@@ -12,11 +12,6 @@
       "action": "move",
       "plan": "p608"
     },
-    "src/_engine/3dModels/characterObstacles.blend": {
-      "to": "src/app/scenes/thirdPersonGymScene/characterObstacles.blend",
-      "action": "move",
-      "plan": "p608"
-    },
     "src/_engine/3dModels/customPropTemplates.blend": {
       "to": "src/_engine/kernel/assets/import/customPropTemplates.blend",
       "action": "move",
@@ -1929,21 +1924,10 @@
       "action": "move",
       "plan": "p608"
     },
-    "src/_engine/utils/cameras/followObjectCameraRig.ts": {
-      "to": "src/toolkit/ecs/FollowObjectCameraRig.ts",
-      "action": "move",
-      "plan": "p608"
-    },
     "src/_engine/utils/CMP.ts": {
       "to": "src/_engine/ui/CMP.ts",
       "action": "move",
       "plan": "p608"
-    },
-    "src/_engine/utils/commontTypes.ts": {
-      "to": "src/toolkit/ecs/FollowObjectCameraRig.ts",
-      "action": "merge",
-      "plan": "p608",
-      "note": "merged into its one user (p602 D6)"
     },
     "src/_engine/utils/constants.ts": {
       "to": "src/_engine/utils/constants.ts",
@@ -2052,12 +2036,6 @@
       "action": "move",
       "plan": "p608"
     },
-    "src/_engine/utils/PhysicsStressTest.ts": {
-      "to": "src/app/scenes/thirdPersonGymScene/PhysicsStressTest.ts",
-      "action": "move",
-      "plan": "p608",
-      "note": "only the gym uses it"
-    },
     "src/_engine/utils/PromiseResolver.test.ts": {
       "to": "src/_engine/utils/PromiseResolver.test.ts",
       "action": "keep",
@@ -2086,23 +2064,6 @@
     },
     "src/_engine/utils/Window.ts": {
       "to": "src/_engine/ui/Window.ts",
-      "action": "move",
-      "plan": "p608"
-    },
-    "src/_engine/utils/world/characterTestObjects.ts": {
-      "to": "src/app/scenes/thirdPersonGymScene/characterTestObjects.ts",
-      "action": "move",
-      "plan": "p608",
-      "note": "only the gym uses it"
-    },
-    "src/_engine/utils/world/characterTestObstacles.ts": {
-      "to": "src/app/scenes/thirdPersonGymScene/characterTestObstacles.ts",
-      "action": "move",
-      "plan": "p608",
-      "note": "only the gym uses it"
-    },
-    "src/_engine/utils/world/movingPlatform.ts": {
-      "to": "src/toolkit/ecs/MovingPlatform.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -2443,23 +2404,23 @@
       "action": "keep",
       "plan": "p609"
     },
+    "src/toolkit/ecs/FollowObjectCameraRig.ts": {
+      "to": "src/toolkit/ecs/FollowObjectCameraRig.ts",
+      "action": "keep",
+      "plan": "p609",
+      "note": "moved from the engine (p606 Phase 7, p602 D6); p609 picks its category folder"
+    },
     "src/toolkit/ecs/index.ts": {
       "to": "src/toolkit/ecs/index.ts",
       "action": "keep",
       "plan": "p609",
       "note": "the `aekasha/toolkit/ecs` entry (p606)"
     },
-    "src/toolkit/ecs/InstancedMeshPool.ts": {
-      "to": null,
-      "action": "delete",
+    "src/toolkit/ecs/MovingPlatform.ts": {
+      "to": "src/toolkit/ecs/MovingPlatform.ts",
+      "action": "keep",
       "plan": "p609",
-      "note": "a deprecated re-export, removed in the toolkit's next major"
-    },
-    "src/toolkit/ecs/InstancedMeshPoolTypes.ts": {
-      "to": null,
-      "action": "delete",
-      "plan": "p609",
-      "note": "a deprecated re-export, removed in the toolkit's next major"
+      "note": "moved from the engine (p606 Phase 7, p602 D6); p609 picks its category folder"
     },
     "src/toolkit/geometry/generateAsteroid.ts": {
       "to": "src/toolkit/geometry/generate/Asteroid.ts",

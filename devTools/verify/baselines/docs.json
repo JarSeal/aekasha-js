@@ -2,19 +2,19 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1352,
-      "total": 2077
+      "documented": 1354,
+      "total": 2070
     },
     "members": {
       "documented": 212,
-      "total": 441
+      "total": 440
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1314,
-        "total": 2020
+        "documented": 1309,
+        "total": 2006
       },
       "members": {
         "documented": 162,
@@ -23,12 +23,12 @@
     },
     "toolkit": {
       "exports": {
-        "documented": 38,
-        "total": 57
+        "documented": 45,
+        "total": 64
       },
       "members": {
         "documented": 50,
-        "total": 81
+        "total": 80
       }
     }
   },
@@ -1180,7 +1180,7 @@
     "engine/utils": {
       "exports": {
         "documented": 64,
-        "total": 110
+        "total": 108
       },
       "members": {
         "documented": 0,
@@ -1218,8 +1218,6 @@
           "ECSStressTest#instancedSyncSystem",
           "ECSStressTest#proximitySystem",
           "LocalAndSessionStorage#StorageValue",
-          "PhysicsStressTest#initPhysicsStressTest",
-          "commontTypes#XYZObject",
           "constants#DIRECTIONS",
           "constants#FOUR_PX_TO_8K_LIST",
           "constants#GRAVITY_DOWN_NORMAL",
@@ -1249,23 +1247,6 @@
           "PromiseResolver#RequestTimeoutError.constructor",
           "helpers#DebugModuleRef.current"
         ]
-      }
-    },
-    "engine/utils/cameras": {
-      "exports": {
-        "documented": 2,
-        "total": 4
-      },
-      "members": {
-        "documented": 0,
-        "total": 0
-      },
-      "undocumented": {
-        "exports": [
-          "followObjectCameraRig#createFollowObjectCameraRig",
-          "followObjectCameraRig#deleteFollowObjectCameraRig"
-        ],
-        "members": []
       }
     },
     "engine/utils/materials": {
@@ -1315,26 +1296,6 @@
       "undocumented": {
         "exports": [
           "PercentagePieHtml#PercentagePieOpts"
-        ],
-        "members": []
-      }
-    },
-    "engine/utils/world": {
-      "exports": {
-        "documented": 3,
-        "total": 8
-      },
-      "members": {
-        "documented": 0,
-        "total": 0
-      },
-      "undocumented": {
-        "exports": [
-          "characterTestObjects#characterTestObstacles",
-          "movingPlatform#DeleteMeshOptions",
-          "movingPlatform#MovingPlatformControls",
-          "movingPlatform#MovingPlatformReturn",
-          "movingPlatform#createMovingPlatform"
         ],
         "members": []
       }
@@ -1393,18 +1354,16 @@
     },
     "toolkit/ecs": {
       "exports": {
-        "documented": 3,
-        "total": 3
+        "documented": 10,
+        "total": 10
       },
       "members": {
         "documented": 0,
-        "total": 1
+        "total": 0
       },
       "undocumented": {
         "exports": [],
-        "members": [
-          "InstancedMeshPoolTypes#InstancedMeshPoolComponentData.CORE_INSTANCED_MESH_SLOT"
-        ]
+        "members": []
       }
     },
     "toolkit/ecs/effects": {

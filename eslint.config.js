@@ -20,7 +20,7 @@ const SIMULATION_FILES = [
   'src/_engine/core/PhysicsTierPolicy.ts',
   'src/_engine/core/Character.ts',
   'src/_engine/core/Character/**/*.ts',
-  'src/_engine/utils/world/movingPlatform.ts',
+  'src/toolkit/ecs/MovingPlatform.ts',
   'src/toolkit/ecs/effects/MutualGravity.ts',
 ];
 const STEP_TIME_MESSAGE =

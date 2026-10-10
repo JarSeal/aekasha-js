@@ -2303,12 +2303,6 @@
       "isNotUndefinedNorNullOrThrow": "Function",
       "isNotUndefinedNorNullOrWarn": "Function"
     },
-    "src/_engine/utils/cameras/followObjectCameraRig.ts": {
-      "createFollowObjectCameraRig": "Function",
-      "deleteFollowObjectCameraRig": "Function",
-      "FollowObjectCameraParams": "TypeAlias",
-      "registerFollowObjectCameraRigSystem": "Function"
-    },
     "src/_engine/utils/CMP.ts": {
       "addStylesToHead": "Function",
       "classes": "Function",
@@ -2326,9 +2320,6 @@
       "TProps": "TypeAlias",
       "TSettings": "TypeAlias",
       "TStyle": "TypeAlias"
-    },
-    "src/_engine/utils/commontTypes.ts": {
-      "XYZObject": "TypeAlias"
     },
     "src/_engine/utils/constants.ts": {
       "DIRECTIONS": "Variable",
@@ -2437,9 +2428,6 @@
     "src/_engine/utils/object3DHelpers.ts": {
       "isOnlyObject3D": "Function"
     },
-    "src/_engine/utils/PhysicsStressTest.ts": {
-      "initPhysicsStressTest": "Function"
-    },
     "src/_engine/utils/PromiseResolver.ts": {
       "createNewResolver": "Function",
       "getResolverStats": "Function",
@@ -2466,20 +2454,6 @@
     },
     "src/_engine/utils/Window.ts": {
       "getWindowSize": "Function"
-    },
-    "src/_engine/utils/world/characterTestObjects.ts": {
-      "characterTestObstacles": "Function"
-    },
-    "src/_engine/utils/world/characterTestObstacles.ts": {
-      "getTestObstacle": "Function"
-    },
-    "src/_engine/utils/world/movingPlatform.ts": {
-      "createMovingPlatform": "Function",
-      "DeleteMeshOptions": "TypeAlias",
-      "MovingPlatformControls": "TypeAlias",
-      "MovingPlatformReturn": "TypeAlias",
-      "PhysicsParams": "TypeAlias",
-      "registerMovingPlatformSystem": "Function"
     },
     "src/_engine/workers/assets/assetsFetch.ts": {
       "AssetsSourceError": "Class",
@@ -2538,25 +2512,19 @@
       "SunShadowFitData": "Interface",
       "sunShadowFitSystem": "Function"
     },
-    "src/toolkit/ecs/InstancedMeshPool.ts": {
-      "createInstancedLodPool": "Reference",
-      "CreateInstancedLodPoolOptions": "Reference",
-      "createInstancedMeshPool": "Reference",
-      "CreateInstancedMeshPoolOptions": "Reference",
-      "InstancedLodPool": "Reference",
-      "InstancedLodPoolLevel": "Reference",
-      "InstancedMeshPool": "Reference",
-      "InstancedMeshPoolComponentData": "Reference",
-      "InstancedMeshPoolComponentType": "Reference",
-      "instancedMeshPoolSyncSystem": "Reference",
-      "InstancedMeshSlotData": "Reference",
-      "InstancePlacement": "Reference",
-      "registerInstancedMeshPoolEffect": "Function"
+    "src/toolkit/ecs/FollowObjectCameraRig.ts": {
+      "createFollowObjectCameraRig": "Function",
+      "deleteFollowObjectCameraRig": "Function",
+      "FollowObjectCameraParams": "TypeAlias",
+      "registerFollowObjectCameraRigSystem": "Function"
     },
-    "src/toolkit/ecs/InstancedMeshPoolTypes.ts": {
-      "InstancedMeshPoolComponentData": "Interface",
-      "InstancedMeshPoolComponentType": "Enum",
-      "InstancedMeshSlotData": "Reference"
+    "src/toolkit/ecs/MovingPlatform.ts": {
+      "createMovingPlatform": "Function",
+      "DeleteMeshOptions": "TypeAlias",
+      "MovingPlatformControls": "TypeAlias",
+      "MovingPlatformReturn": "TypeAlias",
+      "PhysicsParams": "TypeAlias",
+      "registerMovingPlatformSystem": "Function"
     },
     "src/toolkit/geometry/generateAsteroid.ts": {
       "AsteroidCraterOptions": "Interface",

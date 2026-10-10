@@ -1,16 +1,16 @@
 import * as THREE from 'three/webgpu';
-import type { GeoProps, GeoTypes } from '../../core/Geometry';
-import { createGeometry } from '../../core/Geometry';
-import type { Materials, MatProps } from '../../core/Material';
-import { createMaterial } from '../../core/Material';
-import type { MeshProps } from '../../core/MeshManager';
-import { createMeshEntity, getMeshByAppId } from '../../core/MeshManager';
-import { getECSWorld, type ECSWorld } from '../../core/ECS';
-import { createPhysicsEntity } from '../../core/PhysicsManager';
-import type { ColliderParams, RigidBodyParams } from '../../core/Physics/PhysicsAPITypes';
-import { ECSSystemStage } from '../../core/ECS/SystemStages';
-import { existsOrThrow } from '../assert';
-import { getLogger } from '../Logger';
+import type { GeoProps, GeoTypes } from '../../_engine/core/Geometry';
+import { createGeometry } from '../../_engine/core/Geometry';
+import type { Materials, MatProps } from '../../_engine/core/Material';
+import { createMaterial } from '../../_engine/core/Material';
+import type { MeshProps } from '../../_engine/core/MeshManager';
+import { createMeshEntity, getMeshByAppId } from '../../_engine/core/MeshManager';
+import { getECSWorld, type ECSWorld } from '../../_engine/core/ECS';
+import { createPhysicsEntity } from '../../_engine/core/PhysicsManager';
+import type { ColliderParams, RigidBodyParams } from '../../_engine/core/Physics/PhysicsAPITypes';
+import { ECSSystemStage } from '../../_engine/core/ECS/SystemStages';
+import { existsOrThrow } from '../../_engine/utils/assert';
+import { getLogger } from '../../_engine/utils/Logger';
 
 /** This file's own internal grouping of one collider (+ optionally the shared rigid body) — the
  * engine-agnostic Physics API has
@@ -60,6 +60,7 @@ export const registerMovingPlatformSystem = (world: ECSWorld) => {
   return world;
 };
 
+/** What to delete with a platform's mesh. Not read yet: `controls.delete()` deletes the platform's entity only. */
 export type DeleteMeshOptions = {
   deleteGeometries?: boolean;
   deleteMaterials?: boolean;
@@ -67,6 +68,7 @@ export type DeleteMeshOptions = {
   deleteAll?: boolean;
 };
 
+/** Playback controls of a platform made by {@link createMovingPlatform}. */
 export type MovingPlatformControls = {
   play: (fromSegmentIndex?: number) => void;
   pause: () => void;
@@ -90,6 +92,7 @@ export type MovingPlatformControls = {
   };
 };
 
+/** {@link createMovingPlatform}'s result: the platform's entity, its mesh and its controls. */
 export type MovingPlatformReturn = {
   entityId: number;
   mesh?: THREE.Mesh;
@@ -97,6 +100,12 @@ export type MovingPlatformReturn = {
 };
 
 const DEFAULT_SEGMENT_DURATION = 3000;
+/**
+ * Creates a kinematic platform that moves along `points` (each `dur` in ms, 3000 by default to
+ * reach the next point) and plays from the start unless `opts.isPlayingFromStart` is false.
+ * `loopTimes` -1 (the default) loops forever.
+ * @remarks Moves only once {@link registerMovingPlatformSystem} has run on the world.
+ */
 export const createMovingPlatform = async (props: {
   id: string;
   name?: string;

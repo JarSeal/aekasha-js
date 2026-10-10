@@ -21,8 +21,8 @@
       "unreferenced": 26
     },
     "aekasha/instancing": {
-      "public": 3,
-      "crossEntry": 0,
+      "public": 2,
+      "crossEntry": 1,
       "internal": 1,
       "unreferenced": 6
     },
@@ -71,7 +71,7 @@
     "aekasha/toolkit/ecs": {
       "public": 16,
       "crossEntry": 0,
-      "internal": 1,
+      "internal": 0,
       "unreferenced": 16
     },
     "aekasha/toolkit/geometry": {
@@ -5235,10 +5235,9 @@
       "src/_engine/features/instancing/InstancedMeshPoolTypes.ts": {
         "InstancedMeshSlotData": {
           "kind": "Interface",
-          "usage": "public",
+          "usage": "crossEntry",
           "by": [
-            "aekasha",
-            "toolkit"
+            "aekasha"
           ]
         },
         "InstancePlacement": {
@@ -10558,10 +10557,6 @@
           "by": [
             "app"
           ]
-        },
-        "XYZObject": {
-          "kind": "TypeAlias",
-          "usage": "internal"
         }
       },
       "src/toolkit/ecs/MovingPlatform.ts": {

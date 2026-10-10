@@ -1,9 +1,9 @@
 import * as THREE from 'three/webgpu';
-import { createGeometry, deleteGeometry, saveBufferGeometry } from '../../core/Geometry';
-import { createMaterial } from '../../core/Material';
+import { createGeometry, deleteGeometry, saveBufferGeometry } from '../../../_engine/core/Geometry';
+import { createMaterial } from '../../../_engine/core/Material';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { createMeshEntity, getMeshByAppId } from '../../core/MeshManager';
-import { createPhysicsEntity } from '../../core/PhysicsManager';
+import { createMeshEntity, getMeshByAppId } from '../../../_engine/core/MeshManager';
+import { createPhysicsEntity } from '../../../_engine/core/PhysicsManager';
 
 export const characterTestObstacles = async () => {
   // Stairs

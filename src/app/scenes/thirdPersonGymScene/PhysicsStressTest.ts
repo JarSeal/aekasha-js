@@ -1,10 +1,10 @@
-import { createKeyBinding } from '../core/Input/KeyboardInput';
-import { getLogger } from './Logger';
-import { createPhysicsEntity } from '../core/PhysicsManager';
-import { createGeometry } from '../core/Geometry';
-import { createMaterial } from '../core/Material';
-import { createMeshEntity } from '../core/MeshManager';
-import { IS_DEBUG_ENV } from '../core/Config';
+import { createKeyBinding } from '../../../_engine/core/Input/KeyboardInput';
+import { getLogger } from '../../../_engine/utils/Logger';
+import { createPhysicsEntity } from '../../../_engine/core/PhysicsManager';
+import { createGeometry } from '../../../_engine/core/Geometry';
+import { createMaterial } from '../../../_engine/core/Material';
+import { createMeshEntity } from '../../../_engine/core/MeshManager';
+import { IS_DEBUG_ENV } from '../../../_engine/core/Config';
 
 let stressTestCount = 0;
 

@@ -1,8 +1,7 @@
 import * as THREE from 'three/webgpu';
-import type { ECSWorld } from '../../core/ECS';
-import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../../core/ECS/SystemStages';
-import type { XYZObject } from '../commontTypes';
-import { smoothDampVec3 } from '../helpers';
+import type { ECSWorld } from '../../_engine/core/ECS';
+import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../../_engine/core/ECS/SystemStages';
+import { smoothDampVec3 } from '../../_engine/utils/helpers';
 
 const DEFAULT_OFFSET = { x: 0, y: 5, z: 10 };
 const DEFAULT_LERP_SMOOTH_TIME = 0.1;
@@ -17,7 +16,7 @@ export type FollowObjectCameraParams = {
   camera: THREE.Camera;
   targetMesh: THREE.Mesh;
   /** What is the offset of the camera from the target */
-  offset?: XYZObject;
+  offset?: { x: number; y: number; z: number };
   /** Smoothing function type (default is 'SMOOTH_DAMP') */
   smoothingType?: 'SMOOTH_DAMP' | 'LERP';
   /** Smoothing time used for SMOOTH_DAMP or LERP */
@@ -70,6 +69,12 @@ export const registerFollowObjectCameraRigSystem = (world: ECSWorld) => {
   return world;
 };
 
+/**
+ * Makes `camera` follow `targetMesh` at `offset`, smoothed, from the next frame on. The rig is
+ * keyed by `id`: creating one with an id in use replaces it.
+ * @remarks Moves the camera only once {@link registerFollowObjectCameraRigSystem} has run on the
+ * world.
+ */
 export const createFollowObjectCameraRig = (params: FollowObjectCameraParams) => {
   const {
     id,
@@ -255,6 +260,7 @@ export const createFollowObjectCameraRig = (params: FollowObjectCameraParams) =>
   activeRigs.set(id, { tick });
 };
 
+/** Stops the rig `id`; the camera stays where it is. An unknown id is a no-op. */
 export const deleteFollowObjectCameraRig = (id: string) => {
   activeRigs.delete(id);
 };

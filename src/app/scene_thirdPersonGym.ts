@@ -5,16 +5,16 @@ import { createMeshEntity, getMeshByAppId, setMeshMaterial } from '../_engine/co
 import { createSkyBox } from '../_engine/core/SkyBox/SkyBox';
 import { getLoaderStatusUpdater } from '../_engine/core/SceneLoader';
 import { createDynamicCharacter } from '../_engine/core/Character/DynamicCharacter';
-import { characterTestObstacles } from '../_engine/utils/world/characterTestObjects';
+import { characterTestObstacles } from './scenes/thirdPersonGymScene/characterTestObjects';
 import { importAssetAsync } from '../_engine/core/Import/ImportRegistry';
 import { spawnImportedAsset } from '../_engine/core/Import/SpawnImported';
 import type { ImportedAssetManifest } from '../_engine/core/Import/ImportTypes';
 import type { Transform } from '../_engine/core/ECS/ECSCoreComponents';
 import { ComponentType } from '../_engine/core/ECS/ECSCoreComponents';
 import { getQuatFromAngle } from '../_engine/utils/helpers';
-import { createMovingPlatform } from '../_engine/utils/world/movingPlatform';
-import { initPhysicsStressTest } from '../_engine/utils/PhysicsStressTest';
-import { getTestObstacle } from '../_engine/utils/world/characterTestObstacles';
+import { createMovingPlatform } from '../toolkit/ecs/MovingPlatform';
+import { initPhysicsStressTest } from './scenes/thirdPersonGymScene/PhysicsStressTest';
+import { getTestObstacle } from './scenes/thirdPersonGymScene/characterTestObstacles';
 import type { ECSWorld } from '../_engine/core/ECS';
 import { getECSWorld, getEntityIdByAppId } from '../_engine/core/ECS';
 import { getScene, registerOnSceneExit } from '../_engine/core/Scene';
@@ -24,7 +24,7 @@ import { getLightByAppId, getLightTargetId } from '../_engine/core/LightManager'
 import {
   createFollowObjectCameraRig,
   deleteFollowObjectCameraRig,
-} from '../_engine/utils/cameras/followObjectCameraRig';
+} from '../toolkit/ecs/FollowObjectCameraRig';
 import { ECSSystemStage } from '../_engine/core/ECS/SystemStages';
 import { createCharacterVisual } from './characterVisual';
 

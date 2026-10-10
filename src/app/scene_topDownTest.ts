@@ -12,7 +12,7 @@ import { getCameraByAppId } from '../_engine/core/CameraManager';
 import {
   createFollowObjectCameraRig,
   deleteFollowObjectCameraRig,
-} from '../_engine/utils/cameras/followObjectCameraRig';
+} from '../toolkit/ecs/FollowObjectCameraRig';
 import { existsOrThrow } from '../_engine/utils/assert';
 import { lwarn } from '../_engine/utils/Logger';
 import { generateTerrain } from '../toolkit/geometry/generateTerrain';

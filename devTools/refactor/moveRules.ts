@@ -342,36 +342,7 @@ const ENGINE_RULES: MoveRule[] = [
       GRAVITY_DOWN_NORMAL: `${K}render/ThreeMath.ts`,
     },
   },
-  {
-    from: `${E}utils/commontTypes.ts`,
-    to: `${T}ecs/FollowObjectCameraRig.ts`,
-    action: 'merge',
-    note: 'merged into its one user (p602 D6)',
-  },
   { from: `${E}utils/materials/`, action: 'delete', note: 'no importers (p602 D6)' },
-
-  // Gameplay pieces to the toolkit, test scaffolding to the app (p602 D6)
-  { from: `${E}utils/world/movingPlatform.ts`, to: `${T}ecs/MovingPlatform.ts` },
-  { from: `${E}utils/cameras/followObjectCameraRig.ts`, to: `${T}ecs/FollowObjectCameraRig.ts` },
-  {
-    from: `${E}utils/PhysicsStressTest.ts`,
-    to: `${A}scenes/thirdPersonGymScene/PhysicsStressTest.ts`,
-    note: 'only the gym uses it',
-  },
-  {
-    from: `${E}utils/world/characterTestObjects.ts`,
-    to: `${A}scenes/thirdPersonGymScene/characterTestObjects.ts`,
-    note: 'only the gym uses it',
-  },
-  {
-    from: `${E}utils/world/characterTestObstacles.ts`,
-    to: `${A}scenes/thirdPersonGymScene/characterTestObstacles.ts`,
-    note: 'only the gym uses it',
-  },
-  {
-    from: `${E}3dModels/characterObstacles.blend`,
-    to: `${A}scenes/thirdPersonGymScene/characterObstacles.blend`,
-  },
 
   { from: `${E}schemas/`, to: `${E}schemas/` },
 ];
@@ -388,16 +359,16 @@ const TOOLKIT_RULES: MoveRule[] = [
   ),
   { from: `${T}ecs/effects/`, to: `${T}ecs/effects/`, plan: 'p609' },
   {
-    from: `${T}ecs/InstancedMeshPool.ts`,
-    action: 'delete',
+    from: `${T}ecs/FollowObjectCameraRig.ts`,
+    to: `${T}ecs/FollowObjectCameraRig.ts`,
     plan: 'p609',
-    note: "a deprecated re-export, removed in the toolkit's next major",
+    note: 'moved from the engine (p606 Phase 7, p602 D6); p609 picks its category folder',
   },
   {
-    from: `${T}ecs/InstancedMeshPoolTypes.ts`,
-    action: 'delete',
+    from: `${T}ecs/MovingPlatform.ts`,
+    to: `${T}ecs/MovingPlatform.ts`,
     plan: 'p609',
-    note: "a deprecated re-export, removed in the toolkit's next major",
+    note: 'moved from the engine (p606 Phase 7, p602 D6); p609 picks its category folder',
   },
   {
     from: `${T}geometry/generateAsteroid.ts`,

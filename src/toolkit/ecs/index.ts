@@ -2,17 +2,10 @@ export {
   createFollowObjectCameraRig,
   deleteFollowObjectCameraRig,
   registerFollowObjectCameraRigSystem,
-} from '../../_engine/utils/cameras/followObjectCameraRig';
-export type { FollowObjectCameraParams } from '../../_engine/utils/cameras/followObjectCameraRig';
-export {
-  createMovingPlatform,
-  registerMovingPlatformSystem,
-} from '../../_engine/utils/world/movingPlatform';
-export type {
-  DeleteMeshOptions,
-  MovingPlatformReturn,
-  PhysicsParams,
-} from '../../_engine/utils/world/movingPlatform';
+} from './FollowObjectCameraRig';
+export type { FollowObjectCameraParams } from './FollowObjectCameraRig';
+export { createMovingPlatform, registerMovingPlatformSystem } from './MovingPlatform';
+export type { DeleteMeshOptions, MovingPlatformReturn, PhysicsParams } from './MovingPlatform';
 export { FollowToolComponentType, registerFollowToolEffect } from './effects/FollowTool';
 export type { FollowToolData } from './effects/FollowTool';
 export { HoverToolComponentType, registerHoverToolEffect } from './effects/HoverEffect';

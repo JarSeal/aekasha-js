@@ -25,7 +25,7 @@ export interface GeneratedTreeGeometry {
 /**
  * Very-low-poly procedural tree: a cylinder trunk topped with a cone canopy, merged into one
  * geometry with two material groups. No GLTF — follows
- * `src/_engine/utils/world/characterTestObjects.ts`'s `mergeGeometries` use (merge, then
+ * `src/app/scenes/thirdPersonGymScene/characterTestObjects.ts`'s `mergeGeometries` use (merge, then
  * delete the intermediate registered sub-geometries so they don't linger in the geometry
  * registry after being folded into the merged result).
  */
