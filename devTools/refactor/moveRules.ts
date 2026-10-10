@@ -53,16 +53,9 @@ const ENGINE_RULES: MoveRule[] = [
   { from: `${E}features/`, to: F, note: 'the feature entries (p606): the code moves under them' },
   { from: `${E}types/`, to: `${E}types/` },
   {
-    from: `${E}generatedAppData.json`,
-    to: 'src/generated/generatedAppData.json',
-    plan: 'p606',
-    note: 'app data, handed to the engine through InitEngine (p602 D9)',
-  },
-  {
-    from: `${E}generatedAppFns.ts`,
-    to: 'src/generated/generatedAppFns.ts',
-    plan: 'p606',
-    note: 'app data, handed to the engine through InitEngine (p602 D9)',
+    from: `${E}moduleLoad.test.ts`,
+    to: `${E}ModuleLoad.test.ts`,
+    note: 'imports every engine module in Node (p606 Phase 5): the whole engine, so at its root',
   },
 
   // Kernel: ECS
@@ -91,9 +84,15 @@ const ENGINE_RULES: MoveRule[] = [
   { from: `${E}core/MainLoop.ts`, to: `${K}loop/MainLoop.ts` },
   { from: `${E}core/Debug/_dbg__MainLoop.ts`, to: `${K}loop/debug/_dbg__MainLoop.ts` },
   { from: `${E}core/Config.ts`, to: `${K}config/Config.ts` },
+  { from: `${E}core/Config.test.ts`, to: `${K}config/Config.test.ts` },
 
   // Kernel: scene
   { from: `${E}core/Scene.ts`, to: `${K}scene/Scene.ts` },
+  {
+    from: `${E}core/AppData.ts`,
+    to: `${K}scene/AppData.ts`,
+    note: "the app's data from InitEngine (p606, p602 D9): the scenes read it",
+  },
   { from: `${E}core/SceneLoader.ts`, to: `${K}scene/SceneLoader.ts` },
   { from: `${E}core/GroupManager.ts`, to: `${K}scene/Group.ts` },
   {

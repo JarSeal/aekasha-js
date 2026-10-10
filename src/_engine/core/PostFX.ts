@@ -26,7 +26,7 @@ import {
   registerOnAllSceneExits,
 } from './Scene';
 import { getActiveCamera } from './CameraManager';
-import { postFxFileObjects } from '../../generated/generatedAppFns';
+import { getAppData } from './AppData';
 import { lerror, llog, lwarn } from '../utils/Logger';
 import type { DebugModuleRef } from '../utils/helpers';
 import { loadDebugModuleAsync, useDebug } from '../utils/helpers';
@@ -119,7 +119,7 @@ const resolvePostFxPass = (
     props = found;
   }
 
-  const fxNode = (postFxFileObjects as Record<string, { fxNode?: PostFxPassFn }>)[props.id]?.fxNode;
+  const fxNode = getAppData().postFxFiles[props.id]?.fxNode as PostFxPassFn | undefined;
   if (!fxNode) {
     lwarn(
       `Could not locate the "fxNode" export for PostFX pass "${props.id}" (scene "${sceneId}"), skipping it. A PostFX pass needs a *.postFx.json file whose tslFile exports "fxNode" (PostFX passes written inline in a scene file are not supported).`

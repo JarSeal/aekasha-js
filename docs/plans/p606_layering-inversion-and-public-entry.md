@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-5 implemented
+Status: in progress | Phases 1-6 implemented
 Category: Architecture, Refactoring
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
 Blocks: p607_sbp-foundation-feature-modules.md, p608_engine-folder-restructure.md, p510_headless-simulation-runtime.md
@@ -457,11 +457,54 @@ what it adds.
 - `yarn verify:scenes`: 96 passed against the Phase 1 baselines (the debug and prodTest
   configurations set their flags in `InitEngine` in time).
 
-### Phase 6: the generated code moves out
+### Phase 6: the generated code moves out — done
 
 1. `gatherAppData` writes `src/generated/` (§4.3) and every path in §2's list follows.
 2. `InitEngine({ data })`; `core/AppData.ts`; the five readers use `getAppData()`.
-3. The two `p606` rules leave `moveRules.ts` (done), and the regenerated map has no `p606` entries.
+3. The two `p606` rules leave `moveRules.ts` once the files have moved, and the regenerated map has
+   no `p606` entries.
+
+**As built:**
+
+- `gatherAppData.ts`: `OUTPUT_DIR` (`src/generated/`) with `OUTPUT_FILE_DATA`, `OUTPUT_FILE_FN`
+  and `OUTPUT_FILE_INDEX`. The two files were `git mv`'d; regenerated, the JSON is byte-identical
+  and `generatedAppFns.ts` differs only in its `import type` lines (`../_engine/core/…`). The
+  `'../${basePath}/…'` imports don't change: `..` is `src/` from both folders. `index.ts` is the
+  same on every gather (a constant in the gatherer).
+- **Names changed from §4.3** (confirmed): `AppData` is `{ json, sceneFiles, tslMaterialFiles,
+  postFxFiles }`, since `data.scenes` would sit next to `data.json.scenes` and `data.postFx` (the
+  pass files) next to `data.json.postFx` (the pass assets). `data` is required: a missing one fails
+  `tsc`, not `loadScene`.
+- `core/AppData.ts`: `AppData` and `GeneratedAppJson` (`{ scenes: Record<string, unknown>;
+  [section: string]: unknown }`: a production gather writes only `scenes`, and every reader
+  outside `Scene.ts` casts), both exported by `aekasha`; `setAppData` / `getAppData`, `@internal`
+  and in no entry. `sceneFiles` reuses `LoadSceneProps['nextSceneFn']`'s type. Empty until
+  `InitEngine` runs `setAppData(data)`, right after `loadConfig`. The JSON's inferred type assigns
+  to `GeneratedAppJson` without a cast.
+- **Not in §2:** `getGeneratedAppData` / `getGeneratedSceneData` (`Scene.ts`, in `aekasha`) have
+  8 more readers (debug modules, `TextureArray.ts`, the app's `textureArrays.ts`). They stay, as
+  wrappers over `getAppData().json`, now with JSDoc. Three readers lost their `as Record<…>` casts.
+- `sceneGathererPlugin.ts` skips `OUTPUT_FILE_INDEX` as its own output; `devFiles/selfCheck.ts`
+  restores `index.ts` too. `checkVersions.ts` drops the two excludes: `src/generated/` is in no
+  part. The `generatedApp*` excludes of TypeDoc and the Hub extract are gone (the folder is outside
+  their scope; the API hash is unchanged); ESLint's JSDoc block ignores `src/generated/**`.
+- `src/generated/index.ts` and `generatedAppFns.ts` import the engine by relative path; Phase 7's
+  gatherer change makes them `aekasha` imports (`AppData`, `SceneData`, `ScenePrimitiveAssets` are
+  all in the entry).
+- `moveRules.ts`: the two `p606` rules gone; new rules for `core/AppData.ts`
+  (`kernel/scene/AppData.ts`) and, missing since Phase 5 (`moveMap.ts --check` failed on a clean
+  `HEAD`), `core/Config.test.ts` (`kernel/config/`) and `moduleLoad.test.ts` (the engine root,
+  `ModuleLoad.test.ts` per D7). The layout report's "Engine → generated data" row is gone and the
+  map has no `p606` entries.
+- Docs now, since they'd be false until Phase 9: root `CLAUDE.md`'s data pipeline step 3 and
+  `yarn docs` line, `devFiles/CLAUDE.md`, `devTools/hub/CLAUDE.md`, `hub/CLAUDE.md`,
+  `hub-authoring.md`; `readme.md`'s example 1 (`data: appData`) and its tree (`generated/`).
+- Baselines: `api.json` gains `AppData`, `GeneratedAppJson`, `getAppData`, `setAppData` and
+  `aekasha`'s two types; `docs.json` engine/core 373 / 523 → 379 / 527 documented; `bundle.json`
+  moves the JSON from the main chunk's `_engine` group to `app` (−9.8 / +10.0 kB gzip), and the
+  shared texture atlas / impostor bake chunk is named `ImpostorBake.js` instead of
+  `TextureAtlas.js` (same 3968 bytes: Rollup names it after one of its modules).
+- `yarn verify:scenes`: 96 passed against the Phase 1 baselines.
 
 ### Phase 7: the app, the toolkit and the docs' code use the entries
 

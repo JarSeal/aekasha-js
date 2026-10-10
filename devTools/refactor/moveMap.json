@@ -22,6 +22,12 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/AppData.ts": {
+      "to": "src/_engine/kernel/scene/AppData.ts",
+      "action": "move",
+      "plan": "p608",
+      "note": "the app's data from InitEngine (p606, p602 D9): the scenes read it"
+    },
     "src/_engine/core/Assets/AssetOwners.ts": {
       "to": "src/_engine/kernel/assets/AssetOwners.ts",
       "action": "move",
@@ -79,6 +85,11 @@
     },
     "src/_engine/core/Character/DynamicCharacter.ts": {
       "to": "src/_engine/features/character/DynamicCharacter.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/Config.test.ts": {
+      "to": "src/_engine/kernel/config/Config.test.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -1755,18 +1766,6 @@
       "plan": "p608",
       "note": "the feature entries (p606): the code moves under them"
     },
-    "src/_engine/generatedAppData.json": {
-      "to": "src/generated/generatedAppData.json",
-      "action": "move",
-      "plan": "p606",
-      "note": "app data, handed to the engine through InitEngine (p602 D9)"
-    },
-    "src/_engine/generatedAppFns.ts": {
-      "to": "src/generated/generatedAppFns.ts",
-      "action": "move",
-      "plan": "p606",
-      "note": "app data, handed to the engine through InitEngine (p602 D9)"
-    },
     "src/_engine/index.ts": {
       "to": "src/_engine/index.ts",
       "action": "keep",
@@ -1777,6 +1776,12 @@
       "to": "src/_engine/kernel/init/InitEngine.ts",
       "action": "move",
       "plan": "p608"
+    },
+    "src/_engine/moduleLoad.test.ts": {
+      "to": "src/_engine/ModuleLoad.test.ts",
+      "action": "move",
+      "plan": "p608",
+      "note": "imports every engine module in Node (p606 Phase 5): the whole engine, so at its root"
     },
     "src/_engine/schemas/_helperSchemas.ts": {
       "to": "src/_engine/schemas/_HelperSchemas.ts",
@@ -2052,6 +2057,11 @@
       "action": "move",
       "plan": "p608",
       "note": "only the gym uses it"
+    },
+    "src/_engine/utils/PromiseResolver.test.ts": {
+      "to": "src/_engine/utils/PromiseResolver.test.ts",
+      "action": "keep",
+      "plan": "p608"
     },
     "src/_engine/utils/PromiseResolver.ts": {
       "to": "src/_engine/utils/PromiseResolver.ts",

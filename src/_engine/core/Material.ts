@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import { deleteTexture, getTexture, getTextureRegistry } from './Texture';
 import { getRootScene } from './Scene';
 import { existsOrThrow } from '../utils/assert';
-import { tslMaterialFileObjects } from '../../generated/generatedAppFns';
+import { getAppData } from './AppData';
 import { lerror, lwarn } from '../utils/Logger';
 import type { Node } from 'three/tsl';
 import { color, texture, uniform } from 'three/tsl';
@@ -330,10 +330,7 @@ export const createMaterial = (props: MatProps) => {
   // TSL file
   if ('tslFile' in props && props.tslFile) {
     const activeMaterialRegistry = existsOrThrow(
-      (props.tslMaterialId || id) &&
-        (tslMaterialFileObjects as Record<string, Record<string, unknown>>)[
-          props.tslMaterialId || id || ''
-        ],
+      (props.tslMaterialId || id) && getAppData().tslMaterialFiles[props.tslMaterialId || id || ''],
       `[Material Manager] Could not locate compiled TSL Master Graph registry entry for material ID "${id}. Materials with a TSL file must have a *.material.json file."`
     );
     if (activeMaterialRegistry === '') {

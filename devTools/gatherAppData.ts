@@ -94,6 +94,21 @@ export const generatedAppFnsFilename = 'generatedAppFns.ts';
 export const OUTPUT_DIR = path.resolve(__dirname, '../src/generated');
 export const OUTPUT_FILE_DATA = path.join(OUTPUT_DIR, generatedAppDataJSONFilename);
 export const OUTPUT_FILE_FN = path.join(OUTPUT_DIR, generatedAppFnsFilename);
+/** The app's import (`appData`, passed to `InitEngine`); the same on every gather */
+export const OUTPUT_FILE_INDEX = path.join(OUTPUT_DIR, 'index.ts');
+const INDEX_FILE_CONTENT = `// THIS IS AN AUTO-GENERATED FILE, DO NOT MODIFY!
+import type { AppData } from '../_engine/core/AppData';
+import json from './${generatedAppDataJSONFilename}';
+import { postFxFileObjects, sceneFileObjects, tslMaterialFileObjects } from './${generatedAppFnsFilename.replace(/\.ts$/, '')}';
+
+/** The app's gathered data: \`InitEngine({ data: appData })\` hands it to the engine. */
+export const appData: AppData = {
+  json,
+  sceneFiles: sceneFileObjects,
+  tslMaterialFiles: tslMaterialFileObjects,
+  postFxFiles: postFxFileObjects,
+};
+`;
 
 const JSON_ENDING_SIGNATURES = {
   scene: '.scene.json',
@@ -1725,6 +1740,7 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
       `${sceneFileImports}\n${sceneFileObject}\n${tslMaterialFileObject}\n${postFxFileObject}`,
       'utf-8'
     );
+    fs.writeFileSync(OUTPUT_FILE_INDEX, INDEX_FILE_CONTENT, 'utf-8');
 
     console.log(
       `\x1b[32m✓ [Scene Gatherer] Consolidated ${sceneFiles.length} scene configurations (${isProduction ? 'prod' : 'dev'}).\x1b[0m`

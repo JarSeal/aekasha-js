@@ -5,8 +5,8 @@
     "aekasha": {
       "public": 118,
       "crossEntry": 123,
-      "internal": 187,
-      "unreferenced": 197
+      "internal": 198,
+      "unreferenced": 190
     },
     "aekasha/character": {
       "public": 7,
@@ -1372,7 +1372,7 @@
       "src/_engine/kernel/config/Config.ts": {
         "APP_CONFIG": {
           "kind": "Variable",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "AppConfig": {
           "kind": "TypeAlias",
@@ -1402,7 +1402,7 @@
         },
         "DebugPhysicsWireframeConfig": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "DEFAULT_DEBUG_DRAWER_TAB_ORDER": {
           "kind": "Variable",
@@ -1411,9 +1411,13 @@
             "aekasha/debug"
           ]
         },
+        "EnvironmentInput": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
         "Environments": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "getConfig": {
           "kind": "Function",
@@ -1448,6 +1452,10 @@
           "kind": "Function",
           "usage": "internal"
         },
+        "initEnvironment": {
+          "kind": "Function",
+          "usage": "internal"
+        },
         "IS_DEBUG_ENV": {
           "kind": "Variable",
           "usage": "public",
@@ -1465,11 +1473,11 @@
         },
         "IS_PROD_ENV": {
           "kind": "Variable",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "IS_PROD_TEST_ENV": {
           "kind": "Variable",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "IS_PROD_TEST_MODE": {
           "kind": "Variable",
@@ -1481,7 +1489,7 @@
         },
         "isCurrentEnvironment": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "isDebugEnvironment": {
           "kind": "Function",
@@ -1495,7 +1503,7 @@
         },
         "isNotCurrentEnvironment": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "isProdTestMode": {
           "kind": "Function",
@@ -1948,6 +1956,10 @@
           "by": [
             "app"
           ]
+        },
+        "InitEngineOptions": {
+          "kind": "TypeAlias",
+          "usage": "unreferenced"
         }
       },
       "src/_engine/kernel/input/GamepadInput.ts": {
@@ -2341,6 +2353,10 @@
           "by": [
             "aekasha/physics"
           ]
+        },
+        "addWindowListeners": {
+          "kind": "Function",
+          "usage": "internal"
         },
         "deleteAddOnWindowBlurFn": {
           "kind": "Function",
@@ -3410,7 +3426,7 @@
         },
         "LoadSceneProps": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "SceneLoader": {
           "kind": "TypeAlias",

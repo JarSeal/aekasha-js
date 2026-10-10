@@ -1,6 +1,12 @@
 {
   "formatVersion": 1,
   "modules": {
+    "src/_engine/core/AppData.ts": {
+      "AppData": "TypeAlias",
+      "GeneratedAppJson": "TypeAlias",
+      "getAppData": "Function",
+      "setAppData": "Function"
+    },
     "src/_engine/core/Assets/AssetOwners.ts": {
       "copyAssetOwner": "Function",
       "getAssetOwner": "Function",
@@ -2607,6 +2613,7 @@
     "aekasha": [
       "APP_RENDER_SYNC_ORDER",
       "AppConfig",
+      "AppData",
       "AtlasCellRect",
       "BuildTextureArrayProps",
       "ComponentData",
@@ -2622,6 +2629,7 @@
       "ECSTransformProp",
       "ECSWorld",
       "ECSWorldOptions",
+      "GeneratedAppJson",
       "GeneratedAssetUrls",
       "GeoBaseProps",
       "GeoProps",

@@ -1,3 +1,4 @@
+export type { AppData, GeneratedAppJson } from './core/AppData';
 export { resolveAssetUrl } from './core/Assets/AssetUrl';
 export type { GeneratedAssetUrls } from './core/Assets/AssetUrl';
 export {

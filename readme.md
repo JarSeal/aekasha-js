@@ -164,6 +164,8 @@ Open `http://localhost:8080/?isDebug=true` to get the full debug suite, then pre
 │   │   └── utils/          # Helpers, camera rigs, world test objects, stress tests
 │   ├── toolkit/            # Reusable ECS effects, TSL materials and procedural geometry
 │   ├── app/                # Your game: *.scene.json + scene .ts files and asset JSON files
+│   ├── generated/          # The gathered scene and asset data, handed to InitEngine
+│   │                       # (written by yarn gatherAppData, committed)
 │   ├── AppECSPlugins.ts    # Wires app and toolkit systems into the ECS
 │   ├── AppECSRegistry.ts   # The app's own component keys (added to the engine's component map)
 │   ├── CONFIG.ts           # App configuration (physics, debug keys, debug camera…)
@@ -199,9 +201,11 @@ import { InitEngine } from './_engine/InitApp';
 import { createRenderer } from './_engine/core/Renderer';
 import { createSceneLoader, loadScene } from './_engine/core/SceneLoader';
 import config from './CONFIG';
+import { appData } from './generated'; // written by yarn gatherAppData
 
 InitEngine({
   config,
+  data: appData,
   start: async () => {
     await createRenderer({
       antialias: true,

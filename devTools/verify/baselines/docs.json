@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1346,
-      "total": 2073
+      "documented": 1352,
+      "total": 2077
     },
     "members": {
       "documented": 212,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1308,
-        "total": 2016
+        "documented": 1314,
+        "total": 2020
       },
       "members": {
         "documented": 162,
@@ -49,8 +49,8 @@
     },
     "engine/core": {
       "exports": {
-        "documented": 373,
-        "total": 523
+        "documented": 379,
+        "total": 527
       },
       "members": {
         "documented": 35,
@@ -170,8 +170,6 @@
           "Scene#Looper",
           "Scene#SceneData",
           "Scene#SceneOptions",
-          "Scene#getGeneratedAppData",
-          "Scene#getGeneratedSceneData",
           "Scene#registerOnAllSceneEnterings",
           "Scene#registerOnAllSceneExits",
           "Scene#registerOnSceneEnter",

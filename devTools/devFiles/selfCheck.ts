@@ -27,7 +27,7 @@ import {
  * It writes into `src/app/__devFilesSelfCheck__/` and removes the folder at the end. The save
  * entry cases (Phase 3) write a material and two debug scenes there and wait for the dev server's
  * gather to apply them (a running `yarn dev` reloads its page on it too). At the end it waits for
- * the gather that drops them again, else it restores `src/generated/generatedApp*` as they were.
+ * the gather that drops them again, else it restores `src/generated/` as it was.
  */
 
 const TEST_DIR = 'src/app/__devFilesSelfCheck__';
@@ -42,6 +42,7 @@ const PNG_2 = Buffer.concat([PNG, Buffer.from([1])]);
 const GENERATED_FILES = [
   path.join(ROOT, 'src/generated/generatedAppData.json'),
   path.join(ROOT, 'src/generated/generatedAppFns.ts'),
+  path.join(ROOT, 'src/generated/index.ts'),
 ];
 const GATHER_TIMEOUT_MS = 60_000;
 // The save entry cases' assets; the scenes reuse an app scene file (never loaded here)
@@ -568,9 +569,7 @@ const cleanUp = async (generatedBefore: Buffer[], closeServer: () => Promise<voi
   await closeServer();
   if (isClean) return;
   GENERATED_FILES.forEach((file, i) => fs.writeFileSync(file, generatedBefore[i]));
-  console.log(
-    '- the gather kept the test scenes: restored src/generated/generatedApp* as they were'
-  );
+  console.log('- the gather kept the test scenes: restored src/generated/ as it was');
 };
 
 const main = async () => {

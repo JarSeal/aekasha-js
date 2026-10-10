@@ -17,7 +17,7 @@ import { getGeneratedAppData } from '../../../Scene';
 import { createMaterial, deleteMaterial, type MatProps } from '../../../Material';
 import { getTexture, loadTextureAsync, type TextureProps } from '../../../Texture';
 import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../../HUD';
-import { tslMaterialFileObjects } from '../../../../../generated/generatedAppFns';
+import { getAppData } from '../../../AppData';
 import type { MaterialAsset } from '../../../../schemas/materialSchema';
 import { textureMapKeys } from '../../../../utils/constants';
 import { addDebugToast } from '../../../../debug/DebuggerGUI';
@@ -714,7 +714,7 @@ export const getMaterialTextureIds = (asset: MaterialAsset) => {
 /** Why a material can't be loaded here, if it can't. */
 const getUnavailableReason = (asset: MaterialAsset) => {
   if (!('tslFile' in asset) || !asset.tslFile) return undefined;
-  if ((tslMaterialFileObjects as Record<string, unknown>)[asset.id]) return undefined;
+  if (getAppData().tslMaterialFiles[asset.id]) return undefined;
   return 'its TSL graph is not in this build (a production-gathered build only has the graphs of the materials a scene uses; run yarn dev)';
 };
 

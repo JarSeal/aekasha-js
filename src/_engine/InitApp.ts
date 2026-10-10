@@ -9,6 +9,7 @@ import {
   PROJECT_METADATA,
 } from './core/Config';
 import { initAssets } from './core/Assets/AssetsAPI';
+import { type AppData, setAppData } from './core/AppData';
 import { createHudContainer, getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from './core/HUD';
 import {
   registerDefaultDebugKeyBindings,
@@ -67,22 +68,27 @@ export type InitEngineOptions = {
   /** The app's configuration, merged over the engine defaults per top-level key (the template
    * keeps it in `src/CONFIG.ts`). Default: the engine defaults only. */
   config?: AppConfig;
+  /** The app's gathered scenes and assets: `appData` from `src/generated/`, which
+   * `yarn gatherAppData` writes. */
+  data: AppData;
   /** The app's start: creates the renderer and the scene loader and loads the first scene. Runs
    * after the engine's own init (and the debug tools' registration), before the main loop starts. */
   start: () => Promise<void>;
 };
 
 /**
- * Initializes the engine with the app's configuration, then runs the app's `start`. Call it once,
- * first thing: it reads the environment (the env vars and the `?isDebug` / `?isProdTest` URL
- * params), so the `IS_*` flags read as production until it runs.
+ * Initializes the engine with the app's configuration and data, then runs the app's `start`. Call
+ * it once, first thing: it reads the environment (the env vars and the `?isDebug` / `?isProdTest`
+ * URL params), so the `IS_*` flags read as production until it runs.
  * @example
  * ```ts
  * import { InitEngine, createRenderer, loadScene } from 'aekasha';
  * import config from './CONFIG';
+ * import { appData } from './generated';
  *
  * InitEngine({
  *   config,
+ *   data: appData,
  *   start: async () => {
  *     await createRenderer({ antialias: true });
  *     await loadScene({ sceneId: 'myScene' });
@@ -90,13 +96,14 @@ export type InitEngineOptions = {
  * });
  * ```
  */
-export const InitEngine = async ({ config, start }: InitEngineOptions) => {
+export const InitEngine = async ({ config, data, start }: InitEngineOptions) => {
   // Start app
   try {
     // The environment first (env vars, URL params): every IS_* flag reads as production before
-    // it. Then the configuration, which reads the debug flag for its LS overrides
+    // it. Then the configuration, which reads the debug flag for its LS overrides, and the data
     initEnvironment();
     loadConfig(config);
+    setAppData(data);
     addWindowListeners();
 
     // Logs the engine, toolkit and app versions (they are in the HTML meta tags too)

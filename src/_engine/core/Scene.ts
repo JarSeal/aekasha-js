@@ -17,7 +17,7 @@ import {
   registerSkyBox,
 } from './SkyBox/SkyBox';
 import type { SkyBoxDef } from './SkyBox/SkyBoxTypes';
-import generatedAppData from '../../generated/generatedAppData.json';
+import { getAppData } from './AppData';
 import type { CameraProps } from '../schemas/cameraSchema';
 import type { CoreEntityOpts } from '../schemas/_helperSchemas';
 import type { SceneSpatialDomainEntry } from '../schemas/spatialDomainSchema';
@@ -735,19 +735,22 @@ export const runOnAllSceneExits = () => {
 };
 // @TODO: add deletion methods for all these registers
 
-export const getGeneratedAppData = () => generatedAppData;
+/**
+ * The gathered asset data that {@link InitEngine} was given as `data.json`: the scenes by id, and
+ * in a development build each asset section by id too. Empty before `InitEngine`.
+ */
+export const getGeneratedAppData = () => getAppData().json;
+/** A scene's gathered data by id, or `undefined` for an id the gatherer didn't find. */
 export const getGeneratedSceneData = (sceneId: string) =>
-  getGeneratedAppData().scenes[sceneId as keyof typeof generatedAppData.scenes] as unknown as
-    | SceneData
-    | undefined;
+  getGeneratedAppData().scenes[sceneId] as SceneData | undefined;
 
 /** Registers (creates) the scenes at initEngine (initApp). */
 export const registerScenesFromGeneratedData = async () => {
-  const data = getGeneratedAppData();
-  const sceneIds = Object.keys(data.scenes);
+  const { scenes } = getGeneratedAppData();
+  const sceneIds = Object.keys(scenes);
   for (let i = 0; i < sceneIds.length; i++) {
-    const sceneId = sceneIds[i] as keyof typeof data.scenes;
-    const sceneData = data.scenes[sceneId] as unknown as SceneData;
+    const sceneId = sceneIds[i];
+    const sceneData = scenes[sceneId] as SceneData;
 
     createScene(sceneId, {
       backgroundColor: sceneData.backgroundColor,

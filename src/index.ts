@@ -7,9 +7,11 @@ import { createSceneLoader, loadScene } from './_engine/core/SceneLoader';
 import { CMP } from './_engine/utils/CMP';
 import { IS_DEBUG_ENV } from './_engine/core/Config';
 import config from './CONFIG';
+import { appData } from './generated';
 
 InitEngine({
   config,
+  data: appData,
   start: async () => {
     // Init renderer
     // #region create-renderer (shown in the Hub: hub/pages/features/rendering/)
