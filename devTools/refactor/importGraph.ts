@@ -179,15 +179,24 @@ export const parseModuleSource = (fileName: string, text: string): ParsedModule 
 
 const RESOLVE_SUFFIXES = ['', '.ts', '.d.ts', '/index.ts'];
 
+export type ResolveOptions = {
+  /** Whether a repo-relative file exists */
+  exists: (file: string) => boolean;
+  /** Exact specifier → repo-relative file: the entries' aliases (`ENTRY_FILES`) */
+  aliases?: Readonly<Record<string, string>>;
+};
+
 /**
- * A relative specifier as a repo-relative file (its query, `?worker` / `?raw` / `?url`, dropped);
- * `null` for a package, `undefined` for a relative path that isn't a file
+ * A relative or aliased specifier as a repo-relative file (its query, `?worker` / `?raw` /
+ * `?url`, dropped); `null` for a package, `undefined` for a path or alias that isn't a file
  */
 export const resolveSpecifier = (
   fromFile: string,
   specifier: string,
-  exists: (file: string) => boolean
+  { exists, aliases }: ResolveOptions
 ): string | null | undefined => {
+  const aliased = aliases?.[specifier];
+  if (aliased !== undefined) return exists(aliased) ? aliased : undefined;
   if (!specifier.startsWith('.')) return null;
   const bare = specifier.replace(/\?.*$/, '');
   const base = path.posix.normalize(path.posix.join(path.posix.dirname(fromFile), bare));
@@ -215,7 +224,7 @@ export type ImportGraph = {
 
 export const buildImportGraph = (
   sources: Map<string, string>,
-  exists: (file: string) => boolean
+  resolveOpts: ResolveOptions
 ): ImportGraph => {
   const modules = new Map<string, ParsedModule>();
   const imports: ResolvedImport[] = [];
@@ -223,10 +232,15 @@ export const buildImportGraph = (
     const parsed = parseModuleSource(file, text);
     modules.set(file, parsed);
     for (const imp of parsed.imports) {
-      imports.push({ ...imp, from: file, resolved: resolveSpecifier(file, imp.specifier, exists) });
+      imports.push({
+        ...imp,
+        from: file,
+        resolved: resolveSpecifier(file, imp.specifier, resolveOpts),
+      });
     }
   }
-  const resolveIn = (file: string, specifier: string) => resolveSpecifier(file, specifier, exists);
+  const resolveIn = (file: string, specifier: string) =>
+    resolveSpecifier(file, specifier, resolveOpts);
 
   const resolveExport = (
     file: string,

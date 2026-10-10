@@ -23,6 +23,7 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import { ROOT } from '../assetPipeline/sources';
+import { ENTRY_FILES } from '../aliases';
 import { buildImportGraph, type ImportKind } from './importGraph';
 import { applyMoveRules, getMoveRules, isPascalModuleName, type MoveEntry } from './moveRules';
 
@@ -151,7 +152,8 @@ for (const file of trackedFiles) {
   if (file.startsWith('devTools/refactor/')) continue;
   sources.set(file, fs.readFileSync(path.join(ROOT, file), 'utf8'));
 }
-const graph = buildImportGraph(sources, (f) => tracked.has(f));
+// An entry import (`aekasha/physics`) resolves to the entry file, and through it to the module
+const graph = buildImportGraph(sources, { exists: (f) => tracked.has(f), aliases: ENTRY_FILES });
 
 type Edge = {
   from: string;
