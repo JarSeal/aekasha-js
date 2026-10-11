@@ -215,7 +215,7 @@ Rules:
 
 - Bump once per branch merged to `main` (in the PR), not per commit, at the level of the biggest change on that side since the last merge. Reset the lower parts to 0 (e.g. `1.4.2` → minor bump → `1.5.0`).
 - Engine, toolkit and app are bumped independently; a side with no changes keeps its version.
-- A major bump gets a new codename. Engine codenames follow the sun's path (Dawn → Sunrise → Morning → Zenith → …); toolkit codenames follow the moon's phases (Crescent → Half Moon → Gibbous → Full Moon → …); app codenames follow life stages (Toddler → Preschooler → Kid → Teen → …).
+- A major bump gets a new codename. Engine codenames follow the sun's path (Dawn → Sunrise → Morning → Zenith → Afternoon → Golden Hour → …); toolkit codenames follow the moon's phases (Crescent → Half Moon → Gibbous → Full Moon → …); app codenames follow life stages (Toddler → Preschooler → Kid → Teen → …).
 - Each PR adds an entry to `CHANGELOG.md` with a section per part it bumped (Engine / Toolkit / App, plus Project for repo tooling).
 - Before opening the PR, `yarn checkVersions --against main` must pass. The Stop hook runs the base check (project version = engine version, valid semver) whenever `package.json` changes.
 - After merging to `main`, run `yarn tagRelease` and push the tags it prints.

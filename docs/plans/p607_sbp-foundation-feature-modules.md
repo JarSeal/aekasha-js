@@ -79,7 +79,9 @@ What p606 decided for this plan, and what it left where this plan picks it up:
   reads it through `InitEngine`'s `data` (`core/AppData.ts`: `tslMaterialFiles`, `postFxFiles`),
   so the `import()` maps change `AppData`'s types and the gatherer, not an engine import.
 - **Branch and versions** (p606 D5): from `stage-b`, merged into `stage-b`; then `stage-b` merges
-  to `main` as engine 5.0.0 and toolkit 2.0.0. This plan adds to p606's `CHANGELOG.md` entry and to
+  to `main` as engine 5.0.0 (Golden Hour) and toolkit 2.0.0 (Half Moon), already in `package.json`
+  from p606's Phase 10; run `yarn checkVersions --against main`, not `--against stage-b` (which
+  would ask for another engine bump). This plan adds to p606's `CHANGELOG.md` entry and to
   the Hub migration guide's "Engine 4 → 5" section (`hub/pages/documentation/migration/engine-5.md`):
   `features`, and anything else an app must change.
 

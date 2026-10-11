@@ -475,9 +475,10 @@ other once their blockers land, and can run in parallel branches.
   exception is `_DONE_p605`: its lint rules changed engine, toolkit and app source (`import type`,
   the stats clock, JSDoc), so each got a patch bump.
 - **Stage B** is breaking for engine and toolkit: one engine major and one toolkit major, with new
-  codenames from the sun's and the moon's sequences, chosen when the major merges. The app gets
-  the bump its migration needs. The import codemod and the Hub migration guide ship with the
-  major; no long-lived re-export shims.
+  codenames from the sun's and the moon's sequences (Golden Hour and Half Moon, chosen in p606's
+  Phase 10: `checkVersions` wants them with the bump). The app gets the bump its migration needs.
+  The import codemod and the Hub migration guide ship with the major; no long-lived re-export
+  shims.
   - The majors land with p606 and p607 together (p606 D5), on the `stage-b` integration branch
     below; p608-p611 are then minor or patch bumps (from p606 on, consumers import entries, so
     the moves are internal).
@@ -493,8 +494,8 @@ per merge).
 | --- | --- | --- | --- |
 | Stage A (p601-p605) | each its own; the document plans p602 and p603 shared one | `main` | one per branch (all merged) |
 | p606 | `layering-invasion-and-public-entry` | `stage-b` (cut from `main` when p606 is done) | into `stage-b` after p606's last phase: reviewed alone, its versions and changelog entry already in |
-| p607 | its own, from `stage-b` | `stage-b` | into `stage-b` after p607's last phase; it adds to p606's changelog entry |
-| `stage-b` | — | `main` | right after p607's PR merges: the engine and toolkit majors (codenames chosen then) and the app minor |
+| p607 | its own, from `stage-b` | `stage-b` | into `stage-b` after p607's last phase; it adds to p606's changelog entry, and its check is `yarn checkVersions --against main` (against `stage-b` the engine would need another bump) |
+| `stage-b` | — | `main` | right after p607's PR merges: the engine and toolkit majors (codenames chosen in p606; renaming them is still possible) and the app minor; the changelog entry's date becomes the merge's |
 | p608, then p609; p610 and p611 after p608 | each its own, from `main` | `main` | one per plan when its last phase is done; p608 opens with no other branch open (its codemod reruns on a fresh `main`) |
 | Stage C (p612-p620) | each its own, from `main` | `main` | one per plan; they can run in parallel once their blockers land |
 | Stage D (p621) | its own | `main` | closes the epic |

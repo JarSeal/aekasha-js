@@ -167,7 +167,9 @@ The app gets a minor bump (its code migrates; no app feature changes).
 
 **As decided:** option A. This plan's branch merges into a `stage-b` integration branch (cut from
 `main`), not into `main`; `stage-b` merges to `main` after p607 with the majors, whose codenames are
-chosen then.
+chosen then. **Changed in Phase 10:** `checkVersions` fails a major bump that keeps its codename,
+so they're chosen here (engine 5.0.0 Golden Hour, toolkit 2.0.0 Half Moon); `stage-b`'s merge can
+still rename them.
 
 ## 4. Design
 
