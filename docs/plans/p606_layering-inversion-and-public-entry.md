@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-6 implemented
+Status: in progress | Phases 1-7 implemented
 Category: Architecture, Refactoring
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
 Blocks: p607_sbp-foundation-feature-modules.md, p608_engine-folder-restructure.md, p510_headless-simulation-runtime.md
@@ -506,7 +506,7 @@ what it adds.
   `TextureAtlas.js` (same 3968 bytes: Rollup names it after one of its modules).
 - `yarn verify:scenes`: 96 passed against the Phase 1 baselines.
 
-### Phase 7: the app, the toolkit and the docs' code use the entries
+### Phase 7: the app, the toolkit and the docs' code use the entries — done
 
 1. `devTools/refactor/migrateToEntries.ts`: rewrites deep engine and toolkit imports in the given
    folders to entry imports (each name to its entry, grouped, `import type` kept), from the entries'
@@ -526,6 +526,60 @@ what it adds.
    pulls in (and the system order, risk 1).
 6. `readme.md`'s examples and the Hub's code blocks use `aekasha` imports.
 
+**As built** (in the order A: step 4, B: step 3, C: step 1, D: steps 2 and 5, E: step 6):
+
+- `importGraph.ts`: `resolveSpecifier` / `buildImportGraph` take `{ exists, aliases? }`; an exact
+  alias resolves to its entry file (`moveMap.ts` passes `ENTRY_FILES`), any other bare specifier is
+  still a package. With the app on entries, `entryExports.json` came out unchanged. Phase 6 had left
+  `layoutReport.md` and `entryExports.json` stale (`core/AppData.ts`); regenerated then.
+- The moves: `utils/cameras/followObjectCameraRig.ts` → `toolkit/ecs/FollowObjectCameraRig.ts`
+  (`commontTypes.ts`'s `XYZObject` inlined into its one use, the `offset` option),
+  `utils/world/movingPlatform.ts` → `toolkit/ecs/MovingPlatform.ts`; `PhysicsStressTest.ts`,
+  `characterTestObjects.ts`, `characterTestObstacles.ts` and `characterObstacles.blend` →
+  `src/app/scenes/thirdPersonGymScene/` (the gym's scene file stays in `src/app/` until p609).
+  `eslint.config.js`'s `SIMULATION_FILES` follows. Their rules left `moveRules.ts` once applied (as in
+  Phase 6), not `plan: 'p606'`; the two toolkit files have keep rules (`plan: 'p609'`, which picks
+  their folder). The six exports the docs ratchet flagged in `toolkit/ecs` got JSDoc instead of a
+  docs drop. `createMovingPlatform`'s `opts.deleteMeshOptions` is never read (`controls.delete()`
+  deletes the entity only); its type says so, behaviour unchanged.
+- **Not in the plan:** the toolkit's deprecated re-exports `ecs/InstancedMeshPool.ts` and
+  `InstancedMeshPoolTypes.ts` (`export *` of the engine, "until the toolkit's next major", no
+  importers) are deleted: the toolkit major is `stage-b`'s (D5). For Phase 10's changelog.
+- The codemod is two files, as `importGraph.ts` / `moveMap.ts`: `refactor/entryImports.ts` (the
+  rules, no file system, `entryImports.test.ts`) and `refactor/migrateToEntries.ts` (the CLI:
+  `[--check] <folder | file>...`, walks `src/`, Prettier, writes nothing on an error). One value
+  import and one `import type` per entry at the first import's place (`separate-type-imports`; an
+  inline `type` stays inline, a value import left with inline types only becomes `import type`),
+  an entry import already there merged in. Left alone: engine modules, imports within a toolkit
+  category, `.tsl.ts` imports. Errors: a name in no entry or in two, a namespace / default /
+  side-effect / dynamic import, `export *`, an alias without its file.
+- Run on `src/app`, `src/toolkit`, `src/generated` and the root `.ts` files: 57 of 70 modules
+  rewritten, no name missing from an entry (Phase 3's lists covered them all). `gatherAppData.ts`
+  emits `import type { SceneData, ScenePrimitiveAssets } from 'aekasha'` and `index.ts`'s
+  `import type { AppData } from 'aekasha'`; a gather is byte-identical to the codemod's output.
+- **Step 5, the bundle:** without a change, the main chunk grew 5.1 kB gzip and lost the lazy
+  `ECSStressTest` and `PhysicsTierPolicy` chunks: an entry file counted as having side effects, so
+  `src/index.ts`'s `aekasha` import made the main chunk run every module the entry re-exports.
+  `getEntryModuleSideEffects` (`devTools/aliases.ts`) in `vite.config.ts`'s
+  `build.rollupOptions.treeshake.moduleSideEffects` marks the 16 entry files only as side-effect
+  free; the bundle baseline is then unchanged (the module order inside the main chunk isn't).
+  An entry file must stay re-exports only (Phase 8).
+- **Step 5, the system order** (every stage's `getSystemOrder`, Phase 2's five runs, before and
+  after, on the dev server and on `VITE_APP_ENV=test` builds): the builds are identical (bar Phase 2's
+  `cameraHelperSyncSystem` / `lightHelperSyncSystem` race). On the dev server one tie moved:
+  `physicsTierPolicyFrameSystem` (`APP_LOGIC`, order 0) now registers before the toolkit's and the
+  app's order-0 systems. The dev server doesn't tree-shake, so `MovingPlatform`'s `aekasha/physics`
+  import runs `PhysicsTierPolicy`'s `registerPlugin` while `AppECSPlugins`' imports load (before,
+  a debug module or the physics tiers scene loaded it later). Accepted (confirmed): the system
+  returns at once unless a policy has `cadence: 'FRAMES'`, which no scene sets; p607 removes
+  registration at module load.
+- `readme.md`'s examples 1, 4, 5 and `hub/pages/documentation/code-blocks/intro.md` import from
+  `aekasha` / `aekasha/physics` (the page's line highlights follow). `yarn hub:build` passes; its
+  four `{@link InitEngine}` warnings (`AppData.ts`, `Scene.ts`, from Phase 6) are Phase 9's.
+- `yarn verify:scenes`: 96 passed against the Phase 1 baselines; `verify:baselines` unchanged
+  after B's update (`api.json`: the moved and removed exports; `bundle.json`: 3.9 kB gzip from the
+  main chunk's `_engine/utils` group to `toolkit`; `docs.json`: `toolkit/ecs` 10 / 10).
+
 ### Phase 8: the boundary lint and the `@example` check
 
 1. `eslint-plugin-import` loaded; the rules in §4.5, errors everywhere (D1).
@@ -534,6 +588,9 @@ what it adds.
    imports by path: an exception to the "only `aekasha*`" rule.
 4. The done check: `grep` finds no engine import of the app, the toolkit, `src/*.ts` or
    `src/generated/`.
+5. An entry file holds only `export … from` (found in Phase 7: `getEntryModuleSideEffects` declares
+   them side-effect free, so the build would drop anything else they run). A check next to
+   `baselines.ts`' `export *` failure, or in `aliases.test.ts`.
 
 ### Phase 9: Hub, CLAUDE.md and the migration guide
 
@@ -548,7 +605,13 @@ what it adds.
 3. p602's `moveRules.ts` notes and p607 / p608 / p510's stubs updated for D2 and what this plan
    did (p510 still cites the `LoopState` imports as open). p607's stub gets the feature-schema seam
    (D3, changed in Phase 3). p608's §"The moves" keeps `ECSStressTest` in the kernel
-   (`moveRules.ts`, p602 D6), not the app (found in Phase 4).
+   (`moveRules.ts`, p602 D6), not the app (found in Phase 4), and its gameplay and test moves are
+   done (Phase 7).
+4. Found in Phase 7: root `CLAUDE.md`'s Build config notes (the entries' `moduleSideEffects`, and
+   "Nothing imports them yet" is false now) and the commands (`migrateToEntries.ts`); the four
+   `{@link InitEngine}` in `AppData.ts` / `Scene.ts` that TypeDoc can't resolve (no import in
+   scope: `{@link InitApp!InitEngine}`). `readme.md`'s examples' imports and the code-blocks page
+   are done (Phase 7).
 
 ### Phase 10: versioning and mark done
 

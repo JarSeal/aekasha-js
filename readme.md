@@ -197,9 +197,7 @@ The split between `_engine`, `toolkit` and `app` is a convention: the engine sta
 ```ts
 // src/index.ts
 import * as THREE from 'three/webgpu';
-import { InitEngine } from './_engine/InitApp';
-import { createRenderer } from './_engine/core/Renderer';
-import { createSceneLoader, loadScene } from './_engine/core/SceneLoader';
+import { InitEngine, createRenderer, createSceneLoader, loadScene } from 'aekasha';
 import config from './CONFIG';
 import { appData } from './generated'; // written by yarn gatherAppData
 
@@ -290,10 +288,8 @@ The `sceneFile` exports a `scene` function that runs while the scene loads.
 
 ```ts
 // src/app/myScene.ts
-import { createGeometry } from '../_engine/core/Geometry';
-import { createMaterial } from '../_engine/core/Material';
-import { createMeshEntity } from '../_engine/core/MeshManager';
-import { createPhysicsEntity } from '../_engine/core/PhysicsManager';
+import { createGeometry, createMaterial, createMeshEntity } from 'aekasha';
+import { createPhysicsEntity } from 'aekasha/physics';
 
 export const scene = async () => {
   const position = { x: 0, y: 5, z: 0 };
@@ -316,9 +312,8 @@ export const scene = async () => {
 ```ts
 // src/app/systems/spin.ts
 import * as THREE from 'three/webgpu';
-import type { ECSWorld } from '../../_engine/core/ECS';
-import { ComponentType } from '../../_engine/core/ECS/ECSCoreComponents';
-import { ECSSystemStage } from '../../_engine/core/ECS/SystemStages';
+import { ComponentType, ECSSystemStage } from 'aekasha';
+import type { ECSWorld } from 'aekasha';
 
 // The component's key, and its data's type added to the engine's component map
 export const SpinComponentType = { SPIN: 'APP_SPIN' } as const;
