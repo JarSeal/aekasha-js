@@ -896,8 +896,9 @@ const onWorkerMessage = (event: MessageEvent<PhysicsDownProtocol>) => {
         bodyActivity.sleeping = data.sleepingBodies;
         hasBodyActivity = true;
       }
-      // The panel shows the pure step time only — never step + messaging overhead.
-      updatePhysicsPanel(data.stepDuration);
+      // The panel shows the pure step time only — never step + messaging overhead. The flag here
+      // too (the panel exists only there): a production build drops the call
+      if (IS_DEBUG_ENV) updatePhysicsPanel(data.stepDuration);
     }
     return;
   } else if (type === PhysicsProtocolType.EVENTS_PUSH) {

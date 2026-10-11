@@ -96,151 +96,157 @@ export type InitEngineOptions = {
  * });
  * ```
  */
-export const InitEngine = async ({ config, data, start }: InitEngineOptions) => {
-  // Start app
-  try {
-    // The environment first (env vars, URL params): every IS_* flag reads as production before
-    // it. Then the configuration, which reads the debug flag for its LS overrides, and the data
-    initEnvironment();
-    loadConfig(config);
-    setAppData(data);
-    addWindowListeners();
-
-    // Logs the engine, toolkit and app versions (they are in the HTML meta tags too)
-    consoleBootText();
-
-    // Create base scene
-    createRootScene();
-
-    // Init ECS
-    const ecsWorld = initECSWorld();
-
-    // HUD container
-    createHudContainer();
-
-    // Resolve the assets config (the assets worker is only started by its first request)
-    initAssets();
-
-    // Register scenes from generated data
-    await registerScenesFromGeneratedData();
-
-    await load3DSymbols();
-
-    // Register Managers
-    await registerCameraManager();
-    await registerLightManager(ecsWorld);
-    registerLineManager();
-
-    // Initializes the debug camera (if in debug mode)
-    await initDebugCamera(ecsWorld);
-
-    registerPhysicsManager(ecsWorld);
-    await initNewPhysics(true); // doNotCreateWorld — createPhysicsWorld() below owns that + physicsWorldEnabled
-    // Before the first world: the debugger's saved world settings are what worlds are built from
-    if (IS_DEBUG_ENV) await registerPhysicsAPIDebugGUI();
-    if (getConfig().physics?.enabled) {
-      await createPhysicsWorld();
-    }
-    if (IS_DEBUG_ENV) await registerPhysicsDeterminismProbe();
-
-    if (IS_DEBUG_ENV) {
-      await registerUndoRedoModule();
-      initUndoRedo();
-      await registerStatsModule();
-      await registerSkyBoxDebugGUI();
-      await registerRaycastDebugGUI();
-      await registerDebuggerGUI();
-      await registerAxesGizmoModule();
-      await registerEnvBallModule();
-      // Before restoreSavedView (the end of InitEngine) can switch back to it
-      await registerMaterialEditor();
-      registerDefaultDebugKeyBindings();
-      await registerCharacterTools();
-      await registerECSModule();
-      await registerSpatialIndexDebugGUI();
-      await registerLodDebugGUI();
-    }
-    if (IS_DEBUG_ENV || IS_PROD_TEST_MODE) {
-      // Loaded here (not the IS_DEBUG_ENV-only block above) so isProdTest mode can still read
-      // the persisted "debug start scene" setting via getDebugToolsState() in SceneLoader.ts —
-      // registerDebugToolsModule()/getDebugToolsState() are prod-test-aware themselves; the
-      // debug tools UI panel they back stays IS_DEBUG_ENV-only regardless (initDebugTools()).
-      await registerDebugToolsModule();
-      // Debug env, and prodTest when enabled there. Before the windows are restored from LS
-      await registerProfiler();
-      // A profiler tab (loads where the profiler does). Before start: its allocation
-      // tracker must see the renderer's init()
-      await registerGPUMemoryDebugGUI();
-      await registerMainLoopDebugGUI();
-      await registerOnScreenTools();
-      if (IS_PROD_TEST_MODE) registerDefaultProdTestKeyBindings();
-    }
-
-    // Before start, so it is ready for the first scene load (it needs no renderer yet)
-    initPostFX();
-
-    // The scene runner's window.__AEK_TEST__ (?aekTest=true; debug env and prod test mode).
-    // Before the first scene load, so it sees that load and its probe report
-    await registerTestBridge();
-
-    await start();
-
-    // Start engine/loop if root scene has children
-    const rootScene = getRootScene() as Scene;
-    if (rootScene.children.length) initMainLoop();
-
-    // Create debug GUIs and utils
-    if (IS_DEBUG_ENV) {
-      await createRendererDebugGUI();
-      createPhysicsAPIDebugGUI();
-      await createAssetsDebugGUI();
-      // After start: measuring needs the renderer
-      await registerPostFxProfiler();
-      // After the profiler: the tab re-applies a persisted measuring override
-      await createPostFXDebugGUI();
-      createCharactersDebuggerGUI();
-      createSkyBoxDebugGUI();
-
-      // Make the debug toaster appear above the stats cmp
-      const statsCmp = getStatsCmp();
-      let yOffset = '-268px';
-      if (statsCmp) yOffset = `${-statsCmp.elem.offsetHeight - 16}px`;
-      getHUDRootCMP().add(
-        createToaster({
-          id: DEBUG_TOASTER_ID,
-          // Shown in every view (ViewManager.ts)
-          className: KEEP_IN_VIEWS_CLASS,
-          settings: {
-            animationTimeMs: 200,
-            verticalPosition: 'bottom',
-            horizontalPosition: 'left',
-            toastDirection: 'up',
-            toastAppearFromDirection: 'left',
-            offset: { x: '18px', y: yOffset },
-            closeBtnIcon: getSvgIcon('x'),
-            icons: {
-              info: getSvgIcon('info'),
-              warning: getSvgIcon('warning'),
-              alert: getSvgIcon('alert'),
-            },
-          },
-        })
-      );
-      // Toasts from the boot, eg. an unknown ?startScene
-      flushQueuedDebugToasts();
-    }
-
-    // Load draggableWindow states
-    loadDraggableWindowStatesFromLS();
-
-    // Back to the view that was active before the refresh: last, so the scene and every debug
-    // GUI exist (hidden by the view) when switching back. Not awaited: the loop already runs
-    if (IS_DEBUG_ENV) void restoreSavedView();
-  } catch (err) {
+export const InitEngine = (options: InitEngineOptions) =>
+  // A promise's catch, not a try block: Rollup keeps everything inside a try block whole (its
+  // `tryCatchDeoptimization`), so the debug blocks below and the app's `start` stayed in a
+  // production build after `__AEK_DEBUG__` had folded their conditions
+  initEngineAsync(options).catch((err: unknown) => {
     const msg = 'Error at app start function (InitEngine)';
     lerror(msg, err);
     throw new Error(msg);
+  });
+
+/** {@link InitEngine}'s steps, in order. */
+const initEngineAsync = async ({ config, data, start }: InitEngineOptions) => {
+  // The environment first (env vars, URL params): every IS_* flag reads as production before
+  // it. Then the configuration, which reads the debug flag for its LS overrides, and the data
+  initEnvironment();
+  loadConfig(config);
+  setAppData(data);
+  addWindowListeners();
+
+  // Logs the engine, toolkit and app versions (they are in the HTML meta tags too)
+  consoleBootText();
+
+  // Create base scene
+  createRootScene();
+
+  // Init ECS
+  const ecsWorld = initECSWorld();
+
+  // HUD container
+  createHudContainer();
+
+  // Resolve the assets config (the assets worker is only started by its first request)
+  initAssets();
+
+  // Register scenes from generated data
+  await registerScenesFromGeneratedData();
+
+  // The flag here too (load3DSymbols checks it): a production build then drops the call
+  if (IS_DEBUG_ENV) await load3DSymbols();
+
+  // Register Managers
+  await registerCameraManager();
+  await registerLightManager(ecsWorld);
+  registerLineManager();
+
+  // Initializes the debug camera (if in debug mode)
+  await initDebugCamera(ecsWorld);
+
+  registerPhysicsManager(ecsWorld);
+  await initNewPhysics(true); // doNotCreateWorld — createPhysicsWorld() below owns that + physicsWorldEnabled
+  // Before the first world: the debugger's saved world settings are what worlds are built from
+  if (IS_DEBUG_ENV) await registerPhysicsAPIDebugGUI();
+  if (getConfig().physics?.enabled) {
+    await createPhysicsWorld();
   }
+  if (IS_DEBUG_ENV) await registerPhysicsDeterminismProbe();
+
+  if (IS_DEBUG_ENV) {
+    await registerUndoRedoModule();
+    initUndoRedo();
+    await registerStatsModule();
+    await registerSkyBoxDebugGUI();
+    await registerRaycastDebugGUI();
+    await registerDebuggerGUI();
+    await registerAxesGizmoModule();
+    await registerEnvBallModule();
+    // Before restoreSavedView (the end of InitEngine) can switch back to it
+    await registerMaterialEditor();
+    registerDefaultDebugKeyBindings();
+    await registerCharacterTools();
+    await registerECSModule();
+    await registerSpatialIndexDebugGUI();
+    await registerLodDebugGUI();
+  }
+  if (IS_DEBUG_ENV || IS_PROD_TEST_MODE) {
+    // Loaded here (not the IS_DEBUG_ENV-only block above) so isProdTest mode can still read
+    // the persisted "debug start scene" setting via getDebugToolsState() in SceneLoader.ts —
+    // registerDebugToolsModule()/getDebugToolsState() are prod-test-aware themselves; the
+    // debug tools UI panel they back stays IS_DEBUG_ENV-only regardless (initDebugTools()).
+    await registerDebugToolsModule();
+    // Debug env, and prodTest when enabled there. Before the windows are restored from LS
+    await registerProfiler();
+    // A profiler tab (loads where the profiler does). Before start: its allocation
+    // tracker must see the renderer's init()
+    await registerGPUMemoryDebugGUI();
+    await registerMainLoopDebugGUI();
+    await registerOnScreenTools();
+    if (IS_PROD_TEST_MODE) registerDefaultProdTestKeyBindings();
+  }
+
+  // Before start, so it is ready for the first scene load (it needs no renderer yet)
+  initPostFX();
+
+  // The scene runner's window.__AEK_TEST__ (?aekTest=true; debug env and prod test mode).
+  // Before the first scene load, so it sees that load and its probe report. The flags here too
+  // (registerTestBridge checks them): a production build then drops the call
+  if (IS_DEBUG_ENV || IS_PROD_TEST_MODE) await registerTestBridge();
+
+  await start();
+
+  // Start engine/loop if root scene has children
+  const rootScene = getRootScene() as Scene;
+  if (rootScene.children.length) initMainLoop();
+
+  // Create debug GUIs and utils
+  if (IS_DEBUG_ENV) {
+    await createRendererDebugGUI();
+    createPhysicsAPIDebugGUI();
+    await createAssetsDebugGUI();
+    // After start: measuring needs the renderer
+    await registerPostFxProfiler();
+    // After the profiler: the tab re-applies a persisted measuring override
+    await createPostFXDebugGUI();
+    createCharactersDebuggerGUI();
+    createSkyBoxDebugGUI();
+
+    // Make the debug toaster appear above the stats cmp
+    const statsCmp = getStatsCmp();
+    let yOffset = '-268px';
+    if (statsCmp) yOffset = `${-statsCmp.elem.offsetHeight - 16}px`;
+    getHUDRootCMP().add(
+      createToaster({
+        id: DEBUG_TOASTER_ID,
+        // Shown in every view (ViewManager.ts)
+        className: KEEP_IN_VIEWS_CLASS,
+        settings: {
+          animationTimeMs: 200,
+          verticalPosition: 'bottom',
+          horizontalPosition: 'left',
+          toastDirection: 'up',
+          toastAppearFromDirection: 'left',
+          offset: { x: '18px', y: yOffset },
+          closeBtnIcon: getSvgIcon('x'),
+          icons: {
+            info: getSvgIcon('info'),
+            warning: getSvgIcon('warning'),
+            alert: getSvgIcon('alert'),
+          },
+        },
+      })
+    );
+    // Toasts from the boot, eg. an unknown ?startScene
+    flushQueuedDebugToasts();
+  }
+
+  // Load draggableWindow states
+  loadDraggableWindowStatesFromLS();
+
+  // Back to the view that was active before the refresh: last, so the scene and every debug
+  // GUI exist (hidden by the view) when switching back. Not awaited: the loop already runs
+  if (IS_DEBUG_ENV) void restoreSavedView();
 };
 
 const consoleBootText = () => {

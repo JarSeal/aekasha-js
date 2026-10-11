@@ -541,7 +541,8 @@ export async function loadDebugModuleAsync<T>(
  * }
  */
 export const isDebugReady = <T>(ref: DebugModuleRef<T>): ref is { current: T } =>
-  !!(IS_DEBUG_ENV && ref?.current);
+  // `__AEK_DEBUG__` first: a production build folds the check to false, and its callers' code out
+  __AEK_DEBUG__ && !!(IS_DEBUG_ENV && ref?.current);
 
 /**
  * Accessor: Returns the module if debug is active and loaded, otherwise undefined.
@@ -551,7 +552,11 @@ export const useDebug = <T>(
   ref: DebugModuleRef<T> | null,
   includeInProdTestMode: boolean = false
 ): T | undefined =>
-  (IS_DEBUG_ENV || includeInProdTestMode) && ref?.current ? ref.current : undefined;
+  // `__AEK_DEBUG__` first: a production build folds the result to undefined, so a wrapper's
+  // `useDebug(ref)?.fn()` and the wrapper itself leave the bundle
+  __AEK_DEBUG__ && (IS_DEBUG_ENV || includeInProdTestMode) && ref?.current
+    ? ref.current
+    : undefined;
 
 /** Determines and returns the light types */
 export const getLightCharacteristics = (light: THREE.Light) => {

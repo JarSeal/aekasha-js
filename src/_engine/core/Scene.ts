@@ -8,6 +8,7 @@ import type { TextureProps } from './Texture';
 import { deleteTexture, getTexture } from './Texture';
 import { initMainLoop } from './MainLoop';
 import { updateDebuggerSceneTitle } from '../debug/DebuggerGUI';
+import { IS_DEBUG_ENV } from './Config';
 import type { LightProps } from './LightManager';
 import type { ImportAssetParams } from './Import/ImportTypes';
 import {
@@ -305,9 +306,13 @@ export const setCurrentScene = (id: string | null) => {
     rootScene.add(nextScene);
   }
 
-  updateDebuggerSceneTitle(
-    currentSceneOpts?.name || id || nextScene?.userData.id || '[No scene..]'
-  );
+  // The flag here too (the debugger exists only there): a production build drops the call, whose
+  // property reads it couldn't drop otherwise
+  if (IS_DEBUG_ENV) {
+    updateDebuggerSceneTitle(
+      currentSceneOpts?.name || id || nextScene?.userData.id || '[No scene..]'
+    );
+  }
 
   if (rootScene.children.length) initMainLoop();
 

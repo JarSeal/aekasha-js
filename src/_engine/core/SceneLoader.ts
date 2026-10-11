@@ -491,7 +491,8 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
   let loader: SceneLoader | undefined = getCurrentSceneLoader();
   if (targetLoaderId) {
     loader = sceneLoaders.find((sl) => sl.id === targetLoaderId);
-    if (!loader && targetLoaderId === DEBUGGER_SCENE_LOADER_ID) {
+    // Only the debug env targets the debugger's loader (above): a production build drops this
+    if (!loader && IS_DEBUG_ENV && targetLoaderId === DEBUGGER_SCENE_LOADER_ID) {
       // A stale debug setting must never kill boot, fall back to the current loader
       lwarn(
         `Could not find the debugger scene loader (loader id "${targetLoaderId}") in loadScene, using the current scene loader instead.`

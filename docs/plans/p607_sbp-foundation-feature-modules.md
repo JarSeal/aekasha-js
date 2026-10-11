@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-3 implemented
 Category: Build, Performance, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
 Blocks: p608_engine-folder-restructure.md, p611_sbp-tooling-profiles-and-marketing.md, p510_headless-simulation-runtime.md
@@ -479,7 +479,7 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
 - **Running the runner against a build** writes `dist-stats/` too (the visualizer ignores
   `--outDir`): `verify:baselines --no-build` then refuses; run it with a build.
 
-### Phase 3: `__AEK_DEBUG__`
+### Phase 3: `__AEK_DEBUG__` — done
 
 1. The define, the declaration, `initEnvironment`'s guard, the loader guards (D7).
 2. The production check in `verify:baselines`.
@@ -509,11 +509,10 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
     branch as `if (IS_DEBUG_ENV) ;`, and the `import()` inside still creates an orphan chunk
     (nothing loads it; it pulled `Snapshot` and `DevFiles` along). The scenes' identical
     `if (IS_DEBUG_ENV) { await import() }` blocks fold, and so does the engine's. Even
-    `loadDebugModuleAsync` there kept its argument. Fixed with `if (__AEK_DEBUG__ && IS_DEBUG_ENV)`:
-    a literal folds from the first pass. App code in `start` that gates a debug `import()` needs
-    the same (Phase 10's Hub text says so).
+    `loadDebugModuleAsync` there kept its argument. Step 1 used `if (__AEK_DEBUG__ && IS_DEBUG_ENV)`
+    there; **step 3 found the cause and reverted it** (below): `InitEngine`'s `try` block.
   - Rollup keeps the `register*` wrappers' declarations (never called) and the empty
-    `if (IS_DEBUG_ENV) ;` shells; the minifier removes most of it.
+    `if (IS_DEBUG_ENV) ;` shells; the minifier removes most of it. Same cause.
 - Bundle after step 1: no `_dbg__` chunk and no `tweakpane.js` in `dist/`; `index.js` 430.5 →
   402.2 kB gzip (−28.3 kB: `three` −9.0, `_engine/core` −12.2, `debug` −5.4); gone with their only
   non-debug importer: `Snapshot`, `OrbitControls`, `DevFiles`, `DialogWindow`, `ECSStressTest`.
@@ -536,6 +535,40 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
 - Checked with a mutation: a `VITE_APP_ENV=test` build reports 58 debug files, 110 modules and 16
   wrappers, and `--update` refuses. On the production build it reports the 14 wrappers in
   `assets/index.js` and nothing else: step 3's list.
+
+**As built (step 3):**
+
+- **The cause of step 1's leftovers: Rollup's `treeshake.tryCatchDeoptimization`** (on by
+  default). `InitEngine`'s whole body was a `try { … } catch`, and Rollup includes everything in
+  a `try` block whole, and fully includes the arguments of a parameter called there: so every
+  `if (IS_DEBUG_ENV) { await registerX() }` block's call stayed (rendered as `if (IS_DEBUG_ENV) ;`,
+  but `registerX` and its wrapper module stayed), and `await start()` kept the app's whole
+  `start` callback, hence `_dbg__exampleHub`'s orphan chunk. Fixed in `InitApp.ts`: the body is
+  `initEngineAsync`, and `InitEngine = (options) => initEngineAsync(options).catch(…)` with the
+  same log and error (the same rejection as before). `src/index.ts` is back to a plain
+  `if (IS_DEBUG_ENV)`. Not `tryCatchDeoptimization: false`: that changes how every `try` in three
+  and Rapier is shaken (feature detection relies on it). **A `try` block around debug-gated code
+  keeps it in a production build:** later phases' install code (`onDebug` hooks run inside one?)
+  must keep debug calls out of `try` blocks, or behind `__AEK_DEBUG__`.
+- `useDebug` and `isDebugReady` start with `__AEK_DEBUG__ &&`: their result folds, so a wrapper
+  whose body is `useDebug(ref)?.fn()` becomes empty and leaves with its calls.
+- Five call sites got the flag their callee already checks, so a production build drops the
+  call (an `await` of an empty async function, or a call whose arguments read properties, stays
+  otherwise): `InitApp.ts`' `load3DSymbols()` (`IS_DEBUG_ENV`) and `registerTestBridge()`
+  (`IS_DEBUG_ENV || IS_PROD_TEST_MODE`), `Scene.ts`' `updateDebuggerSceneTitle`, `PhysicsAPI.ts`'
+  `updatePhysicsPanel` (the `TRANSFORMS_PUSH` one), and `SceneLoader.ts`' missing debugger
+  loader fallback (`IS_DEBUG_ENV &&`: only the debug env targets that loader). Debug env and
+  prodTest unchanged; production loses two `await`s of resolved promises in `InitEngine`.
+- Bundle (`bundle.json` recorded): `index.js` 430.5 → 401.3 kB gzip (−29.1 kB), its modules
+  218 → 197 (gzip sum 916 → 871 kB); `_engine/debug` gone from main (the 14 wrappers), and with it
+  `DefaultDebugKeyBindings` (`core/Input` −2.9 kB), the Toaster and `3DSymbols` (`core/UI`
+  −3.4 kB); `three` −9.0 kB (`OrbitControls` and the debug-only helpers). `GLTFLoader` and
+  `DRACOLoader` stay in main for `Import/GLTFSource.ts` (Phase 8, D14). The debug check: none.
+  `api.json` and `docs.json` unchanged.
+- Checks: `yarn verify:scenes` 96 passed (24 scenes × 4 configurations, WebGPU, macOS): hashes,
+  snapshots and the system order unchanged, so the debug and prodTest configurations behave as
+  before (the dev server, where `__AEK_DEBUG__` is true). `yarn test` 225 passed, lint, `tsc`
+  (both projects), the docs ratchet.
 
 ### Phase 4: the install contract and the kernel
 
