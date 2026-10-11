@@ -237,15 +237,15 @@ export const scene = async () =>
       sphere.rotation.y += transformMainSpeedValue(0.1);
     });
 
+    // Input (replaced by id on the next visit; it stays bound after the scene, as before)
+    createKeyBinding({
+      id: 'scene01-log-d-press',
+      type: 'KEY_DOWN',
+      chord: { key: 'd' },
+      fn: (_, time) => {
+        llog('PRESSED', performance.now() - time);
+      },
+    });
+
     resolve('testScene1');
   });
-
-// Input
-createKeyBinding({
-  id: 'scene01-log-d-press',
-  type: 'KEY_DOWN',
-  chord: { key: 'd' },
-  fn: (_, time) => {
-    llog('PRESSED', performance.now() - time);
-  },
-});

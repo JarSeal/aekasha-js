@@ -1,14 +1,15 @@
 import * as THREE from 'three/webgpu';
 import { createRenderer, InitEngine, createSceneLoader, loadScene, IS_DEBUG_ENV } from 'aekasha';
-// The app's and the toolkit's ECS plugins, registered after the engine's own
-import './AppECSPlugins';
 import { CMP } from 'aekasha/ui';
 import config from './CONFIG';
 import { appData } from './generated';
+import { appECSPlugins } from './AppECSPlugins';
 
 InitEngine({
   config,
   data: appData,
+  // Installed in this order, after the engine's own (the app's last)
+  features: [appECSPlugins],
   start: async () => {
     // Init renderer
     // #region create-renderer (shown in the Hub: hub/pages/features/rendering/)

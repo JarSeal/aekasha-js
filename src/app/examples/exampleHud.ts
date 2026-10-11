@@ -7,10 +7,10 @@ import { registerOnAllSceneExits } from 'aekasha';
 
 let panel: TCMP | null = null;
 
-registerOnAllSceneExits('exampleHud', () => {
+const removePanel = () => {
   panel?.remove();
   panel = null;
-});
+};
 
 /**
  * Shows the example's HUD panel (one per scene)
@@ -18,6 +18,8 @@ registerOnAllSceneExits('exampleHud', () => {
  * @returns the panel, to update with `panel.updateText(text)`
  */
 export const createExampleHud = (text: string) => {
+  // Registered by id, so once however many scenes show a panel
+  registerOnAllSceneExits('exampleHud', removePanel);
   panel?.remove();
   panel = getHUDRootCMP().add({
     text,
