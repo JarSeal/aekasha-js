@@ -1,9 +1,10 @@
 import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from './SystemStages';
 import { isAnyLightHelperVisible } from '../LightManager';
 import { IS_DEBUG_ENV } from '../Config';
-import { ECSWorld } from '../ECS';
+import type { ECSWorld } from '../ECS';
 import { ComponentType, OBJECT3D_TAGS } from './ECSCoreComponents';
 import { CoreComponentType } from './ECSRegistry';
+import type { FeatureContext } from '../Features';
 
 // --- UNIVERSAL VISIBILITY HOOKS ---
 
@@ -51,116 +52,123 @@ export function reconcileObject3DVisibility(
   objComp.value.visible = !isDisabled && !isFrustumCulled && !isObjectCulled && !isLodCulled;
 }
 
-ECSWorld.registerComponentHooks(ComponentType.DISABLED, {
-  onAddComponent: (entityId, world) => {
-    reconcileObject3DVisibility(entityId, world, { isDisabled: true });
+/**
+ * Installs the core ECS plumbing (the kernel, p607): the visibility and persistence hooks, and the
+ * core plugin's object3D sync, lifetime and look-at systems, which every world runs.
+ * @internal
+ */
+export const installCoreSystems = (ctx: FeatureContext) => {
+  ctx.registerComponentHooks(ComponentType.DISABLED, {
+    onAddComponent: (entityId, world) => {
+      reconcileObject3DVisibility(entityId, world, { isDisabled: true });
 
-    // Hide Debug Helpers (Gizmos)
-    if (IS_DEBUG_ENV) {
-      const helper = world.getComponent(entityId, ComponentType.DEBUG_LIGHT_HELPER);
-      if (helper) helper.value.visible = false;
-    }
-
-    // Recursively disable possible targets
-    const targetLink = world.getComponent(entityId, ComponentType.TARGET_LINK);
-    if (targetLink) {
-      world.addComponent(targetLink.targetId, ComponentType.DISABLED, true);
-    }
-
-    // @TODO: for physics, you need to take these into account as well
-  },
-
-  onRemoveComponent: (entityId, world) => {
-    reconcileObject3DVisibility(entityId, world, { isDisabled: false });
-
-    if (IS_DEBUG_ENV) {
-      const helper = world.getComponent(entityId, ComponentType.DEBUG_LIGHT_HELPER);
-      if (helper) {
-        helper.value.visible = isAnyLightHelperVisible();
+      // Hide Debug Helpers (Gizmos)
+      if (IS_DEBUG_ENV) {
+        const helper = world.getComponent(entityId, ComponentType.DEBUG_LIGHT_HELPER);
+        if (helper) helper.value.visible = false;
       }
-    }
 
-    // Recursively enable possible targets
-    const targetLink = world.getComponent(entityId, ComponentType.TARGET_LINK);
-    if (targetLink) {
-      world.removeComponent(targetLink.targetId, ComponentType.DISABLED);
-    }
+      // Recursively disable possible targets
+      const targetLink = world.getComponent(entityId, ComponentType.TARGET_LINK);
+      if (targetLink) {
+        world.addComponent(targetLink.targetId, ComponentType.DISABLED, true);
+      }
 
-    // @TODO: for physics, you need to take these into account as well
-  },
-});
+      // @TODO: for physics, you need to take these into account as well
+    },
 
-// Register onAddComponent hook for OBJECT3D
-ECSWorld.registerComponentHooks(ComponentType.OBJECT3D, {
-  onAddComponent: (entityId, world) => {
-    const obj3DComp = world.getComponent(entityId, ComponentType.OBJECT3D);
-    if (!obj3DComp) return;
-    const obj = obj3DComp.value;
-    if (obj) {
-      for (const detector of OBJECT3D_TAGS) {
-        if (detector.prop in obj) {
-          world.addComponent(entityId, detector.tag, true);
+    onRemoveComponent: (entityId, world) => {
+      reconcileObject3DVisibility(entityId, world, { isDisabled: false });
+
+      if (IS_DEBUG_ENV) {
+        const helper = world.getComponent(entityId, ComponentType.DEBUG_LIGHT_HELPER);
+        if (helper) {
+          helper.value.visible = isAnyLightHelperVisible();
         }
       }
-      if (obj.userData.isPhysicsObject) {
-        world.addComponent(entityId, ComponentType.TAG_IS_PHYSICS_OBJECT, true);
+
+      // Recursively enable possible targets
+      const targetLink = world.getComponent(entityId, ComponentType.TARGET_LINK);
+      if (targetLink) {
+        world.removeComponent(targetLink.targetId, ComponentType.DISABLED);
       }
-    }
-  },
-});
 
-// Register PERSISTENT onAddComponent and onRemoveComponent logic for TARGET_LINKs
-ECSWorld.registerComponentHooks(ComponentType.PERSISTENT, {
-  /** When an entity is marked persistent, ensure its linked target survives as well. */
-  onAddComponent: (entityId, world) => {
-    const targetLink = world.getComponent(entityId, ComponentType.TARGET_LINK);
-    if (targetLink && world.isAlive(targetLink.targetId)) {
-      world.addComponent(targetLink.targetId, ComponentType.PERSISTENT, true);
-    }
-  },
-  /** If persistence is removed, the linked target is no longer protected by this parent. */
-  onRemoveComponent: (entityId, world) => {
-    const targetLink = world.getComponent(entityId, ComponentType.TARGET_LINK);
-    if (targetLink && world.isAlive(targetLink.targetId)) {
-      world.removeComponent(targetLink.targetId, ComponentType.PERSISTENT);
-    }
-  },
-});
-ECSWorld.registerComponentHooks(ComponentType.TARGET_LINK, {
-  /** When the TARGET_LINK is added, and if the parent entity is PERSISTENT, ensure the target entity is also. */
-  onAddComponent: (entityId, world) => {
-    // If the looker is already persistent, make the new target persistent immediately
-    if (world.hasComponent(entityId, ComponentType.PERSISTENT)) {
-      const link = world.getComponent(entityId, ComponentType.TARGET_LINK);
-      if (link) world.addComponent(link.targetId, ComponentType.PERSISTENT, true);
-    }
-  },
-});
+      // @TODO: for physics, you need to take these into account as well
+    },
+  });
 
-// --- PLUGIN REGISTRATION ---
-// registerCorePlugin (not registerPlugin): these are universal engine
-// plumbing every world needs to function — without object3DSyncSystem in
-// particular, a world's ECS Transform updates never reach its Object3Ds.
-// A world opting out via `applyGlobalPlugins: false` should only skip
-// app/feature systems (e.g. light frustum culling), not this.
+  // Register onAddComponent hook for OBJECT3D
+  ctx.registerComponentHooks(ComponentType.OBJECT3D, {
+    onAddComponent: (entityId, world) => {
+      const obj3DComp = world.getComponent(entityId, ComponentType.OBJECT3D);
+      if (!obj3DComp) return;
+      const obj = obj3DComp.value;
+      if (obj) {
+        for (const detector of OBJECT3D_TAGS) {
+          if (detector.prop in obj) {
+            world.addComponent(entityId, detector.tag, true);
+          }
+        }
+        if (obj.userData.isPhysicsObject) {
+          world.addComponent(entityId, ComponentType.TAG_IS_PHYSICS_OBJECT, true);
+        }
+      }
+    },
+  });
 
-ECSWorld.registerCorePlugin((world) => {
-  // This is the object3D (meshes, lights, cameras, groups) syncSystem
-  world.addSystem(ECSSystemStage.MAIN, 'object3DSyncSystem', object3DSyncSystem);
+  // Register PERSISTENT onAddComponent and onRemoveComponent logic for TARGET_LINKs
+  ctx.registerComponentHooks(ComponentType.PERSISTENT, {
+    /** When an entity is marked persistent, ensure its linked target survives as well. */
+    onAddComponent: (entityId, world) => {
+      const targetLink = world.getComponent(entityId, ComponentType.TARGET_LINK);
+      if (targetLink && world.isAlive(targetLink.targetId)) {
+        world.addComponent(targetLink.targetId, ComponentType.PERSISTENT, true);
+      }
+    },
+    /** If persistence is removed, the linked target is no longer protected by this parent. */
+    onRemoveComponent: (entityId, world) => {
+      const targetLink = world.getComponent(entityId, ComponentType.TARGET_LINK);
+      if (targetLink && world.isAlive(targetLink.targetId)) {
+        world.removeComponent(targetLink.targetId, ComponentType.PERSISTENT);
+      }
+    },
+  });
+  ctx.registerComponentHooks(ComponentType.TARGET_LINK, {
+    /** When the TARGET_LINK is added, and if the parent entity is PERSISTENT, ensure the target entity is also. */
+    onAddComponent: (entityId, world) => {
+      // If the looker is already persistent, make the new target persistent immediately
+      if (world.hasComponent(entityId, ComponentType.PERSISTENT)) {
+        const link = world.getComponent(entityId, ComponentType.TARGET_LINK);
+        if (link) world.addComponent(link.targetId, ComponentType.PERSISTENT, true);
+      }
+    },
+  });
 
-  // Lifetime system usually runs at the end of the frame to clean up
-  // entities that expired during the logic step (hence stage is LATE_MAIN).
-  world.addSystem(ECSSystemStage.LATE_MAIN, 'entityLifetimeSystem', entityLifetimeSystem);
+  // --- PLUGIN REGISTRATION ---
+  // registerCorePlugin (not registerPlugin): these are universal engine
+  // plumbing every world needs to function — without object3DSyncSystem in
+  // particular, a world's ECS Transform updates never reach its Object3Ds.
+  // A world opting out via `applyGlobalPlugins: false` should only skip
+  // app/feature systems (e.g. light frustum culling), not this.
 
-  world.addSystem(
-    ECSSystemStage.APP_RENDER_SYNC,
-    'lookAtSystem',
-    lookAtSystem,
-    APP_RENDER_SYNC_ORDER.POSE_PRODUCERS
-  );
+  ctx.registerCorePlugin((world) => {
+    // This is the object3D (meshes, lights, cameras, groups) syncSystem
+    world.addSystem(ECSSystemStage.MAIN, 'object3DSyncSystem', object3DSyncSystem);
 
-  return world;
-});
+    // Lifetime system usually runs at the end of the frame to clean up
+    // entities that expired during the logic step (hence stage is LATE_MAIN).
+    world.addSystem(ECSSystemStage.LATE_MAIN, 'entityLifetimeSystem', entityLifetimeSystem);
+
+    world.addSystem(
+      ECSSystemStage.APP_RENDER_SYNC,
+      'lookAtSystem',
+      lookAtSystem,
+      APP_RENDER_SYNC_ORDER.POSE_PRODUCERS
+    );
+
+    return world;
+  });
+};
 
 // --- SYSTEMS ---
 

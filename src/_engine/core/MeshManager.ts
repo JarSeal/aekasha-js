@@ -10,7 +10,8 @@ import {
   getMaterialRegistry,
   getMaterialVariant,
 } from './Material';
-import { ECSWorld, getECSWorld, getEntityIdByAppId } from './ECS';
+import type { ECSWorld } from './ECS';
+import { getECSWorld, getEntityIdByAppId } from './ECS';
 import { getRootScene } from './Scene';
 import { ThreeEuler, ThreeQuoternion } from '../utils/helpers';
 import { getRenderer } from './Renderer';
@@ -24,11 +25,17 @@ import { CoreComponentType } from './ECS/ECSRegistry';
 import { setFrustumCullingEnabled } from './ECS/ObjectFrustumCullingSystem';
 import { IS_DEBUG_ENV } from './Config';
 import type { LodDef, MeshLodDef } from './Lod/LodTypes';
+import type { FeatureContext } from './Features';
 
-// Register onDeleteEntity hook for TAG_IS_MESH
-ECSWorld.registerComponentHooks(ComponentType.TAG_IS_MESH, {
-  onDeleteEntity: (entityId, world) => disposeMesh(entityId, world),
-});
+/**
+ * Installs the meshes (the kernel, p607): a mesh entity's deletion disposes its mesh.
+ * @internal
+ */
+export const installMeshes = (ctx: FeatureContext) => {
+  ctx.registerComponentHooks(ComponentType.TAG_IS_MESH, {
+    onDeleteEntity: (entityId, world) => disposeMesh(entityId, world),
+  });
+};
 
 export type MeshProps = {
   // @CONSIDER: We could also allow passing an id for geo and mat (as strings), and then look them up in the asset manager.

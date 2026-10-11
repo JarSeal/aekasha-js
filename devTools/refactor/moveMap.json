@@ -848,6 +848,12 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/Kernel.ts": {
+      "to": "src/_engine/kernel/init/Kernel.ts",
+      "action": "move",
+      "plan": "p608",
+      "note": "the kernel's install (p607 D2): InitEngine runs it before the first world"
+    },
     "src/_engine/core/LightManager.ts": {
       "to": "src/_engine/kernel/light/Light.ts",
       "action": "move",

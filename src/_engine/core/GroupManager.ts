@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu';
-import { ECSWorld, getECSWorld, getEntityIdByAppId } from './ECS';
+import type { ECSWorld } from './ECS';
+import { getECSWorld, getEntityIdByAppId } from './ECS';
 import { getRootScene } from './Scene';
 import { ThreeEuler, ThreeQuoternion } from '../utils/helpers';
 import { ComponentType } from './ECS/ECSCoreComponents';
@@ -8,11 +9,17 @@ import { lerror, lwarn } from '../utils/Logger';
 import type { CoreEntityOpts } from '../schemas/_helperSchemas';
 import { existsOrThrow } from '../utils/assert';
 import { CoreComponentType } from './ECS/ECSRegistry';
+import type { FeatureContext } from './Features';
 
-// Register onDeleteEntity hook for TAG_IS_GROUP
-ECSWorld.registerComponentHooks(ComponentType.TAG_IS_GROUP, {
-  onDeleteEntity: (entityId, world) => disposeGroup(entityId, world),
-});
+/**
+ * Installs the groups (the kernel, p607): a group entity's deletion disposes its group.
+ * @internal
+ */
+export const installGroups = (ctx: FeatureContext) => {
+  ctx.registerComponentHooks(ComponentType.TAG_IS_GROUP, {
+    onDeleteEntity: (entityId, world) => disposeGroup(entityId, world),
+  });
+};
 
 export type GroupProps = {
   appId?: string;

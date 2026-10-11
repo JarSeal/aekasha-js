@@ -56,6 +56,11 @@ const ENGINE_RULES: MoveRule[] = [
     note: 'the install contract (p607 D1): the features install through it',
   },
   { from: `${E}core/Features.test.ts`, to: `${K}init/Features.test.ts` },
+  {
+    from: `${E}core/Kernel.ts`,
+    to: `${K}init/Kernel.ts`,
+    note: "the kernel's install (p607 D2): InitEngine runs it before the first world",
+  },
   { from: `${E}index.ts`, to: `${E}index.ts`, note: 'the `aekasha` entry (p606)' },
   { from: `${E}features/`, to: F, note: 'the feature entries (p606): the code moves under them' },
   { from: `${E}types/`, to: `${E}types/` },

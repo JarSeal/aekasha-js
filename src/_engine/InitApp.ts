@@ -38,13 +38,20 @@ import { registerLineManager } from './core/LineManager';
 import { createPostFXDebugGUI, initPostFX } from './core/PostFX';
 import { restoreSavedView } from './core/ViewManager';
 
-// ECS Core Plugins
-import './core/ECS/ECSCoreSystems';
-import './core/ECS/ObjectFrustumCullingSystem';
+// The kernel's systems and hooks, installed by InitEngine (here, where their modules were
+// imported for their registrations, so the modules still load in the same order)
+import { installKernel } from './core/Kernel';
+// Light culling still registers when it's imported (p607 Phase 6 makes it the spatial feature's)
 import './core/ECS/LightObjectCullingSystem';
 import { registerLodDebugGUI } from './core/Lod/LodSystem';
 import { registerSpatialIndexDebugGUI } from './core/Spatial/SpatialIndexSystem';
-import './core/MeshManager';
+import {
+  createFeatureHost,
+  type EngineFeature,
+  installFeaturesAsync,
+  checkFeatures,
+  runFeatureDebugHooksAsync,
+} from './core/Features';
 
 import { initECSWorld, registerECSModule } from './core/ECS';
 import { initDebugCamera, registerCameraManager } from './core/CameraManager';
@@ -71,6 +78,11 @@ export type InitEngineOptions = {
   /** The app's gathered scenes and assets: `appData` from `src/generated/`, which
    * `yarn gatherAppData` writes. */
   data: AppData;
+  /** The features to install, in this order, after the kernel (p607 D1): each once, awaiting
+   * each `install`. The template lists the app's own last (`appECSPlugins`). Until p607 has
+   * converted the engine's features, `InitEngine` installs those itself and this list holds the
+   * app's. Default: none. */
+  features?: EngineFeature[];
   /** The app's start: creates the renderer and the scene loader and loads the first scene. Runs
    * after the engine's own init (and the debug tools' registration), before the main loop starts. */
   start: () => Promise<void>;
@@ -85,10 +97,12 @@ export type InitEngineOptions = {
  * import { InitEngine, createRenderer, loadScene } from 'aekasha';
  * import config from './CONFIG';
  * import { appData } from './generated';
+ * import { appECSPlugins } from './AppECSPlugins';
  *
  * InitEngine({
  *   config,
  *   data: appData,
+ *   features: [appECSPlugins],
  *   start: async () => {
  *     await createRenderer({ antialias: true });
  *     await loadScene({ sceneId: 'myScene' });
@@ -107,11 +121,13 @@ export const InitEngine = (options: InitEngineOptions) =>
   });
 
 /** {@link InitEngine}'s steps, in order. */
-const initEngineAsync = async ({ config, data, start }: InitEngineOptions) => {
+const initEngineAsync = async ({ config, data, features = [], start }: InitEngineOptions) => {
   // The environment first (env vars, URL params): every IS_* flag reads as production before
   // it. Then the configuration, which reads the debug flag for its LS overrides, and the data
   initEnvironment();
   loadConfig(config);
+  // A list that can't install fails here, before anything boots
+  checkFeatures(features);
   setAppData(data);
   addWindowListeners();
 
@@ -120,6 +136,10 @@ const initEngineAsync = async ({ config, data, start }: InitEngineOptions) => {
 
   // Create base scene
   createRootScene();
+
+  // The kernel before the first world: its core plugin's systems come first in every world
+  const featureHost = createFeatureHost(getConfig());
+  installKernel(featureHost.ctx);
 
   // Init ECS
   const ecsWorld = initECSWorld();
@@ -143,6 +163,9 @@ const initEngineAsync = async ({ config, data, start }: InitEngineOptions) => {
 
   // Initializes the debug camera (if in debug mode)
   await initDebugCamera(ecsWorld);
+
+  // The features, in list order (p607 D1: where physics boots, which is still below)
+  await installFeaturesAsync(features, featureHost);
 
   registerPhysicsManager(ecsWorld);
   await initNewPhysics(true); // doNotCreateWorld — createPhysicsWorld() below owns that + physicsWorldEnabled
@@ -169,6 +192,8 @@ const initEngineAsync = async ({ config, data, start }: InitEngineOptions) => {
     await registerECSModule();
     await registerSpatialIndexDebugGUI();
     await registerLodDebugGUI();
+    // The features' own, in install order
+    await runFeatureDebugHooksAsync(featureHost.debugHooks);
   }
   if (IS_DEBUG_ENV || IS_PROD_TEST_MODE) {
     // Loaded here (not the IS_DEBUG_ENV-only block above) so isProdTest mode can still read
@@ -211,6 +236,8 @@ const initEngineAsync = async ({ config, data, start }: InitEngineOptions) => {
     await createPostFXDebugGUI();
     createCharactersDebuggerGUI();
     createSkyBoxDebugGUI();
+    // The features' own, in install order
+    await runFeatureDebugHooksAsync(featureHost.debugAfterStartHooks);
 
     // Make the debug toaster appear above the stats cmp
     const statsCmp = getStatsCmp();

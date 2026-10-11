@@ -1,28 +1,10 @@
 import * as THREE from 'three/webgpu';
 import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from './SystemStages';
-import { ECSWorld } from '../ECS';
+import type { ECSWorld } from '../ECS';
 import { getMainCamera } from '../CameraManager';
 import { ComponentType } from './ECSCoreComponents';
 import { reconcileObject3DVisibility } from './ECSCoreSystems';
-
-// --- FRUSTUM CULLING VISIBILITY HOOK ---
-// Deliberately a separate component/hook from DISABLED (see docs/plans/_DONE_light-culling.md
-// §2.2, §4.2): FRUSTUM_CULLING_ENABLED is the opt-in flag, TAG_FRUSTUM_CULLED is the
-// fast-changing runtime state. DISABLED must keep meaning exactly one thing: "user/game logic
-// turned this off." Generic across entity types (docs/plans/_DONE_p080_object3d-frustum-culling.md
-// §2.1) — nothing here is light-specific, it just reads OBJECT3D/hooks generically.
-
-ECSWorld.registerComponentHooks(ComponentType.TAG_FRUSTUM_CULLED, {
-  onAddComponent: (entityId, world) => {
-    reconcileObject3DVisibility(entityId, world, { isFrustumCulled: true });
-  },
-  onRemoveComponent: (entityId, world) => {
-    // reconcileObject3DVisibility's own isDisabled/isObjectCulled checks already
-    // respect an explicit user-authored "off" or an active object-cull — don't
-    // let re-entering the frustum resurrect an entity either of those is hiding.
-    reconcileObject3DVisibility(entityId, world, { isFrustumCulled: false });
-  },
-});
+import type { FeatureContext } from '../Features';
 
 /** Mirrors `LightManager.ts`'s `setLightFrustumCullingEnabled` (which now delegates here) —
  * generic across whatever entity type opts in (docs/plans/_DONE_p080_object3d-frustum-culling.md §2.4). */
@@ -173,12 +155,35 @@ export const objectFrustumCullingSystem = (world: ECSWorld) => {
   }
 };
 
-ECSWorld.registerPlugin((world) => {
-  world.addSystem(
-    ECSSystemStage.APP_RENDER_SYNC,
-    'objectFrustumCullingSystem',
-    objectFrustumCullingSystem,
-    APP_RENDER_SYNC_ORDER.FRUSTUM_CULLING
-  );
-  return world;
-});
+/**
+ * Installs frustum culling (the kernel, p607): the visibility hook and the culling system.
+ * @internal
+ */
+export const installObjectFrustumCulling = (ctx: FeatureContext) => {
+  // The visibility hook: deliberately a separate component/hook from DISABLED (see docs/plans/_DONE_light-culling.md
+  // §2.2, §4.2): FRUSTUM_CULLING_ENABLED is the opt-in flag, TAG_FRUSTUM_CULLED is the
+  // fast-changing runtime state. DISABLED must keep meaning exactly one thing: "user/game logic
+  // turned this off." Generic across entity types (docs/plans/_DONE_p080_object3d-frustum-culling.md
+  // §2.1) — nothing here is light-specific, it just reads OBJECT3D/hooks generically.
+  ctx.registerComponentHooks(ComponentType.TAG_FRUSTUM_CULLED, {
+    onAddComponent: (entityId, world) => {
+      reconcileObject3DVisibility(entityId, world, { isFrustumCulled: true });
+    },
+    onRemoveComponent: (entityId, world) => {
+      // reconcileObject3DVisibility's own isDisabled/isObjectCulled checks already
+      // respect an explicit user-authored "off" or an active object-cull — don't
+      // let re-entering the frustum resurrect an entity either of those is hiding.
+      reconcileObject3DVisibility(entityId, world, { isFrustumCulled: false });
+    },
+  });
+
+  ctx.registerPlugin((world) => {
+    world.addSystem(
+      ECSSystemStage.APP_RENDER_SYNC,
+      'objectFrustumCullingSystem',
+      objectFrustumCullingSystem,
+      APP_RENDER_SYNC_ORDER.FRUSTUM_CULLING
+    );
+    return world;
+  });
+};
