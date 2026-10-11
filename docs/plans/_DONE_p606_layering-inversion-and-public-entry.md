@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-9 implemented
+Status: implemented (Phases 1-10)
 Category: Architecture, Refactoring
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
 Blocks: p607_sbp-foundation-feature-modules.md, p608_engine-folder-restructure.md, p510_headless-simulation-runtime.md
@@ -735,11 +735,26 @@ links; D: the plans and `moveRules.ts`):
   warnings (TypeDoc's 16 `notExported` and the search index; the four `{@link InitEngine}` gone),
   `moveMap.ts --check`. No runtime code changed (JSDoc only), so no `verify:scenes`.
 
-### Phase 10: versioning and mark done
+### Phase 10: versioning and mark done — done
 
 Per D5: bump the engine and toolkit majors (new codenames) and the app minor, the `CHANGELOG.md`
 entry (Engine, Toolkit, App, Project), `yarn checkVersions --against main`, mark the plan done
 (`docs/plans/CLAUDE.md`).
+
+**As built** (A: the versions; B: the changelog; C: marking the plan done):
+
+- **The codenames are chosen here, not at `stage-b`'s merge** (D5's note, confirmed):
+  `checkVersions` fails a major bump that keeps its codename. Engine 5.0.0 Golden Hour (the sun's
+  path after Afternoon; root `CLAUDE.md`'s sequence names both now), toolkit 2.0.0 Half Moon, app
+  1.10.0 Preschooler, project 5.0.0. p600 §11 and its branch table, and p607's "Branch and
+  versions", say so, and that p607 checks `--against main` (against `stage-b`, the engine would
+  need another bump).
+- `CHANGELOG.md`'s entry is `## 2026-10-11 — stage-b`: the branch that merges to `main`, which
+  p607 adds to; the date becomes the merge's (p600's table). `src/index.ts` is listed under App,
+  though `checkVersions` counts it in no part.
+- Marked done: the references in p600, p601, p602 and p604 renamed; the `Blocked by` on p510, p607
+  and p608 dropped, with a `Related` line each instead. No `CLAUDE.md` or Hub page names the file.
+- `yarn checkVersions --against main` passes.
 
 ## 6. Done when
 

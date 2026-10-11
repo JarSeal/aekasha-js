@@ -1,9 +1,8 @@
 Status: stub — not-implemented
 Category: Build, Performance, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
-Blocked by: p606_layering-inversion-and-public-entry.md
 Blocks: p608_engine-folder-restructure.md, p611_sbp-tooling-profiles-and-marketing.md, p510_headless-simulation-runtime.md
-Related: p990_follow-ups-from-done-plans.md (the two bundle items moved here), p240_client-device-capability-sniffer.md
+Related: \_DONE_p606_layering-inversion-and-public-entry.md (the entries, `InitEngine`'s options, the branch: "From p606" below), p990_follow-ups-from-done-plans.md (the two bundle items moved here), p240_client-device-capability-sniffer.md
 
 # SBP Foundation: Feature Modules — Stub
 

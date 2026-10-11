@@ -1,8 +1,8 @@
 Status: stub — not-implemented
 Category: Networking, Architecture, Physics
-Blocked by: p606_layering-inversion-and-public-entry.md (no module-load DOM or Vite reads), p607_sbp-foundation-feature-modules.md (the `?worker` and SCSS imports at load), p608_engine-folder-restructure.md (the kernel / feature split a headless build picks from)
+Blocked by: p607_sbp-foundation-feature-modules.md (the `?worker` and SCSS imports at load), p608_engine-folder-restructure.md (the kernel / feature split a headless build picks from)
 Blocks: p511_network-transport-and-replication.md, p512_client-prediction-and-reconciliation.md
-Related: \_DONE_p604_multiplayer-viability-study.md (§3.1 the verdict, §4 the rules, Phase 1 the measurements; its dropped spike is this plan's Phase 1), p614_review-physics.md (the transport interface), \_DONE_p603_gameplay-architecture-contracts.md (C4: a network brain is a brain)
+Related: \_DONE_p606_layering-inversion-and-public-entry.md (no module-load DOM or Vite reads; the worker's headless test), \_DONE_p604_multiplayer-viability-study.md (§3.1 the verdict, §4 the rules, Phase 1 the measurements; its dropped spike is this plan's Phase 1), p614_review-physics.md (the transport interface), \_DONE_p603_gameplay-architecture-contracts.md (C4: a network brain is a brain)
 
 # Headless Simulation Runtime — Stub
 
