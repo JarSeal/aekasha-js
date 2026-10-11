@@ -90,6 +90,7 @@ These are ready-made modules you can import as they are, or copy into your app a
 | Asset pipeline         | Textures are encoded to KTX2 (Basis UASTC or ETC1S) and transcoded at load to whatever the device reads (BC7, ASTC, ETC2), in the transcoder's own workers. GLBs get meshopt geometry. Outputs are content-hashed, cached and committed.                                                                                                                                                                                  |
 | LOD selection          | One distance and one multiply per entity (the camera terms are computed once per frame), after frustum culling. Only an entity whose level changed is touched; a pool instance moves between level meshes by a swap-remove. An optional cap spreads the selection over frames. A cross-fade keeps a pool instance in both level meshes, so it adds no draw call, and its per-frame work touches only the fading entities. |
 | Editor views           | An editor view takes over the frame: no ECS stage, scene looper or physics step runs, and physics resumes without catching up, so a visit to an editor keeps a scene deterministic. The editor renders its own scene and camera, with the viewports on top.                                                                                                                                                               |
+| Public entries         | The app and the toolkit reach the engine through 16 named entries (`aekasha`, `aekasha/<feature>`, `aekasha/toolkit/<category>`), and the engine takes the app's config and data through `InitEngine` instead of importing them. The lint makes a deep path an error, and the entries are side-effect free, so a build keeps only what the app uses.                                                                      |
 | Tree-shaking           | Debug implementations live in `_dbg__*` files that are loaded only through a dynamic `import()` behind `IS_DEBUG_ENV`, so production bundles don't contain them.                                                                                                                                                                                                                                                          |
 | Save data              | Each asset file stores per-scene override history stamped with the engine, toolkit and app versions, and the gatherer warns when an entry comes from another major version.                                                                                                                                                                                                                                               |
 | Versioning             | Engine, toolkit and app are versioned independently, with release tags and a checksum meta tag in the built HTML.                                                                                                                                                                                                                                                                                                         |
@@ -156,13 +157,16 @@ Open `http://localhost:8080/?isDebug=true` to get the full debug suite, then pre
 .
 ├── src/
 │   ├── _engine/            # The core engine: stable library code
+│   │   ├── index.ts        # The aekasha entry: the public API's core
+│   │   ├── features/       # The feature entries (aekasha/physics, aekasha/skybox, …)
 │   │   ├── core/           # Renderer, ECS, scenes, physics, characters, assets, cameras,
 │   │   │                   # lights, PostFX, viewports, lines, input, spatial index, UI
 │   │   ├── debug/          # Thin public debug entry points (lazy-load core/Debug/_dbg__*)
 │   │   ├── schemas/        # Zod schemas for every asset JSON type
 │   │   ├── workers/        # Physics and asset worker threads
-│   │   └── utils/          # Helpers, camera rigs, world test objects, stress tests
-│   ├── toolkit/            # Reusable ECS effects, TSL materials and procedural geometry
+│   │   └── utils/          # Helpers, logging, storage, the ECS stress test
+│   ├── toolkit/            # Reusable ECS effects, a camera rig, TSL materials, procedural
+│   │                       # geometry (entries: aekasha/toolkit/<category>)
 │   ├── app/                # Your game: *.scene.json + scene .ts files and asset JSON files
 │   ├── generated/          # The gathered scene and asset data, handed to InitEngine
 │   │                       # (written by yarn gatherAppData, committed)
@@ -186,7 +190,7 @@ Open `http://localhost:8080/?isDebug=true` to get the full debug suite, then pre
 └── vite.config.ts
 ```
 
-The split between `_engine`, `toolkit` and `app` is a convention: the engine stays stable, the toolkit ships with it, and `app` is yours to change.
+The engine stays stable, the toolkit ships with it, and `app` is yours to change. The split is a lint rule: the engine imports neither the toolkit nor the app, and everything outside the engine imports it through its public entries (`aekasha`, `aekasha/physics`, …, `aekasha/toolkit/ecs`), never by a path into `src/_engine/`.
 
 ---
 
@@ -396,6 +400,7 @@ The engine, toolkit and example app each have their own semantic version and cod
 
 - **Ækasha Hub**: run `yarn dev` and open `http://localhost:8080/hub/` for the getting-started guide, a page per feature, examples, known issues and the changelog, all searchable (⌘K / Ctrl+K), or build it as a static site with `yarn hub:build`. To add or edit its pages, see [writing Hub pages](docs/techniques/hub-authoring.md).
 - **API reference**: the Hub's Documentation section (`/hub/documentation/`): every engine and toolkit export with its signature, JSDoc and source link, searchable and linked from the other Hub pages. `yarn docs` still writes TypeDoc's own HTML to `docs-api/`.
+- **Migration guide**: the Hub's `/hub/documentation/migration/`: what changes for an app in each major version, with the `migrateToEntries.ts` codemod for the entry imports.
 - **Guides**: [`docs/techniques/`](docs/techniques/), eg. [asset optimization](docs/techniques/asset-optimization.md).
 - **Design docs**: [`docs/plans/`](docs/plans/). Files prefixed `_DONE_` describe features that are already implemented.
 - **Contributor and agent guide**: [`.claude/CLAUDE.md`](.claude/CLAUDE.md).

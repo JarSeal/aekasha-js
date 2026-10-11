@@ -8,8 +8,8 @@ export type GeneratedAppJson = { scenes: Record<string, unknown>; [section: stri
 
 /**
  * The app's gathered data, which `yarn gatherAppData` writes to `src/generated/` and the app hands
- * to {@link InitEngine} as `data`. Its keys are filled by code the gatherer generates; an app never
- * writes them by hand.
+ * to {@link _engine/InitApp!InitEngine} as `data`. Its keys are filled by code the gatherer
+ * generates; an app never writes them by hand.
  */
 export type AppData = {
   /** The gathered asset data */
@@ -31,8 +31,8 @@ let appData: AppData = {
 };
 
 /**
- * Sets the app's data: {@link InitEngine} calls it with its `data` before the scenes are
- * registered.
+ * Sets the app's data: {@link _engine/InitApp!InitEngine} calls it with its `data` before the
+ * scenes are registered.
  * @internal
  */
 export const setAppData = (data: AppData) => {
@@ -40,8 +40,8 @@ export const setAppData = (data: AppData) => {
 };
 
 /**
- * The app's data that {@link InitEngine} was given (empty before it). Apps read the asset data
- * through `getGeneratedAppData` and `getGeneratedSceneData`.
+ * The app's data that {@link _engine/InitApp!InitEngine} was given (empty before it). Apps read
+ * the asset data through `getGeneratedAppData` and `getGeneratedSceneData`.
  * @internal
  */
 export const getAppData = () => appData;

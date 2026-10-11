@@ -736,8 +736,9 @@ export const runOnAllSceneExits = () => {
 // @TODO: add deletion methods for all these registers
 
 /**
- * The gathered asset data that {@link InitEngine} was given as `data.json`: the scenes by id, and
- * in a development build each asset section by id too. Empty before `InitEngine`.
+ * The gathered asset data that {@link _engine/InitApp!InitEngine} was given as `data.json`: the
+ * scenes by id, and in a development build each asset section by id too. Empty before
+ * `InitEngine`.
  */
 export const getGeneratedAppData = () => getAppData().json;
 /** A scene's gathered data by id, or `undefined` for an id the gatherer didn't find. */
