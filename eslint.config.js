@@ -2,9 +2,69 @@ import globals from 'globals';
 import prettier from 'eslint-plugin-prettier';
 import typescriptEslint from '@typescript-eslint/eslint-plugin';
 import jsdoc from 'eslint-plugin-jsdoc';
+import importPlugin from 'eslint-plugin-import';
 import { FlatCompat } from '@eslint/eslintrc';
 
 const compat = new FlatCompat();
+
+// The layering (p606, the coding standards' "Layering"): engine ← toolkit ← app. Everything outside
+// the engine reaches it through the `aekasha*` entries (devTools/aliases.ts), which the resolver
+// below doesn't resolve, so only paths are checked. A glob zone's `except` isn't resolved against
+// the base path: it's absolute.
+const ROOT = import.meta.dirname;
+// The `aekasha/toolkit/<category>` entries' folders
+const TOOLKIT_CATEGORIES = ['ecs', 'geometry', 'materials'];
+const ENGINE_CONSUMERS = ['src/toolkit/**', 'src/app/**', 'src/generated/**', 'src/*.ts'];
+const LAYER_ZONES = [
+  {
+    target: 'src/_engine/**',
+    from: ['src/toolkit/**', 'src/app/**', 'src/generated/**', 'src/*.ts'],
+    message:
+      'The engine imports only engine code. Configuration and data come in through InitEngine.',
+  },
+  {
+    target: 'src/toolkit/**',
+    from: ['src/app/**', 'src/generated/**', 'src/*.ts'],
+    message: "The toolkit doesn't depend on the app.",
+  },
+  {
+    target: ENGINE_CONSUMERS,
+    from: 'src/_engine/**',
+    message:
+      'Import the engine through its entries (`aekasha`, `aekasha/<feature>`): a deep path is internal.',
+  },
+  ...TOOLKIT_CATEGORIES.map((category) => ({
+    target: `src/toolkit/${category}/**`,
+    from: 'src/toolkit/**',
+    except: [`${ROOT}/src/toolkit/${category}/**`],
+    message: 'Import another toolkit category through its entry (`aekasha/toolkit/<category>`).',
+  })),
+  {
+    target: ['src/app/**', 'src/*.ts'],
+    from: 'src/toolkit/**',
+    message: 'Import the toolkit through its entries (`aekasha/toolkit/<category>`).',
+  },
+  {
+    // The TSL material files are assets: the generated code imports them by path
+    target: 'src/generated/**',
+    from: 'src/toolkit/**',
+    except: [`${ROOT}/src/toolkit/**/*.tsl.ts`],
+    message: "The generated code imports only the toolkit's TSL material files.",
+  },
+];
+// Static imports only: a dynamic `import()` isn't checked, and is how the debug loader reaches them
+const DEBUG_MODULE_IMPORT = {
+  regex: '(^|/)_dbg__',
+  allowTypeImports: true,
+  message:
+    'A `_dbg__` module loads through the debug loader (`import()`, loadDebugModuleAsync / useDebug), so production builds drop it. `import type` is fine.',
+};
+const ENTRY_IMPORT = {
+  regex: '^aekasha(/|$)',
+  message:
+    'Engine code imports engine code by relative path: an entry imported inside the engine makes barrel cycles.',
+};
+const DEBUG_FILES = ['src/**/_dbg__*.ts', 'src/_engine/core/Debug/**/*.ts'];
 
 // The simulation: code that runs at APP_PHYSICS_STEP or inside the physics step, on the main
 // thread or in the physics worker. It must run identically on every machine, so it counts time in
@@ -127,6 +187,35 @@ export default [
       'jsdoc/require-hyphen-before-param-description': ['error', 'never'],
       'jsdoc/informative-docs': 'error',
     },
+  },
+
+  // The layering (see LAYER_ZONES)
+  {
+    files: ['src/**/*.ts'],
+    plugins: { import: importPlugin },
+    settings: { 'import/resolver': { node: { extensions: ['.ts', '.js', '.json'] } } },
+    rules: {
+      'import/no-restricted-paths': ['error', { basePath: ROOT, zones: LAYER_ZONES }],
+      '@typescript-eslint/no-restricted-imports': ['error', { patterns: [DEBUG_MODULE_IMPORT] }],
+    },
+  },
+  // A later entry replaces the rule's options for its files, so each lists all that applies there
+  {
+    files: ['src/_engine/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        { patterns: [DEBUG_MODULE_IMPORT, ENTRY_IMPORT] },
+      ],
+    },
+  },
+  {
+    files: DEBUG_FILES,
+    rules: { '@typescript-eslint/no-restricted-imports': 'off' },
+  },
+  {
+    files: ['src/_engine/**/_dbg__*.ts', 'src/_engine/core/Debug/**/*.ts'],
+    rules: { '@typescript-eslint/no-restricted-imports': ['error', { patterns: [ENTRY_IMPORT] }] },
   },
 
   // The simulation rules (the coding standards' "The simulation")
