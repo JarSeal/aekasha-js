@@ -4,6 +4,82 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-11 — stage-b
+
+### Engine 5.0.0 (Golden Hour)
+
+The engine stops importing the app and gets public entry points. Apps made from the template migrate with the Hub's guide (Documentation → Migration → "Engine 4 → 5") and the import codemod (Project, below).
+
+**Changed**
+
+- `InitEngine({ config, data, start })` (`InitEngineOptions`) takes what it used to import: `config` is `src/CONFIG.ts`'s default export, merged over the defaults as before (`loadConfig(appConfig)`); `data` is the gathered data (`appData` from `src/generated/`); `start` is the callback `InitEngine` took before. The engine no longer imports `src/AppECSPlugins.ts`: `src/index.ts` imports it right after `aekasha`, so the app's systems register after every engine module's (the system order is unchanged, checked stage by stage).
+- The environment is read when `InitEngine` runs (`initEnvironment({ search?, env? })`, `core/Config.ts`), not when a module loads. `IS_DEBUG_ENV`, `IS_PROD_TEST_MODE`, `IS_PROD_TEST_ENV`, `IS_PROD_ENV` and `CUR_ENV` are live bindings that read as a production build until then. No engine module reads `window` or `import.meta.env` at load. `env` is a copy, so `loadConfig` no longer writes into `import.meta.env`. The `beforeunload` / `blur` listeners `MainLoop.ts` added at load are added by `InitEngine` (`addWindowListeners`).
+- `ECSSystemStage` and `APP_RENDER_SYNC_ORDER` moved into the engine (`core/ECS/SystemStages.ts`), with the same names and values. `src/AppECSRegistry.ts` doesn't re-export them.
+- Component types use declaration merging. `ComponentDataMap` is an interface that the app and the toolkit extend from their own files (`declare module 'aekasha' { interface ComponentDataMap { … } }`), and `ComponentType` / `ComponentData` are its keys and itself, so `addComponent`, `getComponent` and `getStorage` are typed for every key without `as any`. The `ComponentType` value holds only the engine's keys (it used to spread in the app's and the toolkit's), and the engine no longer has `AppComponentType` / `AppComponentData`.
+- The gathered data left the engine: `src/_engine/generatedAppData.json` and `generatedAppFns.ts` are now in `src/generated/`, which the engine never imports. It keeps `InitEngine`'s `data` in `core/AppData.ts` (types `AppData` and `GeneratedAppJson`), and `getGeneratedAppData` / `getGeneratedSceneData` read it from there.
+- The ECS stress test no longer borrows the app's and the toolkit's components: it has two core debug keys (`DEBUG_STRESS_TEST_INSTANCE`, `DEBUG_STRESS_TEST_HOVER`) and its own hover system, registered on its first spawn.
+- The entity inspector and the profiler list component types by value (`CORE_TRANSFORM`, `APP_SPIN`) instead of by key name. They read `ECSWorld.getComponentTypes()`, the types the world has a storage for. App and toolkit storages are now created on first use.
+- `utils/PromiseResolver.ts` imports nothing: `resolveRequest(requestId, value)` returns whether the request was pending, and the physics API logs a missing one in the debug env.
+- `Texture.ts`, `ECSCoreComponents.ts` and `MeshColliderGeometry.ts` import three's loaders directly, not through the `Addons.js` barrel (its `TTFLoader` can't load in Node).
+- The bundle is the same size. The gathered JSON moved from the main chunk's `_engine` group to `app`, and the camera rig and moving platform from `_engine/utils` to `toolkit`.
+
+**Added**
+
+- The public entries, the only way into the engine from outside it: `aekasha` (`src/_engine/index.ts`), `aekasha/character`, `/instancing`, `/lines`, `/lod`, `/physics`, `/postfx`, `/skybox`, `/spatial`, `/viewports` (`src/_engine/features/<name>/index.ts`), `aekasha/ui`, `aekasha/debug` and `aekasha/schemas`. Each entry is a list of named re-exports from the engine's current paths, so later folder moves don't touch the code that uses it. The production build treats the entry files as side-effect free, so a chunk takes only the modules it uses.
+- `ECSWorld.getComponentTypes()`, `initEnvironment` and its `EnvironmentInput`, `addWindowListeners`, `InitEngineOptions`, `AppData`, `GeneratedAppJson`. `@example`s on `InitEngine` and `ComponentDataMap`.
+
+**Removed**
+
+- `utils/cameras/followObjectCameraRig.ts` and `utils/world/movingPlatform.ts` moved to the toolkit (`aekasha/toolkit/ecs`). `utils/commontTypes.ts` is removed: its one type, `XYZObject`, is written out in the camera rig's `offset` option.
+- The gym's test code moved to the app (`src/app/scenes/thirdPersonGymScene/`): `utils/PhysicsStressTest.ts`, `utils/world/characterTestObjects.ts`, `characterTestObstacles.ts` and `3dModels/characterObstacles.blend`.
+
+### Toolkit 2.0.0 (Half Moon)
+
+**Changed**
+
+- `HoverEffect`, `FollowTool` and `SunShadowFit` add their keys to the engine's `ComponentDataMap` themselves, and read their storages typed (no `as any`). Their data types are exported as `HoverToolData`, `FollowToolData` and `SunShadowFitData`. The four effects (`MutualGravity` too) import the system stages from the engine.
+- The toolkit imports the engine only through `aekasha` entries, and other toolkit categories only through their entries.
+- `createMovingPlatform`'s `deleteMeshOptions` is typed and documented as unread (`controls.delete()` deletes the entity only); the behaviour is the same.
+
+**Added**
+
+- Entries: `aekasha/toolkit/ecs`, `aekasha/toolkit/geometry`, `aekasha/toolkit/materials`.
+- From the engine, with JSDoc: the follow camera rig (`ecs/FollowObjectCameraRig.ts`: `createFollowObjectCameraRig`, `deleteFollowObjectCameraRig`, `registerFollowObjectCameraRigSystem`) and the moving platform (`ecs/MovingPlatform.ts`: `createMovingPlatform`, `registerMovingPlatformSystem`).
+
+**Removed**
+
+- `HoverComponentData`, `FollowComponentData` and `SunShadowFitComponentData`: the toolkit adds its keys itself.
+- `ecs/InstancedMeshPool.ts` and `ecs/InstancedMeshPoolTypes.ts`, deprecated re-exports of the engine's pools until this major: use `aekasha/instancing`.
+
+### App 1.10.0 (Preschooler)
+
+**Changed**
+
+- `src/index.ts` passes `config`, `data` and `start` to `InitEngine` and imports `./AppECSPlugins` right after `aekasha`.
+- The app imports the engine and the toolkit only through their entries (57 modules rewritten by the codemod).
+- Code uses each module's key object (`HoverToolComponentType.HOVER`, `SpinComponentType.SPIN`, …) instead of `ComponentType`. `AppECSRegistry.ts` keeps only `HEALTH`, added to the component map, with no imports. `SpinComponent.ts` adds its key itself (the region `spin-component-map`, which the ECS walkthrough shows).
+- The gym's test code from the engine is under `src/app/scenes/thirdPersonGymScene/`.
+- Every scene's snapshots and determinism hashes are the same as on `main`'s commit (the scene runner, 96 of 96 in every phase).
+
+### Project
+
+**Added**
+
+- The entries' import aliases from one list, `devTools/aliases.ts`: `tsconfig.json`'s `paths` (a copy that `aliases.test.ts` checks), `resolve.alias` in `vite.config.ts` and `vitest.config.ts`, and the build's `treeshake.moduleSideEffects`. Each alias is exact, so an entry that isn't in the list doesn't resolve.
+- The boundary lint, all errors (`eslint-plugin-import` loaded, `LAYER_ZONES` in `eslint.config.js`): the engine imports no toolkit, app, `src/generated/` or `src/*.ts` file, and the toolkit no app, `src/generated/` or `src/*.ts` file. Nothing outside the engine uses an `_engine/` path, a toolkit category imports no other category's files, and the app imports no toolkit file. The engine imports no `aekasha*` entry, and nothing outside the debug modules imports a `_dbg__` module statically. The paths are resolved, so `import type` and `import()` are checked too.
+- The import codemod, `npx tsx devTools/refactor/migrateToEntries.ts [--check] <folder | file>...` (rules in `refactor/entryImports.ts`, tested): deep engine and toolkit imports become entry imports, one value import and one `import type` per entry, formatted with Prettier. On any error it lists them all and writes nothing. It ships with the major for apps made from the template.
+- Tests: the physics worker bundles without three, `MainLoop`, `Config` or `PhysicsAPI` (`workers/physicsWorker.test.ts`, esbuild 0.25.12 as a direct dev dependency); every engine module loads in Node without a DOM (`moduleLoad.test.ts`); each entry file holds only named `export … from` (`aliases.test.ts`); every `@example` type-checks against the entries (`devTools/verify/examples.ts`, `examples.test.ts`); plus `Config.test.ts` and `PromiseResolver.test.ts`.
+- `api.json` (`yarn verify:baselines`) gains each entry's export list, so the public surface is a baseline.
+- Hub: the migration guide (Documentation → Migration, "Engine 4 → 5"); the Documentation intro's "Importing the engine" (the 16 entries and the lint); the Quick start's "How the app starts" (`src/index.ts`, `InitEngine`'s options). The ECS guide and walkthrough, scenes and assets, and the coding standards follow the changes.
+
+**Changed**
+
+- `yarn gatherAppData` writes `src/generated/` (`generatedAppData.json`, `generatedAppFns.ts` and an `index.ts` exporting `appData`), with `aekasha` type imports. `checkVersions` counts `src/generated/` in no part.
+- The move map's import graph resolves the aliases, so code that imports through an entry still counts as a consumer. `moveRules.ts` maps the new files, and its notes on the kernel's extension points name p607.
+- TypeDoc and the Hub's API extraction leave the entry files out, so the API pages stay per module (until p619).
+- CLAUDE.md (the three-folder split as lint rules, the ECS core, the data pipeline, the bootstrap flow, the build config, the commands and tests) and `readme.md` (the examples' imports, `InitEngine`'s signature, the tree, a "Public entries" highlight, the migration guide).
+- The Hub's search index is 1.01 MB, over the build's 1 MiB warning; left for p619.
+
 ## 2026-10-10 — coding-standards-and-documentation-tooling
 
 ### Engine 4.15.1 (Afternoon)
