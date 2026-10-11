@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: in progress | Phases 1-4 implemented
 Category: Build, Performance, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
 Blocks: p608_engine-folder-restructure.md, p611_sbp-tooling-profiles-and-marketing.md, p510_headless-simulation-runtime.md
@@ -570,7 +570,7 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
   before (the dev server, where `__AEK_DEBUG__` is true). `yarn test` 225 passed, lint, `tsc`
   (both projects), the docs ratchet.
 
-### Phase 4: the install contract and the kernel
+### Phase 4: the install contract and the kernel — done
 
 1. `core/Features.ts`: the types, `FeatureContext` (the ECS members and `onDebug*` now; the seams
    come with their features), the install runner, `requires` checks.
@@ -579,6 +579,69 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
 3. The app's plugins become `appECSPlugins` (D9); `exampleHud.ts` and `scene01.ts` lose their
    top-level statements; the Hub region `ecs-register-plugin` moves with the code.
 4. The allow-list loses the kernel's and the app's entries; the system order is unchanged.
+
+**As built:**
+
+- **`core/Features.ts`:** the public types `EngineFeature`, `FeatureContext` and
+  `FeatureDebugHook` (on `aekasha`); internal `createFeatureHost(config)` (the context plus the
+  installed ids and the two debug hook lists, on a host object `InitEngine` owns, not in module
+  state), `checkFeatures` (an id listed twice, a `requires` id missing or listed later: throws
+  naming both, before anything installs), `installFeaturesAsync` (list order, each awaited; a
+  failure is caught with a promise `.catch`, not a `try` block, logged with the feature's id and
+  rethrown: the lib is ES2021, no `Error` `cause`) and `runFeatureDebugHooksAsync`.
+  `core/Features.test.ts` (9 tests). Move rules: `Features.ts`, its test and `Kernel.ts` →
+  `kernel/init/`.
+- **Changed from D1's table:** the context also has `registerCorePlugin` (the kernel's core
+  plugin needs it, and `lines()` will: `lineTimeSystem` is a core plugin, Phase 7).
+- `onDebug` / `onDebugAfterStart` keep a hook only `if (__AEK_DEBUG__)`. Nothing calls them yet:
+  **Phase 5 checks that a production build drops an `onDebug` closure and its `import()`** (the
+  debug check in `verify:baselines`). Rollup may not see through `ctx.onDebug` (a method of an
+  object passed as a parameter) to its empty body; if the chunk stays, the call sites become
+  `if (IS_DEBUG_ENV) ctx.onDebug(…)` (installs run after `initEnvironment`, so the flag is set).
+- **The install points follow the recorded system order, not just §4.2.** Today the kernel's and
+  the features' load-time registrations interleave (dev server evaluation order: Raycast,
+  PhysicsManager, Character, GroupManager, ECSCoreSystems, frustum culling, MeshManager, Spatial,
+  SkyBox, light culling, LOD, InitApp, PhysicsTiers, PhysicsTierPolicy, AppECSPlugins). The ties
+  that involve kernel or app systems (every recorded entry): `MAIN` / `LATE_MAIN` /
+  `APP_RENDER_SYNC@0` (the core plugin's systems first), `LATE_MAIN@-1000`
+  (`rayCastFrameEndSystem` before `physicsRayStatsFrameEndSystem`), `APP_LOGIC@0`
+  (`physicsTierPolicyFrameSystem` before the app's), `APP_RENDER_SYNC@-0.5`
+  (`followObjectCameraRigSystem` before `physicsWireframeSystem`). So:
+  - `installKernel` (`core/Kernel.ts`: core systems, frustum culling, meshes, groups, raycast;
+    no two share a stage and order or a component type) runs **right before `initECSWorld`**.
+  - The listed features install after the debug camera, before `registerPhysicsManager` (D1's
+    point). Their debug hooks run at the end of the first `IS_DEBUG_ENV` block, the after-start
+    ones after `createSkyBoxDebugGUI` (before the toaster); neither inside a `try`.
+  - The kernel's `DISABLED` and `TAG_FRUSTUM_CULLED` hooks now run after LOD's (still at load):
+    LOD's only queue a selection, no interaction.
+  - **For Phase 5:** with `physics()` before `app` in the list, the ties above hold as long as
+    `physicsTierPolicyFrameSystem` registers in physics' install and `physicsWireframeSystem`
+    after the app's install (today its debug chunk registers it, fire-and-forget, from
+    `registerPhysicsManager`). Keep `physicsInterpolationSystem` and
+    `physicsRayStatsFrameEndSystem` after the kernel (they are).
+- Each kernel module's statements are an internal `install…(ctx)` in the module
+  (`installCoreSystems`, `installObjectFrustumCulling` with its hook moved next to its plugin,
+  `installMeshes`, `installGroups`, `installRaycast`). `InitApp.ts` imports `Kernel.ts` where
+  the side-effect imports were, so the modules still registering at load evaluate in the same
+  relative order (checked with an evaluation-order script); light culling's side-effect import
+  stays until Phase 6.
+- `InitEngine`: `features?: EngineFeature[]` (default `[]`), `checkFeatures` right after
+  `loadConfig`; the `@example` lists `features: [appECSPlugins]`. Cameras, lights and input still
+  register in `InitEngine` itself.
+- **The app (D9):** `appECSPlugins` (`id: 'app'`), the Hub region `ecs-register-plugin` around
+  the whole feature; `src/index.ts` lists it and no longer imports the file for its effect.
+  `createExampleHud` registers the exit hook (by id, so once), `scene01`'s key binding is created
+  in its scene function (replaced by id on a later visit, still bound after the scene). The Hub's
+  prose about `AppECSPlugins.ts` is Phase 10's.
+- The allow-list: 29 statements in 11 files left (physics, character, sky box, light culling,
+  LOD, spatial, instancing; 42 in 19 before).
+- Checks: `yarn verify:scenes` 96 passed after section 2 and again after section 3 (24 scenes ×
+  4 configurations, WebGPU, macOS): hashes, snapshots and the system order unchanged. `yarn test`
+  234 passed, lint, `tsc` (both projects), the docs ratchet, `yarn hub:build` (the moved region).
+  Baselines recorded: `api.json` gains the three public types on `aekasha` and the internal
+  installers and runner; `bundle.json`'s main chunk `_engine/core` 58.7 → 59.5 kB gzip (25 → 27
+  modules: `Features.ts`, `Kernel.ts`), the file `index.js` 411.0 → 411.6 kB gzip; `docs.json`
+  better coverage. The production build's debug check: none.
 
 ### Phase 5: physics and character
 

@@ -242,6 +242,7 @@
     },
     "src/_engine/core/ECS/ECSCoreSystems.ts": {
       "entityLifetimeSystem": "Function",
+      "installCoreSystems": "Function",
       "lookAtSystem": "Function",
       "object3DSyncSystem": "Function",
       "reconcileObject3DVisibility": "Function"
@@ -257,6 +258,7 @@
     "src/_engine/core/ECS/ObjectFrustumCullingSystem.ts": {
       "BoundingVolumeProvider": "TypeAlias",
       "getMeshWorldBoundingSphere": "Variable",
+      "installObjectFrustumCulling": "Function",
       "MAX_SPOT_ANGLE": "Variable",
       "objectFrustumCullingSystem": "Function",
       "setFrustumCullingEnabled": "Function"
@@ -269,6 +271,16 @@
       "createTransformBuffer": "Function",
       "TRANSFORM_FIELD_COUNT": "Variable",
       "TypedArrayTransformStore": "Class"
+    },
+    "src/_engine/core/Features.ts": {
+      "checkFeatures": "Function",
+      "createFeatureHost": "Function",
+      "EngineFeature": "TypeAlias",
+      "FeatureContext": "TypeAlias",
+      "FeatureDebugHook": "TypeAlias",
+      "FeatureHost": "TypeAlias",
+      "installFeaturesAsync": "Function",
+      "runFeatureDebugHooksAsync": "Function"
     },
     "src/_engine/core/Geometry.ts": {
       "createGeometry": "Function",
@@ -297,6 +309,7 @@
       "disposeGroup": "Function",
       "getGroupByAppId": "Function",
       "GroupProps": "TypeAlias",
+      "installGroups": "Function",
       "removeFromGroupEntity": "Function"
     },
     "src/_engine/core/Helpers.ts": {
@@ -492,6 +505,9 @@
     "src/_engine/core/Instancing/InstancedMeshPoolTypes.ts": {
       "InstancedMeshSlotData": "Interface",
       "InstancePlacement": "Interface"
+    },
+    "src/_engine/core/Kernel.ts": {
+      "installKernel": "Function"
     },
     "src/_engine/core/LightManager.ts": {
       "aimLightAtEntity": "Function",
@@ -881,6 +897,7 @@
       "createMeshEntity": "Function",
       "disposeMesh": "Function",
       "getMeshByAppId": "Function",
+      "installMeshes": "Function",
       "MeshProps": "TypeAlias",
       "preWarmMesh": "Function",
       "removeMeshLod": "Function",
@@ -1298,6 +1315,7 @@
       "deleteAllRayHelpers": "Function",
       "getRayCastStats": "Function",
       "initRayCasting": "Function",
+      "installRaycast": "Function",
       "isRayCastStatsEnabled": "Function",
       "RayCastOpts": "TypeAlias",
       "RayDebugOpts": "Reference",
@@ -2598,6 +2616,9 @@
       "ECSTransformProp",
       "ECSWorld",
       "ECSWorldOptions",
+      "EngineFeature",
+      "FeatureContext",
+      "FeatureDebugHook",
       "GeneratedAppJson",
       "GeneratedAssetUrls",
       "GeoBaseProps",
