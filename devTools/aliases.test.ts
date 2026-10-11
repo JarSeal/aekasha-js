@@ -17,4 +17,25 @@ describe('aliases', () => {
       expect(fs.existsSync(path.join(ROOT, file)), file).toBe(true);
     }
   });
+
+  // getEntryModuleSideEffects declares the entry files side-effect free, so the build drops
+  // anything else they'd run. Named, so an entry lists its API (no `export *`).
+  it('an entry file holds only named `export … from` statements', () => {
+    const offending: string[] = [];
+    for (const file of Object.values(ENTRY_FILES)) {
+      const text = fs.readFileSync(path.join(ROOT, file), 'utf-8');
+      const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+      for (const statement of sf.statements) {
+        const isNamedReexport =
+          ts.isExportDeclaration(statement) &&
+          !!statement.moduleSpecifier &&
+          !!statement.exportClause &&
+          ts.isNamedExports(statement.exportClause);
+        if (isNamedReexport) continue;
+        const line = sf.getLineAndCharacterOfPosition(statement.getStart(sf)).line + 1;
+        offending.push(`${file}:${line} ${statement.getText(sf).split('\n')[0]}`);
+      }
+    }
+    expect(offending).toEqual([]);
+  });
 });

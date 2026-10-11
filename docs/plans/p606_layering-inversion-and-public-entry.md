@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-7 implemented
+Status: in progress | Phases 1-8 implemented
 Category: Architecture, Refactoring
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
 Blocks: p607_sbp-foundation-feature-modules.md, p608_engine-folder-restructure.md, p510_headless-simulation-runtime.md
@@ -580,7 +580,7 @@ what it adds.
   after B's update (`api.json`: the moved and removed exports; `bundle.json`: 3.9 kB gzip from the
   main chunk's `_engine/utils` group to `toolkit`; `docs.json`: `toolkit/ecs` 10 / 10).
 
-### Phase 8: the boundary lint and the `@example` check
+### Phase 8: the boundary lint and the `@example` check — done
 
 1. `eslint-plugin-import` loaded; the rules in §4.5, errors everywhere (D1).
 2. The `@example` check (§4.6); `createLines`' example fixed so it parses.
@@ -591,6 +591,64 @@ what it adds.
 5. An entry file holds only `export … from` (found in Phase 7: `getEntryModuleSideEffects` declares
    them side-effect free, so the build would drop anything else they run). A check next to
    `baselines.ts`' `export *` failure, or in `aliases.test.ts`.
+
+**As built** (A: steps 1, 3, 4; B: step 2; C: step 5):
+
+- **The tree already followed every rule:** a trial config flagged nothing, so the lint is a config
+  change only (`eslint.config.js`, +89 lines). Each rule was checked with a mutation file per zone.
+  `yarn lint` on `src/` takes 9.3 s instead of 8.6 s.
+- **Changed from §4.5:** every path rule is one `import/no-restricted-paths` with zones
+  (`LAYER_ZONES`), the "consumers → `_engine/`" row included (§4.5 had `no-restricted-imports`):
+  it resolves the path, so the depth of the `../` doesn't matter, and it checks `import type` and
+  `import()` too (risk 3's second specifier is a type import). The zones: the engine imports no
+  toolkit, app, `src/generated/` or `src/*.ts`; the toolkit no app, `src/generated/` or `src/*.ts`;
+  nothing outside the engine an `_engine/` path; a toolkit category no other category's files
+  (`TOOLKIT_CATEGORIES`, the `aekasha/toolkit/*` entries' folders, listed by hand); the app and
+  `src/*.ts` no toolkit file. The node resolver with `.ts` resolves them, and leaves the `aekasha*`
+  aliases unresolved (so unchecked).
+- **Trap:** in a zone whose `from` is a glob, `except` isn't resolved against `basePath`: the
+  exceptions are absolute (`import.meta.dirname`). And one zone's `from` must be all globs or none.
+- The `_dbg__` rule and "no `aekasha*` in the engine" are `@typescript-eslint/no-restricted-imports`
+  (regex patterns), for `allowTypeImports` on the first: an `import type` of a `_dbg__` module is
+  erased. Exempt from the `_dbg__` rule: `_dbg__*` files anywhere (the app has 5) and
+  `core/Debug/**`; `src/_engine/debug/*.ts` (the thin public entries) isn't exempt, and uses only
+  `import()`. The engine's debug files keep the `aekasha*` rule.
+- **Step 3 is narrower than written:** only the generated code's 3 toolkit `*.tsl.ts` imports need
+  the exception (a glob `except` on the generated → toolkit zone); no rule restricts generated →
+  app, so its app `.tsl.ts` imports and dynamic scene imports need none.
+- Phase 5's `import/no-mutable-exports` note doesn't apply: §4.5 doesn't turn the rule on, and the
+  plugin's `recommended` set isn't loaded.
+- Step 4: all 2,082 relative specifiers in the 342 engine files resolved; none leaves
+  `src/_engine/`.
+- **The `@example` check** (`devTools/verify/examples.ts`, `examples.test.ts`). There were 4
+  examples, not 2: Phases 4 and 5 added `InitEngine`'s (fenced, importing `./CONFIG` and
+  `./generated`) and `ComponentDataMap`'s (a `declare module 'aekasha'`).
+  - Extraction: the TS AST finds each tag, and the code comes from the raw comment, so each block
+    knows its source line. Each fenced block is one example (other languages than ts / js are
+    skipped); an unfenced tag is all code, as TypeDoc reads it. Scope: TypeDoc's (`src/_engine`,
+    `src/toolkit`, minus `_dbg__*`, tests, `index.ts`).
+  - Each example is a virtual module in `src/__examples__/` (a folder that doesn't exist), with
+    one header line importing the entry names it uses but doesn't import or declare (from any
+    entry, values and `import type` apart for `verbatimModuleSyntax`) and `export {}` (examples
+    don't share a scope). One program: the real `tsconfig.json` with its `.d.ts` roots, minus
+    `noUnusedLocals` / `noUnusedParameters`; only the examples' diagnostics count.
+  - Free, beyond §4.6's "Cannot find name": 2304, 2552 (its "Did you mean" form), 18004 (a
+    shorthand property of one), and 2307 for a relative specifier (the reader's own module). A
+    misspelled entry fails.
+  - `createLines`' loop is `for (const [a, b] of pairs) w.vec(a, b);`. Before the fix the check
+    reported it at `LineManager.ts:69` (TS1109); a mutation of `InitEngine`'s example
+    (`sceneId: 42`) failed at `InitApp.ts:94` (TS2322).
+  - The test checks the repo's examples and four fixtures in one program (about 1.3 s); `yarn
+    test` takes 2.3 s.
+  - Limits: an example's `'aekasha'` augmentation merges into the shared program (two
+    conflicting ones would clash; there's one); an internal name no entry exports passes as a free
+    name.
+- Step 5 is in `aliases.test.ts`: every statement of an entry file is a named `export … from`
+  (checked with a mutation: `export *`, a side-effect import, a local export, a call, a
+  declaration, a local `export { y }`, each reported with its line). `baselines.ts`' own
+  `export *` failure stays.
+- Baselines: `bundle.json`, `api.json` and `docs.json` unchanged. `verify:scenes` not run: no
+  runtime code changed (one JSDoc comment).
 
 ### Phase 9: Hub, CLAUDE.md and the migration guide
 
@@ -612,6 +670,13 @@ what it adds.
    `{@link InitEngine}` in `AppData.ts` / `Scene.ts` that TypeDoc can't resolve (no import in
    scope: `{@link InitApp!InitEngine}`). `readme.md`'s examples' imports and the code-blocks page
    are done (Phase 7).
+5. Found in Phase 8: root `CLAUDE.md`'s "Three-folder split" says nothing in `eslint.config.js`
+   enforces the boundary (it does now: `LAYER_ZONES`, the `_dbg__` and `aekasha*` rules), and its
+   `yarn test` line gets the `@example` and entry-file checks; `devTools/verify/CLAUDE.md` gets the
+   `@example` check (`examples.ts`). The Hub's coding standards: `intro.md`'s layering rules name
+   the lint; `jsdoc.md`'s "Examples compile" says how it's checked (`yarn test`, free names and
+   the reader's relative imports allowed) and its tag table's "imports are left out" allows an
+   example's own imports (`InitEngine`'s has them).
 
 ### Phase 10: versioning and mark done
 
