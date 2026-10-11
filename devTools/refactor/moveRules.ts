@@ -1,7 +1,8 @@
 /**
  * The target layout as rules (p602 Phase 2): where every file of `src/_engine/` and
- * `src/toolkit/`, and the app files that move, go in p606-p609. `moveMap.ts` applies them to the
- * tracked tree and writes `moveMap.json`, which p608's codemod reads.
+ * `src/toolkit/`, and the app files that move, go in p608-p609. `moveMap.ts` applies them to the
+ * tracked tree and writes `moveMap.json`, which p608's codemod reads. (p606 made its own moves,
+ * the generated data and the gameplay and test code, and their rules left with them.)
  *
  * - A rule's `from` is a repo-relative file, or a folder ending in `/`. The longest matching
  *   `from` wins, so a file rule beats its folder's rule and the order here doesn't matter.
@@ -15,7 +16,7 @@ import path from 'path';
 
 export type MoveAction = 'keep' | 'move' | 'delete' | 'merge' | 'split';
 /** The plan that applies the move */
-export type MovePlan = 'p606' | 'p608' | 'p609';
+export type MovePlan = 'p608' | 'p609';
 
 export type MoveEntry = {
   /** Target path; `null` for a deleted file */
@@ -44,7 +45,7 @@ const T = 'src/toolkit/';
 const A = 'src/app/';
 
 const WRAPPER_NOTE =
-  "a debug wrapper: p606 / p618 merge it into the feature's public module (p602 D4)";
+  "a debug wrapper: merged into the feature's public module with its move (p608 / p618, p602 D4)";
 
 const ENGINE_RULES: MoveRule[] = [
   // Engine root
@@ -120,7 +121,7 @@ const ENGINE_RULES: MoveRule[] = [
   {
     from: `${E}core/Import/MeshColliderGeometry.ts`,
     to: `${F}physics/import/MeshColliderGeometry.ts`,
-    note: 'builds physics colliders: SpawnImported reaches it through an import extension (p606)',
+    note: 'builds physics colliders: SpawnImported reaches it through an import extension (p607)',
   },
   {
     from: `${E}3dModels/customPropTemplates.blend`,

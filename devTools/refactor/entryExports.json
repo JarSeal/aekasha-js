@@ -1954,7 +1954,8 @@
           "kind": "Function",
           "usage": "public",
           "by": [
-            "app"
+            "app",
+            "hub"
           ]
         },
         "InitEngineOptions": {
@@ -2533,6 +2534,7 @@
             "aekasha/lod",
             "aekasha/physics",
             "aekasha/spatial",
+            "hub",
             "toolkit"
           ]
         },
@@ -2549,6 +2551,7 @@
             "aekasha/skybox",
             "aekasha/spatial",
             "app",
+            "hub",
             "toolkit"
           ]
         }

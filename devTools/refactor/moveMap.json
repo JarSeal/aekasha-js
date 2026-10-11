@@ -765,7 +765,7 @@
       "to": "src/_engine/features/physics/import/MeshColliderGeometry.ts",
       "action": "move",
       "plan": "p608",
-      "note": "builds physics colliders: SpawnImported reaches it through an import extension (p606)"
+      "note": "builds physics colliders: SpawnImported reaches it through an import extension (p607)"
     },
     "src/_engine/core/Import/MeshoptDecoder.ts": {
       "to": "src/_engine/kernel/assets/import/MeshoptDecoder.ts",
@@ -1629,7 +1629,7 @@
       "to": "src/_engine/kernel/assets/debug/Assets.ts",
       "action": "move",
       "plan": "p608",
-      "note": "a debug wrapper: p606 / p618 merge it into the feature's public module (p602 D4)"
+      "note": "a debug wrapper: merged into the feature's public module with its move (p608 / p618, p602 D4)"
     },
     "src/_engine/debug/AxesGizmo.ts": {
       "to": "src/_engine/debug/AxesGizmo.ts",
@@ -1685,7 +1685,7 @@
       "to": "src/_engine/features/postfx/debug/PostFXProfiler.ts",
       "action": "move",
       "plan": "p608",
-      "note": "a debug wrapper: p606 / p618 merge it into the feature's public module (p602 D4)"
+      "note": "a debug wrapper: merged into the feature's public module with its move (p608 / p618, p602 D4)"
     },
     "src/_engine/debug/Profiler.ts": {
       "to": "src/_engine/debug/Profiler.ts",

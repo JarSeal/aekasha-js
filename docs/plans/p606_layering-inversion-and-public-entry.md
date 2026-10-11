@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-8 implemented
+Status: in progress | Phases 1-9 implemented
 Category: Architecture, Refactoring
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
 Blocks: p607_sbp-foundation-feature-modules.md, p608_engine-folder-restructure.md, p510_headless-simulation-runtime.md
@@ -650,7 +650,7 @@ what it adds.
 - Baselines: `bundle.json`, `api.json` and `docs.json` unchanged. `verify:scenes` not run: no
   runtime code changed (one JSDoc comment).
 
-### Phase 9: Hub, CLAUDE.md and the migration guide
+### Phase 9: Hub, CLAUDE.md and the migration guide — done
 
 1. Hub: the ECS pages (stages, component types by augmentation), the `InitEngine` and getting
    started pages, the code-blocks page, and **the migration guide's first section** (a new
@@ -677,6 +677,61 @@ what it adds.
    the lint; `jsdoc.md`'s "Examples compile" says how it's checked (`yarn test`, free names and
    the reader's relative imports allowed) and its tag table's "imports are left out" allows an
    example's own imports (`InitEngine`'s has them).
+
+**As built** (A: the Hub pages; B: the migration guide; C: CLAUDE.md files, `readme.md`, the
+links; D: the plans and `moveRules.ts`):
+
+- **Already done by earlier phases:** the ECS pages' augmentation (Phase 4), the code-blocks page
+  and `readme.md`'s examples (Phase 7), the paths in `devFiles/CLAUDE.md`, `hub/CLAUDE.md`, the
+  data pipeline and `yarn docs` lines (Phase 6).
+- **There was no `InitEngine` page** in the Hub (step 1 names one). The Quick start's `setup.md` has
+  "How the app starts" instead: `<<< src/index.ts collapse` (a whole-file include, so no region
+  can drift) and `config`, `data`, `start`, the `./AppECSPlugins` import, entry-only imports and the
+  flags reading as production until `InitEngine`.
+- Hub, the rest of A: the ECS guide (`ComponentType` from `aekasha` holds the engine's keys, the
+  module key objects, `ECSSystemStage` and `APP_RENDER_SYNC_ORDER` as `api:` links, where
+  `AppECSPlugins.ts` is imported) and walkthrough (the stages come from `aekasha`);
+  scenes-and-assets (`src/generated/`, `data`); the Documentation intro's "Importing the engine"
+  (the 16 entries, what each holds, the lint; the API pages are still per module until p619); the
+  coding standards (step 5) and `jsdoc.md`'s `{@link}` row (below).
+- **The migration guide** is `hub/pages/documentation/migration/` (`intro.md`, `engine-5.md`):
+  "Engine 4 → 5" with a "not released yet" note and no codenames (D5 picks them at `stage-b`'s
+  merge). Before you start (the template's engine, toolkit, `devTools/` and configs first),
+  `InitEngine`'s options as a diff, the stages, component types (an old → new table, the real
+  `src/AppECSRegistry.ts` included), `migrateToEntries.ts` and its errors, the moved and removed
+  modules (Phase 7's, `commontTypes.ts`, the toolkit's `InstancedMeshPool` re-exports), the lint.
+  p607 adds `features` to the same section.
+- **The links:** `{@link InitApp!InitEngine}` (step 4) doesn't resolve: TypeDoc names a module by
+  its path from `src/`, so it's `{@link _engine/InitApp!InitEngine}` (3 in `AppData.ts`, 1 in
+  `Scene.ts`). p608's stub says its codemod rewrites such links.
+- **Root `CLAUDE.md`, not in step 2's list:** the `yarn test` line said `Config.ts` reads `window` at
+  load and is stubbed (false since Phase 5; no test stubs a global now); it names
+  `moduleLoad.test.ts`, how a test turns the debug env on (`VITE_APP_ENV: 'development'`: without
+  it a production build ignores the URL) and the three structural tests. The Coding standards'
+  Layering and Public API lines name the lint and the entry-file rule. Bootstrap flow is checked
+  against `InitApp.ts` step by step. The Three-folder split lists the zones and the config's two
+  traps.
+- `readme.md`: the tree (`index.ts`, `features/`, `utils/` and `toolkit/` lines), the
+  "convention" sentence, a "Public entries" highlight, the migration guide under Documentation.
+- `moveRules.ts`: `WRAPPER_NOTE` and `MeshColliderGeometry`'s note name p608 / p618 and p607 (D2);
+  `MovePlan` loses `'p606'` (no rule uses it since Phases 6-7). The regenerated `entryExports.json`
+  and `layoutReport.md` also pick up the Hub's new `api:` links and two modules from Phase 8 (the
+  reports were stale; `--check` passes now).
+- Plans: p607 gets "From p606" (the seams, the feature-schema seam, `features` in `InitEngine`, the
+  dev server's module-level registrations, the entries' side effects, the `?worker` and SCSS
+  imports, the lazy data maps' new home, the branch and the migration guide); its "Loaders and
+  barrels" item lost the `Addons.js` half (Phase 5). p608: its codemod rewrites the entries'
+  re-export paths, `eslint.config.js` and the module-qualified links; the gameplay and test moves
+  are done and `ECSStressTest` stays in the kernel; `api.json` changes by path only, its `entries`
+  not at all; no path list in the migration guide. p510: the `LoopState` trap and the load-time
+  reads are fixed (Phases 1, 5), the `?worker` / SCSS imports are p607's, so it's blocked by p607
+  too (and p607 blocks it).
+- **The Hub's search index is over its budget:** 1.01 MB against `devTools/hub/build.ts`'s 1 MiB
+  warning (it was 1008 kB before this phase; A and B's pages tipped it). A warning, left for p619
+  (the Hub tooling's review), as decided.
+- Checks: `yarn test` (218), `yarn verify:baselines --docs` unchanged, `yarn hub:build` with 17
+  warnings (TypeDoc's 16 `notExported` and the search index; the four `{@link InitEngine}` gone),
+  `moveMap.ts --check`. No runtime code changed (JSDoc only), so no `verify:scenes`.
 
 ### Phase 10: versioning and mark done
 
