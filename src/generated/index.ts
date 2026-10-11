@@ -1,5 +1,5 @@
 // THIS IS AN AUTO-GENERATED FILE, DO NOT MODIFY!
-import type { AppData } from '../_engine/core/AppData';
+import type { AppData } from 'aekasha';
 import json from './generatedAppData.json';
 import { postFxFileObjects, sceneFileObjects, tslMaterialFileObjects } from './generatedAppFns';
 

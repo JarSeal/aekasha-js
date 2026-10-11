@@ -2,21 +2,30 @@ import * as THREE from 'three/webgpu';
 import { float, normalMap, texture, uv, vec2 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { Node } from 'three/webgpu';
-import { createCameraEntity } from '../_engine/core/CameraManager';
-import { IS_DEBUG_ENV } from '../_engine/core/Config';
-import { getECSWorld } from '../_engine/core/ECS';
-import { CoreComponentType } from '../_engine/core/ECS/ECSRegistry';
-import { createGeometry, saveBufferGeometry } from '../_engine/core/Geometry';
-import { importAssetAsync, releaseImportedAsset } from '../_engine/core/Import/ImportRegistry';
-import type { ImportedAssetManifest } from '../_engine/core/Import/ImportTypes';
-import { spawnImportedAsset } from '../_engine/core/Import/SpawnImported';
-import { createKeyBinding } from '../_engine/core/Input/KeyboardInput';
-import { createMaterial, deleteMaterial, saveMaterial } from '../_engine/core/Material';
-import { createMeshEntity } from '../_engine/core/MeshManager';
-import { getRenderer } from '../_engine/core/Renderer';
-import { getLoaderStatusUpdater } from '../_engine/core/SceneLoader';
-import { deleteTexture, getTexture, loadTextureAsync } from '../_engine/core/Texture';
-import { lerror, lwarn } from '../_engine/utils/Logger';
+import {
+  createCameraEntity,
+  IS_DEBUG_ENV,
+  getECSWorld,
+  CoreComponentType,
+  createGeometry,
+  saveBufferGeometry,
+  importAssetAsync,
+  releaseImportedAsset,
+  spawnImportedAsset,
+  createKeyBinding,
+  createMaterial,
+  deleteMaterial,
+  saveMaterial,
+  createMeshEntity,
+  getRenderer,
+  getLoaderStatusUpdater,
+  deleteTexture,
+  getTexture,
+  loadTextureAsync,
+  lerror,
+  lwarn,
+} from 'aekasha';
+import type { ImportedAssetManifest } from 'aekasha';
 
 /**
  * The p300 Phase 1d comparison scene: the codec variants that `phase1Variants.ts` built, side by

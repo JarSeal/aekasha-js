@@ -1,16 +1,18 @@
 import * as THREE from 'three/webgpu';
-import type { GeoProps, GeoTypes } from '../../_engine/core/Geometry';
-import { createGeometry } from '../../_engine/core/Geometry';
-import type { Materials, MatProps } from '../../_engine/core/Material';
-import { createMaterial } from '../../_engine/core/Material';
-import type { MeshProps } from '../../_engine/core/MeshManager';
-import { createMeshEntity, getMeshByAppId } from '../../_engine/core/MeshManager';
-import { getECSWorld, type ECSWorld } from '../../_engine/core/ECS';
-import { createPhysicsEntity } from '../../_engine/core/PhysicsManager';
-import type { ColliderParams, RigidBodyParams } from '../../_engine/core/Physics/PhysicsAPITypes';
-import { ECSSystemStage } from '../../_engine/core/ECS/SystemStages';
-import { existsOrThrow } from '../../_engine/utils/assert';
-import { getLogger } from '../../_engine/utils/Logger';
+import {
+  createGeometry,
+  createMaterial,
+  createMeshEntity,
+  getMeshByAppId,
+  getECSWorld,
+  type ECSWorld,
+  ECSSystemStage,
+  existsOrThrow,
+  getLogger,
+} from 'aekasha';
+import type { GeoProps, GeoTypes, Materials, MatProps, MeshProps } from 'aekasha';
+import { createPhysicsEntity } from 'aekasha/physics';
+import type { ColliderParams, RigidBodyParams } from 'aekasha/physics';
 
 /** This file's own internal grouping of one collider (+ optionally the shared rigid body) — the
  * engine-agnostic Physics API has

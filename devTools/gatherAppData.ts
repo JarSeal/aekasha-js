@@ -97,7 +97,7 @@ export const OUTPUT_FILE_FN = path.join(OUTPUT_DIR, generatedAppFnsFilename);
 /** The app's import (`appData`, passed to `InitEngine`); the same on every gather */
 export const OUTPUT_FILE_INDEX = path.join(OUTPUT_DIR, 'index.ts');
 const INDEX_FILE_CONTENT = `// THIS IS AN AUTO-GENERATED FILE, DO NOT MODIFY!
-import type { AppData } from '../_engine/core/AppData';
+import type { AppData } from 'aekasha';
 import json from './${generatedAppDataJSONFilename}';
 import { postFxFileObjects, sceneFileObjects, tslMaterialFileObjects } from './${generatedAppFnsFilename.replace(/\.ts$/, '')}';
 
@@ -1288,8 +1288,7 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
       if (isProduction && fileContentJSON.isDebugScene) continue;
 
       if (!addedFirstImport) {
-        sceneFileImports +=
-          "import type { SceneData } from '../_engine/core/Scene.ts';\nimport type { ScenePrimitiveAssets } from '../_engine/core/SceneLoader.ts';\n";
+        sceneFileImports += "import type { SceneData, ScenePrimitiveAssets } from 'aekasha';\n";
         addedFirstImport = true;
       }
       const basePath = getBasePath(fullPath);

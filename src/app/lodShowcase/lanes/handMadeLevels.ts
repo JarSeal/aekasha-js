@@ -1,12 +1,14 @@
 import type * as THREE from 'three/webgpu';
-import { getEntityIdByAppId } from '../../../_engine/core/ECS';
-import { getGeometry } from '../../../_engine/core/Geometry';
-import { getMaterial } from '../../../_engine/core/Material';
-import { createMeshEntity } from '../../../_engine/core/MeshManager';
-import type { LodDef } from '../../../_engine/core/Lod/LodTypes';
-import { getConservativeGeometryRadius } from '../../../_engine/core/Spatial/SpatialIndexSystem';
-import { existsOrThrow } from '../../../_engine/utils/assert';
-import { lwarn } from '../../../_engine/utils/Logger';
+import {
+  getEntityIdByAppId,
+  getGeometry,
+  getMaterial,
+  createMeshEntity,
+  existsOrThrow,
+  lwarn,
+} from 'aekasha';
+import type { LodDef } from 'aekasha/lod';
+import { getConservativeGeometryRadius } from 'aekasha/spatial';
 import type { ShowcaseLane } from '../layout';
 
 /** The lane's mesh JSON (lodShowcaseHandMade.mesh.json), listed in lodShowcase.scene.json. */

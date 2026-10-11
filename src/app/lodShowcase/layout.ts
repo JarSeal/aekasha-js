@@ -1,9 +1,8 @@
 import * as THREE from 'three/webgpu';
-import type { ECSWorld } from '../../_engine/core/ECS';
-import type { SceneData } from '../../_engine/core/Scene';
-import type { LodDef } from '../../_engine/core/Lod/LodTypes';
-import { DEFAULT_LOD_HYSTERESIS, getLodBias } from '../../_engine/core/Lod/LodSystem';
-import { lwarn } from '../../_engine/utils/Logger';
+import { lwarn } from 'aekasha';
+import type { ECSWorld, SceneData } from 'aekasha';
+import { DEFAULT_LOD_HYSTERESIS, getLodBias } from 'aekasha/lod';
+import type { LodDef } from 'aekasha/lod';
 
 // The LOD showcase's layout (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 5): lanes side by side
 // along x, each running away from the start camera along -z. A level is used while the screen size

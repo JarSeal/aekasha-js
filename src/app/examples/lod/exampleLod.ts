@@ -1,14 +1,16 @@
 import * as THREE from 'three/webgpu';
-import { getECSWorld } from '../../../_engine/core/ECS';
-import { getGeometry, saveBufferGeometry } from '../../../_engine/core/Geometry';
-import { createInstancedLodPool } from '../../../_engine/core/Instancing/InstancedMeshPool';
-import { generateOctahedralImpostor } from '../../../_engine/core/Lod/Impostors/OctahedralImpostor';
-import { generateLodChain } from '../../../_engine/core/Lod/LodChains';
-import { createMaterial } from '../../../_engine/core/Material';
-import { createMeshEntity } from '../../../_engine/core/MeshManager';
-import { getRootScene } from '../../../_engine/core/Scene';
-import { existsOrThrow } from '../../../_engine/utils/assert';
-import { createSeededRandom } from '../../../toolkit/geometry/seededRandom';
+import {
+  getECSWorld,
+  getGeometry,
+  saveBufferGeometry,
+  createMaterial,
+  createMeshEntity,
+  getRootScene,
+  existsOrThrow,
+} from 'aekasha';
+import { createInstancedLodPool } from 'aekasha/instancing';
+import { generateOctahedralImpostor, generateLodChain } from 'aekasha/lod';
+import { createSeededRandom } from 'aekasha/toolkit/geometry';
 
 const KNOT_ID = 'lodExampleKnot';
 /** Bakes at load. To load it instead: export it from the LOD tab's Impostors folder, move its four

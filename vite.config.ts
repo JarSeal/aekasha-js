@@ -13,7 +13,7 @@ import { devFilesPlugin } from './devTools/devFilesPlugin.ts';
 import { hubPlugin } from './devTools/hubPlugin.ts';
 import { getProjectMetadata } from './devTools/projectMetadata.ts';
 // The public entries' import aliases (`aekasha`, `aekasha/*`, p606)
-import { getViteAliases } from './devTools/aliases.ts';
+import { getEntryModuleSideEffects, getViteAliases } from './devTools/aliases.ts';
 
 const REPO_ROOT = fileURLToPath(new URL('.', import.meta.url));
 
@@ -56,6 +56,7 @@ export default defineConfig({
     manifest: true,
     minify: true,
     reportCompressedSize: true,
+    rollupOptions: { treeshake: { moduleSideEffects: getEntryModuleSideEffects(REPO_ROOT) } },
   },
   // ES module workers: an IIFE worker can't be code-split, and the assets worker loads the
   // meshopt simplifier on demand (docs/plans/_DONE_p347_lod-chain-generation.md, Phase 0). The dev server

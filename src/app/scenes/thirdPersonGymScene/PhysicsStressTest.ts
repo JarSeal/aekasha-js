@@ -1,10 +1,12 @@
-import { createKeyBinding } from '../../../_engine/core/Input/KeyboardInput';
-import { getLogger } from '../../../_engine/utils/Logger';
-import { createPhysicsEntity } from '../../../_engine/core/PhysicsManager';
-import { createGeometry } from '../../../_engine/core/Geometry';
-import { createMaterial } from '../../../_engine/core/Material';
-import { createMeshEntity } from '../../../_engine/core/MeshManager';
-import { IS_DEBUG_ENV } from '../../../_engine/core/Config';
+import {
+  createKeyBinding,
+  getLogger,
+  createGeometry,
+  createMaterial,
+  createMeshEntity,
+  IS_DEBUG_ENV,
+} from 'aekasha';
+import { createPhysicsEntity } from 'aekasha/physics';
 
 let stressTestCount = 0;
 

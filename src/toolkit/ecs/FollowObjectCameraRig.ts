@@ -1,7 +1,6 @@
 import * as THREE from 'three/webgpu';
-import type { ECSWorld } from '../../_engine/core/ECS';
-import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../../_engine/core/ECS/SystemStages';
-import { smoothDampVec3 } from '../../_engine/utils/helpers';
+import { APP_RENDER_SYNC_ORDER, ECSSystemStage, smoothDampVec3 } from 'aekasha';
+import type { ECSWorld } from 'aekasha';
 
 const DEFAULT_OFFSET = { x: 0, y: 5, z: 10 };
 const DEFAULT_LERP_SMOOTH_TIME = 0.1;

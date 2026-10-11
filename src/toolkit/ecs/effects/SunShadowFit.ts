@@ -1,8 +1,6 @@
 import * as THREE from 'three/webgpu';
-import type { ECSWorld } from '../../../_engine/core/ECS';
-import { CoreComponentType } from '../../../_engine/core/ECS/ECSRegistry';
-import { lwarn } from '../../../_engine/utils/Logger';
-import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../../../_engine/core/ECS/SystemStages';
+import { CoreComponentType, lwarn, APP_RENDER_SYNC_ORDER, ECSSystemStage } from 'aekasha';
+import type { ECSWorld } from 'aekasha';
 
 /** Internal Key (Values) */
 export enum SunShadowFitComponentType {

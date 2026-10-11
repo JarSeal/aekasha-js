@@ -1,8 +1,5 @@
-import { getECSWorld } from '../../../_engine/core/ECS';
-import { HoverToolComponentType } from '../../../toolkit/ecs/effects/HoverEffect';
-import { getMaterial } from '../../../_engine/core/Material';
-import { createMeshEntity } from '../../../_engine/core/MeshManager';
-import { existsOrThrow } from '../../../_engine/utils/assert';
+import { getECSWorld, getMaterial, createMeshEntity, existsOrThrow } from 'aekasha';
+import { HoverToolComponentType } from 'aekasha/toolkit/ecs';
 
 // #region toolkit-scene (shown in the Hub: hub/pages/examples/toolkit/)
 export const scene = async () => {

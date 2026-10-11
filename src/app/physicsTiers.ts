@@ -1,28 +1,31 @@
 import * as THREE from 'three/webgpu';
 
-import { ECSSystemStage } from '../_engine/core/ECS/SystemStages';
 import {
+  ECSSystemStage,
   createCameraEntity,
   getActiveCameraId,
   setMainCamera,
-} from '../_engine/core/CameraManager';
-import type { ECSWorld } from '../_engine/core/ECS';
-import { getECSWorld, getEntityIdByAppId } from '../_engine/core/ECS';
-import { ComponentType } from '../_engine/core/ECS/ECSCoreComponents';
-import { SunShadowFitComponentType } from '../toolkit/ecs/effects/SunShadowFit';
-import { FollowToolComponentType } from '../toolkit/ecs/effects/FollowTool';
-import { createGeometry } from '../_engine/core/Geometry';
-import { createKeyBinding } from '../_engine/core/Input/KeyboardInput';
-import { createLines, polylineToSegments } from '../_engine/core/LineManager';
-import { createMaterial, decMaterialRef, incMaterialRef } from '../_engine/core/Material';
-import { createMeshEntity, setMeshMaterial } from '../_engine/core/MeshManager';
-import type { PhysicsTier, PhysicsTierRing } from '../_engine/core/Physics/PhysicsTierTypes';
-import { createPhysicsEntity } from '../_engine/core/PhysicsManager';
-import { setPhysicsTierPolicy } from '../_engine/core/PhysicsTierPolicy';
-import { registerOnSceneEnter, registerOnSceneExit } from '../_engine/core/Scene';
-import { getLoaderStatusUpdater } from '../_engine/core/SceneLoader';
-import { existsOrThrow } from '../_engine/utils/assert';
-import { lwarn } from '../_engine/utils/Logger';
+  getECSWorld,
+  getEntityIdByAppId,
+  ComponentType,
+  createGeometry,
+  createKeyBinding,
+  createMaterial,
+  decMaterialRef,
+  incMaterialRef,
+  createMeshEntity,
+  setMeshMaterial,
+  registerOnSceneEnter,
+  registerOnSceneExit,
+  getLoaderStatusUpdater,
+  existsOrThrow,
+  lwarn,
+} from 'aekasha';
+import type { ECSWorld } from 'aekasha';
+import { SunShadowFitComponentType, FollowToolComponentType } from 'aekasha/toolkit/ecs';
+import { createLines, polylineToSegments } from 'aekasha/lines';
+import { createPhysicsEntity, setPhysicsTierPolicy } from 'aekasha/physics';
+import type { PhysicsTier, PhysicsTierRing } from 'aekasha/physics';
 
 /**
  * Physics simulation tiers demo (docs/plans/_DONE_p352_physics-simulation-tiers.md §5): crate piles

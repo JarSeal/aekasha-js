@@ -1,12 +1,13 @@
 import * as THREE from 'three/webgpu';
-import { getECSWorld } from '../../../_engine/core/ECS';
+import {
+  getECSWorld,
+  saveBufferGeometry,
+  getMaterial,
+  createMeshEntity,
+  existsOrThrow,
+} from 'aekasha';
 import { SpinComponentType } from '../ecs/SpinComponent';
-import { saveBufferGeometry } from '../../../_engine/core/Geometry';
-import { getMaterial } from '../../../_engine/core/Material';
-import { createMeshEntity } from '../../../_engine/core/MeshManager';
-import { existsOrThrow } from '../../../_engine/utils/assert';
-import { generateAsteroid } from '../../../toolkit/geometry/generateAsteroid';
-import { createSeededRandom } from '../../../toolkit/geometry/seededRandom';
+import { generateAsteroid, createSeededRandom } from 'aekasha/toolkit/geometry';
 
 /** Dark rock colours for the asteroid material (its own grey-brown, a carbonaceous grey) */
 const PALETTES = [

@@ -1,9 +1,14 @@
 import * as THREE from 'three/webgpu';
-import { createGeometry, deleteGeometry, saveBufferGeometry } from '../../../_engine/core/Geometry';
-import { createMaterial } from '../../../_engine/core/Material';
+import {
+  createGeometry,
+  deleteGeometry,
+  saveBufferGeometry,
+  createMaterial,
+  createMeshEntity,
+  getMeshByAppId,
+} from 'aekasha';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { createMeshEntity, getMeshByAppId } from '../../../_engine/core/MeshManager';
-import { createPhysicsEntity } from '../../../_engine/core/PhysicsManager';
+import { createPhysicsEntity } from 'aekasha/physics';
 
 export const characterTestObstacles = async () => {
   // Stairs

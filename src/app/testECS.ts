@@ -1,14 +1,14 @@
-import { getLoaderStatusUpdater } from '../_engine/core/SceneLoader';
-import type { MeshProps } from '../_engine/core/MeshManager';
-import { createMeshEntity } from '../_engine/core/MeshManager';
-import { ECSWorld, getECSWorld } from '../_engine/core/ECS';
-import { initECSStressTest } from '../_engine/utils/ECSStressTest';
-import { createLightEntity } from '../_engine/core/LightManager';
-import { createCameraEntity } from '../_engine/core/CameraManager';
 import {
-  HoverToolComponentType,
-  registerHoverToolEffect,
-} from '../toolkit/ecs/effects/HoverEffect';
+  getLoaderStatusUpdater,
+  createMeshEntity,
+  ECSWorld,
+  getECSWorld,
+  initECSStressTest,
+  createLightEntity,
+  createCameraEntity,
+} from 'aekasha';
+import type { MeshProps } from 'aekasha';
+import { HoverToolComponentType, registerHoverToolEffect } from 'aekasha/toolkit/ecs';
 
 export const scene = async () => {
   const updateLoaderFn = getLoaderStatusUpdater();

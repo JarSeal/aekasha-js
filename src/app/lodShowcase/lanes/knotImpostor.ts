@@ -1,11 +1,10 @@
 import * as THREE from 'three/webgpu';
-import { getGeometry } from '../../../_engine/core/Geometry';
-import { createInstancedLodPool } from '../../../_engine/core/Instancing/InstancedMeshPool';
-import { generateOctahedralImpostor } from '../../../_engine/core/Lod/Impostors/OctahedralImpostor';
-import type { LodDef } from '../../../_engine/core/Lod/LodTypes';
-import { getConservativeGeometryRadius } from '../../../_engine/core/Spatial/SpatialIndexSystem';
-import { existsOrThrow } from '../../../_engine/utils/assert';
-import { createSeededRandom } from '../../../toolkit/geometry/seededRandom';
+import { getGeometry, existsOrThrow } from 'aekasha';
+import { createInstancedLodPool } from 'aekasha/instancing';
+import { generateOctahedralImpostor } from 'aekasha/lod';
+import type { LodDef } from 'aekasha/lod';
+import { getConservativeGeometryRadius } from 'aekasha/spatial';
+import { createSeededRandom } from 'aekasha/toolkit/geometry';
 import type { ShowcaseLane } from '../layout';
 import { getShowcaseKnot, getShowcaseKnotMaterial } from './generatedChain';
 

@@ -1,7 +1,6 @@
-import { getECSWorld } from '../../../_engine/core/ECS';
+import { getECSWorld, createMeshEntity } from 'aekasha';
 import { SpinComponentType } from './SpinComponent';
-import { HoverToolComponentType } from '../../../toolkit/ecs/effects/HoverEffect';
-import { createMeshEntity } from '../../../_engine/core/MeshManager';
+import { HoverToolComponentType } from 'aekasha/toolkit/ecs';
 
 // #region ecs-scene (shown in the Hub: hub/pages/examples/ecs/)
 export const scene = async () => {

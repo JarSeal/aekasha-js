@@ -1,6 +1,5 @@
-import type { ECSWorld } from '../../../_engine/core/ECS';
-import { CoreComponentType } from '../../../_engine/core/ECS/ECSRegistry';
-import { ECSSystemStage } from '../../../_engine/core/ECS/SystemStages';
+import { CoreComponentType, ECSSystemStage } from 'aekasha';
+import type { ECSWorld } from 'aekasha';
 
 // --- src/toolkit/ecs/systems/HoverEffect.ts ---
 

@@ -1,5 +1,5 @@
 // Type imports only: the asset pipeline imports this file in Node (p300)
-import type { AppConfig } from './_engine/core/Config';
+import type { AppConfig } from 'aekasha';
 
 const config: AppConfig = {
   // Debug-only key bindings. The engine's defaults ('h' = debug drawer, 'F1' = debug camera)

@@ -1,6 +1,5 @@
-import { importAssetAsync } from '../../../_engine/core/Import/ImportRegistry';
-import { spawnImportedAsset } from '../../../_engine/core/Import/SpawnImported';
-import type { SpawnImportedParams } from '../../../_engine/core/Import/ImportTypes';
+import { importAssetAsync, spawnImportedAsset } from 'aekasha';
+import type { SpawnImportedParams } from 'aekasha';
 
 const obstacles = {
   slideAngles: { fileName: '/debugger/assets/testModels/characterSlideAngles.glb' },

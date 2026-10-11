@@ -1,6 +1,4 @@
-import { createKeyBinding } from '../../../_engine/core/Input/KeyboardInput';
-import { createMeshEntity } from '../../../_engine/core/MeshManager';
-import { createSceneMainLooper } from '../../../_engine/core/Scene';
+import { createKeyBinding, createMeshEntity, createSceneMainLooper } from 'aekasha';
 import {
   getDayNightSpeed,
   getTimeOfDay,
@@ -9,7 +7,7 @@ import {
   playDayNight,
   setDayNightSpeed,
   setTimeOfDay,
-} from '../../../_engine/core/SkyBox/SkyBox';
+} from 'aekasha/skybox';
 import { createExampleHud } from '../exampleHud';
 
 const SCENE_ID = 'exampleSkyBox';

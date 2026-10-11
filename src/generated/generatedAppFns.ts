@@ -6,8 +6,7 @@ import * as triplanarCheckerboardFn from '../toolkit/materials/triplanarCheckerb
 import * as triplanarGridFn from '../toolkit/materials/triplanarGrid.tsl.ts';
 import * as ambientOcclusionPostFxFn from '../app/postFx/ambientOcclusion.tsl.ts';
 import * as heroBloomPostFxFn from '../app/examples/hubHero/heroBloom.tsl.ts';
-import type { SceneData } from '../_engine/core/Scene.ts';
-import type { ScenePrimitiveAssets } from '../_engine/core/SceneLoader.ts';
+import type { SceneData, ScenePrimitiveAssets } from 'aekasha';
 
 export const sceneFileObjects: {
   [sceneId: string]: (sceneData: {

@@ -1,11 +1,8 @@
 import * as THREE from 'three/webgpu';
-import { getECSWorld } from '../../../_engine/core/ECS';
-import type { GeoProps } from '../../../_engine/core/Geometry';
-import { createKeyBinding } from '../../../_engine/core/Input/KeyboardInput';
-import type { MatProps } from '../../../_engine/core/Material';
-import { createMeshEntity } from '../../../_engine/core/MeshManager';
-import type { ColliderParams } from '../../../_engine/core/Physics/PhysicsAPITypes';
-import { createPhysicsEntity } from '../../../_engine/core/PhysicsManager';
+import { getECSWorld, createKeyBinding, createMeshEntity } from 'aekasha';
+import type { GeoProps, MatProps } from 'aekasha';
+import { createPhysicsEntity } from 'aekasha/physics';
+import type { ColliderParams } from 'aekasha/physics';
 import { createExampleHud } from '../exampleHud';
 
 const SCENE_ID = 'examplePhysics';

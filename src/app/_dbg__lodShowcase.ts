@@ -1,28 +1,29 @@
 import * as THREE from 'three/webgpu';
-import { cameraLookAtPoint } from '../_engine/core/CameraManager';
-import { getECSWorld, getEntityIdByAppId } from '../_engine/core/ECS';
-import { ComponentType } from '../_engine/core/ECS/ECSCoreComponents';
-import { getLodFrameStats, getLodWorldSphere } from '../_engine/core/Lod/LodSystem';
-import { createSceneAppLooper } from '../_engine/core/Scene';
+import {
+  cameraLookAtPoint,
+  getECSWorld,
+  getEntityIdByAppId,
+  ComponentType,
+  createSceneAppLooper,
+} from 'aekasha';
+import { getLodFrameStats, getLodWorldSphere } from 'aekasha/lod';
 import {
   getTimeOfDay,
   isDayNightPlaying,
   pauseDayNight,
   playDayNight,
   setTimeOfDay,
-} from '../_engine/core/SkyBox/SkyBox';
+} from 'aekasha/skybox';
 import {
   createDebuggerTab,
   debuggerListCMP,
   openDebuggerTab,
   persistDebuggerTabValue,
   updateDebuggerTab,
-} from '../_engine/debug/DebuggerGUI';
-import {
   isProfilerAvailable,
   isProfilerWindowOpen,
   toggleProfilerWindow,
-} from '../_engine/debug/Profiler';
+} from 'aekasha/debug';
 import {
   addShowcaseEnterListener,
   getShowcaseLanes,

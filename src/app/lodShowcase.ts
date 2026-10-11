@@ -1,12 +1,16 @@
 import type * as THREE from 'three/webgpu';
-import { IS_DEBUG_ENV } from '../_engine/core/Config';
-import { getECSWorld } from '../_engine/core/ECS';
-import { createMaterial } from '../_engine/core/Material';
-import { createMeshEntity } from '../_engine/core/MeshManager';
-import { getRootScene, registerOnSceneEnter, type SceneData } from '../_engine/core/Scene';
-import { getLoaderStatusUpdater } from '../_engine/core/SceneLoader';
-import { pauseDayNight, setTimeOfDay } from '../_engine/core/SkyBox/SkyBox';
-import { existsOrThrow } from '../_engine/utils/assert';
+import {
+  IS_DEBUG_ENV,
+  getECSWorld,
+  createMaterial,
+  createMeshEntity,
+  getRootScene,
+  registerOnSceneEnter,
+  type SceneData,
+  getLoaderStatusUpdater,
+  existsOrThrow,
+} from 'aekasha';
+import { pauseDayNight, setTimeOfDay } from 'aekasha/skybox';
 import {
   createLaneContext,
   getStartCamera,

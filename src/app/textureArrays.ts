@@ -2,29 +2,30 @@ import * as THREE from 'three/webgpu';
 import { dFdx, dFdy, int, texture, uv, vec2 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { Node, TextureNode } from 'three/webgpu';
-import { createCameraEntity, getActiveCamera } from '../_engine/core/CameraManager';
-import { saveBufferGeometry } from '../_engine/core/Geometry';
-import { createLightEntity } from '../_engine/core/LightManager';
-import { saveMaterial } from '../_engine/core/Material';
-import { createMeshEntity } from '../_engine/core/MeshManager';
-import { getRenderer } from '../_engine/core/Renderer';
-import { getGeneratedAppData } from '../_engine/core/Scene';
-import { loadScene, type ScenePrimitiveAssets } from '../_engine/core/SceneLoader';
 import {
+  createCameraEntity,
+  getActiveCamera,
+  saveBufferGeometry,
+  createLightEntity,
+  saveMaterial,
+  createMeshEntity,
+  getRenderer,
+  getGeneratedAppData,
+  loadScene,
+  type ScenePrimitiveAssets,
   getAllTextures,
   getTexture,
   loadTextureAsync,
   type TextureProps,
-} from '../_engine/core/Texture';
-import {
   buildTextureArray,
   getArrayLayerIndex,
   getTextureArrayInfo,
   sampleArrayLayer,
   setTextureArrayLayer,
   type TextureArray,
-} from '../_engine/core/TextureArray';
-import { lerror, llog } from '../_engine/utils/Logger';
+  lerror,
+  llog,
+} from 'aekasha';
 
 /**
  * The p299 verification scene: texture arrays next to the textures they were built from. Unlit

@@ -1,10 +1,12 @@
-import { ECSWorld } from './_engine/core/ECS';
-import { registerHoverToolEffect } from './toolkit/ecs/effects/HoverEffect';
-import { registerFollowToolEffect } from './toolkit/ecs/effects/FollowTool';
-import { registerSunShadowFitEffect } from './toolkit/ecs/effects/SunShadowFit';
-import { registerMutualGravityEffect } from './toolkit/ecs/effects/MutualGravity';
-import { registerMovingPlatformSystem } from './toolkit/ecs/MovingPlatform';
-import { registerFollowObjectCameraRigSystem } from './toolkit/ecs/FollowObjectCameraRig';
+import { ECSWorld } from 'aekasha';
+import {
+  registerHoverToolEffect,
+  registerFollowToolEffect,
+  registerSunShadowFitEffect,
+  registerMutualGravityEffect,
+  registerMovingPlatformSystem,
+  registerFollowObjectCameraRigSystem,
+} from 'aekasha/toolkit/ecs';
 import { registerSpinSystem } from './app/examples/ecs/SpinSystem';
 
 /**

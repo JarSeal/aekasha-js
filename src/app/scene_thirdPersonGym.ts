@@ -1,31 +1,37 @@
 import * as THREE from 'three/webgpu';
-import { createGeometry } from '../_engine/core/Geometry';
-import { getMaterial, getMaterialVariant } from '../_engine/core/Material';
-import { createMeshEntity, getMeshByAppId, setMeshMaterial } from '../_engine/core/MeshManager';
-import { createSkyBox } from '../_engine/core/SkyBox/SkyBox';
-import { getLoaderStatusUpdater } from '../_engine/core/SceneLoader';
-import { createDynamicCharacter } from '../_engine/core/Character/DynamicCharacter';
-import { characterTestObstacles } from './scenes/thirdPersonGymScene/characterTestObjects';
-import { importAssetAsync } from '../_engine/core/Import/ImportRegistry';
-import { spawnImportedAsset } from '../_engine/core/Import/SpawnImported';
-import type { ImportedAssetManifest } from '../_engine/core/Import/ImportTypes';
-import type { Transform } from '../_engine/core/ECS/ECSCoreComponents';
-import { ComponentType } from '../_engine/core/ECS/ECSCoreComponents';
-import { getQuatFromAngle } from '../_engine/utils/helpers';
-import { createMovingPlatform } from '../toolkit/ecs/MovingPlatform';
-import { initPhysicsStressTest } from './scenes/thirdPersonGymScene/PhysicsStressTest';
-import { getTestObstacle } from './scenes/thirdPersonGymScene/characterTestObstacles';
-import type { ECSWorld } from '../_engine/core/ECS';
-import { getECSWorld, getEntityIdByAppId } from '../_engine/core/ECS';
-import { getScene, registerOnSceneExit } from '../_engine/core/Scene';
-import { createPhysicsEntity } from '../_engine/core/PhysicsManager';
-import { getCameraByAppId } from '../_engine/core/CameraManager';
-import { getLightByAppId, getLightTargetId } from '../_engine/core/LightManager';
 import {
+  createGeometry,
+  getMaterial,
+  getMaterialVariant,
+  createMeshEntity,
+  getMeshByAppId,
+  setMeshMaterial,
+  getLoaderStatusUpdater,
+  importAssetAsync,
+  spawnImportedAsset,
+  ComponentType,
+  getQuatFromAngle,
+  getECSWorld,
+  getEntityIdByAppId,
+  getScene,
+  registerOnSceneExit,
+  getCameraByAppId,
+  getLightByAppId,
+  getLightTargetId,
+  ECSSystemStage,
+} from 'aekasha';
+import type { ImportedAssetManifest, Transform, ECSWorld } from 'aekasha';
+import { createSkyBox } from 'aekasha/skybox';
+import { createDynamicCharacter } from 'aekasha/character';
+import { characterTestObstacles } from './scenes/thirdPersonGymScene/characterTestObjects';
+import {
+  createMovingPlatform,
   createFollowObjectCameraRig,
   deleteFollowObjectCameraRig,
-} from '../toolkit/ecs/FollowObjectCameraRig';
-import { ECSSystemStage } from '../_engine/core/ECS/SystemStages';
+} from 'aekasha/toolkit/ecs';
+import { initPhysicsStressTest } from './scenes/thirdPersonGymScene/PhysicsStressTest';
+import { getTestObstacle } from './scenes/thirdPersonGymScene/characterTestObstacles';
+import { createPhysicsEntity } from 'aekasha/physics';
 import { createCharacterVisual } from './characterVisual';
 
 export const SCENE_THIRD_PERSON_GYM_META = {

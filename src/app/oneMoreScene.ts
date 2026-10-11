@@ -1,4 +1,4 @@
-import { llog } from '../_engine/utils/Logger';
+import { llog } from 'aekasha';
 
 export const scene = async () => {
   llog('Another scene');

@@ -1,8 +1,11 @@
 import type * as THREE from 'three/webgpu';
-import { createGeometry } from '../_engine/core/Geometry';
-import { createMaterial } from '../_engine/core/Material';
-import { createMeshEntity, getMeshByAppId } from '../_engine/core/MeshManager';
-import { loadTexture } from '../_engine/core/Texture';
+import {
+  createGeometry,
+  createMaterial,
+  createMeshEntity,
+  getMeshByAppId,
+  loadTexture,
+} from 'aekasha';
 
 /**
  * The test characters' visual: a capsule sized like the character's collider, with a beak

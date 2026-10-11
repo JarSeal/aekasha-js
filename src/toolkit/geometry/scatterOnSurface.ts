@@ -1,9 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js';
-import { createMeshEntity, type MeshProps } from '../../_engine/core/MeshManager';
-import { ComponentType } from '../../_engine/core/ECS/ECSCoreComponents';
-import { getECSWorld } from '../../_engine/core/ECS';
-import type { CoreEntityOpts } from '../../_engine/schemas/_helperSchemas';
+import { createMeshEntity, type MeshProps, ComponentType, getECSWorld } from 'aekasha';
+import type { CoreEntityOpts } from 'aekasha/schemas';
 import { createSeededRandom } from './seededRandom';
 
 /**

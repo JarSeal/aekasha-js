@@ -1,6 +1,6 @@
 import type * as THREE from 'three/webgpu';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { createGeometry, deleteGeometry } from '../../_engine/core/Geometry';
+import { createGeometry, deleteGeometry } from 'aekasha';
 import { createSeededRandom } from './seededRandom';
 
 export interface TreeGeometryOptions {

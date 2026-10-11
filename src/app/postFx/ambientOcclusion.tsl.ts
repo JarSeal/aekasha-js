@@ -1,7 +1,7 @@
 import { vec4 } from 'three/tsl';
 import { ao } from 'three/addons/tsl/display/GTAONode.js';
-import type { PostFxPassFn } from '../../_engine/core/PostFX/PostFXTypes';
-import { lwarn } from '../../_engine/utils/Logger';
+import type { PostFxPassFn } from 'aekasha/postfx';
+import { lwarn } from 'aekasha';
 
 /** Ground Truth Ambient Occlusion (three's GTAONode), multiplied over the incoming color. */
 export const fxNode: PostFxPassFn = (params, ctx) => {
