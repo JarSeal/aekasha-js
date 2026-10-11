@@ -4,7 +4,6 @@
 // crash) transparently re-runs on the main thread. The worker holds no cache: the main-thread
 // registries stay the single source of truth.
 
-import AssetsWorker from '../../workers/assetsWorker?worker';
 import { getConfig, isDebugEnvironment } from '../Config';
 import { initWorker } from '../../utils/helpers';
 import { lerror, llog, lwarn } from '../../utils/Logger';
@@ -210,18 +209,22 @@ const setWorkerFailed = (reason: string) => {
 const startWorker = () => {
   if (workerStartPromise) return workerStartPromise;
   workerStatus = 'STARTING';
-  workerStartPromise = initWorker<AssetsDownProtocol>(
-    AssetsWorker,
-    'Assets Worker',
-    onWorkerMessage,
-    onWorkerError,
-    {
-      onReady: (data) => {
-        workerCapabilities = (data as AssetsWorkerReadyMessage).capabilities;
-      },
-      timeoutMs: assetsState.requestTimeoutMs,
-    }
-  )
+  // Imported here, not at load (like the worker itself, only by the first request)
+  workerStartPromise = import('../../workers/assetsWorker?worker')
+    .then(({ default: AssetsWorker }) =>
+      initWorker<AssetsDownProtocol>(
+        AssetsWorker,
+        'Assets Worker',
+        onWorkerMessage,
+        onWorkerError,
+        {
+          onReady: (data) => {
+            workerCapabilities = (data as AssetsWorkerReadyMessage).capabilities;
+          },
+          timeoutMs: assetsState.requestTimeoutMs,
+        }
+      )
+    )
     .then((startedWorker) => {
       worker = startedWorker;
       workerStatus = 'READY';

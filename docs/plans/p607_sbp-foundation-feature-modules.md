@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Build, Performance, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
 Blocks: p608_engine-folder-restructure.md, p611_sbp-tooling-profiles-and-marketing.md, p510_headless-simulation-runtime.md
@@ -440,13 +440,44 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
   `bundle.json` only `_dbg__TestBridge.js` (+0.1 kB gzip; the other chunks' few-byte jitter left
   out), `docs.json` `engine/debug` 133 / 184.
 
-### Phase 2: Rapier out of the main chunk
+### Phase 2: Rapier out of the main chunk — done
 
 1. `ENGINES.ts`: `loadEngineAPI: () => import('./EngineRapier')`; `initPhysicsEngine` awaits it
    (main thread and worker). `_dbg__About.ts` unchanged.
 2. The `?worker` imports load at the worker's start (D15).
 3. Bundle: the main chunk loses `rapier.mjs` (−829 kB gzip expected) and `EngineRapier`; in
    `MAIN_THREAD` mode it's a lazy chunk. Hashes in all three targets.
+
+**As built:**
+
+- `ENGINES.ts`: `loadEngineAPI: () => import('./EngineRapier')` instead of the namespace import;
+  `initPhysicsEngine` loads the engine and its API together (`Promise.all`), on the main thread
+  and in the worker. `_dbg__About.ts` reads only the names, unchanged.
+- `PhysicsAPI.ts` imports `physicsWorker?worker` in `initPhysics`' `WORKER_THREAD` branch, and
+  `AssetsAPI.ts`' `startWorker` imports `assetsWorker?worker` before `initWorker` (its `.catch`
+  covers a failed import too).
+- Bundle (§2.1's 1.78 MB is the main chunk's modules' gzip sum, 1738 KiB; the file itself
+  gzips to 1251 KiB): the file `index.js` 1251.3 → 430.5 kB gzip (−821 kB), its modules'
+  sum 1738 → 916 kB; `core/Physics` in main 19.7 → 7.2 kB (`EngineRapier` gone),
+  `@dimforge/rapier3d-compat` and `_engine/workers` gone from it. **Not expected:** the worker is
+  split too (it's an ES module worker): `physicsWorker.js` 828 → 9.2 kB, and Rapier is one lazy
+  `rapier.js` (810 kB) that the worker and, in `MAIN_THREAD` mode, the main thread load: Vite
+  emits it once (the same content hash), so `dist/` holds one Rapier instead of two. New chunks:
+  `rapier.js`, two `EngineRapier.js` (the page's and the worker's, 9.3 / 9.2 kB) and the two
+  `?worker` wrappers (0.1 kB each).
+- Checks: `yarn verify:scenes` 96 passed (dev server, where nothing is split). The split only
+  exists in a build, so the runner also ran against a `VITE_APP_ENV=test` build under
+  `vite preview` (`--url`; `workerMsg`, `mainThread`, `prodTest`: preview sends no COOP / COEP,
+  so no `workerSab`): every hash matched, so Rapier loads from its chunk in the worker and on the
+  page. Two differences there, both also on the parent commit's build: the system order (p606
+  Phase 7's dev vs build tie: `physicsTierPolicyFrameSystem` registers early only on the dev
+  server, where the baselines are recorded) and `textureAtlases` (below). `api.json` unchanged.
+- **Found, not this plan's:** `textureAtlases` fails in every build. `src/app/textureAtlases.ts:79`'s
+  `local = (url) => url.pathname.slice(1)` turns a PNG Vite inlined as a `data:` URL (under
+  `assetsInlineLimit`, 4 kB) into `mage/png;base64,…`, so `textureAtlases/albedo_red` doesn't
+  load (2 errors, a different snapshot). The dev server serves paths, so the runner never saw it.
+- **Running the runner against a build** writes `dist-stats/` too (the visualizer ignores
+  `--outDir`): `verify:baselines --no-build` then refuses; run it with a build.
 
 ### Phase 3: `__AEK_DEBUG__`
 

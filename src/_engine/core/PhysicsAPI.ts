@@ -7,7 +7,6 @@
 
 import * as THREE from 'three/webgpu';
 
-import PhysicsWorker from '../workers/physicsWorker?worker';
 import { getConfig, IS_DEBUG_ENV, isDebugEnvironment } from './Config';
 import { PhysicsTransformBuffer } from './Physics/PhysicsTransformBuffer';
 import {
@@ -310,6 +309,8 @@ export const initPhysics = async (doNotCreateWorld?: boolean) => {
     );
     if (worldOrUndefined) physicsWorld = worldOrUndefined;
   } else if (target === 'WORKER_THREAD') {
+    // Imported here, not at load: an app without physics, or on the main thread, never loads it
+    const { default: PhysicsWorker } = await import('../workers/physicsWorker?worker');
     worker = await initWorker<PhysicsDownProtocol>(
       PhysicsWorker,
       'Physics Worker',
