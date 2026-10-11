@@ -685,6 +685,17 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/Features.test.ts": {
+      "to": "src/_engine/kernel/init/Features.test.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/Features.ts": {
+      "to": "src/_engine/kernel/init/Features.ts",
+      "action": "move",
+      "plan": "p608",
+      "note": "the install contract (p607 D1): the features install through it"
+    },
     "src/_engine/core/Geometry.ts": {
       "to": "src/_engine/kernel/assets/Geometry.ts",
       "action": "move",

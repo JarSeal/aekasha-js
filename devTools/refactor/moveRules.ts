@@ -50,6 +50,12 @@ const WRAPPER_NOTE =
 const ENGINE_RULES: MoveRule[] = [
   // Engine root
   { from: `${E}InitApp.ts`, to: `${K}init/InitEngine.ts` },
+  {
+    from: `${E}core/Features.ts`,
+    to: `${K}init/Features.ts`,
+    note: 'the install contract (p607 D1): the features install through it',
+  },
+  { from: `${E}core/Features.test.ts`, to: `${K}init/Features.test.ts` },
   { from: `${E}index.ts`, to: `${E}index.ts`, note: 'the `aekasha` entry (p606)' },
   { from: `${E}features/`, to: F, note: 'the feature entries (p606): the code moves under them' },
   { from: `${E}types/`, to: `${E}types/` },

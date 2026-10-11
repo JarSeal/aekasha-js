@@ -30,6 +30,7 @@ export type {
 } from './core/ECS/ECSCoreComponents';
 export { CoreComponentType } from './core/ECS/ECSRegistry';
 export { APP_RENDER_SYNC_ORDER, ECSSystemStage } from './core/ECS/SystemStages';
+export type { EngineFeature, FeatureContext, FeatureDebugHook } from './core/Features';
 export {
   createGeometry,
   deleteGeometry,

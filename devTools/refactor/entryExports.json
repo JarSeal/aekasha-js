@@ -5,8 +5,8 @@
     "aekasha": {
       "public": 119,
       "crossEntry": 124,
-      "internal": 199,
-      "unreferenced": 191
+      "internal": 202,
+      "unreferenced": 188
     },
     "aekasha/character": {
       "public": 7,
@@ -15,7 +15,7 @@
       "unreferenced": 17
     },
     "aekasha/debug": {
-      "public": 38,
+      "public": 39,
       "crossEntry": 48,
       "internal": 87,
       "unreferenced": 26
@@ -1567,7 +1567,7 @@
       "src/_engine/kernel/ecs/ECS.ts": {
         "ComponentHook": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "DEFAULT_ECS_WORLD_ID": {
           "kind": "Variable",
@@ -1665,11 +1665,11 @@
         },
         "TransformResetListener": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "WorldPlugin": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "internal"
         }
       },
       "src/_engine/kernel/ecs/ECSComponentStorage.ts": {
@@ -5091,6 +5091,13 @@
           ]
         },
         "TestBridgeSnapshot": {
+          "kind": "TypeAlias",
+          "usage": "public",
+          "by": [
+            "devTools"
+          ]
+        },
+        "TestBridgeSystemOrder": {
           "kind": "TypeAlias",
           "usage": "public",
           "by": [
