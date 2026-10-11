@@ -519,8 +519,23 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
   non-debug importer: `Snapshot`, `OrbitControls`, `DevFiles`, `DialogWindow`, `ECSStressTest`.
   Three lazy chunks grew by taking in chunks that existed only because debug code shared them:
   `physicsTiers` +4.0 kB (`PhysicsTierPolicy`), `InstancedMeshPool` +5.7 kB (`ImpostorBake`,
-  `OctahedralImpostor`), `generateFoliage` +2.1 kB (`CrossQuads`). The 14 `debug/*.ts` wrappers are still in main (2.1 kB
-  gzip), as hollow shells.
+  `OctahedralImpostor`), `generateFoliage` +2.1 kB (`CrossQuads`). The 14 `debug/*.ts` wrappers
+  are still in main (2.1 kB gzip), as hollow shells.
+
+**As built (step 2):**
+
+- `devTools/verify/debugInProduction.ts` (`findDebugCodeInBuild`, tested): a `_dbg__*` file in
+  `dist/assets/`, a `_dbg__` or `core/Debug/` module with rendered code in any chunk, or a
+  `debug/*.ts` wrapper (the entry `index.ts` aside) with rendered code in any chunk. Stricter than
+  D7's "main chunk" (a wrapper in a lazy chunk ships too). The visualizer also lists tree-shaken
+  modules (without a chunk), so only rendered code counts.
+- `verify:baselines` runs it on every bundle run, after the three baselines (`production build:
+  debug code`): each finding fails the run, and `--update` records nothing while there is one. The
+  build passes `VITE_APP_ENV=production` itself. `--no-build` after `yarn build:test` fails by
+  design, and the message says so.
+- Checked with a mutation: a `VITE_APP_ENV=test` build reports 58 debug files, 110 modules and 16
+  wrappers, and `--update` refuses. On the production build it reports the 14 wrappers in
+  `assets/index.js` and nothing else: step 3's list.
 
 ### Phase 4: the install contract and the kernel
 
