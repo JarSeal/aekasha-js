@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import { ECSWorld, getAllECSWorlds, getECSWorld, getEntityIdByAppId } from './ECS';
 import { getCurrentSceneId, getRootScene, registerOnAllSceneEnterings } from './Scene';
 import type { DebugModuleRef } from '../utils/helpers';
-import { loadDebugModule, useDebug } from '../utils/helpers';
+import { loadDebugModule, loadDebugModuleAsync, useDebug } from '../utils/helpers';
 import { getWindowSize } from '../utils/Window';
 import { IS_DEBUG_ENV } from './Config';
 import type { CoreComponentData } from './ECS/ECSCoreComponents';
@@ -36,11 +36,13 @@ let debugCamera: DebugModuleRef<DebugCameraModule> | null = null;
 const _m1 = new THREE.Matrix4();
 const _v1 = new THREE.Vector3();
 
-export const registerCameraManager = () => {
+export const registerCameraManager = async () => {
   addResizer('cameraAspectResizer', updateAllCameraAspectRatios);
 
   if (IS_DEBUG_ENV) {
-    cameraDebugGUI = loadDebugModule(() => import('./Debug/Camera/_dbg__CameraGUI'));
+    // Awaited, so the debug camera's MAIN system (its module comes with the GUI's) registers in a
+    // fixed place: before the light helpers' and the line time system (a load race before p607)
+    cameraDebugGUI = await loadDebugModuleAsync(() => import('./Debug/Camera/_dbg__CameraGUI'));
 
     registerOnAllSceneEnterings('cameraDebugSync', () => {
       const sceneId = getCurrentSceneId();
@@ -414,7 +416,8 @@ export const initDebugCamera = async (world: ECSWorld) => {
   if (debugHelpers) return;
 
   const camImporter = () => import('./Debug/Camera/_dbg__DebugCamera');
-  debugHelpers = loadDebugModule(() => import('./Debug/Camera/_dbg__CameraHelpers'));
+  // Awaited: its LATE_MAIN system registers in a fixed place (after the light helpers')
+  debugHelpers = await loadDebugModuleAsync(() => import('./Debug/Camera/_dbg__CameraHelpers'));
   debugCamera = loadDebugModule(camImporter);
 
   if (IS_DEBUG_ENV) {

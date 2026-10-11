@@ -127,8 +127,8 @@ export const InitEngine = async ({ config, data, start }: InitEngineOptions) => 
     await load3DSymbols();
 
     // Register Managers
-    registerCameraManager();
-    registerLightManager(ecsWorld);
+    await registerCameraManager();
+    await registerLightManager(ecsWorld);
     registerLineManager();
 
     // Initializes the debug camera (if in debug mode)

@@ -2077,7 +2077,8 @@
       "TEST_BRIDGE_VERSION": "Variable",
       "TestBridgeProbeResult": "TypeAlias",
       "TestBridgeSceneReady": "TypeAlias",
-      "TestBridgeSnapshot": "TypeAlias"
+      "TestBridgeSnapshot": "TypeAlias",
+      "TestBridgeSystemOrder": "TypeAlias"
     },
     "src/_engine/debug/UndoRedo.ts": {
       "canRedo": "Function",

@@ -6,7 +6,7 @@ import type { PhysicsProbeReport } from '../core/Debug/_dbg__PhysicsDeterminism'
 export const TEST_BRIDGE_QUERY_PARAM = 'aekTest';
 
 /** The bridge's protocol version: bump it when a method's arguments or results change */
-export const TEST_BRIDGE_VERSION = 2;
+export const TEST_BRIDGE_VERSION = 3;
 
 export type TestBridgeSceneReady =
   /** `backend`: what the renderer runs on (WebGPU falls back to WebGL2 without `navigator.gpu`) */
@@ -28,6 +28,12 @@ export type TestBridgeSnapshot = {
   /** Whether it went through the scene's PostFX pipeline */
   postFx: boolean;
 };
+
+/**
+ * Every ECS world's systems in the order they run: world id → stage → `id@order` per system. Equal
+ * `order`s run in registration order, so this is what a change in registration order shows in.
+ */
+export type TestBridgeSystemOrder = Record<string, Record<string, string[]>>;
 
 /**
  * `window.__AEK_TEST__`: what the scene runner (`devTools/verify/scenes.ts`, p601) drives a page
@@ -53,6 +59,8 @@ export type AekTestBridge = {
   freeze: () => Promise<void>;
   /** `takeSnapshotAsync` of what the canvas shows (debug helpers hidden, PostFX included) */
   snapshot: (opts: { width: number; height: number }) => Promise<TestBridgeSnapshot>;
+  /** Every world's system order now ({@link TestBridgeSystemOrder}) */
+  getSystemOrder: () => TestBridgeSystemOrder;
 };
 
 declare global {
