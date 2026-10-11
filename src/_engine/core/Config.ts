@@ -484,8 +484,8 @@ export const isNotCurrentEnvironment = (environment: Environments) =>
  * Checks whether the current environment is a debug environment.
  * @returns boolean
  */
-export const isDebugEnvironment = () =>
-  (curEnvironment === 'development' || curEnvironment === 'test') && isDebugQueryParam;
+// The flag, not its formula: a production build folds it (see initEnvironment)
+export const isDebugEnvironment = () => IS_DEBUG_ENV;
 
 /** Whether the current environment is a debug environment or not. False until `InitEngine`
  * reads the environment (a live binding: read it when it's needed, never into a module-level
@@ -535,8 +535,8 @@ export let IS_PROD_ENV = true;
  * on the screen when testing production.
  * @returns boolean
  */
-export const isProdTestMode = () =>
-  (curEnvironment === 'development' || curEnvironment === 'test') && isProdTestQueryParam;
+// The flag, not its formula: a production build folds it (see initEnvironment)
+export const isProdTestMode = () => IS_PROD_TEST_MODE;
 
 /**
  * Checks whether the app is in production test mode or not.
@@ -597,12 +597,17 @@ export const initEnvironment = ({ search, env }: EnvironmentInput = {}) => {
     curEnvironment = 'production';
   }
 
+  IS_PROD_ENV = curEnvironment === 'production' || isProdTestQueryParam;
+  CUR_ENV = curEnvironment;
+
+  // The debug flags' only assignments, after an early return: in a production build
+  // (`__AEK_DEBUG__` false) Rollup folds every read to the initial value, and the debug code
+  // behind them leaves the bundle. (An `if (__AEK_DEBUG__) { … }` block around them doesn't fold.)
+  if (!__AEK_DEBUG__) return;
   const isDevOrTest = curEnvironment === 'development' || curEnvironment === 'test';
   IS_DEBUG_ENV = isDevOrTest && isDebugQueryParam;
   IS_PROD_TEST_MODE = isDevOrTest && isProdTestQueryParam;
   IS_PROD_TEST_ENV = IS_PROD_TEST_MODE;
-  IS_PROD_ENV = curEnvironment === 'production' || isProdTestQueryParam;
-  CUR_ENV = curEnvironment;
 };
 
 /**

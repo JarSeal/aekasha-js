@@ -75,7 +75,7 @@ InitEngine({
     });
 
     // The example scenes' Hub tab (debug env)
-    if (IS_DEBUG_ENV) {
+    if (__AEK_DEBUG__ && IS_DEBUG_ENV) {
       const { registerExampleHubTabs } = await import('./app/examples/_dbg__exampleHub');
       registerExampleHubTabs();
     }

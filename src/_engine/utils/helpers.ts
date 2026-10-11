@@ -490,6 +490,8 @@ export function loadDebugModule<T>(
   importer: () => Promise<T>,
   debugId?: string
 ): DebugModuleRef<T> | null {
+  // A production build drops the importer, and with it the debug chunk
+  if (!__AEK_DEBUG__) return null;
   if (!IS_DEBUG_ENV) return null;
   const ref: DebugModuleRef<T> = { current: null };
   importer()
@@ -510,9 +512,13 @@ export function loadDebugModule<T>(
  */
 export async function loadDebugModuleAsync<T>(
   importer: () => Promise<T>,
-  includeInProdTestMode: boolean = false,
+  // No default value: Rollup drops a call's arguments only when every parameter is unused, and a
+  // default counts as a use, so `true` would keep the importer and its chunk
+  includeInProdTestMode?: boolean,
   debugId?: string
 ): Promise<DebugModuleRef<T> | null> {
+  // A production build drops the importer, and with it the debug chunk
+  if (!__AEK_DEBUG__) return null;
   if (!IS_DEBUG_ENV && !includeInProdTestMode) return null;
   const ref: DebugModuleRef<T> = { current: null };
   return importer()

@@ -486,6 +486,42 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
 3. Bundle: the debug wrappers, `DefaultDebugKeyBindings`, the Toaster, `3DSymbols` and the
    debug-only branches leave main. The debug and prodTest configurations pass unchanged.
 
+**As built (step 1):**
+
+- **The define is `VITE_APP_ENV` is 'development' or 'test'**, not D7's `!== 'production'`:
+  `yarn build` sets no `VITE_APP_ENV` (`initEnvironment` reads anything else as production), so
+  `!== 'production'` would have been true there. It's read from `process.env` like the scripts set
+  it (no `.env` files). `vitest.config.ts`: `true`. Declared in `types/typings.d.ts`.
+- `initEnvironment` assigns the three flags after `if (!__AEK_DEBUG__) return;` (`IS_PROD_ENV` and
+  `CUR_ENV` before it). `isDebugEnvironment()` / `isProdTestMode()` return `IS_DEBUG_ENV` /
+  `IS_PROD_TEST_MODE` (the same formulas) instead of recomputing from the query params, so their
+  calls fold too (`MainLoop`'s `mainLoopForDebug`, the input debug branches). Both loaders start
+  with `if (!__AEK_DEBUG__) return null`.
+- **§2.5's spike holds only partly in the real graph.** Rollup does know every flag read is
+  `false` (checked by instrumenting Rollup: never reassigned, no TDZ), and the code behind them
+  goes, but two things kept `_dbg__` chunks:
+  - `loadDebugModuleAsync`'s `includeInProdTestMode = false` default: Rollup drops a call's
+    arguments only when no parameter is used, and a default counts, so the six `…, true)` calls
+    (DebuggerGUI, Profiler, GPUMemory, OnScreenTools, MainLoop, Character) kept their `import()`.
+    The parameter is optional now, without a default (same behaviour).
+  - `src/index.ts`'s `if (IS_DEBUG_ENV) { … await import('…/_dbg__exampleHub') }` inside
+    `InitEngine`'s `start` callback: Rollup includes that callback's code whole, renders the dead
+    branch as `if (IS_DEBUG_ENV) ;`, and the `import()` inside still creates an orphan chunk
+    (nothing loads it; it pulled `Snapshot` and `DevFiles` along). The scenes' identical
+    `if (IS_DEBUG_ENV) { await import() }` blocks fold, and so does the engine's. Even
+    `loadDebugModuleAsync` there kept its argument. Fixed with `if (__AEK_DEBUG__ && IS_DEBUG_ENV)`:
+    a literal folds from the first pass. App code in `start` that gates a debug `import()` needs
+    the same (Phase 10's Hub text says so).
+  - Rollup keeps the `register*` wrappers' declarations (never called) and the empty
+    `if (IS_DEBUG_ENV) ;` shells; the minifier removes most of it.
+- Bundle after step 1: no `_dbg__` chunk and no `tweakpane.js` in `dist/`; `index.js` 430.5 →
+  402.2 kB gzip (−28.3 kB: `three` −9.0, `_engine/core` −12.2, `debug` −5.4); gone with their only
+  non-debug importer: `Snapshot`, `OrbitControls`, `DevFiles`, `DialogWindow`, `ECSStressTest`.
+  Three lazy chunks grew by taking in chunks that existed only because debug code shared them:
+  `physicsTiers` +4.0 kB (`PhysicsTierPolicy`), `InstancedMeshPool` +5.7 kB (`ImpostorBake`,
+  `OctahedralImpostor`), `generateFoliage` +2.1 kB (`CrossQuads`). The 14 `debug/*.ts` wrappers are still in main (2.1 kB
+  gzip), as hollow shells.
+
 ### Phase 4: the install contract and the kernel
 
 1. `core/Features.ts`: the types, `FeatureContext` (the ECS members and `onDebug*` now; the seams

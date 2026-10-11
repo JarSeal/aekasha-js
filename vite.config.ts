@@ -43,6 +43,11 @@ const crossOriginIsolationPlugin = () => ({
 // The versions, packages and build info: `__PROJECT_METADATA__` and index.html's placeholders
 const meta = getProjectMetadata();
 
+// `__AEK_DEBUG__` (p607 D7): whether the debug tooling can run, as `initEnvironment` reads the
+// environment (only 'development' and 'test' read `?isDebug` / `?isProdTest`). False folds the
+// debug flags, so a production build drops the debug code (the dev server and workers included).
+const isDebugBuild = ['development', 'test'].includes(process.env.VITE_APP_ENV ?? '');
+
 export default defineConfig({
   root: './src',
   // Workers resolve with these too
@@ -130,5 +135,6 @@ export default defineConfig({
   ],
   define: {
     __PROJECT_METADATA__: meta,
+    __AEK_DEBUG__: isDebugBuild,
   },
 });
