@@ -22,9 +22,11 @@ A component is a type key and its data:
 [`getStorage`](api:ECSWorld.getStorage) gives every entity that has a component, with its data,
 which is what a system loops over.
 
-The engine's component types are in `src/_engine/core/ECS/ECSRegistry.ts`. An app or toolkit
-module adds its own next to its code, by augmenting the engine's `ComponentDataMap` interface
-(`declare module 'aekasha'`), so the type checker knows each component's data everywhere. The
+`ComponentType` (from `aekasha`) holds the engine's own keys: `ComponentType.TRANSFORM`,
+`ComponentType.OBJECT3D` and the rest. An app or toolkit module adds its own next to its code, with a
+key object of its own and an augmentation of the engine's `ComponentDataMap` interface
+(`declare module 'aekasha'`), so the type checker knows each component's data everywhere. Code
+uses each module's key object (`HoverToolComponentType.HOVER`). The
 [ECS example](hub:examples/ecs#2-adding-it-to-the-component-map) shows how.
 
 The transform is a component too. Write it with [`setTransform`](api:ECSWorld.setTransform)
@@ -34,8 +36,8 @@ frame is drawn. `AppConfig.ecs.storageMode` chooses its storage: `MAP` (the defa
 
 ## Systems and stages
 
-[`addSystem`](api:ECSWorld.addSystem) puts a function in a stage. The stages run in this order
-every frame:
+[`addSystem`](api:ECSWorld.addSystem) puts a function in a stage, an
+[`ECSSystemStage`](api:ECSSystemStage) from `aekasha`. The stages run in this order every frame:
 
 | Stage              | What it's for                                                                                                |
 | ------------------ | ------------------------------------------------------------------------------------------------------------ |
@@ -50,7 +52,9 @@ every frame:
 - Pausing the app (`F7` in debug) stops physics and `APP_POST_PHYSICS`, `APP_LOGIC` and
   `APP_RENDER_SYNC`. `MAIN`, `APP_PRE_PHYSICS` and `LATE_MAIN` keep running.
 - Within a stage, a higher `order` runs first. The order is resolved when a system is added, so
-  a frame never sorts.
+  a frame never sorts. In `APP_RENDER_SYNC`, use the
+  [`APP_RENDER_SYNC_ORDER`](api:APP_RENDER_SYNC_ORDER) constants: a camera that follows an entity
+  runs at `POSE_CONSUMERS`, after the poses are written and before culling.
 - A system belongs to its world until [`removeSystem`](api:ECSWorld.removeSystem). A system only
   one scene needs is added in its scene file and removed when the scene exits.
 
@@ -58,7 +62,8 @@ every frame:
 
 [`registerPlugin`](api:ECSWorld.registerPlugin) runs a function for every world, now and when
 one is created: that's how the engine's managers and the app's systems install themselves. The
-app registers its plugins in one place, `src/AppECSPlugins.ts`:
+app registers its plugins in one place, `src/AppECSPlugins.ts`, which `src/index.ts` imports
+right after the engine:
 
 <<< src/AppECSPlugins.ts#ecs-register-plugin
 

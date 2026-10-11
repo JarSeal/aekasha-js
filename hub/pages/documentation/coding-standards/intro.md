@@ -11,19 +11,29 @@ follows them; a file you touch is a good time to fix what it breaks.
 
 - **Engine ← toolkit ← app.** The engine imports neither the toolkit nor the app, and the toolkit
   doesn't import the app. Configuration and generated data are handed to the engine (through
-  `InitEngine`), never imported from an app path.
+  [InitEngine](api:InitEngine)), never imported from an app path.
+- **Outside the engine, only entries:** the toolkit and the app import the engine through
+  `aekasha` and `aekasha/*`, and the toolkit's categories reach each other through
+  `aekasha/toolkit/*`. Inside the engine, it's the other way round: relative paths, never an entry
+  (an entry imported by the code it re-exports makes cycles).
+- **The lint enforces the layers** (`eslint.config.js`): a path across a forbidden boundary is an
+  error, `import type` and `import()` included, and so is an `aekasha` import inside the engine.
+  The [entries](hub:documentation#importing-the-engine) list what's public.
 - **A feature owns its folder:** its public entry, its implementation, its ECS registrations, its
   worker if it has one, and its debug modules. Removing the folder and its install line removes the
   feature.
 - **Debug code is colocated and lazy.** A feature's debug panels live in `_dbg__` modules next to
   it and are reached only through the debug loader
   ([loadDebugModuleAsync](api:loadDebugModuleAsync)), never by a static import, so a shipping
-  build doesn't load them.
+  build doesn't load them. The lint makes a static import of a `_dbg__` module an error outside
+  the debug modules themselves (an `import type` is fine: it's erased).
 
 ## Public API
 
 - **Only entry points are public.** Everything a feature exports for its own files and not from
-  its entry is `@internal`.
+  its entry is `@internal`. An entry file (`index.ts`) holds only named `export … from` lines, no
+  `export *` and no code: the build treats it as free of side effects, so anything else in it
+  wouldn't run (`yarn test` checks it).
 - **Options objects** for a function with more than two parameters or any optional one:
   `createViewport({ id, scene, camera, anchor })`, not positional flags.
 - **No internals in public types:** a public signature names only public types. An internal type

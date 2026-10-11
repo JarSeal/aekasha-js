@@ -31,7 +31,7 @@ A function that isn't exported gets a comment when its purpose isn't obvious fro
 | `@param` | When the parameter needs more than its name and type: units, valid range, what `null` means | `@param geometryId a registered geometry (not a LOD level)`: the name, a space and the text, no hyphen, no type |
 | `@returns` | When the result has cases: `null`, a remover, the argument it wrote into | `@returns the chain, or null when it was refused (warned)`; words first, since `@returns {@link X}` reads as a type |
 | `@template` | A type parameter that needs explaining | `@template K a key of the debug state` (TypeDoc shows it as a type parameter) |
-| `@example` | Every entry-point API: the functions an app calls first | A fenced `ts` block showing the call; imports are left out |
+| `@example` | Every entry-point API: the functions an app calls first | A fenced `ts` block showing the call; the entry's imports can be left out, the app's own (`./CONFIG`) written |
 | `@remarks` | A trap the reader would hit: a three quirk, an order the caller must keep, a cost | After the summary and the tags it explains |
 | `@internal` | Every export that isn't part of a public entry | An empty tag on its own line, the reason in the summary |
 | `@deprecated` | An export that's going away | What replaces it, and the major that removes it |
@@ -105,3 +105,15 @@ export type CameraProps = z.infer<typeof CameraProps>;
 An `@example` is code a developer copies, so it must type-check against the public API: the call
 as written, with the entry's imports added. An example that only sketches an idea belongs in a
 Hub page's prose, not in `@example`.
+
+`yarn test` checks it (`devTools/verify/examples.ts`). Every `@example` in the engine and the
+toolkit becomes a module of its own, with an import of each entry name it uses and doesn't import
+itself, and the lot is type-checked against the real `tsconfig.json`; an error fails the test with
+the file and line. Each fenced `ts` or `js` block is one example (an unfenced tag is all code).
+What the reader has is allowed:
+
+- **Free names:** a variable the example doesn't declare (`box`, `world`) is the reader's own.
+- **The reader's own modules:** a relative import (`import config from './CONFIG'`) isn't
+  resolved. An entry is: `from 'aekasha/physic'` fails.
+- **Its own imports:** an example can import from the entries itself, as
+  [InitEngine](api:InitEngine)'s does.

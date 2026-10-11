@@ -28,6 +28,8 @@ same interface augmented through two paths loses keys without an error.
 - A system belongs to a stage. Every frame runs `MAIN`, `APP_PRE_PHYSICS`, `APP_POST_PHYSICS`,
   `APP_LOGIC`, `APP_RENDER_SYNC` and `LATE_MAIN` in that order. `APP_LOGIC` is for gameplay, and
   it stops while the app is paused.
+- `ECSSystemStage` and the `ECSWorld` type come from `aekasha`, like the rest of the engine's API
+  (see [Importing the engine](hub:documentation#importing-the-engine)).
 
 ## 4. Registering it
 

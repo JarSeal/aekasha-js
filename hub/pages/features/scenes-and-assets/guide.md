@@ -39,7 +39,9 @@ Each has a Zod schema in `src/_engine/schemas/`. Start a file with a `$schema` l
 ## The gatherer
 
 `devTools/gatherAppData.ts` walks `src/`, checks every asset JSON against its schema, and writes
-the generated data the engine loads its scenes from. It runs before `yarn dev` and `yarn build`,
+the generated data to `src/generated/`: the JSON, and the scene, TSL material and PostFX files by
+id (a scene's file loads on demand). `src/index.ts` hands it to [`InitEngine`](api:InitEngine) as `data`, and the engine
+loads its scenes from it. It runs before `yarn dev` and `yarn build`,
 and in `yarn dev` on every save: the page reloads with the change, and an invalid file shows an
 error overlay naming the file and the problem. `yarn gatherAppData` runs it by hand.
 
