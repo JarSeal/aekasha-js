@@ -66,7 +66,7 @@ export const registerLineManager = () => {
  * // Refill every frame, allocation-free
  * const trail = createLines({ capacity: 256, growth: 'FIXED' });
  * const w = trail.beginWrite();
- * for (...) w.segment(ax, ay, az, bx, by, bz);
+ * for (const [a, b] of pairs) w.vec(a, b);
  * trail.endWrite();
  */
 export const createLines = (props: LineProps = {}): LineObject => {
