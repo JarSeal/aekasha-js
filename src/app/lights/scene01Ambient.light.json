@@ -9,7 +9,7 @@
     "appId": "scene01Ambient",
     "debugData": {
       "name": "Scene01 ambient light",
-      "description": "Ambient light shared by scene01.ts and scene01_v2.ts."
+      "description": "Ambient light shared by scene01.ts and scene01V2.ts."
     }
   }
 }

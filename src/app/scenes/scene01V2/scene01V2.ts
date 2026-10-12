@@ -18,7 +18,7 @@ import { createSkyBox } from 'aekasha/skybox';
 import { createPhysicsEntity, getPhysicsSimClock, getPhysicsState } from 'aekasha/physics';
 
 export const SCENE01_ID = 'testScene1';
-/** The id in scene01_v2.scene.json (SCENE01_ID above is only the scene fn's resolve value). */
+/** The id in scene01V2.scene.json (SCENE01_ID above is only the scene fn's resolve value). */
 const SCENE01_V2_SCENE_ID = 'scene01V2';
 
 export const scene = async () =>

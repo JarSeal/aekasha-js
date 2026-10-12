@@ -1,5 +1,5 @@
 {
-  "$schemas": "../../../../.schemas/light.schema.json",
+  "$schema": "../../../../.schemas/light.schema.json",
   "lightProps": {
     "type": "AMBIENT",
     "color": "#ffffff",

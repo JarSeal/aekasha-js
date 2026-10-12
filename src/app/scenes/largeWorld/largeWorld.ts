@@ -473,7 +473,7 @@ export const scene = async () => {
   // Temporary stand-in motion so the FollowTool/camera-toggle below is visibly demonstrable
   // before real physics exists (§1.3) — not a substitute for the eventual rigid body, just a
   // sine-wave bob via the existing HoverEffect toolkit component (already used elsewhere, e.g.
-  // the bobbing ball in testECS.ts).
+  // the bobbing ball in sceneTestECS.ts).
   ecsWorld.addComponent(crateStackId, HoverToolComponentType.HOVER, {
     speed: 1.2,
     amplitude: 0.4,

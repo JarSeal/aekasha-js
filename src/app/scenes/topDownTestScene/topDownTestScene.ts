@@ -30,7 +30,7 @@ import { createCharacterVisual } from '../thirdPersonGymScene/characterVisual';
  * it, so W (North, -Z) is screen-up. The sun's shadow is fitted to the camera view by the
  * toolkit's SunShadowFit effect.
  *
- * The camera, the lights and the sky box come from topDownTest.scene.json. The character, its
+ * The camera, the lights and the sky box come from topDownTestScene.scene.json. The character, its
  * bindings and the sun's SUN_SHADOW_FIT component go with their entities on scene exit (the
  * CHARACTER and component hooks); only the follow camera rig is deleted by hand.
  */
