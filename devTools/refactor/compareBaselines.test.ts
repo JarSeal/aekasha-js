@@ -1,4 +1,4 @@
-import fs from 'fs';
+import { execFileSync } from 'child_process';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
 import type { DocsBaseline, FolderDocs } from '../verify/baselines';
@@ -15,12 +15,25 @@ import { buildPathMap } from './moveApply';
 const ROOT = path.resolve(__dirname, '../..');
 const E = 'src/_engine/';
 
+const git = (args: string[]) =>
+  execFileSync('git', args, { cwd: ROOT, encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024 });
+
+/** The commit p608's move ran on, from the move commit's message; none in a shallow clone */
+const findMoveBase = () => {
+  try {
+    const message = git(['log', '-1', '--format=%B', '--grep=applyMoveMap.ts --plan p608 on ']);
+    return /applyMoveMap\.ts --plan p608 on ([0-9a-f]{40})/.exec(message)?.[1];
+  } catch {
+    return undefined;
+  }
+};
+
 /**
- * The committed baselines and the p608 map, on the tree the map was made from (its own files: the
- * test holds in the move's dry run too, where the working tree has moved)
+ * The baselines and the p608 map at the move's base: after the move the map has no p608 move (its
+ * rules describe the new layout, D9), and the baselines are recorded by the new paths
  */
-const setup = () => {
-  const read = (file: string) => JSON.parse(fs.readFileSync(path.join(ROOT, file), 'utf-8'));
+const setup = (base: string) => {
+  const read = (file: string) => JSON.parse(git(['show', `${base}:${file}`]));
   const moveMap = read('devTools/refactor/moveMap.json').files;
   const map = buildPathMap({ files: Object.keys(moveMap), moveMap, plan: 'p608' });
   const dir = 'devTools/verify/baselines';
@@ -57,8 +70,10 @@ const mapCopy = ({ map, before }: ReturnType<typeof setup>): Baselines => {
 const attentionOf = (findings: ReturnType<typeof compareBaselines>) =>
   findings.filter((f) => f.attention).map((f) => f.line);
 
-describe('compareBaselines', () => {
-  const tree = setup();
+const MOVE_BASE = findMoveBase();
+
+describe.skipIf(!MOVE_BASE)('compareBaselines', () => {
+  const tree = setup(MOVE_BASE as string);
 
   it('passes a copy that differs only by the move map', () => {
     const after = mapCopy(tree);

@@ -760,6 +760,42 @@ As built:
      change; `yarn gatherAppData` leaves `src/generated/` and `.schemas/` unchanged
      (`git status` clean after it).
 
+As built:
+
+- **The base (2026-10-12):** `main` and `origin/main` still at `4154a88`, no open PR (the public
+  API), no new branch (§2.6's archives and `origin/wall-slide-feature` only): no rebase, no new map,
+  dry run or scene baselines (Phase 1's 96 entries on `4154a88` stand).
+- **A fix before the move commit** (`5491035`, group 1): the first apply stopped after 247 of the
+  first pass's `git mv`s on `.git/index.lock` (the editor's git integration polls the repo; one
+  `git mv` per pass and move wrote the index 796 times). Reset to `HEAD`. `applyMoveMap.ts` now
+  renames on the file system (through the temporary name, as before), then stages in batches: the
+  old paths with `git rm --cached` (index only: on macOS `git add` of `assert.ts` finds
+  `Assert.ts`), the new ones with `git add -f` (as `git mv` tracks them); and every git command
+  waits out an index lock (50 × 100 ms). The apply takes 12 s instead of about 30.
+- **The move commit:** `1d65320` "p608: apply the move map", `applyMoveMap.ts --plan p608` on
+  `5491035`: Phase 4's dry run's counts exactly (398 moves, 23 case-only; 3 deletes; 2 splits into 9
+  modules; 337 texts; 35 emptied folders; the same 10 leftovers; the same 2 documents not
+  formatted). `--verify-commit HEAD` passes. Git shows the two moved `CLAUDE.md` files as a delete
+  and an add (their rewritten paths drop them under 50 % similarity) and `constants.ts` →
+  `Constants.ts` as a rename: its display only.
+- **The rules for the new layout** (step 3, its own commit):
+  - `moveRules.ts`' engine rules are 9 keep rules: `index.ts`, `ModuleLoad.test.ts`, and the
+    folders `kernel/`, `features/`, `ui/`, `debug/`, `utils/`, `schemas/`, `types/`. A file outside
+    them fails `moveMap.ts`; a module name that isn't PascalCase shows as a move to its PascalCase
+    name (the folder rule's naming).
+  - The map: 513 files (keep 450, move 63), p608 441 keeps, p609's 72 entries identical. The
+    layout report: 23 kernel → feature type-only in 14 files, 2 ui → kernel, 1 schemas → kernel,
+    the same two assets worker job imports, no feature cycle.
+  - `MOVE_EDITS` is empty (all 10 entries were p608's).
+  - `moveTree.test.ts`' test on today's tree applies p609's plan (on the moved tree: 63 moves, 23
+    texts, no error) and skips once p609's moves are done.
+  - `compareBaselines.test.ts` reads the map and the three baselines at the move's base, found in
+    the move commit's message (`applyMoveMap.ts --plan p608 on <sha>`, so a rerun's new sha is
+    found too); it skips without that commit (a shallow clone).
+  - **`entryExports.json` is stale until the baselines' update:** it reads `api.json`, whose
+    modules keep their old paths until step 4's `--update` (each lands in `aekasha` as
+    unreferenced). `moveMap.ts` is run again in the baselines' commit.
+
 ### Phase 6: the Hub, CLAUDE.md and the readme
 
 The list is `applyMoveMap.ts --plan p608 --leftovers <base sha>`: the old paths still named anywhere outside

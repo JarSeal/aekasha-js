@@ -1,8 +1,9 @@
 /**
  * The target layout as rules (p602 Phase 2): where every file of `src/_engine/` and
- * `src/toolkit/`, and the app files that move, go in p608-p609. `moveMap.ts` applies them to the
- * tracked tree and writes `moveMap.json`, which p608's codemod reads. (p606 made its own moves,
- * the generated data and the gameplay and test code, and their rules left with them.)
+ * `src/toolkit/`, and the app files that move, go in p609. `moveMap.ts` applies them to the
+ * tracked tree and writes `moveMap.json`, which the codemod (`applyMoveMap.ts`) reads. (p606 made
+ * its own moves, the generated data and the gameplay and test code, and their rules left with
+ * them; p608 moved the engine, whose rules now describe its layout, p608 D9.)
  *
  * - A rule's `from` is a repo-relative file, or a folder ending in `/`. The longest matching
  *   `from` wins, so a file rule beats its folder's rule and the order here doesn't matter.
@@ -44,339 +45,28 @@ const F = `${E}features/`;
 const T = 'src/toolkit/';
 const A = 'src/app/';
 
+/**
+ * The engine's layout since p608's move (D9): each folder keeps its files where they are, so a
+ * file outside it (a new top-level folder or file) has no rule and fails `moveMap.ts`, and a
+ * module name that isn't PascalCase shows as a move to its PascalCase name.
+ */
 const ENGINE_RULES: MoveRule[] = [
-  // Engine root
-  { from: `${E}InitApp.ts`, to: `${K}init/InitEngine.ts` },
-  {
-    from: `${E}core/Features.ts`,
-    to: `${K}init/Features.ts`,
-    note: 'the install contract (p607 D1): the features install through it',
-  },
-  { from: `${E}core/Features.test.ts`, to: `${K}init/Features.test.ts` },
-  {
-    from: `${E}core/Kernel.ts`,
-    to: `${K}init/Kernel.ts`,
-    note: "the kernel's install (p607 D2): InitEngine runs it before the first world",
-  },
   { from: `${E}index.ts`, to: `${E}index.ts`, note: 'the `aekasha` entry (p606)' },
-  { from: `${E}features/`, to: F, note: 'the feature entries (p606): the code moves under them' },
-  { from: `${E}types/`, to: `${E}types/` },
   {
-    from: `${E}moduleLoad.test.ts`,
+    from: `${E}ModuleLoad.test.ts`,
     to: `${E}ModuleLoad.test.ts`,
     note: 'imports every engine module in Node (p606 Phase 5): the whole engine, so at its root',
   },
-
-  // Kernel: ECS
-  { from: `${E}core/ECS.ts`, to: `${K}ecs/ECS.ts` },
-  { from: `${E}core/ECS.test.ts`, to: `${K}ecs/ECS.test.ts` },
-  { from: `${E}core/ECS/`, to: `${K}ecs/` },
-  {
-    from: `${E}core/ECS/SystemStages.ts`,
-    to: `${K}loop/SystemStages.ts`,
-    note: 'the loop owns the stages (p602 D2): every world runs them in this order',
-  },
-  {
-    from: `${E}core/ECS/LightObjectCullingSystem.ts`,
-    to: `${F}spatial/LightObjectCullingSystem.ts`,
-    note: 'the spatial feature owns light culling (p602 D2)',
-  },
-  { from: `${E}utils/ECSHelpers.ts`, to: `${K}ecs/ECSHelpers.ts` },
-  {
-    from: `${E}utils/ECSStressTest.ts`,
-    to: `${K}ecs/debug/ECSStressTest.ts`,
-    note: 'not the app (p602 D6): the ECS debug tab benchmarks with it',
-  },
-  { from: `${E}core/Debug/_dbg__ECS.ts`, to: `${K}ecs/debug/_dbg__ECS.ts` },
-
-  // Kernel: loop, config
-  { from: `${E}core/MainLoop.ts`, to: `${K}loop/MainLoop.ts` },
-  { from: `${E}core/Debug/_dbg__MainLoop.ts`, to: `${K}loop/debug/_dbg__MainLoop.ts` },
-  { from: `${E}core/Config.ts`, to: `${K}config/Config.ts` },
-  { from: `${E}core/Config.test.ts`, to: `${K}config/Config.test.ts` },
-
-  // Kernel: scene
-  { from: `${E}core/Scene.ts`, to: `${K}scene/Scene.ts` },
-  {
-    from: `${E}core/AppData.ts`,
-    to: `${K}scene/AppData.ts`,
-    note: "the app's data from InitEngine (p606, p602 D9): the scenes read it",
-  },
-  { from: `${E}core/SceneLoader.ts`, to: `${K}scene/SceneLoader.ts` },
-  {
-    from: `${E}core/SceneHooks.ts`,
-    to: `${K}scene/SceneHooks.ts`,
-    note: "the scene seams (p607 D4): the features' part of a scene load",
-  },
-  { from: `${E}core/SceneHooks.test.ts`, to: `${K}scene/SceneHooks.test.ts` },
-  { from: `${E}core/GroupManager.ts`, to: `${K}scene/Group.ts` },
-  {
-    from: `${E}core/PropertyLoader.ts`,
-    to: `${K}scene/PropertyLoader.ts`,
-    note: 'merges the debug overrides into camera and light props: p612 / p618 move it behind the debug loader',
-  },
-  {
-    from: `${E}core/Debug/_dbg__DebuggerSceneLoader.ts`,
-    to: `${K}scene/debug/_dbg__DebuggerSceneLoader.ts`,
-  },
-  {
-    from: `${E}core/Debug/DebuggerSceneLoader.module.scss`,
-    to: `${K}scene/debug/DebuggerSceneLoader.module.scss`,
-  },
-
-  // Kernel: assets
-  { from: `${E}core/Assets/`, to: `${K}assets/` },
-  { from: `${E}core/Geometry.ts`, to: `${K}assets/Geometry.ts` },
-  { from: `${E}core/Material.ts`, to: `${K}assets/Material.ts` },
-  { from: `${E}core/Texture.ts`, to: `${K}assets/Texture.ts` },
-  { from: `${E}core/TextureArray.ts`, to: `${K}assets/TextureArray.ts` },
-  { from: `${E}core/TextureAtlas.ts`, to: `${K}assets/TextureAtlas.ts` },
-  { from: `${E}core/Import/`, to: `${K}assets/import/` },
-  {
-    from: `${E}core/Import/MeshColliderGeometry.ts`,
-    to: `${F}physics/import/MeshColliderGeometry.ts`,
-    note: 'builds physics colliders: SpawnImported reaches it through an import extension (p607)',
-  },
-  {
-    from: `${E}core/Import/ImportPhysics.ts`,
-    to: `${F}physics/import/ImportPhysics.ts`,
-    note: "spawnImportedAsset's physics half: the physics feature's import extension (p607 D5)",
-  },
-  {
-    from: `${E}3dModels/customPropTemplates.blend`,
-    to: `${K}assets/import/customPropTemplates.blend`,
-  },
-  { from: `${E}workers/assetsWorker.ts`, to: `${K}assets/worker/AssetsWorker.ts` },
-  { from: `${E}workers/assets/`, to: `${K}assets/worker/` },
-  {
-    from: `${E}workers/assets/assetsSwitchSimplify.ts`,
-    to: `${F}lod/worker/AssetsSwitchSimplify.ts`,
-    note: "the LOD feature's worker job: the assets worker loads it on the first one (p607 D5)",
-  },
-  { from: `${E}core/Debug/_dbg__Assets.ts`, to: `${K}assets/debug/_dbg__Assets.ts` },
-  { from: `${E}core/Debug/_dbg__AssetStats.ts`, to: `${K}assets/debug/_dbg__AssetStats.ts` },
-  { from: `${E}core/Debug/_dbg__AssetsPreview.ts`, to: `${K}assets/debug/_dbg__AssetsPreview.ts` },
-  {
-    from: `${E}core/Debug/_dbg__TexturePreview.ts`,
-    to: `${K}assets/debug/_dbg__TexturePreview.ts`,
-  },
-  { from: `${E}core/Debug/Assets.module.scss`, to: `${K}assets/debug/Assets.module.scss` },
-
-  // Kernel: render
-  { from: `${E}core/Renderer.ts`, to: `${K}render/Renderer.ts` },
-  { from: `${E}core/Snapshot.ts`, to: `${K}render/Snapshot.ts` },
-  {
-    from: `${E}core/RenderHooks.ts`,
-    to: `${K}render/RenderHooks.ts`,
-    note: "the render seams (p607 D5): PostFX's pipeline and the viewports' after-render hook",
-  },
-  { from: `${E}core/RenderHooks.test.ts`, to: `${K}render/RenderHooks.test.ts` },
-  { from: `${E}core/ViewManager.ts`, to: `${K}render/Views.ts` },
-  {
-    from: `${E}core/Raycast.ts`,
-    to: `${K}render/Raycast.ts`,
-    note: "three's Raycaster against Object3Ds, not physics (p602 D2)",
-  },
-  { from: `${E}core/RayDebugTypes.ts`, to: `${K}render/RayDebugTypes.ts` },
-  { from: `${E}utils/object3DHelpers.ts`, to: `${K}render/Object3DHelpers.ts` },
-  { from: `${E}core/Debug/_dbg__Renderer.ts`, to: `${K}render/debug/_dbg__Renderer.ts` },
-  { from: `${E}core/Debug/_dbg__Raycast.ts`, to: `${K}render/debug/_dbg__Raycast.ts` },
-  { from: `${E}core/Debug/_dbg__RayHelpers.ts`, to: `${K}render/debug/_dbg__RayHelpers.ts` },
-  { from: `${E}core/Debug/_dbg__RayTester.ts`, to: `${K}render/debug/_dbg__RayTester.ts` },
-
-  // Kernel: camera, light, mesh, input
-  { from: `${E}core/CameraManager.ts`, to: `${K}camera/Camera.ts` },
-  { from: `${E}core/Debug/Camera/`, to: `${K}camera/debug/` },
-  { from: `${E}core/LightManager.ts`, to: `${K}light/Light.ts` },
-  { from: `${E}core/Debug/Light/`, to: `${K}light/debug/` },
-  { from: `${E}core/MeshManager.ts`, to: `${K}mesh/Mesh.ts` },
-  { from: `${E}core/Input/`, to: `${K}input/` },
-  {
-    from: `${E}core/Input/DefaultDebugKeyBindings.ts`,
-    to: `${E}debug/DefaultDebugKeyBindings.ts`,
-  },
-
-  // Features: physics
-  { from: `${E}core/PhysicsAPI.ts`, to: `${F}physics/PhysicsAPI.ts` },
-  { from: `${E}core/PhysicsFeature.ts`, to: `${F}physics/PhysicsFeature.ts` },
-  { from: `${E}core/PhysicsManager.ts`, to: `${F}physics/PhysicsEntity.ts` },
-  { from: `${E}core/PhysicsTiers.ts`, to: `${F}physics/PhysicsTiers.ts` },
-  { from: `${E}core/PhysicsTierPolicy.ts`, to: `${F}physics/PhysicsTierPolicy.ts` },
-  { from: `${E}core/Physics/`, to: `${F}physics/` },
-  { from: `${E}core/Physics/ENGINES.ts`, to: `${F}physics/backends/Engines.ts` },
-  { from: `${E}core/Physics/EngineRapier.ts`, to: `${F}physics/backends/rapier/EngineRapier.ts` },
-  { from: `${E}workers/physicsWorker.ts`, to: `${F}physics/worker/PhysicsWorker.ts` },
-  { from: `${E}workers/physicsWorker.test.ts`, to: `${F}physics/worker/PhysicsWorker.test.ts` },
-  { from: `${E}workers/physics/`, to: `${F}physics/worker/` },
-  { from: `${E}core/Debug/_dbg__PhysicsAPI.ts`, to: `${F}physics/debug/_dbg__PhysicsAPI.ts` },
-  {
-    from: `${E}core/Debug/_dbg__PhysicsBootOverrides.ts`,
-    to: `${F}physics/debug/_dbg__PhysicsBootOverrides.ts`,
-  },
-  {
-    from: `${E}core/Debug/_dbg__PhysicsDebugDraw.ts`,
-    to: `${F}physics/debug/_dbg__PhysicsDebugDraw.ts`,
-  },
-  {
-    from: `${E}core/Debug/_dbg__PhysicsDeterminism.ts`,
-    to: `${F}physics/debug/_dbg__PhysicsDeterminism.ts`,
-  },
-
-  // Features: character
-  { from: `${E}core/Character.ts`, to: `${F}character/Character.ts` },
-  { from: `${E}core/Character/`, to: `${F}character/` },
-  { from: `${E}core/Debug/Character/`, to: `${F}character/debug/` },
-  { from: `${E}core/Debug/_dbg__Character.ts`, to: `${F}character/debug/_dbg__Character.ts` },
-
-  // Features: sky box
-  { from: `${E}core/SkyBox/`, to: `${F}skybox/` },
-  { from: `${E}core/Debug/SkyBox/`, to: `${F}skybox/debug/` },
-  { from: `${E}core/Debug/_dbg__SkyBox.ts`, to: `${F}skybox/debug/_dbg__SkyBox.ts` },
-
-  // Features: LOD
-  { from: `${E}core/Lod/`, to: `${F}lod/` },
-  {
-    from: `${E}core/Lod/LodFade.ts`,
-    to: `${K}render/LodFade.ts`,
-    note: "the dither fade (three only): the LOD system and instancing's LOD pools draw with it (p607 D5)",
-  },
-  { from: `${E}core/Lod/Impostors/`, to: `${F}lod/impostors/` },
-  { from: `${E}core/Debug/Lod/`, to: `${F}lod/debug/` },
-  { from: `${E}core/Debug/_dbg__LOD.ts`, to: `${F}lod/debug/_dbg__LOD.ts` },
-
-  // Features: spatial, instancing, lines, PostFX, viewports
-  { from: `${E}core/Spatial/`, to: `${F}spatial/` },
-  { from: `${E}core/Debug/_dbg__SpatialGrid.ts`, to: `${F}spatial/debug/_dbg__SpatialGrid.ts` },
-  { from: `${E}core/Instancing/`, to: `${F}instancing/` },
-  { from: `${E}core/LineManager.ts`, to: `${F}lines/Lines.ts` },
-  { from: `${E}core/Lines/`, to: `${F}lines/` },
-  { from: `${E}core/PostFX.ts`, to: `${F}postfx/PostFX.ts` },
-  { from: `${E}core/PostFX/`, to: `${F}postfx/` },
-  { from: `${E}core/Debug/_dbg__PostFX.ts`, to: `${F}postfx/debug/_dbg__PostFX.ts` },
-  {
-    from: `${E}core/Debug/_dbg__PostFXProfiler.ts`,
-    to: `${F}postfx/debug/_dbg__PostFXProfiler.ts`,
-  },
-  { from: `${E}core/Viewports.ts`, to: `${F}viewports/Viewports.ts` },
-  { from: `${E}core/ViewportsFeature.ts`, to: `${F}viewports/ViewportsFeature.ts` },
-  { from: `${E}core/Viewports.module.scss`, to: `${F}viewports/Viewports.module.scss` },
-
-  // UI kit (p602 D5)
-  { from: `${E}ui/`, to: `${E}ui/`, note: 'the `aekasha/ui` entry (p606)' },
-  { from: `${E}utils/CMP.ts`, to: `${E}ui/CMP.ts` },
-  { from: `${E}utils/Window.ts`, to: `${E}ui/Window.ts` },
-  { from: `${E}core/HUD.ts`, to: `${E}ui/HUD.ts` },
-  { from: `${E}core/UI/`, to: `${E}ui/` },
-  { from: `${E}styles/`, to: `${E}ui/styles/` },
-  { from: `${E}styles/debugger.scss`, to: `${E}debug/debugger.scss` },
-
-  // The debugger framework (p602 D4)
+  // The kernel: what every app runs, by area (`kernel/<area>/`, its debug modules in `debug/`)
+  { from: K, to: K },
+  // The features: one folder each, its entry, install, worker jobs and debug modules in it
+  { from: F, to: F },
+  // The UI kit, the debugger framework, pure utilities, the schemas, the declarations (p602 D4-D6)
+  { from: `${E}ui/`, to: `${E}ui/` },
   { from: `${E}debug/`, to: `${E}debug/` },
-  { from: `${E}debug/DebugToolsManager.ts`, to: `${E}debug/DebugTools.ts` },
-  { from: `${E}debug/3DSymbols.ts`, to: `${E}debug/symbols/3DSymbols.ts` },
-  { from: `${E}core/Debug/`, to: `${E}debug/` },
-  { from: `${E}core/Debug/_dbg__Symbols.ts`, to: `${E}debug/symbols/_dbg__Symbols.ts` },
-  { from: `${E}core/UI/3DSymbols/`, to: `${E}debug/symbols/` },
-  {
-    from: `${E}core/UI/3DSymbols/3DSymbolsTextures.png~`,
-    action: 'delete',
-    note: "an image editor's backup file",
-  },
-  { from: `${E}3dModels/3DSymbols.blend`, to: `${E}debug/symbols/source/3DSymbols.blend` },
-  {
-    from: `${E}3dModels/3DSymbolsTextures.kra`,
-    to: `${E}debug/symbols/source/3DSymbolsTextures.kra`,
-  },
-  { from: `${E}core/Debug/Profiler/`, to: `${E}debug/profiler/` },
-  { from: `${E}core/Debug/Editors/`, to: `${E}debug/editors/` },
-  { from: `${E}core/Debug/Editors/Material/`, to: `${E}debug/editors/material/` },
-  { from: `${E}core/Debug/_dbg__GPUMemory.ts`, to: `${E}debug/gpuMemory/_dbg__GPUMemory.ts` },
-  {
-    from: `${E}core/Debug/_dbg__GPUMemoryAllocations.ts`,
-    to: `${E}debug/gpuMemory/_dbg__GPUMemoryAllocations.ts`,
-  },
-  {
-    from: `${E}core/Debug/_dbg__GPUMemoryOwners.ts`,
-    to: `${E}debug/gpuMemory/_dbg__GPUMemoryOwners.ts`,
-  },
-  {
-    from: `${E}core/Debug/_dbg__GPUMemorySnapshots.ts`,
-    to: `${E}debug/gpuMemory/_dbg__GPUMemorySnapshots.ts`,
-  },
-  {
-    from: `${E}core/Debug/_dbg__GPUMemorySources.ts`,
-    to: `${E}debug/gpuMemory/_dbg__GPUMemorySources.ts`,
-  },
-  { from: `${E}core/Debug/GPUMemory.module.scss`, to: `${E}debug/gpuMemory/GPUMemory.module.scss` },
-  {
-    from: `${E}core/Helpers.ts`,
-    to: `${E}debug/SceneHelpers.ts`,
-    note: 'the axes and grid helpers (p602 D6); renamed apart from utils/helpers.ts (D7)',
-  },
-  { from: `${E}utils/UI/PercentagePieHtml.ts`, to: `${E}debug/PercentagePieHtml.ts` },
-
-  // Utilities (p602 D6)
   { from: `${E}utils/`, to: `${E}utils/` },
-  {
-    from: `${E}utils/stats/IntervalCounterStats.ts`,
-    to: `${E}utils/IntervalCounterStats.ts`,
-    note: 'not debug/ (p602 D6): pure, and the ray and physics stats count with it at runtime',
-  },
-  {
-    from: `${E}utils/helpers.ts`,
-    action: 'split',
-    note: 'split per export (p602 D6), the debug loaders next to Config.ts (p608 D2); the codemod rewrites each import to its target',
-    split: {
-      getFileNameExt: `${K}assets/AssetFiles.ts`,
-      isHDR: `${K}assets/AssetFiles.ts`,
-      isKTX2: `${K}assets/AssetFiles.ts`,
-      isJPG: `${K}assets/AssetFiles.ts`,
-      isPNG: `${K}assets/AssetFiles.ts`,
-      removeTextureFromMemory: `${K}assets/Disposal.ts`,
-      removeMaterialFromMemory: `${K}assets/Disposal.ts`,
-      removeGeometryFromMemory: `${K}assets/Disposal.ts`,
-      removeObjectFromMemory: `${K}assets/Disposal.ts`,
-      removeObjectChildrenFromMemory: `${K}assets/Disposal.ts`,
-      removeObjectAndChildrenFromMemory: `${K}assets/Disposal.ts`,
-      RemovalTypes: `${K}assets/Disposal.ts`,
-      ThreeVector3: `${K}render/ThreeMath.ts`,
-      ThreeQuoternion: `${K}render/ThreeMath.ts`,
-      ThreeEuler: `${K}render/ThreeMath.ts`,
-      getQuatFromAngle: `${K}render/ThreeMath.ts`,
-      slerp: `${K}render/ThreeMath.ts`,
-      smoothDampVec3: `${K}render/ThreeMath.ts`,
-      roundToDecimal: `${E}utils/Numbers.ts`,
-      isOnlyObject3D: `${K}render/Object3DHelpers.ts`,
-      setMeshCreatePropsToUserData: `${K}mesh/MeshUserData.ts`,
-      initWorker: `${K}loop/Workers.ts`,
-      isMainThread: `${K}loop/Workers.ts`,
-      isMainThreadSimple: `${K}loop/Workers.ts`,
-      DebugModuleRef: `${K}config/DebugModules.ts`,
-      loadDebugModule: `${K}config/DebugModules.ts`,
-      loadDebugModuleAsync: `${K}config/DebugModules.ts`,
-      isDebugReady: `${K}config/DebugModules.ts`,
-      useDebug: `${K}config/DebugModules.ts`,
-      getLightCharacteristics: `${K}light/LightHelpers.ts`,
-    },
-  },
-  {
-    from: `${E}utils/constants.ts`,
-    action: 'split',
-    note: 'split per export: its three objects leave utils/ (p602 D6)',
-    split: {
-      HALF_PI: `${E}utils/Constants.ts`,
-      QUARTER_PI: `${E}utils/Constants.ts`,
-      FOUR_PX_TO_8K_LIST: `${E}utils/Constants.ts`,
-      textureMapKeys: `${E}utils/Constants.ts`,
-      RENDERER_SHADOW_OPTIONS: `${K}render/ThreeMath.ts`,
-      DIRECTIONS: `${K}render/ThreeMath.ts`,
-      LEVEL_GROUND_NORMAL: `${K}render/ThreeMath.ts`,
-      GRAVITY_DOWN_NORMAL: `${K}render/ThreeMath.ts`,
-    },
-  },
-  { from: `${E}utils/materials/`, action: 'delete', note: 'no importers (p602 D6)' },
-
   { from: `${E}schemas/`, to: `${E}schemas/` },
+  { from: `${E}types/`, to: `${E}types/` },
 ];
 
 /** The toolkit's categories (p609, from the p450 prompt) */

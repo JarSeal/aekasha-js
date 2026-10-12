@@ -96,6 +96,7 @@ describe('rewriteTree', () => {
 });
 
 describe("today's tree", () => {
+  const PLAN = 'p609';
   /** Every tracked text file; the binaries (models, images, the Blender files) aside */
   const readTree = () => {
     const files = execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf-8' })
@@ -111,13 +112,13 @@ describe("today's tree", () => {
     const moveMap: Record<string, MoveEntry> = JSON.parse(
       texts.get('devTools/refactor/moveMap.json') as string
     ).files;
-    // The move commit itself: the map's p608 moves are done, its rules not yet the new layout's
-    // (p608 Phase 5, step 3, which makes this test apply p609's plan)
+    // The plan still to apply: p608's moves are done (its rules describe the new layout, D9). The
+    // test skips once p609's are done too, until a next plan's rules.
     const tracked = new Set(files);
     const isMoved = Object.entries(moveMap).some(
-      ([from, entry]) => entry.plan === 'p608' && entry.action === 'move' && !tracked.has(from)
+      ([from, entry]) => entry.plan === PLAN && entry.action === 'move' && !tracked.has(from)
     );
-    return { map: buildPathMap({ files, moveMap, plan: 'p608' }), texts, isMoved };
+    return { map: buildPathMap({ files, moveMap, plan: PLAN }), texts, isMoved };
   };
   const tree = readTree();
 
@@ -129,12 +130,11 @@ describe("today's tree", () => {
       const { changed, created, errors } = rewriteTree(map, texts, MOVE_EDITS);
       expect(errors).toEqual([]);
 
-      // A target is a new module, or a moved file's text (with the parts, or its own: `isOnlyObject3D`)
+      // A split target is a new module, or a moved file's text (with the parts, or its own)
       const textOf = (target: string) => {
         const owner = map.oldPathOf(target) as string;
         return created.get(target) ?? changed.get(owner) ?? (texts.get(owner) as string);
       };
-      expect(map.splits.size).toBe(2);
       const missing: string[] = [];
       for (const [source, split] of map.splits) {
         for (const [name, target] of Object.entries(split)) {
