@@ -597,3 +597,100 @@ export const rewriteTypeScript = (map: PathMap, file: string, text: string): Rew
 
   return { text: errors.length ? text : applyEdits(text, edits), errors };
 };
+
+// Stylesheets
+
+const SASS_EXTENSIONS = ['.scss', '.sass', '.css'];
+
+/** How Sass finds a loaded file from a path: as written, its partial, its folder's index */
+const sassCandidates = (base: string) => {
+  const dir = posix.dirname(base);
+  const name = posix.basename(base);
+  const partial = (file: string) => posix.join(dir, `_${file}`);
+  if (SASS_EXTENSIONS.some((ext) => name.endsWith(ext))) return [base, partial(name)];
+  return [
+    ...SASS_EXTENSIONS.flatMap((ext) => [base + ext, partial(name + ext)]),
+    ...['.scss', '.sass'].flatMap((ext) => [`${base}/index${ext}`, `${base}/_index${ext}`]),
+  ];
+};
+
+const resolveSass = (importer: string, url: string, files: ReadonlySet<string>) => {
+  const base = posix.normalize(posix.join(posix.dirname(importer), url));
+  return sassCandidates(base).find((file) => files.has(file));
+};
+
+/** A loaded URL that may be a file relative to the stylesheet: not `sass:math`, a package or `/…` */
+const isSassPath = (url: string) => !/^[a-z][\w+.-]*:/i.test(url) && !url.startsWith('/');
+
+/**
+ * A `@use`, `@forward` or `@import` URL after the move, written as it was (`'./debugTabButtons'`
+ * keeps its partial's name without the underscore and its extension left out); `{}` when it stays
+ */
+const moveSassUrl = (
+  map: PathMap,
+  importer: string,
+  url: string
+): { url?: string; error?: string } => {
+  const oldTarget = resolveSass(importer, url, map.oldFiles);
+  if (!oldTarget) return {}; // a load path's or a package's, not this tree's
+  const newImporter = map.newPathOf(importer) as string;
+  const newTarget = map.newPathOf(oldTarget);
+  if (!newTarget) return { error: `'${url}' loads ${describeGone(map, oldTarget)}` };
+  if (newImporter === importer && newTarget === oldTarget) return {};
+
+  const base = posix.normalize(posix.join(posix.dirname(importer), url));
+  const viaIndex = oldTarget.startsWith(`${base}/`);
+  const name = posix.basename(newTarget);
+  let to = newTarget;
+  if (viaIndex) {
+    if (!/^_?index\.s[ac]ss$/.test(name)) {
+      return { error: `'${url}' loads a folder's index, but ${newTarget} isn't one` };
+    }
+    to = posix.dirname(newTarget);
+  } else {
+    const writesExtension = SASS_EXTENSIONS.some((ext) => url.endsWith(ext));
+    const writesUnderscore = posix.basename(url).startsWith('_');
+    let file = name;
+    if (!writesUnderscore && file.startsWith('_')) file = file.slice(1);
+    if (!writesExtension) file = file.replace(/\.(scss|sass|css)$/, '');
+    to = posix.join(posix.dirname(newTarget), file);
+  }
+  const newDir = posix.dirname(newImporter);
+  let written = toSpecifier(newDir, to);
+  if (!isRelative(url) && written.startsWith('./')) written = written.slice(2);
+  const resolved = resolveSass(newImporter, written, map.newFiles);
+  if (resolved !== newTarget) {
+    return {
+      error: `'${written}' from ${newImporter} would load ${resolved ?? 'nothing'}, not ${newTarget}`,
+    };
+  }
+  return written === url ? {} : { url: written };
+};
+
+/** An at-rule that loads files, at a line's start, with its quoted URLs (`@import` takes several) */
+const SASS_LOAD_RULE =
+  /^[ \t]*@(?:use|forward|import)\s+((?:(['"])[^'"\n]*\2\s*,\s*)*(['"])[^'"\n]*\3)/gm;
+
+/**
+ * Rewrites one stylesheet's `@use`, `@forward` and `@import` paths for the move (§4.3), resolved
+ * as Sass resolves them. `sass:` modules, packages and absolute `url()`s are left alone; a
+ * relative `url()` isn't rewritten (none in the tree).
+ */
+export const rewriteStylesheet = (map: PathMap, file: string, text: string): RewriteResult => {
+  if (!map.newPathOf(file)) return { text, errors: [] };
+  const edits: Edit[] = [];
+  const errors: string[] = [];
+  for (const rule of text.matchAll(SASS_LOAD_RULE)) {
+    const urlsStart = (rule.index as number) + rule[0].length - rule[1].length;
+    for (const quoted of rule[1].matchAll(/(['"])([^'"\n]*)\1/g)) {
+      const url = quoted[2];
+      if (!isSassPath(url)) continue;
+      const start = urlsStart + (quoted.index as number) + 1;
+      const moved = moveSassUrl(map, file, url);
+      const line = text.slice(0, start).split('\n').length;
+      if (moved.error) errors.push(`${file}:${line} ${moved.error}`);
+      else if (moved.url) edits.push({ start, end: start + url.length, text: moved.url });
+    }
+  }
+  return { text: errors.length ? text : applyEdits(text, edits), errors };
+};

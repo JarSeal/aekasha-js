@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildPathMap, rewriteTypeScript } from './moveApply';
+import { buildPathMap, rewriteStylesheet, rewriteTypeScript } from './moveApply';
 import type { MoveEntry } from './moveRules';
 
 const E = 'src/_engine/';
@@ -307,5 +307,88 @@ describe('rewriteTypeScript', () => {
     expect(errors).toEqual([
       "src/app/scene.ts:1 glob pattern '../_engine/core/Lod/*.ts': its files don't land in one folder (edit table)",
     ]);
+  });
+});
+
+describe('rewriteStylesheet', () => {
+  const S = `${E}styles/`;
+  const D = `${E}core/Debug/`;
+  const map = () =>
+    buildPathMap({
+      files: [
+        `${S}variables.scss`,
+        `${S}index.scss`,
+        `${S}normalize.scss`,
+        `${S}debugger.scss`,
+        `${S}mixins/_index.scss`,
+        `${S}old.scss`,
+        `${D}_tabButtons.scss`,
+        `${D}Panel.module.scss`,
+        `${D}Profiler/Profiler.module.scss`,
+        `${E}core/UI/DropDown.scss`,
+      ],
+      moveMap: {
+        [`${S}variables.scss`]: move(`${E}ui/styles/variables.scss`),
+        [`${S}index.scss`]: move(`${E}ui/styles/index.scss`),
+        [`${S}normalize.scss`]: move(`${E}ui/styles/normalize.scss`),
+        [`${S}debugger.scss`]: move(`${E}debug/debugger.scss`),
+        [`${S}mixins/_index.scss`]: move(`${E}ui/styles/mixins/_index.scss`),
+        [`${S}old.scss`]: { to: null, action: 'delete', plan: 'p608' },
+        [`${D}_tabButtons.scss`]: move(`${E}debug/_tabButtons.scss`),
+        [`${D}Panel.module.scss`]: move(`${E}debug/Panel.module.scss`),
+        [`${D}Profiler/Profiler.module.scss`]: move(`${E}debug/profiler/Profiler.module.scss`),
+      },
+      plan: 'p608',
+    });
+  const run = (file: string, lines: string[]) => {
+    const { text, errors } = rewriteStylesheet(map(), file, lines.join('\n'));
+    return { lines: text.split('\n'), errors };
+  };
+
+  it("keeps each URL's written form: the extension, a partial without its underscore, an index", () => {
+    expect(
+      run(`${D}Panel.module.scss`, [
+        "@use 'sass:math';",
+        "@use '../../styles/variables.scss';",
+        "@use './tabButtons' as tabButtons;",
+        "@use '../../styles/mixins' as *;",
+        "@use 'some-package/theme';",
+        '// @use "../../styles/old.scss";',
+        ".panel { background: url('/debugger/stripes.png'); }",
+      ])
+    ).toEqual({
+      lines: [
+        "@use 'sass:math';",
+        "@use '../ui/styles/variables.scss';",
+        "@use './tabButtons' as tabButtons;",
+        "@use '../ui/styles/mixins' as *;",
+        "@use 'some-package/theme';",
+        '// @use "../../styles/old.scss";',
+        ".panel { background: url('/debugger/stripes.png'); }",
+      ],
+      errors: [],
+    });
+    expect(
+      run(`${D}Profiler/Profiler.module.scss`, ["@use '../tabButtons' as tabButtons;"]).lines
+    ).toEqual(["@use '../tabButtons' as tabButtons;"]);
+  });
+
+  it('rewrites `@forward` and every URL of an `@import`, for a stylesheet that stays too', () => {
+    expect(
+      run(`${S}index.scss`, ["@forward './normalize.scss';", "@forward './debugger.scss';"]).lines
+    ).toEqual(["@forward './normalize.scss';", "@forward '../../debug/debugger.scss';"]);
+    expect(
+      run(`${E}core/UI/DropDown.scss`, [
+        '@import "../../styles/variables", "../../styles/debugger";',
+      ]).lines
+    ).toEqual(['@import "../../ui/styles/variables", "../../debug/debugger";']);
+  });
+
+  it('reports a URL whose file is deleted, and leaves the stylesheet as it was', () => {
+    const source = ["@use '../../styles/variables.scss';", "@use '../../styles/old';"];
+    expect(run(`${D}Panel.module.scss`, source)).toEqual({
+      lines: source,
+      errors: [`${D}Panel.module.scss:2 '../../styles/old' loads ${S}old.scss, which is deleted`],
+    });
   });
 });
