@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1406,
-      "total": 2120
+      "documented": 1412,
+      "total": 2126
     },
     "members": {
       "documented": 212,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1361,
-        "total": 2056
+        "documented": 1367,
+        "total": 2062
       },
       "members": {
         "documented": 162,
@@ -49,8 +49,8 @@
     },
     "engine/core": {
       "exports": {
-        "documented": 415,
-        "total": 561
+        "documented": 416,
+        "total": 562
       },
       "members": {
         "documented": 35,
@@ -276,8 +276,8 @@
     },
     "engine/core/ECS": {
       "exports": {
-        "documented": 28,
-        "total": 39
+        "documented": 37,
+        "total": 48
       },
       "members": {
         "documented": 12,
@@ -530,8 +530,8 @@
     },
     "engine/core/Lod": {
       "exports": {
-        "documented": 62,
-        "total": 76
+        "documented": 61,
+        "total": 75
       },
       "members": {
         "documented": 0,
@@ -878,8 +878,8 @@
     },
     "engine/core/Spatial": {
       "exports": {
-        "documented": 42,
-        "total": 55
+        "documented": 39,
+        "total": 52
       },
       "members": {
         "documented": 20,

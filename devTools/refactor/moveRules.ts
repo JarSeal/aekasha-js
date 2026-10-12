@@ -223,6 +223,11 @@ const ENGINE_RULES: MoveRule[] = [
 
   // Features: LOD
   { from: `${E}core/Lod/`, to: `${F}lod/` },
+  {
+    from: `${E}core/Lod/LodFade.ts`,
+    to: `${K}render/LodFade.ts`,
+    note: "the dither fade (three only): the LOD system and instancing's LOD pools draw with it (p607 D5)",
+  },
   { from: `${E}core/Lod/Impostors/`, to: `${F}lod/impostors/` },
   { from: `${E}core/Debug/Lod/`, to: `${F}lod/debug/` },
   { from: `${E}core/Debug/_dbg__LOD.ts`, to: `${F}lod/debug/_dbg__LOD.ts` },

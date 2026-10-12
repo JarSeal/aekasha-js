@@ -3,9 +3,9 @@ import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../ECS/SystemStages';
 import type { ECSWorld } from '../ECS';
 import type { FeatureContext } from '../Features';
 import { ComponentType } from '../ECS/ECSCoreComponents';
-import { incGeometryRef } from '../Geometry';
+import { getConservativeGeometryRadius, incGeometryRef } from '../Geometry';
 import { incMaterialRef } from '../Material';
-import { registerLodTarget } from '../Lod/LodSystem';
+import { registerLodTarget } from '../ECS/LodTargets';
 import {
   createLodFadeAttribute,
   enableLodDither,
@@ -13,13 +13,11 @@ import {
   LOD_FADE_OPAQUE,
 } from '../Lod/LodFade';
 import {
-  DEFAULT_SPATIAL_DOMAIN,
-  getConservativeGeometryRadius,
-  getSpatialDomain,
-  joinSpatialDomain,
+  getSpatialDomainMembership,
   registerSpatialRadiusProvider,
+  type SpatialDomainMembership,
   type SpatialRadiusProvider,
-} from '../Spatial/SpatialIndexSystem';
+} from '../ECS/SpatialMembership';
 import { lwarn } from '../../utils/Logger';
 import type { LodData, LodDef, LodResolvedLevel, LodTarget } from '../Lod/LodTypes';
 import type { CoreEntityOpts } from '../../schemas/_helperSchemas';
@@ -252,25 +250,32 @@ const createPoolMesh = (
   return { mesh, meshEntityId };
 };
 
-/** The spatial domain `spawn()` joins its instances to, undefined (with a warning) when it isn't
- * registered. Checked once per spawn, or joinSpatialDomain would warn for every instance. */
-const getSpawnSpatialDomain = (
+/** How `spawn()` joins its instances to their spatial domain (the spatial index's membership,
+ * ECS/SpatialMembership.ts), undefined without a domain, and undefined with a warning without
+ * `spatial()` or when the domain isn't registered. Checked once per spawn, or joining would warn
+ * for every instance. */
+const getSpawnSpatialMembership = (
   world: ECSWorld,
   spatialDomain: string | undefined,
   poolName: string
-) => {
-  if (
-    spatialDomain &&
-    spatialDomain !== DEFAULT_SPATIAL_DOMAIN &&
-    !getSpatialDomain(world, spatialDomain)
-  ) {
+): SpatialDomainMembership | undefined => {
+  if (!spatialDomain) return undefined;
+  const membership = getSpatialDomainMembership();
+  if (!membership) {
+    lwarn(
+      `${poolName}: spatial domain '${spatialDomain}' needs the spatial() feature in ` +
+        `InitEngine's \`features\` — the instances aren't indexed.`
+    );
+    return undefined;
+  }
+  if (!membership.hasDomain(world, spatialDomain)) {
     lwarn(
       `${poolName}: spatial domain '${spatialDomain}' isn't registered — the instances ` +
         `aren't indexed (register it with registerSpatialDomain before spawning).`
     );
     return undefined;
   }
-  return spatialDomain;
+  return membership;
 };
 
 /** Creates an instance's entity at `placement` and leaves its matrix in `_matrix`. */
@@ -366,7 +371,8 @@ export const createInstancedMeshPool = (
 
   const spawn: InstancedMeshPool['spawn'] = (world, placements, entityOpts) => {
     const entityIds: number[] = [];
-    const spatialDomain = getSpawnSpatialDomain(world, opts.spatialDomain, 'InstancedMeshPool');
+    const { spatialDomain } = opts;
+    const spatial = getSpawnSpatialMembership(world, spatialDomain, 'InstancedMeshPool');
 
     for (const placement of placements) {
       if (mesh.count >= maxInstances) {
@@ -386,7 +392,7 @@ export const createInstancedMeshPool = (
         _fadeOutIndex: -1,
       });
       // After the slot, which its radius provider reads
-      if (spatialDomain) joinSpatialDomain(entityId, spatialDomain, world);
+      if (spatial && spatialDomain) spatial.join(entityId, spatialDomain, world);
 
       entityIds.push(entityId);
     }
@@ -529,7 +535,8 @@ export const createInstancedLodPool = (opts: CreateInstancedLodPoolOptions): Ins
 
   const spawn: InstancedLodPool['spawn'] = (world, placements, entityOpts) => {
     const entityIds: number[] = [];
-    const spatialDomain = getSpawnSpatialDomain(world, opts.spatialDomain, 'InstancedLodPool');
+    const { spatialDomain } = opts;
+    const spatial = getSpawnSpatialMembership(world, spatialDomain, 'InstancedLodPool');
 
     for (const placement of placements) {
       if (state.liveCount >= maxInstances) {
@@ -554,7 +561,7 @@ export const createInstancedLodPool = (opts: CreateInstancedLodPoolOptions): Ins
       // After the slot, which the LOD target and the radius provider read
       const lod: LodData = { def, level: -1, applied: -1, radius: 0, _levels: [] };
       world.addComponent(entityId, ComponentType.LOD, lod);
-      if (spatialDomain) joinSpatialDomain(entityId, spatialDomain, world);
+      if (spatial && spatialDomain) spatial.join(entityId, spatialDomain, world);
 
       entityIds.push(entityId);
     }

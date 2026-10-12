@@ -261,6 +261,10 @@
       "installLightObjectCulling": "Function",
       "lightObjectCullingSystem": "Function"
     },
+    "src/_engine/core/ECS/LodTargets.ts": {
+      "getLodTargets": "Function",
+      "registerLodTarget": "Function"
+    },
     "src/_engine/core/ECS/ObjectFrustumCullingSystem.ts": {
       "BoundingVolumeProvider": "TypeAlias",
       "getMeshWorldBoundingSphere": "Variable",
@@ -268,6 +272,15 @@
       "MAX_SPOT_ANGLE": "Variable",
       "objectFrustumCullingSystem": "Function",
       "setFrustumCullingEnabled": "Function"
+    },
+    "src/_engine/core/ECS/SpatialMembership.ts": {
+      "findSpatialRadiusProvider": "Function",
+      "getSpatialDomainMembership": "Function",
+      "registerSpatialRadiusProvider": "Function",
+      "setSpatialDomainMembership": "Function",
+      "SpatialDomainMembership": "TypeAlias",
+      "SpatialRadiusProvider": "TypeAlias",
+      "SpatialRadiusProviderEntry": "TypeAlias"
     },
     "src/_engine/core/ECS/SystemStages.ts": {
       "APP_RENDER_SYNC_ORDER": "Variable",
@@ -300,6 +313,7 @@
       "GeoProps": "TypeAlias",
       "GeoTypes": "TypeAlias",
       "getAllGeometries": "Function",
+      "getConservativeGeometryRadius": "Function",
       "getGeometry": "Function",
       "getGeometryRegistry": "Function",
       "incGeometryRef": "Function",
@@ -831,7 +845,6 @@
       "measureLodEntity": "Function",
       "refreshLodBounds": "Function",
       "registerLodDebugGUI": "Function",
-      "registerLodTarget": "Function",
       "setLodBias": "Function",
       "setLodDebugOptions": "Function",
       "setLodFadeSeconds": "Function",
@@ -1760,7 +1773,6 @@
     "src/_engine/core/Spatial/SpatialIndexSystem.ts": {
       "computeLightInfluenceRadius": "Function",
       "DEFAULT_SPATIAL_DOMAIN": "Variable",
-      "getConservativeGeometryRadius": "Function",
       "getLastRebuildDurationMs": "Function",
       "getOracleCheckedQueryCount": "Function",
       "getOracleMismatchCount": "Function",
@@ -1782,7 +1794,6 @@
       "registerSceneSpatialDomains": "Function",
       "registerSpatialDomain": "Function",
       "registerSpatialIndexDebugGUI": "Function",
-      "registerSpatialRadiusProvider": "Function",
       "releaseSceneSpatialDomains": "Function",
       "ResolvedSpatialDomainOptions": "TypeAlias",
       "setSpatialDomainOptionsOverride": "Function",
@@ -1792,7 +1803,6 @@
       "SpatialDomainOptionsOverride": "TypeAlias",
       "SpatialDomainRebuildStats": "TypeAlias",
       "spatialIndexRebuildSystem": "Function",
-      "SpatialRadiusProvider": "TypeAlias",
       "SpatialUpdatePolicy": "TypeAlias",
       "unregisterSpatialDomain": "Function",
       "validateSpatialGridQuery": "Function"

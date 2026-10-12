@@ -8,16 +8,21 @@ import type { IComponentStorage } from '../ECS/ECSComponentStorage';
 import { reconcileObject3DVisibility } from '../ECS/ECSCoreSystems';
 import { getActiveCamera, getMainCamera } from '../CameraManager';
 import { getConfig, IS_DEBUG_ENV } from '../Config';
-import { decGeometryRef, getGeometryRegistry, incGeometryRef } from '../Geometry';
+import {
+  decGeometryRef,
+  getConservativeGeometryRadius,
+  getGeometryRegistry,
+  incGeometryRef,
+} from '../Geometry';
+import { getLodTargets } from '../ECS/LodTargets';
 import { decMaterialRef, getMaterialRegistry, incMaterialRef } from '../Material';
 import { preWarmMesh, setMeshGeometry, setMeshMaterial } from '../MeshManager';
-import { getConservativeGeometryRadius } from '../Spatial/SpatialIndexSystem';
 import { lwarn } from '../../utils/Logger';
 import type { DebugModuleRef } from '../../utils/helpers';
 import { loadDebugModuleAsync, useDebug } from '../../utils/helpers';
 import { getInstancedLodBounds } from './LodBounds';
 import { clearLodObjectFade, enableLodDither, LOD_FADE_OPAQUE, setLodObjectFade } from './LodFade';
-import type { LodData, LodResolvedLevel, LodTarget } from './LodTypes';
+import type { LodData, LodResolvedLevel } from './LodTypes';
 
 /** A component type's hooks, as `FeatureContext.registerComponentHooks` takes them. */
 type ComponentHooks = Parameters<FeatureContext['registerComponentHooks']>[1];
@@ -271,22 +276,11 @@ const lodTransitioningHooks: ComponentHooks = {
 };
 
 // --- TARGETS ---
-
-const lodTargets: { componentType: ComponentType; target: LodTarget }[] = [];
-
-/**
- * Lets `LOD` work on entities with `componentType` that have no plain mesh (eg. the
- * instanced LOD pool). See {@link LodTarget}. Registering a type again replaces its target.
- */
-export const registerLodTarget = (componentType: ComponentType, target: LodTarget) => {
-  const index = lodTargets.findIndex((e) => e.componentType === componentType);
-  if (index >= 0) lodTargets[index].target = target;
-  else lodTargets.push({ componentType, target });
-};
+// Registered with registerLodTarget (ECS/LodTargets.ts, the kernel's registry)
 
 /** Sets the entity's levels from the first target that has them. False when none does. */
 const resolveTargetLevels = (entityId: number, world: ECSWorld, lod: LodData) => {
-  for (const { componentType, target } of lodTargets) {
+  for (const { componentType, target } of getLodTargets()) {
     if (!world.hasComponent(entityId, componentType)) continue;
     const levels = target.resolveLevels(entityId, world, lod);
     if (!levels || levels.length === 0) continue;

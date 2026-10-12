@@ -674,8 +674,18 @@
       "plan": "p608",
       "note": "the spatial feature owns light culling (p602 D2)"
     },
+    "src/_engine/core/ECS/LodTargets.ts": {
+      "to": "src/_engine/kernel/ecs/LodTargets.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/core/ECS/ObjectFrustumCullingSystem.ts": {
       "to": "src/_engine/kernel/ecs/ObjectFrustumCullingSystem.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/ECS/SpatialMembership.ts": {
+      "to": "src/_engine/kernel/ecs/SpatialMembership.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -1025,9 +1035,10 @@
       "plan": "p608"
     },
     "src/_engine/core/Lod/LodFade.ts": {
-      "to": "src/_engine/features/lod/LodFade.ts",
+      "to": "src/_engine/kernel/render/LodFade.ts",
       "action": "move",
-      "plan": "p608"
+      "plan": "p608",
+      "note": "the dither fade (three only): the LOD system and instancing's LOD pools draw with it (p607 D5)"
     },
     "src/_engine/core/Lod/LodFeature.ts": {
       "to": "src/_engine/features/lod/LodFeature.ts",

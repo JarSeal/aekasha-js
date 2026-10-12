@@ -13,7 +13,7 @@
 // show more.
 import type * as THREE from 'three/webgpu';
 import { lwarn } from '../../utils/Logger';
-import { getConservativeGeometryRadius } from '../Spatial/SpatialIndexSystem';
+import { getConservativeGeometryRadius } from '../Geometry';
 import { getInstancedLodBounds } from './LodBounds';
 import { getLodChain, getPendingLodChain, type LodChain } from './LodChains';
 import { getLodChainRequest } from './LodChainRequests';

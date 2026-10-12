@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-5 implemented
+Status: in progress | Phases 1-6 implemented
 Category: Build, Performance, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
 Blocks: p608_engine-folder-restructure.md, p611_sbp-tooling-profiles-and-marketing.md, p510_headless-simulation-runtime.md
@@ -727,7 +727,7 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
   `physics`, `character`, `SceneHooks`, `FixedStepDriver`, `LoopState` on their entries, the
   internal installers and runners, `registerPhysicsManager` gone; `docs.json` better coverage.
 
-### Phase 6: sky box, spatial, LOD, instancing
+### Phase 6: sky box, spatial, LOD, instancing — done
 
 1. `skyBox()` (the scene data hooks, `retainedTextures`), `spatial()` (light culling, the domain
    hooks), `lod()`, `instancing()`. The scene data phases (`sceneRegistered`, `sceneDeleted`,
@@ -793,12 +793,43 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
   (6.0 kB, the impostor code it carried) is new. The production debug check: none. `api.json`:
   the four factories on their entries, the installers, scene hook objects and runners.
 
+**As built (section 2):**
+
+- **`core/ECS/LodTargets.ts`** (kernel, → `kernel/ecs/`): `registerLodTarget` (moved from
+  `LodSystem.ts`, still on `aekasha/lod`) and internal `getLodTargets()`, which the LOD
+  selection reads. It imports the `LodTarget` type from `Lod/LodTypes.ts` (type only, D6).
+- **`core/ECS/SpatialMembership.ts`** (kernel): the radius provider registry
+  (`registerSpatialRadiusProvider`, `SpatialRadiusProvider`, still on `aekasha/spatial`; internal
+  `findSpatialRadiusProvider`) and, **not in D5**, the domain membership seam: internal
+  `SpatialDomainMembership` (`hasDomain`, `join`), which `spatial()`'s install sets
+  (`setSpatialDomainMembership`, from `getSpatialDomain` / `joinSpatialDomain`). **Why:** the
+  grounding (§2.4) missed that the pools' `spatialDomain` option calls `joinSpatialDomain`, so the
+  registries alone left instancing → spatial (and the 7.6 kB index in any build with
+  `instancing()`). Without `spatial()` a pool with a `spatialDomain` warns once per spawn and
+  indexes nothing.
+- **`getConservativeGeometryRadius`** moved to `core/Geometry.ts` (still on `aekasha/spatial`);
+  `LodSystem.ts`, `LodAuto.ts`, the pools and the spatial index import it from there.
+- **`Lod/LodFade.ts` is the kernel's in the target layout** (a `moveRules.ts` rule:
+  `kernel/render/LodFade.ts`), not moved now: the grounding missed it too. It's the dither
+  primitive (three only), which the LOD system and the instanced LOD pools both draw with.
+  p608 moves the file.
+- The layout report's feature dependencies: character → physics (3 runtime, 2 type), and
+  instancing → lod type only (`LodData`, `LodDef`, `LodResolvedLevel`, `LodTarget`, D6). No
+  feature → feature runtime row besides character's.
+- Checks: `yarn verify:scenes` 96 passed after section 1's re-recorded baselines and again after
+  section 2 (24 scenes × 4 configurations, WebGPU, macOS): hashes, snapshots and the system order.
+  `yarn test` 241 passed, lint, `tsc` (both projects), the docs ratchet, `yarn hub:build`.
+  Baselines recorded: `api.json` (the three moves, the new internals), `bundle.json` (main
+  `core/ECS` 6.7 → 7.3 kB gzip, `core/Spatial` 7.6 → 7.4 kB), `docs.json`. The production debug
+  check: none.
+
 ### Phase 7: lines, PostFX, viewports, import; `features` required
 
 1. `lines()` (D3), `postFx()` (`setRenderPipeline`; `Snapshot.ts` reads the seam), `viewports()`
    (`addAfterRender`).
 2. The import extensions (physics, LOD) and the assets worker's job modules (D5).
-3. `features` required; `InitEngine` installs nothing on its own. The allow-list is empty.
+3. `features` required; `InitEngine` installs nothing on its own. The allow-list is empty (it
+   already is: Phase 6 removed its last entries; keep it so).
 4. The layout report's "Kernel → feature" has no runtime or dynamic rows.
 
 ### Phase 8: the SBP packaging

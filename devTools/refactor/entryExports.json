@@ -4,9 +4,9 @@
   "summary": {
     "aekasha": {
       "public": 120,
-      "crossEntry": 129,
-      "internal": 220,
-      "unreferenced": 189
+      "crossEntry": 135,
+      "internal": 223,
+      "unreferenced": 191
     },
     "aekasha/character": {
       "public": 8,
@@ -21,9 +21,9 @@
       "unreferenced": 26
     },
     "aekasha/instancing": {
-      "public": 2,
+      "public": 3,
       "crossEntry": 1,
-      "internal": 1,
+      "internal": 2,
       "unreferenced": 6
     },
     "aekasha/lines": {
@@ -33,10 +33,10 @@
       "unreferenced": 20
     },
     "aekasha/lod": {
-      "public": 25,
-      "crossEntry": 31,
-      "internal": 53,
-      "unreferenced": 29
+      "public": 26,
+      "crossEntry": 27,
+      "internal": 52,
+      "unreferenced": 27
     },
     "aekasha/physics": {
       "public": 23,
@@ -57,16 +57,16 @@
       "unreferenced": 55
     },
     "aekasha/skybox": {
-      "public": 21,
+      "public": 22,
       "crossEntry": 10,
-      "internal": 163,
-      "unreferenced": 36
+      "internal": 164,
+      "unreferenced": 37
     },
     "aekasha/spatial": {
       "public": 12,
-      "crossEntry": 2,
-      "internal": 25,
-      "unreferenced": 14
+      "crossEntry": 0,
+      "internal": 28,
+      "unreferenced": 17
     },
     "aekasha/toolkit/ecs": {
       "public": 16,
@@ -2731,6 +2731,60 @@
           ]
         }
       },
+      "src/_engine/kernel/render/LodFade.ts": {
+        "clearLodObjectFade": {
+          "kind": "Function",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/lod"
+          ]
+        },
+        "createLodFadeAttribute": {
+          "kind": "Function",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/instancing"
+          ]
+        },
+        "enableLodDither": {
+          "kind": "Function",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/instancing",
+            "aekasha/lod"
+          ]
+        },
+        "getLodFadeAttribute": {
+          "kind": "Function",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/instancing"
+          ]
+        },
+        "isLodDitherEnabled": {
+          "kind": "Function",
+          "usage": "unreferenced"
+        },
+        "LOD_FADE_OPAQUE": {
+          "kind": "Variable",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/instancing",
+            "aekasha/lod"
+          ]
+        },
+        "lodDither": {
+          "kind": "Function",
+          "usage": "unreferenced"
+        },
+        "setLodObjectFade": {
+          "kind": "Function",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/lod"
+          ]
+        }
+      },
       "src/_engine/kernel/render/Object3DHelpers.ts": {
         "isOnlyObject3D": {
           "kind": "Function",
@@ -3486,11 +3540,19 @@
           "kind": "Function",
           "usage": "internal"
         },
+        "getSceneRetainedTextures": {
+          "kind": "Function",
+          "usage": "internal"
+        },
         "runSceneBeforeAssetsHooksAsync": {
           "kind": "Function",
           "usage": "internal"
         },
         "runSceneCreatedHooksAsync": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "runSceneDeletedHooks": {
           "kind": "Function",
           "usage": "internal"
         },
@@ -3507,6 +3569,10 @@
           "usage": "internal"
         },
         "runSceneLoadStartHooks": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "runSceneRegisteredHooks": {
           "kind": "Function",
           "usage": "internal"
         },
@@ -5372,6 +5438,10 @@
           "kind": "Interface",
           "usage": "unreferenced"
         },
+        "installInstancedMeshPools": {
+          "kind": "Function",
+          "usage": "internal"
+        },
         "InstancedLodPool": {
           "kind": "Interface",
           "usage": "unreferenced"
@@ -5400,6 +5470,15 @@
         "InstancePlacement": {
           "kind": "Interface",
           "usage": "internal"
+        }
+      },
+      "src/_engine/features/instancing/InstancingFeature.ts": {
+        "instancing": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "app"
+          ]
         }
       }
     },
@@ -6285,50 +6364,13 @@
           ]
         }
       },
-      "src/_engine/features/lod/LodFade.ts": {
-        "clearLodObjectFade": {
+      "src/_engine/features/lod/LodFeature.ts": {
+        "lod": {
           "kind": "Function",
-          "usage": "internal"
-        },
-        "createLodFadeAttribute": {
-          "kind": "Function",
-          "usage": "crossEntry",
+          "usage": "public",
           "by": [
-            "aekasha/instancing"
+            "app"
           ]
-        },
-        "enableLodDither": {
-          "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha/instancing"
-          ]
-        },
-        "getLodFadeAttribute": {
-          "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha/instancing"
-          ]
-        },
-        "isLodDitherEnabled": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
-        "LOD_FADE_OPAQUE": {
-          "kind": "Variable",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha/instancing"
-          ]
-        },
-        "lodDither": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
-        "setLodObjectFade": {
-          "kind": "Function",
-          "usage": "internal"
         }
       },
       "src/_engine/features/lod/LodSimplify.ts": {
@@ -6397,6 +6439,10 @@
             "app"
           ]
         },
+        "installLodSystem": {
+          "kind": "Function",
+          "usage": "internal"
+        },
         "lodApplySystem": {
           "kind": "Function",
           "usage": "unreferenced"
@@ -6437,7 +6483,6 @@
           "kind": "Function",
           "usage": "public",
           "by": [
-            "aekasha/instancing",
             "hub"
           ]
         },
@@ -6506,6 +6551,7 @@
           "kind": "TypeAlias",
           "usage": "crossEntry",
           "by": [
+            "aekasha",
             "aekasha/instancing"
           ]
         },
@@ -9708,6 +9754,10 @@
             "hub"
           ]
         },
+        "installSkyBoxSystem": {
+          "kind": "Function",
+          "usage": "internal"
+        },
         "isDayNightPlaying": {
           "kind": "Function",
           "usage": "public",
@@ -9802,6 +9852,19 @@
           "by": [
             "hub"
           ]
+        }
+      },
+      "src/_engine/features/skybox/SkyBoxFeature.ts": {
+        "skyBox": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "app"
+          ]
+        },
+        "skyBoxSceneHooks": {
+          "kind": "Variable",
+          "usage": "unreferenced"
         }
       },
       "src/_engine/features/skybox/SkyBoxTypes.ts": {
@@ -10296,8 +10359,25 @@
         }
       },
       "src/_engine/features/spatial/LightObjectCullingSystem.ts": {
+        "installLightObjectCulling": {
+          "kind": "Function",
+          "usage": "internal"
+        },
         "lightObjectCullingSystem": {
           "kind": "Function",
+          "usage": "unreferenced"
+        }
+      },
+      "src/_engine/features/spatial/SpatialFeature.ts": {
+        "spatial": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "app"
+          ]
+        },
+        "spatialSceneHooks": {
+          "kind": "Variable",
           "usage": "unreferenced"
         }
       },
@@ -10329,19 +10409,11 @@
         },
         "DEFAULT_SPATIAL_DOMAIN": {
           "kind": "Variable",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha/instancing"
-          ]
+          "usage": "internal"
         },
         "getConservativeGeometryRadius": {
           "kind": "Function",
-          "usage": "public",
-          "by": [
-            "aekasha/instancing",
-            "aekasha/lod",
-            "app"
-          ]
+          "usage": "unreferenced"
         },
         "getLastRebuildDurationMs": {
           "kind": "Function",
@@ -10359,7 +10431,6 @@
           "kind": "Function",
           "usage": "public",
           "by": [
-            "aekasha/instancing",
             "hub"
           ]
         },
@@ -10386,6 +10457,10 @@
             "hub"
           ]
         },
+        "installSpatialIndex": {
+          "kind": "Function",
+          "usage": "internal"
+        },
         "invalidateSpatialDomain": {
           "kind": "Function",
           "usage": "public",
@@ -10405,7 +10480,6 @@
           "kind": "Function",
           "usage": "public",
           "by": [
-            "aekasha/instancing",
             "hub"
           ]
         },
@@ -10455,7 +10529,6 @@
           "kind": "Function",
           "usage": "public",
           "by": [
-            "aekasha/instancing",
             "hub"
           ]
         },
@@ -10497,10 +10570,7 @@
         },
         "SpatialRadiusProvider": {
           "kind": "TypeAlias",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha/instancing"
-          ]
+          "usage": "unreferenced"
         },
         "SpatialUpdatePolicy": {
           "kind": "TypeAlias",

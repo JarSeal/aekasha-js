@@ -13,6 +13,13 @@ import { loadDebugModuleAsync, useDebug } from '../../utils/helpers';
 import { getCurrentSceneId } from '../Scene';
 import { getNextSceneId, isCurrentlyLoading } from '../SceneLoader';
 import type { SceneSpatialDomainEntry } from '../../schemas/spatialDomainSchema';
+import { getConservativeGeometryRadius } from '../Geometry';
+import {
+  findSpatialRadiusProvider,
+  registerSpatialRadiusProvider,
+  setSpatialDomainMembership,
+  type SpatialRadiusProvider,
+} from '../ECS/SpatialMembership';
 
 // Debug
 type SpatialGridDebugModule = typeof import('../Debug/_dbg__SpatialGrid');
@@ -235,7 +242,7 @@ const addDomain = (
 const insertMember = (world: ECSWorld, domain: SpatialDomain, entityId: number) => {
   const transform = world.getComponent(entityId, ComponentType.TRANSFORM);
   const pos = transform?.position;
-  const entry = findRadiusProvider(entityId, world);
+  const entry = findSpatialRadiusProvider(entityId, world);
   const local = entry?.provider(entityId, world) ?? 0;
 
   let radius = local;
@@ -718,65 +725,15 @@ export function computeLightInfluenceRadius(light: THREE.PointLight | THREE.Spot
 }
 
 // --- RADIUS PROVIDERS (p346 §3.3) ---
-// Like ObjectFrustumCullingSystem.ts's bounding-volume providers: the first registered component
-// type an entity has picks the provider that measures it. A member none of them measures gets
-// radius 0 (a point).
-
-/** A member's radius in its local space (before its Transform scale), or undefined if it can't be measured. */
-export type SpatialRadiusProvider = (entityId: number, world: ECSWorld) => number | undefined;
-
-type RadiusProviderEntry = {
-  componentType: ComponentType;
-  provider: SpatialRadiusProvider;
-  isScaleIndependent: boolean;
-};
-
-const radiusProviders: RadiusProviderEntry[] = [];
-
-/**
- * Measures the members that have `componentType`. The radius is read when an entity joins a
- * domain, and multiplied by the largest axis of its Transform scale on every rebuild, unless
- * `scaleIndependent` (eg. a light's range). Registering a type again replaces its provider.
- */
-export function registerSpatialRadiusProvider(
-  componentType: ComponentType,
-  provider: SpatialRadiusProvider,
-  opts?: { scaleIndependent?: boolean }
-): void {
-  const entry: RadiusProviderEntry = {
-    componentType,
-    provider,
-    isScaleIndependent: opts?.scaleIndependent ?? false,
-  };
-  const index = radiusProviders.findIndex((e) => e.componentType === componentType);
-  if (index >= 0) radiusProviders[index] = entry;
-  else radiusProviders.push(entry);
-}
-
-function findRadiusProvider(entityId: number, world: ECSWorld): RadiusProviderEntry | undefined {
-  for (let i = 0; i < radiusProviders.length; i++) {
-    if (world.hasComponent(entityId, radiusProviders[i].componentType)) return radiusProviders[i];
-  }
-  return undefined;
-}
+// The registry is the kernel's (ECS/SpatialMembership.ts), so other features register into it
+// without importing this module; the mesh and light providers are registered by the install.
 
 const maxAbsScale = (scale: THREE.Vector3 | undefined) =>
   scale ? Math.max(Math.abs(scale.x), Math.abs(scale.y), Math.abs(scale.z)) : 1;
 
-/**
- * A sphere around the geometry's local origin (where its entity's position is) that holds its
- * whole bounding sphere: `|center| + radius`. Conservative for geometry that isn't centred on its
- * origin, where the bounding sphere's radius alone would miss part of it.
- */
-export function getConservativeGeometryRadius(geometry: THREE.BufferGeometry): number {
-  if (!geometry.boundingSphere) geometry.computeBoundingSphere();
-  const sphere = geometry.boundingSphere;
-  return sphere ? sphere.center.length() + sphere.radius : 0;
-}
-
 /** The radius `entityId` has as a member right now: its provider's, scaled by its Transform. */
 function computeSpatialRadius(entityId: number, world: ECSWorld): number {
-  const entry = findRadiusProvider(entityId, world);
+  const entry = findSpatialRadiusProvider(entityId, world);
   const local = entry?.provider(entityId, world) ?? 0;
   if (!entry || entry.isScaleIndependent || !(local > 0) || !Number.isFinite(local)) return local;
   return local * maxAbsScale(world.getScale(entityId));
@@ -1109,7 +1066,8 @@ export function validateSpatialGridQuery(
 
 /**
  * Installs the spatial index (the `spatial()` feature's install, SpatialFeature.ts): the domain
- * membership hooks, the mesh and light radius providers and the rebuild system.
+ * membership hooks, the mesh and light radius providers, the membership other features join
+ * through, and the rebuild system.
  * @internal
  */
 export const installSpatialIndex = (ctx: FeatureContext) => {
@@ -1128,6 +1086,13 @@ export const installSpatialIndex = (ctx: FeatureContext) => {
   registerSpatialRadiusProvider(ComponentType.TAG_IS_MESH, getMeshRadius);
 
   ctx.registerComponentHooks(ComponentType.SPATIAL_INDEXED, spatialIndexedHooks);
+
+  // How instancing's pools join their `spatialDomain` (ECS/SpatialMembership.ts)
+  setSpatialDomainMembership({
+    hasDomain: (world, domainId) =>
+      domainId === DEFAULT_SPATIAL_DOMAIN || Boolean(getSpatialDomain(world, domainId)),
+    join: joinSpatialDomain,
+  });
 
   ctx.registerPlugin((world) => {
     // order: -1, matching objectFrustumCullingSystem's precedent — runs after this

@@ -1,3 +1,4 @@
+export { registerLodTarget } from '../../core/ECS/LodTargets';
 export { generateCrossQuads } from '../../core/Lod/Impostors/CrossQuads';
 export type { CrossQuads, CrossQuadsOptions } from '../../core/Lod/Impostors/CrossQuads';
 export {
@@ -33,7 +34,6 @@ export {
   getLodBias,
   getLodFrameStats,
   getLodWorldSphere,
-  registerLodTarget,
   setLodBias,
   setLodFadeSeconds,
 } from '../../core/Lod/LodSystem';
