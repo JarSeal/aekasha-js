@@ -1,5 +1,886 @@
 {
   "scenes": {
+    "exampleDebugTab": {
+      "name": "Example: Your own debug tab",
+      "description": "A ring of boxes and a debug drawer tab of the scene's own (debug env): the number of boxes and their colour, saved in the browser, and a button that shuffles them.",
+      "backgroundColor": "#1c212b",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.1,
+            "far": 100,
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 11
+            },
+            "lookAtPoint": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "type": "PERSPECTIVE",
+            "fov": 45,
+            "appId": "exampleDebugTabCamera"
+          },
+          "entityOpts": {
+            "appId": "exampleDebugTabCamera",
+            "debugData": {
+              "name": "Debug tab example camera"
+            }
+          }
+        }
+      ],
+      "lights": [
+        {
+          "lightProps": {
+            "type": "AMBIENT",
+            "color": "#ffffff",
+            "intensity": 0.6,
+            "appId": "exampleDebugTabAmbient"
+          },
+          "entityOpts": {
+            "appId": "exampleDebugTabAmbient",
+            "debugData": {
+              "name": "Debug tab example ambient light"
+            }
+          }
+        },
+        {
+          "lightProps": {
+            "type": "DIRECTIONAL",
+            "color": "#fff2d9",
+            "intensity": 3,
+            "position": {
+              "x": 5,
+              "y": 10,
+              "z": 4
+            },
+            "targetPos": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "castShadow": true,
+            "shadowCameraNearFar": [
+              1,
+              30
+            ],
+            "shadowCameraFrustum": [
+              -8,
+              8,
+              8,
+              -8
+            ],
+            "appId": "exampleDebugTabSun"
+          },
+          "entityOpts": {
+            "appId": "exampleDebugTabSun",
+            "debugData": {
+              "name": "Debug tab example sun"
+            }
+          }
+        }
+      ],
+      "id": "exampleDebugTab",
+      "sceneFile": "./examples/debugTab/exampleDebugTab.ts",
+      "__features": []
+    },
+    "exampleEcs": {
+      "name": "Example: Custom component & system",
+      "description": "A SPIN component of the app's own and the system that turns every entity that has it: a row of shapes, each turning about its own axis at its own speed, one of them hovering too.",
+      "backgroundColor": "#1c212b",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.1,
+            "far": 100,
+            "position": {
+              "x": 0,
+              "y": 3.5,
+              "z": 9
+            },
+            "lookAtPoint": {
+              "x": 0,
+              "y": 1,
+              "z": 0
+            },
+            "type": "PERSPECTIVE",
+            "fov": 45,
+            "appId": "exampleEcsCamera"
+          },
+          "entityOpts": {
+            "appId": "exampleEcsCamera",
+            "debugData": {
+              "name": "ECS example camera"
+            }
+          }
+        }
+      ],
+      "lights": [
+        {
+          "lightProps": {
+            "type": "AMBIENT",
+            "color": "#ffffff",
+            "intensity": 0.6,
+            "appId": "exampleEcsAmbient"
+          },
+          "entityOpts": {
+            "appId": "exampleEcsAmbient",
+            "debugData": {
+              "name": "ECS example ambient light"
+            }
+          }
+        },
+        {
+          "lightProps": {
+            "type": "DIRECTIONAL",
+            "color": "#fff2d9",
+            "intensity": 3,
+            "position": {
+              "x": 5,
+              "y": 10,
+              "z": 4
+            },
+            "targetPos": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "castShadow": true,
+            "shadowCameraNearFar": [
+              1,
+              30
+            ],
+            "shadowCameraFrustum": [
+              -8,
+              8,
+              8,
+              -8
+            ],
+            "appId": "exampleEcsSun"
+          },
+          "entityOpts": {
+            "appId": "exampleEcsSun",
+            "debugData": {
+              "name": "ECS example sun"
+            }
+          }
+        }
+      ],
+      "id": "exampleEcs",
+      "sceneFile": "./examples/ecs/exampleEcs.ts",
+      "__features": []
+    },
+    "exampleHubHero": {
+      "name": "Example: Hub hero",
+      "description": "The Ækasha Hub homepage's image: the SPACE sky box, a large toolkit asteroid in a glowing ring and smaller ones around it, slowly turning, with a bloom pass.",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.1,
+            "far": 500,
+            "position": {
+              "x": -4.5,
+              "y": 1.6,
+              "z": 13
+            },
+            "lookAtPoint": {
+              "x": -2.2,
+              "y": 0.2,
+              "z": 0
+            },
+            "type": "PERSPECTIVE",
+            "fov": 40,
+            "appId": "exampleHubHeroCamera"
+          },
+          "entityOpts": {
+            "appId": "exampleHubHeroCamera",
+            "debugData": {
+              "name": "Hub hero camera"
+            }
+          }
+        }
+      ],
+      "materials": [
+        {
+          "id": "asteroid",
+          "debugData": {
+            "name": "Asteroid",
+            "description": "Procedural object-space rock (no UVs): mottled colours, Worley pits, mineral speckles, bump. Every input is on colorNode, which also sets roughnessNode and normalNode; override `seed` per mesh for a different rock."
+          },
+          "params": {
+            "color": "#6b6158",
+            "roughness": 0.9,
+            "metalness": 0
+          },
+          "tslFile": "materials/asteroid/asteroid.tsl.ts",
+          "staticDefines": {
+            "octaves": 4
+          },
+          "nodes": {
+            "colorNode": {
+              "seed": 0,
+              "noiseScale": 1.4,
+              "colorA": "#5d554d",
+              "colorB": "#8a7f72",
+              "pitColor": "#2b2622",
+              "pitScale": 2.2,
+              "pitSize": 0.35,
+              "pitStrength": 0.7,
+              "speckleColor": "#c9c2b4",
+              "speckleScale": 9,
+              "speckleAmount": 0.25,
+              "roughnessMin": 0.75,
+              "roughnessMax": 0.95,
+              "bumpStrength": 0.05
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        }
+      ],
+      "skyboxes": [
+        {
+          "base": {
+            "type": "COLOR",
+            "color": "#000005"
+          },
+          "env": {
+            "dynamic": false,
+            "size": 256
+          },
+          "suns": [
+            {
+              "elevation": 30,
+              "azimuth": 315,
+              "discSize": 2,
+              "glowIntensity": 1.2,
+              "glowSize": 12,
+              "light": {
+                "shadowFrustumSize": 16,
+                "shadowFollow": "ORIGIN"
+              }
+            },
+            {
+              "elevation": 20,
+              "azimuth": 135,
+              "discSize": 1.2,
+              "glowIntensity": 0.9,
+              "glowSize": 10,
+              "color": "#9fc4ff"
+            }
+          ],
+          "stars": {
+            "density": 0.8,
+            "brightness": 1.2,
+            "fadeRange": [
+              90,
+              90
+            ],
+            "milkyWay": {
+              "intensity": 0.1
+            }
+          },
+          "nebulae": [
+            {
+              "seed": 7,
+              "direction": [
+                -0.6,
+                0.25,
+                -0.75
+              ],
+              "size": 35,
+              "stretch": 1.8,
+              "orientation": 30,
+              "density": 0.55,
+              "warp": 0.8,
+              "dust": 0.45,
+              "brightness": 1.2,
+              "starBoost": 0.5
+            },
+            {
+              "seed": 23,
+              "direction": [
+                0.7,
+                -0.1,
+                0.6
+              ],
+              "size": 28,
+              "stretch": 1.3,
+              "orientation": -50,
+              "colors": [
+                "#08203a",
+                "#1f7a8c",
+                "#bdf2e6"
+              ],
+              "density": 0.45,
+              "warp": 0.6,
+              "dust": 0.3,
+              "brightness": 0.9,
+              "starBoost": 0.3
+            }
+          ],
+          "id": "exampleHubHero",
+          "debugData": {
+            "name": "Hub hero sky",
+            "description": "The SPACE preset with its sun behind the camera, lighting the asteroids from the front, and a light-less blue sun in the frame."
+          }
+        }
+      ],
+      "postFx": [
+        {
+          "id": "heroBloom",
+          "tslFile": "examples/hubHero/heroBloom.tsl.ts",
+          "enabled": true,
+          "params": {
+            "strength": 0.9,
+            "radius": 0.5,
+            "threshold": 0.85
+          },
+          "paramsMeta": {
+            "strength": {
+              "label": "Strength",
+              "min": 0,
+              "max": 3,
+              "step": 0.01
+            },
+            "radius": {
+              "label": "Radius",
+              "min": 0,
+              "max": 1,
+              "step": 0.01
+            },
+            "threshold": {
+              "label": "Threshold",
+              "min": 0,
+              "max": 2,
+              "step": 0.01
+            }
+          },
+          "debugData": {
+            "name": "Bloom (Hub hero)",
+            "description": "three's BloomNode added over the incoming colour: what is brighter than the threshold glows."
+          }
+        }
+      ],
+      "postFxEnabled": true,
+      "id": "exampleHubHero",
+      "sceneFile": "./examples/hubHero/exampleHubHero.ts",
+      "__features": [
+        "skybox",
+        "postfx"
+      ]
+    },
+    "exampleLod": {
+      "name": "Example: LOD & instancing",
+      "description": "A field of 180 torus knots (16,384 triangles each) in one instanced LOD pool: the knot, its generated chain's simplified levels, then an octahedral impostor, one quad each, for the farthest. The LOD tab's level overlay shows which level each knot draws.",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.1,
+            "far": 400,
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 14
+            },
+            "lookAtPoint": {
+              "x": 0,
+              "y": 0,
+              "z": -40
+            },
+            "type": "PERSPECTIVE",
+            "fov": 50,
+            "appId": "exampleLodCamera"
+          },
+          "entityOpts": {
+            "appId": "exampleLodCamera",
+            "debugData": {
+              "name": "LOD example camera"
+            }
+          }
+        }
+      ],
+      "skyboxes": [
+        {
+          "base": {
+            "type": "COLOR",
+            "color": "#000000"
+          },
+          "atmosphere": {},
+          "suns": [
+            {
+              "elevation": 45,
+              "azimuth": 160,
+              "glowIntensity": 0.4,
+              "light": {}
+            }
+          ],
+          "clouds": {
+            "coverage": 0.35
+          },
+          "ground": {},
+          "id": "exampleLod",
+          "debugData": {
+            "name": "LOD example sky",
+            "description": "The DAY_SKY preset: its sun light (with a shadow that follows the camera) lights the field."
+          }
+        }
+      ],
+      "id": "exampleLod",
+      "sceneFile": "./examples/lod/exampleLod.ts",
+      "__features": [
+        "skybox"
+      ]
+    },
+    "examplePhysics": {
+      "name": "Example: Physics",
+      "description": "A static ground with a box, a sphere, a capsule and a cylinder dropping onto it, each a mesh entity with a Rapier body from createPhysicsEntity. Space drops another one.",
+      "backgroundColor": "#1c212b",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.1,
+            "far": 120,
+            "position": {
+              "x": 9,
+              "y": 8,
+              "z": 14
+            },
+            "lookAtPoint": {
+              "x": 0,
+              "y": 1,
+              "z": 0
+            },
+            "type": "PERSPECTIVE",
+            "fov": 45,
+            "appId": "examplePhysicsCamera"
+          },
+          "entityOpts": {
+            "appId": "examplePhysicsCamera",
+            "debugData": {
+              "name": "Physics example camera"
+            }
+          }
+        }
+      ],
+      "lights": [
+        {
+          "lightProps": {
+            "type": "AMBIENT",
+            "color": "#ffffff",
+            "intensity": 0.6,
+            "appId": "examplePhysicsAmbient"
+          },
+          "entityOpts": {
+            "appId": "examplePhysicsAmbient",
+            "debugData": {
+              "name": "Physics example ambient light"
+            }
+          }
+        },
+        {
+          "lightProps": {
+            "type": "DIRECTIONAL",
+            "color": "#fff2d9",
+            "intensity": 3,
+            "position": {
+              "x": 8,
+              "y": 16,
+              "z": 6
+            },
+            "targetPos": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "castShadow": true,
+            "shadowCameraNearFar": [
+              1,
+              50
+            ],
+            "shadowCameraFrustum": [
+              -12,
+              12,
+              12,
+              -12
+            ],
+            "appId": "examplePhysicsSun"
+          },
+          "entityOpts": {
+            "appId": "examplePhysicsSun",
+            "debugData": {
+              "name": "Physics example sun"
+            }
+          }
+        }
+      ],
+      "id": "examplePhysics",
+      "sceneFile": "./examples/physics/examplePhysics.ts",
+      "__features": []
+    },
+    "exampleQuickStart": {
+      "name": "Example: Quick start",
+      "description": "The smallest complete scene: a camera and two lights from JSON, a ground, and a cube with the toolkit's triplanarCheckerboard material, hovering with the toolkit's HoverEffect.",
+      "backgroundColor": "#1c212b",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.1,
+            "far": 100,
+            "position": {
+              "x": 4,
+              "y": 3.5,
+              "z": 6
+            },
+            "lookAtPoint": {
+              "x": 0,
+              "y": 1,
+              "z": 0
+            },
+            "type": "PERSPECTIVE",
+            "fov": 45,
+            "appId": "exampleQuickStartCamera"
+          },
+          "entityOpts": {
+            "appId": "exampleQuickStartCamera",
+            "debugData": {
+              "name": "Quick start camera"
+            }
+          }
+        }
+      ],
+      "lights": [
+        {
+          "lightProps": {
+            "type": "AMBIENT",
+            "color": "#ffffff",
+            "intensity": 0.6,
+            "appId": "exampleQuickStartAmbient"
+          },
+          "entityOpts": {
+            "appId": "exampleQuickStartAmbient",
+            "debugData": {
+              "name": "Quick start ambient light"
+            }
+          }
+        },
+        {
+          "lightProps": {
+            "type": "DIRECTIONAL",
+            "color": "#fff2d9",
+            "intensity": 3,
+            "position": {
+              "x": 5,
+              "y": 10,
+              "z": 4
+            },
+            "targetPos": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "castShadow": true,
+            "shadowCameraNearFar": [
+              1,
+              30
+            ],
+            "shadowCameraFrustum": [
+              -8,
+              8,
+              8,
+              -8
+            ],
+            "appId": "exampleQuickStartSun"
+          },
+          "entityOpts": {
+            "appId": "exampleQuickStartSun",
+            "debugData": {
+              "name": "Quick start sun"
+            }
+          }
+        }
+      ],
+      "materials": [
+        {
+          "id": "triplanarCheckerboard",
+          "params": {
+            "color": "#ff0000",
+            "roughness": 0.85,
+            "metalness": 0
+          },
+          "tslFile": "materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts",
+          "staticDefines": {
+            "alignToObject": true,
+            "fitToBounds": false,
+            "dominantAxis": false,
+            "plusSigns": true
+          },
+          "nodes": {
+            "colorNode": {
+              "checkerSize": 0.25,
+              "checkerColorA": "#898989",
+              "checkerColorB": "#787878",
+              "plusSignColor": "#555555"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        }
+      ],
+      "id": "exampleQuickStart",
+      "sceneFile": "./examples/quickStart/exampleQuickStart.ts",
+      "__features": []
+    },
+    "exampleSkyBox": {
+      "name": "Example: Sky box & day-night",
+      "description": "The DAY_NIGHT sky box preset on a two-minute day, over a ground with a few objects to light: its sun and moon are the scene's only lights. Keys play and pause the day, move the time and change its speed.",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.1,
+            "far": 500,
+            "position": {
+              "x": 7,
+              "y": 2.2,
+              "z": 9
+            },
+            "lookAtPoint": {
+              "x": 0,
+              "y": 2.5,
+              "z": 0
+            },
+            "type": "PERSPECTIVE",
+            "fov": 50,
+            "appId": "exampleSkyBoxCamera"
+          },
+          "entityOpts": {
+            "appId": "exampleSkyBoxCamera",
+            "debugData": {
+              "name": "Sky box example camera"
+            }
+          }
+        }
+      ],
+      "skyboxes": [
+        {
+          "base": {
+            "type": "COLOR",
+            "color": "#000000"
+          },
+          "atmosphere": {
+            "nightSkyColor": "#0a1020"
+          },
+          "suns": [
+            {
+              "glowIntensity": 0.4,
+              "light": {}
+            }
+          ],
+          "moons": [
+            {
+              "phase": 0.4,
+              "phaseMode": "CYCLE",
+              "light": {
+                "intensity": 0.5
+              }
+            }
+          ],
+          "stars": {
+            "milkyWay": {}
+          },
+          "clouds": {
+            "coverage": 0.35
+          },
+          "ground": {},
+          "dayNight": {
+            "timeOfDay": 16,
+            "cycleDurationSec": 120
+          },
+          "id": "exampleSkyBox",
+          "debugData": {
+            "name": "Sky box example",
+            "description": "The DAY_NIGHT preset (atmosphere, sun and moon with their lights, stars and Milky Way, clouds, ground) on a two-minute day."
+          }
+        }
+      ],
+      "id": "exampleSkyBox",
+      "sceneFile": "./examples/skyBox/exampleSkyBox.ts",
+      "__features": [
+        "skybox"
+      ]
+    },
+    "exampleToolkit": {
+      "name": "Example: Toolkit",
+      "description": "Pieces of the toolkit together: the Ækasha symbol model (a Draco GLB imported from its asset JSON) with the triplanarCheckerboard material in two colours, hovering with HoverEffect over a ground with the triplanarGrid material.",
+      "backgroundColor": "#1c212b",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.1,
+            "far": 100,
+            "position": {
+              "x": 2.5,
+              "y": 2.6,
+              "z": 7.5
+            },
+            "lookAtPoint": {
+              "x": 0,
+              "y": 1.4,
+              "z": 0
+            },
+            "type": "PERSPECTIVE",
+            "fov": 40,
+            "appId": "exampleToolkitCamera"
+          },
+          "entityOpts": {
+            "appId": "exampleToolkitCamera",
+            "debugData": {
+              "name": "Toolkit example camera"
+            }
+          }
+        }
+      ],
+      "lights": [
+        {
+          "lightProps": {
+            "type": "AMBIENT",
+            "color": "#ffffff",
+            "intensity": 0.6,
+            "appId": "exampleToolkitAmbient"
+          },
+          "entityOpts": {
+            "appId": "exampleToolkitAmbient",
+            "debugData": {
+              "name": "Toolkit example ambient light"
+            }
+          }
+        },
+        {
+          "lightProps": {
+            "type": "DIRECTIONAL",
+            "color": "#fff2d9",
+            "intensity": 3,
+            "position": {
+              "x": 4,
+              "y": 9,
+              "z": 7
+            },
+            "targetPos": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "castShadow": true,
+            "shadowCameraNearFar": [
+              1,
+              30
+            ],
+            "shadowCameraFrustum": [
+              -6,
+              6,
+              6,
+              -6
+            ],
+            "appId": "exampleToolkitSun"
+          },
+          "entityOpts": {
+            "appId": "exampleToolkitSun",
+            "debugData": {
+              "name": "Toolkit example sun"
+            }
+          }
+        }
+      ],
+      "materials": [
+        {
+          "id": "triplanarCheckerboard",
+          "params": {
+            "color": "#ff0000",
+            "roughness": 0.85,
+            "metalness": 0
+          },
+          "tslFile": "materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts",
+          "staticDefines": {
+            "alignToObject": true,
+            "fitToBounds": false,
+            "dominantAxis": false,
+            "plusSigns": true
+          },
+          "nodes": {
+            "colorNode": {
+              "checkerSize": 0.25,
+              "checkerColorA": "#898989",
+              "checkerColorB": "#787878",
+              "plusSignColor": "#555555"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "triplanarGrid",
+          "params": {
+            "color": "#808080",
+            "roughness": 0.85,
+            "metalness": 0
+          },
+          "tslFile": "materials/triplanarGrid/triplanarGrid.tsl.ts",
+          "staticDefines": {
+            "alignToObject": true,
+            "fitToBounds": true,
+            "dominantAxis": false,
+            "minorLines": true,
+            "seamNormals": false
+          },
+          "nodes": {
+            "colorNode": {
+              "lineThickness": 0.05,
+              "lineFrequency": 1,
+              "lineColor": "#999999",
+              "backgroundColor": "#808080",
+              "minorLineDivisions": 2,
+              "minorLineColor": "#878787"
+            },
+            "normalNode": {
+              "seamNormalStrength": 0.5,
+              "minorSeamNormalStrength": 0.25
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        }
+      ],
+      "importedAssets": [
+        {
+          "id": "aekashaSymbol",
+          "fileName": "./aekashaSymbol.glb",
+          "debugData": {
+            "name": "Ækasha symbol",
+            "description": "The Æ glyph of the favicon, extruded with a small bevel: 1 unit high, centred on the origin, facing +z. One geometry, aekashaSymbol/aekashaSymbol. Built by devTools/toolkit/buildAekashaSymbol.ts; the pipeline keeps it Draco."
+          },
+          "__fileSize": 16320,
+          "__sourceUrl": "/toolkit/models/brand/aekashaSymbol/aekashaSymbol.glb",
+          "__url": "/aek-assets/toolkit/models/brand/aekashaSymbol/aekashaSymbol.ac7e8564.glb",
+          "__bytes": {
+            "in": 16320,
+            "out": 16576
+          },
+          "__vramBytes": {
+            "in": 117856,
+            "out": 117248
+          }
+        }
+      ],
+      "id": "exampleToolkit",
+      "sceneFile": "./examples/toolkit/exampleToolkit.ts",
+      "__features": []
+    },
     "assetCompare": {
       "isDebugScene": true,
       "name": "Asset compare (p300 codec variants)",
@@ -32,7 +913,7 @@
         }
       ],
       "id": "assetCompare",
-      "sceneFile": "./assetCompare.ts",
+      "sceneFile": "./scenes/assetCompare/assetCompare.ts",
       "cameras": [
         {
           "camProps": {
@@ -51,27 +932,6 @@
       "__features": [
         "skybox"
       ]
-    },
-    "testDebugScene": {
-      "isDebugScene": true,
-      "id": "testDebugScene",
-      "sceneFile": "debugScene.scene.ts",
-      "cameras": [
-        {
-          "camProps": {
-            "type": "PERSPECTIVE",
-            "fov": 90,
-            "active": true
-          },
-          "entityOpts": {
-            "debugData": {
-              "name": "_camera",
-              "description": "Auto-generated camera for the scene"
-            }
-          }
-        }
-      ],
-      "__features": []
     },
     "largeWorld": {
       "name": "Large ECS test world",
@@ -362,7 +1222,7 @@
         }
       ],
       "id": "largeWorld",
-      "sceneFile": "./largeWorld.ts",
+      "sceneFile": "./scenes/largeWorld/largeWorld.ts",
       "textures": [
         {
           "id": "largeWorldRockImpostor.albedo",
@@ -3944,7 +4804,7 @@
               }
             }
           },
-          "__url": "/aek-assets/app/impostors/largeWorldTreeCross.atlas.albedo.5916d4c9.ktx2",
+          "__url": "/aek-assets/app/scenes/largeWorld/largeWorldTreeCross.atlas.albedo.5916d4c9.ktx2",
           "__bytes": {
             "in": 1464,
             "out": 5603
@@ -4011,7 +4871,7 @@
               }
             }
           },
-          "__url": "/aek-assets/app/impostors/largeWorldTreeCross.atlas.normal.6cb59704.ktx2",
+          "__url": "/aek-assets/app/scenes/largeWorld/largeWorldTreeCross.atlas.normal.6cb59704.ktx2",
           "__bytes": {
             "in": 5971,
             "out": 13027
@@ -4306,7 +5166,7 @@
         }
       ],
       "id": "lodShowcase",
-      "sceneFile": "./lodShowcase.ts",
+      "sceneFile": "./scenes/lodShowcase/lodShowcase.ts",
       "textures": [
         {
           "id": "lodShowcaseTreeCross.albedo",
@@ -4367,7 +5227,7 @@
               }
             }
           },
-          "__url": "/aek-assets/app/impostors/lodShowcaseTreeCross.atlas.albedo.1f8ec40c.ktx2",
+          "__url": "/aek-assets/app/scenes/lodShowcase/lodShowcaseTreeCross.atlas.albedo.1f8ec40c.ktx2",
           "__bytes": {
             "in": 1420,
             "out": 5498
@@ -4434,7 +5294,7 @@
               }
             }
           },
-          "__url": "/aek-assets/app/impostors/lodShowcaseTreeCross.atlas.normal.f8c4ac09.ktx2",
+          "__url": "/aek-assets/app/scenes/lodShowcase/lodShowcaseTreeCross.atlas.normal.f8c4ac09.ktx2",
           "__bytes": {
             "in": 6744,
             "out": 15194
@@ -6196,7 +7056,7 @@
               }
             }
           },
-          "__url": "/aek-assets/app/impostors/lodShowcaseKnotImpostor.atlas.albedo.0d91eb26.ktx2",
+          "__url": "/aek-assets/app/scenes/lodShowcase/lodShowcaseKnotImpostor.atlas.albedo.0d91eb26.ktx2",
           "__bytes": {
             "in": 52199,
             "out": 101012
@@ -7955,7 +8815,7 @@
               }
             }
           },
-          "__url": "/aek-assets/app/impostors/lodShowcaseKnotImpostor.atlas.normalDepth.5bf8f162.ktx2",
+          "__url": "/aek-assets/app/scenes/lodShowcase/lodShowcaseKnotImpostor.atlas.normalDepth.5bf8f162.ktx2",
           "__bytes": {
             "in": 1465828,
             "out": 796877
@@ -11496,7 +12356,7 @@
     "oneMoreScene": {
       "name": "One More Scene",
       "id": "oneMoreScene",
-      "sceneFile": "./oneMoreScene",
+      "sceneFile": "./scenes/oneMoreScene/oneMoreScene",
       "cameras": [
         {
           "camProps": {
@@ -11602,7 +12462,7 @@
         }
       ],
       "id": "physicsTest",
-      "sceneFile": "./physicsTest.ts",
+      "sceneFile": "./scenes/physicsTest/physicsTest.ts",
       "__features": []
     },
     "physicsTiers": {
@@ -11705,7 +12565,7 @@
         }
       ],
       "id": "physicsTiers",
-      "sceneFile": "./physicsTiers.ts",
+      "sceneFile": "./scenes/physicsTiers/physicsTiers.ts",
       "__features": [
         "skybox"
       ]
@@ -11798,7 +12658,7 @@
         }
       ],
       "id": "scene01",
-      "sceneFile": "./scene01.ts",
+      "sceneFile": "./scenes/scene01/scene01.ts",
       "__features": []
     },
     "scene01V2": {
@@ -11889,8 +12749,193 @@
         }
       ],
       "id": "scene01V2",
-      "sceneFile": "./scene01_v2.ts",
+      "sceneFile": "./scenes/scene01V2/scene01V2.ts",
       "__features": []
+    },
+    "sceneTestECS": {
+      "name": "ECS test scene",
+      "description": "This is a ECS test scene.",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "lookAtPoint": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "type": "PERSPECTIVE",
+            "fov": 90,
+            "appId": "mainCamera",
+            "position": {
+              "x": 10,
+              "y": 5,
+              "z": 20
+            }
+          },
+          "entityOpts": {
+            "appId": "mainCamera",
+            "persistent": true,
+            "debugData": {
+              "name": "Main camera",
+              "description": "Main application camera"
+            }
+          }
+        }
+      ],
+      "lights": [
+        {
+          "lightProps": {
+            "type": "AMBIENT",
+            "color": "#ffffff",
+            "intensity": 0.5,
+            "appId": "ambientLight"
+          },
+          "entityOpts": {
+            "appId": "ambientLight",
+            "debugData": {
+              "name": "Ambient light",
+              "description": "The ambient light for the scene. It colors everything in the scene (except skyboxes and basic materials) whether you like it or not. This is what next gen games is all about."
+            }
+          }
+        }
+      ],
+      "geometries": [
+        {
+          "id": "testSphere",
+          "type": "SPHERE",
+          "params": {
+            "radius": 2.6,
+            "widthSegments": 32,
+            "heightSegments": 32
+          },
+          "debugData": {
+            "name": "Test Sphere",
+            "description": "This is a test sphere"
+          }
+        },
+        {
+          "id": "otherTestBox",
+          "type": "BOX"
+        }
+      ],
+      "textures": [
+        {
+          "id": "testTexture",
+          "fileName": "/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg",
+          "useHDRLoader": false,
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "__fileSize": 967035,
+          "__sourceUrl": "/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg",
+          "__url": "/aek-assets/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.316c3c57.ktx2",
+          "__bytes": {
+            "in": 967035,
+            "out": 1122854
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        }
+      ],
+      "materials": [
+        {
+          "id": "testMaterial",
+          "params": {
+            "color": "#ff00ff",
+            "wireframe": false
+          },
+          "type": "PHONG",
+          "nodes": {}
+        },
+        {
+          "id": "testTslMat",
+          "tslFile": "scenes/sceneTestECS/testTslMat.tsl.ts",
+          "nodes": {
+            "colorNode": {
+              "baseColor": "#1c233a",
+              "panelColor": "#ffaa00",
+              "gridScale": 1,
+              "texture": "testTexture"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        }
+      ],
+      "meshes": [
+        {
+          "props": {
+            "geo": "testSphere",
+            "mat": "testTslMat",
+            "castShadow": false,
+            "receiveShadow": true,
+            "position": {
+              "x": 4,
+              "y": 1,
+              "z": 2
+            },
+            "appId": "testMesh"
+          }
+        },
+        {
+          "props": {
+            "geo": "testImport/Cube",
+            "mat": {
+              "id": "importedMeshMat",
+              "params": {
+                "map": "testTexture"
+              },
+              "type": "PHONG"
+            },
+            "castShadow": true,
+            "receiveShadow": true,
+            "position": {
+              "x": -4,
+              "y": 1,
+              "z": -1
+            },
+            "appId": "testImportedMesh"
+          }
+        }
+      ],
+      "importedAssets": [
+        {
+          "id": "testImport",
+          "fileName": "/debugger/assets/testModels/box01.glb",
+          "__fileSize": 46676,
+          "__sourceUrl": "/debugger/assets/testModels/box01.glb",
+          "__url": "/aek-assets/debugger/assets/testModels/box01.2acf7d9b.glb",
+          "__bytes": {
+            "in": 46676,
+            "out": 14664
+          },
+          "__vramBytes": {
+            "in": 45544,
+            "out": 33824
+          }
+        }
+      ],
+      "skyboxes": [
+        {
+          "id": "basicSkybox",
+          "base": {
+            "type": "EQUIRECTANGULAR",
+            "file": "/debugger/assets/testTextures/skyboxes/sunset_stylized/sky_empty_2k.png",
+            "textureId": "equiRectEmptyId",
+            "colorSpace": "srgb",
+            "rotate": 3.141592653589793
+          }
+        }
+      ],
+      "id": "sceneTestECS",
+      "sceneFile": "./scenes/sceneTestECS/sceneTestECS.ts",
+      "__features": [
+        "skybox"
+      ]
     },
     "skyShowcase": {
       "name": "Sky showcase (day-night)",
@@ -12054,7 +13099,7 @@
         }
       ],
       "id": "skyShowcase",
-      "sceneFile": "./skyShowcase.ts",
+      "sceneFile": "./scenes/skyShowcase/skyShowcase.ts",
       "__features": [
         "skybox"
       ]
@@ -12103,7 +13148,7 @@
             "roughness": 0.9,
             "metalness": 0
           },
-          "tslFile": "materials/asteroid.tsl.ts",
+          "tslFile": "materials/asteroid/asteroid.tsl.ts",
           "staticDefines": {
             "octaves": 4
           },
@@ -12217,195 +13262,31 @@
         }
       ],
       "id": "space",
-      "sceneFile": "./space.ts",
+      "sceneFile": "./scenes/space/space.ts",
       "__features": [
         "skybox"
       ]
     },
-    "sceneTestECS": {
-      "name": "ECS test scene",
-      "description": "This is a ECS test scene.",
+    "testDebugScene": {
+      "isDebugScene": true,
+      "id": "testDebugScene",
+      "sceneFile": "scenes/testDebugScene/testDebugScene.ts",
       "cameras": [
         {
           "camProps": {
-            "active": true,
-            "lookAtPoint": {
-              "x": 0,
-              "y": 0,
-              "z": 0
-            },
             "type": "PERSPECTIVE",
             "fov": 90,
-            "appId": "mainCamera",
-            "position": {
-              "x": 10,
-              "y": 5,
-              "z": 20
-            }
+            "active": true
           },
           "entityOpts": {
-            "appId": "mainCamera",
-            "persistent": true,
             "debugData": {
-              "name": "Main camera",
-              "description": "Main application camera"
+              "name": "_camera",
+              "description": "Auto-generated camera for the scene"
             }
           }
         }
       ],
-      "lights": [
-        {
-          "lightProps": {
-            "type": "AMBIENT",
-            "color": "#ffffff",
-            "intensity": 0.5,
-            "appId": "ambientLight"
-          },
-          "entityOpts": {
-            "appId": "ambientLight",
-            "debugData": {
-              "name": "Ambient light",
-              "description": "The ambient light for the scene. It colors everything in the scene (except skyboxes and basic materials) whether you like it or not. This is what next gen games is all about."
-            }
-          }
-        }
-      ],
-      "geometries": [
-        {
-          "id": "testSphere",
-          "type": "SPHERE",
-          "params": {
-            "radius": 2.6,
-            "widthSegments": 32,
-            "heightSegments": 32
-          },
-          "debugData": {
-            "name": "Test Sphere",
-            "description": "This is a test sphere"
-          }
-        },
-        {
-          "id": "otherTestBox",
-          "type": "BOX"
-        }
-      ],
-      "textures": [
-        {
-          "id": "testTexture",
-          "fileName": "/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg",
-          "useHDRLoader": false,
-          "texOpts": {
-            "wrapS": 1000,
-            "wrapT": 1000
-          },
-          "__fileSize": 967035,
-          "__sourceUrl": "/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg",
-          "__url": "/aek-assets/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.316c3c57.ktx2",
-          "__bytes": {
-            "in": 967035,
-            "out": 1122854
-          },
-          "__vramBytes": {
-            "in": 22369620,
-            "out": 1398128
-          },
-          "__codec": "uastc"
-        }
-      ],
-      "materials": [
-        {
-          "id": "testMaterial",
-          "params": {
-            "color": "#ff00ff",
-            "wireframe": false
-          },
-          "type": "PHONG",
-          "nodes": {}
-        },
-        {
-          "id": "testTslMat",
-          "tslFile": "materials/testTslMat.tsl.ts",
-          "nodes": {
-            "colorNode": {
-              "baseColor": "#1c233a",
-              "panelColor": "#ffaa00",
-              "gridScale": 1,
-              "texture": "testTexture"
-            }
-          },
-          "type": "STANDARDNODEMATERIAL"
-        }
-      ],
-      "meshes": [
-        {
-          "props": {
-            "geo": "testSphere",
-            "mat": "testTslMat",
-            "castShadow": false,
-            "receiveShadow": true,
-            "position": {
-              "x": 4,
-              "y": 1,
-              "z": 2
-            },
-            "appId": "testMesh"
-          }
-        },
-        {
-          "props": {
-            "geo": "testImport/Cube",
-            "mat": {
-              "id": "importedMeshMat",
-              "params": {
-                "map": "testTexture"
-              },
-              "type": "PHONG"
-            },
-            "castShadow": true,
-            "receiveShadow": true,
-            "position": {
-              "x": -4,
-              "y": 1,
-              "z": -1
-            },
-            "appId": "testImportedMesh"
-          }
-        }
-      ],
-      "importedAssets": [
-        {
-          "id": "testImport",
-          "fileName": "/debugger/assets/testModels/box01.glb",
-          "__fileSize": 46676,
-          "__sourceUrl": "/debugger/assets/testModels/box01.glb",
-          "__url": "/aek-assets/debugger/assets/testModels/box01.2acf7d9b.glb",
-          "__bytes": {
-            "in": 46676,
-            "out": 14664
-          },
-          "__vramBytes": {
-            "in": 45544,
-            "out": 33824
-          }
-        }
-      ],
-      "skyboxes": [
-        {
-          "id": "basicSkybox",
-          "base": {
-            "type": "EQUIRECTANGULAR",
-            "file": "/debugger/assets/testTextures/skyboxes/sunset_stylized/sky_empty_2k.png",
-            "textureId": "equiRectEmptyId",
-            "colorSpace": "srgb",
-            "rotate": 3.141592653589793
-          }
-        }
-      ],
-      "id": "sceneTestECS",
-      "sceneFile": "./testECS.ts",
-      "__features": [
-        "skybox"
-      ]
+      "__features": []
     },
     "textureArrays": {
       "isDebugScene": true,
@@ -12428,7 +13309,7 @@
             "l1",
             "cubemap01_positive_y"
           ],
-          "__url": "/aek-assets/app/textures/p299TestArray.array.5c60d088.ktx2",
+          "__url": "/aek-assets/app/scenes/textureArrays/p299TestArray.array.5c60d088.ktx2",
           "__bytes": {
             "in": 4471280,
             "out": 446409
@@ -12453,7 +13334,7 @@
           "__layers": [
             "l2"
           ],
-          "__url": "/aek-assets/app/textures/p299TestArray1.array.ecc27102.ktx2",
+          "__url": "/aek-assets/app/scenes/textureArrays/p299TestArray1.array.ecc27102.ktx2",
           "__bytes": {
             "in": 1632,
             "out": 3265
@@ -12466,7 +13347,7 @@
         }
       ],
       "id": "textureArrays",
-      "sceneFile": "./textureArrays.ts",
+      "sceneFile": "./scenes/textureArrays/textureArrays.ts",
       "cameras": [
         {
           "camProps": {
@@ -12585,7 +13466,7 @@
               }
             }
           },
-          "__url": "/aek-assets/app/textures/p299TestAtlas.atlas.albedo.1bae140f.ktx2",
+          "__url": "/aek-assets/app/scenes/textureAtlases/p299TestAtlas.atlas.albedo.1bae140f.ktx2",
           "__bytes": {
             "in": 976923,
             "out": 16013
@@ -12689,7 +13570,7 @@
               }
             }
           },
-          "__url": "/aek-assets/app/textures/p299TestAtlas.atlas.mask.91a3bdbd.ktx2",
+          "__url": "/aek-assets/app/scenes/textureAtlases/p299TestAtlas.atlas.mask.91a3bdbd.ktx2",
           "__bytes": {
             "in": 3090,
             "out": 16750
@@ -12831,7 +13712,7 @@
               }
             }
           },
-          "__url": "/aek-assets/app/textures/p299TestAtlasImage.atlas.albedo.26184dd3.ktx2",
+          "__url": "/aek-assets/app/scenes/textureAtlases/p299TestAtlasImage.atlas.albedo.26184dd3.ktx2",
           "__bytes": {
             "in": 2322,
             "out": 4202
@@ -12970,7 +13851,7 @@
               }
             }
           },
-          "__url": "/aek-assets/app/textures/p299TestAtlasImage.atlas.normalDepth.339cb09e.ktx2",
+          "__url": "/aek-assets/app/scenes/textureAtlases/p299TestAtlasImage.atlas.normalDepth.339cb09e.ktx2",
           "__bytes": {
             "in": 60702,
             "out": 12373
@@ -12983,7 +13864,7 @@
         }
       ],
       "id": "textureAtlases",
-      "sceneFile": "./textureAtlases.ts",
+      "sceneFile": "./scenes/textureAtlases/textureAtlases.ts",
       "cameras": [
         {
           "camProps": {
@@ -13096,7 +13977,7 @@
             "roughness": 0.85,
             "metalness": 0
           },
-          "tslFile": "materials/triplanarGrid.tsl.ts",
+          "tslFile": "materials/triplanarGrid/triplanarGrid.tsl.ts",
           "staticDefines": {
             "alignToObject": true,
             "fitToBounds": true,
@@ -13127,7 +14008,7 @@
             "roughness": 0.85,
             "metalness": 0
           },
-          "tslFile": "materials/triplanarCheckerboard.tsl.ts",
+          "tslFile": "materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts",
           "staticDefines": {
             "alignToObject": true,
             "fitToBounds": false,
@@ -13215,7 +14096,7 @@
       ],
       "postFxEnabled": true,
       "id": "thirdPersonGymScene",
-      "sceneFile": "./scene_thirdPersonGym.ts",
+      "sceneFile": "./scenes/thirdPersonGymScene/thirdPersonGymScene.ts",
       "__features": [
         "postfx"
       ]
@@ -13315,7 +14196,7 @@
             "roughness": 0.85,
             "metalness": 0
           },
-          "tslFile": "materials/triplanarGrid.tsl.ts",
+          "tslFile": "materials/triplanarGrid/triplanarGrid.tsl.ts",
           "staticDefines": {
             "alignToObject": true,
             "fitToBounds": true,
@@ -13346,7 +14227,7 @@
             "roughness": 0.85,
             "metalness": 0
           },
-          "tslFile": "materials/triplanarCheckerboard.tsl.ts",
+          "tslFile": "materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts",
           "staticDefines": {
             "alignToObject": true,
             "fitToBounds": false,
@@ -13449,1043 +14330,14 @@
       ],
       "postFxEnabled": true,
       "id": "topDownTestScene",
-      "sceneFile": "./scene_topDownTest.ts",
+      "sceneFile": "./scenes/topDownTestScene/topDownTestScene.ts",
       "__features": [
         "skybox",
         "postfx"
       ]
-    },
-    "exampleDebugTab": {
-      "name": "Example: Your own debug tab",
-      "description": "A ring of boxes and a debug drawer tab of the scene's own (debug env): the number of boxes and their colour, saved in the browser, and a button that shuffles them.",
-      "backgroundColor": "#1c212b",
-      "cameras": [
-        {
-          "camProps": {
-            "active": true,
-            "near": 0.1,
-            "far": 100,
-            "position": {
-              "x": 0,
-              "y": 7,
-              "z": 11
-            },
-            "lookAtPoint": {
-              "x": 0,
-              "y": 0,
-              "z": 0
-            },
-            "type": "PERSPECTIVE",
-            "fov": 45,
-            "appId": "exampleDebugTabCamera"
-          },
-          "entityOpts": {
-            "appId": "exampleDebugTabCamera",
-            "debugData": {
-              "name": "Debug tab example camera"
-            }
-          }
-        }
-      ],
-      "lights": [
-        {
-          "lightProps": {
-            "type": "AMBIENT",
-            "color": "#ffffff",
-            "intensity": 0.6,
-            "appId": "exampleDebugTabAmbient"
-          },
-          "entityOpts": {
-            "appId": "exampleDebugTabAmbient",
-            "debugData": {
-              "name": "Debug tab example ambient light"
-            }
-          }
-        },
-        {
-          "lightProps": {
-            "type": "DIRECTIONAL",
-            "color": "#fff2d9",
-            "intensity": 3,
-            "position": {
-              "x": 5,
-              "y": 10,
-              "z": 4
-            },
-            "targetPos": {
-              "x": 0,
-              "y": 0,
-              "z": 0
-            },
-            "castShadow": true,
-            "shadowCameraNearFar": [
-              1,
-              30
-            ],
-            "shadowCameraFrustum": [
-              -8,
-              8,
-              8,
-              -8
-            ],
-            "appId": "exampleDebugTabSun"
-          },
-          "entityOpts": {
-            "appId": "exampleDebugTabSun",
-            "debugData": {
-              "name": "Debug tab example sun"
-            }
-          }
-        }
-      ],
-      "id": "exampleDebugTab",
-      "sceneFile": "./examples/debugTab/exampleDebugTab.ts",
-      "__features": []
-    },
-    "exampleEcs": {
-      "name": "Example: Custom component & system",
-      "description": "A SPIN component of the app's own and the system that turns every entity that has it: a row of shapes, each turning about its own axis at its own speed, one of them hovering too.",
-      "backgroundColor": "#1c212b",
-      "cameras": [
-        {
-          "camProps": {
-            "active": true,
-            "near": 0.1,
-            "far": 100,
-            "position": {
-              "x": 0,
-              "y": 3.5,
-              "z": 9
-            },
-            "lookAtPoint": {
-              "x": 0,
-              "y": 1,
-              "z": 0
-            },
-            "type": "PERSPECTIVE",
-            "fov": 45,
-            "appId": "exampleEcsCamera"
-          },
-          "entityOpts": {
-            "appId": "exampleEcsCamera",
-            "debugData": {
-              "name": "ECS example camera"
-            }
-          }
-        }
-      ],
-      "lights": [
-        {
-          "lightProps": {
-            "type": "AMBIENT",
-            "color": "#ffffff",
-            "intensity": 0.6,
-            "appId": "exampleEcsAmbient"
-          },
-          "entityOpts": {
-            "appId": "exampleEcsAmbient",
-            "debugData": {
-              "name": "ECS example ambient light"
-            }
-          }
-        },
-        {
-          "lightProps": {
-            "type": "DIRECTIONAL",
-            "color": "#fff2d9",
-            "intensity": 3,
-            "position": {
-              "x": 5,
-              "y": 10,
-              "z": 4
-            },
-            "targetPos": {
-              "x": 0,
-              "y": 0,
-              "z": 0
-            },
-            "castShadow": true,
-            "shadowCameraNearFar": [
-              1,
-              30
-            ],
-            "shadowCameraFrustum": [
-              -8,
-              8,
-              8,
-              -8
-            ],
-            "appId": "exampleEcsSun"
-          },
-          "entityOpts": {
-            "appId": "exampleEcsSun",
-            "debugData": {
-              "name": "ECS example sun"
-            }
-          }
-        }
-      ],
-      "id": "exampleEcs",
-      "sceneFile": "./examples/ecs/exampleEcs.ts",
-      "__features": []
-    },
-    "exampleHubHero": {
-      "name": "Example: Hub hero",
-      "description": "The Ækasha Hub homepage's image: the SPACE sky box, a large toolkit asteroid in a glowing ring and smaller ones around it, slowly turning, with a bloom pass.",
-      "cameras": [
-        {
-          "camProps": {
-            "active": true,
-            "near": 0.1,
-            "far": 500,
-            "position": {
-              "x": -4.5,
-              "y": 1.6,
-              "z": 13
-            },
-            "lookAtPoint": {
-              "x": -2.2,
-              "y": 0.2,
-              "z": 0
-            },
-            "type": "PERSPECTIVE",
-            "fov": 40,
-            "appId": "exampleHubHeroCamera"
-          },
-          "entityOpts": {
-            "appId": "exampleHubHeroCamera",
-            "debugData": {
-              "name": "Hub hero camera"
-            }
-          }
-        }
-      ],
-      "materials": [
-        {
-          "id": "asteroid",
-          "debugData": {
-            "name": "Asteroid",
-            "description": "Procedural object-space rock (no UVs): mottled colours, Worley pits, mineral speckles, bump. Every input is on colorNode, which also sets roughnessNode and normalNode; override `seed` per mesh for a different rock."
-          },
-          "params": {
-            "color": "#6b6158",
-            "roughness": 0.9,
-            "metalness": 0
-          },
-          "tslFile": "materials/asteroid.tsl.ts",
-          "staticDefines": {
-            "octaves": 4
-          },
-          "nodes": {
-            "colorNode": {
-              "seed": 0,
-              "noiseScale": 1.4,
-              "colorA": "#5d554d",
-              "colorB": "#8a7f72",
-              "pitColor": "#2b2622",
-              "pitScale": 2.2,
-              "pitSize": 0.35,
-              "pitStrength": 0.7,
-              "speckleColor": "#c9c2b4",
-              "speckleScale": 9,
-              "speckleAmount": 0.25,
-              "roughnessMin": 0.75,
-              "roughnessMax": 0.95,
-              "bumpStrength": 0.05
-            }
-          },
-          "type": "STANDARDNODEMATERIAL"
-        }
-      ],
-      "skyboxes": [
-        {
-          "base": {
-            "type": "COLOR",
-            "color": "#000005"
-          },
-          "env": {
-            "dynamic": false,
-            "size": 256
-          },
-          "suns": [
-            {
-              "elevation": 30,
-              "azimuth": 315,
-              "discSize": 2,
-              "glowIntensity": 1.2,
-              "glowSize": 12,
-              "light": {
-                "shadowFrustumSize": 16,
-                "shadowFollow": "ORIGIN"
-              }
-            },
-            {
-              "elevation": 20,
-              "azimuth": 135,
-              "discSize": 1.2,
-              "glowIntensity": 0.9,
-              "glowSize": 10,
-              "color": "#9fc4ff"
-            }
-          ],
-          "stars": {
-            "density": 0.8,
-            "brightness": 1.2,
-            "fadeRange": [
-              90,
-              90
-            ],
-            "milkyWay": {
-              "intensity": 0.1
-            }
-          },
-          "nebulae": [
-            {
-              "seed": 7,
-              "direction": [
-                -0.6,
-                0.25,
-                -0.75
-              ],
-              "size": 35,
-              "stretch": 1.8,
-              "orientation": 30,
-              "density": 0.55,
-              "warp": 0.8,
-              "dust": 0.45,
-              "brightness": 1.2,
-              "starBoost": 0.5
-            },
-            {
-              "seed": 23,
-              "direction": [
-                0.7,
-                -0.1,
-                0.6
-              ],
-              "size": 28,
-              "stretch": 1.3,
-              "orientation": -50,
-              "colors": [
-                "#08203a",
-                "#1f7a8c",
-                "#bdf2e6"
-              ],
-              "density": 0.45,
-              "warp": 0.6,
-              "dust": 0.3,
-              "brightness": 0.9,
-              "starBoost": 0.3
-            }
-          ],
-          "id": "exampleHubHero",
-          "debugData": {
-            "name": "Hub hero sky",
-            "description": "The SPACE preset with its sun behind the camera, lighting the asteroids from the front, and a light-less blue sun in the frame."
-          }
-        }
-      ],
-      "postFx": [
-        {
-          "id": "heroBloom",
-          "tslFile": "examples/hubHero/heroBloom.tsl.ts",
-          "enabled": true,
-          "params": {
-            "strength": 0.9,
-            "radius": 0.5,
-            "threshold": 0.85
-          },
-          "paramsMeta": {
-            "strength": {
-              "label": "Strength",
-              "min": 0,
-              "max": 3,
-              "step": 0.01
-            },
-            "radius": {
-              "label": "Radius",
-              "min": 0,
-              "max": 1,
-              "step": 0.01
-            },
-            "threshold": {
-              "label": "Threshold",
-              "min": 0,
-              "max": 2,
-              "step": 0.01
-            }
-          },
-          "debugData": {
-            "name": "Bloom (Hub hero)",
-            "description": "three's BloomNode added over the incoming colour: what is brighter than the threshold glows."
-          }
-        }
-      ],
-      "postFxEnabled": true,
-      "id": "exampleHubHero",
-      "sceneFile": "./examples/hubHero/exampleHubHero.ts",
-      "__features": [
-        "skybox",
-        "postfx"
-      ]
-    },
-    "exampleLod": {
-      "name": "Example: LOD & instancing",
-      "description": "A field of 180 torus knots (16,384 triangles each) in one instanced LOD pool: the knot, its generated chain's simplified levels, then an octahedral impostor, one quad each, for the farthest. The LOD tab's level overlay shows which level each knot draws.",
-      "cameras": [
-        {
-          "camProps": {
-            "active": true,
-            "near": 0.1,
-            "far": 400,
-            "position": {
-              "x": 0,
-              "y": 7,
-              "z": 14
-            },
-            "lookAtPoint": {
-              "x": 0,
-              "y": 0,
-              "z": -40
-            },
-            "type": "PERSPECTIVE",
-            "fov": 50,
-            "appId": "exampleLodCamera"
-          },
-          "entityOpts": {
-            "appId": "exampleLodCamera",
-            "debugData": {
-              "name": "LOD example camera"
-            }
-          }
-        }
-      ],
-      "skyboxes": [
-        {
-          "base": {
-            "type": "COLOR",
-            "color": "#000000"
-          },
-          "atmosphere": {},
-          "suns": [
-            {
-              "elevation": 45,
-              "azimuth": 160,
-              "glowIntensity": 0.4,
-              "light": {}
-            }
-          ],
-          "clouds": {
-            "coverage": 0.35
-          },
-          "ground": {},
-          "id": "exampleLod",
-          "debugData": {
-            "name": "LOD example sky",
-            "description": "The DAY_SKY preset: its sun light (with a shadow that follows the camera) lights the field."
-          }
-        }
-      ],
-      "id": "exampleLod",
-      "sceneFile": "./examples/lod/exampleLod.ts",
-      "__features": [
-        "skybox"
-      ]
-    },
-    "examplePhysics": {
-      "name": "Example: Physics",
-      "description": "A static ground with a box, a sphere, a capsule and a cylinder dropping onto it, each a mesh entity with a Rapier body from createPhysicsEntity. Space drops another one.",
-      "backgroundColor": "#1c212b",
-      "cameras": [
-        {
-          "camProps": {
-            "active": true,
-            "near": 0.1,
-            "far": 120,
-            "position": {
-              "x": 9,
-              "y": 8,
-              "z": 14
-            },
-            "lookAtPoint": {
-              "x": 0,
-              "y": 1,
-              "z": 0
-            },
-            "type": "PERSPECTIVE",
-            "fov": 45,
-            "appId": "examplePhysicsCamera"
-          },
-          "entityOpts": {
-            "appId": "examplePhysicsCamera",
-            "debugData": {
-              "name": "Physics example camera"
-            }
-          }
-        }
-      ],
-      "lights": [
-        {
-          "lightProps": {
-            "type": "AMBIENT",
-            "color": "#ffffff",
-            "intensity": 0.6,
-            "appId": "examplePhysicsAmbient"
-          },
-          "entityOpts": {
-            "appId": "examplePhysicsAmbient",
-            "debugData": {
-              "name": "Physics example ambient light"
-            }
-          }
-        },
-        {
-          "lightProps": {
-            "type": "DIRECTIONAL",
-            "color": "#fff2d9",
-            "intensity": 3,
-            "position": {
-              "x": 8,
-              "y": 16,
-              "z": 6
-            },
-            "targetPos": {
-              "x": 0,
-              "y": 0,
-              "z": 0
-            },
-            "castShadow": true,
-            "shadowCameraNearFar": [
-              1,
-              50
-            ],
-            "shadowCameraFrustum": [
-              -12,
-              12,
-              12,
-              -12
-            ],
-            "appId": "examplePhysicsSun"
-          },
-          "entityOpts": {
-            "appId": "examplePhysicsSun",
-            "debugData": {
-              "name": "Physics example sun"
-            }
-          }
-        }
-      ],
-      "id": "examplePhysics",
-      "sceneFile": "./examples/physics/examplePhysics.ts",
-      "__features": []
-    },
-    "exampleQuickStart": {
-      "name": "Example: Quick start",
-      "description": "The smallest complete scene: a camera and two lights from JSON, a ground, and a cube with the toolkit's triplanarCheckerboard material, hovering with the toolkit's HoverEffect.",
-      "backgroundColor": "#1c212b",
-      "cameras": [
-        {
-          "camProps": {
-            "active": true,
-            "near": 0.1,
-            "far": 100,
-            "position": {
-              "x": 4,
-              "y": 3.5,
-              "z": 6
-            },
-            "lookAtPoint": {
-              "x": 0,
-              "y": 1,
-              "z": 0
-            },
-            "type": "PERSPECTIVE",
-            "fov": 45,
-            "appId": "exampleQuickStartCamera"
-          },
-          "entityOpts": {
-            "appId": "exampleQuickStartCamera",
-            "debugData": {
-              "name": "Quick start camera"
-            }
-          }
-        }
-      ],
-      "lights": [
-        {
-          "lightProps": {
-            "type": "AMBIENT",
-            "color": "#ffffff",
-            "intensity": 0.6,
-            "appId": "exampleQuickStartAmbient"
-          },
-          "entityOpts": {
-            "appId": "exampleQuickStartAmbient",
-            "debugData": {
-              "name": "Quick start ambient light"
-            }
-          }
-        },
-        {
-          "lightProps": {
-            "type": "DIRECTIONAL",
-            "color": "#fff2d9",
-            "intensity": 3,
-            "position": {
-              "x": 5,
-              "y": 10,
-              "z": 4
-            },
-            "targetPos": {
-              "x": 0,
-              "y": 0,
-              "z": 0
-            },
-            "castShadow": true,
-            "shadowCameraNearFar": [
-              1,
-              30
-            ],
-            "shadowCameraFrustum": [
-              -8,
-              8,
-              8,
-              -8
-            ],
-            "appId": "exampleQuickStartSun"
-          },
-          "entityOpts": {
-            "appId": "exampleQuickStartSun",
-            "debugData": {
-              "name": "Quick start sun"
-            }
-          }
-        }
-      ],
-      "materials": [
-        {
-          "id": "triplanarCheckerboard",
-          "params": {
-            "color": "#ff0000",
-            "roughness": 0.85,
-            "metalness": 0
-          },
-          "tslFile": "materials/triplanarCheckerboard.tsl.ts",
-          "staticDefines": {
-            "alignToObject": true,
-            "fitToBounds": false,
-            "dominantAxis": false,
-            "plusSigns": true
-          },
-          "nodes": {
-            "colorNode": {
-              "checkerSize": 0.25,
-              "checkerColorA": "#898989",
-              "checkerColorB": "#787878",
-              "plusSignColor": "#555555"
-            }
-          },
-          "type": "STANDARDNODEMATERIAL"
-        }
-      ],
-      "id": "exampleQuickStart",
-      "sceneFile": "./examples/quickStart/exampleQuickStart.ts",
-      "__features": []
-    },
-    "exampleSkyBox": {
-      "name": "Example: Sky box & day-night",
-      "description": "The DAY_NIGHT sky box preset on a two-minute day, over a ground with a few objects to light: its sun and moon are the scene's only lights. Keys play and pause the day, move the time and change its speed.",
-      "cameras": [
-        {
-          "camProps": {
-            "active": true,
-            "near": 0.1,
-            "far": 500,
-            "position": {
-              "x": 7,
-              "y": 2.2,
-              "z": 9
-            },
-            "lookAtPoint": {
-              "x": 0,
-              "y": 2.5,
-              "z": 0
-            },
-            "type": "PERSPECTIVE",
-            "fov": 50,
-            "appId": "exampleSkyBoxCamera"
-          },
-          "entityOpts": {
-            "appId": "exampleSkyBoxCamera",
-            "debugData": {
-              "name": "Sky box example camera"
-            }
-          }
-        }
-      ],
-      "skyboxes": [
-        {
-          "base": {
-            "type": "COLOR",
-            "color": "#000000"
-          },
-          "atmosphere": {
-            "nightSkyColor": "#0a1020"
-          },
-          "suns": [
-            {
-              "glowIntensity": 0.4,
-              "light": {}
-            }
-          ],
-          "moons": [
-            {
-              "phase": 0.4,
-              "phaseMode": "CYCLE",
-              "light": {
-                "intensity": 0.5
-              }
-            }
-          ],
-          "stars": {
-            "milkyWay": {}
-          },
-          "clouds": {
-            "coverage": 0.35
-          },
-          "ground": {},
-          "dayNight": {
-            "timeOfDay": 16,
-            "cycleDurationSec": 120
-          },
-          "id": "exampleSkyBox",
-          "debugData": {
-            "name": "Sky box example",
-            "description": "The DAY_NIGHT preset (atmosphere, sun and moon with their lights, stars and Milky Way, clouds, ground) on a two-minute day."
-          }
-        }
-      ],
-      "id": "exampleSkyBox",
-      "sceneFile": "./examples/skyBox/exampleSkyBox.ts",
-      "__features": [
-        "skybox"
-      ]
-    },
-    "exampleToolkit": {
-      "name": "Example: Toolkit",
-      "description": "Pieces of the toolkit together: the Ækasha symbol model (a Draco GLB imported from its asset JSON) with the triplanarCheckerboard material in two colours, hovering with HoverEffect over a ground with the triplanarGrid material.",
-      "backgroundColor": "#1c212b",
-      "cameras": [
-        {
-          "camProps": {
-            "active": true,
-            "near": 0.1,
-            "far": 100,
-            "position": {
-              "x": 2.5,
-              "y": 2.6,
-              "z": 7.5
-            },
-            "lookAtPoint": {
-              "x": 0,
-              "y": 1.4,
-              "z": 0
-            },
-            "type": "PERSPECTIVE",
-            "fov": 40,
-            "appId": "exampleToolkitCamera"
-          },
-          "entityOpts": {
-            "appId": "exampleToolkitCamera",
-            "debugData": {
-              "name": "Toolkit example camera"
-            }
-          }
-        }
-      ],
-      "lights": [
-        {
-          "lightProps": {
-            "type": "AMBIENT",
-            "color": "#ffffff",
-            "intensity": 0.6,
-            "appId": "exampleToolkitAmbient"
-          },
-          "entityOpts": {
-            "appId": "exampleToolkitAmbient",
-            "debugData": {
-              "name": "Toolkit example ambient light"
-            }
-          }
-        },
-        {
-          "lightProps": {
-            "type": "DIRECTIONAL",
-            "color": "#fff2d9",
-            "intensity": 3,
-            "position": {
-              "x": 4,
-              "y": 9,
-              "z": 7
-            },
-            "targetPos": {
-              "x": 0,
-              "y": 0,
-              "z": 0
-            },
-            "castShadow": true,
-            "shadowCameraNearFar": [
-              1,
-              30
-            ],
-            "shadowCameraFrustum": [
-              -6,
-              6,
-              6,
-              -6
-            ],
-            "appId": "exampleToolkitSun"
-          },
-          "entityOpts": {
-            "appId": "exampleToolkitSun",
-            "debugData": {
-              "name": "Toolkit example sun"
-            }
-          }
-        }
-      ],
-      "materials": [
-        {
-          "id": "triplanarCheckerboard",
-          "params": {
-            "color": "#ff0000",
-            "roughness": 0.85,
-            "metalness": 0
-          },
-          "tslFile": "materials/triplanarCheckerboard.tsl.ts",
-          "staticDefines": {
-            "alignToObject": true,
-            "fitToBounds": false,
-            "dominantAxis": false,
-            "plusSigns": true
-          },
-          "nodes": {
-            "colorNode": {
-              "checkerSize": 0.25,
-              "checkerColorA": "#898989",
-              "checkerColorB": "#787878",
-              "plusSignColor": "#555555"
-            }
-          },
-          "type": "STANDARDNODEMATERIAL"
-        },
-        {
-          "id": "triplanarGrid",
-          "params": {
-            "color": "#808080",
-            "roughness": 0.85,
-            "metalness": 0
-          },
-          "tslFile": "materials/triplanarGrid.tsl.ts",
-          "staticDefines": {
-            "alignToObject": true,
-            "fitToBounds": true,
-            "dominantAxis": false,
-            "minorLines": true,
-            "seamNormals": false
-          },
-          "nodes": {
-            "colorNode": {
-              "lineThickness": 0.05,
-              "lineFrequency": 1,
-              "lineColor": "#999999",
-              "backgroundColor": "#808080",
-              "minorLineDivisions": 2,
-              "minorLineColor": "#878787"
-            },
-            "normalNode": {
-              "seamNormalStrength": 0.5,
-              "minorSeamNormalStrength": 0.25
-            }
-          },
-          "type": "STANDARDNODEMATERIAL"
-        }
-      ],
-      "importedAssets": [
-        {
-          "id": "aekashaSymbol",
-          "fileName": "./aekashaSymbol.glb",
-          "debugData": {
-            "name": "Ækasha symbol",
-            "description": "The Æ glyph of the favicon, extruded with a small bevel: 1 unit high, centred on the origin, facing +z. One geometry, aekashaSymbol/aekashaSymbol. Built by devTools/toolkit/buildAekashaSymbol.ts; the pipeline keeps it Draco."
-          },
-          "__fileSize": 16320,
-          "__sourceUrl": "/toolkit/models/aekashaSymbol/aekashaSymbol.glb",
-          "__url": "/aek-assets/toolkit/models/aekashaSymbol/aekashaSymbol.ac7e8564.glb",
-          "__bytes": {
-            "in": 16320,
-            "out": 16576
-          },
-          "__vramBytes": {
-            "in": 117856,
-            "out": 117248
-          }
-        }
-      ],
-      "id": "exampleToolkit",
-      "sceneFile": "./examples/toolkit/exampleToolkit.ts",
-      "__features": []
     }
   },
   "cameras": {
-    "largeWorldOverview": {
-      "camProps": {
-        "active": true,
-        "near": 0.1,
-        "far": 1000,
-        "position": {
-          "x": 0,
-          "y": 60,
-          "z": 120
-        },
-        "lookAtPoint": {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        },
-        "type": "PERSPECTIVE",
-        "fov": 60,
-        "appId": "largeWorldOverview"
-      },
-      "entityOpts": {
-        "appId": "largeWorldOverview",
-        "debugData": {
-          "name": "Large world overview camera",
-          "description": "Static wide overview of the terrain (docs/plans/p090_large-ecs-test-world-scene.md §2)."
-        }
-      },
-      "__sourcePath": "src/app/cameras/largeWorldOverview.camera.json"
-    },
-    "lodShowcaseCamera": {
-      "camProps": {
-        "active": true,
-        "near": 0.1,
-        "far": 600,
-        "position": {
-          "x": 0,
-          "y": 7,
-          "z": 24
-        },
-        "lookAtPoint": {
-          "x": 0,
-          "y": 0,
-          "z": -50
-        },
-        "type": "PERSPECTIVE",
-        "fov": 50,
-        "appId": "lodShowcaseCamera"
-      },
-      "entityOpts": {
-        "appId": "lodShowcaseCamera",
-        "debugData": {
-          "name": "LOD showcase start camera",
-          "description": "Looks down the lanes (along -z). The lanes' objects are placed by their distance from this camera, so every level of every lane is on screen from here (lodShowcase/layout.ts)."
-        }
-      },
-      "__sourcePath": "src/app/cameras/lodShowcaseCamera.camera.json"
-    },
-    "mainCamera": {
-      "camProps": {
-        "active": true,
-        "lookAtPoint": {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        },
-        "type": "PERSPECTIVE",
-        "fov": 90,
-        "appId": "mainCamera"
-      },
-      "entityOpts": {
-        "appId": "mainCamera",
-        "persistent": true,
-        "debugData": {
-          "name": "Main camera",
-          "description": "Main application camera"
-        }
-      },
-      "__saveData": {
-        "sceneTestECS": [
-          {
-            "__meta": {
-              "date": 1779449688109
-            },
-            "position": {
-              "x": 10,
-              "y": 5,
-              "z": 20
-            }
-          }
-        ]
-      },
-      "__sourcePath": "src/app/cameras/mainCamera.camera.json"
-    },
-    "physicsTestCamera": {
-      "camProps": {
-        "active": true,
-        "near": 0.1,
-        "far": 120,
-        "position": {
-          "x": 0,
-          "y": 18,
-          "z": 40
-        },
-        "lookAtPoint": {
-          "x": 0,
-          "y": 2,
-          "z": -6
-        },
-        "type": "PERSPECTIVE",
-        "fov": 65,
-        "appId": "physicsTestCamera"
-      },
-      "entityOpts": {
-        "appId": "physicsTestCamera",
-        "debugData": {
-          "name": "Physics test camera",
-          "description": "Static camera framing the ground plane and drop zone for the physics API MVP test scene."
-        }
-      },
-      "__sourcePath": "src/app/cameras/physicsTestCamera.camera.json"
-    },
-    "physicsTiersOverview": {
-      "camProps": {
-        "active": true,
-        "near": 0.5,
-        "far": 1500,
-        "position": {
-          "x": 0,
-          "y": 330,
-          "z": 390
-        },
-        "lookAtPoint": {
-          "x": 0,
-          "y": 0,
-          "z": 10
-        },
-        "type": "PERSPECTIVE",
-        "fov": 50,
-        "appId": "physicsTiersOverview"
-      },
-      "entityOpts": {
-        "appId": "physicsTiersOverview",
-        "debugData": {
-          "name": "Physics tiers overview camera",
-          "description": "Sees the whole 600 x 600 field, so the tier rings can be watched sweeping over the piles. C switches to the chase camera (created in physicsTiers.ts)."
-        }
-      },
-      "__sourcePath": "src/app/cameras/physicsTiersOverview.camera.json"
-    },
     "scene01Camera": {
       "camProps": {
         "active": true,
@@ -14513,118 +14365,6 @@
         }
       },
       "__sourcePath": "src/app/cameras/scene01Camera.camera.json"
-    },
-    "skyShowcaseCamera": {
-      "camProps": {
-        "active": true,
-        "near": 0.1,
-        "far": 200,
-        "position": {
-          "x": 7.5,
-          "y": 1.8,
-          "z": 0
-        },
-        "lookAtPoint": {
-          "x": 0,
-          "y": 2.6,
-          "z": 0
-        },
-        "type": "PERSPECTIVE",
-        "fov": 60,
-        "appId": "skyShowcaseCamera"
-      },
-      "entityOpts": {
-        "appId": "skyShowcaseCamera",
-        "debugData": {
-          "name": "Sky showcase camera",
-          "description": "Looks west over the sphere rows, toward the sunset (the scene's dayOfYear puts it just north of west)."
-        }
-      },
-      "__sourcePath": "src/app/cameras/skyShowcaseCamera.camera.json"
-    },
-    "spaceCamera": {
-      "camProps": {
-        "active": true,
-        "near": 0.1,
-        "far": 200,
-        "position": {
-          "x": 9.2,
-          "y": 3.6,
-          "z": 12.7
-        },
-        "lookAtPoint": {
-          "x": 0,
-          "y": 0.5,
-          "z": 0
-        },
-        "type": "PERSPECTIVE",
-        "fov": 55,
-        "appId": "spaceCamera"
-      },
-      "entityOpts": {
-        "appId": "spaceCamera",
-        "debugData": {
-          "name": "Space camera",
-          "description": "Looks at the asteroids around the origin, toward the SPACE preset's first nebula; the sun lights them from the right."
-        }
-      },
-      "__sourcePath": "src/app/cameras/spaceCamera.camera.json"
-    },
-    "thirdPersonGymCamera": {
-      "camProps": {
-        "active": true,
-        "near": 2,
-        "far": 1000,
-        "position": {
-          "x": 12,
-          "y": 23,
-          "z": 2
-        },
-        "lookAtPoint": {
-          "x": 5,
-          "y": 3,
-          "z": -5
-        },
-        "type": "PERSPECTIVE",
-        "fov": 60,
-        "appId": "thirdPersonGymCamera"
-      },
-      "entityOpts": {
-        "appId": "thirdPersonGymCamera",
-        "debugData": {
-          "name": "Third-person gym camera",
-          "description": "Follow camera driven by createFollowObjectCameraRig (legacy gym's offset/lens settings), tracking the player-controlled character. This initial position/lookAt only matters for the first instant before the follow rig (APP_LOGIC) takes over each frame."
-        }
-      },
-      "__sourcePath": "src/app/cameras/thirdPersonGymCamera.camera.json"
-    },
-    "topDownTestCamera": {
-      "camProps": {
-        "active": true,
-        "near": 1,
-        "far": 400,
-        "position": {
-          "x": 0,
-          "y": 21,
-          "z": 8
-        },
-        "lookAtPoint": {
-          "x": 0,
-          "y": 1,
-          "z": 0
-        },
-        "type": "PERSPECTIVE",
-        "fov": 50,
-        "appId": "topDownTestCamera"
-      },
-      "entityOpts": {
-        "appId": "topDownTestCamera",
-        "debugData": {
-          "name": "Top-down test camera",
-          "description": "Follow camera driven by createFollowObjectCameraRig at a (0, 20, 8) offset: straight South of and above the player, so North (-Z) is screen-up. This initial position/lookAt only matters until the rig takes over."
-        }
-      },
-      "__sourcePath": "src/app/cameras/topDownTestCamera.camera.json"
     },
     "exampleDebugTabCamera": {
       "camProps": {
@@ -14841,21 +14581,137 @@
         }
       },
       "__sourcePath": "src/app/examples/toolkit/exampleToolkitCamera.camera.json"
-    }
-  },
-  "lights": {
-    "ambientLight": {
-      "lightProps": {
-        "type": "AMBIENT",
-        "color": "#ffffff",
-        "intensity": 0.8,
-        "appId": "ambientLight"
+    },
+    "largeWorldOverview": {
+      "camProps": {
+        "active": true,
+        "near": 0.1,
+        "far": 1000,
+        "position": {
+          "x": 0,
+          "y": 60,
+          "z": 120
+        },
+        "lookAtPoint": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "type": "PERSPECTIVE",
+        "fov": 60,
+        "appId": "largeWorldOverview"
       },
       "entityOpts": {
-        "appId": "ambientLight",
+        "appId": "largeWorldOverview",
         "debugData": {
-          "name": "Ambient light",
-          "description": "The ambient light for the scene. It colors everything in the scene (except skyboxes and basic materials) whether you like it or not. This is what next gen games is all about."
+          "name": "Large world overview camera",
+          "description": "Static wide overview of the terrain (docs/plans/p090_large-ecs-test-world-scene.md §2)."
+        }
+      },
+      "__sourcePath": "src/app/scenes/largeWorld/largeWorldOverview.camera.json"
+    },
+    "lodShowcaseCamera": {
+      "camProps": {
+        "active": true,
+        "near": 0.1,
+        "far": 600,
+        "position": {
+          "x": 0,
+          "y": 7,
+          "z": 24
+        },
+        "lookAtPoint": {
+          "x": 0,
+          "y": 0,
+          "z": -50
+        },
+        "type": "PERSPECTIVE",
+        "fov": 50,
+        "appId": "lodShowcaseCamera"
+      },
+      "entityOpts": {
+        "appId": "lodShowcaseCamera",
+        "debugData": {
+          "name": "LOD showcase start camera",
+          "description": "Looks down the lanes (along -z). The lanes' objects are placed by their distance from this camera, so every level of every lane is on screen from here (lodShowcase/layout.ts)."
+        }
+      },
+      "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseCamera.camera.json"
+    },
+    "physicsTestCamera": {
+      "camProps": {
+        "active": true,
+        "near": 0.1,
+        "far": 120,
+        "position": {
+          "x": 0,
+          "y": 18,
+          "z": 40
+        },
+        "lookAtPoint": {
+          "x": 0,
+          "y": 2,
+          "z": -6
+        },
+        "type": "PERSPECTIVE",
+        "fov": 65,
+        "appId": "physicsTestCamera"
+      },
+      "entityOpts": {
+        "appId": "physicsTestCamera",
+        "debugData": {
+          "name": "Physics test camera",
+          "description": "Static camera framing the ground plane and drop zone for the physics API MVP test scene."
+        }
+      },
+      "__sourcePath": "src/app/scenes/physicsTest/physicsTestCamera.camera.json"
+    },
+    "physicsTiersOverview": {
+      "camProps": {
+        "active": true,
+        "near": 0.5,
+        "far": 1500,
+        "position": {
+          "x": 0,
+          "y": 330,
+          "z": 390
+        },
+        "lookAtPoint": {
+          "x": 0,
+          "y": 0,
+          "z": 10
+        },
+        "type": "PERSPECTIVE",
+        "fov": 50,
+        "appId": "physicsTiersOverview"
+      },
+      "entityOpts": {
+        "appId": "physicsTiersOverview",
+        "debugData": {
+          "name": "Physics tiers overview camera",
+          "description": "Sees the whole 600 x 600 field, so the tier rings can be watched sweeping over the piles. C switches to the chase camera (created in physicsTiers.ts)."
+        }
+      },
+      "__sourcePath": "src/app/scenes/physicsTiers/physicsTiersOverview.camera.json"
+    },
+    "mainCamera": {
+      "camProps": {
+        "active": true,
+        "lookAtPoint": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "type": "PERSPECTIVE",
+        "fov": 90,
+        "appId": "mainCamera"
+      },
+      "entityOpts": {
+        "appId": "mainCamera",
+        "persistent": true,
+        "debugData": {
+          "name": "Main camera",
+          "description": "Main application camera"
         }
       },
       "__saveData": {
@@ -14864,178 +14720,130 @@
             "__meta": {
               "date": 1779449688109
             },
-            "type": "AMBIENT",
-            "intensity": 0.5
+            "position": {
+              "x": 10,
+              "y": 5,
+              "z": 20
+            }
           }
         ]
       },
-      "__sourcePath": "src/app/lights/ambientLight.light.json"
+      "__sourcePath": "src/app/scenes/sceneTestECS/mainCamera.camera.json"
     },
-    "largeWorldAmbient": {
-      "lightProps": {
-        "type": "AMBIENT",
-        "color": "#dfe8ff",
-        "intensity": 0.3,
-        "appId": "largeWorldAmbient"
-      },
-      "entityOpts": {
-        "appId": "largeWorldAmbient",
-        "debugData": {
-          "name": "Large world ambient fill",
-          "description": "Low-intensity baseline fill so shadowed terrain/foliage isn't pure black — the sun (largeWorldSun) is the dominant light."
-        }
-      },
-      "__sourcePath": "src/app/lights/largeWorldAmbient.light.json"
-    },
-    "largeWorldSun": {
-      "lightProps": {
-        "type": "DIRECTIONAL",
-        "color": "#fff2d9",
-        "intensity": 3,
+    "skyShowcaseCamera": {
+      "camProps": {
+        "active": true,
+        "near": 0.1,
+        "far": 200,
         "position": {
-          "x": 30,
-          "y": 40,
-          "z": 20
-        },
-        "targetPos": {
-          "x": 0,
-          "y": 0,
+          "x": 7.5,
+          "y": 1.8,
           "z": 0
         },
-        "castShadow": true,
-        "shadowPreset": "HIGH",
-        "shadowCameraNearFar": [
-          1,
-          100
-        ],
-        "shadowCameraFrustum": [
-          -25,
-          25,
-          25,
-          -25
-        ],
-        "shadowIntensity": 0.8,
-        "appId": "largeWorldSun"
-      },
-      "entityOpts": {
-        "appId": "largeWorldSun",
-        "debugData": {
-          "name": "Large world sun",
-          "description": "Directional shadow-casting sun. Its shadow frustum is intentionally scoped to a bounded play area around the origin, not the whole terrain — sizing it to the full terrain would blur shadow resolution everywhere instead (docs/plans/p090_large-ecs-test-world-scene.md §1.4)."
-        }
-      },
-      "__sourcePath": "src/app/lights/largeWorldSun.light.json"
-    },
-    "physicsTestAmbient": {
-      "lightProps": {
-        "type": "AMBIENT",
-        "color": "#ffffff",
-        "intensity": 0.4,
-        "appId": "physicsTestAmbient"
-      },
-      "entityOpts": {
-        "appId": "physicsTestAmbient",
-        "debugData": {
-          "name": "Physics test ambient light",
-          "description": "Ambient light for the physics API MVP test scene."
-        }
-      },
-      "__sourcePath": "src/app/lights/physicsTestAmbient.light.json"
-    },
-    "physicsTestSun": {
-      "lightProps": {
-        "type": "DIRECTIONAL",
-        "color": "#fff2d9",
-        "intensity": 3,
-        "position": {
-          "x": 20,
-          "y": 30,
-          "z": 15
-        },
-        "targetPos": {
+        "lookAtPoint": {
           "x": 0,
-          "y": 0,
+          "y": 2.6,
           "z": 0
         },
-        "castShadow": true,
-        "shadowPreset": "HIGH",
-        "shadowCameraNearFar": [
-          1,
-          80
-        ],
-        "shadowCameraFrustum": [
-          -30,
-          30,
-          30,
-          -30
-        ],
-        "shadowIntensity": 0.8,
-        "appId": "physicsTestSun"
+        "type": "PERSPECTIVE",
+        "fov": 60,
+        "appId": "skyShowcaseCamera"
       },
       "entityOpts": {
-        "appId": "physicsTestSun",
+        "appId": "skyShowcaseCamera",
         "debugData": {
-          "name": "Physics test sun",
-          "description": "Directional shadow-casting sun for the physics API test scene. Its shadow frustum is sized to the 50x50 ground plane, not larger — oversizing it would degrade shadow resolution everywhere (see largeWorldSun.light.json for the same pattern)."
+          "name": "Sky showcase camera",
+          "description": "Looks west over the sphere rows, toward the sunset (the scene's dayOfYear puts it just north of west)."
         }
       },
-      "__sourcePath": "src/app/lights/physicsTestSun.light.json"
+      "__sourcePath": "src/app/scenes/skyShowcase/skyShowcaseCamera.camera.json"
     },
-    "physicsTiersAmbient": {
-      "lightProps": {
-        "type": "AMBIENT",
-        "color": "#dfe8ff",
-        "intensity": 0.5,
-        "appId": "physicsTiersAmbient"
-      },
-      "entityOpts": {
-        "appId": "physicsTiersAmbient",
-        "debugData": {
-          "name": "Physics tiers ambient fill",
-          "description": "Fill light, so the tier tints read in shadow too."
-        }
-      },
-      "__sourcePath": "src/app/lights/physicsTiersAmbient.light.json"
-    },
-    "physicsTiersSun": {
-      "lightProps": {
-        "type": "DIRECTIONAL",
-        "color": "#fff2d9",
-        "intensity": 2.5,
+    "spaceCamera": {
+      "camProps": {
+        "active": true,
+        "near": 0.1,
+        "far": 200,
         "position": {
-          "x": 40,
-          "y": 60,
-          "z": 30
+          "x": 9.2,
+          "y": 3.6,
+          "z": 12.7
         },
-        "targetPos": {
+        "lookAtPoint": {
           "x": 0,
-          "y": 0,
+          "y": 0.5,
           "z": 0
         },
-        "castShadow": true,
-        "shadowPreset": "HIGH",
-        "shadowCameraNearFar": [
-          1,
-          160
-        ],
-        "shadowCameraFrustum": [
-          -60,
-          60,
-          60,
-          -60
-        ],
-        "shadowIntensity": 0.7,
-        "appId": "physicsTiersSun"
+        "type": "PERSPECTIVE",
+        "fov": 55,
+        "appId": "spaceCamera"
       },
       "entityOpts": {
-        "appId": "physicsTiersSun",
+        "appId": "spaceCamera",
         "debugData": {
-          "name": "Physics tiers sun",
-          "description": "Only its direction (position → targetPos) is kept: physicsTiers.ts adds a SUN_SHADOW_FIT component on scene enter, which fits its shadow to the main camera's view (the frustum here only applies until then)."
+          "name": "Space camera",
+          "description": "Looks at the asteroids around the origin, toward the SPACE preset's first nebula; the sun lights them from the right."
         }
       },
-      "__sourcePath": "src/app/lights/physicsTiersSun.light.json"
+      "__sourcePath": "src/app/scenes/space/spaceCamera.camera.json"
     },
+    "thirdPersonGymCamera": {
+      "camProps": {
+        "active": true,
+        "near": 2,
+        "far": 1000,
+        "position": {
+          "x": 12,
+          "y": 23,
+          "z": 2
+        },
+        "lookAtPoint": {
+          "x": 5,
+          "y": 3,
+          "z": -5
+        },
+        "type": "PERSPECTIVE",
+        "fov": 60,
+        "appId": "thirdPersonGymCamera"
+      },
+      "entityOpts": {
+        "appId": "thirdPersonGymCamera",
+        "debugData": {
+          "name": "Third-person gym camera",
+          "description": "Follow camera driven by createFollowObjectCameraRig (legacy gym's offset/lens settings), tracking the player-controlled character. This initial position/lookAt only matters for the first instant before the follow rig (APP_LOGIC) takes over each frame."
+        }
+      },
+      "__sourcePath": "src/app/scenes/thirdPersonGymScene/thirdPersonGymCamera.camera.json"
+    },
+    "topDownTestCamera": {
+      "camProps": {
+        "active": true,
+        "near": 1,
+        "far": 400,
+        "position": {
+          "x": 0,
+          "y": 21,
+          "z": 8
+        },
+        "lookAtPoint": {
+          "x": 0,
+          "y": 1,
+          "z": 0
+        },
+        "type": "PERSPECTIVE",
+        "fov": 50,
+        "appId": "topDownTestCamera"
+      },
+      "entityOpts": {
+        "appId": "topDownTestCamera",
+        "debugData": {
+          "name": "Top-down test camera",
+          "description": "Follow camera driven by createFollowObjectCameraRig at a (0, 20, 8) offset: straight South of and above the player, so North (-Z) is screen-up. This initial position/lookAt only matters until the rig takes over."
+        }
+      },
+      "__sourcePath": "src/app/scenes/topDownTestScene/topDownTestCamera.camera.json"
+    }
+  },
+  "lights": {
     "scene01Ambient": {
       "lightProps": {
         "type": "AMBIENT",
@@ -15090,116 +14898,6 @@
         }
       },
       "__sourcePath": "src/app/lights/scene01Sun.light.json"
-    },
-    "thirdPersonGymAmbient": {
-      "lightProps": {
-        "type": "AMBIENT",
-        "color": "#dfe8ff",
-        "intensity": 0.35,
-        "appId": "thirdPersonGymAmbient"
-      },
-      "entityOpts": {
-        "appId": "thirdPersonGymAmbient",
-        "debugData": {
-          "name": "Third-person gym ambient fill",
-          "description": "Low-intensity baseline fill so shadowed geometry isn't pure black — thirdPersonGymSun is the dominant light."
-        }
-      },
-      "__sourcePath": "src/app/lights/thirdPersonGymAmbient.light.json"
-    },
-    "thirdPersonGymSun": {
-      "lightProps": {
-        "type": "DIRECTIONAL",
-        "color": "#fff2d9",
-        "intensity": 3,
-        "position": {
-          "x": 20,
-          "y": 30,
-          "z": 15
-        },
-        "targetPos": {
-          "x": 0,
-          "y": -2,
-          "z": 0
-        },
-        "castShadow": true,
-        "shadowPreset": "HIGH",
-        "shadowCameraNearFar": [
-          1,
-          80
-        ],
-        "shadowCameraFrustum": [
-          -25,
-          25,
-          25,
-          -25
-        ],
-        "shadowIntensity": 0.8,
-        "appId": "thirdPersonGymSun"
-      },
-      "entityOpts": {
-        "appId": "thirdPersonGymSun",
-        "debugData": {
-          "name": "Third-person gym sun",
-          "description": "Directional shadow-casting sun. scene_thirdPersonGym.ts moves it (and its target) with the player every frame, keeping this position - targetPos offset as the light direction, so the shadow frustum (sized for the play area around the player, not the whole scene, which would blur shadow resolution everywhere) follows the player instead of covering a fixed area around the origin."
-        }
-      },
-      "__sourcePath": "src/app/lights/thirdPersonGymSun.light.json"
-    },
-    "topDownTestAmbient": {
-      "lightProps": {
-        "type": "AMBIENT",
-        "color": "#dfe8ff",
-        "intensity": 0.35,
-        "appId": "topDownTestAmbient"
-      },
-      "entityOpts": {
-        "appId": "topDownTestAmbient",
-        "debugData": {
-          "name": "Top-down test ambient fill",
-          "description": "Low-intensity baseline fill so shadowed geometry isn't pure black — topDownTestSun is the dominant light."
-        }
-      },
-      "__sourcePath": "src/app/lights/topDownTestAmbient.light.json"
-    },
-    "topDownTestSun": {
-      "lightProps": {
-        "type": "DIRECTIONAL",
-        "color": "#fff2d9",
-        "intensity": 3,
-        "position": {
-          "x": 25,
-          "y": 30,
-          "z": 30
-        },
-        "targetPos": {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        },
-        "castShadow": true,
-        "shadowPreset": "HIGH",
-        "shadowCameraNearFar": [
-          1,
-          120
-        ],
-        "shadowCameraFrustum": [
-          -35,
-          35,
-          35,
-          -35
-        ],
-        "shadowIntensity": 0.8,
-        "appId": "topDownTestSun"
-      },
-      "entityOpts": {
-        "appId": "topDownTestSun",
-        "debugData": {
-          "name": "Top-down test sun",
-          "description": "Directional shadow-casting sun from the South-East, about 38° above the horizon. Only its direction (position → targetPos) is kept: scene_topDownTest.ts adds a SUN_SHADOW_FIT component on scene enter, which moves it with the camera view and owns its shadow frustum (the values here only apply until then)."
-        }
-      },
-      "__sourcePath": "src/app/lights/topDownTestSun.light.json"
     },
     "exampleDebugTabAmbient": {
       "lightProps": {
@@ -15455,9 +15153,359 @@
         }
       },
       "__sourcePath": "src/app/examples/toolkit/exampleToolkitSun.light.json"
+    },
+    "largeWorldAmbient": {
+      "lightProps": {
+        "type": "AMBIENT",
+        "color": "#dfe8ff",
+        "intensity": 0.3,
+        "appId": "largeWorldAmbient"
+      },
+      "entityOpts": {
+        "appId": "largeWorldAmbient",
+        "debugData": {
+          "name": "Large world ambient fill",
+          "description": "Low-intensity baseline fill so shadowed terrain/foliage isn't pure black — the sun (largeWorldSun) is the dominant light."
+        }
+      },
+      "__sourcePath": "src/app/scenes/largeWorld/largeWorldAmbient.light.json"
+    },
+    "largeWorldSun": {
+      "lightProps": {
+        "type": "DIRECTIONAL",
+        "color": "#fff2d9",
+        "intensity": 3,
+        "position": {
+          "x": 30,
+          "y": 40,
+          "z": 20
+        },
+        "targetPos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "castShadow": true,
+        "shadowPreset": "HIGH",
+        "shadowCameraNearFar": [
+          1,
+          100
+        ],
+        "shadowCameraFrustum": [
+          -25,
+          25,
+          25,
+          -25
+        ],
+        "shadowIntensity": 0.8,
+        "appId": "largeWorldSun"
+      },
+      "entityOpts": {
+        "appId": "largeWorldSun",
+        "debugData": {
+          "name": "Large world sun",
+          "description": "Directional shadow-casting sun. Its shadow frustum is intentionally scoped to a bounded play area around the origin, not the whole terrain — sizing it to the full terrain would blur shadow resolution everywhere instead (docs/plans/p090_large-ecs-test-world-scene.md §1.4)."
+        }
+      },
+      "__sourcePath": "src/app/scenes/largeWorld/largeWorldSun.light.json"
+    },
+    "physicsTestAmbient": {
+      "lightProps": {
+        "type": "AMBIENT",
+        "color": "#ffffff",
+        "intensity": 0.4,
+        "appId": "physicsTestAmbient"
+      },
+      "entityOpts": {
+        "appId": "physicsTestAmbient",
+        "debugData": {
+          "name": "Physics test ambient light",
+          "description": "Ambient light for the physics API MVP test scene."
+        }
+      },
+      "__sourcePath": "src/app/scenes/physicsTest/physicsTestAmbient.light.json"
+    },
+    "physicsTestSun": {
+      "lightProps": {
+        "type": "DIRECTIONAL",
+        "color": "#fff2d9",
+        "intensity": 3,
+        "position": {
+          "x": 20,
+          "y": 30,
+          "z": 15
+        },
+        "targetPos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "castShadow": true,
+        "shadowPreset": "HIGH",
+        "shadowCameraNearFar": [
+          1,
+          80
+        ],
+        "shadowCameraFrustum": [
+          -30,
+          30,
+          30,
+          -30
+        ],
+        "shadowIntensity": 0.8,
+        "appId": "physicsTestSun"
+      },
+      "entityOpts": {
+        "appId": "physicsTestSun",
+        "debugData": {
+          "name": "Physics test sun",
+          "description": "Directional shadow-casting sun for the physics API test scene. Its shadow frustum is sized to the 50x50 ground plane, not larger — oversizing it would degrade shadow resolution everywhere (see largeWorldSun.light.json for the same pattern)."
+        }
+      },
+      "__sourcePath": "src/app/scenes/physicsTest/physicsTestSun.light.json"
+    },
+    "physicsTiersAmbient": {
+      "lightProps": {
+        "type": "AMBIENT",
+        "color": "#dfe8ff",
+        "intensity": 0.5,
+        "appId": "physicsTiersAmbient"
+      },
+      "entityOpts": {
+        "appId": "physicsTiersAmbient",
+        "debugData": {
+          "name": "Physics tiers ambient fill",
+          "description": "Fill light, so the tier tints read in shadow too."
+        }
+      },
+      "__sourcePath": "src/app/scenes/physicsTiers/physicsTiersAmbient.light.json"
+    },
+    "physicsTiersSun": {
+      "lightProps": {
+        "type": "DIRECTIONAL",
+        "color": "#fff2d9",
+        "intensity": 2.5,
+        "position": {
+          "x": 40,
+          "y": 60,
+          "z": 30
+        },
+        "targetPos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "castShadow": true,
+        "shadowPreset": "HIGH",
+        "shadowCameraNearFar": [
+          1,
+          160
+        ],
+        "shadowCameraFrustum": [
+          -60,
+          60,
+          60,
+          -60
+        ],
+        "shadowIntensity": 0.7,
+        "appId": "physicsTiersSun"
+      },
+      "entityOpts": {
+        "appId": "physicsTiersSun",
+        "debugData": {
+          "name": "Physics tiers sun",
+          "description": "Only its direction (position → targetPos) is kept: physicsTiers.ts adds a SUN_SHADOW_FIT component on scene enter, which fits its shadow to the main camera's view (the frustum here only applies until then)."
+        }
+      },
+      "__sourcePath": "src/app/scenes/physicsTiers/physicsTiersSun.light.json"
+    },
+    "ambientLight": {
+      "lightProps": {
+        "type": "AMBIENT",
+        "color": "#ffffff",
+        "intensity": 0.8,
+        "appId": "ambientLight"
+      },
+      "entityOpts": {
+        "appId": "ambientLight",
+        "debugData": {
+          "name": "Ambient light",
+          "description": "The ambient light for the scene. It colors everything in the scene (except skyboxes and basic materials) whether you like it or not. This is what next gen games is all about."
+        }
+      },
+      "__saveData": {
+        "sceneTestECS": [
+          {
+            "__meta": {
+              "date": 1779449688109
+            },
+            "type": "AMBIENT",
+            "intensity": 0.5
+          }
+        ]
+      },
+      "__sourcePath": "src/app/scenes/sceneTestECS/ambientLight.light.json"
+    },
+    "thirdPersonGymAmbient": {
+      "lightProps": {
+        "type": "AMBIENT",
+        "color": "#dfe8ff",
+        "intensity": 0.35,
+        "appId": "thirdPersonGymAmbient"
+      },
+      "entityOpts": {
+        "appId": "thirdPersonGymAmbient",
+        "debugData": {
+          "name": "Third-person gym ambient fill",
+          "description": "Low-intensity baseline fill so shadowed geometry isn't pure black — thirdPersonGymSun is the dominant light."
+        }
+      },
+      "__sourcePath": "src/app/scenes/thirdPersonGymScene/thirdPersonGymAmbient.light.json"
+    },
+    "thirdPersonGymSun": {
+      "lightProps": {
+        "type": "DIRECTIONAL",
+        "color": "#fff2d9",
+        "intensity": 3,
+        "position": {
+          "x": 20,
+          "y": 30,
+          "z": 15
+        },
+        "targetPos": {
+          "x": 0,
+          "y": -2,
+          "z": 0
+        },
+        "castShadow": true,
+        "shadowPreset": "HIGH",
+        "shadowCameraNearFar": [
+          1,
+          80
+        ],
+        "shadowCameraFrustum": [
+          -25,
+          25,
+          25,
+          -25
+        ],
+        "shadowIntensity": 0.8,
+        "appId": "thirdPersonGymSun"
+      },
+      "entityOpts": {
+        "appId": "thirdPersonGymSun",
+        "debugData": {
+          "name": "Third-person gym sun",
+          "description": "Directional shadow-casting sun. scene_thirdPersonGym.ts moves it (and its target) with the player every frame, keeping this position - targetPos offset as the light direction, so the shadow frustum (sized for the play area around the player, not the whole scene, which would blur shadow resolution everywhere) follows the player instead of covering a fixed area around the origin."
+        }
+      },
+      "__sourcePath": "src/app/scenes/thirdPersonGymScene/thirdPersonGymSun.light.json"
+    },
+    "topDownTestAmbient": {
+      "lightProps": {
+        "type": "AMBIENT",
+        "color": "#dfe8ff",
+        "intensity": 0.35,
+        "appId": "topDownTestAmbient"
+      },
+      "entityOpts": {
+        "appId": "topDownTestAmbient",
+        "debugData": {
+          "name": "Top-down test ambient fill",
+          "description": "Low-intensity baseline fill so shadowed geometry isn't pure black — topDownTestSun is the dominant light."
+        }
+      },
+      "__sourcePath": "src/app/scenes/topDownTestScene/topDownTestAmbient.light.json"
+    },
+    "topDownTestSun": {
+      "lightProps": {
+        "type": "DIRECTIONAL",
+        "color": "#fff2d9",
+        "intensity": 3,
+        "position": {
+          "x": 25,
+          "y": 30,
+          "z": 30
+        },
+        "targetPos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "castShadow": true,
+        "shadowPreset": "HIGH",
+        "shadowCameraNearFar": [
+          1,
+          120
+        ],
+        "shadowCameraFrustum": [
+          -35,
+          35,
+          35,
+          -35
+        ],
+        "shadowIntensity": 0.8,
+        "appId": "topDownTestSun"
+      },
+      "entityOpts": {
+        "appId": "topDownTestSun",
+        "debugData": {
+          "name": "Top-down test sun",
+          "description": "Directional shadow-casting sun from the South-East, about 38° above the horizon. Only its direction (position → targetPos) is kept: scene_topDownTest.ts adds a SUN_SHADOW_FIT component on scene enter, which moves it with the camera view and owns its shadow frustum (the values here only apply until then)."
+        }
+      },
+      "__sourcePath": "src/app/scenes/topDownTestScene/topDownTestSun.light.json"
     }
   },
   "geometries": {
+    "lodShowcaseSphereLod0": {
+      "geoProps": {
+        "debugData": {
+          "name": "LOD showcase sphere, level 0",
+          "description": "Lane 1's hand-made level 0 (64 × 32 segments), see lodShowcaseHandMade.mesh.json."
+        },
+        "type": "SPHERE",
+        "params": {
+          "radius": 1,
+          "widthSegments": 64,
+          "heightSegments": 32
+        },
+        "id": "lodShowcaseSphereLod0"
+      },
+      "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseSphereLod0.geometry.json"
+    },
+    "lodShowcaseSphereLod1": {
+      "geoProps": {
+        "debugData": {
+          "name": "LOD showcase sphere, level 1",
+          "description": "Lane 1's hand-made level 1 (20 × 12 segments), see lodShowcaseHandMade.mesh.json."
+        },
+        "type": "SPHERE",
+        "params": {
+          "radius": 1,
+          "widthSegments": 20,
+          "heightSegments": 12
+        },
+        "id": "lodShowcaseSphereLod1"
+      },
+      "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseSphereLod1.geometry.json"
+    },
+    "lodShowcaseSphereLod2": {
+      "geoProps": {
+        "debugData": {
+          "name": "LOD showcase sphere, level 2",
+          "description": "Lane 1's hand-made level 2 (8 × 6 segments), see lodShowcaseHandMade.mesh.json."
+        },
+        "type": "SPHERE",
+        "params": {
+          "radius": 1,
+          "widthSegments": 8,
+          "heightSegments": 6
+        },
+        "id": "lodShowcaseSphereLod2"
+      },
+      "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseSphereLod2.geometry.json"
+    },
     "testSphere": {
       "geoProps": {
         "debugData": {
@@ -15484,55 +15532,7 @@
           }
         ]
       },
-      "__sourcePath": "src/app/geometries/testSphere.geometry.json"
-    },
-    "lodShowcaseSphereLod0": {
-      "geoProps": {
-        "debugData": {
-          "name": "LOD showcase sphere, level 0",
-          "description": "Lane 1's hand-made level 0 (64 × 32 segments), see lodShowcaseHandMade.mesh.json."
-        },
-        "type": "SPHERE",
-        "params": {
-          "radius": 1,
-          "widthSegments": 64,
-          "heightSegments": 32
-        },
-        "id": "lodShowcaseSphereLod0"
-      },
-      "__sourcePath": "src/app/lodShowcase/lodShowcaseSphereLod0.geometry.json"
-    },
-    "lodShowcaseSphereLod1": {
-      "geoProps": {
-        "debugData": {
-          "name": "LOD showcase sphere, level 1",
-          "description": "Lane 1's hand-made level 1 (20 × 12 segments), see lodShowcaseHandMade.mesh.json."
-        },
-        "type": "SPHERE",
-        "params": {
-          "radius": 1,
-          "widthSegments": 20,
-          "heightSegments": 12
-        },
-        "id": "lodShowcaseSphereLod1"
-      },
-      "__sourcePath": "src/app/lodShowcase/lodShowcaseSphereLod1.geometry.json"
-    },
-    "lodShowcaseSphereLod2": {
-      "geoProps": {
-        "debugData": {
-          "name": "LOD showcase sphere, level 2",
-          "description": "Lane 1's hand-made level 2 (8 × 6 segments), see lodShowcaseHandMade.mesh.json."
-        },
-        "type": "SPHERE",
-        "params": {
-          "radius": 1,
-          "widthSegments": 8,
-          "heightSegments": 6
-        },
-        "id": "lodShowcaseSphereLod2"
-      },
-      "__sourcePath": "src/app/lodShowcase/lodShowcaseSphereLod2.geometry.json"
+      "__sourcePath": "src/app/scenes/sceneTestECS/testSphere.geometry.json"
     }
   },
   "textures": {
@@ -15619,13 +15619,13 @@
         "name": "p299 test array",
         "description": "p299 Phase 2: a build-time array of three layers of mixed sizes (a texture asset's 2048² source, a 256² and a 2048² file), resized to 512²."
       },
-      "__sourcePath": "src/app/textures/p299TestArray.textureArray.json",
+      "__sourcePath": "src/app/scenes/textureArrays/p299TestArray.textureArray.json",
       "__layers": [
         "testTexture",
         "l1",
         "cubemap01_positive_y"
       ],
-      "__url": "/aek-assets/app/textures/p299TestArray.array.5c60d088.ktx2",
+      "__url": "/aek-assets/app/scenes/textureArrays/p299TestArray.array.5c60d088.ktx2",
       "__bytes": {
         "in": 4471280,
         "out": 446409
@@ -15653,11 +15653,11 @@
         "name": "p299 one-layer test array",
         "description": "p299 Phase 2: a build-time array of one layer (a 256² file). `ktx create --layers 1` writes layerCount 1, which KTX2Loader loads as a plain CompressedTexture: loadTextureAsync wraps it."
       },
-      "__sourcePath": "src/app/textures/p299TestArray1.textureArray.json",
+      "__sourcePath": "src/app/scenes/textureArrays/p299TestArray1.textureArray.json",
       "__layers": [
         "l2"
       ],
-      "__url": "/aek-assets/app/textures/p299TestArray1.array.ecc27102.ktx2",
+      "__url": "/aek-assets/app/scenes/textureArrays/p299TestArray1.array.ecc27102.ktx2",
       "__bytes": {
         "in": 1632,
         "out": 3265
@@ -19200,7 +19200,7 @@
         "name": "largeWorldTreeCross (impostor atlas)",
         "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
       },
-      "__sourcePath": "src/app/impostors/largeWorldTreeCross.textureAtlas.json",
+      "__sourcePath": "src/app/scenes/largeWorld/largeWorldTreeCross.textureAtlas.json",
       "__atlas": {
         "id": "largeWorldTreeCross",
         "slot": "albedo",
@@ -19251,7 +19251,7 @@
           }
         }
       },
-      "__url": "/aek-assets/app/impostors/largeWorldTreeCross.atlas.albedo.5916d4c9.ktx2",
+      "__url": "/aek-assets/app/scenes/largeWorld/largeWorldTreeCross.atlas.albedo.5916d4c9.ktx2",
       "__bytes": {
         "in": 1464,
         "out": 5603
@@ -19268,7 +19268,7 @@
         "name": "largeWorldTreeCross (impostor atlas)",
         "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
       },
-      "__sourcePath": "src/app/impostors/largeWorldTreeCross.textureAtlas.json",
+      "__sourcePath": "src/app/scenes/largeWorld/largeWorldTreeCross.textureAtlas.json",
       "__atlas": {
         "id": "largeWorldTreeCross",
         "slot": "normal",
@@ -19319,7 +19319,7 @@
           }
         }
       },
-      "__url": "/aek-assets/app/impostors/largeWorldTreeCross.atlas.normal.6cb59704.ktx2",
+      "__url": "/aek-assets/app/scenes/largeWorld/largeWorldTreeCross.atlas.normal.6cb59704.ktx2",
       "__bytes": {
         "in": 5971,
         "out": 13027
@@ -19339,7 +19339,7 @@
         "name": "lodShowcaseKnotImpostor (impostor atlas)",
         "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
       },
-      "__sourcePath": "src/app/impostors/lodShowcaseKnotImpostor.textureAtlas.json",
+      "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.textureAtlas.json",
       "__atlas": {
         "id": "lodShowcaseKnotImpostor",
         "slot": "albedo",
@@ -21082,7 +21082,7 @@
           }
         }
       },
-      "__url": "/aek-assets/app/impostors/lodShowcaseKnotImpostor.atlas.albedo.0d91eb26.ktx2",
+      "__url": "/aek-assets/app/scenes/lodShowcase/lodShowcaseKnotImpostor.atlas.albedo.0d91eb26.ktx2",
       "__bytes": {
         "in": 52199,
         "out": 101012
@@ -21099,7 +21099,7 @@
         "name": "lodShowcaseKnotImpostor (impostor atlas)",
         "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
       },
-      "__sourcePath": "src/app/impostors/lodShowcaseKnotImpostor.textureAtlas.json",
+      "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.textureAtlas.json",
       "__atlas": {
         "id": "lodShowcaseKnotImpostor",
         "slot": "normalDepth",
@@ -22842,7 +22842,7 @@
           }
         }
       },
-      "__url": "/aek-assets/app/impostors/lodShowcaseKnotImpostor.atlas.normalDepth.5bf8f162.ktx2",
+      "__url": "/aek-assets/app/scenes/lodShowcase/lodShowcaseKnotImpostor.atlas.normalDepth.5bf8f162.ktx2",
       "__bytes": {
         "in": 1465828,
         "out": 796877
@@ -22862,7 +22862,7 @@
         "name": "lodShowcaseTreeCross (impostor atlas)",
         "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
       },
-      "__sourcePath": "src/app/impostors/lodShowcaseTreeCross.textureAtlas.json",
+      "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.textureAtlas.json",
       "__atlas": {
         "id": "lodShowcaseTreeCross",
         "slot": "albedo",
@@ -22913,7 +22913,7 @@
           }
         }
       },
-      "__url": "/aek-assets/app/impostors/lodShowcaseTreeCross.atlas.albedo.1f8ec40c.ktx2",
+      "__url": "/aek-assets/app/scenes/lodShowcase/lodShowcaseTreeCross.atlas.albedo.1f8ec40c.ktx2",
       "__bytes": {
         "in": 1420,
         "out": 5498
@@ -22930,7 +22930,7 @@
         "name": "lodShowcaseTreeCross (impostor atlas)",
         "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
       },
-      "__sourcePath": "src/app/impostors/lodShowcaseTreeCross.textureAtlas.json",
+      "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.textureAtlas.json",
       "__atlas": {
         "id": "lodShowcaseTreeCross",
         "slot": "normal",
@@ -22981,7 +22981,7 @@
           }
         }
       },
-      "__url": "/aek-assets/app/impostors/lodShowcaseTreeCross.atlas.normal.f8c4ac09.ktx2",
+      "__url": "/aek-assets/app/scenes/lodShowcase/lodShowcaseTreeCross.atlas.normal.f8c4ac09.ktx2",
       "__bytes": {
         "in": 6744,
         "out": 15194
@@ -23001,7 +23001,7 @@
         "name": "p299 test atlas",
         "description": "p299 Phase 3: a 2-slot atlas of 6 cells (explicit rects and packed ones, a texture asset's source, cells without a mask source), 16 px of padding, for checking mip bleeding."
       },
-      "__sourcePath": "src/app/textures/p299TestAtlas.textureAtlas.json",
+      "__sourcePath": "src/app/scenes/textureAtlases/p299TestAtlas.textureAtlas.json",
       "__atlas": {
         "id": "p299TestAtlas",
         "slot": "albedo",
@@ -23089,7 +23089,7 @@
           }
         }
       },
-      "__url": "/aek-assets/app/textures/p299TestAtlas.atlas.albedo.1bae140f.ktx2",
+      "__url": "/aek-assets/app/scenes/textureAtlases/p299TestAtlas.atlas.albedo.1bae140f.ktx2",
       "__bytes": {
         "in": 976923,
         "out": 16013
@@ -23106,7 +23106,7 @@
         "name": "p299 test atlas",
         "description": "p299 Phase 3: a 2-slot atlas of 6 cells (explicit rects and packed ones, a texture asset's source, cells without a mask source), 16 px of padding, for checking mip bleeding."
       },
-      "__sourcePath": "src/app/textures/p299TestAtlas.textureAtlas.json",
+      "__sourcePath": "src/app/scenes/textureAtlases/p299TestAtlas.textureAtlas.json",
       "__atlas": {
         "id": "p299TestAtlas",
         "slot": "mask",
@@ -23194,7 +23194,7 @@
           }
         }
       },
-      "__url": "/aek-assets/app/textures/p299TestAtlas.atlas.mask.91a3bdbd.ktx2",
+      "__url": "/aek-assets/app/scenes/textureAtlases/p299TestAtlas.atlas.mask.91a3bdbd.ktx2",
       "__bytes": {
         "in": 3090,
         "out": 16750
@@ -23214,7 +23214,7 @@
         "name": "p299 test atlas (ready-made images)",
         "description": "p351 Phase 4 section 1: a 2-slot atlas from ready-made images of its layout (slots.<name>.image, an impostor-like bake: 3 × 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192² down to 1², through an odd 3²)."
       },
-      "__sourcePath": "src/app/textures/p299TestAtlasImage.textureAtlas.json",
+      "__sourcePath": "src/app/scenes/textureAtlases/p299TestAtlasImage.textureAtlas.json",
       "__atlas": {
         "id": "p299TestAtlasImage",
         "slot": "albedo",
@@ -23337,7 +23337,7 @@
           }
         }
       },
-      "__url": "/aek-assets/app/textures/p299TestAtlasImage.atlas.albedo.26184dd3.ktx2",
+      "__url": "/aek-assets/app/scenes/textureAtlases/p299TestAtlasImage.atlas.albedo.26184dd3.ktx2",
       "__bytes": {
         "in": 2322,
         "out": 4202
@@ -23354,7 +23354,7 @@
         "name": "p299 test atlas (ready-made images)",
         "description": "p351 Phase 4 section 1: a 2-slot atlas from ready-made images of its layout (slots.<name>.image, an impostor-like bake: 3 × 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192² down to 1², through an odd 3²)."
       },
-      "__sourcePath": "src/app/textures/p299TestAtlasImage.textureAtlas.json",
+      "__sourcePath": "src/app/scenes/textureAtlases/p299TestAtlasImage.textureAtlas.json",
       "__atlas": {
         "id": "p299TestAtlasImage",
         "slot": "normalDepth",
@@ -23477,7 +23477,7 @@
           }
         }
       },
-      "__url": "/aek-assets/app/textures/p299TestAtlasImage.atlas.normalDepth.339cb09e.ktx2",
+      "__url": "/aek-assets/app/scenes/textureAtlases/p299TestAtlasImage.atlas.normalDepth.339cb09e.ktx2",
       "__bytes": {
         "in": 60702,
         "out": 12373
@@ -23498,7 +23498,7 @@
         "metalness": 0.1
       },
       "type": "STANDARD",
-      "__sourcePath": "src/app/lodShowcase/lodShowcaseSphere.material.json"
+      "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseSphere.material.json"
     },
     "testMaterial": {
       "id": "testMaterial",
@@ -23518,7 +23518,7 @@
         ]
       },
       "type": "PHONG",
-      "__sourcePath": "src/app/materials/testMaterial.material.json"
+      "__sourcePath": "src/app/scenes/sceneTestECS/testMaterial.material.json"
     },
     "testTslMat": {
       "id": "testTslMat",
@@ -23536,7 +23536,7 @@
           }
         ]
       },
-      "tslFile": "materials/testTslMat.tsl.ts",
+      "tslFile": "scenes/sceneTestECS/testTslMat.tsl.ts",
       "nodes": {
         "colorNode": {
           "baseColor": "#1a233a",
@@ -23546,7 +23546,7 @@
         }
       },
       "type": "STANDARDNODEMATERIAL",
-      "__sourcePath": "src/app/materials/testTslMat.material.json"
+      "__sourcePath": "src/app/scenes/sceneTestECS/testTslMat.material.json"
     },
     "asteroid": {
       "id": "asteroid",
@@ -23559,7 +23559,7 @@
         "roughness": 0.9,
         "metalness": 0
       },
-      "tslFile": "materials/asteroid.tsl.ts",
+      "tslFile": "materials/asteroid/asteroid.tsl.ts",
       "staticDefines": {
         "octaves": 4
       },
@@ -23582,7 +23582,7 @@
         }
       },
       "type": "STANDARDNODEMATERIAL",
-      "__sourcePath": "src/toolkit/materials/asteroid.material.json"
+      "__sourcePath": "src/toolkit/materials/asteroid/asteroid.material.json"
     },
     "triplanarCheckerboard": {
       "id": "triplanarCheckerboard",
@@ -23591,7 +23591,7 @@
         "roughness": 0.85,
         "metalness": 0
       },
-      "tslFile": "materials/triplanarCheckerboard.tsl.ts",
+      "tslFile": "materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts",
       "staticDefines": {
         "alignToObject": true,
         "fitToBounds": false,
@@ -23607,7 +23607,7 @@
         }
       },
       "type": "STANDARDNODEMATERIAL",
-      "__sourcePath": "src/toolkit/materials/triplanarCheckerboard.material.json"
+      "__sourcePath": "src/toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.material.json"
     },
     "triplanarGrid": {
       "id": "triplanarGrid",
@@ -23616,7 +23616,7 @@
         "roughness": 0.85,
         "metalness": 0
       },
-      "tslFile": "materials/triplanarGrid.tsl.ts",
+      "tslFile": "materials/triplanarGrid/triplanarGrid.tsl.ts",
       "staticDefines": {
         "alignToObject": true,
         "fitToBounds": true,
@@ -23639,7 +23639,7 @@
         }
       },
       "type": "STANDARDNODEMATERIAL",
-      "__sourcePath": "src/toolkit/materials/triplanarGrid.material.json"
+      "__sourcePath": "src/toolkit/materials/triplanarGrid/triplanarGrid.material.json"
     }
   },
   "meshes": {
@@ -23680,7 +23680,7 @@
           "description": "Lane 1 of the lodShowcase scene (p351 Phase 5): levels authored in JSON, the same sphere at fewer segments. This is the lane's first object (level 0's band); the lane places copies of this definition in the farther bands (lodShowcase/lanes/handMadeLevels.ts), so keep it at the lane's x (-12)."
         }
       },
-      "__sourcePath": "src/app/lodShowcase/lodShowcaseHandMade.mesh.json"
+      "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseHandMade.mesh.json"
     },
     "testImportedMesh": {
       "props": {
@@ -23701,7 +23701,7 @@
         },
         "appId": "testImportedMesh"
       },
-      "__sourcePath": "src/app/meshes/testImportedMesh.mesh.json"
+      "__sourcePath": "src/app/scenes/sceneTestECS/testImportedMesh.mesh.json"
     },
     "testMesh": {
       "props": {
@@ -23726,14 +23726,14 @@
           }
         ]
       },
-      "__sourcePath": "src/app/meshes/testMesh.mesh.json"
+      "__sourcePath": "src/app/scenes/sceneTestECS/testMesh.mesh.json"
     }
   },
   "importedAssets": {
     "testImport": {
       "id": "testImport",
       "fileName": "/debugger/assets/testModels/box01.glb",
-      "__sourcePath": "src/app/importedAssets/testImport.importedAsset.json",
+      "__sourcePath": "src/app/scenes/sceneTestECS/testImport.importedAsset.json",
       "__fileSize": 46676,
       "__sourceUrl": "/debugger/assets/testModels/box01.glb",
       "__url": "/aek-assets/debugger/assets/testModels/box01.2acf7d9b.glb",
@@ -23758,10 +23758,10 @@
           "codec": "draco"
         }
       },
-      "__sourcePath": "src/toolkit/models/aekashaSymbol/aekashaSymbol.importedAsset.json",
+      "__sourcePath": "src/toolkit/models/brand/aekashaSymbol/aekashaSymbol.importedAsset.json",
       "__fileSize": 16320,
-      "__sourceUrl": "/toolkit/models/aekashaSymbol/aekashaSymbol.glb",
-      "__url": "/aek-assets/toolkit/models/aekashaSymbol/aekashaSymbol.ac7e8564.glb",
+      "__sourceUrl": "/toolkit/models/brand/aekashaSymbol/aekashaSymbol.glb",
+      "__url": "/aek-assets/toolkit/models/brand/aekashaSymbol/aekashaSymbol.ac7e8564.glb",
       "__bytes": {
         "in": 16320,
         "out": 16576
@@ -23773,32 +23773,6 @@
     }
   },
   "skyboxes": {
-    "assetCompare": {
-      "base": {
-        "type": "COLOR",
-        "color": "#000000"
-      },
-      "atmosphere": {},
-      "suns": [
-        {
-          "elevation": 20,
-          "azimuth": 200,
-          "glowIntensity": 0.4,
-          "light": {}
-        }
-      ],
-      "clouds": {
-        "coverage": 0.35,
-        "enabled": false
-      },
-      "ground": {},
-      "id": "assetCompare",
-      "debugData": {
-        "name": "Asset compare",
-        "description": "DAY_SKY with a low sun and no clouds: raking light shows the normal maps, the sky reflects in the metals."
-      },
-      "__sourcePath": "src/app/skyboxes/assetCompare.skybox.json"
-    },
     "basicSkybox": {
       "id": "basicSkybox",
       "base": {
@@ -24091,6 +24065,32 @@
         "description": "The DAY_NIGHT preset (atmosphere, sun and moon with their lights, stars and Milky Way, clouds, ground) on a two-minute day."
       },
       "__sourcePath": "src/app/examples/skyBox/exampleSkyBox.skybox.json"
+    },
+    "assetCompare": {
+      "base": {
+        "type": "COLOR",
+        "color": "#000000"
+      },
+      "atmosphere": {},
+      "suns": [
+        {
+          "elevation": 20,
+          "azimuth": 200,
+          "glowIntensity": 0.4,
+          "light": {}
+        }
+      ],
+      "clouds": {
+        "coverage": 0.35,
+        "enabled": false
+      },
+      "ground": {},
+      "id": "assetCompare",
+      "debugData": {
+        "name": "Asset compare",
+        "description": "DAY_SKY with a low sun and no clouds: raking light shows the normal maps, the sky reflects in the metals."
+      },
+      "__sourcePath": "src/app/scenes/assetCompare/assetCompare.skybox.json"
     }
   },
   "postFx": {
@@ -24269,7 +24269,7 @@
         "halfHeight": 1.729032208842616
       },
       "normals": true,
-      "__sourcePath": "src/app/impostors/largeWorldTreeCross.impostor.json"
+      "__sourcePath": "src/app/scenes/largeWorld/largeWorldTreeCross.impostor.json"
     },
     "lodShowcaseKnotImpostor": {
       "id": "lodShowcaseKnotImpostor",
@@ -24304,7 +24304,7 @@
         "extent": 2.447143472064189
       },
       "surfaceDepth": false,
-      "__sourcePath": "src/app/impostors/lodShowcaseKnotImpostor.impostor.json"
+      "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.impostor.json"
     },
     "lodShowcaseTreeCross": {
       "id": "lodShowcaseTreeCross",
@@ -24342,7 +24342,7 @@
         "halfHeight": 2.1935483809440366
       },
       "normals": true,
-      "__sourcePath": "src/app/impostors/lodShowcaseTreeCross.impostor.json"
+      "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.impostor.json"
     }
   }
 }
