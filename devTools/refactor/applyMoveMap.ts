@@ -10,9 +10,10 @@
  * - **Apply:** the preconditions (§4.2: a clean working tree, `moveMap.ts --check`, the path map
  *   checked on the tree), then everything in memory (`rewriteTree` with `MOVE_EDITS`, Prettier),
  *   then the report (`.cache/refactor/<plan>-report.md`, and a summary printed). On any error
- *   nothing is written. Then `git mv` through a temporary name (case-only renames on macOS, a move
- *   onto a path another one leaves), `git rm` the deletes and the split files, the new texts
- *   written and `git add`ed, the emptied folders removed.
+ *   nothing is written. Then the renames through a temporary name (case-only renames on macOS, a
+ *   move onto a path another one leaves), staged in batches, `git rm` the deletes and the split
+ *   files, the new texts written and `git add`ed, the emptied folders removed. A git command
+ *   waits out an index lock another process holds (an editor's git integration).
  * - **Prettier** formats a written file only when its text before the move was formatted (a longer
  *   path can wrap a line), and every created one: no other formatting. The report lists the ones
  *   it left alone.
@@ -83,13 +84,29 @@ const toPlan = (value: string | undefined): MovePlan | undefined => {
 
 // Git and the file system
 
-const git = (root: string, gitArgs: string[], env?: NodeJS.ProcessEnv) =>
-  execFileSync('git', gitArgs, {
-    cwd: root,
-    encoding: 'utf8',
-    env: env ? { ...process.env, ...env } : undefined,
-    maxBuffer: 64 * 1024 * 1024,
-  });
+const sleepSync = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
+/**
+ * A git command; retried for a while when another process holds the index lock (an editor's git
+ * integration polls the repo, and the move writes the index many times)
+ */
+const git = (root: string, gitArgs: string[], env?: NodeJS.ProcessEnv) => {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return execFileSync('git', gitArgs, {
+        cwd: root,
+        encoding: 'utf8',
+        env: env ? { ...process.env, ...env } : undefined,
+        maxBuffer: 64 * 1024 * 1024,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+    } catch (error) {
+      const stderr = String((error as { stderr?: unknown }).stderr ?? '');
+      if (attempt >= 50 || !stderr.includes('index.lock')) throw error;
+      sleepSync(100);
+    }
+  }
+};
 
 const gitList = (root: string, gitArgs: string[]) => git(root, gitArgs).split('\0').filter(Boolean);
 
@@ -327,12 +344,26 @@ const writeMove = (move: ComputedMove) => {
   const { root, map, plan } = move;
   const tmp = (file: string) => `${file}.${plan}tmp`;
 
-  // Through a temporary name: a case-only rename, and no move onto a path another one leaves
-  for (const [from] of map.renames) git(root, ['mv', '--', from, tmp(from)]);
+  // Through a temporary name: a case-only rename, and no move onto a path another one leaves. On
+  // the file system, then staged in batches (one `git mv` each wrote the index 800 times): the old
+  // paths come out of the index only (`git add` of `assert.ts` would find `Assert.ts` on macOS),
+  // and the new ones go in as `git mv` tracks them, ignored or not
+  for (const [from] of map.renames)
+    fs.renameSync(path.join(root, from), path.join(root, tmp(from)));
   for (const [from, to] of map.renames) {
     fs.mkdirSync(path.join(root, folderOf(to)), { recursive: true });
-    git(root, ['mv', '--', tmp(from), to]);
+    fs.renameSync(path.join(root, tmp(from)), path.join(root, to));
   }
+  gitEach(
+    root,
+    ['rm', '--cached', '-q'],
+    map.renames.map(([from]) => from)
+  );
+  gitEach(
+    root,
+    ['add', '-f'],
+    map.renames.map(([, to]) => to)
+  );
   // The split files go before their parts are written (`utils/constants.ts` → `utils/Constants.ts`)
   gitEach(root, ['rm', '-q'], [...map.deletes, ...map.splits.keys()]);
 
