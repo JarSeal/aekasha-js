@@ -144,5 +144,5 @@ describe("today's tree", () => {
       }
     }
     expect(unresolved).toEqual([]);
-  });
+  }, 30_000); // the whole tree: about 2 s alone, much more next to a dry run or a build
 });
