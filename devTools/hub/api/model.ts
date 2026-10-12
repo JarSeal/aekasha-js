@@ -134,13 +134,16 @@ const addCoverage = (into: Coverage, from: Coverage) => {
 export const getOwnMembers = (symbol: DeclarationReflection) =>
   (symbol.children ?? []).filter((child) => !child.inheritedFrom);
 
+const getPagePath = (subtree: ApiSubtree, relPath: string) =>
+  `${API_SECTION_PATH}${subtree}/${relPath ? `${relPath}/` : ''}`;
+
 const createFolder = (subtree: ApiSubtree, relPath: string): ApiFolder => {
   const { sourceDir } = API_SUBTREES.find((s) => s.id === subtree)!;
   return {
     subtree,
     relPath,
     sourcePath: relPath ? `${sourceDir}/${relPath}` : sourceDir,
-    pagePath: `${API_SECTION_PATH}${subtree}/${relPath ? `${relPath}/` : ''}`,
+    pagePath: getPagePath(subtree, relPath),
     folders: [],
     modules: [],
     module: null,
@@ -160,6 +163,19 @@ const locateModule = (sourcePath: string) => {
     }
   }
   return null;
+};
+
+/**
+ * The page of a module (`src/_engine/core/SceneLoader.ts` → `documentation/engine/core/SceneLoader/`)
+ * or a folder (`src/_engine/core/` → `documentation/engine/core/`), whether the API has it or not;
+ * `null` outside both subtrees. p608's codemod rewrites `hub:` links with it.
+ */
+export const getApiPagePath = (sourcePath: string): string | null => {
+  const isFolder = sourcePath.endsWith('/');
+  const location = locateModule(isFolder ? `${sourcePath}index.ts` : sourcePath);
+  if (!location) return null;
+  const relPath = isFolder ? location.relPath.replace(/\/?index$/, '') : location.relPath;
+  return getPagePath(location.subtree, relPath);
 };
 
 export const indexApiModel = (project: JSONOutput.ProjectReflection): ApiIndex => {
@@ -195,7 +211,7 @@ export const indexApiModel = (project: JSONOutput.ProjectReflection): ApiIndex =
       ...location,
       sourcePath,
       file: path.join(ROOT, sourcePath),
-      pagePath: `${API_SECTION_PATH}${location.subtree}/${location.relPath}/`,
+      pagePath: getPagePath(location.subtree, location.relPath),
       symbols,
       coverage: { documented: counted.filter(isDocumented).length, total: counted.length },
     };
