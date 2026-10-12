@@ -100,6 +100,7 @@ export {
   getMaterial,
   getMaterialVariant,
   incMaterialRef,
+  loadTslMaterialFileAsync,
   saveMaterial,
 } from './core/Material';
 export type { MatProps, MaterialVariantOverrides, Materials } from './core/Material';

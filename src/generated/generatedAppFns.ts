@@ -1,11 +1,5 @@
 // THIS IS AN AUTO-GENERATED FILE, DO NOT MODIFY!
 // ALSO, DO NOT MODIFY THE 'generatedAppData.json' FILE)!
-import * as testTslMatFn from '../app/materials/testTslMat.tsl.ts';
-import * as asteroidFn from '../toolkit/materials/asteroid.tsl.ts';
-import * as triplanarCheckerboardFn from '../toolkit/materials/triplanarCheckerboard.tsl.ts';
-import * as triplanarGridFn from '../toolkit/materials/triplanarGrid.tsl.ts';
-import * as ambientOcclusionPostFxFn from '../app/postFx/ambientOcclusion.tsl.ts';
-import * as heroBloomPostFxFn from '../app/examples/hubHero/heroBloom.tsl.ts';
 import type { SceneData, ScenePrimitiveAssets } from 'aekasha';
 
 export const sceneFileObjects: {
@@ -209,26 +203,13 @@ export const sceneFileObjects: {
 };
 
 export const tslMaterialFileObjects = {
-  testTslMat: {
-    colorNode: testTslMatFn.colorNode,
-  },
-  asteroid: {
-    colorNode: asteroidFn.colorNode,
-  },
-  triplanarCheckerboard: {
-    colorNode: triplanarCheckerboardFn.colorNode,
-  },
-  triplanarGrid: {
-    colorNode: triplanarGridFn.colorNode,
-    normalNode: triplanarGridFn.normalNode,
-  },
+  testTslMat: () => import('../app/materials/testTslMat.tsl.ts'),
+  asteroid: () => import('../toolkit/materials/asteroid.tsl.ts'),
+  triplanarCheckerboard: () => import('../toolkit/materials/triplanarCheckerboard.tsl.ts'),
+  triplanarGrid: () => import('../toolkit/materials/triplanarGrid.tsl.ts'),
 };
 
 export const postFxFileObjects = {
-  ambientOcclusion: {
-    fxNode: ambientOcclusionPostFxFn.fxNode,
-  },
-  heroBloom: {
-    fxNode: heroBloomPostFxFn.fxNode,
-  },
+  ambientOcclusion: () => import('../app/postFx/ambientOcclusion.tsl.ts'),
+  heroBloom: () => import('../app/examples/hubHero/heroBloom.tsl.ts'),
 };

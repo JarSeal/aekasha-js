@@ -16,10 +16,12 @@ export type AppData = {
   json: GeneratedAppJson;
   /** Each scene's code by scene id (a scene JSON's `sceneFile`), loaded on demand */
   sceneFiles: Record<string, NonNullable<LoadSceneProps['nextSceneFn']>>;
-  /** Each TSL material file's node exports by material id (a material JSON's `tslFile`) */
-  tslMaterialFiles: Record<string, Record<string, unknown>>;
-  /** Each PostFX pass file's exports by pass id (a PostFX JSON's `tslFile`) */
-  postFxFiles: Record<string, Record<string, unknown>>;
+  /** Each TSL material file's module (its node functions by socket) by material id (a material
+   * JSON's `tslFile`), loaded on demand: a scene load loads its materials' files */
+  tslMaterialFiles: Record<string, () => Promise<Record<string, unknown>>>;
+  /** Each PostFX pass file's module (its `fxNode`) by pass id (a PostFX JSON's `tslFile`), loaded
+   * on demand: the PostFX feature loads a scene's chain's files before it builds the chain */
+  postFxFiles: Record<string, () => Promise<Record<string, unknown>>>;
 };
 
 // Empty until InitEngine: a module that reads it at load sees no scenes

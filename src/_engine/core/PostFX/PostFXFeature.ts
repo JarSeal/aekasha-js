@@ -7,18 +7,21 @@ import {
   disposePostFx,
   getActivePostFxPipeline,
   installPostFx,
+  loadScenePostFxFilesAsync,
 } from '../PostFX';
 import type { SceneHooks } from '../SceneHooks';
 
 /**
  * PostFX's part of a scene load: the previous scene's chain is disposed, and the next scene's is
- * set up from its options (`postFx`, `postFxEnabled`) once its code has run. The pipeline itself
- * is built on the first frame that renders it.
+ * set up from its options (`postFx`, `postFxEnabled`) once its code has run, after its passes'
+ * files have loaded. The pipeline itself is built on the first frame that renders it.
  * @internal
  */
 export const postFxSceneHooks: SceneHooks = {
   exit: () => disposePostFx(),
-  created: (sceneId) => {
+  created: async (sceneId) => {
+    // The chain's files load on demand: the chain is known once the scene's code has run
+    await loadScenePostFxFilesAsync(sceneId);
     buildPostFxForScene(sceneId);
   },
 };

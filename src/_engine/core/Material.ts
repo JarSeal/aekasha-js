@@ -170,6 +170,50 @@ export type MatProps = {
     }
 );
 
+/** The TSL material files loaded so far, by material id (see loadTslMaterialFileAsync) */
+const loadedTslMaterialFiles = new Map<string, Record<string, unknown>>();
+
+/**
+ * Loads a material's TSL file (its material JSON's `tslFile`) so {@link createMaterial} can build
+ * it: the gathered data loads these files on demand (p607 D11). A scene load does it for the
+ * scene's materials; code that creates such a material at another time awaits this first. A file
+ * loads once. A production build has the files of the materials its scenes list (a development
+ * one has all).
+ * @param materialId the material JSON's id
+ * @returns false when the app's data has no TSL file for this id
+ * @example
+ * ```ts
+ * import { createMaterial, loadTslMaterialFileAsync } from 'aekasha';
+ *
+ * // A grid of its own, from the toolkit's triplanarGrid material file
+ * if (await loadTslMaterialFileAsync('triplanarGrid')) {
+ *   createMaterial({
+ *     id: 'wideGrid',
+ *     tslMaterialId: 'triplanarGrid',
+ *     type: 'STANDARDNODEMATERIAL',
+ *     tslFile: 'materials/triplanarGrid.tsl.ts',
+ *     staticDefines: { minorLines: false },
+ *     nodes: {
+ *       colorNode: {
+ *         lineThickness: 0.05,
+ *         lineFrequency: 0.25,
+ *         lineColor: '#4fc3f7',
+ *         backgroundColor: '#202020',
+ *       },
+ *     },
+ *   });
+ * }
+ * ```
+ */
+export const loadTslMaterialFileAsync = async (materialId: string) => {
+  if (loadedTslMaterialFiles.has(materialId)) return true;
+  const load = getAppData().tslMaterialFiles[materialId];
+  if (!load) return false;
+  const exports = await load();
+  loadedTslMaterialFiles.set(materialId, exports);
+  return true;
+};
+
 export const incMaterialRef = (id: string) => {
   if (materials[id]) {
     materials[id].count++;
@@ -329,15 +373,19 @@ export const createMaterial = (props: MatProps) => {
 
   // TSL file
   if ('tslFile' in props && props.tslFile) {
-    const activeMaterialRegistry = existsOrThrow(
-      (props.tslMaterialId || id) && getAppData().tslMaterialFiles[props.tslMaterialId || id || ''],
-      `[Material Manager] Could not locate compiled TSL Master Graph registry entry for material ID "${id}. Materials with a TSL file must have a *.material.json file."`
-    );
-    if (activeMaterialRegistry === '') {
-      const msg = `[Material Manager] Empty TSL Master Graph function export for material entry ID: "${id}".`;
+    const tslMaterialId = props.tslMaterialId || id || '';
+    if (
+      !loadedTslMaterialFiles.has(tslMaterialId) &&
+      getAppData().tslMaterialFiles[tslMaterialId]
+    ) {
+      const msg = `[Material Manager] The TSL file of material "${tslMaterialId}" isn't loaded: a scene load loads its materials' files, other code awaits loadTslMaterialFileAsync("${tslMaterialId}") before createMaterial.`;
       lerror(msg);
       throw new Error(msg);
     }
+    const activeMaterialRegistry = existsOrThrow(
+      loadedTslMaterialFiles.get(tslMaterialId),
+      `[Material Manager] Could not locate compiled TSL Master Graph registry entry for material ID "${id}. Materials with a TSL file must have a *.material.json file."`
+    );
 
     const staticDefines = props.staticDefines || {};
 

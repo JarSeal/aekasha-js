@@ -79,6 +79,8 @@ let needsRebuild = true;
 const postFxChainListeners = new Set<() => void>();
 const lastSize = new THREE.Vector2(-1, -1);
 const curSize = new THREE.Vector2();
+/** The PostFX pass files loaded so far, by pass id (see loadScenePostFxFilesAsync) */
+const loadedPostFxFiles = new Map<string, Record<string, unknown>>();
 
 /**
  * Installs the PostFX system (the `postFx()` feature's install, PostFX/PostFXFeature.ts): reads
@@ -88,6 +90,29 @@ const curSize = new THREE.Vector2();
  */
 export const installPostFx = (ctx: FeatureContext) => {
   isMasterEnabled = ctx.config.postFx?.enabled !== false;
+};
+
+/**
+ * Loads the files of the PostFX passes a scene's chain names (its options' `postFx`), which the
+ * gathered data loads on demand (p607 D11): the `created` scene hook awaits it before
+ * buildPostFxForScene. A file loads once; one that fails is logged and its pass left out (as a
+ * pass without a file is).
+ * @internal
+ */
+export const loadScenePostFxFilesAsync = async (sceneId: string) => {
+  const entries = getSceneOpts(sceneId)?.postFx || [];
+  await Promise.all(
+    entries.map(async (entry) => {
+      const id = typeof entry === 'string' ? entry : entry.id;
+      const load = getAppData().postFxFiles[id];
+      if (loadedPostFxFiles.has(id) || !load) return;
+      try {
+        loadedPostFxFiles.set(id, await load());
+      } catch (err) {
+        lerror(`Could not load the file of PostFX pass "${id}" (scene "${sceneId}").`, err);
+      }
+    })
+  );
 };
 
 const resolvePostFxPass = (
@@ -108,7 +133,7 @@ const resolvePostFxPass = (
     props = found;
   }
 
-  const fxNode = getAppData().postFxFiles[props.id]?.fxNode as PostFxPassFn | undefined;
+  const fxNode = loadedPostFxFiles.get(props.id)?.fxNode as PostFxPassFn | undefined;
   if (!fxNode) {
     lwarn(
       `Could not locate the "fxNode" export for PostFX pass "${props.id}" (scene "${sceneId}"), skipping it. A PostFX pass needs a *.postFx.json file whose tslFile exports "fxNode" (PostFX passes written inline in a scene file are not supported).`

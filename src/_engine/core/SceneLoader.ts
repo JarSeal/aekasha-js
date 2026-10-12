@@ -50,7 +50,7 @@ import {
 import { ComponentType } from './ECS/ECSCoreComponents';
 import { getAppData } from './AppData';
 import { getTexture, loadTextureAsync } from './Texture';
-import { createMaterial, getMaterial } from './Material';
+import { createMaterial, getMaterial, loadTslMaterialFileAsync } from './Material';
 import { textureMapKeys } from '../utils/constants';
 import { createGeometry, doesGeoExist, getGeometry } from './Geometry';
 import { createLightEntity } from './LightManager';
@@ -258,9 +258,9 @@ const loadNextSceneAssets = async (sceneData: SceneData): Promise<ScenePrimitive
   const geometries: ScenePrimitiveAssets['geometries'] = {};
   const importedAssets: ScenePrimitiveAssets['importedAssets'] = {};
 
-  // Load textures and imported assets (in parallel): materials can use the textures and meshes the
-  // imported geometries (by id). Assets referenced by id are re-tagged to this scene (AssetOwners),
-  // so leaving the scene that loaded them doesn't release them.
+  // Load textures, imported assets and the materials' TSL files (in parallel): materials can use
+  // the textures and meshes the imported geometries (by id). Assets referenced by id are re-tagged
+  // to this scene (AssetOwners), so leaving the scene that loaded them doesn't release them.
   const importPromises: Promise<ImportedAssetManifest | null>[] = [];
   for (const asset of sceneData.importedAssets || []) {
     if (typeof asset === 'string') {
@@ -286,9 +286,16 @@ const loadNextSceneAssets = async (sceneData: SceneData): Promise<ScenePrimitive
     textureIds.push(texId);
     texturePromises.push(loadTextureAsync(tex));
   }
+  // The TSL files load on demand (p607 D11): createMaterial reads them synchronously
+  const tslFilePromises: Promise<boolean>[] = [];
+  for (const material of sceneData.materials || []) {
+    if (typeof material === 'string' || !('tslFile' in material) || !material.tslFile) continue;
+    tslFilePromises.push(loadTslMaterialFileAsync(material.tslMaterialId || material.id || ''));
+  }
   const [loadedTextures, manifests] = await Promise.all([
     Promise.all(texturePromises),
     Promise.all(importPromises),
+    Promise.all(tslFilePromises),
   ]);
   for (const manifest of manifests) {
     if (manifest) importedAssets[manifest.id] = manifest;

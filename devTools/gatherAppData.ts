@@ -30,7 +30,6 @@ import {
   type AssetOptimize,
   type TexturePack,
 } from '../src/_engine/schemas/assetsConfigSchema';
-import { toUniqueJsIdentifier } from '../src/_engine/utils/jsIdentifier';
 import type { MetaSchema } from '../src/_engine/schemas/_saveDataSchema';
 import {
   isLegacySkyBoxProps,
@@ -495,8 +494,6 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
   let sceneFileObject = '';
   let tslMaterialFileObject = '';
   let postFxFileObject = '';
-  // Shared by material and PostFX TS imports, which land in the same generated file
-  const usedImportNamespaces = new Set<string>();
   const ids: {
     scenes: string[];
     cameras: string[];
@@ -1016,26 +1013,14 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
             continue;
           }
 
-          const runtimeUniqueNamespace = toUniqueJsIdentifier(
-            `${matId}Fn`,
-            usedImportNamespaces,
-            'mat'
-          );
-          sceneFileImports += `import * as ${runtimeUniqueNamespace} from '../${basePath}/${matJSON.tslFile}';\n`;
-
           if (!tslMaterialFileObject) {
             tslMaterialFileObject += 'export const tslMaterialFileObjects = {\n';
           }
 
-          // Use single quotes if the identifier starts with a number or contains characters that are not valid in JS identifiers, otherwise keep it unquoted to match lint rules
-          tslMaterialFileObject += `  ${matId.match(/^[0-9]/) ? `'${matId}'` : matId}: {\n`;
-          if (matJSON.nodes) {
-            for (const nodeSocket of Object.keys(matJSON.nodes)) {
-              // Automatically match keys from the JSON configuration mapping straight to the typescript exports namespace
-              tslMaterialFileObject += `    ${nodeSocket}: ${runtimeUniqueNamespace}.${nodeSocket},\n`;
-            }
-          }
-          tslMaterialFileObject += `  },\n`;
+          // Loaded on demand (p607 D11): the scene loader loads its materials' files, and
+          // createMaterial reads the node functions (the JSON's `nodes` keys) from the module.
+          // Single quotes when the id starts with a number, otherwise unquoted to match lint rules
+          tslMaterialFileObject += `  ${matId.match(/^[0-9]/) ? `'${matId}'` : matId}: () => import('../${basePath}/${matJSON.tslFile}'),\n`;
         }
       } catch {
         logJSONError(file);
@@ -1219,21 +1204,13 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
             continue;
           }
 
-          const runtimeUniqueNamespace = toUniqueJsIdentifier(
-            `${postFxId}PostFxFn`,
-            usedImportNamespaces,
-            'postFx'
-          );
-          sceneFileImports += `import * as ${runtimeUniqueNamespace} from '../${basePath}/${postFxJSON.tslFile}';\n`;
-
           if (!postFxFileObject) {
             postFxFileObject += 'export const postFxFileObjects = {\n';
           }
 
-          // Use single quotes if the identifier starts with a number, otherwise keep it unquoted to match lint rules
-          postFxFileObject += `  ${postFxId.match(/^[0-9]/) ? `'${postFxId}'` : postFxId}: {\n`;
-          postFxFileObject += `    fxNode: ${runtimeUniqueNamespace}.fxNode,\n`;
-          postFxFileObject += `  },\n`;
+          // Loaded on demand (p607 D11): the PostFX feature loads a scene's chain's files before
+          // it builds the chain. Single quotes when the id starts with a number (lint rules)
+          postFxFileObject += `  ${postFxId.match(/^[0-9]/) ? `'${postFxId}'` : postFxId}: () => import('../${basePath}/${postFxJSON.tslFile}'),\n`;
         }
       } catch {
         logJSONError(file);

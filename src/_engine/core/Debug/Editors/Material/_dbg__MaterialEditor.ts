@@ -14,7 +14,12 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { registerView } from '../../../ViewManager';
 import { getRenderer } from '../../../Renderer';
 import { getGeneratedAppData } from '../../../Scene';
-import { createMaterial, deleteMaterial, type MatProps } from '../../../Material';
+import {
+  createMaterial,
+  deleteMaterial,
+  loadTslMaterialFileAsync,
+  type MatProps,
+} from '../../../Material';
 import { getTexture, loadTextureAsync, type TextureProps } from '../../../Texture';
 import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../../HUD';
 import { getAppData } from '../../../AppData';
@@ -873,7 +878,14 @@ export const loadEditorMaterial = async (materialId: string | null) => {
   // The previous copy stays on the stage until this one is ready
   loadingMaterialId = materialId;
   refreshUI();
-  await loadMissingTextures(asset);
+  // Its TSL file too (loaded on demand, p607 D11): a failure shows as the load's error below
+  let tslFileError: unknown = null;
+  await Promise.all([
+    loadMissingTextures(asset),
+    loadTslMaterialFileAsync(materialId).catch((err: unknown) => {
+      tslFileError = err;
+    }),
+  ]);
   if (token !== loadToken) return false;
   loadingMaterialId = null;
 
@@ -883,6 +895,7 @@ export const loadEditorMaterial = async (materialId: string | null) => {
   // With the swap (the previous material kept its pose while this one's textures loaded)
   applyMaterialStage(materialId);
   try {
+    if (tslFileError) throw tslFileError;
     const overrides = readMaterialOverrides(materialId);
     const copy = createMaterial({
       ...getCopyProps(asset, overrides.nodes),

@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-7 implemented
+Status: in progress | Phases 1-8 implemented
 Category: Build, Performance, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
 Blocks: p608_engine-folder-restructure.md, p611_sbp-tooling-profiles-and-marketing.md, p510_headless-simulation-runtime.md
@@ -967,7 +967,7 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
   passed, lint, `tsc` (both projects), the docs ratchet; `yarn verify:baselines` unchanged, the
   production debug check: none.
 
-### Phase 8: the SBP packaging
+### Phase 8: the SBP packaging — done
 
 1. `sideEffects` (D13), measured against the entries' `moduleSideEffects`.
 2. The icon registry (D12).
@@ -1092,6 +1092,53 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
   loaders are their own chunks) 60 passed, the 12 failures the four `isDebugScene` scenes (as
   before). `yarn test` 245 passed, lint, `tsc` (both projects) and `yarn hub:build` (in
   `build:test`); `verify:baselines` recorded.
+
+**As built (section 4):**
+
+- **The gatherer** writes `tslMaterialFileObjects` and `postFxFileObjects` as
+  `{ id: () => import('…tsl.ts') }` (no namespace imports any more; its `toUniqueJsIdentifier`
+  import went, the util stays public). `AppData.tslMaterialFiles` / `postFxFiles` are
+  `Record<string, () => Promise<Record<string, unknown>>>`; the generated `index.ts` type-checks
+  against them as it is. **Lost:** the generated file named each JSON `nodes` socket
+  (`colorNode: ns.colorNode`), so `tsc` failed on a socket its file doesn't export; now
+  `createMaterial` warns at runtime ("Could not locate node"), as it already did for a socket the
+  JSON didn't list.
+- **Materials** (`Material.ts`): `loadTslMaterialFileAsync(materialId)` (on `aekasha`; resolves
+  false when the app's data has no file for the id) fills a module cache that `createMaterial`
+  reads synchronously as before. A TSL material whose file the data has but nobody loaded throws
+  naming `loadTslMaterialFileAsync`; the old error stays for an id without a file. The dead
+  `=== ''` branch went (`existsOrThrow` throws on `''`). `loadNextSceneAssets` loads the scene's
+  TSL materials' files in the same `Promise.all` as its textures and imports (D11's "with its
+  other assets"); a failed file fails the load, as `createMaterial` would have.
+- **PostFX** (`PostFX.ts`): `loadScenePostFxFilesAsync(sceneId)` (internal) loads the files of the
+  scene options' `postFx` entries into its own cache, which `resolvePostFxPass` reads. **Where,
+  changed from D11's "the scene loader":** `postFx()`'s `created` hook awaits it before
+  `buildPostFxForScene`: the kernel's loader can't import the feature, and the chain is known only
+  once the scene code has run (it can set the options). A file that fails is logged and its pass
+  left out, as a pass without a file is. Frames during the wait render without PostFX, as they
+  already did from the `exit` hook's dispose to the build.
+- **The material editor** loads the selected material's TSL file with its textures; a failed file
+  shows as the load's error (the existing toast and drawer status). Its "not in this build" check
+  reads the loaders, unchanged.
+- An edited `.tsl.ts` still has no HMR boundary, so the dev server reloads the page as before.
+- Bundle: `index.js` 382.3 → 376.9 kB gzip (−5.4 kB), modules 160 → 151; main `toolkit` 12.9 →
+  8.5 kB, `app` 13.5 → 12.5 kB, `three` 626.8 → 616.9 kB (`GTAONode` and `BloomNode` go with the
+  two PostFX files). New lazy chunks: one per TSL / PostFX file (`ambientOcclusion.tsl.js` 2.7 kB,
+  `heroBloom.tsl.js` 2.0 kB, `triplanarGrid.tsl.js` 1.1 kB, `asteroid.tsl.js` 0.8 kB,
+  `triplanarCheckerboard.tsl.js` 0.6 kB, `testTslMat.tsl.js` 0.2 kB) and the shared
+  `triplanarProjection.js` (0.8 kB). `api.json`: `loadTslMaterialFileAsync` (public),
+  `loadScenePostFxFilesAsync` (internal). The production debug check: none.
+- **For Phase 10:** the migration guide's `loadTslMaterialFileAsync` (a TSL material created
+  outside a scene load); root `CLAUDE.md`'s data pipeline names the generated loaders.
+- Checks: `yarn verify:scenes` 96 passed on the dev server; against a `VITE_APP_ENV=test` build
+  under `vite preview` (`workerMsg`, `mainThread`, `prodTest`, each TSL and PostFX file its own
+  chunk) 60 passed, the 12 failures the four `isDebugScene` scenes (as before). The scenes cover
+  the TSL materials (`sceneTestECS`, `space`, the gym, `topDownTest`, the examples) and both PostFX
+  passes (`largeWorld`, the gym, `topDownTest`, `exampleHubHero`). In the browser (dev server):
+  the material editor restored on each of the four TSL materials, no failed load, no error, the
+  grid's lines drawn; touching `testTslMat.tsl.ts` reloaded the page. `yarn test` 245 passed (the
+  new `@example` included), lint, `tsc` (both projects) and `yarn hub:build` (in `build:test`);
+  `verify:baselines` recorded.
 
 ### Phase 9: the manifest and the feature schemas
 
