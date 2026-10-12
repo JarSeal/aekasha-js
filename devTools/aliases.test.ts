@@ -18,8 +18,9 @@ describe('aliases', () => {
     }
   });
 
-  // getEntryModuleSideEffects declares the entry files side-effect free, so the build drops
-  // anything else they'd run. Named, so an entry lists its API (no `export *`).
+  // An entry only names modules: the build keeps what's used of them (package.json's
+  // `sideEffects`), and anything else in an entry would run wherever the entry is imported. Named,
+  // so an entry lists its API (no `export *`).
   it('an entry file holds only named `export … from` statements', () => {
     const offending: string[] = [];
     for (const file of Object.values(ENTRY_FILES)) {

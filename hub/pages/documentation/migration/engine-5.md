@@ -15,9 +15,9 @@ which the lint now enforces.
 1. Commit, so each step below is a diff of its own.
 2. Take the new `src/_engine/`, `src/toolkit/` and `devTools/` from the template, and the root
    configs that wire the entries up, keeping your own changes to them: `tsconfig.json` (`paths`),
-   `vite.config.ts` (`resolve.alias`, and `build.rollupOptions.treeshake.moduleSideEffects`, without
-   which your main chunk takes in everything an entry re-exports), `vitest.config.ts` and
-   `eslint.config.js` (the boundary rules). The aliases all come from one list,
+   `vite.config.ts` (`resolve.alias`), `vitest.config.ts`, `eslint.config.js` (the boundary rules)
+   and `package.json`'s `sideEffects` (the stylesheets and `devTools/`), without which your main
+   chunk takes in everything an entry re-exports. The aliases all come from one list,
    `devTools/aliases.ts`.
 3. Run `yarn`, then `yarn gatherAppData`: it writes `src/generated/` (see below).
 

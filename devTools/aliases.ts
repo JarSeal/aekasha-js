@@ -43,16 +43,3 @@ export const getViteAliases = (root: string) =>
 /** `tsconfig.json`'s `compilerOptions.paths`, relative to the root config */
 export const getTsconfigPaths = (): Record<string, string[]> =>
   Object.fromEntries(Object.entries(ENTRY_FILES).map(([entry, file]) => [entry, [`./${file}`]]));
-
-/**
- * Rollup's `treeshake.moduleSideEffects`: an entry file is only re-exports, so it has none. Rollup
- * then follows an entry's names to their modules, and a chunk depends on the modules it uses, not
- * on everything its entry re-exports (`src/index.ts`'s `aekasha` import would otherwise pull
- * modules only lazy scenes use, like `ECSStressTest`, into the main chunk). Every other module
- * keeps Rollup's default. The dev server doesn't tree-shake: there an entry still runs every
- * module it re-exports when it's first imported.
- */
-export const getEntryModuleSideEffects = (root: string) => {
-  const entryFiles = new Set(Object.values(ENTRY_FILES).map((file) => path.join(root, file)));
-  return (id: string) => !entryFiles.has(id);
-};

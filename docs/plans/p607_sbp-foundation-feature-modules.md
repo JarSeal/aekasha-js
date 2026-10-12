@@ -975,6 +975,48 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
 4. Lazy TSL material and PostFX maps (D11): the gatherer, `AppData`'s types, the scene loader's
    preload, the material editor.
 
+**As built (section 1):**
+
+- **How the field reaches Rollup (Vite 6.4.3, read in its code):** Vite's resolver answers a
+  relative import in a build with `moduleSideEffects: pkg.hasSideEffects(id)` (the nearest
+  `package.json`; `null` without the field), and Rollup takes the resolver's answer over
+  `treeshake.moduleSideEffects` (`resolvedId.moduleSideEffects ?? hasModuleSideEffects(id)`). An
+  absolute or aliased path gets no answer, so the option still applied to the entries.
+- **Measured** (`.cache/runs/`, per-chunk rendered modules from the visualizer): with
+  `["**/*.scss", "**/*.css"]` the production build's main chunk loses `Lines/LineBuilders.ts`
+  (into the lazy `physicsTiers.js`, the one scene that draws with it) and `ViewManager.ts` (every
+  reader folds without the debug env), and `OctahedralImpostor.js` loses `ImpostorSourceHash.ts`:
+  `index.js` −305 B, `physicsTiers.js` +303 B. The workers are byte for byte the same. **Without
+  `getEntryModuleSideEffects`** (the field kept), every chunk holds the same modules (±5 B: the
+  chunks' import order and minified names): the entries only re-export, and what they re-export is
+  now side-effect free through the field. **So the field stays and the option went** (D13: one
+  mechanism, the standard one an app's bundler reads too): `vite.config.ts`' `rollupOptions` and
+  `aliases.ts`' `getEntryModuleSideEffects` are gone.
+- **The `_dbg__` modules:** a `VITE_APP_ENV=test` build with and without the field holds the same
+  rendered modules except `LineBuilders.ts` (its own lazy chunk there), so no debug module that
+  another one imports lost its load-time registrations. No bare `import './x.ts'` in `src/` or
+  `hub/`; the two stylesheet imports stay (`**/*.scss`).
+- **Not expected: esbuild reads the field too.** Vite bundles `vite.config.ts` with its local
+  imports through esbuild, which dropped `devTools/hub/build.ts`' `import './cards'` (a warning
+  at config load): the dev server's Hub would have lost its `::: cards` directive. The Hub's
+  directives register at load by design (`markdown.ts`, `code.ts`, `scenes.ts`, `claudeMd.ts`,
+  `cards.ts`), and `devTools/` never ships, so the field lists `"./devTools/**"` (checked: the
+  config bundle has every directive). The Hub's Vite-built scripts are identical with the field.
+- Root `CLAUDE.md`'s Build config bullet and the migration guide's "Before you start" name the
+  field instead of the option. **For Phase 10:** the guide's `import './AppECSPlugins'` line (and
+  any bare import of an app module) would be dropped by a build now: say so where it becomes
+  `appECSPlugins`. `CHANGELOG.md`'s p606 line naming `treeshake.moduleSideEffects` is Phase 11's.
+- Checks: the field only acts in a build, so the runner ran against a `VITE_APP_ENV=test` build
+  under `vite preview` (`workerMsg`, `mainThread`, `prodTest`): 60 passed (hashes, snapshots, the
+  system order), the 12 failures the four `isDebugScene` scenes a build leaves out (as in Phases 5
+  and 7). On the dev server 95 of 96 passed; the first run (`assetCompare workerSab`) lost its page
+  to a navigation with the dev server's socket refused, and passed on its own rerun (likely Vite
+  re-optimizing after the config change; not confirmed). `yarn verify:baselines` recorded
+  (`bundle.json` as above; `api.json`, `docs.json` unchanged; the production debug check: none).
+  `yarn test` 245 passed, lint, `tsc` (both projects, in `build:test`), `yarn hub:build` (in
+  `build:test`; its search index warning, 1.04 MB over 1.00 MB, comes with the API docs and isn't
+  this change's).
+
 ### Phase 9: the manifest and the feature schemas
 
 1. The composed scene and mesh schemas; the three feature schemas move next to their features,
