@@ -1,7 +1,6 @@
 Status: stub — not-implemented
 Category: Refactoring, Documentation, Dev tooling
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
-Blocked by: p608_engine-folder-restructure.md
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
 
 # Review: Schemas, Data Pipeline, Dev Tools and Hub Generator — Stub

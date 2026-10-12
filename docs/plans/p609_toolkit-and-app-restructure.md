@@ -1,7 +1,6 @@
 Status: stub — not-implemented
 Category: Refactoring, Toolkit, App
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, toolkit major)
-Blocked by: p608_engine-folder-restructure.md
 Blocks: p620_review-toolkit-and-app-code.md
 Related: the "Toolkit and asset housekeeping" (p450) prompt in `docs/templates/todo-plan-prompts.txt` (its folder structure is absorbed here; its new assets and LOD test scene stay in p450)
 

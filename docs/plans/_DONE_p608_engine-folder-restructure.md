@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-6 implemented
+Status: implemented (Phases 1-7)
 Category: Refactoring, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p609_toolkit-and-app-restructure.md, p610_character-and-input-action-architecture.md, p611_sbp-tooling-profiles-and-marketing.md, p612_review-ecs-loop-config-init.md, p613_review-rendering-scene-assets.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p510_headless-simulation-runtime.md
@@ -274,6 +274,11 @@ project version with it.** Toolkit 2.0.0 and App 1.10.0 don't change (no file of
 the toolkit and the app import only entries). The `CHANGELOG.md` entry has an Engine section (the
 moves, the new layout, the Hub's new API URLs) and a Project section (the codemod, the checks'
 new debug rule).
+
+**As built (Phase 7):** Toolkit 2.0.1 and App 1.10.1 too. The move commit rewrote comments in
+three of their files (`scatterOnSurface.ts`, `_dbg__lodShowcase.ts`, `examples/_dbg__exampleHub.ts`
+name the engine's new paths), and `checkVersions --against main` wants a bump for any changed file
+of a part. Codenames kept; each changelog section is one line.
 
 ### D9. After the move, the rules describe the new layout
 
@@ -902,7 +907,7 @@ As built:
   `git grep -P`: `-E` has no `\b`) finds only the kept fixtures, `yarn test` 305, `tsc`,
   `tsc -p hub`, lint.
 
-### Phase 7: versioning, changelog and mark done
+### Phase 7: versioning, changelog and mark done — done
 
 1. `package.json`: `engine_metadata.version` and `version` 5.0.0 → 5.0.1, codename Golden Hour
    kept (D8). Toolkit and app unchanged.
@@ -916,8 +921,31 @@ As built:
    p615, p616, p618, p619 and p510 (dropped where p608 was the only blocker), p600's roadmap row and
    §11 / "Branches and PRs" where they name p608, p299's note, the `CLAUDE.md` mentions
    (`devTools/verify/CLAUDE.md`'s "p608's moves rename folders").
-5. **Time for a PR:** `engine-folder-restructure` → `main` (p600's "Branches and PRs"), opened when
+5. **Time for a PR:** `engine-folder-restructured` → `main` (p600's "Branches and PRs"), opened when
    asked; after the merge, `yarn tagRelease` and push `engine-v5.0.1`.
+
+As built:
+
+- **Versions:** Engine 5.0.1 (Golden Hour) and the project version, as D8 says, and also Toolkit
+  2.0.0 → 2.0.1 (Half Moon) and App 1.10.0 → 1.10.1 (Preschooler): see D8's note. After the
+  merge, `yarn tagRelease` tags `engine-v5.0.1`, `toolkit-v2.0.1` and `app-v1.10.1`.
+- **`CHANGELOG.md`:** "2026-10-12 — engine-folder-restructured": Engine (the layout, the debug
+  modules, the naming rule with every `Manager` rename, the split and `kernel/config/DebugModules.ts`,
+  the Hub's API URLs, the bundle finding of Phase 5 as risk 1 asks, the two deletes), one line each
+  for Toolkit and App, and Project (`applyMoveMap.ts`, `compareBaselines.ts`, the debug rule, the
+  keep rules, `SIMULATION_FILES`, the baselines, the docs, 305 tests). `assetCompare`'s missing
+  prop (Phase 5) isn't in it: the scene baselines are a local cache.
+- **The references:** the `Blocked by` lines of p609-p613, p615, p616, p618, p619 and p510 named
+  only p608, so all ten went; the `Blocks` lines of p600, p602, p606 and p607, p600's roadmap row,
+  §9's p299 note, §11 and "Branches and PRs" (the branch, the versions), and p299's note (the moved
+  paths are in the map at the move's base, `5491035`: after D9 the current map has only keeps).
+  The plan numbers in code comments and `CLAUDE.md` (`p608 D4`, `p608 §4`) stay: they point at
+  this file's sections. `moveText.test.ts`' `docs/plans/p608_engine-folder-restructure.md` is a
+  path kind's example, not a reference.
+- **`CLAUDE.md`:** the root's commands list `applyMoveMap.ts` and `compareBaselines.ts` (p609 uses
+  them), and `moveMap.ts`' line names the codemod by its file. `devTools/verify/CLAUDE.md`'s
+  "p608's moves rename folders" says when a move needs `--allow-docs-drop`; `devTools/aliases.ts`'
+  header says p608 moved the code under the entries.
 
 ## 6. Done when
 

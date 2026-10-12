@@ -4,6 +4,76 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-12 — engine-folder-restructured
+
+### Engine 5.0.1 (Golden Hour)
+
+The engine's files move into the layout of p602: the folder says what a file is. Only moves and renames: every entry exports the same names, and every scene's hash, snapshot and system order is the same as before (the scene runner ran 96 of 96 against `main`'s baselines, in all four configurations). An app that imports only the `aekasha*` entries (the lint makes anything else an error since 5.0.0) has nothing to change.
+
+**Changed**
+
+- `core/`, `workers/`, `styles/`, `3dModels/` and most of `utils/` move into new folders:
+  - `kernel/`: what every app runs, one folder per area (`ecs/`, `loop/`, `config/`, `init/`, `scene/`, `assets/` with `import/` and the assets worker, `render/`, `camera/`, `light/`, `mesh/`, `input/`).
+  - `features/<name>/`: each of the nine features, with its entry, its `<Name>Feature.ts`, its worker, its `debug/` modules and its nested `CLAUDE.md`.
+  - `ui/`: the UI kit, with the global styles in `ui/styles/`.
+  - `debug/`: the debugger framework.
+  - `utils/` holds only pure modules. `schemas/` and `types/` stay. The engine root holds only `index.ts` and `ModuleLoad.test.ts`.
+- Debug modules sit next to the code they debug: a kernel area's or a feature's own `debug/` folder (`kernel/render/debug/_dbg__Renderer.ts`, `features/skybox/debug/`). `core/Debug/` is gone, and a debug folder holds nothing that ships. `debug/Assets.ts` and `debug/PostFXProfiler.ts` stay wrappers in `debug/` until p618 merges them into their features.
+- File names follow one rule: every module is PascalCase, and no file has a `Manager` suffix:
+  - PascalCase: the 19 schemas (`sceneSchema.ts` → `SceneSchema.ts`), `assert.ts`, `deepMerge.ts`, `jsIdentifier.ts`, the worker modules (`physicsWorker.ts` → `PhysicsWorker.ts`, `assetsSwitchGLTF.ts` → `AssetsSwitchGLTF.ts`).
+  - No `Manager` suffix: `CameraManager.ts` → `kernel/camera/Camera.ts`, `LightManager.ts` → `kernel/light/Light.ts`, `MeshManager.ts` → `kernel/mesh/Mesh.ts`, `GroupManager.ts` → `kernel/scene/Group.ts`, `LineManager.ts` → `features/lines/Lines.ts`, `PhysicsManager.ts` → `features/physics/PhysicsEntity.ts`, `ViewManager.ts` → `kernel/render/Views.ts`, `DebugToolsManager.ts` → `debug/DebugTools.ts`.
+  - Also renamed: `InitApp.ts` → `kernel/init/InitEngine.ts` and `core/Helpers.ts` → `debug/SceneHelpers.ts`.
+  - On a case-insensitive file system (macOS, Windows), a checkout can keep an old file name after the pull. `tsc`'s casing check names any such file.
+- `utils/helpers.ts` and `utils/constants.ts` are split into nine modules by what they hold: `AssetFiles`, `Disposal`, `ThreeMath`, `Numbers`, `MeshUserData`, `Workers`, `DebugModules`, `LightHelpers` and `Constants`. The debug loaders (`loadDebugModule`, `loadDebugModuleAsync`, `useDebug`, `isDebugReady`, `DebugModuleRef`) are now in `kernel/config/DebugModules.ts`, next to `Config.ts`. Shipping code calls them, so they belong to the kernel, not to a debug folder.
+- The Hub's API pages are per module path, so every engine API URL moved (`documentation/engine/core/SceneLoader/` → `documentation/engine/kernel/scene/SceneLoader/`). There are no redirects: bookmarks and outside links to engine API pages break, until p619 switches the API reference to the entries.
+- The production build: the main chunk (`assets/index.js`) is 4589 B smaller rendered and 403 B smaller gzipped, with 151 → 155 modules (the split parts). `setMeshCreatePropsToUserData` (`kernel/mesh/MeshUserData.ts`) is used only by the physics import's mesh colliders, so it left the main chunk for the lazy `ImportPhysics.js` chunk (2067 → 2549 B gzip). In all, the build is 84 B smaller gzipped. The seven chunks named after a renamed module take its new name (`PhysicsWorker.js`, `AssetsWorker.js`, `AssetsSwitchGLTF.js`, `AssetsSwitchSimplify.js`, `AssetsSwitchTexture.js`).
+
+**Removed**
+
+- `utils/materials/checkerBoardPattern.ts` and `nestedGridPattern.ts`: nothing imported them, and no entry exported them.
+
+### Toolkit 2.0.1 (Half Moon)
+
+**Changed**
+
+- `bakeScatterToInstancedMesh`'s JSDoc names the engine's new path for the ECS stress test (`kernel/ecs/debug/ECSStressTest.ts`).
+
+### App 1.10.1 (Preschooler)
+
+**Changed**
+
+- The comments in `_dbg__lodShowcase.ts` and `examples/_dbg__exampleHub.ts` name the engine's new paths.
+
+### Project
+
+**Added**
+
+- The move codemod, `npx tsx devTools/refactor/applyMoveMap.ts --plan <plan>` (in `refactor/`: `moveApply.ts`, `moveText.ts`, `moveSplit.ts`, `moveEdits.ts`, `moveTree.ts`, each tested on in-memory trees). It applies `moveMap.json`'s entries for a plan:
+
+  - renames, through a temporary name for the case-only ones; deletes; and splits a module per export;
+  - rewrites every import specifier (static, `import type`, `export … from`, `import()`, `typeof import`, `vi.mock`, `new URL`, `?raw` / `?url` / `?worker`, `import.meta.glob`) and the SCSS `@use` / `@forward`;
+  - rewrites the paths in documents and comments, the Hub's `hub:documentation/engine/…` links and TypeDoc's module links;
+  - edits the globs and regexes through a checked table (`MOVE_EDITS`).
+
+  It computes everything before writing anything, and writes nothing on an error. Its other modes:
+
+  - `--dry-run`: applies in a scratch worktree, then runs `tsc`, the tests, the lint and `yarn build` there.
+  - `--verify-commit <sha>`: checks that a commit is exactly the tool's output on its parent.
+  - `--leftovers <base-sha>`: lists the old paths still named anywhere.
+
+  The move commit (`1d65320`) is its output on `5491035`. p609 moves the toolkit and the app with the same tool.
+
+- `npx tsx devTools/refactor/compareBaselines.ts --plan <plan> <base-sha>`: compares the API, docs and bundle baselines after a move with the base's, mapped through the base's map. The exports may differ only by their modules' paths, `entries` must be the same, the documented and undocumented totals the same, and each chunk within the tolerance under its mapped name. The tolerance rule moved to `devTools/verify/bundleGrowth.ts`.
+
+**Changed**
+
+- The debug rule: the lint's `DEBUG_FILES` and the side-effects test find debug code by the `_dbg__` name alone. `yarn verify:baselines`' production check fails on a `_dbg__` module or on any module in an engine folder named `debug` (in any case), except the entry `src/_engine/debug/index.ts`. This replaces the `core/Debug/` pattern and the wrapper regex.
+- `moveRules.ts`' engine rules are nine keep rules for the new layout: `index.ts`, `ModuleLoad.test.ts`, and the folders `kernel/`, `features/`, `ui/`, `debug/`, `utils/`, `schemas/`, `types/`. `moveMap.ts` fails on a file outside them. The layout report shows the same boundary findings as before the move, by their new paths: 23 kernel → feature imports (type-only), 2 ui → kernel, 1 schemas → kernel, and no feature cycle. p609's entries don't change.
+- `eslint.config.js`' `SIMULATION_FILES` covers the same files as before: `features/physics/**` and `features/character/**`, with `SIMULATION_IGNORES` leaving out each feature's install, its entry, the physics import extension and the debug modules.
+- The baselines are recorded under the new paths: `api.json`, `docs.json`, and `bundle.json`, whose main chunk groups split `kernel/` and `features/` per subfolder.
+- The root `CLAUDE.md` (the three-folder split, the debug system, physics), the nested `CLAUDE.md` files, `readme.md`'s tree, the Hub's guides and coding standards, and `docs/issues/` describe the new layout.
+- Tests: 305 in all (`moveApply.test.ts`, `moveText.test.ts`, `moveSplit.test.ts`, `moveEdits.test.ts`, `moveTree.test.ts`, `compareBaselines.test.ts`, and the production check's case for each kind of debug folder).
+
 ## 2026-10-11 — stage-b
 
 ### Engine 5.0.0 (Golden Hour)

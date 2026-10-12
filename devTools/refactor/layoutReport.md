@@ -45,7 +45,7 @@ p607 D5: a worker can't be handed code, so the assets worker `import()`s the fea
 | Importer (today) | Imports (today) | Target | Kind | Names |
 | --- | --- | --- | --- | --- |
 | `kernel/assets/worker/AssetsSwitchGLTF.ts:91` | `features/lod/LodChainGLTF.ts` | `features/lod/LodChainGLTF.ts` | dynamic | * |
-| `kernel/assets/worker/AssetsWorker.ts:31` | `features/lod/worker/AssetsSwitchSimplify.ts` | `features/lod/worker/AssetsSwitchSimplify.ts` | dynamic | * |
+| `kernel/assets/worker/AssetsWorker.ts:32` | `features/lod/worker/AssetsSwitchSimplify.ts` | `features/lod/worker/AssetsSwitchSimplify.ts` | dynamic | * |
 
 ## Feature dependencies
 

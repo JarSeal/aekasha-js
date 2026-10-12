@@ -4,8 +4,9 @@
  * can't import it: `aliases.test.ts` checks the two agree). TypeDoc and `tsx` read the `paths`.
  *
  * Each alias is matched exactly: `aekasha` doesn't resolve `aekasha/physics`, and an entry missing
- * here is an unresolved import, not a deep path. An entry re-exports by name from today's paths;
- * p608 moves the code under it and rewrites only those paths.
+ * here is an unresolved import, not a deep path. An entry re-exports by name from today's paths:
+ * p608 moved the code under the engine's entries and rewrote only those paths, and p609's move
+ * does the same for the toolkit's.
  */
 import path from 'path';
 
