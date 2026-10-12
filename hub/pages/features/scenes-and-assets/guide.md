@@ -40,13 +40,33 @@ Each has a Zod schema in `src/_engine/schemas/`. Start a file with a `$schema` l
 
 `devTools/gatherAppData.ts` walks `src/`, checks every asset JSON against its schema, and writes
 the generated data to `src/generated/`: the JSON, and the scene, TSL material and PostFX files by
-id (a scene's file loads on demand). `src/index.ts` hands it to [`InitEngine`](api:InitEngine) as `data`, and the engine
-loads its scenes from it. It runs before `yarn dev` and `yarn build`,
-and in `yarn dev` on every save: the page reloads with the change, and an invalid file shows an
-error overlay naming the file and the problem. `yarn gatherAppData` runs it by hand.
+id. `src/index.ts` hands it to [`InitEngine`](api:InitEngine) as `data`, and the engine loads its
+scenes from it. It runs before `yarn dev` and `yarn build`, and in `yarn dev` on every save: the
+page reloads with the change, and an invalid file shows an error overlay naming the file and the
+problem. `yarn gatherAppData` runs it by hand.
+
+The code files load on demand, each in a chunk of its own in a build: a scene's file when the
+scene loads, and a TSL material's or a PostFX pass's with the scene that lists it. A TSL material
+your code creates at another time needs its file loaded first:
+[`loadTslMaterialFileAsync`](api:loadTslMaterialFileAsync).
 
 The textures and models the JSONs point at go through the
 [asset pipeline](hub:features/asset-optimization) first.
+
+### The feature manifest
+
+Some scene and mesh fields belong to a feature: `skyboxes` to the sky box (`skyBox()`), `postFx`
+and `postFxEnabled` to PostFX (`postFx()`), `spatialDomains` to the spatial index (`spatial()`),
+and `impostors` and a mesh's `lod` to LOD (`lod()`). The gatherer writes the features each scene's
+data uses into the generated data (the scene's `__features`), and `InitEngine` checks every scene,
+loaded or not, against its `features` before anything boots:
+
+```text wrap
+InitEngine: a scene's data needs a feature `features` doesn't list: the scene 'myScene' needs the feature 'skybox' (skyBox() from 'aekasha/skybox'). List it, or take its fields out of the scene's data.
+```
+
+Only the data counts: a sky box or levels of detail your scene code makes aren't in the manifest,
+so list their features yourself.
 
 ## Per-scene overrides
 
@@ -104,7 +124,8 @@ in lockstep with physics goes in the ECS instead (see [ECS](hub:features/ecs#sys
 - [`getMaterial`](api:getMaterial), [`getTexture`](api:getTexture) and
   [`getGeometry`](api:getGeometry): the assets a scene loaded, by id.
 - [`createMeshEntity`](api:createMeshEntity), [`createMaterial`](api:createMaterial) and
-  [`importAssetAsync`](api:importAssetAsync): the same assets from code.
+  [`importAssetAsync`](api:importAssetAsync): the same assets from code
+  ([`loadTslMaterialFileAsync`](api:loadTslMaterialFileAsync) before a TSL material).
 
 ## Read more
 

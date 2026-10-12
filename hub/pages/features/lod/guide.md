@@ -1,3 +1,15 @@
+## Installing it
+
+List [`lod()`](api:lod), from `aekasha/lod`, in `InitEngine`'s `features` (see
+[How the app starts](hub:examples/quick-start#how-the-app-starts)), and
+[`instancing()`](api:instancing), from `aekasha/instancing`, for the instanced pools
+([Many instances](#many-instances)). Generating chains and impostors loads on first use.
+
+- Without `lod()`, a mesh's `lod` does nothing (`"AUTO"` warns once), and an import reads no
+  prebuilt chains and builds none.
+- A scene whose JSON has a mesh's `lod` or `impostors` fails the boot without it, naming the
+  feature (see [the feature manifest](hub:features/scenes-and-assets#the-feature-manifest)).
+
 ## A level is a screen size
 
 An object's screen size is its bounding sphere's height on screen, as a fraction of the screen's:
@@ -48,6 +60,9 @@ pixels. Both stay opaque, so shadows, depth and post effects work through a fade
 [`createInstancedLodPool`](api:createInstancedLodPool) has one mesh per level and moves each
 instance into its level's mesh, so a whole forest is a draw call per level. A fading instance is
 in two level meshes, which adds no draw call.
+
+The pools need `instancing()`, an instanced LOD pool's levels `lod()` too, and a pool's
+`spatialDomain` option `spatial()` (without it, the pool warns and indexes nothing).
 
 The selection costs one distance and one multiply per entity, after frustum culling, and only an
 entity whose level changed is touched. `AppConfig.lod.maxSelectionsPerFrame` spreads it over

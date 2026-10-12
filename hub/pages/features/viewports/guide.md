@@ -1,3 +1,10 @@
+## Installing it
+
+List [`viewports()`](api:viewports), from `aekasha/viewports`, in `InitEngine`'s `features` (see
+[How the app starts](hub:examples/quick-start#how-the-app-starts)). Without it,
+`createViewport` throws, naming the feature, and the debugger's axes gizmo and environment ball
+are off. Views are the engine's own: they need no feature.
+
 ## A viewport
 
 ```ts

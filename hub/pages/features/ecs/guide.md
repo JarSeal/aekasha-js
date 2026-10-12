@@ -58,19 +58,42 @@ frame is drawn. `AppConfig.ecs.storageMode` chooses its storage: `MAP` (the defa
 - A system belongs to its world until [`removeSystem`](api:ECSWorld.removeSystem). A system only
   one scene needs is added in its scene file and removed when the scene exits.
 
+## Features
+
+[`InitEngine`](api:InitEngine) installs the engine's kernel (the ECS, meshes, groups, cameras,
+lights, raycasting, input and scenes), then each of its `features`, in list order: the engine's
+(`physics()`, `skyBox()`, …, see
+[How the app starts](hub:examples/quick-start#how-the-app-starts)), then the app's own. A
+feature ([`EngineFeature`](api:EngineFeature)) is an id and an `install` function, which gets the
+kernel's seams ([`FeatureContext`](api:FeatureContext)): the ECS registrations below, the scene
+load's phases, and `onDebug` for its debug tools.
+
+- **Nothing registers itself when its module is imported.** A build keeps only the modules whose
+  names something uses (`package.json`'s `sideEffects`), so a registration at a module's top level
+  wouldn't run in a production build. `yarn test` fails on one.
+- **The list's order is the registration order.** Two systems in the same stage with the same
+  `order` run in the order their features installed.
+- **`requires`** names the features one needs, listed before it: `character()` requires
+  `physics()`, and `InitEngine` fails naming both otherwise.
+- **`ctx.onDebug(fn)`** runs `fn` only in the debug env, before the app's `start`. Load the
+  feature's debug code there with an `import()`, and a production build leaves it out.
+
 ## Plugins and hooks
 
 [`registerPlugin`](api:ECSWorld.registerPlugin) runs a function for every world, now and when
-one is created: that's how the engine's managers and the app's systems install themselves. The
-app registers its plugins in one place, `src/AppECSPlugins.ts`, which `src/index.ts` imports
-right after the engine:
+one is created: a feature registers its systems that way, in its install (`ctx.registerPlugin`).
+The app's own feature, `appECSPlugins` in `src/AppECSPlugins.ts`, registers the app's systems and
+the toolkit's, and `src/index.ts` lists it last:
 
 <<< src/AppECSPlugins.ts#ecs-register-plugin
 
-[`registerComponentHooks`](api:ECSWorld.registerComponentHooks) runs code when a component is
-added or removed, or its entity deleted. The engine uses hooks to create and free what a
-component stands for (a mesh's Three.js object, a body's colliders), so deleting an entity
-cleans up after it.
+[`registerComponentHooks`](api:ECSWorld.registerComponentHooks) (`ctx.registerComponentHooks`)
+runs code when a component is added or removed, or its entity deleted. The engine uses hooks to
+create and free what a component stands for (a mesh's Three.js object, a body's colliders), so
+deleting an entity cleans up after it.
+
+A bigger part of your game (a combat system with its components, hooks and debug tab) can be a
+feature of its own, listed before `appECSPlugins`.
 
 ## Managed entities
 
@@ -87,6 +110,8 @@ tab, so a change made by hand can't fight the manager.
   [`setTransform`](api:ECSWorld.setTransform).
 - [`addSystem`](api:ECSWorld.addSystem), [`registerPlugin`](api:ECSWorld.registerPlugin) and
   [`registerComponentHooks`](api:ECSWorld.registerComponentHooks).
+- [`EngineFeature`](api:EngineFeature) and [`FeatureContext`](api:FeatureContext): a feature of
+  your own.
 
 ## Read more
 

@@ -35,10 +35,16 @@ same interface augmented through two paths loses keys without an error.
 
 <<< src/AppECSPlugins.ts#ecs-register-plugin
 
-[`registerPlugin`](api:ECSWorld.registerPlugin) runs for every ECS world, so the system is there
-in every scene: where no entity has the component, it loops over nothing. For a system only one
-scene needs, call [`addSystem`](api:ECSWorld.addSystem) in the scene file and
-[`removeSystem`](api:ECSWorld.removeSystem) when the scene exits.
+- `appECSPlugins` is the app's own feature. `src/index.ts` lists it last in
+  [`InitEngine`](api:InitEngine)'s `features`, so its `install` runs once, after the engine's
+  features (see [Features](hub:features/ecs#features)).
+- `ctx.registerPlugin` ([`registerPlugin`](api:ECSWorld.registerPlugin)) runs for every ECS
+  world, so the system is there in every scene: where no entity has the component, it loops over
+  nothing.
+- Register in an install, never at a module's top level: a production build drops a module that
+  nothing uses a name of, and its registrations with it.
+- For a system only one scene needs, call [`addSystem`](api:ECSWorld.addSystem) in the scene file
+  and [`removeSystem`](api:ECSWorld.removeSystem) when the scene exits.
 
 ## Using it
 
