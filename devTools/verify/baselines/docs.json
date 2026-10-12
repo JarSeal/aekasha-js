@@ -1451,20 +1451,6 @@
         ]
       }
     },
-    "toolkit/ecs": {
-      "exports": {
-        "documented": 10,
-        "total": 10
-      },
-      "members": {
-        "documented": 0,
-        "total": 0
-      },
-      "undocumented": {
-        "exports": [],
-        "members": []
-      }
-    },
     "toolkit/ecs/effects": {
       "exports": {
         "documented": 21,
@@ -1486,65 +1472,109 @@
         ]
       }
     },
-    "toolkit/geometry": {
+    "toolkit/ecs/gameplay": {
       "exports": {
-        "documented": 8,
-        "total": 21
+        "documented": 10,
+        "total": 10
       },
       "members": {
-        "documented": 39,
-        "total": 65
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/geometry": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/geometry/generate": {
+      "exports": {
+        "documented": 4,
+        "total": 14
+      },
+      "members": {
+        "documented": 32,
+        "total": 48
       },
       "undocumented": {
         "exports": [
-          "generateAsteroid#AsteroidCraterOptions",
-          "generateAsteroid#AsteroidNoiseOptions",
-          "generateAsteroid#AsteroidOptions",
-          "generateAsteroid#GeneratedAsteroid",
-          "generateFoliage#BushGeometryOptions",
-          "generateFoliage#GeneratedTreeGeometry",
-          "generateFoliage#TreeGeometryOptions",
-          "generateTerrain#GeneratedTerrain",
-          "generateTerrain#TerrainNoiseOctave",
-          "generateTerrain#TerrainOptions",
-          "scatterOnSurface#ScatterOptions",
-          "scatterOnSurface#ScatterPlacement",
-          "scatterOnSurface#SpawnScatterMeshOptions"
+          "Asteroid#AsteroidCraterOptions",
+          "Asteroid#AsteroidNoiseOptions",
+          "Asteroid#AsteroidOptions",
+          "Asteroid#GeneratedAsteroid",
+          "Foliage#BushGeometryOptions",
+          "Foliage#GeneratedTreeGeometry",
+          "Foliage#TreeGeometryOptions",
+          "Terrain#GeneratedTerrain",
+          "Terrain#TerrainNoiseOctave",
+          "Terrain#TerrainOptions"
         ],
         "members": [
-          "generateAsteroid#AsteroidOptions.craters",
-          "generateAsteroid#AsteroidOptions.noise",
-          "generateAsteroid#GeneratedAsteroid.geometry",
-          "generateFoliage#BushGeometryOptions.baseRadius",
-          "generateFoliage#BushGeometryOptions.radiusVariance",
-          "generateFoliage#BushGeometryOptions.seed",
-          "generateFoliage#GeneratedTreeGeometry.geometry",
-          "generateFoliage#TreeGeometryOptions.foliageHeight",
-          "generateFoliage#TreeGeometryOptions.foliageRadius",
-          "generateFoliage#TreeGeometryOptions.trunkHeight",
-          "generateFoliage#TreeGeometryOptions.trunkRadius",
-          "generateTerrain#GeneratedTerrain.depth",
-          "generateTerrain#GeneratedTerrain.depthSegments",
-          "generateTerrain#GeneratedTerrain.geometry",
-          "generateTerrain#GeneratedTerrain.width",
-          "generateTerrain#GeneratedTerrain.widthSegments",
-          "scatterOnSurface#ScatterOptions.count",
-          "scatterOnSurface#ScatterOptions.seed",
-          "scatterOnSurface#ScatterPlacement.position",
-          "scatterOnSurface#ScatterPlacement.quaternion",
-          "scatterOnSurface#ScatterPlacement.scale",
-          "scatterOnSurface#SpawnScatterMeshOptions.castShadow",
-          "scatterOnSurface#SpawnScatterMeshOptions.entityOpts",
-          "scatterOnSurface#SpawnScatterMeshOptions.geo",
-          "scatterOnSurface#SpawnScatterMeshOptions.mat",
-          "scatterOnSurface#SpawnScatterMeshOptions.receiveShadow"
+          "Asteroid#AsteroidOptions.craters",
+          "Asteroid#AsteroidOptions.noise",
+          "Asteroid#GeneratedAsteroid.geometry",
+          "Foliage#BushGeometryOptions.baseRadius",
+          "Foliage#BushGeometryOptions.radiusVariance",
+          "Foliage#BushGeometryOptions.seed",
+          "Foliage#GeneratedTreeGeometry.geometry",
+          "Foliage#TreeGeometryOptions.foliageHeight",
+          "Foliage#TreeGeometryOptions.foliageRadius",
+          "Foliage#TreeGeometryOptions.trunkHeight",
+          "Foliage#TreeGeometryOptions.trunkRadius",
+          "Terrain#GeneratedTerrain.depth",
+          "Terrain#GeneratedTerrain.depthSegments",
+          "Terrain#GeneratedTerrain.geometry",
+          "Terrain#GeneratedTerrain.width",
+          "Terrain#GeneratedTerrain.widthSegments"
+        ]
+      }
+    },
+    "toolkit/geometry/scatter": {
+      "exports": {
+        "documented": 3,
+        "total": 6
+      },
+      "members": {
+        "documented": 7,
+        "total": 17
+      },
+      "undocumented": {
+        "exports": [
+          "ScatterOnSurface#ScatterOptions",
+          "ScatterOnSurface#ScatterPlacement",
+          "ScatterOnSurface#SpawnScatterMeshOptions"
+        ],
+        "members": [
+          "ScatterOnSurface#ScatterOptions.count",
+          "ScatterOnSurface#ScatterOptions.seed",
+          "ScatterOnSurface#ScatterPlacement.position",
+          "ScatterOnSurface#ScatterPlacement.quaternion",
+          "ScatterOnSurface#ScatterPlacement.scale",
+          "ScatterOnSurface#SpawnScatterMeshOptions.castShadow",
+          "ScatterOnSurface#SpawnScatterMeshOptions.entityOpts",
+          "ScatterOnSurface#SpawnScatterMeshOptions.geo",
+          "ScatterOnSurface#SpawnScatterMeshOptions.mat",
+          "ScatterOnSurface#SpawnScatterMeshOptions.receiveShadow"
         ]
       }
     },
     "toolkit/materials": {
       "exports": {
-        "documented": 6,
-        "total": 11
+        "documented": 5,
+        "total": 7
       },
       "members": {
         "documented": 0,
@@ -1552,11 +1582,55 @@
       },
       "undocumented": {
         "exports": [
-          "triplanarCheckerboard.tsl#colorNode",
+          "TriplanarProjection#TriplanarProjection",
+          "TriplanarProjection#TriplanarProjectionOptions"
+        ],
+        "members": []
+      }
+    },
+    "toolkit/materials/asteroid": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/materials/triplanarCheckerboard": {
+      "exports": {
+        "documented": 0,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [
+          "triplanarCheckerboard.tsl#colorNode"
+        ],
+        "members": []
+      }
+    },
+    "toolkit/materials/triplanarGrid": {
+      "exports": {
+        "documented": 0,
+        "total": 2
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [
           "triplanarGrid.tsl#colorNode",
-          "triplanarGrid.tsl#normalNode",
-          "triplanarProjection#TriplanarProjection",
-          "triplanarProjection#TriplanarProjectionOptions"
+          "triplanarGrid.tsl#normalNode"
         ],
         "members": []
       }
