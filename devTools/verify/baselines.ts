@@ -45,6 +45,7 @@ import { parseModuleSource } from '../refactor/importGraph';
 import { getOwnMembers, indexApiModel, isDocumented, Kind } from '../hub/api/model';
 import { out, PROGRESS_LOG_WATCH, setProgressLogEnabled } from './progressLog';
 import { type BuildModule, findDebugCodeInBuild } from './debugInProduction';
+import { isGrowthToFlag } from './bundleGrowth';
 
 /** Bump when that file's shape changes: an old one is then read as missing */
 const BUNDLE_FORMAT_VERSION = 1;
@@ -55,11 +56,6 @@ const DIST_ASSETS_DIR = path.join(ROOT, 'dist/assets');
 const MANIFEST_FILE = path.join(ROOT, 'dist/.vite/manifest.json');
 const VISUALIZER_FILE = path.join(ROOT, 'dist-stats/bundle-stats.html');
 
-/** Gzip growth that needs a look: over 1 % or 2 kB, and never under 100 B */
-const GROWTH_RATIO = 0.01;
-const GROWTH_BYTES = 2048;
-const GROWTH_MIN_BYTES = 100;
-
 const color = (code: string) => (process.env.NO_COLOR ? '' : `\x1b[${code}m`);
 const RED = color('31');
 const GREEN = color('32');
@@ -67,25 +63,25 @@ const YELLOW = color('33');
 const DIM = color('2');
 const RESET = color('0');
 
-type Size = { bytes: number; gzip: number };
-type GroupSize = { modules: number; rendered: number; gzip: number };
-type BundleBaseline = {
+export type Size = { bytes: number; gzip: number };
+export type GroupSize = { modules: number; rendered: number; gzip: number };
+export type BundleBaseline = {
   formatVersion: number;
   chunks: Record<string, Size>;
   main: { chunk: string; modules: number; rendered: number; gzip: number };
   mainGroups: Record<string, GroupSize>;
 };
-type ApiBaseline = {
+export type ApiBaseline = {
   formatVersion: number;
   /** Source path → export name → kind (`Function`, `Class`, … several joined by `, `) */
   modules: Record<string, Record<string, string>>;
   /** Entry (`aekasha/physics`) → the names it exports; missing in a baseline from before p606 */
   entries?: Record<string, string[]>;
 };
-type Coverage = { documented: number; total: number };
-type FolderCoverage = { exports: Coverage; members: Coverage };
-type DocsPart = 'exports' | 'members';
-type FolderDocs = FolderCoverage & {
+export type Coverage = { documented: number; total: number };
+export type FolderCoverage = { exports: Coverage; members: Coverage };
+export type DocsPart = 'exports' | 'members';
+export type FolderDocs = FolderCoverage & {
   /**
    * By the module's file name in the folder: `SceneLoader#LoadSceneProps`, a class or interface
    * member after its owner (`ECS#ECSWorld.addSystem`). A name a module exports twice (a value and
@@ -93,7 +89,7 @@ type FolderDocs = FolderCoverage & {
    */
   undocumented: Record<DocsPart, string[]>;
 };
-type DocsBaseline = {
+export type DocsBaseline = {
   formatVersion: number;
   total: FolderCoverage;
   subtrees: Record<string, FolderCoverage>;
@@ -273,11 +269,6 @@ const reportDebugCode = (bundle: BundleBaseline, modules: BuildModule[]) => {
   if (!findings.length) out(`  ${GREEN}none${RESET}`);
   for (const line of findings) out(`  ${RED}✗ ${line}${RESET}`);
   return findings.length;
-};
-
-const isGrowthToFlag = (before: number, after: number) => {
-  const growth = after - before;
-  return growth >= GROWTH_MIN_BYTES && (growth > GROWTH_BYTES || growth > before * GROWTH_RATIO);
 };
 
 const diffBundle = (before: BundleBaseline, after: BundleBaseline): Finding[] => {
