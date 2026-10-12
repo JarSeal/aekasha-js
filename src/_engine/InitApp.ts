@@ -63,11 +63,12 @@ export type InitEngineOptions = {
    * `yarn gatherAppData` writes. */
   data: AppData;
   /** The features to install, in this order, after the kernel (p607 D1): each once, awaiting
-   * each `install`. The template lists the app's own last (`appECSPlugins`). Each engine feature
-   * comes from its entry (`physics()` from `aekasha/physics`, …); one not listed isn't installed
+   * each `install`. The engine installs nothing else on its own: each engine feature comes from
+   * its entry (`physics()` from `aekasha/physics`, …), and one not listed isn't installed
    * (`createLines` throws without `lines()`, a scene's `postFx` is ignored without `postFx()`).
-   * Default: none. */
-  features?: EngineFeature[];
+   * The template lists all nine and the app's own last (`appECSPlugins`); `[]` is the kernel
+   * alone. */
+  features: EngineFeature[];
   /** The app's start: creates the renderer and the scene loader and loads the first scene. Runs
    * after the engine's own init (and the debug tools' registration), before the main loop starts. */
   start: () => Promise<void>;
@@ -126,7 +127,7 @@ export const InitEngine = (options: InitEngineOptions) =>
   });
 
 /** {@link InitEngine}'s steps, in order. */
-const initEngineAsync = async ({ config, data, features = [], start }: InitEngineOptions) => {
+const initEngineAsync = async ({ config, data, features, start }: InitEngineOptions) => {
   // The environment first (env vars, URL params): every IS_* flag reads as production before
   // it. Then the configuration, which reads the debug flag for its LS overrides, and the data
   initEnvironment();

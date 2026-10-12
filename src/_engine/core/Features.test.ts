@@ -19,6 +19,12 @@ const feature = (id: string, requires?: string[]): EngineFeature => ({
 });
 
 describe('checkFeatures', () => {
+  test('names `features` when an app leaves it out', () => {
+    expect(() => checkFeatures(undefined as unknown as EngineFeature[])).toThrow(
+      'InitEngine: `features` is required'
+    );
+  });
+
   test('passes a list whose requires are listed earlier', () => {
     expect(() =>
       checkFeatures([feature('physics'), feature('character', ['physics']), feature('app')])

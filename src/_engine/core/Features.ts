@@ -141,11 +141,18 @@ export const createFeatureHost = (config: AppConfig): FeatureHost => {
 };
 
 /**
- * Throws on a list `InitEngine` can't install: an id listed twice, or a `requires` id that isn't
- * listed before the feature needing it. Checks the whole list before anything installs.
+ * Throws on a list `InitEngine` can't install: none given (an app from before `features`), an id
+ * listed twice, or a `requires` id that isn't listed before the feature needing it. Checks the
+ * whole list before anything installs.
  * @internal
  */
 export const checkFeatures = (features: readonly EngineFeature[]) => {
+  // Typed as required, but a JS app or one from before p607 can still leave it out
+  if (!Array.isArray(features)) {
+    throw new Error(
+      "InitEngine: `features` is required: list the features to install, eg. `[physics(), skyBox()]` (each from its entry, 'aekasha/physics', …), or `[]` for the kernel alone."
+    );
+  }
   const ids = features.map((feature) => feature.id);
   features.forEach((feature, index) => {
     if (ids.indexOf(feature.id) !== index) {

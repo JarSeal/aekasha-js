@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-6 implemented
+Status: in progress | Phases 1-7 implemented
 Category: Build, Performance, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
 Blocks: p608_engine-folder-restructure.md, p611_sbp-tooling-profiles-and-marketing.md, p510_headless-simulation-runtime.md
@@ -823,7 +823,7 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
   `core/ECS` 6.7 → 7.3 kB gzip, `core/Spatial` 7.6 → 7.4 kB), `docs.json`. The production debug
   check: none.
 
-### Phase 7: lines, PostFX, viewports, import; `features` required
+### Phase 7: lines, PostFX, viewports, import; `features` required — done
 
 1. `lines()` (D3), `postFx()` (`setRenderPipeline`; `Snapshot.ts` reads the seam), `viewports()`
    (`addAfterRender`).
@@ -949,6 +949,23 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
   the four `isDebugScene` scenes a build leaves out (as in Phase 5). `yarn test` 244 passed, lint,
   `tsc`, the docs ratchet, `yarn hub:build` (in `build:test`), `moveMap.ts --check`. `api.json`
   and `docs.json` recorded.
+
+**As built (section 3):**
+
+- `InitEngineOptions.features` is required (no default); its JSDoc says the engine installs
+  nothing else and `[]` is the kernel alone. `checkFeatures` throws a clear error when an app
+  leaves it out anyway (JS, or an app from before p607), tested in `Features.test.ts`.
+- The side effects allow-list (`NOT_YET_INSTALLED`) stays empty. Step 4 was done in section 2.
+- **For Phase 10**, besides its list: `readme.md`'s "Boot the engine" example and the migration
+  guide's `src/index.ts` diff have no `features` (they don't compile against the required option
+  now); the quick start includes the real `src/index.ts`, only its prose lacks `features`. Root
+  `CLAUDE.md`: the Bootstrap flow (the Line manager and `initPostFX` are gone, the features
+  install after the debug camera), the `yarn test` line's "p607 shrinks its allow-list to none",
+  and `devTools/verify/CLAUDE.md`'s `NOT_YET_INSTALLED` sentence; the layout report's new
+  "Assets worker job modules" section (`devTools/refactor/`).
+- Checks: `yarn verify:scenes` 96 passed (hashes, snapshots, system order). `yarn test` 245
+  passed, lint, `tsc` (both projects), the docs ratchet; `yarn verify:baselines` unchanged, the
+  production debug check: none.
 
 ### Phase 8: the SBP packaging
 
