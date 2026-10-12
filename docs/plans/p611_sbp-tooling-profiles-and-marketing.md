@@ -1,8 +1,9 @@
 Status: stub — not-implemented
 Category: Build, Dev tooling, Marketing
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
-Blocked by: p607_sbp-foundation-feature-modules.md, p608_engine-folder-restructure.md
+Blocked by: p608_engine-folder-restructure.md
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
+Related: \_DONE_p607_sbp-foundation-feature-modules.md (the main chunk measured, the manifest, `sideEffects`: "From p607" below)
 
 # SBP Tooling, Profiles and Marketing — Stub
 

@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-10 implemented
+Status: implemented (Phases 1-11)
 Category: Build, Performance, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
 Blocks: p608_engine-folder-restructure.md, p611_sbp-tooling-profiles-and-marketing.md, p510_headless-simulation-runtime.md
@@ -1284,12 +1284,39 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
   stays; `{@link LodTarget}` at `LodSystem.ts:989` links nowhere, from Phase 6's move, left for
   p616), the CLAUDE.md coverage check, `moveMap.ts --check`, Prettier on the edited files.
 
-### Phase 11: changelog and mark done
+### Phase 11: changelog and mark done — done
 
 `CHANGELOG.md`'s `stage-b` entry gains this plan (Engine, Toolkit if touched, App, Project) with
 the main chunk's before / after from `bundle.json`; no new version bump (D5 of p606: the majors
 are `stage-b`'s); `yarn checkVersions --against main`; mark the plan done. Then the PR into
 `stage-b`, and `stage-b`'s PR into `main`.
+
+**As built** (section 1: the changelog; section 2: the version check and marking the plan done):
+
+- **`CHANGELOG.md`'s `## 2026-10-11 — stage-b`** gains this plan in all four parts. The main chunk's
+  before / after is `bundle.json` at `996d9b4` (p606's end) against Phase 10's: `index.js` 1251.3 →
+  377.2 kB gzip (3778 → 1396 kB minified), 222 → 151 modules, the modules' gzip sum 1738.4 → 817.7
+  kB, with the groups that changed; `dist/`'s JavaScript 2703 → 1629 kB gzip, one Rapier chunk, no
+  `_dbg__` chunk (57 before) and no `tweakpane.js`. The baseline tool's `kB` is 1024 bytes, and so
+  are the entry's.
+- **p606's lines the merged entry would contradict are rewritten, not added to:** `InitEngine`'s
+  signature and `import './AppECSPlugins'` (Engine and App), "The bundle is the same size" (now the
+  before / after, keeping p606's moved groups), the entries' side-effect line and the Project
+  aliases bullet (`treeshake.moduleSideEffects` → `package.json`'s `sideEffects`, a bullet of its
+  own), and the Hub's search index (1.01 → 1.07 MB).
+- **Toolkit:** its only change is `registerFollowObjectCameraRigSystem`'s JSDoc; the entry adds that
+  and the TSL materials becoming lazy chunks (the gatherer's doing). The date stays: it becomes
+  `stage-b`'s merge's (p600's table).
+- No version bump (p606 D5); `yarn checkVersions --against main` passes (Engine 5.0.0, Toolkit
+  2.0.0, App 1.10.0).
+- **Marked done** as p606 was: `p600` (`Blocks` and the Stage B table) and `_DONE_p606` (`Blocks`)
+  renamed; the `Blocked by` on p608, p611 and p510 dropped, with a `Related` line each instead; p612
+  gets one too (it has a "From p607" section). No `CLAUDE.md`, Hub page or `devTools/` file names the
+  file. Root `CLAUDE.md`, the nested ones and `readme.md` were Phase 10's.
+- **§6 holds:** no Rapier in the main chunk (Phase 2), the allow-list empty (Phase 6, kept by Phase
+  7), no debug code in the production build (Phase 3's check, none since), the runner passing in all
+  three targets with the system order recorded (every phase; the one change, Phase 6's
+  `instancedMeshPoolSync`, re-recorded), "Kernel → feature" with no runtime or dynamic rows (Phase 7).
 
 ## 6. Done when
 

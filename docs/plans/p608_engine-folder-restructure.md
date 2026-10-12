@@ -1,9 +1,9 @@
 Status: stub — not-implemented
 Category: Refactoring, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
-Blocked by: p607_sbp-foundation-feature-modules.md, p299_texture-arrays-and-atlases.md (in progress: merged before the move)
+Blocked by: p299_texture-arrays-and-atlases.md (in progress: merged before the move)
 Blocks: p609_toolkit-and-app-restructure.md, p610_character-and-input-action-architecture.md, p611_sbp-tooling-profiles-and-marketing.md, p612_review-ecs-loop-config-init.md, p613_review-rendering-scene-assets.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p510_headless-simulation-runtime.md
-Related: \_DONE_p606_layering-inversion-and-public-entry.md (the entries this plan re-points, `moveRules.ts`, the import codemod)
+Related: \_DONE_p607_sbp-foundation-feature-modules.md (the features, the seams and what they leave for the moves: "From p607" below), \_DONE_p606_layering-inversion-and-public-entry.md (the entries this plan re-points, `moveRules.ts`, the import codemod)
 
 # Engine Folder Restructure — Stub
 
