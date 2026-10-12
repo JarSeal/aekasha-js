@@ -1,4 +1,3 @@
-import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
@@ -16,14 +15,14 @@ import { buildPathMap } from './moveApply';
 const ROOT = path.resolve(__dirname, '../..');
 const E = 'src/_engine/';
 
-/** The committed baselines and today's p608 map */
+/**
+ * The committed baselines and the p608 map, on the tree the map was made from (its own files: the
+ * test holds in the move's dry run too, where the working tree has moved)
+ */
 const setup = () => {
-  const files = execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf-8' })
-    .trim()
-    .split('\n');
   const read = (file: string) => JSON.parse(fs.readFileSync(path.join(ROOT, file), 'utf-8'));
   const moveMap = read('devTools/refactor/moveMap.json').files;
-  const map = buildPathMap({ files, moveMap, plan: 'p608' });
+  const map = buildPathMap({ files: Object.keys(moveMap), moveMap, plan: 'p608' });
   const dir = 'devTools/verify/baselines';
   const before: Baselines = {
     api: read(`${dir}/api.json`),

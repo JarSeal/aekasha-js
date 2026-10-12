@@ -3,7 +3,7 @@
  * Applies the move map (p608 §4, the codemod's command):
  *
  *   npx tsx devTools/refactor/applyMoveMap.ts --plan p608                  # apply to the working tree
- *   npx tsx devTools/refactor/applyMoveMap.ts --plan p608 --dry-run        # in a scratch worktree, then tsc, tests, lint
+ *   npx tsx devTools/refactor/applyMoveMap.ts --plan p608 --dry-run        # in a scratch worktree, then the checks and the build
  *   npx tsx devTools/refactor/applyMoveMap.ts --verify-commit <sha>        # is <sha> exactly the tool's output on its parent?
  *   npx tsx devTools/refactor/applyMoveMap.ts --plan p608 --leftovers <base-sha>  # old paths still named, by <base-sha>'s map
  *
@@ -17,9 +17,13 @@
  *   path can wrap a line), and every created one: no other formatting. The report lists the ones
  *   it left alone.
  * - **`--dry-run`:** the working tree as it is (uncommitted and untracked files included, through
- *   a temporary index) checked out in `.cache/refactor/worktree/` with a `node_modules` symlink;
- *   the tool's own copy there applies the plan, then `tsc`, `tsc -p hub`, `yarn test` and
- *   `yarn lint` run in it. The worktree is removed after (`--keep-worktree` keeps it).
+ *   a temporary index) checked out in a scratch worktree with a `node_modules` symlink; the
+ *   tool's own copy there applies the plan, then `tsc`, `tsc -p hub`, `yarn test`, `yarn lint`
+ *   and `yarn build` (the Vite build: the stylesheets' loads and the `?worker` / `?raw` / `?url`
+ *   imports; the Hub: its `api:` and `hub:` links) run in it. The worktree is removed after
+ *   (`--keep-worktree` keeps it). The scratch worktrees are outside the repo, in the system's
+ *   temporary folder: inside it, TypeDoc names the sources from the repo's root
+ *   (`.cache/…/src/_engine/…`) and the Hub's API model finds no module.
  * - **`--verify-commit <sha>`:** reruns the tool on `<sha>`'s parent in a scratch worktree and
  *   compares the trees; the plan comes from the commit message (`applyMoveMap.ts --plan p608`)
  *   unless `--plan` names it.
@@ -28,6 +32,7 @@
  */
 import { execFileSync, spawnSync } from 'child_process';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import prettier from 'prettier';
 import { ROOT } from '../assetPipeline/sources';
@@ -365,7 +370,7 @@ const apply = async (plan: MovePlan) => {
 // Scratch worktrees
 
 const createWorktree = (name: string, commit: string) => {
-  const dir = path.join(ROOT, CACHE_DIR, name);
+  const dir = path.join(os.tmpdir(), 'aekasha-applyMoveMap', name);
   removeWorktree(dir);
   git(ROOT, ['worktree', 'add', '--detach', '--quiet', dir, commit]);
   fs.symlinkSync(path.join(ROOT, 'node_modules'), path.join(dir, 'node_modules'));
@@ -400,7 +405,7 @@ const snapshotWorkingTree = () => {
 const dryRun = (plan: MovePlan, keep: boolean) => {
   const snapshot = snapshotWorkingTree();
   const dir = createWorktree('worktree', snapshot);
-  console.log(`Dry run in ${path.relative(ROOT, dir)} (${snapshot.slice(0, 7)})`);
+  console.log(`Dry run in ${dir} (${snapshot.slice(0, 7)})`);
   const steps: [string, ReturnType<typeof run>][] = [];
   try {
     const applied = run(dir, 'npx', ['tsx', TOOL, '--plan', plan]);
@@ -414,6 +419,7 @@ const dryRun = (plan: MovePlan, keep: boolean) => {
       steps.push(['tsc -p hub', run(dir, 'npx', ['tsc', '-p', 'hub'])]);
       steps.push(['yarn test', run(dir, 'yarn', ['test'])]);
       steps.push(['yarn lint', run(dir, 'yarn', ['lint'])]);
+      steps.push(['yarn build', run(dir, 'yarn', ['build'])]);
     }
   } finally {
     if (keep) console.log(`\nKept the worktree: ${dir}`);

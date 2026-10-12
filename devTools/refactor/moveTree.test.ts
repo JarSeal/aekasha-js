@@ -108,41 +108,54 @@ describe("today's tree", () => {
       const bytes = fs.readFileSync(full);
       if (!bytes.includes(0)) texts.set(file, bytes.toString('utf-8'));
     }
-    const moveMap = JSON.parse(texts.get('devTools/refactor/moveMap.json') as string).files;
-    return { map: buildPathMap({ files, moveMap, plan: 'p608' }), texts };
+    const moveMap: Record<string, MoveEntry> = JSON.parse(
+      texts.get('devTools/refactor/moveMap.json') as string
+    ).files;
+    // The move commit itself: the map's p608 moves are done, its rules not yet the new layout's
+    // (p608 Phase 5, step 3, which makes this test apply p609's plan)
+    const tracked = new Set(files);
+    const isMoved = Object.entries(moveMap).some(
+      ([from, entry]) => entry.plan === 'p608' && entry.action === 'move' && !tracked.has(from)
+    );
+    return { map: buildPathMap({ files, moveMap, plan: 'p608' }), texts, isMoved };
   };
+  const tree = readTree();
 
-  it('rewrites without an error, the edit table included, and lands every split export', () => {
-    const { map, texts } = readTree();
-    expect(map.errors).toEqual([]);
-    const { changed, created, errors } = rewriteTree(map, texts, MOVE_EDITS);
-    expect(errors).toEqual([]);
+  it.skipIf(tree.isMoved)(
+    'rewrites without an error, the edit table included, and lands every split export',
+    () => {
+      const { map, texts } = tree;
+      expect(map.errors).toEqual([]);
+      const { changed, created, errors } = rewriteTree(map, texts, MOVE_EDITS);
+      expect(errors).toEqual([]);
 
-    // A target is a new module, or a moved file's text (with the parts, or its own: `isOnlyObject3D`)
-    const textOf = (target: string) => {
-      const owner = map.oldPathOf(target) as string;
-      return created.get(target) ?? changed.get(owner) ?? (texts.get(owner) as string);
-    };
-    expect(map.splits.size).toBe(2);
-    const missing: string[] = [];
-    for (const [source, split] of map.splits) {
-      for (const [name, target] of Object.entries(split)) {
-        const { exports } = parseModuleSource(target, textOf(target));
-        if (!exports.local.includes(name) && !exports.named[name]) {
-          missing.push(`${source}: ${name} isn't exported by ${target}`);
+      // A target is a new module, or a moved file's text (with the parts, or its own: `isOnlyObject3D`)
+      const textOf = (target: string) => {
+        const owner = map.oldPathOf(target) as string;
+        return created.get(target) ?? changed.get(owner) ?? (texts.get(owner) as string);
+      };
+      expect(map.splits.size).toBe(2);
+      const missing: string[] = [];
+      for (const [source, split] of map.splits) {
+        for (const [name, target] of Object.entries(split)) {
+          const { exports } = parseModuleSource(target, textOf(target));
+          if (!exports.local.includes(name) && !exports.named[name]) {
+            missing.push(`${source}: ${name} isn't exported by ${target}`);
+          }
         }
       }
-    }
-    expect(missing).toEqual([]);
+      expect(missing).toEqual([]);
 
-    const unresolved: string[] = [];
-    for (const [target, text] of created) {
-      for (const { specifier } of parseModuleSource(target, text).imports) {
-        if (!specifier.startsWith('.')) continue;
-        const found = resolveSpecifier(target, specifier, { exists: (f) => map.newFiles.has(f) });
-        if (!found) unresolved.push(`${target}: '${specifier}'`);
+      const unresolved: string[] = [];
+      for (const [target, text] of created) {
+        for (const { specifier } of parseModuleSource(target, text).imports) {
+          if (!specifier.startsWith('.')) continue;
+          const found = resolveSpecifier(target, specifier, { exists: (f) => map.newFiles.has(f) });
+          if (!found) unresolved.push(`${target}: '${specifier}'`);
+        }
       }
-    }
-    expect(unresolved).toEqual([]);
-  }, 30_000); // the whole tree: about 2 s alone, much more next to a dry run or a build
+      expect(unresolved).toEqual([]);
+    },
+    30_000 // the whole tree: about 2 s alone, much more next to a dry run or a build
+  );
 });

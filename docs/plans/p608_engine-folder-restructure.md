@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: in progress | Phases 1-4 implemented
 Category: Refactoring, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p609_toolkit-and-app-restructure.md, p610_character-and-input-action-architecture.md, p611_sbp-tooling-profiles-and-marketing.md, p612_review-ecs-loop-config-init.md, p613_review-rendering-scene-assets.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p510_headless-simulation-runtime.md
@@ -646,7 +646,7 @@ As built:
 - **Verification:** `yarn test` 298 tests in 29 files, `yarn lint` clean, `tsc` and `tsc -p hub`,
   `moveMap.ts --check`.
 
-### Phase 4: the command, the dry run and the baseline comparison
+### Phase 4: the command, the dry run and the baseline comparison — done
 
 1. `applyMoveMap.ts` (§4.2, §4.5): the preconditions, `git mv` through a temporary name, the
    deletes and splits, the writes (`rewriteTree(map, texts, MOVE_EDITS)`: `changed` at each file's
@@ -665,6 +665,68 @@ As built:
    Phase 6 or history.
 4. **Verification:** `yarn test`, `yarn lint`, the dry run clean.
 
+As built:
+
+- **`applyMoveMap.ts` (500 lines):** `--plan <plan>` applies; `--dry-run [--keep-worktree]`;
+  `--verify-commit <sha> [--plan <plan>]` (the plan read from the commit message's
+  `applyMoveMap.ts --plan pNNN` otherwise); **`--leftovers` needs `--plan`**
+  (`--plan p608 --leftovers <base-sha>`): the map at the move's base still lists p609's moves,
+  which aren't done.
+  - **Preconditions** besides §4.2's: a target taken by a file git doesn't track (an ignored one),
+    and a folder whose name changes only by case (none today: `git mv` through a temporary name
+    renames files, not folders) are errors.
+  - **Prettier** formats a written file only when its text before the move was Prettier-clean, and
+    every created one ("no other formatting"): two documents aren't
+    (`docs/issues/three-instanced-node-attribute-leak.md`,
+    `hub/pages/documentation/coding-standards/jsdoc.md`); the report lists them.
+  - **The split files** are `git rm`'d before any part is written, so `utils/constants.ts` →
+    `utils/Constants.ts` needs no temporary name (macOS sees a removed file, then a new one).
+  - **The report** (`.cache/refactor/<plan>-report.md`): the counts, errors, leftovers, the files
+    not formatted, then every move, delete, split target, changed and created file. The console
+    prints the counts, the leftovers and the errors, and the commit command naming the base.
+  - **`--dry-run`** snapshots the working tree as a commit (uncommitted and untracked files, through
+    a temporary index: the real index isn't touched; a new file needs `git add -N` before
+    `moveMap.ts --check` counts it), checks it out in a scratch worktree, runs **the worktree's own
+    copy** of the tool (the exact command, its precondition included), then `tsc`, `tsc -p hub`,
+    `yarn test`, `yarn lint` **and `yarn build`** (added: the only check of the Vite build's
+    stylesheet loads and `?worker` / `?raw` / `?url` imports, and of the Hub's `api:` and `hub:`
+    links after D7's rewrite). Its report is copied to `.cache/refactor/<plan>-dry-run-report.md`.
+  - **The scratch worktrees are outside the repo** (`os.tmpdir()/aekasha-applyMoveMap/`), not in
+    `.cache/refactor/`: inside the repo TypeDoc names the sources from the main repo's root
+    (`.cache/refactor/worktree/src/_engine/…`), the Hub's API model finds no module, and the Hub
+    build fails on every `api:` link. With the `node_modules` symlink resolving outside the
+    worktree, the Hub also warns about 57 `{@link}`s in `@types/three`: an artifact of the
+    worktree, not of the move.
+  - **The apply** takes about 30 s (the `git mv`s: two per move).
+- **`compareBaselines.ts`** (`--plan <plan> <base-sha>`, pure functions tested, the command run
+  only as the main module): `api.json` mapped per export (a re-export a split target declares is
+  dropped, a deleted module's exports go; a module that exports nothing is compared by its path),
+  `entries` identical. **`docs.json`'s totals can't stay equal:** the two deleted
+  `utils/materials/` modules are in the baselines (4 undocumented exports), so the expected totals
+  are the old ones less what the deletes counted (a deleted class or interface would be an error:
+  its members can't be counted). Chunks: a name after a renamed module takes its new name (on
+  today's map exactly §2.4's five names, seven chunks); chunks of one name are paired by size,
+  since their `#2` order follows the content hash. A chunk outside the tolerance names the split
+  parts the last build (`dist-stats/`) put in it. The tolerance rule moved to
+  `devTools/verify/bundleGrowth.ts` (`baselines.ts` runs on import); `baselines.ts` exports its
+  baseline types.
+- **The tests hold on the moved tree too:** `compareBaselines.test.ts` builds the map on its own
+  files (not the working tree's); `moveTree.test.ts`' test on today's tree skips once the map's p608
+  moves are done (the move commit, before step 3 of Phase 5); its timeout is 30 s (about 2 s alone,
+  over 5 s next to a dry run).
+- **Dry run fixes:** `debugInProduction.test.ts`' `core/Debug/` case named a real file
+  (`About.module.scss`), whose expectation the text rewrite changed but not its input (after a
+  `/`, no path boundary): it names a file that doesn't exist (`Panel.module.scss`), as its
+  `_dbg__Profiler.ts` case does, so no edit table entry (one keeping the text would stay a leftover
+  for good). `layoutReport.md` regenerated (the new modules).
+- **The clean dry run:** 398 moves (23 case-only), 3 deletes, 2 splits into 9 new modules, 337 texts
+  changed, 35 emptied folders removed; apply, `tsc`, `tsc -p hub`, `yarn test` (304 passed, 1
+  skipped), `yarn lint` and `yarn build` pass. The Hub's warnings are today's (the search index
+  1.07 → 1.08 MB, longer URLs) plus the worktree's `@types/three` ones. 10 leftovers, all Phase 6's
+  (Phase 3's list).
+- **Verification:** `yarn test` 305 tests in 30 files, `yarn lint` clean, `tsc` and `tsc -p hub`,
+  `moveMap.ts --check`.
+
 ### Phase 5: the move
 
 1. **A fresh base:** if `main` has moved since the branch's base, rebase group 1 onto it, run
@@ -675,7 +737,8 @@ As built:
    `applyMoveMap.ts --plan p608` on `<sha>`). `applyMoveMap.ts --verify-commit HEAD` passes.
 3. **The rules for the new layout** (D9), its own commit: `MOVE_EDITS`' p608 entries go (their
    `find`s are gone) and `moveTree.test.ts`' test on today's tree applies the p609 plan (or goes to
-   p609), `moveRules.ts`' p608 rules become keep rules for the new folders, `moveMap.ts` regenerates (every engine file a keep; the p609 entries
+   p609; it skips on the move commit), `compareBaselines.test.ts` reads the map of the move's base
+   (after D9 the current map has no p608 move: its expectations would fail), `moveRules.ts`' p608 rules become keep rules for the new folders, `moveMap.ts` regenerates (every engine file a keep; the p609 entries
    unchanged), and the layout report shows the same boundary violations as before the move, by
    their new paths (23 kernel → feature type-only, 2 ui → kernel, 1 schemas → kernel), and the same
    two assets worker job imports (`moveMap.ts` allows them from `kernel/assets/worker/`).
@@ -686,7 +749,8 @@ As built:
      no new error, the same hashes, the snapshots within tolerance and **the same system order**
      (a `_dbg__` module that another imports statically registers at its first importer's load,
      p607: a moved import order there would show here).
-   - `yarn verify:baselines --update --allow-docs-drop`, then `compareBaselines.ts <base sha>`
+   - `yarn verify:baselines --update --allow-docs-drop`, then
+     `compareBaselines.ts --plan p608 <base sha>`
      (§4.7). Commit the three baselines only when it passes ("the baselines by their new paths").
    - By hand: `yarn dev` with `?isDebug=true` (the drawer, a few debug tabs from different
      features, the profiler window, the material editor view: their `import()`s and SCSS moved)
@@ -698,7 +762,7 @@ As built:
 
 ### Phase 6: the Hub, CLAUDE.md and the readme
 
-The list is `applyMoveMap.ts --leftovers <base sha>`: the old paths still named anywhere outside
+The list is `applyMoveMap.ts --plan p608 --leftovers <base sha>`: the old paths still named anywhere outside
 D6's history, read from the map at the move's base (after D9 the current map only has the new
 layout). Each item is fixed by hand, and the report reruns to empty.
 

@@ -55,7 +55,7 @@ describe('findDebugCodeInBuild', () => {
       findDebugCodeInBuild(
         [MAIN],
         [
-          { id: '/src/_engine/core/Debug/About.module.scss', chunks: { [MAIN]: 10 } },
+          { id: '/src/_engine/core/Debug/Panel.module.scss', chunks: { [MAIN]: 10 } },
           { id: '/src/_engine/debug/Profiler.ts', chunks: { [MAIN]: 459 } },
           { id: '/src/_engine/debug/symbols/3DSymbols.ts', chunks: { [MAIN]: 8 } },
           { id: '/src/_engine/kernel/ecs/debug/ECSStressTest.ts', chunks: { [MAIN]: 6 } },
@@ -63,7 +63,7 @@ describe('findDebugCodeInBuild', () => {
         ]
       )
     ).toEqual([
-      'debug module src/_engine/core/Debug/About.module.scss in assets/index.js',
+      'debug module src/_engine/core/Debug/Panel.module.scss in assets/index.js',
       'debug module src/_engine/debug/Profiler.ts in assets/index.js',
       'debug module src/_engine/debug/symbols/3DSymbols.ts in assets/index.js',
       'debug module src/_engine/features/lod/debug/LodHelpers.ts in assets/index.js',
