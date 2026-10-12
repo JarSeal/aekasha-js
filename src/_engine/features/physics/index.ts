@@ -39,3 +39,4 @@ export { createPhysicsEntity, getPhysicsEntityByAppId } from '../../core/Physics
 export type { PhysicsEntityOpts } from '../../core/PhysicsManager';
 export { setPhysicsTierPolicy, setPhysicsTierPolicyMember } from '../../core/PhysicsTierPolicy';
 export { getPhysicsTier, requestPhysicsTier } from '../../core/PhysicsTiers';
+export { physics } from '../../core/PhysicsFeature';

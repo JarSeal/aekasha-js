@@ -63,6 +63,11 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/Character/CharacterFeature.ts": {
+      "to": "src/_engine/features/character/CharacterFeature.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/core/Character/CharacterInputSchemes.ts": {
       "to": "src/_engine/features/character/CharacterInputSchemes.ts",
       "action": "move",
@@ -1099,6 +1104,11 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/PhysicsFeature.ts": {
+      "to": "src/_engine/features/physics/PhysicsFeature.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/core/PhysicsManager.ts": {
       "to": "src/_engine/features/physics/PhysicsEntity.ts",
       "action": "move",
@@ -1150,6 +1160,17 @@
       "to": "src/_engine/kernel/scene/Scene.ts",
       "action": "move",
       "plan": "p608"
+    },
+    "src/_engine/core/SceneHooks.test.ts": {
+      "to": "src/_engine/kernel/scene/SceneHooks.test.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/SceneHooks.ts": {
+      "to": "src/_engine/kernel/scene/SceneHooks.ts",
+      "action": "move",
+      "plan": "p608",
+      "note": "the scene seams (p607 D4): the features' part of a scene load"
     },
     "src/_engine/core/SceneLoader.ts": {
       "to": "src/_engine/kernel/scene/SceneLoader.ts",

@@ -1,5 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { createRenderer, InitEngine, createSceneLoader, loadScene, IS_DEBUG_ENV } from 'aekasha';
+import { character } from 'aekasha/character';
+import { physics } from 'aekasha/physics';
 import { CMP } from 'aekasha/ui';
 import config from './CONFIG';
 import { appData } from './generated';
@@ -8,8 +10,8 @@ import { appECSPlugins } from './AppECSPlugins';
 InitEngine({
   config,
   data: appData,
-  // Installed in this order, after the engine's own (the app's last)
-  features: [appECSPlugins],
+  // Installed in this order, after the engine's kernel (the app's last)
+  features: [physics(), character(), appECSPlugins],
   start: async () => {
     // Init renderer
     // #region create-renderer (shown in the Hub: hub/pages/features/rendering/)

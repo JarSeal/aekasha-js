@@ -15,3 +15,4 @@ export type {
 } from '../../core/Character/CharacterTypes';
 export { createDynamicCharacter } from '../../core/Character/DynamicCharacter';
 export type { DynamicCharacter, DynamicCharacterOpts } from '../../core/Character/DynamicCharacter';
+export { character } from '../../core/Character/CharacterFeature';

@@ -4,15 +4,15 @@
   "summary": {
     "aekasha": {
       "public": 120,
-      "crossEntry": 124,
-      "internal": 213,
+      "crossEntry": 126,
+      "internal": 211,
       "unreferenced": 190
     },
     "aekasha/character": {
       "public": 7,
-      "crossEntry": 3,
-      "internal": 25,
-      "unreferenced": 18
+      "crossEntry": 1,
+      "internal": 28,
+      "unreferenced": 17
     },
     "aekasha/debug": {
       "public": 39,
@@ -40,9 +40,9 @@
     },
     "aekasha/physics": {
       "public": 22,
-      "crossEntry": 31,
-      "internal": 208,
-      "unreferenced": 84
+      "crossEntry": 25,
+      "internal": 222,
+      "unreferenced": 76
     },
     "aekasha/postfx": {
       "public": 5,
@@ -1665,7 +1665,10 @@
         },
         "TransformResetListener": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/physics"
+          ]
         },
         "WorldPlugin": {
           "kind": "TypeAlias",
@@ -1970,12 +1973,18 @@
           "kind": "TypeAlias",
           "usage": "public",
           "by": [
+            "aekasha/character",
+            "aekasha/physics",
             "app"
           ]
         },
         "FeatureContext": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/character",
+            "aekasha/physics"
+          ]
         },
         "FeatureDebugHook": {
           "kind": "TypeAlias",
@@ -3848,14 +3857,11 @@
         },
         "createCharactersDebuggerGUI": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "deleteAllCharacters": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "deleteCharacter": {
           "kind": "Function",
@@ -3892,10 +3898,7 @@
         },
         "registerCharacterTools": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "registerOnDeleteCharacter": {
           "kind": "Function",
@@ -6626,17 +6629,11 @@
         },
         "createPhysicsAPIDebugGUI": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "createPhysicsWorld": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "createRigidBodies": {
           "kind": "Function",
@@ -6727,7 +6724,7 @@
         },
         "flushPhysicsEvents": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "forEachJointBodyPair": {
           "kind": "Function",
@@ -6878,14 +6875,11 @@
         },
         "holdPhysicsStepping": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "initPhysics": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "isPhysicsRayStatsEnabled": {
           "kind": "Function",
@@ -6916,7 +6910,7 @@
         },
         "latchPhysicsSnapshot": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "PhysicsCapacityError": {
           "kind": "Class",
@@ -6951,22 +6945,19 @@
         },
         "registerPhysicsAPIDebugGUI": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "releasePhysicsStepping": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "resetPhysicsRayStats": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "resetPhysicsWorld": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "restorePhysicsSnapshot": {
           "kind": "Function",
@@ -7012,7 +7003,7 @@
         },
         "stepPhysics": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "takePhysicsSnapshot": {
           "kind": "Function",
@@ -7756,7 +7747,7 @@
         },
         "deleteAllPhysicsEntities": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "deriveColliderDimensionsFromMesh": {
           "kind": "Function",
@@ -7804,17 +7795,11 @@
         },
         "registerPhysicsDeterminismProbe": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "registerPhysicsManager": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "unreferenced"
         },
         "resetPhysicsInterpolationHistory": {
           "kind": "Function",
@@ -7829,7 +7814,7 @@
         },
         "settlePendingPhysicsEntities": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         }
       },
       "src/_engine/features/physics/PhysicsStepStatsBuffer.ts": {

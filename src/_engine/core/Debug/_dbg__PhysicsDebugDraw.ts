@@ -45,7 +45,7 @@ import { markDebugHelper } from '../../debug/Profiler';
  * survives independently of the others. `setWireframeMasterVisible` layers a scene-level
  * show/hide filter on top of that (bound to the on-screen tools bottom bar), but it only
  * flips `.visible` on what's already built and never touches the per-entity component or
- * its persisted state. Dynamically imported (see PhysicsManager.registerPhysicsManager),
+ * its persisted state. Dynamically imported (see PhysicsManager.registerPhysicsWireframeDebugAsync),
  * so none of this reaches production.
  */
 
@@ -391,7 +391,7 @@ export const setWireframeMasterVisible = (visible: boolean) => {
 export const toggleWireframeMasterVisible = () => setWireframeMasterVisible(!masterVisible);
 
 /** Restores the master filter for the scene being entered. Called on every scene
- * entering (PhysicsManager.registerPhysicsManager) so switching scenes doesn't carry a
+ * entering (PhysicsManager.registerPhysicsWireframeDebugAsync) so switching scenes doesn't carry a
  * previous scene's filter state along. */
 export const syncWireframeMasterVisibilityFromLS = (sceneId: string) => {
   masterVisible = readMasterVisibilityLS()[sceneId] !== false;
@@ -998,78 +998,92 @@ const physicsWireframeSystem = () => {
 // Registration
 // ----------------------------------------------------------------------------
 
-ECSWorld.registerComponentHooks(ComponentType.DEBUG_PHYSICS_WIREFRAME, {
-  onAddComponent: (entityId, world) => {
-    // The component may declare color overrides inline; fold them into the module map,
-    // which is what colorFor reads and what survives the wireframe being toggled off.
-    const declared = world.getComponent(
-      entityId,
-      ComponentType.DEBUG_PHYSICS_WIREFRAME
-    )?.colorOverrides;
-    if (declared && Object.keys(declared).length) {
-      entityColorOverrides.set(entityId, {
-        ...entityColorOverrides.get(entityId),
-        ...declared,
-      });
-    }
-    // Fire-and-forget: the build needs RPC in worker mode, and hooks are synchronous.
-    buildEntityWireframes(entityId, world).catch((err) =>
-      lwarn(`Physics debug wireframe: failed to build for entity ${entityId}.`, err)
-    );
-  },
-  onRemoveComponent: (entityId) => disposeEntityWireframes(entityId),
-  onDeleteEntity: (entityId) => {
-    disposeEntityWireframes(entityId);
-    entityColorOverrides.delete(entityId);
-  },
-});
+let areWireframesInstalled = false;
 
-// Restores persisted per-entity settings as physics entities appear. Hooked on COLLIDER
-// rather than TAG_IS_PHYSICS_OBJECT because the tag is added first, before there is
-// anything to draw; the microtask defers past the rest of createPhysicsEntity's
-// synchronous tail so the rigid-body bucket component is in place too.
-// The REMOVED physics tier (p352) takes COLLIDER away while the colliders are out of the world
-// (the lines would read a body that isn't there), and puts it back with them: a shown
-// wireframe is built again then.
-ECSWorld.registerComponentHooks(ComponentType.COLLIDER, {
-  onAddComponent: (entityId, world) =>
-    queueMicrotask(() => {
-      if (!world.hasComponent(entityId, ComponentType.COLLIDER)) return;
-      if (isWireframeVisible(entityId, world)) {
-        buildEntityWireframes(entityId, world).catch((err) =>
-          lwarn(`Physics debug wireframe: failed to build for entity ${entityId}.`, err)
-        );
-        return;
+/**
+ * Registers the wireframes' hooks and system, once (PhysicsManager's
+ * registerPhysicsWireframeDebugAsync, the physics feature's `onDebug` hook). Not at load: the
+ * physics GUI (_dbg__PhysicsAPI.ts) imports this module in the physics install, before the app's,
+ * and physicsWireframeSystem ties with the app's camera rig system (APP_RENDER_SYNC, the
+ * POSE_CONSUMERS order), so it has to register after the app's install.
+ */
+export const _installPhysicsWireframes = () => {
+  if (areWireframesInstalled) return;
+  areWireframesInstalled = true;
+
+  ECSWorld.registerComponentHooks(ComponentType.DEBUG_PHYSICS_WIREFRAME, {
+    onAddComponent: (entityId, world) => {
+      // The component may declare color overrides inline; fold them into the module map,
+      // which is what colorFor reads and what survives the wireframe being toggled off.
+      const declared = world.getComponent(
+        entityId,
+        ComponentType.DEBUG_PHYSICS_WIREFRAME
+      )?.colorOverrides;
+      if (declared && Object.keys(declared).length) {
+        entityColorOverrides.set(entityId, {
+          ...entityColorOverrides.get(entityId),
+          ...declared,
+        });
       }
-      restoreEntityWireframe(entityId, world);
-    }),
-  onRemoveComponent: (entityId) => disposeEntityWireframes(entityId),
-});
+      // Fire-and-forget: the build needs RPC in worker mode, and hooks are synchronous.
+      buildEntityWireframes(entityId, world).catch((err) =>
+        lwarn(`Physics debug wireframe: failed to build for entity ${entityId}.`, err)
+      );
+    },
+    onRemoveComponent: (entityId) => disposeEntityWireframes(entityId),
+    onDeleteEntity: (entityId) => {
+      disposeEntityWireframes(entityId);
+      entityColorOverrides.delete(entityId);
+    },
+  });
 
-ECSWorld.registerPlugin((world) => {
-  // POSE_CONSUMERS: in 'RENDERED' pose mode this reads the render pose of other entities, so
-  // it must run after physicsInterpolationSystem whatever the registration order.
-  world.addSystem(
-    ECSSystemStage.APP_RENDER_SYNC,
-    'physicsWireframeSystem',
-    physicsWireframeSystem,
-    APP_RENDER_SYNC_ORDER.POSE_CONSUMERS
-  );
+  // Restores persisted per-entity settings as physics entities appear. Hooked on COLLIDER
+  // rather than TAG_IS_PHYSICS_OBJECT because the tag is added first, before there is
+  // anything to draw; the microtask defers past the rest of createPhysicsEntity's
+  // synchronous tail so the rigid-body bucket component is in place too.
+  // The REMOVED physics tier (p352) takes COLLIDER away while the colliders are out of the world
+  // (the lines would read a body that isn't there), and puts it back with them: a shown
+  // wireframe is built again then.
+  ECSWorld.registerComponentHooks(ComponentType.COLLIDER, {
+    onAddComponent: (entityId, world) =>
+      queueMicrotask(() => {
+        if (!world.hasComponent(entityId, ComponentType.COLLIDER)) return;
+        if (isWireframeVisible(entityId, world)) {
+          buildEntityWireframes(entityId, world).catch((err) =>
+            lwarn(`Physics debug wireframe: failed to build for entity ${entityId}.`, err)
+          );
+          return;
+        }
+        restoreEntityWireframe(entityId, world);
+      }),
+    onRemoveComponent: (entityId) => disposeEntityWireframes(entityId),
+  });
 
-  // Pick up anything that already had the component before this module finished loading
-  // (it's dynamically imported, so a world can outrun it).
-  for (const [entityId] of world.getStorage(ComponentType.DEBUG_PHYSICS_WIREFRAME)) {
-    buildEntityWireframes(entityId, world).catch((err) =>
-      lwarn(`Physics debug wireframe: failed to build for entity ${entityId}.`, err)
+  ECSWorld.registerPlugin((world) => {
+    // POSE_CONSUMERS: in 'RENDERED' pose mode this reads the render pose of other entities, so
+    // it must run after physicsInterpolationSystem whatever the registration order.
+    world.addSystem(
+      ECSSystemStage.APP_RENDER_SYNC,
+      'physicsWireframeSystem',
+      physicsWireframeSystem,
+      APP_RENDER_SYNC_ORDER.POSE_CONSUMERS
     );
-  }
 
-  // Same for physics entities that predate this module — the COLLIDER hook above only
-  // sees the ones created after it was registered.
-  for (const [entityId] of world.getStorage(ComponentType.COLLIDER)) {
-    restoreEntityWireframe(entityId, world);
-  }
-});
+    // Pick up anything that already had the component before this module finished loading
+    // (it's dynamically imported, so a world can outrun it).
+    for (const [entityId] of world.getStorage(ComponentType.DEBUG_PHYSICS_WIREFRAME)) {
+      buildEntityWireframes(entityId, world).catch((err) =>
+        lwarn(`Physics debug wireframe: failed to build for entity ${entityId}.`, err)
+      );
+    }
+
+    // Same for physics entities that predate this module — the COLLIDER hook above only
+    // sees the ones created after it was registered.
+    for (const [entityId] of world.getStorage(ComponentType.COLLIDER)) {
+      restoreEntityWireframe(entityId, world);
+    }
+  });
+};
 
 // ----------------------------------------------------------------------------
 // Public helpers (used by the debugger tab in later phases)

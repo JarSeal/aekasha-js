@@ -3,7 +3,8 @@ import { createPhysicsEntity } from './PhysicsManager';
 import type { ColliderParams, RigidBodyParams } from './Physics/PhysicsAPITypes';
 import { createKeyBinding, deleteKeyBinding, type KeyBinding } from './Input/KeyboardInput';
 import { createMouseBinding, deleteMouseBinding, type MouseBinding } from './Input/MouseInput';
-import { ECSWorld, getECSWorld, getEntityIdByAppId } from './ECS';
+import { type ECSWorld, getECSWorld, getEntityIdByAppId } from './ECS';
+import type { FeatureContext } from './Features';
 import { ComponentType } from './ECS/ECSCoreComponents';
 import type {
   CharacterConfigValues,
@@ -49,35 +50,42 @@ const characterControllerSystem = (world: ECSWorld, dt: number) => {
   for (const entityId of storage.keys()) storage.get(entityId)!.controller?.tick(dt);
 };
 
-ECSWorld.registerPlugin((world) => {
-  world.addSystem(
-    ECSSystemStage.APP_PHYSICS_STEP,
-    'characterControllerSystem',
-    characterControllerSystem,
-    CHARACTER_SYSTEM_ORDER
-  );
-});
+/**
+ * Installs the characters' controller system and the `CHARACTER` delete hook (the character
+ * feature's install).
+ * @internal
+ */
+export const installCharacters = (ctx: FeatureContext) => {
+  ctx.registerPlugin((world) => {
+    world.addSystem(
+      ECSSystemStage.APP_PHYSICS_STEP,
+      'characterControllerSystem',
+      characterControllerSystem,
+      CHARACTER_SYSTEM_ORDER
+    );
+  });
 
-// Every way a character's entity goes (deleteCharacter, a scene change, the debugger, a direct
-// world.deleteEntity) cleans up the same way.
-ECSWorld.registerComponentHooks(ComponentType.CHARACTER, {
-  onDeleteEntity: (entityId, world) => {
-    const char = world.getComponent(entityId, ComponentType.CHARACTER);
-    if (!char) return;
-    char.controller?.dispose?.();
-    for (let i = 0; i < char.keyBindingIds.length; i++) deleteKeyBinding(char.keyBindingIds[i]);
-    for (let i = 0; i < char.mouseBindingIds.length; i++) {
-      deleteMouseBinding(char.mouseBindingIds[i]);
-    }
-    if (characterEntityIds.get(char.id) === entityId) characterEntityIds.delete(char.id);
-    locomotionStateListeners.delete(entityId);
-    const onDelete = onDeleteCharacter[char.id];
-    delete onDeleteCharacter[char.id];
-    onDelete?.();
-    // The entity still exists while its hooks run
-    queueCharactersDebuggerUpdate();
-  },
-});
+  // Every way a character's entity goes (deleteCharacter, a scene change, the debugger, a direct
+  // world.deleteEntity) cleans up the same way.
+  ctx.registerComponentHooks(ComponentType.CHARACTER, {
+    onDeleteEntity: (entityId, world) => {
+      const char = world.getComponent(entityId, ComponentType.CHARACTER);
+      if (!char) return;
+      char.controller?.dispose?.();
+      for (let i = 0; i < char.keyBindingIds.length; i++) deleteKeyBinding(char.keyBindingIds[i]);
+      for (let i = 0; i < char.mouseBindingIds.length; i++) {
+        deleteMouseBinding(char.mouseBindingIds[i]);
+      }
+      if (characterEntityIds.get(char.id) === entityId) characterEntityIds.delete(char.id);
+      locomotionStateListeners.delete(entityId);
+      const onDelete = onDeleteCharacter[char.id];
+      delete onDeleteCharacter[char.id];
+      onDelete?.();
+      // The entity still exists while its hooks run
+      queueCharactersDebuggerUpdate();
+    },
+  });
+};
 
 /** The `_` keys of the data with a primitive value, copied and frozen. */
 const getConfigSnapshot = (data: Record<string, unknown>): CharacterConfigValues => {

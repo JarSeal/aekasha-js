@@ -111,6 +111,7 @@ const ENGINE_RULES: MoveRule[] = [
     to: `${K}scene/SceneHooks.ts`,
     note: "the scene seams (p607 D4): the features' part of a scene load",
   },
+  { from: `${E}core/SceneHooks.test.ts`, to: `${K}scene/SceneHooks.test.ts` },
   { from: `${E}core/GroupManager.ts`, to: `${K}scene/Group.ts` },
   {
     from: `${E}core/PropertyLoader.ts`,

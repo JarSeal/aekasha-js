@@ -22,15 +22,11 @@ const EXEMPT = [
  * count that drops must drop here too (so the list only shrinks). Empty when p607 is done.
  */
 const NOT_YET_INSTALLED: Record<string, number> = {
-  'src/_engine/core/Character.ts': 2,
   'src/_engine/core/ECS/LightObjectCullingSystem.ts': 2,
   'src/_engine/core/Instancing/InstancedMeshPool.ts': 4,
   'src/_engine/core/Lod/Impostors/ImpostorRegistry.ts': 1,
   'src/_engine/core/Lod/LodChains.ts': 1,
   'src/_engine/core/Lod/LodSystem.ts': 6,
-  'src/_engine/core/PhysicsManager.ts': 1,
-  'src/_engine/core/PhysicsTierPolicy.ts': 3,
-  'src/_engine/core/PhysicsTiers.ts': 2,
   'src/_engine/core/SkyBox/SkyBox.ts': 1,
   'src/_engine/core/Spatial/SpatialIndexSystem.ts': 6,
 };

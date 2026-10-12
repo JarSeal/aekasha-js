@@ -16,22 +16,12 @@ import {
   registerDefaultProdTestKeyBindings,
 } from './core/Input/DefaultDebugKeyBindings';
 import { addWindowListeners, initMainLoop, registerMainLoopDebugGUI } from './core/MainLoop';
-import {
-  createPhysicsAPIDebugGUI,
-  registerPhysicsAPIDebugGUI,
-  createPhysicsWorld,
-  initPhysics as initNewPhysics,
-} from './core/PhysicsAPI';
-import { registerPhysicsDeterminismProbe, registerPhysicsManager } from './core/PhysicsManager';
-import { physicsFixedStepDriver, physicsSceneHooks } from './core/PhysicsFeature';
-import { characterSceneHooks } from './core/Character/CharacterFeature';
 import { createRootScene, getRootScene, registerScenesFromGeneratedData } from './core/Scene';
 import './styles/index.scss';
 import { lerror, llog } from './utils/Logger';
 import { createSkyBoxDebugGUI, registerSkyBoxDebugGUI } from './core/SkyBox/SkyBox';
 import { createRendererDebugGUI } from './core/Renderer';
 import { loadDraggableWindowStatesFromLS } from './core/UI/DraggableWindow';
-import { createCharactersDebuggerGUI, registerCharacterTools } from './core/Character';
 import { createToaster } from './core/UI/Toaster';
 import { getStatsCmp, registerStatsModule } from './debug/Stats';
 import { createAssetsDebugGUI } from './debug/Assets';
@@ -81,9 +71,9 @@ export type InitEngineOptions = {
    * `yarn gatherAppData` writes. */
   data: AppData;
   /** The features to install, in this order, after the kernel (p607 D1): each once, awaiting
-   * each `install`. The template lists the app's own last (`appECSPlugins`). Until p607 has
-   * converted the engine's features, `InitEngine` installs those itself and this list holds the
-   * app's. Default: none. */
+   * each `install`. The template lists the app's own last (`appECSPlugins`). Each engine feature
+   * comes from its entry (`physics()` from `aekasha/physics`, …); until p607 has converted them
+   * all, `InitEngine` installs the rest itself. Default: none. */
   features?: EngineFeature[];
   /** The app's start: creates the renderer and the scene loader and loads the first scene. Runs
    * after the engine's own init (and the debug tools' registration), before the main loop starts. */
@@ -98,13 +88,15 @@ export type InitEngineOptions = {
  * ```ts
  * import { InitEngine, createRenderer, loadScene } from 'aekasha';
  * import config from './CONFIG';
+ * import { character } from 'aekasha/character';
+ * import { physics } from 'aekasha/physics';
  * import { appData } from './generated';
  * import { appECSPlugins } from './AppECSPlugins';
  *
  * InitEngine({
  *   config,
  *   data: appData,
- *   features: [appECSPlugins],
+ *   features: [physics(), character(), appECSPlugins],
  *   start: async () => {
  *     await createRenderer({ antialias: true });
  *     await loadScene({ sceneId: 'myScene' });
@@ -166,23 +158,8 @@ const initEngineAsync = async ({ config, data, features = [], start }: InitEngin
   // Initializes the debug camera (if in debug mode)
   await initDebugCamera(ecsWorld);
 
-  // Physics' and characters' scene hooks and the fixed-step driver, before the listed features'
-  // (p607 Phase 5 section 2 makes them the physics() and character() features)
-  featureHost.ctx.setFixedStepDriver(physicsFixedStepDriver);
-  featureHost.ctx.addSceneHooks(physicsSceneHooks);
-  featureHost.ctx.addSceneHooks(characterSceneHooks);
-
-  // The features, in list order (p607 D1: where physics boots, which is still below)
+  // The features, in list order (p607 D1): physics boots in its install
   await installFeaturesAsync(features, featureHost);
-
-  registerPhysicsManager(ecsWorld);
-  await initNewPhysics(true); // doNotCreateWorld — createPhysicsWorld() below owns that + physicsWorldEnabled
-  // Before the first world: the debugger's saved world settings are what worlds are built from
-  if (IS_DEBUG_ENV) await registerPhysicsAPIDebugGUI();
-  if (getConfig().physics?.enabled) {
-    await createPhysicsWorld();
-  }
-  if (IS_DEBUG_ENV) await registerPhysicsDeterminismProbe();
 
   if (IS_DEBUG_ENV) {
     await registerUndoRedoModule();
@@ -196,7 +173,6 @@ const initEngineAsync = async ({ config, data, features = [], start }: InitEngin
     // Before restoreSavedView (the end of InitEngine) can switch back to it
     await registerMaterialEditor();
     registerDefaultDebugKeyBindings();
-    await registerCharacterTools();
     await registerECSModule();
     await registerSpatialIndexDebugGUI();
     await registerLodDebugGUI();
@@ -236,13 +212,11 @@ const initEngineAsync = async ({ config, data, features = [], start }: InitEngin
   // Create debug GUIs and utils
   if (IS_DEBUG_ENV) {
     await createRendererDebugGUI();
-    createPhysicsAPIDebugGUI();
     await createAssetsDebugGUI();
     // After start: measuring needs the renderer
     await registerPostFxProfiler();
     // After the profiler: the tab re-applies a persisted measuring override
     await createPostFXDebugGUI();
-    createCharactersDebuggerGUI();
     createSkyBoxDebugGUI();
     // The features' own, in install order
     await runFeatureDebugHooksAsync(featureHost.debugAfterStartHooks);

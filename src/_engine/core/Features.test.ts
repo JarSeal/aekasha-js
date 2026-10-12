@@ -148,3 +148,17 @@ describe('debug hooks', () => {
     expect(log).toEqual(['a', 'b', 'a after start']);
   });
 });
+
+describe('the loop seam', () => {
+  test('takes one fixed-step driver, and a second fails', () => {
+    const { ctx } = createFeatureHost(getConfig());
+    const driver = {
+      latch: () => {},
+      step: () => {},
+      flushEvents: () => {},
+      isStepping: () => false,
+    };
+    expect(() => ctx.setFixedStepDriver(driver)).not.toThrow();
+    expect(() => ctx.setFixedStepDriver(driver)).toThrow('a fixed-step driver is already set');
+  });
+});
