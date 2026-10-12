@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1369,
-      "total": 2085
+      "documented": 1392,
+      "total": 2106
     },
     "members": {
       "documented": 212,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1324,
-        "total": 2021
+        "documented": 1347,
+        "total": 2042
       },
       "members": {
         "documented": 162,
@@ -49,8 +49,8 @@
     },
     "engine/core": {
       "exports": {
-        "documented": 391,
-        "total": 539
+        "documented": 412,
+        "total": 558
       },
       "members": {
         "documented": 35,
@@ -123,7 +123,6 @@
           "LightManager#setLightObjectCullingEnabled",
           "LightManager#setLightShadowEnabled",
           "LightManager#toggleAllLightHelpers",
-          "MainLoop#LoopState",
           "MainLoop#addBeforeUnloadFn",
           "MainLoop#addOnWindowBlurFn",
           "MainLoop#addVisibilityChangeFn",
@@ -158,7 +157,6 @@
           "PhysicsAPI#takePhysicsSnapshot",
           "PhysicsManager#disposePhysicsEntity",
           "PhysicsManager#getPhysicsEntityByAppId",
-          "PhysicsManager#registerPhysicsManager",
           "PhysicsTierPolicy#DEFAULT_TIER_POLICY_CADENCE",
           "PhysicsTierPolicy#DEFAULT_TIER_POLICY_INTERVAL",
           "PropertyLoader#LoadableProps",
@@ -264,8 +262,8 @@
     },
     "engine/core/Character": {
       "exports": {
-        "documented": 39,
-        "total": 39
+        "documented": 41,
+        "total": 41
       },
       "members": {
         "documented": 0,

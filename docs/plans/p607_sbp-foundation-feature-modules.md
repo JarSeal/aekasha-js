@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-4 implemented
+Status: in progress | Phases 1-5 implemented
 Category: Build, Performance, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
 Blocks: p608_engine-folder-restructure.md, p611_sbp-tooling-profiles-and-marketing.md, p510_headless-simulation-runtime.md
@@ -643,7 +643,7 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
   modules: `Features.ts`, `Kernel.ts`), the file `index.js` 411.0 → 411.6 kB gzip; `docs.json`
   better coverage. The production build's debug check: none.
 
-### Phase 5: physics and character
+### Phase 5: physics and character — done
 
 1. The seams these need: `addSceneHooks` (D4: all phases), `setFixedStepDriver` (D5).
 2. `physics()`: boot (`initPhysics`, the first world), the manager, tiers, tier policy, the
@@ -652,10 +652,87 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
 3. `SceneLoader.ts`, `MainLoop.ts` and `InitApp.ts` stop importing physics and characters.
 4. Hashes in all three targets, with and without the probe; `physicsTiers` in all three.
 
+**As built:**
+
+- **The scene seams:** `core/SceneHooks.ts` (`SceneHooks`, public on `aekasha`; internal
+  `addSceneHooks`, which returns the remover, and a runner per phase; `SceneHooks.test.ts`).
+  Each phase runs the hooks in install order, `exit` in reverse; the awaited phases await each
+  hook (only the hooks that have the phase, so no extra `await`s). **Only the load phases**
+  (`loadStart`, `exit`, `worldCleared`, `beforeAssets`, `created`, `entered`, `loadSettled`),
+  each wired into `loadScene` where D4 says (`worldCleared` and `created` have no hook yet).
+  **`sceneRegistered`, `sceneDeleted` and `retainedTextures` are Phase 6's**, with the sky box:
+  `registerScenesFromGeneratedData` runs before the features install, so a `sceneRegistered` hook
+  added in an install misses every scene. Phase 6 either registers the scenes after the installs
+  or replays the registered scenes to a hook when it's added.
+- **The fixed-step seam:** `FixedStepDriver` in `MainLoop.ts` (public with `LoopState`, now
+  documented), internal `setFixedStepDriver` (a second throws). **Changed from D5's
+  `{ latch, step, getState }`:** `{ latch, step, flushEvents, isStepping }`. A boolean keeps
+  `PhysicsState` out of the kernel; `flushEvents` because the loop owns the sub-step's order
+  (held keys, the events, the `APP_PHYSICS_STEP` systems) and the events sit in its middle. The
+  loop calls `step(loopState, runFixedSubStep)` while playing and `step(loopState)` while paused
+  (it notes the pause); without a driver, or while `!isStepping()`, it polls held keys once per
+  frame. `MainLoop.ts` and `SceneLoader.ts` import no physics or character module.
+- `FeatureContext` gains `addSceneHooks` and `setFixedStepDriver`.
+- **`physics()`** (`core/PhysicsFeature.ts`, on `aekasha/physics`) installs, in order:
+  `installPhysicsTiers`, `installPhysicsTierPolicy`, `installPhysicsEntities` (was
+  `registerPhysicsManager`: the transform reset listener, the moved-body listener, the
+  `TAG_IS_PHYSICS_OBJECT` hook and the default world's three systems, still that world only), the
+  driver, the scene hooks, `initPhysics(true)`, `registerPhysicsAPIDebugGUI` (`if (IS_DEBUG_ENV)`,
+  in the install: it must precede the first world), the first world when `physics.enabled`;
+  `onDebug`: the collider wireframes (`registerPhysicsWireframeDebugAsync`, awaited now), then
+  the determinism probe; `onDebugAfterStart`: the Physics API tab. The tier policy's
+  scene-scoped cleanup moved from `registerOnAllSceneExits` into physics' `exit` hook
+  (`deleteScenePhysicsTierPolicies(prevSceneId)`, after `deleteAllPhysicsEntities`: the same
+  relative order).
+- **`character()`** (`core/Character/CharacterFeature.ts`, on `aekasha/character`,
+  `requires: ['physics']`): `installCharacters`, the `exit` hook (`deleteAllCharacters`, before
+  physics' by the reverse order), `onDebug(registerCharacterTools)`,
+  `onDebugAfterStart(createCharactersDebuggerGUI)`.
+- `InitApp.ts` imports neither; the template lists `[physics(), character(), appECSPlugins]`,
+  and so does `InitEngine`'s `@example`. The allow-list: 21 statements in 7 files (sky box,
+  light culling, LOD, spatial, instancing). The layout report: the only kernel → physics runtime
+  rows left are `SpawnImported.ts`' (Phase 7's import extension); none for character.
+- **Found by the system order:** `physicsWireframeSystem` registered before the app's
+  `followObjectCameraRigSystem` (`APP_RENDER_SYNC@-0.5`) in every debug run. `_dbg__PhysicsAPI`
+  imports `_dbg__PhysicsDebugDraw` statically and loads in physics' install, so the wireframe
+  module's load-time registrations ran before the app's install. They're now
+  `_installPhysicsWireframes()` (once), which the `onDebug` hook calls. **A `_dbg__` module that
+  another one imports registers at the first importer's load:** a debug module whose systems tie
+  with the app's registers from an install function, not at load.
+- Order changes the runner doesn't record, all between independent steps: the tiers', policy's
+  and characters' plugins now follow the kernel's non-core ones (no shared stage and order); the
+  wireframe visibility sync and the probe's enter / exit callbacks register at the end of the
+  first debug block instead of right after the physics boot. **The drawer tab order is
+  unchanged** (listed before and after with `?isDebug=true`, risk 3).
+- **The `onDebug` folding check (Phase 4's open point): it folds.** The production build's debug
+  check finds nothing, so Rollup drops the `ctx.onDebug(…)` closures and their `import()`s; the
+  call sites need no `IS_DEBUG_ENV`.
+- Bundle (`bundle.json` recorded): `index.js` 402.0 → 406.0 kB gzip (+4.0 kB),
+  `physicsTiers.js` 6.2 → 2.2 kB (−4.0 kB): the tiers and the tier policy were in the
+  `physicsTiers` scene's lazy chunk (they registered when they loaded), and `physics()` installs
+  them. In return the system order is the same in a build as on the dev server
+  (`physicsTierPolicyFrameSystem` registered late in a build, Phase 2). A `physics()` option to
+  leave them out is possible later (D1: no options yet). Main `_engine/core` 59.5 → 67.2 kB
+  (27 → 31 modules).
+- Checks: `yarn verify:scenes` 96 passed after each section (24 scenes × 4 configurations,
+  WebGPU, macOS): hashes (the probe in the three debug targets; `prodTest` without it),
+  snapshots and the system order unchanged, `physicsTiers` included. Against a
+  `VITE_APP_ENV=test` build under `vite preview` (`--url`; `workerMsg`, `mainThread`, `prodTest`,
+  as in Phase 2): every scene the build ships passed (60), hashes and the system order matching
+  the dev server's baselines, **so Phase 2's dev vs build tie is gone**. The 12 failures are the
+  four `isDebugScene` scenes (`assetCompare`, `testDebugScene`, `textureArrays`,
+  `textureAtlases`), which the production gather leaves out of a build by design: the runner's
+  `?startScene` falls back. `yarn test`
+  239 passed, lint, `tsc` (both projects), the docs ratchet. `api.json`: the new public
+  `physics`, `character`, `SceneHooks`, `FixedStepDriver`, `LoopState` on their entries, the
+  internal installers and runners, `registerPhysicsManager` gone; `docs.json` better coverage.
+
 ### Phase 6: sky box, spatial, LOD, instancing
 
 1. `skyBox()` (the scene data hooks, `retainedTextures`), `spatial()` (light culling, the domain
-   hooks), `lod()`, `instancing()`.
+   hooks), `lod()`, `instancing()`. The scene data phases (`sceneRegistered`, `sceneDeleted`,
+   `retainedTextures`) join `SceneHooks` here, with the registration timing Phase 5's "As built"
+   names; the sky box's `created` and spatial's `worldCleared` call sites already exist.
 2. The kernel registries for LOD targets and spatial radii; `getConservativeGeometryRadius` moves
    (D5). The layout report's feature dependencies: character → physics only.
 

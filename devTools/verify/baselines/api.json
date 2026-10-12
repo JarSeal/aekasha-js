@@ -114,6 +114,7 @@
       "emitLocomotionStateChange": "Function",
       "getCharacterById": "Function",
       "getCharacters": "Function",
+      "installCharacters": "Function",
       "LocomotionState": "Reference",
       "LocomotionStateListener": "Reference",
       "onLocomotionStateChange": "Function",
@@ -125,6 +126,10 @@
     "src/_engine/core/Character/CharacterBodyPlans.ts": {
       "HUMANOID_CAPSULE": "Variable",
       "HumanoidCapsuleDimensions": "TypeAlias"
+    },
+    "src/_engine/core/Character/CharacterFeature.ts": {
+      "character": "Function",
+      "characterSceneHooks": "Variable"
     },
     "src/_engine/core/Character/CharacterInputSchemes.ts": {
       "CameraRelativeInputMappings": "TypeAlias",
@@ -845,6 +850,7 @@
       "deleteBeforeUnloadFn": "Function",
       "deleteResizer": "Function",
       "deleteVisibilityChangeFn": "Function",
+      "FixedStepDriver": "TypeAlias",
       "FrameProbe": "TypeAlias",
       "getAppDelta": "Function",
       "getDelta": "Function",
@@ -861,6 +867,7 @@
       "renderFrameNow": "Function",
       "renderFrameWhileMasterPaused": "Function",
       "setFixedFrameDelta": "Function",
+      "setFixedStepDriver": "Function",
       "setFrameProbe": "Function",
       "setIsLoadingScene": "Function",
       "setPlaySpeedMultiplier": "Function",
@@ -1234,6 +1241,11 @@
       "stepPhysics": "Function",
       "takePhysicsSnapshot": "Function"
     },
+    "src/_engine/core/PhysicsFeature.ts": {
+      "physics": "Function",
+      "physicsFixedStepDriver": "Variable",
+      "physicsSceneHooks": "Variable"
+    },
     "src/_engine/core/PhysicsManager.ts": {
       "createPhysicsEntity": "Function",
       "deleteAllPhysicsEntities": "Function",
@@ -1242,6 +1254,7 @@
       "getPhysicsBodyOwner": "Function",
       "getPhysicsEntityByAppId": "Function",
       "getPhysicsInterpolationReadout": "Function",
+      "installPhysicsEntities": "Function",
       "PhysicsBodyOwner": "TypeAlias",
       "PhysicsEntityOpts": "TypeAlias",
       "PhysicsInterpolationReadout": "TypeAlias",
@@ -1249,7 +1262,7 @@
       "physicsToTransformSystem": "Function",
       "queueStaticBodySync": "Function",
       "registerPhysicsDeterminismProbe": "Function",
-      "registerPhysicsManager": "Function",
+      "registerPhysicsWireframeDebugAsync": "Function",
       "resetPhysicsInterpolationHistory": "Function",
       "setPhysicsInterpolationPinnedToNewest": "Function",
       "settlePendingPhysicsEntities": "Function"
@@ -1257,10 +1270,12 @@
     "src/_engine/core/PhysicsTierPolicy.ts": {
       "DEFAULT_TIER_POLICY_CADENCE": "Variable",
       "DEFAULT_TIER_POLICY_INTERVAL": "Variable",
+      "deleteScenePhysicsTierPolicies": "Function",
       "DETERMINISM_PROBE_FREEZE_SOURCE": "Variable",
       "getPhysicsTierPolicy": "Function",
       "getPhysicsTierPolicyFreezeSources": "Function",
       "getPhysicsTierPolicyStatus": "Function",
+      "installPhysicsTierPolicy": "Function",
       "isPhysicsTierPolicyFrozen": "Function",
       "PhysicsTierPolicy": "Reference",
       "PhysicsTierPolicyCadence": "Reference",
@@ -1271,6 +1286,7 @@
     },
     "src/_engine/core/PhysicsTiers.ts": {
       "getPhysicsTier": "Function",
+      "installPhysicsTiers": "Function",
       "PhysicsTier": "Reference",
       "requestPhysicsTier": "Function"
     },
@@ -1391,6 +1407,17 @@
       "setCurrentScene": "Function",
       "setLoadingSceneId": "Function",
       "setSceneOpts": "Function"
+    },
+    "src/_engine/core/SceneHooks.ts": {
+      "addSceneHooks": "Function",
+      "runSceneBeforeAssetsHooksAsync": "Function",
+      "runSceneCreatedHooksAsync": "Function",
+      "runSceneEnteredHooksAsync": "Function",
+      "runSceneExitHooks": "Function",
+      "runSceneLoadSettledHooks": "Function",
+      "runSceneLoadStartHooks": "Function",
+      "runSceneWorldClearedHooks": "Function",
+      "SceneHooks": "TypeAlias"
     },
     "src/_engine/core/SceneLoader.ts": {
       "createCameras": "Function",
@@ -2619,6 +2646,7 @@
       "EngineFeature",
       "FeatureContext",
       "FeatureDebugHook",
+      "FixedStepDriver",
       "GeneratedAppJson",
       "GeneratedAssetUrls",
       "GeoBaseProps",
@@ -2635,6 +2663,7 @@
       "KeyBinding",
       "LightProps",
       "LoadSceneProps",
+      "LoopState",
       "Looper",
       "MatProps",
       "MaterialVariantOverrides",
@@ -2645,6 +2674,7 @@
       "RendererOptions",
       "SampleAtlasCellOpts",
       "SceneData",
+      "SceneHooks",
       "SceneLoader",
       "ScenePrimitiveAssets",
       "Snapshot",
@@ -2797,6 +2827,7 @@
       "DynamicCharacter",
       "DynamicCharacterOpts",
       "LocomotionStateListener",
+      "character",
       "createCharacter",
       "createDynamicCharacter",
       "deleteCharacter",
@@ -2955,6 +2986,7 @@
       "getPhysicsTier",
       "getPhysicsWorld",
       "getRigidBody",
+      "physics",
       "readBodyPositionsAtStep",
       "requestPhysicsTier",
       "setPhysicsTierPolicy",
