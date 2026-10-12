@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-3 implemented
 Category: Refactoring, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p609_toolkit-and-app-restructure.md, p610_character-and-input-action-architecture.md, p611_sbp-tooling-profiles-and-marketing.md, p612_review-ecs-loop-config-init.md, p613_review-rendering-scene-assets.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p510_headless-simulation-runtime.md
@@ -313,6 +313,7 @@ but are rewritten when they import a moved one.
 | `moveText.ts`         | The text rewrite (D6's file kinds, paths, `hub:` links, TypeDoc's links, comments only for `src/` modules) and the leftovers; split from `moveApply.ts` for the 800-line rule | `moveText.test.ts`                                                                                    |
 | `moveSplit.ts`        | Splits a module per export (§4.4)                                                                                                                                             | `moveSplit.test.ts`                                                                                   |
 | `moveEdits.ts`        | The edit table (D5): `{ file, find, replace, glob? }`                                                                                                                         | the glob check, at run time                                                                           |
+| `moveTree.ts`         | `rewriteTree`: the rewrite, the splits, the edit table and the leftovers on a whole tree (Phase 3: out of `moveApply.ts`, so no module imports in a cycle)                    | `moveTree.test.ts`, today's tree included                                                             |
 | `applyMoveMap.ts`     | The CLI: preconditions, reading, `git mv`, writing, Prettier, the report, `--dry-run`, `--verify-commit`                                                                      | the dry run on the real tree                                                                          |
 | `compareBaselines.ts` | §4.7                                                                                                                                                                          | `compareBaselines.test.ts`                                                                            |
 
@@ -554,7 +555,7 @@ As built:
 - **Verification:** `yarn test` 283 tests in 26 files, `yarn lint` clean, `tsc` and `tsc -p hub`,
   `moveMap.ts --check` (`layoutReport.md` regenerated: `model.ts`' new JSDoc names a moving path).
 
-### Phase 3: splitting and the edit table
+### Phase 3: splitting and the edit table — done
 
 1. `moveSplit.ts` (§4.4) and its tests: statements per export with their comments, imports by use,
    imports between the parts, appending to a target that's also a moved file or another split's
@@ -573,10 +574,85 @@ As built:
 3. **Verification:** `yarn test` (including the split of today's `helpers.ts` and `constants.ts`
    in memory: every export lands in its target; Phase 4's dry run compiles the parts), `yarn lint`.
 
+As built:
+
+- **A fourth module, `moveTree.ts`:** `rewriteTree(map, texts, edits)` moved out of `moveApply.ts`
+  (which would otherwise import `moveSplit.ts`, which imports it). It runs each file's rewrite
+  (the table's `find`s protected), then the splits (each split file's comments rewritten first),
+  then the table, each step only when the one before had no error, then the leftovers on the
+  result. It returns `changed` (by the path before the move; a moved file a split appends to
+  included), `created` (the split targets that are no file's path, by the path after the move),
+  `leftovers` and `errors`. `moveApply.ts` exports `moveSpecifier` (with a `newImporter`
+  parameter: a split target writes the split file's specifiers), `toSpecifier` and the glob
+  helpers. Lines: `moveApply` 700, `moveSplit` 708, `moveEdits` 299, `moveText` 313, `moveTree` 103.
+- **`moveSplit.ts` (`splitModules`):** a statement takes the comments above it and one after it on
+  its line. Uses are read with a type checker on the split file alone (an in-memory program,
+  `noLib`), so a local or a property named like an import isn't one. A binding a target uses only
+  in types is an `import type` (`verbatimModuleSyntax`, `consistent-type-imports` with separate
+  type imports), each original import's names in its order, then the other parts' names; a
+  re-export whose name lands in its own target is dropped (`helpers.ts`' `isOnlyObject3D`, so
+  `Object3DHelpers.ts` gets nothing appended). Merging into a target file deduplicates a binding,
+  turns a type-only namespace or default import into a value one when a part needs it, adds a
+  named binding to an import of its module and kind, and errors on anything else (a name bound or
+  declared twice, a type-only named binding a part needs as a value, the file importing itself).
+  The cycle check is on runtime imports only (a type import and an `import()` add no edge): a
+  cycle through a target after the move is an error unless its modules, mapped back, were one
+  cycle before it.
+- **Two orders §4.4 didn't fix:** parts from two split files in one target (`ThreeMath.ts`) come
+  in `moveMap.json`'s order (alphabetical: `constants.ts`' before `helpers.ts`'), not
+  `moveRules.ts`' (the split sees only the map); within a file, the statements' order, which keeps
+  a constant declared before a top-level use. Neighbours in the source keep what separated them
+  (`ThreeVector3`, `ThreeQuoternion`, `ThreeEuler` stay on consecutive lines); other parts are
+  separated by a blank line.
+- **Errors besides §4.4's:** a default export, `export *`, a side-effect import, a comment above an
+  import (nothing to go with), text after the last statement, a split name the file doesn't
+  export, one statement declaring names with different targets.
+- **Today's split:** `helpers.ts` and `constants.ts` into 9 modules (`AssetFiles`, `Disposal`,
+  `ThreeMath`, `Numbers`, `MeshUserData`, `Workers`, `DebugModules`, `LightHelpers`, `Constants`;
+  `Object3DHelpers.ts` already exports its name), no new cycle. `Disposal.ts` imports `THREE` and
+  `Materials` as types and `textureMapKeys` from `utils/Constants`; `DebugModules.ts` imports
+  `lerror` and `IS_DEBUG_ENV`; `MeshUserData.ts` imports `ThreeVector3` from `../render/ThreeMath`.
+- **`moveEdits.ts` (`MOVE_EDITS`, 10 entries, each with its plan and a `why`):** a `check` per
+  entry where one applies: `globs` (the quoted patterns of `find` and `replace` are exactly the
+  declared sets; the old set expanded on the tree before the move, mapped, equals the new one with
+  its ignores on the tree after it), `regex` (the same, with the literal in both texts) and
+  `paths` (each quoted path, from the repo root, `src/_engine/` or the file's folder, maps to the
+  replacement's at its index). The entries:
+  - `eslint.config.js`: `SIMULATION_FILES` → `features/physics/**/*.ts`,
+    `features/character/**/*.ts` and the two toolkit files, with a new `SIMULATION_IGNORES`
+    (`features/*/index.ts`, `features/*/debug/**`, `PhysicsFeature.ts`, `physics/import/**`,
+    `physics/worker/PhysicsWorker.test.ts`; `CharacterFeature.ts` is in the set today, so it stays
+    in); the rule's config gets `ignores: SIMULATION_IGNORES`; the comment that named the codemod.
+    The per-file overrides are exact paths: the text rewrite takes them.
+  - `moduleSideEffects.test.ts`' worker entries regex.
+  - `physicsWorker.test.ts`: `FORBIDDEN_MODULES`, and `path.resolve(__dirname,
+'physicsWorker.ts')` (not in Phase 2's leftovers: a bare file name isn't a path form; a
+    case-sensitive file system would fail it).
+  - `devTools/verify/baselines.ts`' `getModuleGroup` and its comment: `kernel/` and `features/`
+    keep their subfolders apart in the bundle baseline's groups, as `core/` did (§4.7 sums them, so
+    it's for the report).
+  - The two `hub:` folder links: `engine/debug` stays (the folder's page stays), `engine/core/Lod`
+    → `engine/features/lod`.
+- **On today's tree in memory** (1005 text files, about 2 s): no error, 338 files changed, 9
+  created, 10 leftovers (Phase 2's 13 minus `FORBIDDEN_MODULES`' 3): the root `CLAUDE.md`'s
+  `utils/helpers.ts`, three modules' comments naming it, two `.scss` comments (`index.scss` 2,
+  `OnScreenTools.module.scss`), `driver.mjs`, `docs/templates/todo-plan-prompts.txt`,
+  `hub/_assets/scss/_api.scss`: all Phase 6's.
+- **Tests:** `moveSplit.test.ts` (in-memory trees), `moveEdits.test.ts` (each check passing and
+  failing, counts, a missing file, the plan filter, the text rewrite leaving a `find` to the
+  table), `moveTree.test.ts` (a small tree, and today's tree with `MOVE_EDITS`: no error, every
+  split export in its target, every import of a created module resolving; the rewrite test moved
+  there from `moveText.test.ts`).
+- **Verification:** `yarn test` 298 tests in 29 files, `yarn lint` clean, `tsc` and `tsc -p hub`,
+  `moveMap.ts --check`.
+
 ### Phase 4: the command, the dry run and the baseline comparison
 
 1. `applyMoveMap.ts` (§4.2, §4.5): the preconditions, `git mv` through a temporary name, the
-   deletes and splits, the writes, Prettier, the report (written to
+   deletes and splits, the writes (`rewriteTree(map, texts, MOVE_EDITS)`: `changed` at each file's
+   new path, `created` as new files, every split file `git rm`'d; `utils/constants.ts` →
+   `utils/Constants.ts` is a removal and a new file differing only by case, so it goes through
+   the temporary name too), Prettier, the report (written to
    `.cache/refactor/p608-report.md` as well as printed), `--dry-run`, `--verify-commit <sha>` and
    `--leftovers <base-sha>`.
 2. `compareBaselines.ts` and its test (§4.7): on the committed baselines and a hand-made mapped
@@ -597,8 +673,9 @@ As built:
 2. **The move commit:** `applyMoveMap.ts --plan p608`, then commit everything it changed and
    nothing else, with the command and the base in the message ("p608: apply the move map",
    `applyMoveMap.ts --plan p608` on `<sha>`). `applyMoveMap.ts --verify-commit HEAD` passes.
-3. **The rules for the new layout** (D9), its own commit: `moveRules.ts`' p608 rules become keep
-   rules for the new folders, `moveMap.ts` regenerates (every engine file a keep; the p609 entries
+3. **The rules for the new layout** (D9), its own commit: `MOVE_EDITS`' p608 entries go (their
+   `find`s are gone) and `moveTree.test.ts`' test on today's tree applies the p609 plan (or goes to
+   p609), `moveRules.ts`' p608 rules become keep rules for the new folders, `moveMap.ts` regenerates (every engine file a keep; the p609 entries
    unchanged), and the layout report shows the same boundary violations as before the move, by
    their new paths (23 kernel → feature type-only, 2 ui → kernel, 1 schemas → kernel), and the same
    two assets worker job imports (`moveMap.ts` allows them from `kernel/assets/worker/`).
