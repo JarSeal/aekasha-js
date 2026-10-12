@@ -1,15 +1,17 @@
-import { getConfig, IS_DEBUG_ENV } from '../core/Config';
-import type { DebugModuleRef } from '../utils/helpers';
-import { loadDebugModuleAsync, useDebug } from '../utils/helpers';
+import { getConfig, IS_DEBUG_ENV } from '../kernel/config/Config';
+import type { DebugModuleRef } from '../kernel/config/DebugModules';
+import { loadDebugModuleAsync, useDebug } from '../kernel/config/DebugModules';
 
-type PostFxProfilerModule = typeof import('../core/Debug/_dbg__PostFXProfiler');
+type PostFxProfilerModule = typeof import('../features/postfx/debug/_dbg__PostFXProfiler');
 let profiler: DebugModuleRef<PostFxProfilerModule> | null = null;
 
 /** Loads the PostFX profiler (debug only), and starts measuring if AppConfig.postFx.measureEnabled is set. */
 export const registerPostFxProfiler = async () => {
   if (!IS_DEBUG_ENV) return;
   if (!profiler) {
-    profiler = await loadDebugModuleAsync(() => import('../core/Debug/_dbg__PostFXProfiler'));
+    profiler = await loadDebugModuleAsync(
+      () => import('../features/postfx/debug/_dbg__PostFXProfiler')
+    );
   }
   if (getConfig().postFx?.measureEnabled) useDebug(profiler)?._setPostFxMeasureEnabled(true);
 };
@@ -21,7 +23,9 @@ export const registerPostFxProfiler = async () => {
 export const setPostFxMeasureEnabled = async (enabled: boolean) => {
   if (!IS_DEBUG_ENV) return;
   if (!profiler) {
-    profiler = await loadDebugModuleAsync(() => import('../core/Debug/_dbg__PostFXProfiler'));
+    profiler = await loadDebugModuleAsync(
+      () => import('../features/postfx/debug/_dbg__PostFXProfiler')
+    );
   }
   useDebug(profiler)?._setPostFxMeasureEnabled(enabled);
 };

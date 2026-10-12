@@ -1,7 +1,6 @@
 Status: stub — not-implemented
 Category: Refactoring, Documentation, ECS
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
-Blocked by: p608_engine-folder-restructure.md
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
 Related: \_DONE_p607_sbp-foundation-feature-modules.md (D6's type-only seams, the install contract and the loop seams this plan reviews: "From p607" below)
 

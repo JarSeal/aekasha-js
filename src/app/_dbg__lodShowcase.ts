@@ -36,7 +36,7 @@ import {
 
 const TAB_ID = 'lodShowcaseDemo';
 const LS_KEY = 'AEK_debugLodShowcase';
-/** The engine's LOD tab (core/Debug/_dbg__LOD.ts). */
+/** The engine's LOD tab (features/lod/debug/_dbg__LOD.ts). */
 const LOD_TAB_ID = 'lodControls';
 
 /** How far the dolly runs down the lanes before it turns back. */

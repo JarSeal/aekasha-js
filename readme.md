@@ -158,15 +158,20 @@ Open `http://localhost:8080/?isDebug=true` to get the full debug suite, then pre
 ```text
 .
 ├── src/
-│   ├── _engine/            # The core engine: stable library code
-│   │   ├── index.ts        # The aekasha entry: the public API's core
-│   │   ├── features/       # The feature entries (aekasha/physics, aekasha/skybox, …)
-│   │   ├── core/           # Renderer, ECS, scenes, physics, characters, assets, cameras,
-│   │   │                   # lights, PostFX, viewports, lines, input, spatial index, UI
-│   │   ├── debug/          # Thin public debug entry points (lazy-load core/Debug/_dbg__*)
+│   ├── _engine/            # The engine: stable library code
+│   │   ├── index.ts        # The aekasha entry: the kernel's public API
+│   │   ├── kernel/         # What every app runs, a folder per area: ECS, loop, config,
+│   │   │                   # init, scenes, assets (and their worker), rendering, cameras,
+│   │   │                   # lights, meshes, input
+│   │   ├── features/       # A folder per opt-in feature, with its entry (aekasha/physics,
+│   │   │                   # …), worker and debug/: physics, character, skybox, lod,
+│   │   │                   # spatial, instancing, lines, postfx, viewports
+│   │   ├── ui/             # The UI kit (aekasha/ui): CMP, HUD, windows, icons, styles
+│   │   ├── debug/          # The debugger framework (aekasha/debug); the kernel's and the
+│   │   │                   # features' own _dbg__* modules sit in their debug/ folders
 │   │   ├── schemas/        # Zod schemas for every asset JSON type
-│   │   ├── workers/        # Physics and asset worker threads
-│   │   └── utils/          # Helpers, logging, storage, the ECS stress test
+│   │   ├── utils/          # Pure helpers: logging, storage, asserts
+│   │   └── types/          # Global type declarations
 │   ├── toolkit/            # Reusable ECS effects, a camera rig, TSL materials, procedural
 │   │                       # geometry (entries: aekasha/toolkit/<category>)
 │   ├── app/                # Your game: *.scene.json + scene .ts files and asset JSON files

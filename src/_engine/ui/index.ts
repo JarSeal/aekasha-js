@@ -1,6 +1,6 @@
-export { getHUDRootCMP } from '../core/HUD';
-export { addToast, removeToast } from '../core/UI/Toaster';
-export type { AddToastResponse, ToastProps } from '../core/UI/Toaster';
+export { getHUDRootCMP } from './HUD';
+export { addToast, removeToast } from './Toaster';
+export type { AddToastResponse, ToastProps } from './Toaster';
 export {
   aekashaIcon,
   alertIcon,
@@ -51,8 +51,8 @@ export {
   warningIcon,
   xIcon,
   xBoldIcon,
-} from '../core/UI/icons/BuiltInIcons';
-export { getSvgIcon, registerBuiltInIcons, registerIcon } from '../core/UI/icons/SvgIcon';
-export type { BuiltInIconName, SvgIconKey } from '../core/UI/icons/SvgIcon';
-export { CMP } from '../utils/CMP';
-export type { TCMP, TProps } from '../utils/CMP';
+} from './icons/BuiltInIcons';
+export { getSvgIcon, registerBuiltInIcons, registerIcon } from './icons/SvgIcon';
+export type { BuiltInIconName, SvgIconKey } from './icons/SvgIcon';
+export { CMP } from './CMP';
+export type { TCMP, TProps } from './CMP';

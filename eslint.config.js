@@ -64,24 +64,27 @@ const ENTRY_IMPORT = {
   message:
     'Engine code imports engine code by relative path: an entry imported inside the engine makes barrel cycles.',
 };
-const DEBUG_FILES = ['src/**/_dbg__*.ts', 'src/_engine/core/Debug/**/*.ts'];
+// Debug code is found by name, wherever its feature keeps it (p608 D4)
+const DEBUG_FILES = ['src/**/_dbg__*.ts'];
 
 // The simulation: code that runs at APP_PHYSICS_STEP or inside the physics step, on the main
 // thread or in the physics worker. It must run identically on every machine, so it counts time in
-// steps and draws randomness from a seeded RNG. p608's codemod rewrites these paths when it moves
-// the files.
+// steps and draws randomness from a seeded RNG. Two feature folders, without what else they hold
+// (p608 D5: the set the lint covered before the move).
 const SIMULATION_FILES = [
-  'src/_engine/core/Physics/**/*.ts',
-  'src/_engine/workers/physicsWorker.ts',
-  'src/_engine/workers/physics/**/*.ts',
-  'src/_engine/core/PhysicsAPI.ts',
-  'src/_engine/core/PhysicsManager.ts',
-  'src/_engine/core/PhysicsTiers.ts',
-  'src/_engine/core/PhysicsTierPolicy.ts',
-  'src/_engine/core/Character.ts',
-  'src/_engine/core/Character/**/*.ts',
+  'src/_engine/features/physics/**/*.ts',
+  'src/_engine/features/character/**/*.ts',
   'src/toolkit/ecs/MovingPlatform.ts',
   'src/toolkit/ecs/effects/MutualGravity.ts',
+];
+// What the two feature folders hold besides the simulation: the installs and entries, the
+// physics import extension and worker test, the debug modules
+const SIMULATION_IGNORES = [
+  'src/_engine/features/*/index.ts',
+  'src/_engine/features/*/debug/**',
+  'src/_engine/features/physics/PhysicsFeature.ts',
+  'src/_engine/features/physics/import/**',
+  'src/_engine/features/physics/worker/PhysicsWorker.test.ts',
 ];
 const STEP_TIME_MESSAGE =
   'Simulation time is the step index (getPhysicsSubStepIndex), never the wall clock. Profiling reads use readStatsClock (utils/StatsClock.ts).';
@@ -214,13 +217,14 @@ export default [
     rules: { '@typescript-eslint/no-restricted-imports': 'off' },
   },
   {
-    files: ['src/_engine/**/_dbg__*.ts', 'src/_engine/core/Debug/**/*.ts'],
+    files: ['src/_engine/**/_dbg__*.ts'],
     rules: { '@typescript-eslint/no-restricted-imports': ['error', { patterns: [ENTRY_IMPORT] }] },
   },
 
   // The simulation rules (the coding standards' "The simulation")
   {
     files: SIMULATION_FILES,
+    ignores: SIMULATION_IGNORES,
     rules: {
       'no-restricted-properties': ['error', ...SIMULATION_RESTRICTED_PROPERTIES],
       'no-restricted-syntax': ['error', ...SIMULATION_RESTRICTED_SYNTAX],
@@ -230,7 +234,7 @@ export default [
   // options for its file, so it lists what stays restricted there.
   {
     // The tumble impulse's direction (p610: the seeded RNG)
-    files: ['src/_engine/core/Character/DynamicCharacter.ts'],
+    files: ['src/_engine/features/character/DynamicCharacter.ts'],
     rules: {
       'no-restricted-properties': [
         'error',
@@ -240,7 +244,7 @@ export default [
   },
   {
     // The wall clock under getPhysGameTime(), which the characters read (p610: step-index time)
-    files: ['src/_engine/core/Physics/PhysicsWallClock.ts'],
+    files: ['src/_engine/features/physics/PhysicsWallClock.ts'],
     rules: {
       'no-restricted-properties': [
         'error',

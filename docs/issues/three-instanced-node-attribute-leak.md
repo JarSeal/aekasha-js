@@ -56,8 +56,8 @@ then does four `largeWorld` ↔ `skyShowcase` round trips:
 ```js
 const url = (n) =>
   performance.getEntriesByType('resource').map((e) => e.name).find((x) => new URL(x).pathname === n);
-const { getRenderer } = await import(url('/_engine/core/Renderer.ts'));
-const { loadScene, isCurrentlyLoading } = await import(url('/_engine/core/SceneLoader.ts'));
+const { getRenderer } = await import(url('/_engine/kernel/render/Renderer.ts'));
+const { loadScene, isCurrentlyLoading } = await import(url('/_engine/kernel/scene/SceneLoader.ts'));
 const visit = async (sceneId) => {
   await loadScene({ sceneId });
   while (isCurrentlyLoading()) await new Promise((r) => setTimeout(r, 100));
@@ -135,8 +135,8 @@ current scene.
 
 The same investigation found two smaller leaks in Aekasha's own code:
 
-- Debug mode only: the light and camera debug symbols (`debug/3DSymbols.ts`) get cloned materials. The
-  `DEBUG_SYMBOL` delete hook (`core/Debug/_dbg__Symbols.ts`) only removes them from the scene, and the
+- Debug mode only: the light and camera debug symbols (`debug/symbols/3DSymbols.ts`) get cloned materials. The
+  `DEBUG_SYMBOL` delete hook (`debug/symbols/_dbg__Symbols.ts`) only removes them from the scene, and the
   cloned materials are never disposed. So their render objects stay alive in three, with about 56 uniform
   buffers per round trip.
 - Every mode: about one uniform buffer pair (~0.4 KB) per scene visit, with one more `Background.mesh`

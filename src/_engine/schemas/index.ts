@@ -1,12 +1,12 @@
-export type { CoreEntityOpts } from './_helperSchemas';
-export { MetaSchema } from './_saveDataSchema';
+export type { CoreEntityOpts } from './_HelperSchemas';
+export { MetaSchema } from './_SaveDataSchema';
 export {
   AssetsConfigSchema,
   NON_COVERAGE_SLOTS,
   PACK_TARGETS,
   TEXTURE_SLOTS,
   isJsonRelativeFileName,
-} from './assetsConfigSchema';
+} from './AssetsConfigSchema';
 export type {
   AssetOptimize,
   AssetsConfig,
@@ -17,45 +17,45 @@ export type {
   TexturePack,
   TextureSettings,
   TextureSlot,
-} from './assetsConfigSchema';
-export { CameraAssetSchema, CameraProps } from './cameraSchema';
-export type { FeatureSchemaPart } from './featureSchemas';
-export type { CameraAsset } from './cameraSchema';
-export { GeoAssetSchema } from './geometrySchema';
-export type { GeoAsset } from './geometrySchema';
-export { ImportedAssetSchema } from './importedAssetSchema';
-export type { ImportedAsset } from './importedAssetSchema';
-export { ImpostorAssetSchema } from '../core/Lod/Impostors/ImpostorSchema';
-export type { ImpostorAsset, ImpostorDef } from '../core/Lod/Impostors/ImpostorSchema';
-export { LightAssetSchema } from './lightSchema';
-export { lodSchemaPart } from '../core/Lod/LodSchema';
-export type { LightAsset } from './lightSchema';
-export { MaterialAssetSchema } from './materialSchema';
-export type { MaterialAsset } from './materialSchema';
-export { createMeshAssetSchema } from './meshSchema';
-export type { MeshAsset } from './meshSchema';
-export { PostFxAssetSchema } from './postFxSchema';
-export type { PostFxAsset } from './postFxSchema';
-export { postFxSchemaPart } from '../core/PostFX/PostFXSchema';
-export { createSceneAssetSchema } from './sceneSchema';
-export type { SceneAsset } from './sceneSchema';
-export { spatialSchemaPart } from '../core/Spatial/SpatialSchema';
-export { SkyBoxAssetSchema, skyBoxSchemaPart } from '../core/SkyBox/SkyBoxSchema';
-export type { SkyBoxAsset } from '../core/SkyBox/SkyBoxSchema';
-export { TextureArrayAssetSchema, isTextureArrayLayerFile } from './textureArraySchema';
-export type { TextureArrayAsset } from './textureArraySchema';
+} from './AssetsConfigSchema';
+export { CameraAssetSchema, CameraProps } from './CameraSchema';
+export type { FeatureSchemaPart } from './FeatureSchemas';
+export type { CameraAsset } from './CameraSchema';
+export { GeoAssetSchema } from './GeometrySchema';
+export type { GeoAsset } from './GeometrySchema';
+export { ImportedAssetSchema } from './ImportedAssetSchema';
+export type { ImportedAsset } from './ImportedAssetSchema';
+export { ImpostorAssetSchema } from '../features/lod/impostors/ImpostorSchema';
+export type { ImpostorAsset, ImpostorDef } from '../features/lod/impostors/ImpostorSchema';
+export { LightAssetSchema } from './LightSchema';
+export { lodSchemaPart } from '../features/lod/LodSchema';
+export type { LightAsset } from './LightSchema';
+export { MaterialAssetSchema } from './MaterialSchema';
+export type { MaterialAsset } from './MaterialSchema';
+export { createMeshAssetSchema } from './MeshSchema';
+export type { MeshAsset } from './MeshSchema';
+export { PostFxAssetSchema } from './PostFxSchema';
+export type { PostFxAsset } from './PostFxSchema';
+export { postFxSchemaPart } from '../features/postfx/PostFXSchema';
+export { createSceneAssetSchema } from './SceneSchema';
+export type { SceneAsset } from './SceneSchema';
+export { spatialSchemaPart } from '../features/spatial/SpatialSchema';
+export { SkyBoxAssetSchema, skyBoxSchemaPart } from '../features/skybox/SkyBoxSchema';
+export type { SkyBoxAsset } from '../features/skybox/SkyBoxSchema';
+export { TextureArrayAssetSchema, isTextureArrayLayerFile } from './TextureArraySchema';
+export type { TextureArrayAsset } from './TextureArraySchema';
 export {
   DEFAULT_ATLAS_PADDING,
   TextureAtlasAssetSchema,
   getAtlasSlotTextureId,
   getFullMipLevelCount,
-} from './textureAtlasSchema';
+} from './TextureAtlasSchema';
 export type {
   AtlasMipChain,
   TextureAtlasAsset,
   TextureAtlasCellInfo,
   TextureAtlasSlot,
   TextureAtlasSlotTexture,
-} from './textureAtlasSchema';
-export { TextureAssetSchema } from './textureSchema';
-export type { TextureAsset } from './textureSchema';
+} from './TextureAtlasSchema';
+export { TextureAssetSchema } from './TextureSchema';
+export type { TextureAsset } from './TextureSchema';

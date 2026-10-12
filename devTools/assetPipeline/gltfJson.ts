@@ -4,7 +4,7 @@ import path from 'path';
 /**
  * A glTF's JSON (a .glb's first chunk, or a .gltf's whole text), read without gltf-transform:
  * what the pipeline needs to know about a file before it decides to encode it (p300 §7's cache
- * key), the same way the runtime reads `extensionsUsed` (core/Import/GLTFExtensions.ts).
+ * key), the same way the runtime reads `extensionsUsed` (kernel/assets/import/GLTFExtensions.ts).
  */
 
 const GLB_MAGIC = 0x46546c67; // 'glTF'

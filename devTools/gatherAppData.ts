@@ -10,36 +10,36 @@ import {
   type MeshAsset,
   type SceneAsset,
 } from './engineSchemas';
-import type { CameraAsset } from '../src/_engine/schemas/cameraSchema';
-import { CameraAssetSchema } from '../src/_engine/schemas/cameraSchema';
-import type { LightAsset } from '../src/_engine/schemas/lightSchema';
-import { LightAssetSchema } from '../src/_engine/schemas/lightSchema';
-import type { GeoAsset } from '../src/_engine/schemas/geometrySchema';
-import { GeoAssetSchema } from '../src/_engine/schemas/geometrySchema';
-import type { TextureAsset } from '../src/_engine/schemas/textureSchema';
-import { TextureAssetSchema } from '../src/_engine/schemas/textureSchema';
-import type { TextureArrayAsset } from '../src/_engine/schemas/textureArraySchema';
-import { TextureArrayAssetSchema } from '../src/_engine/schemas/textureArraySchema';
-import type { MaterialAsset } from '../src/_engine/schemas/materialSchema';
-import { MaterialAssetSchema } from '../src/_engine/schemas/materialSchema';
-import type { ImportedAsset } from '../src/_engine/schemas/importedAssetSchema';
-import { ImportedAssetSchema } from '../src/_engine/schemas/importedAssetSchema';
-import type { SkyBoxAsset } from '../src/_engine/core/SkyBox/SkyBoxSchema';
-import { SkyBoxAssetSchema } from '../src/_engine/core/SkyBox/SkyBoxSchema';
-import type { PostFxAsset } from '../src/_engine/schemas/postFxSchema';
-import { PostFxAssetSchema } from '../src/_engine/schemas/postFxSchema';
+import type { CameraAsset } from '../src/_engine/schemas/CameraSchema';
+import { CameraAssetSchema } from '../src/_engine/schemas/CameraSchema';
+import type { LightAsset } from '../src/_engine/schemas/LightSchema';
+import { LightAssetSchema } from '../src/_engine/schemas/LightSchema';
+import type { GeoAsset } from '../src/_engine/schemas/GeometrySchema';
+import { GeoAssetSchema } from '../src/_engine/schemas/GeometrySchema';
+import type { TextureAsset } from '../src/_engine/schemas/TextureSchema';
+import { TextureAssetSchema } from '../src/_engine/schemas/TextureSchema';
+import type { TextureArrayAsset } from '../src/_engine/schemas/TextureArraySchema';
+import { TextureArrayAssetSchema } from '../src/_engine/schemas/TextureArraySchema';
+import type { MaterialAsset } from '../src/_engine/schemas/MaterialSchema';
+import { MaterialAssetSchema } from '../src/_engine/schemas/MaterialSchema';
+import type { ImportedAsset } from '../src/_engine/schemas/ImportedAssetSchema';
+import { ImportedAssetSchema } from '../src/_engine/schemas/ImportedAssetSchema';
+import type { SkyBoxAsset } from '../src/_engine/features/skybox/SkyBoxSchema';
+import { SkyBoxAssetSchema } from '../src/_engine/features/skybox/SkyBoxSchema';
+import type { PostFxAsset } from '../src/_engine/schemas/PostFxSchema';
+import { PostFxAssetSchema } from '../src/_engine/schemas/PostFxSchema';
 import {
   AssetsConfigSchema,
   type AssetOptimize,
   type TexturePack,
-} from '../src/_engine/schemas/assetsConfigSchema';
-import type { MetaSchema } from '../src/_engine/schemas/_saveDataSchema';
+} from '../src/_engine/schemas/AssetsConfigSchema';
+import type { MetaSchema } from '../src/_engine/schemas/_SaveDataSchema';
 import {
   isLegacySkyBoxProps,
   LEGACY_SKYBOX_WARNING,
-} from '../src/_engine/core/SkyBox/legacySkyBox';
-import { deepMerge } from '../src/_engine/utils/deepMerge';
-import { mergeSkyBoxPreset } from '../src/_engine/core/SkyBox/presets';
+} from '../src/_engine/features/skybox/LegacySkyBox';
+import { deepMerge } from '../src/_engine/utils/DeepMerge';
+import { mergeSkyBoxPreset } from '../src/_engine/features/skybox/Presets';
 import pkg from '../package.json';
 import { createSettingsResolver } from './assetPipeline/settings';
 import { listPackFiles } from './assetPipeline/pack';
@@ -77,17 +77,17 @@ import {
   getAtlasSlotTextureId,
   TextureAtlasAssetSchema,
   type TextureAtlasSlotTexture,
-} from '../src/_engine/schemas/textureAtlasSchema';
+} from '../src/_engine/schemas/TextureAtlasSchema';
 import { getAtlasCellTable, resolveTextureAtlas } from './assetPipeline/textureAtlases';
 import {
   ImpostorAssetSchema,
   type ImpostorAsset,
   type ImpostorDef,
-} from '../src/_engine/core/Lod/Impostors/ImpostorSchema';
+} from '../src/_engine/features/lod/impostors/ImpostorSchema';
 import {
   getImpostorDefSlots,
   IMPOSTOR_EXPORT_FORMAT_VERSION,
-} from '../src/_engine/core/Lod/Impostors/ImpostorFormat';
+} from '../src/_engine/features/lod/impostors/ImpostorFormat';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const generatedAppDataJSONFilename = 'generatedAppData.json';

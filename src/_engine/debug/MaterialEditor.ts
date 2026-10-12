@@ -1,8 +1,8 @@
-import { IS_DEBUG_ENV } from '../core/Config';
-import type { DebugModuleRef } from '../utils/helpers';
-import { loadDebugModuleAsync, useDebug } from '../utils/helpers';
+import { IS_DEBUG_ENV } from '../kernel/config/Config';
+import type { DebugModuleRef } from '../kernel/config/DebugModules';
+import { loadDebugModuleAsync, useDebug } from '../kernel/config/DebugModules';
 
-type MaterialEditorModule = typeof import('../core/Debug/Editors/Material/_dbg__MaterialEditor');
+type MaterialEditorModule = typeof import('./editors/material/_dbg__MaterialEditor');
 let materialEditor: DebugModuleRef<MaterialEditorModule> | null = null;
 
 /**
@@ -12,7 +12,7 @@ let materialEditor: DebugModuleRef<MaterialEditorModule> | null = null;
 export const registerMaterialEditor = async () => {
   if (!IS_DEBUG_ENV) return;
   materialEditor = await loadDebugModuleAsync(
-    () => import('../core/Debug/Editors/Material/_dbg__MaterialEditor')
+    () => import('./editors/material/_dbg__MaterialEditor')
   );
   useDebug(materialEditor)?._registerMaterialEditorView();
 };

@@ -42,7 +42,7 @@ type NameEntry = {
   target: ApiTarget;
   /** The symbol's name, or the member's */
   name: string;
-  /** Its names from the shortest (`loadScene`) to the longest (`engine/core/SceneLoader.loadScene`) */
+  /** Its names from the shortest (`loadScene`) to the longest (`engine/kernel/scene/SceneLoader.loadScene`) */
   keys: string[];
 };
 
@@ -88,7 +88,7 @@ const walkModel = (project: JSONOutput.ProjectReflection) => {
   return { owners, namedLinks };
 };
 
-/** `engine/core/SceneLoader` → `SceneLoader`, `core/SceneLoader`, `engine/core/SceneLoader` */
+/** `engine/kernel/scene/SceneLoader` → `SceneLoader`, `scene/SceneLoader`, `kernel/scene/SceneLoader`, `engine/kernel/scene/SceneLoader` */
 const modulePathSuffixes = (subtree: string, relPath: string) => {
   const parts = [subtree, ...relPath.split('/')];
   return parts.map((_part, i) => parts.slice(parts.length - 1 - i).join('/'));

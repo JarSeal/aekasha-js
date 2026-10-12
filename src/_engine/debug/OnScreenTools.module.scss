@@ -1,0 +1,197 @@
+@use '../ui/styles/variables.scss';
+
+.onScreenToolGroup {
+  display: flex;
+  gap: 0.1rem;
+  position: fixed;
+  z-index: 10000;
+  padding: 0.4rem;
+  background-color: variables.$debugOnScreenAlphaBack;
+  border-radius: 0.2rem;
+  transition: opacity 0.2s ease-in-out;
+
+  // The tool button centres it (an inline-block svg would leave a baseline gap under it)
+  :global(.uiIcon) {
+    display: block;
+    width: 2.2rem;
+
+    &:global(.smallIcon) {
+      width: 1.7rem;
+    }
+
+    svg {
+      display: block;
+    }
+  }
+}
+
+:global(.switchTools) {
+  bottom: 1.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  transition:
+    transform 0.2s ease-in-out,
+    opacity 0.2s ease-in-out;
+
+  @media screen and (max-width: variables.$breakpointMedium) {
+    left: 100%;
+    transform: translateX(calc(-100% - 1.6rem));
+  }
+  @media screen and (max-width: variables.$breakpointSmall) {
+    display: none;
+  }
+
+  :global(.debugDrawerOpen) & {
+    transform: translateX(calc(-50% - (variables.$drawerWidth / 2)));
+
+    @media screen and (max-width: variables.$breakpointXLarge) {
+      transform: translateX(calc(-50% - (variables.$drawerWidth / 4)));
+    }
+    @media screen and (max-width: variables.$breakpointLarge) {
+      transform: translateX(-50%);
+    }
+    @media screen and (max-width: variables.$breakpointMedium) {
+      left: 100%;
+      transform: translateX(calc(-100% - 1.6rem));
+    }
+  }
+}
+
+// The top row: the play tools. Only its groups take clicks, not the gap between them.
+// debugDrawerOpen is set by whichever right-side drawer is open: the debug drawer, or an editor
+// view's own one.
+.onScreenTopRow {
+  display: flex;
+  gap: 0.6rem;
+  position: fixed;
+  z-index: 10000;
+  top: 1.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  transition: transform 0.2s ease-in-out;
+  pointer-events: none;
+
+  .onScreenToolGroup {
+    position: static;
+    pointer-events: auto;
+  }
+
+  :global(.debugDrawerOpen) & {
+    transform: translateX(calc(-50% - (variables.$drawerWidth / 2)));
+
+    @media screen and (max-width: variables.$breakpointMedium) {
+      transform: translateX(-50%);
+    }
+  }
+}
+
+// The top left row: the About and undo / redo tools, then the view tools (debug env, with an
+// editor view registered). The debug drawer opens from the right and the stats panel sits
+// bottom-left, so this corner stays free. Only its groups take clicks, not the gap between them.
+.onScreenTopLeftRow {
+  display: flex;
+  gap: 0.6rem;
+  position: fixed;
+  z-index: 10000;
+  top: 1.6rem;
+  left: 1.6rem;
+  pointer-events: none;
+
+  .onScreenToolGroup {
+    position: static;
+    pointer-events: auto;
+  }
+}
+
+// Set on <body> by the Debug Tools "On-screen tools" folder / § shortcut (debug env only). Makes
+// the on-screen tools, the drawer handle, the stats panel and the axes gizmo click-through, so the
+// whole canvas is clickable. pointer-events goes on every descendant too, because a child with its
+// own value (buttons, <select>, stats-gl's canvases) would still catch clicks. The axes gizmo is
+// not dimmed: it renders into the canvas, its slot is an empty box.
+// New on-screen elements add their selector here.
+:global(body.aekOnScreenToolsDisabled) {
+  :global(.onScreenToolGroup),
+  :global(.debugDrawerToggler),
+  :global(.statsContainer) {
+    opacity: var(--aek-disabled-on-screen-tools-opacity, 0.5);
+  }
+
+  :global(.onScreenToolGroup),
+  :global(.debugDrawerToggler),
+  :global(.statsContainer),
+  :global(.aekAxesGizmoSlot) {
+    &,
+    & * {
+      pointer-events: none !important;
+    }
+  }
+}
+
+.onScreenTool {
+  @include variables.nakedButton;
+  position: relative;
+  vertical-align: top;
+  overflow: hidden;
+  border-radius: 0.2rem;
+  padding: 0.5rem;
+  background-color: variables.$debugGuiBackgroundLighter2;
+  transition: background-color 0.17s ease-in-out;
+  width: 3.2rem;
+  height: 3.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &.active {
+    &:before {
+      display: block;
+      content: '';
+      position: absolute;
+      left: -0.6rem;
+      top: -0.6rem;
+      background-color: variables.$debugTextColor;
+      width: 1rem;
+      height: 1.2rem;
+      transform: rotate(45deg);
+    }
+  }
+
+  &:hover {
+    background-color: variables.$debugGuiBackgroundLighter;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.35;
+
+    &:hover {
+      background-color: variables.$debugGuiBackgroundLighter2;
+    }
+  }
+
+  svg path {
+    fill: variables.$debugTextColor;
+  }
+}
+
+// An on-screen dropdown's trigger (ui/DropDown.ts, its default styles in DropDown.scss):
+// the on-screen tool look, wider
+.onScreenToolDropDown {
+  justify-content: flex-start;
+  width: 16rem;
+
+  :global(.uiIcon):global(.smallIcon) {
+    flex-shrink: 0;
+    margin-left: 0.3rem;
+  }
+}
+
+.dropDownLabelStruck {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+// The About Ækasha button: a gap sets it apart from the undo / redo buttons after it
+.aboutTool {
+  margin-right: 0.4rem;
+}

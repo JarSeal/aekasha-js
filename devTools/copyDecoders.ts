@@ -7,9 +7,9 @@ import { fileURLToPath } from 'url';
  * Copies the runtime decoders from the installed three.js version into `src/public/` (Vite
  * serves `src/public/**` at `/`):
  * - the glTF-variant DRACO decoders into `src/public/draco/gltf/`, where
- *   `src/_engine/core/Import/DracoDecoder.ts` expects them (the encoder is not copied);
+ *   `src/_engine/kernel/assets/import/DracoDecoder.ts` expects them (the encoder is not copied);
  * - the Basis Universal transcoder into `src/public/basis/`, where
- *   `src/_engine/core/Import/KTX2.ts` expects it.
+ *   `src/_engine/kernel/assets/import/KTX2.ts` expects it.
  * The destinations are gitignored, so upgrading three.js updates the decoders without
  * committing binaries. (The meshopt decoder is a JS module, bundled by Vite: nothing to copy.)
  *

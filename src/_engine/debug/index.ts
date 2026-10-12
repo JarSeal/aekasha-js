@@ -60,5 +60,5 @@ export type { StatsSource } from './Profiler';
 export type { TestBridgeProbeResult, TestBridgeSceneReady, TestBridgeSnapshot } from './TestBridge';
 export { recordUndoRedoAction, registerUndoRedoActionHandler } from './UndoRedo';
 export type { UndoRedoActionHandler, UndoRedoScope } from './UndoRedo';
-export { loadDebugModuleAsync } from '../utils/helpers';
-export type { DebugModuleRef } from '../utils/helpers';
+export { loadDebugModuleAsync } from '../kernel/config/DebugModules';
+export type { DebugModuleRef } from '../kernel/config/DebugModules';

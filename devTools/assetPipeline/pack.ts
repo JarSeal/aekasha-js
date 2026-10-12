@@ -1,4 +1,4 @@
-import { PACK_TARGETS, type TexturePack } from '../../src/_engine/schemas/assetsConfigSchema';
+import { PACK_TARGETS, type TexturePack } from '../../src/_engine/schemas/AssetsConfigSchema';
 import {
   createImage,
   extractChannel,

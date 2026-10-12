@@ -121,7 +121,7 @@ const browser = await chromium
   });
 
 const page = await browser.newPage({ viewport: { width: viewportWidth, height: viewportHeight } });
-// Without navigator.gpu the engine's renderer picks its WebGL2 backend (see core/Renderer.ts)
+// Without navigator.gpu the engine's renderer picks its WebGL2 backend (see kernel/render/Renderer.ts)
 if (useWebGL) await page.addInitScript(() => delete Object.getPrototypeOf(navigator).gpu);
 
 const consoleLogs = [];

@@ -134,7 +134,7 @@ Bodies are made through [the facade](api:PhysicsAPI.createRigidBody).
 ```
 
 - **A bare name is an export:** `api:loadScene`. A class's or an interface's member needs its owner: `api:ECSWorld.addSystem`.
-- **A name two modules export needs its module:** `api:PhysicsAPI.createRigidBody`, or more of the path when the file name isn't enough (`api:core/PhysicsAPI.createRigidBody`, `api:toolkit/…`). Re-exports don't count: they point at the original.
+- **A name two modules export needs its module:** `api:PhysicsAPI.createRigidBody`, or more of the path when the file name isn't enough (`api:physics/PhysicsAPI.createRigidBody`, `api:toolkit/…`). Re-exports don't count: they point at the original.
 - **Every `api:` link is checked as it's rendered.** An unknown name fails the build and suggests close ones (`Unknown api:createPhysicEntity (did you mean api:createPhysicsEntity?)`), and an ambiguous one lists each candidate as a link you can copy.
 - `api:` works in a page's markup too: `<a href="api:loadScene">`.
 - In the engine's and the toolkit's JSDoc, `{@link loadScene}` links the same way. TypeDoc resolves it from the file's imports. One that resolves to nothing documented is shown as text, with a warning at its file and line. A link to three's own classes is shown as text, without a warning.
@@ -154,7 +154,7 @@ The renderer is created in [src/index.ts](repo:src/index.ts#L10).
 
 ### CLAUDE.md sections
 
-A feature page names the CLAUDE.md sections it covers in its head, and `::: claude-md` links them. The sections are the root file's (`.claude/CLAUDE.md`) `###` headings under `## Architecture`, and the `##` headings of every nested `CLAUDE.md` (a subsystem's notes next to its code, `src/_engine/core/SkyBox/CLAUDE.md`). A name can be in both: the root keeps a section's rules that apply everywhere, its nested file the detail.
+A feature page names the CLAUDE.md sections it covers in its head, and `::: claude-md` links them. The sections are the root file's (`.claude/CLAUDE.md`) `###` headings under `## Architecture`, and the `##` headings of every nested `CLAUDE.md` (a subsystem's notes next to its code, `src/_engine/features/skybox/CLAUDE.md`). A name can be in both: the root keeps a section's rules that apply everywhere, its nested file the detail.
 
 ```html
 <meta name="aek:covers" content="Physics" />
@@ -445,7 +445,7 @@ The shell (`hub/_layout/shell.html`) also has `{{link:path}}`, a checked URL to 
 
 An unknown icon, asset or helper fails the build. **Always reference a static asset through `{{asset:…}}`.** The built site caches `_assets/*` as immutable, so a bare path would stay stale in browsers after the file changes.
 
-The icons are [Lucide](https://lucide.dev/) line icons (ISC, `hub/_assets/icons/LICENSE-lucide.txt`) plus three brand marks: the Æ (`aekasha.svg`), `github.svg` (from [Bootstrap Icons](https://icons.getbootstrap.com/), MIT, `hub/_assets/icons/LICENSE-bootstrap-icons.txt`) and `three-js.svg`. To add an icon, copy its SVG from `lucide-static` into `hub/_assets/icons/`. The brand marks are copies of the engine's icons (`src/_engine/core/UI/icons/svg/`, 16 × 16), so a change to one goes into both. Where an icon would repeat many times on a page, draw it from its file with a CSS `mask: url('icons/<name>.svg')` instead of inlining it (the API pages' GitHub source links do).
+The icons are [Lucide](https://lucide.dev/) line icons (ISC, `hub/_assets/icons/LICENSE-lucide.txt`) plus three brand marks: the Æ (`aekasha.svg`), `github.svg` (from [Bootstrap Icons](https://icons.getbootstrap.com/), MIT, `hub/_assets/icons/LICENSE-bootstrap-icons.txt`) and `three-js.svg`. To add an icon, copy its SVG from `lucide-static` into `hub/_assets/icons/`. The brand marks are copies of the engine's icons (`src/_engine/ui/icons/svg/`, 16 × 16), so a change to one goes into both. Where an icon would repeat many times on a page, draw it from its file with a CSS `mask: url('icons/<name>.svg')` instead of inlining it (the API pages' GitHub source links do).
 
 ## Generated sections
 

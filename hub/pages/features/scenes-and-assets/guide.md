@@ -130,8 +130,8 @@ in lockstep with physics goes in the ECS instead (see [ECS](hub:features/ecs#sys
 ## Read more
 
 - The [quick start](hub:examples/quick-start).
-- The API reference: [Scene](hub:documentation/engine/core/Scene),
-  [SceneLoader](hub:documentation/engine/core/SceneLoader) and the
+- The API reference: [Scene](hub:documentation/engine/kernel/scene/Scene),
+  [SceneLoader](hub:documentation/engine/kernel/scene/SceneLoader) and the
   [schemas](hub:documentation/engine/schemas).
 
 ::: claude-md

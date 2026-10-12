@@ -8,7 +8,7 @@ import { getViteAliases } from './devTools/aliases.ts';
 // files, the visualizer) must not run under a test. The entries' aliases are the one setting shared.
 export default defineConfig({
   resolve: { alias: getViteAliases(fileURLToPath(new URL('.', import.meta.url))) },
-  // The build-time constants vite.config.ts defines (core/Config.ts reads it at load)
+  // The build-time constants vite.config.ts defines (kernel/config/Config.ts reads it at load)
   define: {
     __PROJECT_METADATA__: getProjectMetadata(),
     // The debug code stays: a test sets the debug env with initEnvironment

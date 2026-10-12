@@ -1,7 +1,6 @@
 Status: stub — not-implemented
 Category: Refactoring, Documentation, Debug
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
-Blocked by: p608_engine-folder-restructure.md
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
 
 # Review: Debug Public API — Stub
@@ -16,6 +15,12 @@ Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every 
 
 - The debugger framework's public API (`createDebuggerTab`, `createProfilerTab`, `registerStatsSource`, `registerGPUMemorySource`, the dev files, undo / redo, views, draggable windows) and the one debug-module loader: documented with examples, so an app writes its own tab from the Hub page alone.
 - The debug folders' structure after p608 (p602 D4).
+- **From p608 (D3):** the two debug wrappers p608 left in `debug/`, `debug/Assets.ts` and
+  `debug/PostFXProfiler.ts`, merge into their features' public modules here (or stay, with the
+  reason). A merged wrapper keeps its debug code foldable (p607 D7: the calls behind
+  `IS_DEBUG_ENV`, none inside a `try` block, a closure handed to `ctx.onDebug*` that keeps a module
+  alive gated with `if (IS_DEBUG_ENV)`); `yarn verify:baselines`' production debug check catches a
+  leftover.
 - **Not in scope:** polishing the Tweakpane panels' code (about 40% of the codebase). p800 replaces them; this plan only fixes what is broken or blocks p800.
 
 ## Inputs

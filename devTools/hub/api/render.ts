@@ -209,7 +209,7 @@ type Ctx = {
   sourceLink: SourceLink;
 };
 
-/** The shortest relative URL between two site paths: `../SceneLoader/`, `engine/core/` */
+/** The shortest relative URL between two site paths: `../SceneLoader/`, `engine/kernel/` */
 const relativeUrl = (from: string, to: string) => {
   const fromParts = from.split('/').filter(Boolean);
   const toParts = to.split('/').filter(Boolean);

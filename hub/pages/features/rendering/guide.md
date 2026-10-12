@@ -99,9 +99,9 @@ workaround in the engine yet:
 
 - The [quick start](hub:examples/quick-start): the dev environment and the smallest complete
   scene.
-- The API reference: [Renderer](hub:documentation/engine/core/Renderer),
-  [PostFX](hub:documentation/engine/core/PostFX) and
-  [Snapshot](hub:documentation/engine/core/Snapshot).
+- The API reference: [Renderer](hub:documentation/engine/kernel/render/Renderer),
+  [PostFX](hub:documentation/engine/features/postfx/PostFX) and
+  [Snapshot](hub:documentation/engine/kernel/render/Snapshot).
 
 ::: claude-md
 :::

@@ -1,6 +1,6 @@
-import { IS_DEBUG_ENV } from '../core/Config';
-import type { DebugModuleRef } from '../utils/helpers';
-import { loadDebugModuleAsync, useDebug } from '../utils/helpers';
+import { IS_DEBUG_ENV } from '../kernel/config/Config';
+import type { DebugModuleRef } from '../kernel/config/DebugModules';
+import { loadDebugModuleAsync, useDebug } from '../kernel/config/DebugModules';
 
 /**
  * One recorded debugger action. Entries are persisted to LocalStorage, so everything in
@@ -57,12 +57,12 @@ export type UndoRedoSettings = {
   showToasts: boolean;
 };
 
-type UndoRedoModule = typeof import('../core/Debug/_dbg__UndoRedo');
+type UndoRedoModule = typeof import('./_dbg__UndoRedo');
 let debugGUI: DebugModuleRef<UndoRedoModule> | null = null;
 
 export const registerUndoRedoModule = async () => {
   if (!IS_DEBUG_ENV) return;
-  debugGUI = await loadDebugModuleAsync(() => import('../core/Debug/_dbg__UndoRedo'));
+  debugGUI = await loadDebugModuleAsync(() => import('./_dbg__UndoRedo'));
 };
 
 /** Loads the persisted history from LocalStorage. */

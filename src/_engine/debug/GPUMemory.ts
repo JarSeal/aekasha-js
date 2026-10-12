@@ -1,12 +1,12 @@
 import type * as THREE from 'three/webgpu';
-import type { DebugModuleRef } from '../utils/helpers';
-import { loadDebugModuleAsync, useDebug } from '../utils/helpers';
+import type { DebugModuleRef } from '../kernel/config/DebugModules';
+import { loadDebugModuleAsync, useDebug } from '../kernel/config/DebugModules';
 import { isProfilerLoadedInThisMode } from './Profiler';
 
 /** Profiler window tab id of the GPU memory and draw-call tab. */
 export const GPU_MEMORY_TAB_ID = 'gpuMemory';
 
-let debugGUI: DebugModuleRef<typeof import('../core/Debug/_dbg__GPUMemory')> | null = null;
+let debugGUI: DebugModuleRef<typeof import('./gpuMemory/_dbg__GPUMemory')> | null = null;
 
 /** Creates the profiler's GPU memory tab (three's GPU memory bookkeeping, draw calls) and its
  * per-frame sampler. The implementation is only loaded where the profiler is: the debug env, and
@@ -15,7 +15,7 @@ let debugGUI: DebugModuleRef<typeof import('../core/Debug/_dbg__GPUMemory')> | n
 export const registerGPUMemoryDebugGUI = async () => {
   if (!isProfilerLoadedInThisMode()) return;
   debugGUI = await loadDebugModuleAsync(
-    () => import('../core/Debug/_dbg__GPUMemory'),
+    () => import('./gpuMemory/_dbg__GPUMemory'),
     true,
     'GPU memory'
   );

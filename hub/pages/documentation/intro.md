@@ -3,7 +3,7 @@ JSDoc: a page per module, with each export's signature, comment, parameters and 
 source. Exports without a JSDoc comment are listed too, marked "No description", and each folder
 shows how much of it is documented.
 
-The debug implementations behind `debug/*.ts` (the `_dbg__*` files) and the generated app data
+The debug implementations (the `_dbg__*` files in the `debug/` folders) and the generated app data
 aren't part of the API, so they aren't listed.
 
 ## Importing the engine
@@ -47,7 +47,9 @@ import { createPhysicsEntity } from 'aekasha/physics';
   so is a path into another toolkit category's files. The engine imports neither the toolkit nor
   the app.
 - The API pages below are still per module, with the module's path: an export is public when its
-  entry exports it.
+  entry exports it. The engine's folders: `kernel/` (what every app runs, a folder per area:
+  `ecs/`, `scene/`, `render/`, …), `features/` (a folder per feature entry), `ui/`, `debug/`,
+  `schemas/` and `utils/`.
 
 ## The API
 

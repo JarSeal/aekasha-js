@@ -1,7 +1,7 @@
 Status: implemented (Phases 1-10)
 Category: Architecture, Refactoring
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
-Blocks: \_DONE_p607_sbp-foundation-feature-modules.md, p608_engine-folder-restructure.md, p510_headless-simulation-runtime.md
+Blocks: \_DONE_p607_sbp-foundation-feature-modules.md, \_DONE_p608_engine-folder-restructure.md, p510_headless-simulation-runtime.md
 Related: \_DONE_p604_multiplayer-viability-study.md (the headless-core rules), \_DONE_p602_architecture-and-target-structure.md (D1, D3, D9, D10), \_DONE_p605_coding-standards-and-documentation-tooling.md (the `@example` rule)
 
 # Layering Inversion and Public Entry

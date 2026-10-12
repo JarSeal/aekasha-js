@@ -8,8 +8,8 @@ import { ROOT } from '../paths';
  *
  * Two subtrees, `engine/` (`src/_engine/`) and `toolkit/` (`src/toolkit/`), each a folder tree
  * under `documentation/`. A module's page is its file's path without `.ts`
- * (`documentation/engine/core/SceneLoader/`), and a folder's page its path. A module next to a
- * folder of the same name (`core/ECS.ts`, `core/ECS/`) has the folder's URL: its page is both,
+ * (`documentation/engine/kernel/scene/SceneLoader/`), and a folder's page its path. A module next to a
+ * folder of the same name (`Foo.ts` and `Foo/`) has the folder's URL: its page is both,
  * the module's symbols and the folder's list.
  */
 
@@ -58,7 +58,7 @@ export const API_SUBTREES: { id: ApiSubtree; sourceDir: string; title: string }[
 ];
 
 /**
- * Whether a site path (`documentation/engine/core/SceneLoader/`) is one of the pages the API
+ * Whether a site path (`documentation/engine/kernel/scene/SceneLoader/`) is one of the pages the API
  * model renders: the landing page and both subtrees, not the section's hand-written children
  */
 export const isApiPagePath = (sitePath: string) =>
@@ -71,9 +71,9 @@ export type Coverage = { documented: number; total: number };
 export type ApiModule = {
   reflection: DeclarationReflection;
   subtree: ApiSubtree;
-  /** From its subtree's folder, without `.ts`: `core/SceneLoader` */
+  /** From its subtree's folder, without `.ts`: `kernel/scene/SceneLoader` */
   relPath: string;
-  /** From the repo root: `src/_engine/core/SceneLoader.ts` */
+  /** From the repo root: `src/_engine/kernel/scene/SceneLoader.ts` */
   sourcePath: string;
   /** Absolute: its page's diagnostics point here */
   file: string;
@@ -86,14 +86,14 @@ export type ApiModule = {
 
 export type ApiFolder = {
   subtree: ApiSubtree;
-  /** From its subtree's folder: `core/Physics`, '' for the subtree's own */
+  /** From its subtree's folder: `features/physics`, '' for the subtree's own */
   relPath: string;
-  /** From the repo root: `src/_engine/core/Physics` */
+  /** From the repo root: `src/_engine/features/physics` */
   sourcePath: string;
   pagePath: string;
   folders: ApiFolder[];
   modules: ApiModule[];
-  /** The module with this folder's URL (`core/ECS.ts` for `core/ECS/`): its page is the folder's */
+  /** The module with this folder's URL (`Foo.ts` for `Foo/`): its page is the folder's */
   module: ApiModule | null;
   /** Its own modules', for the landing page's groups */
   coverage: Coverage;
@@ -134,13 +134,16 @@ const addCoverage = (into: Coverage, from: Coverage) => {
 export const getOwnMembers = (symbol: DeclarationReflection) =>
   (symbol.children ?? []).filter((child) => !child.inheritedFrom);
 
+const getPagePath = (subtree: ApiSubtree, relPath: string) =>
+  `${API_SECTION_PATH}${subtree}/${relPath ? `${relPath}/` : ''}`;
+
 const createFolder = (subtree: ApiSubtree, relPath: string): ApiFolder => {
   const { sourceDir } = API_SUBTREES.find((s) => s.id === subtree)!;
   return {
     subtree,
     relPath,
     sourcePath: relPath ? `${sourceDir}/${relPath}` : sourceDir,
-    pagePath: `${API_SECTION_PATH}${subtree}/${relPath ? `${relPath}/` : ''}`,
+    pagePath: getPagePath(subtree, relPath),
     folders: [],
     modules: [],
     module: null,
@@ -149,7 +152,7 @@ const createFolder = (subtree: ApiSubtree, relPath: string): ApiFolder => {
   };
 };
 
-/** `src/_engine/core/SceneLoader.ts` → its subtree and `core/SceneLoader` */
+/** `src/_engine/kernel/scene/SceneLoader.ts` → its subtree and `kernel/scene/SceneLoader` */
 const locateModule = (sourcePath: string) => {
   for (const { id, sourceDir } of API_SUBTREES) {
     if (sourcePath.startsWith(`${sourceDir}/`)) {
@@ -160,6 +163,20 @@ const locateModule = (sourcePath: string) => {
     }
   }
   return null;
+};
+
+/**
+ * The page of a module (`src/_engine/kernel/scene/SceneLoader.ts` →
+ * `documentation/engine/kernel/scene/SceneLoader/`) or a folder (`src/_engine/kernel/` →
+ * `documentation/engine/kernel/`), whether the API has it or not;
+ * `null` outside both subtrees. p608's codemod rewrites `hub:` links with it.
+ */
+export const getApiPagePath = (sourcePath: string): string | null => {
+  const isFolder = sourcePath.endsWith('/');
+  const location = locateModule(isFolder ? `${sourcePath}index.ts` : sourcePath);
+  if (!location) return null;
+  const relPath = isFolder ? location.relPath.replace(/\/?index$/, '') : location.relPath;
+  return getPagePath(location.subtree, relPath);
 };
 
 export const indexApiModel = (project: JSONOutput.ProjectReflection): ApiIndex => {
@@ -195,7 +212,7 @@ export const indexApiModel = (project: JSONOutput.ProjectReflection): ApiIndex =
       ...location,
       sourcePath,
       file: path.join(ROOT, sourcePath),
-      pagePath: `${API_SECTION_PATH}${location.subtree}/${location.relPath}/`,
+      pagePath: getPagePath(location.subtree, location.relPath),
       symbols,
       coverage: { documented: counted.filter(isDocumented).length, total: counted.length },
     };

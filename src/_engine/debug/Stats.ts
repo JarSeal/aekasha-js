@@ -1,7 +1,7 @@
 import type { Renderer } from 'three/webgpu';
-import { IS_DEBUG_ENV } from '../core/Config';
-import type { DebugModuleRef } from '../utils/helpers';
-import { loadDebugModuleAsync, useDebug } from '../utils/helpers';
+import { IS_DEBUG_ENV } from '../kernel/config/Config';
+import type { DebugModuleRef } from '../kernel/config/DebugModules';
+import { loadDebugModuleAsync, useDebug } from '../kernel/config/DebugModules';
 
 export type StatsOptions = {
   /** @deprecated Unused: the Statistics tab keeps its folder states in `AEK_debugStatsUI`. */
@@ -44,12 +44,12 @@ export const defaultStatsOptions = {
   enabled: true,
 };
 
-type StatsGUIModule = typeof import('../core/Debug/_dbg__Stats');
+type StatsGUIModule = typeof import('./_dbg__Stats');
 let debugGUI: DebugModuleRef<StatsGUIModule> | null = null;
 
 export const registerStatsModule = async () => {
   if (!IS_DEBUG_ENV) return;
-  debugGUI = await loadDebugModuleAsync(() => import('../core/Debug/_dbg__Stats'));
+  debugGUI = await loadDebugModuleAsync(() => import('./_dbg__Stats'));
 };
 
 /**

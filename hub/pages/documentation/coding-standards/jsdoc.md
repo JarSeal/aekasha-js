@@ -35,7 +35,7 @@ A function that isn't exported gets a comment when its purpose isn't obvious fro
 | `@remarks` | A trap the reader would hit: a three quirk, an order the caller must keep, a cost | After the summary and the tags it explains |
 | `@internal` | Every export that isn't part of a public entry | An empty tag on its own line, the reason in the summary |
 | `@deprecated` | An export that's going away | What replaces it, and the major that removes it |
-| `{@link X}` | A reference to another export | Only for names TypeDoc resolves (our own exports); three's classes and outside names go in backticks. A name the file doesn't import takes its module, from `src/`: `{@link _engine/InitApp!InitEngine}` |
+| `{@link X}` | A reference to another export | Only for names TypeDoc resolves (our own exports); three's classes and outside names go in backticks. A name the file doesn't import takes its module, from `src/`: `{@link _engine/kernel/init/InitEngine!InitEngine}` |
 
 ```ts
 /**

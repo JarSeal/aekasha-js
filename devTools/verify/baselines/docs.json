@@ -3,7 +3,7 @@
   "total": {
     "exports": {
       "documented": 1481,
-      "total": 2165
+      "total": 2161
     },
     "members": {
       "documented": 212,
@@ -14,7 +14,7 @@
     "engine": {
       "exports": {
         "documented": 1436,
-        "total": 2101
+        "total": 2097
       },
       "members": {
         "documented": 162,
@@ -33,10 +33,102 @@
     }
   },
   "folders": {
-    "engine": {
+    "engine/debug": {
       "exports": {
-        "documented": 2,
-        "total": 2
+        "documented": 142,
+        "total": 195
+      },
+      "members": {
+        "documented": 0,
+        "total": 3
+      },
+      "undocumented": {
+        "exports": [
+          "DebugTools#DEBUG_CAMERA_ID",
+          "DebugTools#DebugToolsState",
+          "DebugTools#registerDebugToolsModule",
+          "DebuggerGUI#DEBUGGER_SCENE_LOADER_ID",
+          "DebuggerGUI#DEBUG_TOASTER_ID",
+          "DebuggerGUI#DebugGUIOpts",
+          "DebuggerGUI#DebuggerListItem",
+          "DebuggerGUI#DebuggerPaneButton",
+          "DebuggerGUI#DebuggerPaneItem",
+          "DebuggerGUI#DebuggerPaneSeparator",
+          "DebuggerGUI#disableDebugger",
+          "DebuggerGUI#isDebuggerDisabled",
+          "DebuggerGUI#registerDebuggerGUI",
+          "DebuggerGUI#updateDebuggerSceneTitle",
+          "DevFiles#DevFileRead",
+          "DevFiles#DevFilesStatus",
+          "DevFiles#DevFilesUnavailableReason",
+          "DevFiles#EncodePNGOpts",
+          "DevFilesProtocol#DevDataGatheredEvent",
+          "DevFilesProtocol#DevFilesCommitRequest",
+          "DevFilesProtocol#DevFilesErrorBody",
+          "DevFilesProtocol#DevFilesErrorCode",
+          "DevFilesProtocol#DevFilesWriteStatus",
+          "GPUMemory#GPUMemorySource",
+          "OnScreenTools#InitOnScreenTools",
+          "OnScreenTools#ToolTypes",
+          "OnScreenTools#registerOnScreenTools",
+          "OnScreenTools#updateOnScreenTools",
+          "PercentagePieHtml#PercentagePieOpts",
+          "Profiler#DEFAULT_PROFILER_SETTINGS",
+          "Profiler#ProfilerBarMeasure",
+          "Profiler#ProfilerSettings",
+          "SceneHelpers#createAxesHelper",
+          "SceneHelpers#createGridHelper",
+          "SceneHelpers#createPolarGridHelper",
+          "SceneHelpers#toggleAxesHelperVisibility",
+          "SceneHelpers#toggleGridHelperVisibility",
+          "SceneHelpers#togglePolarGridHelperVisibility",
+          "Stats#StatsOptions",
+          "Stats#defaultStatsOptions",
+          "Stats#getStatsCmp",
+          "Stats#registerStatsModule",
+          "Stats#startCustomMeasurements",
+          "Stats#updatePhysicsPanel",
+          "Stats#updateRestOfStats",
+          "TestBridge#TestBridgeProbeResult",
+          "TestBridge#TestBridgeSceneReady",
+          "TestBridge#TestBridgeSnapshot",
+          "UndoRedo#UndoRedoClearScope",
+          "UndoRedo#UndoRedoHistoryState",
+          "UndoRedo#canRedo",
+          "UndoRedo#canUndo",
+          "UndoRedo#registerUndoRedoModule"
+        ],
+        "members": [
+          "DevFiles#DevFilesError.code",
+          "DevFiles#DevFilesError.constructor",
+          "DevFiles#DevFilesError.details"
+        ]
+      }
+    },
+    "engine/debug/symbols": {
+      "exports": {
+        "documented": 0,
+        "total": 5
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [
+          "3DSymbols#createNewCameraSymbol",
+          "3DSymbols#createNewDirectionalLightSymbol",
+          "3DSymbols#createNewPointLightSymbol",
+          "3DSymbols#createNewSpotLightSymbol",
+          "3DSymbols#load3DSymbols"
+        ],
+        "members": []
+      }
+    },
+    "engine/features/character": {
+      "exports": {
+        "documented": 56,
+        "total": 56
       },
       "members": {
         "documented": 0,
@@ -47,412 +139,7 @@
         "members": []
       }
     },
-    "engine/core": {
-      "exports": {
-        "documented": 433,
-        "total": 579
-      },
-      "members": {
-        "documented": 35,
-        "total": 64
-      },
-      "undocumented": {
-        "exports": [
-          "CameraManager#CameraDebugLSData",
-          "CameraManager#CameraEntityDebugState",
-          "CameraManager#CameraSceneDebugState",
-          "CameraManager#cameraDebugGUI",
-          "CameraManager#createCameraEntity",
-          "CameraManager#disposeCamera",
-          "CameraManager#getActiveCamera",
-          "CameraManager#getActiveCameraId",
-          "CameraManager#getAllCamerasAsArray",
-          "CameraManager#getCameraByAppId",
-          "CameraManager#getCurrentCamera",
-          "CameraManager#getCurrentCameraId",
-          "CameraManager#getMainAppCameraId",
-          "CameraManager#initDebugCamera",
-          "CameraManager#isAnyCameraHelperVisible",
-          "CameraManager#isDebugCameraActive",
-          "CameraManager#registerCameraManager",
-          "CameraManager#setActiveCamera",
-          "CameraManager#setCurrentCamera",
-          "CameraManager#setMainCamera",
-          "CameraManager#syncCameraHelpersFromLS",
-          "CameraManager#toggleAllCameraHelpers",
-          "CameraManager#toggleDebugCamera",
-          "Config#AppConfig",
-          "Config#DebugPhysicsWireframeConfig",
-          "Config#Environments",
-          "ECS#ComponentHook",
-          "ECS#DEFAULT_ECS_WORLD_ID",
-          "ECS#ECSSystem",
-          "ECS#ECSWorld",
-          "ECS#ECSWorldOptions",
-          "ECS#WorldPlugin",
-          "ECS#getEntityIdByAppId",
-          "ECS#registerECSModule",
-          "Geometry#GeoDebugData",
-          "Geometry#GeoProps",
-          "Geometry#GeoTypes",
-          "Geometry#decGeometryRef",
-          "Geometry#freeGeometryGPUMemory",
-          "Geometry#getGeometryRegistry",
-          "Geometry#incGeometryRef",
-          "Geometry#setGeometryPersistence",
-          "GroupManager#GroupProps",
-          "GroupManager#getGroupByAppId",
-          "HUD#GUI_CONTAINER_ID",
-          "HUD#HUD_ROOT_ID",
-          "Helpers#createAxesHelper",
-          "Helpers#createGridHelper",
-          "Helpers#createPolarGridHelper",
-          "Helpers#toggleAxesHelperVisibility",
-          "Helpers#toggleGridHelperVisibility",
-          "Helpers#togglePolarGridHelperVisibility",
-          "LightManager#LightProps",
-          "LightManager#SHADOW_PRESETS",
-          "LightManager#ShadowQuality",
-          "LightManager#createLightEntity",
-          "LightManager#debugGUI",
-          "LightManager#getLightByAppId",
-          "LightManager#isAnyLightHelperVisible",
-          "LightManager#registerLightManager",
-          "LightManager#setLightEnabled",
-          "LightManager#setLightFrustumCullingEnabled",
-          "LightManager#setLightObjectCullingEnabled",
-          "LightManager#setLightShadowEnabled",
-          "LightManager#toggleAllLightHelpers",
-          "MainLoop#addBeforeUnloadFn",
-          "MainLoop#addOnWindowBlurFn",
-          "MainLoop#addVisibilityChangeFn",
-          "MainLoop#deleteAddOnWindowBlurFn",
-          "MainLoop#deleteAllBeforeUnloadFns",
-          "MainLoop#deleteAllOnWindowBlurFns",
-          "MainLoop#deleteAllVisibilityChangeFns",
-          "MainLoop#deleteBeforeUnloadFn",
-          "MainLoop#deleteVisibilityChangeFn",
-          "MainLoop#mainLoop",
-          "MainLoop#registerMainLoopDebugGUI",
-          "MainLoop#setPlaySpeedMultiplier",
-          "Material#MatProps",
-          "Material#MaterialVariantOverrides",
-          "Material#Materials",
-          "Material#TextureMapKeys",
-          "Material#decMaterialRef",
-          "Material#getMaterialRegistry",
-          "Material#incMaterialRef",
-          "Material#setMaterialPersistence",
-          "MeshManager#MeshProps",
-          "MeshManager#createMeshEntity",
-          "MeshManager#disposeMesh",
-          "MeshManager#getMeshByAppId",
-          "PhysicsAPI#createPhysicsWorld",
-          "PhysicsAPI#deletePhysicsWorld",
-          "PhysicsAPI#getCollider",
-          "PhysicsAPI#getJoint",
-          "PhysicsAPI#getRigidBody",
-          "PhysicsAPI#isPhysicsSteppingHeld",
-          "PhysicsAPI#restorePhysicsSnapshot",
-          "PhysicsAPI#takePhysicsSnapshot",
-          "PhysicsManager#disposePhysicsEntity",
-          "PhysicsManager#getPhysicsEntityByAppId",
-          "PhysicsTierPolicy#DEFAULT_TIER_POLICY_CADENCE",
-          "PhysicsTierPolicy#DEFAULT_TIER_POLICY_INTERVAL",
-          "PropertyLoader#LoadableProps",
-          "Renderer#RendererOptions",
-          "Renderer#createRendererDebugGUI",
-          "Renderer#getCanvasElem",
-          "Renderer#isWebGLRenderer",
-          "Renderer#isWebGPURenderer",
-          "Scene#Looper",
-          "Scene#SceneData",
-          "Scene#SceneOptions",
-          "Scene#registerOnAllSceneEnterings",
-          "Scene#registerOnAllSceneExits",
-          "Scene#registerOnSceneEnter",
-          "Scene#registerOnSceneExit",
-          "Scene#runOnAllSceneEnters",
-          "Scene#runOnAllSceneExits",
-          "Scene#runOnSceneEnter",
-          "Scene#runOnSceneExit",
-          "Scene#runSceneAppLoopers",
-          "Scene#runSceneMainLateLoopers",
-          "Scene#runSceneMainLoopers",
-          "SceneLoader#SceneLoader",
-          "SceneLoader#ScenePrimitiveAssets",
-          "SceneLoader#UpdateLoaderStatusFn",
-          "SceneLoader#createCameras",
-          "SceneLoader#createSceneLoader",
-          "SceneLoader#getCurrentSceneLoader",
-          "SceneLoader#getCurrentSceneLoaderId",
-          "SceneLoader#getNextSceneId",
-          "SceneLoader#hasFirstSceneBeenLoaded",
-          "SceneLoader#setCurrentSceneLoader",
-          "Snapshot#SnapshotBlobOpts",
-          "Snapshot#SnapshotOpts",
-          "Texture#TexOpts",
-          "Texture#TextureProps",
-          "Texture#decTextureRef",
-          "Texture#getTextureRegistry",
-          "Texture#incTextureRef",
-          "Texture#setTexturePersistence",
-          "TextureArray#BuildTextureArrayProps",
-          "TextureAtlas#RemapUVsToAtlasCellOpts",
-          "TextureAtlas#SampleAtlasCellOpts",
-          "Viewports#Viewport",
-          "Viewports#ViewportAnchor",
-          "Viewports#ViewportProps",
-          "Viewports#ViewportRect"
-        ],
-        "members": [
-          "CameraManager#CameraEntityDebugState.helperVisible",
-          "CameraManager#CameraSceneDebugState.debugCam",
-          "CameraManager#DebugCamLSProps.enabled",
-          "CameraManager#DebugCamLSProps.far",
-          "CameraManager#DebugCamLSProps.fov",
-          "CameraManager#DebugCamLSProps.latestAppCameraId",
-          "CameraManager#DebugCamLSProps.near",
-          "CameraManager#DebugCamLSProps.position",
-          "CameraManager#DebugCamLSProps.target",
-          "CameraManager#DebugCamLSProps.zoom",
-          "ECS#ECSWorld.addComponent",
-          "ECS#ECSWorld.constructor",
-          "ECS#ECSWorld.createEntity",
-          "ECS#ECSWorld.createRawEntity",
-          "ECS#ECSWorld.getComponent",
-          "ECS#ECSWorld.getPosition",
-          "ECS#ECSWorld.getRigidBody",
-          "ECS#ECSWorld.getRotation",
-          "ECS#ECSWorld.getScale",
-          "ECS#ECSWorld.getTransform",
-          "ECS#ECSWorld.id",
-          "ECS#ECSWorld.isEntityDynamic",
-          "ECS#ECSWorld.maxEntities",
-          "ECS#ECSWorld.registerComponentHooks",
-          "ECS#ECSWorld.setTransform",
-          "ECS#ECSWorld.storageMode",
-          "PhysicsAPI#PhysicsCapacityError.constructor",
-          "PhysicsAPI#PhysicsCapacityError.maxBodies",
-          "PropertyLoader#LoadableProps.appId"
-        ]
-      }
-    },
-    "engine/core/Assets": {
-      "exports": {
-        "documented": 40,
-        "total": 47
-      },
-      "members": {
-        "documented": 0,
-        "total": 0
-      },
-      "undocumented": {
-        "exports": [
-          "AssetsAPITypes#AssetsDownProtocol",
-          "AssetsAPITypes#AssetsErrorResponse",
-          "AssetsAPITypes#AssetsPingRequest",
-          "AssetsAPITypes#AssetsPingResponse",
-          "AssetsAPITypes#AssetsProtocolType",
-          "AssetsAPITypes#AssetsUpProtocol",
-          "AssetsAPITypes#AssetsWorkerStatus"
-        ],
-        "members": []
-      }
-    },
-    "engine/core/Character": {
-      "exports": {
-        "documented": 41,
-        "total": 41
-      },
-      "members": {
-        "documented": 0,
-        "total": 0
-      },
-      "undocumented": {
-        "exports": [],
-        "members": []
-      }
-    },
-    "engine/core/ECS": {
-      "exports": {
-        "documented": 37,
-        "total": 48
-      },
-      "members": {
-        "documented": 12,
-        "total": 98
-      },
-      "undocumented": {
-        "exports": [
-          "ECSComponentStorage#ECSStorageLSOverride",
-          "ECSCoreComponents#CoreComponentData",
-          "ECSCoreComponents#ECSPosition",
-          "ECSCoreComponents#ECSRotation",
-          "ECSCoreComponents#ECSTransformProp",
-          "ECSCoreComponents#LifetimeData",
-          "ECSRegistry#EntityDebugData",
-          "LightObjectCullingSystem#lightObjectCullingSystem",
-          "ObjectFrustumCullingSystem#MAX_SPOT_ANGLE",
-          "ObjectFrustumCullingSystem#getMeshWorldBoundingSphere",
-          "ObjectFrustumCullingSystem#objectFrustumCullingSystem"
-        ],
-        "members": [
-          "ECSComponentStorage#ECSStorageLSOverride.maxEntities",
-          "ECSComponentStorage#ECSStorageLSOverride.storageMode",
-          "ECSComponentStorage#IComponentStorage.clear",
-          "ECSComponentStorage#IComponentStorage.delete",
-          "ECSComponentStorage#IComponentStorage.entries",
-          "ECSComponentStorage#IComponentStorage.get",
-          "ECSComponentStorage#IComponentStorage.has",
-          "ECSComponentStorage#IComponentStorage.keys",
-          "ECSComponentStorage#IComponentStorage.set",
-          "ECSComponentStorage#IComponentStorage.size",
-          "ECSCoreComponents#CoreComponentData.CORE_APP_ID",
-          "ECSCoreComponents#CoreComponentData.CORE_BODY_DYNAMIC_HEADLESS",
-          "ECSCoreComponents#CoreComponentData.CORE_BODY_DYNAMIC_VISUAL",
-          "ECSCoreComponents#CoreComponentData.CORE_BODY_STATIC",
-          "ECSCoreComponents#CoreComponentData.CORE_CAMERA_SETTINGS",
-          "ECSCoreComponents#CoreComponentData.CORE_CHARACTER",
-          "ECSCoreComponents#CoreComponentData.CORE_COLLIDER",
-          "ECSCoreComponents#CoreComponentData.CORE_DEBUG_CAMERA_HELPER",
-          "ECSCoreComponents#CoreComponentData.CORE_DEBUG_DATA",
-          "ECSCoreComponents#CoreComponentData.CORE_DEBUG_IS_DEBUG_CAMERA",
-          "ECSCoreComponents#CoreComponentData.CORE_DEBUG_LIGHT_HELPER",
-          "ECSCoreComponents#CoreComponentData.CORE_DEBUG_SYMBOL",
-          "ECSCoreComponents#CoreComponentData.CORE_DISABLED",
-          "ECSCoreComponents#CoreComponentData.CORE_FRUSTUM_CULLING_ENABLED",
-          "ECSCoreComponents#CoreComponentData.CORE_INSTANCED_MESH_SLOT",
-          "ECSCoreComponents#CoreComponentData.CORE_IS_AMBIENT_LIGHT",
-          "ECSCoreComponents#CoreComponentData.CORE_IS_DIRECTIONAL_LIGHT",
-          "ECSCoreComponents#CoreComponentData.CORE_IS_HEMISPHERE_LIGHT",
-          "ECSCoreComponents#CoreComponentData.CORE_IS_POINT_LIGHT",
-          "ECSCoreComponents#CoreComponentData.CORE_IS_SPOT_LIGHT",
-          "ECSCoreComponents#CoreComponentData.CORE_LIFETIME",
-          "ECSCoreComponents#CoreComponentData.CORE_LOD",
-          "ECSCoreComponents#CoreComponentData.CORE_MANAGED_BY",
-          "ECSCoreComponents#CoreComponentData.CORE_OBJECT3D",
-          "ECSCoreComponents#CoreComponentData.CORE_OBJECT_CULLING_ENABLED",
-          "ECSCoreComponents#CoreComponentData.CORE_ORBIT_CONTROLS",
-          "ECSCoreComponents#CoreComponentData.CORE_PERSISTENT",
-          "ECSCoreComponents#CoreComponentData.CORE_SPATIAL_INDEXED",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_FRUSTUM_CULLED",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_CAMERA",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_CHARACTER",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_GROUP",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_LIGHT",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_LINE",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_MAIN_CAMERA",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_MESH",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_PHYSICS_OBJECT",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_LOD_CULLED",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_LOD_TRANSITIONING",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_OBJECT_CULLED",
-          "ECSCoreComponents#CoreComponentData.CORE_TARGET_LINK",
-          "ECSCoreComponents#CoreComponentData.CORE_TRANSFORM",
-          "ECSCoreComponents#CoreComponentData.CORE_USER_DATA",
-          "ECSCoreComponents#LifetimeData.remaining",
-          "ECSCoreComponents#LifetimeData.total",
-          "ECSCoreComponents#Transform.constructor",
-          "ECSCoreComponents#Transform.copy",
-          "ECSCoreComponents#Transform.position",
-          "ECSCoreComponents#Transform.quaternion",
-          "ECSCoreComponents#Transform.scale",
-          "ECSCoreComponents#Transform.version",
-          "TypedArrayTransformStore#TypedArrayTransformStore.[iterator]",
-          "TypedArrayTransformStore#TypedArrayTransformStore.clear",
-          "TypedArrayTransformStore#TypedArrayTransformStore.clearDirty",
-          "TypedArrayTransformStore#TypedArrayTransformStore.constructor",
-          "TypedArrayTransformStore#TypedArrayTransformStore.delete",
-          "TypedArrayTransformStore#TypedArrayTransformStore.entries",
-          "TypedArrayTransformStore#TypedArrayTransformStore.get",
-          "TypedArrayTransformStore#TypedArrayTransformStore.has",
-          "TypedArrayTransformStore#TypedArrayTransformStore.isDirty",
-          "TypedArrayTransformStore#TypedArrayTransformStore.keys",
-          "TypedArrayTransformStore#TypedArrayTransformStore.posX",
-          "TypedArrayTransformStore#TypedArrayTransformStore.posY",
-          "TypedArrayTransformStore#TypedArrayTransformStore.posZ",
-          "TypedArrayTransformStore#TypedArrayTransformStore.quatW",
-          "TypedArrayTransformStore#TypedArrayTransformStore.quatX",
-          "TypedArrayTransformStore#TypedArrayTransformStore.quatY",
-          "TypedArrayTransformStore#TypedArrayTransformStore.quatZ",
-          "TypedArrayTransformStore#TypedArrayTransformStore.scaleX",
-          "TypedArrayTransformStore#TypedArrayTransformStore.scaleY",
-          "TypedArrayTransformStore#TypedArrayTransformStore.scaleZ",
-          "TypedArrayTransformStore#TypedArrayTransformStore.set",
-          "TypedArrayTransformStore#TypedArrayTransformStore.setPosition",
-          "TypedArrayTransformStore#TypedArrayTransformStore.setQuaternion",
-          "TypedArrayTransformStore#TypedArrayTransformStore.setScale",
-          "TypedArrayTransformStore#TypedArrayTransformStore.size"
-        ]
-      }
-    },
-    "engine/core/Import": {
-      "exports": {
-        "documented": 58,
-        "total": 69
-      },
-      "members": {
-        "documented": 0,
-        "total": 0
-      },
-      "undocumented": {
-        "exports": [
-          "DracoDecoder#DracoConfig",
-          "GLTFExtract#ExtractResult",
-          "GLTFTextureCollect#CollectedGLTFTexture",
-          "GLTFTextureCollect#CollectedGLTFTextures",
-          "GLTFTextures#RegisteredGLTFTextures",
-          "GeometryTransfer#TransferableAttribute",
-          "ImportTypes#ImportAssetParams",
-          "ImportTypes#ImportedAssetManifest",
-          "ImportTypes#ImportedGeometryInfo",
-          "ImportTypes#SpawnImportedParams",
-          "ImportTypes#SpawnImportedResult"
-        ],
-        "members": []
-      }
-    },
-    "engine/core/Input": {
-      "exports": {
-        "documented": 33,
-        "total": 57
-      },
-      "members": {
-        "documented": 0,
-        "total": 0
-      },
-      "undocumented": {
-        "exports": [
-          "GamepadInput#pollGamepads",
-          "InputState#areAllInputsEnabled",
-          "InputState#areAppInputsSuspended",
-          "KeyboardInput#KeyBinding",
-          "KeyboardInput#KeyBindingType",
-          "KeyboardInput#KeyChord",
-          "KeyboardInput#KeyUpDownBinding",
-          "KeyboardInput#createKeyBinding",
-          "KeyboardInput#deleteKeyBinding",
-          "KeyboardInput#setKeyBindingEnabled",
-          "KeyboardInput#setKeyInputsEnabled",
-          "MouseInput#MouseBinding",
-          "MouseInput#MouseBindingType",
-          "MouseInput#MouseButton",
-          "MouseInput#createMouseBinding",
-          "MouseInput#deleteMouseBinding",
-          "MouseInput#setMouseBindingEnabled",
-          "MouseInput#setMouseInputsEnabled",
-          "TouchInput#TouchBinding",
-          "TouchInput#TouchBindingType",
-          "TouchInput#createTouchBinding",
-          "TouchInput#deleteTouchBinding",
-          "TouchInput#setTouchBindingEnabled",
-          "TouchInput#setTouchInputsEnabled"
-        ],
-        "members": []
-      }
-    },
-    "engine/core/Instancing": {
+    "engine/features/instancing": {
       "exports": {
         "documented": 7,
         "total": 12
@@ -482,10 +169,10 @@
         ]
       }
     },
-    "engine/core/Lines": {
+    "engine/features/lines": {
       "exports": {
-        "documented": 44,
-        "total": 58
+        "documented": 56,
+        "total": 70
       },
       "members": {
         "documented": 38,
@@ -528,10 +215,10 @@
         ]
       }
     },
-    "engine/core/Lod": {
+    "engine/features/lod": {
       "exports": {
-        "documented": 68,
-        "total": 80
+        "documented": 60,
+        "total": 72
       },
       "members": {
         "documented": 0,
@@ -555,7 +242,7 @@
         "members": []
       }
     },
-    "engine/core/Lod/Impostors": {
+    "engine/features/lod/impostors": {
       "exports": {
         "documented": 64,
         "total": 73
@@ -579,37 +266,39 @@
         "members": []
       }
     },
-    "engine/core/Physics": {
+    "engine/features/lod/worker": {
       "exports": {
-        "documented": 67,
-        "total": 223
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/features/physics": {
+      "exports": {
+        "documented": 167,
+        "total": 315
       },
       "members": {
         "documented": 27,
-        "total": 50
+        "total": 52
       },
       "undocumented": {
         "exports": [
-          "ENGINES#ENGINES",
-          "EngineRapier#createCollider",
-          "EngineRapier#createColliders",
-          "EngineRapier#createJoint",
-          "EngineRapier#createJoints",
-          "EngineRapier#createRigidBodies",
-          "EngineRapier#createRigidBody",
-          "EngineRapier#createWorld",
-          "EngineRapier#debugRender",
-          "EngineRapier#deleteCollider",
-          "EngineRapier#deleteColliders",
-          "EngineRapier#deleteJoint",
-          "EngineRapier#deleteJoints",
-          "EngineRapier#deleteRigidBodies",
-          "EngineRapier#deleteRigidBody",
-          "EngineRapier#deleteWorld",
-          "EngineRapier#init",
-          "EngineRapier#restoreSnapshot",
-          "EngineRapier#step",
-          "EngineRapier#takeSnapshot",
+          "PhysicsAPI#createPhysicsWorld",
+          "PhysicsAPI#deletePhysicsWorld",
+          "PhysicsAPI#getCollider",
+          "PhysicsAPI#getJoint",
+          "PhysicsAPI#getRigidBody",
+          "PhysicsAPI#isPhysicsSteppingHeld",
+          "PhysicsAPI#restorePhysicsSnapshot",
+          "PhysicsAPI#takePhysicsSnapshot",
           "PhysicsAPITypes#ActiveHooks",
           "PhysicsAPITypes#CollBorderRadiusResponse",
           "PhysicsAPITypes#CollCollisionGroupsResponse",
@@ -736,7 +425,11 @@
           "PhysicsAPITypes#WorldNumSolverIterationsResponse",
           "PhysicsAPITypes#WorldProxyAPIType",
           "PhysicsAPITypes#WorldTimestepResponse",
+          "PhysicsEntity#disposePhysicsEntity",
+          "PhysicsEntity#getPhysicsEntityByAppId",
           "PhysicsStepStatsBuffer#PHYSICS_STEP_STATS_FIELD_COUNT",
+          "PhysicsTierPolicy#DEFAULT_TIER_POLICY_CADENCE",
+          "PhysicsTierPolicy#DEFAULT_TIER_POLICY_INTERVAL",
           "PhysicsTierTypes#PhysicsTierBucket",
           "PhysicsUtils#ValidProtocolTypes",
           "PhysicsUtils#getCollOrRigidId",
@@ -748,6 +441,8 @@
           "PhysicsUtils#setPhysicsPauseTime"
         ],
         "members": [
+          "PhysicsAPI#PhysicsCapacityError.constructor",
+          "PhysicsAPI#PhysicsCapacityError.maxBodies",
           "PhysicsAPITypes#ContactForceEventSnapshot.constructor",
           "PhysicsAPITypes#PhysRotation.w",
           "PhysicsAPITypes#PhysRotation.x",
@@ -774,10 +469,60 @@
         ]
       }
     },
-    "engine/core/PostFX": {
+    "engine/features/physics/backends": {
       "exports": {
-        "documented": 10,
-        "total": 10
+        "documented": 0,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [
+          "Engines#ENGINES"
+        ],
+        "members": []
+      }
+    },
+    "engine/features/physics/backends/rapier": {
+      "exports": {
+        "documented": 12,
+        "total": 31
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [
+          "EngineRapier#createCollider",
+          "EngineRapier#createColliders",
+          "EngineRapier#createJoint",
+          "EngineRapier#createJoints",
+          "EngineRapier#createRigidBodies",
+          "EngineRapier#createRigidBody",
+          "EngineRapier#createWorld",
+          "EngineRapier#debugRender",
+          "EngineRapier#deleteCollider",
+          "EngineRapier#deleteColliders",
+          "EngineRapier#deleteJoint",
+          "EngineRapier#deleteJoints",
+          "EngineRapier#deleteRigidBodies",
+          "EngineRapier#deleteRigidBody",
+          "EngineRapier#deleteWorld",
+          "EngineRapier#init",
+          "EngineRapier#restoreSnapshot",
+          "EngineRapier#step",
+          "EngineRapier#takeSnapshot"
+        ],
+        "members": []
+      }
+    },
+    "engine/features/physics/import": {
+      "exports": {
+        "documented": 3,
+        "total": 3
       },
       "members": {
         "documented": 0,
@@ -788,7 +533,40 @@
         "members": []
       }
     },
-    "engine/core/SkyBox": {
+    "engine/features/physics/worker": {
+      "exports": {
+        "documented": 0,
+        "total": 4
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [
+          "PhysicsSwitchColl#physicsSwitchColl",
+          "PhysicsSwitchJoint#physicsSwitchJoint",
+          "PhysicsSwitchRigid#physicsSwitchRigid",
+          "PhysicsSwitchWorld#physicsSwitchWorld"
+        ],
+        "members": []
+      }
+    },
+    "engine/features/postfx": {
+      "exports": {
+        "documented": 28,
+        "total": 28
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/features/skybox": {
       "exports": {
         "documented": 150,
         "total": 174
@@ -799,6 +577,11 @@
       },
       "undocumented": {
         "exports": [
+          "LegacySkyBox#LEGACY_SKYBOX_WARNING",
+          "Presets#SKYBOX_PRESETS",
+          "Presets#SKYBOX_PRESET_NAMES",
+          "Presets#SkyBoxPresetName",
+          "Presets#isSkyBoxPresetName",
           "SkyBox#SkyBoxChangeReason",
           "SkyBox#isDayNightPlaying",
           "SkyBox#registerSkyBoxDebugGUI",
@@ -817,17 +600,12 @@
           "SkyLights#SUN_LIGHT_DEFAULTS",
           "SkyStaticLayers#_setStaticLayersBakeHooks",
           "SkyTime#DAY_NIGHT_DEFAULTS",
-          "SkyTime#createSkyTimeState",
-          "legacySkyBox#LEGACY_SKYBOX_WARNING",
-          "presets#SKYBOX_PRESETS",
-          "presets#SKYBOX_PRESET_NAMES",
-          "presets#SkyBoxPresetName",
-          "presets#isSkyBoxPresetName"
+          "SkyTime#createSkyTimeState"
         ],
         "members": []
       }
     },
-    "engine/core/SkyBox/layers": {
+    "engine/features/skybox/layers": {
       "exports": {
         "documented": 47,
         "total": 79
@@ -838,46 +616,46 @@
       },
       "undocumented": {
         "exports": [
-          "atmosphere#ATMOSPHERE_DEFAULTS",
-          "atmosphere#ATMOSPHERE_STRUCTURAL_KEYS",
-          "atmosphere#AtmosphereUniforms",
-          "atmosphere#atmosphereParts",
-          "atmosphere#createAtmosphereUniforms",
-          "base#BASE_DEFAULTS",
-          "base#BaseLayer",
-          "base#ENV_DEFAULTS",
-          "base#createBaseUniforms",
-          "clouds#CLOUDS_DEFAULTS",
-          "clouds#CLOUDS_STRUCTURAL_KEYS",
-          "clouds#CloudsUniforms",
-          "clouds#applyCloudsUniforms",
-          "clouds#createCloudsUniforms",
-          "ground#GROUND_DEFAULTS",
-          "ground#GROUND_STRUCTURAL_KEYS",
-          "ground#GroundUniforms",
-          "ground#applyGroundUniforms",
-          "ground#createGroundUniforms",
-          "moon#MOON_DEFAULTS",
-          "moon#MOON_TEXTURE_DEFAULTS",
-          "moon#MoonUniforms",
-          "moon#createMoonUniforms",
-          "nebula#NEBULA_DEFAULTS",
-          "nebula#NebulaUniforms",
-          "stars#STARS_DEFAULTS",
-          "stars#StarsUniforms",
-          "stars#createStarsUniforms",
-          "sun#SUN_DEFAULTS",
-          "sun#SUN_STRUCTURAL_KEYS",
-          "sun#SunUniforms",
-          "sun#createSunUniforms"
+          "Atmosphere#ATMOSPHERE_DEFAULTS",
+          "Atmosphere#ATMOSPHERE_STRUCTURAL_KEYS",
+          "Atmosphere#AtmosphereUniforms",
+          "Atmosphere#atmosphereParts",
+          "Atmosphere#createAtmosphereUniforms",
+          "Base#BASE_DEFAULTS",
+          "Base#BaseLayer",
+          "Base#ENV_DEFAULTS",
+          "Base#createBaseUniforms",
+          "Clouds#CLOUDS_DEFAULTS",
+          "Clouds#CLOUDS_STRUCTURAL_KEYS",
+          "Clouds#CloudsUniforms",
+          "Clouds#applyCloudsUniforms",
+          "Clouds#createCloudsUniforms",
+          "Ground#GROUND_DEFAULTS",
+          "Ground#GROUND_STRUCTURAL_KEYS",
+          "Ground#GroundUniforms",
+          "Ground#applyGroundUniforms",
+          "Ground#createGroundUniforms",
+          "Moon#MOON_DEFAULTS",
+          "Moon#MOON_TEXTURE_DEFAULTS",
+          "Moon#MoonUniforms",
+          "Moon#createMoonUniforms",
+          "Nebula#NEBULA_DEFAULTS",
+          "Nebula#NebulaUniforms",
+          "Stars#STARS_DEFAULTS",
+          "Stars#StarsUniforms",
+          "Stars#createStarsUniforms",
+          "Sun#SUN_DEFAULTS",
+          "Sun#SUN_STRUCTURAL_KEYS",
+          "Sun#SunUniforms",
+          "Sun#createSunUniforms"
         ],
         "members": []
       }
     },
-    "engine/core/Spatial": {
+    "engine/features/spatial": {
       "exports": {
-        "documented": 40,
-        "total": 53
+        "documented": 41,
+        "total": 55
       },
       "members": {
         "documented": 20,
@@ -890,6 +668,7 @@
           "CellKey#CELL_AXIS_OFFSET",
           "CellKey#CELL_AXIS_SIZE",
           "CellKey#CellCoords",
+          "LightObjectCullingSystem#lightObjectCullingSystem",
           "SpatialGrid#SpatialGrid",
           "SpatialGrid#SpatialGridOptions",
           "SpatialGrid#SpatialGridStats",
@@ -921,10 +700,10 @@
         ]
       }
     },
-    "engine/core/UI": {
+    "engine/features/viewports": {
       "exports": {
-        "documented": 35,
-        "total": 54
+        "documented": 12,
+        "total": 16
       },
       "members": {
         "documented": 0,
@@ -932,33 +711,358 @@
       },
       "undocumented": {
         "exports": [
-          "DialogWindow#DialogProps",
-          "DialogWindow#openDialog",
-          "DraggableWindow#DraggableWindowContent",
-          "DraggableWindow#DraggableWindowData",
-          "DraggableWindow#DraggableWindowUnits",
-          "DraggableWindow#OpenDraggableWindowProps",
-          "DraggableWindow#closeDraggableWindow",
-          "DraggableWindow#getDraggableWindow",
-          "DraggableWindow#openDraggableWindow",
-          "DraggableWindow#removeDraggableWindow",
-          "DraggableWindow#toggleCollapse",
-          "DropDown#DropDownOption",
-          "DropDown#DropDownProps",
-          "DropDown#TDropDown",
-          "Toaster#AddToastResponse",
-          "Toaster#DEFAULT_TOASTER_SETTINGS",
-          "Toaster#ToastProps",
-          "Toaster#addToast",
-          "Toaster#createToaster"
+          "Viewports#Viewport",
+          "Viewports#ViewportAnchor",
+          "Viewports#ViewportProps",
+          "Viewports#ViewportRect"
         ],
         "members": []
       }
     },
-    "engine/core/UI/icons": {
+    "engine/kernel/assets": {
       "exports": {
-        "documented": 6,
+        "documented": 104,
+        "total": 136
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [
+          "AssetsAPITypes#AssetsDownProtocol",
+          "AssetsAPITypes#AssetsErrorResponse",
+          "AssetsAPITypes#AssetsPingRequest",
+          "AssetsAPITypes#AssetsPingResponse",
+          "AssetsAPITypes#AssetsProtocolType",
+          "AssetsAPITypes#AssetsUpProtocol",
+          "AssetsAPITypes#AssetsWorkerStatus",
+          "Geometry#GeoDebugData",
+          "Geometry#GeoProps",
+          "Geometry#GeoTypes",
+          "Geometry#decGeometryRef",
+          "Geometry#freeGeometryGPUMemory",
+          "Geometry#getGeometryRegistry",
+          "Geometry#incGeometryRef",
+          "Geometry#setGeometryPersistence",
+          "Material#MatProps",
+          "Material#MaterialVariantOverrides",
+          "Material#Materials",
+          "Material#TextureMapKeys",
+          "Material#decMaterialRef",
+          "Material#getMaterialRegistry",
+          "Material#incMaterialRef",
+          "Material#setMaterialPersistence",
+          "Texture#TexOpts",
+          "Texture#TextureProps",
+          "Texture#decTextureRef",
+          "Texture#getTextureRegistry",
+          "Texture#incTextureRef",
+          "Texture#setTexturePersistence",
+          "TextureArray#BuildTextureArrayProps",
+          "TextureAtlas#RemapUVsToAtlasCellOpts",
+          "TextureAtlas#SampleAtlasCellOpts"
+        ],
+        "members": []
+      }
+    },
+    "engine/kernel/assets/import": {
+      "exports": {
+        "documented": 55,
+        "total": 66
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [
+          "DracoDecoder#DracoConfig",
+          "GLTFExtract#ExtractResult",
+          "GLTFTextureCollect#CollectedGLTFTexture",
+          "GLTFTextureCollect#CollectedGLTFTextures",
+          "GLTFTextures#RegisteredGLTFTextures",
+          "GeometryTransfer#TransferableAttribute",
+          "ImportTypes#ImportAssetParams",
+          "ImportTypes#ImportedAssetManifest",
+          "ImportTypes#ImportedGeometryInfo",
+          "ImportTypes#SpawnImportedParams",
+          "ImportTypes#SpawnImportedResult"
+        ],
+        "members": []
+      }
+    },
+    "engine/kernel/assets/worker": {
+      "exports": {
+        "documented": 2,
+        "total": 4
+      },
+      "members": {
+        "documented": 0,
+        "total": 1
+      },
+      "undocumented": {
+        "exports": [
+          "AssetsSwitchGLTF#assetsSwitchGLTF",
+          "AssetsSwitchTexture#assetsSwitchTexture"
+        ],
+        "members": [
+          "AssetsFetch#AssetsSourceError.constructor"
+        ]
+      }
+    },
+    "engine/kernel/camera": {
+      "exports": {
+        "documented": 8,
+        "total": 31
+      },
+      "members": {
+        "documented": 1,
+        "total": 11
+      },
+      "undocumented": {
+        "exports": [
+          "Camera#CameraDebugLSData",
+          "Camera#CameraEntityDebugState",
+          "Camera#CameraSceneDebugState",
+          "Camera#cameraDebugGUI",
+          "Camera#createCameraEntity",
+          "Camera#disposeCamera",
+          "Camera#getActiveCamera",
+          "Camera#getActiveCameraId",
+          "Camera#getAllCamerasAsArray",
+          "Camera#getCameraByAppId",
+          "Camera#getCurrentCamera",
+          "Camera#getCurrentCameraId",
+          "Camera#getMainAppCameraId",
+          "Camera#initDebugCamera",
+          "Camera#isAnyCameraHelperVisible",
+          "Camera#isDebugCameraActive",
+          "Camera#registerCameraManager",
+          "Camera#setActiveCamera",
+          "Camera#setCurrentCamera",
+          "Camera#setMainCamera",
+          "Camera#syncCameraHelpersFromLS",
+          "Camera#toggleAllCameraHelpers",
+          "Camera#toggleDebugCamera"
+        ],
+        "members": [
+          "Camera#CameraEntityDebugState.helperVisible",
+          "Camera#CameraSceneDebugState.debugCam",
+          "Camera#DebugCamLSProps.enabled",
+          "Camera#DebugCamLSProps.far",
+          "Camera#DebugCamLSProps.fov",
+          "Camera#DebugCamLSProps.latestAppCameraId",
+          "Camera#DebugCamLSProps.near",
+          "Camera#DebugCamLSProps.position",
+          "Camera#DebugCamLSProps.target",
+          "Camera#DebugCamLSProps.zoom"
+        ]
+      }
+    },
+    "engine/kernel/config": {
+      "exports": {
+        "documented": 29,
+        "total": 32
+      },
+      "members": {
+        "documented": 0,
+        "total": 1
+      },
+      "undocumented": {
+        "exports": [
+          "Config#AppConfig",
+          "Config#DebugPhysicsWireframeConfig",
+          "Config#Environments"
+        ],
+        "members": [
+          "DebugModules#DebugModuleRef.current"
+        ]
+      }
+    },
+    "engine/kernel/ecs": {
+      "exports": {
+        "documented": 45,
+        "total": 78
+      },
+      "members": {
+        "documented": 46,
+        "total": 158
+      },
+      "undocumented": {
+        "exports": [
+          "ECS#ComponentHook",
+          "ECS#DEFAULT_ECS_WORLD_ID",
+          "ECS#ECSSystem",
+          "ECS#ECSWorld",
+          "ECS#ECSWorldOptions",
+          "ECS#WorldPlugin",
+          "ECS#getEntityIdByAppId",
+          "ECS#registerECSModule",
+          "ECSComponentStorage#ECSStorageLSOverride",
+          "ECSCoreComponents#CoreComponentData",
+          "ECSCoreComponents#ECSPosition",
+          "ECSCoreComponents#ECSRotation",
+          "ECSCoreComponents#ECSTransformProp",
+          "ECSCoreComponents#LifetimeData",
+          "ECSHelpers#EntityDiagnosticData",
+          "ECSHelpers#addComponent",
+          "ECSHelpers#createEntity",
+          "ECSHelpers#createRawEntity",
+          "ECSHelpers#deleteEntity",
+          "ECSHelpers#getComponent",
+          "ECSHelpers#getPosition",
+          "ECSHelpers#getRotation",
+          "ECSHelpers#getScale",
+          "ECSHelpers#getStorage",
+          "ECSHelpers#getTransform",
+          "ECSHelpers#hasComponent",
+          "ECSHelpers#removeComponent",
+          "ECSHelpers#setTransform",
+          "ECSHelpers#teleport",
+          "ECSRegistry#EntityDebugData",
+          "ObjectFrustumCullingSystem#MAX_SPOT_ANGLE",
+          "ObjectFrustumCullingSystem#getMeshWorldBoundingSphere",
+          "ObjectFrustumCullingSystem#objectFrustumCullingSystem"
+        ],
+        "members": [
+          "ECS#ECSWorld.addComponent",
+          "ECS#ECSWorld.constructor",
+          "ECS#ECSWorld.createEntity",
+          "ECS#ECSWorld.createRawEntity",
+          "ECS#ECSWorld.getComponent",
+          "ECS#ECSWorld.getPosition",
+          "ECS#ECSWorld.getRigidBody",
+          "ECS#ECSWorld.getRotation",
+          "ECS#ECSWorld.getScale",
+          "ECS#ECSWorld.getTransform",
+          "ECS#ECSWorld.id",
+          "ECS#ECSWorld.isEntityDynamic",
+          "ECS#ECSWorld.maxEntities",
+          "ECS#ECSWorld.registerComponentHooks",
+          "ECS#ECSWorld.setTransform",
+          "ECS#ECSWorld.storageMode",
+          "ECSComponentStorage#ECSStorageLSOverride.maxEntities",
+          "ECSComponentStorage#ECSStorageLSOverride.storageMode",
+          "ECSComponentStorage#IComponentStorage.clear",
+          "ECSComponentStorage#IComponentStorage.delete",
+          "ECSComponentStorage#IComponentStorage.entries",
+          "ECSComponentStorage#IComponentStorage.get",
+          "ECSComponentStorage#IComponentStorage.has",
+          "ECSComponentStorage#IComponentStorage.keys",
+          "ECSComponentStorage#IComponentStorage.set",
+          "ECSComponentStorage#IComponentStorage.size",
+          "ECSCoreComponents#CoreComponentData.CORE_APP_ID",
+          "ECSCoreComponents#CoreComponentData.CORE_BODY_DYNAMIC_HEADLESS",
+          "ECSCoreComponents#CoreComponentData.CORE_BODY_DYNAMIC_VISUAL",
+          "ECSCoreComponents#CoreComponentData.CORE_BODY_STATIC",
+          "ECSCoreComponents#CoreComponentData.CORE_CAMERA_SETTINGS",
+          "ECSCoreComponents#CoreComponentData.CORE_CHARACTER",
+          "ECSCoreComponents#CoreComponentData.CORE_COLLIDER",
+          "ECSCoreComponents#CoreComponentData.CORE_DEBUG_CAMERA_HELPER",
+          "ECSCoreComponents#CoreComponentData.CORE_DEBUG_DATA",
+          "ECSCoreComponents#CoreComponentData.CORE_DEBUG_IS_DEBUG_CAMERA",
+          "ECSCoreComponents#CoreComponentData.CORE_DEBUG_LIGHT_HELPER",
+          "ECSCoreComponents#CoreComponentData.CORE_DEBUG_SYMBOL",
+          "ECSCoreComponents#CoreComponentData.CORE_DISABLED",
+          "ECSCoreComponents#CoreComponentData.CORE_FRUSTUM_CULLING_ENABLED",
+          "ECSCoreComponents#CoreComponentData.CORE_INSTANCED_MESH_SLOT",
+          "ECSCoreComponents#CoreComponentData.CORE_IS_AMBIENT_LIGHT",
+          "ECSCoreComponents#CoreComponentData.CORE_IS_DIRECTIONAL_LIGHT",
+          "ECSCoreComponents#CoreComponentData.CORE_IS_HEMISPHERE_LIGHT",
+          "ECSCoreComponents#CoreComponentData.CORE_IS_POINT_LIGHT",
+          "ECSCoreComponents#CoreComponentData.CORE_IS_SPOT_LIGHT",
+          "ECSCoreComponents#CoreComponentData.CORE_LIFETIME",
+          "ECSCoreComponents#CoreComponentData.CORE_LOD",
+          "ECSCoreComponents#CoreComponentData.CORE_MANAGED_BY",
+          "ECSCoreComponents#CoreComponentData.CORE_OBJECT3D",
+          "ECSCoreComponents#CoreComponentData.CORE_OBJECT_CULLING_ENABLED",
+          "ECSCoreComponents#CoreComponentData.CORE_ORBIT_CONTROLS",
+          "ECSCoreComponents#CoreComponentData.CORE_PERSISTENT",
+          "ECSCoreComponents#CoreComponentData.CORE_SPATIAL_INDEXED",
+          "ECSCoreComponents#CoreComponentData.CORE_TAG_FRUSTUM_CULLED",
+          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_CAMERA",
+          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_CHARACTER",
+          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_GROUP",
+          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_LIGHT",
+          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_LINE",
+          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_MAIN_CAMERA",
+          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_MESH",
+          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_PHYSICS_OBJECT",
+          "ECSCoreComponents#CoreComponentData.CORE_TAG_LOD_CULLED",
+          "ECSCoreComponents#CoreComponentData.CORE_TAG_LOD_TRANSITIONING",
+          "ECSCoreComponents#CoreComponentData.CORE_TAG_OBJECT_CULLED",
+          "ECSCoreComponents#CoreComponentData.CORE_TARGET_LINK",
+          "ECSCoreComponents#CoreComponentData.CORE_TRANSFORM",
+          "ECSCoreComponents#CoreComponentData.CORE_USER_DATA",
+          "ECSCoreComponents#LifetimeData.remaining",
+          "ECSCoreComponents#LifetimeData.total",
+          "ECSCoreComponents#Transform.constructor",
+          "ECSCoreComponents#Transform.copy",
+          "ECSCoreComponents#Transform.position",
+          "ECSCoreComponents#Transform.quaternion",
+          "ECSCoreComponents#Transform.scale",
+          "ECSCoreComponents#Transform.version",
+          "ECSHelpers#EntityDiagnosticData.activeTags",
+          "ECSHelpers#EntityDiagnosticData.appId",
+          "ECSHelpers#EntityDiagnosticData.debugData",
+          "ECSHelpers#EntityDiagnosticData.id",
+          "ECSHelpers#EntityDiagnosticData.isDisabled",
+          "ECSHelpers#EntityDiagnosticData.isPersistent",
+          "ECSHelpers#EntityDiagnosticData.obj3D",
+          "ECSHelpers#EntityDiagnosticData.physics",
+          "ECSHelpers#EntityDiagnosticData.targetId",
+          "ECSHelpers#EntityDiagnosticData.transform",
+          "TypedArrayTransformStore#TypedArrayTransformStore.[iterator]",
+          "TypedArrayTransformStore#TypedArrayTransformStore.clear",
+          "TypedArrayTransformStore#TypedArrayTransformStore.clearDirty",
+          "TypedArrayTransformStore#TypedArrayTransformStore.constructor",
+          "TypedArrayTransformStore#TypedArrayTransformStore.delete",
+          "TypedArrayTransformStore#TypedArrayTransformStore.entries",
+          "TypedArrayTransformStore#TypedArrayTransformStore.get",
+          "TypedArrayTransformStore#TypedArrayTransformStore.has",
+          "TypedArrayTransformStore#TypedArrayTransformStore.isDirty",
+          "TypedArrayTransformStore#TypedArrayTransformStore.keys",
+          "TypedArrayTransformStore#TypedArrayTransformStore.posX",
+          "TypedArrayTransformStore#TypedArrayTransformStore.posY",
+          "TypedArrayTransformStore#TypedArrayTransformStore.posZ",
+          "TypedArrayTransformStore#TypedArrayTransformStore.quatW",
+          "TypedArrayTransformStore#TypedArrayTransformStore.quatX",
+          "TypedArrayTransformStore#TypedArrayTransformStore.quatY",
+          "TypedArrayTransformStore#TypedArrayTransformStore.quatZ",
+          "TypedArrayTransformStore#TypedArrayTransformStore.scaleX",
+          "TypedArrayTransformStore#TypedArrayTransformStore.scaleY",
+          "TypedArrayTransformStore#TypedArrayTransformStore.scaleZ",
+          "TypedArrayTransformStore#TypedArrayTransformStore.set",
+          "TypedArrayTransformStore#TypedArrayTransformStore.setPosition",
+          "TypedArrayTransformStore#TypedArrayTransformStore.setQuaternion",
+          "TypedArrayTransformStore#TypedArrayTransformStore.setScale",
+          "TypedArrayTransformStore#TypedArrayTransformStore.size"
+        ]
+      }
+    },
+    "engine/kernel/ecs/debug": {
+      "exports": {
+        "documented": 3,
         "total": 6
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [
+          "ECSStressTest#initECSStressTest",
+          "ECSStressTest#instancedSyncSystem",
+          "ECSStressTest#proximitySystem"
+        ],
+        "members": []
+      }
+    },
+    "engine/kernel/init": {
+      "exports": {
+        "documented": 12,
+        "total": 12
       },
       "members": {
         "documented": 0,
@@ -969,73 +1073,192 @@
         "members": []
       }
     },
-    "engine/debug": {
+    "engine/kernel/input": {
       "exports": {
-        "documented": 133,
-        "total": 184
+        "documented": 27,
+        "total": 51
       },
       "members": {
         "documented": 0,
-        "total": 3
+        "total": 0
       },
       "undocumented": {
         "exports": [
-          "3DSymbols#createNewCameraSymbol",
-          "3DSymbols#createNewDirectionalLightSymbol",
-          "3DSymbols#createNewPointLightSymbol",
-          "3DSymbols#createNewSpotLightSymbol",
-          "3DSymbols#load3DSymbols",
-          "DebugToolsManager#DEBUG_CAMERA_ID",
-          "DebugToolsManager#DebugToolsState",
-          "DebugToolsManager#registerDebugToolsModule",
-          "DebuggerGUI#DEBUGGER_SCENE_LOADER_ID",
-          "DebuggerGUI#DEBUG_TOASTER_ID",
-          "DebuggerGUI#DebugGUIOpts",
-          "DebuggerGUI#DebuggerListItem",
-          "DebuggerGUI#DebuggerPaneButton",
-          "DebuggerGUI#DebuggerPaneItem",
-          "DebuggerGUI#DebuggerPaneSeparator",
-          "DebuggerGUI#disableDebugger",
-          "DebuggerGUI#isDebuggerDisabled",
-          "DebuggerGUI#registerDebuggerGUI",
-          "DebuggerGUI#updateDebuggerSceneTitle",
-          "DevFiles#DevFileRead",
-          "DevFiles#DevFilesStatus",
-          "DevFiles#DevFilesUnavailableReason",
-          "DevFiles#EncodePNGOpts",
-          "DevFilesProtocol#DevDataGatheredEvent",
-          "DevFilesProtocol#DevFilesCommitRequest",
-          "DevFilesProtocol#DevFilesErrorBody",
-          "DevFilesProtocol#DevFilesErrorCode",
-          "DevFilesProtocol#DevFilesWriteStatus",
-          "GPUMemory#GPUMemorySource",
-          "OnScreenTools#InitOnScreenTools",
-          "OnScreenTools#ToolTypes",
-          "OnScreenTools#registerOnScreenTools",
-          "OnScreenTools#updateOnScreenTools",
-          "Profiler#DEFAULT_PROFILER_SETTINGS",
-          "Profiler#ProfilerBarMeasure",
-          "Profiler#ProfilerSettings",
-          "Stats#StatsOptions",
-          "Stats#defaultStatsOptions",
-          "Stats#getStatsCmp",
-          "Stats#registerStatsModule",
-          "Stats#startCustomMeasurements",
-          "Stats#updatePhysicsPanel",
-          "Stats#updateRestOfStats",
-          "TestBridge#TestBridgeProbeResult",
-          "TestBridge#TestBridgeSceneReady",
-          "TestBridge#TestBridgeSnapshot",
-          "UndoRedo#UndoRedoClearScope",
-          "UndoRedo#UndoRedoHistoryState",
-          "UndoRedo#canRedo",
-          "UndoRedo#canUndo",
-          "UndoRedo#registerUndoRedoModule"
+          "GamepadInput#pollGamepads",
+          "InputState#areAllInputsEnabled",
+          "InputState#areAppInputsSuspended",
+          "KeyboardInput#KeyBinding",
+          "KeyboardInput#KeyBindingType",
+          "KeyboardInput#KeyChord",
+          "KeyboardInput#KeyUpDownBinding",
+          "KeyboardInput#createKeyBinding",
+          "KeyboardInput#deleteKeyBinding",
+          "KeyboardInput#setKeyBindingEnabled",
+          "KeyboardInput#setKeyInputsEnabled",
+          "MouseInput#MouseBinding",
+          "MouseInput#MouseBindingType",
+          "MouseInput#MouseButton",
+          "MouseInput#createMouseBinding",
+          "MouseInput#deleteMouseBinding",
+          "MouseInput#setMouseBindingEnabled",
+          "MouseInput#setMouseInputsEnabled",
+          "TouchInput#TouchBinding",
+          "TouchInput#TouchBindingType",
+          "TouchInput#createTouchBinding",
+          "TouchInput#deleteTouchBinding",
+          "TouchInput#setTouchBindingEnabled",
+          "TouchInput#setTouchInputsEnabled"
+        ],
+        "members": []
+      }
+    },
+    "engine/kernel/light": {
+      "exports": {
+        "documented": 6,
+        "total": 19
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [
+          "Light#LightProps",
+          "Light#SHADOW_PRESETS",
+          "Light#ShadowQuality",
+          "Light#createLightEntity",
+          "Light#debugGUI",
+          "Light#getLightByAppId",
+          "Light#isAnyLightHelperVisible",
+          "Light#registerLightManager",
+          "Light#setLightEnabled",
+          "Light#setLightFrustumCullingEnabled",
+          "Light#setLightObjectCullingEnabled",
+          "Light#setLightShadowEnabled",
+          "Light#toggleAllLightHelpers"
+        ],
+        "members": []
+      }
+    },
+    "engine/kernel/loop": {
+      "exports": {
+        "documented": 32,
+        "total": 44
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [
+          "MainLoop#addBeforeUnloadFn",
+          "MainLoop#addOnWindowBlurFn",
+          "MainLoop#addVisibilityChangeFn",
+          "MainLoop#deleteAddOnWindowBlurFn",
+          "MainLoop#deleteAllBeforeUnloadFns",
+          "MainLoop#deleteAllOnWindowBlurFns",
+          "MainLoop#deleteAllVisibilityChangeFns",
+          "MainLoop#deleteBeforeUnloadFn",
+          "MainLoop#deleteVisibilityChangeFn",
+          "MainLoop#mainLoop",
+          "MainLoop#registerMainLoopDebugGUI",
+          "MainLoop#setPlaySpeedMultiplier"
+        ],
+        "members": []
+      }
+    },
+    "engine/kernel/mesh": {
+      "exports": {
+        "documented": 8,
+        "total": 13
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [
+          "Mesh#MeshProps",
+          "Mesh#createMeshEntity",
+          "Mesh#disposeMesh",
+          "Mesh#getMeshByAppId",
+          "MeshUserData#setMeshCreatePropsToUserData"
+        ],
+        "members": []
+      }
+    },
+    "engine/kernel/render": {
+      "exports": {
+        "documented": 67,
+        "total": 83
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [
+          "Renderer#RendererOptions",
+          "Renderer#createRendererDebugGUI",
+          "Renderer#getCanvasElem",
+          "Renderer#isWebGLRenderer",
+          "Renderer#isWebGPURenderer",
+          "Snapshot#SnapshotBlobOpts",
+          "Snapshot#SnapshotOpts",
+          "ThreeMath#DIRECTIONS",
+          "ThreeMath#GRAVITY_DOWN_NORMAL",
+          "ThreeMath#LEVEL_GROUND_NORMAL",
+          "ThreeMath#RENDERER_SHADOW_OPTIONS",
+          "ThreeMath#ThreeEuler",
+          "ThreeMath#ThreeQuoternion",
+          "ThreeMath#ThreeVector3",
+          "ThreeMath#getQuatFromAngle",
+          "ThreeMath#slerp"
+        ],
+        "members": []
+      }
+    },
+    "engine/kernel/scene": {
+      "exports": {
+        "documented": 61,
+        "total": 88
+      },
+      "members": {
+        "documented": 0,
+        "total": 1
+      },
+      "undocumented": {
+        "exports": [
+          "Group#GroupProps",
+          "Group#getGroupByAppId",
+          "PropertyLoader#LoadableProps",
+          "Scene#Looper",
+          "Scene#SceneData",
+          "Scene#SceneOptions",
+          "Scene#registerOnAllSceneEnterings",
+          "Scene#registerOnAllSceneExits",
+          "Scene#registerOnSceneEnter",
+          "Scene#registerOnSceneExit",
+          "Scene#runOnAllSceneEnters",
+          "Scene#runOnAllSceneExits",
+          "Scene#runOnSceneEnter",
+          "Scene#runOnSceneExit",
+          "Scene#runSceneAppLoopers",
+          "Scene#runSceneMainLateLoopers",
+          "Scene#runSceneMainLoopers",
+          "SceneLoader#SceneLoader",
+          "SceneLoader#ScenePrimitiveAssets",
+          "SceneLoader#UpdateLoaderStatusFn",
+          "SceneLoader#createCameras",
+          "SceneLoader#createSceneLoader",
+          "SceneLoader#getCurrentSceneLoader",
+          "SceneLoader#getCurrentSceneLoaderId",
+          "SceneLoader#getNextSceneId",
+          "SceneLoader#hasFirstSceneBeenLoaded",
+          "SceneLoader#setCurrentSceneLoader"
         ],
         "members": [
-          "DevFiles#DevFilesError.code",
-          "DevFiles#DevFilesError.constructor",
-          "DevFiles#DevFilesError.details"
+          "PropertyLoader#LoadableProps.appId"
         ]
       }
     },
@@ -1050,82 +1273,82 @@
       },
       "undocumented": {
         "exports": [
-          "_helperSchemas#ColorJSON",
-          "_helperSchemas#ColorJSONSchema",
-          "_helperSchemas#ColorSpaceSchema",
-          "_helperSchemas#CoreEntityOpts",
-          "_helperSchemas#CoreEntityOptsSchema",
-          "_helperSchemas#DebugData",
-          "_helperSchemas#DebugDataSchema",
-          "_helperSchemas#EntityDebugData",
-          "_helperSchemas#EntityDebugDataSchema",
-          "_helperSchemas#ShadowQuality",
-          "_helperSchemas#ShadowQualitySchema",
-          "_helperSchemas#UserData",
-          "_helperSchemas#UserDataSchema",
-          "_helperSchemas#Vector3",
-          "_helperSchemas#Vector3Schema",
-          "_helperSchemas#Vector4Schema",
-          "_saveDataSchema#MetaSchema",
-          "_saveDataSchema#createSaveDataSchema",
-          "assetsConfigSchema#AssetFileNameSchema",
-          "assetsConfigSchema#AssetsConfig",
-          "assetsConfigSchema#AssetsConfigRule",
-          "assetsConfigSchema#AssetsConfigRuleSchema",
-          "assetsConfigSchema#AssetsConfigSchema",
-          "assetsConfigSchema#MeshSettings",
-          "assetsConfigSchema#MeshSettingsSchema",
-          "assetsConfigSchema#PACK_TARGETS",
-          "assetsConfigSchema#PackTarget",
-          "assetsConfigSchema#TEXTURE_SLOTS",
-          "assetsConfigSchema#TextureSettings",
-          "assetsConfigSchema#TextureSettingsSchema",
-          "assetsConfigSchema#TextureSlot",
-          "assetsConfigSchema#TextureSlotSchema",
-          "cameraSchema#CameraAsset",
-          "cameraSchema#CameraAssetSchema",
-          "cameraSchema#CameraOverrides",
-          "cameraSchema#CameraOverridesSchema",
-          "cameraSchema#CameraProps",
-          "cameraSchema#CameraProps",
-          "geometrySchema#GeoAsset",
-          "geometrySchema#GeoAssetSchema",
-          "geometrySchema#GeoOverrides",
-          "geometrySchema#GeoProps",
-          "geometrySchema#GeoPropsSchema",
-          "importedAssetSchema#ImportedAsset",
-          "importedAssetSchema#ImportedAssetSchema",
-          "lightSchema#LightAsset",
-          "lightSchema#LightAssetSchema",
-          "lightSchema#LightOverrides",
-          "lightSchema#LightProps",
-          "lodChainSchema#LodChainSchema",
-          "materialSchema#MaterialAsset",
-          "materialSchema#MaterialAssetSchema",
-          "materialSchema#MaterialOverrides",
-          "postFxSchema#PostFxAsset",
-          "postFxSchema#PostFxAssetSchema",
-          "postFxSchema#PostFxOverrides",
-          "postFxSchema#PostFxParamMeta",
-          "spatialDomainSchema#SceneSpatialDomainEntry",
-          "spatialDomainSchema#SceneSpatialDomainsSchema",
-          "textureArraySchema#TextureArrayAsset",
-          "textureArraySchema#TextureArrayAssetSchema",
-          "textureAtlasSchema#ATLAS_MIP_CHAINS",
-          "textureAtlasSchema#AtlasMipChain",
-          "textureAtlasSchema#DEFAULT_ATLAS_PADDING",
-          "textureAtlasSchema#TextureAtlasAsset",
-          "textureAtlasSchema#TextureAtlasAssetSchema",
-          "textureAtlasSchema#TextureAtlasCell",
-          "textureAtlasSchema#TextureAtlasCellSchema",
-          "textureAtlasSchema#TextureAtlasSlot",
-          "textureAtlasSchema#TextureAtlasSlotSchema",
-          "textureSchema#TexOpts",
-          "textureSchema#TexOptsSchema",
-          "textureSchema#TextureAsset",
-          "textureSchema#TextureAssetSchema",
-          "textureSchema#TextureOverrides",
-          "textureSchema#TextureOverridesSchema"
+          "AssetsConfigSchema#AssetFileNameSchema",
+          "AssetsConfigSchema#AssetsConfig",
+          "AssetsConfigSchema#AssetsConfigRule",
+          "AssetsConfigSchema#AssetsConfigRuleSchema",
+          "AssetsConfigSchema#AssetsConfigSchema",
+          "AssetsConfigSchema#MeshSettings",
+          "AssetsConfigSchema#MeshSettingsSchema",
+          "AssetsConfigSchema#PACK_TARGETS",
+          "AssetsConfigSchema#PackTarget",
+          "AssetsConfigSchema#TEXTURE_SLOTS",
+          "AssetsConfigSchema#TextureSettings",
+          "AssetsConfigSchema#TextureSettingsSchema",
+          "AssetsConfigSchema#TextureSlot",
+          "AssetsConfigSchema#TextureSlotSchema",
+          "CameraSchema#CameraAsset",
+          "CameraSchema#CameraAssetSchema",
+          "CameraSchema#CameraOverrides",
+          "CameraSchema#CameraOverridesSchema",
+          "CameraSchema#CameraProps",
+          "CameraSchema#CameraProps",
+          "GeometrySchema#GeoAsset",
+          "GeometrySchema#GeoAssetSchema",
+          "GeometrySchema#GeoOverrides",
+          "GeometrySchema#GeoProps",
+          "GeometrySchema#GeoPropsSchema",
+          "ImportedAssetSchema#ImportedAsset",
+          "ImportedAssetSchema#ImportedAssetSchema",
+          "LightSchema#LightAsset",
+          "LightSchema#LightAssetSchema",
+          "LightSchema#LightOverrides",
+          "LightSchema#LightProps",
+          "LodChainSchema#LodChainSchema",
+          "MaterialSchema#MaterialAsset",
+          "MaterialSchema#MaterialAssetSchema",
+          "MaterialSchema#MaterialOverrides",
+          "PostFxSchema#PostFxAsset",
+          "PostFxSchema#PostFxAssetSchema",
+          "PostFxSchema#PostFxOverrides",
+          "PostFxSchema#PostFxParamMeta",
+          "SpatialDomainSchema#SceneSpatialDomainEntry",
+          "SpatialDomainSchema#SceneSpatialDomainsSchema",
+          "TextureArraySchema#TextureArrayAsset",
+          "TextureArraySchema#TextureArrayAssetSchema",
+          "TextureAtlasSchema#ATLAS_MIP_CHAINS",
+          "TextureAtlasSchema#AtlasMipChain",
+          "TextureAtlasSchema#DEFAULT_ATLAS_PADDING",
+          "TextureAtlasSchema#TextureAtlasAsset",
+          "TextureAtlasSchema#TextureAtlasAssetSchema",
+          "TextureAtlasSchema#TextureAtlasCell",
+          "TextureAtlasSchema#TextureAtlasCellSchema",
+          "TextureAtlasSchema#TextureAtlasSlot",
+          "TextureAtlasSchema#TextureAtlasSlotSchema",
+          "TextureSchema#TexOpts",
+          "TextureSchema#TexOptsSchema",
+          "TextureSchema#TextureAsset",
+          "TextureSchema#TextureAssetSchema",
+          "TextureSchema#TextureOverrides",
+          "TextureSchema#TextureOverridesSchema",
+          "_HelperSchemas#ColorJSON",
+          "_HelperSchemas#ColorJSONSchema",
+          "_HelperSchemas#ColorSpaceSchema",
+          "_HelperSchemas#CoreEntityOpts",
+          "_HelperSchemas#CoreEntityOptsSchema",
+          "_HelperSchemas#DebugData",
+          "_HelperSchemas#DebugDataSchema",
+          "_HelperSchemas#EntityDebugData",
+          "_HelperSchemas#EntityDebugDataSchema",
+          "_HelperSchemas#ShadowQuality",
+          "_HelperSchemas#ShadowQualitySchema",
+          "_HelperSchemas#UserData",
+          "_HelperSchemas#UserDataSchema",
+          "_HelperSchemas#Vector3",
+          "_HelperSchemas#Vector3Schema",
+          "_HelperSchemas#Vector4Schema",
+          "_SaveDataSchema#MetaSchema",
+          "_SaveDataSchema#createSaveDataSchema"
         ],
         "members": []
       }
@@ -1144,14 +1367,14 @@
         "members": []
       }
     },
-    "engine/utils": {
+    "engine/ui": {
       "exports": {
-        "documented": 64,
-        "total": 108
+        "documented": 45,
+        "total": 77
       },
       "members": {
         "documented": 0,
-        "total": 12
+        "total": 0
       },
       "undocumented": {
         "exports": [
@@ -1166,157 +1389,66 @@
           "CMP#TProps",
           "CMP#TSettings",
           "CMP#TStyle",
-          "ECSHelpers#EntityDiagnosticData",
-          "ECSHelpers#addComponent",
-          "ECSHelpers#createEntity",
-          "ECSHelpers#createRawEntity",
-          "ECSHelpers#deleteEntity",
-          "ECSHelpers#getComponent",
-          "ECSHelpers#getPosition",
-          "ECSHelpers#getRotation",
-          "ECSHelpers#getScale",
-          "ECSHelpers#getStorage",
-          "ECSHelpers#getTransform",
-          "ECSHelpers#hasComponent",
-          "ECSHelpers#removeComponent",
-          "ECSHelpers#setTransform",
-          "ECSHelpers#teleport",
-          "ECSStressTest#initECSStressTest",
-          "ECSStressTest#instancedSyncSystem",
-          "ECSStressTest#proximitySystem",
-          "LocalAndSessionStorage#StorageValue",
-          "constants#DIRECTIONS",
-          "constants#FOUR_PX_TO_8K_LIST",
-          "constants#GRAVITY_DOWN_NORMAL",
-          "constants#HALF_PI",
-          "constants#LEVEL_GROUND_NORMAL",
-          "constants#QUARTER_PI",
-          "constants#RENDERER_SHADOW_OPTIONS",
-          "constants#textureMapKeys",
-          "helpers#ThreeEuler",
-          "helpers#ThreeQuoternion",
-          "helpers#ThreeVector3",
-          "helpers#getQuatFromAngle",
-          "helpers#setMeshCreatePropsToUserData",
-          "helpers#slerp"
+          "DialogWindow#DialogProps",
+          "DialogWindow#openDialog",
+          "DraggableWindow#DraggableWindowContent",
+          "DraggableWindow#DraggableWindowData",
+          "DraggableWindow#DraggableWindowUnits",
+          "DraggableWindow#OpenDraggableWindowProps",
+          "DraggableWindow#closeDraggableWindow",
+          "DraggableWindow#getDraggableWindow",
+          "DraggableWindow#openDraggableWindow",
+          "DraggableWindow#removeDraggableWindow",
+          "DraggableWindow#toggleCollapse",
+          "DropDown#DropDownOption",
+          "DropDown#DropDownProps",
+          "DropDown#TDropDown",
+          "HUD#GUI_CONTAINER_ID",
+          "HUD#HUD_ROOT_ID",
+          "Toaster#AddToastResponse",
+          "Toaster#DEFAULT_TOASTER_SETTINGS",
+          "Toaster#ToastProps",
+          "Toaster#addToast",
+          "Toaster#createToaster"
         ],
-        "members": [
-          "ECSHelpers#EntityDiagnosticData.activeTags",
-          "ECSHelpers#EntityDiagnosticData.appId",
-          "ECSHelpers#EntityDiagnosticData.debugData",
-          "ECSHelpers#EntityDiagnosticData.id",
-          "ECSHelpers#EntityDiagnosticData.isDisabled",
-          "ECSHelpers#EntityDiagnosticData.isPersistent",
-          "ECSHelpers#EntityDiagnosticData.obj3D",
-          "ECSHelpers#EntityDiagnosticData.physics",
-          "ECSHelpers#EntityDiagnosticData.targetId",
-          "ECSHelpers#EntityDiagnosticData.transform",
-          "PromiseResolver#RequestTimeoutError.constructor",
-          "helpers#DebugModuleRef.current"
-        ]
+        "members": []
       }
     },
-    "engine/utils/materials": {
+    "engine/ui/icons": {
       "exports": {
-        "documented": 0,
-        "total": 4
+        "documented": 6,
+        "total": 6
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "checkerBoardPattern#addCheckerboardMaterialToMesh",
-          "checkerBoardPattern#getUVRepeatFactor",
-          "nestedGridPattern#addNestedGridMaterialToMesh",
-          "nestedGridPattern#getUVRepeatFactor"
-        ],
+        "exports": [],
         "members": []
       }
     },
-    "engine/utils/stats": {
+    "engine/utils": {
       "exports": {
-        "documented": 5,
-        "total": 5
+        "documented": 34,
+        "total": 39
       },
       "members": {
         "documented": 4,
-        "total": 5
-      },
-      "undocumented": {
-        "exports": [],
-        "members": [
-          "IntervalCounterStats#IntervalCounterStats.constructor"
-        ]
-      }
-    },
-    "engine/utils/UI": {
-      "exports": {
-        "documented": 3,
-        "total": 4
-      },
-      "members": {
-        "documented": 0,
-        "total": 0
+        "total": 6
       },
       "undocumented": {
         "exports": [
-          "PercentagePieHtml#PercentagePieOpts"
-        ],
-        "members": []
-      }
-    },
-    "engine/workers": {
-      "exports": {
-        "documented": 0,
-        "total": 0
-      },
-      "members": {
-        "documented": 0,
-        "total": 0
-      },
-      "undocumented": {
-        "exports": [],
-        "members": []
-      }
-    },
-    "engine/workers/assets": {
-      "exports": {
-        "documented": 3,
-        "total": 5
-      },
-      "members": {
-        "documented": 0,
-        "total": 1
-      },
-      "undocumented": {
-        "exports": [
-          "assetsSwitchGLTF#assetsSwitchGLTF",
-          "assetsSwitchTexture#assetsSwitchTexture"
+          "Constants#FOUR_PX_TO_8K_LIST",
+          "Constants#HALF_PI",
+          "Constants#QUARTER_PI",
+          "Constants#textureMapKeys",
+          "LocalAndSessionStorage#StorageValue"
         ],
         "members": [
-          "assetsFetch#AssetsSourceError.constructor"
+          "IntervalCounterStats#IntervalCounterStats.constructor",
+          "PromiseResolver#RequestTimeoutError.constructor"
         ]
-      }
-    },
-    "engine/workers/physics": {
-      "exports": {
-        "documented": 0,
-        "total": 4
-      },
-      "members": {
-        "documented": 0,
-        "total": 0
-      },
-      "undocumented": {
-        "exports": [
-          "physicsSwitchColl#physicsSwitchColl",
-          "physicsSwitchJoint#physicsSwitchJoint",
-          "physicsSwitchRigid#physicsSwitchRigid",
-          "physicsSwitchWorld#physicsSwitchWorld"
-        ],
-        "members": []
       }
     },
     "toolkit/ecs": {
