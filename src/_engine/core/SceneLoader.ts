@@ -17,13 +17,6 @@ import {
 } from './Scene';
 import type { TCMP } from '../utils/CMP';
 import { getHUDRootCMP } from './HUD';
-import { deleteAllPhysicsEntities, settlePendingPhysicsEntities } from './PhysicsManager';
-import {
-  holdPhysicsStepping,
-  releasePhysicsStepping,
-  resetPhysicsRayStats,
-  resetPhysicsWorld,
-} from './PhysicsAPI';
 import {
   addDebugToastWhenReady,
   DEBUGGER_SCENE_LOADER_ID,
@@ -38,17 +31,14 @@ import {
   IS_PROD_TEST_MODE,
   isDebugEnvironment,
 } from './Config';
-import { activateSceneDefaultSkyBox, clearSkyBox } from './SkyBox/SkyBox';
 import {
   handleDraggableWindowsOnSceneChangeEnd,
   handleDraggableWindowsOnSceneChangeStart,
 } from './UI/DraggableWindow';
 import { updateOnScreenTools } from '../debug/OnScreenTools';
-import { deleteAllCharacters } from './Character';
 import { existsOrThrow } from '../utils/assert';
 import { deleteAllRayHelpers, resetRayCastStats } from './Raycast';
 import { deleteAllGroupEntities } from './GroupManager';
-import { disposeNonPersistentLines } from './LineManager';
 import { setIsLoadingScene } from './MainLoop';
 import {
   DEFAULT_ECS_WORLD_ID,
@@ -58,9 +48,9 @@ import {
   getEntityIdByAppId,
 } from './ECS';
 import { ComponentType } from './ECS/ECSCoreComponents';
-import { sceneFileObjects } from '../generatedAppFns';
+import { getAppData } from './AppData';
 import { getTexture, loadTextureAsync } from './Texture';
-import { createMaterial, getMaterial } from './Material';
+import { createMaterial, getMaterial, loadTslMaterialFileAsync } from './Material';
 import { textureMapKeys } from '../utils/constants';
 import { createGeometry, doesGeoExist, getGeometry } from './Geometry';
 import { createLightEntity } from './LightManager';
@@ -71,9 +61,14 @@ import type { ImportedAssetManifest } from './Import/ImportTypes';
 import { retagAssetOwner, setAssetOwnerScene } from './Assets/AssetOwners';
 import { releaseSceneOwnedAssets } from './Assets/SceneAssetRelease';
 import {
-  registerSceneSpatialDomains,
-  releaseSceneSpatialDomains,
-} from './Spatial/SpatialIndexSystem';
+  runSceneBeforeAssetsHooksAsync,
+  runSceneCreatedHooksAsync,
+  runSceneEnteredHooksAsync,
+  runSceneExitHooks,
+  runSceneLoadSettledHooks,
+  runSceneLoadStartHooks,
+  runSceneWorldClearedHooks,
+} from './SceneHooks';
 
 export type UpdateLoaderStatusFn = (
   loader: SceneLoader,
@@ -263,9 +258,9 @@ const loadNextSceneAssets = async (sceneData: SceneData): Promise<ScenePrimitive
   const geometries: ScenePrimitiveAssets['geometries'] = {};
   const importedAssets: ScenePrimitiveAssets['importedAssets'] = {};
 
-  // Load textures and imported assets (in parallel): materials can use the textures and meshes the
-  // imported geometries (by id). Assets referenced by id are re-tagged to this scene (AssetOwners),
-  // so leaving the scene that loaded them doesn't release them.
+  // Load textures, imported assets and the materials' TSL files (in parallel): materials can use
+  // the textures and meshes the imported geometries (by id). Assets referenced by id are re-tagged
+  // to this scene (AssetOwners), so leaving the scene that loaded them doesn't release them.
   const importPromises: Promise<ImportedAssetManifest | null>[] = [];
   for (const asset of sceneData.importedAssets || []) {
     if (typeof asset === 'string') {
@@ -291,9 +286,16 @@ const loadNextSceneAssets = async (sceneData: SceneData): Promise<ScenePrimitive
     textureIds.push(texId);
     texturePromises.push(loadTextureAsync(tex));
   }
+  // The TSL files load on demand (p607 D11): createMaterial reads them synchronously
+  const tslFilePromises: Promise<boolean>[] = [];
+  for (const material of sceneData.materials || []) {
+    if (typeof material === 'string' || !('tslFile' in material) || !material.tslFile) continue;
+    tslFilePromises.push(loadTslMaterialFileAsync(material.tslMaterialId || material.id || ''));
+  }
   const [loadedTextures, manifests] = await Promise.all([
     Promise.all(texturePromises),
     Promise.all(importPromises),
+    Promise.all(tslFilePromises),
   ]);
   for (const manifest of manifests) {
     if (manifest) importedAssets[manifest.id] = manifest;
@@ -421,7 +423,7 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
   const startSceneParam = !firstSceneLoaded ? getStartSceneQueryParam() : null;
   let startSceneOverride: string | null = null;
   if (startSceneParam) {
-    if (getGeneratedSceneData(startSceneParam) && sceneFileObjects[startSceneParam]) {
+    if (getGeneratedSceneData(startSceneParam) && getAppData().sceneFiles[startSceneParam]) {
       startSceneOverride = startSceneParam;
     } else {
       const msg = `Unknown scene id "${startSceneParam}" in the startScene URL param, loading the usual start scene instead.`;
@@ -439,7 +441,7 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
     sceneId = startSceneOverride || debugToolsState?.scenesListing.debugStartScene || sceneId;
 
     // Clear out any hardcoded start functions passed by index.ts
-    // to guarantee the lookup pulls dynamically from sceneFileObjects instead
+    // to guarantee the lookup pulls dynamically from the app data's sceneFiles instead
     overrideNextSceneFn = undefined;
   }
 
@@ -478,7 +480,7 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
   }
 
   // Resolve the Stage Execution Function from your autogenerated registry module
-  const nextSceneFn = overrideNextSceneFn || sceneFileObjects[sceneId];
+  const nextSceneFn = overrideNextSceneFn || getAppData().sceneFiles[sceneId];
   if (!nextSceneFn) {
     const errorMsg = `Could not find nextSceneFn in loadScene for sceneId ${sceneId}`;
     lerror(errorMsg);
@@ -491,7 +493,8 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
   let loader: SceneLoader | undefined = getCurrentSceneLoader();
   if (targetLoaderId) {
     loader = sceneLoaders.find((sl) => sl.id === targetLoaderId);
-    if (!loader && targetLoaderId === DEBUGGER_SCENE_LOADER_ID) {
+    // Only the debug env targets the debugger's loader (above): a production build drops this
+    if (!loader && IS_DEBUG_ENV && targetLoaderId === DEBUGGER_SCENE_LOADER_ID) {
       // A stale debug setting must never kill boot, fall back to the current loader
       lwarn(
         `Could not find the debugger scene loader (loader id "${targetLoaderId}") in loadScene, using the current scene loader instead.`
@@ -542,19 +545,17 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
   await loadStartFn(loader)
     .then(async () => {
       setIsLoadingScene(true);
-      // No stepping until the whole next scene exists (released before loadEndFn below), so a
-      // scene's physics never depends on how long its assets took to load.
-      holdPhysicsStepping();
+      // The features' load start (physics holds its stepping until `entered`)
+      runSceneLoadStartHooks();
 
-      // Delete prev scene characters, physics objects, in scene cameras, and in scene lights
-      deleteAllCharacters();
-      deleteAllPhysicsEntities();
+      // The features tear down the previous scene (in reverse install order: the viewports,
+      // PostFX and lines, the sky box, characters, then physics entities), then the groups,
+      // loopers and non-persistent entities go
+      runSceneExitHooks(prevSceneId);
       deleteAllGroupEntities();
-      disposeNonPersistentLines();
 
       if (prevScene) deleteAllSceneLoopers(prevSceneId);
 
-      clearSkyBox();
       handleDraggableWindowsOnSceneChangeStart();
 
       runOnSceneExit(prevSceneId);
@@ -574,14 +575,8 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
         void ecsWorld.getEntitiesWith(ComponentType.DEBUG_TAG_IS_DEBUG_CAMERA).next().value;
       }
       ecsWorld.clearNonPersistent();
-      // After the delete, so a domain going back to its world settings re-inserts only the
-      // persistent members, and before anything of the next scene joins a domain
-      releaseSceneSpatialDomains(ecsWorld, prevSceneId);
-      // Before the next scene's assets, code and JSON objects join anything, so each grid is
-      // created once, at the scene's own settings
-      if (sceneData.spatialDomains?.length) {
-        registerSceneSpatialDomains(ecsWorld, sceneId, sceneData.spatialDomains);
-      }
+      // The features' part, before anything of the next scene exists (spatial's scene domains)
+      runSceneWorldClearedHooks(ecsWorld, prevSceneId, sceneData);
       if (loadSceneProps.deletePrevScene && prevSceneId && prevSceneId !== sceneId) {
         releaseSceneOwnedAssets(prevSceneId);
       }
@@ -592,11 +587,9 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
 
       createCameras(sceneData);
 
-      // Every physics entity is gone by now: start the next scene on a fresh world, so a
-      // revisit simulates exactly like the first visit (no leftover Rapier internal state).
-      // After createCameras: in WORKER_THREAD mode this awaits the worker, and frames keep
-      // rendering meanwhile, which needs a camera. Before the assets: imports can spawn bodies.
-      await resetPhysicsWorld();
+      // After the cameras (frames keep rendering while a hook awaits, which needs a camera),
+      // before the assets (imports can create entities): physics starts a fresh world here
+      await runSceneBeforeAssetsHooksAsync();
 
       // Create / load all next scene assets before the scene file
       const nextSceneAssets = await loadNextSceneAssets(sceneData);
@@ -610,7 +603,8 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
           );
           setCurrentScene(sceneId);
           setLoadingSceneId(null);
-          await activateSceneDefaultSkyBox(sceneId);
+          // The features' part (the sky box shows the scene's default, PostFX sets up its chain)
+          await runSceneCreatedHooksAsync(sceneId);
           await createNextSceneObject3Ds(sceneData);
           // The next scene has taken refs on, or re-tagged, what it shares with the previous one:
           // release what the previous scene still owns and nothing uses. (Reloading the same
@@ -637,12 +631,8 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
             updateOnScreenTools();
           }
           resetRayCastStats();
-          resetPhysicsRayStats();
-
-          // Includes creates the scene code didn't await (and the prev scene's deletes, in
-          // WORKER_THREAD mode), so every body starts stepping on the same step.
-          await settlePendingPhysicsEntities();
-          releasePhysicsStepping();
+          // The scene is complete: physics waits for its bodies and releases its stepping
+          await runSceneEnteredHooksAsync();
 
           loader.phase = 'END';
           await loadEndFn(loader).then(() => {
@@ -664,8 +654,8 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
       handleDraggableWindowsOnSceneChangeEnd(true);
       // @CONSIDER: should this throw an error?
     })
-    // A failed load must not leave physics held (a no-op if it was already released).
-    .finally(releasePhysicsStepping);
+    // Failed or not (a failed load must not leave physics held)
+    .finally(runSceneLoadSettledHooks);
 };
 
 /**

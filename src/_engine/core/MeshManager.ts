@@ -10,7 +10,8 @@ import {
   getMaterialRegistry,
   getMaterialVariant,
 } from './Material';
-import { ECSWorld, getECSWorld, getEntityIdByAppId } from './ECS';
+import type { ECSWorld } from './ECS';
+import { getECSWorld, getEntityIdByAppId } from './ECS';
 import { getRootScene } from './Scene';
 import { ThreeEuler, ThreeQuoternion } from '../utils/helpers';
 import { getRenderer } from './Renderer';
@@ -23,12 +24,18 @@ import { getGeometry } from './Geometry';
 import { CoreComponentType } from './ECS/ECSRegistry';
 import { setFrustumCullingEnabled } from './ECS/ObjectFrustumCullingSystem';
 import { IS_DEBUG_ENV } from './Config';
-import type { LodDef, MeshLodDef } from './Lod/LodTypes';
+import type { LodAutoDef, LodDef, MeshLodDef } from './Lod/LodTypes';
+import type { FeatureContext } from './Features';
 
-// Register onDeleteEntity hook for TAG_IS_MESH
-ECSWorld.registerComponentHooks(ComponentType.TAG_IS_MESH, {
-  onDeleteEntity: (entityId, world) => disposeMesh(entityId, world),
-});
+/**
+ * Installs the meshes (the kernel, p607): a mesh entity's deletion disposes its mesh.
+ * @internal
+ */
+export const installMeshes = (ctx: FeatureContext) => {
+  ctx.registerComponentHooks(ComponentType.TAG_IS_MESH, {
+    onDeleteEntity: (entityId, world) => disposeMesh(entityId, world),
+  });
+};
 
 export type MeshProps = {
   // @CONSIDER: We could also allow passing an id for geo and mat (as strings), and then look them up in the asset manager.
@@ -244,6 +251,30 @@ export const createMeshEntity = (
   return entityId;
 };
 
+/**
+ * Resolves an `AUTO` LOD's levels from its geometry's LOD chain (null when it has none). The
+ * `lod()` feature's, loaded on the first `AUTO` (`setAutoLodResolverLoader`).
+ * @internal
+ */
+export type AutoLodResolver = (
+  geometry: THREE.BufferGeometry,
+  auto: LodAutoDef | 'AUTO',
+  label: string,
+  mesh?: THREE.Mesh
+) => Promise<LodDef | null>;
+
+let loadAutoLodResolver: (() => Promise<AutoLodResolver>) | null = null;
+let hasWarnedNoAutoLod = false;
+
+/**
+ * Sets what loads the `AUTO` LOD resolver (the `lod()` feature's install, LodFeature.ts). Without
+ * it, `setMeshLod(…, 'AUTO')` warns once and resolves to false.
+ * @internal
+ */
+export const setAutoLodResolverLoader = (loader: () => Promise<AutoLodResolver>) => {
+  loadAutoLodResolver = loader;
+};
+
 /** Per world: the `AUTO` LODs waiting for their chain, by entity. A later setMeshLod or
  * removeMeshLod replaces or drops the entry, which cancels the wait. */
 const pendingAutoLods = new WeakMap<ECSWorld, Map<number, object>>();
@@ -314,13 +345,23 @@ export const setMeshLod = (
     lwarn(`[LOD] Entity ${entityId} has no mesh: its LOD does nothing.`);
     return Promise.resolve(false);
   }
+  const loadResolver = loadAutoLodResolver;
+  if (!loadResolver) {
+    if (!hasWarnedNoAutoLod) {
+      hasWarnedNoAutoLod = true;
+      lwarn(
+        "[LOD] lod AUTO needs the lod feature, which isn't installed: add `lod()` (from 'aekasha/lod') to InitEngine's `features`. Ignored (warned once)."
+      );
+    }
+    return Promise.resolve(false);
+  }
   const geometry = mesh.geometry;
   const request = {};
   const pending = getPendingAutoLods(world);
   pending.set(entityId, request);
   const isCurrent = () => pending.get(entityId) === request;
-  return import('./Lod/LodAuto')
-    .then(({ resolveAutoLod }) =>
+  return loadResolver()
+    .then((resolveAutoLod) =>
       isCurrent() ? resolveAutoLod(geometry, def, mesh.userData.id || mesh.uuid, mesh) : null
     )
     .catch((err) => {

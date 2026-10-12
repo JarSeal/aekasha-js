@@ -19,7 +19,7 @@ import type {
   SkyBoxStarsSchema,
   SkyBoxSunLightSchema,
   SkyBoxSunSchema,
-} from '../../schemas/skyBoxSchema';
+} from './SkyBoxSchema';
 
 /** A base layer as the schema takes it, before its defaults. */
 export type SkyBoxBaseInput = z.input<typeof SkyBoxBaseSchema>;

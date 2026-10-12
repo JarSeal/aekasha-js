@@ -1,17 +1,21 @@
 import * as THREE from 'three/webgpu';
-import { createSceneAppLooper } from '../_engine/core/Scene';
-import { createGeometry } from '../_engine/core/Geometry';
-import { createMaterial } from '../_engine/core/Material';
-import { getTexture, loadTexture } from '../_engine/core/Texture';
-import { importAssetAsync } from '../_engine/core/Import/ImportRegistry';
-import { spawnImportedAsset } from '../_engine/core/Import/SpawnImported';
-import { createMeshEntity, getMeshByAppId } from '../_engine/core/MeshManager';
-import { createGroupEntity, addToGroupEntity } from '../_engine/core/GroupManager';
-import { createSkyBox } from '../_engine/core/SkyBox/SkyBox';
-import { createPhysicsEntity } from '../_engine/core/PhysicsManager';
-import { getPhysicsSimClock, getPhysicsState } from '../_engine/core/PhysicsAPI';
-import { getLoaderStatusUpdater } from '../_engine/core/SceneLoader';
-import { llog } from '../_engine/utils/Logger';
+import {
+  createSceneAppLooper,
+  createGeometry,
+  createMaterial,
+  getTexture,
+  loadTexture,
+  importAssetAsync,
+  spawnImportedAsset,
+  createMeshEntity,
+  getMeshByAppId,
+  createGroupEntity,
+  addToGroupEntity,
+  getLoaderStatusUpdater,
+  llog,
+} from 'aekasha';
+import { createSkyBox } from 'aekasha/skybox';
+import { createPhysicsEntity, getPhysicsSimClock, getPhysicsState } from 'aekasha/physics';
 
 export const SCENE01_ID = 'testScene1';
 /** The id in scene01_v2.scene.json (SCENE01_ID above is only the scene fn's resolve value). */

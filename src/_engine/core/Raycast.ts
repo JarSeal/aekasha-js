@@ -6,9 +6,10 @@ import {
   IntervalCounterStats,
   type IntervalCounterSnapshot,
 } from '../utils/stats/IntervalCounterStats';
-import { DEFAULT_ECS_WORLD_ID, ECSWorld } from './ECS';
-import { ECSSystemStage } from '../../AppECSRegistry';
+import { DEFAULT_ECS_WORLD_ID } from './ECS';
+import { ECSSystemStage } from './ECS/SystemStages';
 import { RAY_STATS_WINDOWS, type RayDebugOpts } from './RayDebugTypes';
+import type { FeatureContext } from './Features';
 
 export type { RayDebugOpts, RayHelperKind } from './RayDebugTypes';
 
@@ -256,11 +257,22 @@ const rayCastFrameEndSystem = () => {
   useDebug(rayHelpers)?._updateRayHelpers(now);
 };
 
-ECSWorld.registerPlugin((world) => {
-  // Only the default world: LATE_MAIN runs once per world, and a frame must end only once
-  if (world.id !== DEFAULT_ECS_WORLD_ID) return;
-  world.addSystem(ECSSystemStage.LATE_MAIN, 'rayCastFrameEndSystem', rayCastFrameEndSystem, -1000);
-});
+/**
+ * Installs ray casting (the kernel, p607): the system that ends the ray stats frame.
+ * @internal
+ */
+export const installRaycast = (ctx: FeatureContext) => {
+  ctx.registerPlugin((world) => {
+    // Only the default world: LATE_MAIN runs once per world, and a frame must end only once
+    if (world.id !== DEFAULT_ECS_WORLD_ID) return;
+    world.addSystem(
+      ECSSystemStage.LATE_MAIN,
+      'rayCastFrameEndSystem',
+      rayCastFrameEndSystem,
+      -1000
+    );
+  });
+};
 
 // Debug
 type RaycastGUIModule = typeof import('../core/Debug/_dbg__Raycast');

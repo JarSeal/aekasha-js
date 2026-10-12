@@ -1,8 +1,5 @@
-import { getECSWorld } from '../../../_engine/core/ECS';
-import { ComponentType } from '../../../_engine/core/ECS/ECSCoreComponents';
-import { getMaterial } from '../../../_engine/core/Material';
-import { createMeshEntity } from '../../../_engine/core/MeshManager';
-import { existsOrThrow } from '../../../_engine/utils/assert';
+import { getECSWorld, getMaterial, createMeshEntity, existsOrThrow } from 'aekasha';
+import { HoverToolComponentType } from 'aekasha/toolkit/ecs';
 
 // #region toolkit-scene (shown in the Hub: hub/pages/examples/toolkit/)
 export const scene = async () => {
@@ -44,7 +41,7 @@ export const scene = async () => {
       receiveShadow: true,
     });
     // The toolkit's HoverEffect, out of step so they don't bob together
-    world.addComponent(symbolId, ComponentType.HOVER, {
+    world.addComponent(symbolId, HoverToolComponentType.HOVER, {
       speed: 1.2,
       amplitude: 0.15,
       baseY,

@@ -1,17 +1,23 @@
 import type * as THREE from 'three/webgpu';
-import { createSceneMainLooper } from '../_engine/core/Scene';
-import { createGeometry } from '../_engine/core/Geometry';
-import { createMaterial } from '../_engine/core/Material';
-import { getTexture, loadTexture, loadTextures } from '../_engine/core/Texture';
-import { llog } from '../_engine/utils/Logger';
-import { importAssetAsync } from '../_engine/core/Import/ImportRegistry';
-import { spawnImportedAsset } from '../_engine/core/Import/SpawnImported';
-import { createMeshEntity, getMeshByAppId } from '../_engine/core/MeshManager';
-import { createGroupEntity, addToGroupEntity } from '../_engine/core/GroupManager';
-import { transformMainSpeedValue } from '../_engine/core/MainLoop';
-import { createSkyBox } from '../_engine/core/SkyBox/SkyBox';
-import { createKeyBinding } from '../_engine/core/Input/KeyboardInput';
-import { createPhysicsEntity } from '../_engine/core/PhysicsManager';
+import {
+  createSceneMainLooper,
+  createGeometry,
+  createMaterial,
+  getTexture,
+  loadTexture,
+  loadTextures,
+  llog,
+  importAssetAsync,
+  spawnImportedAsset,
+  createMeshEntity,
+  getMeshByAppId,
+  createGroupEntity,
+  addToGroupEntity,
+  transformMainSpeedValue,
+  createKeyBinding,
+} from 'aekasha';
+import { createSkyBox } from 'aekasha/skybox';
+import { createPhysicsEntity } from 'aekasha/physics';
 
 export const assets = {};
 
@@ -231,15 +237,15 @@ export const scene = async () =>
       sphere.rotation.y += transformMainSpeedValue(0.1);
     });
 
+    // Input (replaced by id on the next visit; it stays bound after the scene, as before)
+    createKeyBinding({
+      id: 'scene01-log-d-press',
+      type: 'KEY_DOWN',
+      chord: { key: 'd' },
+      fn: (_, time) => {
+        llog('PRESSED', performance.now() - time);
+      },
+    });
+
     resolve('testScene1');
   });
-
-// Input
-createKeyBinding({
-  id: 'scene01-log-d-press',
-  type: 'KEY_DOWN',
-  chord: { key: 'd' },
-  fn: (_, time) => {
-    llog('PRESSED', performance.now() - time);
-  },
-});

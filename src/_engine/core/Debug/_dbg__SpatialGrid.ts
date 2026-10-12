@@ -6,10 +6,15 @@ import {
 } from '../../debug/DebuggerGUI';
 import { markDebugHelper } from '../../debug/Profiler';
 import { ECSWorld, getECSWorld } from '../ECS';
-import { ECSSystemStage } from '../../../AppECSRegistry';
+import { ECSSystemStage } from '../ECS/SystemStages';
 import type { SpatialGrid } from '../Spatial/SpatialGrid';
 import type { LineObject } from '../LineManager';
-import { BOX_EDGE_SEGMENT_COUNT, createLines, writeBox3Edges } from '../LineManager';
+import {
+  BOX_EDGE_SEGMENT_COUNT,
+  createLines,
+  isLinesInstalledFor,
+  writeBox3Edges,
+} from '../LineManager';
 import { lsGetItem, lsSetItem } from '../../utils/LocalAndSessionStorage';
 import { getCurrentSceneId } from '../Scene';
 import {
@@ -317,6 +322,8 @@ const ensureOverlays = (domainId: string): DomainOverlays => {
 const syncOverlays = (domainId: string) => {
   const settings = getSettings(domainId);
   if (!settings.showCells && !settings.showOversized && !getOverlays(domainId)) return;
+  // Drawn as lines: none without the feature
+  if (!isLinesInstalledFor('spatial grid overlay')) return;
   const overlays = ensureOverlays(domainId);
   // Color writes are uniform writes, no geometry rebuild
   overlays.cells.line.setColor(settings.cellsColor);

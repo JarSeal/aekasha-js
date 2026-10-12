@@ -1,13 +1,14 @@
 // Physics simulation tiers (docs/plans/_DONE_p352_physics-simulation-tiers.md): a dynamic body can be
 // frozen in place but collidable (STATIC), taken out of the simulation (DISABLED) or out of the
-// physics world (REMOVED), and put back (FULL). Self-registers on import, so an app that never
-// requests a tier pays nothing.
+// physics world (REMOVED), and put back (FULL). The physics feature installs its system and
+// hooks (installPhysicsTiers); with no tier requested, the system returns at once.
 
-import { ECSSystemStage } from '../../AppECSRegistry';
+import { ECSSystemStage } from './ECS/SystemStages';
 import { existsOrThrow } from '../utils/assert';
 import { lerror, lwarn } from '../utils/Logger';
 import { IS_DEBUG_ENV } from './Config';
-import { ECSWorld, getECSWorld } from './ECS';
+import { type ECSWorld, getECSWorld } from './ECS';
+import type { FeatureContext } from './Features';
 import { ComponentType } from './ECS/ECSCoreComponents';
 import {
   detachRigidBody,
@@ -391,16 +392,23 @@ const physicsTierSystem = (world: ECSWorld) => {
   pending.clear();
 };
 
-ECSWorld.registerPlugin((world) => {
-  world.addSystem(
-    ECSSystemStage.APP_PHYSICS_STEP,
-    'physicsTierSystem',
-    physicsTierSystem,
-    PHYSICS_TIER_SYSTEM_ORDER
-  );
-});
+/**
+ * Installs the tiers' `APP_PHYSICS_STEP` system and the `PHYSICS_SIM_TIER` hooks (the physics
+ * feature's install).
+ * @internal
+ */
+export const installPhysicsTiers = (ctx: FeatureContext) => {
+  ctx.registerPlugin((world) => {
+    world.addSystem(
+      ECSSystemStage.APP_PHYSICS_STEP,
+      'physicsTierSystem',
+      physicsTierSystem,
+      PHYSICS_TIER_SYSTEM_ORDER
+    );
+  });
 
-ECSWorld.registerComponentHooks(ComponentType.PHYSICS_SIM_TIER, {
-  onRemoveComponent: (entityId, world) => pendingByWorld.get(world)?.delete(entityId),
-  onDeleteEntity: (entityId, world) => pendingByWorld.get(world)?.delete(entityId),
-});
+  ctx.registerComponentHooks(ComponentType.PHYSICS_SIM_TIER, {
+    onRemoveComponent: (entityId, world) => pendingByWorld.get(world)?.delete(entityId),
+    onDeleteEntity: (entityId, world) => pendingByWorld.get(world)?.delete(entityId),
+  });
+};

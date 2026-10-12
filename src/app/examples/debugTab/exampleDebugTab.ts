@@ -1,8 +1,5 @@
 import type * as THREE from 'three/webgpu';
-import { IS_DEBUG_ENV } from '../../../_engine/core/Config';
-import { getECSWorld } from '../../../_engine/core/ECS';
-import { getMaterial } from '../../../_engine/core/Material';
-import { createMeshEntity } from '../../../_engine/core/MeshManager';
+import { IS_DEBUG_ENV, getECSWorld, getMaterial, createMeshEntity } from 'aekasha';
 
 export const DEBUG_TAB_SCENE_ID = 'exampleDebugTab';
 

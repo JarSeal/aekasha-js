@@ -372,7 +372,7 @@ A static ground with a box, a sphere, a capsule and a cylinder dropping onto it.
 - The panel shows the scene's Hub image, then the directive's content (ordinary Markdown).
 - In dev, it ends with **Open in debug** and **Open in prod test** buttons. They open `/?isDebug=true&startScene=<sceneId>` and `/?isProdTest=true&startScene=<sceneId>` in a new tab.
 - In `yarn hub:build`, it ends with a note on running the scene locally instead. The public Hub runs no engine.
-- The id is checked against the app's generated data (`src/_engine/generatedAppData.json`), the same data `?startScene` reads. An unknown id fails the build in both modes. Any app scene works, not only the examples: the LOD page ends with `::: scene lodShowcase`.
+- The id is checked against the app's generated data (`src/generated/generatedAppData.json`), the same data `?startScene` reads. An unknown id fails the build in both modes. Any app scene works, not only the examples: the LOD page ends with `::: scene lodShowcase`.
 - A scene without a saved image gives a warning. In dev, the panel says how to save one.
 
 ### Hub images

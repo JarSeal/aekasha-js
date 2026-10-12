@@ -9,6 +9,8 @@ Fix or tweak these list items:
 - When the master loop is turned of (from the on-screen tools or from the Loop controls debugger drawer tab), disable the debug camera transforms. What happens is that panning/dragging is still recorded on the screen even if the master loop is not on. After the master loop is toggled on, all the transforms made are actualized by the debug camera moving to a new position.
 - Make the Top-down test scene's and the GYM (3rd person) scene's key input's be in the scene scope. Now when I open the App key shortcuts dialog, it lists them under the All scenes list. In the Gym scene there is also the phyisc stress test. That should be scene scoped as well. Then in the ECS test scene there are the ECS stress test keys (two keys) and those should be scoped to the scene as well.
 - The on-screen tools' left top corner groups should have equal spacing. Now the AE symbol (about button) and the undo/redo buttons are in the same group but the view switchers are in a separate group. They should be in the same group.
+- Try to avoid plan document references in the actual jsDoc description. They will end up on the documentation page and I don't want that. I want to publish the Hub at one point and I want it to be clean.
+- In the Hub, make the A-Z index its own sub page in the Documentation. Also in there make Issues and Versions be one main menu element ("Versions & Issues") to save space on the main menu and be more clear. Use the Versions icon for it. Leave the Issues quick link on the Hub's home page. Also add the changelog as its own page (as a sub page under the main menu). The main page for Versions & Issues can show the versions and then have cards for Issues and Changelog.
 
 If any of these fixes/tweaks are large refactorings/fixes then produce a separate plan for each large one.
 
@@ -258,5 +260,15 @@ We should add a snapshot window that has different options and a button to take 
 - What else?
 
 The window can be opened from the AE menu dropdown or with shortcut Ctrl+Enter. If the window is open then using the shortcut again (Ctrl+Enter) would take the snapshot as well.
+
+************************************
+
+Create "Stop loop when nothing happens system" plan in docs/plans/p115_stop-loop-when-nothing-happens-system.md
+
+Category: Loop
+
+We need a system to detect when the scene is stable and nothing happens (nothing moves). This should only be opt-in and the default should be off. This means that if nothing happens then the main loop is paused. This is mainly for banners, site backgrounds, decorative features that would make for example mobile sites save battery so that the scene wouldn't be rendered constantly. I am not sure if this would really work on scene's that use physics but at least scene's without them should have these feature as an option. Study the possibility for physics (maybe if all of the physics bodies are sleeping or something like that?). We then naturally some logic to wake the scene up when something happens or is about to happen (like a mouse click/move).
+
+If for some reason this plan or some of its features can't or shouldn't be created with this specification or has some high risks of failing the implementation, notify immediately. You are allowed to change the naming of the plan or the header information if they are not well described, but please notify about this.
 
 ************************************

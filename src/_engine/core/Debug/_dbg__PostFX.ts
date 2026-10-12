@@ -155,8 +155,8 @@ const applyMeasureEnabled = async (enabled: boolean) => {
 };
 
 /** Re-applies the current scene's persisted PostFX enabled override. Runs on every scene
- * entering, after PostFX.ts's own 'postFxSceneEnter' (registered earlier, so it runs first)
- * has set the chain up with the authored value. */
+ * entering, after the `postFx()` feature's `created` scene hook (earlier in the load) has set the
+ * chain up with the authored value. */
 const syncPostFxEnabledFromLS = () => {
   const sceneId = getCurrentSceneId();
   if (!sceneId || !isMasterEnabled()) return;

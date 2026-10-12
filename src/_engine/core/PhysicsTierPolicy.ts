@@ -2,17 +2,17 @@
 // _DONE_p343_deterministic-physics-tier-policy.md): each member entity (PHYSICS_TIER_POLICY)
 // gets the tier of the ring around the focus it's in, through requestPhysicsTier. With the STEPS
 // cadence (default) it measures on a fixed physics step and applies `interval` steps later, so
-// it's deterministic; with FRAMES it runs every N frames at APP_LOGIC. Self-registers on import,
-// so an app that never sets a policy pays nothing (createPhysicsEntity's `tierPolicy` option only
-// adds the component).
+// it's deterministic; with FRAMES it runs every N frames at APP_LOGIC. The physics feature
+// installs its systems (installPhysicsTierPolicy); without a policy they return at once
+// (createPhysicsEntity's `tierPolicy` option only adds the component).
 
 import * as THREE from 'three/webgpu';
 
-import { ECSSystemStage } from '../../AppECSRegistry';
+import { ECSSystemStage } from './ECS/SystemStages';
 import { existsOrThrow } from '../utils/assert';
 import { lerror, lwarn } from '../utils/Logger';
 import { IS_DEBUG_ENV } from './Config';
-import { ECSWorld, getAllECSWorlds, getECSWorld, onECSWorldRegistryChange } from './ECS';
+import { type ECSWorld, getAllECSWorlds, getECSWorld, onECSWorldRegistryChange } from './ECS';
 import { ComponentType } from './ECS/ECSCoreComponents';
 import type { IComponentStorage } from './ECS/ECSComponentStorage';
 import {
@@ -33,7 +33,7 @@ import type {
 } from './Physics/PhysicsTierTypes';
 import { getPhysicsBodyOwner } from './PhysicsManager';
 import { requestPhysicsTier } from './PhysicsTiers';
-import { getCurrentSceneId, registerOnAllSceneExits } from './Scene';
+import type { FeatureContext } from './Features';
 
 export type {
   PhysicsTierPolicy,
@@ -629,34 +629,44 @@ const physicsTierPolicyStepSystem = (world: ECSWorld) => {
   }
 };
 
-ECSWorld.registerPlugin((world) => {
-  world.addSystem(
-    ECSSystemStage.APP_LOGIC,
-    'physicsTierPolicyFrameSystem',
-    physicsTierPolicyFrameSystem
-  );
-  world.addSystem(
-    ECSSystemStage.APP_PHYSICS_STEP,
-    'physicsTierPolicyStepSystem',
-    physicsTierPolicyStepSystem,
-    POLICY_STEP_SYSTEM_ORDER
-  );
-});
-
-// A scene-scoped policy goes with its scene (the current one while the exit hooks run)
-registerOnAllSceneExits('physicsTierPolicy', () => {
-  const sceneId = getCurrentSceneId();
+/**
+ * Deletes the policies scoped to a scene (`PhysicsTierPolicy.sceneId`): a scene-scoped policy goes
+ * with its scene. The physics feature's scene exit hook calls it with the scene being left.
+ * @internal
+ */
+export const deleteScenePhysicsTierPolicies = (sceneId: string | undefined) => {
   if (!sceneId) return;
   for (const [world, policy] of policies) {
     if (policy.def.sceneId === sceneId) deletePolicy(world);
   }
-});
+};
 
-// Deleted worlds (a scene's secondary worlds) drop their policies
-onECSWorldRegistryChange(() => {
-  if (!policies.size) return;
-  const alive = new Set(getAllECSWorlds());
-  for (const world of policies.keys()) {
-    if (!alive.has(world)) deletePolicy(world);
-  }
-});
+/**
+ * Installs the policy's systems (both cadences) and drops the policies of deleted worlds (the
+ * physics feature's install).
+ * @internal
+ */
+export const installPhysicsTierPolicy = (ctx: FeatureContext) => {
+  ctx.registerPlugin((world) => {
+    world.addSystem(
+      ECSSystemStage.APP_LOGIC,
+      'physicsTierPolicyFrameSystem',
+      physicsTierPolicyFrameSystem
+    );
+    world.addSystem(
+      ECSSystemStage.APP_PHYSICS_STEP,
+      'physicsTierPolicyStepSystem',
+      physicsTierPolicyStepSystem,
+      POLICY_STEP_SYSTEM_ORDER
+    );
+  });
+
+  // Deleted worlds (a scene's secondary worlds) drop their policies
+  onECSWorldRegistryChange(() => {
+    if (!policies.size) return;
+    const alive = new Set(getAllECSWorlds());
+    for (const world of policies.keys()) {
+      if (!alive.has(world)) deletePolicy(world);
+    }
+  });
+};

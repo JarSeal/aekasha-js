@@ -63,15 +63,28 @@ describe('parseModuleSource', () => {
 });
 
 describe('resolveSpecifier', () => {
-  const files = new Set(['src/a/b.ts', 'src/a/c/index.ts', 'src/w.ts', 'src/s.svg']);
+  const files = new Set([
+    'src/a/b.ts',
+    'src/a/c/index.ts',
+    'src/w.ts',
+    'src/s.svg',
+    'src/e/index.ts',
+  ]);
   const exists = (f: string) => files.has(f);
   it('resolves relative paths, index files and queries', () => {
-    expect(resolveSpecifier('src/a/x.ts', './b', exists)).toBe('src/a/b.ts');
-    expect(resolveSpecifier('src/a/x.ts', './c', exists)).toBe('src/a/c/index.ts');
-    expect(resolveSpecifier('src/a/x.ts', '../w?worker', exists)).toBe('src/w.ts');
-    expect(resolveSpecifier('src/a/x.ts', '../s.svg?raw', exists)).toBe('src/s.svg');
-    expect(resolveSpecifier('src/a/x.ts', 'three', exists)).toBeNull();
-    expect(resolveSpecifier('src/a/x.ts', './missing', exists)).toBeUndefined();
+    expect(resolveSpecifier('src/a/x.ts', './b', { exists })).toBe('src/a/b.ts');
+    expect(resolveSpecifier('src/a/x.ts', './c', { exists })).toBe('src/a/c/index.ts');
+    expect(resolveSpecifier('src/a/x.ts', '../w?worker', { exists })).toBe('src/w.ts');
+    expect(resolveSpecifier('src/a/x.ts', '../s.svg?raw', { exists })).toBe('src/s.svg');
+    expect(resolveSpecifier('src/a/x.ts', 'three', { exists })).toBeNull();
+    expect(resolveSpecifier('src/a/x.ts', './missing', { exists })).toBeUndefined();
+  });
+
+  it('resolves an alias by exact match only', () => {
+    const aliases = { aek: 'src/e/index.ts', 'aek/gone': 'src/gone/index.ts' };
+    expect(resolveSpecifier('src/a/x.ts', 'aek', { exists, aliases })).toBe('src/e/index.ts');
+    expect(resolveSpecifier('src/a/x.ts', 'aek/gone', { exists, aliases })).toBeUndefined();
+    expect(resolveSpecifier('src/a/x.ts', 'aek/other', { exists, aliases })).toBeNull();
   });
 });
 
@@ -82,7 +95,7 @@ describe('buildImportGraph', () => {
       ['src/impl.ts', 'export const a = 1;\nexport type T = string;'],
       ['src/deep.ts', 'export const inner = 2;'],
     ]);
-    const graph = buildImportGraph(sources, (f) => sources.has(f));
+    const graph = buildImportGraph(sources, { exists: (f) => sources.has(f) });
     expect(graph.resolveExport('src/entry.ts', 'a')).toEqual({ file: 'src/impl.ts', name: 'a' });
     expect(graph.resolveExport('src/entry.ts', 'outer')).toEqual({
       file: 'src/deep.ts',
@@ -91,6 +104,24 @@ describe('buildImportGraph', () => {
     expect([...graph.allExports('src/entry.ts')].sort()).toEqual(['T', 'a', 'outer']);
     expect(graph.isTypeExport('src/entry.ts', 'T')).toBe(true);
     expect(graph.isTypeExport('src/entry.ts', 'a')).toBe(false);
+  });
+
+  it('follows an aliased import to the declaring module', () => {
+    const sources = new Map([
+      ['src/engine/index.ts', "export { inner as outer } from './deep';"],
+      ['src/engine/deep.ts', 'export const inner = 2;'],
+      ['src/app/use.ts', "import { outer } from 'aek';"],
+    ]);
+    const graph = buildImportGraph(sources, {
+      exists: (f) => sources.has(f),
+      aliases: { aek: 'src/engine/index.ts' },
+    });
+    const imp = graph.imports.find((i) => i.from === 'src/app/use.ts');
+    expect(imp?.resolved).toBe('src/engine/index.ts');
+    expect(graph.resolveExport(imp?.resolved as string, 'outer')).toEqual({
+      file: 'src/engine/deep.ts',
+      name: 'inner',
+    });
   });
 });
 

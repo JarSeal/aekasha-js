@@ -2,41 +2,41 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1336,
-      "total": 2069
+      "documented": 1481,
+      "total": 2165
     },
     "members": {
-      "documented": 209,
-      "total": 441
+      "documented": 212,
+      "total": 440
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1298,
-        "total": 2009
+        "documented": 1436,
+        "total": 2101
       },
       "members": {
-        "documented": 159,
-        "total": 357
+        "documented": 162,
+        "total": 360
       }
     },
     "toolkit": {
       "exports": {
-        "documented": 38,
-        "total": 60
+        "documented": 45,
+        "total": 64
       },
       "members": {
         "documented": 50,
-        "total": 84
+        "total": 80
       }
     }
   },
   "folders": {
     "engine": {
       "exports": {
-        "documented": 1,
-        "total": 1
+        "documented": 2,
+        "total": 2
       },
       "members": {
         "documented": 0,
@@ -49,12 +49,12 @@
     },
     "engine/core": {
       "exports": {
-        "documented": 370,
-        "total": 520
+        "documented": 433,
+        "total": 579
       },
       "members": {
-        "documented": 34,
-        "total": 63
+        "documented": 35,
+        "total": 64
       },
       "undocumented": {
         "exports": [
@@ -123,7 +123,6 @@
           "LightManager#setLightObjectCullingEnabled",
           "LightManager#setLightShadowEnabled",
           "LightManager#toggleAllLightHelpers",
-          "MainLoop#LoopState",
           "MainLoop#addBeforeUnloadFn",
           "MainLoop#addOnWindowBlurFn",
           "MainLoop#addVisibilityChangeFn",
@@ -158,7 +157,6 @@
           "PhysicsAPI#takePhysicsSnapshot",
           "PhysicsManager#disposePhysicsEntity",
           "PhysicsManager#getPhysicsEntityByAppId",
-          "PhysicsManager#registerPhysicsManager",
           "PhysicsTierPolicy#DEFAULT_TIER_POLICY_CADENCE",
           "PhysicsTierPolicy#DEFAULT_TIER_POLICY_INTERVAL",
           "PropertyLoader#LoadableProps",
@@ -170,8 +168,6 @@
           "Scene#Looper",
           "Scene#SceneData",
           "Scene#SceneOptions",
-          "Scene#getGeneratedAppData",
-          "Scene#getGeneratedSceneData",
           "Scene#registerOnAllSceneEnterings",
           "Scene#registerOnAllSceneExits",
           "Scene#registerOnSceneEnter",
@@ -266,8 +262,8 @@
     },
     "engine/core/Character": {
       "exports": {
-        "documented": 39,
-        "total": 39
+        "documented": 41,
+        "total": 41
       },
       "members": {
         "documented": 0,
@@ -280,19 +276,16 @@
     },
     "engine/core/ECS": {
       "exports": {
-        "documented": 19,
-        "total": 33
+        "documented": 37,
+        "total": 48
       },
       "members": {
-        "documented": 10,
-        "total": 96
+        "documented": 12,
+        "total": 98
       },
       "undocumented": {
         "exports": [
           "ECSComponentStorage#ECSStorageLSOverride",
-          "ECSCoreComponents#ComponentData",
-          "ECSCoreComponents#ComponentType",
-          "ECSCoreComponents#ComponentType",
           "ECSCoreComponents#CoreComponentData",
           "ECSCoreComponents#ECSPosition",
           "ECSCoreComponents#ECSRotation",
@@ -396,8 +389,8 @@
     },
     "engine/core/Import": {
       "exports": {
-        "documented": 48,
-        "total": 59
+        "documented": 58,
+        "total": 69
       },
       "members": {
         "documented": 0,
@@ -461,8 +454,8 @@
     },
     "engine/core/Instancing": {
       "exports": {
-        "documented": 5,
-        "total": 10
+        "documented": 7,
+        "total": 12
       },
       "members": {
         "documented": 26,
@@ -491,8 +484,8 @@
     },
     "engine/core/Lines": {
       "exports": {
-        "documented": 42,
-        "total": 56
+        "documented": 44,
+        "total": 58
       },
       "members": {
         "documented": 38,
@@ -537,8 +530,8 @@
     },
     "engine/core/Lod": {
       "exports": {
-        "documented": 60,
-        "total": 74
+        "documented": 68,
+        "total": 80
       },
       "members": {
         "documented": 0,
@@ -547,9 +540,7 @@
       "undocumented": {
         "exports": [
           "LodBounds#InstancedLodBounds",
-          "LodChainGLTF#GLTFLodChains",
           "LodChainGLTF#TransferableLodChain",
-          "LodChainGLTF#getGLTFLodChainKey",
           "LodChainOptions#DEFAULT_LOD_CHAIN_OPTIONS",
           "LodChainOptions#LodChainOptions",
           "LodChainOptions#ResolvedLodChainOptions",
@@ -566,8 +557,8 @@
     },
     "engine/core/Lod/Impostors": {
       "exports": {
-        "documented": 55,
-        "total": 64
+        "documented": 64,
+        "total": 73
       },
       "members": {
         "documented": 0,
@@ -785,8 +776,8 @@
     },
     "engine/core/PostFX": {
       "exports": {
-        "documented": 7,
-        "total": 7
+        "documented": 10,
+        "total": 10
       },
       "members": {
         "documented": 0,
@@ -799,8 +790,8 @@
     },
     "engine/core/SkyBox": {
       "exports": {
-        "documented": 127,
-        "total": 151
+        "documented": 150,
+        "total": 174
       },
       "members": {
         "documented": 0,
@@ -885,8 +876,8 @@
     },
     "engine/core/Spatial": {
       "exports": {
-        "documented": 39,
-        "total": 52
+        "documented": 40,
+        "total": 53
       },
       "members": {
         "documented": 20,
@@ -966,24 +957,22 @@
     },
     "engine/core/UI/icons": {
       "exports": {
-        "documented": 1,
-        "total": 2
+        "documented": 6,
+        "total": 6
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "SvgIcon#getSvgIcon"
-        ],
+        "exports": [],
         "members": []
       }
     },
     "engine/debug": {
       "exports": {
-        "documented": 132,
-        "total": 183
+        "documented": 133,
+        "total": 184
       },
       "members": {
         "documented": 0,
@@ -1052,8 +1041,8 @@
     },
     "engine/schemas": {
       "exports": {
-        "documented": 51,
-        "total": 154
+        "documented": 46,
+        "total": 122
       },
       "members": {
         "documented": 0,
@@ -1106,10 +1095,6 @@
           "geometrySchema#GeoPropsSchema",
           "importedAssetSchema#ImportedAsset",
           "importedAssetSchema#ImportedAssetSchema",
-          "impostorSchema#CrossQuadsImpostorAssetSchema",
-          "impostorSchema#ImpostorAsset",
-          "impostorSchema#ImpostorAssetSchema",
-          "impostorSchema#OctahedralImpostorAssetSchema",
           "lightSchema#LightAsset",
           "lightSchema#LightAssetSchema",
           "lightSchema#LightOverrides",
@@ -1118,33 +1103,10 @@
           "materialSchema#MaterialAsset",
           "materialSchema#MaterialAssetSchema",
           "materialSchema#MaterialOverrides",
-          "meshSchema#MeshAsset",
-          "meshSchema#MeshAssetSchema",
-          "meshSchema#MeshOverrides",
-          "meshSchema#MeshPropsSchema",
           "postFxSchema#PostFxAsset",
           "postFxSchema#PostFxAssetSchema",
           "postFxSchema#PostFxOverrides",
           "postFxSchema#PostFxParamMeta",
-          "sceneSchema#SceneAsset",
-          "sceneSchema#SceneAssetSchema",
-          "sceneSchema#SceneOverrides",
-          "skyBoxSchema#SkyBoxAmbientLightSchema",
-          "skyBoxSchema#SkyBoxAtmosphereSchema",
-          "skyBoxSchema#SkyBoxBaseSchema",
-          "skyBoxSchema#SkyBoxCloudsSchema",
-          "skyBoxSchema#SkyBoxDayNightSchema",
-          "skyBoxSchema#SkyBoxEnvSchema",
-          "skyBoxSchema#SkyBoxEnvSizeSchema",
-          "skyBoxSchema#SkyBoxGroundSchema",
-          "skyBoxSchema#SkyBoxMoonLightSchema",
-          "skyBoxSchema#SkyBoxMoonSchema",
-          "skyBoxSchema#SkyBoxNebulaSchema",
-          "skyBoxSchema#SkyBoxOverrides",
-          "skyBoxSchema#SkyBoxOverridesSchema",
-          "skyBoxSchema#SkyBoxStarsSchema",
-          "skyBoxSchema#SkyBoxSunLightSchema",
-          "skyBoxSchema#SkyBoxSunSchema",
           "spatialDomainSchema#SceneSpatialDomainEntry",
           "spatialDomainSchema#SceneSpatialDomainsSchema",
           "textureArraySchema#TextureArrayAsset",
@@ -1185,7 +1147,7 @@
     "engine/utils": {
       "exports": {
         "documented": 64,
-        "total": 110
+        "total": 108
       },
       "members": {
         "documented": 0,
@@ -1223,8 +1185,6 @@
           "ECSStressTest#instancedSyncSystem",
           "ECSStressTest#proximitySystem",
           "LocalAndSessionStorage#StorageValue",
-          "PhysicsStressTest#initPhysicsStressTest",
-          "commontTypes#XYZObject",
           "constants#DIRECTIONS",
           "constants#FOUR_PX_TO_8K_LIST",
           "constants#GRAVITY_DOWN_NORMAL",
@@ -1254,23 +1214,6 @@
           "PromiseResolver#RequestTimeoutError.constructor",
           "helpers#DebugModuleRef.current"
         ]
-      }
-    },
-    "engine/utils/cameras": {
-      "exports": {
-        "documented": 2,
-        "total": 4
-      },
-      "members": {
-        "documented": 0,
-        "total": 0
-      },
-      "undocumented": {
-        "exports": [
-          "followObjectCameraRig#createFollowObjectCameraRig",
-          "followObjectCameraRig#deleteFollowObjectCameraRig"
-        ],
-        "members": []
       }
     },
     "engine/utils/materials": {
@@ -1320,26 +1263,6 @@
       "undocumented": {
         "exports": [
           "PercentagePieHtml#PercentagePieOpts"
-        ],
-        "members": []
-      }
-    },
-    "engine/utils/world": {
-      "exports": {
-        "documented": 3,
-        "total": 8
-      },
-      "members": {
-        "documented": 0,
-        "total": 0
-      },
-      "undocumented": {
-        "exports": [
-          "characterTestObjects#characterTestObstacles",
-          "movingPlatform#DeleteMeshOptions",
-          "movingPlatform#MovingPlatformControls",
-          "movingPlatform#MovingPlatformReturn",
-          "movingPlatform#createMovingPlatform"
         ],
         "members": []
       }
@@ -1398,44 +1321,36 @@
     },
     "toolkit/ecs": {
       "exports": {
-        "documented": 3,
-        "total": 3
+        "documented": 10,
+        "total": 10
       },
       "members": {
         "documented": 0,
-        "total": 1
+        "total": 0
       },
       "undocumented": {
         "exports": [],
-        "members": [
-          "InstancedMeshPoolTypes#InstancedMeshPoolComponentData.CORE_INSTANCED_MESH_SLOT"
-        ]
+        "members": []
       }
     },
     "toolkit/ecs/effects": {
       "exports": {
         "documented": 21,
-        "total": 25
+        "total": 22
       },
       "members": {
         "documented": 11,
-        "total": 18
+        "total": 15
       },
       "undocumented": {
         "exports": [
-          "FollowTool#FollowComponentData",
-          "HoverEffect#HoverComponentData",
-          "MutualGravity#GravityBody",
-          "SunShadowFit#SunShadowFitComponentData"
+          "MutualGravity#GravityBody"
         ],
         "members": [
-          "FollowTool#FollowComponentData.TOOL_FOLLOW",
-          "HoverEffect#HoverComponentData.TOOL_HOVER",
           "HoverEffect#HoverToolData.amplitude",
           "HoverEffect#HoverToolData.baseY",
           "HoverEffect#HoverToolData.speed",
-          "HoverEffect#HoverToolData.time",
-          "SunShadowFit#SunShadowFitComponentData.TOOL_SUN_SHADOW_FIT"
+          "HoverEffect#HoverToolData.time"
         ]
       }
     },

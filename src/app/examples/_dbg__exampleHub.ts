@@ -2,17 +2,19 @@ import {
   getCurrentSceneId,
   getGeneratedSceneData,
   registerOnAllSceneEnterings,
-} from '../../_engine/core/Scene';
-import { takeSnapshotAsync } from '../../_engine/core/Snapshot';
-import { isRuntimeViewActive } from '../../_engine/core/ViewManager';
-import { addDebugToast, createDebuggerTab } from '../../_engine/debug/DebuggerGUI';
+  takeSnapshotAsync,
+  isRuntimeViewActive,
+  lerror,
+  lwarn,
+} from 'aekasha';
 import {
+  addDebugToast,
+  createDebuggerTab,
   DevFilesError,
   encodePNG,
   getDevFilesStatus,
   writeDevFiles,
-} from '../../_engine/debug/DevFiles';
-import { lerror, lwarn } from '../../_engine/utils/Logger';
+} from 'aekasha/debug';
 
 // The example scenes' "Hub" tab (p554 §2.4): "Save Hub image" takes a snapshot of what the canvas shows (core/Snapshot.ts: the
 // active camera, PostFX, no viewports or debug helpers) at a fixed size and writes it as

@@ -23,6 +23,7 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import { ROOT } from '../assetPipeline/sources';
+import { ENTRY_FILES } from '../aliases';
 import { buildImportGraph, type ImportKind } from './importGraph';
 import { applyMoveRules, getMoveRules, isPascalModuleName, type MoveEntry } from './moveRules';
 
@@ -130,6 +131,8 @@ const entryOf = (target: string): string | null => {
   }
 };
 
+const ENTRY_FILE_PATHS = new Set<string>(Object.values(ENTRY_FILES));
+
 const isDbgModule = (file: string) => path.posix.basename(file).startsWith('_dbg__');
 const isEngineLayer = (l: Layer) =>
   ['kernel', 'feature', 'ui', 'debug', 'utils', 'schemas', 'types', 'engine'].includes(l);
@@ -151,7 +154,8 @@ for (const file of trackedFiles) {
   if (file.startsWith('devTools/refactor/')) continue;
   sources.set(file, fs.readFileSync(path.join(ROOT, file), 'utf8'));
 }
-const graph = buildImportGraph(sources, (f) => tracked.has(f));
+// An entry import (`aekasha/physics`) resolves to the entry file, and through it to the module
+const graph = buildImportGraph(sources, { exists: (f) => tracked.has(f), aliases: ENTRY_FILES });
 
 type Edge = {
   from: string;
@@ -164,6 +168,9 @@ type Edge = {
 };
 const violations = new Map<string, Edge[]>();
 const featureEdges: Edge[] = [];
+/** The assets worker's `import()`s of feature code (p607 D5): a worker can't be handed code. */
+const workerJobEdges: Edge[] = [];
+const WORKER_ZONE = 'src/_engine/kernel/assets/worker/';
 const deletedImports: Edge[] = [];
 const splitFileImports: Edge[] = [];
 const unresolved: string[] = [];
@@ -186,6 +193,9 @@ const checkEdge = (fz: Zone, tz: Zone, edge: Edge): string | null => {
     return 'Static `_dbg__` imports outside debug code';
   }
   if (fz.isDebug) return null;
+  // An entry re-exports its names from wherever their code is (`aekasha/schemas` the features'
+  // schemas, p607 D10): its layer's rule is for the code under it
+  if (ENTRY_FILE_PATHS.has(edge.from)) return null;
   switch (fz.layer) {
     case 'utils':
       return tz.layer === 'utils' ? null : `utils → ${tz.layer}`;
@@ -255,6 +265,15 @@ for (const imp of graph.imports) {
     if (toEntry?.action === 'merge') deletedImports.push(edge);
     const fz = zoneOf(fromTarget);
     const tz = zoneOf(toTarget);
+    if (
+      edge.kind === 'dynamic' &&
+      fromTarget.startsWith(WORKER_ZONE) &&
+      fz.layer === 'kernel' &&
+      tz.layer === 'feature'
+    ) {
+      workerJobEdges.push(edge);
+      continue;
+    }
     const category = checkEdge(fz, tz, edge);
     if (category) addViolation(category, edge);
     if (fz.layer === 'feature' && tz.layer === 'feature' && fz.area !== tz.area && !fz.isDebug) {
@@ -496,6 +515,16 @@ out();
 out(
   `Public: the app, the toolkit, a Hub ${code('api:')} link or the devTools import it. Cross-entry: only engine code of another entry does (each is either exported from its entry or a seam p606 designs). Internal: only its own entry (an ${code('@internal')} candidate). Unreferenced: nothing imports it; some are API the example app doesn't use. The full list is ${code('entryExports.json')}.`
 );
+out();
+
+out('## Assets worker job modules');
+out();
+out(
+  `p607 D5: a worker can't be handed code, so the assets worker ${code('import()')}s the feature code a job needs, on the first job that needs it. Not boundary violations (a static import would be).`
+);
+out();
+out(EDGE_HEADER);
+for (const e of workerJobEdges) out(edgeRow(e));
 out();
 
 out('## Feature dependencies');

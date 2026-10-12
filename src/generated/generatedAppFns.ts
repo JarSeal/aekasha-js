@@ -1,0 +1,215 @@
+// THIS IS AN AUTO-GENERATED FILE, DO NOT MODIFY!
+// ALSO, DO NOT MODIFY THE 'generatedAppData.json' FILE)!
+import type { SceneData, ScenePrimitiveAssets } from 'aekasha';
+
+export const sceneFileObjects: {
+  [sceneId: string]: (sceneData: {
+    sceneData: SceneData;
+    assets: ScenePrimitiveAssets;
+  }) => Promise<void>;
+} = {
+  assetCompare: async ({ sceneData, assets }) => {
+    const module = await import('../app/./assetCompare.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  testDebugScene: async ({ sceneData, assets }) => {
+    const module = await import('../app/debugScene.scene.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  largeWorld: async ({ sceneData, assets }) => {
+    const module = await import('../app/./largeWorld.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  lodShowcase: async ({ sceneData, assets }) => {
+    const module = await import('../app/./lodShowcase.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  oneMoreScene: async ({ sceneData, assets }) => {
+    const module = await import('../app/./oneMoreScene');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  physicsTest: async ({ sceneData, assets }) => {
+    const module = await import('../app/./physicsTest.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  physicsTiers: async ({ sceneData, assets }) => {
+    const module = await import('../app/./physicsTiers.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  scene01: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scene01.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  scene01V2: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scene01_v2.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  skyShowcase: async ({ sceneData, assets }) => {
+    const module = await import('../app/./skyShowcase.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  space: async ({ sceneData, assets }) => {
+    const module = await import('../app/./space.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  sceneTestECS: async ({ sceneData, assets }) => {
+    const module = await import('../app/./testECS.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  textureArrays: async ({ sceneData, assets }) => {
+    const module = await import('../app/./textureArrays.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  textureAtlases: async ({ sceneData, assets }) => {
+    const module = await import('../app/./textureAtlases.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  thirdPersonGymScene: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scene_thirdPersonGym.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  topDownTestScene: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scene_topDownTest.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  exampleDebugTab: async ({ sceneData, assets }) => {
+    const module = await import('../app/./examples/debugTab/exampleDebugTab.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  exampleEcs: async ({ sceneData, assets }) => {
+    const module = await import('../app/./examples/ecs/exampleEcs.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  exampleHubHero: async ({ sceneData, assets }) => {
+    const module = await import('../app/./examples/hubHero/exampleHubHero.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  exampleLod: async ({ sceneData, assets }) => {
+    const module = await import('../app/./examples/lod/exampleLod.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  examplePhysics: async ({ sceneData, assets }) => {
+    const module = await import('../app/./examples/physics/examplePhysics.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  exampleQuickStart: async ({ sceneData, assets }) => {
+    const module = await import('../app/./examples/quickStart/exampleQuickStart.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  exampleSkyBox: async ({ sceneData, assets }) => {
+    const module = await import('../app/./examples/skyBox/exampleSkyBox.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  exampleToolkit: async ({ sceneData, assets }) => {
+    const module = await import('../app/./examples/toolkit/exampleToolkit.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+};
+
+export const tslMaterialFileObjects = {
+  testTslMat: () => import('../app/materials/testTslMat.tsl.ts'),
+  asteroid: () => import('../toolkit/materials/asteroid.tsl.ts'),
+  triplanarCheckerboard: () => import('../toolkit/materials/triplanarCheckerboard.tsl.ts'),
+  triplanarGrid: () => import('../toolkit/materials/triplanarGrid.tsl.ts'),
+};
+
+export const postFxFileObjects = {
+  ambientOcclusion: () => import('../app/postFx/ambientOcclusion.tsl.ts'),
+  heroBloom: () => import('../app/examples/hubHero/heroBloom.tsl.ts'),
+};

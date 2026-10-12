@@ -293,7 +293,7 @@ export const isChordHeld = (chord: KeyChord, caseInsensitive: boolean = true): b
 
 /**
  * Drives KEY_HELD bindings once per tick. Called from exactly two places in MainLoop.ts
- * (runPhysicsSubStep, once per fixed physics sub-step, and the physics-disabled branch), so a
+ * (runFixedSubStep, once per fixed physics sub-step, and the no-stepping branch), so a
  * held key writes a character's intent (Character/CharacterInputSchemes.ts) once per sub-step,
  * before the tick that reads it. New Physics-API-based code should prefer isChordHeld() polled
  * from its own APP_PRE_PHYSICS system instead.

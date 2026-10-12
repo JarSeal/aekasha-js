@@ -20,6 +20,7 @@ import {
   isFilePathValid,
   OUTPUT_FILE_DATA,
   OUTPUT_FILE_FN,
+  OUTPUT_FILE_INDEX,
 } from './gatherAppData';
 
 /**
@@ -273,7 +274,8 @@ export const sceneGathererPlugin = (): Plugin => ({
 
     const handleFileEvent = (event: 'add' | 'change' | 'unlink') => (filePath: string) => {
       const file = path.resolve(filePath);
-      if (file === OUTPUT_FILE_DATA || file === OUTPUT_FILE_FN) return;
+      if (file === OUTPUT_FILE_DATA || file === OUTPUT_FILE_FN || file === OUTPUT_FILE_INDEX)
+        return;
       if (file.startsWith(AEK_ASSETS_DIR + path.sep)) return; // The pipeline's own outputs
       if (file.endsWith(DEV_FILES_TEMP_SUFFIX)) return; // A dev files commit renames it into place
 

@@ -2,28 +2,30 @@ import * as THREE from 'three/webgpu';
 import { float, fwidth, max, mix, step, texture, uv, vec3, vec4 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { Node, TextureNode } from 'three/webgpu';
-import { createCameraEntity, getActiveCamera } from '../_engine/core/CameraManager';
-import { getGeometryRegistry, saveBufferGeometry } from '../_engine/core/Geometry';
-import { createLightEntity } from '../_engine/core/LightManager';
-import { saveMaterial } from '../_engine/core/Material';
-import { createMeshEntity } from '../_engine/core/MeshManager';
-import { getRenderer } from '../_engine/core/Renderer';
-import { getGeneratedSceneData } from '../_engine/core/Scene';
-import { loadScene, type ScenePrimitiveAssets } from '../_engine/core/SceneLoader';
 import {
+  createCameraEntity,
+  getActiveCamera,
+  getGeometryRegistry,
+  saveBufferGeometry,
+  createLightEntity,
+  saveMaterial,
+  createMeshEntity,
+  getRenderer,
+  getGeneratedSceneData,
+  loadScene,
+  type ScenePrimitiveAssets,
   getAllTextures,
   getTexture,
   loadTextureAsync,
   type TextureProps,
-} from '../_engine/core/Texture';
-import {
   getAtlasCell,
   getTextureAtlasInfo,
   remapUVsToAtlasCell,
   sampleAtlasCell,
   type TextureAtlasInfo,
-} from '../_engine/core/TextureAtlas';
-import { lerror, llog } from '../_engine/utils/Logger';
+  lerror,
+  llog,
+} from 'aekasha';
 
 /**
  * The p299 atlas verification scene: the `p299TestAtlas` asset (`*.textureAtlas.json`, listed by

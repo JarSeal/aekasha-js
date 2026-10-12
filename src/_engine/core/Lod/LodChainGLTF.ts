@@ -12,6 +12,7 @@ import {
   serializeGeometry,
   type TransferableAttribute,
 } from '../Import/GeometryTransfer';
+import { getGLTFPrimitiveKey } from '../Import/GLTFExtract';
 import {
   GLTF_LOD_FORMAT_VERSION,
   type LodLevelVertices,
@@ -54,8 +55,7 @@ export type ExtractedLodChain = {
   levels: { geometry: THREE.BufferGeometry; triangles: number; error: number }[];
 };
 
-export const getGLTFLodChainKey = (mesh: number, primitive: number) => `${mesh}:${primitive}`;
-
+/** A file's prebuilt chains, by `getGLTFPrimitiveKey` (Import/GLTFExtract.ts) of their base. */
 export type GLTFLodChains = Map<string, ExtractedLodChain>;
 
 /** A level mesh's geometry, loaded through the parser (cached, so its attributes are the same
@@ -71,7 +71,7 @@ const loadLevelGeometry = async (gltf: GLTF, meshIndex: number) => {
 };
 
 /**
- * Loads the prebuilt LOD chains of a parsed glTF, by {@link getGLTFLodChainKey} of their base, for
+ * Loads the prebuilt LOD chains of a parsed glTF, by `getGLTFPrimitiveKey` of their base, for
  * extractPrimitives(). Empty for a file without any, or with another format version.
  */
 export const readGLTFLodChains = async (gltf: GLTF): Promise<GLTFLodChains> => {
@@ -87,7 +87,7 @@ export const readGLTFLodChains = async (gltf: GLTF): Promise<GLTFLodChains> => {
       if (!geometry) break;
       levels.push({ geometry, triangles, error });
     }
-    chains.set(getGLTFLodChainKey(chain.mesh, chain.primitive), {
+    chains.set(getGLTFPrimitiveKey(chain.mesh, chain.primitive), {
       extent: chain.extent,
       baseTriangles: chain.baseTriangles,
       vertices: chain.vertices,

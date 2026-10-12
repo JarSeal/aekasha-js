@@ -1,15 +1,15 @@
-import { createGeometry } from '../_engine/core/Geometry';
-import { createMaterial } from '../_engine/core/Material';
-import { createMeshEntity } from '../_engine/core/MeshManager';
-import { createPhysicsEntity } from '../_engine/core/PhysicsManager';
-import { addToast } from '../_engine/core/UI/Toaster';
-import { getECSWorld } from '../_engine/core/ECS';
-import { createJoint, getPhysicsWorld } from '../_engine/core/PhysicsAPI';
-import type { PhysVector } from '../_engine/core/Physics/PhysicsAPITypes';
-import { JointAxesMask } from '../_engine/core/Physics/PhysicsAPITypes';
-import { existsOrThrow } from '../_engine/utils/assert';
-import { IS_DEBUG_ENV } from '../_engine/core/Config';
-import { llog } from '../_engine/utils/Logger';
+import {
+  createGeometry,
+  createMaterial,
+  createMeshEntity,
+  getECSWorld,
+  existsOrThrow,
+  IS_DEBUG_ENV,
+  llog,
+} from 'aekasha';
+import { createPhysicsEntity, createJoint, getPhysicsWorld, JointAxesMask } from 'aekasha/physics';
+import type { PhysVector } from 'aekasha/physics';
+import { addToast } from 'aekasha/ui';
 
 /**
  * Physics API verification scene: a static ground box, a falling ball, and a

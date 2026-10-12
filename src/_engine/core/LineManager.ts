@@ -1,8 +1,9 @@
-import { lerror } from '../utils/Logger';
+import { lerror, llog } from '../utils/Logger';
 import { existsOrThrow } from '../utils/assert';
 import type { CoreEntityOpts } from '../schemas/_helperSchemas';
-import { ECSWorld, getECSWorld } from './ECS';
+import { type ECSWorld, getECSWorld } from './ECS';
 import { ComponentType } from './ECS/ECSCoreComponents';
+import type { FeatureContext } from './Features';
 import { getFatLineBackendFactory, loadFatLineBackend } from './Lines/LineBackend';
 import { retagLineEntity } from './Lines/LineEntity';
 import { LineObject } from './Lines/LineObject';
@@ -12,7 +13,7 @@ import {
   nextLineId,
   registerLine,
 } from './Lines/LineRegistry';
-import { registerLineTimeSystem } from './Lines/LineSystem';
+import { installLineTimeSystem } from './Lines/LineSystem';
 import type { LineProps } from './Lines/LineTypes';
 
 export { LineObject } from './Lines/LineObject';
@@ -21,7 +22,8 @@ export type * from './Lines/LineTypes';
 export * from './Lines/LineBuilders';
 export { LINE_PULSE_MAX_COLORS, lineTimeUniform } from './Lines/LinePulse';
 
-let hooksRegistered = false;
+let isInstalled = false;
+const toolsLoggedOff = new Set<string>();
 
 /** The entity side went first (deleted, or its LINE component removed): dispose the line
  * without it trying to take the entity down again. */
@@ -35,19 +37,34 @@ const disposeEntityLine = (entityId: number, world: ECSWorld) => {
 };
 
 /**
- * Registers the line system: the per-frame time uniform every pulsing line reads, and the
- * LINE component hooks that dispose an entity's line with it. Called once by InitEngine;
- * without it, pulses stand still and entity lines outlive their entities.
+ * Installs the line core (the `lines()` feature's install, LinesFeature.ts): the per-frame time
+ * uniform every pulsing line reads, and the LINE component hooks that dispose an entity's line
+ * with it. Without it, {@link createLines} throws.
+ * @internal
  */
-export const registerLineManager = () => {
-  registerLineTimeSystem();
-  if (hooksRegistered) return;
-  hooksRegistered = true;
+export const installLines = (ctx: FeatureContext) => {
+  installLineTimeSystem(ctx);
   // deleteEntity runs only onDeleteEntity hooks, removeComponent only onRemoveComponent
-  ECSWorld.registerComponentHooks(ComponentType.LINE, {
+  ctx.registerComponentHooks(ComponentType.LINE, {
     onDeleteEntity: disposeEntityLine,
     onRemoveComponent: disposeEntityLine,
   });
+  isInstalled = true;
+};
+
+/**
+ * Whether the `lines()` feature is installed, for the engine's debug drawing (ray helpers,
+ * collider wireframes, overlays), which checks it before creating a line. When it isn't, logs
+ * once per `tool` that the tool is off.
+ * @internal
+ */
+export const isLinesInstalledFor = (tool: string) => {
+  if (isInstalled) return true;
+  if (!toolsLoggedOff.has(tool)) {
+    toolsLoggedOff.add(tool);
+    llog(`The ${tool} is off: it needs the lines() feature (aekasha/lines).`);
+  }
+  return false;
 };
 
 /**
@@ -66,10 +83,16 @@ export const registerLineManager = () => {
  * // Refill every frame, allocation-free
  * const trail = createLines({ capacity: 256, growth: 'FIXED' });
  * const w = trail.beginWrite();
- * for (...) w.segment(ax, ay, az, bx, by, bz);
+ * for (const [a, b] of pairs) w.vec(a, b);
  * trail.endWrite();
  */
 export const createLines = (props: LineProps = {}): LineObject => {
+  if (!isInstalled) {
+    const msg =
+      "createLines: the lines feature isn't installed. Add `lines()` (from 'aekasha/lines') to InitEngine's `features`.";
+    lerror(msg);
+    throw new Error(msg);
+  }
   const id = props.id ?? nextLineId();
   if (getRegisteredLine(id)) {
     const msg = `A line with the id "${id}" already exists. Dispose the old line first or pick another id (createLines).`;
@@ -94,7 +117,7 @@ export const disposeAllLines = () => {
 
 /** Disposes every line that is neither `persistent` nor owned by an entity (those follow
  * their entity: clearNonPersistent deletes it, and its line with it). Runs on every scene
- * switch (SceneLoader). */
+ * switch (the `lines()` feature's `exit` scene hook). */
 export const disposeNonPersistentLines = () => {
   for (const line of getAllLines()) {
     if (!line.persistent && !line.entityBinding) line.dispose();

@@ -9,13 +9,14 @@ import {
 } from '../Material';
 import { deleteTexture, getTextureRegistry } from '../Texture';
 import { releaseImportsOwnedBy } from '../Import/ImportRegistry';
-import { getActiveSkyBoxTexture } from '../SkyBox/SkyBox';
+import { getSceneRetainedTextures } from '../SceneHooks';
 import { getAssetOwner } from './AssetOwners';
 
 /**
  * Releases the non-persistent assets a scene still owns (see AssetOwners) that nothing uses:
  * its import manifests, its materials and geometries with ref count 0, and its textures that no
- * registered material or the current sky box uses. SceneLoader runs this for the previous scene
+ * registered material uses and no feature retains (the current sky box's, a `retainedTextures`
+ * scene hook). SceneLoader runs this for the previous scene
  * once the next one has loaded, so whatever the next scene shares has been re-tagged to it (or
  * has taken refs) and stays.
  *
@@ -50,10 +51,10 @@ export const releaseSceneOwnedAssets = (sceneId: string) => {
   }
 
   // A sky box texture's baked PMREM is disposed with it (SkyBox/SkyEnvironment.ts)
-  const skyBoxTexture = getActiveSkyBoxTexture();
+  const retained = getSceneRetainedTextures();
   for (const [id, entry] of Object.entries(getTextureRegistry())) {
     if (entry.persistent || !isOwned(entry.resource)) continue;
-    if (entry.resource === skyBoxTexture || isTextureUsedByAnyMaterial(entry.resource)) continue;
+    if (retained.has(entry.resource) || isTextureUsedByAnyMaterial(entry.resource)) continue;
     deleteTexture(id);
     released.textures.push(id);
   }

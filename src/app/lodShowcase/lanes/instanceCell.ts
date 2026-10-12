@@ -1,10 +1,14 @@
 import * as THREE from 'three/webgpu';
-import { ComponentType } from '../../../_engine/core/ECS/ECSCoreComponents';
-import { createGeometry, incGeometryRef } from '../../../_engine/core/Geometry';
-import type { LodDef } from '../../../_engine/core/Lod/LodTypes';
-import { createMaterial, incMaterialRef } from '../../../_engine/core/Material';
-import { setMeshLod } from '../../../_engine/core/MeshManager';
-import { createSeededRandom } from '../../../toolkit/geometry/seededRandom';
+import {
+  ComponentType,
+  createGeometry,
+  incGeometryRef,
+  createMaterial,
+  incMaterialRef,
+  setMeshLod,
+} from 'aekasha';
+import type { LodDef } from 'aekasha/lod';
+import { createSeededRandom } from 'aekasha/toolkit/geometry';
 import type { ShowcaseLaneContext, ShowcaseLane } from '../layout';
 
 const GRID = 4;

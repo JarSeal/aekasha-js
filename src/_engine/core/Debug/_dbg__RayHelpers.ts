@@ -1,5 +1,10 @@
 import * as THREE from 'three/webgpu';
-import { createLines, preloadFatLineBackend, type LineObject } from '../LineManager';
+import {
+  createLines,
+  isLinesInstalledFor,
+  preloadFatLineBackend,
+  type LineObject,
+} from '../LineManager';
 import { lwarn } from '../../utils/Logger';
 import { markDebugHelper } from '../../debug/Profiler';
 import type { RayDebugOpts, RayHelperKind } from '../RayDebugTypes';
@@ -366,6 +371,8 @@ const writeGeometry = (pool: KindPool, helper: Helper) => {
 /** A helper for a new id: from the free list, or a new line. At the cap, the least recently
  * cast inactive helper is recycled first; with none inactive, nothing is drawn. */
 const acquireHelper = (pool: KindPool, id: string): Helper | null => {
+  // Drawn as lines: none without the feature
+  if (!isLinesInstalledFor('ray helpers')) return null;
   if (pool.helpers.size >= pool.settings.maxHelpers) {
     let oldest: Helper | null = null;
     for (const helper of pool.helpers.values()) {

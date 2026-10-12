@@ -1,8 +1,5 @@
-import { getECSWorld } from '../../../_engine/core/ECS';
-import { ComponentType } from '../../../_engine/core/ECS/ECSCoreComponents';
-import { getMaterial } from '../../../_engine/core/Material';
-import { createMeshEntity } from '../../../_engine/core/MeshManager';
-import { existsOrThrow } from '../../../_engine/utils/assert';
+import { getECSWorld, getMaterial, createMeshEntity, existsOrThrow } from 'aekasha';
+import { HoverToolComponentType } from 'aekasha/toolkit/ecs';
 
 // #region quick-start (shown in the Hub: hub/pages/examples/quick-start/)
 export const scene = async () => {
@@ -25,7 +22,7 @@ export const scene = async () => {
   });
 
   // The toolkit's HoverEffect bobs it (its system is registered in src/AppECSPlugins.ts)
-  getECSWorld().addComponent(cubeId, ComponentType.HOVER, {
+  getECSWorld().addComponent(cubeId, HoverToolComponentType.HOVER, {
     speed: 1.5,
     amplitude: 0.25,
     baseY: 1.5,

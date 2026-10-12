@@ -26,6 +26,37 @@ self-signed certificate: open `https://<your computer's address>:8443/?isDebug=t
 and accept the certificate.
 :::
 
+## How the app starts
+
+`src/index.ts` is the app's entry. It hands the engine everything it needs in one call,
+[`InitEngine`](api:InitEngine):
+
+<<< src/index.ts collapse
+
+- `config` is your configuration (`src/CONFIG.ts`): physics, debug keys, the debug camera and
+  more, each top-level key merged over the engine's defaults.
+- `data` is your scenes and assets, gathered from their JSON files into `src/generated/`. The
+  gatherer writes it before `yarn dev` and `yarn build` and on every save, so you never edit it.
+- `features` lists what the engine installs besides its kernel (the ECS, meshes, cameras, lights,
+  input and scenes), in this order: each engine feature from its entry (`physics()` from
+  `aekasha/physics`, …), then `appECSPlugins`, the app's own feature, which registers your systems
+  and the toolkit's (see the [ECS example](hub:examples/ecs#4-registering-it)). The template lists
+  all nine engine features.
+- `start` runs once the engine is ready: it creates the renderer and the scene loader and loads
+  the first scene.
+- Everything comes from the engine's public entries: `aekasha`, `aekasha/ui`, and for a feature
+  its own (`aekasha/physics`, `aekasha/skybox`, …). A path into `src/_engine/` is a lint error
+  outside the engine.
+
+A feature you don't list isn't installed, and isn't in a production build: without `physics()`,
+no Rapier is loaded. Drop the ones your game doesn't use. If a scene's JSON uses one you dropped
+(a sky box, post effects, a mesh's levels of detail), `InitEngine` fails at boot and names it
+(see [the feature manifest](hub:features/scenes-and-assets#the-feature-manifest)).
+
+`InitEngine` reads the environment first (the build's env vars, `?isDebug` and `?isProdTest`), so
+`IS_DEBUG_ENV` and the other flags read as a production build until it runs: check them in
+`start` or later, never at a module's top level.
+
 ::: dev-only
 
 ## Check your changes

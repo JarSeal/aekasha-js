@@ -1,22 +1,27 @@
 import * as THREE from 'three/webgpu';
-import { createGeometry, saveBufferGeometry } from '../_engine/core/Geometry';
-import { getMaterial, getMaterialVariant } from '../_engine/core/Material';
-import { createMeshEntity } from '../_engine/core/MeshManager';
-import { getLoaderStatusUpdater } from '../_engine/core/SceneLoader';
-import { createDynamicCharacter } from '../_engine/core/Character/DynamicCharacter';
-import { ComponentType } from '../_engine/core/ECS/ECSCoreComponents';
-import { getECSWorld, getEntityIdByAppId } from '../_engine/core/ECS';
-import { registerOnSceneEnter, registerOnSceneExit } from '../_engine/core/Scene';
-import { createPhysicsEntity } from '../_engine/core/PhysicsManager';
-import { getCameraByAppId } from '../_engine/core/CameraManager';
 import {
+  createGeometry,
+  saveBufferGeometry,
+  getMaterial,
+  getMaterialVariant,
+  createMeshEntity,
+  getLoaderStatusUpdater,
+  getECSWorld,
+  getEntityIdByAppId,
+  registerOnSceneEnter,
+  registerOnSceneExit,
+  getCameraByAppId,
+  existsOrThrow,
+  lwarn,
+} from 'aekasha';
+import { createDynamicCharacter } from 'aekasha/character';
+import {
+  SunShadowFitComponentType,
   createFollowObjectCameraRig,
   deleteFollowObjectCameraRig,
-} from '../_engine/utils/cameras/followObjectCameraRig';
-import { existsOrThrow } from '../_engine/utils/assert';
-import { lwarn } from '../_engine/utils/Logger';
-import { generateTerrain } from '../toolkit/geometry/generateTerrain';
-import { createSeededRandom } from '../toolkit/geometry/seededRandom';
+} from 'aekasha/toolkit/ecs';
+import { createPhysicsEntity } from 'aekasha/physics';
+import { generateTerrain, createSeededRandom } from 'aekasha/toolkit/geometry';
 import { createCharacterVisual } from './characterVisual';
 
 /**
@@ -587,7 +592,7 @@ export const scene = async () => {
       lwarn(`Top-down test scene: could not find the sun light '${SUN_APP_ID}'.`);
       return;
     }
-    world.addComponent(sunId, ComponentType.SUN_SHADOW_FIT, {
+    world.addComponent(sunId, SunShadowFitComponentType.SUN_SHADOW_FIT, {
       maxDistance: 48,
       casterExtension: 25,
       followEntityId: playerEntityId,

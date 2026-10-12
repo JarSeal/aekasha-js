@@ -4,18 +4,19 @@ A component is a key and the type of its data:
 
 <<< src/app/examples/ecs/SpinComponent.ts#spin-component
 
-## 2. Its types in the registry
+## 2. Adding it to the component map
 
-`src/AppECSRegistry.ts` lists the app's components next to the engine's, so
-[`addComponent`](api:ECSWorld.addComponent) and [`getStorage`](api:ECSWorld.getStorage) know
-`SPIN` and its data's type:
+The same file adds `SPIN` to the engine's component map, so
+[`addComponent`](api:ECSWorld.addComponent) and [`getStorage`](api:ECSWorld.getStorage) know it
+and its data's type:
 
-<<< src/AppECSRegistry.ts#ecs-component-types
+<<< src/app/examples/ecs/SpinComponent.ts#spin-component-map
 
-<<< src/AppECSRegistry.ts#ecs-component-data
-
-Keep this file to keys and types (`SpinComponent.ts` has no imports): everything that imports the
-ECS imports it.
+`declare module 'aekasha'` merges the key into the engine's `ComponentDataMap` interface, with no
+shared file to edit: the toolkit's components (`HOVER`, `FOLLOW`, `SUN_SHADOW_FIT`) add theirs the
+same way, and code uses each module's own key object (`SpinComponentType.SPIN`,
+`HoverToolComponentType.HOVER`). Always augment `'aekasha'`, never a path into the engine: the
+same interface augmented through two paths loses keys without an error.
 
 ## 3. The system
 
@@ -27,15 +28,23 @@ ECS imports it.
 - A system belongs to a stage. Every frame runs `MAIN`, `APP_PRE_PHYSICS`, `APP_POST_PHYSICS`,
   `APP_LOGIC`, `APP_RENDER_SYNC` and `LATE_MAIN` in that order. `APP_LOGIC` is for gameplay, and
   it stops while the app is paused.
+- `ECSSystemStage` and the `ECSWorld` type come from `aekasha`, like the rest of the engine's API
+  (see [Importing the engine](hub:documentation#importing-the-engine)).
 
 ## 4. Registering it
 
 <<< src/AppECSPlugins.ts#ecs-register-plugin
 
-[`registerPlugin`](api:ECSWorld.registerPlugin) runs for every ECS world, so the system is there
-in every scene: where no entity has the component, it loops over nothing. For a system only one
-scene needs, call [`addSystem`](api:ECSWorld.addSystem) in the scene file and
-[`removeSystem`](api:ECSWorld.removeSystem) when the scene exits.
+- `appECSPlugins` is the app's own feature. `src/index.ts` lists it last in
+  [`InitEngine`](api:InitEngine)'s `features`, so its `install` runs once, after the engine's
+  features (see [Features](hub:features/ecs#features)).
+- `ctx.registerPlugin` ([`registerPlugin`](api:ECSWorld.registerPlugin)) runs for every ECS
+  world, so the system is there in every scene: where no entity has the component, it loops over
+  nothing.
+- Register in an install, never at a module's top level: a production build drops a module that
+  nothing uses a name of, and its registrations with it.
+- For a system only one scene needs, call [`addSystem`](api:ECSWorld.addSystem) in the scene file
+  and [`removeSystem`](api:ECSWorld.removeSystem) when the scene exits.
 
 ## Using it
 

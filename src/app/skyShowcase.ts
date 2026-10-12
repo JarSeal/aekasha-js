@@ -1,6 +1,4 @@
-import { createMaterial } from '../_engine/core/Material';
-import { createMeshEntity } from '../_engine/core/MeshManager';
-import { getLoaderStatusUpdater } from '../_engine/core/SceneLoader';
+import { createMaterial, createMeshEntity, getLoaderStatusUpdater } from 'aekasha';
 
 /** Roughness along each sphere row, front (south) to back (north). */
 const ROUGHNESS = [0, 0.2, 0.4, 0.6, 0.8, 1];

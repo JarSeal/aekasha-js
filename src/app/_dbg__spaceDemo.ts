@@ -1,9 +1,6 @@
-import { getECSWorld } from '../_engine/core/ECS';
-import { createDebuggerTab, debuggerListCMP } from '../_engine/debug/DebuggerGUI';
-import {
-  getMutualGravityConfig,
-  setMutualGravityConfig,
-} from '../toolkit/ecs/effects/MutualGravity';
+import { getECSWorld } from 'aekasha';
+import { createDebuggerTab, debuggerListCMP } from 'aekasha/debug';
+import { getMutualGravityConfig, setMutualGravityConfig } from 'aekasha/toolkit/ecs';
 import {
   getSpaceAsteroids,
   resetSpaceAsteroids,

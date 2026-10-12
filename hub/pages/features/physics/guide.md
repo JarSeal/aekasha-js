@@ -1,3 +1,11 @@
+## Installing it
+
+List [`physics()`](api:physics), from `aekasha/physics`, in `InitEngine`'s `features` (see
+[How the app starts](hub:examples/quick-start#how-the-app-starts)). It installs the physics API,
+physics entities, simulation tiers and the tier policy, and drives the fixed steps. Without it,
+neither physics nor Rapier is loaded, or in a production build. With
+`AppConfig.physics.enabled: false` it's installed, but no world is created at boot.
+
 ## Bodies on entities
 
 A physics object is an ECS entity with a rigid body and its colliders.

@@ -1,21 +1,25 @@
-import { getECSWorld } from '../_engine/core/ECS';
-import { IS_DEBUG_ENV } from '../_engine/core/Config';
-import { saveBufferGeometry } from '../_engine/core/Geometry';
-import { getMaterial } from '../_engine/core/Material';
-import { createMeshEntity } from '../_engine/core/MeshManager';
-import { getPhysicsWorld } from '../_engine/core/PhysicsAPI';
-import { createPhysicsEntity } from '../_engine/core/PhysicsManager';
-import type { PhysVector } from '../_engine/core/Physics/PhysicsAPITypes';
-import { getLoaderStatusUpdater } from '../_engine/core/SceneLoader';
-import { existsOrThrow } from '../_engine/utils/assert';
+import {
+  getECSWorld,
+  IS_DEBUG_ENV,
+  saveBufferGeometry,
+  getMaterial,
+  createMeshEntity,
+  getLoaderStatusUpdater,
+  existsOrThrow,
+} from 'aekasha';
+import { getPhysicsWorld, createPhysicsEntity } from 'aekasha/physics';
+import type { PhysVector } from 'aekasha/physics';
 import {
   addGravityBody,
   getMutualGravityConfig,
   setMutualGravityConfig,
   type MutualGravityConfig,
-} from '../toolkit/ecs/effects/MutualGravity';
-import { generateAsteroid, type GeneratedAsteroid } from '../toolkit/geometry/generateAsteroid';
-import { createSeededRandom } from '../toolkit/geometry/seededRandom';
+} from 'aekasha/toolkit/ecs';
+import {
+  generateAsteroid,
+  type GeneratedAsteroid,
+  createSeededRandom,
+} from 'aekasha/toolkit/geometry';
 
 export const SPACE_SCENE_ID = 'space';
 

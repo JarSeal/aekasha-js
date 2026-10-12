@@ -1,9 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as THREE from 'three/webgpu';
-import type { ECSWorld } from '../../../_engine/core/ECS';
-import { CoreComponentType } from '../../../_engine/core/ECS/ECSRegistry';
-import { ECSSystemStage } from '../../../AppECSRegistry';
-import { ComponentType } from '../../../_engine/core/ECS/ECSCoreComponents';
+import { CoreComponentType, ECSSystemStage, ComponentType } from 'aekasha';
+import type { ECSWorld } from 'aekasha';
 
 /** Internal Key (Values) */
 export enum FollowToolComponentType {
@@ -25,8 +22,10 @@ export interface FollowToolData {
   speed: number;
 }
 
-export interface FollowComponentData {
-  [FollowToolComponentType.FOLLOW]: FollowToolData;
+declare module 'aekasha' {
+  interface ComponentDataMap {
+    [FollowToolComponentType.FOLLOW]: FollowToolData;
+  }
 }
 
 // Scratchpad vector to prevent garbage collection stutters
@@ -34,7 +33,7 @@ const _targetPos = new THREE.Vector3();
 
 /** ECS System */
 export const followToolSystem = (world: ECSWorld, dt: number) => {
-  const storage = world.getStorage(FollowToolComponentType.FOLLOW as any);
+  const storage = world.getStorage(FollowToolComponentType.FOLLOW);
   if (!storage) return;
   const transformStore = world.getTypedTransformStore();
 

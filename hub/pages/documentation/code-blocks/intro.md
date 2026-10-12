@@ -41,10 +41,8 @@ Use the language's own comment: `/* [!code ++] */` in CSS, `# [!code ++]` in bas
 
 ### Highlights and a title
 
-```ts title="src/app/myScene.ts" {6-7}
-import { createGeometry } from '../_engine/core/Geometry';
-import { createMaterial } from '../_engine/core/Material';
-import { createMeshEntity } from '../_engine/core/MeshManager';
+```ts title="src/app/myScene.ts" {4-5}
+import { createGeometry, createMaterial, createMeshEntity } from 'aekasha';
 
 export const scene = async () => {
   const geo = createGeometry({ id: 'ball', type: 'SPHERE', params: { radius: 0.4 } });
@@ -177,11 +175,9 @@ removing a region that a page includes breaks the page. Say so in the marker's n
 One block with a title, line highlights, a diff, a focus, an error and a warning, wrapped lines,
 and collapsed after 15 lines.
 
-```ts title="src/app/myScene.ts" {6} wrap collapse
-import { createGeometry } from '../_engine/core/Geometry';
-import { createMaterial } from '../_engine/core/Material';
-import { createMeshEntity } from '../_engine/core/MeshManager';
-import { createPhysicsEntity } from '../_engine/core/PhysicsManager';
+```ts title="src/app/myScene.ts" {4} wrap collapse
+import { createGeometry, createMaterial, createMeshEntity } from 'aekasha';
+import { createPhysicsEntity } from 'aekasha/physics';
 
 export const scene = async () => {
   const position = { x: 0, y: 5, z: 0 };

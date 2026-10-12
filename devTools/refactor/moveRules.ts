@@ -1,7 +1,8 @@
 /**
  * The target layout as rules (p602 Phase 2): where every file of `src/_engine/` and
- * `src/toolkit/`, and the app files that move, go in p606-p609. `moveMap.ts` applies them to the
- * tracked tree and writes `moveMap.json`, which p608's codemod reads.
+ * `src/toolkit/`, and the app files that move, go in p608-p609. `moveMap.ts` applies them to the
+ * tracked tree and writes `moveMap.json`, which p608's codemod reads. (p606 made its own moves,
+ * the generated data and the gameplay and test code, and their rules left with them.)
  *
  * - A rule's `from` is a repo-relative file, or a folder ending in `/`. The longest matching
  *   `from` wins, so a file rule beats its folder's rule and the order here doesn't matter.
@@ -15,7 +16,7 @@ import path from 'path';
 
 export type MoveAction = 'keep' | 'move' | 'delete' | 'merge' | 'split';
 /** The plan that applies the move */
-export type MovePlan = 'p606' | 'p608' | 'p609';
+export type MovePlan = 'p608' | 'p609';
 
 export type MoveEntry = {
   /** Target path; `null` for a deleted file */
@@ -44,29 +45,40 @@ const T = 'src/toolkit/';
 const A = 'src/app/';
 
 const WRAPPER_NOTE =
-  "a debug wrapper: p606 / p618 merge it into the feature's public module (p602 D4)";
+  "a debug wrapper: merged into the feature's public module with its move (p608 / p618, p602 D4)";
 
 const ENGINE_RULES: MoveRule[] = [
   // Engine root
   { from: `${E}InitApp.ts`, to: `${K}init/InitEngine.ts` },
+  {
+    from: `${E}core/Features.ts`,
+    to: `${K}init/Features.ts`,
+    note: 'the install contract (p607 D1): the features install through it',
+  },
+  { from: `${E}core/Features.test.ts`, to: `${K}init/Features.test.ts` },
+  {
+    from: `${E}core/Kernel.ts`,
+    to: `${K}init/Kernel.ts`,
+    note: "the kernel's install (p607 D2): InitEngine runs it before the first world",
+  },
+  { from: `${E}index.ts`, to: `${E}index.ts`, note: 'the `aekasha` entry (p606)' },
+  { from: `${E}features/`, to: F, note: 'the feature entries (p606): the code moves under them' },
   { from: `${E}types/`, to: `${E}types/` },
   {
-    from: `${E}generatedAppData.json`,
-    to: 'src/generated/generatedAppData.json',
-    plan: 'p606',
-    note: 'app data, handed to the engine through InitEngine (p602 D9)',
-  },
-  {
-    from: `${E}generatedAppFns.ts`,
-    to: 'src/generated/generatedAppFns.ts',
-    plan: 'p606',
-    note: 'app data, handed to the engine through InitEngine (p602 D9)',
+    from: `${E}moduleLoad.test.ts`,
+    to: `${E}ModuleLoad.test.ts`,
+    note: 'imports every engine module in Node (p606 Phase 5): the whole engine, so at its root',
   },
 
   // Kernel: ECS
   { from: `${E}core/ECS.ts`, to: `${K}ecs/ECS.ts` },
   { from: `${E}core/ECS.test.ts`, to: `${K}ecs/ECS.test.ts` },
   { from: `${E}core/ECS/`, to: `${K}ecs/` },
+  {
+    from: `${E}core/ECS/SystemStages.ts`,
+    to: `${K}loop/SystemStages.ts`,
+    note: 'the loop owns the stages (p602 D2): every world runs them in this order',
+  },
   {
     from: `${E}core/ECS/LightObjectCullingSystem.ts`,
     to: `${F}spatial/LightObjectCullingSystem.ts`,
@@ -84,10 +96,22 @@ const ENGINE_RULES: MoveRule[] = [
   { from: `${E}core/MainLoop.ts`, to: `${K}loop/MainLoop.ts` },
   { from: `${E}core/Debug/_dbg__MainLoop.ts`, to: `${K}loop/debug/_dbg__MainLoop.ts` },
   { from: `${E}core/Config.ts`, to: `${K}config/Config.ts` },
+  { from: `${E}core/Config.test.ts`, to: `${K}config/Config.test.ts` },
 
   // Kernel: scene
   { from: `${E}core/Scene.ts`, to: `${K}scene/Scene.ts` },
+  {
+    from: `${E}core/AppData.ts`,
+    to: `${K}scene/AppData.ts`,
+    note: "the app's data from InitEngine (p606, p602 D9): the scenes read it",
+  },
   { from: `${E}core/SceneLoader.ts`, to: `${K}scene/SceneLoader.ts` },
+  {
+    from: `${E}core/SceneHooks.ts`,
+    to: `${K}scene/SceneHooks.ts`,
+    note: "the scene seams (p607 D4): the features' part of a scene load",
+  },
+  { from: `${E}core/SceneHooks.test.ts`, to: `${K}scene/SceneHooks.test.ts` },
   { from: `${E}core/GroupManager.ts`, to: `${K}scene/Group.ts` },
   {
     from: `${E}core/PropertyLoader.ts`,
@@ -114,7 +138,12 @@ const ENGINE_RULES: MoveRule[] = [
   {
     from: `${E}core/Import/MeshColliderGeometry.ts`,
     to: `${F}physics/import/MeshColliderGeometry.ts`,
-    note: 'builds physics colliders: SpawnImported reaches it through an import extension (p606)',
+    note: 'builds physics colliders: SpawnImported reaches it through an import extension (p607)',
+  },
+  {
+    from: `${E}core/Import/ImportPhysics.ts`,
+    to: `${F}physics/import/ImportPhysics.ts`,
+    note: "spawnImportedAsset's physics half: the physics feature's import extension (p607 D5)",
   },
   {
     from: `${E}3dModels/customPropTemplates.blend`,
@@ -122,6 +151,11 @@ const ENGINE_RULES: MoveRule[] = [
   },
   { from: `${E}workers/assetsWorker.ts`, to: `${K}assets/worker/AssetsWorker.ts` },
   { from: `${E}workers/assets/`, to: `${K}assets/worker/` },
+  {
+    from: `${E}workers/assets/assetsSwitchSimplify.ts`,
+    to: `${F}lod/worker/AssetsSwitchSimplify.ts`,
+    note: "the LOD feature's worker job: the assets worker loads it on the first one (p607 D5)",
+  },
   { from: `${E}core/Debug/_dbg__Assets.ts`, to: `${K}assets/debug/_dbg__Assets.ts` },
   { from: `${E}core/Debug/_dbg__AssetStats.ts`, to: `${K}assets/debug/_dbg__AssetStats.ts` },
   { from: `${E}core/Debug/_dbg__AssetsPreview.ts`, to: `${K}assets/debug/_dbg__AssetsPreview.ts` },
@@ -135,6 +169,12 @@ const ENGINE_RULES: MoveRule[] = [
   // Kernel: render
   { from: `${E}core/Renderer.ts`, to: `${K}render/Renderer.ts` },
   { from: `${E}core/Snapshot.ts`, to: `${K}render/Snapshot.ts` },
+  {
+    from: `${E}core/RenderHooks.ts`,
+    to: `${K}render/RenderHooks.ts`,
+    note: "the render seams (p607 D5): PostFX's pipeline and the viewports' after-render hook",
+  },
+  { from: `${E}core/RenderHooks.test.ts`, to: `${K}render/RenderHooks.test.ts` },
   { from: `${E}core/ViewManager.ts`, to: `${K}render/Views.ts` },
   {
     from: `${E}core/Raycast.ts`,
@@ -162,6 +202,7 @@ const ENGINE_RULES: MoveRule[] = [
 
   // Features: physics
   { from: `${E}core/PhysicsAPI.ts`, to: `${F}physics/PhysicsAPI.ts` },
+  { from: `${E}core/PhysicsFeature.ts`, to: `${F}physics/PhysicsFeature.ts` },
   { from: `${E}core/PhysicsManager.ts`, to: `${F}physics/PhysicsEntity.ts` },
   { from: `${E}core/PhysicsTiers.ts`, to: `${F}physics/PhysicsTiers.ts` },
   { from: `${E}core/PhysicsTierPolicy.ts`, to: `${F}physics/PhysicsTierPolicy.ts` },
@@ -169,6 +210,7 @@ const ENGINE_RULES: MoveRule[] = [
   { from: `${E}core/Physics/ENGINES.ts`, to: `${F}physics/backends/Engines.ts` },
   { from: `${E}core/Physics/EngineRapier.ts`, to: `${F}physics/backends/rapier/EngineRapier.ts` },
   { from: `${E}workers/physicsWorker.ts`, to: `${F}physics/worker/PhysicsWorker.ts` },
+  { from: `${E}workers/physicsWorker.test.ts`, to: `${F}physics/worker/PhysicsWorker.test.ts` },
   { from: `${E}workers/physics/`, to: `${F}physics/worker/` },
   { from: `${E}core/Debug/_dbg__PhysicsAPI.ts`, to: `${F}physics/debug/_dbg__PhysicsAPI.ts` },
   {
@@ -197,6 +239,11 @@ const ENGINE_RULES: MoveRule[] = [
 
   // Features: LOD
   { from: `${E}core/Lod/`, to: `${F}lod/` },
+  {
+    from: `${E}core/Lod/LodFade.ts`,
+    to: `${K}render/LodFade.ts`,
+    note: "the dither fade (three only): the LOD system and instancing's LOD pools draw with it (p607 D5)",
+  },
   { from: `${E}core/Lod/Impostors/`, to: `${F}lod/impostors/` },
   { from: `${E}core/Debug/Lod/`, to: `${F}lod/debug/` },
   { from: `${E}core/Debug/_dbg__LOD.ts`, to: `${F}lod/debug/_dbg__LOD.ts` },
@@ -220,9 +267,11 @@ const ENGINE_RULES: MoveRule[] = [
     note: WRAPPER_NOTE,
   },
   { from: `${E}core/Viewports.ts`, to: `${F}viewports/Viewports.ts` },
+  { from: `${E}core/ViewportsFeature.ts`, to: `${F}viewports/ViewportsFeature.ts` },
   { from: `${E}core/Viewports.module.scss`, to: `${F}viewports/Viewports.module.scss` },
 
   // UI kit (p602 D5)
+  { from: `${E}ui/`, to: `${E}ui/`, note: 'the `aekasha/ui` entry (p606)' },
   { from: `${E}utils/CMP.ts`, to: `${E}ui/CMP.ts` },
   { from: `${E}utils/Window.ts`, to: `${E}ui/Window.ts` },
   { from: `${E}core/HUD.ts`, to: `${E}ui/HUD.ts` },
@@ -334,54 +383,33 @@ const ENGINE_RULES: MoveRule[] = [
       GRAVITY_DOWN_NORMAL: `${K}render/ThreeMath.ts`,
     },
   },
-  {
-    from: `${E}utils/commontTypes.ts`,
-    to: `${T}ecs/FollowObjectCameraRig.ts`,
-    action: 'merge',
-    note: 'merged into its one user (p602 D6)',
-  },
   { from: `${E}utils/materials/`, action: 'delete', note: 'no importers (p602 D6)' },
-
-  // Gameplay pieces to the toolkit, test scaffolding to the app (p602 D6)
-  { from: `${E}utils/world/movingPlatform.ts`, to: `${T}ecs/MovingPlatform.ts` },
-  { from: `${E}utils/cameras/followObjectCameraRig.ts`, to: `${T}ecs/FollowObjectCameraRig.ts` },
-  {
-    from: `${E}utils/PhysicsStressTest.ts`,
-    to: `${A}scenes/thirdPersonGymScene/PhysicsStressTest.ts`,
-    note: 'only the gym uses it',
-  },
-  {
-    from: `${E}utils/world/characterTestObjects.ts`,
-    to: `${A}scenes/thirdPersonGymScene/characterTestObjects.ts`,
-    note: 'only the gym uses it',
-  },
-  {
-    from: `${E}utils/world/characterTestObstacles.ts`,
-    to: `${A}scenes/thirdPersonGymScene/characterTestObstacles.ts`,
-    note: 'only the gym uses it',
-  },
-  {
-    from: `${E}3dModels/characterObstacles.blend`,
-    to: `${A}scenes/thirdPersonGymScene/characterObstacles.blend`,
-  },
 
   { from: `${E}schemas/`, to: `${E}schemas/` },
 ];
 
 /** The toolkit's categories (p609, from the p450 prompt) */
 const TOOLKIT_RULES: MoveRule[] = [
+  ...['ecs', 'geometry', 'materials'].map(
+    (category): MoveRule => ({
+      from: `${T}${category}/index.ts`,
+      to: `${T}${category}/index.ts`,
+      plan: 'p609',
+      note: `the \`aekasha/toolkit/${category}\` entry (p606)`,
+    })
+  ),
   { from: `${T}ecs/effects/`, to: `${T}ecs/effects/`, plan: 'p609' },
   {
-    from: `${T}ecs/InstancedMeshPool.ts`,
-    action: 'delete',
+    from: `${T}ecs/FollowObjectCameraRig.ts`,
+    to: `${T}ecs/FollowObjectCameraRig.ts`,
     plan: 'p609',
-    note: "a deprecated re-export, removed in the toolkit's next major",
+    note: 'moved from the engine (p606 Phase 7, p602 D6); p609 picks its category folder',
   },
   {
-    from: `${T}ecs/InstancedMeshPoolTypes.ts`,
-    action: 'delete',
+    from: `${T}ecs/MovingPlatform.ts`,
+    to: `${T}ecs/MovingPlatform.ts`,
     plan: 'p609',
-    note: "a deprecated re-export, removed in the toolkit's next major",
+    note: 'moved from the engine (p606 Phase 7, p602 D6); p609 picks its category folder',
   },
   {
     from: `${T}geometry/generateAsteroid.ts`,

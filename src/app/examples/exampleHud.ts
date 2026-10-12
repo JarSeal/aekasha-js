@@ -1,16 +1,16 @@
-import { getHUDRootCMP } from '../../_engine/core/HUD';
-import { registerOnAllSceneExits } from '../../_engine/core/Scene';
-import type { TCMP } from '../../_engine/utils/CMP';
+import { getHUDRootCMP } from 'aekasha/ui';
+import type { TCMP } from 'aekasha/ui';
+import { registerOnAllSceneExits } from 'aekasha';
 
 // The example scenes' HUD panel: one box of text at the bottom of the screen, removed when its
 // scene exits (the exit hooks run before the next scene's file, so a new panel is never removed)
 
 let panel: TCMP | null = null;
 
-registerOnAllSceneExits('exampleHud', () => {
+const removePanel = () => {
   panel?.remove();
   panel = null;
-});
+};
 
 /**
  * Shows the example's HUD panel (one per scene)
@@ -18,6 +18,8 @@ registerOnAllSceneExits('exampleHud', () => {
  * @returns the panel, to update with `panel.updateText(text)`
  */
 export const createExampleHud = (text: string) => {
+  // Registered by id, so once however many scenes show a panel
+  registerOnAllSceneExits('exampleHud', removePanel);
   panel?.remove();
   panel = getHUDRootCMP().add({
     text,

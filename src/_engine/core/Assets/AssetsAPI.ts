@@ -4,7 +4,6 @@
 // crash) transparently re-runs on the main thread. The worker holds no cache: the main-thread
 // registries stay the single source of truth.
 
-import AssetsWorker from '../../workers/assetsWorker?worker';
 import { getConfig, isDebugEnvironment } from '../Config';
 import { initWorker } from '../../utils/helpers';
 import { lerror, llog, lwarn } from '../../utils/Logger';
@@ -189,7 +188,8 @@ const onWorkerMessage = (event: MessageEvent<AssetsDownProtocol>) => {
     );
     return;
   }
-  resolveRequest(data, requestId);
+  // Pending: checked above
+  resolveRequest(requestId, data);
 };
 
 /** Stops the worker for good: in-flight requests fail with CRASHED (and so fall back), queued
@@ -209,18 +209,22 @@ const setWorkerFailed = (reason: string) => {
 const startWorker = () => {
   if (workerStartPromise) return workerStartPromise;
   workerStatus = 'STARTING';
-  workerStartPromise = initWorker<AssetsDownProtocol>(
-    AssetsWorker,
-    'Assets Worker',
-    onWorkerMessage,
-    onWorkerError,
-    {
-      onReady: (data) => {
-        workerCapabilities = (data as AssetsWorkerReadyMessage).capabilities;
-      },
-      timeoutMs: assetsState.requestTimeoutMs,
-    }
-  )
+  // Imported here, not at load (like the worker itself, only by the first request)
+  workerStartPromise = import('../../workers/assetsWorker?worker')
+    .then(({ default: AssetsWorker }) =>
+      initWorker<AssetsDownProtocol>(
+        AssetsWorker,
+        'Assets Worker',
+        onWorkerMessage,
+        onWorkerError,
+        {
+          onReady: (data) => {
+            workerCapabilities = (data as AssetsWorkerReadyMessage).capabilities;
+          },
+          timeoutMs: assetsState.requestTimeoutMs,
+        }
+      )
+    )
     .then((startedWorker) => {
       worker = startedWorker;
       workerStatus = 'READY';
@@ -459,6 +463,7 @@ export const loadHDRTextureInWorker = async (url: string) => {
  * (TextureTransfer.ts's deserializeTexture() rebuilds them)
  * @param opts.draco the main thread's DRACO settings (DracoDecoder.ts's getDracoWorkerSettings())
  * @param opts.ktx2 the main thread's KTX2 settings (KTX2.ts's getKTX2WorkerSettings())
+ * @param opts.readLodChains also send the file's prebuilt LOD chains (the `lod()` feature's)
  */
 export const loadGLTFInWorker = (
   url: string,
@@ -468,6 +473,7 @@ export const loadGLTFInWorker = (
     importTextures: boolean;
     draco: DracoWorkerSettings;
     ktx2: KTX2WorkerSettings | null;
+    readLodChains: boolean;
   }
 ) =>
   requestAssetsWorker<AssetsLoadGLTFResponse>({
@@ -478,6 +484,7 @@ export const loadGLTFInWorker = (
     importTextures: opts.importTextures,
     draco: opts.draco,
     ktx2: opts.ktx2,
+    readLodChains: opts.readLodChains,
   });
 
 /**

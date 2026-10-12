@@ -1,7 +1,5 @@
-import { getECSWorld, type ECSWorld } from '../../../_engine/core/ECS';
-import { registerOnAllSceneExits } from '../../../_engine/core/Scene';
-import type { PhysVector, RigidBodyAPI } from '../../../_engine/core/Physics/PhysicsAPITypes';
-import { ECSSystemStage } from '../../../AppECSRegistry';
+import { getECSWorld, type ECSWorld, registerOnAllSceneExits, ECSSystemStage } from 'aekasha';
+import type { PhysVector, RigidBodyAPI } from 'aekasha/physics';
 
 /**
  * Mutual (N-body) Newtonian gravity between registered dynamic bodies, for zero-g scenes: every

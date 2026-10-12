@@ -1,3 +1,9 @@
+## Installing it
+
+List [`character()`](api:character), from `aekasha/character`, in `InitEngine`'s `features`,
+after [`physics()`](api:physics): `features: [physics(), character(), …]`{ts}. `InitEngine`
+fails at boot, naming both, when `physics()` isn't listed before it.
+
 ## A character
 
 [`createDynamicCharacter`](api:createDynamicCharacter) turns a visual (a mesh or a group) into a

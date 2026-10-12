@@ -8,9 +8,10 @@ import { lsGetItem } from '../../utils/LocalAndSessionStorage';
 import type { DebugModuleRef } from '../../utils/helpers';
 import { loadDebugModuleAsync, useDebug } from '../../utils/helpers';
 import { deepMerge, isIndexObject } from '../../utils/deepMerge';
-import { ECSWorld, getECSWorld } from '../ECS';
+import { type ECSWorld, getECSWorld } from '../ECS';
+import type { FeatureContext } from '../Features';
 import { getRenderer } from '../Renderer';
-import { ECSSystemStage } from '../../../AppECSRegistry';
+import { ECSSystemStage } from '../ECS/SystemStages';
 import { getElapsedTime, isAppPlaying } from '../MainLoop';
 import type { SkyBoxBaseDef, SkyBoxDef, SkyBoxEnvDef, SkyBoxOverrides } from './SkyBoxTypes';
 import { fromLegacySkyBoxProps, isLegacySkyBoxProps, type LegacySkyBoxProps } from './legacySkyBox';
@@ -732,10 +733,16 @@ const stepDayNight = (world: ECSWorld) => {
 
 // System
 
-ECSWorld.registerPlugin((world) => {
-  // MAIN, order 1: before object3DSyncSystem (order 0), where the sky lights' transforms go
-  world.addSystem(ECSSystemStage.MAIN, 'skyBoxSystem', skyBoxSystem, 1);
-});
+/**
+ * Installs the sky box's system (the `skyBox()` feature's install, SkyBoxFeature.ts).
+ * @internal
+ */
+export const installSkyBoxSystem = (ctx: FeatureContext) => {
+  ctx.registerPlugin((world) => {
+    // MAIN, order 1: before object3DSyncSystem (order 0), where the sky lights' transforms go
+    world.addSystem(ECSSystemStage.MAIN, 'skyBoxSystem', skyBoxSystem, 1);
+  });
+};
 
 /** Steps the day-night cycle, moves the sky lights with their follow point, and runs a
  * requested static-layer bake and then env bake (it samples the static layers), never while a

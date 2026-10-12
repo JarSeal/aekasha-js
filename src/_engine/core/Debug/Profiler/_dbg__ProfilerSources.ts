@@ -1,4 +1,4 @@
-import { ECSSystemStage } from '../../../../AppECSRegistry';
+import { ECSSystemStage } from '../../ECS/SystemStages';
 import { IS_DEBUG_ENV } from '../../Config';
 import { getECSWorld } from '../../ECS';
 import {
@@ -15,8 +15,8 @@ import {
   setPhysicsRayStatsEnabled,
   setPhysicsStepStatsEnabled,
 } from '../../PhysicsAPI';
-import { getActivePostFxPipeline } from '../../PostFX';
 import { getRayCastStats, isRayCastStatsEnabled, setRayCastStatsEnabled } from '../../Raycast';
+import { getRenderPipeline } from '../../RenderHooks';
 import { getRenderer } from '../../Renderer';
 import { getCurrentSceneId } from '../../Scene';
 import { getNextSceneId, isCurrentlyLoading } from '../../SceneLoader';
@@ -508,7 +508,7 @@ export const registerBuiltInStatsSources = (settings: Readonly<ProfilerSettings>
     availability: () => {
       if (!IS_DEBUG_ENV) return 'debug env only';
       if (!getRenderer()) return NO_RENDERER;
-      return getActivePostFxPipeline() ? true : 'PostFX off';
+      return getRenderPipeline() ? true : 'PostFX off';
     },
     acquire: acquirePostFx,
     release: releasePostFx,

@@ -1,15 +1,8 @@
 import * as THREE from 'three/webgpu';
-import { saveBufferGeometry } from '../../../_engine/core/Geometry';
-import { resolveAutoLod } from '../../../_engine/core/Lod/LodAuto';
-import {
-  generateLodChain,
-  getLodChain,
-  type LodChainOptions,
-} from '../../../_engine/core/Lod/LodChains';
-import type { LodAutoDef } from '../../../_engine/core/Lod/LodTypes';
-import { createMaterial } from '../../../_engine/core/Material';
-import { createMeshEntity, setMeshLod } from '../../../_engine/core/MeshManager';
-import { getConservativeGeometryRadius } from '../../../_engine/core/Spatial/SpatialIndexSystem';
+import { saveBufferGeometry, createMaterial, createMeshEntity, setMeshLod } from 'aekasha';
+import { resolveAutoLod, generateLodChain, getLodChain, type LodChainOptions } from 'aekasha/lod';
+import type { LodAutoDef } from 'aekasha/lod';
+import { getConservativeGeometryRadius } from 'aekasha/spatial';
 import type { ShowcaseLane } from '../layout';
 
 /** The heavy procedural mesh lanes 2 and 4 share: 256 × 32 segments, 16,384 triangles. */

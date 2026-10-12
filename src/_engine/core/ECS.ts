@@ -13,7 +13,7 @@ import { CoreComponentType } from './ECS/ECSRegistry';
 import type { ECSStorageMode, IComponentStorage } from './ECS/ECSComponentStorage';
 import { getECSStorageLSOverride } from './ECS/ECSComponentStorage';
 import { TypedArrayTransformStore } from './ECS/TypedArrayTransformStore';
-import { ECSSystemStage } from '../../AppECSRegistry';
+import { ECSSystemStage } from './ECS/SystemStages';
 import type { CoreEntityOpts } from '../schemas/_helperSchemas';
 import { loadDebugModuleAsync, useDebug, type DebugModuleRef } from '../utils/helpers';
 import { lerror } from '../utils/Logger';
@@ -41,10 +41,6 @@ export type ECSWorldOptions = {
   /** Whether globally registered plugins (ECSWorld.registerPlugin) run on this world. Default true. */
   applyGlobalPlugins?: boolean;
 };
-
-/** DEBUG_DATA is only stored where it is read: debug and prodTest mode (eg. the on-screen tools'
- * camera names). Production never stores it. */
-const STORE_DEBUG_DATA = IS_DEBUG_ENV || IS_PROD_TEST_MODE;
 
 let ecsWorld: ECSWorld;
 
@@ -396,6 +392,15 @@ export class ECSWorld {
   }
 
   /**
+   * The component types this world has a storage for: every engine type, plus each app or toolkit
+   * type once something added it or asked for its storage. A storage can be empty. For debug
+   * listings (the entity inspector, the profiler); allocates an array.
+   */
+  public getComponentTypes(): ComponentType[] {
+    return [...this.storages.keys()];
+  }
+
+  /**
    * Returns the TypedArray-backed Transform store when TRANSFORM storage is
    * in `TYPED_ARRAY` mode, or `undefined` in the default `MAP` mode.
    * Hot-path systems use this to branch once per call instead of paying the
@@ -518,7 +523,10 @@ export class ECSWorld {
   }
 
   addComponent<K extends ComponentType>(entityId: number, type: K, data: ComponentData[K]): void {
-    if (!STORE_DEBUG_DATA && type === ComponentType.DEBUG_DATA) return;
+    // DEBUG_DATA is only stored where it is read: debug and prodTest mode (eg. the on-screen
+    // tools' camera names). Production never stores it. The flags are read here, not at load:
+    // they're set by InitEngine
+    if (type === ComponentType.DEBUG_DATA && !IS_DEBUG_ENV && !IS_PROD_TEST_MODE) return;
 
     let storage = this.storages.get(type);
     if (!storage) {

@@ -3,8 +3,13 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import z from 'zod';
-import type { SceneAsset } from '../src/_engine/schemas/sceneSchema';
-import { SceneAssetSchema } from '../src/_engine/schemas/sceneSchema';
+import {
+  getSceneFeatureIds,
+  MeshAssetSchema,
+  SceneAssetSchema,
+  type MeshAsset,
+  type SceneAsset,
+} from './engineSchemas';
 import type { CameraAsset } from '../src/_engine/schemas/cameraSchema';
 import { CameraAssetSchema } from '../src/_engine/schemas/cameraSchema';
 import type { LightAsset } from '../src/_engine/schemas/lightSchema';
@@ -17,12 +22,10 @@ import type { TextureArrayAsset } from '../src/_engine/schemas/textureArraySchem
 import { TextureArrayAssetSchema } from '../src/_engine/schemas/textureArraySchema';
 import type { MaterialAsset } from '../src/_engine/schemas/materialSchema';
 import { MaterialAssetSchema } from '../src/_engine/schemas/materialSchema';
-import type { MeshAsset } from '../src/_engine/schemas/meshSchema';
-import { MeshAssetSchema } from '../src/_engine/schemas/meshSchema';
 import type { ImportedAsset } from '../src/_engine/schemas/importedAssetSchema';
 import { ImportedAssetSchema } from '../src/_engine/schemas/importedAssetSchema';
-import type { SkyBoxAsset } from '../src/_engine/schemas/skyBoxSchema';
-import { SkyBoxAssetSchema } from '../src/_engine/schemas/skyBoxSchema';
+import type { SkyBoxAsset } from '../src/_engine/core/SkyBox/SkyBoxSchema';
+import { SkyBoxAssetSchema } from '../src/_engine/core/SkyBox/SkyBoxSchema';
 import type { PostFxAsset } from '../src/_engine/schemas/postFxSchema';
 import { PostFxAssetSchema } from '../src/_engine/schemas/postFxSchema';
 import {
@@ -30,7 +33,6 @@ import {
   type AssetOptimize,
   type TexturePack,
 } from '../src/_engine/schemas/assetsConfigSchema';
-import { toUniqueJsIdentifier } from '../src/_engine/utils/jsIdentifier';
 import type { MetaSchema } from '../src/_engine/schemas/_saveDataSchema';
 import {
   isLegacySkyBoxProps,
@@ -81,7 +83,7 @@ import {
   ImpostorAssetSchema,
   type ImpostorAsset,
   type ImpostorDef,
-} from '../src/_engine/schemas/impostorSchema';
+} from '../src/_engine/core/Lod/Impostors/ImpostorSchema';
 import {
   getImpostorDefSlots,
   IMPOSTOR_EXPORT_FORMAT_VERSION,
@@ -90,11 +92,25 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const generatedAppDataJSONFilename = 'generatedAppData.json';
 export const generatedAppFnsFilename = 'generatedAppFns.ts';
-export const OUTPUT_FILE_DATA = path.resolve(
-  __dirname,
-  `../src/_engine/${generatedAppDataJSONFilename}`
-);
-export const OUTPUT_FILE_FN = path.resolve(__dirname, `../src/_engine/${generatedAppFnsFilename}`);
+/** The gatherer's outputs: app data, handed to the engine through `InitEngine` (p606) */
+export const OUTPUT_DIR = path.resolve(__dirname, '../src/generated');
+export const OUTPUT_FILE_DATA = path.join(OUTPUT_DIR, generatedAppDataJSONFilename);
+export const OUTPUT_FILE_FN = path.join(OUTPUT_DIR, generatedAppFnsFilename);
+/** The app's import (`appData`, passed to `InitEngine`); the same on every gather */
+export const OUTPUT_FILE_INDEX = path.join(OUTPUT_DIR, 'index.ts');
+const INDEX_FILE_CONTENT = `// THIS IS AN AUTO-GENERATED FILE, DO NOT MODIFY!
+import type { AppData } from 'aekasha';
+import json from './${generatedAppDataJSONFilename}';
+import { postFxFileObjects, sceneFileObjects, tslMaterialFileObjects } from './${generatedAppFnsFilename.replace(/\.ts$/, '')}';
+
+/** The app's gathered data: \`InitEngine({ data: appData })\` hands it to the engine. */
+export const appData: AppData = {
+  json,
+  sceneFiles: sceneFileObjects,
+  tslMaterialFiles: tslMaterialFileObjects,
+  postFxFiles: postFxFileObjects,
+};
+`;
 
 const JSON_ENDING_SIGNATURES = {
   scene: '.scene.json',
@@ -451,7 +467,7 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
 
   const srcDir = path.resolve(__dirname, '../src');
   const combinedData: {
-    scenes: Record<string, SceneAsset>;
+    scenes: Record<string, SceneAsset & { __features: string[] }>;
     cameras: Record<string, CameraAsset>;
     lights: Record<string, LightAsset>;
     geometries: Record<string, GeoAsset>;
@@ -481,8 +497,6 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
   let sceneFileObject = '';
   let tslMaterialFileObject = '';
   let postFxFileObject = '';
-  // Shared by material and PostFX TS imports, which land in the same generated file
-  const usedImportNamespaces = new Set<string>();
   const ids: {
     scenes: string[];
     cameras: string[];
@@ -1002,26 +1016,14 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
             continue;
           }
 
-          const runtimeUniqueNamespace = toUniqueJsIdentifier(
-            `${matId}Fn`,
-            usedImportNamespaces,
-            'mat'
-          );
-          sceneFileImports += `import * as ${runtimeUniqueNamespace} from '../${basePath}/${matJSON.tslFile}';\n`;
-
           if (!tslMaterialFileObject) {
             tslMaterialFileObject += 'export const tslMaterialFileObjects = {\n';
           }
 
-          // Use single quotes if the identifier starts with a number or contains characters that are not valid in JS identifiers, otherwise keep it unquoted to match lint rules
-          tslMaterialFileObject += `  ${matId.match(/^[0-9]/) ? `'${matId}'` : matId}: {\n`;
-          if (matJSON.nodes) {
-            for (const nodeSocket of Object.keys(matJSON.nodes)) {
-              // Automatically match keys from the JSON configuration mapping straight to the typescript exports namespace
-              tslMaterialFileObject += `    ${nodeSocket}: ${runtimeUniqueNamespace}.${nodeSocket},\n`;
-            }
-          }
-          tslMaterialFileObject += `  },\n`;
+          // Loaded on demand (p607 D11): the scene loader loads its materials' files, and
+          // createMaterial reads the node functions (the JSON's `nodes` keys) from the module.
+          // Single quotes when the id starts with a number, otherwise unquoted to match lint rules
+          tslMaterialFileObject += `  ${matId.match(/^[0-9]/) ? `'${matId}'` : matId}: () => import('../${basePath}/${matJSON.tslFile}'),\n`;
         }
       } catch {
         logJSONError(file);
@@ -1205,21 +1207,13 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
             continue;
           }
 
-          const runtimeUniqueNamespace = toUniqueJsIdentifier(
-            `${postFxId}PostFxFn`,
-            usedImportNamespaces,
-            'postFx'
-          );
-          sceneFileImports += `import * as ${runtimeUniqueNamespace} from '../${basePath}/${postFxJSON.tslFile}';\n`;
-
           if (!postFxFileObject) {
             postFxFileObject += 'export const postFxFileObjects = {\n';
           }
 
-          // Use single quotes if the identifier starts with a number, otherwise keep it unquoted to match lint rules
-          postFxFileObject += `  ${postFxId.match(/^[0-9]/) ? `'${postFxId}'` : postFxId}: {\n`;
-          postFxFileObject += `    fxNode: ${runtimeUniqueNamespace}.fxNode,\n`;
-          postFxFileObject += `  },\n`;
+          // Loaded on demand (p607 D11): the PostFX feature loads a scene's chain's files before
+          // it builds the chain. Single quotes when the id starts with a number (lint rules)
+          postFxFileObject += `  ${postFxId.match(/^[0-9]/) ? `'${postFxId}'` : postFxId}: () => import('../${basePath}/${postFxJSON.tslFile}'),\n`;
         }
       } catch {
         logJSONError(file);
@@ -1274,8 +1268,7 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
       if (isProduction && fileContentJSON.isDebugScene) continue;
 
       if (!addedFirstImport) {
-        sceneFileImports +=
-          "import type { SceneData } from './core/Scene.ts';\nimport type { ScenePrimitiveAssets } from './core/SceneLoader.ts';\n";
+        sceneFileImports += "import type { SceneData, ScenePrimitiveAssets } from 'aekasha';\n";
         addedFirstImport = true;
       }
       const basePath = getBasePath(fullPath);
@@ -1636,7 +1629,12 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
         delete fileContentJSON.__sourcePath;
       }
 
-      combinedData.scenes[sceneId] = fileContentJSON;
+      // The scene manifest (p607 D10): the features its data needs, which InitEngine checks
+      // against its `features` (always written: no list is data from before the manifest)
+      combinedData.scenes[sceneId] = {
+        ...fileContentJSON,
+        __features: getSceneFeatureIds(fileContentJSON),
+      };
     }
 
     if (missingOutputs.size) {
@@ -1726,6 +1724,7 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
       `${sceneFileImports}\n${sceneFileObject}\n${tslMaterialFileObject}\n${postFxFileObject}`,
       'utf-8'
     );
+    fs.writeFileSync(OUTPUT_FILE_INDEX, INDEX_FILE_CONTENT, 'utf-8');
 
     console.log(
       `\x1b[32m✓ [Scene Gatherer] Consolidated ${sceneFiles.length} scene configurations (${isProduction ? 'prod' : 'dev'}).\x1b[0m`

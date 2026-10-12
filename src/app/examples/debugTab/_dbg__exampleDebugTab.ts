@@ -1,4 +1,4 @@
-import { createDebuggerTab } from '../../../_engine/debug/DebuggerGUI';
+import { createDebuggerTab } from 'aekasha/debug';
 import {
   BOX_DEFAULTS,
   boxSettings,

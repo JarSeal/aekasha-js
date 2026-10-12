@@ -1,18 +1,22 @@
 import * as THREE from 'three/webgpu';
-import { getGeometryRegistry } from '../_engine/core/Geometry';
-import { importAssetAsync, releaseImportedAsset } from '../_engine/core/Import/ImportRegistry';
-import type { ImportedGeometryInfo } from '../_engine/core/Import/ImportTypes';
-import { deriveColliderFromGeometry } from '../_engine/core/Import/MeshColliderGeometry';
-import type { ColliderParams } from '../_engine/core/Physics/PhysicsAPITypes';
-import { getRenderer } from '../_engine/core/Renderer';
+import {
+  getGeometryRegistry,
+  importAssetAsync,
+  releaseImportedAsset,
+  getRenderer,
+  llog,
+  lwarn,
+} from 'aekasha';
+import type { ImportedGeometryInfo } from 'aekasha';
+import { deriveColliderFromGeometry } from 'aekasha/physics';
+import type { ColliderParams } from 'aekasha/physics';
 import {
   addDebugToast,
   createDebuggerTab,
   debuggerListCMP,
   updateDebuggerTab,
   type DebuggerListItem,
-} from '../_engine/debug/DebuggerGUI';
-import { llog, lwarn } from '../_engine/utils/Logger';
+} from 'aekasha/debug';
 import {
   ASSET_COMPARE_SCENE_ID,
   COMPARE_VARIANTS,

@@ -1,16 +1,25 @@
 import * as THREE from 'three/webgpu';
-import { createCameraEntity } from '../_engine/core/CameraManager';
-import { getECSWorld } from '../_engine/core/ECS';
-import { ComponentType } from '../_engine/core/ECS/ECSCoreComponents';
-import { createGeometry, getGeometry, incGeometryRef } from '../_engine/core/Geometry';
-import { createLightEntity } from '../_engine/core/LightManager';
-import { createMaterial, getMaterial, incMaterialRef } from '../_engine/core/Material';
-import { createMeshEntity, setMeshLod } from '../_engine/core/MeshManager';
-import { getRootScene } from '../_engine/core/Scene';
-import { getTexture, loadTextureAsync, type TexOpts } from '../_engine/core/Texture';
-import { importAssetAsync } from '../_engine/core/Import/ImportRegistry';
-import { spawnImportedAsset } from '../_engine/core/Import/SpawnImported';
-import type { ImportedAssetManifest } from '../_engine/core/Import/ImportTypes';
+import {
+  createCameraEntity,
+  getECSWorld,
+  ComponentType,
+  createGeometry,
+  getGeometry,
+  incGeometryRef,
+  createLightEntity,
+  createMaterial,
+  getMaterial,
+  incMaterialRef,
+  createMeshEntity,
+  setMeshLod,
+  getRootScene,
+  getTexture,
+  loadTextureAsync,
+  type TexOpts,
+  importAssetAsync,
+  spawnImportedAsset,
+} from 'aekasha';
+import type { ImportedAssetManifest } from 'aekasha';
 
 // p300 Phase 0 check: hand-optimized assets (KTX2 textures, meshopt GLBs, made with gltfpack)
 // next to their sources. Top row: each PNG texture, then its KTX2 copy; they must look the same

@@ -40,3 +40,8 @@ declare const __PROJECT_METADATA__: {
   versionChecksum: string;
   versionChecksumString: string;
 };
+
+// Whether this build can run the debug tooling: `VITE_APP_ENV` is 'development' or 'test'
+// (vite.config.ts; true under Vitest). False folds every debug flag and the code it gates out of
+// a production build (p607 D7).
+declare const __AEK_DEBUG__: boolean;

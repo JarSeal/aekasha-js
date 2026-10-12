@@ -10,7 +10,9 @@
  * Baselines are local (`.cache/verify/scenes/<backend>/`): snapshots depend on the GPU, the driver
  * and the backend. `--update` compares nothing with the baseline and records every run without
  * errors or timeouts as the new one (merged: `--only` updates only those scenes). The workflow is
- * "update on `main`, then run on the branch".
+ * "update on `main`, then run on the branch". Each run also records every world's system order
+ * (`getSystemOrder`, last on the page) and fails on a change (`systemOrder.ts`): registration
+ * order breaks ties between systems, so it moves when a registration moves.
  *
  * It starts its own dev server (port 8092 or the next free one) unless `--url` points at one.
  * Headless WebGPU can't render on WSL2, so there (and with `--webgl`) the page gets no
@@ -34,6 +36,7 @@ import type {
   TestBridgeProbeResult,
   TestBridgeSceneReady,
   TestBridgeSnapshot,
+  TestBridgeSystemOrder,
 } from '../../src/_engine/debug/TestBridge';
 import {
   DEFAULT_CONFIG_SET,
@@ -54,11 +57,12 @@ import {
 } from './scenes.config';
 import { out, PROGRESS_LOG_WATCH } from './progressLog';
 import { compareSnapshots } from './snapshotDiff';
+import { diffSystemOrders } from './systemOrder';
 
 /** Bump when the baseline file's shape changes: an old one is then ignored */
 const BASELINE_FORMAT_VERSION = 1;
 const CACHE_DIR = path.join(ROOT, '.cache/verify/scenes');
-const GENERATED_DATA = path.join(ROOT, 'src/_engine/generatedAppData.json');
+const GENERATED_DATA = path.join(ROOT, 'src/generated/generatedAppData.json');
 /** `DEBUG_PHYSICS_API_BOOT_LS_KEY` (core/Config.ts, which reads `window` at load: not importable here) */
 const PHYSICS_BOOT_LS_KEY = 'AEK_debugPhysicsApiBoot';
 const VIEWPORT = { width: 1024, height: 576 };
@@ -90,6 +94,8 @@ type BaselineEntry = {
   probeConfig?: string;
   /** File name in the baseline folder */
   snapshot?: string;
+  /** Every world's systems per stage once the scene ran (p607) */
+  systemOrder?: TestBridgeSystemOrder;
   recordedAt: string;
   commit: string;
 };
@@ -113,6 +119,7 @@ type RunResult = {
   steps?: number;
   probeConfig?: string;
   snapshotFile?: string;
+  systemOrder?: TestBridgeSystemOrder;
   durationMs: number;
 };
 
@@ -523,6 +530,13 @@ const runOne = async (
       }
     }
 
+    // Last: after the probe's steps (or the prod test settle), so the debug modules that register
+    // systems from a lazy chunk have loaded
+    if (ctx.browserName === 'chromium') {
+      result.systemOrder = await page.evaluate(() => window.__AEK_TEST__!.getSystemOrder());
+      if (!ctx.isRecording) compareSystemOrder(baseline.entries[runKey(sceneId, config)], result);
+    }
+
     result.warnings.push(...[...warnings].map((w) => `[console.warn] ${w}`));
     const unallowed = result.errors.filter((e) => !isAllowed(sceneId, e, ctx.browserName));
     if (unallowed.length) {
@@ -560,6 +574,16 @@ const compareHash = (
     result.warnings.push(`${msg}: ${unstable.reason}`);
   } else {
     result.failures.push(msg);
+  }
+};
+
+const compareSystemOrder = (entry: BaselineEntry | undefined, result: RunResult) => {
+  if (!entry?.systemOrder || !result.systemOrder) {
+    result.notes.push('no baseline system order');
+    return;
+  }
+  for (const diff of diffSystemOrders(entry.systemOrder, result.systemOrder)) {
+    result.failures.push(`system order ${diff} (baseline ${entry.commit})`);
   }
 };
 
@@ -647,6 +671,7 @@ const recordBaseline = (
     if (r.status !== 'PASS' && r.status !== 'NEW') continue;
     const entry: BaselineEntry = { recordedAt: now, commit };
     if (r.hash) Object.assign(entry, { hash: r.hash, steps: r.steps, probeConfig: r.probeConfig });
+    if (r.systemOrder) entry.systemOrder = r.systemOrder;
     if (r.snapshotFile) {
       fs.copyFileSync(
         path.join(paths.lastRunDir, r.snapshotFile),

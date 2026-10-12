@@ -1,12 +1,12 @@
 {
   "name": "aekasha-js",
-  "version": "4.15.1",
+  "version": "5.0.0",
   "description": "High-performance WebGPU application powered by the Ækasha framework.",
   "repository": "https://github.com/JarSeal/aekasha-js.git",
   "author": "JarSeal",
   "engine_metadata": {
-    "version": "4.15.1",
-    "codename": "Afternoon",
+    "version": "5.0.0",
+    "codename": "Golden Hour",
     "name": "Ækasha",
     "fullName": "Ækasha Framework",
     "description": "The 'fifth element' of web development: a modular, high-performance WebGPU framework built on Three.js and the Ækasha ECS.",
@@ -15,15 +15,15 @@
     "author": "JarSeal"
   },
   "toolkit_metadata": {
-    "version": "1.4.1",
-    "codename": "Crescent",
+    "version": "2.0.0",
+    "codename": "Half Moon",
     "name": "Ækasha Toolkit",
     "fullName": "Ækasha Toolkit — Modules & Assets",
     "description": "Ready-made ECS components, modules, models, textures, and shaders for Ækasha: bring in only what you need, as-is, or copy it into your app and make it your own.",
     "url": ""
   },
   "app_metadata": {
-    "version": "1.9.1",
+    "version": "1.10.0",
     "codename": "Preschooler",
     "name": "Example App",
     "fullName": "Example App for Ækasha",
@@ -45,6 +45,11 @@
   "license": "MIT",
   "private": false,
   "type": "module",
+  "sideEffects": [
+    "**/*.scss",
+    "**/*.css",
+    "./devTools/**"
+  ],
   "scripts": {
     "gatherAppData": "tsx ./devTools/gatherAppData.ts",
     "copyDecoders": "tsx ./devTools/copyDecoders.ts",
@@ -91,6 +96,7 @@
     "@typescript-eslint/parser": "8.70.0",
     "@vitejs/plugin-basic-ssl": "2.3.0",
     "draco3dgltf": "1.5.7",
+    "esbuild": "0.25.12",
     "eslint": "9.39.5",
     "eslint-config-import": "0.13.0",
     "eslint-config-prettier": "9.1.0",

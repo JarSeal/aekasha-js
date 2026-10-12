@@ -1,6 +1,6 @@
 import { vec4 } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
-import type { PostFxPassFn } from '../../../_engine/core/PostFX/PostFXTypes';
+import type { PostFxPassFn } from 'aekasha/postfx';
 
 /** three's BloomNode, added over the incoming colour (alpha is kept) */
 export const fxNode: PostFxPassFn = (params, ctx) => {

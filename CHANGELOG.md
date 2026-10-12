@@ -4,6 +4,112 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-11 — stage-b
+
+### Engine 5.0.0 (Golden Hour)
+
+The engine stops importing the app, gets public entry points, and installs only the features an app lists: a production bundle holds what the app lists and uses. Apps made from the template migrate with the Hub's guide (Documentation → Migration → "Engine 4 → 5") and the import codemod (Project, below).
+
+**Changed**
+
+- `InitEngine({ config, data, features, start })` (`InitEngineOptions`) takes what it used to import: `config` is `src/CONFIG.ts`'s default export, merged over the defaults as before (`loadConfig(appConfig)`); `data` is the gathered data (`appData` from `src/generated/`); `features` (required) is the engine features to install, in order, and the app's own (Added, below); `start` is the callback `InitEngine` took before. The engine no longer imports `src/AppECSPlugins.ts`: the app's plugins are a feature it lists last.
+- Nothing registers at module load. The kernel (the core systems, frustum culling, meshes, groups, raycasting) installs itself right before the first ECS world, and each feature registers its systems, hooks, scene work and debug tools in its install; cameras, lights and input still register in `InitEngine`. `[]` installs the kernel alone. The system order is the same in every scene but for one system: `instancedMeshPoolSync` is in every world from boot (it registered when a scene's code first imported the pools), and `physicsTierPolicyFrameSystem` now has the same place in a build as on the dev server.
+- Scene loads run the features' scene hooks (`loadStart`, `exit`, `worldCleared`, `beforeAssets`, `created`, `entered`, `loadSettled`; `exit` in reverse install order). So the sky box's clear, the lines' dispose, the PostFX chain's dispose and the scene's viewports' delete run in `exit`, before characters and physics, and PostFX and viewports before the exited scene's own exit hooks. The PostFX chain is built in `created`, before the scene's JSON objects and enter hooks, so a scene's enter hook sees its chain. The scenes register after the features install. Every hash and snapshot is unchanged.
+- Rapier loads with `import()` (`ENGINES.ts`' `loadEngineAPI`): in the physics worker, or on the page in `MAIN_THREAD` mode. The physics and assets workers are imported when they start and are ES module workers, so a build splits them: the worker and the page share one Rapier chunk, and the assets worker loads each job's module (texture, GLTF, simplify) on its first job, LOD's chain reader only while `lod()` is installed. An app without `physics()` loads no Rapier.
+- Debug code folds out of a production build: `__AEK_DEBUG__` (a build define, true only when `VITE_APP_ENV` is `development` or `test`) guards `initEnvironment`'s debug flags and both debug loaders, so the `debug/*.ts` wrappers, every `_dbg__` module, Tweakpane, the default debug key bindings, the toaster and the 3D symbols are left out. An app's own Vite config defines it (the migration guide). `InitEngine`'s body runs outside a `try` block (a promise `.catch`, the same error), since Rollup keeps whatever a `try` block calls.
+- three's loaders load where used: `GLTFLoader` with the first `loadGLTF`, `DRACOLoader` with the first Draco-compressed file, `HDRLoader` with the first `.hdr` (the synchronous `loadTexture` still returns its `DataTexture` at once and fills it when the file is in).
+- TSL material and PostFX files load with their scene: the generated data holds a loader per file, a scene load loads its TSL materials' files with its other assets, and `postFx()` loads its passes' files before building the chain. A TSL material created outside a scene load needs `loadTslMaterialFileAsync` first; `createMaterial` throws naming it. A JSON `nodes` socket its file doesn't export warns at runtime instead of failing `tsc`.
+- Icons are a registry: the built-in SVGs are registered only in the debug env and prod test mode, so a production build holds none. An app's own `icon` (a draggable window's, a debug tab's, a view's) needs `registerIcon` in a production build, or shows `??`.
+- The scene and mesh schemas are composed from the kernel's fields and each feature's part. The sky box, LOD and impostor schemas moved next to their features (`SkyBox/SkyBoxSchema.ts`, `Lod/LodSchema.ts`, `Lod/Impostors/ImpostorSchema.ts`), still on `aekasha/schemas`. `SceneAsset` / `MeshAsset` are the kernel's fields. The JSON Schemas in `.schemas/` are byte for byte the same.
+- Without its feature the API says so: `createLines` and `createViewport` throw naming it; `lod: 'AUTO'`, an import's physics nodes or `lodChain`, and a pool's `spatialDomain` warn once. The debug tools that draw lines or viewports are off without them, with one log line each.
+- `registerLodTarget`, `registerSpatialRadiusProvider` and `getConservativeGeometryRadius` moved into the kernel (`core/ECS/LodTargets.ts`, `core/ECS/SpatialMembership.ts`, `core/Geometry.ts`), on the same entries, so the instanced pools need neither `lod()` nor `spatial()`.
+- The environment is read when `InitEngine` runs (`initEnvironment({ search?, env? })`, `core/Config.ts`), not when a module loads. `IS_DEBUG_ENV`, `IS_PROD_TEST_MODE`, `IS_PROD_TEST_ENV`, `IS_PROD_ENV` and `CUR_ENV` are live bindings that read as a production build until then. No engine module reads `window` or `import.meta.env` at load. `env` is a copy, so `loadConfig` no longer writes into `import.meta.env`. The `beforeunload` / `blur` listeners `MainLoop.ts` added at load are added by `InitEngine` (`addWindowListeners`).
+- `ECSSystemStage` and `APP_RENDER_SYNC_ORDER` moved into the engine (`core/ECS/SystemStages.ts`), with the same names and values. `src/AppECSRegistry.ts` doesn't re-export them.
+- Component types use declaration merging. `ComponentDataMap` is an interface that the app and the toolkit extend from their own files (`declare module 'aekasha' { interface ComponentDataMap { … } }`), and `ComponentType` / `ComponentData` are its keys and itself, so `addComponent`, `getComponent` and `getStorage` are typed for every key without `as any`. The `ComponentType` value holds only the engine's keys (it used to spread in the app's and the toolkit's), and the engine no longer has `AppComponentType` / `AppComponentData`.
+- The gathered data left the engine: `src/_engine/generatedAppData.json` and `generatedAppFns.ts` are now in `src/generated/`, which the engine never imports. It keeps `InitEngine`'s `data` in `core/AppData.ts` (types `AppData` and `GeneratedAppJson`), and `getGeneratedAppData` / `getGeneratedSceneData` read it from there.
+- The ECS stress test no longer borrows the app's and the toolkit's components: it has two core debug keys (`DEBUG_STRESS_TEST_INSTANCE`, `DEBUG_STRESS_TEST_HOVER`) and its own hover system, registered on its first spawn.
+- The entity inspector and the profiler list component types by value (`CORE_TRANSFORM`, `APP_SPIN`) instead of by key name. They read `ECSWorld.getComponentTypes()`, the types the world has a storage for. App and toolkit storages are now created on first use.
+- `utils/PromiseResolver.ts` imports nothing: `resolveRequest(requestId, value)` returns whether the request was pending, and the physics API logs a missing one in the debug env.
+- `Texture.ts`, `ECSCoreComponents.ts` and `MeshColliderGeometry.ts` import three's loaders directly, not through the `Addons.js` barrel (its `TTFLoader` can't load in Node).
+- The production build's main chunk (`assets/index.js`, `devTools/verify/baselines/bundle.json`): **1251.3 → 377.2 kB gzip** (3778 → 1396 kB minified), 222 → 151 modules. Rapier (809.8 kB gzip) left it, and so did the debug wrappers (7.5 kB) and 52 of `core/UI`'s 55 modules (29.2 → 7.8 kB, the icons); `three` 674.2 → 616.9 kB (the loaders, `OrbitControls`, the PostFX passes' nodes), `core/Physics` 19.7 → 6.8 kB, `core/Input` 6.3 → 3.4 kB, `toolkit` 12.9 → 8.5 kB. `dist/` holds one Rapier chunk (810 kB) instead of two copies (`physicsWorker.js` 828.2 → 9.2 kB), no `_dbg__` chunk (57 before) and no `tweakpane.js`: its JavaScript is 2703 → 1629 kB gzip. The gathered JSON moved from the main chunk's `_engine` group to `app`, and the camera rig and moving platform from `_engine/utils` to `toolkit`.
+
+**Added**
+
+- The public entries, the only way into the engine from outside it: `aekasha` (`src/_engine/index.ts`), `aekasha/character`, `/instancing`, `/lines`, `/lod`, `/physics`, `/postfx`, `/skybox`, `/spatial`, `/viewports` (`src/_engine/features/<name>/index.ts`), `aekasha/ui`, `aekasha/debug` and `aekasha/schemas`. Each entry is a list of named re-exports from the engine's current paths, so later folder moves don't touch the code that uses it. Every module but the stylesheets is side-effect free (`package.json`'s `sideEffects`), so a chunk takes only the modules it uses.
+- The nine engine features, a factory each on its entry: `physics()`, `character()` (requires `physics()`), `skyBox()`, `lod()`, `spatial()` (with light culling), `instancing()`, `lines()`, `postFx()`, `viewports()`. `InitEngine` checks the list before anything installs (a missing list, an id listed twice, a `requires` id not listed earlier) and installs them in list order, each awaited.
+- The install contract, on `aekasha`: `EngineFeature` (`{ id, requires?, install(ctx) }`) and `FeatureContext`, a feature's only way into the kernel: the ECS registrations, `addSceneHooks` (`SceneHooks`: the load phases above, plus `sceneRegistered`, `sceneDeleted` and `retainedTextures`), `setFixedStepDriver` (`FixedStepDriver`, `LoopState`), `setRenderPipeline` (`RenderPipelineProvider`), `addAfterRender` (`AfterRenderHook`), `registerImportExtension`, and `onDebug` / `onDebugAfterStart` (`FeatureDebugHook`, kept only in a debug build).
+- The feature manifest: each gathered scene lists the features its data needs (`__features`), and `InitEngine` fails the boot on a scene that needs a feature the app doesn't list, naming each scene, feature, factory and entry.
+- The icon registry on `aekasha/ui`: `registerIcon(name, svg)` (also restyles a built-in), `registerBuiltInIcons()`, `BuiltInIconName`, and the 49 built-in SVGs as `<name>Icon`. `getSvgIcon` warns once for a name nobody registered.
+- `loadTslMaterialFileAsync(materialId)` on `aekasha`.
+- On `aekasha/schemas`: `FeatureSchemaPart`, `createSceneAssetSchema(parts)` and `createMeshAssetSchema(parts)`, and the parts `skyBoxSchemaPart`, `lodSchemaPart`, `postFxSchemaPart` and `spatialSchemaPart`.
+- `ECSWorld.getComponentTypes()`, `initEnvironment` and its `EnvironmentInput`, `addWindowListeners`, `InitEngineOptions`, `AppData`, `GeneratedAppJson`. `@example`s on `InitEngine` and `ComponentDataMap`.
+- The test bridge's `getSystemOrder()` (every world's systems per stage; bridge version 3).
+
+**Removed**
+
+- `utils/cameras/followObjectCameraRig.ts` and `utils/world/movingPlatform.ts` moved to the toolkit (`aekasha/toolkit/ecs`). `utils/commontTypes.ts` is removed: its one type, `XYZObject`, is written out in the camera rig's `offset` option.
+- The gym's test code moved to the app (`src/app/scenes/thirdPersonGymScene/`): `utils/PhysicsStressTest.ts`, `utils/world/characterTestObjects.ts`, `characterTestObstacles.ts` and `3dModels/characterObstacles.blend`.
+- `SceneAssetSchema` and `MeshAssetSchema` (`aekasha/schemas`): use `createSceneAssetSchema` / `createMeshAssetSchema` with the parts of the features you install.
+
+**Fixed**
+
+- Debug env: the light and camera helpers' sync systems (`LATE_MAIN`, order 0) registered when their debug chunks happened to land, and swapped in about 1 of 6 loads. The light and camera managers and the debug camera now await their debug modules, so the order is fixed.
+
+### Toolkit 2.0.0 (Half Moon)
+
+**Changed**
+
+- `HoverEffect`, `FollowTool` and `SunShadowFit` add their keys to the engine's `ComponentDataMap` themselves, and read their storages typed (no `as any`). Their data types are exported as `HoverToolData`, `FollowToolData` and `SunShadowFitData`. The four effects (`MutualGravity` too) import the system stages from the engine.
+- The toolkit imports the engine only through `aekasha` entries, and other toolkit categories only through their entries.
+- `createMovingPlatform`'s `deleteMeshOptions` is typed and documented as unread (`controls.delete()` deletes the entity only); the behaviour is the same.
+- The TSL materials are their own chunks in a build, loaded with the scenes that use them (the main chunk's `toolkit` group is 12.9 → 8.5 kB gzip). `registerFollowObjectCameraRigSystem`'s JSDoc says why its explicit order still matters now that the app's plugins install after `physics()`.
+
+**Added**
+
+- Entries: `aekasha/toolkit/ecs`, `aekasha/toolkit/geometry`, `aekasha/toolkit/materials`.
+- From the engine, with JSDoc: the follow camera rig (`ecs/FollowObjectCameraRig.ts`: `createFollowObjectCameraRig`, `deleteFollowObjectCameraRig`, `registerFollowObjectCameraRigSystem`) and the moving platform (`ecs/MovingPlatform.ts`: `createMovingPlatform`, `registerMovingPlatformSystem`).
+
+**Removed**
+
+- `HoverComponentData`, `FollowComponentData` and `SunShadowFitComponentData`: the toolkit adds its keys itself.
+- `ecs/InstancedMeshPool.ts` and `ecs/InstancedMeshPoolTypes.ts`, deprecated re-exports of the engine's pools until this major: use `aekasha/instancing`.
+
+### App 1.10.0 (Preschooler)
+
+**Changed**
+
+- `src/index.ts` passes `config`, `data`, `features` and `start` to `InitEngine`: all nine engine features, then the app's.
+- `AppECSPlugins.ts` exports the app's feature, `appECSPlugins` (`id: 'app'`), which registers the app's and the toolkit's systems in its install instead of at import (the Hub region `ecs-register-plugin` moved with it). `createExampleHud` registers its exit hook with its first panel, and `scene01`'s `d` key binding is created in its scene function: no app module runs code at load.
+- The app imports the engine and the toolkit only through their entries (57 modules rewritten by the codemod).
+- Code uses each module's key object (`HoverToolComponentType.HOVER`, `SpinComponentType.SPIN`, …) instead of `ComponentType`. `AppECSRegistry.ts` keeps only `HEALTH`, added to the component map, with no imports. `SpinComponent.ts` adds its key itself (the region `spin-component-map`, which the ECS walkthrough shows).
+- The gym's test code from the engine is under `src/app/scenes/thirdPersonGymScene/`.
+- Every scene's snapshots and determinism hashes are the same as on `main`'s commit (the scene runner, 96 of 96 in every phase), in all three physics targets, and so is the system order but for `instancedMeshPoolSync` (Engine, above).
+
+### Project
+
+**Added**
+
+- The entries' import aliases from one list, `devTools/aliases.ts`: `tsconfig.json`'s `paths` (a copy that `aliases.test.ts` checks) and `resolve.alias` in `vite.config.ts` and `vitest.config.ts`. Each alias is exact, so an entry that isn't in the list doesn't resolve.
+- `package.json`'s `"sideEffects": ["**/*.scss", "**/*.css", "./devTools/**"]`: every other module is side-effect free, so a build keeps only what's used of a module and drops one none of whose names are used. It replaced the build's `treeshake.moduleSideEffects` for the entries (the same chunks without it), and is what an app's own bundler reads too. `devTools/**` is listed because esbuild reads the field when Vite bundles `vite.config.ts`, and the Hub's Markdown directives register at load.
+- The `__AEK_DEBUG__` define (`vite.config.ts`: true when `VITE_APP_ENV` is `development` or `test`; `vitest.config.ts`: true; declared in `src/_engine/types/typings.d.ts`).
+- The boundary lint, all errors (`eslint-plugin-import` loaded, `LAYER_ZONES` in `eslint.config.js`): the engine imports no toolkit, app, `src/generated/` or `src/*.ts` file, and the toolkit no app, `src/generated/` or `src/*.ts` file. Nothing outside the engine uses an `_engine/` path, a toolkit category imports no other category's files, and the app imports no toolkit file. The engine imports no `aekasha*` entry, and nothing outside the debug modules imports a `_dbg__` module statically. The paths are resolved, so `import type` and `import()` are checked too.
+- The import codemod, `npx tsx devTools/refactor/migrateToEntries.ts [--check] <folder | file>...` (rules in `refactor/entryImports.ts`, tested): deep engine and toolkit imports become entry imports, one value import and one `import type` per entry, formatted with Prettier. On any error it lists them all and writes nothing. It ships with the major for apps made from the template.
+- Tests: the physics worker bundles without three, `MainLoop`, `Config` or `PhysicsAPI` (`workers/physicsWorker.test.ts`, esbuild 0.25.12 as a direct dev dependency); every engine module loads in Node without a DOM (`moduleLoad.test.ts`); each entry file holds only named `export … from` (`aliases.test.ts`); every `@example` type-checks against the entries (`devTools/verify/examples.ts`, `examples.test.ts`); plus `Config.test.ts` and `PromiseResolver.test.ts`.
+- No module-level side effects, as a test (`devTools/verify/moduleSideEffects.test.ts`): no statement runs at load outside the debug loader's modules, the worker entries and `src/index.ts`. Its allow-list started with 42 statements in 19 files and is empty. More tests: `Features.test.ts`, `SceneHooks.test.ts`, `RenderHooks.test.ts`, `ImportExtensions.test.ts`, `featureSchemas.test.ts`, `devTools/engineSchemas.test.ts`, `systemOrder.test.ts`, `debugInProduction.test.ts` (259 tests in all).
+- `yarn verify:scenes` records every world's system order per stage in each baseline entry (`systemOrder`, through the test bridge; Chromium only) and fails on a difference, naming the first position that differs or the systems added and removed.
+- `yarn verify:baselines` fails on debug code in the production build it measures (`devTools/verify/debugInProduction.ts`): a `_dbg__` file in `dist/assets/`, or a `_dbg__`, `core/Debug/` or `debug/*.ts` wrapper module with rendered code in any chunk. It builds with `VITE_APP_ENV=production` itself, and `--update` records nothing while there is a finding.
+- `api.json` (`yarn verify:baselines`) gains each entry's export list, so the public surface is a baseline.
+- Hub: the migration guide (Documentation → Migration, "Engine 4 → 5": `features`, the `__AEK_DEBUG__` define, the app's plugins as a feature and the `sideEffects` trap of a bare `import './AppECSPlugins'`, icons, TSL files loading with their scene, the scene and mesh schemas); the Documentation intro's "Importing the engine" (the 16 entries and the lint, the factories, the icons); the Quick start's "How the app starts" (`src/index.ts`, `InitEngine`'s options, the boot check). Each feature page's guide starts with "Installing it"; the ECS guide has a "Features" section; scenes and assets has the lazy TSL / PostFX loaders and "The feature manifest"; the debug suite guide has the icon registry. The ECS and toolkit walkthroughs and the coding standards' "Smallest build" follow the changes.
+
+**Changed**
+
+- `yarn gatherAppData` writes `src/generated/` (`generatedAppData.json`, `generatedAppFns.ts` and an `index.ts` exporting `appData`), with `aekasha` type imports. `checkVersions` counts `src/generated/` in no part. It composes the scene and mesh schemas from the engine's parts (`devTools/engineSchemas.ts`), writes each scene's `__features` (`[]` included), and a loader per TSL material and PostFX file (`() => import(…)`) instead of namespace imports. `generatedAppData.json` is otherwise byte for byte the same.
+- The move map's import graph resolves the aliases, so code that imports through an entry still counts as a consumer. `moveRules.ts` maps the new files. The layout report's "Kernel → feature" has no runtime or dynamic import left (23 type-only), and the assets worker's `import()`s of its feature job modules are listed in their own section; the only feature → feature runtime imports are character → physics.
+- TypeDoc and the Hub's API extraction leave the entry files out, so the API pages stay per module (until p619).
+- CLAUDE.md (the three-folder split as lint rules, the ECS core, a new "Engine features" section, the data pipeline, the bootstrap flow, physics, the debug system, the build config, the commands and tests, the coding standards' "Smallest build") and `readme.md` (the examples' imports, `InitEngine`'s signature and `features`, the tree, "Public entries", "Feature modules" and "Smallest build" highlights, the icon registry, the migration guide).
+- The plans that build on this stage (p608, p611, p612, p510) have a "From p607" section: what it did and left for them.
+- The Hub's search index is 1.07 MB, over the build's 1 MiB warning; left for p619.
+
 ## 2026-10-10 — coding-standards-and-documentation-tooling
 
 ### Engine 4.15.1 (Afternoon)

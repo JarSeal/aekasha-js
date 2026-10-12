@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
-import { type GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { getDracoLoader } from './DracoDecoder';
+import type { GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { getDracoLoaderAsync } from './DracoDecoder';
 import { getGLTFDecoderNeeds, readGLTFExtensionsUsed, setGLTFDecoders } from './GLTFExtensions';
 import { getKTX2Loader } from './KTX2';
 import { getMeshoptDecoder } from './MeshoptDecoder';
@@ -12,10 +12,13 @@ const ALLOWED_FILENAME_EXTENSIONS = ['gltf', 'glb'];
 const pendingFetches = new Map<string, Promise<ArrayBuffer>>();
 
 let gltfLoader: GLTFLoader | null = null;
-const getGLTFLoader = () => {
+/** The shared GLTFLoader, imported with the first file (p607 D14): an app without models never
+ * loads it (with its BufferGeometryUtils and SkeletonUtils). */
+const getGLTFLoaderAsync = async () => {
   if (!gltfLoader) {
-    gltfLoader = new GLTFLoader();
-    gltfLoader.setDRACOLoader(getDracoLoader());
+    const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+    // A parallel call may have created it while this one awaited
+    gltfLoader ??= new GLTFLoader();
   }
   return gltfLoader;
 };
@@ -55,11 +58,11 @@ const fetchFile = (url: string) => {
 
 /**
  * Loads and parses a .glb/.gltf file. Parallel calls for the same URL share one network fetch,
- * but each call gets its own parsed GLTF (every caller owns, and disposes, its result).
- * DRACO-compressed primitives are decoded through the shared DRACO loader, meshopt-compressed
- * ones (EXT_meshopt_compression) through the meshopt decoder, and KTX2 textures
- * (KHR_texture_basisu) through the shared KTX2 loader; the last two are only imported when a file
- * needs them.
+ * but each call gets its own parsed GLTF (every caller owns, and disposes, its result). GLTFLoader
+ * itself is imported with the first file. DRACO-compressed primitives (KHR_draco_mesh_compression)
+ * are decoded through the shared DRACO loader, meshopt-compressed ones (EXT_meshopt_compression)
+ * through the meshopt decoder, and KTX2 textures (KHR_texture_basisu) through the shared KTX2
+ * loader; each is only imported when a file needs it.
  * @param fileName URL of the file
  * @returns Promise<GLTF>
  */
@@ -67,8 +70,9 @@ export const loadGLTF = async (fileName: string): Promise<GLTF> => {
   const url = toAbsoluteUrl(fileName);
   const data = await fetchFile(url);
   const needs = getGLTFDecoderNeeds(readGLTFExtensionsUsed(data));
-  const loader = getGLTFLoader();
+  const loader = await getGLTFLoaderAsync();
   setGLTFDecoders(loader, {
+    draco: needs.draco ? await getDracoLoaderAsync() : null,
     meshopt: needs.meshopt ? await getMeshoptDecoder() : null,
     ktx2: needs.ktx2 ? await getKTX2Loader() : null,
   });

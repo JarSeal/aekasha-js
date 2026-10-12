@@ -1,8 +1,6 @@
-import { saveBufferGeometry } from '../../../_engine/core/Geometry';
-import { generateOctahedralImpostor } from '../../../_engine/core/Lod/Impostors/OctahedralImpostor';
-import { createMaterial } from '../../../_engine/core/Material';
-import { createMeshEntity } from '../../../_engine/core/MeshManager';
-import { generateAsteroid } from '../../../toolkit/geometry/generateAsteroid';
+import { saveBufferGeometry, createMaterial, createMeshEntity } from 'aekasha';
+import { generateOctahedralImpostor } from 'aekasha/lod';
+import { generateAsteroid } from 'aekasha/toolkit/geometry';
 import type { ShowcaseLane } from '../layout';
 
 /** largeWorld's rock impostor export, which the scene lists too: built from it. */
