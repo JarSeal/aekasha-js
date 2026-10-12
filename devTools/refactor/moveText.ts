@@ -244,26 +244,44 @@ const commentRanges = (file: string, text: string): [number, number][] => {
 
 const lineAt = (text: string, at: number) => text.slice(0, at).split('\n').length;
 
+/** Every occurrence of each text, as ranges */
+const occurrences = (text: string, finds: readonly string[]) => {
+  const ranges: [number, number][] = [];
+  for (const find of finds) {
+    for (let at = text.indexOf(find); find && at !== -1; at = text.indexOf(find, at + 1)) {
+      ranges.push([at, at + find.length]);
+    }
+  }
+  return ranges;
+};
+
 /**
  * Rewrites one file's text for the move: the whole text, or a module's comments only
  * (`getTextKind`). Run it after the file's specifiers are rewritten. On an error (a `hub:` link
- * that can't follow its page, a link to a deleted module) the text stays as it was.
+ * that can't follow its page, a link to a deleted module) the text stays as it was. A match inside
+ * one of `protect`'s texts (the edit table's `find`s for the file) is left to the table, error or
+ * not.
  */
 export const rewriteText = (
   ctx: TextContext,
   file: string,
-  text: string
+  text: string,
+  protect: readonly string[] = []
 ): { text: string; errors: string[] } => {
   const kind = getTextKind(file);
   if (kind === 'history' || kind === 'scan') return { text, errors: [] };
   const ranges: [number, number][] =
     kind === 'comments' ? commentRanges(file, text) : [[0, text.length]];
+  const kept = occurrences(text, protect);
+  const isKept = (start: number, end: number) => kept.some(([s, e]) => start < e && end > s);
   const edits: Edit[] = [];
   const errors: string[] = [];
   for (const [start, end] of ranges) {
     const found = findEdits(ctx, text, start, end);
-    edits.push(...found.edits);
-    for (const p of found.problems) errors.push(`${file}:${lineAt(text, p.at)} ${p.message}`);
+    edits.push(...found.edits.filter((e) => !isKept(e.start, Math.max(e.end, e.start + 1))));
+    for (const p of found.problems) {
+      if (!isKept(p.at, p.at + 1)) errors.push(`${file}:${lineAt(text, p.at)} ${p.message}`);
+    }
   }
   if (errors.length) return { text, errors };
   let out = text;

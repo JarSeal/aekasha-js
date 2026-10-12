@@ -1,13 +1,8 @@
-import { execFileSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
 import { describe, expect, it } from 'vitest';
-import { parseModuleSource, resolveSpecifier } from './importGraph';
 import { buildPathMap } from './moveApply';
 import type { MoveEntry } from './moveRules';
 import { splitModules } from './moveSplit';
 
-const ROOT = path.resolve(__dirname, '../..');
 const E = 'src/_engine/';
 const H = `${E}utils/helpers.ts`;
 const C = `${E}utils/constants.ts`;
@@ -320,52 +315,5 @@ describe('splitModules', () => {
       },
     });
     expect(errors).toEqual([]);
-  });
-});
-
-describe("today's split files", () => {
-  it('lands every export of helpers.ts and constants.ts in its target, each import resolving', () => {
-    const files = execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf-8' })
-      .trim()
-      .split('\n');
-    const moveMap = JSON.parse(
-      fs.readFileSync(path.join(ROOT, 'devTools/refactor/moveMap.json'), 'utf-8')
-    ).files;
-    const map = buildPathMap({ files, moveMap, plan: 'p608' });
-    expect(map.errors).toEqual([]);
-    const texts = new Map<string, string>();
-    for (const file of files) {
-      if (file.endsWith('.ts') && fs.existsSync(path.join(ROOT, file))) {
-        texts.set(file, fs.readFileSync(path.join(ROOT, file), 'utf-8'));
-      }
-    }
-    const read = (file: string) => texts.get(file) as string;
-    const { targets, errors } = splitModules(map, { texts, sourceText: read, current: read });
-    expect(errors).toEqual([]);
-    expect([H, C].every((file) => map.splits.has(file))).toBe(true);
-
-    const missing: string[] = [];
-    for (const [source, split] of map.splits) {
-      for (const [name, target] of Object.entries(split)) {
-        // A moved file nothing was appended to keeps its own text (`isOnlyObject3D`)
-        const owner = map.oldPathOf(target) as string;
-        const text = targets.get(target) ?? read(owner);
-        const { exports } = parseModuleSource(target, text);
-        if (!exports.local.includes(name) && !exports.named[name]) {
-          missing.push(`${source}: ${name} isn't exported by ${target}`);
-        }
-      }
-    }
-    expect(missing).toEqual([]);
-
-    const unresolved: string[] = [];
-    for (const [target, text] of targets) {
-      for (const { specifier } of parseModuleSource(target, text).imports) {
-        if (!specifier.startsWith('.')) continue;
-        const found = resolveSpecifier(target, specifier, { exists: (f) => map.newFiles.has(f) });
-        if (!found) unresolved.push(`${target}: '${specifier}'`);
-      }
-    }
-    expect(unresolved).toEqual([]);
   });
 });

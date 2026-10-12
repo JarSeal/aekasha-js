@@ -276,15 +276,15 @@ const globToRegExp = (pattern: string) => {
   return new RegExp(`^${re}$`);
 };
 
-type GlobPattern = { isNegated: boolean; pattern: string };
+export type GlobPattern = { isNegated: boolean; pattern: string };
 
 const parseGlob = (written: string): GlobPattern => {
   const isNegated = written.startsWith('!');
   return { isNegated, pattern: isNegated ? written.slice(1) : written };
 };
 
-/** The files a glob's patterns match, from its importer's folder */
-const matchGlob = (patterns: GlobPattern[], dir: string, files: Iterable<string>) => {
+/** The files a glob's patterns match, from a folder (`''` for the repo root) */
+export const matchGlob = (patterns: GlobPattern[], dir: string, files: Iterable<string>) => {
   const tests = patterns.map(({ isNegated, pattern }) => ({
     isNegated,
     re: globToRegExp(posix.normalize(posix.join(dir, pattern))),
@@ -302,7 +302,7 @@ const matchGlob = (patterns: GlobPattern[], dir: string, files: Iterable<string>
 };
 
 /** Files before the move, as the files after it: a split file is its targets */
-const mapFileSet = (map: PathMap, files: Iterable<string>) => {
+export const mapFileSet = (map: PathMap, files: Iterable<string>) => {
   const out = new Set<string>();
   for (const file of files) {
     const to = map.newPathOf(file);
@@ -312,10 +312,10 @@ const mapFileSet = (map: PathMap, files: Iterable<string>) => {
   return out;
 };
 
-const sameSet = (a: Set<string>, b: Set<string>) =>
+export const sameSet = (a: Set<string>, b: Set<string>) =>
   a.size === b.size && [...a].every((f) => b.has(f));
 
-const describeSetDiff = (expected: Set<string>, actual: Set<string>) => {
+export const describeSetDiff = (expected: Set<string>, actual: Set<string>) => {
   const missing = [...expected].filter((f) => !actual.has(f));
   const extra = [...actual].filter((f) => !expected.has(f));
   const list = (files: string[]) =>

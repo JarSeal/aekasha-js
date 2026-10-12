@@ -1,7 +1,14 @@
+import { execFileSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 import { describe, expect, it } from 'vitest';
+import { parseModuleSource, resolveSpecifier } from './importGraph';
 import { buildPathMap } from './moveApply';
+import { MOVE_EDITS } from './moveEdits';
 import type { MoveEntry } from './moveRules';
 import { rewriteTree } from './moveTree';
+
+const ROOT = path.resolve(__dirname, '../..');
 
 const E = 'src/_engine/';
 
@@ -58,7 +65,7 @@ const setup = () => {
 describe('rewriteTree', () => {
   it("runs a module's specifiers, then its comments, then the splits, and reports what's left", () => {
     const { map, texts } = setup();
-    const { changed, created, leftovers, errors } = rewriteTree(map, texts);
+    const { changed, created, leftovers, errors } = rewriteTree(map, texts, []);
     expect(errors).toEqual([]);
     expect(Object.fromEntries(changed)).toEqual({
       [`${E}core/Scene.ts`]: [
@@ -85,5 +92,57 @@ describe('rewriteTree', () => {
     expect(leftovers).toEqual([
       { file: `${E}kernel/scene/Scene.ts`, line: 5, path: 'src/_engine/core/ECS.ts' },
     ]);
+  });
+});
+
+describe("today's tree", () => {
+  /** Every tracked text file; the binaries (models, images, the Blender files) aside */
+  const readTree = () => {
+    const files = execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf-8' })
+      .trim()
+      .split('\n');
+    const texts = new Map<string, string>();
+    for (const file of files) {
+      const full = path.join(ROOT, file);
+      if (!fs.existsSync(full)) continue;
+      const bytes = fs.readFileSync(full);
+      if (!bytes.includes(0)) texts.set(file, bytes.toString('utf-8'));
+    }
+    const moveMap = JSON.parse(texts.get('devTools/refactor/moveMap.json') as string).files;
+    return { map: buildPathMap({ files, moveMap, plan: 'p608' }), texts };
+  };
+
+  it('rewrites without an error, the edit table included, and lands every split export', () => {
+    const { map, texts } = readTree();
+    expect(map.errors).toEqual([]);
+    const { changed, created, errors } = rewriteTree(map, texts, MOVE_EDITS);
+    expect(errors).toEqual([]);
+
+    // A target is a new module, or a moved file's text (with the parts, or its own: `isOnlyObject3D`)
+    const textOf = (target: string) => {
+      const owner = map.oldPathOf(target) as string;
+      return created.get(target) ?? changed.get(owner) ?? (texts.get(owner) as string);
+    };
+    expect(map.splits.size).toBe(2);
+    const missing: string[] = [];
+    for (const [source, split] of map.splits) {
+      for (const [name, target] of Object.entries(split)) {
+        const { exports } = parseModuleSource(target, textOf(target));
+        if (!exports.local.includes(name) && !exports.named[name]) {
+          missing.push(`${source}: ${name} isn't exported by ${target}`);
+        }
+      }
+    }
+    expect(missing).toEqual([]);
+
+    const unresolved: string[] = [];
+    for (const [target, text] of created) {
+      for (const { specifier } of parseModuleSource(target, text).imports) {
+        if (!specifier.startsWith('.')) continue;
+        const found = resolveSpecifier(target, specifier, { exists: (f) => map.newFiles.has(f) });
+        if (!found) unresolved.push(`${target}: '${specifier}'`);
+      }
+    }
+    expect(unresolved).toEqual([]);
   });
 });
