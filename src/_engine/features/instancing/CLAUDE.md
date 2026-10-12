@@ -1,4 +1,4 @@
-Notes for the instanced mesh pools (`src/_engine/core/Instancing/`); the root `.claude/CLAUDE.md` keeps the project-wide rules, commands and workflow.
+Notes for the instanced mesh pools (`src/_engine/features/instancing/`); the root `.claude/CLAUDE.md` keeps the project-wide rules, commands and workflow.
 
 ## Instanced mesh pools
 

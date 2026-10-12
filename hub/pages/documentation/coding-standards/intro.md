@@ -19,12 +19,12 @@ follows them; a file you touch is a good time to fix what it breaks.
 - **The lint enforces the layers** (`eslint.config.js`): a path across a forbidden boundary is an
   error, `import type` and `import()` included, and so is an `aekasha` import inside the engine.
   The [entries](hub:documentation#importing-the-engine) list what's public.
-- **A feature owns its folder:** its public entry, its implementation, its ECS registrations, its
-  worker if it has one, and its debug modules. Removing the folder and its install line removes the
-  feature.
-- **Debug code is colocated and lazy.** A feature's debug panels live in `_dbg__` modules next to
-  it and are reached only through the debug loader
-  ([loadDebugModuleAsync](api:loadDebugModuleAsync)), never by a static import, so a shipping
+- **A feature owns its folder** (`src/_engine/features/<name>/`): its public entry, its
+  implementation, its ECS registrations, its worker if it has one, and its debug modules. Removing
+  the folder and its install line removes the feature.
+- **Debug code is colocated and lazy.** A feature's debug panels live in `_dbg__` modules in a
+  `debug/` folder next to it (`features/skybox/debug/`) and are reached only through the debug
+  loader ([loadDebugModuleAsync](api:loadDebugModuleAsync)), never by a static import, so a shipping
   build doesn't load them. The lint makes a static import of a `_dbg__` module an error outside
   the debug modules themselves (an `import type` is fine: it's erased).
 

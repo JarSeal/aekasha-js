@@ -142,7 +142,7 @@ down the lanes.
 - [Alpha-cut textures](repo:docs/techniques/asset-optimization.md#alpha-cut-textures) and
   [Impostor atlases](repo:docs/techniques/asset-optimization.md#impostor-atlases) in the asset
   optimization guide.
-- The API reference: [Lod](hub:documentation/engine/features/lod) and
+- The API reference: [LOD](hub:documentation/engine/features/lod) and
   [Instancing](hub:documentation/engine/features/instancing).
 
 ::: claude-md

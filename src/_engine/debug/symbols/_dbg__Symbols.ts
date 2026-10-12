@@ -1,4 +1,4 @@
-// ./src/_engine/core/Debug/_dbg__Symbols.ts
+// ./src/_engine/debug/symbols/_dbg__Symbols.ts
 import * as THREE from 'three/webgpu';
 import { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';

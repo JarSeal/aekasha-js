@@ -158,7 +158,7 @@ const writeCache = (model: ApiModel) => {
   fs.renameSync(temp, HUB_API_CACHE_FILE);
 };
 
-/** `The signature _engine/core/SceneLoader.SceneLoader.loadFn…`: the module's file */
+/** `The signature _engine/kernel/scene/SceneLoader.SceneLoader.loadFn…`: the module's file */
 const findModuleFile = (message: string, project: JSONOutput.ProjectReflection) => {
   let best: JSONOutput.DeclarationReflection | null = null;
   for (const module of project.children ?? []) {

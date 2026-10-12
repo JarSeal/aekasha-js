@@ -56,8 +56,8 @@ then does four `largeWorld` ↔ `skyShowcase` round trips:
 ```js
 const url = (n) =>
   performance.getEntriesByType('resource').map((e) => e.name).find((x) => new URL(x).pathname === n);
-const { getRenderer } = await import(url('/_engine/core/Renderer.ts'));
-const { loadScene, isCurrentlyLoading } = await import(url('/_engine/core/SceneLoader.ts'));
+const { getRenderer } = await import(url('/_engine/kernel/render/Renderer.ts'));
+const { loadScene, isCurrentlyLoading } = await import(url('/_engine/kernel/scene/SceneLoader.ts'));
 const visit = async (sceneId) => {
   await loadScene({ sceneId });
   while (isCurrentlyLoading()) await new Promise((r) => setTimeout(r, 100));

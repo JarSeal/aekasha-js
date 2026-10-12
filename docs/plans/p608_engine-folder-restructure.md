@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-5 implemented
+Status: in progress | Phases 1-6 implemented
 Category: Refactoring, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p609_toolkit-and-app-restructure.md, p610_character-and-input-action-architecture.md, p611_sbp-tooling-profiles-and-marketing.md, p612_review-ecs-loop-config-init.md, p613_review-rendering-scene-assets.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p510_headless-simulation-runtime.md
@@ -826,7 +826,7 @@ As built:
   `applyMoveMap.ts --plan p608 --leftovers 5491035` (the 10 leftovers of Phase 3's list, plus
   whatever prose the grep finds).
 
-### Phase 6: the Hub, CLAUDE.md and the readme
+### Phase 6: the Hub, CLAUDE.md and the readme — done
 
 The list is `applyMoveMap.ts --plan p608 --leftovers <base sha>`: the old paths still named anywhere outside
 D6's history, read from the map at the move's base (after D9 the current map only has the new
@@ -854,6 +854,53 @@ layout). Each item is fixed by hand, and the report reruns to empty.
    `yarn verify:baselines --docs`, `--leftovers` empty, and a grep for the old folder names
    (`core/`, `workers/`, `styles/`, `3dModels/`, `utils/helpers`) outside D6's history finding
    nothing about the engine (prose naming a folder without a file isn't in `--leftovers`).
+
+As built:
+
+- **`--leftovers` named only Phase 3's 10;** most of the work was what it can't see: folders
+  without a file (the nested `CLAUDE.md` files' first lines), short forms relative to an old folder
+  (`Lod/LodTypes.ts`, `Physics/EngineRapier.ts`, `ECS/SpatialMembership.ts`, `Debug/Lod/…`),
+  renamed bare names (`PhysicsManager.ts` → `PhysicsEntity.ts`, `MeshManager.ts` → `Mesh.ts`,
+  `ViewManager.ts` → `Views.ts`, the sky box's `presets.ts` / `layers/base.ts`, the assets worker's
+  job modules), a path after `./` (`_dbg__Symbols.ts`' header: the boundary rejects it) and
+  half-rewritten examples in JSDoc (`devTools/hub/api/model.ts` and `links.ts`: `kernel/ecs/ECS.ts`
+  next to `core/ECS/`). Found by checking every backticked path against `git ls-files` **case
+  exactly** (macOS's `existsSync` passes `Lod/LodTypes.ts` as `features/lod/LodTypes.ts`) and by
+  grepping the map's renamed base names.
+- **Root `CLAUDE.md`:** the Three-folder split lists the engine's folders and what each holds; the
+  Debug system names `kernel/config/DebugModules.ts` (D2) and the colocated `debug/` folders (D4);
+  the Physics section's paths are `features/physics/`'s. The Architecture map's nested paths were
+  the codemod's already.
+- **Nested `CLAUDE.md` files:** character debugging stays in `debug/CLAUDE.md` (the feature has no
+  nested file), saying where it is, so the root's map line doesn't change; the paragraph naming
+  the long-gone `legacy-refactoring-camera-mesh-light-debug-tools` branch as current was dropped.
+  No `##` heading changed. `devTools/verify/CLAUDE.md`'s debug folder list lost "`core/Debug/`,
+  after p608"; its "p608's moves rename folders" is Phase 7's.
+- **Hub:** link labels named after old modules (`PhysicsManager`, `ViewManager`, `Lod`), the
+  Documentation intro (the `_dbg__` files in the `debug/` folders, a sentence naming the engine's
+  folders), the coding standards' feature and debug rules name their folders,
+  `hub-authoring.md`'s icon path and `api:` suffix example. The generator's and `baselines.ts`'
+  JSDoc examples show the new URLs.
+- **The readme's tree:** `kernel/`, `features/`, `ui/`, `debug/`, `schemas/`, `utils/`, `types/`;
+  `core/` and `workers/` gone.
+- **`docs/issues/`:** the codemod's three, plus `three-instanced-node-attribute-leak.md`'s console
+  repro (dev server URLs, `/_engine/kernel/render/Renderer.ts`).
+- **The `utils/helpers.ts` warnings** (`GLTFExtract.ts`, `GLTFTextureCollect.ts`, `AssetsWorker.ts`:
+  not worker-safe) name `kernel/config/DebugModules.ts`, the one split part that imports `Config.ts`
+  and `Logger.ts`.
+- **Kept on purpose:** `debugInProduction.ts`' rule text and its test's `core/Debug/` fixtures (the
+  "any case" folder rule, Phase 1). `debug/Profiler.ts` and `debug/GPUMemory.ts` sit next to
+  `debug/profiler/` and `debug/gpuMemory/`, which hold only `_dbg__` modules: no folder page, so
+  no case-only URL pair in `dist-hub/` (one would collide on macOS if a documented module landed
+  there).
+- **Prettier:** run only on files that were clean before (as the codemod does); the coding-standards
+  page and `driver.mjs` weren't, so their edits are wrapped by hand.
+- **Verification:** `yarn hub:build` (325 pages, no dead link, the dry run's warnings by the new
+  paths, search index 1.09 MB), `yarn hub:preview` (the API tree is `kernel/`, `features/`, `debug/`,
+  …; the physics page's API links resolve, `documentation/engine/core/SceneLoader/` is a 404, D7),
+  `yarn verify:baselines --docs` unchanged, `--leftovers` empty, the old folder grep (with
+  `git grep -P`: `-E` has no `\b`) finds only the kept fixtures, `yarn test` 305, `tsc`,
+  `tsc -p hub`, lint.
 
 ### Phase 7: versioning, changelog and mark done
 

@@ -93,10 +93,10 @@ export type DocsBaseline = {
   formatVersion: number;
   total: FolderCoverage;
   subtrees: Record<string, FolderCoverage>;
-  /** `engine/core/Physics`, `toolkit` (the subtree's own folder): its own modules, not below */
+  /** `engine/features/physics`, `toolkit` (the subtree's own folder): its own modules, not below */
   folders: Record<string, FolderDocs>;
 };
-/** `engine/core/SceneLoader#LoadSceneProps` (folder, then the undocumented name) → `file:line` */
+/** `engine/kernel/scene/SceneLoader#LoadSceneProps` (folder, then the undocumented name) → `file:line` */
 type DocsLocations = Map<string, string>;
 
 /** A finding: `attention` ones make the run exit 1 */

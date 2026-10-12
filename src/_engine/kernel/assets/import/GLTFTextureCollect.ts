@@ -1,5 +1,6 @@
 // Runs on both threads (main-thread imports and the assets worker): keep it free of imports that
-// touch `window`/`document` (eg. Config.ts, Logger.ts, Texture.ts, utils/helpers.ts).
+// touch `window`/`document` (eg. Config.ts, Logger.ts, Texture.ts,
+// kernel/config/DebugModules.ts).
 import type * as THREE from 'three/webgpu';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { textureMapKeys } from '../../../utils/Constants';

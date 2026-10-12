@@ -12,7 +12,7 @@ type GLTFJson = {
 };
 
 // Runs on both threads (main-thread imports and the assets worker): keep it free of imports that
-// touch `window`/`document` (eg. Config.ts, Logger.ts, utils/helpers.ts).
+// touch `window`/`document` (eg. Config.ts, Logger.ts, kernel/config/DebugModules.ts).
 
 /** One extracted primitive: its (not yet registered) geometry, glTF material and metadata. */
 export type ExtractedPrimitive = {

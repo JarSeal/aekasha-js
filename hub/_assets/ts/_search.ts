@@ -116,7 +116,7 @@ const pagePathTrail = (pagePath: string) => {
 
 /**
  * A page's breadcrumb label: its menu entry or title, else its folder's name (an API module's
- * page: `documentation/engine/core/SceneLoader/` → `SceneLoader`)
+ * page: `documentation/engine/kernel/scene/SceneLoader/` → `SceneLoader`)
  */
 const pathLabel = (pagePath: string) => {
   const parts = pagePath.split('/').filter(Boolean);

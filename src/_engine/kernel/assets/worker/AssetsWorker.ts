@@ -1,7 +1,8 @@
 /// <reference lib="webworker" />
 
-// Only import worker-safe modules here (no Config.ts, Logger.ts or utils/helpers.ts: those
-// touch `window`/`document`, directly or through their imports).
+// Only import worker-safe modules here (no Config.ts, Logger.ts or
+// kernel/config/DebugModules.ts: those touch `window`/`document`, directly or through their
+// imports).
 import type {
   AssetsDownProtocol,
   AssetsUpProtocol,
