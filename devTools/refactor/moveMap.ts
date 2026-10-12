@@ -166,6 +166,9 @@ type Edge = {
 };
 const violations = new Map<string, Edge[]>();
 const featureEdges: Edge[] = [];
+/** The assets worker's `import()`s of feature code (p607 D5): a worker can't be handed code. */
+const workerJobEdges: Edge[] = [];
+const WORKER_ZONE = 'src/_engine/kernel/assets/worker/';
 const deletedImports: Edge[] = [];
 const splitFileImports: Edge[] = [];
 const unresolved: string[] = [];
@@ -257,6 +260,15 @@ for (const imp of graph.imports) {
     if (toEntry?.action === 'merge') deletedImports.push(edge);
     const fz = zoneOf(fromTarget);
     const tz = zoneOf(toTarget);
+    if (
+      edge.kind === 'dynamic' &&
+      fromTarget.startsWith(WORKER_ZONE) &&
+      fz.layer === 'kernel' &&
+      tz.layer === 'feature'
+    ) {
+      workerJobEdges.push(edge);
+      continue;
+    }
     const category = checkEdge(fz, tz, edge);
     if (category) addViolation(category, edge);
     if (fz.layer === 'feature' && tz.layer === 'feature' && fz.area !== tz.area && !fz.isDebug) {
@@ -498,6 +510,16 @@ out();
 out(
   `Public: the app, the toolkit, a Hub ${code('api:')} link or the devTools import it. Cross-entry: only engine code of another entry does (each is either exported from its entry or a seam p606 designs). Internal: only its own entry (an ${code('@internal')} candidate). Unreferenced: nothing imports it; some are API the example app doesn't use. The full list is ${code('entryExports.json')}.`
 );
+out();
+
+out('## Assets worker job modules');
+out();
+out(
+  `p607 D5: a worker can't be handed code, so the assets worker ${code('import()')}s the feature code a job needs, on the first job that needs it. Not boundary violations (a static import would be).`
+);
+out();
+out(EDGE_HEADER);
+for (const e of workerJobEdges) out(edgeRow(e));
 out();
 
 out('## Feature dependencies');

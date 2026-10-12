@@ -895,6 +895,61 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
   paired the other way round, the bytes are the baseline's), `docs.json`. The production debug
   check: none.
 
+**As built (section 2):**
+
+- **The import seam:** `core/Import/ImportExtensions.ts` (kernel): the public types
+  `ImportExtension` (`{ id, spawnPhysics?, lodChains? }`), `ImportPhysicsSpawn` and
+  `ImportLodChainsExtension`; internal `registerImportExtension` (each member has one provider, a
+  second throws), `getImportPhysicsSpawn`, `getImportLodChains` and
+  `warnMissingImportExtension(featureId, use)` (once per feature and use);
+  `ImportExtensions.test.ts`. `FeatureContext.registerImportExtension`. **Changed from D5's
+  `{ id, … }`:** the members are named per cooperation, not generic hooks: the kernel's import
+  has exactly two, and the worker side is LOD-specific anyway. Their LOD types
+  (`ExtractedLodChain`, `GLTFLodChains`, `TransferableLodChain`) are type-only imports (D6), not on
+  an entry (`hub:build`'s `notExported` only flags module-local types).
+- **Physics:** `SpawnImported.ts`' physics half is `Import/ImportPhysics.ts`'
+  `spawnImportedPhysics({ nodes, params, appIdPrefix })` (a move rule → `features/physics/import/`),
+  and the spawn node type is the public `ImportSpawnNode` (`ImportTypes.ts`). `physics()` registers
+  `physicsImportExtension`, whose `spawnPhysics` `import()`s that module on the first spawn with
+  physics nodes (it and `MeshColliderGeometry` stay out of main, as they were). Every app spawn is
+  awaited by its scene code, so the extra load stays inside the held load. Without `physics()`, a
+  spawn with physics nodes warns once and spawns the meshes only.
+- **LOD:** `Lod/LodImport.ts`' `lodImportExtension` (`read: readGLTFLodChains`, `deserialize:
+  deserializeLodChain`, and `requestLodChains` / `registerPrebuiltLodChains` moved from
+  `ImportRegistry.ts` as they were), which `lod()` registers. Without `lod()`: `lodChain` warns
+  once, and a file's prebuilt chains aren't read (its level meshes are never loaded). The
+  primitive key moved to the kernel: `getGLTFPrimitiveKey` in `GLTFExtract.ts` (was
+  `getGLTFLodChainKey` in `LodChainGLTF.ts`).
+- **`lod: 'AUTO'`** (the layout report's `MeshManager.ts` → `LodAuto` dynamic row, not in §2.4):
+  `MeshManager.ts`' internal `setAutoLodResolverLoader(loader)` (and the `AutoLodResolver` type),
+  which `lod()` sets to `() => import('./LodAuto')…`; `setMeshLod` checks `isCurrent()` after the
+  load as before (one microtask later). Without `lod()`, `AUTO` warns once and resolves false. Like
+  Phase 6's `setSpatialDomainMembership`, a direct internal setter, not a context member.
+- **The assets worker** (`assetsWorker.ts`) `import()`s each job module on its first job (texture,
+  GLTF, simplify; a failed load is tried again by the next job), and the GLTF job `import()`s
+  `LodChainGLTF` only when the request's new `readLodChains` is set (`loadGLTFInWorker`'s option:
+  the main thread sets it when the LOD extension is registered). `assetsSwitchSimplify.ts` is
+  LOD's (a move rule → `features/lod/worker/`).
+- **The layout report:** "Kernel → feature" has **no runtime and no dynamic rows** (0 / 22 type /
+  0: Phase 7's step 4, done here). **New, not in the plan:** the worker's two `import()`s of
+  feature code (`assetsWorker.ts` → `assetsSwitchSimplify.ts`, `assetsSwitchGLTF.ts` →
+  `LodChainGLTF.ts`) are listed in their own section, "Assets worker job modules" (`moveMap.ts`:
+  a dynamic import from `kernel/assets/worker/` to a feature), not as violations: a worker can't be
+  handed code, so naming its jobs' modules is D5's seam; a static one would still be a violation.
+- `Lod/CLAUDE.md` names the extension, the resolver and the lazy job module.
+- Bundle (`bundle.json` recorded): `index.js` 420.0 → 420.7 kB gzip (main `core/Lod` +0.8 kB:
+  `LodImport`; `core/Import` +0.2 kB). The worker splits: `assetsWorker.js` 105.2 kB → its entry
+  1.0 kB, with lazy `assetsSwitchGLTF.js` (50.6 kB), a worker-side `three.core.js` (50.8 kB),
+  `assetsSwitchTexture.js` (1.9 kB), `assetsSwitchSimplify.js` (1.8 kB), `GeometryTransfer.js`
+  (1.8 kB) and `LodChainGLTF.js` (1.0 kB); `SpawnImported.js` 3.0 → 1.4 kB and a new
+  `ImportPhysics.js` (2.0 kB). The production debug check: none.
+- Checks: `yarn verify:scenes` 96 passed (dev server: hashes, snapshots, system order). Against a
+  `VITE_APP_ENV=test` build under `vite preview` (`workerMsg`, `mainThread`, `prodTest`, where the
+  worker's job modules and `ImportPhysics` really are separate chunks): 60 passed, the 12 failures
+  the four `isDebugScene` scenes a build leaves out (as in Phase 5). `yarn test` 244 passed, lint,
+  `tsc`, the docs ratchet, `yarn hub:build` (in `build:test`), `moveMap.ts --check`. `api.json`
+  and `docs.json` recorded.
+
 ### Phase 8: the SBP packaging
 
 1. `sideEffects` (D13), measured against the entries' `moduleSideEffects`.

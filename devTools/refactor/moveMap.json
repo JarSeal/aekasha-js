@@ -772,6 +772,22 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/Import/ImportExtensions.test.ts": {
+      "to": "src/_engine/kernel/assets/import/ImportExtensions.test.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/Import/ImportExtensions.ts": {
+      "to": "src/_engine/kernel/assets/import/ImportExtensions.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/Import/ImportPhysics.ts": {
+      "to": "src/_engine/features/physics/import/ImportPhysics.ts",
+      "action": "move",
+      "plan": "p608",
+      "note": "spawnImportedAsset's physics half: the physics feature's import extension (p607 D5)"
+    },
     "src/_engine/core/Import/ImportRegistry.ts": {
       "to": "src/_engine/kernel/assets/import/ImportRegistry.ts",
       "action": "move",
@@ -1047,6 +1063,11 @@
     },
     "src/_engine/core/Lod/LodFeature.ts": {
       "to": "src/_engine/features/lod/LodFeature.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/Lod/LodImport.ts": {
+      "to": "src/_engine/features/lod/LodImport.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -2173,9 +2194,10 @@
       "plan": "p608"
     },
     "src/_engine/workers/assets/assetsSwitchSimplify.ts": {
-      "to": "src/_engine/kernel/assets/worker/AssetsSwitchSimplify.ts",
+      "to": "src/_engine/features/lod/worker/AssetsSwitchSimplify.ts",
       "action": "move",
-      "plan": "p608"
+      "plan": "p608",
+      "note": "the LOD feature's worker job: the assets worker loads it on the first one (p607 D5)"
     },
     "src/_engine/workers/assets/assetsSwitchTexture.ts": {
       "to": "src/_engine/kernel/assets/worker/AssetsSwitchTexture.ts",

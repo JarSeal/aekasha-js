@@ -19,13 +19,8 @@ import {
   deserializeTexture,
   releaseTransferableImage,
 } from './TextureTransfer';
-import type { LodChainOptions } from '../Lod/LodChainOptions';
-import { trackLodChainRequest } from '../Lod/LodChainRequests';
-import {
-  deserializeLodChain,
-  readGLTFLodChains,
-  type ExtractedLodChain,
-} from '../Lod/LodChainGLTF';
+import type { ExtractedLodChain } from '../Lod/LodChainGLTF';
+import { getImportLodChains, warnMissingImportExtension } from './ImportExtensions';
 import type { ImportAssetParams, ImportedAssetManifest, ImportedGeometryInfo } from './ImportTypes';
 
 type ImportRecord = {
@@ -96,52 +91,6 @@ const logWarnings = (manifest: ImportedAssetManifest) => {
   }
 };
 
-/** Starts the LOD chains an import asks for (`lodChain`, p347): one per rendered geometry that
- * has no chain yet and none pending. Not awaited by the import. LodChains is loaded on first use,
- * so apps that never ask for a chain don't download it. generateLodChain refuses (and warns about)
- * skinned and morph-target geometry. */
-const requestLodChains = (manifest: ImportedAssetManifest, lodChain: true | LodChainOptions) => {
-  const geometryIds = new Set<string>();
-  for (const { geometryId, customProps } of manifest.geometries) {
-    // Collider only: never rendered (spawnImportedAsset gives it no mesh)
-    if (customProps.isPhysObj && !customProps.keepMesh) continue;
-    geometryIds.add(geometryId);
-  }
-  if (!geometryIds.size) return;
-  const opts = lodChain === true ? undefined : lodChain;
-  const ready = import('../Lod/LodChains');
-  ready.catch((err) =>
-    lerror(`Import "${manifest.id}": could not load the LOD chain module.`, err)
-  );
-  for (const geometryId of geometryIds) {
-    // Tracked from now, so a mesh with `lod: 'AUTO'` created before the module loads waits for it
-    const settled = ready.then(({ generateLodChain, getLodChain, isLodChainPending }) => {
-      // Released while the module loaded, or already chained (the first options win)
-      if (!doesGeoExist(geometryId)) return;
-      if (getLodChain(geometryId) || isLodChainPending(geometryId)) return;
-      return generateLodChain(geometryId, opts).catch((err) =>
-        lerror(`Import "${manifest.id}": LOD chain for geometry "${geometryId}" failed.`, err)
-      );
-    });
-    trackLodChainRequest(geometryId, settled);
-  }
-};
-
-/** Registers the LOD chains the asset pipeline built into the file (p347 Phase 3), whatever the
- * import's `lodChain` says: the file is shared by every use, and its levels were downloaded
- * anyway. Awaited, so a `lodChain` request right after the import finds them. */
-const registerPrebuiltLodChains = async (
-  importId: string,
-  prebuilt: { geometryId: string; chain: ExtractedLodChain }[]
-) => {
-  try {
-    const { registerPrebuiltLodChain } = await import('../Lod/LodChains');
-    for (const { geometryId, chain } of prebuilt) registerPrebuiltLodChain(geometryId, chain);
-  } catch (err) {
-    lerror(`Import "${importId}": could not load the LOD chain module.`, err);
-  }
-};
-
 const LOAD_ERROR_MESSAGE = 'loading or parsing the file failed.';
 
 /** The "load + extract" stage of an import: the only part that differs by thread. */
@@ -186,7 +135,8 @@ const loadOnMainThread = async (
     return { error: LOAD_ERROR_MESSAGE, cause: err };
   }
 
-  const lodChains = await readGLTFLodChains(gltf);
+  // The LOD extension (`lod()`) reads the prebuilt chains; without it the file's levels are ignored
+  const lodChains = await getImportLodChains()?.read(gltf);
   const extracted = extractPrimitives(gltf, { importId: id, meshIndex, lodChains });
   if (extracted.error !== undefined) {
     disposeGLTFLeftovers(gltf, {});
@@ -216,8 +166,11 @@ const loadInWorker = async (
   id: string,
   url: string
 ): Promise<LoadOutcome> => {
+  const lodExtension = getImportLodChains();
   const response = await loadGLTFInWorker(url, {
     importId: id,
+    // The worker loads the prebuilt LOD chains' code only for this
+    readLodChains: Boolean(lodExtension),
     meshIndex: params.meshIndex,
     importTextures: Boolean(params.importTextures),
     draco: getDracoWorkerSettings(),
@@ -227,10 +180,12 @@ const loadInWorker = async (
 
   const geometries = response.geometries.map(deserializeGeometry);
   const lodChains = new Map(
-    response.lodChains.map(({ geometryIndex, chain }) => [
-      geometryIndex,
-      deserializeLodChain(chain, geometries[geometryIndex]),
-    ])
+    lodExtension
+      ? response.lodChains.map(({ geometryIndex, chain }) => [
+          geometryIndex,
+          lodExtension.deserialize(chain, geometries[geometryIndex]),
+        ])
+      : []
   );
   const primitives = response.primitives.map(({ geometryIndex, info }) => {
     const lodChain = lodChains.get(geometryIndex);
@@ -369,7 +324,10 @@ const runImport = async (
     }
   }
   loaded.disposeLeftovers(keepGeometries);
-  if (prebuiltLodChains.length) await registerPrebuiltLodChains(id, prebuiltLodChains);
+  // Only filled with the LOD extension (it read the chains)
+  if (prebuiltLodChains.length) {
+    await getImportLodChains()?.registerPrebuilt(id, prebuiltLodChains);
+  }
 
   const manifest: ImportedAssetManifest = {
     id,
@@ -435,7 +393,8 @@ const resolveImport = async (params: ImportAssetParams): Promise<ImportedAssetMa
  * still registered (re-imports otherwise), and parallel calls share one import.
  *
  * With `lodChain`, the rendered geometries that have no LOD chain get one after the import (also
- * when the manifest was cached), without delaying it.
+ * when the manifest was cached), without delaying it. The LOD chains (`lodChain`, and the ones
+ * the asset pipeline built into the file) need the `lod()` feature.
  * @param params {@link ImportAssetParams}
  * @returns Promise<{@link ImportedAssetManifest} | null> (null on error, unless throwOnError)
  */
@@ -443,7 +402,11 @@ export const importAssetAsync = async (
   params: ImportAssetParams
 ): Promise<ImportedAssetManifest | null> => {
   const manifest = await resolveImport(params);
-  if (manifest && params.lodChain) requestLodChains(manifest, params.lodChain);
+  if (manifest && params.lodChain) {
+    const lodExtension = getImportLodChains();
+    if (lodExtension) lodExtension.request(manifest, params.lodChain);
+    else warnMissingImportExtension('lod', "importAssetAsync's `lodChain`");
+  }
   return manifest;
 };
 

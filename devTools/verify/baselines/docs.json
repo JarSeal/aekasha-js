@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1427,
-      "total": 2141
+      "documented": 1442,
+      "total": 2154
     },
     "members": {
       "documented": 212,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1382,
-        "total": 2077
+        "documented": 1397,
+        "total": 2090
       },
       "members": {
         "documented": 162,
@@ -49,8 +49,8 @@
     },
     "engine/core": {
       "exports": {
-        "documented": 427,
-        "total": 573
+        "documented": 430,
+        "total": 576
       },
       "members": {
         "documented": 35,
@@ -389,8 +389,8 @@
     },
     "engine/core/Import": {
       "exports": {
-        "documented": 48,
-        "total": 59
+        "documented": 58,
+        "total": 69
       },
       "members": {
         "documented": 0,
@@ -530,7 +530,7 @@
     },
     "engine/core/Lod": {
       "exports": {
-        "documented": 61,
+        "documented": 63,
         "total": 75
       },
       "members": {
@@ -540,9 +540,7 @@
       "undocumented": {
         "exports": [
           "LodBounds#InstancedLodBounds",
-          "LodChainGLTF#GLTFLodChains",
           "LodChainGLTF#TransferableLodChain",
-          "LodChainGLTF#getGLTFLodChainKey",
           "LodChainOptions#DEFAULT_LOD_CHAIN_OPTIONS",
           "LodChainOptions#LodChainOptions",
           "LodChainOptions#ResolvedLodChainOptions",

@@ -141,11 +141,21 @@ const ENGINE_RULES: MoveRule[] = [
     note: 'builds physics colliders: SpawnImported reaches it through an import extension (p607)',
   },
   {
+    from: `${E}core/Import/ImportPhysics.ts`,
+    to: `${F}physics/import/ImportPhysics.ts`,
+    note: "spawnImportedAsset's physics half: the physics feature's import extension (p607 D5)",
+  },
+  {
     from: `${E}3dModels/customPropTemplates.blend`,
     to: `${K}assets/import/customPropTemplates.blend`,
   },
   { from: `${E}workers/assetsWorker.ts`, to: `${K}assets/worker/AssetsWorker.ts` },
   { from: `${E}workers/assets/`, to: `${K}assets/worker/` },
+  {
+    from: `${E}workers/assets/assetsSwitchSimplify.ts`,
+    to: `${F}lod/worker/AssetsSwitchSimplify.ts`,
+    note: "the LOD feature's worker job: the assets worker loads it on the first one (p607 D5)",
+  },
   { from: `${E}core/Debug/_dbg__Assets.ts`, to: `${K}assets/debug/_dbg__Assets.ts` },
   { from: `${E}core/Debug/_dbg__AssetStats.ts`, to: `${K}assets/debug/_dbg__AssetStats.ts` },
   { from: `${E}core/Debug/_dbg__AssetsPreview.ts`, to: `${K}assets/debug/_dbg__AssetsPreview.ts` },

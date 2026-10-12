@@ -145,6 +145,9 @@ export type AssetsLoadGLTFRequest = {
   /** Null when the main thread has no KTX2 support set up (no renderer yet): a file with
    * KHR_texture_basisu then fails in the worker and re-runs on the main thread. */
   ktx2: KTX2WorkerSettings | null;
+  /** Also send the file's prebuilt LOD chains (the `lod()` feature is installed): the worker loads
+   * their code only then. */
+  readLodChains: boolean;
 };
 
 /** The geometry's arrays are copies, transferred: the main thread's geometry stays usable. */

@@ -4,9 +4,9 @@
   "summary": {
     "aekasha": {
       "public": 123,
-      "crossEntry": 141,
-      "internal": 223,
-      "unreferenced": 192
+      "crossEntry": 149,
+      "internal": 230,
+      "unreferenced": 193
     },
     "aekasha/character": {
       "public": 8,
@@ -27,27 +27,27 @@
       "unreferenced": 6
     },
     "aekasha/lines": {
-      "public": 2,
-      "crossEntry": 6,
-      "internal": 37,
-      "unreferenced": 22
+      "public": 3,
+      "crossEntry": 7,
+      "internal": 39,
+      "unreferenced": 21
     },
     "aekasha/lod": {
       "public": 25,
-      "crossEntry": 27,
-      "internal": 52,
-      "unreferenced": 27
+      "crossEntry": 21,
+      "internal": 60,
+      "unreferenced": 26
     },
     "aekasha/physics": {
       "public": 23,
       "crossEntry": 25,
-      "internal": 227,
-      "unreferenced": 77
+      "internal": 228,
+      "unreferenced": 78
     },
     "aekasha/postfx": {
-      "public": 5,
+      "public": 6,
       "crossEntry": 5,
-      "internal": 14,
+      "internal": 15,
       "unreferenced": 4
     },
     "aekasha/schemas": {
@@ -93,9 +93,9 @@
       "unreferenced": 45
     },
     "aekasha/viewports": {
-      "public": 5,
-      "crossEntry": 1,
-      "internal": 0,
+      "public": 6,
+      "crossEntry": 2,
+      "internal": 2,
       "unreferenced": 6
     }
   },
@@ -233,7 +233,10 @@
         },
         "AssetsDownProtocol": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/lod"
+          ]
         },
         "AssetsErrorResponse": {
           "kind": "TypeAlias",
@@ -281,7 +284,10 @@
         },
         "AssetsSimplifyGeometryRequest": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/lod"
+          ]
         },
         "AssetsSimplifyGeometryResponse": {
           "kind": "TypeAlias",
@@ -606,6 +612,13 @@
         "ExtractResult": {
           "kind": "TypeAlias",
           "usage": "unreferenced"
+        },
+        "getGLTFPrimitiveKey": {
+          "kind": "Function",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/lod"
+          ]
         }
       },
       "src/_engine/kernel/assets/import/GLTFSource.ts": {
@@ -650,6 +663,43 @@
           "usage": "unreferenced"
         }
       },
+      "src/_engine/kernel/assets/import/ImportExtensions.ts": {
+        "getImportLodChains": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "getImportPhysicsSpawn": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "ImportExtension": {
+          "kind": "TypeAlias",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/lod",
+            "aekasha/physics"
+          ]
+        },
+        "ImportLodChainsExtension": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "ImportPhysicsSpawn": {
+          "kind": "TypeAlias",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/physics"
+          ]
+        },
+        "registerImportExtension": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "warnMissingImportExtension": {
+          "kind": "Function",
+          "usage": "internal"
+        }
+      },
       "src/_engine/kernel/assets/import/ImportRegistry.ts": {
         "getImportedAsset": {
           "kind": "Function",
@@ -688,6 +738,7 @@
           "kind": "TypeAlias",
           "usage": "public",
           "by": [
+            "aekasha/lod",
             "app"
           ]
         },
@@ -702,6 +753,13 @@
         "ImportPhysicsParams": {
           "kind": "TypeAlias",
           "usage": "internal"
+        },
+        "ImportSpawnNode": {
+          "kind": "TypeAlias",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/physics"
+          ]
         },
         "ParsedCustomProps": {
           "kind": "TypeAlias",
@@ -1186,12 +1244,6 @@
       },
       "src/_engine/kernel/assets/worker/AssetsSwitchGLTF.ts": {
         "assetsSwitchGLTF": {
-          "kind": "Function",
-          "usage": "internal"
-        }
-      },
-      "src/_engine/kernel/assets/worker/AssetsSwitchSimplify.ts": {
-        "assetsSwitchSimplify": {
           "kind": "Function",
           "usage": "internal"
         }
@@ -2738,6 +2790,10 @@
         }
       },
       "src/_engine/kernel/mesh/Mesh.ts": {
+        "AutoLodResolver": {
+          "kind": "TypeAlias",
+          "usage": "unreferenced"
+        },
         "createMeshEntity": {
           "kind": "Function",
           "usage": "public",
@@ -2781,6 +2837,13 @@
         "removeMeshLod": {
           "kind": "Function",
           "usage": "unreferenced"
+        },
+        "setAutoLodResolverLoader": {
+          "kind": "Function",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/lod"
+          ]
         },
         "setMeshGeometry": {
           "kind": "Function",
@@ -3034,6 +3097,35 @@
         },
         "RendererOptions": {
           "kind": "TypeAlias",
+          "usage": "internal"
+        }
+      },
+      "src/_engine/kernel/render/RenderHooks.ts": {
+        "addAfterRender": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "AfterRenderHook": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "getRenderPipeline": {
+          "kind": "Function",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/debug"
+          ]
+        },
+        "RenderPipelineProvider": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "runAfterRenderHooks": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "setRenderPipeline": {
+          "kind": "Function",
           "usage": "internal"
         }
       },
@@ -5811,9 +5903,24 @@
           "kind": "Function",
           "usage": "unreferenced"
         },
+        "installLines": {
+          "kind": "Function",
+          "usage": "internal"
+        },
         "isFatLineBackendAvailable": {
           "kind": "Function",
           "usage": "unreferenced"
+        },
+        "isLinesInstalledFor": {
+          "kind": "Function",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha",
+            "aekasha/character",
+            "aekasha/lod",
+            "aekasha/physics",
+            "aekasha/spatial"
+          ]
         },
         "preloadFatLineBackend": {
           "kind": "Function",
@@ -5823,16 +5930,25 @@
             "aekasha/character",
             "aekasha/physics"
           ]
-        },
-        "registerLineManager": {
+        }
+      },
+      "src/_engine/features/lines/LinesFeature.ts": {
+        "lines": {
           "kind": "Function",
+          "usage": "public",
+          "by": [
+            "app"
+          ]
+        },
+        "linesSceneHooks": {
+          "kind": "Variable",
           "usage": "unreferenced"
         }
       },
       "src/_engine/features/lines/LineSystem.ts": {
-        "registerLineTimeSystem": {
+        "installLineTimeSystem": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         }
       },
       "src/_engine/features/lines/LineTypes.ts": {
@@ -6205,23 +6321,16 @@
       "src/_engine/features/lod/LodAuto.ts": {
         "LOD_AUTO_REFERENCE_HEIGHT": {
           "kind": "Variable",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "lodDefFromChain": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "resolveAutoLod": {
           "kind": "Function",
           "usage": "public",
           "by": [
-            "aekasha",
             "app"
           ]
         }
@@ -6251,17 +6360,11 @@
             "aekasha"
           ]
         },
-        "getGLTFLodChainKey": {
-          "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
-        },
         "GLTF_LOD_EXTRAS_KEY": {
           "kind": "Variable",
           "usage": "public",
           "by": [
+            "aekasha",
             "devTools"
           ]
         },
@@ -6276,6 +6379,7 @@
           "kind": "TypeAlias",
           "usage": "public",
           "by": [
+            "aekasha",
             "devTools"
           ]
         },
@@ -6295,7 +6399,10 @@
         },
         "TransferableLevelAttributes": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha"
+          ]
         },
         "TransferableLodChain": {
           "kind": "TypeAlias",
@@ -6314,6 +6421,7 @@
           "kind": "Variable",
           "usage": "public",
           "by": [
+            "aekasha",
             "devTools"
           ]
         },
@@ -6363,10 +6471,7 @@
         },
         "trackLodChainRequest": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         }
       },
       "src/_engine/features/lod/LodChains.ts": {
@@ -6396,17 +6501,11 @@
         },
         "getLodChains": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "getPendingLodChain": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "isLodChainPending": {
           "kind": "Function",
@@ -6424,17 +6523,11 @@
         },
         "LodChainLevel": {
           "kind": "TypeAlias",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "registerPrebuiltLodChain": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "releaseLodChain": {
           "kind": "Function",
@@ -6453,6 +6546,12 @@
           ]
         }
       },
+      "src/_engine/features/lod/LodImport.ts": {
+        "lodImportExtension": {
+          "kind": "Variable",
+          "usage": "internal"
+        }
+      },
       "src/_engine/features/lod/LodSimplify.ts": {
         "SimplifiedLevel": {
           "kind": "TypeAlias",
@@ -6469,7 +6568,6 @@
           "kind": "Function",
           "usage": "public",
           "by": [
-            "aekasha",
             "devTools"
           ]
         }
@@ -6587,6 +6685,7 @@
           "kind": "TypeAlias",
           "usage": "public",
           "by": [
+            "aekasha",
             "aekasha/schemas",
             "app"
           ]
@@ -6634,6 +6733,15 @@
           "by": [
             "aekasha",
             "aekasha/schemas"
+          ]
+        }
+      },
+      "src/_engine/features/lod/worker/AssetsSwitchSimplify.ts": {
+        "assetsSwitchSimplify": {
+          "kind": "Function",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha"
           ]
         }
       }
@@ -6780,6 +6888,12 @@
           "usage": "internal"
         }
       },
+      "src/_engine/features/physics/import/ImportPhysics.ts": {
+        "spawnImportedPhysics": {
+          "kind": "Function",
+          "usage": "internal"
+        }
+      },
       "src/_engine/features/physics/import/MeshColliderGeometry.ts": {
         "ColliderSource": {
           "kind": "TypeAlias",
@@ -6789,7 +6903,6 @@
           "kind": "Function",
           "usage": "public",
           "by": [
-            "aekasha",
             "app"
           ]
         }
@@ -7941,7 +8054,6 @@
           "kind": "Function",
           "usage": "public",
           "by": [
-            "aekasha",
             "aekasha/character",
             "app",
             "hub",
@@ -8033,6 +8145,10 @@
           ]
         },
         "physicsFixedStepDriver": {
+          "kind": "Variable",
+          "usage": "unreferenced"
+        },
+        "physicsImportExtension": {
           "kind": "Variable",
           "usage": "unreferenced"
         },
@@ -8321,9 +8437,9 @@
             "hub"
           ]
         },
-        "initPostFX": {
+        "installPostFx": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "invalidatePostFxPipeline": {
           "kind": "Function",
@@ -8368,6 +8484,19 @@
         },
         "togglePostFxPass": {
           "kind": "Function",
+          "usage": "unreferenced"
+        }
+      },
+      "src/_engine/features/postfx/PostFXFeature.ts": {
+        "postFx": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "app"
+          ]
+        },
+        "postFxSceneHooks": {
+          "kind": "Variable",
           "usage": "unreferenced"
         }
       },
@@ -11513,6 +11642,10 @@
             "hub"
           ]
         },
+        "deleteSceneViewports": {
+          "kind": "Function",
+          "usage": "internal"
+        },
         "deleteViewport": {
           "kind": "Function",
           "usage": "public",
@@ -11532,6 +11665,10 @@
             "hub"
           ]
         },
+        "installViewports": {
+          "kind": "Function",
+          "usage": "internal"
+        },
         "invalidateViewportLayout": {
           "kind": "Function",
           "usage": "public",
@@ -11539,9 +11676,12 @@
             "hub"
           ]
         },
-        "renderViewports": {
+        "isViewportsInstalledFor": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/debug"
+          ]
         },
         "setViewportEnabled": {
           "kind": "Function",
@@ -11572,6 +11712,19 @@
         },
         "ViewportRect": {
           "kind": "TypeAlias",
+          "usage": "unreferenced"
+        }
+      },
+      "src/_engine/features/viewports/ViewportsFeature.ts": {
+        "viewports": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "app"
+          ]
+        },
+        "viewportsSceneHooks": {
+          "kind": "Variable",
           "usage": "unreferenced"
         }
       }

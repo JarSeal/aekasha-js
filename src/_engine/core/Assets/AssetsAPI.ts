@@ -463,6 +463,7 @@ export const loadHDRTextureInWorker = async (url: string) => {
  * (TextureTransfer.ts's deserializeTexture() rebuilds them)
  * @param opts.draco the main thread's DRACO settings (DracoDecoder.ts's getDracoWorkerSettings())
  * @param opts.ktx2 the main thread's KTX2 settings (KTX2.ts's getKTX2WorkerSettings())
+ * @param opts.readLodChains also send the file's prebuilt LOD chains (the `lod()` feature's)
  */
 export const loadGLTFInWorker = (
   url: string,
@@ -472,6 +473,7 @@ export const loadGLTFInWorker = (
     importTextures: boolean;
     draco: DracoWorkerSettings;
     ktx2: KTX2WorkerSettings | null;
+    readLodChains: boolean;
   }
 ) =>
   requestAssetsWorker<AssetsLoadGLTFResponse>({
@@ -482,6 +484,7 @@ export const loadGLTFInWorker = (
     importTextures: opts.importTextures,
     draco: opts.draco,
     ktx2: opts.ktx2,
+    readLodChains: opts.readLodChains,
   });
 
 /**

@@ -1,6 +1,7 @@
 import { IS_DEBUG_ENV } from './Config';
 import { getECSWorld } from './ECS';
 import type { EngineFeature } from './Features';
+import type { ImportExtension } from './Import/ImportExtensions';
 import type { FixedStepDriver } from './MainLoop';
 import {
   createPhysicsAPIDebugGUI,
@@ -54,6 +55,7 @@ export const physics = (): EngineFeature => ({
     );
     ctx.setFixedStepDriver(physicsFixedStepDriver);
     ctx.addSceneHooks(physicsSceneHooks);
+    ctx.registerImportExtension(physicsImportExtension);
 
     await initPhysics(true); // doNotCreateWorld: createPhysicsWorld() below owns that
     // Before the first world: the debugger's saved world settings are what worlds are built from.
@@ -100,6 +102,18 @@ export const physicsSceneHooks: SceneHooks = {
   },
   // A failed load must not leave physics held (a no-op if it was already released)
   loadSettled: releasePhysicsStepping,
+};
+
+/**
+ * Physics' part of the imports: `spawnImportedAsset` spawns the bodies and colliders the nodes'
+ * custom props describe. Its code (and the collider derivation) loads on the first spawn with
+ * physics nodes, so an app that never spawns one doesn't download it.
+ * @internal
+ */
+export const physicsImportExtension: ImportExtension = {
+  id: 'physics',
+  spawnPhysics: async (spawn) =>
+    (await import('./Import/ImportPhysics')).spawnImportedPhysics(spawn),
 };
 
 /**

@@ -374,7 +374,8 @@
       "disposeGLTFLeftovers": "Function",
       "ExtractedPrimitive": "TypeAlias",
       "extractPrimitives": "Function",
-      "ExtractResult": "TypeAlias"
+      "ExtractResult": "TypeAlias",
+      "getGLTFPrimitiveKey": "Function"
     },
     "src/_engine/core/Import/GLTFSource.ts": {
       "loadGLTF": "Function",
@@ -391,6 +392,18 @@
       "registerGLTFTextures": "Function",
       "TextureSlots": "TypeAlias"
     },
+    "src/_engine/core/Import/ImportExtensions.ts": {
+      "getImportLodChains": "Function",
+      "getImportPhysicsSpawn": "Function",
+      "ImportExtension": "TypeAlias",
+      "ImportLodChainsExtension": "TypeAlias",
+      "ImportPhysicsSpawn": "TypeAlias",
+      "registerImportExtension": "Function",
+      "warnMissingImportExtension": "Function"
+    },
+    "src/_engine/core/Import/ImportPhysics.ts": {
+      "spawnImportedPhysics": "Function"
+    },
     "src/_engine/core/Import/ImportRegistry.ts": {
       "getImportedAsset": "Function",
       "importAssetAsync": "Function",
@@ -403,6 +416,7 @@
       "ImportedAssetManifest": "TypeAlias",
       "ImportedGeometryInfo": "TypeAlias",
       "ImportPhysicsParams": "TypeAlias",
+      "ImportSpawnNode": "TypeAlias",
       "ParsedCustomProps": "TypeAlias",
       "QuatLike": "TypeAlias",
       "SpawnImportedParams": "TypeAlias",
@@ -771,7 +785,6 @@
     "src/_engine/core/Lod/LodChainGLTF.ts": {
       "deserializeLodChain": "Function",
       "ExtractedLodChain": "TypeAlias",
-      "getGLTFLodChainKey": "Function",
       "GLTF_LOD_EXTRAS_KEY": "Variable",
       "GLTF_LOD_FORMAT_VERSION": "Reference",
       "GLTFLodChains": "TypeAlias",
@@ -821,6 +834,9 @@
     },
     "src/_engine/core/Lod/LodFeature.ts": {
       "lod": "Function"
+    },
+    "src/_engine/core/Lod/LodImport.ts": {
+      "lodImportExtension": "Variable"
     },
     "src/_engine/core/Lod/LodSimplify.ts": {
       "DEFAULT_LOD_CHAIN_OPTIONS": "Reference",
@@ -928,6 +944,7 @@
       "updateAllMaterials": "Function"
     },
     "src/_engine/core/MeshManager.ts": {
+      "AutoLodResolver": "TypeAlias",
       "createMeshEntity": "Function",
       "disposeMesh": "Function",
       "getMeshByAppId": "Function",
@@ -935,6 +952,7 @@
       "MeshProps": "TypeAlias",
       "preWarmMesh": "Function",
       "removeMeshLod": "Function",
+      "setAutoLodResolverLoader": "Function",
       "setMeshGeometry": "Function",
       "setMeshLod": "Function",
       "setMeshMaterial": "Function"
@@ -1271,6 +1289,7 @@
     "src/_engine/core/PhysicsFeature.ts": {
       "physics": "Function",
       "physicsFixedStepDriver": "Variable",
+      "physicsImportExtension": "Variable",
       "physicsSceneHooks": "Variable"
     },
     "src/_engine/core/PhysicsManager.ts": {
