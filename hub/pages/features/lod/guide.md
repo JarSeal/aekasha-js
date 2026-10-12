@@ -18,7 +18,7 @@ orthographic camera has no distance). So an object keeps its detail when the cam
 
 Levels go from the finest down, each with the smallest `screenSize` it's used at:
 
-<<< src/app/lodShowcase/lodShowcaseHandMade.mesh.json
+<<< src/app/scenes/lodShowcase/lodShowcaseHandMade.mesh.json
 
 - A level's `geo`, `mat` and `castShadow` default to the level before's (level 0's to the mesh's
   own). Here the far levels are the same sphere at fewer segments, and the last stops casting

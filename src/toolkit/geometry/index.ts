@@ -1,17 +1,21 @@
-export { generateAsteroid } from './generateAsteroid';
-export type { AsteroidOptions, GeneratedAsteroid } from './generateAsteroid';
-export { generateBushGeometry, generateTreeGeometry } from './generateFoliage';
+export { generateAsteroid } from './generate/Asteroid';
+export type { AsteroidOptions, GeneratedAsteroid } from './generate/Asteroid';
+export { generateBushGeometry, generateTreeGeometry } from './generate/Foliage';
 export type {
   BushGeometryOptions,
   GeneratedTreeGeometry,
   TreeGeometryOptions,
-} from './generateFoliage';
-export { generateTerrain } from './generateTerrain';
-export type { GeneratedTerrain, TerrainOptions } from './generateTerrain';
+} from './generate/Foliage';
+export { generateTerrain } from './generate/Terrain';
+export type { GeneratedTerrain, TerrainOptions } from './generate/Terrain';
 export {
   bakeScatterToInstancedMesh,
   scatterOnSurface,
   spawnScatterAsMeshEntities,
-} from './scatterOnSurface';
-export type { ScatterOptions, ScatterPlacement, SpawnScatterMeshOptions } from './scatterOnSurface';
-export { createSeededRandom } from './seededRandom';
+} from './scatter/ScatterOnSurface';
+export type {
+  ScatterOptions,
+  ScatterPlacement,
+  SpawnScatterMeshOptions,
+} from './scatter/ScatterOnSurface';
+export { createSeededRandom } from './SeededRandom';

@@ -21,7 +21,7 @@ hand.
 An asset's settings live in its own JSON, under `optimize`. The toolkit's Æ symbol keeps its
 Draco geometry that way:
 
-<<< src/toolkit/models/aekashaSymbol/aekashaSymbol.importedAsset.json
+<<< src/toolkit/models/brand/aekashaSymbol/aekashaSymbol.importedAsset.json
 
 Shared settings live in `assets.config.json` at the repo root: defaults, profiles (`prop`,
 `hero`, `compact`, `data` and your own) and rules that apply settings by path. A texture's

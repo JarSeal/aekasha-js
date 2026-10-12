@@ -9,7 +9,7 @@ export const sceneFileObjects: {
   }) => Promise<void>;
 } = {
   assetCompare: async ({ sceneData, assets }) => {
-    const module = await import('../app/./assetCompare.ts');
+    const module = await import('../app/scenes/assetCompare/assetCompare.ts');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
@@ -17,7 +17,7 @@ export const sceneFileObjects: {
     ).scene({ sceneData, assets });
   },
   testDebugScene: async ({ sceneData, assets }) => {
-    const module = await import('../app/debugScene.scene.ts');
+    const module = await import('../app/scenes/testDebugScene/testDebugScene.ts');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
@@ -25,7 +25,7 @@ export const sceneFileObjects: {
     ).scene({ sceneData, assets });
   },
   largeWorld: async ({ sceneData, assets }) => {
-    const module = await import('../app/./largeWorld.ts');
+    const module = await import('../app/scenes/largeWorld/largeWorld.ts');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
@@ -33,7 +33,7 @@ export const sceneFileObjects: {
     ).scene({ sceneData, assets });
   },
   lodShowcase: async ({ sceneData, assets }) => {
-    const module = await import('../app/./lodShowcase.ts');
+    const module = await import('../app/scenes/lodShowcase/lodShowcase.ts');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
@@ -41,7 +41,7 @@ export const sceneFileObjects: {
     ).scene({ sceneData, assets });
   },
   oneMoreScene: async ({ sceneData, assets }) => {
-    const module = await import('../app/./oneMoreScene');
+    const module = await import('../app/scenes/oneMoreScene/oneMoreScene');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
@@ -49,7 +49,7 @@ export const sceneFileObjects: {
     ).scene({ sceneData, assets });
   },
   physicsTest: async ({ sceneData, assets }) => {
-    const module = await import('../app/./physicsTest.ts');
+    const module = await import('../app/scenes/physicsTest/physicsTest.ts');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
@@ -57,7 +57,7 @@ export const sceneFileObjects: {
     ).scene({ sceneData, assets });
   },
   physicsTiers: async ({ sceneData, assets }) => {
-    const module = await import('../app/./physicsTiers.ts');
+    const module = await import('../app/scenes/physicsTiers/physicsTiers.ts');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
@@ -65,7 +65,7 @@ export const sceneFileObjects: {
     ).scene({ sceneData, assets });
   },
   scene01: async ({ sceneData, assets }) => {
-    const module = await import('../app/./scene01.ts');
+    const module = await import('../app/scenes/scene01/scene01.ts');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
@@ -73,7 +73,7 @@ export const sceneFileObjects: {
     ).scene({ sceneData, assets });
   },
   scene01V2: async ({ sceneData, assets }) => {
-    const module = await import('../app/./scene01_v2.ts');
+    const module = await import('../app/scenes/scene01V2/scene01V2.ts');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
@@ -81,7 +81,7 @@ export const sceneFileObjects: {
     ).scene({ sceneData, assets });
   },
   skyShowcase: async ({ sceneData, assets }) => {
-    const module = await import('../app/./skyShowcase.ts');
+    const module = await import('../app/scenes/skyShowcase/skyShowcase.ts');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
@@ -89,7 +89,7 @@ export const sceneFileObjects: {
     ).scene({ sceneData, assets });
   },
   space: async ({ sceneData, assets }) => {
-    const module = await import('../app/./space.ts');
+    const module = await import('../app/scenes/space/space.ts');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
@@ -97,7 +97,7 @@ export const sceneFileObjects: {
     ).scene({ sceneData, assets });
   },
   sceneTestECS: async ({ sceneData, assets }) => {
-    const module = await import('../app/./testECS.ts');
+    const module = await import('../app/scenes/sceneTestECS/sceneTestECS.ts');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
@@ -105,7 +105,7 @@ export const sceneFileObjects: {
     ).scene({ sceneData, assets });
   },
   textureArrays: async ({ sceneData, assets }) => {
-    const module = await import('../app/./textureArrays.ts');
+    const module = await import('../app/scenes/textureArrays/textureArrays.ts');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
@@ -113,7 +113,7 @@ export const sceneFileObjects: {
     ).scene({ sceneData, assets });
   },
   textureAtlases: async ({ sceneData, assets }) => {
-    const module = await import('../app/./textureAtlases.ts');
+    const module = await import('../app/scenes/textureAtlases/textureAtlases.ts');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
@@ -121,7 +121,7 @@ export const sceneFileObjects: {
     ).scene({ sceneData, assets });
   },
   thirdPersonGymScene: async ({ sceneData, assets }) => {
-    const module = await import('../app/./scene_thirdPersonGym.ts');
+    const module = await import('../app/scenes/thirdPersonGymScene/thirdPersonGymScene.ts');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
@@ -129,7 +129,7 @@ export const sceneFileObjects: {
     ).scene({ sceneData, assets });
   },
   topDownTestScene: async ({ sceneData, assets }) => {
-    const module = await import('../app/./scene_topDownTest.ts');
+    const module = await import('../app/scenes/topDownTestScene/topDownTestScene.ts');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
@@ -203,10 +203,11 @@ export const sceneFileObjects: {
 };
 
 export const tslMaterialFileObjects = {
-  testTslMat: () => import('../app/materials/testTslMat.tsl.ts'),
-  asteroid: () => import('../toolkit/materials/asteroid.tsl.ts'),
-  triplanarCheckerboard: () => import('../toolkit/materials/triplanarCheckerboard.tsl.ts'),
-  triplanarGrid: () => import('../toolkit/materials/triplanarGrid.tsl.ts'),
+  testTslMat: () => import('../app/scenes/sceneTestECS/testTslMat.tsl.ts'),
+  asteroid: () => import('../toolkit/materials/asteroid/asteroid.tsl.ts'),
+  triplanarCheckerboard: () =>
+    import('../toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts'),
+  triplanarGrid: () => import('../toolkit/materials/triplanarGrid/triplanarGrid.tsl.ts'),
 };
 
 export const postFxFileObjects = {

@@ -287,7 +287,7 @@ Show the real code instead of a copy of it. `<<<` on a line of its own includes 
 | `<<< path/from/repo/root.json#L10-L24` | Lines 10 to 24, numbered as in the file |
 
 - **The path is from the repo root** and must stay inside it, symlinks included. Only text files can be included. The extension picks the language (`.ts`, `.json`, `.scss`, `.wgsl`, `.vert` / `.frag`, `.md`, …: the table in `snippets.ts`).
-- **The title is the path.** After the path, the fence meta works as on a fence and can replace the title: `<<< src/app/space.ts#asteroids {3-5} title="space.ts" wrap`.
+- **The title is the path.** After the path, the fence meta works as on a fence and can replace the title: `<<< src/app/scenes/space/space.ts#asteroids {3-5} title="space.ts" wrap`.
 - **An include is an ordinary code block**, so it works inside `::: code-group` and takes notation comments from the source.
 - **The code is dedented**, and blank lines around it are dropped.
 

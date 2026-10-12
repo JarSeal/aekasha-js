@@ -22,7 +22,7 @@ import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.j
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '../..');
 const SVG_FILE = path.join(REPO_ROOT, 'src/public/favicon.svg');
-const OUT_FILE = path.join(REPO_ROOT, 'src/toolkit/models/aekashaSymbol/aekashaSymbol.glb');
+const OUT_FILE = path.join(REPO_ROOT, 'src/toolkit/models/brand/aekashaSymbol/aekashaSymbol.glb');
 const NAME = 'aekashaSymbol';
 
 /** Points per curve of the glyph's outline (its rounded corners are short cubic curves) */

@@ -144,7 +144,7 @@ the file refreshes the page.
 
 The path is from the repo root and stays inside it, and the file is a text file. The language
 comes from its extension and the title is its path. After the path, the fence meta works as on
-a fence (`<<< src/app/space.ts#asteroids {3-5} title="space.ts" wrap`).
+a fence (`<<< src/app/scenes/space/space.ts#asteroids {3-5} title="space.ts" wrap`).
 
 Mark a region in the source with a comment. Text after the name is a note, and the marker lines
 (those of regions nested in it too) are left out of the page:
@@ -166,9 +166,9 @@ A missing file, region or line fails `yarn hub:build` with the page and line, so
 removing a region that a page includes breaks the page. Say so in the marker's note.
 :::
 
-`<<< src/app/physicsTest.ts#dynamic-box {20-24}` shows:
+`<<< src/app/scenes/physicsTest/physicsTest.ts#dynamic-box {20-24}` shows:
 
-<<< src/app/physicsTest.ts#dynamic-box {20-24}
+<<< src/app/scenes/physicsTest/physicsTest.ts#dynamic-box {20-24}
 
 ## All together
 

@@ -9,7 +9,7 @@ fails at boot, naming both, when `physics()` isn't listed before it.
 [`createDynamicCharacter`](api:createDynamicCharacter) turns a visual (a mesh or a group) into a
 character. The app's top-down test scene makes its player like this:
 
-<<< src/app/scene_topDownTest.ts#dynamic-character
+<<< src/app/scenes/topDownTestScene/topDownTestScene.ts#dynamic-character
 
 - `charData` tunes it: the `_` keys are its configuration (size, speeds, jump, slope limits), and
   the rest is its live state.

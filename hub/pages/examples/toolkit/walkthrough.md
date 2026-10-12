@@ -2,7 +2,7 @@
 
 The Ækasha symbol is a GLB next to its asset JSON in `src/toolkit/models/aekashaSymbol/`:
 
-<<< src/toolkit/models/aekashaSymbol/aekashaSymbol.importedAsset.json
+<<< src/toolkit/models/brand/aekashaSymbol/aekashaSymbol.importedAsset.json
 
 - `fileName` starting with `./` is relative to the JSON. The asset pipeline optimizes the file into
   `src/public/aek-assets/`, and the app loads that output.

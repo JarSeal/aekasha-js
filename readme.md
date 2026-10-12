@@ -254,7 +254,7 @@ Each file is validated against its schema, and the `$schema` line gives you auto
 ```
 
 ```jsonc
-// src/app/meshes/testMesh.mesh.json
+// src/app/scenes/sceneTestECS/testMesh.mesh.json
 {
   "$schema": "../../../.schemas/mesh.schema.json",
   "props": {
@@ -269,7 +269,7 @@ Each file is validated against its schema, and the `$schema` line gives you auto
 
 A mesh can have levels of detail. Each level starts at a screen size (the mesh's bounding-sphere diameter over the viewport height) and can swap the geometry, the material and shadow casting. Below `cullScreenSize` the mesh is hidden. Changes cross-fade over `fadeSeconds` (default 0.25, 0 switches at once). `"lod": "AUTO"` reads the levels from the geometry's LOD chain instead.
 
-To see it all at work, load the `lodShowcase` scene (`src/app/lodShowcase.ts`). Its lanes run away from the start camera with an object in every level band: hand-made levels in a `*.mesh.json`, a generated chain with `AUTO`, an instanced tree pool ending in cross-quads, an instanced pool ending in an octahedral impostor, a baked and an exported impostor side by side, and a static instance cell. In a debug build its "LOD demo" tab has camera stops on both sides of every switch, a dolly down the lanes, the time of day and each lane's levels and triangles.
+To see it all at work, load the `lodShowcase` scene (`src/app/scenes/lodShowcase/lodShowcase.ts`). Its lanes run away from the start camera with an object in every level band: hand-made levels in a `*.mesh.json`, a generated chain with `AUTO`, an instanced tree pool ending in cross-quads, an instanced pool ending in an octahedral impostor, a baked and an exported impostor side by side, and a static instance cell. In a debug build its "LOD demo" tab has camera stops on both sides of every switch, a dolly down the lanes, the time of day and each lane's levels and triangles.
 
 ```jsonc
 // in testMesh.mesh.json's "props"
