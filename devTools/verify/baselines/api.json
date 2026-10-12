@@ -293,6 +293,7 @@
     },
     "src/_engine/core/Features.ts": {
       "checkFeatures": "Function",
+      "checkSceneFeatures": "Function",
       "createFeatureHost": "Function",
       "EngineFeature": "TypeAlias",
       "FeatureContext": "TypeAlias",

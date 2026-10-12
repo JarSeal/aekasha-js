@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-8 implemented
+Status: in progress | Phases 1-9 implemented
 Category: Build, Performance, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
 Blocks: p608_engine-folder-restructure.md, p611_sbp-tooling-profiles-and-marketing.md, p510_headless-simulation-runtime.md
@@ -1140,7 +1140,7 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
   new `@example` included), lint, `tsc` (both projects) and `yarn hub:build` (in `build:test`);
   `verify:baselines` recorded.
 
-### Phase 9: the manifest and the feature schemas
+### Phase 9: the manifest and the feature schemas — done
 
 1. The composed scene and mesh schemas; the three feature schemas move next to their features,
    their entries export them, `aekasha/schemas` re-exports them (D10). `.schemas/` unchanged.
@@ -1194,6 +1194,38 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
   and the unread `SceneOverrides`, `MeshOverrides`, `MeshPropsSchema` gone) and `docs.json`
   recorded; the production debug check: none. No `verify:scenes` run: the generated data is
   byte-identical; section 2 (the boot check) runs it for the phase.
+
+**As built (section 2):**
+
+- **The manifest:** each gathered scene gets `__features` (`string[]`, development and
+  production), from `getSceneFeatureIds(scene, parts = ENGINE_SCHEMA_PARTS)` in
+  `devTools/engineSchemas.ts`: a part's feature when the resolved scene uses one of its `scene`
+  fields, or one of its meshes (`{ props }`, after the save entry's merge) one of its `mesh`
+  fields; "uses" is given and not an empty list. In part order. Always written, `[]` included: a
+  scene without the key is data from before the manifest, which the check skips. `SceneData`
+  documents it. Only data counts: a sky box or LOD made in scene code isn't in it (the template's
+  `exampleLod` is `['skybox']`: its levels are code). Today's 24 scenes: 11 list `skybox`, 4
+  `postfx`, 2 `lod` (`largeWorld`, `lodShowcase`), 1 `spatial` (`largeWorld`), 12 none.
+- **The check:** `checkSceneFeatures(scenes, features)` (`core/Features.ts`, internal), which
+  `InitEngine` calls right after `checkFeatures`, before `setAppData` and anything boots (D10's
+  "against the installed features": the list is what installs, so it fails before an install
+  instead of after). Every scene, loaded or not, every environment; one error naming each scene
+  and missing feature, with the engine feature's factory and entry (`skyBox() from
+  'aekasha/skybox'`), and "List it, or take its fields out of the scene's data."
+- Tests: `Features.test.ts` (3: passes, names each scene / feature / factory, skips a scene
+  without a manifest), `devTools/engineSchemas.test.ts` (6: kernel-only, each scene field in
+  part order, a mesh field, empty lists, given parts, the engine parts' fields).
+- **For Phase 10:** root `CLAUDE.md`'s data pipeline (step 3: `__features`; step 2: the composed
+  scene and mesh schemas, `devTools/engineSchemas.ts`) and Bootstrap flow (the scene check after
+  the feature check), the Hub's data pipeline / scene JSON pages (the manifest and the boot
+  error), the migration guide (a scene whose data uses a feature the app leaves out now fails
+  the boot).
+- Checks: `yarn verify:scenes` 96 passed (24 scenes × 4 configurations, WebGPU, macOS): hashes,
+  snapshots and the system order unchanged, so every scene's manifest passes the template's list.
+  `yarn test` 259 passed, lint, `tsc` (both projects). Baselines recorded: `bundle.json`
+  (`index.js` +0.4 kB gzip, the check; `EngineRapier.js`' ±0.1 kB is the two same-named chunks
+  paired the other way round, as in Phase 7), `api.json` (`checkSceneFeatures`, internal),
+  `docs.json`. The production debug check: none.
 
 ### Phase 10: Hub, CLAUDE.md, readme, migration guide
 

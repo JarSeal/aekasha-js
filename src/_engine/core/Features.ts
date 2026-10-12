@@ -175,6 +175,50 @@ export const checkFeatures = (features: readonly EngineFeature[]) => {
   });
 };
 
+// Where each engine feature's factory is, for the scene check's error
+const ENGINE_FEATURE_FACTORIES: Record<string, string> = {
+  physics: "physics() from 'aekasha/physics'",
+  character: "character() from 'aekasha/character'",
+  skybox: "skyBox() from 'aekasha/skybox'",
+  lod: "lod() from 'aekasha/lod'",
+  spatial: "spatial() from 'aekasha/spatial'",
+  instancing: "instancing() from 'aekasha/instancing'",
+  lines: "lines() from 'aekasha/lines'",
+  postfx: "postFx() from 'aekasha/postfx'",
+  viewports: "viewports() from 'aekasha/viewports'",
+};
+
+/**
+ * Throws when a gathered scene needs a feature `features` doesn't list (p607 D10): the
+ * gatherer's manifest, each scene's `__features`, names the features its data uses (a sky box,
+ * a mesh's `lod`, …). Every scene is checked, loaded or not, and the error names each scene and
+ * feature missing. A scene without a manifest (data gathered before it) isn't checked.
+ * @internal
+ */
+export const checkSceneFeatures = (
+  scenes: Readonly<Record<string, unknown>>,
+  features: readonly EngineFeature[]
+) => {
+  const ids = new Set(features.map((feature) => feature.id));
+  const missing: string[] = [];
+  for (const [sceneId, scene] of Object.entries(scenes)) {
+    const needed = (scene as { __features?: unknown } | null)?.__features;
+    if (!Array.isArray(needed)) continue;
+    for (const id of needed) {
+      if (typeof id !== 'string' || ids.has(id)) continue;
+      const factory = ENGINE_FEATURE_FACTORIES[id];
+      missing.push(
+        `the scene '${sceneId}' needs the feature '${id}'${factory ? ` (${factory})` : ''}`
+      );
+    }
+  }
+  if (!missing.length) return;
+  throw new Error(
+    `InitEngine: a scene's data needs a feature \`features\` doesn't list: ${missing.join('; ')}. ` +
+      "List it, or take its fields out of the scene's data."
+  );
+};
+
 /**
  * Checks `features` (`checkFeatures`), then installs each in list order, awaiting each
  * `install`. A failed install logs the feature's id and rejects with its error, and the features

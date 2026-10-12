@@ -57,6 +57,9 @@ export type SceneData = {
   /** The exported impostors the scene lists, resolved by the gatherer (their atlas slots are in
    * `textures`). */
   impostors?: ImpostorDef[];
+  /** The features this scene's data needs (the gatherer's manifest, p607 D10): `InitEngine`
+   * fails when its `features` doesn't list one. */
+  __features?: string[];
 };
 
 const scenes: { [id: string]: THREE.Group } = {};

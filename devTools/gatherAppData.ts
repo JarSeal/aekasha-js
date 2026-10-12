@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import z from 'zod';
 import {
+  getSceneFeatureIds,
   MeshAssetSchema,
   SceneAssetSchema,
   type MeshAsset,
@@ -466,7 +467,7 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
 
   const srcDir = path.resolve(__dirname, '../src');
   const combinedData: {
-    scenes: Record<string, SceneAsset>;
+    scenes: Record<string, SceneAsset & { __features: string[] }>;
     cameras: Record<string, CameraAsset>;
     lights: Record<string, LightAsset>;
     geometries: Record<string, GeoAsset>;
@@ -1628,7 +1629,12 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
         delete fileContentJSON.__sourcePath;
       }
 
-      combinedData.scenes[sceneId] = fileContentJSON;
+      // The scene manifest (p607 D10): the features its data needs, which InitEngine checks
+      // against its `features` (always written: no list is data from before the manifest)
+      combinedData.scenes[sceneId] = {
+        ...fileContentJSON,
+        __features: getSceneFeatureIds(fileContentJSON),
+      };
     }
 
     if (missingOutputs.size) {

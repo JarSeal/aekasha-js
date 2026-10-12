@@ -4,6 +4,7 @@ import { ECSWorld } from './ECS';
 import { ECSSystemStage } from './ECS/SystemStages';
 import {
   checkFeatures,
+  checkSceneFeatures,
   createFeatureHost,
   type EngineFeature,
   installFeaturesAsync,
@@ -47,6 +48,35 @@ describe('checkFeatures', () => {
     expect(() => checkFeatures([feature('character', ['physics'])])).toThrow(
       "the feature 'character' requires 'physics', which isn't in `features`"
     );
+  });
+});
+
+describe('checkSceneFeatures', () => {
+  const scenes = {
+    gym: { id: 'gym', __features: ['skybox', 'postfx'] },
+    plain: { id: 'plain', __features: [] },
+  };
+
+  test('passes when every scene’s features are listed', () => {
+    expect(() =>
+      checkSceneFeatures(scenes, [feature('skybox'), feature('postfx'), feature('app')])
+    ).not.toThrow();
+  });
+
+  test('names each scene and missing feature, with its factory', () => {
+    const run = () =>
+      checkSceneFeatures({ ...scenes, space: { id: 'space', __features: ['skybox', 'myFog'] } }, [
+        feature('postfx'),
+      ]);
+    expect(run).toThrow(
+      "the scene 'gym' needs the feature 'skybox' (skyBox() from 'aekasha/skybox'); " +
+        "the scene 'space' needs the feature 'skybox' (skyBox() from 'aekasha/skybox'); " +
+        "the scene 'space' needs the feature 'myFog'."
+    );
+  });
+
+  test('skips a scene without a manifest (data from before it)', () => {
+    expect(() => checkSceneFeatures({ old: { id: 'old', skyboxes: ['sky'] } }, [])).not.toThrow();
   });
 });
 

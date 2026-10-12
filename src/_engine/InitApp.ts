@@ -35,6 +35,7 @@ import {
   type EngineFeature,
   installFeaturesAsync,
   checkFeatures,
+  checkSceneFeatures,
   runFeatureDebugHooksAsync,
 } from './core/Features';
 
@@ -132,8 +133,10 @@ const initEngineAsync = async ({ config, data, features, start }: InitEngineOpti
   // it. Then the configuration, which reads the debug flag for its LS overrides, and the data
   initEnvironment();
   loadConfig(config);
-  // A list that can't install fails here, before anything boots
+  // A list that can't install fails here, before anything boots, and so does a scene whose data
+  // needs a feature the list doesn't have (the gatherer's manifest)
   checkFeatures(features);
+  checkSceneFeatures(data.json.scenes, features);
   setAppData(data);
   addWindowListeners();
 
