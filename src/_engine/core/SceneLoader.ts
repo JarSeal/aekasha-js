@@ -17,13 +17,6 @@ import {
 } from './Scene';
 import type { TCMP } from '../utils/CMP';
 import { getHUDRootCMP } from './HUD';
-import { deleteAllPhysicsEntities, settlePendingPhysicsEntities } from './PhysicsManager';
-import {
-  holdPhysicsStepping,
-  releasePhysicsStepping,
-  resetPhysicsRayStats,
-  resetPhysicsWorld,
-} from './PhysicsAPI';
 import {
   addDebugToastWhenReady,
   DEBUGGER_SCENE_LOADER_ID,
@@ -44,7 +37,6 @@ import {
   handleDraggableWindowsOnSceneChangeStart,
 } from './UI/DraggableWindow';
 import { updateOnScreenTools } from '../debug/OnScreenTools';
-import { deleteAllCharacters } from './Character';
 import { existsOrThrow } from '../utils/assert';
 import { deleteAllRayHelpers, resetRayCastStats } from './Raycast';
 import { deleteAllGroupEntities } from './GroupManager';
@@ -74,6 +66,15 @@ import {
   registerSceneSpatialDomains,
   releaseSceneSpatialDomains,
 } from './Spatial/SpatialIndexSystem';
+import {
+  runSceneBeforeAssetsHooksAsync,
+  runSceneCreatedHooksAsync,
+  runSceneEnteredHooksAsync,
+  runSceneExitHooks,
+  runSceneLoadSettledHooks,
+  runSceneLoadStartHooks,
+  runSceneWorldClearedHooks,
+} from './SceneHooks';
 
 export type UpdateLoaderStatusFn = (
   loader: SceneLoader,
@@ -543,13 +544,12 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
   await loadStartFn(loader)
     .then(async () => {
       setIsLoadingScene(true);
-      // No stepping until the whole next scene exists (released before loadEndFn below), so a
-      // scene's physics never depends on how long its assets took to load.
-      holdPhysicsStepping();
+      // The features' load start (physics holds its stepping until `entered`)
+      runSceneLoadStartHooks();
 
-      // Delete prev scene characters, physics objects, in scene cameras, and in scene lights
-      deleteAllCharacters();
-      deleteAllPhysicsEntities();
+      // The features tear down the previous scene (characters, then physics entities), then the
+      // groups, loopers and non-persistent entities go
+      runSceneExitHooks(prevSceneId);
       deleteAllGroupEntities();
       disposeNonPersistentLines();
 
@@ -575,6 +575,7 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
         void ecsWorld.getEntitiesWith(ComponentType.DEBUG_TAG_IS_DEBUG_CAMERA).next().value;
       }
       ecsWorld.clearNonPersistent();
+      runSceneWorldClearedHooks(ecsWorld, prevSceneId, sceneData);
       // After the delete, so a domain going back to its world settings re-inserts only the
       // persistent members, and before anything of the next scene joins a domain
       releaseSceneSpatialDomains(ecsWorld, prevSceneId);
@@ -593,11 +594,9 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
 
       createCameras(sceneData);
 
-      // Every physics entity is gone by now: start the next scene on a fresh world, so a
-      // revisit simulates exactly like the first visit (no leftover Rapier internal state).
-      // After createCameras: in WORKER_THREAD mode this awaits the worker, and frames keep
-      // rendering meanwhile, which needs a camera. Before the assets: imports can spawn bodies.
-      await resetPhysicsWorld();
+      // After the cameras (frames keep rendering while a hook awaits, which needs a camera),
+      // before the assets (imports can create entities): physics starts a fresh world here
+      await runSceneBeforeAssetsHooksAsync();
 
       // Create / load all next scene assets before the scene file
       const nextSceneAssets = await loadNextSceneAssets(sceneData);
@@ -611,6 +610,7 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
           );
           setCurrentScene(sceneId);
           setLoadingSceneId(null);
+          await runSceneCreatedHooksAsync(sceneId);
           await activateSceneDefaultSkyBox(sceneId);
           await createNextSceneObject3Ds(sceneData);
           // The next scene has taken refs on, or re-tagged, what it shares with the previous one:
@@ -638,12 +638,8 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
             updateOnScreenTools();
           }
           resetRayCastStats();
-          resetPhysicsRayStats();
-
-          // Includes creates the scene code didn't await (and the prev scene's deletes, in
-          // WORKER_THREAD mode), so every body starts stepping on the same step.
-          await settlePendingPhysicsEntities();
-          releasePhysicsStepping();
+          // The scene is complete: physics waits for its bodies and releases its stepping
+          await runSceneEnteredHooksAsync();
 
           loader.phase = 'END';
           await loadEndFn(loader).then(() => {
@@ -665,8 +661,8 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
       handleDraggableWindowsOnSceneChangeEnd(true);
       // @CONSIDER: should this throw an error?
     })
-    // A failed load must not leave physics held (a no-op if it was already released).
-    .finally(releasePhysicsStepping);
+    // Failed or not (a failed load must not leave physics held)
+    .finally(runSceneLoadSettledHooks);
 };
 
 /**

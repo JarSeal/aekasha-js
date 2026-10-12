@@ -344,7 +344,7 @@ export const initPhysics = async (doNotCreateWorld?: boolean) => {
  * main loop before this is reached).
  *
  * Calls `onBeforeStep` once per fixed-timestep slice, right before that slice's step (held-key
- * polling, event delivery and APP_PHYSICS_STEP systems, see MainLoop.ts's runPhysicsSubStep).
+ * polling, event delivery and APP_PHYSICS_STEP systems, see MainLoop.ts's runFixedSubStep).
  * In WORKER_THREAD mode the steps themselves run off-thread,
  * so the callbacks all run here up front, and whatever one-way commands each one issues are
  * carried in the STEP message and replayed on the worker right before their own sub-step.

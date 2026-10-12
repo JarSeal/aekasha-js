@@ -106,6 +106,11 @@ const ENGINE_RULES: MoveRule[] = [
     note: "the app's data from InitEngine (p606, p602 D9): the scenes read it",
   },
   { from: `${E}core/SceneLoader.ts`, to: `${K}scene/SceneLoader.ts` },
+  {
+    from: `${E}core/SceneHooks.ts`,
+    to: `${K}scene/SceneHooks.ts`,
+    note: "the scene seams (p607 D4): the features' part of a scene load",
+  },
   { from: `${E}core/GroupManager.ts`, to: `${K}scene/Group.ts` },
   {
     from: `${E}core/PropertyLoader.ts`,
@@ -180,6 +185,7 @@ const ENGINE_RULES: MoveRule[] = [
 
   // Features: physics
   { from: `${E}core/PhysicsAPI.ts`, to: `${F}physics/PhysicsAPI.ts` },
+  { from: `${E}core/PhysicsFeature.ts`, to: `${F}physics/PhysicsFeature.ts` },
   { from: `${E}core/PhysicsManager.ts`, to: `${F}physics/PhysicsEntity.ts` },
   { from: `${E}core/PhysicsTiers.ts`, to: `${F}physics/PhysicsTiers.ts` },
   { from: `${E}core/PhysicsTierPolicy.ts`, to: `${F}physics/PhysicsTierPolicy.ts` },

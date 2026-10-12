@@ -23,6 +23,8 @@ import {
   initPhysics as initNewPhysics,
 } from './core/PhysicsAPI';
 import { registerPhysicsDeterminismProbe, registerPhysicsManager } from './core/PhysicsManager';
+import { physicsFixedStepDriver, physicsSceneHooks } from './core/PhysicsFeature';
+import { characterSceneHooks } from './core/Character/CharacterFeature';
 import { createRootScene, getRootScene, registerScenesFromGeneratedData } from './core/Scene';
 import './styles/index.scss';
 import { lerror, llog } from './utils/Logger';
@@ -163,6 +165,12 @@ const initEngineAsync = async ({ config, data, features = [], start }: InitEngin
 
   // Initializes the debug camera (if in debug mode)
   await initDebugCamera(ecsWorld);
+
+  // Physics' and characters' scene hooks and the fixed-step driver, before the listed features'
+  // (p607 Phase 5 section 2 makes them the physics() and character() features)
+  featureHost.ctx.setFixedStepDriver(physicsFixedStepDriver);
+  featureHost.ctx.addSceneHooks(physicsSceneHooks);
+  featureHost.ctx.addSceneHooks(characterSceneHooks);
 
   // The features, in list order (p607 D1: where physics boots, which is still below)
   await installFeaturesAsync(features, featureHost);

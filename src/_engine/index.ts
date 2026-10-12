@@ -92,6 +92,7 @@ export {
   transformAppSpeedValue,
   transformMainSpeedValue,
 } from './core/MainLoop';
+export type { FixedStepDriver, LoopState } from './core/MainLoop';
 export {
   createMaterial,
   decMaterialRef,
@@ -130,6 +131,7 @@ export {
 export type { Looper, SceneData } from './core/Scene';
 export { createSceneLoader, getLoaderStatusUpdater, loadScene } from './core/SceneLoader';
 export type { LoadSceneProps, SceneLoader, ScenePrimitiveAssets } from './core/SceneLoader';
+export type { SceneHooks } from './core/SceneHooks';
 export { snapshotToBlobAsync, takeSnapshotAsync } from './core/Snapshot';
 export type { Snapshot, SnapshotBlobOpts, SnapshotOpts } from './core/Snapshot';
 export {

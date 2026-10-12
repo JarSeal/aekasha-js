@@ -1,6 +1,8 @@
 import type { AppConfig } from './Config';
 import { type ComponentHook, ECSWorld, type TransformResetListener, type WorldPlugin } from './ECS';
 import type { ComponentType } from './ECS/ECSCoreComponents';
+import { type FixedStepDriver, setFixedStepDriver } from './MainLoop';
+import { addSceneHooks, type SceneHooks } from './SceneHooks';
 import { lerror } from '../utils/Logger';
 
 // The install contract (p607 D1): `InitEngine` installs the kernel, then each of `features` in
@@ -12,8 +14,8 @@ import { lerror } from '../utils/Logger';
 export type FeatureDebugHook = () => void | Promise<void>;
 
 /**
- * What a feature's `install` gets: the kernel's seams. The scene, loop, render and import seams
- * join it with the features that use them (p607 Phases 5-7).
+ * What a feature's `install` gets: the kernel's seams. The render and import seams join it with
+ * the features that use them (p607 Phase 7).
  */
 export type FeatureContext = {
   /** The merged app configuration (the engine defaults under `InitEngine`'s `config`). */
@@ -39,6 +41,12 @@ export type FeatureContext = {
   /** {@link ECSWorld.registerTransformResetListener}: told when `setTransform` or `teleport`
    * moves an entity, so pose history can be dropped. */
   registerTransformResetListener: (listener: TransformResetListener) => void;
+  /** Adds the feature's part of every scene load, by phase ({@link SceneHooks}). Returns the
+   * remover. */
+  addSceneHooks: (hooks: SceneHooks) => () => void;
+  /** Makes the feature the main loop's fixed-step driver ({@link FixedStepDriver}): physics.
+   * One per page; a second throws. */
+  setFixedStepDriver: (driver: FixedStepDriver) => void;
   /**
    * Runs `fn` in `InitEngine`'s debug block, before the app's `start`, in install order (the
    * debug env only: `?isDebug=true` in a development or test build). Load the debug code there,
@@ -103,6 +111,8 @@ export const createFeatureHost = (config: AppConfig): FeatureHost => {
     registerCorePlugin: (plugin) => ECSWorld.registerCorePlugin(plugin),
     registerComponentHooks: (type, hooks) => ECSWorld.registerComponentHooks(type, hooks),
     registerTransformResetListener: (listener) => ECSWorld.registerTransformResetListener(listener),
+    addSceneHooks,
+    setFixedStepDriver,
     // A production build keeps none (and runs none: InitEngine's debug blocks fold away)
     onDebug: (fn) => {
       if (__AEK_DEBUG__) debugHooks.push(fn);
