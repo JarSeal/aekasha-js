@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-4 implemented
+Status: in progress | Phases 1-5 implemented
 Category: Refactoring, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p609_toolkit-and-app-restructure.md, p610_character-and-input-action-architecture.md, p611_sbp-tooling-profiles-and-marketing.md, p612_review-ecs-loop-config-init.md, p613_review-rendering-scene-assets.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p510_headless-simulation-runtime.md
@@ -727,7 +727,7 @@ As built:
 - **Verification:** `yarn test` 305 tests in 30 files, `yarn lint` clean, `tsc` and `tsc -p hub`,
   `moveMap.ts --check`.
 
-### Phase 5: the move
+### Phase 5: the move — done
 
 1. **A fresh base:** if `main` has moved since the branch's base, rebase group 1 onto it, run
    `moveMap.ts` (regenerate the map) and the dry run again, and record the scene baselines again
@@ -820,6 +820,11 @@ As built:
     name, `ThreeVector3` (`aekasha`), unreferenced → internal, since `MeshUserData.ts` imports it
     from `ThreeMath.ts` where `helpers.ts` used it in place.
   - "Production build: debug code none".
+  - **By hand** (the user, 2026-10-12): `yarn dev` with `?isDebug=true` (the drawer, debug tabs of
+    several features, the profiler window, the material editor view) and `?isProdTest=true` work.
+- **For Phase 6:** `--leftovers` reads the map at the move's base:
+  `applyMoveMap.ts --plan p608 --leftovers 5491035` (the 10 leftovers of Phase 3's list, plus
+  whatever prose the grep finds).
 
 ### Phase 6: the Hub, CLAUDE.md and the readme
 
