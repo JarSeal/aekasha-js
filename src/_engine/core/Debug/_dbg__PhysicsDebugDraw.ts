@@ -11,6 +11,7 @@ import { ComponentType } from '../ECS/ECSCoreComponents';
 import {
   createLines,
   flattenSegmentGeometry,
+  isLinesInstalledFor,
   preloadFatLineBackend,
   type LineObject,
 } from '../LineManager';
@@ -1009,6 +1010,8 @@ let areWireframesInstalled = false;
  */
 export const _installPhysicsWireframes = () => {
   if (areWireframesInstalled) return;
+  // Drawn as lines: off without the feature (no hooks, no systems)
+  if (!isLinesInstalledFor('physics collider wireframes')) return;
   areWireframesInstalled = true;
 
   ECSWorld.registerComponentHooks(ComponentType.DEBUG_PHYSICS_WIREFRAME, {

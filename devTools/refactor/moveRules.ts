@@ -159,6 +159,12 @@ const ENGINE_RULES: MoveRule[] = [
   // Kernel: render
   { from: `${E}core/Renderer.ts`, to: `${K}render/Renderer.ts` },
   { from: `${E}core/Snapshot.ts`, to: `${K}render/Snapshot.ts` },
+  {
+    from: `${E}core/RenderHooks.ts`,
+    to: `${K}render/RenderHooks.ts`,
+    note: "the render seams (p607 D5): PostFX's pipeline and the viewports' after-render hook",
+  },
+  { from: `${E}core/RenderHooks.test.ts`, to: `${K}render/RenderHooks.test.ts` },
   { from: `${E}core/ViewManager.ts`, to: `${K}render/Views.ts` },
   {
     from: `${E}core/Raycast.ts`,
@@ -251,6 +257,7 @@ const ENGINE_RULES: MoveRule[] = [
     note: WRAPPER_NOTE,
   },
   { from: `${E}core/Viewports.ts`, to: `${F}viewports/Viewports.ts` },
+  { from: `${E}core/ViewportsFeature.ts`, to: `${F}viewports/ViewportsFeature.ts` },
   { from: `${E}core/Viewports.module.scss`, to: `${F}viewports/Viewports.module.scss` },
 
   // UI kit (p602 D5)

@@ -28,6 +28,7 @@ import { CLICK_MAX_MOVE_PX } from '../Input/MouseInput';
 import {
   createViewport,
   getViewportPointerNDC,
+  isViewportsInstalledFor,
   setViewportEnabled,
   setViewportInteractive,
 } from '../Viewports';
@@ -569,6 +570,8 @@ export const _initAxesGizmo = (opts: AxesGizmoOpts) => {
   showGizmo = opts.show;
   showInMainCamera = opts.showInMainCamera;
   if (isInitialized) return;
+  // It's drawn in a viewport: off without the feature
+  if (!isViewportsInstalledFor('axes gizmo')) return;
   isInitialized = true;
 
   gizmoCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);

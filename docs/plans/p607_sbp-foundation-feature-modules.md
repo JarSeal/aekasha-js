@@ -832,6 +832,69 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
    already is: Phase 6 removed its last entries; keep it so).
 4. The layout report's "Kernel → feature" has no runtime or dynamic rows.
 
+**As built (section 1):**
+
+- **The render seams:** `core/RenderHooks.ts` (kernel, → `kernel/render/`): the public types
+  `RenderPipelineProvider` and `AfterRenderHook` (on `aekasha`, in `FeatureContext`'s signature),
+  internal `setRenderPipeline` (a second throws, like the fixed-step driver), `getRenderPipeline`,
+  `addAfterRender` (returns the remover) and `runAfterRenderHooks`; `RenderHooks.test.ts`. Its own
+  module rather than `MainLoop.ts` (721 lines): `Snapshot.ts` and the profiler read it too. `MainLoop.renderScene`
+  renders through `getRenderPipeline()` and runs the after-render hooks in both branches (an editor
+  view too, as before); `Snapshot.ts` and `_dbg__ProfilerSources.ts` read `getRenderPipeline()`.
+  `FeatureContext` gains `setRenderPipeline` and `addAfterRender`.
+- **`lines()`** (`core/Lines/LinesFeature.ts`): `installLines` (was `registerLineManager`: the
+  time system, now `installLineTimeSystem(ctx)` through `ctx.registerCorePlugin`, and the `LINE`
+  hooks) and `linesSceneHooks.exit` (`disposeNonPersistentLines`). Without it `createLines` throws,
+  naming the feature (D3). **Order change (D4):** the dispose moved from after the groups' delete to
+  the `exit` phase (before the sky box's clear, by the reverse order). `lineTimeSystem@0` keeps its
+  place in `MAIN` (nothing installed between registers a `MAIN@0` system).
+- **`postFx()`** (`core/PostFX/PostFXFeature.ts`, id `'postfx'`): `installPostFx` (was
+  `initPostFX`: reads `AppConfig.postFx.enabled` from the context), `setRenderPipeline(
+  getActivePostFxPipeline)`, and **the scene hooks instead of `registerOnAllSceneExits` /
+  `registerOnAllSceneEnterings`** (D4: features use the hooks): `exit` disposes the chain,
+  `created` builds the next one. `created`, not `entered`: the debug tab's `postFxDebugSync`
+  (an all-scenes enter hook) must run after the build, and `entered` comes after the enter hooks.
+  So the chain is set up after the sky box's `created` (awaited) and before the scene's JSON objects
+  and enter hooks, instead of after them; nothing awaits in between, so no frame renders
+  differently, and a scene's own enter hook now sees its chain. `onDebugAfterStart`:
+  `registerPostFxProfiler`, then `createPostFXDebugGUI` (was `InitEngine`'s after-start block;
+  now after physics', character's and the sky box's after-start hooks; the tab order comes from
+  `DEFAULT_DEBUG_DRAWER_TAB_ORDER`).
+- **`viewports()`** (`core/ViewportsFeature.ts`, a move rule → `features/viewports/`):
+  `installViewports` (`addAfterRender(renderViewports)`; `renderViewports` isn't exported any
+  more) and `viewportsSceneHooks.exit` (`deleteSceneViewports(prevSceneId)`, was an all-scenes exit
+  hook added on the first `createViewport`). Without it `createViewport` throws, naming the feature.
+  Like PostFX's dispose, it now runs before the exited scene's own exit hooks, not after them
+  (`deleteViewport` of a gone id is a no-op).
+- **Not in the plan: the engine's debug tools that draw with a feature.** The ray helpers, the
+  collider wireframes, the LOD and spatial overlays and the character gizmos draw lines; the axes
+  gizmo and the environment ball are viewports. In a debug env without that feature they're off,
+  with one log line per tool (internal `isLinesInstalledFor(tool)`, `isViewportsInstalledFor(tool)`,
+  checked where each creates its first line or viewport; the wireframes skip their whole install),
+  instead of throwing at boot or every frame.
+- `InitApp.ts` imports none of the three; the template and `InitEngine`'s `@example` list all nine
+  features and the app's. `features`' JSDoc: a feature not listed isn't installed.
+- The layout report: no kernel → lines, PostFX or viewports runtime rows (7 runtime rows left:
+  section 2's import and assets worker rows). Regenerating it also caught up Phase 6 section 2's
+  moves (`LodTargets`, `SpatialMembership`, `getConservativeGeometryRadius`), which that commit's
+  generated files had missed.
+- Root `CLAUDE.md`'s Viewports paragraph names the after-render hook (the rest is Phase 10's).
+- **Found by the production debug check: a closure handed to `ctx.onDebug*` stays in a production
+  build** (Phase 5's "it folds" holds for the `import()`s, which their callees' own flags fold, not
+  for the closures). `postFx()`'s after-start closure kept `debug/PostFXProfiler.ts` (an empty
+  `registerPostFxProfiler`) in `index.js`; the call site is now `if (IS_DEBUG_ENV)
+  ctx.onDebugAfterStart(…)` (installs run after `initEnvironment`). The earlier features' closures
+  call non-wrapper functions, so the check can't see them: they're likely dead code in main too
+  (not measured); Phase 8 can gate them the same way when it measures.
+- Checks: `yarn verify:scenes` 96 passed (24 scenes × 4 configurations, WebGPU, macOS): hashes,
+  snapshots and the system order unchanged. `yarn test` 243 passed, lint, `tsc`, the docs ratchet,
+  `yarn hub:build`. Baselines recorded: `api.json` (the three factories on their entries, the two
+  public types on `aekasha`, the installers and seams; `registerLineManager`, `initPostFX`,
+  `renderViewports` gone), `bundle.json` (`index.js` 418.4 → 420.0 kB gzip; main `_engine/core`
+  67.2 → 69.6 kB, 31 → 33 modules; `EngineRapier.js`' "+0.1 kB" is the two same-named chunks
+  paired the other way round, the bytes are the baseline's), `docs.json`. The production debug
+  check: none.
+
 ### Phase 8: the SBP packaging
 
 1. `sideEffects` (D13), measured against the entries' `moduleSideEffects`.

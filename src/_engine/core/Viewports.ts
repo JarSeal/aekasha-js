@@ -27,16 +27,16 @@
  * OrbitControls or MouseInput); others let everything through to the canvas.
  *
  * The same path works with PostFX on or off, and on the WebGPU and WebGL2 backends. With no
- * enabled viewport, renderViewports() is a single count check, and nothing is added to the DOM
- * before the first createViewport().
+ * enabled viewport, renderViewports() (the `viewports()` feature's after-render hook) is a single
+ * count check, and nothing is added to the DOM before the first createViewport().
  */
 import * as THREE from 'three/webgpu';
 import { texture, uniform, uv } from 'three/tsl';
 import { registerGPUMemorySource } from '../debug/GPUMemory';
 import type { TCMP } from '../utils/CMP';
-import { lwarn } from '../utils/Logger';
+import { llog, lwarn } from '../utils/Logger';
+import type { FeatureContext } from './Features';
 import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from './HUD';
-import { getCurrentSceneId, registerOnAllSceneExits } from './Scene';
 import styles from './Viewports.module.scss';
 
 export type ViewportRect = { x: number; y: number; width: number; height: number };
@@ -140,13 +140,14 @@ type ViewportState = {
 };
 
 const LAYER_ID = 'aekViewportsLayer';
-const SCENE_EXIT_HOOK_ID = 'viewports';
 /** A transition that never reports its end (eg. its element was removed mid-way) stops being
  * tracked after this long without transition events. */
 const TRANSITION_TRACKING_TIMEOUT_MS = 3000;
 
 const viewports: ViewportState[] = [];
 let enabledCount = 0;
+let isInstalled = false;
+const toolsLoggedOff = new Set<string>();
 
 let layerCmp: TCMP | null = null;
 const stackCmps: Partial<Record<ViewportAnchor, TCMP>> = {};
@@ -201,7 +202,6 @@ const ensureLayer = () => {
     attributes: true,
     attributeFilter: ['class'],
   });
-  registerOnAllSceneExits(SCENE_EXIT_HOOK_ID, deleteSceneViewports);
   return layerCmp;
 };
 
@@ -254,6 +254,11 @@ const createSlotCmp = (props: ViewportProps) => {
  * @returns (object) {@link Viewport}
  */
 export const createViewport = (props: ViewportProps): Viewport => {
+  if (!isInstalled) {
+    throw new Error(
+      "createViewport: the viewports feature isn't installed. Add `viewports()` (from 'aekasha/viewports') to InitEngine's `features`."
+    );
+  }
   const existing = viewports.find((vp) => vp.id === props.id);
   if (existing) {
     lwarn(`Viewport with id "${props.id}" already exists, in createViewport. Replacing it.`);
@@ -336,8 +341,12 @@ export const deleteViewport = (id: string) => {
 };
 
 /** Deletes the viewports of the scene being exited (registered on all scene exits). */
-const deleteSceneViewports = () => {
-  const sceneId = getCurrentSceneId();
+/**
+ * Deletes the viewports created with the exited scene's `sceneId` (the `viewports()` feature's
+ * `exit` scene hook).
+ * @internal
+ */
+export const deleteSceneViewports = (sceneId: string | undefined) => {
   if (!sceneId) return;
   for (let i = viewports.length - 1; i >= 0; i--) {
     if (viewports[i].props.sceneId === sceneId) deleteViewport(viewports[i].id);
@@ -525,13 +534,9 @@ const updateQuadMaterial = (
   vp.material.needsUpdate = true;
 };
 
-/**
- * Renders every enabled viewport over the canvas. Called by MainLoop's renderScene() once per
- * frame, right after the main render (and PostFX). Not for app code.
- * @param renderer (THREE.Renderer)
- * @param delta (number) main loop delta time
- */
-export const renderViewports = (renderer: THREE.Renderer, delta: number) => {
+/** Renders every enabled viewport over the canvas: the after-render hook `viewports()` adds, so
+ * MainLoop's renderScene() calls it once per frame, right after the main render (and PostFX). */
+const renderViewports = (renderer: THREE.Renderer, delta: number) => {
   if (!enabledCount) return;
 
   // A canvas resize or a pixel ratio change re-layouts every viewport
@@ -611,4 +616,29 @@ export const renderViewports = (renderer: THREE.Renderer, delta: number) => {
   renderer.setClearColor(_prevClearColor, prevClearAlpha);
   renderer.autoClear = prevAutoClear;
   renderer.setRenderTarget(prevRenderTarget, prevCubeFace, prevMipmapLevel);
+};
+
+/**
+ * Installs the viewports (the `viewports()` feature's install, ViewportsFeature.ts). Without it,
+ * {@link createViewport} throws.
+ * @internal
+ */
+export const installViewports = (ctx: FeatureContext) => {
+  ctx.addAfterRender(renderViewports);
+  isInstalled = true;
+};
+
+/**
+ * Whether the `viewports()` feature is installed, for the debug axes gizmo and environment ball,
+ * which check it before creating their viewports. When it isn't, logs once per `tool` that the
+ * tool is off.
+ * @internal
+ */
+export const isViewportsInstalledFor = (tool: string) => {
+  if (isInstalled) return true;
+  if (!toolsLoggedOff.has(tool)) {
+    toolsLoggedOff.add(tool);
+    llog(`The ${tool} is off: it needs the viewports() feature (aekasha/viewports).`);
+  }
+  return false;
 };

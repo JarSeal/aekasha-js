@@ -23,7 +23,7 @@ import { ECSSystemStage } from '../ECS/SystemStages';
 import { getRootScene } from '../Scene';
 import { getActiveEnvironmentTexture, getActiveSkyBox, onSkyBoxChange } from '../SkyBox/SkyBox';
 import { isBaseFlipY, turnUpsideDown } from '../SkyBox/layers/base';
-import { createViewport, setViewportEnabled } from '../Viewports';
+import { createViewport, isViewportsInstalledFor, setViewportEnabled } from '../Viewports';
 import {
   addViewChangeListener,
   addViewFrameListener,
@@ -151,6 +151,8 @@ export const _initEnvBall = (opts: EnvBallOpts) => {
   showInMainCamera = opts.showInMainCamera;
   uRoughness.value = opts.roughness;
   if (isInitialized) return;
+  // It's drawn in a viewport: off without the feature
+  if (!isViewportsInstalledFor('environment ball')) return;
   isInitialized = true;
 
   ballCamera = new THREE.PerspectiveCamera(CAMERA_FOV, 1, 0.1, CAMERA_DISTANCE * 2);

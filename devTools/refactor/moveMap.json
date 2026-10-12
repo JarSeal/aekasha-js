@@ -924,6 +924,11 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/Lines/LinesFeature.ts": {
+      "to": "src/_engine/features/lines/LinesFeature.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/core/Lines/LineSystem.ts": {
       "to": "src/_engine/features/lines/LineSystem.ts",
       "action": "move",
@@ -1150,6 +1155,11 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/PostFX/PostFXFeature.ts": {
+      "to": "src/_engine/features/postfx/PostFXFeature.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/core/PostFX/PostFXTypes.ts": {
       "to": "src/_engine/features/postfx/PostFXTypes.ts",
       "action": "move",
@@ -1176,6 +1186,17 @@
       "to": "src/_engine/kernel/render/Renderer.ts",
       "action": "move",
       "plan": "p608"
+    },
+    "src/_engine/core/RenderHooks.test.ts": {
+      "to": "src/_engine/kernel/render/RenderHooks.test.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/RenderHooks.ts": {
+      "to": "src/_engine/kernel/render/RenderHooks.ts",
+      "action": "move",
+      "plan": "p608",
+      "note": "the render seams (p607 D5): PostFX's pipeline and the viewports' after-render hook"
     },
     "src/_engine/core/Scene.ts": {
       "to": "src/_engine/kernel/scene/Scene.ts",
@@ -1686,6 +1707,11 @@
     },
     "src/_engine/core/Viewports.ts": {
       "to": "src/_engine/features/viewports/Viewports.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/ViewportsFeature.ts": {
+      "to": "src/_engine/features/viewports/ViewportsFeature.ts",
       "action": "move",
       "plan": "p608"
     },

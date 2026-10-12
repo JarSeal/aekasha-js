@@ -20,8 +20,7 @@ import { getActiveCamera } from './CameraManager';
 import { existsOrThrow } from '../utils/assert';
 import type { DebugModuleRef } from '../utils/helpers';
 import { loadDebugModuleAsync, useDebug } from '../utils/helpers';
-import { getActivePostFxPipeline } from './PostFX';
-import { renderViewports } from './Viewports';
+import { getRenderPipeline, runAfterRenderHooks } from './RenderHooks';
 import { updateDebuggerTab } from '../debug/DebuggerGUI';
 import { getActiveView, runActiveViewAfterRender, runActiveViewFrame } from './ViewManager';
 
@@ -267,14 +266,14 @@ const renderScene = () => {
   const renderer = getRenderer() as Renderer;
 
   if (loopState.isSceneSuspended) {
-    // An editor view: its own scene and camera, without the scene's PostFX pipeline (built for
-    // the root scene and its camera). Between two editor views (no active one), or without a
+    // An editor view: its own scene and camera, without the scene's render pipeline (PostFX's,
+    // built for the root scene and its camera). Between two editor views (no active one), or without a
     // view camera, nothing is rendered and the canvas keeps its last frame.
     const view = getActiveView();
     const viewCamera = view?.getCamera();
     if (!view || !viewCamera) return;
     renderer.render(view.scene, viewCamera);
-    renderViewports(renderer, delta);
+    runAfterRenderHooks(renderer, delta);
     return;
   }
 
@@ -286,15 +285,17 @@ const renderScene = () => {
     `Error in renderScene, missing renderer, rootScene, and/or camera. Status:\nrenderer: ${Boolean(renderer)}\nrootScene: ${Boolean(rootScene)}\ncamera: ${Boolean(camera)}`
   );
 
-  const postFxPipeline = getActivePostFxPipeline();
-  if (postFxPipeline) {
-    postFxPipeline.render();
+  // The render pipeline seam (PostFX's, when a scene's chain is on), else a direct render
+  const pipeline = getRenderPipeline();
+  if (pipeline) {
+    pipeline.render();
   } else {
     renderer.render(rootScene, camera);
   }
 
-  // Viewports (picture-in-picture, the debug axes gizmo) go over the finished frame
-  renderViewports(renderer, delta);
+  // The after-render seam (viewports: picture-in-picture, the debug axes gizmo) draws over the
+  // finished frame
+  runAfterRenderHooks(renderer, delta);
 };
 
 // LOOP (for debug)

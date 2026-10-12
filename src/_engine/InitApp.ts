@@ -25,8 +25,6 @@ import { createToaster } from './core/UI/Toaster';
 import { getStatsCmp, registerStatsModule } from './debug/Stats';
 import { createAssetsDebugGUI } from './debug/Assets';
 import { getSvgIcon } from './core/UI/icons/SvgIcon';
-import { registerLineManager } from './core/LineManager';
-import { createPostFXDebugGUI, initPostFX } from './core/PostFX';
 import { restoreSavedView } from './core/ViewManager';
 
 // The kernel's systems and hooks, installed by InitEngine (here, where their modules were
@@ -49,7 +47,6 @@ import { registerRaycastDebugGUI } from './core/Raycast';
 import { registerOnScreenTools } from './debug/OnScreenTools';
 import { DEBUG_TOASTER_ID, flushQueuedDebugToasts, registerDebuggerGUI } from './debug/DebuggerGUI';
 import { initUndoRedo, registerUndoRedoModule } from './debug/UndoRedo';
-import { registerPostFxProfiler } from './debug/PostFXProfiler';
 import { registerAxesGizmoModule } from './debug/AxesGizmo';
 import { registerEnvBallModule } from './debug/EnvBall';
 import { registerMaterialEditor } from './debug/MaterialEditor';
@@ -67,8 +64,9 @@ export type InitEngineOptions = {
   data: AppData;
   /** The features to install, in this order, after the kernel (p607 D1): each once, awaiting
    * each `install`. The template lists the app's own last (`appECSPlugins`). Each engine feature
-   * comes from its entry (`physics()` from `aekasha/physics`, …); until p607 has converted them
-   * all, `InitEngine` installs the rest itself. Default: none. */
+   * comes from its entry (`physics()` from `aekasha/physics`, …); one not listed isn't installed
+   * (`createLines` throws without `lines()`, a scene's `postFx` is ignored without `postFx()`).
+   * Default: none. */
   features?: EngineFeature[];
   /** The app's start: creates the renderer and the scene loader and loads the first scene. Runs
    * after the engine's own init (and the debug tools' registration), before the main loop starts. */
@@ -85,17 +83,31 @@ export type InitEngineOptions = {
  * import config from './CONFIG';
  * import { character } from 'aekasha/character';
  * import { instancing } from 'aekasha/instancing';
+ * import { lines } from 'aekasha/lines';
  * import { lod } from 'aekasha/lod';
  * import { physics } from 'aekasha/physics';
+ * import { postFx } from 'aekasha/postfx';
  * import { skyBox } from 'aekasha/skybox';
  * import { spatial } from 'aekasha/spatial';
+ * import { viewports } from 'aekasha/viewports';
  * import { appData } from './generated';
  * import { appECSPlugins } from './AppECSPlugins';
  *
  * InitEngine({
  *   config,
  *   data: appData,
- *   features: [physics(), character(), skyBox(), lod(), spatial(), instancing(), appECSPlugins],
+ *   features: [
+ *     physics(),
+ *     character(),
+ *     skyBox(),
+ *     lod(),
+ *     spatial(),
+ *     instancing(),
+ *     lines(),
+ *     postFx(),
+ *     viewports(),
+ *     appECSPlugins,
+ *   ],
  *   start: async () => {
  *     await createRenderer({ antialias: true });
  *     await loadScene({ sceneId: 'myScene' });
@@ -149,7 +161,6 @@ const initEngineAsync = async ({ config, data, features = [], start }: InitEngin
   // Register Managers
   await registerCameraManager();
   await registerLightManager(ecsWorld);
-  registerLineManager();
 
   // Initializes the debug camera (if in debug mode)
   await initDebugCamera(ecsWorld);
@@ -192,9 +203,6 @@ const initEngineAsync = async ({ config, data, features = [], start }: InitEngin
     if (IS_PROD_TEST_MODE) registerDefaultProdTestKeyBindings();
   }
 
-  // Before start, so it is ready for the first scene load (it needs no renderer yet)
-  initPostFX();
-
   // The scene runner's window.__AEK_TEST__ (?aekTest=true; debug env and prod test mode).
   // Before the first scene load, so it sees that load and its probe report. The flags here too
   // (registerTestBridge checks them): a production build then drops the call
@@ -210,10 +218,6 @@ const initEngineAsync = async ({ config, data, features = [], start }: InitEngin
   if (IS_DEBUG_ENV) {
     await createRendererDebugGUI();
     await createAssetsDebugGUI();
-    // After start: measuring needs the renderer
-    await registerPostFxProfiler();
-    // After the profiler: the tab re-applies a persisted measuring override
-    await createPostFXDebugGUI();
     // The features' own, in install order
     await runFeatureDebugHooksAsync(featureHost.debugAfterStartHooks);
 

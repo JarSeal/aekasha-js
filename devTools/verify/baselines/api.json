@@ -568,7 +568,9 @@
       "getAllLines": "Function",
       "getLine": "Function",
       "getLineForEntity": "Function",
+      "installLines": "Function",
       "isFatLineBackendAvailable": "Function",
+      "isLinesInstalledFor": "Function",
       "LINE_PULSE_MAX_COLORS": "Reference",
       "LineAttachment": "Reference",
       "LineBackendChoice": "Reference",
@@ -586,7 +588,6 @@
       "polylineSegmentCount": "Reference",
       "polylineToSegments": "Reference",
       "preloadFatLineBackend": "Function",
-      "registerLineManager": "Function",
       "segmentCountOf": "Reference",
       "writeBox3Edges": "Reference",
       "writeBoxEdges": "Reference",
@@ -651,8 +652,12 @@
       "registerLine": "Function",
       "unregisterLine": "Function"
     },
+    "src/_engine/core/Lines/LinesFeature.ts": {
+      "lines": "Function",
+      "linesSceneHooks": "Variable"
+    },
     "src/_engine/core/Lines/LineSystem.ts": {
-      "registerLineTimeSystem": "Function"
+      "installLineTimeSystem": "Function"
     },
     "src/_engine/core/Lines/LineTypes.ts": {
       "LineAttachment": "TypeAlias",
@@ -1320,7 +1325,7 @@
       "getActivePostFxPipeline": "Function",
       "getPostFxBuiltChain": "Function",
       "getPostFxPasses": "Function",
-      "initPostFX": "Function",
+      "installPostFx": "Function",
       "invalidatePostFxPipeline": "Function",
       "isPostFxEnabled": "Function",
       "PostFxLiveParams": "TypeAlias",
@@ -1330,6 +1335,10 @@
       "setPostFxPassParam": "Function",
       "togglePostFx": "Function",
       "togglePostFxPass": "Function"
+    },
+    "src/_engine/core/PostFX/PostFXFeature.ts": {
+      "postFx": "Function",
+      "postFxSceneHooks": "Variable"
     },
     "src/_engine/core/PostFX/PostFXTypes.ts": {
       "PostFxBuiltChain": "TypeAlias",
@@ -1380,6 +1389,14 @@
       "isWebGPURenderer": "Function",
       "onRendererCreated": "Function",
       "RendererOptions": "TypeAlias"
+    },
+    "src/_engine/core/RenderHooks.ts": {
+      "addAfterRender": "Function",
+      "AfterRenderHook": "TypeAlias",
+      "getRenderPipeline": "Function",
+      "RenderPipelineProvider": "TypeAlias",
+      "runAfterRenderHooks": "Function",
+      "setRenderPipeline": "Function"
     },
     "src/_engine/core/Scene.ts": {
       "createRootScene": "Function",
@@ -1943,17 +1960,23 @@
     },
     "src/_engine/core/Viewports.ts": {
       "createViewport": "Function",
+      "deleteSceneViewports": "Function",
       "deleteViewport": "Function",
       "getViewport": "Function",
       "getViewportPointerNDC": "Function",
+      "installViewports": "Function",
       "invalidateViewportLayout": "Function",
-      "renderViewports": "Function",
+      "isViewportsInstalledFor": "Function",
       "setViewportEnabled": "Function",
       "setViewportInteractive": "Function",
       "Viewport": "TypeAlias",
       "ViewportAnchor": "TypeAlias",
       "ViewportProps": "TypeAlias",
       "ViewportRect": "TypeAlias"
+    },
+    "src/_engine/core/ViewportsFeature.ts": {
+      "viewports": "Function",
+      "viewportsSceneHooks": "Variable"
     },
     "src/_engine/debug/3DSymbols.ts": {
       "createNewCameraSymbol": "Function",
@@ -2658,6 +2681,7 @@
   "entries": {
     "aekasha": [
       "APP_RENDER_SYNC_ORDER",
+      "AfterRenderHook",
       "AppConfig",
       "AppData",
       "AtlasCellRect",
@@ -2703,6 +2727,7 @@
       "MeshProps",
       "MouseBinding",
       "RemapUVsToAtlasCellOpts",
+      "RenderPipelineProvider",
       "RendererOptions",
       "SampleAtlasCellOpts",
       "SceneData",
@@ -2943,6 +2968,7 @@
       "geometryEdgesToSegments",
       "geometryWireframeToSegments",
       "getLine",
+      "lines",
       "polylineToSegments",
       "preloadFatLineBackend"
     ],
@@ -3030,6 +3056,7 @@
       "PostFxPassFn",
       "PostFxPassInfo",
       "getPostFxPasses",
+      "postFx",
       "setPostFxEnabled",
       "setPostFxPassEnabled",
       "setPostFxPassParam"
@@ -3205,7 +3232,8 @@
       "getViewport",
       "getViewportPointerNDC",
       "invalidateViewportLayout",
-      "setViewportEnabled"
+      "setViewportEnabled",
+      "viewports"
     ]
   }
 }

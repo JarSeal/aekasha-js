@@ -111,6 +111,7 @@ export {
   setMeshMaterial,
 } from './core/MeshManager';
 export type { MeshProps } from './core/MeshManager';
+export type { AfterRenderHook, RenderPipelineProvider } from './core/RenderHooks';
 export { createRenderer, deleteRenderer, getRenderer, isWebGPURenderer } from './core/Renderer';
 export type { RendererOptions } from './core/Renderer';
 export {

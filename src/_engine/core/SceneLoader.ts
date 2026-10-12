@@ -39,7 +39,6 @@ import { updateOnScreenTools } from '../debug/OnScreenTools';
 import { existsOrThrow } from '../utils/assert';
 import { deleteAllRayHelpers, resetRayCastStats } from './Raycast';
 import { deleteAllGroupEntities } from './GroupManager';
-import { disposeNonPersistentLines } from './LineManager';
 import { setIsLoadingScene } from './MainLoop';
 import {
   DEFAULT_ECS_WORLD_ID,
@@ -542,11 +541,11 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
       // The features' load start (physics holds its stepping until `entered`)
       runSceneLoadStartHooks();
 
-      // The features tear down the previous scene (the sky box, characters, then physics
-      // entities), then the groups, loopers and non-persistent entities go
+      // The features tear down the previous scene (in reverse install order: the viewports,
+      // PostFX and lines, the sky box, characters, then physics entities), then the groups,
+      // loopers and non-persistent entities go
       runSceneExitHooks(prevSceneId);
       deleteAllGroupEntities();
-      disposeNonPersistentLines();
 
       if (prevScene) deleteAllSceneLoopers(prevSceneId);
 
@@ -597,7 +596,7 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
           );
           setCurrentScene(sceneId);
           setLoadingSceneId(null);
-          // The features' part (the sky box shows the scene's default)
+          // The features' part (the sky box shows the scene's default, PostFX sets up its chain)
           await runSceneCreatedHooksAsync(sceneId);
           await createNextSceneObject3Ds(sceneData);
           // The next scene has taken refs on, or re-tagged, what it shares with the previous one:
