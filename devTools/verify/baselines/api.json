@@ -258,6 +258,7 @@
       "ManagedByData": "TypeAlias"
     },
     "src/_engine/core/ECS/LightObjectCullingSystem.ts": {
+      "installLightObjectCulling": "Function",
       "lightObjectCullingSystem": "Function"
     },
     "src/_engine/core/ECS/ObjectFrustumCullingSystem.ts": {
@@ -500,6 +501,7 @@
       "CreateInstancedLodPoolOptions": "Interface",
       "createInstancedMeshPool": "Function",
       "CreateInstancedMeshPoolOptions": "Interface",
+      "installInstancedMeshPools": "Function",
       "InstancedLodPool": "Interface",
       "InstancedLodPoolLevel": "Interface",
       "InstancedMeshPool": "Interface",
@@ -510,6 +512,9 @@
     "src/_engine/core/Instancing/InstancedMeshPoolTypes.ts": {
       "InstancedMeshSlotData": "Interface",
       "InstancePlacement": "Interface"
+    },
+    "src/_engine/core/Instancing/InstancingFeature.ts": {
+      "instancing": "Function"
     },
     "src/_engine/core/Kernel.ts": {
       "installKernel": "Function"
@@ -795,6 +800,9 @@
       "lodDither": "Function",
       "setLodObjectFade": "Function"
     },
+    "src/_engine/core/Lod/LodFeature.ts": {
+      "lod": "Function"
+    },
     "src/_engine/core/Lod/LodSimplify.ts": {
       "DEFAULT_LOD_CHAIN_OPTIONS": "Reference",
       "LodChainOptions": "Reference",
@@ -813,6 +821,7 @@
       "getLodMaxSelectionsPerFrame": "Function",
       "getLodSelectionCamera": "Function",
       "getLodWorldSphere": "Function",
+      "installLodSystem": "Function",
       "lodApplySystem": "Function",
       "LodDebugOptions": "TypeAlias",
       "lodFadeSystem": "Function",
@@ -1410,12 +1419,15 @@
     },
     "src/_engine/core/SceneHooks.ts": {
       "addSceneHooks": "Function",
+      "getSceneRetainedTextures": "Function",
       "runSceneBeforeAssetsHooksAsync": "Function",
       "runSceneCreatedHooksAsync": "Function",
+      "runSceneDeletedHooks": "Function",
       "runSceneEnteredHooksAsync": "Function",
       "runSceneExitHooks": "Function",
       "runSceneLoadSettledHooks": "Function",
       "runSceneLoadStartHooks": "Function",
+      "runSceneRegisteredHooks": "Function",
       "runSceneWorldClearedHooks": "Function",
       "SceneHooks": "TypeAlias"
     },
@@ -1568,6 +1580,7 @@
       "getSunDirection": "Function",
       "getSunElevation": "Function",
       "getTimeOfDay": "Function",
+      "installSkyBoxSystem": "Function",
       "isDayNightPlaying": "Function",
       "onSkyBoxChange": "Function",
       "pauseDayNight": "Function",
@@ -1589,6 +1602,10 @@
       "SkyBoxPresetName": "Reference",
       "SkyBoxUpdate": "TypeAlias",
       "updateSkyBox": "Function"
+    },
+    "src/_engine/core/SkyBox/SkyBoxFeature.ts": {
+      "skyBox": "Function",
+      "skyBoxSceneHooks": "Variable"
     },
     "src/_engine/core/SkyBox/SkyBoxTypes.ts": {
       "SkyBoxAmbientLightDef": "TypeAlias",
@@ -1730,6 +1747,10 @@
       "unpackCellKey": "Function",
       "worldToCell": "Function"
     },
+    "src/_engine/core/Spatial/SpatialFeature.ts": {
+      "spatial": "Function",
+      "spatialSceneHooks": "Variable"
+    },
     "src/_engine/core/Spatial/SpatialGrid.ts": {
       "ReadonlyVec3": "Interface",
       "SpatialGrid": "Class",
@@ -1749,6 +1770,7 @@
       "getSpatialDomainRebuildStats": "Function",
       "getSpatialDomainSceneId": "Function",
       "getSpatialGrid": "Function",
+      "installSpatialIndex": "Function",
       "invalidateSpatialDomain": "Function",
       "isInSpatialDomain": "Function",
       "isSpatialGridOracleEnabled": "Function",
@@ -2900,7 +2922,8 @@
       "InstancedMeshPool",
       "InstancedMeshSlotData",
       "createInstancedLodPool",
-      "createInstancedMeshPool"
+      "createInstancedMeshPool",
+      "instancing"
     ],
     "aekasha/lines": [
       "LineProps",
@@ -2944,6 +2967,7 @@
       "getLodChain",
       "getLodFrameStats",
       "getLodWorldSphere",
+      "lod",
       "registerLodTarget",
       "resolveAutoLod",
       "resolveLodChainOptions",
@@ -3079,6 +3103,7 @@
       "setDayNightCycleDuration",
       "setDayNightSpeed",
       "setTimeOfDay",
+      "skyBox",
       "updateSkyBox"
     ],
     "aekasha/spatial": [
@@ -3099,6 +3124,7 @@
       "refreshSpatialRadius",
       "registerSpatialDomain",
       "registerSpatialRadiusProvider",
+      "spatial",
       "unregisterSpatialDomain"
     ],
     "aekasha/toolkit/ecs": [

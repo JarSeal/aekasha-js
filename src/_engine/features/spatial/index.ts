@@ -1,3 +1,4 @@
+export { spatial } from '../../core/Spatial/SpatialFeature';
 export { SpatialGrid } from '../../core/Spatial/SpatialGrid';
 export type {
   ReadonlyVec3,

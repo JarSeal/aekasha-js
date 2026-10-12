@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../ECS/SystemStages';
-import { ECSWorld, getECSWorld } from '../ECS';
+import { type ECSWorld, getECSWorld } from '../ECS';
+import type { FeatureContext } from '../Features';
 import type { ComponentData } from '../ECS/ECSCoreComponents';
 import { ComponentType } from '../ECS/ECSCoreComponents';
 import type { IComponentStorage } from '../ECS/ECSComponentStorage';
@@ -17,6 +18,9 @@ import { loadDebugModuleAsync, useDebug } from '../../utils/helpers';
 import { getInstancedLodBounds } from './LodBounds';
 import { clearLodObjectFade, enableLodDither, LOD_FADE_OPAQUE, setLodObjectFade } from './LodFade';
 import type { LodData, LodResolvedLevel, LodTarget } from './LodTypes';
+
+/** A component type's hooks, as `FeatureContext.registerComponentHooks` takes them. */
+type ComponentHooks = Parameters<FeatureContext['registerComponentHooks']>[1];
 
 // Debug
 type LodDebugModule = typeof import('../Debug/_dbg__LOD');
@@ -230,7 +234,7 @@ const startFade = (entityId: number, world: ECSWorld, lod: LodData, from: number
   world.addComponent(entityId, ComponentType.TAG_LOD_TRANSITIONING, true);
 };
 
-ECSWorld.registerComponentHooks(ComponentType.TAG_LOD_CULLED, {
+const lodCulledHooks: ComponentHooks = {
   onAddComponent: (entityId, world) => {
     reconcileObject3DVisibility(entityId, world, { isLodCulled: true });
     const lod = world.getComponent(entityId, ComponentType.LOD);
@@ -254,17 +258,17 @@ ECSWorld.registerComponentHooks(ComponentType.TAG_LOD_CULLED, {
     setCulledTo(entityId, world, lod, false, fade);
     if (fade) startFade(entityId, world, lod, -1);
   },
-});
+};
 
 // A plain mesh fading out to LOD culled stays visible until its fade ends
-ECSWorld.registerComponentHooks(ComponentType.TAG_LOD_TRANSITIONING, {
+const lodTransitioningHooks: ComponentHooks = {
   onAddComponent: (entityId, world) => {
     reconcileObject3DVisibility(entityId, world, { isLodTransitioning: true });
   },
   onRemoveComponent: (entityId, world) => {
     reconcileObject3DVisibility(entityId, world, { isLodTransitioning: false });
   },
-});
+};
 
 // --- TARGETS ---
 
@@ -349,15 +353,6 @@ const queuePrioritySelection = (entityId: number, world: ECSWorld) => {
   }
   queue.push(entityId);
 };
-
-// Frustum culling runs before the selection in the same frame, so an entity re-entering the view
-// is queued in time for its first frame in view
-ECSWorld.registerComponentHooks(ComponentType.TAG_FRUSTUM_CULLED, {
-  onRemoveComponent: queuePrioritySelection,
-});
-ECSWorld.registerComponentHooks(ComponentType.DISABLED, {
-  onRemoveComponent: queuePrioritySelection,
-});
 
 /** Per world: where the capped walk stopped. The `LOD` storage is always a Map, whose iterators
  * stay valid across frames (deleted entries are skipped, new ones visited). */
@@ -578,7 +573,7 @@ export const refreshLodBounds = (entityId: number, ecsWorld?: ECSWorld) => {
   setMeshLodBounds(mesh as THREE.Mesh, lod);
 };
 
-ECSWorld.registerComponentHooks(ComponentType.LOD, {
+const lodHooks: ComponentHooks = {
   onAddComponent: (entityId, world) => {
     const lod = world.getComponent(entityId, ComponentType.LOD);
     if (!lod) return;
@@ -650,7 +645,7 @@ ECSWorld.registerComponentHooks(ComponentType.LOD, {
     lod._levels = [];
     lod._target = undefined;
   },
-});
+};
 
 // --- SELECTION ---
 
@@ -1060,25 +1055,44 @@ export const lodFadeSystem = (world: ECSWorld, dt: number) => {
   if (IS_DEBUG_ENV) stats.fadeMs = performance.now() - start;
 };
 
-ECSWorld.registerPlugin((world) => {
-  // Same order: selection, apply, then the fades (registration order breaks the tie)
-  world.addSystem(
-    ECSSystemStage.APP_RENDER_SYNC,
-    'lodSelectionSystem',
-    lodSelectionSystem,
-    APP_RENDER_SYNC_ORDER.LOD_SELECTION
-  );
-  world.addSystem(
-    ECSSystemStage.APP_RENDER_SYNC,
-    'lodApplySystem',
-    lodApplySystem,
-    APP_RENDER_SYNC_ORDER.LOD_SELECTION
-  );
-  world.addSystem(
-    ECSSystemStage.APP_RENDER_SYNC,
-    'lodFadeSystem',
-    lodFadeSystem,
-    APP_RENDER_SYNC_ORDER.LOD_SELECTION
-  );
-  return world;
-});
+/**
+ * Installs the LOD selection (the `lod()` feature's install, LodFeature.ts): the `LOD` and cull
+ * hooks and the selection, apply and fade systems.
+ * @internal
+ */
+export const installLodSystem = (ctx: FeatureContext) => {
+  ctx.registerComponentHooks(ComponentType.TAG_LOD_CULLED, lodCulledHooks);
+  ctx.registerComponentHooks(ComponentType.TAG_LOD_TRANSITIONING, lodTransitioningHooks);
+  // Frustum culling runs before the selection in the same frame, so an entity re-entering the
+  // view is queued in time for its first frame in view
+  ctx.registerComponentHooks(ComponentType.TAG_FRUSTUM_CULLED, {
+    onRemoveComponent: queuePrioritySelection,
+  });
+  ctx.registerComponentHooks(ComponentType.DISABLED, {
+    onRemoveComponent: queuePrioritySelection,
+  });
+  ctx.registerComponentHooks(ComponentType.LOD, lodHooks);
+
+  ctx.registerPlugin((world) => {
+    // Same order: selection, apply, then the fades (registration order breaks the tie)
+    world.addSystem(
+      ECSSystemStage.APP_RENDER_SYNC,
+      'lodSelectionSystem',
+      lodSelectionSystem,
+      APP_RENDER_SYNC_ORDER.LOD_SELECTION
+    );
+    world.addSystem(
+      ECSSystemStage.APP_RENDER_SYNC,
+      'lodApplySystem',
+      lodApplySystem,
+      APP_RENDER_SYNC_ORDER.LOD_SELECTION
+    );
+    world.addSystem(
+      ECSSystemStage.APP_RENDER_SYNC,
+      'lodFadeSystem',
+      lodFadeSystem,
+      APP_RENDER_SYNC_ORDER.LOD_SELECTION
+    );
+    return world;
+  });
+};

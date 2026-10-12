@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../ECS/SystemStages';
-import { ECSWorld } from '../ECS';
+import type { ECSWorld } from '../ECS';
+import type { FeatureContext } from '../Features';
 import { ComponentType } from '../ECS/ECSCoreComponents';
 import { incGeometryRef } from '../Geometry';
 import { incMaterialRef } from '../Material';
@@ -17,27 +18,28 @@ import {
   getSpatialDomain,
   joinSpatialDomain,
   registerSpatialRadiusProvider,
+  type SpatialRadiusProvider,
 } from '../Spatial/SpatialIndexSystem';
 import { lwarn } from '../../utils/Logger';
-import type { LodData, LodDef, LodResolvedLevel } from '../Lod/LodTypes';
+import type { LodData, LodDef, LodResolvedLevel, LodTarget } from '../Lod/LodTypes';
 import type { CoreEntityOpts } from '../../schemas/_helperSchemas';
 import type { InstancePlacement, InstancedMeshSlotData } from './InstancedMeshPoolTypes';
 
 // Instanced mesh pools: one InstancedMesh drawing many instances, each instance an ECS entity
 // with a Transform and an INSTANCED_MESH_SLOT (its mesh and slot index), kept in sync onto the
 // instance matrix by instancedMeshPoolSyncSystem. An instanced LOD pool has one mesh per level
-// (docs/plans/_DONE_p348_ecs-lod-selection.md §4.2). The sync system registers itself with the module.
+// (docs/plans/_DONE_p348_ecs-lod-selection.md §4.2). The `instancing()` feature installs the sync system.
 
 export type * from './InstancedMeshPoolTypes';
 
 // A pool instance's spatial radius (docs/plans/_DONE_p346_spatial-domains.md §3.3): the pool
 // geometry's (an instanced LOD pool: level 0's), scaled by the instance's Transform.
-registerSpatialRadiusProvider(ComponentType.INSTANCED_MESH_SLOT, (entityId, world) => {
+const getInstanceRadius: SpatialRadiusProvider = (entityId, world) => {
   const slot = world.getComponent(entityId, ComponentType.INSTANCED_MESH_SLOT);
   if (!slot) return undefined;
   const lodPool = lodPoolsByMesh.get(slot.mesh);
   return getConservativeGeometryRadius(lodPool ? lodPool.levels[0].geometry : slot.mesh.geometry);
-});
+};
 
 const _matrix = new THREE.Matrix4();
 const _moveMatrix = new THREE.Matrix4();
@@ -156,12 +158,6 @@ const freeInstanceSlot = (entityId: number, world: ECSWorld) => {
   removeInstance(entityId, slot, world);
 };
 
-// onRemoveComponent too, so removing the slot directly can't leave its matrix drawn
-ECSWorld.registerComponentHooks(ComponentType.INSTANCED_MESH_SLOT, {
-  onRemoveComponent: freeInstanceSlot,
-  onDeleteEntity: freeInstanceSlot,
-});
-
 // A pool instance in an instanced LOD pool shows its level by moving to that level's mesh
 // (docs/plans/_DONE_p348_ecs-lod-selection.md §4.2). Its slot keeps pointing at the applied level's
 // mesh while it's LOD culled (index -1, in no mesh), so it knows where to come back to.
@@ -170,7 +166,7 @@ ECSWorld.registerComponentHooks(ComponentType.INSTANCED_MESH_SLOT, {
 // drawn as its outgoing copy (`_fadeOutMesh`/`_fadeOutIndex`) while the new one fades in, each
 // with its own per-instance fade (LodFade.ts). A fade to culled has only the outgoing copy, a fade
 // from culled only the incoming one. The LOD system ends a running fade before the next change.
-registerLodTarget(ComponentType.INSTANCED_MESH_SLOT, {
+const instanceLodTarget: LodTarget = {
   resolveLevels: (entityId, world) => {
     const slot = getSlot(entityId, world);
     return slot && lodPoolsByMesh.get(slot.mesh)?.levels;
@@ -218,7 +214,7 @@ registerLodTarget(ComponentType.INSTANCED_MESH_SLOT, {
     if (slot.index >= 0) writeFade(slot.mesh, slot.index, progress);
     if (slot._fadeOutMesh) writeFade(slot._fadeOutMesh, slot._fadeOutIndex, progress - 1);
   },
-});
+};
 
 /** Creates a pool's `InstancedMesh` and the entity that owns it. The mesh takes a registry ref on
  * its geometry and material(s), which `MeshManager`'s `TAG_IS_MESH` delete hook releases. */
@@ -610,13 +606,31 @@ export const instancedMeshPoolSyncSystem = (world: ECSWorld) => {
   for (const dirtyMesh of dirtyMeshes) dirtyMesh.instanceMatrix.needsUpdate = true;
 };
 
-// Before LOD selection, which moves instances between level meshes with their baked matrices
-ECSWorld.registerPlugin((world) => {
-  world.addSystem(
-    ECSSystemStage.APP_RENDER_SYNC,
-    'instancedMeshPoolSync',
-    instancedMeshPoolSyncSystem,
-    APP_RENDER_SYNC_ORDER.POSE_PRODUCERS
-  );
-  return world;
-});
+/**
+ * Installs the instanced mesh pools (the `instancing()` feature's install, InstancingFeature.ts):
+ * the instances' spatial radius, the slot hooks, the instanced LOD pool's LOD target and the sync
+ * system.
+ * @internal
+ */
+export const installInstancedMeshPools = (ctx: FeatureContext) => {
+  registerSpatialRadiusProvider(ComponentType.INSTANCED_MESH_SLOT, getInstanceRadius);
+
+  // onRemoveComponent too, so removing the slot directly can't leave its matrix drawn
+  ctx.registerComponentHooks(ComponentType.INSTANCED_MESH_SLOT, {
+    onRemoveComponent: freeInstanceSlot,
+    onDeleteEntity: freeInstanceSlot,
+  });
+
+  registerLodTarget(ComponentType.INSTANCED_MESH_SLOT, instanceLodTarget);
+
+  // Before LOD selection, which moves instances between level meshes with their baked matrices
+  ctx.registerPlugin((world) => {
+    world.addSystem(
+      ECSSystemStage.APP_RENDER_SYNC,
+      'instancedMeshPoolSync',
+      instancedMeshPoolSyncSystem,
+      APP_RENDER_SYNC_ORDER.POSE_PRODUCERS
+    );
+    return world;
+  });
+};

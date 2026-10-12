@@ -736,6 +736,63 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
 2. The kernel registries for LOD targets and spatial radii; `getConservativeGeometryRadius` moves
    (D5). The layout report's feature dependencies: character → physics only.
 
+**As built (section 1):**
+
+- **The scene data phases** join `SceneHooks`: `sceneRegistered(sceneId, data)`,
+  `sceneDeleted(sceneId)` (both run in install order, from `Scene.ts`) and
+  `retainedTextures(): readonly Texture[]` (`getSceneRetainedTextures()` collects every hook's into
+  a `Set`, read once per `releaseSceneOwnedAssets`). Tested in `SceneHooks.test.ts`.
+- **Registration timing: the scenes register after the installs**, not a replay.
+  `registerScenesFromGeneratedData()` moved in `InitEngine` from before `load3DSymbols` to right
+  after `installFeaturesAsync`; nothing in between reads the scenes (checked: the camera, light and
+  line managers, the debug camera, `3DSymbols`, physics' install). A hook added later sees no
+  earlier scene (none is, today).
+- **`worldCleared`'s next scene id** is `nextSceneData.id` (the loader's fallback data for a
+  code-only scene sets it too; every gathered scene's key is its `id`).
+- **`skyBox()`** (`core/SkyBox/SkyBoxFeature.ts`, id `'skybox'`): `installSkyBoxSystem` (was the
+  module's plugin), `skyBoxSceneHooks` (`sceneRegistered`: the scene's JSON `skyboxes`;
+  `sceneDeleted`: `Scene.ts`' old texture release, moved as is; `retainedTextures`: the active
+  texture; `exit`: `clearSkyBox`; `created`: `activateSceneDefaultSkyBox`), `onDebug`:
+  `registerSkyBoxDebugGUI`, `onDebugAfterStart`: `createSkyBoxDebugGUI`. **Order change (D4):**
+  the clear moved from after the groups, lines and loopers to the `exit` phase, before characters
+  and physics (reverse install order). Every hash and snapshot passed.
+- **`spatial()`** (`core/Spatial/SpatialFeature.ts`): `installSpatialIndex` (the six statements,
+  in their order), `installLightObjectCulling` (the two), `spatialSceneHooks.worldCleared` (the
+  loader's release / register, moved as is; the `worldCleared` call site had no hook before, so
+  it's the same place), `onDebug`: `registerSpatialIndexDebugGUI`.
+- **`lod()`** (`core/Lod/LodFeature.ts`): `installLodSystem` (the hook objects stay where they
+  were as named consts, registered in their old order), `onDebug`: `registerLodDebugGUI`. The
+  kernel's `DISABLED` / `TAG_FRUSTUM_CULLED` hooks run before LOD's again (pre-p607's order).
+- **The two lazy LOD modules** (`LodChains.ts`, `Impostors/ImpostorRegistry.ts`) add their
+  `onGeometryDeleted` listener with their first chain / record instead of at load: with no
+  record there's nothing to release, and the modules stay lazy chunks. Not a feature install:
+  they're the modules' own bookkeeping (D3's "one rule" is about features).
+- **`instancing()`** (`core/Instancing/InstancingFeature.ts`): `installInstancedMeshPools` (the
+  radius provider, the slot hooks, the LOD target, the sync system, in their order). No
+  `requires`: registering the LOD target and the radius provider without `lod()` / `spatial()`
+  is harmless (section 2 makes them kernel registries anyway).
+- **Not expected: the system order changes**, by one system: `instancedMeshPoolSync@0` registered
+  only when a scene's lazy module imported the pool (`largeWorld`, `lodShowcase`, `exampleLod`),
+  and now every world with global plugins has it from boot, at the position it had in those
+  three scenes (after `physicsInterpolationSystem`). `yarn verify:scenes`: 12 passed, 84 failed,
+  every failure only `added instancedMeshPoolSync@0`; one new tie, in `physicsTiers`
+  (before the scene's `physicsTiersTintSystem`, independent). The baselines are re-recorded for it.
+- The debug block: the three debug GUIs move from `InitEngine`'s blocks into the features'
+  `onDebug` hooks (the end of the first debug block, after physics' and character's). The drawer
+  tab order comes from `DEFAULT_DEBUG_DRAWER_TAB_ORDER`, so it doesn't change (risk 3). The
+  modules' load-time registrations (`_dbg__SkyBox`'s manager info and undo handlers) don't
+  depend on order; `spatialGridVisualizerSystem` stays between the camera helpers and the GPU
+  memory sampler.
+- `InitApp.ts` imports none of the four; the template lists
+  `[physics(), character(), skyBox(), lod(), spatial(), instancing(), appECSPlugins]`, and so does
+  `InitEngine`'s `@example`. **The side effects allow-list is empty** (Phase 7's step 3, earlier:
+  lines already register in `registerLineManager`). The layout report: no kernel → sky box or
+  spatial runtime rows; LOD's left are Phase 7's (import, assets worker).
+- Bundle: `index.js` 406.0 → 408.5 kB gzip (`core/Instancing` 0 → 3.0 kB, the four feature
+  modules); the lazy `InstancedMeshPool.js` (8.2 kB) is gone and `OctahedralImpostor.js`
+  (6.0 kB, the impostor code it carried) is new. The production debug check: none. `api.json`:
+  the four factories on their entries, the installers, scene hook objects and runners.
+
 ### Phase 7: lines, PostFX, viewports, import; `features` required
 
 1. `lines()` (D3), `postFx()` (`setRenderPipeline`; `Snapshot.ts` reads the seam), `viewports()`

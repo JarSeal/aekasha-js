@@ -1,7 +1,11 @@
 import * as THREE from 'three/webgpu';
 import { createRenderer, InitEngine, createSceneLoader, loadScene, IS_DEBUG_ENV } from 'aekasha';
 import { character } from 'aekasha/character';
+import { instancing } from 'aekasha/instancing';
+import { lod } from 'aekasha/lod';
 import { physics } from 'aekasha/physics';
+import { skyBox } from 'aekasha/skybox';
+import { spatial } from 'aekasha/spatial';
 import { CMP } from 'aekasha/ui';
 import config from './CONFIG';
 import { appData } from './generated';
@@ -11,7 +15,7 @@ InitEngine({
   config,
   data: appData,
   // Installed in this order, after the engine's kernel (the app's last)
-  features: [physics(), character(), appECSPlugins],
+  features: [physics(), character(), skyBox(), lod(), spatial(), instancing(), appECSPlugins],
   start: async () => {
     // Init renderer
     // #region create-renderer (shown in the Hub: hub/pages/features/rendering/)

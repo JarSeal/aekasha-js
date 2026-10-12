@@ -19,7 +19,6 @@ import { addWindowListeners, initMainLoop, registerMainLoopDebugGUI } from './co
 import { createRootScene, getRootScene, registerScenesFromGeneratedData } from './core/Scene';
 import './styles/index.scss';
 import { lerror, llog } from './utils/Logger';
-import { createSkyBoxDebugGUI, registerSkyBoxDebugGUI } from './core/SkyBox/SkyBox';
 import { createRendererDebugGUI } from './core/Renderer';
 import { loadDraggableWindowStatesFromLS } from './core/UI/DraggableWindow';
 import { createToaster } from './core/UI/Toaster';
@@ -33,10 +32,6 @@ import { restoreSavedView } from './core/ViewManager';
 // The kernel's systems and hooks, installed by InitEngine (here, where their modules were
 // imported for their registrations, so the modules still load in the same order)
 import { installKernel } from './core/Kernel';
-// Light culling still registers when it's imported (p607 Phase 6 makes it the spatial feature's)
-import './core/ECS/LightObjectCullingSystem';
-import { registerLodDebugGUI } from './core/Lod/LodSystem';
-import { registerSpatialIndexDebugGUI } from './core/Spatial/SpatialIndexSystem';
 import {
   createFeatureHost,
   type EngineFeature,
@@ -89,14 +84,18 @@ export type InitEngineOptions = {
  * import { InitEngine, createRenderer, loadScene } from 'aekasha';
  * import config from './CONFIG';
  * import { character } from 'aekasha/character';
+ * import { instancing } from 'aekasha/instancing';
+ * import { lod } from 'aekasha/lod';
  * import { physics } from 'aekasha/physics';
+ * import { skyBox } from 'aekasha/skybox';
+ * import { spatial } from 'aekasha/spatial';
  * import { appData } from './generated';
  * import { appECSPlugins } from './AppECSPlugins';
  *
  * InitEngine({
  *   config,
  *   data: appData,
- *   features: [physics(), character(), appECSPlugins],
+ *   features: [physics(), character(), skyBox(), lod(), spatial(), instancing(), appECSPlugins],
  *   start: async () => {
  *     await createRenderer({ antialias: true });
  *     await loadScene({ sceneId: 'myScene' });
@@ -144,9 +143,6 @@ const initEngineAsync = async ({ config, data, features = [], start }: InitEngin
   // Resolve the assets config (the assets worker is only started by its first request)
   initAssets();
 
-  // Register scenes from generated data
-  await registerScenesFromGeneratedData();
-
   // The flag here too (load3DSymbols checks it): a production build then drops the call
   if (IS_DEBUG_ENV) await load3DSymbols();
 
@@ -161,11 +157,14 @@ const initEngineAsync = async ({ config, data, features = [], start }: InitEngin
   // The features, in list order (p607 D1): physics boots in its install
   await installFeaturesAsync(features, featureHost);
 
+  // Register scenes from generated data: after the installs, so each feature's sceneRegistered
+  // hook sees every scene (the sky box registers the scenes' sky boxes)
+  await registerScenesFromGeneratedData();
+
   if (IS_DEBUG_ENV) {
     await registerUndoRedoModule();
     initUndoRedo();
     await registerStatsModule();
-    await registerSkyBoxDebugGUI();
     await registerRaycastDebugGUI();
     await registerDebuggerGUI();
     await registerAxesGizmoModule();
@@ -174,8 +173,6 @@ const initEngineAsync = async ({ config, data, features = [], start }: InitEngin
     await registerMaterialEditor();
     registerDefaultDebugKeyBindings();
     await registerECSModule();
-    await registerSpatialIndexDebugGUI();
-    await registerLodDebugGUI();
     // The features' own, in install order
     await runFeatureDebugHooksAsync(featureHost.debugHooks);
   }
@@ -217,7 +214,6 @@ const initEngineAsync = async ({ config, data, features = [], start }: InitEngin
     await registerPostFxProfiler();
     // After the profiler: the tab re-applies a persisted measuring override
     await createPostFXDebugGUI();
-    createSkyBoxDebugGUI();
     // The features' own, in install order
     await runFeatureDebugHooksAsync(featureHost.debugAfterStartHooks);
 

@@ -69,6 +69,8 @@ const chains = new Map<string, LodChain>();
 const baseIdOfLevel = new Map<string, string>();
 const pending = new Map<string, Promise<LodChain | null>>();
 let warnedMainThread = false;
+/** Whether `handleGeometryDeleted` (below) is a geometry delete listener yet. */
+let isListeningForDeletes = false;
 
 /** The arrays the simplifier needs, as copies (the base stays usable after the transfer): all
  * attributes when they're welded or compacted, else only the weighted ones. */
@@ -130,6 +132,11 @@ const registerLevels = (
   baseTriangles: number,
   inputs: LevelInput[]
 ) => {
+  // With the first chain (nothing to release before it; no registration at module load, p607)
+  if (!isListeningForDeletes) {
+    isListeningForDeletes = true;
+    onGeometryDeleted(handleGeometryDeleted);
+  }
   if (!base.boundingBox) base.computeBoundingBox();
   if (!base.boundingSphere) base.computeBoundingSphere();
   const baseName = getGeometryRegistry()[baseId]?.debugData?.name || baseId;
@@ -349,7 +356,7 @@ export const releaseLodChain = (baseId: string) => {
   }
 };
 
-onGeometryDeleted((id) => {
+const handleGeometryDeleted = (id: string) => {
   if (chains.has(id)) releaseLodChain(id);
   const baseId = baseIdOfLevel.get(id);
   if (baseId === undefined) return;
@@ -357,4 +364,4 @@ onGeometryDeleted((id) => {
   baseIdOfLevel.delete(id);
   const chain = chains.get(baseId);
   if (chain) chain.levels = chain.levels.filter((level) => level.geometryId !== id);
-});
+};

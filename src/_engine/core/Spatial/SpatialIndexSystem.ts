@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu';
-import { ECSWorld, getECSWorld } from '../ECS';
+import { type ECSWorld, getECSWorld } from '../ECS';
+import type { FeatureContext } from '../Features';
 import { ECSSystemStage } from '../ECS/SystemStages';
 import { ComponentType } from '../ECS/ECSCoreComponents';
 import { IS_DEBUG_ENV } from '../Config';
@@ -424,9 +425,9 @@ function applyDomainOptions(
  * Drops the settings `sceneId` registered (§3.2): each domain they belong to goes back to its
  * world settings, or is unregistered if it has none (its persistent members leave it too). Then
  * frees `DEFAULT`'s grid, also without a `sceneId` (the first load), so the next scene builds
- * its own when it needs one (§3.6). The scene loader calls it for the default world right after
- * the previous scene's entities are deleted, so a reverted grid re-inserts only the persistent
- * ones.
+ * its own when it needs one (§3.6). Spatial's scene hook (SpatialFeature.ts) calls it for the
+ * default world right after the previous scene's entities are deleted, so a reverted grid
+ * re-inserts only the persistent ones.
  */
 export function releaseSceneSpatialDomains(
   world: ECSWorld,
@@ -453,9 +454,9 @@ export function releaseSceneSpatialDomains(
 /**
  * Registers a scene's `spatialDomains` (its scene JSON, §3.4) with `sceneId` as their scope.
  * `DEFAULT`'s entry is partial, merged over its world settings, and only stores them (its grid is
- * built by the scene's first join, at those settings); every other domain is created here. The
- * scene loader calls it for the default world right after `releaseSceneSpatialDomains`, before
- * anything of the scene joins a domain, so each grid is created once at its final size.
+ * built by the scene's first join, at those settings); every other domain is created here.
+ * Spatial's scene hook calls it for the default world right after `releaseSceneSpatialDomains`,
+ * before anything of the scene joins a domain, so each grid is created once at its final size.
  */
 export function registerSceneSpatialDomains(
   world: ECSWorld,
@@ -697,12 +698,6 @@ const leaveMaskedDomains = (entityId: number, world: ECSWorld) => {
   }
 };
 
-// onRemoveComponent too, so removing the component directly can't leave stale grid members
-ECSWorld.registerComponentHooks(ComponentType.SPATIAL_DOMAINS, {
-  onRemoveComponent: leaveMaskedDomains,
-  onDeleteEntity: leaveMaskedDomains,
-});
-
 /**
  * A point/spot light's influence-sphere radius — shared with
  * LightObjectCullingSystem.ts so both consumers agree on what "this light's
@@ -794,19 +789,14 @@ const getLightRadius: SpatialRadiusProvider = (entityId, world) => {
     : undefined;
 };
 
-registerSpatialRadiusProvider(ComponentType.TAG_IS_POINT_LIGHT, getLightRadius, {
-  scaleIndependent: true,
-});
-registerSpatialRadiusProvider(ComponentType.TAG_IS_SPOT_LIGHT, getLightRadius, {
-  scaleIndependent: true,
-});
-registerSpatialRadiusProvider(ComponentType.TAG_IS_MESH, (entityId, world) => {
+const getMeshRadius: SpatialRadiusProvider = (entityId, world) => {
   const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
   return obj instanceof THREE.Mesh ? getConservativeGeometryRadius(obj.geometry) : undefined;
-});
+};
 
-ECSWorld.registerComponentHooks(ComponentType.SPATIAL_INDEXED, {
-  onAddComponent: (entityId, world) => {
+// The DEFAULT domain's membership (installSpatialIndex registers it on SPATIAL_INDEXED)
+const spatialIndexedHooks = {
+  onAddComponent: (entityId: number, world: ECSWorld) => {
     if (IS_DEBUG_ENV) {
       const isAmbient = world.hasComponent(entityId, ComponentType.TAG_IS_AMBIENT_LIGHT);
       const isHemisphere = world.hasComponent(entityId, ComponentType.TAG_IS_HEMISPHERE_LIGHT);
@@ -825,9 +815,9 @@ ECSWorld.registerComponentHooks(ComponentType.SPATIAL_INDEXED, {
     // its hooks run)
     else buildDefaultDomain(world, domains);
   },
-  onRemoveComponent: (entityId, world) => leaveDefaultDomain(entityId, world),
-  onDeleteEntity: (entityId, world) => leaveDefaultDomain(entityId, world),
-});
+  onRemoveComponent: (entityId: number, world: ECSWorld) => leaveDefaultDomain(entityId, world),
+  onDeleteEntity: (entityId: number, world: ECSWorld) => leaveDefaultDomain(entityId, world),
+};
 
 function leaveDefaultDomain(entityId: number, world: ECSWorld) {
   const domain = domainsByWorld.get(world)?.byId.get(DEFAULT_SPATIAL_DOMAIN);
@@ -1117,14 +1107,37 @@ export function validateSpatialGridQuery(
   checkQuery(world, domain, oracle, p, r);
 }
 
-ECSWorld.registerPlugin((world) => {
-  // order: -1, matching objectFrustumCullingSystem's precedent — runs after this
-  // stage's default-order (0) systems, in particular physicsToTransformSystem,
-  // so it rebuilds from this frame's final transforms, not last frame's.
-  world.addSystem(
-    ECSSystemStage.APP_POST_PHYSICS,
-    'spatialIndexRebuildSystem',
-    spatialIndexRebuildSystem,
-    -1
-  );
-});
+/**
+ * Installs the spatial index (the `spatial()` feature's install, SpatialFeature.ts): the domain
+ * membership hooks, the mesh and light radius providers and the rebuild system.
+ * @internal
+ */
+export const installSpatialIndex = (ctx: FeatureContext) => {
+  // onRemoveComponent too, so removing the component directly can't leave stale grid members
+  ctx.registerComponentHooks(ComponentType.SPATIAL_DOMAINS, {
+    onRemoveComponent: leaveMaskedDomains,
+    onDeleteEntity: leaveMaskedDomains,
+  });
+
+  registerSpatialRadiusProvider(ComponentType.TAG_IS_POINT_LIGHT, getLightRadius, {
+    scaleIndependent: true,
+  });
+  registerSpatialRadiusProvider(ComponentType.TAG_IS_SPOT_LIGHT, getLightRadius, {
+    scaleIndependent: true,
+  });
+  registerSpatialRadiusProvider(ComponentType.TAG_IS_MESH, getMeshRadius);
+
+  ctx.registerComponentHooks(ComponentType.SPATIAL_INDEXED, spatialIndexedHooks);
+
+  ctx.registerPlugin((world) => {
+    // order: -1, matching objectFrustumCullingSystem's precedent — runs after this
+    // stage's default-order (0) systems, in particular physicsToTransformSystem,
+    // so it rebuilds from this frame's final transforms, not last frame's.
+    world.addSystem(
+      ECSSystemStage.APP_POST_PHYSICS,
+      'spatialIndexRebuildSystem',
+      spatialIndexRebuildSystem,
+      -1
+    );
+  });
+};

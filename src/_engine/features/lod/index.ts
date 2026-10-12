@@ -25,6 +25,7 @@ export type {
 } from '../../core/Lod/LodChainOptions';
 export { generateLodChain, getLodChain } from '../../core/Lod/LodChains';
 export type { LodChain } from '../../core/Lod/LodChains';
+export { lod } from '../../core/Lod/LodFeature';
 export { simplifyLodChain } from '../../core/Lod/LodSimplify';
 export type { SimplifiedLodChain } from '../../core/Lod/LodSimplify';
 export {

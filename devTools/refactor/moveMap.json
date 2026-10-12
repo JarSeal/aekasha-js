@@ -853,6 +853,11 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/Instancing/InstancingFeature.ts": {
+      "to": "src/_engine/features/instancing/InstancingFeature.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/core/Kernel.ts": {
       "to": "src/_engine/kernel/init/Kernel.ts",
       "action": "move",
@@ -1021,6 +1026,11 @@
     },
     "src/_engine/core/Lod/LodFade.ts": {
       "to": "src/_engine/features/lod/LodFade.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/Lod/LodFeature.ts": {
+      "to": "src/_engine/features/lod/LodFeature.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -1237,6 +1247,11 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/SkyBox/SkyBoxFeature.ts": {
+      "to": "src/_engine/features/skybox/SkyBoxFeature.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/core/SkyBox/SkyBoxTypes.ts": {
       "to": "src/_engine/features/skybox/SkyBoxTypes.ts",
       "action": "move",
@@ -1294,6 +1309,11 @@
     },
     "src/_engine/core/Spatial/CLAUDE.md": {
       "to": "src/_engine/features/spatial/CLAUDE.md",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/Spatial/SpatialFeature.ts": {
+      "to": "src/_engine/features/spatial/SpatialFeature.ts",
       "action": "move",
       "plan": "p608"
     },

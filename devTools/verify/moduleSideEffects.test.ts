@@ -21,15 +21,7 @@ const EXEMPT = [
  * The statements p607 hasn't moved into an install yet, by file: the phases remove them, and a
  * count that drops must drop here too (so the list only shrinks). Empty when p607 is done.
  */
-const NOT_YET_INSTALLED: Record<string, number> = {
-  'src/_engine/core/ECS/LightObjectCullingSystem.ts': 2,
-  'src/_engine/core/Instancing/InstancedMeshPool.ts': 4,
-  'src/_engine/core/Lod/Impostors/ImpostorRegistry.ts': 1,
-  'src/_engine/core/Lod/LodChains.ts': 1,
-  'src/_engine/core/Lod/LodSystem.ts': 6,
-  'src/_engine/core/SkyBox/SkyBox.ts': 1,
-  'src/_engine/core/Spatial/SpatialIndexSystem.ts': 6,
-};
+const NOT_YET_INSTALLED: Record<string, number> = {};
 
 const SCANNED = ['src/_engine', 'src/toolkit', 'src/app'];
 

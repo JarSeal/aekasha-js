@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1392,
-      "total": 2106
+      "documented": 1406,
+      "total": 2120
     },
     "members": {
       "documented": 212,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1347,
-        "total": 2042
+        "documented": 1361,
+        "total": 2056
       },
       "members": {
         "documented": 162,
@@ -49,8 +49,8 @@
     },
     "engine/core": {
       "exports": {
-        "documented": 412,
-        "total": 558
+        "documented": 415,
+        "total": 561
       },
       "members": {
         "documented": 35,
@@ -276,8 +276,8 @@
     },
     "engine/core/ECS": {
       "exports": {
-        "documented": 27,
-        "total": 38
+        "documented": 28,
+        "total": 39
       },
       "members": {
         "documented": 12,
@@ -454,8 +454,8 @@
     },
     "engine/core/Instancing": {
       "exports": {
-        "documented": 5,
-        "total": 10
+        "documented": 7,
+        "total": 12
       },
       "members": {
         "documented": 26,
@@ -530,8 +530,8 @@
     },
     "engine/core/Lod": {
       "exports": {
-        "documented": 60,
-        "total": 74
+        "documented": 62,
+        "total": 76
       },
       "members": {
         "documented": 0,
@@ -792,8 +792,8 @@
     },
     "engine/core/SkyBox": {
       "exports": {
-        "documented": 127,
-        "total": 151
+        "documented": 130,
+        "total": 154
       },
       "members": {
         "documented": 0,
@@ -878,8 +878,8 @@
     },
     "engine/core/Spatial": {
       "exports": {
-        "documented": 39,
-        "total": 52
+        "documented": 42,
+        "total": 55
       },
       "members": {
         "documented": 20,

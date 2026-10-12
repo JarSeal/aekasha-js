@@ -39,8 +39,17 @@ const records = new Map<string, ImpostorRecord>();
  * mode). Elsewhere a record would only keep its source geometry from being collected. */
 const isSourceKept = () => isDebugEnvironment() || isProdTestMode();
 
+let isListeningForDeletes = false;
+
 /** Records an impostor a generator just made, replacing an earlier record under its id. */
 export const recordImpostor = (record: ImpostorRecord) => {
+  // With the first record (nothing to forget before it; no registration at module load, p607)
+  if (!isListeningForDeletes) {
+    isListeningForDeletes = true;
+    onGeometryDeleted((id) => {
+      records.delete(id);
+    });
+  }
   records.set(record.id, isSourceKept() ? record : { ...record, source: null });
 };
 
@@ -49,7 +58,3 @@ export const getImpostorRecord = (id: string) => records.get(id);
 
 /** Every impostor whose assets are registered, in the order they were generated. */
 export const getImpostorRecords = () => [...records.values()];
-
-onGeometryDeleted((id) => {
-  records.delete(id);
-});

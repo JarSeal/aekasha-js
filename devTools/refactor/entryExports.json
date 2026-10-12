@@ -4,15 +4,15 @@
   "summary": {
     "aekasha": {
       "public": 120,
-      "crossEntry": 126,
-      "internal": 211,
-      "unreferenced": 190
+      "crossEntry": 129,
+      "internal": 220,
+      "unreferenced": 189
     },
     "aekasha/character": {
-      "public": 7,
+      "public": 8,
       "crossEntry": 1,
-      "internal": 28,
-      "unreferenced": 17
+      "internal": 29,
+      "unreferenced": 18
     },
     "aekasha/debug": {
       "public": 39,
@@ -39,10 +39,10 @@
       "unreferenced": 29
     },
     "aekasha/physics": {
-      "public": 22,
+      "public": 23,
       "crossEntry": 25,
-      "internal": 222,
-      "unreferenced": 76
+      "internal": 227,
+      "unreferenced": 77
     },
     "aekasha/postfx": {
       "public": 5,
@@ -58,15 +58,15 @@
     },
     "aekasha/skybox": {
       "public": 21,
-      "crossEntry": 17,
-      "internal": 156,
+      "crossEntry": 10,
+      "internal": 163,
       "unreferenced": 36
     },
     "aekasha/spatial": {
       "public": 12,
-      "crossEntry": 4,
-      "internal": 22,
-      "unreferenced": 15
+      "crossEntry": 2,
+      "internal": 25,
+      "unreferenced": 14
     },
     "aekasha/toolkit/ecs": {
       "public": 16,
@@ -943,6 +943,7 @@
           "usage": "public",
           "by": [
             "aekasha/lod",
+            "aekasha/skybox",
             "app"
           ]
         },
@@ -1974,7 +1975,11 @@
           "usage": "public",
           "by": [
             "aekasha/character",
+            "aekasha/instancing",
+            "aekasha/lod",
             "aekasha/physics",
+            "aekasha/skybox",
+            "aekasha/spatial",
             "app"
           ]
         },
@@ -1983,7 +1988,11 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/character",
-            "aekasha/physics"
+            "aekasha/instancing",
+            "aekasha/lod",
+            "aekasha/physics",
+            "aekasha/skybox",
+            "aekasha/spatial"
           ]
         },
         "FeatureDebugHook": {
@@ -2447,6 +2456,13 @@
           "kind": "Function",
           "usage": "unreferenced"
         },
+        "FixedStepDriver": {
+          "kind": "TypeAlias",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/physics"
+          ]
+        },
         "FrameProbe": {
           "kind": "TypeAlias",
           "usage": "crossEntry",
@@ -2533,6 +2549,10 @@
           "by": [
             "aekasha/debug"
           ]
+        },
+        "setFixedStepDriver": {
+          "kind": "Function",
+          "usage": "internal"
         },
         "setFrameProbe": {
           "kind": "Function",
@@ -3357,7 +3377,10 @@
         },
         "isCurrentScene": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "Looper": {
           "kind": "TypeAlias",
@@ -3456,6 +3479,50 @@
         "setSceneOpts": {
           "kind": "Function",
           "usage": "unreferenced"
+        }
+      },
+      "src/_engine/kernel/scene/SceneHooks.ts": {
+        "addSceneHooks": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "runSceneBeforeAssetsHooksAsync": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "runSceneCreatedHooksAsync": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "runSceneEnteredHooksAsync": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "runSceneExitHooks": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "runSceneLoadSettledHooks": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "runSceneLoadStartHooks": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "runSceneWorldClearedHooks": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "SceneHooks": {
+          "kind": "TypeAlias",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/character",
+            "aekasha/physics",
+            "aekasha/skybox",
+            "aekasha/spatial"
+          ]
         }
       },
       "src/_engine/kernel/scene/SceneLoader.ts": {
@@ -3889,6 +3956,10 @@
             "hub"
           ]
         },
+        "installCharacters": {
+          "kind": "Function",
+          "usage": "internal"
+        },
         "onLocomotionStateChange": {
           "kind": "Function",
           "usage": "public",
@@ -3923,6 +3994,19 @@
         },
         "HumanoidCapsuleDimensions": {
           "kind": "TypeAlias",
+          "usage": "unreferenced"
+        }
+      },
+      "src/_engine/features/character/CharacterFeature.ts": {
+        "character": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "app"
+          ]
+        },
+        "characterSceneHooks": {
+          "kind": "Variable",
           "usage": "unreferenced"
         }
       },
@@ -6347,10 +6431,7 @@
         },
         "registerLodDebugGUI": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "registerLodTarget": {
           "kind": "Function",
@@ -6423,7 +6504,10 @@
         },
         "LodTarget": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/instancing"
+          ]
         },
         "MeshLodDef": {
           "kind": "TypeAlias",
@@ -7769,6 +7853,10 @@
           "kind": "Function",
           "usage": "internal"
         },
+        "installPhysicsEntities": {
+          "kind": "Function",
+          "usage": "internal"
+        },
         "PhysicsBodyOwner": {
           "kind": "TypeAlias",
           "usage": "unreferenced"
@@ -7797,9 +7885,9 @@
           "kind": "Function",
           "usage": "internal"
         },
-        "registerPhysicsManager": {
+        "registerPhysicsWireframeDebugAsync": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "resetPhysicsInterpolationHistory": {
           "kind": "Function",
@@ -7815,6 +7903,23 @@
         "settlePendingPhysicsEntities": {
           "kind": "Function",
           "usage": "internal"
+        }
+      },
+      "src/_engine/features/physics/PhysicsFeature.ts": {
+        "physics": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "app"
+          ]
+        },
+        "physicsFixedStepDriver": {
+          "kind": "Variable",
+          "usage": "unreferenced"
+        },
+        "physicsSceneHooks": {
+          "kind": "Variable",
+          "usage": "unreferenced"
         }
       },
       "src/_engine/features/physics/PhysicsStepStatsBuffer.ts": {
@@ -7840,6 +7945,10 @@
           "kind": "Variable",
           "usage": "unreferenced"
         },
+        "deleteScenePhysicsTierPolicies": {
+          "kind": "Function",
+          "usage": "internal"
+        },
         "DETERMINISM_PROBE_FREEZE_SOURCE": {
           "kind": "Variable",
           "usage": "internal"
@@ -7853,6 +7962,10 @@
           "usage": "internal"
         },
         "getPhysicsTierPolicyStatus": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "installPhysicsTierPolicy": {
           "kind": "Function",
           "usage": "internal"
         },
@@ -7884,6 +7997,10 @@
           "by": [
             "hub"
           ]
+        },
+        "installPhysicsTiers": {
+          "kind": "Function",
+          "usage": "internal"
         },
         "requestPhysicsTier": {
           "kind": "Function",
@@ -9492,10 +9609,7 @@
         },
         "activateSceneDefaultSkyBox": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "ActiveSkyBox": {
           "kind": "TypeAlias",
@@ -9510,10 +9624,7 @@
         },
         "clearSkyBox": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "createSkyBox": {
           "kind": "Function",
@@ -9525,10 +9636,7 @@
         },
         "createSkyBoxDebugGUI": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "getActiveEnvironmentTexture": {
           "kind": "Function",
@@ -9546,10 +9654,7 @@
         },
         "getActiveSkyBoxTexture": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "getDayNightSpeed": {
           "kind": "Function",
@@ -9579,10 +9684,7 @@
         },
         "getSceneSkyBoxTextureIds": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "getSunDirection": {
           "kind": "Function",
@@ -9642,17 +9744,11 @@
         },
         "registerSkyBox": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "registerSkyBoxDebugGUI": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "setActiveSkyBox": {
           "kind": "Function",
@@ -10341,10 +10437,7 @@
         },
         "registerSceneSpatialDomains": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "registerSpatialDomain": {
           "kind": "Function",
@@ -10356,10 +10449,7 @@
         },
         "registerSpatialIndexDebugGUI": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "registerSpatialRadiusProvider": {
           "kind": "Function",
@@ -10371,10 +10461,7 @@
         },
         "releaseSceneSpatialDomains": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "internal"
         },
         "ResolvedSpatialDomainOptions": {
           "kind": "TypeAlias",
@@ -10410,7 +10497,10 @@
         },
         "SpatialRadiusProvider": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/instancing"
+          ]
         },
         "SpatialUpdatePolicy": {
           "kind": "TypeAlias",

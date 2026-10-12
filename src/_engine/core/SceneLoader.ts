@@ -31,7 +31,6 @@ import {
   IS_PROD_TEST_MODE,
   isDebugEnvironment,
 } from './Config';
-import { activateSceneDefaultSkyBox, clearSkyBox } from './SkyBox/SkyBox';
 import {
   handleDraggableWindowsOnSceneChangeEnd,
   handleDraggableWindowsOnSceneChangeStart,
@@ -62,10 +61,6 @@ import { getImportedAsset, importAssetAsync, retagImportedAsset } from './Import
 import type { ImportedAssetManifest } from './Import/ImportTypes';
 import { retagAssetOwner, setAssetOwnerScene } from './Assets/AssetOwners';
 import { releaseSceneOwnedAssets } from './Assets/SceneAssetRelease';
-import {
-  registerSceneSpatialDomains,
-  releaseSceneSpatialDomains,
-} from './Spatial/SpatialIndexSystem';
 import {
   runSceneBeforeAssetsHooksAsync,
   runSceneCreatedHooksAsync,
@@ -547,15 +542,14 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
       // The features' load start (physics holds its stepping until `entered`)
       runSceneLoadStartHooks();
 
-      // The features tear down the previous scene (characters, then physics entities), then the
-      // groups, loopers and non-persistent entities go
+      // The features tear down the previous scene (the sky box, characters, then physics
+      // entities), then the groups, loopers and non-persistent entities go
       runSceneExitHooks(prevSceneId);
       deleteAllGroupEntities();
       disposeNonPersistentLines();
 
       if (prevScene) deleteAllSceneLoopers(prevSceneId);
 
-      clearSkyBox();
       handleDraggableWindowsOnSceneChangeStart();
 
       runOnSceneExit(prevSceneId);
@@ -575,15 +569,8 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
         void ecsWorld.getEntitiesWith(ComponentType.DEBUG_TAG_IS_DEBUG_CAMERA).next().value;
       }
       ecsWorld.clearNonPersistent();
+      // The features' part, before anything of the next scene exists (spatial's scene domains)
       runSceneWorldClearedHooks(ecsWorld, prevSceneId, sceneData);
-      // After the delete, so a domain going back to its world settings re-inserts only the
-      // persistent members, and before anything of the next scene joins a domain
-      releaseSceneSpatialDomains(ecsWorld, prevSceneId);
-      // Before the next scene's assets, code and JSON objects join anything, so each grid is
-      // created once, at the scene's own settings
-      if (sceneData.spatialDomains?.length) {
-        registerSceneSpatialDomains(ecsWorld, sceneId, sceneData.spatialDomains);
-      }
       if (loadSceneProps.deletePrevScene && prevSceneId && prevSceneId !== sceneId) {
         releaseSceneOwnedAssets(prevSceneId);
       }
@@ -610,8 +597,8 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
           );
           setCurrentScene(sceneId);
           setLoadingSceneId(null);
+          // The features' part (the sky box shows the scene's default)
           await runSceneCreatedHooksAsync(sceneId);
-          await activateSceneDefaultSkyBox(sceneId);
           await createNextSceneObject3Ds(sceneData);
           // The next scene has taken refs on, or re-tagged, what it shares with the previous one:
           // release what the previous scene still owns and nothing uses. (Reloading the same

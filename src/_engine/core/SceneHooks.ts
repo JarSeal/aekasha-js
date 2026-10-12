@@ -1,26 +1,36 @@
+import type * as THREE from 'three/webgpu';
 import type { ECSWorld } from './ECS';
 import type { SceneData } from './Scene';
 
 // The scene seams (p607 D4): a feature adds its part of a scene load through
 // `FeatureContext.addSceneHooks`, and `loadScene` (SceneLoader.ts) runs each phase where the
-// feature's calls used to be, so the order inside a load stays. App code keeps
+// feature's calls used to be, so the order inside a load stays. The scene data phases run from
+// Scene.ts (registration, delete) and Assets/SceneAssetRelease.ts. App code keeps
 // `registerOnAllSceneExits` / `registerOnAllSceneEnterings`.
 
 /**
- * A feature's part of a scene load (`FeatureContext.addSceneHooks`), by phase, in the order
- * `loadScene` runs them. Each phase runs the features' hooks in install order, except `exit`,
- * which runs them in reverse (a dependent feature tears down first: characters before physics).
- * The awaited phases await each hook before the next. A hook that throws fails the load like any
- * other step of it.
+ * A feature's part of the scenes' life (`FeatureContext.addSceneHooks`), by phase: the scene
+ * data phases, then a scene load's phases in the order `loadScene` runs them. Each phase runs the
+ * features' hooks in install order, except `exit`, which runs them in reverse (a dependent
+ * feature tears down first: characters before physics). The awaited phases await each hook
+ * before the next. A load phase's hook that throws fails the load like any other step of it.
  */
 export type SceneHooks = {
+  /** A scene of the gathered data was registered, with its data. `InitEngine` registers them
+   * after every feature has installed, so the hook sees every one. */
+  sceneRegistered?: (sceneId: string, data: SceneData) => void;
+  /** `deleteScene` deleted the scene's objects (`sceneId` is never the current scene). */
+  sceneDeleted?: (sceneId: string) => void;
+  /** The textures a scene's asset release must keep, though the released scene owns them and no
+   * material uses them (eg. the sky box's). Read once per release. */
+  retainedTextures?: () => readonly THREE.Texture[];
   /** First thing after the loader's `loadStartFn`, before anything of the previous scene goes. */
   loadStart?: () => void;
   /** Tears down what the previous scene left (`prevSceneId`, undefined on the first load), before
    * the kernel deletes the groups, the scene loopers and the non-persistent entities. */
   exit?: (prevSceneId: string | undefined) => void;
   /** After the default world's non-persistent entities are gone, before anything of the next
-   * scene exists. */
+   * scene exists (`nextSceneData.id` is its id). */
   worldCleared?: (
     world: ECSWorld,
     prevSceneId: string | undefined,
@@ -50,6 +60,35 @@ export const addSceneHooks = (hooks: SceneHooks) => {
     const index = sceneHooks.indexOf(hooks);
     if (index !== -1) sceneHooks.splice(index, 1);
   };
+};
+
+/**
+ * Runs the `sceneRegistered` hooks.
+ * @internal
+ */
+export const runSceneRegisteredHooks = (sceneId: string, data: SceneData) => {
+  for (let i = 0; i < sceneHooks.length; i++) sceneHooks[i].sceneRegistered?.(sceneId, data);
+};
+
+/**
+ * Runs the `sceneDeleted` hooks.
+ * @internal
+ */
+export const runSceneDeletedHooks = (sceneId: string) => {
+  for (let i = 0; i < sceneHooks.length; i++) sceneHooks[i].sceneDeleted?.(sceneId);
+};
+
+/**
+ * The textures the `retainedTextures` hooks keep from a scene's asset release.
+ * @internal
+ */
+export const getSceneRetainedTextures = () => {
+  const retained = new Set<THREE.Texture>();
+  for (let i = 0; i < sceneHooks.length; i++) {
+    const textures = sceneHooks[i].retainedTextures?.();
+    if (textures) for (const texture of textures) retained.add(texture);
+  }
+  return retained;
 };
 
 /**
