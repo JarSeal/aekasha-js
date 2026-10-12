@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-9 implemented
+Status: in progress | Phases 1-10 implemented
 Category: Build, Performance, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
 Blocks: p608_engine-folder-restructure.md, p611_sbp-tooling-profiles-and-marketing.md, p510_headless-simulation-runtime.md
@@ -1227,7 +1227,7 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
   paired the other way round, as in Phase 7), `api.json` (`checkSceneFeatures`, internal),
   `docs.json`. The production debug check: none.
 
-### Phase 10: Hub, CLAUDE.md, readme, migration guide
+### Phase 10: Hub, CLAUDE.md, readme, migration guide — done
 
 1. Hub: each feature page's `features` line; the ECS guide and walkthrough (`appECSPlugins`); the
    Quick start's "How the app starts"; the icons (UI pages); the migration guide's "Engine 4 → 5":
@@ -1236,6 +1236,53 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
    `sideEffects`, Coding standards' "no module-level side effects" names the test), the nested
    ones the phases touched, `readme.md` (`InitEngine`'s example, a "Smallest build" line).
 3. p608, p611, p612 and p510's stubs: what this plan did and left.
+
+**As built:**
+
+- **The Hub (section 1):** each feature page's guide starts with "Installing it" (the factory, its
+  entry, what happens without it; PostFX's is in Rendering's "Post effects", instancing's in the LOD
+  page). The ECS guide has a "Features" section (the kernel, list order, `requires`, `onDebug`, no
+  registration at load) and "Plugins and hooks" shows `appECSPlugins`; the ECS walkthrough's step
+  4, the toolkit pages, the Quick start's "How the app starts" (a `features` bullet and the boot
+  check) follow. Scenes and assets: the lazy TSL / PostFX loaders and "The feature manifest" (the
+  boot error quoted). The Documentation page's entries table names the factories and `aekasha/ui`'s
+  icons. The coding standards' "Smallest build" names `sideEffects`, `moduleSideEffects.test.ts` and
+  the debug fold. The migration guide: `features` in the `src/index.ts` diff, the `__AEK_DEBUG__`
+  define in "Before you start", and new sections Features, Your ECS plugins are a feature (with the
+  `sideEffects` trap for a bare `import './AppECSPlugins'`), Icons, TSL files load with their
+  scene, and Scene and mesh schemas (`SceneAssetSchema` / `MeshAssetSchema` were public).
+- **Changed from step 1: no UI pages exist,** so the icon registry is a section of the debug suite
+  guide (tabs, views and windows take an `icon`) and a row of the entries table. `lines()` has no
+  feature page either: it's in the factory lists.
+- **Prettier and shiki's notation:** Prettier moves a trailing `// [!code ++]` onto its own line in
+  a code block that parses, which shifts what it marks; the migration guide uses range markers on
+  their own line (`// [!code --:4]`), which it leaves alone.
+- **Root `CLAUDE.md` (section 2):** a new Architecture section, **Engine features** (the contract,
+  the context's seams, install order as system order, the production traps, what happens without a
+  feature, the assets worker's job modules), covered by the ECS page's `aek:covers`; the Bootstrap
+  flow in the code's order; ECS core's plugin registration; the data pipeline's composed schemas,
+  generated loaders and manifest; Physics (`physics()`, the driver's latch, the scene hooks); Debug
+  system and Build config (`__AEK_DEBUG__`); the `yarn test` and move map lines; Coding standards'
+  "Smallest build". `devTools/verify/CLAUDE.md`'s `NOT_YET_INSTALLED` sentence; `SkyBox/CLAUDE.md`
+  names `skyBox()` (the other features' nested files already did).
+- **`readme.md`:** "Boot the engine" lists `[physics(), skyBox(), postFx(), appECSPlugins]`
+  (example 2's scene has `skyboxes`), example 5's plugin is `appECSPlugins`, a "Feature modules"
+  bullet, the icon registry, a "Smallest build" highlight row (its numbers left to the changelog,
+  Phase 11) and the `__AEK_DEBUG__` fold in "Tree-shaking".
+- **The stubs (section 3):** a "From p607" section each: p608 (the new files' move rules,
+  `LodFade.ts` mapped not moved, the hard-coded debug paths in `debugInProduction.ts`,
+  `moduleSideEffects.test.ts` and `eslint.config.js`, merging a wrapper keeps it foldable, the
+  layout report, `entryExports.json`'s schema entries, the system order), p611 (the main chunk's
+  numbers by group, what `yarn sbp` can read, the banner profile's `features: []`, the manifest
+  fold, a `physics()` option, an icon budget), p612 (D6's 22 type-only imports by kind, init, the
+  `onDebug` closures not measured, the loop seams, factory options), p510 (the `?worker` /
+  Rapier `import()`s, installs, `FixedStepDriver`; left: the SCSS import, `InitEngine`'s DOM work,
+  the kernel's render systems).
+- **`moveMap.ts --check` was stale** (Phase 9's new test file, the names Phases 8-9 added, and the
+  paths this phase's CLAUDE.md and Hub text name): regenerated.
+- Checks: `yarn hub:build` passes (305 pages; the search index 1.07 MB, was 1.04 MB: the warning
+  stays; `{@link LodTarget}` at `LodSystem.ts:989` links nowhere, from Phase 6's move, left for
+  p616), the CLAUDE.md coverage check, `moveMap.ts --check`, Prettier on the edited files.
 
 ### Phase 11: changelog and mark done
 

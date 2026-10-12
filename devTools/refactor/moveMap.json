@@ -1944,6 +1944,11 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/schemas/featureSchemas.test.ts": {
+      "to": "src/_engine/schemas/FeatureSchemas.test.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/schemas/featureSchemas.ts": {
       "to": "src/_engine/schemas/FeatureSchemas.ts",
       "action": "move",

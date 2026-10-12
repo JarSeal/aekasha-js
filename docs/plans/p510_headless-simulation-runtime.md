@@ -49,6 +49,19 @@ network: simulation tests and recorded replays in CI.
   in one function (`physicsTiers.ts` creates each crate's mesh and body together), and physics
   objects are created in code, not in the scene JSON yet.
 
+- **Done by p607 (2026-10-12):** the two `?worker` imports are `import()`s at the worker's start
+  (`initPhysics`' `WORKER_THREAD` branch, the assets worker's first request), and Rapier loads by
+  `import()` (`Physics/ENGINES.ts`' `loadEngineAPI`). Nothing registers at module load
+  (`moduleSideEffects.test.ts`): the kernel installs in `installKernel` and each feature in its
+  `install`, so a headless runner chooses what it installs (`physics()`: the tiers, the tier
+  policy, the physics entities' systems, the fixed-step driver and the scene hooks). The loop
+  reaches physics only through `FixedStepDriver` (`latch`, `step(loopState, runSubStep)`,
+  `flushEvents`, `isStepping`), which a server clock (question 3) can drive. `__AEK_DEBUG__` is a
+  build define (a headless build sets it). **Left:** `InitApp.ts` keeps its SCSS import (p607 D15:
+  it's the browser boot, which a headless runner doesn't import), so question 1 leans to an entry
+  of its own; `InitEngine` still creates the root scene, the HUD and the window listeners; the
+  kernel's install holds render systems (frustum culling, meshes), which p608 splits.
+
 ## Phase 1 (from p604's dropped spike)
 
 A throwaway branch once the kernel is headless: a Node process running `physicsTiers`' simulation,
