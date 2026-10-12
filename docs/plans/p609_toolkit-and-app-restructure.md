@@ -1,38 +1,225 @@
-Status: stub — not-implemented
+Status: draft | not-implemented
 Category: Refactoring, Toolkit, App
-Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, toolkit major)
+Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p620_review-toolkit-and-app-code.md
-Related: the "Toolkit and asset housekeeping" (p450) prompt in `docs/templates/todo-plan-prompts.txt` (its folder structure is absorbed here; its new assets and LOD test scene stay in p450)
+Related: \_DONE_p602_architecture-and-target-structure.md (D2, D7, D8), \_DONE_p608_engine-folder-restructure.md (the codemod, `moveRules.ts`, its D9 after-move rules), \_DONE_p300_asset-optimization-pipeline-plan.md (the asset pipeline's output paths), the "Toolkit and asset housekeeping" (p450) prompt in `docs/templates/todo-plan-prompts.txt` (its folder structure is absorbed here; its new assets, LOD test scene and the debugger test assets stay in p450)
 
-# Toolkit and App Restructure — Stub
-
-**This is a stub.** It fixes the scope, the inputs and the done criteria. Expand it into a full plan (grounding checked against the code, non-breaking phases, the Hub phase, versioning) when its blockers land: its details depend on p602's decisions.
-
-## Goal
+# Toolkit and App Restructure
 
 The toolkit and the app get the same clarity as the engine: the toolkit as a catalogue of
-ready-made pieces by category, the app as one folder per scene.
+ready-made pieces by category, the app as one folder per scene with the assets only that scene
+uses. Moves and renames only, with p608's codemod (`applyMoveMap.ts --plan p609`): every
+`aekasha/toolkit/*` entry exports the same names, every scene keeps its id, and every scene's
+hash, snapshot and system order stays the same.
 
-## Scope
+## 1. As found (2026-10-13, branch `toolkit-and-app-restructure` at `de10424`, = `main` after p608's merge)
 
-- **Toolkit categories** (from the p450 prompt): `ecs` (effects, and the gameplay pieces p608
-  moved in), `geometry` with `generate/` and `scatter/`, `materials/<name>/`,
-  `textures/<name>/`, `models/<category>/<name>/`, `skyboxes/<name>/`; each with its own entry
-  (`aekasha/toolkit/*`, p602 D1).
-- **Remove the deprecated re-exports** `toolkit/ecs/InstancedMeshPool*.ts` (kept until the
-  toolkit's next major: this one).
-- **The app:** one folder per scene (`src/app/scenes/<sceneId>/`, p602 D7), consistent scene file
-  names (today `scene01_v2.ts`, `scene_thirdPersonGym.ts`, `largeWorld.ts` side by side), the
-  shared asset JSONs in their type folders, `characterVisual.ts` with the gym.
-- **`AppECSPlugins.ts`** becomes the app's feature list for `InitEngine` (p602 D8).
-- The asset location question from the p450 prompt (`src/public/aek-assets/` vs the toolkit):
-  answered here or handed back to p450, with the asset pipeline's output paths in mind.
+What changed since the stub was written:
 
-## Inputs
+- **The deprecated re-exports are gone.** `toolkit/ecs/InstancedMeshPool*.ts` was removed in
+  p606 Phase 7 (`a2001ec`). Nothing to do.
+- **`AppECSPlugins.ts` is already the app's feature** (p607): `appECSPlugins: EngineFeature`
+  (`id: 'app'`), listed last in `src/index.ts`'s `features`. p602 D8 is done; the file keeps its
+  name (the root `CLAUDE.md`'s Versioning and the Hub's `ecs-register-plugin` region name it).
+- **The toolkit major already shipped** (2.0.0 Half Moon, with `stage-b`). The epic's §11 makes
+  p608-p611 minor or patch bumps, and the entries keep their names, so this is a toolkit patch
+  (D6), not "the toolkit major in the changelog".
+- **The move is mostly prepared.** p608 left 72 `p609` entries in `moveMap.json` (63 moves, 9
+  keeps); `applyMoveMap.ts`, `compareBaselines.ts` and `moveTree.test.ts` (which applies p609's
+  plan to today's tree without an error) take `--plan p609`.
+- **Gap: the codemod doesn't rewrite asset JSONs.** `moveText.ts`' `getTextKind` makes every
+  `.json` but `tsconfig.json` / `package.json` a `scan` (reported, not rewritten), so a moved
+  asset JSON's `$schema` (`../../../.schemas/…`, one more `../` per folder level), a scene's
+  `sceneFile` (relative to `src/app/`, eg. `./scene01_v2.ts`, `debugScene.scene.ts`) and a
+  relative source (`"image": "./source/p299Atlas/…"`, `"fileName": "./aekashaSymbol.glb"`) would
+  break. `moveRules.ts`' note "the codemod rewrites its `sceneFile`" isn't true yet. Phase 1 adds it.
+- **The asset pipeline names outputs by path** (`outputs.ts`: `src/public/aek-assets/<path under
+src/>.<hash>.<ext>`), and the cache key holds that path: a single texture or model by its
+  relative source's path (`getLogicalPath`), an array, atlas or pack by its JSON's
+  (`getArrayLogicalPath`, `getAtlasLogicalPath`, `getPackLogicalPath`). So the moved Æ symbol,
+  impostor atlases, p299 atlases and p299 arrays get new outputs and lock entries, and `yarn
+assets` encodes them again (the textures with `ktx`). A single asset with a public source
+  (`testImport`'s `/debugger/assets/…` GLB) keeps its output.
+- The Hub finds a scene's image next to its scene file (`devTools/hub/scenes.ts`), so the
+  `.hub.png` moves with it; the examples keep `src/app/examples/<name>/` (the Hub's example rule).
 
-- p602 D2, D7, D8; the p450 prompt; p608's moves.
+## 2. Decisions (confirmed 2026-10-13)
 
-## Done when
+### D1. The toolkit's categories
 
-- The toolkit's folders follow the categories, each piece importable by its entry; the app's
-  scenes each in their folder; p601's runner passes; the toolkit major is in the changelog.
+```
+src/toolkit/
+  ecs/            index.ts → aekasha/toolkit/ecs
+    effects/      a component + its system, put on an entity: FollowTool, HoverEffect, MutualGravity, SunShadowFit
+    gameplay/     FollowObjectCameraRig, MovingPlatform
+  geometry/       index.ts → aekasha/toolkit/geometry
+    generate/     Asteroid, Foliage, Terrain
+    scatter/      ScatterOnSurface
+    SeededRandom.ts
+  materials/      index.ts → aekasha/toolkit/materials
+    <id>/         one folder per material: <id>.material.json, <id>.tsl.ts
+    TriplanarProjection.ts   (the shared TSL helper)
+  models/<category>/<id>/    asset JSON + source; first category brand/ (aekashaSymbol)
+  textures/<id>/             (p450's PBR textures)
+  skyboxes/<id>/             (p450's sky boxes)
+```
+
+- By kind, not a folder per piece: six one-file modules don't need six folders. A piece that
+  grows a second file gets its own folder inside its kind.
+- **Only code categories have an entry** (`ecs`, `geometry`, `materials`; `TOOLKIT_CATEGORIES`
+  in `eslint.config.js` and `devTools/aliases.ts` unchanged). Models, textures and sky boxes are
+  asset JSONs reached by id through the gatherer, so they get no `aekasha/toolkit/*` entry.
+- **Model categories:** `brand/` now; p450's reference models (bunny, dragon, teapot, Suzanne)
+  go in `reference/`, its tree in `nature/`.
+- `textures/` and `skyboxes/` have no content yet (git keeps no empty folder): they're named in
+  the docs and created by p450.
+- `SeededRandom.ts` stays in the toolkit (the p450 prompt's question): the engine doesn't use it.
+  The simulation lint's message points at it until p610's RNG service exists.
+
+### D2. The app: one folder per scene, with the assets only it uses
+
+```
+src/app/
+  scenes/<sceneId>/   <sceneId>.scene.json, <sceneId>.ts, _dbg__ module, <sceneId>.hub.png,
+                      the scene's own modules and the asset JSONs only this scene uses
+  examples/<name>/    unchanged (the Hub's example rule)
+  cameras/ lights/ impostors/ skyboxes/ textures/ postFx/   the shared asset JSONs
+```
+
+- **Scene ids stay** (thirdPersonGymScene, topDownTestScene, sceneTestECS, testDebugScene,
+  scene01V2 included): they key `__saveData`, the scene runner's baselines, the LS state and
+  `?startScene=`. File and folder names follow the id, which makes them consistent.
+- **"Only this scene uses it"** is decided by who names the asset's id (scene JSONs, scene code,
+  other asset JSONs; a Hub mention of the same word as a field name doesn't count), scanned
+  2026-10-13. The moving assets are listed as file rules in `moveRules.ts` with the scene in
+  their note (the "edited by hand" part of the map), so the map can be generated again:
+
+  | Scene                 | Assets that move into its folder                                                                                                                                                                                |
+  | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `largeWorld`          | `cameras/largeWorldOverview`, `lights/largeWorldAmbient`, `lights/largeWorldSun`, `impostors/largeWorldTreeCross.*` (impostor, atlas, 2 PNGs)                                                                   |
+  | `lodShowcase`         | `cameras/lodShowcaseCamera`, `impostors/lodShowcaseKnotImpostor.*`, `impostors/lodShowcaseTreeCross.*` (4 files each)                                                                                           |
+  | `physicsTest`         | `cameras/physicsTestCamera`, `lights/physicsTestAmbient`, `lights/physicsTestSun`                                                                                                                               |
+  | `physicsTiers`        | `cameras/physicsTiersOverview`, `lights/physicsTiersAmbient`, `lights/physicsTiersSun`                                                                                                                          |
+  | `skyShowcase`         | `cameras/skyShowcaseCamera`                                                                                                                                                                                     |
+  | `space`               | `cameras/spaceCamera`                                                                                                                                                                                           |
+  | `thirdPersonGymScene` | `cameras/thirdPersonGymCamera`, `lights/thirdPersonGymAmbient`, `lights/thirdPersonGymSun`, `characterVisual.ts` (the top-down test imports it from there)                                                      |
+  | `topDownTestScene`    | `cameras/topDownTestCamera`, `lights/topDownTestAmbient`, `lights/topDownTestSun`                                                                                                                               |
+  | `assetCompare`        | `skyboxes/assetCompare`                                                                                                                                                                                         |
+  | `textureArrays`       | `textures/p299TestArray`, `textures/p299TestArray1`                                                                                                                                                             |
+  | `textureAtlases`      | `textures/p299TestAtlas`, `textures/p299TestAtlasImage`, `textures/source/p299Atlas/` (8 PNGs)                                                                                                                  |
+  | `sceneTestECS`        | `cameras/mainCamera`, `lights/ambientLight`, `materials/testMaterial`, `materials/testTslMat` (+ `.tsl.ts`), `meshes/testMesh`, `meshes/testImportedMesh`, `geometries/testSphere`, `importedAssets/testImport` |
+
+- **Stay shared:** `scene01Camera` / `scene01Ambient` / `scene01Sun` (scene01 and scene01V2),
+  `largeWorldRockImpostor` (largeWorld and lodShowcase), `basicSkybox`, `dayNight`, `space`
+  (skybox), `ambientOcclusion` (postFx), `testTexture`, and `p341AlphaCutTest` (no scene uses it;
+  p620 decides whether it goes). `materials/`, `meshes/`, `geometries/` and `importedAssets/`
+  end up empty and disappear.
+- An asset that a second scene starts using moves back to its type folder (the rule for later
+  work, written into the Hub's app-structure text in Phase 3).
+
+### D3. The asset location question (the p450 prompt)
+
+Answered by p300: an asset's source sits next to its JSON (in the toolkit or the app), and the
+pipeline writes the shipped output to `src/public/aek-assets/` (generated and committed, so a
+clone needs no encoder; `dist/aek-assets/` gets only what production loads). Toolkit sources
+already live in the toolkit. **Handed back to p450:** the ~145 debugger test files in
+`src/public/debugger/assets/` (sources used from public paths), which the prompt wants out of
+`public/`. Phase 3 writes this into the p450 prompt.
+
+### D4. The codemod reads asset JSONs
+
+A new text kind `json` in `moveText.ts` for every gathered asset JSON under `src/` (by suffix,
+the gatherer's list): text edits on the string values only (formatting and `__saveData` stay
+byte for byte), each edit resolved against the file's old folder and written against its new one:
+
+- `$schema`: re-relativised to `.schemas/` from the new folder;
+- `sceneFile`: resolved from `src/app/` (the gatherer's base), with or without `.ts`, written as
+  `./scenes/<id>/<id>.ts`;
+- any other string starting `./` or `../` (`image`, `fileName`, layer paths): a tracked file,
+  mapped and re-relativised. A relative path that resolves to no tracked file is an error;
+  root-absolute paths (`/debugger/…`) are left alone.
+
+A JSON that doesn't move but points at a moved file (a texture whose source folder moves) is
+rewritten too. Tested on in-memory trees like the other rules (`moveText.test.ts`).
+
+### D5. After the move
+
+As p608 D9: `moveRules.ts`' toolkit and app rules describe the layout (keep rules), so a new file
+outside it fails `moveMap.ts`, and `moveTree.test.ts`' p609 test skips (no plan left to apply).
+`MovePlan` keeps `'p609'` for `--verify-commit` and `compareBaselines` on the move commit.
+
+### D6. Versions
+
+- **Toolkit 2.0.1 → 2.0.2** (patch): moves only; every entry exports the same names. The Æ
+  symbol's output URL changes, which nothing names by hand (it's in the generated data).
+- **App 1.10.1 → 1.10.2** (patch): moves and renames, same scenes.
+- **Engine:** unchanged unless a comment of the text rewrite lands in it (then a patch, as p608's
+  toolkit and app patches).
+- **Project:** the codemod's JSON rewrite, the rules.
+
+No example scene: nothing new to show (the Hub's app-structure and toolkit pages change, Phase 3).
+
+## 3. Phases
+
+The move is one commit made by the codemod (`--verify-commit` checks it), so the phases split
+around it: the tooling before, the outputs and fixes after, the docs last.
+
+### Phase 1: the rules and the JSON rewrite
+
+No file of the toolkit or the app changes.
+
+1. Record the scene runner's baselines on this branch's base (`de10424` = `main`):
+   `yarn verify:scenes --update`, in the background (Workflow's "Watching a long run").
+2. D4: the `json` text kind in `moveText.ts` with its tests; the leftovers report covers it too.
+3. `moveRules.ts`: D1 (`ecs/gameplay/` for `FollowObjectCameraRig.ts` and `MovingPlatform.ts`,
+   `models/brand/` without the "proposal" note), D2's asset file rules with their notes, the
+   `sceneFile` note made true.
+4. `npx tsx devTools/refactor/moveMap.ts`, then review `layoutReport.md` and the map's p609
+   entries (expected: 72 + D2's 52 asset files).
+5. `applyMoveMap.ts --plan p609 --dry-run`; its leftovers name what `MOVE_EDITS` needs (expected:
+   the simulation lint message's `toolkit/geometry/seededRandom.ts`, any toolkit-relative path in
+   a comment). Add those edits, dry-run again until it's clean.
+6. `yarn test`, `yarn lint`. Commit.
+
+### Phase 2: the move
+
+1. `npx tsx devTools/refactor/applyMoveMap.ts --plan p609`: commit alone, its message naming the
+   command and the base (`p609: apply the move map`).
+2. `yarn setupAssetTools` (if `.tools/` has no `ktx`), then `yarn assets` (a full run: it prunes
+   the old outputs and lock entries) and `yarn gatherAppData`. Commit the outputs, the lock and
+   the generated data.
+3. Checks: `applyMoveMap.ts --verify-commit <move sha>`, `compareBaselines.ts --plan p609 <base>`,
+   `yarn test`, `yarn verify:scenes` (every configuration, against step 1's baselines),
+   `yarn verify:baselines`, `yarn build`, `yarn hub:build`.
+4. `applyMoveMap.ts --plan p609 --leftovers <base>`: fix what's left by hand (asset JSON
+   descriptions naming old files, eg. `thirdPersonGymSun.light.json`'s). Commit.
+
+### Phase 3: after the move, the docs and the Hub
+
+1. D5: the rules become keep rules, `moveMap.ts` regenerates (every file a keep), the
+   `moveTree.test.ts` skip.
+2. Root `.claude/CLAUDE.md`: the three-folder split's toolkit (D1's categories, the models path)
+   and app (D2) lines; nested `CLAUDE.md` files naming app paths (`features/lod/CLAUDE.md`'s
+   `lodShowcase`, others the leftovers named).
+3. The Hub: the toolkit pages (`hub/pages/examples/toolkit/`, the feature pages that name toolkit
+   paths), the app-structure text (where a scene and its assets go, D2's rule for shared assets),
+   `features/asset-optimization/guide.md`'s Æ symbol path. `yarn hub:build`.
+4. `readme.md` where it lists the toolkit or the app layout.
+5. D3 into the p450 prompt (`docs/templates/todo-plan-prompts.txt`): the asset location answer,
+   the categories it fills, the debugger test assets it keeps.
+
+### Phase 4: versions and done
+
+D6's bumps, the `CHANGELOG.md` entry (Toolkit, App, Project; Engine if touched), `yarn
+checkVersions --against main`, mark the plan done (`docs/plans/CLAUDE.md`), p620's `Blocked by`
+line. Then the PR: `toolkit-and-app-restructure` into `main` (the epic's Branches and PRs row).
+
+## 4. Risks
+
+- **Re-encoded outputs differ.** The arrays' and atlases' outputs are encoded again under their new paths;
+  the same `ktx` version and input should give the same bytes, but a different hash only changes
+  a URL. The scene runner's snapshots are the check.
+- **A dev server running during the move** gathers half-moved trees: stop it for Phase 2.
+- **Case-insensitive file systems:** the moves include no case-only rename except the toolkit's
+  PascalCase ones (`seededRandom.ts` → `SeededRandom.ts`, `triplanarProjection.ts` →
+  `TriplanarProjection.ts`), which the codemod renames through a temporary name.
