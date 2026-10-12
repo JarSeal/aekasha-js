@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1449,
-      "total": 2160
+      "documented": 1480,
+      "total": 2164
     },
     "members": {
       "documented": 212,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1404,
-        "total": 2096
+        "documented": 1435,
+        "total": 2100
       },
       "members": {
         "documented": 162,
@@ -530,8 +530,8 @@
     },
     "engine/core/Lod": {
       "exports": {
-        "documented": 63,
-        "total": 75
+        "documented": 68,
+        "total": 80
       },
       "members": {
         "documented": 0,
@@ -557,8 +557,8 @@
     },
     "engine/core/Lod/Impostors": {
       "exports": {
-        "documented": 55,
-        "total": 64
+        "documented": 64,
+        "total": 73
       },
       "members": {
         "documented": 0,
@@ -776,8 +776,8 @@
     },
     "engine/core/PostFX": {
       "exports": {
-        "documented": 9,
-        "total": 9
+        "documented": 10,
+        "total": 10
       },
       "members": {
         "documented": 0,
@@ -790,8 +790,8 @@
     },
     "engine/core/SkyBox": {
       "exports": {
-        "documented": 130,
-        "total": 154
+        "documented": 150,
+        "total": 174
       },
       "members": {
         "documented": 0,
@@ -876,8 +876,8 @@
     },
     "engine/core/Spatial": {
       "exports": {
-        "documented": 39,
-        "total": 52
+        "documented": 40,
+        "total": 53
       },
       "members": {
         "documented": 20,
@@ -1041,8 +1041,8 @@
     },
     "engine/schemas": {
       "exports": {
-        "documented": 51,
-        "total": 154
+        "documented": 46,
+        "total": 122
       },
       "members": {
         "documented": 0,
@@ -1095,10 +1095,6 @@
           "geometrySchema#GeoPropsSchema",
           "importedAssetSchema#ImportedAsset",
           "importedAssetSchema#ImportedAssetSchema",
-          "impostorSchema#CrossQuadsImpostorAssetSchema",
-          "impostorSchema#ImpostorAsset",
-          "impostorSchema#ImpostorAssetSchema",
-          "impostorSchema#OctahedralImpostorAssetSchema",
           "lightSchema#LightAsset",
           "lightSchema#LightAssetSchema",
           "lightSchema#LightOverrides",
@@ -1107,33 +1103,10 @@
           "materialSchema#MaterialAsset",
           "materialSchema#MaterialAssetSchema",
           "materialSchema#MaterialOverrides",
-          "meshSchema#MeshAsset",
-          "meshSchema#MeshAssetSchema",
-          "meshSchema#MeshOverrides",
-          "meshSchema#MeshPropsSchema",
           "postFxSchema#PostFxAsset",
           "postFxSchema#PostFxAssetSchema",
           "postFxSchema#PostFxOverrides",
           "postFxSchema#PostFxParamMeta",
-          "sceneSchema#SceneAsset",
-          "sceneSchema#SceneAssetSchema",
-          "sceneSchema#SceneOverrides",
-          "skyBoxSchema#SkyBoxAmbientLightSchema",
-          "skyBoxSchema#SkyBoxAtmosphereSchema",
-          "skyBoxSchema#SkyBoxBaseSchema",
-          "skyBoxSchema#SkyBoxCloudsSchema",
-          "skyBoxSchema#SkyBoxDayNightSchema",
-          "skyBoxSchema#SkyBoxEnvSchema",
-          "skyBoxSchema#SkyBoxEnvSizeSchema",
-          "skyBoxSchema#SkyBoxGroundSchema",
-          "skyBoxSchema#SkyBoxMoonLightSchema",
-          "skyBoxSchema#SkyBoxMoonSchema",
-          "skyBoxSchema#SkyBoxNebulaSchema",
-          "skyBoxSchema#SkyBoxOverrides",
-          "skyBoxSchema#SkyBoxOverridesSchema",
-          "skyBoxSchema#SkyBoxStarsSchema",
-          "skyBoxSchema#SkyBoxSunLightSchema",
-          "skyBoxSchema#SkyBoxSunSchema",
           "spatialDomainSchema#SceneSpatialDomainEntry",
           "spatialDomainSchema#SceneSpatialDomainsSchema",
           "textureArraySchema#TextureArrayAsset",

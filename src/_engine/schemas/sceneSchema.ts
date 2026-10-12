@@ -5,14 +5,17 @@ import { LightAssetSchema } from './lightSchema';
 import { GeoPropsSchema } from './geometrySchema';
 import { InlineTextureOverridesSchema, InlineTextureSchema } from './textureSchema';
 import { MaterialAssetSchema } from './materialSchema';
-import { PostFxAssetSchema } from './postFxSchema';
-import { SkyBoxAssetSchema } from './skyBoxSchema';
 import { ColorJSONSchema } from './_helperSchemas';
-import { SceneSpatialDomainsSchema } from './spatialDomainSchema';
+import {
+  type FeatureSchemaPart,
+  type FeatureSchemaShape,
+  mergeFeatureSchemaShapes,
+} from './featureSchemas';
 
 const AssetReferenceOrInline = z.union([z.string(), z.record(z.string(), z.unknown())]);
 
-const SceneOverridesSchema = z.object({
+// The kernel's scene fields; the features' follow them (createSceneAssetSchema)
+const KERNEL_SCENE_SHAPE = {
   $schema: z.string().optional(),
   __meta: MetaSchema.optional(),
 
@@ -35,32 +38,38 @@ const SceneOverridesSchema = z.object({
   materials: z.array(z.union([z.string(), MaterialAssetSchema])).optional(),
   meshes: z.array(AssetReferenceOrInline).optional(),
   importedAssets: z.array(AssetReferenceOrInline).optional(),
-  skyboxes: z.array(z.union([z.string(), SkyBoxAssetSchema])).optional(),
-  /** Ordered PostFX pass chain: unlike the other registries, array order is execution order (each pass builds on the previous pass's output). */
-  postFx: z.array(z.union([z.string(), PostFxAssetSchema])).optional(),
-  /** Whether the scene's PostFX chain starts switched on. Default true when `postFx` is non-empty. */
-  postFxEnabled: z.boolean().optional(),
-  /** Spatial domains this scene registers for itself, before any of its entities join one; dropped on its exit (`DEFAULT`: partial, merged over its world settings). */
-  spatialDomains: SceneSpatialDomainsSchema.optional(),
-  impostors: z
-    .array(z.string())
-    .optional()
-    .describe(
-      "Exported impostors (`*.impostor.json` ids): their atlases load with the scene's textures, and generateOctahedralImpostor / generateCrossQuads called with one's id builds from it instead of baking."
-    ),
-});
+};
 
-export type SceneOverrides = z.infer<typeof SceneOverridesSchema>;
+/**
+ * The scene schema (`*.scene.json`) with the features' fields (p607 D10): the kernel's fields,
+ * then each part's `scene` fields in part order (the JSON Schema's property order), all of them
+ * allowed in the scene's save entries too. The gatherer composes it with every engine feature's
+ * part. Throws on a field two parts give.
+ * @example
+ * ```ts
+ * import { createSceneAssetSchema, lodSchemaPart, skyBoxSchemaPart } from 'aekasha/schemas';
+ *
+ * const SceneSchema = createSceneAssetSchema([skyBoxSchemaPart, lodSchemaPart]);
+ * const isValid = SceneSchema.safeParse({ id: 'myScene', sceneFile: 'myScene.ts' }).success;
+ * ```
+ */
+export const createSceneAssetSchema = <const P extends readonly FeatureSchemaPart[]>(parts: P) => {
+  const SceneOverridesSchema = z.object(
+    mergeFeatureSchemaShapes(KERNEL_SCENE_SHAPE, parts, 'scene') as typeof KERNEL_SCENE_SHAPE &
+      FeatureSchemaShape<P, 'scene'>
+  );
+  return SceneOverridesSchema.omit({ __meta: true }).extend({
+    id: z.string({
+      error: "Scene 'id' is required for index parsing.",
+    }),
+    sceneFile: z.string({
+      error: "Property 'sceneFile' is required to route your stage execution script.",
+    }),
+    __sourcePath: z.string().optional(),
+    __saveData: createSaveDataSchema(SceneOverridesSchema),
+  });
+};
 
-export const SceneAssetSchema = SceneOverridesSchema.omit({ __meta: true }).extend({
-  id: z.string({
-    error: "Scene 'id' is required for index parsing.",
-  }),
-  sceneFile: z.string({
-    error: "Property 'sceneFile' is required to route your stage execution script.",
-  }),
-  __sourcePath: z.string().optional(),
-  __saveData: createSaveDataSchema(SceneOverridesSchema),
-});
-
-export type SceneAsset = z.infer<typeof SceneAssetSchema>;
+/** A scene JSON's kernel fields (the features' are typed by `createSceneAssetSchema` with their
+ * parts). */
+export type SceneAsset = z.infer<ReturnType<typeof createSceneAssetSchema<[]>>>;

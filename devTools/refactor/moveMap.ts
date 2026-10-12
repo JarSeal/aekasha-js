@@ -131,6 +131,8 @@ const entryOf = (target: string): string | null => {
   }
 };
 
+const ENTRY_FILE_PATHS = new Set<string>(Object.values(ENTRY_FILES));
+
 const isDbgModule = (file: string) => path.posix.basename(file).startsWith('_dbg__');
 const isEngineLayer = (l: Layer) =>
   ['kernel', 'feature', 'ui', 'debug', 'utils', 'schemas', 'types', 'engine'].includes(l);
@@ -191,6 +193,9 @@ const checkEdge = (fz: Zone, tz: Zone, edge: Edge): string | null => {
     return 'Static `_dbg__` imports outside debug code';
   }
   if (fz.isDebug) return null;
+  // An entry re-exports its names from wherever their code is (`aekasha/schemas` the features'
+  // schemas, p607 D10): its layer's rule is for the code under it
+  if (ENTRY_FILE_PATHS.has(edge.from)) return null;
   switch (fz.layer) {
     case 'utils':
       return tz.layer === 'utils' ? null : `utils → ${tz.layer}`;

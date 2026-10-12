@@ -19,25 +19,29 @@ export type {
   TextureSlot,
 } from './assetsConfigSchema';
 export { CameraAssetSchema, CameraProps } from './cameraSchema';
+export type { FeatureSchemaPart } from './featureSchemas';
 export type { CameraAsset } from './cameraSchema';
 export { GeoAssetSchema } from './geometrySchema';
 export type { GeoAsset } from './geometrySchema';
 export { ImportedAssetSchema } from './importedAssetSchema';
 export type { ImportedAsset } from './importedAssetSchema';
-export { ImpostorAssetSchema } from './impostorSchema';
-export type { ImpostorAsset, ImpostorDef } from './impostorSchema';
+export { ImpostorAssetSchema } from '../core/Lod/Impostors/ImpostorSchema';
+export type { ImpostorAsset, ImpostorDef } from '../core/Lod/Impostors/ImpostorSchema';
 export { LightAssetSchema } from './lightSchema';
+export { lodSchemaPart } from '../core/Lod/LodSchema';
 export type { LightAsset } from './lightSchema';
 export { MaterialAssetSchema } from './materialSchema';
 export type { MaterialAsset } from './materialSchema';
-export { MeshAssetSchema } from './meshSchema';
+export { createMeshAssetSchema } from './meshSchema';
 export type { MeshAsset } from './meshSchema';
 export { PostFxAssetSchema } from './postFxSchema';
 export type { PostFxAsset } from './postFxSchema';
-export { SceneAssetSchema } from './sceneSchema';
+export { postFxSchemaPart } from '../core/PostFX/PostFXSchema';
+export { createSceneAssetSchema } from './sceneSchema';
 export type { SceneAsset } from './sceneSchema';
-export { SkyBoxAssetSchema } from './skyBoxSchema';
-export type { SkyBoxAsset } from './skyBoxSchema';
+export { spatialSchemaPart } from '../core/Spatial/SpatialSchema';
+export { SkyBoxAssetSchema, skyBoxSchemaPart } from '../core/SkyBox/SkyBoxSchema';
+export type { SkyBoxAsset } from '../core/SkyBox/SkyBoxSchema';
 export { TextureArrayAssetSchema, isTextureArrayLayerFile } from './textureArraySchema';
 export type { TextureArrayAsset } from './textureArraySchema';
 export {

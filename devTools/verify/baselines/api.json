@@ -743,6 +743,17 @@
       "ImpostorSource": "TypeAlias",
       "recordImpostor": "Function"
     },
+    "src/_engine/core/Lod/Impostors/ImpostorSchema.ts": {
+      "CrossQuadsImpostorAssetSchema": "Variable",
+      "CrossQuadsLayoutSchema": "Variable",
+      "ImpostorAsset": "TypeAlias",
+      "ImpostorAssetSchema": "Variable",
+      "ImpostorDef": "TypeAlias",
+      "ImpostorShading": "TypeAlias",
+      "ImpostorShadingSchema": "Variable",
+      "OctahedralImpostorAssetSchema": "Variable",
+      "OctahedralImpostorLayoutSchema": "Variable"
+    },
     "src/_engine/core/Lod/Impostors/ImpostorSourceHash.ts": {
       "getImpostorSourceHash": "Function"
     },
@@ -837,6 +848,13 @@
     },
     "src/_engine/core/Lod/LodImport.ts": {
       "lodImportExtension": "Variable"
+    },
+    "src/_engine/core/Lod/LodSchema.ts": {
+      "LodAutoDefSchema": "Variable",
+      "LodDefSchema": "Variable",
+      "LodLevelDefSchema": "Variable",
+      "lodSchemaPart": "Variable",
+      "MeshLodDefSchema": "Variable"
     },
     "src/_engine/core/Lod/LodSimplify.ts": {
       "DEFAULT_LOD_CHAIN_OPTIONS": "Reference",
@@ -1361,6 +1379,9 @@
       "postFx": "Function",
       "postFxSceneHooks": "Variable"
     },
+    "src/_engine/core/PostFX/PostFXSchema.ts": {
+      "postFxSchemaPart": "Variable"
+    },
     "src/_engine/core/PostFX/PostFXTypes.ts": {
       "PostFxBuiltChain": "TypeAlias",
       "PostFxPassApi": "TypeAlias",
@@ -1658,6 +1679,28 @@
       "skyBox": "Function",
       "skyBoxSceneHooks": "Variable"
     },
+    "src/_engine/core/SkyBox/SkyBoxSchema.ts": {
+      "SkyBoxAmbientLightSchema": "Variable",
+      "SkyBoxAsset": "TypeAlias",
+      "SkyBoxAssetSchema": "Variable",
+      "SkyBoxAtmosphereSchema": "Variable",
+      "SkyBoxBaseSchema": "Variable",
+      "SkyBoxCloudsSchema": "Variable",
+      "SkyBoxDayNightSchema": "Variable",
+      "SkyBoxDefSchema": "Variable",
+      "SkyBoxEnvSchema": "Variable",
+      "SkyBoxEnvSizeSchema": "Variable",
+      "SkyBoxGroundSchema": "Variable",
+      "SkyBoxMoonLightSchema": "Variable",
+      "SkyBoxMoonSchema": "Variable",
+      "SkyBoxNebulaSchema": "Variable",
+      "SkyBoxOverrides": "TypeAlias",
+      "SkyBoxOverridesSchema": "Variable",
+      "skyBoxSchemaPart": "Variable",
+      "SkyBoxStarsSchema": "Variable",
+      "SkyBoxSunLightSchema": "Variable",
+      "SkyBoxSunSchema": "Variable"
+    },
     "src/_engine/core/SkyBox/SkyBoxTypes.ts": {
       "SkyBoxAmbientLightDef": "TypeAlias",
       "SkyBoxAtmosphereDef": "TypeAlias",
@@ -1844,6 +1887,9 @@
       "SpatialUpdatePolicy": "TypeAlias",
       "unregisterSpatialDomain": "Function",
       "validateSpatialGridQuery": "Function"
+    },
+    "src/_engine/core/Spatial/SpatialSchema.ts": {
+      "spatialSchemaPart": "Variable"
     },
     "src/_engine/core/Texture.ts": {
       "decTextureRef": "Function",
@@ -2348,6 +2394,11 @@
       "CameraOverridesSchema": "Variable",
       "CameraProps": "TypeAlias, Variable"
     },
+    "src/_engine/schemas/featureSchemas.ts": {
+      "FeatureSchemaPart": "TypeAlias",
+      "FeatureSchemaShape": "TypeAlias",
+      "mergeFeatureSchemaShapes": "Function"
+    },
     "src/_engine/schemas/geometrySchema.ts": {
       "GeoAsset": "TypeAlias",
       "GeoAssetSchema": "Variable",
@@ -2361,17 +2412,6 @@
       "ImportedAssetOverridesSchema": "Variable",
       "ImportedAssetSchema": "Variable"
     },
-    "src/_engine/schemas/impostorSchema.ts": {
-      "CrossQuadsImpostorAssetSchema": "Variable",
-      "CrossQuadsLayoutSchema": "Variable",
-      "ImpostorAsset": "TypeAlias",
-      "ImpostorAssetSchema": "Variable",
-      "ImpostorDef": "TypeAlias",
-      "ImpostorShading": "TypeAlias",
-      "ImpostorShadingSchema": "Variable",
-      "OctahedralImpostorAssetSchema": "Variable",
-      "OctahedralImpostorLayoutSchema": "Variable"
-    },
     "src/_engine/schemas/lightSchema.ts": {
       "LightAsset": "TypeAlias",
       "LightAssetSchema": "Variable",
@@ -2382,12 +2422,6 @@
       "LodChainOptionsSchema": "Variable",
       "LodChainSchema": "Variable"
     },
-    "src/_engine/schemas/lodSchema.ts": {
-      "LodAutoDefSchema": "Variable",
-      "LodDefSchema": "Variable",
-      "LodLevelDefSchema": "Variable",
-      "MeshLodDefSchema": "Variable"
-    },
     "src/_engine/schemas/materialSchema.ts": {
       "MaterialAsset": "TypeAlias",
       "MaterialAssetSchema": "Variable",
@@ -2395,10 +2429,8 @@
       "MaterialVariantOverridesSchema": "Variable"
     },
     "src/_engine/schemas/meshSchema.ts": {
-      "MeshAsset": "TypeAlias",
-      "MeshAssetSchema": "Variable",
-      "MeshOverrides": "TypeAlias",
-      "MeshPropsSchema": "Variable"
+      "createMeshAssetSchema": "Function",
+      "MeshAsset": "TypeAlias"
     },
     "src/_engine/schemas/postFxSchema.ts": {
       "PostFxAsset": "TypeAlias",
@@ -2407,30 +2439,8 @@
       "PostFxParamMeta": "TypeAlias"
     },
     "src/_engine/schemas/sceneSchema.ts": {
-      "SceneAsset": "TypeAlias",
-      "SceneAssetSchema": "Variable",
-      "SceneOverrides": "TypeAlias"
-    },
-    "src/_engine/schemas/skyBoxSchema.ts": {
-      "SkyBoxAmbientLightSchema": "Variable",
-      "SkyBoxAsset": "TypeAlias",
-      "SkyBoxAssetSchema": "Variable",
-      "SkyBoxAtmosphereSchema": "Variable",
-      "SkyBoxBaseSchema": "Variable",
-      "SkyBoxCloudsSchema": "Variable",
-      "SkyBoxDayNightSchema": "Variable",
-      "SkyBoxDefSchema": "Variable",
-      "SkyBoxEnvSchema": "Variable",
-      "SkyBoxEnvSizeSchema": "Variable",
-      "SkyBoxGroundSchema": "Variable",
-      "SkyBoxMoonLightSchema": "Variable",
-      "SkyBoxMoonSchema": "Variable",
-      "SkyBoxNebulaSchema": "Variable",
-      "SkyBoxOverrides": "TypeAlias",
-      "SkyBoxOverridesSchema": "Variable",
-      "SkyBoxStarsSchema": "Variable",
-      "SkyBoxSunLightSchema": "Variable",
-      "SkyBoxSunSchema": "Variable"
+      "createSceneAssetSchema": "Function",
+      "SceneAsset": "TypeAlias"
     },
     "src/_engine/schemas/spatialDomainSchema.ts": {
       "SceneSpatialDomainEntry": "TypeAlias",
@@ -3147,6 +3157,7 @@
       "CameraProps",
       "CoreEntityOpts",
       "DEFAULT_ATLAS_PADDING",
+      "FeatureSchemaPart",
       "GeneratedAssetFields",
       "GeoAsset",
       "GeoAssetSchema",
@@ -3160,7 +3171,6 @@
       "MaterialAsset",
       "MaterialAssetSchema",
       "MeshAsset",
-      "MeshAssetSchema",
       "MeshSettings",
       "MetaSchema",
       "NON_COVERAGE_SLOTS",
@@ -3169,7 +3179,6 @@
       "PostFxAsset",
       "PostFxAssetSchema",
       "SceneAsset",
-      "SceneAssetSchema",
       "SkyBoxAsset",
       "SkyBoxAssetSchema",
       "TEXTURE_SLOTS",
@@ -3186,10 +3195,16 @@
       "TexturePack",
       "TextureSettings",
       "TextureSlot",
+      "createMeshAssetSchema",
+      "createSceneAssetSchema",
       "getAtlasSlotTextureId",
       "getFullMipLevelCount",
       "isJsonRelativeFileName",
-      "isTextureArrayLayerFile"
+      "isTextureArrayLayerFile",
+      "lodSchemaPart",
+      "postFxSchemaPart",
+      "skyBoxSchemaPart",
+      "spatialSchemaPart"
     ],
     "aekasha/skybox": [
       "LEGACY_SKYBOX_WARNING",

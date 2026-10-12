@@ -1146,6 +1146,55 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
    their entries export them, `aekasha/schemas` re-exports them (D10). `.schemas/` unchanged.
 2. The manifest in the generated data, `InitEngine`'s check, a unit test for both.
 
+**As built (section 1):**
+
+- **The parts:** `schemas/featureSchemas.ts` (kernel): the public type `FeatureSchemaPart`
+  (`{ feature, scene?, mesh? }`: Zod shapes) and internal `mergeFeatureSchemaShapes` (the kernel's
+  fields, then each part's in part order; a field two parts give, or one the kernel has, throws
+  naming both owners) and `FeatureSchemaShape` (the parts' fields as one shape type). Each part
+  sits next to its feature: `skyBoxSchemaPart` (`skyboxes`, in `SkyBox/SkyBoxSchema.ts`),
+  `lodSchemaPart` (scene `impostors`, mesh `lod`, in `Lod/LodSchema.ts`), `postFxSchemaPart`
+  (`postFx`, `postFxEnabled`, `PostFX/PostFXSchema.ts`) and `spatialSchemaPart` (`spatialDomains`,
+  `Spatial/SpatialSchema.ts`). **Changed from D10:** no `asset` member: the gatherer's per-type
+  passes (`*.skybox.json`, `*.impostor.json`, `*.postFx.json`) are code, so a part listing its
+  asset type would change nothing; the gatherer imports those schemas from their new files.
+- **The composition:** `sceneSchema.ts` and `meshSchema.ts` hold the kernel's fields and export
+  `createSceneAssetSchema(parts)` / `createMeshAssetSchema(parts)` (public, typed by the parts:
+  `const` type parameter), which replace the `SceneAssetSchema` / `MeshAssetSchema` values on
+  `aekasha/schemas` (no reader besides the gatherer). A part's fields are allowed in the save
+  entries too (a mesh's before `__meta`, where they were). `SceneAsset` / `MeshAsset` are the
+  kernel's fields now (the debug tools read only those). `featureSchemas.test.ts` (5 tests).
+- **The gatherer** composes them in `devTools/engineSchemas.ts`: `ENGINE_SCHEMA_PARTS` (sky box,
+  PostFX, spatial, LOD: the JSON Schemas' property order before p607, not the install order),
+  `SceneAssetSchema`, `MeshAssetSchema` and their types, imported from the `aekasha/schemas` entry
+  file. **`.schemas/` is byte-identical**, and so is `src/generated/generatedAppData.json`
+  (development and production gathers, before and after).
+- **The moves:** `skyBoxSchema.ts` → `core/SkyBox/SkyBoxSchema.ts`, `lodSchema.ts` →
+  `core/Lod/LodSchema.ts`, `impostorSchema.ts` → `core/Lod/Impostors/ImpostorSchema.ts`
+  (PascalCase, the coding standard's; the folder rules map them). `postFxSchema.ts` and
+  `spatialDomainSchema.ts` stay in `schemas/` (no feature imports; the kernel reads their types),
+  and so does `lodChainSchema.ts` (the kernel's import option `lodChain`, which warns without
+  `lod()`, Phase 7).
+- **Changed from D10 (asked, 2026-10-12): the moved schemas stay on `aekasha/schemas` only**, not
+  on their feature entries too: no name is in two entries, and `migrateToEntries`' rules treat a
+  name two entries export as an error. The parts are on `aekasha/schemas` with them.
+- **The layout report:** "schemas → feature" is gone (3 runtime, 1 type). `moveMap.ts` skips the
+  layer rules for an entry file (an entry re-exports its names from wherever the code is; only
+  `aekasha/schemas` had such rows). Kernel → feature gains one type row (`Scene.ts`'
+  `ImpostorDef`, a `schemas/` import before; D6). **For p608:** `entryExports.json` files an
+  export under its folder's entry, so the moved schema names show under `aekasha/skybox` /
+  `aekasha/lod` there while `aekasha/schemas` exports them.
+- The 20 undocumented exports the moved files carried (the sky box layers' schemas, the impostor
+  asset schemas) got their summaries, so the docs ratchet passes without `--allow-docs-drop`.
+- Nested `CLAUDE.md`s (`SkyBox/`, `Lod/`, `Lod/Impostors/`) name the new files.
+- Checks: `yarn test` 250 passed (the new `@example` included), lint, `tsc` (both projects),
+  `yarn hub:build`, `moveMap.ts` regenerated. `verify:baselines`: `bundle.json` unchanged (no
+  runtime code moved: the runtime imports these files' types only), `api.json` (the moves, the
+  two factories and the four parts on `aekasha/schemas`, `SceneAssetSchema` / `MeshAssetSchema`
+  and the unread `SceneOverrides`, `MeshOverrides`, `MeshPropsSchema` gone) and `docs.json`
+  recorded; the production debug check: none. No `verify:scenes` run: the generated data is
+  byte-identical; section 2 (the boot check) runs it for the phase.
+
 ### Phase 10: Hub, CLAUDE.md, readme, migration guide
 
 1. Hub: each feature page's `features` line; the ECS guide and walkthrough (`appECSPlugins`); the

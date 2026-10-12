@@ -3,9 +3,14 @@ import { createSaveDataSchema, MetaSchema } from './_saveDataSchema';
 import { CoreEntityOptsSchema, Vector3Schema, Vector4Schema } from './_helperSchemas';
 import { GeoPropsSchema } from './geometrySchema';
 import { MaterialAssetSchema, MaterialVariantOverridesSchema } from './materialSchema';
-import { MeshLodDefSchema } from './lodSchema';
+import {
+  type FeatureSchemaPart,
+  type FeatureSchemaShape,
+  mergeFeatureSchemaShapes,
+} from './featureSchemas';
 
-export const MeshPropsSchema = z.object({
+// The kernel's mesh props; the features' follow them (createMeshAssetSchema)
+const KERNEL_MESH_PROPS_SHAPE = {
   geo: z.union([GeoPropsSchema, z.string()]),
   mat: z.union([MaterialAssetSchema, z.string()]),
   matOverrides: MaterialVariantOverridesSchema.optional(),
@@ -18,15 +23,14 @@ export const MeshPropsSchema = z.object({
   appId: z.string().optional(),
   /** Native Object3D.frustumCulled (Three.js's own per-mesh render-list culling). Defaults to Three's own default (true). */
   frustumCullingEnabled: z.boolean().optional(),
-  /** Levels of detail (p348), or `AUTO` from the geometry's LOD chain, see setMeshLod. */
-  lod: MeshLodDefSchema.optional(),
   // physicsParams: z.union([]),
-});
+};
 
 const PartialGeoProps = z.union(GeoPropsSchema.options.map((variant) => variant.partial()));
 const PartialMatProps = z.union(MaterialAssetSchema.options.map((variant) => variant.partial()));
 
-const MeshOverridesSchema = z.object({
+// The kernel's fields of a mesh's save entry (`__meta` last, after the features')
+const KERNEL_MESH_OVERRIDES_SHAPE = {
   geo: z.union([PartialGeoProps, z.string()]).optional(),
   mat: z.union([PartialMatProps, z.string()]).optional(),
   matOverrides: MaterialVariantOverridesSchema.optional(),
@@ -37,19 +41,40 @@ const MeshOverridesSchema = z.object({
   rotation: Vector3Schema.optional(),
   quaternion: Vector4Schema.optional(),
   frustumCullingEnabled: z.boolean().optional(),
-  /** Replaces the mesh's whole `lod` in this scene (the save entry merges shallowly). */
-  lod: MeshLodDefSchema.optional(),
-  __meta: MetaSchema.optional(),
-});
+};
 
-export type MeshOverrides = z.infer<typeof MeshOverridesSchema>;
+/**
+ * The mesh schema (`*.mesh.json`) with the features' fields (p607 D10): the kernel's `props`,
+ * then each part's `mesh` fields in part order, each also allowed in the mesh's save entries
+ * (where it replaces the whole field: a save entry merges shallowly). The gatherer composes it
+ * with every engine feature's part. Throws on a field two parts give.
+ */
+export const createMeshAssetSchema = <const P extends readonly FeatureSchemaPart[]>(parts: P) => {
+  type PartsShape = FeatureSchemaShape<P, 'mesh'>;
+  const MeshPropsSchema = z.object(
+    mergeFeatureSchemaShapes(
+      KERNEL_MESH_PROPS_SHAPE,
+      parts,
+      'mesh'
+    ) as typeof KERNEL_MESH_PROPS_SHAPE & PartsShape
+  );
+  const MeshOverridesSchema = z.object({
+    ...(mergeFeatureSchemaShapes(
+      KERNEL_MESH_OVERRIDES_SHAPE,
+      parts,
+      'mesh'
+    ) as typeof KERNEL_MESH_OVERRIDES_SHAPE & PartsShape),
+    __meta: MetaSchema.optional(),
+  });
+  return z.object({
+    $schema: z.string().optional(),
+    props: MeshPropsSchema,
+    entityOpts: CoreEntityOptsSchema.optional(),
+    __sourcePath: z.string().optional(),
+    __saveData: createSaveDataSchema(MeshOverridesSchema),
+  });
+};
 
-export const MeshAssetSchema = z.object({
-  $schema: z.string().optional(),
-  props: MeshPropsSchema,
-  entityOpts: CoreEntityOptsSchema.optional(),
-  __sourcePath: z.string().optional(),
-  __saveData: createSaveDataSchema(MeshOverridesSchema),
-});
-
-export type MeshAsset = z.infer<typeof MeshAssetSchema>;
+/** A mesh JSON with the kernel's `props` (the features' are typed by `createMeshAssetSchema` with
+ * their parts). */
+export type MeshAsset = z.infer<ReturnType<typeof createMeshAssetSchema<[]>>>;

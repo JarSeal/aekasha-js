@@ -1,9 +1,6 @@
 import { z } from 'zod';
-import { DebugDataSchema } from './_helperSchemas';
-import {
-  IMPOSTOR_EXPORT_FORMAT_VERSION,
-  IMPOSTOR_MATERIAL_TYPES,
-} from '../core/Lod/Impostors/ImpostorFormat';
+import { DebugDataSchema } from '../../../schemas/_helperSchemas';
+import { IMPOSTOR_EXPORT_FORMAT_VERSION, IMPOSTOR_MATERIAL_TYPES } from './ImpostorFormat';
 
 /**
  * An exported impostor (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): everything its
@@ -92,12 +89,14 @@ const ImpostorBaseSchema = z.object({
   __sourcePath: z.string().optional(),
 });
 
+/** An exported octahedral impostor (`kind: 'OCTAHEDRAL'`). */
 export const OctahedralImpostorAssetSchema = ImpostorBaseSchema.extend({
   kind: z.literal('OCTAHEDRAL'),
   layout: OctahedralImpostorLayoutSchema,
   surfaceDepth: z.boolean(),
 });
 
+/** An exported cross-quads impostor (`kind: 'CROSS_QUADS'`). */
 export const CrossQuadsImpostorAssetSchema = ImpostorBaseSchema.extend({
   kind: z.literal('CROSS_QUADS'),
   layout: CrossQuadsLayoutSchema,
@@ -106,11 +105,13 @@ export const CrossQuadsImpostorAssetSchema = ImpostorBaseSchema.extend({
     .describe('Baked with a normal atlas: its atlas must have the "normal" slot too.'),
 });
 
+/** An exported impostor (`*.impostor.json`), by `kind`. */
 export const ImpostorAssetSchema = z.discriminatedUnion('kind', [
   OctahedralImpostorAssetSchema,
   CrossQuadsImpostorAssetSchema,
 ]);
 
+/** {@link ImpostorAssetSchema}'s type. */
 export type ImpostorAsset = z.infer<typeof ImpostorAssetSchema>;
 export type ImpostorShading = z.infer<typeof ImpostorShadingSchema>;
 

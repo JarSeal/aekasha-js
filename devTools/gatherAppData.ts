@@ -3,8 +3,12 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import z from 'zod';
-import type { SceneAsset } from '../src/_engine/schemas/sceneSchema';
-import { SceneAssetSchema } from '../src/_engine/schemas/sceneSchema';
+import {
+  MeshAssetSchema,
+  SceneAssetSchema,
+  type MeshAsset,
+  type SceneAsset,
+} from './engineSchemas';
 import type { CameraAsset } from '../src/_engine/schemas/cameraSchema';
 import { CameraAssetSchema } from '../src/_engine/schemas/cameraSchema';
 import type { LightAsset } from '../src/_engine/schemas/lightSchema';
@@ -17,12 +21,10 @@ import type { TextureArrayAsset } from '../src/_engine/schemas/textureArraySchem
 import { TextureArrayAssetSchema } from '../src/_engine/schemas/textureArraySchema';
 import type { MaterialAsset } from '../src/_engine/schemas/materialSchema';
 import { MaterialAssetSchema } from '../src/_engine/schemas/materialSchema';
-import type { MeshAsset } from '../src/_engine/schemas/meshSchema';
-import { MeshAssetSchema } from '../src/_engine/schemas/meshSchema';
 import type { ImportedAsset } from '../src/_engine/schemas/importedAssetSchema';
 import { ImportedAssetSchema } from '../src/_engine/schemas/importedAssetSchema';
-import type { SkyBoxAsset } from '../src/_engine/schemas/skyBoxSchema';
-import { SkyBoxAssetSchema } from '../src/_engine/schemas/skyBoxSchema';
+import type { SkyBoxAsset } from '../src/_engine/core/SkyBox/SkyBoxSchema';
+import { SkyBoxAssetSchema } from '../src/_engine/core/SkyBox/SkyBoxSchema';
 import type { PostFxAsset } from '../src/_engine/schemas/postFxSchema';
 import { PostFxAssetSchema } from '../src/_engine/schemas/postFxSchema';
 import {
@@ -80,7 +82,7 @@ import {
   ImpostorAssetSchema,
   type ImpostorAsset,
   type ImpostorDef,
-} from '../src/_engine/schemas/impostorSchema';
+} from '../src/_engine/core/Lod/Impostors/ImpostorSchema';
 import {
   getImpostorDefSlots,
   IMPOSTOR_EXPORT_FORMAT_VERSION,

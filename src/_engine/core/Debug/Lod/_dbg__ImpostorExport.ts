@@ -11,7 +11,7 @@ import {
   type DevFilesCommitBody,
   type DevFileWrite,
 } from '../../../debug/DevFiles';
-import type { ImpostorAsset } from '../../../schemas/impostorSchema';
+import type { ImpostorAsset } from '../../Lod/Impostors/ImpostorSchema';
 import { lerror, lwarn } from '../../../utils/Logger';
 import { getConfig } from '../../Config';
 import {

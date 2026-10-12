@@ -1000,6 +1000,11 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/Lod/Impostors/ImpostorSchema.ts": {
+      "to": "src/_engine/features/lod/impostors/ImpostorSchema.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/core/Lod/Impostors/ImpostorSourceHash.ts": {
       "to": "src/_engine/features/lod/impostors/ImpostorSourceHash.ts",
       "action": "move",
@@ -1068,6 +1073,11 @@
     },
     "src/_engine/core/Lod/LodImport.ts": {
       "to": "src/_engine/features/lod/LodImport.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/Lod/LodSchema.ts": {
+      "to": "src/_engine/features/lod/LodSchema.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -1178,6 +1188,11 @@
     },
     "src/_engine/core/PostFX/PostFXFeature.ts": {
       "to": "src/_engine/features/postfx/PostFXFeature.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/PostFX/PostFXSchema.ts": {
+      "to": "src/_engine/features/postfx/PostFXSchema.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -1305,6 +1320,11 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/SkyBox/SkyBoxSchema.ts": {
+      "to": "src/_engine/features/skybox/SkyBoxSchema.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/core/SkyBox/SkyBoxTypes.ts": {
       "to": "src/_engine/features/skybox/SkyBoxTypes.ts",
       "action": "move",
@@ -1380,6 +1400,11 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/Spatial/SpatialSchema.ts": {
+      "to": "src/_engine/features/spatial/SpatialSchema.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/core/Texture.ts": {
       "to": "src/_engine/kernel/assets/Texture.ts",
       "action": "move",
@@ -1438,6 +1463,11 @@
     },
     "src/_engine/core/UI/DropDown.ts": {
       "to": "src/_engine/ui/DropDown.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/UI/icons/BuiltInIcons.ts": {
+      "to": "src/_engine/ui/icons/BuiltInIcons.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -1914,6 +1944,11 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/schemas/featureSchemas.ts": {
+      "to": "src/_engine/schemas/FeatureSchemas.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/schemas/geometrySchema.ts": {
       "to": "src/_engine/schemas/GeometrySchema.ts",
       "action": "move",
@@ -1921,11 +1956,6 @@
     },
     "src/_engine/schemas/importedAssetSchema.ts": {
       "to": "src/_engine/schemas/ImportedAssetSchema.ts",
-      "action": "move",
-      "plan": "p608"
-    },
-    "src/_engine/schemas/impostorSchema.ts": {
-      "to": "src/_engine/schemas/ImpostorSchema.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -1941,11 +1971,6 @@
     },
     "src/_engine/schemas/lodChainSchema.ts": {
       "to": "src/_engine/schemas/LodChainSchema.ts",
-      "action": "move",
-      "plan": "p608"
-    },
-    "src/_engine/schemas/lodSchema.ts": {
-      "to": "src/_engine/schemas/LodSchema.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -1966,11 +1991,6 @@
     },
     "src/_engine/schemas/sceneSchema.ts": {
       "to": "src/_engine/schemas/SceneSchema.ts",
-      "action": "move",
-      "plan": "p608"
-    },
-    "src/_engine/schemas/skyBoxSchema.ts": {
-      "to": "src/_engine/schemas/SkyBoxSchema.ts",
       "action": "move",
       "plan": "p608"
     },

@@ -17,7 +17,7 @@ import { getAppData } from './AppData';
 import type { CameraProps } from '../schemas/cameraSchema';
 import type { CoreEntityOpts } from '../schemas/_helperSchemas';
 import type { SceneSpatialDomainEntry } from '../schemas/spatialDomainSchema';
-import type { ImpostorDef } from '../schemas/impostorSchema';
+import type { ImpostorDef } from './Lod/Impostors/ImpostorSchema';
 import type { MeshProps } from './MeshManager';
 import { deleteEntity } from '../utils/ECSHelpers';
 import { getECSWorld, getEntityIdByAppId } from './ECS';

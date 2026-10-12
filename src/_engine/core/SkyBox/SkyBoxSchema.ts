@@ -1,17 +1,18 @@
 import { z } from 'zod';
-import { createSaveDataSchema, MetaSchema } from './_saveDataSchema';
+import { createSaveDataSchema, MetaSchema } from '../../schemas/_saveDataSchema';
 import {
   ColorJSONSchema,
   ColorSpaceSchema,
   DebugDataSchema,
   ShadowQualitySchema,
-} from './_helperSchemas';
+} from '../../schemas/_helperSchemas';
 import {
   fromLegacySkyBoxOverrides,
   fromLegacySkyBoxProps,
   isLegacySkyBoxProps,
-} from '../core/SkyBox/legacySkyBox';
-import { mergeSkyBoxPreset, SKYBOX_PRESET_NAMES } from '../core/SkyBox/presets';
+} from './legacySkyBox';
+import { mergeSkyBoxPreset, SKYBOX_PRESET_NAMES } from './presets';
+import type { FeatureSchemaPart } from '../../schemas/featureSchemas';
 
 // A sky box definition is a set of layers. p111 has the base and env layers, p112 the atmosphere
 // and suns, p113 the day-night cycle and p114 the nebulae; later plans add their own layers as
@@ -56,6 +57,7 @@ const SkyBoxCubeBaseSchema = z.object({
   intensity: z.number().min(0).optional(),
 });
 
+/** The `base` layer: a colour, an equirectangular texture or a cube texture, by `type`. */
 export const SkyBoxBaseSchema = z.discriminatedUnion('type', [
   SkyBoxColorBaseSchema,
   SkyBoxEquirectBaseSchema,
@@ -64,6 +66,7 @@ export const SkyBoxBaseSchema = z.discriminatedUnion('type', [
 
 // Env layer
 
+/** The environment bake's cube size in texels (`env.size`, `env.nebulaSize`). */
 export const SkyBoxEnvSizeSchema = z.union([
   z.literal(64),
   z.literal(128),
@@ -71,6 +74,7 @@ export const SkyBoxEnvSizeSchema = z.union([
   z.literal(512),
 ]);
 
+/** The `env` layer: the background's blur and intensity, the environment's intensity and its bake. */
 export const SkyBoxEnvSchema = z.object({
   /** Blur of the background (PMREM roughness, 0-1). Materials' own roughness drives the environment. */
   backgroundRoughness: z.number().min(0).max(1).optional(),
@@ -103,6 +107,7 @@ export const SkyBoxEnvSchema = z.object({
 /** 'AUTO', or a colour. */
 const AutoOrColorSchema = z.union([z.literal('AUTO'), ColorJSONSchema]);
 
+/** The `atmosphere` layer (three's `SkyMesh`, lit by `suns[0]`). */
 export const SkyBoxAtmosphereSchema = z.object({
   /** Default true. */
   enabled: z.boolean().optional(),
@@ -133,6 +138,7 @@ export const SkyBoxAtmosphereSchema = z.object({
 
 // Sun light: a managed directional light (MANAGED_BY) aimed like the sun
 
+/** A sun's `light`: the managed directional light aimed like it. */
 export const SkyBoxSunLightSchema = z.object({
   /** Default true. */
   enabled: z.boolean().optional(),
@@ -164,6 +170,7 @@ export const SkyBoxSunLightSchema = z.object({
 
 // Sun layer (the disc and its halo; suns[0] also drives the atmosphere). Up to 4 suns.
 
+/** One of `suns`: its disc, halo and light. */
 export const SkyBoxSunSchema = z.object({
   /** Whether the disc is drawn. The atmosphere follows the sun either way. Default true. */
   enabled: z.boolean().optional(),
@@ -193,6 +200,7 @@ export const SkyBoxSunSchema = z.object({
 
 // Moon light: a managed directional light aimed like the moon (the sun light's settings)
 
+/** A moon's `light`: the managed directional light aimed like it, on only at night. */
 export const SkyBoxMoonLightSchema = SkyBoxSunLightSchema.extend({
   /** Scaled by the moon's lit fraction, its horizon fade and the night (it's off by day).
    * Default 0.3. */
@@ -224,6 +232,7 @@ const SkyBoxMoonTextureSchema = z
     path: ['file'],
   });
 
+/** One of `moons`: a sphere lit into its phase, with an optional texture and a light. */
 export const SkyBoxMoonSchema = z.object({
   /** Default true. */
   enabled: z.boolean().optional(),
@@ -279,6 +288,7 @@ const SkyBoxMilkyWaySchema = z.object({
   width: z.number().min(0.1).max(90).optional(),
 });
 
+/** The `stars` layer (procedural, with an optional Milky Way), faded out by day. */
 export const SkyBoxStarsSchema = z.object({
   /** Default true. */
   enabled: z.boolean().optional(),
@@ -308,6 +318,7 @@ export const SkyBoxStarsSchema = z.object({
 
 const Vec3TupleSchema = z.tuple([z.number(), z.number(), z.number()]);
 
+/** One of `nebulae`, baked into a cube once per change. */
 export const SkyBoxNebulaSchema = z.object({
   /** Default true. */
   enabled: z.boolean().optional(),
@@ -345,6 +356,7 @@ export const SkyBoxNebulaSchema = z.object({
 // the environment bake already lights PBR materials (a hemisphere light adds to it); it's for
 // non-PBR materials (Lambert/Phong don't sample the environment) and stylized looks.
 
+/** The `ambientLight` layer: a managed hemisphere or ambient light that follows the sun. */
 export const SkyBoxAmbientLightSchema = z.object({
   /** Default true. */
   enabled: z.boolean().optional(),
@@ -360,6 +372,7 @@ export const SkyBoxAmbientLightSchema = z.object({
 
 // Clouds layer (a port of SkyMesh's; needs the atmosphere)
 
+/** The `clouds` layer (needs the atmosphere; moonlit at night). */
 export const SkyBoxCloudsSchema = z.object({
   /** Default true. */
   enabled: z.boolean().optional(),
@@ -381,6 +394,7 @@ export const SkyBoxCloudsSchema = z.object({
 
 // Ground layer (the sky's lower hemisphere colour; a physical ground is the game's job)
 
+/** The `ground` layer: the sky's lower hemisphere colour. */
 export const SkyBoxGroundSchema = z.object({
   /** Default true. */
   enabled: z.boolean().optional(),
@@ -399,6 +413,7 @@ export const SkyBoxGroundSchema = z.object({
 // Day-night cycle (p113): places the sun and moon from a time of day. Games drive it at runtime
 // (setTimeOfDay, playDayNight, ...); these are its values on activation.
 
+/** The `dayNight` layer: the time of day that places the suns and moons, and how it runs. */
 export const SkyBoxDayNightSchema = z.object({
   /** Default true. */
   enabled: z.boolean().optional(),
@@ -455,6 +470,7 @@ const indexedOverrides = <T extends z.ZodType>(entry: T, max: number) =>
     .union([z.array(entry).max(max), z.record(z.string().regex(/^(0|[1-9]\d*)$/), entry)])
     .optional();
 
+/** A sky box's save entry: per-layer overrides of its definition in one scene. */
 export const SkyBoxOverridesSchema = z.object({
   base: SkyBoxBaseOverridesSchema.optional(),
   env: SkyBoxEnvSchema.partial().optional(),
@@ -479,6 +495,7 @@ export const SkyBoxOverridesSchema = z.object({
   __meta: MetaSchema.optional(),
 });
 
+/** {@link SkyBoxOverridesSchema}'s type. */
 export type SkyBoxOverrides = z.infer<typeof SkyBoxOverridesSchema>;
 
 // Definition
@@ -551,3 +568,12 @@ export const SkyBoxAssetSchema = z.preprocess(
 );
 
 export type SkyBoxAsset = z.infer<typeof SkyBoxAssetSchema>;
+
+/** The sky box feature's scene field (p607 D10): `skyboxes`, ids of `*.skybox.json` files or
+ * inline definitions. */
+export const skyBoxSchemaPart = {
+  feature: 'skybox',
+  scene: {
+    skyboxes: z.array(z.union([z.string(), SkyBoxAssetSchema])).optional(),
+  },
+} satisfies FeatureSchemaPart;
