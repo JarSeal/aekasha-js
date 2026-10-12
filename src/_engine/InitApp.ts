@@ -24,7 +24,7 @@ import { loadDraggableWindowStatesFromLS } from './core/UI/DraggableWindow';
 import { createToaster } from './core/UI/Toaster';
 import { getStatsCmp, registerStatsModule } from './debug/Stats';
 import { createAssetsDebugGUI } from './debug/Assets';
-import { getSvgIcon } from './core/UI/icons/SvgIcon';
+import { getSvgIcon, registerBuiltInIcons } from './core/UI/icons/SvgIcon';
 import { restoreSavedView } from './core/ViewManager';
 
 // The kernel's systems and hooks, installed by InitEngine (here, where their modules were
@@ -136,6 +136,10 @@ const initEngineAsync = async ({ config, data, features, start }: InitEngineOpti
   checkFeatures(features);
   setAppData(data);
   addWindowListeners();
+
+  // The debug tools' icons, before any debug module loads (prod test mode shows some too). A
+  // production build drops the call and every built-in SVG: an app registers its own (registerIcon)
+  if (IS_DEBUG_ENV || IS_PROD_TEST_MODE) registerBuiltInIcons();
 
   // Logs the engine, toolkit and app versions (they are in the HTML meta tags too)
   consoleBootText();

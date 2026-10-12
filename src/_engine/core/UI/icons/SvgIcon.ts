@@ -1,126 +1,174 @@
-import aekashaIcon from './svg/aekasha.svg?raw';
-import alertIcon from './svg/exclamation-octagon-fill.svg?raw';
-import arrowClockwiseIcon from './svg/arrow-clockwise.svg?raw';
-import arrowCounterClockwiseIcon from './svg/arrow-counterclockwise.svg?raw';
-import assetsIcon from './svg/assets-collection.svg?raw';
-import aspectRatioIcon from './svg/aspect-ratio.svg?raw';
-import cameraIcon from './svg/camera2.svg?raw';
-import cameraReelsIcon from './svg/camera-reels.svg?raw';
-import circleCheckCutoutIcon from './svg/circle-check-cutout.svg?raw';
-import cloudSunIcon from './svg/cloud-sun-fill.svg?raw';
-import databaseXIcon from './svg/database-fill-x.svg?raw';
-import easelIcon from './svg/easel-fill.svg?raw';
-import ecsNodesIcon from './svg/ecs-nodes.svg?raw';
-import eraserIcon from './svg/eraser-fill.svg?raw';
-import fileAsterixIcon from './svg/file-earmark-medical-fill.svg?raw';
-import fileCodeIcon from './svg/file-earmark-code-fill.svg?raw';
-import gearIcon from './svg/gear-fill.svg?raw';
-import geometryIcon from './svg/geometry-cube.svg?raw';
-import gpuCardIcon from './svg/gpu-card.svg?raw';
-import heartArrowIcon from './svg/heart-arrow.svg?raw';
-import infinityIcon from './svg/infinity.svg?raw';
-import infoIcon from './svg/info-circle-fill.svg?raw';
-import lightBulbIcon from './svg/lightbulb-fill.svg?raw';
-import lampIcon from './svg/lamp.svg?raw';
-import lockIcon from './svg/lock-fill.svg?raw';
-import lodIcon from './svg/lod.svg?raw';
-import materialIcon from './svg/material-sphere.svg?raw';
-import memoryIcon from './svg/memory.svg?raw';
-import objectsCubesIcon from './svg/cubes-wireframe.svg?raw';
-import pauseIcon from './svg/pause-fill.svg?raw';
-import pinIcon from './svg/pin-angle-fill.svg?raw';
-import personArmsUpIcon from './svg/person-arms-up.svg?raw';
-import playFillIcon from './svg/play-fill.svg?raw';
-import postFxIcon from './svg/post-fx.svg?raw';
-import profilerIcon from './svg/profiler-pulse.svg?raw';
-import redoIcon from './svg/arrow-90deg-right.svg?raw';
-import rocketIcon from './svg/rocket.svg?raw';
-import rocketTakeoffIcon from './svg/rocket-takeoff-fill.svg?raw';
-import runtimeViewIcon from './svg/runtime-view.svg?raw';
-import spatialGridIcon from './svg/spatial-grid.svg?raw';
-import speedometerIcon from './svg/speedometer.svg?raw';
-import stopIcon from './svg/stop-fill.svg?raw';
-import textureIcon from './svg/texture-image.svg?raw';
-import thrashIcon from './svg/trash3-fill.svg?raw';
-import toolsIcon from './svg/tools.svg?raw';
-import undoIcon from './svg/arrow-90deg-left.svg?raw';
-import warningIcon from './svg/exclamation-triangle-fill.svg?raw';
-import xIcon from './svg/x.svg?raw';
-import xBoldIcon from './svg/x-bold.svg?raw';
+import { lwarn } from '../../../utils/Logger';
+import * as builtIn from './BuiltInIcons';
 
 /**
- * @license Bootstrap Icons, Copyright 2019-2024 The Bootstrap Authors
- * SPDX-License-Identifier: MIT (LICENSE-bootstrap-icons.txt)
+ * The icon registry (p607 D12): `getSvgIcon` renders only a registered icon, so a build holds the
+ * SVGs that something registers and no others. The debug tools register every built-in in
+ * InitEngine (debug env and prod test mode); a production build registers none unless the app does.
  */
 
+/** The name of an engine built-in icon (each is exported as `<name>Icon`, `gear` → `gearIcon`). */
+export type BuiltInIconName =
+  | 'aekasha'
+  | 'alert'
+  | 'arrowClockwise'
+  | 'arrowCounterClockwise'
+  | 'assets'
+  | 'aspectRatio'
+  | 'camera'
+  | 'cameraReels'
+  | 'circleCheckCutout'
+  | 'cloudSun'
+  | 'databaseX'
+  | 'easel'
+  | 'ecs'
+  | 'eraser'
+  | 'fileAsterix'
+  | 'fileCode'
+  | 'gear'
+  | 'geometry'
+  | 'gpuCard'
+  | 'heartArrow'
+  | 'infinity'
+  | 'info'
+  | 'lightBulb'
+  | 'lamp'
+  | 'lock'
+  | 'lod'
+  | 'material'
+  | 'memory'
+  | 'objectsCubes'
+  | 'pause'
+  | 'personArmsUp'
+  | 'pin'
+  | 'playFill'
+  | 'postFx'
+  | 'profiler'
+  | 'redo'
+  | 'rocket'
+  | 'rocketTakeoff'
+  | 'runtime'
+  | 'spatialGrid'
+  | 'speedometer'
+  | 'stop'
+  | 'texture'
+  | 'thrash'
+  | 'tools'
+  | 'undo'
+  | 'warning'
+  | 'x'
+  | 'xBold';
+
+/** The built-ins by name (read only by registerBuiltInIcons: a build without it drops them) */
+const BUILT_IN_ICONS = {
+  aekasha: builtIn.aekashaIcon,
+  alert: builtIn.alertIcon,
+  arrowClockwise: builtIn.arrowClockwiseIcon,
+  arrowCounterClockwise: builtIn.arrowCounterClockwiseIcon,
+  assets: builtIn.assetsIcon,
+  aspectRatio: builtIn.aspectRatioIcon,
+  camera: builtIn.cameraIcon,
+  cameraReels: builtIn.cameraReelsIcon,
+  circleCheckCutout: builtIn.circleCheckCutoutIcon,
+  cloudSun: builtIn.cloudSunIcon,
+  databaseX: builtIn.databaseXIcon,
+  easel: builtIn.easelIcon,
+  ecs: builtIn.ecsIcon,
+  eraser: builtIn.eraserIcon,
+  fileAsterix: builtIn.fileAsterixIcon,
+  fileCode: builtIn.fileCodeIcon,
+  gear: builtIn.gearIcon,
+  geometry: builtIn.geometryIcon,
+  gpuCard: builtIn.gpuCardIcon,
+  heartArrow: builtIn.heartArrowIcon,
+  infinity: builtIn.infinityIcon,
+  info: builtIn.infoIcon,
+  lightBulb: builtIn.lightBulbIcon,
+  lamp: builtIn.lampIcon,
+  lock: builtIn.lockIcon,
+  lod: builtIn.lodIcon,
+  material: builtIn.materialIcon,
+  memory: builtIn.memoryIcon,
+  objectsCubes: builtIn.objectsCubesIcon,
+  pause: builtIn.pauseIcon,
+  personArmsUp: builtIn.personArmsUpIcon,
+  pin: builtIn.pinIcon,
+  playFill: builtIn.playFillIcon,
+  postFx: builtIn.postFxIcon,
+  profiler: builtIn.profilerIcon,
+  redo: builtIn.redoIcon,
+  rocket: builtIn.rocketIcon,
+  rocketTakeoff: builtIn.rocketTakeoffIcon,
+  runtime: builtIn.runtimeIcon,
+  spatialGrid: builtIn.spatialGridIcon,
+  speedometer: builtIn.speedometerIcon,
+  stop: builtIn.stopIcon,
+  texture: builtIn.textureIcon,
+  thrash: builtIn.thrashIcon,
+  tools: builtIn.toolsIcon,
+  undo: builtIn.undoIcon,
+  warning: builtIn.warningIcon,
+  x: builtIn.xIcon,
+  xBold: builtIn.xBoldIcon,
+} satisfies Record<BuiltInIconName, string>;
+
 /**
- * Every icon in `svg/` follows Bootstrap Icons' form: `<svg xmlns width="16" height="16"
- * fill="currentColor" class="bi bi-<file name>" viewBox="0 0 16 16">` and paths without
- * transforms or fixed colours, so it takes the text colour. A line icon has `fill="none"` and
- * `stroke="currentColor"` on its paths (1 wide, 0.75 for inner detail). Files without a key below
- * aren't in the bundle (`github.svg` and `three-js.svg` are the Hub's brand marks, copied into
- * `hub/_assets/icons/`).
+ * A registered icon's name: a built-in's ({@link BuiltInIconName}, autocompleted) or any name an
+ * app registers with {@link registerIcon}.
+ */
+export type SvgIconKey = BuiltInIconName | (string & {});
+
+const icons = new Map<string, string>();
+/** The unregistered names getSvgIcon has warned about, once each */
+const warnedNames = new Set<string>();
+
+/**
+ * Registers an icon under a name for {@link getSvgIcon} (and every `icon` option that takes an
+ * {@link SvgIconKey}, eg. a draggable window's). A name registered again gets the new SVG, so an
+ * app can restyle a built-in. The SVG should take the text colour (`fill="currentColor"`).
+ * @param svg the SVG markup
+ * @example
+ * ```ts
+ * import { gearIcon, registerIcon } from 'aekasha/ui';
+ * import shieldSvg from './icons/shield.svg?raw';
  *
- * Most of them are Bootstrap Icons' own (https://icons.getbootstrap.com, MIT, the licence in
- * `LICENSE-bootstrap-icons.txt`); the rest are drawn for the engine in the same form. A new one
- * from Bootstrap Icons is copied as it is, under its own file name.
+ * registerIcon('gear', gearIcon); // a built-in the app's UI uses
+ * registerIcon('shield', shieldSvg); // the app's own
+ * ```
  */
-const icons = {
-  aekasha: aekashaIcon,
-  alert: alertIcon,
-  arrowClockwise: arrowClockwiseIcon,
-  arrowCounterClockwise: arrowCounterClockwiseIcon,
-  assets: assetsIcon,
-  aspectRatio: aspectRatioIcon,
-  camera: cameraIcon,
-  cameraReels: cameraReelsIcon,
-  circleCheckCutout: circleCheckCutoutIcon,
-  cloudSun: cloudSunIcon,
-  databaseX: databaseXIcon,
-  easel: easelIcon,
-  ecs: ecsNodesIcon,
-  eraser: eraserIcon,
-  fileAsterix: fileAsterixIcon,
-  fileCode: fileCodeIcon,
-  gear: gearIcon,
-  geometry: geometryIcon,
-  gpuCard: gpuCardIcon,
-  heartArrow: heartArrowIcon,
-  infinity: infinityIcon,
-  info: infoIcon,
-  lightBulb: lightBulbIcon,
-  lamp: lampIcon,
-  lock: lockIcon,
-  lod: lodIcon,
-  material: materialIcon,
-  memory: memoryIcon,
-  objectsCubes: objectsCubesIcon,
-  pause: pauseIcon,
-  personArmsUp: personArmsUpIcon,
-  pin: pinIcon,
-  playFill: playFillIcon,
-  postFx: postFxIcon,
-  profiler: profilerIcon,
-  redo: redoIcon,
-  rocket: rocketIcon,
-  rocketTakeoff: rocketTakeoffIcon,
-  runtime: runtimeViewIcon,
-  spatialGrid: spatialGridIcon,
-  speedometer: speedometerIcon,
-  stop: stopIcon,
-  texture: textureIcon,
-  thrash: thrashIcon,
-  tools: toolsIcon,
-  undo: undoIcon,
-  warning: warningIcon,
-  x: xIcon,
-  xBold: xBoldIcon,
+export const registerIcon = (name: SvgIconKey, svg: string) => {
+  icons.set(name, svg);
 };
 
-/** Key of an engine UI icon (see {@link getSvgIcon}). */
-export type SvgIconKey = keyof typeof icons;
+/**
+ * Registers every built-in icon under its {@link BuiltInIconName} (about 10 kB gzip of SVG). The
+ * engine does it for the debug tools; an app that wants only some registers those with
+ * {@link registerIcon}.
+ */
+export const registerBuiltInIcons = () => {
+  for (const name in BUILT_IN_ICONS) {
+    registerIcon(name, BUILT_IN_ICONS[name as BuiltInIconName]);
+  }
+};
 
-export const getSvgIcon = (iconKey: SvgIconKey, size?: 'small') => {
-  const icon = icons[iconKey] || '??';
+/**
+ * A registered icon as HTML (`<span class="uiIcon">` around the SVG; `'small'` adds
+ * `smallIcon`). An unregistered name renders `??` and warns once.
+ * @example
+ * ```ts
+ * import { CMP, getSvgIcon } from 'aekasha/ui';
+ *
+ * const button = CMP({ tag: 'button', html: `${getSvgIcon('shield', 'small')} Defend` });
+ * ```
+ */
+export const getSvgIcon = (name: SvgIconKey, size?: 'small') => {
+  let icon = icons.get(name);
+  if (icon === undefined) {
+    if (!warnedNames.has(name)) {
+      warnedNames.add(name);
+      lwarn(`No icon "${name}" is registered (registerIcon, or registerBuiltInIcons).`);
+    }
+    icon = '??';
+  }
   return `<span class="uiIcon${size === 'small' ? ' smallIcon' : ''}">${icon}</span>`;
 };

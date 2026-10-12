@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1442,
-      "total": 2154
+      "documented": 1447,
+      "total": 2158
     },
     "members": {
       "documented": 212,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1397,
-        "total": 2090
+        "documented": 1402,
+        "total": 2094
       },
       "members": {
         "documented": 162,
@@ -957,17 +957,15 @@
     },
     "engine/core/UI/icons": {
       "exports": {
-        "documented": 1,
-        "total": 2
+        "documented": 6,
+        "total": 6
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "SvgIcon#getSvgIcon"
-        ],
+        "exports": [],
         "members": []
       }
     },

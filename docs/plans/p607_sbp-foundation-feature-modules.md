@@ -1017,6 +1017,43 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
   `build:test`; its search index warning, 1.04 MB over 1.00 MB, comes with the API docs and isn't
   this change's).
 
+**As built (section 2):**
+
+- **The registry** (`core/UI/icons/SvgIcon.ts`, on `aekasha/ui`): `registerIcon(name, svg)` (a
+  name registered again gets the new SVG, so an app can restyle a built-in), `getSvgIcon(name,
+  size?)` (an unregistered name renders `??`, as before, and warns once) and
+  `registerBuiltInIcons()`. `BuiltInIconName` is the 49 names as a union (not `keyof typeof` the
+  map: TypeDoc then documents the names, and warned about the undocumented map), and the name →
+  SVG map `BUILT_IN_ICONS` `satisfies Record<BuiltInIconName, string>`, so a name missing from
+  either fails `tsc`. Only `registerBuiltInIcons` reads the map, so a build without the call drops
+  it. `SvgIconKey` is `BuiltInIconName | (string & {})`.
+- **Changed from D12:** not one module per icon but one module of named re-exports,
+  `core/UI/icons/BuiltInIcons.ts` (`export { default as gearIcon } from './svg/gear-fill.svg?raw'`,
+  49 lines, each `<name>Icon`; the licence and the SVG form notes moved there). Each `?raw` file is
+  its own module, so a build keeps the ones used either way; one file instead of 49, and
+  re-exports need no doc comment (the Hub's coverage rule). All 49 are on `aekasha/ui`, so an app
+  can register a single built-in.
+- **Who registers:** no kernel code names an icon outside debug paths (`DraggableWindow` shows
+  whatever `config.icon` its caller passes; the toaster's, the key bindings' and the views' icons
+  are debug env), so the kernel registers none. **Changed from D12's "the debugger in its `_dbg__`
+  init":** `InitEngine` calls `registerBuiltInIcons()` right after `addWindowListeners`, behind
+  `IS_DEBUG_ENV || IS_PROD_TEST_MODE` (before any debug module loads; prod test mode shows the
+  on-screen tools' icons). The names are spread over about 20 `_dbg__` modules and three debug
+  wrappers, and one call before them all can't miss one. A production build folds the call and
+  keeps no SVG. The app and the toolkit use no icons today.
+- `core/Debug/CLAUDE.md` (drawer tabs) says how an `icon` resolves.
+- Bundle: `index.js` 410.8 → 400.3 kB gzip (−10.6 kB), its modules 215 → 166; main `core/UI`
+  25.7 → 7.8 kB gzip (52 → 3 modules). `api.json`: the 49 icons and the three registry names on
+  `aekasha/ui`; `docs.json`: `core/UI/icons` 1 / 2 → 6 / 6 documented. The production debug
+  check: none.
+- **For Phase 10:** the UI pages (the registry, the built-ins, `aekasha/ui`), and the migration
+  guide: an app's own `icon` (a draggable window's, a debug tab's or a view's) shows `??` in a
+  production build until the app registers it (the debug env has every built-in).
+- Checks: in the browser (dev server, a Playwright script): `?isDebug=true` with the drawer open,
+  32 icons, all with their SVG; `?isProdTest=true`, 3; no `??`, no "No icon" warning, no error.
+  `yarn verify:scenes` 96 passed (hashes, snapshots, the system order). `yarn test` 245 passed,
+  lint, `tsc` (both projects), `yarn hub:build`; `verify:baselines` recorded.
+
 ### Phase 9: the manifest and the feature schemas
 
 1. The composed scene and mesh schemas; the three feature schemas move next to their features,
