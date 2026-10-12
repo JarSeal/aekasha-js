@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Refactoring, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p609_toolkit-and-app-restructure.md, p610_character-and-input-action-architecture.md, p611_sbp-tooling-profiles-and-marketing.md, p612_review-ecs-loop-config-init.md, p613_review-rendering-scene-assets.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p510_headless-simulation-runtime.md
@@ -307,13 +307,14 @@ but are rewritten when they import a moved one.
 
 ### 4.1 Modules
 
-| Module                | What                                                                                                                                                                     | Tested by                                                                                             |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `moveApply.ts`        | The path map (old → new for every tracked file, unmoved ones to themselves), the specifier and text rewrites, the result: renames, deletes, new texts, leftovers, errors | `moveApply.test.ts`: small trees in memory (no fixture under `src/`: it would be gathered and linted) |
-| `moveSplit.ts`        | Splits a module per export (§4.4)                                                                                                                                        | `moveSplit.test.ts`                                                                                   |
-| `moveEdits.ts`        | The edit table (D5): `{ file, find, replace, glob? }`                                                                                                                    | the glob check, at run time                                                                           |
-| `applyMoveMap.ts`     | The CLI: preconditions, reading, `git mv`, writing, Prettier, the report, `--dry-run`, `--verify-commit`                                                                 | the dry run on the real tree                                                                          |
-| `compareBaselines.ts` | §4.7                                                                                                                                                                     | `compareBaselines.test.ts`                                                                            |
+| Module                | What                                                                                                                                                                          | Tested by                                                                                             |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `moveApply.ts`        | The path map (old → new for every tracked file, unmoved ones to themselves), the specifier and text rewrites, the result: renames, deletes, new texts, leftovers, errors      | `moveApply.test.ts`: small trees in memory (no fixture under `src/`: it would be gathered and linted) |
+| `moveText.ts`         | The text rewrite (D6's file kinds, paths, `hub:` links, TypeDoc's links, comments only for `src/` modules) and the leftovers; split from `moveApply.ts` for the 800-line rule | `moveText.test.ts`                                                                                    |
+| `moveSplit.ts`        | Splits a module per export (§4.4)                                                                                                                                             | `moveSplit.test.ts`                                                                                   |
+| `moveEdits.ts`        | The edit table (D5): `{ file, find, replace, glob? }`                                                                                                                         | the glob check, at run time                                                                           |
+| `applyMoveMap.ts`     | The CLI: preconditions, reading, `git mv`, writing, Prettier, the report, `--dry-run`, `--verify-commit`                                                                      | the dry run on the real tree                                                                          |
+| `compareBaselines.ts` | §4.7                                                                                                                                                                          | `compareBaselines.test.ts`                                                                            |
 
 It reuses `importGraph.ts` (`parseModuleSource`, `resolveSpecifier`), `moveRules.ts`' types and
 `devTools/hub/api/model.ts`' page URL rule (so a rewritten `hub:` link is the URL the generator
@@ -485,7 +486,7 @@ As built:
   files, `yarn verify:baselines` "All baselines unchanged" with "production build: debug code
   none", `tsc` and `tsc -p hub`, `moveMap.ts --check`.
 
-### Phase 2: the rewrite rules
+### Phase 2: the rewrite rules — done
 
 `devTools/refactor/moveApply.ts` and its tests (§4.1, §4.3), no file system:
 
@@ -506,6 +507,53 @@ As built:
    an excluded file untouched, a case-only rename.
 6. **Verification:** `yarn test`, `yarn lint`.
 
+As built:
+
+- **Two modules:** `moveApply.ts` (743 lines: `buildPathMap`, `rewriteTypeScript`,
+  `rewriteStylesheet`, and `rewriteTree`, which runs them and the text rewrite on a tree's texts
+  and returns the changed texts by old path, the leftovers by new path and the errors) and
+  `moveText.ts` (`getTextKind`, `createTextContext`, `rewriteText`, `findLeftovers`), each with
+  its test. A split file and a deleted one aren't rewritten (Phase 3 splits the former).
+- **The path map** also checks two paths that differ only by case and an action the codemod has no
+  rule for (`merge`); a split target may land on any path (§4.4 appends there). On today's tree:
+  398 moves (23 case-only), 3 deletes, 2 splits, 1200 files → 1204 (9 split targets are new paths;
+  `Object3DHelpers.ts` is a moved file's).
+- **A form §4.3 didn't list:** `typeof import('…')` types (`ts.ImportTypeNode`, about 10, all into
+  `core/Debug/`); an `import('…').Name` type of a split file follows its name. Also rewritten:
+  `vi.unmock` / `vi.doUnmock` / `vi.importMock`. A `new URL` whose base isn't `import.meta.url`
+  isn't a path. A specifier naming a folder (`new URL('.', import.meta.url)`) keeps naming it (an
+  error if the folder is empty after the move); one naming nothing is left alone unless its
+  importer moves. Every new specifier is checked to resolve to its file in the tree after the move.
+- **Globs:** the matcher is the module's own (`**`, `*`, `?`; braces and extglobs are errors):
+  `picomatch` and `minimatch` are only transitive dependencies. A pattern's folder follows its
+  files when they land in one folder at the same depth below it (a subfolder's name may change
+  case).
+- **A divided import** keeps its keyword, quotes, indentation, inline `type` and aliases; it can
+  leave two imports of one module (a value and a type import, as `LightManager.ts` has today).
+  The lint has no `import/no-duplicates`, and merging them would reorder the imports.
+- **Stylesheets:** a URL without `./` is tried relative to the stylesheet first, as Sass does; one
+  that doesn't resolve (a load path, a package) is left alone.
+- **Text:** `devTools/verify/baselines/` is history too (§4.7 maps the baselines; a rewritten
+  `api.json` would land in the move commit). The path boundary lets a full stop followed by a
+  space or the end close a path (`core/Scene.` at a sentence's end). An engine-relative form
+  without `.ts` needs a `/` (`InitApp` alone is a word). A `hub:` link to a module wins over a
+  folder of its name (`core/ECS`); a split module's page follows its anchor's export.
+  `devTools/hub/api/model.ts` exports the URL rule as `getApiPagePath`.
+- **On today's tree, in memory** (912 text files, 1.8 s): 533 modules with no TypeScript error,
+  334 files changed (270 modules' comments, 22 devTools and config modules, 25 documents, 17
+  stylesheets), and:
+  - **2 errors:** the folder links `hub:documentation/engine/debug` (15 modules stay in `debug/`,
+    `3DSymbols.ts` goes to `debug/symbols/`) and `…/core/Lod` (22 to `features/lod/`, `LodFade.ts`
+    to `kernel/render/`). Phase 3's edit table takes them.
+  - **13 leftovers in 10 files**, one of them code: `physicsWorker.test.ts`' `FORBIDDEN_MODULES`
+    (`'core/MainLoop.ts'`, …) is matched against esbuild's bundle inputs, so after the move the
+    boundary test would pass for nothing. A string in `src/`, which D6 leaves alone: Phase 3's
+    edit table. The rest are prose and comments for Phase 6 (two `.scss` comments, the root
+    `CLAUDE.md`'s `utils/helpers.ts`, three modules' comments naming it, `driver.mjs`,
+    `docs/templates/`, a Hub SCSS comment).
+- **Verification:** `yarn test` 283 tests in 26 files, `yarn lint` clean, `tsc` and `tsc -p hub`,
+  `moveMap.ts --check` (`layoutReport.md` regenerated: `model.ts`' new JSDoc names a moving path).
+
 ### Phase 3: splitting and the edit table
 
 1. `moveSplit.ts` (§4.4) and its tests: statements per export with their comments, imports by use,
@@ -515,8 +563,13 @@ As built:
 2. `moveEdits.ts` (D5), with the entries the tree needs: `SIMULATION_FILES`' two globs (the same
    files: `features/physics/` and `features/character/` with `ignores` for the feature's install,
    entry, import extension and debug modules, or the files listed), `moduleSideEffects.test.ts`'
-   worker entries regex, and whatever the dry run (Phase 4) turns up. Each `find` checked to occur
-   as often as the entry says, each glob entry checked file set against file set.
+   worker entries regex, `physicsWorker.test.ts`' `FORBIDDEN_MODULES` (engine-relative paths in a
+   string, Phase 2's leftovers), the two `hub:` folder links whose modules scatter (`debug` and
+   `core/Lod`, Phase 2's errors), and whatever the dry run (Phase 4) turns up.
+   - **The table runs last, but an error stops the run before it:** the text rewrite skips a
+     `hub:` link (or any match) that an edit table entry's `find` covers, so the entry decides
+     its replacement. Each `find` checked to occur
+     as often as the entry says, each glob entry checked file set against file set.
 3. **Verification:** `yarn test` (including the split of today's `helpers.ts` and `constants.ts`
    in memory: every export lands in its target; Phase 4's dry run compiles the parts), `yarn lint`.
 

@@ -139,7 +139,7 @@ Mentions of a moving file's path (from the repo root, or from `src/_engine/`) in
 | `src/_engine/core/Debug/CLAUDE.md` | 12 | 12 |
 | `eslint.config.js` | 8 | 8 |
 | `src/_engine/core/Lod/CLAUDE.md` | 6 | 5 |
-| `devTools/hub/api/model.ts` | 4 | 2 |
+| `devTools/hub/api/model.ts` | 5 | 2 |
 | `hub/pages/documentation/code-blocks/intro.md` | 3 | 2 |
 | `devTools/copyDecoders.ts` | 2 | 2 |
 | `devTools/devFiles/CLAUDE.md` | 2 | 2 |
