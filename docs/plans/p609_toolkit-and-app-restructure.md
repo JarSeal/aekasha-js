@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Refactoring, Toolkit, App
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p620_review-toolkit-and-app-code.md
@@ -211,7 +211,7 @@ No file of the toolkit or the app changes.
   changed, 0 errors; its 64 leftovers are all in `assets.lock.json` and
   `src/generated/generatedAppData.json`, which Phase 2's `yarn assets` and gather write again.
 
-### Phase 2: the move
+### Phase 2: the move — done
 
 1. `npx tsx devTools/refactor/applyMoveMap.ts --plan p609`: commit alone, its message naming the
    command and the base (`p609: apply the move map`).
@@ -225,6 +225,30 @@ No file of the toolkit or the app changes.
    descriptions naming old files, eg. `thirdPersonGymSun.light.json`'s), and give the three
    asset JSONs without a working `$schema` theirs (`testDebugScene` and `oneMoreScene` have
    none, `ambientLight.light.json` has the typo `"$schemas"`). Commit.
+
+**As built:**
+
+- The commits: `d04b076` (the move, on `ffa46d8`; `--verify-commit` passes), `eb5c2be` (the
+  outputs, the lock, the generated data), `6876682` (the baselines), `9089c86` (the leftovers).
+- Step 2: the 13 outputs of the moved assets came out byte for byte the same (same content
+  hashes) under their new logical paths (`aek-assets/app/scenes/<id>/…`,
+  `aek-assets/toolkit/models/brand/…`); the full run removed the 13 old ones. So the risk below
+  didn't happen.
+- Step 3: `compareBaselines.ts --plan p609 ffa46d8` passes (the bundle differs by nine renamed
+  chunks: `scene01_v2.js` → `scene01V2.js`, `generateAsteroid.js` → `Asteroid.js`, …), after
+  `yarn verify:baselines --update --allow-docs-drop` (committed). `yarn test`, `yarn build` and
+  `yarn hub:build` pass. `yarn verify:scenes`: 93 of 96; **`lodShowcase`'s three debug
+  configurations fail on the snapshot** (0.12-0.13 % of the pixels, max 47-49, all in the
+  clouds), with the same probe hash. Not the move: `ffa46d8` (before it), run in a worktree
+  against the same baselines, fails the same way. The scene's sky drifts between runs an hour
+  apart (the sky box's env bakes are throttled by `performance.now()`), so its baseline only
+  holds for a while; it's left for an issue file (Phase 4 asks).
+- Step 4: the leftover report found nothing (it reads full paths); a `grep` for the old file
+  names found eight: bare names in comments and asset descriptions (`scene01_v2.ts`,
+  `scene_thirdPersonGym.ts`, `testECS.ts`, `topDownTest.scene.json`, …), the toolkit
+  walkthrough's `src/toolkit/models/aekashaSymbol/` folder, `lod/CLAUDE.md`'s lanes folder and
+  `debug/CLAUDE.md`'s `_dbg__spaceDemo.ts` example. The codemod had carried `ambientLight`'s
+  misspelled `"$schemas"` value along as a relative path, so only its key changed.
 
 ### Phase 3: after the move, the docs and the Hub
 
