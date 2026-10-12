@@ -48,7 +48,15 @@ export type MoveEdit = {
  * The table, in the order it applies. p608's entries left with its move (D9: their `find`s are
  * gone); p609 adds its own.
  */
-export const MOVE_EDITS: MoveEdit[] = [];
+export const MOVE_EDITS: MoveEdit[] = [
+  {
+    plan: 'p609',
+    file: 'eslint.config.js',
+    find: 'createSeededRandom (toolkit/geometry/seededRandom.ts)',
+    replace: 'createSeededRandom (toolkit/geometry/SeededRandom.ts)',
+    why: 'the simulation lint message names the module from src/: the text rewrite reads only full and engine-relative paths',
+  },
+];
 
 /** The table's `find`s per file, for one plan: what the rewrite leaves to the table */
 export const getProtectedTexts = (edits: readonly MoveEdit[], plan: MovePlan) => {

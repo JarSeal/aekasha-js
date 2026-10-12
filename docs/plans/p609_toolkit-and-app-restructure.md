@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 implemented
 Category: Refactoring, Toolkit, App
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p620_review-toolkit-and-app-code.md
@@ -128,11 +128,12 @@ already live in the toolkit. **Handed back to p450:** the ~145 debugger test fil
 
 ### D4. The codemod reads asset JSONs
 
-A new text kind `json` in `moveText.ts` for every gathered asset JSON under `src/` (by suffix,
-the gatherer's list): text edits on the string values only (formatting and `__saveData` stay
-byte for byte), each edit resolved against the file's old folder and written against its new one:
+A rewriter for every gathered asset JSON under `src/` (by suffix, the gatherer's list): text
+edits on the string values only (formatting and `__saveData` stay byte for byte), each edit
+resolved against the file's old folder and written against its new one:
 
-- `$schema`: re-relativised to `.schemas/` from the new folder;
+- `$schema`: the schema's file in `.schemas/`, written from the new folder (so the 10 scene JSONs
+  whose `../.schemas/…` is broken today are fixed by their move);
 - `sceneFile`: resolved from `src/app/` (the gatherer's base), with or without `.ts`, written as
   `./scenes/<id>/<id>.ts`;
 - any other string starting `./` or `../` (`image`, `fileName`, layer paths): a tracked file,
@@ -140,7 +141,18 @@ byte for byte), each edit resolved against the file's old folder and written aga
   root-absolute paths (`/debugger/…`) are left alone.
 
 A JSON that doesn't move but points at a moved file (a texture whose source folder moves) is
-rewritten too. Tested on in-memory trees like the other rules (`moveText.test.ts`).
+rewritten too. Tested on in-memory trees like the other rules.
+
+**As built (Phase 1):** its own module, `devTools/refactor/moveJson.ts` (`isAssetJson`,
+`rewriteAssetJson`, tests in `moveJson.test.ts`), called by `moveTree.ts`' `rewriteTree` next to
+the stylesheet rewrite, not a `moveText.ts` text kind: JSONs stay `scan` there, so the leftovers
+report still lists a path in a JSON string the rewrite doesn't own (a `description`). It parses
+with `ts.parseJsonText` for the string positions. `$schema` changes only for a JSON that moves;
+`sceneFile` keeps its `./` and `.ts` as written (`./oneMoreScene`, `debugScene.scene.ts`). A
+third key the plan missed: **`tslFile`** (a material's or PostFX's TSL module), which the gatherer
+resolves from the JSON's root under `src/` (`getBasePath`: `src/app/` or `src/toolkit/`), not
+from the JSON's folder and without `./` (`"materials/asteroid.tsl.ts"`); it's resolved like
+`sceneFile`, from that root.
 
 ### D5. After the move
 
@@ -164,13 +176,13 @@ No example scene: nothing new to show (the Hub's app-structure and toolkit pages
 The move is one commit made by the codemod (`--verify-commit` checks it), so the phases split
 around it: the tooling before, the outputs and fixes after, the docs last.
 
-### Phase 1: the rules and the JSON rewrite
+### Phase 1: the rules and the JSON rewrite — done
 
 No file of the toolkit or the app changes.
 
 1. Record the scene runner's baselines on this branch's base (`de10424` = `main`):
    `yarn verify:scenes --update`, in the background (Workflow's "Watching a long run").
-2. D4: the `json` text kind in `moveText.ts` with its tests; the leftovers report covers it too.
+2. D4: the asset JSON rewrite with its tests.
 3. `moveRules.ts`: D1 (`ecs/gameplay/` for `FollowObjectCameraRig.ts` and `MovingPlatform.ts`,
    `models/brand/` without the "proposal" note), D2's asset file rules with their notes, the
    `sceneFile` note made true.
@@ -180,6 +192,24 @@ No file of the toolkit or the app changes.
    the simulation lint message's `toolkit/geometry/seededRandom.ts`, any toolkit-relative path in
    a comment). Add those edits, dry-run again until it's clean.
 6. `yarn test`, `yarn lint`. Commit.
+
+**As built:**
+
+- Step 1: 96 of 96 runs recorded (24 scenes × 4 configurations, WebGPU, `.cache/verify/scenes/webgpu/`).
+- Step 2: `moveJson.ts` (D4's as built), with `tslFile`.
+- Step 3: D2's assets are `SCENE_ONLY_ASSETS` in `moveRules.ts`, by scene id, paths from
+  `src/app/` (a folder ends `/`, `name.*` takes an impostor's four files); a path that names no
+  file throws, so the list can't go stale silently.
+- Step 4: the map has 565 files, p609 124 (117 moves, 7 keeps: the four effects, the three
+  entries); the layout report's 26 boundary violations are `main`'s.
+- Step 5: the leftover scan reads only full and engine-relative paths, so it didn't name the lint
+  message: a `grep` for toolkit-relative paths found it, the one entry in `MOVE_EDITS`. The first
+  dry run also failed on `debugInProduction.test.ts`, whose fixture `/src/app/_dbg__spaceDemo.ts`
+  (an id with a leading `/`, which the text rewrite doesn't match) was rewritten in the expected
+  string only: the fixture is now `_dbg__demo.ts`, a path no plan moves. The last dry run: apply,
+  `tsc`, `tsc -p hub`, `yarn test`, `yarn lint` and `yarn build` pass; 117 moves, 86 texts
+  changed, 0 errors; its 64 leftovers are all in `assets.lock.json` and
+  `src/generated/generatedAppData.json`, which Phase 2's `yarn assets` and gather write again.
 
 ### Phase 2: the move
 
@@ -192,7 +222,9 @@ No file of the toolkit or the app changes.
    `yarn test`, `yarn verify:scenes` (every configuration, against step 1's baselines),
    `yarn verify:baselines`, `yarn build`, `yarn hub:build`.
 4. `applyMoveMap.ts --plan p609 --leftovers <base>`: fix what's left by hand (asset JSON
-   descriptions naming old files, eg. `thirdPersonGymSun.light.json`'s). Commit.
+   descriptions naming old files, eg. `thirdPersonGymSun.light.json`'s), and give the three
+   asset JSONs without a working `$schema` theirs (`testDebugScene` and `oneMoreScene` have
+   none, `ambientLight.light.json` has the typo `"$schemas"`). Commit.
 
 ### Phase 3: after the move, the docs and the Hub
 

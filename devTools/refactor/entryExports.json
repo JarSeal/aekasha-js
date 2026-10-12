@@ -10910,7 +10910,7 @@
           "usage": "unreferenced"
         }
       },
-      "src/toolkit/ecs/FollowObjectCameraRig.ts": {
+      "src/toolkit/ecs/gameplay/FollowObjectCameraRig.ts": {
         "createFollowObjectCameraRig": {
           "kind": "Function",
           "usage": "public",
@@ -10937,7 +10937,7 @@
           ]
         }
       },
-      "src/toolkit/ecs/MovingPlatform.ts": {
+      "src/toolkit/ecs/gameplay/MovingPlatform.ts": {
         "createMovingPlatform": {
           "kind": "Function",
           "usage": "public",

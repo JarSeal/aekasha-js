@@ -1,9 +1,9 @@
 /**
  * The whole tree's rewrite for the move (p608 §4.3-§4.4), without the file system: every module's
- * specifiers and comments, the stylesheets and the documents (`moveApply.ts`, `moveText.ts`), then
- * the split files' parts (`moveSplit.ts`), then the edit table (`moveEdits.ts`), then the leftovers
- * on the result. `applyMoveMap.ts` writes what it returns; nothing may be written when it has
- * errors.
+ * specifiers and comments, the stylesheets, the asset JSONs and the documents (`moveApply.ts`,
+ * `moveJson.ts`, `moveText.ts`), then the split files' parts (`moveSplit.ts`), then the edit table
+ * (`moveEdits.ts`), then the leftovers on the result. `applyMoveMap.ts` writes what it returns;
+ * nothing may be written when it has errors.
  */
 import {
   rewriteStylesheet,
@@ -12,6 +12,7 @@ import {
   type RewriteResult,
 } from './moveApply';
 import { applyEditTable, getProtectedTexts, type MoveEdit } from './moveEdits';
+import { isAssetJson, rewriteAssetJson } from './moveJson';
 import { splitModules } from './moveSplit';
 import {
   createTextContext,
@@ -34,9 +35,9 @@ export type TreeRewrite = {
 
 /**
  * Rewrites every text of a tree for the move: a module's specifiers then its comments (or its
- * whole text, `getTextKind`), a stylesheet's loads, a document's paths and links; then splits each
- * split file, its comments rewritten first; then applies the edit table's entries for the map's
- * plan, whose `find`s the text rewrite leaves alone. A deleted file isn't rewritten, history
+ * whole text, `getTextKind`), a stylesheet's loads, an asset JSON's paths, a document's paths and
+ * links; then splits each split file, its comments rewritten first; then applies the edit table's
+ * entries for the map's plan, whose `find`s the text rewrite leaves alone. A deleted file isn't rewritten, history
  * neither (D6). Any error stops it before the next step.
  */
 export const rewriteTree = (
@@ -65,6 +66,7 @@ export const rewriteTree = (
     };
     if (file.endsWith('.ts')) run(rewriteTypeScript(map, file, next));
     else if (/\.s[ac]ss$/.test(file)) run(rewriteStylesheet(map, file, next));
+    else if (isAssetJson(file)) run(rewriteAssetJson(map, file, next));
     run(rewriteText(ctx, file, next, protectedTexts.get(file)));
     if (next !== text) changed.set(file, next);
   }

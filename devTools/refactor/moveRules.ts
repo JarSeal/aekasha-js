@@ -69,7 +69,7 @@ const ENGINE_RULES: MoveRule[] = [
   { from: `${E}types/`, to: `${E}types/` },
 ];
 
-/** The toolkit's categories (p609, from the p450 prompt) */
+/** The toolkit's categories (p609 D1, from the p450 prompt) */
 const TOOLKIT_RULES: MoveRule[] = [
   ...['ecs', 'geometry', 'materials'].map(
     (category): MoveRule => ({
@@ -82,15 +82,15 @@ const TOOLKIT_RULES: MoveRule[] = [
   { from: `${T}ecs/effects/`, to: `${T}ecs/effects/`, plan: 'p609' },
   {
     from: `${T}ecs/FollowObjectCameraRig.ts`,
-    to: `${T}ecs/FollowObjectCameraRig.ts`,
+    to: `${T}ecs/gameplay/FollowObjectCameraRig.ts`,
     plan: 'p609',
-    note: 'moved from the engine (p606 Phase 7, p602 D6); p609 picks its category folder',
+    note: 'moved from the engine (p606 Phase 7, p602 D6); a gameplay piece (p609 D1)',
   },
   {
     from: `${T}ecs/MovingPlatform.ts`,
-    to: `${T}ecs/MovingPlatform.ts`,
+    to: `${T}ecs/gameplay/MovingPlatform.ts`,
     plan: 'p609',
-    note: 'moved from the engine (p606 Phase 7, p602 D6); p609 picks its category folder',
+    note: 'moved from the engine (p606 Phase 7, p602 D6); a gameplay piece (p609 D1)',
   },
   {
     from: `${T}geometry/generateAsteroid.ts`,
@@ -114,7 +114,7 @@ const TOOLKIT_RULES: MoveRule[] = [
     from: `${T}models/aekashaSymbol/`,
     to: `${T}models/brand/aekashaSymbol/`,
     plan: 'p609',
-    note: 'the category is a proposal: p609 names the model categories',
+    note: 'models by category (p609 D1): brand/, later reference/ and nature/ (p450)',
   },
 ];
 
@@ -129,10 +129,99 @@ const getToolkitMaterialRules = (files: string[]): MoveRule[] =>
     });
 
 /**
+ * The asset files only one scene uses, which go into its folder (p609 D2), by scene id; paths
+ * from `src/app/`. A path ending `/` is a folder, one ending `.*` every file of that name (an
+ * impostor's JSON, atlas and images). The rest stay in their type folders: a second user (scene
+ * JSON, scene code, another asset) makes an asset shared.
+ */
+const SCENE_ONLY_ASSETS: Record<string, string[]> = {
+  largeWorld: [
+    'cameras/largeWorldOverview.camera.json',
+    'lights/largeWorldAmbient.light.json',
+    'lights/largeWorldSun.light.json',
+    'impostors/largeWorldTreeCross.*',
+  ],
+  lodShowcase: [
+    'cameras/lodShowcaseCamera.camera.json',
+    'impostors/lodShowcaseKnotImpostor.*',
+    'impostors/lodShowcaseTreeCross.*',
+  ],
+  physicsTest: [
+    'cameras/physicsTestCamera.camera.json',
+    'lights/physicsTestAmbient.light.json',
+    'lights/physicsTestSun.light.json',
+  ],
+  physicsTiers: [
+    'cameras/physicsTiersOverview.camera.json',
+    'lights/physicsTiersAmbient.light.json',
+    'lights/physicsTiersSun.light.json',
+  ],
+  skyShowcase: ['cameras/skyShowcaseCamera.camera.json'],
+  space: ['cameras/spaceCamera.camera.json'],
+  thirdPersonGymScene: [
+    'cameras/thirdPersonGymCamera.camera.json',
+    'lights/thirdPersonGymAmbient.light.json',
+    'lights/thirdPersonGymSun.light.json',
+  ],
+  topDownTestScene: [
+    'cameras/topDownTestCamera.camera.json',
+    'lights/topDownTestAmbient.light.json',
+    'lights/topDownTestSun.light.json',
+  ],
+  assetCompare: ['skyboxes/assetCompare.skybox.json'],
+  textureArrays: [
+    'textures/p299TestArray.textureArray.json',
+    'textures/p299TestArray1.textureArray.json',
+  ],
+  textureAtlases: [
+    'textures/p299TestAtlas.textureAtlas.json',
+    'textures/p299TestAtlasImage.textureAtlas.json',
+    'textures/source/p299Atlas/',
+  ],
+  sceneTestECS: [
+    'cameras/mainCamera.camera.json',
+    'lights/ambientLight.light.json',
+    'materials/testMaterial.material.json',
+    'materials/testTslMat.material.json',
+    'materials/testTslMat.tsl.ts',
+    'meshes/testMesh.mesh.json',
+    'meshes/testImportedMesh.mesh.json',
+    'geometries/testSphere.geometry.json',
+    'importedAssets/testImport.importedAsset.json',
+  ],
+};
+
+/** `SCENE_ONLY_ASSETS`' rules; a path that names no file throws (the list is out of date) */
+const getSceneOnlyAssetRules = (files: string[]): MoveRule[] =>
+  Object.entries(SCENE_ONLY_ASSETS).flatMap(([id, paths]) =>
+    paths.flatMap((rel): MoveRule[] => {
+      const note = `used only by the scene ${id} (p609 D2)`;
+      const folder = `${A}scenes/${id}/`;
+      const from = `${A}${rel}`;
+      if (rel.endsWith('/')) {
+        if (!files.some((f) => f.startsWith(from)))
+          throw new Error(`SCENE_ONLY_ASSETS: no ${from}`);
+        const to = `${folder}${rel.split('/').slice(1).join('/')}`;
+        return [{ from, to, plan: 'p609', note }];
+      }
+      const matches = rel.endsWith('.*')
+        ? files.filter((f) => f.startsWith(from.slice(0, -1)))
+        : files.filter((f) => f === from);
+      if (!matches.length) throw new Error(`SCENE_ONLY_ASSETS: no ${from}`);
+      return matches.map((f) => ({
+        from: f,
+        to: `${folder}${path.posix.basename(f)}`,
+        plan: 'p609',
+        note,
+      }));
+    })
+  );
+
+/**
  * The app: one folder per scene, `src/app/scenes/<sceneId>/` with its scene JSON, scene file,
- * `_dbg__` module and Hub image, named by the scene id (p602 D7, p609). The examples keep their
- * folders (the Hub's example rule reads `src/app/examples/`); the shared asset JSONs stay in
- * their type folders.
+ * `_dbg__` module, Hub image and the assets only it uses, named by the scene id (p602 D7, p609
+ * D2). The examples keep their folders (the Hub's example rule reads `src/app/examples/`); the
+ * shared asset JSONs stay in their type folders.
  */
 const getAppSceneRules = (root: string, files: string[]): MoveRule[] => {
   const rules: MoveRule[] = [];
@@ -146,7 +235,7 @@ const getAppSceneRules = (root: string, files: string[]): MoveRule[] => {
     const json = JSON.parse(fs.readFileSync(path.join(root, jsonFile), 'utf8'));
     const id: string = json.id;
     const folder = `${A}scenes/${id}/`;
-    const note = 'the codemod rewrites its `sceneFile`';
+    const note = 'the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)';
     rules.push({ from: jsonFile, to: `${folder}${id}.scene.json`, plan: 'p609', note });
     if (typeof json.sceneFile === 'string') {
       let sceneFile = path.posix.join(A, json.sceneFile);
@@ -175,6 +264,7 @@ export const getMoveRules = (root: string, files: string[]): MoveRule[] => [
   ...TOOLKIT_RULES,
   ...getToolkitMaterialRules(files),
   ...getAppSceneRules(root, files),
+  ...getSceneOnlyAssetRules(files),
 ];
 
 /** Whether a `.ts` file keeps its name: an asset-id file (`asteroid.tsl.ts`), an entry, a declaration */

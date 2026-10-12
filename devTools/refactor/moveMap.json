@@ -2228,12 +2228,66 @@
       "to": "src/app/scenes/assetCompare/assetCompare.scene.json",
       "action": "move",
       "plan": "p609",
-      "note": "the codemod rewrites its `sceneFile`"
+      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
     },
     "src/app/assetCompare.ts": {
       "to": "src/app/scenes/assetCompare/assetCompare.ts",
       "action": "move",
       "plan": "p609"
+    },
+    "src/app/cameras/largeWorldOverview.camera.json": {
+      "to": "src/app/scenes/largeWorld/largeWorldOverview.camera.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene largeWorld (p609 D2)"
+    },
+    "src/app/cameras/lodShowcaseCamera.camera.json": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseCamera.camera.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene lodShowcase (p609 D2)"
+    },
+    "src/app/cameras/mainCamera.camera.json": {
+      "to": "src/app/scenes/sceneTestECS/mainCamera.camera.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene sceneTestECS (p609 D2)"
+    },
+    "src/app/cameras/physicsTestCamera.camera.json": {
+      "to": "src/app/scenes/physicsTest/physicsTestCamera.camera.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene physicsTest (p609 D2)"
+    },
+    "src/app/cameras/physicsTiersOverview.camera.json": {
+      "to": "src/app/scenes/physicsTiers/physicsTiersOverview.camera.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene physicsTiers (p609 D2)"
+    },
+    "src/app/cameras/skyShowcaseCamera.camera.json": {
+      "to": "src/app/scenes/skyShowcase/skyShowcaseCamera.camera.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene skyShowcase (p609 D2)"
+    },
+    "src/app/cameras/spaceCamera.camera.json": {
+      "to": "src/app/scenes/space/spaceCamera.camera.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene space (p609 D2)"
+    },
+    "src/app/cameras/thirdPersonGymCamera.camera.json": {
+      "to": "src/app/scenes/thirdPersonGymScene/thirdPersonGymCamera.camera.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene thirdPersonGymScene (p609 D2)"
+    },
+    "src/app/cameras/topDownTestCamera.camera.json": {
+      "to": "src/app/scenes/topDownTestScene/topDownTestCamera.camera.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene topDownTestScene (p609 D2)"
     },
     "src/app/characterVisual.ts": {
       "to": "src/app/scenes/thirdPersonGymScene/characterVisual.ts",
@@ -2245,23 +2299,173 @@
       "to": "src/app/scenes/testDebugScene/testDebugScene.scene.json",
       "action": "move",
       "plan": "p609",
-      "note": "the codemod rewrites its `sceneFile`"
+      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
     },
     "src/app/debugScene.scene.ts": {
       "to": "src/app/scenes/testDebugScene/testDebugScene.ts",
       "action": "move",
       "plan": "p609"
     },
+    "src/app/geometries/testSphere.geometry.json": {
+      "to": "src/app/scenes/sceneTestECS/testSphere.geometry.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene sceneTestECS (p609 D2)"
+    },
+    "src/app/importedAssets/testImport.importedAsset.json": {
+      "to": "src/app/scenes/sceneTestECS/testImport.importedAsset.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene sceneTestECS (p609 D2)"
+    },
+    "src/app/impostors/largeWorldTreeCross.albedo.png": {
+      "to": "src/app/scenes/largeWorld/largeWorldTreeCross.albedo.png",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene largeWorld (p609 D2)"
+    },
+    "src/app/impostors/largeWorldTreeCross.impostor.json": {
+      "to": "src/app/scenes/largeWorld/largeWorldTreeCross.impostor.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene largeWorld (p609 D2)"
+    },
+    "src/app/impostors/largeWorldTreeCross.normal.png": {
+      "to": "src/app/scenes/largeWorld/largeWorldTreeCross.normal.png",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene largeWorld (p609 D2)"
+    },
+    "src/app/impostors/largeWorldTreeCross.textureAtlas.json": {
+      "to": "src/app/scenes/largeWorld/largeWorldTreeCross.textureAtlas.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene largeWorld (p609 D2)"
+    },
+    "src/app/impostors/lodShowcaseKnotImpostor.albedo.png": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.albedo.png",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene lodShowcase (p609 D2)"
+    },
+    "src/app/impostors/lodShowcaseKnotImpostor.impostor.json": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.impostor.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene lodShowcase (p609 D2)"
+    },
+    "src/app/impostors/lodShowcaseKnotImpostor.normalDepth.png": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.normalDepth.png",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene lodShowcase (p609 D2)"
+    },
+    "src/app/impostors/lodShowcaseKnotImpostor.textureAtlas.json": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.textureAtlas.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene lodShowcase (p609 D2)"
+    },
+    "src/app/impostors/lodShowcaseTreeCross.albedo.png": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.albedo.png",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene lodShowcase (p609 D2)"
+    },
+    "src/app/impostors/lodShowcaseTreeCross.impostor.json": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.impostor.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene lodShowcase (p609 D2)"
+    },
+    "src/app/impostors/lodShowcaseTreeCross.normal.png": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.normal.png",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene lodShowcase (p609 D2)"
+    },
+    "src/app/impostors/lodShowcaseTreeCross.textureAtlas.json": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.textureAtlas.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene lodShowcase (p609 D2)"
+    },
     "src/app/largeWorld.scene.json": {
       "to": "src/app/scenes/largeWorld/largeWorld.scene.json",
       "action": "move",
       "plan": "p609",
-      "note": "the codemod rewrites its `sceneFile`"
+      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
     },
     "src/app/largeWorld.ts": {
       "to": "src/app/scenes/largeWorld/largeWorld.ts",
       "action": "move",
       "plan": "p609"
+    },
+    "src/app/lights/ambientLight.light.json": {
+      "to": "src/app/scenes/sceneTestECS/ambientLight.light.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene sceneTestECS (p609 D2)"
+    },
+    "src/app/lights/largeWorldAmbient.light.json": {
+      "to": "src/app/scenes/largeWorld/largeWorldAmbient.light.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene largeWorld (p609 D2)"
+    },
+    "src/app/lights/largeWorldSun.light.json": {
+      "to": "src/app/scenes/largeWorld/largeWorldSun.light.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene largeWorld (p609 D2)"
+    },
+    "src/app/lights/physicsTestAmbient.light.json": {
+      "to": "src/app/scenes/physicsTest/physicsTestAmbient.light.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene physicsTest (p609 D2)"
+    },
+    "src/app/lights/physicsTestSun.light.json": {
+      "to": "src/app/scenes/physicsTest/physicsTestSun.light.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene physicsTest (p609 D2)"
+    },
+    "src/app/lights/physicsTiersAmbient.light.json": {
+      "to": "src/app/scenes/physicsTiers/physicsTiersAmbient.light.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene physicsTiers (p609 D2)"
+    },
+    "src/app/lights/physicsTiersSun.light.json": {
+      "to": "src/app/scenes/physicsTiers/physicsTiersSun.light.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene physicsTiers (p609 D2)"
+    },
+    "src/app/lights/thirdPersonGymAmbient.light.json": {
+      "to": "src/app/scenes/thirdPersonGymScene/thirdPersonGymAmbient.light.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene thirdPersonGymScene (p609 D2)"
+    },
+    "src/app/lights/thirdPersonGymSun.light.json": {
+      "to": "src/app/scenes/thirdPersonGymScene/thirdPersonGymSun.light.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene thirdPersonGymScene (p609 D2)"
+    },
+    "src/app/lights/topDownTestAmbient.light.json": {
+      "to": "src/app/scenes/topDownTestScene/topDownTestAmbient.light.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene topDownTestScene (p609 D2)"
+    },
+    "src/app/lights/topDownTestSun.light.json": {
+      "to": "src/app/scenes/topDownTestScene/topDownTestSun.light.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene topDownTestScene (p609 D2)"
     },
     "src/app/lodShowcase.hub.png": {
       "to": "src/app/scenes/lodShowcase/lodShowcase.hub.png",
@@ -2272,7 +2476,7 @@
       "to": "src/app/scenes/lodShowcase/lodShowcase.scene.json",
       "action": "move",
       "plan": "p609",
-      "note": "the codemod rewrites its `sceneFile`"
+      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
     },
     "src/app/lodShowcase.ts": {
       "to": "src/app/scenes/lodShowcase/lodShowcase.ts",
@@ -2339,11 +2543,41 @@
       "action": "move",
       "plan": "p609"
     },
+    "src/app/materials/testMaterial.material.json": {
+      "to": "src/app/scenes/sceneTestECS/testMaterial.material.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene sceneTestECS (p609 D2)"
+    },
+    "src/app/materials/testTslMat.material.json": {
+      "to": "src/app/scenes/sceneTestECS/testTslMat.material.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene sceneTestECS (p609 D2)"
+    },
+    "src/app/materials/testTslMat.tsl.ts": {
+      "to": "src/app/scenes/sceneTestECS/testTslMat.tsl.ts",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene sceneTestECS (p609 D2)"
+    },
+    "src/app/meshes/testImportedMesh.mesh.json": {
+      "to": "src/app/scenes/sceneTestECS/testImportedMesh.mesh.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene sceneTestECS (p609 D2)"
+    },
+    "src/app/meshes/testMesh.mesh.json": {
+      "to": "src/app/scenes/sceneTestECS/testMesh.mesh.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene sceneTestECS (p609 D2)"
+    },
     "src/app/oneMoreScene.scene.json": {
       "to": "src/app/scenes/oneMoreScene/oneMoreScene.scene.json",
       "action": "move",
       "plan": "p609",
-      "note": "the codemod rewrites its `sceneFile`"
+      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
     },
     "src/app/oneMoreScene.ts": {
       "to": "src/app/scenes/oneMoreScene/oneMoreScene.ts",
@@ -2354,7 +2588,7 @@
       "to": "src/app/scenes/physicsTest/physicsTest.scene.json",
       "action": "move",
       "plan": "p609",
-      "note": "the codemod rewrites its `sceneFile`"
+      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
     },
     "src/app/physicsTest.ts": {
       "to": "src/app/scenes/physicsTest/physicsTest.ts",
@@ -2365,7 +2599,7 @@
       "to": "src/app/scenes/physicsTiers/physicsTiers.scene.json",
       "action": "move",
       "plan": "p609",
-      "note": "the codemod rewrites its `sceneFile`"
+      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
     },
     "src/app/physicsTiers.ts": {
       "to": "src/app/scenes/physicsTiers/physicsTiers.ts",
@@ -2386,7 +2620,7 @@
       "to": "src/app/scenes/scene01V2/scene01V2.scene.json",
       "action": "move",
       "plan": "p609",
-      "note": "the codemod rewrites its `sceneFile`"
+      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
     },
     "src/app/scene01_v2.ts": {
       "to": "src/app/scenes/scene01V2/scene01V2.ts",
@@ -2397,18 +2631,24 @@
       "to": "src/app/scenes/scene01/scene01.scene.json",
       "action": "move",
       "plan": "p609",
-      "note": "the codemod rewrites its `sceneFile`"
+      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
     },
     "src/app/scene01.ts": {
       "to": "src/app/scenes/scene01/scene01.ts",
       "action": "move",
       "plan": "p609"
     },
+    "src/app/skyboxes/assetCompare.skybox.json": {
+      "to": "src/app/scenes/assetCompare/assetCompare.skybox.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene assetCompare (p609 D2)"
+    },
     "src/app/skyShowcase.scene.json": {
       "to": "src/app/scenes/skyShowcase/skyShowcase.scene.json",
       "action": "move",
       "plan": "p609",
-      "note": "the codemod rewrites its `sceneFile`"
+      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
     },
     "src/app/skyShowcase.ts": {
       "to": "src/app/scenes/skyShowcase/skyShowcase.ts",
@@ -2419,7 +2659,7 @@
       "to": "src/app/scenes/space/space.scene.json",
       "action": "move",
       "plan": "p609",
-      "note": "the codemod rewrites its `sceneFile`"
+      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
     },
     "src/app/space.ts": {
       "to": "src/app/scenes/space/space.ts",
@@ -2430,7 +2670,7 @@
       "to": "src/app/scenes/sceneTestECS/sceneTestECS.scene.json",
       "action": "move",
       "plan": "p609",
-      "note": "the codemod rewrites its `sceneFile`"
+      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
     },
     "src/app/testECS.ts": {
       "to": "src/app/scenes/sceneTestECS/sceneTestECS.ts",
@@ -2441,7 +2681,7 @@
       "to": "src/app/scenes/textureArrays/textureArrays.scene.json",
       "action": "move",
       "plan": "p609",
-      "note": "the codemod rewrites its `sceneFile`"
+      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
     },
     "src/app/textureArrays.ts": {
       "to": "src/app/scenes/textureArrays/textureArrays.ts",
@@ -2452,24 +2692,96 @@
       "to": "src/app/scenes/textureAtlases/textureAtlases.scene.json",
       "action": "move",
       "plan": "p609",
-      "note": "the codemod rewrites its `sceneFile`"
+      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
     },
     "src/app/textureAtlases.ts": {
       "to": "src/app/scenes/textureAtlases/textureAtlases.ts",
       "action": "move",
       "plan": "p609"
     },
+    "src/app/textures/p299TestArray.textureArray.json": {
+      "to": "src/app/scenes/textureArrays/p299TestArray.textureArray.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene textureArrays (p609 D2)"
+    },
+    "src/app/textures/p299TestArray1.textureArray.json": {
+      "to": "src/app/scenes/textureArrays/p299TestArray1.textureArray.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene textureArrays (p609 D2)"
+    },
+    "src/app/textures/p299TestAtlas.textureAtlas.json": {
+      "to": "src/app/scenes/textureAtlases/p299TestAtlas.textureAtlas.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene textureAtlases (p609 D2)"
+    },
+    "src/app/textures/p299TestAtlasImage.textureAtlas.json": {
+      "to": "src/app/scenes/textureAtlases/p299TestAtlasImage.textureAtlas.json",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene textureAtlases (p609 D2)"
+    },
+    "src/app/textures/source/p299Atlas/blue.png": {
+      "to": "src/app/scenes/textureAtlases/source/p299Atlas/blue.png",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene textureAtlases (p609 D2)"
+    },
+    "src/app/textures/source/p299Atlas/green.png": {
+      "to": "src/app/scenes/textureAtlases/source/p299Atlas/green.png",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene textureAtlases (p609 D2)"
+    },
+    "src/app/textures/source/p299Atlas/imageAtlasAlbedo.png": {
+      "to": "src/app/scenes/textureAtlases/source/p299Atlas/imageAtlasAlbedo.png",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene textureAtlases (p609 D2)"
+    },
+    "src/app/textures/source/p299Atlas/imageAtlasNormalDepth.png": {
+      "to": "src/app/scenes/textureAtlases/source/p299Atlas/imageAtlasNormalDepth.png",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene textureAtlases (p609 D2)"
+    },
+    "src/app/textures/source/p299Atlas/maskGradient.png": {
+      "to": "src/app/scenes/textureAtlases/source/p299Atlas/maskGradient.png",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene textureAtlases (p609 D2)"
+    },
+    "src/app/textures/source/p299Atlas/maskRings.png": {
+      "to": "src/app/scenes/textureAtlases/source/p299Atlas/maskRings.png",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene textureAtlases (p609 D2)"
+    },
+    "src/app/textures/source/p299Atlas/red.png": {
+      "to": "src/app/scenes/textureAtlases/source/p299Atlas/red.png",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene textureAtlases (p609 D2)"
+    },
+    "src/app/textures/source/p299Atlas/yellow.png": {
+      "to": "src/app/scenes/textureAtlases/source/p299Atlas/yellow.png",
+      "action": "move",
+      "plan": "p609",
+      "note": "used only by the scene textureAtlases (p609 D2)"
+    },
     "src/app/thirdPersonGym.scene.json": {
       "to": "src/app/scenes/thirdPersonGymScene/thirdPersonGymScene.scene.json",
       "action": "move",
       "plan": "p609",
-      "note": "the codemod rewrites its `sceneFile`"
+      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
     },
     "src/app/topDownTest.scene.json": {
       "to": "src/app/scenes/topDownTestScene/topDownTestScene.scene.json",
       "action": "move",
       "plan": "p609",
-      "note": "the codemod rewrites its `sceneFile`"
+      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
     },
     "src/toolkit/ecs/effects/FollowTool.ts": {
       "to": "src/toolkit/ecs/effects/FollowTool.ts",
@@ -2492,10 +2804,10 @@
       "plan": "p609"
     },
     "src/toolkit/ecs/FollowObjectCameraRig.ts": {
-      "to": "src/toolkit/ecs/FollowObjectCameraRig.ts",
-      "action": "keep",
+      "to": "src/toolkit/ecs/gameplay/FollowObjectCameraRig.ts",
+      "action": "move",
       "plan": "p609",
-      "note": "moved from the engine (p606 Phase 7, p602 D6); p609 picks its category folder"
+      "note": "moved from the engine (p606 Phase 7, p602 D6); a gameplay piece (p609 D1)"
     },
     "src/toolkit/ecs/index.ts": {
       "to": "src/toolkit/ecs/index.ts",
@@ -2504,10 +2816,10 @@
       "note": "the `aekasha/toolkit/ecs` entry (p606)"
     },
     "src/toolkit/ecs/MovingPlatform.ts": {
-      "to": "src/toolkit/ecs/MovingPlatform.ts",
-      "action": "keep",
+      "to": "src/toolkit/ecs/gameplay/MovingPlatform.ts",
+      "action": "move",
       "plan": "p609",
-      "note": "moved from the engine (p606 Phase 7, p602 D6); p609 picks its category folder"
+      "note": "moved from the engine (p606 Phase 7, p602 D6); a gameplay piece (p609 D1)"
     },
     "src/toolkit/geometry/generateAsteroid.ts": {
       "to": "src/toolkit/geometry/generate/Asteroid.ts",
@@ -2585,13 +2897,13 @@
       "to": "src/toolkit/models/brand/aekashaSymbol/aekashaSymbol.glb",
       "action": "move",
       "plan": "p609",
-      "note": "the category is a proposal: p609 names the model categories"
+      "note": "models by category (p609 D1): brand/, later reference/ and nature/ (p450)"
     },
     "src/toolkit/models/aekashaSymbol/aekashaSymbol.importedAsset.json": {
       "to": "src/toolkit/models/brand/aekashaSymbol/aekashaSymbol.importedAsset.json",
       "action": "move",
       "plan": "p609",
-      "note": "the category is a proposal: p609 names the model categories"
+      "note": "models by category (p609 D1): brand/, later reference/ and nature/ (p450)"
     }
   }
 }

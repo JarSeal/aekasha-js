@@ -39,14 +39,14 @@ describe('findDebugCodeInBuild', () => {
         [MAIN, 'assets/_dbg__Profiler.js', 'assets/_dbg__Profiler.css'],
         [
           { id: '/src/_engine/core/Debug/_dbg__Profiler.ts', chunks: { 'assets/x.js': 40 } },
-          { id: '/src/app/_dbg__spaceDemo.ts', chunks: { [MAIN]: 5, 'assets/space.js': 7 } },
+          { id: '/src/app/_dbg__demo.ts', chunks: { [MAIN]: 5, 'assets/space.js': 7 } },
         ]
       )
     ).toEqual([
       'debug chunk assets/_dbg__Profiler.css',
       'debug chunk assets/_dbg__Profiler.js',
       'debug module src/_engine/core/Debug/_dbg__Profiler.ts in assets/x.js',
-      'debug module src/app/_dbg__spaceDemo.ts in assets/index.js, assets/space.js',
+      'debug module src/app/_dbg__demo.ts in assets/index.js, assets/space.js',
     ]);
   });
 
