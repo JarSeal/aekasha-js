@@ -1,4 +1,4 @@
-import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import type { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { lwarn } from '../../utils/Logger';
 import type { DracoWorkerSettings } from '../Assets/AssetsAPITypes';
 
@@ -30,12 +30,15 @@ const isDecoderLocked = (loader: DRACOLoader) =>
 const getDefaultDecoderPath = () =>
   new URL(`${import.meta.env.BASE_URL}draco/gltf/`, document.baseURI).href;
 
+/** The decoder path and type the config asks for (the defaults filled in) */
+const getConfiguredDecoder = () => ({
+  decoderPath: config.decoderPath || getDefaultDecoderPath(),
+  decoderType: config.decoderType || ('wasm' as const),
+});
+
 const setDecoder = (loader: DRACOLoader) => {
   const prevDecoderType = activeDecoder?.decoderType;
-  activeDecoder = {
-    decoderPath: config.decoderPath || getDefaultDecoderPath(),
-    decoderType: config.decoderType || 'wasm',
-  };
+  activeDecoder = getConfiguredDecoder();
   loader.setDecoderPath(activeDecoder.decoderPath);
   // DRACOLoader uses WASM by default and setDecoderConfig() is deprecated (warns since r186), so
   // it's only called to switch to the 'js' decoder or back from it.
@@ -45,17 +48,23 @@ const setDecoder = (loader: DRACOLoader) => {
 };
 
 /**
- * Returns the one shared DRACOLoader, creating it on the first call. Creating it costs nothing:
- * the decoder files are only fetched (once) when the first file using
- * KHR_draco_mesh_compression is parsed, so apps without compressed models never download them.
+ * Returns the one shared DRACOLoader, creating it on the first call: GLTFSource.ts asks for it
+ * only for a file that uses KHR_draco_mesh_compression, so an app without DRACO models never loads
+ * DRACOLoader (p607 D14) or its decoder files (fetched once, by the first parse). Parallel first
+ * calls get the same loader; one created after disposeDracoLoader is a new one.
+ * @internal
  */
-export const getDracoLoader = () => {
-  if (dracoLoader) return dracoLoader;
-
-  const loader = new DRACOLoader();
-  setDecoder(loader);
-  if (config.workerLimit !== undefined) loader.setWorkerLimit(config.workerLimit);
-  dracoLoader = loader;
+export const getDracoLoaderAsync = async () => {
+  if (!dracoLoader) {
+    const { DRACOLoader } = await import('three/addons/loaders/DRACOLoader.js');
+    // A parallel call may have created it while this one awaited
+    if (!dracoLoader) {
+      const loader = new DRACOLoader();
+      setDecoder(loader);
+      if (config.workerLimit !== undefined) loader.setWorkerLimit(config.workerLimit);
+      dracoLoader = loader;
+    }
+  }
   return dracoLoader;
 };
 
@@ -88,8 +97,8 @@ export const configureDraco = (newConfig: DracoConfig) => {
  * script's URL.
  */
 export const getDracoWorkerSettings = (): DracoWorkerSettings => {
-  getDracoLoader();
-  const { decoderPath, decoderType } = activeDecoder!;
+  // The loader's while it exists (a locked decoder keeps its own), else what it would be set up with
+  const { decoderPath, decoderType } = activeDecoder ?? getConfiguredDecoder();
   return {
     decoderPath: new URL(decoderPath, document.baseURI).href,
     decoderType,
@@ -98,10 +107,8 @@ export const getDracoWorkerSettings = (): DracoWorkerSettings => {
 };
 
 /**
- * Terminates the shared DRACO worker pool and drops the loader. The next
- * {@link getDracoLoader} call creates a new one (and fetches the decoder again when used).
- * Loaders that already hold the old instance must not be used for compressed files after this.
- * Not called automatically.
+ * Terminates the shared DRACO worker pool and drops the loader. The next DRACO file gets a new
+ * one (and fetches the decoder again). Not called automatically.
  */
 export const disposeDracoLoader = () => {
   if (!dracoLoader) return;

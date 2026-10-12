@@ -1,6 +1,5 @@
 import * as THREE from 'three/webgpu';
 import { lerror, lwarn } from '../utils/Logger';
-import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
 import { isHDR, isKTX2 } from '../utils/helpers';
 import {
   loadHDRTextureInWorker,
@@ -109,6 +108,25 @@ const createHDRTextureFromWorkerData = ({
   texture.flipY = true;
   texture.needsUpdate = true;
   return texture;
+};
+
+/** HDRLoader, imported with the first `.hdr` file (p607 D14) */
+const importHDRLoader = async () => (await import('three/addons/loaders/HDRLoader.js')).HDRLoader;
+
+/** Copies what HDRLoader's load sets on its texture (DataTextureLoader's `_applyTexData` with
+ * HDRLoader's parse result, three r186) onto `target`: its format, mapping and mipmaps stay. */
+const applyLoadedHDRTexture = (target: THREE.DataTexture, loaded: THREE.DataTexture) => {
+  target.image = loaded.image;
+  target.wrapS = loaded.wrapS;
+  target.wrapT = loaded.wrapT;
+  target.magFilter = loaded.magFilter;
+  target.minFilter = loaded.minFilter;
+  target.anisotropy = loaded.anisotropy;
+  target.colorSpace = loaded.colorSpace;
+  target.flipY = loaded.flipY;
+  target.type = loaded.type;
+  target.generateMipmaps = loaded.generateMipmaps;
+  target.needsUpdate = true;
 };
 
 /** Registers a freshly loaded texture. If a parallel load registered the same id first, the
@@ -247,20 +265,21 @@ const createTexture = (
   }
 
   if (isHDR(fileName)) {
-    const loader = new HDRLoader();
-    const texture = setTextureOpts(
-      loader.setDataType(THREE.HalfFloatType).load(
-        fileName,
-        (texture) => texture,
-        undefined,
-        (err) => {
-          const errorMsg = `Could not load HDR texture in createTexture (id: "${id}", fileName: "${fileName}")`;
-          lerror(errorMsg, err);
-          if (throwOnError) throw new Error(errorMsg);
-          return new THREE.Texture();
-        }
-      ),
-      texOpts
+    // The texture HDRLoader's load would return, filled the same way when the file has loaded:
+    // the loader is imported first
+    const texture = new THREE.DataTexture();
+    setTextureOpts(texture, texOpts);
+    const onError = (err: unknown) => {
+      const errorMsg = `Could not load HDR texture in createTexture (id: "${id}", fileName: "${fileName}")`;
+      lerror(errorMsg, err);
+      if (throwOnError) throw new Error(errorMsg);
+    };
+    importHDRLoader().then(
+      (HDRLoader) =>
+        new HDRLoader()
+          .setDataType(THREE.HalfFloatType)
+          .load(fileName, (loaded) => applyLoadedHDRTexture(texture, loaded), undefined, onError),
+      onError
     );
     saveTexture(texture, id, isPersistent);
     return texture;
@@ -501,7 +520,7 @@ export const loadTextureFileAsync = async (
     const { result, report } = await runAssetTask<THREE.DataTexture>(
       'TEXTURE',
       async () => createHDRTextureFromWorkerData(await loadHDRTextureInWorker(url)),
-      () => new HDRLoader().loadAsync(url),
+      async () => new (await importHDRLoader())().loadAsync(url),
       null // HDR parsing is plain JS, no worker capability needed
     );
     return { texture: result, report };

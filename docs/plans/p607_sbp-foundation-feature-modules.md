@@ -1054,6 +1054,45 @@ unchanged) and `yarn verify:baselines` (`bundle.json` / `api.json` diffs are the
   `yarn verify:scenes` 96 passed (hashes, snapshots, the system order). `yarn test` 245 passed,
   lint, `tsc` (both projects), `yarn hub:build`; `verify:baselines` recorded.
 
+**As built (section 3):**
+
+- **`GLTFLoader`** (`Import/GLTFSource.ts`): the shared loader is created after
+  `import('three/addons/loaders/GLTFLoader.js')` on the first `loadGLTF` (a parallel first call
+  keeps the one created first). It takes `BufferGeometryUtils` and `SkeletonUtils` (its imports)
+  and three's `three.module.js` (`GLTFLoader` imports `three`, not `three/webgpu`) out of main.
+- **`DRACOLoader`, further than D14:** not on the first GLTF load but on the first file that uses
+  `KHR_draco_mesh_compression`, like meshopt and KTX2 already were: `getGLTFDecoderNeeds` has
+  `draco`, and `setGLTFDecoders` sets the DRACO loader per parse when given (the worker ignores the
+  new need: its job module creates its own). `DracoDecoder.ts`' internal `getDracoLoader` is
+  `getDracoLoaderAsync` (the module import, then one shared loader; re-checked after the await).
+  `getDracoWorkerSettings` no longer creates the loader to learn the decoder: the loader's while it
+  exists, else the config's (`getConfiguredDecoder`), the same values. Since the GLTF loader gets
+  the current DRACO loader per parse, `disposeDracoLoader`'s old caveat (a GLTF loader keeping the
+  disposed one) is gone from its JSDoc.
+- **`HDRLoader`** (`Texture.ts`): imported with the first `.hdr` (`importHDRLoader`). The async
+  main-thread path awaits it. **The sync path** (`createTexture`, behind `loadTexture`) returns a
+  `DataTexture` at once, as `HDRLoader.load` did, and copies onto it what the loader sets once the
+  file is in (`applyLoadedHDRTexture`: the image, wraps, filters, anisotropy, colour space, flipY,
+  type, generateMipmaps, `needsUpdate`; three r186's `_applyTexData` with HDRLoader's parse
+  result), so `texOpts`' format and mapping survive as before. Checked in the browser against
+  `HDRLoader`'s own result for the same file: every field the same, the mapping kept, one
+  `needsUpdate`, no error.
+- The worker's loaders were already lazy (Phase 7's job modules); `debug/3DSymbols.ts`' static
+  `GLTFLoader` folds out of production with its wrapper.
+- Bundle: `index.js` 400.3 → 382.3 kB gzip (−18.0 kB), modules 166 → 160; main `three` 665.2 →
+  626.8 kB (12 → 6 modules). New lazy chunks: `GLTFLoader.js` 13.2 kB (with `SkeletonUtils`),
+  `DRACOLoader.js` 3.0 kB, `BufferGeometryUtils.js` 2.2 kB (shared with the lazy scenes and
+  `MeshColliderGeometry`), `HDRLoader.js` 1.6 kB, and a second `three.module.js` (0.2 kB, the
+  `three` entry's own module; the first is the worker's). `api.json`: `getDracoLoader` →
+  `getDracoLoaderAsync` (internal). The production debug check: none.
+- Checks: imports load on the main thread by default (`assets.workerTarget`), so the scenes cover
+  the lazy paths (the imported models, the toolkit's Draco Æ in `exampleToolkit`, `scene01_v2`'s
+  `.hdr` sky box). `yarn verify:scenes` 96 passed on the dev server; against a
+  `VITE_APP_ENV=test` build under `vite preview` (`workerMsg`, `mainThread`, `prodTest`, where the
+  loaders are their own chunks) 60 passed, the 12 failures the four `isDebugScene` scenes (as
+  before). `yarn test` 245 passed, lint, `tsc` (both projects) and `yarn hub:build` (in
+  `build:test`); `verify:baselines` recorded.
+
 ### Phase 9: the manifest and the feature schemas
 
 1. The composed scene and mesh schemas; the three feature schemas move next to their features,

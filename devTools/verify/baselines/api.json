@@ -355,7 +355,7 @@
       "configureDraco": "Function",
       "disposeDracoLoader": "Function",
       "DracoConfig": "TypeAlias",
-      "getDracoLoader": "Function",
+      "getDracoLoaderAsync": "Function",
       "getDracoWorkerSettings": "Function"
     },
     "src/_engine/core/Import/GeometryTransfer.ts": {
