@@ -24,6 +24,9 @@
  * the baselines (commit them with the change that explains them), but refuses a grown undocumented
  * count unless it's given `--allow-docs-drop` as well, so a drop is recorded only on purpose.
  *
+ * The same build is checked for debug code (p607 D7, `debugInProduction.ts`): a `_dbg__` chunk or
+ * module, or a `debug/*.ts` wrapper, fails the run and `--update` records nothing.
+ *
  * It runs the production build's steps first (decoders, the production gather, `vite build`, then
  * the dev gather again, as `yarn build` does, without `tsc` and the Hub); `--no-build` reuses
  * `dist/` and `dist-stats/` from the last build. `--docs` checks (or records) `docs.json` alone,
@@ -41,6 +44,7 @@ import { loadApiModel } from '../hub/api/extract';
 import { parseModuleSource } from '../refactor/importGraph';
 import { getOwnMembers, indexApiModel, isDocumented, Kind } from '../hub/api/model';
 import { out, PROGRESS_LOG_WATCH, setProgressLogEnabled } from './progressLog';
+import { type BuildModule, findDebugCodeInBuild } from './debugInProduction';
 
 /** Bump when that file's shape changes: an old one is then read as missing */
 const BUNDLE_FORMAT_VERSION = 1;
@@ -168,7 +172,8 @@ const buildBundle = async () => {
   try {
     await runYarn(['copyDecoders']);
     await runYarn(['gatherAppData'], { NODE_ENV: 'production' });
-    await runYarn(['vite', 'build']);
+    // Set, not inherited: a shell's `development` would build the debug code in (`__AEK_DEBUG__`)
+    await runYarn(['vite', 'build'], { VITE_APP_ENV: 'production' });
   } finally {
     await runYarn(['gatherAppData']);
   }
@@ -205,7 +210,8 @@ const getModuleGroup = (id: string) => {
 const sortKeys = <T>(obj: Record<string, T>) =>
   Object.fromEntries(Object.entries(obj).sort(([a], [b]) => a.localeCompare(b)));
 
-const collectBundle = (): BundleBaseline => {
+/** The build's sizes, and every module the visualizer lists (for the debug check) */
+const collectBundle = (): { bundle: BundleBaseline; modules: BuildModule[] } => {
   const manifest = readJSON<Manifest>(MANIFEST_FILE);
   if (!manifest || !fs.existsSync(DIST_ASSETS_DIR)) {
     return fail('No dist/ build to measure: run without --no-build, or yarn build first');
@@ -227,7 +233,17 @@ const collectBundle = (): BundleBaseline => {
   const data = JSON.parse(match[1]) as VisualizerData;
   const groups: Record<string, GroupSize> = {};
   const main = { chunk: stripHash(entry.file), modules: 0, rendered: 0, gzip: 0 };
+  const modules: BuildModule[] = [];
   for (const meta of Object.values(data.nodeMetas)) {
+    modules.push({
+      id: meta.id,
+      chunks: Object.fromEntries(
+        Object.entries(meta.moduleParts).map(([file, id]) => [
+          stripHash(file),
+          data.nodeParts[id].renderedLength,
+        ])
+      ),
+    });
     const partId = meta.moduleParts[entry.file];
     if (!partId) continue;
     const part = data.nodeParts[partId];
@@ -244,7 +260,19 @@ const collectBundle = (): BundleBaseline => {
       `The visualizer data has no modules in ${entry.file}: dist-stats/ is from another build`
     );
   }
-  return { formatVersion: BUNDLE_FORMAT_VERSION, chunks, main, mainGroups: sortKeys(groups) };
+  return {
+    bundle: { formatVersion: BUNDLE_FORMAT_VERSION, chunks, main, mainGroups: sortKeys(groups) },
+    modules,
+  };
+};
+
+/** Prints the debug check's findings (p607 D7); returns their count */
+const reportDebugCode = (bundle: BundleBaseline, modules: BuildModule[]) => {
+  const findings = findDebugCodeInBuild(Object.keys(bundle.chunks), modules);
+  out(`\nproduction build: debug code`);
+  if (!findings.length) out(`  ${GREEN}none${RESET}`);
+  for (const line of findings) out(`  ${RED}✗ ${line}${RESET}`);
+  return findings.length;
 };
 
 const isGrowthToFlag = (before: number, after: number) => {
@@ -567,7 +595,7 @@ const main = async () => {
   const started = Date.now();
 
   if (args.build && !args.docsOnly) await buildBundle();
-  const bundle = args.docsOnly ? null : collectBundle();
+  const { bundle = null, modules = [] } = args.docsOnly ? {} : collectBundle();
   const { api, docs, locations } = await collectApiAndDocs();
 
   const exportCount = Object.values(api.modules).reduce((n, m) => n + Object.keys(m).length, 0);
@@ -600,12 +628,18 @@ const main = async () => {
     ),
   ];
 
-  const attention = results.reduce((n, r) => n + r.attention, 0);
+  const debugFindings = bundle ? reportDebugCode(bundle, modules) : 0;
+  const attention = results.reduce((n, r) => n + r.attention, debugFindings);
   const changes = results.reduce((n, r) => n + r.changes, 0);
   const docsDrops = results.find((r) => r.name === 'docs.json')?.attention ?? 0;
   const took = `${((Date.now() - started) / 1000).toFixed(1)} s`;
   const docsHint = `Document each one above (a JSDoc summary), or record the drop on purpose: yarn verify:baselines${args.docsOnly ? ' --docs' : ''} --update --allow-docs-drop, with the reason in the commit.`;
+  const debugHint = `Debug code in a production build: it must fold out (\`__AEK_DEBUG__\`, the debug loader), never be recorded.${args.build ? '' : ' A `dist/` from `yarn build:test` holds it by design: run without --no-build.'}`;
   if (args.update) {
+    if (debugFindings) {
+      out(`\n${RED}Nothing recorded${RESET}: ${debugFindings} finding(s). ${debugHint}`);
+      process.exit(1);
+    }
     if (docsDrops && !args.allowDocsDrop) {
       out(
         `\n${RED}Nothing recorded${RESET}: ${docsDrops} folder count(s) of undocumented exports or members grew. ${docsHint}`
@@ -625,7 +659,8 @@ const main = async () => {
   if (attention) {
     out(`\n${RED}${attention} change(s) to look at${RESET} in ${took}.`);
     if (docsDrops) out(`Undocumented exports or members added: ${docsHint}`);
-    if (attention > docsDrops) {
+    if (debugFindings) out(debugHint);
+    if (attention > docsDrops + debugFindings) {
       out(
         "Bundle or API changes: if they're intended, record them with --update and commit the baselines with the change."
       );

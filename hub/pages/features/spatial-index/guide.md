@@ -1,3 +1,11 @@
+## Installing it
+
+List [`spatial()`](api:spatial), from `aekasha/spatial`, in `InitEngine`'s `features` (see
+[How the app starts](hub:examples/quick-start#how-the-app-starts)): the index and the light
+culling that queries it. Without it, nothing is indexed and no light is culled by its
+contribution, and a scene whose JSON has `spatialDomains` fails the boot, naming the feature (see
+[the feature manifest](hub:features/scenes-and-assets#the-feature-manifest)).
+
 ## Domains
 
 Each ECS world holds named domains, each its own grid with its own cell size, capacity and

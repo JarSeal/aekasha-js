@@ -7,3 +7,4 @@ export {
   polylineToSegments,
 } from '../../core/Lines/LineBuilders';
 export type { LineProps } from '../../core/Lines/LineTypes';
+export { lines } from '../../core/Lines/LinesFeature';

@@ -50,6 +50,17 @@ const WRAPPER_NOTE =
 const ENGINE_RULES: MoveRule[] = [
   // Engine root
   { from: `${E}InitApp.ts`, to: `${K}init/InitEngine.ts` },
+  {
+    from: `${E}core/Features.ts`,
+    to: `${K}init/Features.ts`,
+    note: 'the install contract (p607 D1): the features install through it',
+  },
+  { from: `${E}core/Features.test.ts`, to: `${K}init/Features.test.ts` },
+  {
+    from: `${E}core/Kernel.ts`,
+    to: `${K}init/Kernel.ts`,
+    note: "the kernel's install (p607 D2): InitEngine runs it before the first world",
+  },
   { from: `${E}index.ts`, to: `${E}index.ts`, note: 'the `aekasha` entry (p606)' },
   { from: `${E}features/`, to: F, note: 'the feature entries (p606): the code moves under them' },
   { from: `${E}types/`, to: `${E}types/` },
@@ -95,6 +106,12 @@ const ENGINE_RULES: MoveRule[] = [
     note: "the app's data from InitEngine (p606, p602 D9): the scenes read it",
   },
   { from: `${E}core/SceneLoader.ts`, to: `${K}scene/SceneLoader.ts` },
+  {
+    from: `${E}core/SceneHooks.ts`,
+    to: `${K}scene/SceneHooks.ts`,
+    note: "the scene seams (p607 D4): the features' part of a scene load",
+  },
+  { from: `${E}core/SceneHooks.test.ts`, to: `${K}scene/SceneHooks.test.ts` },
   { from: `${E}core/GroupManager.ts`, to: `${K}scene/Group.ts` },
   {
     from: `${E}core/PropertyLoader.ts`,
@@ -124,11 +141,21 @@ const ENGINE_RULES: MoveRule[] = [
     note: 'builds physics colliders: SpawnImported reaches it through an import extension (p607)',
   },
   {
+    from: `${E}core/Import/ImportPhysics.ts`,
+    to: `${F}physics/import/ImportPhysics.ts`,
+    note: "spawnImportedAsset's physics half: the physics feature's import extension (p607 D5)",
+  },
+  {
     from: `${E}3dModels/customPropTemplates.blend`,
     to: `${K}assets/import/customPropTemplates.blend`,
   },
   { from: `${E}workers/assetsWorker.ts`, to: `${K}assets/worker/AssetsWorker.ts` },
   { from: `${E}workers/assets/`, to: `${K}assets/worker/` },
+  {
+    from: `${E}workers/assets/assetsSwitchSimplify.ts`,
+    to: `${F}lod/worker/AssetsSwitchSimplify.ts`,
+    note: "the LOD feature's worker job: the assets worker loads it on the first one (p607 D5)",
+  },
   { from: `${E}core/Debug/_dbg__Assets.ts`, to: `${K}assets/debug/_dbg__Assets.ts` },
   { from: `${E}core/Debug/_dbg__AssetStats.ts`, to: `${K}assets/debug/_dbg__AssetStats.ts` },
   { from: `${E}core/Debug/_dbg__AssetsPreview.ts`, to: `${K}assets/debug/_dbg__AssetsPreview.ts` },
@@ -142,6 +169,12 @@ const ENGINE_RULES: MoveRule[] = [
   // Kernel: render
   { from: `${E}core/Renderer.ts`, to: `${K}render/Renderer.ts` },
   { from: `${E}core/Snapshot.ts`, to: `${K}render/Snapshot.ts` },
+  {
+    from: `${E}core/RenderHooks.ts`,
+    to: `${K}render/RenderHooks.ts`,
+    note: "the render seams (p607 D5): PostFX's pipeline and the viewports' after-render hook",
+  },
+  { from: `${E}core/RenderHooks.test.ts`, to: `${K}render/RenderHooks.test.ts` },
   { from: `${E}core/ViewManager.ts`, to: `${K}render/Views.ts` },
   {
     from: `${E}core/Raycast.ts`,
@@ -169,6 +202,7 @@ const ENGINE_RULES: MoveRule[] = [
 
   // Features: physics
   { from: `${E}core/PhysicsAPI.ts`, to: `${F}physics/PhysicsAPI.ts` },
+  { from: `${E}core/PhysicsFeature.ts`, to: `${F}physics/PhysicsFeature.ts` },
   { from: `${E}core/PhysicsManager.ts`, to: `${F}physics/PhysicsEntity.ts` },
   { from: `${E}core/PhysicsTiers.ts`, to: `${F}physics/PhysicsTiers.ts` },
   { from: `${E}core/PhysicsTierPolicy.ts`, to: `${F}physics/PhysicsTierPolicy.ts` },
@@ -205,6 +239,11 @@ const ENGINE_RULES: MoveRule[] = [
 
   // Features: LOD
   { from: `${E}core/Lod/`, to: `${F}lod/` },
+  {
+    from: `${E}core/Lod/LodFade.ts`,
+    to: `${K}render/LodFade.ts`,
+    note: "the dither fade (three only): the LOD system and instancing's LOD pools draw with it (p607 D5)",
+  },
   { from: `${E}core/Lod/Impostors/`, to: `${F}lod/impostors/` },
   { from: `${E}core/Debug/Lod/`, to: `${F}lod/debug/` },
   { from: `${E}core/Debug/_dbg__LOD.ts`, to: `${F}lod/debug/_dbg__LOD.ts` },
@@ -228,6 +267,7 @@ const ENGINE_RULES: MoveRule[] = [
     note: WRAPPER_NOTE,
   },
   { from: `${E}core/Viewports.ts`, to: `${F}viewports/Viewports.ts` },
+  { from: `${E}core/ViewportsFeature.ts`, to: `${F}viewports/ViewportsFeature.ts` },
   { from: `${E}core/Viewports.module.scss`, to: `${F}viewports/Viewports.module.scss` },
 
   // UI kit (p602 D5)

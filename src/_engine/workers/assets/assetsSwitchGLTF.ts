@@ -4,7 +4,7 @@ import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
-// Static, unlike the main thread's on-demand import: the worker bundle can't be code-split
+// Static, unlike the main thread's on-demand import: this job module loads on the first GLTF job
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import type {
   AssetsDownProtocol,
@@ -21,11 +21,7 @@ import {
 import { collectGLTFTextures } from '../../core/Import/GLTFTextureCollect';
 import type { TransferableGeometry } from '../../core/Import/GeometryTransfer';
 import { serializeGeometry } from '../../core/Import/GeometryTransfer';
-import {
-  readGLTFLodChains,
-  serializeLodChain,
-  type TransferableLodChain,
-} from '../../core/Lod/LodChainGLTF';
+import type { TransferableLodChain } from '../../core/Lod/LodChainGLTF';
 import type { TransferableImage } from '../../core/Import/TextureTransfer';
 import { collectImageTransferables, serializeTexture } from '../../core/Import/TextureTransfer';
 import { fetchAsset } from './assetsFetch';
@@ -77,7 +73,8 @@ export const assetsSwitchGLTF = async (
   data: AssetsLoadGLTFRequest,
   sendMessage: (message: AssetsDownProtocol, transfer?: Transferable[]) => void
 ) => {
-  const { type, requestId, url, importId, meshIndex, importTextures, draco, ktx2 } = data;
+  const { type, requestId, url, importId, meshIndex, importTextures, draco, ktx2, readLodChains } =
+    data;
   const buffer = await (await fetchAsset(url)).arrayBuffer();
   const needs = getGLTFDecoderNeeds(readGLTFExtensionsUsed(buffer));
   if (needs.ktx2 && !ktx2) {
@@ -90,11 +87,13 @@ export const assetsSwitchGLTF = async (
   });
   const gltf = await loader.parseAsync(buffer, THREE.LoaderUtils.extractUrlBase(url));
 
+  // The prebuilt LOD chains' code (the LOD feature's) loads only when the main thread has LOD
+  const lod = readLodChains ? await import('../../core/Lod/LodChainGLTF') : null;
   // The same extraction the main-thread import runs, so both produce the same manifest
   const extracted = extractPrimitives(gltf, {
     importId,
     meshIndex,
-    lodChains: await readGLTFLodChains(gltf),
+    lodChains: lod ? await lod.readGLTFLodChains(gltf) : undefined,
   });
   if (extracted.error !== undefined) {
     disposeGLTFLeftovers(gltf, {});
@@ -122,8 +121,12 @@ export const assetsSwitchGLTF = async (
       geometryIndex = geometries.push(serializeGeometry(geometry, transfer)) - 1;
       indexByGeometry.set(geometry, geometryIndex);
       keepGeometries.add(geometry);
-      if (lodChain) {
-        lodChains.push({ geometryIndex, chain: serializeLodChain(lodChain, geometry, transfer) });
+      // Only set when `lod` read the chains
+      if (lodChain && lod) {
+        lodChains.push({
+          geometryIndex,
+          chain: lod.serializeLodChain(lodChain, geometry, transfer),
+        });
         for (const level of lodChain.levels) keepGeometries.add(level.geometry);
       }
     }

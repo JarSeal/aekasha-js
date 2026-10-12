@@ -15,10 +15,11 @@ let curEngineAPI: EngineAPIType | null = null;
 
 export const initPhysicsEngine = async (engineKey: PhysicsEngine) => {
   const engineFns = ENGINES[engineKey];
-  curEngineObj = await engineFns.init();
+  const [engineObj, engineAPI] = await Promise.all([engineFns.init(), engineFns.loadEngineAPI()]);
+  curEngineObj = engineObj;
   curEngineKey = engineKey;
-  curEngineAPI = engineFns.engineAPI;
-  return { engine: engineFns.forceTypeEngine(curEngineObj), engineAPI: engineFns.engineAPI };
+  curEngineAPI = engineAPI;
+  return { engine: engineFns.forceTypeEngine(curEngineObj), engineAPI };
 };
 
 export const getPhysicsEngineKey = () => curEngineKey;

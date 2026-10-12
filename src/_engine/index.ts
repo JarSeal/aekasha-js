@@ -30,6 +30,7 @@ export type {
 } from './core/ECS/ECSCoreComponents';
 export { CoreComponentType } from './core/ECS/ECSRegistry';
 export { APP_RENDER_SYNC_ORDER, ECSSystemStage } from './core/ECS/SystemStages';
+export type { EngineFeature, FeatureContext, FeatureDebugHook } from './core/Features';
 export {
   createGeometry,
   deleteGeometry,
@@ -91,6 +92,7 @@ export {
   transformAppSpeedValue,
   transformMainSpeedValue,
 } from './core/MainLoop';
+export type { FixedStepDriver, LoopState } from './core/MainLoop';
 export {
   createMaterial,
   decMaterialRef,
@@ -98,6 +100,7 @@ export {
   getMaterial,
   getMaterialVariant,
   incMaterialRef,
+  loadTslMaterialFileAsync,
   saveMaterial,
 } from './core/Material';
 export type { MatProps, MaterialVariantOverrides, Materials } from './core/Material';
@@ -109,6 +112,7 @@ export {
   setMeshMaterial,
 } from './core/MeshManager';
 export type { MeshProps } from './core/MeshManager';
+export type { AfterRenderHook, RenderPipelineProvider } from './core/RenderHooks';
 export { createRenderer, deleteRenderer, getRenderer, isWebGPURenderer } from './core/Renderer';
 export type { RendererOptions } from './core/Renderer';
 export {
@@ -129,6 +133,7 @@ export {
 export type { Looper, SceneData } from './core/Scene';
 export { createSceneLoader, getLoaderStatusUpdater, loadScene } from './core/SceneLoader';
 export type { LoadSceneProps, SceneLoader, ScenePrimitiveAssets } from './core/SceneLoader';
+export type { SceneHooks } from './core/SceneHooks';
 export { snapshotToBlobAsync, takeSnapshotAsync } from './core/Snapshot';
 export type { Snapshot, SnapshotBlobOpts, SnapshotOpts } from './core/Snapshot';
 export {

@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import type { LodAutoDef, LodDef, MeshLodDef } from '../core/Lod/LodTypes';
+import type { LodAutoDef, LodDef, MeshLodDef } from './LodTypes';
+import type { FeatureSchemaPart } from '../../schemas/featureSchemas';
 
 /** One level of a mesh's `lod` (LodLevelDef in core/Lod/LodTypes.ts, p348 §2.2). */
 export const LodLevelDefSchema = z
@@ -113,3 +114,21 @@ export const MeshLodDefSchema = z.union([
       "Levels of detail (p348) from the geometry's LOD chain, with the defaults: `{ auto: true }`."
     ),
 ]) satisfies z.ZodType<MeshLodDef>;
+
+/** The LOD feature's fields (p607 D10): a mesh's `lod` and a scene's exported `impostors`. */
+export const lodSchemaPart = {
+  feature: 'lod',
+  scene: {
+    impostors: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "Exported impostors (`*.impostor.json` ids): their atlases load with the scene's textures, and generateOctahedralImpostor / generateCrossQuads called with one's id builds from it instead of baking."
+      ),
+  },
+  mesh: {
+    /** Levels of detail (p348), or `AUTO` from the geometry's LOD chain, see setMeshLod. In a save
+     * entry it replaces the mesh's whole `lod` in that scene. */
+    lod: MeshLodDefSchema.optional(),
+  },
+} satisfies FeatureSchemaPart;

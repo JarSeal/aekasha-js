@@ -114,6 +114,7 @@
       "emitLocomotionStateChange": "Function",
       "getCharacterById": "Function",
       "getCharacters": "Function",
+      "installCharacters": "Function",
       "LocomotionState": "Reference",
       "LocomotionStateListener": "Reference",
       "onLocomotionStateChange": "Function",
@@ -125,6 +126,10 @@
     "src/_engine/core/Character/CharacterBodyPlans.ts": {
       "HUMANOID_CAPSULE": "Variable",
       "HumanoidCapsuleDimensions": "TypeAlias"
+    },
+    "src/_engine/core/Character/CharacterFeature.ts": {
+      "character": "Function",
+      "characterSceneHooks": "Variable"
     },
     "src/_engine/core/Character/CharacterInputSchemes.ts": {
       "CameraRelativeInputMappings": "TypeAlias",
@@ -242,6 +247,7 @@
     },
     "src/_engine/core/ECS/ECSCoreSystems.ts": {
       "entityLifetimeSystem": "Function",
+      "installCoreSystems": "Function",
       "lookAtSystem": "Function",
       "object3DSyncSystem": "Function",
       "reconcileObject3DVisibility": "Function"
@@ -252,14 +258,29 @@
       "ManagedByData": "TypeAlias"
     },
     "src/_engine/core/ECS/LightObjectCullingSystem.ts": {
+      "installLightObjectCulling": "Function",
       "lightObjectCullingSystem": "Function"
+    },
+    "src/_engine/core/ECS/LodTargets.ts": {
+      "getLodTargets": "Function",
+      "registerLodTarget": "Function"
     },
     "src/_engine/core/ECS/ObjectFrustumCullingSystem.ts": {
       "BoundingVolumeProvider": "TypeAlias",
       "getMeshWorldBoundingSphere": "Variable",
+      "installObjectFrustumCulling": "Function",
       "MAX_SPOT_ANGLE": "Variable",
       "objectFrustumCullingSystem": "Function",
       "setFrustumCullingEnabled": "Function"
+    },
+    "src/_engine/core/ECS/SpatialMembership.ts": {
+      "findSpatialRadiusProvider": "Function",
+      "getSpatialDomainMembership": "Function",
+      "registerSpatialRadiusProvider": "Function",
+      "setSpatialDomainMembership": "Function",
+      "SpatialDomainMembership": "TypeAlias",
+      "SpatialRadiusProvider": "TypeAlias",
+      "SpatialRadiusProviderEntry": "TypeAlias"
     },
     "src/_engine/core/ECS/SystemStages.ts": {
       "APP_RENDER_SYNC_ORDER": "Variable",
@@ -269,6 +290,17 @@
       "createTransformBuffer": "Function",
       "TRANSFORM_FIELD_COUNT": "Variable",
       "TypedArrayTransformStore": "Class"
+    },
+    "src/_engine/core/Features.ts": {
+      "checkFeatures": "Function",
+      "checkSceneFeatures": "Function",
+      "createFeatureHost": "Function",
+      "EngineFeature": "TypeAlias",
+      "FeatureContext": "TypeAlias",
+      "FeatureDebugHook": "TypeAlias",
+      "FeatureHost": "TypeAlias",
+      "installFeaturesAsync": "Function",
+      "runFeatureDebugHooksAsync": "Function"
     },
     "src/_engine/core/Geometry.ts": {
       "createGeometry": "Function",
@@ -282,6 +314,7 @@
       "GeoProps": "TypeAlias",
       "GeoTypes": "TypeAlias",
       "getAllGeometries": "Function",
+      "getConservativeGeometryRadius": "Function",
       "getGeometry": "Function",
       "getGeometryRegistry": "Function",
       "incGeometryRef": "Function",
@@ -297,6 +330,7 @@
       "disposeGroup": "Function",
       "getGroupByAppId": "Function",
       "GroupProps": "TypeAlias",
+      "installGroups": "Function",
       "removeFromGroupEntity": "Function"
     },
     "src/_engine/core/Helpers.ts": {
@@ -322,7 +356,7 @@
       "configureDraco": "Function",
       "disposeDracoLoader": "Function",
       "DracoConfig": "TypeAlias",
-      "getDracoLoader": "Function",
+      "getDracoLoaderAsync": "Function",
       "getDracoWorkerSettings": "Function"
     },
     "src/_engine/core/Import/GeometryTransfer.ts": {
@@ -341,7 +375,8 @@
       "disposeGLTFLeftovers": "Function",
       "ExtractedPrimitive": "TypeAlias",
       "extractPrimitives": "Function",
-      "ExtractResult": "TypeAlias"
+      "ExtractResult": "TypeAlias",
+      "getGLTFPrimitiveKey": "Function"
     },
     "src/_engine/core/Import/GLTFSource.ts": {
       "loadGLTF": "Function",
@@ -358,6 +393,18 @@
       "registerGLTFTextures": "Function",
       "TextureSlots": "TypeAlias"
     },
+    "src/_engine/core/Import/ImportExtensions.ts": {
+      "getImportLodChains": "Function",
+      "getImportPhysicsSpawn": "Function",
+      "ImportExtension": "TypeAlias",
+      "ImportLodChainsExtension": "TypeAlias",
+      "ImportPhysicsSpawn": "TypeAlias",
+      "registerImportExtension": "Function",
+      "warnMissingImportExtension": "Function"
+    },
+    "src/_engine/core/Import/ImportPhysics.ts": {
+      "spawnImportedPhysics": "Function"
+    },
     "src/_engine/core/Import/ImportRegistry.ts": {
       "getImportedAsset": "Function",
       "importAssetAsync": "Function",
@@ -370,6 +417,7 @@
       "ImportedAssetManifest": "TypeAlias",
       "ImportedGeometryInfo": "TypeAlias",
       "ImportPhysicsParams": "TypeAlias",
+      "ImportSpawnNode": "TypeAlias",
       "ParsedCustomProps": "TypeAlias",
       "QuatLike": "TypeAlias",
       "SpawnImportedParams": "TypeAlias",
@@ -482,6 +530,7 @@
       "CreateInstancedLodPoolOptions": "Interface",
       "createInstancedMeshPool": "Function",
       "CreateInstancedMeshPoolOptions": "Interface",
+      "installInstancedMeshPools": "Function",
       "InstancedLodPool": "Interface",
       "InstancedLodPoolLevel": "Interface",
       "InstancedMeshPool": "Interface",
@@ -492,6 +541,12 @@
     "src/_engine/core/Instancing/InstancedMeshPoolTypes.ts": {
       "InstancedMeshSlotData": "Interface",
       "InstancePlacement": "Interface"
+    },
+    "src/_engine/core/Instancing/InstancingFeature.ts": {
+      "instancing": "Function"
+    },
+    "src/_engine/core/Kernel.ts": {
+      "installKernel": "Function"
     },
     "src/_engine/core/LightManager.ts": {
       "aimLightAtEntity": "Function",
@@ -528,7 +583,9 @@
       "getAllLines": "Function",
       "getLine": "Function",
       "getLineForEntity": "Function",
+      "installLines": "Function",
       "isFatLineBackendAvailable": "Function",
+      "isLinesInstalledFor": "Function",
       "LINE_PULSE_MAX_COLORS": "Reference",
       "LineAttachment": "Reference",
       "LineBackendChoice": "Reference",
@@ -546,7 +603,6 @@
       "polylineSegmentCount": "Reference",
       "polylineToSegments": "Reference",
       "preloadFatLineBackend": "Function",
-      "registerLineManager": "Function",
       "segmentCountOf": "Reference",
       "writeBox3Edges": "Reference",
       "writeBoxEdges": "Reference",
@@ -611,8 +667,12 @@
       "registerLine": "Function",
       "unregisterLine": "Function"
     },
+    "src/_engine/core/Lines/LinesFeature.ts": {
+      "lines": "Function",
+      "linesSceneHooks": "Variable"
+    },
     "src/_engine/core/Lines/LineSystem.ts": {
-      "registerLineTimeSystem": "Function"
+      "installLineTimeSystem": "Function"
     },
     "src/_engine/core/Lines/LineTypes.ts": {
       "LineAttachment": "TypeAlias",
@@ -684,6 +744,17 @@
       "ImpostorSource": "TypeAlias",
       "recordImpostor": "Function"
     },
+    "src/_engine/core/Lod/Impostors/ImpostorSchema.ts": {
+      "CrossQuadsImpostorAssetSchema": "Variable",
+      "CrossQuadsLayoutSchema": "Variable",
+      "ImpostorAsset": "TypeAlias",
+      "ImpostorAssetSchema": "Variable",
+      "ImpostorDef": "TypeAlias",
+      "ImpostorShading": "TypeAlias",
+      "ImpostorShadingSchema": "Variable",
+      "OctahedralImpostorAssetSchema": "Variable",
+      "OctahedralImpostorLayoutSchema": "Variable"
+    },
     "src/_engine/core/Lod/Impostors/ImpostorSourceHash.ts": {
       "getImpostorSourceHash": "Function"
     },
@@ -726,7 +797,6 @@
     "src/_engine/core/Lod/LodChainGLTF.ts": {
       "deserializeLodChain": "Function",
       "ExtractedLodChain": "TypeAlias",
-      "getGLTFLodChainKey": "Function",
       "GLTF_LOD_EXTRAS_KEY": "Variable",
       "GLTF_LOD_FORMAT_VERSION": "Reference",
       "GLTFLodChains": "TypeAlias",
@@ -774,6 +844,19 @@
       "lodDither": "Function",
       "setLodObjectFade": "Function"
     },
+    "src/_engine/core/Lod/LodFeature.ts": {
+      "lod": "Function"
+    },
+    "src/_engine/core/Lod/LodImport.ts": {
+      "lodImportExtension": "Variable"
+    },
+    "src/_engine/core/Lod/LodSchema.ts": {
+      "LodAutoDefSchema": "Variable",
+      "LodDefSchema": "Variable",
+      "LodLevelDefSchema": "Variable",
+      "lodSchemaPart": "Variable",
+      "MeshLodDefSchema": "Variable"
+    },
     "src/_engine/core/Lod/LodSimplify.ts": {
       "DEFAULT_LOD_CHAIN_OPTIONS": "Reference",
       "LodChainOptions": "Reference",
@@ -792,6 +875,7 @@
       "getLodMaxSelectionsPerFrame": "Function",
       "getLodSelectionCamera": "Function",
       "getLodWorldSphere": "Function",
+      "installLodSystem": "Function",
       "lodApplySystem": "Function",
       "LodDebugOptions": "TypeAlias",
       "lodFadeSystem": "Function",
@@ -801,7 +885,6 @@
       "measureLodEntity": "Function",
       "refreshLodBounds": "Function",
       "registerLodDebugGUI": "Function",
-      "registerLodTarget": "Function",
       "setLodBias": "Function",
       "setLodDebugOptions": "Function",
       "setLodFadeSeconds": "Function",
@@ -829,6 +912,7 @@
       "deleteBeforeUnloadFn": "Function",
       "deleteResizer": "Function",
       "deleteVisibilityChangeFn": "Function",
+      "FixedStepDriver": "TypeAlias",
       "FrameProbe": "TypeAlias",
       "getAppDelta": "Function",
       "getDelta": "Function",
@@ -845,6 +929,7 @@
       "renderFrameNow": "Function",
       "renderFrameWhileMasterPaused": "Function",
       "setFixedFrameDelta": "Function",
+      "setFixedStepDriver": "Function",
       "setFrameProbe": "Function",
       "setIsLoadingScene": "Function",
       "setPlaySpeedMultiplier": "Function",
@@ -869,6 +954,7 @@
       "getMaterialVariant": "Function",
       "incMaterialRef": "Function",
       "isTextureUsedByAnyMaterial": "Function",
+      "loadTslMaterialFileAsync": "Function",
       "Materials": "TypeAlias",
       "MaterialVariantOverrides": "TypeAlias",
       "MatProps": "TypeAlias",
@@ -878,12 +964,15 @@
       "updateAllMaterials": "Function"
     },
     "src/_engine/core/MeshManager.ts": {
+      "AutoLodResolver": "TypeAlias",
       "createMeshEntity": "Function",
       "disposeMesh": "Function",
       "getMeshByAppId": "Function",
+      "installMeshes": "Function",
       "MeshProps": "TypeAlias",
       "preWarmMesh": "Function",
       "removeMeshLod": "Function",
+      "setAutoLodResolverLoader": "Function",
       "setMeshGeometry": "Function",
       "setMeshLod": "Function",
       "setMeshMaterial": "Function"
@@ -1217,6 +1306,12 @@
       "stepPhysics": "Function",
       "takePhysicsSnapshot": "Function"
     },
+    "src/_engine/core/PhysicsFeature.ts": {
+      "physics": "Function",
+      "physicsFixedStepDriver": "Variable",
+      "physicsImportExtension": "Variable",
+      "physicsSceneHooks": "Variable"
+    },
     "src/_engine/core/PhysicsManager.ts": {
       "createPhysicsEntity": "Function",
       "deleteAllPhysicsEntities": "Function",
@@ -1225,6 +1320,7 @@
       "getPhysicsBodyOwner": "Function",
       "getPhysicsEntityByAppId": "Function",
       "getPhysicsInterpolationReadout": "Function",
+      "installPhysicsEntities": "Function",
       "PhysicsBodyOwner": "TypeAlias",
       "PhysicsEntityOpts": "TypeAlias",
       "PhysicsInterpolationReadout": "TypeAlias",
@@ -1232,7 +1328,7 @@
       "physicsToTransformSystem": "Function",
       "queueStaticBodySync": "Function",
       "registerPhysicsDeterminismProbe": "Function",
-      "registerPhysicsManager": "Function",
+      "registerPhysicsWireframeDebugAsync": "Function",
       "resetPhysicsInterpolationHistory": "Function",
       "setPhysicsInterpolationPinnedToNewest": "Function",
       "settlePendingPhysicsEntities": "Function"
@@ -1240,10 +1336,12 @@
     "src/_engine/core/PhysicsTierPolicy.ts": {
       "DEFAULT_TIER_POLICY_CADENCE": "Variable",
       "DEFAULT_TIER_POLICY_INTERVAL": "Variable",
+      "deleteScenePhysicsTierPolicies": "Function",
       "DETERMINISM_PROBE_FREEZE_SOURCE": "Variable",
       "getPhysicsTierPolicy": "Function",
       "getPhysicsTierPolicyFreezeSources": "Function",
       "getPhysicsTierPolicyStatus": "Function",
+      "installPhysicsTierPolicy": "Function",
       "isPhysicsTierPolicyFrozen": "Function",
       "PhysicsTierPolicy": "Reference",
       "PhysicsTierPolicyCadence": "Reference",
@@ -1254,6 +1352,7 @@
     },
     "src/_engine/core/PhysicsTiers.ts": {
       "getPhysicsTier": "Function",
+      "installPhysicsTiers": "Function",
       "PhysicsTier": "Reference",
       "requestPhysicsTier": "Function"
     },
@@ -1265,9 +1364,10 @@
       "getActivePostFxPipeline": "Function",
       "getPostFxBuiltChain": "Function",
       "getPostFxPasses": "Function",
-      "initPostFX": "Function",
+      "installPostFx": "Function",
       "invalidatePostFxPipeline": "Function",
       "isPostFxEnabled": "Function",
+      "loadScenePostFxFilesAsync": "Function",
       "PostFxLiveParams": "TypeAlias",
       "PostFxPassInfo": "TypeAlias",
       "setPostFxEnabled": "Function",
@@ -1275,6 +1375,13 @@
       "setPostFxPassParam": "Function",
       "togglePostFx": "Function",
       "togglePostFxPass": "Function"
+    },
+    "src/_engine/core/PostFX/PostFXFeature.ts": {
+      "postFx": "Function",
+      "postFxSceneHooks": "Variable"
+    },
+    "src/_engine/core/PostFX/PostFXSchema.ts": {
+      "postFxSchemaPart": "Variable"
     },
     "src/_engine/core/PostFX/PostFXTypes.ts": {
       "PostFxBuiltChain": "TypeAlias",
@@ -1298,6 +1405,7 @@
       "deleteAllRayHelpers": "Function",
       "getRayCastStats": "Function",
       "initRayCasting": "Function",
+      "installRaycast": "Function",
       "isRayCastStatsEnabled": "Function",
       "RayCastOpts": "TypeAlias",
       "RayDebugOpts": "Reference",
@@ -1324,6 +1432,14 @@
       "isWebGPURenderer": "Function",
       "onRendererCreated": "Function",
       "RendererOptions": "TypeAlias"
+    },
+    "src/_engine/core/RenderHooks.ts": {
+      "addAfterRender": "Function",
+      "AfterRenderHook": "TypeAlias",
+      "getRenderPipeline": "Function",
+      "RenderPipelineProvider": "TypeAlias",
+      "runAfterRenderHooks": "Function",
+      "setRenderPipeline": "Function"
     },
     "src/_engine/core/Scene.ts": {
       "createRootScene": "Function",
@@ -1373,6 +1489,20 @@
       "setCurrentScene": "Function",
       "setLoadingSceneId": "Function",
       "setSceneOpts": "Function"
+    },
+    "src/_engine/core/SceneHooks.ts": {
+      "addSceneHooks": "Function",
+      "getSceneRetainedTextures": "Function",
+      "runSceneBeforeAssetsHooksAsync": "Function",
+      "runSceneCreatedHooksAsync": "Function",
+      "runSceneDeletedHooks": "Function",
+      "runSceneEnteredHooksAsync": "Function",
+      "runSceneExitHooks": "Function",
+      "runSceneLoadSettledHooks": "Function",
+      "runSceneLoadStartHooks": "Function",
+      "runSceneRegisteredHooks": "Function",
+      "runSceneWorldClearedHooks": "Function",
+      "SceneHooks": "TypeAlias"
     },
     "src/_engine/core/SceneLoader.ts": {
       "createCameras": "Function",
@@ -1523,6 +1653,7 @@
       "getSunDirection": "Function",
       "getSunElevation": "Function",
       "getTimeOfDay": "Function",
+      "installSkyBoxSystem": "Function",
       "isDayNightPlaying": "Function",
       "onSkyBoxChange": "Function",
       "pauseDayNight": "Function",
@@ -1544,6 +1675,32 @@
       "SkyBoxPresetName": "Reference",
       "SkyBoxUpdate": "TypeAlias",
       "updateSkyBox": "Function"
+    },
+    "src/_engine/core/SkyBox/SkyBoxFeature.ts": {
+      "skyBox": "Function",
+      "skyBoxSceneHooks": "Variable"
+    },
+    "src/_engine/core/SkyBox/SkyBoxSchema.ts": {
+      "SkyBoxAmbientLightSchema": "Variable",
+      "SkyBoxAsset": "TypeAlias",
+      "SkyBoxAssetSchema": "Variable",
+      "SkyBoxAtmosphereSchema": "Variable",
+      "SkyBoxBaseSchema": "Variable",
+      "SkyBoxCloudsSchema": "Variable",
+      "SkyBoxDayNightSchema": "Variable",
+      "SkyBoxDefSchema": "Variable",
+      "SkyBoxEnvSchema": "Variable",
+      "SkyBoxEnvSizeSchema": "Variable",
+      "SkyBoxGroundSchema": "Variable",
+      "SkyBoxMoonLightSchema": "Variable",
+      "SkyBoxMoonSchema": "Variable",
+      "SkyBoxNebulaSchema": "Variable",
+      "SkyBoxOverrides": "TypeAlias",
+      "SkyBoxOverridesSchema": "Variable",
+      "skyBoxSchemaPart": "Variable",
+      "SkyBoxStarsSchema": "Variable",
+      "SkyBoxSunLightSchema": "Variable",
+      "SkyBoxSunSchema": "Variable"
     },
     "src/_engine/core/SkyBox/SkyBoxTypes.ts": {
       "SkyBoxAmbientLightDef": "TypeAlias",
@@ -1685,6 +1842,10 @@
       "unpackCellKey": "Function",
       "worldToCell": "Function"
     },
+    "src/_engine/core/Spatial/SpatialFeature.ts": {
+      "spatial": "Function",
+      "spatialSceneHooks": "Variable"
+    },
     "src/_engine/core/Spatial/SpatialGrid.ts": {
       "ReadonlyVec3": "Interface",
       "SpatialGrid": "Class",
@@ -1694,7 +1855,6 @@
     "src/_engine/core/Spatial/SpatialIndexSystem.ts": {
       "computeLightInfluenceRadius": "Function",
       "DEFAULT_SPATIAL_DOMAIN": "Variable",
-      "getConservativeGeometryRadius": "Function",
       "getLastRebuildDurationMs": "Function",
       "getOracleCheckedQueryCount": "Function",
       "getOracleMismatchCount": "Function",
@@ -1704,6 +1864,7 @@
       "getSpatialDomainRebuildStats": "Function",
       "getSpatialDomainSceneId": "Function",
       "getSpatialGrid": "Function",
+      "installSpatialIndex": "Function",
       "invalidateSpatialDomain": "Function",
       "isInSpatialDomain": "Function",
       "isSpatialGridOracleEnabled": "Function",
@@ -1715,7 +1876,6 @@
       "registerSceneSpatialDomains": "Function",
       "registerSpatialDomain": "Function",
       "registerSpatialIndexDebugGUI": "Function",
-      "registerSpatialRadiusProvider": "Function",
       "releaseSceneSpatialDomains": "Function",
       "ResolvedSpatialDomainOptions": "TypeAlias",
       "setSpatialDomainOptionsOverride": "Function",
@@ -1725,10 +1885,12 @@
       "SpatialDomainOptionsOverride": "TypeAlias",
       "SpatialDomainRebuildStats": "TypeAlias",
       "spatialIndexRebuildSystem": "Function",
-      "SpatialRadiusProvider": "TypeAlias",
       "SpatialUpdatePolicy": "TypeAlias",
       "unregisterSpatialDomain": "Function",
       "validateSpatialGridQuery": "Function"
+    },
+    "src/_engine/core/Spatial/SpatialSchema.ts": {
+      "spatialSchemaPart": "Variable"
     },
     "src/_engine/core/Texture.ts": {
       "decTextureRef": "Function",
@@ -1821,8 +1983,62 @@
       "DropDownProps": "TypeAlias",
       "TDropDown": "TypeAlias"
     },
+    "src/_engine/core/UI/icons/BuiltInIcons.ts": {
+      "aekashaIcon": "Variable",
+      "alertIcon": "Reference",
+      "arrowClockwiseIcon": "Reference",
+      "arrowCounterClockwiseIcon": "Reference",
+      "aspectRatioIcon": "Reference",
+      "assetsIcon": "Reference",
+      "cameraIcon": "Reference",
+      "cameraReelsIcon": "Reference",
+      "circleCheckCutoutIcon": "Reference",
+      "cloudSunIcon": "Reference",
+      "databaseXIcon": "Reference",
+      "easelIcon": "Reference",
+      "ecsIcon": "Reference",
+      "eraserIcon": "Reference",
+      "fileAsterixIcon": "Reference",
+      "fileCodeIcon": "Reference",
+      "gearIcon": "Reference",
+      "geometryIcon": "Reference",
+      "gpuCardIcon": "Reference",
+      "heartArrowIcon": "Reference",
+      "infinityIcon": "Reference",
+      "infoIcon": "Reference",
+      "lampIcon": "Reference",
+      "lightBulbIcon": "Reference",
+      "lockIcon": "Reference",
+      "lodIcon": "Reference",
+      "materialIcon": "Reference",
+      "memoryIcon": "Reference",
+      "objectsCubesIcon": "Reference",
+      "pauseIcon": "Reference",
+      "personArmsUpIcon": "Reference",
+      "pinIcon": "Reference",
+      "playFillIcon": "Reference",
+      "postFxIcon": "Reference",
+      "profilerIcon": "Reference",
+      "redoIcon": "Reference",
+      "rocketIcon": "Reference",
+      "rocketTakeoffIcon": "Reference",
+      "runtimeIcon": "Reference",
+      "spatialGridIcon": "Reference",
+      "speedometerIcon": "Reference",
+      "stopIcon": "Reference",
+      "textureIcon": "Reference",
+      "thrashIcon": "Reference",
+      "toolsIcon": "Reference",
+      "undoIcon": "Reference",
+      "warningIcon": "Reference",
+      "xBoldIcon": "Reference",
+      "xIcon": "Reference"
+    },
     "src/_engine/core/UI/icons/SvgIcon.ts": {
+      "BuiltInIconName": "TypeAlias",
       "getSvgIcon": "Function",
+      "registerBuiltInIcons": "Function",
+      "registerIcon": "Function",
       "SvgIconKey": "TypeAlias"
     },
     "src/_engine/core/UI/Toaster.ts": {
@@ -1866,17 +2082,23 @@
     },
     "src/_engine/core/Viewports.ts": {
       "createViewport": "Function",
+      "deleteSceneViewports": "Function",
       "deleteViewport": "Function",
       "getViewport": "Function",
       "getViewportPointerNDC": "Function",
+      "installViewports": "Function",
       "invalidateViewportLayout": "Function",
-      "renderViewports": "Function",
+      "isViewportsInstalledFor": "Function",
       "setViewportEnabled": "Function",
       "setViewportInteractive": "Function",
       "Viewport": "TypeAlias",
       "ViewportAnchor": "TypeAlias",
       "ViewportProps": "TypeAlias",
       "ViewportRect": "TypeAlias"
+    },
+    "src/_engine/core/ViewportsFeature.ts": {
+      "viewports": "Function",
+      "viewportsSceneHooks": "Variable"
     },
     "src/_engine/debug/3DSymbols.ts": {
       "createNewCameraSymbol": "Function",
@@ -2077,7 +2299,8 @@
       "TEST_BRIDGE_VERSION": "Variable",
       "TestBridgeProbeResult": "TypeAlias",
       "TestBridgeSceneReady": "TypeAlias",
-      "TestBridgeSnapshot": "TypeAlias"
+      "TestBridgeSnapshot": "TypeAlias",
+      "TestBridgeSystemOrder": "TypeAlias"
     },
     "src/_engine/debug/UndoRedo.ts": {
       "canRedo": "Function",
@@ -2172,6 +2395,11 @@
       "CameraOverridesSchema": "Variable",
       "CameraProps": "TypeAlias, Variable"
     },
+    "src/_engine/schemas/featureSchemas.ts": {
+      "FeatureSchemaPart": "TypeAlias",
+      "FeatureSchemaShape": "TypeAlias",
+      "mergeFeatureSchemaShapes": "Function"
+    },
     "src/_engine/schemas/geometrySchema.ts": {
       "GeoAsset": "TypeAlias",
       "GeoAssetSchema": "Variable",
@@ -2185,17 +2413,6 @@
       "ImportedAssetOverridesSchema": "Variable",
       "ImportedAssetSchema": "Variable"
     },
-    "src/_engine/schemas/impostorSchema.ts": {
-      "CrossQuadsImpostorAssetSchema": "Variable",
-      "CrossQuadsLayoutSchema": "Variable",
-      "ImpostorAsset": "TypeAlias",
-      "ImpostorAssetSchema": "Variable",
-      "ImpostorDef": "TypeAlias",
-      "ImpostorShading": "TypeAlias",
-      "ImpostorShadingSchema": "Variable",
-      "OctahedralImpostorAssetSchema": "Variable",
-      "OctahedralImpostorLayoutSchema": "Variable"
-    },
     "src/_engine/schemas/lightSchema.ts": {
       "LightAsset": "TypeAlias",
       "LightAssetSchema": "Variable",
@@ -2206,12 +2423,6 @@
       "LodChainOptionsSchema": "Variable",
       "LodChainSchema": "Variable"
     },
-    "src/_engine/schemas/lodSchema.ts": {
-      "LodAutoDefSchema": "Variable",
-      "LodDefSchema": "Variable",
-      "LodLevelDefSchema": "Variable",
-      "MeshLodDefSchema": "Variable"
-    },
     "src/_engine/schemas/materialSchema.ts": {
       "MaterialAsset": "TypeAlias",
       "MaterialAssetSchema": "Variable",
@@ -2219,10 +2430,8 @@
       "MaterialVariantOverridesSchema": "Variable"
     },
     "src/_engine/schemas/meshSchema.ts": {
-      "MeshAsset": "TypeAlias",
-      "MeshAssetSchema": "Variable",
-      "MeshOverrides": "TypeAlias",
-      "MeshPropsSchema": "Variable"
+      "createMeshAssetSchema": "Function",
+      "MeshAsset": "TypeAlias"
     },
     "src/_engine/schemas/postFxSchema.ts": {
       "PostFxAsset": "TypeAlias",
@@ -2231,30 +2440,8 @@
       "PostFxParamMeta": "TypeAlias"
     },
     "src/_engine/schemas/sceneSchema.ts": {
-      "SceneAsset": "TypeAlias",
-      "SceneAssetSchema": "Variable",
-      "SceneOverrides": "TypeAlias"
-    },
-    "src/_engine/schemas/skyBoxSchema.ts": {
-      "SkyBoxAmbientLightSchema": "Variable",
-      "SkyBoxAsset": "TypeAlias",
-      "SkyBoxAssetSchema": "Variable",
-      "SkyBoxAtmosphereSchema": "Variable",
-      "SkyBoxBaseSchema": "Variable",
-      "SkyBoxCloudsSchema": "Variable",
-      "SkyBoxDayNightSchema": "Variable",
-      "SkyBoxDefSchema": "Variable",
-      "SkyBoxEnvSchema": "Variable",
-      "SkyBoxEnvSizeSchema": "Variable",
-      "SkyBoxGroundSchema": "Variable",
-      "SkyBoxMoonLightSchema": "Variable",
-      "SkyBoxMoonSchema": "Variable",
-      "SkyBoxNebulaSchema": "Variable",
-      "SkyBoxOverrides": "TypeAlias",
-      "SkyBoxOverridesSchema": "Variable",
-      "SkyBoxStarsSchema": "Variable",
-      "SkyBoxSunLightSchema": "Variable",
-      "SkyBoxSunSchema": "Variable"
+      "createSceneAssetSchema": "Function",
+      "SceneAsset": "TypeAlias"
     },
     "src/_engine/schemas/spatialDomainSchema.ts": {
       "SceneSpatialDomainEntry": "TypeAlias",
@@ -2580,6 +2767,7 @@
   "entries": {
     "aekasha": [
       "APP_RENDER_SYNC_ORDER",
+      "AfterRenderHook",
       "AppConfig",
       "AppData",
       "AtlasCellRect",
@@ -2597,6 +2785,10 @@
       "ECSTransformProp",
       "ECSWorld",
       "ECSWorldOptions",
+      "EngineFeature",
+      "FeatureContext",
+      "FeatureDebugHook",
+      "FixedStepDriver",
       "GeneratedAppJson",
       "GeneratedAssetUrls",
       "GeoBaseProps",
@@ -2613,6 +2805,7 @@
       "KeyBinding",
       "LightProps",
       "LoadSceneProps",
+      "LoopState",
       "Looper",
       "MatProps",
       "MaterialVariantOverrides",
@@ -2620,9 +2813,11 @@
       "MeshProps",
       "MouseBinding",
       "RemapUVsToAtlasCellOpts",
+      "RenderPipelineProvider",
       "RendererOptions",
       "SampleAtlasCellOpts",
       "SceneData",
+      "SceneHooks",
       "SceneLoader",
       "ScenePrimitiveAssets",
       "Snapshot",
@@ -2732,6 +2927,7 @@
       "loadTexture",
       "loadTextureAsync",
       "loadTextures",
+      "loadTslMaterialFileAsync",
       "lwarn",
       "registerOnAllSceneEnterings",
       "registerOnAllSceneExits",
@@ -2775,6 +2971,7 @@
       "DynamicCharacter",
       "DynamicCharacterOpts",
       "LocomotionStateListener",
+      "character",
       "createCharacter",
       "createDynamicCharacter",
       "deleteCharacter",
@@ -2847,7 +3044,8 @@
       "InstancedMeshPool",
       "InstancedMeshSlotData",
       "createInstancedLodPool",
-      "createInstancedMeshPool"
+      "createInstancedMeshPool",
+      "instancing"
     ],
     "aekasha/lines": [
       "LineProps",
@@ -2857,6 +3055,7 @@
       "geometryEdgesToSegments",
       "geometryWireframeToSegments",
       "getLine",
+      "lines",
       "polylineToSegments",
       "preloadFatLineBackend"
     ],
@@ -2891,6 +3090,7 @@
       "getLodChain",
       "getLodFrameStats",
       "getLodWorldSphere",
+      "lod",
       "registerLodTarget",
       "resolveAutoLod",
       "resolveLodChainOptions",
@@ -2933,6 +3133,7 @@
       "getPhysicsTier",
       "getPhysicsWorld",
       "getRigidBody",
+      "physics",
       "readBodyPositionsAtStep",
       "requestPhysicsTier",
       "setPhysicsTierPolicy",
@@ -2942,6 +3143,7 @@
       "PostFxPassFn",
       "PostFxPassInfo",
       "getPostFxPasses",
+      "postFx",
       "setPostFxEnabled",
       "setPostFxPassEnabled",
       "setPostFxPassParam"
@@ -2956,6 +3158,7 @@
       "CameraProps",
       "CoreEntityOpts",
       "DEFAULT_ATLAS_PADDING",
+      "FeatureSchemaPart",
       "GeneratedAssetFields",
       "GeoAsset",
       "GeoAssetSchema",
@@ -2969,7 +3172,6 @@
       "MaterialAsset",
       "MaterialAssetSchema",
       "MeshAsset",
-      "MeshAssetSchema",
       "MeshSettings",
       "MetaSchema",
       "NON_COVERAGE_SLOTS",
@@ -2978,7 +3180,6 @@
       "PostFxAsset",
       "PostFxAssetSchema",
       "SceneAsset",
-      "SceneAssetSchema",
       "SkyBoxAsset",
       "SkyBoxAssetSchema",
       "TEXTURE_SLOTS",
@@ -2995,10 +3196,16 @@
       "TexturePack",
       "TextureSettings",
       "TextureSlot",
+      "createMeshAssetSchema",
+      "createSceneAssetSchema",
       "getAtlasSlotTextureId",
       "getFullMipLevelCount",
       "isJsonRelativeFileName",
-      "isTextureArrayLayerFile"
+      "isTextureArrayLayerFile",
+      "lodSchemaPart",
+      "postFxSchemaPart",
+      "skyBoxSchemaPart",
+      "spatialSchemaPart"
     ],
     "aekasha/skybox": [
       "LEGACY_SKYBOX_WARNING",
@@ -3025,6 +3232,7 @@
       "setDayNightCycleDuration",
       "setDayNightSpeed",
       "setTimeOfDay",
+      "skyBox",
       "updateSkyBox"
     ],
     "aekasha/spatial": [
@@ -3045,6 +3253,7 @@
       "refreshSpatialRadius",
       "registerSpatialDomain",
       "registerSpatialRadiusProvider",
+      "spatial",
       "unregisterSpatialDomain"
     ],
     "aekasha/toolkit/ecs": [
@@ -3099,13 +3308,67 @@
     ],
     "aekasha/ui": [
       "AddToastResponse",
+      "BuiltInIconName",
       "CMP",
+      "SvgIconKey",
       "TCMP",
       "TProps",
       "ToastProps",
       "addToast",
+      "aekashaIcon",
+      "alertIcon",
+      "arrowClockwiseIcon",
+      "arrowCounterClockwiseIcon",
+      "aspectRatioIcon",
+      "assetsIcon",
+      "cameraIcon",
+      "cameraReelsIcon",
+      "circleCheckCutoutIcon",
+      "cloudSunIcon",
+      "databaseXIcon",
+      "easelIcon",
+      "ecsIcon",
+      "eraserIcon",
+      "fileAsterixIcon",
+      "fileCodeIcon",
+      "gearIcon",
+      "geometryIcon",
       "getHUDRootCMP",
-      "removeToast"
+      "getSvgIcon",
+      "gpuCardIcon",
+      "heartArrowIcon",
+      "infinityIcon",
+      "infoIcon",
+      "lampIcon",
+      "lightBulbIcon",
+      "lockIcon",
+      "lodIcon",
+      "materialIcon",
+      "memoryIcon",
+      "objectsCubesIcon",
+      "pauseIcon",
+      "personArmsUpIcon",
+      "pinIcon",
+      "playFillIcon",
+      "postFxIcon",
+      "profilerIcon",
+      "redoIcon",
+      "registerBuiltInIcons",
+      "registerIcon",
+      "removeToast",
+      "rocketIcon",
+      "rocketTakeoffIcon",
+      "runtimeIcon",
+      "spatialGridIcon",
+      "speedometerIcon",
+      "stopIcon",
+      "textureIcon",
+      "thrashIcon",
+      "toolsIcon",
+      "undoIcon",
+      "warningIcon",
+      "xBoldIcon",
+      "xIcon"
     ],
     "aekasha/viewports": [
       "Viewport",
@@ -3115,7 +3378,8 @@
       "getViewport",
       "getViewportPointerNDC",
       "invalidateViewportLayout",
-      "setViewportEnabled"
+      "setViewportEnabled",
+      "viewports"
     ]
   }
 }

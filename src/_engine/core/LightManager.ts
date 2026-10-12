@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import { ECSWorld, getECSWorld, getEntityIdByAppId } from './ECS';
 import { getCurrentSceneId, getRootScene, registerOnAllSceneEnterings } from './Scene';
 import type { DebugModuleRef } from '../utils/helpers';
-import { getLightCharacteristics, loadDebugModule, useDebug } from '../utils/helpers';
+import { getLightCharacteristics, loadDebugModuleAsync, useDebug } from '../utils/helpers';
 import { ComponentType, Transform } from './ECS/ECSCoreComponents';
 import { IS_DEBUG_ENV } from './Config';
 import { loadPersistentProps } from './PropertyLoader';
@@ -14,10 +14,12 @@ import { getTexture } from './Texture';
 import { retagAssetOwner } from './Assets/AssetOwners';
 import { setFrustumCullingEnabled } from './ECS/ObjectFrustumCullingSystem';
 
-export const registerLightManager = (world: ECSWorld) => {
+export const registerLightManager = async (world: ECSWorld) => {
   if (IS_DEBUG_ENV) {
-    debugGUI = loadDebugModule(() => import('./Debug/Light/_dbg__LightGUI'));
-    loadDebugModule(() => import('./Debug/Light/_dbg__LightHelpers'));
+    // Awaited, so the helpers' LATE_MAIN system registers before the debug camera's helpers' (a
+    // load race before p607: the system order differed between page loads)
+    debugGUI = await loadDebugModuleAsync(() => import('./Debug/Light/_dbg__LightGUI'));
+    await loadDebugModuleAsync(() => import('./Debug/Light/_dbg__LightHelpers'));
 
     registerOnAllSceneEnterings('lightHelpersSceneSync', () => {
       const sceneId = getCurrentSceneId();

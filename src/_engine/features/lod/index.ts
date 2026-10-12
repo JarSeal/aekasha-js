@@ -1,3 +1,4 @@
+export { registerLodTarget } from '../../core/ECS/LodTargets';
 export { generateCrossQuads } from '../../core/Lod/Impostors/CrossQuads';
 export type { CrossQuads, CrossQuadsOptions } from '../../core/Lod/Impostors/CrossQuads';
 export {
@@ -25,6 +26,7 @@ export type {
 } from '../../core/Lod/LodChainOptions';
 export { generateLodChain, getLodChain } from '../../core/Lod/LodChains';
 export type { LodChain } from '../../core/Lod/LodChains';
+export { lod } from '../../core/Lod/LodFeature';
 export { simplifyLodChain } from '../../core/Lod/LodSimplify';
 export type { SimplifiedLodChain } from '../../core/Lod/LodSimplify';
 export {
@@ -32,7 +34,6 @@ export {
   getLodBias,
   getLodFrameStats,
   getLodWorldSphere,
-  registerLodTarget,
   setLodBias,
   setLodFadeSeconds,
 } from '../../core/Lod/LodSystem';

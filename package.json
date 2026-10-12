@@ -45,6 +45,11 @@
   "license": "MIT",
   "private": false,
   "type": "module",
+  "sideEffects": [
+    "**/*.scss",
+    "**/*.css",
+    "./devTools/**"
+  ],
   "scripts": {
     "gatherAppData": "tsx ./devTools/gatherAppData.ts",
     "copyDecoders": "tsx ./devTools/copyDecoders.ts",

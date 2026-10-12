@@ -5,7 +5,8 @@
 
 import { NodeFrame } from 'three/webgpu';
 import { IS_DEBUG_ENV } from '../Config';
-import { getECSWorld } from '../ECS';
+import { getAllECSWorlds, getECSWorld } from '../ECS';
+import { ECSSystemStage } from '../ECS/SystemStages';
 import { setFixedFrameDelta, toggleAppPlay, toggleMainPlay } from '../MainLoop';
 import { setPhysicsInterpolationPinnedToNewest } from '../PhysicsManager';
 import { getRenderer } from '../Renderer';
@@ -19,7 +20,11 @@ import {
   type PhysicsProbeReport,
 } from './_dbg__PhysicsDeterminism';
 import { encodeRGBA8PNG } from './_dbg__PNGEncoder';
-import { TEST_BRIDGE_VERSION, type AekTestBridge } from '../../debug/TestBridge';
+import {
+  TEST_BRIDGE_VERSION,
+  type AekTestBridge,
+  type TestBridgeSystemOrder,
+} from '../../debug/TestBridge';
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 /** Every frame of a test page advances by this (the physics timestep: one step a frame) */
@@ -128,6 +133,19 @@ const snapshot: AekTestBridge['snapshot'] = async ({ width, height }) => {
   };
 };
 
+const getSystemOrder: AekTestBridge['getSystemOrder'] = () => {
+  const order: TestBridgeSystemOrder = {};
+  for (const world of getAllECSWorlds()) {
+    const stages: Record<string, string[]> = {};
+    for (const stage of Object.values(ECSSystemStage)) {
+      const systems = world.getSystemOrder(stage);
+      if (systems.length) stages[stage] = systems.map(({ id, order }) => `${id}@${order}`);
+    }
+    order[world.id] = stages;
+  }
+  return order;
+};
+
 export const _installTestBridge = () => {
   if (window.__AEK_TEST__) return;
   useTestClock();
@@ -145,5 +163,6 @@ export const _installTestBridge = () => {
     whenProbeDone,
     freeze,
     snapshot,
+    getSystemOrder,
   };
 };

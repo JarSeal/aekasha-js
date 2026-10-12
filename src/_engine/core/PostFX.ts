@@ -15,16 +15,10 @@
  */
 import * as THREE from 'three/webgpu';
 import { mrt, normalView, pass } from 'three/tsl';
-import { getConfig, IS_DEBUG_ENV } from './Config';
+import { IS_DEBUG_ENV } from './Config';
+import type { FeatureContext } from './Features';
 import { getRenderer } from './Renderer';
-import {
-  getCurrentSceneId,
-  getGeneratedAppData,
-  getRootScene,
-  getSceneOpts,
-  registerOnAllSceneEnterings,
-  registerOnAllSceneExits,
-} from './Scene';
+import { getGeneratedAppData, getRootScene, getSceneOpts } from './Scene';
 import { getActiveCamera } from './CameraManager';
 import { getAppData } from './AppData';
 import { lerror, llog, lwarn } from '../utils/Logger';
@@ -85,20 +79,40 @@ let needsRebuild = true;
 const postFxChainListeners = new Set<() => void>();
 const lastSize = new THREE.Vector2(-1, -1);
 const curSize = new THREE.Vector2();
+/** The PostFX pass files loaded so far, by pass id (see loadScenePostFxFilesAsync) */
+const loadedPostFxFiles = new Map<string, Record<string, unknown>>();
 
 /**
- * Initializes the PostFX system. Nothing is built here: the pipeline is only created the
- * first time a scene's PostFX chain is actually rendered.
+ * Installs the PostFX system (the `postFx()` feature's install, PostFX/PostFXFeature.ts): reads
+ * `AppConfig.postFx.enabled`. Nothing is built here: the pipeline is only created the first time
+ * a scene's PostFX chain is actually rendered.
+ * @internal
  */
-export const initPostFX = () => {
-  isMasterEnabled = getConfig().postFx?.enabled !== false;
+export const installPostFx = (ctx: FeatureContext) => {
+  isMasterEnabled = ctx.config.postFx?.enabled !== false;
+};
 
-  // The PostFX chain is scene-scoped: set up on every scene enter, released on every exit
-  registerOnAllSceneExits('postFxSceneExit', disposePostFx);
-  registerOnAllSceneEnterings('postFxSceneEnter', () => {
-    const sceneId = getCurrentSceneId();
-    if (sceneId) buildPostFxForScene(sceneId);
-  });
+/**
+ * Loads the files of the PostFX passes a scene's chain names (its options' `postFx`), which the
+ * gathered data loads on demand (p607 D11): the `created` scene hook awaits it before
+ * buildPostFxForScene. A file loads once; one that fails is logged and its pass left out (as a
+ * pass without a file is).
+ * @internal
+ */
+export const loadScenePostFxFilesAsync = async (sceneId: string) => {
+  const entries = getSceneOpts(sceneId)?.postFx || [];
+  await Promise.all(
+    entries.map(async (entry) => {
+      const id = typeof entry === 'string' ? entry : entry.id;
+      const load = getAppData().postFxFiles[id];
+      if (loadedPostFxFiles.has(id) || !load) return;
+      try {
+        loadedPostFxFiles.set(id, await load());
+      } catch (err) {
+        lerror(`Could not load the file of PostFX pass "${id}" (scene "${sceneId}").`, err);
+      }
+    })
+  );
 };
 
 const resolvePostFxPass = (
@@ -119,7 +133,7 @@ const resolvePostFxPass = (
     props = found;
   }
 
-  const fxNode = getAppData().postFxFiles[props.id]?.fxNode as PostFxPassFn | undefined;
+  const fxNode = loadedPostFxFiles.get(props.id)?.fxNode as PostFxPassFn | undefined;
   if (!fxNode) {
     lwarn(
       `Could not locate the "fxNode" export for PostFX pass "${props.id}" (scene "${sceneId}"), skipping it. A PostFX pass needs a *.postFx.json file whose tslFile exports "fxNode" (PostFX passes written inline in a scene file are not supported).`
@@ -243,7 +257,8 @@ const updatePostFxSize = (renderer: THREE.WebGPURenderer) => {
 /**
  * Returns the PostFX render pipeline to render the frame with, or null when the frame should
  * be rendered directly (PostFX is switched off, or no PostFX pass is enabled). (Re)builds the
- * pipeline when needed, so this is meant to be called once per frame, by renderScene().
+ * pipeline when needed, so this is meant to be called once per frame: it's the render pipeline
+ * seam's provider (`postFx()`), which renderScene() and snapshots read.
  * @returns (THREE.RenderPipeline | null)
  */
 export const getActivePostFxPipeline = () => {

@@ -490,6 +490,8 @@ export function loadDebugModule<T>(
   importer: () => Promise<T>,
   debugId?: string
 ): DebugModuleRef<T> | null {
+  // A production build drops the importer, and with it the debug chunk
+  if (!__AEK_DEBUG__) return null;
   if (!IS_DEBUG_ENV) return null;
   const ref: DebugModuleRef<T> = { current: null };
   importer()
@@ -510,9 +512,13 @@ export function loadDebugModule<T>(
  */
 export async function loadDebugModuleAsync<T>(
   importer: () => Promise<T>,
-  includeInProdTestMode: boolean = false,
+  // No default value: Rollup drops a call's arguments only when every parameter is unused, and a
+  // default counts as a use, so `true` would keep the importer and its chunk
+  includeInProdTestMode?: boolean,
   debugId?: string
 ): Promise<DebugModuleRef<T> | null> {
+  // A production build drops the importer, and with it the debug chunk
+  if (!__AEK_DEBUG__) return null;
   if (!IS_DEBUG_ENV && !includeInProdTestMode) return null;
   const ref: DebugModuleRef<T> = { current: null };
   return importer()
@@ -535,7 +541,8 @@ export async function loadDebugModuleAsync<T>(
  * }
  */
 export const isDebugReady = <T>(ref: DebugModuleRef<T>): ref is { current: T } =>
-  !!(IS_DEBUG_ENV && ref?.current);
+  // `__AEK_DEBUG__` first: a production build folds the check to false, and its callers' code out
+  __AEK_DEBUG__ && !!(IS_DEBUG_ENV && ref?.current);
 
 /**
  * Accessor: Returns the module if debug is active and loaded, otherwise undefined.
@@ -545,7 +552,11 @@ export const useDebug = <T>(
   ref: DebugModuleRef<T> | null,
   includeInProdTestMode: boolean = false
 ): T | undefined =>
-  (IS_DEBUG_ENV || includeInProdTestMode) && ref?.current ? ref.current : undefined;
+  // `__AEK_DEBUG__` first: a production build folds the result to undefined, so a wrapper's
+  // `useDebug(ref)?.fn()` and the wrapper itself leave the bundle
+  __AEK_DEBUG__ && (IS_DEBUG_ENV || includeInProdTestMode) && ref?.current
+    ? ref.current
+    : undefined;
 
 /** Determines and returns the light types */
 export const getLightCharacteristics = (light: THREE.Light) => {

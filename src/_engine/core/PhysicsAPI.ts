@@ -7,7 +7,6 @@
 
 import * as THREE from 'three/webgpu';
 
-import PhysicsWorker from '../workers/physicsWorker?worker';
 import { getConfig, IS_DEBUG_ENV, isDebugEnvironment } from './Config';
 import { PhysicsTransformBuffer } from './Physics/PhysicsTransformBuffer';
 import {
@@ -310,6 +309,8 @@ export const initPhysics = async (doNotCreateWorld?: boolean) => {
     );
     if (worldOrUndefined) physicsWorld = worldOrUndefined;
   } else if (target === 'WORKER_THREAD') {
+    // Imported here, not at load: an app without physics, or on the main thread, never loads it
+    const { default: PhysicsWorker } = await import('../workers/physicsWorker?worker');
     worker = await initWorker<PhysicsDownProtocol>(
       PhysicsWorker,
       'Physics Worker',
@@ -343,7 +344,7 @@ export const initPhysics = async (doNotCreateWorld?: boolean) => {
  * main loop before this is reached).
  *
  * Calls `onBeforeStep` once per fixed-timestep slice, right before that slice's step (held-key
- * polling, event delivery and APP_PHYSICS_STEP systems, see MainLoop.ts's runPhysicsSubStep).
+ * polling, event delivery and APP_PHYSICS_STEP systems, see MainLoop.ts's runFixedSubStep).
  * In WORKER_THREAD mode the steps themselves run off-thread,
  * so the callbacks all run here up front, and whatever one-way commands each one issues are
  * carried in the STEP message and replayed on the worker right before their own sub-step.
@@ -895,8 +896,9 @@ const onWorkerMessage = (event: MessageEvent<PhysicsDownProtocol>) => {
         bodyActivity.sleeping = data.sleepingBodies;
         hasBodyActivity = true;
       }
-      // The panel shows the pure step time only — never step + messaging overhead.
-      updatePhysicsPanel(data.stepDuration);
+      // The panel shows the pure step time only — never step + messaging overhead. The flag here
+      // too (the panel exists only there): a production build drops the call
+      if (IS_DEBUG_ENV) updatePhysicsPanel(data.stepDuration);
     }
     return;
   } else if (type === PhysicsProtocolType.EVENTS_PUSH) {

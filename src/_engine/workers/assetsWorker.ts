@@ -10,11 +10,24 @@ import type {
 } from '../core/Assets/AssetsAPITypes';
 import { AssetsProtocolType } from '../core/Assets/AssetsAPITypes';
 import { AssetsSourceError } from './assets/assetsFetch';
-import { assetsSwitchGLTF } from './assets/assetsSwitchGLTF';
-import { assetsSwitchSimplify } from './assets/assetsSwitchSimplify';
-import { assetsSwitchTexture } from './assets/assetsSwitchTexture';
 
 const STATUS_READY_STRING = 'INIT_READY';
+
+// Each job kind's module (and the loaders and decoders it brings) loads on its first job (p607
+// D5): a worker can't be handed code, so the job kinds are named here, not registered. An app
+// that never simplifies a geometry (no LOD) never loads LodSimplify.
+/** Loads a job module once; a failed load is tried again by the next job. */
+const createJobLoader = <T>(load: () => Promise<T>) => {
+  let loading: Promise<T> | null = null;
+  return () =>
+    (loading ??= load().catch((err: unknown) => {
+      loading = null;
+      throw err;
+    }));
+};
+const loadTextureJob = createJobLoader(() => import('./assets/assetsSwitchTexture'));
+const loadGLTFJob = createJobLoader(() => import('./assets/assetsSwitchGLTF'));
+const loadSimplifyJob = createJobLoader(() => import('./assets/assetsSwitchSimplify'));
 
 /** The same test GLTFLoader runs (three 0.183.2, GLTFParser constructor) to choose between
  * ImageBitmapLoader and the `document`-dependent TextureLoader. */
@@ -48,11 +61,11 @@ const handleMessage = async (data: AssetsUpProtocol) => {
         return sendMessage({ type, requestId, workerTime: performance.now() });
       case AssetsProtocolType.LOAD_TEXTURE:
       case AssetsProtocolType.LOAD_HDR_TEXTURE:
-        return await assetsSwitchTexture(data, sendMessage);
+        return await (await loadTextureJob()).assetsSwitchTexture(data, sendMessage);
       case AssetsProtocolType.LOAD_GLTF:
-        return await assetsSwitchGLTF(data, sendMessage);
+        return await (await loadGLTFJob()).assetsSwitchGLTF(data, sendMessage);
       case AssetsProtocolType.SIMPLIFY_GEOMETRY:
-        return await assetsSwitchSimplify(data, sendMessage);
+        return await (await loadSimplifyJob()).assetsSwitchSimplify(data, sendMessage);
       default:
         return sendMessage({
           type: AssetsProtocolType.ERROR,

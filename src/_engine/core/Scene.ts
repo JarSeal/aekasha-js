@@ -5,23 +5,19 @@ import type { MatProps } from './Material';
 import { deleteMaterial } from './Material';
 import { lerror, lwarn } from '../utils/Logger';
 import type { TextureProps } from './Texture';
-import { deleteTexture, getTexture } from './Texture';
+import { getTexture } from './Texture';
 import { initMainLoop } from './MainLoop';
 import { updateDebuggerSceneTitle } from '../debug/DebuggerGUI';
+import { IS_DEBUG_ENV } from './Config';
 import type { LightProps } from './LightManager';
 import type { ImportAssetParams } from './Import/ImportTypes';
-import {
-  clearSkyBox,
-  getActiveSkyBoxTexture,
-  getSceneSkyBoxTextureIds,
-  registerSkyBox,
-} from './SkyBox/SkyBox';
+import { runSceneDeletedHooks, runSceneRegisteredHooks } from './SceneHooks';
 import type { SkyBoxDef } from './SkyBox/SkyBoxTypes';
 import { getAppData } from './AppData';
 import type { CameraProps } from '../schemas/cameraSchema';
 import type { CoreEntityOpts } from '../schemas/_helperSchemas';
 import type { SceneSpatialDomainEntry } from '../schemas/spatialDomainSchema';
-import type { ImpostorDef } from '../schemas/impostorSchema';
+import type { ImpostorDef } from './Lod/Impostors/ImpostorSchema';
 import type { MeshProps } from './MeshManager';
 import { deleteEntity } from '../utils/ECSHelpers';
 import { getECSWorld, getEntityIdByAppId } from './ECS';
@@ -61,6 +57,9 @@ export type SceneData = {
   /** The exported impostors the scene lists, resolved by the gatherer (their atlas slots are in
    * `textures`). */
   impostors?: ImpostorDef[];
+  /** The features this scene's data needs (the gatherer's manifest, p607 D10): `InitEngine`
+   * fails when its `features` doesn't list one. */
+  __features?: string[];
 };
 
 const scenes: { [id: string]: THREE.Group } = {};
@@ -247,14 +246,8 @@ export const deleteScene = (
   // Delete loopers
   deleteAllSceneLoopers(id);
 
-  // Delete sky box textures (their baked PMREMs go with them), except one another scene's sky box
-  // is showing
-  if (isCurrentScene(id)) clearSkyBox();
-  const activeSkyBoxTexture = getActiveSkyBoxTexture();
-  for (const textureId of getSceneSkyBoxTextureIds(id)) {
-    const texture = getTexture(textureId);
-    if (texture && texture !== activeSkyBoxTexture) deleteTexture(textureId);
-  }
+  // The features' part (the sky box deletes its textures)
+  runSceneDeletedHooks(id);
 
   if (opts?.deleteSavedScene) delete scenes[id];
 };
@@ -305,9 +298,13 @@ export const setCurrentScene = (id: string | null) => {
     rootScene.add(nextScene);
   }
 
-  updateDebuggerSceneTitle(
-    currentSceneOpts?.name || id || nextScene?.userData.id || '[No scene..]'
-  );
+  // The flag here too (the debugger exists only there): a production build drops the call, whose
+  // property reads it couldn't drop otherwise
+  if (IS_DEBUG_ENV) {
+    updateDebuggerSceneTitle(
+      currentSceneOpts?.name || id || nextScene?.userData.id || '[No scene..]'
+    );
+  }
 
   if (rootScene.children.length) initMainLoop();
 
@@ -745,7 +742,8 @@ export const getGeneratedAppData = () => getAppData().json;
 export const getGeneratedSceneData = (sceneId: string) =>
   getGeneratedAppData().scenes[sceneId] as SceneData | undefined;
 
-/** Registers (creates) the scenes at initEngine (initApp). */
+/** Registers (creates) the scenes at initEngine (initApp), after the features have installed:
+ * each feature's `sceneRegistered` hook gets every scene with its data. */
 export const registerScenesFromGeneratedData = async () => {
   const { scenes } = getGeneratedAppData();
   const sceneIds = Object.keys(scenes);
@@ -761,13 +759,6 @@ export const registerScenesFromGeneratedData = async () => {
       postFx: sceneData.postFx,
       postFxEnabled: sceneData.postFxEnabled,
     });
-
-    if (sceneData.skyboxes?.length) {
-      for (let j = 0; j < sceneData.skyboxes.length; j++) {
-        const props = sceneData.skyboxes[j];
-        if (typeof props === 'string') continue;
-        registerSkyBox(props, sceneId);
-      }
-    }
+    runSceneRegisteredHooks(sceneId, sceneData);
   }
 };

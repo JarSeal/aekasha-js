@@ -1,14 +1,35 @@
 import * as THREE from 'three/webgpu';
 import { createRenderer, InitEngine, createSceneLoader, loadScene, IS_DEBUG_ENV } from 'aekasha';
-// The app's and the toolkit's ECS plugins, registered after the engine's own
-import './AppECSPlugins';
+import { character } from 'aekasha/character';
+import { instancing } from 'aekasha/instancing';
+import { lines } from 'aekasha/lines';
+import { lod } from 'aekasha/lod';
+import { physics } from 'aekasha/physics';
+import { postFx } from 'aekasha/postfx';
+import { skyBox } from 'aekasha/skybox';
+import { spatial } from 'aekasha/spatial';
+import { viewports } from 'aekasha/viewports';
 import { CMP } from 'aekasha/ui';
 import config from './CONFIG';
 import { appData } from './generated';
+import { appECSPlugins } from './AppECSPlugins';
 
 InitEngine({
   config,
   data: appData,
+  // Installed in this order, after the engine's kernel (the app's last)
+  features: [
+    physics(),
+    character(),
+    skyBox(),
+    lod(),
+    spatial(),
+    instancing(),
+    lines(),
+    postFx(),
+    viewports(),
+    appECSPlugins,
+  ],
   start: async () => {
     // Init renderer
     // #region create-renderer (shown in the Hub: hub/pages/features/rendering/)

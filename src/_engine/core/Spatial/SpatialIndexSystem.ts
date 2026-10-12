@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu';
-import { ECSWorld, getECSWorld } from '../ECS';
+import { type ECSWorld, getECSWorld } from '../ECS';
+import type { FeatureContext } from '../Features';
 import { ECSSystemStage } from '../ECS/SystemStages';
 import { ComponentType } from '../ECS/ECSCoreComponents';
 import { IS_DEBUG_ENV } from '../Config';
@@ -12,6 +13,13 @@ import { loadDebugModuleAsync, useDebug } from '../../utils/helpers';
 import { getCurrentSceneId } from '../Scene';
 import { getNextSceneId, isCurrentlyLoading } from '../SceneLoader';
 import type { SceneSpatialDomainEntry } from '../../schemas/spatialDomainSchema';
+import { getConservativeGeometryRadius } from '../Geometry';
+import {
+  findSpatialRadiusProvider,
+  registerSpatialRadiusProvider,
+  setSpatialDomainMembership,
+  type SpatialRadiusProvider,
+} from '../ECS/SpatialMembership';
 
 // Debug
 type SpatialGridDebugModule = typeof import('../Debug/_dbg__SpatialGrid');
@@ -234,7 +242,7 @@ const addDomain = (
 const insertMember = (world: ECSWorld, domain: SpatialDomain, entityId: number) => {
   const transform = world.getComponent(entityId, ComponentType.TRANSFORM);
   const pos = transform?.position;
-  const entry = findRadiusProvider(entityId, world);
+  const entry = findSpatialRadiusProvider(entityId, world);
   const local = entry?.provider(entityId, world) ?? 0;
 
   let radius = local;
@@ -424,9 +432,9 @@ function applyDomainOptions(
  * Drops the settings `sceneId` registered (§3.2): each domain they belong to goes back to its
  * world settings, or is unregistered if it has none (its persistent members leave it too). Then
  * frees `DEFAULT`'s grid, also without a `sceneId` (the first load), so the next scene builds
- * its own when it needs one (§3.6). The scene loader calls it for the default world right after
- * the previous scene's entities are deleted, so a reverted grid re-inserts only the persistent
- * ones.
+ * its own when it needs one (§3.6). Spatial's scene hook (SpatialFeature.ts) calls it for the
+ * default world right after the previous scene's entities are deleted, so a reverted grid
+ * re-inserts only the persistent ones.
  */
 export function releaseSceneSpatialDomains(
   world: ECSWorld,
@@ -453,9 +461,9 @@ export function releaseSceneSpatialDomains(
 /**
  * Registers a scene's `spatialDomains` (its scene JSON, §3.4) with `sceneId` as their scope.
  * `DEFAULT`'s entry is partial, merged over its world settings, and only stores them (its grid is
- * built by the scene's first join, at those settings); every other domain is created here. The
- * scene loader calls it for the default world right after `releaseSceneSpatialDomains`, before
- * anything of the scene joins a domain, so each grid is created once at its final size.
+ * built by the scene's first join, at those settings); every other domain is created here.
+ * Spatial's scene hook calls it for the default world right after `releaseSceneSpatialDomains`,
+ * before anything of the scene joins a domain, so each grid is created once at its final size.
  */
 export function registerSceneSpatialDomains(
   world: ECSWorld,
@@ -697,12 +705,6 @@ const leaveMaskedDomains = (entityId: number, world: ECSWorld) => {
   }
 };
 
-// onRemoveComponent too, so removing the component directly can't leave stale grid members
-ECSWorld.registerComponentHooks(ComponentType.SPATIAL_DOMAINS, {
-  onRemoveComponent: leaveMaskedDomains,
-  onDeleteEntity: leaveMaskedDomains,
-});
-
 /**
  * A point/spot light's influence-sphere radius — shared with
  * LightObjectCullingSystem.ts so both consumers agree on what "this light's
@@ -723,65 +725,15 @@ export function computeLightInfluenceRadius(light: THREE.PointLight | THREE.Spot
 }
 
 // --- RADIUS PROVIDERS (p346 §3.3) ---
-// Like ObjectFrustumCullingSystem.ts's bounding-volume providers: the first registered component
-// type an entity has picks the provider that measures it. A member none of them measures gets
-// radius 0 (a point).
-
-/** A member's radius in its local space (before its Transform scale), or undefined if it can't be measured. */
-export type SpatialRadiusProvider = (entityId: number, world: ECSWorld) => number | undefined;
-
-type RadiusProviderEntry = {
-  componentType: ComponentType;
-  provider: SpatialRadiusProvider;
-  isScaleIndependent: boolean;
-};
-
-const radiusProviders: RadiusProviderEntry[] = [];
-
-/**
- * Measures the members that have `componentType`. The radius is read when an entity joins a
- * domain, and multiplied by the largest axis of its Transform scale on every rebuild, unless
- * `scaleIndependent` (eg. a light's range). Registering a type again replaces its provider.
- */
-export function registerSpatialRadiusProvider(
-  componentType: ComponentType,
-  provider: SpatialRadiusProvider,
-  opts?: { scaleIndependent?: boolean }
-): void {
-  const entry: RadiusProviderEntry = {
-    componentType,
-    provider,
-    isScaleIndependent: opts?.scaleIndependent ?? false,
-  };
-  const index = radiusProviders.findIndex((e) => e.componentType === componentType);
-  if (index >= 0) radiusProviders[index] = entry;
-  else radiusProviders.push(entry);
-}
-
-function findRadiusProvider(entityId: number, world: ECSWorld): RadiusProviderEntry | undefined {
-  for (let i = 0; i < radiusProviders.length; i++) {
-    if (world.hasComponent(entityId, radiusProviders[i].componentType)) return radiusProviders[i];
-  }
-  return undefined;
-}
+// The registry is the kernel's (ECS/SpatialMembership.ts), so other features register into it
+// without importing this module; the mesh and light providers are registered by the install.
 
 const maxAbsScale = (scale: THREE.Vector3 | undefined) =>
   scale ? Math.max(Math.abs(scale.x), Math.abs(scale.y), Math.abs(scale.z)) : 1;
 
-/**
- * A sphere around the geometry's local origin (where its entity's position is) that holds its
- * whole bounding sphere: `|center| + radius`. Conservative for geometry that isn't centred on its
- * origin, where the bounding sphere's radius alone would miss part of it.
- */
-export function getConservativeGeometryRadius(geometry: THREE.BufferGeometry): number {
-  if (!geometry.boundingSphere) geometry.computeBoundingSphere();
-  const sphere = geometry.boundingSphere;
-  return sphere ? sphere.center.length() + sphere.radius : 0;
-}
-
 /** The radius `entityId` has as a member right now: its provider's, scaled by its Transform. */
 function computeSpatialRadius(entityId: number, world: ECSWorld): number {
-  const entry = findRadiusProvider(entityId, world);
+  const entry = findSpatialRadiusProvider(entityId, world);
   const local = entry?.provider(entityId, world) ?? 0;
   if (!entry || entry.isScaleIndependent || !(local > 0) || !Number.isFinite(local)) return local;
   return local * maxAbsScale(world.getScale(entityId));
@@ -794,19 +746,14 @@ const getLightRadius: SpatialRadiusProvider = (entityId, world) => {
     : undefined;
 };
 
-registerSpatialRadiusProvider(ComponentType.TAG_IS_POINT_LIGHT, getLightRadius, {
-  scaleIndependent: true,
-});
-registerSpatialRadiusProvider(ComponentType.TAG_IS_SPOT_LIGHT, getLightRadius, {
-  scaleIndependent: true,
-});
-registerSpatialRadiusProvider(ComponentType.TAG_IS_MESH, (entityId, world) => {
+const getMeshRadius: SpatialRadiusProvider = (entityId, world) => {
   const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
   return obj instanceof THREE.Mesh ? getConservativeGeometryRadius(obj.geometry) : undefined;
-});
+};
 
-ECSWorld.registerComponentHooks(ComponentType.SPATIAL_INDEXED, {
-  onAddComponent: (entityId, world) => {
+// The DEFAULT domain's membership (installSpatialIndex registers it on SPATIAL_INDEXED)
+const spatialIndexedHooks = {
+  onAddComponent: (entityId: number, world: ECSWorld) => {
     if (IS_DEBUG_ENV) {
       const isAmbient = world.hasComponent(entityId, ComponentType.TAG_IS_AMBIENT_LIGHT);
       const isHemisphere = world.hasComponent(entityId, ComponentType.TAG_IS_HEMISPHERE_LIGHT);
@@ -825,9 +772,9 @@ ECSWorld.registerComponentHooks(ComponentType.SPATIAL_INDEXED, {
     // its hooks run)
     else buildDefaultDomain(world, domains);
   },
-  onRemoveComponent: (entityId, world) => leaveDefaultDomain(entityId, world),
-  onDeleteEntity: (entityId, world) => leaveDefaultDomain(entityId, world),
-});
+  onRemoveComponent: (entityId: number, world: ECSWorld) => leaveDefaultDomain(entityId, world),
+  onDeleteEntity: (entityId: number, world: ECSWorld) => leaveDefaultDomain(entityId, world),
+};
 
 function leaveDefaultDomain(entityId: number, world: ECSWorld) {
   const domain = domainsByWorld.get(world)?.byId.get(DEFAULT_SPATIAL_DOMAIN);
@@ -1117,14 +1064,45 @@ export function validateSpatialGridQuery(
   checkQuery(world, domain, oracle, p, r);
 }
 
-ECSWorld.registerPlugin((world) => {
-  // order: -1, matching objectFrustumCullingSystem's precedent — runs after this
-  // stage's default-order (0) systems, in particular physicsToTransformSystem,
-  // so it rebuilds from this frame's final transforms, not last frame's.
-  world.addSystem(
-    ECSSystemStage.APP_POST_PHYSICS,
-    'spatialIndexRebuildSystem',
-    spatialIndexRebuildSystem,
-    -1
-  );
-});
+/**
+ * Installs the spatial index (the `spatial()` feature's install, SpatialFeature.ts): the domain
+ * membership hooks, the mesh and light radius providers, the membership other features join
+ * through, and the rebuild system.
+ * @internal
+ */
+export const installSpatialIndex = (ctx: FeatureContext) => {
+  // onRemoveComponent too, so removing the component directly can't leave stale grid members
+  ctx.registerComponentHooks(ComponentType.SPATIAL_DOMAINS, {
+    onRemoveComponent: leaveMaskedDomains,
+    onDeleteEntity: leaveMaskedDomains,
+  });
+
+  registerSpatialRadiusProvider(ComponentType.TAG_IS_POINT_LIGHT, getLightRadius, {
+    scaleIndependent: true,
+  });
+  registerSpatialRadiusProvider(ComponentType.TAG_IS_SPOT_LIGHT, getLightRadius, {
+    scaleIndependent: true,
+  });
+  registerSpatialRadiusProvider(ComponentType.TAG_IS_MESH, getMeshRadius);
+
+  ctx.registerComponentHooks(ComponentType.SPATIAL_INDEXED, spatialIndexedHooks);
+
+  // How instancing's pools join their `spatialDomain` (ECS/SpatialMembership.ts)
+  setSpatialDomainMembership({
+    hasDomain: (world, domainId) =>
+      domainId === DEFAULT_SPATIAL_DOMAIN || Boolean(getSpatialDomain(world, domainId)),
+    join: joinSpatialDomain,
+  });
+
+  ctx.registerPlugin((world) => {
+    // order: -1, matching objectFrustumCullingSystem's precedent — runs after this
+    // stage's default-order (0) systems, in particular physicsToTransformSystem,
+    // so it rebuilds from this frame's final transforms, not last frame's.
+    world.addSystem(
+      ECSSystemStage.APP_POST_PHYSICS,
+      'spatialIndexRebuildSystem',
+      spatialIndexRebuildSystem,
+      -1
+    );
+  });
+};

@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from './SystemStages';
-import { ECSWorld } from '../ECS';
+import type { ECSWorld } from '../ECS';
+import type { FeatureContext } from '../Features';
 import { getMainCamera } from '../CameraManager';
 import { ComponentType } from './ECSCoreComponents';
 import { reconcileObject3DVisibility } from './ECSCoreSystems';
@@ -12,20 +13,6 @@ import {
   getSpatialDomain,
   validateSpatialGridQuery,
 } from '../Spatial/SpatialIndexSystem';
-
-// --- OBJECT (CONTRIBUTION) CULLING VISIBILITY HOOK ---
-// A third, independent cull reason alongside DISABLED and TAG_FRUSTUM_CULLED,
-// reconciled through the shared helper rather than another pairwise
-// visibility guard.
-
-ECSWorld.registerComponentHooks(ComponentType.TAG_OBJECT_CULLED, {
-  onAddComponent: (entityId, world) => {
-    reconcileObject3DVisibility(entityId, world, { isObjectCulled: true });
-  },
-  onRemoveComponent: (entityId, world) => {
-    reconcileObject3DVisibility(entityId, world, { isObjectCulled: false });
-  },
-});
 
 // --- NEARBY-MESH TEST ---
 // Candidates come from the spatial index (docs/plans/_DONE_p050_spatial-index.md);
@@ -114,14 +101,33 @@ export const lightObjectCullingSystem = (world: ECSWorld) => {
   }
 };
 
-ECSWorld.registerPlugin((world) => {
-  // LIGHT_CULLING (-2), one below objectFrustumCullingSystem's FRUSTUM_CULLING (-1) —
-  // runs after frustum culling has updated TAG_FRUSTUM_CULLED for this
-  // frame, so the skip above sees this frame's result, not last frame's.
-  world.addSystem(
-    ECSSystemStage.APP_RENDER_SYNC,
-    'lightObjectCullingSystem',
-    lightObjectCullingSystem,
-    APP_RENDER_SYNC_ORDER.LIGHT_CULLING
-  );
-});
+/**
+ * Installs light (contribution) culling (the `spatial()` feature's install, SpatialFeature.ts):
+ * the visibility hook and the culling system.
+ * @internal
+ */
+export const installLightObjectCulling = (ctx: FeatureContext) => {
+  // The object (contribution) culling visibility hook: a third, independent cull reason
+  // alongside DISABLED and TAG_FRUSTUM_CULLED, reconciled through the shared helper rather than
+  // another pairwise visibility guard.
+  ctx.registerComponentHooks(ComponentType.TAG_OBJECT_CULLED, {
+    onAddComponent: (entityId, world) => {
+      reconcileObject3DVisibility(entityId, world, { isObjectCulled: true });
+    },
+    onRemoveComponent: (entityId, world) => {
+      reconcileObject3DVisibility(entityId, world, { isObjectCulled: false });
+    },
+  });
+
+  ctx.registerPlugin((world) => {
+    // LIGHT_CULLING (-2), one below objectFrustumCullingSystem's FRUSTUM_CULLING (-1) —
+    // runs after frustum culling has updated TAG_FRUSTUM_CULLED for this
+    // frame, so the skip above sees this frame's result, not last frame's.
+    world.addSystem(
+      ECSSystemStage.APP_RENDER_SYNC,
+      'lightObjectCullingSystem',
+      lightObjectCullingSystem,
+      APP_RENDER_SYNC_ORDER.LIGHT_CULLING
+    );
+  });
+};

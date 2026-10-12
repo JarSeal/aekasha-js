@@ -109,6 +109,17 @@ export const onGeometryDeleted = (listener: GeometryDeleteListener) => {
   return () => deleteListeners.delete(listener);
 };
 
+/**
+ * A sphere around the geometry's local origin (where its entity's position is) that holds its
+ * whole bounding sphere: `|center| + radius`. Conservative for geometry that isn't centred on its
+ * origin, where the bounding sphere's radius alone would miss part of it.
+ */
+export function getConservativeGeometryRadius(geometry: THREE.BufferGeometry): number {
+  if (!geometry.boundingSphere) geometry.computeBoundingSphere();
+  const sphere = geometry.boundingSphere;
+  return sphere ? sphere.center.length() + sphere.radius : 0;
+}
+
 /** Frees the geometry's VRAM and removes it from the registry. */
 const removeGeometry = (id: string) => {
   const entry = geometries[id];

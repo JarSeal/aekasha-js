@@ -97,8 +97,16 @@ Systems, loopers and anything else that runs every frame or every physics step:
 Only what an app uses ships.
 
 - **No module-level side effects.** Registering a system, a component hook or a plugin happens
-  when the feature is installed, not when its module is imported, so importing a type or an unused
-  function costs nothing.
+  when the feature is installed (its `install`, listed in `InitEngine`'s `features`), not when its
+  module is imported, so importing a type or an unused function costs nothing. `package.json`'s
+  `sideEffects` tells the bundler so: a build drops a module none of whose names are used, its
+  top-level code with it. `yarn test` fails on a top-level statement outside the entries, the
+  workers and the debug modules (`moduleSideEffects.test.ts`); a top-level `const x = register()`
+  slips past it, so don't write one.
+- **Debug code folds away.** In a production build the debug flags (`IS_DEBUG_ENV`, …) are the
+  constant `false` (the `__AEK_DEBUG__` define), so the code behind them and the `_dbg__` modules
+  it would load aren't in the bundle. Keep debug calls out of `try` blocks: the bundler keeps a
+  `try` block's calls whole. `yarn verify:baselines` fails on debug code in a production build.
 - **Heavy dependencies behind `import()`:** a physics backend, a loader, a decoder, a debug panel.
 - **Import what you use,** never a barrel of three's addons (`three/examples/jsm/Addons.js`).
 

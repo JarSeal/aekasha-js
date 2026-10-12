@@ -6,8 +6,9 @@ import { existsOrThrow } from '../utils/assert';
 import { lerror, lwarn } from '../utils/Logger';
 import { IS_DEBUG_ENV } from './Config';
 import type { DebugModuleRef } from '../utils/helpers';
-import { loadDebugModule, loadDebugModuleAsync, useDebug } from '../utils/helpers';
-import { ECSWorld, getECSWorld, getEntityIdByAppId } from './ECS';
+import { loadDebugModuleAsync, useDebug } from '../utils/helpers';
+import { type ECSWorld, getECSWorld, getEntityIdByAppId, type TransformResetListener } from './ECS';
+import type { FeatureContext } from './Features';
 import { ComponentType } from './ECS/ECSCoreComponents';
 import type { IComponentStorage } from './ECS/ECSComponentStorage';
 import {
@@ -92,21 +93,17 @@ export const deriveColliderDimensionsFromMesh = (
   }
 };
 
-export const registerPhysicsManager = (world: ECSWorld) => {
-  if (IS_DEBUG_ENV) {
-    // Per-entity collider wireframes. Self-registers its ECS hooks/system on
-    // import; nothing runs until an entity actually gets a DEBUG_PHYSICS_WIREFRAME
-    // component, and none of it reaches a production bundle.
-    debugPhysicsDraw = loadDebugModule(() => import('./Debug/_dbg__PhysicsDebugDraw'));
-
-    registerOnAllSceneEnterings('physicsWireframeMasterVisibilitySync', () => {
-      const sceneId = getCurrentSceneId();
-      if (sceneId) useDebug(debugPhysicsDraw)?.syncWireframeMasterVisibilityFromLS(sceneId);
-    });
-  }
-
+/**
+ * Installs the physics entities' side (the physics feature's install): the transform reset
+ * listener, the moved-body listener, the `TAG_IS_PHYSICS_OBJECT` delete hook, and `world`'s
+ * physics → transform sync, interpolation and ray stats systems (that world only: the default
+ * one).
+ * @internal
+ */
+export const installPhysicsEntities = (ctx: FeatureContext, world: ECSWorld) => {
+  ctx.registerTransformResetListener(onPhysicsTransformReset);
   setBodyMovedListener(onBodyMoved);
-  ECSWorld.registerComponentHooks(ComponentType.TAG_IS_PHYSICS_OBJECT, {
+  ctx.registerComponentHooks(ComponentType.TAG_IS_PHYSICS_OBJECT, {
     onDeleteEntity: (entityId, w) => {
       const body = getEntityBody(w, entityId);
       if (body) {
@@ -139,6 +136,18 @@ export const registerPhysicsManager = (world: ECSWorld) => {
     () => endPhysicsRayStatsFrame(readStatsClock()),
     -1000
   );
+};
+
+/** Debug only: loads and installs the per-entity collider wireframes (_dbg__PhysicsDebugDraw.ts:
+ * its ECS hooks and system; nothing runs until an entity gets a DEBUG_PHYSICS_WIREFRAME
+ * component) and syncs their master visibility on every scene enter. */
+export const registerPhysicsWireframeDebugAsync = async () => {
+  debugPhysicsDraw = await loadDebugModuleAsync(() => import('./Debug/_dbg__PhysicsDebugDraw'));
+  useDebug(debugPhysicsDraw)?._installPhysicsWireframes();
+  registerOnAllSceneEnterings('physicsWireframeMasterVisibilitySync', () => {
+    const sceneId = getCurrentSceneId();
+    if (sceneId) useDebug(debugPhysicsDraw)?.syncWireframeMasterVisibilityFromLS(sceneId);
+  });
 };
 
 /** Debug only: loads the physics determinism probe (_dbg__PhysicsDeterminism.ts). Must run
@@ -721,7 +730,7 @@ const createInterpolationHistory = (): InterpolationHistory => ({
 // history isn't reseeded here: under WORKER_THREAD rb.pos is still the not-yet-stepped pending
 // value, and stamping it with the latest snapshot's step would place it at a simulated time it
 // doesn't belong to. The reset pose is shown as-is instead until a later-stamped snapshot lands.
-ECSWorld.registerTransformResetListener((world, entityId) => {
+const onPhysicsTransformReset: TransformResetListener = (world, entityId) => {
   if (!world.hasComponent(entityId, ComponentType.BODY_DYNAMIC_VISUAL)) return;
   const transform = world.getComponent(entityId, ComponentType.TRANSFORM);
   if (!transform) return;
@@ -743,7 +752,7 @@ ECSWorld.registerTransformResetListener((world, entityId) => {
   history.snapPose ??= new Float32Array(POSE_FLOATS);
   writeHistorySlot(history.snapPose, 0);
   history.snapUntilStep = getPhysicsWriteVisibleStep();
-});
+};
 
 /**
  * Render-only smoothing on top of the discrete physics-step pose: writes the blended pose only

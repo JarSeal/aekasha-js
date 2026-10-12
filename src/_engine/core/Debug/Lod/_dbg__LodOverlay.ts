@@ -7,6 +7,7 @@ import type { LineObject } from '../../LineManager';
 import {
   BOX_EDGE_SEGMENT_COUNT,
   createLines,
+  isLinesInstalledFor,
   type LineWriter,
   writeBox3Edges,
 } from '../../LineManager';
@@ -93,6 +94,8 @@ export const isLodOverlayEnabled = () => isEnabled;
 
 /** Shows or hides the overlay. The lines and the system are created on the first enable. */
 export const setLodOverlayEnabled = (enabled: boolean) => {
+  // Drawn as lines: off without the feature
+  if (enabled && !isLinesInstalledFor('LOD overlay')) return;
   isEnabled = enabled;
   if (enabled && lines.length === 0) {
     for (let i = 0; i < LOD_OVERLAY_COLORS.length; i++) lines.push(createLevelLine(i));

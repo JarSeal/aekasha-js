@@ -1,11 +1,7 @@
 import * as THREE from 'three/webgpu';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { isOnlyObject3D } from '../../utils/object3DHelpers';
-import {
-  getGLTFLodChainKey,
-  type ExtractedLodChain,
-  type GLTFLodChains,
-} from '../Lod/LodChainGLTF';
+import type { ExtractedLodChain, GLTFLodChains } from '../Lod/LodChainGLTF';
 import { parseCustomProps } from './CustomProps';
 import type { ImportedGeometryInfo } from './ImportTypes';
 
@@ -33,6 +29,12 @@ export type ExtractedPrimitive = {
 export type ExtractResult =
   | { primitives: ExtractedPrimitive[]; error?: undefined }
   | { primitives?: undefined; error: string };
+
+/**
+ * A mesh primitive's key in a glTF file (its mesh index and primitive index): what prebuilt
+ * per-primitive data, like the LOD chains (`GLTFLodChains`), is keyed by.
+ */
+export const getGLTFPrimitiveKey = (mesh: number, primitive: number) => `${mesh}:${primitive}`;
 
 /** A Blender export often has a single empty Object3D as its only root: its children are then
  * the real pieces, and transforms are relative to it. */
@@ -115,7 +117,7 @@ export const extractPrimitives = (
 
     const lodChain =
       assoc.meshes !== undefined
-        ? lodChains?.get(getGLTFLodChainKey(assoc.meshes, assoc.primitives ?? 0))
+        ? lodChains?.get(getGLTFPrimitiveKey(assoc.meshes, assoc.primitives ?? 0))
         : undefined;
     primitives.push({
       geometry: mesh.geometry,

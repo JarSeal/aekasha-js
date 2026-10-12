@@ -63,6 +63,11 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/Character/CharacterFeature.ts": {
+      "to": "src/_engine/features/character/CharacterFeature.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/core/Character/CharacterInputSchemes.ts": {
       "to": "src/_engine/features/character/CharacterInputSchemes.ts",
       "action": "move",
@@ -669,8 +674,18 @@
       "plan": "p608",
       "note": "the spatial feature owns light culling (p602 D2)"
     },
+    "src/_engine/core/ECS/LodTargets.ts": {
+      "to": "src/_engine/kernel/ecs/LodTargets.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/core/ECS/ObjectFrustumCullingSystem.ts": {
       "to": "src/_engine/kernel/ecs/ObjectFrustumCullingSystem.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/ECS/SpatialMembership.ts": {
+      "to": "src/_engine/kernel/ecs/SpatialMembership.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -684,6 +699,17 @@
       "to": "src/_engine/kernel/ecs/TypedArrayTransformStore.ts",
       "action": "move",
       "plan": "p608"
+    },
+    "src/_engine/core/Features.test.ts": {
+      "to": "src/_engine/kernel/init/Features.test.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/Features.ts": {
+      "to": "src/_engine/kernel/init/Features.ts",
+      "action": "move",
+      "plan": "p608",
+      "note": "the install contract (p607 D1): the features install through it"
     },
     "src/_engine/core/Geometry.ts": {
       "to": "src/_engine/kernel/assets/Geometry.ts",
@@ -745,6 +771,22 @@
       "to": "src/_engine/kernel/assets/import/GLTFTextures.ts",
       "action": "move",
       "plan": "p608"
+    },
+    "src/_engine/core/Import/ImportExtensions.test.ts": {
+      "to": "src/_engine/kernel/assets/import/ImportExtensions.test.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/Import/ImportExtensions.ts": {
+      "to": "src/_engine/kernel/assets/import/ImportExtensions.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/Import/ImportPhysics.ts": {
+      "to": "src/_engine/features/physics/import/ImportPhysics.ts",
+      "action": "move",
+      "plan": "p608",
+      "note": "spawnImportedAsset's physics half: the physics feature's import extension (p607 D5)"
     },
     "src/_engine/core/Import/ImportRegistry.ts": {
       "to": "src/_engine/kernel/assets/import/ImportRegistry.ts",
@@ -837,6 +879,17 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/Instancing/InstancingFeature.ts": {
+      "to": "src/_engine/features/instancing/InstancingFeature.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/Kernel.ts": {
+      "to": "src/_engine/kernel/init/Kernel.ts",
+      "action": "move",
+      "plan": "p608",
+      "note": "the kernel's install (p607 D2): InitEngine runs it before the first world"
+    },
     "src/_engine/core/LightManager.ts": {
       "to": "src/_engine/kernel/light/Light.ts",
       "action": "move",
@@ -884,6 +937,11 @@
     },
     "src/_engine/core/Lines/LineRegistry.ts": {
       "to": "src/_engine/features/lines/LineRegistry.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/Lines/LinesFeature.ts": {
+      "to": "src/_engine/features/lines/LinesFeature.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -939,6 +997,11 @@
     },
     "src/_engine/core/Lod/Impostors/ImpostorRegistry.ts": {
       "to": "src/_engine/features/lod/impostors/ImpostorRegistry.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/Lod/Impostors/ImpostorSchema.ts": {
+      "to": "src/_engine/features/lod/impostors/ImpostorSchema.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -998,7 +1061,23 @@
       "plan": "p608"
     },
     "src/_engine/core/Lod/LodFade.ts": {
-      "to": "src/_engine/features/lod/LodFade.ts",
+      "to": "src/_engine/kernel/render/LodFade.ts",
+      "action": "move",
+      "plan": "p608",
+      "note": "the dither fade (three only): the LOD system and instancing's LOD pools draw with it (p607 D5)"
+    },
+    "src/_engine/core/Lod/LodFeature.ts": {
+      "to": "src/_engine/features/lod/LodFeature.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/Lod/LodImport.ts": {
+      "to": "src/_engine/features/lod/LodImport.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/Lod/LodSchema.ts": {
+      "to": "src/_engine/features/lod/LodSchema.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -1082,6 +1161,11 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/PhysicsFeature.ts": {
+      "to": "src/_engine/features/physics/PhysicsFeature.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/core/PhysicsManager.ts": {
       "to": "src/_engine/features/physics/PhysicsEntity.ts",
       "action": "move",
@@ -1099,6 +1183,16 @@
     },
     "src/_engine/core/PostFX.ts": {
       "to": "src/_engine/features/postfx/PostFX.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/PostFX/PostFXFeature.ts": {
+      "to": "src/_engine/features/postfx/PostFXFeature.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/PostFX/PostFXSchema.ts": {
+      "to": "src/_engine/features/postfx/PostFXSchema.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -1129,10 +1223,32 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/RenderHooks.test.ts": {
+      "to": "src/_engine/kernel/render/RenderHooks.test.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/RenderHooks.ts": {
+      "to": "src/_engine/kernel/render/RenderHooks.ts",
+      "action": "move",
+      "plan": "p608",
+      "note": "the render seams (p607 D5): PostFX's pipeline and the viewports' after-render hook"
+    },
     "src/_engine/core/Scene.ts": {
       "to": "src/_engine/kernel/scene/Scene.ts",
       "action": "move",
       "plan": "p608"
+    },
+    "src/_engine/core/SceneHooks.test.ts": {
+      "to": "src/_engine/kernel/scene/SceneHooks.test.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/SceneHooks.ts": {
+      "to": "src/_engine/kernel/scene/SceneHooks.ts",
+      "action": "move",
+      "plan": "p608",
+      "note": "the scene seams (p607 D4): the features' part of a scene load"
     },
     "src/_engine/core/SceneLoader.ts": {
       "to": "src/_engine/kernel/scene/SceneLoader.ts",
@@ -1199,6 +1315,16 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/SkyBox/SkyBoxFeature.ts": {
+      "to": "src/_engine/features/skybox/SkyBoxFeature.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/SkyBox/SkyBoxSchema.ts": {
+      "to": "src/_engine/features/skybox/SkyBoxSchema.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/core/SkyBox/SkyBoxTypes.ts": {
       "to": "src/_engine/features/skybox/SkyBoxTypes.ts",
       "action": "move",
@@ -1259,6 +1385,11 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/Spatial/SpatialFeature.ts": {
+      "to": "src/_engine/features/spatial/SpatialFeature.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/core/Spatial/SpatialGrid.ts": {
       "to": "src/_engine/features/spatial/SpatialGrid.ts",
       "action": "move",
@@ -1266,6 +1397,11 @@
     },
     "src/_engine/core/Spatial/SpatialIndexSystem.ts": {
       "to": "src/_engine/features/spatial/SpatialIndexSystem.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/Spatial/SpatialSchema.ts": {
+      "to": "src/_engine/features/spatial/SpatialSchema.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -1327,6 +1463,11 @@
     },
     "src/_engine/core/UI/DropDown.ts": {
       "to": "src/_engine/ui/DropDown.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/core/UI/icons/BuiltInIcons.ts": {
+      "to": "src/_engine/ui/icons/BuiltInIcons.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -1620,6 +1761,11 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/core/ViewportsFeature.ts": {
+      "to": "src/_engine/features/viewports/ViewportsFeature.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/debug/3DSymbols.ts": {
       "to": "src/_engine/debug/symbols/3DSymbols.ts",
       "action": "move",
@@ -1798,6 +1944,16 @@
       "action": "move",
       "plan": "p608"
     },
+    "src/_engine/schemas/featureSchemas.test.ts": {
+      "to": "src/_engine/schemas/FeatureSchemas.test.ts",
+      "action": "move",
+      "plan": "p608"
+    },
+    "src/_engine/schemas/featureSchemas.ts": {
+      "to": "src/_engine/schemas/FeatureSchemas.ts",
+      "action": "move",
+      "plan": "p608"
+    },
     "src/_engine/schemas/geometrySchema.ts": {
       "to": "src/_engine/schemas/GeometrySchema.ts",
       "action": "move",
@@ -1805,11 +1961,6 @@
     },
     "src/_engine/schemas/importedAssetSchema.ts": {
       "to": "src/_engine/schemas/ImportedAssetSchema.ts",
-      "action": "move",
-      "plan": "p608"
-    },
-    "src/_engine/schemas/impostorSchema.ts": {
-      "to": "src/_engine/schemas/ImpostorSchema.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -1825,11 +1976,6 @@
     },
     "src/_engine/schemas/lodChainSchema.ts": {
       "to": "src/_engine/schemas/LodChainSchema.ts",
-      "action": "move",
-      "plan": "p608"
-    },
-    "src/_engine/schemas/lodSchema.ts": {
-      "to": "src/_engine/schemas/LodSchema.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -1850,11 +1996,6 @@
     },
     "src/_engine/schemas/sceneSchema.ts": {
       "to": "src/_engine/schemas/SceneSchema.ts",
-      "action": "move",
-      "plan": "p608"
-    },
-    "src/_engine/schemas/skyBoxSchema.ts": {
-      "to": "src/_engine/schemas/SkyBoxSchema.ts",
       "action": "move",
       "plan": "p608"
     },
@@ -2078,9 +2219,10 @@
       "plan": "p608"
     },
     "src/_engine/workers/assets/assetsSwitchSimplify.ts": {
-      "to": "src/_engine/kernel/assets/worker/AssetsSwitchSimplify.ts",
+      "to": "src/_engine/features/lod/worker/AssetsSwitchSimplify.ts",
       "action": "move",
-      "plan": "p608"
+      "plan": "p608",
+      "note": "the LOD feature's worker job: the assets worker loads it on the first one (p607 D5)"
     },
     "src/_engine/workers/assets/assetsSwitchTexture.ts": {
       "to": "src/_engine/kernel/assets/worker/AssetsSwitchTexture.ts",

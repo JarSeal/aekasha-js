@@ -14,6 +14,7 @@ import { getECSWorld, type ECSWorld } from '../../ECS';
 import { ComponentType } from '../../ECS/ECSCoreComponents';
 import {
   createLines,
+  isLinesInstalledFor,
   preloadFatLineBackend,
   type LineObject,
   type LineWriter,
@@ -789,7 +790,8 @@ const disposeSet = (set: CharacterGizmoSet) => {
  * when there is no such character. */
 export const acquireCharacterGizmos = (charId: string, owner: object) => {
   const character = getCharacterById(charId);
-  if (!character) return null;
+  // Drawn as lines: none without the feature
+  if (!character || !isLinesInstalledFor('character gizmos')) return null;
   let set = sets.get(charId);
   if (set && set.entityId !== character.entityId) {
     disposeSet(set);

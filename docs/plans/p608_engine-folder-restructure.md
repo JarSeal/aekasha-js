@@ -1,9 +1,9 @@
 Status: stub — not-implemented
 Category: Refactoring, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
-Blocked by: p607_sbp-foundation-feature-modules.md, p299_texture-arrays-and-atlases.md (in progress: merged before the move)
+Blocked by: p299_texture-arrays-and-atlases.md (in progress: merged before the move)
 Blocks: p609_toolkit-and-app-restructure.md, p610_character-and-input-action-architecture.md, p611_sbp-tooling-profiles-and-marketing.md, p612_review-ecs-loop-config-init.md, p613_review-rendering-scene-assets.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p510_headless-simulation-runtime.md
-Related: \_DONE_p606_layering-inversion-and-public-entry.md (the entries this plan re-points, `moveRules.ts`, the import codemod)
+Related: \_DONE_p607_sbp-foundation-feature-modules.md (the features, the seams and what they leave for the moves: "From p607" below), \_DONE_p606_layering-inversion-and-public-entry.md (the entries this plan re-points, `moveRules.ts`, the import codemod)
 
 # Engine Folder Restructure — Stub
 
@@ -43,6 +43,44 @@ no behaviour change.
 - **What must survive** (p600 §3.7): LS keys, `__saveData`, URL flags, the Hub's `#region`
   includes, the generated data's shape, every scene's snapshot and hash.
 - Runs when no other branch is open (p600 §12.4).
+
+## From p607 (2026-10-12)
+
+p607 (the feature modules) is done up to its changelog. What it leaves for the moves:
+
+- **Its new files have their move rules** (`moveRules.ts`; `moveMap.ts --check` passes): each
+  `<Name>Feature.ts` into `features/<name>/` (`core/PhysicsFeature.ts`, `core/ViewportsFeature.ts`
+  included), `Features.ts` and `Kernel.ts` → `kernel/init/`, `SceneHooks.ts` → `kernel/scene/`,
+  `RenderHooks.ts` → `kernel/render/`, `ECS/LodTargets.ts` and `ECS/SpatialMembership.ts` →
+  `kernel/ecs/`, `Import/ImportPhysics.ts` → `features/physics/import/`,
+  `workers/assets/assetsSwitchSimplify.ts` → `features/lod/worker/`, and the feature schemas it
+  moved next to their features (`SkyBox/SkyBoxSchema.ts`, `Lod/LodSchema.ts`,
+  `Lod/Impostors/ImpostorSchema.ts`, `PostFX/PostFXSchema.ts`, `Spatial/SpatialSchema.ts`).
+- **Mapped but not moved:** `Lod/LodFade.ts` → `kernel/render/LodFade.ts` (the dither primitive
+  the LOD system and the instanced LOD pools both draw with).
+- **Engine paths p607 hard-coded,** for the codemod's list: `devTools/verify/debugInProduction.ts`
+  (`/src/_engine/core/Debug/` and the `debug/*.ts` wrappers), `moduleSideEffects.test.ts`'
+  `EXEMPT` (`core/Debug/`, the two worker entries) and `eslint.config.js`' `DEBUG_FILES` (already
+  in the scope's list). When D4 moves the debug modules next to their features and the wrappers
+  merge into their features' public modules (p606 D2), these patterns follow: `_dbg__*` stays the
+  rule, the folder patterns go.
+- **Merging a debug wrapper into a feature module** must keep its debug code foldable (p607 D7):
+  the calls behind `IS_DEBUG_ENV`, none inside a `try` block (Rollup keeps a `try` block's calls
+  whole), and a closure handed to `ctx.onDebug*` that would keep a module alive gated with
+  `if (IS_DEBUG_ENV)`. `yarn verify:baselines`' production debug check catches a leftover.
+- **The layout report:** "Kernel → feature" has no runtime or dynamic rows, 22 type-only ones
+  (p607 D6: they move as they are; p612 decides). Its "Assets worker job modules" section lists the
+  worker's two `import()`s of feature code (`assetsWorker.ts` → `assetsSwitchSimplify.ts`,
+  `assetsSwitchGLTF.ts` → `LodChainGLTF.ts`), which `moveMap.ts` allows from
+  `kernel/assets/worker/`. `moveMap.ts` skips the layer rules for an entry file. The only
+  feature → feature runtime dependency is character → physics.
+- **`entryExports.json` files an export under its folder's entry,** so the schemas p607 moved show
+  under `aekasha/skybox` / `aekasha/lod` while `aekasha/schemas` exports them (p607 Phase 9: no
+  name in two entries). Their entry stays `aekasha/schemas`.
+- **The system order** is a scene runner baseline now (p607 Phase 1). Nothing registers at module
+  load outside the `_dbg__` modules, so a move can't change it, but a `_dbg__` module that another
+  imports statically still registers at its first importer's load: a moved import order there
+  shows as a system order change.
 
 ## Inputs
 

@@ -4,7 +4,7 @@
 // scene file runs. A generator called with a listed id then builds from the definition and the
 // loaded slots instead of baking. Shared by both kinds.
 import type * as THREE from 'three/webgpu';
-import type { ImpostorDef } from '../../../schemas/impostorSchema';
+import type { ImpostorDef } from './ImpostorSchema';
 import { lwarn } from '../../../utils/Logger';
 import { isDebugEnvironment } from '../../Config';
 import { getCurrentSceneId, getGeneratedSceneData } from '../../Scene';

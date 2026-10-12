@@ -11,6 +11,8 @@ export default defineConfig({
   // The build-time constants vite.config.ts defines (core/Config.ts reads it at load)
   define: {
     __PROJECT_METADATA__: getProjectMetadata(),
+    // The debug code stays: a test sets the debug env with initEnvironment
+    __AEK_DEBUG__: true,
   },
   test: {
     include: ['src/**/*.test.ts', 'devTools/**/*.test.ts'],

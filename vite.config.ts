@@ -13,7 +13,7 @@ import { devFilesPlugin } from './devTools/devFilesPlugin.ts';
 import { hubPlugin } from './devTools/hubPlugin.ts';
 import { getProjectMetadata } from './devTools/projectMetadata.ts';
 // The public entries' import aliases (`aekasha`, `aekasha/*`, p606)
-import { getEntryModuleSideEffects, getViteAliases } from './devTools/aliases.ts';
+import { getViteAliases } from './devTools/aliases.ts';
 
 const REPO_ROOT = fileURLToPath(new URL('.', import.meta.url));
 
@@ -43,6 +43,11 @@ const crossOriginIsolationPlugin = () => ({
 // The versions, packages and build info: `__PROJECT_METADATA__` and index.html's placeholders
 const meta = getProjectMetadata();
 
+// `__AEK_DEBUG__` (p607 D7): whether the debug tooling can run, as `initEnvironment` reads the
+// environment (only 'development' and 'test' read `?isDebug` / `?isProdTest`). False folds the
+// debug flags, so a production build drops the debug code (the dev server and workers included).
+const isDebugBuild = ['development', 'test'].includes(process.env.VITE_APP_ENV ?? '');
+
 export default defineConfig({
   root: './src',
   // Workers resolve with these too
@@ -56,7 +61,8 @@ export default defineConfig({
     manifest: true,
     minify: true,
     reportCompressedSize: true,
-    rollupOptions: { treeshake: { moduleSideEffects: getEntryModuleSideEffects(REPO_ROOT) } },
+    // Tree-shaking reads package.json's `sideEffects` (p607 D13): every module in `src/` but the
+    // stylesheets is side-effect free, so the build keeps only what's used (the entries included)
   },
   // ES module workers: an IIFE worker can't be code-split, and the assets worker loads the
   // meshopt simplifier on demand (docs/plans/_DONE_p347_lod-chain-generation.md, Phase 0). The dev server
@@ -130,5 +136,6 @@ export default defineConfig({
   ],
   define: {
     __PROJECT_METADATA__: meta,
+    __AEK_DEBUG__: isDebugBuild,
   },
 });

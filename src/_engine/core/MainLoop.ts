@@ -13,12 +13,6 @@ import { lerror, lwarn } from '../utils/Logger';
 import { getWindowSize } from '../utils/Window';
 import { getEnv, isDebugEnvironment, isProdTestMode, isProductionEnvironment } from './Config';
 import { initDebugTools } from '../debug/DebugToolsManager';
-import {
-  flushPhysicsEvents,
-  getPhysicsState,
-  latchPhysicsSnapshot,
-  stepPhysics,
-} from './PhysicsAPI';
 import { pollHeldKeyBindings } from './Input/KeyboardInput';
 import { initRayCasting } from './Raycast';
 import { getAllECSWorlds } from './ECS';
@@ -26,8 +20,7 @@ import { getActiveCamera } from './CameraManager';
 import { existsOrThrow } from '../utils/assert';
 import type { DebugModuleRef } from '../utils/helpers';
 import { loadDebugModuleAsync, useDebug } from '../utils/helpers';
-import { getActivePostFxPipeline } from './PostFX';
-import { renderViewports } from './Viewports';
+import { getRenderPipeline, runAfterRenderHooks } from './RenderHooks';
 import { updateDebuggerTab } from '../debug/DebuggerGUI';
 import { getActiveView, runActiveViewAfterRender, runActiveViewFrame } from './ViewManager';
 
@@ -60,16 +53,27 @@ const shouldSkipFrameForMaxFPS = () => {
   return false;
 };
 
+/** The main loop's play state, which a {@link FixedStepDriver} reads to know when it is paused. */
 export type LoopState = {
+  /** The master loop is set to play (everything runs). */
   masterPlay: boolean;
+  /** The app loop is set to play (physics and the app stages run). */
   appPlay: boolean;
+  /** The master loop played this frame. */
   isMasterPlaying: boolean;
+  /** The app loop played this frame. */
   isAppPlaying: boolean;
+  /** Scales every delta (1: real time). */
   playSpeedMultiplier: number;
+  /** The max FPS limiter's rate (0: off). */
   maxFPS: number;
+  /** `1000 / maxFPS`, in milliseconds. */
   maxFPSInterval: number;
+  /** The page is hidden (another tab, a minimized window). */
   isWindowHidden: boolean;
+  /** The page is unloading. */
   isUnloading: boolean;
+  /** A scene load is in progress. */
   isLoadingScene: boolean;
   /** An editor view is active (ViewManager.ts): the loaded scene is neither rendered nor ticked,
    * and physics sees it as a pause. */
@@ -172,34 +176,75 @@ export const setFrameProbe = (probe: FrameProbe | null) => {
   frameProbe = probe;
 };
 
-/** Everything that has to run in lockstep with the simulation, once per fixed physics
- * sub-step right before it (see stepPhysics): held-key input, then the previous step's
- * collision events, then every world's APP_PHYSICS_STEP systems (see flushPhysicsEvents for
- * why the order matters). */
-const runPhysicsSubStep = (stepDelta: number) => {
+/**
+ * The loop's fixed-step seam (p607 D5): what drives a simulation at a fixed timestep, set by the
+ * feature that owns it (`physics()`, through `FeatureContext.setFixedStepDriver`). One per page.
+ * Without one, the loop polls held keys once per frame with the frame's delta.
+ */
+export type FixedStepDriver = {
+  /** Once per frame, right after the timer update: makes this frame's simulation state visible
+   * (every reader in the frame sees the same snapshot). */
+  latch: () => void;
+  /** Once per frame: takes this frame's fixed steps from the time that passed, calling
+   * `onBeforeStep` right before each one with the fixed timestep. While `loopState` says paused
+   * (the app or master loop, or the scene suspended by an editor view), the loop calls it
+   * without `onBeforeStep`: it steps nothing then, only notes the pause, so resuming doesn't
+   * catch up on the paused time. */
+  step: (loopState: Readonly<LoopState>, onBeforeStep?: (stepDelta: number) => void) => void;
+  /** Delivers the previous step's events (collisions, contact forces): the loop calls it in each
+   * sub-step, after the held keys and before the `APP_PHYSICS_STEP` systems. */
+  flushEvents: () => void;
+  /** Whether the simulation steps at all (enabled and its world stepping): when it doesn't, the
+   * loop polls held keys once per frame itself. */
+  isStepping: () => boolean;
+};
+
+let fixedStepDriver: FixedStepDriver | null = null;
+
+/**
+ * Sets the fixed-step driver (`FeatureContext.setFixedStepDriver`). Throws on a second one.
+ * @internal
+ */
+export const setFixedStepDriver = (driver: FixedStepDriver) => {
+  if (fixedStepDriver) {
+    throw new Error(
+      'setFixedStepDriver: a fixed-step driver is already set (one feature drives the fixed steps).'
+    );
+  }
+  fixedStepDriver = driver;
+};
+
+/** Everything that has to run in lockstep with the simulation, once per fixed sub-step right
+ * before it (see FixedStepDriver.step): held-key input, then the previous step's events, then
+ * every world's APP_PHYSICS_STEP systems (see PhysicsAPI.ts's flushPhysicsEvents for why the
+ * order matters). Only called by the driver, so it is set. */
+const runFixedSubStep = (stepDelta: number) => {
   pollHeldKeyBindings(stepDelta);
-  flushPhysicsEvents();
+  fixedStepDriver!.flushEvents();
   for (const world of getAllECSWorlds()) world.updatePhysicsStep(stepDelta);
 };
 
-/** Steps the new Physics API (running runPhysicsSubStep before each sub-step). Falls back to
- * polling held keys once with the raw frame delta whenever physics itself isn't running at
- * all, so held-key-driven input (e.g. debug camera movement) still works with physics off. */
-const stepPhysicsAndPollHeldKeys = (delta: number) => {
-  stepPhysics(loopState, runPhysicsSubStep);
-  const physicsState = getPhysicsState();
-  if (!physicsState.enabled || !physicsState.worldStepEnabled) pollHeldKeyBindings(delta);
+/** Takes the frame's fixed steps (running runFixedSubStep before each). Falls back to polling
+ * held keys once with the raw frame delta whenever nothing steps (no driver, or physics off), so
+ * held-key-driven input (e.g. debug camera movement) still works without physics. */
+const stepFixedAndPollHeldKeys = (delta: number) => {
+  const driver = fixedStepDriver;
+  if (driver) {
+    driver.step(loopState, runFixedSubStep);
+    if (driver.isStepping()) return;
+  }
+  pollHeldKeyBindings(delta);
 };
 
-/** Called instead of stepPhysicsAndPollHeldKeys while the app loop is paused. It steps nothing,
- * but stepPhysics() is what notices the pause, so it can discard the paused time on resume
+/** Called instead of stepFixedAndPollHeldKeys while the app loop is paused. It steps nothing,
+ * but the driver's step is what notices the pause, so it can discard the paused time on resume
  * instead of catching up on it (up to maxDeltaTime worth of steps in one frame). */
-const notePhysicsAppPause = () => stepPhysics(loopState);
+const noteFixedStepPause = () => fixedStepDriver?.step(loopState);
 
 /** Advances getElapsedTime by this frame's delta. Must run in every loop variant right after
  * the masterPlay check. The timer is never reset across a master pause, so the first delta
- * after resuming spans the whole paused duration — it is discarded (as stepPhysics does for
- * physics), otherwise the elapsed time would jump forward instead of having stood still.
+ * after resuming spans the whole paused duration — it is discarded (as the fixed-step driver does
+ * for physics), otherwise the elapsed time would jump forward instead of having stood still.
  * Starts out true, which also covers a loop that starts paused (saved loop state) and so
  * never reaches the paused branch before its first resume.
  * Detected here rather than in toggleMainPlay because the debug GUI's master loop toggle
@@ -221,14 +266,14 @@ const renderScene = () => {
   const renderer = getRenderer() as Renderer;
 
   if (loopState.isSceneSuspended) {
-    // An editor view: its own scene and camera, without the scene's PostFX pipeline (built for
-    // the root scene and its camera). Between two editor views (no active one), or without a
+    // An editor view: its own scene and camera, without the scene's render pipeline (PostFX's,
+    // built for the root scene and its camera). Between two editor views (no active one), or without a
     // view camera, nothing is rendered and the canvas keeps its last frame.
     const view = getActiveView();
     const viewCamera = view?.getCamera();
     if (!view || !viewCamera) return;
     renderer.render(view.scene, viewCamera);
-    renderViewports(renderer, delta);
+    runAfterRenderHooks(renderer, delta);
     return;
   }
 
@@ -240,15 +285,17 @@ const renderScene = () => {
     `Error in renderScene, missing renderer, rootScene, and/or camera. Status:\nrenderer: ${Boolean(renderer)}\nrootScene: ${Boolean(rootScene)}\ncamera: ${Boolean(camera)}`
   );
 
-  const postFxPipeline = getActivePostFxPipeline();
-  if (postFxPipeline) {
-    postFxPipeline.render();
+  // The render pipeline seam (PostFX's, when a scene's chain is on), else a direct render
+  const pipeline = getRenderPipeline();
+  if (pipeline) {
+    pipeline.render();
   } else {
     renderer.render(rootScene, camera);
   }
 
-  // Viewports (picture-in-picture, the debug axes gizmo) go over the finished frame
-  renderViewports(renderer, delta);
+  // The after-render seam (viewports: picture-in-picture, the debug axes gizmo) draws over the
+  // finished frame
+  runAfterRenderHooks(renderer, delta);
 };
 
 // LOOP (for debug)
@@ -258,7 +305,7 @@ const mainLoopForDebug = async () => {
   startCustomMeasurements();
 
   timer.update();
-  latchPhysicsSnapshot();
+  fixedStepDriver?.latch();
   const dt = fixedFrameDelta ?? timer.getDelta();
 
   if (loopState.masterPlay) {
@@ -281,7 +328,7 @@ const mainLoopForDebug = async () => {
   if (isSceneSuspended) {
     loopState.isAppPlaying = false;
     // Steps nothing, but lets physics notice the pause, so resuming never catches up on it
-    notePhysicsAppPause();
+    noteFixedStepPause();
     runActiveViewFrame(delta);
   } else {
     // main loopers
@@ -293,7 +340,7 @@ const mainLoopForDebug = async () => {
       deltaApp = dt * loopState.playSpeedMultiplier;
 
       // Step the physics and poll held-key input at the same cadence
-      stepPhysicsAndPollHeldKeys(delta);
+      stepFixedAndPollHeldKeys(delta);
 
       // app loopers
       for (const world of getAllECSWorlds()) world.updateAppLoop(deltaApp);
@@ -301,7 +348,7 @@ const mainLoopForDebug = async () => {
     } else {
       // Only master loop is playing (app loop is paused)
       loopState.isAppPlaying = false;
-      notePhysicsAppPause();
+      noteFixedStepPause();
     }
   }
 
@@ -331,7 +378,7 @@ const mainLoopForDebug = async () => {
 const mainLoopForProduction = async () => {
   frameProbe?.begin(performance.now());
   timer.update();
-  latchPhysicsSnapshot();
+  fixedStepDriver?.latch();
   const dt = fixedFrameDelta ?? timer.getDelta();
   if (loopState.masterPlay) {
     delta = dt * loopState.playSpeedMultiplier;
@@ -351,13 +398,13 @@ const mainLoopForProduction = async () => {
     deltaApp = dt * loopState.playSpeedMultiplier;
 
     // Step the physics and poll held-key input at the same cadence
-    stepPhysicsAndPollHeldKeys(delta);
+    stepFixedAndPollHeldKeys(delta);
 
     // app loopers
     for (const world of getAllECSWorlds()) world.updateAppLoop(deltaApp);
     runSceneAppLoopers(deltaApp);
   } else {
-    notePhysicsAppPause();
+    noteFixedStepPause();
   }
 
   renderScene();
@@ -372,7 +419,7 @@ const mainLoopForProduction = async () => {
 const mainLoopForProductionWithFPSLimiter = async () => {
   frameProbe?.begin(performance.now());
   timer.update();
-  latchPhysicsSnapshot();
+  fixedStepDriver?.latch();
   const dt = fixedFrameDelta ?? timer.getDelta();
 
   if (loopState.masterPlay) {
@@ -396,7 +443,7 @@ const mainLoopForProductionWithFPSLimiter = async () => {
     deltaApp = dt * loopState.playSpeedMultiplier;
 
     // Step the physics (always, even on a skipped render frame, so it doesn't fall behind)
-    stepPhysicsAndPollHeldKeys(delta);
+    stepFixedAndPollHeldKeys(delta);
 
     if (skipFrame) {
       frameProbe?.end(performance.now(), false);
@@ -407,7 +454,7 @@ const mainLoopForProductionWithFPSLimiter = async () => {
     for (const world of getAllECSWorlds()) world.updateAppLoop(deltaApp);
     runSceneAppLoopers(deltaApp);
   } else {
-    notePhysicsAppPause();
+    noteFixedStepPause();
     if (skipFrame) {
       frameProbe?.end(performance.now(), false);
       return;

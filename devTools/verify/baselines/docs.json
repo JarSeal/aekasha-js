@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1354,
-      "total": 2070
+      "documented": 1481,
+      "total": 2165
     },
     "members": {
       "documented": 212,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1309,
-        "total": 2006
+        "documented": 1436,
+        "total": 2101
       },
       "members": {
         "documented": 162,
@@ -49,8 +49,8 @@
     },
     "engine/core": {
       "exports": {
-        "documented": 379,
-        "total": 527
+        "documented": 433,
+        "total": 579
       },
       "members": {
         "documented": 35,
@@ -123,7 +123,6 @@
           "LightManager#setLightObjectCullingEnabled",
           "LightManager#setLightShadowEnabled",
           "LightManager#toggleAllLightHelpers",
-          "MainLoop#LoopState",
           "MainLoop#addBeforeUnloadFn",
           "MainLoop#addOnWindowBlurFn",
           "MainLoop#addVisibilityChangeFn",
@@ -158,7 +157,6 @@
           "PhysicsAPI#takePhysicsSnapshot",
           "PhysicsManager#disposePhysicsEntity",
           "PhysicsManager#getPhysicsEntityByAppId",
-          "PhysicsManager#registerPhysicsManager",
           "PhysicsTierPolicy#DEFAULT_TIER_POLICY_CADENCE",
           "PhysicsTierPolicy#DEFAULT_TIER_POLICY_INTERVAL",
           "PropertyLoader#LoadableProps",
@@ -264,8 +262,8 @@
     },
     "engine/core/Character": {
       "exports": {
-        "documented": 39,
-        "total": 39
+        "documented": 41,
+        "total": 41
       },
       "members": {
         "documented": 0,
@@ -278,8 +276,8 @@
     },
     "engine/core/ECS": {
       "exports": {
-        "documented": 25,
-        "total": 36
+        "documented": 37,
+        "total": 48
       },
       "members": {
         "documented": 12,
@@ -391,8 +389,8 @@
     },
     "engine/core/Import": {
       "exports": {
-        "documented": 48,
-        "total": 59
+        "documented": 58,
+        "total": 69
       },
       "members": {
         "documented": 0,
@@ -456,8 +454,8 @@
     },
     "engine/core/Instancing": {
       "exports": {
-        "documented": 5,
-        "total": 10
+        "documented": 7,
+        "total": 12
       },
       "members": {
         "documented": 26,
@@ -486,8 +484,8 @@
     },
     "engine/core/Lines": {
       "exports": {
-        "documented": 42,
-        "total": 56
+        "documented": 44,
+        "total": 58
       },
       "members": {
         "documented": 38,
@@ -532,8 +530,8 @@
     },
     "engine/core/Lod": {
       "exports": {
-        "documented": 60,
-        "total": 74
+        "documented": 68,
+        "total": 80
       },
       "members": {
         "documented": 0,
@@ -542,9 +540,7 @@
       "undocumented": {
         "exports": [
           "LodBounds#InstancedLodBounds",
-          "LodChainGLTF#GLTFLodChains",
           "LodChainGLTF#TransferableLodChain",
-          "LodChainGLTF#getGLTFLodChainKey",
           "LodChainOptions#DEFAULT_LOD_CHAIN_OPTIONS",
           "LodChainOptions#LodChainOptions",
           "LodChainOptions#ResolvedLodChainOptions",
@@ -561,8 +557,8 @@
     },
     "engine/core/Lod/Impostors": {
       "exports": {
-        "documented": 55,
-        "total": 64
+        "documented": 64,
+        "total": 73
       },
       "members": {
         "documented": 0,
@@ -780,8 +776,8 @@
     },
     "engine/core/PostFX": {
       "exports": {
-        "documented": 7,
-        "total": 7
+        "documented": 10,
+        "total": 10
       },
       "members": {
         "documented": 0,
@@ -794,8 +790,8 @@
     },
     "engine/core/SkyBox": {
       "exports": {
-        "documented": 127,
-        "total": 151
+        "documented": 150,
+        "total": 174
       },
       "members": {
         "documented": 0,
@@ -880,8 +876,8 @@
     },
     "engine/core/Spatial": {
       "exports": {
-        "documented": 39,
-        "total": 52
+        "documented": 40,
+        "total": 53
       },
       "members": {
         "documented": 20,
@@ -961,24 +957,22 @@
     },
     "engine/core/UI/icons": {
       "exports": {
-        "documented": 1,
-        "total": 2
+        "documented": 6,
+        "total": 6
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "SvgIcon#getSvgIcon"
-        ],
+        "exports": [],
         "members": []
       }
     },
     "engine/debug": {
       "exports": {
-        "documented": 132,
-        "total": 183
+        "documented": 133,
+        "total": 184
       },
       "members": {
         "documented": 0,
@@ -1047,8 +1041,8 @@
     },
     "engine/schemas": {
       "exports": {
-        "documented": 51,
-        "total": 154
+        "documented": 46,
+        "total": 122
       },
       "members": {
         "documented": 0,
@@ -1101,10 +1095,6 @@
           "geometrySchema#GeoPropsSchema",
           "importedAssetSchema#ImportedAsset",
           "importedAssetSchema#ImportedAssetSchema",
-          "impostorSchema#CrossQuadsImpostorAssetSchema",
-          "impostorSchema#ImpostorAsset",
-          "impostorSchema#ImpostorAssetSchema",
-          "impostorSchema#OctahedralImpostorAssetSchema",
           "lightSchema#LightAsset",
           "lightSchema#LightAssetSchema",
           "lightSchema#LightOverrides",
@@ -1113,33 +1103,10 @@
           "materialSchema#MaterialAsset",
           "materialSchema#MaterialAssetSchema",
           "materialSchema#MaterialOverrides",
-          "meshSchema#MeshAsset",
-          "meshSchema#MeshAssetSchema",
-          "meshSchema#MeshOverrides",
-          "meshSchema#MeshPropsSchema",
           "postFxSchema#PostFxAsset",
           "postFxSchema#PostFxAssetSchema",
           "postFxSchema#PostFxOverrides",
           "postFxSchema#PostFxParamMeta",
-          "sceneSchema#SceneAsset",
-          "sceneSchema#SceneAssetSchema",
-          "sceneSchema#SceneOverrides",
-          "skyBoxSchema#SkyBoxAmbientLightSchema",
-          "skyBoxSchema#SkyBoxAtmosphereSchema",
-          "skyBoxSchema#SkyBoxBaseSchema",
-          "skyBoxSchema#SkyBoxCloudsSchema",
-          "skyBoxSchema#SkyBoxDayNightSchema",
-          "skyBoxSchema#SkyBoxEnvSchema",
-          "skyBoxSchema#SkyBoxEnvSizeSchema",
-          "skyBoxSchema#SkyBoxGroundSchema",
-          "skyBoxSchema#SkyBoxMoonLightSchema",
-          "skyBoxSchema#SkyBoxMoonSchema",
-          "skyBoxSchema#SkyBoxNebulaSchema",
-          "skyBoxSchema#SkyBoxOverrides",
-          "skyBoxSchema#SkyBoxOverridesSchema",
-          "skyBoxSchema#SkyBoxStarsSchema",
-          "skyBoxSchema#SkyBoxSunLightSchema",
-          "skyBoxSchema#SkyBoxSunSchema",
           "spatialDomainSchema#SceneSpatialDomainEntry",
           "spatialDomainSchema#SceneSpatialDomainsSchema",
           "textureArraySchema#TextureArrayAsset",

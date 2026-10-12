@@ -28,7 +28,7 @@ import { texture, unpremultiplyAlpha } from 'three/tsl';
 import { DEBUG_HELPER_USER_DATA_KEY } from '../debug/Profiler';
 import { getActiveCamera } from './CameraManager';
 import { renderFrameNow } from './MainLoop';
-import { getActivePostFxPipeline } from './PostFX';
+import { getRenderPipeline } from './RenderHooks';
 import { getRenderer } from './Renderer';
 import { getRootScene } from './Scene';
 import { getActiveView, isRuntimeViewActive } from './ViewManager';
@@ -250,7 +250,8 @@ export const takeSnapshotAsync = async (opts: SnapshotOpts): Promise<Snapshot> =
     isRuntimeViewActive() &&
     scene === getRootScene() &&
     camera === getActiveCamera();
-  const postFxPipeline = isPostFx ? getActivePostFxPipeline() : null;
+  // The render pipeline seam: PostFX's (the scene's chain, when it's on)
+  const postFxPipeline = isPostFx ? getRenderPipeline() : null;
 
   // Saved state (restored below, before the readback)
   const prevTarget = renderer.getRenderTarget();
@@ -283,7 +284,7 @@ export const takeSnapshotAsync = async (opts: SnapshotOpts): Promise<Snapshot> =
       renderer.setPixelRatio(1);
       renderer.setSize(width, height, false);
       // Sizes the passes to the snapshot; the pipeline stays the scene's
-      getActivePostFxPipeline();
+      getRenderPipeline();
       renderer.setRenderTarget(output);
       postFxPipeline.render();
     } else {

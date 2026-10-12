@@ -21,5 +21,6 @@ export {
   updateSkyBox,
 } from '../../core/SkyBox/SkyBox';
 export type { SkyBoxChangeListener, SkyBoxUpdate } from '../../core/SkyBox/SkyBox';
+export { skyBox } from '../../core/SkyBox/SkyBoxFeature';
 export type { SkyBoxDef } from '../../core/SkyBox/SkyBoxTypes';
 export { getSkyLightIds } from '../../core/SkyBox/SkyLights';

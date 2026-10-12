@@ -1,6 +1,5 @@
 import type Rapier from '@dimforge/rapier3d-compat';
 
-import * as RapierAPI from './EngineRapier';
 import type { EngineAPIType } from './PhysicsAPITypes';
 
 // Define the engines (key) and their init functions
@@ -13,7 +12,9 @@ export const ENGINES: Record<
     packageName: string;
     init: () => Promise<unknown>;
     forceTypeEngine: (engineObj: unknown) => unknown;
-    engineAPI: EngineAPIType;
+    /** Loads the backend: only by `import()`, so the engine's package (Rapier: 829 kB gzip) is
+     * in no chunk but the one that starts the simulation (p607) */
+    loadEngineAPI: () => Promise<EngineAPIType>;
   }
 > = {
   RAPIER: {
@@ -26,6 +27,6 @@ export const ENGINES: Record<
       return RAPIER as typeof Rapier;
     },
     forceTypeEngine: (engineObj: unknown) => engineObj as typeof Rapier,
-    engineAPI: RapierAPI,
+    loadEngineAPI: () => import('./EngineRapier'),
   },
 };

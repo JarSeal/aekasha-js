@@ -1,3 +1,10 @@
+## Installing it
+
+List [`skyBox()`](api:skyBox), from `aekasha/skybox`, in `InitEngine`'s `features` (see
+[How the app starts](hub:examples/quick-start#how-the-app-starts)). Without it, no sky box is
+registered or shown, and a scene whose JSON lists `skyboxes` fails the boot, naming the feature
+(see [the feature manifest](hub:features/scenes-and-assets#the-feature-manifest)).
+
 ## A definition
 
 A sky box is a `*.skybox.json` (or the same object in code). A `preset` is the starting point,

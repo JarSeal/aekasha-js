@@ -140,3 +140,21 @@ export type SpawnImportedResult = {
   /** Entities carrying rigid bodies: a mesh entity (anchor) or a headless physics entity. */
   physicsEntityIds: number[];
 };
+
+/** One node `spawnImportedAsset` spawns, as the physics extension gets it
+ * (`ImportPhysicsSpawn`): its geometry, parsed custom props and composed world transform. */
+export type ImportSpawnNode = {
+  info: ImportedGeometryInfo;
+  geometry: THREE.BufferGeometry;
+  props: ParsedCustomProps;
+  /** The node's physicsParams override, for the fields custom props can't express. */
+  override?: ImportPhysicsParams;
+  /** appId part, unique within the import: the node name (+ `#n` for repeated names, ie. the
+   * primitives of a multi-primitive mesh). */
+  localName: string;
+  position: THREE.Vector3;
+  quaternion: THREE.Quaternion;
+  scale: THREE.Vector3;
+  /** The node's mesh entity, when it's rendered. */
+  entityId?: number;
+};

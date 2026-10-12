@@ -1,8 +1,8 @@
 Status: stub — not-implemented
 Category: Networking, Architecture, Physics
-Blocked by: p607_sbp-foundation-feature-modules.md (the `?worker` and SCSS imports at load), p608_engine-folder-restructure.md (the kernel / feature split a headless build picks from)
+Blocked by: p608_engine-folder-restructure.md (the kernel / feature split a headless build picks from)
 Blocks: p511_network-transport-and-replication.md, p512_client-prediction-and-reconciliation.md
-Related: \_DONE_p606_layering-inversion-and-public-entry.md (no module-load DOM or Vite reads; the worker's headless test), \_DONE_p604_multiplayer-viability-study.md (§3.1 the verdict, §4 the rules, Phase 1 the measurements; its dropped spike is this plan's Phase 1), p614_review-physics.md (the transport interface), \_DONE_p603_gameplay-architecture-contracts.md (C4: a network brain is a brain)
+Related: \_DONE_p607_sbp-foundation-feature-modules.md (the `?worker` imports and Rapier load on demand, installs, `FixedStepDriver`; the SCSS import left: "Done by p607" below), \_DONE_p606_layering-inversion-and-public-entry.md (no module-load DOM or Vite reads; the worker's headless test), \_DONE_p604_multiplayer-viability-study.md (§3.1 the verdict, §4 the rules, Phase 1 the measurements; its dropped spike is this plan's Phase 1), p614_review-physics.md (the transport interface), \_DONE_p603_gameplay-architecture-contracts.md (C4: a network brain is a brain)
 
 # Headless Simulation Runtime — Stub
 
@@ -48,6 +48,19 @@ network: simulation tests and recorded replays in CI.
 - **Scene code mixes both halves:** a scene file creates meshes, materials and physics entities
   in one function (`physicsTiers.ts` creates each crate's mesh and body together), and physics
   objects are created in code, not in the scene JSON yet.
+
+- **Done by p607 (2026-10-12):** the two `?worker` imports are `import()`s at the worker's start
+  (`initPhysics`' `WORKER_THREAD` branch, the assets worker's first request), and Rapier loads by
+  `import()` (`Physics/ENGINES.ts`' `loadEngineAPI`). Nothing registers at module load
+  (`moduleSideEffects.test.ts`): the kernel installs in `installKernel` and each feature in its
+  `install`, so a headless runner chooses what it installs (`physics()`: the tiers, the tier
+  policy, the physics entities' systems, the fixed-step driver and the scene hooks). The loop
+  reaches physics only through `FixedStepDriver` (`latch`, `step(loopState, runSubStep)`,
+  `flushEvents`, `isStepping`), which a server clock (question 3) can drive. `__AEK_DEBUG__` is a
+  build define (a headless build sets it). **Left:** `InitApp.ts` keeps its SCSS import (p607 D15:
+  it's the browser boot, which a headless runner doesn't import), so question 1 leans to an entry
+  of its own; `InitEngine` still creates the root scene, the HUD and the window listeners; the
+  kernel's install holds render systems (frustum culling, meshes), which p608 splits.
 
 ## Phase 1 (from p604's dropped spike)
 

@@ -54,8 +54,9 @@ const followObjectCameraRigSystemFn = (_world: ECSWorld, dt: number) => {
  * physicsInterpolationSystem has written this frame's final (possibly interpolated) pose into
  * the Object3D, and before frustum culling reads the main camera. At APP_LOGIC the mesh would
  * still hold the previous frame's discrete pose, so the camera would chase a pose that differs
- * from the one being drawn. An explicit order is required: this registers before
- * registerPhysicsManager, so at the default order 0 it would still run first.
+ * from the one being drawn. An explicit order is required: at the default order 0 it would tie
+ * with physicsInterpolationSystem, and a tie runs in registration order (the app's install
+ * comes after the physics feature's, but nothing else keeps it so).
  * Call this once per world before creating any camera rigs on it — mirrors
  * toolkit/ecs/effects/FollowTool.ts's registerFollowToolEffect(world) convention. */
 export const registerFollowObjectCameraRigSystem = (world: ECSWorld) => {

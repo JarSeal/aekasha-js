@@ -47,6 +47,9 @@
             }
           }
         }
+      ],
+      "__features": [
+        "skybox"
       ]
     },
     "testDebugScene": {
@@ -67,7 +70,8 @@
             }
           }
         }
-      ]
+      ],
+      "__features": []
     },
     "largeWorld": {
       "name": "Large ECS test world",
@@ -4018,6 +4022,12 @@
           },
           "__codec": "uastc"
         }
+      ],
+      "__features": [
+        "skybox",
+        "postfx",
+        "spatial",
+        "lod"
       ]
     },
     "lodShowcase": {
@@ -11477,6 +11487,10 @@
           },
           "__codec": "uastc"
         }
+      ],
+      "__features": [
+        "skybox",
+        "lod"
       ]
     },
     "oneMoreScene": {
@@ -11497,7 +11511,8 @@
             }
           }
         }
-      ]
+      ],
+      "__features": []
     },
     "physicsTest": {
       "name": "Physics API MVP test scene",
@@ -11587,7 +11602,8 @@
         }
       ],
       "id": "physicsTest",
-      "sceneFile": "./physicsTest.ts"
+      "sceneFile": "./physicsTest.ts",
+      "__features": []
     },
     "physicsTiers": {
       "name": "Physics simulation tiers demo",
@@ -11689,7 +11705,10 @@
         }
       ],
       "id": "physicsTiers",
-      "sceneFile": "./physicsTiers.ts"
+      "sceneFile": "./physicsTiers.ts",
+      "__features": [
+        "skybox"
+      ]
     },
     "scene01": {
       "name": "Scene 01 (basic physics demo)",
@@ -11779,7 +11798,8 @@
         }
       ],
       "id": "scene01",
-      "sceneFile": "./scene01.ts"
+      "sceneFile": "./scene01.ts",
+      "__features": []
     },
     "scene01V2": {
       "name": "Scene 01 v2 (physics demo with shadows + sensor)",
@@ -11869,7 +11889,8 @@
         }
       ],
       "id": "scene01V2",
-      "sceneFile": "./scene01_v2.ts"
+      "sceneFile": "./scene01_v2.ts",
+      "__features": []
     },
     "skyShowcase": {
       "name": "Sky showcase (day-night)",
@@ -12033,7 +12054,10 @@
         }
       ],
       "id": "skyShowcase",
-      "sceneFile": "./skyShowcase.ts"
+      "sceneFile": "./skyShowcase.ts",
+      "__features": [
+        "skybox"
+      ]
     },
     "space": {
       "name": "Space demo (zero-g asteroids)",
@@ -12193,7 +12217,10 @@
         }
       ],
       "id": "space",
-      "sceneFile": "./space.ts"
+      "sceneFile": "./space.ts",
+      "__features": [
+        "skybox"
+      ]
     },
     "sceneTestECS": {
       "name": "ECS test scene",
@@ -12375,7 +12402,10 @@
         }
       ],
       "id": "sceneTestECS",
-      "sceneFile": "./testECS.ts"
+      "sceneFile": "./testECS.ts",
+      "__features": [
+        "skybox"
+      ]
     },
     "textureArrays": {
       "isDebugScene": true,
@@ -12451,7 +12481,8 @@
             }
           }
         }
-      ]
+      ],
+      "__features": []
     },
     "textureAtlases": {
       "isDebugScene": true,
@@ -12967,7 +12998,8 @@
             }
           }
         }
-      ]
+      ],
+      "__features": []
     },
     "thirdPersonGymScene": {
       "name": "GYM (3rd person)",
@@ -13183,7 +13215,10 @@
       ],
       "postFxEnabled": true,
       "id": "thirdPersonGymScene",
-      "sceneFile": "./scene_thirdPersonGym.ts"
+      "sceneFile": "./scene_thirdPersonGym.ts",
+      "__features": [
+        "postfx"
+      ]
     },
     "topDownTestScene": {
       "name": "Top-down test",
@@ -13414,7 +13449,11 @@
       ],
       "postFxEnabled": true,
       "id": "topDownTestScene",
-      "sceneFile": "./scene_topDownTest.ts"
+      "sceneFile": "./scene_topDownTest.ts",
+      "__features": [
+        "skybox",
+        "postfx"
+      ]
     },
     "exampleDebugTab": {
       "name": "Example: Your own debug tab",
@@ -13500,7 +13539,8 @@
         }
       ],
       "id": "exampleDebugTab",
-      "sceneFile": "./examples/debugTab/exampleDebugTab.ts"
+      "sceneFile": "./examples/debugTab/exampleDebugTab.ts",
+      "__features": []
     },
     "exampleEcs": {
       "name": "Example: Custom component & system",
@@ -13586,7 +13626,8 @@
         }
       ],
       "id": "exampleEcs",
-      "sceneFile": "./examples/ecs/exampleEcs.ts"
+      "sceneFile": "./examples/ecs/exampleEcs.ts",
+      "__features": []
     },
     "exampleHubHero": {
       "name": "Example: Hub hero",
@@ -13782,7 +13823,11 @@
       ],
       "postFxEnabled": true,
       "id": "exampleHubHero",
-      "sceneFile": "./examples/hubHero/exampleHubHero.ts"
+      "sceneFile": "./examples/hubHero/exampleHubHero.ts",
+      "__features": [
+        "skybox",
+        "postfx"
+      ]
     },
     "exampleLod": {
       "name": "Example: LOD & instancing",
@@ -13842,7 +13887,10 @@
         }
       ],
       "id": "exampleLod",
-      "sceneFile": "./examples/lod/exampleLod.ts"
+      "sceneFile": "./examples/lod/exampleLod.ts",
+      "__features": [
+        "skybox"
+      ]
     },
     "examplePhysics": {
       "name": "Example: Physics",
@@ -13928,7 +13976,8 @@
         }
       ],
       "id": "examplePhysics",
-      "sceneFile": "./examples/physics/examplePhysics.ts"
+      "sceneFile": "./examples/physics/examplePhysics.ts",
+      "__features": []
     },
     "exampleQuickStart": {
       "name": "Example: Quick start",
@@ -14040,7 +14089,8 @@
         }
       ],
       "id": "exampleQuickStart",
-      "sceneFile": "./examples/quickStart/exampleQuickStart.ts"
+      "sceneFile": "./examples/quickStart/exampleQuickStart.ts",
+      "__features": []
     },
     "exampleSkyBox": {
       "name": "Example: Sky box & day-night",
@@ -14116,7 +14166,10 @@
         }
       ],
       "id": "exampleSkyBox",
-      "sceneFile": "./examples/skyBox/exampleSkyBox.ts"
+      "sceneFile": "./examples/skyBox/exampleSkyBox.ts",
+      "__features": [
+        "skybox"
+      ]
     },
     "exampleToolkit": {
       "name": "Example: Toolkit",
@@ -14280,7 +14333,8 @@
         }
       ],
       "id": "exampleToolkit",
-      "sceneFile": "./examples/toolkit/exampleToolkit.ts"
+      "sceneFile": "./examples/toolkit/exampleToolkit.ts",
+      "__features": []
     }
   },
   "cameras": {

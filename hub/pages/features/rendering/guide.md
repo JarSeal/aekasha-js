@@ -14,9 +14,14 @@ The app creates the renderer once, first thing in its start callback (`src/index
 
 ## Post effects
 
+Post effects are a feature: list [`postFx()`](api:postFx), from `aekasha/postfx`, in
+`InitEngine`'s `features` (see [How the app starts](hub:examples/quick-start#how-the-app-starts)).
+Without it, scenes render directly, and a scene whose JSON lists `postFx` fails the boot, naming
+the feature (see [the feature manifest](hub:features/scenes-and-assets#the-feature-manifest)).
+
 A scene's post effects are an ordered chain of PostFX passes, rendered through a TSL
 `RenderPipeline`. A pass is two files: a `*.postFx.json` with its params, and a `*.tsl.ts` that
-builds its node. The scene JSON lists them in order:
+builds its node, loaded with the first scene that lists it. The scene JSON lists them in order:
 
 ```json
 {

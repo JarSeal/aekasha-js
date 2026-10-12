@@ -2,7 +2,7 @@
 
 ### ECS effects
 
-A component and its system each, registered in `src/AppECSPlugins.ts` (see
+A component and its system each, registered by the app's feature in `src/AppECSPlugins.ts` (see
 [ECS](hub:features/ecs#plugins-and-hooks)):
 
 - **`HoverEffect`**: bobs an entity up and down (the `HOVER` component).

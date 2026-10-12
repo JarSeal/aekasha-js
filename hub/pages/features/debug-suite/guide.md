@@ -25,6 +25,25 @@ From the drawer, an entity opens in an edit window: lights, cameras, ECS worlds,
 physics entities, assets and characters. Several can be open at once, and they're kept over
 reloads and scene changes.
 
+## Icons
+
+A drawer tab, an editor view and a draggable window take an `icon` by name, from a registry
+(`aekasha/ui`). The debug env and prod test mode register every built-in icon; a production build
+registers none, so its bundle has no SVG it doesn't show.
+
+```ts
+import { gearIcon, registerIcon } from 'aekasha/ui';
+import shieldSvg from './icons/shield.svg?raw';
+
+registerIcon('shield', shieldSvg); // Your own, in every build
+registerIcon('gear', gearIcon); // A built-in your production UI shows
+```
+
+- An unregistered name renders `??` and warns once. Register your own icons, and the built-ins
+  your app shows in production (each is exported as `<name>Icon`), before the UI that shows them.
+- Registering a name again replaces its SVG, so you can restyle a built-in.
+- [`getSvgIcon`](api:getSvgIcon) renders a registered icon as HTML, for your own HUD.
+
 ## Keys
 
 | Key          | Does                                                     |
@@ -120,6 +139,7 @@ it all for a bug report.
 - [`createDebuggerTab`](api:createDebuggerTab), [`openDebuggerTab`](api:openDebuggerTab) and
   [`updateDebuggerTab`](api:updateDebuggerTab).
 - [`addDebugToast`](api:addDebugToast): a short message on screen.
+- [`registerIcon`](api:registerIcon) and [`getSvgIcon`](api:getSvgIcon).
 - [`toggleProfilerWindow`](api:toggleProfilerWindow),
   [`registerStatsSource`](api:registerStatsSource) and
   [`registerGPUMemorySource`](api:registerGPUMemorySource).
