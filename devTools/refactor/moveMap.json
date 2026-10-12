@@ -2209,579 +2209,865 @@
       "action": "keep",
       "plan": "p608"
     },
-    "src/app/_dbg__assetCompare.ts": {
+    "src/app/cameras/scene01Camera.camera.json": {
+      "to": "src/app/cameras/scene01Camera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/_dbg__exampleHub.ts": {
+      "to": "src/app/examples/_dbg__exampleHub.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/debugTab/_dbg__exampleDebugTab.ts": {
+      "to": "src/app/examples/debugTab/_dbg__exampleDebugTab.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/debugTab/exampleDebugTab.hub.png": {
+      "to": "src/app/examples/debugTab/exampleDebugTab.hub.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/debugTab/exampleDebugTab.scene.json": {
+      "to": "src/app/examples/debugTab/exampleDebugTab.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/debugTab/exampleDebugTab.ts": {
+      "to": "src/app/examples/debugTab/exampleDebugTab.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/debugTab/exampleDebugTabAmbient.light.json": {
+      "to": "src/app/examples/debugTab/exampleDebugTabAmbient.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/debugTab/exampleDebugTabCamera.camera.json": {
+      "to": "src/app/examples/debugTab/exampleDebugTabCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/debugTab/exampleDebugTabSun.light.json": {
+      "to": "src/app/examples/debugTab/exampleDebugTabSun.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/ecs/exampleEcs.hub.png": {
+      "to": "src/app/examples/ecs/exampleEcs.hub.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/ecs/exampleEcs.scene.json": {
+      "to": "src/app/examples/ecs/exampleEcs.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/ecs/exampleEcs.ts": {
+      "to": "src/app/examples/ecs/exampleEcs.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/ecs/exampleEcsAmbient.light.json": {
+      "to": "src/app/examples/ecs/exampleEcsAmbient.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/ecs/exampleEcsCamera.camera.json": {
+      "to": "src/app/examples/ecs/exampleEcsCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/ecs/exampleEcsSun.light.json": {
+      "to": "src/app/examples/ecs/exampleEcsSun.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/ecs/SpinComponent.ts": {
+      "to": "src/app/examples/ecs/SpinComponent.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/ecs/SpinSystem.ts": {
+      "to": "src/app/examples/ecs/SpinSystem.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/exampleHud.ts": {
+      "to": "src/app/examples/exampleHud.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/hubHero/exampleHubHero.hub.png": {
+      "to": "src/app/examples/hubHero/exampleHubHero.hub.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/hubHero/exampleHubHero.scene.json": {
+      "to": "src/app/examples/hubHero/exampleHubHero.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/hubHero/exampleHubHero.skybox.json": {
+      "to": "src/app/examples/hubHero/exampleHubHero.skybox.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/hubHero/exampleHubHero.ts": {
+      "to": "src/app/examples/hubHero/exampleHubHero.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/hubHero/exampleHubHeroCamera.camera.json": {
+      "to": "src/app/examples/hubHero/exampleHubHeroCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/hubHero/heroBloom.postFx.json": {
+      "to": "src/app/examples/hubHero/heroBloom.postFx.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/hubHero/heroBloom.tsl.ts": {
+      "to": "src/app/examples/hubHero/heroBloom.tsl.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/lod/exampleLod.hub.png": {
+      "to": "src/app/examples/lod/exampleLod.hub.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/lod/exampleLod.scene.json": {
+      "to": "src/app/examples/lod/exampleLod.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/lod/exampleLod.skybox.json": {
+      "to": "src/app/examples/lod/exampleLod.skybox.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/lod/exampleLod.ts": {
+      "to": "src/app/examples/lod/exampleLod.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/lod/exampleLodCamera.camera.json": {
+      "to": "src/app/examples/lod/exampleLodCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/physics/examplePhysics.hub.png": {
+      "to": "src/app/examples/physics/examplePhysics.hub.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/physics/examplePhysics.scene.json": {
+      "to": "src/app/examples/physics/examplePhysics.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/physics/examplePhysics.ts": {
+      "to": "src/app/examples/physics/examplePhysics.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/physics/examplePhysicsAmbient.light.json": {
+      "to": "src/app/examples/physics/examplePhysicsAmbient.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/physics/examplePhysicsCamera.camera.json": {
+      "to": "src/app/examples/physics/examplePhysicsCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/physics/examplePhysicsSun.light.json": {
+      "to": "src/app/examples/physics/examplePhysicsSun.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/quickStart/exampleQuickStart.hub.png": {
+      "to": "src/app/examples/quickStart/exampleQuickStart.hub.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/quickStart/exampleQuickStart.scene.json": {
+      "to": "src/app/examples/quickStart/exampleQuickStart.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/quickStart/exampleQuickStart.ts": {
+      "to": "src/app/examples/quickStart/exampleQuickStart.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/quickStart/exampleQuickStartAmbient.light.json": {
+      "to": "src/app/examples/quickStart/exampleQuickStartAmbient.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/quickStart/exampleQuickStartCamera.camera.json": {
+      "to": "src/app/examples/quickStart/exampleQuickStartCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/quickStart/exampleQuickStartSun.light.json": {
+      "to": "src/app/examples/quickStart/exampleQuickStartSun.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/skyBox/exampleSkyBox.hub.png": {
+      "to": "src/app/examples/skyBox/exampleSkyBox.hub.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/skyBox/exampleSkyBox.scene.json": {
+      "to": "src/app/examples/skyBox/exampleSkyBox.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/skyBox/exampleSkyBox.skybox.json": {
+      "to": "src/app/examples/skyBox/exampleSkyBox.skybox.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/skyBox/exampleSkyBox.ts": {
+      "to": "src/app/examples/skyBox/exampleSkyBox.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/skyBox/exampleSkyBoxCamera.camera.json": {
+      "to": "src/app/examples/skyBox/exampleSkyBoxCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/toolkit/exampleToolkit.hub.png": {
+      "to": "src/app/examples/toolkit/exampleToolkit.hub.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/toolkit/exampleToolkit.scene.json": {
+      "to": "src/app/examples/toolkit/exampleToolkit.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/toolkit/exampleToolkit.ts": {
+      "to": "src/app/examples/toolkit/exampleToolkit.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/toolkit/exampleToolkitAmbient.light.json": {
+      "to": "src/app/examples/toolkit/exampleToolkitAmbient.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/toolkit/exampleToolkitCamera.camera.json": {
+      "to": "src/app/examples/toolkit/exampleToolkitCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/toolkit/exampleToolkitSun.light.json": {
+      "to": "src/app/examples/toolkit/exampleToolkitSun.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/impostors/largeWorldRockImpostor.albedo.png": {
+      "to": "src/app/impostors/largeWorldRockImpostor.albedo.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/impostors/largeWorldRockImpostor.impostor.json": {
+      "to": "src/app/impostors/largeWorldRockImpostor.impostor.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/impostors/largeWorldRockImpostor.normalDepth.png": {
+      "to": "src/app/impostors/largeWorldRockImpostor.normalDepth.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/impostors/largeWorldRockImpostor.textureAtlas.json": {
+      "to": "src/app/impostors/largeWorldRockImpostor.textureAtlas.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/lights/scene01Ambient.light.json": {
+      "to": "src/app/lights/scene01Ambient.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/lights/scene01Sun.light.json": {
+      "to": "src/app/lights/scene01Sun.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/postFx/ambientOcclusion.postFx.json": {
+      "to": "src/app/postFx/ambientOcclusion.postFx.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/postFx/ambientOcclusion.tsl.ts": {
+      "to": "src/app/postFx/ambientOcclusion.tsl.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/assetCompare/_dbg__assetCompare.ts": {
       "to": "src/app/scenes/assetCompare/_dbg__assetCompare.ts",
-      "action": "move",
+      "action": "keep",
       "plan": "p609"
     },
-    "src/app/_dbg__lodShowcase.ts": {
-      "to": "src/app/scenes/lodShowcase/_dbg__lodShowcase.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/_dbg__spaceDemo.ts": {
-      "to": "src/app/scenes/space/_dbg__spaceDemo.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/assetCompare.scene.json": {
+    "src/app/scenes/assetCompare/assetCompare.scene.json": {
       "to": "src/app/scenes/assetCompare/assetCompare.scene.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
-    },
-    "src/app/assetCompare.ts": {
-      "to": "src/app/scenes/assetCompare/assetCompare.ts",
-      "action": "move",
+      "action": "keep",
       "plan": "p609"
     },
-    "src/app/cameras/largeWorldOverview.camera.json": {
-      "to": "src/app/scenes/largeWorld/largeWorldOverview.camera.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene largeWorld (p609 D2)"
-    },
-    "src/app/cameras/lodShowcaseCamera.camera.json": {
-      "to": "src/app/scenes/lodShowcase/lodShowcaseCamera.camera.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene lodShowcase (p609 D2)"
-    },
-    "src/app/cameras/mainCamera.camera.json": {
-      "to": "src/app/scenes/sceneTestECS/mainCamera.camera.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene sceneTestECS (p609 D2)"
-    },
-    "src/app/cameras/physicsTestCamera.camera.json": {
-      "to": "src/app/scenes/physicsTest/physicsTestCamera.camera.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene physicsTest (p609 D2)"
-    },
-    "src/app/cameras/physicsTiersOverview.camera.json": {
-      "to": "src/app/scenes/physicsTiers/physicsTiersOverview.camera.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene physicsTiers (p609 D2)"
-    },
-    "src/app/cameras/skyShowcaseCamera.camera.json": {
-      "to": "src/app/scenes/skyShowcase/skyShowcaseCamera.camera.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene skyShowcase (p609 D2)"
-    },
-    "src/app/cameras/spaceCamera.camera.json": {
-      "to": "src/app/scenes/space/spaceCamera.camera.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene space (p609 D2)"
-    },
-    "src/app/cameras/thirdPersonGymCamera.camera.json": {
-      "to": "src/app/scenes/thirdPersonGymScene/thirdPersonGymCamera.camera.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene thirdPersonGymScene (p609 D2)"
-    },
-    "src/app/cameras/topDownTestCamera.camera.json": {
-      "to": "src/app/scenes/topDownTestScene/topDownTestCamera.camera.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene topDownTestScene (p609 D2)"
-    },
-    "src/app/characterVisual.ts": {
-      "to": "src/app/scenes/thirdPersonGymScene/characterVisual.ts",
-      "action": "move",
-      "plan": "p609",
-      "note": "with the gym (p609); the top-down test imports it from there"
-    },
-    "src/app/debugScene.scene.json": {
-      "to": "src/app/scenes/testDebugScene/testDebugScene.scene.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
-    },
-    "src/app/debugScene.scene.ts": {
-      "to": "src/app/scenes/testDebugScene/testDebugScene.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/geometries/testSphere.geometry.json": {
-      "to": "src/app/scenes/sceneTestECS/testSphere.geometry.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene sceneTestECS (p609 D2)"
-    },
-    "src/app/importedAssets/testImport.importedAsset.json": {
-      "to": "src/app/scenes/sceneTestECS/testImport.importedAsset.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene sceneTestECS (p609 D2)"
-    },
-    "src/app/impostors/largeWorldTreeCross.albedo.png": {
-      "to": "src/app/scenes/largeWorld/largeWorldTreeCross.albedo.png",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene largeWorld (p609 D2)"
-    },
-    "src/app/impostors/largeWorldTreeCross.impostor.json": {
-      "to": "src/app/scenes/largeWorld/largeWorldTreeCross.impostor.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene largeWorld (p609 D2)"
-    },
-    "src/app/impostors/largeWorldTreeCross.normal.png": {
-      "to": "src/app/scenes/largeWorld/largeWorldTreeCross.normal.png",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene largeWorld (p609 D2)"
-    },
-    "src/app/impostors/largeWorldTreeCross.textureAtlas.json": {
-      "to": "src/app/scenes/largeWorld/largeWorldTreeCross.textureAtlas.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene largeWorld (p609 D2)"
-    },
-    "src/app/impostors/lodShowcaseKnotImpostor.albedo.png": {
-      "to": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.albedo.png",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene lodShowcase (p609 D2)"
-    },
-    "src/app/impostors/lodShowcaseKnotImpostor.impostor.json": {
-      "to": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.impostor.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene lodShowcase (p609 D2)"
-    },
-    "src/app/impostors/lodShowcaseKnotImpostor.normalDepth.png": {
-      "to": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.normalDepth.png",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene lodShowcase (p609 D2)"
-    },
-    "src/app/impostors/lodShowcaseKnotImpostor.textureAtlas.json": {
-      "to": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.textureAtlas.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene lodShowcase (p609 D2)"
-    },
-    "src/app/impostors/lodShowcaseTreeCross.albedo.png": {
-      "to": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.albedo.png",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene lodShowcase (p609 D2)"
-    },
-    "src/app/impostors/lodShowcaseTreeCross.impostor.json": {
-      "to": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.impostor.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene lodShowcase (p609 D2)"
-    },
-    "src/app/impostors/lodShowcaseTreeCross.normal.png": {
-      "to": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.normal.png",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene lodShowcase (p609 D2)"
-    },
-    "src/app/impostors/lodShowcaseTreeCross.textureAtlas.json": {
-      "to": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.textureAtlas.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene lodShowcase (p609 D2)"
-    },
-    "src/app/largeWorld.scene.json": {
-      "to": "src/app/scenes/largeWorld/largeWorld.scene.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
-    },
-    "src/app/largeWorld.ts": {
-      "to": "src/app/scenes/largeWorld/largeWorld.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/lights/ambientLight.light.json": {
-      "to": "src/app/scenes/sceneTestECS/ambientLight.light.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene sceneTestECS (p609 D2)"
-    },
-    "src/app/lights/largeWorldAmbient.light.json": {
-      "to": "src/app/scenes/largeWorld/largeWorldAmbient.light.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene largeWorld (p609 D2)"
-    },
-    "src/app/lights/largeWorldSun.light.json": {
-      "to": "src/app/scenes/largeWorld/largeWorldSun.light.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene largeWorld (p609 D2)"
-    },
-    "src/app/lights/physicsTestAmbient.light.json": {
-      "to": "src/app/scenes/physicsTest/physicsTestAmbient.light.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene physicsTest (p609 D2)"
-    },
-    "src/app/lights/physicsTestSun.light.json": {
-      "to": "src/app/scenes/physicsTest/physicsTestSun.light.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene physicsTest (p609 D2)"
-    },
-    "src/app/lights/physicsTiersAmbient.light.json": {
-      "to": "src/app/scenes/physicsTiers/physicsTiersAmbient.light.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene physicsTiers (p609 D2)"
-    },
-    "src/app/lights/physicsTiersSun.light.json": {
-      "to": "src/app/scenes/physicsTiers/physicsTiersSun.light.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene physicsTiers (p609 D2)"
-    },
-    "src/app/lights/thirdPersonGymAmbient.light.json": {
-      "to": "src/app/scenes/thirdPersonGymScene/thirdPersonGymAmbient.light.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene thirdPersonGymScene (p609 D2)"
-    },
-    "src/app/lights/thirdPersonGymSun.light.json": {
-      "to": "src/app/scenes/thirdPersonGymScene/thirdPersonGymSun.light.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene thirdPersonGymScene (p609 D2)"
-    },
-    "src/app/lights/topDownTestAmbient.light.json": {
-      "to": "src/app/scenes/topDownTestScene/topDownTestAmbient.light.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene topDownTestScene (p609 D2)"
-    },
-    "src/app/lights/topDownTestSun.light.json": {
-      "to": "src/app/scenes/topDownTestScene/topDownTestSun.light.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene topDownTestScene (p609 D2)"
-    },
-    "src/app/lodShowcase.hub.png": {
-      "to": "src/app/scenes/lodShowcase/lodShowcase.hub.png",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/lodShowcase.scene.json": {
-      "to": "src/app/scenes/lodShowcase/lodShowcase.scene.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
-    },
-    "src/app/lodShowcase.ts": {
-      "to": "src/app/scenes/lodShowcase/lodShowcase.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/lodShowcase/lanes/generatedChain.ts": {
-      "to": "src/app/scenes/lodShowcase/lanes/generatedChain.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/lodShowcase/lanes/handMadeLevels.ts": {
-      "to": "src/app/scenes/lodShowcase/lanes/handMadeLevels.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/lodShowcase/lanes/instanceCell.ts": {
-      "to": "src/app/scenes/lodShowcase/lanes/instanceCell.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/lodShowcase/lanes/knotImpostor.ts": {
-      "to": "src/app/scenes/lodShowcase/lanes/knotImpostor.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/lodShowcase/lanes/rockImpostors.ts": {
-      "to": "src/app/scenes/lodShowcase/lanes/rockImpostors.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/lodShowcase/lanes/treeGrove.ts": {
-      "to": "src/app/scenes/lodShowcase/lanes/treeGrove.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/lodShowcase/layout.ts": {
-      "to": "src/app/scenes/lodShowcase/layout.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/lodShowcase/lodShowcaseHandMade.mesh.json": {
-      "to": "src/app/scenes/lodShowcase/lodShowcaseHandMade.mesh.json",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/lodShowcase/lodShowcaseSphere.material.json": {
-      "to": "src/app/scenes/lodShowcase/lodShowcaseSphere.material.json",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/lodShowcase/lodShowcaseSphereLod0.geometry.json": {
-      "to": "src/app/scenes/lodShowcase/lodShowcaseSphereLod0.geometry.json",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/lodShowcase/lodShowcaseSphereLod1.geometry.json": {
-      "to": "src/app/scenes/lodShowcase/lodShowcaseSphereLod1.geometry.json",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/lodShowcase/lodShowcaseSphereLod2.geometry.json": {
-      "to": "src/app/scenes/lodShowcase/lodShowcaseSphereLod2.geometry.json",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/materials/testMaterial.material.json": {
-      "to": "src/app/scenes/sceneTestECS/testMaterial.material.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene sceneTestECS (p609 D2)"
-    },
-    "src/app/materials/testTslMat.material.json": {
-      "to": "src/app/scenes/sceneTestECS/testTslMat.material.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene sceneTestECS (p609 D2)"
-    },
-    "src/app/materials/testTslMat.tsl.ts": {
-      "to": "src/app/scenes/sceneTestECS/testTslMat.tsl.ts",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene sceneTestECS (p609 D2)"
-    },
-    "src/app/meshes/testImportedMesh.mesh.json": {
-      "to": "src/app/scenes/sceneTestECS/testImportedMesh.mesh.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene sceneTestECS (p609 D2)"
-    },
-    "src/app/meshes/testMesh.mesh.json": {
-      "to": "src/app/scenes/sceneTestECS/testMesh.mesh.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene sceneTestECS (p609 D2)"
-    },
-    "src/app/oneMoreScene.scene.json": {
-      "to": "src/app/scenes/oneMoreScene/oneMoreScene.scene.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
-    },
-    "src/app/oneMoreScene.ts": {
-      "to": "src/app/scenes/oneMoreScene/oneMoreScene.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/physicsTest.scene.json": {
-      "to": "src/app/scenes/physicsTest/physicsTest.scene.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
-    },
-    "src/app/physicsTest.ts": {
-      "to": "src/app/scenes/physicsTest/physicsTest.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/physicsTiers.scene.json": {
-      "to": "src/app/scenes/physicsTiers/physicsTiers.scene.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
-    },
-    "src/app/physicsTiers.ts": {
-      "to": "src/app/scenes/physicsTiers/physicsTiers.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/scene_thirdPersonGym.ts": {
-      "to": "src/app/scenes/thirdPersonGymScene/thirdPersonGymScene.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/scene_topDownTest.ts": {
-      "to": "src/app/scenes/topDownTestScene/topDownTestScene.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/scene01_v2.scene.json": {
-      "to": "src/app/scenes/scene01V2/scene01V2.scene.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
-    },
-    "src/app/scene01_v2.ts": {
-      "to": "src/app/scenes/scene01V2/scene01V2.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/scene01.scene.json": {
-      "to": "src/app/scenes/scene01/scene01.scene.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
-    },
-    "src/app/scene01.ts": {
-      "to": "src/app/scenes/scene01/scene01.ts",
-      "action": "move",
-      "plan": "p609"
-    },
-    "src/app/skyboxes/assetCompare.skybox.json": {
+    "src/app/scenes/assetCompare/assetCompare.skybox.json": {
       "to": "src/app/scenes/assetCompare/assetCompare.skybox.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene assetCompare (p609 D2)"
-    },
-    "src/app/skyShowcase.scene.json": {
-      "to": "src/app/scenes/skyShowcase/skyShowcase.scene.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
-    },
-    "src/app/skyShowcase.ts": {
-      "to": "src/app/scenes/skyShowcase/skyShowcase.ts",
-      "action": "move",
+      "action": "keep",
       "plan": "p609"
     },
-    "src/app/space.scene.json": {
-      "to": "src/app/scenes/space/space.scene.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
-    },
-    "src/app/space.ts": {
-      "to": "src/app/scenes/space/space.ts",
-      "action": "move",
+    "src/app/scenes/assetCompare/assetCompare.ts": {
+      "to": "src/app/scenes/assetCompare/assetCompare.ts",
+      "action": "keep",
       "plan": "p609"
     },
-    "src/app/testECS.scene.json": {
+    "src/app/scenes/largeWorld/largeWorld.scene.json": {
+      "to": "src/app/scenes/largeWorld/largeWorld.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/largeWorld/largeWorld.ts": {
+      "to": "src/app/scenes/largeWorld/largeWorld.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/largeWorld/largeWorldAmbient.light.json": {
+      "to": "src/app/scenes/largeWorld/largeWorldAmbient.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/largeWorld/largeWorldOverview.camera.json": {
+      "to": "src/app/scenes/largeWorld/largeWorldOverview.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/largeWorld/largeWorldSun.light.json": {
+      "to": "src/app/scenes/largeWorld/largeWorldSun.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/largeWorld/largeWorldTreeCross.albedo.png": {
+      "to": "src/app/scenes/largeWorld/largeWorldTreeCross.albedo.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/largeWorld/largeWorldTreeCross.impostor.json": {
+      "to": "src/app/scenes/largeWorld/largeWorldTreeCross.impostor.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/largeWorld/largeWorldTreeCross.normal.png": {
+      "to": "src/app/scenes/largeWorld/largeWorldTreeCross.normal.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/largeWorld/largeWorldTreeCross.textureAtlas.json": {
+      "to": "src/app/scenes/largeWorld/largeWorldTreeCross.textureAtlas.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/_dbg__lodShowcase.ts": {
+      "to": "src/app/scenes/lodShowcase/_dbg__lodShowcase.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lanes/generatedChain.ts": {
+      "to": "src/app/scenes/lodShowcase/lanes/generatedChain.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lanes/handMadeLevels.ts": {
+      "to": "src/app/scenes/lodShowcase/lanes/handMadeLevels.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lanes/instanceCell.ts": {
+      "to": "src/app/scenes/lodShowcase/lanes/instanceCell.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lanes/knotImpostor.ts": {
+      "to": "src/app/scenes/lodShowcase/lanes/knotImpostor.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lanes/rockImpostors.ts": {
+      "to": "src/app/scenes/lodShowcase/lanes/rockImpostors.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lanes/treeGrove.ts": {
+      "to": "src/app/scenes/lodShowcase/lanes/treeGrove.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/layout.ts": {
+      "to": "src/app/scenes/lodShowcase/layout.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lodShowcase.hub.png": {
+      "to": "src/app/scenes/lodShowcase/lodShowcase.hub.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lodShowcase.scene.json": {
+      "to": "src/app/scenes/lodShowcase/lodShowcase.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lodShowcase.ts": {
+      "to": "src/app/scenes/lodShowcase/lodShowcase.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lodShowcaseCamera.camera.json": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lodShowcaseHandMade.mesh.json": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseHandMade.mesh.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.albedo.png": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.albedo.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.impostor.json": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.impostor.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.normalDepth.png": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.normalDepth.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.textureAtlas.json": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.textureAtlas.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lodShowcaseSphere.material.json": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseSphere.material.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lodShowcaseSphereLod0.geometry.json": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseSphereLod0.geometry.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lodShowcaseSphereLod1.geometry.json": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseSphereLod1.geometry.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lodShowcaseSphereLod2.geometry.json": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseSphereLod2.geometry.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lodShowcaseTreeCross.albedo.png": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.albedo.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lodShowcaseTreeCross.impostor.json": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.impostor.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lodShowcaseTreeCross.normal.png": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.normal.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/lodShowcase/lodShowcaseTreeCross.textureAtlas.json": {
+      "to": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.textureAtlas.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/oneMoreScene/oneMoreScene.scene.json": {
+      "to": "src/app/scenes/oneMoreScene/oneMoreScene.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/oneMoreScene/oneMoreScene.ts": {
+      "to": "src/app/scenes/oneMoreScene/oneMoreScene.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/physicsTest/physicsTest.scene.json": {
+      "to": "src/app/scenes/physicsTest/physicsTest.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/physicsTest/physicsTest.ts": {
+      "to": "src/app/scenes/physicsTest/physicsTest.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/physicsTest/physicsTestAmbient.light.json": {
+      "to": "src/app/scenes/physicsTest/physicsTestAmbient.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/physicsTest/physicsTestCamera.camera.json": {
+      "to": "src/app/scenes/physicsTest/physicsTestCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/physicsTest/physicsTestSun.light.json": {
+      "to": "src/app/scenes/physicsTest/physicsTestSun.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/physicsTiers/physicsTiers.scene.json": {
+      "to": "src/app/scenes/physicsTiers/physicsTiers.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/physicsTiers/physicsTiers.ts": {
+      "to": "src/app/scenes/physicsTiers/physicsTiers.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/physicsTiers/physicsTiersAmbient.light.json": {
+      "to": "src/app/scenes/physicsTiers/physicsTiersAmbient.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/physicsTiers/physicsTiersOverview.camera.json": {
+      "to": "src/app/scenes/physicsTiers/physicsTiersOverview.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/physicsTiers/physicsTiersSun.light.json": {
+      "to": "src/app/scenes/physicsTiers/physicsTiersSun.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/scene01/scene01.scene.json": {
+      "to": "src/app/scenes/scene01/scene01.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/scene01/scene01.ts": {
+      "to": "src/app/scenes/scene01/scene01.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/scene01V2/scene01V2.scene.json": {
+      "to": "src/app/scenes/scene01V2/scene01V2.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/scene01V2/scene01V2.ts": {
+      "to": "src/app/scenes/scene01V2/scene01V2.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/sceneTestECS/ambientLight.light.json": {
+      "to": "src/app/scenes/sceneTestECS/ambientLight.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/sceneTestECS/mainCamera.camera.json": {
+      "to": "src/app/scenes/sceneTestECS/mainCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/sceneTestECS/sceneTestECS.scene.json": {
       "to": "src/app/scenes/sceneTestECS/sceneTestECS.scene.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
+      "action": "keep",
+      "plan": "p609"
     },
-    "src/app/testECS.ts": {
+    "src/app/scenes/sceneTestECS/sceneTestECS.ts": {
       "to": "src/app/scenes/sceneTestECS/sceneTestECS.ts",
-      "action": "move",
+      "action": "keep",
       "plan": "p609"
     },
-    "src/app/textureArrays.scene.json": {
-      "to": "src/app/scenes/textureArrays/textureArrays.scene.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
-    },
-    "src/app/textureArrays.ts": {
-      "to": "src/app/scenes/textureArrays/textureArrays.ts",
-      "action": "move",
+    "src/app/scenes/sceneTestECS/testImport.importedAsset.json": {
+      "to": "src/app/scenes/sceneTestECS/testImport.importedAsset.json",
+      "action": "keep",
       "plan": "p609"
     },
-    "src/app/textureAtlases.scene.json": {
-      "to": "src/app/scenes/textureAtlases/textureAtlases.scene.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
-    },
-    "src/app/textureAtlases.ts": {
-      "to": "src/app/scenes/textureAtlases/textureAtlases.ts",
-      "action": "move",
+    "src/app/scenes/sceneTestECS/testImportedMesh.mesh.json": {
+      "to": "src/app/scenes/sceneTestECS/testImportedMesh.mesh.json",
+      "action": "keep",
       "plan": "p609"
     },
-    "src/app/textures/p299TestArray.textureArray.json": {
+    "src/app/scenes/sceneTestECS/testMaterial.material.json": {
+      "to": "src/app/scenes/sceneTestECS/testMaterial.material.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/sceneTestECS/testMesh.mesh.json": {
+      "to": "src/app/scenes/sceneTestECS/testMesh.mesh.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/sceneTestECS/testSphere.geometry.json": {
+      "to": "src/app/scenes/sceneTestECS/testSphere.geometry.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/sceneTestECS/testTslMat.material.json": {
+      "to": "src/app/scenes/sceneTestECS/testTslMat.material.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/sceneTestECS/testTslMat.tsl.ts": {
+      "to": "src/app/scenes/sceneTestECS/testTslMat.tsl.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/skyShowcase/skyShowcase.scene.json": {
+      "to": "src/app/scenes/skyShowcase/skyShowcase.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/skyShowcase/skyShowcase.ts": {
+      "to": "src/app/scenes/skyShowcase/skyShowcase.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/skyShowcase/skyShowcaseCamera.camera.json": {
+      "to": "src/app/scenes/skyShowcase/skyShowcaseCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/space/_dbg__spaceDemo.ts": {
+      "to": "src/app/scenes/space/_dbg__spaceDemo.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/space/space.scene.json": {
+      "to": "src/app/scenes/space/space.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/space/space.ts": {
+      "to": "src/app/scenes/space/space.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/space/spaceCamera.camera.json": {
+      "to": "src/app/scenes/space/spaceCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/testDebugScene/testDebugScene.scene.json": {
+      "to": "src/app/scenes/testDebugScene/testDebugScene.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/testDebugScene/testDebugScene.ts": {
+      "to": "src/app/scenes/testDebugScene/testDebugScene.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/textureArrays/p299TestArray.textureArray.json": {
       "to": "src/app/scenes/textureArrays/p299TestArray.textureArray.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene textureArrays (p609 D2)"
+      "action": "keep",
+      "plan": "p609"
     },
-    "src/app/textures/p299TestArray1.textureArray.json": {
+    "src/app/scenes/textureArrays/p299TestArray1.textureArray.json": {
       "to": "src/app/scenes/textureArrays/p299TestArray1.textureArray.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene textureArrays (p609 D2)"
+      "action": "keep",
+      "plan": "p609"
     },
-    "src/app/textures/p299TestAtlas.textureAtlas.json": {
+    "src/app/scenes/textureArrays/textureArrays.scene.json": {
+      "to": "src/app/scenes/textureArrays/textureArrays.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/textureArrays/textureArrays.ts": {
+      "to": "src/app/scenes/textureArrays/textureArrays.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/textureAtlases/p299TestAtlas.textureAtlas.json": {
       "to": "src/app/scenes/textureAtlases/p299TestAtlas.textureAtlas.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene textureAtlases (p609 D2)"
+      "action": "keep",
+      "plan": "p609"
     },
-    "src/app/textures/p299TestAtlasImage.textureAtlas.json": {
+    "src/app/scenes/textureAtlases/p299TestAtlasImage.textureAtlas.json": {
       "to": "src/app/scenes/textureAtlases/p299TestAtlasImage.textureAtlas.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene textureAtlases (p609 D2)"
+      "action": "keep",
+      "plan": "p609"
     },
-    "src/app/textures/source/p299Atlas/blue.png": {
+    "src/app/scenes/textureAtlases/source/p299Atlas/blue.png": {
       "to": "src/app/scenes/textureAtlases/source/p299Atlas/blue.png",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene textureAtlases (p609 D2)"
+      "action": "keep",
+      "plan": "p609"
     },
-    "src/app/textures/source/p299Atlas/green.png": {
+    "src/app/scenes/textureAtlases/source/p299Atlas/green.png": {
       "to": "src/app/scenes/textureAtlases/source/p299Atlas/green.png",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene textureAtlases (p609 D2)"
+      "action": "keep",
+      "plan": "p609"
     },
-    "src/app/textures/source/p299Atlas/imageAtlasAlbedo.png": {
+    "src/app/scenes/textureAtlases/source/p299Atlas/imageAtlasAlbedo.png": {
       "to": "src/app/scenes/textureAtlases/source/p299Atlas/imageAtlasAlbedo.png",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene textureAtlases (p609 D2)"
+      "action": "keep",
+      "plan": "p609"
     },
-    "src/app/textures/source/p299Atlas/imageAtlasNormalDepth.png": {
+    "src/app/scenes/textureAtlases/source/p299Atlas/imageAtlasNormalDepth.png": {
       "to": "src/app/scenes/textureAtlases/source/p299Atlas/imageAtlasNormalDepth.png",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene textureAtlases (p609 D2)"
+      "action": "keep",
+      "plan": "p609"
     },
-    "src/app/textures/source/p299Atlas/maskGradient.png": {
+    "src/app/scenes/textureAtlases/source/p299Atlas/maskGradient.png": {
       "to": "src/app/scenes/textureAtlases/source/p299Atlas/maskGradient.png",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene textureAtlases (p609 D2)"
+      "action": "keep",
+      "plan": "p609"
     },
-    "src/app/textures/source/p299Atlas/maskRings.png": {
+    "src/app/scenes/textureAtlases/source/p299Atlas/maskRings.png": {
       "to": "src/app/scenes/textureAtlases/source/p299Atlas/maskRings.png",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene textureAtlases (p609 D2)"
+      "action": "keep",
+      "plan": "p609"
     },
-    "src/app/textures/source/p299Atlas/red.png": {
+    "src/app/scenes/textureAtlases/source/p299Atlas/red.png": {
       "to": "src/app/scenes/textureAtlases/source/p299Atlas/red.png",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene textureAtlases (p609 D2)"
+      "action": "keep",
+      "plan": "p609"
     },
-    "src/app/textures/source/p299Atlas/yellow.png": {
+    "src/app/scenes/textureAtlases/source/p299Atlas/yellow.png": {
       "to": "src/app/scenes/textureAtlases/source/p299Atlas/yellow.png",
-      "action": "move",
-      "plan": "p609",
-      "note": "used only by the scene textureAtlases (p609 D2)"
+      "action": "keep",
+      "plan": "p609"
     },
-    "src/app/thirdPersonGym.scene.json": {
+    "src/app/scenes/textureAtlases/textureAtlases.scene.json": {
+      "to": "src/app/scenes/textureAtlases/textureAtlases.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/textureAtlases/textureAtlases.ts": {
+      "to": "src/app/scenes/textureAtlases/textureAtlases.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/thirdPersonGymScene/characterObstacles.blend": {
+      "to": "src/app/scenes/thirdPersonGymScene/characterObstacles.blend",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/thirdPersonGymScene/characterTestObjects.ts": {
+      "to": "src/app/scenes/thirdPersonGymScene/characterTestObjects.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/thirdPersonGymScene/characterTestObstacles.ts": {
+      "to": "src/app/scenes/thirdPersonGymScene/characterTestObstacles.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/thirdPersonGymScene/characterVisual.ts": {
+      "to": "src/app/scenes/thirdPersonGymScene/characterVisual.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/thirdPersonGymScene/PhysicsStressTest.ts": {
+      "to": "src/app/scenes/thirdPersonGymScene/PhysicsStressTest.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/thirdPersonGymScene/thirdPersonGymAmbient.light.json": {
+      "to": "src/app/scenes/thirdPersonGymScene/thirdPersonGymAmbient.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/thirdPersonGymScene/thirdPersonGymCamera.camera.json": {
+      "to": "src/app/scenes/thirdPersonGymScene/thirdPersonGymCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/thirdPersonGymScene/thirdPersonGymScene.scene.json": {
       "to": "src/app/scenes/thirdPersonGymScene/thirdPersonGymScene.scene.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
+      "action": "keep",
+      "plan": "p609"
     },
-    "src/app/topDownTest.scene.json": {
+    "src/app/scenes/thirdPersonGymScene/thirdPersonGymScene.ts": {
+      "to": "src/app/scenes/thirdPersonGymScene/thirdPersonGymScene.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/thirdPersonGymScene/thirdPersonGymSun.light.json": {
+      "to": "src/app/scenes/thirdPersonGymScene/thirdPersonGymSun.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/topDownTestScene/topDownTestAmbient.light.json": {
+      "to": "src/app/scenes/topDownTestScene/topDownTestAmbient.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/topDownTestScene/topDownTestCamera.camera.json": {
+      "to": "src/app/scenes/topDownTestScene/topDownTestCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/topDownTestScene/topDownTestScene.scene.json": {
       "to": "src/app/scenes/topDownTestScene/topDownTestScene.scene.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "the codemod rewrites its `$schema` and `sceneFile` (moveJson.ts)"
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/topDownTestScene/topDownTestScene.ts": {
+      "to": "src/app/scenes/topDownTestScene/topDownTestScene.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/topDownTestScene/topDownTestSun.light.json": {
+      "to": "src/app/scenes/topDownTestScene/topDownTestSun.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/skyboxes/basicSkybox.skybox.json": {
+      "to": "src/app/skyboxes/basicSkybox.skybox.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/skyboxes/dayNight.skybox.json": {
+      "to": "src/app/skyboxes/dayNight.skybox.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/skyboxes/space.skybox.json": {
+      "to": "src/app/skyboxes/space.skybox.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/textures/p341AlphaCutTest.texture.json": {
+      "to": "src/app/textures/p341AlphaCutTest.texture.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/textures/source/p341AlphaCut.png": {
+      "to": "src/app/textures/source/p341AlphaCut.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/textures/testTexture.texture.json": {
+      "to": "src/app/textures/testTexture.texture.json",
+      "action": "keep",
+      "plan": "p609"
     },
     "src/toolkit/ecs/effects/FollowTool.ts": {
       "to": "src/toolkit/ecs/effects/FollowTool.ts",
@@ -2803,11 +3089,15 @@
       "action": "keep",
       "plan": "p609"
     },
-    "src/toolkit/ecs/FollowObjectCameraRig.ts": {
+    "src/toolkit/ecs/gameplay/FollowObjectCameraRig.ts": {
       "to": "src/toolkit/ecs/gameplay/FollowObjectCameraRig.ts",
-      "action": "move",
-      "plan": "p609",
-      "note": "moved from the engine (p606 Phase 7, p602 D6); a gameplay piece (p609 D1)"
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/toolkit/ecs/gameplay/MovingPlatform.ts": {
+      "to": "src/toolkit/ecs/gameplay/MovingPlatform.ts",
+      "action": "keep",
+      "plan": "p609"
     },
     "src/toolkit/ecs/index.ts": {
       "to": "src/toolkit/ecs/index.ts",
@@ -2815,25 +3105,19 @@
       "plan": "p609",
       "note": "the `aekasha/toolkit/ecs` entry (p606)"
     },
-    "src/toolkit/ecs/MovingPlatform.ts": {
-      "to": "src/toolkit/ecs/gameplay/MovingPlatform.ts",
-      "action": "move",
-      "plan": "p609",
-      "note": "moved from the engine (p606 Phase 7, p602 D6); a gameplay piece (p609 D1)"
-    },
-    "src/toolkit/geometry/generateAsteroid.ts": {
+    "src/toolkit/geometry/generate/Asteroid.ts": {
       "to": "src/toolkit/geometry/generate/Asteroid.ts",
-      "action": "move",
+      "action": "keep",
       "plan": "p609"
     },
-    "src/toolkit/geometry/generateFoliage.ts": {
+    "src/toolkit/geometry/generate/Foliage.ts": {
       "to": "src/toolkit/geometry/generate/Foliage.ts",
-      "action": "move",
+      "action": "keep",
       "plan": "p609"
     },
-    "src/toolkit/geometry/generateTerrain.ts": {
+    "src/toolkit/geometry/generate/Terrain.ts": {
       "to": "src/toolkit/geometry/generate/Terrain.ts",
-      "action": "move",
+      "action": "keep",
       "plan": "p609"
     },
     "src/toolkit/geometry/index.ts": {
@@ -2842,24 +3126,25 @@
       "plan": "p609",
       "note": "the `aekasha/toolkit/geometry` entry (p606)"
     },
-    "src/toolkit/geometry/scatterOnSurface.ts": {
+    "src/toolkit/geometry/scatter/ScatterOnSurface.ts": {
       "to": "src/toolkit/geometry/scatter/ScatterOnSurface.ts",
-      "action": "move",
+      "action": "keep",
       "plan": "p609"
     },
-    "src/toolkit/geometry/seededRandom.ts": {
+    "src/toolkit/geometry/SeededRandom.ts": {
       "to": "src/toolkit/geometry/SeededRandom.ts",
-      "action": "move",
-      "plan": "p609"
+      "action": "keep",
+      "plan": "p609",
+      "note": "the generators share it; the simulation lint points at it until p610"
     },
-    "src/toolkit/materials/asteroid.material.json": {
+    "src/toolkit/materials/asteroid/asteroid.material.json": {
       "to": "src/toolkit/materials/asteroid/asteroid.material.json",
-      "action": "move",
+      "action": "keep",
       "plan": "p609"
     },
-    "src/toolkit/materials/asteroid.tsl.ts": {
+    "src/toolkit/materials/asteroid/asteroid.tsl.ts": {
       "to": "src/toolkit/materials/asteroid/asteroid.tsl.ts",
-      "action": "move",
+      "action": "keep",
       "plan": "p609"
     },
     "src/toolkit/materials/index.ts": {
@@ -2868,42 +3153,41 @@
       "plan": "p609",
       "note": "the `aekasha/toolkit/materials` entry (p606)"
     },
-    "src/toolkit/materials/triplanarCheckerboard.material.json": {
+    "src/toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.material.json": {
       "to": "src/toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.material.json",
-      "action": "move",
+      "action": "keep",
       "plan": "p609"
     },
-    "src/toolkit/materials/triplanarCheckerboard.tsl.ts": {
+    "src/toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts": {
       "to": "src/toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts",
-      "action": "move",
+      "action": "keep",
       "plan": "p609"
     },
-    "src/toolkit/materials/triplanarGrid.material.json": {
+    "src/toolkit/materials/triplanarGrid/triplanarGrid.material.json": {
       "to": "src/toolkit/materials/triplanarGrid/triplanarGrid.material.json",
-      "action": "move",
+      "action": "keep",
       "plan": "p609"
     },
-    "src/toolkit/materials/triplanarGrid.tsl.ts": {
+    "src/toolkit/materials/triplanarGrid/triplanarGrid.tsl.ts": {
       "to": "src/toolkit/materials/triplanarGrid/triplanarGrid.tsl.ts",
-      "action": "move",
+      "action": "keep",
       "plan": "p609"
     },
-    "src/toolkit/materials/triplanarProjection.ts": {
+    "src/toolkit/materials/TriplanarProjection.ts": {
       "to": "src/toolkit/materials/TriplanarProjection.ts",
-      "action": "move",
+      "action": "keep",
+      "plan": "p609",
+      "note": "the TSL helper the triplanar materials share"
+    },
+    "src/toolkit/models/brand/aekashaSymbol/aekashaSymbol.glb": {
+      "to": "src/toolkit/models/brand/aekashaSymbol/aekashaSymbol.glb",
+      "action": "keep",
       "plan": "p609"
     },
-    "src/toolkit/models/aekashaSymbol/aekashaSymbol.glb": {
-      "to": "src/toolkit/models/brand/aekashaSymbol/aekashaSymbol.glb",
-      "action": "move",
-      "plan": "p609",
-      "note": "models by category (p609 D1): brand/, later reference/ and nature/ (p450)"
-    },
-    "src/toolkit/models/aekashaSymbol/aekashaSymbol.importedAsset.json": {
+    "src/toolkit/models/brand/aekashaSymbol/aekashaSymbol.importedAsset.json": {
       "to": "src/toolkit/models/brand/aekashaSymbol/aekashaSymbol.importedAsset.json",
-      "action": "move",
-      "plan": "p609",
-      "note": "models by category (p609 D1): brand/, later reference/ and nature/ (p450)"
+      "action": "keep",
+      "plan": "p609"
     }
   }
 }
