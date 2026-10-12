@@ -795,6 +795,31 @@ As built:
   - **`entryExports.json` is stale until the baselines' update:** it reads `api.json`, whose
     modules keep their old paths until step 4's `--update` (each lands in `aekasha` as
     unreferenced). `moveMap.ts` is run again in the baselines' commit.
+- **Verification** (step 4):
+  - `tsc`, `tsc -p hub`, `yarn lint`, `yarn test` (305), `moveMap.ts --check`; `yarn build` with the
+    Hub (its warnings the dry run's, by the new paths). The build's gathers leave `src/generated/`
+    and `.schemas/` as committed.
+  - **`yarn verify:scenes`:** 93 of 96 on the first run, the same hashes and system order in all.
+    The 3 were `assetCompare`'s debug configurations, one snapshot difference (2.05 % of the
+    pixels): its prop, a gitignored GLB (`src/public/debugger/assets/testOptimized/phase1/
+    metalToolbox/`) the scene loads only when the dev server serves it, which Phase 1's fresh
+    worktree didn't have, so `main`'s baselines show no prop. With that folder moved aside,
+    `--only assetCompare` passes all four: the 96 runs match `main`. **A run in the repo fails
+    `assetCompare` against these baselines until they're recorded where the prop exists** (or the
+    scene's snapshot ignores a missing prop).
+  - **`compareBaselines.ts --plan p608 5491035`:** `api.json` and `docs.json` differ only by the
+    paths (the deletes' 4 exports out of both); the 7 chunks take their renamed names. It exits 1
+    on two bundle findings, both §7's risk 1, one split part changing chunks:
+    `setMeshCreatePropsToUserData` (`kernel/mesh/MeshUserData.ts`, 4584 B rendered, 742 B gzip),
+    whose one importer, `MeshColliderGeometry.ts`, is in the lazy physics import chunk, left the
+    main chunk with `helpers.ts`: main −4589 B rendered (−403 B gzip, within the tolerance; the
+    rendered size is flagged in either direction), `ImportPhysics.js` 2067 → 2549 B gzip, all
+    chunks −84 B gzip. Recorded in the baselines' commit and the changelog (Phase 7), as risk 1
+    says.
+  - **`entryExports.json` regenerated** with the new `api.json`: the summary as at the base but one
+    name, `ThreeVector3` (`aekasha`), unreferenced → internal, since `MeshUserData.ts` imports it
+    from `ThreeMath.ts` where `helpers.ts` used it in place.
+  - "Production build: debug code none".
 
 ### Phase 6: the Hub, CLAUDE.md and the readme
 
