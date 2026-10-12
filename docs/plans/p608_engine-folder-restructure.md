@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 implemented
 Category: Refactoring, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p609_toolkit-and-app-restructure.md, p610_character-and-input-action-architecture.md, p611_sbp-tooling-profiles-and-marketing.md, p612_review-ecs-loop-config-init.md, p613_review-rendering-scene-assets.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p510_headless-simulation-runtime.md
@@ -429,7 +429,7 @@ Phase 5 is the move commit and the first of group 3, Phases 6-7 the rest of grou
 leaves the tree compiling and lint-clean (the Stop hook), and runs `yarn test`. Long runs go to the
 background with a log (root `CLAUDE.md`, "Watching a long run").
 
-### Phase 1: the rules and the checks before the move
+### Phase 1: the rules and the checks before the move — done
 
 1. **Nothing else open:** no PR open against `main` (GitHub; `gh` isn't installed here) and no
    branch with work in flight (§2.6). If one is, it merges first or waits for p608.
@@ -454,6 +454,36 @@ background with a log (root `CLAUDE.md`, "Watching a long run").
 5. **Verification:** `yarn lint` (no file's rules changed: nothing new is reported),
    `yarn test`, `yarn verify:baselines` (passes with no baseline change: the debug check finds
    nothing on today's build), `moveMap.ts --check`.
+
+As built:
+
+- **Nothing open (2026-10-12):** no open PR (the public GitHub API, `JarSeal/aekasha-js`). Besides
+  §2.6's two archives, `origin/wall-slide-feature` (`81442ab`, 2025-10-08, "Proto a wall slide
+  sensor", remote only) has a commit `main` lacks: a year-old character prototype, not work in
+  flight; picked up after p608, it's rewritten against `features/character/`. The branch is
+  `engine-folder-restructured` (with a "d"), not `engine-folder-restructure`.
+- **The scene baselines:** recorded on `4154a88` (`baseline.json`'s commit, clean): 96 runs (24
+  scenes × 4 configurations, headless WebGPU on the Mac, 6 minutes), 72 snapshots. Three character
+  scenes have no hash (characters aren't deterministic yet), so Phase 5 compares only their
+  snapshots, errors and system order. The worktree was in the session's scratchpad with an APFS
+  clone of `node_modules` (`cp -cR`) and its `.cache/verify` linked to the repo's, so the baselines
+  landed where Phase 5 reads them. A `node_modules` symlink is enough for `tsc` and Vitest (Phase 4's
+  dry run), but not for a Vite server: it resolves the real path, outside the worktree's
+  `server.fs.allow`, and shares the prebundle cache with the repo.
+- **The map:** p608 now has move 398 and keep 34 (the two wrappers are keeps; totals unchanged: 509,
+  p608 437, p609 72), and the split rule's note names D2. `entryExports.json` files exactly 10 names
+  under another entry: the five loaders `aekasha/debug` → `aekasha`, `createAssetsDebugGUI`
+  `aekasha` → `aekasha/debug`, the four `PostFXProfiler` exports `aekasha/postfx` →
+  `aekasha/debug`. The layout report's boundary violations (26) and cycles (none) don't change.
+- **The production check's test** also passes three near misses: a folder that only starts with
+  `debug` (`features/debugDraw/`), a `debug/` folder outside the engine (`src/app/debug/`) and
+  `node_modules/debug/`.
+- **The root `CLAUDE.md`'s Debug system** line on `__AEK_DEBUG__` says what `yarn verify:baselines`
+  fails on (a `_dbg__` module, or any module in an engine folder named `debug`), besides the
+  layering lint's line.
+- **Verification:** `yarn lint` reports nothing (no error, no warning), `yarn test` 260 tests in 24
+  files, `yarn verify:baselines` "All baselines unchanged" with "production build: debug code
+  none", `tsc` and `tsc -p hub`, `moveMap.ts --check`.
 
 ### Phase 2: the rewrite rules
 

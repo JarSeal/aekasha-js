@@ -1772,10 +1772,9 @@
       "plan": "p608"
     },
     "src/_engine/debug/Assets.ts": {
-      "to": "src/_engine/kernel/assets/debug/Assets.ts",
-      "action": "move",
-      "plan": "p608",
-      "note": "a debug wrapper: merged into the feature's public module with its move (p608 / p618, p602 D4)"
+      "to": "src/_engine/debug/Assets.ts",
+      "action": "keep",
+      "plan": "p608"
     },
     "src/_engine/debug/AxesGizmo.ts": {
       "to": "src/_engine/debug/AxesGizmo.ts",
@@ -1828,10 +1827,9 @@
       "plan": "p608"
     },
     "src/_engine/debug/PostFXProfiler.ts": {
-      "to": "src/_engine/features/postfx/debug/PostFXProfiler.ts",
-      "action": "move",
-      "plan": "p608",
-      "note": "a debug wrapper: merged into the feature's public module with its move (p608 / p618, p602 D4)"
+      "to": "src/_engine/debug/PostFXProfiler.ts",
+      "action": "keep",
+      "plan": "p608"
     },
     "src/_engine/debug/Profiler.ts": {
       "to": "src/_engine/debug/Profiler.ts",
@@ -2111,7 +2109,7 @@
       "to": "src/_engine/utils/helpers.ts",
       "action": "split",
       "plan": "p608",
-      "note": "split per export (p602 D6); the codemod rewrites each import to its target",
+      "note": "split per export (p602 D6), the debug loaders next to Config.ts (p608 D2); the codemod rewrites each import to its target",
       "split": {
         "getFileNameExt": "src/_engine/kernel/assets/AssetFiles.ts",
         "isHDR": "src/_engine/kernel/assets/AssetFiles.ts",
@@ -2137,11 +2135,11 @@
         "initWorker": "src/_engine/kernel/loop/Workers.ts",
         "isMainThread": "src/_engine/kernel/loop/Workers.ts",
         "isMainThreadSimple": "src/_engine/kernel/loop/Workers.ts",
-        "DebugModuleRef": "src/_engine/debug/DebugModules.ts",
-        "loadDebugModule": "src/_engine/debug/DebugModules.ts",
-        "loadDebugModuleAsync": "src/_engine/debug/DebugModules.ts",
-        "isDebugReady": "src/_engine/debug/DebugModules.ts",
-        "useDebug": "src/_engine/debug/DebugModules.ts",
+        "DebugModuleRef": "src/_engine/kernel/config/DebugModules.ts",
+        "loadDebugModule": "src/_engine/kernel/config/DebugModules.ts",
+        "loadDebugModuleAsync": "src/_engine/kernel/config/DebugModules.ts",
+        "isDebugReady": "src/_engine/kernel/config/DebugModules.ts",
+        "useDebug": "src/_engine/kernel/config/DebugModules.ts",
         "getLightCharacteristics": "src/_engine/kernel/light/LightHelpers.ts"
       }
     },

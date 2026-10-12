@@ -4,21 +4,22 @@
  * isn't a diff: a finding is never something to record.
  *
  * - A file named `_dbg__*` in `dist/assets/` (a chunk, its CSS, an orphan chunk nothing loads).
- * - A debug module (`_dbg__*`, anything under `src/_engine/core/Debug/`) with rendered code in a
- *   chunk.
- * - A debug wrapper (`src/_engine/debug/*.ts`, the entry `index.ts` aside) with rendered code in a
- *   chunk: its body folds out, so a wrapper still there is called from code that ships.
+ * - A debug module with rendered code in a chunk: a `_dbg__*` module, or any module under an engine
+ *   folder named `debug` without regard to case (`debug/`, `kernel/<area>/debug/`,
+ *   `features/<name>/debug/`, `core/Debug/`), the entry `debug/index.ts` aside (p608 D4). A debug
+ *   folder holds nothing that ships: a wrapper's body folds out, so one still there is called from
+ *   code that ships.
  */
 
 /** A module of the build, as the visualizer lists it: its id (`/src/…`) and its rendered length
  * per chunk (chunk names without their content hash). A tree-shaken module has no chunks. */
 export type BuildModule = { id: string; chunks: Record<string, number> };
 
-const isDebugModule = (id: string) =>
-  /(^|\/)_dbg__[^/]*$/.test(id) || id.startsWith('/src/_engine/core/Debug/');
+const DEBUG_ENTRY = '/src/_engine/debug/index.ts';
 
-const isDebugWrapper = (id: string) =>
-  /^\/src\/_engine\/debug\/[^/]+\.ts$/.test(id) && id !== '/src/_engine/debug/index.ts';
+const isDebugModule = (id: string) =>
+  /(^|\/)_dbg__[^/]*$/.test(id) ||
+  (/^\/src\/_engine\/(?:[^/]+\/)*debug\//i.test(id) && id !== DEBUG_ENTRY);
 
 /**
  * Lists the debug code a production build holds, one line each, sorted.
@@ -34,13 +35,12 @@ export const findDebugCodeInBuild = (files: string[], modules: BuildModule[]): s
     }
   }
   for (const { id, chunks } of modules) {
-    const what = isDebugModule(id) ? 'debug module' : isDebugWrapper(id) ? 'debug wrapper' : null;
-    if (!what) continue;
+    if (!isDebugModule(id)) continue;
     const inChunks = Object.entries(chunks)
       .filter(([, rendered]) => rendered > 0)
       .map(([chunk]) => chunk)
       .sort();
-    if (inChunks.length) findings.push(`${what} ${id.slice(1)} in ${inChunks.join(', ')}`);
+    if (inChunks.length) findings.push(`debug module ${id.slice(1)} in ${inChunks.join(', ')}`);
   }
   return findings.sort();
 };

@@ -64,7 +64,8 @@ const ENTRY_IMPORT = {
   message:
     'Engine code imports engine code by relative path: an entry imported inside the engine makes barrel cycles.',
 };
-const DEBUG_FILES = ['src/**/_dbg__*.ts', 'src/_engine/core/Debug/**/*.ts'];
+// Debug code is found by name, wherever its feature keeps it (p608 D4)
+const DEBUG_FILES = ['src/**/_dbg__*.ts'];
 
 // The simulation: code that runs at APP_PHYSICS_STEP or inside the physics step, on the main
 // thread or in the physics worker. It must run identically on every machine, so it counts time in
@@ -214,7 +215,7 @@ export default [
     rules: { '@typescript-eslint/no-restricted-imports': 'off' },
   },
   {
-    files: ['src/_engine/**/_dbg__*.ts', 'src/_engine/core/Debug/**/*.ts'],
+    files: ['src/_engine/**/_dbg__*.ts'],
     rules: { '@typescript-eslint/no-restricted-imports': ['error', { patterns: [ENTRY_IMPORT] }] },
   },
 

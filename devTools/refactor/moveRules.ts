@@ -44,9 +44,6 @@ const F = `${E}features/`;
 const T = 'src/toolkit/';
 const A = 'src/app/';
 
-const WRAPPER_NOTE =
-  "a debug wrapper: merged into the feature's public module with its move (p608 / p618, p602 D4)";
-
 const ENGINE_RULES: MoveRule[] = [
   // Engine root
   { from: `${E}InitApp.ts`, to: `${K}init/InitEngine.ts` },
@@ -164,7 +161,6 @@ const ENGINE_RULES: MoveRule[] = [
     to: `${K}assets/debug/_dbg__TexturePreview.ts`,
   },
   { from: `${E}core/Debug/Assets.module.scss`, to: `${K}assets/debug/Assets.module.scss` },
-  { from: `${E}debug/Assets.ts`, to: `${K}assets/debug/Assets.ts`, note: WRAPPER_NOTE },
 
   // Kernel: render
   { from: `${E}core/Renderer.ts`, to: `${K}render/Renderer.ts` },
@@ -261,11 +257,6 @@ const ENGINE_RULES: MoveRule[] = [
     from: `${E}core/Debug/_dbg__PostFXProfiler.ts`,
     to: `${F}postfx/debug/_dbg__PostFXProfiler.ts`,
   },
-  {
-    from: `${E}debug/PostFXProfiler.ts`,
-    to: `${F}postfx/debug/PostFXProfiler.ts`,
-    note: WRAPPER_NOTE,
-  },
   { from: `${E}core/Viewports.ts`, to: `${F}viewports/Viewports.ts` },
   { from: `${E}core/ViewportsFeature.ts`, to: `${F}viewports/ViewportsFeature.ts` },
   { from: `${E}core/Viewports.module.scss`, to: `${F}viewports/Viewports.module.scss` },
@@ -334,7 +325,7 @@ const ENGINE_RULES: MoveRule[] = [
   {
     from: `${E}utils/helpers.ts`,
     action: 'split',
-    note: 'split per export (p602 D6); the codemod rewrites each import to its target',
+    note: 'split per export (p602 D6), the debug loaders next to Config.ts (p608 D2); the codemod rewrites each import to its target',
     split: {
       getFileNameExt: `${K}assets/AssetFiles.ts`,
       isHDR: `${K}assets/AssetFiles.ts`,
@@ -360,11 +351,11 @@ const ENGINE_RULES: MoveRule[] = [
       initWorker: `${K}loop/Workers.ts`,
       isMainThread: `${K}loop/Workers.ts`,
       isMainThreadSimple: `${K}loop/Workers.ts`,
-      DebugModuleRef: `${E}debug/DebugModules.ts`,
-      loadDebugModule: `${E}debug/DebugModules.ts`,
-      loadDebugModuleAsync: `${E}debug/DebugModules.ts`,
-      isDebugReady: `${E}debug/DebugModules.ts`,
-      useDebug: `${E}debug/DebugModules.ts`,
+      DebugModuleRef: `${K}config/DebugModules.ts`,
+      loadDebugModule: `${K}config/DebugModules.ts`,
+      loadDebugModuleAsync: `${K}config/DebugModules.ts`,
+      isDebugReady: `${K}config/DebugModules.ts`,
+      useDebug: `${K}config/DebugModules.ts`,
       getLightCharacteristics: `${K}light/LightHelpers.ts`,
     },
   },
