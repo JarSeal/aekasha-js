@@ -436,34 +436,35 @@ standards, the structure and the SBP strategy to it would make every session pay
   - p070 "Refactor dynamic character code": its sensor bug fixes and new options come after p610,
     on the restructured controller.
   - p770 "Key binding refactoring": aligned with p610's action layer (one key binding model).
-- **In-flight work:** `p299` (in progress) is merged before p608's move, which touches nearly
-  every file.
+- **In-flight work:** `p299` (in progress) has its Phases 0-4 on `main` and no code in flight;
+  its Phase 5 waits on p302, so it doesn't block p608's move (p608 D1). What it still writes uses
+  the new paths.
 
 ## 10. Roadmap
 
-| Stage | Plan                                                      | What                                                                                                                   | Blocked by              |
-| ----- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| A     | \_DONE_p601_refactoring-safety-net-tests-and-baselines.md | Vitest, the scene runner (snapshots, console errors, determinism hashes), bundle / API / coverage baselines            | —                       |
-| A     | \_DONE_p602_architecture-and-target-structure.md          | The decisions: folder map, public entry, feature-module contract, debug placement, naming, boundaries                  | —                       |
-| A     | \_DONE_p603_gameplay-architecture-contracts.md            | Actors, controllers, intents, brains, animation, world systems; the stub plans                                         | p602                    |
-| A     | \_DONE_p604_multiplayer-viability-study.md                | The verdict, the constraints (measured; the two-client spike dropped)                                                  | p602                    |
-| A     | \_DONE_p605_coding-standards-and-documentation-tooling.md | Coding standards, JSDoc style, eslint-plugin-jsdoc + TypeDoc validation as a ratchet, the CLAUDE.md split              | p602                    |
-| B     | \_DONE_p606_layering-inversion-and-public-entry.md        | The engine stops importing the app; declaration-merged component types; the `aekasha` entry; boundary lint             | p601, p602              |
-| B     | \_DONE_p607_sbp-foundation-feature-modules.md             | No side-effect registrations, `sideEffects`, lazy Rapier, `__AEK_DEBUG__`, lazy maps and loaders, the feature manifest | p606                    |
-| B     | p608_engine-folder-restructure.md                         | The folder map applied with a codemod; utils, UI and debug moved; demo code out of the engine                          | p606, p607, p299 merged |
-| B     | p609_toolkit-and-app-restructure.md                       | Toolkit categories (p450's structure), app scenes in folders, deprecated re-exports removed                            | p608                    |
-| B     | p610_character-and-input-action-architecture.md           | The input action layer, the controller contract, `createDynamicCharacter` split, intents                               | p603, p608              |
-| B     | p611_sbp-tooling-profiles-and-marketing.md                | `yarn sbp`, budgets, the banner profile and example, the lite-renderer study, marketing                                | p607, p608              |
-| C     | p612_review-ecs-loop-config-init.md                       | ECS, main loop, config, `InitEngine`, views (+ p200's cache)                                                           | p608                    |
-| C     | p613_review-rendering-scene-assets.md                     | Renderer, scenes and loader, geometry / material / texture, assets, import, PostFX, viewports, snapshots               | p608                    |
-| C     | p614_review-physics.md                                    | PhysicsAPI split, EngineRapier, worker, tiers, raycast (+ the `RayCastOpts` removal)                                   | p608, p610              |
-| C     | p615_review-sky-box.md                                    | The sky box                                                                                                            | p608                    |
-| C     | p616_review-lod-spatial-instancing-lines.md               | LOD, impostors, spatial index, instancing, lines                                                                       | p608                    |
-| C     | p617_review-input-ui-hud.md                               | Input devices, the UI kit (usable by apps), HUD, icons                                                                 | p608, p610              |
-| C     | p618_review-debug-public-api.md                           | The debug entry points and their docs, debug structure (no panel polish: p800)                                         | p608                    |
-| C     | p619_review-schemas-pipeline-devtools-hub.md              | Schemas, the data pipeline, the asset pipeline, devTools, the Hub generator                                            | p608                    |
-| C     | p620_review-toolkit-and-app-code.md                       | Toolkit and app code                                                                                                   | p609                    |
-| D     | p621_hub-docs-readme-and-claude-md-final.md               | Architecture, SBP and migration pages, readme, CLAUDE.md final, the epic closed                                        | Stage C                 |
+| Stage | Plan                                                      | What                                                                                                                   | Blocked by |
+| ----- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------- |
+| A     | \_DONE_p601_refactoring-safety-net-tests-and-baselines.md | Vitest, the scene runner (snapshots, console errors, determinism hashes), bundle / API / coverage baselines            | —          |
+| A     | \_DONE_p602_architecture-and-target-structure.md          | The decisions: folder map, public entry, feature-module contract, debug placement, naming, boundaries                  | —          |
+| A     | \_DONE_p603_gameplay-architecture-contracts.md            | Actors, controllers, intents, brains, animation, world systems; the stub plans                                         | p602       |
+| A     | \_DONE_p604_multiplayer-viability-study.md                | The verdict, the constraints (measured; the two-client spike dropped)                                                  | p602       |
+| A     | \_DONE_p605_coding-standards-and-documentation-tooling.md | Coding standards, JSDoc style, eslint-plugin-jsdoc + TypeDoc validation as a ratchet, the CLAUDE.md split              | p602       |
+| B     | \_DONE_p606_layering-inversion-and-public-entry.md        | The engine stops importing the app; declaration-merged component types; the `aekasha` entry; boundary lint             | p601, p602 |
+| B     | \_DONE_p607_sbp-foundation-feature-modules.md             | No side-effect registrations, `sideEffects`, lazy Rapier, `__AEK_DEBUG__`, lazy maps and loaders, the feature manifest | p606       |
+| B     | p608_engine-folder-restructure.md                         | The folder map applied with a codemod; utils, UI and debug moved; demo code out of the engine                          | p606, p607 |
+| B     | p609_toolkit-and-app-restructure.md                       | Toolkit categories (p450's structure), app scenes in folders, deprecated re-exports removed                            | p608       |
+| B     | p610_character-and-input-action-architecture.md           | The input action layer, the controller contract, `createDynamicCharacter` split, intents                               | p603, p608 |
+| B     | p611_sbp-tooling-profiles-and-marketing.md                | `yarn sbp`, budgets, the banner profile and example, the lite-renderer study, marketing                                | p607, p608 |
+| C     | p612_review-ecs-loop-config-init.md                       | ECS, main loop, config, `InitEngine`, views (+ p200's cache)                                                           | p608       |
+| C     | p613_review-rendering-scene-assets.md                     | Renderer, scenes and loader, geometry / material / texture, assets, import, PostFX, viewports, snapshots               | p608       |
+| C     | p614_review-physics.md                                    | PhysicsAPI split, EngineRapier, worker, tiers, raycast (+ the `RayCastOpts` removal)                                   | p608, p610 |
+| C     | p615_review-sky-box.md                                    | The sky box                                                                                                            | p608       |
+| C     | p616_review-lod-spatial-instancing-lines.md               | LOD, impostors, spatial index, instancing, lines                                                                       | p608       |
+| C     | p617_review-input-ui-hud.md                               | Input devices, the UI kit (usable by apps), HUD, icons                                                                 | p608, p610 |
+| C     | p618_review-debug-public-api.md                           | The debug entry points and their docs, debug structure (no panel polish: p800)                                         | p608       |
+| C     | p619_review-schemas-pipeline-devtools-hub.md              | Schemas, the data pipeline, the asset pipeline, devTools, the Hub generator                                            | p608       |
+| C     | p620_review-toolkit-and-app-code.md                       | Toolkit and app code                                                                                                   | p609       |
+| D     | p621_hub-docs-readme-and-claude-md-final.md               | Architecture, SBP and migration pages, readme, CLAUDE.md final, the epic closed                                        | Stage C    |
 
 **Order:** p601 and p602 first (in either order), then p603-p605. Stage B is one engine major and
 must land in order (p606 → p607 → p608, then p609-p611). Stage C plans are independent of each

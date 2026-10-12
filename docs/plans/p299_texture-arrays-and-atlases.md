@@ -4,6 +4,7 @@ Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 0)
 Blocked by: p302_material-and-texture-system-refactor.md (soft: only Phase 5's JSON binding)
 Blocks: p303_texture-sets-and-terrain-texture-library.md (D4 layer arrays build on D1), p309_terrain-decals.md (D1 decal atlases build on D3), p374_multi-material-merging.md
 Related: \_DONE_p300_asset-optimization-pipeline-plan.md (the pipeline this extends), \_DONE_p351_impostor-billboard-lod.md (its exported atlases use D3's cell table), p308_terrain-scatter.md (leaf-card atlases), \_DONE_p345_gpu-memory-and-draw-call-debugger.md
+Note: p608 (the engine folder restructure) doesn't wait for Phases 5-6 (p608 D1): it moves this plan's files (`core/TextureArray.ts`, `core/TextureAtlas.ts` → `kernel/assets/`, the schemas to PascalCase names, …). Read paths here as before p608, and write the remaining phases against the moved files (`devTools/refactor/moveMap.json`).
 
 # Texture Arrays & Atlases
 
