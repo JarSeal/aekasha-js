@@ -9,7 +9,8 @@
  *   importer's old path to the old target, both mapped, and written as the relative path between
  *   the new ones in the style it had. An import of a split file is divided per target.
  * - Stylesheets (`rewriteStylesheet`): `@use`, `@forward` and `@import`, resolved as Sass does.
- * - Text: `moveText.ts`. `rewriteTree` runs all three on a tree's texts and reports the leftovers.
+ * - Text: `moveText.ts`; the splits: `moveSplit.ts`; the edit table: `moveEdits.ts`. `moveTree.ts`
+ *   runs them all on a tree's texts.
  *
  * Every rewrite resolves against the tree before the move and writes against the one after it.
  */
@@ -17,13 +18,6 @@ import path from 'path';
 import ts from 'typescript';
 import { resolveSpecifier } from './importGraph';
 import type { MoveEntry, MovePlan } from './moveRules';
-import {
-  createTextContext,
-  findLeftovers,
-  getTextKind,
-  rewriteText,
-  type Leftover,
-} from './moveText';
 
 export type PathMap = {
   plan: MovePlan;
@@ -185,7 +179,7 @@ const foldersOf = (files: ReadonlySet<string>) => {
 };
 
 /** A relative path written as a specifier: `./` for a sibling, `.` for the folder itself */
-const toSpecifier = (fromDir: string, to: string) => {
+export const toSpecifier = (fromDir: string, to: string) => {
   const rel = posix.relative(fromDir, to);
   if (!rel) return '.';
   return rel === '..' || rel.startsWith('../') ? rel : `./${rel}`;
@@ -204,17 +198,18 @@ const describeGone = (map: PathMap, file: string) =>
 /**
  * A relative specifier after the move, written as it was (with or without `.ts`, `/index` or not,
  * its query); `{}` when it stays as written. `target` stands for the file it names after the move
- * (a split file's part). A specifier naming a folder (`new URL('.', import.meta.url)`) keeps naming
- * it, and one naming nothing is left alone unless its importer moves.
+ * (a split file's part), and `newImporter` for where it's written (a split file's target). A
+ * specifier naming a folder (`new URL('.', import.meta.url)`) keeps naming it, and one naming
+ * nothing is left alone unless its importer moves.
  */
-const moveSpecifier = (
+export const moveSpecifier = (
   map: PathMap,
   importer: string,
   spec: string,
-  target?: string
+  target?: string,
+  newImporter = map.newPathOf(importer) as string
 ): { spec?: string; error?: string } => {
   if (!isRelative(spec)) return {};
-  const newImporter = map.newPathOf(importer) as string;
   const query = /\?.*$/.exec(spec)?.[0] ?? '';
   const bare = spec.slice(0, spec.length - query.length);
   const base = posix.normalize(posix.join(posix.dirname(importer), bare)).replace(/\/$/, '');
@@ -702,42 +697,4 @@ export const rewriteStylesheet = (map: PathMap, file: string, text: string): Rew
     }
   }
   return { text: errors.length ? text : applyEdits(text, edits), errors };
-};
-
-// The tree
-
-export type TreeRewrite = {
-  /** The texts that change, by their path before the move */
-  changed: Map<string, string>;
-  /** The old paths still named, by the path after the move of the file naming them */
-  leftovers: Leftover[];
-  /** `file:line message`; on any, nothing may be written */
-  errors: string[];
-};
-
-/**
- * Rewrites every text of a tree for the move: a module's specifiers then its comments (or its
- * whole text, `getTextKind`), a stylesheet's loads, a document's paths and links. A deleted file
- * and a split one (`moveSplit.ts`) aren't rewritten; history neither (D6).
- */
-export const rewriteTree = (map: PathMap, texts: ReadonlyMap<string, string>): TreeRewrite => {
-  const ctx = createTextContext(map);
-  const changed = new Map<string, string>();
-  const leftovers: Leftover[] = [];
-  const errors: string[] = [];
-  for (const [file, text] of texts) {
-    const to = map.newPathOf(file);
-    if (!to || getTextKind(file) === 'history') continue;
-    let next = text;
-    const run = (result: RewriteResult) => {
-      errors.push(...result.errors);
-      next = result.text;
-    };
-    if (file.endsWith('.ts')) run(rewriteTypeScript(map, file, next));
-    else if (/\.s[ac]ss$/.test(file)) run(rewriteStylesheet(map, file, next));
-    run(rewriteText(ctx, file, next));
-    if (next !== text) changed.set(file, next);
-    leftovers.push(...findLeftovers(ctx, to, next));
-  }
-  return { changed, leftovers, errors };
 };

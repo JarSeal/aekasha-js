@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildPathMap, rewriteTree } from './moveApply';
+import { buildPathMap } from './moveApply';
 import type { MoveEntry } from './moveRules';
 import { createTextContext, findLeftovers, getTextKind, rewriteText } from './moveText';
 
@@ -169,30 +169,5 @@ describe('findLeftovers', () => {
       { file: 'readme.md', line: 2, path: 'core/Scene.ts' },
     ]);
     expect(findLeftovers(ctx, 'CHANGELOG.md', text)).toEqual([]);
-  });
-});
-
-describe('rewriteTree', () => {
-  it("runs a module's specifiers, then its comments, and reports what's left by the new path", () => {
-    const { map } = setup();
-    const texts = new Map([
-      [
-        `${E}core/Scene.ts`,
-        "// see core/ECS.ts\nimport { a } from './ECS';\nconst p = 'src/_engine/core/ECS.ts';",
-      ],
-      ['CHANGELOG.md', 'core/Scene.ts'],
-      ['readme.md', 'nothing to see'],
-    ]);
-    const { changed, leftovers, errors } = rewriteTree(map, texts);
-    expect(errors).toEqual([]);
-    expect([...changed]).toEqual([
-      [
-        `${E}core/Scene.ts`,
-        "// see kernel/ecs/ECS.ts\nimport { a } from '../ecs/ECS';\nconst p = 'src/_engine/core/ECS.ts';",
-      ],
-    ]);
-    expect(leftovers).toEqual([
-      { file: `${E}kernel/scene/Scene.ts`, line: 3, path: 'src/_engine/core/ECS.ts' },
-    ]);
   });
 });
