@@ -1,12 +1,9 @@
-export {
-  createInstancedLodPool,
-  createInstancedMeshPool,
-} from '../../core/Instancing/InstancedMeshPool';
+export { createInstancedLodPool, createInstancedMeshPool } from './InstancedMeshPool';
 export type {
   CreateInstancedLodPoolOptions,
   CreateInstancedMeshPoolOptions,
   InstancedLodPool,
   InstancedMeshPool,
-} from '../../core/Instancing/InstancedMeshPool';
-export type { InstancedMeshSlotData } from '../../core/Instancing/InstancedMeshPoolTypes';
-export { instancing } from '../../core/Instancing/InstancingFeature';
+} from './InstancedMeshPool';
+export type { InstancedMeshSlotData } from './InstancedMeshPoolTypes';
+export { instancing } from './InstancingFeature';

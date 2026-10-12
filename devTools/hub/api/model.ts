@@ -9,7 +9,7 @@ import { ROOT } from '../paths';
  * Two subtrees, `engine/` (`src/_engine/`) and `toolkit/` (`src/toolkit/`), each a folder tree
  * under `documentation/`. A module's page is its file's path without `.ts`
  * (`documentation/engine/core/SceneLoader/`), and a folder's page its path. A module next to a
- * folder of the same name (`core/ECS.ts`, `core/ECS/`) has the folder's URL: its page is both,
+ * folder of the same name (`kernel/ecs/ECS.ts`, `core/ECS/`) has the folder's URL: its page is both,
  * the module's symbols and the folder's list.
  */
 
@@ -71,9 +71,9 @@ export type Coverage = { documented: number; total: number };
 export type ApiModule = {
   reflection: DeclarationReflection;
   subtree: ApiSubtree;
-  /** From its subtree's folder, without `.ts`: `core/SceneLoader` */
+  /** From its subtree's folder, without `.ts`: `kernel/scene/SceneLoader` */
   relPath: string;
-  /** From the repo root: `src/_engine/core/SceneLoader.ts` */
+  /** From the repo root: `src/_engine/kernel/scene/SceneLoader.ts` */
   sourcePath: string;
   /** Absolute: its page's diagnostics point here */
   file: string;
@@ -93,7 +93,7 @@ export type ApiFolder = {
   pagePath: string;
   folders: ApiFolder[];
   modules: ApiModule[];
-  /** The module with this folder's URL (`core/ECS.ts` for `core/ECS/`): its page is the folder's */
+  /** The module with this folder's URL (`kernel/ecs/ECS.ts` for `core/ECS/`): its page is the folder's */
   module: ApiModule | null;
   /** Its own modules', for the landing page's groups */
   coverage: Coverage;
@@ -152,7 +152,7 @@ const createFolder = (subtree: ApiSubtree, relPath: string): ApiFolder => {
   };
 };
 
-/** `src/_engine/core/SceneLoader.ts` → its subtree and `core/SceneLoader` */
+/** `src/_engine/kernel/scene/SceneLoader.ts` → its subtree and `kernel/scene/SceneLoader` */
 const locateModule = (sourcePath: string) => {
   for (const { id, sourceDir } of API_SUBTREES) {
     if (sourcePath.startsWith(`${sourceDir}/`)) {
@@ -166,7 +166,7 @@ const locateModule = (sourcePath: string) => {
 };
 
 /**
- * The page of a module (`src/_engine/core/SceneLoader.ts` → `documentation/engine/core/SceneLoader/`)
+ * The page of a module (`src/_engine/kernel/scene/SceneLoader.ts` → `documentation/engine/core/SceneLoader/`)
  * or a folder (`src/_engine/core/` → `documentation/engine/core/`), whether the API has it or not;
  * `null` outside both subtrees. p608's codemod rewrites `hub:` links with it.
  */

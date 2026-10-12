@@ -1,13 +1,13 @@
-import type { DebugModuleRef } from '../utils/helpers';
-import { loadDebugModuleAsync, useDebug } from '../utils/helpers';
+import type { DebugModuleRef } from '../kernel/config/DebugModules';
+import { loadDebugModuleAsync, useDebug } from '../kernel/config/DebugModules';
 
 export type ToolTypes = 'SWITCH' | 'PLAY' | 'UNDO' | 'VIEW';
 
-type OnScreenToolsGUIModule = typeof import('../core/Debug/_dbg__OnScreenTools');
+type OnScreenToolsGUIModule = typeof import('./_dbg__OnScreenTools');
 let debugGUI: DebugModuleRef<OnScreenToolsGUIModule> | null = null;
 
 export const registerOnScreenTools = async () => {
-  debugGUI = await loadDebugModuleAsync(() => import('../core/Debug/_dbg__OnScreenTools'), true);
+  debugGUI = await loadDebugModuleAsync(() => import('./_dbg__OnScreenTools'), true);
 };
 
 export const InitOnScreenTools = () => {

@@ -2,7 +2,7 @@ import path from 'path';
 import type {
   GeneratedAssetFields,
   TextureCodec,
-} from '../../src/_engine/schemas/assetsConfigSchema';
+} from '../../src/_engine/schemas/AssetsConfigSchema';
 import {
   getPipelineAssetKey,
   getTextureArrayAssetKey,

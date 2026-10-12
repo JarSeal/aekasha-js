@@ -5,6 +5,6 @@ export {
   getViewportPointerNDC,
   invalidateViewportLayout,
   setViewportEnabled,
-} from '../../core/Viewports';
-export type { Viewport, ViewportProps } from '../../core/Viewports';
-export { viewports } from '../../core/ViewportsFeature';
+} from './Viewports';
+export type { Viewport, ViewportProps } from './Viewports';
+export { viewports } from './ViewportsFeature';

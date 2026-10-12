@@ -3,7 +3,7 @@ export {
   setPostFxEnabled,
   setPostFxPassEnabled,
   setPostFxPassParam,
-} from '../../core/PostFX';
-export type { PostFxPassInfo } from '../../core/PostFX';
-export type { PostFxPassFn } from '../../core/PostFX/PostFXTypes';
-export { postFx } from '../../core/PostFX/PostFXFeature';
+} from './PostFX';
+export type { PostFxPassInfo } from './PostFX';
+export type { PostFxPassFn } from './PostFXTypes';
+export { postFx } from './PostFXFeature';

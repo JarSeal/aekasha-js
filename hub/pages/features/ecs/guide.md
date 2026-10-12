@@ -117,7 +117,7 @@ tab, so a change made by hand can't fight the manager.
 
 - The [ECS example](hub:examples/ecs): a component and its system, from the type to the scene.
 - The [toolkit](hub:features/toolkit)'s effects: more components and systems to read or copy.
-- The API reference: [ECS](hub:documentation/engine/core/ECS).
+- The API reference: [ECS](hub:documentation/engine/kernel/ecs/ECS).
 
 ::: claude-md
 :::

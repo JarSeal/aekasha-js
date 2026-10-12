@@ -186,8 +186,8 @@ type VisualizerData = {
 /** `assets/index-Hx4K2rfZ.js` → `assets/index.js` (Vite's 8-character content hash) */
 const stripHash = (file: string) => file.replace(/-[A-Za-z0-9_-]{8}(\.[a-z0-9]+)$/, '$1');
 
-/** The main chunk's module groups: a package, an engine folder (core's subfolders apart), the
- * toolkit, or the app (`src/app/` and `src/`'s own files) */
+/** The main chunk's module groups: a package, an engine folder (kernel's and features'
+ * subfolders apart), the toolkit, or the app (`src/app/` and `src/`'s own files) */
 const getModuleGroup = (id: string) => {
   if (id.startsWith('\0')) return 'vite';
   const pkg = id.match(/^\/node_modules\/((?:@[^/]+\/)?[^/]+)\//);
@@ -197,7 +197,9 @@ const getModuleGroup = (id: string) => {
   const parts = src[1].split('/');
   if (parts[0] === '_engine') {
     if (parts.length <= 2) return '_engine';
-    if (parts[1] === 'core' && parts.length > 3) return `_engine/core/${parts[2]}`;
+    if ((parts[1] === 'kernel' || parts[1] === 'features') && parts.length > 3) {
+      return `_engine/${parts[1]}/${parts[2]}`;
+    }
     return `_engine/${parts[1]}`;
   }
   return parts[0] === 'toolkit' ? 'toolkit' : 'app';

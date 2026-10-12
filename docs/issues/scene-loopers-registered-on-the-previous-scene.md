@@ -7,10 +7,10 @@ Found: 2026-10-09, the scene runner's first run over every scene (p601 Phase 2 s
 ## What happens
 
 `createSceneMainLooper`, `createSceneAppLooper`, `createSceneResizer` and the matching get and
-delete functions in `src/_engine/core/Scene.ts` take an optional scene id that defaulted to
+delete functions in `src/_engine/kernel/scene/Scene.ts` take an optional scene id that defaulted to
 `currentSceneId`. Scene code runs inside `loadScene` before the scene is current:
 `setCurrentScene(sceneId)` runs only after the scene function resolves
-(`src/_engine/core/SceneLoader.ts`). So a scene file that calls `createSceneMainLooper(fn)`
+(`src/_engine/kernel/scene/SceneLoader.ts`). So a scene file that calls `createSceneMainLooper(fn)`
 without an id, as `scene01.ts` does:
 
 - **On the first load** (eg. `?startScene=scene01`): `currentSceneId` is null, the looper is

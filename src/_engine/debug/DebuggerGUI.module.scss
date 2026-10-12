@@ -1,0 +1,506 @@
+@use 'sass:color';
+@use '../ui/styles/variables.scss';
+@use './debugTabButtons' as tabButtons;
+
+.debuggerGUI {
+  position: fixed;
+  top: 0;
+  right: variables.$drawerWidth * -1;
+  z-index: 10200;
+  background-color: variables.$debugGuiBackground;
+  width: variables.$drawerWidth;
+  height: 100%;
+  padding: 1.2rem;
+  transition: right 0.2s ease-in-out;
+
+  @media screen and (max-width: variables.$breakpointSmall) {
+    width: variables.$drawerWidthSmall;
+  }
+  @media screen and (max-width: variables.$breakpointXSmall) {
+    width: 100%;
+  }
+}
+
+.debuggerGUI_open {
+  right: 0;
+}
+
+.debuggerGUI_closed {
+  right: variables.$drawerWidth * -1;
+
+  @media screen and (max-width: variables.$breakpointSmall) {
+    right: variables.$drawerWidthSmall * -1;
+  }
+  @media screen and (max-width: variables.$breakpointXSmall) {
+    right: -100%;
+  }
+}
+
+.debugDrawerToggler,
+.debugDrawerToggler:global(.MIDDLE) {
+  @include variables.nakedButton;
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translate3d(3.6rem, -50%, 0) rotate(-90deg);
+  height: 3rem;
+  padding: 0 2rem;
+  border-radius: 0.4rem 0.4rem 0 0;
+  background: variables.$debugGuiBackground;
+  color: variables.$debugTextColor;
+  user-select: none;
+  transition:
+    background 0.2s ease-in-out,
+    opacity 0.2s ease-in-out;
+
+  &:hover {
+    background: variables.$debugGuiBackgroundLighter;
+  }
+}
+.debugDrawerToggler:global(.TOP) {
+  top: 10%;
+}
+.debugDrawerToggler:global(.BOTTOM) {
+  top: auto;
+  bottom: 10%;
+}
+
+.debugDrawerTabsMenu {
+  position: relative;
+  margin-bottom: 1.2rem;
+}
+
+.debugDrawerTabButton {
+  @include tabButtons.tabButton(debugDrawerTabButton_selected);
+}
+
+.debugDrawerTabButton_selected {
+  @include tabButtons.tabButtonSelected;
+}
+
+// Scene tabs (`sceneId`, removed on their scene's exit): a tinted, dashed button with a corner dot
+.debugDrawerTabButton_scene {
+  position: relative;
+  border-style: dashed;
+  border-color: color.adjust(variables.$info, $lightness: 25%);
+  background-color: rgba(variables.$info, 0.22);
+
+  &:after {
+    content: '';
+    position: absolute;
+    top: 0.2rem;
+    right: 0.2rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background-color: color.adjust(variables.$info, $lightness: 30%);
+  }
+
+  &.debugDrawerTabButton_selected {
+    background-color: color.adjust(variables.$info, $lightness: 40%);
+    border-color: transparent;
+
+    &:after {
+      background-color: variables.$info;
+    }
+  }
+}
+
+.debugDrawerTabsContainer {
+  color: variables.$debugTextColor;
+  overflow: auto;
+  scrollbar-color: variables.$debugTextColor variables.$debugGuiBackground;
+}
+
+.childContainer {
+  :global(.debuggerTabHeadingRow) {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  :global(.debuggerTabHeading) {
+    margin: 0;
+    font-size: 1.8rem;
+
+    :global(.uiIcon) {
+      display: inline-block;
+      width: 1.4rem;
+      margin-right: 0.2rem;
+    }
+  }
+
+  &:first-of-type {
+    :global(.debuggerHeading) {
+      margin-top: 0 !important;
+    }
+  }
+}
+
+:global(.debuggerClearLSButton) {
+  @include variables.nakedButton;
+  position: relative;
+  vertical-align: top;
+  overflow: hidden;
+  flex-shrink: 0;
+  border-radius: 0.4rem;
+  padding: 0.4rem;
+  background-color: transparent;
+  border: 0.1rem solid variables.$debugTextColorDark;
+  transition:
+    background-color 0.17s ease-in-out,
+    border-color 0.17s ease-in-out;
+  width: 2.2rem;
+  height: 2.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: variables.$debugTextColor;
+  }
+
+  // An inline icon would sit on the text baseline, at the bottom of the button
+  :global(.uiIcon) {
+    display: block;
+    width: 100%;
+
+    svg {
+      display: block;
+    }
+  }
+
+  svg path {
+    fill: variables.$debugTextColor;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.35;
+  }
+}
+
+:global(.debuggerSkyTransportRow) {
+  display: flex;
+  gap: 0.2rem;
+  padding: 0.2rem 0;
+
+  :global(.tp-btnv_b) {
+    flex: 1;
+    min-width: 0;
+    padding: 0 0.2rem;
+    white-space: nowrap;
+  }
+
+  &:global(.isDisabled) {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+:global(.debuggerClearLSDialogButtonRow) {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.6rem;
+}
+
+:global(.debuggerClearLSDialogButton) {
+  @include variables.nakedButton;
+  padding: 0.8rem 1.6rem;
+  margin: 0 0.4rem;
+  border-radius: 0.4rem;
+  background-color: variables.$debugTabButton;
+  border: 0.1rem solid variables.$debugTextColor;
+  color: variables.$debugTextColor;
+  transition: background-color 0.2s ease-in-out;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+  }
+
+  &:global(.dangerColor) {
+    border-color: variables.$errorDark;
+    color: variables.$errorDark;
+  }
+}
+
+:global(.debuggerSmallButton) {
+  @include variables.nakedButton;
+  padding: 0.3rem 0.8rem;
+  border-radius: 0.3rem;
+  background-color: variables.$debugTabButton;
+  border: 0.1rem solid variables.$debugTextColor;
+  color: variables.$debugTextColor;
+  font-size: 1.1rem;
+  transition: background-color 0.2s ease-in-out;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+  }
+}
+
+:global(.debuggerWarningText) {
+  color: variables.$errorDark;
+}
+
+.debugCurrentSceneTitle {
+  width: 100%;
+  height: 3rem;
+  padding: 0.4rem 0 0.8rem;
+  padding-right: 3rem;
+  position: relative;
+  color: variables.$debugTextColor;
+
+  .closeBtn {
+    @include variables.nakedButton;
+    background-color: transparent;
+    width: 2.4rem;
+    height: 2.4rem;
+    margin: 0;
+    position: absolute;
+    top: 0;
+    right: 0;
+    border-radius: 0.4rem;
+    transition: background-color 0.2s ease-in-out;
+
+    &:hover {
+      background-color: rgba(variables.$debugTextColor, 0.2);
+    }
+
+    &:before,
+    &:after {
+      display: block;
+      content: '';
+      width: 2rem;
+      height: 0.1rem;
+      background: variables.$white;
+      position: absolute;
+      top: 50%;
+      left: 0.2rem;
+    }
+    &:before {
+      transform: rotate(45deg);
+    }
+    &:after {
+      transform: rotate(-45deg);
+    }
+  }
+}
+
+.debugCurrentSceneTitleHeading {
+  position: absolute;
+  top: -0.8rem;
+  left: 0;
+  font-size: 0.8rem;
+}
+
+.debugCurrentSceneTitleText {
+  font-size: 1.4rem;
+}
+
+.debuggerDisabled {
+  pointer-events: none !important;
+
+  &:after {
+    display: block;
+    content: '';
+    transition: background 0.2s ease-in-out;
+    background: repeat url('/debugger/assets/images/stripe-pattern-24x24.png') rgba(75, 59, 59, 0.2);
+    background-size: 8px 8px;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+}
+
+:global(.listItemCount) {
+  margin: 2.4rem 0 1.6rem;
+  font-size: 1.4rem;
+}
+
+:global(ul li.emptyState) {
+  padding: 2.4rem;
+  color: color.adjust(variables.$debugTextColorDark, $lightness: -20%);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+:global(.ulList) {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background-color: color.adjust(#28292e, $lightness: -2%);
+  border-radius: 0.4rem;
+  overflow: hidden;
+
+  li {
+    display: block;
+    position: relative;
+    width: 100%;
+    color: variables.$debugTextColor;
+    font-size: 1.2rem;
+
+    &:nth-child(odd) {
+      background-color: #28292e;
+    }
+
+    > button {
+      @include variables.nakedButton;
+      background: none;
+      display: block;
+      width: 100%;
+      text-align: left;
+      color: variables.$debugTextColor;
+      transition: background-color 0.075s ease-in-out;
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+
+      &:focus {
+        &:before {
+          display: block;
+          content: '';
+          width: 0.2rem;
+          height: 100%;
+          position: absolute;
+          left: 0;
+          top: 0;
+          background-color: rgba(255, 255, 255, 0.9);
+        }
+      }
+    }
+
+    &:global(.disabledItem) > button {
+      opacity: 0.45;
+    }
+
+    &:global(.selected) {
+      &:before {
+        display: block;
+        content: '';
+        width: 0.4rem;
+        height: 100%;
+        position: absolute;
+        left: 0;
+        top: 0;
+        background-color: variables.$debugTextColor;
+      }
+    }
+  }
+}
+
+ul li :global(.listItemWithId) {
+  display: flex;
+  gap: 0.8rem;
+  padding: 2rem 0.8rem 0.8rem;
+  position: relative;
+
+  :global(.itemId) {
+    position: absolute;
+    top: 0;
+    font-size: 1rem;
+    padding-top: 0.5rem;
+    color: variables.$debugTextColorDark;
+  }
+
+  :global(.additionalInfo) {
+    display: inline-block;
+    font-size: 0.8rem;
+    color: variables.$debugGuiBackgroundLighter;
+    background-color: variables.$debugTextColorDark;
+    position: absolute;
+    top: 0.4rem;
+    left: 100%;
+    margin-left: 0.8rem;
+    padding: 0.2rem 0.2rem 0 0.2rem;
+    border-radius: 0.2rem;
+  }
+
+  span,
+  h4 {
+    display: block;
+    margin: 0;
+  }
+}
+
+// Shared debugger list (_dbg__DebuggerList.ts)
+:global(.debuggerListHeading) {
+  margin: 1.2rem 0 0.6rem;
+  font-size: 1.3rem;
+  color: variables.$debugTextColor;
+
+  :global(.debuggerListCount) {
+    color: variables.$debugTextColorDark;
+    font-weight: 400;
+  }
+}
+
+:global(.ulList) li:global(.hasToggles) {
+  display: flex;
+  align-items: center;
+
+  > button {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+ul li :global(.listItemWithId) > :global(.uiIcon) {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 1.4rem;
+}
+
+:global(.debuggerListToggles) {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.4rem;
+  padding: 0 0.8rem;
+}
+
+:global(.debuggerListToggle),
+:global(.debuggerListToggleSpacer) {
+  width: 2.2rem;
+  height: 2.2rem;
+}
+
+:global(.debuggerListToggle) {
+  @include variables.nakedButton;
+  display: block;
+  border-radius: 0.4rem;
+  padding: 0.4rem;
+  background-color: transparent;
+  border: 0.1rem solid transparent;
+  opacity: 0.4;
+  transition:
+    background-color 0.17s ease-in-out,
+    opacity 0.17s ease-in-out;
+
+  &:global(.isOn) {
+    opacity: 1;
+  }
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    border-color: variables.$debugTextColor;
+    opacity: 1;
+  }
+
+  :global(.uiIcon) {
+    display: block;
+  }
+
+  svg path {
+    fill: variables.$debugTextColor;
+  }
+}

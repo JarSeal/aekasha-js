@@ -88,4 +88,4 @@ are the ones to try: open them with `?isDebug=true&startScene=<id>`.
 ## Read more
 
 - [Physics](hub:features/physics), which characters are built on.
-- The API reference: [Character](hub:documentation/engine/core/Character).
+- The API reference: [Character](hub:documentation/engine/features/character/Character).

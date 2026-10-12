@@ -94,7 +94,7 @@ check that compares every query with a full scan.
 
 ## Read more
 
-- The API reference: [Spatial](hub:documentation/engine/core/Spatial).
+- The API reference: [Spatial](hub:documentation/engine/features/spatial).
 
 ::: claude-md
 :::

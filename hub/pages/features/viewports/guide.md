@@ -83,8 +83,8 @@ Only the debug build registers editor views so far.
 
 ## Read more
 
-- The API reference: [Viewports](hub:documentation/engine/core/Viewports) and
-  [ViewManager](hub:documentation/engine/core/ViewManager).
+- The API reference: [Viewports](hub:documentation/engine/features/viewports/Viewports) and
+  [ViewManager](hub:documentation/engine/kernel/render/Views).
 
 ::: claude-md
 :::

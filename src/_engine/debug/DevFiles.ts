@@ -1,6 +1,6 @@
-import { getConfig, IS_DEBUG_ENV } from '../core/Config';
-import { loadDebugModuleAsync } from '../utils/helpers';
-import { getDebugToolsState } from './DebugToolsManager';
+import { getConfig, IS_DEBUG_ENV } from '../kernel/config/Config';
+import { loadDebugModuleAsync } from '../kernel/config/DebugModules';
+import { getDebugToolsState } from './DebugTools';
 import type {
   DevDataGatheredEvent,
   DevFilesCommitBody,
@@ -39,13 +39,13 @@ export type {
  * keeps {@link getDevFilesSaveHistorySize} entries for the scene.
  */
 
-type DevFilesModule = typeof import('../core/Debug/_dbg__DevFiles');
+type DevFilesModule = typeof import('./_dbg__DevFiles');
 let devFilesModule: Promise<DevFilesModule | null> | null = null;
 
 /** Loads the implementation once; null outside the debug env */
 const loadDevFiles = () => {
   devFilesModule ??= loadDebugModuleAsync(
-    () => import('../core/Debug/_dbg__DevFiles'),
+    () => import('./_dbg__DevFiles'),
     false,
     'Dev files'
   ).then(

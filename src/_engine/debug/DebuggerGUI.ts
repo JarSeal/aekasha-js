@@ -1,12 +1,12 @@
-import type { TCMP } from '../utils/CMP';
+import type { TCMP } from '../ui/CMP';
 import type { FolderApi, Pane } from 'tweakpane';
 import type { BindingApi } from '@tweakpane/core';
-import type { SvgIconKey } from '../core/UI/icons/SvgIcon';
-import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../core/Config';
+import type { SvgIconKey } from '../ui/icons/SvgIcon';
+import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
 import { lsGetItem } from '../utils/LocalAndSessionStorage';
-import { loadDebugModuleAsync, useDebug, type DebugModuleRef } from '../utils/helpers';
+import { loadDebugModuleAsync, useDebug, type DebugModuleRef } from '../kernel/config/DebugModules';
 import { lerror } from '../utils/Logger';
-import { addToast, hasToaster, type ToastProps } from '../core/UI/Toaster';
+import { addToast, hasToaster, type ToastProps } from '../ui/Toaster';
 
 export const DEBUGGER_SCENE_LOADER_ID = '__debugger-scene-loader';
 export const DEBUG_TOASTER_ID = 'debugToaster';
@@ -44,7 +44,7 @@ export const flushQueuedDebugToasts = () => {
   for (const props of queuedDebugToasts.splice(0)) addDebugToast(props);
 };
 
-type DebuggerGUIModule = typeof import('../core/Debug/_dbg__DebuggerGUI');
+type DebuggerGUIModule = typeof import('./_dbg__DebuggerGUI');
 let debugGUI: DebugModuleRef<DebuggerGUIModule> | null = null;
 
 export type DebugGUIOpts = { drawerBtnPlace?: 'TOP' | 'MIDDLE' | 'BOTTOM' };
@@ -263,7 +263,7 @@ export type UpdateDebuggerTabOpts = {
 };
 
 export const registerDebuggerGUI = async () => {
-  debugGUI = await loadDebugModuleAsync(() => import('../core/Debug/_dbg__DebuggerGUI'), true);
+  debugGUI = await loadDebugModuleAsync(() => import('./_dbg__DebuggerGUI'), true);
   // Debug env only: the first loadScene may target this loader ("Use debugger scene loader for start scene")
   useDebug(debugGUI)?._ensureDebuggerSceneLoader();
 };

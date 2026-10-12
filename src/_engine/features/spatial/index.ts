@@ -1,13 +1,9 @@
-export { registerSpatialRadiusProvider } from '../../core/ECS/SpatialMembership';
-export type { SpatialRadiusProvider } from '../../core/ECS/SpatialMembership';
-export { getConservativeGeometryRadius } from '../../core/Geometry';
-export { spatial } from '../../core/Spatial/SpatialFeature';
-export { SpatialGrid } from '../../core/Spatial/SpatialGrid';
-export type {
-  ReadonlyVec3,
-  SpatialGridOptions,
-  SpatialGridStats,
-} from '../../core/Spatial/SpatialGrid';
+export { registerSpatialRadiusProvider } from '../../kernel/ecs/SpatialMembership';
+export type { SpatialRadiusProvider } from '../../kernel/ecs/SpatialMembership';
+export { getConservativeGeometryRadius } from '../../kernel/assets/Geometry';
+export { spatial } from './SpatialFeature';
+export { SpatialGrid } from './SpatialGrid';
+export type { ReadonlyVec3, SpatialGridOptions, SpatialGridStats } from './SpatialGrid';
 export {
   getSpatialDomain,
   getSpatialGrid,
@@ -19,5 +15,5 @@ export {
   refreshSpatialRadius,
   registerSpatialDomain,
   unregisterSpatialDomain,
-} from '../../core/Spatial/SpatialIndexSystem';
-export type { SpatialDomainOptions } from '../../core/Spatial/SpatialIndexSystem';
+} from './SpatialIndexSystem';
+export type { SpatialDomainOptions } from './SpatialIndexSystem';

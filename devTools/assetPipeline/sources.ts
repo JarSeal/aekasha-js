@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import {
   isJsonRelativeFileName,
   type TexturePack,
-} from '../../src/_engine/schemas/assetsConfigSchema';
+} from '../../src/_engine/schemas/AssetsConfigSchema';
 
 /**
  * Where an asset JSON's `fileName` points (p300 DD3):

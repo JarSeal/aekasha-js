@@ -1,10 +1,10 @@
-export { createLines, getLine, preloadFatLineBackend } from '../../core/LineManager';
+export { createLines, getLine, preloadFatLineBackend } from './Lines';
 export {
   box3EdgesToSegments,
   boxEdgesToSegments,
   geometryEdgesToSegments,
   geometryWireframeToSegments,
   polylineToSegments,
-} from '../../core/Lines/LineBuilders';
-export type { LineProps } from '../../core/Lines/LineTypes';
-export { lines } from '../../core/Lines/LinesFeature';
+} from './LineBuilders';
+export type { LineProps } from './LineTypes';
+export { lines } from './LinesFeature';

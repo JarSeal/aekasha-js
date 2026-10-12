@@ -154,7 +154,7 @@ The renderer is created in [src/index.ts](repo:src/index.ts#L10).
 
 ### CLAUDE.md sections
 
-A feature page names the CLAUDE.md sections it covers in its head, and `::: claude-md` links them. The sections are the root file's (`.claude/CLAUDE.md`) `###` headings under `## Architecture`, and the `##` headings of every nested `CLAUDE.md` (a subsystem's notes next to its code, `src/_engine/core/SkyBox/CLAUDE.md`). A name can be in both: the root keeps a section's rules that apply everywhere, its nested file the detail.
+A feature page names the CLAUDE.md sections it covers in its head, and `::: claude-md` links them. The sections are the root file's (`.claude/CLAUDE.md`) `###` headings under `## Architecture`, and the `##` headings of every nested `CLAUDE.md` (a subsystem's notes next to its code, `src/_engine/features/skybox/CLAUDE.md`). A name can be in both: the root keeps a section's rules that apply everywhere, its nested file the detail.
 
 ```html
 <meta name="aek:covers" content="Physics" />

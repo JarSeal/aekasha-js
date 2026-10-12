@@ -1,23 +1,23 @@
 import fs from 'fs';
 import path from 'path';
-import { TextureAssetSchema, type TextureAsset } from '../../src/_engine/schemas/textureSchema';
+import { TextureAssetSchema, type TextureAsset } from '../../src/_engine/schemas/TextureSchema';
 import {
   ImportedAssetSchema,
   type ImportedAsset,
-} from '../../src/_engine/schemas/importedAssetSchema';
+} from '../../src/_engine/schemas/ImportedAssetSchema';
 import {
   TextureArrayAssetSchema,
   type TextureArrayAsset,
-} from '../../src/_engine/schemas/textureArraySchema';
+} from '../../src/_engine/schemas/TextureArraySchema';
 import {
   getAtlasSlotTextureId,
   TextureAtlasAssetSchema,
   type TextureAtlasAsset,
-} from '../../src/_engine/schemas/textureAtlasSchema';
+} from '../../src/_engine/schemas/TextureAtlasSchema';
 import {
   resolveLodChainOptions,
   type ResolvedLodChainOptions,
-} from '../../src/_engine/core/Lod/LodChainOptions';
+} from '../../src/_engine/features/lod/LodChainOptions';
 import type { PipelineAsset } from './pipeline';
 import { createArraySource, resolveTextureArrayLayers, type TextureLookup } from './textureArrays';
 import { createAtlasSlotSource, resolveTextureAtlas } from './textureAtlases';

@@ -1,4 +1,4 @@
-import { NON_COVERAGE_SLOTS, type TextureSlot } from '../../src/_engine/schemas/assetsConfigSchema';
+import { NON_COVERAGE_SLOTS, type TextureSlot } from '../../src/_engine/schemas/AssetsConfigSchema';
 import type { Img } from './images';
 import type { ResolvedTextureSettings } from './settings';
 

@@ -1,8 +1,8 @@
 import type { Object3D } from 'three/webgpu';
-import type { ECSWorld } from '../core/ECS';
-import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../core/Config';
+import type { ECSWorld } from '../kernel/ecs/ECS';
+import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
 import { lsGetItem } from '../utils/LocalAndSessionStorage';
-import { loadDebugModuleAsync, useDebug, type DebugModuleRef } from '../utils/helpers';
+import { loadDebugModuleAsync, useDebug, type DebugModuleRef } from '../kernel/config/DebugModules';
 import {
   hydrateDebuggerTabState,
   type AnyDebuggerTabDef,
@@ -59,7 +59,7 @@ export const DEFAULT_PROFILER_SETTINGS: Readonly<ProfilerSettings> = {
   objectsBarMeasure: 'TRIANGLES',
 };
 
-type ProfilerModule = typeof import('../core/Debug/Profiler/_dbg__Profiler');
+type ProfilerModule = typeof import('./profiler/_dbg__Profiler');
 let profiler: DebugModuleRef<ProfilerModule> | null = null;
 
 const useProfiler = () => useDebug(profiler, true);
@@ -97,7 +97,7 @@ export const isProfilerLoadedInThisMode = () => {
 export const registerProfiler = async () => {
   if (!isProfilerLoadedInThisMode()) return;
   profiler = await loadDebugModuleAsync(
-    () => import('../core/Debug/Profiler/_dbg__Profiler'),
+    () => import('./profiler/_dbg__Profiler'),
     true,
     'Profiler'
   );

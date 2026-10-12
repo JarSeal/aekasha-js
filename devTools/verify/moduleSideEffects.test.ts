@@ -12,7 +12,7 @@ import { ROOT } from '../assetPipeline/sources';
 /** Run only by the debug loader's `import()` (their load is their install), or entry points */
 const EXEMPT = [
   /(^|\/)_dbg__[^/]*\.ts$/,
-  /^src\/_engine\/workers\/(physicsWorker|assetsWorker)\.ts$/,
+  /^src\/_engine\/(features\/physics\/worker\/PhysicsWorker|kernel\/assets\/worker\/AssetsWorker)\.ts$/,
   /^src\/index\.ts$/,
 ];
 

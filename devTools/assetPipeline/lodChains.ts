@@ -6,23 +6,23 @@ import {
   type Node,
   type TypedArray,
 } from '@gltf-transform/core';
-import type { TransferableAttribute } from '../../src/_engine/core/Import/GeometryTransfer';
+import type { TransferableAttribute } from '../../src/_engine/kernel/assets/import/GeometryTransfer';
 import {
   GLTF_LOD_EXTRAS_KEY,
   GLTF_LOD_FORMAT_VERSION,
   type GLTFLodChainsExtras,
-} from '../../src/_engine/core/Lod/LodChainGLTF';
+} from '../../src/_engine/features/lod/LodChainGLTF';
 import type {
   LodLevelVertices,
   ResolvedLodChainOptions,
-} from '../../src/_engine/core/Lod/LodChainOptions';
-import { simplifyLodChain } from '../../src/_engine/core/Lod/LodSimplify';
+} from '../../src/_engine/features/lod/LodChainOptions';
+import { simplifyLodChain } from '../../src/_engine/features/lod/LodSimplify';
 
 /**
  * The GLB step's LOD chains (p347 Phase 3, §2.4): every rendered triangle primitive is simplified
  * with the runtime's own simplifier (`simplifyLodChain`), and its levels are written as meshes
  * `<mesh>__lod<n>` that no node references, described by the root's extras
- * (`core/Lod/LodChainGLTF.ts` reads them, and says why not as a second glTF scene). Runs after the geometry's compression transforms:
+ * (`features/lod/LodChainGLTF.ts` reads them, and says why not as a second glTF scene). Runs after the geometry's compression transforms:
  * meshopt's reorder splits primitives that share attributes but not indices, so the levels are
  * built from the attributes as they ship (reordered, quantized) and index the base's accessors.
  */

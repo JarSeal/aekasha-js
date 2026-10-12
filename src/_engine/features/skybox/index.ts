@@ -1,6 +1,6 @@
-export { LEGACY_SKYBOX_WARNING, isLegacySkyBoxProps } from '../../core/SkyBox/legacySkyBox';
-export type { LegacySkyBoxProps } from '../../core/SkyBox/legacySkyBox';
-export { mergeSkyBoxPreset } from '../../core/SkyBox/presets';
+export { LEGACY_SKYBOX_WARNING, isLegacySkyBoxProps } from './LegacySkyBox';
+export type { LegacySkyBoxProps } from './LegacySkyBox';
+export { mergeSkyBoxPreset } from './Presets';
 export {
   bakeEnvironment,
   createSkyBox,
@@ -19,8 +19,8 @@ export {
   setDayNightSpeed,
   setTimeOfDay,
   updateSkyBox,
-} from '../../core/SkyBox/SkyBox';
-export type { SkyBoxChangeListener, SkyBoxUpdate } from '../../core/SkyBox/SkyBox';
-export { skyBox } from '../../core/SkyBox/SkyBoxFeature';
-export type { SkyBoxDef } from '../../core/SkyBox/SkyBoxTypes';
-export { getSkyLightIds } from '../../core/SkyBox/SkyLights';
+} from './SkyBox';
+export type { SkyBoxChangeListener, SkyBoxUpdate } from './SkyBox';
+export { skyBox } from './SkyBoxFeature';
+export type { SkyBoxDef } from './SkyBoxTypes';
+export { getSkyLightIds } from './SkyLights';

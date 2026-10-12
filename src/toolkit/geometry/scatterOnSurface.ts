@@ -145,7 +145,7 @@ export const scatterOnSurface = (opts: ScatterOptions): ScatterPlacement[] => {
  * this sidesteps the fact that neither `MeshProps`/mesh JSON nor the ECS `Transform` helpers
  * expose a per-entity scale today (see docs/plans/p090_large-ecs-test-world-scene.md §1.1).
  * Does not create any ECS entities — pair with the instancing pattern in
- * `src/_engine/utils/ECSStressTest.ts` if per-instance ECS state is needed later.
+ * `src/_engine/kernel/ecs/debug/ECSStressTest.ts` if per-instance ECS state is needed later.
  * Returns the next free index.
  */
 export const bakeScatterToInstancedMesh = (

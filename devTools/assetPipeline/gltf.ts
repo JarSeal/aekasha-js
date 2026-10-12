@@ -14,8 +14,8 @@ import {
   weld,
 } from '@gltf-transform/functions';
 import { MeshoptDecoder, MeshoptEncoder, MeshoptSimplifier } from 'meshoptimizer';
-import type { ResolvedLodChainOptions } from '../../src/_engine/core/Lod/LodChainOptions';
-import type { TextureSlot } from '../../src/_engine/schemas/assetsConfigSchema';
+import type { ResolvedLodChainOptions } from '../../src/_engine/features/lod/LodChainOptions';
+import type { TextureSlot } from '../../src/_engine/schemas/AssetsConfigSchema';
 import { readImageFile, resizeImage } from './images';
 import type { KtxProvider } from './ktxEncode';
 import { buildLodChains, type BuiltLodChain } from './lodChains';

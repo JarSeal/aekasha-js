@@ -1,6 +1,6 @@
-export type { AppData, GeneratedAppJson } from './core/AppData';
-export { resolveAssetUrl } from './core/Assets/AssetUrl';
-export type { GeneratedAssetUrls } from './core/Assets/AssetUrl';
+export type { AppData, GeneratedAppJson } from './kernel/scene/AppData';
+export { resolveAssetUrl } from './kernel/assets/AssetUrl';
+export type { GeneratedAssetUrls } from './kernel/assets/AssetUrl';
 export {
   cameraLookAtPoint,
   createCameraEntity,
@@ -8,29 +8,29 @@ export {
   getActiveCameraId,
   getCameraByAppId,
   setMainCamera,
-} from './core/CameraManager';
-export { IS_DEBUG_ENV } from './core/Config';
-export type { AppConfig } from './core/Config';
-export { ECSWorld, getECSWorld, getEntityIdByAppId } from './core/ECS';
+} from './kernel/camera/Camera';
+export { IS_DEBUG_ENV } from './kernel/config/Config';
+export type { AppConfig } from './kernel/config/Config';
+export { ECSWorld, getECSWorld, getEntityIdByAppId } from './kernel/ecs/ECS';
 export type {
   ComponentHook,
   ECSSystem,
   ECSWorldOptions,
   TransformResetListener,
   WorldPlugin,
-} from './core/ECS';
-export type { IComponentStorage } from './core/ECS/ECSComponentStorage';
-export { ComponentType, Transform } from './core/ECS/ECSCoreComponents';
+} from './kernel/ecs/ECS';
+export type { IComponentStorage } from './kernel/ecs/ECSComponentStorage';
+export { ComponentType, Transform } from './kernel/ecs/ECSCoreComponents';
 export type {
   ComponentData,
   ComponentDataMap,
   ECSPosition,
   ECSRotation,
   ECSTransformProp,
-} from './core/ECS/ECSCoreComponents';
-export { CoreComponentType } from './core/ECS/ECSRegistry';
-export { APP_RENDER_SYNC_ORDER, ECSSystemStage } from './core/ECS/SystemStages';
-export type { EngineFeature, FeatureContext, FeatureDebugHook } from './core/Features';
+} from './kernel/ecs/ECSCoreComponents';
+export { CoreComponentType } from './kernel/ecs/ECSRegistry';
+export { APP_RENDER_SYNC_ORDER, ECSSystemStage } from './kernel/loop/SystemStages';
+export type { EngineFeature, FeatureContext, FeatureDebugHook } from './kernel/init/Features';
 export {
   createGeometry,
   deleteGeometry,
@@ -38,61 +38,64 @@ export {
   getGeometryRegistry,
   incGeometryRef,
   saveBufferGeometry,
-} from './core/Geometry';
-export type { GeoBaseProps, GeoProps, GeoTypes } from './core/Geometry';
+} from './kernel/assets/Geometry';
+export type { GeoBaseProps, GeoProps, GeoTypes } from './kernel/assets/Geometry';
 export {
   addToGroupEntity,
   createGroupEntity,
   getGroupByAppId,
   removeFromGroupEntity,
-} from './core/GroupManager';
-export type { GroupProps } from './core/GroupManager';
-export { configureDraco, disposeDracoLoader } from './core/Import/DracoDecoder';
-export type { DracoConfig } from './core/Import/DracoDecoder';
-export type { TransferableAttribute, TransferableGeometry } from './core/Import/GeometryTransfer';
-export { importAssetAsync, releaseImportedAsset } from './core/Import/ImportRegistry';
+} from './kernel/scene/Group';
+export type { GroupProps } from './kernel/scene/Group';
+export { configureDraco, disposeDracoLoader } from './kernel/assets/import/DracoDecoder';
+export type { DracoConfig } from './kernel/assets/import/DracoDecoder';
+export type {
+  TransferableAttribute,
+  TransferableGeometry,
+} from './kernel/assets/import/GeometryTransfer';
+export { importAssetAsync, releaseImportedAsset } from './kernel/assets/import/ImportRegistry';
 export type {
   ImportAssetParams,
   ImportedAssetManifest,
   ImportedGeometryInfo,
   SpawnImportedParams,
   SpawnImportedResult,
-} from './core/Import/ImportTypes';
-export { disposeKTX2Loader } from './core/Import/KTX2';
-export { spawnImportedAsset } from './core/Import/SpawnImported';
+} from './kernel/assets/import/ImportTypes';
+export { disposeKTX2Loader } from './kernel/assets/import/KTX2';
+export { spawnImportedAsset } from './kernel/assets/import/SpawnImported';
 export {
   createKeyBinding,
   deleteKeyBinding,
   setKeyBindingEnabled,
-} from './core/Input/KeyboardInput';
-export type { KeyBinding } from './core/Input/KeyboardInput';
+} from './kernel/input/KeyboardInput';
+export type { KeyBinding } from './kernel/input/KeyboardInput';
 export {
   createMouseBinding,
   deleteMouseBinding,
   setMouseBindingEnabled,
-} from './core/Input/MouseInput';
-export type { MouseBinding } from './core/Input/MouseInput';
+} from './kernel/input/MouseInput';
+export type { MouseBinding } from './kernel/input/MouseInput';
 export {
   createTouchBinding,
   deleteTouchBinding,
   setTouchBindingEnabled,
-} from './core/Input/TouchInput';
-export type { TouchBinding } from './core/Input/TouchInput';
+} from './kernel/input/TouchInput';
+export type { TouchBinding } from './kernel/input/TouchInput';
 export {
   createLightEntity,
   getLightByAppId,
   getLightTargetId,
   setLightEnabled,
-} from './core/LightManager';
-export type { LightProps } from './core/LightManager';
+} from './kernel/light/Light';
+export type { LightProps } from './kernel/light/Light';
 export {
   getAppDelta,
   getDelta,
   getElapsedTime,
   transformAppSpeedValue,
   transformMainSpeedValue,
-} from './core/MainLoop';
-export type { FixedStepDriver, LoopState } from './core/MainLoop';
+} from './kernel/loop/MainLoop';
+export type { FixedStepDriver, LoopState } from './kernel/loop/MainLoop';
 export {
   createMaterial,
   decMaterialRef,
@@ -102,19 +105,24 @@ export {
   incMaterialRef,
   loadTslMaterialFileAsync,
   saveMaterial,
-} from './core/Material';
-export type { MatProps, MaterialVariantOverrides, Materials } from './core/Material';
+} from './kernel/assets/Material';
+export type { MatProps, MaterialVariantOverrides, Materials } from './kernel/assets/Material';
 export {
   createMeshEntity,
   getMeshByAppId,
   removeMeshLod,
   setMeshLod,
   setMeshMaterial,
-} from './core/MeshManager';
-export type { MeshProps } from './core/MeshManager';
-export type { AfterRenderHook, RenderPipelineProvider } from './core/RenderHooks';
-export { createRenderer, deleteRenderer, getRenderer, isWebGPURenderer } from './core/Renderer';
-export type { RendererOptions } from './core/Renderer';
+} from './kernel/mesh/Mesh';
+export type { MeshProps } from './kernel/mesh/Mesh';
+export type { AfterRenderHook, RenderPipelineProvider } from './kernel/render/RenderHooks';
+export {
+  createRenderer,
+  deleteRenderer,
+  getRenderer,
+  isWebGPURenderer,
+} from './kernel/render/Renderer';
+export type { RendererOptions } from './kernel/render/Renderer';
 export {
   createSceneAppLooper,
   createSceneMainLooper,
@@ -129,13 +137,13 @@ export {
   registerOnAllSceneExits,
   registerOnSceneEnter,
   registerOnSceneExit,
-} from './core/Scene';
-export type { Looper, SceneData } from './core/Scene';
-export { createSceneLoader, getLoaderStatusUpdater, loadScene } from './core/SceneLoader';
-export type { LoadSceneProps, SceneLoader, ScenePrimitiveAssets } from './core/SceneLoader';
-export type { SceneHooks } from './core/SceneHooks';
-export { snapshotToBlobAsync, takeSnapshotAsync } from './core/Snapshot';
-export type { Snapshot, SnapshotBlobOpts, SnapshotOpts } from './core/Snapshot';
+} from './kernel/scene/Scene';
+export type { Looper, SceneData } from './kernel/scene/Scene';
+export { createSceneLoader, getLoaderStatusUpdater, loadScene } from './kernel/scene/SceneLoader';
+export type { LoadSceneProps, SceneLoader, ScenePrimitiveAssets } from './kernel/scene/SceneLoader';
+export type { SceneHooks } from './kernel/scene/SceneHooks';
+export { snapshotToBlobAsync, takeSnapshotAsync } from './kernel/render/Snapshot';
+export type { Snapshot, SnapshotBlobOpts, SnapshotOpts } from './kernel/render/Snapshot';
 export {
   deleteTexture,
   getAllTextures,
@@ -143,8 +151,8 @@ export {
   loadTexture,
   loadTextureAsync,
   loadTextures,
-} from './core/Texture';
-export type { TexOpts, TextureProps } from './core/Texture';
+} from './kernel/assets/Texture';
+export type { TexOpts, TextureProps } from './kernel/assets/Texture';
 export {
   buildTextureArray,
   getArrayLayerIndex,
@@ -152,20 +160,24 @@ export {
   getTextureArrayInfo,
   sampleArrayLayer,
   setTextureArrayLayer,
-} from './core/TextureArray';
-export type { BuildTextureArrayProps, TextureArray, TextureArrayMember } from './core/TextureArray';
+} from './kernel/assets/TextureArray';
+export type {
+  BuildTextureArrayProps,
+  TextureArray,
+  TextureArrayMember,
+} from './kernel/assets/TextureArray';
 export {
   getAtlasCell,
   getTextureAtlasInfo,
   remapUVsToAtlasCell,
   sampleAtlasCell,
-} from './core/TextureAtlas';
+} from './kernel/assets/TextureAtlas';
 export type {
   AtlasCellRect,
   RemapUVsToAtlasCellOpts,
   SampleAtlasCellOpts,
   TextureAtlasInfo,
-} from './core/TextureAtlas';
+} from './kernel/assets/TextureAtlas';
 export {
   addViewChangeListener,
   addViewFrameListener,
@@ -173,17 +185,17 @@ export {
   registerView,
   setActiveView,
   unregisterView,
-} from './core/ViewManager';
+} from './kernel/render/Views';
 export type {
   ViewChangeListener,
   ViewDef,
   ViewFrameListener,
   ViewFrameListenerPhase,
-} from './core/ViewManager';
-export { InitEngine } from './InitApp';
-export type { InitEngineOptions } from './InitApp';
-export { existsOrThrow } from './utils/assert';
-export { deepMerge } from './utils/deepMerge';
+} from './kernel/render/Views';
+export { InitEngine } from './kernel/init/InitEngine';
+export type { InitEngineOptions } from './kernel/init/InitEngine';
+export { existsOrThrow } from './utils/Assert';
+export { deepMerge } from './utils/DeepMerge';
 export {
   addComponent,
   createEntity,
@@ -198,8 +210,8 @@ export {
   removeComponent,
   setTransform,
   teleport,
-} from './utils/ECSHelpers';
-export { initECSStressTest } from './utils/ECSStressTest';
-export { getQuatFromAngle, smoothDampVec3 } from './utils/helpers';
-export { toUniqueJsIdentifier } from './utils/jsIdentifier';
+} from './kernel/ecs/ECSHelpers';
+export { initECSStressTest } from './kernel/ecs/debug/ECSStressTest';
+export { getQuatFromAngle, smoothDampVec3 } from './kernel/render/ThreeMath';
+export { toUniqueJsIdentifier } from './utils/JsIdentifier';
 export { getLogger, lerror, llog, lwarn } from './utils/Logger';

@@ -4,8 +4,8 @@ import {
   GLTF_LOD_FORMAT_VERSION,
   LOD_SIMPLIFY_VERSION,
   type ResolvedLodChainOptions,
-} from '../../src/_engine/core/Lod/LodChainOptions';
-import type { AssetOptimize } from '../../src/_engine/schemas/assetsConfigSchema';
+} from '../../src/_engine/features/lod/LodChainOptions';
+import type { AssetOptimize } from '../../src/_engine/schemas/AssetsConfigSchema';
 import { ALPHA_COVERAGE_VERSION } from './alphaCoverage';
 import { encodePng } from './images';
 import {

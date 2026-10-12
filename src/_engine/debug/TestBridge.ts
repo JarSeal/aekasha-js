@@ -1,6 +1,6 @@
-import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../core/Config';
-import { loadDebugModuleAsync, useDebug } from '../utils/helpers';
-import type { PhysicsProbeReport } from '../core/Debug/_dbg__PhysicsDeterminism';
+import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
+import { loadDebugModuleAsync, useDebug } from '../kernel/config/DebugModules';
+import type { PhysicsProbeReport } from '../features/physics/debug/_dbg__PhysicsDeterminism';
 
 /** The URL param that installs the test bridge: `?aekTest=true`, next to `?isDebug=true` or `?isProdTest=true` */
 export const TEST_BRIDGE_QUERY_PARAM = 'aekTest';
@@ -78,10 +78,6 @@ declare global {
 export const registerTestBridge = async () => {
   if (!IS_DEBUG_ENV && !IS_PROD_TEST_MODE) return;
   if (new URLSearchParams(window.location.search).get(TEST_BRIDGE_QUERY_PARAM) !== 'true') return;
-  const bridge = await loadDebugModuleAsync(
-    () => import('../core/Debug/_dbg__TestBridge'),
-    true,
-    'TestBridge'
-  );
+  const bridge = await loadDebugModuleAsync(() => import('./_dbg__TestBridge'), true, 'TestBridge');
   useDebug(bridge, true)?._installTestBridge();
 };

@@ -63,7 +63,7 @@ import { diffSystemOrders } from './systemOrder';
 const BASELINE_FORMAT_VERSION = 1;
 const CACHE_DIR = path.join(ROOT, '.cache/verify/scenes');
 const GENERATED_DATA = path.join(ROOT, 'src/generated/generatedAppData.json');
-/** `DEBUG_PHYSICS_API_BOOT_LS_KEY` (core/Config.ts, which reads `window` at load: not importable here) */
+/** `DEBUG_PHYSICS_API_BOOT_LS_KEY` (kernel/config/Config.ts, which reads `window` at load: not importable here) */
 const PHYSICS_BOOT_LS_KEY = 'AEK_debugPhysicsApiBoot';
 const VIEWPORT = { width: 1024, height: 576 };
 const BRIDGE_INSTALL_TIMEOUT_MS = 120_000;

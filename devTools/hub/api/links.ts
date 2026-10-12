@@ -88,7 +88,7 @@ const walkModel = (project: JSONOutput.ProjectReflection) => {
   return { owners, namedLinks };
 };
 
-/** `engine/core/SceneLoader` → `SceneLoader`, `core/SceneLoader`, `engine/core/SceneLoader` */
+/** `engine/core/SceneLoader` → `SceneLoader`, `kernel/scene/SceneLoader`, `engine/core/SceneLoader` */
 const modulePathSuffixes = (subtree: string, relPath: string) => {
   const parts = [subtree, ...relPath.split('/')];
   return parts.map((_part, i) => parts.slice(parts.length - 1 - i).join('/'));

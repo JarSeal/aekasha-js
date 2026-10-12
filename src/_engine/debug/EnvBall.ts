@@ -1,9 +1,9 @@
-import { IS_DEBUG_ENV } from '../core/Config';
-import type { DebugModuleRef } from '../utils/helpers';
-import { loadDebugModuleAsync, useDebug } from '../utils/helpers';
-import type { EnvBallOpts } from '../core/Debug/_dbg__EnvBall';
+import { IS_DEBUG_ENV } from '../kernel/config/Config';
+import type { DebugModuleRef } from '../kernel/config/DebugModules';
+import { loadDebugModuleAsync, useDebug } from '../kernel/config/DebugModules';
+import type { EnvBallOpts } from './_dbg__EnvBall';
 
-type EnvBallModule = typeof import('../core/Debug/_dbg__EnvBall');
+type EnvBallModule = typeof import('./_dbg__EnvBall');
 let debugEnvBall: DebugModuleRef<EnvBallModule> | null = null;
 
 /**
@@ -11,7 +11,7 @@ let debugEnvBall: DebugModuleRef<EnvBallModule> | null = null;
  */
 export const registerEnvBallModule = async () => {
   if (!IS_DEBUG_ENV) return;
-  debugEnvBall = await loadDebugModuleAsync(() => import('../core/Debug/_dbg__EnvBall'));
+  debugEnvBall = await loadDebugModuleAsync(() => import('./_dbg__EnvBall'));
 };
 
 /**

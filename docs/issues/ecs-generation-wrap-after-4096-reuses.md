@@ -2,12 +2,12 @@
 
 Status: fixed | 2026-10-09, p601 Phase 1
 Category: Bug, ECS
-Found: 2026-10-09, writing the ECS unit tests (p601 Phase 1, `src/_engine/core/ECS.test.ts`)
+Found: 2026-10-09, writing the ECS unit tests (p601 Phase 1, `src/_engine/kernel/ecs/ECS.test.ts`)
 
 ## What happens
 
 `ECSWorld` packs an entity id as a 20-bit index and a 12-bit generation (`_pack` in
-`src/_engine/core/ECS.ts`), and `deleteEntity` bumps the slot's generation in `generations`, a
+`src/_engine/kernel/ecs/ECS.ts`), and `deleteEntity` bumps the slot's generation in `generations`, a
 `Uint32Array`. `_pack` masks the generation to 12 bits, but `generations[index]` isn't masked,
 and `isAlive` compares the two:
 

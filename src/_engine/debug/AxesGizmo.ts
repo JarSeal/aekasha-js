@@ -1,8 +1,8 @@
-import { IS_DEBUG_ENV } from '../core/Config';
-import type { DebugModuleRef } from '../utils/helpers';
-import { loadDebugModuleAsync, useDebug } from '../utils/helpers';
+import { IS_DEBUG_ENV } from '../kernel/config/Config';
+import type { DebugModuleRef } from '../kernel/config/DebugModules';
+import { loadDebugModuleAsync, useDebug } from '../kernel/config/DebugModules';
 
-type AxesGizmoModule = typeof import('../core/Debug/_dbg__AxesGizmo');
+type AxesGizmoModule = typeof import('./_dbg__AxesGizmo');
 let debugGizmo: DebugModuleRef<AxesGizmoModule> | null = null;
 
 /**
@@ -10,7 +10,7 @@ let debugGizmo: DebugModuleRef<AxesGizmoModule> | null = null;
  */
 export const registerAxesGizmoModule = async () => {
   if (!IS_DEBUG_ENV) return;
-  debugGizmo = await loadDebugModuleAsync(() => import('../core/Debug/_dbg__AxesGizmo'));
+  debugGizmo = await loadDebugModuleAsync(() => import('./_dbg__AxesGizmo'));
 };
 
 /**
