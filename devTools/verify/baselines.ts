@@ -37,7 +37,6 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { spawn } from 'child_process';
 import { ROOT } from '../assetPipeline/sources';
 import { ENTRY_FILES } from '../aliases';
 import { loadApiModel } from '../hub/api/extract';
@@ -47,6 +46,7 @@ import { out, PROGRESS_LOG_WATCH, setProgressLogEnabled } from './progressLog';
 import { type BuildModule, findDebugCodeInBuild } from './debugInProduction';
 import { type BundleBaseline, collectBundle, sortKeys } from '../sbp/bundleModel';
 import { diffBundle, formatKB } from '../sbp/bundleDiff';
+import { buildAppBundle } from '../sbp/appBuild';
 
 /** Bump when that file's shape changes: an old one is then read as missing (`bundle.json`'s is
  * `bundleModel.ts`') */
@@ -122,46 +122,6 @@ const readJSON = <T>(file: string): T | null => {
 
 const formatShare = (c: Coverage) =>
   `${c.documented} / ${c.total}${c.total ? ` (${Math.round((c.documented / c.total) * 100)} %)` : ''}`;
-
-// --- Build ---
-
-/** Runs `yarn <args>`, its output into the progress log */
-const runYarn = (args: string[], env: Record<string, string> = {}) =>
-  new Promise<void>((resolve, reject) => {
-    out(
-      `${DIM}$ ${Object.entries(env)
-        .map(([k, v]) => `${k}=${v} `)
-        .join('')}yarn ${args.join(' ')}${RESET}`
-    );
-    const child = spawn('yarn', ['-s', ...args], { cwd: ROOT, env: { ...process.env, ...env } });
-    const pipe = (stream: NodeJS.ReadableStream, isError: boolean) => {
-      let pending = '';
-      stream.on('data', (data: Buffer) => {
-        const lines = (pending + data.toString()).split('\n');
-        pending = lines.pop() ?? '';
-        for (const line of lines) out(`  ${line}`, isError);
-      });
-      stream.on('end', () => pending && out(`  ${pending}`, isError));
-    };
-    pipe(child.stdout, false);
-    pipe(child.stderr, true);
-    child.on('error', reject);
-    child.on('close', (code) =>
-      code === 0 ? resolve() : reject(new Error(`yarn ${args.join(' ')} exited with ${code}`))
-    );
-  });
-
-/** `yarn build`'s bundle steps; the dev data is gathered again whatever happens */
-const buildBundle = async () => {
-  try {
-    await runYarn(['copyDecoders']);
-    await runYarn(['gatherAppData'], { NODE_ENV: 'production' });
-    // Set, not inherited: a shell's `development` would build the debug code in (`__AEK_DEBUG__`)
-    await runYarn(['vite', 'build'], { VITE_APP_ENV: 'production' });
-  } finally {
-    await runYarn(['gatherAppData']);
-  }
-};
 
 // --- bundle.json ---
 
@@ -448,7 +408,7 @@ const main = async () => {
   if (!args.docsOnly) out(`${DIM}Watch it: ${PROGRESS_LOG_WATCH}${RESET}\n`);
   const started = Date.now();
 
-  if (args.build && !args.docsOnly) await buildBundle();
+  if (args.build && !args.docsOnly) await buildAppBundle();
   const { bundle = null, modules = [] } = args.docsOnly ? {} : collectBundle();
   const { api, docs, locations } = await collectApiAndDocs();
 
