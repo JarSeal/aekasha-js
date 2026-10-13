@@ -8,6 +8,7 @@
  * - `bundle.json`: every file in `dist/assets/` (name without its content hash, bytes and gzip),
  *   and the main chunk's modules summed per group (three, Rapier, each engine folder, toolkit,
  *   app; the visualizer's rendered and gzip sizes, before minification, as p600 §2.4 counts).
+ *   The measuring is `devTools/sbp/bundleModel.ts`', which `yarn sbp` shares (p611 D1).
  * - `api.json`: every export of the documented API (the Hub's TypeDoc model: `src/_engine` and
  *   `src/toolkit` minus `_dbg__*`, tests and the entries) by module, with its kind,
  *   and each public entry's (`aekasha`, `aekasha/*`, p606) export names, read from its file.
@@ -36,7 +37,6 @@
  */
 import fs from 'fs';
 import path from 'path';
-import zlib from 'zlib';
 import { spawn } from 'child_process';
 import { ROOT } from '../assetPipeline/sources';
 import { ENTRY_FILES } from '../aliases';
@@ -46,15 +46,13 @@ import { getOwnMembers, indexApiModel, isDocumented, Kind } from '../hub/api/mod
 import { out, PROGRESS_LOG_WATCH, setProgressLogEnabled } from './progressLog';
 import { type BuildModule, findDebugCodeInBuild } from './debugInProduction';
 import { isGrowthToFlag } from './bundleGrowth';
+import { type BundleBaseline, collectBundle, sortKeys } from '../sbp/bundleModel';
 
-/** Bump when that file's shape changes: an old one is then read as missing */
-const BUNDLE_FORMAT_VERSION = 1;
+/** Bump when that file's shape changes: an old one is then read as missing (`bundle.json`'s is
+ * `bundleModel.ts`') */
 const API_FORMAT_VERSION = 1;
 const DOCS_FORMAT_VERSION = 2;
 const BASELINES_DIR = path.join(ROOT, 'devTools/verify/baselines');
-const DIST_ASSETS_DIR = path.join(ROOT, 'dist/assets');
-const MANIFEST_FILE = path.join(ROOT, 'dist/.vite/manifest.json');
-const VISUALIZER_FILE = path.join(ROOT, 'dist-stats/bundle-stats.html');
 
 const color = (code: string) => (process.env.NO_COLOR ? '' : `\x1b[${code}m`);
 const RED = color('31');
@@ -63,14 +61,6 @@ const YELLOW = color('33');
 const DIM = color('2');
 const RESET = color('0');
 
-export type Size = { bytes: number; gzip: number };
-export type GroupSize = { modules: number; rendered: number; gzip: number };
-export type BundleBaseline = {
-  formatVersion: number;
-  chunks: Record<string, Size>;
-  main: { chunk: string; modules: number; rendered: number; gzip: number };
-  mainGroups: Record<string, GroupSize>;
-};
 export type ApiBaseline = {
   formatVersion: number;
   /** Source path → export name → kind (`Function`, `Class`, … several joined by `, `) */
@@ -176,93 +166,6 @@ const buildBundle = async () => {
 };
 
 // --- bundle.json ---
-
-type Manifest = Record<string, { file: string; src?: string; isEntry?: boolean }>;
-type VisualizerData = {
-  nodeParts: Record<string, { renderedLength: number; gzipLength: number }>;
-  nodeMetas: Record<string, { id: string; moduleParts: Record<string, string> }>;
-};
-
-/** `assets/index-Hx4K2rfZ.js` → `assets/index.js` (Vite's 8-character content hash) */
-const stripHash = (file: string) => file.replace(/-[A-Za-z0-9_-]{8}(\.[a-z0-9]+)$/, '$1');
-
-/** The main chunk's module groups: a package, an engine folder (kernel's and features'
- * subfolders apart), the toolkit, or the app (`src/app/` and `src/`'s own files) */
-const getModuleGroup = (id: string) => {
-  if (id.startsWith('\0')) return 'vite';
-  const pkg = id.match(/^\/node_modules\/((?:@[^/]+\/)?[^/]+)\//);
-  if (pkg) return pkg[1];
-  const src = id.match(/^\/src\/([^?]*)/);
-  if (!src) return 'other';
-  const parts = src[1].split('/');
-  if (parts[0] === '_engine') {
-    if (parts.length <= 2) return '_engine';
-    if ((parts[1] === 'kernel' || parts[1] === 'features') && parts.length > 3) {
-      return `_engine/${parts[1]}/${parts[2]}`;
-    }
-    return `_engine/${parts[1]}`;
-  }
-  return parts[0] === 'toolkit' ? 'toolkit' : 'app';
-};
-
-const sortKeys = <T>(obj: Record<string, T>) =>
-  Object.fromEntries(Object.entries(obj).sort(([a], [b]) => a.localeCompare(b)));
-
-/** The build's sizes, and every module the visualizer lists (for the debug check) */
-const collectBundle = (): { bundle: BundleBaseline; modules: BuildModule[] } => {
-  const manifest = readJSON<Manifest>(MANIFEST_FILE);
-  if (!manifest || !fs.existsSync(DIST_ASSETS_DIR)) {
-    return fail('No dist/ build to measure: run without --no-build, or yarn build first');
-  }
-  const entry = Object.values(manifest).find((m) => m.isEntry);
-  if (!entry) return fail(`${path.relative(ROOT, MANIFEST_FILE)} names no entry chunk`);
-
-  const chunks: Record<string, Size> = {};
-  for (const name of fs.readdirSync(DIST_ASSETS_DIR).sort()) {
-    const data = fs.readFileSync(path.join(DIST_ASSETS_DIR, name));
-    let key = stripHash(`assets/${name}`);
-    for (let n = 2; chunks[key]; n++) key = `${stripHash(`assets/${name}`)}#${n}`;
-    chunks[key] = { bytes: data.length, gzip: zlib.gzipSync(data, { level: 9 }).length };
-  }
-
-  const html = fs.existsSync(VISUALIZER_FILE) ? fs.readFileSync(VISUALIZER_FILE, 'utf-8') : '';
-  const match = html.match(/const data = (\{.*?\});\n/s);
-  if (!match) return fail(`No visualizer data in ${path.relative(ROOT, VISUALIZER_FILE)}`);
-  const data = JSON.parse(match[1]) as VisualizerData;
-  const groups: Record<string, GroupSize> = {};
-  const main = { chunk: stripHash(entry.file), modules: 0, rendered: 0, gzip: 0 };
-  const modules: BuildModule[] = [];
-  for (const meta of Object.values(data.nodeMetas)) {
-    modules.push({
-      id: meta.id,
-      chunks: Object.fromEntries(
-        Object.entries(meta.moduleParts).map(([file, id]) => [
-          stripHash(file),
-          data.nodeParts[id].renderedLength,
-        ])
-      ),
-    });
-    const partId = meta.moduleParts[entry.file];
-    if (!partId) continue;
-    const part = data.nodeParts[partId];
-    const group = (groups[getModuleGroup(meta.id)] ??= { modules: 0, rendered: 0, gzip: 0 });
-    group.modules++;
-    group.rendered += part.renderedLength;
-    group.gzip += part.gzipLength;
-    main.modules++;
-    main.rendered += part.renderedLength;
-    main.gzip += part.gzipLength;
-  }
-  if (!main.modules) {
-    return fail(
-      `The visualizer data has no modules in ${entry.file}: dist-stats/ is from another build`
-    );
-  }
-  return {
-    bundle: { formatVersion: BUNDLE_FORMAT_VERSION, chunks, main, mainGroups: sortKeys(groups) },
-    modules,
-  };
-};
 
 /** Prints the debug check's findings (p607 D7); returns their count */
 const reportDebugCode = (bundle: BundleBaseline, modules: BuildModule[]) => {

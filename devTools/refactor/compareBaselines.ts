@@ -26,14 +26,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { ROOT } from '../assetPipeline/sources';
 import { API_SUBTREES } from '../hub/api/model';
-import type {
-  ApiBaseline,
-  BundleBaseline,
-  DocsBaseline,
-  DocsPart,
-  FolderCoverage,
-  Size,
-} from '../verify/baselines';
+import type { ApiBaseline, DocsBaseline, DocsPart, FolderCoverage } from '../verify/baselines';
+import { type BundleBaseline, type Size, readVisualizerData, stripHash } from '../sbp/bundleModel';
 import { isGrowthToFlag } from '../verify/bundleGrowth';
 import { buildPathMap, type PathMap } from './moveApply';
 import type { MovePlan } from './moveRules';
@@ -427,20 +421,15 @@ export const compareBaselines = (
 // The command
 
 const BASELINES = 'devTools/verify/baselines';
-const VISUALIZER_FILE = path.join(ROOT, 'dist-stats/bundle-stats.html');
 
 /** The last build's modules per chunk, from the visualizer's data; empty without it */
 const readChunkModules = (): ChunkModules => {
   const out: ChunkModules = new Map();
-  if (!fs.existsSync(VISUALIZER_FILE)) return out;
-  const match = fs.readFileSync(VISUALIZER_FILE, 'utf-8').match(/const data = (\{.*?\});\n/s);
-  if (!match) return out;
-  const data = JSON.parse(match[1]) as {
-    nodeMetas: Record<string, { id: string; moduleParts: Record<string, string> }>;
-  };
+  const data = readVisualizerData();
+  if (!data) return out;
   for (const meta of Object.values(data.nodeMetas)) {
     for (const file of Object.keys(meta.moduleParts)) {
-      const chunk = file.replace(/-[A-Za-z0-9_-]{8}(\.[a-z0-9]+)$/, '$1');
+      const chunk = stripHash(file);
       out.set(chunk, [...(out.get(chunk) ?? []), meta.id]);
     }
   }

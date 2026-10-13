@@ -1,0 +1,206 @@
+/**
+ * The production build's bundle model (p611 D1), shared by `yarn verify:baselines` (its
+ * `bundle.json`) and `yarn sbp`: every file in `dist/assets/` by its name without the content
+ * hash, and the visualizer's modules (`dist-stats/bundle-stats.html`: rendered and gzip sizes per
+ * chunk, before minification, as p600 §2.4 counts) summed per group.
+ *
+ * It only reads a build; making one is the caller's. A missing or mismatched build throws.
+ */
+import fs from 'fs';
+import path from 'path';
+import zlib from 'zlib';
+import { ROOT } from '../assetPipeline/sources';
+import type { BuildModule } from '../verify/debugInProduction';
+
+/** Bump when `bundle.json`'s shape changes: an old one is then read as missing */
+export const BUNDLE_FORMAT_VERSION = 1;
+export const DIST_ASSETS_DIR = path.join(ROOT, 'dist/assets');
+export const MANIFEST_FILE = path.join(ROOT, 'dist/.vite/manifest.json');
+export const VISUALIZER_FILE = path.join(ROOT, 'dist-stats/bundle-stats.html');
+
+export type Size = { bytes: number; gzip: number };
+export type GroupSize = { modules: number; rendered: number; gzip: number };
+export type BundleBaseline = {
+  formatVersion: number;
+  chunks: Record<string, Size>;
+  main: { chunk: string; modules: number; rendered: number; gzip: number };
+  mainGroups: Record<string, GroupSize>;
+};
+
+/** Vite's `dist/.vite/manifest.json`: keys are sources relative to `src/` (`index.html`) or
+ * shared chunks (`_three.module-CqBAFLUG.js`); `imports` and `dynamicImports` name other keys */
+export type Manifest = Record<
+  string,
+  {
+    file: string;
+    src?: string;
+    isEntry?: boolean;
+    isDynamicEntry?: boolean;
+    imports?: string[];
+    dynamicImports?: string[];
+    css?: string[];
+    assets?: string[];
+  }
+>;
+
+/** An import edge of the visualizer's graph: `dynamic` for an `import()` */
+export type ModuleRef = { uid: string; dynamic?: boolean };
+
+/** The visualizer's data (`rollup-plugin-visualizer`'s `const data = {…}`): every module of the
+ * graph, tree-shaken ones included (their `moduleParts` are empty) */
+export type VisualizerData = {
+  nodeParts: Record<string, { renderedLength: number; gzipLength: number }>;
+  nodeMetas: Record<
+    string,
+    {
+      id: string;
+      moduleParts: Record<string, string>;
+      imported: ModuleRef[];
+      importedBy: ModuleRef[];
+    }
+  >;
+};
+
+/** `assets/index-Hx4K2rfZ.js` → `assets/index.js` (Vite's 8-character content hash) */
+export const stripHash = (file: string) => file.replace(/-[A-Za-z0-9_-]{8}(\.[a-z0-9]+)$/, '$1');
+
+/** A module's group: a package, an engine folder (kernel's and features' subfolders apart), the
+ * toolkit, or the app (`src/app/` and `src/`'s own files) */
+export const getModuleGroup = (id: string) => {
+  if (id.startsWith('\0')) return 'vite';
+  const pkg = id.match(/^\/node_modules\/((?:@[^/]+\/)?[^/]+)\//);
+  if (pkg) return pkg[1];
+  const src = id.match(/^\/src\/([^?]*)/);
+  if (!src) return 'other';
+  const parts = src[1].split('/');
+  if (parts[0] === '_engine') {
+    if (parts.length <= 2) return '_engine';
+    if ((parts[1] === 'kernel' || parts[1] === 'features') && parts.length > 3) {
+      return `_engine/${parts[1]}/${parts[2]}`;
+    }
+    return `_engine/${parts[1]}`;
+  }
+  return parts[0] === 'toolkit' ? 'toolkit' : 'app';
+};
+
+export const sortKeys = <T>(obj: Record<string, T>) =>
+  Object.fromEntries(Object.entries(obj).sort(([a], [b]) => a.localeCompare(b)));
+
+const readJSON = <T>(file: string): T | null => {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf-8')) as T;
+  } catch {
+    return null;
+  }
+};
+
+/** The visualizer's data from its HTML report; null when it holds none */
+export const parseVisualizerData = (html: string): VisualizerData | null => {
+  const match = html.match(/const data = (\{.*?\});\n/s);
+  return match ? (JSON.parse(match[1]) as VisualizerData) : null;
+};
+
+/** The last build's visualizer data; null without the file or the data */
+export const readVisualizerData = (file = VISUALIZER_FILE) =>
+  fs.existsSync(file) ? parseVisualizerData(fs.readFileSync(file, 'utf-8')) : null;
+
+/**
+ * Each file's key: its name without the hash (`assets/index.js`), a second file of the same name
+ * `#2` and so on, in sorted order of the hashed names
+ * @param files hashed names (`assets/index-Bd_fo_yS.js`)
+ * @returns hashed name → key
+ */
+export const keyFiles = (files: string[]): Record<string, string> => {
+  const keys: Record<string, string> = {};
+  const taken = new Set<string>();
+  for (const file of [...files].sort()) {
+    let key = stripHash(file);
+    for (let n = 2; taken.has(key); n++) key = `${stripHash(file)}#${n}`;
+    taken.add(key);
+    keys[file] = key;
+  }
+  return keys;
+};
+
+/** Every file in a build's `assets/` folder by its key ({@link keyFiles}) with its bytes and
+ * gzip (level 9), and the hashed name → key map */
+export const measureFiles = (dir = DIST_ASSETS_DIR) => {
+  const fileKeys = keyFiles(fs.readdirSync(dir).map((name) => `assets/${name}`));
+  const chunks: Record<string, Size> = {};
+  for (const [file, key] of Object.entries(fileKeys)) {
+    const data = fs.readFileSync(path.join(dir, path.basename(file)));
+    chunks[key] = { bytes: data.length, gzip: zlib.gzipSync(data, { level: 9 }).length };
+  }
+  return { chunks, fileKeys };
+};
+
+/** Every module the visualizer lists with its rendered length per chunk (for the debug check) */
+export const listBuildModules = (data: VisualizerData): BuildModule[] =>
+  Object.values(data.nodeMetas).map((meta) => ({
+    id: meta.id,
+    chunks: Object.fromEntries(
+      Object.entries(meta.moduleParts).map(([file, id]) => [
+        stripHash(file),
+        data.nodeParts[id].renderedLength,
+      ])
+    ),
+  }));
+
+/** The main (entry) chunk's totals and its modules summed per group */
+export const measureMainChunk = (entryFile: string, data: VisualizerData) => {
+  const groups: Record<string, GroupSize> = {};
+  const main = { chunk: stripHash(entryFile), modules: 0, rendered: 0, gzip: 0 };
+  for (const meta of Object.values(data.nodeMetas)) {
+    const partId = meta.moduleParts[entryFile];
+    if (!partId) continue;
+    const part = data.nodeParts[partId];
+    const group = (groups[getModuleGroup(meta.id)] ??= { modules: 0, rendered: 0, gzip: 0 });
+    group.modules++;
+    group.rendered += part.renderedLength;
+    group.gzip += part.gzipLength;
+    main.modules++;
+    main.rendered += part.renderedLength;
+    main.gzip += part.gzipLength;
+  }
+  return { main, mainGroups: sortKeys(groups) };
+};
+
+/** A measured build: the baseline's shape, its modules, and what it was read from */
+export type CollectedBundle = {
+  bundle: BundleBaseline;
+  modules: BuildModule[];
+  /** `dist/assets/`' hashed names (`assets/index-Bd_fo_yS.js`) → their keys in `bundle.chunks` */
+  fileKeys: Record<string, string>;
+  manifest: Manifest;
+  data: VisualizerData;
+};
+
+/**
+ * Measures the last build in `dist/` and `dist-stats/`.
+ * @throws when there is no build, its manifest names no entry, or the visualizer's data is
+ *   missing or from another build
+ */
+export const collectBundle = (): CollectedBundle => {
+  const manifest = readJSON<Manifest>(MANIFEST_FILE);
+  if (!manifest || !fs.existsSync(DIST_ASSETS_DIR)) {
+    throw new Error('No dist/ build to measure: run without --no-build, or yarn build first');
+  }
+  const entry = Object.values(manifest).find((m) => m.isEntry);
+  if (!entry) throw new Error(`${path.relative(ROOT, MANIFEST_FILE)} names no entry chunk`);
+  const { chunks, fileKeys } = measureFiles();
+  const data = readVisualizerData();
+  if (!data) throw new Error(`No visualizer data in ${path.relative(ROOT, VISUALIZER_FILE)}`);
+  const { main, mainGroups } = measureMainChunk(entry.file, data);
+  if (!main.modules) {
+    throw new Error(
+      `The visualizer data has no modules in ${entry.file}: dist-stats/ is from another build`
+    );
+  }
+  return {
+    bundle: { formatVersion: BUNDLE_FORMAT_VERSION, chunks, main, mainGroups },
+    modules: listBuildModules(data),
+    fileKeys,
+    manifest,
+    data,
+  };
+};
