@@ -6,7 +6,7 @@ from what the copy button copies.
 ## The fence
 
 ````md
-```ts title="src/app/myScene.ts" {3,5-7}
+```ts title="src/app/scenes/myScene/myScene.ts" {3,5-7}
 // The code
 ```
 ````
@@ -41,7 +41,7 @@ Use the language's own comment: `/* [!code ++] */` in CSS, `# [!code ++]` in bas
 
 ### Highlights and a title
 
-```ts title="src/app/myScene.ts" {4-5}
+```ts title="src/app/scenes/myScene/myScene.ts" {4-5}
 import { createGeometry, createMaterial, createMeshEntity } from 'aekasha';
 
 export const scene = async () => {
@@ -175,7 +175,7 @@ removing a region that a page includes breaks the page. Say so in the marker's n
 One block with a title, line highlights, a diff, a focus, an error and a warning, wrapped lines,
 and collapsed after 15 lines.
 
-```ts title="src/app/myScene.ts" {4} wrap collapse
+```ts title="src/app/scenes/myScene/myScene.ts" {4} wrap collapse
 import { createGeometry, createMaterial, createMeshEntity } from 'aekasha';
 import { createPhysicsEntity } from 'aekasha/physics';
 

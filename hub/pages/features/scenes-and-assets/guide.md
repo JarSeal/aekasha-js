@@ -36,6 +36,36 @@ The engine finds every file with one of these suffixes under `src/` by itself:
 Each has a Zod schema in `src/_engine/schemas/`. Start a file with a `$schema` line pointing at
 `.schemas/<type>.schema.json`, and your editor checks and autocompletes it as you type.
 
+## Where the files go
+
+The gatherer finds an asset JSON anywhere under `src/`, so a folder is a convention, not a rule
+the engine reads. The app keeps a folder per scene:
+
+```text
+src/app/
+  scenes/<sceneId>/   <sceneId>.scene.json, <sceneId>.ts, its debug tab's _dbg__ module, its Hub
+                      image, its own modules, and the assets only this scene uses
+  examples/<name>/    the Hub's examples, one scene each
+  shared/             code several scenes use
+  cameras/ lights/ textures/ skyboxes/ impostors/ postFx/ …
+                      the assets several scenes use, each in its type's folder
+```
+
+- **One scene uses it: its folder.** An asset (and its images or model) that no other scene names
+  in its scene JSON, its scene file or one of its assets goes in that scene's folder. When a
+  second scene starts using it, move it to its type's folder; `materials/`, `meshes/`,
+  `geometries/` and `importedAssets/` appear with the first shared one.
+- **Name a scene's folder and files after its id.** The id is what everything else keys on: the
+  `__saveData` entries, `?startScene=`, the debugger's saved state.
+- **Moving a file changes no id**, so the scenes that name it don't change. What does is in the
+  file itself: its `$schema` (one more `../` per folder), its paths that start `./` or `../`
+  (`image`, `fileName`), and the paths from the app's folder: a scene's `sceneFile`
+  (`./scenes/myScene/myScene.ts`) and a TSL material's `tslFile`
+  (`scenes/myScene/myMaterial.tsl.ts`), which are relative to `src/app/` (to `src/toolkit/` for
+  the toolkit's own).
+
+The toolkit's assets sit by kind instead (see [Toolkit](hub:features/toolkit#what-s-in-it)).
+
 ## The gatherer
 
 `devTools/gatherAppData.ts` walks `src/`, checks every asset JSON against its schema, and writes

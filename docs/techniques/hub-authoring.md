@@ -222,7 +222,7 @@ Code is highlighted by [shiki](https://shiki.style/) when the Hub is built (`dev
 Write a fence with a language, and put options after the language (the fence's _meta_):
 
 ````md
-```ts title="src/app/myScene.ts" {3,5-7}
+```ts title="src/app/scenes/myScene/myScene.ts" {3,5-7}
 // The code
 ```
 ````

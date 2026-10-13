@@ -1,6 +1,7 @@
 ## The model
 
-The Ækasha symbol is a GLB next to its asset JSON in `src/toolkit/models/brand/aekashaSymbol/`:
+The Ækasha symbol is a GLB next to its asset JSON in `src/toolkit/models/brand/aekashaSymbol/`
+(the toolkit's models sit by category, `models/<category>/<id>/`):
 
 <<< src/toolkit/models/brand/aekashaSymbol/aekashaSymbol.importedAsset.json
 

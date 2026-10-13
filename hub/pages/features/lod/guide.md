@@ -106,7 +106,9 @@ and the scene loads it instead:
    [dev file server](hub:features/debug-suite#dev-file-server): `<id>.impostor.json`,
    `<id>.textureAtlas.json` and two PNGs, into `src/app/impostors/` by default
    (`AppConfig.lod.impostorExportDir`). The asset pipeline encodes the PNGs to KTX2, about a
-   quarter of a bake's GPU memory.
+   quarter of a bake's GPU memory. Move the four into the scene's folder when only that scene
+   uses them (see [where the files go](hub:features/scenes-and-assets#where-the-files-go)): a
+   later export writes wherever they are.
 3. List the id in the scene JSON's `impostors`. The same `generateOctahedralImpostor` /
    `generateCrossQuads` call with that `id` now builds from the export, without baking.
 
