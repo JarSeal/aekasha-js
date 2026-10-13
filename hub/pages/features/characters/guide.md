@@ -15,25 +15,37 @@ character. The app's top-down test scene makes its player like this:
   the rest is its live state.
 - `body` is its body plan: the colliders and how they're sized. The humanoid capsule is built in
   (`HUMANOID_CAPSULE`), with a crouching collider and the sensors the controller reads.
-- `input` gives it keys. The bindings are the character's, and they're deleted with it.
+- `brain` decides what it wants to do: here a player brain reading an action map's bindings. The
+  brain is the character's, and it's deleted with it.
 - It resolves with the character, its live data and its intent. Deleting the character's entity,
   any way, deletes the character.
 
-## Input schemes
+## Player brains
 
-| Scheme            | The keys                                                                                  |
-| ----------------- | ----------------------------------------------------------------------------------------- |
-| `TANK`            | Turn left and right, and move along the facing.                                           |
-| `WORLD_FIXED`     | Move north, south, west and east (8 directions with diagonals); it turns toward its move. |
-| `CAMERA_RELATIVE` | Like `WORLD_FIXED`, with forward along the camera's view on the ground.                   |
+A player brain owns an action map (`<characterId>:input`) built from its `bindings`, and writes
+the character's intent from it once per physics step. The engine registers three:
 
-Every scheme also has `jump`, `run` and `crouch`. `runMode` and `crouchMode` choose whether their
-keys toggle or must be held.
+| Brain             | Its movement actions                                                                       |
+| ----------------- | ------------------------------------------------------------------------------------------ |
+| `TANK`            | `turn` left and right, and `forward` along the facing.                                     |
+| `WORLD_FIXED`     | `move` north, south, west and east (8 directions with diagonals); it turns toward its move. |
+| `CAMERA_RELATIVE` | Like `WORLD_FIXED`, with up along the camera's view on the ground.                         |
+
+Every player brain also has `jump`, `run` and `crouch`. `runMode` and `crouchMode` choose whether
+their bindings toggle or must be held. Bindings can be keys, a gamepad's sticks and buttons, or
+both: the app's gym gives its `TANK` player both. With `turnToLastMoveDirection`, the two
+directional brains keep turning the character in place, after the move stops, until it faces the
+last direction it moved in.
+
+[`setCharacterBrain`](api:setCharacterBrain) switches a character's brain at runtime (a
+cutscene, a possession), or takes it away with `null`. Your own kinds, an AI or a scripted
+behaviour, are registered with [`registerBrainKind`](api:registerBrainKind): the gym's dummy is
+one, `GYM_DUMMY`.
 
 ## Driving it from code
 
-The controller moves the character only by its intent, read once per physics step. Keys write
-it; so can an AI, a cutscene or a network message, from an `APP_PHYSICS_STEP` system:
+The controller moves the character only by its intent, read once per physics step. A brain
+writes it; so can code without a brain, from an `APP_PHYSICS_STEP` system:
 
 ```ts
 const { intent } = await createDynamicCharacter({ id: 'guard', visual: guardMesh });
@@ -74,9 +86,9 @@ mode they still tick on the main thread against the worker's last snapshot and a
 casts, so they don't yet.
 :::
 
-The app's `thirdPersonGymScene` (an obstacle course with moving platforms, a player and a
-character driven by code) and `topDownTestScene` (a `WORLD_FIXED` player among hills and props)
-are the ones to try: open them with `?isDebug=true&startScene=<id>`.
+The app's `thirdPersonGymScene` (an obstacle course with moving platforms, two players and a
+character driven by a brain of its own) and `topDownTestScene` (a `WORLD_FIXED` player among hills
+and props) are the ones to try: open them with `?isDebug=true&startScene=<id>`.
 
 ## Key APIs
 
@@ -85,6 +97,7 @@ are the ones to try: open them with `?isDebug=true&startScene=<id>`.
 - [`getCharacterById`](api:getCharacterById) and [`getCharacters`](api:getCharacters).
 - [`setControlMode`](api:setControlMode) and
   [`onLocomotionStateChange`](api:onLocomotionStateChange).
+- [`setCharacterBrain`](api:setCharacterBrain) and [`registerBrainKind`](api:registerBrainKind).
 - [`createCharacter`](api:createCharacter): the base a controller builds on, for writing your own.
 
 ## Read more

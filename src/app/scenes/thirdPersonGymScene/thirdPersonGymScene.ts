@@ -44,8 +44,8 @@ const GYM_ENVIRONMENT_INTENSITY = 0.3;
 
 const TEST_MODELS = '/debugger/assets/testModels';
 
-/** Off when probing physics determinism (`?physicsProbe=N`): the characters aren't deterministic,
- * and the dummy one walks into the test props, so the probe would report their differences. */
+/** Off to probe the props alone in the worker targets (`?physicsProbe=N`): the characters are
+ * deterministic on MAIN_THREAD only (p428), and the dummy walks into the test props. */
 const ARE_CHARACTERS_ENABLED = true;
 
 /** Root transform that puts an import's first visible node (its first mesh, which is also its
@@ -140,10 +140,10 @@ const followWithSun = (
   };
 };
 
-/** The player character (TANK controls, with its follow camera), a second player character on
- * the arrow keys (CAMERA_RELATIVE) and an input-less dummy that walks and jumps around. All are
- * frame-timing dependent (wall clock, random tumbling, async shape casts in
- * WORKER_THREAD mode), so they're left out when ARE_CHARACTERS_ENABLED is off (p101 §1). */
+/** The player character (a TANK brain on the keyboard and a gamepad, with its follow camera), a
+ * second player character on the arrow keys (CAMERA_RELATIVE) and a dummy whose brain walks and
+ * jumps around (GYM_DUMMY, GymDummyBrain.ts). They're deterministic on MAIN_THREAD only (async
+ * shape casts in WORKER_THREAD mode, p428), so ARE_CHARACTERS_ENABLED can leave them out. */
 const createGymCharacters = async () => {
   const characterData = {
     _height: 1.6,
@@ -162,16 +162,31 @@ const createGymCharacters = async () => {
     id: 'topDownChar',
     visual: characterMesh,
     charData: characterData,
-    input: {
-      scheme: 'TANK',
-      mappings: {
-        rotateLeft: ['a'],
-        rotateRight: ['d'],
-        moveForward: ['w'],
-        moveBackward: ['s'],
-        jump: [' '],
-        run: ['Shift'],
-        crouch: ['Control'],
+    brain: {
+      kind: 'TANK',
+      params: {
+        bindings: {
+          turn: [
+            { device: 'KEYBOARD', negative: ['d'], positive: ['a'] },
+            { device: 'GAMEPAD', axis: 'LEFT_X', invert: true },
+          ],
+          forward: [
+            { device: 'KEYBOARD', negative: ['s'], positive: ['w'] },
+            { device: 'GAMEPAD', axis: 'LEFT_Y' },
+          ],
+          jump: [
+            { device: 'KEYBOARD', keys: [' '] },
+            { device: 'GAMEPAD', button: 'SOUTH' },
+          ],
+          run: [
+            { device: 'KEYBOARD', keys: ['Shift'] },
+            { device: 'GAMEPAD', button: 'LEFT_STICK' },
+          ],
+          crouch: [
+            { device: 'KEYBOARD', keys: ['Control'] },
+            { device: 'GAMEPAD', button: 'EAST' },
+          ],
+        },
       },
     },
   });
@@ -207,52 +222,35 @@ const createGymCharacters = async () => {
     id: 'arrowKeysChar',
     visual: arrowsCharacterMesh,
     charData: characterData,
-    input: {
-      scheme: 'CAMERA_RELATIVE',
-      mappings: {
-        moveForward: ['ArrowUp'],
-        moveBackward: ['ArrowDown'],
-        moveLeft: ['ArrowLeft'],
-        moveRight: ['ArrowRight'],
-        jump: ['Enter'],
+    brain: {
+      kind: 'CAMERA_RELATIVE',
+      params: {
+        bindings: {
+          move: [
+            {
+              device: 'KEYBOARD',
+              up: ['ArrowUp'],
+              down: ['ArrowDown'],
+              left: ['ArrowLeft'],
+              right: ['ArrowRight'],
+            },
+          ],
+          jump: [{ device: 'KEYBOARD', keys: ['Enter'] }],
+        },
       },
     },
   });
   getECSWorld().getRigidBody(arrowsCharacter.entityId)?.setTranslation({ x: 2, y: 3, z: -8 }, true);
 
-  // Another character without input, driven by writing its intent
+  // A character without input: its brain writes the intent every step, and goes with it
   const characterMesh2 = createCharacterMesh(2, '#333');
-  const { intent: dummyIntent, character: dummyCharacter } = await createDynamicCharacter({
+  const { character: dummyCharacter } = await createDynamicCharacter({
     id: 'testDummyChar',
     visual: characterMesh2,
     charData: characterData,
+    brain: { kind: 'GYM_DUMMY' },
   });
   getECSWorld().getRigidBody(dummyCharacter.entityId)?.setTranslation({ x: -2, y: 5, z: -2 }, true);
-
-  // A named ECS system re-registered on every scene load would be a silent no-op the second
-  // time (world.addSystem ignores a duplicate id) — remove any stale registration from a
-  // previous load of this scene first, since it'd otherwise keep running against this
-  // instance's now-deleted character.
-  let action: 'F' | 'T' | null = null;
-  let accDelta = 0;
-  getECSWorld().removeSystem('dummyCharLooper');
-  // ...and it's removed on leaving too (see the scene's exit callback), or it would keep driving
-  // the deleted dummy character.
-  getECSWorld().addSystem(ECSSystemStage.APP_PHYSICS_STEP, 'dummyCharLooper', (_world, dt) => {
-    // Every second: jump, and switch between walking forward and turning left. The move and turn
-    // are per sub-step (the character's tick clears them), so they are written every sub-step.
-    if (accDelta > 1) {
-      action = action !== 'F' ? 'F' : 'T';
-      dummyIntent.jump = true;
-      accDelta = 0;
-    }
-    if (action === 'F') {
-      dummyIntent.moveForward = 1;
-    } else {
-      dummyIntent.turn = 1;
-    }
-    accDelta += dt;
-  });
 };
 
 export const scene = async () =>
@@ -268,11 +266,10 @@ export const scene = async () =>
 
     updateLoaderFn({ loadedCount: 1, totalCount: 2 });
 
-    // Clean up on leaving: the characters' systems and follow camera rig would otherwise keep
+    // Clean up on leaving: the sun follow system and the follow camera rig would otherwise keep
     // running against their deleted entities/meshes (all no-ops when ARE_CHARACTERS_ENABLED is off).
     // (One exit callback per scene — registerOnSceneExit replaces any earlier one.)
     registerOnSceneExit(SCENE_THIRD_PERSON_GYM_META.id, () => {
-      getECSWorld().removeSystem('dummyCharLooper');
       getECSWorld().removeSystem('gymSunFollow');
       deleteFollowObjectCameraRig('thirdPersonGymFollowCam');
     });

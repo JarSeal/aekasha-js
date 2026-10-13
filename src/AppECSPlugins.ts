@@ -8,6 +8,7 @@ import {
   registerFollowObjectCameraRigSystem,
 } from 'aekasha/toolkit/ecs';
 import { registerSpinSystem } from './app/examples/ecs/SpinSystem';
+import { registerGymDummyBrain } from './app/scenes/thirdPersonGymScene/GymDummyBrain';
 
 /**
  * The app's own feature: wires the app's and the toolkit's ECS systems and hooks into the engine.
@@ -29,6 +30,8 @@ export const appECSPlugins: EngineFeature = {
       registerFollowObjectCameraRigSystem(world);
       registerSpinSystem(world);
     });
+    // The app's brain kinds (a brain goes with its character, so no scene adds a system for it)
+    registerGymDummyBrain();
   },
 };
 // #endregion ecs-register-plugin

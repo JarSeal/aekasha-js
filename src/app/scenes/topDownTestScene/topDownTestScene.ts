@@ -537,16 +537,15 @@ const createPlayer = async () => {
     name: 'Top-down player',
     visual,
     charData,
-    input: {
-      scheme: 'WORLD_FIXED',
-      mappings: {
-        moveNorth: ['w'],
-        moveSouth: ['s'],
-        moveWest: ['a'],
-        moveEast: ['d'],
-        jump: [' '],
-        run: ['Shift'],
-        crouch: ['Control'],
+    brain: {
+      kind: 'WORLD_FIXED',
+      params: {
+        bindings: {
+          move: [{ device: 'KEYBOARD', up: ['w'], down: ['s'], left: ['a'], right: ['d'] }],
+          jump: [{ device: 'KEYBOARD', keys: [' '] }],
+          run: [{ device: 'KEYBOARD', keys: ['Shift'] }],
+          crouch: [{ device: 'KEYBOARD', keys: ['Control'] }],
+        },
       },
     },
   });

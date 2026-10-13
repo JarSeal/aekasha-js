@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented (Phase 3 in progress)
+Status: in progress | Phases 1-3 implemented
 Category: Characters, Input, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B; a minor bump per part, D7)
 Blocks: p614_review-physics.md, p617_review-input-ui-hud.md, p512_client-prediction-and-reconciliation.md, p421_kinematic-character-controller.md, p423_vehicles.md, p424_ai-brains-and-navigation.md, p420_npc-simulation-tiers.md
@@ -418,7 +418,7 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
   main chunk +15 B (the loop's sampler calls and physics' step index), the rest gzip noise and the
   two `EngineRapier.js` chunks trading places.
 
-### Phase 3: brains and the controller contract
+### Phase 3: brains and the controller contract — done
 
 1. D5's types, `registerBrainKind` / `registerControllerKind`, the brain system, `setCharacterBrain`.
 2. The three player brains on action maps (`CharacterInputSchemes.ts` becomes them); `input:`
@@ -430,7 +430,7 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
    (checked by the user with a pad). `topDownTestScene` on `brain`.
 5. Same path hash, same hashes (D10 is off in both scenes). Commit.
 
-**As built (steps 1-3, in review):**
+**As built:**
 
 - Decided with the user: `ActorBrain.think(intent, step, dt)` (`dt` appended to D5's signature:
   the dummy and `releaseGraceMs` turn ms into steps), and `registerControllerKind` comes with
@@ -471,9 +471,30 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
   80 ms keeps 4 steps at 60 Hz), else the last move. A turn in the intent cancels it, and a
   `faceYaw` someone else wrote is never cleared nor replaced (amends D10, which said nothing of
   it). Tested in `brains/PlayerBrains.test.ts` through replayed recordings of the brain's map.
+- Step 4: the gym's players and `topDownTestScene`'s on `brain:`; the TANK player also on a
+  gamepad (`LEFT_X` inverted turns, `LEFT_Y` forward, `SOUTH` jump, `LEFT_STICK` run, `EAST`
+  crouch), which the runner has no pad for, so its hash can't tell (the user checks it). The dummy
+  is `GYM_DUMMY` (`thirdPersonGymScene/GymDummyBrain.ts`, its kind added by declaration merging,
+  registered in `AppECSPlugins.ts`' install): it counts `round(periodMs / stepMs)` = 60 steps from
+  its first think, which is when the old system's summed `dt` passed 1 s (60 additions of 1/60
+  give 1.0000000000000013), and turns until its first switch, as the system did. The scene no
+  longer adds or removes a system for it. The Hub's characters guide and intro describe brains
+  (`brain` in the include, "Player brains" for "Input schemes", `setCharacterBrain`,
+  `registerBrainKind`); `yarn hub:build` passes.
 - Checks: the gym's path hash `a51d785e` and probe hash `f5cf468f`, `topDownTestScene`'s
-  `c7786d74`, unchanged in all targets (the arrow-keys diagonals included); the system order
-  check fails only on the new `characterBrainSystem@-5`, recorded at the end of the phase.
+  `c7786d74`, unchanged in all targets after steps 2 and 4 (the arrow-keys diagonals and the
+  dummy's brain included); the system order check fails only on the new
+  `characterBrainSystem@-5` and, in the gym, the removed `dummyCharLooper@0`, recorded at the end
+  of the phase.
+- Step 5: `yarn verify:scenes --update` recorded 96 of 96 (WebGPU, macOS, 381 s) for the new
+  system order; against `webgpu.before-p610/`, 93 probe hashes are the same and the other 3 are
+  the gym's, changed on purpose in Phase 1 (`f5cf468f` at 600 steps); path hash `a51d785e`.
+  `yarn verify:baselines --update`: the new exports, main chunk +6.9 kB gzip (`kernel/input` +7.7,
+  `features/character` +3.0, the app's `GymDummyBrain` +0.3), `DynamicCharacter.js` a 6.5 kB
+  chunk, `characterVisual.js` −7.0 kB; no debug code in the build. `moveMap.ts` regenerated (stale
+  since Phase 2): 649 files, the same 26 boundary violations as `main`, no feature cycles.
+- Left to the user: the TANK player's gamepad bindings, played with a pad (the runner has none).
+  The players no longer move while the debug camera is on (D4's gameplay default).
 
 ### Phase 4: the dynamic controller split
 

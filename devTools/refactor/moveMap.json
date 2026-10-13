@@ -407,6 +407,31 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/character/ActorKinds.test.ts": {
+      "to": "src/_engine/features/character/ActorKinds.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/ActorKinds.ts": {
+      "to": "src/_engine/features/character/ActorKinds.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/ActorTypes.ts": {
+      "to": "src/_engine/features/character/ActorTypes.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/brains/PlayerBrains.test.ts": {
+      "to": "src/_engine/features/character/brains/PlayerBrains.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/brains/PlayerBrains.ts": {
+      "to": "src/_engine/features/character/brains/PlayerBrains.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/character/Character.ts": {
       "to": "src/_engine/features/character/Character.ts",
       "action": "keep",
@@ -1495,6 +1520,31 @@
     },
     "src/_engine/kernel/init/Kernel.ts": {
       "to": "src/_engine/kernel/init/Kernel.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/input/ActionBindings.ts": {
+      "to": "src/_engine/kernel/input/ActionBindings.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/input/ActionRecording.ts": {
+      "to": "src/_engine/kernel/input/ActionRecording.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/input/Actions.test.ts": {
+      "to": "src/_engine/kernel/input/Actions.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/input/Actions.ts": {
+      "to": "src/_engine/kernel/input/Actions.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/input/ActionTypes.ts": {
+      "to": "src/_engine/kernel/input/ActionTypes.ts",
       "action": "keep",
       "plan": "p608"
     },

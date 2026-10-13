@@ -2,23 +2,23 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1559,
-      "total": 2238
+      "documented": 1591,
+      "total": 2270
     },
     "members": {
-      "documented": 212,
-      "total": 440
+      "documented": 216,
+      "total": 444
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1515,
-        "total": 2175
+        "documented": 1547,
+        "total": 2207
       },
       "members": {
-        "documented": 162,
-        "total": 360
+        "documented": 166,
+        "total": 364
       }
     },
     "toolkit": {
@@ -127,8 +127,22 @@
     },
     "engine/features/character": {
       "exports": {
-        "documented": 56,
-        "total": 56
+        "documented": 76,
+        "total": 76
+      },
+      "members": {
+        "documented": 4,
+        "total": 4
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/features/character/brains": {
+      "exports": {
+        "documented": 12,
+        "total": 12
       },
       "members": {
         "documented": 0,
