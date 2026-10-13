@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented (Phase 2 in review)
 Category: Characters, Input, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B; a minor bump per part, D7)
 Blocks: p614_review-physics.md, p617_review-input-ui-hud.md, p512_client-prediction-and-reconciliation.md, p421_kinematic-character-controller.md, p423_vehicles.md, p424_ai-brains-and-navigation.md, p420_npc-simulation-tiers.md
@@ -353,6 +353,70 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
 3. Unit tests: sampling and edge counts, contexts, the keyboard composite, the gamepad with a
    stubbed `navigator.getGamepads`, recording and replay.
 4. Nothing uses it yet: every scene's hash and path stay. Commit.
+
+**As built (stopped for review, not committed):**
+
+- Files: `ActionTypes.ts` (types only), `Actions.ts` (maps, contexts, sampling, events, 608 lines),
+  `ActionBindings.ts` (compiling bindings and reading the devices through them, split out to keep
+  `Actions.ts` under the size standard), `ActionRecording.ts`, `GamepadInput.ts`; tests in
+  `Actions.test.ts` (28, window / document / navigator stubbed). Public on `aekasha`:
+  `createActionMap`, `getActionMap(s)`, `setActionContextEnabled`, `isActionContextEnabled`,
+  `recordActions`, `playActionRecording`, `getConnectedGamepads`, `onGamepadConnected` /
+  `onGamepadDisconnected`, and the types.
+- **Types:** `createActionMap` has a `const` type parameter, so the action ids are typed and each
+  action's bindings are checked against its type (`ActionBindingOf<T>`); a binding of the wrong
+  kind from plain data is left out with a warning. `ActionMap`'s members are methods, so any map
+  is an `ActionMap`. One `ActionState` shape for every type (`isDown`, `pressedCount`,
+  `releasedCount`, `value`, `x`, `y`); `AXIS_2D` and `DELTA_2D` are right and up positive (the
+  gamepad's and the mouse's Y flipped). Several bindings: a button is down while any is, an axis
+  takes the one pushed furthest, a delta sums them.
+- **Bindings:** keyboard `keys` (strings or `KeyChord`s), `negative` / `positive` (`AXIS_1D`),
+  `up` / `down` / `left` / `right` (`AXIS_2D`, a diagonal has length 1); mouse `button` (pressed on
+  the canvas) and `delta: 'MOVE' | 'WHEEL'` (over the canvas or while the pointer is locked, a wheel
+  line 16 px); touch `gesture: 'TAP' | 'DRAG'` (the default tap thresholds); gamepad `button`,
+  `axis` (deadzone, invert) and `stick: 'LEFT' | 'RIGHT' | 'DPAD'` (radial deadzone, default 0.15).
+  No gamepad binding on `DELTA_2D`: a stick look is an `AXIS_2D` rate action.
+- **Map defaults outside `DEBUG`:** `ignoreModifiers` true, `preventDefault` true (a bound key's
+  press, never in a text field), `enabledInDebugCam: 'NOT_ENABLED_IN_DEBUG'` (D4; today's
+  character bindings run in the debug camera, so Phase 3's brains change that, outside any hashed
+  run). `DEBUG`: exact modifiers, no `preventDefault`, `ENABLED_IN_DEBUG`. `gamepadIndex` reads one
+  pad (default: any). A taken id replaces the old map, as the bindings do.
+- **Live state vs. activity:** every device's state is followed all the time; counts, deltas and
+  callbacks only while the map is active (enabled, its context on, its scene current, the debug
+  camera rule met, no replay). A key held through a disabled context reads down afterwards
+  without a press. `DEBUG` follows `areAllInputsEnabled()` (off during a scene load, on in editor
+  views); every other context `areAppInputsEnabled()`. The per-device `set*InputsEnabled`
+  switches are the bindings' own and don't apply (nothing in `src/` calls them).
+- **Device sources:** one `@internal` hook per device module (`setKeyActionListener`,
+  `setMouseActionSource`, `setTouchActionSource`), plus `isKeyChordHeld` / `doesKeyEventMatchChord`
+  / `isMouseButtonHeld`; each module's bindings are unchanged. Added only when a map's bindings
+  need that device. Gamepad: connection callbacks from the DOM events (no polling), the pads'
+  values polled once per frame while a map has a gamepad binding, kept as `Float64Array`s (the
+  API's doubles: a `Float32Array` turned a trigger's 0.3 into 0.30000001, which a recording would
+  carry).
+- **The loop:** `MainLoop`'s `@internal` `setActionSampler` (`pollFrame`, `sample`, `skip`), set by
+  the first `createActionMap`. `pollFrame` right after the latch in every variant (also paused and
+  in editor views, so gamepad callbacks work there); `sample(stepIndex)` in `runFixedSubStep` after
+  the pre-step hook and before the held keys, and `sample(-1)` in the no-stepping fallback (the
+  layer then numbers its samples itself); `skip` in `noteFixedStepPause` (paused or suspended), so
+  a press made meanwhile doesn't land on the first step after it. The step index reaches the loop
+  through `FixedStepDriver.step`'s `onBeforeStep(stepDelta, stepIndex?)` (optional: other drivers
+  still compile); `stepPhysics` passes `subStepIndex` in both worker targets, the number
+  `getPhysicsSubStepIndex()` gives, so recordings and Phase 3's brains share one step clock.
+- **Recording:** `recordActions(map).stop()` gives `{ mapId, firstStep, lastStep, frames }`, a
+  frame per step with the non-idle fields of the non-idle actions (JSON as is). Replay
+  (`playActionRecording`) stands in for the map's devices (which neither count nor call back
+  meanwhile; replayed presses call the callbacks at the sample) whatever its context, until
+  `lastStep`; `from: 'RECORDED_STEPS'` (default, starts over when the step goes back) or
+  `'NEXT_SAMPLE'`. Deleting the map ends both.
+- Not unit-tested: the `MainLoop` hook itself (driving the loop needs a renderer); nothing calls
+  it until Phase 3.
+- Checks: `yarn test` (345), lint, `tsc`; `yarn verify:scenes` 96 of 96 (WebGPU, macOS, 381 s),
+  the gym's path hash `a51d785e` and probe hash `f5cf468f` unchanged. `yarn verify:baselines
+  --update`: the new exports (the `aekasha` entry and the `@internal` hooks), `kernel/input` docs
+  27 / 51 → 96 / 119; bundle: no new chunk, the action layer tree-shaken out (no map is made), the
+  main chunk +15 B (the loop's sampler calls and physics' step index), the rest gzip noise and the
+  two `EngineRapier.js` chunks trading places.
 
 ### Phase 3: brains and the controller contract
 
