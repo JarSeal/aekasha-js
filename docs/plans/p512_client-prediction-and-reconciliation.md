@@ -1,6 +1,6 @@
 Status: stub — not-implemented
 Category: Networking, Characters, Physics
-Blocked by: p500_restore-physics-snapshot.md (restore that rebinds the proxies), p610_character-and-input-action-architecture.md (deterministic characters, recorded actions), p511_network-transport-and-replication.md (the snapshots it reconciles against)
+Blocked by: p500_restore-physics-snapshot.md (restore that rebinds the proxies), p610_character-and-input-action-architecture.md (deterministic characters, recorded actions), p428_character-determinism-in-worker-targets.md (deterministic characters in the worker targets, the default), p511_network-transport-and-replication.md (the snapshots it reconciles against)
 Related: \_DONE_p604_multiplayer-viability-study.md (§3.1 model 2, the snapshot costs under Phase 2), p421_kinematic-character-controller.md (the controller the local player is predicted with), p510_headless-simulation-runtime.md
 
 # Client Prediction and Reconciliation — Stub
@@ -24,10 +24,11 @@ since. Remote entities stay interpolated (p511).
 - **So the local character is predicted alone:** a kinematic controller (p421) moved against the
   world by sweeps can be re-run for N steps without stepping the world, and corrected by itself.
   Whole-world rewind is for small worlds (and for rollback, p604 §3.1 model 4).
-- **Characters aren't deterministic yet** (wall clock, `Math.random`, async casts a step late in
-  `WORKER_THREAD` mode); p610 fixes them, and the KCC's sweeps must run inside the step (p421's
-  open question 1). Prediction needs the client's character to match the server's for the same
-  actions, but not bit for bit across machines: small differences are corrected.
+- **Characters are deterministic on `MAIN_THREAD` only** (p610: step-index time, the seeded RNG,
+  synchronous casts); in the worker targets they still tick on the main thread against the latched
+  snapshot and async casts (p428), and the KCC's sweeps must run inside the step (p421's open
+  question 1, the same decision). Prediction needs the client's character to match the server's
+  for the same actions, but not bit for bit across machines: small differences are corrected.
 - p500 makes a physics snapshot restorable with the API's proxies rebound; its non-goals are ECS
   rewind and character state, which this plan adds for the predicted entity.
 

@@ -28,6 +28,7 @@ Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every 
 ## Inputs
 
 - p604 §4, p990's ray casting item (moved here), p500 (its snapshot repair touches the same modules: coordinate), p600 §2.
+- p428 (characters in the worker targets: the controller in the worker or fixed-lag step-stamped reads, with step-stamped `EVENTS_PUSH` records; its protocol side is decided with the transport interface here).
 - p605 Phase 5's `notExported` warnings in scope (`yarn hub:build` lists each with its file and line; export the type with a summary or change the signature): `EngineColliderProxyAPI`, `EngineRigidBodyProxyAPI`, `EngineJointProxyAPI` (`EngineRapier.ts`) and `RigidBodyProxyAPI` (`PhysicsAPI.ts`), named by the `create*` functions' results.
 
 ## Done when

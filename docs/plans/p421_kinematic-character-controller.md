@@ -2,7 +2,7 @@ Status: stub — not-implemented
 Category: Characters, Physics
 Blocked by: p610_character-and-input-action-architecture.md (the controller contract in code)
 Blocks: p420_npc-simulation-tiers.md (soft: the NPC default controller)
-Related: \_DONE_p603_gameplay-architecture-contracts.md (C2: this is the second implementation that makes the controller contract firm), \_DONE_p604_multiplayer-viability-study.md (step-index time, no async casts in the tick), p512_client-prediction-and-reconciliation.md (predicts the local player with this controller), the "Refactor dynamic character code" (p070) prompt in `docs/templates/todo-plan-prompts.txt` (crouch shape, grace time and air control apply here too)
+Related: \_DONE_p603_gameplay-architecture-contracts.md (C2: this is the second implementation that makes the controller contract firm), \_DONE_p604_multiplayer-viability-study.md (step-index time, no async casts in the tick), p512_client-prediction-and-reconciliation.md (predicts the local player with this controller), p428_character-determinism-in-worker-targets.md (where a controller's in-step queries run in the worker targets: open question 1, decided together), the "Refactor dynamic character code" (p070) prompt in `docs/templates/todo-plan-prompts.txt` (crouch shape, grace time and air control apply here too)
 
 # Kinematic Character Controller — Stub
 
@@ -41,7 +41,9 @@ can use; `DynamicCharacter` stays for the player who wants physical movement and
 
 1. **Where the KCC runs in `WORKER_THREAD` mode:** a controller half in the worker (the tick's
    intent sent in the STEP message, the result back with the poses) or a synchronous main-thread
-   world copy. The first keeps determinism and costs a protocol addition.
+   world copy. The first keeps determinism and costs a protocol addition. The dynamic controller has
+   the same question (p428: the controller in the worker, or fixed-lag step-stamped reads), so one
+   answer for both.
 2. **Body plans:** one plan with per-controller collider sets, or a plan per controller kind.
 3. **Interaction with dynamic bodies:** the KCC pushes nothing by itself; how much push and how
    much a dynamic body pushes back (Rapier's `computedCollisions` plus impulses applied by the tick).
