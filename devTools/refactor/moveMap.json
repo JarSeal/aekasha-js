@@ -462,6 +462,56 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/character/controllers/dynamic/Casts.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/Casts.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/Crouch.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/Crouch.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/DynamicCharacter.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/DynamicCharacter.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/DynamicCharacterData.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/DynamicCharacterData.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/Floor.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/Floor.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/Jump.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/Jump.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/Locomotion.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/Locomotion.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/Platform.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/Platform.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/Tumble.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/Tumble.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/Wall.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/Wall.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/character/debug/_dbg__Character.ts": {
       "to": "src/_engine/features/character/debug/_dbg__Character.ts",
       "action": "keep",
@@ -489,11 +539,6 @@
     },
     "src/_engine/features/character/debug/CharacterStateWindow.module.scss": {
       "to": "src/_engine/features/character/debug/CharacterStateWindow.module.scss",
-      "action": "keep",
-      "plan": "p608"
-    },
-    "src/_engine/features/character/DynamicCharacter.ts": {
-      "to": "src/_engine/features/character/DynamicCharacter.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -3051,6 +3096,11 @@
     },
     "src/app/scenes/thirdPersonGymScene/characterVisual.ts": {
       "to": "src/app/scenes/thirdPersonGymScene/characterVisual.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/scenes/thirdPersonGymScene/GymDummyBrain.ts": {
+      "to": "src/app/scenes/thirdPersonGymScene/GymDummyBrain.ts",
       "action": "keep",
       "plan": "p609"
     },

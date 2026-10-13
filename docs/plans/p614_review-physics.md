@@ -18,6 +18,11 @@ Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every 
 - The physics manager, tiers and tier policy, raycast, the worker and its switchboard.
 - **The transport interface** in front of `postMessage` (p604 §4.5).
 - **Remove the deprecated `RayCastOpts` aliases** (from p990: due in a major, this epic's).
+- **The sync queries allocate per call** (p610 Phase 4's `perf-auditor` run): `castRayAndGetNormalSync`
+  makes a `new RAPIER.Ray` and a result object (`EngineRapier.ts`, the dynamic character's floor ray:
+  every step, per character), `castShapeSync` a new Rapier shape through `paramsToShape` (the wall
+  cast: every step near a wall while moving). Reuse one `Ray` (set its origin and dir), cache the
+  shape by its params.
 - JSDoc: `core/Physics` is the worst folder (65 of 221 documented, 153 type aliases).
 
 ## Inputs

@@ -11,8 +11,8 @@
     "aekasha/character": {
       "public": 10,
       "crossEntry": 1,
-      "internal": 54,
-      "unreferenced": 23
+      "internal": 51,
+      "unreferenced": 26
     },
     "aekasha/debug": {
       "public": 40,
@@ -4592,6 +4592,7 @@
           "kind": "Function",
           "usage": "public",
           "by": [
+            "app",
             "hub"
           ]
         },
@@ -4912,7 +4913,7 @@
         },
         "CharacterController": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "CharacterControlMode": {
           "kind": "TypeAlias",
@@ -4953,27 +4954,26 @@
       "src/_engine/features/character/DynamicCharacter.ts": {
         "CharacterData": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "createDynamicCharacter": {
           "kind": "Function",
           "usage": "public",
           "by": [
-            "app",
             "hub"
           ]
         },
         "DynamicCharacter": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "DynamicCharacterOpts": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "DynamicCharacterParams": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         }
       }
     },

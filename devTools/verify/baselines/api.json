@@ -288,9 +288,9 @@
     "src/_engine/features/character/Character.ts": {
       "applySavedCharacterConfig": "Function",
       "CharacterBodyPlan": "Reference",
-      "CharacterConfigHooks": "Reference",
       "CharacterConfigValues": "Reference",
       "CharacterController": "Reference",
+      "CharacterControllerConfig": "Reference",
       "CharacterControlMode": "Reference",
       "CharacterIntent": "Reference",
       "CharacterObject": "Reference",
@@ -348,9 +348,9 @@
       "CharacterBodyPlan": "TypeAlias",
       "CharacterCastRecord": "TypeAlias",
       "CharacterColliderRole": "TypeAlias",
-      "CharacterConfigHooks": "TypeAlias",
       "CharacterConfigValues": "TypeAlias",
       "CharacterController": "TypeAlias",
+      "CharacterControllerConfig": "TypeAlias",
       "CharacterControlMode": "TypeAlias",
       "CharacterDimensions": "TypeAlias",
       "CharacterIntent": "TypeAlias",
@@ -360,12 +360,72 @@
       "LocomotionState": "TypeAlias",
       "LocomotionStateListener": "TypeAlias"
     },
-    "src/_engine/features/character/DynamicCharacter.ts": {
-      "CharacterData": "TypeAlias",
+    "src/_engine/features/character/controllers/dynamic/Casts.ts": {
+      "castDir": "Variable",
+      "castPos": "Variable",
+      "castRot": "Variable",
+      "CharacterCast": "TypeAlias",
+      "copyVec": "Function",
+      "createCast": "Function",
+      "floorRay": "Variable",
+      "isWorkerTarget": "Function",
+      "rayDown": "Variable",
+      "recordCastShot": "Function",
+      "resolveCastRecord": "Function",
+      "setRot": "Function",
+      "setVec": "Function"
+    },
+    "src/_engine/features/character/controllers/dynamic/Crouch.ts": {
+      "updateCrouch": "Function"
+    },
+    "src/_engine/features/character/controllers/dynamic/DynamicCharacter.ts": {
       "createDynamicCharacter": "Function",
       "DynamicCharacter": "TypeAlias",
       "DynamicCharacterOpts": "TypeAlias",
       "DynamicCharacterParams": "TypeAlias"
+    },
+    "src/_engine/features/character/controllers/dynamic/DynamicCharacterData.ts": {
+      "BAKED_CONFIG_KEYS": "Variable",
+      "CharacterData": "TypeAlias",
+      "createDynamicCharacterData": "Function",
+      "DERIVED_CONFIG": "Variable",
+      "DynamicCharacterConfig": "TypeAlias",
+      "DynamicCharacterContext": "TypeAlias",
+      "DynamicCharacterController": "TypeAlias",
+      "DynamicCharacterDataObjects": "TypeAlias",
+      "DynamicCharacterInternal": "TypeAlias",
+      "DynamicCharacterState": "TypeAlias"
+    },
+    "src/_engine/features/character/controllers/dynamic/Floor.ts": {
+      "applyPendingLanding": "Function",
+      "createFloorSensorHandler": "Function",
+      "refreshFloorNormal": "Function",
+      "updateFalling": "Function"
+    },
+    "src/_engine/features/character/controllers/dynamic/Jump.ts": {
+      "tryJump": "Function",
+      "updateJumpPhase": "Function"
+    },
+    "src/_engine/features/character/controllers/dynamic/Locomotion.ts": {
+      "moveFromIntent": "Function",
+      "turnCharacter": "Function",
+      "turnFromIntent": "Function",
+      "updateLocomotionState": "Function",
+      "writeMotionState": "Function",
+      "writeVelocityState": "Function"
+    },
+    "src/_engine/features/character/controllers/dynamic/Platform.ts": {
+      "followMovingPlatform": "Function"
+    },
+    "src/_engine/features/character/controllers/dynamic/Tumble.ts": {
+      "applyControlMode": "Function",
+      "applyPendingTumble": "Function",
+      "updateGettingUp": "Function",
+      "updateTumbling": "Function"
+    },
+    "src/_engine/features/character/controllers/dynamic/Wall.ts": {
+      "createWallSensorHandler": "Function",
+      "slideAlongWall": "Function"
     },
     "src/_engine/features/instancing/InstancedMeshPool.ts": {
       "createInstancedLodPool": "Function",
@@ -3148,8 +3208,10 @@
       "CharacterBrainFactory",
       "CharacterBrainKinds",
       "CharacterBrainSpec",
+      "CharacterConfigValues",
       "CharacterControlMode",
       "CharacterController",
+      "CharacterControllerConfig",
       "CharacterControllerFactory",
       "CharacterControllerFactoryOpts",
       "CharacterControllerKinds",
@@ -3161,8 +3223,12 @@
       "CreateCharacterOpts",
       "DirectionalBrainActions",
       "DynamicCharacter",
+      "DynamicCharacterConfig",
+      "DynamicCharacterController",
+      "DynamicCharacterInternal",
       "DynamicCharacterOpts",
       "DynamicCharacterParams",
+      "DynamicCharacterState",
       "LocomotionStateListener",
       "PlayerBrainCommonParams",
       "PlayerBrainHoldMode",

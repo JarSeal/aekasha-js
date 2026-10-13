@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: in progress | Phases 1-4 implemented
 Category: Characters, Input, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B; a minor bump per part, D7)
 Blocks: p614_review-physics.md, p617_review-input-ui-hud.md, p512_client-prediction-and-reconciliation.md, p421_kinematic-character-controller.md, p423_vehicles.md, p424_ai-brains-and-navigation.md, p420_npc-simulation-tiers.md
@@ -496,7 +496,7 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
 - Left to the user: the TANK player's gamepad bindings, played with a pad (the runner has none).
   The players no longer move while the debug camera is on (D4's gameplay default).
 
-### Phase 4: the dynamic controller split
+### Phase 4: the dynamic controller split — done
 
 1. `features/character/controllers/dynamic/`: the factory and the tick's order
    (`DynamicCharacter.ts`), `Floor.ts`, `Wall.ts`, `Platform.ts`, `Jump.ts`, `Tumble.ts`,
@@ -509,6 +509,71 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
 3. The debug tools read the three objects; the saved overrides keep their localStorage keys and
    format (mapped on load).
 4. Same path hash, same hashes; `perf-auditor` on the tick. Commit.
+
+**As built:**
+
+- Decided with the user: `controller.config` is `{ values, initial, bakedKeys, onChange,
+  applyDefaults }` (the values nested, not next to the hooks); a new `config` option
+  (`Partial<DynamicCharacterConfig>`, unprefixed) replaces `charData`'s `_` keys (`charData`
+  deprecated, `config` wins over it), with the gym and `topDownTestScene` moved to it in this phase;
+  `CharacterBodyData` and the body plans unprefixed (`height`, `radius`, …: the configuration
+  satisfies it, so a plan sizes from `config.values`; never on the entry, so no deprecation, but a
+  custom plan breaks: changelog); steps 1 and 2 done together (section A), the debug tools as
+  section B, the checks as section C.
+- Files (`controllers/dynamic/`, `git mv`'d from `DynamicCharacter.ts`): `DynamicCharacter.ts` (398:
+  the factory and `tickDynamicCharacter`, the tick's order as calls), `DynamicCharacterData.ts` (450:
+  the three types, their defaults, `BAKED_CONFIG_KEYS`, `DERIVED_CONFIG`, the flat view, the context
+  type), `Locomotion.ts` (314: turn, move, steep slope, motion and locomotion state), `Floor.ts`
+  (223: floor sensor, floor ray, landing, falling), `Wall.ts` (209: wall sensor, wall cast, slide),
+  `Tumble.ts` (182: control mode, tumble start and stop, getting up), `Platform.ts` (171), `Casts.ts`
+  (117: the cast records and the physics-call scratch), `Jump.ts` (50), `Crouch.ts` (20). Largest
+  function ~95 lines. The brains were already in `brains/` (Phase 3).
+- **The context** (`DynamicCharacterContext`, one per character): the body, its colliders, the
+  three objects, the intent, the dims, the applied control mode, the casts and the wall hit, and
+  the pose and velocity scratch (per character now: 13 doubles; the vector scratch stays shared,
+  module-level in the file that uses it). Each part is a function of it; the sensor handlers are
+  closures over it, made once. The body fields are set once `createCharacter` resolves (`null!`
+  before: the sensors fire and the tick runs only after).
+- **The three objects** (`DynamicCharacterState`, `DynamicCharacterConfig`, `DynamicCharacterInternal`,
+  all on the entry with `DynamicCharacterController`): the state keys as they were, the configuration
+  and internal ones without their `_` / `__`. `CharacterController` is generic over them
+  (`state?`, `config?: CharacterControllerConfig<T>`, `internal?`, `probes?`); `CharacterConfigHooks`
+  (unreleased) became `CharacterControllerConfig`, and `CharacterConfigValues` is on the entry.
+  `createDynamicCharacter` returns `controller` too. A brain's `configDefaults` key is unprefixed
+  (`turnToMoveDirection`), and `applyDefaults` skips a key the controller doesn't have (before: it
+  was written into `data`).
+- **The flat view:** `character.data` / `DynamicCharacter.data` are accessors defined once at
+  creation (`Object.defineProperty` per key, state then `_` config then `__` internal: the old key
+  order), and `charData` is applied through it (`Object.assign`, so a key the view lacks stays on it
+  as a plain value, as before). `CharacterData` (deprecated) is that view's type, mapped from the
+  three. Deprecated, removed in engine 6.0.0: `CharacterObject.data` and `initialConfig` (use
+  `config.initial`), `DynamicCharacter.data`, `CreateCharacterOpts.data`, `charData`. Nothing in the
+  engine reads the view any more (risk 3): only `createCharacter`'s `initialConfig` snapshot.
+- **Debug tools (step 3):** the state window reads each group from its object (`getGroupSource`, no
+  allocation), labels without a prefix, edits write `config.values` + `onChange`, the creation-time
+  values come from `config.initial`, "Copy changes" gives a `config` snippet, "Copy data" gives
+  `{ state, config, internal }`. The saved overrides keep `AEK_debugCharConfig`'s format (the `_`
+  keys), mapped by `toSavedKey` / `fromSavedKey` at the LS boundary, so tuning saved before applies.
+  The hints and the window's formats are rekeyed; the gizmos read `state` / `config.values` (and
+  `resolvedAtStep`, not the deprecated `resolvedAt`); the test bridge reads
+  `controller.state.locomotionState`. Checked in a driven browser on `topDownTestScene`: an
+  old-format `_maxVelocity` override applied (`values` 5.5, `initial` 3.7), an edit in degrees saved
+  as `_maxWalkableAngle` and recomputed `maxWalkableAngleCos`, both applied again after a reload, an
+  unknown saved key skipped with the warning.
+- Also now: the root `CLAUDE.md`'s two `DynamicCharacter.ts` paths, the characters Hub guide's
+  `charData` line and "resolves with" line (its include shows the changed region).
+- `perf-auditor`: the character modules' step path is allocation-free and the split added nothing.
+  Its two real findings are the physics backend's (a `RAPIER.Ray` per `castRayAndGetNormalSync`, a
+  shape per `castShapeSync`), filed in p614's scope. Its low-priority note, left for later: the
+  floor ray fires every step, idle too (a skip at rest would change behaviour and the hashes).
+- Checks: `yarn test` (355), lint, `tsc`; `yarn verify:scenes` 96 of 96 (WebGPU, macOS, 380 s): the
+  gym's path hash `a51d785e` and probe hash `f5cf468f`, `topDownTestScene`'s `c7786d74`, every other
+  hash and the system order unchanged (the two character scenes also after section A alone).
+  `yarn verify:baselines --update`: the moves, the split's module exports, `CharacterConfigHooks` →
+  `CharacterControllerConfig`, six new `aekasha/character` exports; the `DynamicCharacter.js` chunk
+  6.5 → 7.3 kB gzip (the flat view, the `config` option, the module boundaries), the main chunk within
+  the tolerance; no debug code in the build; the new folder's exports 47 / 47 documented. `moveMap.ts`
+  regenerated: 659 files, the same 26 boundary violations, no feature cycles.
 
 ### Phase 5: the debug keys and the app's bindings on actions
 
