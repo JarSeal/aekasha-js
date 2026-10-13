@@ -2,13 +2,13 @@ import type * as THREE from 'three/webgpu';
 import { isDebugCameraActive } from '../camera/Camera';
 import { isDebugEnvironment } from '../config/Config';
 import { getECSWorld } from '../ecs/ECS';
-import { addOnWindowBlurFn } from '../loop/MainLoop';
+import { addOnWindowBlurFn, deleteAddOnWindowBlurFn } from '../loop/MainLoop';
 import { getCanvasElem } from '../render/Renderer';
 import { getCurrentSceneId } from '../scene/Scene';
 import { ECSSystemStage } from '../loop/SystemStages';
 import { lwarn } from '../../utils/Logger';
 import { pickTargetsAt, type PickOpts } from './InputPicking';
-import { areAppInputsEnabled } from './InputState';
+import { areAppInputsEnabled, getInputScope } from './InputState';
 import type { BindingMeta, EnabledInDebugCam, TargetList } from './InputSharedTypes';
 
 // NOTE! Every raycast here tests only a binding's own `targets`, never the whole scene graph.
@@ -104,6 +104,9 @@ const hoverIntersects: THREE.Intersection[] = [];
 
 let canvas: HTMLElement | null = null;
 let listenersInitiated = false;
+/** Removes the mouse listeners (null: none added) */
+let removeListeners: (() => void) | null = null;
+const BLUR_FN_ID = 'inputMousePressesClear';
 
 /**
  * The action layer's mouse source (Actions.ts).
@@ -292,23 +295,54 @@ const initHoverSystem = () => {
   world.addSystem(ECSSystemStage.MAIN, HOVER_SYSTEM_ID, hoverSystem);
 };
 
+const clearPresses = () => {
+  for (const button of MOUSE_BUTTONS) delete pressStarts[button];
+  lastRightClickTimes.clear();
+  onPointerLeaveWindow();
+  mouseActionSource?.onButton(null);
+};
+
+/** Adds the listeners by the input scope (InputState.ts): on the window, on the canvas, or none. */
 const initMouseListeners = () => {
   if (listenersInitiated) return;
   listenersInitiated = true;
-  canvas = getCanvasElem();
-  window.addEventListener('mousedown', onMouseDown);
-  window.addEventListener('mouseup', onMouseUp);
-  window.addEventListener('dblclick', onDblClick);
-  window.addEventListener('wheel', onWheel);
-  window.addEventListener('mousemove', onMouseMove);
-  window.addEventListener('contextmenu', onContextMenu);
-  document.documentElement.addEventListener('mouseleave', onPointerLeaveWindow);
-  addOnWindowBlurFn('inputMousePressesClear', () => {
-    for (const button of MOUSE_BUTTONS) delete pressStarts[button];
-    lastRightClickTimes.clear();
-    onPointerLeaveWindow();
-    mouseActionSource?.onButton(null);
-  });
+  const scope = getInputScope();
+  if (scope === 'NONE') return;
+  const canvasElem = getCanvasElem();
+  canvas = canvasElem;
+  const target: Window | HTMLElement = scope === 'CANVAS' ? canvasElem : window;
+  const leaveTarget = scope === 'CANVAS' ? canvasElem : document.documentElement;
+  const listeners: [EventTarget, string, EventListener][] = [
+    [target, 'mousedown', onMouseDown as EventListener],
+    // On the window in either scope (it changes nothing on the page): a press made on the canvas
+    // ends wherever it's released
+    [window, 'mouseup', onMouseUp as EventListener],
+    [target, 'dblclick', onDblClick as EventListener],
+    [target, 'wheel', onWheel as EventListener],
+    [target, 'mousemove', onMouseMove as EventListener],
+    [target, 'contextmenu', onContextMenu as EventListener],
+    [leaveTarget, 'mouseleave', onPointerLeaveWindow],
+  ];
+  for (const [elem, type, fn] of listeners) elem.addEventListener(type, fn);
+  addOnWindowBlurFn(BLUR_FN_ID, clearPresses);
+  removeListeners = () => {
+    for (const [elem, type, fn] of listeners) elem.removeEventListener(type, fn);
+    deleteAddOnWindowBlurFn(BLUR_FN_ID);
+  };
+};
+
+/**
+ * Removes the mouse listeners and clears the presses and the hover (the mount's unmount). The
+ * next binding or action source adds them again, by the input scope then.
+ * @internal
+ */
+export const removeMouseListeners = (): void => {
+  removeListeners?.();
+  removeListeners = null;
+  clearPresses();
+  lastMoveEvent = null;
+  canvas = null;
+  listenersInitiated = false;
 };
 
 export const createMouseBinding = (binding: MouseBinding): void => {

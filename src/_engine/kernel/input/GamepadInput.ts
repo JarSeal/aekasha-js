@@ -1,4 +1,6 @@
 import { lwarn } from '../../utils/Logger';
+import { getRenderer } from '../render/Renderer';
+import { getInputScope } from './InputState';
 
 // The Gamepad API has no button events: `navigator.getGamepads()` is polled once per frame (the
 // action layer's frame hook, Actions.ts, while a map has a gamepad binding) and each pad's buttons
@@ -101,10 +103,46 @@ const onDisconnected = (e: GamepadEvent) => {
 };
 
 const addConnectionListeners = () => {
-  if (connectionListenersAdded) return;
+  // None in the NONE input scope (InputState.ts)
+  if (connectionListenersAdded || getInputScope() === 'NONE') return;
   connectionListenersAdded = true;
   window.addEventListener('gamepadconnected', onConnected);
   window.addEventListener('gamepaddisconnected', onDisconnected);
+};
+
+/**
+ * Removes the connection listeners and forgets the pads' state (the mount's unmount). The
+ * connection callbacks stay; the next one added, or the next poll, adds the listeners again.
+ * @internal
+ */
+export const removeGamepadListeners = (): void => {
+  if (connectionListenersAdded) {
+    window.removeEventListener('gamepadconnected', onConnected);
+    window.removeEventListener('gamepaddisconnected', onDisconnected);
+    connectionListenersAdded = false;
+  }
+  pads.length = 0;
+};
+
+/** Whether the pads are read, by the input scope: always for the window, while the canvas has
+ * focus for the canvas (like the keys), never for none. */
+const isInScope = () => {
+  const scope = getInputScope();
+  if (scope === 'WINDOW') return true;
+  if (scope === 'NONE') return false;
+  const canvas = getRenderer()?.domElement;
+  return !!canvas && document.activeElement === canvas;
+};
+
+/** Forgets every pad's state, so nothing reads held. Whether any pad had one. */
+const releasePads = () => {
+  let changed = false;
+  for (let i = 0; i < pads.length; i++) {
+    if (!pads[i]) continue;
+    pads[i] = null;
+    changed = true;
+  }
+  return changed;
 };
 
 const addListener = <T>(list: T[], fn: T) => {
@@ -193,6 +231,8 @@ const readPad = (state: PadState, gp: Gamepad) => {
  * @returns whether any button or axis changed, a pad connected or one went away
  */
 export const pollGamepads = (): boolean => {
+  // Out of scope (the canvas lost focus): released, as a blur releases the keys
+  if (!isInScope()) return releasePads();
   const list = typeof navigator !== 'undefined' ? navigator.getGamepads?.() : undefined;
   let changed = false;
   const count = list ? list.length : 0;

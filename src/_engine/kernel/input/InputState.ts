@@ -26,3 +26,29 @@ export const areAppInputsSuspended = (): boolean => appInputsSuspended;
 
 /** Whether the app's input bindings run: every input is enabled and no editor view suspends them. */
 export const areAppInputsEnabled = (): boolean => allInputsEnabled && !appInputsSuspended;
+
+/**
+ * Where the input devices listen (p611 D6). `WINDOW`: the whole page (the full-page boot,
+ * `InitEngine`). `CANVAS`: the canvas only, for an engine mounted into a page it doesn't own
+ * (`mountAekasha`): the pointer and touch events on the canvas, the keys while it has focus (it
+ * gets a `tabindex`), the gamepads too. `NONE`: no listeners at all, so the bindings and action
+ * maps never fire.
+ */
+export type InputScope = 'WINDOW' | 'CANVAS' | 'NONE';
+
+let inputScope: InputScope = 'WINDOW';
+
+/**
+ * Sets where the input devices listen. A device reads it when it adds its listeners (its first
+ * binding or action source), so set it before: the mount does, before the boot.
+ * @internal
+ */
+export const setInputScope = (scope: InputScope): void => {
+  inputScope = scope;
+};
+
+/**
+ * Where the input devices listen.
+ * @internal
+ */
+export const getInputScope = (): InputScope => inputScope;

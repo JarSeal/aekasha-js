@@ -1,12 +1,12 @@
 import type * as THREE from 'three/webgpu';
 import { isDebugCameraActive } from '../camera/Camera';
 import { isDebugEnvironment } from '../config/Config';
-import { addOnWindowBlurFn } from '../loop/MainLoop';
+import { addOnWindowBlurFn, deleteAddOnWindowBlurFn } from '../loop/MainLoop';
 import { getCanvasElem } from '../render/Renderer';
 import { getCurrentSceneId } from '../scene/Scene';
 import { lwarn } from '../../utils/Logger';
 import { pickTargetsAt, type PickOpts } from './InputPicking';
-import { areAppInputsEnabled } from './InputState';
+import { areAppInputsEnabled, getInputScope } from './InputState';
 import type { BindingMeta, EnabledInDebugCam, TargetList } from './InputSharedTypes';
 
 // Only gestures that start on the canvas count (touches on the HUD/debug UI are ignored).
@@ -84,6 +84,9 @@ let pinchLastDistance: number | null = null;
 
 let canvas: HTMLElement | null = null;
 let listenersInitiated = false;
+/** Removes the touch listeners (null: none added) */
+let removeListeners: (() => void) | null = null;
+const BLUR_FN_ID = 'inputTouchGestureClear';
 
 /**
  * The action layer's touch source (Actions.ts), with the default tap thresholds.
@@ -251,16 +254,42 @@ const resetGesture = () => {
   pinchLastDistance = null;
 };
 
+/** Adds the listeners by the input scope (InputState.ts): on the window, on the canvas (a touch's
+ * events all go to the element it started on), or none. */
 const initTouchListeners = () => {
   if (listenersInitiated) return;
   listenersInitiated = true;
-  canvas = getCanvasElem();
-  window.addEventListener('touchstart', onTouchStart, { passive: true });
-  // Non-passive only where preventDefault is needed (native pinch-zoom/scroll during gestures)
-  window.addEventListener('touchmove', onTouchMove, { passive: false });
-  window.addEventListener('touchend', onTouchEnd, { passive: true });
-  window.addEventListener('touchcancel', onTouchEnd, { passive: true });
-  addOnWindowBlurFn('inputTouchGestureClear', resetGesture);
+  const scope = getInputScope();
+  if (scope === 'NONE') return;
+  const canvasElem = getCanvasElem();
+  canvas = canvasElem;
+  const target: Window | HTMLElement = scope === 'CANVAS' ? canvasElem : window;
+  const listeners: [string, EventListener, AddEventListenerOptions][] = [
+    ['touchstart', onTouchStart as EventListener, { passive: true }],
+    // Non-passive only where preventDefault is needed (native pinch-zoom/scroll during gestures)
+    ['touchmove', onTouchMove as EventListener, { passive: false }],
+    ['touchend', onTouchEnd as EventListener, { passive: true }],
+    ['touchcancel', onTouchEnd as EventListener, { passive: true }],
+  ];
+  for (const [type, fn, opts] of listeners) target.addEventListener(type, fn, opts);
+  addOnWindowBlurFn(BLUR_FN_ID, resetGesture);
+  removeListeners = () => {
+    for (const [type, fn] of listeners) target.removeEventListener(type, fn);
+    deleteAddOnWindowBlurFn(BLUR_FN_ID);
+  };
+};
+
+/**
+ * Removes the touch listeners and ends the gesture (the mount's unmount). The next binding or
+ * action source adds them again, by the input scope then.
+ * @internal
+ */
+export const removeTouchListeners = (): void => {
+  removeListeners?.();
+  removeListeners = null;
+  resetGesture();
+  canvas = null;
+  listenersInitiated = false;
 };
 
 export const createTouchBinding = (binding: TouchBinding): void => {
