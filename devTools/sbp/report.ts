@@ -1,10 +1,11 @@
 /**
- * `yarn sbp`'s report (p611 Phase 1): a profile's build measured (the initial / lazy split, the
- * groups, the feature view, the diff against `bundle.json`) as data for `.cache/sbp/report.json`,
- * and as the lines the command prints.
+ * `yarn sbp`'s report (p611 Phases 1-2): a profile's build measured (the initial / lazy split, the
+ * groups, the feature view, the diff against `bundle.json`, the budgets) as data for
+ * `.cache/sbp/report.json`, and as the lines the command prints.
  */
 import { type BundleFinding, diffBundle, formatKB, readBundleBaseline } from './bundleDiff';
 import { buildFeatureView } from './bundleFeatures';
+import { type BudgetCheck, checkBudgets, isBudgetFailure, suggestBudget } from './budgets';
 import type { CollectedBundle, Size } from './bundleModel';
 import { type SplitGroupSize, measureSplitGroups, splitBundle, sumSizes } from './bundleSplit';
 import {
@@ -15,10 +16,10 @@ import {
   getEntryModuleId,
   indexModuleGraph,
 } from './bundleWhy';
-import { APP_ENTRY, type SbpProfile } from './config';
+import { APP_ENTRY, KIB, type SbpProfile } from './config';
 
 /** Bump when the report's shape changes: Hub pages read it (p611 D9) */
-export const REPORT_FORMAT_VERSION = 1;
+export const REPORT_FORMAT_VERSION = 2;
 
 export type LoadReport = { total: Size; files: Record<string, Size> };
 
@@ -43,6 +44,8 @@ export type ProfileReport = {
   features: FeatureReport[];
   /** Against `devTools/verify/baselines/bundle.json` (the `app` profile only); null without one */
   diff: BundleFinding[] | null;
+  /** The profile's budgets checked (`sbp.config.ts`); null when it has none */
+  budgets: BudgetCheck[] | null;
 };
 
 export type SbpReportFile = { formatVersion: number; profiles: Record<string, ProfileReport> };
@@ -79,6 +82,16 @@ export const measureProfile = (opts: {
     dataFeatures: opts.dataFeatures,
   }).map(({ why, ...row }) => ({ ...row, why: why && formatImportChain(why) }));
   const baseline = opts.profile.entry === APP_ENTRY ? readBundleBaseline() : null;
+  const initial = pick(split.initial, bundle.chunks);
+  const budgets = opts.profile.budgets
+    ? checkBudgets(opts.profile.budgets, {
+        initialGzip: initial.total.gzip,
+        chunks: bundle.chunks,
+        groups,
+        data,
+        initialFiles: split.initialFiles,
+      })
+    : null;
   return {
     report: {
       profile: {
@@ -86,11 +99,12 @@ export const measureProfile = (opts: {
         entry: opts.profile.entry,
         scenes: Object.keys(opts.scenes).sort(),
       },
-      initial: pick(split.initial, bundle.chunks),
+      initial,
       lazy: pick(split.lazy, bundle.chunks),
       groups,
       features,
       diff: baseline && diffBundle(baseline, bundle),
+      budgets,
     },
     graph,
     from,
@@ -180,6 +194,45 @@ const formatDiff = (diff: BundleFinding[] | null, c: Colors) => {
   ];
 };
 
+const KIND_TEXT: Record<BudgetCheck['kind'], string> = {
+  initial: '',
+  chunk: 'chunk ',
+  group: 'group ',
+  module: 'modules under ',
+};
+
+const formatBudget = ({ kind, key, budget, size, status }: BudgetCheck, c: Colors) => {
+  const name = `${KIND_TEXT[kind]}${key}`;
+  if (size === null) {
+    return `${c.red}✗ ${name}: no such file in the build (rename or remove its budget)${c.reset}`;
+  }
+  const sizes = `${formatKB(size)}, budget ${formatKB(budget)}`;
+  if (status === 'over') {
+    return `${c.red}✗ ${name}: ${sizes}, over by ${formatKB(size - budget)}${c.reset}`;
+  }
+  return `${c.yellow}· ${name}: ${sizes}, well under: lower it to ${suggestBudget(size) / KIB} * KIB${c.reset}`;
+};
+
+/** The budgets' lines: failures and the ones to tighten, or one line when all are within */
+const formatBudgets = (checks: BudgetCheck[] | null, c: Colors) => {
+  if (!checks) return [`budgets: ${c.dim}none (sbp.config.ts)${c.reset}`];
+  const failed = checks.filter(isBudgetFailure).length;
+  const wellUnder = checks.filter((check) => check.status === 'wellUnder').length;
+  const head = `budgets ${c.dim}(gzip, sbp.config.ts)${c.reset}: ${checks.length} checked`;
+  if (!failed && !wellUnder) return [`${head}, ${c.green}all within${c.reset}`];
+  return [
+    `${head}${failed ? `, ${c.red}${failed} failed${c.reset}` : ''}${wellUnder ? `, ${c.yellow}${wellUnder} well under${c.reset}` : ''}`,
+    ...checks
+      .filter((check) => check.status !== 'within')
+      .map((check) => `  ${formatBudget(check, c)}`),
+    ...(failed
+      ? [
+          `  ${c.dim}Over a budget: shrink the build (yarn sbp --why <group | module>), or raise the budget in the change that explains the growth.${c.reset}`,
+        ]
+      : []),
+  ];
+};
+
 /** The report's text, a line each */
 export const formatReport = (report: ProfileReport, c: Colors): string[] => [
   `profile ${report.profile.id}: ${report.profile.entry}, ${report.profile.scenes.length} scene(s)`,
@@ -193,6 +246,8 @@ export const formatReport = (report: ProfileReport, c: Colors): string[] => [
   ...formatFeatures(report.features, c),
   '',
   ...formatDiff(report.diff, c),
+  '',
+  ...formatBudgets(report.budgets, c),
 ];
 
 const LOAD_TEXT = {

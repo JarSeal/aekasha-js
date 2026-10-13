@@ -1,5 +1,5 @@
 /**
- * The Smallest Build Possible report (p611 Phase 1):
+ * The Smallest Build Possible report and budgets (p611 Phases 1-2):
  *
  *   yarn sbp [--profile <id>] [--no-build] [--why <group | module path>] [--json]
  *
@@ -7,8 +7,12 @@
  * `yarn verify:baselines` runs them), then reports what loads before the first frame and what
  * loads later, each group's share, each engine feature's size and why it's in the initial chunks
  * (the shortest static import chain from the entry) next to the scenes whose data needs it, and
- * the diff against the committed `devTools/verify/baselines/bundle.json`. Phase 1 reports only:
- * the budgets that fail it come with Phase 2, and `verify:baselines` records the baseline.
+ * the diff against the committed `devTools/verify/baselines/bundle.json` (`verify:baselines`
+ * records it; the diff never fails), then checks the profile's budgets (`sbp.config.ts`).
+ *
+ * Exits 1 when a budget fails (over it, or a chunk budget with no file in the build), so
+ * `yarn build` fails as it does for an asset over its budget; a budget well under is only
+ * reported. With `--why` nothing fails but a query that matches nothing (1). Errors exit 2.
  *
  * - `--no-build` measures the last build in `dist/` and `dist-stats/`.
  * - `--why <x>` prints the import chains to a group (`physics`, `kernel/assets`, `three`) or to
@@ -24,6 +28,7 @@ import sbpProfiles from '../sbp.config';
 import { ROOT } from './assetPipeline/sources';
 import { ENGINE_SCHEMA_PARTS } from './engineSchemas';
 import { buildAppBundle } from './sbp/appBuild';
+import { isBudgetFailure } from './sbp/budgets';
 import { readSceneFeatures } from './sbp/bundleFeatures';
 import { collectBundle } from './sbp/bundleModel';
 import { checkSbpProfiles } from './sbp/config';
@@ -128,7 +133,15 @@ const main = async () => {
   );
   // eslint-disable-next-line no-console -- the one line on stdout with --json
   if (args.json) console.log(JSON.stringify(measured.report, null, 2));
-  if (why && !why.isFound) process.exit(1);
+  if (why) {
+    if (!why.isFound) process.exit(1);
+    return;
+  }
+  const failed = measured.report.budgets?.filter(isBudgetFailure).length ?? 0;
+  if (failed) {
+    out(`${COLORS.red}✗ ${failed} budget(s) of profile ${profile.id} failed${COLORS.reset}`, true);
+    process.exit(1);
+  }
 };
 
 main().catch((err: Error) => fail(`yarn sbp stopped: ${err.message}`));

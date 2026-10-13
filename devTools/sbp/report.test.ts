@@ -63,7 +63,11 @@ describe('the text', () => {
     expect(lines[0]).toBe('profile test: src/test.html, 2 scene(s)');
     expect(lines).toContain('initial: 1 file(s), 0.0 kB gzip (0.0 kB)');
     expect(lines.some((l) => /^ {2}physics .* no scene's data needs it/.test(l))).toBe(true);
-    expect(lines.at(-1)).toBe('diff against bundle.json: none (the app profile only)');
+    expect(lines.slice(-3)).toEqual([
+      'diff against bundle.json: none (the app profile only)',
+      '',
+      'budgets: none (sbp.config.ts)',
+    ]);
   });
 
   it('answers --why, and says when nothing matches', () => {
