@@ -2339,6 +2339,31 @@
       "action": "keep",
       "plan": "p609"
     },
+    "src/app/examples/character/exampleCharacter.scene.json": {
+      "to": "src/app/examples/character/exampleCharacter.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/character/exampleCharacter.ts": {
+      "to": "src/app/examples/character/exampleCharacter.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/character/exampleCharacterAmbient.light.json": {
+      "to": "src/app/examples/character/exampleCharacterAmbient.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/character/exampleCharacterCamera.camera.json": {
+      "to": "src/app/examples/character/exampleCharacterCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/character/exampleCharacterSun.light.json": {
+      "to": "src/app/examples/character/exampleCharacterSun.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
     "src/app/examples/debugTab/_dbg__exampleDebugTab.ts": {
       "to": "src/app/examples/debugTab/_dbg__exampleDebugTab.ts",
       "action": "keep",
@@ -3211,6 +3236,11 @@
     },
     "src/toolkit/ecs/effects/SunShadowFit.ts": {
       "to": "src/toolkit/ecs/effects/SunShadowFit.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/toolkit/ecs/gameplay/FollowObjectCameraRig.test.ts": {
+      "to": "src/toolkit/ecs/gameplay/FollowObjectCameraRig.test.ts",
       "action": "keep",
       "plan": "p609"
     },

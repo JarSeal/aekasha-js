@@ -7,16 +7,16 @@ fails at boot, naming both, when `physics()` isn't listed before it.
 ## A character
 
 [`createDynamicCharacter`](api:createDynamicCharacter) turns a visual (a mesh or a group) into a
-character. The app's top-down test scene makes its player like this:
+character. The [character example](hub:examples/character) makes its player like this:
 
-<<< src/app/scenes/topDownTestScene/topDownTestScene.ts#dynamic-character
+<<< src/app/examples/character/exampleCharacter.ts#dynamic-character
 
-- `config` tunes it ([`DynamicCharacterConfig`](api:DynamicCharacterConfig)): its size, speeds,
-  jump and slope limits, over the defaults.
-- `body` is its body plan: the colliders and how they're sized. The humanoid capsule is built in
-  (`HUMANOID_CAPSULE`), with a crouching collider and the sensors the controller reads.
 - `brain` decides what it wants to do: here a player brain reading an action map's bindings. The
   brain is the character's, and it's deleted with it.
+- `config` tunes it ([`DynamicCharacterConfig`](api:DynamicCharacterConfig)): its size, speeds,
+  jump and slope limits, over the defaults (`config: { maxVelocity: 5 }`{ts}).
+- `body` is its body plan: the colliders and how they're sized. The humanoid capsule is the
+  default (`HUMANOID_CAPSULE`), with a crouching collider and the sensors the controller reads.
 - It resolves with the character, its controller and its intent. The controller's `state` is what
   its tick writes every step (position, velocities, `locomotionState`, `isGrounded`…), its
   `config.values` the live configuration, and its `internal` the tick's memory. Deleting the character's entity,
@@ -88,9 +88,10 @@ mode they still tick on the main thread against the worker's last snapshot and a
 casts, so they don't yet.
 :::
 
-The app's `thirdPersonGymScene` (an obstacle course with moving platforms, two players and a
-character driven by a brain of its own) and `topDownTestScene` (a `WORLD_FIXED` player among hills
-and props) are the ones to try: open them with `?isDebug=true&startScene=<id>`.
+Besides the [example](hub:examples/character), the app's `thirdPersonGymScene` (an obstacle
+course with moving platforms, two players and a character driven by a brain of its own) and
+`topDownTestScene` (a `WORLD_FIXED` player among hills and props) are the ones to try: open them
+with `?isDebug=true&startScene=<id>`.
 
 ## Key APIs
 

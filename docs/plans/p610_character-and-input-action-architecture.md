@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-5 implemented
+Status: in progress | Phases 1-6 implemented
 Category: Characters, Input, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B; a minor bump per part, D7)
 Blocks: p614_review-physics.md, p617_review-input-ui-hud.md, p512_client-prediction-and-reconciliation.md, p421_kinematic-character-controller.md, p423_vehicles.md, p424_ai-brains-and-navigation.md, p420_npc-simulation-tiers.md
@@ -669,13 +669,61 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
   history; the unit tests cover ⌘Z twice and redo) and a real keyboard's § and F keys, which the
   user checks.
 
-### Phase 6: the camera rig and the example scene
+### Phase 6: the camera rig and the example scene — done
 
 1. D9's rig options (the shared tick first), with the gym's rig unchanged.
 2. The `exampleCharacter` scene and its HUD line.
 3. The Hub: the example page, the characters feature page's panel and include; the Hub image
    (saved with the drawer's Hub tab: the user, or through the dev files from a driven browser).
    `yarn hub:build`. Commit.
+
+**As built:**
+
+- Section 1 (the rig, `FollowObjectCameraRig.ts`): one tick, the smoothing step (lerp or
+  `smoothDampVec3`, the same speed caps: 100 m/s, none with the mouse) chosen once, the orbit its
+  own function. `orientation: 'FIXED'` looks along `-offset` (`camera.lookAt(position - offset)`),
+  without mouse input only. `lookAhead` as D9; left to it: the travel velocity is the drawn pose's
+  movement smoothed over 0.1 s (so a pose that moves only on steps doesn't read as stopping), below
+  0.5 m/s the target stands still, above 100 m/s a move is a teleport and ignored, and the lead is
+  always the full `distance` while moving (eased in by smoothDamp), not scaled by speed.
+  `afterLookAtFn`'s `targetPos` is the followed point (lead included); `targetHeight` documented as
+  mouse-only (it always was). An `@example`. Checked: the old and new rig gave the same camera path
+  bit for bit (both smoothing types, with and without the mouse; a throwaway test), the toolkit's
+  first tests (`FollowObjectCameraRig.test.ts`, 5, through a stub world), the gym's and
+  `topDownTestScene`'s snapshots and hashes unchanged.
+- Section 2 (`src/app/examples/character/`): the level as block data (`BLOCKS`, one
+  `createBlock(block)`: a box mesh and a `FIXED` body, a geometry per size and a material per
+  colour, ids prefixed `exampleCharacter`), a 17° ramp to a 1.5 m platform, stairs to a 1 m one
+  (four drawn steps over one hidden ramp collider through their middles, as the gym's: a capsule
+  catches on a step's edge), crates, a low block, a low wall round the 30 × 30 ground. The visual
+  is the example's own (the user's choice): a capsule of the default body size with a nose on +X
+  (a yaw of 0 faces +X), the nose made with `doNotAddToScene` and added to the capsule. The brain:
+  `WORLD_FIXED`, W/A/S/D and the arrows as two `move` bindings, Space, Shift, C,
+  `runMode: 'HOLD'` (hold Shift to run, the keyboard convention; crouch stays `TOGGLE`),
+  `turnToLastMoveDirection`. The rig at a (0, 10, 8) offset, `FIXED`, `lookAhead: { distance: 1.5 }`
+  (looked right; not changed), deleted on exit. Driven in Chrome: stairs and ramp climbed, crouch
+  walk, jump, a 40 ms tap turns all the way (West to North), W+D let go 30 ms apart ends North-East.
+- **Dropped: a beam to crouch under.** A crouched dynamic character can't pass under a low ceiling:
+  the wall sensor keeps the standing capsule's size (`HUMANOID_CAPSULE`'s `wallSensorHalfHeight`),
+  so under the beam `isNearWall` is set and `slideAlongWall` cancels the move into the wall cast's
+  last hit. Fixing it changes the controller's behaviour (outside this phase); an issue file or
+  p421 / the p070 prompt is the user's call.
+- Section 3 (the Hub): `hub/pages/examples/character/` (order 25, after physics; intro and
+  walkthrough: the level, the look, the character, the camera), regions `character-level`,
+  `character-visual`, `dynamic-character` and `follow-camera` (the scene function itself isn't
+  included). The characters guide's include is the example's `dynamic-character` (the bullets
+  reordered: the example passes no `config` or `body`); `topDownTestScene`'s region removed. The
+  characters intro has the `::: scene` panel; the toolkit guide's rig line names the two options
+  and links the example. The Hub image saved through the dev files from a driven browser
+  (`saveHubImageAsync`, the character 2.5 m North of the spawn, facing East).
+- Checks: `yarn test` (377 + 1 skipped), lint, `tsc`, `yarn hub:build` (353 pages; the search
+  index is 1.17 MB, over its 1 MB budget, a warning not from this page). `yarn verify:scenes`: 96
+  of 96 passed, every hash, snapshot and system order unchanged (the gym's path hash `a51d785e`),
+  `exampleCharacter` new in four configurations (probe hash `811c9dc5`: no dynamic body, the
+  character isn't hashed), recorded with `--update --only`. `yarn verify:baselines --update`: the
+  `exampleCharacter.js` chunk (1.5 kB gzip), the main chunk's toolkit +0.5 kB; API and docs
+  unchanged; no debug code. `moveMap.ts` regenerated: 666 files, the same 26 boundary violations,
+  no feature cycles.
 
 ### Phase 7: the Hub, readme and CLAUDE.md
 

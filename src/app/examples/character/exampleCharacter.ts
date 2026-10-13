@@ -164,10 +164,10 @@ const createCharacterVisual = () => {
 };
 // #endregion character-visual
 
-// #region character-scene (shown in the Hub: hub/pages/examples/character/)
 export const scene = async () => {
   await createLevel();
 
+  // #region dynamic-character (shown in the Hub: hub/pages/examples/character/, hub/pages/features/characters/)
   // A dynamic character (a Rapier body the controller pushes around) on a WORLD_FIXED player
   // brain: its own action map reads the keys at every physics step and writes the intent
   const visual = createCharacterVisual();
@@ -202,7 +202,9 @@ export const scene = async () => {
     },
   });
   getECSWorld().getRigidBody(character.entityId)?.setTranslation(SPAWN, true);
+  // #endregion dynamic-character
 
+  // #region follow-camera (shown in the Hub: hub/pages/examples/character/)
   // South of and above the character, looking North-down without ever turning, and a little
   // ahead of where it's heading
   createFollowObjectCameraRig({
@@ -215,7 +217,7 @@ export const scene = async () => {
   });
   // The character goes with the scene; the rig isn't an entity, so it's deleted by hand
   registerOnSceneExit(SCENE_ID, () => deleteFollowObjectCameraRig(CAMERA_RIG_ID));
+  // #endregion follow-camera
 
   createExampleHud('W A S D or the arrows: move · Space: jump · Shift (hold): run · C: crouch');
 };
-// #endregion character-scene

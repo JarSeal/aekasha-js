@@ -524,7 +524,6 @@ const createDynamicProps = async (obstacles: Footprint[]) => {
 /** The WORLD_FIXED player (WASD: North / West / South / East; Space, Shift, Control) and the
  * follow camera rig. Returns the player's entity id. */
 const createPlayer = async () => {
-  // #region dynamic-character (shown in the Hub: hub/pages/features/characters/)
   const config = { height: 1.6, radius: 0.5 };
   const visual = createCharacterVisual({
     key: 'topDownPlayer',
@@ -549,7 +548,6 @@ const createPlayer = async () => {
       },
     },
   });
-  // #endregion dynamic-character
   getECSWorld().getRigidBody(character.entityId)?.setTranslation(SPAWN, true);
 
   // Straight South of and above the player: North (-Z) is screen-up

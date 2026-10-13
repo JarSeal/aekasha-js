@@ -71,8 +71,8 @@
     "aekasha/toolkit/ecs": {
       "public": 16,
       "crossEntry": 0,
-      "internal": 0,
-      "unreferenced": 16
+      "internal": 1,
+      "unreferenced": 15
     },
     "aekasha/toolkit/geometry": {
       "public": 8,
@@ -11860,7 +11860,7 @@
         },
         "FollowObjectCameraParams": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "registerFollowObjectCameraRigSystem": {
           "kind": "Function",
