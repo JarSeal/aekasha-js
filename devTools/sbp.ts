@@ -1,7 +1,7 @@
 /**
  * The Smallest Build Possible report and budgets (p611 Phases 1-2):
  *
- *   yarn sbp [--profile <id>] [--no-build] [--why <group | module path>] [--json]
+ *   yarn sbp [--profile <id>] [--no-build] [--why <group | module path>] [--json] [--brief]
  *
  * Builds a profile (`sbp.config.ts`; `app` by default: `yarn build`'s bundle steps, as
  * `yarn verify:baselines` runs them), then reports what loads before the first frame and what
@@ -18,6 +18,10 @@
  * - `--why <x>` prints the import chains to a group (`physics`, `kernel/assets`, `three`) or to
  *   the modules a path matches (`PhysicsTiers.ts`), instead of the report.
  * - `--json` prints the profile's report on stdout (the rest goes to the log, errors to stderr).
+ * - `--brief` prints only the totals and the budgets (the whole report still goes to the log and
+ *   the report file): `yarn build` runs `yarn sbp --no-build --profile app --brief` on the build
+ *   it just made (p611 D4).
+ * - `AEK_SBP=false` does nothing (`yarn build` without it), as `AEK_HUB=false` for the Hub.
  *
  * Every line also goes to `.cache/sbp/progress.log` (emptied when a run starts), and the report to
  * `.cache/sbp/report.json` (a key per profile, the others kept). `NO_COLOR` turns colours off.
@@ -35,6 +39,7 @@ import { checkSbpProfiles } from './sbp/config';
 import {
   type Colors,
   type SbpReportFile,
+  formatBriefReport,
   formatReport,
   formatWhy,
   measureProfile,
@@ -55,7 +60,8 @@ const COLORS: Colors = {
   reset: color('0'),
 };
 
-const USAGE = 'yarn sbp [--profile <id>] [--no-build] [--why <group | module path>] [--json]';
+const USAGE =
+  'yarn sbp [--profile <id>] [--no-build] [--why <group | module path>] [--json] [--brief]';
 
 const fail = (msg: string): never => {
   out(`${COLORS.red}${msg}${COLORS.reset}`, true);
@@ -63,7 +69,7 @@ const fail = (msg: string): never => {
 };
 
 const parseArgs = (argv: string[]) => {
-  const args = { profile: 'app', build: true, why: '', json: false };
+  const args = { profile: 'app', build: true, why: '', json: false, brief: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const value = () => {
@@ -75,6 +81,7 @@ const parseArgs = (argv: string[]) => {
     else if (arg === '--no-build') args.build = false;
     else if (arg === '--why') args.why = value();
     else if (arg === '--json') args.json = true;
+    else if (arg === '--brief') args.brief = true;
     else fail(`Unknown argument: ${arg} (usage: ${USAGE})`);
   }
   return args;
@@ -90,6 +97,11 @@ const readJSON = <T>(file: string): T | null => {
 
 const main = async () => {
   const args = parseArgs(process.argv.slice(2));
+  if (process.env.AEK_SBP === 'false') {
+    // eslint-disable-next-line no-console -- no progress log for a run that does nothing
+    console.log('[SBP] AEK_SBP=false: not checked');
+    return;
+  }
   const problems = checkSbpProfiles(sbpProfiles);
   if (problems.length) fail(`sbp.config.ts:\n  ${problems.join('\n  ')}`);
   const profile = sbpProfiles.find((p) => p.id === args.profile);
@@ -102,7 +114,9 @@ const main = async () => {
 
   const watch = setProgressLogFile(LOG_FILE);
   if (args.json) setProgressLogConsole(false);
-  out(`Smallest Build Possible: profile ${profile.id}${args.build ? '' : ', without a build'}`);
+  out(
+    `Smallest Build Possible: profile ${profile.id}${args.build ? '' : ', the last build in dist/'}`
+  );
   out(`${COLORS.dim}Watch it: ${watch}${COLORS.reset}\n`);
   const started = Date.now();
 
@@ -127,7 +141,21 @@ const main = async () => {
   );
 
   const why = args.why ? formatWhy(measured, args.why, COLORS) : null;
-  for (const line of why?.lines ?? formatReport(measured.report, COLORS)) out(line);
+  const report = formatReport(measured.report, COLORS);
+  if (why) {
+    for (const line of why.lines) out(line);
+  } else if (args.brief) {
+    // The whole report into the log only, the brief one on the console only
+    setProgressLogConsole(false);
+    for (const line of report) out(line);
+    setProgressLogConsole(!args.json);
+    for (const line of args.json ? [] : formatBriefReport(measured.report, COLORS)) {
+      // eslint-disable-next-line no-console -- already in the log, as part of the report
+      console.log(line);
+    }
+  } else {
+    for (const line of report) out(line);
+  }
   out(
     `\n${COLORS.green}Done${COLORS.reset} in ${((Date.now() - started) / 1000).toFixed(1)} s; the report: ${path.relative(ROOT, REPORT_FILE)}`
   );

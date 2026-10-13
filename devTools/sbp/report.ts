@@ -250,6 +250,12 @@ export const formatReport = (report: ProfileReport, c: Colors): string[] => [
   ...formatBudgets(report.budgets, c),
 ];
 
+/** `--brief`'s text (`yarn build`): the totals and the budgets */
+export const formatBriefReport = (report: ProfileReport, c: Colors): string[] => [
+  `profile ${report.profile.id}: initial ${formatKB(report.initial.total.gzip)} gzip (${Object.keys(report.initial.files).length} file(s)), lazy ${formatKB(report.lazy.total.gzip)} (${Object.keys(report.lazy.files).length} file(s))`,
+  ...formatBudgets(report.budgets, c),
+];
+
 const LOAD_TEXT = {
   initial: 'code in the initial chunks',
   lazy: 'code in lazy chunks only',
