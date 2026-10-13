@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 implemented
 Category: Build, Dev tooling, Engine API, Marketing
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -259,7 +259,7 @@ Each phase leaves `main`'s behaviour as it was until the phase that changes it o
 for every phase: `yarn test`, lint, `tsc` (both projects), and for a phase that touches `src/`
 `yarn verify:scenes` (record the scene baselines on `main` first) and `yarn verify:baselines`.
 
-### Phase 1: `yarn sbp`, the report
+### Phase 1: `yarn sbp`, the report — done
 
 1. `devTools/sbp/bundleModel.ts` (D1): the bundle collection moved out of `baselines.ts`, which
    imports it; `bundle.json` unchanged (`verify:baselines` passes with no diff).
@@ -270,6 +270,61 @@ for every phase: `yarn test`, lint, `tsc` (both projects), and for a phase that 
 5. `yarn sbp [--profile <id>] [--no-build] [--why <x>] [--json]`, its output into
    `.cache/sbp/progress.log` (the verify commands' pattern) and `.cache/sbp/report.json`.
 6. Tests: the BFS and the split on a small synthetic visualizer graph (no build in a test).
+
+As built:
+
+- **The shared modules** (D1), in `devTools/sbp/`: `bundleModel.ts` (`collectBundle`,
+  `getModuleGroup`, `stripHash`, `sortKeys`, the visualizer parsing, `keyFiles`; `collectBundle`
+  also returns the manifest, the parsed visualizer data and each hashed file name → its key, and
+  throws instead of exiting), `bundleDiff.ts` (`diffBundle`, `formatKB`, `readBundleBaseline`)
+  and `appBuild.ts` (`runYarn`, `buildAppBundle`: `yarn build`'s bundle steps). `baselines.ts`
+  imports all three; p608's `compareBaselines.ts` reads the visualizer through `bundleModel.ts`
+  too. `bundle.json` unchanged.
+- **The rest:** `bundleSplit.ts` (the split), `bundleWhy.ts` (the graph, the chains, `--why`),
+  `bundleFeatures.ts` (the feature view, the scenes' `__features`), `report.ts` (the report and
+  its text), `config.ts` (`SbpProfile`, `checkSbpProfiles`), the command `devTools/sbp.ts`
+  (`yarn sbp`), and `testBuild.ts`, the tests' synthetic build (27 tests in `devTools/sbp/`).
+- **`sbp.config.ts` exists already**, with the `app` profile alone (`{ id, entry, scenes? }`,
+  `scenes` omitted = all) and no budgets: Phase 2 adds `budgets` to `SbpProfile`. It's in
+  `tsconfig.json`'s `include`. `checkSbpProfiles` rejects any entry but `src/index.html` until
+  Phase 4 builds embeds (`devTools/sbp.ts` calls `buildAppBundle` for the build).
+- **The split:** initial is the entry chunk, its manifest `imports` (transitively) and their CSS;
+  everything else in `dist/assets/` is lazy, including the worker chunks (which the manifest
+  doesn't list) and the `?url` files (`3DSymbols.glb`, so Phase 2's debug asset check reads the
+  visualizer's `?url` metas, not the split). `dist/index.html` isn't counted. A group's lazy size
+  counts a module once per chunk (a worker's copy is downloaded again).
+- **The chains:** each module's load is `initial`, `lazy` or `none` (no rendered code: tree-shaken,
+  or an entry that only re-exports). `findBestImportChain` tries static chains through shipping
+  modules (load not `none`, or an entry file) first, then with `import()`s, then through any
+  module: the visualizer's graph is before tree-shaking, and the shortest chain to GLTFLoader went
+  through the tree-shaken `3DSymbols.ts`. A feature's chain ends at its nearest module with
+  initial code. Labels: an entry as `aekasha/physics (features/physics/index.ts)`, an engine
+  module from `_engine/`, a module in the previous one's folder by its file, `⇢` for an
+  `import()`; an HTML entry is left out.
+- **`--why`** takes a group (`_engine/features/physics`, `features/physics`, `physics`,
+  `kernel/assets`, `three`; one chain, to its nearest initial module) or a path (a module id's end,
+  else any part; a chain each, up to 8), and prints only that. No match exits 1.
+- **The scenes** come from `src/generated/generatedAppData.json` (a build ends with the dev
+  gather) minus `isDebugScene` ones, which the production gather leaves out. Only the features
+  with a schema part (sky box, PostFX, spatial, LOD) can be in a manifest, so only they can be
+  flagged as needed by no scene's data; the others read "code only".
+- **No failing yet:** the diff against `bundle.json` (the `app` profile only) is printed and
+  recorded, never a failure; `verify:baselines` stays its gate. Errors exit 2.
+- **Output:** `progressLog.ts` gained `setProgressLogFile` (`.cache/sbp/progress.log`) and
+  `setProgressLogConsole` (`--json`: stdout carries only the report, errors still go to stderr).
+  `.cache/sbp/report.json` is `{ formatVersion, profiles: { [id]: ProfileReport } }`
+  (`ProfileReport`: `profile`, `initial` / `lazy` (`total`, `files`), `groups`, `features` with
+  `why` as one line, `diff`); a run replaces its profile and keeps the others.
+- **Units:** `formatKB` (shared with `verify:baselines`) divides by 1024, so the tools print KiB as
+  "kB", while §2.1's numbers are decimal (394.3 kB = 385.1 KiB, the 850.6 kB sum = 830.7 KiB).
+  Budgets are bytes, so Phase 2 isn't affected; Phase 6's page picks one unit and says which.
+- **Today's report:** initial 387.7 KiB gzip (`index.js` 385.1, `index.css` 2.7), lazy 73 files
+  1778.2 KiB; `3DSymbols.glb` (106.2 KiB) is the fourth largest lazy file; every feature is in the
+  initial chunks only through `src/index.ts`'s import of its entry; `PhysicsTiers.ts` is in them
+  through `aekasha/physics` (D10). LOD's chain ends at `LodChainGLTF.ts`, the assets worker's
+  GLTF job, which has code in the main chunk: worth a look in Phase 5.
+- **Docs wait for Phase 6** as planned (Commands, `devTools/sbp/CLAUDE.md`, `AEK_SBP`);
+  `devTools/verify/CLAUDE.md` names the shared modules now.
 
 ### Phase 2: budgets, `yarn build`, debug assets
 
