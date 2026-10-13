@@ -1,7 +1,31 @@
 /**
- * `yarn sbp`'s profiles (p611 D2), listed in `sbp.config.ts` at the repo root: what a build holds
- * and which scenes it serves. Budgets join them in Phase 2, the embed profiles in Phase 4.
+ * `yarn sbp`'s profiles (p611 D2), listed in `sbp.config.ts` at the repo root: what a build holds,
+ * which scenes it serves and the budgets it must stay within. The embed profiles come with Phase 4.
  */
+
+/** A kibibyte, for budgets written as `400 * KIB` */
+export const KIB = 1024;
+
+/**
+ * A profile's budgets, each in gzip bytes. Over one fails `yarn sbp` (and so `yarn build`); under
+ * one by more than {@link isWellUnderBudget}'s margin is reported, so a budget is tightened when a
+ * build shrinks instead of leaving room for the next growth.
+ */
+export type SbpBudgets = {
+  /** What loads before the first frame: the entry chunk, its static imports and their CSS (the
+   * report's `initial.total`, the files' gzip) */
+  initial?: number;
+  /** A file of `dist/assets/` by its key (`assets/index.js`, as `bundle.json` names it), initial or
+   * lazy; a key with no file in the build fails too */
+  chunks?: Record<string, number>;
+  /** A group's modules in the initial chunks (`three`, `_engine/features/physics`, `app`: the
+   * report's groups, the modules' gzip before minification); a group with no code there is 0 */
+  groups?: Record<string, number>;
+  /** The modules under a path from `src/` in the initial chunks, a file
+   * (`_engine/ui/icons/BuiltInIcons.ts`) or a folder ending in `/`, measured as the groups are:
+   * for what a group is too coarse for */
+  modules?: Record<string, number>;
+};
 
 /** A build `yarn sbp` measures */
 export type SbpProfile = {
@@ -11,10 +35,47 @@ export type SbpProfile = {
   entry: string;
   /** The scene ids it serves (their `__features` go next to the feature view); all when omitted */
   scenes?: string[];
+  /** None checked when omitted */
+  budgets?: SbpBudgets;
 };
 
 /** The app's full-page build, its every scene: what `yarn build` makes */
 export const APP_ENTRY = 'src/index.html';
+
+/** Under a budget by more than this share of it (and by {@link WELL_UNDER_MIN_BYTES}) is
+ * reported */
+export const WELL_UNDER_RATIO = 0.1;
+/** Keeps a small budget's normal headroom from being reported */
+export const WELL_UNDER_MIN_BYTES = 2 * KIB;
+
+/** Whether a size is far enough under its budget to report that the budget can be tightened */
+export const isWellUnderBudget = (size: number, budget: number) =>
+  budget - size > Math.max(budget * WELL_UNDER_RATIO, WELL_UNDER_MIN_BYTES);
+
+const isBudget = (value: unknown) =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0;
+
+const checkBudgets = (id: string, budgets: SbpBudgets): string[] => {
+  const problems: string[] = [];
+  const at = `profile ${id}: budgets`;
+  if (budgets.initial !== undefined && !isBudget(budgets.initial)) {
+    problems.push(`${at}.initial: a whole number of bytes, 0 or more`);
+  }
+  const keyRules: Record<'chunks' | 'groups' | 'modules', [RegExp, string]> = {
+    chunks: [/^assets\/[^/]+$/, 'a file of dist/assets/ (assets/index.js)'],
+    groups: [/^[^/\s](?:\S*[^/\s])?$/, 'a group (three, _engine/features/physics)'],
+    modules: [/^[^/\s.][^\s]*$/, 'a path from src/ (_engine/ui/icons/ or …/BuiltInIcons.ts)'],
+  };
+  for (const [kind, [pattern, text]] of Object.entries(keyRules)) {
+    for (const [key, value] of Object.entries(budgets[kind as keyof typeof keyRules] ?? {})) {
+      if (!pattern.test(key)) problems.push(`${at}.${kind} ${JSON.stringify(key)}: ${text}`);
+      if (!isBudget(value)) {
+        problems.push(`${at}.${kind} ${key}: a whole number of bytes, 0 or more`);
+      }
+    }
+  }
+  return problems;
+};
 
 /** Checks the profiles' shape; returns the problems, one line each */
 export const checkSbpProfiles = (profiles: readonly SbpProfile[]): string[] => {
@@ -31,6 +92,7 @@ export const checkSbpProfiles = (profiles: readonly SbpProfile[]): string[] => {
         `profile ${profile.id}: only ${APP_ENTRY} builds so far (embeds: p611 Phase 4)`
       );
     }
+    if (profile.budgets) problems.push(...checkBudgets(profile.id, profile.budgets));
   }
   return problems;
 };

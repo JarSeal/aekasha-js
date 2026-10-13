@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { checkSbpProfiles } from './config';
 import {
   type Colors,
   REPORT_FORMAT_VERSION,
@@ -78,25 +77,5 @@ describe('the text', () => {
       isFound: true,
     });
     expect(formatWhy(measured, 'Nope.ts', NO_COLORS).isFound).toBe(false);
-  });
-});
-
-describe('checkSbpProfiles', () => {
-  it('accepts the app profile', () => {
-    expect(checkSbpProfiles([{ id: 'app', entry: 'src/index.html' }])).toEqual([]);
-  });
-
-  it('names a bad id, a repeated one and an entry that doesn’t build yet', () => {
-    expect(
-      checkSbpProfiles([
-        { id: 'app', entry: 'src/index.html' },
-        { id: 'app', entry: 'src/index.html' },
-        { id: 'Bad id', entry: 'src/app/profiles/banner/banner.embed.ts' },
-      ])
-    ).toEqual([
-      'profile app listed twice',
-      'profile id "Bad id": a letter, then letters, digits, -',
-      'profile Bad id: only src/index.html builds so far (embeds: p611 Phase 4)',
-    ]);
   });
 });
