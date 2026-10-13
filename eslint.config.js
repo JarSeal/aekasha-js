@@ -252,4 +252,7 @@ export default [
       ],
     },
   },
+  // The gatherer's output, written unformatted on every gather: `yarn lint --fix` reformatting it
+  // would leave a diff that the next gather undoes (a long import path in generatedAppFns.ts)
+  { files: ['src/generated/**'], rules: { 'prettier/prettier': 'off' } },
 ];
