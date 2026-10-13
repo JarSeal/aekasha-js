@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-6 implemented
+Status: in progress | Phases 1-7 implemented
 Category: Characters, Input, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B; a minor bump per part, D7)
 Blocks: p614_review-physics.md, p617_review-input-ui-hud.md, p512_client-prediction-and-reconciliation.md, p421_kinematic-character-controller.md, p423_vehicles.md, p424_ai-brains-and-navigation.md, p420_npc-simulation-tiers.md
@@ -725,7 +725,7 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
   unchanged; no debug code. `moveMap.ts` regenerated: 666 files, the same 26 boundary violations,
   no feature cycles.
 
-### Phase 7: the Hub, readme and CLAUDE.md
+### Phase 7: the Hub, readme and CLAUDE.md — done
 
 1. The characters feature page's guide (controllers, brains, actions, determinism), the input
    documentation (action maps, contexts, the gamepad), the physics page's note on characters.
@@ -759,6 +759,13 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
   lint list. `SIMULATION_FILES` gains the gym's `GymDummyBrain.ts` (a brain outside the character
   folder); the input devices stay off it (they time DOM events; the per-step sample is what the
   simulation reads).
+- Section C: `readme.md`'s Features (Input: the action layer, contexts, recording, the gamepad,
+  the device bindings under it; Characters: brains, controller kinds, `MAIN_THREAD` determinism;
+  the seeded streams in Deterministic scene loads; the toolkit's rig options), a technical
+  highlights row ("Input at the step") and the Hub's example list (eight, the character example
+  added). Checks: `yarn hub:build` 354 pages (the input page new; the search index at 1.19 MB,
+  over its budget as before), `yarn verify:baselines --docs` unchanged (no new undocumented
+  export), `yarn test` 377 + 1 skipped, lint and `tsc` clean.
 
 ### Phase 8: versions and done
 
