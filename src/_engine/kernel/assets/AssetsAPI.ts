@@ -205,6 +205,14 @@ const setWorkerFailed = (reason: string) => {
   }
 };
 
+/**
+ * Stops the assets worker for good (a mounted engine's unmount, `mountAekasha`): it's terminated
+ * if it started, and later requests fall back without starting it.
+ * @internal
+ */
+export const stopAssetsWorker = () =>
+  setWorkerFailed('The engine was unmounted (mountAekasha): the assets worker is stopped.');
+
 /** Starts the worker on the first call; every call returns the same outcome. */
 const startWorker = () => {
   if (workerStartPromise) return workerStartPromise;

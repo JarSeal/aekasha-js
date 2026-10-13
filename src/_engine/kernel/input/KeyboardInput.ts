@@ -8,6 +8,7 @@ import {
   areAllInputsEnabled,
   areAppInputsEnabled,
   areAppInputsSuspended,
+  addInputListenerRemover,
   getInputScope,
 } from './InputState';
 import type { BindingMeta, EnabledInDebugCam, Modifiers } from './InputSharedTypes';
@@ -264,6 +265,7 @@ const initKeyListeners = () => {
     dispatchKeyEvent(e, 'KEY_UP');
   };
 
+  addInputListenerRemover(removeKeyListeners);
   addVisibilityChangeFn('inputKeyboardHeldKeysClear', () => clearHeldKeys());
   addOnWindowBlurFn('inputKeyboardHeldKeysClear', () => clearHeldKeys());
 
@@ -293,12 +295,9 @@ const addKeyListeners = (target: Window | HTMLElement) => {
   };
 };
 
-/**
- * Removes the key listeners and clears the held keys (the mount's unmount). The next binding or
- * action source adds them again, by the input scope then.
- * @internal
- */
-export const removeKeyListeners = (): void => {
+/** Removes the key listeners and clears the held keys (the mount's unmount, through
+ * InputState.ts). The next binding or action source adds them again, by the input scope then. */
+const removeKeyListeners = (): void => {
   removeListeners?.();
   removeListeners = null;
   keydownListener = null;

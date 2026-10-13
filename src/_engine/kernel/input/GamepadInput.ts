@@ -1,6 +1,6 @@
 import { lwarn } from '../../utils/Logger';
 import { getRenderer } from '../render/Renderer';
-import { getInputScope } from './InputState';
+import { addInputListenerRemover, getInputScope } from './InputState';
 
 // The Gamepad API has no button events: `navigator.getGamepads()` is polled once per frame (the
 // action layer's frame hook, Actions.ts, while a map has a gamepad binding) and each pad's buttons
@@ -108,14 +108,12 @@ const addConnectionListeners = () => {
   connectionListenersAdded = true;
   window.addEventListener('gamepadconnected', onConnected);
   window.addEventListener('gamepaddisconnected', onDisconnected);
+  addInputListenerRemover(removeGamepadListeners);
 };
 
-/**
- * Removes the connection listeners and forgets the pads' state (the mount's unmount). The
- * connection callbacks stay; the next one added, or the next poll, adds the listeners again.
- * @internal
- */
-export const removeGamepadListeners = (): void => {
+/** Removes the connection listeners and forgets the pads' state (the mount's unmount, through
+ * InputState.ts). The connection callbacks stay; the next one added adds the listeners again. */
+const removeGamepadListeners = (): void => {
   if (connectionListenersAdded) {
     window.removeEventListener('gamepadconnected', onConnected);
     window.removeEventListener('gamepaddisconnected', onDisconnected);

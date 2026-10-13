@@ -8,7 +8,7 @@ import { getCurrentSceneId } from '../scene/Scene';
 import { ECSSystemStage } from '../loop/SystemStages';
 import { lwarn } from '../../utils/Logger';
 import { pickTargetsAt, type PickOpts } from './InputPicking';
-import { areAppInputsEnabled, getInputScope } from './InputState';
+import { addInputListenerRemover, areAppInputsEnabled, getInputScope } from './InputState';
 import type { BindingMeta, EnabledInDebugCam, TargetList } from './InputSharedTypes';
 
 // NOTE! Every raycast here tests only a binding's own `targets`, never the whole scene graph.
@@ -325,18 +325,16 @@ const initMouseListeners = () => {
   ];
   for (const [elem, type, fn] of listeners) elem.addEventListener(type, fn);
   addOnWindowBlurFn(BLUR_FN_ID, clearPresses);
+  addInputListenerRemover(removeMouseListeners);
   removeListeners = () => {
     for (const [elem, type, fn] of listeners) elem.removeEventListener(type, fn);
     deleteAddOnWindowBlurFn(BLUR_FN_ID);
   };
 };
 
-/**
- * Removes the mouse listeners and clears the presses and the hover (the mount's unmount). The
- * next binding or action source adds them again, by the input scope then.
- * @internal
- */
-export const removeMouseListeners = (): void => {
+/** Removes the mouse listeners and clears the presses and the hover (the mount's unmount, through
+ * InputState.ts). The next binding or action source adds them again, by the input scope then. */
+const removeMouseListeners = (): void => {
   removeListeners?.();
   removeListeners = null;
   clearPresses();

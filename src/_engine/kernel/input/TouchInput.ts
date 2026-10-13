@@ -6,7 +6,7 @@ import { getCanvasElem } from '../render/Renderer';
 import { getCurrentSceneId } from '../scene/Scene';
 import { lwarn } from '../../utils/Logger';
 import { pickTargetsAt, type PickOpts } from './InputPicking';
-import { areAppInputsEnabled, getInputScope } from './InputState';
+import { addInputListenerRemover, areAppInputsEnabled, getInputScope } from './InputState';
 import type { BindingMeta, EnabledInDebugCam, TargetList } from './InputSharedTypes';
 
 // Only gestures that start on the canvas count (touches on the HUD/debug UI are ignored).
@@ -273,18 +273,16 @@ const initTouchListeners = () => {
   ];
   for (const [type, fn, opts] of listeners) target.addEventListener(type, fn, opts);
   addOnWindowBlurFn(BLUR_FN_ID, resetGesture);
+  addInputListenerRemover(removeTouchListeners);
   removeListeners = () => {
     for (const [type, fn] of listeners) target.removeEventListener(type, fn);
     deleteAddOnWindowBlurFn(BLUR_FN_ID);
   };
 };
 
-/**
- * Removes the touch listeners and ends the gesture (the mount's unmount). The next binding or
- * action source adds them again, by the input scope then.
- * @internal
- */
-export const removeTouchListeners = (): void => {
+/** Removes the touch listeners and ends the gesture (the mount's unmount, through InputState.ts).
+ * The next binding or action source adds them again, by the input scope then. */
+const removeTouchListeners = (): void => {
   removeListeners?.();
   removeListeners = null;
   resetGesture();

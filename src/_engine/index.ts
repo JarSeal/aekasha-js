@@ -252,6 +252,8 @@ export type {
 } from './kernel/render/Views';
 export { InitEngine } from './kernel/init/InitEngine';
 export type { InitEngineOptions } from './kernel/init/InitEngine';
+export { mountAekasha } from './kernel/init/Mount';
+export type { AekashaMount, MountAekashaOptions } from './kernel/init/Mount';
 export { existsOrThrow } from './utils/Assert';
 export { deepMerge } from './utils/DeepMerge';
 export {

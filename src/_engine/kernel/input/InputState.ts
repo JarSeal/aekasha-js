@@ -52,3 +52,25 @@ export const setInputScope = (scope: InputScope): void => {
  * @internal
  */
 export const getInputScope = (): InputScope => inputScope;
+
+const listenerRemovers = new Set<() => void>();
+
+/**
+ * Registers a device's listener remover (a device adds its own when it adds its listeners), so
+ * an unmount removes every device's listeners without importing any device module.
+ * @internal
+ */
+export const addInputListenerRemover = (remove: () => void): void => {
+  listenerRemovers.add(remove);
+};
+
+/**
+ * Removes every device's listeners and clears their held state (the mount's unmount). A device
+ * adds them again on its next binding or action source.
+ * @internal
+ */
+export const removeAllInputListeners = (): void => {
+  const removers = [...listenerRemovers];
+  listenerRemovers.clear();
+  for (const remove of removers) remove();
+};

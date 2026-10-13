@@ -23,16 +23,17 @@ export const getGUIContainerElem = () => {
 };
 
 /**
- * Creates the HUD container and sets it to DOM
- * @param parent the element to put it in. Default: the page's `#hudRoot` or `#guiContainer`
- * element. A mounted engine's is its container (`mountAekasha`), whose layout containment makes
- * the HUD's fixed elements relative to it.
+ * Creates the HUD container and sets it to DOM, in place of `slot` (the UI kit's root component
+ * replaces the element it attaches to).
+ * @param slot the element the HUD root takes the place of. Default: the page's `#hudRoot` or
+ * `#guiContainer` element. A mounted engine's is an element in its container (`mountAekasha`),
+ * whose layout containment makes the HUD's fixed elements relative to the container.
  */
-export const createHudContainer = (parent?: HTMLElement) => {
+export const createHudContainer = (slot?: HTMLElement) => {
   hudRoot = CMP({
     id: HUD_ROOT_ID,
     idAttr: true,
-    attach: parent ?? getGUIContainerElem(),
+    attach: slot ?? getGUIContainerElem(),
     class: 'hudRoot',
     style: { position: 'fixed', top: 0, left: 0, width: 0, height: 0 },
   });
