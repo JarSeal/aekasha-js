@@ -4,6 +4,168 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-13 — character-and-input-action-architecture
+
+### Engine 5.1.0 (Golden Hour)
+
+Characters are rebuilt on p603's contracts (actors, controllers and brains) over a new input action layer, and simulate identically on every run on `MAIN_THREAD` (p610). Every removal is a `@deprecated` alias until engine 6.0.0 (Deprecated, below), so an app made from 5.0 still compiles and runs. The scene runner gives every scene the same probe hash and snapshot as on `main`, except the gym's (Changed, below). The system order is also the same, except for the new brain system.
+
+**Added**
+
+- The input action layer (`kernel/input/`, on `aekasha`): `createActionMap({ id, context, actions, bindings })` maps devices to named actions of four types: `BUTTON`, `AXIS_1D`, `AXIS_2D` (clamped to length 1, so a keyboard diagonal is no faster) and `DELTA_2D` (summed between samples). Bindings are plain data per device:
+
+  - keyboard: `keys`, and the `negative` / `positive` and `up` / `down` / `left` / `right` composites;
+  - mouse: `button`, and `delta: 'MOVE' | 'WHEEL'`;
+  - touch: `gesture: 'TAP' | 'DRAG'`;
+  - gamepad: `button`, `axis` and `stick` (radial deadzone).
+
+  `createActionMap` has a `const` type parameter, so action ids are typed and each binding is checked against its action's type. Also: `getActionMap`, `getActionMaps` and the types.
+
+- Two ways to read an action:
+  - At the step: `map.read(id)`, sampled right before each fixed sub-step. Presses and releases between two samples are counted, so a tap shorter than a step isn't lost, and a jump lands on exactly one step. Simulation code reads this.
+  - At the event: `map.onPressed` / `onReleased`, called when the device reports it, also while the loop is paused or an editor view is active. Debug keys and UI use this.
+- Action contexts: `GAMEPLAY` (suspended in editor views and, by default, while the debug camera is on), `DEBUG` (every view) and app-defined ones, switched with `setActionContextEnabled` / `isActionContextEnabled`. A map can also be scene-scoped (`sceneId`).
+- Action recording, per step as plain data: `recordActions(map).stop()` gives `{ mapId, firstStep, lastStep, frames }`, and `playActionRecording` stands in for the map's devices while it plays.
+- An app without action maps bundles none of the layer: the main loop calls its sampler through a hook the first `createActionMap` sets.
+- The gamepad (`GamepadInput.ts`, a stub before): the standard mapping's buttons, axes and sticks by name. The pads are polled once per frame while a map has a gamepad binding. Also `getConnectedGamepads`, `onGamepadConnected` and `onGamepadDisconnected`.
+- Seeded random streams (`utils/RandomStreams.ts`, on `aekasha`): `getRandomStream(name)` returns a `() => number` seeded from the world seed and the name, so one stream's draws don't depend on another's. Also `setRandomSeed` and `getRandomSeed`. Every `loadScene` restarts the streams right before the physics world is replaced, so a scene draws the same numbers on every visit. `createSeededRandom` moved here from the toolkit, with the same output.
+- Actors, controllers and brains (`aekasha/character`):
+  - The contracts: `ActorController` (`kind`, `tick(dt, intent, step)`) and `ActorBrain` (`kind`, `think(intent, step, dt)`, `configDefaults`, `dispose`).
+  - The registries: `registerBrainKind`, `registerControllerKind`, their `unregister*` and `get*Kinds`. Kinds and their params come by declaration merging (`CharacterBrainKinds`, `CharacterControllerKinds`), so a `{ kind, params }` spec is type-checked per kind.
+  - `createCharacterOfKind({ id, visual, controller, brain? })` makes a character from data.
+  - `setCharacterBrain(id, spec | null)` switches a brain at runtime.
+  - One system runs every brain at `APP_PHYSICS_STEP` order -5, between the app's systems (0) and the controllers (-10).
+- Player brains, registered by `character()`: `TANK`, `WORLD_FIXED` and `CAMERA_RELATIVE`. Each owns an action map (`<characterId>:input`, `GAMEPLAY`) built from its `bindings` param, with `runMode` / `crouchMode` (`HOLD` or `TOGGLE`) and `turnToMoveDirection`.
+- `turnToLastMoveDirection` (`WORLD_FIXED`, `CAMERA_RELATIVE`): the character keeps turning in place until it faces the last direction it moved in. A short tap of W while facing South turns it all the way North. `releaseGraceMs` (default 80 ms, counted in steps) keeps a diagonal whose keys are let go a step or two apart.
+- `createDynamicCharacter` gains three things:
+
+  - Its `brain` option.
+  - Its `config` option (`Partial<DynamicCharacterConfig>`, unprefixed keys).
+  - The `controller` it returns, which keeps its data as `state`, `config` (`{ values, initial, bakedKeys, onChange, applyDefaults }`) and `internal`.
+
+  New types on the entry: `DynamicCharacterState`, `DynamicCharacterConfig`, `DynamicCharacterInternal`, `DynamicCharacterController`, `CharacterController`, `CharacterControllerConfig`, `CharacterConfigValues`, `CharacterIntent`, the actor types and the player brains' params.
+
+- `bodyKind` on `CharacterObject`, `CharacterBodyPlan` and `CreateCharacterOpts`. `CharacterCastRecord.resolvedAtStep`.
+- `bodyTypeSync()` works in `WORKER_THREAD` mode. The worker's body proxy keeps its type, from creation and `setBodyType`.
+- `FixedStepDriver.step`'s `onBeforeStep` gets the step index as an optional second argument.
+- The test bridge (version 4) adds two things. `getCharacterPaths()` hashes every character's pose and locomotion state per step. A scripted input plays key events right before given steps, from a debug-only pre-step hook in the main loop.
+
+**Changed**
+
+- Characters are deterministic on `MAIN_THREAD`. These behaviour changes are on purpose:
+  - Durations are whole steps. The configured values stay in ms and are compared against the steps passed × the fixed timestep, so `jumpCooldown: 100` is 6 steps at 60 Hz. The stamps are step indices (`…Step`, `-1` for "not set").
+  - The floor ray and the wall cast are synchronous on `MAIN_THREAD` and used in the step that fires them. Before, the result landed a microtask after the frame, one or more steps later depending on the frame timing.
+  - Only the tick writes the body. The wall sensor's tumble start runs in the next tick, not when its promise resolves, and `isNearWall` is set in the event flush of the same sub-step. The floor sensor's tumble start and landing velocity are applied by the tick.
+  - The tumble's direction comes from `getRandomStream('character:<id>')`, not `Math.random`.
+- The gym's probe hash changed, at its new 600 probe steps.
+- Characters stay non-deterministic in the worker targets: the controller ticks on the main thread against the latched snapshot and async casts. `docs/plans/p428_character-determinism-in-worker-targets.md` owns that.
+- Player characters no longer move while the debug camera is on: gameplay action maps default to `NOT_ENABLED_IN_DEBUG`.
+- The dynamic character is split into `features/character/controllers/dynamic/`: `DynamicCharacter.ts` holds the factory and the tick's order, beside `Floor`, `Wall`, `Platform`, `Jump`, `Tumble`, `Crouch`, `Locomotion`, `Casts` and `DynamicCharacterData`. The player brains are in `brains/`. The `DYNAMIC_CHARACTER` kind `import()`s the controller, so it's a chunk of its own.
+- `CharacterBodyData` and the body plans' sizes are unprefixed (`height`, `radius`, …). A custom body plan that read the `_` keys must change; it was never on an entry, so there is no alias.
+- The engine's debug keys are three `DEBUG` action maps: `aek:debugKeys` (the defaults with `AppConfig.debugKeys`' overrides), `aek:appDebugKeys` and `aek:prodTestKeys`. `AppConfig.debugKeys` keeps its shape. Behaviour changes:
+  - A new keydown of a key that is already down counts as a press, for every action map. On macOS, ⌘Z followed by Z again is a second undo: macOS sends no keyup for Z while ⌘ is held.
+  - A debug key's keydown is prevented outside a text field (h, u, i, o, p and § too; no visible effect).
+  - A held F key's key-repeats in a text field aren't prevented any more (the press still is).
+  - A `CONFIG.ts` debug key's fn no longer gets key-repeats, and `setKeyInputsEnabled` no longer stops the debug keys.
+  - A key binding with a debug key's id no longer replaces it: both run, with the reserved-chord warning. That warning now covers action maps' keyboard bindings too.
+- The keyboard shortcuts dialog lists the engine keys from the live map (rebound, unbound, disabled) and, under App, each action map's actions next to the key bindings.
+- The character state window reads the controller's `state`, `config.values` and `internal`, and shows stamps as "N steps (M ms) ago". "Copy changes" gives a `config` snippet. The saved tuning (`AEK_debugCharConfig`) keeps its format, so values saved before still apply.
+- `getPhysGameTime()`'s wall clock (`PhysicsWallClock.ts`) is read by no simulation code. It stays until 6.0.0.
+- The production build's main chunk (`assets/index.js`) grew from 386.4 to 394.3 kB gzip, and from 155 to 165 modules:
+  - `kernel/input` grew from 3.5 to 11.5 kB, for the action layer: the player brains, registered at install, keep it in the main chunk.
+  - `features/character` grew from 2.3 to 5.3 kB, and `utils` from 2.5 to 3.0 kB (the streams).
+  - The controller is its own `DynamicCharacter.js` chunk (7.4 kB). The gym's `characterVisual.js` chunk carried it before, and fell from 7.4 to 0.5 kB.
+  - The `SeededRandom.js` chunk is gone.
+
+**Deprecated** (removed in engine 6.0.0)
+
+- `getPhysGameTime()`: use the step index (`getPhysicsSubStepIndex()`) times the fixed timestep.
+- `CharacterCastRecord.resolvedAt`: use `resolvedAtStep`.
+- `DynamicCharacterOpts.input` and its scheme types: use `brain`. `input` still works, mapped to the same kind's player brain with its `mappings` as keyboard bindings, and `brain` wins over it, with a warning.
+- `charData`: use `config`, which wins over it.
+- `CharacterObject.kind` and `CharacterBodyPlan.kind`: use `bodyKind`.
+- `CharacterObject.keyBindingIds` and `mouseBindingIds`, and `CreateCharacterOpts.controls`: use a brain.
+- The flat data view, made once at creation, with nothing per frame: `CharacterObject.data` and `initialConfig`, `CreateCharacterOpts.data`, `DynamicCharacter.data` and the `CharacterData` type. Use the controller's `state`, `config.values` / `config.initial` and `internal`.
+
+### Toolkit 2.1.0 (Half Moon)
+
+**Added**
+
+- The follow camera rig's options (`FollowObjectCameraParams`); the defaults keep the old behaviour:
+  - `orientation: 'LOOK_AT_TARGET' | 'FIXED'`. `'FIXED'` looks along `-offset` and only moves the camera, so the view never swings while it catches up. It applies only without mouse input.
+  - `lookAhead: { distance, smoothingTime?, returnSpeed? }`. The followed point leads the target by `distance` in its horizontal direction of travel, eased in over `smoothingTime` (0.6 s). When the target stops, the lead returns at `returnSpeed` (1 m/s; 0 keeps it where it is).
+  - An `@example` on `createFollowObjectCameraRig`.
+- The toolkit's first unit tests: `FollowObjectCameraRig.test.ts`.
+
+**Changed**
+
+- The rig's `LERP` and `SMOOTH_DAMP` ticks are one tick, with the smoothing step chosen once. The camera path is the same as before, bit for bit.
+- `afterLookAtFn`'s `targetPos` is the followed point, which differs from before only with `lookAhead`. `targetHeight` is documented as mouse-only, which it always was.
+- The generators (`Asteroid`, `Foliage`, `Terrain`, `ScatterOnSurface`) import `createSeededRandom` from `aekasha` and draw the same numbers.
+
+**Deprecated**
+
+- `createSeededRandom` on `aekasha/toolkit/geometry`, now a re-export from `aekasha`: import it from there (removed in toolkit 3.0.0). `geometry/SeededRandom.ts` moved to the engine.
+
+### App 1.11.0 (Preschooler)
+
+**Added**
+
+- The character example, `exampleCharacter` (`src/app/examples/character/`). The level:
+
+  - a 30 × 30 ground with a low wall round it;
+  - a 17° ramp to a 1.5 m platform, and stairs to a 1 m one;
+  - crates and a low block.
+
+  The character runs on a `WORLD_FIXED` brain:
+
+  - W/A/S/D and the arrow keys move it North, West, South and East;
+  - Space jumps, Shift (held) runs and C crouches;
+  - `turnToLastMoveDirection` is on.
+
+  The camera follows with `orientation: 'FIXED'` and a 1.5 m `lookAhead`. It has a HUD line, a Hub image and Hub regions.
+
+- The gym's dummy is an app brain kind, `GYM_DUMMY` (`scenes/thirdPersonGymScene/GymDummyBrain.ts`), registered in `AppECSPlugins.ts`' install. The scene no longer adds or removes a system for it.
+
+**Changed**
+
+- The gym's players and `topDownTestScene`'s character use `brain` and `config` (not `input` and `charData`). The gym's TANK player is on a gamepad too:
+  - the left stick turns and moves;
+  - South jumps, East crouches;
+  - pressing the left stick runs.
+- On action maps: `physicsTiers` and `largeWorld` (C, the camera), `assetCompare` (V, the slot), `examplePhysics` (Space or the gamepad's South drops a shape) and `exampleSkyBox` (Space and the arrows). Changes:
+
+  - The keys do nothing while the debug camera is on.
+  - The toggles act on the press, not the release.
+  - `exampleSkyBox` ignores key-repeats: holding an arrow moves one hour.
+  - Ctrl+C and Ctrl+V don't toggle anything.
+
+  `scene01`'s D (a latency log) and the gym's stress test J stay key bindings.
+
+- `examplePhysics` draws its drops from `getRandomStream('examplePhysics:drops')`, so they come in the same order on every visit. Its Hub walkthrough explains the map and the stream.
+- The app imports `createSeededRandom` from `aekasha` (seven modules); the same numbers.
+
+### Project
+
+**Added**
+
+- Recorded runs in the scene runner. A scene's `inputScript` (`devTools/verify/scenes.config.ts`) plays key events right before given steps, and the characters' path hash is compared with its baseline on `MAIN_THREAD`. The gym runs 600 steps of `devTools/verify/inputs/thirdPersonGymScene.json`: two players walking, turning, running, crouching, jumping and tumbling into the props, and the dummy looping. That path hash (`a51d785e`) stayed the same through every phase of the refactor.
+- Hub:
+  - The Input feature page: action maps, bindings per device, reading at the step or at the event, contexts, the gamepad, recording, and the device bindings as the low-level API.
+  - The character example's page.
+  - The characters page's scene panel, and in its guide brains, your own brain, controllers and determinism.
+  - A line each in the physics and debug suite guides.
+- Nested `CLAUDE.md` files for `features/character/` (characters, brains, the dynamic controller, its debugging) and `kernel/input/` (devices, action maps, the gamepad).
+- `docs/plans/p428_character-determinism-in-worker-targets.md` (stub): characters in the worker targets. p512 and p421 point at it, and p614 lists it as an input.
+
+**Changed**
+
+- The simulation lint's randomness message names `getRandomStream`. The dynamic character's `Math.random` allow-list entry is gone, and `GymDummyBrain.ts` is on the list.
+- `scenes.config.ts`: the gym's `unstableHash` covers only `workerSab` and `workerMsg`, with the reason (p428). The scene baselines are recorded again for the gym (600 probe steps), `topDownTestScene` and `exampleCharacter` (new), and for the system order (`characterBrainSystem`).
+- `yarn verify:baselines`: the API, docs and bundle baselines updated for the new exports and the chunks above. `kernel/input`'s documented exports go from 27 of 51 to 99 of 122: every new export is documented.
+- `readme.md`'s Features (input, characters, deterministic scene loads, the toolkit's rig), a highlights row ("Input at the step") and the Hub's example list. The root `CLAUDE.md`: physics' determinism and RNG lines, the toolkit's geometry, and the map's two new nested files.
+- The Hub's search index is 1.19 MB, still over its 1 MiB budget (p619).
+
 ## 2026-10-13 — toolkit-and-app-restructure
 
 ### Engine 5.0.2 (Golden Hour)
