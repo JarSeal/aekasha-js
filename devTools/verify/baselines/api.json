@@ -63,10 +63,13 @@
       "toggleOnScreenToolsDisabled": "Function"
     },
     "src/_engine/debug/DefaultDebugKeyBindings.ts": {
+      "APP_DEBUG_KEYS_ACTION_MAP_ID": "Variable",
+      "DEBUG_KEYS_ACTION_MAP_ID": "Variable",
       "DebugKeyBindingConfig": "TypeAlias",
       "DebugKeyCategory": "TypeAlias",
       "DefaultDebugKeyBinding": "TypeAlias",
       "getDefaultDebugKeyBindings": "Function",
+      "PROD_TEST_KEYS_ACTION_MAP_ID": "Variable",
       "registerDefaultDebugKeyBindings": "Function",
       "registerDefaultProdTestKeyBindings": "Function"
     },
@@ -2073,6 +2076,7 @@
       "getActionMap": "Function",
       "getActionMaps": "Function",
       "isActionContextEnabled": "Function",
+      "isKeyEventInActiveMaps": "Function",
       "pollActionsFrame": "Function",
       "sampleActions": "Function",
       "setActionContextEnabled": "Function",
@@ -2149,6 +2153,7 @@
       "getKeyChordLabel": "Function",
       "isChordHeld": "Function",
       "isKeyChordHeld": "Function",
+      "isKeyEventTakenByBindings": "Function",
       "KeyBinding": "TypeAlias",
       "KeyBindingBase": "TypeAlias",
       "KeyBindingType": "TypeAlias",
@@ -2159,7 +2164,8 @@
       "pollHeldKeyBindings": "Function",
       "setKeyActionListener": "Function",
       "setKeyBindingEnabled": "Function",
-      "setKeyInputsEnabled": "Function"
+      "setKeyInputsEnabled": "Function",
+      "warnIfKeyChordReserved": "Function"
     },
     "src/_engine/kernel/input/MouseInput.ts": {
       "CLICK_MAX_MOVE_PX": "Variable",

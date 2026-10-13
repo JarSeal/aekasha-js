@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-4 implemented
+Status: in progress | Phases 1-5 implemented
 Category: Characters, Input, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B; a minor bump per part, D7)
 Blocks: p614_review-physics.md, p617_review-input-ui-hud.md, p512_client-prediction-and-reconciliation.md, p421_kinematic-character-controller.md, p423_vehicles.md, p424_ai-brains-and-navigation.md, p420_npc-simulation-tiers.md
@@ -575,7 +575,7 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
   the tolerance; no debug code in the build; the new folder's exports 47 / 47 documented. `moveMap.ts`
   regenerated: 659 files, the same 26 boundary violations, no feature cycles.
 
-### Phase 5: the debug keys and the app's bindings on actions
+### Phase 5: the debug keys and the app's bindings on actions — done
 
 1. `DefaultDebugKeyBindings.ts` becomes a `DEBUG` action map with event callbacks; `AppConfig.debugKeys`
    keeps its shape (mapped onto it), the reserved-chord warnings stay, the shortcuts dialog reads
@@ -650,6 +650,24 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
 - Checks: `yarn test` (368), lint, `tsc`, `yarn hub:build`. Driven browser: `examplePhysics` drops
   three shapes, `exampleSkyBox`'s keys move, speed up and pause the day, `physicsTiers` switches to
   the chase camera, the dialog's App tab lists each map's actions; no new console output.
+
+**As built (section C, step 3):**
+
+- `yarn verify:scenes`: 96 of 96 (WebGPU, macOS, 380 s), every hash and the system order
+  unchanged: the gym's path hash `a51d785e` and probe hash `f5cf468f`, `topDownTestScene`'s
+  `c7786d74` (the re-press rule changes nothing there: the gym's script never presses a held key).
+- `yarn verify:baselines --update`: the six new exports (the three map ids; `isKeyEventInActiveMaps`,
+  `isKeyEventTakenByBindings`, `warnIfKeyChordReserved`, `@internal`), all documented; the main
+  chunk's `kernel/input` +0.2 kB gzip, the two `EngineRapier.js` chunks trading 0.1 kB; no debug
+  code in the build. `moveMap.ts` regenerated: 660 files, the same 26 boundary violations, no
+  feature cycles.
+- The debug keys, driven in a browser (`?aekTest=true`, after `whenSceneReady`): in the Runtime
+  view h, u / i (and Escape), o / p, F1, F6, F7, F8, F9, F10 and § each did what it should, both
+  ways; in the material editor view h (its drawer), u / i, F6, F7 (the view), F8, F9, F10 too, F1
+  and F5 nothing (as before); F5 went to production test mode, where F6 and F7 toggled the play
+  tools and F5 went back. No console output. Not driven: undo / redo (a fresh profile has no
+  history; the unit tests cover ⌘Z twice and redo) and a real keyboard's § and F keys, which the
+  user checks.
 
 ### Phase 6: the camera rig and the example scene
 

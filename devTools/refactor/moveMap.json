@@ -152,6 +152,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/debug/DefaultDebugKeyBindings.test.ts": {
+      "to": "src/_engine/debug/DefaultDebugKeyBindings.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/debug/DefaultDebugKeyBindings.ts": {
       "to": "src/_engine/debug/DefaultDebugKeyBindings.ts",
       "action": "keep",
