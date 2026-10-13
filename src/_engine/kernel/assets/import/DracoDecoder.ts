@@ -1,10 +1,12 @@
 import type { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { lwarn } from '../../../utils/Logger';
+import { getAppBaseUrl, resolveFileUrl } from '../AssetUrl';
 import type { DracoWorkerSettings } from '../AssetsAPITypes';
 
 export type DracoConfig = {
   /** Directory (with a trailing slash) that serves `draco_decoder.js`, `draco_decoder.wasm` and
-   * `draco_wasm_wrapper.js`. Default: `${BASE_URL}draco/gltf/`, filled by
+   * `draco_wasm_wrapper.js`, resolved like a file name (against the document, or a mounted engine's
+   * `assetBaseUrl`). Default: the app's `draco/gltf/`, filled by
    * `devTools/copyDecoders.ts`. A cross-origin path (eg. a CDN) must send CORS/CORP
    * headers, because the dev server enables cross-origin isolation (COEP `require-corp`). */
   decoderPath?: string;
@@ -27,12 +29,11 @@ let activeDecoder: { decoderPath: string; decoderType: 'wasm' | 'js' } | null = 
 const isDecoderLocked = (loader: DRACOLoader) =>
   Boolean((loader as unknown as { decoderPending: Promise<void> | null }).decoderPending);
 
-const getDefaultDecoderPath = () =>
-  new URL(`${import.meta.env.BASE_URL}draco/gltf/`, document.baseURI).href;
+const getDefaultDecoderPath = () => new URL('draco/gltf/', getAppBaseUrl()).href;
 
-/** The decoder path and type the config asks for (the defaults filled in) */
+/** The decoder path and type the config asks for (the defaults filled in), the path absolute */
 const getConfiguredDecoder = () => ({
-  decoderPath: config.decoderPath || getDefaultDecoderPath(),
+  decoderPath: config.decoderPath ? resolveFileUrl(config.decoderPath) : getDefaultDecoderPath(),
   decoderType: config.decoderType || ('wasm' as const),
 });
 
@@ -100,7 +101,7 @@ export const getDracoWorkerSettings = (): DracoWorkerSettings => {
   // The loader's while it exists (a locked decoder keeps its own), else what it would be set up with
   const { decoderPath, decoderType } = activeDecoder ?? getConfiguredDecoder();
   return {
-    decoderPath: new URL(decoderPath, document.baseURI).href,
+    decoderPath,
     decoderType,
     ...(config.workerLimit !== undefined ? { workerLimit: config.workerLimit } : {}),
   };

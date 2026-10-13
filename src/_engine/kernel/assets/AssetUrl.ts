@@ -14,10 +14,45 @@ const warnedSourceUrls = new Set<string>();
 /** Packed textures already logged by the "Load source files" override. */
 const loggedPackedAssets = new Set<string>();
 
+/** The URL the app's files are served from when it isn't the page's (the mount's `assetBaseUrl`,
+ * p611 D6), absolute with a trailing slash */
+let assetBaseUrl: string | null = null;
+
+/**
+ * Sets the URL the app's files are served from: an embed's own folder, when the engine is mounted
+ * into a page it doesn't own (`mountAekasha`'s `assetBaseUrl`). Null: the page's, Vite's `base`
+ * against the document. A relative URL resolves against the document; a missing trailing slash is
+ * added (it names a folder).
+ * @internal
+ */
+export const setAssetBaseUrl = (url: string | null) => {
+  if (url === null) {
+    assetBaseUrl = null;
+    return;
+  }
+  const href = new URL(url, document.baseURI).href;
+  assetBaseUrl = href.endsWith('/') ? href : `${href}/`;
+};
+
+/**
+ * The URL the app's public files (`aek-assets/`, the decoders' `basis/` and `draco/`) are served
+ * from: the mount's `assetBaseUrl`, else Vite's `base` against the document.
+ * @internal
+ */
+export const getAppBaseUrl = () =>
+  assetBaseUrl ?? new URL(import.meta.env.BASE_URL, document.baseURI).href;
+
+/**
+ * Resolves a file name the way three's loaders do, against the document, or against the mount's
+ * `assetBaseUrl` when it has one (a host page's URL says nothing about where the app's files are).
+ * @internal
+ */
+export const resolveFileUrl = (fileName: string) =>
+  new URL(fileName, assetBaseUrl ?? document.baseURI).href;
+
 /** A generated URL is root-absolute (`/aek-assets/…`): resolved against the app's base, like the
- * decoders' paths, so it also works when the app is served from a sub path. */
-export const toAppUrl = (url: string) =>
-  new URL(`${import.meta.env.BASE_URL}${url.replace(/^\/+/, '')}`, document.baseURI).href;
+ * decoders' paths, so it also works when the app is served from a sub path or mounted. */
+export const toAppUrl = (url: string) => new URL(url.replace(/^\/+/, ''), getAppBaseUrl()).href;
 
 /** A `fileName` relative to its asset JSON (`./`, `../`), which only the asset pipeline reads. */
 export const isJsonRelativeFileName = (fileName: string) =>
