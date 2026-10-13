@@ -104,12 +104,6 @@ const getToolkitRules = (files: string[]): MoveRule[] => [
   { from: `${T}geometry/generate/`, to: `${T}geometry/generate/`, plan: 'p609' },
   { from: `${T}geometry/scatter/`, to: `${T}geometry/scatter/`, plan: 'p609' },
   {
-    from: `${T}geometry/SeededRandom.ts`,
-    to: `${T}geometry/SeededRandom.ts`,
-    plan: 'p609',
-    note: 'the generators share it; the simulation lint points at it until p610',
-  },
-  {
     from: `${T}materials/TriplanarProjection.ts`,
     to: `${T}materials/TriplanarProjection.ts`,
     plan: 'p609',

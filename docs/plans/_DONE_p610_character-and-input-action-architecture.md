@@ -1,8 +1,8 @@
-Status: in progress | Phases 1-7 implemented
+Status: implemented (Phases 1-8)
 Category: Characters, Input, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B; a minor bump per part, D7)
-Blocks: p614_review-physics.md, p617_review-input-ui-hud.md, p512_client-prediction-and-reconciliation.md, p421_kinematic-character-controller.md, p423_vehicles.md, p424_ai-brains-and-navigation.md, p420_npc-simulation-tiers.md
-Related: \_DONE_p603_gameplay-architecture-contracts.md (the contracts C1-C5 this plan builds, and the stub plans p421-p427 that build on it), \_DONE_p604_multiplayer-viability-study.md (§4: step-index time, seeded RNG, the simulation reads its own state), p420_npc-simulation-tiers.md, the "Refactor dynamic character code" (p070) and "Key binding refactoring" (p770) prompts in `docs/templates/todo-plan-prompts.txt` (they build on this plan)
+Blocks: p614_review-physics.md, p617_review-input-ui-hud.md, p512_client-prediction-and-reconciliation.md, p420_npc-simulation-tiers.md, p421_kinematic-character-controller.md, p422_animation-state-graph-and-ik.md, p423_vehicles.md, p424_ai-brains-and-navigation.md, p426_sequencer-splines-and-cutscenes.md
+Related: \_DONE_p603_gameplay-architecture-contracts.md (the contracts C1-C5 this plan builds, and the stub plans p421-p427 that build on it), \_DONE_p604_multiplayer-viability-study.md (§4: step-index time, seeded RNG, the simulation reads its own state), p420_npc-simulation-tiers.md, the "Refactor dynamic character code" (p070) and "Key binding refactoring" (p770) prompts in `docs/templates/todo-plan-prompts.txt` (they build on this plan), p428_character-determinism-in-worker-targets.md (D1: characters in the worker targets, left to it)
 
 # Character and Input Action Architecture
 
@@ -767,7 +767,7 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
   over its budget as before), `yarn verify:baselines --docs` unchanged (no new undocumented
   export), `yarn test` 377 + 1 skipped, lint and `tsc` clean.
 
-### Phase 8: versions and done
+### Phase 8: versions and done — done
 
 1. Create `p428_character-determinism-in-worker-targets.md` (stub, D1); point p512 and p421 at it.
 2. D7's bumps, the changelog entry (D8's changes listed), `yarn checkVersions --against main`.
@@ -776,6 +776,36 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
 4. Mark the plan done; the references (`Blocked by` lines in p420, p421, p423, p424, p617, p614,
    p512, the p070 / p770 prompts' notes, p600). The p070 prompt's note says its "keep turning to
    the last heading" item is done (D10). Time for the PR: this branch into `main`.
+
+**As built:**
+
+- Sections: A = step 1, B = step 2, C = step 3, D = step 4.
+- Section A: `p428_character-determinism-in-worker-targets.md` (stub): what is deterministic in
+  every target already, the three reads that aren't in the worker targets (the latched pose and
+  velocities, the async casts, the `EVENTS_PUSH` delivery), the two directions with their costs
+  (the controller in the worker needs a tick free of three and the facade, which the worker bundles
+  without), the open questions and the done criterion. p512's `Blocked by` and grounding, p421's
+  `Related` and open question 1 point at it; p614's Inputs list it too (D1 decides it with p614).
+- Section B: Engine 5.1.0, Toolkit 2.1.0, App 1.11.0 (codenames unchanged); one `CHANGELOG.md`
+  entry with Engine (D8's changes first under Changed), Toolkit, App and Project sections, its
+  figures taken from the committed baselines (the main chunk 386.4 → 394.3 kB gzip; `kernel/input`
+  99 of 122 exports documented). `yarn checkVersions --against main` passes.
+- Section C, on `19e0dae`: `yarn test` 377 + 1 skipped, lint, `tsc`, `tsc -p hub`;
+  `yarn verify:baselines` all unchanged, no debug code; `yarn build` (with the Hub, 354 pages; the
+  search index at 1.19 MB, over its budget as before). `yarn verify:scenes`: 100 of 100 (WebGPU,
+  macOS, 408 s), every hash, snapshot and system order unchanged, the gym's path hash `a51d785e`.
+  `--browser firefox`: 75 of 75 (323 s), every `MAIN_THREAD` hash and the gym's path hash equal to
+  Chromium's; the only differences are in `unstableHash`'s worker targets (the gym's `workerSab`
+  `06415695`, `space`'s `workerMsg` `621ee284`), so no issue file.
+- Section D: the plan done and moved. The plans blocked only by it lost the line: p421, p422,
+  p423, p424 and p426 name it in `Related` instead (they build on its contracts), p614 and p617
+  don't (Stage C's order only); p420 and p512 keep their other blockers. The other references
+  renamed; the p070 and p770 prompts' notes say what p610 built and what's left (p070's
+  last-heading item done, D10); p600's mentions of p610 as future work updated;
+  `moveRules.ts`' rule for the toolkit's `SeededRandom.ts`, which p610 moved to the engine,
+  removed. `moveMap.ts` regenerated (stale since Phases 6 and 7: the example's Hub image, the two
+  nested `CLAUDE.md` files, the entries' documented exports): 669 files, the same 26 boundary
+  violations, no feature cycles.
 
 ## 4. Risks
 

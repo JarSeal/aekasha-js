@@ -467,6 +467,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/character/CLAUDE.md": {
+      "to": "src/_engine/features/character/CLAUDE.md",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/character/controllers/dynamic/Casts.ts": {
       "to": "src/_engine/features/character/controllers/dynamic/Casts.ts",
       "action": "keep",
@@ -1598,6 +1603,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/kernel/input/CLAUDE.md": {
+      "to": "src/_engine/kernel/input/CLAUDE.md",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/kernel/input/GamepadInput.ts": {
       "to": "src/_engine/kernel/input/GamepadInput.ts",
       "action": "keep",
@@ -2336,6 +2346,11 @@
     },
     "src/app/examples/_dbg__exampleHub.ts": {
       "to": "src/app/examples/_dbg__exampleHub.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/character/exampleCharacter.hub.png": {
+      "to": "src/app/examples/character/exampleCharacter.hub.png",
       "action": "keep",
       "plan": "p609"
     },

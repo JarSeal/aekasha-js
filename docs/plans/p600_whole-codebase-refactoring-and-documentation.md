@@ -1,6 +1,6 @@
 Status: draft | epic — not-implemented
 Category: Refactoring, Documentation, Architecture, Build
-Blocks: \_DONE_p601_refactoring-safety-net-tests-and-baselines.md, \_DONE_p602_architecture-and-target-structure.md, \_DONE_p603_gameplay-architecture-contracts.md, \_DONE_p604_multiplayer-viability-study.md, \_DONE_p605_coding-standards-and-documentation-tooling.md, \_DONE_p606_layering-inversion-and-public-entry.md, \_DONE_p607_sbp-foundation-feature-modules.md, \_DONE_p608_engine-folder-restructure.md, \_DONE_p609_toolkit-and-app-restructure.md, p610_character-and-input-action-architecture.md, p611_sbp-tooling-profiles-and-marketing.md, p612_review-ecs-loop-config-init.md, p613_review-rendering-scene-assets.md, p614_review-physics.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p617_review-input-ui-hud.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p620_review-toolkit-and-app-code.md, p621_hub-docs-readme-and-claude-md-final.md
+Blocks: \_DONE_p601_refactoring-safety-net-tests-and-baselines.md, \_DONE_p602_architecture-and-target-structure.md, \_DONE_p603_gameplay-architecture-contracts.md, \_DONE_p604_multiplayer-viability-study.md, \_DONE_p605_coding-standards-and-documentation-tooling.md, \_DONE_p606_layering-inversion-and-public-entry.md, \_DONE_p607_sbp-foundation-feature-modules.md, \_DONE_p608_engine-folder-restructure.md, \_DONE_p609_toolkit-and-app-restructure.md, \_DONE_p610_character-and-input-action-architecture.md, p611_sbp-tooling-profiles-and-marketing.md, p612_review-ecs-loop-config-init.md, p613_review-rendering-scene-assets.md, p614_review-physics.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p617_review-input-ui-hud.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p620_review-toolkit-and-app-code.md, p621_hub-docs-readme-and-claude-md-final.md
 Related: p990_follow-ups-from-done-plans.md (its bundle size items move to p607), p200_component-query-caching.md (its main-camera cache lands in p612), p420_npc-simulation-tiers.md (fits p603's actor model), p500_restore-physics-snapshot.md (p604's rollback prerequisite), p302_material-and-texture-system-refactor.md (p613 leaves what it rewrites), p240_client-device-capability-sniffer.md (SBP-aware: its benchmark is a lazy chunk), `docs/templates/todo-plan-prompts.txt` (the original prompt, and the p800, p450, p070 and p770 prompts this epic sequences)
 
 # Whole Codebase Refactoring and Documentation — Epic
@@ -374,7 +374,8 @@ bit for bit, and so did Chromium, Firefox and an Android phone (x86-64 and ARM).
   sending only the changed bodies, quantized, at 20 Hz costs 45-62 kbit/s per client for its 687
   bodies.
 - **Go, staged:** client prediction and reconciliation, blocked by p500 (snapshot restore) and
-  p610 (deterministic characters). Snapshots take and restore in 0.25-4 ms; re-simulating the
+  p428 (deterministic characters in the worker targets; p610 made them deterministic on
+  `MAIN_THREAD`). Snapshots take and restore in 0.25-4 ms; re-simulating the
   whole world is the cost, so the local character is predicted with a kinematic controller (p421)
   and only small worlds are rewound whole.
 - **Possible later, not shaping the engine now:** lockstep and rollback. Rapier's compat build
@@ -420,8 +421,8 @@ standards, the structure and the SBP strategy to it would make every session pay
 - **`p200_component-query-caching.md`:** its recommendation (cache the main-camera tag lookup) is
   implemented in p612.
 - **`p420_npc-simulation-tiers.md`:** its NPC data entity and tiers fit p603's actor, controller
-  and brain model; p603 rewrote its tiers in those terms, and it's blocked by p610 (the contracts in
-  code) and softly by p603's stubs p421 (kinematic controller) and p424 (AI brains, navmesh).
+  and brain model; p603 rewrote its tiers in those terms, p610 put the contracts in code, and it's
+  blocked softly by p603's stubs p421 (kinematic controller) and p424 (AI brains, navmesh).
 - **`p500_restore-physics-snapshot.md`:** stays its own plan; p604 lists it as the prerequisite for
   prediction and rollback.
 - **`p302_material-and-texture-system-refactor.md`:** stays in the terrain epic; p613 leaves
@@ -433,9 +434,10 @@ standards, the structure and the SBP strategy to it would make every session pay
     with p617 (the UI kit apps can use).
   - p450 "Toolkit and asset housekeeping": its toolkit folder structure is absorbed by p609; its
     new PBR textures, models and LOD test scene stay in p450.
-  - p070 "Refactor dynamic character code": its sensor bug fixes and new options come after p610,
-    on the restructured controller.
-  - p770 "Key binding refactoring": aligned with p610's action layer (one key binding model).
+  - p070 "Refactor dynamic character code": its sensor bug fixes and new options go on the
+    controller p610 restructured (its "keep turning to the last heading" item is done, p610 D10).
+  - p770 "Key binding refactoring": on p610's action layer (one key binding model; the debug keys
+    are already `DEBUG` action maps).
 - **In-flight work:** `p299` (in progress) has its Phases 0-4 on `main` and no code in flight;
   its Phase 5 waits on p302, so it didn't block p608's move (p608 D1). What it still writes uses
   the new paths.
@@ -453,7 +455,7 @@ standards, the structure and the SBP strategy to it would make every session pay
 | B     | \_DONE_p607_sbp-foundation-feature-modules.md             | No side-effect registrations, `sideEffects`, lazy Rapier, `__AEK_DEBUG__`, lazy maps and loaders, the feature manifest | p606       |
 | B     | \_DONE_p608_engine-folder-restructure.md                  | The folder map applied with a codemod; utils, UI and debug moved; demo code out of the engine                          | p606, p607 |
 | B     | \_DONE_p609_toolkit-and-app-restructure.md                | Toolkit categories (p450's structure), app scenes in folders, deprecated re-exports removed                            | p608       |
-| B     | p610_character-and-input-action-architecture.md           | The input action layer, the controller contract, `createDynamicCharacter` split, intents                               | p603, p608 |
+| B     | \_DONE_p610_character-and-input-action-architecture.md    | The input action layer, the controller contract, `createDynamicCharacter` split, intents                               | p603, p608 |
 | B     | p611_sbp-tooling-profiles-and-marketing.md                | `yarn sbp`, budgets, the banner profile and example, the lite-renderer study, marketing                                | p607, p608 |
 | C     | p612_review-ecs-loop-config-init.md                       | ECS, main loop, config, `InitEngine`, views (+ p200's cache)                                                           | p608       |
 | C     | p613_review-rendering-scene-assets.md                     | Renderer, scenes and loader, geometry / material / texture, assets, import, PostFX, viewports, snapshots               | p608       |

@@ -1,7 +1,7 @@
 Status: stub — not-implemented
 Category: Networking, Characters, Physics
-Blocked by: p500_restore-physics-snapshot.md (restore that rebinds the proxies), p610_character-and-input-action-architecture.md (deterministic characters, recorded actions), p428_character-determinism-in-worker-targets.md (deterministic characters in the worker targets, the default), p511_network-transport-and-replication.md (the snapshots it reconciles against)
-Related: \_DONE_p604_multiplayer-viability-study.md (§3.1 model 2, the snapshot costs under Phase 2), p421_kinematic-character-controller.md (the controller the local player is predicted with), p510_headless-simulation-runtime.md
+Blocked by: p500_restore-physics-snapshot.md (restore that rebinds the proxies), p428_character-determinism-in-worker-targets.md (deterministic characters in the worker targets, the default), p511_network-transport-and-replication.md (the snapshots it reconciles against)
+Related: \_DONE_p610_character-and-input-action-architecture.md (deterministic characters on `MAIN_THREAD`, the per-step action recording), \_DONE_p604_multiplayer-viability-study.md (§3.1 model 2, the snapshot costs under Phase 2), p421_kinematic-character-controller.md (the controller the local player is predicted with), p510_headless-simulation-runtime.md
 
 # Client Prediction and Reconciliation — Stub
 

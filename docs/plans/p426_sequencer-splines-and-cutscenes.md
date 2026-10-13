@@ -1,7 +1,6 @@
 Status: stub — not-implemented
 Category: Gameplay, Cameras, Cutscenes
-Blocked by: p610_character-and-input-action-architecture.md (soft: the `SCRIPT` brain drives actors through the brain contract)
-Related: \_DONE_p603_gameplay-architecture-contracts.md (C7: the sequencer and splines; C4: the brain switch on takeover), p425_game-events-missions-and-save-games.md (cues emit game events), \_DONE_p083_editor-creator-view.md (an editor view to draw splines in)
+Related: \_DONE_p610_character-and-input-action-architecture.md (the brain contract and `setCharacterBrain` in code, which a takeover uses), \_DONE_p603_gameplay-architecture-contracts.md (C7: the sequencer and splines; C4: the brain switch on takeover), p425_game-events-missions-and-save-games.md (cues emit game events), \_DONE_p083_editor-creator-view.md (an editor view to draw splines in)
 
 # Sequencer, Splines and Cutscenes — Stub
 

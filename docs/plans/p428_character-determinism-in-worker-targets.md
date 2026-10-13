@@ -1,7 +1,7 @@
 Status: stub — not-implemented
 Category: Characters, Physics
 Blocks: p512_client-prediction-and-reconciliation.md (the local player predicted in the default worker target)
-Related: p610_character-and-input-action-architecture.md (D1: made characters deterministic on `MAIN_THREAD` and left the worker targets here), p614_review-physics.md (the worker protocol and its transport interface, which this changes), p421_kinematic-character-controller.md (the KCC's sweeps must run inside the step: its open question 1 is this plan's), \_DONE_p603_gameplay-architecture-contracts.md (C2: the controller contract), \_DONE_p604_multiplayer-viability-study.md (§4: step-index time, the simulation reads its own state)
+Related: \_DONE_p610_character-and-input-action-architecture.md (D1: made characters deterministic on `MAIN_THREAD` and left the worker targets here), p614_review-physics.md (the worker protocol and its transport interface, which this changes), p421_kinematic-character-controller.md (the KCC's sweeps must run inside the step: its open question 1 is this plan's), \_DONE_p603_gameplay-architecture-contracts.md (C2: the controller contract), \_DONE_p604_multiplayer-viability-study.md (§4: step-index time, the simulation reads its own state)
 
 # Character Determinism in the Worker Targets — Stub
 
