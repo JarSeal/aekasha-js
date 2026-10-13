@@ -16,6 +16,7 @@ import { type ECSWorld, getECSWorld, getEntityIdByAppId } from '../../kernel/ecs
 import type { FeatureContext } from '../../kernel/init/Features';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import type {
+  CharacterBodyKindField,
   CharacterConfigValues,
   CharacterControlMode,
   CharacterIntent,
@@ -23,6 +24,7 @@ import type {
   LocomotionState,
   LocomotionStateListener,
 } from './CharacterTypes';
+import { getBodyKind } from './CharacterBodyPlans';
 import { createIntent } from './CharacterIntent';
 import type { ActorBrain, CharacterBrainSpec } from './ActorTypes';
 import { createBrain } from './ActorKinds';
@@ -140,21 +142,24 @@ const getConfigSnapshot = (data: Record<string, unknown>): CharacterConfigValues
   return Object.freeze(config);
 };
 
-/** {@link createCharacter}'s options. */
-export type CreateCharacterOpts = {
+/** {@link createCharacter}'s options. The body's kind (eg. `'HUMANOID'`, usually from its body
+ * plan) is `bodyKind`, or the deprecated `kind`. */
+export type CreateCharacterOpts = CharacterBodyKindField & {
   /** The character's id: the public handle ({@link getCharacterById}, {@link deleteCharacter}). */
   id: string;
   /** A display name (the debug tools show it). */
   name?: string;
-  /** The body's kind (eg. `'HUMANOID'`), usually from its body plan. */
-  kind: string;
   /** The (possibly compound) physics body: colliders and an optional shared rigid body. */
   physicsParams: { colliders: ColliderParams | ColliderParams[]; rigidBody?: RigidBodyParams };
   /** The visual root (eg. a mesh or a group made with createMeshEntity or createGroupEntity), or
    * its app id: its entity becomes the character. */
   visual: THREE.Object3D | string;
-  /** The character's input bindings ({@link KeyBinding}s and {@link MouseBinding}s), deleted with
-   * it. */
+  /**
+   * The character's input bindings ({@link KeyBinding}s and {@link MouseBinding}s), deleted with
+   * it.
+   * @deprecated Give the character a brain (a player brain reads an action map); removed in engine
+   * 6.0.0.
+   */
   controls?: (KeyBinding | MouseBinding)[];
   /** The controller's live data ({@link CharacterObject}'s `data`). */
   data?: { [key: string]: unknown };
@@ -174,17 +179,18 @@ export type CreateCharacterOpts = {
  * @param opts see {@link CreateCharacterOpts}
  * @returns the character ({@link CharacterObject})
  */
-export const createCharacter = async ({
-  id,
-  name,
-  kind,
-  physicsParams,
-  visual,
-  controls,
-  data = {},
-  intent = createIntent(),
-  brain,
-}: CreateCharacterOpts) => {
+export const createCharacter = async (opts: CreateCharacterOpts) => {
+  const {
+    id,
+    name,
+    physicsParams,
+    visual,
+    controls,
+    data = {},
+    intent = createIntent(),
+    brain,
+  } = opts;
+  const bodyKind = getBodyKind(opts);
   // Before anything else can write the data
   const initialConfig = getConfigSnapshot(data);
 
@@ -217,7 +223,8 @@ export const createCharacter = async ({
   const char: CharacterObject = {
     id,
     name,
-    kind,
+    bodyKind,
+    kind: bodyKind,
     entityId,
     visualId,
     keyBindingIds: [],

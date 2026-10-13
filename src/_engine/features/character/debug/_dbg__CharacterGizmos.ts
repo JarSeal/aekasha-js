@@ -1,3 +1,4 @@
+import { getBodyKind } from '../CharacterBodyPlans';
 import * as THREE from 'three/webgpu';
 import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../../../kernel/loop/SystemStages';
 import { lsGetItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
@@ -362,10 +363,10 @@ const getFloorSensorBall = (probes: Readonly<CharacterProbes>, character: Charac
     const { params } = collider;
     const radius = getBoundingRadius(params);
     const isBall = params.type === 'BALL' || params.type === 'SPHERE';
-    if (!isBall && !warnedSensorKinds.has(probes.body.kind)) {
-      warnedSensorKinds.add(probes.body.kind);
+    if (!isBall && !warnedSensorKinds.has(getBodyKind(probes.body))) {
+      warnedSensorKinds.add(getBodyKind(probes.body));
       lwarn(
-        `[Character gizmos] The '${probes.body.kind}' body plan's FLOOR_SENSOR is a ${params.type}: ` +
+        `[Character gizmos] The '${getBodyKind(probes.body)}' body plan's FLOOR_SENSOR is a ${params.type}: ` +
           (radius === null
             ? 'the Sensor gizmo draws nothing.'
             : 'the Sensor gizmo draws its bounding ball.')

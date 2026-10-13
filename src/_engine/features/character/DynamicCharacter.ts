@@ -9,6 +9,7 @@ import type {
   CharacterBodyData,
   CharacterBodyPlan,
   CharacterCastRecord,
+  CharacterConfigValues,
   CharacterColliderRole,
   CharacterControlMode,
   CharacterIntent,
@@ -17,7 +18,7 @@ import type {
   LocomotionState,
   LocomotionStateListener,
 } from './CharacterTypes';
-import { HUMANOID_CAPSULE } from './CharacterBodyPlans';
+import { getBodyKind, HUMANOID_CAPSULE } from './CharacterBodyPlans';
 import {
   clearIntentSubStep,
   createIntent,
@@ -25,11 +26,10 @@ import {
   wrapToPi,
   yawFromDirection,
 } from './CharacterIntent';
-import {
-  createCharacterInput,
-  SCHEME_TURNS_TO_MOVE_DIRECTION,
-  type CharacterInputOpts,
-} from './CharacterInputSchemes';
+import { getInputBrainSpec, type CharacterInputOpts } from './CharacterInputSchemes';
+import type { CharacterBrainSpec } from './ActorTypes';
+import { createBrain } from './ActorKinds';
+import { lwarn } from '../../utils/Logger';
 import { getECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import {
@@ -240,8 +240,15 @@ export type DynamicCharacterOpts = DynamicCharacterParams & {
    * createMeshEntity or createGroupEntity): that entity becomes the character. The controller
    * never reads it, so any Object3D works (a capsule, a skinned mesh, a group). */
   visual: THREE.Object3D;
-  /** Keyboard input: a scheme and its key mappings. Without it the character is driven by code,
-   * through its intent. */
+  /** What writes the intent: a registered brain kind and its params, eg. a player brain
+   * (`TANK`, `WORLD_FIXED`, `CAMERA_RELATIVE`) on its own action map. Without one, code drives
+   * the character through its intent. Switch it later with `setCharacterBrain`. */
+  brain?: CharacterBrainSpec;
+  /**
+   * Keyboard input: a scheme and its key mappings, made into the player brain of the same kind
+   * (ignored when `brain` is given).
+   * @deprecated Use `brain` (removed in engine 6.0.0).
+   */
   input?: CharacterInputOpts;
   /** Called on every locomotion state change (the same as registering it with
    * `onLocomotionStateChange` right after creation). */
@@ -553,12 +560,23 @@ export const createDynamicCharacter = async (
     input: inputOpts,
     onLocomotionStateChange: locomotionStateListener,
   } = opts;
+  if (opts.brain && inputOpts) {
+    lwarn(
+      `createDynamicCharacter: '${id}' has both 'brain' and the deprecated 'input': 'input' is ignored.`
+    );
+  }
+  const brainSpec = opts.brain ?? (inputOpts ? getInputBrainSpec(inputOpts) : undefined);
 
   // Combine character data
   const characterData: CharacterData = { ...getDefaultCharacterData(), ...charData };
-  if (charData?._turnToMoveDirection === undefined && inputOpts) {
-    characterData._turnToMoveDirection = SCHEME_TURNS_TO_MOVE_DIRECTION[inputOpts.scheme];
-  }
+  /** Sets each value whose key charData doesn't give (a brain's configDefaults). */
+  const applyConfigDefaults = (values: CharacterConfigValues) => {
+    for (const key of Object.keys(values)) {
+      if (charData && (charData as Record<string, unknown>)[key] !== undefined) continue;
+      (characterData as Record<string, unknown>)[key] = values[key];
+      DERIVED_CONFIG.get(key)?.(characterData);
+    }
+  };
   const dims = body.getDimensions(characterData);
   for (const derive of DERIVED_CONFIG.values()) derive(characterData);
 
@@ -578,9 +596,8 @@ export const createDynamicCharacter = async (
    * next tick). */
   let appliedControlMode: CharacterControlMode = 'CONTROLLED';
 
-  // Written by the input scheme's bindings, controlFns and game code; read only by the tick
+  // Written by the brain, controlFns and game code; read only by the tick
   const intent = createIntent();
-  const input = inputOpts ? createCharacterInput(id, intent, inputOpts) : undefined;
 
   // On MAIN_THREAD the casts are synchronous, so the tick uses the result of its own step: the
   // same on every run, whatever the frame timing. WorldAPI.castShapeSync()/castRayAndGetNormalSync()
@@ -1098,7 +1115,7 @@ export const createDynamicCharacter = async (
     const index = bodyColliders.findIndex((collider) => collider.role === role);
     if (index === -1) {
       throw new Error(
-        `createDynamicCharacter: body plan '${body.kind}' has no '${role}' collider (character '${id}').`
+        `createDynamicCharacter: body plan '${getBodyKind(body)}' has no '${role}' collider (character '${id}').`
       );
     }
     colliderIndexes[role] = index;
@@ -1126,16 +1143,26 @@ export const createDynamicCharacter = async (
 
   const ecsWorld = getECSWorld();
 
-  const character = await createCharacter({
-    id,
-    name,
-    kind: body.kind,
-    physicsParams: { colliders, rigidBody: rigidBodyParams },
-    visual,
-    data: characterData,
-    intent,
-    controls: input?.bindings,
-  });
+  // Made last before the character, so nothing above can throw with it made; its configuration
+  // defaults go in before createCharacter snapshots initialConfig (the saved debug edits win)
+  const brain = brainSpec ? createBrain(brainSpec, id) : undefined;
+  if (brain?.configDefaults) applyConfigDefaults(brain.configDefaults);
+  let character: CharacterObject;
+  try {
+    character = await createCharacter({
+      id,
+      name,
+      bodyKind: getBodyKind(body),
+      physicsParams: { colliders, rigidBody: rigidBodyParams },
+      visual,
+      data: characterData,
+      intent,
+      brain,
+    });
+  } catch (err) {
+    brain?.dispose?.();
+    throw err;
+  }
   const entityId = character.entityId;
 
   characterBody = existsOrThrow(
@@ -1178,6 +1205,7 @@ export const createDynamicCharacter = async (
     config: {
       bakedKeys: BAKED_CONFIG_KEYS,
       onChange: (key) => DERIVED_CONFIG.get(key)?.(characterData),
+      applyDefaults: applyConfigDefaults,
     },
     // `intent` is the character's, the same object this closure writes elsewhere. `step` is the
     // clock: durations are counted in fixed steps, never on the wall clock.
@@ -1226,7 +1254,6 @@ export const createDynamicCharacter = async (
       const isControlled = appliedControlMode === 'CONTROLLED';
 
       // The intent of this sub-step, read once (its per-sub-step fields are cleared right away)
-      input?.beforeTick?.();
       const turnInput = Math.max(-1, Math.min(1, intent.turn));
       const worldMoveX = intent.moveX;
       const worldMoveZ = intent.moveZ;

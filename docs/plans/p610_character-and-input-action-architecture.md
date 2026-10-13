@@ -430,6 +430,43 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
    (checked by the user with a pad). `topDownTestScene` on `brain`.
 5. Same path hash, same hashes (D10 is off in both scenes). Commit.
 
+**As built (steps 1-2, in review):**
+
+- Decided with the user: `ActorBrain.think(intent, step, dt)` (`dt` appended to D5's signature:
+  the dummy and `releaseGraceMs` turn ms into steps), and `registerControllerKind` comes with
+  `createCharacterOfKind({ id, visual (Object3D or app id), controller: { kind, params }, brain? })`.
+- `ActorTypes.ts` (the contracts, type-only) and `ActorKinds.ts` (both registries, register /
+  unregister / get, `createCharacterOfKind`). The kinds and their params are interfaces filled by
+  declaration merging on `aekasha/character` (`CharacterBrainKinds`, `CharacterControllerKinds`,
+  as `ComponentDataMap`), so a spec's params are type-checked per kind; `params` is optional when
+  all of its fields are. An unknown kind throws, naming the registered ones.
+- A brain's controller default: `ActorBrain.configDefaults` (a player brain's
+  `_turnToMoveDirection`), set by the controller's new `config.applyDefaults` for the keys
+  `charData` didn't give, at creation (before `initialConfig` is snapshotted, so saved debug
+  edits still win) and on `setCharacterBrain` (which then overwrites a debug edit of that key).
+- `Character.ts`: `characterBrainSystem` (order -5), the controller system passes the intent and
+  `getPhysicsSubStepIndex()`, the brain is disposed with the character, `setCharacterBrain`
+  makes the new brain before disposing the old one. `ActorController.kind` is required
+  (`CharacterController` wasn't on the entry). New on the entry: `CharacterIntent`,
+  `CharacterController`, `CharacterData`, the actor types, the player brains' params types.
+- The player brains are in `brains/PlayerBrains.ts` (Phase 4's place). Actions: `TANK` `turn`
+  (`AXIS_1D`, positive left) and `forward` (`AXIS_1D`); the others `move` (`AXIS_2D`); all
+  `jump`, `run`, `crouch`. `TOGGLE` flips on an odd `pressedCount`, `HOLD` follows `isDown` (the
+  HOLD latch left the tick). `CharacterInputSchemes.ts` keeps the deprecated types and
+  `getInputBrainSpec` (`input:` → the same kind's spec, its mappings as keyboard bindings;
+  `brain` wins over `input`, with a warning). `createCharacterInput` and
+  `SCHEME_TURNS_TO_MOVE_DIRECTION` are gone (never on the entry).
+- `bodyKind` on `CharacterObject`, `CharacterBodyPlan` and `CreateCharacterOpts`
+  (`CharacterBodyKindField`: either field, `getBodyKind` reads it); `kind`, `keyBindingIds`,
+  `mouseBindingIds` and `controls` `@deprecated`. `HUMANOID_CAPSULE` gives both names.
+- Bundle: the `DYNAMIC_CHARACTER` factory `import()`s `DynamicCharacter.ts` (a static import put
+  it in the main chunk, +12.5 kB gzip); the player brains registered at install keep the action
+  layer in the main chunk (the user's choice, D5): main +6.5 kB gzip, `DynamicCharacter.js` a
+  chunk of its own (6.5 kB).
+- Checks: the gym's path hash `a51d785e` and probe hash `f5cf468f`, `topDownTestScene`'s
+  `c7786d74`, unchanged in all targets (the arrow-keys diagonals included); the system order
+  check fails only on the new `characterBrainSystem@-5`, recorded at the end of the phase.
+
 ### Phase 4: the dynamic controller split
 
 1. `features/character/controllers/dynamic/`: the factory and the tick's order

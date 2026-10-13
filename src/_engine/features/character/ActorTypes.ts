@@ -1,4 +1,4 @@
-// NOTE! Type-only file: everything here is erased at build time (as CharacterTypes.ts).
+// NOTE! Type-only file: everything here is erased at build time.
 import type * as THREE from 'three/webgpu';
 import type { CharacterConfigValues, CharacterIntent, CharacterObject } from './CharacterTypes';
 import type {

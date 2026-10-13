@@ -1,14 +1,9 @@
-import type * as THREE from 'three/webgpu';
-import type {
-  KeyBinding,
-  KeyHeldBinding,
-  KeyUpDownBinding,
-} from '../../kernel/input/KeyboardInput';
-import { getMainCamera } from '../../kernel/camera/Camera';
-import { getECSWorld } from '../../kernel/ecs/ECS';
-import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
-import { addIntentMove } from './CharacterIntent';
-import type { CharacterIntent } from './CharacterTypes';
+import type { KeyActionBinding } from '../../kernel/input/ActionTypes';
+import type { CharacterBrainSpec } from './ActorTypes';
+import type { PlayerBrainCommonParams, PlayerBrainHoldMode } from './brains/PlayerBrains';
+
+// The input schemes, before the player brains (p610 D5): `createDynamicCharacter`'s deprecated
+// `input` option, mapped onto a player brain of the same name with the same keys.
 
 /**
  * How keys map to a character's intent:
@@ -17,11 +12,16 @@ import type { CharacterIntent } from './CharacterTypes';
  *   move diagonally. The character turns toward the move direction.
  * - `CAMERA_RELATIVE`: like `WORLD_FIXED`, with forward = the camera's view direction on the
  *   ground (screen-up).
+ * @deprecated Use a player brain of the same kind (`brain: { kind: 'TANK', params }`), removed in
+ * engine 6.0.0.
  */
 export type CharacterInputScheme = 'TANK' | 'WORLD_FIXED' | 'CAMERA_RELATIVE';
 
-/** `TOGGLE`: a key press switches the state (default). `HOLD`: on while the key is held. */
-export type CharacterInputHoldMode = 'TOGGLE' | 'HOLD';
+/**
+ * `TOGGLE`: a key press switches the state (default). `HOLD`: on while the key is held.
+ * @deprecated Use `PlayerBrainHoldMode` (removed in engine 6.0.0).
+ */
+export type CharacterInputHoldMode = PlayerBrainHoldMode;
 
 /** The keys every scheme has (all optional). Keys are `KeyboardEvent.key` values
  * (case-insensitive); any of them triggers the action. */
@@ -67,7 +67,11 @@ export type CharacterInputCommonOpts = {
   crouchMode?: CharacterInputHoldMode;
 };
 
-/** A character's keyboard input: a scheme and its key mappings. */
+/**
+ * A character's keyboard input: a scheme and its key mappings.
+ * @deprecated Use `createDynamicCharacter`'s `brain` (a player brain on an action map), removed in
+ * engine 6.0.0.
+ */
 export type CharacterInputOpts = CharacterInputCommonOpts &
   (
     | { scheme: 'TANK'; mappings: TankInputMappings }
@@ -81,168 +85,94 @@ export type CharacterInputOpts = CharacterInputCommonOpts &
       }
   );
 
-/** What a scheme gives the character: its bindings, and what the controller runs at the start of
- * each tick, before it reads the intent. */
-export type CharacterInput = {
-  /** The key bindings, ids namespaced `${characterId}:${action}`. */
-  bindings: KeyBinding[];
-  /** Hands latched `HOLD` states to the intent (set only when a `HOLD` mode is used). */
-  beforeTick?: () => void;
-};
-
-/** Whether a scheme turns the character toward its move direction by default (the dynamic
- * character's `_turnToMoveDirection`). */
-export const SCHEME_TURNS_TO_MOVE_DIRECTION: Record<CharacterInputScheme, boolean> = {
-  TANK: false,
-  WORLD_FIXED: true,
-  CAMERA_RELATIVE: true,
-};
-
-const toChord = (keys: string[]) => keys.map((key) => ({ key }));
-
-const _cameraForward = { x: 0, z: -1 };
-/** The camera's screen-up direction on the ground, into _cameraForward (North without one). */
-const readCameraForward = (cameraEntityId?: number) => {
-  const camera =
-    cameraEntityId === undefined
-      ? getMainCamera()
-      : (getECSWorld().getComponent(cameraEntityId, ComponentType.OBJECT3D)?.value as
-          | THREE.Object3D
-          | undefined);
-  _cameraForward.x = 0;
-  _cameraForward.z = -1;
-  if (!camera) return _cameraForward;
-  const e = camera.matrixWorld.elements;
-  // The view direction (-Z axis) on the ground, or the up axis for a camera looking straight down
-  let x = -e[8];
-  let z = -e[10];
-  let length = Math.hypot(x, z);
-  if (length < 1e-4) {
-    x = e[4];
-    z = e[6];
-    length = Math.hypot(x, z);
-  }
-  if (length < 1e-4) return _cameraForward;
-  _cameraForward.x = x / length;
-  _cameraForward.z = z / length;
-  return _cameraForward;
-};
+/** Keys as a keyboard button binding, or none without keys. */
+const keysBinding = (keys: string[] | undefined): KeyActionBinding[] =>
+  keys?.length ? [{ device: 'KEYBOARD', keys }] : [];
 
 /**
- * Builds a character's key bindings for an input scheme. Every binding writes only the intent,
- * so the controller's tick is the only thing that touches the body. Binding ids are namespaced
- * `${characterId}:${action}`, and every binding ignores modifiers: Shift and Ctrl are the
- * default run and crouch keys, and pressing one must not interrupt a held move key.
+ * The player brain an input scheme is now (the same kind, its mappings as keyboard bindings):
+ * what `createDynamicCharacter` makes for the deprecated `input` option.
+ * @internal
  */
-export const createCharacterInput = (
-  characterId: string,
-  intent: CharacterIntent,
-  opts: CharacterInputOpts
-): CharacterInput => {
-  const bindings: KeyBinding[] = [];
-  const beforeTickFns: (() => void)[] = [];
-  const bindingId = (action: string) => `${characterId}:${action}`;
-
-  const addHeld = (action: string, keys: string[] | undefined, fn: () => void) => {
-    if (!keys?.length) return;
-    const binding: KeyHeldBinding = {
-      id: bindingId(action),
-      ignoreModifiers: true,
-      type: 'KEY_HELD',
-      chord: toChord(keys),
-      fn,
-    };
-    bindings.push(binding);
-  };
-
-  const addPress = (action: string, keys: string[] | undefined, fn: () => void) => {
-    if (!keys?.length) return;
-    const binding: KeyUpDownBinding = {
-      id: bindingId(action),
-      ignoreModifiers: true,
-      type: 'KEY_DOWN',
-      chord: toChord(keys),
-      fn: (e) => {
-        e.preventDefault();
-        if (e.repeat) return;
-        fn();
-      },
-    };
-    bindings.push(binding);
-  };
-
-  /** A run/crouch key. HOLD latches the held state and hands it to the intent before each tick:
-   * KEY_UP would miss releases (blur, a hidden page or disabled inputs clear the held keys
-   * without one) and leave the state stuck on. */
-  const addState = (
-    action: 'run' | 'crouch',
-    keys: string[] | undefined,
-    mode: CharacterInputHoldMode = 'TOGGLE'
-  ) => {
-    if (!keys?.length) return;
-    if (mode === 'TOGGLE') {
-      addPress(action, keys, () => (intent[action] = !intent[action]));
-      return;
-    }
-    let isHeld = false;
-    addHeld(action, keys, () => (isHeld = true));
-    beforeTickFns.push(() => {
-      intent[action] = isHeld;
-      isHeld = false;
-    });
-  };
-
+export const getInputBrainSpec = (opts: CharacterInputOpts): CharacterBrainSpec => {
+  const m = opts.mappings;
+  const common: PlayerBrainCommonParams = { runMode: opts.runMode, crouchMode: opts.crouchMode };
+  const jump = keysBinding(m.jump);
+  const run = keysBinding(m.run);
+  const crouch = keysBinding(m.crouch);
   switch (opts.scheme) {
-    case 'TANK': {
-      const m = opts.mappings;
-      addHeld('rotateLeft', m.rotateLeft, () => (intent.turn += 1));
-      addHeld('rotateRight', m.rotateRight, () => (intent.turn -= 1));
-      addHeld('moveForward', m.moveForward, () => (intent.moveForward += 1));
-      addHeld('moveBackward', m.moveBackward, () => (intent.moveForward -= 1));
-      break;
-    }
+    case 'TANK':
+      return {
+        kind: 'TANK',
+        params: {
+          ...common,
+          bindings: {
+            turn: [
+              {
+                device: 'KEYBOARD',
+                negative: opts.mappings.rotateRight,
+                positive: opts.mappings.rotateLeft,
+              },
+            ],
+            forward: [
+              {
+                device: 'KEYBOARD',
+                negative: opts.mappings.moveBackward,
+                positive: opts.mappings.moveForward,
+              },
+            ],
+            jump,
+            run,
+            crouch,
+          },
+        },
+      };
     case 'WORLD_FIXED': {
-      const m = opts.mappings;
-      addHeld('moveNorth', m.moveNorth, () => (intent.moveZ -= 1));
-      addHeld('moveSouth', m.moveSouth, () => (intent.moveZ += 1));
-      addHeld('moveWest', m.moveWest, () => (intent.moveX -= 1));
-      addHeld('moveEast', m.moveEast, () => (intent.moveX += 1));
-      break;
+      const w = opts.mappings;
+      return {
+        kind: 'WORLD_FIXED',
+        params: {
+          ...common,
+          bindings: {
+            move: [
+              {
+                device: 'KEYBOARD',
+                up: w.moveNorth,
+                down: w.moveSouth,
+                left: w.moveWest,
+                right: w.moveEast,
+              },
+            ],
+            jump,
+            run,
+            crouch,
+          },
+        },
+      };
     }
     case 'CAMERA_RELATIVE': {
-      const m = opts.mappings;
-      const cameraEntityId = opts.cameraEntityId;
-      // Right = forward turned 90° clockwise seen from above: (-forward.z, forward.x)
-      addHeld('moveForward', m.moveForward, () => {
-        const f = readCameraForward(cameraEntityId);
-        addIntentMove(intent, f.x, f.z);
-      });
-      addHeld('moveBackward', m.moveBackward, () => {
-        const f = readCameraForward(cameraEntityId);
-        addIntentMove(intent, -f.x, -f.z);
-      });
-      addHeld('moveLeft', m.moveLeft, () => {
-        const f = readCameraForward(cameraEntityId);
-        addIntentMove(intent, f.z, -f.x);
-      });
-      addHeld('moveRight', m.moveRight, () => {
-        const f = readCameraForward(cameraEntityId);
-        addIntentMove(intent, -f.z, f.x);
-      });
-      break;
+      const c = opts.mappings;
+      return {
+        kind: 'CAMERA_RELATIVE',
+        params: {
+          ...common,
+          cameraEntityId: opts.cameraEntityId,
+          bindings: {
+            move: [
+              {
+                device: 'KEYBOARD',
+                up: c.moveForward,
+                down: c.moveBackward,
+                left: c.moveLeft,
+                right: c.moveRight,
+              },
+            ],
+            jump,
+            run,
+            crouch,
+          },
+        },
+      };
     }
   }
-
-  addPress('jump', opts.mappings.jump, () => (intent.jump = true));
-  addState('run', opts.mappings.run, opts.runMode);
-  addState('crouch', opts.mappings.crouch, opts.crouchMode);
-
-  return {
-    bindings,
-    beforeTick: beforeTickFns.length
-      ? () => {
-          for (let i = 0; i < beforeTickFns.length; i++) beforeTickFns[i]();
-        }
-      : undefined,
-  };
 };

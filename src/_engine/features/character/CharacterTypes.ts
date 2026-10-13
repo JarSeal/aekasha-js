@@ -135,18 +135,42 @@ export type CharacterBodyCollider = {
 };
 
 /**
+ * A body's kind (eg. `'HUMANOID'`), given as `bodyKind` or as the deprecated `kind` (at least
+ * one; {@link getBodyKind} reads it).
+ */
+export type CharacterBodyKindField =
+  | {
+      /** The body's kind (eg. `'HUMANOID'`): data for game code, not a code path. */
+      bodyKind: string;
+      /**
+       * The body's kind.
+       * @deprecated Use `bodyKind` (removed in engine 6.0.0).
+       */
+      kind?: string;
+    }
+  | {
+      /** The body's kind (eg. `'HUMANOID'`): data for game code, not a code path. */
+      bodyKind?: string;
+      /**
+       * The body's kind.
+       * @deprecated Use `bodyKind` (removed in engine 6.0.0).
+       */
+      kind: string;
+    };
+
+/**
  * What a character's body looks like to physics: its kind and its colliders and probes, all sized
  * from the character's data. A controller (eg. createDynamicCharacter) decides how the body moves;
- * the body plan only shapes it, so one controller can move several kinds of bodies.
+ * the body plan only shapes it, so one controller can move several kinds of bodies. Its kind is
+ * set as the character's `bodyKind`.
  */
-export type CharacterBodyPlan<Dims extends CharacterDimensions = CharacterDimensions> = {
-  /** The character's kind (eg. `'HUMANOID'`): data for game code, set as `CharacterObject.kind`. */
-  kind: string;
-  /** Derives every size from the data. Pure: call it again after the data changes. */
-  getDimensions(data: CharacterBodyData): Dims;
-  /** The colliders, by role, sized from `getDimensions`' result. */
-  getColliders(dims: Dims, data: CharacterBodyData): CharacterBodyCollider[];
-};
+export type CharacterBodyPlan<Dims extends CharacterDimensions = CharacterDimensions> =
+  CharacterBodyKindField & {
+    /** Derives every size from the data. Pure: call it again after the data changes. */
+    getDimensions(data: CharacterBodyData): Dims;
+    /** The colliders, by role, sized from `getDimensions`' result. */
+    getColliders(dims: Dims, data: CharacterBodyData): CharacterBodyCollider[];
+  };
 
 /**
  * What a character's body is doing, derived by its controller once per sub-step: what a future
@@ -223,14 +247,26 @@ export type CharacterObject = {
   name?: string;
   /** The body's kind, from its body plan (eg. `'HUMANOID'`). Data, not a code path: switch on it
    * in game code. */
+  bodyKind: string;
+  /**
+   * The body's kind (the same as `bodyKind`).
+   * @deprecated Use `bodyKind` (removed in engine 6.0.0).
+   */
   kind: string;
   /** The character's entity: the visual's, with the physics components. */
   entityId: number;
   /** App id of the visual root (the Object3D the body moves). */
   visualId: string;
-  /** Key binding ids owned by this character (namespaced `${id}:…`), deleted with it. */
+  /**
+   * Key binding ids owned by this character (`createCharacter`'s `controls`), deleted with it.
+   * @deprecated A brain owns a character's input now (a player brain's action map); removed in
+   * engine 6.0.0 with `controls`.
+   */
   keyBindingIds: string[];
-  /** Mouse binding ids owned by this character, deleted with it. */
+  /**
+   * Mouse binding ids owned by this character, deleted with it.
+   * @deprecated See `keyBindingIds`.
+   */
   mouseBindingIds: string[];
   /** Live controller data. Keys follow the naming convention the debug tools rely on: no prefix =
    * state, `_` = configuration, `__` = internal memory. */

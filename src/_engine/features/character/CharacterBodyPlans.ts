@@ -1,5 +1,6 @@
 import type {
   CharacterBodyData,
+  CharacterBodyKindField,
   CharacterBodyPlan,
   CharacterDimensions,
   CharacterProbeDimensions,
@@ -25,6 +26,10 @@ export type HumanoidCapsuleDimensions = CharacterDimensions & {
   floorSensorOffsetY: number;
 };
 
+/** A body plan's (or `createCharacter` options') kind: `bodyKind`, else the deprecated `kind`. */
+export const getBodyKind = (field: CharacterBodyKindField): string =>
+  field.bodyKind ?? field.kind ?? '';
+
 const WALL_SENSOR_LIFT = 0.05;
 /** The wall cast sits this much above the active capsule's center. */
 const WALL_CAST_LIFT = 0.1;
@@ -45,12 +50,14 @@ const getCapsuleProbes = (
 });
 
 /**
- * An upright capsule body (`kind: 'HUMANOID'`): a walk capsule (`MAIN`), a shorter crouch capsule
+ * An upright capsule body (`bodyKind: 'HUMANOID'`): a walk capsule (`MAIN`), a shorter crouch capsule
  * (`CROUCH`, its bottom where the walk capsule's is), a slightly wider capsule sensor (`WALL_SENSOR`)
  * and a ball sensor at the bottom (`FLOOR_SENSOR`). `_height` is the walk capsule's full height,
  * so a capsule mesh of `_height` and `_radius` matches it.
  */
 export const HUMANOID_CAPSULE: CharacterBodyPlan<HumanoidCapsuleDimensions> = {
+  bodyKind: 'HUMANOID',
+  // The deprecated name, kept readable until engine 6.0.0
   kind: 'HUMANOID',
 
   getDimensions: (d: CharacterBodyData): HumanoidCapsuleDimensions => {

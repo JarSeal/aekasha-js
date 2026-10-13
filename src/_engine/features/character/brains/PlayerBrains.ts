@@ -1,4 +1,22 @@
-import type { ActionBindings } from '../../../kernel/input/ActionTypes';
+import type * as THREE from 'three/webgpu';
+import type {
+  ActionBindings,
+  ActionDefs,
+  ActionMap,
+  ActionState,
+} from '../../../kernel/input/ActionTypes';
+import { createActionMap } from '../../../kernel/input/Actions';
+import { getMainCamera } from '../../../kernel/camera/Camera';
+import { getECSWorld } from '../../../kernel/ecs/ECS';
+import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
+import { addIntentMove } from '../CharacterIntent';
+import type { CharacterIntent } from '../CharacterTypes';
+import type { ActorBrain } from '../ActorTypes';
+import { registerBrainKind } from '../ActorKinds';
+
+// The engine's player brains (p603 C4, p610 D5): each owns an action map (`<characterId>:input`,
+// GAMEPLAY context) read at the step, so the intent is written once per fixed step from the same
+// sample on every run. They write the intent only; the controller's tick is what moves the body.
 
 /** `TOGGLE`: a press switches the state (default). `HOLD`: on while the binding is held. */
 export type PlayerBrainHoldMode = 'TOGGLE' | 'HOLD';
@@ -83,4 +101,158 @@ export type WorldFixedBrainParams = PlayerBrainCommonParams & {
 export type CameraRelativeBrainParams = WorldFixedBrainParams & {
   /** The camera's entity (default: the main camera, also while the debug camera is on). */
   cameraEntityId?: number;
+};
+
+const COMMON_ACTIONS = {
+  jump: { type: 'BUTTON', name: 'Jump' },
+  run: { type: 'BUTTON', name: 'Run' },
+  crouch: { type: 'BUTTON', name: 'Crouch' },
+} as const satisfies ActionDefs;
+
+const TANK_ACTIONS = {
+  turn: { type: 'AXIS_1D', name: 'Turn', description: 'Positive turns left' },
+  forward: { type: 'AXIS_1D', name: 'Forward', description: 'Positive moves forward' },
+  ...COMMON_ACTIONS,
+} as const satisfies ActionDefs;
+
+const DIRECTIONAL_ACTIONS = {
+  move: { type: 'AXIS_2D', name: 'Move' },
+  ...COMMON_ACTIONS,
+} as const satisfies ActionDefs;
+
+/** A player brain's action map id: `<characterId>:input`. */
+export const getPlayerBrainActionMapId = (characterId: string) => `${characterId}:input`;
+
+/** A run or crouch action into the intent: `HOLD` follows the binding, `TOGGLE` switches on each
+ * press (two presses in one sample switch twice). */
+const applyStateAction = (
+  intent: CharacterIntent,
+  key: 'run' | 'crouch',
+  action: Readonly<ActionState>,
+  mode: PlayerBrainHoldMode
+) => {
+  if (mode === 'HOLD') intent[key] = action.isDown;
+  else if (action.pressedCount % 2 === 1) intent[key] = !intent[key];
+};
+
+/** The parts every player brain has: the map, jump, run and crouch, and its config default. */
+const createPlayerBrain = <TActions extends ActionDefs & typeof COMMON_ACTIONS>(
+  kind: string,
+  characterId: string,
+  actions: TActions,
+  params: PlayerBrainCommonParams & { bindings: ActionBindings<TActions> },
+  turnsToMoveDirection: boolean,
+  thinkMove: (map: ActionMap<TActions>, intent: CharacterIntent, step: number, dt: number) => void
+): ActorBrain<CharacterIntent> => {
+  const map: ActionMap<TActions> = createActionMap({
+    id: getPlayerBrainActionMapId(characterId),
+    actions,
+    bindings: params.bindings,
+  });
+  // The actions every player brain has (a generic map can't name them)
+  const common = map as unknown as ActionMap<typeof COMMON_ACTIONS>;
+  const runMode = params.runMode ?? 'TOGGLE';
+  const crouchMode = params.crouchMode ?? 'TOGGLE';
+  return {
+    kind,
+    configDefaults: Object.freeze({
+      _turnToMoveDirection: params.turnToMoveDirection ?? turnsToMoveDirection,
+    }),
+    think: (intent, step, dt) => {
+      thinkMove(map, intent, step, dt);
+      if (common.read('jump').pressedCount > 0) intent.jump = true;
+      applyStateAction(intent, 'run', common.read('run'), runMode);
+      applyStateAction(intent, 'crouch', common.read('crouch'), crouchMode);
+    },
+    dispose: () => map.delete(),
+  };
+};
+
+const _cameraForward = { x: 0, z: -1 };
+/** The camera's screen-up direction on the ground, into _cameraForward (North without one). */
+const readCameraForward = (cameraEntityId?: number) => {
+  const camera =
+    cameraEntityId === undefined
+      ? getMainCamera()
+      : (getECSWorld().getComponent(cameraEntityId, ComponentType.OBJECT3D)?.value as
+          | THREE.Object3D
+          | undefined);
+  _cameraForward.x = 0;
+  _cameraForward.z = -1;
+  if (!camera) return _cameraForward;
+  const e = camera.matrixWorld.elements;
+  // The view direction (-Z axis) on the ground, or the up axis for a camera looking straight down
+  let x = -e[8];
+  let z = -e[10];
+  let length = Math.hypot(x, z);
+  if (length < 1e-4) {
+    x = e[4];
+    z = e[6];
+    length = Math.hypot(x, z);
+  }
+  if (length < 1e-4) return _cameraForward;
+  _cameraForward.x = x / length;
+  _cameraForward.z = z / length;
+  return _cameraForward;
+};
+
+/** Makes a `TANK` player brain ({@link TankBrainParams}). */
+export const createTankBrain = (
+  params: TankBrainParams,
+  characterId: string
+): ActorBrain<CharacterIntent> =>
+  createPlayerBrain('TANK', characterId, TANK_ACTIONS, params, false, (map, intent) => {
+    intent.turn += map.read('turn').value;
+    intent.moveForward += map.read('forward').value;
+  });
+
+/** Makes a `WORLD_FIXED` player brain ({@link WorldFixedBrainParams}): up is North (-Z). */
+export const createWorldFixedBrain = (
+  params: WorldFixedBrainParams,
+  characterId: string
+): ActorBrain<CharacterIntent> =>
+  createPlayerBrain(
+    'WORLD_FIXED',
+    characterId,
+    DIRECTIONAL_ACTIONS,
+    params,
+    true,
+    (map, intent) => {
+      const move = map.read('move');
+      if (move.value !== 0) addIntentMove(intent, move.x, -move.y);
+    }
+  );
+
+/** Makes a `CAMERA_RELATIVE` player brain ({@link CameraRelativeBrainParams}): the camera is
+ * read at the step, so the intent (and a recording of it) carries the world move, not the camera. */
+export const createCameraRelativeBrain = (
+  params: CameraRelativeBrainParams,
+  characterId: string
+): ActorBrain<CharacterIntent> => {
+  const cameraEntityId = params.cameraEntityId;
+  return createPlayerBrain(
+    'CAMERA_RELATIVE',
+    characterId,
+    DIRECTIONAL_ACTIONS,
+    params,
+    true,
+    (map, intent) => {
+      const move = map.read('move');
+      if (move.value === 0) return;
+      // Up = the camera's forward f, right = f turned 90° clockwise seen from above: (-f.z, f.x)
+      const f = readCameraForward(cameraEntityId);
+      addIntentMove(intent, f.x * move.y - f.z * move.x, f.z * move.y + f.x * move.x);
+    }
+  );
+};
+
+/**
+ * Registers the engine's player brain kinds, `TANK`, `WORLD_FIXED` and `CAMERA_RELATIVE` (the
+ * character feature's install).
+ * @internal
+ */
+export const registerPlayerBrains = () => {
+  registerBrainKind('TANK', createTankBrain);
+  registerBrainKind('WORLD_FIXED', createWorldFixedBrain);
+  registerBrainKind('CAMERA_RELATIVE', createCameraRelativeBrain);
 };
