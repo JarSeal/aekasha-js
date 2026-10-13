@@ -8,6 +8,14 @@ export const sceneFileObjects: {
     assets: ScenePrimitiveAssets;
   }) => Promise<void>;
 } = {
+  exampleCharacter: async ({ sceneData, assets }) => {
+    const module = await import('../app/./examples/character/exampleCharacter.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   exampleDebugTab: async ({ sceneData, assets }) => {
     const module = await import('../app/./examples/debugTab/exampleDebugTab.ts');
     await (

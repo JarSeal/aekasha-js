@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../../.schemas/light.schema.json",
+  "lightProps": { "type": "AMBIENT", "color": "#ffffff", "intensity": 0.6 },
+  "entityOpts": {
+    "appId": "exampleCharacterAmbient",
+    "debugData": { "name": "Character example ambient light" }
+  }
+}
