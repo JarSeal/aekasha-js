@@ -20,6 +20,7 @@ import {
   type PhysicsProbeReport,
 } from '../features/physics/debug/_dbg__PhysicsDeterminism';
 import { encodeRGBA8PNG } from './_dbg__PNGEncoder';
+import { getCharacterPaths, installTestInput } from './_dbg__TestBridgeInput';
 import { TEST_BRIDGE_VERSION, type AekTestBridge, type TestBridgeSystemOrder } from './TestBridge';
 
 const DEFAULT_TIMEOUT_MS = 60_000;
@@ -145,6 +146,7 @@ const getSystemOrder: AekTestBridge['getSystemOrder'] = () => {
 export const _installTestBridge = () => {
   if (window.__AEK_TEST__) return;
   useTestClock();
+  installTestInput(window.__AEK_TEST_INPUT__ ?? null);
   onPhysicsProbeReport((report) => {
     probeReports.set(report.sceneId, report);
     if (freezeOnProbeReport && report.sceneId === getCurrentSceneId()) {
@@ -160,5 +162,6 @@ export const _installTestBridge = () => {
     freeze,
     snapshot,
     getSystemOrder,
+    getCharacterPaths,
   };
 };

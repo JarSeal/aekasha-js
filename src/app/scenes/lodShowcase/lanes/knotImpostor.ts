@@ -1,10 +1,9 @@
 import * as THREE from 'three/webgpu';
-import { getGeometry, existsOrThrow } from 'aekasha';
+import { getGeometry, existsOrThrow, createSeededRandom } from 'aekasha';
 import { createInstancedLodPool } from 'aekasha/instancing';
 import { generateOctahedralImpostor } from 'aekasha/lod';
 import type { LodDef } from 'aekasha/lod';
 import { getConservativeGeometryRadius } from 'aekasha/spatial';
-import { createSeededRandom } from 'aekasha/toolkit/geometry';
 import type { ShowcaseLane } from '../layout';
 import { getShowcaseKnot, getShowcaseKnotMaterial } from './generatedChain';
 

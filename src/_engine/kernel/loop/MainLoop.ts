@@ -219,11 +219,23 @@ export const setFixedStepDriver = (driver: FixedStepDriver) => {
   fixedStepDriver = driver;
 };
 
+let preStepHook: (() => void) | null = null;
+
+/**
+ * Sets the function run at the very start of every fixed sub-step, before the held keys (null
+ * removes it): the test bridge's scripted input and character path recording.
+ * @internal
+ */
+export const setPreStepHook = (fn: (() => void) | null) => {
+  preStepHook = fn;
+};
+
 /** Everything that has to run in lockstep with the simulation, once per fixed sub-step right
- * before it (see FixedStepDriver.step): held-key input, then the previous step's events, then
- * every world's APP_PHYSICS_STEP systems (see PhysicsAPI.ts's flushPhysicsEvents for why the
- * order matters). Only called by the driver, so it is set. */
+ * before it (see FixedStepDriver.step): the pre-step hook, held-key input, then the previous
+ * step's events, then every world's APP_PHYSICS_STEP systems (see PhysicsAPI.ts's
+ * flushPhysicsEvents for why the order matters). Only called by the driver, so it is set. */
 const runFixedSubStep = (stepDelta: number) => {
+  preStepHook?.();
   pollHeldKeyBindings(stepDelta);
   fixedStepDriver!.flushEvents();
   for (const world of getAllECSWorlds()) world.updatePhysicsStep(stepDelta);

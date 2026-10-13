@@ -87,6 +87,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/debug/_dbg__TestBridgeInput.ts": {
+      "to": "src/_engine/debug/_dbg__TestBridgeInput.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/debug/_dbg__UndoRedo.ts": {
       "to": "src/_engine/debug/_dbg__UndoRedo.ts",
       "action": "keep",
@@ -2204,6 +2209,21 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/utils/RandomStreams.test.ts": {
+      "to": "src/_engine/utils/RandomStreams.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/utils/RandomStreams.ts": {
+      "to": "src/_engine/utils/RandomStreams.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/utils/SeededRandom.ts": {
+      "to": "src/_engine/utils/SeededRandom.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/utils/StatsClock.ts": {
       "to": "src/_engine/utils/StatsClock.ts",
       "action": "keep",
@@ -3130,12 +3150,6 @@
       "to": "src/toolkit/geometry/scatter/ScatterOnSurface.ts",
       "action": "keep",
       "plan": "p609"
-    },
-    "src/toolkit/geometry/SeededRandom.ts": {
-      "to": "src/toolkit/geometry/SeededRandom.ts",
-      "action": "keep",
-      "plan": "p609",
-      "note": "the generators share it; the simulation lint points at it until p610"
     },
     "src/toolkit/materials/asteroid/asteroid.material.json": {
       "to": "src/toolkit/materials/asteroid/asteroid.material.json",

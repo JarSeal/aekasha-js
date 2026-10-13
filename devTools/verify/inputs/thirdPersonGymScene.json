@@ -1,0 +1,33 @@
+{
+  "frames": [
+    { "step": 10, "down": ["w"] },
+    { "step": 40, "down": ["d"] },
+    { "step": 70, "up": ["d"] },
+    { "step": 80, "down": ["Shift"] },
+    { "step": 85, "up": ["Shift"] },
+    { "step": 100, "down": [" "] },
+    { "step": 105, "up": [" "] },
+    { "step": 130, "down": ["ArrowUp"] },
+    { "step": 160, "down": ["ArrowLeft"] },
+    { "step": 190, "up": ["ArrowLeft"], "down": ["Enter"] },
+    { "step": 195, "up": ["Enter"] },
+    { "step": 220, "down": ["a"] },
+    { "step": 260, "up": ["a"] },
+    { "step": 280, "down": ["Control"] },
+    { "step": 285, "up": ["Control"] },
+    { "step": 330, "down": ["Control"] },
+    { "step": 335, "up": ["Control"] },
+    { "step": 340, "down": ["Shift"] },
+    { "step": 345, "up": ["Shift"] },
+    { "step": 360, "up": ["w"], "down": ["s"] },
+    { "step": 400, "up": ["s"], "down": [" "] },
+    { "step": 405, "up": [" "] },
+    { "step": 420, "up": ["ArrowUp"], "down": ["ArrowRight", "ArrowDown"] },
+    { "step": 480, "up": ["ArrowRight", "ArrowDown"] },
+    { "step": 500, "down": ["w", "Shift"] },
+    { "step": 505, "up": ["Shift"] },
+    { "step": 540, "down": [" "] },
+    { "step": 545, "up": [" "] },
+    { "step": 590, "up": ["w"] }
+  ]
+}

@@ -93,7 +93,7 @@ const SIMULATION_RESTRICTED_PROPERTIES = [
     object: 'Math',
     property: 'random',
     message:
-      'Simulation randomness is seeded: createSeededRandom (toolkit/geometry/SeededRandom.ts) until the RNG service exists.',
+      'Simulation randomness is seeded: draw from a named stream (getRandomStream, utils/RandomStreams.ts).',
   },
   { object: 'performance', property: 'now', message: STEP_TIME_MESSAGE },
   { object: 'Date', property: 'now', message: STEP_TIME_MESSAGE },
@@ -233,17 +233,8 @@ export default [
   // Known violations, each with the plan that removes it. A later entry replaces the rule's
   // options for its file, so it lists what stays restricted there.
   {
-    // The tumble impulse's direction (p610: the seeded RNG)
-    files: ['src/_engine/features/character/DynamicCharacter.ts'],
-    rules: {
-      'no-restricted-properties': [
-        'error',
-        ...SIMULATION_RESTRICTED_PROPERTIES.filter((p) => p.object !== 'Math'),
-      ],
-    },
-  },
-  {
-    // The wall clock under getPhysGameTime(), which the characters read (p610: step-index time)
+    // The wall clock under the deprecated getPhysGameTime(), which no simulation code reads any
+    // more (removed with it in engine 6.0.0)
     files: ['src/_engine/features/physics/PhysicsWallClock.ts'],
     rules: {
       'no-restricted-properties': [

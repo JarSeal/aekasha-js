@@ -6,6 +6,7 @@ import {
   createMeshEntity,
   getLoaderStatusUpdater,
   existsOrThrow,
+  createSeededRandom,
 } from 'aekasha';
 import { getPhysicsWorld, createPhysicsEntity } from 'aekasha/physics';
 import type { PhysVector } from 'aekasha/physics';
@@ -15,11 +16,7 @@ import {
   setMutualGravityConfig,
   type MutualGravityConfig,
 } from 'aekasha/toolkit/ecs';
-import {
-  generateAsteroid,
-  type GeneratedAsteroid,
-  createSeededRandom,
-} from 'aekasha/toolkit/geometry';
+import { generateAsteroid, type GeneratedAsteroid } from 'aekasha/toolkit/geometry';
 
 export const SPACE_SCENE_ID = 'space';
 

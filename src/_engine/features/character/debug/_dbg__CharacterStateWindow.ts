@@ -3,7 +3,7 @@ import { CMP, type TCMP } from '../../../ui/CMP';
 import { lsGetItem, lsSetItem, lsSubscribe } from '../../../utils/LocalAndSessionStorage';
 import { llog } from '../../../utils/Logger';
 import { getCharacterById } from '../Character';
-import { getPhysGameTime } from '../../physics/PhysicsAPI';
+import { getPhysicsSnapshotStepIndex, getPhysicsState } from '../../physics/PhysicsAPI';
 import type { CharacterObject } from '../CharacterTypes';
 import {
   createSceneMainLooper,
@@ -93,8 +93,8 @@ const DEFAULT_SETTINGS: StateWindowSettings = {
 };
 
 type RowKind = 'BOOL' | 'NUMBER' | 'STRING' | 'VECTOR' | 'NUM_ARRAY' | 'OTHER';
-/** A known number key's display: a `getPhysGameTime()` timestamp, or an angle in radians */
-type NumberFormat = 'MS_AGO' | 'RAD_DEG';
+/** A known number key's display: a physics step stamp (-1 = unset), or an angle in radians */
+type NumberFormat = 'STEP_AGO' | 'RAD_DEG';
 type RawValue = number | boolean | string | undefined;
 type ConfigValue = number | boolean;
 /** A configuration (`_`) row's editor. */
@@ -126,8 +126,8 @@ type Row = {
   texts: Text[];
   /** VECTOR only: the component keys, in the object's key order */
   vecKeys: string[];
-  /** The last raw values (per component for vectors and arrays), never object references. MS_AGO
-   * also keeps the last shown ms at index 1. */
+  /** The last raw values (per component for vectors and arrays), never object references. STEP_AGO
+   * also keeps the last shown age in steps at index 1. */
   last: RawValue[];
   /** A Properties number or boolean row's editor (null: a read-only row) */
   editor: ConfigEditor | null;
@@ -198,11 +198,11 @@ const saveSettings = (settings: StateWindowSettings) => lsSetItem(LS_KEY, settin
 
 /** Readable displays for known keys (any other key gets its type's display) */
 const NUMBER_FORMATS: Record<string, NumberFormat> = {
-  __jumpTime: 'MS_AGO',
-  __isFallingStartTime: 'MS_AGO',
-  __isTumblingStartTime: 'MS_AGO',
-  __isGettingUpStartTime: 'MS_AGO',
-  __locomotionStateStartTime: 'MS_AGO',
+  __jumpStep: 'STEP_AGO',
+  __isFallingStartStep: 'STEP_AGO',
+  __isTumblingStartStep: 'STEP_AGO',
+  __isGettingUpStartStep: 'STEP_AGO',
+  __locomotionStateStartStep: 'STEP_AGO',
   charRotation: 'RAD_DEG',
   _maxWalkableAngle: 'RAD_DEG',
 };
@@ -273,7 +273,7 @@ const formatRadians = (value: number) =>
   `${value.toFixed(3)} rad (${(value * RAD_TO_DEG).toFixed(1)}°)`;
 
 const NUMBER_FORMAT_CELL_CLASSES: Record<NumberFormat, string> = {
-  MS_AGO: styles.numAgo,
+  STEP_AGO: styles.numAgo,
   RAD_DEG: styles.numRad,
 };
 
@@ -739,7 +739,7 @@ const getConfigEditor = (
   inst: StateWindowInstance
 ): ConfigEditor | null => {
   if (getGroupId(key) !== 'props') return null;
-  if (kind !== 'BOOL' && (kind !== 'NUMBER' || format === 'MS_AGO')) return null;
+  if (kind !== 'BOOL' && (kind !== 'NUMBER' || format === 'STEP_AGO')) return null;
   const isLocked = character.controller?.config?.bakedKeys.has(key) ?? false;
   const initial = character.initialConfig[key];
   const hasInitial = typeof initial === (kind === 'BOOL' ? 'boolean' : 'number');
@@ -864,16 +864,17 @@ const flashRow = (row: Row) => {
   row.flashAnim.play();
 };
 
-/** A timestamp row: the age changes with the clock, so it is checked on every update (shown in
- * whole ms, written only when that changes). 0 = unset. */
-const updateMsAgoRow = (row: Row, value: number, force: boolean, flash: boolean) => {
+/** A step stamp row: its age grows with the steps, so it is checked on every update (shown in
+ * steps and whole ms of step time, written only when that changes). -1 = unset. */
+const updateStepAgoRow = (row: Row, value: number, force: boolean, flash: boolean) => {
   const last = row.last;
   if (flash && hasChanged(last[0], value)) flashRow(row);
   last[0] = value;
-  const shown = value ? Math.max(0, Math.round(getPhysGameTime() - value)) : -1;
-  if (!force && shown === last[1]) return;
-  last[1] = shown;
-  row.texts[0].nodeValue = shown < 0 ? '—' : `${shown} ms ago`;
+  const steps = value < 0 ? -1 : Math.max(0, getPhysicsSnapshotStepIndex() - 1 - value);
+  if (!force && steps === last[1]) return;
+  last[1] = steps;
+  const ms = Math.round(steps * getPhysicsState().timestepRatio * 1000);
+  row.texts[0].nodeValue = steps < 0 ? '—' : `${steps} steps (${ms} ms) ago`;
 };
 
 /** Writes the row's value if it changed since the last write (`force`: always, never flashes).
@@ -896,8 +897,8 @@ const updateRow = (row: Row, value: unknown, force: boolean, flashOn: boolean) =
     }
     case 'NUMBER': {
       const next = value as number;
-      if (row.format === 'MS_AGO') {
-        updateMsAgoRow(row, next, force, flash);
+      if (row.format === 'STEP_AGO') {
+        updateStepAgoRow(row, next, force, flash);
       } else if (force || hasChanged(last[0], next)) {
         const input = row.editor?.input;
         // Never overwritten while being typed in (`last` stays, so it is written after the blur)

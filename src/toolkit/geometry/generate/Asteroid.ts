@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import { SimplexNoise } from 'three/examples/jsm/math/SimplexNoise.js';
 import { ConvexHull } from 'three/examples/jsm/math/ConvexHull.js';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { createSeededRandom } from '../SeededRandom';
+import { createSeededRandom } from 'aekasha';
 
 export interface AsteroidNoiseOptions {
   /** Lumps per unit of the undisplaced sphere's radius (the noise runs on the unit direction). */

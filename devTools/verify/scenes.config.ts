@@ -98,6 +98,11 @@ export const GLOBAL_ALLOWED_ERRORS: AllowedError[] = [];
 export type SceneVerifyConfig = {
   /** Fixed steps before the probe freezes physics (default {@link DEFAULT_PROBE_STEPS}) */
   probeSteps?: number;
+  /** Key events played right before given steps (`devTools/verify/inputs/<name>.json`, the test
+   * bridge's `TestBridgeInputScript`), so the characters' path hash covers a recorded run (p610
+   * D6). The path hash is compared in every scene with characters, on `MAIN_THREAD` only (the worker
+   * targets' characters aren't deterministic, p428); `unstableHash` applies to it */
+  inputScript?: string;
   /** Not loaded at all, or not in these configurations / browsers */
   skip?: { reason: string; configs?: VerifyConfigName[]; browsers?: VerifyBrowser[] };
   allowedErrors?: AllowedError[];
@@ -125,9 +130,13 @@ export const SCENE_VERIFY_CONFIG: Record<string, SceneVerifyConfig> = {
     },
   },
   thirdPersonGymScene: {
+    // 10 s of the input script: the two players walk, turn, run, crouch and jump, the dummy loops
+    probeSteps: 600,
+    inputScript: 'thirdPersonGymScene',
     unstableHash: {
       reason:
-        "its characters aren't deterministic yet (wall clock, Math.random, async shape casts in the worker: CLAUDE.md, Physics) and push the hashed bodies around",
+        "in the worker targets its characters aren't deterministic (they tick on the main thread against the latched snapshot and async casts: p428) and push the hashed bodies around",
+      configs: ['workerSab', 'workerMsg'],
     },
   },
   textureArrays: {

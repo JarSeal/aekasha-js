@@ -13,6 +13,7 @@ import {
   getCameraByAppId,
   existsOrThrow,
   lwarn,
+  createSeededRandom,
 } from 'aekasha';
 import { createDynamicCharacter } from 'aekasha/character';
 import {
@@ -21,7 +22,7 @@ import {
   deleteFollowObjectCameraRig,
 } from 'aekasha/toolkit/ecs';
 import { createPhysicsEntity } from 'aekasha/physics';
-import { generateTerrain, createSeededRandom } from 'aekasha/toolkit/geometry';
+import { generateTerrain } from 'aekasha/toolkit/geometry';
 import { createCharacterVisual } from '../thirdPersonGymScene/characterVisual';
 
 /**

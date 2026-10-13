@@ -20,7 +20,7 @@ import {
   type LineWriter,
 } from '../../lines/Lines';
 import type { ColliderParams } from '../../physics/PhysicsAPITypes';
-import { getPhysGameTime } from '../../physics/PhysicsAPI';
+import { getPhysicsSnapshotStepIndex, getPhysicsState } from '../../physics/PhysicsAPI';
 import { registerOnAllSceneEnterings } from '../../../kernel/scene/Scene';
 import { markDebugHelper } from '../../../debug/Profiler';
 
@@ -593,9 +593,13 @@ const GIZMO_IMPLS: Partial<Record<CharacterGizmoId, GizmoImpl>> = {
       const probes = frame.probes;
       const cast = probes?.wallCast;
       // Fired only near a wall while moving: an old cast is gone
-      const isShown = Boolean(
-        cast?.resolvedAt && getPhysGameTime() - cast.resolvedAt <= WALL_CAST_HOLD_MS
-      );
+      const isShown =
+        !!cast &&
+        cast.resolvedAtStep >= 0 &&
+        (getPhysicsSnapshotStepIndex() - cast.resolvedAtStep) *
+          getPhysicsState().timestepRatio *
+          1000 <=
+          WALL_CAST_HOLD_MS;
       const maxY = (frame.character.data as GizmoData)._wallNormalMaxY;
       const isRejected = typeof maxY === 'number' && Math.abs(cast?.normal.y ?? 0) > maxY;
       for (let i = 0; i < 4; i++) {

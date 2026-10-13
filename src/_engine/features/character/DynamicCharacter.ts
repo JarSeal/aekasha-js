@@ -32,25 +32,35 @@ import {
 } from './CharacterInputSchemes';
 import { getECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
-import { getPhysGameTime, getPhysicsWorld } from '../physics/PhysicsAPI';
+import {
+  getPhysicsSnapshotStepIndex,
+  getPhysicsState,
+  getPhysicsSubStepIndex,
+  getPhysicsWorld,
+} from '../physics/PhysicsAPI';
 import {
   QueryFilterFlags,
   RigidBodyTypeAPI,
   type ColliderAPI,
   type ColliderParams,
   type PhysVector,
+  type RayColliderIntersectionAPI,
   type RigidBodyAPI,
   type RigidBodyParams,
+  type ShapeCastHitAPI,
 } from '../physics/PhysicsAPITypes';
 import type { RayDebugOpts } from '../../kernel/render/RayDebugTypes';
 import { LEVEL_GROUND_NORMAL } from '../../kernel/render/ThreeMath';
 import { existsOrThrow } from '../../utils/Assert';
+import { getRandomStream } from '../../utils/RandomStreams';
 
 /**
  * A dynamic character's live data. Prop name prefixes: none = state (written by the controller),
  * one underscore (`_`) = configuration, two underscores (`__`) = internal memory (not configurable).
  * The nested objects are mutated in place every tick: re-read `data.velocity` etc., never keep a
- * reference to one across ticks expecting a snapshot. Times are physics game time in milliseconds.
+ * reference to one across ticks expecting a snapshot. Durations (`_…` keys) are in milliseconds
+ * and measured in fixed physics steps; stamps (`__…Step`) are step indices
+ * (getPhysicsSubStepIndex), -1 when not set.
  */
 export type CharacterData = {
   /** What the body is doing (see {@link LocomotionState}), derived at the end of every tick. */
@@ -175,19 +185,19 @@ export type CharacterData = {
   /** How long (ms) the character must be off the ground, without a jump, before its locomotion
    * state is `FALL` (shorter gaps, like a stair step, keep the grounded state). */
   _fallStateDelay: number;
-  /** When `locomotionState` last changed. */
-  __locomotionStateStartTime: number;
+  /** The step `locomotionState` last changed in. */
+  __locomotionStateStartStep: number;
   /** In a jump (locomotionState `JUMP`): from the jump until the character stops rising in the
    * air or lands. */
   __isJumping: boolean;
   /** Whether the current jump has left the ground yet. */
   __jumpLeftGround: boolean;
-  /** When the character left the ground (0 while grounded). */
-  __isFallingStartTime: number;
-  /** When tumbling started (0 while not tumbling). */
-  __isTumblingStartTime: number;
-  /** When the last jump was applied. */
-  __jumpTime: number;
+  /** The step the character left the ground in (-1 while grounded). */
+  __isFallingStartStep: number;
+  /** The step tumbling started in (-1 while not tumbling). */
+  __isTumblingStartStep: number;
+  /** The step the last jump was applied in (-1 before the first). */
+  __jumpStep: number;
   /** `isGrounded` as of the floor sensor's last collision event (the landing logic reads it). */
   __lastIsGroundedState: boolean;
   /** cos(`_maxWalkableAngle`), computed at creation. */
@@ -198,12 +208,17 @@ export type CharacterData = {
   __touchingGroundColliders: number[];
   /** The angular damping restored when tumbling ends (the body's default, 0). */
   __charAngDamping: number;
-  /** When getting up started (0 while not getting up). */
-  __isGettingUpStartTime: number;
+  /** The step getting up started in (-1 while not getting up). */
+  __isGettingUpStartStep: number;
   /** The moving platform's velocity the tick added to the body on the last sub-step. */
   __lastAppliedPlatformVelocity: { x: number; y: number; z: number };
   /** The velocity of the moving platform's floor under the character this sub-step. */
   __currentPlatformVelocity: { x: number; y: number; z: number };
+  /** A sensor saw a hit hard enough to tumble: the next tick starts tumbling (only the tick
+   * writes the body). */
+  __pendingTumble: boolean;
+  /** The floor sensor saw a landing with move input: the next tick drops the vertical speed. */
+  __pendingLanding: boolean;
 };
 
 /** {@link createDynamicCharacter}'s options. */
@@ -311,20 +326,22 @@ const DEFAULT_CHARACTER_DATA: CharacterData = {
   _wallCastDistance: 0.2,
   _slopeSlideSpeed: 15,
   _fallStateDelay: 100,
-  __locomotionStateStartTime: 0,
+  __locomotionStateStartStep: -1,
   __isJumping: false,
   __jumpLeftGround: false,
-  __isFallingStartTime: 0,
-  __isTumblingStartTime: 0,
-  __jumpTime: 0,
+  __isFallingStartStep: -1,
+  __isTumblingStartStep: -1,
+  __jumpStep: -1,
   __lastIsGroundedState: false,
   __maxWalkableAngleCos: 0,
   __touchingWallColliders: [],
   __touchingGroundColliders: [],
   __charAngDamping: 0,
-  __isGettingUpStartTime: 0,
+  __isGettingUpStartStep: -1,
   __lastAppliedPlatformVelocity: { x: 0, y: 0, z: 0 },
   __currentPlatformVelocity: { x: 0, y: 0, z: 0 },
+  __pendingTumble: false,
+  __pendingLanding: false,
 };
 const getDefaultCharacterData = (): CharacterData => {
   // We need to copy all object and arrays
@@ -383,7 +400,8 @@ const SLIDE_STATE_SPEED_MARGIN = 0.1;
 /** The locomotion state from the controller's data (see {@link LocomotionState}). */
 const deriveLocomotionState = (
   d: CharacterData,
-  now: number,
+  step: number,
+  stepMs: number,
   isControlled: boolean
 ): LocomotionState => {
   // Physics alone moves the body (eg. a ragdoll): it's tumbling as far as animation goes
@@ -392,7 +410,7 @@ const deriveLocomotionState = (
   if (d.isTumbling) return 'TUMBLE';
   if (d.__isJumping) return 'JUMP';
   // A short time off the ground (a stair step, a bump) keeps the grounded state
-  if (!d.isGrounded && now - d.__isFallingStartTime >= d._fallStateDelay) return 'FALL';
+  if (!d.isGrounded && (step - d.__isFallingStartStep) * stepMs >= d._fallStateDelay) return 'FALL';
   // Only a slide the character can't make by itself: on too steep ground, or faster than it moves
   // (isSliding alone is also true while it slows down after a move)
   if (
@@ -433,6 +451,10 @@ const _castDir = { x: 0, y: 0, z: 0 };
 const _castRot = { w: 1, x: 0, y: 0, z: 0 }; // Identity quaternion
 const _rayDown = { x: 0, y: -1, z: 0 };
 const _floorRay = { origin: _castPos, dir: _rayDown };
+const _wallCastShape = { type: 'CYLINDER' as const, halfHeight: 0, radius: 0 };
+
+/** Whether the simulation runs in the physics worker (async casts, no sync body reads). */
+const isWorkerTarget = () => getPhysicsState().workerTarget === 'WORKER_THREAD';
 
 const setVec = (x: number, y: number, z: number) => {
   _vec.x = x;
@@ -448,6 +470,7 @@ const copyVec = (to: PhysVector, from: PhysVector) => {
 };
 
 const createCastRecord = (): CharacterCastRecord => ({
+  resolvedAtStep: -1,
   resolvedAt: 0,
   isCrouching: false,
   origin: { x: 0, y: 0, z: 0 },
@@ -473,14 +496,18 @@ const recordCastShot = (
   shot.isCrouching = isCrouching;
 };
 
-/** Publishes a cast's result into its record, with the cast it belongs to (`shot`). A hit's
- * point and normal are the caller's to write, right after (`distance` < 0 = a miss). */
+/** Publishes a cast's result into its record, with the cast it belongs to (`shot`), resolved at
+ * `step`. A hit's point and normal are the caller's to write, right after (`distance` < 0 = a
+ * miss). */
 const resolveCastRecord = (
   record: CharacterCastRecord,
   shot: CharacterCastRecord,
-  distance: number
+  distance: number,
+  step: number
 ) => {
-  record.resolvedAt = getPhysGameTime();
+  record.resolvedAtStep = step;
+  // Deprecated: step time in ms, from 1 so that 0 still means "no result"
+  record.resolvedAt = (step + 1) * getPhysicsState().timestepRatio * 1000;
   copyVec(record.origin, shot.origin);
   copyVec(record.dir, shot.dir);
   record.maxDistance = shot.maxDistance;
@@ -533,7 +560,6 @@ export const createDynamicCharacter = async (
   const moveVector3 = new THREE.Vector3();
   const flatNormalVector3 = new THREE.Vector3();
   const jumpAmountVector3 = new THREE.Vector3();
-  const justLandedVector3 = new THREE.Vector3();
 
   // Forward-declared: closures below (controlFns, collider collisionEventFn) close over
   // these and are only ever invoked after createCharacter() resolves and assigns them once.
@@ -551,12 +577,13 @@ export const createDynamicCharacter = async (
   const intent = createIntent();
   const input = inputOpts ? createCharacterInput(id, intent, inputOpts) : undefined;
 
-  // WorldAPI.castShapeSync()/castRayAndGetNormalSync() throw in WORKER_THREAD mode (spatial
-  // queries need the live physics world, which lives off-thread there — unlike pos/rot/lvel/
-  // avel there's no hot-path buffer that could make this synchronous). The tick needs a same-
-  // sub-step value for wall-slide/slope math, so each async cast is fired again once the previous
-  // one resolved, and the latest resolved result is used meanwhile — a frame of latency at most,
-  // imperceptible for both effects. At most one wall cast and one floor ray are in flight.
+  // On MAIN_THREAD the casts are synchronous, so the tick uses the result of its own step: the
+  // same on every run, whatever the frame timing. WorldAPI.castShapeSync()/castRayAndGetNormalSync()
+  // throw in WORKER_THREAD mode (spatial queries need the live physics world, which lives
+  // off-thread there), so there each async cast is fired again once the previous one resolved, and
+  // the latest resolved result is used meanwhile: a frame or so late, depending on the frame
+  // timing, so the worker targets aren't deterministic (p428). At most one wall cast and one floor
+  // ray are in flight.
   const wallHit = { isValid: false, normal: new THREE.Vector3(), distance: 0 };
   let wallHitCastInFlight = false;
   let floorRayCastInFlight = false;
@@ -601,17 +628,37 @@ export const createDynamicCharacter = async (
       characterData._wallCastDistance,
       characterData.isCrouching
     );
+    _wallCastShape.halfHeight = probes.wallCastHalfHeight;
+    _wallCastShape.radius = probes.wallCastRadius;
+    const world = getPhysicsWorld();
+    if (!isWorkerTarget()) {
+      applyWallHit(
+        world.castShapeSync(
+          _castPos,
+          _castRot,
+          _castDir,
+          _wallCastShape,
+          0.0,
+          characterData._wallCastDistance,
+          true, // Stop at Penetration
+          QueryFilterFlags.EXCLUDE_SENSORS,
+          undefined,
+          undefined,
+          characterBody, // Exclude Self
+          undefined,
+          wallCastDebug
+        ),
+        getPhysicsSubStepIndex()
+      );
+      return;
+    }
     wallHitCastInFlight = true;
-    getPhysicsWorld()
+    world
       .castShape(
         _castPos,
         _castRot,
         _castDir,
-        {
-          type: 'CYLINDER',
-          halfHeight: probes.wallCastHalfHeight,
-          radius: probes.wallCastRadius,
-        },
+        _wallCastShape,
         0.0,
         characterData._wallCastDistance,
         true, // Stop at Penetration
@@ -624,23 +671,28 @@ export const createDynamicCharacter = async (
       )
       .then((hit) => {
         wallHitCastInFlight = false;
-        resolveCastRecord(wallCastRecord, wallCastShot, hit ? hit.timeOfImpact : -1);
-        if (hit) {
-          // Both on the hit collider, in world space
-          copyVec(wallCastRecord.point, hit.witness1);
-          copyVec(wallCastRecord.normal, hit.normal1);
-        }
-        if (!hit || Math.abs(hit.normal1.y) > characterData._wallNormalMaxY) {
-          wallHit.isValid = false;
-          return;
-        }
-        wallHit.isValid = true;
-        wallHit.normal.set(hit.normal1.x, hit.normal1.y, hit.normal1.z);
-        wallHit.distance = hit.timeOfImpact;
+        applyWallHit(hit, getPhysicsSnapshotStepIndex());
       })
       .catch(() => {
         wallHitCastInFlight = false;
       });
+  };
+
+  /** A wall cast's result, resolved at `step`: its record and wallHit. */
+  const applyWallHit = (hit: ShapeCastHitAPI | null, step: number) => {
+    resolveCastRecord(wallCastRecord, wallCastShot, hit ? hit.timeOfImpact : -1, step);
+    if (hit) {
+      // Both on the hit collider, in world space
+      copyVec(wallCastRecord.point, hit.witness1);
+      copyVec(wallCastRecord.normal, hit.normal1);
+    }
+    if (!hit || Math.abs(hit.normal1.y) > characterData._wallNormalMaxY) {
+      wallHit.isValid = false;
+      return;
+    }
+    wallHit.isValid = true;
+    wallHit.normal.set(hit.normal1.x, hit.normal1.y, hit.normal1.z);
+    wallHit.distance = hit.timeOfImpact;
   };
 
   /** Fires an async floor ray-cast (fire-and-forget) if one isn't already in flight, updating
@@ -658,8 +710,26 @@ export const createDynamicCharacter = async (
       probes.floorRayLength,
       characterData.isCrouching
     );
+    const world = getPhysicsWorld();
+    if (!isWorkerTarget()) {
+      applyFloorHit(
+        world.castRayAndGetNormalSync(
+          _floorRay,
+          probes.floorRayLength,
+          false,
+          QueryFilterFlags.EXCLUDE_SENSORS,
+          undefined,
+          undefined,
+          characterBody,
+          undefined,
+          floorRayDebug
+        ),
+        getPhysicsSubStepIndex()
+      );
+      return;
+    }
     floorRayCastInFlight = true;
-    getPhysicsWorld()
+    world
       .castRayAndGetNormal(
         _floorRay,
         probes.floorRayLength,
@@ -673,32 +743,38 @@ export const createDynamicCharacter = async (
       )
       .then((hit) => {
         floorRayCastInFlight = false;
-        resolveCastRecord(floorRayRecord, floorRayShot, hit ? hit.timeOfImpact : -1);
-        if (hit) {
-          const { origin, dir, point } = floorRayRecord;
-          point.x = origin.x + dir.x * hit.timeOfImpact;
-          point.y = origin.y + dir.y * hit.timeOfImpact;
-          point.z = origin.z + dir.z * hit.timeOfImpact;
-          copyVec(floorRayRecord.normal, hit.normal);
-        }
-        const groundNormal = characterData.groundNormal;
-        if (hit) {
-          groundNormal.x = hit.normal.x;
-          groundNormal.y = hit.normal.y;
-          groundNormal.z = hit.normal.z;
-        } else {
-          groundNormal.x = 0;
-          groundNormal.y = 1;
-          groundNormal.z = 0;
-        }
-        const groundDot = vectors.groundDot
-          .set(groundNormal.x, groundNormal.y, groundNormal.z)
-          .dot(LEVEL_GROUND_NORMAL);
-        characterData.groundIsWalkable = !hit || groundDot > characterData.__maxWalkableAngleCos;
+        applyFloorHit(hit, getPhysicsSnapshotStepIndex());
       })
       .catch(() => {
         floorRayCastInFlight = false;
       });
+  };
+
+  /** A floor ray's result, resolved at `step`: its record, the ground normal and whether the
+   * ground is walkable. */
+  const applyFloorHit = (hit: RayColliderIntersectionAPI | null, step: number) => {
+    resolveCastRecord(floorRayRecord, floorRayShot, hit ? hit.timeOfImpact : -1, step);
+    if (hit) {
+      const { origin, dir, point } = floorRayRecord;
+      point.x = origin.x + dir.x * hit.timeOfImpact;
+      point.y = origin.y + dir.y * hit.timeOfImpact;
+      point.z = origin.z + dir.z * hit.timeOfImpact;
+      copyVec(floorRayRecord.normal, hit.normal);
+    }
+    const groundNormal = characterData.groundNormal;
+    if (hit) {
+      groundNormal.x = hit.normal.x;
+      groundNormal.y = hit.normal.y;
+      groundNormal.z = hit.normal.z;
+    } else {
+      groundNormal.x = 0;
+      groundNormal.y = 1;
+      groundNormal.z = 0;
+    }
+    const groundDot = vectors.groundDot
+      .set(groundNormal.x, groundNormal.y, groundNormal.z)
+      .dot(LEVEL_GROUND_NORMAL);
+    characterData.groundIsWalkable = !hit || groundDot > characterData.__maxWalkableAngleCos;
   };
 
   const yawQuat = new THREE.Quaternion();
@@ -890,7 +966,8 @@ export const createDynamicCharacter = async (
   };
 
   /** The wall sensor's collisions: counts the touching non-dynamic bodies (isNearWall), and a
-   * fast enough hit starts tumbling. */
+   * fast enough hit starts tumbling on the next tick. Runs at the sub-step's start (the events'
+   * flush), so it records and never writes the body. */
   const onWallSensorCollision = (
     collider1: ColliderAPI,
     collider2: ColliderAPI,
@@ -902,21 +979,19 @@ export const createDynamicCharacter = async (
     const otherCollider = isColl1Mine ? collider2 : collider1;
 
     if (started) {
-      void getPhysicsWorld()
-        .getRigidBodySync(otherCollider.parentId ?? -1)
-        ?.bodyType()
-        .then((bodyType) => {
-          if (bodyType !== RigidBodyTypeAPI.Dynamic) {
-            characterData.__touchingWallColliders.push(otherCollider.id);
-            characterData.isNearWall = true;
-          }
-          if (
-            appliedControlMode === 'CONTROLLED' &&
-            characterData.relVelocity.length > characterData._tumblingWallSpeedThreshold
-          ) {
-            startCharacterTumbling(characterData, characterBody);
-          }
-        });
+      const otherBody = getPhysicsWorld().getRigidBodySync(otherCollider.parentId ?? -1);
+      if (!otherBody) return;
+      // Synchronous on every target (the worker's proxy keeps its body's type)
+      if (otherBody.bodyTypeSync() !== RigidBodyTypeAPI.Dynamic) {
+        characterData.__touchingWallColliders.push(otherCollider.id);
+        characterData.isNearWall = true;
+      }
+      if (
+        appliedControlMode === 'CONTROLLED' &&
+        characterData.relVelocity.length > characterData._tumblingWallSpeedThreshold
+      ) {
+        characterData.__pendingTumble = true;
+      }
       return;
     }
     const indexToRemove = characterData.__touchingWallColliders.indexOf(otherCollider.id);
@@ -927,7 +1002,8 @@ export const createDynamicCharacter = async (
   };
 
   /** The floor sensor's collisions: grounded, stairs and moving platform state, landing, and
-   * tumbling on a hard landing. */
+   * tumbling on a hard landing. Runs at the sub-step's start (the events' flush): the landing and
+   * the tumbling are recorded for the tick, which applies them first. */
   const onFloorSensorCollision = (
     collider1: ColliderAPI,
     collider2: ColliderAPI,
@@ -959,7 +1035,7 @@ export const createDynamicCharacter = async (
         characterData.relVelocity.length > characterData._tumblingGroundSpeedThreshold &&
         !characterData.__lastIsGroundedState
       ) {
-        startCharacterTumbling(characterData, characterBody);
+        characterData.__pendingTumble = true;
         return;
       }
 
@@ -969,13 +1045,9 @@ export const createDynamicCharacter = async (
         isControlled &&
         !characterData.isFalling &&
         !characterData.__lastIsGroundedState &&
-        (characterData.hasMoveInput || hasMoveIntent(intent)) &&
-        characterBody
+        (characterData.hasMoveInput || hasMoveIntent(intent))
       ) {
-        const linvel = characterBody.lvel;
-        if (characterData._keepMovingAfterJumpThreshold < linvel.y) {
-          characterBody.setLinvel(justLandedVector3.set(linvel.x, 0, linvel.z), true);
-        }
+        characterData.__pendingLanding = true;
       }
       characterData.__lastIsGroundedState = characterData.isGrounded;
 
@@ -1104,11 +1176,29 @@ export const createDynamicCharacter = async (
     tick: (dt: number) => {
       const body = characterBody;
       if (!body) return;
-      const now = getPhysGameTime();
+      // The step clock: durations are counted in fixed steps, never on the wall clock
+      const step = getPhysicsSubStepIndex();
+      const stepMs = dt * 1000;
+
+      // What the sensors recorded at this sub-step's start (the events' flush), applied before the
+      // body is read, where the callbacks used to write it themselves
+      if (characterData.__pendingTumble) {
+        characterData.__pendingTumble = false;
+        startCharacterTumbling(characterData, body, step, character.id);
+      }
 
       // The body's state, read once (no allocation); every velocity write below updates _vels too
       body.readPoseInto(_pose);
       body.readVelocitiesInto(_vels);
+
+      // A landing with move input keeps the horizontal speed and drops the vertical
+      if (characterData.__pendingLanding) {
+        characterData.__pendingLanding = false;
+        if (characterData._keepMovingAfterJumpThreshold < _vels[1]) {
+          _vels[1] = 0;
+          body.setLinvel(setVec(_vels[0], 0, _vels[2]), true);
+        }
+      }
 
       // A control mode change (setControlMode) applies here, so only the tick touches the body
       if (character.controlMode !== appliedControlMode) {
@@ -1116,7 +1206,7 @@ export const createDynamicCharacter = async (
         if (appliedControlMode === 'PHYSICS_ONLY') {
           // Physics alone: free rotations and the body's own (default) angular damping
           characterData.isGettingUp = false;
-          characterData.__isGettingUpStartTime = 0;
+          characterData.__isGettingUpStartStep = -1;
           body.setAngularDamping(0);
           body.lockRotations(false, true);
           body.setEnabledRotations(true, true, true, true);
@@ -1124,7 +1214,7 @@ export const createDynamicCharacter = async (
           // Back from physics: get up first (the getting-up path locks the rotations at its end)
           characterData.isTumbling = true;
           characterData.isGettingUp = true;
-          characterData.__isGettingUpStartTime = now;
+          characterData.__isGettingUpStartStep = step;
         }
       }
       const isControlled = appliedControlMode === 'CONTROLLED';
@@ -1193,13 +1283,13 @@ export const createDynamicCharacter = async (
         isControlled &&
         characterData.isTumbling &&
         !characterData.isGettingUp &&
-        characterData.__isTumblingStartTime + characterData._tumblingMinTime < now &&
+        (step - characterData.__isTumblingStartStep) * stepMs > characterData._tumblingMinTime &&
         characterData.relVelocity.length < characterData._tumblingEndMinVelo &&
         characterData.angularVelocity.length < characterData._tumblingEndMinAngVelo
       ) {
         // End tumbling and start isGettingUp phase
         characterData.isGettingUp = true;
-        characterData.__isGettingUpStartTime = now;
+        characterData.__isGettingUpStartStep = step;
       } else if (isControlled && characterData.isTumbling) {
         // Clamp angular velocity when tumbling
         const maxAngVel = characterData._tumblingMaxAngVelo;
@@ -1217,7 +1307,8 @@ export const createDynamicCharacter = async (
       if (isControlled && characterData.isGettingUp) {
         body.setAngularDamping(characterData._gettingUpAngularDamping);
         const ratio = Math.min(
-          (now - characterData.__isGettingUpStartTime) / characterData._gettingUpDuration,
+          ((step - characterData.__isGettingUpStartStep) * stepMs) /
+            characterData._gettingUpDuration,
           1
         );
         const q = getUpQuat.set(_pose[3], _pose[4], _pose[5], _pose[6]);
@@ -1264,11 +1355,14 @@ export const createDynamicCharacter = async (
 
       // Set isFalling
       if (characterData.isGrounded) {
-        characterData.__isFallingStartTime = 0;
+        characterData.__isFallingStartStep = -1;
         characterData.isFalling = false;
-      } else if (!characterData.__isFallingStartTime) {
-        characterData.__isFallingStartTime = now;
-      } else if (characterData.__isFallingStartTime + characterData._isFallingThreshold < now) {
+      } else if (characterData.__isFallingStartStep < 0) {
+        characterData.__isFallingStartStep = step;
+      } else if (
+        (step - characterData.__isFallingStartStep) * stepMs >
+        characterData._isFallingThreshold
+      ) {
         characterData.isFalling = true;
       }
 
@@ -1442,7 +1536,8 @@ export const createDynamicCharacter = async (
         if (
           characterData.isTumbling ||
           (characterData.__jumpLeftGround && (characterData.isGrounded || relVelocity.y <= 0)) ||
-          (!characterData.__jumpLeftGround && now - characterData.__jumpTime > JUMP_LIFT_OFF_GRACE)
+          (!characterData.__jumpLeftGround &&
+            (step - characterData.__jumpStep) * stepMs > JUMP_LIFT_OFF_GRACE)
         ) {
           characterData.__isJumping = false;
         }
@@ -1456,20 +1551,21 @@ export const createDynamicCharacter = async (
         !characterData.isTumbling &&
         characterData.isGrounded &&
         !characterData.isCrouching &&
-        characterData.__jumpTime + characterData._jumpCooldown < now
+        (characterData.__jumpStep < 0 ||
+          (step - characterData.__jumpStep) * stepMs > characterData._jumpCooldown)
       ) {
         body.applyImpulse(jumpAmountVector3.set(0, characterData._jumpAmount, 0), true);
-        characterData.__jumpTime = now;
+        characterData.__jumpStep = step;
         characterData.__isJumping = true;
         characterData.__jumpLeftGround = false;
       }
 
       // Locomotion state, once per change
       const prevState = characterData.locomotionState;
-      const nextState = deriveLocomotionState(characterData, now, isControlled);
+      const nextState = deriveLocomotionState(characterData, step, stepMs, isControlled);
       if (nextState !== prevState) {
         characterData.locomotionState = nextState;
-        characterData.__locomotionStateStartTime = now;
+        characterData.__locomotionStateStartStep = step;
         emitLocomotionStateChange(character, nextState, prevState);
       }
     },
@@ -1481,25 +1577,30 @@ export const createDynamicCharacter = async (
 };
 
 const _tumbleStartImpulseVector3 = new THREE.Vector3();
-const startCharacterTumbling = (characterData: CharacterData, body?: RigidBodyAPI) => {
+/** Knocks the character over at `step`, with a small push in a direction drawn from its own
+ * random stream (`character:<id>`), so a scene tumbles the same way on every visit. */
+const startCharacterTumbling = (
+  characterData: CharacterData,
+  body: RigidBodyAPI,
+  step: number,
+  characterId: string
+) => {
   characterData.isGettingUp = false;
   characterData.isTumbling = true;
-  characterData.__isTumblingStartTime = getPhysGameTime();
+  characterData.__isTumblingStartStep = step;
   // angularDampingSync() throws in WORKER_THREAD mode (not backed by the hot-path buffer).
   // The body's angular damping is never touched by anything except this tumble/getting-up/
   // stop cycle, and the walk-capsule rigidBodyParams never set one at creation — so the value
   // to restore once tumbling ends is always the engine default (0), not something that needs
   // querying live.
   characterData.__charAngDamping = 0;
-  body?.setAngularDamping(characterData._tumblingAngularDamping);
-  body?.lockRotations(false, true);
-  body?.setEnabledRotations(true, true, true, true);
-  const rando1 = Math.random() > 0.5 ? 1 : -1;
-  const rando2 = Math.random() > 0.5 ? 1 : -1;
-  body?.applyImpulse(
-    _tumbleStartImpulseVector3.set(Math.random() * rando1, 0, Math.random() * rando2),
-    true
-  );
+  body.setAngularDamping(characterData._tumblingAngularDamping);
+  body.lockRotations(false, true);
+  body.setEnabledRotations(true, true, true, true);
+  const random = getRandomStream(`character:${characterId}`);
+  const rando1 = random() > 0.5 ? 1 : -1;
+  const rando2 = random() > 0.5 ? 1 : -1;
+  body.applyImpulse(_tumbleStartImpulseVector3.set(random() * rando1, 0, random() * rando2), true);
 };
 
 const tumbleStopRotationVector4 = new THREE.Vector4();
@@ -1528,7 +1629,7 @@ const stopCharacterTumbling = (characterData: CharacterData, body: RigidBodyAPI)
   body.setAngularDamping(characterData.__charAngDamping);
   characterData.__charAngDamping = 0;
   characterData.isTumbling = false;
-  characterData.__isTumblingStartTime = 0;
+  characterData.__isTumblingStartStep = -1;
   characterData.isGettingUp = false;
-  characterData.__isGettingUpStartTime = 0;
+  characterData.__isGettingUpStartStep = -1;
 };

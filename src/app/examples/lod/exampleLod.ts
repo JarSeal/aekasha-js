@@ -7,10 +7,10 @@ import {
   createMeshEntity,
   getRootScene,
   existsOrThrow,
+  createSeededRandom,
 } from 'aekasha';
 import { createInstancedLodPool } from 'aekasha/instancing';
 import { generateOctahedralImpostor, generateLodChain } from 'aekasha/lod';
-import { createSeededRandom } from 'aekasha/toolkit/geometry';
 
 const KNOT_ID = 'lodExampleKnot';
 /** Bakes at load. To load it instead: export it from the LOD tab's Impostors folder, move its four

@@ -220,6 +220,8 @@
       "registerTestBridge": "Function",
       "TEST_BRIDGE_QUERY_PARAM": "Variable",
       "TEST_BRIDGE_VERSION": "Variable",
+      "TestBridgeCharacterPaths": "TypeAlias",
+      "TestBridgeInputScript": "TypeAlias",
       "TestBridgeProbeResult": "TypeAlias",
       "TestBridgeSceneReady": "TypeAlias",
       "TestBridgeSnapshot": "TypeAlias",
@@ -2074,6 +2076,7 @@
       "setFrameProbe": "Function",
       "setIsLoadingScene": "Function",
       "setPlaySpeedMultiplier": "Function",
+      "setPreStepHook": "Function",
       "setSceneSuspended": "Function",
       "toggleAppPlay": "Function",
       "toggleMainPlay": "Function",
@@ -2671,6 +2674,15 @@
       "RequestTimeoutError": "Class",
       "resolveRequest": "Function"
     },
+    "src/_engine/utils/RandomStreams.ts": {
+      "getRandomSeed": "Function",
+      "getRandomStream": "Function",
+      "resetRandomStreams": "Function",
+      "setRandomSeed": "Function"
+    },
+    "src/_engine/utils/SeededRandom.ts": {
+      "createSeededRandom": "Function"
+    },
     "src/_engine/utils/StatsClock.ts": {
       "readStatsClock": "Function"
     },
@@ -2745,9 +2757,6 @@
       "ScatterPlacement": "Interface",
       "spawnScatterAsMeshEntities": "Function",
       "SpawnScatterMeshOptions": "Interface"
-    },
-    "src/toolkit/geometry/SeededRandom.ts": {
-      "createSeededRandom": "Function"
     },
     "src/toolkit/materials/asteroid/asteroid.tsl.ts": {
       "colorNode": "Function"
@@ -2865,6 +2874,7 @@
       "createSceneAppLooper",
       "createSceneLoader",
       "createSceneMainLooper",
+      "createSeededRandom",
       "createTouchBinding",
       "decMaterialRef",
       "deepMerge",
@@ -2908,6 +2918,8 @@
       "getMeshByAppId",
       "getPosition",
       "getQuatFromAngle",
+      "getRandomSeed",
+      "getRandomStream",
       "getRenderer",
       "getRootScene",
       "getRotation",
@@ -2956,6 +2968,7 @@
       "setMeshLod",
       "setMeshMaterial",
       "setMouseBindingEnabled",
+      "setRandomSeed",
       "setTextureArrayLayer",
       "setTouchBindingEnabled",
       "setTransform",

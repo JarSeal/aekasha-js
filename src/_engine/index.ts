@@ -215,3 +215,5 @@ export { initECSStressTest } from './kernel/ecs/debug/ECSStressTest';
 export { getQuatFromAngle, smoothDampVec3 } from './kernel/render/ThreeMath';
 export { toUniqueJsIdentifier } from './utils/JsIdentifier';
 export { getLogger, lerror, llog, lwarn } from './utils/Logger';
+export { getRandomSeed, getRandomStream, setRandomSeed } from './utils/RandomStreams';
+export { createSeededRandom } from './utils/SeededRandom';

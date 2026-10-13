@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { SimplexNoise } from 'three/examples/jsm/math/SimplexNoise.js';
-import { createSeededRandom } from '../SeededRandom';
+import { createSeededRandom } from 'aekasha';
 
 export interface TerrainNoiseOctave {
   /** Noise cycles per world unit — larger frequency values = smaller/more frequent bumps. */

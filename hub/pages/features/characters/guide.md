@@ -66,10 +66,12 @@ over reloads per scene. Its gizmos draw what the controller decides from (veloci
 ground normal, the floor ray, the wall cast, a trail), and can be pinned to stay after the window
 closes.
 
-::: warning Not deterministic yet
-Characters use the wall clock and random numbers, and in `WORKER_THREAD` mode asynchronous shape
-casts, so a scene with characters doesn't simulate the same way on every visit (see
-[Physics](hub:features/physics#deterministic-scene-loads)).
+::: warning Deterministic on MAIN_THREAD only
+Characters count fixed physics steps, draw their random numbers from a seeded stream and cast
+their probes synchronously, so on `MAIN_THREAD` a scene with characters simulates the same way on
+every visit (see [Physics](hub:features/physics#deterministic-scene-loads)). In `WORKER_THREAD`
+mode they still tick on the main thread against the worker's last snapshot and asynchronous
+casts, so they don't yet.
 :::
 
 The app's `thirdPersonGymScene` (an obstacle course with moving platforms, a player and a

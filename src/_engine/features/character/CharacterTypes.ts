@@ -75,7 +75,13 @@ export type CharacterDimensions = {
  * keep a nested object), and updated as a whole when a result arrives, so its fields always
  * belong to one cast. In WORKER_THREAD mode a result arrives a physics step or so late. */
 export type CharacterCastRecord = {
-  /** `getPhysGameTime()` when the result arrived, 0 = no result yet. */
+  /** The physics step the result belongs to (getPhysicsSubStepIndex; in WORKER_THREAD mode the
+   * snapshot step when it arrived), -1 = no result yet. */
+  resolvedAtStep: number;
+  /**
+   * When the result arrived, in step time (ms), 0 = no result yet.
+   * @deprecated Use `resolvedAtStep` (removed in engine 6.0.0).
+   */
   resolvedAt: number;
   /** The stance the cast was sized for. */
   isCrouching: boolean;
