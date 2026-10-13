@@ -67,11 +67,11 @@ const AXIS_INDEX: { [name in GamepadAxisName]: number } = {
 type PadState = {
   info: GamepadInfo;
   /** Each button's value (0-1). */
-  values: Float32Array;
+  values: Float64Array;
   /** Each button's `pressed` flag (the browser's threshold on the analog ones). */
   pressed: Uint8Array;
   /** The four stick axes, Y flipped to up positive. */
-  axes: Float32Array;
+  axes: Float64Array;
   /** `Gamepad.timestamp` at the last poll: unchanged means nothing on the pad changed. */
   timestamp: number;
 };
@@ -152,9 +152,9 @@ const createPadState = (gp: Gamepad): PadState => {
   }
   return {
     info: toInfo(gp),
-    values: new Float32Array(BUTTON_COUNT),
+    values: new Float64Array(BUTTON_COUNT),
     pressed: new Uint8Array(BUTTON_COUNT),
-    axes: new Float32Array(AXIS_COUNT),
+    axes: new Float64Array(AXIS_COUNT),
     timestamp: -1,
   };
 };
