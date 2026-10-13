@@ -67,6 +67,9 @@ export const setKeyInputsEnabled = (enabled: boolean): void => {
 
 let keydownListener: ((e: KeyboardEvent) => void) | null = null;
 let keyupListener: ((e: KeyboardEvent) => void) | null = null;
+/** The action layer's source (Actions.ts): every key event after the held keys are updated, and
+ * null when they are cleared. */
+let keyActionListener: ((e: KeyboardEvent | null) => void) | null = null;
 
 const getChordArray = (chord: KeyChord | KeyChord[]): KeyChord[] =>
   Array.isArray(chord) ? chord : [chord];
@@ -183,6 +186,7 @@ const updateHeldModifiers = (e: KeyboardEvent) => {
 const clearHeldKeys = () => {
   heldRawKeys.clear();
   heldModifiers = {};
+  keyActionListener?.(null);
 };
 
 /** Whether a binding is active and its chord matches the event. */
@@ -231,6 +235,7 @@ const initKeyListeners = () => {
   keydownListener = (e: KeyboardEvent) => {
     if (!e.repeat) heldRawKeys.add(e.key);
     updateHeldModifiers(e);
+    keyActionListener?.(e);
     dispatchKeyEvent(e, 'KEY_DOWN');
   };
 
@@ -241,6 +246,7 @@ const initKeyListeners = () => {
     heldRawKeys.delete(e.key.toLowerCase());
     heldRawKeys.delete(e.key.toUpperCase());
     updateHeldModifiers(e);
+    keyActionListener?.(e);
     dispatchKeyEvent(e, 'KEY_UP');
   };
 
@@ -312,6 +318,38 @@ export const pollHeldKeyBindings = (delta: number): void => {
     if (matched) binding.fn(delta);
   }
 };
+
+/**
+ * Sets (null removes) the action layer's keyboard source, called on every key event after the
+ * held keys are updated, before the bindings, and with null when the held keys are cleared (blur,
+ * a hidden page). Adds the window listeners.
+ * @internal
+ */
+export const setKeyActionListener = (fn: ((e: KeyboardEvent | null) => void) | null): void => {
+  keyActionListener = fn;
+  if (fn) initKeyListeners();
+};
+
+/**
+ * Whether a chord is held now, by the bindings' rules (the action layer's keyboard reads).
+ * @internal
+ */
+export const isKeyChordHeld = (
+  chord: KeyChord,
+  caseInsensitive: boolean,
+  ignoreModifiers: boolean
+): boolean => chordIsHeld(chord, caseInsensitive, ignoreModifiers);
+
+/**
+ * Whether a key event matches a chord, by the bindings' rules.
+ * @internal
+ */
+export const doesKeyEventMatchChord = (
+  e: KeyboardEvent,
+  chord: KeyChord,
+  caseInsensitive: boolean,
+  ignoreModifiers: boolean
+): boolean => eventMatchesChord(e, chord, caseInsensitive, ignoreModifiers);
 
 /** Used by DefaultDebugKeyBindings.ts to register a chord as a collision-check target. */
 export const markChordReserved = (id: string, chord: KeyChord | KeyChord[]): void => {

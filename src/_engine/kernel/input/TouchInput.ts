@@ -85,6 +85,21 @@ let pinchLastDistance: number | null = null;
 let canvas: HTMLElement | null = null;
 let listenersInitiated = false;
 
+/**
+ * The action layer's touch source (Actions.ts), with the default tap thresholds.
+ * @internal
+ */
+export type TouchActionSource = {
+  /** A tap on the canvas ended. */
+  onTap: (e: TouchEvent) => void;
+  /** A one-finger drag moved, in CSS pixels since the previous call. */
+  onDrag: (e: TouchEvent, dx: number, dy: number) => void;
+  /** Whether a binding uses drags (native scrolling is then prevented during one). */
+  usesDrag: () => boolean;
+};
+
+let touchActionSource: TouchActionSource | null = null;
+
 const isInputInDebugCamInvalid = (enabledInDebugCam?: EnabledInDebugCam) =>
   isDebugEnvironment() &&
   ((enabledInDebugCam === 'NOT_ENABLED_IN_DEBUG' && isDebugCameraActive()) ||
@@ -181,7 +196,9 @@ const onTouchMove = (e: TouchEvent) => {
   if (!single || !single.isTapCandidate || e.touches.length !== 1) return;
   const t = findTouch(e.touches, single.identifier);
   if (!t) return;
-  if (hasActiveBinding('TOUCH_DRAG')) e.preventDefault(); // stop native scrolling
+  if (hasActiveBinding('TOUCH_DRAG') || touchActionSource?.usesDrag()) {
+    e.preventDefault(); // stop native scrolling
+  }
   single.maxMovePx = Math.max(
     single.maxMovePx,
     Math.hypot(t.clientX - single.startX, t.clientY - single.startY)
@@ -197,6 +214,7 @@ const onTouchMove = (e: TouchEvent) => {
   const delta = { x: t.clientX - single.lastX, y: t.clientY - single.lastY };
   single.lastX = t.clientX;
   single.lastY = t.clientY;
+  touchActionSource?.onDrag(e, delta.x, delta.y);
   for (let i = 0; i < bindings.length; i++) {
     const binding = bindings[i];
     if (binding.type === 'TOUCH_DRAG' && isBindingActive(binding)) binding.onMove?.(e, delta);
@@ -216,6 +234,14 @@ const onTouchEnd = (e: TouchEvent) => {
   if (e.type === 'touchend' && single?.isTapCandidate) {
     const t = findTouch(e.changedTouches, single.identifier);
     if (t) fireTaps(e, t);
+    if (
+      t &&
+      touchActionSource &&
+      performance.now() - single.startTime <= DEFAULT_TAP_MAX_DURATION_MS &&
+      single.maxMovePx <= DEFAULT_TAP_MAX_MOVE_PX
+    ) {
+      touchActionSource.onTap(e);
+    }
   }
   single = null;
 };
@@ -245,6 +271,15 @@ export const createTouchBinding = (binding: TouchBinding): void => {
 
 export const deleteTouchBinding = (id: string): void => {
   bindings = bindings.filter((b) => b.id !== id);
+};
+
+/**
+ * Sets (null removes) the action layer's touch source, and adds the window listeners.
+ * @internal
+ */
+export const setTouchActionSource = (source: TouchActionSource | null): void => {
+  touchActionSource = source;
+  if (source) initTouchListeners();
 };
 
 export const setTouchBindingEnabled = (id: string, enabled: boolean): void => {

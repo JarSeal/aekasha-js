@@ -63,6 +63,58 @@ export type {
 } from './kernel/assets/import/ImportTypes';
 export { disposeKTX2Loader } from './kernel/assets/import/KTX2';
 export { spawnImportedAsset } from './kernel/assets/import/SpawnImported';
+export { playActionRecording, recordActions } from './kernel/input/ActionRecording';
+export type {
+  ActionPlayback,
+  ActionPlaybackOpts,
+  ActionRecorder,
+} from './kernel/input/ActionRecording';
+export type {
+  ActionBinding,
+  ActionBindingOf,
+  ActionBindings,
+  ActionContext,
+  ActionDef,
+  ActionDefs,
+  ActionEventFn,
+  ActionFrame,
+  ActionFrameState,
+  ActionKeys,
+  ActionMap,
+  ActionMapOpts,
+  ActionRecording,
+  ActionState,
+  ActionType,
+  GamepadAxisActionBinding,
+  GamepadButtonActionBinding,
+  GamepadStickActionBinding,
+  KeyActionBinding,
+  KeyActionBindingBase,
+  KeyAxisActionBinding,
+  KeyCompositeActionBinding,
+  MouseButtonActionBinding,
+  MouseDeltaActionBinding,
+  TouchDragActionBinding,
+  TouchTapActionBinding,
+} from './kernel/input/ActionTypes';
+export {
+  createActionMap,
+  getActionMap,
+  getActionMaps,
+  isActionContextEnabled,
+  setActionContextEnabled,
+} from './kernel/input/Actions';
+export {
+  getConnectedGamepads,
+  onGamepadConnected,
+  onGamepadDisconnected,
+} from './kernel/input/GamepadInput';
+export type {
+  GamepadAxisName,
+  GamepadButtonName,
+  GamepadInfo,
+  GamepadStickName,
+} from './kernel/input/GamepadInput';
 export {
   createKeyBinding,
   deleteKeyBinding,

@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented (in review)
+Status: in progress | Phase 1 implemented
 Category: Characters, Input, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B; a minor bump per part, D7)
 Blocks: p614_review-physics.md, p617_review-input-ui-hud.md, p512_client-prediction-and-reconciliation.md, p421_kinematic-character-controller.md, p423_vehicles.md, p424_ai-brains-and-navigation.md, p420_npc-simulation-tiers.md
@@ -271,7 +271,7 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
 `tsc`, `yarn verify:scenes` (from Phase 1's end also the gym's path hash, D6) and
 `yarn verify:baselines`, plus its own checks.
 
-### Phase 1: determinism and the recorded run
+### Phase 1: determinism and the recorded run — done
 
 1. Record the scene runner's baselines on this branch's base (`8deb455` = `main`):
    `yarn verify:scenes --update`, in the background.
@@ -294,7 +294,7 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
 8. Play the gym (the user) for D8's changes; update the gym's and `topDownTestScene`'s baselines
    with the reason. Commit.
 
-**As built (stopped for review, not committed):**
+**As built:**
 
 - Step 1: recorded in a scratch worktree at `8deb455` (so the tree could change meanwhile), 96 of
   96 runs, WebGPU on macOS, about 6 minutes; the baseline copied into `.cache/verify/scenes/webgpu/`

@@ -105,6 +105,24 @@ const hoverIntersects: THREE.Intersection[] = [];
 let canvas: HTMLElement | null = null;
 let listenersInitiated = false;
 
+/**
+ * The action layer's mouse source (Actions.ts).
+ * @internal
+ */
+export type MouseActionSource = {
+  /** A button went down on the canvas or came up after that; null when the presses are cleared
+   * (blur). */
+  onButton: (e: MouseEvent | null) => void;
+  /** The pointer moved over the canvas, or anywhere while it's locked. */
+  onMove: (e: MouseEvent) => void;
+  /** The wheel turned over the canvas. */
+  onWheel: (e: WheelEvent) => void;
+  /** Whether a binding uses the right button (the canvas' context menu is then prevented). */
+  usesRightButton: () => boolean;
+};
+
+let mouseActionSource: MouseActionSource | null = null;
+
 const getButton = (e: MouseEvent): MouseButton | undefined => MOUSE_BUTTONS[e.button];
 
 const isInputInDebugCamInvalid = (enabledInDebugCam?: EnabledInDebugCam) =>
@@ -141,6 +159,7 @@ const onMouseDown = (e: MouseEvent) => {
   const button = getButton(e);
   if (!button || e.target !== canvas) return;
   pressStarts[button] = { x: e.clientX, y: e.clientY };
+  mouseActionSource?.onButton(e);
 };
 
 const onMouseUp = (e: MouseEvent) => {
@@ -148,6 +167,7 @@ const onMouseUp = (e: MouseEvent) => {
   if (!button) return;
   const start = pressStarts[button];
   delete pressStarts[button];
+  if (start) mouseActionSource?.onButton(e);
   // A click must both start and end on the canvas without dragging (e.g. orbiting the camera)
   if (!start || e.target !== canvas) return;
   if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > CLICK_MAX_MOVE_PX) return;
@@ -187,6 +207,7 @@ const onDblClick = (e: MouseEvent) => {
 
 const onWheel = (e: WheelEvent) => {
   if (e.target !== canvas) return;
+  mouseActionSource?.onWheel(e);
   for (let i = 0; i < bindings.length; i++) {
     const binding = bindings[i];
     if (binding.type === 'MOUSE_WHEEL' && isBindingActive(binding)) binding.fn(e);
@@ -197,6 +218,9 @@ const onMouseMove = (e: MouseEvent) => {
   lastMoveEvent = e;
   pointerOverCanvas = e.target === canvas;
   hoverDirty = true;
+  if (mouseActionSource && (pointerOverCanvas || document.pointerLockElement)) {
+    mouseActionSource.onMove(e);
+  }
 };
 
 const onPointerLeaveWindow = () => {
@@ -207,9 +231,10 @@ const onPointerLeaveWindow = () => {
 const onContextMenu = (e: MouseEvent) => {
   // The browser's context menu would swallow right clicks meant for the scene
   if (e.target !== canvas) return;
-  const hasRightBinding = bindings.some(
-    (b) => (b.type === 'MOUSE_CLICK' || b.type === 'MOUSE_DBLCLICK') && b.button === 'RIGHT'
-  );
+  const hasRightBinding =
+    bindings.some(
+      (b) => (b.type === 'MOUSE_CLICK' || b.type === 'MOUSE_DBLCLICK') && b.button === 'RIGHT'
+    ) || !!mouseActionSource?.usesRightButton();
   if (hasRightBinding) e.preventDefault();
 };
 
@@ -282,6 +307,7 @@ const initMouseListeners = () => {
     for (const button of MOUSE_BUTTONS) delete pressStarts[button];
     lastRightClickTimes.clear();
     onPointerLeaveWindow();
+    mouseActionSource?.onButton(null);
   });
 };
 
@@ -300,6 +326,22 @@ export const deleteMouseBinding = (id: string): void => {
   hoveredUuids.delete(id);
   lastRightClickTimes.delete(id);
 };
+
+/**
+ * Sets (null removes) the action layer's mouse source, and adds the window listeners.
+ * @internal
+ */
+export const setMouseActionSource = (source: MouseActionSource | null): void => {
+  mouseActionSource = source;
+  if (source) initMouseListeners();
+};
+
+/**
+ * Whether a button is held after a press on the canvas.
+ * @internal
+ */
+export const isMouseButtonHeld = (button: MouseButton): boolean =>
+  pressStarts[button] !== undefined;
 
 export const setMouseBindingEnabled = (id: string, enabled: boolean): void => {
   const binding = bindings.find((b) => b.id === id);
