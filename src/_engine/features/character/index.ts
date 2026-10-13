@@ -31,8 +31,10 @@ export type {
   CharacterControllerSpec,
 } from './ActorTypes';
 export type {
+  CharacterConfigValues,
   CharacterControlMode,
   CharacterController,
+  CharacterControllerConfig,
   CharacterIntent,
   CharacterObject,
   LocomotionStateListener,
@@ -46,11 +48,17 @@ export type {
   TankBrainParams,
   WorldFixedBrainParams,
 } from './brains/PlayerBrains';
-export { createDynamicCharacter } from './DynamicCharacter';
+export { createDynamicCharacter } from './controllers/dynamic/DynamicCharacter';
 export type {
-  CharacterData,
   DynamicCharacter,
   DynamicCharacterOpts,
   DynamicCharacterParams,
-} from './DynamicCharacter';
+} from './controllers/dynamic/DynamicCharacter';
+export type {
+  CharacterData,
+  DynamicCharacterConfig,
+  DynamicCharacterController,
+  DynamicCharacterInternal,
+  DynamicCharacterState,
+} from './controllers/dynamic/DynamicCharacterData';
 export { character } from './CharacterFeature';

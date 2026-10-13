@@ -50,8 +50,8 @@ export type PlayerBrainCommonParams = {
   runMode?: PlayerBrainHoldMode;
   /** How the crouch binding works (default `TOGGLE`). */
   crouchMode?: PlayerBrainHoldMode;
-  /** Turn toward the move direction while moving: sets the controller's `_turnToMoveDirection`
-   * unless the character's `charData` gives it. Default: off for `TANK`, on for the others. */
+  /** Turn toward the move direction while moving: sets the controller's `turnToMoveDirection`
+   * unless the character's `config` gives it. Default: off for `TANK`, on for the others. */
   turnToMoveDirection?: boolean;
 };
 
@@ -156,7 +156,7 @@ const createPlayerBrain = <TActions extends ActionDefs & typeof COMMON_ACTIONS>(
   return {
     kind,
     configDefaults: Object.freeze({
-      _turnToMoveDirection: params.turnToMoveDirection ?? turnsToMoveDirection,
+      turnToMoveDirection: params.turnToMoveDirection ?? turnsToMoveDirection,
     }),
     think: (intent, step, dt) => {
       thinkMove(map, intent, step, dt);

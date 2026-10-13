@@ -34,20 +34,21 @@ export type CharacterIntent = {
   crouch: boolean;
 };
 
-/** The character data a body plan sizes its colliders and probes from (lengths in m). */
+/** The sizes a body plan derives its colliders and probes from (lengths in m): the matching keys
+ * of a controller's configuration (eg. `DynamicCharacterConfig`). */
 export type CharacterBodyData = {
   /** Standing height, from the bottom of the body to its top. */
-  _height: number;
+  height: number;
   /** Body radius. */
-  _radius: number;
+  radius: number;
   /** Crouching height, from the bottom of the body to its top. */
-  _crouchHeight: number;
-  /** How much wider than the body the wall sensor is, as a fraction of `_radius`. */
-  _skinThickness: number;
+  crouchHeight: number;
+  /** How much wider than the body the wall sensor is, as a fraction of `radius`. */
+  skinThickness: number;
   /** Height of the floor sensor's center above the bottom of the body. */
-  _groundDetectorOffset: number;
-  /** Floor sensor radius, as a fraction of `_radius`. */
-  _groundDetectorRadius: number;
+  groundDetectorOffset: number;
+  /** Floor sensor radius, as a fraction of `radius`. */
+  groundDetectorRadius: number;
 };
 
 /** The sizes of a character's probes in one stance (standing or crouching), in body space. */
@@ -114,7 +115,7 @@ export type CharacterProbes = {
   /** The last floor ray (straight down from the body's center). */
   floorRay: CharacterCastRecord;
   /** The last wall shape-cast (a cylinder along the horizontal move direction). Fired only while
-   * the character is near a wall and moving, so it can be old: check `resolvedAt`. */
+   * the character is near a wall and moving, so it can be old: check `resolvedAtStep`. */
   wallCast: CharacterCastRecord;
 };
 
@@ -213,30 +214,55 @@ export type LocomotionStateListener = (
  */
 export type CharacterControlMode = 'CONTROLLED' | 'PHYSICS_ONLY';
 
-/** A character's configuration values: the `_` keys of its data that hold a primitive value. */
+/** Configuration values by key (a controller's, or a brain's suggested defaults). */
 export type CharacterConfigValues = Readonly<Record<string, number | boolean | string>>;
 
-/** How a controller takes a configuration (`_`) key of its data written from outside, eg. by
- * the debug tools. Without these hooks, every `_` key is read live and nothing is derived. */
-export type CharacterConfigHooks = {
-  /** `_` keys only read at creation (eg. sized into the colliders): writing them changes nothing
-   * until the body is rebuilt. */
+/**
+ * A controller's configuration: its live values, and how to edit them from outside (eg. the debug
+ * tools). Without `onChange`'s recomputing, a value is read live and nothing derives from it.
+ * @template TValues the controller's configuration values (eg. `DynamicCharacterConfig`)
+ */
+export type CharacterControllerConfig<
+  TValues extends object = Record<string, number | boolean | string>,
+> = {
+  /** The live values, read by the controller from its next tick. Write a key, then call
+   * `onChange` with it. */
+  values: TValues;
+  /** The values as the character was created with them (the brain's defaults included): what the
+   * scene's code asked for, before any debug edit. Frozen. */
+  initial: Readonly<TValues>;
+  /** Keys only read at creation (eg. sized into the colliders): writing them changes nothing until
+   * the body is rebuilt. */
   bakedKeys: ReadonlySet<string>;
-  /** Call it after writing a `_` key of the data: recomputes the values derived from it (eg.
-   * `__maxWalkableAngleCos`). A key nothing is derived from is a no-op. */
+  /** Call it after writing a key of `values`: recomputes what the controller derives from it (eg.
+   * the dynamic character's `maxWalkableAngleCos`). A key nothing is derived from is a no-op. */
   onChange: (key: string) => void;
   /** Sets each value whose key the character's creation options didn't give (a brain's
    * {@link ActorBrain.configDefaults}), then recomputes what derives from it. */
   applyDefaults?: (values: CharacterConfigValues) => void;
 };
 
-/** What moves a character (eg. createDynamicCharacter's controller, of kind
- * `'DYNAMIC_CHARACTER'`): the actor controller contract, with the character's diagnostics. */
-export type CharacterController = ActorController<CharacterIntent> & {
+/**
+ * What moves a character (eg. createDynamicCharacter's controller, of kind `'DYNAMIC_CHARACTER'`):
+ * the actor controller contract, with the character's data and diagnostics.
+ * @template TState what the tick writes (eg. `DynamicCharacterState`)
+ * @template TConfig the configuration values (eg. `DynamicCharacterConfig`)
+ * @template TInternal the tick's memory (eg. `DynamicCharacterInternal`)
+ */
+export type CharacterController<
+  TState extends object = Record<string, unknown>,
+  TConfig extends object = Record<string, number | boolean | string>,
+  TInternal extends object = Record<string, unknown>,
+> = ActorController<CharacterIntent> & {
+  /** What the tick writes every step (read-only from outside). The nested objects are mutated in
+   * place: re-read them, never keep one expecting a snapshot. */
+  state?: Readonly<TState>;
+  /** The configuration values and how to edit them from outside. */
+  config?: CharacterControllerConfig<TConfig>;
+  /** The tick's memory between steps (read-only, diagnostics only). */
+  internal?: Readonly<TInternal>;
   /** The body and the probes' last results, for diagnostics (read-only). */
   probes?: Readonly<CharacterProbes>;
-  /** How the controller takes its configuration being edited from outside. */
-  config?: CharacterConfigHooks;
 };
 
 /** A character's registry entry: the data of its entity's `CHARACTER` component. */
@@ -268,11 +294,17 @@ export type CharacterObject = {
    * @deprecated See `keyBindingIds`.
    */
   mouseBindingIds: string[];
-  /** Live controller data. Keys follow the naming convention the debug tools rely on: no prefix =
-   * state, `_` = configuration, `__` = internal memory. */
+  /**
+   * The controller's data as one flat object: state keys as they are, configuration keys with one
+   * underscore (`_maxVelocity`), internal ones with two (`__jumpStep`).
+   * @deprecated Use the controller's `state`, `config.values` and `internal` (removed in engine
+   * 6.0.0).
+   */
   data: Record<string, unknown>;
-  /** The configuration (`_` keys of `data`) as the character was created with it: what the
-   * scene's code asked for, before any debug edit. Frozen. */
+  /**
+   * The configuration (`_` keys of `data`) as the character was created with it. Frozen.
+   * @deprecated Use the controller's `config.initial` (removed in engine 6.0.0).
+   */
   initialConfig: CharacterConfigValues;
   /** What the character wants to do this sub-step: write it to drive the character. */
   intent: CharacterIntent;

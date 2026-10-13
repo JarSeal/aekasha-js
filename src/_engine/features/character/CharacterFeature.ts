@@ -40,7 +40,7 @@ export const character = (): EngineFeature => ({
     installCharacters(ctx);
     // Loaded on the first use: the controller stays with the scenes that make characters
     registerControllerKind('DYNAMIC_CHARACTER', async ({ id, name, visual, params, brain }) => {
-      const { createDynamicCharacter } = await import('./DynamicCharacter');
+      const { createDynamicCharacter } = await import('./controllers/dynamic/DynamicCharacter');
       const { character } = await createDynamicCharacter({ id, name, visual, brain, ...params });
       return character;
     });

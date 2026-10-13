@@ -120,7 +120,8 @@ export const saveCharacterConfig = (character: CharacterObject, keys: string[]) 
   const baked = character.controller?.config?.bakedKeys;
   let isChanged = false;
   for (const key of keys) {
-    if (baked?.has(key)) continue;
+    // The data's `_` keys are the configuration's without the underscore
+    if (baked?.has(key.slice(1))) continue;
     const value = character.data[key];
     const initial = character.initialConfig[key];
     if (
@@ -166,7 +167,7 @@ export const _applySavedCharacterConfig = (character: CharacterObject) => {
     if (
       (typeof value !== 'number' && typeof value !== 'boolean') ||
       typeof initial !== typeof value ||
-      config?.bakedKeys.has(key)
+      config?.bakedKeys.has(key.slice(1))
     ) {
       skipped.push(key);
       continue;
@@ -177,7 +178,7 @@ export const _applySavedCharacterConfig = (character: CharacterObject) => {
       continue;
     }
     character.data[key] = value;
-    config?.onChange(key);
+    config?.onChange(key.slice(1));
     applied.push(key);
   }
   if (hasDropped) writeSavedConfigs(all);

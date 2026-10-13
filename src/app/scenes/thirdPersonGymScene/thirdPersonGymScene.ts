@@ -145,15 +145,15 @@ const followWithSun = (
  * jumps around (GYM_DUMMY, GymDummyBrain.ts). They're deterministic on MAIN_THREAD only (async
  * shape casts in WORKER_THREAD mode, p428), so ARE_CHARACTERS_ENABLED can leave them out. */
 const createGymCharacters = async () => {
-  const characterData = {
-    _height: 1.6,
-    _radius: 0.5,
+  const characterConfig = {
+    height: 1.6,
+    radius: 0.5,
   };
   const createCharacterMesh = (index: number, beakColor: string) =>
     createCharacterVisual({
       key: index,
-      height: characterData._height,
-      radius: characterData._radius,
+      height: characterConfig.height,
+      radius: characterConfig.radius,
       beakColor,
     });
 
@@ -161,7 +161,7 @@ const createGymCharacters = async () => {
   const { character: playerCharacter } = await createDynamicCharacter({
     id: 'topDownChar',
     visual: characterMesh,
-    charData: characterData,
+    config: characterConfig,
     brain: {
       kind: 'TANK',
       params: {
@@ -221,7 +221,7 @@ const createGymCharacters = async () => {
   const { character: arrowsCharacter } = await createDynamicCharacter({
     id: 'arrowKeysChar',
     visual: arrowsCharacterMesh,
-    charData: characterData,
+    config: characterConfig,
     brain: {
       kind: 'CAMERA_RELATIVE',
       params: {
@@ -247,7 +247,7 @@ const createGymCharacters = async () => {
   const { character: dummyCharacter } = await createDynamicCharacter({
     id: 'testDummyChar',
     visual: characterMesh2,
-    charData: characterData,
+    config: characterConfig,
     brain: { kind: 'GYM_DUMMY' },
   });
   getECSWorld().getRigidBody(dummyCharacter.entityId)?.setTranslation({ x: -2, y: 5, z: -2 }, true);

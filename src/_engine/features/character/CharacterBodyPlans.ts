@@ -14,7 +14,7 @@ export type HumanoidCapsuleDimensions = CharacterDimensions & {
   crouchHalfHeight: number;
   /** Y of the crouch capsule's center: its bottom lines up with the walk capsule's. */
   crouchOffsetY: number;
-  /** The wall sensor capsule's radius: `_radius` widened by `_skinThickness`. */
+  /** The wall sensor capsule's radius: `radius` widened by `skinThickness`. */
   wallSensorRadius: number;
   /** Half the wall sensor capsule's cylinder part. */
   wallSensorHalfHeight: number;
@@ -22,7 +22,7 @@ export type HumanoidCapsuleDimensions = CharacterDimensions & {
   wallSensorOffsetY: number;
   /** The floor sensor ball's radius. */
   floorSensorRadius: number;
-  /** Y of the floor sensor's center: `_groundDetectorOffset` above the walk capsule's bottom. */
+  /** Y of the floor sensor's center: `groundDetectorOffset` above the walk capsule's bottom. */
   floorSensorOffsetY: number;
 };
 
@@ -52,8 +52,8 @@ const getCapsuleProbes = (
 /**
  * An upright capsule body (`bodyKind: 'HUMANOID'`): a walk capsule (`MAIN`), a shorter crouch capsule
  * (`CROUCH`, its bottom where the walk capsule's is), a slightly wider capsule sensor (`WALL_SENSOR`)
- * and a ball sensor at the bottom (`FLOOR_SENSOR`). `_height` is the walk capsule's full height,
- * so a capsule mesh of `_height` and `_radius` matches it.
+ * and a ball sensor at the bottom (`FLOOR_SENSOR`). `height` is the walk capsule's full height,
+ * so a capsule mesh of `height` and `radius` matches it.
  */
 export const HUMANOID_CAPSULE: CharacterBodyPlan<HumanoidCapsuleDimensions> = {
   bodyKind: 'HUMANOID',
@@ -61,28 +61,28 @@ export const HUMANOID_CAPSULE: CharacterBodyPlan<HumanoidCapsuleDimensions> = {
   kind: 'HUMANOID',
 
   getDimensions: (d: CharacterBodyData): HumanoidCapsuleDimensions => {
-    const walkHalfHeight = Math.max(0, d._height / 2 - d._radius);
-    const crouchHalfHeight = Math.max(0, Math.min(d._crouchHeight, d._height) / 2 - d._radius);
+    const walkHalfHeight = Math.max(0, d.height / 2 - d.radius);
+    const crouchHalfHeight = Math.max(0, Math.min(d.crouchHeight, d.height) / 2 - d.radius);
     const crouchOffsetY = crouchHalfHeight - walkHalfHeight;
-    const wallSensorRadius = d._radius * (1 + d._skinThickness);
+    const wallSensorRadius = d.radius * (1 + d.skinThickness);
     return {
       walkHalfHeight,
       crouchHalfHeight,
       crouchOffsetY,
       wallSensorRadius,
-      wallSensorHalfHeight: Math.max(0, walkHalfHeight + d._radius - wallSensorRadius),
+      wallSensorHalfHeight: Math.max(0, walkHalfHeight + d.radius - wallSensorRadius),
       wallSensorOffsetY: WALL_SENSOR_LIFT,
-      floorSensorRadius: d._radius * d._groundDetectorRadius,
-      floorSensorOffsetY: -(walkHalfHeight + d._radius) + d._groundDetectorOffset,
-      standing: getCapsuleProbes(walkHalfHeight, 0, wallSensorRadius, d._radius),
-      crouching: getCapsuleProbes(crouchHalfHeight, crouchOffsetY, wallSensorRadius, d._radius),
+      floorSensorRadius: d.radius * d.groundDetectorRadius,
+      floorSensorOffsetY: -(walkHalfHeight + d.radius) + d.groundDetectorOffset,
+      standing: getCapsuleProbes(walkHalfHeight, 0, wallSensorRadius, d.radius),
+      crouching: getCapsuleProbes(crouchHalfHeight, crouchOffsetY, wallSensorRadius, d.radius),
     };
   },
 
   getColliders: (dims, d) => [
     {
       role: 'MAIN',
-      params: { type: 'CAPSULE', halfHeight: dims.walkHalfHeight, radius: d._radius },
+      params: { type: 'CAPSULE', halfHeight: dims.walkHalfHeight, radius: d.radius },
     },
     {
       role: 'CROUCH',
@@ -90,7 +90,7 @@ export const HUMANOID_CAPSULE: CharacterBodyPlan<HumanoidCapsuleDimensions> = {
         type: 'CAPSULE',
         friction: 0.9,
         halfHeight: dims.crouchHalfHeight,
-        radius: d._radius,
+        radius: d.radius,
         translation: { x: 0, y: dims.crouchOffsetY, z: 0 },
       },
     },

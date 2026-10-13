@@ -6,7 +6,7 @@ import type {
   TankBrainParams,
   WorldFixedBrainParams,
 } from './brains/PlayerBrains';
-import type { DynamicCharacterParams } from './DynamicCharacter';
+import type { DynamicCharacterParams } from './controllers/dynamic/DynamicCharacter';
 
 // The actor contracts (p603 C1, C2, C4): what moves an actor (its controller) and what decides
 // where it goes (its brain), named generically so a vehicle (p423) can lift them. Characters are

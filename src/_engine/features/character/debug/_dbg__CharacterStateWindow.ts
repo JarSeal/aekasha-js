@@ -335,7 +335,7 @@ const BAKED_KEY_NOTE =
  */
 const writeConfig = (character: CharacterObject, key: string, value: number | boolean) => {
   character.data[key] = value;
-  character.controller?.config?.onChange(key);
+  character.controller?.config?.onChange(key.slice(1));
 };
 
 /** Shows a row's current value right away (no flash: the user caused the change). A row whose
@@ -577,7 +577,7 @@ const getChangedConfig = (character: CharacterObject) => {
   const baked = character.controller?.config?.bakedKeys;
   const changed: [string, ConfigValue][] = [];
   for (const key of Object.keys(character.initialConfig)) {
-    if (baked?.has(key)) continue;
+    if (baked?.has(key.slice(1))) continue;
     const initial = character.initialConfig[key];
     const current = character.data[key];
     if (typeof current !== 'number' && typeof current !== 'boolean') continue;
@@ -740,7 +740,7 @@ const getConfigEditor = (
 ): ConfigEditor | null => {
   if (getGroupId(key) !== 'props') return null;
   if (kind !== 'BOOL' && (kind !== 'NUMBER' || format === 'STEP_AGO')) return null;
-  const isLocked = character.controller?.config?.bakedKeys.has(key) ?? false;
+  const isLocked = character.controller?.config?.bakedKeys.has(key.slice(1)) ?? false;
   const initial = character.initialConfig[key];
   const hasInitial = typeof initial === (kind === 'BOOL' ? 'boolean' : 'number');
   return {

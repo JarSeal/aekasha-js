@@ -10,7 +10,7 @@ import type {
   CharacterObject,
   CharacterProbes,
 } from '../CharacterTypes';
-import type { CharacterData } from '../DynamicCharacter';
+import type { CharacterData } from '../controllers/dynamic/DynamicCharacterData';
 import { getECSWorld, type ECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
 import {
@@ -357,7 +357,10 @@ const getFloorSensorBall = (probes: Readonly<CharacterProbes>, character: Charac
   if (ball !== undefined) return ball;
   ball = null;
   const collider = probes.body
-    .getColliders(probes.dims, character.data as CharacterBodyData)
+    .getColliders(
+      probes.dims,
+      (character.controller?.config?.values ?? {}) as unknown as CharacterBodyData
+    )
     .find((c) => c.role === 'FLOOR_SENSOR');
   if (collider) {
     const { params } = collider;

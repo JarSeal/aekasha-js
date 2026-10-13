@@ -525,18 +525,18 @@ const createDynamicProps = async (obstacles: Footprint[]) => {
  * follow camera rig. Returns the player's entity id. */
 const createPlayer = async () => {
   // #region dynamic-character (shown in the Hub: hub/pages/features/characters/)
-  const charData = { _height: 1.6, _radius: 0.5 };
+  const config = { height: 1.6, radius: 0.5 };
   const visual = createCharacterVisual({
     key: 'topDownPlayer',
-    height: charData._height,
-    radius: charData._radius,
+    height: config.height,
+    radius: config.radius,
     beakColor: '#333',
   });
   const { character } = await createDynamicCharacter({
     id: 'topDownPlayer',
     name: 'Top-down player',
     visual,
-    charData,
+    config,
     brain: {
       kind: 'WORLD_FIXED',
       params: {

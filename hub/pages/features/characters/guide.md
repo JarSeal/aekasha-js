@@ -11,13 +11,15 @@ character. The app's top-down test scene makes its player like this:
 
 <<< src/app/scenes/topDownTestScene/topDownTestScene.ts#dynamic-character
 
-- `charData` tunes it: the `_` keys are its configuration (size, speeds, jump, slope limits), and
-  the rest is its live state.
+- `config` tunes it ([`DynamicCharacterConfig`](api:DynamicCharacterConfig)): its size, speeds,
+  jump and slope limits, over the defaults.
 - `body` is its body plan: the colliders and how they're sized. The humanoid capsule is built in
   (`HUMANOID_CAPSULE`), with a crouching collider and the sensors the controller reads.
 - `brain` decides what it wants to do: here a player brain reading an action map's bindings. The
   brain is the character's, and it's deleted with it.
-- It resolves with the character, its live data and its intent. Deleting the character's entity,
+- It resolves with the character, its controller and its intent. The controller's `state` is what
+  its tick writes every step (position, velocities, `locomotionState`, `isGrounded`…), its
+  `config.values` the live configuration, and its `internal` the tick's memory. Deleting the character's entity,
   any way, deletes the character.
 
 ## Player brains

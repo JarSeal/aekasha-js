@@ -39,8 +39,8 @@ import {
 
 export type {
   CharacterBodyPlan,
-  CharacterConfigHooks,
   CharacterConfigValues,
+  CharacterControllerConfig,
   CharacterControlMode,
   CharacterController,
   CharacterIntent,
@@ -161,7 +161,11 @@ export type CreateCharacterOpts = CharacterBodyKindField & {
    * 6.0.0.
    */
   controls?: (KeyBinding | MouseBinding)[];
-  /** The controller's live data ({@link CharacterObject}'s `data`). */
+  /**
+   * The controller's data as one flat object ({@link CharacterObject}'s `data`).
+   * @deprecated A controller keeps its data on itself (`state`, `config`, `internal`); removed in
+   * engine 6.0.0.
+   */
   data?: { [key: string]: unknown };
   /** The intent the controller reads (default: a new one); pass it when the bindings write it. */
   intent?: CharacterIntent;
