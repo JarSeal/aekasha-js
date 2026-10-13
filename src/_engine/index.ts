@@ -174,7 +174,13 @@ export {
   getRenderer,
   isWebGPURenderer,
 } from './kernel/render/Renderer';
-export type { RendererOptions } from './kernel/render/Renderer';
+export type {
+  CreateRendererOptions,
+  RendererCanvasOptions,
+  RendererOptions,
+} from './kernel/render/Renderer';
+export { getCanvasSize } from './kernel/render/CanvasSize';
+export type { CanvasSize } from './kernel/render/CanvasSize';
 export {
   createSceneAppLooper,
   createSceneMainLooper,

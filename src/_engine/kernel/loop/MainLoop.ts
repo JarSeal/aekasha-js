@@ -10,7 +10,7 @@ import {
   runSceneMainLoopers,
 } from '../scene/Scene';
 import { lerror, lwarn } from '../../utils/Logger';
-import { getWindowSize } from '../../ui/Window';
+import { getCanvasSize, onCanvasResize } from '../render/CanvasSize';
 import {
   getEnv,
   isDebugEnvironment,
@@ -525,6 +525,21 @@ const mainLoopForProductionWithFPSLimiter = async () => {
   frameProbe?.end(performance.now(), true);
 };
 
+/** Runs the global resizers, then the current scene's. */
+const runResizers = () => {
+  const ids = Object.keys(resizers);
+  for (let i = 0; i < ids.length; i++) {
+    resizers[ids[i]]();
+  }
+
+  const sceneResizers = getSceneResizers();
+  if (sceneResizers) {
+    for (let i = 0; i < sceneResizers.length; i++) {
+      sceneResizers[i]();
+    }
+  }
+};
+
 /**
  * Initializes the main loop. Requires that the renderer, camera, and scene have been created.
  */
@@ -550,28 +565,11 @@ export const initMainLoop = () => {
   addResizer('canvasResizer', () => {
     const renderer = getRenderer();
     if (!renderer) throw new Error('Could not find current renderer in canvas resizer.');
-    const { width, height } = getWindowSize();
+    const { width, height } = getCanvasSize();
     renderer.setSize(width, height);
   });
-  window.addEventListener(
-    'resize',
-    () => {
-      // Global resizers
-      const ids = Object.keys(resizers);
-      for (let i = 0; i < ids.length; i++) {
-        resizers[ids[i]]();
-      }
-
-      // Scene resizers
-      const sceneResizers = getSceneResizers();
-      if (sceneResizers) {
-        for (let i = 0; i < sceneResizers.length; i++) {
-          sceneResizers[i]();
-        }
-      }
-    },
-    false
-  );
+  // The window's resize, or the mounted container's (kernel/render/CanvasSize.ts)
+  onCanvasResize(runResizers);
 
   const maxFPS = Number(getEnv('VITE_MAX_FPS'));
   if (maxFPS !== undefined && !isNaN(maxFPS)) {

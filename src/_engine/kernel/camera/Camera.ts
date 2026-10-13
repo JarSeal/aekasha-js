@@ -3,7 +3,7 @@ import { ECSWorld, getAllECSWorlds, getECSWorld, getEntityIdByAppId } from '../e
 import { getCurrentSceneId, getRootScene, registerOnAllSceneEnterings } from '../scene/Scene';
 import type { DebugModuleRef } from '../config/DebugModules';
 import { loadDebugModule, loadDebugModuleAsync, useDebug } from '../config/DebugModules';
-import { getWindowSize } from '../../ui/Window';
+import { getCanvasSize } from '../render/CanvasSize';
 import { IS_DEBUG_ENV } from '../config/Config';
 import type { CoreComponentData } from '../ecs/ECSCoreComponents';
 import { ComponentType } from '../ecs/ECSCoreComponents';
@@ -133,7 +133,7 @@ export const createCameraEntity = (
 ): number => {
   const world = ecsWorld || getECSWorld();
   const rootScene = existsOrThrow(getRootScene(), 'No Scene for Camera.');
-  const { aspect } = getWindowSize();
+  const { aspect } = getCanvasSize();
 
   // Load light properties
   const appId = camProps.appId || entityOpts?.appId;
@@ -281,10 +281,10 @@ export const cameraLookAtPoint = (
 };
 
 /**
- * Updates all cameras, in every ECS world, to match current window dimensions.
+ * Updates all cameras, in every ECS world, to match the canvas's aspect ratio.
  */
 export const updateAllCameraAspectRatios = () => {
-  const { aspect } = getWindowSize();
+  const { aspect } = getCanvasSize();
 
   for (const world of getAllECSWorlds()) {
     const storage = world.getStorage(ComponentType.CAMERA_SETTINGS);
