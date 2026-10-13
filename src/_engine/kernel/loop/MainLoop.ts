@@ -191,11 +191,16 @@ export type FixedStepDriver = {
    * (every reader in the frame sees the same snapshot). */
   latch: () => void;
   /** Once per frame: takes this frame's fixed steps from the time that passed, calling
-   * `onBeforeStep` right before each one with the fixed timestep. While `loopState` says paused
+   * `onBeforeStep` right before each one with the fixed timestep and the step's index (counted
+   * from 0 in each simulation world; without it, the action layer numbers its samples itself).
+   * While `loopState` says paused
    * (the app or master loop, or the scene suspended by an editor view), the loop calls it
    * without `onBeforeStep`: it steps nothing then, only notes the pause, so resuming doesn't
    * catch up on the paused time. */
-  step: (loopState: Readonly<LoopState>, onBeforeStep?: (stepDelta: number) => void) => void;
+  step: (
+    loopState: Readonly<LoopState>,
+    onBeforeStep?: (stepDelta: number, stepIndex?: number) => void
+  ) => void;
   /** Delivers the previous step's events (collisions, contact forces): the loop calls it in each
    * sub-step, after the held keys and before the `APP_PHYSICS_STEP` systems. */
   flushEvents: () => void;
@@ -222,6 +227,31 @@ export const setFixedStepDriver = (driver: FixedStepDriver) => {
 let preStepHook: (() => void) | null = null;
 
 /**
+ * The action layer's hooks in the loop (`kernel/input/Actions.ts`, set by its first map, so an
+ * app without action maps bundles none of it).
+ * @internal
+ */
+export type ActionSampler = {
+  /** Once per frame, right after the latch, in every view and while the app loop is paused. */
+  pollFrame: () => void;
+  /** Right before each fixed sub-step (after the pre-step hook, before the held keys), or once per
+   * frame when nothing steps, with -1. */
+  sample: (stepIndex: number) => void;
+  /** On a frame that doesn't step because the app loop is paused or the scene is suspended. */
+  skip: () => void;
+};
+
+let actionSampler: ActionSampler | null = null;
+
+/**
+ * Sets the action layer's hooks (`Actions.ts`, once).
+ * @internal
+ */
+export const setActionSampler = (sampler: ActionSampler) => {
+  actionSampler = sampler;
+};
+
+/**
  * Sets the function run at the very start of every fixed sub-step, before the held keys (null
  * removes it): the test bridge's scripted input and character path recording.
  * @internal
@@ -231,11 +261,13 @@ export const setPreStepHook = (fn: (() => void) | null) => {
 };
 
 /** Everything that has to run in lockstep with the simulation, once per fixed sub-step right
- * before it (see FixedStepDriver.step): the pre-step hook, held-key input, then the previous
- * step's events, then every world's APP_PHYSICS_STEP systems (see PhysicsAPI.ts's
- * flushPhysicsEvents for why the order matters). Only called by the driver, so it is set. */
-const runFixedSubStep = (stepDelta: number) => {
+ * before it (see FixedStepDriver.step): the pre-step hook, the action sample, held-key input,
+ * then the previous step's events, then every world's APP_PHYSICS_STEP systems (see
+ * PhysicsAPI.ts's flushPhysicsEvents for why the order matters). Only called by the driver, so it
+ * is set. */
+const runFixedSubStep = (stepDelta: number, stepIndex = -1) => {
   preStepHook?.();
+  actionSampler?.sample(stepIndex);
   pollHeldKeyBindings(stepDelta);
   fixedStepDriver!.flushEvents();
   for (const world of getAllECSWorlds()) world.updatePhysicsStep(stepDelta);
@@ -250,13 +282,18 @@ const stepFixedAndPollHeldKeys = (delta: number) => {
     driver.step(loopState, runFixedSubStep);
     if (driver.isStepping()) return;
   }
+  actionSampler?.sample(-1);
   pollHeldKeyBindings(delta);
 };
 
-/** Called instead of stepFixedAndPollHeldKeys while the app loop is paused. It steps nothing,
- * but the driver's step is what notices the pause, so it can discard the paused time on resume
- * instead of catching up on it (up to maxDeltaTime worth of steps in one frame). */
-const noteFixedStepPause = () => fixedStepDriver?.step(loopState);
+/** Called instead of stepFixedAndPollHeldKeys while the app loop is paused (or the scene is
+ * suspended). It steps nothing, but the driver's step is what notices the pause, so it can discard
+ * the paused time on resume instead of catching up on it (up to maxDeltaTime worth of steps in one
+ * frame). The action layer drops what happened meanwhile the same way. */
+const noteFixedStepPause = () => {
+  fixedStepDriver?.step(loopState);
+  actionSampler?.skip();
+};
 
 /** Advances getElapsedTime by this frame's delta. Must run in every loop variant right after
  * the masterPlay check. The timer is never reset across a master pause, so the first delta
@@ -323,6 +360,7 @@ const mainLoopForDebug = async () => {
 
   timer.update();
   fixedStepDriver?.latch();
+  actionSampler?.pollFrame();
   const dt = fixedFrameDelta ?? timer.getDelta();
 
   if (loopState.masterPlay) {
@@ -396,6 +434,7 @@ const mainLoopForProduction = async () => {
   frameProbe?.begin(performance.now());
   timer.update();
   fixedStepDriver?.latch();
+  actionSampler?.pollFrame();
   const dt = fixedFrameDelta ?? timer.getDelta();
   if (loopState.masterPlay) {
     delta = dt * loopState.playSpeedMultiplier;
@@ -437,6 +476,7 @@ const mainLoopForProductionWithFPSLimiter = async () => {
   frameProbe?.begin(performance.now());
   timer.update();
   fixedStepDriver?.latch();
+  actionSampler?.pollFrame();
   const dt = fixedFrameDelta ?? timer.getDelta();
 
   if (loopState.masterPlay) {

@@ -358,8 +358,9 @@ export const stepPhysics = (
   loopState: LoopState,
   /** Called once per fixed sub-step, right before it, with dt = the fixed timestep (this is
    * what drives held-key polling, flushPhysicsEvents and the APP_PHYSICS_STEP ECS stage, see
-   * MainLoop.ts). Without one, events are flushed before each sub-step here instead. */
-  onBeforeStep?: (stepDelta: number) => void
+   * MainLoop.ts), and the step's index (getPhysicsSubStepIndex). Without one, events are flushed
+   * before each sub-step here instead. */
+  onBeforeStep?: (stepDelta: number, stepIndex: number) => void
 ): number => {
   if (!physicsWorldEnabled) return 0;
   // Scene load in progress (holdPhysicsStepping): no timer update either, releasing it
@@ -480,7 +481,7 @@ export const stepPhysics = (
           break;
         }
         subStepIndex = stepsIssued + i;
-        if (onBeforeStep) onBeforeStep(stepDelta);
+        if (onBeforeStep) onBeforeStep(stepDelta, subStepIndex);
         else flushPhysicsEvents();
         if (!trackStats) {
           engAPI?.step();
@@ -518,7 +519,7 @@ export const stepPhysics = (
         substepCommandCapture = [];
         subStepIndex = stepsIssued + i;
         try {
-          onBeforeStep(stepDelta);
+          onBeforeStep(stepDelta, subStepIndex);
         } finally {
           substepCommands.push(substepCommandCapture);
           substepCommandCapture = null;

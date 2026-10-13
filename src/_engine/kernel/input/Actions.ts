@@ -12,6 +12,7 @@
 
 import { isDebugCameraActive } from '../camera/Camera';
 import { isDebugEnvironment } from '../config/Config';
+import { setActionSampler } from '../loop/MainLoop';
 import { getCurrentSceneId } from '../scene/Scene';
 import { lwarn } from '../../utils/Logger';
 import {
@@ -106,6 +107,7 @@ const mapsById = new Map<string, MapRuntime>();
 const runtimeOfHandle = new WeakMap<ActionMap, MapRuntime>();
 const disabledContexts = new Set<ActionContext>();
 let noStepSampleIndex = 0;
+let isSamplerSet = false;
 
 let hasKeySource = false;
 let hasMouseSource = false;
@@ -484,6 +486,14 @@ export const createActionMap = <const TActions extends ActionDefs>(
 ): ActionMap<TActions> => {
   const existing = mapsById.get(opts.id);
   if (existing) deleteMapRuntime(existing);
+  if (!isSamplerSet) {
+    isSamplerSet = true;
+    setActionSampler({
+      pollFrame: pollActionsFrame,
+      sample: sampleActions,
+      skip: skipActionSample,
+    });
+  }
 
   const context = opts.context ?? 'GAMEPLAY';
   const isDebug = context === 'DEBUG';
