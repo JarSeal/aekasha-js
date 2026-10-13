@@ -5,6 +5,17 @@ import type { ECSWorld } from 'aekasha';
 const DEFAULT_OFFSET = { x: 0, y: 5, z: 10 };
 const DEFAULT_LERP_SMOOTH_TIME = 0.1;
 const DEFAULT_DAMP_SMOOTH_TIME = 0.2;
+// The SMOOTH_DAMP step's speed cap without mouse input (m/s); the mouse orbit has none
+const DAMP_MAX_SPEED = 100;
+const DEFAULT_LOOK_AHEAD_SMOOTHING_TIME = 0.6;
+const DEFAULT_LOOK_AHEAD_RETURN_SPEED = 1;
+// The look-ahead's travel velocity is smoothed over this time (s), so a pose that only moves on
+// physics steps (no interpolation) doesn't read as stopping between them
+const TRAVEL_SMOOTHING_TIME = 0.1;
+// Below this horizontal speed (m/s) the target counts as standing still
+const MIN_TRAVEL_SPEED = 0.5;
+// Above this horizontal speed (m/s) a move is a teleport (a respawn), not travel
+const MAX_TRAVEL_SPEED = 100;
 
 /**
  * {@link createFollowObjectCameraRig}'s options: the camera, the mesh it follows, and how it
@@ -20,11 +31,35 @@ export type FollowObjectCameraParams = {
   smoothingType?: 'SMOOTH_DAMP' | 'LERP';
   /** Smoothing time used for SMOOTH_DAMP or LERP */
   smoothingTime?: number;
-  /** The target height of the camera to point at (for example character head) */
+  /** The height above the target the camera points at (for example the character's head), with
+   * `getMouseMoveInput` only */
   targetHeight?: number;
+  /**
+   * How the camera turns without `getMouseMoveInput` (with it, the orbit decides).
+   * `'LOOK_AT_TARGET'` (the default) aims at the followed point every frame, so the view
+   * direction swings while the camera catches up with a moving target. `'FIXED'` keeps looking
+   * along `-offset` and only moves the camera, so the view never turns.
+   */
+  orientation?: 'LOOK_AT_TARGET' | 'FIXED';
+  /**
+   * Leads the followed point ahead of the target in its horizontal direction of travel (read from
+   * the drawn pose's movement), so the view shows more of where the target is heading. Off when
+   * not given.
+   */
+  lookAhead?: {
+    /** How far ahead the followed point leads a moving target (m) */
+    distance: number;
+    /** About how long the lead takes to reach `distance`, or to swing round when the target
+     * turns (s, default 0.6) */
+    smoothingTime?: number;
+    /** How fast the lead moves back to the target once it stands still (m/s, default 1); 0 keeps
+     * the lead where it is */
+    returnSpeed?: number;
+  };
   /** Function to run after the camera.lookAt (at the very end) */
   afterLookAtFn?: (params: {
     id: string;
+    /** The followed point (the target, plus the look-ahead's lead and `targetHeight`) */
     targetPos: THREE.Vector3;
     camera: THREE.Camera;
     targetMesh: THREE.Mesh;
@@ -69,11 +104,75 @@ export const registerFollowObjectCameraRigSystem = (world: ECSWorld) => {
   return world;
 };
 
+// The look-ahead's lead: a horizontal offset from the target toward its direction of travel,
+// updated once per frame from the drawn pose. Presentation only: it reads the rendered pose,
+// so it isn't part of the deterministic simulation.
+const createLookAhead = (
+  targetMesh: THREE.Object3D,
+  {
+    distance,
+    smoothingTime = DEFAULT_LOOK_AHEAD_SMOOTHING_TIME,
+    returnSpeed = DEFAULT_LOOK_AHEAD_RETURN_SPEED,
+  }: NonNullable<FollowObjectCameraParams['lookAhead']>
+) => {
+  const lead = new THREE.Vector3();
+  const leadVelocity = new THREE.Vector3();
+  const desiredLead = new THREE.Vector3();
+  const prevPos = new THREE.Vector3();
+  let hasPrevPos = false;
+  let travelX = 0;
+  let travelZ = 0;
+
+  const update = (dt: number) => {
+    const pos = targetMesh.position;
+    if (hasPrevPos) {
+      const vx = (pos.x - prevPos.x) / dt;
+      const vz = (pos.z - prevPos.z) / dt;
+      if (vx * vx + vz * vz <= MAX_TRAVEL_SPEED * MAX_TRAVEL_SPEED) {
+        const k = 1 - Math.exp(-dt / TRAVEL_SMOOTHING_TIME);
+        travelX += (vx - travelX) * k;
+        travelZ += (vz - travelZ) * k;
+      }
+    }
+    prevPos.copy(pos);
+    hasPrevPos = true;
+
+    const speed = Math.sqrt(travelX * travelX + travelZ * travelZ);
+    if (speed >= MIN_TRAVEL_SPEED) {
+      desiredLead.set((travelX / speed) * distance, 0, (travelZ / speed) * distance);
+      smoothDampVec3(lead, desiredLead, leadVelocity, smoothingTime, Infinity, dt);
+      return;
+    }
+
+    // Standing still: back to the target in a straight line, at returnSpeed
+    leadVelocity.set(0, 0, 0);
+    const length = lead.length();
+    if (length === 0 || returnSpeed <= 0) return;
+    const step = returnSpeed * dt;
+    if (step >= length) lead.set(0, 0, 0);
+    else lead.multiplyScalar(1 - step / length);
+  };
+
+  return { lead, update };
+};
+
 /**
  * Makes `camera` follow `targetMesh` at `offset`, smoothed, from the next frame on. The rig is
  * keyed by `id`: creating one with an id in use replaces it.
  * @remarks Moves the camera only once {@link registerFollowObjectCameraRigSystem} has run on the
  * world.
+ * @example
+ * ```ts
+ * // A top-down camera that never turns and shows a little more of where the player is heading
+ * createFollowObjectCameraRig({
+ *   id: 'playerCam',
+ *   camera,
+ *   targetMesh: playerMesh,
+ *   offset: { x: 0, y: 14, z: 7 },
+ *   orientation: 'FIXED',
+ *   lookAhead: { distance: 1.5 },
+ * });
+ * ```
  */
 export const createFollowObjectCameraRig = (params: FollowObjectCameraParams) => {
   const {
@@ -84,6 +183,8 @@ export const createFollowObjectCameraRig = (params: FollowObjectCameraParams) =>
     smoothingType,
     smoothingTime,
     targetHeight,
+    orientation,
+    lookAhead: lookAheadParam,
     afterLookAtFn,
     getMouseMoveInput,
   } = params;
@@ -93,6 +194,7 @@ export const createFollowObjectCameraRig = (params: FollowObjectCameraParams) =>
   const velocity = new THREE.Vector3(0, 0, 0); // For dampening (if using smoothDamp)
   const targetHeightVector = new THREE.Vector3(0, targetHeight, 0);
   const sphericalOffset = new THREE.Vector3(); // mouse-look offset, rewritten every tick
+  const fixedLookPoint = new THREE.Vector3();
 
   const offsetObj = offsetParam || DEFAULT_OFFSET;
   const offset = new THREE.Vector3(offsetObj.x, offsetObj.y, offsetObj.z);
@@ -104,6 +206,8 @@ export const createFollowObjectCameraRig = (params: FollowObjectCameraParams) =>
         ? DEFAULT_LERP_SMOOTH_TIME
         : DEFAULT_DAMP_SMOOTH_TIME;
   const dist = new THREE.Vector3(0, 0, 0).distanceTo(offset);
+  const isFixedOrientation = orientation === 'FIXED' && !getMouseMoveInput;
+  const lookAhead = lookAheadParam ? createLookAhead(targetMesh, lookAheadParam) : null;
 
   // Spherical coordinate system for orbiting
   // Phi: Vertical angle (0 = top, PI = bottom). Start at roughly 45-60 deg.
@@ -128,134 +232,71 @@ export const createFollowObjectCameraRig = (params: FollowObjectCameraParams) =>
     spherical,
   };
 
-  const tick =
+  // The smoothing step, chosen once: moves the camera toward idealPos
+  const dampMaxSpeed = getMouseMoveInput ? Infinity : DAMP_MAX_SPEED;
+  const smoothStep =
     smoothType === 'LERP'
       ? (dt: number) => {
-          // Safety check for NaN DT (on first frame or pause)
-          if (dt <= 0.0001) return;
-
-          if (getMouseMoveInput) {
-            // Handle possible mouse move input
-            // -------------------
-
-            const mouseDelta = getMouseMoveInput();
-
-            // Horizontal (Theta) - Rotate around Y
-            // Subtract to rotate "intuitively" (drag background) or add for inverted
-            spherical.theta -= mouseDelta.x * sensitivity;
-
-            // Vertical (Phi) - Rotate up/down
-            spherical.phi -= mouseDelta.y * sensitivity;
-
-            // Clamp Vertical angle
-            spherical.phi = Math.max(minPolarAngle, Math.min(maxPolarAngle, spherical.phi));
-
-            // Calculate Offset Vector from Spherical Coords
-            // This converts the Angles back into a Vector3 offset (x, y, z)
-            const offsetVector = sphericalOffset.setFromSpherical(spherical);
-
-            // Get Look Target (e.g., Player Head position)
-            targetPos.copy(targetMesh.position).add(targetHeightVector);
-
-            // Calculate Ideal Camera Position
-            idealPos.copy(targetPos).add(offsetVector);
-          } else {
-            // No mouse move input
-            // -------------------
-
-            // Get Target Position (Mesh or RigidBody)
-            // Using mesh is usually safer for visual smoothness if you interpolate visuals
-            targetPos.copy(targetMesh.position);
-
-            // Calculate Ideal Camera Position
-            idealPos.copy(targetPos).add(offset);
-          }
-
-          // Smoothly move camera there (Lerp): an exponential approach with time constant
-          // smoothTime, so the feel doesn't change with the frame rate (a fixed per-frame lerp
-          // factor would converge 2.4x faster at 144Hz than at 60Hz)
+          // An exponential approach with time constant smoothTime, so the feel doesn't change
+          // with the frame rate (a fixed per-frame lerp factor would converge 2.4x faster at
+          // 144Hz than at 60Hz)
           camera.position.lerp(idealPos, 1 - Math.exp(-dt / smoothTime));
-
-          // Look at the target
-          camera.lookAt(targetPos);
-
-          // After lookAt fn
-          if (afterLookAtFn) {
-            afterLookParams.targetPos = targetPos;
-            afterLookAtFn(afterLookParams);
-          }
         }
       : (dt: number) => {
-          // Safety check for NaN DT (on first frame or pause)
-          if (dt <= 0.0001) return;
-
-          if (getMouseMoveInput) {
-            // Handle possible mouse move input
-            // -------------------
-
-            const mouseDelta = getMouseMoveInput();
-
-            // Horizontal (Theta) - Rotate around Y
-            // Subtract to rotate "intuitively" (drag background) or add for inverted
-            spherical.theta -= mouseDelta.x * sensitivity;
-
-            // Vertical (Phi) - Rotate up/down
-            spherical.phi -= mouseDelta.y * sensitivity;
-
-            // Clamp Vertical angle
-            spherical.phi = Math.max(minPolarAngle, Math.min(maxPolarAngle, spherical.phi));
-
-            // Calculate Offset Vector from Spherical Coords
-            // This converts the Angles back into a Vector3 offset (x, y, z)
-            const offsetVector = sphericalOffset.setFromSpherical(spherical);
-
-            // Get Look Target (e.g., Player Head position)
-            targetPos.copy(targetMesh.position).add(targetHeightVector);
-
-            // Calculate Ideal Camera Position
-            idealPos.copy(targetPos).add(offsetVector);
-
-            // Smooth Damp
-            smoothDampVec3(
-              camera.position,
-              idealPos,
-              velocity,
-              smoothTime, // Faster smooth time for mouse look feels snappier
-              Infinity,
-              dt
-            );
-          } else {
-            // No mouse move input
-            // -------------------
-
-            // Get Target Position (Mesh or RigidBody)
-            // Using mesh is usually safer for visual smoothness if you interpolate visuals
-            targetPos.copy(targetMesh.position);
-
-            // Calculate Ideal Camera Position
-            idealPos.copy(targetPos).add(offset);
-
-            // Smoothly move Camera -> Ideal
-            // This modifies camera.position AND velocity in place.
-            smoothDampVec3(
-              camera.position, // Current
-              idealPos, // Target
-              velocity, // Velocity State (Stores momentum)
-              smoothTime, // Smooth time
-              100, // Max Speed (Optional cap)
-              dt // Time since last frame
-            );
-          }
-
-          // Look at the target
-          camera.lookAt(targetPos);
-
-          // After lookAt fn
-          if (afterLookAtFn) {
-            afterLookParams.targetPos = targetPos;
-            afterLookAtFn(afterLookParams);
-          }
+          // Modifies camera.position AND velocity (the momentum) in place
+          smoothDampVec3(camera.position, idealPos, velocity, smoothTime, dampMaxSpeed, dt);
         };
+
+  // Orbits the offset by the mouse movement into sphericalOffset
+  const orbit = (mouseDelta: { x: number; y: number }) => {
+    // Horizontal (Theta) - Rotate around Y
+    // Subtract to rotate "intuitively" (drag background) or add for inverted
+    spherical.theta -= mouseDelta.x * sensitivity;
+
+    // Vertical (Phi) - Rotate up/down
+    spherical.phi -= mouseDelta.y * sensitivity;
+
+    // Clamp Vertical angle
+    spherical.phi = Math.max(minPolarAngle, Math.min(maxPolarAngle, spherical.phi));
+
+    // Convert the angles back into a Vector3 offset (x, y, z)
+    sphericalOffset.setFromSpherical(spherical);
+  };
+
+  const tick = (dt: number) => {
+    // Safety check for NaN DT (on first frame or pause)
+    if (dt <= 0.0001) return;
+
+    // The followed point: the drawn pose (the mesh, not the rigid body, for visual smoothness
+    // when the visuals are interpolated), led ahead of it when lookAhead is on
+    targetPos.copy(targetMesh.position);
+    if (lookAhead) {
+      lookAhead.update(dt);
+      targetPos.add(lookAhead.lead);
+    }
+
+    if (getMouseMoveInput) {
+      orbit(getMouseMoveInput());
+      // Look at eg. the player's head
+      targetPos.add(targetHeightVector);
+      idealPos.copy(targetPos).add(sphericalOffset);
+    } else {
+      idealPos.copy(targetPos).add(offset);
+    }
+
+    smoothStep(dt);
+
+    if (isFixedOrientation) {
+      camera.lookAt(fixedLookPoint.copy(camera.position).sub(offset));
+    } else {
+      camera.lookAt(targetPos);
+    }
+
+    if (afterLookAtFn) {
+      afterLookParams.targetPos = targetPos;
+      afterLookAtFn(afterLookParams);
+    }
+  };
 
   activeRigs.set(id, { tick });
 };
