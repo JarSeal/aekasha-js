@@ -1,3 +1,8 @@
+// The engine's debug keys (p610 Phase 5): action maps in the DEBUG context, so they run in every
+// view, also while the loop is paused (event callbacks), and stop during a scene load. Their
+// definitions stay key-binding data (KeyUpDownBinding), so AppConfig.debugKeys keeps its shape: a
+// KEY_DOWN key runs at its action's press, a KEY_UP key at its release, each only for its own
+// key's event (see runDebugKey).
 import { addDebugToast } from './DebuggerGUI';
 import {
   playInProdTestMode,
@@ -15,8 +20,10 @@ import {
 import { toggleProfilerWindow } from './Profiler';
 import { redoLastAction, undoLastAction } from './UndoRedo';
 import { lwarn } from '../utils/Logger';
-import { getConfig } from '../kernel/config/Config';
+import { isDebugCameraActive } from '../kernel/camera/Camera';
+import { getConfig, isDebugEnvironment } from '../kernel/config/Config';
 import { getReadOnlyLoopState, toggleAppPlay, toggleMainPlay } from '../kernel/loop/MainLoop';
+import { getCurrentSceneId } from '../kernel/scene/Scene';
 import { getSvgIcon } from '../ui/icons/SvgIcon';
 import {
   getActiveView,
@@ -25,17 +32,32 @@ import {
   toggleActiveViewDrawer,
   toggleViewPlay,
 } from '../kernel/render/Views';
+import { createActionMap, isKeyEventInActiveMaps } from '../kernel/input/Actions';
+import type { ActionDef, KeyActionBinding } from '../kernel/input/ActionTypes';
 import {
-  createKeyBinding,
+  doesKeyEventMatchChord,
+  isKeyEventTakenByBindings,
   markChordReserved,
+  type KeyChord,
   type KeyUpDownBinding,
 } from '../kernel/input/KeyboardInput';
 
+/** The action map of the engine's debug keys, with the CONFIG.ts `debugKeys` overrides applied
+ * (debug env). An action per key, by the key's id. */
+export const DEBUG_KEYS_ACTION_MAP_ID = 'aek:debugKeys';
+/** The action map of the CONFIG.ts `debugKeys` that add a key (debug env, made only when there
+ * are some). */
+export const APP_DEBUG_KEYS_ACTION_MAP_ID = 'aek:appDebugKeys';
+/** The action map of the production test mode keys (prod test mode). */
+export const PROD_TEST_KEYS_ACTION_MAP_ID = 'aek:prodTestKeys';
+
 /**
- * An `AppConfig.debugKeys` entry (CONFIG.ts). Reusing a default debug binding's id overrides
- * that default — only the given fields change (e.g. just `chord`), and `enabled: false` removes
- * it. Any other id registers an additional debug-only key binding, which needs `chord` and `fn`
- * (`type` defaults to 'KEY_UP').
+ * An `AppConfig.debugKeys` entry (CONFIG.ts). Reusing a default debug key's id overrides that
+ * default — only the given fields change (e.g. just `chord`), and `enabled: false` removes it.
+ * Any other id adds a debug-only key, which needs `chord` and `fn` (`type` defaults to 'KEY_UP').
+ * Each is an action of a `DEBUG` action map ({@link DEBUG_KEYS_ACTION_MAP_ID},
+ * {@link APP_DEBUG_KEYS_ACTION_MAP_ID}): `fn` runs at the key's own keydown (`KEY_DOWN`) or keyup
+ * (`KEY_UP`), not for a key-repeat.
  */
 export type DebugKeyBindingConfig = Partial<Omit<KeyUpDownBinding, 'id'>> & { id: string };
 
@@ -270,28 +292,96 @@ const DEFAULT_DEBUG_KEY_BINDINGS: DefaultDebugKeyBinding[] = [
   },
 ];
 
+const getChordArray = (chord: KeyChord | KeyChord[]) => (Array.isArray(chord) ? chord : [chord]);
+
+const isDebugCamRuleMet = (rule: KeyUpDownBinding['enabledInDebugCam']) =>
+  !isDebugEnvironment() ||
+  !(
+    (rule === 'NOT_ENABLED_IN_DEBUG' && isDebugCameraActive()) ||
+    (rule === 'ENABLED_ONLY_IN_DEBUG' && !isDebugCameraActive())
+  );
+
+/** Runs a debug key for its action's press or release: only for its own key's event of its type
+ * (not an edge a modifier made, a blur's release or a replay), then by the binding's own rules. */
+const runDebugKey = (mapId: string, key: KeyUpDownBinding, e: Event | null) => {
+  if (e?.type !== (key.type === 'KEY_DOWN' ? 'keydown' : 'keyup')) return;
+  const keyEvent = e as KeyboardEvent;
+  const caseInsensitive = key.caseInsensitive ?? true;
+  const ignoreModifiers = !!key.ignoreModifiers;
+  const chords = getChordArray(key.chord);
+  if (!chords.some((c) => doesKeyEventMatchChord(keyEvent, c, caseInsensitive, ignoreModifiers))) {
+    return;
+  }
+  if (key.sceneId && key.sceneId !== getCurrentSceneId()) return;
+  if (!isDebugCamRuleMet(key.enabledInDebugCam)) return;
+  if (
+    key.yieldToOtherBindings &&
+    (isKeyEventTakenByBindings(keyEvent, key.type) || isKeyEventInActiveMaps(keyEvent, mapId))
+  ) {
+    return;
+  }
+  key.fn(keyEvent, performance.now());
+};
+
+/** A `DEBUG` action map of keys: an action per key (its id, name and chords), its fn called by
+ * runDebugKey. preventDefault: a bound key's keydown outside a text field, repeats included (F5
+ * doesn't reload); the KEY_DOWN fns also prevent their own press in a field. */
+const createDebugKeyMap = (mapId: string, keys: readonly Readonly<KeyUpDownBinding>[]) => {
+  const actions: { [id: string]: ActionDef } = {};
+  const bindings: { [id: string]: KeyActionBinding[] } = {};
+  for (const key of keys) {
+    actions[key.id] = {
+      type: 'BUTTON',
+      name: key.name,
+      description: key.description,
+      icons: key.icons,
+    };
+    bindings[key.id] = [
+      {
+        device: 'KEYBOARD',
+        keys: getChordArray(key.chord),
+        ignoreModifiers: !!key.ignoreModifiers,
+      },
+    ];
+  }
+  const map = createActionMap({
+    id: mapId,
+    context: 'DEBUG',
+    actions,
+    bindings,
+    preventDefault: true,
+  });
+  for (const key of keys) {
+    const run = (e: Event | null) => runDebugKey(mapId, key, e);
+    if (key.type === 'KEY_DOWN') map.onPressed(key.id, run);
+    else map.onReleased(key.id, run);
+  }
+};
+
 /**
- * Registers the engine's default debug key bindings (merged with any CONFIG.ts `debugKeys`
- * overrides) plus the app's own `debugKeys`, and reserves the defaults' chords so app code
- * binding the same chord under another id gets a console warning. Debug environment only.
+ * Creates the engine's debug keys' action map ({@link DEBUG_KEYS_ACTION_MAP_ID}), its defaults
+ * merged with the CONFIG.ts `debugKeys` overrides, and the app's own `debugKeys` as a map of their
+ * own ({@link APP_DEBUG_KEYS_ACTION_MAP_ID}). Reserves the engine keys' chords, so a key binding or
+ * an action map binding one of them gets a console warning. Debug environment only.
  */
 export const registerDefaultDebugKeyBindings = (): void => {
   const { debugKeys = [] } = getConfig();
   const defaultIds = new Set(DEFAULT_DEBUG_KEY_BINDINGS.map((d) => d.id));
 
+  const engineKeys: KeyUpDownBinding[] = [];
   for (const def of DEFAULT_DEBUG_KEY_BINDINGS) {
     const override = debugKeys.find((k) => k.id === def.id);
     if (override?.enabled === false) continue; // the app turned this default off
-    // Debug keys also run in editor views (ViewManager.ts), which suspend the app's bindings
-    const binding: KeyUpDownBinding = { ...def, ...override, isDebugKey: true };
-    markChordReserved(binding.id, binding.chord); // reserve whatever chord actually ends up bound
-    createKeyBinding(binding); // same id = sanctioned override, no warning
+    const key: KeyUpDownBinding = { ...def, ...override };
+    markChordReserved(key.id, key.chord, DEBUG_KEYS_ACTION_MAP_ID); // the chord actually bound
+    engineKeys.push(key);
   }
+  createDebugKeyMap(DEBUG_KEYS_ACTION_MAP_ID, engineKeys);
 
-  // App debugKeys that don't override a default register normally (and get the collision
-  // warning if they reuse a reserved chord)
+  // App debugKeys that don't override a default: their own map, so a reserved chord warns
+  const appKeys: KeyUpDownBinding[] = [];
   for (const appKey of debugKeys) {
-    if (defaultIds.has(appKey.id)) continue;
+    if (defaultIds.has(appKey.id) || appKey.enabled === false) continue;
     const { chord, fn } = appKey;
     if (!chord || !fn) {
       lwarn(
@@ -300,12 +390,14 @@ export const registerDefaultDebugKeyBindings = (): void => {
       );
       continue;
     }
-    createKeyBinding({ ...appKey, type: appKey.type ?? 'KEY_UP', chord, fn, isDebugKey: true });
+    appKeys.push({ ...appKey, type: appKey.type ?? 'KEY_UP', chord, fn });
   }
+  if (appKeys.length) createDebugKeyMap(APP_DEBUG_KEYS_ACTION_MAP_ID, appKeys);
 };
 
 /** Production test mode keys: the on-screen play tools' stop, main loop, app loop pause and
- * profiler buttons. Each gives way to an app binding of the same key (yieldToOtherBindings). */
+ * profiler buttons. Each gives way to an app key binding or action map of the same key
+ * (yieldToOtherBindings). */
 const DEFAULT_PROD_TEST_KEY_BINDINGS: DefaultDebugKeyBinding[] = [
   {
     id: 'sc-prod-test-stop',
@@ -364,12 +456,12 @@ const DEFAULT_PROD_TEST_KEY_BINDINGS: DefaultDebugKeyBinding[] = [
 ];
 
 /**
- * Registers the production test mode keys (F5 stop, F6 main loop, F7 app loop pause, F8
- * profiler window, no toasts). An app binding of the same key takes over. Production test mode
- * only.
+ * Creates the production test mode keys' action map ({@link PROD_TEST_KEYS_ACTION_MAP_ID}: F5
+ * stop, F6 main loop, F7 app loop pause, F8 profiler window, no toasts). An app key binding or
+ * action map of the same key takes over. Production test mode only.
  */
 export const registerDefaultProdTestKeyBindings = (): void => {
-  for (const binding of DEFAULT_PROD_TEST_KEY_BINDINGS) createKeyBinding(binding);
+  createDebugKeyMap(PROD_TEST_KEYS_ACTION_MAP_ID, DEFAULT_PROD_TEST_KEY_BINDINGS);
 };
 
 /**

@@ -587,6 +587,46 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
 3. Same path hash, same hashes, every debug key checked by hand in the Runtime and the material
    editor views. Commit.
 
+**As built (section A, step 1):**
+
+- Decided with the user: a new keydown (not a key-repeat) of a key bound to a `BUTTON` that is
+  already down counts as a press (`Actions.ts`' `updateMap`): macOS sends no keyup for Z while ⌘
+  is held, so ⌘Z, Z again wasn't a second undo. It applies to every map (Space held, Enter pressed:
+  a second jump), so `pressedCount` can exceed `releasedCount`; `ActionState` and `onPressed` say so.
+  And the production test keys are an action map too.
+- Three `DEBUG` maps (`DefaultDebugKeyBindings.ts`): `aek:debugKeys` (the defaults with the
+  CONFIG.ts overrides), `aek:appDebugKeys` (the CONFIG.ts keys that add one; its own map, so a
+  reserved chord still warns) and `aek:prodTestKeys`; the ids exported as
+  `DEBUG_KEYS_ACTION_MAP_ID`, `APP_DEBUG_KEYS_ACTION_MAP_ID`, `PROD_TEST_KEYS_ACTION_MAP_ID`. The
+  definitions stay `KeyUpDownBinding` data (`DebugKeyBindingConfig` unchanged): an action per key
+  by its id, `KEY_DOWN` on `onPressed`, `KEY_UP` on `onReleased`, through `runDebugKey`, which runs
+  the fn only for the key's own event of its type (not an edge a modifier made, a blur's release
+  or a replay) and checks `sceneId`, `enabledInDebugCam`, `caseInsensitive` and
+  `yieldToOtherBindings` there. A yielding key gives way to a key binding
+  (`isKeyEventTakenByBindings`, `@internal`, `KeyboardInput.ts`) or another active map
+  (`isKeyEventInActiveMaps`, `@internal`, `Actions.ts`).
+- The maps have `preventDefault: true`: their keys' keydowns are prevented outside a text field,
+  key-repeats included; the `KEY_DOWN` fns still prevent their own press in a field. Changes:
+  a held F key's key-repeats in a text field aren't prevented any more (the press is), h / u / i /
+  o / p / § keydowns are prevented outside a field (no visible effect), a yielding prod test key's
+  keydown is prevented too, and a CONFIG.ts debug key's fn no longer gets key-repeats.
+  `setKeyInputsEnabled` (called nowhere) doesn't stop them any more.
+- Reserved chords: `markChordReserved(id, chord, mapId?)`; `warnIfKeyChordReserved` (`@internal`)
+  warns for a key binding (now also one with a debug key's id: it no longer replaces it) and for
+  an action map's keyboard bindings (`setActionBindings`, debug env; a binding that ignores
+  modifiers collides on the key alone). The message says both run.
+- `ActionMap` gains `sceneId` and `enabledInDebugCam` (read-only), for the dialog.
+- The shortcuts dialog: engine rows from the definitions (`category`) and the `aek:debugKeys`
+  map's live bindings (rebound, unbound, disabled, removed by app code; "Replaced by app code" is
+  gone: a key binding with a default's id is now just another binding); the App tab lists the app's
+  action maps' actions (type, map, debug camera rule, "Inactive now") next to its key bindings, the
+  CONFIG.ts keys from `aek:appDebugKeys`; collisions with engine keys checked for both.
+- Tests: `Actions.test.ts` (+4; "keeps a button down while any of its keys is" now expects two
+  presses), `debug/DefaultDebugKeyBindings.test.ts` (8: press / release, modifier edges, ⌘Z twice,
+  preventDefault, overrides, the app map and its warning, the reserved warnings, the prod test
+  yield). Checked in a driven browser on the gym: `h` toggles the drawer, `i` / `u` open both tabs,
+  no new console output.
+
 ### Phase 6: the camera rig and the example scene
 
 1. D9's rig options (the shared tick first), with the gym's rig unchanged.

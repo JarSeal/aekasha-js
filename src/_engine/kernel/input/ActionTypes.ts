@@ -132,7 +132,9 @@ export type ActionBindings<TActions extends ActionDefs> = {
 /**
  * An action as the last sample saw it (see {@link ActionMap.read}). Every type has every field:
  * - `BUTTON`: `isDown` while held; `value` 1 while held (a trigger's analog value); the counts are
- *   the presses and releases since the previous sample.
+ *   the presses and releases since the previous sample. A new keydown of one of its keys while it's
+ *   held counts as a press too (another of its keys, or macOS's lost keyups while ⌘ is held), so
+ *   `pressedCount` can be higher than `releasedCount`.
  * - `AXIS_1D`: `value` -1 to 1; `isDown` when it isn't 0, and the counts are the times it left 0
  *   and came back.
  * - `AXIS_2D`: `x` and `y` (right and up positive), `value` their length (at most 1); `isDown` and
@@ -193,6 +195,10 @@ export type ActionMap<TActions extends ActionDefs = ActionDefs> = {
   readonly id: string;
   /** The context that enables or suspends it. */
   readonly context: ActionContext;
+  /** The scene it's active in (undefined: every scene). */
+  readonly sceneId: string | undefined;
+  /** Whether it runs while the debug camera is on (debug env only). */
+  readonly enabledInDebugCam: EnabledInDebugCam;
   /** Its action definitions, as given (names and icons for UI). */
   readonly actions: TActions;
   /**
@@ -201,8 +207,9 @@ export type ActionMap<TActions extends ActionDefs = ActionDefs> = {
    */
   read(actionId: Extract<keyof TActions, string>): Readonly<ActionState>;
   /**
-   * Calls `fn` when the action goes down (a `BUTTON` pressed, an axis leaving 0), at the device
-   * event, also while the loop is paused: what UI and debug keys use.
+   * Calls `fn` when the action goes down (a `BUTTON` pressed, a key of a held one pressed again, an
+   * axis leaving 0), at the device event, also while the loop is paused: what UI and debug keys
+   * use.
    * @returns removes the callback
    */
   onPressed(actionId: Extract<keyof TActions, string>, fn: ActionEventFn): () => void;

@@ -4,6 +4,7 @@ import { playActionRecording, recordActions } from './ActionRecording';
 import {
   createActionMap,
   getActionMap,
+  isKeyEventInActiveMaps,
   pollActionsFrame,
   sampleActions,
   setActionContextEnabled,
@@ -36,21 +37,26 @@ vi.mock(import('../../utils/Logger'), async (importOriginal) => ({
 
 const held = new Set<string>();
 
-const keyEvent = (type: 'keydown' | 'keyup', key: string, mods: { ctrl?: boolean } = {}) => {
+const keyEvent = (
+  type: 'keydown' | 'keyup',
+  key: string,
+  mods: { ctrl?: boolean; meta?: boolean; repeat?: boolean } = {}
+) => {
   if (type === 'keydown') held.add(key);
   else held.delete(key);
   const e = Object.assign(new Event(type, { cancelable: true }), {
     key,
-    repeat: false,
+    repeat: !!mods.repeat,
     shiftKey: held.has('Shift'),
     ctrlKey: !!mods.ctrl || held.has('Control'),
     altKey: false,
-    metaKey: false,
+    metaKey: !!mods.meta || held.has('Meta'),
   });
   dom.win.dispatchEvent(e);
   return e;
 };
-const down = (key: string, mods?: { ctrl?: boolean }) => keyEvent('keydown', key, mods);
+const down = (key: string, mods?: { ctrl?: boolean; meta?: boolean; repeat?: boolean }) =>
+  keyEvent('keydown', key, mods);
 const up = (key: string) => keyEvent('keyup', key);
 
 /** A mouse event whose target is the canvas (dispatched on window, where the listeners are). */
@@ -159,10 +165,10 @@ describe('sampling', () => {
   it('keeps a button down while any of its keys is', () => {
     const map = createPlayerMap();
     down(' ');
-    down('Enter');
+    down('Enter'); // a press too (see below)
     up(' ');
     sampleActions(0);
-    expect(map.read('jump')).toMatchObject({ isDown: true, pressedCount: 1, releasedCount: 0 });
+    expect(map.read('jump')).toMatchObject({ isDown: true, pressedCount: 2, releasedCount: 0 });
   });
 
   it('drops the counts on a skipped sample, keeping what is held', () => {
@@ -274,6 +280,56 @@ describe('keyboard bindings', () => {
     expect(down(' ').defaultPrevented).toBe(true);
     expect(down('h').defaultPrevented).toBe(false);
     expect(down('x').defaultPrevented).toBe(false);
+  });
+
+  it("count a new keydown of a held button's key as a press, not a key-repeat", () => {
+    const map = createPlayerMap();
+    const pressed = vi.fn();
+    map.onPressed('jump', pressed);
+    down(' ');
+    down(' ', { repeat: true });
+    down('Enter'); // another of its keys
+    // A key whose keyup never came (macOS sends none while ⌘ is held)
+    down(' ');
+    sampleActions(0);
+    expect(map.read('jump')).toMatchObject({ isDown: true, pressedCount: 3, releasedCount: 0 });
+    expect(pressed).toHaveBeenCalledTimes(3);
+  });
+
+  it('count ⌘Z pressed again while ⌘ is held, without a keyup of Z between', () => {
+    const debug = track(
+      createActionMap({
+        id: 'debug',
+        context: 'DEBUG',
+        actions: { undo: { type: 'BUTTON' } },
+        bindings: { undo: [{ device: 'KEYBOARD', keys: [{ key: 'z', meta: true }] }] },
+      })
+    );
+    const undo = vi.fn();
+    debug.onPressed('undo', undo);
+    down('Meta');
+    down('z', { meta: true });
+    down('z', { meta: true });
+    expect(undo).toHaveBeenCalledTimes(2);
+  });
+
+  it('do not count a press again for an axis', () => {
+    const map = createPlayerMap();
+    const pressed = vi.fn();
+    map.onPressed('move', pressed);
+    down('w');
+    down('w');
+    expect(pressed).toHaveBeenCalledTimes(1);
+  });
+
+  it('tell whether another active map takes a key event', () => {
+    createPlayerMap();
+    const e = down(' ') as unknown as KeyboardEvent;
+    expect(isKeyEventInActiveMaps(e, 'other')).toBe(true);
+    expect(isKeyEventInActiveMaps(e, 'player')).toBe(false);
+    expect(isKeyEventInActiveMaps(down('x') as unknown as KeyboardEvent, 'other')).toBe(false);
+    setActionContextEnabled('GAMEPLAY', false);
+    expect(isKeyEventInActiveMaps(e, 'other')).toBe(false);
   });
 
   it('follow replaced bindings, releasing a dropped held key', () => {

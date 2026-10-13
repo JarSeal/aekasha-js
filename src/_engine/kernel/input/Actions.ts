@@ -36,7 +36,7 @@ import type {
 import { pollGamepads } from './GamepadInput';
 import type { EnabledInDebugCam } from './InputSharedTypes';
 import { areAllInputsEnabled, areAppInputsEnabled } from './InputState';
-import { setKeyActionListener } from './KeyboardInput';
+import { setKeyActionListener, warnIfKeyChordReserved } from './KeyboardInput';
 import { setMouseActionSource } from './MouseInput';
 import { setTouchActionSource } from './TouchInput';
 
@@ -158,6 +158,9 @@ const fire = (fns: ActionEventFn[], e: Event | null) => {
   for (let i = 0; i < fns.length; i++) fns[i](e);
 };
 
+const isNewKeyDown = (e: Event | null): e is KeyboardEvent =>
+  e !== null && e.type === 'keydown' && !(e as KeyboardEvent).repeat;
+
 /** Re-reads a map's button and axis actions. On a change of down, an active map counts the edge
  * and calls its callbacks. */
 const updateMap = (map: MapRuntime, e: Event | null, active: boolean) => {
@@ -165,7 +168,21 @@ const updateMap = (map: MapRuntime, e: Event | null, active: boolean) => {
     const a = map.actions[i];
     if (a.type === 'DELTA_2D') continue;
     const isDown = readActionDevices(a.compiled, a.type, map.gamepadIndex, a.live);
-    if (isDown === a.isLiveDown) continue;
+    if (isDown === a.isLiveDown) {
+      // A key of a held button pressed again is a press too: another of its keys, or a key whose
+      // keyup the browser never sent (macOS sends none while ⌘ is held: ⌘Z, Z again)
+      if (
+        isDown &&
+        active &&
+        a.type === 'BUTTON' &&
+        isNewKeyDown(e) &&
+        isKeyEventInBindings(a.compiled, e)
+      ) {
+        a.pressedCount++;
+        fire(a.pressedFns, e);
+      }
+      continue;
+    }
     a.isLiveDown = isDown;
     if (!active) continue;
     if (isDown) {
@@ -212,6 +229,23 @@ const onKeyEvent = (e: KeyboardEvent | null) => {
       }
     }
   }
+};
+
+/**
+ * Whether an active map other than `exceptMapId` has a keyboard binding the event matches (what a
+ * yielding debug key gives way to).
+ * @internal
+ */
+export const isKeyEventInActiveMaps = (e: KeyboardEvent, exceptMapId: string): boolean => {
+  const list = maps;
+  for (let i = 0; i < list.length; i++) {
+    const map = list[i];
+    if (map.id === exceptMapId || !isCountingEvents(map)) continue;
+    for (let j = 0; j < map.actions.length; j++) {
+      if (isKeyEventInBindings(map.actions[j].compiled, e)) return true;
+    }
+  }
+  return false;
 };
 
 /** Adds `x`, `y` (right and up positive) to the active maps' delta actions, times the scale
@@ -320,6 +354,19 @@ const setActionBindings = (
 ) => {
   a.bindings = bindings;
   a.compiled = compileActionBindings(map.id, a.id, a.type, bindings, map.ignoreModifiers);
+  if (!isDebugEnvironment()) return;
+  // A debug key's chord (DefaultDebugKeyBindings.ts) runs both in debug mode: warn
+  const owner = `the action "${a.id}" of the action map "${map.id}"`;
+  for (const c of a.compiled) {
+    if (c.kind !== 'KEYS' && c.kind !== 'KEY_AXIS' && c.kind !== 'KEY_COMPOSITE') continue;
+    const chords =
+      c.kind === 'KEYS'
+        ? c.chords
+        : c.kind === 'KEY_AXIS'
+          ? [...c.neg, ...c.pos]
+          : [...c.up, ...c.down, ...c.left, ...c.right];
+    warnIfKeyChordReserved(owner, a.id, chords, map.id, c.ignoreModifiers);
+  }
 };
 
 // Sampling (the loop's hooks)
@@ -547,6 +594,8 @@ export const createActionMap = <const TActions extends ActionDefs>(
   const handle: ActionMap<TActions> = {
     id: map.id,
     context,
+    sceneId: map.sceneId,
+    enabledInDebugCam: map.enabledInDebugCam,
     actions: opts.actions,
     read: (actionId) => map.byId.get(actionId)?.state ?? IDLE,
     onPressed: (actionId, fn) => addFn(getAction(map, actionId), 'pressedFns', fn),

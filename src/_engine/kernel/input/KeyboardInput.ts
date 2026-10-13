@@ -29,8 +29,8 @@ export type KeyBindingBase = BindingMeta & {
   enabled?: boolean; // default true
   sceneId?: string;
   enabledInDebugCam?: EnabledInDebugCam;
-  /** Runs in editor views too (ViewManager.ts), which suspend the other bindings. Set by the
-   * engine for its debug keys and the CONFIG.ts `debugKeys`. */
+  /** Runs in editor views too (ViewManager.ts), which suspend the other bindings. (The engine's
+   * debug keys and the CONFIG.ts `debugKeys` are action maps in the `DEBUG` context instead.) */
   isDebugKey?: boolean;
 };
 
@@ -52,7 +52,13 @@ export type KeyHeldBinding = KeyBindingBase & {
 
 export type KeyBinding = KeyUpDownBinding | KeyHeldBinding;
 
-type ReservedChord = { id: string; chord: KeyChord | KeyChord[]; chordLabel: string };
+type ReservedChord = {
+  id: string;
+  chord: KeyChord | KeyChord[];
+  chordLabel: string;
+  /** The action map that binds it (its own bindings don't collide with it). */
+  mapId: string | undefined;
+};
 
 let bindings: KeyBinding[] = [];
 let reservedChords: ReservedChord[] = [];
@@ -206,7 +212,7 @@ const bindingMatchesEvent = (
 
 /** Whether a binding other than `self`, and not yielding itself, fires for the event. */
 const isEventTakenByOther = (
-  self: KeyUpDownBinding,
+  self: KeyUpDownBinding | null,
   type: 'KEY_UP' | 'KEY_DOWN',
   e: KeyboardEvent
 ) => {
@@ -256,20 +262,46 @@ const initKeyListeners = () => {
   addOnWindowBlurFn('inputKeyboardHeldKeysClear', () => clearHeldKeys());
 };
 
-export const createKeyBinding = (binding: KeyBinding): void => {
-  if (isDebugEnvironment()) {
-    for (let i = 0; i < reservedChords.length; i++) {
-      const reserved = reservedChords[i];
-      if (reserved.id !== binding.id && doKeyChordsCollide(reserved.chord, binding.chord)) {
-        lwarn(
-          `Debugger shortcut key for "${reserved.chordLabel}" ("${reserved.id}") has been ` +
-            `overwritten with app code ("${binding.id}"). Please overwrite it from the CONFIG.ts ` +
-            `file instead (a debugKeys entry with the id "${reserved.id}").`
-        );
-      }
-    }
+/**
+ * Warns (debug env) when a chord is one a debug key reserved ({@link markChordReserved}): both
+ * run in debug mode. A reserved chord of the map `mapId`, or one with the id `id` that no map
+ * owns, is skipped.
+ * @internal
+ */
+export const warnIfKeyChordReserved = (
+  owner: string,
+  id: string,
+  chord: KeyChord | KeyChord[],
+  mapId?: string,
+  ignoreModifiers?: boolean
+): void => {
+  if (!isDebugEnvironment()) return;
+  for (let i = 0; i < reservedChords.length; i++) {
+    const reserved = reservedChords[i];
+    if (reserved.mapId ? reserved.mapId === mapId : reserved.id === id) continue;
+    // A chord that ignores modifiers matches the key with any of them
+    const collides = ignoreModifiers
+      ? getChordArray(reserved.chord).some((r) =>
+          getChordArray(chord).some((c) => c.key.toLowerCase() === r.key.toLowerCase())
+        )
+      : doKeyChordsCollide(reserved.chord, chord);
+    if (!collides) continue;
+    lwarn(
+      `Debug key "${reserved.chordLabel}" ("${reserved.id}") is also bound by ${owner}: both ` +
+        `run in debug mode. To rebind or turn off the debug key, add a debugKeys entry with the ` +
+        `id "${reserved.id}" to CONFIG.ts.`
+    );
   }
+};
 
+export const createKeyBinding = (binding: KeyBinding): void => {
+  warnIfKeyChordReserved(
+    `the key binding "${binding.id}"`,
+    binding.id,
+    binding.chord,
+    undefined,
+    binding.ignoreModifiers
+  );
   bindings = bindings.filter((b) => b.id !== binding.id);
   bindings.push(binding);
   initKeyListeners();
@@ -350,8 +382,24 @@ export const doesKeyEventMatchChord = (
   ignoreModifiers: boolean
 ): boolean => eventMatchesChord(e, chord, caseInsensitive, ignoreModifiers);
 
-/** Used by DefaultDebugKeyBindings.ts to register a chord as a collision-check target. */
-export const markChordReserved = (id: string, chord: KeyChord | KeyChord[]): void => {
+/**
+ * Reserves a debug key's chord: a key binding or an action map binding it later gets a console
+ * warning (debug env). Used by DefaultDebugKeyBindings.ts.
+ * @param mapId the action map that binds it, whose own bindings don't collide with it
+ */
+export const markChordReserved = (
+  id: string,
+  chord: KeyChord | KeyChord[],
+  mapId?: string
+): void => {
   reservedChords = reservedChords.filter((r) => r.id !== id);
-  reservedChords.push({ id, chord, chordLabel: getKeyChordLabel(chord) });
+  reservedChords.push({ id, chord, chordLabel: getKeyChordLabel(chord), mapId });
 };
+
+/**
+ * Whether a key binding that doesn't yield itself fires for the event (what a yielding debug key
+ * gives way to).
+ * @internal
+ */
+export const isKeyEventTakenByBindings = (e: KeyboardEvent, type: 'KEY_UP' | 'KEY_DOWN'): boolean =>
+  keyInputsEnabled && areAllInputsEnabled() && isEventTakenByOther(null, type, e);
