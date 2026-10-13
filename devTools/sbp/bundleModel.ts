@@ -10,7 +10,7 @@ import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
 import { ROOT } from '../assetPipeline/sources';
-import type { BuildModule } from '../verify/debugInProduction';
+import type { BuildModule, EmittedAsset } from '../verify/debugInProduction';
 
 /** Bump when `bundle.json`'s shape changes: an old one is then read as missing */
 export const BUNDLE_FORMAT_VERSION = 1;
@@ -146,6 +146,36 @@ export const listBuildModules = (data: VisualizerData): BuildModule[] =>
     ),
   }));
 
+/**
+ * The files Vite emitted for modules (the manifest's entries that aren't chunks or CSS: `?url`
+ * imports, `new URL(…, import.meta.url)` files), each with its source's module id and the modules
+ * that import it (none for a `new URL` file: the visualizer lists no module for it)
+ * @param fileKeys hashed name → key ({@link keyFiles})
+ */
+export const listEmittedAssets = (
+  manifest: Manifest,
+  data: VisualizerData,
+  fileKeys: Record<string, string>
+): EmittedAsset[] => {
+  const metas = Object.values(data.nodeMetas);
+  const assets: EmittedAsset[] = [];
+  for (const { file, src } of Object.values(manifest)) {
+    if (!src || /\.(js|css)$/.test(file)) continue;
+    // `src` is relative to the Vite root `src/` (`../node_modules/…` for a package's file)
+    const id = path.posix.normalize(`/src/${src}`);
+    const importers = new Set<string>();
+    for (const meta of metas) {
+      if (meta.id !== id && !meta.id.startsWith(`${id}?`)) continue;
+      for (const { uid } of meta.importedBy) {
+        const importer = data.nodeMetas[uid]?.id;
+        if (importer) importers.add(importer);
+      }
+    }
+    assets.push({ file: fileKeys[file] ?? stripHash(file), id, importers: [...importers].sort() });
+  }
+  return assets.sort((a, b) => a.file.localeCompare(b.file));
+};
+
 /** The main (entry) chunk's totals and its modules summed per group */
 export const measureMainChunk = (entryFile: string, data: VisualizerData) => {
   const groups: Record<string, GroupSize> = {};
@@ -169,6 +199,8 @@ export const measureMainChunk = (entryFile: string, data: VisualizerData) => {
 export type CollectedBundle = {
   bundle: BundleBaseline;
   modules: BuildModule[];
+  /** The files Vite emitted for modules, for the debug check */
+  assets: EmittedAsset[];
   /** `dist/assets/`' hashed names (`assets/index-Bd_fo_yS.js`) → their keys in `bundle.chunks` */
   fileKeys: Record<string, string>;
   manifest: Manifest;
@@ -199,6 +231,7 @@ export const collectBundle = (): CollectedBundle => {
   return {
     bundle: { formatVersion: BUNDLE_FORMAT_VERSION, chunks, main, mainGroups },
     modules: listBuildModules(data),
+    assets: listEmittedAssets(manifest, data, fileKeys),
     fileKeys,
     manifest,
     data,

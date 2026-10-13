@@ -15,7 +15,8 @@ export function loadDebugModule<T>(
   importer: () => Promise<T>,
   debugId?: string
 ): DebugModuleRef<T> | null {
-  // A production build drops the importer, and with it the debug chunk
+  // A production build drops the importer, and with it the debug chunk (the module is still
+  // loaded: a `?url` import in it still emits its file, see `debug/symbols/3DSymbols.ts`)
   if (!__AEK_DEBUG__) return null;
   if (!IS_DEBUG_ENV) return null;
   const ref: DebugModuleRef<T> = { current: null };

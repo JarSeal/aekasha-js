@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Build, Dev tooling, Engine API, Marketing
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -248,8 +248,8 @@ From p607's "left to this plan":
   3.8 kB gzip in main today) change engine APIs that
   p612 and p614 review. Phase 5 measures what each would save from the `yarn sbp` report and
   writes the recommendation into p612 / p614.
-- **An icon budget** needs no code of its own: `ui/icons` is a group, and its production budget
-  is 0 (the built-ins register only in the debug env).
+- **An icon budget** needs no code of its own: ~~`ui/icons` is a group~~ `modules` budgets on the
+  built-in icons' files, at 0 (the built-ins register only in the debug env; Phase 2's As built).
 
 **Recommended.**
 
@@ -326,13 +326,59 @@ As built:
 - **Docs wait for Phase 6** as planned (Commands, `devTools/sbp/CLAUDE.md`, `AEK_SBP`);
   `devTools/verify/CLAUDE.md` names the shared modules now.
 
-### Phase 2: budgets, `yarn build`, debug assets
+### Phase 2: budgets, `yarn build`, debug assets — done
 
 1. `sbp.config.ts` (D2) with the `app` profile's budgets, set from today's report plus a margin.
 2. Over budget fails with the group or chunk, its size and the budget; well under is reported.
 3. `yarn build` runs it (D4); `AEK_SBP=false` skips it.
 4. The debug assets check and the `3DSymbols` fix (D5): `dist/assets/` loses 114.5 kB gzip;
    `bundle.json` updated with the change that explains it.
+
+As built:
+
+- **Budgets** (`SbpBudgets` in `devTools/sbp/config.ts`, `budgets?` on `SbpProfile`; gzip bytes,
+  written `404 * KIB`): `initial` (the report's `initial.total`), `chunks` (a `bundle.json` key,
+  initial or lazy), `groups` (a group's code in the initial chunks, before minification, as the
+  report's groups) and `modules` (a file or a folder ending in `/` under `src/`, measured as the
+  groups). A chunk budget without its file fails (`missing`); a group without initial code is 0.
+  The `app` profile has 25: `initial` 404 KiB, 5 chunks, 17 groups (`three`, every feature, the
+  kernel areas over 5 KiB, `ui`, `app`, `toolkit`; the `initial` budget covers the rest) and 2
+  modules. Each is the size plus about 4% (at least 1 KiB), rounded up to a whole KiB
+  (`suggestBudget`). "Well under" is more than 10% of the budget and more than 2 KiB
+  (`isWellUnderBudget`), so a small budget's headroom isn't reported; the line suggests the
+  tighter value.
+- **D10's icon budget:** `ui/icons` isn't a group (`getModuleGroup` splits only `kernel/` and
+  `features/`; the icons are in `_engine/ui`), and `SvgIcon.ts` (266 B) ships. So the `modules`
+  budgets exist: `_engine/ui/icons/BuiltInIcons.ts` and `_engine/ui/icons/svg/` at 0.
+- **The check** (`devTools/sbp/budgets.ts`): `checkBudgets` in `measureProfile`; the report's
+  `budgets` (null without any; `REPORT_FORMAT_VERSION` 2) and its last section: one line when all
+  are within, else each failure and each budget to lower. `yarn sbp` exits 1 on a failure (as
+  `yarn assets` does), never with `--why`.
+- **`yarn build`** runs `yarn sbp --no-build --profile app --brief` after the dev gather (it reads
+  the manifests) and before `yarn hub:build` (Phase 6's `{{sbp:…}}` reads the report). `--brief`
+  prints the totals and the budgets; the whole report still goes to the log and `report.json`.
+  `AEK_SBP=false` makes `yarn sbp` print one line and exit 0. `build:test` doesn't run it (a debug
+  build: the budgets would fail). D4's `banner` part waits for Phase 4's embed build.
+- **D5's fix as planned doesn't work:** a production build still loads the `_dbg__` modules (97 in
+  its graph), since Rollup loads every `import()`, and Vite emits a `?url` file when it loads the
+  module. Measured with a scratch Vite 6.4 build (`__AEK_DEBUG__` false): an `import()` in a
+  loader's closure, or after `if (!__AEK_DEBUG__) return`, still emits; one inside
+  `if (__AEK_DEBUG__) { … }` or `__AEK_DEBUG__ ? … : null` doesn't. So the `?url` imports moved
+  into `_dbg__Symbols.ts` (which re-exports them), and `load3DSymbols` loads it with
+  `__AEK_DEBUG__ ? await loadDebugModuleAsync(() => import('./_dbg__Symbols')) : null`, then reads
+  the URLs from it. `loadDebugModule`'s comment names the trap. Checked in the debug env: the
+  symbols load, no error.
+- **The debug assets check** (`findDebugCodeInBuild`, now an options object
+  `{ files, modules, assets }`): `listEmittedAssets` (`bundleModel.ts`, on `CollectedBundle` as
+  `assets`) reads the manifest's entries that aren't chunks or CSS, each with its source's module
+  id and the visualizer's importers of it (any query). A file is a finding when its source is in a
+  debug folder or every importer is a debug module; a `new URL` file has no importers listed, so
+  only its path counts. Before the fix it named `3DSymbols.glb` and `3DSymbolsTextures.png`.
+- **`bundle.json`** recorded: the two files gone (108.8 + 5.7 kB gzip), the main chunk unchanged;
+  the other chunks moved a few gzip bytes each (the content hashes they import changed).
+- **Docs wait for Phase 6** as planned: `devTools/verify/CLAUDE.md` (the debug assets check),
+  Commands (`yarn sbp`, `--brief`, `AEK_SBP`), `devTools/sbp/CLAUDE.md`; the `__AEK_DEBUG__ ?`
+  trap belongs in `src/_engine/debug/CLAUDE.md` (Debug system) too.
 
 ### Phase 3: `mountAekasha` (engine)
 

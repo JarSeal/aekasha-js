@@ -8,6 +8,7 @@ import {
   type Manifest,
   type VisualizerData,
   listBuildModules,
+  listEmittedAssets,
   measureMainChunk,
 } from './bundleModel';
 
@@ -103,6 +104,7 @@ export const createTestBundle = (): CollectedBundle => ({
     ...measureMainChunk(MAIN, DATA),
   },
   modules: listBuildModules(DATA),
+  assets: listEmittedAssets(MANIFEST, DATA, FILE_KEYS),
   fileKeys: FILE_KEYS,
   manifest: MANIFEST,
   data: DATA,

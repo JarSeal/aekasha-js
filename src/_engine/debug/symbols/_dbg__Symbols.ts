@@ -12,6 +12,12 @@ import {
   createNewPointLightSymbol,
   createNewSpotLightSymbol,
 } from './3DSymbols';
+import symbolsModelUrl from './3DSymbols.glb?url';
+import symbolsTextureUrl from './3DSymbolsTextures.png?url';
+
+// The symbols' files, imported here and not by `3DSymbols.ts`: a production build never loads this
+// module, so Vite never emits them into `dist/` (p611 D5)
+export { symbolsModelUrl, symbolsTextureUrl };
 
 const attachToEntity = (id: number, w: ECSWorld, scene: THREE.Scene) => {
   if (w.hasComponent(id, ComponentType.DEBUG_SYMBOL)) return;

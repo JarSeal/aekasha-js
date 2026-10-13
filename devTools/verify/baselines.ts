@@ -43,7 +43,7 @@ import { loadApiModel } from '../hub/api/extract';
 import { parseModuleSource } from '../refactor/importGraph';
 import { getOwnMembers, indexApiModel, isDocumented, Kind } from '../hub/api/model';
 import { out, PROGRESS_LOG_WATCH, setProgressLogEnabled } from './progressLog';
-import { type BuildModule, findDebugCodeInBuild } from './debugInProduction';
+import { type BuildModule, type EmittedAsset, findDebugCodeInBuild } from './debugInProduction';
 import { type BundleBaseline, collectBundle, sortKeys } from '../sbp/bundleModel';
 import { diffBundle, formatKB } from '../sbp/bundleDiff';
 import { buildAppBundle } from '../sbp/appBuild';
@@ -126,8 +126,12 @@ const formatShare = (c: Coverage) =>
 // --- bundle.json ---
 
 /** Prints the debug check's findings (p607 D7); returns their count */
-const reportDebugCode = (bundle: BundleBaseline, modules: BuildModule[]) => {
-  const findings = findDebugCodeInBuild(Object.keys(bundle.chunks), modules);
+const reportDebugCode = (
+  bundle: BundleBaseline,
+  modules: BuildModule[],
+  assets: EmittedAsset[]
+) => {
+  const findings = findDebugCodeInBuild({ files: Object.keys(bundle.chunks), modules, assets });
   out(`\nproduction build: debug code`);
   if (!findings.length) out(`  ${GREEN}none${RESET}`);
   for (const line of findings) out(`  ${RED}✗ ${line}${RESET}`);
@@ -409,7 +413,7 @@ const main = async () => {
   const started = Date.now();
 
   if (args.build && !args.docsOnly) await buildAppBundle();
-  const { bundle = null, modules = [] } = args.docsOnly ? {} : collectBundle();
+  const { bundle = null, modules = [], assets = [] } = args.docsOnly ? {} : collectBundle();
   const { api, docs, locations } = await collectApiAndDocs();
 
   const exportCount = Object.values(api.modules).reduce((n, m) => n + Object.keys(m).length, 0);
@@ -442,7 +446,7 @@ const main = async () => {
     ),
   ];
 
-  const debugFindings = bundle ? reportDebugCode(bundle, modules) : 0;
+  const debugFindings = bundle ? reportDebugCode(bundle, modules, assets) : 0;
   const attention = results.reduce((n, r) => n + r.attention, debugFindings);
   const changes = results.reduce((n, r) => n + r.changes, 0);
   const docsDrops = results.find((r) => r.name === 'docs.json')?.attention ?? 0;
