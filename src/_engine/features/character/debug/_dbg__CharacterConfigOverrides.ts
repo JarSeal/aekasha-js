@@ -8,8 +8,12 @@ import type { CharacterObject } from '../CharacterTypes';
 /**
  * Tuned character configuration (the Character state window's edits), saved per scene and
  * character id so it survives a reload: only the values that differ from the character's
- * creation-time ones (`initialConfig`). Applied when the character is created, debug env only.
- * Copy changes is still the way to make the tuning permanent.
+ * creation-time ones (the controller's `config.initial`). Applied when the character is created,
+ * debug env only. Copy changes is still the way to make the tuning permanent.
+ *
+ * The saved keys keep the flat data's underscore (`_maxVelocity`), the format from before the
+ * controllers' `config` objects (p610), so tuning saved earlier still applies: the functions here
+ * take and give the configuration's own keys (`maxVelocity`) and map them.
  */
 
 export const CHAR_CONFIG_LS_KEY = 'AEK_debugCharConfig';
@@ -25,6 +29,12 @@ export const isSameConfigValue = (a: unknown, b: unknown) =>
   (typeof a === 'number' &&
     typeof b === 'number' &&
     Math.abs(a - b) <= 1e-12 * Math.max(1, Math.abs(b)));
+
+/** A configuration key as saved. */
+const toSavedKey = (key: string) => `_${key}`;
+/** A saved key as a configuration key, or null when it isn't one (no single underscore). */
+const fromSavedKey = (savedKey: string) =>
+  savedKey.startsWith('_') && !savedKey.startsWith('__') ? savedKey.slice(1) : null;
 
 const isObject = (value: unknown): value is object =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -66,14 +76,21 @@ const characterSceneIds = new WeakMap<CharacterObject, string>();
 const getCharacterSceneId = (character: CharacterObject) =>
   characterSceneIds.get(character) ?? getCurrentSceneId();
 
-/** The character's saved overrides (in the scene it was created in), or null when it has none. */
+/** The character's saved overrides (in the scene it was created in) by configuration key, or null
+ * when it has none. */
 export const getSavedCharacterConfig = (
   character: CharacterObject
 ): Readonly<SavedCharacterConfig> | null => {
   const sceneId = getCharacterSceneId(character);
   if (!sceneId) return null;
   const saved = readSavedConfigs()[sceneId]?.[character.id];
-  return isObject(saved) && Object.keys(saved).length ? saved : null;
+  if (!isObject(saved)) return null;
+  const byKey: SavedCharacterConfig = {};
+  for (const savedKey of Object.keys(saved)) {
+    const key = fromSavedKey(savedKey);
+    if (key !== null) byKey[key] = saved[savedKey];
+  }
+  return Object.keys(byKey).length ? byKey : null;
 };
 
 /** Removes the character's saved overrides (in the scene it was created in). The live values stay:
@@ -103,12 +120,14 @@ export const clearSavedConfigScenes = (sceneIds: string[]) => {
 };
 
 /**
- * Saves the keys' live values as the character's overrides, or clears the ones back at their
- * creation-time value (debug env only). Only values with the creation-time value's type are
- * saved, never a baked key: those are what applying can use. One LS write, only on a change.
+ * Saves the configuration keys' live values as the character's overrides, or clears the ones back
+ * at their creation-time value (debug env only). Only values with the creation-time value's type
+ * are saved, never a baked key: those are what applying can use. One LS write, only on a change.
  */
 export const saveCharacterConfig = (character: CharacterObject, keys: string[]) => {
   if (!IS_DEBUG_ENV) return;
+  const config = character.controller?.config;
+  if (!config) return;
   const sceneId = getCharacterSceneId(character);
   if (!sceneId) return;
   const all = readSavedConfigs();
@@ -117,24 +136,25 @@ export const saveCharacterConfig = (character: CharacterObject, keys: string[]) 
   const scene = all[sceneId];
   if (!isObject(scene[character.id])) scene[character.id] = {};
   const saved = scene[character.id];
-  const baked = character.controller?.config?.bakedKeys;
+  const values = config.values as Record<string, unknown>;
+  const initials = config.initial as Record<string, unknown>;
   let isChanged = false;
   for (const key of keys) {
-    // The data's `_` keys are the configuration's without the underscore
-    if (baked?.has(key.slice(1))) continue;
-    const value = character.data[key];
-    const initial = character.initialConfig[key];
+    if (config.bakedKeys.has(key)) continue;
+    const savedKey = toSavedKey(key);
+    const value = values[key];
+    const initial = initials[key];
     if (
       (typeof value === 'number' || typeof value === 'boolean') &&
       typeof value === typeof initial &&
       !isSameConfigValue(value, initial)
     ) {
-      if (saved[key] !== value) {
-        saved[key] = value;
+      if (saved[savedKey] !== value) {
+        saved[savedKey] = value;
         isChanged = true;
       }
-    } else if (Object.prototype.hasOwnProperty.call(saved, key)) {
-      delete saved[key];
+    } else if (Object.prototype.hasOwnProperty.call(saved, savedKey)) {
+      delete saved[savedKey];
       isChanged = true;
     }
   }
@@ -143,10 +163,10 @@ export const saveCharacterConfig = (character: CharacterObject, keys: string[]) 
 
 /**
  * Applies the character's saved configuration overrides (debug env only): writes each one to the
- * live data and lets the controller recompute what derives from it. A key the character no longer
- * has with the same type (eg. a renamed config key) or a baked key is skipped, with one warning,
- * and kept (it may come back). A saved value equal to the creation-time one (the code caught up)
- * is dropped.
+ * controller's configuration values and lets it recompute what derives from it. A key the
+ * character no longer has with the same type (eg. a renamed config key) or a baked key is skipped,
+ * with one warning, and kept (it may come back). A saved value equal to the creation-time one (the
+ * code caught up) is dropped.
  */
 export const _applySavedCharacterConfig = (character: CharacterObject) => {
   if (!IS_DEBUG_ENV) return;
@@ -158,27 +178,32 @@ export const _applySavedCharacterConfig = (character: CharacterObject) => {
   if (!isObject(saved)) return;
 
   const config = character.controller?.config;
+  if (!config) return;
+  const values = config.values as Record<string, unknown>;
+  const initials = config.initial as Record<string, unknown>;
   const applied: string[] = [];
   const skipped: string[] = [];
   let hasDropped = false;
-  for (const key of Object.keys(saved)) {
-    const value = saved[key];
-    const initial = character.initialConfig[key];
+  for (const savedKey of Object.keys(saved)) {
+    const value = saved[savedKey];
+    const key = fromSavedKey(savedKey);
+    const initial = key === null ? undefined : initials[key];
     if (
+      key === null ||
       (typeof value !== 'number' && typeof value !== 'boolean') ||
       typeof initial !== typeof value ||
-      config?.bakedKeys.has(key.slice(1))
+      config.bakedKeys.has(key)
     ) {
-      skipped.push(key);
+      skipped.push(key ?? savedKey);
       continue;
     }
     if (isSameConfigValue(value, initial)) {
-      delete saved[key];
+      delete saved[savedKey];
       hasDropped = true;
       continue;
     }
-    character.data[key] = value;
-    config?.onChange(key.slice(1));
+    values[key] = value;
+    config.onChange(key);
     applied.push(key);
   }
   if (hasDropped) writeSavedConfigs(all);

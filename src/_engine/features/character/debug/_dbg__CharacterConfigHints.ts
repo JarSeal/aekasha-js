@@ -1,7 +1,7 @@
 /**
  * Input hints for the Character state window's configuration editors: the dynamic character's
- * `_` keys (`DynamicCharacter.ts`' `CharacterData`). Optional: the window works with any
- * controller's keys, and a key missing here gets {@link DEFAULT_CONFIG_KEY_HINT}.
+ * configuration keys (`DynamicCharacterConfig`). Optional: the window works with any controller's
+ * keys, and a key missing here gets {@link DEFAULT_CONFIG_KEY_HINT}.
  */
 
 export type ConfigKeyHint = {
@@ -24,106 +24,106 @@ const NEXT_TUMBLE = 'An edit applies from the next tumble.';
 const NEXT_WALL_CAST = 'An edit applies from the next wall cast.';
 
 const CONFIG_KEY_HINTS: Record<string, ConfigKeyHint> = {
-  _height: {
+  height: {
     step: 0.05,
     min: 0.1,
     unit: 'm',
     note: 'Standing height, from the capsule bottom to its top.',
   },
-  _radius: { step: 0.05, min: 0.05, unit: 'm', note: 'Capsule radius.' },
-  _crouchHeight: {
+  radius: { step: 0.05, min: 0.05, unit: 'm', note: 'Capsule radius.' },
+  crouchHeight: {
     step: 0.05,
     min: 0.1,
     unit: 'm',
     note: "Crouching height, from the crouch capsule's bottom to its top.",
   },
-  _skinThickness: {
+  skinThickness: {
     step: 0.01,
     min: 0,
     unit: '×r',
-    note: 'How much wider than the capsule the wall sensor is, as a fraction of _radius.',
+    note: 'How much wider than the capsule the wall sensor is, as a fraction of radius.',
   },
-  _groundDetectorOffset: {
+  groundDetectorOffset: {
     step: 0.01,
     unit: 'm',
     note: "Height of the floor sensor's center above the capsule's bottom.",
   },
-  _groundDetectorRadius: {
+  groundDetectorRadius: {
     step: 0.05,
     min: 0,
     unit: '×r',
-    note: 'Floor sensor radius, as a fraction of _radius.',
+    note: 'Floor sensor radius, as a fraction of radius.',
   },
-  _tumblingGroundSpeedThreshold: {
+  tumblingGroundSpeedThreshold: {
     step: 0.5,
     min: 0,
     unit: 'm/s',
     note: 'Relative speed above which landing starts tumbling.',
   },
-  _tumblingWallSpeedThreshold: {
+  tumblingWallSpeedThreshold: {
     step: 0.5,
     min: 0,
     unit: 'm/s',
     note: 'Relative speed above which touching a wall starts tumbling.',
   },
-  _tumblingMinTime: {
+  tumblingMinTime: {
     step: 100,
     min: 0,
     unit: 'ms',
     note: 'Minimum tumbling time before getting up.',
   },
-  _tumblingEndMinVelo: {
+  tumblingEndMinVelo: {
     step: 0.1,
     min: 0,
     unit: 'm/s',
     note: 'Tumbling can end only below this relative speed.',
   },
-  _tumblingEndMinAngVelo: {
+  tumblingEndMinAngVelo: {
     step: 0.1,
     min: 0,
     unit: 'rad/s',
     note: 'Tumbling can end only below this angular speed.',
   },
-  _tumblingMaxAngVelo: {
+  tumblingMaxAngVelo: {
     step: 0.1,
     min: 0,
     unit: 'rad/s',
     note: 'Max angular speed while tumbling.',
   },
-  _tumblingAngularDamping: {
+  tumblingAngularDamping: {
     step: 0.1,
     min: 0,
     note: `The body's angular damping while tumbling.\n${NEXT_TUMBLE}`,
   },
-  _gettingUpDuration: { step: 50, min: 1, unit: 'ms', note: 'How long getting up takes.' },
-  _gettingUpAngularDamping: {
+  gettingUpDuration: { step: 50, min: 1, unit: 'ms', note: 'How long getting up takes.' },
+  gettingUpAngularDamping: {
     step: 1,
     min: 0,
     note: "The body's angular damping while getting up.",
   },
-  _gettingUpMaxAngVelo: {
+  gettingUpMaxAngVelo: {
     step: 0.1,
     min: 0,
     unit: 'rad/s',
     note: 'Max angular speed while getting up.',
   },
-  _gettingUpTorque: {
+  gettingUpTorque: {
     step: 0.01,
     min: 0,
     note: 'Strength of the uprighting torque impulse (per radian off upright), once fully eased in.',
   },
-  _rotateSpeed: {
+  rotateSpeed: {
     step: 0.1,
     min: 0,
     unit: 'rad/s',
     note: 'Turn speed, for turn input and for turning toward a yaw or the move direction.',
   },
-  _turnToMoveDirection: {
+  turnToMoveDirection: {
     step: 1,
     note: "Turn toward the move direction while moving. The intent's turn and faceYaw override it.",
   },
-  _maxVelocity: { step: 0.1, min: 0, unit: 'm/s', note: 'Max walking speed.' },
-  _maxWalkableAngle: {
+  maxVelocity: { step: 0.1, min: 0, unit: 'm/s', note: 'Max walking speed.' },
+  maxWalkableAngle: {
     step: 1,
     min: 0,
     max: 90,
@@ -131,79 +131,79 @@ const CONFIG_KEY_HINTS: Record<string, ConfigKeyHint> = {
     deg: true,
     note: 'Steepest walkable slope (stored in radians, edited in degrees).',
   },
-  _minSlidingVelocity: {
+  minSlidingVelocity: {
     step: 0.1,
     min: 0,
     unit: 'm/s',
     note: 'Speed above which a grounded character without move input is sliding.',
   },
-  _moveYOffset: {
+  moveYOffset: {
     step: 0.01,
     unit: 'm/s',
     note: 'Upward velocity added to grounded moves (eg. 0.15 climbs steeper slopes).',
   },
-  _jumpAmount: { step: 0.1, min: 0, note: 'Upward jump impulse.' },
-  _jumpCooldown: { step: 10, min: 0, unit: 'ms', note: 'Minimum time between jumps.' },
-  _inTheAirDiminisher: {
+  jumpAmount: { step: 0.1, min: 0, note: 'Upward jump impulse.' },
+  jumpCooldown: { step: 10, min: 0, unit: 'ms', note: 'Minimum time between jumps.' },
+  inTheAirDiminisher: {
     step: 0.05,
     min: 0,
     unit: '×',
     note: 'Acceleration multiplier in the air.',
   },
-  _accumulateVeloPerInterval: {
+  accumulateVeloPerInterval: {
     step: 1,
     min: 0,
     unit: 'm/s²',
     note: 'Acceleration toward the max speed.',
   },
-  _isFallingThreshold: {
+  isFallingThreshold: {
     step: 50,
     min: 0,
     unit: 'ms',
     note: 'How long the character can be off the ground before it is falling (isFalling).',
   },
-  _runningMultiplier: {
+  runningMultiplier: {
     step: 0.05,
     min: 0,
     unit: '×',
     note: 'Max speed multiplier while running.',
   },
-  _crouchingMultiplier: {
+  crouchingMultiplier: {
     step: 0.05,
     min: 0,
     unit: '×',
     note: 'Max speed multiplier while crouching (the acceleration gets 1 + this).',
   },
-  _keepMovingAfterJumpThreshold: {
+  keepMovingAfterJumpThreshold: {
     step: 0.5,
     unit: 'm/s',
     note: 'Landing with move input and a vertical speed above this zeroes the vertical speed.',
   },
-  _wallMicroPush: {
+  wallMicroPush: {
     step: 0.01,
     min: 0,
     unit: 'm/s',
     note: 'Speed away from a wall added while sliding along it: breaks the contact whose friction would hold the character up.',
   },
-  _wallNormalMaxY: {
+  wallNormalMaxY: {
     step: 0.05,
     min: 0,
     max: 1,
     note: `Wall cast hits with a normal steeper than this (|y|) are floors or ceilings, not walls.\n${NEXT_WALL_CAST}`,
   },
-  _wallCastDistance: {
+  wallCastDistance: {
     step: 0.05,
     min: 0,
     unit: 'm',
     note: `How far ahead the wall cast looks.\n${NEXT_WALL_CAST}`,
   },
-  _slopeSlideSpeed: {
+  slopeSlideSpeed: {
     step: 1,
     min: 0,
     unit: 'm/s²',
-    note: 'Downhill acceleration on unwalkable slopes, up to _maxVelocity.',
+    note: 'Downhill acceleration on unwalkable slopes, up to maxVelocity.',
   },
-  _fallStateDelay: {
+  fallStateDelay: {
     step: 10,
     min: 0,
     unit: 'ms',

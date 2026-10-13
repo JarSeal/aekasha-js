@@ -81,7 +81,7 @@ const recordPaths = (pathRun: PathRun) => {
       f32[0] = pose[i];
       h = fnvWord(h, f32Bits[0]);
     }
-    const state = String(char.data.locomotionState ?? '');
+    const state = String(char.controller?.state?.locomotionState ?? '');
     h = fnvString(h, state);
     pathRun.characterIds.add(char.id);
     let states = pathRun.states.get(char.id);

@@ -10,7 +10,10 @@ import type {
   CharacterObject,
   CharacterProbes,
 } from '../CharacterTypes';
-import type { CharacterData } from '../controllers/dynamic/DynamicCharacterData';
+import type {
+  DynamicCharacterConfig,
+  DynamicCharacterState,
+} from '../controllers/dynamic/DynamicCharacterData';
 import { getECSWorld, type ECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
 import {
@@ -187,10 +190,11 @@ for (let i = 0; i <= CIRCLE_SEGMENTS; i++) {
 }
 
 type Vec3 = { x: number; y: number; z: number };
-/** The keys the vector gizmos read: a controller without them draws nothing for that gizmo */
-type GizmoData = Partial<
+/** The state keys the gizmos read (the dynamic character's names): a controller without them
+ * draws nothing for that gizmo */
+type GizmoState = Partial<
   Pick<
-    CharacterData,
+    DynamicCharacterState,
     | 'velocity'
     | 'relVelocity'
     | 'isOnMovingPlatform'
@@ -198,9 +202,18 @@ type GizmoData = Partial<
     | 'groundNormal'
     | 'groundIsWalkable'
     | 'isGrounded'
-    | '_wallNormalMaxY'
   >
 >;
+/** The configuration keys the gizmos read */
+type GizmoConfig = Partial<Pick<DynamicCharacterConfig, 'wallNormalMaxY'>>;
+const NO_DATA: Readonly<Record<string, unknown>> = Object.freeze({});
+
+/** The controller's state (empty without a controller). */
+const getGizmoState = (character: CharacterObject) =>
+  (character.controller?.state ?? NO_DATA) as GizmoState;
+/** The controller's configuration values (empty without a controller). */
+const getGizmoConfig = (character: CharacterObject) =>
+  (character.controller?.config?.values ?? NO_DATA) as GizmoConfig;
 
 /** Appends an arrow from (ox, oy, oz) along (dx, dy, dz), its length the vector's: the shaft and
  * a head of two crossed "V"s in the planes through it. Below MIN_ARROW_LENGTH it writes nothing. */
@@ -439,13 +452,13 @@ const GIZMO_IMPLS: Partial<Record<CharacterGizmoId, GizmoImpl>> = {
   velocity: {
     lines: [{ capacity: ARROW_SEGMENTS, color: GIZMO_COLORS.velocity }],
     write: (lines, frame) => {
-      writeVectorFromAnchor(lines[0], (frame.character.data as GizmoData).velocity, frame);
+      writeVectorFromAnchor(lines[0], getGizmoState(frame.character).velocity, frame);
     },
   },
   relVelocity: {
     lines: [{ capacity: ARROW_SEGMENTS, color: GIZMO_COLORS.relVelocity }],
     write: (lines, frame) => {
-      const data = frame.character.data as GizmoData;
+      const data = getGizmoState(frame.character);
       writeVectorFromAnchor(
         lines[0],
         data.isOnMovingPlatform ? data.relVelocity : undefined,
@@ -456,7 +469,7 @@ const GIZMO_IMPLS: Partial<Record<CharacterGizmoId, GizmoImpl>> = {
   facing: {
     lines: [{ capacity: ARROW_SEGMENTS, color: GIZMO_COLORS.facing }],
     write: (lines, frame) => {
-      const yaw = (frame.character.data as GizmoData).charRotation;
+      const yaw = getGizmoState(frame.character).charRotation;
       const w = lines[0].beginWrite();
       if (typeof yaw === 'number') {
         // Forward is (cos yaw, 0, -sin yaw) (CharacterIntent)
@@ -481,11 +494,11 @@ const GIZMO_IMPLS: Partial<Record<CharacterGizmoId, GizmoImpl>> = {
       { capacity: ARROW_SEGMENTS, color: GIZMO_COLORS.steep },
     ],
     write: (lines, frame) => {
-      const data = frame.character.data as GizmoData;
+      const data = getGizmoState(frame.character);
       const ray = frame.probes?.floorRay;
       const normal = data.groundNormal;
       // A miss (or no ray yet) draws nothing: the controller then uses level ground
-      const isShown = Boolean(ray && ray.resolvedAt && ray.isHit && normal);
+      const isShown = Boolean(ray && ray.resolvedAtStep >= 0 && ray.isHit && normal);
       const isWalkable = data.groundIsWalkable !== false;
       for (let i = 0; i < 2; i++) {
         const w = lines[i].beginWrite();
@@ -517,7 +530,7 @@ const GIZMO_IMPLS: Partial<Record<CharacterGizmoId, GizmoImpl>> = {
       const solid = lines[0].beginWrite();
       const dashed = lines[1].beginWrite();
       // Nothing before the first result
-      if (ray?.resolvedAt) {
+      if (ray && ray.resolvedAtStep >= 0) {
         const { origin: o, dir: d } = ray;
         const hitDistance = ray.isHit ? ray.distance : 0;
         const hx = o.x + d.x * hitDistance;
@@ -544,7 +557,7 @@ const GIZMO_IMPLS: Partial<Record<CharacterGizmoId, GizmoImpl>> = {
     ],
     write: (lines, frame) => {
       const ball = frame.probes ? getFloorSensorBall(frame.probes, frame.character) : null;
-      const isGrounded = (frame.character.data as GizmoData).isGrounded === true;
+      const isGrounded = getGizmoState(frame.character).isGrounded === true;
       // Rides the visual like the collider rides the body (also tumbling): its offset turns with it
       if (ball) {
         _sensorCenter.set(ball.x, ball.y, ball.z).applyQuaternion(frame.rotation).add(frame.anchor);
@@ -604,7 +617,7 @@ const GIZMO_IMPLS: Partial<Record<CharacterGizmoId, GizmoImpl>> = {
           getPhysicsState().timestepRatio *
           1000 <=
           WALL_CAST_HOLD_MS;
-      const maxY = (frame.character.data as GizmoData)._wallNormalMaxY;
+      const maxY = getGizmoConfig(frame.character).wallNormalMaxY;
       const isRejected = typeof maxY === 'number' && Math.abs(cast?.normal.y ?? 0) > maxY;
       for (let i = 0; i < 4; i++) {
         const w = lines[i].beginWrite();
