@@ -33,7 +33,8 @@ from then on the simulation moves the entity's transform, and the transform move
   drop. Code that must step in lockstep with the simulation reads the action at the step instead
   (`actions.read('drop').pressedCount` in an `APP_PHYSICS_STEP` system), as the
   [characters](hub:features/characters)' brains do. The action's `name` shows in the debug key
-  shortcuts dialog (`u`).
+  shortcuts dialog (`u`). [Input](hub:features/input) has the rest: bindings, contexts, the
+  gamepad.
 - [`getRandomStream`](api:getRandomStream) gives a named, seeded random stream that starts over
   on every load, so the drops come in the same order on every visit.
 - Deleting an entity ([`deleteEntity`](api:ECSWorld.deleteEntity)) removes its body and

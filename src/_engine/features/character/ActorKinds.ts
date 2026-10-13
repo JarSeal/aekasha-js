@@ -134,7 +134,7 @@ export type CreateCharacterOfKindOpts = {
  * const character = await createCharacterOfKind({
  *   id: 'player',
  *   visual: 'playerMesh',
- *   controller: { kind: 'DYNAMIC_CHARACTER', params: { charData: { _height: 1.6 } } },
+ *   controller: { kind: 'DYNAMIC_CHARACTER', params: { config: { height: 1.6 } } },
  *   brain: {
  *     kind: 'WORLD_FIXED',
  *     params: {
