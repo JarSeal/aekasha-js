@@ -45,8 +45,8 @@ import { parseModuleSource } from '../refactor/importGraph';
 import { getOwnMembers, indexApiModel, isDocumented, Kind } from '../hub/api/model';
 import { out, PROGRESS_LOG_WATCH, setProgressLogEnabled } from './progressLog';
 import { type BuildModule, findDebugCodeInBuild } from './debugInProduction';
-import { isGrowthToFlag } from './bundleGrowth';
 import { type BundleBaseline, collectBundle, sortKeys } from '../sbp/bundleModel';
+import { diffBundle, formatKB } from '../sbp/bundleDiff';
 
 /** Bump when that file's shape changes: an old one is then read as missing (`bundle.json`'s is
  * `bundleModel.ts`') */
@@ -120,8 +120,6 @@ const readJSON = <T>(file: string): T | null => {
   }
 };
 
-const formatKB = (bytes: number) => `${(bytes / 1024).toFixed(1)} kB`;
-const formatSigned = (bytes: number) => `${bytes >= 0 ? '+' : '−'}${formatKB(Math.abs(bytes))}`;
 const formatShare = (c: Coverage) =>
   `${c.documented} / ${c.total}${c.total ? ` (${Math.round((c.documented / c.total) * 100)} %)` : ''}`;
 
@@ -174,46 +172,6 @@ const reportDebugCode = (bundle: BundleBaseline, modules: BuildModule[]) => {
   if (!findings.length) out(`  ${GREEN}none${RESET}`);
   for (const line of findings) out(`  ${RED}✗ ${line}${RESET}`);
   return findings.length;
-};
-
-const diffBundle = (before: BundleBaseline, after: BundleBaseline): Finding[] => {
-  const findings: Finding[] = [];
-  for (const [name, size] of Object.entries(after.chunks)) {
-    const old = before.chunks[name];
-    if (!old) {
-      findings.push({ line: `new ${name}: ${formatKB(size.gzip)} gzip`, attention: true });
-    } else if (isGrowthToFlag(old.gzip, size.gzip)) {
-      findings.push({
-        line: `${name}: ${formatKB(old.gzip)} → ${formatKB(size.gzip)} gzip (${formatSigned(size.gzip - old.gzip)})`,
-        attention: true,
-      });
-    } else if (isGrowthToFlag(size.gzip, old.gzip)) {
-      findings.push({
-        line: `${name}: ${formatKB(old.gzip)} → ${formatKB(size.gzip)} gzip (${formatSigned(size.gzip - old.gzip)})`,
-        attention: false,
-      });
-    }
-  }
-  for (const name of Object.keys(before.chunks)) {
-    if (!after.chunks[name]) findings.push({ line: `gone: ${name}`, attention: false });
-  }
-  // The main chunk's groups explain a change of it (details, never a reason on their own)
-  for (const [group, size] of Object.entries(after.mainGroups)) {
-    const old = before.mainGroups[group];
-    const oldGzip = old?.gzip ?? 0;
-    if (isGrowthToFlag(oldGzip, size.gzip) || isGrowthToFlag(size.gzip, oldGzip)) {
-      findings.push({
-        line: `  main ${group}: ${formatKB(oldGzip)} → ${formatKB(size.gzip)} gzip (${formatSigned(size.gzip - oldGzip)}, ${old?.modules ?? 0} → ${size.modules} modules)`,
-        attention: false,
-      });
-    }
-  }
-  for (const group of Object.keys(before.mainGroups)) {
-    if (!after.mainGroups[group]) {
-      findings.push({ line: `  main ${group}: gone from the main chunk`, attention: false });
-    }
-  }
-  return findings;
 };
 
 // --- api.json and docs.json ---
