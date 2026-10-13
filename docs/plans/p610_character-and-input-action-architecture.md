@@ -735,6 +735,31 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
 3. `readme.md`: the action layer and the gamepad (Features), the character example.
 4. `yarn hub:build`, `yarn verify:baselines --docs`. Commit.
 
+**As built:**
+
+- Sections: A = step 1 (the Hub), B = step 2 (the `CLAUDE.md` files), C = steps 3 and 4.
+- Section A: the Hub had no input page, so the input documentation is a new feature page,
+  `hub/pages/features/input/` (Core group, order 45, lucide `gamepad-2` at the Hub's pinned
+  1.53.0): action maps and types, bindings per device, reading at the step vs. at the event,
+  contexts, the gamepad, recording, the device bindings as the low-level API, the debug keys.
+  The characters guide gained "Your own brain", "Controllers" (the step order 0 → -5 → -10, the
+  contract, `createCharacterOfKind`, `registerControllerKind`) and "Determinism" (with a dev-only
+  note on the recorded runs); the physics guide a line on input at the step; the debug suite's
+  keys a line on the `DEBUG` maps. `ActionMap`'s members aren't `api:` symbols (type members), so
+  the page names them as code. Also: `createCharacterOfKind`'s `@example` used the deprecated
+  `charData`, now `config`. Left: TypeDoc's "links nowhere" / "not included" warnings on this
+  plan's code (`ActionTypes.ts`' `{@link createActionMap}`, `SeededRandom.ts`' `{@link
+  getRandomStream}`, `CharacterTypes.ts`' `{@link getBodyKind}`, `CharacterBrainKinds`, `KindSpec`,
+  `PlayerBrainCommonActions`), from before this phase.
+- Section B: `features/character/CLAUDE.md` (Characters, Character brains, Dynamic character
+  controller, Character debugging: moved from `debug/CLAUDE.md`, which was stale since Phase 4
+  and now points there) and `kernel/input/CLAUDE.md` (Input devices, Action maps, Gamepad), each
+  a line in the root's map; the characters and input pages' `aek:covers` and `::: claude-md`. The
+  root's Physics section: the brains and the per-step action sample in the characters' line, the
+  lint list. `SIMULATION_FILES` gains the gym's `GymDummyBrain.ts` (a brain outside the character
+  folder); the input devices stay off it (they time DOM events; the per-step sample is what the
+  simulation reads).
+
 ### Phase 8: versions and done
 
 1. Create `p428_character-determinism-in-worker-targets.md` (stub, D1); point p512 and p421 at it.

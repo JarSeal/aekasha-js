@@ -184,3 +184,6 @@ own; a gameplay binding on a debug key's chord logs a warning in debug mode.
 - [Characters](hub:features/characters): the player brains read action maps.
 - [Physics](hub:features/physics#stepping): the fixed steps the actions are sampled for.
 - The API reference: [Actions](hub:documentation/engine/kernel/input/Actions).
+
+::: claude-md
+:::

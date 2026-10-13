@@ -70,12 +70,15 @@ const DEBUG_FILES = ['src/**/_dbg__*.ts'];
 // The simulation: code that runs at APP_PHYSICS_STEP or inside the physics step, on the main
 // thread or in the physics worker. It must run identically on every machine, so it counts time in
 // steps and draws randomness from a seeded RNG. Two feature folders, without what else they hold
-// (p608 D5: the set the lint covered before the move).
+// (p608 D5: the set the lint covered before the move), and the character brains outside them (a
+// brain thinks at APP_PHYSICS_STEP, p610). The input devices aren't on it: they time DOM events,
+// and the action layer's per-step sample is what the simulation reads.
 const SIMULATION_FILES = [
   'src/_engine/features/physics/**/*.ts',
   'src/_engine/features/character/**/*.ts',
   'src/toolkit/ecs/gameplay/MovingPlatform.ts',
   'src/toolkit/ecs/effects/MutualGravity.ts',
+  'src/app/scenes/thirdPersonGymScene/GymDummyBrain.ts',
 ];
 // What the two feature folders hold besides the simulation: the installs and entries, the
 // physics import extension and worker test, the debug modules

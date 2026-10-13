@@ -194,3 +194,6 @@ with `?isDebug=true&startScene=<id>`.
 - [Physics](hub:features/physics), which characters are built on.
 - [Input](hub:features/input): the action maps the player brains read.
 - The API reference: [Character](hub:documentation/engine/features/character/Character).
+
+::: claude-md
+:::
