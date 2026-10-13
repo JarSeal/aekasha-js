@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-3 implemented
 Category: Refactoring, Toolkit, App
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p620_review-toolkit-and-app-code.md
@@ -250,7 +250,7 @@ No file of the toolkit or the app changes.
   `debug/CLAUDE.md`'s `_dbg__spaceDemo.ts` example. The codemod had carried `ambientLight`'s
   misspelled `"$schemas"` value along as a relative path, so only its key changed.
 
-### Phase 3: after the move, the docs and the Hub
+### Phase 3: after the move, the docs and the Hub — done
 
 1. D5: the rules become keep rules, `moveMap.ts` regenerates (every file a keep), the
    `moveTree.test.ts` skip.
@@ -263,6 +263,41 @@ No file of the toolkit or the app changes.
 4. `readme.md` where it lists the toolkit or the app layout.
 5. D3 into the p450 prompt (`docs/templates/todo-plan-prompts.txt`): the asset location answer,
    the categories it fills, the debugger test assets it keeps.
+
+**As built:**
+
+- The commits: `de333d2` (the rules), `782e196` (the CLAUDE.md files), `80ac8f0` (the Hub),
+  `db5b33b` (the readme), then the p450 prompt with this plan.
+- Step 1: `moveRules.ts`' toolkit and app rules are keep rules; `getSubfolderRules` makes the
+  "a folder per id" ones from the tracked files (`materials/<id>/`, `models/<category>/<id>/`,
+  `textures/<id>/`, `skyboxes/<id>/`, `scenes/<sceneId>/`), so a loose file there has no rule.
+  The app's rules list every asset type's folder (`materials/`, `meshes/`, … come back with the
+  first shared asset, D2), and `moveMap.ts` now fails on an app file without a rule too. The map:
+  636 files, all keeps (p608 441, p609 195). The skip is "no p609 move whose source is still
+  tracked". A bug the move exposed: with no moved path, the leftover mentions' regex was an empty
+  alternation that matched everywhere; the scan is skipped then.
+- **Added: `src/app/shared/`** (confirmed 2026-10-13), for app code several scenes use (a
+  copied toolkit piece among them), in the rules, the root `CLAUDE.md`, the Hub and the readme. D2
+  had no place for it; `characterVisual.ts` stays in the gym's folder (p620 may move it).
+- **Added: `src/generated/**` is out of the `prettier/prettier` lint rule.** The move made
+  `generatedAppFns.ts`' `triplanarCheckerboard.tsl.ts` import longer than the print width, so the
+  Stop hook's `lint --fix` and every gather undid each other (the committed form failed a plain
+  `yarn lint`).
+- Step 3: the app layout and D2's rule went into the Hub's Scenes and assets page (a new "Where
+  the files go" section); the toolkit guide got D1's tree and the gameplay pieces it never listed
+  (`createFollowObjectCameraRig`, `createMovingPlatform`); the quick start copies to
+  `scenes/<id>/`. The Æ symbol's include was the codemod's already. The search index's 1.09 MB
+  warning was there before.
+- Step 4: the readme's toolkit list was stale besides the layout (a "checkerboard" material that
+  doesn't exist; `MutualGravity`, the gameplay pieces and the asteroids missing), and its example
+  scene JSON's `$schema` / `sceneFile` were wrong for a scene folder.
+- Step 5: the prompt's location and structure paragraphs are replaced by what p300 and p609
+  decided and what's left: filling the categories, and moving the ~145 debugger test files out
+  of `public/` into the scene folders that use them.
+- For Phase 4 (D6): the branch changes no engine code against `main`, only three nested
+  `CLAUDE.md` files under `src/_engine/` (`debug/`, `features/lod/`, `features/lod/impostors/`),
+  so the engine keeps 5.0.1 unless a docs-only change should count. The CHANGELOG's Project
+  section gets the keep rules, `src/app/shared/` and the generated code's lint exception.
 
 ### Phase 4: versions and done
 
