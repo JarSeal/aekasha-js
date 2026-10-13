@@ -160,6 +160,8 @@ const createEditCharacterContent = (data?: { [key: string]: unknown }) => {
   <div><span class="winSmallLabel">Name:</span> ${character.name || ''}</div>
   <div><span class="winSmallLabel">Id:</span> ${character.id}</div>
   <div><span class="winSmallLabel">Kind:</span> ${character.kind}</div>
+  <div><span class="winSmallLabel">Controller:</span> ${character.controller?.kind ?? '-'}</div>
+  <div><span class="winSmallLabel">Brain:</span> ${character.brain?.kind ?? '- (code)'}</div>
   <div><span class="winSmallLabel">Control mode:</span> ${character.controlMode}</div>
   <div><span class="winSmallLabel">Entity id:</span> ${character.entityId}</div>
   <div><span class="winSmallLabel">Visual id:</span> ${character.visualId}</div>

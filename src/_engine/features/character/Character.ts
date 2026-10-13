@@ -1,5 +1,6 @@
 import type * as THREE from 'three/webgpu';
 import { createPhysicsEntity } from '../physics/PhysicsEntity';
+import { getPhysicsSubStepIndex } from '../physics/PhysicsAPI';
 import type { ColliderParams, RigidBodyParams } from '../physics/PhysicsAPITypes';
 import {
   createKeyBinding,
@@ -23,6 +24,8 @@ import type {
   LocomotionStateListener,
 } from './CharacterTypes';
 import { createIntent } from './CharacterIntent';
+import type { ActorBrain, CharacterBrainSpec } from './ActorTypes';
+import { createBrain } from './ActorKinds';
 import { ECSSystemStage } from '../../kernel/loop/SystemStages';
 import { existsOrThrow } from '../../utils/Assert';
 import { lerror, lwarn } from '../../utils/Logger';
@@ -51,24 +54,47 @@ let onDeleteCharacter: { [characterId: string]: () => void } = {};
 /** Entity id → its character's locomotion state listeners (gone with the entity). */
 const locomotionStateListeners = new Map<number, LocomotionStateListener[]>();
 
-/** After the other APP_PHYSICS_STEP systems (default order 0), so what those request from a
- * character (eg. an AI's moves) applies in the same sub-step. */
+/** After the other APP_PHYSICS_STEP systems (default order 0), so what those write to a
+ * character's intent applies in the same sub-step, and after the brains. */
 const CHARACTER_SYSTEM_ORDER = -10;
+/** Between the app's systems (order 0) and the controllers: a brain sees what code wrote to the
+ * intent this sub-step (eg. a turn overriding a player brain's heading). */
+const CHARACTER_BRAIN_SYSTEM_ORDER = -5;
+
+/** Runs every character's brain once per fixed physics sub-step, before the controllers. */
+const characterBrainSystem = (world: ECSWorld, dt: number) => {
+  const storage = world.getStorage(ComponentType.CHARACTER);
+  const step = getPhysicsSubStepIndex();
+  // keys() + get(): the storage's own iterator allocates a [key, value] pair per entry
+  for (const entityId of storage.keys()) {
+    const char = storage.get(entityId)!;
+    char.brain?.think(char.intent, step, dt);
+  }
+};
 
 /** Ticks every character's controller once per fixed physics sub-step. */
 const characterControllerSystem = (world: ECSWorld, dt: number) => {
   const storage = world.getStorage(ComponentType.CHARACTER);
-  // keys() + get(): the storage's own iterator allocates a [key, value] pair per entry
-  for (const entityId of storage.keys()) storage.get(entityId)!.controller?.tick(dt);
+  const step = getPhysicsSubStepIndex();
+  for (const entityId of storage.keys()) {
+    const char = storage.get(entityId)!;
+    char.controller?.tick(dt, char.intent, step);
+  }
 };
 
 /**
- * Installs the characters' controller system and the `CHARACTER` delete hook (the character
- * feature's install).
+ * Installs the characters' brain and controller systems and the `CHARACTER` delete hook (the
+ * character feature's install).
  * @internal
  */
 export const installCharacters = (ctx: FeatureContext) => {
   ctx.registerPlugin((world) => {
+    world.addSystem(
+      ECSSystemStage.APP_PHYSICS_STEP,
+      'characterBrainSystem',
+      characterBrainSystem,
+      CHARACTER_BRAIN_SYSTEM_ORDER
+    );
     world.addSystem(
       ECSSystemStage.APP_PHYSICS_STEP,
       'characterControllerSystem',
@@ -83,6 +109,8 @@ export const installCharacters = (ctx: FeatureContext) => {
     onDeleteEntity: (entityId, world) => {
       const char = world.getComponent(entityId, ComponentType.CHARACTER);
       if (!char) return;
+      char.brain?.dispose?.();
+      char.brain = undefined;
       char.controller?.dispose?.();
       for (let i = 0; i < char.keyBindingIds.length; i++) deleteKeyBinding(char.keyBindingIds[i]);
       for (let i = 0; i < char.mouseBindingIds.length; i++) {
@@ -132,6 +160,9 @@ export type CreateCharacterOpts = {
   data?: { [key: string]: unknown };
   /** The intent the controller reads (default: a new one); pass it when the bindings write it. */
   intent?: CharacterIntent;
+  /** The brain that writes the intent (see {@link setCharacterBrain}), made by the controller's
+   * creator (it may suggest controller configuration first). Disposed with the character. */
+  brain?: ActorBrain<CharacterIntent>;
 };
 
 /**
@@ -152,6 +183,7 @@ export const createCharacter = async ({
   controls,
   data = {},
   intent = createIntent(),
+  brain,
 }: CreateCharacterOpts) => {
   // Before anything else can write the data
   const initialConfig = getConfigSnapshot(data);
@@ -194,6 +226,7 @@ export const createCharacter = async ({
     initialConfig,
     intent,
     controlMode: 'CONTROLLED',
+    brain,
   };
   ecsWorld.addComponent(entityId, ComponentType.CHARACTER, char);
   ecsWorld.addComponent(entityId, ComponentType.TAG_IS_CHARACTER, true);
@@ -263,6 +296,34 @@ export const setControlMode = (id: string, mode: CharacterControlMode) => {
   const char = getCharacterById(id);
   if (!char) return false;
   char.controlMode = mode;
+  return true;
+};
+
+/**
+ * Switches a character's brain, eg. for a cutscene, a possession or a disconnected player handed
+ * to an AI: makes the new brain from its spec ({@link CharacterBrainSpec}, a kind registered with
+ * `registerBrainKind`), disposes the old one and sets the new one's configuration defaults on the
+ * controller (a debug edit of those keys is overwritten). The intent's persistent fields (`run`,
+ * `crouch`, `faceYaw`) are left as they are. Takes effect from the next brain run (this sub-step's
+ * when called from an `APP_PHYSICS_STEP` system of order above -5).
+ * @param spec the new brain, or null for none (code drives the character)
+ * @returns false when no character has this id
+ * @example
+ * ```ts
+ * import { setCharacterBrain } from 'aekasha/character';
+ *
+ * setCharacterBrain('player', null); // a cutscene drives it through its intent
+ * ```
+ */
+export const setCharacterBrain = (id: string, spec: CharacterBrainSpec | null): boolean => {
+  const char = getCharacterById(id);
+  if (!char) return false;
+  // Before the old one goes: a factory that throws leaves the character as it was
+  const next = spec ? createBrain(spec, id) : undefined;
+  char.brain?.dispose?.();
+  char.brain = next;
+  if (next?.configDefaults) char.controller?.config?.applyDefaults?.(next.configDefaults);
+  updateCharactersDebuggerGUI('WINDOW');
   return true;
 };
 

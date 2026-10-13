@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented (Phase 2 in review)
+Status: in progress | Phases 1-2 implemented (Phase 3 in progress)
 Category: Characters, Input, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B; a minor bump per part, D7)
 Blocks: p614_review-physics.md, p617_review-input-ui-hud.md, p512_client-prediction-and-reconciliation.md, p421_kinematic-character-controller.md, p423_vehicles.md, p424_ai-brains-and-navigation.md, p420_npc-simulation-tiers.md
@@ -343,7 +343,7 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
   The runner's test clock runs one step a frame; `CAMERA_RELATIVE` follows the camera, which
   depends on the frame timing by design (D6), so such a check needs the arrow-keys player left out.
 
-### Phase 2: the action layer
+### Phase 2: the action layer — done
 
 1. D4 in `kernel/input/`: `Actions.ts` (maps, contexts, sampling, event callbacks), `ActionTypes.ts`,
    `ActionRecording.ts`, the keyboard, mouse and touch sources (through `@internal` listeners on
@@ -354,7 +354,7 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
    stubbed `navigator.getGamepads`, recording and replay.
 4. Nothing uses it yet: every scene's hash and path stay. Commit.
 
-**As built (stopped for review, not committed):**
+**As built:**
 
 - Files: `ActionTypes.ts` (types only), `Actions.ts` (maps, contexts, sampling, events, 608 lines),
   `ActionBindings.ts` (compiling bindings and reading the devices through them, split out to keep

@@ -221,8 +221,17 @@ export type CharacterData = {
   __pendingLanding: boolean;
 };
 
+/** The `DYNAMIC_CHARACTER` controller kind's params (`createCharacterOfKind`): its body and
+ * tuning, the part of {@link DynamicCharacterOpts} that isn't the character's identity. */
+export type DynamicCharacterParams = {
+  /** The body's shape and kind (default {@link HUMANOID_CAPSULE}). */
+  body?: CharacterBodyPlan;
+  /** Overrides of the default {@link CharacterData} (usually `_` configuration keys). */
+  charData?: Partial<CharacterData>;
+};
+
 /** {@link createDynamicCharacter}'s options. */
-export type DynamicCharacterOpts = {
+export type DynamicCharacterOpts = DynamicCharacterParams & {
   /** The character's id (namespaces its binding ids). An existing character with it is replaced. */
   id: string;
   /** A display name (the debug tools show it). */
@@ -231,10 +240,6 @@ export type DynamicCharacterOpts = {
    * createMeshEntity or createGroupEntity): that entity becomes the character. The controller
    * never reads it, so any Object3D works (a capsule, a skinned mesh, a group). */
   visual: THREE.Object3D;
-  /** The body's shape and kind (default {@link HUMANOID_CAPSULE}). */
-  body?: CharacterBodyPlan;
-  /** Overrides of the default {@link CharacterData} (usually `_` configuration keys). */
-  charData?: Partial<CharacterData>;
   /** Keyboard input: a scheme and its key mappings. Without it the character is driven by code,
    * through its intent. */
   input?: CharacterInputOpts;
@@ -1168,16 +1173,17 @@ export const createDynamicCharacter = async (
   // amounts (eg. turning with a rotating platform by angVelo * timestep) are only right at that
   // cadence. It goes with the entity: no cleanup needed.
   character.controller = {
+    kind: 'DYNAMIC_CHARACTER',
     probes,
     config: {
       bakedKeys: BAKED_CONFIG_KEYS,
       onChange: (key) => DERIVED_CONFIG.get(key)?.(characterData),
     },
-    tick: (dt: number) => {
+    // `intent` is the character's, the same object this closure writes elsewhere. `step` is the
+    // clock: durations are counted in fixed steps, never on the wall clock.
+    tick: (dt, intent, step) => {
       const body = characterBody;
       if (!body) return;
-      // The step clock: durations are counted in fixed steps, never on the wall clock
-      const step = getPhysicsSubStepIndex();
       const stepMs = dt * 1000;
 
       // What the sensors recorded at this sub-step's start (the events' flush), applied before the

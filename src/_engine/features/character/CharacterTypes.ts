@@ -1,4 +1,5 @@
 import type { ColliderParams } from '../physics/PhysicsAPITypes';
+import type { ActorBrain, ActorController } from './ActorTypes';
 
 /**
  * What a character wants to do, written by its input scheme, AI, cutscene or network code and
@@ -200,14 +201,14 @@ export type CharacterConfigHooks = {
   /** Call it after writing a `_` key of the data: recomputes the values derived from it (eg.
    * `__maxWalkableAngleCos`). A key nothing is derived from is a no-op. */
   onChange: (key: string) => void;
+  /** Sets each value whose key the character's creation options didn't give (a brain's
+   * {@link ActorBrain.configDefaults}), then recomputes what derives from it. */
+  applyDefaults?: (values: CharacterConfigValues) => void;
 };
 
-/** What moves a character (eg. createDynamicCharacter's controller). */
-export type CharacterController = {
-  /** Runs once per fixed physics sub-step (APP_PHYSICS_STEP), with the fixed timestep. */
-  tick: (dt: number) => void;
-  /** Runs when the character's entity is deleted, before its components are gone. */
-  dispose?: () => void;
+/** What moves a character (eg. createDynamicCharacter's controller, of kind
+ * `'DYNAMIC_CHARACTER'`): the actor controller contract, with the character's diagnostics. */
+export type CharacterController = ActorController<CharacterIntent> & {
   /** The body and the probes' last results, for diagnostics (read-only). */
   probes?: Readonly<CharacterProbes>;
   /** How the controller takes its configuration being edited from outside. */
@@ -244,4 +245,7 @@ export type CharacterObject = {
   controlMode: CharacterControlMode;
   /** Set by the controller's creator once the character exists (until then nothing ticks). */
   controller?: CharacterController;
+  /** What writes the intent once per step, before the controller ticks (eg. a player brain on
+   * an action map). None: code drives the character. Switch it with `setCharacterBrain`. */
+  brain?: ActorBrain<CharacterIntent>;
 };
