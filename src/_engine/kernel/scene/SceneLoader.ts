@@ -37,6 +37,7 @@ import {
 } from '../../ui/DraggableWindow';
 import { updateOnScreenTools } from '../../debug/OnScreenTools';
 import { existsOrThrow } from '../../utils/Assert';
+import { resetRandomStreams } from '../../utils/RandomStreams';
 import { deleteAllRayHelpers, resetRayCastStats } from '../render/Raycast';
 import { deleteAllGroupEntities } from './Group';
 import { setIsLoadingScene } from '../loop/MainLoop';
@@ -591,6 +592,8 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
 
       createCameras(sceneData);
 
+      // Every random stream starts again, so the scene draws the same numbers on every visit
+      resetRandomStreams();
       // After the cameras (frames keep rendering while a hook awaits, which needs a camera),
       // before the assets (imports can create entities): physics starts a fresh world here
       await runSceneBeforeAssetsHooksAsync();

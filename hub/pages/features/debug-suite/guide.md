@@ -58,7 +58,9 @@ registerIcon('gear', gearIcon); // A built-in your production UI shows
 | `F9` / `F10` | Shows the environment ball / the axes gizmo.             |
 | `Ctrl/⌘ + Z` | Undo (with `Shift`: redo).                               |
 
-`AppConfig.debugKeys` in `src/CONFIG.ts` rebinds them and adds your own.
+`AppConfig.debugKeys` in `src/CONFIG.ts` rebinds them and adds your own. They're
+[action maps](hub:features/input#debug-keys) in the `DEBUG` context, so they work while the app
+is paused and in editor views.
 
 ## Profiler and GPU memory
 

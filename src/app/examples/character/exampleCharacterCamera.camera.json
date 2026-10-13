@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../../.schemas/camera.schema.json",
+  "camProps": {
+    "type": "PERSPECTIVE",
+    "fov": 45,
+    "near": 0.1,
+    "far": 100,
+    "position": { "x": 0, "y": 11, "z": 11 },
+    "lookAtPoint": { "x": 0, "y": 1, "z": 3 },
+    "active": true
+  },
+  "entityOpts": {
+    "appId": "exampleCharacterCamera",
+    "debugData": {
+      "name": "Character example camera",
+      "description": "Driven by createFollowObjectCameraRig at a (0, 10, 8) offset from the character: South of and above it, so North (-Z) is screen-up. This position is the rig's from the spawn point."
+    }
+  }
+}

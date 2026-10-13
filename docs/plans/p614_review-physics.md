@@ -1,7 +1,6 @@
 Status: stub — not-implemented
 Category: Refactoring, Documentation, Physics
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
-Blocked by: p610_character-and-input-action-architecture.md
 Blocks: p621_hub-docs-readme-and-claude-md-final.md, p511_network-transport-and-replication.md (the transport interface)
 
 # Review: Physics — Stub
@@ -18,11 +17,17 @@ Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every 
 - The physics manager, tiers and tier policy, raycast, the worker and its switchboard.
 - **The transport interface** in front of `postMessage` (p604 §4.5).
 - **Remove the deprecated `RayCastOpts` aliases** (from p990: due in a major, this epic's).
+- **The sync queries allocate per call** (p610 Phase 4's `perf-auditor` run): `castRayAndGetNormalSync`
+  makes a `new RAPIER.Ray` and a result object (`EngineRapier.ts`, the dynamic character's floor ray:
+  every step, per character), `castShapeSync` a new Rapier shape through `paramsToShape` (the wall
+  cast: every step near a wall while moving). Reuse one `Ray` (set its origin and dir), cache the
+  shape by its params.
 - JSDoc: `core/Physics` is the worst folder (65 of 221 documented, 153 type aliases).
 
 ## Inputs
 
 - p604 §4, p990's ray casting item (moved here), p500 (its snapshot repair touches the same modules: coordinate), p600 §2.
+- p428 (characters in the worker targets: the controller in the worker or fixed-lag step-stamped reads, with step-stamped `EVENTS_PUSH` records; its protocol side is decided with the transport interface here).
 - p605 Phase 5's `notExported` warnings in scope (`yarn hub:build` lists each with its file and line; export the type with a summary or change the signature): `EngineColliderProxyAPI`, `EngineRigidBodyProxyAPI`, `EngineJointProxyAPI` (`EngineRapier.ts`) and `RigidBodyProxyAPI` (`PhysicsAPI.ts`), named by the `create*` functions' results.
 
 ## Done when

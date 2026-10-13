@@ -18,4 +18,5 @@ export type {
   ScatterPlacement,
   SpawnScatterMeshOptions,
 } from './scatter/ScatterOnSurface';
-export { createSeededRandom } from './SeededRandom';
+/** @deprecated Import `createSeededRandom` from `aekasha` (removed in toolkit 3.0.0). */
+export { createSeededRandom } from 'aekasha';

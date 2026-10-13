@@ -33,6 +33,8 @@ import { execSync } from 'child_process';
 import { chromium, firefox, type Browser, type BrowserContext, type Page } from 'playwright-core';
 import { ROOT } from '../assetPipeline/sources';
 import type {
+  TestBridgeCharacterPaths,
+  TestBridgeInputScript,
   TestBridgeProbeResult,
   TestBridgeSceneReady,
   TestBridgeSnapshot,
@@ -62,6 +64,8 @@ import { diffSystemOrders } from './systemOrder';
 /** Bump when the baseline file's shape changes: an old one is then ignored */
 const BASELINE_FORMAT_VERSION = 1;
 const CACHE_DIR = path.join(ROOT, '.cache/verify/scenes');
+/** The scenes' input scripts (`SceneVerifyConfig.inputScript`), by name */
+const INPUTS_DIR = path.join(ROOT, 'devTools/verify/inputs');
 const GENERATED_DATA = path.join(ROOT, 'src/generated/generatedAppData.json');
 /** `DEBUG_PHYSICS_API_BOOT_LS_KEY` (kernel/config/Config.ts, which reads `window` at load: not importable here) */
 const PHYSICS_BOOT_LS_KEY = 'AEK_debugPhysicsApiBoot';
@@ -91,6 +95,9 @@ type Args = {
 type BaselineEntry = {
   hash?: string;
   steps?: number;
+  /** The characters' path hash over the probe's steps (p610 D6) */
+  pathHash?: string;
+  pathSteps?: number;
   probeConfig?: string;
   /** File name in the baseline folder */
   snapshot?: string;
@@ -117,6 +124,8 @@ type RunResult = {
   errors: string[];
   hash?: string;
   steps?: number;
+  pathHash?: string;
+  pathSteps?: number;
   probeConfig?: string;
   snapshotFile?: string;
   systemOrder?: TestBridgeSystemOrder;
@@ -425,13 +434,20 @@ const runOne = async (
 
   let context: BrowserContext | null = null;
   try {
+    const input = sceneConfig.inputScript ? readInputScript(sceneConfig.inputScript) : null;
     context = await ctx.browser.newContext({ viewport: VIEWPORT });
     await context.addInitScript(
-      ({ hideGPU, bootKey, boot }) => {
+      ({ hideGPU, bootKey, boot, input }) => {
         if (hideGPU) delete (Object.getPrototypeOf(navigator) as { gpu?: unknown }).gpu;
         if (boot) localStorage.setItem(bootKey, JSON.stringify(boot));
+        if (input) window.__AEK_TEST_INPUT__ = input;
       },
-      { hideGPU: ctx.useWebGL, bootKey: PHYSICS_BOOT_LS_KEY, boot: def.physicsBoot ?? null }
+      {
+        hideGPU: ctx.useWebGL,
+        bootKey: PHYSICS_BOOT_LS_KEY,
+        boot: def.physicsBoot ?? null,
+        input,
+      }
     );
     const page: Page = await context.newPage();
     const warnings = new Set<string>();
@@ -507,8 +523,32 @@ const runOne = async (
         } else if (!ctx.isRecording) {
           compareHash(baseline.entries[runKey(sceneId, config)], result, ctx.browserName);
         }
-        if (probe.characterCount && !sceneConfig.unstableHash) {
-          result.notes.push(`${probe.characterCount} character(s), not hashed`);
+        const paths: TestBridgeCharacterPaths = await page.evaluate(() =>
+          window.__AEK_TEST__!.getCharacterPaths()
+        );
+        // MAIN_THREAD only: in the worker targets the recorder reads the latched snapshot, whose
+        // step depends on the frame timing (p610 D1, p428)
+        if (paths.status === 'DONE' && probe.config.startsWith('MAIN_THREAD')) {
+          result.pathHash = paths.hash;
+          result.pathSteps = paths.steps;
+          if (sceneConfig.inputScript) {
+            const states = Object.entries(paths.states).map(([id, s]) => `${id} ${s.join('/')}`);
+            result.notes.push(`character paths ${paths.hash}: ${states.join(', ')}`);
+          }
+          if (ctx.browserName === 'firefox') {
+            const chromium = getChromiumEntry(ctx, runKey(sceneId, config));
+            comparePathHash(
+              chromium?.entry,
+              result,
+              ctx.browserName,
+              `Chromium ${chromium?.backend ?? ''}`
+            );
+          } else if (!ctx.isRecording) {
+            comparePathHash(baseline.entries[runKey(sceneId, config)], result, ctx.browserName);
+          }
+        }
+        if (probe.characterCount && !result.pathHash && !sceneConfig.unstableHash) {
+          result.notes.push(`${probe.characterCount} character(s), not in the probe hash`);
         }
 
         if (ctx.browserName === 'firefox') {
@@ -575,6 +615,42 @@ const compareHash = (
   } else {
     result.failures.push(msg);
   }
+};
+
+/** The characters' path hash, like the probe hash (`unstableHash` applies to both) */
+const comparePathHash = (
+  entry: BaselineEntry | undefined,
+  result: RunResult,
+  browser: VerifyBrowser,
+  source?: string
+) => {
+  const sceneConfig = SCENE_VERIFY_CONFIG[result.sceneId] ?? {};
+  const of = source ? ` (${source.trim()})` : '';
+  if (!entry?.pathHash) {
+    result.notes.push(`no baseline path hash${of}`);
+    return;
+  }
+  if (entry.pathSteps !== result.pathSteps) {
+    result.notes.push(
+      `no baseline path hash at ${result.pathSteps} steps${of} (baseline: ${entry.pathSteps})`
+    );
+    return;
+  }
+  if (entry.pathHash === result.pathHash) return;
+  const msg = `character path hash ${result.pathHash}, baseline ${entry.pathHash} (${source ? `${source}, ` : ''}${entry.commit})`;
+  const unstable = sceneConfig.unstableHash;
+  if (unstable && appliesTo(unstable, result.config, browser)) {
+    result.warnings.push(`${msg}: ${unstable.reason}`);
+  } else {
+    result.failures.push(msg);
+  }
+};
+
+/** A scene's input script, `devTools/verify/inputs/<name>.json` */
+const readInputScript = (name: string): TestBridgeInputScript => {
+  const file = path.join(INPUTS_DIR, `${name}.json`);
+  if (!fs.existsSync(file)) fail(`The input script ${path.relative(ROOT, file)} doesn't exist.`);
+  return JSON.parse(fs.readFileSync(file, 'utf8')) as TestBridgeInputScript;
 };
 
 const compareSystemOrder = (entry: BaselineEntry | undefined, result: RunResult) => {
@@ -671,6 +747,7 @@ const recordBaseline = (
     if (r.status !== 'PASS' && r.status !== 'NEW') continue;
     const entry: BaselineEntry = { recordedAt: now, commit };
     if (r.hash) Object.assign(entry, { hash: r.hash, steps: r.steps, probeConfig: r.probeConfig });
+    if (r.pathHash) Object.assign(entry, { pathHash: r.pathHash, pathSteps: r.pathSteps });
     if (r.systemOrder) entry.systemOrder = r.systemOrder;
     if (r.snapshotFile) {
       fs.copyFileSync(

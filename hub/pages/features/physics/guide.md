@@ -66,7 +66,15 @@ the same way on every visit, on either thread. What follows from it:
   stale.
 - Physics writes (poses, velocities, impulses, kinematic targets) belong in `APP_PHYSICS_STEP`
   systems or in the scene's load code. Writes from the other stages depend on frame timing.
-- Characters aren't deterministic yet: they use the wall clock and random numbers.
+- Input read at the step is deterministic too: an [action map](hub:features/input)'s `read()`
+  returns the sample taken right before each step, so a press lands on the same step whatever
+  the frame rate, and a recorded run replays step by step.
+- [Characters](hub:features/characters#determinism) are deterministic on `MAIN_THREAD`: they
+  count fixed steps, draw from a seeded stream and cast their probes synchronously. In
+  `WORKER_THREAD` mode they aren't yet.
+- Simulation code that needs random numbers draws from a named stream
+  ([getRandomStream](api:getRandomStream)), never `Math.random`: every scene load restarts the
+  streams, so a scene draws the same numbers on every visit.
 
 To check a scene, open it with `?isDebug=true&physicsProbe=N`, or use "Determinism probe" in the
 Physics API debug tab. It freezes physics N steps after the scene starts, hashes every dynamic

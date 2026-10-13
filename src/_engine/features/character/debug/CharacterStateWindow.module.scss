@@ -166,11 +166,6 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   white-space: nowrap;
 }
 
-.prefix {
-  color: $dimText;
-  opacity: 0.7;
-}
-
 .value {
   flex-shrink: 0;
   display: flex;

@@ -1,9 +1,9 @@
 /**
- * The wall clock under `getPhysGameTime()` and its pause bookkeeping, the one wall-clock read the
- * simulation still takes (the characters' tumble timing and wall-cast ages), so it isn't
- * deterministic. The simulation lint (`SIMULATION_FILES` in `eslint.config.js`) allow-lists this
- * file alone; p610 replaces `getPhysGameTime()` with step-index time and deletes it. Measurement
- * reads use `readStatsClock` (`utils/StatsClock.ts`) instead.
+ * The wall clock under the deprecated `getPhysGameTime()` and its pause bookkeeping. No
+ * simulation code reads it (the characters count fixed steps since p610); it goes with
+ * `getPhysGameTime()` in engine 6.0.0. The simulation lint (`SIMULATION_FILES` in
+ * `eslint.config.js`) allow-lists this file alone. Measurement reads use `readStatsClock`
+ * (`utils/StatsClock.ts`) instead.
  * @internal
  */
 export const readPhysicsWallClock = () => performance.now();

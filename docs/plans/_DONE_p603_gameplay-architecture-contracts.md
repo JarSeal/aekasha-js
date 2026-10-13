@@ -1,7 +1,7 @@
 Status: implemented (Phases 1-4)
 Category: Architecture, Characters, Gameplay
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage A)
-Blocks: p610_character-and-input-action-architecture.md, p420_npc-simulation-tiers.md (soft: its NPC entity and tiers use these contracts)
+Blocks: \_DONE_p610_character-and-input-action-architecture.md, p420_npc-simulation-tiers.md (soft: its NPC entity and tiers use these contracts)
 Stub plans: p421_kinematic-character-controller.md, p422_animation-state-graph-and-ik.md, p423_vehicles.md, p424_ai-brains-and-navigation.md, p425_game-events-missions-and-save-games.md, p426_sequencer-splines-and-cutscenes.md, p427_weather-and-mood.md
 Related: \_DONE_p604_multiplayer-viability-study.md (the network brain and the determinism rules), p307_wet-and-dry-surface-states.md (consumes the weather state), the "Refactor dynamic character code" (p070) and "Key binding refactoring" (p770) prompts in `docs/templates/todo-plan-prompts.txt`
 

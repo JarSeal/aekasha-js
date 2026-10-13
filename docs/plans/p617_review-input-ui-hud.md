@@ -1,7 +1,6 @@
 Status: stub — not-implemented
 Category: Refactoring, Documentation, UI, Input
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
-Blocked by: p610_character-and-input-action-architecture.md
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
 
 # Review: Input, UI Kit and HUD — Stub
@@ -14,7 +13,7 @@ Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every 
 
 ## Scope
 
-- The input devices after p610 (`core/Input` 30 of 54 exports documented, 10 of 44 internal functions commented).
+- The input devices and p610's action layer (`kernel/input/`, its `CLAUDE.md`; 99 of 122 exports documented after p610, the undocumented ones the devices' older exports).
 - **The UI kit** (`ui/`, p602 D5): CMP (1,062 lines), the HUD, DraggableWindow (1,503 lines), DialogWindow, DropDown, Toaster, the icon registry, the styles; documented for app use, with a Hub page showing an app HUD built from it.
 - **Aligned with p800** (the debugger UI overhaul, a prompt today): this plan makes the kit usable and documented; p800 restyles it and adds the components that replace Tweakpane.
 

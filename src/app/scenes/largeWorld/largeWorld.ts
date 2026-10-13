@@ -14,7 +14,7 @@ import {
   createCameraEntity,
   getActiveCameraId,
   setMainCamera,
-  createKeyBinding,
+  createActionMap,
   ComponentType,
   getECSWorld,
   getEntityIdByAppId,
@@ -558,21 +558,22 @@ export const scene = async () => {
     speed: 3,
   });
 
-  // --- Camera toggle key binding (Phase 6, §2) ---
+  // --- Camera toggle (Phase 6, §2): a scene action map, replaced on the next visit by its id;
+  // exact modifiers, so Ctrl+C isn't a switch ---
 
-  createKeyBinding({
-    id: 'largeWorldToggleCamera',
-    chord: { key: 'c' },
-    caseInsensitive: true,
-    type: 'KEY_UP',
+  const actions = createActionMap({
+    id: 'largeWorld',
     sceneId: 'largeWorld',
-    fn: () => {
-      const overviewId = getEntityIdByAppId('largeWorldOverview', ecsWorld);
-      const dynamicId = getEntityIdByAppId('largeWorldDynamicCamera', ecsWorld);
-      if (overviewId === undefined || dynamicId === undefined) return;
-      const world = getECSWorld();
-      setMainCamera(world, getActiveCameraId() === overviewId ? dynamicId : overviewId);
-    },
+    ignoreModifiers: false,
+    actions: { toggleCamera: { type: 'BUTTON', name: 'Switch the overview and dynamic cameras' } },
+    bindings: { toggleCamera: [{ device: 'KEYBOARD', keys: ['c'] }] },
+  });
+  actions.onPressed('toggleCamera', () => {
+    const overviewId = getEntityIdByAppId('largeWorldOverview', ecsWorld);
+    const dynamicId = getEntityIdByAppId('largeWorldDynamicCamera', ecsWorld);
+    if (overviewId === undefined || dynamicId === undefined) return;
+    const world = getECSWorld();
+    setMainCamera(world, getActiveCameraId() === overviewId ? dynamicId : overviewId);
   });
 
   // --- Sky lights: the scene also lists the day-night sky box (docs/plans/_DONE_p351_impostor-billboard-lod.md

@@ -5,9 +5,10 @@ import {
   getMaterial,
   createMeshEntity,
   existsOrThrow,
+  createSeededRandom,
 } from 'aekasha';
 import { SpinComponentType } from '../ecs/SpinComponent';
-import { generateAsteroid, createSeededRandom } from 'aekasha/toolkit/geometry';
+import { generateAsteroid } from 'aekasha/toolkit/geometry';
 
 /** Dark rock colours for the asteroid material (its own grey-brown, a carbonaceous grey) */
 const PALETTES = [

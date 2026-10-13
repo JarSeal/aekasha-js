@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js';
 import { createMeshEntity, type MeshProps, ComponentType, getECSWorld } from 'aekasha';
 import type { CoreEntityOpts } from 'aekasha/schemas';
-import { createSeededRandom } from '../SeededRandom';
+import { createSeededRandom } from 'aekasha';
 
 /**
  * `MeshSurfaceSampler.setRandomGenerator` exists at runtime (three@0.183.2's

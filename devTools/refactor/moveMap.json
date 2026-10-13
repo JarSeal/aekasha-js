@@ -87,6 +87,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/debug/_dbg__TestBridgeInput.ts": {
+      "to": "src/_engine/debug/_dbg__TestBridgeInput.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/debug/_dbg__UndoRedo.ts": {
       "to": "src/_engine/debug/_dbg__UndoRedo.ts",
       "action": "keep",
@@ -144,6 +149,11 @@
     },
     "src/_engine/debug/DebugTools.ts": {
       "to": "src/_engine/debug/DebugTools.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/debug/DefaultDebugKeyBindings.test.ts": {
+      "to": "src/_engine/debug/DefaultDebugKeyBindings.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -402,6 +412,31 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/character/ActorKinds.test.ts": {
+      "to": "src/_engine/features/character/ActorKinds.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/ActorKinds.ts": {
+      "to": "src/_engine/features/character/ActorKinds.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/ActorTypes.ts": {
+      "to": "src/_engine/features/character/ActorTypes.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/brains/PlayerBrains.test.ts": {
+      "to": "src/_engine/features/character/brains/PlayerBrains.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/brains/PlayerBrains.ts": {
+      "to": "src/_engine/features/character/brains/PlayerBrains.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/character/Character.ts": {
       "to": "src/_engine/features/character/Character.ts",
       "action": "keep",
@@ -432,6 +467,61 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/character/CLAUDE.md": {
+      "to": "src/_engine/features/character/CLAUDE.md",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/Casts.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/Casts.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/Crouch.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/Crouch.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/DynamicCharacter.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/DynamicCharacter.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/DynamicCharacterData.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/DynamicCharacterData.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/Floor.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/Floor.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/Jump.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/Jump.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/Locomotion.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/Locomotion.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/Platform.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/Platform.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/Tumble.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/Tumble.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/character/controllers/dynamic/Wall.ts": {
+      "to": "src/_engine/features/character/controllers/dynamic/Wall.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/character/debug/_dbg__Character.ts": {
       "to": "src/_engine/features/character/debug/_dbg__Character.ts",
       "action": "keep",
@@ -459,11 +549,6 @@
     },
     "src/_engine/features/character/debug/CharacterStateWindow.module.scss": {
       "to": "src/_engine/features/character/debug/CharacterStateWindow.module.scss",
-      "action": "keep",
-      "plan": "p608"
-    },
-    "src/_engine/features/character/DynamicCharacter.ts": {
-      "to": "src/_engine/features/character/DynamicCharacter.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -1493,6 +1578,36 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/kernel/input/ActionBindings.ts": {
+      "to": "src/_engine/kernel/input/ActionBindings.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/input/ActionRecording.ts": {
+      "to": "src/_engine/kernel/input/ActionRecording.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/input/Actions.test.ts": {
+      "to": "src/_engine/kernel/input/Actions.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/input/Actions.ts": {
+      "to": "src/_engine/kernel/input/Actions.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/input/ActionTypes.ts": {
+      "to": "src/_engine/kernel/input/ActionTypes.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/input/CLAUDE.md": {
+      "to": "src/_engine/kernel/input/CLAUDE.md",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/kernel/input/GamepadInput.ts": {
       "to": "src/_engine/kernel/input/GamepadInput.ts",
       "action": "keep",
@@ -2204,6 +2319,21 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/utils/RandomStreams.test.ts": {
+      "to": "src/_engine/utils/RandomStreams.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/utils/RandomStreams.ts": {
+      "to": "src/_engine/utils/RandomStreams.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/utils/SeededRandom.ts": {
+      "to": "src/_engine/utils/SeededRandom.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/utils/StatsClock.ts": {
       "to": "src/_engine/utils/StatsClock.ts",
       "action": "keep",
@@ -2216,6 +2346,36 @@
     },
     "src/app/examples/_dbg__exampleHub.ts": {
       "to": "src/app/examples/_dbg__exampleHub.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/character/exampleCharacter.hub.png": {
+      "to": "src/app/examples/character/exampleCharacter.hub.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/character/exampleCharacter.scene.json": {
+      "to": "src/app/examples/character/exampleCharacter.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/character/exampleCharacter.ts": {
+      "to": "src/app/examples/character/exampleCharacter.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/character/exampleCharacterAmbient.light.json": {
+      "to": "src/app/examples/character/exampleCharacterAmbient.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/character/exampleCharacterCamera.camera.json": {
+      "to": "src/app/examples/character/exampleCharacterCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/character/exampleCharacterSun.light.json": {
+      "to": "src/app/examples/character/exampleCharacterSun.light.json",
       "action": "keep",
       "plan": "p609"
     },
@@ -2984,6 +3144,11 @@
       "action": "keep",
       "plan": "p609"
     },
+    "src/app/scenes/thirdPersonGymScene/GymDummyBrain.ts": {
+      "to": "src/app/scenes/thirdPersonGymScene/GymDummyBrain.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
     "src/app/scenes/thirdPersonGymScene/PhysicsStressTest.ts": {
       "to": "src/app/scenes/thirdPersonGymScene/PhysicsStressTest.ts",
       "action": "keep",
@@ -3089,6 +3254,11 @@
       "action": "keep",
       "plan": "p609"
     },
+    "src/toolkit/ecs/gameplay/FollowObjectCameraRig.test.ts": {
+      "to": "src/toolkit/ecs/gameplay/FollowObjectCameraRig.test.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
     "src/toolkit/ecs/gameplay/FollowObjectCameraRig.ts": {
       "to": "src/toolkit/ecs/gameplay/FollowObjectCameraRig.ts",
       "action": "keep",
@@ -3130,12 +3300,6 @@
       "to": "src/toolkit/geometry/scatter/ScatterOnSurface.ts",
       "action": "keep",
       "plan": "p609"
-    },
-    "src/toolkit/geometry/SeededRandom.ts": {
-      "to": "src/toolkit/geometry/SeededRandom.ts",
-      "action": "keep",
-      "plan": "p609",
-      "note": "the generators share it; the simulation lint points at it until p610"
     },
     "src/toolkit/materials/asteroid/asteroid.material.json": {
       "to": "src/toolkit/materials/asteroid/asteroid.material.json",

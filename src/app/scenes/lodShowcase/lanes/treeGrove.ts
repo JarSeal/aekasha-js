@@ -1,10 +1,10 @@
 import * as THREE from 'three/webgpu';
-import { saveBufferGeometry, createMaterial } from 'aekasha';
+import { saveBufferGeometry, createMaterial, createSeededRandom } from 'aekasha';
 import { createInstancedLodPool } from 'aekasha/instancing';
 import { generateCrossQuads } from 'aekasha/lod';
 import type { LodDef } from 'aekasha/lod';
 import { getConservativeGeometryRadius } from 'aekasha/spatial';
-import { generateTreeGeometry, createSeededRandom } from 'aekasha/toolkit/geometry';
+import { generateTreeGeometry } from 'aekasha/toolkit/geometry';
 import type { ShowcaseLane } from '../layout';
 
 /** The cross-quads' export (src/app/impostors/), listed in lodShowcase.scene.json's `impostors`. */

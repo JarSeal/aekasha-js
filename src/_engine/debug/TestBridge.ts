@@ -6,7 +6,35 @@ import type { PhysicsProbeReport } from '../features/physics/debug/_dbg__Physics
 export const TEST_BRIDGE_QUERY_PARAM = 'aekTest';
 
 /** The bridge's protocol version: bump it when a method's arguments or results change */
-export const TEST_BRIDGE_VERSION = 3;
+export const TEST_BRIDGE_VERSION = 4;
+
+/**
+ * Key events the bridge dispatches right before fixed physics steps of the first scene's world
+ * (`step`: its getPhysicsSubStepIndex, 0 = the first step after the load). Set as
+ * `window.__AEK_TEST_INPUT__` before the page's scripts run (the runner's init script), so the
+ * first step is covered. Keys are `KeyboardEvent.key` values; the modifier flags follow the held
+ * modifier keys.
+ */
+export type TestBridgeInputScript = {
+  frames: { step: number; down?: string[]; up?: string[] }[];
+};
+
+/**
+ * A scene's character paths ({@link AekTestBridge.getCharacterPaths}): what the scene runner
+ * compares, run to run, to check that the characters move the same way (p610).
+ */
+export type TestBridgeCharacterPaths =
+  /** Every character's pose (and locomotion state) per step, over the probe's steps: `hash` covers
+   * them all, `states` lists the locomotion states each character went through */
+  | {
+      status: 'DONE';
+      steps: number;
+      hash: string;
+      characterCount: number;
+      states: Record<string, string[]>;
+    }
+  /** No probe armed, or no character */
+  | { status: 'NONE' };
 
 export type TestBridgeSceneReady =
   /** `backend`: what the renderer runs on (WebGPU falls back to WebGL2 without `navigator.gpu`) */
@@ -61,11 +89,16 @@ export type AekTestBridge = {
   snapshot: (opts: { width: number; height: number }) => Promise<TestBridgeSnapshot>;
   /** Every world's system order now ({@link TestBridgeSystemOrder}) */
   getSystemOrder: () => TestBridgeSystemOrder;
+  /** The current scene's character paths so far ({@link TestBridgeCharacterPaths}): read it after
+   * whenProbeDone, when the probe's steps have all run */
+  getCharacterPaths: () => TestBridgeCharacterPaths;
 };
 
 declare global {
   interface Window {
     __AEK_TEST__?: AekTestBridge;
+    /** The runner's input script ({@link TestBridgeInputScript}), read when the bridge installs */
+    __AEK_TEST_INPUT__?: TestBridgeInputScript;
   }
 }
 

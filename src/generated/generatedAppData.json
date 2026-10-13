@@ -1,5 +1,93 @@
 {
   "scenes": {
+    "exampleCharacter": {
+      "name": "Example: Character",
+      "description": "A dynamic character on a WORLD_FIXED player brain (W A S D or the arrows: North, West, South, East; Space jumps, Shift runs, C crouches), turning to its last heading, on a ground with crates, stairs and a ramp. The toolkit's follow camera rig keeps a fixed view direction and leads the character a little.",
+      "backgroundColor": "#1c212b",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.1,
+            "far": 100,
+            "position": {
+              "x": 0,
+              "y": 11,
+              "z": 11
+            },
+            "lookAtPoint": {
+              "x": 0,
+              "y": 1,
+              "z": 3
+            },
+            "type": "PERSPECTIVE",
+            "fov": 45,
+            "appId": "exampleCharacterCamera"
+          },
+          "entityOpts": {
+            "appId": "exampleCharacterCamera",
+            "debugData": {
+              "name": "Character example camera",
+              "description": "Driven by createFollowObjectCameraRig at a (0, 10, 8) offset from the character: South of and above it, so North (-Z) is screen-up. This position is the rig's from the spawn point."
+            }
+          }
+        }
+      ],
+      "lights": [
+        {
+          "lightProps": {
+            "type": "AMBIENT",
+            "color": "#ffffff",
+            "intensity": 0.6,
+            "appId": "exampleCharacterAmbient"
+          },
+          "entityOpts": {
+            "appId": "exampleCharacterAmbient",
+            "debugData": {
+              "name": "Character example ambient light"
+            }
+          }
+        },
+        {
+          "lightProps": {
+            "type": "DIRECTIONAL",
+            "color": "#fff2d9",
+            "intensity": 3,
+            "position": {
+              "x": 8,
+              "y": 20,
+              "z": 10
+            },
+            "targetPos": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "castShadow": true,
+            "shadowCameraNearFar": [
+              1,
+              60
+            ],
+            "shadowCameraFrustum": [
+              -18,
+              18,
+              18,
+              -18
+            ],
+            "appId": "exampleCharacterSun"
+          },
+          "entityOpts": {
+            "appId": "exampleCharacterSun",
+            "debugData": {
+              "name": "Character example sun"
+            }
+          }
+        }
+      ],
+      "id": "exampleCharacter",
+      "sceneFile": "./examples/character/exampleCharacter.ts",
+      "__features": []
+    },
     "exampleDebugTab": {
       "name": "Example: Your own debug tab",
       "description": "A ring of boxes and a debug drawer tab of the scene's own (debug env): the number of boxes and their colour, saved in the browser, and a button that shuffles them.",
@@ -14366,6 +14454,34 @@
       },
       "__sourcePath": "src/app/cameras/scene01Camera.camera.json"
     },
+    "exampleCharacterCamera": {
+      "camProps": {
+        "active": true,
+        "near": 0.1,
+        "far": 100,
+        "position": {
+          "x": 0,
+          "y": 11,
+          "z": 11
+        },
+        "lookAtPoint": {
+          "x": 0,
+          "y": 1,
+          "z": 3
+        },
+        "type": "PERSPECTIVE",
+        "fov": 45,
+        "appId": "exampleCharacterCamera"
+      },
+      "entityOpts": {
+        "appId": "exampleCharacterCamera",
+        "debugData": {
+          "name": "Character example camera",
+          "description": "Driven by createFollowObjectCameraRig at a (0, 10, 8) offset from the character: South of and above it, so North (-Z) is screen-up. This position is the rig's from the spawn point."
+        }
+      },
+      "__sourcePath": "src/app/examples/character/exampleCharacterCamera.camera.json"
+    },
     "exampleDebugTabCamera": {
       "camProps": {
         "active": true,
@@ -14898,6 +15014,57 @@
         }
       },
       "__sourcePath": "src/app/lights/scene01Sun.light.json"
+    },
+    "exampleCharacterAmbient": {
+      "lightProps": {
+        "type": "AMBIENT",
+        "color": "#ffffff",
+        "intensity": 0.6,
+        "appId": "exampleCharacterAmbient"
+      },
+      "entityOpts": {
+        "appId": "exampleCharacterAmbient",
+        "debugData": {
+          "name": "Character example ambient light"
+        }
+      },
+      "__sourcePath": "src/app/examples/character/exampleCharacterAmbient.light.json"
+    },
+    "exampleCharacterSun": {
+      "lightProps": {
+        "type": "DIRECTIONAL",
+        "color": "#fff2d9",
+        "intensity": 3,
+        "position": {
+          "x": 8,
+          "y": 20,
+          "z": 10
+        },
+        "targetPos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "castShadow": true,
+        "shadowCameraNearFar": [
+          1,
+          60
+        ],
+        "shadowCameraFrustum": [
+          -18,
+          18,
+          18,
+          -18
+        ],
+        "appId": "exampleCharacterSun"
+      },
+      "entityOpts": {
+        "appId": "exampleCharacterSun",
+        "debugData": {
+          "name": "Character example sun"
+        }
+      },
+      "__sourcePath": "src/app/examples/character/exampleCharacterSun.light.json"
     },
     "exampleDebugTabAmbient": {
       "lightProps": {

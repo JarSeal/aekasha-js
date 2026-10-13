@@ -1,7 +1,7 @@
 Status: implemented (Phases 1-7)
 Category: Refactoring, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
-Blocks: \_DONE_p609_toolkit-and-app-restructure.md, p610_character-and-input-action-architecture.md, p611_sbp-tooling-profiles-and-marketing.md, p612_review-ecs-loop-config-init.md, p613_review-rendering-scene-assets.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p510_headless-simulation-runtime.md
+Blocks: \_DONE_p609_toolkit-and-app-restructure.md, \_DONE_p610_character-and-input-action-architecture.md, p611_sbp-tooling-profiles-and-marketing.md, p612_review-ecs-loop-config-init.md, p613_review-rendering-scene-assets.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p510_headless-simulation-runtime.md
 Related: \_DONE_p602_architecture-and-target-structure.md (the folder map, D2-D7), \_DONE_p607_sbp-foundation-feature-modules.md (the features, the seams and what they leave for the moves, folded into §2-§7), \_DONE_p606_layering-inversion-and-public-entry.md (the entries this plan re-points, `moveRules.ts`, the import codemod)
 
 # Engine Folder Restructure

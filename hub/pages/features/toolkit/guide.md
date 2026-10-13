@@ -38,7 +38,9 @@ In `ecs/effects/`, a component and its system each, registered by the app's feat
 In `ecs/gameplay/`, each with a system to register once per world:
 
 - [`createFollowObjectCameraRig`](api:createFollowObjectCameraRig): a camera that follows a
-  mesh at an offset, smoothed, reading the pose that's drawn.
+  mesh at an offset, smoothed, reading the pose that's drawn. It can keep its view direction
+  (`orientation: 'FIXED'`) and look ahead of where the mesh is going (`lookAhead`), as in the
+  [character example](hub:examples/character#the-camera).
 - [`createMovingPlatform`](api:createMovingPlatform): a kinematic platform moving along a path
   of points, on every physics step, so characters ride it.
 

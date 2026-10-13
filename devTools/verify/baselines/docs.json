@@ -2,29 +2,29 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1481,
-      "total": 2161
+      "documented": 1639,
+      "total": 2318
     },
     "members": {
-      "documented": 212,
-      "total": 440
+      "documented": 216,
+      "total": 444
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1436,
-        "total": 2097
+        "documented": 1595,
+        "total": 2255
       },
       "members": {
-        "documented": 162,
-        "total": 360
+        "documented": 166,
+        "total": 364
       }
     },
     "toolkit": {
       "exports": {
-        "documented": 45,
-        "total": 64
+        "documented": 44,
+        "total": 63
       },
       "members": {
         "documented": 50,
@@ -35,8 +35,8 @@
   "folders": {
     "engine/debug": {
       "exports": {
-        "documented": 142,
-        "total": 195
+        "documented": 147,
+        "total": 200
       },
       "members": {
         "documented": 0,
@@ -127,8 +127,36 @@
     },
     "engine/features/character": {
       "exports": {
-        "documented": 56,
-        "total": 56
+        "documented": 71,
+        "total": 71
+      },
+      "members": {
+        "documented": 4,
+        "total": 4
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/features/character/brains": {
+      "exports": {
+        "documented": 12,
+        "total": 12
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/features/character/controllers/dynamic": {
+      "exports": {
+        "documented": 47,
+        "total": 47
       },
       "members": {
         "documented": 0,
@@ -1075,8 +1103,8 @@
     },
     "engine/kernel/input": {
       "exports": {
-        "documented": 27,
-        "total": 51
+        "documented": 99,
+        "total": 122
       },
       "members": {
         "documented": 0,
@@ -1084,7 +1112,6 @@
       },
       "undocumented": {
         "exports": [
-          "GamepadInput#pollGamepads",
           "InputState#areAllInputsEnabled",
           "InputState#areAppInputsSuspended",
           "KeyboardInput#KeyBinding",
@@ -1142,8 +1169,8 @@
     },
     "engine/kernel/loop": {
       "exports": {
-        "documented": 32,
-        "total": 44
+        "documented": 35,
+        "total": 47
       },
       "members": {
         "documented": 0,
@@ -1430,8 +1457,8 @@
     },
     "engine/utils": {
       "exports": {
-        "documented": 34,
-        "total": 39
+        "documented": 39,
+        "total": 44
       },
       "members": {
         "documented": 4,
@@ -1476,20 +1503,6 @@
       "exports": {
         "documented": 10,
         "total": 10
-      },
-      "members": {
-        "documented": 0,
-        "total": 0
-      },
-      "undocumented": {
-        "exports": [],
-        "members": []
-      }
-    },
-    "toolkit/geometry": {
-      "exports": {
-        "documented": 1,
-        "total": 1
       },
       "members": {
         "documented": 0,

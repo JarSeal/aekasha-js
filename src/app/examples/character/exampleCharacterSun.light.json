@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../.schemas/light.schema.json",
+  "lightProps": {
+    "type": "DIRECTIONAL",
+    "color": "#fff2d9",
+    "intensity": 3,
+    "position": { "x": 8, "y": 20, "z": 10 },
+    "targetPos": { "x": 0, "y": 0, "z": 0 },
+    "castShadow": true,
+    "shadowCameraNearFar": [1, 60],
+    "shadowCameraFrustum": [-18, 18, 18, -18]
+  },
+  "entityOpts": {
+    "appId": "exampleCharacterSun",
+    "debugData": { "name": "Character example sun" }
+  }
+}

@@ -6,9 +6,9 @@ import {
   createMaterial,
   incMaterialRef,
   setMeshLod,
+  createSeededRandom,
 } from 'aekasha';
 import type { LodDef } from 'aekasha/lod';
-import { createSeededRandom } from 'aekasha/toolkit/geometry';
 import type { ShowcaseLaneContext, ShowcaseLane } from '../layout';
 
 const GRID = 4;

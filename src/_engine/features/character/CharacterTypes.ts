@@ -1,4 +1,5 @@
 import type { ColliderParams } from '../physics/PhysicsAPITypes';
+import type { ActorBrain, ActorController } from './ActorTypes';
 
 /**
  * What a character wants to do, written by its input scheme, AI, cutscene or network code and
@@ -33,20 +34,21 @@ export type CharacterIntent = {
   crouch: boolean;
 };
 
-/** The character data a body plan sizes its colliders and probes from (lengths in m). */
+/** The sizes a body plan derives its colliders and probes from (lengths in m): the matching keys
+ * of a controller's configuration (eg. `DynamicCharacterConfig`). */
 export type CharacterBodyData = {
   /** Standing height, from the bottom of the body to its top. */
-  _height: number;
+  height: number;
   /** Body radius. */
-  _radius: number;
+  radius: number;
   /** Crouching height, from the bottom of the body to its top. */
-  _crouchHeight: number;
-  /** How much wider than the body the wall sensor is, as a fraction of `_radius`. */
-  _skinThickness: number;
+  crouchHeight: number;
+  /** How much wider than the body the wall sensor is, as a fraction of `radius`. */
+  skinThickness: number;
   /** Height of the floor sensor's center above the bottom of the body. */
-  _groundDetectorOffset: number;
-  /** Floor sensor radius, as a fraction of `_radius`. */
-  _groundDetectorRadius: number;
+  groundDetectorOffset: number;
+  /** Floor sensor radius, as a fraction of `radius`. */
+  groundDetectorRadius: number;
 };
 
 /** The sizes of a character's probes in one stance (standing or crouching), in body space. */
@@ -75,7 +77,13 @@ export type CharacterDimensions = {
  * keep a nested object), and updated as a whole when a result arrives, so its fields always
  * belong to one cast. In WORKER_THREAD mode a result arrives a physics step or so late. */
 export type CharacterCastRecord = {
-  /** `getPhysGameTime()` when the result arrived, 0 = no result yet. */
+  /** The physics step the result belongs to (getPhysicsSubStepIndex; in WORKER_THREAD mode the
+   * snapshot step when it arrived), -1 = no result yet. */
+  resolvedAtStep: number;
+  /**
+   * When the result arrived, in step time (ms), 0 = no result yet.
+   * @deprecated Use `resolvedAtStep` (removed in engine 6.0.0).
+   */
   resolvedAt: number;
   /** The stance the cast was sized for. */
   isCrouching: boolean;
@@ -107,7 +115,7 @@ export type CharacterProbes = {
   /** The last floor ray (straight down from the body's center). */
   floorRay: CharacterCastRecord;
   /** The last wall shape-cast (a cylinder along the horizontal move direction). Fired only while
-   * the character is near a wall and moving, so it can be old: check `resolvedAt`. */
+   * the character is near a wall and moving, so it can be old: check `resolvedAtStep`. */
   wallCast: CharacterCastRecord;
 };
 
@@ -128,18 +136,42 @@ export type CharacterBodyCollider = {
 };
 
 /**
+ * A body's kind (eg. `'HUMANOID'`), given as `bodyKind` or as the deprecated `kind` (at least
+ * one; {@link getBodyKind} reads it).
+ */
+export type CharacterBodyKindField =
+  | {
+      /** The body's kind (eg. `'HUMANOID'`): data for game code, not a code path. */
+      bodyKind: string;
+      /**
+       * The body's kind.
+       * @deprecated Use `bodyKind` (removed in engine 6.0.0).
+       */
+      kind?: string;
+    }
+  | {
+      /** The body's kind (eg. `'HUMANOID'`): data for game code, not a code path. */
+      bodyKind?: string;
+      /**
+       * The body's kind.
+       * @deprecated Use `bodyKind` (removed in engine 6.0.0).
+       */
+      kind: string;
+    };
+
+/**
  * What a character's body looks like to physics: its kind and its colliders and probes, all sized
  * from the character's data. A controller (eg. createDynamicCharacter) decides how the body moves;
- * the body plan only shapes it, so one controller can move several kinds of bodies.
+ * the body plan only shapes it, so one controller can move several kinds of bodies. Its kind is
+ * set as the character's `bodyKind`.
  */
-export type CharacterBodyPlan<Dims extends CharacterDimensions = CharacterDimensions> = {
-  /** The character's kind (eg. `'HUMANOID'`): data for game code, set as `CharacterObject.kind`. */
-  kind: string;
-  /** Derives every size from the data. Pure: call it again after the data changes. */
-  getDimensions(data: CharacterBodyData): Dims;
-  /** The colliders, by role, sized from `getDimensions`' result. */
-  getColliders(dims: Dims, data: CharacterBodyData): CharacterBodyCollider[];
-};
+export type CharacterBodyPlan<Dims extends CharacterDimensions = CharacterDimensions> =
+  CharacterBodyKindField & {
+    /** Derives every size from the data. Pure: call it again after the data changes. */
+    getDimensions(data: CharacterBodyData): Dims;
+    /** The colliders, by role, sized from `getDimensions`' result. */
+    getColliders(dims: Dims, data: CharacterBodyData): CharacterBodyCollider[];
+  };
 
 /**
  * What a character's body is doing, derived by its controller once per sub-step: what a future
@@ -182,30 +214,55 @@ export type LocomotionStateListener = (
  */
 export type CharacterControlMode = 'CONTROLLED' | 'PHYSICS_ONLY';
 
-/** A character's configuration values: the `_` keys of its data that hold a primitive value. */
+/** Configuration values by key (a controller's, or a brain's suggested defaults). */
 export type CharacterConfigValues = Readonly<Record<string, number | boolean | string>>;
 
-/** How a controller takes a configuration (`_`) key of its data written from outside, eg. by
- * the debug tools. Without these hooks, every `_` key is read live and nothing is derived. */
-export type CharacterConfigHooks = {
-  /** `_` keys only read at creation (eg. sized into the colliders): writing them changes nothing
-   * until the body is rebuilt. */
+/**
+ * A controller's configuration: its live values, and how to edit them from outside (eg. the debug
+ * tools). Without `onChange`'s recomputing, a value is read live and nothing derives from it.
+ * @template TValues the controller's configuration values (eg. `DynamicCharacterConfig`)
+ */
+export type CharacterControllerConfig<
+  TValues extends object = Record<string, number | boolean | string>,
+> = {
+  /** The live values, read by the controller from its next tick. Write a key, then call
+   * `onChange` with it. */
+  values: TValues;
+  /** The values as the character was created with them (the brain's defaults included): what the
+   * scene's code asked for, before any debug edit. Frozen. */
+  initial: Readonly<TValues>;
+  /** Keys only read at creation (eg. sized into the colliders): writing them changes nothing until
+   * the body is rebuilt. */
   bakedKeys: ReadonlySet<string>;
-  /** Call it after writing a `_` key of the data: recomputes the values derived from it (eg.
-   * `__maxWalkableAngleCos`). A key nothing is derived from is a no-op. */
+  /** Call it after writing a key of `values`: recomputes what the controller derives from it (eg.
+   * the dynamic character's `maxWalkableAngleCos`). A key nothing is derived from is a no-op. */
   onChange: (key: string) => void;
+  /** Sets each value whose key the character's creation options didn't give (a brain's
+   * {@link ActorBrain.configDefaults}), then recomputes what derives from it. */
+  applyDefaults?: (values: CharacterConfigValues) => void;
 };
 
-/** What moves a character (eg. createDynamicCharacter's controller). */
-export type CharacterController = {
-  /** Runs once per fixed physics sub-step (APP_PHYSICS_STEP), with the fixed timestep. */
-  tick: (dt: number) => void;
-  /** Runs when the character's entity is deleted, before its components are gone. */
-  dispose?: () => void;
+/**
+ * What moves a character (eg. createDynamicCharacter's controller, of kind `'DYNAMIC_CHARACTER'`):
+ * the actor controller contract, with the character's data and diagnostics.
+ * @template TState what the tick writes (eg. `DynamicCharacterState`)
+ * @template TConfig the configuration values (eg. `DynamicCharacterConfig`)
+ * @template TInternal the tick's memory (eg. `DynamicCharacterInternal`)
+ */
+export type CharacterController<
+  TState extends object = Record<string, unknown>,
+  TConfig extends object = Record<string, number | boolean | string>,
+  TInternal extends object = Record<string, unknown>,
+> = ActorController<CharacterIntent> & {
+  /** What the tick writes every step (read-only from outside). The nested objects are mutated in
+   * place: re-read them, never keep one expecting a snapshot. */
+  state?: Readonly<TState>;
+  /** The configuration values and how to edit them from outside. */
+  config?: CharacterControllerConfig<TConfig>;
+  /** The tick's memory between steps (read-only, diagnostics only). */
+  internal?: Readonly<TInternal>;
   /** The body and the probes' last results, for diagnostics (read-only). */
   probes?: Readonly<CharacterProbes>;
-  /** How the controller takes its configuration being edited from outside. */
-  config?: CharacterConfigHooks;
 };
 
 /** A character's registry entry: the data of its entity's `CHARACTER` component. */
@@ -216,20 +273,38 @@ export type CharacterObject = {
   name?: string;
   /** The body's kind, from its body plan (eg. `'HUMANOID'`). Data, not a code path: switch on it
    * in game code. */
+  bodyKind: string;
+  /**
+   * The body's kind (the same as `bodyKind`).
+   * @deprecated Use `bodyKind` (removed in engine 6.0.0).
+   */
   kind: string;
   /** The character's entity: the visual's, with the physics components. */
   entityId: number;
   /** App id of the visual root (the Object3D the body moves). */
   visualId: string;
-  /** Key binding ids owned by this character (namespaced `${id}:…`), deleted with it. */
+  /**
+   * Key binding ids owned by this character (`createCharacter`'s `controls`), deleted with it.
+   * @deprecated A brain owns a character's input now (a player brain's action map); removed in
+   * engine 6.0.0 with `controls`.
+   */
   keyBindingIds: string[];
-  /** Mouse binding ids owned by this character, deleted with it. */
+  /**
+   * Mouse binding ids owned by this character, deleted with it.
+   * @deprecated See `keyBindingIds`.
+   */
   mouseBindingIds: string[];
-  /** Live controller data. Keys follow the naming convention the debug tools rely on: no prefix =
-   * state, `_` = configuration, `__` = internal memory. */
+  /**
+   * The controller's data as one flat object: state keys as they are, configuration keys with one
+   * underscore (`_maxVelocity`), internal ones with two (`__jumpStep`).
+   * @deprecated Use the controller's `state`, `config.values` and `internal` (removed in engine
+   * 6.0.0).
+   */
   data: Record<string, unknown>;
-  /** The configuration (`_` keys of `data`) as the character was created with it: what the
-   * scene's code asked for, before any debug edit. Frozen. */
+  /**
+   * The configuration (`_` keys of `data`) as the character was created with it. Frozen.
+   * @deprecated Use the controller's `config.initial` (removed in engine 6.0.0).
+   */
   initialConfig: CharacterConfigValues;
   /** What the character wants to do this sub-step: write it to drive the character. */
   intent: CharacterIntent;
@@ -238,4 +313,7 @@ export type CharacterObject = {
   controlMode: CharacterControlMode;
   /** Set by the controller's creator once the character exists (until then nothing ticks). */
   controller?: CharacterController;
+  /** What writes the intent once per step, before the controller ticks (eg. a player brain on
+   * an action map). None: code drives the character. Switch it with `setCharacterBrain`. */
+  brain?: ActorBrain<CharacterIntent>;
 };

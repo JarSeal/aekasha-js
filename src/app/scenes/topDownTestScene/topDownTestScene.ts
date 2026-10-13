@@ -13,6 +13,7 @@ import {
   getCameraByAppId,
   existsOrThrow,
   lwarn,
+  createSeededRandom,
 } from 'aekasha';
 import { createDynamicCharacter } from 'aekasha/character';
 import {
@@ -21,7 +22,7 @@ import {
   deleteFollowObjectCameraRig,
 } from 'aekasha/toolkit/ecs';
 import { createPhysicsEntity } from 'aekasha/physics';
-import { generateTerrain, createSeededRandom } from 'aekasha/toolkit/geometry';
+import { generateTerrain } from 'aekasha/toolkit/geometry';
 import { createCharacterVisual } from '../thirdPersonGymScene/characterVisual';
 
 /**
@@ -523,33 +524,30 @@ const createDynamicProps = async (obstacles: Footprint[]) => {
 /** The WORLD_FIXED player (WASD: North / West / South / East; Space, Shift, Control) and the
  * follow camera rig. Returns the player's entity id. */
 const createPlayer = async () => {
-  // #region dynamic-character (shown in the Hub: hub/pages/features/characters/)
-  const charData = { _height: 1.6, _radius: 0.5 };
+  const config = { height: 1.6, radius: 0.5 };
   const visual = createCharacterVisual({
     key: 'topDownPlayer',
-    height: charData._height,
-    radius: charData._radius,
+    height: config.height,
+    radius: config.radius,
     beakColor: '#333',
   });
   const { character } = await createDynamicCharacter({
     id: 'topDownPlayer',
     name: 'Top-down player',
     visual,
-    charData,
-    input: {
-      scheme: 'WORLD_FIXED',
-      mappings: {
-        moveNorth: ['w'],
-        moveSouth: ['s'],
-        moveWest: ['a'],
-        moveEast: ['d'],
-        jump: [' '],
-        run: ['Shift'],
-        crouch: ['Control'],
+    config,
+    brain: {
+      kind: 'WORLD_FIXED',
+      params: {
+        bindings: {
+          move: [{ device: 'KEYBOARD', up: ['w'], down: ['s'], left: ['a'], right: ['d'] }],
+          jump: [{ device: 'KEYBOARD', keys: [' '] }],
+          run: [{ device: 'KEYBOARD', keys: ['Shift'] }],
+          crouch: [{ device: 'KEYBOARD', keys: ['Control'] }],
+        },
       },
     },
   });
-  // #endregion dynamic-character
   getECSWorld().getRigidBody(character.entityId)?.setTranslation(SPAWN, true);
 
   // Straight South of and above the player: North (-Z) is screen-up

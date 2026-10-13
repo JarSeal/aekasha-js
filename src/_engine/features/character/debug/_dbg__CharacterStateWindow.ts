@@ -3,7 +3,7 @@ import { CMP, type TCMP } from '../../../ui/CMP';
 import { lsGetItem, lsSetItem, lsSubscribe } from '../../../utils/LocalAndSessionStorage';
 import { llog } from '../../../utils/Logger';
 import { getCharacterById } from '../Character';
-import { getPhysGameTime } from '../../physics/PhysicsAPI';
+import { getPhysicsSnapshotStepIndex, getPhysicsState } from '../../physics/PhysicsAPI';
 import type { CharacterObject } from '../CharacterTypes';
 import {
   createSceneMainLooper,
@@ -49,9 +49,9 @@ import {
 import styles from './CharacterStateWindow.module.scss';
 
 /**
- * The Character state window: a character's live `data`, split into groups by key prefix (see
- * `CharacterObject.data`). Rows are built once, and each update writes only the values that
- * changed, in open groups only.
+ * The Character state window: a character's live data, its controller's `state`, `config.values`
+ * and `internal`, a group each (a character without a controller shows none). Rows are built
+ * once, and each update writes only the values that changed, in open groups only.
  */
 
 // The windows' kind: one window per character, keyed by its id. Kept from the legacy tracker
@@ -93,8 +93,8 @@ const DEFAULT_SETTINGS: StateWindowSettings = {
 };
 
 type RowKind = 'BOOL' | 'NUMBER' | 'STRING' | 'VECTOR' | 'NUM_ARRAY' | 'OTHER';
-/** A known number key's display: a `getPhysGameTime()` timestamp, or an angle in radians */
-type NumberFormat = 'MS_AGO' | 'RAD_DEG';
+/** A known number key's display: a physics step stamp (-1 = unset), or an angle in radians */
+type NumberFormat = 'STEP_AGO' | 'RAD_DEG';
 type RawValue = number | boolean | string | undefined;
 type ConfigValue = number | boolean;
 /** A configuration (`_`) row's editor. */
@@ -106,7 +106,7 @@ type ConfigEditor = {
   input: HTMLInputElement | null;
   /** Baked into the body at creation (the controller's `bakedKeys`): shown, never written */
   isLocked: boolean;
-  /** The creation-time value (`initialConfig`), undefined when the character wasn't created with
+  /** The creation-time value (`config.initial`), undefined when the character wasn't created with
    * this key (or with another type): no marker, no reset */
   initial: ConfigValue | undefined;
   /** Whether the value differs from `initial` (the row is marked and gets a reset button) */
@@ -114,6 +114,8 @@ type ConfigEditor = {
 };
 type Row = {
   key: string;
+  /** The group, so the object the key is read from */
+  groupId: GroupId;
   kind: RowKind;
   /** NUMBER only: a known key's display (null: the generic number) */
   format: NumberFormat | null;
@@ -126,8 +128,8 @@ type Row = {
   texts: Text[];
   /** VECTOR only: the component keys, in the object's key order */
   vecKeys: string[];
-  /** The last raw values (per component for vectors and arrays), never object references. MS_AGO
-   * also keeps the last shown ms at index 1. */
+  /** The last raw values (per component for vectors and arrays), never object references. STEP_AGO
+   * also keeps the last shown age in steps at index 1. */
   last: RawValue[];
   /** A Properties number or boolean row's editor (null: a read-only row) */
   editor: ConfigEditor | null;
@@ -198,13 +200,13 @@ const saveSettings = (settings: StateWindowSettings) => lsSetItem(LS_KEY, settin
 
 /** Readable displays for known keys (any other key gets its type's display) */
 const NUMBER_FORMATS: Record<string, NumberFormat> = {
-  __jumpTime: 'MS_AGO',
-  __isFallingStartTime: 'MS_AGO',
-  __isTumblingStartTime: 'MS_AGO',
-  __isGettingUpStartTime: 'MS_AGO',
-  __locomotionStateStartTime: 'MS_AGO',
+  jumpStep: 'STEP_AGO',
+  isFallingStartStep: 'STEP_AGO',
+  isTumblingStartStep: 'STEP_AGO',
+  isGettingUpStartStep: 'STEP_AGO',
+  locomotionStateStartStep: 'STEP_AGO',
   charRotation: 'RAD_DEG',
-  _maxWalkableAngle: 'RAD_DEG',
+  maxWalkableAngle: 'RAD_DEG',
 };
 
 /** Values written by an async physics query, so they can trail the other values by a step */
@@ -213,11 +215,31 @@ const LATE_KEYS = new Set([
   'groundNormal',
   'groundIsWalkable',
   'isNearWall',
-  '__touchingWallColliders',
+  'touchingWallColliders',
 ]);
 
-const getGroupId = (key: string): GroupId =>
-  key.startsWith('__') ? 'internal' : key.startsWith('_') ? 'props' : 'state';
+const NO_DATA: Readonly<Record<string, unknown>> = Object.freeze({});
+
+/** The object a group's rows read: the controller's `state`, `config.values` or `internal` (empty
+ * without them). No allocation: it runs on every update. */
+const getGroupSource = (
+  character: CharacterObject,
+  groupId: GroupId
+): Readonly<Record<string, unknown>> => {
+  const controller = character.controller;
+  if (!controller) return NO_DATA;
+  if (groupId === 'state') return controller.state ?? NO_DATA;
+  if (groupId === 'props') return controller.config?.values ?? NO_DATA;
+  return controller.internal ?? NO_DATA;
+};
+
+/** The controller's configuration values, writable (empty without them). */
+const getConfigValues = (character: CharacterObject) =>
+  (character.controller?.config?.values ?? NO_DATA) as Record<string, unknown>;
+
+/** The controller's creation-time configuration (empty without it). */
+const getInitialConfig = (character: CharacterObject) =>
+  (character.controller?.config?.initial ?? NO_DATA) as Readonly<Record<string, unknown>>;
 
 const VECTOR_KEYS = new Set(['x', 'y', 'z', 'w', 'length']);
 
@@ -273,7 +295,7 @@ const formatRadians = (value: number) =>
   `${value.toFixed(3)} rad (${(value * RAD_TO_DEG).toFixed(1)}°)`;
 
 const NUMBER_FORMAT_CELL_CLASSES: Record<NumberFormat, string> = {
-  MS_AGO: styles.numAgo,
+  STEP_AGO: styles.numAgo,
   RAD_DEG: styles.numRad,
 };
 
@@ -314,14 +336,7 @@ const createTextCell = (parent: HTMLElement, className: string) => {
   return text;
 };
 
-const createLabel = (key: string) => {
-  const label = createElem('span', styles.label);
-  const prefixLength = key.startsWith('__') ? 2 : key.startsWith('_') ? 1 : 0;
-  if (prefixLength)
-    label.appendChild(createElem('span', styles.prefix, key.slice(0, prefixLength)));
-  label.appendChild(document.createTextNode(key.slice(prefixLength)));
-  return label;
-};
+const createLabel = (key: string) => createElem('span', styles.label, key);
 
 // Configuration editing
 
@@ -329,20 +344,22 @@ const BAKED_KEY_NOTE =
   'Sized into the colliders at creation. Editing needs a body rebuild (not available yet).';
 
 /**
- * Writes a configuration value to the character's live data, where the controller reads it from
- * its next sub-step, and lets the controller recompute what it derives from it. The one write path
- * of the editors, the resets and undo.
+ * Writes a configuration value to the controller's live values, where it reads it from its next
+ * sub-step, and lets it recompute what it derives from it. The one write path of the editors, the
+ * resets and undo.
  */
 const writeConfig = (character: CharacterObject, key: string, value: number | boolean) => {
-  character.data[key] = value;
-  character.controller?.config?.onChange(key);
+  const config = character.controller?.config;
+  if (!config) return;
+  (config.values as Record<string, unknown>)[key] = value;
+  config.onChange(key);
 };
 
 /** Shows a row's current value right away (no flash: the user caused the change). A row whose
  * value changed its shape is left to the next update's rebuild. */
 const refreshRow = (row: Row, charId: string) => {
   const character = getCharacterById(charId);
-  if (character) updateRow(row, character.data[row.key], true, false);
+  if (character) updateRow(row, getGroupSource(character, row.groupId)[row.key], true, false);
 };
 
 /** Writes several configuration values, saves them (only the ones that differ from the
@@ -378,7 +395,7 @@ const applyConfigUndo = (charId: string, values: Record<string, ConfigValue>) =>
   if (!character) return;
   const writable: Record<string, ConfigValue> = {};
   for (const key of Object.keys(values)) {
-    if (typeof character.data[key] === typeof values[key]) writable[key] = values[key];
+    if (typeof getConfigValues(character)[key] === typeof values[key]) writable[key] = values[key];
   }
   applyConfigValues(character, writable);
 };
@@ -506,7 +523,7 @@ const commitConfigEdit = (row: Row, charId: string, next: ConfigValue | null, is
   const character = getCharacterById(charId);
   const initial = row.editor?.initial;
   const value = isSameConfigValue(next, initial) ? initial! : next;
-  const prev = character?.data[row.key];
+  const prev = character ? getConfigValues(character)[row.key] : undefined;
   if (
     character &&
     value !== null &&
@@ -548,9 +565,11 @@ const resetAllConfig = (inst: StateWindowInstance) => {
   if (!character) return;
   const prev: Record<string, ConfigValue> = {};
   const next: Record<string, ConfigValue> = {};
+  const values = getConfigValues(character);
+  const initials = getInitialConfig(character);
   for (const key of inst.changedKeys) {
-    const initial = character.initialConfig[key];
-    const current = character.data[key];
+    const initial = initials[key];
+    const current = values[key];
     if (typeof current !== typeof initial) continue;
     if (typeof initial === 'number' || typeof initial === 'boolean') {
       prev[key] = current as ConfigValue;
@@ -575,11 +594,13 @@ const resetAllConfig = (inst: StateWindowInstance) => {
  * (and would need the visual resized too). */
 const getChangedConfig = (character: CharacterObject) => {
   const baked = character.controller?.config?.bakedKeys;
+  const values = getConfigValues(character);
+  const initials = getInitialConfig(character);
   const changed: [string, ConfigValue][] = [];
-  for (const key of Object.keys(character.initialConfig)) {
+  for (const key of Object.keys(initials)) {
     if (baked?.has(key)) continue;
-    const initial = character.initialConfig[key];
-    const current = character.data[key];
+    const initial = initials[key];
+    const current = values[key];
     if (typeof current !== 'number' && typeof current !== 'boolean') continue;
     if (typeof current === typeof initial && !isSameConfigValue(current, initial)) {
       changed.push([key, current]);
@@ -590,7 +611,7 @@ const getChangedConfig = (character: CharacterObject) => {
 
 const IDENTIFIER_RE = /^[A-Za-z_$][\w$]*$/;
 
-/** A `charData` snippet (an object literal) of the changed keys. Numbers are rounded to 4
+/** A `config` snippet (an object literal) of the changed keys. Numbers are rounded to 4
  * decimals, except radians: they are written in full (4 decimals would move them by up to 0.003°),
  * with their degrees in a comment. */
 const formatConfigSnippet = (changed: [string, ConfigValue][]) => {
@@ -605,8 +626,8 @@ const formatConfigSnippet = (changed: [string, ConfigValue][]) => {
   return `{\n${lines.join('\n')}\n}`;
 };
 
-/** Copies the changed configuration as a `charData` snippet, to make the tuning permanent in the
- * scene's code. Logs it when the clipboard fails. */
+/** Copies the changed configuration as a `config` snippet (createDynamicCharacter's option), to
+ * make the tuning permanent in the scene's code. Logs it when the clipboard fails. */
 const copyConfigChanges = async (charId: string) => {
   const character = getCharacterById(charId);
   if (!character) return;
@@ -622,10 +643,10 @@ const copyConfigChanges = async (charId: string) => {
     await navigator.clipboard.writeText(snippet);
     addDebugToast({
       title: 'Character changes copied',
-      message: `${name}: ${count}, as charData overrides`,
+      message: `${name}: ${count}, as config overrides`,
     });
   } catch {
-    llog(`CHARACTER CONFIG CHANGES (${name}, charData overrides):`, snippet);
+    llog(`CHARACTER CONFIG CHANGES (${name}, config overrides):`, snippet);
     addDebugToast({
       type: 'warning',
       title: 'Copy failed',
@@ -670,7 +691,8 @@ const createNumberInput = (row: Row, editor: ConfigEditor, charId: string) => {
   input.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault();
-      const current = getCharacterById(charId)?.data[row.key];
+      const character = getCharacterById(charId);
+      const current = character ? getConfigValues(character)[row.key] : undefined;
       if (typeof current !== 'number') return;
       const shown = isDegreeEditor(editor) ? current * RAD_TO_DEG : current;
       const step = editor.hint.step * (e.shiftKey ? 10 : 1) * (e.key === 'ArrowUp' ? 1 : -1);
@@ -694,7 +716,8 @@ const createBoolButton = (row: Row, charId: string) => {
   button.addEventListener('mousedown', (e) => e.preventDefault());
   isolateEditorKeys(button);
   button.addEventListener('click', () => {
-    const current = getCharacterById(charId)?.data[row.key];
+    const character = getCharacterById(charId);
+    const current = character ? getConfigValues(character)[row.key] : undefined;
     if (typeof current === 'boolean') commitConfigEdit(row, charId, !current);
   });
   return button;
@@ -729,19 +752,20 @@ const createResetButton = (row: Row, editor: ConfigEditor, charId: string) => {
   return button;
 };
 
-/** A Properties number or boolean row gets an editor (any controller's `_` keys), locked when the
- * controller bakes the key into the body at creation. */
+/** A Properties number or boolean row gets an editor (any controller's configuration keys), locked
+ * when the controller bakes the key into the body at creation. */
 const getConfigEditor = (
   key: string,
+  groupId: GroupId,
   kind: RowKind,
   format: NumberFormat | null,
   character: CharacterObject,
   inst: StateWindowInstance
 ): ConfigEditor | null => {
-  if (getGroupId(key) !== 'props') return null;
-  if (kind !== 'BOOL' && (kind !== 'NUMBER' || format === 'MS_AGO')) return null;
+  if (groupId !== 'props') return null;
+  if (kind !== 'BOOL' && (kind !== 'NUMBER' || format === 'STEP_AGO')) return null;
   const isLocked = character.controller?.config?.bakedKeys.has(key) ?? false;
-  const initial = character.initialConfig[key];
+  const initial = getInitialConfig(character)[key];
   const hasInitial = typeof initial === (kind === 'BOOL' ? 'boolean' : 'number');
   return {
     inst,
@@ -755,6 +779,7 @@ const getConfigEditor = (
 
 const createRow = (
   key: string,
+  groupId: GroupId,
   value: unknown,
   character: CharacterObject,
   inst: StateWindowInstance
@@ -766,13 +791,14 @@ const createRow = (
   const valueElem = createElem('span', styles.value);
   elem.appendChild(valueElem);
   const format = (kind === 'NUMBER' && NUMBER_FORMATS[key]) || null;
-  const editor = getConfigEditor(key, kind, format, character, inst);
+  const editor = getConfigEditor(key, groupId, kind, format, character, inst);
   const row: Row = {
     key,
+    groupId,
     kind,
     format,
     elem,
-    flashes: rowFlashes(getGroupId(key), kind),
+    flashes: rowFlashes(groupId, kind),
     flashAnim: null,
     texts: [],
     vecKeys: [],
@@ -844,7 +870,9 @@ const createRow = (
     .map((note) => `\n${note}`)
     .join('');
   elem.addEventListener('mouseenter', () => {
-    elem.title = `${key}: ${formatRawForTitle(getCharacterById(charId)?.data[key])}${notes}`;
+    const current = getCharacterById(charId);
+    const value = current ? getGroupSource(current, groupId)[key] : undefined;
+    elem.title = `${key}: ${formatRawForTitle(value)}${notes}`;
   });
 
   return row;
@@ -864,16 +892,17 @@ const flashRow = (row: Row) => {
   row.flashAnim.play();
 };
 
-/** A timestamp row: the age changes with the clock, so it is checked on every update (shown in
- * whole ms, written only when that changes). 0 = unset. */
-const updateMsAgoRow = (row: Row, value: number, force: boolean, flash: boolean) => {
+/** A step stamp row: its age grows with the steps, so it is checked on every update (shown in
+ * steps and whole ms of step time, written only when that changes). -1 = unset. */
+const updateStepAgoRow = (row: Row, value: number, force: boolean, flash: boolean) => {
   const last = row.last;
   if (flash && hasChanged(last[0], value)) flashRow(row);
   last[0] = value;
-  const shown = value ? Math.max(0, Math.round(getPhysGameTime() - value)) : -1;
-  if (!force && shown === last[1]) return;
-  last[1] = shown;
-  row.texts[0].nodeValue = shown < 0 ? '—' : `${shown} ms ago`;
+  const steps = value < 0 ? -1 : Math.max(0, getPhysicsSnapshotStepIndex() - 1 - value);
+  if (!force && steps === last[1]) return;
+  last[1] = steps;
+  const ms = Math.round(steps * getPhysicsState().timestepRatio * 1000);
+  row.texts[0].nodeValue = steps < 0 ? '—' : `${steps} steps (${ms} ms) ago`;
 };
 
 /** Writes the row's value if it changed since the last write (`force`: always, never flashes).
@@ -896,8 +925,8 @@ const updateRow = (row: Row, value: unknown, force: boolean, flashOn: boolean) =
     }
     case 'NUMBER': {
       const next = value as number;
-      if (row.format === 'MS_AGO') {
-        updateMsAgoRow(row, next, force, flash);
+      if (row.format === 'STEP_AGO') {
+        updateStepAgoRow(row, next, force, flash);
       } else if (force || hasChanged(last[0], next)) {
         const input = row.editor?.input;
         // Never overwritten while being typed in (`last` stays, so it is written after the blur)
@@ -963,13 +992,10 @@ const updateRow = (row: Row, value: unknown, force: boolean, flashOn: boolean) =
   }
 };
 
-/** Updates an open group's rows. Returns false when a row needs a rebuild. */
-const updateGroup = (
-  group: Group,
-  data: Record<string, unknown>,
-  force: boolean,
-  flash: boolean
-) => {
+/** Updates an open group's rows from the character's data. Returns false when a row needs a
+ * rebuild. */
+const updateGroup = (group: Group, character: CharacterObject, force: boolean, flash: boolean) => {
+  const data = getGroupSource(character, group.id);
   const rows = group.rows;
   for (let i = 0; i < rows.length; i++) {
     if (!updateRow(rows[i], data[rows[i].key], force, flash)) return false;
@@ -977,24 +1003,31 @@ const updateGroup = (
   return true;
 };
 
-const countKeys = (data: Record<string, unknown>) => {
+/** The keys of every group's object (a change means a rebuild). */
+const countKeys = (character: CharacterObject) => {
   let count = 0;
-  for (const key in data) if (Object.prototype.hasOwnProperty.call(data, key)) count++;
+  for (let i = 0; i < GROUPS.length; i++) {
+    const data = getGroupSource(character, GROUPS[i].id);
+    for (const key in data) if (Object.prototype.hasOwnProperty.call(data, key)) count++;
+  }
   return count;
 };
 
 const buildGroups = (inst: StateWindowInstance, character: CharacterObject) => {
-  const data = character.data;
   inst.body.textContent = '';
   inst.changedKeys.clear();
   inst.configActions = null;
   const rowsByGroup: Record<GroupId, Row[]> = { state: [], props: [], internal: [] };
-  const keys = Object.keys(data);
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    rowsByGroup[getGroupId(key)].push(createRow(key, data[key], character, inst));
+  let keyCount = 0;
+  for (const { id } of GROUPS) {
+    const data = getGroupSource(character, id);
+    const keys = Object.keys(data);
+    for (let i = 0; i < keys.length; i++) {
+      rowsByGroup[id].push(createRow(keys[i], id, data[keys[i]], character, inst));
+    }
+    keyCount += keys.length;
   }
-  inst.keyCount = keys.length;
+  inst.keyCount = keyCount;
 
   inst.groups = GROUPS.map(({ id, title }) => {
     const details = createElem('details', styles.group) as HTMLDetailsElement;
@@ -1021,7 +1054,7 @@ const buildGroups = (inst: StateWindowInstance, character: CharacterObject) => {
     return group;
   });
 
-  for (const group of inst.groups) updateGroup(group, data, true, false);
+  for (const group of inst.groups) updateGroup(group, character, true, false);
   renderConfigActions(inst);
   renderSavedState(inst);
 };
@@ -1042,7 +1075,7 @@ const createConfigActions = (inst: StateWindowInstance) => {
   const copy = createIconButton(
     `winSmallIconButton ${styles.groupActionButton}`,
     'fileAsterix',
-    'Copy changes: the changed values as a charData snippet, to paste into the scene code'
+    'Copy changes: the changed values as a config snippet, to paste into the scene code'
   );
   copy.addEventListener('click', () => void copyConfigChanges(inst.charId));
   actions.append(changedText, copy, resetAll);
@@ -1053,7 +1086,7 @@ const createConfigActions = (inst: StateWindowInstance) => {
 const refreshGroup = (inst: StateWindowInstance, group: Group) => {
   const character = getCharacterById(inst.charId);
   if (!character) return;
-  if (!updateGroup(group, character.data, true, false)) buildGroups(inst, character);
+  if (!updateGroup(group, character, true, false)) buildGroups(inst, character);
 };
 
 /** Freezing first fills every group, closed ones too, so a group opened while frozen shows the
@@ -1071,11 +1104,21 @@ const setFrozen = (inst: StateWindowInstance, isFrozen: boolean) => {
   if (inst.gizmos) setCharacterGizmosFrozen(inst.gizmos, isFrozen);
 };
 
-/** Copies the character's live data (also while frozen). Logs it when the clipboard fails. */
+/** Copies the character's live data, its controller's three objects (also while frozen). Logs it
+ * when the clipboard fails. */
 const copyDataAsJson = async (charId: string) => {
   const character = getCharacterById(charId);
   if (!character) return;
-  const json = JSON.stringify(character.data, null, 2);
+  const controller = character.controller;
+  const json = JSON.stringify(
+    {
+      state: controller?.state,
+      config: controller?.config?.values,
+      internal: controller?.internal,
+    },
+    null,
+    2
+  );
   const name = character.name || `[${character.id}]`;
   try {
     await navigator.clipboard.writeText(json);
@@ -1123,16 +1166,15 @@ const showCharacterNotFound = (inst: StateWindowInstance) => {
 };
 
 const updateInstance = (inst: StateWindowInstance, character: CharacterObject) => {
-  const data = character.data;
   // Keys added or removed: rebuild (rare)
-  if (countKeys(data) !== inst.keyCount) {
+  if (countKeys(character) !== inst.keyCount) {
     buildGroups(inst, character);
     return;
   }
   for (let i = 0; i < inst.groups.length; i++) {
     const group = inst.groups[i];
     if (!group.details.open) continue;
-    if (!updateGroup(group, data, false, inst.settings.flash)) {
+    if (!updateGroup(group, character, false, inst.settings.flash)) {
       // A value changed its shape: rebuild (rare)
       buildGroups(inst, character);
       return;

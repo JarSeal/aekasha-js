@@ -70,12 +70,15 @@ const DEBUG_FILES = ['src/**/_dbg__*.ts'];
 // The simulation: code that runs at APP_PHYSICS_STEP or inside the physics step, on the main
 // thread or in the physics worker. It must run identically on every machine, so it counts time in
 // steps and draws randomness from a seeded RNG. Two feature folders, without what else they hold
-// (p608 D5: the set the lint covered before the move).
+// (p608 D5: the set the lint covered before the move), and the character brains outside them (a
+// brain thinks at APP_PHYSICS_STEP, p610). The input devices aren't on it: they time DOM events,
+// and the action layer's per-step sample is what the simulation reads.
 const SIMULATION_FILES = [
   'src/_engine/features/physics/**/*.ts',
   'src/_engine/features/character/**/*.ts',
   'src/toolkit/ecs/gameplay/MovingPlatform.ts',
   'src/toolkit/ecs/effects/MutualGravity.ts',
+  'src/app/scenes/thirdPersonGymScene/GymDummyBrain.ts',
 ];
 // What the two feature folders hold besides the simulation: the installs and entries, the
 // physics import extension and worker test, the debug modules
@@ -93,7 +96,7 @@ const SIMULATION_RESTRICTED_PROPERTIES = [
     object: 'Math',
     property: 'random',
     message:
-      'Simulation randomness is seeded: createSeededRandom (toolkit/geometry/SeededRandom.ts) until the RNG service exists.',
+      'Simulation randomness is seeded: draw from a named stream (getRandomStream, utils/RandomStreams.ts).',
   },
   { object: 'performance', property: 'now', message: STEP_TIME_MESSAGE },
   { object: 'Date', property: 'now', message: STEP_TIME_MESSAGE },
@@ -233,17 +236,8 @@ export default [
   // Known violations, each with the plan that removes it. A later entry replaces the rule's
   // options for its file, so it lists what stays restricted there.
   {
-    // The tumble impulse's direction (p610: the seeded RNG)
-    files: ['src/_engine/features/character/DynamicCharacter.ts'],
-    rules: {
-      'no-restricted-properties': [
-        'error',
-        ...SIMULATION_RESTRICTED_PROPERTIES.filter((p) => p.object !== 'Math'),
-      ],
-    },
-  },
-  {
-    // The wall clock under getPhysGameTime(), which the characters read (p610: step-index time)
+    // The wall clock under the deprecated getPhysGameTime(), which no simulation code reads any
+    // more (removed with it in engine 6.0.0)
     files: ['src/_engine/features/physics/PhysicsWallClock.ts'],
     rules: {
       'no-restricted-properties': [

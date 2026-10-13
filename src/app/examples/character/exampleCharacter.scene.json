@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../.schemas/scene.schema.json",
+  "id": "exampleCharacter",
+  "sceneFile": "./examples/character/exampleCharacter.ts",
+  "name": "Example: Character",
+  "description": "A dynamic character on a WORLD_FIXED player brain (W A S D or the arrows: North, West, South, East; Space jumps, Shift runs, C crouches), turning to its last heading, on a ground with crates, stairs and a ramp. The toolkit's follow camera rig keeps a fixed view direction and leads the character a little.",
+  "backgroundColor": "#1c212b",
+  "cameras": ["exampleCharacterCamera"],
+  "lights": ["exampleCharacterAmbient", "exampleCharacterSun"]
+}

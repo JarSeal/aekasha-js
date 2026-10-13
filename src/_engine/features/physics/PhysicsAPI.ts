@@ -54,7 +54,6 @@ import type {
   WorldAPI,
   PhysRotation,
   PoseArray,
-  RigidBodyTypeAPI,
   TakeSnapshotResponse,
   CreateWorldResponse,
   DeleteWorldResponse,
@@ -155,6 +154,7 @@ import type {
 } from './PhysicsAPITypes';
 import {
   PhysicsProtocolType,
+  RigidBodyTypeAPI,
   ContactForceEventSnapshot,
   type PhysicsBodyActivity,
   type RigidBodyAttachState,
@@ -358,8 +358,9 @@ export const stepPhysics = (
   loopState: LoopState,
   /** Called once per fixed sub-step, right before it, with dt = the fixed timestep (this is
    * what drives held-key polling, flushPhysicsEvents and the APP_PHYSICS_STEP ECS stage, see
-   * MainLoop.ts). Without one, events are flushed before each sub-step here instead. */
-  onBeforeStep?: (stepDelta: number) => void
+   * MainLoop.ts), and the step's index (getPhysicsSubStepIndex). Without one, events are flushed
+   * before each sub-step here instead. */
+  onBeforeStep?: (stepDelta: number, stepIndex: number) => void
 ): number => {
   if (!physicsWorldEnabled) return 0;
   // Scene load in progress (holdPhysicsStepping): no timer update either, releasing it
@@ -480,7 +481,7 @@ export const stepPhysics = (
           break;
         }
         subStepIndex = stepsIssued + i;
-        if (onBeforeStep) onBeforeStep(stepDelta);
+        if (onBeforeStep) onBeforeStep(stepDelta, subStepIndex);
         else flushPhysicsEvents();
         if (!trackStats) {
           engAPI?.step();
@@ -518,7 +519,7 @@ export const stepPhysics = (
         substepCommandCapture = [];
         subStepIndex = stepsIssued + i;
         try {
-          onBeforeStep(stepDelta);
+          onBeforeStep(stepDelta, subStepIndex);
         } finally {
           substepCommands.push(substepCommandCapture);
           substepCommandCapture = null;
@@ -992,8 +993,11 @@ const setPhysicsPauseTime = () => {
   physicsState.pausedTime = now;
 };
 
-/** Get the current phys game time, that is the wall clock (`readPhysicsWallClock`)
- * adjusted with the total pause time.
+/**
+ * The wall clock (ms) minus the time physics was paused. Not deterministic: simulation code
+ * counts fixed steps instead.
+ * @deprecated Use the step index ({@link getPhysicsSubStepIndex}) times the fixed timestep
+ * (removed in engine 6.0.0).
  */
 export const getPhysGameTime = () => {
   const now = readPhysicsWallClock();
@@ -1501,7 +1505,8 @@ export const createRigidBody = async (params: RigidBodyParams) => {
       res.id,
       res.slot,
       params.userData,
-      res.pose
+      res.pose,
+      toRigidBodyTypeAPI(params.rigidType)
     ) as RigidBodyAPI;
     rigidBodies.set(res.id, rbAPI);
     return rbAPI;
@@ -1560,7 +1565,13 @@ export const createRigidBodies = async (params: RigidBodyParams[]) => {
     const rbAPIs = [];
     for (let i = 0; i < res.ids.length; i++) {
       const id = res.ids[i];
-      const rbAPI = new RigidBodyProxyAPI(id, res.slots[i], params[i].userData, res.poses[i]);
+      const rbAPI = new RigidBodyProxyAPI(
+        id,
+        res.slots[i],
+        params[i].userData,
+        res.poses[i],
+        toRigidBodyTypeAPI(params[i].rigidType)
+      );
       rbAPIs.push(rbAPI);
       rigidBodies.set(id, rbAPI);
     }
@@ -1954,7 +1965,8 @@ export const createRigidBodyWithColliders = async (
         res.id,
         res.slot,
         rigidBodyParams.userData,
-        res.pose
+        res.pose,
+        toRigidBodyTypeAPI(rigidBodyParams.rigidType)
       ) as RigidBodyAPI;
       rigidBodies.set(res.id, rigidBody);
     }
@@ -2935,6 +2947,20 @@ class WorldProxyAPI implements WorldAPI {
 
 type PendingWrite<T> = { value: T; visibleAt: number };
 
+/** A rigid body's creation type (`RigidBodyParams.rigidType`) as the API's enum. */
+const toRigidBodyTypeAPI = (rigidType: RigidBodyParams['rigidType']): RigidBodyTypeAPI => {
+  switch (rigidType) {
+    case 'FIXED':
+      return RigidBodyTypeAPI.Fixed;
+    case 'POS_BASED':
+      return RigidBodyTypeAPI.KinematicPositionBased;
+    case 'VELO_BASED':
+      return RigidBodyTypeAPI.KinematicVelocityBased;
+    default:
+      return RigidBodyTypeAPI.Dynamic;
+  }
+};
+
 class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
   uData: Record<string, unknown> = {};
   isBeingDeleted: boolean = false;
@@ -2963,7 +2989,9 @@ class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
     /** The pose the worker reported at creation. Read until the first transform write-back
      * that includes this body, which (without SAB) can arrive a frame or more later, and
      * until then the slot holds zeros or a deleted body's last pose. */
-    initialPose?: RigidBodyPose
+    initialPose?: RigidBodyPose,
+    /** The type the body was created with (bodyTypeSync's start) */
+    private cachedBodyType: RigidBodyTypeAPI = RigidBodyTypeAPI.Dynamic
   ) {
     if (userData) this.uData = userData;
     if (initialPose && slot === -1) {
@@ -3653,13 +3681,15 @@ class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
       })
     ).bodyType;
   }
+  /** The type this body was created with or last set to through `setBodyType` (the only way its
+   * type changes), so no worker round trip: what a step's code (eg. a character's sensor) reads
+   * synchronously, the same on every target. */
   bodyTypeSync(): RigidBodyTypeAPI {
-    throw new Error(
-      'Checking the body type of a rigid body (bodyType) cannot be synchronous in the worker mode.'
-    );
+    return this.cachedBodyType;
   }
 
   setBodyType(bodyType: RigidBodyTypeAPI, wakeUp: boolean): void {
+    this.cachedBodyType = bodyType;
     messageWorker({
       type: PhysicsProtocolType.RIGID_SET_BODY_TYPE,
       rigidBodyId: this.id,

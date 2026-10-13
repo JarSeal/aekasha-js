@@ -1,4 +1,4 @@
-import { createKeyBinding, createMeshEntity, createSceneMainLooper } from 'aekasha';
+import { createActionMap, createMeshEntity, createSceneMainLooper } from 'aekasha';
 import {
   getDayNightSpeed,
   getTimeOfDay,
@@ -50,27 +50,33 @@ export const scene = async () => {
 // #region sky-controls (shown in the Hub: hub/pages/examples/sky-box/)
 /** Keys for the running day (setTimeOfDay wraps the hours), and a HUD line that shows it */
 const createDayNightControls = () => {
-  const keys: [string, string, () => void][] = [
-    [' ', 'Play or pause the day', () => (isDayNightPlaying() ? pauseDayNight() : playDayNight())],
-    ['ArrowLeft', 'An hour back', () => setTimeOfDay((getTimeOfDay() ?? 0) - 1)],
-    ['ArrowRight', 'An hour on', () => setTimeOfDay((getTimeOfDay() ?? 0) + 1)],
-    ['ArrowUp', 'Faster', () => setDayNightSpeed(Math.min((getDayNightSpeed() ?? 1) * 2, 64))],
-    [
-      'ArrowDown',
-      'Slower',
-      () => setDayNightSpeed(Math.max((getDayNightSpeed() ?? 1) / 2, 1 / 16)),
-    ],
-  ];
-  for (const [key, name, fn] of keys) {
-    createKeyBinding({
-      id: `exampleSkyBox${key}`,
-      name,
-      chord: { key },
-      type: 'KEY_DOWN',
-      sceneId: SCENE_ID,
-      fn,
-    });
-  }
+  // The scene's actions: active in this scene only, replaced by the next visit's map (its id)
+  const actions = createActionMap({
+    id: SCENE_ID,
+    sceneId: SCENE_ID,
+    actions: {
+      playPause: { type: 'BUTTON', name: 'Play or pause the day' },
+      hourBack: { type: 'BUTTON', name: 'An hour back' },
+      hourOn: { type: 'BUTTON', name: 'An hour on' },
+      faster: { type: 'BUTTON', name: 'Faster' },
+      slower: { type: 'BUTTON', name: 'Slower' },
+    },
+    bindings: {
+      playPause: [{ device: 'KEYBOARD', keys: [' '] }],
+      hourBack: [{ device: 'KEYBOARD', keys: ['ArrowLeft'] }],
+      hourOn: [{ device: 'KEYBOARD', keys: ['ArrowRight'] }],
+      faster: [{ device: 'KEYBOARD', keys: ['ArrowUp'] }],
+      slower: [{ device: 'KEYBOARD', keys: ['ArrowDown'] }],
+    },
+  });
+  // At each press (also while the app is paused)
+  actions.onPressed('playPause', () => (isDayNightPlaying() ? pauseDayNight() : playDayNight()));
+  actions.onPressed('hourBack', () => setTimeOfDay((getTimeOfDay() ?? 0) - 1));
+  actions.onPressed('hourOn', () => setTimeOfDay((getTimeOfDay() ?? 0) + 1));
+  actions.onPressed('faster', () => setDayNightSpeed(Math.min((getDayNightSpeed() ?? 1) * 2, 64)));
+  actions.onPressed('slower', () =>
+    setDayNightSpeed(Math.max((getDayNightSpeed() ?? 1) / 2, 1 / 16))
+  );
 
   // The time, read every frame, written to the HUD when it changes
   const hud = createExampleHud('');

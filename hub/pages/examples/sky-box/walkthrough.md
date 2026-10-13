@@ -33,6 +33,10 @@ colour from it, blurred. Both change with the time of day.
   running day, and [`getTimeOfDay`](api:getTimeOfDay),
   [`isDayNightPlaying`](api:isDayNightPlaying) and [`getDayNightSpeed`](api:getDayNightSpeed)
   read it. They do nothing for a sky box without day-night.
+- The keys are an action map ([`createActionMap`](api:createActionMap)): a `BUTTON` per control,
+  each bound to a key, and `onPressed` runs at the press, also while the app is paused. With the
+  scene's `sceneId` the map is active in this scene only. Each action's `name` shows in the debug
+  key shortcuts dialog (`u`).
 - The day runs with the app loop, so pausing the app pauses it too.
 - [`createSceneMainLooper`](api:createSceneMainLooper) runs a function every frame while the
   scene is loaded. The HUD line is only rewritten when its text changes.
