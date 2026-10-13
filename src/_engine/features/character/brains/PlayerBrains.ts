@@ -9,7 +9,7 @@ import { createActionMap } from '../../../kernel/input/Actions';
 import { getMainCamera } from '../../../kernel/camera/Camera';
 import { getECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
-import { addIntentMove } from '../CharacterIntent';
+import { addIntentMove, yawFromDirection } from '../CharacterIntent';
 import type { CharacterIntent } from '../CharacterTypes';
 import type { ActorBrain } from '../ActorTypes';
 import { registerBrainKind } from '../ActorKinds';
@@ -196,6 +196,73 @@ const readCameraForward = (cameraEntityId?: number) => {
   return _cameraForward;
 };
 
+/** {@link WorldFixedBrainParams.releaseGraceMs}' default. */
+const DEFAULT_RELEASE_GRACE_MS = 80;
+
+/** The last heading's per-step update: this step's `move` action and the world move the brain
+ * made of it (0, 0 without one). */
+type LastHeadingFn = (
+  intent: CharacterIntent,
+  step: number,
+  dt: number,
+  move: Readonly<ActionState>,
+  worldX: number,
+  worldZ: number
+) => void;
+
+/**
+ * D10's turn to the last heading (`turnToLastMoveDirection`), or null when it's off. While there's
+ * move input it remembers the move's yaw and leaves `faceYaw` to the controller's turn toward the
+ * move; on the first step without one it writes the last heading to `faceYaw`, which the
+ * controller turns toward until it's reached. The last heading is the last diagonal when one was
+ * held within `releaseGraceMs` (counted in steps) of the move's last step, else the last move. A
+ * turn in the intent (code, before the brain) cancels it, and a `faceYaw` written by anyone else
+ * is left alone (and kept over the last heading).
+ */
+const createLastHeading = (params: WorldFixedBrainParams): LastHeadingFn | null => {
+  if (!params.turnToLastMoveDirection) return null;
+  const graceMs = Math.max(0, params.releaseGraceMs ?? DEFAULT_RELEASE_GRACE_MS);
+  let isMoving = false;
+  let lastStep = -1;
+  let lastYaw = 0;
+  let diagonalStep = -1;
+  let diagonalYaw = 0;
+  /** The faceYaw this brain wrote, while the intent still holds it. */
+  let writtenYaw: number | null = null;
+
+  const clearWrittenYaw = (intent: CharacterIntent) => {
+    if (writtenYaw !== null && intent.faceYaw === writtenYaw) intent.faceYaw = null;
+    writtenYaw = null;
+  };
+
+  return (intent, step, dt, move, worldX, worldZ) => {
+    if (intent.turn !== 0) {
+      isMoving = false;
+      clearWrittenYaw(intent);
+      return;
+    }
+    if (move.value !== 0) {
+      const yaw = yawFromDirection(worldX, worldZ);
+      lastStep = step;
+      lastYaw = yaw;
+      if (move.x !== 0 && move.y !== 0) {
+        diagonalStep = step;
+        diagonalYaw = yaw;
+      }
+      isMoving = true;
+      clearWrittenYaw(intent);
+      return;
+    }
+    if (!isMoving) return;
+    isMoving = false;
+    // Someone else's heading wins (eg. code aiming the character)
+    if (intent.faceYaw !== null) return;
+    const isDiagonalRecent = diagonalStep >= 0 && (lastStep - diagonalStep) * dt * 1000 <= graceMs;
+    writtenYaw = isDiagonalRecent ? diagonalYaw : lastYaw;
+    intent.faceYaw = writtenYaw;
+  };
+};
+
 /** Makes a `TANK` player brain ({@link TankBrainParams}). */
 export const createTankBrain = (
   params: TankBrainParams,
@@ -210,18 +277,21 @@ export const createTankBrain = (
 export const createWorldFixedBrain = (
   params: WorldFixedBrainParams,
   characterId: string
-): ActorBrain<CharacterIntent> =>
-  createPlayerBrain(
+): ActorBrain<CharacterIntent> => {
+  const lastHeading = createLastHeading(params);
+  return createPlayerBrain(
     'WORLD_FIXED',
     characterId,
     DIRECTIONAL_ACTIONS,
     params,
     true,
-    (map, intent) => {
+    (map, intent, step, dt) => {
       const move = map.read('move');
       if (move.value !== 0) addIntentMove(intent, move.x, -move.y);
+      lastHeading?.(intent, step, dt, move, move.x, -move.y);
     }
   );
+};
 
 /** Makes a `CAMERA_RELATIVE` player brain ({@link CameraRelativeBrainParams}): the camera is
  * read at the step, so the intent (and a recording of it) carries the world move, not the camera. */
@@ -230,18 +300,25 @@ export const createCameraRelativeBrain = (
   characterId: string
 ): ActorBrain<CharacterIntent> => {
   const cameraEntityId = params.cameraEntityId;
+  const lastHeading = createLastHeading(params);
   return createPlayerBrain(
     'CAMERA_RELATIVE',
     characterId,
     DIRECTIONAL_ACTIONS,
     params,
     true,
-    (map, intent) => {
+    (map, intent, step, dt) => {
       const move = map.read('move');
-      if (move.value === 0) return;
+      if (move.value === 0) {
+        lastHeading?.(intent, step, dt, move, 0, 0);
+        return;
+      }
       // Up = the camera's forward f, right = f turned 90° clockwise seen from above: (-f.z, f.x)
       const f = readCameraForward(cameraEntityId);
-      addIntentMove(intent, f.x * move.y - f.z * move.x, f.z * move.y + f.x * move.x);
+      const worldX = f.x * move.y - f.z * move.x;
+      const worldZ = f.z * move.y + f.x * move.x;
+      addIntentMove(intent, worldX, worldZ);
+      lastHeading?.(intent, step, dt, move, worldX, worldZ);
     }
   );
 };

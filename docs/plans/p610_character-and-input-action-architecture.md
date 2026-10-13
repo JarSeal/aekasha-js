@@ -430,7 +430,7 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
    (checked by the user with a pad). `topDownTestScene` on `brain`.
 5. Same path hash, same hashes (D10 is off in both scenes). Commit.
 
-**As built (steps 1-2, in review):**
+**As built (steps 1-3, in review):**
 
 - Decided with the user: `ActorBrain.think(intent, step, dt)` (`dt` appended to D5's signature:
   the dummy and `releaseGraceMs` turn ms into steps), and `registerControllerKind` comes with
@@ -463,6 +463,14 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
   it in the main chunk, +12.5 kB gzip); the player brains registered at install keep the action
   layer in the main chunk (the user's choice, D5): main +6.5 kB gzip, `DynamicCharacter.js` a
   chunk of its own (6.5 kB).
+- Step 3 (D10): the last heading is a closure made only when `turnToLastMoveDirection` is on.
+  While `move` isn't idle it remembers the world move's yaw (and the last diagonal's: both of the
+  action's axes non-zero, so a stick counts as one too) and clears a `faceYaw` it wrote; on the
+  first idle step it writes the heading to `faceYaw`: the last diagonal when the move's last step
+  is within `releaseGraceMs` of it (`(lastStep - diagonalStep) * dt * 1000 <= releaseGraceMs`, so
+  80 ms keeps 4 steps at 60 Hz), else the last move. A turn in the intent cancels it, and a
+  `faceYaw` someone else wrote is never cleared nor replaced (amends D10, which said nothing of
+  it). Tested in `brains/PlayerBrains.test.ts` through replayed recordings of the brain's map.
 - Checks: the gym's path hash `a51d785e` and probe hash `f5cf468f`, `topDownTestScene`'s
   `c7786d74`, unchanged in all targets (the arrow-keys diagonals included); the system order
   check fails only on the new `characterBrainSystem@-5`, recorded at the end of the phase.
