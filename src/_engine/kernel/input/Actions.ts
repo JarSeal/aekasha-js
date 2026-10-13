@@ -223,7 +223,7 @@ const onKeyEvent = (e: KeyboardEvent | null) => {
     const map = list[i];
     if (!map.preventDefault || !isCountingEvents(map)) continue;
     for (let j = 0; j < map.actions.length; j++) {
-      if (isKeyEventInBindings(map.actions[j].compiled, e)) {
+      if (isKeyEventInBindings(map.actions[j].compiled, e, true)) {
         e.preventDefault();
         return;
       }

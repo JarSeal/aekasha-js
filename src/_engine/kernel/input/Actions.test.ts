@@ -282,6 +282,16 @@ describe('keyboard bindings', () => {
     expect(down('x').defaultPrevented).toBe(false);
   });
 
+  it('leave a browser shortcut alone when a binding ignores modifiers', () => {
+    const map = createPlayerMap();
+    const e = down('w', { ctrl: true });
+    expect(e.defaultPrevented).toBe(false);
+    sampleActions(0);
+    expect(map.read('move').y).toBe(1); // still read
+    up('w');
+    expect(down('w').defaultPrevented).toBe(true);
+  });
+
   it("count a new keydown of a held button's key as a press, not a key-repeat", () => {
     const map = createPlayerMap();
     const pressed = vi.fn();

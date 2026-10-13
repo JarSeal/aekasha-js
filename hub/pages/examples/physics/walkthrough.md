@@ -26,8 +26,16 @@ from then on the simulation moves the entity's transform, and the transform move
 - The first four drops are the same on every visit. A scene's physics starts from a fresh world
   and waits for every `createPhysicsEntity` call of the load before it steps, so a scene
   simulates the same way every time it loads.
-- [`createKeyBinding`](api:createKeyBinding) with a `sceneId` only fires in that scene. Its
-  `name` shows in the debug key shortcuts dialog (`u`).
+- [`createActionMap`](api:createActionMap) makes the scene's actions: here one `BUTTON`, `drop`,
+  bound to Space and to a gamepad's bottom button (A, or ✕). With a `sceneId` the map is active in
+  that scene only, and a map with an id already taken replaces the old one, so the next visit's
+  map takes over. `onPressed` runs at the press itself, the right place for a one-off like this
+  drop. Code that must step in lockstep with the simulation reads the action at the step instead
+  (`actions.read('drop').pressedCount` in an `APP_PHYSICS_STEP` system), as the
+  [characters](hub:features/characters)' brains do. The action's `name` shows in the debug key
+  shortcuts dialog (`u`).
+- [`getRandomStream`](api:getRandomStream) gives a named, seeded random stream that starts over
+  on every load, so the drops come in the same order on every visit.
 - Deleting an entity ([`deleteEntity`](api:ECSWorld.deleteEntity)) removes its body and
   colliders too.
 - `createExampleHud` (`src/app/examples/exampleHud.ts`) is the examples' own HUD line: a

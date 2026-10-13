@@ -178,10 +178,20 @@ const matchesAny = (e: KeyboardEvent, chords: KeyChord[], ignoreModifiers: boole
  * Whether one of the keyboard bindings has the event's key (and modifiers, unless it ignores
  * them).
  * @internal
+ * @param isForPreventDefault a binding that ignores modifiers then doesn't match a key pressed
+ * with Ctrl, Alt or Meta: a browser shortcut (copy, paste, back) keeps working
  */
-export const isKeyEventInBindings = (compiled: CompiledBinding[], e: KeyboardEvent): boolean => {
+export const isKeyEventInBindings = (
+  compiled: CompiledBinding[],
+  e: KeyboardEvent,
+  isForPreventDefault = false
+): boolean => {
+  const isShortcut = isForPreventDefault && (e.ctrlKey || e.altKey || e.metaKey);
   for (let i = 0; i < compiled.length; i++) {
     const c = compiled[i];
+    if ((c.kind === 'KEYS' || c.kind === 'KEY_AXIS' || c.kind === 'KEY_COMPOSITE') && isShortcut) {
+      if (c.ignoreModifiers) continue;
+    }
     if (c.kind === 'KEYS') {
       if (matchesAny(e, c.chords, c.ignoreModifiers)) return true;
     } else if (c.kind === 'KEY_AXIS') {

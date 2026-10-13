@@ -177,7 +177,8 @@ export type ActionMapOpts<TActions extends ActionDefs> = {
   ignoreModifiers?: boolean;
   /** Calls `preventDefault()` on a key press one of its keyboard bindings matches while it's
    * active (default true, in the `DEBUG` context false), so Space doesn't scroll the page or click
-   * a focused button. Never in a text field. */
+   * a focused button. Never in a text field, and a binding that ignores modifiers never for a key
+   * pressed with Ctrl, Alt or Meta (copy, paste, back stay the browser's). */
   preventDefault?: boolean;
   /** Read only this gamepad (`Gamepad.index`). Default: any, the most pushed one for an axis. */
   gamepadIndex?: number;

@@ -12,7 +12,7 @@ import {
   importAssetAsync,
   releaseImportedAsset,
   spawnImportedAsset,
-  createKeyBinding,
+  createActionMap,
   createMaterial,
   deleteMaterial,
   saveMaterial,
@@ -416,15 +416,20 @@ export const scene = async () => {
     createAssetCompareTab();
   }
 
-  createKeyBinding({
-    id: 'assetCompareToggleSlot',
-    name: 'Show slot A / B',
-    description: 'Switches between the two codec variants (the Asset compare tab picks them).',
-    chord: { key: 'v' },
-    type: 'KEY_UP',
+  // A scene map (replaced on the next visit, by its id); exact modifiers, so Ctrl+V isn't a switch
+  createActionMap({
+    id: ASSET_COMPARE_SCENE_ID,
     sceneId: ASSET_COMPARE_SCENE_ID,
-    fn: toggleCompareSlot,
-  });
+    ignoreModifiers: false,
+    actions: {
+      toggleSlot: {
+        type: 'BUTTON',
+        name: 'Show slot A / B',
+        description: 'Switches between the two codec variants (the Asset compare tab picks them).',
+      },
+    },
+    bindings: { toggleSlot: [{ device: 'KEYBOARD', keys: ['v'] }] },
+  }).onPressed('toggleSlot', () => toggleCompareSlot());
 
   await rebuildCompareSlot('A');
   updateLoaderFn({ loadedCount: 1, totalCount: 2 });

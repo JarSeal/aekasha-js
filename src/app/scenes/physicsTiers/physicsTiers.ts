@@ -8,8 +8,8 @@ import {
   getECSWorld,
   getEntityIdByAppId,
   ComponentType,
+  createActionMap,
   createGeometry,
-  createKeyBinding,
   createMaterial,
   decMaterialRef,
   incMaterialRef,
@@ -310,17 +310,18 @@ export const scene = async () => {
     targetOffset: new THREE.Vector3(),
     speed: 4,
   });
-  createKeyBinding({
-    id: 'physicsTiersToggleCamera',
-    chord: { key: 'c' },
-    caseInsensitive: true,
-    type: 'KEY_UP',
+  // A scene map (replaced on the next visit, by its id); exact modifiers, so Ctrl+C isn't a switch
+  const actions = createActionMap({
+    id: PHYSICS_TIERS_SCENE_ID,
     sceneId: PHYSICS_TIERS_SCENE_ID,
-    fn: () => {
-      const overviewId = getEntityIdByAppId('physicsTiersOverview', world);
-      if (overviewId === undefined) return;
-      setMainCamera(world, getActiveCameraId() === overviewId ? chaseId : overviewId);
-    },
+    ignoreModifiers: false,
+    actions: { toggleCamera: { type: 'BUTTON', name: 'Switch the overview and chase cameras' } },
+    bindings: { toggleCamera: [{ device: 'KEYBOARD', keys: ['c'] }] },
+  });
+  actions.onPressed('toggleCamera', () => {
+    const overviewId = getEntityIdByAppId('physicsTiersOverview', world);
+    if (overviewId === undefined) return;
+    setMainCamera(world, getActiveCameraId() === overviewId ? chaseId : overviewId);
   });
 
   // The JSON lights are created after this function runs: the sun gets its shadow fit on enter

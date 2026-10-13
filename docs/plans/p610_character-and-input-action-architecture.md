@@ -627,6 +627,30 @@ Each phase is reviewed and committed on its own. Every phase runs `yarn test`, `
   yield). Checked in a driven browser on the gym: `h` toggles the drawer, `i` / `u` open both tabs,
   no new console output.
 
+**As built (section B, step 2):**
+
+- On action maps (a map per scene, id and `sceneId` the scene's, so the next visit's map replaces
+  it; `onPressed`, the old `KEY_UP` toggles now fire at the press): `physicsTiers` and `largeWorld`
+  (C: the camera switch), `assetCompare` (V: the slot), `examplePhysics` (Space and the gamepad's
+  `SOUTH`: drop a shape) and `exampleSkyBox` (Space, the arrows: five `BUTTON`s). The three toggle
+  maps have `ignoreModifiers: false` (Ctrl+C / Ctrl+V aren't a switch, as before).
+- Stay key bindings: `scene01`'s D (a latency log that reads the binding's `time` argument) and the
+  gym's `PhysicsStressTest` J (a debug-env stress tool, as the engine's `ECSStressTest` K / L).
+- Changes: the maps' gameplay default `NOT_ENABLED_IN_DEBUG` (the keys do nothing while the debug
+  camera is on; they did before), and `exampleSkyBox`'s keys no longer act on key-repeats (holding
+  an arrow moves one hour, not one per repeat).
+- `examplePhysics` draws its drops from `getRandomStream('examplePhysics:drops')`, not
+  `Math.random` (the same order on every visit). Its Hub walkthrough explains the map (`onPressed`
+  for a one-off, `read()` at the step for simulation) and the stream; the sky box's walkthrough
+  gets a line on its map.
+- Found while moving them, fixed in `Actions.ts` / `ActionBindings.ts`: a binding that ignores
+  modifiers no longer prevents the default of a key pressed with Ctrl, Alt or Meta (a gameplay
+  map on V blocked paste, one on the arrows blocked Alt+← back, the gym's arrow-keys player
+  included since Phase 3). No state change, so no hash.
+- Checks: `yarn test` (368), lint, `tsc`, `yarn hub:build`. Driven browser: `examplePhysics` drops
+  three shapes, `exampleSkyBox`'s keys move, speed up and pause the day, `physicsTiers` switches to
+  the chase camera, the dialog's App tab lists each map's actions; no new console output.
+
 ### Phase 6: the camera rig and the example scene
 
 1. D9's rig options (the shared tick first), with the gym's rig unchanged.

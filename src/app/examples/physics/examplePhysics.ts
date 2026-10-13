@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { getECSWorld, createKeyBinding, createMeshEntity } from 'aekasha';
+import { createActionMap, createMeshEntity, getECSWorld, getRandomStream } from 'aekasha';
 import type { GeoProps, MatProps } from 'aekasha';
 import { createPhysicsEntity } from 'aekasha/physics';
 import type { ColliderParams } from 'aekasha/physics';
@@ -85,22 +85,30 @@ export const scene = async () => {
     SHAPES.map((shape, i) => dropShape(shape, { x: (i - 1.5) * 2, y: 3 + i, z: 0.3 * i }))
   );
 
-  // Space drops a random shape (a scene binding: it does nothing in other scenes)
+  // A random shape: a named stream restarts with every load, so the drops come in the same order
+  const random = getRandomStream('examplePhysics:drops');
   const dropRandomShape = async () => {
-    const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
-    const position = { x: Math.random() * 8 - 4, y: 8, z: Math.random() * 8 - 4 };
+    const shape = SHAPES[Math.floor(random() * SHAPES.length)];
+    const position = { x: random() * 8 - 4, y: 8, z: random() * 8 - 4 };
     dropped.push(await dropShape(shape, position));
     // Deleting the entity removes its body too
     if (dropped.length > MAX_SHAPES) getECSWorld().deleteEntity(dropped.shift()!);
   };
-  createKeyBinding({
-    id: 'examplePhysicsDrop',
-    name: 'Drop a shape',
-    chord: { key: ' ' },
-    type: 'KEY_DOWN',
+
+  // Space or a gamepad's bottom button drops one. The map's sceneId: it does nothing in other
+  // scenes (and the next visit's map replaces it, by its id)
+  const actions = createActionMap({
+    id: SCENE_ID,
     sceneId: SCENE_ID,
-    fn: () => void dropRandomShape(),
+    actions: { drop: { type: 'BUTTON', name: 'Drop a shape' } },
+    bindings: {
+      drop: [
+        { device: 'KEYBOARD', keys: [' '] },
+        { device: 'GAMEPAD', button: 'SOUTH' },
+      ],
+    },
   });
-  createExampleHud('Space: drop a shape');
+  actions.onPressed('drop', () => void dropRandomShape());
+  createExampleHud('Space or pad A: drop a shape');
 };
 // #endregion physics-scene
