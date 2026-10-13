@@ -1,0 +1,96 @@
+/**
+ * The initial / lazy split (p611 Phase 1): what loads before the first frame and what loads on
+ * demand. Initial is the entry chunk, every chunk it imports statically (the manifest's `imports`,
+ * transitively) and their CSS; everything else in `dist/assets/` is lazy: the `import()`ed chunks,
+ * the workers and their chunks (which the manifest doesn't list), and the files code reaches by
+ * URL (`?url`, the GLBs and images).
+ */
+import {
+  type GroupSize,
+  type Manifest,
+  type Size,
+  type VisualizerData,
+  getModuleGroup,
+  sortKeys,
+} from './bundleModel';
+
+export type ChunkLoad = 'initial' | 'lazy';
+
+export type BundleSplit = {
+  /** Keys (`assets/index.js`) of what loads before the first frame, sorted */
+  initial: string[];
+  /** Keys of the rest, sorted */
+  lazy: string[];
+  /** The hashed names of the initial files (`assets/index-Bd_fo_yS.js`): the visualizer's
+   * `moduleParts` name chunks so */
+  initialFiles: Set<string>;
+};
+
+/** A group's modules in the initial chunks and in the lazy ones (a module in both counts twice:
+ * a worker's copy is bytes loaded again) */
+export type SplitGroupSize = Record<ChunkLoad, GroupSize>;
+
+/**
+ * Splits a build's files into initial and lazy.
+ * @param manifest Vite's manifest
+ * @param fileKeys every file in `dist/assets/`: hashed name → key (`keyFiles`)
+ * @throws when the manifest names no entry, or an entry's file isn't in `fileKeys`
+ */
+export const splitBundle = (manifest: Manifest, fileKeys: Record<string, string>): BundleSplit => {
+  const entries = Object.keys(manifest).filter((key) => manifest[key].isEntry);
+  if (!entries.length) throw new Error('The manifest names no entry chunk');
+  const seen = new Set<string>();
+  const queue = [...entries];
+  while (queue.length) {
+    const key = queue.shift()!;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    queue.push(...(manifest[key]?.imports ?? []));
+  }
+  const initialFiles = new Set<string>();
+  for (const key of seen) {
+    const chunk = manifest[key];
+    if (!chunk) continue;
+    initialFiles.add(chunk.file);
+    for (const css of chunk.css ?? []) initialFiles.add(css);
+  }
+  for (const file of initialFiles) {
+    if (!fileKeys[file]) throw new Error(`The manifest's ${file} isn't in dist/assets/`);
+  }
+  const initial: string[] = [];
+  const lazy: string[] = [];
+  for (const [file, key] of Object.entries(fileKeys)) {
+    (initialFiles.has(file) ? initial : lazy).push(key);
+  }
+  return { initial: initial.sort(), lazy: lazy.sort(), initialFiles };
+};
+
+/** The files' sizes summed */
+export const sumSizes = (keys: string[], sizes: Record<string, Size>): Size =>
+  keys.reduce(
+    (sum, key) => ({ bytes: sum.bytes + sizes[key].bytes, gzip: sum.gzip + sizes[key].gzip }),
+    { bytes: 0, gzip: 0 }
+  );
+
+/** Every group's modules summed in the initial chunks and in the lazy ones (the visualizer's
+ * rendered and gzip sizes per chunk) */
+export const measureSplitGroups = (
+  data: VisualizerData,
+  split: Pick<BundleSplit, 'initialFiles'>
+): Record<string, SplitGroupSize> => {
+  const groups: Record<string, SplitGroupSize> = {};
+  for (const meta of Object.values(data.nodeMetas)) {
+    for (const [file, partId] of Object.entries(meta.moduleParts)) {
+      const part = data.nodeParts[partId];
+      const group = (groups[getModuleGroup(meta.id)] ??= {
+        initial: { modules: 0, rendered: 0, gzip: 0 },
+        lazy: { modules: 0, rendered: 0, gzip: 0 },
+      });
+      const into = group[split.initialFiles.has(file) ? 'initial' : 'lazy'];
+      into.modules++;
+      into.rendered += part.renderedLength;
+      into.gzip += part.gzipLength;
+    }
+  }
+  return sortKeys(groups);
+};
