@@ -55,12 +55,13 @@ Each feature has a page in the Ækasha Hub's Features section (`/hub/features/`:
 
 ### Toolkit (`src/toolkit/`)
 
-These are ready-made modules you can import as they are, or copy into your app and change:
+These are ready-made modules you can import as they are, or copy into your app and change. They're sorted by kind: the code through three entries (`aekasha/toolkit/ecs`, `aekasha/toolkit/geometry`, `aekasha/toolkit/materials`), the assets by id like the app's.
 
-- **ECS effects**: `HoverEffect` (bobbing), `FollowTool` (follow a target) and `SunShadowFit` (fits a directional light's shadow to the camera's view).
-- **TSL materials**: checkerboard, triplanar checkerboard and triplanar grid materials.
-- **Procedural geometry**: seeded noise terrain, foliage generation and scattering on surfaces.
-- **Models**: the Ækasha symbol, the Æ glyph extruded with a soft bevel, as a Draco-compressed GLB with its asset JSON, ready for `importAssetAsync`.
+- **ECS effects** (`ecs/effects/`): `HoverEffect` (bobbing), `FollowTool` (follow a target), `SunShadowFit` (fits a directional light's shadow to the camera's view) and `MutualGravity` (gravity between bodies, for zero-g scenes).
+- **Gameplay** (`ecs/gameplay/`): a camera rig that follows an object, and kinematic moving platforms that characters ride.
+- **TSL materials** (`materials/<id>/`): triplanar checkerboard, triplanar grid and asteroid materials, each a material JSON with its TSL file.
+- **Procedural geometry** (`geometry/`): seeded noise terrain, foliage, asteroids and scattering on surfaces, all from one seeded random generator.
+- **Models** (`models/<category>/<id>/`): the Ækasha symbol, the Æ glyph extruded with a soft bevel, as a Draco-compressed GLB with its asset JSON, ready for `importAssetAsync`.
 
 ### Debug suite (debug builds only)
 
@@ -172,9 +173,16 @@ Open `http://localhost:8080/?isDebug=true` to get the full debug suite, then pre
 │   │   ├── schemas/        # Zod schemas for every asset JSON type
 │   │   ├── utils/          # Pure helpers: logging, storage, asserts
 │   │   └── types/          # Global type declarations
-│   ├── toolkit/            # Reusable ECS effects, a camera rig, TSL materials, procedural
-│   │                       # geometry (entries: aekasha/toolkit/<category>)
-│   ├── app/                # Your game: *.scene.json + scene .ts files and asset JSON files
+│   ├── toolkit/            # Reusable modules by kind, each code kind an entry
+│   │   ├── ecs/            # (aekasha/toolkit/ecs) effects/ and gameplay/
+│   │   ├── geometry/       # (aekasha/toolkit/geometry) generate/, scatter/, a seeded random
+│   │   ├── materials/      # (aekasha/toolkit/materials) a TSL material per folder
+│   │   └── models/         # Models by category: brand/aekashaSymbol/
+│   ├── app/                # Your game
+│   │   ├── scenes/         # A folder per scene: its JSON, code and the assets only it uses
+│   │   ├── examples/       # The Hub's example scenes
+│   │   ├── shared/         # Code several scenes use
+│   │   └── cameras/, lights/, textures/, …  # The assets several scenes use, by type
 │   ├── generated/          # The gathered scene and asset data, handed to InitEngine
 │   │                       # (written by yarn gatherAppData, committed)
 │   ├── AppECSPlugins.ts    # The app's own feature: wires app and toolkit systems into the ECS
@@ -239,11 +247,11 @@ InitEngine({
 Each file is validated against its schema, and the `$schema` line gives you autocomplete in the editor.
 
 ```jsonc
-// src/app/myScene.scene.json
+// src/app/scenes/myScene/myScene.scene.json
 {
-  "$schema": "../../.schemas/scene.schema.json",
+  "$schema": "../../../../.schemas/scene.schema.json",
   "id": "myScene",
-  "sceneFile": "./myScene.ts",
+  "sceneFile": "./scenes/myScene/myScene.ts",
   "name": "My scene",
   "cameras": ["mainCamera"],
   "lights": ["ambientLight"],
@@ -256,7 +264,7 @@ Each file is validated against its schema, and the `$schema` line gives you auto
 ```jsonc
 // src/app/scenes/sceneTestECS/testMesh.mesh.json
 {
-  "$schema": "../../../.schemas/mesh.schema.json",
+  "$schema": "../../../../.schemas/mesh.schema.json",
   "props": {
     "appId": "testMesh",
     "geo": "testSphere",
@@ -304,7 +312,7 @@ Put the source next to its asset JSON and choose a profile. On save, the dev ser
 The `sceneFile` exports a `scene` function that runs while the scene loads.
 
 ```ts
-// src/app/myScene.ts
+// src/app/scenes/myScene/myScene.ts
 import { createGeometry, createMaterial, createMeshEntity } from 'aekasha';
 import { createPhysicsEntity } from 'aekasha/physics';
 
@@ -327,7 +335,7 @@ export const scene = async () => {
 ### 5. Write your own component and system
 
 ```ts
-// src/app/systems/spin.ts
+// src/app/shared/Spin.ts
 import * as THREE from 'three/webgpu';
 import { ComponentType, ECSSystemStage } from 'aekasha';
 import type { ECSWorld } from 'aekasha';
@@ -393,7 +401,7 @@ const config: AppConfig = {
 
 The Ækasha Hub's Examples section (`/hub/examples/`) walks through seven example scenes, each in [`src/app/examples/`](src/app/examples/) and named "Example: …" in the scene dropdowns: the quick start, physics, the toolkit's model and materials, the sky box and day-night, a component and system of your own, LOD and instancing, and a debug tab of your own. Each page opens its scene with `?startScene`.
 
-The other example scenes in [`src/app/`](src/app/) cover more: a physics and joints test, a physics simulation tiers demo (686 crates and a plough), a large procedural world with instancing and culling, a third-person character gym, a top-down character scene (world-fixed controls, hills, and sun shadows fitted to the view), and an ECS stress test.
+The other example scenes, a folder each in [`src/app/scenes/`](src/app/scenes/), cover more: a physics and joints test, a physics simulation tiers demo (686 crates and a plough), a large procedural world with instancing and culling, a third-person character gym, a top-down character scene (world-fixed controls, hills, and sun shadows fitted to the view), and an ECS stress test.
 
 ---
 
