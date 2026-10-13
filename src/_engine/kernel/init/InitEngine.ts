@@ -17,6 +17,9 @@ import {
 } from '../../debug/DefaultDebugKeyBindings';
 import { addWindowListeners, initMainLoop, registerMainLoopDebugGUI } from '../loop/MainLoop';
 import { createRootScene, getRootScene, registerScenesFromGeneratedData } from '../scene/Scene';
+// The page's styles (normalize, html, body), then the components': a mounted engine loads only
+// the components' (p611 D6)
+import '../../ui/styles/page.scss';
 import '../../ui/styles/index.scss';
 import { lerror, llog } from '../../utils/Logger';
 import { createRendererDebugGUI } from '../render/Renderer';
