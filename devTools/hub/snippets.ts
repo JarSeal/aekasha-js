@@ -68,7 +68,7 @@ export type HubSnippetResult =
   /** `file`: the resolved file when it's inside the repo (watched even when it's missing) */
   | { isOk: false; file: string | null; message: string };
 
-/** `<<< src/app/space.ts#asteroids {3} wrap` (the text after `<<<`) */
+/** `<<< src/app/scenes/space/space.ts#asteroids {3} wrap` (the text after `<<<`) */
 export const parseSnippetSpec = (text: string): HubSnippetSpec => {
   const [ref = '', ...meta] = text.trim().split(/\s+/);
   const hashAt = ref.indexOf('#');

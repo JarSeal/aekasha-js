@@ -8,134 +8,6 @@ export const sceneFileObjects: {
     assets: ScenePrimitiveAssets;
   }) => Promise<void>;
 } = {
-  assetCompare: async ({ sceneData, assets }) => {
-    const module = await import('../app/./assetCompare.ts');
-    await (
-      module as {
-        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
-      }
-    ).scene({ sceneData, assets });
-  },
-  testDebugScene: async ({ sceneData, assets }) => {
-    const module = await import('../app/debugScene.scene.ts');
-    await (
-      module as {
-        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
-      }
-    ).scene({ sceneData, assets });
-  },
-  largeWorld: async ({ sceneData, assets }) => {
-    const module = await import('../app/./largeWorld.ts');
-    await (
-      module as {
-        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
-      }
-    ).scene({ sceneData, assets });
-  },
-  lodShowcase: async ({ sceneData, assets }) => {
-    const module = await import('../app/./lodShowcase.ts');
-    await (
-      module as {
-        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
-      }
-    ).scene({ sceneData, assets });
-  },
-  oneMoreScene: async ({ sceneData, assets }) => {
-    const module = await import('../app/./oneMoreScene');
-    await (
-      module as {
-        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
-      }
-    ).scene({ sceneData, assets });
-  },
-  physicsTest: async ({ sceneData, assets }) => {
-    const module = await import('../app/./physicsTest.ts');
-    await (
-      module as {
-        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
-      }
-    ).scene({ sceneData, assets });
-  },
-  physicsTiers: async ({ sceneData, assets }) => {
-    const module = await import('../app/./physicsTiers.ts');
-    await (
-      module as {
-        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
-      }
-    ).scene({ sceneData, assets });
-  },
-  scene01: async ({ sceneData, assets }) => {
-    const module = await import('../app/./scene01.ts');
-    await (
-      module as {
-        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
-      }
-    ).scene({ sceneData, assets });
-  },
-  scene01V2: async ({ sceneData, assets }) => {
-    const module = await import('../app/./scene01_v2.ts');
-    await (
-      module as {
-        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
-      }
-    ).scene({ sceneData, assets });
-  },
-  skyShowcase: async ({ sceneData, assets }) => {
-    const module = await import('../app/./skyShowcase.ts');
-    await (
-      module as {
-        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
-      }
-    ).scene({ sceneData, assets });
-  },
-  space: async ({ sceneData, assets }) => {
-    const module = await import('../app/./space.ts');
-    await (
-      module as {
-        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
-      }
-    ).scene({ sceneData, assets });
-  },
-  sceneTestECS: async ({ sceneData, assets }) => {
-    const module = await import('../app/./testECS.ts');
-    await (
-      module as {
-        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
-      }
-    ).scene({ sceneData, assets });
-  },
-  textureArrays: async ({ sceneData, assets }) => {
-    const module = await import('../app/./textureArrays.ts');
-    await (
-      module as {
-        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
-      }
-    ).scene({ sceneData, assets });
-  },
-  textureAtlases: async ({ sceneData, assets }) => {
-    const module = await import('../app/./textureAtlases.ts');
-    await (
-      module as {
-        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
-      }
-    ).scene({ sceneData, assets });
-  },
-  thirdPersonGymScene: async ({ sceneData, assets }) => {
-    const module = await import('../app/./scene_thirdPersonGym.ts');
-    await (
-      module as {
-        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
-      }
-    ).scene({ sceneData, assets });
-  },
-  topDownTestScene: async ({ sceneData, assets }) => {
-    const module = await import('../app/./scene_topDownTest.ts');
-    await (
-      module as {
-        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
-      }
-    ).scene({ sceneData, assets });
-  },
   exampleDebugTab: async ({ sceneData, assets }) => {
     const module = await import('../app/./examples/debugTab/exampleDebugTab.ts');
     await (
@@ -200,13 +72,141 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  assetCompare: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/assetCompare/assetCompare.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  largeWorld: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/largeWorld/largeWorld.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  lodShowcase: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/lodShowcase/lodShowcase.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  oneMoreScene: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/oneMoreScene/oneMoreScene');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  physicsTest: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/physicsTest/physicsTest.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  physicsTiers: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/physicsTiers/physicsTiers.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  scene01: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/scene01/scene01.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  scene01V2: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/scene01V2/scene01V2.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  sceneTestECS: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/sceneTestECS/sceneTestECS.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  skyShowcase: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/skyShowcase/skyShowcase.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  space: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/space/space.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  testDebugScene: async ({ sceneData, assets }) => {
+    const module = await import('../app/scenes/testDebugScene/testDebugScene.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  textureArrays: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/textureArrays/textureArrays.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  textureAtlases: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/textureAtlases/textureAtlases.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  thirdPersonGymScene: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/thirdPersonGymScene/thirdPersonGymScene.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  topDownTestScene: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/topDownTestScene/topDownTestScene.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
 };
 
 export const tslMaterialFileObjects = {
-  testTslMat: () => import('../app/materials/testTslMat.tsl.ts'),
-  asteroid: () => import('../toolkit/materials/asteroid.tsl.ts'),
-  triplanarCheckerboard: () => import('../toolkit/materials/triplanarCheckerboard.tsl.ts'),
-  triplanarGrid: () => import('../toolkit/materials/triplanarGrid.tsl.ts'),
+  testTslMat: () => import('../app/scenes/sceneTestECS/testTslMat.tsl.ts'),
+  asteroid: () => import('../toolkit/materials/asteroid/asteroid.tsl.ts'),
+  triplanarCheckerboard: () => import('../toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts'),
+  triplanarGrid: () => import('../toolkit/materials/triplanarGrid/triplanarGrid.tsl.ts'),
 };
 
 export const postFxFileObjects = {

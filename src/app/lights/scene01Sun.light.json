@@ -16,7 +16,7 @@
     "appId": "scene01Sun",
     "debugData": {
       "name": "Scene01 sun",
-      "description": "Directional shadow-casting sun shared by scene01.ts and scene01_v2.ts. Its shadow frustum is sized to the 10x10 ground plane, not larger — oversizing it would degrade shadow resolution everywhere (see largeWorldSun.light.json for the same pattern)."
+      "description": "Directional shadow-casting sun shared by scene01.ts and scene01V2.ts. Its shadow frustum is sized to the 10x10 ground plane, not larger — oversizing it would degrade shadow resolution everywhere (see largeWorldSun.light.json for the same pattern)."
     }
   }
 }

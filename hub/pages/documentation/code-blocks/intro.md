@@ -6,7 +6,7 @@ from what the copy button copies.
 ## The fence
 
 ````md
-```ts title="src/app/myScene.ts" {3,5-7}
+```ts title="src/app/scenes/myScene/myScene.ts" {3,5-7}
 // The code
 ```
 ````
@@ -41,7 +41,7 @@ Use the language's own comment: `/* [!code ++] */` in CSS, `# [!code ++]` in bas
 
 ### Highlights and a title
 
-```ts title="src/app/myScene.ts" {4-5}
+```ts title="src/app/scenes/myScene/myScene.ts" {4-5}
 import { createGeometry, createMaterial, createMeshEntity } from 'aekasha';
 
 export const scene = async () => {
@@ -144,7 +144,7 @@ the file refreshes the page.
 
 The path is from the repo root and stays inside it, and the file is a text file. The language
 comes from its extension and the title is its path. After the path, the fence meta works as on
-a fence (`<<< src/app/space.ts#asteroids {3-5} title="space.ts" wrap`).
+a fence (`<<< src/app/scenes/space/space.ts#asteroids {3-5} title="space.ts" wrap`).
 
 Mark a region in the source with a comment. Text after the name is a note, and the marker lines
 (those of regions nested in it too) are left out of the page:
@@ -166,16 +166,16 @@ A missing file, region or line fails `yarn hub:build` with the page and line, so
 removing a region that a page includes breaks the page. Say so in the marker's note.
 :::
 
-`<<< src/app/physicsTest.ts#dynamic-box {20-24}` shows:
+`<<< src/app/scenes/physicsTest/physicsTest.ts#dynamic-box {20-24}` shows:
 
-<<< src/app/physicsTest.ts#dynamic-box {20-24}
+<<< src/app/scenes/physicsTest/physicsTest.ts#dynamic-box {20-24}
 
 ## All together
 
 One block with a title, line highlights, a diff, a focus, an error and a warning, wrapped lines,
 and collapsed after 15 lines.
 
-```ts title="src/app/myScene.ts" {4} wrap collapse
+```ts title="src/app/scenes/myScene/myScene.ts" {4} wrap collapse
 import { createGeometry, createMaterial, createMeshEntity } from 'aekasha';
 import { createPhysicsEntity } from 'aekasha/physics';
 

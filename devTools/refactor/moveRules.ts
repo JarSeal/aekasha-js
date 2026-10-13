@@ -1,9 +1,9 @@
 /**
- * The target layout as rules (p602 Phase 2): where every file of `src/_engine/` and
- * `src/toolkit/`, and the app files that move, go in p609. `moveMap.ts` applies them to the
- * tracked tree and writes `moveMap.json`, which the codemod (`applyMoveMap.ts`) reads. (p606 made
- * its own moves, the generated data and the gameplay and test code, and their rules left with
- * them; p608 moved the engine, whose rules now describe its layout, p608 D9.)
+ * The target layout as rules (p602 Phase 2): where every file of `src/_engine/`, `src/toolkit/`
+ * and `src/app/` goes. `moveMap.ts` applies them to the tracked tree and writes `moveMap.json`,
+ * which the codemod (`applyMoveMap.ts`) reads. (p606 made its own moves, the generated data and
+ * the gameplay and test code, and their rules left with them; p608 moved the engine and p609 the
+ * toolkit and the app, whose rules now describe their layouts, p608 D9 and p609 D5.)
  *
  * - A rule's `from` is a repo-relative file, or a folder ending in `/`. The longest matching
  *   `from` wins, so a file rule beats its folder's rule and the order here doesn't matter.
@@ -11,8 +11,9 @@
  *   `layers/atmosphere.ts` → `layers/Atmosphere.ts`); a file rule's `to` is the final name.
  * - The exceptions to a rule are file rules with their reason in `note`: they are the "edited by
  *   hand" part of the map, kept here so the map can be generated again on a fresh `main`.
+ * - A file no rule maps is outside the layout, which fails `moveMap.ts`: a new folder gets a rule
+ *   here, with the layout's docs (the root `CLAUDE.md`'s Three-folder split, the Hub).
  */
-import fs from 'fs';
 import path from 'path';
 
 export type MoveAction = 'keep' | 'move' | 'delete' | 'merge' | 'split';
@@ -69,8 +70,26 @@ const ENGINE_RULES: MoveRule[] = [
   { from: `${E}types/`, to: `${E}types/` },
 ];
 
-/** The toolkit's categories (p609, from the p450 prompt) */
-const TOOLKIT_RULES: MoveRule[] = [
+/**
+ * Keep rules for the folders one level below `prefix` (`materials/<id>/`, `scenes/<sceneId>/`),
+ * or two (`models/<category>/<id>/`): a file directly in `prefix`, or above that depth, has no
+ * rule and fails `moveMap.ts`.
+ */
+const getSubfolderRules = (prefix: string, depth: number, files: string[]): MoveRule[] => {
+  const folders = new Set<string>();
+  for (const f of files) {
+    if (!f.startsWith(prefix)) continue;
+    const parts = f.slice(prefix.length).split('/');
+    if (parts.length > depth) folders.add(`${prefix}${parts.slice(0, depth).join('/')}/`);
+  }
+  return [...folders].map((folder) => ({ from: folder, to: folder, plan: 'p609' }));
+};
+
+/**
+ * The toolkit's layout since p609's move (D1, D5): code by category, each with its entry, and the
+ * assets by id. Models, textures and sky boxes are asset JSONs reached by id, so no entry.
+ */
+const getToolkitRules = (files: string[]): MoveRule[] => [
   ...['ecs', 'geometry', 'materials'].map(
     (category): MoveRule => ({
       from: `${T}${category}/index.ts`,
@@ -79,102 +98,66 @@ const TOOLKIT_RULES: MoveRule[] = [
       note: `the \`aekasha/toolkit/${category}\` entry (p606)`,
     })
   ),
+  // A component and its system, put on an entity
   { from: `${T}ecs/effects/`, to: `${T}ecs/effects/`, plan: 'p609' },
+  { from: `${T}ecs/gameplay/`, to: `${T}ecs/gameplay/`, plan: 'p609' },
+  { from: `${T}geometry/generate/`, to: `${T}geometry/generate/`, plan: 'p609' },
+  { from: `${T}geometry/scatter/`, to: `${T}geometry/scatter/`, plan: 'p609' },
   {
-    from: `${T}ecs/FollowObjectCameraRig.ts`,
-    to: `${T}ecs/FollowObjectCameraRig.ts`,
+    from: `${T}geometry/SeededRandom.ts`,
+    to: `${T}geometry/SeededRandom.ts`,
     plan: 'p609',
-    note: 'moved from the engine (p606 Phase 7, p602 D6); p609 picks its category folder',
+    note: 'the generators share it; the simulation lint points at it until p610',
   },
   {
-    from: `${T}ecs/MovingPlatform.ts`,
-    to: `${T}ecs/MovingPlatform.ts`,
-    plan: 'p609',
-    note: 'moved from the engine (p606 Phase 7, p602 D6); p609 picks its category folder',
-  },
-  {
-    from: `${T}geometry/generateAsteroid.ts`,
-    to: `${T}geometry/generate/Asteroid.ts`,
-    plan: 'p609',
-  },
-  { from: `${T}geometry/generateFoliage.ts`, to: `${T}geometry/generate/Foliage.ts`, plan: 'p609' },
-  { from: `${T}geometry/generateTerrain.ts`, to: `${T}geometry/generate/Terrain.ts`, plan: 'p609' },
-  {
-    from: `${T}geometry/scatterOnSurface.ts`,
-    to: `${T}geometry/scatter/ScatterOnSurface.ts`,
-    plan: 'p609',
-  },
-  { from: `${T}geometry/seededRandom.ts`, to: `${T}geometry/SeededRandom.ts`, plan: 'p609' },
-  {
-    from: `${T}materials/triplanarProjection.ts`,
+    from: `${T}materials/TriplanarProjection.ts`,
     to: `${T}materials/TriplanarProjection.ts`,
     plan: 'p609',
+    note: 'the TSL helper the triplanar materials share',
   },
-  {
-    from: `${T}models/aekashaSymbol/`,
-    to: `${T}models/brand/aekashaSymbol/`,
-    plan: 'p609',
-    note: 'the category is a proposal: p609 names the model categories',
-  },
+  // One folder per material (`<id>.material.json`, `<id>.tsl.ts`), texture or sky box; a model
+  // folder per category (`brand/`, later p450's `reference/` and `nature/`)
+  ...getSubfolderRules(`${T}materials/`, 1, files),
+  ...getSubfolderRules(`${T}models/`, 2, files),
+  ...getSubfolderRules(`${T}textures/`, 1, files),
+  ...getSubfolderRules(`${T}skyboxes/`, 1, files),
 ];
 
-/** A toolkit material is a folder named by its asset id: `materials/<id>/` (p609) */
-const getToolkitMaterialRules = (files: string[]): MoveRule[] =>
-  files
-    .filter((f) => /^src\/toolkit\/materials\/[^/]+\.(material\.json|tsl\.ts)$/.test(f))
-    .map((f) => {
-      const base = path.basename(f);
-      const id = base.split('.')[0];
-      return { from: f, to: `${T}materials/${id}/${base}`, plan: 'p609' };
-    });
+/**
+ * The asset type folders of the app's shared assets (p609 D2): an asset two scenes use sits in
+ * its type's folder, one only a scene uses in that scene's folder.
+ */
+const APP_ASSET_FOLDERS = [
+  'cameras',
+  'geometries',
+  'importedAssets',
+  'impostors',
+  'lights',
+  'materials',
+  'meshes',
+  'postFx',
+  'skyboxes',
+  'textures',
+];
 
 /**
- * The app: one folder per scene, `src/app/scenes/<sceneId>/` with its scene JSON, scene file,
- * `_dbg__` module and Hub image, named by the scene id (p602 D7, p609). The examples keep their
- * folders (the Hub's example rule reads `src/app/examples/`); the shared asset JSONs stay in
- * their type folders.
+ * The app's layout since p609's move (D2, D5): one folder per scene, `scenes/<sceneId>/` (its
+ * scene JSON, scene file, `_dbg__` module, Hub image, its own modules and the assets only it
+ * uses), the examples (the Hub's example rule reads `examples/<name>/`), `shared/` (code several
+ * scenes use, a copied toolkit piece among them) and the shared assets' type folders. A file
+ * anywhere else has no rule and fails `moveMap.ts`.
  */
-const getAppSceneRules = (root: string, files: string[]): MoveRule[] => {
-  const rules: MoveRule[] = [];
-  const sceneJsons = files.filter((f) => /^src\/app\/[^/]+\.scene\.json$/.test(f));
-  const dbgModules: Record<string, string> = {
-    assetCompare: `${A}_dbg__assetCompare.ts`,
-    lodShowcase: `${A}_dbg__lodShowcase.ts`,
-    space: `${A}_dbg__spaceDemo.ts`,
-  };
-  for (const jsonFile of sceneJsons) {
-    const json = JSON.parse(fs.readFileSync(path.join(root, jsonFile), 'utf8'));
-    const id: string = json.id;
-    const folder = `${A}scenes/${id}/`;
-    const note = 'the codemod rewrites its `sceneFile`';
-    rules.push({ from: jsonFile, to: `${folder}${id}.scene.json`, plan: 'p609', note });
-    if (typeof json.sceneFile === 'string') {
-      let sceneFile = path.posix.join(A, json.sceneFile);
-      if (!sceneFile.endsWith('.ts')) sceneFile += '.ts';
-      rules.push({ from: sceneFile, to: `${folder}${id}.ts`, plan: 'p609' });
-    }
-    const hubImage = `${A}${id}.hub.png`;
-    if (files.includes(hubImage)) {
-      rules.push({ from: hubImage, to: `${folder}${id}.hub.png`, plan: 'p609' });
-    }
-    const dbg = dbgModules[id];
-    if (dbg) rules.push({ from: dbg, to: `${folder}${path.basename(dbg)}`, plan: 'p609' });
-  }
-  rules.push({ from: `${A}lodShowcase/`, to: `${A}scenes/lodShowcase/`, plan: 'p609' });
-  rules.push({
-    from: `${A}characterVisual.ts`,
-    to: `${A}scenes/thirdPersonGymScene/characterVisual.ts`,
-    plan: 'p609',
-    note: 'with the gym (p609); the top-down test imports it from there',
-  });
-  return rules;
-};
+const getAppRules = (files: string[]): MoveRule[] => [
+  ...getSubfolderRules(`${A}scenes/`, 1, files),
+  { from: `${A}examples/`, to: `${A}examples/`, plan: 'p609' },
+  { from: `${A}shared/`, to: `${A}shared/`, plan: 'p609' },
+  ...APP_ASSET_FOLDERS.map((f): MoveRule => ({ from: `${A}${f}/`, to: `${A}${f}/`, plan: 'p609' })),
+];
 
-export const getMoveRules = (root: string, files: string[]): MoveRule[] => [
+export const getMoveRules = (files: string[]): MoveRule[] => [
   ...ENGINE_RULES,
-  ...TOOLKIT_RULES,
-  ...getToolkitMaterialRules(files),
-  ...getAppSceneRules(root, files),
+  ...getToolkitRules(files),
+  ...getAppRules(files),
 ];
 
 /** Whether a `.ts` file keeps its name: an asset-id file (`asteroid.tsl.ts`), an entry, a declaration */

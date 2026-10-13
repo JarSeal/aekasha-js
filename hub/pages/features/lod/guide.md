@@ -18,7 +18,7 @@ orthographic camera has no distance). So an object keeps its detail when the cam
 
 Levels go from the finest down, each with the smallest `screenSize` it's used at:
 
-<<< src/app/lodShowcase/lodShowcaseHandMade.mesh.json
+<<< src/app/scenes/lodShowcase/lodShowcaseHandMade.mesh.json
 
 - A level's `geo`, `mat` and `castShadow` default to the level before's (level 0's to the mesh's
   own). Here the far levels are the same sphere at fewer segments, and the last stops casting
@@ -106,7 +106,9 @@ and the scene loads it instead:
    [dev file server](hub:features/debug-suite#dev-file-server): `<id>.impostor.json`,
    `<id>.textureAtlas.json` and two PNGs, into `src/app/impostors/` by default
    (`AppConfig.lod.impostorExportDir`). The asset pipeline encodes the PNGs to KTX2, about a
-   quarter of a bake's GPU memory.
+   quarter of a bake's GPU memory. Move the four into the scene's folder when only that scene
+   uses them (see [where the files go](hub:features/scenes-and-assets#where-the-files-go)): a
+   later export writes wherever they are.
 3. List the id in the scene JSON's `impostors`. The same `generateOctahedralImpostor` /
    `generateCrossQuads` call with that `id` now builds from the export, without baking.
 

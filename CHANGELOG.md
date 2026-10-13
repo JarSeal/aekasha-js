@@ -4,6 +4,54 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-13 — toolkit-and-app-restructure
+
+### Engine 5.0.2 (Golden Hour)
+
+No code changes.
+
+**Changed**
+
+- The nested `CLAUDE.md` files of the debug system, LOD and impostors name the app's new paths (`app/scenes/lodShowcase/`, `app/scenes/space/_dbg__spaceDemo.ts`), and say where an exported impostor goes when one scene uses it.
+
+### Toolkit 2.0.2 (Half Moon)
+
+The toolkit becomes a catalogue by kind (p609). Only moves and renames: every `aekasha/toolkit/*` entry exports the same names, and every scene's hash and snapshot is the same as before. An app that imports the toolkit through its entries has nothing to change; one that copied a toolkit file keeps its copy.
+
+**Changed**
+
+- `ecs/`: `FollowObjectCameraRig.ts` and `MovingPlatform.ts` move into `ecs/gameplay/`, next to `ecs/effects/`.
+- `geometry/`: the generators move into `generate/` and drop their `generate` prefix (`generateAsteroid.ts` → `generate/Asteroid.ts`, `Foliage.ts`, `Terrain.ts`), `scatterOnSurface.ts` → `scatter/ScatterOnSurface.ts`, and `seededRandom.ts` → `SeededRandom.ts`.
+- `materials/`: a folder per material, named by its id (`materials/asteroid/asteroid.material.json` and `asteroid.tsl.ts`, `triplanarCheckerboard/`, `triplanarGrid/`); `triplanarProjection.ts` → `TriplanarProjection.ts`.
+- `models/`: models sit by category, `models/<category>/<id>/`; the Æ symbol is in `models/brand/aekashaSymbol/`. Its optimized output keeps its bytes under the new path (`aek-assets/toolkit/models/brand/…`), which only the generated data names.
+- On a case-insensitive file system (macOS, Windows), a checkout can keep `seededRandom.ts` or `triplanarProjection.ts` under its old name after the pull; `tsc`'s casing check names it.
+
+### App 1.10.2 (Preschooler)
+
+The app gets a folder per scene (p609). Every scene keeps its id, so `__saveData`, `?startScene=`, the debugger's saved state and the scene runner's baselines carry over.
+
+**Changed**
+
+- `src/app/scenes/<sceneId>/` holds each scene's JSON, its scene file, its `_dbg__` module and Hub image, its own modules and the assets only it uses. The files are named after the scene id: `scene01_v2.ts` → `scenes/scene01V2/scene01V2.ts`, `testECS.ts` → `scenes/sceneTestECS/sceneTestECS.ts`, `scene_thirdPersonGym.ts` → `scenes/thirdPersonGymScene/thirdPersonGymScene.ts`, `scene_topDownTest.ts` → `scenes/topDownTestScene/topDownTestScene.ts`, `debugScene.scene.ts` → `scenes/testDebugScene/testDebugScene.ts`, and the scene JSONs the same way.
+- The assets only one scene uses move into its folder: the large world's, LOD showcase's, physics test's, physics tiers', sky showcase's, space's, gym's and top-down test's cameras and lights, their impostors, the asset compare's sky box, the texture arrays and atlases (with the atlas sources) and `sceneTestECS`'s camera, light, materials, meshes, geometry and import. `characterVisual.ts` moves into the gym's folder; the top-down test imports it from there.
+- The shared assets stay in their type's folder (`cameras/`, `lights/`, `impostors/`, `skyboxes/`, `textures/`, `postFx/`); `materials/`, `meshes/`, `geometries/` and `importedAssets/` are empty and gone. `src/app/shared/` is the place for code several scenes use (none yet). The rule is on the Hub's Scenes and assets page ("Where the files go").
+- Every moved asset JSON's `$schema` points at its schema from its new folder; the scene JSONs whose `$schema` was broken (ten of them), `testDebugScene` and `oneMoreScene` (which had none) and `ambientLight` (whose key was misspelled `"$schemas"`) now check and autocomplete in the editor.
+- The optimized outputs of the moved textures, atlases and impostors keep their bytes under their new paths (`aek-assets/app/scenes/<id>/…`).
+
+### Project
+
+**Added**
+
+- The move codemod rewrites asset JSONs (`devTools/refactor/moveJson.ts`, tested): a moved or pointed-at file's `$schema`, a scene's `sceneFile` and a TSL material's `tslFile` (both from the JSON's root under `src/`), and every other `./` or `../` path, as text edits on the string values, so formatting and `__saveData` stay byte for byte.
+- An issue file for `lodShowcase`'s snapshot, which fails against a baseline recorded earlier because its clouds follow the wall clock (`docs/issues/lodshowcase-sky-snapshot-drift.md`).
+
+**Changed**
+
+- `devTools/refactor/moveRules.ts` describes the toolkit's and the app's layouts as keep rules, like the engine's since p608: `moveMap.ts` fails on a file outside them (app files included now), and its map is all keeps. Its scan for mentions of moved paths no longer matches every position when nothing moves.
+- The lint's Prettier rule skips `src/generated/`: `yarn lint --fix` and every gather undid each other's formatting of a generated import the move made longer.
+- The root `CLAUDE.md`, the readme and the Hub (Toolkit, Scenes and assets, the quick start, LOD) describe the new layouts. The readme's toolkit list is corrected besides (it named a plain checkerboard material, and missed `MutualGravity`, the gameplay pieces and the asteroids), and the toolkit page lists the gameplay pieces.
+- The p450 prompt (`docs/templates/todo-plan-prompts.txt`) records what p300 and p609 decided about the asset locations and the toolkit's folders, and keeps moving the debugger test files out of `public/`.
+
 ## 2026-10-12 — engine-folder-restructured
 
 ### Engine 5.0.1 (Golden Hour)

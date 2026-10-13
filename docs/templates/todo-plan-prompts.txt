@@ -174,15 +174,16 @@ Create "Toolkit and asset housekeeping" plan in docs/plans/p450_toolkit-and-asse
 
 Category: Toolkit, Assets
 
-We should reorganize where these assets are located. Currently they are located at the public directory under aek-assets but I would like for them to be in the toolkit, but I am not sure how to make it work with Vite. Please study and suggest a solution. In the public folder should only exist static assets that will be shipped with the app/game. Basically now there should be the favicons (3 files) and the stripe-pattern-24x24.png.
+Already decided (p609 D1 and D3, implemented by p609; read its plan first):
 
-The toolkit should have a logical folder structure. In the toolkits root there should be all the different categories "ecs", "geometryUtils" (now named "geometry"), "materials", "textures", "models", "skyboxes", what else? Under each sub-folder there should be a folder describing what it is and the relevant files there.
-- In the "ecs" folder there is the InstancedMeshPool (+ types), do we still need this here? I though we made this into a core system? If it isn't needed, then remove those 2 files. If you think the "effects" folder should be renamed, you can do that and if you think they should have their own (or some kind of different) folder structure, you can do that.
-- The "geometryUtils" should at least have a "generate" folder where all generating scripts should be at. I am not sure if the seededRandom should be a engine core util, but I will move it there if I need it in the core code. For the rest you can create separate folder (maybe "scatter" and "utils" or if you think something better, go for it).
-- The "materials" folder should have a sub-folder for each material.
-- The "textures" folder should have a sub-folder for each texture.
-- The "models" folder should have sub-folders for each category and then a sub-folder for each model because some of the models will have packed and unpacked versions.
-- The "skyboxes" folder should have a sub-folder for each skybox texture. 
+- Where assets live (the location question): answered by p300's asset pipeline. An asset's source sits next to its JSON, in the toolkit or the app, and the pipeline writes the shipped output to src/public/aek-assets/ (generated and committed, so a clone needs no encoder; dist/aek-assets/ gets only what production loads). So new toolkit assets go into the toolkit with their sources, and their outputs land in src/public/aek-assets/toolkit/ by themselves. Don't move the outputs by hand.
+- The toolkit's folder structure is in place (the root CLAUDE.md's Three-folder split, the Hub's Toolkit page). Code: ecs/ (effects/, gameplay/), geometry/ (generate/, scatter/, SeededRandom.ts), materials/<id>/ (plus TriplanarProjection.ts), each with its aekasha/toolkit/<category> entry. Assets, no entry (reached by id through the gatherer): models/<category>/<id>/ (brand/ holds aekashaSymbol), textures/<id>/, skyboxes/<id>/. The deprecated InstancedMeshPool re-exports are gone (p606), and SeededRandom stays in the toolkit (the engine doesn't use it; p610 brings the engine's own seeded RNG).
+- devTools/refactor/moveRules.ts keeps that layout as rules, so `npx tsx devTools/refactor/moveMap.ts` fails on a file outside it.
+
+What this plan does for the structure:
+
+- Fill the categories: the PBR textures in textures/<id>/, the models in models/reference/<id>/ (the bunny, the dragon, the teapot, Suzanne) and models/nature/<id>/ (the high-poly tree), the sky box in skyboxes/<id>/. A model with packed and unpacked versions keeps both in its folder. textures/ and skyboxes/ don't exist yet (git keeps no empty folder): the first asset creates each.
+- The debugger test files in src/public/debugger/assets/ (about 145: images/, testModels/, testOptimized/, testTextures/), which the app's test scenes and asset JSONs use from public paths (/debugger/assets/…: testTexture, the p299 arrays and atlas, testImport, scene01, testDebugScene, topDownTestScene). They should leave public/, which should hold only what ships as it is: the favicons (favicon.svg, favicon.ico, apple-touch-icon.png) and the stripe pattern (now debugger/assets/images/stripe-pattern-24x24.png; decide where it goes). Move each into the folder of the scene that uses it (or the app's shared asset folders, the Hub's "Where the files go") as a source next to its JSON, so the pipeline ships its output, and rewrite the JSONs' and the scene code's paths. Files no scene uses can go (list them first). Then the scene runner's snapshots are the check that nothing changed.
 
 We should also get 5-10 high quality PBR textures (with normal maps, AO maps, etc.). These can be all kinds of (semi-random) textures.
 

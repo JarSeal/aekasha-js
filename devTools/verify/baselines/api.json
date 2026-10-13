@@ -2704,13 +2704,13 @@
       "SunShadowFitData": "Interface",
       "sunShadowFitSystem": "Function"
     },
-    "src/toolkit/ecs/FollowObjectCameraRig.ts": {
+    "src/toolkit/ecs/gameplay/FollowObjectCameraRig.ts": {
       "createFollowObjectCameraRig": "Function",
       "deleteFollowObjectCameraRig": "Function",
       "FollowObjectCameraParams": "TypeAlias",
       "registerFollowObjectCameraRigSystem": "Function"
     },
-    "src/toolkit/ecs/MovingPlatform.ts": {
+    "src/toolkit/ecs/gameplay/MovingPlatform.ts": {
       "createMovingPlatform": "Function",
       "DeleteMeshOptions": "TypeAlias",
       "MovingPlatformControls": "TypeAlias",
@@ -2718,27 +2718,27 @@
       "PhysicsParams": "TypeAlias",
       "registerMovingPlatformSystem": "Function"
     },
-    "src/toolkit/geometry/generateAsteroid.ts": {
+    "src/toolkit/geometry/generate/Asteroid.ts": {
       "AsteroidCraterOptions": "Interface",
       "AsteroidNoiseOptions": "Interface",
       "AsteroidOptions": "Interface",
       "generateAsteroid": "Function",
       "GeneratedAsteroid": "Interface"
     },
-    "src/toolkit/geometry/generateFoliage.ts": {
+    "src/toolkit/geometry/generate/Foliage.ts": {
       "BushGeometryOptions": "Interface",
       "generateBushGeometry": "Function",
       "GeneratedTreeGeometry": "Interface",
       "generateTreeGeometry": "Function",
       "TreeGeometryOptions": "Interface"
     },
-    "src/toolkit/geometry/generateTerrain.ts": {
+    "src/toolkit/geometry/generate/Terrain.ts": {
       "GeneratedTerrain": "Interface",
       "generateTerrain": "Function",
       "TerrainNoiseOctave": "Interface",
       "TerrainOptions": "Interface"
     },
-    "src/toolkit/geometry/scatterOnSurface.ts": {
+    "src/toolkit/geometry/scatter/ScatterOnSurface.ts": {
       "bakeScatterToInstancedMesh": "Function",
       "scatterOnSurface": "Function",
       "ScatterOptions": "Interface",
@@ -2746,20 +2746,20 @@
       "spawnScatterAsMeshEntities": "Function",
       "SpawnScatterMeshOptions": "Interface"
     },
-    "src/toolkit/geometry/seededRandom.ts": {
+    "src/toolkit/geometry/SeededRandom.ts": {
       "createSeededRandom": "Function"
     },
-    "src/toolkit/materials/asteroid.tsl.ts": {
+    "src/toolkit/materials/asteroid/asteroid.tsl.ts": {
       "colorNode": "Function"
     },
-    "src/toolkit/materials/triplanarCheckerboard.tsl.ts": {
+    "src/toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts": {
       "colorNode": "Function"
     },
-    "src/toolkit/materials/triplanarGrid.tsl.ts": {
+    "src/toolkit/materials/triplanarGrid/triplanarGrid.tsl.ts": {
       "colorNode": "Function",
       "normalNode": "Function"
     },
-    "src/toolkit/materials/triplanarProjection.ts": {
+    "src/toolkit/materials/TriplanarProjection.ts": {
       "blendProjectionGradients": "Function",
       "blendProjections": "Function",
       "ProjectionPattern": "TypeAlias",

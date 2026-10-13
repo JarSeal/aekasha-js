@@ -112,11 +112,12 @@ describe("today's tree", () => {
     const moveMap: Record<string, MoveEntry> = JSON.parse(
       texts.get('devTools/refactor/moveMap.json') as string
     ).files;
-    // The plan still to apply: p608's moves are done (its rules describe the new layout, D9). The
-    // test skips once p609's are done too, until a next plan's rules.
+    // The last plan with moves: p608's and p609's are done (their rules describe the new layout,
+    // p608 D9, p609 D5), so the test skips while no move of the plan is left to apply; a next
+    // plan's rules set PLAN.
     const tracked = new Set(files);
-    const isMoved = Object.entries(moveMap).some(
-      ([from, entry]) => entry.plan === PLAN && entry.action === 'move' && !tracked.has(from)
+    const isMoved = !Object.entries(moveMap).some(
+      ([from, entry]) => entry.plan === PLAN && entry.action === 'move' && tracked.has(from)
     );
     return { map: buildPathMap({ files, moveMap, plan: PLAN }), texts, isMoved };
   };

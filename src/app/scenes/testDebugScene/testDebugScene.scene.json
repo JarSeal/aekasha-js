@@ -1,0 +1,6 @@
+{
+  "$schema": "../../../../.schemas/scene.schema.json",
+  "id": "testDebugScene",
+  "isDebugScene": true,
+  "sceneFile": "scenes/testDebugScene/testDebugScene.ts"
+}

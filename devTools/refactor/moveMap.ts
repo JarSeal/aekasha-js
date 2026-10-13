@@ -4,10 +4,10 @@
  *
  *   npx tsx devTools/refactor/moveMap.ts [--check]
  *
- * - `moveMap.json`: every tracked file of `src/_engine/` and `src/toolkit/`, and the app files
- *   that move, with its target (`moveRules.ts`). p608's codemod reads it; regenerate it on a fresh
- *   `main` before applying it. It fails on a file no rule maps, two files with one target (also
- *   by case) and a module name that isn't PascalCase (p602 D7).
+ * - `moveMap.json`: every tracked file of `src/_engine/`, `src/toolkit/` and `src/app/` with its
+ *   target (`moveRules.ts`). p608's codemod reads it; regenerate it on a fresh `main` before
+ *   applying it. It fails on a file no rule maps, two files with one target (also by case) and a
+ *   module name that isn't PascalCase (p602 D7).
  * - `layoutReport.md`: the import graph checked against the target layout: kernel code importing a
  *   feature, cycles between features, the engine importing the app, static `_dbg__` imports
  *   outside debug code, and the `utils/` / `ui/` / `schemas/` boundaries. What p606 must fix
@@ -48,14 +48,14 @@ const tracked = allTracked;
 
 // The move map
 
-const rules = getMoveRules(ROOT, trackedFiles);
+const rules = getMoveRules(trackedFiles);
 const moveMap: Record<string, MoveEntry> = {};
 const errors: string[] = [];
 for (const file of trackedFiles) {
   if (!file.startsWith('src/')) continue;
   const entry = applyMoveRules(rules, file);
   if (entry) moveMap[file] = entry;
-  else if (file.startsWith('src/_engine/') || file.startsWith('src/toolkit/')) {
+  else if (/^src\/(_engine|toolkit|app)\//.test(file)) {
     errors.push(`No rule maps ${file}`);
   }
 }
@@ -628,7 +628,8 @@ const docFiles = [...allTracked].filter(
     ].includes(f)
 );
 const pathRefs: { file: string; count: number; paths: Set<string> }[] = [];
-for (const file of docFiles) {
+// With nothing moving, the empty alternation would match everywhere
+for (const file of movedPaths.length ? docFiles : []) {
   const text = fs.readFileSync(path.join(ROOT, file), 'utf8');
   const found = [...text.matchAll(pathPattern)].map((m) => m[1]);
   if (found.length) pathRefs.push({ file, count: found.length, paths: new Set(found) });

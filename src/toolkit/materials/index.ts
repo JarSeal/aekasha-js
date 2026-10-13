@@ -1,2 +1,2 @@
-export { triplanarProjection } from './triplanarProjection';
-export type { TriplanarProjectionOptions } from './triplanarProjection';
+export { triplanarProjection } from './TriplanarProjection';
+export type { TriplanarProjectionOptions } from './TriplanarProjection';

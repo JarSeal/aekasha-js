@@ -74,7 +74,7 @@ const DEBUG_FILES = ['src/**/_dbg__*.ts'];
 const SIMULATION_FILES = [
   'src/_engine/features/physics/**/*.ts',
   'src/_engine/features/character/**/*.ts',
-  'src/toolkit/ecs/MovingPlatform.ts',
+  'src/toolkit/ecs/gameplay/MovingPlatform.ts',
   'src/toolkit/ecs/effects/MutualGravity.ts',
 ];
 // What the two feature folders hold besides the simulation: the installs and entries, the
@@ -93,7 +93,7 @@ const SIMULATION_RESTRICTED_PROPERTIES = [
     object: 'Math',
     property: 'random',
     message:
-      'Simulation randomness is seeded: createSeededRandom (toolkit/geometry/seededRandom.ts) until the RNG service exists.',
+      'Simulation randomness is seeded: createSeededRandom (toolkit/geometry/SeededRandom.ts) until the RNG service exists.',
   },
   { object: 'performance', property: 'now', message: STEP_TIME_MESSAGE },
   { object: 'Date', property: 'now', message: STEP_TIME_MESSAGE },
@@ -252,4 +252,7 @@ export default [
       ],
     },
   },
+  // The gatherer's output, written unformatted on every gather: `yarn lint --fix` reformatting it
+  // would leave a diff that the next gather undoes (a long import path in generatedAppFns.ts)
+  { files: ['src/generated/**'], rules: { 'prettier/prettier': 'off' } },
 ];

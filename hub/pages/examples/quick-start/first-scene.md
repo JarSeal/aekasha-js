@@ -34,8 +34,11 @@ The scene file exports `scene`, which the engine calls once the JSON's assets ar
 
 ## Make it yours
 
-1. Copy the `src/app/examples/quickStart/` folder and rename its ids (the `id` in the scene JSON,
-   the files and their `appId`s).
+1. Copy the `src/app/examples/quickStart/` folder to `src/app/scenes/<your scene id>/`, rename
+   its ids (the `id` in the scene JSON, the files and their `appId`s), name the scene's files
+   after its id, and point the scene JSON's `sceneFile` at its new file:
+   `./scenes/<your scene id>/<your scene id>.ts` (see
+   [where the files go](hub:features/scenes-and-assets#where-the-files-go)).
 2. Open it with `?startScene=<your scene id>` next to `?isDebug=true`, or make it the app's start
    scene in `src/index.ts` (`loadScene({ sceneId: '<your scene id>' })`).
 3. Edit the scene file or the JSON: the page reloads with the change.
