@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: implemented (Phases 1-4)
 Category: Refactoring, Toolkit, App
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p620_review-toolkit-and-app-code.md
@@ -299,11 +299,23 @@ No file of the toolkit or the app changes.
   so the engine keeps 5.0.1 unless a docs-only change should count. The CHANGELOG's Project
   section gets the keep rules, `src/app/shared/` and the generated code's lint exception.
 
-### Phase 4: versions and done
+### Phase 4: versions and done — done
 
 D6's bumps, the `CHANGELOG.md` entry (Toolkit, App, Project; Engine if touched), `yarn
 checkVersions --against main`, mark the plan done (`docs/plans/CLAUDE.md`), p620's `Blocked by`
 line. Then the PR: `toolkit-and-app-restructure` into `main` (the epic's Branches and PRs row).
+
+**As built:**
+
+- **Engine 5.0.2 (patch), not unchanged:** `yarn checkVersions --against main` counts any file
+  under `src/_engine/`, and the branch changes three nested `CLAUDE.md` files there (no code),
+  so the engine and the project version took a patch, as D6 says for a text change in it.
+  Toolkit 2.0.2, App 1.10.2 as planned. The `CHANGELOG.md` entry has Engine, Toolkit, App and
+  Project sections.
+- `lodShowcase`'s snapshot drift (Phase 2) got an issue file,
+  `docs/issues/lodshowcase-sky-snapshot-drift.md`: the view's clouds read three's TSL `time`
+  (the wall clock), not the engine's elapsed time.
+- p620's `Blocked by` (only this plan) is dropped.
 
 ## 4. Risks
 
