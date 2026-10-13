@@ -259,6 +259,8 @@ const resetGesture = () => {
 const initTouchListeners = () => {
   if (listenersInitiated) return;
   listenersInitiated = true;
+  // Also in the NONE scope, so a removal resets it
+  addInputListenerRemover(removeTouchListeners);
   const scope = getInputScope();
   if (scope === 'NONE') return;
   const canvasElem = getCanvasElem();
@@ -273,7 +275,6 @@ const initTouchListeners = () => {
   ];
   for (const [type, fn, opts] of listeners) target.addEventListener(type, fn, opts);
   addOnWindowBlurFn(BLUR_FN_ID, resetGesture);
-  addInputListenerRemover(removeTouchListeners);
   removeListeners = () => {
     for (const [type, fn] of listeners) target.removeEventListener(type, fn);
     deleteAddOnWindowBlurFn(BLUR_FN_ID);

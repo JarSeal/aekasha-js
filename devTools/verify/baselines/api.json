@@ -1622,7 +1622,8 @@
       "pingAssetsWorker": "Function",
       "recordAssetLoadReport": "Function",
       "runAssetTask": "Function",
-      "simplifyGeometryInWorker": "Function"
+      "simplifyGeometryInWorker": "Function",
+      "stopAssetsWorker": "Function"
     },
     "src/_engine/kernel/assets/AssetsAPITypes.ts": {
       "AssetKind": "TypeAlias",
@@ -1652,9 +1653,12 @@
     },
     "src/_engine/kernel/assets/AssetUrl.ts": {
       "GeneratedAssetUrls": "TypeAlias",
+      "getAppBaseUrl": "Function",
       "isJsonRelativeFileName": "Function",
       "isLoadingSourceFiles": "Function",
       "resolveAssetUrl": "Function",
+      "resolveFileUrl": "Function",
+      "setAssetBaseUrl": "Function",
       "toAppUrl": "Function"
     },
     "src/_engine/kernel/assets/Disposal.ts": {
@@ -2037,6 +2041,11 @@
       "TRANSFORM_FIELD_COUNT": "Variable",
       "TypedArrayTransformStore": "Class"
     },
+    "src/_engine/kernel/init/Boot.ts": {
+      "bootEngineAsync": "Function",
+      "BootOptions": "TypeAlias",
+      "isEngineBooted": "Function"
+    },
     "src/_engine/kernel/init/Features.ts": {
       "checkFeatures": "Function",
       "checkSceneFeatures": "Function",
@@ -2054,6 +2063,11 @@
     },
     "src/_engine/kernel/init/Kernel.ts": {
       "installKernel": "Function"
+    },
+    "src/_engine/kernel/init/Mount.ts": {
+      "AekashaMount": "TypeAlias",
+      "mountAekasha": "Function",
+      "MountAekashaOptions": "TypeAlias"
     },
     "src/_engine/kernel/input/ActionBindings.ts": {
       "compileActionBindings": "Function",
@@ -2138,11 +2152,16 @@
       "TargetList": "TypeAlias"
     },
     "src/_engine/kernel/input/InputState.ts": {
+      "addInputListenerRemover": "Function",
       "areAllInputsEnabled": "Function",
       "areAppInputsEnabled": "Function",
       "areAppInputsSuspended": "Function",
+      "getInputScope": "Function",
+      "InputScope": "TypeAlias",
+      "removeAllInputListeners": "Function",
       "setAllInputsEnabled": "Function",
-      "setAppInputsSuspended": "Function"
+      "setAppInputsSuspended": "Function",
+      "setInputScope": "Function"
     },
     "src/_engine/kernel/input/KeyboardInput.ts": {
       "createKeyBinding": "Function",
@@ -2260,6 +2279,7 @@
       "setPlaySpeedMultiplier": "Function",
       "setPreStepHook": "Function",
       "setSceneSuspended": "Function",
+      "stopMainLoop": "Function",
       "toggleAppPlay": "Function",
       "toggleMainPlay": "Function",
       "transformAppSpeedValue": "Function",
@@ -2291,6 +2311,14 @@
     },
     "src/_engine/kernel/mesh/MeshUserData.ts": {
       "setMeshCreatePropsToUserData": "Function"
+    },
+    "src/_engine/kernel/render/CanvasSize.ts": {
+      "CanvasSize": "TypeAlias",
+      "CanvasSizeSource": "TypeAlias",
+      "createElementSizeSource": "Function",
+      "getCanvasSize": "Function",
+      "onCanvasResize": "Function",
+      "setCanvasSizeSource": "Function"
     },
     "src/_engine/kernel/render/LodFade.ts": {
       "clearLodObjectFade": "Function",
@@ -2331,6 +2359,7 @@
     "src/_engine/kernel/render/Renderer.ts": {
       "createRenderer": "Function",
       "createRendererDebugGUI": "Function",
+      "CreateRendererOptions": "TypeAlias",
       "deleteRenderer": "Function",
       "getCanvasElem": "Function",
       "getCanvasParentElem": "Function",
@@ -2339,6 +2368,7 @@
       "isWebGLRenderer": "Function",
       "isWebGPURenderer": "Function",
       "onRendererCreated": "Function",
+      "RendererCanvasOptions": "TypeAlias",
       "RendererOptions": "TypeAlias"
     },
     "src/_engine/kernel/render/RenderHooks.ts": {
@@ -2981,16 +3011,19 @@
       "ActionRecording",
       "ActionState",
       "ActionType",
+      "AekashaMount",
       "AfterRenderHook",
       "AppConfig",
       "AppData",
       "AtlasCellRect",
       "BuildTextureArrayProps",
+      "CanvasSize",
       "ComponentData",
       "ComponentDataMap",
       "ComponentHook",
       "ComponentType",
       "CoreComponentType",
+      "CreateRendererOptions",
       "DracoConfig",
       "ECSPosition",
       "ECSRotation",
@@ -3036,11 +3069,13 @@
       "MaterialVariantOverrides",
       "Materials",
       "MeshProps",
+      "MountAekashaOptions",
       "MouseBinding",
       "MouseButtonActionBinding",
       "MouseDeltaActionBinding",
       "RemapUVsToAtlasCellOpts",
       "RenderPipelineProvider",
+      "RendererCanvasOptions",
       "RendererOptions",
       "SampleAtlasCellOpts",
       "SceneData",
@@ -3116,6 +3151,7 @@
       "getArrayLayerIndex",
       "getAtlasCell",
       "getCameraByAppId",
+      "getCanvasSize",
       "getComponent",
       "getConnectedGamepads",
       "getCurrentSceneId",
@@ -3166,6 +3202,7 @@
       "loadTextures",
       "loadTslMaterialFileAsync",
       "lwarn",
+      "mountAekasha",
       "onGamepadConnected",
       "onGamepadDisconnected",
       "playActionRecording",

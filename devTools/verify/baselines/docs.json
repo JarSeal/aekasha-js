@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1639,
-      "total": 2318
+      "documented": 1664,
+      "total": 2342
     },
     "members": {
       "documented": 216,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1595,
-        "total": 2255
+        "documented": 1620,
+        "total": 2279
       },
       "members": {
         "documented": 166,
@@ -749,8 +749,8 @@
     },
     "engine/kernel/assets": {
       "exports": {
-        "documented": 104,
-        "total": 136
+        "documented": 108,
+        "total": 140
       },
       "members": {
         "documented": 0,
@@ -1089,8 +1089,8 @@
     },
     "engine/kernel/init": {
       "exports": {
-        "documented": 12,
-        "total": 12
+        "documented": 18,
+        "total": 18
       },
       "members": {
         "documented": 0,
@@ -1103,8 +1103,8 @@
     },
     "engine/kernel/input": {
       "exports": {
-        "documented": 99,
-        "total": 122
+        "documented": 104,
+        "total": 127
       },
       "members": {
         "documented": 0,
@@ -1169,8 +1169,8 @@
     },
     "engine/kernel/loop": {
       "exports": {
-        "documented": 35,
-        "total": 47
+        "documented": 36,
+        "total": 48
       },
       "members": {
         "documented": 0,
@@ -1216,8 +1216,8 @@
     },
     "engine/kernel/render": {
       "exports": {
-        "documented": 67,
-        "total": 83
+        "documented": 76,
+        "total": 91
       },
       "members": {
         "documented": 0,
@@ -1227,7 +1227,6 @@
         "exports": [
           "Renderer#RendererOptions",
           "Renderer#createRendererDebugGUI",
-          "Renderer#getCanvasElem",
           "Renderer#isWebGLRenderer",
           "Renderer#isWebGPURenderer",
           "Snapshot#SnapshotBlobOpts",

@@ -53,6 +53,22 @@ module 'aekasha'`), which changes the public types of the core component map: th
   yet (p607 D1): `physics()` keeps `config.physics`, which this plan reviews (eg. leaving the tiers
   and the tier policy out, p611).
 
+## From p611 (2026-10-14)
+
+The embed's seams (p611 Phase 3, D6), each defaulting to the full-page boot's behaviour:
+
+- **The boot** is `kernel/init/Boot.ts`' `bootEngineAsync` (`@internal`; `InitEngine` is the
+  full-page wrapper that adds `page.scss`), shared with `mountAekasha` (`kernel/init/Mount.ts`). It
+  runs once per page load (`isEngineBooted`): a second `InitEngine` or mount throws. Mounting again
+  after `unmount()` throws too, since the registrations (`ECSWorld.registerPlugin`, the features'
+  installs, the scene registry) are static and can't be undone: resetting them is this plan's call.
+  `BootOptions.hudSlot` is the element the HUD root replaces.
+- **The loop:** `initMainLoop` subscribes its resizers with `onCanvasResize`
+  (`kernel/render/CanvasSize.ts`) instead of the window's `resize`; `stopMainLoop()` (`@internal`)
+  stops it for good, a queued frame included (a flag each loop variant checks first), and removes
+  the resize, visibility, `beforeunload` and `blur` listeners.
+- **Not stopped by `unmount()`:** a physics worker (`physics()` has no stop; p614).
+
 ## Done when
 
 - Every file in scope reviewed against p600 §5, the findings fixed or filed (`docs/issues/` or a plan item).

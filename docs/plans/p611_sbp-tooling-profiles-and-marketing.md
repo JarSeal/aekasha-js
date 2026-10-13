@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-3 implemented
 Category: Build, Dev tooling, Engine API, Marketing
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -380,7 +380,7 @@ As built:
   Commands (`yarn sbp`, `--brief`, `AEK_SBP`), `devTools/sbp/CLAUDE.md`; the `__AEK_DEBUG__ ?`
   trap belongs in `src/_engine/debug/CLAUDE.md` (Debug system) too.
 
-### Phase 3: `mountAekasha` (engine)
+### Phase 3: `mountAekasha` (engine) — done
 
 1. The seams, each defaulting to today: the canvas parent element and the canvas's attributes
    (`Renderer.ts`), a size source (`getCanvasSize`, the window by default, a container's
@@ -395,11 +395,110 @@ As built:
 6. Tests (the size source, the input scope, the options' defaults, a second mount throwing);
    `verify:scenes` unchanged; `api.json` gains the new names (`--update`).
 
+As built:
+
+- **The scene baselines** were recorded on `main` (`711c720`) in a worktree. A worktree lacks the
+  gitignored `src/public/debugger/assets/testOptimized/phase1/` (`assetCompare`'s toolbox): copy it
+  in, or `assetCompare`'s snapshots differ.
+- **The size source** (`kernel/render/CanvasSize.ts`): `getCanvasSize()` (on `aekasha`; aspect 1
+  while the height is 0), `onCanvasResize` (the main loop's resizers run from it, replacing its
+  window listener), `setCanvasSizeSource` / `createElementSizeSource` (`@internal`; a
+  `ResizeObserver` plus the window's `resize`, so the debug windows still follow the window). The
+  cameras (and the camera debug GUI) read it; the draggable windows and the drawer keep
+  `getWindowSize`.
+- **`createRenderer({ parent, canvas: { id, className, style } })`** (`CreateRendererOptions`,
+  `RendererCanvasOptions` on `aekasha`): `style` is a CSS string set before `setSize`; both kept out
+  of the options it saves to LS. `getCanvasParentElem` returns the parent it used, `getCanvasElem`
+  the renderer's canvas.
+- **The HUD:** `createHudContainer(slot?)`. The UI kit's root replaces the element it attaches to
+  (`CMP`'s `replaceRootDom`: the template's `#guiContainer` is replaced), so the mount passes an
+  empty slot in its container; the container's `contain: layout` keeps the HUD's fixed elements
+  inside it.
+- **The input scope** (`InputState.ts`, `@internal`): `WINDOW` (default), `CANVAS` (pointer and touch
+  on the canvas, `mouseup` on the window, passive; keys on the canvas with `tabindex="0"`, held keys
+  cleared on `blur`, attached once the renderer exists; gamepads read only while the canvas has
+  focus, released when it loses it), `NONE` (no listeners, no gamepad reads). Each device registers
+  its remover (`addInputListenerRemover`, also in `NONE`, so a removal resets it: a test found it
+  missing); `removeAllInputListeners()` calls them, so the mount imports no device module. The
+  page-height wheel unit (`Actions.ts`) still reads `window.innerHeight`.
+- **The styles:** `ui/styles/page.scss` (normalize, `html`, `*`, `body`, `#mainCanvas`,
+  `#guiContainer`) and `index.scss` (the components'). Measured with scratch builds: a static import
+  in a module the embed doesn't use doesn't reach its CSS (no CSS at all for an entry using
+  `createRenderer` and `getCanvasSize`); the full-page boot with a static import ships one file
+  (2,759 B gzip), with `import()` two (2,045 + 922 B) applied after the JS (a flash, and a
+  top-level statement `moduleSideEffects.test.ts` forbids). Kept static; `index.css` unchanged
+  (9,788 B, the same rules reordered). **The dev server doesn't tree-shake**, so an embed served by
+  it gets `page.scss` (black body, normalize): dev only, accepted (the user's call); the Phase 4
+  test page checks the built embed.
+- **The asset base** (`AssetUrl.ts`, `@internal`): `setAssetBaseUrl` (a folder URL, relative to the
+  document, a missing trailing slash added) **replaces** Vite's `base`: `getAppBaseUrl()` is it or
+  `base` against the document (`aek-assets/`, `basis/`, `draco/`), and `resolveFileUrl()` resolves a
+  file name against it or the document. Used by `toAppUrl`, KTX2's transcoder, Draco's default and
+  configured paths, `Texture.ts` (its async resolver, the legacy synchronous `createTexture` /
+  `loadTextures` and the cube's `setPath`) and `GLTFSource.ts`; the debug-only Assets tab still uses
+  the document. So an embed's entry must sit at the root of its folder, or pass `'..'` (Phase 4).
+- **The boot** moved into `kernel/init/Boot.ts` (`bootEngineAsync`, `BootOptions` with `hudSlot`,
+  `isEngineBooted`; `@internal`); `InitEngine.ts` imports `page.scss`, then the boot (which imports
+  `index.scss`), so the CSS order holds. One boot per page load: a second throws.
+- **`mountAekasha`** (`kernel/init/Mount.ts`; `MountAekashaOptions`, `AekashaMount` on `aekasha`):
+  - The container: a `div.aekMount.aekMount_<LAYOUT>` in the target (nothing else on the page
+    changes), holding the canvas's own parent (`position: absolute; inset: 0`: a scene load sets
+    `pointer-events` on the canvas's parent, which in `BACKGROUND` must stay the container's), the
+    HUD slot and the fallback image (a `div` with a `cover` background). `INLINE`: relative;
+    `BACKGROUND`: fixed, `z-index: -1`, no pointer events. Both `overflow: hidden`, `contain:
+    layout`. The canvas gets `display: block` before the user's style. A container without a height
+    is warned about.
+  - **`sceneId` defaults to the first scene in `data`** (the config has no start scene). The mount
+    creates its own scene loader (no UI; `loadScene` throws without one).
+  - The loop's holds (`user`, `outOfView` from an `IntersectionObserver`, `reducedMotion`) drive
+    `toggleMainPlay`. Reduced motion pauses after the first loop frame (the second render: the first
+    is `initMainLoop`'s, before any system), as the fallback image goes away; `resume()` lifts it.
+    The first-frame hook removes itself in a microtask (removing it during the hooks' loop would
+    skip the next hook).
+  - **A failed boot resolves with the fallback handle** (`isFallback`, logged), torn down but the
+    container kept with its image; no WebGPU or WebGL2: the same without booting. The boot's
+    rejection is handled with `.then(ok, fail)`, not a `try` block.
+  - `unmount()`: the observer, `stopMainLoop()` (a flag each loop variant checks first, so a queued
+    frame doesn't run on a disposed renderer; the resize, visibility, `beforeunload`, `blur`
+    listeners removed), `removeAllInputListeners()`, `stopAssetsWorker()` (`AssetsAPI.ts`), the
+    renderer disposed, the container removed, the seams reset. **Mounting again throws** (also after
+    `unmount()`): the registrations are static and can't be undone (p612). A physics worker isn't
+    stopped (`physics()` has no stop, p614).
+  - Checked in Chrome (WebGPU) with a scratch page in the dev server: the canvas at 50% of a
+    600×300 host (298×296), following a host resize; paused out of view and on `pause()`; reduced
+    motion paused after the first frame; `BACKGROUND` behind the page's text with no pointer
+    events (the canvas's parent too, after the scene load); no WebGPU / WebGL2: the fallback; a
+    second mount throws, also after `unmount()`, which left the host empty; the host's styles
+    unchanged by the mount.
+- **A scratch embed** (an entry with `mountAekasha` alone, `features: []`): 2.0 kB gzip CSS (the
+  components' only) and a 303 kB gzip entry chunk (three), plus `three.core` 51.7 kB. The physics
+  and assets worker chunks and the Draco and Basis decoders are emitted as lazy files (never loaded,
+  but deployed): Phase 4's look. The probe script is `.cache/probe/build.mts` (gitignored).
+- **Tests** (31): `CanvasSize.test.ts` (the sources, the switch, the listeners), `InputScope.test.ts`
+  (each scope for keys, the wheel and the gamepad, the blur, the removal), `AssetUrl.test.ts` (the
+  default against the old formula for `/`, `./` and `/sub/`, the asset base, Draco's paths) and
+  `Mount.test.ts` (every module the mount drives mocked: the defaults, the layouts, the holds, the
+  fallback, unmount, a second mount throwing). `verify:scenes` 100 / 100 after each section.
+- **Baselines:** `api.json` (the names above; on `aekasha`: `mountAekasha`, `getCanvasSize`,
+  `AekashaMount`, `MountAekashaOptions`, `CanvasSize`, `CreateRendererOptions`,
+  `RendererCanvasOptions`), `docs.json` (every new export documented), `bundle.json` (the main
+  chunk +1.4 kB gzip: input 0.7, render 0.5, init 0.2; the `EngineRapier.js` pair's 0.1 kB swap is
+  noise); the `app` budgets all within (initial 388.5 KiB).
+- **Overlaps (§6):** a "From p611" section in p612 (the boot, the loop), p613 (the size source, the
+  renderer's options, the asset base, the styles) and p617 (the input scope, the HUD slot, and the
+  UI kit's `rem`s, which assume `page.scss`' 62.5% root font size: 1.6× in an embed's HUD).
+- **Docs:** the input `CLAUDE.md` (the scope); the root `CLAUDE.md`'s two `initEngineAsync`
+  mentions. The rest waits for Phase 6 (the Hub's embed page, the readme, the Bootstrap flow).
+
 ### Phase 4: profiles and the banner
 
 1. Per-profile data from the gatherer (D7).
 2. The embed build per profile into `dist-embed/<profile>/` (D7; library mode compared and the
    choice recorded); `yarn sbp --profile banner` measures it, its baseline next to `bundle.json`.
+   From Phase 3: `assetBaseUrl` replaces Vite's `base`, so the entry module sits at the folder's
+   root (or the entry passes `new URL('..', import.meta.url)`); and a scratch embed emitted the
+   physics and assets worker chunks and the decoders as lazy files: keep them out of a profile that
+   can't load them.
 3. The banner scene and its entry under `src/app/profiles/banner/` (D8); its Hub image.
 4. A plain HTML test page that mounts it at a size in %, in `BACKGROUND` layout and unmounts it,
    driven by the run-aekasha-js skill's Playwright: no error, the canvas sized to its container,

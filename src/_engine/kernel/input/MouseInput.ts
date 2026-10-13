@@ -306,6 +306,8 @@ const clearPresses = () => {
 const initMouseListeners = () => {
   if (listenersInitiated) return;
   listenersInitiated = true;
+  // Also in the NONE scope, so a removal resets it
+  addInputListenerRemover(removeMouseListeners);
   const scope = getInputScope();
   if (scope === 'NONE') return;
   const canvasElem = getCanvasElem();
@@ -325,7 +327,6 @@ const initMouseListeners = () => {
   ];
   for (const [elem, type, fn] of listeners) elem.addEventListener(type, fn);
   addOnWindowBlurFn(BLUR_FN_ID, clearPresses);
-  addInputListenerRemover(removeMouseListeners);
   removeListeners = () => {
     for (const [elem, type, fn] of listeners) elem.removeEventListener(type, fn);
     deleteAddOnWindowBlurFn(BLUR_FN_ID);
