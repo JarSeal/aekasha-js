@@ -569,6 +569,41 @@ As built:
     chunks requested.
   - Tests: `embedBuild.test.ts` (the crawl), `bundleModel.test.ts` (the main chunk),
     `bundleDiff.test.ts` (the baseline's name).
+- **§3, the banner** (`src/app/profiles/banner/`, laid out as a scene folder; `sbp.config.ts`'
+  `banner` profile replaced the probe):
+  - **The scene** (`banner.scene.json`, `banner.ts`): a dodecahedron (Plato's solid of the aether,
+    the fifth element) from three's `DodecahedronGeometry` through `saveBufferGeometry`, turned
+    by a scene app looper (`createSceneAppLooper`, `world.setTransform`: the app's `SpinComponent`
+    needs `appECSPlugins`, which a `features: []` embed doesn't install). The camera
+    (`bannerCamera`, fov 35 at z 6), one directional light (`bannerLight`, neutral white: an orange
+    light on the teal turned it muddy green) and the material come from JSON; no background.
+  - **The material** (`bannerAether.material.json`, `.tsl.ts`, `STANDARDNODEMATERIAL`): `colorNode`
+    an indigo-to-teal gradient up the shape (object space), `emissiveNode` a cyan rim
+    (`1 - |n·v|`, view space, breathing with `time`) plus the brand orange on the faces turned
+    upward (world space, so it travels over the shape). A polyhedron's normals are its faces', so
+    every face is one tint. The three typings infer `vec3` for the rim's float chain unless each
+    step is annotated `Node<'float'>`.
+  - **The entry** (`banner.embed.ts`): `mount(opts: BannerMountOptions)` binds the profile's data,
+    `features: []`, `renderer: { alpha: true, antialias: true }` (the caller's merged over) and
+    `assetBaseUrl: new URL('.', import.meta.url)` in a build only (`import.meta.env.DEV` folds it;
+    the dev server serves the files from its root). Regions `banner-scene` and `banner-embed` name
+    Phase 6's pages.
+  - **The Hub image** (`banner.hub.png`, CARD 1600 × 1000, transparent): `_dbg__exampleHub.ts` gives
+    `banner` the Hub tab (`OTHER_HUB_SCENES`) and saves it without the background
+    (`TRANSPARENT_HUB_SCENES`, `takeSnapshotAsync({ transparent })`), the poster of D9's
+    `::: embed`, which the page shows through as it does the live embed. Saved by calling
+    `saveHubImageAsync` from Playwright in the debug env.
+  - **Measured** (`yarn sbp --profile banner`): initial **300.6 KiB gzip** (the shared chunk 298.4,
+    the CSS 2.0, the facade 0.2; three 608 kB of the modules' 686 kB), no feature in the build, lazy
+    26 files 752.9 KiB. The built embed over a host page's gradient: transparent, turning (two
+    frames apart differ), not the fallback, no error but the browser's own favicon request.
+  - **Elsewhere:** `moveRules.ts` maps `src/app/profiles/<id>/` (a subfolder rule under the app
+    layout's plan id: the codemod's `MovePlan` lists the plans whose moves it applies, and this is
+    a keep); `moveMap.ts`' outputs regenerated (stale since Phase 3's new engine files; boundary
+    violations unchanged). `moveMap.ts` reads the git index, so it fails on the committed probe
+    until §3's deletion is staged. The root `CLAUDE.md`'s app layout lists `profiles/<id>/`.
+    `verify:scenes --only banner`: new in all four configurations, no error (no baseline yet;
+    record it with `--update --only banner`).
 
 ### Phase 5: studies
 

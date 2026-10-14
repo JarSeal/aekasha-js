@@ -1,7 +1,8 @@
 /**
  * The Smallest Build Possible's profiles (p611 D2): the builds `yarn sbp` measures and the budgets
- * they must stay within (gzip bytes; `devTools/sbp/config.ts`' `SbpBudgets`). The embed profiles
- * (`banner`) come with p611 Phase 4.
+ * they must stay within (gzip bytes; `devTools/sbp/config.ts`' `SbpBudgets`): the template app,
+ * and the embeds (p611 D7), each an entry module the gatherer writes its scenes' data for
+ * (`src/generated/profiles/<id>/`) and `yarn sbp --profile <id>` builds into `dist-embed/<id>/`.
  *
  * A budget is the size it was set at plus about 4% (at least 1 KiB), rounded up to a whole KiB.
  * Over it fails `yarn sbp` and `yarn build`: shrink the build, or raise the budget in the same
@@ -51,8 +52,12 @@ const profiles: SbpProfile[] = [
       },
     },
   },
-  // TEMPORARY (p611 Phase 4 §2 probe)
-  { id: 'probe', entry: 'src/app/profiles/probe/probe.embed.ts', scenes: ['exampleQuickStart'] },
+  {
+    // The banner embed (p611 D8): one code-made scene, no feature, built into dist-embed/banner/
+    id: 'banner',
+    entry: 'src/app/profiles/banner/banner.embed.ts',
+    scenes: ['banner'],
+  },
 ];
 
 export default profiles;

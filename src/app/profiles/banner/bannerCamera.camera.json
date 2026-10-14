@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../../.schemas/camera.schema.json",
+  "camProps": {
+    "type": "PERSPECTIVE",
+    "fov": 35,
+    "near": 0.1,
+    "far": 50,
+    "position": { "x": 0, "y": 0, "z": 6 },
+    "lookAtPoint": { "x": 0, "y": 0, "z": 0 },
+    "active": true
+  },
+  "entityOpts": {
+    "appId": "bannerCamera",
+    "debugData": { "name": "Banner camera" }
+  }
+}

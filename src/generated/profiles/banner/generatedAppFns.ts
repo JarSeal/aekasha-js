@@ -8,8 +8,8 @@ export const sceneFileObjects: {
     assets: ScenePrimitiveAssets;
   }) => Promise<void>;
 } = {
-  exampleQuickStart: async ({ sceneData, assets }) => {
-    const module = await import('../../../app/./examples/quickStart/exampleQuickStart.ts');
+  banner: async ({ sceneData, assets }) => {
+    const module = await import('../../../app/./profiles/banner/banner.ts');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
@@ -19,7 +19,7 @@ export const sceneFileObjects: {
 };
 
 export const tslMaterialFileObjects = {
-  triplanarCheckerboard: () => import('../../../toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts'),
+  bannerAether: () => import('../../../app/profiles/banner/bannerAether.tsl.ts'),
 };
 
 export const postFxFileObjects = {};

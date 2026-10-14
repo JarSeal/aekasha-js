@@ -969,6 +969,96 @@
       "sceneFile": "./examples/toolkit/exampleToolkit.ts",
       "__features": []
     },
+    "banner": {
+      "name": "Banner (the SBP floor)",
+      "description": "The banner embed's scene (p611 D8): a dodecahedron, Plato's solid of the aether, made in code with a TSL material, one light and the camera, slowly turning on a transparent background. No loader, no feature: the smallest build an embed can be.",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.1,
+            "far": 50,
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 6
+            },
+            "lookAtPoint": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "type": "PERSPECTIVE",
+            "fov": 35,
+            "appId": "bannerCamera"
+          },
+          "entityOpts": {
+            "appId": "bannerCamera",
+            "debugData": {
+              "name": "Banner camera"
+            }
+          }
+        }
+      ],
+      "lights": [
+        {
+          "lightProps": {
+            "type": "DIRECTIONAL",
+            "color": "#eef4ff",
+            "intensity": 3,
+            "position": {
+              "x": 4,
+              "y": 5,
+              "z": 6
+            },
+            "targetPos": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "appId": "bannerLight"
+          },
+          "entityOpts": {
+            "appId": "bannerLight",
+            "debugData": {
+              "name": "Banner light"
+            }
+          }
+        }
+      ],
+      "materials": [
+        {
+          "id": "bannerAether",
+          "debugData": {
+            "name": "Banner aether",
+            "description": "The banner's faceted surface: an indigo-to-teal gradient up the shape, a cyan rim that glows where a face turns away from the camera, breathing slowly, and a warm glow on the faces that turn upward."
+          },
+          "params": {
+            "roughness": 0.35,
+            "metalness": 0.2
+          },
+          "tslFile": "profiles/banner/bannerAether.tsl.ts",
+          "nodes": {
+            "colorNode": {
+              "colorLow": "#262c6b",
+              "colorHigh": "#1a93b8"
+            },
+            "emissiveNode": {
+              "rimColor": "#00d4ff",
+              "rimPower": 2.5,
+              "rimIntensity": 1.6,
+              "pulseSpeed": 0.6,
+              "warmColor": "#ff9955",
+              "warmIntensity": 0.6
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        }
+      ],
+      "id": "banner",
+      "sceneFile": "./profiles/banner/banner.ts",
+      "__features": []
+    },
     "assetCompare": {
       "isDebugScene": true,
       "name": "Asset compare (p300 codec variants)",
@@ -14698,6 +14788,33 @@
       },
       "__sourcePath": "src/app/examples/toolkit/exampleToolkitCamera.camera.json"
     },
+    "bannerCamera": {
+      "camProps": {
+        "active": true,
+        "near": 0.1,
+        "far": 50,
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 6
+        },
+        "lookAtPoint": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "type": "PERSPECTIVE",
+        "fov": 35,
+        "appId": "bannerCamera"
+      },
+      "entityOpts": {
+        "appId": "bannerCamera",
+        "debugData": {
+          "name": "Banner camera"
+        }
+      },
+      "__sourcePath": "src/app/profiles/banner/bannerCamera.camera.json"
+    },
     "largeWorldOverview": {
       "camProps": {
         "active": true,
@@ -15320,6 +15437,31 @@
         }
       },
       "__sourcePath": "src/app/examples/toolkit/exampleToolkitSun.light.json"
+    },
+    "bannerLight": {
+      "lightProps": {
+        "type": "DIRECTIONAL",
+        "color": "#eef4ff",
+        "intensity": 3,
+        "position": {
+          "x": 4,
+          "y": 5,
+          "z": 6
+        },
+        "targetPos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "appId": "bannerLight"
+      },
+      "entityOpts": {
+        "appId": "bannerLight",
+        "debugData": {
+          "name": "Banner light"
+        }
+      },
+      "__sourcePath": "src/app/profiles/banner/bannerLight.light.json"
     },
     "largeWorldAmbient": {
       "lightProps": {
@@ -23657,6 +23799,34 @@
     }
   },
   "materials": {
+    "bannerAether": {
+      "id": "bannerAether",
+      "debugData": {
+        "name": "Banner aether",
+        "description": "The banner's faceted surface: an indigo-to-teal gradient up the shape, a cyan rim that glows where a face turns away from the camera, breathing slowly, and a warm glow on the faces that turn upward."
+      },
+      "params": {
+        "roughness": 0.35,
+        "metalness": 0.2
+      },
+      "tslFile": "profiles/banner/bannerAether.tsl.ts",
+      "nodes": {
+        "colorNode": {
+          "colorLow": "#262c6b",
+          "colorHigh": "#1a93b8"
+        },
+        "emissiveNode": {
+          "rimColor": "#00d4ff",
+          "rimPower": 2.5,
+          "rimIntensity": 1.6,
+          "pulseSpeed": 0.6,
+          "warmColor": "#ff9955",
+          "warmIntensity": 0.6
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/app/profiles/banner/bannerAether.material.json"
+    },
     "lodShowcaseSphere": {
       "id": "lodShowcaseSphere",
       "params": {
