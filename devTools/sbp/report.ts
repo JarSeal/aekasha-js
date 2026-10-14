@@ -3,7 +3,13 @@
  * groups, the feature view, the diff against `bundle.json`, the budgets) as data for
  * `.cache/sbp/report.json`, and as the lines the command prints.
  */
-import { type BundleFinding, diffBundle, formatKB, readBundleBaseline } from './bundleDiff';
+import {
+  type BundleFinding,
+  diffBundle,
+  formatKB,
+  getBundleBaselineFile,
+  readBundleBaseline,
+} from './bundleDiff';
 import { buildFeatureView } from './bundleFeatures';
 import { type BudgetCheck, checkBudgets, isBudgetFailure, suggestBudget } from './budgets';
 import type { CollectedBundle, Size } from './bundleModel';
@@ -16,7 +22,8 @@ import {
   getEntryModuleId,
   indexModuleGraph,
 } from './bundleWhy';
-import { APP_ENTRY, KIB, type SbpProfile } from './config';
+import path from 'path';
+import { KIB, type SbpProfile } from './config';
 
 /** Bump when the report's shape changes: Hub pages read it (p611 D9) */
 export const REPORT_FORMAT_VERSION = 2;
@@ -42,7 +49,8 @@ export type ProfileReport = {
   lazy: LoadReport;
   groups: Record<string, SplitGroupSize>;
   features: FeatureReport[];
-  /** Against `devTools/verify/baselines/bundle.json` (the `app` profile only); null without one */
+  /** Against the profile's committed baseline (`devTools/verify/baselines/bundle.json`, an
+   * embed's `bundle.<id>.json`); null without one */
   diff: BundleFinding[] | null;
   /** The profile's budgets checked (`sbp.config.ts`); null when it has none */
   budgets: BudgetCheck[] | null;
@@ -81,7 +89,7 @@ export const measureProfile = (opts: {
     scenes: opts.scenes,
     dataFeatures: opts.dataFeatures,
   }).map(({ why, ...row }) => ({ ...row, why: why && formatImportChain(why) }));
-  const baseline = opts.profile.entry === APP_ENTRY ? readBundleBaseline() : null;
+  const baseline = readBundleBaseline(getBundleBaselineFile(opts.profile.id));
   const initial = pick(split.initial, bundle.chunks);
   const budgets = opts.profile.budgets
     ? checkBudgets(opts.profile.budgets, {
@@ -171,6 +179,7 @@ const formatFeatures = (features: FeatureReport[], c: Colors) => {
   const width = Math.max(...features.map((f) => f.feature.length), 7);
   return [
     `features ${c.dim}(initial, lazy; the scenes whose data needs it; why it's in the initial chunks)${c.reset}`,
+    ...(features.length ? [] : [`  ${c.dim}none in the build${c.reset}`]),
     ...features.flatMap((f) => {
       const data = !f.hasDataPart
         ? `${c.dim}code only (no scene data names it)${c.reset}`
@@ -185,11 +194,14 @@ const formatFeatures = (features: FeatureReport[], c: Colors) => {
   ];
 };
 
-const formatDiff = (diff: BundleFinding[] | null, c: Colors) => {
-  if (!diff) return [`diff against bundle.json: ${c.dim}none (the app profile only)${c.reset}`];
-  if (!diff.length) return [`diff against bundle.json: ${c.green}unchanged${c.reset}`];
+const formatDiff = (diff: BundleFinding[] | null, profileId: string, c: Colors) => {
+  const name = path.basename(getBundleBaselineFile(profileId));
+  if (!diff) {
+    return [`diff against ${name}: ${c.dim}no baseline (yarn verify:baselines --update)${c.reset}`];
+  }
+  if (!diff.length) return [`diff against ${name}: ${c.green}unchanged${c.reset}`];
   return [
-    `diff against bundle.json ${c.dim}(yarn verify:baselines records it)${c.reset}`,
+    `diff against ${name} ${c.dim}(yarn verify:baselines records it)${c.reset}`,
     ...diff.map((f) => `  ${f.attention ? `${c.red}✗` : `${c.dim}·`} ${f.line}${c.reset}`),
   ];
 };
@@ -245,7 +257,7 @@ export const formatReport = (report: ProfileReport, c: Colors): string[] => [
   '',
   ...formatFeatures(report.features, c),
   '',
-  ...formatDiff(report.diff, c),
+  ...formatDiff(report.diff, report.profile.id, c),
   '',
   ...formatBudgets(report.budgets, c),
 ];

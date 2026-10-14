@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BUNDLE_FORMAT_VERSION, type BundleBaseline } from './bundleModel';
-import { diffBundle, readBundleBaseline } from './bundleDiff';
+import { diffBundle, getBundleBaselineFile, readBundleBaseline } from './bundleDiff';
 
 const bundle = (
   chunks: Record<string, number>,
@@ -52,5 +52,14 @@ describe('readBundleBaseline', () => {
 
   it('reads a missing file as none', () => {
     expect(readBundleBaseline('/nonexistent/bundle.json')).toBeNull();
+  });
+});
+
+describe('getBundleBaselineFile', () => {
+  it('is bundle.json for the app, bundle.<id>.json next to it for an embed', () => {
+    expect(getBundleBaselineFile('app')).toMatch(/devTools\/verify\/baselines\/bundle\.json$/);
+    expect(getBundleBaselineFile('banner')).toMatch(
+      /devTools\/verify\/baselines\/bundle\.banner\.json$/
+    );
   });
 });

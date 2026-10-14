@@ -8,6 +8,8 @@ yarn-error.log
 **/dist-stats
 # The Ækasha Hub's public build (yarn hub:build)
 dist-hub/
+# The SBP embed profiles' builds (yarn sbp --profile <id>, p611 D7)
+dist-embed/
 # TypeDoc output (yarn docs); wiped and regenerated on every run
 docs-api/
 *.blend[0-9]

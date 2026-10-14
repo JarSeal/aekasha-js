@@ -66,7 +66,7 @@ describe('splitBundle', () => {
   });
 
   it('throws on an entry file missing from the build', () => {
-    expect(() => splitBundle(MANIFEST, {})).toThrow(/isn't in dist\/assets/);
+    expect(() => splitBundle(MANIFEST, {})).toThrow(/isn't in the build/);
   });
 
   it('sums sizes', () => {

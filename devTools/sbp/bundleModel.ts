@@ -2,7 +2,8 @@
  * The production build's bundle model (p611 D1), shared by `yarn verify:baselines` (its
  * `bundle.json`) and `yarn sbp`: every file in `dist/assets/` by its name without the content
  * hash, and the visualizer's modules (`dist-stats/bundle-stats.html`: rendered and gzip sizes per
- * chunk, before minification, as p600 §2.4 counts) summed per group.
+ * chunk, before minification, as p600 §2.4 counts) summed per group. An embed profile's build
+ * (`dist-embed/<id>/`, `embedBuild.ts`) is measured the same way, every file of its folder counted.
  *
  * It only reads a build; making one is the caller's. A missing or mismatched build throws.
  */
@@ -14,9 +15,23 @@ import type { BuildModule, EmittedAsset } from '../verify/debugInProduction';
 
 /** Bump when `bundle.json`'s shape changes: an old one is then read as missing */
 export const BUNDLE_FORMAT_VERSION = 1;
-export const DIST_ASSETS_DIR = path.join(ROOT, 'dist/assets');
-export const MANIFEST_FILE = path.join(ROOT, 'dist/.vite/manifest.json');
 export const VISUALIZER_FILE = path.join(ROOT, 'dist-stats/bundle-stats.html');
+
+/** Where a build is: its output folder, its visualizer report, and which of its files count */
+export type BuildLocation = {
+  outDir: string;
+  statsFile: string;
+  /** Only `assets/` (the app: `dist/` also holds the public folder's copy and `index.html`), or
+   * every file but `.vite/` (an embed: its entry, its data's files and its decoders too) */
+  isAssetsOnly: boolean;
+};
+
+/** The template app's `yarn build` */
+export const APP_BUILD: BuildLocation = {
+  outDir: path.join(ROOT, 'dist'),
+  statsFile: VISUALIZER_FILE,
+  isAssetsOnly: true,
+};
 
 export type Size = { bytes: number; gzip: number };
 export type GroupSize = { modules: number; rendered: number; gzip: number };
@@ -122,13 +137,24 @@ export const keyFiles = (files: string[]): Record<string, string> => {
   return keys;
 };
 
-/** Every file in a build's `assets/` folder by its key ({@link keyFiles}) with its bytes and
- * gzip (level 9), and the hashed name → key map */
-export const measureFiles = (dir = DIST_ASSETS_DIR) => {
-  const fileKeys = keyFiles(fs.readdirSync(dir).map((name) => `assets/${name}`));
+/** A build's files that count, as paths from its output folder with `/` */
+export const listBuildFiles = ({ outDir, isAssetsOnly }: BuildLocation) => {
+  const list = (dir: string): string[] =>
+    fs.readdirSync(path.join(outDir, dir), { withFileTypes: true }).flatMap((entry) => {
+      const rel = dir ? `${dir}/${entry.name}` : entry.name;
+      if (!entry.isDirectory()) return [rel];
+      return rel === '.vite' ? [] : list(rel);
+    });
+  return list(isAssetsOnly ? 'assets' : '');
+};
+
+/** Every file of a build that counts by its key ({@link keyFiles}) with its bytes and gzip
+ * (level 9), and the hashed name → key map */
+export const measureFiles = (build: BuildLocation = APP_BUILD) => {
+  const fileKeys = keyFiles(listBuildFiles(build));
   const chunks: Record<string, Size> = {};
   for (const [file, key] of Object.entries(fileKeys)) {
-    const data = fs.readFileSync(path.join(dir, path.basename(file)));
+    const data = fs.readFileSync(path.join(build.outDir, file));
     chunks[key] = { bytes: data.length, gzip: zlib.gzipSync(data, { level: 9 }).length };
   }
   return { chunks, fileKeys };
@@ -176,6 +202,44 @@ export const listEmittedAssets = (
   return assets.sort((a, b) => a.file.localeCompare(b.file));
 };
 
+/**
+ * The main chunk: the largest of the entry's chunk and the chunks it imports statically (the
+ * modules' gzip). The app's is its entry's; an embed's entry only re-exports what a shared chunk
+ * holds, which the scenes' and materials' chunks import too.
+ */
+export const findMainChunkFile = (manifest: Manifest, data: VisualizerData) => {
+  const entry = Object.values(manifest).find((m) => m.isEntry);
+  if (!entry) return null;
+  const gzipOf = (file: string) =>
+    Object.values(data.nodeMetas).reduce(
+      (n, meta) =>
+        n + (meta.moduleParts[file] ? data.nodeParts[meta.moduleParts[file]].gzipLength : 0),
+      0
+    );
+  const candidates = [
+    entry.file,
+    ...(entry.imports ?? []).flatMap((key) => (manifest[key] ? [manifest[key].file] : [])),
+  ];
+  // Stable: the entry wins a tie
+  return candidates.reduce((best, file) => (gzipOf(file) > gzipOf(best) ? file : best));
+};
+
+/** Drops the visualizer's parts in files the build doesn't have (an embed's pruned files) */
+const keepPartsIn = (data: VisualizerData, files: Set<string>): VisualizerData => ({
+  nodeParts: data.nodeParts,
+  nodeMetas: Object.fromEntries(
+    Object.entries(data.nodeMetas).map(([uid, meta]) => [
+      uid,
+      {
+        ...meta,
+        moduleParts: Object.fromEntries(
+          Object.entries(meta.moduleParts).filter(([file]) => files.has(file))
+        ),
+      },
+    ])
+  ),
+});
+
 /** The main (entry) chunk's totals and its modules summed per group */
 export const measureMainChunk = (entryFile: string, data: VisualizerData) => {
   const groups: Record<string, GroupSize> = {};
@@ -208,24 +272,31 @@ export type CollectedBundle = {
 };
 
 /**
- * Measures the last build in `dist/` and `dist-stats/`.
+ * Measures the last build of the app (`dist/` and `dist-stats/`) or of an embed profile.
  * @throws when there is no build, its manifest names no entry, or the visualizer's data is
  *   missing or from another build
  */
-export const collectBundle = (): CollectedBundle => {
-  const manifest = readJSON<Manifest>(MANIFEST_FILE);
-  if (!manifest || !fs.existsSync(DIST_ASSETS_DIR)) {
-    throw new Error('No dist/ build to measure: run without --no-build, or yarn build first');
+export const collectBundle = (build: BuildLocation = APP_BUILD): CollectedBundle => {
+  const manifestFile = path.join(build.outDir, '.vite/manifest.json');
+  const outDir = path.relative(ROOT, build.outDir);
+  const manifest = readJSON<Manifest>(manifestFile);
+  if (!manifest || !fs.existsSync(path.join(build.outDir, 'assets'))) {
+    throw new Error(`No ${outDir}/ build to measure: run without --no-build`);
   }
-  const entry = Object.values(manifest).find((m) => m.isEntry);
-  if (!entry) throw new Error(`${path.relative(ROOT, MANIFEST_FILE)} names no entry chunk`);
-  const { chunks, fileKeys } = measureFiles();
-  const data = readVisualizerData();
-  if (!data) throw new Error(`No visualizer data in ${path.relative(ROOT, VISUALIZER_FILE)}`);
-  const { main, mainGroups } = measureMainChunk(entry.file, data);
+  if (!Object.values(manifest).some((m) => m.isEntry)) {
+    throw new Error(`${path.relative(ROOT, manifestFile)} names no entry chunk`);
+  }
+  const { chunks, fileKeys } = measureFiles(build);
+  const rawData = readVisualizerData(build.statsFile);
+  if (!rawData) {
+    throw new Error(`No visualizer data in ${path.relative(ROOT, build.statsFile)}`);
+  }
+  const data = keepPartsIn(rawData, new Set(Object.keys(fileKeys)));
+  const mainFile = findMainChunkFile(manifest, data)!;
+  const { main, mainGroups } = measureMainChunk(mainFile, data);
   if (!main.modules) {
     throw new Error(
-      `The visualizer data has no modules in ${entry.file}: dist-stats/ is from another build`
+      `The visualizer data has no modules in ${mainFile}: ${path.relative(ROOT, build.statsFile)} is from another build`
     );
   }
   return {

@@ -51,6 +51,8 @@ const profiles: SbpProfile[] = [
       },
     },
   },
+  // TEMPORARY (p611 Phase 4 §2 probe)
+  { id: 'probe', entry: 'src/app/profiles/probe/probe.embed.ts', scenes: ['exampleQuickStart'] },
 ];
 
 export default profiles;

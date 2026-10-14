@@ -55,7 +55,7 @@ export const splitBundle = (manifest: Manifest, fileKeys: Record<string, string>
     for (const css of chunk.css ?? []) initialFiles.add(css);
   }
   for (const file of initialFiles) {
-    if (!fileKeys[file]) throw new Error(`The manifest's ${file} isn't in dist/assets/`);
+    if (!fileKeys[file]) throw new Error(`The manifest's ${file} isn't in the build`);
   }
   const initial: string[] = [];
   const lazy: string[] = [];

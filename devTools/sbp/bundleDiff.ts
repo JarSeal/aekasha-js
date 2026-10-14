@@ -11,6 +11,13 @@ import { BUNDLE_FORMAT_VERSION, type BundleBaseline } from './bundleModel';
 
 export const BUNDLE_BASELINE_FILE = path.join(ROOT, 'devTools/verify/baselines/bundle.json');
 
+/** A profile's committed bundle baseline: `bundle.json` for the app, `bundle.<id>.json` next to
+ * it for an embed (p611 D7) */
+export const getBundleBaselineFile = (profileId: string) =>
+  profileId === 'app'
+    ? BUNDLE_BASELINE_FILE
+    : path.join(path.dirname(BUNDLE_BASELINE_FILE), `bundle.${profileId}.json`);
+
 /** A diff line; `attention` ones need a look (`verify:baselines` exits 1 on them) */
 export type BundleFinding = { line: string; attention: boolean };
 

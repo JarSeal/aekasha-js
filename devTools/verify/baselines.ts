@@ -9,6 +9,8 @@
  *   and the main chunk's modules summed per group (three, Rapier, each engine folder, toolkit,
  *   app; the visualizer's rendered and gzip sizes, before minification, as p600 §2.4 counts).
  *   The measuring is `devTools/sbp/bundleModel.ts`', which `yarn sbp` shares (p611 D1).
+ * - `bundle.<id>.json`: the same for each embed profile (`sbp.config.ts`, p611 D7), every file of
+ *   its `dist-embed/<id>/`, built after the app on the same production gather.
  * - `api.json`: every export of the documented API (the Hub's TypeDoc model: `src/_engine` and
  *   `src/toolkit` minus `_dbg__*`, tests and the entries) by module, with its kind,
  *   and each public entry's (`aekasha`, `aekasha/*`, p606) export names, read from its file.
@@ -25,7 +27,7 @@
  * the baselines (commit them with the change that explains them), but refuses a grown undocumented
  * count unless it's given `--allow-docs-drop` as well, so a drop is recorded only on purpose.
  *
- * The same build is checked for debug code (p607 D7, `debugInProduction.ts`): a `_dbg__` chunk or
+ * The same builds are checked for debug code (p607 D7, `debugInProduction.ts`): a `_dbg__` chunk or
  * module, or a `debug/*.ts` wrapper, fails the run and `--update` records nothing.
  *
  * It runs the production build's steps first (decoders, the production gather, `vite build`, then
@@ -46,7 +48,11 @@ import { out, PROGRESS_LOG_WATCH, setProgressLogEnabled } from './progressLog';
 import { type BuildModule, type EmittedAsset, findDebugCodeInBuild } from './debugInProduction';
 import { type BundleBaseline, collectBundle, sortKeys } from '../sbp/bundleModel';
 import { diffBundle, formatKB } from '../sbp/bundleDiff';
-import { buildAppBundle } from '../sbp/appBuild';
+import { buildBundles } from '../sbp/appBuild';
+import { getBundleBaselineFile } from '../sbp/bundleDiff';
+import { getEmbedBuildLocation } from '../sbp/embedBuild';
+import { getEmbedProfiles } from '../gatherOutput';
+import sbpProfiles from '../../sbp.config';
 
 /** Bump when that file's shape changes: an old one is then read as missing (`bundle.json`'s is
  * `bundleModel.ts`') */
@@ -127,12 +133,13 @@ const formatShare = (c: Coverage) =>
 
 /** Prints the debug check's findings (p607 D7); returns their count */
 const reportDebugCode = (
+  label: string,
   bundle: BundleBaseline,
   modules: BuildModule[],
   assets: EmittedAsset[]
 ) => {
   const findings = findDebugCodeInBuild({ files: Object.keys(bundle.chunks), modules, assets });
-  out(`\nproduction build: debug code`);
+  out(`\n${label}: debug code`);
   if (!findings.length) out(`  ${GREEN}none${RESET}`);
   for (const line of findings) out(`  ${RED}✗ ${line}${RESET}`);
   return findings.length;
@@ -412,8 +419,15 @@ const main = async () => {
   if (!args.docsOnly) out(`${DIM}Watch it: ${PROGRESS_LOG_WATCH}${RESET}\n`);
   const started = Date.now();
 
-  if (args.build && !args.docsOnly) await buildAppBundle();
+  // The embed profiles' builds too (p611 D7), each with its baseline next to bundle.json
+  const embedIds = args.docsOnly ? [] : getEmbedProfiles(sbpProfiles).map((p) => p.id);
+  if (args.build && !args.docsOnly) await buildBundles({ isApp: true, embedIds });
   const { bundle = null, modules = [], assets = [] } = args.docsOnly ? {} : collectBundle();
+  const embeds = embedIds.map((id) => ({
+    id,
+    name: path.basename(getBundleBaselineFile(id)),
+    ...collectBundle(getEmbedBuildLocation(id)),
+  }));
   const { api, docs, locations } = await collectApiAndDocs();
 
   const exportCount = Object.values(api.modules).reduce((n, m) => n + Object.keys(m).length, 0);
@@ -427,6 +441,15 @@ const main = async () => {
             bundle,
             diffBundle,
             args.update
+          ),
+          ...embeds.map((embed) =>
+            report(
+              embed.name,
+              `embed ${embed.id}: ${Object.keys(embed.bundle.chunks).length} files; main ${embed.bundle.main.chunk} ${embed.bundle.main.modules} modules, ${formatKB(embed.bundle.main.gzip)} gzip`,
+              embed.bundle,
+              diffBundle,
+              args.update
+            )
           ),
           report(
             'api.json',
@@ -446,7 +469,13 @@ const main = async () => {
     ),
   ];
 
-  const debugFindings = bundle ? reportDebugCode(bundle, modules, assets) : 0;
+  const debugFindings =
+    (bundle ? reportDebugCode('production build', bundle, modules, assets) : 0) +
+    embeds.reduce(
+      (n, embed) =>
+        n + reportDebugCode(`embed ${embed.id}`, embed.bundle, embed.modules, embed.assets),
+      0
+    );
   const attention = results.reduce((n, r) => n + r.attention, debugFindings);
   const changes = results.reduce((n, r) => n + r.changes, 0);
   const docsDrops = results.find((r) => r.name === 'docs.json')?.attention ?? 0;
@@ -466,6 +495,7 @@ const main = async () => {
     }
     if (bundle) {
       writeBaseline('bundle.json', bundle);
+      for (const embed of embeds) writeBaseline(embed.name, embed.bundle);
       writeBaseline('api.json', api);
     }
     writeBaseline('docs.json', docs);

@@ -55,7 +55,7 @@ describe('checkSbpProfiles', () => {
           entry: 'src/index.html',
           budgets: {
             initial: 1.5,
-            chunks: { 'index.js': 1, 'assets/a.js': -1 },
+            chunks: { 'assets/sub/a.js': 1, 'assets/a.js': -1 },
             groups: { '/three': 1, three: 0 },
             modules: { '/src/_engine/ui/': 0, '_engine/ui/icons/': 0 },
           },
@@ -63,7 +63,7 @@ describe('checkSbpProfiles', () => {
       ])
     ).toEqual([
       'profile app: budgets.initial: a whole number of bytes, 0 or more',
-      'profile app: budgets.chunks "index.js": a file of dist/assets/ (assets/index.js)',
+      'profile app: budgets.chunks "assets/sub/a.js": a file of assets/, or an embed\'s entry (assets/index.js)',
       'profile app: budgets.chunks assets/a.js: a whole number of bytes, 0 or more',
       'profile app: budgets.groups "/three": a group (three, _engine/features/physics)',
       'profile app: budgets.modules "/src/_engine/ui/": a path from src/ (_engine/ui/icons/ or …/BuiltInIcons.ts)',

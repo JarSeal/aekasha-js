@@ -17,7 +17,8 @@ import { OUTPUT_FILE_DATA } from './gatherAppData';
  * keeps every current output instead of too few.
  */
 
-const collectUrls = (value: unknown, urls: Set<string>) => {
+/** Every `__url` in the generated data, into `urls` */
+export const collectUrls = (value: unknown, urls: Set<string>) => {
   if (Array.isArray(value)) {
     for (const item of value) collectUrls(item, urls);
   } else if (value && typeof value === 'object') {

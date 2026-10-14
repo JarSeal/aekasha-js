@@ -64,7 +64,7 @@ describe('the text', () => {
     expect(lines).toContain('initial: 1 file(s), 0.0 kB gzip (0.0 kB)');
     expect(lines.some((l) => /^ {2}physics .* no scene's data needs it/.test(l))).toBe(true);
     expect(lines.slice(-3)).toEqual([
-      'diff against bundle.json: none (the app profile only)',
+      'diff against bundle.test.json: no baseline (yarn verify:baselines --update)',
       '',
       'budgets: none (sbp.config.ts)',
     ]);

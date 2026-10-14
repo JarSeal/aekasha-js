@@ -16,8 +16,9 @@ export type SbpBudgets = {
   /** What loads before the first frame: the entry chunk, its static imports and their CSS (the
    * report's `initial.total`, the files' gzip) */
   initial?: number;
-  /** A file of `dist/assets/` by its key (`assets/index.js`, as `bundle.json` names it), initial or
-   * lazy; a key with no file in the build fails too */
+  /** A file of the build's `assets/` by its key (`assets/index.js`, as `bundle.json` names it), or
+   * an embed's entry (`banner.embed.js`), initial or lazy; a key with no file in the build fails
+   * too */
   chunks?: Record<string, number>;
   /** A group's modules in the initial chunks (`three`, `_engine/features/physics`, `app`: the
    * report's groups, the modules' gzip before minification); a group with no code there is 0 */
@@ -66,7 +67,7 @@ const checkBudgets = (id: string, budgets: SbpBudgets): string[] => {
     problems.push(`${at}.initial: a whole number of bytes, 0 or more`);
   }
   const keyRules: Record<'chunks' | 'groups' | 'modules', [RegExp, string]> = {
-    chunks: [/^assets\/[^/]+$/, 'a file of dist/assets/ (assets/index.js)'],
+    chunks: [/^(?:assets\/)?[^/\s]+$/, "a file of assets/, or an embed's entry (assets/index.js)"],
     groups: [/^[^/\s](?:\S*[^/\s])?$/, 'a group (three, _engine/features/physics)'],
     modules: [/^[^/\s.][^\s]*$/, 'a path from src/ (_engine/ui/icons/ or …/BuiltInIcons.ts)'],
   };

@@ -1,20 +1,21 @@
 /**
- * The Smallest Build Possible report and budgets (p611 Phases 1-2):
+ * The Smallest Build Possible report and budgets (p611 Phases 1-2, embeds Phase 4):
  *
  *   yarn sbp [--profile <id>] [--no-build] [--why <group | module path>] [--json] [--brief]
  *
  * Builds a profile (`sbp.config.ts`; `app` by default: `yarn build`'s bundle steps, as
- * `yarn verify:baselines` runs them), then reports what loads before the first frame and what
- * loads later, each group's share, each engine feature's size and why it's in the initial chunks
- * (the shortest static import chain from the entry) next to the scenes whose data needs it, and
- * the diff against the committed `devTools/verify/baselines/bundle.json` (`verify:baselines`
- * records it; the diff never fails), then checks the profile's budgets (`sbp.config.ts`).
+ * `yarn verify:baselines` runs them; an embed into `dist-embed/<id>/`, `sbp/embedBuild.ts`), then
+ * reports what loads before the first frame and what loads later, each group's share, each engine
+ * feature's size and why it's in the initial chunks (the shortest static import chain from the
+ * entry) next to the scenes whose data needs it, and the diff against the profile's committed
+ * baseline (`devTools/verify/baselines/bundle.json`, an embed's `bundle.<id>.json`;
+ * `verify:baselines` records them; the diff never fails), then checks the profile's budgets.
  *
  * Exits 1 when a budget fails (over it, or a chunk budget with no file in the build), so
  * `yarn build` fails as it does for an asset over its budget; a budget well under is only
  * reported. With `--why` nothing fails but a query that matches nothing (1). Errors exit 2.
  *
- * - `--no-build` measures the last build in `dist/` and `dist-stats/`.
+ * - `--no-build` measures the profile's last build (`dist/`, `dist-embed/<id>/`).
  * - `--why <x>` prints the import chains to a group (`physics`, `kernel/assets`, `three`) or to
  *   the modules a path matches (`PhysicsTiers.ts`), instead of the report.
  * - `--json` prints the profile's report on stdout (the rest goes to the log, errors to stderr).
@@ -31,10 +32,11 @@ import path from 'path';
 import sbpProfiles from '../sbp.config';
 import { ROOT } from './assetPipeline/sources';
 import { ENGINE_SCHEMA_PARTS } from './engineSchemas';
-import { buildAppBundle } from './sbp/appBuild';
+import { buildBundles } from './sbp/appBuild';
 import { isBudgetFailure } from './sbp/budgets';
 import { readSceneFeatures } from './sbp/bundleFeatures';
-import { collectBundle } from './sbp/bundleModel';
+import { APP_BUILD, collectBundle } from './sbp/bundleModel';
+import { getEmbedBuildLocation } from './sbp/embedBuild';
 import { APP_ENTRY, checkSbpProfiles } from './sbp/config';
 import {
   type Colors,
@@ -111,8 +113,6 @@ const main = async () => {
     );
     return;
   }
-  // TODO(p611 Phase 4 §2): the embed build
-  if (profile.entry !== APP_ENTRY) fail(`Profile ${profile.id}: embeds don't build yet`);
 
   const watch = setProgressLogFile(LOG_FILE);
   if (args.json) setProgressLogConsole(false);
@@ -122,8 +122,9 @@ const main = async () => {
   out(`${COLORS.dim}Watch it: ${watch}${COLORS.reset}\n`);
   const started = Date.now();
 
-  if (args.build) await buildAppBundle();
-  const collected = collectBundle();
+  const isApp = profile.entry === APP_ENTRY;
+  if (args.build) await buildBundles({ isApp, embedIds: isApp ? [] : [profile.id] });
+  const collected = collectBundle(isApp ? APP_BUILD : getEmbedBuildLocation(profile.id));
   // The dev gather (a build ends with it): its debug scenes are left out, as the production
   // gather leaves them out
   const appData = readJSON<Parameters<typeof readSceneFeatures>[0]>(APP_DATA_FILE);

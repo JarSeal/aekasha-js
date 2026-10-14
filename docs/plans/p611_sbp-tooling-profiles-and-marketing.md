@@ -521,8 +521,54 @@ As built:
   or a debug scene fails the gather (both modes), as `checkSbpProfiles`' problems do; a folder no
   profile writes is removed, and `profiles/` once empty. `gatherSceneData({ profiles })` defaults to
   `sbp.config.ts`. `checkSbpProfiles` now takes an embed: a `.ts` entry under `src/`, `scenes`
-  required, none twice; `yarn sbp` refuses one until §2. The dev plugin ignores all of
-  `src/generated/`. Tests: `gatherOutput.test.ts`, `config.test.ts`.
+  required, none twice. The dev plugin ignores all of `src/generated/`. Tests:
+  `gatherOutput.test.ts`, `config.test.ts`.
+- **§2, the embed build** (`devTools/sbp/embedBuild.ts`): `AEK_EMBED_PROFILE=<id> vite build`
+  builds the profile instead of the app (`vite.config.ts` merges `getEmbedBuildConfig` and swaps
+  `assetOutputsBuildPlugin` for `embedOutputsPlugin` and the visualizer's file for
+  `dist-stats/embed-<id>/`): the entry at `dist-embed/<id>/<name>.js` without a hash
+  (`entryFileNames: '[name].js'`), the rest in `assets/`, `base: './'`, `publicDir: false`
+  (the app's copies all of `src/public/`, 433 MB). `dist-embed/` is gitignored.
+  - **Library mode compared** (Vite 6.4, `formats: ['es']`, the same entry): workers stay files,
+    but every `new URL` file is inlined as base64 (the GLTF job 148 kB → 2.7 MB, `DRACOLoader`
+    1.76 MB, `KTX2Loader` 848 kB with the decoders in them), ES output isn't minified (the main
+    chunk 2.09 MB vs 1.08 MB) and its CSS isn't linked either. Kept the app-style build.
+  - **The entry is a facade:** with `preserveEntrySignatures: 'exports-only'` and the scenes'
+    and materials' chunks importing the engine, Rollup puts the code in a shared chunk
+    (`assets/<name>.js`, the same key as the facade's name) and the entry re-exports `mount`
+    (0.2 kB). `findMainChunkFile` (`bundleModel.ts`) makes the main chunk the largest of the entry
+    and its static imports, which leaves the app's `assets/index.js`.
+  - **The CSS:** Vite emits a JS entry's CSS but nothing links it (checked: no chunk names it). The
+    plugin prepends a loop adding a `<link>` per CSS file of the entry and its static imports
+    (`viteMetadata.importedCss`), resolved against `import.meta.url`.
+  - **The data's files:** every `__url` of the profile's data copied from `src/public/`, `basis/`
+    when one is a KTX2, `draco/` when the data has imported assets; a missing file fails the build.
+  - **The prune:** after the build, a crawl from the entry, its CSS and the copied files through
+    the text files (JS, CSS) keeps every file whose name a kept file contains, and removes the
+    rest (listed in `.vite/aek-pruned.json`; `collectBundle` drops the visualizer's parts in
+    them). With `features: []` that's the physics worker, `EngineRapier` and Rapier (emitted only
+    because Vite bundles a `?worker` when it loads its importer). **The assets worker, its jobs,
+    the loaders and their decoders stay:** the kernel's asset code names them, so a scene file
+    can load a model or a KTX2 texture; dropping them by data would 404 such a scene. They're
+    deployed, never downloaded unless used: 753.8 KiB gzip of lazy files in the probe below.
+  - **Measuring:** `collectBundle(build)` takes a `BuildLocation` (`APP_BUILD`, or
+    `getEmbedBuildLocation(id)`: every file of the folder but `.vite/`, so the entry, the data's
+    files and the decoders count); the budgets' `chunks` keys may name a root file (an embed's
+    entry). `buildBundles({ isApp, embedIds })` (`appBuild.ts`) builds on one production gather.
+    `yarn sbp --profile <embed>` builds and measures it; its diff reads `bundle.<id>.json`
+    (`getBundleBaselineFile`), "no baseline" until one is recorded.
+  - **`verify:baselines`** builds every embed profile after the app, diffs and records each as
+    `bundle.<id>.json` next to `bundle.json`, and runs the debug check on each (none). `bundle.json`
+    unchanged.
+  - **A temporary `probe` profile** (`src/app/profiles/probe/`, `exampleQuickStart`, marked
+    TEMPORARY; §3 replaces it with the banner, nothing recorded for it): initial 299.6 KiB gzip
+    (the shared chunk 297.5, three nearly all of it; the CSS 2.0; the facade 0.2), lazy 26 files
+    753.8 KiB. Checked in Chrome from a plain host page served statically: mounted (not the
+    fallback), the canvas 300×300 at `width: '50%'` of a 600×300 target, the CSS linked, the host's
+    styles untouched, and only the facade, the shared chunk, the CSS, the scene's and its material's
+    chunks requested.
+  - Tests: `embedBuild.test.ts` (the crawl), `bundleModel.test.ts` (the main chunk),
+    `bundleDiff.test.ts` (the baseline's name).
 
 ### Phase 5: studies
 
