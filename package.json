@@ -66,6 +66,7 @@
     "test:watch": "vitest",
     "verify:scenes": "yarn copyDecoders && yarn gatherAppData && tsx ./devTools/verify/scenes.ts",
     "verify:baselines": "tsx ./devTools/verify/baselines.ts",
+    "verify:embed": "tsx ./devTools/verify/embed.ts",
     "sbp": "tsx ./devTools/sbp.ts",
     "build": "yarn copyDecoders && NODE_ENV=production yarn gatherAppData && tsc && tsc -p hub && vite build && yarn gatherAppData && yarn sbp --no-build --profile app --brief && yarn hub:build",
     "build:test": "yarn copyDecoders && NODE_ENV=production yarn gatherAppData && tsc && tsc -p hub && VITE_APP_ENV=test vite build && yarn gatherAppData && yarn hub:build",

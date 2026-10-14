@@ -604,6 +604,34 @@ As built:
     until §3's deletion is staged. The root `CLAUDE.md`'s app layout lists `profiles/<id>/`.
     `verify:scenes --only banner`: new in all four configurations, no error (no baseline yet;
     record it with `--update --only banner`).
+- **§4, the test page as a command:** `yarn verify:embed [--profile <id>] [--no-build] [--headed]
+  [--webgl]` (`devTools/verify/embed.ts`), so the check repeats (Phase 6's live Hub embed, any
+  later engine change) instead of a one-off script. It builds the embed profiles (unless
+  `--no-build`), serves `devTools/verify/embedHost.html` (a plain page with its own styles, a
+  heading, a link, a button and an input) at `/` and the build at `/aekasha/` from its own static
+  server (8093; the favicon a 204, so no error), and drives Chromium, one page load per scenario
+  (one mount per page load):
+  - `INLINE`, `width: '50%'`, `height: '80%'` of a 640 × 360 target: the container, the canvas
+    and its drawing buffer at 320 × 288, something drawn (the target's screenshot differs from the
+    empty one), all at 400 × 320 when the target grows to 800 × 400; after `unmount()` no
+    container or canvas and the target empty; a second mount rejects.
+  - `BACKGROUND`: the container and the canvas fill the viewport at 0, 0, something drawn behind
+    the content (the page's screenshot differs), `elementFromPoint` on the heading's centre is the
+    heading and in the middle not the embed; nothing left after `unmount()`.
+  - In both, every computed property of `html`, `body`, `h1`, `p`, `a`, `button`, `input` and the
+    target (`HOST_STYLE_SELECTORS`, `embedChecks.ts`, tested) compared before, while mounted and
+    after the unmount, and no console or page error.
+  - Checked that it catches a change: a `body { letter-spacing }` appended to the built CSS failed
+    both scenarios, naming each element's property. Banner: all pass on WebGPU (3 s without the
+    build, 11 s with it) and on WebGL2 through SwiftShader (`--webgl`).
+  - The browser launch moved out of `scenes.ts` into `devTools/verify/browser.ts` (`isWSL`,
+    `findBrowserExecutable`, `launchChromium`, which throws), shared by both; the scene runner
+    passes as before. Documented in `devTools/verify/CLAUDE.md` and the root Commands; the readme
+    waits for Phase 6.
+  - A caveat for Phase 6's embed page: `BACKGROUND` is `z-index: -1` in the root stacking context,
+    so it shows through a background on `body` (it propagates to the canvas when `html` has none),
+    but a page whose `html` and `body` both have one should paint `body`'s over it (from CSS's
+    painting order, not tested: check it with the embed page's example).
 
 ### Phase 5: studies
 
