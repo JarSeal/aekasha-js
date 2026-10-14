@@ -1,6 +1,6 @@
 import { isDebugCameraActive } from '../camera/Camera';
 import { isDebugEnvironment } from '../config/Config';
-import { addOnWindowBlurFn, addVisibilityChangeFn } from '../loop/MainLoop';
+import { onVisibilityChange, onWindowBlur } from '../loop/MainLoop';
 import { onRendererCreated } from '../render/Renderer';
 import { getCurrentSceneId } from '../scene/Scene';
 import { lwarn } from '../../utils/Logger';
@@ -266,8 +266,9 @@ const initKeyListeners = () => {
   };
 
   addInputListenerRemover(removeKeyListeners);
-  addVisibilityChangeFn('inputKeyboardHeldKeysClear', () => clearHeldKeys());
-  addOnWindowBlurFn('inputKeyboardHeldKeysClear', () => clearHeldKeys());
+  // The same function each time, so adding the listeners again (after a removal) adds nothing
+  onVisibilityChange(clearHeldKeys);
+  onWindowBlur(clearHeldKeys);
 
   // The input scope (InputState.ts): the window, the canvas while it has focus, or nothing
   const scope = getInputScope();

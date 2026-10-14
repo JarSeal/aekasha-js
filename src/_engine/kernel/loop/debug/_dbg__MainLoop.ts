@@ -1,5 +1,5 @@
 import { createDebuggerTab } from '../../../debug/DebuggerGUI';
-import { LOOP_DEBUGGER_TAB_ID, mainLoop, type LoopState } from '../MainLoop';
+import { LOOP_DEBUGGER_TAB_ID, requestMainLoopFrame, type LoopState } from '../MainLoop';
 import { InitOnScreenTools, updateOnScreenTools } from '../../../debug/OnScreenTools';
 
 const LS_KEY = 'AEK_debugLoop';
@@ -24,7 +24,7 @@ export const createLoopDebugControls = (loopState: LoopState) => {
             key: 'masterPlay',
             label: 'Master loop',
             onChange: (value) => {
-              if (value) requestAnimationFrame(mainLoop);
+              if (value) requestMainLoopFrame();
               updateOnScreenTools('PLAY');
             },
           },

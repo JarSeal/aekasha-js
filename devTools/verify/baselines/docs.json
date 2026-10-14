@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1699,
-      "total": 2341
+      "documented": 1707,
+      "total": 2337
     },
     "members": {
       "documented": 329,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1655,
-        "total": 2278
+        "documented": 1663,
+        "total": 2274
       },
       "members": {
         "documented": 279,
@@ -1018,28 +1018,15 @@
     },
     "engine/kernel/loop": {
       "exports": {
-        "documented": 36,
-        "total": 48
+        "documented": 44,
+        "total": 44
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "MainLoop#addBeforeUnloadFn",
-          "MainLoop#addOnWindowBlurFn",
-          "MainLoop#addVisibilityChangeFn",
-          "MainLoop#deleteAddOnWindowBlurFn",
-          "MainLoop#deleteAllBeforeUnloadFns",
-          "MainLoop#deleteAllOnWindowBlurFns",
-          "MainLoop#deleteAllVisibilityChangeFns",
-          "MainLoop#deleteBeforeUnloadFn",
-          "MainLoop#deleteVisibilityChangeFn",
-          "MainLoop#mainLoop",
-          "MainLoop#registerMainLoopDebugGUI",
-          "MainLoop#setPlaySpeedMultiplier"
-        ],
+        "exports": [],
         "members": []
       }
     },

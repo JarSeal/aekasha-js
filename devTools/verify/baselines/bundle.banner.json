@@ -23,7 +23,7 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7537,
-      "gzip": 3066
+      "gzip": 3067
     },
     "assets/GLTFLoader.js": {
       "bytes": 45868,
@@ -45,17 +45,17 @@
       "bytes": 2222,
       "gzip": 984
     },
-    "assets/banner.js": {
-      "bytes": 460,
-      "gzip": 336
-    },
     "assets/banner.css": {
       "bytes": 7672,
       "gzip": 2017
     },
+    "assets/banner.js": {
+      "bytes": 460,
+      "gzip": 336
+    },
     "assets/banner.embed.js": {
-      "bytes": 1079015,
-      "gzip": 305594
+      "bytes": 1080252,
+      "gzip": 305941
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
@@ -115,35 +115,35 @@
     },
     "banner.embed.js": {
       "bytes": 251,
-      "gzip": 212
+      "gzip": 211
     }
   },
   "main": {
     "chunk": "assets/banner.embed.js",
-    "modules": 80,
-    "rendered": 3474662,
-    "gzip": 705173
+    "modules": 81,
+    "rendered": 3483888,
+    "gzip": 707884
   },
   "mainGroups": {
     "_engine/kernel/assets": {
       "modules": 22,
-      "rendered": 78843,
-      "gzip": 24365
+      "rendered": 78860,
+      "gzip": 24377
     },
     "_engine/kernel/camera": {
       "modules": 1,
-      "rendered": 6493,
-      "gzip": 1880
+      "rendered": 6825,
+      "gzip": 1944
     },
     "_engine/kernel/config": {
       "modules": 2,
-      "rendered": 6587,
-      "gzip": 2332
+      "rendered": 6337,
+      "gzip": 2284
     },
     "_engine/kernel/ecs": {
       "modules": 7,
-      "rendered": 47015,
-      "gzip": 13531
+      "rendered": 56238,
+      "gzip": 15940
     },
     "_engine/kernel/init": {
       "modules": 4,
@@ -152,8 +152,8 @@
     },
     "_engine/kernel/input": {
       "modules": 2,
-      "rendered": 5657,
-      "gzip": 1779
+      "rendered": 5573,
+      "gzip": 1754
     },
     "_engine/kernel/light": {
       "modules": 2,
@@ -162,8 +162,8 @@
     },
     "_engine/kernel/loop": {
       "modules": 3,
-      "rendered": 10178,
-      "gzip": 2890
+      "rendered": 9797,
+      "gzip": 3003
     },
     "_engine/kernel/mesh": {
       "modules": 1,
@@ -171,9 +171,9 @@
       "gzip": 2050
     },
     "_engine/kernel/render": {
-      "modules": 7,
-      "rendered": 6525,
-      "gzip": 2556
+      "modules": 8,
+      "rendered": 6890,
+      "gzip": 2739
     },
     "_engine/kernel/scene": {
       "modules": 6,
@@ -197,8 +197,8 @@
     },
     "three": {
       "modules": 4,
-      "rendered": 3199558,
-      "gzip": 623025
+      "rendered": 3199562,
+      "gzip": 623028
     },
     "vite": {
       "modules": 1,

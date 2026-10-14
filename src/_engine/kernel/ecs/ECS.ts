@@ -81,8 +81,12 @@ export const getECSWorld = (id: string = DEFAULT_ECS_WORLD_ID): ECSWorld =>
     `ECS World '${id}' not initialized. Could not get ECS World.`
   );
 
-/** Returns every currently registered ECS World. */
-export const getAllECSWorlds = (): ECSWorld[] => ECSWorld.getAllWorlds();
+/**
+ * Returns every currently registered ECS World. The array is shared and read-only (no copy: the
+ * main loop reads it several times a frame); creating or deleting a world replaces it, so
+ * iterating it while deleting worlds is safe.
+ */
+export const getAllECSWorlds = (): readonly ECSWorld[] => ECSWorld.getAllWorlds();
 
 /**
  * Deletes an ECS World by id. Routes every live entity through deleteEntity
@@ -144,6 +148,8 @@ export const onECSEntityCountChange = (listener: (world: ECSWorld) => void): voi
 export class ECSWorld {
   // INSTANCE TRACKING (keyed by world id — also the identity/lookup registry)
   private static worldsById: Map<string, ECSWorld> = new Map();
+  // worldsById's values, rebuilt (a new array) whenever a world is created or deleted
+  private static worldList: readonly ECSWorld[] = [];
   private static worldRegistryListeners: (() => void)[] = [];
   private static entityCountListeners: ((world: ECSWorld) => void)[] = [];
   // STATIC REGISTRIES (External core managers write to these)
@@ -194,9 +200,9 @@ export class ECSWorld {
     return this.worldsById.get(id);
   }
 
-  /** Returns every currently registered ECS World. */
-  public static getAllWorlds(): ECSWorld[] {
-    return Array.from(this.worldsById.values());
+  /** Returns every currently registered ECS World (shared and read-only, see `getAllECSWorlds`). */
+  public static getAllWorlds(): readonly ECSWorld[] {
+    return this.worldList;
   }
 
   /**
@@ -210,6 +216,7 @@ export class ECSWorld {
     if (!world) return false;
     world.clearWorld();
     this.worldsById.delete(id);
+    this.worldList = Array.from(this.worldsById.values());
     this.notifyWorldRegistryChange();
     return true;
   }
@@ -370,6 +377,7 @@ export class ECSWorld {
 
     // REGISTER THIS INSTANCE
     ECSWorld.worldsById.set(id, this);
+    ECSWorld.worldList = Array.from(ECSWorld.worldsById.values());
 
     // BOOTSTRAP: core plugins (universal engine plumbing) always run, first,
     // regardless of applyGlobalPlugins — see the corePlugins field comment.

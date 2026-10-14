@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: Refactoring, Documentation, ECS
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -438,7 +438,7 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
   of its targets pass with the baseline hash (`f5cf468f`). The plan file was edited during the run:
   no file is touched while a scene run runs from here on.
 
-### Phase 3: the loop (`MainLoop.ts`, `SystemStages.ts`, `Workers.ts`)
+### Phase 3: the loop (`MainLoop.ts`, `SystemStages.ts`, `Workers.ts`) — done
 
 1. D10: one frame function, not `async`; L1's fix.
 2. L2: the start and `toggleMainPlay` share one "request a frame unless one is queued" guard.
@@ -452,6 +452,52 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
    elapsed time's pause discard (pure once their state is passed in).
 7. The `perf-auditor` agent over `kernel/loop/`.
 8. `yarn verify:scenes`: unchanged.
+
+**As built:**
+
+- **D10:** one `runFrame` (not `async`) replaces the three variants. The stats calls sit behind
+  `IS_DEBUG_ENV` (folded in production: `verify:baselines` finds no debug code); the editor view
+  branch stays a boolean check. The max FPS limiter skips only the render, `LATE_MAIN` and the late
+  loopers (L1), now in every build: a plain development build (no `?isDebug`) honours
+  `VITE_MAX_FPS` too, which the old variant choice didn't. The limiter's step is the pure
+  `nextMaxFPSReference(nowMs, lastRenderMs, intervalMs)` (-1 skips), the elapsed time
+  `advanceElapsedClock(clock, delta, isRunning)` on a module `ElapsedClock`: both `@internal`, tested.
+- **L2:** `requestMainLoopFrame()` (`@internal`) asks for a frame unless one is queued
+  (`isFrameRequested`, cleared when the frame starts) or the loop is stopped: the start's
+  `setTimeout`, `toggleMainPlay` and the Loop tab's master toggle (`_dbg__MainLoop.ts`, which used
+  `requestAnimationFrame(mainLoop)` itself) all go through it. `mainLoop` isn't exported anymore.
+- **L3:** `ECSWorld` keeps `worldList` (a new array on every world create and delete):
+  `getAllECSWorlds()` / `ECSWorld.getAllWorlds()` return it, typed `readonly ECSWorld[]`, no copy.
+  The loop iterates it with index loops.
+- **D11:** `onVisibilityChange(fn)`, `onBeforeUnload(fn)`, `onWindowBlur(fn)` (`@internal`, Sets,
+  each returns its remover) replace the nine `add*Fn` / `delete*Fn` / `deleteAll*Fns` (and the
+  `deleteAddOnWindowBlurFn` typo). Callers: `KeyboardInput.ts` (passes `clearHeldKeys` itself, so
+  adding the listeners again after a removal adds nothing), `MouseInput.ts` and `TouchInput.ts`
+  (keep the remover), `PhysicsAPI.ts` (the same handler on every world: the Set keeps one).
+- **L5-L7:** `getReadOnlyLoopState` is a spread copy (the state is flat), documented as allocating;
+  `initWorker` takes `InitWorkerOptions` (its two callers, `PhysicsAPI.ts` and `AssetsAPI.ts`);
+  `isMainThread` / `isMainThreadSimple` (`Workers.ts`, no caller) removed; the stale comments
+  (`ViewManager`, `PhysicsManager`, `Lod/`). `ECSSystemStage` documented with the stage order.
+- **Not in the plan:** `renderScene` called `existsOrThrow(…, \`…${Boolean(renderer)}…\`)`, so the
+  message string was built every frame; now an `if` throws (the renderer checked first, also for
+  the editor view branch, which rendered before the check).
+- **The `perf-auditor` agent** over `kernel/loop`: no allocation left in `MainLoop.ts` (one
+  `performance.now()` per frame, in three's `Timer`, two with the limiter). Two in
+  `KeyboardInput.ts`' `pollHeldKeyBindings`, once per fixed sub-step and held binding: a `.some`
+  closure and `getChordArray`'s `[chord]` array. That file is p617's: its Inputs get them (Phase 8).
+- **JSDoc:** `kernel/loop` exports 36 / 48 → 44 / 44.
+- Tests (`MainLoop.test.ts`, 5, `requestAnimationFrame` stubbed): the limiter's pacing (30 and 50
+  FPS caps on 60 Hz), its skip and re-anchor, the elapsed clock's dropped deltas, one frame chain.
+- **Baselines** (`--update`): `api.json`'s 25 changes (the renamed, removed and added internal
+  exports above, and Phase 1-2's `registerECSModule`, `LodTargetEntry` and the stress test's two
+  systems); the main chunk is 1,065 B larger minified, +228 B gzip (395,593 → 395,821): the
+  `appId` map, the removal guard and the loop. The report's "835.3 kB gzip" headline is the
+  visualizer's pre-minification sum, which counts the new JSDoc.
+- **`yarn verify:scenes`:** 103 passed and `examplePhysics` `workerSab` stopped 0.7 s in on a page
+  reload ("Execution context was destroyed … navigation"); alone, its four targets pass with the
+  baseline hash (`74835516`). No file was touched during this run, so Phase 2's guess (the plan
+  edit) was wrong: an intermittent reload of the runner's dev server, maybe Vite's dependency
+  optimizer reloading on a dependency it found at runtime (not confirmed). Filed for p619 (Phase 8).
 
 ### Phase 4: config (`Config.ts`, `DebugModules.ts`)
 
@@ -499,8 +545,10 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
 2. `yarn test`, `yarn verify:scenes`, `yarn verify:baselines` (no unexplained growth), `yarn build`,
    `yarn hub:build`.
 3. Mark the plan done (`docs/plans/CLAUDE.md`), drop p200's "lands in p612" (p200 itself then has
-   nothing left: mark it done too), update p613's and p614's inputs (D2's rule, D7's
-   `PhysicsTierPolicy` note).
+   nothing left: mark it done too), update the other stubs' inputs: p613 and p614 (D2's rule, D7's
+   `PhysicsTierPolicy` note), p617 (`pollHeldKeyBindings`' closure and array per sub-step, Phase 3),
+   p619 (the `ComponentDataMap` `notExported` from the augmentations, Phase 1; the scene runner's
+   intermittent page reload, Phases 2-3).
 4. Time for a PR: this branch into `main` (p600's "Branches and PRs").
 
 ## 4. Risks

@@ -220,18 +220,16 @@ const startWorker = () => {
   // Imported here, not at load (like the worker itself, only by the first request)
   workerStartPromise = import('./worker/AssetsWorker?worker')
     .then(({ default: AssetsWorker }) =>
-      initWorker<AssetsDownProtocol>(
-        AssetsWorker,
-        'Assets Worker',
-        onWorkerMessage,
-        onWorkerError,
-        {
-          onReady: (data) => {
-            workerCapabilities = (data as AssetsWorkerReadyMessage).capabilities;
-          },
-          timeoutMs: assetsState.requestTimeoutMs,
-        }
-      )
+      initWorker<AssetsDownProtocol>({
+        WorkerClass: AssetsWorker,
+        name: 'Assets Worker',
+        onMessage: onWorkerMessage,
+        onError: onWorkerError,
+        onReady: (data) => {
+          workerCapabilities = (data as AssetsWorkerReadyMessage).capabilities;
+        },
+        timeoutMs: assetsState.requestTimeoutMs,
+      })
     )
     .then((startedWorker) => {
       worker = startedWorker;

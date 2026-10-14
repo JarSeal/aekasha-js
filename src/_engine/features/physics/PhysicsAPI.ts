@@ -24,7 +24,7 @@ import { readStatsClock } from '../../utils/StatsClock';
 import { updatePhysicsPanel } from '../../debug/Stats';
 import type { LoopState } from '../../kernel/loop/MainLoop';
 import {
-  addVisibilityChangeFn,
+  onVisibilityChange,
   getFixedFrameDelta,
   getReadOnlyLoopState,
   toggleMainPlay,
@@ -313,12 +313,12 @@ export const initPhysics = async (doNotCreateWorld?: boolean) => {
   } else if (target === 'WORKER_THREAD') {
     // Imported here, not at load: an app without physics, or on the main thread, never loads it
     const { default: PhysicsWorker } = await import('./worker/PhysicsWorker?worker');
-    worker = await initWorker<PhysicsDownProtocol>(
-      PhysicsWorker,
-      'Physics Worker',
-      onWorkerMessage,
-      onWorkerError
-    );
+    worker = await initWorker<PhysicsDownProtocol>({
+      WorkerClass: PhysicsWorker,
+      name: 'Physics Worker',
+      onMessage: onWorkerMessage,
+      onError: onWorkerError,
+    });
     const worldCreated = await messageWorkerAsync<boolean>({
       type: PhysicsProtocolType.INIT_PHYSICS,
       physicsState,
@@ -1339,7 +1339,7 @@ export const createPhysicsWorld = async (
     );
     physicsWorldEnabled = true;
     resetSimClock();
-    addVisibilityChangeFn('pausePhysicsApiOnVisibilityChange', physicsVisibilityChangeHandler);
+    onVisibilityChange(physicsVisibilityChangeHandler);
   } else if (physicsState.workerTarget === 'WORKER_THREAD') {
     const response = await messageWorkerAsync<CreateWorldResponse>({
       type: PhysicsProtocolType.CREATE_WORLD,
@@ -1368,7 +1368,7 @@ export const createPhysicsWorld = async (
         ? new Float64Array(response.statsBuffer, 0, PHYSICS_STEP_STATS_FIELD_COUNT)
         : undefined;
       // MESSAGE_BATCH: transformBuffer stays undefined until the first TRANSFORMS_PUSH arrives.
-      addVisibilityChangeFn('pausePhysicsApiOnVisibilityChange', physicsVisibilityChangeHandler);
+      onVisibilityChange(physicsVisibilityChangeHandler);
     } else {
       lerror(
         `Could not create physics world (WORKER_THREAD), gravity: ${JSON.stringify(gravity)}, opts: ${JSON.stringify(opts)}`
