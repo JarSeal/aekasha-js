@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-5 implemented
+Status: in progress | Phases 1-6 implemented
 Category: Build, Dev tooling, Engine API, Marketing
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -690,7 +690,7 @@ As built:
     major, which breaks physics' API anyway; ties checked: none change, the `exit` hooks' order
     does.
 
-### Phase 6: Hub, readme, CLAUDE.md
+### Phase 6: Hub, readme, CLAUDE.md — done
 
 1. The `::: embed` directive and the `{{sbp:…}}` helper (D9); `hub:build` copies the embed.
    From Phase 4: the build is `yarn sbp --profile banner` into `dist-embed/banner/` (the entry
@@ -811,6 +811,16 @@ As built:
   possible, Embedding), the Smallest build highlight (no sizes: they'd go stale; the Hub page has
   them), Commands (`yarn sbp`, `yarn verify:embed`), the project tree (`profiles/`,
   `src/generated/profiles/`, `sbp.config.ts`) and example 7, "Embed a scene in a site".
+- **§5, checked:** a full `yarn build` passes (the app, `yarn sbp --profile all --no-app-build
+  --brief`: `app` initial 389.0 KiB, 25 budgets within; `banner` 300.6 KiB, 19 within; then the
+  Hub, the banner copied into `_assets/embed/banner/`). `yarn hub:preview` at the root and with
+  `--base /hub/`, in Chromium on WebGPU and on WebGL2 (SwiftShader): both pages (the feature page,
+  the example) in both themes live, turning, the pause button stilling them, no console error,
+  failed request or 4xx; the homepage, the Features page and two other pages load no embed file.
+  `yarn verify:baselines`: all unchanged (`bundle.json`, `bundle.banner.json`, `api.json`,
+  `docs.json`), no debug code in either build. `verify:scenes` not run: Phase 6 changed no runtime
+  code in `src/` (the banner scene's region comment, `sbp.config.ts`' region). The search index
+  warning (1.23 MB over 1 MB) is older than this phase (p552 §2.4's next cut, the stored `path`).
 
 ### Phase 7: versioning, changelog, mark done
 
