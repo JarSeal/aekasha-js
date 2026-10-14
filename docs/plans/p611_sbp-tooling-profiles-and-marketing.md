@@ -790,6 +790,27 @@ As built:
   turning, the button pausing (no change over 400 ms) and resuming, no error. Passes on WebGPU and
   WebGL2; with the example's `pause()` removed it fails naming both checks. (A named function inside
   `page.evaluate` fails under tsx: its `__name` helper isn't in the page.)
+- **§4, the homepage:** Smallest build replaced Debug suite among the featured four (the icon row
+  is four columns: a fifth sat alone), so the four match the four principles (Rendering, Physics,
+  ECS, Smallest build); Debug suite stays in the Tools group. `aek:featured` needs
+  `content="true"` (§2's page had it bare, so it wasn't featured until now).
+- **§4, the docs:** the fourth principle, "Smallest Build Possible", in the root CLAUDE.md's
+  brand section, the readme's "Why Ækasha?" and the Hub's Features intro ("Four principles").
+  Root CLAUDE.md: `yarn sbp` in Commands (with `AEK_SBP`), `yarn build`'s sbp step,
+  `hub:build --no-embed`, `verify:embed`'s example, the map line for the new
+  `devTools/sbp/CLAUDE.md`, the data pipeline's `src/generated/profiles/<id>/`, and the embed boot
+  after the Bootstrap flow. `devTools/sbp/CLAUDE.md` (new): "Smallest build possible" (`yarn sbp`,
+  the profiles, the budgets, the debug assets check, the lite study's verdict) and "Embed
+  profiles" (the data, the entry, the build and its prune, measuring, checking, the limits): the
+  feature page's `aek:covers` and its `::: claude-md`. `hub/CLAUDE.md` (`{{sbp:…}}`,
+  `::: embed`, the public Hub's exception, the banner's Hub tab, the feature list, the featured
+  four, the embedding example's sources), `devTools/hub/CLAUDE.md` (the embeds in `hub:build`, the
+  dev embed's `/@vite/env` and `page.scss`), `devTools/verify/CLAUDE.md` (the debug assets check on
+  the app and each embed, the example scenario), `src/_engine/debug/CLAUDE.md` (the
+  `__AEK_DEBUG__ ?` trap for a debug module's `?url` assets). The readme: Features (Smallest build
+  possible, Embedding), the Smallest build highlight (no sizes: they'd go stale; the Hub page has
+  them), Commands (`yarn sbp`, `yarn verify:embed`), the project tree (`profiles/`,
+  `src/generated/profiles/`, `sbp.config.ts`) and example 7, "Embed a scene in a site".
 
 ### Phase 7: versioning, changelog, mark done
 

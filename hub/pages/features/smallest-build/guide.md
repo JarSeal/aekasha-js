@@ -117,3 +117,6 @@ and it helps every build; the classic path comes back when three ships its node 
 - [`InitEngine`](api:InitEngine) with its `features`, and [`EngineFeature`](api:EngineFeature).
 - [`mountAekasha`](api:mountAekasha), [`MountAekashaOptions`](api:MountAekashaOptions) and
   [`AekashaMount`](api:AekashaMount).
+
+::: claude-md
+:::
