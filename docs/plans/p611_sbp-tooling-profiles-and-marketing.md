@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-4 implemented
+Status: in progress | Phases 1-5 implemented
 Category: Build, Dev tooling, Engine API, Marketing
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -651,7 +651,7 @@ As built:
     chunk +0.5 kB gzip, its data; the rest a byte or two from new content hashes). No debug code in
     either build; `api.json` and `docs.json` unchanged.
 
-### Phase 5: studies
+### Phase 5: studies — done
 
 1. **The lite renderer** (p600 §4.4): measure a throwaway `WebGLRenderer` + `MeshStandardMaterial`
    page with the same scene (not committed), list what the engine would need for a second
@@ -673,6 +673,22 @@ As built:
   first, filed in p613's (the import path, the `three.core.js` extras) and p617's (the UI kit in a
   mount without a HUD) "From p611". Phase 6's page states three's floor (237.7 KiB) next to the
   banner's (300.6).
+- **§2, the manifest fold and the `physics()` option:** measured with scratch builds, each edit
+  restored from git (`.cache/probe/fold/run.sh`: a fresh baseline of both profiles, the change,
+  `yarn sbp`, a clean rebuild at the end, so `report.json` and `dist-embed/` are `HEAD`'s).
+  - **The fold** (p612's "From p611"): the template app saves nothing (its scenes' data uses every
+    data-driven path). On the banner, folding the scene's imported assets (the one data-only kernel
+    path it doesn't use) saves 15.5 KiB gzip initial (300.6 → 285.1: the import path and 24.5 kB of
+    `three.core.js`, three's animation tracks among them, which closes §7.1's question) and 23.6 KiB
+    of deployed lazy files (`GLTFLoader`, `DRACOLoader`, the meshopt decoder). The sky box layers
+    can't fold safely (scene code makes sky boxes too). **Verdict: no manifest constants now**; the
+    import path behind an `import()` saves the same in every build, the app's initial chunk
+    included (p613's "From p611").
+  - **The tiers** (p614's "From p611"): the app without them installed, initial 389.0 → 384.8 KiB
+    (−4.2). A runtime option can't shrink the build and installing on first use breaks the system
+    order (p607), so **a `physicsTiers()` feature** (`requires: ['physics']`), in the epic's engine
+    major, which breaks physics' API anyway; ties checked: none change, the `exit` hooks' order
+    does.
 
 ### Phase 6: Hub, readme, CLAUDE.md
 
@@ -759,12 +775,12 @@ error.
     the windows' scene-change handlers and the HUD root (its loader UI) statically.
   - The glTF import path, 11.4 kB in `kernel/assets/import/` (`ImportRegistry.ts` 3.0,
     `GLTFExtract.ts` 1.5, `CustomProps.ts` 1.2, `GLTFTextures.ts` 1.0, …): `SceneLoader.ts` imports
-    `ImportRegistry` statically.
+    `ImportRegistry` statically. Folded out in a scratch build (§2's study), the banner loses
+    15.5 KiB gzip: the path, and 24.5 kB of `three.core.js`.
   - In `three.core.js`, among others: three's animation tracks (`KeyframeTrack`, `PropertyBinding`,
-    `Interpolant`; their messages are in the banner's chunk, not in the probe's), `TextureLoader`
-    (`Texture.ts`) and the `Raycaster` (`Raycast.ts`, made at module load). No engine module
-    imports the animation classes, and the visualizer can't see inside `three.core.js`, so which
-    import keeps them is open.
+    `Interpolant`; their messages are in the banner's chunk, not in the probe's), which come with the
+    import path (no engine module imports them; they're gone from the folded build), `TextureLoader`
+    (`Texture.ts`) and the `Raycaster` (`Raycast.ts`, made at module load).
 - **Deployed, never downloaded:** the embed's 752.9 KiB of lazy files (the assets worker, its jobs,
   the loaders, the Draco and Basis decoders), kept because kernel code names them (Phase 4 §2's
   prune).
@@ -806,8 +822,9 @@ Every area that is TSL or `WebGPURenderer` only today:
   runs against the first core principle (engineered from the ground up for WebGPU).
 - **Take the engine's own 62.9 KiB first**, which helps every profile, the app included: the scene
   loader's UI and the windows' hooks out of a mount without a HUD, the glTF import path behind an
-  `import()` (loaded when a scene's data names an imported asset), and the `three.core.js` extras
-  (the animation tracks found first). Filed in p613's and p617's "From p611".
+  `import()` (loaded when a scene's data names an imported asset: 15.5 KiB on the banner, the
+  animation tracks with it), and the other `three.core.js` extras. Filed in p613's and p617's "From
+  p611".
 - **Say the honest floor** (Phase 6): three's WebGPU and TSL alone are 237.7 KiB gzip for this
   scene, the engine's banner 300.6 KiB.
 - **Revisit when** three ships its node system apart from `WebGPURenderer`, or a real embed needs

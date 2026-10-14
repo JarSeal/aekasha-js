@@ -48,13 +48,22 @@ The lite-renderer study (p611 §7, Phase 5) recommends no second material path n
 engine's own share of the banner embed, 62.9 KiB gzip over three's WebGPU and TSL alone (300.6 vs
 237.7), which helps every profile when it shrinks. This plan's part of it:
 
-- **The glTF import path in every initial chunk:** `SceneLoader.ts` imports `ImportRegistry`
+- **The glTF import path in every initial chunk:** `SceneLoader.ts` (the scene's
+  `importedAssets`) and `SceneAssetRelease.ts` (`releaseImportsOwnedBy`) import `ImportRegistry`
   statically, which brings `kernel/assets/import/` (11.4 kB before minification in the banner,
-  which has no model). Behind an `import()` loaded when a scene's data names an imported asset?
-- **`three.core.js` extras:** the banner ships 39.4 kB more of it than a bare page with the same
-  scene, among them three's animation tracks (`KeyframeTrack`, `PropertyBinding`, `Interpolant`),
-  which no engine module imports directly (find which import keeps them), `TextureLoader`
-  (`Texture.ts`) and the `Raycaster` (`Raycast.ts`, made at module load).
+  which has no model). Measured in a scratch build with both branches folded (p611 Phase 5 §2):
+  the banner's initial 300.6 → **285.1 KiB gzip** (`kernel/assets` 23.9 → 13.2 kB, `three.core.js`
+  183.4 → 158.9 kB, three's animation tracks `KeyframeTrack`, `PropertyBinding`, `Interpolant` among
+  them), and its lazy files 752.9 → 729.3 KiB (`GLTFLoader`, `DRACOLoader` and the meshopt decoder
+  no longer named by shipped code, so the embed's prune drops them). **Recommended:** load the
+  registry with an `import()` when a scene's data names an imported asset (the load already waits
+  for `GLTFLoader`'s chunk and the worker), and make the release a no-op until it has loaded. It
+  moves the same bytes out of the app's initial chunk too, into a chunk its first scene
+  (`sceneTestECS`, with an imported asset) loads next to its other assets: the app's other users of
+  the import API are scene files, lazy already. p612's "From p611" has why this beats a manifest
+  fold.
+- **`three.core.js` extras:** apart from the import path's, `TextureLoader` (`Texture.ts`) and the
+  `Raycaster` (`Raycast.ts`, made at module load).
 - **`three/webgpu` imports:** core classes imported through it keep 79.7 kB of `three.webgpu.js`'
   top-level code. No cost while the renderer is `WebGPURenderer`, but a renderer seam (if a lite
   profile is ever built, §7.3's shape) starts there.
