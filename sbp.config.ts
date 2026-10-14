@@ -9,7 +9,15 @@
  * change that explains the growth. Well under it is reported: lower it to the new size plus the
  * same margin.
  */
+import fs from 'fs';
 import { KIB, type SbpProfile } from './devTools/sbp/config';
+
+/** Every engine feature's group (p607: a folder each in `src/_engine/features/`), so a new
+ * feature is budgeted at 0 for the banner too */
+const FEATURE_GROUPS = fs
+  .readdirSync(new URL('./src/_engine/features/', import.meta.url), { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => `_engine/features/${entry.name}`);
 
 const profiles: SbpProfile[] = [
   {
@@ -57,6 +65,26 @@ const profiles: SbpProfile[] = [
     id: 'banner',
     entry: 'src/app/profiles/banner/banner.embed.ts',
     scenes: ['banner'],
+    // Set from p611 Phase 4's report (initial 300.6 KiB gzip): the measured floor
+    budgets: {
+      initial: 313 * KIB,
+      chunks: {
+        // The entry only re-exports `mount` from the shared chunk
+        'banner.embed.js': 2 * KIB,
+        'assets/banner.embed.js': 311 * KIB,
+        'assets/banner.css': 3 * KIB,
+      },
+      groups: {
+        three: 633 * KIB,
+        '_engine/kernel/assets': 25 * KIB,
+        '_engine/kernel/ecs': 15 * KIB,
+        '_engine/kernel/scene': 7 * KIB,
+        '_engine/ui': 15 * KIB,
+        app: 3 * KIB,
+        // The floor's promise: no feature reaches the initial chunks
+        ...Object.fromEntries(FEATURE_GROUPS.map((group) => [group, 0])),
+      },
+    },
   },
 ];
 

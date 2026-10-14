@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: in progress | Phases 1-4 implemented
 Category: Build, Dev tooling, Engine API, Marketing
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -490,7 +490,7 @@ As built:
 - **Docs:** the input `CLAUDE.md` (the scope); the root `CLAUDE.md`'s two `initEngineAsync`
   mentions. The rest waits for Phase 6 (the Hub's embed page, the readme, the Bootstrap flow).
 
-### Phase 4: profiles and the banner
+### Phase 4: profiles and the banner — done
 
 1. Per-profile data from the gatherer (D7).
 2. The embed build per profile into `dist-embed/<profile>/` (D7; library mode compared and the
@@ -632,19 +632,49 @@ As built:
     so it shows through a background on `body` (it propagates to the canvas when `html` has none),
     but a page whose `html` and `body` both have one should paint `body`'s over it (from CSS's
     painting order, not tested: check it with the embed page's example).
+- **§5, the banner's budgets and `yarn build`:**
+  - `sbp.config.ts`' `banner` budgets, set as the app's (the size plus about 4%, at least 1 KiB,
+    whole KiB): `initial` 313 KiB, the chunks `banner.embed.js` 2, `assets/banner.embed.js` 311,
+    `assets/banner.css` 3, the groups over 5 KiB (`three` 633, `kernel/assets` 25, `kernel/ecs` 15,
+    `kernel/scene` 7, `ui` 15) and `app` 3, and **every feature group at 0** (the floor's promise:
+    `FEATURE_GROUPS`, read from `src/_engine/features/`' folders, so a new feature is budgeted too):
+    19 checks. Lowering `three` to 600 KiB failed the run (exit 1) naming the group and the bytes.
+  - **`yarn sbp` takes several profiles:** `--profile <id>[,<id>…] | all`, one production gather
+    for every build, a report per profile, exit 1 when any profile's budget fails; `--why` and
+    `--json` take one. `--no-app-build` measures the app's last build and builds the embeds.
+    **`yarn build` runs `yarn sbp --profile all --no-app-build --brief`** after the dev gather
+    (in place of Phase 2's `--profile app --no-build`): the app it just built, and the banner built
+    and checked (about 8 s together). `AEK_SBP=false` skips both, as before.
+  - **Baselines recorded** (`verify:baselines --update`): `bundle.banner.json` (29 files, the
+    main chunk `assets/banner.embed.js`, 80 modules), and `bundle.json` with the banner scene in
+    the app (two new lazy chunks, `assets/banner.js` and `assets/bannerAether.tsl.js`, and the main
+    chunk +0.5 kB gzip, its data; the rest a byte or two from new content hashes). No debug code in
+    either build; `api.json` and `docs.json` unchanged.
 
 ### Phase 5: studies
 
 1. **The lite renderer** (p600 §4.4): measure a throwaway `WebGLRenderer` + `MeshStandardMaterial`
    page with the same scene (not committed), list what the engine would need for a second
    material path (materials, sky box, PostFX, the LOD dither, impostors are TSL), and recommend.
-   Written into this plan's §7.
+   Written into this plan's §7. From Phase 4: "the same scene" is the banner (a dodecahedron, one
+   directional light, a perspective camera, transparent); its engine build is 300.6 KiB gzip
+   initial, three about 608 of the modules' 686 kB before minification. Also worth a line: the
+   banner's other initial groups (`kernel/assets` 23.8 kB, `ui` 13.1 kB for a mount with no HUD)
+   and the 752.9 KiB of lazy loader files an embed deploys (§2's prune keeps what kernel code
+   names).
 2. **The manifest fold and the `physics()` option** (D10): the savings from the report, the
    recommendation written into p612 and p614.
 
 ### Phase 6: Hub, readme, CLAUDE.md
 
 1. The `::: embed` directive and the `{{sbp:…}}` helper (D9); `hub:build` copies the embed.
+   From Phase 4: the build is `yarn sbp --profile banner` into `dist-embed/banner/` (the entry
+   `banner.embed.js` at its root), the poster `src/app/profiles/banner/banner.hub.png`
+   (transparent), the numbers in `.cache/sbp/report.json` (format 2) and the committed
+   `devTools/verify/baselines/bundle.banner.json`. In `dev` the page imports
+   `/app/profiles/banner/banner.embed.ts` (its `assetBaseUrl` is the dev server's root there). The
+   regions `banner-scene` and `banner-embed` name this phase's pages. `yarn verify:embed` checks a
+   built embed in a plain page; the Hub's live embed is checked as step 5 says.
 2. **Feature page `hub/pages/features/smallest-build/`** (`aek:group` Performance,
    `aek:featured`): what SBP is, the live banner, the real numbers (the floor, the app, the
    three floor and why), what's lazy, `yarn sbp`, the budgets, the lite study's verdict, `aek:covers`.
@@ -652,9 +682,12 @@ As built:
    page's code as regions, the options, the limits (same origin, one per page).
 4. The homepage's featured features (a fifth card, or replacing one: decided with the page),
    the readme's "Why Ækasha?" and Features, the brand section in `.claude/CLAUDE.md` (a fourth
-   principle), Commands (`yarn sbp`, `AEK_SBP`), `devTools/sbp/CLAUDE.md` (new, in the map),
+   principle), Commands (`yarn sbp` with Phase 4's `--profile <id>,… | all` and `--no-app-build`,
+   `AEK_SBP`, `yarn build`'s sbp step; `yarn verify:embed` is listed already), the readme's
+   commands (`yarn sbp`, `yarn verify:embed`), `devTools/sbp/CLAUDE.md` (new, in the map: the
+   profiles, the per-profile data, the embed build and its prune, the budgets),
    `hub/CLAUDE.md` (the embed directive; the public Hub's exception), `devTools/verify/CLAUDE.md`
-   (the debug assets check).
+   (the debug assets check), the Bootstrap flow / data pipeline (`src/generated/profiles/<id>/`).
 5. `yarn hub:build`, `yarn hub:preview` with the live embed checked in a browser.
 
 ### Phase 7: versioning, changelog, mark done
