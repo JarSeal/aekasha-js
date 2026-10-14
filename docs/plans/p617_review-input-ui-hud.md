@@ -22,6 +22,31 @@ Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every 
 - p602 D5, p610, the p800 prompt in `docs/templates/todo-plan-prompts.txt`.
 - p605 Phase 5's `notExported` warnings in scope (`yarn hub:build` lists each with its file and line; export the type with a summary or change the signature): `icons` (`UI/icons/SvgIcon.ts`, the value `SvgIconKey` is `keyof typeof`).
 
+## From p611 (2026-10-14)
+
+The embed's seams (p611 Phase 3, D6), each defaulting to the full-page boot's behaviour:
+
+- **The input scope** (`kernel/input/InputState.ts`, `@internal`: `setInputScope`, `InputScope`):
+  `WINDOW` (default), `CANVAS` (the pointer and touch on the canvas, `mouseup` on the window; the
+  keys on the canvas with `tabindex="0"`, cleared on `blur`; the gamepads read while it has focus),
+  `NONE` (no listeners). Each device registers its remover (`addInputListenerRemover`), which
+  `removeAllInputListeners()` calls (the mount imports no device). Details: the input `CLAUDE.md`.
+  The page-height wheel unit (`Actions.ts`, `deltaMode` 2) still reads `window.innerHeight`.
+- **The HUD:** `createHudContainer(slot?)`: the UI kit's root replaces the element it attaches to
+  (`CMP`'s `replaceRootDom`, default on; the template's `#guiContainer` is replaced), so a mount
+  passes an empty slot in its container, whose `contain: layout` keeps the HUD's fixed elements
+  inside it.
+- **The UI kit's sizes in an embed:** its `rem`s assume `page.scss`' `html { font-size: 62.5% }`,
+  which a mounted engine doesn't load, so a kit component in an embed's HUD is 1.6× its size on a
+  page with the default 16px. The review decides (sizes in `em` from the HUD root, or a root font
+  size on the HUD).
+- **The UI kit in a mount without a HUD** (p611 §7, Phase 5's lite-renderer study): the banner
+  embed ships `ui` 13.1 kB before minification (`DraggableWindow.ts` 7.2, `CMP.ts` 4.7, `HUD.ts`
+  0.4) though it shows no UI, because `kernel/scene/SceneLoader.ts` imports the windows'
+  scene-change handlers (`handleDraggableWindowsOnSceneChange*`) and the HUD root (its loader UI)
+  statically. The windows could register their handlers through a scene hook when the first one is
+  made, and the loader UI could be the full-page boot's.
+
 ## Done when
 
 - Every file in scope reviewed against p600 §5, the findings fixed or filed (`docs/issues/` or a plan item).

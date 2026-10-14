@@ -1,0 +1,116 @@
+<!doctype html>
+<!--
+  yarn verify:embed's host page (p611 Phase 4, devTools/verify/embed.ts): a plain page with its own
+  styles, as a site would be, that imports an embed profile's built entry (served at ./aekasha/,
+  its file name in ?entry=) and mounts it. The runner drives it through window.__embedTest, and
+  hands styles() embedChecks.ts' HOST_STYLE_SELECTORS, the elements whose styles it compares.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Embed host</title>
+    <style>
+      body {
+        margin: 24px;
+        background: linear-gradient(120deg, #f7f3ea, #e8dcc8);
+        color: #2b2620;
+        font: 18px/1.5 Georgia, serif;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+      p {
+        margin: 0 0 12px;
+      }
+      a {
+        color: #8a3b12;
+      }
+      button,
+      input {
+        font: inherit;
+        padding: 4px 10px;
+      }
+      #inline {
+        width: 640px;
+        height: 360px;
+        border: 1px solid #8a7d6b;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>An embed host</h1>
+    <p>A page with its own text, <a href="#">links</a> and controls.</p>
+    <p><button type="button">A button</button> <input value="An input" /></p>
+    <div id="inline"></div>
+    <div id="background"></div>
+    <script type="module">
+      const entry = new URLSearchParams(location.search).get('entry');
+      const box = (elem) => {
+        if (!elem) return null;
+        const rect = elem.getBoundingClientRect();
+        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+      };
+      let handle = null;
+
+      window.__embedTest = {
+        styles: (selectors) =>
+          Object.fromEntries(
+            selectors.map((selector) => {
+              const style = getComputedStyle(document.querySelector(selector));
+              return [selector, Object.fromEntries([...style].map((p) => [p, style.getPropertyValue(p)]))];
+            })
+          ),
+        mount: async (opts) => {
+          const { mount } = await import(`./aekasha/${entry}`);
+          handle = await mount(opts);
+          return { isFallback: handle.isFallback };
+        },
+        resizeTarget: (selector, width, height) => {
+          const elem = document.querySelector(selector);
+          elem.style.width = width;
+          elem.style.height = height;
+        },
+        boxes: () => {
+          const canvas = document.querySelector('.aekMount canvas');
+          return {
+            container: box(document.querySelector('.aekMount')),
+            canvas: box(canvas),
+            buffer: canvas
+              ? { width: canvas.width / devicePixelRatio, height: canvas.height / devicePixelRatio }
+              : null,
+            viewport: { width: innerWidth, height: innerHeight },
+          };
+        },
+        /** What a click at the h1's centre and at the viewport's centre would hit */
+        hits: () => {
+          const h1 = box(document.querySelector('h1'));
+          const describe = (elem) =>
+            !elem ? 'nothing' : elem.closest('.aekMount') ? 'the embed' : elem.tagName.toLowerCase();
+          return {
+            h1: describe(document.elementFromPoint(h1.x + h1.width / 2, h1.y + h1.height / 2)),
+            center: describe(document.elementFromPoint(innerWidth / 2, innerHeight / 2)),
+          };
+        },
+        unmount: () => handle.unmount(),
+        mountAgain: async () => {
+          const { mount } = await import(`./aekasha/${entry}`);
+          try {
+            await mount({ target: '#inline' });
+            return null;
+          } catch (err) {
+            return err.message;
+          }
+        },
+        leftovers: () => ({
+          containers: document.querySelectorAll('.aekMount').length,
+          canvases: document.querySelectorAll('canvas').length,
+          inlineChildren: document.querySelector('#inline').childElementCount,
+          backgroundChildren: document.querySelector('#background').childElementCount,
+        }),
+      };
+      window.__embedTestReady = true;
+    </script>
+  </body>
+</html>

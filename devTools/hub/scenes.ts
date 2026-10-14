@@ -94,7 +94,7 @@ const readPngSize = (file: string) => {
 };
 
 /** Finds a scene, with an error at `file`:`line` when there's no such scene (or no data) */
-const findScene = (
+export const findScene = (
   id: string,
   env: HubRenderContext,
   diag: HubDiagnostics,
@@ -118,7 +118,7 @@ const findScene = (
 };
 
 /** The scene's Hub image as webp sources (an image job per width), or null when there's none yet */
-const getSceneImageSources = (
+export const getSceneImageSources = (
   scene: HubAppScene,
   env: HubMarkdownEnv,
   file: string,

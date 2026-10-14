@@ -1,20 +1,21 @@
 import type * as THREE from 'three/webgpu';
 import type { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 import { getRenderer } from '../../render/Renderer';
+import { getAppBaseUrl } from '../AssetUrl';
 import type { KTX2WorkerSettings } from '../AssetsAPITypes';
 
 let ktx2Loader: Promise<KTX2Loader> | null = null;
 /** The renderer the shared loader detected its supported formats on. */
 let detectedOn: THREE.WebGPURenderer | null = null;
 
-const getTranscoderPath = () => new URL(`${import.meta.env.BASE_URL}basis/`, document.baseURI).href;
+const getTranscoderPath = () => new URL('basis/', getAppBaseUrl()).href;
 
 /**
  * Returns the one shared KTX2Loader (KTX2 / Basis Universal textures), creating it on the first
  * call. KTX2Loader itself is imported then, so apps without KTX2 files never download it.
  * It detects which GPU formats it can transcode to on the renderer, so it throws before
  * createRenderer() has finished; a new renderer (eg. after deleteRenderer()) gets a new loader.
- * The transcoder (`${BASE_URL}basis/`, filled by `devTools/copyDecoders.ts`) is only fetched,
+ * The transcoder (the app's `basis/`, filled by `devTools/copyDecoders.ts`) is only fetched,
  * and its worker pool only started, when the first file is transcoded.
  */
 export const getKTX2Loader = () => {

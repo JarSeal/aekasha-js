@@ -1,0 +1,209 @@
+{
+  "formatVersion": 1,
+  "chunks": {
+    "assets/AssetsSwitchGLTF.js": {
+      "bytes": 148112,
+      "gzip": 51863
+    },
+    "assets/AssetsSwitchSimplify.js": {
+      "bytes": 3889,
+      "gzip": 1871
+    },
+    "assets/AssetsSwitchTexture.js": {
+      "bytes": 4039,
+      "gzip": 1943
+    },
+    "assets/AssetsWorker.js": {
+      "bytes": 158,
+      "gzip": 156
+    },
+    "assets/AssetsWorker.js#2": {
+      "bytes": 2027,
+      "gzip": 1047
+    },
+    "assets/DRACOLoader.js": {
+      "bytes": 7537,
+      "gzip": 3066
+    },
+    "assets/GLTFLoader.js": {
+      "bytes": 45868,
+      "gzip": 13851
+    },
+    "assets/GeometryTransfer.js": {
+      "bytes": 4297,
+      "gzip": 1793
+    },
+    "assets/HDRLoader.js": {
+      "bytes": 3401,
+      "gzip": 1629
+    },
+    "assets/KTX2Loader.js": {
+      "bytes": 59855,
+      "gzip": 24343
+    },
+    "assets/LodChainGLTF.js": {
+      "bytes": 2222,
+      "gzip": 984
+    },
+    "assets/banner.js": {
+      "bytes": 460,
+      "gzip": 336
+    },
+    "assets/banner.css": {
+      "bytes": 7672,
+      "gzip": 2017
+    },
+    "assets/banner.embed.js": {
+      "bytes": 1079015,
+      "gzip": 305594
+    },
+    "assets/bannerAether.tsl.js": {
+      "bytes": 407,
+      "gzip": 284
+    },
+    "assets/basis_transcoder.wasm": {
+      "bytes": 527333,
+      "gzip": 247535
+    },
+    "assets/basis_transcoder.js": {
+      "bytes": 57529,
+      "gzip": 15143
+    },
+    "assets/draco_decoder.wasm": {
+      "bytes": 285747,
+      "gzip": 88507
+    },
+    "assets/draco_decoder.wasm#2": {
+      "bytes": 192420,
+      "gzip": 63395
+    },
+    "assets/draco_decoder.js": {
+      "bytes": 719410,
+      "gzip": 147373
+    },
+    "assets/draco_wasm_wrapper.js": {
+      "bytes": 58763,
+      "gzip": 11823
+    },
+    "assets/draco_wasm_wrapper.js#2": {
+      "bytes": 58456,
+      "gzip": 11667
+    },
+    "assets/meshopt_decoder.module.js": {
+      "bytes": 26491,
+      "gzip": 7257
+    },
+    "assets/meshopt_encoder.js": {
+      "bytes": 20481,
+      "gzip": 8135
+    },
+    "assets/meshopt_simplifier.js": {
+      "bytes": 42313,
+      "gzip": 14544
+    },
+    "assets/three.core.js": {
+      "bytes": 195908,
+      "gzip": 52038
+    },
+    "assets/three.module.js": {
+      "bytes": 218,
+      "gzip": 179
+    },
+    "assets/three.module.js#2": {
+      "bytes": 220,
+      "gzip": 182
+    },
+    "banner.embed.js": {
+      "bytes": 251,
+      "gzip": 212
+    }
+  },
+  "main": {
+    "chunk": "assets/banner.embed.js",
+    "modules": 80,
+    "rendered": 3474662,
+    "gzip": 705173
+  },
+  "mainGroups": {
+    "_engine/kernel/assets": {
+      "modules": 22,
+      "rendered": 78843,
+      "gzip": 24365
+    },
+    "_engine/kernel/camera": {
+      "modules": 1,
+      "rendered": 6493,
+      "gzip": 1880
+    },
+    "_engine/kernel/config": {
+      "modules": 2,
+      "rendered": 6587,
+      "gzip": 2332
+    },
+    "_engine/kernel/ecs": {
+      "modules": 7,
+      "rendered": 47015,
+      "gzip": 13531
+    },
+    "_engine/kernel/init": {
+      "modules": 4,
+      "rendered": 11257,
+      "gzip": 4233
+    },
+    "_engine/kernel/input": {
+      "modules": 2,
+      "rendered": 5657,
+      "gzip": 1779
+    },
+    "_engine/kernel/light": {
+      "modules": 2,
+      "rendered": 8877,
+      "gzip": 2602
+    },
+    "_engine/kernel/loop": {
+      "modules": 3,
+      "rendered": 10178,
+      "gzip": 2890
+    },
+    "_engine/kernel/mesh": {
+      "modules": 1,
+      "rendered": 6560,
+      "gzip": 2050
+    },
+    "_engine/kernel/render": {
+      "modules": 7,
+      "rendered": 6525,
+      "gzip": 2556
+    },
+    "_engine/kernel/scene": {
+      "modules": 6,
+      "rendered": 21719,
+      "gzip": 5868
+    },
+    "_engine/ui": {
+      "modules": 7,
+      "rendered": 54067,
+      "gzip": 13412
+    },
+    "_engine/utils": {
+      "modules": 7,
+      "rendered": 6981,
+      "gzip": 2564
+    },
+    "app": {
+      "modules": 4,
+      "rendered": 1773,
+      "gzip": 1061
+    },
+    "three": {
+      "modules": 4,
+      "rendered": 3199558,
+      "gzip": 623025
+    },
+    "vite": {
+      "modules": 1,
+      "rendered": 2572,
+      "gzip": 1025
+    }
+  }
+}

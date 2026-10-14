@@ -16,9 +16,12 @@ import { isApiPagePath } from './api/model';
 import { createApiSection, type ApiBuildStats, type ApiModelSource } from './api/render';
 import { buildHubData, getPageSection } from './data';
 import './cards'; // Registers the `cards` directive
+import { copyHubEmbeds, createHubEmbedState } from './embed'; // Also registers the `embed` directive
 import { checkClaudeMdCoverage } from './claudeMd'; // Also registers the `claude-md` directive
 import { hubCodePlugin, loadHubHighlighter } from './code';
 import { buildSearchIndex } from './search';
+import { fillSbpPlaceholder, readSbpReport } from './sbp';
+import { SBP_REPORT_FILE, type SbpReportFile } from '../sbp/report';
 import { createHomeSection, getRepoWebUrl } from './generated/home';
 import { createIssuesSection } from './generated/issues';
 import type { HubGeneratedSection, HubSlotGenerator } from './generated/section';
@@ -94,6 +97,11 @@ export type HubBuildOptions = {
   buildTime?: string;
   /** The API docs' model (p553 §2.5): `current` by default, `last` in the dev plugin */
   api?: ApiModelSource;
+  /**
+   * `public`: `::: embed` runs its profile live (copied into `_assets/embed/`), the default, or
+   * shows its poster only (`yarn hub:build --no-embed`). `dev` always runs it from the source.
+   */
+  isEmbedLive?: boolean;
 };
 
 export type HubBuiltPage = {
@@ -169,7 +177,7 @@ type RenderedPage = { page: HubPage; body: string; env: HubMarkdownEnv };
 const HTML_HUB_LINK_REGEX = /\b(href|src)=(["'])((?:hub|api):[^"']*)\2/g;
 
 /** The markup helpers a page's own markup can use (`{{link:…}}` is the shell's: pages use `hub:`) */
-const PAGE_HELPERS = ['icon', 'asset'] as const;
+const PAGE_HELPERS = ['icon', 'asset', 'sbp'] as const;
 
 /** The page's markup with its `hub:` links resolved, `{{root}}` and its markup helpers filled */
 const resolvePageMarkup = (
@@ -349,6 +357,7 @@ export const buildHub = async ({
   fallback,
   buildTime,
   api: apiModel = 'current',
+  isEmbedLive = true,
 }: HubBuildOptions): Promise<HubBuildResult> => {
   const startTime = performance.now();
   const diag = new HubDiagnostics();
@@ -402,6 +411,8 @@ export const buildHub = async ({
   const notFoundBody = fs.readFileSync(HUB_NOT_FOUND_FILE, 'utf-8');
   const icons = loadHubIcons(diag);
   const hashStaticAsset = createStaticAssetHasher();
+  let sbpReport: SbpReportFile | null | undefined;
+  const getSbpReport = () => (sbpReport === undefined ? (sbpReport = readSbpReport()) : sbpReport);
   const helpers: HubMarkupHelpers = {
     icon: (name, _root, file, line) => icons.render(name, file, line),
     asset: (assetPath, root, file, line) => {
@@ -416,6 +427,8 @@ export const buildHub = async ({
       diag.error(file, line, `Dead link {{link:${sitePath}}}: no page at hub/pages/${sitePath}/`);
       return '';
     },
+    sbp: (ref, _root, file, line) =>
+      fillSbpPlaceholder(ref, { mode, report: getSbpReport(), diag, file, line }),
   };
   assets.styles = buildStyles(mode, diag, hashStaticAsset) ?? fallback?.styles ?? null;
   assets.scripts = (await buildScripts(mode, diag)) ?? fallback?.scripts ?? null;
@@ -433,6 +446,8 @@ export const buildHub = async ({
     icons,
     apiLinks: api.links,
     getAppScenes: () => (appScenes ??= loadAppScenes()),
+    getSbpReport,
+    embeds: createHubEmbedState(mode === 'dev' || isEmbedLive),
     repoBlobUrl: `${getRepoWebUrl(meta)}/blob/${meta.build.commit || 'main'}/`,
     tree,
   };
@@ -629,6 +644,8 @@ export const buildHub = async ({
       // pages that show it
       ...rendered.flatMap(({ env }) => env.includes),
       ...pageImageFiles,
+      // `{{sbp:…}}` (p611 D9): a `yarn sbp` run rebuilds the pages that show its numbers
+      SBP_REPORT_FILE,
     ]),
   ];
   if (mode === 'public' && diag.errors.length) {
@@ -642,6 +659,7 @@ export const buildHub = async ({
     if (file) writeFile(path.join(outDir, file.outPath), file.content);
   }
   copyStaticAssets(outDir);
+  if (mode === 'public') copyHubEmbeds(context.embeds, outDir);
   await writeImages(
     rendered.flatMap(({ env }) => env.images),
     outDir,

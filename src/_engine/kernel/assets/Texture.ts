@@ -9,7 +9,7 @@ import {
 } from './AssetsAPI';
 import type { AssetLoadReport } from './AssetsAPITypes';
 import { recordAssetOwner, retagAssetOwner } from './AssetOwners';
-import { resolveAssetUrl, type GeneratedAssetUrls } from './AssetUrl';
+import { resolveAssetUrl, resolveFileUrl, type GeneratedAssetUrls } from './AssetUrl';
 import { loadKTX2Texture } from './import/KTX2';
 import type { TextureArrayInfo } from './TextureArray';
 import type { TextureAtlasInfo } from './TextureAtlas';
@@ -72,9 +72,8 @@ const disposeTextureResource = (texture: THREE.Texture) => {
 };
 
 /** Resolves a file name the way three's loaders do (`path + fileName`, then against the
- * document), so the worker fetches exactly the same URL. */
-const toLoaderUrl = (fileName: string, path?: string) =>
-  new URL((path || './') + fileName, document.baseURI).href;
+ * document, or a mounted engine's `assetBaseUrl`), so the worker fetches exactly the same URL. */
+const toLoaderUrl = (fileName: string, path?: string) => resolveFileUrl((path || './') + fileName);
 
 /** A texture from an assets-worker ImageBitmap, in the state TextureLoader leaves a texture in,
  * except flipY: the flip is already baked into the bitmap. */
@@ -278,7 +277,12 @@ const createTexture = (
       (HDRLoader) =>
         new HDRLoader()
           .setDataType(THREE.HalfFloatType)
-          .load(fileName, (loaded) => applyLoadedHDRTexture(texture, loaded), undefined, onError),
+          .load(
+            resolveFileUrl(fileName),
+            (loaded) => applyLoadedHDRTexture(texture, loaded),
+            undefined,
+            onError
+          ),
       onError
     );
     saveTexture(texture, id, isPersistent);
@@ -288,7 +292,7 @@ const createTexture = (
   const loader = new THREE.TextureLoader();
   const texture = setTextureOpts(
     loader.load(
-      fileName,
+      resolveFileUrl(fileName),
       (texture) => texture,
       undefined,
       (err) => {
@@ -375,7 +379,7 @@ export const loadTextures = (
       if (updateStatusFn) updateStatusFn(batchTextures, loadedCount, totalCount);
     } else if (fileName) {
       loader.load(
-        fileName,
+        resolveFileUrl(fileName),
         (texture) => {
           const texId = id || texture.uuid;
           setTextureOpts(texture, texOpts, userData, debugData);
@@ -763,7 +767,7 @@ export const loadTextureAsync = async (props: TextureProps) => {
       loaderType = 'CubeTextureLoader';
       const loader = new THREE.CubeTextureLoader();
       const loadedTexture = setTextureOpts(
-        await loader.setPath(path || './').loadAsync(fileName),
+        await loader.setPath(resolveFileUrl(path || './')).loadAsync(fileName),
         texOpts,
         userData,
         debugData

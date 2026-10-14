@@ -50,8 +50,57 @@ module 'aekasha'`), which changes the public types of the core component map: th
   in main (not measured): measure and gate them, or make `onDebug` fold.
 - **The loop:** the fixed-step seam is `MainLoop.ts`' `FixedStepDriver` (`latch`, `step`,
   `flushEvents`, `isStepping`), the render seams `core/RenderHooks.ts`. Factories take no options
-  yet (p607 D1): `physics()` keeps `config.physics`, which this plan reviews (eg. leaving the tiers
-  and the tier policy out, p611).
+  yet (p607 D1): `physics()` keeps `config.physics`, which this plan reviews. Leaving the tiers and
+  the tier policy out was measured in p611 Phase 5: a feature of its own, not an option, in p614's
+  "From p611".
+
+## From p611 (2026-10-14)
+
+The embed's seams (p611 Phase 3, D6), each defaulting to the full-page boot's behaviour:
+
+- **The boot** is `kernel/init/Boot.ts`' `bootEngineAsync` (`@internal`; `InitEngine` is the
+  full-page wrapper that adds `page.scss`), shared with `mountAekasha` (`kernel/init/Mount.ts`). It
+  runs once per page load (`isEngineBooted`): a second `InitEngine` or mount throws. Mounting again
+  after `unmount()` throws too, since the registrations (`ECSWorld.registerPlugin`, the features'
+  installs, the scene registry) are static and can't be undone: resetting them is this plan's call.
+  `BootOptions.hudSlot` is the element the HUD root replaces.
+- **The loop:** `initMainLoop` subscribes its resizers with `onCanvasResize`
+  (`kernel/render/CanvasSize.ts`) instead of the window's `resize`; `stopMainLoop()` (`@internal`)
+  stops it for good, a queued frame included (a flag each loop variant checks first), and removes
+  the resize, visibility, `beforeunload` and `blur` listeners.
+- **Not stopped by `unmount()`:** a physics worker (`physics()` has no stop; p614).
+
+**The manifest fold** (p600 §4.2's constants, left to p611 by p607 D10; measured in p611 Phase 5
+§2): build-time constants from the gathered data, so code paths no shipped scene's data needs fold
+away, as `__AEK_DEBUG__` folds the debug code.
+
+- **The template app saves nothing:** some scene's data uses every data-driven path. Each of the
+  four features with a schema part is in a manifest (sky box in 10 scenes, PostFX in 4, LOD in 2,
+  spatial in 1), the sky boxes use every layer between them (`dayNight` all but the nebulae, which
+  `space` and `exampleHubHero` have), and `exampleToolkit` and
+  `sceneTestECS` (the first scene) import assets. It pays in an app with fewer scenes, and in an
+  embed (each profile has its own data, `src/generated/profiles/<id>/`).
+- **Measured on the banner:** folding the one data-only kernel path it doesn't use, the scene's
+  imported assets (`SceneLoader.ts`' branch and `SceneAssetRelease.ts`' release, with
+  `if (false as boolean)` in a scratch build), takes its initial 300.6 → 285.1 KiB gzip (−5.2%) and
+  its deployed lazy files 752.9 → 729.3 KiB (p613's "From p611" has the breakdown).
+- **Safe only on a branch that reads scene data:** the public API keeps what it imports, so code
+  that calls `importAssetAsync` still works when the data branch folds. The sky box layers aren't
+  such a branch (their pre-minification sizes: the eight layers 12.9 kB, `SkyLights.ts` 3.5,
+  `SkyTime.ts` 1.5, `SkyStaticLayers.ts` 1.0): the composite reads a definition that scene code
+  can make too, so folding a layer no data names would break a code-made sky. Leaving layers out
+  needs an API (eg. `skyBox()` taking the layers it may build, p615), not a manifest.
+- **The mechanism, if built:** defines computed from the gathered data at build time, one per
+  data-only path (`__AEK_DATA_IMPORTS__`), from the app's data or the embed profile's (the
+  production gather runs before `vite build` in `yarn build` and `buildBundles`), `true` in the dev
+  server and the tests. `vite.config.ts` would read the gathered JSON when it loads, and the
+  scene runner couldn't see a wrong fold (it runs the dev data).
+- **Recommendation: don't build it now.** The one candidate found folds better as an `import()`
+  (p613's "From p611": loaded when a scene's data names an imported asset), which saves the same
+  bytes in every build, the app's initial chunk included, with no build-time constants and no
+  build that differs from the dev server. Revisit when a data-only path can't be lazy (it must run
+  synchronously) and is worth more than a few KiB. The manifest stays what p607 made it: the
+  boot's check that `features` covers the scenes.
 
 ## Done when
 

@@ -27,10 +27,10 @@
  * `.cache/verify/scenes/firefox/`.
  */
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
 import { execSync } from 'child_process';
-import { chromium, firefox, type Browser, type BrowserContext, type Page } from 'playwright-core';
+import { firefox, type Browser, type BrowserContext, type Page } from 'playwright-core';
+import { isWSL, launchChromium } from './browser';
 import { ROOT } from '../assetPipeline/sources';
 import type {
   TestBridgeCharacterPaths,
@@ -218,8 +218,6 @@ const selectScenes = (allIds: string[], only: string[]) => {
 
 // --- Environment ---
 
-const isWSL = () => os.release().toLowerCase().includes('microsoft');
-
 const getCommit = () => {
   try {
     const sha = execSync('git rev-parse --short HEAD', { cwd: ROOT }).toString().trim();
@@ -228,35 +226,6 @@ const getCommit = () => {
   } catch {
     return 'unknown';
   }
-};
-
-/** A system Chrome / Chromium / Edge (the skill driver's list), else playwright-core's own */
-const findBrowserExecutable = () => {
-  const candidates: string[] = [];
-  const platform = os.platform();
-  if (platform === 'darwin') {
-    candidates.push(
-      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-      '/Applications/Chromium.app/Contents/MacOS/Chromium',
-      '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'
-    );
-  } else if (platform === 'win32') {
-    candidates.push(
-      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-      'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
-    );
-  } else {
-    // Linux and WSL2 (a Windows Chrome under /mnt/c can't be driven from WSL2: the debugging
-    // pipe doesn't cross the boundary)
-    candidates.push(
-      '/usr/bin/google-chrome-stable',
-      '/usr/bin/google-chrome',
-      '/usr/bin/chromium-browser',
-      '/usr/bin/chromium'
-    );
-  }
-  return candidates.find((p) => fs.existsSync(p));
 };
 
 const launchBrowser = async (browser: VerifyBrowser, useWebGL: boolean, headed: boolean) => {
@@ -271,21 +240,10 @@ const launchBrowser = async (browser: VerifyBrowser, useWebGL: boolean, headed: 
       );
     }
   }
-  const executablePath = findBrowserExecutable();
-  const launchArgs = useWebGL
-    ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist']
-    : ['--enable-unsafe-webgpu', '--enable-features=Vulkan'];
   try {
-    return await chromium.launch({
-      ...(executablePath ? { executablePath } : {}),
-      headless: !headed,
-      args: launchArgs,
-    });
+    return await launchChromium({ useWebGL, headed });
   } catch (err) {
-    const hint = executablePath
-      ? ''
-      : '\nNo system Chrome found: install one, or run `npx playwright-core install chromium` once.';
-    return fail(`The browser didn't launch: ${(err as Error).message}${hint}`);
+    return fail((err as Error).message);
   }
 };
 

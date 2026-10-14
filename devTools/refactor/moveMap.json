@@ -1283,6 +1283,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/kernel/assets/AssetUrl.test.ts": {
+      "to": "src/_engine/kernel/assets/AssetUrl.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/kernel/assets/AssetUrl.ts": {
       "to": "src/_engine/kernel/assets/AssetUrl.ts",
       "action": "keep",
@@ -1558,6 +1563,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/kernel/init/Boot.ts": {
+      "to": "src/_engine/kernel/init/Boot.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/kernel/init/Features.test.ts": {
       "to": "src/_engine/kernel/init/Features.test.ts",
       "action": "keep",
@@ -1575,6 +1585,16 @@
     },
     "src/_engine/kernel/init/Kernel.ts": {
       "to": "src/_engine/kernel/init/Kernel.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/init/Mount.test.ts": {
+      "to": "src/_engine/kernel/init/Mount.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/init/Mount.ts": {
+      "to": "src/_engine/kernel/init/Mount.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -1615,6 +1635,11 @@
     },
     "src/_engine/kernel/input/InputPicking.ts": {
       "to": "src/_engine/kernel/input/InputPicking.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/input/InputScope.test.ts": {
+      "to": "src/_engine/kernel/input/InputScope.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -1690,6 +1715,16 @@
     },
     "src/_engine/kernel/mesh/MeshUserData.ts": {
       "to": "src/_engine/kernel/mesh/MeshUserData.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/render/CanvasSize.test.ts": {
+      "to": "src/_engine/kernel/render/CanvasSize.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/render/CanvasSize.ts": {
+      "to": "src/_engine/kernel/render/CanvasSize.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -2249,6 +2284,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/ui/styles/page.scss": {
+      "to": "src/_engine/ui/styles/page.scss",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/ui/styles/variables.scss": {
       "to": "src/_engine/ui/styles/variables.scss",
       "action": "keep",
@@ -2671,6 +2711,46 @@
     },
     "src/app/postFx/ambientOcclusion.tsl.ts": {
       "to": "src/app/postFx/ambientOcclusion.tsl.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/profiles/banner/banner.embed.ts": {
+      "to": "src/app/profiles/banner/banner.embed.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/profiles/banner/banner.hub.png": {
+      "to": "src/app/profiles/banner/banner.hub.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/profiles/banner/banner.scene.json": {
+      "to": "src/app/profiles/banner/banner.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/profiles/banner/banner.ts": {
+      "to": "src/app/profiles/banner/banner.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/profiles/banner/bannerAether.material.json": {
+      "to": "src/app/profiles/banner/bannerAether.material.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/profiles/banner/bannerAether.tsl.ts": {
+      "to": "src/app/profiles/banner/bannerAether.tsl.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/profiles/banner/bannerCamera.camera.json": {
+      "to": "src/app/profiles/banner/bannerCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/profiles/banner/bannerLight.light.json": {
+      "to": "src/app/profiles/banner/bannerLight.light.json",
       "action": "keep",
       "plan": "p609"
     },

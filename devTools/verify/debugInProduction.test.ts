@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { findDebugCodeInBuild } from './debugInProduction';
+import { type BuildModule, type EmittedAsset, findDebugCodeInBuild } from './debugInProduction';
 
 const MAIN = 'assets/index.js';
+
+const find = (files: string[], modules: BuildModule[], assets: EmittedAsset[] = []) =>
+  findDebugCodeInBuild({ files, modules, assets });
 
 describe('findDebugCodeInBuild', () => {
   it('passes a build without debug code', () => {
     expect(
-      findDebugCodeInBuild(
+      find(
         [MAIN, 'assets/rapier.js'],
         [
           { id: '/src/_engine/core/MainLoop.ts', chunks: { [MAIN]: 900 } },
@@ -22,7 +25,7 @@ describe('findDebugCodeInBuild', () => {
 
   it('ignores tree-shaken debug modules and the debug entry', () => {
     expect(
-      findDebugCodeInBuild(
+      find(
         [MAIN],
         [
           { id: '/src/_engine/core/Debug/_dbg__Stats.ts', chunks: {} },
@@ -35,7 +38,7 @@ describe('findDebugCodeInBuild', () => {
 
   it('reports debug chunks and _dbg__ modules', () => {
     expect(
-      findDebugCodeInBuild(
+      find(
         [MAIN, 'assets/_dbg__Profiler.js', 'assets/_dbg__Profiler.css'],
         [
           { id: '/src/_engine/core/Debug/_dbg__Profiler.ts', chunks: { 'assets/x.js': 40 } },
@@ -52,7 +55,7 @@ describe('findDebugCodeInBuild', () => {
 
   it('reports any module under an engine folder named debug, in any case', () => {
     expect(
-      findDebugCodeInBuild(
+      find(
         [MAIN],
         [
           { id: '/src/_engine/core/Debug/Panel.module.scss', chunks: { [MAIN]: 10 } },
@@ -69,5 +72,54 @@ describe('findDebugCodeInBuild', () => {
       'debug module src/_engine/features/lod/debug/LodHelpers.ts in assets/index.js',
       'debug module src/_engine/kernel/ecs/debug/ECSStressTest.ts in assets/index.js',
     ]);
+  });
+
+  it('reports a file emitted for a debug module', () => {
+    const shipped = { id: '/src/_engine/kernel/assets/Basis.ts', chunks: { [MAIN]: 50 } };
+    expect(
+      find(
+        [MAIN, 'assets/3DSymbols.glb', 'assets/logo.png', 'assets/basis_transcoder.wasm'],
+        [shipped],
+        [
+          // In a debug folder, whoever imports it
+          {
+            file: 'assets/3DSymbols.glb',
+            id: '/src/_engine/debug/symbols/3DSymbols.glb',
+            importers: ['/src/_engine/debug/symbols/_dbg__Symbols.ts'],
+          },
+          // Imported only by debug modules
+          {
+            file: 'assets/logo.png',
+            id: '/src/toolkit/textures/logo/logo.png',
+            importers: ['/src/app/_dbg__Splash.ts', '/src/_engine/kernel/debug/Panel.ts'],
+          },
+          // A `new URL` file has no importers listed: never a finding by its importers
+          {
+            file: 'assets/basis_transcoder.wasm',
+            id: '/node_modules/three/examples/jsm/libs/basis/basis_transcoder.wasm',
+            importers: [],
+          },
+        ]
+      )
+    ).toEqual([
+      'debug asset assets/3DSymbols.glb (src/_engine/debug/symbols/3DSymbols.glb)',
+      'debug asset assets/logo.png (src/toolkit/textures/logo/logo.png, imported only by src/app/_dbg__Splash.ts, src/_engine/kernel/debug/Panel.ts)',
+    ]);
+  });
+
+  it('passes a file a shipping module imports too', () => {
+    expect(
+      find(
+        [MAIN, 'assets/logo.png'],
+        [],
+        [
+          {
+            file: 'assets/logo.png',
+            id: '/src/toolkit/textures/logo/logo.png',
+            importers: ['/src/app/_dbg__Splash.ts', '/src/app/Splash.ts'],
+          },
+        ]
+      )
+    ).toEqual([]);
   });
 });

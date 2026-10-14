@@ -80,6 +80,14 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  banner: async ({ sceneData, assets }) => {
+    const module = await import('../app/./profiles/banner/banner.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   assetCompare: async ({ sceneData, assets }) => {
     const module = await import('../app/./scenes/assetCompare/assetCompare.ts');
     await (
@@ -211,6 +219,7 @@ export const sceneFileObjects: {
 };
 
 export const tslMaterialFileObjects = {
+  bannerAether: () => import('../app/profiles/banner/bannerAether.tsl.ts'),
   testTslMat: () => import('../app/scenes/sceneTestECS/testTslMat.tsl.ts'),
   asteroid: () => import('../toolkit/materials/asteroid/asteroid.tsl.ts'),
   triplanarCheckerboard: () => import('../toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts'),

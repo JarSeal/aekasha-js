@@ -53,5 +53,5 @@
     "plugin": ["typedoc-plugin-zod"]
   },
   "exclude": ["node_modules"],
-  "include": ["src/**/*", "devTools/**/*.ts", "vite.config.ts", "vitest.config.ts", "vite-env.d.ts"]
+  "include": ["src/**/*", "devTools/**/*.ts", "vite.config.ts", "vitest.config.ts", "vite-env.d.ts", "sbp.config.ts"]
 }

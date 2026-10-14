@@ -10,7 +10,7 @@ import {
   runSceneMainLoopers,
 } from '../scene/Scene';
 import { lerror, lwarn } from '../../utils/Logger';
-import { getWindowSize } from '../../ui/Window';
+import { getCanvasSize, onCanvasResize } from '../render/CanvasSize';
 import {
   getEnv,
   isDebugEnvironment,
@@ -38,6 +38,10 @@ let deltaApp = 0;
 let elapsed = 0;
 let discardNextElapsedDelta = true; // the first frame's delta is time since module load
 let mainLoopInitiated = false;
+/** stopMainLoop ran (a mounted engine's unmount): no frame runs again, a queued one included */
+let isMainLoopStopped = false;
+/** Removes what initMainLoop and addWindowListeners added (the resize subscription, the listeners) */
+const loopListenerRemovers: (() => void)[] = [];
 let lastRenderTime = performance.now();
 // Debug and test only: when set, every frame advances by this many seconds (setFixedFrameDelta)
 let fixedFrameDelta: number | null = null;
@@ -355,6 +359,7 @@ const renderScene = () => {
 // LOOP (for debug)
 // **************************************
 const mainLoopForDebug = async () => {
+  if (isMainLoopStopped) return;
   frameProbe?.begin(performance.now());
   startCustomMeasurements();
 
@@ -431,6 +436,7 @@ const mainLoopForDebug = async () => {
 // LOOP (for production)
 // **************************************
 const mainLoopForProduction = async () => {
+  if (isMainLoopStopped) return;
   frameProbe?.begin(performance.now());
   timer.update();
   fixedStepDriver?.latch();
@@ -473,6 +479,7 @@ const mainLoopForProduction = async () => {
 // LOOP (for production with FPS limiter)
 // **************************************
 const mainLoopForProductionWithFPSLimiter = async () => {
+  if (isMainLoopStopped) return;
   frameProbe?.begin(performance.now());
   timer.update();
   fixedStepDriver?.latch();
@@ -525,6 +532,21 @@ const mainLoopForProductionWithFPSLimiter = async () => {
   frameProbe?.end(performance.now(), true);
 };
 
+/** Runs the global resizers, then the current scene's. */
+const runResizers = () => {
+  const ids = Object.keys(resizers);
+  for (let i = 0; i < ids.length; i++) {
+    resizers[ids[i]]();
+  }
+
+  const sceneResizers = getSceneResizers();
+  if (sceneResizers) {
+    for (let i = 0; i < sceneResizers.length; i++) {
+      sceneResizers[i]();
+    }
+  }
+};
+
 /**
  * Initializes the main loop. Requires that the renderer, camera, and scene have been created.
  */
@@ -550,28 +572,11 @@ export const initMainLoop = () => {
   addResizer('canvasResizer', () => {
     const renderer = getRenderer();
     if (!renderer) throw new Error('Could not find current renderer in canvas resizer.');
-    const { width, height } = getWindowSize();
+    const { width, height } = getCanvasSize();
     renderer.setSize(width, height);
   });
-  window.addEventListener(
-    'resize',
-    () => {
-      // Global resizers
-      const ids = Object.keys(resizers);
-      for (let i = 0; i < ids.length; i++) {
-        resizers[ids[i]]();
-      }
-
-      // Scene resizers
-      const sceneResizers = getSceneResizers();
-      if (sceneResizers) {
-        for (let i = 0; i < sceneResizers.length; i++) {
-          sceneResizers[i]();
-        }
-      }
-    },
-    false
-  );
+  // The window's resize, or the mounted container's (kernel/render/CanvasSize.ts)
+  loopListenerRemovers.push(onCanvasResize(runResizers));
 
   const maxFPS = Number(getEnv('VITE_MAX_FPS'));
   if (maxFPS !== undefined && !isNaN(maxFPS)) {
@@ -723,16 +728,20 @@ export const addVisibilityChangeFn = (id: string, fn: (isHidden: boolean) => voi
   (visibilityChangeFns[id] = fn);
 export const deleteVisibilityChangeFn = (id: string) => delete visibilityChangeFns[id];
 export const deleteAllVisibilityChangeFns = () => (visibilityChangeFns = {});
+const onVisibilityChange = () => {
+  if (loopState.isUnloading) return;
+  const isHidden = document.hidden;
+  loopState.isWindowHidden = isHidden;
+  const keys = Object.keys(visibilityChangeFns);
+  for (let i = 0; i < keys.length; i++) {
+    visibilityChangeFns[keys[i]](isHidden);
+  }
+};
 const initWinVisibilityListener = () => {
-  document.addEventListener('visibilitychange', () => {
-    if (loopState.isUnloading) return;
-    const isHidden = document.hidden;
-    loopState.isWindowHidden = isHidden;
-    const keys = Object.keys(visibilityChangeFns);
-    for (let i = 0; i < keys.length; i++) {
-      visibilityChangeFns[keys[i]](isHidden);
-    }
-  });
+  document.addEventListener('visibilitychange', onVisibilityChange);
+  loopListenerRemovers.push(() =>
+    document.removeEventListener('visibilitychange', onVisibilityChange)
+  );
 };
 
 let beforeUnloadFns: { [id: string]: () => void } = {};
@@ -755,19 +764,39 @@ let areWindowListenersAdded = false;
 export const addWindowListeners = () => {
   if (areWindowListenersAdded) return;
   areWindowListenersAdded = true;
-  window.addEventListener('beforeunload', () => {
+  const onBeforeUnload = () => {
     loopState.isUnloading = true;
     const keys = Object.keys(beforeUnloadFns);
     for (let i = 0; i < keys.length; i++) {
       beforeUnloadFns[keys[i]]();
     }
-  });
-  window.addEventListener('blur', () => {
+  };
+  const onBlur = () => {
     const keys = Object.keys(onWindowBlurFns);
     for (let i = 0; i < keys.length; i++) {
       onWindowBlurFns[keys[i]]();
     }
+  };
+  window.addEventListener('beforeunload', onBeforeUnload);
+  window.addEventListener('blur', onBlur);
+  loopListenerRemovers.push(() => {
+    window.removeEventListener('beforeunload', onBeforeUnload);
+    window.removeEventListener('blur', onBlur);
   });
+};
+
+/**
+ * Stops the main loop for good (a mounted engine's unmount, `mountAekasha`): no frame runs again,
+ * one already requested included, and the resize subscription and the window and document
+ * listeners (visibility, `beforeunload`, `blur`) are removed. The engine doesn't start again in
+ * this page load.
+ * @internal
+ */
+export const stopMainLoop = () => {
+  isMainLoopStopped = true;
+  loopState.masterPlay = false;
+  loopState.isMasterPlaying = false;
+  for (const remove of loopListenerRemovers.splice(0)) remove();
 };
 
 // Debug

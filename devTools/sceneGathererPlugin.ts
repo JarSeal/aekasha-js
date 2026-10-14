@@ -15,13 +15,7 @@ import { ASSETS_CONFIG_FILE } from './assetPipeline/settings';
 import { ROOT } from './assetPipeline/sources';
 import { CONFIG_FILE, resolveProjectOptOut, type ProjectOptOut } from './assetPipeline/switches';
 import { DEV_FILES_TEMP_SUFFIX } from './devFiles/commit';
-import {
-  gatherSceneData,
-  isFilePathValid,
-  OUTPUT_FILE_DATA,
-  OUTPUT_FILE_FN,
-  OUTPUT_FILE_INDEX,
-} from './gatherAppData';
+import { gatherSceneData, isFilePathValid, OUTPUT_DIR } from './gatherAppData';
 
 /**
  * The dev server's gatherer (`yarn dev`): re-gathers the generated data when an asset JSON is
@@ -274,8 +268,7 @@ export const sceneGathererPlugin = (): Plugin => ({
 
     const handleFileEvent = (event: 'add' | 'change' | 'unlink') => (filePath: string) => {
       const file = path.resolve(filePath);
-      if (file === OUTPUT_FILE_DATA || file === OUTPUT_FILE_FN || file === OUTPUT_FILE_INDEX)
-        return;
+      if (file.startsWith(OUTPUT_DIR + path.sep)) return; // Its own outputs, the profiles' too
       if (file.startsWith(AEK_ASSETS_DIR + path.sep)) return; // The pipeline's own outputs
       if (file.endsWith(DEV_FILES_TEMP_SUFFIX)) return; // A dev files commit renames it into place
 

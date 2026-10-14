@@ -138,13 +138,15 @@ const APP_ASSET_FOLDERS = [
  * The app's layout since p609's move (D2, D5): one folder per scene, `scenes/<sceneId>/` (its
  * scene JSON, scene file, `_dbg__` module, Hub image, its own modules and the assets only it
  * uses), the examples (the Hub's example rule reads `examples/<name>/`), `shared/` (code several
- * scenes use, a copied toolkit piece among them) and the shared assets' type folders. A file
- * anywhere else has no rule and fails `moveMap.ts`.
+ * scenes use, a copied toolkit piece among them), the shared assets' type folders and the SBP
+ * embed profiles (p611 D7, `profiles/<id>/`: the entry module, its scene and that scene's assets).
+ * A file anywhere else has no rule and fails `moveMap.ts`.
  */
 const getAppRules = (files: string[]): MoveRule[] => [
   ...getSubfolderRules(`${A}scenes/`, 1, files),
   { from: `${A}examples/`, to: `${A}examples/`, plan: 'p609' },
   { from: `${A}shared/`, to: `${A}shared/`, plan: 'p609' },
+  ...getSubfolderRules(`${A}profiles/`, 1, files),
   ...APP_ASSET_FOLDERS.map((f): MoveRule => ({ from: `${A}${f}/`, to: `${A}${f}/`, plan: 'p609' })),
 ];
 

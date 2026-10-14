@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "bannerAether",
+  "tslFile": "profiles/banner/bannerAether.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "params": { "roughness": 0.35, "metalness": 0.2 },
+  "nodes": {
+    "colorNode": {
+      "colorLow": "#262c6b",
+      "colorHigh": "#1a93b8"
+    },
+    "emissiveNode": {
+      "rimColor": "#00d4ff",
+      "rimPower": 2.5,
+      "rimIntensity": 1.6,
+      "pulseSpeed": 0.6,
+      "warmColor": "#ff9955",
+      "warmIntensity": 0.6
+    }
+  },
+  "debugData": {
+    "name": "Banner aether",
+    "description": "The banner's faceted surface: an indigo-to-teal gradient up the shape, a cyan rim that glows where a face turns away from the camera, breathing slowly, and a warm glow on the faces that turn upward."
+  }
+}

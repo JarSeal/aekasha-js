@@ -5,12 +5,15 @@ import type StateBlock from 'markdown-it/lib/rules_block/state_block.mjs';
 import type StateCore from 'markdown-it/lib/rules_core/state_core.mjs';
 import type Token from 'markdown-it/lib/token.mjs';
 import type { HubDiagnostics } from './diagnostics';
+import type { HubEmbedState } from './embed';
 import { hashContent } from './hash';
 import type { HubIcons } from './icons';
 import type { HubPageTree } from './pages';
 import { PAGE_IMAGES_URL_DIR, ROOT, toRepoPath } from './paths';
 import { readMarkdownHeadings } from './repoFiles';
 import type { HubAppScenes } from './scenes';
+import { fillSbpPlaceholder, SBP_PLACEHOLDER_REGEX } from './sbp';
+import { SBP_REPORT_FILE, type SbpReportFile } from '../sbp/report';
 import type { HubBuildMode, HubHeading, HubPage } from './types';
 
 /**
@@ -68,6 +71,10 @@ export type HubRenderContext = {
   apiLinks: HubApiLinkResolver | null;
   /** The app's scenes (p554, `scenes.ts`), read on the build's first use */
   getAppScenes: () => HubAppScenes;
+  /** The last `yarn sbp` report (p611 D9, `sbp.ts`), read on the build's first use */
+  getSbpReport: () => SbpReportFile | null;
+  /** The live embeds (p611 D9, `embed.ts`) */
+  embeds: HubEmbedState;
   /** The repo's files on GitHub at the build's commit, with a trailing slash (`repo:` links) */
   repoBlobUrl: string;
   /**
@@ -518,6 +525,27 @@ export const renderMarkdownText = (
   }
 };
 
+/**
+ * `{{sbp:…}}` in a slot's Markdown (p611 D9), filled before it's parsed (code blocks too); a
+ * line's text changes, never the line count
+ */
+const fillSbpPlaceholders = (text: string, file: string, env: HubMarkdownEnv) =>
+  text
+    .split('\n')
+    .map((lineText, i) =>
+      lineText.replace(SBP_PLACEHOLDER_REGEX, (_match, ref: string) => {
+        env.includes.push(SBP_REPORT_FILE);
+        return fillSbpPlaceholder(ref, {
+          mode: env.mode,
+          report: env.getSbpReport(),
+          diag: env.diag,
+          file,
+          line: i + 1,
+        });
+      })
+    )
+    .join('\n');
+
 /** Renders one slot's Markdown into the page's env */
 export const renderMarkdown = (md: MarkdownIt, file: string, env: HubMarkdownEnv) =>
-  renderMarkdownText(md, fs.readFileSync(file, 'utf-8'), file, env);
+  renderMarkdownText(md, fillSbpPlaceholders(fs.readFileSync(file, 'utf-8'), file, env), file, env);

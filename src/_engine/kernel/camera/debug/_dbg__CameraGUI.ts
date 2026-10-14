@@ -29,7 +29,7 @@ import {
 } from '../../../debug/_dbg__ClearLSButtons';
 import type { CameraDebugLSData, DebugCamLSProps } from '../Camera';
 import { getActiveCameraId, getAllCamerasAsArray, applyCameraProjection } from '../Camera';
-import { getWindowSize } from '../../../ui/Window';
+import { getCanvasSize } from '../../render/CanvasSize';
 import { DEFAULT_DEBUG_CAM_PROPS } from './_dbg__DebugCamera';
 import { updateOnScreenTools } from '../../../debug/OnScreenTools';
 import { lwarn } from '../../../utils/Logger';
@@ -143,20 +143,20 @@ const applyCamField: {
   position: ({ world, entityId }, value) => world.setTransform(entityId, { pos: value }),
   responsiveAspect: ({ camera, settings }, value) => {
     settings.responsiveAspect = value;
-    applyCameraProjection(camera, settings, getWindowSize().aspect);
+    applyCameraProjection(camera, settings, getCanvasSize().aspect);
   },
   referenceAspect: ({ camera, settings }, value) => {
     settings.referenceAspect = value;
-    applyCameraProjection(camera, settings, getWindowSize().aspect);
+    applyCameraProjection(camera, settings, getCanvasSize().aspect);
   },
   // Goes through settings.fov in both modes: applyCameraProjection derives the live fov from it.
   fov: ({ camera, settings }, value) => {
     settings.fov = value;
-    applyCameraProjection(camera, settings, getWindowSize().aspect);
+    applyCameraProjection(camera, settings, getCanvasSize().aspect);
   },
   frustumSize: ({ camera, settings }, value) => {
     settings.frustumSize = value;
-    applyCameraProjection(camera, settings, getWindowSize().aspect);
+    applyCameraProjection(camera, settings, getCanvasSize().aspect);
   },
   near: ({ camera }, value) => {
     camera.near = value;
@@ -326,7 +326,7 @@ export const createEditCameraContent = (data?: { [key: string]: unknown }) => {
     .addBinding(responsiveProxy, 'responsiveAspect', { label: 'Responsive Aspect' })
     .on('change', (ev) => {
       settings.responsiveAspect = ev.value;
-      applyCameraProjection(camera, settings, getWindowSize().aspect);
+      applyCameraProjection(camera, settings, getCanvasSize().aspect);
       save('responsiveAspect', ev.value);
       record('responsiveAspect', ev.value);
       // Without this one iteration timeout, Tweakpane will crash (maybe fix at one point)
@@ -342,7 +342,7 @@ export const createEditCameraContent = (data?: { [key: string]: unknown }) => {
     })
     .on('change', (ev) => {
       settings.referenceAspect = ev.value;
-      applyCameraProjection(camera, settings, getWindowSize().aspect);
+      applyCameraProjection(camera, settings, getCanvasSize().aspect);
       save('referenceAspect', ev.value);
       record('referenceAspect', ev.value);
     });
@@ -361,7 +361,7 @@ export const createEditCameraContent = (data?: { [key: string]: unknown }) => {
       })
       .on('change', (ev) => {
         settings.fov = ev.value;
-        applyCameraProjection(camera, settings, getWindowSize().aspect);
+        applyCameraProjection(camera, settings, getCanvasSize().aspect);
         save('fov', settings.fov);
         record('fov', settings.fov);
       });
@@ -375,7 +375,7 @@ export const createEditCameraContent = (data?: { [key: string]: unknown }) => {
       })
       .on('change', (ev) => {
         settings.frustumSize = ev.value;
-        applyCameraProjection(camera, settings, getWindowSize().aspect);
+        applyCameraProjection(camera, settings, getCanvasSize().aspect);
         save('frustumSize', settings.frustumSize);
         record('frustumSize', settings.frustumSize);
       });

@@ -1,0 +1,70 @@
+<!doctype html>
+<!--
+  The embed example (p611 Phase 6): a site's page that puts the banner embed into its hero, as the
+  Hub's example page shows it (its regions, hub/pages/examples/embed/). yarn verify:embed serves it
+  at /example.html with the banner's build at ./aekasha/ and checks that it mounts, draws and
+  pauses (devTools/verify/embed.ts), so the example is code that runs.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Embed example</title>
+    <style>
+      body {
+        margin: 0;
+        background: #10141f;
+        color: #e8ecf3;
+        font:
+          18px/1.5 system-ui,
+          sans-serif;
+      }
+      /* #region embed-example-styles */
+      .hero {
+        position: relative;
+        height: 28rem;
+      }
+      .heroScene {
+        position: absolute;
+        inset: 0;
+      }
+      .heroText {
+        position: relative; /* Over the scene */
+        max-width: 32rem;
+        padding: 6rem 2rem 0;
+      }
+      /* #endregion embed-example-styles */
+    </style>
+  </head>
+  <body>
+    <!-- #region embed-example-markup -->
+    <section class="hero">
+      <div class="heroScene" id="heroScene"></div>
+      <div class="heroText">
+        <h1>The fifth element</h1>
+        <p>A page of its own, with the engine turning behind its heading.</p>
+        <button type="button" id="heroPause">Pause</button>
+      </div>
+    </section>
+    <!-- #endregion embed-example-markup -->
+    <script type="module">
+      // #region embed-example-script
+      import { mount } from './aekasha/banner.embed.js';
+
+      const scene = await mount({ target: '#heroScene' });
+
+      // Paused out of view already; this pauses it for good
+      const pauseButton = document.querySelector('#heroPause');
+      pauseButton.addEventListener('click', () => {
+        if (scene.isPaused()) scene.resume();
+        else scene.pause();
+        pauseButton.textContent = scene.isPaused() ? 'Play' : 'Pause';
+      });
+      // #endregion embed-example-script
+
+      // For yarn verify:embed
+      window.__embedExample = scene;
+      window.__embedTestReady = true;
+    </script>
+  </body>
+</html>

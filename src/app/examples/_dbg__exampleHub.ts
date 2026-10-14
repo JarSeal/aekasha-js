@@ -64,8 +64,14 @@ let isSaving = false;
 /**
  * Renders the scene's Hub image and writes it beside the scene file, or downloads it when the dev
  * files can't write (see the module comment). Reports through toasts; never rejects.
+ * @param isTransparent without the scene's background, the clear colour's alpha 0 (an embed's
+ * poster, which the page shows through as the live embed does)
  */
-export const saveHubImageAsync = async (sceneId: string, size: HubImageSize = 'CARD') => {
+export const saveHubImageAsync = async (
+  sceneId: string,
+  size: HubImageSize = 'CARD',
+  isTransparent = false
+) => {
   if (isSaving) return;
   isSaving = true;
   const path = getHubImagePath(sceneId);
@@ -73,7 +79,9 @@ export const saveHubImageAsync = async (sceneId: string, size: HubImageSize = 'C
     if (!path) throw new Error(`The scene "${sceneId}" isn't in the generated data.`);
     if (!isRuntimeViewActive()) throw new Error('Switch back to the Runtime view first.');
     const { width, height } = HUB_IMAGE_SIZES[size];
-    const blob = await encodePNG(await takeSnapshotAsync({ width, height }));
+    const blob = await encodePNG(
+      await takeSnapshotAsync({ width, height, transparent: isTransparent })
+    );
     const status = await getDevFilesStatus();
     if (!status.available) {
       downloadBlob(path.slice(path.lastIndexOf('/') + 1), blob);
@@ -109,8 +117,13 @@ export const saveHubImageAsync = async (sceneId: string, size: HubImageSize = 'C
  * create it on its enter, in the debug env only, through a dynamic import.
  * @param sceneId (string) the example scene's id
  * @param size ({@link HubImageSize}) the image's size, default `CARD`
+ * @param isTransparent see {@link saveHubImageAsync}
  */
-export const createExampleHubTab = (sceneId: string, size: HubImageSize = 'CARD') => {
+export const createExampleHubTab = (
+  sceneId: string,
+  size: HubImageSize = 'CARD',
+  isTransparent = false
+) => {
   const { width, height } = HUB_IMAGE_SIZES[size];
   const info = { file: getHubImagePath(sceneId) ?? '-', size: `${width} × ${height}` };
 
@@ -128,8 +141,8 @@ export const createExampleHubTab = (sceneId: string, size: HubImageSize = 'CARD'
           {
             type: 'button',
             title: 'Save Hub image',
-            label: 'Active camera, PostFX',
-            onClick: () => void saveHubImageAsync(sceneId, size),
+            label: `Active camera, PostFX${isTransparent ? ', transparent' : ''}`,
+            onClick: () => void saveHubImageAsync(sceneId, size, isTransparent),
           },
         ],
       },
@@ -140,8 +153,13 @@ export const createExampleHubTab = (sceneId: string, size: HubImageSize = 'CARD'
 /** Example scenes whose Hub image isn't a card */
 const SCENE_IMAGE_SIZES: Record<string, HubImageSize> = { exampleHubHero: 'HERO' };
 
-/** Scenes outside `src/app/examples/` that a Hub page shows (`::: scene`), so they get the tab too */
-const OTHER_HUB_SCENES = new Set(['lodShowcase']);
+/** Scenes outside `src/app/examples/` that a Hub page shows (`::: scene`, `::: embed`'s poster),
+ * so they get the tab too */
+const OTHER_HUB_SCENES = new Set(['lodShowcase', 'banner']);
+
+/** Scenes whose Hub image has no background: an embed's poster, in place of the live embed that
+ * the page shows through (p611 D9) */
+const TRANSPARENT_HUB_SCENES = new Set(['banner']);
 
 /**
  * Gives every example scene (a scene file under `src/app/examples/`) and the other scenes the Hub
@@ -154,5 +172,5 @@ export const registerExampleHubTabs = () =>
     const sceneFile = sceneId ? getGeneratedSceneData(sceneId)?.sceneFile : undefined;
     if (!sceneId || !sceneFile) return;
     if (!/^(\.\/)?examples\//.test(sceneFile) && !OTHER_HUB_SCENES.has(sceneId)) return;
-    createExampleHubTab(sceneId, SCENE_IMAGE_SIZES[sceneId]);
+    createExampleHubTab(sceneId, SCENE_IMAGE_SIZES[sceneId], TRANSPARENT_HUB_SCENES.has(sceneId));
   });

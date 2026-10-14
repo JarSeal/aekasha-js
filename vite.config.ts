@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { defineConfig, type ViteDevServer } from 'vite';
+import { defineConfig, mergeConfig, type ViteDevServer } from 'vite';
 import wasm from 'vite-plugin-wasm';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import { visualizer } from 'rollup-plugin-visualizer';
@@ -14,6 +14,13 @@ import { hubPlugin } from './devTools/hubPlugin.ts';
 import { getProjectMetadata } from './devTools/projectMetadata.ts';
 // The public entries' import aliases (`aekasha`, `aekasha/*`, p606)
 import { getViteAliases } from './devTools/aliases.ts';
+// An embed profile's build (p611 D7): `AEK_EMBED_PROFILE=<id> vite build`
+import {
+  embedOutputsPlugin,
+  getEmbedBuildConfig,
+  getEmbedProfileFromEnv,
+  getEmbedStatsFile,
+} from './devTools/sbp/embedBuild.ts';
 
 const REPO_ROOT = fileURLToPath(new URL('.', import.meta.url));
 
@@ -48,7 +55,11 @@ const meta = getProjectMetadata();
 // debug flags, so a production build drops the debug code (the dev server and workers included).
 const isDebugBuild = ['development', 'test'].includes(process.env.VITE_APP_ENV ?? '');
 
-export default defineConfig({
+// `yarn sbp --profile <id>` builds an embed profile (sbp.config.ts) instead of the app: its entry
+// module into dist-embed/<id>/ (devTools/sbp/embedBuild.ts)
+const embedProfile = getEmbedProfileFromEnv();
+
+const appConfig = defineConfig({
   root: './src',
   // Workers resolve with these too
   resolve: { alias: getViteAliases(REPO_ROOT) },
@@ -94,7 +105,7 @@ export default defineConfig({
     sceneGathererPlugin(),
     devFilesPlugin(),
     hubPlugin(),
-    assetOutputsBuildPlugin(),
+    embedProfile ? embedOutputsPlugin(embedProfile) : assetOutputsBuildPlugin(),
     {
       name: 'html-transform',
       transformIndexHtml(html) {
@@ -123,7 +134,9 @@ export default defineConfig({
     },
     visualizer({
       title: meta.app.name,
-      filename: './dist-stats/bundle-stats.html',
+      filename: embedProfile
+        ? getEmbedStatsFile(embedProfile.id)
+        : './dist-stats/bundle-stats.html',
       open: false,
       gzipSize: true,
       template: 'treemap',
@@ -139,3 +152,5 @@ export default defineConfig({
     __AEK_DEBUG__: isDebugBuild,
   },
 });
+
+export default embedProfile ? mergeConfig(appConfig, getEmbedBuildConfig(embedProfile)) : appConfig;

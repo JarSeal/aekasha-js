@@ -88,29 +88,31 @@ import {
   getImpostorDefSlots,
   IMPOSTOR_EXPORT_FORMAT_VERSION,
 } from '../src/_engine/features/lod/impostors/ImpostorFormat';
+import sbpProfiles from '../sbp.config';
+import { checkSbpProfiles, type SbpProfile } from './sbp/config';
+import {
+  GENERATED_APP_DATA_FILENAME,
+  GENERATED_APP_FNS_FILENAME,
+  GENERATED_INDEX_FILENAME,
+  type GeneratedLoaders,
+  type GeneratedOutput,
+  getEmbedProfiles,
+  PROFILES_DIR_NAME,
+  removeStaleProfileOutputs,
+  selectProfileOutput,
+  writeGeneratedOutput,
+} from './gatherOutput';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const generatedAppDataJSONFilename = 'generatedAppData.json';
-export const generatedAppFnsFilename = 'generatedAppFns.ts';
+const ROOT_DIR = path.resolve(__dirname, '..');
 /** The gatherer's outputs: app data, handed to the engine through `InitEngine` (p606) */
 export const OUTPUT_DIR = path.resolve(__dirname, '../src/generated');
-export const OUTPUT_FILE_DATA = path.join(OUTPUT_DIR, generatedAppDataJSONFilename);
-export const OUTPUT_FILE_FN = path.join(OUTPUT_DIR, generatedAppFnsFilename);
+export const OUTPUT_FILE_DATA = path.join(OUTPUT_DIR, GENERATED_APP_DATA_FILENAME);
+export const OUTPUT_FILE_FN = path.join(OUTPUT_DIR, GENERATED_APP_FNS_FILENAME);
 /** The app's import (`appData`, passed to `InitEngine`); the same on every gather */
-export const OUTPUT_FILE_INDEX = path.join(OUTPUT_DIR, 'index.ts');
-const INDEX_FILE_CONTENT = `// THIS IS AN AUTO-GENERATED FILE, DO NOT MODIFY!
-import type { AppData } from 'aekasha';
-import json from './${generatedAppDataJSONFilename}';
-import { postFxFileObjects, sceneFileObjects, tslMaterialFileObjects } from './${generatedAppFnsFilename.replace(/\.ts$/, '')}';
-
-/** The app's gathered data: \`InitEngine({ data: appData })\` hands it to the engine. */
-export const appData: AppData = {
-  json,
-  sceneFiles: sceneFileObjects,
-  tslMaterialFiles: tslMaterialFileObjects,
-  postFxFiles: postFxFileObjects,
-};
-`;
+export const OUTPUT_FILE_INDEX = path.join(OUTPUT_DIR, GENERATED_INDEX_FILENAME);
+/** Each embed profile's data (p611 D7), `profiles/<id>/` */
+export const OUTPUT_PROFILES_DIR = path.join(OUTPUT_DIR, PROFILES_DIR_NAME);
 
 const JSON_ENDING_SIGNATURES = {
   scene: '.scene.json',
@@ -375,6 +377,31 @@ export const getBasePath = (fullPath: string) => {
   return splitFolders[0];
 };
 
+/**
+ * Each embed profile's output (p611 D7), selected from the app's; null when `sbp.config.ts` is
+ * invalid or a profile names a scene the data doesn't ship (the problems are logged), which fails
+ * the gather as an invalid asset does.
+ */
+const getProfileOutputs = (
+  profiles: readonly SbpProfile[],
+  app: GeneratedOutput,
+  debugSceneIds: ReadonlySet<string>
+): [string, GeneratedOutput][] | null => {
+  const problems = checkSbpProfiles(profiles);
+  const outputs: [string, GeneratedOutput][] = [];
+  if (!problems.length) {
+    for (const profile of getEmbedProfiles(profiles)) {
+      const { output, errors } = selectProfileOutput({ profile, app, debugSceneIds });
+      problems.push(...errors);
+      outputs.push([profile.id, output]);
+    }
+  }
+  if (!problems.length) return outputs;
+  console.error(`\x1b[31m✗ [Scene Gatherer] sbp.config.ts:\x1b[0m`);
+  for (const problem of problems) console.error(`  ${problem}`);
+  return null;
+};
+
 // Helper to write JSON Schema definitions to a hidden workspace folder
 const compileJsonSchemas = () => {
   const schemasDir = path.resolve(__dirname, '../.schemas');
@@ -421,8 +448,12 @@ compileJsonSchemas();
  * @param opts.pipeline An asset pipeline run over the same JSONs (p300 §5): each texture and
  * imported asset gets its output's `__url` and figures, per scene when a scene's save entry
  * points at another file. Without one, they get none.
+ * @param opts.profiles The SBP profiles (`sbp.config.ts` when omitted): each embed profile gets its
+ * own data in `src/generated/profiles/<id>/` (p611 D7), and a folder no profile writes is removed.
  */
-export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
+export const gatherSceneData = (
+  opts: { pipeline?: PipelineRun; profiles?: readonly SbpProfile[] } = {}
+) => {
   const isProduction = process.env.NODE_ENV === 'production';
   let hasError = false;
   // Removes the asset's own generated keys from a scene entry and adds its file's
@@ -492,11 +523,10 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
     postFx: {},
     impostors: {},
   };
-  let sceneFileImports = `// THIS IS AN AUTO-GENERATED FILE, DO NOT MODIFY!\n// ALSO, DO NOT MODIFY THE '${generatedAppDataJSONFilename}' FILE)!\n`;
-  let addedFirstImport = false;
-  let sceneFileObject = '';
-  let tslMaterialFileObject = '';
-  let postFxFileObject = '';
+  // The files the generated code loads on demand, by id, as paths from src/
+  const loaders: GeneratedLoaders = { scenes: {}, tslMaterials: {}, postFx: {} };
+  // Left out of a production build, and of every profile (p611 D7)
+  const debugSceneIds = new Set<string>();
   const ids: {
     scenes: string[];
     cameras: string[];
@@ -1016,14 +1046,9 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
             continue;
           }
 
-          if (!tslMaterialFileObject) {
-            tslMaterialFileObject += 'export const tslMaterialFileObjects = {\n';
-          }
-
           // Loaded on demand (p607 D11): the scene loader loads its materials' files, and
-          // createMaterial reads the node functions (the JSON's `nodes` keys) from the module.
-          // Single quotes when the id starts with a number, otherwise unquoted to match lint rules
-          tslMaterialFileObject += `  ${matId.match(/^[0-9]/) ? `'${matId}'` : matId}: () => import('../${basePath}/${matJSON.tslFile}'),\n`;
+          // createMaterial reads the node functions (the JSON's `nodes` keys) from the module
+          loaders.tslMaterials[matId] = `${basePath}/${matJSON.tslFile}`;
         }
       } catch {
         logJSONError(file);
@@ -1207,13 +1232,9 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
             continue;
           }
 
-          if (!postFxFileObject) {
-            postFxFileObject += 'export const postFxFileObjects = {\n';
-          }
-
           // Loaded on demand (p607 D11): the PostFX feature loads a scene's chain's files before
-          // it builds the chain. Single quotes when the id starts with a number (lint rules)
-          postFxFileObject += `  ${postFxId.match(/^[0-9]/) ? `'${postFxId}'` : postFxId}: () => import('../${basePath}/${postFxJSON.tslFile}'),\n`;
+          // it builds the chain
+          loaders.postFx[postFxId] = `${basePath}/${postFxJSON.tslFile}`;
         }
       } catch {
         logJSONError(file);
@@ -1265,29 +1286,10 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
       }
 
       // Remove debug scenes from production builds
+      if (fileContentJSON.isDebugScene) debugSceneIds.add(sceneId);
       if (isProduction && fileContentJSON.isDebugScene) continue;
 
-      if (!addedFirstImport) {
-        sceneFileImports += "import type { SceneData, ScenePrimitiveAssets } from 'aekasha';\n";
-        addedFirstImport = true;
-      }
-      const basePath = getBasePath(fullPath);
-      if (!sceneFileObject) {
-        sceneFileObject += 'export const sceneFileObjects: {\n';
-        sceneFileObject += `  [sceneId: string]: (sceneData: {\n`;
-        sceneFileObject += `    sceneData: SceneData;\n`;
-        sceneFileObject += `    assets: ScenePrimitiveAssets;\n`;
-        sceneFileObject += `  }) => Promise<void>;\n`;
-        sceneFileObject += `} = {\n`;
-      }
-      sceneFileObject += `  ${sceneId}: async ({ sceneData, assets }) => {\n`;
-      sceneFileObject += `    const module = await import('../${basePath}/${fileContentJSON.sceneFile}');\n`;
-      sceneFileObject += `    await (\n`;
-      sceneFileObject += `      module as {\n`;
-      sceneFileObject += `        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;\n`;
-      sceneFileObject += `      }\n`;
-      sceneFileObject += `    ).scene({ sceneData, assets });\n`;
-      sceneFileObject += `  },\n`;
+      loaders.scenes[sceneId] = `${getBasePath(fullPath)}/${fileContentJSON.sceneFile}`;
 
       // --- CURRENT SCENE ASSETS per SCENE: ---
 
@@ -1694,41 +1696,40 @@ export const gatherSceneData = (opts: { pipeline?: PipelineRun } = {}) => {
 
     if (hasError) return false;
 
-    // Create generatedScenes.json
-    fs.mkdirSync(path.dirname(OUTPUT_FILE_DATA), { recursive: true });
-    fs.writeFileSync(
-      OUTPUT_FILE_DATA,
-      JSON.stringify(isProduction ? { scenes: combinedData.scenes } : combinedData, null, 2),
-      'utf-8'
+    // The app's output, then each embed profile's (p611 D7)
+    const appOutput: GeneratedOutput = {
+      json: isProduction ? { scenes: combinedData.scenes } : combinedData,
+      loaders,
+    };
+    const profileOutputs = getProfileOutputs(
+      opts.profiles ?? sbpProfiles,
+      appOutput,
+      debugSceneIds
     );
-
-    // Create generatedScenes.ts
-    if (sceneFileObject) {
-      sceneFileObject += '};\n';
-    } else {
-      sceneFileObject = 'export const sceneFileObjects = {};\n';
+    if (!profileOutputs) return false;
+    writeGeneratedOutput(OUTPUT_DIR, appOutput, srcDir);
+    for (const [id, output] of profileOutputs) {
+      writeGeneratedOutput(path.join(OUTPUT_PROFILES_DIR, id), output, srcDir);
     }
-    if (tslMaterialFileObject) {
-      tslMaterialFileObject += '};\n';
-    } else {
-      tslMaterialFileObject = 'export const tslMaterialFileObjects = {};\n';
-    }
-    if (postFxFileObject) {
-      postFxFileObject += '};\n';
-    } else {
-      postFxFileObject = 'export const postFxFileObjects = {};\n';
-    }
-    fs.mkdirSync(path.dirname(OUTPUT_FILE_FN), { recursive: true });
-    fs.writeFileSync(
-      OUTPUT_FILE_FN,
-      `${sceneFileImports}\n${sceneFileObject}\n${tslMaterialFileObject}\n${postFxFileObject}`,
-      'utf-8'
+    const removed = removeStaleProfileOutputs(
+      OUTPUT_PROFILES_DIR,
+      profileOutputs.map(([id]) => id)
     );
-    fs.writeFileSync(OUTPUT_FILE_INDEX, INDEX_FILE_CONTENT, 'utf-8');
 
     console.log(
       `\x1b[32m✓ [Scene Gatherer] Consolidated ${sceneFiles.length} scene configurations (${isProduction ? 'prod' : 'dev'}).\x1b[0m`
     );
+    for (const [id, output] of profileOutputs) {
+      const sceneIds = Object.keys(output.json.scenes);
+      console.log(
+        `\x1b[32m✓ [Scene Gatherer] Profile ${id}: ${sceneIds.length} scene(s) (${sceneIds.join(', ')}) in ${path.relative(ROOT_DIR, path.join(OUTPUT_PROFILES_DIR, id))}/\x1b[0m`
+      );
+    }
+    if (removed.length) {
+      console.log(
+        `\x1b[32m✓ [Scene Gatherer] Removed the data of the profile(s) sbp.config.ts no longer lists: ${removed.join(', ')}\x1b[0m`
+      );
+    }
     return true;
   } catch (err) {
     console.error(

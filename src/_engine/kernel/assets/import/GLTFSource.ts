@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu';
 import type { GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { resolveFileUrl } from '../AssetUrl';
 import { getDracoLoaderAsync } from './DracoDecoder';
 import { getGLTFDecoderNeeds, readGLTFExtensionsUsed, setGLTFDecoders } from './GLTFExtensions';
 import { getKTX2Loader } from './KTX2';
@@ -33,8 +34,9 @@ export const validateGLTFFileName = (fileName: string) => {
   return null;
 };
 
-/** Resolves a file name against the document, so the same file always has the same key. */
-export const toAbsoluteUrl = (fileName: string) => new URL(fileName, document.baseURI).href;
+/** Resolves a file name against the document (or a mounted engine's `assetBaseUrl`), so the same
+ * file always has the same key. */
+export const toAbsoluteUrl = (fileName: string) => resolveFileUrl(fileName);
 
 const fetchFile = (url: string) => {
   const pending = pendingFetches.get(url);

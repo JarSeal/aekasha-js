@@ -2,10 +2,8 @@ import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { lerror } from '../../utils/Logger';
-import symbolsModelUrl from './3DSymbols.glb?url';
-import symbolsTextureUrl from './3DSymbolsTextures.png?url';
 import type { DebugModuleRef } from '../../kernel/config/DebugModules';
-import { loadDebugModule, useDebug } from '../../kernel/config/DebugModules';
+import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
 import { getECSWorld } from '../../kernel/ecs/ECS';
 import { registerGPUMemorySource } from '../GPUMemory';
 import { markDebugHelper } from '../Profiler';
@@ -22,7 +20,16 @@ type SymbolsModule = DebugModuleRef<typeof import('./_dbg__Symbols')> | null;
 export const load3DSymbols = async () => {
   if (!IS_DEBUG_ENV) return;
 
-  const symbolsModule: SymbolsModule = loadDebugModule(() => import('./_dbg__Symbols'));
+  // The `import()` inside `__AEK_DEBUG__ ? … : null`, not only in the loader: a production build
+  // then drops it before Rollup loads `_dbg__Symbols.ts`, so Vite never emits the GLB and the PNG
+  // that module imports (p611 D5). The loader's own check, or an early return on `__AEK_DEBUG__`,
+  // drops the chunk but still loads the module, and Vite emits a `?url` file when it loads one.
+  const symbolsModule: SymbolsModule = __AEK_DEBUG__
+    ? await loadDebugModuleAsync(() => import('./_dbg__Symbols'))
+    : null;
+  const symbolsDebug = useDebug(symbolsModule);
+  if (!symbolsDebug) return;
+  const { symbolsModelUrl, symbolsTextureUrl } = symbolsDebug;
 
   const modelLoader = new GLTFLoader();
   const textureLoader = new THREE.TextureLoader();
@@ -133,7 +140,7 @@ export const load3DSymbols = async () => {
     });
 
     // This is just to auto attach the symbols in case there were some without them.
-    useDebug(symbolsModule)?.autoAttachSymbols(getECSWorld());
+    symbolsDebug.autoAttachSymbols(getECSWorld());
   } catch (err) {
     lerror('Failed to load engine 3D Symbol Icons GLB', err);
   }

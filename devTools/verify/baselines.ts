@@ -8,6 +8,9 @@
  * - `bundle.json`: every file in `dist/assets/` (name without its content hash, bytes and gzip),
  *   and the main chunk's modules summed per group (three, Rapier, each engine folder, toolkit,
  *   app; the visualizer's rendered and gzip sizes, before minification, as p600 §2.4 counts).
+ *   The measuring is `devTools/sbp/bundleModel.ts`', which `yarn sbp` shares (p611 D1).
+ * - `bundle.<id>.json`: the same for each embed profile (`sbp.config.ts`, p611 D7), every file of
+ *   its `dist-embed/<id>/`, built after the app on the same production gather.
  * - `api.json`: every export of the documented API (the Hub's TypeDoc model: `src/_engine` and
  *   `src/toolkit` minus `_dbg__*`, tests and the entries) by module, with its kind,
  *   and each public entry's (`aekasha`, `aekasha/*`, p606) export names, read from its file.
@@ -24,7 +27,7 @@
  * the baselines (commit them with the change that explains them), but refuses a grown undocumented
  * count unless it's given `--allow-docs-drop` as well, so a drop is recorded only on purpose.
  *
- * The same build is checked for debug code (p607 D7, `debugInProduction.ts`): a `_dbg__` chunk or
+ * The same builds are checked for debug code (p607 D7, `debugInProduction.ts`): a `_dbg__` chunk or
  * module, or a `debug/*.ts` wrapper, fails the run and `--update` records nothing.
  *
  * It runs the production build's steps first (decoders, the production gather, `vite build`, then
@@ -36,25 +39,26 @@
  */
 import fs from 'fs';
 import path from 'path';
-import zlib from 'zlib';
-import { spawn } from 'child_process';
 import { ROOT } from '../assetPipeline/sources';
 import { ENTRY_FILES } from '../aliases';
 import { loadApiModel } from '../hub/api/extract';
 import { parseModuleSource } from '../refactor/importGraph';
 import { getOwnMembers, indexApiModel, isDocumented, Kind } from '../hub/api/model';
 import { out, PROGRESS_LOG_WATCH, setProgressLogEnabled } from './progressLog';
-import { type BuildModule, findDebugCodeInBuild } from './debugInProduction';
-import { isGrowthToFlag } from './bundleGrowth';
+import { type BuildModule, type EmittedAsset, findDebugCodeInBuild } from './debugInProduction';
+import { type BundleBaseline, collectBundle, sortKeys } from '../sbp/bundleModel';
+import { diffBundle, formatKB } from '../sbp/bundleDiff';
+import { buildBundles } from '../sbp/appBuild';
+import { getBundleBaselineFile } from '../sbp/bundleDiff';
+import { getEmbedBuildLocation } from '../sbp/embedBuild';
+import { getEmbedProfiles } from '../gatherOutput';
+import sbpProfiles from '../../sbp.config';
 
-/** Bump when that file's shape changes: an old one is then read as missing */
-const BUNDLE_FORMAT_VERSION = 1;
+/** Bump when that file's shape changes: an old one is then read as missing (`bundle.json`'s is
+ * `bundleModel.ts`') */
 const API_FORMAT_VERSION = 1;
 const DOCS_FORMAT_VERSION = 2;
 const BASELINES_DIR = path.join(ROOT, 'devTools/verify/baselines');
-const DIST_ASSETS_DIR = path.join(ROOT, 'dist/assets');
-const MANIFEST_FILE = path.join(ROOT, 'dist/.vite/manifest.json');
-const VISUALIZER_FILE = path.join(ROOT, 'dist-stats/bundle-stats.html');
 
 const color = (code: string) => (process.env.NO_COLOR ? '' : `\x1b[${code}m`);
 const RED = color('31');
@@ -63,14 +67,6 @@ const YELLOW = color('33');
 const DIM = color('2');
 const RESET = color('0');
 
-export type Size = { bytes: number; gzip: number };
-export type GroupSize = { modules: number; rendered: number; gzip: number };
-export type BundleBaseline = {
-  formatVersion: number;
-  chunks: Record<string, Size>;
-  main: { chunk: string; modules: number; rendered: number; gzip: number };
-  mainGroups: Record<string, GroupSize>;
-};
 export type ApiBaseline = {
   formatVersion: number;
   /** Source path → export name → kind (`Function`, `Class`, … several joined by `, `) */
@@ -130,187 +126,23 @@ const readJSON = <T>(file: string): T | null => {
   }
 };
 
-const formatKB = (bytes: number) => `${(bytes / 1024).toFixed(1)} kB`;
-const formatSigned = (bytes: number) => `${bytes >= 0 ? '+' : '−'}${formatKB(Math.abs(bytes))}`;
 const formatShare = (c: Coverage) =>
   `${c.documented} / ${c.total}${c.total ? ` (${Math.round((c.documented / c.total) * 100)} %)` : ''}`;
 
-// --- Build ---
-
-/** Runs `yarn <args>`, its output into the progress log */
-const runYarn = (args: string[], env: Record<string, string> = {}) =>
-  new Promise<void>((resolve, reject) => {
-    out(
-      `${DIM}$ ${Object.entries(env)
-        .map(([k, v]) => `${k}=${v} `)
-        .join('')}yarn ${args.join(' ')}${RESET}`
-    );
-    const child = spawn('yarn', ['-s', ...args], { cwd: ROOT, env: { ...process.env, ...env } });
-    const pipe = (stream: NodeJS.ReadableStream, isError: boolean) => {
-      let pending = '';
-      stream.on('data', (data: Buffer) => {
-        const lines = (pending + data.toString()).split('\n');
-        pending = lines.pop() ?? '';
-        for (const line of lines) out(`  ${line}`, isError);
-      });
-      stream.on('end', () => pending && out(`  ${pending}`, isError));
-    };
-    pipe(child.stdout, false);
-    pipe(child.stderr, true);
-    child.on('error', reject);
-    child.on('close', (code) =>
-      code === 0 ? resolve() : reject(new Error(`yarn ${args.join(' ')} exited with ${code}`))
-    );
-  });
-
-/** `yarn build`'s bundle steps; the dev data is gathered again whatever happens */
-const buildBundle = async () => {
-  try {
-    await runYarn(['copyDecoders']);
-    await runYarn(['gatherAppData'], { NODE_ENV: 'production' });
-    // Set, not inherited: a shell's `development` would build the debug code in (`__AEK_DEBUG__`)
-    await runYarn(['vite', 'build'], { VITE_APP_ENV: 'production' });
-  } finally {
-    await runYarn(['gatherAppData']);
-  }
-};
-
 // --- bundle.json ---
 
-type Manifest = Record<string, { file: string; src?: string; isEntry?: boolean }>;
-type VisualizerData = {
-  nodeParts: Record<string, { renderedLength: number; gzipLength: number }>;
-  nodeMetas: Record<string, { id: string; moduleParts: Record<string, string> }>;
-};
-
-/** `assets/index-Hx4K2rfZ.js` → `assets/index.js` (Vite's 8-character content hash) */
-const stripHash = (file: string) => file.replace(/-[A-Za-z0-9_-]{8}(\.[a-z0-9]+)$/, '$1');
-
-/** The main chunk's module groups: a package, an engine folder (kernel's and features'
- * subfolders apart), the toolkit, or the app (`src/app/` and `src/`'s own files) */
-const getModuleGroup = (id: string) => {
-  if (id.startsWith('\0')) return 'vite';
-  const pkg = id.match(/^\/node_modules\/((?:@[^/]+\/)?[^/]+)\//);
-  if (pkg) return pkg[1];
-  const src = id.match(/^\/src\/([^?]*)/);
-  if (!src) return 'other';
-  const parts = src[1].split('/');
-  if (parts[0] === '_engine') {
-    if (parts.length <= 2) return '_engine';
-    if ((parts[1] === 'kernel' || parts[1] === 'features') && parts.length > 3) {
-      return `_engine/${parts[1]}/${parts[2]}`;
-    }
-    return `_engine/${parts[1]}`;
-  }
-  return parts[0] === 'toolkit' ? 'toolkit' : 'app';
-};
-
-const sortKeys = <T>(obj: Record<string, T>) =>
-  Object.fromEntries(Object.entries(obj).sort(([a], [b]) => a.localeCompare(b)));
-
-/** The build's sizes, and every module the visualizer lists (for the debug check) */
-const collectBundle = (): { bundle: BundleBaseline; modules: BuildModule[] } => {
-  const manifest = readJSON<Manifest>(MANIFEST_FILE);
-  if (!manifest || !fs.existsSync(DIST_ASSETS_DIR)) {
-    return fail('No dist/ build to measure: run without --no-build, or yarn build first');
-  }
-  const entry = Object.values(manifest).find((m) => m.isEntry);
-  if (!entry) return fail(`${path.relative(ROOT, MANIFEST_FILE)} names no entry chunk`);
-
-  const chunks: Record<string, Size> = {};
-  for (const name of fs.readdirSync(DIST_ASSETS_DIR).sort()) {
-    const data = fs.readFileSync(path.join(DIST_ASSETS_DIR, name));
-    let key = stripHash(`assets/${name}`);
-    for (let n = 2; chunks[key]; n++) key = `${stripHash(`assets/${name}`)}#${n}`;
-    chunks[key] = { bytes: data.length, gzip: zlib.gzipSync(data, { level: 9 }).length };
-  }
-
-  const html = fs.existsSync(VISUALIZER_FILE) ? fs.readFileSync(VISUALIZER_FILE, 'utf-8') : '';
-  const match = html.match(/const data = (\{.*?\});\n/s);
-  if (!match) return fail(`No visualizer data in ${path.relative(ROOT, VISUALIZER_FILE)}`);
-  const data = JSON.parse(match[1]) as VisualizerData;
-  const groups: Record<string, GroupSize> = {};
-  const main = { chunk: stripHash(entry.file), modules: 0, rendered: 0, gzip: 0 };
-  const modules: BuildModule[] = [];
-  for (const meta of Object.values(data.nodeMetas)) {
-    modules.push({
-      id: meta.id,
-      chunks: Object.fromEntries(
-        Object.entries(meta.moduleParts).map(([file, id]) => [
-          stripHash(file),
-          data.nodeParts[id].renderedLength,
-        ])
-      ),
-    });
-    const partId = meta.moduleParts[entry.file];
-    if (!partId) continue;
-    const part = data.nodeParts[partId];
-    const group = (groups[getModuleGroup(meta.id)] ??= { modules: 0, rendered: 0, gzip: 0 });
-    group.modules++;
-    group.rendered += part.renderedLength;
-    group.gzip += part.gzipLength;
-    main.modules++;
-    main.rendered += part.renderedLength;
-    main.gzip += part.gzipLength;
-  }
-  if (!main.modules) {
-    return fail(
-      `The visualizer data has no modules in ${entry.file}: dist-stats/ is from another build`
-    );
-  }
-  return {
-    bundle: { formatVersion: BUNDLE_FORMAT_VERSION, chunks, main, mainGroups: sortKeys(groups) },
-    modules,
-  };
-};
-
 /** Prints the debug check's findings (p607 D7); returns their count */
-const reportDebugCode = (bundle: BundleBaseline, modules: BuildModule[]) => {
-  const findings = findDebugCodeInBuild(Object.keys(bundle.chunks), modules);
-  out(`\nproduction build: debug code`);
+const reportDebugCode = (
+  label: string,
+  bundle: BundleBaseline,
+  modules: BuildModule[],
+  assets: EmittedAsset[]
+) => {
+  const findings = findDebugCodeInBuild({ files: Object.keys(bundle.chunks), modules, assets });
+  out(`\n${label}: debug code`);
   if (!findings.length) out(`  ${GREEN}none${RESET}`);
   for (const line of findings) out(`  ${RED}✗ ${line}${RESET}`);
   return findings.length;
-};
-
-const diffBundle = (before: BundleBaseline, after: BundleBaseline): Finding[] => {
-  const findings: Finding[] = [];
-  for (const [name, size] of Object.entries(after.chunks)) {
-    const old = before.chunks[name];
-    if (!old) {
-      findings.push({ line: `new ${name}: ${formatKB(size.gzip)} gzip`, attention: true });
-    } else if (isGrowthToFlag(old.gzip, size.gzip)) {
-      findings.push({
-        line: `${name}: ${formatKB(old.gzip)} → ${formatKB(size.gzip)} gzip (${formatSigned(size.gzip - old.gzip)})`,
-        attention: true,
-      });
-    } else if (isGrowthToFlag(size.gzip, old.gzip)) {
-      findings.push({
-        line: `${name}: ${formatKB(old.gzip)} → ${formatKB(size.gzip)} gzip (${formatSigned(size.gzip - old.gzip)})`,
-        attention: false,
-      });
-    }
-  }
-  for (const name of Object.keys(before.chunks)) {
-    if (!after.chunks[name]) findings.push({ line: `gone: ${name}`, attention: false });
-  }
-  // The main chunk's groups explain a change of it (details, never a reason on their own)
-  for (const [group, size] of Object.entries(after.mainGroups)) {
-    const old = before.mainGroups[group];
-    const oldGzip = old?.gzip ?? 0;
-    if (isGrowthToFlag(oldGzip, size.gzip) || isGrowthToFlag(size.gzip, oldGzip)) {
-      findings.push({
-        line: `  main ${group}: ${formatKB(oldGzip)} → ${formatKB(size.gzip)} gzip (${formatSigned(size.gzip - oldGzip)}, ${old?.modules ?? 0} → ${size.modules} modules)`,
-        attention: false,
-      });
-    }
-  }
-  for (const group of Object.keys(before.mainGroups)) {
-    if (!after.mainGroups[group]) {
-      findings.push({ line: `  main ${group}: gone from the main chunk`, attention: false });
-    }
-  }
-  return findings;
 };
 
 // --- api.json and docs.json ---
@@ -587,8 +419,15 @@ const main = async () => {
   if (!args.docsOnly) out(`${DIM}Watch it: ${PROGRESS_LOG_WATCH}${RESET}\n`);
   const started = Date.now();
 
-  if (args.build && !args.docsOnly) await buildBundle();
-  const { bundle = null, modules = [] } = args.docsOnly ? {} : collectBundle();
+  // The embed profiles' builds too (p611 D7), each with its baseline next to bundle.json
+  const embedIds = args.docsOnly ? [] : getEmbedProfiles(sbpProfiles).map((p) => p.id);
+  if (args.build && !args.docsOnly) await buildBundles({ isApp: true, embedIds });
+  const { bundle = null, modules = [], assets = [] } = args.docsOnly ? {} : collectBundle();
+  const embeds = embedIds.map((id) => ({
+    id,
+    name: path.basename(getBundleBaselineFile(id)),
+    ...collectBundle(getEmbedBuildLocation(id)),
+  }));
   const { api, docs, locations } = await collectApiAndDocs();
 
   const exportCount = Object.values(api.modules).reduce((n, m) => n + Object.keys(m).length, 0);
@@ -602,6 +441,15 @@ const main = async () => {
             bundle,
             diffBundle,
             args.update
+          ),
+          ...embeds.map((embed) =>
+            report(
+              embed.name,
+              `embed ${embed.id}: ${Object.keys(embed.bundle.chunks).length} files; main ${embed.bundle.main.chunk} ${embed.bundle.main.modules} modules, ${formatKB(embed.bundle.main.gzip)} gzip`,
+              embed.bundle,
+              diffBundle,
+              args.update
+            )
           ),
           report(
             'api.json',
@@ -621,7 +469,13 @@ const main = async () => {
     ),
   ];
 
-  const debugFindings = bundle ? reportDebugCode(bundle, modules) : 0;
+  const debugFindings =
+    (bundle ? reportDebugCode('production build', bundle, modules, assets) : 0) +
+    embeds.reduce(
+      (n, embed) =>
+        n + reportDebugCode(`embed ${embed.id}`, embed.bundle, embed.modules, embed.assets),
+      0
+    );
   const attention = results.reduce((n, r) => n + r.attention, debugFindings);
   const changes = results.reduce((n, r) => n + r.changes, 0);
   const docsDrops = results.find((r) => r.name === 'docs.json')?.attention ?? 0;
@@ -641,6 +495,7 @@ const main = async () => {
     }
     if (bundle) {
       writeBaseline('bundle.json', bundle);
+      for (const embed of embeds) writeBaseline(embed.name, embed.bundle);
       writeBaseline('api.json', api);
     }
     writeBaseline('docs.json', docs);

@@ -1,9 +1,16 @@
 import { isDebugCameraActive } from '../camera/Camera';
 import { isDebugEnvironment } from '../config/Config';
 import { addOnWindowBlurFn, addVisibilityChangeFn } from '../loop/MainLoop';
+import { onRendererCreated } from '../render/Renderer';
 import { getCurrentSceneId } from '../scene/Scene';
 import { lwarn } from '../../utils/Logger';
-import { areAllInputsEnabled, areAppInputsEnabled, areAppInputsSuspended } from './InputState';
+import {
+  areAllInputsEnabled,
+  areAppInputsEnabled,
+  areAppInputsSuspended,
+  addInputListenerRemover,
+  getInputScope,
+} from './InputState';
 import type { BindingMeta, EnabledInDebugCam, Modifiers } from './InputSharedTypes';
 
 export type KeyChord = Modifiers & {
@@ -73,6 +80,8 @@ export const setKeyInputsEnabled = (enabled: boolean): void => {
 
 let keydownListener: ((e: KeyboardEvent) => void) | null = null;
 let keyupListener: ((e: KeyboardEvent) => void) | null = null;
+/** Removes the key listeners (null: none added) */
+let removeListeners: (() => void) | null = null;
 /** The action layer's source (Actions.ts): every key event after the held keys are updated, and
  * null when they are cleared. */
 let keyActionListener: ((e: KeyboardEvent | null) => void) | null = null;
@@ -256,10 +265,44 @@ const initKeyListeners = () => {
     dispatchKeyEvent(e, 'KEY_UP');
   };
 
-  window.addEventListener('keydown', keydownListener);
-  window.addEventListener('keyup', keyupListener);
+  addInputListenerRemover(removeKeyListeners);
   addVisibilityChangeFn('inputKeyboardHeldKeysClear', () => clearHeldKeys());
   addOnWindowBlurFn('inputKeyboardHeldKeysClear', () => clearHeldKeys());
+
+  // The input scope (InputState.ts): the window, the canvas while it has focus, or nothing
+  const scope = getInputScope();
+  if (scope === 'WINDOW') addKeyListeners(window);
+  // The canvas once it exists (createRenderer runs these right away when it does)
+  else if (scope === 'CANVAS')
+    onRendererCreated((renderer) => addKeyListeners(renderer.domElement));
+};
+
+/** Adds the key listeners to the window, or to the canvas, which takes focus (a tabindex) and
+ * clears the held keys when it loses it. */
+const addKeyListeners = (target: Window | HTMLElement) => {
+  const keydown = keydownListener;
+  const keyup = keyupListener;
+  if (!keydown || !keyup || removeListeners) return;
+  target.addEventListener('keydown', keydown as EventListener);
+  target.addEventListener('keyup', keyup as EventListener);
+  const canvas = target === window ? null : (target as HTMLElement);
+  if (canvas && !canvas.hasAttribute('tabindex')) canvas.tabIndex = 0;
+  canvas?.addEventListener('blur', clearHeldKeys);
+  removeListeners = () => {
+    target.removeEventListener('keydown', keydown as EventListener);
+    target.removeEventListener('keyup', keyup as EventListener);
+    canvas?.removeEventListener('blur', clearHeldKeys);
+  };
+};
+
+/** Removes the key listeners and clears the held keys (the mount's unmount, through
+ * InputState.ts). The next binding or action source adds them again, by the input scope then. */
+const removeKeyListeners = (): void => {
+  removeListeners?.();
+  removeListeners = null;
+  keydownListener = null;
+  keyupListener = null;
+  clearHeldKeys();
 };
 
 /**

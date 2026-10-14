@@ -26,3 +26,51 @@ export const areAppInputsSuspended = (): boolean => appInputsSuspended;
 
 /** Whether the app's input bindings run: every input is enabled and no editor view suspends them. */
 export const areAppInputsEnabled = (): boolean => allInputsEnabled && !appInputsSuspended;
+
+/**
+ * Where the input devices listen (p611 D6). `WINDOW`: the whole page (the full-page boot,
+ * `InitEngine`). `CANVAS`: the canvas only, for an engine mounted into a page it doesn't own
+ * (`mountAekasha`): the pointer and touch events on the canvas, the keys while it has focus (it
+ * gets a `tabindex`), the gamepads too. `NONE`: no listeners at all, so the bindings and action
+ * maps never fire.
+ */
+export type InputScope = 'WINDOW' | 'CANVAS' | 'NONE';
+
+let inputScope: InputScope = 'WINDOW';
+
+/**
+ * Sets where the input devices listen. A device reads it when it adds its listeners (its first
+ * binding or action source), so set it before: the mount does, before the boot.
+ * @internal
+ */
+export const setInputScope = (scope: InputScope): void => {
+  inputScope = scope;
+};
+
+/**
+ * Where the input devices listen.
+ * @internal
+ */
+export const getInputScope = (): InputScope => inputScope;
+
+const listenerRemovers = new Set<() => void>();
+
+/**
+ * Registers a device's listener remover (a device adds its own when it adds its listeners), so
+ * an unmount removes every device's listeners without importing any device module.
+ * @internal
+ */
+export const addInputListenerRemover = (remove: () => void): void => {
+  listenerRemovers.add(remove);
+};
+
+/**
+ * Removes every device's listeners and clears their held state (the mount's unmount). A device
+ * adds them again on its next binding or action source.
+ * @internal
+ */
+export const removeAllInputListeners = (): void => {
+  const removers = [...listenerRemovers];
+  listenerRemovers.clear();
+  for (const remove of removers) remove();
+};
