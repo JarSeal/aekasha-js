@@ -762,6 +762,18 @@ As built:
   (the poster and Play, then live); no WebGPU / WebGL2 (the status line, nothing imported);
   `--no-embed` (no copy, the note); the dev Hub (live, styles unchanged). `report.json` and
   `dist-embed/` still hold Phase 4's `probe` (gitignored leftovers; nothing reads them).
+- **§2, the feature page** (`hub/pages/features/smallest-build/`, "Smallest build possible",
+  `aek:order` 75, first in Performance, `aek:featured`, a new `feather` icon): the intro and the
+  live `::: embed banner`, then the numbers (a table of both profiles' initial and lazy totals, all
+  `{{sbp:…}}`), where the floor comes from (three's 237.7 KiB as dated text: §7's throwaway
+  probes can't be generated), each feature's share in the app (`group:` values, said to be per
+  module before minification), how a build stays small, what's deployed but rarely downloaded,
+  `yarn sbp`, profiles and budgets (`<<< sbp.config.ts#banner-profile`, a new region), embedding
+  (no link yet: §3's example page adds it), the lite study's verdict, and the key APIs. **No
+  `aek:covers` yet:** it names `devTools/sbp/CLAUDE.md`'s section, which §4 writes (with the
+  `::: claude-md` line). **`aek:featured` makes the homepage's icon row five cards in a
+  four-column grid:** §4 decides the layout. The search index warning (1.20 MB, over 1 MB) is
+  older than this phase.
 
 ### Phase 7: versioning, changelog, mark done
 

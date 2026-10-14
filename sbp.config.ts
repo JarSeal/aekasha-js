@@ -60,6 +60,7 @@ const profiles: SbpProfile[] = [
       },
     },
   },
+  // #region banner-profile (shown in the Hub: hub/pages/features/smallest-build/)
   {
     // The banner embed (p611 D8): one code-made scene, no feature, built into dist-embed/banner/
     id: 'banner',
@@ -86,6 +87,7 @@ const profiles: SbpProfile[] = [
       },
     },
   },
+  // #endregion banner-profile
 ];
 
 export default profiles;
