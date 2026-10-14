@@ -9,7 +9,6 @@ import { IS_DEBUG_ENV } from '../config/Config';
 import { loadPersistentProps } from '../scene/PropertyLoader';
 import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
 import { existsOrThrow } from '../../utils/Assert';
-import { CoreComponentType } from '../ecs/ECSRegistry';
 import { lerror, lwarn } from '../../utils/Logger';
 import { getTexture } from '../assets/Texture';
 import { retagAssetOwner } from '../assets/AssetOwners';
@@ -522,7 +521,7 @@ export const getLightByAppId = (appId: string, ecsWorld?: ECSWorld) => {
   const entityId = getEntityIdByAppId(appId, world);
   let light: THREE.Light | undefined = undefined;
   if (entityId) {
-    const obj = world.getComponent(entityId, CoreComponentType.OBJECT3D)?.value;
+    const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
     if (obj && !(obj as THREE.Light).isLight) {
       const msg = `Found Object3D is not a light (type: ${obj.type}).`;
       lerror(msg);

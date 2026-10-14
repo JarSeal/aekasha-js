@@ -5,7 +5,11 @@ import type { ComponentType } from './ECSCoreComponents';
 // that aren't plain meshes (instancing's LOD pools) registers its target without importing LOD.
 // A target registered without `lod()` is never read.
 
-type LodTargetEntry = { componentType: ComponentType; target: LodTarget };
+/**
+ * A registered LOD target, with the component type it's for.
+ * @internal
+ */
+export type LodTargetEntry = { componentType: ComponentType; target: LodTarget };
 
 const lodTargets: LodTargetEntry[] = [];
 

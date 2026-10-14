@@ -9,26 +9,36 @@ import { ComponentType, Transform } from './ECSCoreComponents';
 import { existsOrThrow } from '../../utils/Assert';
 import type { RigidBodyAPI } from '../../features/physics/PhysicsAPITypes';
 import { getConfig, IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../config/Config';
-import { CoreComponentType } from './ECSRegistry';
 import type { ECSStorageMode, IComponentStorage } from './ECSComponentStorage';
 import { getECSStorageLSOverride } from './ECSComponentStorage';
 import { TypedArrayTransformStore } from './TypedArrayTransformStore';
 import { ECSSystemStage } from '../loop/SystemStages';
 import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
 import { loadDebugModuleAsync, useDebug, type DebugModuleRef } from '../config/DebugModules';
-import { lerror } from '../../utils/Logger';
+import { lerror, lwarn } from '../../utils/Logger';
 
+/**
+ * A system: run by its world once per frame in its stage (or once per fixed physics step in
+ * `APP_PHYSICS_STEP`), with the stage's delta in seconds. See {@link ECSWorld.addSystem}.
+ */
 export type ECSSystem = (world: ECSWorld, dt: number) => void;
 
 type SystemEntry = { id: string; fn: ECSSystem; order: number; seq: number };
 
+/**
+ * Sets up a world, usually by adding its systems: run on every existing world when registered and
+ * on every world created later (see {@link ECSWorld.registerPlugin}).
+ */
 export type WorldPlugin = (world: ECSWorld) => void;
+/** A component hook (see {@link ECSWorld.registerComponentHooks}), called with the entity and its world. */
 export type ComponentHook = (entityId: number, world: ECSWorld) => void;
-/** See ECSWorld.registerTransformResetListener. */
+/** See {@link ECSWorld.registerTransformResetListener}. */
 export type TransformResetListener = (world: ECSWorld, entityId: number) => void;
 
+/** The default world's id: `getECSWorld()` without an id returns it. */
 export const DEFAULT_ECS_WORLD_ID = '[default]';
 
+/** {@link ECSWorld}'s options. */
 export type ECSWorldOptions = {
   /** Defaults to DEFAULT_ECS_WORLD_ID. Must be unique among live worlds — the identity/lookup key. */
   id?: string;
@@ -36,7 +46,9 @@ export type ECSWorldOptions = {
   name?: string;
   /** Debug-only free-text description, shown in the ECS debug tab's Worlds listing. */
   description?: string;
+  /** The `TRANSFORM` storage's backend ({@link ECSStorageMode}). Default `'MAP'`. */
   storageMode?: ECSStorageMode;
+  /** The most entities the world holds at once (creating one more throws). Default 100,000. */
   maxEntities?: number;
   /** Whether globally registered plugins (ECSWorld.registerPlugin) run on this world. Default true. */
   applyGlobalPlugins?: boolean;
@@ -44,7 +56,11 @@ export type ECSWorldOptions = {
 
 let ecsWorld: ECSWorld;
 
-/** Initializes the default ECS World. */
+/**
+ * Creates the default ECS World from `AppConfig.ecs` (and, in the debug env, the ECS tab's saved
+ * storage override). `InitEngine` calls it.
+ * @internal
+ */
 export const initECSWorld = (): ECSWorld => {
   const ecsConfig = getConfig().ecs;
   let storageMode: ECSStorageMode = ecsConfig?.storageMode ?? 'MAP';
@@ -99,6 +115,32 @@ export const onECSWorldRegistryChange = (listener: () => void): void =>
 export const onECSEntityCountChange = (listener: (world: ECSWorld) => void): void =>
   ECSWorld.onEntityCountChange(listener);
 
+/**
+ * An ECS world: entities (packed numeric ids), their components (one storage per component type)
+ * and the systems that run on them, stage by stage, every frame. The engine creates the default
+ * world (`getECSWorld()`); a scene or tool can create more with an `id` of its own.
+ *
+ * Plugins, component hooks and transform reset listeners are static: registered once (in a
+ * feature's `install`, through its `FeatureContext`), they apply to every world.
+ * @remarks An entity id is only unique within its world, and after a slot was reused 4096 times
+ * the same id comes back (its 12-bit generation wraps): don't keep ids of deleted entities.
+ * @example
+ * ```ts
+ * import { ComponentType, ECSSystemStage, getECSWorld } from 'aekasha';
+ *
+ * const world = getECSWorld();
+ * const crateId = world.createEntity({ appId: 'crate' });
+ * world.setTransform(crateId, { pos: { x: 0, y: 2, z: 0 } });
+ * // Slides the crate along x at one unit per second
+ * world.addSystem(ECSSystemStage.APP_LOGIC, 'crateSlide', (w, dt) => {
+ *   const transform = w.getComponent(crateId, ComponentType.TRANSFORM);
+ *   if (!transform) return;
+ *   transform.position.x += dt;
+ *   transform.setDirty();
+ *   w.commitTransform(crateId, transform);
+ * });
+ * ```
+ */
 export class ECSWorld {
   // INSTANCE TRACKING (keyed by world id — also the identity/lookup registry)
   private static worldsById: Map<string, ECSWorld> = new Map();
@@ -117,8 +159,11 @@ export class ECSWorld {
   private static onDeleteEntityHooks: Map<ComponentType, ComponentHook[]> = new Map();
   private static transformResetListeners: TransformResetListener[] = [];
 
-  /** Global registration methods.
-   * Managers call these once at app startup.
+  /**
+   * Runs `plugin` on every world that applies the global plugins: the existing ones now, and
+   * every later one when it's created (right after the core plugins).
+   * @remarks Call it from an install (`FeatureContext.registerPlugin`), never at module load.
+   * There is no unregister: a plugin applies for the rest of the page load.
    */
   public static registerPlugin(plugin: WorldPlugin) {
     // Save for future worlds (Cold Loading, if the world has not been initiated yet)
@@ -155,17 +200,15 @@ export class ECSWorld {
   }
 
   /**
-   * Deletes an ECS World by id. Routes every live entity through deleteEntity
-   * so onDeleteEntity hooks run (mesh/light/camera disposal, physics body
-   * cleanup, etc.) — a bulk clearWorld()-style wipe would skip them.
+   * Deletes an ECS World by id. Every live entity goes through `deleteEntity` first
+   * ({@link ECSWorld.clearWorld}), so the onDeleteEntity hooks run (mesh, light and camera
+   * disposal, physics body cleanup).
    * Returns false if no world with that id exists.
    */
   public static deleteWorld(id: string): boolean {
     const world = this.worldsById.get(id);
     if (!world) return false;
-    for (const entityId of Array.from(world.entities)) {
-      world.deleteEntity(entityId);
-    }
+    world.clearWorld();
     this.worldsById.delete(id);
     this.notifyWorldRegistryChange();
     return true;
@@ -189,6 +232,15 @@ export class ECSWorld {
     this.entityCountListeners.forEach((listener) => listener(world));
   }
 
+  /**
+   * Adds hooks for a component type, in every world: `onAddComponent` after the component is
+   * stored (every add, a replacement included), `onRemoveComponent` before an entity's component is
+   * removed (it can still read it), `onDeleteEntity` before a deleted entity's components are
+   * cleared, for each type it has. Hooks of one type run in registration order.
+   * @remarks `deleteEntity` runs only the `onDeleteEntity` hooks and `removeComponent` only the
+   * `onRemoveComponent` ones: a resource the component owns needs both to be released. Call it from
+   * an install (`FeatureContext.registerComponentHooks`), never at module load.
+   */
   public static registerComponentHooks(
     type: ComponentType,
     hooks: {
@@ -214,7 +266,7 @@ export class ECSWorld {
   /**
    * Registers a listener fired whenever setTransform (and so teleport) explicitly moves or
    * rotates an entity, after its rigid body and TRANSFORM have been updated. That is a pose
-   * discontinuity: anything holding pose history (e.g. PhysicsManager's render interpolation)
+   * discontinuity: anything holding pose history (e.g. physics' render interpolation)
    * must not smooth across it. Static like registerComponentHooks, so it covers every world —
    * and lets such managers react without ECS importing them back.
    */
@@ -227,7 +279,7 @@ export class ECSWorld {
   // and 12 bits for the generation (4096 reuses per slot)
   private readonly INDEX_MASK = 0xfffff;
   private readonly GEN_MASK = 0xfff;
-  private readonly GEN_SHIFT = 20; // @CONSIDER: This could be a CONFIG value (optional, defaults to 20)
+  private readonly GEN_SHIFT = 20;
   // Tracks the current 'version' of every index ever created. Sized to
   // `maxEntities` (capped at the full 20-bit index space), not the full
   // 1,048,576-slot address space the packed-id scheme could support — a
@@ -241,19 +293,24 @@ export class ECSWorld {
   private freeIds: number[] = [];
   private entities = new Set<number>();
 
-  // Storage: Map<Type, IComponentStorage<Data>>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private storages: Map<ComponentType, IComponentStorage<any>> = new Map();
+  // One storage per component type, read back typed by _getStorageOf
+  private storages: Map<ComponentType, IComponentStorage<unknown>> = new Map();
+
+  // The APP_ID lookup (getEntityIdByAppId): an app id's first entity still alive. The ids more
+  // than one entity took, so deleting the holder looks for the next one only for those.
+  private entityIdsByAppId = new Map<string, number>();
+  private duplicatedAppIds = new Set<string>();
 
   private systems: Map<ECSSystemStage, SystemEntry[]> = new Map();
   private systemSeq = 0;
 
-  // Build-time-selectable storage backend (see ECS/ECSComponentStorage.ts).
-  // TYPED_ARRAY currently only applies to TRANSFORM; every other component
-  // type stays Map-backed regardless of this setting.
+  /** The storage backend chosen at creation ({@link ECSStorageMode}): `TYPED_ARRAY` applies to
+   * `TRANSFORM` only, every other component type is Map-backed either way. */
   public readonly storageMode: ECSStorageMode;
+  /** The most entities this world holds at once. */
   public readonly maxEntities: number;
 
+  /** The world's unique id, its lookup key ({@link getECSWorld}). */
   public readonly id: string;
   /** Debug-only — never used for lookup/equality, purely a nicer label in the debug tab. */
   public readonly name: string;
@@ -261,6 +318,11 @@ export class ECSWorld {
   public readonly description?: string;
   private readonly applyGlobalPlugins: boolean;
 
+  /**
+   * Creates and registers a world, then runs the core plugins on it and, unless
+   * `applyGlobalPlugins` is false, the plugins. Throws when a live world has the id (without an
+   * `id`, the default world's).
+   */
   constructor(opts?: ECSWorldOptions) {
     const id = opts?.id ?? DEFAULT_ECS_WORLD_ID;
     if (ECSWorld.worldsById.has(id)) {
@@ -379,7 +441,7 @@ export class ECSWorld {
    * Extracts the stable, dense entity-slot index from a packed entity id.
    * Exposed (narrowly, alongside the still-private `_pack`/`_getGeneration`)
    * for storage backends — e.g. the TypedArray-backed sparse set in
-   * ECS/TypedArrayTransformStore.ts — that need a numeric array
+   * TypedArrayTransformStore.ts — that need a numeric array
    * offset; the packed id itself is not usable as one.
    */
   public getEntityIndex(entityId: number): number {
@@ -425,8 +487,8 @@ export class ECSWorld {
   }
 
   /**
-   * Prevents "Ghost ID" bugs where a system tries to act on a deleted entity
-   * that has been replaced by a new one in the same storage slot.
+   * Whether the entity exists: false for a deleted one, also once a new entity took its slot
+   * (its generation differs), so a kept id can't act on its slot's next entity.
    */
   public isAlive(entityId: number): boolean {
     const index = this._getIndex(entityId);
@@ -452,6 +514,11 @@ export class ECSWorld {
     return this._pack(index, gen);
   }
 
+  /**
+   * Creates an entity without any component (no `APP_ID`, no `TRANSFORM`): for data-only
+   * entities, eg. a stress test's thousands. Most code wants {@link ECSWorld.createEntity}.
+   * @returns the new entity's id
+   */
   createRawEntity() {
     const id = this._getNewEntityId();
     this.entities.add(id);
@@ -459,24 +526,32 @@ export class ECSWorld {
     return id;
   }
 
+  /**
+   * Creates an entity with the core components: `APP_ID` (`opts.appId`, else a generated UUID),
+   * `TRANSFORM` (identity), `USER_DATA`, `DEBUG_DATA` (debug env and prod test only), `MANAGED_BY`
+   * when given, and `DISABLED` when `opts.disabled`.
+   * @returns the new entity's id
+   */
   createEntity(opts?: CoreEntityOpts): number {
     const id = this._getNewEntityId();
     this.entities.add(id);
-    this.addComponent(id, CoreComponentType.APP_ID, {
+    this.addComponent(id, ComponentType.APP_ID, {
       id: opts?.appId || THREE.MathUtils.generateUUID(),
       isFixed: Boolean(opts?.appId),
     });
-    this.addComponent(id, CoreComponentType.TRANSFORM, new Transform());
-    this.addComponent(id, CoreComponentType.USER_DATA, opts?.userData || {});
-    this.addComponent(id, CoreComponentType.DEBUG_DATA, opts?.debugData || {});
-    if (opts?.managedBy) this.addComponent(id, CoreComponentType.MANAGED_BY, { ...opts.managedBy });
+    this.addComponent(id, ComponentType.TRANSFORM, new Transform());
+    this.addComponent(id, ComponentType.USER_DATA, opts?.userData || {});
+    this.addComponent(id, ComponentType.DEBUG_DATA, opts?.debugData || {});
+    if (opts?.managedBy) this.addComponent(id, ComponentType.MANAGED_BY, { ...opts.managedBy });
     this.setDisabled(id, Boolean(opts?.disabled));
     ECSWorld.notifyEntityCountChange(this);
     return id;
   }
 
   /**
-   * Removes an entity and cleans up all associated resources.
+   * Deletes an entity: runs the `onDeleteEntity` hooks of each component type it has (a throwing
+   * hook is logged and the rest still run), then clears its components and frees its slot. A dead
+   * id is ignored.
    */
   deleteEntity(entityId: number): void {
     // Safety: Ignore if entity is already dead
@@ -513,6 +588,7 @@ export class ECSWorld {
     this.generations[index] = (this.generations[index] + 1) & this.GEN_MASK;
 
     // Clear ECS data using the packed ID as the key for Map consistency
+    this._unmapAppId(entityId);
     this.storages.forEach((storage) => storage.delete(entityId));
     this.entities.delete(entityId);
 
@@ -522,6 +598,12 @@ export class ECSWorld {
     ECSWorld.notifyEntityCountChange(this);
   }
 
+  /**
+   * Stores `data` as the entity's `type` component (replacing one it has), then runs the type's
+   * `onAddComponent` hooks. `DEBUG_DATA` is dropped outside the debug env and prod test mode.
+   * @remarks The data is stored as given, not copied: a component object shared by two entities
+   * changes for both.
+   */
   addComponent<K extends ComponentType>(entityId: number, type: K, data: ComponentData[K]): void {
     // DEBUG_DATA is only stored where it is read: debug and prodTest mode (eg. the on-screen
     // tools' camera names). Production never stores it. The flags are read here, not at load:
@@ -534,7 +616,16 @@ export class ECSWorld {
       this.storages.set(type, storage);
     }
 
-    storage.set(entityId, data);
+    if (type === ComponentType.APP_ID) {
+      const appId = data as ComponentData[typeof ComponentType.APP_ID];
+      // The same id again keeps the entity's place in the lookup
+      const isSameId = this._getStorageOf(ComponentType.APP_ID)?.get(entityId)?.id === appId.id;
+      if (!isSameId) this._unmapAppId(entityId);
+      storage.set(entityId, data);
+      if (!isSameId) this._mapAppId(entityId, appId);
+    } else {
+      storage.set(entityId, data);
+    }
 
     // Trigger Initialization Hooks (onAddComponent)
     const hooks = ECSWorld.onAddComponentHooks.get(type);
@@ -542,23 +633,78 @@ export class ECSWorld {
   }
 
   /**
-   * Removes a component from an entity.
-   * @param type The type of component to remove.
+   * Removes the entity's `type` component, running the type's `onRemoveComponent` hooks first (they
+   * can still read it). Nothing runs when the entity doesn't have it.
    */
   public removeComponent(entityId: number, type: ComponentType): void {
+    const storage = this.storages.get(type);
+    if (!storage?.has(entityId)) return;
     // Fire hooks BEFORE the data is actually gone from storage so the hook
     // can still read the component's last value (including via
     // `hasComponent`/`getComponent` for `type` itself) if needed.
     const hooks = ECSWorld.onRemoveComponentHooks.get(type);
     hooks?.forEach((hook) => hook(entityId, this));
-    this.storages.get(type)?.delete(entityId);
+    if (type === ComponentType.APP_ID) this._unmapAppId(entityId);
+    storage.delete(entityId);
   }
 
+  /**
+   * The entity's `type` component, or undefined.
+   * @remarks In `TYPED_ARRAY` mode `TRANSFORM` comes back as a new copy: write a changed one back
+   * with {@link ECSWorld.commitTransform}.
+   */
   public getComponent<K extends ComponentType>(
     entityId: number,
     type: K
   ): ComponentData[K] | undefined {
-    return this.storages.get(type)?.get(entityId);
+    return this._getStorageOf(type)?.get(entityId);
+  }
+
+  /**
+   * The entity that has `appId` (its `APP_ID.id`), or undefined: one lookup. When several entities
+   * have it, the first one created keeps it until it's deleted.
+   */
+  public getEntityIdByAppId(appId: string): number | undefined {
+    return this.entityIdsByAppId.get(appId);
+  }
+
+  private _mapAppId(entityId: number, data: ComponentData[typeof ComponentType.APP_ID]) {
+    const holder = this.entityIdsByAppId.get(data.id);
+    if (holder === undefined) {
+      this.entityIdsByAppId.set(data.id, entityId);
+      return;
+    }
+    if (holder === entityId) return;
+    this.duplicatedAppIds.add(data.id);
+    // A generated id never repeats; a given one shouldn't
+    if (IS_DEBUG_ENV && data.isFixed) {
+      lwarn(
+        `ECS World '${this.id}': the app id '${data.id}' is already entity ${holder}'s, so entity ${entityId}'s isn't found by it (getEntityIdByAppId returns the first).`
+      );
+    }
+  }
+
+  /** Before the entity's APP_ID is removed or replaced: hands its id to the next entity with it. */
+  private _unmapAppId(entityId: number) {
+    const data = this._getStorageOf(ComponentType.APP_ID)?.get(entityId);
+    if (!data || this.entityIdsByAppId.get(data.id) !== entityId) return;
+    this.entityIdsByAppId.delete(data.id);
+    if (!this.duplicatedAppIds.has(data.id)) return;
+    // The next holder: the first other entity with the id, in the storage's (creation) order
+    for (const [otherId, other] of this._getStorageOf(ComponentType.APP_ID)!) {
+      if (otherId !== entityId && other.id === data.id) {
+        this.entityIdsByAppId.set(data.id, otherId);
+        return;
+      }
+    }
+    this.duplicatedAppIds.delete(data.id);
+  }
+
+  /** The type's storage, typed (the map holds them as unknown) */
+  private _getStorageOf<K extends ComponentType>(
+    type: K
+  ): IComponentStorage<ComponentData[K]> | undefined {
+    return this.storages.get(type) as IComponentStorage<ComponentData[K]> | undefined;
   }
 
   /** Checks if an entity has a specific component. */
@@ -572,18 +718,14 @@ export class ECSWorld {
   }
 
   /**
-   * Direct access to a storage map for high-speed iteration.
-   *
-   * Iteration order happens to match `Map` insertion order (the order
-   * entities first received this component) as a side effect of using `Map`
-   * internally. This is an implementation detail, not a guarantee — systems
-   * must not depend on it. It's expected to change for any component type
-   * that moves to a different storage backing (e.g. the TypedArray-backed
-   * sparse-set storage in ECS/TypedArrayTransformStore.ts,
-   * which reorders on removal by design).
+   * The type's storage, for iterating every entity that has the component: read it once per system
+   * run, not per entity. A type nothing has added yet gets an empty storage.
+   * @remarks The iteration order isn't guaranteed: a `Map` storage iterates in insertion order
+   * today, while the `TYPED_ARRAY` `TRANSFORM` storage reorders on removal (a swap-remove), and
+   * yields new `Transform` copies. Don't depend on either.
    */
   public getStorage<K extends ComponentType>(type: K): IComponentStorage<ComponentData[K]> {
-    let storage = this.storages.get(type);
+    let storage = this._getStorageOf(type);
 
     // --- PREVENT ITERABLE ERROR ---
     if (!storage) {
@@ -595,19 +737,13 @@ export class ECSWorld {
     return storage;
   }
 
-  /** Hard reset of the entire engine state.
-   * Everything is wiped, and ID counters start over.
+  /**
+   * Deletes every entity, each through {@link ECSWorld.deleteEntity} (their `onDeleteEntity` hooks
+   * run, their slots are freed with a new generation). The world stays registered, with its
+   * systems.
    */
   public clearWorld(): void {
-    // 1. Clear all component data
-    this.storages.forEach((storage) => storage.clear());
-
-    // 2. Clear entity tracking
-    this.entities.clear();
-
-    // 3. Reset ID pool and counter
-    this.freeIds = [];
-    this.nextEntityId = 0;
+    for (const entityId of Array.from(this.entities)) this.deleteEntity(entityId);
   }
 
   /**
@@ -651,6 +787,14 @@ export class ECSWorld {
     }
   }
 
+  /**
+   * Moves and / or rotates the entity: its rigid body (when it has one, also a dynamic body in a
+   * `STATIC` or `DISABLED` physics tier) and its `TRANSFORM`, then tells the transform reset
+   * listeners (a pose jump: render interpolation doesn't smooth across it). `resetVelocity` and
+   * `resetForces` apply to a dynamic body; `doNotWakeUp` keeps a sleeping body asleep.
+   * @remarks Physics writes belong in `APP_PHYSICS_STEP` systems or scene-load code: from another
+   * stage their timing depends on the frame rate.
+   */
   setTransform(
     entityId: number,
     tra:
@@ -728,18 +872,29 @@ export class ECSWorld {
     }
   }
 
+  /**
+   * The entity's `TRANSFORM` position, or undefined without one. Read it, don't write it: move an
+   * entity with {@link ECSWorld.setTransform}.
+   * @remarks In `TYPED_ARRAY` mode it's a copy's vector.
+   */
   getPosition(entityId: number): THREE.Vector3 | undefined {
     return this.getComponent(entityId, ComponentType.TRANSFORM)?.position;
   }
 
+  /** The entity's `TRANSFORM` rotation, or undefined. Like {@link ECSWorld.getPosition}, to read. */
   getRotation(entityId: number): THREE.Quaternion | undefined {
     return this.getComponent(entityId, ComponentType.TRANSFORM)?.quaternion;
   }
 
+  /** The entity's `TRANSFORM` scale, or undefined. Like {@link ECSWorld.getPosition}, to read. */
   getScale(entityId: number): THREE.Vector3 | undefined {
     return this.getComponent(entityId, ComponentType.TRANSFORM)?.scale;
   }
 
+  /**
+   * The entity's `TRANSFORM` position, rotation and scale (throws without one). Like
+   * {@link ECSWorld.getPosition}, to read.
+   */
   getTransform(entityId: number): {
     position: THREE.Vector3;
     rotation: THREE.Quaternion;
@@ -752,27 +907,26 @@ export class ECSWorld {
     return { position: tra.position, rotation: tra.quaternion, scale: tra.scale };
   }
 
-  /**
-   * Returns true if the entity is disabled.
-   * If the DISABLED component is missing, we assume it's enabled by default.
-   */
+  /** Whether the entity has `DISABLED` (see {@link ECSWorld.setDisabled}). */
   public isDisabled(entityId: number): boolean {
     return this.hasComponent(entityId, ComponentType.DISABLED);
   }
 
   /**
-   * Master Disabled Switch for an Entity.
-   * Coordinates visibility, physics disabling, etc.
+   * Disables or enables the entity: adds or removes `DISABLED`, whose hooks hide or show its
+   * Object3D (and disable its `TARGET_LINK` target with it), and disables or enables its rigid
+   * body (a body in the `DISABLED` physics tier stays disabled). A dynamic body's velocities and
+   * forces are reset either way unless `opts` says otherwise.
    */
   public setDisabled(
     entityId: number,
     disabled: boolean,
     opts?: {
-      /** Default is true */
+      /** Zero the dynamic body's velocities. Default is true */
       resetVelocity?: boolean;
-      /** Default is true */
+      /** Clear the dynamic body's forces and torques. Default is true */
       resetForces?: boolean;
-      /** Default is true */
+      /** Wake the body with the resets. Default is true */
       wakeUp?: boolean;
     }
   ): void {
@@ -792,20 +946,21 @@ export class ECSWorld {
       }
     }
 
-    // Handle Future Components (e.g., Sounds)
-    // const sound = this.getComponent(entityId, ComponentType.SOUND_EMITTER);
-    // if (sound) { sound.stop(); }
-
     // Update the state component
     if (disabled) {
       // Disabled
-      this.addComponent(entityId, CoreComponentType.DISABLED, disabled);
+      this.addComponent(entityId, ComponentType.DISABLED, disabled);
       return;
     }
     // Enabled
-    this.removeComponent(entityId, CoreComponentType.DISABLED);
+    this.removeComponent(entityId, ComponentType.DISABLED);
   }
 
+  /**
+   * The entity's rigid body: its `BODY_DYNAMIC_VISUAL`, `BODY_DYNAMIC_HEADLESS` or `BODY_STATIC`
+   * component (a dynamic body in a `STATIC` or `DISABLED` physics tier is in `BODY_STATIC`), or
+   * undefined. Undefined while its tier is `REMOVED`.
+   */
   getRigidBody(entityId: number): RigidBodyAPI | undefined {
     return (
       this.getComponent(entityId, ComponentType.BODY_DYNAMIC_VISUAL) ||
@@ -814,6 +969,7 @@ export class ECSWorld {
     );
   }
 
+  /** Whether the entity's body is in a dynamic bucket (`BODY_DYNAMIC_VISUAL` or `_HEADLESS`). */
   isEntityDynamic(entityId: number): boolean {
     return (
       this.hasComponent(entityId, ComponentType.BODY_DYNAMIC_VISUAL) ||
@@ -840,38 +996,55 @@ export class ECSWorld {
   }
 
   /**
-   * Returns an iterator for entity IDs. Usage:
-   * ```
-   * for (const entityId of world.getEntitiesWith(ComponentType.TAG_IS_PLAYER)) {
-   *   // Do stuff with entityId
+   * The ids of the entities that have `type` (none for a type nothing has added yet). The order
+   * isn't guaranteed, as with {@link ECSWorld.getStorage}.
+   * @example
+   * ```ts
+   * import { ComponentType, getECSWorld } from 'aekasha';
+   *
+   * const world = getECSWorld();
+   * for (const entityId of world.getEntitiesWith(ComponentType.TAG_IS_LIGHT)) {
+   *   world.setDisabled(entityId, true);
    * }
    * ```
-   * Same iteration-order caveat as `getStorage` applies: insertion-order
-   * today, not guaranteed.
    */
   public getEntitiesWith(type: ComponentType): IterableIterator<number> {
-    return this.storages.get(type)!.keys();
+    return this.getStorage(type).keys();
   }
 
-  /** Runs in the "Main" part of the loop (UI, Engine maintenance, Pre-Physics) */
+  /**
+   * Runs the `MAIN` and `APP_PRE_PHYSICS` stages (the main loop, every frame).
+   * @internal
+   */
   public updateMainLoop(dt: number) {
     this._runStage(ECSSystemStage.MAIN, dt);
     this._runStage(ECSSystemStage.APP_PRE_PHYSICS, dt);
   }
 
-  /** Runs once per fixed physics sub-step, right before that step (driven by stepPhysics) */
+  /**
+   * Runs the `APP_PHYSICS_STEP` stage, once per fixed physics sub-step right before it (the main
+   * loop's fixed-step driver).
+   * @internal
+   */
   public updatePhysicsStep(dt: number) {
     this._runStage(ECSSystemStage.APP_PHYSICS_STEP, dt);
   }
 
-  /** Runs the Simulation/App logic (Physics, Gameplay, Render Sync) */
+  /**
+   * Runs the `APP_POST_PHYSICS`, `APP_LOGIC` and `APP_RENDER_SYNC` stages (the main loop, while the
+   * app loop plays).
+   * @internal
+   */
   public updateAppLoop(dt: number) {
     this._runStage(ECSSystemStage.APP_POST_PHYSICS, dt);
     this._runStage(ECSSystemStage.APP_LOGIC, dt);
     this._runStage(ECSSystemStage.APP_RENDER_SYNC, dt);
   }
 
-  /** Runs after the Three.js renderer.render() call */
+  /**
+   * Runs the `LATE_MAIN` stage (the main loop, after the frame is rendered).
+   * @internal
+   */
   public updateLateMainLoop(dt: number) {
     this._runStage(ECSSystemStage.LATE_MAIN, dt);
   }
@@ -894,16 +1067,21 @@ export class ECSWorld {
   }
 }
 
-export const getEntityIdByAppId = (appId: string, ecsWorld?: ECSWorld): number | undefined => {
-  const world = ecsWorld || getECSWorld();
-  const appIdStorage = world.getStorage(ComponentType.APP_ID);
-  for (const [entityId, data] of appIdStorage) {
-    if (data.id === appId) {
-      return entityId;
-    }
-  }
-  return undefined;
-};
+/**
+ * The entity in `ecsWorld` (default: the default world) whose `APP_ID` is `appId`, or undefined:
+ * one lookup ({@link ECSWorld.getEntityIdByAppId}). When several entities have the id, the first
+ * one created keeps it until it's deleted; a second entity given a fixed id another one has is
+ * warned about in the debug env.
+ * @example
+ * ```ts
+ * import { getEntityIdByAppId, getECSWorld } from 'aekasha';
+ *
+ * const sunId = getEntityIdByAppId('sun');
+ * if (sunId !== undefined) getECSWorld().setDisabled(sunId, true);
+ * ```
+ */
+export const getEntityIdByAppId = (appId: string, ecsWorld?: ECSWorld): number | undefined =>
+  (ecsWorld || getECSWorld()).getEntityIdByAppId(appId);
 
 /**
  * Returns the entity's app id, but only when the app explicitly supplied one.
@@ -917,7 +1095,7 @@ export const getEntityIdByAppId = (appId: string, ecsWorld?: ECSWorld): number |
  */
 export const getStableAppId = (entityId: number, ecsWorld?: ECSWorld): string | undefined => {
   const world = ecsWorld || getECSWorld();
-  const appId = world.getComponent(entityId, CoreComponentType.APP_ID);
+  const appId = world.getComponent(entityId, ComponentType.APP_ID);
   return appId?.isFixed ? appId.id : undefined;
 };
 
@@ -926,7 +1104,11 @@ export const getStableAppId = (entityId: number, ecsWorld?: ECSWorld): string | 
 type ECSGUIModule = typeof import('./debug/_dbg__ECS');
 let debugGUI: DebugModuleRef<ECSGUIModule> | null = null;
 
-export const registerECSModule = async () => {
+/**
+ * Loads the ECS debug tab's module and builds the tab (debug env only). `InitEngine` calls it.
+ * @internal
+ */
+export const registerECSDebugGUI = async () => {
   if (!IS_DEBUG_ENV) return;
   debugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__ECS'));
   useDebug(debugGUI)?._initECSDebugGUI();

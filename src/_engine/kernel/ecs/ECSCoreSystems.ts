@@ -3,7 +3,6 @@ import { isAnyLightHelperVisible } from '../light/Light';
 import { IS_DEBUG_ENV } from '../config/Config';
 import type { ECSWorld } from './ECS';
 import { ComponentType, OBJECT3D_TAGS } from './ECSCoreComponents';
-import { CoreComponentType } from './ECSRegistry';
 import type { FeatureContext } from '../init/Features';
 
 // --- UNIVERSAL VISIBILITY HOOKS ---
@@ -20,7 +19,7 @@ import type { FeatureContext } from '../init/Features';
  * (ECS.ts), so e.g. TAG_FRUSTUM_CULLED's own onRemoveComponent would
  * otherwise see `hasComponent(TAG_FRUSTUM_CULLED)` still return `true`.
  *
- * A LOD-culled mesh still fading out (TAG_LOD_TRANSITIONING, Lod/LodSystem.ts) stays visible until
+ * A LOD-culled mesh still fading out (TAG_LOD_TRANSITIONING, features/lod/LodSystem.ts) stays visible until
  * its fade ends.
  */
 export function reconcileObject3DVisibility(
@@ -220,7 +219,7 @@ export function object3DSyncSystem(world: ECSWorld) {
  */
 export const entityLifetimeSystem = (world: ECSWorld, dt: number) => {
   // We use getStorage for high-speed iteration
-  const storage = world.getStorage(CoreComponentType.LIFETIME);
+  const storage = world.getStorage(ComponentType.LIFETIME);
 
   // Note: We iterate over the keys to avoid issues when removing
   // entities while looping (though Map.forEach is generally safe in JS)

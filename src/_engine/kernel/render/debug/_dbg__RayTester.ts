@@ -28,7 +28,7 @@ import { getActiveCamera } from '../../camera/Camera';
 import { getCanvasElem } from '../Renderer';
 import { createMouseBinding, deleteMouseBinding } from '../../input/MouseInput';
 import { getECSWorld, getEntityIdByAppId } from '../../ecs/ECS';
-import { CoreComponentType } from '../../ecs/ECSRegistry';
+import { ComponentType } from '../../ecs/ECSCoreComponents';
 import { castRayFromDirection, castRayFromPoints, type RayCastOpts } from '../Raycast';
 import { getPhysicsWorld, isPhysicsWorldEnabled } from '../../../features/physics/PhysicsAPI';
 import {
@@ -612,7 +612,7 @@ const resolveThreeTargets = (ray: ThreeRayParams): THREE.Object3D | THREE.Object
   const world = getECSWorld();
   const entityId = getEntityIdByAppId(appId, world);
   if (entityId === undefined) return `No entity with the app id "${appId}"`;
-  const obj = world.getComponent(entityId, CoreComponentType.OBJECT3D)?.value;
+  const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
   return obj ?? `The entity "${appId}" has no Object3D`;
 };
 
@@ -865,7 +865,7 @@ const resolvePhysicsExclusion = (
   if (entityId === undefined) return `No entity with the app id "${appId}" to exclude`;
   const body = world.getRigidBody(entityId);
   if (body) return { body };
-  const colliders = world.getComponent(entityId, CoreComponentType.COLLIDER);
+  const colliders = world.getComponent(entityId, ComponentType.COLLIDER);
   if (colliders?.length === 1) return { collider: colliders[0] };
   return `The entity "${appId}" has no rigid body${colliders?.length ? ` and ${colliders.length} colliders` : ''}: only a body or a single collider can be excluded`;
 };
@@ -875,8 +875,8 @@ const resolvePhysicsExclusion = (
 const getColliderEntityMap = () => {
   const map = new Map<number, number>();
   const world = getECSWorld();
-  for (const entityId of world.getEntitiesWith(CoreComponentType.COLLIDER)) {
-    const colliders = world.getComponent(entityId, CoreComponentType.COLLIDER);
+  for (const entityId of world.getEntitiesWith(ComponentType.COLLIDER)) {
+    const colliders = world.getComponent(entityId, ComponentType.COLLIDER);
     if (!colliders) continue;
     for (let i = 0; i < colliders.length; i++) map.set(colliders[i].id, entityId);
   }
@@ -1159,7 +1159,7 @@ const toRayDebugOpts = (id: string, helper: RayTesterHelperParams): RayDebugOpts
 
 const getHitEntityInfo = (entityId: number | null): HitEntityInfo => {
   const appIdComp =
-    entityId === null ? undefined : getECSWorld().getComponent(entityId, CoreComponentType.APP_ID);
+    entityId === null ? undefined : getECSWorld().getComponent(entityId, ComponentType.APP_ID);
   return {
     entityId,
     appId: appIdComp?.id ?? null,

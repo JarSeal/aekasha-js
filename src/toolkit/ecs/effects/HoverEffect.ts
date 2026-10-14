@@ -1,4 +1,4 @@
-import { CoreComponentType, ECSSystemStage } from 'aekasha';
+import { ComponentType, ECSSystemStage } from 'aekasha';
 import type { ECSWorld } from 'aekasha';
 
 // --- src/toolkit/ecs/systems/HoverEffect.ts ---
@@ -39,7 +39,7 @@ export const hoverToolSystem = (world: ECSWorld, dt: number) => {
       continue;
     }
 
-    const transform = world.getComponent(entityId, CoreComponentType.TRANSFORM);
+    const transform = world.getComponent(entityId, ComponentType.TRANSFORM);
     if (!transform) continue;
     transform.position.y = y;
     transform.setDirty();

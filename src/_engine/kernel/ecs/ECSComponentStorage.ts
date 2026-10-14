@@ -9,8 +9,11 @@ import { lsGetItem, lsSetItem } from '../../utils/LocalAndSessionStorage';
  */
 export type ECSStorageMode = 'MAP' | 'TYPED_ARRAY';
 
+/** A world's storage settings saved by the ECS debug tab, applied when a world with its id is created. */
 export interface ECSStorageLSOverride {
+  /** The storage backend. */
   storageMode?: ECSStorageMode;
+  /** The entity cap. */
   maxEntities?: number;
 }
 
@@ -58,12 +61,20 @@ export const clearECSStorageLSOverride = (worldId: string): void => {
  * a TypedArray-backed sparse set) can implement this interface directly.
  */
 export interface IComponentStorage<T> extends Iterable<[number, T]> {
+  /** The entity's data, or undefined. */
   get(entityId: number): T | undefined;
+  /** Stores the entity's data (no hooks: `ECSWorld.addComponent` runs them). */
   set(entityId: number, value: T): void;
+  /** Removes the entity's data (no hooks); false when it had none. */
   delete(entityId: number): boolean;
+  /** Whether the entity has data here. */
   has(entityId: number): boolean;
+  /** Removes every entity's data (no hooks). */
   clear(): void;
+  /** How many entities have data here. */
   readonly size: number;
+  /** The entity ids. */
   keys(): IterableIterator<number>;
+  /** The entity ids with their data. */
   entries(): IterableIterator<[number, T]>;
 }

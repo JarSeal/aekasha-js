@@ -42,7 +42,7 @@ import {
   runFeatureDebugHooksAsync,
 } from './Features';
 
-import { initECSWorld, registerECSModule } from '../ecs/ECS';
+import { initECSWorld, registerECSDebugGUI } from '../ecs/ECS';
 import { initDebugCamera, registerCameraManager } from '../camera/Camera';
 import { registerLightManager } from '../light/Light';
 import { load3DSymbols } from '../../debug/symbols/3DSymbols';
@@ -157,7 +157,7 @@ export const bootEngineAsync = async ({ config, data, features, start, hudSlot }
     // Before restoreSavedView (the end of InitEngine) can switch back to it
     await registerMaterialEditor();
     registerDefaultDebugKeyBindings();
-    await registerECSModule();
+    await registerECSDebugGUI();
     // The features' own, in install order
     await runFeatureDebugHooksAsync(featureHost.debugHooks);
   }

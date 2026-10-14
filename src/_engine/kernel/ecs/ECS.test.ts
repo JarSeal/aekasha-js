@@ -179,6 +179,38 @@ describe('storages', () => {
     expect([...world.getStorage(type)]).toEqual([]);
   });
 
+  test('getEntitiesWith of a type nothing has added yields nothing', () => {
+    const world = createWorld();
+    expect([...world.getEntitiesWith('TEST_UNREGISTERED' as ComponentType)]).toEqual([]);
+  });
+
+  test('clearWorld deletes every entity through deleteEntity, and keeps the world', () => {
+    const world = createWorld();
+    const calls = recordHooks(world, ComponentType.LIFETIME);
+    const ran: string[] = [];
+    world.addSystem(ECSSystemStage.APP_LOGIC, 'kept', () => ran.push('kept'));
+    const a = world.createRawEntity();
+    world.addComponent(a, ComponentType.LIFETIME, 1 as never);
+    const b = world.createEntity({ appId: 'b' });
+
+    world.clearWorld();
+    expect(calls).toContain(`delete:${a}:1`);
+    expect(world.isAlive(a)).toBe(false);
+    expect(world.isAlive(b)).toBe(false);
+    expect(world.getEntityCount()).toBe(0);
+    expect(world.getEntityIdByAppId('b')).toBeUndefined();
+    expect(ECSWorld.getWorld(world.id)).toBe(world);
+
+    // Slots are reused with a new generation: the old ids stay dead, and no id is 0
+    const next = world.createRawEntity();
+    expect(next).not.toBe(0);
+    expect(next).not.toBe(a);
+    expect(next).not.toBe(b);
+    expect(world.isAlive(a)).toBe(false);
+    world.updateAppLoop(0);
+    expect(ran).toEqual(['kept']);
+  });
+
   test('clearNonPersistent keeps only PERSISTENT entities', () => {
     const world = createWorld();
     const kept = world.createEntity();
@@ -202,6 +234,14 @@ describe('component hooks', () => {
 
     expect(calls).toEqual([`add:${entityId}:3`, `remove:${entityId}:3`]);
     expect(world.hasComponent(entityId, ComponentType.LIFETIME)).toBe(false);
+  });
+
+  test('removeComponent runs no hook when the entity does not have the component', () => {
+    const world = createWorld();
+    const calls = recordHooks(world, ComponentType.LIFETIME);
+    const entityId = world.createRawEntity();
+    world.removeComponent(entityId, ComponentType.LIFETIME);
+    expect(calls).toEqual([]);
   });
 
   test('onDeleteEntity fires only for components the entity has, before they are cleared', () => {
@@ -232,6 +272,58 @@ describe('component hooks', () => {
     world.deleteEntity(entityId);
     expect(calls).toContain(`delete:${entityId}:x`);
     expect(world.isAlive(entityId)).toBe(false);
+  });
+});
+
+describe('app id lookup', () => {
+  test('finds an entity by its app id, and nothing once it is deleted', () => {
+    const world = createWorld();
+    const entityId = world.createEntity({ appId: 'player' });
+    expect(world.getEntityIdByAppId('player')).toBe(entityId);
+    expect(world.getEntityIdByAppId('nobody')).toBeUndefined();
+
+    world.deleteEntity(entityId);
+    expect(world.getEntityIdByAppId('player')).toBeUndefined();
+  });
+
+  test('a duplicate id: the first keeps it, the next takes it over when the first is deleted', () => {
+    const world = createWorld();
+    const first = world.createEntity({ appId: 'twin' });
+    const second = world.createEntity({ appId: 'twin' });
+    const third = world.createEntity({ appId: 'twin' });
+    expect(world.getEntityIdByAppId('twin')).toBe(first);
+
+    world.deleteEntity(second);
+    expect(world.getEntityIdByAppId('twin')).toBe(first);
+    world.deleteEntity(first);
+    expect(world.getEntityIdByAppId('twin')).toBe(third);
+    world.deleteEntity(third);
+    expect(world.getEntityIdByAppId('twin')).toBeUndefined();
+  });
+
+  test('removing or replacing APP_ID updates the lookup; the same id again keeps the holder', () => {
+    const world = createWorld();
+    const a = world.createEntity({ appId: 'shared' });
+    const b = world.createEntity({ appId: 'shared' });
+
+    world.addComponent(a, ComponentType.APP_ID, { id: 'shared', isFixed: true });
+    expect(world.getEntityIdByAppId('shared')).toBe(a);
+
+    world.addComponent(a, ComponentType.APP_ID, { id: 'renamed', isFixed: true });
+    expect(world.getEntityIdByAppId('renamed')).toBe(a);
+    expect(world.getEntityIdByAppId('shared')).toBe(b);
+
+    world.removeComponent(b, ComponentType.APP_ID);
+    expect(world.getEntityIdByAppId('shared')).toBeUndefined();
+  });
+
+  test('worlds keep their own lookups', () => {
+    const one = createWorld();
+    const two = createWorld();
+    const inOne = one.createEntity({ appId: 'same' });
+    const inTwo = two.createEntity({ appId: 'same' });
+    expect(one.getEntityIdByAppId('same')).toBe(inOne);
+    expect(two.getEntityIdByAppId('same')).toBe(inTwo);
   });
 });
 

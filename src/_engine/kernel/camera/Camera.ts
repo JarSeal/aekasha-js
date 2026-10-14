@@ -14,7 +14,6 @@ import { loadPersistentProps } from '../scene/PropertyLoader';
 import type { CameraProps } from '../../schemas/CameraSchema';
 import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
 import { existsOrThrow } from '../../utils/Assert';
-import { CoreComponentType } from '../ecs/ECSRegistry';
 import { DEBUG_CAMERA_ID } from '../../debug/DebugTools';
 import { updateOnScreenTools } from '../../debug/OnScreenTools';
 import { lerror } from '../../utils/Logger';
@@ -105,7 +104,7 @@ export const computeResponsiveFrustumSize = (
  */
 export const applyCameraProjection = (
   cam: THREE.PerspectiveCamera | THREE.OrthographicCamera,
-  settings: CoreComponentData[CoreComponentType.CAMERA_SETTINGS],
+  settings: CoreComponentData[typeof ComponentType.CAMERA_SETTINGS],
   aspect: number
 ) => {
   if (settings.type === 'PERSPECTIVE' && cam instanceof THREE.PerspectiveCamera) {
@@ -139,7 +138,7 @@ export const createCameraEntity = (
   const appId = camProps.appId || entityOpts?.appId;
   const props = loadPersistentProps<CameraProps>({ ...camProps, appId }, 'CAMERA');
 
-  const settings: CoreComponentData[CoreComponentType.CAMERA_SETTINGS] = {
+  const settings: CoreComponentData[typeof ComponentType.CAMERA_SETTINGS] = {
     type: props.type,
     fov: props.type === 'PERSPECTIVE' ? props.fov ?? 45 : 0,
     near: props.near ?? 0.1,
@@ -575,7 +574,7 @@ export const getCameraByAppId = (appId: string, ecsWorld?: ECSWorld) => {
   const entityId = getEntityIdByAppId(appId, world);
   let camera: THREE.Camera | undefined = undefined;
   if (entityId) {
-    const obj = world.getComponent(entityId, CoreComponentType.OBJECT3D)?.value;
+    const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
     if (obj && !(obj as THREE.Camera).isCamera) {
       const msg = `Found Object3D is not a camera (type: ${obj.type}).`;
       lerror(msg);

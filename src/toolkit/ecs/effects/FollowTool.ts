@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { CoreComponentType, ECSSystemStage, ComponentType } from 'aekasha';
+import { ECSSystemStage, ComponentType } from 'aekasha';
 import type { ECSWorld } from 'aekasha';
 
 /** Internal Key (Values) */
@@ -96,11 +96,11 @@ export const followToolSystem = (world: ECSWorld, dt: number) => {
     // --- MAP mode: live Map references, existing behavior unchanged ---
 
     // 1. Get the Leader's position
-    const leaderTransform = world.getComponent(data.leaderId, CoreComponentType.TRANSFORM);
+    const leaderTransform = world.getComponent(data.leaderId, ComponentType.TRANSFORM);
     if (!leaderTransform) continue;
 
     // 2. Update the Light Source Entity
-    const lightTransform = world.getComponent(entityId, CoreComponentType.TRANSFORM);
+    const lightTransform = world.getComponent(entityId, ComponentType.TRANSFORM);
     if (lightTransform) {
       _targetPos.copy(leaderTransform.position).add(data.offset);
 
@@ -116,7 +116,7 @@ export const followToolSystem = (world: ECSWorld, dt: number) => {
     // 3. Update the Light Target Entity (Only if it exists)
     const targetLink = world.getComponent(entityId, ComponentType.TARGET_LINK);
     if (targetLink) {
-      const targetTransform = world.getComponent(targetLink.targetId, CoreComponentType.TRANSFORM);
+      const targetTransform = world.getComponent(targetLink.targetId, ComponentType.TRANSFORM);
       if (targetTransform) {
         _targetPos.copy(leaderTransform.position).add(data.targetOffset);
 

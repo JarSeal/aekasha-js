@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented
+Status: in progress | Phases 0-1 implemented
 Category: Refactoring, Documentation, ECS
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -319,7 +319,7 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
   with `if (IS_DEBUG_ENV)` (as `postFx()`'s is), and that registration moved behind the module
   check.
 
-### Phase 1: the ECS core (`ECS.ts`, `ECSHelpers.ts`, `ECSComponentStorage.ts`, `TypedArrayTransformStore.ts`, `ECSRegistry.ts`, `ECSCoreComponents.ts`, `LodTargets.ts`, `SpatialMembership.ts`)
+### Phase 1: the ECS core (`ECS.ts`, `ECSHelpers.ts`, `ECSComponentStorage.ts`, `TypedArrayTransformStore.ts`, `ECSRegistry.ts`, `ECSCoreComponents.ts`, `LodTargets.ts`, `SpatialMembership.ts`) — done
 
 1. E1: `clearWorld` deletes every entity through `deleteEntity` (hooks run, generations bump,
    ids are recycled), like `deleteWorld` without unregistering. Tests: hooks run, a stale id stays
@@ -339,6 +339,52 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
    wrap); `@example` on `ECSWorld`, `getEntityIdByAppId` and the helpers' entry.
 9. `yarn verify:scenes`: unchanged.
 
+**As built:**
+
+- **E1:** `clearWorld()` deletes every entity through `deleteEntity` and keeps the world
+  registered with its systems; `deleteWorld` calls it.
+- **E2:** `getEntitiesWith` goes through `getStorage`.
+- **D6:** `ECSWorld` keeps `entityIdsByAppId` (the first entity created keeps an id) and
+  `duplicatedAppIds` (the ids taken twice, so only those are scanned for the next holder when the
+  holder is deleted or its `APP_ID` removed or replaced). Re-adding the same id keeps the holder.
+  A new public member, `ECSWorld.getEntityIdByAppId(appId)`; the module function calls it. The
+  duplicate warning is debug-env only and for fixed ids (`isFixed`): a generated UUID never
+  repeats.
+- **E4:** `storages` is `Map<ComponentType, IComponentStorage<unknown>>`, read back typed by a
+  private `_getStorageOf`; the `any` and its `eslint-disable` are gone.
+- **E7:** `removeComponent` returns early when the entity doesn't have the component. The
+  `DISABLED` remove hooks that no longer run for an entity that wasn't disabled (on every
+  `createEntity`, through `setDisabled(id, false)`) only recompute: the core visibility reconcile,
+  LOD's priority queue and the light GUI's debug visuals.
+- **D5:** `CoreComponentType` has `@deprecated` (the enum stays the definition and stays on the
+  entry: hiding it would make `ComponentType`'s type name an unexported enum, a new `notExported`).
+  Moved to `ComponentType`: `Camera.ts`, `Light.ts`, `Group.ts`, `Mesh.ts`, `ECSCoreSystems.ts`,
+  `ECS.ts`, `_dbg__LightHelpers.ts`, `_dbg__RayTester.ts` (type positions as
+  `CoreComponentData[typeof ComponentType.X]`), the toolkit's `FollowTool`, `HoverEffect` and
+  `SunShadowFit`, and the app's `assetCompare`. No `no-deprecated` lint exists, so nothing else
+  flags it.
+- **E8:** `registerECSModule` renamed `registerECSDebugGUI` (`@internal`; its one caller is the
+  boot). `createRawEntity` (the helper) and `OBJECT3D_TAGS` are `@internal`; the `update*` stage
+  runners on `ECSWorld` too (the loop's).
+- **C2, C3, E6:** the commented-out `createPhysicsEntity`, the `OBJECT3D_TAGS` comment and its
+  `@QUESTION`, the sound stub in `setDisabled`, the `@CONSIDER` and `@TODO` (`ECSHelpers.ts`) and
+  every stale path in the folder.
+- **JSDoc:** `kernel/ecs` exports 45 / 78 → 76 / 79, members 46 / 158 → 159 / 159 (every
+  `CoreComponentData` key, `ECSWorld`, `Transform`, `TypedArrayTransformStore`,
+  `IComponentStorage`). `@example`s on `ECSWorld`, `getEntitiesWith`, `getEntityIdByAppId` and
+  `setTransform` (type-checked by `examples.test.ts`). The 3 exports left are
+  `ObjectFrustumCullingSystem.ts`' (Phase 2), and `kernel/ecs/debug`'s 3 (`ECSStressTest.ts`, added
+  to Phase 2).
+- **`notExported`:** `LodTargetEntry` is exported `@internal` (19 warnings left). `ComponentDataMap`
+  stays: a mapped `ComponentData` didn't change it, so it isn't the alias: the interface is merged
+  by the toolkit's and the app's `declare module 'aekasha'`, and TypeDoc resolves the reference to
+  that merged symbol, which has no reflection. The Hub's extraction is p619's: its Inputs get it
+  (Phase 8).
+- `yarn verify:scenes`: 104 passed, snapshots and hashes unchanged (406.7 s).
+- Tests (`ECS.test.ts`, 27): `clearWorld`, `getEntitiesWith` of an unknown type, `removeComponent`
+  without the component, and the `appId` lookup (lookup, delete, duplicates handed over,
+  `APP_ID` removed and replaced, separate worlds).
+
 ### Phase 2: core systems, frustum culling and the main-camera cache
 
 1. S1: the `DISABLED` / `PERSISTENT` link hooks stop on an entity that already has the component.
@@ -348,7 +394,7 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
    world doesn't touch it).
 4. The `perf-auditor` agent over `kernel/ecs/` (the per-frame systems, the `for … of` over storages
    and `boundingVolumeProviders`); its findings fixed or listed here.
-5. JSDoc: S5 and the rest of the folder.
+5. JSDoc: S5, the rest of the folder, and `kernel/ecs/debug/ECSStressTest.ts`' three exports.
 
 ### Phase 3: the loop (`MainLoop.ts`, `SystemStages.ts`, `Workers.ts`)
 
