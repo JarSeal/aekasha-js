@@ -26,7 +26,7 @@ Implement @docs/plans/TODO_NAME_OF_PLAN_FILE
 
 Read the plan and the files it names before proposing anything. If the code has moved since the plan was written, say so rather than following it blindly.
 
-Work through it in order. Stop after each section for my review — don't run the whole thing end to end.
+Work through it in order. Stop after each section for my review — don't run the whole thing end to end. Do not commit anything.
 *****************************
 
 
