@@ -25,13 +25,13 @@ import type { FeatureContext } from '../init/Features';
 export function reconcileObject3DVisibility(
   entityId: number,
   world: ECSWorld,
-  overrides?: {
+  overrides?: Readonly<{
     isDisabled?: boolean;
     isFrustumCulled?: boolean;
     isObjectCulled?: boolean;
     isLodCulled?: boolean;
     isLodTransitioning?: boolean;
-  }
+  }>
 ): void {
   const objComp = world.getComponent(entityId, ComponentType.OBJECT3D);
   if (!objComp) return;
@@ -51,6 +51,10 @@ export function reconcileObject3DVisibility(
   objComp.value.visible = !isDisabled && !isFrustumCulled && !isObjectCulled && !isLodCulled;
 }
 
+// The DISABLED hooks' overrides: constants, so a toggle allocates nothing
+const IS_DISABLED = Object.freeze({ isDisabled: true });
+const IS_ENABLED = Object.freeze({ isDisabled: false });
+
 /**
  * Installs the core ECS plumbing (the kernel, p607): the visibility and persistence hooks, and the
  * core plugin's object3D sync, lifetime and look-at systems, which every world runs.
@@ -59,7 +63,7 @@ export function reconcileObject3DVisibility(
 export const installCoreSystems = (ctx: FeatureContext) => {
   ctx.registerComponentHooks(ComponentType.DISABLED, {
     onAddComponent: (entityId, world) => {
-      reconcileObject3DVisibility(entityId, world, { isDisabled: true });
+      reconcileObject3DVisibility(entityId, world, IS_DISABLED);
 
       // Hide Debug Helpers (Gizmos)
       if (IS_DEBUG_ENV) {
@@ -67,17 +71,16 @@ export const installCoreSystems = (ctx: FeatureContext) => {
         if (helper) helper.value.visible = false;
       }
 
-      // Recursively disable possible targets
+      // Disable the target too (a target already disabled stops the chain: two entities that
+      // target each other would recurse forever otherwise). setDisabled handles the bodies
       const targetLink = world.getComponent(entityId, ComponentType.TARGET_LINK);
-      if (targetLink) {
+      if (targetLink && !world.hasComponent(targetLink.targetId, ComponentType.DISABLED)) {
         world.addComponent(targetLink.targetId, ComponentType.DISABLED, true);
       }
-
-      // @TODO: for physics, you need to take these into account as well
     },
 
     onRemoveComponent: (entityId, world) => {
-      reconcileObject3DVisibility(entityId, world, { isDisabled: false });
+      reconcileObject3DVisibility(entityId, world, IS_ENABLED);
 
       if (IS_DEBUG_ENV) {
         const helper = world.getComponent(entityId, ComponentType.DEBUG_LIGHT_HELPER);
@@ -86,13 +89,12 @@ export const installCoreSystems = (ctx: FeatureContext) => {
         }
       }
 
-      // Recursively enable possible targets
+      // Enable the target too (removeComponent does nothing for one already enabled, which
+      // stops a cycle)
       const targetLink = world.getComponent(entityId, ComponentType.TARGET_LINK);
       if (targetLink) {
         world.removeComponent(targetLink.targetId, ComponentType.DISABLED);
       }
-
-      // @TODO: for physics, you need to take these into account as well
     },
   });
 
@@ -120,7 +122,11 @@ export const installCoreSystems = (ctx: FeatureContext) => {
     /** When an entity is marked persistent, ensure its linked target survives as well. */
     onAddComponent: (entityId, world) => {
       const targetLink = world.getComponent(entityId, ComponentType.TARGET_LINK);
-      if (targetLink && world.isAlive(targetLink.targetId)) {
+      if (
+        targetLink &&
+        world.isAlive(targetLink.targetId) &&
+        !world.hasComponent(targetLink.targetId, ComponentType.PERSISTENT)
+      ) {
         world.addComponent(targetLink.targetId, ComponentType.PERSISTENT, true);
       }
     },
@@ -138,7 +144,9 @@ export const installCoreSystems = (ctx: FeatureContext) => {
       // If the looker is already persistent, make the new target persistent immediately
       if (world.hasComponent(entityId, ComponentType.PERSISTENT)) {
         const link = world.getComponent(entityId, ComponentType.TARGET_LINK);
-        if (link) world.addComponent(link.targetId, ComponentType.PERSISTENT, true);
+        if (link && !world.hasComponent(link.targetId, ComponentType.PERSISTENT)) {
+          world.addComponent(link.targetId, ComponentType.PERSISTENT, true);
+        }
       }
     },
   });
@@ -218,11 +226,10 @@ export function object3DSyncSystem(world: ECSWorld) {
  * Decrements timers and removes entities that expire.
  */
 export const entityLifetimeSystem = (world: ECSWorld, dt: number) => {
-  // We use getStorage for high-speed iteration
   const storage = world.getStorage(ComponentType.LIFETIME);
+  if (storage.size === 0) return;
 
-  // Note: We iterate over the keys to avoid issues when removing
-  // entities while looping (though Map.forEach is generally safe in JS)
+  // Deleting the current entry while iterating a Map is safe: the iteration goes on with the next
   for (const [entityId, data] of storage) {
     data.remaining -= dt;
 
@@ -239,6 +246,7 @@ export const entityLifetimeSystem = (world: ECSWorld, dt: number) => {
  */
 export const lookAtSystem = (world: ECSWorld) => {
   const storage = world.getStorage(ComponentType.TARGET_LINK);
+  if (storage.size === 0) return;
   const transformStore = world.getTypedTransformStore();
 
   for (const [entityId, link] of storage) {

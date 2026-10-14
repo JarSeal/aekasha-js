@@ -301,6 +301,11 @@ export class ECSWorld {
   private entityIdsByAppId = new Map<string, number>();
   private duplicatedAppIds = new Set<string>();
 
+  // The removals whose hooks are running (entity and type, pairwise): a hook that removes the same
+  // component again (two entities whose links point at each other) doesn't run them twice
+  private removingIds: number[] = [];
+  private removingTypes: ComponentType[] = [];
+
   private systems: Map<ECSSystemStage, SystemEntry[]> = new Map();
   private systemSeq = 0;
 
@@ -627,23 +632,36 @@ export class ECSWorld {
       storage.set(entityId, data);
     }
 
-    // Trigger Initialization Hooks (onAddComponent)
+    // Trigger Initialization Hooks (onAddComponent); an index loop: no closure per add
     const hooks = ECSWorld.onAddComponentHooks.get(type);
-    hooks?.forEach((hook) => hook(entityId, this));
+    if (hooks) for (let i = 0; i < hooks.length; i++) hooks[i](entityId, this);
   }
 
   /**
    * Removes the entity's `type` component, running the type's `onRemoveComponent` hooks first (they
-   * can still read it). Nothing runs when the entity doesn't have it.
+   * can still read it). Nothing runs when the entity doesn't have it, or when its hooks call this
+   * again for the same entity and type (that removal is already running).
    */
   public removeComponent(entityId: number, type: ComponentType): void {
     const storage = this.storages.get(type);
     if (!storage?.has(entityId)) return;
+    for (let i = 0; i < this.removingIds.length; i++) {
+      if (this.removingIds[i] === entityId && this.removingTypes[i] === type) return;
+    }
     // Fire hooks BEFORE the data is actually gone from storage so the hook
     // can still read the component's last value (including via
     // `hasComponent`/`getComponent` for `type` itself) if needed.
     const hooks = ECSWorld.onRemoveComponentHooks.get(type);
-    hooks?.forEach((hook) => hook(entityId, this));
+    if (hooks) {
+      this.removingIds.push(entityId);
+      this.removingTypes.push(type);
+      try {
+        for (let i = 0; i < hooks.length; i++) hooks[i](entityId, this);
+      } finally {
+        this.removingIds.pop();
+        this.removingTypes.pop();
+      }
+    }
     if (type === ComponentType.APP_ID) this._unmapAppId(entityId);
     storage.delete(entityId);
   }

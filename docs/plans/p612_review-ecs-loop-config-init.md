@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: Refactoring, Documentation, ECS
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -385,7 +385,7 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
   without the component, and the `appId` lookup (lookup, delete, duplicates handed over,
   `APP_ID` removed and replaced, separate worlds).
 
-### Phase 2: core systems, frustum culling and the main-camera cache
+### Phase 2: core systems, frustum culling and the main-camera cache — done
 
 1. S1: the `DISABLED` / `PERSISTENT` link hooks stop on an entity that already has the component.
    Test: two lights targeting each other.
@@ -395,6 +395,48 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
 4. The `perf-auditor` agent over `kernel/ecs/` (the per-frame systems, the `for … of` over storages
    and `boundingVolumeProviders`); its findings fixed or listed here.
 5. JSDoc: S5, the rest of the folder, and `kernel/ecs/debug/ECSStressTest.ts`' three exports.
+
+**As built:**
+
+- **S1:** the `DISABLED` add hook and the `PERSISTENT` / `TARGET_LINK` add hooks skip a target
+  that already has the component. That isn't enough on removal (the hooks run while the
+  component is still there), so `ECSWorld.removeComponent` ignores a nested removal of the same
+  entity and type while that removal's hooks run (`removingIds` / `removingTypes`, two arrays used
+  as a stack: no allocation, `try` / `finally` around the hooks). Tests
+  (`ECSCoreSystems.test.ts`): two entities targeting each other, disabled and enabled, made
+  persistent and not; a link added to a persistent entity.
+- **S2, S4:** the stale `@TODO`s and paths. Every export of `ObjectFrustumCullingSystem.ts` is
+  `@internal` (none is on an entry; `MAX_SPOT_ANGLE` and `getMeshWorldBoundingSphere` are shared
+  with spatial).
+- **D7:** `Camera.ts` keeps `mainCameraEntityId` (the id only: the object is one `getComponent`,
+  so a replaced `OBJECT3D` can't go stale), set in `setMainCamera` for the default world, cleared
+  by `TAG_IS_MAIN_CAMERA`'s `onRemoveComponent` and `onDeleteEntity` hooks (default world only,
+  registered in `registerCameraManager`). `getMainCamera` and `getMainAppCameraId` read it. Tests
+  (`kernel/camera/Camera.test.ts`): switching, deleting, and another world's entity with the same
+  id.
+- **The `perf-auditor` agent** over `kernel/ecs` (no measurements; V8 reasoning). Fixed:
+  - Point and spot lights' bounding spheres called `updateWorldMatrix(true, false)` before
+    `getWorldPosition`, which does it again (three r186's `Object3D.getWorldPosition`): once per
+    culled light per frame.
+  - `entityLifetimeSystem` and `lookAtSystem` return at once on an empty storage (no iterator).
+  - `addComponent` runs its hooks in an index loop (no closure per add; culling adds
+    `TAG_FRUSTUM_CULLED` per crossing), like `removeComponent`.
+  - The visibility hooks' `overrides` are frozen module constants (`IS_DISABLED`, `IS_ENABLED`,
+    `FRUSTUM_CULLED`, `FRUSTUM_SHOWN`), not a literal per flip; `reconcileObject3DVisibility`
+    takes `Readonly<…>`.
+  - Left (its "leave"): `for (const [k, v] of map)` (TurboFan elides the pair; `forEach` or keys
+    plus `get` cost more), the mesh provider's `getWorldPosition` matrix walk (skipping it changes
+    what culling sees), a per-entity provider cache, `deleteEntity`'s closures (per delete, not per
+    frame), the `isDisabled` lookup per entity. The `TYPED_ARRAY` cold path (`getPosition`, …
+    allocate a `Transform`) is documented on the members.
+- **JSDoc:** `kernel/ecs` exports 79 / 79; `kernel/ecs/debug` 4 / 4: `initECSStressTest`
+  documented, `instancedSyncSystem` and `proximitySystem` no longer exported (nothing imported
+  them).
+- **`yarn verify:scenes`** (not in the plan's list for this phase, run because culling, the hooks
+  and the main camera changed): 103 passed, and `thirdPersonGymScene` `workerSab` stopped on a
+  page reload mid-run ("Execution context was destroyed … navigation"), not a diff; alone, all four
+  of its targets pass with the baseline hash (`f5cf468f`). The plan file was edited during the run:
+  no file is touched while a scene run runs from here on.
 
 ### Phase 3: the loop (`MainLoop.ts`, `SystemStages.ts`, `Workers.ts`)
 

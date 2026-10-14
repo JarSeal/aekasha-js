@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1695,
-      "total": 2343
+      "documented": 1699,
+      "total": 2341
     },
     "members": {
       "documented": 329,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1651,
-        "total": 2280
+        "documented": 1655,
+        "total": 2278
       },
       "members": {
         "documented": 279,
@@ -910,7 +910,7 @@
     },
     "engine/kernel/ecs": {
       "exports": {
-        "documented": 76,
+        "documented": 79,
         "total": 79
       },
       "members": {
@@ -918,29 +918,21 @@
         "total": 159
       },
       "undocumented": {
-        "exports": [
-          "ObjectFrustumCullingSystem#MAX_SPOT_ANGLE",
-          "ObjectFrustumCullingSystem#getMeshWorldBoundingSphere",
-          "ObjectFrustumCullingSystem#objectFrustumCullingSystem"
-        ],
+        "exports": [],
         "members": []
       }
     },
     "engine/kernel/ecs/debug": {
       "exports": {
-        "documented": 3,
-        "total": 6
+        "documented": 4,
+        "total": 4
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "ECSStressTest#initECSStressTest",
-          "ECSStressTest#instancedSyncSystem",
-          "ECSStressTest#proximitySystem"
-        ],
+        "exports": [],
         "members": []
       }
     },
