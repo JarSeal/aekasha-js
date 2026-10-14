@@ -665,6 +665,15 @@ As built:
 2. **The manifest fold and the `physics()` option** (D10): the savings from the report, the
    recommendation written into p612 and p614.
 
+As built:
+
+- **§1, the lite renderer:** §7, from five throwaway pages (`.cache/probe/lite/`, gitignored: the
+  pages, `build.mts` measuring them, `check.mts` rendering them in Chromium). The verdict: no lite
+  profile now (about 110 KiB saved for a second engine); the engine's own 62.9 KiB over three
+  first, filed in p613's (the import path, the `three.core.js` extras) and p617's (the UI kit in a
+  mount without a HUD) "From p611". Phase 6's page states three's floor (237.7 KiB) next to the
+  banner's (300.6).
+
 ### Phase 6: Hub, readme, CLAUDE.md
 
 1. The `::: embed` directive and the `{{sbp:…}}` helper (D9); `hub:build` copies the embed.
@@ -713,7 +722,99 @@ so their reviews start from them.
 
 ## 7. The lite-renderer study
 
-(Phase 5.)
+Measured 2026-10-14 (Phase 5 §1) on three 0.186.1 and Vite 6.4. The pages are throwaway and not
+committed (`.cache/probe/lite/`, gitignored). Each is the banner's scene without the engine: the
+dodecahedron, the directional light, the perspective camera, a transparent canvas sized by a
+`ResizeObserver`, turning. Each was built alone with Vite's defaults and measured as `yarn sbp`
+measures (gzip level 9, KiB; the groups' kB below are the report's: KiB of the modules' gzip before
+minification). Each renders and turns in Chromium on WebGPU and on WebGL2 (SwiftShader), with no
+error.
+
+| Page                    | Renderer and material                                                  |  gzip | brotli |
+| ----------------------- | ---------------------------------------------------------------------- | ----: | -----: |
+| `webglStandard`         | classic `WebGLRenderer` (`three`), `MeshStandardMaterial`              | 127.9 |  105.3 |
+| `webglLook`             | the same, with the banner's look in GLSL (`onBeforeCompile`)           | 128.3 |  105.7 |
+| `webglViaWebgpuImports` | `webglStandard` with its core classes imported from `three/webgpu`     | 161.9 |  134.1 |
+| `webgpuStandard`        | `WebGPURenderer` (`three/webgpu`), `MeshStandardMaterial`              | 208.4 |  168.6 |
+| `webgpuTsl`             | the same, with the banner's TSL nodes (`MeshStandardNodeMaterial`)     | 237.7 |  189.7 |
+| the banner              | the engine, `features: []` (`yarn sbp --profile banner`, the 3 files)  | 300.6 |  243.0 |
+
+### 7.1 Findings
+
+- **The floor on WebGPU and TSL is three's: 237.7 KiB.** `three.webgpu.js` is 420.6 kB in both the
+  probe and the banner. The node system ships with `WebGPURenderer` whatever the material
+  (`webgpuStandard`); the banner's TSL functions add 29 KiB more of it.
+- **The classic path is 128 KiB, the banner's look included:** the TSL material is about 20 lines
+  of GLSL chunk edits on a `MeshStandardMaterial`, and the two pages' screenshots match.
+- **A lite path must import `three`, not `three/webgpu`:** core classes alone imported through
+  `three/webgpu` keep 79.7 kB of `three.webgpu.js`' top-level code (+34 KiB gzip). Every engine
+  module imports `* as THREE from 'three/webgpu'`, so each module on a lite path would be rewritten,
+  or its build aliases `three/webgpu` to `three` (a node class import then fails the build: a check
+  for free).
+- **`WebGLRenderer` can't render node materials** (only `WebGPURenderer`'s WebGL2 backend can), so
+  the engine's WebGL2 fallback today isn't a lite path.
+- **The engine's own share is 62.9 KiB** (300.6 − 237.7): its modules (80 kB) and 39.4 kB more of
+  `three.core.js` than the scene needs (183.4 vs 144.0). In a mount with no HUD and no model:
+  - `ui` 13.1 kB (`DraggableWindow.ts` 7.2, `CMP.ts` 4.7, `HUD.ts` 0.4): `SceneLoader.ts` imports
+    the windows' scene-change handlers and the HUD root (its loader UI) statically.
+  - The glTF import path, 11.4 kB in `kernel/assets/import/` (`ImportRegistry.ts` 3.0,
+    `GLTFExtract.ts` 1.5, `CustomProps.ts` 1.2, `GLTFTextures.ts` 1.0, …): `SceneLoader.ts` imports
+    `ImportRegistry` statically.
+  - In `three.core.js`, among others: three's animation tracks (`KeyframeTrack`, `PropertyBinding`,
+    `Interpolant`; their messages are in the banner's chunk, not in the probe's), `TextureLoader`
+    (`Texture.ts`) and the `Raycaster` (`Raycast.ts`, made at module load). No engine module
+    imports the animation classes, and the visualizer can't see inside `three.core.js`, so which
+    import keeps them is open.
+- **Deployed, never downloaded:** the embed's 752.9 KiB of lazy files (the assets worker, its jobs,
+  the loaders, the Draco and Basis decoders), kept because kernel code names them (Phase 4 §2's
+  prune).
+
+### 7.2 What a second material path needs
+
+Every area that is TSL or `WebGPURenderer` only today:
+
+- **The renderer:** `createRenderer` makes a `WebGPURenderer`, and `getRenderer()`'s type, the
+  render hooks, `Snapshot.ts` (the `renderOutput()` quad, the readback), the viewports' composite,
+  the profiler and GPU memory (the backend's info) assume it. A second renderer is a renderer seam
+  in the kernel (p613).
+- **The three import** (above): each module on the lite path imports `three`, or the build aliases
+  it.
+- **Materials** (`kernel/assets/Material.ts`): the eight `*NODEMATERIAL` types and their `tslFile`
+  nodes have no classic counterpart, so each TSL material would be written twice (GLSL through
+  `onBeforeCompile` or a `ShaderMaterial`). The schema's 17 classic types (`STANDARD`, `PHONG`, …)
+  exist already and would be the lite path's. 5 of the app's and toolkit's 7 material JSONs are TSL
+  (the toolkit's catalogue all of it: `asteroid`, `triplanarCheckerboard`, `triplanarGrid`,
+  `TriplanarProjection.ts`), and 11 files there import `three/tsl`. Texture arrays and atlases
+  (`TextureArray.ts`, `TextureAtlas.ts`) sample through TSL.
+- **The kernel's LOD dither** (`kernel/render/LodFade.ts`: `maskNode`, in the shadow pass too).
+- **Features:** the sky box (12 TSL files: the layers, the composite, the environment bake, the
+  static layers), PostFX (three's node `RenderPipeline` and `pass()`; the classic path is
+  `EffectComposer` with other passes), viewports (the TSL composite), lines (`LineBackendFat`'s node
+  material, `LinePulse`), impostors (their materials and the bake). Physics, character, spatial and
+  instancing have no TSL.
+- **Debug:** the material editor, the env ball and the axes gizmo are TSL. A lite profile would run
+  the WebGPU path in the debug env, so the scene runner would need a lite configuration to see the
+  lite render at all.
+
+### 7.3 Recommendation: no lite profile now
+
+- **It would save about 110 KiB gzip on the banner** (three's 237.7 → 128.3; about 190 KiB for the
+  embed with the engine's share unchanged): under p600 §4.4's "well under 200 kB" only just.
+- **For that, the profile is the kernel, physics, character, spatial and instancing with classic
+  materials only:** no sky box, PostFX, viewports, fat lines, impostors, LOD fades, texture arrays
+  or TSL materials, and every look written a second time. It's a second engine to verify, and it
+  runs against the first core principle (engineered from the ground up for WebGPU).
+- **Take the engine's own 62.9 KiB first**, which helps every profile, the app included: the scene
+  loader's UI and the windows' hooks out of a mount without a HUD, the glTF import path behind an
+  `import()` (loaded when a scene's data names an imported asset), and the `three.core.js` extras
+  (the animation tracks found first). Filed in p613's and p617's "From p611".
+- **Say the honest floor** (Phase 6): three's WebGPU and TSL alone are 237.7 KiB gzip for this
+  scene, the engine's banner 300.6 KiB.
+- **Revisit when** three ships its node system apart from `WebGPURenderer`, or a real embed needs
+  well under 200 KiB. Then the shape: a lite flag on a profile in `sbp.config.ts` whose build
+  aliases `three/webgpu` to `three` (a node import fails it), a classic `createRenderer` behind the
+  renderer seam, and scenes limited to the classic material types (the gatherer fails a lite
+  profile's scene naming a TSL material, or a feature with TSL in its manifest).
 
 ## 8. Risks
 

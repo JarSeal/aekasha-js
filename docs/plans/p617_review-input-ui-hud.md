@@ -40,6 +40,12 @@ The embed's seams (p611 Phase 3, D6), each defaulting to the full-page boot's be
   which a mounted engine doesn't load, so a kit component in an embed's HUD is 1.6× its size on a
   page with the default 16px. The review decides (sizes in `em` from the HUD root, or a root font
   size on the HUD).
+- **The UI kit in a mount without a HUD** (p611 §7, Phase 5's lite-renderer study): the banner
+  embed ships `ui` 13.1 kB before minification (`DraggableWindow.ts` 7.2, `CMP.ts` 4.7, `HUD.ts`
+  0.4) though it shows no UI, because `kernel/scene/SceneLoader.ts` imports the windows'
+  scene-change handlers (`handleDraggableWindowsOnSceneChange*`) and the HUD root (its loader UI)
+  statically. The windows could register their handlers through a scene hook when the first one is
+  made, and the loader UI could be the full-page boot's.
 
 ## Done when
 

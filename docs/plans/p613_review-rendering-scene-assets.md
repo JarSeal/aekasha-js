@@ -44,6 +44,21 @@ The embed's seams (p611 Phase 3, D6), each defaulting to the full-page boot's be
   editor views, icons, stats). The dev server doesn't tree-shake, so an embed served by it still
   gets `page.scss`; a build doesn't.
 
+The lite-renderer study (p611 §7, Phase 5) recommends no second material path now. It measured the
+engine's own share of the banner embed, 62.9 KiB gzip over three's WebGPU and TSL alone (300.6 vs
+237.7), which helps every profile when it shrinks. This plan's part of it:
+
+- **The glTF import path in every initial chunk:** `SceneLoader.ts` imports `ImportRegistry`
+  statically, which brings `kernel/assets/import/` (11.4 kB before minification in the banner,
+  which has no model). Behind an `import()` loaded when a scene's data names an imported asset?
+- **`three.core.js` extras:** the banner ships 39.4 kB more of it than a bare page with the same
+  scene, among them three's animation tracks (`KeyframeTrack`, `PropertyBinding`, `Interpolant`),
+  which no engine module imports directly (find which import keeps them), `TextureLoader`
+  (`Texture.ts`) and the `Raycaster` (`Raycast.ts`, made at module load).
+- **`three/webgpu` imports:** core classes imported through it keep 79.7 kB of `three.webgpu.js`'
+  top-level code. No cost while the renderer is `WebGPURenderer`, but a renderer seam (if a lite
+  profile is ever built, §7.3's shape) starts there.
+
 ## Done when
 
 - Every file in scope reviewed against p600 §5, the findings fixed or filed (`docs/issues/` or a plan item).
