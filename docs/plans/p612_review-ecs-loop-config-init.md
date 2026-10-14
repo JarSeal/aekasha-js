@@ -1,4 +1,4 @@
-Status: draft | full plan — not-implemented (decisions D1-D13 awaiting confirmation)
+Status: in progress | Phase 0 implemented
 Category: Refactoring, Documentation, ECS
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -33,7 +33,7 @@ Stage C plans own.
 
 - **`AppComponentData` no longer exists** (p606 replaced it with `ComponentDataMap` augmentation),
   and `ECSSystemStage` is on the `aekasha` entry now. Phase 0 runs `yarn hub:build` to see whether
-  any `notExported` warning is left in scope.
+  any `notExported` warning is left in scope (it found two others: Phase 0's As built).
 - **The type-only seams:** 22 in the layout report, 9 of them in this plan's files
   (`ECSCoreComponents.ts` 6, `ECS.ts` 1, `LodTargets.ts` 1, `Config.ts` 1). The other 13 are in
   p613's files (assets, import, mesh, scene). D2 decides the rule for all of them.
@@ -176,7 +176,7 @@ Numbered for the phases to reference. **(bug)** marks wrong behaviour, **(SBP)**
   queued, its listeners return removers. Views are debug-only today (nothing registers one in
   production) but ship in the kernel, folded to a boolean check.
 
-## 2. Decisions (proposed 2026-10-14, awaiting confirmation)
+## 2. Decisions (confirmed 2026-10-14)
 
 ### D1. Scope: the kernel's ECS, loop, config, init and views
 
@@ -288,12 +288,36 @@ own checks. `yarn verify:scenes` runs at the end of Phases 1, 3 and 5 and in Pha
 hashes unchanged unless a phase says otherwise). Each phase ends with its "As built" list and the
 updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a grown count).
 
-### Phase 0: baselines and measurements
+### Phase 0: baselines and measurements — done
 
 1. `yarn verify:scenes --update` on this commit (= `main`), then `yarn verify:baselines` clean.
 2. `yarn hub:build`: the `notExported` warnings in scope (§1.2), recorded here.
 3. D9's measurement: what the `onDebug*` closures keep in `dist/`, per feature.
 4. Record the numbers in this plan's §1 and confirm D1-D13 with the user.
+
+**As built** (2026-10-14, at `40063d1`):
+
+- **Scene baselines:** 104 runs recorded (`.cache/verify/scenes/webgpu/`), 409 s, exit 0.
+- **`yarn verify:baselines`:** all unchanged (`bundle.json`: main chunk 832.7 kB gzip;
+  `bundle.banner.json` 688.6 kB; `api.json` 2457 exports; `docs.json` exports 1664 / 2342, members
+  216 / 444); no debug code in either production build.
+- **`notExported`, 20 in the model (`.cache/hub/typedoc.json`'s `messages`), 2 in scope:**
+  - `ECSCoreComponents.ts:156`: `ComponentDataMap`, named by `ComponentData`, is "not included in
+    the documentation" although the entry exports it. Phase 1 finds why (the interface is empty
+    apart from its `extends`, and the app's and toolkit's `declare module 'aekasha'` augment it).
+  - `LodTargets.ts:26`: `LodTargetEntry`, named by the `@internal` `getLodTargets`. Phase 1
+    exports the type `@internal`.
+  - The stub's two (`ECSSystemStage`, `AppComponentData`) are gone. The other 18 belong to p613,
+    p614, p616, p618, p619 and p610's character types (their stubs list theirs).
+- **D9, the `onDebug*` closures in the production main chunk:** `onDebug` and
+  `onDebugAfterStart` fold to `r=>{}`, but their 8 call sites stay with their arguments: the
+  call sites are 187 characters, and the stubs they keep alive (each wrapper's body folded to
+  `async()=>{await Wl()}`, `Wl` being the folded `loadDebugModuleAsync`) about 165 more, under
+  0.2 kB gzip in all. One isn't empty: physics' `registerPhysicsWireframeDebugAsync` keeps
+  `registerOnAllSceneEnterings('physicsWireframeMasterVisibilitySync', …)`, which runs after the
+  `await` without a debug check. Never called in production, but shipped. Phase 5: each call gated
+  with `if (IS_DEBUG_ENV)` (as `postFx()`'s is), and that registration moved behind the module
+  check.
 
 ### Phase 1: the ECS core (`ECS.ts`, `ECSHelpers.ts`, `ECSComponentStorage.ts`, `TypedArrayTransformStore.ts`, `ECSRegistry.ts`, `ECSCoreComponents.ts`, `LodTargets.ts`, `SpatialMembership.ts`)
 
