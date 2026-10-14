@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-6 implemented
+Status: implemented (Phases 1-7)
 Category: Build, Dev tooling, Engine API, Marketing
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -822,11 +822,26 @@ As built:
   code in `src/` (the banner scene's region comment, `sbp.config.ts`' region). The search index
   warning (1.23 MB over 1 MB) is older than this phase (p552 §2.4's next cut, the stored `path`).
 
-### Phase 7: versioning, changelog, mark done
+### Phase 7: versioning, changelog, mark done — done
 
 - Engine **minor** (5.1.0 → 5.2.0: `mountAekasha`, the seams), Toolkit unchanged, App **minor**
   (1.11.0 → 1.12.0: the banner profile), Project entries for `yarn sbp` and the Hub.
 - `CHANGELOG.md`, `yarn checkVersions --against main`, the plan marked done (docs/plans/CLAUDE.md).
+
+As built:
+
+- **Versions:** engine and project 5.2.0, app 1.12.0, toolkit 2.1.0 (no diff against `main` in
+  `src/toolkit/`); no codename changes. `yarn checkVersions --against main` passes.
+- **`CHANGELOG.md`:** the entry "2026-10-14 — sbp-tooling-profiles-and-marketing", with Engine
+  (`mountAekasha`, `getCanvasSize`, `createRenderer`'s `parent` / `canvas`; the page styles, the
+  input scope, the asset base, the 3D symbols' files gone from a production build, the main chunk
+  394.3 → 395.6 kB gzip from `bundle.json`), App (the banner profile) and Project (`yarn sbp`, its
+  budgets and `yarn build`'s step, the embed build, `yarn verify:embed`, the baselines' debug asset
+  check, the Hub, the docs, the lite-renderer study).
+- **Marked done:** the file renamed `_DONE_p611_…`, and the references to its old name updated:
+  p600's `Blocks` and roadmap, p607's and p608's `Blocks`, and p621's `Blocked by` (p611 dropped;
+  its other blockers stay). No CLAUDE.md file named it. The root and nested `CLAUDE.md` files and
+  `readme.md` were updated in Phase 6.
 
 ## 5. Done when
 

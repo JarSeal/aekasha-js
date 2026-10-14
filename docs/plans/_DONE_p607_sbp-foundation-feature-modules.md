@@ -1,7 +1,7 @@
 Status: implemented (Phases 1-11)
 Category: Build, Performance, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B, engine major)
-Blocks: \_DONE_p608_engine-folder-restructure.md, p611_sbp-tooling-profiles-and-marketing.md, p510_headless-simulation-runtime.md
+Blocks: \_DONE_p608_engine-folder-restructure.md, \_DONE_p611_sbp-tooling-profiles-and-marketing.md, p510_headless-simulation-runtime.md
 Related: \_DONE_p606_layering-inversion-and-public-entry.md (the entries, `InitEngine`'s options, the branch), \_DONE_p602_architecture-and-target-structure.md (D2, D5, D8), p612_review-ecs-loop-config-init.md (the type-only seams, D6), p240_client-device-capability-sniffer.md
 
 # SBP Foundation: Feature Modules

@@ -4,6 +4,73 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-14 — sbp-tooling-profiles-and-marketing
+
+### Engine 5.2.0 (Golden Hour)
+
+The engine can be mounted into an element of a page it doesn't own (p611): a site's hero, a banner, a background behind the page's content. `InitEngine` stays the full-page boot: every new seam defaults to how it worked before, so the template app boots as before, and the scene runner gives every scene the same hash and snapshot as on `main`.
+
+**Added**
+
+- `mountAekasha({ target, config, data, features, … })` (on `aekasha`) boots the engine into its own container inside `target` (an element or a selector) and changes nothing else on the page. It resolves with a handle: `loadScene`, `pause`, `resume`, `isPaused`, `unmount`, `container` and `isFallback`. The options:
+  - `width` and `height`: any CSS length, set on the container. The canvas and the cameras follow the container's box (a `ResizeObserver`), so `%`, `rem`, `vh` and `calc()` all work.
+  - `layout`: `INLINE` (in the target's flow) or `BACKGROUND` (fixed behind the page's content, without pointer events).
+  - `sceneId`: the first scene, by default the first one in `data`. The mount has its own scene loader, without UI.
+  - `input`: `NONE` (no listeners at all, the default) or `CANVAS` (pointer and touch on the canvas; keys and gamepads while it has focus). The page's own input is never taken.
+  - `pauseWhenHidden` (default true): paused while the container is out of the viewport.
+  - `reducedMotion`: `RESPECT` (the default) renders the scene once and pauses until `resume()`; `IGNORE` runs either way.
+  - `fallbackImage`: shown until the first frame, and instead of the scene when neither WebGPU nor WebGL2 is available or the boot fails. The handle's `isFallback` is then true and its methods do nothing.
+  - `assetBaseUrl`: the folder the app's files (`aek-assets/`, `basis/`, `draco/`) load from, in place of the page's. An embed served from its own folder passes its module's URL.
+  - `canvas` and `renderer`: the canvas's attributes and `createRenderer`'s options (`alpha: true` lets the page show through).
+- Limits: one engine per page load. A second mount throws, also after `unmount()`, since the registrations are static (p612 owns that). `unmount()` stops the loop, removes the listeners, the observers and the container, and disposes the renderer, but doesn't stop a physics worker (p614).
+- `getCanvasSize()` (on `aekasha`): the canvas's size, the window's for the full-page boot and the container's for a mount. The renderer's resize and the cameras read it.
+- `createRenderer({ parent, canvas: { id, className, style } })`: the element the canvas goes into (default `#mainCanvas`) and the canvas's id, classes and inline styles. New types `CreateRendererOptions` and `RendererCanvasOptions`. Neither is saved with the renderer's debug options.
+
+**Changed**
+
+- The page styles (normalize, the rules on `html`, `body`, `*`, `#mainCanvas` and `#guiContainer`) moved into `ui/styles/page.scss`, which only `InitEngine` imports. A mount loads only the components' styles (2.0 kB gzip). The app's `index.css` holds the same rules in another order, at the same size. The dev server doesn't tree-shake, so a mount served by it still gets the page styles.
+- The input devices register a remover each, and the gamepad reads its pads only in scope (always for the full-page boot, never for `NONE`, while the canvas has focus for `CANVAS`).
+- `getCanvasParentElem` returns `createRenderer`'s `parent`, and `getCanvasElem` the renderer's canvas.
+- The asset URLs (`aek-assets/`, KTX2's transcoder, Draco's decoder, textures, glTF sources) are resolved through one base, which `assetBaseUrl` replaces. The default is the same URL as before.
+- A production build no longer ships the 3D symbols' files (`3DSymbols.glb` and `3DSymbolsTextures.png`, 114.5 kB gzip). They were never loaded, but deployed: Vite emits a `?url` import's file when it loads the module, and Rollup loads every `import()`. Their imports moved into the `_dbg__` module, loaded behind `__AEK_DEBUG__ ?` (the trap is in `src/_engine/debug/CLAUDE.md`).
+- The production build's main chunk (`assets/index.js`) grew from 394.3 to 395.6 kB gzip: the input scope, the size source and the boot's split.
+
+### App 1.12.0 (Preschooler)
+
+**Added**
+
+- The `banner` embed profile (`src/app/profiles/banner/`), the Smallest Build Possible's floor: one code-made scene, no feature, built as an embed module.
+  - The scene: a dodecahedron (Plato's solid of the aether) turned by a scene app looper, one directional light, the camera and no background, so the page shows through.
+  - Its material, `bannerAether` (TSL): an indigo-to-teal gradient, a breathing cyan rim and the brand orange on the faces turned upward.
+  - The entry, `banner.embed.ts`: `mount(opts)` binds the profile's data, `features: []` and a transparent renderer, and loads its files from its own folder in a build.
+  - A transparent Hub image, `banner.hub.png`: the live embed's poster. The banner has the Hub tab (`_dbg__exampleHub.ts`), which saves it without the background.
+- Built, it's 300.6 KiB gzip before the first frame, three nearly all of it.
+
+### Project
+
+**Added**
+
+- `yarn sbp` (the Smallest Build Possible report, `devTools/sbp.ts` and `devTools/sbp/`): builds the profiles of `sbp.config.ts` and reports what loads before the first frame and what later, each group's and feature's size, why each feature is in the first download (the shortest import chain from the entry, `--why <group | module path>` for anything), the scenes' feature manifests next to it, and the diff against the committed baseline. `--profile <id>[,<id>…] | all`, `--no-build`, `--no-app-build`, `--json`, `--brief`. Its output goes to `.cache/sbp/progress.log` and `.cache/sbp/report.json`.
+- Budgets in `sbp.config.ts`, gzip bytes, per profile: the initial download, chunks, groups and modules. Over a budget fails (exit 1); well under one is reported with a tighter value. The app has 25 (initial 404 KiB), the banner 19, with every feature group at 0.
+- `yarn build` runs `yarn sbp --profile all --no-app-build --brief` (the app it just built, and each embed profile built and checked) before the Hub. `AEK_SBP=false` skips it.
+- Embed profiles: a profile whose entry is a `.ts` module builds with `vite build` into `dist-embed/<id>/` (gitignored), its entry unhashed at the root, the rest in `assets/`, the CSS linked by the entry. The data's files are copied, and what the entry can't reach (the physics worker and Rapier without `physics()`) is pruned. The gatherer writes each embed profile's data, with only its scenes and their loaders, into `src/generated/profiles/<id>/`. Vite's library mode was compared and not used: it inlines every `new URL` file as base64 and doesn't minify ES output.
+- `yarn verify:embed`: mounts each embed profile's build into a plain host page in Chromium, `INLINE` at a size in % and `BACKGROUND`, checks the canvas's size, that something is drawn, the unmount, a second mount rejecting and that no computed style of the host's elements changes, and runs the Hub's embed example page. `--webgl` for WebGL2.
+- `yarn verify:baselines` builds and records each embed profile too (`bundle.banner.json`, next to `bundle.json`) and fails on a debug asset in a production build: a file whose source is in a debug folder or which only debug modules import.
+- Hub:
+  - The Smallest build possible feature page, featured on the homepage in place of the debug suite, so the four featured match the four principles. The banner runs live on it, next to the real numbers.
+  - The example page "Embedding a scene": the profile, the entry, building it, a site's page (checked by `yarn verify:embed`), the options, the handle and the limits.
+  - The `::: embed <profile> [height]` directive: the profile's Hub image as a poster, the embed imported when it scrolls into view and mounted, a pause button; the poster with a play button for reduced motion, and a line saying why without WebGPU or WebGL2. `yarn hub:build` copies the build into `_assets/embed/<id>/` (`--no-embed` keeps the poster).
+  - `{{sbp:<profile>.<measure>}}`: a size from the last `yarn sbp` report, so a page can't state a stale number.
+- `devTools/sbp/CLAUDE.md` (the report, the profiles, the budgets, the embed build).
+- The lite-renderer study (p611 §7): no lite profile on three's `WebGLRenderer` now. It would save about 110 KiB for a second material path; the engine's own 62.9 KiB over three come first. Those, the manifest fold and a `physicsTiers()` feature are filed in p612, p613, p614 and p617's "From p611" sections.
+
+**Changed**
+
+- The fourth core principle, Smallest Build Possible, in the root `CLAUDE.md`'s brand section, the readme's "Why Ækasha?" and the Hub's Features intro.
+- `readme.md`: Features (Smallest build possible, Embedding), a highlight, the commands, the project tree and example 7, "Embed a scene in a site".
+- `verify:baselines`' bundle model moved into `devTools/sbp/bundleModel.ts`, which `yarn sbp` shares; the browser launch into `devTools/verify/browser.ts`, which the scene runner and `verify:embed` share.
+- `yarn verify:baselines`: `bundle.json` without the 3D symbols' files and with the banner scene's two chunks; `api.json` and `docs.json` with the new exports, every one documented.
+
 ## 2026-10-13 — character-and-input-action-architecture
 
 ### Engine 5.1.0 (Golden Hour)
