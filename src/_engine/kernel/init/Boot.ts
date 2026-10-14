@@ -39,12 +39,13 @@ import {
   installFeaturesAsync,
   checkFeatures,
   checkSceneFeatures,
+  type FeatureDebugHook,
   runFeatureDebugHooksAsync,
 } from './Features';
 
-import { initECSWorld, registerECSDebugGUI } from '../ecs/ECS';
-import { initDebugCamera, registerCameraManager } from '../camera/Camera';
-import { registerLightManager } from '../light/Light';
+import { type ECSWorld, initECSWorld, registerECSDebugGUI } from '../ecs/ECS';
+import { initDebugCamera, registerCameraDebugGUI } from '../camera/Camera';
+import { registerLightDebugGUI } from '../light/Light';
 import { load3DSymbols } from '../../debug/symbols/3DSymbols';
 import { registerDebugToolsModule } from '../../debug/DebugTools';
 import { registerRaycastDebugGUI } from '../render/Raycast';
@@ -129,15 +130,9 @@ export const bootEngineAsync = async ({ config, data, features, start, hudSlot }
   // Resolve the assets config (the assets worker is only started by its first request)
   initAssets();
 
-  // The flag here too (load3DSymbols checks it): a production build then drops the call
-  if (IS_DEBUG_ENV) await load3DSymbols();
-
-  // Register Managers
-  await registerCameraManager();
-  await registerLightManager(ecsWorld);
-
-  // Initializes the debug camera (if in debug mode)
-  await initDebugCamera(ecsWorld);
+  // The kernel's debug modules, before the features: their systems register in a fixed place.
+  // The flag here too (each step checks it): a production build then drops the call
+  if (IS_DEBUG_ENV) await bootKernelDebugAsync(ecsWorld);
 
   // The features, in list order (p607 D1): physics boots in its install
   await installFeaturesAsync(features, featureHost);
@@ -146,6 +141,41 @@ export const bootEngineAsync = async ({ config, data, features, start, hudSlot }
   // hook sees every scene (the sky box registers the scenes' sky boxes)
   await registerScenesFromGeneratedData();
 
+  // The debug tools, the features' debug hooks and the test bridge, before the first scene load
+  if (IS_DEBUG_ENV || IS_PROD_TEST_MODE) await bootDebugToolsAsync(featureHost.debugHooks);
+
+  await start();
+
+  // Start engine/loop if root scene has children
+  const rootScene = getRootScene() as Scene;
+  if (rootScene.children.length) initMainLoop();
+
+  // The debug GUIs that need the renderer, and the debug toaster
+  if (IS_DEBUG_ENV) await bootDebugAfterStartAsync(featureHost.debugAfterStartHooks);
+
+  // Load draggableWindow states
+  loadDraggableWindowStatesFromLS();
+
+  // Back to the view that was active before the refresh: last, so the scene and every debug
+  // GUI exist (hidden by the view) when switching back. Not awaited: the loop already runs
+  if (IS_DEBUG_ENV) void restoreSavedView();
+};
+
+// The boot's debug steps: called only behind the debug flags, so a production build drops them
+// with the modules they load. Outside a `try` (Rollup keeps a try block's calls whole).
+
+/** Debug env: the 3D symbols, the camera and light GUIs and the debug camera, in this order (it
+ * fixes their systems' and hooks' order) */
+const bootKernelDebugAsync = async (ecsWorld: ECSWorld) => {
+  await load3DSymbols();
+  await registerCameraDebugGUI();
+  await registerLightDebugGUI(ecsWorld);
+  await initDebugCamera(ecsWorld);
+};
+
+/** Debug env and prod test mode: the debug tools and GUIs (some debug env only), the features'
+ * `onDebug` hooks and the test bridge */
+const bootDebugToolsAsync = async (debugHooks: FeatureDebugHook[]) => {
   if (IS_DEBUG_ENV) {
     await registerUndoRedoModule();
     initUndoRedo();
@@ -159,77 +189,62 @@ export const bootEngineAsync = async ({ config, data, features, start, hudSlot }
     registerDefaultDebugKeyBindings();
     await registerECSDebugGUI();
     // The features' own, in install order
-    await runFeatureDebugHooksAsync(featureHost.debugHooks);
+    await runFeatureDebugHooksAsync(debugHooks);
   }
-  if (IS_DEBUG_ENV || IS_PROD_TEST_MODE) {
-    // Loaded here (not the IS_DEBUG_ENV-only block above) so isProdTest mode can still read
-    // the persisted "debug start scene" setting via getDebugToolsState() in SceneLoader.ts —
-    // registerDebugToolsModule()/getDebugToolsState() are prod-test-aware themselves; the
-    // debug tools UI panel they back stays IS_DEBUG_ENV-only regardless (initDebugTools()).
-    await registerDebugToolsModule();
-    // Debug env, and prodTest when enabled there. Before the windows are restored from LS
-    await registerProfiler();
-    // A profiler tab (loads where the profiler does). Before start: its allocation
-    // tracker must see the renderer's init()
-    await registerGPUMemoryDebugGUI();
-    await registerMainLoopDebugGUI();
-    await registerOnScreenTools();
-    if (IS_PROD_TEST_MODE) registerDefaultProdTestKeyBindings();
-  }
+  // Loaded here (not the IS_DEBUG_ENV-only block above) so isProdTest mode can still read
+  // the persisted "debug start scene" setting via getDebugToolsState() in SceneLoader.ts —
+  // registerDebugToolsModule()/getDebugToolsState() are prod-test-aware themselves; the
+  // debug tools UI panel they back stays IS_DEBUG_ENV-only regardless (initDebugTools()).
+  await registerDebugToolsModule();
+  // Debug env, and prodTest when enabled there. Before the windows are restored from LS
+  await registerProfiler();
+  // A profiler tab (loads where the profiler does). Before start: its allocation
+  // tracker must see the renderer's init()
+  await registerGPUMemoryDebugGUI();
+  await registerMainLoopDebugGUI();
+  await registerOnScreenTools();
+  if (IS_PROD_TEST_MODE) registerDefaultProdTestKeyBindings();
 
-  // The scene runner's window.__AEK_TEST__ (?aekTest=true; debug env and prod test mode).
-  // Before the first scene load, so it sees that load and its probe report. The flags here too
-  // (registerTestBridge checks them): a production build then drops the call
-  if (IS_DEBUG_ENV || IS_PROD_TEST_MODE) await registerTestBridge();
+  // The scene runner's window.__AEK_TEST__ (?aekTest=true). Before the first scene load, so it
+  // sees that load and its probe report
+  await registerTestBridge();
+};
 
-  await start();
+/** Debug env, after the app's `start`: the GUIs that need the renderer, the features'
+ * `onDebugAfterStart` hooks, and the debug toaster */
+const bootDebugAfterStartAsync = async (debugAfterStartHooks: FeatureDebugHook[]) => {
+  await createRendererDebugGUI();
+  await createAssetsDebugGUI();
+  // The features' own, in install order
+  await runFeatureDebugHooksAsync(debugAfterStartHooks);
 
-  // Start engine/loop if root scene has children
-  const rootScene = getRootScene() as Scene;
-  if (rootScene.children.length) initMainLoop();
-
-  // Create debug GUIs and utils
-  if (IS_DEBUG_ENV) {
-    await createRendererDebugGUI();
-    await createAssetsDebugGUI();
-    // The features' own, in install order
-    await runFeatureDebugHooksAsync(featureHost.debugAfterStartHooks);
-
-    // Make the debug toaster appear above the stats cmp
-    const statsCmp = getStatsCmp();
-    let yOffset = '-268px';
-    if (statsCmp) yOffset = `${-statsCmp.elem.offsetHeight - 16}px`;
-    getHUDRootCMP().add(
-      createToaster({
-        id: DEBUG_TOASTER_ID,
-        // Shown in every view (ViewManager.ts)
-        className: KEEP_IN_VIEWS_CLASS,
-        settings: {
-          animationTimeMs: 200,
-          verticalPosition: 'bottom',
-          horizontalPosition: 'left',
-          toastDirection: 'up',
-          toastAppearFromDirection: 'left',
-          offset: { x: '18px', y: yOffset },
-          closeBtnIcon: getSvgIcon('x'),
-          icons: {
-            info: getSvgIcon('info'),
-            warning: getSvgIcon('warning'),
-            alert: getSvgIcon('alert'),
-          },
+  // Make the debug toaster appear above the stats cmp
+  const statsCmp = getStatsCmp();
+  let yOffset = '-268px';
+  if (statsCmp) yOffset = `${-statsCmp.elem.offsetHeight - 16}px`;
+  getHUDRootCMP().add(
+    createToaster({
+      id: DEBUG_TOASTER_ID,
+      // Shown in every view (Views.ts)
+      className: KEEP_IN_VIEWS_CLASS,
+      settings: {
+        animationTimeMs: 200,
+        verticalPosition: 'bottom',
+        horizontalPosition: 'left',
+        toastDirection: 'up',
+        toastAppearFromDirection: 'left',
+        offset: { x: '18px', y: yOffset },
+        closeBtnIcon: getSvgIcon('x'),
+        icons: {
+          info: getSvgIcon('info'),
+          warning: getSvgIcon('warning'),
+          alert: getSvgIcon('alert'),
         },
-      })
-    );
-    // Toasts from the boot, eg. an unknown ?startScene
-    flushQueuedDebugToasts();
-  }
-
-  // Load draggableWindow states
-  loadDraggableWindowStatesFromLS();
-
-  // Back to the view that was active before the refresh: last, so the scene and every debug
-  // GUI exist (hidden by the view) when switching back. Not awaited: the loop already runs
-  if (IS_DEBUG_ENV) void restoreSavedView();
+      },
+    })
+  );
+  // Toasts from the boot, eg. an unknown ?startScene
+  flushQueuedDebugToasts();
 };
 
 const consoleBootText = () => {

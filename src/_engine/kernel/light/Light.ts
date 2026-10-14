@@ -5,7 +5,6 @@ import type { DebugModuleRef } from '../config/DebugModules';
 import { getLightCharacteristics } from './LightHelpers';
 import { loadDebugModuleAsync, useDebug } from '../config/DebugModules';
 import { ComponentType, Transform } from '../ecs/ECSCoreComponents';
-import { IS_DEBUG_ENV } from '../config/Config';
 import { loadPersistentProps } from '../scene/PropertyLoader';
 import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
 import { existsOrThrow } from '../../utils/Assert';
@@ -13,29 +12,41 @@ import { lerror, lwarn } from '../../utils/Logger';
 import { getTexture } from '../assets/Texture';
 import { retagAssetOwner } from '../assets/AssetOwners';
 import { setFrustumCullingEnabled } from '../ecs/ObjectFrustumCullingSystem';
+import type { FeatureContext } from '../init/Features';
 
-export const registerLightManager = async (world: ECSWorld) => {
-  if (IS_DEBUG_ENV) {
-    // Awaited, so the helpers' LATE_MAIN system registers before the debug camera's helpers' (a
-    // load race before p607: the system order differed between page loads)
-    debugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__LightGUI'));
-    await loadDebugModuleAsync(() => import('./debug/_dbg__LightHelpers'));
+/**
+ * Installs the lights (the kernel, p607): a light entity's deletion disposes its light (and its
+ * target entity).
+ * @internal
+ */
+export const installLights = (ctx: FeatureContext) => {
+  ctx.registerComponentHooks(ComponentType.TAG_IS_LIGHT, {
+    onDeleteEntity: (entityId, w) => disposeLight(entityId, w),
+  });
+};
 
-    registerOnAllSceneEnterings('lightHelpersSceneSync', () => {
-      const sceneId = getCurrentSceneId();
-      if (sceneId) useDebug(debugGUI)?.syncDebugVisualsFromLS(sceneId, world);
+/**
+ * Debug env: loads the lights' debug GUI and helpers, keeps the GUI's list current, and syncs
+ * the helpers from LS on every scene enter. The boot calls it before the features install.
+ * @internal
+ */
+export const registerLightDebugGUI = async (world: ECSWorld) => {
+  // Awaited, so the helpers' LATE_MAIN system registers before the debug camera's helpers' (a
+  // load race before p607: the system order differed between page loads)
+  debugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__LightGUI'));
+  await loadDebugModuleAsync(() => import('./debug/_dbg__LightHelpers'));
+  if (!debugGUI) return;
 
-      useDebug(debugGUI)?.initLightDebuggerGUI();
-    });
-    ECSWorld.registerComponentHooks(ComponentType.TAG_IS_LIGHT, {
-      onAddComponent: () => useDebug(debugGUI)?.updateLightsDebuggerGUI(),
-      onDeleteEntity: (entityId, w) => disposeLight(entityId, w),
-    });
-  } else {
-    ECSWorld.registerComponentHooks(ComponentType.TAG_IS_LIGHT, {
-      onDeleteEntity: (entityId, w) => disposeLight(entityId, w),
-    });
-  }
+  registerOnAllSceneEnterings('lightHelpersSceneSync', () => {
+    const sceneId = getCurrentSceneId();
+    if (sceneId) useDebug(debugGUI)?.syncDebugVisualsFromLS(sceneId, world);
+
+    useDebug(debugGUI)?.initLightDebuggerGUI();
+  });
+  // After the 3D symbols' and the helpers' hooks on the tag, which attach what the list shows
+  ECSWorld.registerComponentHooks(ComponentType.TAG_IS_LIGHT, {
+    onAddComponent: () => useDebug(debugGUI)?.updateLightsDebuggerGUI(),
+  });
 };
 
 export enum ShadowQuality {

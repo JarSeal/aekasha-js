@@ -23,6 +23,7 @@ import { existsOrThrow } from '../../utils/Assert';
 import { DEBUG_CAMERA_ID } from '../../debug/DebugTools';
 import { updateOnScreenTools } from '../../debug/OnScreenTools';
 import { lerror } from '../../utils/Logger';
+import type { FeatureContext } from '../init/Features';
 
 // --- STATE ---
 let activeCameraEntityId: number | null = null;
@@ -45,24 +46,15 @@ let debugCamera: DebugModuleRef<DebugCameraModule> | null = null;
 const _m1 = new THREE.Matrix4();
 const _v1 = new THREE.Vector3();
 
-export const registerCameraManager = async () => {
+/**
+ * Installs the cameras (the kernel, p607): a camera entity's deletion disposes its camera, the
+ * main camera cache follows its tag, and every camera's aspect follows the canvas.
+ * @internal
+ */
+export const installCameras = (ctx: FeatureContext) => {
   addResizer('cameraAspectResizer', updateAllCameraAspectRatios);
 
-  if (IS_DEBUG_ENV) {
-    // Awaited, so the debug camera's MAIN system (its module comes with the GUI's) registers in a
-    // fixed place: before the light helpers' and the line time system (a load race before p607)
-    cameraDebugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__CameraGUI'));
-
-    registerOnAllSceneEnterings('cameraDebugSync', () => {
-      const sceneId = getCurrentSceneId();
-      if (sceneId) {
-        syncCameraHelpersFromLS(sceneId, getECSWorld());
-      }
-    });
-  }
-
-  ECSWorld.registerComponentHooks(ComponentType.TAG_IS_CAMERA, {
-    onAddComponent: () => useDebug(cameraDebugGUI)?.updateCamerasDebuggerGUI('LIST'),
+  ctx.registerComponentHooks(ComponentType.TAG_IS_CAMERA, {
     onDeleteEntity: (entityId, world) => disposeCamera(entityId, world),
   });
 
@@ -73,9 +65,32 @@ export const registerCameraManager = async () => {
       mainCameraEntityId = null;
     }
   };
-  ECSWorld.registerComponentHooks(ComponentType.TAG_IS_MAIN_CAMERA, {
+  ctx.registerComponentHooks(ComponentType.TAG_IS_MAIN_CAMERA, {
     onRemoveComponent: clearMainCamera,
     onDeleteEntity: clearMainCamera,
+  });
+};
+
+/**
+ * Debug env: loads the cameras' debug GUI, keeps its list current, and syncs the camera helpers
+ * from LS on every scene enter. The boot calls it before the features install.
+ * @internal
+ */
+export const registerCameraDebugGUI = async () => {
+  // Awaited, so the debug camera's MAIN system (its module comes with the GUI's) registers in a
+  // fixed place: before the light helpers' and the line time system (a load race before p607)
+  cameraDebugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__CameraGUI'));
+  if (!cameraDebugGUI) return;
+
+  registerOnAllSceneEnterings('cameraDebugSync', () => {
+    const sceneId = getCurrentSceneId();
+    if (sceneId) {
+      syncCameraHelpersFromLS(sceneId, getECSWorld());
+    }
+  });
+  // After the 3D symbols' hook on the tag, which attaches the symbol the list shows
+  ECSWorld.registerComponentHooks(ComponentType.TAG_IS_CAMERA, {
+    onAddComponent: () => useDebug(cameraDebugGUI)?.updateCamerasDebuggerGUI('LIST'),
   });
 };
 

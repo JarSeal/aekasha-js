@@ -2,13 +2,14 @@ import { beforeAll, describe, expect, test } from 'vitest';
 import * as THREE from 'three/webgpu';
 import { ECSWorld } from '../ecs/ECS';
 import { ComponentType } from '../ecs/ECSCoreComponents';
-import { getMainAppCameraId, getMainCamera, registerCameraManager, setMainCamera } from './Camera';
+import { createFeatureHost } from '../init/Features';
+import { getMainAppCameraId, getMainCamera, installCameras, setMainCamera } from './Camera';
 
 // The default world (getMainCamera reads it) and the camera hooks, once for this file
 let world: ECSWorld;
-beforeAll(async () => {
+beforeAll(() => {
   world = new ECSWorld();
-  await registerCameraManager();
+  installCameras(createFeatureHost({}).ctx);
 });
 
 const createCameraEntity = (target: ECSWorld, appId: string) => {
