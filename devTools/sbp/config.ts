@@ -1,6 +1,7 @@
 /**
  * `yarn sbp`'s profiles (p611 D2), listed in `sbp.config.ts` at the repo root: what a build holds,
- * which scenes it serves and the budgets it must stay within. The embed profiles come with Phase 4.
+ * which scenes it serves and the budgets it must stay within: the template app's full-page build,
+ * and the embeds (Phase 4), each a module that binds the app's parts and exports the mount (D7).
  */
 
 /** A kibibyte, for budgets written as `400 * KIB` */
@@ -31,9 +32,12 @@ export type SbpBudgets = {
 export type SbpProfile = {
   /** `--profile <id>`, and the key of `.cache/sbp/report.json` */
   id: string;
-  /** The build's entry from the repo root: `src/index.html` is the template app's `yarn build` */
+  /** The build's entry from the repo root: `src/index.html` is the template app's `yarn build`;
+   * any other is an embed, a `.ts` module under `src/` (`src/app/profiles/banner/banner.embed.ts`) */
   entry: string;
-  /** The scene ids it serves (their `__features` go next to the feature view); all when omitted */
+  /** The scene ids it serves (their `__features` go next to the feature view). The app's are all
+   * when omitted; an embed lists its own, and the gatherer writes only those into its data
+   * (`src/generated/profiles/<id>/`, the first is the mount's default scene) */
   scenes?: string[];
   /** None checked when omitted */
   budgets?: SbpBudgets;
@@ -88,9 +92,18 @@ export const checkSbpProfiles = (profiles: readonly SbpProfile[]): string[] => {
     if (ids.has(profile.id)) problems.push(`profile ${profile.id} listed twice`);
     ids.add(profile.id);
     if (profile.entry !== APP_ENTRY) {
-      problems.push(
-        `profile ${profile.id}: only ${APP_ENTRY} builds so far (embeds: p611 Phase 4)`
-      );
+      if (!/^src\/[^\s]+\.ts$/.test(profile.entry) || profile.entry.includes('..')) {
+        problems.push(
+          `profile ${profile.id}: entry ${JSON.stringify(profile.entry)}: ${APP_ENTRY}, or an embed's .ts module under src/`
+        );
+      }
+      if (!profile.scenes?.length) {
+        problems.push(`profile ${profile.id}: an embed lists its scenes (scenes: ['<sceneId>'])`);
+      }
+    }
+    const scenes = profile.scenes ?? [];
+    if (new Set(scenes).size !== scenes.length) {
+      problems.push(`profile ${profile.id}: a scene listed twice`);
     }
     if (profile.budgets) problems.push(...checkBudgets(profile.id, profile.budgets));
   }

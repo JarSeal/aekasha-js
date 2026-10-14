@@ -35,7 +35,7 @@ import { buildAppBundle } from './sbp/appBuild';
 import { isBudgetFailure } from './sbp/budgets';
 import { readSceneFeatures } from './sbp/bundleFeatures';
 import { collectBundle } from './sbp/bundleModel';
-import { checkSbpProfiles } from './sbp/config';
+import { APP_ENTRY, checkSbpProfiles } from './sbp/config';
 import {
   type Colors,
   type SbpReportFile,
@@ -111,6 +111,8 @@ const main = async () => {
     );
     return;
   }
+  // TODO(p611 Phase 4 §2): the embed build
+  if (profile.entry !== APP_ENTRY) fail(`Profile ${profile.id}: embeds don't build yet`);
 
   const watch = setProgressLogFile(LOG_FILE);
   if (args.json) setProgressLogConsole(false);

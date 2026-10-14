@@ -505,6 +505,25 @@ As built:
    no host style changed (computed styles on `body` before and after).
 5. The banner's budgets in `sbp.config.ts`; `yarn build` checks them (D4).
 
+As built:
+
+- **§1, the per-profile data:** `devTools/gatherOutput.ts` holds the gatherer's output: the
+  loaders as data (`GeneratedLoaders`: scene, TSL material and PostFX files by id, as paths from
+  `src/`), `formatGeneratedAppFns` (the text the gatherer built inline, byte for byte: both modes'
+  `src/generated/` unchanged, checked against `HEAD`'s gatherer), `writeGeneratedOutput` (the
+  three files; the import prefix is the folder's path to `src/`), `selectProfileOutput` and
+  `removeStaleProfileOutputs`. An embed profile (any entry but `src/index.html`,
+  `getEmbedProfiles`) gets `src/generated/profiles/<id>/`: its scenes in the profile's order (the
+  first is the mount's default), their scene files, and the TSL material and PostFX files those
+  scenes list (as the production gather picks them). Its JSON is `{ scenes }` in both modes: the
+  dev registries serve the debugger's asset lists, and the runtime's two reads of them
+  (`PostFX.ts`, `TextureArray.ts`) are dev fallbacks. A profile naming a scene the data doesn't have
+  or a debug scene fails the gather (both modes), as `checkSbpProfiles`' problems do; a folder no
+  profile writes is removed, and `profiles/` once empty. `gatherSceneData({ profiles })` defaults to
+  `sbp.config.ts`. `checkSbpProfiles` now takes an embed: a `.ts` entry under `src/`, `scenes`
+  required, none twice; `yarn sbp` refuses one until §2. The dev plugin ignores all of
+  `src/generated/`. Tests: `gatherOutput.test.ts`, `config.test.ts`.
+
 ### Phase 5: studies
 
 1. **The lite renderer** (p600 §4.4): measure a throwaway `WebGLRenderer` + `MeshStandardMaterial`

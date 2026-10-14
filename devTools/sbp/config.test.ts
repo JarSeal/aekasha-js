@@ -11,17 +11,39 @@ describe('checkSbpProfiles', () => {
     expect(checkSbpProfiles(sbpProfiles)).toEqual([]);
   });
 
-  it('names a bad id, a repeated one and an entry that doesn’t build yet', () => {
+  it('names a bad id and a repeated one', () => {
     expect(
       checkSbpProfiles([
         { id: 'app', entry: 'src/index.html' },
         { id: 'app', entry: 'src/index.html' },
-        { id: 'Bad id', entry: 'src/app/profiles/banner/banner.embed.ts' },
+        { id: 'Bad id', entry: 'src/app/profiles/banner/banner.embed.ts', scenes: ['banner'] },
       ])
     ).toEqual([
       'profile app listed twice',
       'profile id "Bad id": a letter, then letters, digits, -',
-      'profile Bad id: only src/index.html builds so far (embeds: p611 Phase 4)',
+    ]);
+  });
+
+  it('accepts an embed with its scenes, and names a bad entry, no scenes and a scene twice', () => {
+    expect(
+      checkSbpProfiles([
+        { id: 'banner', entry: 'src/app/profiles/banner/banner.embed.ts', scenes: ['banner'] },
+      ])
+    ).toEqual([]);
+    expect(
+      checkSbpProfiles([
+        { id: 'a', entry: 'src/app/profiles/a/a.embed.js', scenes: ['x'] },
+        { id: 'b', entry: 'src/../b.ts', scenes: ['x'] },
+        { id: 'c', entry: 'src/app/profiles/c/c.embed.ts' },
+        { id: 'd', entry: 'src/app/profiles/d/d.embed.ts', scenes: [] },
+        { id: 'e', entry: 'src/app/profiles/e/e.embed.ts', scenes: ['x', 'x'] },
+      ])
+    ).toEqual([
+      'profile a: entry "src/app/profiles/a/a.embed.js": src/index.html, or an embed\'s .ts module under src/',
+      'profile b: entry "src/../b.ts": src/index.html, or an embed\'s .ts module under src/',
+      "profile c: an embed lists its scenes (scenes: ['<sceneId>'])",
+      "profile d: an embed lists its scenes (scenes: ['<sceneId>'])",
+      'profile e: a scene listed twice',
     ]);
   });
 
