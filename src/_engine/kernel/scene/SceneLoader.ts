@@ -25,12 +25,7 @@ import {
 import { setAllInputsEnabled } from '../input/InputState';
 import { getCanvasParentElem } from '../render/Renderer';
 import { getDebugToolsState } from '../../debug/DebugTools';
-import {
-  getStartSceneQueryParam,
-  IS_DEBUG_ENV,
-  IS_PROD_TEST_MODE,
-  isDebugEnvironment,
-} from '../config/Config';
+import { getStartSceneQueryParam, IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../config/Config';
 import {
   handleDraggableWindowsOnSceneChangeEnd,
   handleDraggableWindowsOnSceneChangeStart,
@@ -419,9 +414,7 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
   // subset of debug features" run still honors a start-scene override left set in the debug
   // tools tab (getDebugToolsState/registerDebugToolsModule are prod-test-aware for this).
   const debugToolsState =
-    (isDebugEnvironment() || IS_PROD_TEST_MODE) && !firstSceneLoaded
-      ? getDebugToolsState(true)
-      : null;
+    (IS_DEBUG_ENV || IS_PROD_TEST_MODE) && !firstSceneLoaded ? getDebugToolsState(true) : null;
 
   // ?startScene=<sceneId> (debug env and prod test mode, getStartSceneQueryParam) wins over the
   // Debug tools' start scene. An unknown id falls back to the scene loaded without it
@@ -454,11 +447,7 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
   // The debugger's own scene-loader UI is IS_DEBUG_ENV-only (never registered under
   // isProdTest) — only honor this sub-option in real debug mode, or targetLoaderId would
   // point at a loader that was never created. It applies to a ?startScene too.
-  if (
-    useDebugStartScene &&
-    isDebugEnvironment() &&
-    debugToolsState?.scenesListing.useDebuggerSceneLoader
-  ) {
+  if (useDebugStartScene && IS_DEBUG_ENV && debugToolsState?.scenesListing.useDebuggerSceneLoader) {
     targetLoaderId = DEBUGGER_SCENE_LOADER_ID;
   }
 

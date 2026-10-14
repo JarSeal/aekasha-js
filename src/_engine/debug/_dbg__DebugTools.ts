@@ -10,13 +10,7 @@ import {
   type DebuggerPaneItem,
 } from './DebuggerGUI';
 import { getCurrentSceneId, getGeneratedAppData, getRootScene } from '../kernel/scene/Scene';
-import {
-  getConfig,
-  getCurrentEnvironment,
-  getEnvs,
-  IS_DEBUG_ENV,
-  isDebugEnvironment,
-} from '../kernel/config/Config';
+import { getConfig, getCurrentEnvironment, getEnvs, IS_DEBUG_ENV } from '../kernel/config/Config';
 import { isCurrentlyLoading, loadScene } from '../kernel/scene/SceneLoader';
 import { lerror, llog } from '../utils/Logger';
 import { fitAllDraggableWindowsToScreen, openDraggableWindow } from '../ui/DraggableWindow';
@@ -157,7 +151,7 @@ let debugToolsState: DebugToolsState = {
  * Initializes the debug tools (only for debug environments).
  */
 export const _initDebugTools = () => {
-  if (!isDebugEnvironment()) return;
+  if (!IS_DEBUG_ENV) return;
   createDebugToolsDebugGUI();
 };
 

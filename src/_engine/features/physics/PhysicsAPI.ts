@@ -7,7 +7,7 @@
 
 import * as THREE from 'three/webgpu';
 
-import { getConfig, IS_DEBUG_ENV, isDebugEnvironment } from '../../kernel/config/Config';
+import { getConfig, IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { PhysicsTransformBuffer } from './PhysicsTransformBuffer';
 import { PHYSICS_STEP_STATS_FIELD_COUNT, PHYSICS_STEP_STATS_SLOTS } from './PhysicsStepStatsBuffer';
 import { PhysicsDebugStateBuffer } from './PhysicsDebugStateBuffer';
@@ -175,7 +175,8 @@ import { existsOrThrow } from '../../utils/Assert';
 let physicsState: PhysicsState = {
   enabled: false,
   physicsEngine: 'RAPIER',
-  workerTarget: 'MAIN_THREAD',
+  // AppConfig.physics' documented defaults live here (the one owner, p612 D4)
+  workerTarget: 'WORKER_THREAD',
   timestep: 60,
   timestepRatio: 1 / 60,
   backgroundBehavior: 'PAUSE',
@@ -305,7 +306,7 @@ export const initPhysics = async (doNotCreateWorld?: boolean) => {
     engAPI.setBodyMovedObserver(bodyMovedListener);
     const worldOrUndefined = engAPI.init(
       physicsState,
-      isDebugEnvironment(),
+      IS_DEBUG_ENV,
       getReadOnlyLoopState(),
       doNotCreateWorld
     );
@@ -322,7 +323,7 @@ export const initPhysics = async (doNotCreateWorld?: boolean) => {
     const worldCreated = await messageWorkerAsync<boolean>({
       type: PhysicsProtocolType.INIT_PHYSICS,
       physicsState,
-      isDebugEnvironment: isDebugEnvironment(),
+      isDebugEnvironment: IS_DEBUG_ENV,
       loopState: getReadOnlyLoopState(),
       doNotCreateWorld,
       mainTimeOrigin: performance.timeOrigin,
@@ -1315,7 +1316,7 @@ export const createPhysicsWorld = async (
     'Physics engine not initiated. Initiate the engine (initPhysics) before creating the world'
   );
   if (physicsWorldEnabled) {
-    if (isDebugEnvironment())
+    if (IS_DEBUG_ENV)
       lwarn(
         'Trying to create another physics world even though the physics world has been already created.'
       );

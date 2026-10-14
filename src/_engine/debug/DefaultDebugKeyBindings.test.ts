@@ -27,10 +27,18 @@ vi.mock(import('../utils/Logger'), async (importOriginal) => ({
   ...(await importOriginal()),
   lwarn: vi.fn(),
 }));
-vi.mock(import('../kernel/config/Config'), async (importOriginal) => ({
-  ...(await importOriginal()),
-  getConfig: () => dom.config,
-}));
+// A spread copies the flags' values at mock time: getters keep them live bindings, which
+// initEnvironment (below) sets
+vi.mock(import('../kernel/config/Config'), async (importOriginal) => {
+  const original = await importOriginal();
+  return Object.defineProperties(
+    { ...original, getConfig: () => dom.config },
+    {
+      IS_DEBUG_ENV: { get: () => original.IS_DEBUG_ENV, enumerable: true },
+      IS_PROD_TEST_MODE: { get: () => original.IS_PROD_TEST_MODE, enumerable: true },
+    }
+  );
+});
 vi.mock(import('../kernel/loop/MainLoop'), async (importOriginal) => ({
   ...(await importOriginal()),
   toggleMainPlay: vi.fn(),

@@ -4,7 +4,7 @@
 // crash) transparently re-runs on the main thread. The worker holds no cache: the main-thread
 // registries stay the single source of truth.
 
-import { getConfig, isDebugEnvironment } from '../config/Config';
+import { getConfig, IS_DEBUG_ENV } from '../config/Config';
 import { initWorker } from '../loop/Workers';
 import { lerror, llog, lwarn } from '../../utils/Logger';
 import { releaseTransferableImage } from './import/TextureTransfer';
@@ -234,7 +234,7 @@ const startWorker = () => {
     .then((startedWorker) => {
       worker = startedWorker;
       workerStatus = 'READY';
-      if (isDebugEnvironment()) llog('Assets worker ready, capabilities:', workerCapabilities);
+      if (IS_DEBUG_ENV) llog('Assets worker ready, capabilities:', workerCapabilities);
       return startedWorker;
     })
     .catch((err) => {
@@ -403,7 +403,7 @@ export const runAssetTask = async <T>(
  * @param report {@link AssetLoadReport} (from {@link runAssetTask})
  */
 export const recordAssetLoadReport = (key: string, report: AssetLoadReport) => {
-  if (isDebugEnvironment()) loadReports.set(key, report);
+  if (IS_DEBUG_ENV) loadReports.set(key, report);
 };
 
 /**

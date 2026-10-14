@@ -44,7 +44,7 @@ import { computeInscatter, computeRelativeExtinction, getDayFactor } from './lay
 import { MAX_MOONS, MOONLIGHT_COLOR } from './layers/Moon';
 import { MAX_SUNS } from './layers/Sun';
 import { toSkyColor } from './SkyColor';
-import { isDebugEnvironment } from '../../kernel/config/Config';
+import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { lwarn } from '../../utils/Logger';
 
 /** The MANAGED_BY manager id of the entities a sky box owns. */
@@ -519,7 +519,7 @@ const warnAboutShadowCasters = (skyBoxId: string) => {
     warnedShadowCasters = 0;
     return;
   }
-  if (count === warnedShadowCasters || !isDebugEnvironment()) return;
+  if (count === warnedShadowCasters || !IS_DEBUG_ENV) return;
   warnedShadowCasters = count;
   lwarn(
     `Sky box "${skyBoxId}": ${count} sky lights cast shadows (more than ${MAX_SHADOW_CASTERS_HINT}). Each shadow map is a full extra scene render.`

@@ -1,6 +1,6 @@
 import type * as THREE from 'three/webgpu';
 import { isDebugCameraActive } from '../camera/Camera';
-import { isDebugEnvironment } from '../config/Config';
+import { IS_DEBUG_ENV } from '../config/Config';
 import { onWindowBlur } from '../loop/MainLoop';
 import { getCanvasElem } from '../render/Renderer';
 import { getCurrentSceneId } from '../scene/Scene';
@@ -103,7 +103,7 @@ export type TouchActionSource = {
 let touchActionSource: TouchActionSource | null = null;
 
 const isInputInDebugCamInvalid = (enabledInDebugCam?: EnabledInDebugCam) =>
-  isDebugEnvironment() &&
+  IS_DEBUG_ENV &&
   ((enabledInDebugCam === 'NOT_ENABLED_IN_DEBUG' && isDebugCameraActive()) ||
     (enabledInDebugCam === 'ENABLED_ONLY_IN_DEBUG' && !isDebugCameraActive()));
 

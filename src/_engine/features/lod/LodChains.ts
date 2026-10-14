@@ -10,7 +10,7 @@
 // next render.
 import * as THREE from 'three/webgpu';
 import { llog, lwarn } from '../../utils/Logger';
-import { isDebugEnvironment } from '../../kernel/config/Config';
+import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import {
   decGeometryRef,
   getGeometryRegistry,
@@ -257,7 +257,7 @@ const runGeneration = async (geometryId: string, options: ResolvedLodChainOption
           : ' Flat-shaded geometry (a normal per face) needs `permissive: true`.'
       } A very low-poly mesh has nothing to remove.`
     );
-  } else if (isDebugEnvironment()) {
+  } else if (IS_DEBUG_ENV) {
     llog(
       `[LOD] Chain for geometry "${geometryId}": ${levels.map((l) => l.triangles).join(' → ')} triangles, on the ${report.loadedOn === 'MAIN_THREAD' ? 'main thread' : 'worker'} in ${report.durationMs.toFixed(1)} ms (main thread's own work ${mainThreadMs.toFixed(2)} ms).`
     );
@@ -316,7 +316,7 @@ export const registerPrebuiltLodChain = (geometryId: string, prebuilt: Extracted
     origin: 'BUILD',
   };
   chains.set(geometryId, chain);
-  if (levels.length > 1 && isDebugEnvironment()) {
+  if (levels.length > 1 && IS_DEBUG_ENV) {
     llog(
       `[LOD] Chain for geometry "${geometryId}" from the asset pipeline: ${levels.map((l) => l.triangles).join(' → ')} triangles.`
     );

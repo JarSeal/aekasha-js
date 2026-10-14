@@ -1,5 +1,5 @@
 import { isDebugCameraActive } from '../camera/Camera';
-import { isDebugEnvironment } from '../config/Config';
+import { IS_DEBUG_ENV } from '../config/Config';
 import { onVisibilityChange, onWindowBlur } from '../loop/MainLoop';
 import { onRendererCreated } from '../render/Renderer';
 import { getCurrentSceneId } from '../scene/Scene';
@@ -101,7 +101,7 @@ export const getKeyChordLabel = (chord: KeyChord | KeyChord[]): string =>
     .join(' / ');
 
 const isInputInDebugCamInvalid = (enabledInDebugCam?: EnabledInDebugCam) =>
-  isDebugEnvironment() &&
+  IS_DEBUG_ENV &&
   ((enabledInDebugCam === 'NOT_ENABLED_IN_DEBUG' && isDebugCameraActive()) ||
     (enabledInDebugCam === 'ENABLED_ONLY_IN_DEBUG' && !isDebugCameraActive()));
 
@@ -319,7 +319,7 @@ export const warnIfKeyChordReserved = (
   mapId?: string,
   ignoreModifiers?: boolean
 ): void => {
-  if (!isDebugEnvironment()) return;
+  if (!IS_DEBUG_ENV) return;
   for (let i = 0; i < reservedChords.length; i++) {
     const reserved = reservedChords[i];
     if (reserved.mapId ? reserved.mapId === mapId : reserved.id === id) continue;

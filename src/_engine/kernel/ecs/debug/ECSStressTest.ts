@@ -6,7 +6,7 @@ import { createMeshEntity } from '../../mesh/Mesh';
 import type { ECSWorld } from '../ECS';
 import { getECSWorld } from '../ECS';
 import { ComponentType } from '../ECSCoreComponents';
-import { isDebugEnvironment } from '../../config/Config';
+import { IS_DEBUG_ENV } from '../../config/Config';
 import { getRootScene } from '../../scene/Scene';
 import { ECSSystemStage } from '../../loop/SystemStages';
 
@@ -153,7 +153,7 @@ export const resetECSStressTest = (world: ECSWorld) => {
  * tab's benchmark spawns and clears batches too.
  */
 export const initECSStressTest = (batchSize: number = 100, targetId?: number) => {
-  if (!isDebugEnvironment()) return;
+  if (!IS_DEBUG_ENV) return;
 
   const world = getECSWorld();
 

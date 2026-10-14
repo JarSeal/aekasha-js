@@ -29,7 +29,7 @@ import type { SkyBoxEnvSize, SkyBoxMoonDef, SkyBoxMoonTextureDef } from '../SkyB
 import type { SkyCompositeMode } from '../SkyComposite';
 import { toSkyColor } from '../SkyColor';
 import { getTexture, loadTextureAsync } from '../../../kernel/assets/Texture';
-import { isDebugEnvironment } from '../../../kernel/config/Config';
+import { IS_DEBUG_ENV } from '../../../kernel/config/Config';
 import { lerror } from '../../../utils/Logger';
 import { MOON_TIME_DEFAULTS } from '../SkyTime';
 
@@ -168,7 +168,7 @@ export const loadMoonTexture = async (moon: SkyBoxMoonDef | undefined) => {
       id: def.textureId,
       fileName: def.file,
       path: def.path,
-      throwOnError: isDebugEnvironment(),
+      throwOnError: IS_DEBUG_ENV,
     });
   } else if (def.textureId) {
     texture = getTexture(def.textureId) || null;

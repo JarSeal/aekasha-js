@@ -4,11 +4,7 @@ import styles from './DebuggerGUI.module.scss';
 import { lsGetItem, lsSetItem } from '../utils/LocalAndSessionStorage';
 import { getWindowSize } from '../ui/Window';
 import { getHUDRootCMP } from '../ui/HUD';
-import {
-  DEFAULT_DEBUG_DRAWER_TAB_ORDER,
-  getConfig,
-  isDebugEnvironment,
-} from '../kernel/config/Config';
+import { DEFAULT_DEBUG_DRAWER_TAB_ORDER, getConfig, IS_DEBUG_ENV } from '../kernel/config/Config';
 import { lwarn } from '../utils/Logger';
 import type { DebugGUIOpts, AnyDebuggerTabDef, UpdateDebuggerTabOpts } from './DebuggerGUI';
 import { createDebuggerSceneLoader } from '../kernel/scene/debug/_dbg__DebuggerSceneLoader';
@@ -146,7 +142,7 @@ const createTabMenuButtons = () => {
 let guiOpts: DebugGUIOpts | undefined = undefined;
 
 export const _createDebugGui = (opts?: DebugGUIOpts) => {
-  if (!isDebugEnvironment()) return;
+  if (!IS_DEBUG_ENV) return;
 
   guiOpts = opts;
   initDrawerState();
@@ -407,7 +403,7 @@ export const _updateDebuggerSceneTitle = (title: string) => {
 };
 
 export const _disableDebugger = (disable: boolean) => {
-  if (!isDebugEnvironment()) return;
+  if (!IS_DEBUG_ENV) return;
   debuggerDisabled = disable;
   if (disable) {
     drawerCMP?.updateClass(styles.debuggerDisabled, 'add');

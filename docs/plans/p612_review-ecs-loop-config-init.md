@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-4 implemented
 Category: Refactoring, Documentation, ECS
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -499,7 +499,7 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
   edit) was wrong: an intermittent reload of the runner's dev server, maybe Vite's dependency
   optimizer reloading on a dependency it found at runtime (not confirmed). Filed for p619 (Phase 8).
 
-### Phase 4: config (`Config.ts`, `DebugModules.ts`)
+### Phase 4: config (`Config.ts`, `DebugModules.ts`) — done
 
 1. D3: the duplicate flags and functions removed, callers moved (`APP_CONFIG` with them: K1).
 2. D4: the per-section merge, the defaults moved to their readers, `physicsState`'s defaults
@@ -508,6 +508,38 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
 3. K4: `AppConfig` documented key by key (the type is on the entry), the stale paths.
 4. K5: `DebugModules.ts`' unused functions removed (if unused), the rest documented.
 5. Check: `yarn build` and `yarn sbp` (the debug-only defaults gone from the main chunk).
+
+**As built:**
+
+- **D3:** removed `isDebugEnvironment`, `isProdTestMode`, `isProductionEnvironment`,
+  `isCurrentEnvironment`, `isNotCurrentEnvironment` (no caller), `IS_PROD_TEST_ENV`, `CUR_ENV` and
+  `APP_CONFIG`. 21 files moved to `IS_DEBUG_ENV` / `IS_PROD_TEST_MODE`; `_dbg__About.ts` and
+  `ModuleLoad.test.ts` to `getCurrentEnvironment()`. The physics worker's own `isDebugEnvironment`
+  (`EngineRapier.ts`' variable, the INIT message's field) stays: it isn't Config's.
+  `IS_PROD_TEST_MODE`, `IS_PROD_ENV`, `getConfig` and `getEnvs` are `@internal` (none is on an
+  entry); `IS_DEBUG_ENV` stays public.
+- **D4, simpler than planned:** every reader already defaults its keys (`physicsState`,
+  `initAssets`, `LodSystem.ts`, `initECSWorld`, the debug modules), so `Config.ts` keeps **no**
+  defaults at all (`let config: AppConfig = {}`) and a per-section merge has nothing to merge.
+  `loadConfig` copies the three sections it writes the env and debug overrides into (`physics`,
+  `assets`, `ecs`): it used to write into the app's own `CONFIG.physics` object. `physicsState`'s
+  `workerTarget` default is `'WORKER_THREAD'`, the documented one (D4's behaviour change; gravity
+  was already −9.81 there). `DEFAULT_DEBUG_DRAWER_TAB_ORDER` stays in `Config.ts`: only the debugger
+  reads it now, so it left the production bundle with the defaults object.
+- **K4:** `AppConfig` has a summary, an `@example` and a doc on every `physics` key, `ecs` and
+  `draggableWindows`; `Environments`, `DebugPhysicsWireframeConfig`; the stale paths.
+- **K5:** everything in `DebugModules.ts` has callers (`loadDebugModule`: `Camera.ts`,
+  `PhysicsAPI.ts`; `isDebugReady`: the on-screen tools); documented, `@template`s.
+- **Not in the plan:** `DefaultDebugKeyBindings.test.ts` mocked `Config` with
+  `{ ...(await importOriginal()) }`, which copies `IS_DEBUG_ENV`'s value at mock time (false):
+  with the flags read directly (no `isDebugEnvironment()` to reach the real binding), two tests
+  failed. The mock now defines the two flags as getters on the original module.
+- Tests (`Config.test.ts`): no engine defaults (a missing key stays missing); the env overrides
+  land in copies, the app's section objects unchanged.
+- **JSDoc:** `kernel/config` exports 29 / 32 → 24 / 24, members 1 / 1.
+- **Baselines** (`--update`): `api.json`'s 8 removals; the main chunk −1,142 B minified, −432 B
+  gzip (395,821 → 395,389): the defaults object and the tab-order list.
+- **`yarn verify:scenes`:** 104 passed, nothing changed (the template passes `workerTarget`).
 
 ### Phase 5: init and views (`Boot.ts`, `Features.ts`, `InitEngine.ts`, `Kernel.ts`, `Mount.ts`, `Views.ts`)
 

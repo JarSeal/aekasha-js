@@ -1,6 +1,6 @@
 import { llog, lwarn } from '../../utils/Logger';
 import { lsGetItem } from '../../utils/LocalAndSessionStorage';
-import { DEBUG_ASSETS_BOOT_LS_KEY, isDebugEnvironment } from '../config/Config';
+import { DEBUG_ASSETS_BOOT_LS_KEY, IS_DEBUG_ENV } from '../config/Config';
 import type { GeneratedAssetFields } from '../../schemas/AssetsConfigSchema';
 
 /**
@@ -69,7 +69,7 @@ let loadSourceFiles: boolean | undefined;
 export const isLoadingSourceFiles = () => {
   if (loadSourceFiles !== undefined) return loadSourceFiles;
   const isSaved =
-    isDebugEnvironment() &&
+    IS_DEBUG_ENV &&
     (lsGetItem(DEBUG_ASSETS_BOOT_LS_KEY, {}) as { loadSourceFiles?: boolean }).loadSourceFiles ===
       true;
   loadSourceFiles = isSaved && import.meta.env.DEV;

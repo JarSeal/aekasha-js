@@ -1901,9 +1901,7 @@
       "updateAllCameraAspectRatios": "Function"
     },
     "src/_engine/kernel/config/Config.ts": {
-      "APP_CONFIG": "Variable",
       "AppConfig": "TypeAlias",
-      "CUR_ENV": "Variable",
       "DEBUG_ASSETS_BOOT_LS_KEY": "Variable",
       "DEBUG_PHYSICS_API_BOOT_LS_KEY": "Variable",
       "DebugPhysicsWireframeConfig": "TypeAlias",
@@ -1918,13 +1916,7 @@
       "initEnvironment": "Function",
       "IS_DEBUG_ENV": "Variable",
       "IS_PROD_ENV": "Variable",
-      "IS_PROD_TEST_ENV": "Variable",
       "IS_PROD_TEST_MODE": "Variable",
-      "isCurrentEnvironment": "Function",
-      "isDebugEnvironment": "Function",
-      "isNotCurrentEnvironment": "Function",
-      "isProdTestMode": "Function",
-      "isProductionEnvironment": "Function",
       "loadConfig": "Function",
       "PhysicsWireframeColors": "TypeAlias",
       "PROJECT_METADATA": "Variable"

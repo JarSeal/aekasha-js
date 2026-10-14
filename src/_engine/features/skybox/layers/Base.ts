@@ -4,7 +4,7 @@ import type { SkyBoxBaseDef, SkyBoxEnvDef, SkyBoxEnvSize, SkyBoxNebulaSize } fro
 import { getPMREMTexture } from '../SkyEnvironment';
 import { toSkyColor } from '../SkyColor';
 import { getTexture, loadTextureAsync } from '../../../kernel/assets/Texture';
-import { isDebugEnvironment } from '../../../kernel/config/Config';
+import { IS_DEBUG_ENV } from '../../../kernel/config/Config';
 import { isHDR } from '../../../kernel/assets/AssetFiles';
 import { lerror } from '../../../utils/Logger';
 
@@ -77,7 +77,7 @@ const loadEquirectTexture = async (
       fileName: base.file,
       path: base.path,
       useHDRLoader: isHDR(base.file),
-      throwOnError: isDebugEnvironment(),
+      throwOnError: IS_DEBUG_ENV,
     });
   } else if (!texture && base.textureId) {
     texture = getTexture(base.textureId) || null;
@@ -100,7 +100,7 @@ const loadCubeTexture = async (
       id: base.textureId,
       fileName: base.fileNames,
       path: base.path,
-      throwOnError: isDebugEnvironment(),
+      throwOnError: IS_DEBUG_ENV,
     })) as THREE.CubeTexture);
   texture.userData.id = base.textureId || texture.userData.id || texture.uuid;
   texture.generateMipmaps = true;

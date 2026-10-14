@@ -2,22 +2,22 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1707,
-      "total": 2337
+      "documented": 1702,
+      "total": 2329
     },
     "members": {
-      "documented": 329,
+      "documented": 330,
       "total": 445
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1663,
-        "total": 2274
+        "documented": 1658,
+        "total": 2266
       },
       "members": {
-        "documented": 279,
+        "documented": 280,
         "total": 365
       }
     },
@@ -890,22 +890,16 @@
     },
     "engine/kernel/config": {
       "exports": {
-        "documented": 29,
-        "total": 32
+        "documented": 24,
+        "total": 24
       },
       "members": {
-        "documented": 0,
+        "documented": 1,
         "total": 1
       },
       "undocumented": {
-        "exports": [
-          "Config#AppConfig",
-          "Config#DebugPhysicsWireframeConfig",
-          "Config#Environments"
-        ],
-        "members": [
-          "DebugModules#DebugModuleRef.current"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "engine/kernel/ecs": {

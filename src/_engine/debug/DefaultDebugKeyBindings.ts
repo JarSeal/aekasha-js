@@ -21,7 +21,7 @@ import { toggleProfilerWindow } from './Profiler';
 import { redoLastAction, undoLastAction } from './UndoRedo';
 import { lwarn } from '../utils/Logger';
 import { isDebugCameraActive } from '../kernel/camera/Camera';
-import { getConfig, isDebugEnvironment } from '../kernel/config/Config';
+import { getConfig, IS_DEBUG_ENV } from '../kernel/config/Config';
 import { getReadOnlyLoopState, toggleAppPlay, toggleMainPlay } from '../kernel/loop/MainLoop';
 import { getCurrentSceneId } from '../kernel/scene/Scene';
 import { getSvgIcon } from '../ui/icons/SvgIcon';
@@ -295,7 +295,7 @@ const DEFAULT_DEBUG_KEY_BINDINGS: DefaultDebugKeyBinding[] = [
 const getChordArray = (chord: KeyChord | KeyChord[]) => (Array.isArray(chord) ? chord : [chord]);
 
 const isDebugCamRuleMet = (rule: KeyUpDownBinding['enabledInDebugCam']) =>
-  !isDebugEnvironment() ||
+  !IS_DEBUG_ENV ||
   !(
     (rule === 'NOT_ENABLED_IN_DEBUG' && isDebugCameraActive()) ||
     (rule === 'ENABLED_ONLY_IN_DEBUG' && !isDebugCameraActive())

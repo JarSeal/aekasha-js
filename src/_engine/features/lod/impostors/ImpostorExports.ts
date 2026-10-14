@@ -6,7 +6,7 @@
 import type * as THREE from 'three/webgpu';
 import type { ImpostorDef } from './ImpostorSchema';
 import { lwarn } from '../../../utils/Logger';
-import { isDebugEnvironment } from '../../../kernel/config/Config';
+import { IS_DEBUG_ENV } from '../../../kernel/config/Config';
 import { getCurrentSceneId, getGeneratedSceneData } from '../../../kernel/scene/Scene';
 import { getNextSceneId, isCurrentlyLoading } from '../../../kernel/scene/SceneLoader';
 import { doesTextureExist, getTexture } from '../../../kernel/assets/Texture';
@@ -82,7 +82,7 @@ export const warnIfImpostorExportStale = (
   settings: Record<string, unknown>,
   caller: string
 ) => {
-  if (!isDebugEnvironment()) return;
+  if (!IS_DEBUG_ENV) return;
   const hash = getImpostorSourceHash(geometry, material, settings);
   if (hash === def.sourceHash) return;
   lwarn(

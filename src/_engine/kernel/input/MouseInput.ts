@@ -1,6 +1,6 @@
 import type * as THREE from 'three/webgpu';
 import { isDebugCameraActive } from '../camera/Camera';
-import { isDebugEnvironment } from '../config/Config';
+import { IS_DEBUG_ENV } from '../config/Config';
 import { getECSWorld } from '../ecs/ECS';
 import { onWindowBlur } from '../loop/MainLoop';
 import { getCanvasElem } from '../render/Renderer';
@@ -128,7 +128,7 @@ let mouseActionSource: MouseActionSource | null = null;
 const getButton = (e: MouseEvent): MouseButton | undefined => MOUSE_BUTTONS[e.button];
 
 const isInputInDebugCamInvalid = (enabledInDebugCam?: EnabledInDebugCam) =>
-  isDebugEnvironment() &&
+  IS_DEBUG_ENV &&
   ((enabledInDebugCam === 'NOT_ENABLED_IN_DEBUG' && isDebugCameraActive()) ||
     (enabledInDebugCam === 'ENABLED_ONLY_IN_DEBUG' && !isDebugCameraActive()));
 

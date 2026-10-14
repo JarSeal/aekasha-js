@@ -1,6 +1,10 @@
 import * as THREE from 'three/webgpu';
 import { CMP, type TCMP } from '../ui/CMP';
-import { CUR_ENV, IS_PROD_TEST_MODE, PROJECT_METADATA } from '../kernel/config/Config';
+import {
+  getCurrentEnvironment,
+  IS_PROD_TEST_MODE,
+  PROJECT_METADATA,
+} from '../kernel/config/Config';
 import { getRenderer, isWebGPURenderer } from '../kernel/render/Renderer';
 import { ComponentType } from '../kernel/ecs/ECSCoreComponents';
 import { getECSWorld } from '../kernel/ecs/ECS';
@@ -186,7 +190,7 @@ const getSections = (): InfoSection[] => {
       rows: [
         {
           label: 'Environment',
-          value: `${CUR_ENV}, ${IS_PROD_TEST_MODE ? 'production test mode' : 'debug mode'}`,
+          value: `${getCurrentEnvironment()}, ${IS_PROD_TEST_MODE ? 'production test mode' : 'debug mode'}`,
         },
         { label: 'Renderer', value: getRendererText() },
         { label: 'GPU', value: getGPUText() },
