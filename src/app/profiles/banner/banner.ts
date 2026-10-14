@@ -15,7 +15,7 @@ const TURN_SPEED = 0.25;
 const axis = new THREE.Vector3(0.3, 1, 0.15).normalize();
 const turn = new THREE.Quaternion();
 
-// #region banner-scene (shown in the Hub: hub/pages/features/smallest-build/)
+// #region banner-scene (shown in the Hub: hub/pages/examples/embed/)
 /**
  * The banner embed's scene (p611 D8), the smallest build an embed can be: a dodecahedron (Plato's
  * solid of the aether) made in code, no loader and no feature. The camera, the light and the

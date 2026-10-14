@@ -774,6 +774,22 @@ As built:
   `::: claude-md` line). **`aek:featured` makes the homepage's icon row five cards in a
   four-column grid:** §4 decides the layout. The search index warning (1.20 MB, over 1 MB) is
   older than this phase.
+- **§3, the example page** (`hub/pages/examples/embed/`, "Example: Embedding a scene", `aek:order`
+  80, `aek:image` `scene:banner`): the live `::: embed banner` (the second page with it), then the
+  scene (`banner-scene`, its region note now naming this page), the profile, the entry
+  (`banner-embed`), building it (`yarn sbp --profile banner`, copy `dist-embed/banner/`), the page,
+  the options (a table of the ones a site sets, with their defaults) and the handle, the limits
+  (same origin, one per page load, no `SharedArrayBuffer` without COOP / COEP, `BACKGROUND`'s
+  stacking, the HUD's root font size), your own profile, and a `::: dev-only` on
+  `yarn verify:embed` and the dev server's untree-shaken styles. The feature page's Embedding
+  section links it; the Examples intro says the banner lives in `src/app/profiles/banner/`.
+- **§3, the page's code is checked:** `devTools/verify/embedExample.html`, a site's page that
+  mounts the banner in its hero with a pause button (regions `embed-example-markup`,
+  `embed-example-styles`, `embed-example-script`), is `yarn verify:embed`'s third scenario for the
+  banner (served at `/example.html`; `EXAMPLE_PROFILE`): mounted, the canvas at the target's size,
+  turning, the button pausing (no change over 400 ms) and resuming, no error. Passes on WebGPU and
+  WebGL2; with the example's `pause()` removed it fails naming both checks. (A named function inside
+  `page.evaluate` fails under tsx: its `__name` helper isn't in the page.)
 
 ### Phase 7: versioning, changelog, mark done
 

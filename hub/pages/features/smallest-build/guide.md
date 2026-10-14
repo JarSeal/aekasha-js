@@ -99,7 +99,8 @@ drift.
 An embed profile builds as an ES module a site imports from its own origin, and its `mount()`
 puts the engine into an element of a page it doesn't own: an `INLINE` panel like the one above,
 or a `BACKGROUND` behind the page's content. The page's own styles and input stay its own, and
-the engine pauses out of view. One engine mounts per page load.
+the engine pauses out of view. One engine mounts per page load. The
+[embedding example](hub:examples/embed) walks through the banner, from its scene to the page.
 
 ## A lighter renderer?
 

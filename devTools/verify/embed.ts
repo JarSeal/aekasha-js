@@ -14,6 +14,9 @@
  *   reaches the page); `unmount()` leaves nothing.
  * - In both, no computed style of the host's elements (`HOST_STYLE_SELECTORS`) changes while
  *   mounted or after the unmount, and no console error or page error.
+ * - The banner only: the Hub's embed example (`embedExample.html`, its regions on
+ *   `hub/pages/examples/embed/`) mounts into its hero at the target's size, turns, and its pause
+ *   button pauses and resumes it, without an error.
  *
  * It builds the profiles first (`yarn sbp`'s build, `dist-embed/<id>/`) unless `--no-build`,
  * serves the page and the build from its own static server (port 8093: the page at `/`, the build
@@ -42,6 +45,10 @@ import { out, PROGRESS_LOG_WATCH } from './progressLog';
 
 const PORT = 8093;
 const HOST_PAGE = path.join(ROOT, 'devTools/verify/embedHost.html');
+/** The Hub's embed example (its regions), which imports the banner's entry by name */
+const EXAMPLE_PAGE = path.join(ROOT, 'devTools/verify/embedExample.html');
+const EXAMPLE_PROFILE = 'banner';
+const PAGES: Record<string, string> = { '/': HOST_PAGE, '/example.html': EXAMPLE_PAGE };
 const VIEWPORT = { width: 1000, height: 700 };
 /** Long enough for a resize to reach the canvas (a ResizeObserver, then a frame) */
 const SETTLE_MS = 400;
@@ -84,19 +91,20 @@ const CONTENT_TYPES: Record<string, string> = {
   '.glb': 'model/gltf-binary',
 };
 
-/** The host page at `/`, the profile's build at `/aekasha/`; the favicon a 204 (no error) */
+/**
+ * The host page at `/`, the example at `/example.html`, the profile's build at `/aekasha/`; the
+ * favicon a 204 (no error)
+ */
 const startServer = (buildDir: string) =>
   new Promise<http.Server>((resolve, reject) => {
     const server = http.createServer((req, res) => {
       const pathname = decodeURIComponent(new URL(req.url ?? '/', 'http://localhost').pathname);
       if (pathname === '/favicon.ico') return void res.writeHead(204).end();
-      const file =
-        pathname === '/'
-          ? HOST_PAGE
-          : pathname.startsWith('/aekasha/')
-            ? path.join(buildDir, pathname.slice('/aekasha/'.length))
-            : null;
-      if (!file || !file.startsWith(pathname === '/' ? HOST_PAGE : buildDir + path.sep)) {
+      const buildFile = pathname.startsWith('/aekasha/')
+        ? path.join(buildDir, pathname.slice('/aekasha/'.length))
+        : null;
+      const file = PAGES[pathname] ?? buildFile;
+      if (!file || (file === buildFile && !file.startsWith(buildDir + path.sep))) {
         return void res.writeHead(404).end();
       }
       if (!fs.existsSync(file) || !fs.statSync(file).isFile()) return void res.writeHead(404).end();
@@ -244,6 +252,44 @@ const checkProfile = async (page: Page, profileId: string, entry: string) => {
       expectNoStyleChange(problems, 'after unmount', before, await styles());
     }
   );
+
+  if (profileId === EXAMPLE_PROFILE) {
+    failed += await runScenario(
+      page,
+      `http://localhost:${PORT}/example.html`,
+      'the Hub’s example page: mounts in its hero, turns, pauses',
+      async ({ problems }) => {
+        const isFallback = await page.evaluate(() => window.__embedExample.isFallback);
+        if (isFallback) problems.push('mounted as the fallback');
+        await page.waitForTimeout(SETTLE_MS);
+        // No named function in the page: tsx wraps those in a helper the page doesn't have
+        const sizes = await page.evaluate(() =>
+          ['#heroScene', '#heroScene canvas'].map((selector) => {
+            const rect = document.querySelector(selector)?.getBoundingClientRect();
+            return rect ? { width: rect.width, height: rect.height } : null;
+          })
+        );
+        const [target, canvas] = sizes;
+        if (target) pushIf(problems, checkBox('canvas', canvas, target));
+        const scene = page.locator('#heroScene');
+        const first = await scene.screenshot();
+        await page.waitForTimeout(SETTLE_MS);
+        if (first.equals(await scene.screenshot())) problems.push('the scene doesn’t turn');
+        await page.click('#heroPause');
+        if (!(await page.evaluate(() => window.__embedExample.isPaused()))) {
+          problems.push('the pause button didn’t pause it');
+        }
+        await page.waitForTimeout(100); // The frame in flight
+        const paused = await scene.screenshot();
+        await page.waitForTimeout(SETTLE_MS);
+        if (!paused.equals(await scene.screenshot())) problems.push('it turns while paused');
+        await page.click('#heroPause');
+        if (await page.evaluate(() => window.__embedExample.isPaused())) {
+          problems.push('the button didn’t resume it');
+        }
+      }
+    );
+  }
   return failed;
 };
 
@@ -259,6 +305,8 @@ declare global {
       mountAgain: () => Promise<string | null>;
       leftovers: () => Record<string, number>;
     };
+    /** `embedExample.html`'s mount */
+    __embedExample: { isFallback: boolean; isPaused: () => boolean };
   }
 }
 
