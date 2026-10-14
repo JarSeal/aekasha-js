@@ -76,7 +76,8 @@ load's phases, and `onDebug` for its debug tools.
 - **`requires`** names the features one needs, listed before it: `character()` requires
   `physics()`, and `InitEngine` fails naming both otherwise.
 - **`ctx.onDebug(fn)`** runs `fn` only in the debug env, before the app's `start`. Load the
-  feature's debug code there with an `import()`, and a production build leaves it out.
+  feature's debug code there with an `import()`, and put the call inside `if (IS_DEBUG_ENV)`:
+  a production build then leaves both out.
 
 ## Plugins and hooks
 

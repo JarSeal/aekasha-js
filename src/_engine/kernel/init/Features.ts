@@ -69,9 +69,13 @@ export type FeatureContext = {
    * Runs `fn` in `InitEngine`'s debug block, before the app's `start`, in install order (the
    * debug env only: `?isDebug=true` in a development or test build). Load the debug code there,
    * through an `import()`, so a production build leaves it out.
+   * @remarks Gate the call itself with `if (IS_DEBUG_ENV)`: a production build keeps a call and
+   * the closure it's handed (only the context's `onDebug` folds to nothing), and with it every
+   * function the closure names. `yarn verify:baselines` fails on an ungated call in a build.
    */
   onDebug: (fn: FeatureDebugHook) => void;
-  /** Like `onDebug`, after the app's `start` (the renderer exists then). */
+  /** Like `onDebug`, after the app's `start` (the renderer exists then). Gate the call the same
+   * way. */
   onDebugAfterStart: (fn: FeatureDebugHook) => void;
 };
 

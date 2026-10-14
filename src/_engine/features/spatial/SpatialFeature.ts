@@ -1,4 +1,5 @@
 import { installLightObjectCulling } from './LightObjectCullingSystem';
+import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { EngineFeature } from '../../kernel/init/Features';
 import type { SceneHooks } from '../../kernel/scene/SceneHooks';
 import {
@@ -45,6 +46,8 @@ export const spatial = (): EngineFeature => ({
     installSpatialIndex(ctx);
     installLightObjectCulling(ctx);
     ctx.addSceneHooks(spatialSceneHooks);
-    ctx.onDebug(registerSpatialIndexDebugGUI);
+    // Gated like every debug hook (the hooks run only in the debug env): a production build then
+    // drops the calls and the debug wrappers they name (verify:baselines fails on an ungated one)
+    if (IS_DEBUG_ENV) ctx.onDebug(registerSpatialIndexDebugGUI);
   },
 });

@@ -63,13 +63,17 @@ export const physics = (): EngineFeature => ({
     if (IS_DEBUG_ENV) await registerPhysicsAPIDebugGUI();
     if (ctx.config.physics?.enabled) await createPhysicsWorld();
 
-    ctx.onDebug(async () => {
-      // After the app's install: the wireframes' system ties with the app's camera rig system
-      await registerPhysicsWireframeDebugAsync();
-      // Before the first scene load, so `?physicsProbe=N` also catches the first scene enter
-      await registerPhysicsDeterminismProbe();
-    });
-    ctx.onDebugAfterStart(createPhysicsAPIDebugGUI);
+    // Gated like every debug hook (the hooks run only in the debug env): a production build then
+    // drops the calls and the debug wrappers they name (verify:baselines fails on an ungated one)
+    if (IS_DEBUG_ENV) {
+      ctx.onDebug(async () => {
+        // After the app's install: the wireframes' system ties with the app's camera rig system
+        await registerPhysicsWireframeDebugAsync();
+        // Before the first scene load, so `?physicsProbe=N` also catches the first scene enter
+        await registerPhysicsDeterminismProbe();
+      });
+      ctx.onDebugAfterStart(createPhysicsAPIDebugGUI);
+    }
   },
 });
 
