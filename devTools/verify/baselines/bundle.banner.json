@@ -23,7 +23,7 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7537,
-      "gzip": 3068
+      "gzip": 3067
     },
     "assets/GLTFLoader.js": {
       "bytes": 45868,
@@ -35,7 +35,7 @@
     },
     "assets/HDRLoader.js": {
       "bytes": 3401,
-      "gzip": 1629
+      "gzip": 1630
     },
     "assets/KTX2Loader.js": {
       "bytes": 59855,
@@ -45,21 +45,21 @@
       "bytes": 2222,
       "gzip": 984
     },
+    "assets/banner.js": {
+      "bytes": 460,
+      "gzip": 335
+    },
     "assets/banner.css": {
       "bytes": 7672,
       "gzip": 2017
     },
-    "assets/banner.js": {
-      "bytes": 460,
-      "gzip": 337
-    },
     "assets/banner.embed.js": {
-      "bytes": 1079144,
-      "gzip": 305443
+      "bytes": 1078917,
+      "gzip": 305352
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
-      "gzip": 286
+      "gzip": 284
     },
     "assets/basis_transcoder.wasm": {
       "bytes": 527333,
@@ -111,18 +111,18 @@
     },
     "assets/three.module.js#2": {
       "bytes": 220,
-      "gzip": 182
+      "gzip": 183
     },
     "banner.embed.js": {
       "bytes": 251,
-      "gzip": 213
+      "gzip": 211
     }
   },
   "main": {
     "chunk": "assets/banner.embed.js",
-    "modules": 81,
-    "rendered": 3482176,
-    "gzip": 707258
+    "modules": 80,
+    "rendered": 3481540,
+    "gzip": 706907
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -132,13 +132,13 @@
     },
     "_engine/kernel/camera": {
       "modules": 1,
-      "rendered": 6825,
-      "gzip": 1944
+      "rendered": 6587,
+      "gzip": 1853
     },
     "_engine/kernel/config": {
-      "modules": 2,
-      "rendered": 4649,
-      "gzip": 1656
+      "modules": 1,
+      "rendered": 4322,
+      "gzip": 1417
     },
     "_engine/kernel/ecs": {
       "modules": 7,
@@ -147,8 +147,8 @@
     },
     "_engine/kernel/init": {
       "modules": 4,
-      "rendered": 11257,
-      "gzip": 4233
+      "rendered": 11220,
+      "gzip": 4220
     },
     "_engine/kernel/input": {
       "modules": 2,
@@ -157,8 +157,8 @@
     },
     "_engine/kernel/light": {
       "modules": 2,
-      "rendered": 8877,
-      "gzip": 2602
+      "rendered": 8843,
+      "gzip": 2594
     },
     "_engine/kernel/loop": {
       "modules": 3,

@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1702,
-      "total": 2329
+      "documented": 1707,
+      "total": 2332
     },
     "members": {
       "documented": 330,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1658,
-        "total": 2266
+        "documented": 1663,
+        "total": 2269
       },
       "members": {
         "documented": 280,
@@ -841,8 +841,8 @@
     },
     "engine/kernel/camera": {
       "exports": {
-        "documented": 8,
-        "total": 31
+        "documented": 10,
+        "total": 32
       },
       "members": {
         "documented": 1,
@@ -866,7 +866,6 @@
           "Camera#initDebugCamera",
           "Camera#isAnyCameraHelperVisible",
           "Camera#isDebugCameraActive",
-          "Camera#registerCameraManager",
           "Camera#setActiveCamera",
           "Camera#setCurrentCamera",
           "Camera#setMainCamera",
@@ -932,8 +931,8 @@
     },
     "engine/kernel/init": {
       "exports": {
-        "documented": 18,
-        "total": 18
+        "documented": 19,
+        "total": 19
       },
       "members": {
         "documented": 0,
@@ -984,8 +983,8 @@
     },
     "engine/kernel/light": {
       "exports": {
-        "documented": 6,
-        "total": 19
+        "documented": 8,
+        "total": 20
       },
       "members": {
         "documented": 0,
@@ -1000,7 +999,6 @@
           "Light#debugGUI",
           "Light#getLightByAppId",
           "Light#isAnyLightHelperVisible",
-          "Light#registerLightManager",
           "Light#setLightEnabled",
           "Light#setLightFrustumCullingEnabled",
           "Light#setLightObjectCullingEnabled",

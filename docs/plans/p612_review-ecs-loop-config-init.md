@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: in progress | Phases 0-5 implemented
 Category: Refactoring, Documentation, ECS
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -541,7 +541,7 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
   gzip (395,821 → 395,389): the defaults object and the tab-order list.
 - **`yarn verify:scenes`:** 104 passed, nothing changed (the template passes `workerTarget`).
 
-### Phase 5: init and views (`Boot.ts`, `Features.ts`, `InitEngine.ts`, `Kernel.ts`, `Mount.ts`, `Views.ts`)
+### Phase 5: init and views (`Boot.ts`, `Features.ts`, `InitEngine.ts`, `Kernel.ts`, `Mount.ts`, `Views.ts`) — done
 
 1. D9: the `onDebug*` calls gated per Phase 0's measurement, and the check if feasible.
 2. I2: cameras, lights and input registration moved into `installKernel` where their order allows
@@ -553,6 +553,67 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
 6. D8: the issue file.
 7. V1 and the stale comments.
 8. `yarn verify:scenes`, `yarn verify:embed`: unchanged.
+
+**As built** (2026-10-15, one commit per section):
+
+- **D9:** every `ctx.onDebug` / `ctx.onDebugAfterStart` call sits inside `if (IS_DEBUG_ENV)`
+  (LOD, character, physics, sky box, spatial; PostFX's already did); both hook lists run only
+  under that flag in the boot. `registerPhysicsWireframeDebugAsync` returns before its
+  scene-enter registration when its module didn't load. The check: `findDebugCodeInBuild` takes
+  the build's scripts (`BuildScript`, read by `baselines.ts` for the app and each embed) and
+  reports each `.onDebug(` / `.onDebugAfterStart(` call left (property names aren't minified; the
+  context's own `onDebug:r=>{}` isn't a call), tested on Phase 0's minified form.
+  `FeatureContext.onDebug` has the rule as `@remarks`; root CLAUDE.md's "Production builds",
+  `devTools/verify/CLAUDE.md` and the Hub's ECS guide say it too.
+- **I2:** the input registers nothing at boot (each device adds its listeners on its first
+  binding, the mouse its hover system on first use): p607's "and input" was stale. Cameras and
+  lights split: `installCameras(ctx)` (the dispose hook, the main camera cache's hooks, the aspect
+  resizer) and `installLights(ctx)` (the dispose hook) run last in `installKernel`, through the
+  context; `registerCameraDebugGUI()` and `registerLightDebugGUI(world)` (the GUIs, their `onAdd`
+  list hooks, the scene-enter syncs) run where the managers ran. `registerCameraManager` and
+  `registerLightManager` are gone. Hook order holds: the only other hooks on those tags are the 3D
+  symbols' and the light helpers' add hooks, and the GUI add hooks still register after them. The
+  boot's debug blocks are `bootKernelDebugAsync` (before the features), `bootDebugToolsAsync`
+  (debug env and prod test, before `start`) and `bootDebugAfterStartAsync`, each called behind its
+  flags: `bootEngineAsync` 145 → 72 lines. The system order didn't change.
+- **Not in the plan:** `initDebugCamera` was called in production too (a no-op there), and its
+  loader calls kept `DebugModules.ts` in both main chunks; behind the flag now, the module left
+  them.
+- **I3:** `setCurrentScene` (`Scene.ts`) starts the loop too, so an empty root scene after
+  `start` is fine while a load `start` didn't await runs. The boot warns only when the root scene
+  is empty and `isCurrentlyLoading()` is false. No debug toast: in the debug env the debug camera
+  is always a child, so it can't happen there. The warning is `__AEK_DEBUG__`-only (development
+  and test builds, where `yarn dev` without `?isDebug` and prod test mode show it): shipped, it
+  cost about 145 B gzip per build. No unit test (the boot would need ~30 mocks).
+- **I4:** `ENGINE_FEATURE_FACTORIES` is exported `@internal`; `FeatureFactories.test.ts` globs
+  `features/*/*Feature.ts` and their `index.ts` entries, calls each module's one function (the
+  factory), and rebuilds the map (`id → "name() from 'aekasha/<folder>'"`, the entry exporting the
+  same function) to compare with it.
+- **I5, in the renderer instead:** TypeDoc resolves `{@link _engine/kernel/init/InitEngine!InitEngine}`
+  but keeps the reference as the link text. The Hub's `linkLabel` (`devTools/hub/api/comments.ts`)
+  shows a declaration reference's name after the `!`, so the six links (`Mount.ts`, `Scene.ts`,
+  `AppData.ts`) read `InitEngine`; a module that can't import the name keeps that form. Tests:
+  `comments.test.ts`. TypeDoc's own theme (`yarn docs`) still shows the reference.
+- **D8:** `docs/issues/remount-after-unmount.md` (won't fix until an app needs it): what the boot
+  fills (361 module-level `let`s and collections in 75 shipping engine files, the static ECS
+  registries, the seams), and what a reset needs. `mountAekasha`'s JSDoc links it.
+- **V1 and the stale comments:** `Views.ts`' `InitApp`; the 20 `ViewManager.ts` mentions in 18
+  files (most outside this plan's scope, the debug modules included: a word swap to `Views.ts`);
+  `MaterialEditor.ts`' "InitApp's debug block"; the comment lines over 100 characters in scope.
+  `devTools/refactor/` and the engine-5 migration page keep the old names on purpose.
+- **Left to Phase 7:** root CLAUDE.md's Bootstrap flow ("registers the Camera/Light managers,
+  inits the debug camera") and Engine features ("cameras, lights and input still register in
+  `InitEngine`") describe the boot before I2.
+- **Found, not this plan's:** `yarn hub:build` warns on 7 `{@link}`s that link nowhere
+  (`CharacterTypes.ts`, `LodSystem.ts`, `ActionTypes.ts`, `SeededRandom.ts`), and the search index
+  is 1.24 MB, over its 1 MB warning (`devTools/hub/CLAUDE.md` says 1,006 kB): Phase 7 compares with
+  `main`.
+- **Baselines** (`--update`): `api.json`'s 7 changes (the two managers removed; `installCameras`,
+  `installLights`, `registerCameraDebugGUI`, `registerLightDebugGUI`, `ENGINE_FEATURE_FACTORIES`
+  added, all `@internal`); the main chunk −782 B minified, −362 B gzip (395,452 → 395,090), the
+  banner's −227 B, −91 B (305,443 → 305,352).
+- **Checks:** `yarn verify:scenes` 104 passed (408.2 s), snapshots and hashes unchanged, no page
+  reload this time; `yarn verify:embed` all passed; `yarn test` 57 files.
 
 ### Phase 6: the rules written down
 
