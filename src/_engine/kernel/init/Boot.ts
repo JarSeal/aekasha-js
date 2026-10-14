@@ -19,10 +19,11 @@ import {
 } from '../../debug/DefaultDebugKeyBindings';
 import { addWindowListeners, initMainLoop, registerMainLoopDebugGUI } from '../loop/MainLoop';
 import { createRootScene, getRootScene, registerScenesFromGeneratedData } from '../scene/Scene';
+import { isCurrentlyLoading } from '../scene/SceneLoader';
 // The components' styles only: the page's (page.scss) are InitEngine's, which a mounted engine
 // (mountAekasha) doesn't import (p611 D6)
 import '../../ui/styles/index.scss';
-import { llog } from '../../utils/Logger';
+import { llog, lwarn } from '../../utils/Logger';
 import { createRendererDebugGUI } from '../render/Renderer';
 import { loadDraggableWindowStatesFromLS } from '../../ui/DraggableWindow';
 import { createToaster } from '../../ui/Toaster';
@@ -146,9 +147,18 @@ export const bootEngineAsync = async ({ config, data, features, start, hudSlot }
 
   await start();
 
-  // Start engine/loop if root scene has children
+  // Start the loop if the root scene has children. Without any, the first scene that adds some
+  // starts it (setCurrentScene): fine while a load `start` didn't await runs, silent otherwise.
+  // Warned in development and test builds (a production build drops it): in the debug env the
+  // debug camera is always a child, so it shows without `?isDebug` and in prod test mode
   const rootScene = getRootScene() as Scene;
-  if (rootScene.children.length) initMainLoop();
+  if (rootScene.children.length) {
+    initMainLoop();
+  } else if (__AEK_DEBUG__ && !isCurrentlyLoading()) {
+    lwarn(
+      "The root scene is empty after the app's start and no scene is loading: the main loop starts only when a scene adds something. Load the first scene in start (await loadScene)."
+    );
+  }
 
   // The debug GUIs that need the renderer, and the debug toaster
   if (IS_DEBUG_ENV) await bootDebugAfterStartAsync(featureHost.debugAfterStartHooks);
