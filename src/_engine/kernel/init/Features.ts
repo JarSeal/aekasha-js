@@ -244,7 +244,7 @@ export const installFeaturesAsync = async (
 ) => {
   checkFeatures(features);
   for (const feature of features) {
-    // A promise's catch, not a try block (Rollup keeps a try block's calls whole, kernel/init/InitEngine.ts);
+    // A promise's catch, not a try block (Rollup keeps a try block's calls whole, see Boot.ts);
     // the async wrapper turns a synchronous throw into the rejection too
     await (async () => feature.install(host.ctx))().catch((err: unknown) => {
       lerror(`InitEngine: the feature '${feature.id}' failed to install.`, err);

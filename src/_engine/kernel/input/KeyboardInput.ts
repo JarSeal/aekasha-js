@@ -36,7 +36,7 @@ export type KeyBindingBase = BindingMeta & {
   enabled?: boolean; // default true
   sceneId?: string;
   enabledInDebugCam?: EnabledInDebugCam;
-  /** Runs in editor views too (ViewManager.ts), which suspend the other bindings. (The engine's
+  /** Runs in editor views too (Views.ts), which suspend the other bindings. (The engine's
    * debug keys and the CONFIG.ts `debugKeys` are action maps in the `DEBUG` context instead.) */
   isDebugKey?: boolean;
 };

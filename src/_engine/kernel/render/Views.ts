@@ -1,6 +1,6 @@
 /**
- * Views (docs/plans/_DONE_p083_editor-creator-view.md): what the whole canvas shows and what the main
- * loop ticks. There is always exactly one active view. The built-in Runtime view is the loaded
+ * Views (docs/plans/_DONE_p083_editor-creator-view.md): what the whole canvas shows and what the
+ * main loop ticks. There is always exactly one active view. The built-in Runtime view is the loaded
  * scene running with the game/app debugger; editor views (the material editor, …) are
  * registered by modules and show their own private scene and camera.
  *
@@ -69,7 +69,8 @@ export type ViewCameraRig = {
 export type ViewDef = {
   /** Unique view id, never {@link RUNTIME_VIEW_ID}. */
   id: string;
-  /** The view's name: its view tools button's tooltip and its switch toast (eg. "Material editor"). */
+  /** The view's name: its view tools button's tooltip and its switch toast (eg. "Material
+   * editor"). */
   title: string;
   /** Its view tools button's icon. */
   icon: SvgIconKey;
@@ -363,8 +364,8 @@ export const setActiveView = (id: string): Promise<boolean> => {
 };
 
 /**
- * Restores the view that was active before a refresh, and the editor views' play flags. InitApp
- * calls it once at the end of the boot (debug env), after the views are registered and the first
+ * Restores the view that was active before a refresh, and the editor views' play flags. The boot
+ * calls it once at its end (debug env), after the views are registered and the first
  * scene has loaded (the scene is needed when switching back). A saved view that is no longer
  * registered falls back to the Runtime view and clears the saved state.
  * @returns (Promise<boolean>) whether a saved editor view is now active

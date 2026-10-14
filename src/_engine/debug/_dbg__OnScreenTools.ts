@@ -168,7 +168,7 @@ const getTopLeftRow = () => {
 };
 
 // VIEW TOOLS
-// One button per view (ViewManager.ts): the Runtime view first, then the editor views. Debug
+// One button per view (Views.ts): the Runtime view first, then the editor views. Debug
 // environment only (never prod test mode), and only when an editor view is registered.
 
 /** Switches to a view and shows a toast of it (a view tools button). */

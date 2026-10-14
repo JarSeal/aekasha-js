@@ -15,7 +15,7 @@ export const areAllInputsEnabled = (): boolean => allInputsEnabled;
 
 /**
  * Suspends the app's input bindings (keyboard, mouse, touch) while an editor view is active
- * (ViewManager.ts). Debug key bindings (`isDebugKey`) keep running. Apart from
+ * (Views.ts). Debug key bindings (`isDebugKey`) keep running. Apart from
  * {@link setAllInputsEnabled}, so a scene load's re-enable at its end doesn't lift it.
  */
 export const setAppInputsSuspended = (suspended: boolean): void => {

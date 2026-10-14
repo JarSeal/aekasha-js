@@ -195,7 +195,7 @@ export type DraggableWindowKindOpts = {
   onClose?: (id: string) => void;
   /** See {@link registerDraggableWindowSceneTargetResolver} */
   sceneTargetResolver?: SceneTargetResolver;
-  /** Keeps the kind's windows visible in editor views (ViewManager.ts), which hide the other
+  /** Keeps the kind's windows visible in editor views (Views.ts), which hide the other
    * windows with the rest of the suspended scene's HUD. Debug dialogs (`isDebugWindow` with a
    * backdrop) are always kept. */
   keepInViews?: boolean;

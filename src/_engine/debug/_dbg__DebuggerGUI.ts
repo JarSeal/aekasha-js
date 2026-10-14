@@ -24,7 +24,7 @@ let debuggerDisabled = false;
 /** An editor view is active (see _setDrawerSuspendedByView). */
 let isSuspendedByView = false;
 /** Set while a right-side debug drawer is open: this one in the Runtime view, an editor's own one
- * in an editor view (ViewManager.ts). The top on-screen row and the viewport stack shift by it. */
+ * in an editor view (Views.ts). The top on-screen row and the viewport stack shift by it. */
 const DRAWER_OPEN_BODY_CLASS = 'debugDrawerOpen';
 const LS_KEY = 'AEK_debugDrawerState';
 const SCENE_EXIT_HOOK_ID = 'debuggerSceneTabs';
@@ -286,7 +286,7 @@ export const _toggleDrawer = (openOrClose?: 'OPEN' | 'CLOSE') => {
 };
 
 /**
- * Hides the drawer for an editor view (ViewManager.ts), or shows it again. The open state is kept,
+ * Hides the drawer for an editor view (Views.ts), or shows it again. The open state is kept,
  * but while suspended, its open tab isn't refreshed and the `debugDrawerOpen` body class is left
  * to the editor view (an editor's own right drawer sets it, so the offset rules of the top row and
  * the viewport stack keep working).

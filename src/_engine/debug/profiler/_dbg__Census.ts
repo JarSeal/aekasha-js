@@ -24,7 +24,7 @@ import { DEBUG_HELPER_USER_DATA_KEY } from '../Profiler';
  * Viewport scenes (axes gizmo, env ball) and the sky box's bake scenes are not in the root
  * scene: they appear in the drawn counters (`info.render`) only.
  *
- * In an editor view (ViewManager.ts) it counts what is shown: the view's own scene against the
+ * In an editor view (Views.ts) it counts what is shown: the view's own scene against the
  * view's camera, not the suspended root scene. A view's scene has no ECS entities, so its objects
  * get one owner (the view) and the entity figures are 0 in 0 worlds.
  */

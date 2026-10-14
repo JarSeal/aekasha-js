@@ -284,7 +284,7 @@ export const toggleDrawer = (openOrClose?: 'OPEN' | 'CLOSE') => {
 };
 
 /**
- * Hides the drawer while an editor view is active (ViewManager.ts), or shows it again. Its open
+ * Hides the drawer while an editor view is active (Views.ts), or shows it again. Its open
  * state is kept; while hidden, its tab isn't refreshed and the `debugDrawerOpen` body class is
  * the editor view's. Debug environment only.
  * @param suspended (boolean) whether an editor view is active

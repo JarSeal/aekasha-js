@@ -58,7 +58,7 @@ const resolveSettings = (): UndoRedoSettings => ({
 });
 
 /** The bucket of 'perScene' actions: the current scene's, or in an editor view that view's own
- * (`__view:<id>`, ViewManager.ts), so undo there never touches the suspended scene. */
+ * (`__view:<id>`, Views.ts), so undo there never touches the suspended scene. */
 const getSceneBucketId = () => {
   const view = getActiveView();
   if (view) return `${VIEW_BUCKET_PREFIX}${view.id}`;

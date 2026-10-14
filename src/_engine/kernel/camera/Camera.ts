@@ -499,7 +499,7 @@ export const toggleDebugCamera = (world: ECSWorld, useDebugCam: boolean) =>
 
 /**
  * Enables or disables the scene debug camera's canvas input (its OrbitControls) right away.
- * ViewManager.ts turns it off while an editor view is active. Debug env only.
+ * Views.ts turns it off while an editor view is active. Debug env only.
  * @param enabled (boolean)
  */
 export const setSceneDebugCameraInputEnabled = (enabled: boolean) =>

@@ -5,7 +5,7 @@ $selectorBodyHeight: 15rem;
 $cardSlotSize: 5.6rem;
 
 // The editor's HUD: a direct child of the HUD root (with KEEP_IN_VIEWS_CLASS), shown only while
-// the material editor view is active (ViewManager's `aekView_<id>` body class)
+// the material editor view is active (Views.ts' `aekView_<id>` body class)
 .materialEditorHud {
   display: none;
 

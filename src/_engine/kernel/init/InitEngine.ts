@@ -23,7 +23,8 @@ export type InitEngineOptions = {
    * alone. */
   features: EngineFeature[];
   /** The app's start: creates the renderer and the scene loader and loads the first scene. Runs
-   * after the engine's own init (and the debug tools' registration), before the main loop starts. */
+   * after the engine's own init (and the debug tools' registration), before the main loop
+   * starts. */
   start: () => Promise<void>;
 };
 

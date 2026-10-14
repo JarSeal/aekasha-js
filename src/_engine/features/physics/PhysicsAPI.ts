@@ -382,7 +382,7 @@ export const stepPhysics = (
     // backgroundBehavior only governs what happens while the window is hidden. Switching
     // the world step off counts as one too, so switching it back on resumes cleanly instead
     // of catching up on the time it was off, and so does a scene suspended by an editor view
-    // (ViewManager.ts).
+    // (Views.ts).
     if (!physicsState.isPaused) setPhysicsPauseTime();
     physicsState.isPaused = true;
     timerRunning = false;
