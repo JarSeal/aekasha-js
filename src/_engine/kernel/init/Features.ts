@@ -184,8 +184,12 @@ export const checkFeatures = (features: readonly EngineFeature[]) => {
   });
 };
 
-// Where each engine feature's factory is, for the scene check's error
-const ENGINE_FEATURE_FACTORIES: Record<string, string> = {
+/**
+ * Where each engine feature's factory is (by feature id), for the scene check's error. A new
+ * engine feature joins it: `FeatureFactories.test.ts` checks it against the feature entries.
+ * @internal
+ */
+export const ENGINE_FEATURE_FACTORIES: Record<string, string> = {
   physics: "physics() from 'aekasha/physics'",
   character: "character() from 'aekasha/character'",
   skybox: "skyBox() from 'aekasha/skybox'",
