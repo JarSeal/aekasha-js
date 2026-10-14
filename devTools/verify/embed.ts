@@ -29,7 +29,7 @@ import sbpProfiles from '../../sbp.config';
 import { ROOT } from '../assetPipeline/sources';
 import { getEmbedProfiles } from '../gatherOutput';
 import { buildBundles } from '../sbp/appBuild';
-import { getEmbedEntryFileName, getEmbedOutDir } from '../sbp/embedBuild';
+import { getEmbedEntryFileName, getEmbedOutDir } from '../sbp/embedPaths';
 import { isWSL, launchChromium } from './browser';
 import {
   type Box,

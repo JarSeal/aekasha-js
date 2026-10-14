@@ -715,6 +715,54 @@ As built:
    (the debug assets check), the Bootstrap flow / data pipeline (`src/generated/profiles/<id>/`).
 5. `yarn hub:build`, `yarn hub:preview` with the live embed checked in a browser.
 
+As built:
+
+- **§1, `{{sbp:…}}`** (`devTools/hub/sbp.ts`, tested): `{{sbp:<profile>.<measure>}}` in a slot's
+  Markdown (filled before parsing, line by line, code blocks too) and in a page's markup (a
+  `PAGE_HELPERS` entry). Measures: `initial`, `lazy`, `lazyFiles` (a count), `chunk:<key>`,
+  `group:<group>` (initial, before minification), `budget:<key>`; gzip as `300.6 KiB` (KiB, one
+  decimal, a no-break space). An unknown profile (not in `sbp.config.ts`), measure or key fails
+  the build; a report without the profile fails `public` and warns in `dev` (the text reads "[run
+  yarn sbp]"). **D9's "committed as the banner's baseline" isn't so:** the report is
+  `.cache/sbp/report.json` (gitignored; `SBP_REPORT_FILE`, now exported by `sbp/report.ts`), and
+  `bundle.banner.json` has no initial / lazy split. The numbers are the build's because `yarn build`
+  runs `yarn sbp` right before `yarn hub:build`; the dev Hub watches the report (a `yarn sbp` run
+  rebuilds the page).
+- **§1, `::: embed <profile> [height]`** (`devTools/hub/embed.ts`; `HubRenderContext.embeds`):
+  a `figure.hubEmbed` with the profile's first scene's Hub image as the poster (webp 800 / 1600),
+  an empty target over it, play and pause buttons, and the content as the caption. `height` is a
+  CSS length, else the poster's aspect ratio. Errors: a profile that isn't an embed profile, a
+  second embed on a page (one mount per page load), a missing build in `public`. The client is
+  `hub/_assets/ts/_embed.ts`, a chunk `hub.ts` imports only when the page has an embed: no WebGPU
+  and no WebGL2 → the status line, no import; reduced motion → a play button (then
+  `reducedMotion: 'IGNORE'`); else an `IntersectionObserver` (200px margin) imports the entry
+  (`@vite-ignore`) and mounts it into the target (`INLINE`, `input: 'NONE'`, `pauseWhenHidden`,
+  `fallbackImage` the poster's `currentSrc`, so the mount's own fallback covers the gap to the first
+  frame). Live: the poster is hidden (the canvas is transparent) and a round pause button shows. A
+  fallback handle or a failed import: a status line. New icon `pause.svg` (lucide).
+- **§1, `public`:** the entry URL is `_assets/embed/<id>/<entry>.js?v=<hash>`; `copyHubEmbeds`
+  copies `dist-embed/<id>/` without `.vite/` for the profiles the pages use (the chunks are
+  hashed, so `_headers`' immutable cache holds; a profile that copies `basis/` or `draco/` would
+  ship them unhashed, none does yet). `yarn hub:build` first runs `yarn sbp --profile <ids>
+--brief` for an embed profile without a build or a report entry (exit 1, a budget over, still
+  builds the Hub); `--no-embed` skips that and renders the poster with a note.
+- **§1, `dev`:** the entry is its source (`/app/profiles/banner/banner.embed.ts`, marked
+  `data-hub-embed-dev`). Two things the app page has and the Hub page didn't: Vite's `define`s are
+  globals set by `/@vite/env` (imported first; without it `__PROJECT_METADATA__` threw), and the
+  untree-shaken `aekasha` entry injects `page.scss` (the root font size 62.5%, normalize), whose
+  `<style data-vite-dev-id>` is removed after the import. The scss modules bring Vite's client, so
+  that one Hub page reloads on the gatherer's `full-reload`s.
+- **§1, elsewhere:** `getEmbedOutDir` / `getEmbedEntryFileName` / `EMBED_ROOT_DIR` moved to
+  `devTools/sbp/embedPaths.ts`: `embedBuild.ts` imports the gatherer through its plugin, and
+  `gatherAppData.ts` compiles the JSON schemas when it loads (`yarn hub:build` printed the schema
+  compiler's line). `verify/embed.ts` imports them from there too.
+- **§1, checked** with a throwaway page (removed): `hub:preview` in Chromium on WebGPU and on
+  WebGL2 (SwiftShader): mounted, turning, the canvas 734 × 458 filling the stage, the pause button
+  stills it, the page's computed root font size and body colour unchanged, no error; reduced motion
+  (the poster and Play, then live); no WebGPU / WebGL2 (the status line, nothing imported);
+  `--no-embed` (no copy, the note); the dev Hub (live, styles unchanged). `report.json` and
+  `dist-embed/` still hold Phase 4's `probe` (gitignored leftovers; nothing reads them).
+
 ### Phase 7: versioning, changelog, mark done
 
 - Engine **minor** (5.1.0 → 5.2.0: `mountAekasha`, the seams), Toolkit unchanged, App **minor**

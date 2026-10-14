@@ -1,0 +1,101 @@
+// `::: embed <profile> [height]` (p611 D9): an embed profile running live over its poster, the
+// directive's content as the caption
+.hubEmbed {
+  margin: 1.5rem 0 2rem;
+  overflow: hidden;
+  background: var(--hub-panel);
+  border: 1px solid var(--hub-border);
+  border-radius: var(--hub-radius);
+}
+
+.hubEmbedStage {
+  position: relative;
+  border-bottom: 1px solid var(--hub-border);
+}
+
+.hubContent .hubEmbedPoster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0;
+}
+
+// The canvas is transparent: once the scene runs, the poster would show through it
+.hubEmbed_live .hubEmbedPoster {
+  visibility: hidden;
+}
+
+.hubEmbedTarget {
+  position: absolute;
+  inset: 0;
+}
+
+.hubEmbedPlay {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  background: var(--hub-panel);
+}
+
+.hubEmbedPause {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  background: var(--hub-panel);
+  border: 1px solid var(--hub-border-strong);
+  border-radius: 50%;
+  color: var(--hub-text);
+  cursor: pointer;
+  transition: border-color 0.15s;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--hub-accent);
+  }
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+// `.hubButton` and the round button set their own `display`
+.hubEmbedPlay[hidden],
+.hubEmbedPause[hidden],
+.hubEmbedPlayIcon,
+.hubEmbed_paused .hubEmbedPauseIcon {
+  display: none;
+}
+
+.hubEmbed_paused .hubEmbedPlayIcon {
+  display: contents;
+}
+
+.hubEmbedBody {
+  padding: 1rem 1.25rem;
+
+  // Only the hidden status line: no caption
+  &:not(:has(> :not([hidden]))) {
+    display: none;
+  }
+
+  > :first-child {
+    margin-top: 0;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+}
+
+.hubEmbedStatus {
+  color: var(--hub-text-muted);
+  font-size: 0.9375rem;
+}

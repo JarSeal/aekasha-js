@@ -52,11 +52,11 @@ import {
   formatWhy,
   measureProfile,
   mergeReport,
+  SBP_REPORT_FILE,
 } from './sbp/report';
 import { out, setProgressLogConsole, setProgressLogFile } from './verify/progressLog';
 
 const LOG_FILE = path.join(ROOT, '.cache/sbp/progress.log');
-const REPORT_FILE = path.join(ROOT, '.cache/sbp/report.json');
 const APP_DATA_FILE = path.join(ROOT, 'src/generated/generatedAppData.json');
 
 const color = (code: string) => (process.env.NO_COLOR ? '' : `\x1b[${code}m`);
@@ -133,10 +133,10 @@ const measure = (profile: SbpProfile, appData: Parameters<typeof readSceneFeatur
     scenes: readSceneFeatures(appData, profile.scenes),
     dataFeatures: ENGINE_SCHEMA_PARTS.map((part) => part.feature),
   });
-  fs.mkdirSync(path.dirname(REPORT_FILE), { recursive: true });
+  fs.mkdirSync(path.dirname(SBP_REPORT_FILE), { recursive: true });
   fs.writeFileSync(
-    REPORT_FILE,
-    `${JSON.stringify(mergeReport(readJSON<SbpReportFile>(REPORT_FILE), measured.report), null, 2)}\n`
+    SBP_REPORT_FILE,
+    `${JSON.stringify(mergeReport(readJSON<SbpReportFile>(SBP_REPORT_FILE), measured.report), null, 2)}\n`
   );
   return measured;
 };
@@ -216,7 +216,7 @@ const main = async () => {
     }
   }
   out(
-    `\n${COLORS.green}Done${COLORS.reset} in ${((Date.now() - started) / 1000).toFixed(1)} s; the report: ${path.relative(ROOT, REPORT_FILE)}`
+    `\n${COLORS.green}Done${COLORS.reset} in ${((Date.now() - started) / 1000).toFixed(1)} s; the report: ${path.relative(ROOT, SBP_REPORT_FILE)}`
   );
   if (!isWhyFound || failed) process.exit(1);
 };

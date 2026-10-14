@@ -14,11 +14,12 @@ import type { HubHeading, HubPage } from './types';
 
 /**
  * `{{icon:search}}` (an inline icon), `{{asset:images/hero.webp}}` (a static asset's URL with its
- * `?v=`) and, in the shell, `{{link:version}}` (a page's URL, checked). `root` is the relative
+ * `?v=`), `{{sbp:banner.initial}}` (a size from the last `yarn sbp` report, `sbp.ts`) and, in the
+ * shell, `{{link:version}}` (a page's URL, checked). `root` is the relative
  * path to the site root of the page being filled.
  */
 export type HubMarkupHelpers = Record<
-  'icon' | 'asset' | 'link',
+  'icon' | 'asset' | 'link' | 'sbp',
   (arg: string, root: string, file: string, line: number) => string
 >;
 

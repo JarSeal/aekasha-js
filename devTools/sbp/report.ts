@@ -23,10 +23,14 @@ import {
   indexModuleGraph,
 } from './bundleWhy';
 import path from 'path';
+import { ROOT } from '../assetPipeline/sources';
 import { KIB, type SbpProfile } from './config';
 
-/** Bump when the report's shape changes: Hub pages read it (p611 D9) */
+/** Bump when the report's shape changes: Hub pages read it (p611 D9, `devTools/hub/sbp.ts`) */
 export const REPORT_FORMAT_VERSION = 2;
+
+/** The last run's report, a key per profile (`yarn sbp` keeps the profiles it didn't measure) */
+export const SBP_REPORT_FILE = path.join(ROOT, '.cache/sbp/report.json');
 
 export type LoadReport = { total: Size; files: Record<string, Size> };
 

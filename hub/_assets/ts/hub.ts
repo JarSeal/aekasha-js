@@ -273,3 +273,13 @@ document.addEventListener('keydown', (e) => {
   e.preventDefault();
   openSearch();
 });
+
+// --- Live embeds (p611 D9) ---
+
+/** `::: embed`: its script is a chunk of its own, loaded only by a page that has one */
+if (document.querySelector('[data-hub-embed]')) {
+  import('./_embed')
+    .then((embed) => embed.initEmbeds())
+    // eslint-disable-next-line no-console
+    .catch((err: unknown) => console.error('[Hub] The embed script failed to load:', err));
+}

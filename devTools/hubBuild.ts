@@ -1,16 +1,24 @@
 /* eslint-disable no-console */
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import sbpProfiles from '../sbp.config';
+import { getEmbedProfiles } from './gatherOutput';
 import { buildHub, formatBytes, rebaseNotFoundPage } from './hub/build';
+import { readSbpReport } from './hub/sbp';
+import { getEmbedEntryFileName, getEmbedOutDir } from './sbp/embedPaths';
 import { formatDiagnostic } from './hub/diagnostics';
 import { APP_DIST_DIR, HUB_DIST_DIR, ROOT, toRepoPath } from './hub/paths';
 
 /**
- * `yarn hub:build [--out <dir>] [--no-api]`: builds the Ækasha Hub's public site (p551) into
- * `dist-hub/` (emptied first), and exits 1 on an error, without writing anything. `yarn build`
- * runs it last.
+ * `yarn hub:build [--out <dir>] [--no-api] [--no-embed]`: builds the Ækasha Hub's public site
+ * (p551) into `dist-hub/` (emptied first), and exits 1 on an error, without writing anything.
+ * `yarn build` runs it last.
  * - `--no-api`: no API docs (p553 §2.5), for fast content work: no TypeDoc conversion, the
  *   Documentation page says they aren't built, and `api:` links aren't checked (one warning).
+ * - `--no-embed`: `::: embed` shows its poster only (p611 D9). Without it, an embed profile with
+ *   no build (`dist-embed/<id>/`) or no `yarn sbp` report is built and measured first
+ *   (`yarn sbp --profile <ids>`), and the pages' embeds are copied into `_assets/embed/`.
  * - `AEK_HUB=false`: does nothing (`yarn build` without the Hub).
  * - `AEK_HUB_IN_DIST=true`: also copies the site into the app's `dist/hub/`, so the app's own
  *   site serves it at `/hub/` (p550 §3.1). Off by default: the Hub isn't in production unless
@@ -30,12 +38,43 @@ const fail = (message: string) => {
 const parseArgs = (args: string[]) => {
   let outDir = HUB_DIST_DIR;
   let isApiSkipped = false;
+  let isEmbedSkipped = false;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--out' && args[i + 1]) outDir = path.resolve(ROOT, args[++i]);
     else if (args[i] === '--no-api') isApiSkipped = true;
-    else fail(`Unknown argument "${args[i]}" (usage: yarn hub:build [--out <dir>] [--no-api])`);
+    else if (args[i] === '--no-embed') isEmbedSkipped = true;
+    else {
+      fail(
+        `Unknown argument "${args[i]}" (usage: yarn hub:build [--out <dir>] [--no-api] [--no-embed])`
+      );
+    }
   }
-  return { outDir, isApiSkipped };
+  return { outDir, isApiSkipped, isEmbedSkipped };
+};
+
+/**
+ * The embed profiles without a build or a report entry, built and measured by `yarn sbp` (which
+ * `AEK_SBP=false` turns off: `::: embed` then fails on the missing build)
+ */
+const buildMissingEmbeds = () => {
+  const report = readSbpReport();
+  const missing = getEmbedProfiles(sbpProfiles)
+    .filter(
+      (profile) =>
+        !report?.profiles[profile.id] ||
+        !fs.existsSync(path.join(getEmbedOutDir(profile.id), getEmbedEntryFileName(profile)))
+    )
+    .map((profile) => profile.id);
+  if (!missing.length) return;
+  console.log(
+    `[Hub] No build of ${missing.join(', ')} yet: yarn sbp --profile ${missing.join(',')}`
+  );
+  const run = spawnSync('yarn', ['-s', 'sbp', '--profile', missing.join(','), '--brief'], {
+    cwd: ROOT,
+    stdio: 'inherit',
+  });
+  // Exit 1 is a budget over: the build is there, and the Hub shows what it measured
+  if (run.status !== 0 && run.status !== 1) fail(`yarn sbp exited with ${run.status}`);
 };
 
 /**
@@ -65,11 +104,13 @@ const main = async () => {
     console.log('[Hub] AEK_HUB=false: not built');
     return;
   }
-  const { outDir, isApiSkipped } = parseArgs(process.argv.slice(2));
+  const { outDir, isApiSkipped, isEmbedSkipped } = parseArgs(process.argv.slice(2));
+  if (!isEmbedSkipped) buildMissingEmbeds();
   const result = await buildHub({
     mode: 'public',
     outDir,
     api: isApiSkipped ? 'none' : 'current',
+    isEmbedLive: !isEmbedSkipped,
   });
 
   for (const warning of result.diag.warnings) {

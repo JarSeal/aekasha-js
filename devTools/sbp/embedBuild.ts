@@ -29,15 +29,14 @@ import { collectUrls } from '../assetOutputsBuildPlugin';
 import { getEmbedProfiles } from '../gatherOutput';
 import type { BuildLocation } from './bundleModel';
 import type { SbpProfile } from './config';
+import { getEmbedEntryFileName, getEmbedOutDir } from './embedPaths';
 
 /** The profile `vite build` builds instead of the app */
 export const EMBED_PROFILE_ENV = 'AEK_EMBED_PROFILE';
-export const EMBED_ROOT_DIR = path.join(ROOT, 'dist-embed');
 const PUBLIC_DIR = path.join(ROOT, 'src/public');
 /** The files the prune removed, next to the manifest */
 export const PRUNED_FILE_NAME = 'aek-pruned.json';
 
-export const getEmbedOutDir = (id: string) => path.join(EMBED_ROOT_DIR, id);
 /** The visualizer's report of an embed build */
 export const getEmbedStatsFile = (id: string) =>
   path.join(ROOT, 'dist-stats', `embed-${id}`, 'bundle-stats.html');
@@ -50,9 +49,6 @@ export const getEmbedBuildLocation = (id: string): BuildLocation => ({
 /** The profile's generated data (`devTools/gatherOutput.ts`) */
 export const getEmbedDataFile = (id: string) =>
   path.join(ROOT, 'src/generated/profiles', id, 'generatedAppData.json');
-/** The entry's file name in the output: its source's without `.ts` (`banner.embed.js`) */
-export const getEmbedEntryFileName = (profile: SbpProfile) =>
-  `${path.basename(profile.entry, '.ts')}.js`;
 
 /** The embed profile `AEK_EMBED_PROFILE` names; null without it */
 export const getEmbedProfileFromEnv = (): SbpProfile | null => {
