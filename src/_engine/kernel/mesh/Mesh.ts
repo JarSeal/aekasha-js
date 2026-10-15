@@ -18,10 +18,9 @@ import {
 import type { ECSWorld } from '../ecs/ECS';
 import { getECSWorld, getEntityIdByAppId } from '../ecs/ECS';
 import { getRootScene } from '../scene/Scene';
-import { ThreeEuler, ThreeQuaternion } from '../render/ThreeMath';
 import { getRenderer } from '../render/Renderer';
 import { ComponentType } from '../ecs/ECSCoreComponents';
-import { setTransform } from '../ecs/ECSHelpers';
+import { setTransformFromProps } from '../ecs/ECSHelpers';
 import { lerror, lwarn } from '../../utils/Logger';
 import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
 import { existsOrThrow } from '../../utils/Assert';
@@ -199,32 +198,7 @@ export const createMeshEntity = (
 
   if (!entityOpts?.doNotAddToScene) rootScene.add(mesh);
 
-  const tra = {
-    pos: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
-    rot: { x: mesh.quaternion.x, y: mesh.quaternion.y, z: mesh.quaternion.z, w: mesh.quaternion.w },
-  };
-  if (props.position) {
-    if (props.position.x !== undefined) tra.pos.x = props.position.x;
-    if (props.position.y !== undefined) tra.pos.y = props.position.y;
-    if (props.position.z !== undefined) tra.pos.z = props.position.z;
-  }
-  if (props.quaternion) {
-    tra.rot.x = props.quaternion.x;
-    tra.rot.y = props.quaternion.y;
-    tra.rot.z = props.quaternion.z;
-    tra.rot.w = props.quaternion.w;
-  } else if (props.rotation) {
-    const rot = ThreeEuler.set(mesh.rotation.x, mesh.rotation.y, mesh.rotation.z);
-    if (props.rotation.x !== undefined) rot.x = props.rotation.x;
-    if (props.rotation.y !== undefined) rot.y = props.rotation.y;
-    if (props.rotation.z !== undefined) rot.z = props.rotation.z;
-    const quat = ThreeQuaternion.setFromEuler(rot);
-    tra.rot.x = quat.x;
-    tra.rot.y = quat.y;
-    tra.rot.z = quat.z;
-    tra.rot.w = quat.w;
-  }
-  setTransform(entityId, tra, world);
+  setTransformFromProps(entityId, mesh, props, world);
   if (props.scale) {
     const transform = world.getComponent(entityId, ComponentType.TRANSFORM);
     if (transform) {

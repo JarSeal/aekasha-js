@@ -2,19 +2,30 @@ import { useDebug } from '../config/DebugModules';
 import { cameraDebugGUI } from '../camera/Camera';
 import { debugGUI } from '../light/Light';
 import { IS_DEBUG_ENV } from '../config/Config';
-import { getCurrentSceneId } from './Scene';
-import { getNextSceneId } from './SceneLoader';
+import { getCurrentSceneId, getLoadingSceneId } from './Scene';
 
-/** Which kind of saved props {@link loadPersistentProps} reads. */
+/**
+ * Which kind of saved props {@link loadPersistentProps} reads.
+ * @internal
+ */
 export type PropType = 'LIGHT' | 'CAMERA';
 
+/**
+ * The props {@link loadPersistentProps} takes: any object, whose `appId` keys its saved props.
+ * @internal
+ */
 export interface LoadableProps {
+  /** The object's app id: without one, nothing saved applies. */
   appId?: string;
   [key: string]: unknown;
 }
 
-/** Generic property loader.
- * Merges hardcoded props with LocalStorage data (in debug) and eventually files.
+/**
+ * A copy of a camera's or light's creation props, with what the debugger saved for it in this
+ * scene merged over them in the debug env (`initProps` itself without an `appId`). The saved file
+ * props are in `initProps` already: the gatherer applies an asset's `__saveData` to the scene
+ * data the loader creates it from.
+ * @internal
  */
 export const loadPersistentProps = <T extends LoadableProps>(
   initProps: T,
@@ -23,26 +34,18 @@ export const loadPersistentProps = <T extends LoadableProps>(
   const appId = initProps.appId;
   if (!appId) return initProps;
 
-  // Load props from a file
-  // @TODO: Load and return properties from file
-  const savedProps = {};
-
-  // Load from LocalStorage (Debug Mode Only)
   if (IS_DEBUG_ENV) {
     const savedDebugProps = getSavedDebugProps(appId, propType);
-    if (savedDebugProps) {
-      // Merge: Hardcoded < Saved File Props < Saved LS Props
-      return { ...initProps, ...savedProps, ...savedDebugProps };
-    }
+    if (savedDebugProps) return { ...initProps, ...savedDebugProps };
   }
 
-  return { ...initProps, ...savedProps };
+  return { ...initProps };
 };
 
 const getSavedDebugProps = (appId: string, propType: PropType) => {
   // Cameras (and lights created by a scene's init code) are created while their scene is
   // still loading, before it becomes the current scene, so read the loading scene's data.
-  const sceneId = getNextSceneId() ?? getCurrentSceneId();
+  const sceneId = getLoadingSceneId() ?? getCurrentSceneId();
   switch (propType) {
     case 'LIGHT':
       return useDebug(debugGUI)?.loadLightDebugData(appId, sceneId) || {};

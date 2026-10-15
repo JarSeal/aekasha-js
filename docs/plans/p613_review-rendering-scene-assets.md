@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: Refactoring, Documentation, Rendering, Assets
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -589,7 +589,7 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
     topDownTestScene,thirdPersonGymScene,exampleCharacter` (the rig's scenes, for the
     `smoothDampVec3` fix): 12 passed, hashes and snapshots unchanged (70.1 s).
 
-### Phase 2: scenes (`Scene.ts`, `SceneHooks.ts`, `AppData.ts`, `Group.ts`, `PropertyLoader.ts`)
+### Phase 2: scenes (`Scene.ts`, `SceneHooks.ts`, `AppData.ts`, `Group.ts`, `PropertyLoader.ts`) — done
 
 1. D7's scene part (SC1, SC2, SC6), D8, D9 (one looper helper), SC3.
 2. G1 (`deleteMeshes` deletes the child's entity, or detaches an unmanaged child without
@@ -639,6 +639,40 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
     kept, one removed mid-run skipped), the deprecated alias, `backgroundColor: 0`.
   - **Checks:** `tsc` (both), the changed files' lint (the whole-repo `yarn lint` ran over 13
     minutes and was stopped), `yarn test` (59 files, 507 passed), the docs ratchet clean.
+- **Section 2 (steps 2-3, and step 4's tests for them):**
+  - **G1:** `removeFromGroupEntity`'s `deleteMeshes` deletes a removed mesh's entity (in the
+    group's world), and only detaches a mesh without one: nothing a registry owns is disposed.
+    It has no caller, so the three unread options weren't implemented: `@deprecated` (never read,
+    removed in engine 6.0.0; `deleteMeshes` already releases an entity's geometry, materials and
+    their textures), not removed (on the entry: a removal would break a caller's types in a
+    minor).
+  - **G2:** a child's entity is its `userData.entityId` in the group's world, checked against
+    that entity's `OBJECT3D` (`getChildEntityId`), in `disposeGroup` and `removeFromGroupEntity`;
+    every child leaves the group (not every entity kind's deletion detaches its object).
+  - **G3:** `setTransformFromProps` (`kernel/ecs/ECSHelpers.ts`, `@internal`, its own scratch
+    Euler and quaternion) for `createMeshEntity` and `createGroupEntity`; `ThreeMath.ts`'
+    `ThreeEuler` gone (no user left) and `ThreeQuaternion` private (only its own helper uses it).
+    `ThreeVector3` stays exported for `MeshUserData.ts` (D13). The `[Group Manager]` prefixes
+    gone; `GroupProps` documented (`rotation` in radians).
+  - **Not in §1.4, bugs:** `deleteAllGroupEntities` (every scene exit) deleted persistent groups
+    too: it skips `PERSISTENT` ones now. `getGroupByAppId` read entity id 0 as "not found"
+    (`if (entityId)`).
+  - **G4:** the "load from a file" TODO and its `savedProps = {}` removed: the file layer is the
+    gatherer's `__saveData`, already in the props the loader creates from. The cycle through
+    `SceneLoader.ts` is gone: the scene id comes from `Scene.ts`' new `getLoadingSceneId()`
+    (`@internal`) or the current one, not `getNextSceneId()`. Same scene for every camera and
+    light a load creates; after a failed load (SL1, `nextSceneId` left set) it's now the current
+    scene's, not the failed one's. `PropertyLoader.ts` ↔ `Camera.ts` / `Light.ts` (the debug GUI
+    refs) stay: Phase 4's D6 renames `debugGUI`. Everything in the file `@internal` (on no entry).
+  - **JSDoc:** `Group.ts` (`@example`s on the four entry functions) and `PropertyLoader.ts` at
+    100%: `kernel/scene` 64 / 74, the 10 left all `SceneLoader.ts`' (Phase 3). `docs.json`
+    updated (`kernel/ecs` 81 / 81, `kernel/render` 88 / 88).
+  - **Tests:** `kernel/scene/Group.test.ts` (6): the transform props, `objects` and
+    `getGroupByAppId`, `deleteMeshes` (a managed mesh's entity deleted, an unmanaged one's
+    geometry not disposed), removal by index keeping the entity, a deletion in another world
+    leaving the default world's namesake, persistent groups kept.
+  - **Checks:** `tsc` (both), the changed files' lint, `yarn test` (60 files, 513 passed), the
+    docs ratchet recorded.
 
 ### Phase 3: the scene loader (`SceneLoader.ts`)
 

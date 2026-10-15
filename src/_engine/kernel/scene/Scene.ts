@@ -296,6 +296,13 @@ export const setLoadingSceneId = (sceneId: string | null) => {
   loadingSceneId = sceneId;
 };
 
+/**
+ * The scene whose code `loadScene` is running, from right before its cameras are created until it's
+ * current; otherwise `null`.
+ * @internal
+ */
+export const getLoadingSceneId = () => loadingSceneId;
+
 /** An optional scene id's default: the loading scene while its code runs, else the current one.
  * (The current scene is still the previous one then: it changes after the scene code resolves.) */
 const resolveSceneId = (sceneId?: string) => sceneId || loadingSceneId || currentSceneId;

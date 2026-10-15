@@ -2,22 +2,22 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1720,
-      "total": 2330
+      "documented": 1722,
+      "total": 2315
     },
     "members": {
-      "documented": 330,
+      "documented": 331,
       "total": 445
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1676,
-        "total": 2267
+        "documented": 1678,
+        "total": 2252
       },
       "members": {
-        "documented": 280,
+        "documented": 281,
         "total": 365
       }
     },
@@ -596,8 +596,8 @@
     },
     "engine/features/skybox": {
       "exports": {
-        "documented": 150,
-        "total": 174
+        "documented": 149,
+        "total": 173
       },
       "members": {
         "documented": 0,
@@ -903,8 +903,8 @@
     },
     "engine/kernel/ecs": {
       "exports": {
-        "documented": 79,
-        "total": 79
+        "documented": 81,
+        "total": 81
       },
       "members": {
         "documented": 159,
@@ -1044,8 +1044,8 @@
     },
     "engine/kernel/render": {
       "exports": {
-        "documented": 90,
-        "total": 90
+        "documented": 88,
+        "total": 88
       },
       "members": {
         "documented": 0,
@@ -1058,32 +1058,15 @@
     },
     "engine/kernel/scene": {
       "exports": {
-        "documented": 61,
-        "total": 88
+        "documented": 64,
+        "total": 74
       },
       "members": {
-        "documented": 0,
+        "documented": 1,
         "total": 1
       },
       "undocumented": {
         "exports": [
-          "Group#GroupProps",
-          "Group#getGroupByAppId",
-          "PropertyLoader#LoadableProps",
-          "Scene#Looper",
-          "Scene#SceneData",
-          "Scene#SceneOptions",
-          "Scene#registerOnAllSceneEnterings",
-          "Scene#registerOnAllSceneExits",
-          "Scene#registerOnSceneEnter",
-          "Scene#registerOnSceneExit",
-          "Scene#runOnAllSceneEnters",
-          "Scene#runOnAllSceneExits",
-          "Scene#runOnSceneEnter",
-          "Scene#runOnSceneExit",
-          "Scene#runSceneAppLoopers",
-          "Scene#runSceneMainLateLoopers",
-          "Scene#runSceneMainLoopers",
           "SceneLoader#SceneLoader",
           "SceneLoader#ScenePrimitiveAssets",
           "SceneLoader#UpdateLoaderStatusFn",
@@ -1095,9 +1078,7 @@
           "SceneLoader#hasFirstSceneBeenLoaded",
           "SceneLoader#setCurrentSceneLoader"
         ],
-        "members": [
-          "PropertyLoader#LoadableProps.appId"
-        ]
+        "members": []
       }
     },
     "engine/schemas": {

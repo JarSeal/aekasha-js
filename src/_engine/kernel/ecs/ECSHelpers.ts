@@ -12,6 +12,8 @@ import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
 // Reuse scratch objects to prevent GC pressure
 const _v1 = new THREE.Vector3();
 const _m1 = new THREE.Matrix4();
+const _e1 = new THREE.Euler();
+const _q1 = new THREE.Quaternion();
 
 /**
  * {@link ECSWorld.createRawEntity}: an entity without components.
@@ -120,6 +122,51 @@ export const getTransform = (entityId: number, ecsWorld?: ECSWorld) => {
 export const setTransform = (entityId: number, tra: ECSTransformProp, ecsWorld?: ECSWorld) => {
   const world = ecsWorld || getECSWorld();
   world.setTransform(entityId, tra);
+};
+
+/**
+ * The position and rotation props an object entity is created with (`createMeshEntity`,
+ * `createGroupEntity`).
+ * @internal
+ */
+export type ObjectTransformProps = {
+  /** Each axis given replaces the object's own. */
+  position?: { x?: number; y?: number; z?: number };
+  /** Euler angles in radians (XYZ order); each axis given replaces the object's own. */
+  rotation?: { x?: number; y?: number; z?: number };
+  /** Over `rotation`. */
+  quaternion?: { x: number; y: number; z: number; w: number };
+};
+
+/**
+ * Sets a new object entity's transform from its creation props: the object's own position and
+ * rotation, with what the props give replacing it.
+ * @internal
+ */
+export const setTransformFromProps = (
+  entityId: number,
+  obj: THREE.Object3D,
+  props: ObjectTransformProps,
+  world: ECSWorld
+) => {
+  const { position, rotation, quaternion } = props;
+  const pos = {
+    x: position?.x ?? obj.position.x,
+    y: position?.y ?? obj.position.y,
+    z: position?.z ?? obj.position.z,
+  };
+  let rot: { x: number; y: number; z: number; w: number } = obj.quaternion;
+  if (quaternion) {
+    rot = quaternion;
+  } else if (rotation) {
+    _e1.set(
+      rotation.x ?? obj.rotation.x,
+      rotation.y ?? obj.rotation.y,
+      rotation.z ?? obj.rotation.z
+    );
+    rot = _q1.setFromEuler(_e1);
+  }
+  world.setTransform(entityId, { pos, rot: { x: rot.x, y: rot.y, z: rot.z, w: rot.w } });
 };
 
 /**

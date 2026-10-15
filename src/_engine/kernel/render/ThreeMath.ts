@@ -29,17 +29,8 @@ export const LEVEL_GROUND_NORMAL = new THREE.Vector3(0, 1, 0);
  */
 export const ThreeVector3 = new THREE.Vector3();
 
-/**
- * A scratch quaternion, used like {@link ThreeVector3}.
- * @internal
- */
-export const ThreeQuaternion = new THREE.Quaternion();
-
-/**
- * A scratch Euler, used like {@link ThreeVector3}.
- * @internal
- */
-export const ThreeEuler = new THREE.Euler();
+// A scratch quaternion for this file's helpers
+const ThreeQuaternion = new THREE.Quaternion();
 
 /**
  * A rotation of `deg` degrees about the world up axis (+y), as a plain quaternion object (a new
