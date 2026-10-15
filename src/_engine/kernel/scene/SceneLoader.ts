@@ -33,24 +33,11 @@ import { resetRandomStreams } from '../../utils/RandomStreams';
 import { deleteAllRayHelpers, resetRayCastStats } from '../render/Raycast';
 import { deleteAllGroupEntities } from './Group';
 import { setIsLoadingScene } from '../loop/MainLoop';
-import {
-  DEFAULT_ECS_WORLD_ID,
-  deleteECSWorld,
-  getAllECSWorlds,
-  getECSWorld,
-  getEntityIdByAppId,
-} from '../ecs/ECS';
-import { ComponentType } from '../ecs/ECSCoreComponents';
+import { DEFAULT_ECS_WORLD_ID, deleteECSWorld, getAllECSWorlds, getECSWorld } from '../ecs/ECS';
 import { getAppData } from './AppData';
-import { getTexture, loadTextureAsync } from '../assets/Texture';
-import { createMaterial, getMaterial, loadTslMaterialFileAsync } from '../assets/Material';
-import { textureMapKeys } from '../../utils/Constants';
-import { createGeometry, doesGeoExist, getGeometry } from '../assets/Geometry';
-import { createLightEntity } from '../light/Light';
-import { createCameraEntity, setActiveCamera } from '../camera/Camera';
-import { createMeshEntity } from '../mesh/Mesh';
 import type { ImportedAssetManifest } from '../assets/import/ImportTypes';
-import { retagAssetOwner, setAssetOwnerScene } from '../assets/AssetOwners';
+import { setAssetOwnerScene } from '../assets/AssetOwners';
+import { createCameras, createNextSceneObject3Ds, loadNextSceneAssets } from './SceneDataLoader';
 import { releaseSceneOwnedAssets } from '../assets/SceneAssetRelease';
 import {
   runSceneBeforeAssetsHooksAsync,
@@ -137,6 +124,12 @@ export type LoadSceneProps = {
     sceneData: SceneData;
     assets: ScenePrimitiveAssets;
   }) => Promise<void>;
+  /**
+   * Never read: the loader's own `updateLoaderStatusFn` is the one {@link getLoaderStatusUpdater}
+   * returns.
+   * @deprecated Give the loader its `updateLoaderStatusFn` (`createSceneLoader`). Removed in
+   * engine 6.0.0.
+   */
   updateLoaderStatusFn?: UpdateLoaderStatusFn;
   loaderId?: string; // loaderId to use, if not provided then the currentSceneLoader will be used
   /** Release the previous scene's assets before the next scene loads instead of after it: lower
@@ -206,206 +199,12 @@ export const getCurrentSceneLoaderId = () => {
   return currentSceneLoaderId;
 };
 
-export const createCameras = (sceneData: SceneData) => {
-  const cameraProps = sceneData.cameras || [];
-  let firstCamId;
-  let activeCamFound = false;
-  let oneCameraCreated = false;
-  if (!cameraProps?.length) {
-    const msg = 'Could not find any cameras for the scene in createCameras (SceneLoader).';
-    lerror(msg);
-    throw new Error(msg);
-  }
-  for (let i = 0; i < cameraProps.length; i++) {
-    const props = cameraProps[i];
-    if (typeof props === 'string') {
-      if (i === 0) firstCamId = getEntityIdByAppId(props);
-      continue;
-    }
-    createCameraEntity(props.camProps, props.entityOpts);
-    oneCameraCreated = true;
-    if (props.camProps.active) activeCamFound = true;
-  }
-  if (!oneCameraCreated) {
-    const msg = 'No camera was created in createCameras (SceneLoader).';
-    lerror(msg);
-    throw new Error(msg);
-  }
-  if (!activeCamFound && firstCamId) {
-    setActiveCamera(firstCamId);
-  }
-};
-
 export type ScenePrimitiveAssets = {
   textures: { [id: string]: THREE.Texture };
   materials: { [id: string]: THREE.Material };
   geometries: { [id: string]: THREE.BufferGeometry };
   /** The scene's imported assets by import id (spawn them with spawnImportedAsset). */
   importedAssets: { [id: string]: ImportedAssetManifest };
-};
-
-/** Imports a scene's imported assets into `importedAssets`, and re-tags the ones it names by id.
- * The import registry (the glTF import path) loads here, only for a scene that names an import
- * (p613 D4): a scene, or an app, without one never loads it. */
-const loadSceneImportsAsync = async (
-  assets: SceneData['importedAssets'],
-  importedAssets: ScenePrimitiveAssets['importedAssets']
-) => {
-  if (!assets?.length) return;
-  const registry = await import('../assets/import/ImportRegistry');
-  const importPromises: Promise<ImportedAssetManifest | null>[] = [];
-  for (const asset of assets) {
-    if (typeof asset === 'string') {
-      registry.retagImportedAsset(asset);
-      const manifest = registry.getImportedAsset(asset);
-      if (manifest) importedAssets[asset] = manifest;
-      continue;
-    }
-    importPromises.push(registry.importAssetAsync(asset));
-  }
-  for (const manifest of await Promise.all(importPromises)) {
-    if (manifest) importedAssets[manifest.id] = manifest;
-  }
-};
-
-type SceneMaterialDef = Exclude<NonNullable<SceneData['materials']>[number], string>;
-
-/** A copy of a material's params with its texture ids resolved to the scene's textures (or the
- * registered ones). Never resolved in place: the generated scene data is cached, so a revisit
- * would see the previous visit's texture objects, which its release may have disposed. */
-const resolveTextureParams = (
-  params: SceneMaterialDef['params'],
-  textures: ScenePrimitiveAssets['textures']
-): SceneMaterialDef['params'] => {
-  const resolved: Record<string, unknown> = { ...params };
-  for (const texKey of textureMapKeys) {
-    const texRef = resolved[texKey];
-    if (typeof texRef !== 'string') continue;
-    const texture = textures[texRef] || getTexture(texRef);
-    if (!texture) {
-      lwarn(`Could not find texture with id "${texRef}" in loadNextSceneAssets.`);
-      continue;
-    }
-    resolved[texKey] = texture;
-  }
-  return resolved as SceneMaterialDef['params'];
-};
-
-const loadNextSceneAssets = async (sceneData: SceneData): Promise<ScenePrimitiveAssets> => {
-  const textures: ScenePrimitiveAssets['textures'] = {};
-  const materials: ScenePrimitiveAssets['materials'] = {};
-  const geometries: ScenePrimitiveAssets['geometries'] = {};
-  const importedAssets: ScenePrimitiveAssets['importedAssets'] = {};
-
-  // Load textures, imported assets and the materials' TSL files (in parallel): materials can use
-  // the textures and meshes the imported geometries (by id). Assets referenced by id are re-tagged
-  // to this scene (AssetOwners), so leaving the scene that loaded them doesn't release them.
-  const sceneTextures = sceneData.textures || [];
-  const texturePromises: Promise<THREE.Texture>[] = [];
-  const textureIds: string[] = [];
-  for (let i = 0; i < sceneTextures.length; i++) {
-    const tex = sceneTextures[i];
-    if (typeof tex === 'string') {
-      const texture = getTexture(tex);
-      if (texture) retagAssetOwner(texture);
-      continue;
-    }
-    const texId = tex.id;
-    if (!texId) continue;
-    textureIds.push(texId);
-    texturePromises.push(loadTextureAsync(tex));
-  }
-  // The TSL files load on demand (p607 D11): createMaterial reads them synchronously
-  const tslFilePromises: Promise<boolean>[] = [];
-  for (const material of sceneData.materials || []) {
-    if (typeof material === 'string' || !('tslFile' in material) || !material.tslFile) continue;
-    tslFilePromises.push(loadTslMaterialFileAsync(material.tslMaterialId || material.id || ''));
-  }
-  const [loadedTextures] = await Promise.all([
-    Promise.all(texturePromises),
-    loadSceneImportsAsync(sceneData.importedAssets, importedAssets),
-    Promise.all(tslFilePromises),
-  ]);
-  for (let i = 0; i < loadedTextures.length; i++) {
-    textures[textureIds[i]] = loadedTextures[i];
-  }
-
-  // Create materials
-  const sceneMaterials = sceneData.materials || [];
-  for (let i = 0; i < sceneMaterials.length; i++) {
-    const material = sceneMaterials[i];
-    if (typeof material === 'string') {
-      const mat = getMaterial(material);
-      if (mat) {
-        retagAssetOwner(mat);
-        materials[material] = mat;
-      }
-      continue;
-    }
-    const params = resolveTextureParams(material.params, textures);
-    const mat = createMaterial({ ...material, params });
-    if (mat) materials[material.id || `material-${i}`] = mat;
-  }
-
-  // Create geometries
-  const sceneGeometries = sceneData.geometries || [];
-  for (let i = 0; i < sceneGeometries.length; i++) {
-    const geometry = sceneGeometries[i];
-    if (typeof geometry === 'string') {
-      const geo = getGeometry(geometry);
-      if (geo) {
-        retagAssetOwner(geo as THREE.BufferGeometry);
-        geometries[geometry] = geo as THREE.BufferGeometry;
-      }
-      continue;
-    }
-    const geo = createGeometry({ ...geometry });
-    if (geo) geometries[geometry.id || `geometry-${i}`] = geo;
-  }
-
-  return { textures, materials, geometries, importedAssets };
-};
-
-const createNextSceneObject3Ds = async (sceneData: SceneData): Promise<void> => {
-  // Create lights
-  const lightProps = sceneData.lights || [];
-  for (let i = 0; i < lightProps.length; i++) {
-    const props = lightProps[i];
-    if (typeof props === 'string') continue;
-    createLightEntity(props.lightProps, props.entityOpts);
-  }
-
-  // Create meshes
-  const meshProps = sceneData.meshes || [];
-  for (let i = 0; i < meshProps.length; i++) {
-    const props = meshProps[i];
-    if (typeof props === 'string') continue;
-    // Resolve into locals, never write back: the generated scene data is cached, and a revisit
-    // would otherwise reuse the previous visit's released (disposed) geometry/material objects
-    let geo = props.props.geo;
-    if (typeof geo === 'string') {
-      const foundGeo = doesGeoExist(geo) ? getGeometry(geo) : undefined;
-      if (!foundGeo) {
-        lerror(
-          `Could not find geometry with id "${geo}" for mesh "${props.props.appId || props.entityOpts?.appId}" in createNextSceneObject3Ds. Mesh not created.`
-        );
-        continue;
-      }
-      geo = foundGeo as THREE.BufferGeometry;
-    }
-    let mat = props.props.mat;
-    if (typeof mat === 'string') {
-      const foundMat = getMaterial(mat);
-      if (!foundMat) {
-        lerror(
-          `Could not find material with id "${mat}" for "${props.props.appId || props.entityOpts?.appId}" mesh in createNextSceneObject3Ds. Mesh not created.`
-        );
-        continue;
-      }
-      mat = foundMat;
-    }
-    createMeshEntity({ ...props.props, geo, mat }, props.entityOpts);
-  }
 };
 
 /** A load {@link beginLoad} has started: what it resolved, and what it added to the page */
@@ -418,28 +217,22 @@ type ActiveLoad = {
   deletePrevScene: boolean;
 };
 
-/** The scene, its code and the loader a load uses: the props', or on the page's first load the
- * `?startScene` param's or the Debug tools' start scene (and loader). Throws on an unknown scene,
- * a scene without code, or an unknown loader. */
-const resolveLoadTarget = (loadSceneProps: LoadSceneProps) => {
-  let sceneId = loadSceneProps.sceneId;
-  let targetLoaderId = loadSceneProps.loaderId;
-  let overrideNextSceneFn = loadSceneProps.nextSceneFn;
+/**
+ * The scene the page's first load loads instead of the props' (and with which loader), or null:
+ * the `?startScene` param (an unknown id warns and is ignored), else the Debug tools' start scene,
+ * and the debugger's own loader when the Debug tools ask for it. Debug env and prod test mode
+ * only; a production build drops it.
+ */
+const resolveStartSceneOverride = () => {
+  if (firstSceneLoaded || !(IS_DEBUG_ENV || IS_PROD_TEST_MODE)) return null;
 
-  // Process Debug Start Scene Interception (First boot only) — also respected under
-  // isProdTest (IS_PROD_TEST_MODE), not just real debug mode, so a "production build with a
-  // subset of debug features" run still honors a start-scene override left set in the debug
-  // tools tab (getDebugToolsState/registerDebugToolsModule are prod-test-aware for this).
-  const debugToolsState =
-    (IS_DEBUG_ENV || IS_PROD_TEST_MODE) && !firstSceneLoaded ? getDebugToolsState(true) : null;
-
-  // ?startScene=<sceneId> (debug env and prod test mode, getStartSceneQueryParam) wins over the
-  // Debug tools' start scene. An unknown id falls back to the scene loaded without it
-  const startSceneParam = !firstSceneLoaded ? getStartSceneQueryParam() : null;
-  let startSceneOverride: string | null = null;
+  // ?startScene=<sceneId> (getStartSceneQueryParam) wins over the Debug tools' start scene. The
+  // Debug tools' state is prod-test-aware, so a prod test run honours a start scene left set there
+  let sceneId: string | null = null;
+  const startSceneParam = getStartSceneQueryParam();
   if (startSceneParam) {
     if (getGeneratedSceneData(startSceneParam) && getAppData().sceneFiles[startSceneParam]) {
-      startSceneOverride = startSceneParam;
+      sceneId = startSceneParam;
     } else {
       const msg = `Unknown scene id "${startSceneParam}" in the startScene URL param, loading the usual start scene instead.`;
       lwarn(msg);
@@ -447,26 +240,44 @@ const resolveLoadTarget = (loadSceneProps: LoadSceneProps) => {
     }
   }
 
+  const { scenesListing } = getDebugToolsState(true);
   const useDebugStartScene = Boolean(
-    debugToolsState?.scenesListing.useDebugStartScene &&
-      debugToolsState.scenesListing.debugStartScene
+    scenesListing.useDebugStartScene && scenesListing.debugStartScene
   );
+  if (!sceneId && useDebugStartScene) sceneId = scenesListing.debugStartScene;
+  if (!sceneId) return null;
 
-  if (startSceneOverride || useDebugStartScene) {
-    sceneId = startSceneOverride || debugToolsState?.scenesListing.debugStartScene || sceneId;
+  // The debugger's own loader is registered in the debug env only (never in prod test mode), so
+  // only the debug env targets it. It applies to a ?startScene too
+  const loaderId =
+    useDebugStartScene && IS_DEBUG_ENV && scenesListing.useDebuggerSceneLoader
+      ? DEBUGGER_SCENE_LOADER_ID
+      : undefined;
+  return { sceneId, loaderId };
+};
 
-    // Clear out any hardcoded start functions passed by index.ts
-    // to guarantee the lookup pulls dynamically from the app data's sceneFiles instead
-    overrideNextSceneFn = undefined;
+/** The loader with the id (the current loader without one). The debugger's loader falls back to
+ * the current one when it doesn't exist: a stale debug setting must never fail the boot. Throws
+ * on an unknown loader, or without any. */
+const resolveLoader = (loaderId: string | undefined): SceneLoader => {
+  if (!loaderId) return getCurrentSceneLoader();
+  const loader = sceneLoaders.find((sl) => sl.id === loaderId);
+  if (loader) return loader;
+  // Only the debug env targets the debugger's loader: a production build drops this
+  if (IS_DEBUG_ENV && loaderId === DEBUGGER_SCENE_LOADER_ID) {
+    lwarn(
+      `Could not find the debugger scene loader (loader id "${loaderId}") in loadScene, using the current scene loader instead.`
+    );
+    return getCurrentSceneLoader();
   }
+  throw new Error(`Could not find scene loader with loader id "${loaderId}".`);
+};
 
-  // Resolve your loader @TODO: Override with the explicit debugger loader
-  // The debugger's own scene-loader UI is IS_DEBUG_ENV-only (never registered under
-  // isProdTest) — only honor this sub-option in real debug mode, or targetLoaderId would
-  // point at a loader that was never created. It applies to a ?startScene too.
-  if (useDebugStartScene && IS_DEBUG_ENV && debugToolsState?.scenesListing.useDebuggerSceneLoader) {
-    targetLoaderId = DEBUGGER_SCENE_LOADER_ID;
-  }
+/** The scene, its data and code, and the loader a load uses. Throws on an unknown scene, a scene
+ * without code, or an unknown loader. */
+const resolveLoadTarget = (loadSceneProps: LoadSceneProps) => {
+  const override = resolveStartSceneOverride();
+  const sceneId = override?.sceneId ?? loadSceneProps.sceneId;
 
   let sceneData = getGeneratedSceneData(sceneId);
   if (!sceneData) {
@@ -482,23 +293,12 @@ const resolveLoadTarget = (loadSceneProps: LoadSceneProps) => {
     };
   }
 
-  // Resolve the Stage Execution Function from your autogenerated registry module
-  const nextSceneFn = overrideNextSceneFn || getAppData().sceneFiles[sceneId];
+  // A start scene override always runs its own scene file, never the code the props pass
+  const nextSceneFn = (!override && loadSceneProps.nextSceneFn) || getAppData().sceneFiles[sceneId];
   if (!nextSceneFn) throw new Error(`Could not find the scene code of scene "${sceneId}".`);
 
-  // Resolve the Scene Loader Component context
-  let loader = targetLoaderId ? sceneLoaders.find((sl) => sl.id === targetLoaderId) : undefined;
-  // Only the debug env targets the debugger's loader (above): a production build drops this
-  if (!loader && IS_DEBUG_ENV && targetLoaderId === DEBUGGER_SCENE_LOADER_ID) {
-    // A stale debug setting must never kill boot, fall back to the current loader
-    lwarn(
-      `Could not find the debugger scene loader (loader id "${targetLoaderId}") in loadScene, using the current scene loader instead.`
-    );
-    targetLoaderId = undefined;
-  }
-  if (!targetLoaderId) loader = getCurrentSceneLoader();
-  if (!loader) throw new Error(`Could not find scene loader with loader id "${targetLoaderId}".`);
-
+  // The debugger's loader when the start scene asks for it, else the props'
+  const loader = resolveLoader(override?.loaderId ?? loadSceneProps.loaderId);
   return { sceneId, sceneData, nextSceneFn, loader };
 };
 
@@ -539,24 +339,15 @@ const beginLoad = (loadSceneProps: LoadSceneProps): ActiveLoad => {
   };
 };
 
-/** A started load's phases, from the loader's `loadStartFn` to its `loadEndFn`. */
-const runLoadPhasesAsync = async (load: ActiveLoad) => {
-  const { sceneId, sceneData, loader } = load;
-  const prevScene = getCurrentScene();
-  const prevSceneId = prevScene?.userData.id;
-
-  if (loader.loadStartFn) await loader.loadStartFn(loader);
-  setIsLoadingScene(true);
-  // The features' load start (physics holds its stepping until `entered`)
-  runSceneLoadStartHooks();
-
+/** Tears the previous scene down: the features' exit hooks, the groups, its loopers, its exit
+ * listeners, the secondary worlds and the default world's non-persistent entities. */
+const tearDownPrevScene = (load: ActiveLoad, prevSceneId: string | undefined) => {
   // The features tear down the previous scene (in reverse install order: the viewports,
   // PostFX and lines, the sky box, characters, then physics entities), then the groups,
   // loopers and non-persistent entities go
   runSceneExitHooks(prevSceneId);
   deleteAllGroupEntities();
-
-  if (prevScene) deleteAllSceneLoopers(prevSceneId);
+  if (prevSceneId) deleteAllSceneLoopers(prevSceneId);
 
   runOnSceneExit(prevSceneId);
   runOnAllSceneExits();
@@ -569,18 +360,19 @@ const runLoadPhasesAsync = async (load: ActiveLoad) => {
   }
 
   const ecsWorld = existsOrThrow(getECSWorld(), 'Could not find ECS World in loadScene');
-  if (IS_DEBUG_ENV) {
-    // We Give the Debug Camera a chance to save its final state for the current scene.
-    // This triggers the 'end' logic manually if needed, or simply ensures LS is up to date.
-    void ecsWorld.getEntitiesWith(ComponentType.DEBUG_TAG_IS_DEBUG_CAMERA).next().value;
-  }
   ecsWorld.clearNonPersistent();
   // The features' part, before anything of the next scene exists (spatial's scene domains)
-  runSceneWorldClearedHooks(ecsWorld, prevSceneId, sceneData);
-  if (load.deletePrevScene && prevSceneId && prevSceneId !== sceneId) {
+  runSceneWorldClearedHooks(ecsWorld, prevSceneId, load.sceneData);
+  if (load.deletePrevScene && prevSceneId && prevSceneId !== load.sceneId) {
     releaseSceneOwnedAssets(prevSceneId);
   }
+};
 
+/** Builds the next scene until it's current with its JSON objects: its cameras, its assets, its
+ * code (through the loader's `loadFn`), the features' `created` hooks, then the previous scene's
+ * assets released. */
+const loadNextSceneAsync = async (load: ActiveLoad, prevSceneId: string | undefined) => {
+  const { sceneId, sceneData, loader } = load;
   loader.phase = 'LOAD';
   // From here until it is current, optional scene ids (loopers, sky boxes) mean the next scene
   setLoadingSceneId(sceneId);
@@ -608,32 +400,47 @@ const runLoadPhasesAsync = async (load: ActiveLoad) => {
   setLoadingSceneId(null);
   // The features' part (the sky box shows the scene's default, PostFX sets up its chain)
   await runSceneCreatedHooksAsync(sceneId);
-  await createNextSceneObject3Ds(sceneData);
+  createNextSceneObject3Ds(sceneData);
   // The next scene has taken refs on, or re-tagged, what it shares with the previous one:
   // release what the previous scene still owns and nothing uses. (Reloading the same
   // scene releases nothing: its assets are all tagged with the same id.)
   if (prevSceneId && prevSceneId !== sceneId) releaseSceneOwnedAssets(prevSceneId);
+};
 
+/** Enters the scene that is now current: the inputs and the canvas back on, the enter listeners,
+ * the debugger, and the features' `entered` hooks. */
+const enterSceneAsync = async (sceneId: string) => {
   getCanvasParentElem()?.style.setProperty('pointer-events', '');
-
-  // Enable input controls
   setAllInputsEnabled(true);
-
   firstSceneLoaded = true;
 
   runOnSceneEnter(sceneId);
   runOnAllSceneEnters();
 
   if (IS_DEBUG_ENV) {
-    // Enable debuggers
     disableDebugger(false);
-
     updateOnScreenTools();
   }
   resetRayCastStats();
   // The scene is complete: physics waits for its bodies and releases its stepping, the
   // draggable windows rebuild the ones whose target exists
   await runSceneEnteredHooksAsync();
+};
+
+/** A started load's phases, from the loader's `loadStartFn` to its `loadEndFn`. */
+const runLoadPhasesAsync = async (load: ActiveLoad) => {
+  const { loader } = load;
+  const prevSceneId = getCurrentScene()?.userData.id as string | undefined;
+
+  if (loader.loadStartFn) await loader.loadStartFn(loader);
+  setIsLoadingScene(true);
+  // The features' load start (physics holds its stepping until `entered`, the draggable windows
+  // close or suspend theirs)
+  runSceneLoadStartHooks();
+
+  tearDownPrevScene(load, prevSceneId);
+  await loadNextSceneAsync(load, prevSceneId);
+  await enterSceneAsync(load.sceneId);
 
   loader.phase = 'END';
   if (loader.loadEndFn) await loader.loadEndFn(loader);

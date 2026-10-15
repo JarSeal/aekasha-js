@@ -35,6 +35,8 @@ const fns = vi.hoisted(() => ({
   disableDebugger: vi.fn(),
   releaseSceneOwnedAssets: vi.fn(),
   retagImportedAsset: vi.fn(),
+  getEntityIdByAppId: vi.fn<(appId: string) => number | undefined>(),
+  setActiveCamera: vi.fn(),
 }));
 
 vi.mock(import('../loop/MainLoop'), () => ({
@@ -46,11 +48,11 @@ vi.mock(import('../ecs/ECS'), () => ({
   deleteECSWorld: vi.fn(),
   getAllECSWorlds: () => [],
   getECSWorld: (() => m.world) as never,
-  getEntityIdByAppId: vi.fn(),
+  getEntityIdByAppId: fns.getEntityIdByAppId,
 }));
 vi.mock(import('../camera/Camera'), () => ({
   createCameraEntity: vi.fn(),
-  setActiveCamera: vi.fn(),
+  setActiveCamera: fns.setActiveCamera,
 }));
 vi.mock(import('../light/Light'), () => ({ createLightEntity: vi.fn() }));
 vi.mock(import('../mesh/Mesh'), () => ({ createMeshEntity: vi.fn() }));
@@ -290,5 +292,23 @@ describe('loadScene: the import registry (D4)', () => {
     expect(m.registryLoads).toBe(1);
     expect(fns.retagImportedAsset).toHaveBeenCalledWith('byId');
     expect(seen.assets?.importedAssets.byId).toMatchObject({ id: 'byId' });
+  });
+});
+
+describe("loadScene: the scene data's cameras", () => {
+  it('a persistent camera named first becomes active, entity id 0 too', async () => {
+    fns.getEntityIdByAppId.mockReturnValue(0);
+    setScene('persistentCamera', undefined, {
+      cameras: ['persistentCam', camera] as SceneData['cameras'],
+    });
+    await expect(loadScene({ sceneId: 'persistentCamera' })).resolves.toBe(true);
+    expect(fns.getEntityIdByAppId).toHaveBeenCalledWith('persistentCam');
+    expect(fns.setActiveCamera).toHaveBeenCalledWith(0);
+  });
+
+  it('a scene without a camera it creates fails to load', async () => {
+    setScene('noCamera', undefined, { cameras: [] });
+    await expect(loadScene({ sceneId: 'noCamera' })).resolves.toBe(false);
+    expect(isCurrentlyLoading()).toBe(false);
   });
 });

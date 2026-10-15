@@ -772,6 +772,39 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
   - **Checks:** `tsc` (both), the changed files' lint, `yarn test` (63 files, 521 passed),
     `yarn sbp --profile app,banner` (exit 0, no budget over). `yarn verify:baselines --update`
     (the new chunk) at the end of the phase.
+- **Section 3 (step 3):**
+  - **The split:** the load's steps are `resolveStartSceneOverride` (the `?startScene` and Debug
+    tools' start scene and loader, `null` outside the debug env and prod test mode, as before),
+    `resolveLoader`, `resolveLoadTarget`, `beginLoad`, `tearDownPrevScene`, `loadNextSceneAsync`,
+    `enterSceneAsync` and `runLoadPhasesAsync` (which only sequences them), then `finishLoad`; the
+    longest is 38 lines. A start-scene override still keeps the props' `loaderId` unless the
+    debugger's loader applies.
+  - **The size:** `SceneLoader.ts` was 805 lines after the split, so what a load builds from the
+    scene's data moved into `kernel/scene/SceneDataLoader.ts` (new, every export `@internal`):
+    `createCameras` (no longer exported from the loader: no caller outside it),
+    `loadNextSceneAssets` with `loadSceneImportsAsync` and `resolveTextureParams`, and
+    `createNextSceneObject3Ds`. `ScenePrimitiveAssets` stays in `SceneLoader.ts` (on the entry and
+    in the Hub's API pages from there). `SceneLoader.ts` 599 lines, `SceneDataLoader.ts` 225.
+    p302's "texture-id resolution of material params" is in `SceneDataLoader.ts` now (Phase 9's
+    p302 update).
+  - **SL6's smaller items:** `LoadSceneProps.updateLoaderStatusFn` `@deprecated` (never read; the
+    loader's is the one `getLoaderStatusUpdater` returns; removed in engine 6.0.0; on the entry's
+    type, so not removed); the dead `void ecsWorld.getEntitiesWith(…)` debug line gone;
+    `createNextSceneObject3Ds` not `async`. `createSceneLoader` keeps its `async` and its positional
+    `isCurrent`: it's on the entry and callers `await` it or chain on its promise, so either change
+    would break one (section 4 documents both, as `getScene`'s booleans in Phase 2).
+  - **Not in §1.4, a bug:** `createCameras` read entity id 0 as "no camera" (`firstCamId &&`), so a
+    persistent camera named first that is entity 0 never became active (`!== undefined` now). Its
+    two throws no longer `lerror` first (the load logs the failure once).
+  - **The move map** (`moveMap.ts --check`) is stale since this plan's first new file, and its
+    layout report now lists D5's `ui/DraggableWindow.ts` → `kernel/scene/SceneHooks.ts` and
+    `kernel/init/BootHooks.ts` under the report-only "ui → kernel" (next to its existing `Config`
+    and `MainLoop` imports): for p617. The outputs are regenerated in Phase 9, once the new files
+    are tracked (the tool reads git's tracked files).
+  - **Tests:** `SceneLoader.test.ts` +2: a persistent camera named first that is entity 0 becomes
+    active; a scene without a created camera fails to load.
+  - **Checks:** `tsc` (both), the changed files' lint, `yarn test` (63 files, 523 passed), the docs
+    ratchet (no new undocumented export; `kernel/scene` 67 / 76, the 9 left are section 4's).
 
 ### Phase 4: cameras, lights, meshes (`Camera.ts`, `Light.ts`, `LightHelpers.ts`, `Mesh.ts`, `MeshUserData.ts`)
 
