@@ -685,6 +685,42 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
    cleanup (inputs, flags), the lazy import loaded only for a scene that names an import.
 6. `yarn verify:scenes`, `yarn verify:embed`, `yarn sbp` (D4's numbers recorded).
 
+**As built** (one commit per section):
+
+- **Section 1 (step 1, and step 5's tests for it):**
+  - **D3:** `loadScene` returns `Promise<boolean>` and never rejects. One load runs at a time
+    (`runQueuedLoadAsync`): a call during a load waits, a later call replaces the waiting one
+    (which resolves `false` at once). The waiting load starts as soon as the running one settles,
+    before its caller's `await` resumes. A `@remarks` says never to await it from scene code or a
+    scene hook (the call would wait for the load it runs in).
+  - **The load in four steps** (step 3's split, started here because D3 needed it):
+    `resolveLoadTarget` (the start-scene and loader resolution, throws before anything changes, so
+    an unknown scene, scene code or loader resolves `false` with the state untouched: it used to
+    reject, with `currentlyLoading` and the asset owner left set), `beginLoad` (the state a load
+    sets), `runLoadPhasesAsync` (async/await, no `.then` nesting) and `finishLoad`, one end for
+    both outcomes. A failed load also undoes the inputs, the canvas's pointer events, the
+    debugger, the suspended windows (`handleDraggableWindowsOnSceneChangeEnd(true)`), the loading
+    scene id and, beyond D3's list, the asset owner (back to the current scene: registrations
+    after a failure were tagged with the failed scene's id, which no later load released). A
+    promise chain, not a `try` (the debug-gated calls stay foldable). The settled hooks run for
+    every load that began. Not done: a failure's own assets aren't released (the previous scene,
+    torn down or not, stays current; the next load releases it as before).
+  - **PF1:** nothing to change: with the queue no load's `exit` can run while another's `created`
+    hook awaits its files.
+  - **Bug B (SL3):** `resolveTextureParams` resolves a material's texture ids into a copy; the
+    unused `j` loop is gone.
+  - **The mount (not in the plan):** `AekashaMount.loadScene` returns the boolean (`false` after
+    `unmount()` and on a fallback handle), and a first scene that fails throws in the mount's
+    `start`, so the fallback image shows instead of a dead canvas (before, only a missing scene
+    did, by the rejection D3 removed). Phase 8: the embed walkthrough.
+  - **Callers (Risk 1):** the debugger's scene list and the on-screen tools' scene switch skip
+    while `isCurrentlyLoading()` (unchanged: they never queue); `textureAtlases` /
+    `textureArrays`' `leaveTo` and the mount handle queue; `src/index.ts` awaits the first load.
+  - **Tests:** `kernel/scene/SceneLoader.test.ts` (5): the queue (B dropped, C after A), a failed
+    load's cleanup and the next load after it, an unknown scene and an unknown loader, bug B over
+    a revisit (the cached params keep the id, each visit's material gets its own texture).
+  - **Checks:** `tsc` (both), the changed files' lint, `yarn test` (61 files, 518 passed).
+
 ### Phase 4: cameras, lights, meshes (`Camera.ts`, `Light.ts`, `LightHelpers.ts`, `Mesh.ts`, `MeshUserData.ts`)
 
 1. CA1, CA2 (the active camera keyed to the default world: a camera of another world never becomes
