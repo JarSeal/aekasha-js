@@ -2,23 +2,23 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1731,
-      "total": 2314
+      "documented": 1762,
+      "total": 2305
     },
     "members": {
-      "documented": 331,
-      "total": 445
+      "documented": 330,
+      "total": 434
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1687,
-        "total": 2251
+        "documented": 1718,
+        "total": 2242
       },
       "members": {
-        "documented": 281,
-        "total": 365
+        "documented": 280,
+        "total": 354
       }
     },
     "toolkit": {
@@ -841,50 +841,16 @@
     },
     "engine/kernel/camera": {
       "exports": {
-        "documented": 10,
-        "total": 32
+        "documented": 26,
+        "total": 26
       },
       "members": {
-        "documented": 1,
-        "total": 11
+        "documented": 0,
+        "total": 0
       },
       "undocumented": {
-        "exports": [
-          "Camera#CameraDebugLSData",
-          "Camera#CameraEntityDebugState",
-          "Camera#CameraSceneDebugState",
-          "Camera#cameraDebugGUI",
-          "Camera#createCameraEntity",
-          "Camera#disposeCamera",
-          "Camera#getActiveCamera",
-          "Camera#getActiveCameraId",
-          "Camera#getAllCamerasAsArray",
-          "Camera#getCameraByAppId",
-          "Camera#getCurrentCamera",
-          "Camera#getCurrentCameraId",
-          "Camera#getMainAppCameraId",
-          "Camera#initDebugCamera",
-          "Camera#isAnyCameraHelperVisible",
-          "Camera#isDebugCameraActive",
-          "Camera#setActiveCamera",
-          "Camera#setCurrentCamera",
-          "Camera#setMainCamera",
-          "Camera#syncCameraHelpersFromLS",
-          "Camera#toggleAllCameraHelpers",
-          "Camera#toggleDebugCamera"
-        ],
-        "members": [
-          "Camera#CameraEntityDebugState.helperVisible",
-          "Camera#CameraSceneDebugState.debugCam",
-          "Camera#DebugCamLSProps.enabled",
-          "Camera#DebugCamLSProps.far",
-          "Camera#DebugCamLSProps.fov",
-          "Camera#DebugCamLSProps.latestAppCameraId",
-          "Camera#DebugCamLSProps.near",
-          "Camera#DebugCamLSProps.position",
-          "Camera#DebugCamLSProps.target",
-          "Camera#DebugCamLSProps.zoom"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "engine/kernel/config": {
@@ -983,28 +949,15 @@
     },
     "engine/kernel/light": {
       "exports": {
-        "documented": 8,
-        "total": 20
+        "documented": 17,
+        "total": 17
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "Light#LightProps",
-          "Light#SHADOW_PRESETS",
-          "Light#ShadowQuality",
-          "Light#createLightEntity",
-          "Light#debugGUI",
-          "Light#getLightByAppId",
-          "Light#isAnyLightHelperVisible",
-          "Light#setLightEnabled",
-          "Light#setLightFrustumCullingEnabled",
-          "Light#setLightObjectCullingEnabled",
-          "Light#setLightShadowEnabled",
-          "Light#toggleAllLightHelpers"
-        ],
+        "exports": [],
         "members": []
       }
     },
@@ -1024,7 +977,7 @@
     },
     "engine/kernel/mesh": {
       "exports": {
-        "documented": 8,
+        "documented": 13,
         "total": 13
       },
       "members": {
@@ -1032,13 +985,7 @@
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "Mesh#MeshProps",
-          "Mesh#createMeshEntity",
-          "Mesh#disposeMesh",
-          "Mesh#getMeshByAppId",
-          "MeshUserData#setMeshCreatePropsToUserData"
-        ],
+        "exports": [],
         "members": []
       }
     },
@@ -1072,7 +1019,7 @@
     },
     "engine/schemas": {
       "exports": {
-        "documented": 46,
+        "documented": 47,
         "total": 122
       },
       "members": {
@@ -1148,7 +1095,6 @@
           "_HelperSchemas#DebugDataSchema",
           "_HelperSchemas#EntityDebugData",
           "_HelperSchemas#EntityDebugDataSchema",
-          "_HelperSchemas#ShadowQuality",
           "_HelperSchemas#ShadowQualitySchema",
           "_HelperSchemas#UserData",
           "_HelperSchemas#UserDataSchema",

@@ -105,6 +105,14 @@ export const SHADOW_PRESETS: Record<ShadowQuality, ShadowPreset> = {
  * schema's `LightProps` (`aekasha/schemas`, what a `*.light.json` holds): it also takes three's
  * colour representations and, for a spot light's `map`, a texture object besides a registered
  * texture id.
+ *
+ * `enabled: false` creates it disabled. The shadow-casting types (point, directional, spot) cast
+ * none unless `castShadow`, and take a `shadowPreset` (`MEDIUM` by default) that the `shadow*`
+ * values fine-tune; `shadowCameraFrustum` is a directional light's shadow camera's left, right,
+ * top and bottom. A directional or spot light gets a target entity at `targetPos` (the origin by
+ * default). A point or spot light can opt into the ECS frustum culling
+ * (`frustumCullingEnabled`) and the spatial index's object culling (`objectCullingEnabled`). A
+ * spot light's `map` is its cookie texture.
  */
 export type LightProps = {
   enabled?: boolean;
@@ -150,7 +158,7 @@ export type LightProps = {
       shadowNormalBias?: number;
       shadowMapSize?: [number, number];
       shadowCameraNearFar?: [number, number];
-      shadowCameraFrustum?: [number, number, number, number]; // Left, Right, Top, Bottom
+      shadowCameraFrustum?: [number, number, number, number];
       shadowBlurSamples?: number;
       shadowRadius?: number;
       shadowIntensity?: number;
@@ -181,6 +189,32 @@ export type LightProps = {
     }
 );
 
+/**
+ * Creates a light entity: an ambient, hemisphere, point, directional or spot light (in the root
+ * scene unless `entityOpts.doNotAddToScene`) with an `OBJECT3D` and a transform, and for a
+ * directional or spot light a target entity (deleted with it, see {@link getLightTargetId}).
+ * Point and spot lights join the spatial index unless `entityOpts.spatialIndex` is `false`. In
+ * the debug env the debugger's saved overrides for its app id apply, unless the light has a
+ * manager (`entityOpts.managedBy`).
+ * @param ecsWorld default: the default world
+ * @returns the light's entity id
+ * @example
+ * ```ts
+ * import { createLightEntity } from 'aekasha';
+ *
+ * createLightEntity({ type: 'AMBIENT', intensity: 0.3 }, { appId: 'ambient' });
+ * createLightEntity(
+ *   {
+ *     type: 'DIRECTIONAL',
+ *     intensity: 2,
+ *     position: { x: 5, y: 10, z: 5 },
+ *     castShadow: true,
+ *     shadowPreset: 'HIGH',
+ *   },
+ *   { appId: 'sun' }
+ * );
+ * ```
+ */
 export const createLightEntity = (
   lightProps: LightProps,
   entityOpts?: CoreEntityOpts,
@@ -392,11 +426,32 @@ export const createLightEntity = (
 };
 
 /**
- * Returns the entityId of the light's target, if it exists.
+ * Returns the entity id of a directional or spot light's target: move its transform to aim the
+ * light.
+ * @returns the target's entity id, or `undefined` for a light without one
+ * @example
+ * ```ts
+ * import { getECSWorld, getEntityIdByAppId, getLightTargetId } from 'aekasha';
+ *
+ * const world = getECSWorld();
+ * const sunId = getEntityIdByAppId('sun');
+ * const targetId = sunId !== undefined ? getLightTargetId(sunId, world) : undefined;
+ * if (targetId !== undefined) world.setTransform(targetId, { pos: { x: 0, y: 0, z: -5 } });
+ * ```
  */
 export const getLightTargetId = (lightId: number, world: ECSWorld): number | undefined =>
   world.getComponent(lightId, ComponentType.TARGET_LINK)?.targetId;
 
+/**
+ * Enables or disables a light entity (`DISABLED`): a disabled light, and its target, are hidden.
+ * @example
+ * ```ts
+ * import { getECSWorld, getEntityIdByAppId, setLightEnabled } from 'aekasha';
+ *
+ * const lampId = getEntityIdByAppId('lamp');
+ * if (lampId !== undefined) setLightEnabled(lampId, false, getECSWorld());
+ * ```
+ */
 export const setLightEnabled = (lightId: number, enabled: boolean, world: ECSWorld) => {
   if (enabled) {
     world.removeComponent(lightId, ComponentType.DISABLED);
@@ -405,6 +460,11 @@ export const setLightEnabled = (lightId: number, enabled: boolean, world: ECSWor
   }
 };
 
+/**
+ * Opts a light entity into the ECS frustum culling, or out of it (`setFrustumCullingEnabled`,
+ * which isn't light specific).
+ * @internal
+ */
 // A function, not an alias (`= setFrustumCullingEnabled`): Light.ts → ObjectFrustumCullingSystem.ts
 // → ECSCoreSystems.ts → Light.ts is an import cycle, and an alias would read the import while
 // this module loads, possibly before ObjectFrustumCullingSystem.ts has defined it
@@ -414,6 +474,11 @@ export const setLightFrustumCullingEnabled = (
   world: ECSWorld
 ) => setFrustumCullingEnabled(entityId, enabled, world);
 
+/**
+ * Opts a point or spot light entity into the spatial index's object culling (`spatial()`), or out
+ * of it, which also shows it if it was culled.
+ * @internal
+ */
 export const setLightObjectCullingEnabled = (
   lightId: number,
   enabled: boolean,
@@ -432,7 +497,8 @@ export const setLightObjectCullingEnabled = (
 };
 
 /**
- * Cleanup Light Resources and its linked Target
+ * A light entity's deletion hook: deletes its target entity, detaches and disposes its light.
+ * @internal
  */
 export const disposeLight = (entityId: number, ecsWorld?: ECSWorld) => {
   const world = ecsWorld || getECSWorld();
@@ -473,12 +539,33 @@ export type LightGUIModule = typeof import('./debug/_dbg__LightGUI');
  */
 export let lightDebugGUI: DebugModuleRef<LightGUIModule> | null = null;
 
+/**
+ * Whether the light helpers show (debug env; `false` otherwise).
+ * @internal
+ */
 export const isAnyLightHelperVisible = (): boolean =>
   Boolean(useDebug(lightDebugGUI)?.globalHelpersVisible);
 
+/**
+ * Shows or hides the light helpers, toggling them without `show` (debug env; nothing otherwise).
+ * @internal
+ */
 export const toggleAllLightHelpers = (show?: boolean) =>
   useDebug(lightDebugGUI)?._toggleAllLightHelpers(show);
 
+/**
+ * Returns the light of the entity with this app id.
+ * @param ecsWorld default: the default world
+ * @returns the light, or `undefined` when no entity has the id (or it has no object)
+ * @throws when the entity's object isn't a light
+ * @example
+ * ```ts
+ * import { getLightByAppId } from 'aekasha';
+ *
+ * const lamp = getLightByAppId('lamp');
+ * if (lamp) lamp.intensity = 4;
+ * ```
+ */
 export const getLightByAppId = (appId: string, ecsWorld?: ECSWorld) => {
   const world = ecsWorld || getECSWorld();
   const entityId = getEntityIdByAppId(appId, world);

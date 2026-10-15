@@ -40,18 +40,29 @@ export const installMeshes = (ctx: FeatureContext) => {
   });
 };
 
+/**
+ * A mesh's props for {@link createMeshEntity}: the runtime type, wider than the mesh JSON schema's
+ * (it also takes three's geometries and materials).
+ */
 export type MeshProps = {
+  /** A geometry, the props `createGeometry` creates (or returns, for a registered id) one from, or a registered geometry's id */
   geo: THREE.BufferGeometry | GeoProps | string;
+  /** A material, the props `createMaterial` creates (or returns, for a registered id) one from, or a registered material's id */
   mat: THREE.Material | MatProps | string;
   /** Per-mesh material overrides: the mesh gets a cached variant of its (registered) material, see getMaterialVariant */
   matOverrides?: MaterialVariantOverrides;
+  /** Default: `false` */
   castShadow?: boolean;
+  /** Default: `false` */
   receiveShadow?: boolean;
+  /** Compiles its pipelines at creation (and its LOD levels' when it gets a LOD), so its first frame doesn't stall on it */
   preWarm?: boolean;
   position?: { x?: number; y?: number; z?: number };
+  /** Euler angles in radians; `quaternion` wins over it */
   rotation?: { x?: number; y?: number; z?: number };
   quaternion?: THREE.Quaternion;
   scale?: { x: number; y: number; z: number };
+  /** The entity's app id, over `entityOpts.appId` */
   appId?: string;
   /** Native Object3D.frustumCulled (Three.js's own per-mesh render-list culling). Defaults to Three's own default (true). */
   frustumCullingEnabled?: boolean;
@@ -93,6 +104,7 @@ const getPreWarmCamera = () => (preWarmCamera ??= new THREE.PerspectiveCamera())
  * Compiles a mesh's pipelines ahead of its first draw (`renderer.compileAsync`), so the frame it
  * first shows in doesn't stall on it. Used by `createMeshEntity`'s `preWarm` and for every level
  * of a pre-warmed mesh's LOD.
+ * @internal
  * @param mesh the mesh, or a stand-in with the geometry and material to compile
  * @param label names the mesh in the warning
  */
@@ -124,6 +136,29 @@ export const preWarmMesh = (mesh: THREE.Mesh, label: string) => {
   }
 };
 
+/**
+ * Creates a mesh entity: a `THREE.Mesh` (in the root scene unless `entityOpts.doNotAddToScene`)
+ * with an `OBJECT3D` and a transform. It takes a ref on its registered geometry and material,
+ * released when the entity is deleted (an unregistered one warns in the debug env: nothing ever
+ * disposes it). It joins the spatial index unless `entityOpts.spatialIndex` is `false`.
+ * @param ecsWorld default: the default world
+ * @returns the mesh's entity id
+ * @throws for a geometry or material id that isn't registered
+ * @example
+ * ```ts
+ * import { createMeshEntity } from 'aekasha';
+ *
+ * createMeshEntity(
+ *   {
+ *     geo: { type: 'BOX', params: { width: 1, height: 1, depth: 1 } },
+ *     mat: 'crateMaterial',
+ *     castShadow: true,
+ *     position: { y: 0.5 },
+ *   },
+ *   { appId: 'crate' }
+ * );
+ * ```
+ */
 export const createMeshEntity = (
   props: MeshProps,
   entityOpts?: CoreEntityOpts,
@@ -308,6 +343,13 @@ const addLodComponent = (entityId: number, def: LodDef, world: ECSWorld) => {
  * @param ecsWorld the entity's world (default: the default world)
  * @returns resolves to whether the LOD was set: at once for levels, when the chain is ready for
  *   `AUTO` (false when it has none, or the LOD was replaced, removed or the entity deleted first)
+ * @example
+ * ```ts
+ * import { getEntityIdByAppId, setMeshLod } from 'aekasha';
+ *
+ * const rockId = getEntityIdByAppId('rock');
+ * if (rockId !== undefined) void setMeshLod(rockId, 'AUTO');
+ * ```
  */
 export const setMeshLod = (
   entityId: number,
@@ -367,6 +409,13 @@ export const setMeshLod = (
  * chain. A no-op without a LOD.
  * @param entityId a mesh entity
  * @param ecsWorld the entity's world (default: the default world)
+ * @example
+ * ```ts
+ * import { getEntityIdByAppId, removeMeshLod } from 'aekasha';
+ *
+ * const rockId = getEntityIdByAppId('rock');
+ * if (rockId !== undefined) removeMeshLod(rockId);
+ * ```
  */
 export const removeMeshLod = (entityId: number, ecsWorld?: ECSWorld) => {
   const world = ecsWorld || getECSWorld();
@@ -376,6 +425,11 @@ export const removeMeshLod = (entityId: number, ecsWorld?: ECSWorld) => {
   }
 };
 
+/**
+ * A mesh entity's deletion hook: detaches its mesh and releases its geometry's and materials'
+ * refs (the registries dispose what no one holds any more).
+ * @internal
+ */
 export const disposeMesh = (entityId: number, ecsWorld?: ECSWorld) => {
   const world = ecsWorld || getECSWorld();
 
@@ -413,6 +467,14 @@ const forEachMaterialId = (
  * ref the new one never got (freed while still in use) when the mesh is disposed.
  * @param mesh a mesh created with createMeshEntity (other meshes take no refs: only assigned)
  * @param material the new material(s)
+ * @example
+ * ```ts
+ * import { getMaterial, getMeshByAppId, setMeshMaterial } from 'aekasha';
+ *
+ * const crate = getMeshByAppId('crate');
+ * const highlight = getMaterial('highlightMaterial');
+ * if (crate && highlight) setMeshMaterial(crate, highlight);
+ * ```
  */
 export const setMeshMaterial = (mesh: THREE.Mesh, material: THREE.Material | THREE.Material[]) => {
   const prev = mesh.material;
@@ -427,6 +489,7 @@ export const setMeshMaterial = (mesh: THREE.Mesh, material: THREE.Material | THR
 /**
  * Swaps a mesh entity's geometry and moves its geometry ref count to the new one, like
  * {@link setMeshMaterial} does for materials.
+ * @internal
  * @param mesh a mesh created with createMeshEntity (other meshes take no refs: only assigned)
  * @param geometry the new geometry
  */
@@ -439,6 +502,19 @@ export const setMeshGeometry = (mesh: THREE.Mesh, geometry: THREE.BufferGeometry
   if (prev.userData.id) decGeometryRef(prev.userData.id);
 };
 
+/**
+ * Returns the mesh of the entity with this app id.
+ * @param ecsWorld default: the default world
+ * @returns the mesh, or `undefined` when no entity has the id (or it has no object)
+ * @throws when the entity's object isn't a mesh
+ * @example
+ * ```ts
+ * import { getMeshByAppId } from 'aekasha';
+ *
+ * const crate = getMeshByAppId('crate');
+ * if (crate) crate.visible = false;
+ * ```
+ */
 export const getMeshByAppId = (appId: string, ecsWorld?: ECSWorld) => {
   const world = ecsWorld || getECSWorld();
   const entityId = getEntityIdByAppId(appId, world);

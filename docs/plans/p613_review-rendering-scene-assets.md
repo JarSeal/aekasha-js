@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-4 implemented
 Category: Refactoring, Documentation, Rendering, Assets
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -844,7 +844,7 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
     `EngineRapier.js` / `#2` ±0.1 kB (its two copies swapping names).
   - **`yarn sbp`:** section 2's numbers (D4's).
 
-### Phase 4: cameras, lights, meshes (`Camera.ts`, `Light.ts`, `LightHelpers.ts`, `Mesh.ts`, `MeshUserData.ts`)
+### Phase 4: cameras, lights, meshes (`Camera.ts`, `Light.ts`, `LightHelpers.ts`, `Mesh.ts`, `MeshUserData.ts`) — done
 
 1. CA1, CA2 (the active camera keyed to the default world: a camera of another world never becomes
    it), D6, CA4 (`getCurrentCamera*` removed, `setCurrentCamera` through the app id map).
@@ -937,6 +937,30 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
     `preWarmMesh` ones checked to fail without the fix.
   - **Checks:** `tsc` (both), the changed files' lint, `yarn test` (65 files, 529 passed), the
     docs ratchet (`kernel/mesh` 9 / 13; the rest is step 4's JSDoc).
+- **Section 4 (step 4's JSDoc, and the phase's checks):**
+  - **JSDoc:** every export of the three folders documented, `@example`s on the entry's functions
+    (`createCameraEntity`, `getActiveCamera(Id)`, `cameraLookAtPoint`, `setMainCamera`,
+    `getCameraByAppId`, `createLightEntity`, `getLightTargetId`, `setLightEnabled`,
+    `getLightByAppId`, `createMeshEntity`, `setMeshLod`, `removeMeshLod`, `setMeshMaterial`,
+    `getMeshByAppId`), `MeshProps`' fields, `LightProps`' in its summary (a union: the fields
+    repeat per type), everything on no entry `@internal` (`getMainCamera` and `setMeshGeometry`
+    among them: neither is on an entry, though features use them), the last `(boolean)` tag form
+    gone. `kernel/camera` 26 / 26, `kernel/light` 17 / 17, `kernel/mesh` 13 / 13.
+  - **VP5 (filed in Phase 7's step 1):** the `@example` check failed `getActiveCamera`'s first
+    example: a viewport's `camera` resolver returns `Camera | null`, so `getActiveCamera` isn't
+    one, though the root CLAUDE.md and the Hub's viewports guide suggest it. The example says
+    `() => getActiveCamera() ?? null` until Phase 7 widens the resolver.
+  - **`yarn verify:scenes` not run** (the plan runs it after Phases 3, 5, 7 and 9): no scene or
+    toolkit asset sets a camera `zoom` (CA1), and nothing else here changes what a scene shows.
+  - **`yarn verify:baselines`:** no debug code in either production build; the 17 API changes are
+    this phase's (removed: `Camera.ts`' four LS types, `getCurrentCamera(Id)`,
+    `syncCameraHelpersFromLS`, `Light.ts`' four dead functions, `debugGUI`, the `ShadowQuality`
+    enum; added: `CameraGUIModule`, `LightGUIModule`, `lightDebugGUI`, `ShadowPreset`), no entry
+    changed. Recorded (`--update`) with `docs.json` (exports 1762 / 2305) and the two bundle
+    files: the kernel's camera and light groups a little smaller (the enum's runtime object, the
+    removed code), the banner's main chunk 48 B smaller.
+  - **Checks:** `tsc` (both), the three folders' lint, `yarn test` (65 files, 529 passed, the
+    `@example` check included).
 
 ### Phase 5: asset registries (`Geometry.ts`, `Material.ts`, `Texture.ts`, `TextureArray.ts`, `TextureAtlas.ts`, `AssetFiles.ts`, `AssetOwners.ts`, `AssetUrl.ts`, `SceneAssetRelease.ts`, `Disposal.ts`)
 
@@ -959,7 +983,11 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
 ### Phase 7: PostFX and viewports (`features/postfx/`, `features/viewports/`)
 
 1. VP1 (`try` / `finally` around the per-viewport render: no allocation), VP2 (disconnected with
-   the layer, if the layer can go: check `unmount()`), VP3.
+   the layer, if the layer can go: check `unmount()`), VP3. VP5 (found in Phase 4): a viewport's
+   `camera` resolver returns `Camera | null`, so `getActiveCamera` (`Camera | undefined`) isn't
+   one, though the root CLAUDE.md's Viewports section and the Hub's viewports guide
+   (`() => getActiveCamera()`) suggest it: the resolver takes `undefined` too (a widening), then
+   `getActiveCamera`'s `@example` drops its `?? null`.
 2. H1 for the two folders; JSDoc.
 3. The `perf-auditor` agent over `renderViewports`, `getActivePostFxPipeline` and the camera
    resizer (the per-frame code in scope); its findings fixed or listed here.
