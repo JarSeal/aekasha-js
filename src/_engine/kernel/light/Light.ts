@@ -13,6 +13,7 @@ import { getTexture } from '../assets/Texture';
 import { retagAssetOwner } from '../assets/AssetOwners';
 import { setFrustumCullingEnabled } from '../ecs/ObjectFrustumCullingSystem';
 import type { FeatureContext } from '../init/Features';
+import type { ShadowQuality } from '../../schemas/_HelperSchemas';
 
 /**
  * Installs the lights (the kernel, p607): a light entity's deletion disposes its light (and its
@@ -33,53 +34,65 @@ export const installLights = (ctx: FeatureContext) => {
 export const registerLightDebugGUI = async (world: ECSWorld) => {
   // Awaited, so the helpers' LATE_MAIN system registers before the debug camera's helpers' (a
   // load race before p607: the system order differed between page loads)
-  debugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__LightGUI'));
+  lightDebugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__LightGUI'));
   await loadDebugModuleAsync(() => import('./debug/_dbg__LightHelpers'));
-  if (!debugGUI) return;
+  if (!lightDebugGUI) return;
 
   registerOnAllSceneEnters('lightHelpersSceneSync', () => {
     const sceneId = getCurrentSceneId();
-    if (sceneId) useDebug(debugGUI)?.syncDebugVisualsFromLS(sceneId, world);
+    if (sceneId) useDebug(lightDebugGUI)?.syncDebugVisualsFromLS(sceneId, world);
 
-    useDebug(debugGUI)?.initLightDebuggerGUI();
+    useDebug(lightDebugGUI)?.initLightDebuggerGUI();
   });
   // After the 3D symbols' and the helpers' hooks on the tag, which attach what the list shows
   ECSWorld.registerComponentHooks(ComponentType.TAG_IS_LIGHT, {
-    onAddComponent: () => useDebug(debugGUI)?.updateLightsDebuggerGUI(),
+    onAddComponent: () => useDebug(lightDebugGUI)?.updateLightsDebuggerGUI(),
   });
 };
 
-export enum ShadowQuality {
-  LOW = 'LOW', // Mobile / Integrated Graphics
-  MEDIUM = 'MEDIUM', // Standard Laptops
-  HIGH = 'HIGH', // Gaming Desktops
-  ULTRA = 'ULTRA', // M4 Max / RTX 4090 Tier
-}
+/**
+ * A shadow quality preset's values: what `createLightEntity` applies before a light's own
+ * `shadow*` props.
+ * @internal
+ */
+export type ShadowPreset = {
+  mapSize: [number, number];
+  blurSamples: number;
+  radius: number;
+  bias: number;
+  normalBias: number;
+};
 
-export const SHADOW_PRESETS = {
-  [ShadowQuality.LOW]: {
-    mapSize: [512, 512] as [number, number],
+/**
+ * The shadow quality presets, by `shadowPreset`: `LOW` for mobile and integrated graphics,
+ * `MEDIUM` (the default) for standard laptops, `HIGH` for gaming desktops, `ULTRA` for the top
+ * tier.
+ * @internal
+ */
+export const SHADOW_PRESETS: Record<ShadowQuality, ShadowPreset> = {
+  LOW: {
+    mapSize: [512, 512],
     blurSamples: 4,
     radius: 1,
     bias: -0.0005,
     normalBias: 0.02,
   },
-  [ShadowQuality.MEDIUM]: {
-    mapSize: [1024, 1024] as [number, number],
+  MEDIUM: {
+    mapSize: [1024, 1024],
     blurSamples: 8,
     radius: 2,
     bias: -0.0002,
     normalBias: 0.04,
   },
-  [ShadowQuality.HIGH]: {
-    mapSize: [2048, 2048] as [number, number],
+  HIGH: {
+    mapSize: [2048, 2048],
     blurSamples: 16,
     radius: 4,
     bias: -0.0001,
     normalBias: 0.05,
   },
-  [ShadowQuality.ULTRA]: {
-    mapSize: [4096, 4096] as [number, number],
+  ULTRA: {
+    mapSize: [4096, 4096],
     blurSamples: 32,
     radius: 5,
     bias: -0.00005,
@@ -87,6 +100,12 @@ export const SHADOW_PRESETS = {
   },
 };
 
+/**
+ * A light's props for {@link createLightEntity}: the runtime type. It's wider than the light JSON
+ * schema's `LightProps` (`aekasha/schemas`, what a `*.light.json` holds): it also takes three's
+ * colour representations and, for a spot light's `map`, a texture object besides a registered
+ * texture id.
+ */
 export type LightProps = {
   enabled?: boolean;
   appId?: string;
@@ -217,7 +236,7 @@ export const createLightEntity = (
             light.map = texResource;
           } else {
             lwarn(
-              `[Light Manager] Could not locate cookie texture resource "${props.map}" for SpotLight entity "${appId}". Leaving map unassigned.`
+              `Could not locate cookie texture resource "${props.map}" for SpotLight entity "${appId}". Leaving map unassigned.`
             );
           }
         } else {
@@ -231,10 +250,9 @@ export const createLightEntity = (
 
   // --- Shadow Logic (Full Tuning) ---
   if (
-    'castShadow' in light &&
-    (light instanceof THREE.PointLight ||
-      light instanceof THREE.DirectionalLight ||
-      light instanceof THREE.SpotLight)
+    light instanceof THREE.PointLight ||
+    light instanceof THREE.DirectionalLight ||
+    light instanceof THREE.SpotLight
   ) {
     light.castShadow =
       'castShadow' in props && props.castShadow !== undefined ? props.castShadow : false;
@@ -244,7 +262,7 @@ export const createLightEntity = (
     const preset =
       'shadowPreset' in props && props.shadowPreset
         ? SHADOW_PRESETS[props.shadowPreset]
-        : SHADOW_PRESETS[ShadowQuality.MEDIUM];
+        : SHADOW_PRESETS.MEDIUM;
     s.mapSize.set(preset.mapSize[0], preset.mapSize[1]);
     s.blurSamples = preset.blurSamples;
     s.radius = preset.radius;
@@ -379,68 +397,6 @@ export const createLightEntity = (
 export const getLightTargetId = (lightId: number, world: ECSWorld): number | undefined =>
   world.getComponent(lightId, ComponentType.TARGET_LINK)?.targetId;
 
-/**
- * Returns the Transform component of the light's target.
- */
-export const getLightTargetTransform = (
-  lightId: number,
-  world: ECSWorld
-): Transform | undefined => {
-  const targetId = getLightTargetId(lightId, world);
-  if (targetId === undefined) return undefined;
-  return world.getComponent(targetId, ComponentType.TRANSFORM);
-};
-
-/**
- * Updates the light target's position, if it has a target.
- */
-export const setLightTargetPosition = (
-  lightId: number,
-  pos: { x: number; y: number; z: number },
-  world: ECSWorld
-): void => {
-  const targetId = getLightTargetId(lightId, world);
-  if (targetId === undefined) return;
-  const transform = world.getComponent(targetId, ComponentType.TRANSFORM);
-  if (transform) {
-    transform.position.set(pos.x, pos.y, pos.z);
-    transform.setDirty();
-    world.commitTransform(targetId, transform);
-  }
-};
-
-/**
- * Aim the light target at a specific entity by copying its position.
- * Great for "locking" a spotlight onto a character.
- */
-export const aimLightAtEntity = (
-  lightId: number,
-  targetEntityId: number,
-  world: ECSWorld
-): void => {
-  const targetTransform = world.getComponent(targetEntityId, ComponentType.TRANSFORM);
-  const lightTargetId = getLightTargetId(lightId, world);
-  const lightTargetTransform =
-    lightTargetId !== undefined
-      ? world.getComponent(lightTargetId, ComponentType.TRANSFORM)
-      : undefined;
-
-  if (targetTransform && lightTargetTransform && lightTargetId !== undefined) {
-    lightTargetTransform.position.copy(targetTransform.position);
-    lightTargetTransform.setDirty();
-    world.commitTransform(lightTargetId, lightTargetTransform);
-  }
-};
-
-export const setLightShadowEnabled = (lightId: number, enabled: boolean, world: ECSWorld) => {
-  const objComp = world.getComponent(lightId, ComponentType.OBJECT3D);
-  if (objComp && objComp.value instanceof THREE.Light) {
-    objComp.value.castShadow = enabled;
-    // @Note: Some WebGPU materials might need a re-compile if shadows are toggled,
-    // but the WebGPU renderer generally handles this via its node system.
-  }
-};
-
 export const setLightEnabled = (lightId: number, enabled: boolean, world: ECSWorld) => {
   if (enabled) {
     world.removeComponent(lightId, ComponentType.DISABLED);
@@ -449,21 +405,9 @@ export const setLightEnabled = (lightId: number, enabled: boolean, world: ECSWor
   }
 };
 
-// Generic across entity types as of docs/plans/_DONE_p080_object3d-frustum-culling.md §2.1/§2.4 —
-// kept as a light-named export since `_dbg__LightGUI.ts` and `createLightEntity` already
-// call it by this name, but the actual FRUSTUM_CULLING_ENABLED/TAG_FRUSTUM_CULLED toggling
-// lives in ObjectFrustumCullingSystem.ts, shared with MeshManager.ts.
-//
-// Deliberately a wrapper function, not `export const setLightFrustumCullingEnabled =
-// setFrustumCullingEnabled;` — that direct alias reads the import eagerly at module-evaluation
-// time, and LightManager.ts <-> ObjectFrustumCullingSystem.ts <-> ECSCoreSystems.ts <->
-// LightManager.ts form a circular import (ECSCoreSystems.ts already imports
-// isAnyLightHelperVisible from here). Depending on which module the app happens to import
-// first, that eager read can land before ObjectFrustumCullingSystem.ts's own module body has
-// reached its `setFrustumCullingEnabled` declaration, throwing "Cannot access
-// 'setFrustumCullingEnabled' before initialization". Wrapping it in a function defers the
-// read to call time, by which point every module has finished loading — same reason
-// isAnyLightHelperVisible (used only inside hook closures) never hits this.
+// A function, not an alias (`= setFrustumCullingEnabled`): Light.ts → ObjectFrustumCullingSystem.ts
+// → ECSCoreSystems.ts → Light.ts is an import cycle, and an alias would read the import while
+// this module loads, possibly before ObjectFrustumCullingSystem.ts has defined it
 export const setLightFrustumCullingEnabled = (
   entityId: number,
   enabled: boolean,
@@ -500,7 +444,7 @@ export const disposeLight = (entityId: number, ecsWorld?: ECSWorld) => {
 
   const objComp = world.getComponent(entityId, ComponentType.OBJECT3D);
   if (!objComp) {
-    useDebug(debugGUI)?._onLightDeleted(entityId, world);
+    useDebug(lightDebugGUI)?._onLightDeleted(entityId, world);
     return;
   }
 
@@ -512,26 +456,34 @@ export const disposeLight = (entityId: number, ecsWorld?: ECSWorld) => {
   light.removeFromParent();
   light.dispose();
 
-  useDebug(debugGUI)?._onLightDeleted(entityId, world);
+  useDebug(lightDebugGUI)?._onLightDeleted(entityId, world);
 };
 
 // --- DEBUG LIGHT HELPERS ---
 
-type LightGUIModule = typeof import('./debug/_dbg__LightGUI');
+/**
+ * The lights' debug GUI module.
+ * @internal
+ */
+export type LightGUIModule = typeof import('./debug/_dbg__LightGUI');
 
-export let debugGUI: DebugModuleRef<LightGUIModule> | null = null;
+/**
+ * The lights' debug GUI, loaded by the boot's debug step (debug env only; `null` otherwise).
+ * @internal
+ */
+export let lightDebugGUI: DebugModuleRef<LightGUIModule> | null = null;
 
 export const isAnyLightHelperVisible = (): boolean =>
-  Boolean(useDebug(debugGUI)?.globalHelpersVisible);
+  Boolean(useDebug(lightDebugGUI)?.globalHelpersVisible);
 
 export const toggleAllLightHelpers = (show?: boolean) =>
-  useDebug(debugGUI)?._toggleAllLightHelpers(show);
+  useDebug(lightDebugGUI)?._toggleAllLightHelpers(show);
 
 export const getLightByAppId = (appId: string, ecsWorld?: ECSWorld) => {
   const world = ecsWorld || getECSWorld();
   const entityId = getEntityIdByAppId(appId, world);
   let light: THREE.Light | undefined = undefined;
-  if (entityId) {
+  if (entityId !== undefined) {
     const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
     if (obj && !(obj as THREE.Light).isLight) {
       const msg = `Found Object3D is not a light (type: ${obj.type}).`;

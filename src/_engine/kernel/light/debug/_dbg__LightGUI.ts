@@ -21,7 +21,7 @@ import {
   updateDraggableWindowsOfKind,
 } from '../../../ui/DraggableWindow';
 import { isCurrentlyLoading } from '../../scene/SceneLoader';
-import type { ShadowQuality } from '../Light';
+import type { ShadowQuality } from '../../../schemas/_HelperSchemas';
 import {
   setLightEnabled,
   setLightFrustumCullingEnabled,

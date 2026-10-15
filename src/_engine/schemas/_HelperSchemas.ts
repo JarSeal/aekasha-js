@@ -97,4 +97,5 @@ export type CoreEntityOpts = z.infer<typeof CoreEntityOptsSchema> & {
 
 export const ShadowQualitySchema = z.enum(['LOW', 'MEDIUM', 'HIGH', 'ULTRA']);
 
+/** A light's shadow quality preset (`MEDIUM` by default): the light's `shadowPreset` */
 export type ShadowQuality = z.infer<typeof ShadowQualitySchema>;

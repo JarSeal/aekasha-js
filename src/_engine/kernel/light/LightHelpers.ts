@@ -1,6 +1,10 @@
 import type * as THREE from 'three/webgpu';
 
-/** Determines and returns the light types */
+/**
+ * A light's type and what it supports: a shadow, a position, distance and decay, a debug helper
+ * and 3D symbol, a target, frustum culling and the spatial index.
+ * @internal
+ */
 export const getLightCharacteristics = (light: THREE.Light) => {
   const c = {
     isAmbientLight: false,
@@ -40,7 +44,7 @@ export const getLightCharacteristics = (light: THREE.Light) => {
     c.hasDecay = true;
   }
 
-  // Frustum culling (point/spot only — see docs/plans/light-culling.md §1)
+  // Frustum culling: point and spot lights only (a directional or ambient light lights everything)
   c.supportsFrustumCulling = c.isPointLight || c.isSpotLight;
 
   // Spatial index (point/spot only — see docs/plans/_DONE_p050_spatial-index.md §3.1/§9.1). Same

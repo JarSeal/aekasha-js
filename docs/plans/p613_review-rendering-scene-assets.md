@@ -890,6 +890,36 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
     the active camera), each checked to fail without its fix.
   - **Checks:** `tsc` (both), the changed files' lint, `yarn test` (63 files, 525 passed), the
     docs ratchet (`kernel/camera` 14 / 26 exports, members 0 / 0).
+- **Section 2 (step 2):**
+  - **Not in §1.4, an API bug:** the entry's `LightProps.shadowPreset` was typed with the
+    `ShadowQuality` string **enum**, which is on no entry, and a string enum takes no literal: an
+    app couldn't pass `shadowPreset: 'HIGH'` without a cast (the scene data reached
+    `createLightEntity` through the gathered JSON's unchecked cast; `SkyLights.ts` wrote
+    `'MEDIUM' as \`${ShadowQuality}\``). The enum is gone: `LightProps` uses the schema's
+    `ShadowQuality` (`schemas/_HelperSchemas.ts`, `'LOW' | 'MEDIUM' | 'HIGH' | 'ULTRA'`, now with
+    a summary), `SHADOW_PRESETS` is a `Record<ShadowQuality, ShadowPreset>` with literal keys
+    (both `@internal`, on no entry). Not a break: the enum was on no entry, and its only value
+    uses were in `Light.ts`. It also lets Phase 5's D11 test pass for this pair (a string isn't
+    assignable to an enum). `SkyLights.ts`' cast and its stale load-order comment
+    ("LightManager imports Scene") gone; `_dbg__LightGUI.ts` imports the schema's type.
+  - **LI1:** the runtime `LightProps` documented as the runtime type, wider than the schema's
+    (three's colours, a texture object for `map`). The schema's `LightProps` (p619's file) gets
+    its summary in Phase 5 with D11's test.
+  - **LI2:** the cycle is still there (Phase 0), so the wrapper stays; its comment is three lines
+    with the current names.
+  - **LI3:** `'castShadow' in light` gone (the `instanceof` checks are the condition). `debugGUI`
+    is `lightDebugGUI`, `LightGUIModule` exported, both `@internal` (the `notExported`;
+    `PropertyLoader.ts` reads the ref). `[Light Manager]` gone; `getLightByAppId`'s `!==
+    undefined`. The world parameters stay as H4 says.
+  - **Dead (D7's rule, not in §1.4):** `getLightTargetTransform`, `setLightTargetPosition`,
+    `aimLightAtEntity` and `setLightShadowEnabled` (with its `@Note`) removed: no caller, on no
+    entry, so no app could reach them.
+  - **H1:** `LightHelpers.ts`' `light-culling.md` path gone (what it explained kept); the
+    `_DONE_p050` path exists and stays. `getLightCharacteristics` `@internal` with a summary.
+  - **Tests:** `kernel/light/Light.test.ts` (1): a string `shadowPreset` applies its preset,
+    `MEDIUM` by default, a light's own `shadowMapSize` wins over the preset.
+  - **Checks:** `tsc` (both), the changed files' lint, `yarn test` (64 files, 526 passed), the
+    docs ratchet (`kernel/light` 10 / 17; the rest is step 4's JSDoc).
 
 ### Phase 5: asset registries (`Geometry.ts`, `Material.ts`, `Texture.ts`, `TextureArray.ts`, `TextureAtlas.ts`, `AssetFiles.ts`, `AssetOwners.ts`, `AssetUrl.ts`, `SceneAssetRelease.ts`, `Disposal.ts`)
 
