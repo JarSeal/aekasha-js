@@ -391,7 +391,7 @@ ecsWorld.addComponent(ballId, SpinComponentType.SPIN, { speed: 2 });
 
 ### 6. Configure the app
 
-`InitEngine`'s `config` (example 1) is merged over the engine defaults, one top-level key at a time.
+`InitEngine`'s `config` (example 1): every key is optional, and one you leave out keeps its default, set by the part of the engine that reads it (`physics.workerTarget`: `'WORKER_THREAD'`).
 
 ```ts
 // src/CONFIG.ts

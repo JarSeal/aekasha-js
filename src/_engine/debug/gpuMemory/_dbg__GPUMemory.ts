@@ -169,7 +169,7 @@ const gpuMemorySamplerSystem = (world: ECSWorld) => {
   sampleGPUMemory();
 };
 
-/** One frame's sample: from gpuMemorySamplerSystem, or in an editor view (ViewManager.ts, the
+/** One frame's sample: from gpuMemorySamplerSystem, or in an editor view (Views.ts, the
  * scene's stages don't run) from an 'AFTER_RENDER' view frame listener. */
 const sampleGPUMemory = () => {
   const renderer = getRenderer();

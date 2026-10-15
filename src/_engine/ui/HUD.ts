@@ -3,7 +3,7 @@ import { CMP, type TCMP } from './CMP';
 let hudRoot: TCMP | null = null;
 export const GUI_CONTAINER_ID = 'guiContainer';
 export const HUD_ROOT_ID = 'hudRoot';
-/** A direct child of the HUD root with this class stays visible in editor views (ViewManager.ts);
+/** A direct child of the HUD root with this class stays visible in editor views (Views.ts);
  * every other one is hidden there (display: none, so it stays mounted). */
 export const KEEP_IN_VIEWS_CLASS = 'aekKeepInViews';
 

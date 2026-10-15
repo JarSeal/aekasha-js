@@ -107,6 +107,26 @@ describe('findDebugCodeInBuild', () => {
     ]);
   });
 
+  it('reports a feature debug hook call left in a script, not the context', () => {
+    const code =
+      'const c={addSceneHooks:Xe,onDebug:r=>{},onDebugAfterStart:r=>{}};' +
+      'install:n=>{n.addSceneHooks(use),n.onDebug(Qte),n.onDebugAfterStart(()=>Gae())}';
+    expect(
+      findDebugCodeInBuild({
+        files: [MAIN, 'assets/space.js'],
+        modules: [],
+        assets: [],
+        scripts: [
+          { file: MAIN, code },
+          { file: 'assets/space.js', code: 'if(!1)ctx.onDebugger(x);const onDebug=1;' },
+        ],
+      })
+    ).toEqual([
+      'ungated debug hook call in assets/index.js: n.onDebug(Qte),n.onDebugAfterStart(()=>Ga…',
+      'ungated debug hook call in assets/index.js: n.onDebugAfterStart(()=>Gae())}…',
+    ]);
+  });
+
   it('passes a file a shipping module imports too', () => {
     expect(
       find(

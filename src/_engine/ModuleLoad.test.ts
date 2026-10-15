@@ -37,6 +37,12 @@ test('every engine module loads in Node without the browser, and leaves the flag
   expect(Object.keys(modules).length).toBeGreaterThan(300);
 
   // No module called initEnvironment at load
-  const { IS_DEBUG_ENV, IS_PROD_TEST_MODE, CUR_ENV } = await import('./kernel/config/Config');
-  expect([IS_DEBUG_ENV, IS_PROD_TEST_MODE, CUR_ENV]).toEqual([false, false, 'production']);
+  const { IS_DEBUG_ENV, IS_PROD_TEST_MODE, getCurrentEnvironment } = await import(
+    './kernel/config/Config'
+  );
+  expect([IS_DEBUG_ENV, IS_PROD_TEST_MODE, getCurrentEnvironment()]).toEqual([
+    false,
+    false,
+    'production',
+  ]);
 }, 60_000);

@@ -64,6 +64,14 @@ const ENTRY_IMPORT = {
   message:
     'Engine code imports engine code by relative path: an entry imported inside the engine makes barrel cycles.',
 };
+// The kernel runs without any feature: it names a feature's types for the data it holds or carries
+// for it, and imports none of its code (p612 D2; devTools/refactor/layoutReport.md lists each)
+const KERNEL_FEATURE_IMPORT = {
+  regex: '^(\\.\\./)+features/',
+  allowTypeImports: true,
+  message:
+    "The kernel imports a feature only with `import type` (component data, config, definitions, import params, worker messages): the feature's code loads only when an app installs it.",
+};
 // Debug code is found by name, wherever its feature keeps it (p608 D4)
 const DEBUG_FILES = ['src/**/_dbg__*.ts'];
 
@@ -212,6 +220,15 @@ export default [
       '@typescript-eslint/no-restricted-imports': [
         'error',
         { patterns: [DEBUG_MODULE_IMPORT, ENTRY_IMPORT] },
+      ],
+    },
+  },
+  {
+    files: ['src/_engine/kernel/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        { patterns: [DEBUG_MODULE_IMPORT, ENTRY_IMPORT, KERNEL_FEATURE_IMPORT] },
       ],
     },
   },

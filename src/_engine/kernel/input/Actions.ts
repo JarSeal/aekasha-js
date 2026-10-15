@@ -11,7 +11,7 @@
 // bindings' own and don't apply here; the master switches (InputState.ts) do, through contexts.
 
 import { isDebugCameraActive } from '../camera/Camera';
-import { isDebugEnvironment } from '../config/Config';
+import { IS_DEBUG_ENV } from '../config/Config';
 import { setActionSampler } from '../loop/MainLoop';
 import { getCurrentSceneId } from '../scene/Scene';
 import { lwarn } from '../../utils/Logger';
@@ -120,7 +120,7 @@ let usesTouchDrag = false;
 // **************************************
 
 const isDebugCamRuleMet = (rule: EnabledInDebugCam) =>
-  !isDebugEnvironment() ||
+  !IS_DEBUG_ENV ||
   !(
     (rule === 'NOT_ENABLED_IN_DEBUG' && isDebugCameraActive()) ||
     (rule === 'ENABLED_ONLY_IN_DEBUG' && !isDebugCameraActive())
@@ -354,7 +354,7 @@ const setActionBindings = (
 ) => {
   a.bindings = bindings;
   a.compiled = compileActionBindings(map.id, a.id, a.type, bindings, map.ignoreModifiers);
-  if (!isDebugEnvironment()) return;
+  if (!IS_DEBUG_ENV) return;
   // A debug key's chord (DefaultDebugKeyBindings.ts) runs both in debug mode: warn
   const owner = `the action "${a.id}" of the action map "${map.id}"`;
   for (const c of a.compiled) {

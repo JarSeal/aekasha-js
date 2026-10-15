@@ -6,6 +6,7 @@ import {
 } from './Character';
 import { registerControllerKind } from './ActorKinds';
 import { registerPlayerBrains } from './brains/PlayerBrains';
+import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { EngineFeature } from '../../kernel/init/Features';
 import type { SceneHooks } from '../../kernel/scene/SceneHooks';
 
@@ -46,7 +47,11 @@ export const character = (): EngineFeature => ({
     });
     registerPlayerBrains();
     ctx.addSceneHooks(characterSceneHooks);
-    ctx.onDebug(registerCharacterTools);
-    ctx.onDebugAfterStart(createCharactersDebuggerGUI);
+    // Gated like every debug hook (the hooks run only in the debug env): a production build then
+    // drops the calls and the debug wrappers they name (verify:baselines fails on an ungated one)
+    if (IS_DEBUG_ENV) {
+      ctx.onDebug(registerCharacterTools);
+      ctx.onDebugAfterStart(createCharactersDebuggerGUI);
+    }
   },
 });

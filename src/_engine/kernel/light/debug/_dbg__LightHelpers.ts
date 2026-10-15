@@ -2,7 +2,6 @@ import * as THREE from 'three/webgpu';
 
 import { ECSWorld } from '../../ecs/ECS';
 import { ComponentType, type CoreComponentData } from '../../ecs/ECSCoreComponents';
-import type { CoreComponentType } from '../../ecs/ECSRegistry';
 import { ECSSystemStage } from '../../loop/SystemStages';
 import { existsOrThrow } from '../../../utils/Assert';
 import { getRootScene } from '../../scene/Scene';
@@ -14,7 +13,7 @@ import { markDebugHelper } from '../../../debug/Profiler';
  * disposes their internal geometries/materials.
  */
 export const disposeLightHelpers = (
-  helperComp: CoreComponentData[CoreComponentType.DEBUG_LIGHT_HELPER]
+  helperComp: CoreComponentData[typeof ComponentType.DEBUG_LIGHT_HELPER]
 ) => {
   helperComp.value.removeFromParent();
   helperComp.value.dispose();

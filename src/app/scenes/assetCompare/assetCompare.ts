@@ -6,7 +6,7 @@ import {
   createCameraEntity,
   IS_DEBUG_ENV,
   getECSWorld,
-  CoreComponentType,
+  ComponentType,
   createGeometry,
   saveBufferGeometry,
   importAssetAsync,
@@ -183,7 +183,7 @@ const applyVisibility = () => {
   const world = getECSWorld();
   for (const slot of Object.values(slots)) {
     for (const entityId of slot.entityIds) {
-      const obj = world.getComponent(entityId, CoreComponentType.OBJECT3D)?.value;
+      const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
       if (obj) obj.visible = slot.id === compareConfig.shown;
     }
   }

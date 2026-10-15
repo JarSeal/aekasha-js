@@ -3,7 +3,7 @@
 // assets: when its geometry (registered under the impostor's id) is deleted, eg. by the scene's
 // asset release.
 import type * as THREE from 'three/webgpu';
-import { isDebugEnvironment, isProdTestMode } from '../../../kernel/config/Config';
+import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../../../kernel/config/Config';
 import { onGeometryDeleted } from '../../../kernel/assets/Geometry';
 import type { CrossQuadsOptions } from './CrossQuads';
 import type { ImpostorKind } from './ImpostorFormat';
@@ -37,7 +37,7 @@ const records = new Map<string, ImpostorRecord>();
 
 /** Whether records keep their source: only where an export can run (the debug env, prod test
  * mode). Elsewhere a record would only keep its source geometry from being collected. */
-const isSourceKept = () => isDebugEnvironment() || isProdTestMode();
+const isSourceKept = () => IS_DEBUG_ENV || IS_PROD_TEST_MODE;
 
 let isListeningForDeletes = false;
 

@@ -28,12 +28,15 @@ const LINK_TAGS = ['@link', '@linkcode', '@linkplain'];
  * What a `{@link}` shows: `{@link X | the text}`'s own text as Markdown, else the name as code
  * (`@linkplain` as text). TypeDoc keeps the whole `X | the text` in `text` when it didn't
  * resolve the link, and also for some links TypeScript resolved (`tsLinkText` has the text then).
+ * A declaration reference (`_engine/kernel/init/InitEngine!InitEngine`, for a name the module
+ * can't import) shows its name alone, after the `!` (p612 I5).
  */
 const linkLabel = (part: InlineTagPart) => {
   const bar = part.text.indexOf('|');
   if (bar >= 0)
     return part.text.slice(bar + 1).trim() || toInlineCode(part.text.slice(0, bar).trim());
-  const name = (part.tsLinkText || part.text).trim();
+  const text = (part.tsLinkText || part.text).trim();
+  const name = text.slice(text.lastIndexOf('!') + 1);
   return part.tag === '@linkplain' ? name : toInlineCode(name);
 };
 

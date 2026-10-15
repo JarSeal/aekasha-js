@@ -10,7 +10,7 @@ export const TRANSFORM_FIELD_COUNT = 10;
  * `ArrayBuffer` today — kept as a factory so a future worker-based Physics
  * API can swap in a `SharedArrayBuffer` later without touching the store's
  * field layout. `useSAB` is never passed `true` yet (worker-thread physics
- * uses its own Physics/PhysicsTransformBuffer.ts instead); `SharedArrayBuffer`
+ * uses its own features/physics/PhysicsTransformBuffer.ts instead); `SharedArrayBuffer`
  * requires cross-origin isolation (COOP/COEP).
  */
 export function createTransformBuffer(
@@ -54,17 +54,31 @@ export class TypedArrayTransformStore implements IComponentStorage<Transform> {
   private liveCount = 0;
 
   // Flat fields, indexed by dense slot, carved from one contiguous buffer
+  /** Position x by slot (write through `setPosition` to mark the slot dirty). */
   public readonly posX: Float32Array;
+  /** Position y by slot. */
   public readonly posY: Float32Array;
+  /** Position z by slot. */
   public readonly posZ: Float32Array;
+  /** Quaternion x by slot (write through `setQuaternion`). */
   public readonly quatX: Float32Array;
+  /** Quaternion y by slot. */
   public readonly quatY: Float32Array;
+  /** Quaternion z by slot. */
   public readonly quatZ: Float32Array;
+  /** Quaternion w by slot. */
   public readonly quatW: Float32Array;
+  /** Scale x by slot (write through `setScale`). */
   public readonly scaleX: Float32Array;
+  /** Scale y by slot. */
   public readonly scaleY: Float32Array;
+  /** Scale z by slot. */
   public readonly scaleZ: Float32Array;
 
+  /**
+   * A store for up to `maxEntities` transforms. `getEntityIndex` maps a packed entity id to its
+   * slot index in the world (`ECSWorld.getEntityIndex`).
+   */
   constructor(maxEntities: number, getEntityIndex: (entityId: number) => number, useSAB = false) {
     this.maxEntities = maxEntities;
     this.getEntityIndex = getEntityIndex;
@@ -98,14 +112,17 @@ export class TypedArrayTransformStore implements IComponentStorage<Transform> {
     return slot !== -1 && this.denseEntityId[slot] === entityId ? slot : -1;
   }
 
+  /** Whether the slot changed since the Object3D sync last copied it. */
   isDirty(slot: number): boolean {
     return this.dirtyFlags[slot] === 1;
   }
 
+  /** Marks the slot synced. */
   clearDirty(slot: number): void {
     this.dirtyFlags[slot] = 0;
   }
 
+  /** Sets the slot's position and marks it dirty. */
   setPosition(slot: number, x: number, y: number, z: number): void {
     this.posX[slot] = x;
     this.posY[slot] = y;
@@ -113,6 +130,7 @@ export class TypedArrayTransformStore implements IComponentStorage<Transform> {
     this.dirtyFlags[slot] = 1;
   }
 
+  /** Sets the slot's rotation and marks it dirty. */
   setQuaternion(slot: number, x: number, y: number, z: number, w: number): void {
     this.quatX[slot] = x;
     this.quatY[slot] = y;
@@ -121,6 +139,7 @@ export class TypedArrayTransformStore implements IComponentStorage<Transform> {
     this.dirtyFlags[slot] = 1;
   }
 
+  /** Sets the slot's scale and marks it dirty. */
   setScale(slot: number, x: number, y: number, z: number): void {
     this.scaleX[slot] = x;
     this.scaleY[slot] = y;
@@ -164,11 +183,13 @@ export class TypedArrayTransformStore implements IComponentStorage<Transform> {
 
   // --- IComponentStorage<Transform> ---
 
+  /** The entity's transform as a new `Transform` (a copy: changes need `set`), or undefined. */
   get(entityId: number): Transform | undefined {
     const slot = this.getSlot(entityId);
     return slot === -1 ? undefined : this._materialize(slot);
   }
 
+  /** Stores `value`'s fields in the entity's slot (taking a new slot if it has none) and marks it dirty. */
   set(entityId: number, value: Transform): void {
     const entityIndex = this.getEntityIndex(entityId);
     let slot = this.sparse[entityIndex];
@@ -195,6 +216,7 @@ export class TypedArrayTransformStore implements IComponentStorage<Transform> {
     this.dirtyFlags[slot] = 1;
   }
 
+  /** Frees the entity's slot, moving the last slot into it (the order changes). */
   delete(entityId: number): boolean {
     const entityIndex = this.getEntityIndex(entityId);
     const slot = this.sparse[entityIndex];
@@ -225,31 +247,37 @@ export class TypedArrayTransformStore implements IComponentStorage<Transform> {
     return true;
   }
 
+  /** Whether the entity has a slot. */
   has(entityId: number): boolean {
     return this.getSlot(entityId) !== -1;
   }
 
+  /** Frees every slot. */
   clear(): void {
     this.sparse.fill(-1);
     this.liveCount = 0;
   }
 
+  /** How many slots are in use. */
   get size(): number {
     return this.liveCount;
   }
 
+  /** The entity ids, in slot order. */
   *keys(): IterableIterator<number> {
     for (let slot = 0; slot < this.liveCount; slot++) {
       yield this.denseEntityId[slot];
     }
   }
 
+  /** The entity ids with a new `Transform` copy each, in slot order. */
   *entries(): IterableIterator<[number, Transform]> {
     for (let slot = 0; slot < this.liveCount; slot++) {
       yield [this.denseEntityId[slot], this._materialize(slot)];
     }
   }
 
+  /** Same as `entries()`. */
   [Symbol.iterator](): IterableIterator<[number, Transform]> {
     return this.entries();
   }

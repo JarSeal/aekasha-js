@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { CoreComponentType, lwarn, APP_RENDER_SYNC_ORDER, ECSSystemStage } from 'aekasha';
+import { ComponentType, lwarn, APP_RENDER_SYNC_ORDER, ECSSystemStage } from 'aekasha';
 import type { ECSWorld } from 'aekasha';
 
 /** Internal Key (Values) */
@@ -142,13 +142,13 @@ const getViewSliceSphere = (
 const resolveCamera = (world: ECSWorld, data: SunShadowFitData): THREE.Camera | undefined => {
   let cameraId = data.cameraEntityId;
   if (cameraId === undefined) {
-    for (const [id] of world.getStorage(CoreComponentType.TAG_IS_MAIN_CAMERA)) {
+    for (const [id] of world.getStorage(ComponentType.TAG_IS_MAIN_CAMERA)) {
       cameraId = id;
       break;
     }
   }
   if (cameraId === undefined) return undefined;
-  const value = world.getComponent(cameraId, CoreComponentType.OBJECT3D)?.value;
+  const value = world.getComponent(cameraId, ComponentType.OBJECT3D)?.value;
   return (value as THREE.Camera | undefined)?.isCamera ? (value as THREE.Camera) : undefined;
 };
 
@@ -161,7 +161,7 @@ const getFollowPosition = (world: ECSWorld, entityId: number, out: THREE.Vector3
     out.set(transformStore.posX[slot], transformStore.posY[slot], transformStore.posZ[slot]);
     return true;
   }
-  const transform = world.getComponent(entityId, CoreComponentType.TRANSFORM);
+  const transform = world.getComponent(entityId, ComponentType.TRANSFORM);
   if (!transform) return false;
   out.copy(transform.position);
   return true;
@@ -175,7 +175,7 @@ const writeTransformPosition = (world: ECSWorld, entityId: number, p: THREE.Vect
     if (slot !== -1) transformStore.setPosition(slot, p.x, p.y, p.z);
     return;
   }
-  const transform = world.getComponent(entityId, CoreComponentType.TRANSFORM);
+  const transform = world.getComponent(entityId, ComponentType.TRANSFORM);
   if (!transform) return;
   transform.position.copy(p);
   transform.setDirty();
@@ -217,18 +217,18 @@ export const sunShadowFitSystem = (world: ECSWorld) => {
 
   for (const [entityId, data] of storage as Iterable<[number, SunShadowFitData]>) {
     if (world.isDisabled(entityId)) continue;
-    const light = world.getComponent(entityId, CoreComponentType.OBJECT3D)?.value as
+    const light = world.getComponent(entityId, ComponentType.OBJECT3D)?.value as
       | THREE.DirectionalLight
       | undefined;
     if (!light?.isDirectionalLight) {
       warnOnce(data, entityId, 'not a directional light.');
       continue;
     }
-    if (world.hasComponent(entityId, CoreComponentType.MANAGED_BY)) {
+    if (world.hasComponent(entityId, ComponentType.MANAGED_BY)) {
       warnOnce(data, entityId, 'the light is managed by another system, which places it itself.');
       continue;
     }
-    const targetId = world.getComponent(entityId, CoreComponentType.TARGET_LINK)?.targetId;
+    const targetId = world.getComponent(entityId, ComponentType.TARGET_LINK)?.targetId;
     if (targetId === undefined) continue;
 
     const state = getState(data, light);

@@ -1,7 +1,12 @@
 // The ECS system stages, in the order every world runs them, and the order constants that place
 // a system within a stage.
 
-/** Stages of ECS system invocation */
+/**
+ * The stages a world runs its systems in (`ECSWorld.addSystem`), every frame in this order:
+ * `MAIN`, `APP_PRE_PHYSICS`, then `APP_PHYSICS_STEP` once per fixed physics step (0-N per frame),
+ * `APP_POST_PHYSICS`, `APP_LOGIC`, `APP_RENDER_SYNC`, the render, then `LATE_MAIN`. The `APP_*`
+ * stages run only while the app loop plays; none runs while an editor view is active.
+ */
 export enum ECSSystemStage {
   // --- Runs in updateMainLoop (Always runs if MasterPlay is true, also while the app is paused) ---
   MAIN = 'MAIN',
@@ -43,15 +48,15 @@ export enum ECSSystemStage {
  *   lookAtSystem). Plain default order.
  * - POSE_CONSUMERS: systems that read the final render pose of another entity (camera rigs).
  *   Deliberately fractional: it has to run after every order-0 producer whatever their
- *   registration sequence (the follow camera rig registers before PhysicsManager does), and
+ *   registration sequence (the follow camera rig registers before physics() does), and
  *   still before frustum culling, which reads the main camera's matrices — running a rig after
  *   culling would cull against a one-frame-stale camera and pop objects at the frustum edges.
  * - SHADOW_FIT: systems that fit something to this frame's final camera (the toolkit's
  *   SunShadowFit): after the camera rigs, before frustum culling.
  * - FRUSTUM_CULLING / LIGHT_CULLING: objectFrustumCullingSystem, then lightObjectCullingSystem
  *   (which depends on this frame's frustum-culling result).
- * - LOD_SELECTION: lodSelectionSystem, lodApplySystem and lodFadeSystem (Lod/LodSystem.ts), between the two:
- *   after frustum culling, so they skip entities culled this frame and see the final camera.
+ * - LOD_SELECTION: lodSelectionSystem, lodApplySystem and lodFadeSystem
+ *   (features/lod/LodSystem.ts), between the two: after frustum culling, so they skip entities culled this frame and see the final camera.
  */
 export const APP_RENDER_SYNC_ORDER = {
   POSE_PRODUCERS: 0,

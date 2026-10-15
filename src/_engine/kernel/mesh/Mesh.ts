@@ -26,7 +26,6 @@ import { lerror, lwarn } from '../../utils/Logger';
 import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
 import { existsOrThrow } from '../../utils/Assert';
 import { getGeometry } from '../assets/Geometry';
-import { CoreComponentType } from '../ecs/ECSRegistry';
 import { setFrustumCullingEnabled } from '../ecs/ObjectFrustumCullingSystem';
 import { IS_DEBUG_ENV } from '../config/Config';
 import type { LodAutoDef, LodDef, MeshLodDef } from '../../features/lod/LodTypes';
@@ -466,7 +465,7 @@ export const getMeshByAppId = (appId: string, ecsWorld?: ECSWorld) => {
   const entityId = getEntityIdByAppId(appId, world);
   let mesh: THREE.Mesh | undefined = undefined;
   if (entityId) {
-    const obj = world.getComponent(entityId, CoreComponentType.OBJECT3D)?.value;
+    const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
     if (obj && !(obj as THREE.Mesh).isMesh) {
       const msg = `Found Object3D is not a mesh (type: ${obj.type}).`;
       lerror(msg);

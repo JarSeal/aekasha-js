@@ -6,8 +6,13 @@ import { ComponentType } from './ECSCoreComponents';
 import { reconcileObject3DVisibility } from './ECSCoreSystems';
 import type { FeatureContext } from '../init/Features';
 
-/** Mirrors `LightManager.ts`'s `setLightFrustumCullingEnabled` (which now delegates here) —
- * generic across whatever entity type opts in (docs/plans/_DONE_p080_object3d-frustum-culling.md §2.4). */
+/**
+ * Opts the entity in or out of frustum culling (`FRUSTUM_CULLING_ENABLED`): a mesh, a point or a
+ * spot light is then hidden while outside the main camera's frustum. Opting out shows it again.
+ * `Light.ts`' `setLightFrustumCullingEnabled` delegates here
+ * (docs/plans/_DONE_p080_object3d-frustum-culling.md §2.4).
+ * @internal
+ */
 export const setFrustumCullingEnabled = (entityId: number, enabled: boolean, world: ECSWorld) => {
   if (enabled) {
     world.addComponent(entityId, ComponentType.FRUSTUM_CULLING_ENABLED, true);
@@ -36,10 +41,13 @@ export type BoundingVolumeProvider = (
   world: ECSWorld
 ) => THREE.Sphere | undefined;
 
-// Three.js clamps SpotLight.angle to < PI/2 internally; this is a defensive backstop against
-// cos(angle) blowing up toward infinity for a near-90-degree cone. Exported so other consumers
-// of the same distance/cos(angle) influence-sphere formula (e.g. SpatialIndexSystem.ts) share
-// one cutoff instead of drifting.
+/**
+ * The widest spot light cone (in radians, 89.9°) culling measures: a wider one counts as always
+ * visible, since its influence sphere (`distance / cos(angle)`) grows without bound toward 90°.
+ * Shared with the spatial index's light radius (`features/spatial/SpatialIndexSystem.ts`), so the
+ * two use one cutoff.
+ * @internal
+ */
 export const MAX_SPOT_ANGLE = (89.9 * Math.PI) / 180;
 
 // Point/spot light: influence is a sphere (point, exact) or a cone conservatively approximated
@@ -56,7 +64,7 @@ const getPointLightBoundingSphere: BoundingVolumeProvider = (entityId, world) =>
   if (!light) return undefined;
   if (light.distance === 0) return undefined;
 
-  light.updateWorldMatrix(true, false);
+  // getWorldPosition updates the world matrix (with the parents') itself
   light.getWorldPosition(_pointLightSphere.center);
   _pointLightSphere.radius = light.distance;
   return _pointLightSphere;
@@ -72,21 +80,22 @@ const getSpotLightBoundingSphere: BoundingVolumeProvider = (entityId, world) => 
   if (light.distance === 0) return undefined;
   if (light.angle > MAX_SPOT_ANGLE) return undefined;
 
-  light.updateWorldMatrix(true, false);
   light.getWorldPosition(_spotLightSphere.center);
   _spotLightSphere.radius = light.distance / Math.cos(light.angle);
   return _spotLightSphere;
 };
 
-// Mesh: geometry.boundingSphere, computed lazily if missing, transformed to world space
-// (translate by world position, scale radius by the max scale-axis component — an
-// approximation for non-uniformly-scaled meshes, not exact; docs/plans/_DONE_p080_object3d-
-// frustum-culling.md §2.2). No explicit updateWorldMatrix here, matching the established precedent in
-// LightObjectCullingSystem.ts's (now shared) mesh bounding-sphere logic — meshes are kept
-// current by object3DSyncSystem earlier in the frame.
-
 const _meshBoundingSphere = new THREE.Sphere();
 
+/**
+ * A mesh entity's world-space bounding sphere: its geometry's (computed if missing) at its world
+ * position, the radius scaled by its largest scale axis (conservative for a non-uniform scale,
+ * docs/plans/_DONE_p080_object3d-frustum-culling.md §2.2). Undefined for an entity without a mesh.
+ * Shared with the spatial feature's light culling.
+ * @internal
+ * @returns a scratch sphere, overwritten by the next call: copy it to keep it
+ * @remarks `getWorldPosition` updates the mesh's world matrix (and its parents') first.
+ */
 export const getMeshWorldBoundingSphere: BoundingVolumeProvider = (entityId, world) => {
   const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
   if (!(obj instanceof THREE.Mesh)) return undefined;
@@ -116,13 +125,19 @@ const boundingVolumeProviders: [ComponentType, BoundingVolumeProvider][] = [
 const _frustum = new THREE.Frustum();
 const _projScreenMatrix = new THREE.Matrix4();
 
+/**
+ * Tags each `FRUSTUM_CULLING_ENABLED` entity `TAG_FRUSTUM_CULLED` while its bounding sphere is
+ * outside the main camera's frustum (an `APP_RENDER_SYNC` system, `FRUSTUM_CULLING` order).
+ * @internal
+ */
 export const objectFrustumCullingSystem = (world: ECSWorld) => {
   const storage = world.getStorage(ComponentType.FRUSTUM_CULLING_ENABLED);
   if (storage.size === 0) return; // nothing opted in — skip the frustum build entirely
 
   // Deliberately getMainCamera(), not getActiveCamera() — the latter resolves to the debug
   // fly-camera while it's toggled on (docs/plans/_DONE_light-culling.md §2.4), which must not
-  // change which entities are culled from the actual gameplay camera's point of view.
+  // change which entities are culled from the actual gameplay camera's point of view. A cached
+  // lookup (p200), not a query
   const camera = getMainCamera();
   if (!camera) return;
 
@@ -155,6 +170,10 @@ export const objectFrustumCullingSystem = (world: ECSWorld) => {
   }
 };
 
+// The visibility hook's overrides: constants, so a tag flip allocates nothing
+const FRUSTUM_CULLED = Object.freeze({ isFrustumCulled: true });
+const FRUSTUM_SHOWN = Object.freeze({ isFrustumCulled: false });
+
 /**
  * Installs frustum culling (the kernel, p607): the visibility hook and the culling system.
  * @internal
@@ -167,13 +186,13 @@ export const installObjectFrustumCulling = (ctx: FeatureContext) => {
   // §2.1) — nothing here is light-specific, it just reads OBJECT3D/hooks generically.
   ctx.registerComponentHooks(ComponentType.TAG_FRUSTUM_CULLED, {
     onAddComponent: (entityId, world) => {
-      reconcileObject3DVisibility(entityId, world, { isFrustumCulled: true });
+      reconcileObject3DVisibility(entityId, world, FRUSTUM_CULLED);
     },
     onRemoveComponent: (entityId, world) => {
       // reconcileObject3DVisibility's own isDisabled/isObjectCulled checks already
       // respect an explicit user-authored "off" or an active object-cull — don't
       // let re-entering the frustum resurrect an entity either of those is hiding.
-      reconcileObject3DVisibility(entityId, world, { isFrustumCulled: false });
+      reconcileObject3DVisibility(entityId, world, FRUSTUM_SHOWN);
     },
   });
 

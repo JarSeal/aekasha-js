@@ -7,7 +7,7 @@ let materialEditor: DebugModuleRef<MaterialEditorModule> | null = null;
 
 /**
  * Loads the material editor and registers its editor view, "Material editor" (debug environments
- * only). Call it before the saved view is restored (InitApp's debug block).
+ * only). Call it before the saved view is restored (the boot's debug steps).
  */
 export const registerMaterialEditor = async () => {
   if (!IS_DEBUG_ENV) return;

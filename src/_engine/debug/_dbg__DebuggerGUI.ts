@@ -4,11 +4,7 @@ import styles from './DebuggerGUI.module.scss';
 import { lsGetItem, lsSetItem } from '../utils/LocalAndSessionStorage';
 import { getWindowSize } from '../ui/Window';
 import { getHUDRootCMP } from '../ui/HUD';
-import {
-  DEFAULT_DEBUG_DRAWER_TAB_ORDER,
-  getConfig,
-  isDebugEnvironment,
-} from '../kernel/config/Config';
+import { DEFAULT_DEBUG_DRAWER_TAB_ORDER, getConfig, IS_DEBUG_ENV } from '../kernel/config/Config';
 import { lwarn } from '../utils/Logger';
 import type { DebugGUIOpts, AnyDebuggerTabDef, UpdateDebuggerTabOpts } from './DebuggerGUI';
 import { createDebuggerSceneLoader } from '../kernel/scene/debug/_dbg__DebuggerSceneLoader';
@@ -28,7 +24,7 @@ let debuggerDisabled = false;
 /** An editor view is active (see _setDrawerSuspendedByView). */
 let isSuspendedByView = false;
 /** Set while a right-side debug drawer is open: this one in the Runtime view, an editor's own one
- * in an editor view (ViewManager.ts). The top on-screen row and the viewport stack shift by it. */
+ * in an editor view (Views.ts). The top on-screen row and the viewport stack shift by it. */
 const DRAWER_OPEN_BODY_CLASS = 'debugDrawerOpen';
 const LS_KEY = 'AEK_debugDrawerState';
 const SCENE_EXIT_HOOK_ID = 'debuggerSceneTabs';
@@ -146,7 +142,7 @@ const createTabMenuButtons = () => {
 let guiOpts: DebugGUIOpts | undefined = undefined;
 
 export const _createDebugGui = (opts?: DebugGUIOpts) => {
-  if (!isDebugEnvironment()) return;
+  if (!IS_DEBUG_ENV) return;
 
   guiOpts = opts;
   initDrawerState();
@@ -290,7 +286,7 @@ export const _toggleDrawer = (openOrClose?: 'OPEN' | 'CLOSE') => {
 };
 
 /**
- * Hides the drawer for an editor view (ViewManager.ts), or shows it again. The open state is kept,
+ * Hides the drawer for an editor view (Views.ts), or shows it again. The open state is kept,
  * but while suspended, its open tab isn't refreshed and the `debugDrawerOpen` body class is left
  * to the editor view (an editor's own right drawer sets it, so the offset rules of the top row and
  * the viewport stack keep working).
@@ -407,7 +403,7 @@ export const _updateDebuggerSceneTitle = (title: string) => {
 };
 
 export const _disableDebugger = (disable: boolean) => {
-  if (!isDebugEnvironment()) return;
+  if (!IS_DEBUG_ENV) return;
   debuggerDisabled = disable;
   if (disable) {
     drawerCMP?.updateClass(styles.debuggerDisabled, 'add');

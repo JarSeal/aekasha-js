@@ -30,14 +30,14 @@ let panelRefreshCallback: (() => void) | null = null;
 /** Set while another debug tool moves the debug camera itself (the axes gizmo's drag orbit):
  * debugCameraSystem then keeps the OrbitControls disabled instead of re-enabling them. */
 let isControlsSuspended = false;
-/** False while an editor view is active (ViewManager.ts): the scene is suspended and the
+/** False while an editor view is active (Views.ts): the scene is suspended and the
  * canvas belongs to the view, so the OrbitControls stay disabled, also when a scene loads
  * meanwhile. */
 let isSceneInputEnabled = true;
 
 /**
  * Enables or disables the scene debug camera's canvas input (its OrbitControls), right away:
- * debugCameraSystem doesn't run while an editor view suspends the scene. ViewManager.ts only
+ * debugCameraSystem doesn't run while an editor view suspends the scene. Views.ts only
  * (through CameraManager's setSceneDebugCameraInputEnabled).
  * @param enabled (boolean)
  * @param world (ECSWorld) the world the debug camera is in

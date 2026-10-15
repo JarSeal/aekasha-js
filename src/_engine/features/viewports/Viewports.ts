@@ -188,7 +188,7 @@ const ensureLayer = () => {
   layerCmp = getHUDRootCMP().add({
     id: LAYER_ID,
     idAttr: true,
-    // Viewports render over every view (ViewManager.ts)
+    // Viewports render over every view (Views.ts)
     class: [styles.viewportsLayer, KEEP_IN_VIEWS_CLASS],
     // First in the HUD root, so it is below the rest of the HUD also in DOM order
     prepend: true,

@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import WebGL from 'three/addons/capabilities/WebGL.js';
 import { getCanvasSize } from './CanvasSize';
 import { lerror, lwarn } from '../../utils/Logger';
-import { isDebugEnvironment } from '../config/Config';
+import { IS_DEBUG_ENV } from '../config/Config';
 import { lsGetItem } from '../../utils/LocalAndSessionStorage';
 import { existsOrThrow } from '../../utils/Assert';
 import type { DebugModuleRef } from '../config/DebugModules';
@@ -92,7 +92,7 @@ export const createRenderer = async (opts?: CreateRendererOptions) => {
   renderer.toneMapping = options.toneMapping;
   renderer.toneMappingExposure = options.toneMappingExposure;
   renderer.outputColorSpace = options.outputColorSpace;
-  renderer.debug.checkShaderErrors = isDebugEnvironment();
+  renderer.debug.checkShaderErrors = IS_DEBUG_ENV;
 
   renderer.shadowMap.enabled = options.enableShadows || false;
   if (rendererOpts.shadowMapType) {
@@ -180,7 +180,7 @@ const setRendererOptions = async (opts?: Partial<RendererOptions>) => {
   options.forceWebGL = Boolean(opts?.forceWebGL);
   options.devicePixelRatio = opts?.devicePixelRatio || window?.devicePixelRatio || 1;
 
-  if (isDebugEnvironment()) {
+  if (IS_DEBUG_ENV) {
     const savedOptions = lsGetItem(LS_KEY, options);
     options = { ...options, ...opts, ...savedOptions };
   }

@@ -11,18 +11,12 @@ import {
 } from '../scene/Scene';
 import { lerror, lwarn } from '../../utils/Logger';
 import { getCanvasSize, onCanvasResize } from '../render/CanvasSize';
-import {
-  getEnv,
-  isDebugEnvironment,
-  isProdTestMode,
-  isProductionEnvironment,
-} from '../config/Config';
+import { getEnv, IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../config/Config';
 import { initDebugTools } from '../../debug/DebugTools';
 import { pollHeldKeyBindings } from '../input/KeyboardInput';
 import { initRayCasting } from '../render/Raycast';
 import { getAllECSWorlds } from '../ecs/ECS';
 import { getActiveCamera } from '../camera/Camera';
-import { existsOrThrow } from '../../utils/Assert';
 import type { DebugModuleRef } from '../config/DebugModules';
 import { loadDebugModuleAsync, useDebug } from '../config/DebugModules';
 import { getRenderPipeline, runAfterRenderHooks } from '../render/RenderHooks';
@@ -35,11 +29,13 @@ export const LOOP_DEBUGGER_TAB_ID = 'loopControls';
 const timer = new Timer();
 let delta = 0;
 let deltaApp = 0;
-let elapsed = 0;
-let discardNextElapsedDelta = true; // the first frame's delta is time since module load
+/** getElapsedTime's clock (see advanceElapsedClock); the first delta is time since module load */
+const elapsedClock: ElapsedClock = { elapsed: 0, discardNext: true };
 let mainLoopInitiated = false;
 /** stopMainLoop ran (a mounted engine's unmount): no frame runs again, a queued one included */
 let isMainLoopStopped = false;
+/** A frame is requested and hasn't run yet: requestMainLoopFrame asks for no second one */
+let isFrameRequested = false;
 /** Removes what initMainLoop and addWindowListeners added (the resize subscription, the listeners) */
 const loopListenerRemovers: (() => void)[] = [];
 let lastRenderTime = performance.now();
@@ -47,18 +43,27 @@ let lastRenderTime = performance.now();
 let fixedFrameDelta: number | null = null;
 const resizers: { [key: string]: () => void } = {};
 
-/** Max FPS limiter: whether to skip rendering this frame. The reference time advances by
- * exactly one interval per rendered frame rather than jumping to "now", so the time a frame
- * arrives late is carried over instead of discarded — otherwise a frame landing a hair under
- * the interval gets skipped and the rate falls to the next display-rate divisor (a 30 FPS cap
- * on a 60Hz display averaged ~24). After a hitch it re-anchors instead of bursting to catch up. */
+/**
+ * The max FPS limiter's step: the reference time of the frame rendered at `nowMs`, or -1 to skip
+ * rendering it. The reference advances by exactly one interval per rendered frame rather than
+ * jumping to "now", so the time a frame arrives late is carried over instead of discarded —
+ * otherwise a frame landing a hair under the interval gets skipped and the rate falls to the next
+ * display-rate divisor (a 30 FPS cap on a 60Hz display averaged ~24). After a hitch (two
+ * intervals or more) it re-anchors at `nowMs` instead of bursting to catch up.
+ * @internal
+ */
+export const nextMaxFPSReference = (nowMs: number, lastRenderMs: number, intervalMs: number) => {
+  const sinceLast = nowMs - lastRenderMs;
+  if (sinceLast < intervalMs) return -1;
+  return sinceLast < 2 * intervalMs ? lastRenderMs + intervalMs : nowMs;
+};
+
+/** Max FPS limiter: whether to skip rendering this frame (nextMaxFPSReference) */
 const shouldSkipFrameForMaxFPS = () => {
   if (loopState.maxFPS <= 0) return false;
-  const interval = loopState.maxFPSInterval;
-  const nowMs = performance.now();
-  const sinceLast = nowMs - lastRenderTime;
-  if (sinceLast < interval) return true;
-  lastRenderTime = sinceLast < 2 * interval ? lastRenderTime + interval : nowMs;
+  const next = nextMaxFPSReference(performance.now(), lastRenderTime, loopState.maxFPSInterval);
+  if (next === -1) return true;
+  lastRenderTime = next;
   return false;
 };
 
@@ -84,8 +89,8 @@ export type LoopState = {
   isUnloading: boolean;
   /** A scene load is in progress. */
   isLoadingScene: boolean;
-  /** An editor view is active (ViewManager.ts): the loaded scene is neither rendered nor ticked,
-   * and physics sees it as a pause. */
+  /** An editor view is active (`kernel/render/Views.ts`): the loaded scene is neither rendered nor
+   * ticked, and physics sees it as a pause. */
   isSceneSuspended: boolean;
 };
 
@@ -139,7 +144,7 @@ export const getAppDelta = () => deltaApp;
  * the loop should read.
  * @returns (number) elapsed time in seconds
  */
-export const getElapsedTime = () => elapsed;
+export const getElapsedTime = () => elapsedClock.elapsed;
 
 /**
  * Returns linear speed value in relation to main loop delta time
@@ -163,8 +168,6 @@ export const transformAppSpeedValue = (unitsPerSecond: number) => deltaApp * uni
 export const transformTimeValue = (durationInMs: number) =>
   durationInMs * loopState.playSpeedMultiplier;
 
-export let mainLoop: () => void = () => {};
-
 /** Measures every main loop frame (see {@link setFrameProbe}). */
 export type FrameProbe = {
   /** At the start of the loop function. */
@@ -176,8 +179,8 @@ export type FrameProbe = {
 let frameProbe: FrameProbe | null = null;
 
 /**
- * Sets (or with null clears) the frame probe that every main loop variant calls at its start and
- * end. Only the profiler sets one, while its window is open, so without it a frame costs two null
+ * Sets (or with null clears) the frame probe the main loop calls at the start and end of every
+ * frame. Only the profiler sets one, while its window is open, so without it a frame costs two null
  * checks.
  * @param probe ({@link FrameProbe} | null)
  */
@@ -274,7 +277,8 @@ const runFixedSubStep = (stepDelta: number, stepIndex = -1) => {
   actionSampler?.sample(stepIndex);
   pollHeldKeyBindings(stepDelta);
   fixedStepDriver!.flushEvents();
-  for (const world of getAllECSWorlds()) world.updatePhysicsStep(stepDelta);
+  const worlds = getAllECSWorlds();
+  for (let i = 0; i < worlds.length; i++) worlds[i].updatePhysicsStep(stepDelta);
 };
 
 /** Takes the frame's fixed steps (running runFixedSubStep before each). Falls back to polling
@@ -299,29 +303,42 @@ const noteFixedStepPause = () => {
   actionSampler?.skip();
 };
 
-/** Advances getElapsedTime by this frame's delta. Must run in every loop variant right after
- * the masterPlay check. The timer is never reset across a master pause, so the first delta
- * after resuming spans the whole paused duration — it is discarded (as the fixed-step driver does
- * for physics), otherwise the elapsed time would jump forward instead of having stood still.
- * Starts out true, which also covers a loop that starts paused (saved loop state) and so
- * never reaches the paused branch before its first resume.
- * Detected here rather than in toggleMainPlay because the debug GUI's master loop toggle
- * flips loopState.masterPlay directly. A suspended scene (an editor view is active) stands still
- * the same way, so scene code reading it resumes without a jump. */
-const advanceElapsedTime = () => {
-  if (!loopState.masterPlay || loopState.isSceneSuspended) {
-    discardNextElapsedDelta = true;
+/**
+ * getElapsedTime's clock: the elapsed seconds, and whether the next delta is dropped.
+ * @internal
+ */
+export type ElapsedClock = { elapsed: number; discardNext: boolean };
+
+/**
+ * Advances the elapsed time by this frame's delta, while `isRunning` (the master loop plays and
+ * the scene isn't suspended). The timer is never reset across a pause, so the first delta after
+ * one spans the whole paused duration: it is discarded (as the fixed-step driver does for
+ * physics), so the elapsed time stands still instead of jumping forward. `discardNext` starts out
+ * true, which also covers a loop that starts paused (saved loop state). Detected here, every
+ * frame, rather than in toggleMainPlay, because the debug GUI's master loop toggle flips
+ * loopState.masterPlay directly.
+ * @internal
+ */
+export const advanceElapsedClock = (
+  clock: ElapsedClock,
+  frameDelta: number,
+  isRunning: boolean
+) => {
+  if (!isRunning) {
+    clock.discardNext = true;
     return;
   }
-  if (discardNextElapsedDelta) {
-    discardNextElapsedDelta = false;
+  if (clock.discardNext) {
+    clock.discardNext = false;
     return;
   }
-  elapsed += delta;
+  clock.elapsed += frameDelta;
 };
 
 const renderScene = () => {
-  const renderer = getRenderer() as Renderer;
+  const renderer = getRenderer() as Renderer | undefined;
+  // A plain check: the message is built only when it fails, not every frame
+  if (!renderer) throw new Error('Error in renderScene: no renderer (createRenderer).');
 
   if (loopState.isSceneSuspended) {
     // An editor view: its own scene and camera, without the scene's render pipeline (PostFX's,
@@ -338,10 +355,11 @@ const renderScene = () => {
   const rootScene = getRootScene() as Scene;
   const camera = getActiveCamera() as Camera;
 
-  existsOrThrow(
-    renderer && rootScene && camera,
-    `Error in renderScene, missing renderer, rootScene, and/or camera. Status:\nrenderer: ${Boolean(renderer)}\nrootScene: ${Boolean(rootScene)}\ncamera: ${Boolean(camera)}`
-  );
+  if (!rootScene || !camera) {
+    throw new Error(
+      `Error in renderScene, missing the root scene and/or the camera. Status:\nrootScene: ${Boolean(rootScene)}\ncamera: ${Boolean(camera)}`
+    );
+  }
 
   // The render pipeline seam (PostFX's, when a scene's chain is on), else a direct render
   const pipeline = getRenderPipeline();
@@ -356,12 +374,27 @@ const renderScene = () => {
   runAfterRenderHooks(renderer, delta);
 };
 
-// LOOP (for debug)
+/**
+ * Requests the next frame, unless one is already requested (two requests would run two frame
+ * chains, each frame twice) or the loop has stopped for good.
+ * @internal
+ */
+export const requestMainLoopFrame = () => {
+  if (isFrameRequested || isMainLoopStopped) return;
+  isFrameRequested = true;
+  requestAnimationFrame(runFrame);
+};
+
+// THE FRAME
 // **************************************
-const mainLoopForDebug = async () => {
+// One function for every build: the debug env's parts (the stats, the editor views) sit behind
+// IS_DEBUG_ENV, which a production build folds away. The max FPS limiter skips the render (and
+// LATE_MAIN after it) only: every stage before it runs on every frame, so no game time is lost.
+const runFrame = () => {
+  isFrameRequested = false;
   if (isMainLoopStopped) return;
   frameProbe?.begin(performance.now());
-  startCustomMeasurements();
+  if (IS_DEBUG_ENV) startCustomMeasurements();
 
   timer.update();
   fixedStepDriver?.latch();
@@ -370,19 +403,19 @@ const mainLoopForDebug = async () => {
 
   if (loopState.masterPlay) {
     delta = dt * loopState.playSpeedMultiplier;
-    requestAnimationFrame(mainLoop);
+    requestMainLoopFrame();
     loopState.isMasterPlaying = true;
   } else {
     loopState.isMasterPlaying = false;
   }
-  advanceElapsedTime();
+  advanceElapsedClock(elapsedClock, delta, loopState.masterPlay && !loopState.isSceneSuspended);
 
   // --- Max FPS limiter ---
   const skipFrame = shouldSkipFrameForMaxFPS();
 
-  // An editor view is active (ViewManager.ts): the scene is suspended. None of its per-frame
-  // work runs (every world's stages, the scene loopers, physics and held keys), the view's runs
-  // instead.
+  // An editor view is active (kernel/render/Views.ts, debug env only): the scene is suspended.
+  // None of its per-frame work runs (every world's stages, the scene loopers, physics and held
+  // keys), the view's runs instead.
   const isSceneSuspended = loopState.isSceneSuspended;
 
   if (isSceneSuspended) {
@@ -392,7 +425,8 @@ const mainLoopForDebug = async () => {
     runActiveViewFrame(delta);
   } else {
     // main loopers
-    for (const world of getAllECSWorlds()) world.updateMainLoop(delta);
+    const worlds = getAllECSWorlds();
+    for (let i = 0; i < worlds.length; i++) worlds[i].updateMainLoop(delta);
     runSceneMainLoopers(delta, skipFrame);
 
     if (loopState.appPlay) {
@@ -403,7 +437,8 @@ const mainLoopForDebug = async () => {
       stepFixedAndPollHeldKeys(delta);
 
       // app loopers
-      for (const world of getAllECSWorlds()) world.updateAppLoop(deltaApp);
+      const appWorlds = getAllECSWorlds();
+      for (let i = 0; i < appWorlds.length; i++) appWorlds[i].updateAppLoop(deltaApp);
       runSceneAppLoopers(deltaApp);
     } else {
       // Only master loop is playing (app loop is paused)
@@ -418,117 +453,19 @@ const mainLoopForDebug = async () => {
   }
 
   // Update stats-gl
-  getStats()?.update();
+  if (IS_DEBUG_ENV) getStats()?.update();
 
   renderScene();
 
   if (isSceneSuspended) {
     runActiveViewAfterRender(delta);
   } else {
-    for (const world of getAllECSWorlds()) world.updateLateMainLoop(delta);
+    const lateWorlds = getAllECSWorlds();
+    for (let i = 0; i < lateWorlds.length; i++) lateWorlds[i].updateLateMainLoop(delta);
     runSceneMainLateLoopers(delta);
   }
 
-  updateRestOfStats(getRenderer() as Renderer);
-  frameProbe?.end(performance.now(), true);
-};
-
-// LOOP (for production)
-// **************************************
-const mainLoopForProduction = async () => {
-  if (isMainLoopStopped) return;
-  frameProbe?.begin(performance.now());
-  timer.update();
-  fixedStepDriver?.latch();
-  actionSampler?.pollFrame();
-  const dt = fixedFrameDelta ?? timer.getDelta();
-  if (loopState.masterPlay) {
-    delta = dt * loopState.playSpeedMultiplier;
-    requestAnimationFrame(mainLoop);
-    loopState.isMasterPlaying = true;
-  } else {
-    loopState.isMasterPlaying = false;
-  }
-  advanceElapsedTime();
-
-  // main loopers
-  for (const world of getAllECSWorlds()) world.updateMainLoop(delta);
-  runSceneMainLoopers(delta, false);
-
-  if (loopState.appPlay) {
-    loopState.isAppPlaying = true;
-    deltaApp = dt * loopState.playSpeedMultiplier;
-
-    // Step the physics and poll held-key input at the same cadence
-    stepFixedAndPollHeldKeys(delta);
-
-    // app loopers
-    for (const world of getAllECSWorlds()) world.updateAppLoop(deltaApp);
-    runSceneAppLoopers(deltaApp);
-  } else {
-    noteFixedStepPause();
-  }
-
-  renderScene();
-
-  for (const world of getAllECSWorlds()) world.updateLateMainLoop(delta);
-  runSceneMainLateLoopers(delta);
-  frameProbe?.end(performance.now(), true);
-};
-
-// LOOP (for production with FPS limiter)
-// **************************************
-const mainLoopForProductionWithFPSLimiter = async () => {
-  if (isMainLoopStopped) return;
-  frameProbe?.begin(performance.now());
-  timer.update();
-  fixedStepDriver?.latch();
-  actionSampler?.pollFrame();
-  const dt = fixedFrameDelta ?? timer.getDelta();
-
-  if (loopState.masterPlay) {
-    delta = dt * loopState.playSpeedMultiplier;
-    requestAnimationFrame(mainLoop);
-    loopState.isMasterPlaying = true;
-  } else {
-    loopState.isMasterPlaying = false;
-  }
-  advanceElapsedTime();
-
-  // --- Max FPS limiter ---
-  const skipFrame = shouldSkipFrameForMaxFPS();
-
-  // main loopers
-  for (const world of getAllECSWorlds()) world.updateMainLoop(delta);
-  runSceneMainLoopers(delta, skipFrame);
-
-  if (loopState.appPlay) {
-    loopState.isAppPlaying = true;
-    deltaApp = dt * loopState.playSpeedMultiplier;
-
-    // Step the physics (always, even on a skipped render frame, so it doesn't fall behind)
-    stepFixedAndPollHeldKeys(delta);
-
-    if (skipFrame) {
-      frameProbe?.end(performance.now(), false);
-      return;
-    }
-
-    // app loopers
-    for (const world of getAllECSWorlds()) world.updateAppLoop(deltaApp);
-    runSceneAppLoopers(deltaApp);
-  } else {
-    noteFixedStepPause();
-    if (skipFrame) {
-      frameProbe?.end(performance.now(), false);
-      return;
-    }
-  }
-
-  renderScene();
-
-  for (const world of getAllECSWorlds()) world.updateLateMainLoop(delta);
-  runSceneMainLateLoopers(delta);
+  if (IS_DEBUG_ENV) updateRestOfStats(getRenderer() as Renderer);
   frameProbe?.end(performance.now(), true);
 };
 
@@ -588,7 +525,7 @@ export const initMainLoop = () => {
 
   initWinVisibilityListener();
 
-  if (isDebugEnvironment() || isProdTestMode()) {
+  if (IS_DEBUG_ENV || IS_PROD_TEST_MODE) {
     const gui = useDebug(debugGUI, true);
     // Also hydrates loopState's persisted debug values
     if (gui) gui.createLoopDebugControls(loopState);
@@ -596,21 +533,17 @@ export const initMainLoop = () => {
 
   initRayCasting();
 
-  if (isDebugEnvironment()) {
+  if (IS_DEBUG_ENV) {
     initStats();
     initDebugTools();
-    mainLoop = mainLoopForDebug;
-  } else if (isProductionEnvironment() && loopState.maxFPS > 0) {
-    mainLoop = mainLoopForProductionWithFPSLimiter;
-  } else {
-    mainLoop = mainLoopForProduction;
   }
 
   renderScene();
 
   if (loopState.masterPlay) {
-    // Wait for a few loops and start the main loop (which steps physics itself each frame)
-    setTimeout(() => requestAnimationFrame(mainLoop), 100);
+    // Wait for a few loops and start the main loop (which steps physics itself each frame). A
+    // frame requested meanwhile (toggleMainPlay) is the same chain
+    setTimeout(requestMainLoopFrame, 100);
   }
 };
 
@@ -652,7 +585,7 @@ export const toggleMainPlay = (value?: boolean) => {
   }
   if (loopState.masterPlay && !loopState.isMasterPlaying) {
     loopState.isMasterPlaying = true;
-    requestAnimationFrame(mainLoop);
+    requestMainLoopFrame();
   }
   updateDebuggerTab(LOOP_DEBUGGER_TAB_ID);
 };
@@ -677,8 +610,8 @@ export const toggleAppPlay = (value?: boolean) => {
 export const setIsLoadingScene = (isLoading: boolean) => (loopState.isLoadingScene = isLoading);
 
 /**
- * Sets loopState.isSceneSuspended. ViewManager.ts only: it owns the enter and leave sequence of
- * an editor view around it.
+ * Sets loopState.isSceneSuspended. `kernel/render/Views.ts` only: it owns the enter and leave
+ * sequence of an editor view around it.
  * @param isSuspended (boolean) whether the scene is suspended
  */
 export const setSceneSuspended = (isSuspended: boolean) => {
@@ -701,10 +634,11 @@ export const renderFrameNow = () => {
 };
 
 /**
- * Returns the read-only loop state object
+ * A copy of the loop state (a snapshot: changing it changes nothing). Allocates: per-frame code
+ * reads {@link isAppPlaying} instead.
  * @returns ({@link LoopState}) copy of LoopState
  */
-export const getReadOnlyLoopState = () => JSON.parse(JSON.stringify(loopState)) as LoopState;
+export const getReadOnlyLoopState = (): LoopState => ({ ...loopState });
 
 /**
  * Whether the app loop is set to play (loopState.appPlay): a cheap read for per-frame code,
@@ -720,68 +654,94 @@ export const isAppPlaying = () => loopState.appPlay;
  */
 export const getPlaySpeedMultiplier = () => loopState.playSpeedMultiplier;
 
+/**
+ * Sets the play speed multiplier, which scales every delta (1: real time, 0: frozen; a negative
+ * value is 0).
+ * @param multiplier (number) the multiplier
+ */
 export const setPlaySpeedMultiplier = (multiplier: number) =>
   (loopState.playSpeedMultiplier = multiplier < 0 ? 0 : multiplier);
 
-let visibilityChangeFns: { [id: string]: (isHidden: boolean) => void } = {};
-export const addVisibilityChangeFn = (id: string, fn: (isHidden: boolean) => void) =>
-  (visibilityChangeFns[id] = fn);
-export const deleteVisibilityChangeFn = (id: string) => delete visibilityChangeFns[id];
-export const deleteAllVisibilityChangeFns = () => (visibilityChangeFns = {});
-const onVisibilityChange = () => {
+// The page's visibility, unload and blur listeners (run in the order added)
+const visibilityChangeListeners = new Set<(isHidden: boolean) => void>();
+const beforeUnloadListeners = new Set<() => void>();
+const windowBlurListeners = new Set<() => void>();
+
+/**
+ * Adds a listener for the page's visibility (another tab, a minimized window), called with
+ * whether it's hidden now; not while the page unloads. Adding the same function again does
+ * nothing.
+ * @internal
+ * @returns its remover
+ */
+export const onVisibilityChange = (fn: (isHidden: boolean) => void) => {
+  visibilityChangeListeners.add(fn);
+  return () => {
+    visibilityChangeListeners.delete(fn);
+  };
+};
+
+/**
+ * Adds a listener for the window's `beforeunload` (after {@link addWindowListeners}).
+ * @internal
+ * @returns its remover
+ */
+export const onBeforeUnload = (fn: () => void) => {
+  beforeUnloadListeners.add(fn);
+  return () => {
+    beforeUnloadListeners.delete(fn);
+  };
+};
+
+/**
+ * Adds a listener for the window losing focus (`blur`, after {@link addWindowListeners}): eg.
+ * releasing held keys, whose keyup the page won't see.
+ * @internal
+ * @returns its remover
+ */
+export const onWindowBlur = (fn: () => void) => {
+  windowBlurListeners.add(fn);
+  return () => {
+    windowBlurListeners.delete(fn);
+  };
+};
+
+const handleVisibilityChange = () => {
   if (loopState.isUnloading) return;
   const isHidden = document.hidden;
   loopState.isWindowHidden = isHidden;
-  const keys = Object.keys(visibilityChangeFns);
-  for (let i = 0; i < keys.length; i++) {
-    visibilityChangeFns[keys[i]](isHidden);
-  }
+  for (const fn of visibilityChangeListeners) fn(isHidden);
 };
 const initWinVisibilityListener = () => {
-  document.addEventListener('visibilitychange', onVisibilityChange);
+  document.addEventListener('visibilitychange', handleVisibilityChange);
   loopListenerRemovers.push(() =>
-    document.removeEventListener('visibilitychange', onVisibilityChange)
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
   );
 };
-
-let beforeUnloadFns: { [id: string]: () => void } = {};
-export const addBeforeUnloadFn = (id: string, fn: () => void) => (beforeUnloadFns[id] = fn);
-export const deleteBeforeUnloadFn = (id: string) => delete beforeUnloadFns[id];
-export const deleteAllBeforeUnloadFns = () => (beforeUnloadFns = {});
-
-let onWindowBlurFns: { [id: string]: () => void } = {};
-export const addOnWindowBlurFn = (id: string, fn: () => void) => (onWindowBlurFns[id] = fn);
-export const deleteAddOnWindowBlurFn = (id: string) => delete onWindowBlurFns[id];
-export const deleteAllOnWindowBlurFns = () => (onWindowBlurFns = {});
 
 let areWindowListenersAdded = false;
 
 /**
  * Adds the window's `beforeunload` and `blur` listeners that run the functions added with
- * {@link addBeforeUnloadFn} and {@link addOnWindowBlurFn}. `InitEngine` calls it first (not at
+ * {@link onBeforeUnload} and {@link onWindowBlur}. `InitEngine` calls it first (not at
  * module load: the engine's modules read no `window` at load); later calls do nothing.
+ * @internal
  */
 export const addWindowListeners = () => {
   if (areWindowListenersAdded) return;
   areWindowListenersAdded = true;
-  const onBeforeUnload = () => {
+  const handleBeforeUnload = () => {
     loopState.isUnloading = true;
-    const keys = Object.keys(beforeUnloadFns);
-    for (let i = 0; i < keys.length; i++) {
-      beforeUnloadFns[keys[i]]();
-    }
+    for (const fn of beforeUnloadListeners) fn();
   };
-  const onBlur = () => {
-    const keys = Object.keys(onWindowBlurFns);
-    for (let i = 0; i < keys.length; i++) {
-      onWindowBlurFns[keys[i]]();
-    }
+  const handleBlur = () => {
+    for (const fn of windowBlurListeners) fn();
   };
-  window.addEventListener('beforeunload', onBeforeUnload);
-  window.addEventListener('blur', onBlur);
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  window.addEventListener('blur', handleBlur);
   loopListenerRemovers.push(() => {
-    window.removeEventListener('beforeunload', onBeforeUnload);
-    window.removeEventListener('blur', onBlur);
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.removeEventListener('blur', handleBlur);
   });
 };
 
@@ -803,6 +763,10 @@ export const stopMainLoop = () => {
 type MainLoopGUIModule = typeof import('./debug/_dbg__MainLoop');
 let debugGUI: DebugModuleRef<MainLoopGUIModule> | null = null;
 
+/**
+ * Loads the loop's debug module (the Loop tab; debug env and prod test mode). `InitEngine` calls it.
+ * @internal
+ */
 export const registerMainLoopDebugGUI = async () => {
   debugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__MainLoop'), true);
 };

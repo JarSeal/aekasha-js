@@ -1,6 +1,6 @@
 import { isDebugCameraActive } from '../camera/Camera';
-import { isDebugEnvironment } from '../config/Config';
-import { addOnWindowBlurFn, addVisibilityChangeFn } from '../loop/MainLoop';
+import { IS_DEBUG_ENV } from '../config/Config';
+import { onVisibilityChange, onWindowBlur } from '../loop/MainLoop';
 import { onRendererCreated } from '../render/Renderer';
 import { getCurrentSceneId } from '../scene/Scene';
 import { lwarn } from '../../utils/Logger';
@@ -36,7 +36,7 @@ export type KeyBindingBase = BindingMeta & {
   enabled?: boolean; // default true
   sceneId?: string;
   enabledInDebugCam?: EnabledInDebugCam;
-  /** Runs in editor views too (ViewManager.ts), which suspend the other bindings. (The engine's
+  /** Runs in editor views too (Views.ts), which suspend the other bindings. (The engine's
    * debug keys and the CONFIG.ts `debugKeys` are action maps in the `DEBUG` context instead.) */
   isDebugKey?: boolean;
 };
@@ -101,7 +101,7 @@ export const getKeyChordLabel = (chord: KeyChord | KeyChord[]): string =>
     .join(' / ');
 
 const isInputInDebugCamInvalid = (enabledInDebugCam?: EnabledInDebugCam) =>
-  isDebugEnvironment() &&
+  IS_DEBUG_ENV &&
   ((enabledInDebugCam === 'NOT_ENABLED_IN_DEBUG' && isDebugCameraActive()) ||
     (enabledInDebugCam === 'ENABLED_ONLY_IN_DEBUG' && !isDebugCameraActive()));
 
@@ -266,8 +266,9 @@ const initKeyListeners = () => {
   };
 
   addInputListenerRemover(removeKeyListeners);
-  addVisibilityChangeFn('inputKeyboardHeldKeysClear', () => clearHeldKeys());
-  addOnWindowBlurFn('inputKeyboardHeldKeysClear', () => clearHeldKeys());
+  // The same function each time, so adding the listeners again (after a removal) adds nothing
+  onVisibilityChange(clearHeldKeys);
+  onWindowBlur(clearHeldKeys);
 
   // The input scope (InputState.ts): the window, the canvas while it has focus, or nothing
   const scope = getInputScope();
@@ -318,7 +319,7 @@ export const warnIfKeyChordReserved = (
   mapId?: string,
   ignoreModifiers?: boolean
 ): void => {
-  if (!isDebugEnvironment()) return;
+  if (!IS_DEBUG_ENV) return;
   for (let i = 0; i < reservedChords.length; i++) {
     const reserved = reservedChords[i];
     if (reserved.mapId ? reserved.mapId === mapId : reserved.id === id) continue;

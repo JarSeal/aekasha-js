@@ -2,23 +2,23 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1664,
-      "total": 2342
+      "documented": 1707,
+      "total": 2332
     },
     "members": {
-      "documented": 216,
-      "total": 444
+      "documented": 330,
+      "total": 445
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1620,
-        "total": 2279
+        "documented": 1663,
+        "total": 2269
       },
       "members": {
-        "documented": 166,
-        "total": 364
+        "documented": 280,
+        "total": 365
       }
     },
     "toolkit": {
@@ -841,8 +841,8 @@
     },
     "engine/kernel/camera": {
       "exports": {
-        "documented": 8,
-        "total": 31
+        "documented": 10,
+        "total": 32
       },
       "members": {
         "documented": 1,
@@ -866,7 +866,6 @@
           "Camera#initDebugCamera",
           "Camera#isAnyCameraHelperVisible",
           "Camera#isDebugCameraActive",
-          "Camera#registerCameraManager",
           "Camera#setActiveCamera",
           "Camera#setCurrentCamera",
           "Camera#setMainCamera",
@@ -890,207 +889,50 @@
     },
     "engine/kernel/config": {
       "exports": {
-        "documented": 29,
-        "total": 32
+        "documented": 24,
+        "total": 24
       },
       "members": {
-        "documented": 0,
+        "documented": 1,
         "total": 1
       },
       "undocumented": {
-        "exports": [
-          "Config#AppConfig",
-          "Config#DebugPhysicsWireframeConfig",
-          "Config#Environments"
-        ],
-        "members": [
-          "DebugModules#DebugModuleRef.current"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "engine/kernel/ecs": {
       "exports": {
-        "documented": 45,
-        "total": 78
+        "documented": 79,
+        "total": 79
       },
       "members": {
-        "documented": 46,
-        "total": 158
+        "documented": 159,
+        "total": 159
       },
       "undocumented": {
-        "exports": [
-          "ECS#ComponentHook",
-          "ECS#DEFAULT_ECS_WORLD_ID",
-          "ECS#ECSSystem",
-          "ECS#ECSWorld",
-          "ECS#ECSWorldOptions",
-          "ECS#WorldPlugin",
-          "ECS#getEntityIdByAppId",
-          "ECS#registerECSModule",
-          "ECSComponentStorage#ECSStorageLSOverride",
-          "ECSCoreComponents#CoreComponentData",
-          "ECSCoreComponents#ECSPosition",
-          "ECSCoreComponents#ECSRotation",
-          "ECSCoreComponents#ECSTransformProp",
-          "ECSCoreComponents#LifetimeData",
-          "ECSHelpers#EntityDiagnosticData",
-          "ECSHelpers#addComponent",
-          "ECSHelpers#createEntity",
-          "ECSHelpers#createRawEntity",
-          "ECSHelpers#deleteEntity",
-          "ECSHelpers#getComponent",
-          "ECSHelpers#getPosition",
-          "ECSHelpers#getRotation",
-          "ECSHelpers#getScale",
-          "ECSHelpers#getStorage",
-          "ECSHelpers#getTransform",
-          "ECSHelpers#hasComponent",
-          "ECSHelpers#removeComponent",
-          "ECSHelpers#setTransform",
-          "ECSHelpers#teleport",
-          "ECSRegistry#EntityDebugData",
-          "ObjectFrustumCullingSystem#MAX_SPOT_ANGLE",
-          "ObjectFrustumCullingSystem#getMeshWorldBoundingSphere",
-          "ObjectFrustumCullingSystem#objectFrustumCullingSystem"
-        ],
-        "members": [
-          "ECS#ECSWorld.addComponent",
-          "ECS#ECSWorld.constructor",
-          "ECS#ECSWorld.createEntity",
-          "ECS#ECSWorld.createRawEntity",
-          "ECS#ECSWorld.getComponent",
-          "ECS#ECSWorld.getPosition",
-          "ECS#ECSWorld.getRigidBody",
-          "ECS#ECSWorld.getRotation",
-          "ECS#ECSWorld.getScale",
-          "ECS#ECSWorld.getTransform",
-          "ECS#ECSWorld.id",
-          "ECS#ECSWorld.isEntityDynamic",
-          "ECS#ECSWorld.maxEntities",
-          "ECS#ECSWorld.registerComponentHooks",
-          "ECS#ECSWorld.setTransform",
-          "ECS#ECSWorld.storageMode",
-          "ECSComponentStorage#ECSStorageLSOverride.maxEntities",
-          "ECSComponentStorage#ECSStorageLSOverride.storageMode",
-          "ECSComponentStorage#IComponentStorage.clear",
-          "ECSComponentStorage#IComponentStorage.delete",
-          "ECSComponentStorage#IComponentStorage.entries",
-          "ECSComponentStorage#IComponentStorage.get",
-          "ECSComponentStorage#IComponentStorage.has",
-          "ECSComponentStorage#IComponentStorage.keys",
-          "ECSComponentStorage#IComponentStorage.set",
-          "ECSComponentStorage#IComponentStorage.size",
-          "ECSCoreComponents#CoreComponentData.CORE_APP_ID",
-          "ECSCoreComponents#CoreComponentData.CORE_BODY_DYNAMIC_HEADLESS",
-          "ECSCoreComponents#CoreComponentData.CORE_BODY_DYNAMIC_VISUAL",
-          "ECSCoreComponents#CoreComponentData.CORE_BODY_STATIC",
-          "ECSCoreComponents#CoreComponentData.CORE_CAMERA_SETTINGS",
-          "ECSCoreComponents#CoreComponentData.CORE_CHARACTER",
-          "ECSCoreComponents#CoreComponentData.CORE_COLLIDER",
-          "ECSCoreComponents#CoreComponentData.CORE_DEBUG_CAMERA_HELPER",
-          "ECSCoreComponents#CoreComponentData.CORE_DEBUG_DATA",
-          "ECSCoreComponents#CoreComponentData.CORE_DEBUG_IS_DEBUG_CAMERA",
-          "ECSCoreComponents#CoreComponentData.CORE_DEBUG_LIGHT_HELPER",
-          "ECSCoreComponents#CoreComponentData.CORE_DEBUG_SYMBOL",
-          "ECSCoreComponents#CoreComponentData.CORE_DISABLED",
-          "ECSCoreComponents#CoreComponentData.CORE_FRUSTUM_CULLING_ENABLED",
-          "ECSCoreComponents#CoreComponentData.CORE_INSTANCED_MESH_SLOT",
-          "ECSCoreComponents#CoreComponentData.CORE_IS_AMBIENT_LIGHT",
-          "ECSCoreComponents#CoreComponentData.CORE_IS_DIRECTIONAL_LIGHT",
-          "ECSCoreComponents#CoreComponentData.CORE_IS_HEMISPHERE_LIGHT",
-          "ECSCoreComponents#CoreComponentData.CORE_IS_POINT_LIGHT",
-          "ECSCoreComponents#CoreComponentData.CORE_IS_SPOT_LIGHT",
-          "ECSCoreComponents#CoreComponentData.CORE_LIFETIME",
-          "ECSCoreComponents#CoreComponentData.CORE_LOD",
-          "ECSCoreComponents#CoreComponentData.CORE_MANAGED_BY",
-          "ECSCoreComponents#CoreComponentData.CORE_OBJECT3D",
-          "ECSCoreComponents#CoreComponentData.CORE_OBJECT_CULLING_ENABLED",
-          "ECSCoreComponents#CoreComponentData.CORE_ORBIT_CONTROLS",
-          "ECSCoreComponents#CoreComponentData.CORE_PERSISTENT",
-          "ECSCoreComponents#CoreComponentData.CORE_SPATIAL_INDEXED",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_FRUSTUM_CULLED",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_CAMERA",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_CHARACTER",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_GROUP",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_LIGHT",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_LINE",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_MAIN_CAMERA",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_MESH",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_IS_PHYSICS_OBJECT",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_LOD_CULLED",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_LOD_TRANSITIONING",
-          "ECSCoreComponents#CoreComponentData.CORE_TAG_OBJECT_CULLED",
-          "ECSCoreComponents#CoreComponentData.CORE_TARGET_LINK",
-          "ECSCoreComponents#CoreComponentData.CORE_TRANSFORM",
-          "ECSCoreComponents#CoreComponentData.CORE_USER_DATA",
-          "ECSCoreComponents#LifetimeData.remaining",
-          "ECSCoreComponents#LifetimeData.total",
-          "ECSCoreComponents#Transform.constructor",
-          "ECSCoreComponents#Transform.copy",
-          "ECSCoreComponents#Transform.position",
-          "ECSCoreComponents#Transform.quaternion",
-          "ECSCoreComponents#Transform.scale",
-          "ECSCoreComponents#Transform.version",
-          "ECSHelpers#EntityDiagnosticData.activeTags",
-          "ECSHelpers#EntityDiagnosticData.appId",
-          "ECSHelpers#EntityDiagnosticData.debugData",
-          "ECSHelpers#EntityDiagnosticData.id",
-          "ECSHelpers#EntityDiagnosticData.isDisabled",
-          "ECSHelpers#EntityDiagnosticData.isPersistent",
-          "ECSHelpers#EntityDiagnosticData.obj3D",
-          "ECSHelpers#EntityDiagnosticData.physics",
-          "ECSHelpers#EntityDiagnosticData.targetId",
-          "ECSHelpers#EntityDiagnosticData.transform",
-          "TypedArrayTransformStore#TypedArrayTransformStore.[iterator]",
-          "TypedArrayTransformStore#TypedArrayTransformStore.clear",
-          "TypedArrayTransformStore#TypedArrayTransformStore.clearDirty",
-          "TypedArrayTransformStore#TypedArrayTransformStore.constructor",
-          "TypedArrayTransformStore#TypedArrayTransformStore.delete",
-          "TypedArrayTransformStore#TypedArrayTransformStore.entries",
-          "TypedArrayTransformStore#TypedArrayTransformStore.get",
-          "TypedArrayTransformStore#TypedArrayTransformStore.has",
-          "TypedArrayTransformStore#TypedArrayTransformStore.isDirty",
-          "TypedArrayTransformStore#TypedArrayTransformStore.keys",
-          "TypedArrayTransformStore#TypedArrayTransformStore.posX",
-          "TypedArrayTransformStore#TypedArrayTransformStore.posY",
-          "TypedArrayTransformStore#TypedArrayTransformStore.posZ",
-          "TypedArrayTransformStore#TypedArrayTransformStore.quatW",
-          "TypedArrayTransformStore#TypedArrayTransformStore.quatX",
-          "TypedArrayTransformStore#TypedArrayTransformStore.quatY",
-          "TypedArrayTransformStore#TypedArrayTransformStore.quatZ",
-          "TypedArrayTransformStore#TypedArrayTransformStore.scaleX",
-          "TypedArrayTransformStore#TypedArrayTransformStore.scaleY",
-          "TypedArrayTransformStore#TypedArrayTransformStore.scaleZ",
-          "TypedArrayTransformStore#TypedArrayTransformStore.set",
-          "TypedArrayTransformStore#TypedArrayTransformStore.setPosition",
-          "TypedArrayTransformStore#TypedArrayTransformStore.setQuaternion",
-          "TypedArrayTransformStore#TypedArrayTransformStore.setScale",
-          "TypedArrayTransformStore#TypedArrayTransformStore.size"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "engine/kernel/ecs/debug": {
       "exports": {
-        "documented": 3,
-        "total": 6
+        "documented": 4,
+        "total": 4
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "ECSStressTest#initECSStressTest",
-          "ECSStressTest#instancedSyncSystem",
-          "ECSStressTest#proximitySystem"
-        ],
+        "exports": [],
         "members": []
       }
     },
     "engine/kernel/init": {
       "exports": {
-        "documented": 18,
-        "total": 18
+        "documented": 19,
+        "total": 19
       },
       "members": {
         "documented": 0,
@@ -1141,8 +983,8 @@
     },
     "engine/kernel/light": {
       "exports": {
-        "documented": 6,
-        "total": 19
+        "documented": 8,
+        "total": 20
       },
       "members": {
         "documented": 0,
@@ -1157,7 +999,6 @@
           "Light#debugGUI",
           "Light#getLightByAppId",
           "Light#isAnyLightHelperVisible",
-          "Light#registerLightManager",
           "Light#setLightEnabled",
           "Light#setLightFrustumCullingEnabled",
           "Light#setLightObjectCullingEnabled",
@@ -1169,28 +1010,15 @@
     },
     "engine/kernel/loop": {
       "exports": {
-        "documented": 36,
-        "total": 48
+        "documented": 44,
+        "total": 44
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "MainLoop#addBeforeUnloadFn",
-          "MainLoop#addOnWindowBlurFn",
-          "MainLoop#addVisibilityChangeFn",
-          "MainLoop#deleteAddOnWindowBlurFn",
-          "MainLoop#deleteAllBeforeUnloadFns",
-          "MainLoop#deleteAllOnWindowBlurFns",
-          "MainLoop#deleteAllVisibilityChangeFns",
-          "MainLoop#deleteBeforeUnloadFn",
-          "MainLoop#deleteVisibilityChangeFn",
-          "MainLoop#mainLoop",
-          "MainLoop#registerMainLoopDebugGUI",
-          "MainLoop#setPlaySpeedMultiplier"
-        ],
+        "exports": [],
         "members": []
       }
     },

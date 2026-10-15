@@ -152,7 +152,10 @@ export const installPhysicsEntities = (ctx: FeatureContext, world: ECSWorld) => 
  * component) and syncs their master visibility on every scene enter. */
 export const registerPhysicsWireframeDebugAsync = async () => {
   debugPhysicsDraw = await loadDebugModuleAsync(() => import('./debug/_dbg__PhysicsDebugDraw'));
-  useDebug(debugPhysicsDraw)?._installPhysicsWireframes();
+  const draw = useDebug(debugPhysicsDraw);
+  // Only with the module (the loader returns null outside the debug env)
+  if (!draw) return;
+  draw._installPhysicsWireframes();
   registerOnAllSceneEnterings('physicsWireframeMasterVisibilitySync', () => {
     const sceneId = getCurrentSceneId();
     if (sceneId) useDebug(debugPhysicsDraw)?.syncWireframeMasterVisibilityFromLS(sceneId);

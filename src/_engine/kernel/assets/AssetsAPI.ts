@@ -4,7 +4,7 @@
 // crash) transparently re-runs on the main thread. The worker holds no cache: the main-thread
 // registries stay the single source of truth.
 
-import { getConfig, isDebugEnvironment } from '../config/Config';
+import { getConfig, IS_DEBUG_ENV } from '../config/Config';
 import { initWorker } from '../loop/Workers';
 import { lerror, llog, lwarn } from '../../utils/Logger';
 import { releaseTransferableImage } from './import/TextureTransfer';
@@ -220,23 +220,21 @@ const startWorker = () => {
   // Imported here, not at load (like the worker itself, only by the first request)
   workerStartPromise = import('./worker/AssetsWorker?worker')
     .then(({ default: AssetsWorker }) =>
-      initWorker<AssetsDownProtocol>(
-        AssetsWorker,
-        'Assets Worker',
-        onWorkerMessage,
-        onWorkerError,
-        {
-          onReady: (data) => {
-            workerCapabilities = (data as AssetsWorkerReadyMessage).capabilities;
-          },
-          timeoutMs: assetsState.requestTimeoutMs,
-        }
-      )
+      initWorker<AssetsDownProtocol>({
+        WorkerClass: AssetsWorker,
+        name: 'Assets Worker',
+        onMessage: onWorkerMessage,
+        onError: onWorkerError,
+        onReady: (data) => {
+          workerCapabilities = (data as AssetsWorkerReadyMessage).capabilities;
+        },
+        timeoutMs: assetsState.requestTimeoutMs,
+      })
     )
     .then((startedWorker) => {
       worker = startedWorker;
       workerStatus = 'READY';
-      if (isDebugEnvironment()) llog('Assets worker ready, capabilities:', workerCapabilities);
+      if (IS_DEBUG_ENV) llog('Assets worker ready, capabilities:', workerCapabilities);
       return startedWorker;
     })
     .catch((err) => {
@@ -405,7 +403,7 @@ export const runAssetTask = async <T>(
  * @param report {@link AssetLoadReport} (from {@link runAssetTask})
  */
 export const recordAssetLoadReport = (key: string, report: AssetLoadReport) => {
-  if (isDebugEnvironment()) loadReports.set(key, report);
+  if (IS_DEBUG_ENV) loadReports.set(key, report);
 };
 
 /**

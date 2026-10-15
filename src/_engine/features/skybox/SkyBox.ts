@@ -3,7 +3,7 @@ import { normalWorldGeometry, pmremTexture } from 'three/tsl';
 import { lerror, lwarn } from '../../utils/Logger';
 import { getCurrentSceneId, getRootScene } from '../../kernel/scene/Scene';
 import { getNextSceneId, isCurrentlyLoading } from '../../kernel/scene/SceneLoader';
-import { isDebugEnvironment } from '../../kernel/config/Config';
+import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { lsGetItem } from '../../utils/LocalAndSessionStorage';
 import type { DebugModuleRef } from '../../kernel/config/DebugModules';
 import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
@@ -178,7 +178,7 @@ export const registerSkyBox = (def: SkyBoxDef, sceneId?: string) => {
     lerror(msg);
     throw new Error(msg);
   }
-  if ('preset' in def && isDebugEnvironment()) {
+  if ('preset' in def && IS_DEBUG_ENV) {
     lwarn(
       `Sky box "${def.id}" still has a preset, which is ignored here: pass the definition through resolveSkyBoxPreset first (JSON sky boxes are resolved at build time).`
     );
@@ -227,7 +227,7 @@ export const getSceneSkyBoxTextureIds = (sceneId: string) =>
 
 /** The definition with its debug overrides merged in (debug env only: production never reads LS). */
 const resolveSkyBoxDef = (def: SkyBoxDef, sceneId: string): SkyBoxDef => {
-  if (!isDebugEnvironment()) return def;
+  if (!IS_DEBUG_ENV) return def;
   const allOverrides = lsGetItem(SKYBOX_DEBUG_OVERRIDES_LS_KEY, {}) as {
     [sceneId: string]: { [id: string]: SkyBoxOverrides } | undefined;
   } | null;
@@ -356,14 +356,14 @@ const activate = async (sceneId: string, def: SkyBoxDef, time?: SkyTimeState) =>
   ]);
   if (seq !== activationSeq) return active; // Superseded by a later activation or clear
 
-  if (isOn(def.clouds) && !isAtmosphereEnabled(def) && isDebugEnvironment()) {
+  if (isOn(def.clouds) && !isAtmosphereEnabled(def) && IS_DEBUG_ENV) {
     lwarn(`Sky box "${def.id}": clouds need an enabled atmosphere, they are left out.`);
   }
   // A definition made in code isn't validated by the schema
-  if ((def.suns?.length ?? 0) > MAX_SUNS && isDebugEnvironment()) {
+  if ((def.suns?.length ?? 0) > MAX_SUNS && IS_DEBUG_ENV) {
     lwarn(`Sky box "${def.id}": only ${MAX_SUNS} suns are drawn, the others are ignored.`);
   }
-  if ((def.moons?.length ?? 0) > MAX_MOONS && isDebugEnvironment()) {
+  if ((def.moons?.length ?? 0) > MAX_MOONS && IS_DEBUG_ENV) {
     lwarn(`Sky box "${def.id}": only ${MAX_MOONS} moons are drawn, the others are ignored.`);
   }
   const skyTime = time ?? createSkyTimeState(def);
@@ -419,7 +419,7 @@ export const activateSceneDefaultSkyBox = async (sceneId: string) => {
 export const getActiveSkyBox = () => active;
 
 const LEGACY_WARN = (message: string) => {
-  if (isDebugEnvironment()) lwarn(message);
+  if (IS_DEBUG_ENV) lwarn(message);
 };
 
 /**

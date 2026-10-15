@@ -1,5 +1,11 @@
 import * as THREE from 'three/webgpu';
-import { ECSWorld, getAllECSWorlds, getECSWorld, getEntityIdByAppId } from '../ecs/ECS';
+import {
+  DEFAULT_ECS_WORLD_ID,
+  ECSWorld,
+  getAllECSWorlds,
+  getECSWorld,
+  getEntityIdByAppId,
+} from '../ecs/ECS';
 import { getCurrentSceneId, getRootScene, registerOnAllSceneEnterings } from '../scene/Scene';
 import type { DebugModuleRef } from '../config/DebugModules';
 import { loadDebugModule, loadDebugModuleAsync, useDebug } from '../config/DebugModules';
@@ -14,15 +20,19 @@ import { loadPersistentProps } from '../scene/PropertyLoader';
 import type { CameraProps } from '../../schemas/CameraSchema';
 import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
 import { existsOrThrow } from '../../utils/Assert';
-import { CoreComponentType } from '../ecs/ECSRegistry';
 import { DEBUG_CAMERA_ID } from '../../debug/DebugTools';
 import { updateOnScreenTools } from '../../debug/OnScreenTools';
 import { lerror } from '../../utils/Logger';
+import type { FeatureContext } from '../init/Features';
 
 // --- STATE ---
 let activeCameraEntityId: number | null = null;
 let activeCameraObject: THREE.Camera | null = null;
 let debugCameraEntityId: number | null = null;
+// The default world's main camera (p200): the one entity with TAG_IS_MAIN_CAMERA, kept by
+// setMainCamera (the tag's only add site) and cleared by the tag's hooks, so the per-frame
+// getMainCamera() needs no query
+let mainCameraEntityId: number | null = null;
 
 type DebugCameraModule = typeof import('./debug/_dbg__DebugCamera');
 type CameraHelpersModule = typeof import('./debug/_dbg__CameraHelpers');
@@ -36,25 +46,51 @@ let debugCamera: DebugModuleRef<DebugCameraModule> | null = null;
 const _m1 = new THREE.Matrix4();
 const _v1 = new THREE.Vector3();
 
-export const registerCameraManager = async () => {
+/**
+ * Installs the cameras (the kernel, p607): a camera entity's deletion disposes its camera, the
+ * main camera cache follows its tag, and every camera's aspect follows the canvas.
+ * @internal
+ */
+export const installCameras = (ctx: FeatureContext) => {
   addResizer('cameraAspectResizer', updateAllCameraAspectRatios);
 
-  if (IS_DEBUG_ENV) {
-    // Awaited, so the debug camera's MAIN system (its module comes with the GUI's) registers in a
-    // fixed place: before the light helpers' and the line time system (a load race before p607)
-    cameraDebugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__CameraGUI'));
+  ctx.registerComponentHooks(ComponentType.TAG_IS_CAMERA, {
+    onDeleteEntity: (entityId, world) => disposeCamera(entityId, world),
+  });
 
-    registerOnAllSceneEnterings('cameraDebugSync', () => {
-      const sceneId = getCurrentSceneId();
-      if (sceneId) {
-        syncCameraHelpersFromLS(sceneId, getECSWorld());
-      }
-    });
-  }
+  // The main camera cache follows the tag in the default world (other worlds have their own
+  // entity ids: the same number there is another entity)
+  const clearMainCamera = (entityId: number, world: ECSWorld) => {
+    if (world.id === DEFAULT_ECS_WORLD_ID && entityId === mainCameraEntityId) {
+      mainCameraEntityId = null;
+    }
+  };
+  ctx.registerComponentHooks(ComponentType.TAG_IS_MAIN_CAMERA, {
+    onRemoveComponent: clearMainCamera,
+    onDeleteEntity: clearMainCamera,
+  });
+};
 
+/**
+ * Debug env: loads the cameras' debug GUI, keeps its list current, and syncs the camera helpers
+ * from LS on every scene enter. The boot calls it before the features install.
+ * @internal
+ */
+export const registerCameraDebugGUI = async () => {
+  // Awaited, so the debug camera's MAIN system (its module comes with the GUI's) registers in a
+  // fixed place: before the light helpers' and the line time system (a load race before p607)
+  cameraDebugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__CameraGUI'));
+  if (!cameraDebugGUI) return;
+
+  registerOnAllSceneEnterings('cameraDebugSync', () => {
+    const sceneId = getCurrentSceneId();
+    if (sceneId) {
+      syncCameraHelpersFromLS(sceneId, getECSWorld());
+    }
+  });
+  // After the 3D symbols' hook on the tag, which attaches the symbol the list shows
   ECSWorld.registerComponentHooks(ComponentType.TAG_IS_CAMERA, {
     onAddComponent: () => useDebug(cameraDebugGUI)?.updateCamerasDebuggerGUI('LIST'),
-    onDeleteEntity: (entityId, world) => disposeCamera(entityId, world),
   });
 };
 
@@ -105,7 +141,7 @@ export const computeResponsiveFrustumSize = (
  */
 export const applyCameraProjection = (
   cam: THREE.PerspectiveCamera | THREE.OrthographicCamera,
-  settings: CoreComponentData[CoreComponentType.CAMERA_SETTINGS],
+  settings: CoreComponentData[typeof ComponentType.CAMERA_SETTINGS],
   aspect: number
 ) => {
   if (settings.type === 'PERSPECTIVE' && cam instanceof THREE.PerspectiveCamera) {
@@ -139,7 +175,7 @@ export const createCameraEntity = (
   const appId = camProps.appId || entityOpts?.appId;
   const props = loadPersistentProps<CameraProps>({ ...camProps, appId }, 'CAMERA');
 
-  const settings: CoreComponentData[CoreComponentType.CAMERA_SETTINGS] = {
+  const settings: CoreComponentData[typeof ComponentType.CAMERA_SETTINGS] = {
     type: props.type,
     fov: props.type === 'PERSPECTIVE' ? props.fov ?? 45 : 0,
     near: props.near ?? 0.1,
@@ -234,10 +270,10 @@ export const getActiveCamera = (): THREE.Camera | undefined => activeCameraObjec
  * gameplay camera's point of view (e.g. light frustum culling).
  */
 export const getMainCamera = (): THREE.Camera | undefined => {
-  const world = getECSWorld();
-  const mainCamId = world.getEntitiesWith(ComponentType.TAG_IS_MAIN_CAMERA).next().value;
-  if (mainCamId === undefined) return undefined;
-  return world.getComponent(mainCamId, ComponentType.OBJECT3D)?.value as THREE.Camera | undefined;
+  if (mainCameraEntityId === null) return undefined;
+  return getECSWorld().getComponent(mainCameraEntityId, ComponentType.OBJECT3D)?.value as
+    | THREE.Camera
+    | undefined;
 };
 
 export const disposeCamera = (entityId: number, ecsWorld?: ECSWorld) => {
@@ -329,13 +365,8 @@ export const getAllCamerasAsArray = () => {
 };
 
 export const getMainAppCameraId = () => {
-  const world = getECSWorld();
-  const mainCamEntityId = world.getEntitiesWith(ComponentType.TAG_IS_MAIN_CAMERA).next().value;
-
-  if (mainCamEntityId !== undefined) {
-    return world.getComponent(mainCamEntityId, ComponentType.APP_ID)?.id || null;
-  }
-  return null;
+  if (mainCameraEntityId === null) return null;
+  return getECSWorld().getComponent(mainCameraEntityId, ComponentType.APP_ID)?.id || null;
 };
 
 export const getCurrentCamera = () => {
@@ -357,6 +388,7 @@ export const setMainCamera = (world: ECSWorld, newMainId: number) => {
     world.removeComponent(oldId, ComponentType.TAG_IS_MAIN_CAMERA);
   }
   world.addComponent(newMainId, ComponentType.TAG_IS_MAIN_CAMERA, true);
+  if (world.id === DEFAULT_ECS_WORLD_ID) mainCameraEntityId = newMainId;
   if (!isDebugCameraActive()) {
     setActiveCamera(newMainId);
   } else {
@@ -467,7 +499,7 @@ export const toggleDebugCamera = (world: ECSWorld, useDebugCam: boolean) =>
 
 /**
  * Enables or disables the scene debug camera's canvas input (its OrbitControls) right away.
- * ViewManager.ts turns it off while an editor view is active. Debug env only.
+ * Views.ts turns it off while an editor view is active. Debug env only.
  * @param enabled (boolean)
  */
 export const setSceneDebugCameraInputEnabled = (enabled: boolean) =>
@@ -575,7 +607,7 @@ export const getCameraByAppId = (appId: string, ecsWorld?: ECSWorld) => {
   const entityId = getEntityIdByAppId(appId, world);
   let camera: THREE.Camera | undefined = undefined;
   if (entityId) {
-    const obj = world.getComponent(entityId, CoreComponentType.OBJECT3D)?.value;
+    const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
     if (obj && !(obj as THREE.Camera).isCamera) {
       const msg = `Found Object3D is not a camera (type: ${obj.type}).`;
       lerror(msg);

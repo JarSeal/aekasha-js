@@ -1888,9 +1888,10 @@
       "getMainAppCameraId": "Function",
       "getMainCamera": "Function",
       "initDebugCamera": "Function",
+      "installCameras": "Function",
       "isAnyCameraHelperVisible": "Function",
       "isDebugCameraActive": "Function",
-      "registerCameraManager": "Function",
+      "registerCameraDebugGUI": "Function",
       "setActiveCamera": "Function",
       "setCurrentCamera": "Function",
       "setMainCamera": "Function",
@@ -1901,9 +1902,7 @@
       "updateAllCameraAspectRatios": "Function"
     },
     "src/_engine/kernel/config/Config.ts": {
-      "APP_CONFIG": "Variable",
       "AppConfig": "TypeAlias",
-      "CUR_ENV": "Variable",
       "DEBUG_ASSETS_BOOT_LS_KEY": "Variable",
       "DEBUG_PHYSICS_API_BOOT_LS_KEY": "Variable",
       "DebugPhysicsWireframeConfig": "TypeAlias",
@@ -1918,13 +1917,7 @@
       "initEnvironment": "Function",
       "IS_DEBUG_ENV": "Variable",
       "IS_PROD_ENV": "Variable",
-      "IS_PROD_TEST_ENV": "Variable",
       "IS_PROD_TEST_MODE": "Variable",
-      "isCurrentEnvironment": "Function",
-      "isDebugEnvironment": "Function",
-      "isNotCurrentEnvironment": "Function",
-      "isProdTestMode": "Function",
-      "isProductionEnvironment": "Function",
       "loadConfig": "Function",
       "PhysicsWireframeColors": "TypeAlias",
       "PROJECT_METADATA": "Variable"
@@ -1939,8 +1932,6 @@
     "src/_engine/kernel/ecs/debug/ECSStressTest.ts": {
       "getECSStressTestCount": "Function",
       "initECSStressTest": "Function",
-      "instancedSyncSystem": "Function",
-      "proximitySystem": "Function",
       "resetECSStressTest": "Function",
       "spawnECSStressTestBatch": "Function"
     },
@@ -1958,7 +1949,7 @@
       "initECSWorld": "Function",
       "onECSEntityCountChange": "Function",
       "onECSWorldRegistryChange": "Function",
-      "registerECSModule": "Function",
+      "registerECSDebugGUI": "Function",
       "TransformResetListener": "TypeAlias",
       "WorldPlugin": "TypeAlias"
     },
@@ -2017,6 +2008,7 @@
     },
     "src/_engine/kernel/ecs/LodTargets.ts": {
       "getLodTargets": "Function",
+      "LodTargetEntry": "TypeAlias",
       "registerLodTarget": "Function"
     },
     "src/_engine/kernel/ecs/ObjectFrustumCullingSystem.ts": {
@@ -2050,6 +2042,7 @@
       "checkFeatures": "Function",
       "checkSceneFeatures": "Function",
       "createFeatureHost": "Function",
+      "ENGINE_FEATURE_FACTORIES": "Variable",
       "EngineFeature": "TypeAlias",
       "FeatureContext": "TypeAlias",
       "FeatureDebugHook": "TypeAlias",
@@ -2226,9 +2219,10 @@
       "getLightByAppId": "Function",
       "getLightTargetId": "Function",
       "getLightTargetTransform": "Function",
+      "installLights": "Function",
       "isAnyLightHelperVisible": "Function",
       "LightProps": "TypeAlias",
-      "registerLightManager": "Function",
+      "registerLightDebugGUI": "Function",
       "setLightEnabled": "Function",
       "setLightFrustumCullingEnabled": "Function",
       "setLightObjectCullingEnabled": "Function",
@@ -2243,18 +2237,11 @@
     },
     "src/_engine/kernel/loop/MainLoop.ts": {
       "ActionSampler": "TypeAlias",
-      "addBeforeUnloadFn": "Function",
-      "addOnWindowBlurFn": "Function",
       "addResizer": "Function",
-      "addVisibilityChangeFn": "Function",
       "addWindowListeners": "Function",
-      "deleteAddOnWindowBlurFn": "Function",
-      "deleteAllBeforeUnloadFns": "Function",
-      "deleteAllOnWindowBlurFns": "Function",
-      "deleteAllVisibilityChangeFns": "Function",
-      "deleteBeforeUnloadFn": "Function",
+      "advanceElapsedClock": "Function",
       "deleteResizer": "Function",
-      "deleteVisibilityChangeFn": "Function",
+      "ElapsedClock": "TypeAlias",
       "FixedStepDriver": "TypeAlias",
       "FrameProbe": "TypeAlias",
       "getAppDelta": "Function",
@@ -2267,10 +2254,14 @@
       "isAppPlaying": "Function",
       "LOOP_DEBUGGER_TAB_ID": "Variable",
       "LoopState": "TypeAlias",
-      "mainLoop": "Variable",
+      "nextMaxFPSReference": "Function",
+      "onBeforeUnload": "Function",
+      "onVisibilityChange": "Function",
+      "onWindowBlur": "Function",
       "registerMainLoopDebugGUI": "Function",
       "renderFrameNow": "Function",
       "renderFrameWhileMasterPaused": "Function",
+      "requestMainLoopFrame": "Function",
       "setActionSampler": "Function",
       "setFixedFrameDelta": "Function",
       "setFixedStepDriver": "Function",
@@ -2292,8 +2283,7 @@
     },
     "src/_engine/kernel/loop/Workers.ts": {
       "initWorker": "Function",
-      "isMainThread": "Function",
-      "isMainThreadSimple": "Function"
+      "InitWorkerOptions": "TypeAlias"
     },
     "src/_engine/kernel/mesh/Mesh.ts": {
       "AutoLodResolver": "TypeAlias",

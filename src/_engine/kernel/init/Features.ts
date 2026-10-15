@@ -69,9 +69,13 @@ export type FeatureContext = {
    * Runs `fn` in `InitEngine`'s debug block, before the app's `start`, in install order (the
    * debug env only: `?isDebug=true` in a development or test build). Load the debug code there,
    * through an `import()`, so a production build leaves it out.
+   * @remarks Gate the call itself with `if (IS_DEBUG_ENV)`: a production build keeps a call and
+   * the closure it's handed (only the context's `onDebug` folds to nothing), and with it every
+   * function the closure names. `yarn verify:baselines` fails on an ungated call in a build.
    */
   onDebug: (fn: FeatureDebugHook) => void;
-  /** Like `onDebug`, after the app's `start` (the renderer exists then). */
+  /** Like `onDebug`, after the app's `start` (the renderer exists then). Gate the call the same
+   * way. */
   onDebugAfterStart: (fn: FeatureDebugHook) => void;
 };
 
@@ -180,8 +184,12 @@ export const checkFeatures = (features: readonly EngineFeature[]) => {
   });
 };
 
-// Where each engine feature's factory is, for the scene check's error
-const ENGINE_FEATURE_FACTORIES: Record<string, string> = {
+/**
+ * Where each engine feature's factory is (by feature id), for the scene check's error. A new
+ * engine feature joins it: `FeatureFactories.test.ts` checks it against the feature entries.
+ * @internal
+ */
+export const ENGINE_FEATURE_FACTORIES: Record<string, string> = {
   physics: "physics() from 'aekasha/physics'",
   character: "character() from 'aekasha/character'",
   skybox: "skyBox() from 'aekasha/skybox'",
@@ -236,7 +244,7 @@ export const installFeaturesAsync = async (
 ) => {
   checkFeatures(features);
   for (const feature of features) {
-    // A promise's catch, not a try block (Rollup keeps a try block's calls whole, kernel/init/InitEngine.ts);
+    // A promise's catch, not a try block (Rollup keeps a try block's calls whole, see Boot.ts);
     // the async wrapper turns a synchronous throw into the rejection too
     await (async () => feature.install(host.ctx))().catch((err: unknown) => {
       lerror(`InitEngine: the feature '${feature.id}' failed to install.`, err);

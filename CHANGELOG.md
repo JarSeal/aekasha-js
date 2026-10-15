@@ -4,6 +4,68 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-15 — review-ecs-loop-config-init
+
+### Engine 5.3.0 (Golden Hour)
+
+The kernel's ECS, main loop, config, init and views are reviewed file by file (p612): the bugs found are fixed, every export and member is documented, and the main camera lookup is cached. No public export is removed or renamed. The scene runner gives every scene the same probe hash, snapshot and system order as on `main`, in all three physics targets. Two behaviour changes are on purpose, both under Changed.
+
+**Added**
+
+- `ECSWorld.getEntityIdByAppId(appId)`: the world keeps a map of app ids, so `getEntityIdByAppId` is one lookup instead of a scan of every `APP_ID`. The first entity created with an id keeps it until it's deleted or its `APP_ID` removed or replaced, then the next live entity with that id takes over. A second entity given a fixed id (`isFixed`) logs a warning in the debug env. Changing `APP_ID.id` in place isn't supported: add a new `APP_ID`.
+- JSDoc on every export of `kernel/ecs`, `kernel/loop`, `kernel/config` and `kernel/init`, and on every member of `ECSWorld`, `Transform`, `TypedArrayTransformStore`, `IComponentStorage` and `AppConfig` (each `physics` key included), with `@example`s on `ECSWorld`, `getEntitiesWith`, `getEntityIdByAppId`, `setTransform` and `AppConfig`.
+
+**Changed**
+
+- **Behaviour change:** `physics.workerTarget` defaults to `'WORKER_THREAD'`, as `AppConfig` always documented. An app that passed a `physics` section without `workerTarget` ran on `MAIN_THREAD`; it now runs on a worker. Set `workerTarget: 'MAIN_THREAD'` to keep the old behaviour. The template passes it, so no scene changes.
+- `loadConfig` keeps no engine defaults: a key the app leaves out keeps the default of the module that reads it (physics in `PhysicsAPI.ts`, assets in `AssetsAPI.ts`, LOD in `LodSystem.ts`). The debug-only defaults (debug camera, drawer tabs, undo / redo, dev files) left the production bundle. The env var and debug overrides go into copies of `physics`, `assets` and `ecs`, no longer into the app's own config objects. One edge changes with it: physics turned on by `VITE_PHYS_ENABLED` alone, with no `physics` section, gets gravity −9.81 (the physics default) instead of 0.
+- **Behaviour change:** with a max FPS cap (`VITE_MAX_FPS`, or the Loop controls tab's), a frame that isn't drawn still runs every stage up to `APP_RENDER_SYNC`; only the render, `LATE_MAIN` and the late scene loopers are skipped. A production build used to stop such a frame right after physics, so the app stages lost its time and the `TRANSFORM` sync lagged. A development build without `?isDebug` now honours the cap too.
+- The loop is one frame function in every build (it was three variants), and isn't `async`: no promise per frame. `getAllECSWorlds()` returns the world list itself, read-only, instead of a new array each call (four per frame and one per physics sub-step).
+- Fixed: a `toggleMainPlay(true)` in the first 100 ms after the start queued a second frame chain, so every frame ran twice from then on. Every frame request now goes through one guard.
+- Fixed: `ECSWorld.clearWorld()` cleared the storages without running any hook (leaking Object3Ds, bodies and lines), restarted the ids at 0 and brought stale ids back to life. It now deletes each entity through `deleteEntity`.
+- Fixed: `getEntitiesWith(type)` threw for a type no entity had been given yet; it now returns nothing.
+- Fixed: `removeComponent` ran the remove hooks for an entity that didn't have the component. It now returns first, and a hook that removes the same component from the same entity again while it runs is ignored, so two entities whose `TARGET_LINK`s point at each other no longer recurse until the stack overflows when disabled, enabled or made persistent.
+- `getMainCamera()` and `getMainAppCameraId()` read a cached entity id instead of querying `TAG_IS_MAIN_CAMERA` (p200's cache). Frustum culling, light culling, LOD and the player brains call it every frame.
+- Frustum culling of point and spot lights updates each light's world matrix once per frame instead of twice; the lifetime and look-at systems return at once when no entity has their component; `addComponent` runs its hooks without a closure per add.
+- The boot: the cameras' and lights' hooks install in `installKernel`, and the debug steps are three functions, each called behind its flags. When `start` resolves with nothing in the root scene and no scene load running, development and test builds log a warning (the loop starts when the first scene is set).
+- The features' `onDebug` / `onDebugAfterStart` calls sit behind `IS_DEBUG_ENV`, so their closures leave a production build; physics' wireframe sync no longer registers a scene-enter listener there.
+- The production build's main chunk (`assets/index.js`) is 395,092 B gzip, 501 B smaller than on `main`; the banner embed's is 246 B smaller (305,348 B).
+- Internal (no entry exports them, and the lint has made deep imports an error since 5.0.0): the env flag functions and duplicates (`isDebugEnvironment`, `isProdTestMode`, `isProductionEnvironment`, `isCurrentEnvironment`, `isNotCurrentEnvironment`, `IS_PROD_TEST_ENV`, `CUR_ENV`, `APP_CONFIG`, which always held the defaults) are removed: read `IS_DEBUG_ENV`, `IS_PROD_TEST_MODE`, `IS_PROD_ENV` and `getCurrentEnvironment()`. The loop's `add*Fn` / `delete*Fn` listener sets are `onVisibilityChange`, `onBeforeUnload` and `onWindowBlur`, each returning its remover; `mainLoop` isn't exported; `initWorker` takes an options object; `registerECSModule` is `registerECSDebugGUI`; `registerCameraManager` and `registerLightManager` are `installCameras` / `registerCameraDebugGUI` and `installLights` / `registerLightDebugGUI`.
+
+**Deprecated** (removed in engine 6.0.0)
+
+- `CoreComponentType`: use `ComponentType`, the same object.
+
+### Toolkit 2.1.1 (Half Moon)
+
+**Changed**
+
+- `FollowTool`, `HoverEffect` and `SunShadowFit` use `ComponentType` instead of the deprecated `CoreComponentType`. No behaviour change.
+
+### App 1.12.1 (Preschooler)
+
+**Changed**
+
+- The asset compare scene uses `ComponentType` instead of the deprecated `CoreComponentType`.
+
+### Project
+
+**Added**
+
+- A lint rule for the kernel's imports of features (`KERNEL_FEATURE_IMPORT` in `eslint.config.js`): only `import type`, for the data the kernel holds or carries for a feature. The rule is in the coding standards (Layering) and the root `CLAUDE.md`.
+- `yarn verify:baselines` fails on a feature's `.onDebug(` / `.onDebugAfterStart(` call left in a production build (the app's or an embed's).
+- Tests: the ECS world (`clearWorld`, unknown types, removals, the app id map), the link hooks, the main camera cache, the loop's frame cap, elapsed clock and single frame chain, the config without defaults, and `ENGINE_FEATURE_FACTORIES` against the features' entries (`FeatureFactories.test.ts`).
+- An issue file for mounting again after `unmount()` (`docs/issues/remount-after-unmount.md`): won't fix until an app needs it, with what a reset would take.
+
+**Changed**
+
+- The Hub's API pages show a `{@link module!Name}` link as `Name`, not as the module path.
+- The Hub: the ECS page (the app id lookup, the frame cap, the `onDebug` rule), the quick start (config defaults, the one public env flag) and the coding standards.
+- The root `CLAUDE.md` (ECS core, the loop, Bootstrap flow, Engine features), `kernel/input/CLAUDE.md`, `devTools/verify/CLAUDE.md`, `devTools/hub/CLAUDE.md` (the search index is over its 1 MB warning on `main` too) and the readme's config sentence.
+- `devTools/refactor/`'s layout report, move map and entry exports regenerated.
+- `yarn verify:baselines`: `api.json` with the internal renames above, `docs.json` with the kernel's folders fully documented, and both bundle baselines. The last update moved no file's size, only gzip sizes by a few bytes (chunks name each other's new hashes) and the `#2` keys of two same-named chunk pairs (`EngineRapier.js`, `three.module.js`), which follow the hashed names' order.
+- `sbp.config.ts`: the `_engine/kernel/ecs` group's budget is 17 KiB (was 15) in both profiles. A group is measured before minification, so its comments count: the new JSDoc grew it from 14.1 to 16.1 KiB in the app, while its minified code grew about 0.4 KiB.
+
 ## 2026-10-14 — sbp-tooling-profiles-and-marketing
 
 ### Engine 5.2.0 (Golden Hour)

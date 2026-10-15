@@ -34,7 +34,8 @@ and accept the certificate.
 <<< src/index.ts collapse
 
 - `config` is your configuration (`src/CONFIG.ts`): physics, debug keys, the debug camera and
-  more, each top-level key merged over the engine's defaults.
+  more. A key you leave out keeps its default, set by the part of the engine that reads it (see
+  [`AppConfig`](api:AppConfig)).
 - `data` is your scenes and assets, gathered from their JSON files into `src/generated/`. The
   gatherer writes it before `yarn dev` and `yarn build` and on every save, so you never edit it.
 - `features` lists what the engine installs besides its kernel (the ECS, meshes, cameras, lights,
@@ -54,8 +55,8 @@ no Rapier is loaded. Drop the ones your game doesn't use. If a scene's JSON uses
 (see [the feature manifest](hub:features/scenes-and-assets#the-feature-manifest)).
 
 `InitEngine` reads the environment first (the build's env vars, `?isDebug` and `?isProdTest`), so
-`IS_DEBUG_ENV` and the other flags read as a production build until it runs: check them in
-`start` or later, never at a module's top level.
+`IS_DEBUG_ENV` reads as a production build until it runs: check it in `start` or later, never at
+a module's top level.
 
 ::: dev-only
 

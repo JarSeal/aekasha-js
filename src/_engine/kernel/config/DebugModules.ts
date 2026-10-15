@@ -1,15 +1,21 @@
 import { lerror } from '../../utils/Logger';
 import { IS_DEBUG_ENV } from './Config';
 
-/** A container for a module that will be loaded asynchronously.
+/**
+ * A debug module that loads asynchronously: `current` is null until it has loaded (and stays null
+ * outside the debug env). Read it through {@link useDebug}.
+ * @template T the module's shape (`typeof import('./debug/_dbg__X')`)
  */
 export interface DebugModuleRef<T> {
+  /** The loaded module, or null. */
   current: T | null;
 }
 
 /**
- * Loads a lazy debug module.
- * TypeScript infers the module shape 'T' directly from the importer.
+ * Starts loading a debug module (debug env only) and returns its ref at once; `current` is set
+ * when the import resolves. Returns null in production and outside the debug env, where the
+ * importer and its chunk fold away.
+ * @template T the module's shape, inferred from the importer
  */
 export function loadDebugModule<T>(
   importer: () => Promise<T>,
@@ -33,8 +39,10 @@ export function loadDebugModule<T>(
 }
 
 /**
- * Loads a lazy debug module.
- * TypeScript infers the module shape 'T' directly from the importer.
+ * Loads a debug module (debug env; prod test mode too with `includeInProdTestMode`) and resolves
+ * with its ref once it's loaded, or with null in production and other modes, where the importer and
+ * its chunk fold away.
+ * @template T the module's shape, inferred from the importer
  */
 export async function loadDebugModuleAsync<T>(
   importer: () => Promise<T>,
@@ -60,19 +68,21 @@ export async function loadDebugModuleAsync<T>(
 }
 
 /**
- * Type Guard: Checks if we are in Debug mode AND the module is loaded.
- *
- * Usage: if (isDebugReady(debugHelpers)) {
- *   const { current } = debugHelpers;
- * }
+ * Whether the debug env is on and the module has loaded (narrows `ref.current` to the module).
+ * @template T the module's shape
+ * @example
+ * ```ts
+ * if (isDebugReady(debugHelpers)) debugHelpers.current.update();
+ * ```
  */
 export const isDebugReady = <T>(ref: DebugModuleRef<T>): ref is { current: T } =>
   // `__AEK_DEBUG__` first: a production build folds the check to false, and its callers' code out
   __AEK_DEBUG__ && !!(IS_DEBUG_ENV && ref?.current);
 
 /**
- * Accessor: Returns the module if debug is active and loaded, otherwise undefined.
- * Usage: useDebug(debugHelpers)?.attach(...)
+ * The module when it's loaded and its mode is on (the debug env, or prod test mode with
+ * `includeInProdTestMode`), else undefined: call through it as `useDebug(ref)?.fn()`.
+ * @template T the module's shape
  */
 export const useDebug = <T>(
   ref: DebugModuleRef<T> | null,

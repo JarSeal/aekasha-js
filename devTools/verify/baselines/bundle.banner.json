@@ -23,11 +23,11 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7537,
-      "gzip": 3066
+      "gzip": 3068
     },
     "assets/GLTFLoader.js": {
       "bytes": 45868,
-      "gzip": 13851
+      "gzip": 13854
     },
     "assets/GeometryTransfer.js": {
       "bytes": 4297,
@@ -35,11 +35,11 @@
     },
     "assets/HDRLoader.js": {
       "bytes": 3401,
-      "gzip": 1629
+      "gzip": 1630
     },
     "assets/KTX2Loader.js": {
       "bytes": 59855,
-      "gzip": 24343
+      "gzip": 24344
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2222,
@@ -47,15 +47,15 @@
     },
     "assets/banner.js": {
       "bytes": 460,
-      "gzip": 336
+      "gzip": 334
     },
     "assets/banner.css": {
       "bytes": 7672,
       "gzip": 2017
     },
     "assets/banner.embed.js": {
-      "bytes": 1079015,
-      "gzip": 305594
+      "bytes": 1078917,
+      "gzip": 305348
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
@@ -121,49 +121,49 @@
   "main": {
     "chunk": "assets/banner.embed.js",
     "modules": 80,
-    "rendered": 3474662,
-    "gzip": 705173
+    "rendered": 3481540,
+    "gzip": 706911
   },
   "mainGroups": {
     "_engine/kernel/assets": {
       "modules": 22,
-      "rendered": 78843,
-      "gzip": 24365
+      "rendered": 78852,
+      "gzip": 24377
     },
     "_engine/kernel/camera": {
       "modules": 1,
-      "rendered": 6493,
-      "gzip": 1880
+      "rendered": 6587,
+      "gzip": 1853
     },
     "_engine/kernel/config": {
-      "modules": 2,
-      "rendered": 6587,
-      "gzip": 2332
+      "modules": 1,
+      "rendered": 4322,
+      "gzip": 1421
     },
     "_engine/kernel/ecs": {
       "modules": 7,
-      "rendered": 47015,
-      "gzip": 13531
+      "rendered": 56238,
+      "gzip": 15940
     },
     "_engine/kernel/init": {
       "modules": 4,
-      "rendered": 11257,
-      "gzip": 4233
+      "rendered": 11220,
+      "gzip": 4220
     },
     "_engine/kernel/input": {
       "modules": 2,
-      "rendered": 5657,
-      "gzip": 1779
+      "rendered": 5565,
+      "gzip": 1755
     },
     "_engine/kernel/light": {
       "modules": 2,
-      "rendered": 8877,
-      "gzip": 2602
+      "rendered": 8843,
+      "gzip": 2594
     },
     "_engine/kernel/loop": {
       "modules": 3,
-      "rendered": 10178,
-      "gzip": 2890
+      "rendered": 9797,
+      "gzip": 3003
     },
     "_engine/kernel/mesh": {
       "modules": 1,
@@ -171,9 +171,9 @@
       "gzip": 2050
     },
     "_engine/kernel/render": {
-      "modules": 7,
-      "rendered": 6525,
-      "gzip": 2556
+      "modules": 8,
+      "rendered": 6882,
+      "gzip": 2740
     },
     "_engine/kernel/scene": {
       "modules": 6,
@@ -197,8 +197,8 @@
     },
     "three": {
       "modules": 4,
-      "rendered": 3199558,
-      "gzip": 623025
+      "rendered": 3199562,
+      "gzip": 623028
     },
     "vite": {
       "modules": 1,

@@ -36,6 +36,10 @@ export const DEFAULT_DEBUG_DRAWER_TAB_ORDER = [
   'lodControls',
 ];
 
+/**
+ * The environments `VITE_APP_ENV` names. `development` and `test` read the URL's debug params;
+ * anything else is `production` (`unitTest` is the unit tests').
+ */
 export type Environments = 'development' | 'test' | 'unitTest' | 'production';
 
 /**
@@ -59,8 +63,8 @@ export type PhysicsWireframeColors = {
   /** The owning rigid body is asleep. */
   sleeping?: number;
   /** The owning rigid body is kinematic: driven programmatically, never sleeps, and
-   * unaffected by forces. Bucketed alongside real dynamic bodies by
-   * PhysicsManager.createPhysicsEntity, so it needs its own color to stay tellable apart. */
+   * unaffected by forces. Bucketed alongside real dynamic bodies by createPhysicsEntity
+   * (features/physics/PhysicsEntity.ts), so it needs its own color to stay tellable apart. */
   kinematic?: number;
   /** The body is fixed (the BODY_STATIC bucket). Deliberately distinct from `disabled`
    * so a static collider doesn't read as something being wrong. */
@@ -69,25 +73,56 @@ export type PhysicsWireframeColors = {
   awake?: number;
 };
 
+/** `AppConfig.debugPhysicsWireframe`: the debug collider wireframes' look. */
 export type DebugPhysicsWireframeConfig = {
+  /** Colours by collider state ({@link PhysicsWireframeColors}); a missing one takes the engine's. */
   colors?: PhysicsWireframeColors;
   /** Wireframe line width in pixels. Values above 1 only have a visible effect where the
    * fat-line path is available. */
   lineThickness?: number;
 };
 
+/**
+ * The app's configuration, `InitEngine`'s `config` (the template keeps it in `src/CONFIG.ts`).
+ * Every key is optional: a missing one takes the default of the module that reads it (named on
+ * each key). Env vars override some keys (`VITE_PHYS_*`, `VITE_ASSETS_*`, `VITE_ECS_*`), and in
+ * the debug env the Physics API and Assets tabs' boot overrides do too.
+ * @example
+ * ```ts
+ * import type { AppConfig } from 'aekasha';
+ *
+ * const config: AppConfig = {
+ *   physics: { enabled: true, gravity: { x: 0, y: -9.81, z: 0 } },
+ *   lod: { fadeSeconds: 0.4 },
+ * };
+ * export default config;
+ * ```
+ */
 export type AppConfig = {
   /** Debug-only key bindings: overrides of the engine's default debug keys (same id) and/or
    * extra app debug keys. See {@link DebugKeyBindingConfig}. */
   debugKeys?: DebugKeyBindingConfig[];
+  /** The physics world (`aekasha/physics`' `physics()` feature reads it at its install). */
   physics?: {
+    /** Create the physics world at boot. `VITE_PHYS_ENABLED` overrides it. Default false. */
     enabled?: boolean;
+    /** The physics backend. Only `'RAPIER'` exists. Default `'RAPIER'`. */
     physicsEngine?: PhysicsEngine;
+    /** Where the simulation runs: `'WORKER_THREAD'` (transforms come back through a shared buffer
+     * or one message per frame) or `'MAIN_THREAD'` (deterministic characters, synchronous
+     * casts). Default `'WORKER_THREAD'`. */
     workerTarget?: PhysicsWorkerTarget;
+    /** Step the world at all (false: bodies exist but nothing moves). Default true. */
     worldStepEnabled?: boolean;
+    /** Rapier's debug render lines. Default false. */
     visualizerEnabled?: boolean;
+    /** Gravity in m/s². `VITE_PHYS_GRAVITY` (`'x,y,z'`) overrides it. Default `{ x: 0, y: -9.81,
+     * z: 0 }`. */
     gravity?: { x: number; y: number; z: number };
+    /** Fixed steps per second. `VITE_PHYS_TIMESTEP` overrides it. Default 60. */
     timestep?: number;
+    /** What the simulation does while the page is hidden (`'PAUSE'` pauses the master loop with
+     * it). Default `'PAUSE'`. */
     backgroundBehavior?: PhysicsBackgroundBehavior;
     /** Minimum delta time (seconds) substituted for the real elapsed time when
      * backgroundBehavior is 'KEEP_RUNNING_USE_MIN_DELTA' and the window is hidden.
@@ -101,7 +136,9 @@ export type AppConfig = {
      * any remaining accumulated time is dropped (not deferred) to prevent an ever-growing
      * backlog under sustained slowdowns. 0 = not in use. Default 60. */
     maxSubSteps?: number;
+    /** Rapier's solver iterations per step (more: stiffer stacks and joints, slower). Default 10. */
     solverIterations?: number;
+    /** Rapier's internal PGS iterations per solver iteration. Default 1. */
     internalPgsIterations?: number;
     /** Render-time smoothing on top of the discrete physics-step pose. Default 'NONE'
      * (unchanged behavior). See PhysicsState.interpolationMode for the mode semantics. */
@@ -157,7 +194,7 @@ export type AppConfig = {
       meshes?: boolean;
     };
   };
-  /** LOD selection (Lod/LodSystem.ts, docs/plans/_DONE_p348_ecs-lod-selection.md). */
+  /** LOD selection (`lod()`: features/lod/LodSystem.ts, docs/plans/_DONE_p348_ecs-lod-selection.md). */
   lod?: {
     /** Global LOD bias: multiplies every entity's screen size, >1 keeps detail longer. The
      * initial value: setLodBias() changes it at runtime. Default 1. */
@@ -176,6 +213,7 @@ export type AppConfig = {
      * Default `src/app/impostors`. */
     impostorExportDir?: string;
   };
+  /** The default ECS world's storage (read when it's created, in the boot). */
   ecs?: {
     /** Build-time-selectable ECS component storage backend. Default 'MAP'. */
     storageMode?: ECSStorageMode;
@@ -183,10 +221,10 @@ export type AppConfig = {
     maxEntities?: number;
   };
   /** Per-state colors and line thickness for the per-entity physics collider wireframes
-   * (Debug/_dbg__PhysicsDebugDraw.ts). Debug-only: nothing reads this
+   * (features/physics/debug/_dbg__PhysicsDebugDraw.ts). Debug-only: nothing reads this
    * unless a wireframe is actually switched on, which can only happen in a debug or
    * prod-test environment. Every field is optional and falls back to the engine defaults
-   * in `Debug/_dbg__PhysicsDebugDraw.ts`, so partial overrides are fine. */
+   * in that module, so partial overrides are fine. */
   debugPhysicsWireframe?: DebugPhysicsWireframeConfig;
   /** Default params for the debug (orbit) camera, used the first time a scene is
    * visited (before any per-scene LS override exists at `AEK_debugCams`). */
@@ -229,7 +267,8 @@ export type AppConfig = {
      * env. Default 20. */
     saveHistorySize?: number;
   };
-  /** Keyed by window kind (a window's id when it has no kind) */
+  /** Draggable window defaults (size, place, content), keyed by window kind (a window's id when
+   * it has no kind); `ui/DraggableWindow.ts` reads them when a window opens. */
   draggableWindows?: {
     [kind: string]: Partial<DraggableWindow> & {
       contentFn?: (data?: { [key: string]: unknown }) => TCMP;
@@ -243,82 +282,27 @@ let envVars: { [key: string]: unknown } = {};
 let isProdTestQueryParam = false;
 let isDebugQueryParam = false;
 let startSceneQueryParam: string | null = null;
-let config: AppConfig = {
-  // These are the default values (if the values are not found in ENV variables or CONFIG file)
-  debugKeys: [],
-  physics: {
-    enabled: false,
-    physicsEngine: 'RAPIER',
-    workerTarget: 'WORKER_THREAD',
-    worldStepEnabled: true,
-    gravity: { x: 0, y: 0, z: 0 },
-    timestep: 60,
-    backgroundBehavior: 'PAUSE',
-    minDeltaTime: 1 / 30,
-    maxDeltaTime: 1 / 10,
-    maxSubSteps: 60,
-    interpolationMode: 'NONE',
-    useSAB: true,
-    maxBodies: 2048,
-    stepStatsEnabled: false,
-  },
-  assets: {
-    workerTarget: 'MAIN_THREAD',
-    maxConcurrentLoads: 8,
-    requestTimeoutMs: 30_000,
-    fallbackToMainThread: true,
-  },
-  lod: {
-    bias: 1,
-    maxSelectionsPerFrame: Infinity,
-    fadeSeconds: 0.25,
-    impostorExportDir: 'src/app/impostors',
-  },
-  ecs: {
-    storageMode: 'MAP',
-    maxEntities: 100_000,
-  },
-  debugCamera: {
-    position: { x: 3, y: 3, z: 1.5 },
-    target: { x: 0, y: 0, z: 0 },
-    fov: 60,
-    near: 0.1,
-    far: 1000,
-    zoom: 1,
-  },
-  debugDrawer: {
-    tabOrder: DEFAULT_DEBUG_DRAWER_TAB_ORDER,
-  },
-  undoRedo: {
-    historySize: 50,
-  },
-  devFiles: {
-    saveHistorySize: 20,
-  },
-  postFx: {
-    enabled: true,
-    measureEnabled: false,
-  },
-};
+// The app's configuration as loadConfig made it. No engine defaults here: each module that reads a
+// key defaults it (one owner per default, p612 D4), so a default can't disagree with another
+let config: AppConfig = {};
 
 /**
- * Merges the app's configuration over the engine defaults (shallowly, per top-level key), then
- * applies the env var and the debug-only LS overrides. `InitEngine` calls it with its `config`,
- * after {@link initEnvironment}.
+ * Takes the app's configuration, then applies the env var and the debug-only LS overrides. The
+ * sections those write to (`physics`, `assets`, `ecs`) are copies, so the app's own objects aren't
+ * changed. `InitEngine` calls it with its `config`, after {@link initEnvironment}.
  * @param appConfig the app's configuration (`InitEngine`'s `config` option)
  */
 export const loadConfig = (appConfig: AppConfig = {}) => {
-  config = {
-    ...config,
-    ...appConfig,
-  };
+  const physics = { ...appConfig.physics };
+  const assets = { ...appConfig.assets };
+  const ecs = { ...appConfig.ecs };
+  config = { ...appConfig, physics, assets, ecs };
 
   // Setup physics ENV configs
-  if (!config.physics) config.physics = {};
 
   if (typeof envVars.VITE_PHYS_ENABLED === 'string') {
     const physicsEnabled = envVars.VITE_PHYS_ENABLED === 'true';
-    config.physics.enabled = physicsEnabled;
+    physics.enabled = physicsEnabled;
     envVars.VITE_PHYS_ENABLED = physicsEnabled;
   }
 
@@ -330,20 +314,20 @@ export const loadConfig = (appConfig: AppConfig = {}) => {
       if (isNaN(num)) num = 0;
       gr.push(num);
     }
-    config.physics.gravity = { x: gr[0], y: gr[1], z: gr[2] };
-    envVars.VITE_PHYS_GRAVITY = config.physics.gravity;
+    physics.gravity = { x: gr[0], y: gr[1], z: gr[2] };
+    envVars.VITE_PHYS_GRAVITY = physics.gravity;
   }
 
   if (typeof envVars.VITE_PHYS_USE_SAB === 'string') {
     const useSAB = envVars.VITE_PHYS_USE_SAB === 'true';
-    config.physics.useSAB = useSAB;
+    physics.useSAB = useSAB;
     envVars.VITE_PHYS_USE_SAB = useSAB;
   }
 
   if (typeof envVars.VITE_PHYS_TIMESTEP === 'string') {
     const timestep = Number(envVars.VITE_PHYS_TIMESTEP);
     if (!isNaN(timestep)) {
-      config.physics.timestep = timestep;
+      physics.timestep = timestep;
       envVars.VITE_PHYS_TIMESTEP = timestep;
     } else {
       envVars.VITE_PHYS_TIMESTEP = undefined;
@@ -351,7 +335,7 @@ export const loadConfig = (appConfig: AppConfig = {}) => {
   }
 
   // Debug-only boot-time physics overrides (set by the Physics API debug tab, applied on next reload)
-  if (isDebugEnvironment()) {
+  if (IS_DEBUG_ENV) {
     const debugPhysicsBoot = lsGetItem(DEBUG_PHYSICS_API_BOOT_LS_KEY, {}) as {
       workerTarget?: PhysicsWorkerTarget;
       useSAB?: boolean;
@@ -359,21 +343,20 @@ export const loadConfig = (appConfig: AppConfig = {}) => {
       stepStatsEnabled?: boolean;
     };
     if (debugPhysicsBoot.workerTarget) {
-      config.physics.workerTarget = debugPhysicsBoot.workerTarget;
+      physics.workerTarget = debugPhysicsBoot.workerTarget;
     }
     if (typeof debugPhysicsBoot.useSAB === 'boolean') {
-      config.physics.useSAB = debugPhysicsBoot.useSAB;
+      physics.useSAB = debugPhysicsBoot.useSAB;
     }
     if (typeof debugPhysicsBoot.maxBodies === 'number') {
-      config.physics.maxBodies = debugPhysicsBoot.maxBodies;
+      physics.maxBodies = debugPhysicsBoot.maxBodies;
     }
     if (typeof debugPhysicsBoot.stepStatsEnabled === 'boolean') {
-      config.physics.stepStatsEnabled = debugPhysicsBoot.stepStatsEnabled;
+      physics.stepStatsEnabled = debugPhysicsBoot.stepStatsEnabled;
     }
   }
 
   // Setup assets ENV configs
-  if (!config.assets) config.assets = {};
 
   const assetsTargetEnvs = [
     ['VITE_ASSETS_WORKER_TARGET', 'workerTarget'],
@@ -384,7 +367,7 @@ export const loadConfig = (appConfig: AppConfig = {}) => {
   for (const [envKey, configKey] of assetsTargetEnvs) {
     const target = envVars[envKey];
     if (target === 'MAIN_THREAD' || target === 'WORKER_THREAD') {
-      config.assets[configKey] = target;
+      assets[configKey] = target;
     } else if (target !== undefined) {
       envVars[envKey] = undefined;
     }
@@ -398,7 +381,7 @@ export const loadConfig = (appConfig: AppConfig = {}) => {
     if (typeof envVars[envKey] !== 'string') continue;
     const value = Number(envVars[envKey]);
     if (!isNaN(value)) {
-      config.assets[configKey] = value;
+      assets[configKey] = value;
       envVars[envKey] = value;
     } else {
       envVars[envKey] = undefined;
@@ -407,37 +390,36 @@ export const loadConfig = (appConfig: AppConfig = {}) => {
 
   if (typeof envVars.VITE_ASSETS_FALLBACK_TO_MAIN_THREAD === 'string') {
     const fallbackToMainThread = envVars.VITE_ASSETS_FALLBACK_TO_MAIN_THREAD !== 'false';
-    config.assets.fallbackToMainThread = fallbackToMainThread;
+    assets.fallbackToMainThread = fallbackToMainThread;
     envVars.VITE_ASSETS_FALLBACK_TO_MAIN_THREAD = fallbackToMainThread;
   }
 
   // Debug-only boot-time assets overrides (set by the Assets debug tab, applied on next reload)
-  if (isDebugEnvironment()) {
+  if (IS_DEBUG_ENV) {
     const debugAssetsBoot = lsGetItem(DEBUG_ASSETS_BOOT_LS_KEY, {}) as {
       workerTarget?: AssetsWorkerTarget;
       gltfWorkerTarget?: AssetsWorkerTarget;
       textureWorkerTarget?: AssetsWorkerTarget;
       simplifyWorkerTarget?: AssetsWorkerTarget;
     };
-    if (debugAssetsBoot.workerTarget) config.assets.workerTarget = debugAssetsBoot.workerTarget;
+    if (debugAssetsBoot.workerTarget) assets.workerTarget = debugAssetsBoot.workerTarget;
     if (debugAssetsBoot.gltfWorkerTarget) {
-      config.assets.gltfWorkerTarget = debugAssetsBoot.gltfWorkerTarget;
+      assets.gltfWorkerTarget = debugAssetsBoot.gltfWorkerTarget;
     }
     if (debugAssetsBoot.textureWorkerTarget) {
-      config.assets.textureWorkerTarget = debugAssetsBoot.textureWorkerTarget;
+      assets.textureWorkerTarget = debugAssetsBoot.textureWorkerTarget;
     }
     if (debugAssetsBoot.simplifyWorkerTarget) {
-      config.assets.simplifyWorkerTarget = debugAssetsBoot.simplifyWorkerTarget;
+      assets.simplifyWorkerTarget = debugAssetsBoot.simplifyWorkerTarget;
     }
   }
 
   // Setup ecs ENV configs
-  if (!config.ecs) config.ecs = {};
 
   if (typeof envVars.VITE_ECS_STORAGE_MODE === 'string') {
     const storageMode = envVars.VITE_ECS_STORAGE_MODE;
     if (storageMode === 'MAP' || storageMode === 'TYPED_ARRAY') {
-      config.ecs.storageMode = storageMode;
+      ecs.storageMode = storageMode;
       envVars.VITE_ECS_STORAGE_MODE = storageMode;
     }
   }
@@ -445,7 +427,7 @@ export const loadConfig = (appConfig: AppConfig = {}) => {
   if (typeof envVars.VITE_ECS_MAX_ENTITIES === 'string') {
     const maxEntities = Number(envVars.VITE_ECS_MAX_ENTITIES);
     if (!isNaN(maxEntities)) {
-      config.ecs.maxEntities = maxEntities;
+      ecs.maxEntities = maxEntities;
       envVars.VITE_ECS_MAX_ENTITIES = maxEntities;
     } else {
       envVars.VITE_ECS_MAX_ENTITIES = undefined;
@@ -454,7 +436,8 @@ export const loadConfig = (appConfig: AppConfig = {}) => {
 };
 
 /**
- * Returns all environment variables.
+ * Returns all environment variables (the parsed copy: `loadConfig` writes the parsed values back).
+ * @internal
  */
 export const getEnvs = () => envVars;
 
@@ -465,43 +448,17 @@ export const getEnvs = () => envVars;
  */
 export const getEnv = <T>(key: string) => envVars[key] as T;
 
-/**
- * Checks whether the provided environment is the current one.
- * @param environment {@link Environments}
- * @returns boolean
- */
-export const isCurrentEnvironment = (environment: Environments) => environment === curEnvironment;
-
-/**
- * Checks whether the provided environment is NOT the current one.
- * @param environment {@link Environments}
- * @returns boolean
- */
-export const isNotCurrentEnvironment = (environment: Environments) =>
-  environment !== curEnvironment;
-
-/**
- * Checks whether the current environment is a debug environment.
- * @returns boolean
- */
-// The flag, not its formula: a production build folds it (see initEnvironment)
-export const isDebugEnvironment = () => IS_DEBUG_ENV;
-
 /** Whether the current environment is a debug environment or not. False until `InitEngine`
  * reads the environment (a live binding: read it when it's needed, never into a module-level
  * constant). */
-// @TODO: Replace the isDebugEnvironment with this
 export let IS_DEBUG_ENV = false;
 
 /**
- * Checks whether the app is in production test mode or not.
- * This works only in 'development' and
- * 'test' (?isProdTest=true) environments.
- * Note: this is not the same as isProdEnvironment(),
- * the purpose of this is to leave some debug UI elems
- * on the screen when testing production.
+ * Whether the app runs in production test mode (`?isProdTest=true` in a 'development' or 'test'
+ * build): production behaviour with some debug UI left on screen. Not the same as
+ * {@link IS_PROD_ENV}. False until `InitEngine` reads the environment (a live binding).
+ * @internal
  */
-// @TODO: Replace the isProdTestMode with this
 export let IS_PROD_TEST_MODE = false;
 
 /**
@@ -515,51 +472,17 @@ export const getStartSceneQueryParam = () =>
   IS_DEBUG_ENV || IS_PROD_TEST_MODE ? startSceneQueryParam : null;
 
 /**
- * Checks whether the current environment is a production environment.
- * @returns boolean
+ * Whether the app runs as production: a 'production' build, or prod test mode. True until
+ * `InitEngine` reads the environment (a live binding, like {@link IS_DEBUG_ENV}).
+ * @internal
  */
-export const isProductionEnvironment = () =>
-  curEnvironment === 'production' || isProdTestQueryParam;
-
-/** Whether the current environment is a production environment or not. True until `InitEngine`
- * reads the environment (a live binding, like {@link IS_DEBUG_ENV}). */
-// @TODO: Replace the isProductionEnvironment with this
 export let IS_PROD_ENV = true;
-
-/**
- * Checks whether the app is in production test mode or not.
- * This works only in 'development' and
- * 'test' (?isProdTest=true) environments.
- * Note: this is not the same as isProdEnvironment(),
- * the purpose of this is to leave some debug UI elems
- * on the screen when testing production.
- * @returns boolean
- */
-// The flag, not its formula: a production build folds it (see initEnvironment)
-export const isProdTestMode = () => IS_PROD_TEST_MODE;
-
-/**
- * Checks whether the app is in production test mode or not.
- * This works only in 'development' and
- * 'test' (?isProdTest=true) environments.
- * Note: this is not the same as isProdEnvironment(),
- * the purpose of this is to leave some debug UI elems
- * on the screen when testing production.
- * @returns boolean
- */
-// @TODO: Replace the isProdTestMode with this
-export let IS_PROD_TEST_ENV = false;
 
 /**
  * Returns the current environment.
  * @returns one of the environments ({@link Environments})
  */
 export const getCurrentEnvironment = () => curEnvironment;
-
-/** Current environment: 'production' until `InitEngine` reads the environment (a live binding,
- * like {@link IS_DEBUG_ENV}). */
-// @TODO: Replace the getCurrentEnvironment with this
-export let CUR_ENV: Environments = 'production';
 
 /** {@link initEnvironment}'s input: where the environment is read from. */
 export type EnvironmentInput = {
@@ -598,7 +521,6 @@ export const initEnvironment = ({ search, env }: EnvironmentInput = {}) => {
   }
 
   IS_PROD_ENV = curEnvironment === 'production' || isProdTestQueryParam;
-  CUR_ENV = curEnvironment;
 
   // The debug flags' only assignments, after an early return: in a production build
   // (`__AEK_DEBUG__` false) Rollup folds every read to the initial value, and the debug code
@@ -607,18 +529,15 @@ export const initEnvironment = ({ search, env }: EnvironmentInput = {}) => {
   const isDevOrTest = curEnvironment === 'development' || curEnvironment === 'test';
   IS_DEBUG_ENV = isDevOrTest && isDebugQueryParam;
   IS_PROD_TEST_MODE = isDevOrTest && isProdTestQueryParam;
-  IS_PROD_TEST_ENV = IS_PROD_TEST_MODE;
 };
 
 /**
- * Return app config
+ * The app's configuration as `InitEngine` loaded it ({@link loadConfig}): what the app gave, with
+ * the env var and debug overrides. No engine defaults: each reader defaults a missing key.
+ * @internal
  * @returns config ({@link AppConfig})
  */
 export const getConfig = () => config;
-
-/** App configurations. */
-// @TODO: Replace the getConfig with this
-export const APP_CONFIG = config;
 
 /** Project metadata. */
 export const PROJECT_METADATA: {

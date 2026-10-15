@@ -1,3 +1,4 @@
+import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { EngineFeature } from '../../kernel/init/Features';
 import { isCurrentScene } from '../../kernel/scene/Scene';
 import type { SceneHooks } from '../../kernel/scene/SceneHooks';
@@ -65,7 +66,11 @@ export const skyBox = (): EngineFeature => ({
   install: (ctx) => {
     installSkyBoxSystem(ctx);
     ctx.addSceneHooks(skyBoxSceneHooks);
-    ctx.onDebug(registerSkyBoxDebugGUI);
-    ctx.onDebugAfterStart(() => createSkyBoxDebugGUI());
+    // Gated like every debug hook (the hooks run only in the debug env): a production build then
+    // drops the calls and the debug wrappers they name (verify:baselines fails on an ungated one)
+    if (IS_DEBUG_ENV) {
+      ctx.onDebug(registerSkyBoxDebugGUI);
+      ctx.onDebugAfterStart(() => createSkyBoxDebugGUI());
+    }
   },
 });

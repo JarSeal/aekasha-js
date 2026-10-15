@@ -8,7 +8,6 @@ import { setTransform } from '../ecs/ECSHelpers';
 import { lerror, lwarn } from '../../utils/Logger';
 import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
 import { existsOrThrow } from '../../utils/Assert';
-import { CoreComponentType } from '../ecs/ECSRegistry';
 import type { FeatureContext } from '../init/Features';
 
 /**
@@ -255,7 +254,7 @@ export const getGroupByAppId = (appId: string, ecsWorld?: ECSWorld) => {
   const entityId = getEntityIdByAppId(appId, world);
   let group: THREE.Group | undefined = undefined;
   if (entityId) {
-    const obj = world.getComponent(entityId, CoreComponentType.OBJECT3D)?.value;
+    const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
     if (obj && !(obj as THREE.Group).isGroup) {
       const msg = `Found Object3D is not a group (type: ${obj.type}).`;
       lerror(msg);

@@ -6,7 +6,7 @@ import { createMeshEntity } from '../../mesh/Mesh';
 import type { ECSWorld } from '../ECS';
 import { getECSWorld } from '../ECS';
 import { ComponentType } from '../ECSCoreComponents';
-import { isDebugEnvironment } from '../../config/Config';
+import { IS_DEBUG_ENV } from '../../config/Config';
 import { getRootScene } from '../../scene/Scene';
 import { ECSSystemStage } from '../../loop/SystemStages';
 
@@ -146,8 +146,14 @@ export const resetECSStressTest = (world: ECSWorld) => {
   getLogger().log('ECS Stress: Cleared all stress-test entities.');
 };
 
+/**
+ * Debug env only: binds `K` (individual meshes, a draw call each) and `L` (instances of one
+ * InstancedMesh) to spawn `batchSize` hovering spheres each press, for measuring the ECS and the
+ * renderer under load. With `targetId`, instanced spheres near that entity turn red. The ECS debug
+ * tab's benchmark spawns and clears batches too.
+ */
 export const initECSStressTest = (batchSize: number = 100, targetId?: number) => {
-  if (!isDebugEnvironment()) return;
+  if (!IS_DEBUG_ENV) return;
 
   const world = getECSWorld();
 
@@ -199,7 +205,8 @@ const hoverSystem = (world: ECSWorld, dt: number) => {
 
 const _tempMatrix = new THREE.Matrix4();
 
-export const instancedSyncSystem = (world: ECSWorld) => {
+// Writes the instanced spheres' transforms into their InstancedMesh
+const instancedSyncSystem = (world: ECSWorld) => {
   const storage = world.getStorage(ComponentType.DEBUG_STRESS_TEST_INSTANCE);
   if (storage.size === 0) return;
 
@@ -229,7 +236,8 @@ const _colorNear = new THREE.Color(0xff0000); // Red when close
 const _colorFar = new THREE.Color(0x00ff88); // Original Green
 const PROXIMITY_THRESHOLD_SQ = 5 * 5; // Use squared distance to avoid Math.sqrt()
 
-export const proximitySystem = (world: ECSWorld, targetId: number) => {
+// Colours the instanced spheres near the target red
+const proximitySystem = (world: ECSWorld, targetId: number) => {
   // 1. Get the Player/Target Position
   const targetTransform = world.getComponent(targetId, ComponentType.TRANSFORM);
   if (!targetTransform) return;

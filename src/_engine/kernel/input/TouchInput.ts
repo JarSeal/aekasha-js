@@ -1,7 +1,7 @@
 import type * as THREE from 'three/webgpu';
 import { isDebugCameraActive } from '../camera/Camera';
-import { isDebugEnvironment } from '../config/Config';
-import { addOnWindowBlurFn, deleteAddOnWindowBlurFn } from '../loop/MainLoop';
+import { IS_DEBUG_ENV } from '../config/Config';
+import { onWindowBlur } from '../loop/MainLoop';
 import { getCanvasElem } from '../render/Renderer';
 import { getCurrentSceneId } from '../scene/Scene';
 import { lwarn } from '../../utils/Logger';
@@ -86,7 +86,6 @@ let canvas: HTMLElement | null = null;
 let listenersInitiated = false;
 /** Removes the touch listeners (null: none added) */
 let removeListeners: (() => void) | null = null;
-const BLUR_FN_ID = 'inputTouchGestureClear';
 
 /**
  * The action layer's touch source (Actions.ts), with the default tap thresholds.
@@ -104,7 +103,7 @@ export type TouchActionSource = {
 let touchActionSource: TouchActionSource | null = null;
 
 const isInputInDebugCamInvalid = (enabledInDebugCam?: EnabledInDebugCam) =>
-  isDebugEnvironment() &&
+  IS_DEBUG_ENV &&
   ((enabledInDebugCam === 'NOT_ENABLED_IN_DEBUG' && isDebugCameraActive()) ||
     (enabledInDebugCam === 'ENABLED_ONLY_IN_DEBUG' && !isDebugCameraActive()));
 
@@ -274,10 +273,10 @@ const initTouchListeners = () => {
     ['touchcancel', onTouchEnd as EventListener, { passive: true }],
   ];
   for (const [type, fn, opts] of listeners) target.addEventListener(type, fn, opts);
-  addOnWindowBlurFn(BLUR_FN_ID, resetGesture);
+  const removeBlurListener = onWindowBlur(resetGesture);
   removeListeners = () => {
     for (const [type, fn] of listeners) target.removeEventListener(type, fn);
-    deleteAddOnWindowBlurFn(BLUR_FN_ID);
+    removeBlurListener();
   };
 };
 

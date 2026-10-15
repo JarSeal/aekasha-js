@@ -45,8 +45,8 @@ import { loadApiModel } from '../hub/api/extract';
 import { parseModuleSource } from '../refactor/importGraph';
 import { getOwnMembers, indexApiModel, isDocumented, Kind } from '../hub/api/model';
 import { out, PROGRESS_LOG_WATCH, setProgressLogEnabled } from './progressLog';
-import { type BuildModule, type EmittedAsset, findDebugCodeInBuild } from './debugInProduction';
-import { type BundleBaseline, collectBundle, sortKeys } from '../sbp/bundleModel';
+import { type BuildScript, findDebugCodeInBuild } from './debugInProduction';
+import { APP_BUILD, type CollectedBundle, collectBundle, sortKeys } from '../sbp/bundleModel';
 import { diffBundle, formatKB } from '../sbp/bundleDiff';
 import { buildBundles } from '../sbp/appBuild';
 import { getBundleBaselineFile } from '../sbp/bundleDiff';
@@ -131,14 +131,26 @@ const formatShare = (c: Coverage) =>
 
 // --- bundle.json ---
 
+/** A build's scripts by their keys in `bundle.chunks`, for the debug hook check (p612 D9)
+ * @param fileKeys hashed name (relative to `outDir`) → key */
+const readBuildScripts = (outDir: string, fileKeys: Record<string, string>): BuildScript[] =>
+  Object.entries(fileKeys)
+    .filter(([file]) => file.endsWith('.js'))
+    .map(([file, key]) => ({ file: key, code: fs.readFileSync(path.join(outDir, file), 'utf-8') }));
+
 /** Prints the debug check's findings (p607 D7); returns their count */
 const reportDebugCode = (
   label: string,
-  bundle: BundleBaseline,
-  modules: BuildModule[],
-  assets: EmittedAsset[]
+  { bundle, modules, assets, fileKeys }: CollectedBundle,
+  outDir: string
 ) => {
-  const findings = findDebugCodeInBuild({ files: Object.keys(bundle.chunks), modules, assets });
+  const scripts = readBuildScripts(outDir, fileKeys);
+  const findings = findDebugCodeInBuild({
+    files: Object.keys(bundle.chunks),
+    modules,
+    assets,
+    scripts,
+  });
   out(`\n${label}: debug code`);
   if (!findings.length) out(`  ${GREEN}none${RESET}`);
   for (const line of findings) out(`  ${RED}✗ ${line}${RESET}`);
@@ -422,12 +434,17 @@ const main = async () => {
   // The embed profiles' builds too (p611 D7), each with its baseline next to bundle.json
   const embedIds = args.docsOnly ? [] : getEmbedProfiles(sbpProfiles).map((p) => p.id);
   if (args.build && !args.docsOnly) await buildBundles({ isApp: true, embedIds });
-  const { bundle = null, modules = [], assets = [] } = args.docsOnly ? {} : collectBundle();
-  const embeds = embedIds.map((id) => ({
-    id,
-    name: path.basename(getBundleBaselineFile(id)),
-    ...collectBundle(getEmbedBuildLocation(id)),
-  }));
+  const app = args.docsOnly ? null : collectBundle(APP_BUILD);
+  const bundle = app?.bundle ?? null;
+  const embeds = embedIds.map((id) => {
+    const location = getEmbedBuildLocation(id);
+    return {
+      id,
+      name: path.basename(getBundleBaselineFile(id)),
+      location,
+      ...collectBundle(location),
+    };
+  });
   const { api, docs, locations } = await collectApiAndDocs();
 
   const exportCount = Object.values(api.modules).reduce((n, m) => n + Object.keys(m).length, 0);
@@ -470,10 +487,9 @@ const main = async () => {
   ];
 
   const debugFindings =
-    (bundle ? reportDebugCode('production build', bundle, modules, assets) : 0) +
+    (app ? reportDebugCode('production build', app, APP_BUILD.outDir) : 0) +
     embeds.reduce(
-      (n, embed) =>
-        n + reportDebugCode(`embed ${embed.id}`, embed.bundle, embed.modules, embed.assets),
+      (n, embed) => n + reportDebugCode(`embed ${embed.id}`, embed, embed.location.outDir),
       0
     );
   const attention = results.reduce((n, r) => n + r.attention, debugFindings);
@@ -481,7 +497,7 @@ const main = async () => {
   const docsDrops = results.find((r) => r.name === 'docs.json')?.attention ?? 0;
   const took = `${((Date.now() - started) / 1000).toFixed(1)} s`;
   const docsHint = `Document each one above (a JSDoc summary), or record the drop on purpose: yarn verify:baselines${args.docsOnly ? ' --docs' : ''} --update --allow-docs-drop, with the reason in the commit.`;
-  const debugHint = `Debug code in a production build: it must fold out (\`__AEK_DEBUG__\`, the debug loader), never be recorded.${args.build ? '' : ' A `dist/` from `yarn build:test` holds it by design: run without --no-build.'}`;
+  const debugHint = `Debug code in a production build: it must fold out (\`__AEK_DEBUG__\`, the debug loader), never be recorded (a feature's \`ctx.onDebug*\` call: inside \`if (IS_DEBUG_ENV)\`).${args.build ? '' : ' A `dist/` from `yarn build:test` holds it by design: run without --no-build.'}`;
   if (args.update) {
     if (debugFindings) {
       out(`\n${RED}Nothing recorded${RESET}: ${debugFindings} finding(s). ${debugHint}`);

@@ -144,17 +144,19 @@ const createFallbackMount = (container: HTMLElement): AekashaMount => ({
 
 /**
  * Mounts the engine into an element of a page it doesn't own: a site's background, a banner, a
- * product view. It boots like {@link _engine/kernel/init/InitEngine!InitEngine} (the same `config`, `data` and `features`), but
- * leaves the page's styles and input alone: the canvas fills a container the mount adds to
- * `target`, sized by `width` and `height` (any CSS length) and followed with a `ResizeObserver`.
+ * product view. It boots like {@link _engine/kernel/init/InitEngine!InitEngine} (the same
+ * `config`, `data` and `features`), but leaves the page's styles and input alone: the canvas
+ * fills a container the mount adds to `target`, sized by `width` and `height` (any CSS length)
+ * and followed with a `ResizeObserver`.
  * Resolves once the first scene has loaded, or with a fallback handle (`isFallback`) when the
  * browser can't render or the boot fails (logged).
  * @returns the mount's handle
  * @remarks
  * One engine per page load: the engine's state is module-level, so a second mount throws, also
- * after `unmount()`, and so does a mount after {@link _engine/kernel/init/InitEngine!InitEngine}. `unmount()` doesn't stop a
- * physics worker (`physics()` has no stop yet). The app's files are loaded from `assetBaseUrl`,
- * and workers start from the embed's own files: serve them from the page's origin.
+ * after `unmount()` (docs/issues/remount-after-unmount.md), and so does a mount after
+ * {@link _engine/kernel/init/InitEngine!InitEngine}. `unmount()` doesn't stop a physics worker
+ * (`physics()` has no stop yet). The app's files are loaded from `assetBaseUrl`, and workers
+ * start from the embed's own files: serve them from the page's origin.
  * @example
  * ```ts
  * import { mountAekasha } from 'aekasha';

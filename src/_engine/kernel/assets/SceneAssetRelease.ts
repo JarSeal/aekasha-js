@@ -1,5 +1,5 @@
 import { llog } from '../../utils/Logger';
-import { isDebugEnvironment } from '../config/Config';
+import { IS_DEBUG_ENV } from '../config/Config';
 import { deleteGeometry, getGeometryRegistry } from './Geometry';
 import {
   deleteMaterial,
@@ -59,7 +59,7 @@ export const releaseSceneOwnedAssets = (sceneId: string) => {
     released.textures.push(id);
   }
 
-  if (isDebugEnvironment()) {
+  if (IS_DEBUG_ENV) {
     const count = Object.values(released).reduce((sum, ids) => sum + ids.length, 0);
     if (count) llog(`[Assets] Released ${count} assets of scene "${sceneId}":`, released);
   }

@@ -1,6 +1,10 @@
 // NO OTHER LOCAL IMPORTS ALLOWED HERE
 
-/** Engine Core Components */
+/**
+ * The engine's component keys: the enum behind `ComponentType`, whose values (`'CORE_…'`) the
+ * debug listings print.
+ * @deprecated Use `ComponentType`, the same object. This name leaves the entry in engine 6.0.0.
+ */
 export enum CoreComponentType {
   APP_ID = 'CORE_APP_ID',
   TRANSFORM = 'CORE_TRANSFORM',
@@ -41,17 +45,17 @@ export enum CoreComponentType {
   // Frustum culling
   FRUSTUM_CULLING_ENABLED = 'CORE_FRUSTUM_CULLING_ENABLED', // opt-in, user-authored
   TAG_FRUSTUM_CULLED = 'CORE_TAG_FRUSTUM_CULLED', // runtime-only, current culled state
-  // Object (contribution) culling — see ECS/LightObjectCullingSystem.ts
+  // Object (contribution) culling — see features/spatial/LightObjectCullingSystem.ts
   OBJECT_CULLING_ENABLED = 'CORE_OBJECT_CULLING_ENABLED', // opt-in, user-authored
   TAG_OBJECT_CULLED = 'CORE_TAG_OBJECT_CULLED', // runtime-only, current culled state
   // Spatial index (docs/plans/_DONE_p050_spatial-index.md)
   SPATIAL_INDEXED = 'CORE_SPATIAL_INDEXED', // opt-in, membership in the DEFAULT spatial domain
   SPATIAL_DOMAINS = 'CORE_SPATIAL_DOMAINS', // runtime-only, membership in the other spatial domains
-  // LOD selection (docs/plans/_DONE_p348_ecs-lod-selection.md) — see Lod/LodSystem.ts
+  // LOD selection (docs/plans/_DONE_p348_ecs-lod-selection.md) — see features/lod/LodSystem.ts
   LOD = 'CORE_LOD', // opt-in, user-authored
   TAG_LOD_CULLED = 'CORE_TAG_LOD_CULLED', // runtime-only, beyond the last level
   TAG_LOD_TRANSITIONING = 'CORE_TAG_LOD_TRANSITIONING', // runtime-only, a LOD cross-fade runs (p351)
-  // Instanced mesh pools — see Instancing/InstancedMeshPool.ts
+  // Instanced mesh pools — see features/instancing/InstancedMeshPool.ts
   INSTANCED_MESH_SLOT = 'CORE_INSTANCED_MESH_SLOT', // runtime-only, set by a pool's spawn
   // Debug
   DEBUG_DATA = 'CORE_DEBUG_DATA',
@@ -78,10 +82,19 @@ export type ManagedByData = {
   role: string;
 };
 
+/**
+ * An entity's `DEBUG_DATA` (`CoreEntityOpts.debugData`): what the debug tools show for it. Stored only
+ * in the debug env and prod test mode.
+ */
 export type EntityDebugData = {
+  /** A display name (the on-screen tools' camera names, the debug listings). */
   name?: string;
+  /** A longer description. */
   description?: string;
+  /** Notes with their times. */
   comments?: { timestamp: number; comment: string }[];
+  /** Open items, by key. */
   todo?: { [key: string]: unknown };
+  /** Anything else a debug tool keeps for the entity. */
   debugObj?: Record<string, unknown>;
 };

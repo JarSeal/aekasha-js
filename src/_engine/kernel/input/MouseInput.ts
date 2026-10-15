@@ -1,8 +1,8 @@
 import type * as THREE from 'three/webgpu';
 import { isDebugCameraActive } from '../camera/Camera';
-import { isDebugEnvironment } from '../config/Config';
+import { IS_DEBUG_ENV } from '../config/Config';
 import { getECSWorld } from '../ecs/ECS';
-import { addOnWindowBlurFn, deleteAddOnWindowBlurFn } from '../loop/MainLoop';
+import { onWindowBlur } from '../loop/MainLoop';
 import { getCanvasElem } from '../render/Renderer';
 import { getCurrentSceneId } from '../scene/Scene';
 import { ECSSystemStage } from '../loop/SystemStages';
@@ -106,7 +106,6 @@ let canvas: HTMLElement | null = null;
 let listenersInitiated = false;
 /** Removes the mouse listeners (null: none added) */
 let removeListeners: (() => void) | null = null;
-const BLUR_FN_ID = 'inputMousePressesClear';
 
 /**
  * The action layer's mouse source (Actions.ts).
@@ -129,7 +128,7 @@ let mouseActionSource: MouseActionSource | null = null;
 const getButton = (e: MouseEvent): MouseButton | undefined => MOUSE_BUTTONS[e.button];
 
 const isInputInDebugCamInvalid = (enabledInDebugCam?: EnabledInDebugCam) =>
-  isDebugEnvironment() &&
+  IS_DEBUG_ENV &&
   ((enabledInDebugCam === 'NOT_ENABLED_IN_DEBUG' && isDebugCameraActive()) ||
     (enabledInDebugCam === 'ENABLED_ONLY_IN_DEBUG' && !isDebugCameraActive()));
 
@@ -326,10 +325,10 @@ const initMouseListeners = () => {
     [leaveTarget, 'mouseleave', onPointerLeaveWindow],
   ];
   for (const [elem, type, fn] of listeners) elem.addEventListener(type, fn);
-  addOnWindowBlurFn(BLUR_FN_ID, clearPresses);
+  const removeBlurListener = onWindowBlur(clearPresses);
   removeListeners = () => {
     for (const [elem, type, fn] of listeners) elem.removeEventListener(type, fn);
-    deleteAddOnWindowBlurFn(BLUR_FN_ID);
+    removeBlurListener();
   };
 };
 

@@ -70,7 +70,7 @@ const PHYSICS_OFF = 'physics off';
 // --- FRAME SAMPLER ---
 // One LATE_MAIN system on the default world (right after the frame's renderScene(), the p345
 // reason: three resets `info.render` at the start of its own animation frame), added while a
-// per-frame source is acquired and removed with the last one. In an editor view (ViewManager.ts)
+// per-frame source is acquired and removed with the last one. In an editor view (Views.ts)
 // the scene's stages don't run, so an 'AFTER_RENDER' view frame listener samples there.
 
 const SAMPLER_SYSTEM_ID = 'aekProfilerFrameSampler';

@@ -46,7 +46,8 @@ const profiles: SbpProfile[] = [
         '_engine/features/spatial': 10 * KIB,
         '_engine/features/viewports': 4 * KIB,
         '_engine/kernel/assets': 27 * KIB,
-        '_engine/kernel/ecs': 15 * KIB,
+        // p612's JSDoc (a group counts its comments: sizes before minification); its code +0.4 KiB
+        '_engine/kernel/ecs': 17 * KIB,
         '_engine/kernel/input': 13 * KIB,
         '_engine/kernel/scene': 8 * KIB,
         '_engine/ui': 15 * KIB,
@@ -78,7 +79,8 @@ const profiles: SbpProfile[] = [
       groups: {
         three: 633 * KIB,
         '_engine/kernel/assets': 25 * KIB,
-        '_engine/kernel/ecs': 15 * KIB,
+        // p612's JSDoc counts: a group is measured before minification
+        '_engine/kernel/ecs': 17 * KIB,
         '_engine/kernel/scene': 7 * KIB,
         '_engine/ui': 15 * KIB,
         app: 3 * KIB,
