@@ -16,7 +16,7 @@ const ELEM_ID = 'mainCanvas';
 const CANVAS_ID = 'AEK_CANVAS_ELEM';
 const LS_KEY = 'debugRenderer';
 let options: RendererOptions = {
-  antialias: true,
+  antialias: false,
   forceWebGL: false,
   devicePixelRatio: 1,
   currentApi: 'WebGL',
@@ -27,21 +27,41 @@ let options: RendererOptions = {
   outputColorSpace: THREE.SRGBColorSpace,
   alpha: false,
   enableShadows: false,
-  shadowMapType: THREE.BasicShadowMap,
+  // three's own default
+  shadowMapType: THREE.PCFShadowMap,
 };
 
+/**
+ * The renderer's options: what {@link createRenderer} takes (every field optional there), and the
+ * state it resolves, which {@link getRendererOptions} returns. In the debug env the Renderer
+ * controls tab's saved values (`AEK_debugRenderer`) are merged over the given ones.
+ */
 export type RendererOptions = {
+  /** MSAA on the canvas (default false). Snapshots and viewports sample 4× when it's on. */
   antialias?: boolean;
+  /** Use three's WebGL2 backend even where WebGPU is available (default false). */
   forceWebGL?: boolean;
+  /** The canvas's pixel ratio (default the window's `devicePixelRatio`). */
   devicePixelRatio?: number;
+  /** The backend in use, resolved by {@link createRenderer}: a caller doesn't set it. `WebGPU`
+   * until `init()` when `navigator.gpu` exists, then what three's backend really is (three falls
+   * back to WebGL2 when no adapter comes back). */
   currentApi: 'WebGL' | 'WebGL2' | 'WebGPU';
+  /** `currentApi === 'WebGPU'`, resolved like it. */
   currentApiIsWebGPU: boolean;
+  /** `currentApi !== 'WebGPU'`, resolved like it. */
   currentApiIsWebGL: boolean;
+  /** The output tone mapping (default `NoToneMapping`). */
   toneMapping: THREE.ToneMapping;
+  /** The tone mapping exposure (default 1). */
   toneMappingExposure: number;
+  /** The canvas's colour space (default `SRGBColorSpace`). */
   outputColorSpace: THREE.ColorSpace;
+  /** A transparent canvas (default false), eg. an embed over its host page. */
   alpha?: boolean;
+  /** Shadow maps on (default false). */
   enableShadows?: boolean;
+  /** The shadow map filter (default `PCFShadowMap`, three's). */
   shadowMapType?: THREE.ShadowMapType;
 };
 
@@ -95,9 +115,7 @@ export const createRenderer = async (opts?: CreateRendererOptions) => {
   renderer.debug.checkShaderErrors = IS_DEBUG_ENV;
 
   renderer.shadowMap.enabled = options.enableShadows || false;
-  if (rendererOpts.shadowMapType) {
-    renderer.shadowMap.type = options.shadowMapType || THREE.BasicShadowMap;
-  }
+  if (options.shadowMapType !== undefined) renderer.shadowMap.type = options.shadowMapType;
 
   renderer.setPixelRatio(options.devicePixelRatio || window.devicePixelRatio);
   renderer.setSize(canvasSize.width, canvasSize.height);
@@ -112,6 +130,8 @@ export const createRenderer = async (opts?: CreateRendererOptions) => {
   for (const fn of callbacks) fn(renderer);
 
   await renderer.init();
+  // A deleteRenderer() during init() leaves this renderer alone
+  if (r === renderer) setCurrentApi(isWebGPUBackend(renderer));
 
   return renderer;
 };
@@ -120,6 +140,8 @@ export const createRenderer = async (opts?: CreateRendererOptions) => {
  * Runs `fn` with the renderer once createRenderer has constructed it, before its init() (so it
  * sees every GPU resource the renderer creates), or right away if it already exists.
  * @param fn callback, called once
+ * @remarks Before `init()`, {@link isWebGPURenderer} is a guess: three may still fall back to
+ * WebGL2.
  */
 export const onRendererCreated = (fn: (renderer: THREE.WebGPURenderer) => void) => {
   if (r) fn(r);
@@ -149,9 +171,9 @@ export const getCanvasElem = () =>
   );
 
 /**
- * Returns the initialized renderer or null
- * @param throwOnError (boolean) optional flag to throw if renderer is not defined
- * @returns THREE.WebGPURenderer | null
+ * The renderer {@link createRenderer} made (from when it's constructed, before its `init()`
+ * resolves), or null before it and after {@link deleteRenderer}.
+ * @param throwOnError throw (and log) instead of returning null
  */
 export const getRenderer = (throwOnError?: boolean) => {
   if (!r && throwOnError) {
@@ -163,18 +185,30 @@ export const getRenderer = (throwOnError?: boolean) => {
 };
 
 /**
- * Deletes the initialized renderer
+ * Disposes the renderer, so the next {@link createRenderer} makes a new one (a mount's
+ * `unmount()`). Its canvas stays where it is: the caller removes it (or its parent). Warns when
+ * there is none.
  */
 export const deleteRenderer = () => {
   if (!r) {
-    lwarn(`The renderer has not been created or it has been deleted, in deleteRenderer(id).`);
+    lwarn(`The renderer has not been created or it has been deleted, in deleteRenderer().`);
     return;
   }
   r.dispose();
   r = null;
+  canvasParent = null;
 };
 
-const setRendererOptions = async (opts?: Partial<RendererOptions>) => {
+const isWebGPUBackend = (renderer: THREE.WebGPURenderer) =>
+  Boolean((renderer.backend as { isWebGPUBackend?: boolean }).isWebGPUBackend);
+
+const setCurrentApi = (isWebGPU: boolean) => {
+  options.currentApi = isWebGPU ? 'WebGPU' : WebGL.isWebGL2Available() ? 'WebGL2' : 'WebGL';
+  options.currentApiIsWebGPU = isWebGPU;
+  options.currentApiIsWebGL = !isWebGPU;
+};
+
+const setRendererOptions = (opts?: Partial<RendererOptions>) => {
   options = { ...options, ...opts };
   options.antialias = Boolean(opts?.antialias);
   options.forceWebGL = Boolean(opts?.forceWebGL);
@@ -185,30 +219,38 @@ const setRendererOptions = async (opts?: Partial<RendererOptions>) => {
     options = { ...options, ...opts, ...savedOptions };
   }
 
-  if (!options.forceWebGL && 'gpu' in navigator) {
-    options.currentApi = 'WebGPU';
-    options.currentApiIsWebGPU = true;
-    options.currentApiIsWebGL = false;
-  } else {
-    options.currentApi = WebGL.isWebGL2Available() ? 'WebGL2' : 'WebGL';
-    options.currentApiIsWebGPU = false;
-    options.currentApiIsWebGL = true;
-  }
+  // The guess until init() resolves (createRenderer then reads the backend)
+  setCurrentApi(!options.forceWebGL && 'gpu' in navigator);
 };
 
 /**
- * Returns render options object
- * @returns (object) {@link RendererOptions}
+ * The renderer's resolved options (the object itself: the debug tab edits it).
+ * @internal
  */
 export const getRendererOptions = () => options;
 
+/**
+ * Whether the renderer runs on WebGPU: after {@link createRenderer} resolves, its backend's
+ * answer; before, a guess from `navigator.gpu` (three falls back to WebGL2 when no adapter comes
+ * back).
+ */
 export const isWebGPURenderer = () => options.currentApiIsWebGPU;
+
+/**
+ * Whether the renderer runs on three's WebGL2 backend (forced, or WebGPU's fallback); a guess
+ * before {@link createRenderer} resolves, like {@link isWebGPURenderer}.
+ * @internal
+ */
 export const isWebGLRenderer = () => options.currentApiIsWebGL;
 
 // Debug
 type RendererGUIModule = typeof import('./debug/_dbg__Renderer');
 let debugGUI: DebugModuleRef<RendererGUIModule> | null = null;
 
+/**
+ * Debug env: creates the Renderer controls tab (a no-op elsewhere).
+ * @internal
+ */
 export const createRendererDebugGUI = async () => {
   debugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__Renderer'));
   useDebug(debugGUI)?._createRendererDebugGUI(options, r, LS_KEY);

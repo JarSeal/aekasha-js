@@ -1,6 +1,7 @@
 import type { Object3D } from 'three/webgpu';
 import type { ECSWorld } from '../kernel/ecs/ECS';
 import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
+import { DEBUG_HELPER_USER_DATA_KEY } from '../kernel/render/Object3DHelpers';
 import { lsGetItem } from '../utils/LocalAndSessionStorage';
 import { loadDebugModuleAsync, useDebug, type DebugModuleRef } from '../kernel/config/DebugModules';
 import {
@@ -174,9 +175,6 @@ export const setProfilerSettings = (partial: Partial<ProfilerSettings>) => {
 };
 
 // DEBUG HELPERS (§2.7)
-
-/** The `userData` flag {@link markDebugHelper} sets. */
-export const DEBUG_HELPER_USER_DATA_KEY = 'aekDebugHelper';
 
 /**
  * Marks an object (and its subtree) as a debug helper: the profiler's in-view census then counts

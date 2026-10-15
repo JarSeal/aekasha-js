@@ -25,12 +25,12 @@
  */
 import * as THREE from 'three/webgpu';
 import { texture, unpremultiplyAlpha } from 'three/tsl';
-import { DEBUG_HELPER_USER_DATA_KEY } from '../../debug/Profiler';
 import { getActiveCamera } from '../camera/Camera';
 import { renderFrameNow } from '../loop/MainLoop';
 import { getRenderPipeline } from './RenderHooks';
 import { getRenderer } from './Renderer';
 import { getRootScene } from '../scene/Scene';
+import { isDebugHelperObject } from './Object3DHelpers';
 import { getActiveView, isRuntimeViewActive } from './Views';
 
 export type SnapshotOpts = {
@@ -69,11 +69,6 @@ export type Snapshot = {
 
 /** The largest side a snapshot can have (WebGPU's default `maxTextureDimension2D`) */
 export const MAX_SNAPSHOT_SIZE = 8192;
-
-const isDebugHelper = (obj: THREE.Object3D) =>
-  Boolean(obj.userData[DEBUG_HELPER_USER_DATA_KEY]) ||
-  Boolean(obj.userData.isHelperSymbol) ||
-  obj.type.endsWith('Helper');
 
 /** Sets the camera's aspect for the image, as the canvas resizer would; returns what puts it back */
 const fitCamera = (camera: THREE.Camera, aspect: number) => {
@@ -266,7 +261,7 @@ export const takeSnapshotAsync = async (opts: SnapshotOpts): Promise<Snapshot> =
   const hidden: THREE.Object3D[] = [];
   if (hideDebugHelpers) {
     scene.traverseVisible((obj) => {
-      if (obj !== scene && isDebugHelper(obj)) hidden.push(obj);
+      if (obj !== scene && isDebugHelperObject(obj)) hidden.push(obj);
     });
   }
 

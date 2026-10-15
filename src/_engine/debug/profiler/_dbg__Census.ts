@@ -4,7 +4,7 @@ import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { getAllECSWorlds, type ECSWorld } from '../../kernel/ecs/ECS';
 import { getRootScene } from '../../kernel/scene/Scene';
 import { getActiveView, getActiveViewCamera, isRuntimeViewActive } from '../../kernel/render/Views';
-import { DEBUG_HELPER_USER_DATA_KEY } from '../Profiler';
+import { isDebugHelperObject } from '../../kernel/render/Object3DHelpers';
 
 /**
  * The "in view" census (§2.7): a walk of the root scene that repeats three r186's culling rules
@@ -299,11 +299,6 @@ type CensusObject = THREE.Object3D & {
   material?: THREE.Material | THREE.Material[];
 };
 
-const isDebugHelper = (obj: THREE.Object3D) =>
-  Boolean(obj.userData[DEBUG_HELPER_USER_DATA_KEY]) ||
-  Boolean(obj.userData.isHelperSymbol) ||
-  obj.type.endsWith('Helper');
-
 const getKind = (obj: CensusObject): CensusKind | null => {
   if (obj.isMesh) {
     // The FAT line backend (and three's Line2) draw lines as instanced quads
@@ -444,7 +439,7 @@ const visit = (
 ): boolean => {
   const obj = object as CensusObject;
   const isShown = parentShown && obj.visible;
-  const isInHelper = parentInHelper || (walkExcludesHelpers && isDebugHelper(obj));
+  const isInHelper = parentInHelper || (walkExcludesHelpers && isDebugHelperObject(obj));
   const entityIndex = entityObjects.get(obj) ?? parentEntity;
   let isAnyInView = false;
 

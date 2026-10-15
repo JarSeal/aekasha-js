@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 0 implemented
 Category: Refactoring, Documentation, Rendering, Assets
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -367,7 +367,7 @@ reproduced, unless a finding says so.
   (`createXEntity(props, entityOpts?, ecsWorld?)`); kept as the engine's shape (on the entry, the
   Hub's examples), documented.
 
-## 2. Decisions (recommended; to confirm in Phase 0)
+## 2. Decisions (confirmed 2026-10-15)
 
 ### D1. Scope: §1.1's files
 
@@ -501,7 +501,7 @@ hashes unchanged unless a phase says otherwise; no file is edited while it runs)
 with its "As built" list, its folders' JSDoc at 100% (exports and members, the H2 form rewritten),
 and the updated `docs.json` (`yarn verify:baselines --docs --update`).
 
-### Phase 0: baselines and measurements
+### Phase 0: baselines and measurements — done
 
 1. `yarn verify:scenes --update` on this commit (= `main`), then `yarn verify:baselines` clean.
 2. `yarn sbp --profile banner --why _engine/ui` and `--why _engine/kernel/assets/import` (D4, D5),
@@ -543,6 +543,28 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
    scratch objects `@internal` with a "never across a call" remark; `ThreeQuoternion`'s spelling
    fixed (internal).
 4. JSDoc for the folder (our files).
+
+**As built** (one commit per section):
+
+- **Section 1 (steps 1-2):**
+  - **D10:** `createRenderer` sets `currentApi` and its two flags from
+    `renderer.backend.isWebGPUBackend` once `init()` resolves (unless a `deleteRenderer` came
+    first); before that they're the `navigator.gpu` guess, which `onRendererCreated`'s JSDoc says.
+    `setRendererOptions` isn't `async`; the dead `antialias: true` default is `false` (the
+    behaviour was already off unless asked for).
+  - **R2's shadow map type:** the default is `PCFShadowMap` (three r186's own, which a caller that
+    didn't pass one got before too) and is always applied, so the Renderer tab's saved value now
+    applies in any app, and the tab no longer shows "Basic" while PCF renders.
+  - **R3:** `deleteRenderer` clears the canvas parent it kept; `RendererOptions` has a summary and a
+    doc per field (the resolved ones say a caller doesn't set them); `getRenderer`,
+    `isWebGPURenderer` documented; `getRendererOptions`, `isWebGLRenderer` and
+    `createRendererDebugGUI` `@internal` (none is on an entry).
+  - **N1:** `DEBUG_HELPER_USER_DATA_KEY` and one predicate, `isDebugHelperObject`, are in
+    `Object3DHelpers.ts` (`@internal`); `Snapshot.ts` and the profiler's census use the predicate
+    (they had a copy each), `Profiler.ts`' `markDebugHelper` imports the key. `Snapshot.ts` imports
+    nothing from `debug/` any more. `Object3DHelpers.ts`' stale `helpers.ts` comment.
+  - Left to Phase 8: the rendering guide's "`isWebGPURenderer` tells you which one runs" gets "once
+    `createRenderer` has resolved".
 
 ### Phase 2: scenes (`Scene.ts`, `SceneHooks.ts`, `AppData.ts`, `Group.ts`, `PropertyLoader.ts`)
 
