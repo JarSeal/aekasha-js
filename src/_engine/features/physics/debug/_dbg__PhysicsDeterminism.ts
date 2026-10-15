@@ -21,7 +21,7 @@ import type { PhysicsTier } from '../PhysicsTierTypes';
 import { DETERMINISM_PROBE_FREEZE_SOURCE, setPhysicsTierPolicyFrozen } from '../PhysicsTierPolicy';
 import {
   getCurrentSceneId,
-  registerOnAllSceneEnterings,
+  registerOnAllSceneEnters,
   registerOnAllSceneExits,
 } from '../../../kernel/scene/Scene';
 import { getCharacters } from '../../character/Character';
@@ -345,7 +345,7 @@ export const _initPhysicsDeterminismProbe = () => {
     setPhysicsTierPolicyFrozen(true, DETERMINISM_PROBE_FREEZE_SOURCE, getECSWorld());
   }
 
-  registerOnAllSceneEnterings('physicsDeterminismProbe', () => {
+  registerOnAllSceneEnters('physicsDeterminismProbe', () => {
     if (armedSteps !== null) startRun(armedSteps);
   });
   // Released before the next load, so a leftover freeze never holds physics during it (that

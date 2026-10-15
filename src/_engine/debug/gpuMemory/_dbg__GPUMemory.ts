@@ -8,7 +8,7 @@ import { llog } from '../../utils/Logger';
 import { ECSSystemStage } from '../../kernel/loop/SystemStages';
 import { ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
 import { getRenderer, onRendererCreated } from '../../kernel/render/Renderer';
-import { getCurrentSceneId, registerOnAllSceneEnterings } from '../../kernel/scene/Scene';
+import { getCurrentSceneId, registerOnAllSceneEnters } from '../../kernel/scene/Scene';
 import { addViewFrameListener } from '../../kernel/render/Views';
 import { formatBytes, formatNumber } from '../../kernel/assets/debug/_dbg__AssetStats';
 import {
@@ -579,7 +579,7 @@ export const _createGPUMemoryDebugGUI = () => {
   onRendererCreated(installAllocationTracker);
   registerEngineGPUMemorySources();
 
-  registerOnAllSceneEnterings('gpuMemoryScenePeak', () => {
+  registerOnAllSceneEnters('gpuMemoryScenePeak', () => {
     // Starts from what is held now: the previous scene's assets are already released here
     scenePeak.bytes = getRenderer()?.info.memory.total ?? 0;
     scenePeak.at = Date.now();

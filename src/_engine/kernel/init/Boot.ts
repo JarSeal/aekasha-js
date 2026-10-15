@@ -140,7 +140,7 @@ export const bootEngineAsync = async ({ config, data, features, start, hudSlot }
 
   // Register scenes from generated data: after the installs, so each feature's sceneRegistered
   // hook sees every scene (the sky box registers the scenes' sky boxes)
-  await registerScenesFromGeneratedData();
+  registerScenesFromGeneratedData();
 
   // The debug tools, the features' debug hooks and the test bridge, before the first scene load
   if (IS_DEBUG_ENV || IS_PROD_TEST_MODE) await bootDebugToolsAsync(featureHost.debugHooks);

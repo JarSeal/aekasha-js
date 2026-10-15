@@ -6,7 +6,7 @@ import {
   getECSWorld,
   getEntityIdByAppId,
 } from '../ecs/ECS';
-import { getCurrentSceneId, getRootScene, registerOnAllSceneEnterings } from '../scene/Scene';
+import { getCurrentSceneId, getRootScene, registerOnAllSceneEnters } from '../scene/Scene';
 import type { DebugModuleRef } from '../config/DebugModules';
 import { loadDebugModule, loadDebugModuleAsync, useDebug } from '../config/DebugModules';
 import { getCanvasSize } from '../render/CanvasSize';
@@ -82,7 +82,7 @@ export const registerCameraDebugGUI = async () => {
   cameraDebugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__CameraGUI'));
   if (!cameraDebugGUI) return;
 
-  registerOnAllSceneEnterings('cameraDebugSync', () => {
+  registerOnAllSceneEnters('cameraDebugSync', () => {
     const sceneId = getCurrentSceneId();
     if (sceneId) {
       syncCameraHelpersFromLS(sceneId, getECSWorld());
@@ -453,7 +453,7 @@ export const initDebugCamera = async (world: ECSWorld) => {
   debugCamera = loadDebugModule(camImporter);
 
   if (IS_DEBUG_ENV) {
-    registerOnAllSceneEnterings('debugCamEnterSceneLogic', () => {
+    registerOnAllSceneEnters('debugCamEnterSceneLogic', () => {
       useDebug(cameraDebugGUI)?.initCameraDebuggerGUI();
 
       const newSceneId = getCurrentSceneId();

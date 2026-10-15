@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { ECSWorld, getECSWorld, getEntityIdByAppId } from '../ecs/ECS';
-import { getCurrentSceneId, getRootScene, registerOnAllSceneEnterings } from '../scene/Scene';
+import { getCurrentSceneId, getRootScene, registerOnAllSceneEnters } from '../scene/Scene';
 import type { DebugModuleRef } from '../config/DebugModules';
 import { getLightCharacteristics } from './LightHelpers';
 import { loadDebugModuleAsync, useDebug } from '../config/DebugModules';
@@ -37,7 +37,7 @@ export const registerLightDebugGUI = async (world: ECSWorld) => {
   await loadDebugModuleAsync(() => import('./debug/_dbg__LightHelpers'));
   if (!debugGUI) return;
 
-  registerOnAllSceneEnterings('lightHelpersSceneSync', () => {
+  registerOnAllSceneEnters('lightHelpersSceneSync', () => {
     const sceneId = getCurrentSceneId();
     if (sceneId) useDebug(debugGUI)?.syncDebugVisualsFromLS(sceneId, world);
 

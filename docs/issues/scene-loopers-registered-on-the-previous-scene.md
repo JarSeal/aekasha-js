@@ -34,10 +34,15 @@ only because the create calls during the load happened to overwrite them.
   or delete refreshes them only when it touched the current scene's list. A scene's loopers start
   running once it's current, no longer during its load.
 
-## Also seen (not fixed here)
+## Also seen (closed 2026-10-15, p613 Phase 2: the scene resizers removed)
 
 - Scene resizers are never deleted on a scene exit (`deleteAllSceneLoopers` leaves them), so a
   revisit adds them again.
 - `deleteSceneResizer` with an array of indexes filters with `i !== index[i]` (the filter's own
   index against the array at that index), and deleting by `filter` shifts the indexes of the
   resizers after it.
+
+`createSceneResizer` and `deleteSceneResizer` had no caller and weren't on an entry, so they went
+with `getSceneResizers` and the main loop's call (p613 D7) rather than being fixed. The loopers'
+indexes got the matching fix: clearing a scene's loopers on its exit no longer lets an index from
+the earlier visit name a looper of the next one.

@@ -192,6 +192,7 @@ export {
   getRootScene,
   getScene,
   registerOnAllSceneEnterings,
+  registerOnAllSceneEnters,
   registerOnAllSceneExits,
   registerOnSceneEnter,
   registerOnSceneExit,

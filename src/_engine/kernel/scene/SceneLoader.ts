@@ -576,7 +576,7 @@ export const loadScene = async (loadSceneProps: LoadSceneProps) => {
       }
 
       loader.phase = 'LOAD';
-      // From here until it is current, optional scene ids (loopers, resizers) mean the next scene
+      // From here until it is current, optional scene ids (loopers, sky boxes) mean the next scene
       setLoadingSceneId(sceneId);
 
       createCameras(sceneData);

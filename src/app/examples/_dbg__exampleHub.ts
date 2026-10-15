@@ -1,7 +1,7 @@
 import {
   getCurrentSceneId,
   getGeneratedSceneData,
-  registerOnAllSceneEnterings,
+  registerOnAllSceneEnters,
   takeSnapshotAsync,
   isRuntimeViewActive,
   lerror,
@@ -167,7 +167,7 @@ const TRANSPARENT_HUB_SCENES = new Set(['banner']);
  * only, through a dynamic import.
  */
 export const registerExampleHubTabs = () =>
-  registerOnAllSceneEnterings(TAB_ID, () => {
+  registerOnAllSceneEnters(TAB_ID, () => {
     const sceneId = getCurrentSceneId();
     const sceneFile = sceneId ? getGeneratedSceneData(sceneId)?.sceneFile : undefined;
     if (!sceneId || !sceneFile) return;

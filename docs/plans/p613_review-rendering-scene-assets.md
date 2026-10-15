@@ -600,6 +600,46 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
 4. Tests: the looper helper (add, delete by index, the current scene's list refreshed), the
    listener removers, `backgroundColor: 0`.
 
+**As built** (one commit per section):
+
+- **Section 1 (step 1, and step 4's tests for it):**
+  - **D7 (scenes):** `deleteScene`, `getAllScenes`, `setSceneOpts`, `getCurrentSceneOpts`, the
+    three `getScene*Loopers` and the scene resizers (`createSceneResizer`, `deleteSceneResizer`,
+    `deleteSceneResizers`, `getSceneResizers`, `MainLoop.ts`' call) removed; the issue file's
+    "Also seen" closed. `SceneHooks.sceneDeleted` `@deprecated` (never called), its runner
+    `runSceneDeletedHooks` and the sky box's hook gone, with what only they used:
+    `isCurrentScene` and the sky box's `getSceneSkyBoxTextureIds`. Not in §1.4, also dead:
+    `SceneOptions`' `isCurrentScene`, `mainLoopers`, `mainLateLoopers`, `appLoopers` and `skyBox`
+    (its one creator, `registerScenesFromGeneratedData`, passes none) and `createScene`'s
+    `isCurrentScene` path. `SceneOptions` and `createScene` `@internal` (on no entry).
+  - **D8:** the four listener registries return a remover (one `addListener`); no caller read the
+    old return (each a statement). `registerOnAllSceneEnters` on the entry,
+    `registerOnAllSceneEnterings` a `@deprecated` alias of it; the engine's 8 callers and the
+    app's `_dbg__exampleHub.ts` moved (no toolkit file used it). A run skips a listener another
+    one removed during it.
+  - **D9:** one `LooperList` per kind and four helpers (`addLooper`, `deleteLoopers`,
+    `clearLoopers`, `runLoopers`). Beyond the plan: the indexes no longer restart at 0 when a
+    scene's loopers are cleared on its exit (a per-scene `base` moves past them), so an index kept
+    from an earlier visit (the character state window keeps one) can't delete a looper of the
+    next visit, and an index out of range no longer writes a hole into the list. A run reads its
+    list once, so a create or delete during it takes effect next frame.
+  - **SC3:** `backgroundColor !== undefined`. **SC6:** `registerScenesFromGeneratedData` not
+    `async` (`Boot.ts`' `await` gone); the commented fields, the old-implementation TODO and the
+    stale names gone. `getScene`'s two positional booleans stay (on the entry, no decision
+    changes them), documented with an `@example`.
+  - **JSDoc:** every `Scene.ts` export (`SceneData`'s fields, `Looper`, `@example`s on the entry's
+    looper and listener functions), the H2 forms rewritten, everything on no entry `@internal`.
+    `kernel/scene` 61 / 88 → 60 / 73 (the rest is `SceneLoader.ts`, Phase 3; `Group.ts` and
+    `PropertyLoader.ts`, section 2); `docs.json` not yet updated (end of the phase).
+  - Docs: the sky box's `CLAUDE.md` and the root's hook list; `PhysicsEntity.ts`' comment that
+    named `deleteScene`.
+  - **Tests:** `kernel/scene/Scene.test.ts` (12): the lists apart and only the current scene's
+    running, the refresh on create and delete, delete without shifting, an earlier visit's index
+    skipped, the loading scene's default, -1 without a scene, the removers (a replacing listener
+    kept, one removed mid-run skipped), the deprecated alias, `backgroundColor: 0`.
+  - **Checks:** `tsc` (both), the changed files' lint (the whole-repo `yarn lint` ran over 13
+    minutes and was stopped), `yarn test` (59 files, 507 passed), the docs ratchet clean.
+
 ### Phase 3: the scene loader (`SceneLoader.ts`)
 
 1. D3 (SL1, SL2, and PF1's re-check), D2's bug B (SL3).

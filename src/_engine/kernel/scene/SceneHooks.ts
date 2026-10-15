@@ -5,8 +5,8 @@ import type { SceneData } from './Scene';
 // The scene seams (p607 D4): a feature adds its part of a scene load through
 // `FeatureContext.addSceneHooks`, and `loadScene` (SceneLoader.ts) runs each phase where the
 // feature's calls used to be, so the order inside a load stays. The scene data phases run from
-// Scene.ts (registration, delete) and Assets/SceneAssetRelease.ts. App code keeps
-// `registerOnAllSceneExits` / `registerOnAllSceneEnterings`.
+// Scene.ts (registration) and assets/SceneAssetRelease.ts. App code keeps
+// `registerOnAllSceneExits` / `registerOnAllSceneEnters`.
 
 /**
  * A feature's part of the scenes' life (`FeatureContext.addSceneHooks`), by phase: the scene
@@ -19,7 +19,11 @@ export type SceneHooks = {
   /** A scene of the gathered data was registered, with its data. `InitEngine` registers them
    * after every feature has installed, so the hook sees every one. */
   sceneRegistered?: (sceneId: string, data: SceneData) => void;
-  /** `deleteScene` deleted the scene's objects (`sceneId` is never the current scene). */
+  /**
+   * Never called: scenes aren't deleted (`deleteScene`, its one caller, had no caller and went in
+   * engine 5.4.0).
+   * @deprecated Nothing replaces it. Removed in engine 6.0.0.
+   */
   sceneDeleted?: (sceneId: string) => void;
   /** The textures a scene's asset release must keep, though the released scene owns them and no
    * material uses them (eg. the sky box's). Read once per release. */
@@ -68,14 +72,6 @@ export const addSceneHooks = (hooks: SceneHooks) => {
  */
 export const runSceneRegisteredHooks = (sceneId: string, data: SceneData) => {
   for (let i = 0; i < sceneHooks.length; i++) sceneHooks[i].sceneRegistered?.(sceneId, data);
-};
-
-/**
- * Runs the `sceneDeleted` hooks.
- * @internal
- */
-export const runSceneDeletedHooks = (sceneId: string) => {
-  for (let i = 0; i < sceneHooks.length; i++) sceneHooks[i].sceneDeleted?.(sceneId);
 };
 
 /**
