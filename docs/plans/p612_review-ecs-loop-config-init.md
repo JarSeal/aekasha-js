@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented
+Status: in progress | Phases 0-5 implemented, Phase 6 in review
 Category: Refactoring, Documentation, ECS
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -641,6 +641,18 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
   files' later config entries replace it), nor an `import()` (the assets worker's job modules). The
   kernel lints clean; checked on stdin: a runtime import fails, a type import and `../init/Features`
   pass.
+- **Section 2, the findings left: no new issue file.** §1's findings against Phases 1-5's As
+  built: every one is fixed, decided to stay (E5, C4: D2), or filed already (I6: D8's
+  `remount-after-unmount.md`). No `@TODO` / `@CHORE` / `@QUESTION` is left in the plan's files.
+  One was neither: E8's `getEntityDiagnosticData` / `inspectEntity` read only the default world.
+  A few lines, so fixed instead of filed: an optional `ecsWorld` (the other helpers' shape;
+  `inspectEntity` takes it in its options), tested in `ECS.test.ts`. Neither is on an entry.
+- **Plan items, not issue files** (other plans' files; Phase 8 writes them into those plans'
+  Inputs): p613 and p614 (D2's rule, now in the coding standards and the lint), p614
+  (`PhysicsTierPolicy.ts`' own main-camera query), p617 (`pollHeldKeyBindings`' closure and array
+  per sub-step), p619 (the `ComponentDataMap` `notExported`; the scene runner's intermittent page
+  reload). Phase 7 keeps Phase 5's `hub:build` findings (the 7 `{@link}`s, the search index, now
+  1.25 MB).
 
 ### Phase 7: the Hub, CLAUDE.md and readme
 

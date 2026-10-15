@@ -214,11 +214,14 @@ export interface EntityDiagnosticData {
 }
 
 /**
- * Gathers an entity of the default world's ECS and engine state into one object, for logging or a
- * debug view. Returns null if the entity is dead/recycled.
+ * Gathers an entity's ECS and engine state into one object, for logging or a debug view. Returns
+ * null if the entity is dead/recycled. `ecsWorld` defaults to the default world.
  */
-export const getEntityDiagnosticData = (id: number): EntityDiagnosticData | null => {
-  const world = getECSWorld();
+export const getEntityDiagnosticData = (
+  id: number,
+  ecsWorld?: ECSWorld
+): EntityDiagnosticData | null => {
+  const world = ecsWorld || getECSWorld();
   if (!world.isAlive(id)) return null;
 
   const data: EntityDiagnosticData = {
@@ -275,14 +278,15 @@ export const getEntityDiagnosticData = (id: number): EntityDiagnosticData | null
 };
 
 /**
- * Logs an entity of the default world ({@link getEntityDiagnosticData}): `compact` logs the title
- * and the data object, `dataOnly` the data object alone, `includeAllData` adds it to the full log.
+ * Logs an entity ({@link getEntityDiagnosticData}): `compact` logs the title and the data object,
+ * `dataOnly` the data object alone, `includeAllData` adds it to the full log. `ecsWorld` defaults to
+ * the default world.
  */
 export const inspectEntity = (
   id: number,
-  opts?: { compact?: boolean; dataOnly?: boolean; includeAllData?: boolean }
+  opts?: { compact?: boolean; dataOnly?: boolean; includeAllData?: boolean; ecsWorld?: ECSWorld }
 ) => {
-  const data = getEntityDiagnosticData(id);
+  const data = getEntityDiagnosticData(id, opts?.ecsWorld);
 
   if (opts?.dataOnly) {
     llog(data);

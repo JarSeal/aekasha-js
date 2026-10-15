@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { ECSWorld, type ECSWorldOptions } from './ECS';
 import { ComponentType, Transform } from './ECSCoreComponents';
+import { getEntityDiagnosticData } from './ECSHelpers';
 import { ECSSystemStage } from '../loop/SystemStages';
 
 const INDEX_BITS = 20;
@@ -272,6 +273,19 @@ describe('component hooks', () => {
     world.deleteEntity(entityId);
     expect(calls).toContain(`delete:${entityId}:x`);
     expect(world.isAlive(entityId)).toBe(false);
+  });
+});
+
+describe('diagnostics', () => {
+  test("reads the given world's entity, and null for one that isn't alive there", () => {
+    const world = createWorld();
+    const entityId = world.createEntity({ appId: 'probe' });
+    const data = getEntityDiagnosticData(entityId, world);
+    expect(data?.appId).toBe('probe');
+    expect(data?.activeTags).toContain(ComponentType.APP_ID);
+
+    world.deleteEntity(entityId);
+    expect(getEntityDiagnosticData(entityId, world)).toBeNull();
   });
 });
 
