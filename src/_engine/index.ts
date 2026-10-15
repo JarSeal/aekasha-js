@@ -199,7 +199,12 @@ export {
 } from './kernel/scene/Scene';
 export type { Looper, SceneData } from './kernel/scene/Scene';
 export { createSceneLoader, getLoaderStatusUpdater, loadScene } from './kernel/scene/SceneLoader';
-export type { LoadSceneProps, SceneLoader, ScenePrimitiveAssets } from './kernel/scene/SceneLoader';
+export type {
+  LoadSceneProps,
+  SceneLoader,
+  ScenePrimitiveAssets,
+  UpdateLoaderStatusFn,
+} from './kernel/scene/SceneLoader';
 export type { SceneHooks } from './kernel/scene/SceneHooks';
 export { snapshotToBlobAsync, takeSnapshotAsync } from './kernel/render/Snapshot';
 export type { Snapshot, SnapshotBlobOpts, SnapshotOpts } from './kernel/render/Snapshot';

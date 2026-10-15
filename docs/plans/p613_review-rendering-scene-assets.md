@@ -805,6 +805,29 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
     active; a scene without a created camera fails to load.
   - **Checks:** `tsc` (both), the changed files' lint, `yarn test` (63 files, 523 passed), the docs
     ratchet (no new undocumented export; `kernel/scene` 67 / 76, the 9 left are section 4's).
+- **Section 4 (step 4):**
+  - **SL7's TODOs, all removed:** "disable the previous scene's input while loading" was done
+    already (`beginLoad` turns every input off for the whole load); "a next-scene camera" is what
+    the scene data's cameras are (`createCameras` runs before the assets, and the loader's
+    `loaderGroup` shows in the root scene meanwhile); `deleteSceneLoader` has no use (a loader
+    lives as long as the page: `InitEngine` and `mountAekasha` boot once per page load). The
+    `@CONSIDER` went with D3 (section 1), the debugger-loader `@TODO` with the split (section 3:
+    it was implemented).
+  - **Dead code:** `getCurrentSceneLoaderId` (no caller) and `setCurrentSceneLoader` (only
+    `createSceneLoader` called it) removed, with `currentSceneLoaderId`; `getCurrentSceneLoader`
+    private. None was on an entry.
+  - **API:** `UpdateLoaderStatusFn` is on the `aekasha` entry (the public `SceneLoader` type names
+    it): an addition, for the changelog.
+  - **JSDoc:** `SceneLoader` (each member: when the load awaits `loadStartFn` / `loadEndFn`, that
+    their results are ignored, what `loadFn` must do, that `phase` and `loaderContainer` are set
+    by the load), `UpdateLoaderStatusFn`, `LoadSceneProps`' fields (the start scene override,
+    which always runs its scene file), `ScenePrimitiveAssets`, `createSceneLoader` (`isCurrent`, the
+    promise that resolves at once, an `@example`), `getLoaderStatusUpdater` (an `@example`).
+    `isCurrentlyLoading` said "this does NOT tell whether the loading has started", which was
+    wrong (it's set from the load's start to its end, `loopState.isLoadingScene` is the narrower
+    one): rewritten. It, `hasFirstSceneBeenLoaded` and `getNextSceneId` `@internal`.
+  - **Checks:** `tsc`, the changed files' lint, `yarn test` (63 files, 523 passed, the `@example`
+    check included), the docs ratchet: `kernel/scene` 73 / 73 exports, 1 / 1 members.
 
 ### Phase 4: cameras, lights, meshes (`Camera.ts`, `Light.ts`, `LightHelpers.ts`, `Mesh.ts`, `MeshUserData.ts`)
 

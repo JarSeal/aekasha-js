@@ -49,21 +49,31 @@ import {
   runSceneWorldClearedHooks,
 } from './SceneHooks';
 
+/**
+ * A loader's progress callback ({@link SceneLoader.updateLoaderStatusFn}): scene code calls it
+ * through {@link getLoaderStatusUpdater} with whatever the loader's screen shows (eg.
+ * `{ loadedCount, totalCount }`).
+ */
 export type UpdateLoaderStatusFn = (
   loader: SceneLoader,
   params?: { [key: string]: unknown }
 ) => void;
 
+/**
+ * A scene loader: what a scene load shows while it runs (its screen) and the functions it awaits
+ * at its start and end. {@link createSceneLoader} registers one, {@link loadScene} uses the current
+ * one or the one its `loaderId` names.
+ */
 export type SceneLoader = {
-  /**
-   * Scene Loader ID
-   */
+  /** The loader's id (`LoadSceneProps.loaderId`). */
   id: string;
 
   /**
-   * Next scene loader function, resolves when loading is done.
-   * @param loader SceneLoader ({@link SceneLoader})
-   * @param nextSceneFn runs the next scene's code with its data (the default loadFn only awaits it)
+   * Runs the next scene's code: awaited after the scene's assets have loaded. Without it the load
+   * runs the code itself; with it, call `nextSceneFn` once (eg. after a transition starts) and
+   * resolve when it has resolved.
+   * @param loader this loader
+   * @param nextSceneFn runs the scene's code with its data and assets (its argument is ignored)
    */
   loadFn?: (
     loader: SceneLoader,
@@ -71,52 +81,49 @@ export type SceneLoader = {
   ) => Promise<void>;
 
   /**
-   * Load start function, returns true when done
-   * @param loader SceneLoader ({@link SceneLoader})
-   * @returns Promise<boolean>
+   * Awaited first, while the previous scene is still up (its container is on the HUD already):
+   * eg. fade the screen in. The result is ignored.
+   * @param loader this loader
    */
   loadStartFn?: (loader: SceneLoader) => Promise<boolean>;
 
   /**
-   * Load end function, returns true when done
-   * @param loader SceneLoader ({@link SceneLoader})
-   * @returns Promise<boolean>
+   * Awaited last, once the next scene is current and entered: eg. fade the screen out. The
+   * container and the group are removed after it. The result is ignored.
+   * @param loader this loader
    */
   loadEndFn?: (loader: SceneLoader) => Promise<boolean>;
 
-  /**
-   * Update loader status function, returns true when loading is done. {@link UpdateLoaderStatusFn}
-   */
+  /** The progress callback {@link getLoaderStatusUpdater} returns for scene code to call. */
   updateLoaderStatusFn?: UpdateLoaderStatusFn;
 
-  /**
-   * The optional three.js group to be used in the loader
-   */
+  /** A group added to the root scene for the load (eg. a 3D loading animation), removed at its
+   * end. */
   loaderGroup?: THREE.Group;
 
-  /**
-   * The optional function to create a loader container
-   * @returns function (() => TCMP)
-   */
+  /** Makes the loader's HUD element, once per load: added to the HUD root at the load's start,
+   * removed at its end. */
   loaderContainerFn?: () => TCMP;
 
-  /**
-   * The optional HTML overlay component of the loader view that is attached to the
-   */
+  /** The HUD element `loaderContainerFn` made for the running load (set by the load; the last
+   * one after it). */
   loaderContainer?: TCMP;
 
-  /**
-   * Loading phase (no loading phase = undefined)
-   */
+  /** The running load's phase (set by the load): `START` until the previous scene goes, `LOAD`
+   * until the next scene is entered, `END` during `loadEndFn`; undefined between loads. */
   phase?: 'START' | 'LOAD' | 'END';
 };
 
 /**
- * {@link loadScene}'s options: the scene to load, the function that builds it from its data and
- * assets, the loader and its status callback.
+ * {@link loadScene}'s options: the scene to load, its code and the loader.
  */
 export type LoadSceneProps = {
+  /** The scene to load: a scene of the gathered data, or one created in code with `createScene`.
+   * On the page's first load, `?startScene` or the Debug tools' start scene replaces it (debug env
+   * and prod test mode). */
   sceneId: string;
+  /** The scene's code, in place of its scene file (`sceneFile`'s, from the gathered data): gets
+   * the scene's data and its loaded assets. A start scene override always runs its scene file. */
   nextSceneFn?: ({
     sceneData,
     assets,
@@ -131,24 +138,45 @@ export type LoadSceneProps = {
    * engine 6.0.0.
    */
   updateLoaderStatusFn?: UpdateLoaderStatusFn;
-  loaderId?: string; // loaderId to use, if not provided then the currentSceneLoader will be used
+  /** The loader to use (its {@link SceneLoader.id}), the current one without it. */
+  loaderId?: string;
   /** Release the previous scene's assets before the next scene loads instead of after it: lower
    * peak memory, but assets the next scene shares are loaded again. */
   deletePrevScene?: boolean;
-  // @TODO: add possibility to disable inputControls for prevScene while loading
-  // @TODO: add possibility to add nextSceneCamera (maybe)
 };
 
 const sceneLoaders: SceneLoader[] = [];
 let currentSceneLoader: SceneLoader | null = null;
-let currentSceneLoaderId: string | null = null;
 let currentlyLoading = false;
 let firstSceneLoaded = false;
 let nextSceneId: string | null = null;
 
+/**
+ * Registers a scene loader: the screen a scene load shows and the functions it awaits. A loader
+ * lives as long as the page (the boot runs once per page load). An id that is registered already
+ * warns and keeps the first.
+ * @param sceneLoader the loader (its `phase` and `loaderContainer` are set by the loads)
+ * @param isCurrent `false` registers it without making it the current loader (default `true`):
+ * a load then uses it only through its `loaderId`
+ * @returns a promise that resolves at once (the registration is synchronous)
+ * @example
+ * ```ts
+ * import { createSceneLoader } from 'aekasha';
+ * import { CMP } from 'aekasha/ui';
+ *
+ * await createSceneLoader({
+ *   id: 'main',
+ *   loaderContainerFn: () => CMP({ id: 'mainLoader', text: 'Loading…' }),
+ *   updateLoaderStatusFn: (loader, params) => {
+ *     const { loadedCount, totalCount } = params ?? {};
+ *     loader.loaderContainer?.update({ text: `Loading ${loadedCount} / ${totalCount}` });
+ *   },
+ * });
+ * ```
+ */
 export const createSceneLoader = async (
   sceneLoader: Omit<SceneLoader, 'phase' | 'loaderContainer'>,
-  isCurrent?: boolean // default is true
+  isCurrent?: boolean
 ) => {
   const foundSameId = sceneLoaders.find((sl) => sl.id === sceneLoader.id);
   if (foundSameId) {
@@ -158,52 +186,31 @@ export const createSceneLoader = async (
   }
 
   sceneLoaders.push(sceneLoader);
-
-  if (isCurrent !== false) {
-    setCurrentSceneLoader(sceneLoader.id);
-  }
+  if (isCurrent !== false) currentSceneLoader = sceneLoader;
 };
 
-// @TODO: delete a scene loader (deleteSceneLoader)
-// export const deleteSceneLoader = (id: string) => {};
-
-export const setCurrentSceneLoader = (id: string) => {
-  const foundLoader = sceneLoaders.find((sl) => sl.id === id);
-  if (!foundLoader) {
-    const msg = `Could not set current scene loader with loader id "${id}", because the loader was not found.`;
-    lwarn(msg);
-    return;
-  }
-
-  currentSceneLoader = foundLoader;
-  currentSceneLoaderId = foundLoader.id;
-};
-
-export const getCurrentSceneLoader = () => {
+/** The current loader: a load without a `loaderId` uses it. Throws when none is registered. */
+const getCurrentSceneLoader = () => {
   if (!currentSceneLoader) {
-    const msg =
-      'Could not find current scene loader, create a loader first before trying to access the current loader.';
-    throw new Error(msg);
+    throw new Error(
+      'Could not find the current scene loader: create one (createSceneLoader) before loading a scene.'
+    );
   }
-
   return currentSceneLoader;
 };
 
-export const getCurrentSceneLoaderId = () => {
-  if (!currentSceneLoaderId) {
-    const msg =
-      'Could not find current scene loader id, create a loader first before trying to access the current loader id.';
-    throw new Error(msg);
-  }
-
-  return currentSceneLoaderId;
-};
-
+/**
+ * The objects a scene's data defines, loaded before its code runs: what the scene's code
+ * (`LoadSceneProps.nextSceneFn`, a scene file's default export) gets as `assets`, by asset id.
+ */
 export type ScenePrimitiveAssets = {
+  /** The scene's textures (its data's `textures`). */
   textures: { [id: string]: THREE.Texture };
+  /** The scene's materials, with their texture ids resolved. */
   materials: { [id: string]: THREE.Material };
+  /** The scene's geometries. */
   geometries: { [id: string]: THREE.BufferGeometry };
-  /** The scene's imported assets by import id (spawn them with spawnImportedAsset). */
+  /** The scene's imported assets by import id (spawn them with `spawnImportedAsset`). */
   importedAssets: { [id: string]: ImportedAssetManifest };
 };
 
@@ -544,9 +551,18 @@ export const loadScene = (loadSceneProps: LoadSceneProps): Promise<boolean> => {
 };
 
 /**
- * Returns a updateLoaderStatusFn wrapper. If the loaderId is not provided, the current sceneloader's updateLoaderStatusFn is returned.
- * @param loaderId SceneLoader id (optional)
- * @returns (params?: { [key: string]: unknown }) => SceneLoader.updateLoaderStatusFn(sceneLoader, params) ({@link UpdateLoaderStatusFn})
+ * The progress callback of a loader (the current one without an id) for scene code to report
+ * to: it calls the loader's {@link SceneLoader.updateLoaderStatusFn} with the loader. Throws when
+ * the loader doesn't exist or has no `updateLoaderStatusFn`.
+ * @param loaderId the loader's id (default: the current loader)
+ * @returns a function that passes its `params` on to the loader's callback
+ * @example
+ * ```ts
+ * import { getLoaderStatusUpdater } from 'aekasha';
+ *
+ * const updateLoaderFn = getLoaderStatusUpdater();
+ * updateLoaderFn({ loadedCount: 1, totalCount: 3 });
+ * ```
  */
 export const getLoaderStatusUpdater = (loaderId?: string) => {
   let updateLoaderStatusFn: UpdateLoaderStatusFn | undefined = undefined;
@@ -585,15 +601,23 @@ export const getLoaderStatusUpdater = (loaderId?: string) => {
 };
 
 /**
- * This tells whether the scene loader has started/ended the loading animation sequence.
- *
- * This does NOT tell whether the loading has started or ended, but just that loading
- * sequence has started or ended. For more accurate loading phase check, use
- * loopState.isLoading as it tells when the actual loading starts and ends.
- * @returns boolean
+ * Whether a scene load runs: from the moment {@link loadScene} starts it (before the loader's
+ * `loadStartFn`) until it has finished or failed (after `loadEndFn`). A load waiting for it isn't
+ * counted. `loopState.isLoadingScene` is narrower: from after `loadStartFn`.
+ * @internal
  */
 export const isCurrentlyLoading = () => currentlyLoading;
 
+/**
+ * Whether a scene load has completed on this page (the first one ends the debug start-scene
+ * overrides).
+ * @internal
+ */
 export const hasFirstSceneBeenLoaded = () => firstSceneLoaded;
 
+/**
+ * The scene the running load loads (null between loads): while it loads, code that defaults a
+ * scene id reads it (`isCurrentlyLoading() ? getNextSceneId() : getCurrentSceneId()`).
+ * @internal
+ */
 export const getNextSceneId = () => nextSceneId;
