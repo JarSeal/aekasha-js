@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented, Phase 6 in review
+Status: in progress | Phases 0-7 implemented
 Category: Refactoring, Documentation, ECS
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -615,7 +615,7 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
 - **Checks:** `yarn verify:scenes` 104 passed (408.2 s), snapshots and hashes unchanged, no page
   reload this time; `yarn verify:embed` all passed; `yarn test` 57 files.
 
-### Phase 6: the rules written down
+### Phase 6: the rules written down — done
 
 1. D2's rule in the coding standards (`hub/pages/documentation/coding-standards/intro.md`) and
    CLAUDE.md's Three-folder split.
@@ -654,7 +654,7 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
   reload). Phase 7 keeps Phase 5's `hub:build` findings (the 7 `{@link}`s, the search index, now
   1.25 MB).
 
-### Phase 7: the Hub, CLAUDE.md and readme
+### Phase 7: the Hub, CLAUDE.md and readme — done
 
 1. The ECS feature page (`hub/pages/features/ecs/`: ECS core, Engine features), the Viewports page's
    Views section, the ECS and quick-start examples: checked against the code (the `appId` lookup,
@@ -663,6 +663,37 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
    section (`ComponentType` only, the `appId` map), the loop. `readme.md` if its `AppConfig` or
    `addSystem` examples changed.
 3. `yarn hub:build`: no new warning, no dead link.
+
+**As built** (2026-10-15, one commit per section):
+
+- **The pages, checked:** the ECS page's stage table and pause rule match `runFrame`; the Viewports
+  page's Views section matches `Views.ts`; the physics page's defaults match `physicsState` after
+  D4; the examples' included regions didn't change. Fixed: the ECS page's `appId` option (one
+  lookup, keep ids unique: the first entity keeps one, the debug env warns about the second) and
+  a bullet on D10's frame cap (a frame not drawn runs every stage up to `APP_RENDER_SYNC`, skips
+  the render and `LATE_MAIN`); the quick start's "each top-level key merged over the engine's
+  defaults" (D4: a key left out keeps the default of the module that reads it) and "`IS_DEBUG_ENV`
+  and the other flags" (D3: the one public flag).
+- **The migration page isn't used for D4 and D10** (§4's Risk 3 said it would): it has one section
+  per major, for changes that break an app's code, and this is a minor. The changelog says both
+  (Phase 8).
+- **CLAUDE.md:** ECS core gets `CoreComponentType`'s deprecation, an App ids bullet (D6), the
+  remove hooks' rule (E7, S1) and a loop bullet (D10, L2, L3, D11); the `?isDebug` paragraph names
+  the flag bindings left (D3); Bootstrap flow (`loadConfig` without defaults, cameras and lights in
+  `installKernel`, the three debug steps, the empty root scene) and Engine features (I2) as the
+  boot is; Physics and Views name `runFrame` instead of the loop variants. Also
+  `kernel/input/CLAUDE.md`'s "every loop variant", `setFrameProbe`'s JSDoc, and `readme.md`'s
+  config sentence (D4); its `AppConfig` and `addSystem` examples still match.
+- **`yarn hub:build`, compared with `main`** (`40063d1`, built in a scratch worktree): 26 warnings,
+  every one on `main` too but the search index's size; `LodTargetEntry`'s `notExported` is gone
+  (Phase 1). The 19 `notExported` are Phase 1's (`ComponentDataMap` the one in scope). The 7
+  `{@link}`s that link nowhere name an export their file doesn't import (TypeDoc resolves a link
+  in the file's scope): `CharacterTypes.ts` (`getBodyKind`), `LodSystem.ts` (`LodTarget`),
+  `ActionTypes.ts` (`setActionContextEnabled`, `createActionMap` twice), `SeededRandom.ts`
+  (`getRandomStream`); Phase 8 hands them to their plans. The search index is 1,316,018 B (309,347
+  gzip), `main`'s 1,291,232 (302,450): +24.8 kB raw, +6.9 kB gzip, this plan's new JSDoc (each
+  documented symbol stores its first sentence). `main` is over the 1 MB warning already;
+  `devTools/hub/CLAUDE.md`'s "1,006 kB, under the warning" corrected.
 
 ### Phase 8: versions and done
 
@@ -674,7 +705,9 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
    nothing left: mark it done too), update the other stubs' inputs: p613 and p614 (D2's rule, D7's
    `PhysicsTierPolicy` note), p617 (`pollHeldKeyBindings`' closure and array per sub-step, Phase 3),
    p619 (the `ComponentDataMap` `notExported` from the augmentations, Phase 1; the scene runner's
-   intermittent page reload, Phases 2-3).
+   intermittent page reload, Phases 2-3; the search index over its 1 MB warning, Phase 7), and
+   Phase 7's `{@link}`s that link nowhere: p614 (`CharacterTypes.ts`), p616 (`LodSystem.ts`), p617
+   (`ActionTypes.ts`), and `SeededRandom.ts`, which no review plan lists (`utils/`).
 4. Time for a PR: this branch into `main` (p600's "Branches and PRs").
 
 ## 4. Risks
