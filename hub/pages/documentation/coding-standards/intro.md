@@ -19,6 +19,13 @@ follows them; a file you touch is a good time to fix what it breaks.
 - **The lint enforces the layers** (`eslint.config.js`): a path across a forbidden boundary is an
   error, `import type` and `import()` included, and so is an `aekasha` import inside the engine.
   The [entries](hub:documentation#importing-the-engine) list what's public.
+- **The kernel imports a feature's types, never its code.** The kernel runs without any feature,
+  but it holds and carries data for them: a component's data, a config section, a scene's or a
+  mesh's definition, import params, an assets worker message. It names those types with
+  `import type` from the feature's folder, which costs no bytes and loads nothing; the types stay
+  next to the code that owns them. The lint makes any other kernel import of a feature an error,
+  and the layout report (`devTools/refactor/layoutReport.md`, written by `moveMap.ts`) lists each
+  type import.
 - **A feature owns its folder** (`src/_engine/features/<name>/`): its public entry, its
   implementation, its ECS registrations, its worker if it has one, and its debug modules. Removing
   the folder and its install line removes the feature.

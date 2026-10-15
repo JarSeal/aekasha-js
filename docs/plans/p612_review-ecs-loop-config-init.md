@@ -621,6 +621,27 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
    CLAUDE.md's Three-folder split.
 2. The findings this plan files rather than fixes (`docs/issues/`), each named in §1.
 
+**As built:**
+
+- **The seams, recounted:** the committed layout report was stale (last written in p611 Phase 4);
+  regenerated (`moveMap.ts`, with `moveMap.json` and `entryExports.json`), it has 23 type-only
+  kernel → feature imports in 14 files, none at runtime: 8 in this plan's files
+  (`ECSCoreComponents.ts` 5, `ECS.ts`, `LodTargets.ts`, `Config.ts`), 15 in p613's. §1.2's 22 / 9 / 13
+  counted differently; the set is the same.
+- **D2's wording widened:** "component data, config and import params" left out `Scene.ts`'
+  `SkyBoxDef` / `PostFxPassProps` / `ImpostorDef`, `Mesh.ts`' LOD defs and the assets worker's LOD
+  chain types. The rule says "the data the kernel holds or carries for a feature" and lists those
+  kinds: component data, config, scene and mesh definitions, import params, the assets worker's
+  messages.
+- **Written in:** the coding standards' Layering (a bullet after the lint's), CLAUDE.md's
+  Three-folder split (the `no-restricted-imports` bullet) and its Coding standards line.
+- **Not in the plan: a lint for it.** `KERNEL_FEATURE_IMPORT` (`eslint.config.js`): in
+  `src/_engine/kernel/**`, a `^(../)+features/` specifier is an error unless it's `import type`
+  (`allowTypeImports`, as the `_dbg__` rule). A kernel `_dbg__` module isn't checked (the debug
+  files' later config entries replace it), nor an `import()` (the assets worker's job modules). The
+  kernel lints clean; checked on stdin: a runtime import fails, a type import and `../init/Features`
+  pass.
+
 ### Phase 7: the Hub, CLAUDE.md and readme
 
 1. The ECS feature page (`hub/pages/features/ecs/`: ECS core, Engine features), the Viewports page's
