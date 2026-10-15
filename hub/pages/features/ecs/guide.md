@@ -8,7 +8,9 @@ Most entities come from the managers, which create them with their components:
 [`createMeshEntity`](api:createMeshEntity), [`createLightEntity`](api:createLightEntity),
 [`createPhysicsEntity`](api:createPhysicsEntity) and the others. Their options include:
 
-- `appId`: a name of yours, to find the entity with [`getEntityIdByAppId`](api:getEntityIdByAppId).
+- `appId`: a name of yours, to find the entity with [`getEntityIdByAppId`](api:getEntityIdByAppId)
+  (one lookup, each world keeps a map). Keep it unique: when two entities have it, the first one
+  created keeps it until it's deleted, and the debug env warns about the second.
 - `persistent`: the entity survives scene switches. Everything else a scene creates is deleted
   when it exits.
 - `disabled`: created switched off, hidden and with its physics body disabled.
@@ -51,6 +53,9 @@ frame is drawn. `AppConfig.ecs.storageMode` chooses its storage: `MAP` (the defa
 
 - Pausing the app (`F7` in debug) stops physics and `APP_POST_PHYSICS`, `APP_LOGIC` and
   `APP_RENDER_SYNC`. `MAIN`, `APP_PRE_PHYSICS` and `LATE_MAIN` keep running.
+- With a frame rate cap (the `VITE_MAX_FPS` env var, or the debugger's Loop controls tab), a
+  frame that isn't drawn still runs every stage up to `APP_RENDER_SYNC`, so no game time is lost:
+  it skips only the render and `LATE_MAIN`.
 - Within a stage, a higher `order` runs first. The order is resolved when a system is added, so
   a frame never sorts. In `APP_RENDER_SYNC`, use the
   [`APP_RENDER_SYNC_ORDER`](api:APP_RENDER_SYNC_ORDER) constants: a camera that follows an entity
