@@ -180,10 +180,13 @@ reproduced, unless a finding says so.
 - SL4 **(SBP)** `ImportRegistry` is imported statically here and by `SceneAssetRelease.ts`, so the
   glTF import path ships in every initial chunk (p611 measured −15.5 KiB gzip on the banner when
   folded: "From p611" below). D4.
-- SL5 **(SBP, not measured)** The loader imports the UI kit and the debugger's entries statically:
+- SL5 **(SBP)** The loader imports the UI kit and the debugger's entries statically:
   `DraggableWindow.ts`' scene-change handling, `HUD.ts`, `DebuggerGUI.ts`, `DebugTools.ts`,
-  `OnScreenTools.ts`. The banner embed (no UI) carries `_engine/ui` at 13.4 KiB gzip; which
-  importer keeps it isn't known. D5.
+  `OnScreenTools.ts`. The banner embed (no UI) carries `_engine/ui` at 13.4 KiB gzip. Phase 0:
+  `DraggableWindow.ts` (with `Window.ts` and `SvgIcon.ts`) ships only because of the loader's two
+  ungated calls (`Boot.ts`' is debug-gated and folds): 30.6 kB rendered, 7.8 kB gzip before
+  minification, in the banner and the app. `HUD.ts` and `CMP.ts` stay either way (the boot builds
+  the HUD root). D5.
 - SL6 `loadScene` is about 250 lines (the limit is 150): the debug start-scene resolution, the
   loader resolution and the phases in one closure. `createCameras` (exported, used by physics'
   hook order) has no doc; `createNextSceneObject3Ds` and `createSceneLoader` are `async` without an
@@ -233,8 +236,9 @@ reproduced, unless a finding says so.
 - LI1 `LightProps` here and `LightProps` in `schemas/LightSchema.ts` are two types with one name
   (the runtime one takes three's colours and a texture object, the schema's is the JSON). D11.
 - LI2 `setLightFrustumCullingEnabled`'s 15-line comment explains a circular import through
-  `LightManager.ts` and `MeshManager.ts`; check whether the cycle is still there (else the wrapper
-  can go). `debugGUI` is an exported `let` named like every other module's private ref, with an
+  `LightManager.ts` and `MeshManager.ts`. The cycle is still there (Phase 0: `Light.ts` →
+  `ObjectFrustumCullingSystem.ts` → `ECSCoreSystems.ts` → `Light.ts`), so the wrapper stays and
+  the comment is cut down to the current names. `debugGUI` is an exported `let` named like every other module's private ref, with an
   unexported type (the `notExported`).
 - LI3 API: `createLightEntity` takes an optional world, the setters (`setLightEnabled`,
   `setLightShadowEnabled`, …) a required one. `'castShadow' in light` is always true. Undocumented:
@@ -244,9 +248,16 @@ reproduced, unless a finding says so.
 **Meshes (`Mesh.ts`, `MeshUserData.ts`)**
 
 - M1 **(bug)** `MeshUserData.ts`' `setMeshCreatePropsToUserData` has no `break` after `CAPSULE`
-  and `CONE`: a capsule falls through into the cone's and the cylinder's code, so its `halfHeight`
-  ends up the cylinder's (`height / 2`, not `(height − 2r) / 2`). Its one caller is physics'
-  `import/MeshColliderGeometry.ts` (a collider derived from a mesh). D13.
+  and `CONE` (a capsule falls through into the cone's and the cylinder's code). Its one caller is
+  physics' `import/MeshColliderGeometry.ts`, and what it writes is mostly never read (Phase 0):
+  it writes `radius`, `halfHeight` and `orientation` into the scratch geometry's
+  `userData.props.params`, and `PhysicsEntity.ts`' `deriveColliderDimensionsFromMesh` reads
+  `createGeometry`'s names (`height`, `radiusTop` / `radiusBottom`). So an imported node's
+  `CAPSULE`, `CONE` or `CYLINDER` collider gets no derived `halfHeight` (the Physics API's default
+  applies), and a cone or cylinder no derived radius either; boxes and spheres work. No template
+  asset has one (every GLB's colliders are boxes, trimeshes, convex hulls and heightfields), and
+  the code-made cylinder colliders (the gym's carousels, `scene01`) take `createGeometry`'s path,
+  which works. D13.
 - M2 **(bug)** `MeshProps.mat` has no `string` in its type, though `createMeshEntity` handles one
   (the `@CONSIDER` above it asks for what's already there for `geo`).
 - M3 `preWarmMesh` makes a camera per call and leaves `compileAsync`'s promise unhandled (a
@@ -398,14 +409,15 @@ names an imported asset; `SceneAssetRelease.ts` releases imports only once that 
 they are (an app that calls them imports them). Measured before and after in the banner and the
 app (`yarn sbp`); the expected banner initial is about −15 KiB gzip.
 
-### D5. The loader's UI and debug imports: measure first
+### D5. The draggable windows' scene-change handling leaves the loader
 
-Phase 0 runs `yarn sbp --profile banner --why _engine/ui` to see what keeps the UI kit in the
-banner. If it's `SceneLoader.ts` (`DraggableWindow.ts`' scene-change handling, `HUD.ts` for the
-loader container), the draggable windows' part moves behind a scene hook their first registration
-adds (the loader then names neither), and the loader container is only touched when a loader has
-`loaderContainerFn`. `DraggableWindow.ts` itself is p617's: only its two call sites and a hook
-registration change here. If something else keeps it, the finding goes to p617's Inputs.
+Phase 0 measured it: `SceneLoader.ts`' calls to `handleDraggableWindowsOnSceneChangeStart` /
+`…End` are what ship `DraggableWindow.ts` in every production build. They become scene hooks
+(`exit`, `entered`, and the failed load's end) that the draggable windows add on their first
+registration, so the loader names neither; the order inside a load stays (Phase 3 checks it
+against today's: after the exit hooks and the groups, after the enter hooks). `HUD.ts` stays (the
+boot builds the HUD root). `DraggableWindow.ts` itself is p617's: only its two functions'
+callers and a hook registration change here.
 
 ### D6. Debug-only camera code leaves `Camera.ts`
 
@@ -461,17 +473,18 @@ the runtime doesn't take. The two `LightProps` keep their names (one per entry: 
 6.0.0), after A2 and A3 are fixed. The app's three scenes move to `loadTextureAsync`. They move with
 `createTexture` into `kernel/assets/TextureSync.ts`, which takes `Texture.ts` under 800 lines.
 
-### D13. `MeshUserData.ts` moves to physics, with its `break`s
+### D13. `MeshUserData.ts` and its bug go to p614
 
-It's physics' collider derivation (one caller, `features/physics/import/MeshColliderGeometry.ts`):
-moved next to it (p614 then reviews it in place) with the missing `break`s (M1). **Behaviour
-change, on purpose:** a capsule collider derived from a mesh gets the right `halfHeight`. Phase 0
-checks which scenes have one; a scene whose hash moves is named in the changelog.
+Phase 0 showed the bug is the two halves of physics' collider derivation disagreeing on the param
+names (M1), and the fix belongs in physics' files (`PhysicsEntity.ts`' reader,
+`MeshColliderGeometry.ts`' writer). **Recommended:** hand the whole of it to p614 (its Inputs get
+M1 and the move of `MeshUserData.ts` into `features/physics/import/`), and leave the file here
+documented only. No template scene uses the broken path, so no hash waits on it.
 
 ### D14. Versions
 
 Engine **minor** (5.3.0 → 5.4.0): `loadScene` resolves a boolean, `registerOnAllSceneEnters`, the
-deprecations (D7's hook, D8, D12), the behaviour changes (D3, D13). Toolkit **patch** if a toolkit
+deprecations (D7's hook, D8, D12), D3's behaviour change. Toolkit **patch** if a toolkit
 file moves to `registerOnAllSceneEnters` or loses a removed import; app **patch** (D12's three
 scenes, D8's renames). Project = engine.
 
@@ -496,6 +509,29 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
 3. Which scenes derive a capsule collider from a mesh (D13), and whether `LI2`'s import cycle is
    still there (`devTools/refactor/layoutReport.md` or a madge-style check of the three files).
 4. Record the numbers here and confirm D1-D15.
+
+**As built** (2026-10-15, at `99b58f4`):
+
+- **Scene baselines:** 104 runs recorded (`.cache/verify/scenes/webgpu/`), 407.0 s, exit 0.
+- **`yarn verify:baselines`:** all unchanged (`bundle.json`: main chunk 833.9 kB gzip, 168
+  modules; `bundle.banner.json` 690.3 kB, 80 modules; `api.json` 2447 exports; `docs.json`
+  exports 1707 / 2332, members 330 / 445); no debug code in either production build.
+- **What keeps the UI kit in the banner** (`yarn sbp --profile banner --no-build --why <module>`,
+  per module of `ui/`): `DraggableWindow.ts`, `Window.ts` and `SvgIcon.ts` through
+  `SceneLoader.ts` only; `HUD.ts` and `CMP.ts` through the loader and the boot; `DialogWindow.ts`,
+  `DropDown.ts`, `Toaster.ts` and `BuiltInIcons.ts` tree-shaken. Sizes (the app's visualizer data,
+  `dist-stats/bundle-stats.html`, before minification): `DraggableWindow.ts` 30.0 kB rendered /
+  7.4 kB gzip, `SvgIcon.ts` 0.4 / 0.3, `Window.ts` 0.2 / 0.1, `CMP.ts` 21.6 / 4.8, `HUD.ts` 0.9 /
+  0.4. D5 rewritten on it.
+- **The import path in the app's main chunk** (same data): `kernel/assets/import/`'s 13 shipped
+  modules 37.0 kB rendered / 12.5 kB gzip before minification (`ImportRegistry.ts` 10.5 / 3.1,
+  `CustomProps.ts` 5.1 / 1.5, `GLTFExtract.ts` 4.3 / 1.5, …), plus the three classes p611 measured
+  in `three.core.js`. D4 stands; Phase 3 measures the result.
+- **The capsule collider (D13):** no template asset has a `CAPSULE`, `CONE` or `CYLINDER` collider
+  on an imported node, and the code-made ones take the working path; M1 rewritten (the bug is the
+  param names, not only the `break`s), D13 hands it to p614.
+- **LI2's import cycle** is still there: the wrapper stays.
+- **`notExported` in scope:** the three of §1.2, unchanged.
 
 ### Phase 1: rendering (`Renderer.ts`, `CanvasSize.ts`, `RenderHooks.ts`, `Snapshot.ts`, `ThreeMath.ts`, `Object3DHelpers.ts`, `LodFade.ts`)
 
@@ -535,7 +571,7 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
 1. CA1, CA2 (the active camera keyed to the default world: a camera of another world never becomes
    it), D6, CA4 (`getCurrentCamera*` removed, `setCurrentCamera` through the app id map).
 2. LI1 (docs), LI2 (the wrapper kept or removed per Phase 0), LI3.
-3. M2, M3, D13 (M1, M4: moved, `break`s, a unit test of the capsule's numbers).
+3. M2, M3; `MeshUserData.ts` documented only (D13).
 4. JSDoc for the three folders; tests for CA1 (zoom applied at creation) and CA2.
 
 ### Phase 5: asset registries (`Geometry.ts`, `Material.ts`, `Texture.ts`, `TextureArray.ts`, `TextureAtlas.ts`, `AssetFiles.ts`, `AssetOwners.ts`, `AssetUrl.ts`, `SceneAssetRelease.ts`, `Disposal.ts`)
@@ -578,12 +614,12 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
 
 ### Phase 9: versions and done
 
-1. D14's bumps, a `CHANGELOG.md` entry (D3's and D13's behaviour changes called out, the
+1. D14's bumps, a `CHANGELOG.md` entry (D3's behaviour change called out, the
    deprecations with their replacements), `yarn checkVersions --against main`.
 2. `yarn test`, `yarn verify:scenes`, `yarn verify:baselines` (no unexplained growth), `yarn build`
    (the SBP budgets: a group budget moved only with its reason, p612's lesson), `yarn hub:build`.
 3. Mark the plan done (`docs/plans/CLAUDE.md`), update p302 (bugs A and B done here), p614
-   (`MeshUserData.ts` moved to its folder), p617 (D5's finding if it's theirs).
+   (D13: M1 and `MeshUserData.ts`), p617 (D5's hook in `DraggableWindow.ts`).
 4. Time for a PR: this branch into `main` (p600's "Branches and PRs").
 
 ## 4. Risks
@@ -593,9 +629,7 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
    scenes one at a time, so its baselines don't move.
 2. **D2's bug A.** A material whose texture input is missing renders white instead of failing its
    shader build; a scene that has one today shows it (the warning names it).
-3. **D13.** A scene with a capsule collider derived from a mesh changes its determinism hash; Phase
-   0 finds which.
-4. **D4.** A scene whose imports are listed by id only (`importedAssets: ["id"]`) and loaded by
+3. **D4.** A scene whose imports are listed by id only (`importedAssets: ["id"]`) and loaded by
    another scene still finds the registry: the `import()` runs for either form.
 
 ## Done when
