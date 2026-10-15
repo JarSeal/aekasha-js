@@ -27,10 +27,6 @@ import { setAllInputsEnabled } from '../input/InputState';
 import { getCanvasParentElem } from '../render/Renderer';
 import { getDebugToolsState } from '../../debug/DebugTools';
 import { getStartSceneQueryParam, IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../config/Config';
-import {
-  handleDraggableWindowsOnSceneChangeEnd,
-  handleDraggableWindowsOnSceneChangeStart,
-} from '../../ui/DraggableWindow';
 import { updateOnScreenTools } from '../../debug/OnScreenTools';
 import { existsOrThrow } from '../../utils/Assert';
 import { resetRandomStreams } from '../../utils/RandomStreams';
@@ -53,11 +49,6 @@ import { createGeometry, doesGeoExist, getGeometry } from '../assets/Geometry';
 import { createLightEntity } from '../light/Light';
 import { createCameraEntity, setActiveCamera } from '../camera/Camera';
 import { createMeshEntity } from '../mesh/Mesh';
-import {
-  getImportedAsset,
-  importAssetAsync,
-  retagImportedAsset,
-} from '../assets/import/ImportRegistry';
 import type { ImportedAssetManifest } from '../assets/import/ImportTypes';
 import { retagAssetOwner, setAssetOwnerScene } from '../assets/AssetOwners';
 import { releaseSceneOwnedAssets } from '../assets/SceneAssetRelease';
@@ -253,6 +244,30 @@ export type ScenePrimitiveAssets = {
   importedAssets: { [id: string]: ImportedAssetManifest };
 };
 
+/** Imports a scene's imported assets into `importedAssets`, and re-tags the ones it names by id.
+ * The import registry (the glTF import path) loads here, only for a scene that names an import
+ * (p613 D4): a scene, or an app, without one never loads it. */
+const loadSceneImportsAsync = async (
+  assets: SceneData['importedAssets'],
+  importedAssets: ScenePrimitiveAssets['importedAssets']
+) => {
+  if (!assets?.length) return;
+  const registry = await import('../assets/import/ImportRegistry');
+  const importPromises: Promise<ImportedAssetManifest | null>[] = [];
+  for (const asset of assets) {
+    if (typeof asset === 'string') {
+      registry.retagImportedAsset(asset);
+      const manifest = registry.getImportedAsset(asset);
+      if (manifest) importedAssets[asset] = manifest;
+      continue;
+    }
+    importPromises.push(registry.importAssetAsync(asset));
+  }
+  for (const manifest of await Promise.all(importPromises)) {
+    if (manifest) importedAssets[manifest.id] = manifest;
+  }
+};
+
 type SceneMaterialDef = Exclude<NonNullable<SceneData['materials']>[number], string>;
 
 /** A copy of a material's params with its texture ids resolved to the scene's textures (or the
@@ -285,16 +300,6 @@ const loadNextSceneAssets = async (sceneData: SceneData): Promise<ScenePrimitive
   // Load textures, imported assets and the materials' TSL files (in parallel): materials can use
   // the textures and meshes the imported geometries (by id). Assets referenced by id are re-tagged
   // to this scene (AssetOwners), so leaving the scene that loaded them doesn't release them.
-  const importPromises: Promise<ImportedAssetManifest | null>[] = [];
-  for (const asset of sceneData.importedAssets || []) {
-    if (typeof asset === 'string') {
-      retagImportedAsset(asset);
-      const manifest = getImportedAsset(asset);
-      if (manifest) importedAssets[asset] = manifest;
-      continue;
-    }
-    importPromises.push(importAssetAsync(asset));
-  }
   const sceneTextures = sceneData.textures || [];
   const texturePromises: Promise<THREE.Texture>[] = [];
   const textureIds: string[] = [];
@@ -316,14 +321,11 @@ const loadNextSceneAssets = async (sceneData: SceneData): Promise<ScenePrimitive
     if (typeof material === 'string' || !('tslFile' in material) || !material.tslFile) continue;
     tslFilePromises.push(loadTslMaterialFileAsync(material.tslMaterialId || material.id || ''));
   }
-  const [loadedTextures, manifests] = await Promise.all([
+  const [loadedTextures] = await Promise.all([
     Promise.all(texturePromises),
-    Promise.all(importPromises),
+    loadSceneImportsAsync(sceneData.importedAssets, importedAssets),
     Promise.all(tslFilePromises),
   ]);
-  for (const manifest of manifests) {
-    if (manifest) importedAssets[manifest.id] = manifest;
-  }
   for (let i = 0; i < loadedTextures.length; i++) {
     textures[textureIds[i]] = loadedTextures[i];
   }
@@ -556,8 +558,6 @@ const runLoadPhasesAsync = async (load: ActiveLoad) => {
 
   if (prevScene) deleteAllSceneLoopers(prevSceneId);
 
-  handleDraggableWindowsOnSceneChangeStart();
-
   runOnSceneExit(prevSceneId);
   runOnAllSceneExits();
   deleteAllRayHelpers();
@@ -623,8 +623,6 @@ const runLoadPhasesAsync = async (load: ActiveLoad) => {
 
   runOnSceneEnter(sceneId);
   runOnAllSceneEnters();
-  // After the enter hooks, so entities created by scene code exist too
-  handleDraggableWindowsOnSceneChangeEnd();
 
   if (IS_DEBUG_ENV) {
     // Enable debuggers
@@ -633,7 +631,8 @@ const runLoadPhasesAsync = async (load: ActiveLoad) => {
     updateOnScreenTools();
   }
   resetRayCastStats();
-  // The scene is complete: physics waits for its bodies and releases its stepping
+  // The scene is complete: physics waits for its bodies and releases its stepping, the
+  // draggable windows rebuild the ones whose target exists
   await runSceneEnteredHooksAsync();
 
   loader.phase = 'END';
@@ -641,16 +640,16 @@ const runLoadPhasesAsync = async (load: ActiveLoad) => {
 };
 
 /** Ends a started load, loaded or failed: a failed one also undoes what {@link beginLoad} and the
- * phases it reached changed (the inputs, the canvas's pointer events, the debugger, the windows
- * suspended for the scene change, the loading scene and the asset owner), so the page stays
- * usable on the scene that is current. */
+ * phases it reached changed (the inputs, the canvas's pointer events, the debugger, the loading
+ * scene and the asset owner), so the page stays usable on the scene that is current. The
+ * `loadSettled` scene hooks run right after it (the draggable windows close the ones the load
+ * suspended). */
 const finishLoad = (load: ActiveLoad, isLoaded: boolean) => {
   if (!isLoaded) {
     setLoadingSceneId(null);
     // Assets registered from here on belong to the scene that's current (the next one, when the
     // load failed after the scene code ran)
     setAssetOwnerScene(getCurrentSceneId() ?? null);
-    handleDraggableWindowsOnSceneChangeEnd(true);
     getCanvasParentElem()?.style.setProperty('pointer-events', '');
     setAllInputsEnabled(true);
     if (IS_DEBUG_ENV) disableDebugger(false);

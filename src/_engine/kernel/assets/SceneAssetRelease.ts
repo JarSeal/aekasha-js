@@ -8,9 +8,20 @@ import {
   isTextureUsedByAnyMaterial,
 } from './Material';
 import { deleteTexture, getTextureRegistry } from './Texture';
-import { releaseImportsOwnedBy } from './import/ImportRegistry';
 import { getSceneRetainedTextures } from '../scene/SceneHooks';
 import { getAssetOwner } from './AssetOwners';
+
+/** The import registry's release of a scene's imports, once anything was imported */
+let releaseSceneImports: ((sceneId: string) => string[]) | null = null;
+
+/**
+ * Sets the release of a scene's import manifests: the import registry sets its own on its first
+ * import, so this module doesn't name it and the glTF import path loads only with an import.
+ * @internal
+ */
+export const setSceneImportRelease = (release: (sceneId: string) => string[]) => {
+  releaseSceneImports = release;
+};
 
 /**
  * Releases the non-persistent assets a scene still owns (see AssetOwners) that nothing uses:
@@ -28,7 +39,7 @@ import { getAssetOwner } from './AssetOwners';
 export const releaseSceneOwnedAssets = (sceneId: string) => {
   const isOwned = (asset: object) => getAssetOwner(asset) === sceneId;
   const released = {
-    imports: releaseImportsOwnedBy(sceneId),
+    imports: releaseSceneImports?.(sceneId) ?? [],
     materials: [] as string[],
     geometries: [] as string[],
     textures: [] as string[],

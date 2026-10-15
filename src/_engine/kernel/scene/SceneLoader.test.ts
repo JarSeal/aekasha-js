@@ -21,6 +21,7 @@ const m = vi.hoisted(() => {
       getEntitiesWith: vi.fn(() => [].values()),
     },
     textureCount: 0,
+    registryLoads: 0,
   };
 });
 
@@ -32,9 +33,8 @@ const fns = vi.hoisted(() => ({
   })),
   loadTextureAsync: vi.fn(async (props: { id: string }) => ({ id: props.id, n: ++m.textureCount })),
   disableDebugger: vi.fn(),
-  windowsChangeStart: vi.fn(),
-  windowsChangeEnd: vi.fn(),
   releaseSceneOwnedAssets: vi.fn(),
+  retagImportedAsset: vi.fn(),
 }));
 
 vi.mock(import('../loop/MainLoop'), () => ({
@@ -68,11 +68,20 @@ vi.mock(import('../assets/Geometry'), () => ({
   doesGeoExist: vi.fn(),
   getGeometry: vi.fn(),
 }));
-vi.mock(import('../assets/import/ImportRegistry'), () => ({
-  getImportedAsset: vi.fn(),
-  importAssetAsync: vi.fn(),
-  retagImportedAsset: vi.fn(),
-}));
+vi.mock(import('../assets/import/ImportRegistry'), () => {
+  // Runs when the module is first imported: the loader's import()
+  m.registryLoads++;
+  return {
+    getImportedAsset: vi.fn(() => ({
+      id: 'byId',
+      fileName: 'a.glb',
+      geometries: [],
+      textureIds: [],
+    })),
+    importAssetAsync: vi.fn(),
+    retagImportedAsset: fns.retagImportedAsset,
+  };
+});
 vi.mock(import('../assets/SceneAssetRelease'), () => ({
   releaseSceneOwnedAssets: fns.releaseSceneOwnedAssets,
 }));
@@ -85,10 +94,6 @@ vi.mock(import('../render/Raycast'), () => ({
 }));
 vi.mock(import('./Group'), () => ({ deleteAllGroupEntities: vi.fn() }));
 vi.mock(import('../../ui/HUD'), () => ({ getHUDRootCMP: (() => m.hudRoot) as never }));
-vi.mock(import('../../ui/DraggableWindow'), () => ({
-  handleDraggableWindowsOnSceneChangeStart: fns.windowsChangeStart,
-  handleDraggableWindowsOnSceneChangeEnd: fns.windowsChangeEnd,
-}));
 vi.mock(import('../../debug/DebuggerGUI'), () => ({
   addDebugToastWhenReady: vi.fn(),
   DEBUGGER_SCENE_LOADER_ID: '__debugger-scene-loader' as const,
@@ -100,6 +105,7 @@ vi.mock(import('../../debug/OnScreenTools'), () => ({ updateOnScreenTools: vi.fn
 vi.mock(import('../../utils/Logger'), () => ({ lerror: vi.fn(), lwarn: vi.fn(), llog: vi.fn() }));
 
 import { setAppData } from './AppData';
+import { addSceneHooks } from './SceneHooks';
 import { createRootScene, createScene, getCurrentSceneId, getLoadingSceneId } from './Scene';
 import { areAllInputsEnabled, setAllInputsEnabled } from '../input/InputState';
 import {
@@ -197,6 +203,12 @@ describe('loadScene: a failed load', () => {
     setScene('failOk');
     await loadScene({ sceneId: 'failOk' });
     vi.clearAllMocks();
+    const phases: string[] = [];
+    const removeHooks = addSceneHooks({
+      loadStart: () => phases.push('loadStart'),
+      entered: () => void phases.push('entered'),
+      loadSettled: () => phases.push('loadSettled'),
+    });
     setScene('failing', () => {
       throw new Error('scene code failed');
     });
@@ -209,7 +221,9 @@ describe('loadScene: a failed load', () => {
     expect(getLoadingSceneId()).toBeNull();
     expect(fns.setIsLoadingScene).toHaveBeenLastCalledWith(false);
     expect(loaderContainer.remove).toHaveBeenCalledTimes(1);
-    expect(fns.windowsChangeEnd).toHaveBeenLastCalledWith(true);
+    // The draggable windows close the ones the load suspended in loadSettled
+    expect(phases).toEqual(['loadStart', 'loadSettled']);
+    removeHooks();
     // The previous scene stays current (torn down: the next load starts from it)
     expect(getCurrentSceneId()).toBe('failOk');
 
@@ -257,5 +271,24 @@ describe("loadScene: a material's texture ids (p302's bug B)", () => {
     expect(second).toEqual({ id: 'texA', n: expect.any(Number) as number });
     // Each visit's material gets that visit's texture, never the previous one's
     expect(second).not.toBe(first);
+  });
+});
+
+describe('loadScene: the import registry (D4)', () => {
+  it('loads only for a scene that names an imported asset (by id too)', async () => {
+    setScene('noImports');
+    await loadScene({ sceneId: 'noImports' });
+    expect(m.registryLoads).toBe(0);
+
+    const seen: { assets?: Parameters<SceneFn>[0]['assets'] } = {};
+    scenes.importsById = sceneDataOf('importsById', { importedAssets: ['byId'] });
+    sceneFiles.importsById = async (args) => {
+      createScene('importsById');
+      seen.assets = args.assets;
+    };
+    await expect(loadScene({ sceneId: 'importsById' })).resolves.toBe(true);
+    expect(m.registryLoads).toBe(1);
+    expect(fns.retagImportedAsset).toHaveBeenCalledWith('byId');
+    expect(seen.assets?.importedAssets.byId).toMatchObject({ id: 'byId' });
   });
 });

@@ -419,6 +419,12 @@ against today's: after the exit hooks and the groups, after the enter hooks). `H
 boot builds the HUD root). `DraggableWindow.ts` itself is p617's: only its two functions'
 callers and a hook registration change here.
 
+**Revised in Phase 3 (section 2):** Phase 0 was wrong about `Boot.ts`: its
+`loadDraggableWindowStatesFromLS()` runs in every boot, the mount's too (`yarn sbp --why` prints one
+chain per module, the shortest, which was the loader's). So the restore also leaves `Boot.ts`: the
+windows add it on their first use to a kernel after-start step (`kernel/init/BootHooks.ts`), and the
+scene-change handling is the `loadStart` hook, not `exit` (see Phase 3's As built).
+
 ### D6. Debug-only camera code leaves `Camera.ts`
 
 `toggleAllCameraHelpers`, `syncCameraHelpersFromLS`, `isAnyCameraHelperVisible` and the debug
@@ -720,6 +726,52 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
     load's cleanup and the next load after it, an unknown scene and an unknown loader, bug B over
     a revisit (the cached params keep the id, each visit's material gets its own texture).
   - **Checks:** `tsc` (both), the changed files' lint, `yarn test` (61 files, 518 passed).
+- **Section 2 (step 2, and step 5's test for D4):**
+  - **D4:** `loadSceneImportsAsync` (`SceneLoader.ts`) imports `ImportRegistry` with an `import()`
+    only when the scene's data names an imported asset (by id too: Risk 3), in parallel with the
+    textures and the TSL files as before. The release: `SceneAssetRelease.ts` no longer imports the
+    registry; the registry hands it `releaseImportsOwnedBy` on its first import
+    (`setSceneImportRelease`, `@internal`), not when the loader's `import()` resolves as D4 said:
+    an app's scene code that calls `importAssetAsync` itself (the entry's) loads the registry
+    without the loader, and its imports must still be released with their scene.
+  - **D5, revised (above):** `DraggableWindow.ts` adds its scene hooks and its restore on its first
+    use (`addWindowHooks`, from `getWindows()`' lazy init and the three registration functions;
+    never at module load). The restore goes to `addBootAfterStartHook` (`kernel/init/BootHooks.ts`,
+    `@internal`), which `Boot.ts` runs where it called the restore (after `start` and the debug
+    steps after it); a hook added after that step is refused, so a window module first used after
+    the boot restores nothing (none is in the template: in the debug env `_dbg__CameraGUI.ts`
+    registers a kind in the kernel's debug boot, in prod test mode the profiler in the debug
+    tools' boot step). The two handlers and the restore are private now (on no entry; `handle…`
+    renamed `handleWindowsOnSceneChange…`). Hook phases: `loadStart` for the start (it ran after
+    the exit hooks, the groups and the loopers; now before them, so the windows go before the
+    entities they show: the exit hooks' install-order position would have depended on when the
+    windows were first used), `entered` for the end (it ran just before the debugger's re-enable;
+    now after it and after the `entered` hooks installed before the windows' first use), and
+    `loadSettled` for a failed load (it closes what the load suspended; `finishLoad` no longer
+    calls it).
+  - **Measured** (`yarn sbp --profile app,banner`, against the committed baselines):
+    - banner initial **300.4 → 287.3 KiB gzip** (`banner.embed.js` 298.2 → 286.3, `banner.css`
+      2.0 → 0.9: the windows' styles); groups `kernel/assets` 23.8 → 13.9 kB (22 → 12 modules),
+      `ui` 13.1 → 5.1 kB (7 → 3), `utils` −0.6, `kernel/init` +0.2 (`BootHooks.ts`).
+    - app initial **388.5 → 377.1 KiB gzip** (`index.js` 385.8 → 375.5, `index.css` 2.7 → 1.6);
+      `kernel/assets` 25.4 → 18.7 kB, `ui` 13.1 → 5.1 kB. New lazy chunk `ImportRegistry.js`
+      (app 4.5 kB, banner 6.5 kB gzip).
+    - Less than p611's 285.1 for D4 alone: the banner's `three` group is unchanged (623,028 B). The
+      lazy registry chunk still names `GLTFLoader`, whose three classes (`KeyframeTrack`,
+      `PropertyBinding`, …) live in `three.core.js`, one module in the initial chunk, and Rollup
+      keeps a used export where its module is. Only a build that names no import path at all
+      drops them (p611's scratch build): for the banner, a build-time flag from the profile's data
+      (no scene names an import) around the `import()`. Filed in Phase 8 (an SBP follow-up, not
+      this plan's).
+    - The budgets' "well under" hints (`ui` 15 → 7 KiB, `kernel/assets` 27 → 20 / 25 → 15 KiB, the
+      CSS chunks): Phase 9 (p612's lesson: a budget moves with its reason).
+  - **Tests:** `SceneLoader.test.ts` +1 (the registry loads only for a scene that names an import,
+    by id; a failed load's scene hook phases: `loadStart`, then `loadSettled`, no `entered`),
+    `kernel/init/BootHooks.test.ts` (1), `ui/DraggableWindow.test.ts` (1: the hooks added once on
+    the first use, none at module load).
+  - **Checks:** `tsc` (both), the changed files' lint, `yarn test` (63 files, 521 passed),
+    `yarn sbp --profile app,banner` (exit 0, no budget over). `yarn verify:baselines --update`
+    (the new chunk) at the end of the phase.
 
 ### Phase 4: cameras, lights, meshes (`Camera.ts`, `Light.ts`, `LightHelpers.ts`, `Mesh.ts`, `MeshUserData.ts`)
 

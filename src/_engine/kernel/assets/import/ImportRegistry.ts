@@ -6,6 +6,7 @@ import { deleteTexture, doesTextureExist, getTextureRegistry } from '../Texture'
 import { loadGLTFInWorker, recordAssetLoadReport, runAssetTask } from '../AssetsAPI';
 import type { AssetLoadReport } from '../AssetsAPITypes';
 import { getAssetOwner, recordAssetOwner, retagAssetOwner } from '../AssetOwners';
+import { setSceneImportRelease } from '../SceneAssetRelease';
 import { resolveAssetUrl } from '../AssetUrl';
 import { getDracoWorkerSettings } from './DracoDecoder';
 import { deserializeGeometry } from './GeometryTransfer';
@@ -342,6 +343,9 @@ const runImport = async (
     sourceKey,
   };
   recordAssetOwner(imports[id]);
+  // The scene release drops a scene's imports through this, set by the first import: the release
+  // doesn't import this module, so the glTF import path loads only with an import (p613 D4)
+  setSceneImportRelease(releaseImportsOwnedBy);
   recordAssetLoadReport(`import:${id}`, { ...report, sourceUrl: url });
   logWarnings(manifest);
   return manifest;

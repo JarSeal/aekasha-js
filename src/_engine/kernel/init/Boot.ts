@@ -25,7 +25,7 @@ import { isCurrentlyLoading } from '../scene/SceneLoader';
 import '../../ui/styles/index.scss';
 import { llog, lwarn } from '../../utils/Logger';
 import { createRendererDebugGUI } from '../render/Renderer';
-import { loadDraggableWindowStatesFromLS } from '../../ui/DraggableWindow';
+import { runBootAfterStartHooks } from './BootHooks';
 import { createToaster } from '../../ui/Toaster';
 import { getStatsCmp, registerStatsModule } from '../../debug/Stats';
 import { createAssetsDebugGUI } from '../../debug/Assets';
@@ -163,8 +163,8 @@ export const bootEngineAsync = async ({ config, data, features, start, hudSlot }
   // The debug GUIs that need the renderer, and the debug toaster
   if (IS_DEBUG_ENV) await bootDebugAfterStartAsync(featureHost.debugAfterStartHooks);
 
-  // Load draggableWindow states
-  loadDraggableWindowStatesFromLS();
+  // What the modules in use added for this step (the draggable windows' restore from LS)
+  runBootAfterStartHooks();
 
   // Back to the view that was active before the refresh: last, so the scene and every debug
   // GUI exist (hidden by the view) when switching back. Not awaited: the loop already runs
