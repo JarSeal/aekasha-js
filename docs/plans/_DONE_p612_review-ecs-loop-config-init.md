@@ -1,8 +1,8 @@
-Status: in progress | Phases 0-7 implemented
+Status: implemented (Phases 0-8)
 Category: Refactoring, Documentation, ECS
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
-Related: \_DONE_p607_sbp-foundation-feature-modules.md (D6's type-only seams, the install contract and the loop seams this plan reviews: "From p607" below), p200_component-query-caching.md (its main-camera cache lands here), \_DONE_p604_multiplayer-viability-study.md (§4.4: the `appId` map), \_DONE_p606_layering-inversion-and-public-entry.md (the env flag pairs, `APP_CONFIG`, `CoreComponentType`: left to this plan), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the embed's seams in init and the loop), p613_review-rendering-scene-assets.md (owns `Camera.ts` and the other 13 type-only seams)
+Related: \_DONE_p607_sbp-foundation-feature-modules.md (D6's type-only seams, the install contract and the loop seams this plan reviews: "From p607" below), \_DONE_p200_component-query-caching.md (its main-camera cache landed here, Phase 2), \_DONE_p604_multiplayer-viability-study.md (§4.4: the `appId` map), \_DONE_p606_layering-inversion-and-public-entry.md (the env flag pairs, `APP_CONFIG`, `CoreComponentType`: left to this plan), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the embed's seams in init and the loop), p613_review-rendering-scene-assets.md (owns `Camera.ts` and the other 13 type-only seams)
 
 # Review: ECS, Main Loop, Config and Init
 
@@ -695,7 +695,7 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
   documented symbol stores its first sentence). `main` is over the 1 MB warning already;
   `devTools/hub/CLAUDE.md`'s "1,006 kB, under the warning" corrected.
 
-### Phase 8: versions and done
+### Phase 8: versions and done — done
 
 1. D12's bumps, a `CHANGELOG.md` entry (the two behaviour changes called out),
    `yarn checkVersions --against main`.
@@ -709,6 +709,39 @@ updated `docs.json` (`yarn verify:baselines --docs --update`, which refuses a gr
    Phase 7's `{@link}`s that link nowhere: p614 (`CharacterTypes.ts`), p616 (`LodSystem.ts`), p617
    (`ActionTypes.ts`), and `SeededRandom.ts`, which no review plan lists (`utils/`).
 4. Time for a PR: this branch into `main` (p600's "Branches and PRs").
+
+**As built** (2026-10-15):
+
+- **Versions, D12 moved:** p611 merged at engine 5.2.0 after D12 was written, so its levels apply
+  to the current numbers: engine 5.2.0 → 5.3.0 (project the same), toolkit 2.1.0 → 2.1.1, app
+  1.12.0 → 1.12.1. `yarn checkVersions --against main` passes.
+- **The changelog** ("2026-10-15 — review-ecs-loop-config-init") calls out both behaviour changes.
+  D4's is narrower than written: without `physics.enabled` nothing initializes (on `main` too), so
+  an app passing no `physics` section gets gravity −9.81 instead of 0 only when `VITE_PHYS_ENABLED`
+  alone turns physics on. The `workerTarget` change (a partial section now runs on
+  `WORKER_THREAD`) is as written.
+- **Checks:** `yarn test` 57 files (492 passed, 1 skipped); `yarn verify:scenes` 104 passed,
+  hashes, snapshots and system order unchanged (407.9 s); `yarn hub:build` 360 pages, Phase 7's 26
+  warnings, no dead link.
+- **`yarn build` failed on an SBP budget**, which no phase had recorded (Phase 4's step 5 didn't
+  either): `_engine/kernel/ecs` 16.1 KiB gzip in the app, 15.6 in the banner, budget 15. A group is
+  measured before minification, so the JSDoc of Phases 1-2 counts: on `main` the group was 14.1;
+  minified with comments stripped, the folder's code grew 8.1 → 8.5 KiB (the `appId` map, the
+  removal guard, `clearWorld`; the debug-only warning not folded in that measurement). The budget is
+  17 KiB in both profiles (`sbp.config.ts`, with the reason); the build passes.
+- **`yarn verify:baselines` reported one change** with no file's size changed: `keyFiles` numbers
+  same-named chunks in the sorted order of their hashed names, and a hash moved, so
+  `EngineRapier.js` and `EngineRapier.js#2` swapped. `--update` recorded it (and `three.module.js`'s
+  pair, and gzip sizes 1-4 B apart from the chunks naming each other's new hashes); the rerun is
+  clean. The main chunk is 395,092 B gzip (−501 B against `main`), the banner's 305,348 (−246 B).
+- **Handed on**, each in its plan's Inputs: p613 (D2's rule, its 15 seams), p614 (D2's rule and
+  `ECSWorld`'s physics members, `PhysicsTierPolicy.ts:324`'s query, `CharacterTypes.ts`' link),
+  p616 (`LodSystem.ts`' link), p617 (`pollHeldKeyBindings`' allocations, `ActionTypes.ts`' three
+  links), p619 (`ComponentDataMap`'s `notExported`, the scene runner's page reloads, the search
+  index's size, and this phase's two: group budgets that count comments, `#2` keys that follow
+  hashes), and p621 (`SeededRandom.ts`' link: no review plan has `utils/`, and p990 is for plans
+  whose files were removed).
+- **p200** is done: its one phase landed in Phase 2 (D7), and it's `_DONE_p200_…` now.
 
 ## 4. Risks
 

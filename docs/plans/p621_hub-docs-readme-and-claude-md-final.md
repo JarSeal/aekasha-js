@@ -1,7 +1,7 @@
 Status: stub — not-implemented
 Category: Documentation, Hub
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage D)
-Blocked by: p612_review-ecs-loop-config-init.md, p613_review-rendering-scene-assets.md, p614_review-physics.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p617_review-input-ui-hud.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p620_review-toolkit-and-app-code.md
+Blocked by: p613_review-rendering-scene-assets.md, p614_review-physics.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p617_review-input-ui-hud.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p620_review-toolkit-and-app-code.md
 
 # Hub Docs, Readme and CLAUDE.md: the Final Pass — Stub
 
@@ -28,6 +28,9 @@ Close the epic: the Hub, the readme and CLAUDE.md describe the engine as it is a
 ## Inputs
 
 - Every child plan's "As built" lists.
+- p612 Phase 7: `utils/SeededRandom.ts:15`'s `{@link getRandomStream}` links nowhere
+  (`yarn hub:build` warns; TypeDoc resolves a link in the file's scope, and the file doesn't import
+  the name). No review plan lists `utils/`.
 
 ## Done when
 

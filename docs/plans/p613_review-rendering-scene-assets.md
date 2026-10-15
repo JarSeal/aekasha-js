@@ -22,6 +22,13 @@ Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every 
 
 - p302, p600 §2.
 - p605 Phase 5's `notExported` warnings in scope (`yarn hub:build` lists each with its file and line; export the type with a summary or change the signature): `CameraGUIModule` and `LightGUIModule` (the `_dbg__` modules' types behind the exported `cameraDebugGUI` / `debugGUI` refs) and `"three/tsl".Node` (our `types/three-node-material-helpers.d.ts`, named by `sampleAtlasCell`).
+- p612 D2 (the type-only kernel → feature imports): they stay, and the rule is written down: the
+  kernel imports a feature's types only with `import type`, for the data it holds or carries for a
+  feature (component data, config, scene and mesh definitions, import params, the assets worker's
+  messages). It's in the coding standards' Layering and a lint (`KERNEL_FEATURE_IMPORT`,
+  `eslint.config.js`). 15 of the layout report's 23 are in this plan's files (assets, import, mesh,
+  scene): check each against those kinds. `Camera.ts`' main-camera lookups are p612's (D7, the
+  cached id); the rest of `Camera.ts` is this plan's.
 
 ## From p611 (2026-10-14)
 

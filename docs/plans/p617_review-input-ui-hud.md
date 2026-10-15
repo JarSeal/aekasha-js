@@ -21,6 +21,12 @@ Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every 
 
 - p602 D5, p610, the p800 prompt in `docs/templates/todo-plan-prompts.txt`.
 - p605 Phase 5's `notExported` warnings in scope (`yarn hub:build` lists each with its file and line; export the type with a summary or change the signature): `icons` (`UI/icons/SvgIcon.ts`, the value `SvgIconKey` is `keyof typeof`).
+- p612 Phase 3 (the `perf-auditor` agent over the loop): `KeyboardInput.ts`' `pollHeldKeyBindings`
+  allocates once per fixed sub-step and held binding: the `.some` closure and `getChordArray`'s
+  `[chord]` array for a single chord.
+- p612 Phase 7: `ActionTypes.ts`' `{@link setActionContextEnabled}` (line 37) and
+  `{@link createActionMap}` (lines 162, 194) link nowhere (`yarn hub:build` warns): TypeDoc resolves
+  a link in the file's scope, and the file doesn't import the names.
 
 ## From p611 (2026-10-14)
 

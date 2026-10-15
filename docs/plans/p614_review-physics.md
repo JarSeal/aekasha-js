@@ -29,6 +29,16 @@ Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every 
 - p604 §4, p990's ray casting item (moved here), p500 (its snapshot repair touches the same modules: coordinate), p600 §2.
 - p428 (characters in the worker targets: the controller in the worker or fixed-lag step-stamped reads, with step-stamped `EVENTS_PUSH` records; its protocol side is decided with the transport interface here).
 - p605 Phase 5's `notExported` warnings in scope (`yarn hub:build` lists each with its file and line; export the type with a summary or change the signature): `EngineColliderProxyAPI`, `EngineRigidBodyProxyAPI`, `EngineJointProxyAPI` (`EngineRapier.ts`) and `RigidBodyProxyAPI` (`PhysicsAPI.ts`), named by the `create*` functions' results.
+- p612 D2: the kernel names physics' types (`RigidBodyAPI` / `ColliderAPI` and the tier data in
+  `ECSCoreComponents.ts`, `ECS.ts`' `RigidBodyAPI`, `AppConfig.physics`' types) with
+  `import type` only, a rule in the coding standards and a lint (`KERNEL_FEATURE_IMPORT`); they
+  stay. `ECSWorld`'s physics members (`setTransform`, `setVelocity`, `setDisabled`,
+  `getRigidBody`, …) stay public.
+- p612 D7: `PhysicsTierPolicy.ts:324` still finds the main camera with its own
+  `getEntitiesWith(TAG_IS_MAIN_CAMERA)` query; `getMainAppCameraId()` (`kernel/camera/Camera.ts`)
+  reads p612's cached id (default world only).
+- p612 Phase 7: `CharacterTypes.ts:142`'s `{@link getBodyKind}` links nowhere (`yarn hub:build`
+  warns): TypeDoc resolves a link in the file's scope, and the file doesn't import the name.
 
 ## From p611 (2026-10-14)
 

@@ -29,7 +29,7 @@ The kernel's ECS, main loop, config, init and views are reviewed file by file (p
 - Frustum culling of point and spot lights updates each light's world matrix once per frame instead of twice; the lifetime and look-at systems return at once when no entity has their component; `addComponent` runs its hooks without a closure per add.
 - The boot: the cameras' and lights' hooks install in `installKernel`, and the debug steps are three functions, each called behind its flags. When `start` resolves with nothing in the root scene and no scene load running, development and test builds log a warning (the loop starts when the first scene is set).
 - The features' `onDebug` / `onDebugAfterStart` calls sit behind `IS_DEBUG_ENV`, so their closures leave a production build; physics' wireframe sync no longer registers a scene-enter listener there.
-- The production build's main chunk (`assets/index.js`) is 395,090 B gzip, 503 B smaller than on `main`; the banner embed's is 242 B smaller (305,352 B).
+- The production build's main chunk (`assets/index.js`) is 395,092 B gzip, 501 B smaller than on `main`; the banner embed's is 246 B smaller (305,348 B).
 - Internal (no entry exports them, and the lint has made deep imports an error since 5.0.0): the env flag functions and duplicates (`isDebugEnvironment`, `isProdTestMode`, `isProductionEnvironment`, `isCurrentEnvironment`, `isNotCurrentEnvironment`, `IS_PROD_TEST_ENV`, `CUR_ENV`, `APP_CONFIG`, which always held the defaults) are removed: read `IS_DEBUG_ENV`, `IS_PROD_TEST_MODE`, `IS_PROD_ENV` and `getCurrentEnvironment()`. The loop's `add*Fn` / `delete*Fn` listener sets are `onVisibilityChange`, `onBeforeUnload` and `onWindowBlur`, each returning its remover; `mainLoop` isn't exported; `initWorker` takes an options object; `registerECSModule` is `registerECSDebugGUI`; `registerCameraManager` and `registerLightManager` are `installCameras` / `registerCameraDebugGUI` and `installLights` / `registerLightDebugGUI`.
 
 **Deprecated** (removed in engine 6.0.0)
@@ -63,7 +63,8 @@ The kernel's ECS, main loop, config, init and views are reviewed file by file (p
 - The Hub: the ECS page (the app id lookup, the frame cap, the `onDebug` rule), the quick start (config defaults, the one public env flag) and the coding standards.
 - The root `CLAUDE.md` (ECS core, the loop, Bootstrap flow, Engine features), `kernel/input/CLAUDE.md`, `devTools/verify/CLAUDE.md`, `devTools/hub/CLAUDE.md` (the search index is over its 1 MB warning on `main` too) and the readme's config sentence.
 - `devTools/refactor/`'s layout report, move map and entry exports regenerated.
-- `yarn verify:baselines`: `api.json` with the internal renames above, `docs.json` with the kernel's folders fully documented, and both bundle baselines.
+- `yarn verify:baselines`: `api.json` with the internal renames above, `docs.json` with the kernel's folders fully documented, and both bundle baselines. The last update moved no file's size, only gzip sizes by a few bytes (chunks name each other's new hashes) and the `#2` keys of two same-named chunk pairs (`EngineRapier.js`, `three.module.js`), which follow the hashed names' order.
+- `sbp.config.ts`: the `_engine/kernel/ecs` group's budget is 17 KiB (was 15) in both profiles. A group is measured before minification, so its comments count: the new JSDoc grew it from 14.1 to 16.1 KiB in the app, while its minified code grew about 0.4 KiB.
 
 ## 2026-10-14 — sbp-tooling-profiles-and-marketing
 

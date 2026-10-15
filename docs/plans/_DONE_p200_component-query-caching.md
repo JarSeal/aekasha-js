@@ -1,7 +1,7 @@
-Status: draft | research — not-implemented
+Status: implemented (Phase 1, by p612 Phase 2)
 Category: ECS
 Epic: https://trello.com/c/EQQXOyRL/105-ecs-entity-component-system
-Related: p612_review-ecs-loop-config-init.md (implements this plan's main-camera cache, in the p600 refactoring epic)
+Related: \_DONE_p612_review-ecs-loop-config-init.md (implemented this plan's main-camera cache in its Phase 2, D7, in the p600 refactoring epic)
 
 # Component Query Caching — Research & Recommendation
 
@@ -277,6 +277,16 @@ Small enough to be a single, non-breaking phase:
     `_dbg__Symbols.ts:122-125`) still tracks the new main camera correctly. Also verify
     deleting the current main camera entity (via `disposeCamera` or scene teardown)
     doesn't leave `getMainCamera()` returning a stale/disposed camera.
+
+**As built** (p612 Phase 2, 2026-10-14; the file is `kernel/camera/Camera.ts` since p608):
+
+- Only the entity id is cached (`mainCameraEntityId`), not the object: `getMainCamera()` reads the
+  `OBJECT3D` with one `getComponent`, so a replaced object can't go stale.
+- Cleared by `TAG_IS_MAIN_CAMERA`'s `onRemoveComponent` and `onDeleteEntity` hooks, default world
+  only. They register in `installCameras(ctx)` (an install, run by `installKernel`; p612 Phase 5
+  removed `registerCameraManager`).
+- Unit tests instead of the manual check (`kernel/camera/Camera.test.ts`: switching, deleting,
+  another world's entity with the same id); the scene runner's hashes and snapshots didn't change.
 
 ## 7. Risks and open questions
 
