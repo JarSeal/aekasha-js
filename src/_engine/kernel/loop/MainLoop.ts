@@ -179,8 +179,8 @@ export type FrameProbe = {
 let frameProbe: FrameProbe | null = null;
 
 /**
- * Sets (or with null clears) the frame probe that every main loop variant calls at its start and
- * end. Only the profiler sets one, while its window is open, so without it a frame costs two null
+ * Sets (or with null clears) the frame probe the main loop calls at the start and end of every
+ * frame. Only the profiler sets one, while its window is open, so without it a frame costs two null
  * checks.
  * @param probe ({@link FrameProbe} | null)
  */
