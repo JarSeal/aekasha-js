@@ -41,9 +41,8 @@ export const installMeshes = (ctx: FeatureContext) => {
 };
 
 export type MeshProps = {
-  // @CONSIDER: We could also allow passing an id for geo and mat (as strings), and then look them up in the asset manager.
   geo: THREE.BufferGeometry | GeoProps | string;
-  mat: THREE.Material | MatProps;
+  mat: THREE.Material | MatProps | string;
   /** Per-mesh material overrides: the mesh gets a cached variant of its (registered) material, see getMaterialVariant */
   matOverrides?: MaterialVariantOverrides;
   castShadow?: boolean;
@@ -73,17 +72,22 @@ const warnIfUnregistered = (
   const geoId = geo?.userData.id as string | undefined;
   if (geo && getGeometryRegistry()[geoId || '']?.resource !== geo) {
     lwarn(
-      `[MeshManager] Mesh "${appId}" uses an unregistered geometry (${describe(geoId)}), which is never disposed. Create it with createGeometry or register it with saveBufferGeometry.`
+      `Mesh "${appId}" uses an unregistered geometry (${describe(geoId)}), which is never disposed. Create it with createGeometry or register it with saveBufferGeometry.`
     );
   }
   for (const m of Array.isArray(material) ? material : material ? [material] : []) {
     const matId = m.userData.id as string | undefined;
     if (getMaterialRegistry()[matId || '']?.resource === m) continue;
     lwarn(
-      `[MeshManager] Mesh "${appId}" uses an unregistered material (${describe(matId)}), which is never disposed. Create it with createMaterial or register it with saveMaterial.`
+      `Mesh "${appId}" uses an unregistered material (${describe(matId)}), which is never disposed. Create it with createMaterial or register it with saveMaterial.`
     );
   }
 };
+
+// The camera compileAsync takes: the shaders and pipelines it compiles are cached by their key,
+// not per camera, so one camera serves every call
+let preWarmCamera: THREE.PerspectiveCamera | null = null;
+const getPreWarmCamera = () => (preWarmCamera ??= new THREE.PerspectiveCamera());
 
 /**
  * Compiles a mesh's pipelines ahead of its first draw (`renderer.compileAsync`), so the frame it
@@ -95,7 +99,6 @@ const warnIfUnregistered = (
 export const preWarmMesh = (mesh: THREE.Mesh, label: string) => {
   const renderer = getRenderer();
   const rootScene = getRootScene();
-  const camera = new THREE.PerspectiveCamera(); // Consider using the actual active camera if available
   if (!renderer || !rootScene) return;
 
   // Check if we have any valid shadow maps in the scene
@@ -110,11 +113,14 @@ export const preWarmMesh = (mesh: THREE.Mesh, label: string) => {
 
   // Only compile if it's "safe"
   if (!mesh.receiveShadow || hasInitializedShadows) {
-    renderer.compileAsync(mesh, camera, rootScene);
+    // A failed compile leaves the work to the first draw, like a skipped one
+    renderer.compileAsync(mesh, getPreWarmCamera(), rootScene).catch((err) => {
+      lwarn(`Pre-warming ${label} failed: it compiles on its first draw.`, err);
+    });
   } else {
     // If we can't pre-warm now, the renderer will just compile it
     // on the first actual draw call (standard behavior).
-    lwarn(`[Engine] Skipping preWarm for ${label} - ShadowMap not ready.`);
+    lwarn(`Skipping preWarm for ${label} - ShadowMap not ready.`);
   }
 };
 
@@ -156,7 +162,7 @@ export const createMeshEntity = (
       mat = getMaterialVariant(baseMatId, props.matOverrides);
     } else {
       lwarn(
-        `[MeshManager] Mesh "${props.appId || entityOpts?.appId}" has matOverrides but its material is not registered, ignoring the overrides.`
+        `Mesh "${props.appId || entityOpts?.appId}" has matOverrides but its material is not registered, ignoring the overrides.`
       );
     }
   }
@@ -215,8 +221,7 @@ export const createMeshEntity = (
     world.addComponent(entityId, ComponentType.SPATIAL_INDEXED, true);
   }
 
-  // ECS-queryable frustum culling (docs/plans/_DONE_p080_object3d-frustum-culling.md §2.1/§2.4) —
-  // opt-in, off by default, distinct from `props.frustumCullingEnabled` above (Three's native
+  // ECS-queryable frustum culling (ObjectFrustumCullingSystem.ts) — opt-in, off by default, distinct from `props.frustumCullingEnabled` above (Three's native
   // render-time culling, on by default).
   if (entityOpts?.ecsFrustumCullingEnabled) {
     setFrustumCullingEnabled(entityId, true, world);
@@ -438,7 +443,7 @@ export const getMeshByAppId = (appId: string, ecsWorld?: ECSWorld) => {
   const world = ecsWorld || getECSWorld();
   const entityId = getEntityIdByAppId(appId, world);
   let mesh: THREE.Mesh | undefined = undefined;
-  if (entityId) {
+  if (entityId !== undefined) {
     const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
     if (obj && !(obj as THREE.Mesh).isMesh) {
       const msg = `Found Object3D is not a mesh (type: ${obj.type}).`;

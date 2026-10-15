@@ -1,6 +1,19 @@
 import * as THREE from 'three/webgpu';
 import { ThreeVector3 } from '../render/ThreeMath';
 
+/**
+ * Writes a collider shape's dimensions, measured from the mesh's geometry bounds and scale, into
+ * `mesh.geometry.userData.props.params`: `width` / `height` / `depth` for `BOX` (`CUBOID`),
+ * `radius` for `SPHERE` (`BALL`), `radius`, `halfHeight` and `orientation` (the
+ * `userData.spineAxis`, `y` by default) for `CAPSULE`, `CONE` and `CYLINDER`. Physics' import
+ * derivation (`MeshColliderGeometry.ts`) calls it on a scratch mesh.
+ * @internal
+ * @remarks Known bug, p614's with this file's move into physics (p613 D13): `CAPSULE` and `CONE`
+ * fall through into the next case, and `PhysicsEntity.ts`' `deriveColliderDimensionsFromMesh`
+ * reads other names (`height`, `radiusTop` / `radiusBottom`), so an imported node's capsule, cone
+ * or cylinder collider gets the Physics API's default `halfHeight` (and a cone or cylinder no
+ * derived radius). Boxes and spheres work. Writes through the shared `ThreeVector3` scratch.
+ */
 export const setMeshCreatePropsToUserData = (shape: string, mesh: THREE.Mesh) => {
   if (!mesh) return;
   let scale;

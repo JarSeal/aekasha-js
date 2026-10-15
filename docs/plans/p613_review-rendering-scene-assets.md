@@ -920,6 +920,23 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
     `MEDIUM` by default, a light's own `shadowMapSize` wins over the preset.
   - **Checks:** `tsc` (both), the changed files' lint, `yarn test` (64 files, 526 passed), the
     docs ratchet (`kernel/light` 10 / 17; the rest is step 4's JSDoc).
+- **Section 3 (step 3):**
+  - **M2:** `MeshProps.mat` takes a `string` (a registered material's id), which
+    `createMeshEntity` already resolved; the `@CONSIDER` gone. The mesh JSON schema already
+    allowed one, so Phase 5's D11 test passes for this pair. A widening: no caller breaks.
+  - **M3:** `preWarmMesh` compiles with one camera, made on the first call (the shaders and
+    pipelines `compileAsync` makes are cached by their key, not per camera), and catches a failed
+    compile with a warning (the first draw compiles it, as for a skipped pre-warm).
+  - **H1, H3:** the `_DONE_p080` path gone (`ObjectFrustumCullingSystem.ts` named instead; the
+    p050, p348 and p351 paths exist and stay); the `[MeshManager]` and `[Engine]` prefixes gone
+    (`[LOD]` stays: it names the feature). `getMeshByAppId`'s `!== undefined`.
+  - **D13:** `MeshUserData.ts` documented only: `setMeshCreatePropsToUserData` `@internal`, what it
+    writes per shape, and a `@remarks` naming M1 as p614's (Phase 9 updates p614).
+  - **Tests:** `kernel/mesh/Mesh.test.ts` (3): a material by id (its type is M2's check, through
+    `tsc`), a rejected compile warned and not left unhandled, one camera across calls; the two
+    `preWarmMesh` ones checked to fail without the fix.
+  - **Checks:** `tsc` (both), the changed files' lint, `yarn test` (65 files, 529 passed), the
+    docs ratchet (`kernel/mesh` 9 / 13; the rest is step 4's JSDoc).
 
 ### Phase 5: asset registries (`Geometry.ts`, `Material.ts`, `Texture.ts`, `TextureArray.ts`, `TextureAtlas.ts`, `AssetFiles.ts`, `AssetOwners.ts`, `AssetUrl.ts`, `SceneAssetRelease.ts`, `Disposal.ts`)
 
