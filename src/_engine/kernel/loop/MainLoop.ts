@@ -1,6 +1,5 @@
 import { Timer, type Renderer, type Scene, type Camera } from 'three/webgpu';
 import { getStats, initStats, startCustomMeasurements, updateRestOfStats } from '../../debug/Stats';
-import { getCurrentCamera } from '../camera/Camera';
 import { getRenderer } from '../render/Renderer';
 import {
   getRootScene,
@@ -485,7 +484,7 @@ export const initMainLoop = () => {
   mainLoopInitiated = true;
 
   const renderer = getRenderer();
-  const currentCamera = getCurrentCamera();
+  const currentCamera = getActiveCamera();
   if (!renderer) {
     const msg = 'Renderer has not been created or has been deleted (initMainLoop).';
     lerror(msg);

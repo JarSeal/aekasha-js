@@ -30,8 +30,12 @@ import type { DebugToolsState } from './DebugTools';
 import { DEBUG_CAMERA_ID } from './DebugTools';
 import { getECSWorld, getEntityIdByAppId } from '../kernel/ecs/ECS';
 import { ComponentType } from '../kernel/ecs/ECSCoreComponents';
-import { isDebugCameraActive, type DebugCamLSProps } from '../kernel/camera/Camera';
-import { getDebugCamProps, saveDebugCameraToLS } from '../kernel/camera/debug/_dbg__CameraGUI';
+import { isDebugCameraActive } from '../kernel/camera/Camera';
+import {
+  getDebugCamProps,
+  saveDebugCameraToLS,
+  type DebugCamLSProps,
+} from '../kernel/camera/debug/_dbg__CameraGUI';
 import {
   DEFAULT_DEBUG_CAM_PROPS,
   setDebugCameraPanelRefresh,

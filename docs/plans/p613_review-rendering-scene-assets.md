@@ -852,6 +852,45 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
 3. M2, M3; `MeshUserData.ts` documented only (D13).
 4. JSDoc for the three folders; tests for CA1 (zoom applied at creation) and CA2.
 
+**As built** (one commit per section):
+
+- **Section 1 (step 1, and step 4's tests for it):**
+  - **CA3 was wrong about the bytes:** none of the debug camera code is in a production build
+    (`dist/`, Phase 3's step 6: no `AEK_debugCams`, no listener names). Its two entry points,
+    `registerCameraDebugGUI` and `initDebugCamera`, are called only from the boot's debug step,
+    which folds, and the rest only from them or `_dbg__` modules. D6 stands for placement, and
+    for the duplicate: `_dbg__CameraGUI.ts` had its own copy of the LS shape and key.
+  - **D6:** the LS types live once, in `_dbg__CameraGUI.ts` (`DebugCamLSProps` moved there,
+    `CamSceneDebugState.debugCam` is it; `Camera.ts`' `CameraEntityDebugState`,
+    `CameraSceneDebugState`, `CameraDebugLSData` and `LS_KEY` gone). The bodies of
+    `toggleAllCameraHelpers`, `isAnyCameraHelperVisible` and `syncCameraHelpersFromLS` are in
+    `_dbg__CameraHelpers.ts` (which imports the GUI statically: the boot loads the GUI first, so
+    no load order changes). `Camera.ts` keeps the first two as thin `@internal` wrappers over its
+    `debugHelpers` ref, not removed: `_dbg__OnScreenTools.ts` also loads in prod test mode, and a
+    static import of a camera `_dbg__` module from it would load that module (its system, its
+    hook, the GUI's window kind) there too. `cameraDebugGUI` and `CameraGUIModule` `@internal`
+    (the `notExported`).
+  - **CA1:** `camera.zoom` is set before `applyCameraProjection`.
+  - **CA2:** the active camera is the default world's: another world's camera never becomes it.
+    `setMainCamera` in another world only moves that world's tag; `createCameraEntity`'s "first
+    camera becomes main" applies in the default world only (another world's tag comes only from
+    `active: true`); `disposeCamera` clears the active camera only for the default world (another
+    world's deletion of the same entity id cleared it).
+  - **CA4:** `getCurrentCamera` and `getCurrentCameraId` removed (`initMainLoop` reads
+    `getActiveCamera`, the same camera); `setCurrentCamera` (`@internal`) looks the id up with
+    `getEntityIdByAppId` and does nothing for an entity that isn't a camera (a stale
+    `latestAppCameraId` in the debug LS made `setActiveCamera` throw in a scene-enter listener).
+    `disposeCamera`'s stale comment and "Load light properties" fixed.
+  - **Entity id 0 doesn't exist** (slot indexes start at 1, `ECS.ts`' `nextEntityId = 1`), so
+    the `!== undefined` / `!== null` checks here (`getCameraByAppId`, the debug camera's orbit
+    controls) are type hygiene, not fixes. The same goes for Phase 2's `getGroupByAppId` and
+    Phase 3's `createCameras` "bugs": Phase 9's changelog doesn't list them as fixes.
+  - **Tests:** `Camera.test.ts` +2 (zoom in the projection at creation, both types; another
+    world's cameras, first and `active`, never active, and its disposal of the same id leaving
+    the active camera), each checked to fail without its fix.
+  - **Checks:** `tsc` (both), the changed files' lint, `yarn test` (63 files, 525 passed), the
+    docs ratchet (`kernel/camera` 14 / 26 exports, members 0 / 0).
+
 ### Phase 5: asset registries (`Geometry.ts`, `Material.ts`, `Texture.ts`, `TextureArray.ts`, `TextureAtlas.ts`, `AssetFiles.ts`, `AssetOwners.ts`, `AssetUrl.ts`, `SceneAssetRelease.ts`, `Disposal.ts`)
 
 1. A1, A2, A3, D2's bug A (A4), A5 (`decMaterialRef` keeps what `retainedTextures` and the scene's

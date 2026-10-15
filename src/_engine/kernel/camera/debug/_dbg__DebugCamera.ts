@@ -5,7 +5,7 @@ import { ECSWorld } from '../../ecs/ECS';
 import { getCanvasElem } from '../../render/Renderer';
 import { ECSSystemStage } from '../../loop/SystemStages';
 import { ComponentType } from '../../ecs/ECSCoreComponents';
-import type { DebugCamLSProps } from '../Camera';
+import type { DebugCamLSProps } from './_dbg__CameraGUI';
 import { getDebugCamProps, saveDebugCameraToLS, updateCamerasDebuggerGUI } from './_dbg__CameraGUI';
 import { getConfig } from '../../config/Config';
 
