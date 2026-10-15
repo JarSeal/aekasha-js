@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: Refactoring, Documentation, Rendering, Assets
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -680,7 +680,7 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
   - **Checks:** `tsc` (both), the changed files' lint, `yarn test` (60 files, 513 passed), the
     docs ratchet recorded.
 
-### Phase 3: the scene loader (`SceneLoader.ts`)
+### Phase 3: the scene loader (`SceneLoader.ts`) — done
 
 1. D3 (SL1, SL2, and PF1's re-check), D2's bug B (SL3).
 2. D4 (SL4); D5 by Phase 0's measurement (SL5).
@@ -828,6 +828,21 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
     one): rewritten. It, `hasFirstSceneBeenLoaded` and `getNextSceneId` `@internal`.
   - **Checks:** `tsc`, the changed files' lint, `yarn test` (63 files, 523 passed, the `@example`
     check included), the docs ratchet: `kernel/scene` 73 / 73 exports, 1 / 1 members.
+- **Step 6 (the checks):**
+  - **`yarn verify:scenes`:** 104 passed, 0 failed, hashes and snapshots unchanged in every target
+    and in prod test mode (406.9 s).
+  - **`yarn verify:embed`:** passed (`INLINE`, `BACKGROUND`, unmount, the Hub's example page), and
+    again after the fix below.
+  - **`yarn verify:baselines`** caught a regression of section 3: `debug/DebugTools.ts` in both
+    production builds. `resolveStartSceneOverride` began `if (firstSceneLoaded ||
+    !(IS_DEBUG_ENV || IS_PROD_TEST_MODE)) return null`, and Rollup can't fold `unknown || true`,
+    so the `getDebugToolsState` call after it stayed; the constant goes first now (`true || …`
+    folds), with a comment saying why. Then no debug code in either build, and the API and bundle
+    changes of Phases 1-3 recorded (`--update`): the entry gains `UpdateLoaderStatusFn` and
+    `registerOnAllSceneEnters`, loses nothing; `bundle.json` main 385.8 → 375.5 kB gzip,
+    `bundle.banner.json` 298.2 → 286.2 kB, the new `ImportRegistry.js` chunk;
+    `EngineRapier.js` / `#2` ±0.1 kB (its two copies swapping names).
+  - **`yarn sbp`:** section 2's numbers (D4's).
 
 ### Phase 4: cameras, lights, meshes (`Camera.ts`, `Light.ts`, `LightHelpers.ts`, `Mesh.ts`, `MeshUserData.ts`)
 

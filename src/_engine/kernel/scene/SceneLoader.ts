@@ -231,7 +231,9 @@ type ActiveLoad = {
  * only; a production build drops it.
  */
 const resolveStartSceneOverride = () => {
-  if (firstSceneLoaded || !(IS_DEBUG_ENV || IS_PROD_TEST_MODE)) return null;
+  // The constant first: a production build folds `true || …` and drops the rest (the debug tools'
+  // state with it); it can't fold `firstSceneLoaded || true`
+  if (!(IS_DEBUG_ENV || IS_PROD_TEST_MODE) || firstSceneLoaded) return null;
 
   // ?startScene=<sceneId> (getStartSceneQueryParam) wins over the Debug tools' start scene. The
   // Debug tools' state is prod-test-aware, so a prod test run honours a start scene left set there

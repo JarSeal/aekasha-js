@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1722,
-      "total": 2315
+      "documented": 1731,
+      "total": 2314
     },
     "members": {
       "documented": 331,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1678,
-        "total": 2252
+        "documented": 1687,
+        "total": 2251
       },
       "members": {
         "documented": 281,
@@ -749,8 +749,8 @@
     },
     "engine/kernel/assets": {
       "exports": {
-        "documented": 108,
-        "total": 140
+        "documented": 109,
+        "total": 141
       },
       "members": {
         "documented": 0,
@@ -931,8 +931,8 @@
     },
     "engine/kernel/init": {
       "exports": {
-        "documented": 19,
-        "total": 19
+        "documented": 21,
+        "total": 21
       },
       "members": {
         "documented": 0,
@@ -1058,26 +1058,15 @@
     },
     "engine/kernel/scene": {
       "exports": {
-        "documented": 64,
-        "total": 74
+        "documented": 73,
+        "total": 73
       },
       "members": {
         "documented": 1,
         "total": 1
       },
       "undocumented": {
-        "exports": [
-          "SceneLoader#SceneLoader",
-          "SceneLoader#ScenePrimitiveAssets",
-          "SceneLoader#UpdateLoaderStatusFn",
-          "SceneLoader#createCameras",
-          "SceneLoader#createSceneLoader",
-          "SceneLoader#getCurrentSceneLoader",
-          "SceneLoader#getCurrentSceneLoaderId",
-          "SceneLoader#getNextSceneId",
-          "SceneLoader#hasFirstSceneBeenLoaded",
-          "SceneLoader#setCurrentSceneLoader"
-        ],
+        "exports": [],
         "members": []
       }
     },
@@ -1188,8 +1177,8 @@
     },
     "engine/ui": {
       "exports": {
-        "documented": 45,
-        "total": 77
+        "documented": 42,
+        "total": 74
       },
       "members": {
         "documented": 0,
