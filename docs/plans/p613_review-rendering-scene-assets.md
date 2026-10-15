@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented
+Status: in progress | Phases 0-1 implemented
 Category: Refactoring, Documentation, Rendering, Assets
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -533,7 +533,7 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
 - **LI2's import cycle** is still there: the wrapper stays.
 - **`notExported` in scope:** the three of §1.2, unchanged.
 
-### Phase 1: rendering (`Renderer.ts`, `CanvasSize.ts`, `RenderHooks.ts`, `Snapshot.ts`, `ThreeMath.ts`, `Object3DHelpers.ts`, `LodFade.ts`)
+### Phase 1: rendering (`Renderer.ts`, `CanvasSize.ts`, `RenderHooks.ts`, `Snapshot.ts`, `ThreeMath.ts`, `Object3DHelpers.ts`, `LodFade.ts`) — done
 
 1. D10 (R1, R2); R3's docs.
 2. N1: the debug helper key into the kernel (`Object3DHelpers.ts`, with `markDebugHelper`'s
@@ -565,6 +565,29 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
     nothing from `debug/` any more. `Object3DHelpers.ts`' stale `helpers.ts` comment.
   - Left to Phase 8: the rendering guide's "`isWebGPURenderer` tells you which one runs" gets "once
     `createRenderer` has resolved".
+- **Section 2 (steps 3-4):**
+  - **R4:** `slerp` removed, not renamed: it had no caller (§1.4 was wrong: `PhysicsEntity.ts`
+    calls three's `Quaternion.slerp`), so p614 gets nothing. `GRAVITY_DOWN_NORMAL` removed;
+    `RENDERER_SHADOW_OPTIONS` moved into `_dbg__Renderer.ts`, its one user. `ThreeQuoternion` is
+    `ThreeQuaternion` (`Mesh.ts`, `Group.ts`); the scratch objects, `DIRECTIONS` and
+    `LEVEL_GROUND_NORMAL` are `@internal` with a summary (the scratch ones with the "within one
+    synchronous call" remark).
+  - **Not in the plan, a bug:** `smoothDampVec3` (on the entry) wrote the caller's `target`
+    whenever `maxSpeed` clamped (`target.x = current.x - changeX`, never restored). The clamped
+    target is in locals now; the result is the same. Its callers are the toolkit's follow camera
+    rig, which recomputes `idealPos` every frame, so only an `afterLookAtFn` reading `idealPos`
+    after the step sees a difference (the real ideal position now). Tests
+    (`kernel/render/ThreeMath.test.ts`, 3): the target untouched under a clamp, no overshoot, the
+    speed cap. `getQuatFromAngle` and `smoothDampVec3` documented (its `maxSpeed` before the
+    required `deltaTime` stays: on the entry, a `@remarks` says to pass `Infinity`).
+  - **Snapshots:** `SnapshotOpts` and `SnapshotBlobOpts` have summaries, `height` and `Snapshot`'s
+    fields docs, the old `({@link X})` tag forms rewritten, an `@example` on `takeSnapshotAsync`;
+    `readRenderTargetRGBA8Async` `@internal` (the texture preview is its other user).
+  - **JSDoc:** `kernel/render` exports 76 / 91 → 90 / 90; `engine/debug` 147 / 200 → 146 / 199 (the
+    moved key). `docs.json` updated.
+  - **Checks:** lint, `tsc`, `yarn test` (58 files); `yarn verify:scenes --only
+    topDownTestScene,thirdPersonGymScene,exampleCharacter` (the rig's scenes, for the
+    `smoothDampVec3` fix): 12 passed, hashes and snapshots unchanged (70.1 s).
 
 ### Phase 2: scenes (`Scene.ts`, `SceneHooks.ts`, `AppData.ts`, `Group.ts`, `PropertyLoader.ts`)
 

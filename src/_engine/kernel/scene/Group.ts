@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import type { ECSWorld } from '../ecs/ECS';
 import { getECSWorld, getEntityIdByAppId } from '../ecs/ECS';
 import { getRootScene } from './Scene';
-import { ThreeEuler, ThreeQuoternion } from '../render/ThreeMath';
+import { ThreeEuler, ThreeQuaternion } from '../render/ThreeMath';
 import { ComponentType } from '../ecs/ECSCoreComponents';
 import { setTransform } from '../ecs/ECSHelpers';
 import { lerror, lwarn } from '../../utils/Logger';
@@ -103,7 +103,7 @@ export const createGroupEntity = (
     if (props.rotation.x !== undefined) rot.x = props.rotation.x;
     if (props.rotation.y !== undefined) rot.y = props.rotation.y;
     if (props.rotation.z !== undefined) rot.z = props.rotation.z;
-    const quat = ThreeQuoternion.setFromEuler(rot);
+    const quat = ThreeQuaternion.setFromEuler(rot);
     tra.rot.x = quat.x;
     tra.rot.y = quat.y;
     tra.rot.z = quat.z;

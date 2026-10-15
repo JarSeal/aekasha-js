@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1707,
-      "total": 2332
+      "documented": 1720,
+      "total": 2330
     },
     "members": {
       "documented": 330,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1663,
-        "total": 2269
+        "documented": 1676,
+        "total": 2267
       },
       "members": {
         "documented": 280,
@@ -35,8 +35,8 @@
   "folders": {
     "engine/debug": {
       "exports": {
-        "documented": 147,
-        "total": 200
+        "documented": 146,
+        "total": 199
       },
       "members": {
         "documented": 0,
@@ -1044,31 +1044,15 @@
     },
     "engine/kernel/render": {
       "exports": {
-        "documented": 76,
-        "total": 91
+        "documented": 90,
+        "total": 90
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "Renderer#RendererOptions",
-          "Renderer#createRendererDebugGUI",
-          "Renderer#isWebGLRenderer",
-          "Renderer#isWebGPURenderer",
-          "Snapshot#SnapshotBlobOpts",
-          "Snapshot#SnapshotOpts",
-          "ThreeMath#DIRECTIONS",
-          "ThreeMath#GRAVITY_DOWN_NORMAL",
-          "ThreeMath#LEVEL_GROUND_NORMAL",
-          "ThreeMath#RENDERER_SHADOW_OPTIONS",
-          "ThreeMath#ThreeEuler",
-          "ThreeMath#ThreeQuoternion",
-          "ThreeMath#ThreeVector3",
-          "ThreeMath#getQuatFromAngle",
-          "ThreeMath#slerp"
-        ],
+        "exports": [],
         "members": []
       }
     },

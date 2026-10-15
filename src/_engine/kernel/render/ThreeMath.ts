@@ -1,13 +1,10 @@
 import * as THREE from 'three/webgpu';
 
-export const RENDERER_SHADOW_OPTIONS = [
-  { value: THREE.BasicShadowMap, text: 'Basic shadow map' },
-  { value: THREE.PCFShadowMap, text: 'PCF shadow map' },
-  { value: THREE.PCFSoftShadowMap, text: 'PCF soft shadow map' },
-  { value: THREE.VSMShadowMap, text: 'VSM shadow map' },
-];
-
-// Directions for ray casting with angle (castRayFromAngle)
+/**
+ * Unit directions in three's axes (−z forward, +y up), for ray casting from an angle
+ * (`castRayFromAngle`). Shared objects: read them, never write them.
+ * @internal
+ */
 export const DIRECTIONS = {
   FORWARD: new THREE.Vector3(0, 0, -1),
   BACKWARD: new THREE.Vector3(0, 0, 1),
@@ -17,29 +14,55 @@ export const DIRECTIONS = {
   LEFT: new THREE.Vector3(-1, 0, 0),
 };
 
+/**
+ * The world up normal (+y) a flat floor has, for the character controllers' slope maths. A shared
+ * object: read it, never write it.
+ * @internal
+ */
 export const LEVEL_GROUND_NORMAL = new THREE.Vector3(0, 1, 0);
-export const GRAVITY_DOWN_NORMAL = new THREE.Vector3(0, -1, 0);
-
-export const ThreeVector3 = new THREE.Vector3();
-export const ThreeQuoternion = new THREE.Quaternion();
-export const ThreeEuler = new THREE.Euler();
-
-export const getQuatFromAngle = (deg: number) => {
-  ThreeQuoternion.setFromAxisAngle(ThreeVector3.set(0, 1, 0), THREE.MathUtils.degToRad(deg));
-  return { x: ThreeQuoternion.x, y: ThreeQuoternion.y, z: ThreeQuoternion.z, w: ThreeQuoternion.w };
-};
-
-// @TODO: rename this (slerp to slerpQuat)
-export const slerp = (a: THREE.Quaternion, b: THREE.Quaternion, t: number) => a.clone().slerp(b, t);
 
 /**
- * Smoothly dampens a vector towards a target.
- * @param current Current position (Modified in place!)
- * @param target Target position
- * @param currentVelocity Current velocity (Modified in place! Must persist across frames)
- * @param smoothTime Approximately the time it takes to reach the target
- * @param maxSpeed Maximum speed
- * @param deltaTime Time since last frame
+ * A scratch vector shared by the kernel's synchronous helpers.
+ * @internal
+ * @remarks Only within one synchronous call that calls nothing else that uses it: the next user
+ * overwrites it.
+ */
+export const ThreeVector3 = new THREE.Vector3();
+
+/**
+ * A scratch quaternion, used like {@link ThreeVector3}.
+ * @internal
+ */
+export const ThreeQuaternion = new THREE.Quaternion();
+
+/**
+ * A scratch Euler, used like {@link ThreeVector3}.
+ * @internal
+ */
+export const ThreeEuler = new THREE.Euler();
+
+/**
+ * A rotation of `deg` degrees about the world up axis (+y), as a plain quaternion object (a new
+ * one per call), eg. for `setTransform`'s `rot` or a moving platform's points.
+ * @param deg the angle in degrees, counter-clockwise seen from above
+ */
+export const getQuatFromAngle = (deg: number) => {
+  ThreeQuaternion.setFromAxisAngle(ThreeVector3.set(0, 1, 0), THREE.MathUtils.degToRad(deg));
+  return { x: ThreeQuaternion.x, y: ThreeQuaternion.y, z: ThreeQuaternion.z, w: ThreeQuaternion.w };
+};
+
+/**
+ * Moves `current` towards `target` like a critically damped spring (Unity's `SmoothDamp`), without
+ * overshooting it: a camera that follows, a value that eases in. Writes `current` and
+ * `currentVelocity`; allocates nothing.
+ * @param current the value to move, written in place
+ * @param target where it goes (read only)
+ * @param currentVelocity the speed state, written in place: keep one per damped value, across frames
+ * @param smoothTime about the time to reach the target, in the same unit as `deltaTime` (min 0.0001)
+ * @param maxSpeed the highest speed per unit of time (pass `Infinity` for none)
+ * @param deltaTime the time since the last call
+ * @remarks `maxSpeed` comes before the required `deltaTime`, so its default can't be left out:
+ * pass `Infinity`.
  */
 export const smoothDampVec3 = (
   current: THREE.Vector3,
@@ -61,7 +84,7 @@ export const smoothDampVec3 = (
   let changeY = current.y - target.y;
   let changeZ = current.z - target.z;
 
-  // The target before the clamp below rewrites it (plain numbers, not a per-call clone)
+  // The target, kept for the overshoot check (the clamp below moves the one the spring uses)
   const originalToX = target.x;
   const originalToY = target.y;
   const originalToZ = target.z;
@@ -78,9 +101,10 @@ export const smoothDampVec3 = (
     changeZ = (changeZ / mag) * maxChange;
   }
 
-  target.x = current.x - changeX;
-  target.y = current.y - changeY;
-  target.z = current.z - changeZ;
+  // The (clamped) target, in locals: the caller's target is never written
+  const toX = current.x - changeX;
+  const toY = current.y - changeY;
+  const toZ = current.z - changeZ;
 
   // 4. Calculate new velocity
   const tempX = (currentVelocity.x + omega * changeX) * deltaTime;
@@ -92,9 +116,9 @@ export const smoothDampVec3 = (
   currentVelocity.z = (currentVelocity.z - omega * tempZ) * exp;
 
   // 5. Calculate new position
-  let outputX = target.x + (changeX + tempX) * exp;
-  let outputY = target.y + (changeY + tempY) * exp;
-  let outputZ = target.z + (changeZ + tempZ) * exp;
+  let outputX = toX + (changeX + tempX) * exp;
+  let outputY = toY + (changeY + tempY) * exp;
+  let outputZ = toZ + (changeZ + tempZ) * exp;
 
   // 6. Prevent overshooting
   const origMinusCurrentX = originalToX - current.x;
