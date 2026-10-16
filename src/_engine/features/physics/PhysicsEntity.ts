@@ -198,8 +198,13 @@ export type PhysicsEntityOpts = CoreEntityOpts & {
  * Creates a physics entity: an optional rigid body and its colliders, in the bucket its body
  * type and visual call for (BODY_STATIC / BODY_DYNAMIC_VISUAL / BODY_DYNAMIC_HEADLESS).
  * Rejects with a `PhysicsCapacityError` (PhysicsAPI.ts) when a `WORKER_THREAD` world's
- * transform buffer is full (`AppConfig.physics.maxBodies`; `FIXED` bodies take no slot). Then
- * nothing of it exists: a new entity is deleted, an existing `target` entity is left as it was.
+ * transform buffer is full (`AppConfig.physics.maxBodies`; `FIXED` bodies take no slot), and
+ * with the backend's error when a body or collider can't be made (eg. a `TRIMESH` without
+ * indices). Then nothing of it exists: a new entity is deleted, an existing `target` entity is
+ * left as it was.
+ * @remarks An entity deleted while its `WORKER_THREAD` create is in flight (a scene exit) gets
+ * nothing: what the create made is deleted again, and the promise resolves with the deleted
+ * entity's id. Check `world.isAlive(id)` after the await before using it.
  */
 export const createPhysicsEntity = (
   colliderParams: ColliderParams | ColliderParams[],
@@ -300,6 +305,12 @@ const createPhysicsEntityNow = async (
     if (typeof target !== 'number') world.deleteEntity(entityId);
     throw err;
   }
+  // The create's await: the entity may have been deleted meanwhile (a scene exit's
+  // deleteAllPhysicsEntities). What the create made goes again, and nothing lands on the entity
+  if (isWorkerThread && !world.isAlive(entityId)) {
+    await deleteCreatedBodyAndColliders(created);
+    return entityId;
+  }
   const { rigidBody: rb, colliders: colls } = created;
 
   // Primes the worker proxy's cached mass (only known once the colliders exist), so even the
@@ -378,6 +389,13 @@ const createPhysicsEntityNow = async (
   }
 
   return entityId;
+};
+
+/** Deletes what a create made for an entity deleted before it finished (createPhysicsEntityNow).
+ * Both deletes are quiet no-ops once the world is gone. */
+const deleteCreatedBodyAndColliders = async ({ rigidBody, colliders }: RigidBodyWithColliders) => {
+  if (rigidBody) await deleteRigidBody(rigidBody.id);
+  else if (colliders.length) await deleteColliders(colliders.map((c) => c.id));
 };
 
 /** The entity's body, also while a REMOVED physics tier (p352) has taken its bucket component

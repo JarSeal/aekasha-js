@@ -530,8 +530,9 @@ const paramsToShape = (params: ShapeParams): Rapier.Shape => {
   return existsOrThrow(shape, 'Could not create shape in paramsToShape, shape is undefined.');
 };
 
-export const createCollider = (params: ColliderParams, parentId?: number) => {
-  if (parentId !== undefined) params.parentId = parentId;
+export const createCollider = (params: ColliderParams, parentIdArg?: number) => {
+  // Read, never written back: a caller may reuse its params for another collider
+  const parentId = parentIdArg ?? params.parentId;
 
   const shape = paramsToShape(params);
 
@@ -553,7 +554,8 @@ export const createCollider = (params: ColliderParams, parentId?: number) => {
   if (params.translation)
     colliderDesc.setTranslation(params.translation.x, params.translation.y, params.translation.z);
   if (params.rotation) colliderDesc.setRotation(params.rotation);
-  if (params.friction) colliderDesc.setFriction(params.friction);
+  // `!== undefined`: 0 is a friction (Rapier's default is 0.5)
+  if (params.friction !== undefined) colliderDesc.setFriction(params.friction);
   if (params.restitution) colliderDesc.setRestitution(params.restitution);
   if (params.frictionCombineRule)
     colliderDesc.setFrictionCombineRule(getCombineRule(params.frictionCombineRule));
@@ -588,12 +590,12 @@ export const createCollider = (params: ColliderParams, parentId?: number) => {
     if (!eventQueue) eventQueue = new RAPIER.EventQueue(true);
   }
 
-  const collider = physicsWorld.createCollider(colliderDesc, getRigidBody(params.parentId));
+  const collider = physicsWorld.createCollider(colliderDesc, getRigidBody(parentId));
   const id = nextColliderId;
   nextColliderId += 1;
   colliders.set(id, collider.handle);
   handleToColliderId.set(collider.handle, id);
-  const colliderAPI = new EngineColliderProxyAPI(id, params.parentId, params.userData);
+  const colliderAPI = new EngineColliderProxyAPI(id, parentId, params.userData);
   // ColliderDesc's default density is 1
   colliderAPI.massMode = { density: params.density ?? 1 };
   colliderAPI.ownEnabled = params.enabled ?? true;
@@ -716,7 +718,7 @@ export const deleteRigidBody = (id: number) => {
   const rb = physicsWorld.getRigidBody(rbHandle);
   // @CHORE: we need to get the child collider ids and send them to the
   if (!rb) {
-    if (!isDebugEnvironment) {
+    if (isDebugEnvironment) {
       lwarn(
         `Trying to remove a non existing rigid body (no rigid body found), handle: ${rbHandle}`
       );
@@ -976,7 +978,7 @@ export const deleteCollider = (id: number, wakeUp?: boolean) => {
   }
   const coll = physicsWorld.getCollider(collHandle);
   if (!coll) {
-    if (!isDebugEnvironment) {
+    if (isDebugEnvironment) {
       lwarn(`Trying to remove a non existing collider (no collider found), handle: ${collHandle}`);
     }
     colliders.delete(id);
@@ -1011,7 +1013,7 @@ export const deleteJoint = (id: number, wakeUp?: boolean) => {
   }
   const joint = physicsWorld.impulseJoints.get(jointHandle);
   if (!joint) {
-    if (!isDebugEnvironment) {
+    if (isDebugEnvironment) {
       lwarn(`Trying to remove a non existing joint (no joint found), handle: ${jointHandle}`);
     }
     joints.delete(id);

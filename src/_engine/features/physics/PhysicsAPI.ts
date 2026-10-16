@@ -159,7 +159,7 @@ import {
   type PhysicsBodyActivity,
   type RigidBodyAttachState,
 } from './PhysicsAPITypes';
-import { createNewResolver, resolveRequest } from '../../utils/PromiseResolver';
+import { createNewResolver, rejectRequest, resolveRequest } from '../../utils/PromiseResolver';
 import {
   IntervalCounterStats,
   type IntervalCounterSnapshot,
@@ -808,6 +808,10 @@ export const endPhysicsRayStatsFrame = (nowMs: number) => {
 
 // WORKER LOGIC -- [ START ] -----------------------
 
+/** Logs a rejected delete that nobody awaits (WorldProxyAPI's removes). */
+const logFailedRemove = (err: unknown) =>
+  lerror(`Physics remove failed: ${err instanceof Error ? err.message : String(err)}`);
+
 /** postMessage structured-clones only own fields, and a THREE.Quaternion keeps its values in
  * private `_x/_y/_z/_w` fields behind prototype getters — posted as-is, the worker would receive
  * a rotation with no x/y/z/w at all. Every rotation crossing to the worker goes through this. */
@@ -849,14 +853,18 @@ const messageWorker = (message: PhysicsUpProtocol) => {
   worker.postMessage(message);
 };
 
+/** A request to the worker: settled by its reply, or rejected by the worker's ERROR for it (a throw
+ * while handling it, see onWorkerMessage). */
 const messageWorkerAsync = async <T>(message: PhysicsUpProtocol) =>
   new Promise<T>((resolve, reject) => {
     if (!worker) {
       return reject(
-        `Worker not found in messageWorkerAsync. Make sure you have initialized the worker before using messageWorkerAsync.`
+        new Error(
+          'Worker not found in messageWorkerAsync. Make sure you have initialized the worker before using messageWorkerAsync.'
+        )
       );
     }
-    const requestId = createNewResolver(resolve);
+    const requestId = createNewResolver(resolve, { reject });
     worker.postMessage({ ...message, requestId });
   });
 
@@ -866,8 +874,8 @@ const messageWorkerAsync = async <T>(message: PhysicsUpProtocol) =>
 const messageWorkerAtStep = async <T>(message: PhysicsUpProtocol) => {
   if (!substepCommandCapture) return messageWorkerAsync<T>(message);
   const capture = substepCommandCapture;
-  return new Promise<T>((resolve) => {
-    const requestId = createNewResolver(resolve);
+  return new Promise<T>((resolve, reject) => {
+    const requestId = createNewResolver(resolve, { reject });
     capture.push(structuredClone({ ...message, requestId }));
   });
 };
@@ -882,7 +890,11 @@ const onWorkerMessage = (event: MessageEvent<PhysicsDownProtocol>) => {
   const requestId = data.requestId;
 
   if (type === PhysicsProtocolType.ERROR) {
-    // @CONSIDER: should we throw an error here??? Maybe a physics setting whether to throw or not?
+    // A request's error rejects it (its caller handles it); a one-way command's has no one to
+    // reach, so it's logged
+    if (requestId !== undefined) {
+      if (rejectRequest(requestId, new Error(`Physics worker: ${data.message}`))) return;
+    }
     lerror(`Error in physics worker, message: ${data.message}`);
     return;
   } else if (type === PhysicsProtocolType.TRANSFORMS_PUSH) {
@@ -1556,7 +1568,7 @@ export const createRigidBodies = async (params: RigidBodyParams[]) => {
   } else if (physicsState.workerTarget === 'WORKER_THREAD') {
     const res = await messageWorkerAsync<CreateRigidBodiesResponse>({
       type: PhysicsProtocolType.CREATE_RIGID_BODIES,
-      params,
+      params: params.map(toWireRigidBodyParams),
     });
     throwIfCapacityExceeded(res.capacityExceeded);
     existsOrThrow(
@@ -1650,12 +1662,10 @@ export const deleteRigidBody = async (id: number) => {
   return deletedId;
 };
 
-/** Deletes a rigid body (and all child colliders). Returns the id of the deleted rigidBodyAPI (sync). Only for main thread mode. */
+/** Deletes a rigid body (and all child colliders). Returns the id of the deleted rigidBodyAPI (sync), or
+ * undefined without a world (a quiet no-op, see deleteRigidBody). Only for main thread mode. */
 export const deleteRigidBodySync = (id: number) => {
-  existsOrThrow(
-    physicsWorldEnabled,
-    'Physics world is not created. Create the world before deleting a rigid body.'
-  );
+  if (!physicsWorldEnabled) return undefined;
   let deletedId: number | undefined = undefined;
   let deletedColliderIds: number[] = [];
   let deletedJointIds: number[] = [];
@@ -1687,12 +1697,10 @@ export const deleteRigidBodySync = (id: number) => {
   return deletedId;
 };
 
-/** Deletes multiple rigid bodies (and all child colliders). Returns the ids of the deleted rigidBodyAPIs. */
+/** Deletes multiple rigid bodies (and all child colliders). Returns the ids of the deleted rigidBodyAPIs;
+ * without a world nothing happens (see deleteRigidBody). */
 export const deleteRigidBodies = async (ids: number[]) => {
-  existsOrThrow(
-    physicsWorldEnabled,
-    'Physics world is not created. Create the world before deleting rigid bodies.'
-  );
+  if (!physicsWorldEnabled) return [];
   if (!ids.length) return [];
   let deletedIds: number[] | undefined = undefined;
   let deletedColliderIds: number[] = [];
@@ -1740,12 +1748,10 @@ export const deleteRigidBodies = async (ids: number[]) => {
   return deletedIds;
 };
 
-/** Deletes multiple rigid bodies (and all child colliders). Returns the ids of the deleted rigidBodyAPIs (sync). Only for main thread mode. */
+/** Deletes multiple rigid bodies (and all child colliders). Returns the ids of the deleted rigidBodyAPIs
+ * (sync); without a world nothing happens (see deleteRigidBody). Only for main thread mode. */
 export const deleteRigidBodiesSync = (ids: number[]) => {
-  existsOrThrow(
-    physicsWorldEnabled,
-    'Physics world is not created. Create the world before deleting rigid bodies.'
-  );
+  if (!physicsWorldEnabled) return [];
   if (!ids.length) return [];
   let deletedIds: number[] | undefined = undefined;
   let deletedColliderIds: number[] = [];
@@ -1892,6 +1898,13 @@ export const readBodyPositionsSync = (ids: ArrayLike<number>, out: Float32Array)
 const toWireRigidBodyParams = <T extends RigidBodyParams | undefined>(params: T): T =>
   params?.rotation ? { ...params, rotation: toPlainRot(params.rotation) } : params;
 
+/** A JointParams for the postMessage boundary: a FIXED joint's frames as plain objects
+ * (toPlainRot). Returns the original object for every other type. */
+const toWireJointParams = (params: JointParams): JointParams =>
+  params.type === 'FIXED'
+    ? { ...params, frame1: toPlainRot(params.frame1), frame2: toPlainRot(params.frame2) }
+    : params;
+
 /** Strips collisionEventFn/contactForceEventFn from a ColliderParams before it crosses
  * the postMessage boundary (functions can't be structured-cloned — this is what would
  * otherwise throw DataCloneError), replacing them with the boolean flags EngineRapier.ts
@@ -2001,7 +2014,17 @@ export const createRigidBodyWithCollidersSync = (
   const params = rigidBody
     ? colliderParams.map((p) => ({ ...p, parentId: rigidBody.id }))
     : colliderParams;
-  return { rigidBody, colliders: params.length ? createCollidersSync(params) : [] };
+  // All or nothing: a collider that throws takes the body (and its colliders) or the colliders
+  // made before it along
+  const colls: ColliderAPI[] = [];
+  try {
+    for (let i = 0; i < params.length; i++) colls.push(createColliderSync(params[i]));
+  } catch (err) {
+    if (rigidBody) deleteRigidBodySync(rigidBody.id);
+    else if (colls.length) deleteCollidersSync(colls.map((c) => c.id));
+    throw err;
+  }
+  return { rigidBody, colliders: colls };
 };
 
 /** Create a collider. */
@@ -2120,12 +2143,10 @@ export const createCollidersSync = (params: ColliderParams[]) => {
   );
 };
 
-/** Deletes a collider. Returns the id of the deleted colliderAPI. */
+/** Deletes a collider. Returns the id of the deleted colliderAPI, or undefined without a world (a
+ * quiet no-op, see deleteRigidBody). */
 export const deleteCollider = async (id: number, wakeUp?: boolean) => {
-  existsOrThrow(
-    physicsWorldEnabled,
-    'Physics world is not created. Create the world before deleting a collider.'
-  );
+  if (!physicsWorldEnabled) return undefined;
   let deletedId: number | undefined = undefined;
   if (colliders.has(id)) colliders.delete(id);
   cleanupWorkerColliderEventFns(id);
@@ -2148,12 +2169,10 @@ export const deleteCollider = async (id: number, wakeUp?: boolean) => {
   return deletedId;
 };
 
-/** Deletes a collider. Returns the id of the deleted colliderAPI (sync). Only for main thread mode. */
+/** Deletes a collider. Returns the id of the deleted colliderAPI (sync), or undefined without a world
+ * (see deleteRigidBody). Only for main thread mode. */
 export const deleteColliderSync = (id: number, wakeUp?: boolean) => {
-  existsOrThrow(
-    physicsWorldEnabled,
-    'Physics world is not created. Create the world before deleting a collider.'
-  );
+  if (!physicsWorldEnabled) return undefined;
   let deletedId: number | undefined = undefined;
   if (colliders.has(id)) colliders.delete(id);
   cleanupWorkerColliderEventFns(id);
@@ -2201,7 +2220,7 @@ export const deleteColliders = async (allIds: number[], allWakeUps?: boolean[]) 
   }
   if (deletedIds === undefined) {
     throw new Error(
-      `Could not delete rigid bodies, the returned ids was undefined for ids: ${ids.join(', ')}.`
+      `Could not delete colliders, the returned ids was undefined for ids: ${ids.join(', ')}.`
     );
   }
   for (let i = 0; i < ids.length; i++) {
@@ -2214,12 +2233,10 @@ export const deleteColliders = async (allIds: number[], allWakeUps?: boolean[]) 
   return deletedIds;
 };
 
-/** Deletes multiple colliders. Returns the ids of the deleted colliderAPIs (sync). Only for main thread mode. */
+/** Deletes multiple colliders. Returns the ids of the deleted colliderAPIs (sync); without a world
+ * nothing happens (see deleteRigidBody). Only for main thread mode. */
 export const deleteCollidersSync = (ids: number[], wakeUps?: boolean[]) => {
-  existsOrThrow(
-    physicsWorldEnabled,
-    'Physics world is not created. Create the world before deleting colliders.'
-  );
+  if (!physicsWorldEnabled) return [];
   if (!ids.length) return [];
   let deletedIds: number[] | undefined = undefined;
   for (let i = 0; i < ids.length; i++) {
@@ -2234,7 +2251,7 @@ export const deleteCollidersSync = (ids: number[], wakeUps?: boolean[]) => {
   }
   if (deletedIds === undefined) {
     throw new Error(
-      `Could not delete rigid bodies, the returned ids was undefined for ids: ${ids.join(', ')}.`
+      `Could not delete colliders, the returned ids was undefined for ids: ${ids.join(', ')}.`
     );
   }
   for (let i = 0; i < ids.length; i++) {
@@ -2263,7 +2280,7 @@ export const createJoint = async (params: JointParams) => {
   } else if (physicsState.workerTarget === 'WORKER_THREAD') {
     const res = await messageWorkerAsync<CreateJointResponse>({
       type: PhysicsProtocolType.CREATE_JOINT,
-      params,
+      params: toWireJointParams(params),
     });
     const jointProxy = new JointProxyAPI(
       res.id,
@@ -2302,12 +2319,10 @@ export const createJointSync = (params: JointParams) => {
   );
 };
 
-/** Deletes a joint. Returns the id of the deleted jointAPI. */
+/** Deletes a joint. Returns the id of the deleted jointAPI, or undefined without a world (a quiet
+ * no-op, see deleteRigidBody). */
 export const deleteJoint = async (id: number, wakeUp?: boolean) => {
-  existsOrThrow(
-    physicsWorldEnabled,
-    'Physics world is not created. Create the world before deleting a joint.'
-  );
+  if (!physicsWorldEnabled) return undefined;
   let deletedId: number | undefined = undefined;
   if (joints.has(id)) joints.delete(id);
   if (physicsState.workerTarget === 'MAIN_THREAD') {
@@ -2329,12 +2344,10 @@ export const deleteJoint = async (id: number, wakeUp?: boolean) => {
   return deletedId;
 };
 
-/** Deletes a joint. Returns the id of the deleted jointAPI (sync). Only for main thread mode. */
+/** Deletes a joint. Returns the id of the deleted jointAPI (sync), or undefined without a world (see
+ * deleteRigidBody). Only for main thread mode. */
 export const deleteJointSync = (id: number, wakeUp?: boolean) => {
-  existsOrThrow(
-    physicsWorldEnabled,
-    'Physics world is not created. Create the world before deleting a joint.'
-  );
+  if (!physicsWorldEnabled) return undefined;
   let deletedId: number | undefined = undefined;
   if (joints.has(id)) joints.delete(id);
   if (physicsState.workerTarget === 'MAIN_THREAD') {
@@ -2670,19 +2683,20 @@ class WorldProxyAPI implements WorldAPI {
   }
 
   // --- Removal ---
+  // Fire and forget (the WorldAPI's removes return nothing), so a failed delete is logged here
   removeRigidBody(bodyOrId: RigidBodyAPI | number): void {
     const id = typeof bodyOrId === 'number' ? bodyOrId : bodyOrId.id;
-    deleteRigidBody(id);
+    deleteRigidBody(id).catch(logFailedRemove);
   }
 
   removeCollider(colliderOrId: ColliderAPI | number, wakeUp: boolean): void {
     const id = typeof colliderOrId === 'number' ? colliderOrId : colliderOrId.id;
-    deleteCollider(id, wakeUp);
+    deleteCollider(id, wakeUp).catch(logFailedRemove);
   }
 
   removeJoint(jointOrId: JointAPI | number, wakeUp: boolean): void {
     const id = typeof jointOrId === 'number' ? jointOrId : jointOrId.id;
-    deleteJoint(id, wakeUp);
+    deleteJoint(id, wakeUp).catch(logFailedRemove);
   }
 
   // --- Queries (Raycasting) ---
@@ -2879,7 +2893,7 @@ class WorldProxyAPI implements WorldAPI {
     f: (collider2: ColliderAPI) => void
   ): Promise<void> {
     const coll1Id = getCollOrRigidId(collider1);
-    if (!coll1Id) return;
+    if (coll1Id === undefined) return;
     const colliderIds = (
       await messageWorkerAsync<WorldContactPairsResponse>({
         type: PhysicsProtocolType.WORLD_CONTACT_PAIRS_WITH,

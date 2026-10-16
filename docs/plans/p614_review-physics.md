@@ -306,7 +306,7 @@ every removal the engine's `@deprecated` tags promise for 6.0.0 (p610's characte
 
 A1, A2, A3 / W1, A4's throws made quiet no-ops (with the error message fixed), R1, R2, R3, E1, M3.
 M1 and M2 go with D13 (Phase 7). Phase 0 added W7 (A1's worker half, fixed with A1) and A10 (the
-create undone when a collider throws, both targets), proposed for Phase 1 too: to confirm.
+create undone when a collider throws, both targets) to Phase 1 (confirmed 2026-10-16).
 
 **D4b, the one behaviour change:** R1's fix gives the eight `friction: 0` colliders of `scene01`
 and `thirdPersonGymScene` the friction their code asks for. Their probe hashes and the gym's
@@ -468,7 +468,8 @@ WebGPU):
   `createCollider` and A1's `createPhysicsEntity` (both stay pending: W7, then A1), E1 (the deleted
   entity gets its `COLLIDER` back). Red as `it`, green as `it.fails`; `yarn test` 570 passed and 3
   expected fails.
-- **D1-D15 confirmed** as written (2026-10-16). W7 and A10 added to D4's Phase 1 list, to confirm.
+- **D1-D15 confirmed** as written (2026-10-16). W7 and A10 added to D4's Phase 1 list, and D11's
+  shape cache dropped (below), both confirmed.
 - **The perf audit (step 2)** confirms A7, E3, R4, R5, W3, P2 and C1 at their lines, with these
   corrections and additions:
   - W3: the walk skips a slotless (`FIXED`) body before its proxy lookup, but iterates every body
@@ -513,8 +514,8 @@ WebGPU):
   What it means for D11: physics is 4-6 % of the main thread's allocations in `physicsTiers` and
   9-18 % in the gym (three's rendering is the bulk, ~167 KiB / frame in `physicsTiers`), and GC stays under 0.08 ms per frame everywhere.
   The `Ray` reuse is cheap and stays. The shape cache saves too little to be worth its
-  identity-vs-dimensions trap (§1.2): proposed, Phase 5 drops it unless its own measurement
-  disagrees (to confirm). The
+  identity-vs-dimensions trap (§1.2): Phase 5 drops it unless its own measurement disagrees
+  (confirmed 2026-10-16). The
   `MESSAGE_BATCH` copy of the whole buffer is the clearest win: with 14 bodies it costs more than
   the write-back itself (106 kB for 728 B of live slots).
 
@@ -525,6 +526,52 @@ WebGPU):
 2. A2, A3 / W1, A4, A10, R1 (D4b), R2, R3, E1, M3, each with its test (D10).
 3. `yarn verify:scenes`: only `scene01`'s and the gym's hashes move (D4b), re-recorded with the
    reason after the hand check.
+
+As built (2026-10-17):
+
+- **A1 + W7:** the worker awaits all four switches (`PhysicsWorker.ts`' `handleMessage`), so a
+  throw in any of them replies `ERROR` with the request's id. The facade's requests
+  (`messageWorkerAsync`, `messageWorkerAtStep`) are created with their `reject`, and an `ERROR`
+  with a pending `requestId` rejects it with `new Error('Physics worker: <message>')` (a plain
+  `Error`, no new export). One without a request (a one-way command's) is logged as before.
+  `messageWorkerAsync` without a worker rejects with an `Error`, not a string. Rejecting what's
+  pending when the worker goes is Phase 2's (`close()`).
+- **A2:** `createRigidBodies` posts `toWireRigidBodyParams` per body; a new `toWireJointParams`
+  makes a `FIXED` joint's `frame1` / `frame2` plain. No other request posts a rotation unconverted.
+- **A3 / W1:** `=== undefined` / `!== undefined`. No other truthy id check in `features/physics/`
+  or `features/character/`.
+- **A4:** the eight deletes return `undefined` / `[]` without a world. The sync ones still throw
+  in `WORKER_THREAD` mode (a misuse, not a stale id), and an unknown id was already quiet in the
+  backend (a debug-env warning). `WorldProxyAPI`'s `remove*` log a rejected delete
+  (`logFailedRemove`); `deleteColliders(Sync)`' error says "colliders".
+- **A10:** `createRigidBodyWithCollidersSync` makes the colliders one by one and, when one throws,
+  deletes the body (which takes its colliders) or the colliders made before it. The worker's
+  `CREATE_PHYSICS_ENTITY` does the same (`createEntityColliders` in `PhysicsSwitchRigid.ts`) and
+  frees the body's slot. Still partial, left for A5's dedupe in Phase 4: `createColliders` and
+  `CREATE_COLLIDERS` alone (no entity, no body).
+- **R1, R2, R3** as found. R2 has no test: its branch needs a body handle Rapier no longer has,
+  which the API can't make.
+- **E1:** after the create's `await`, `createPhysicsEntityNow` checks `world.isAlive(entityId)`.
+  For a deleted entity it deletes what the create made (`deleteCreatedBodyAndColliders`) and
+  resolves with the dead id; `createPhysicsEntity`'s `@remarks` say so. The ECS side (a component
+  added to a deleted entity is stored) is filed: `docs/issues/ecs-components-on-deleted-entities.md`.
+- **M3:** one integer check after all three branches (none given, `nrows` only, `ncols` only), and
+  null with the import and node named. Seen on the way, for Phase 7 (D13): with only `nrows` given,
+  `nCols = totalVertices / nRows` doesn't match a `(rows + 1) × (cols + 1)` grid.
+- **Tests (D10):** `PhysicsWorkerRequests.test.ts` (`WORKER_THREAD`, in-process worker: A1 × 2, A2,
+  A3, A10, E1), `PhysicsAPI.test.ts` (`MAIN_THREAD`: A10 × 2, A4),
+  `backends/rapier/EngineRapier.test.ts` (W1 through the real switch, R1, R3),
+  `import/MeshColliderGeometry.test.ts` (M3 × 2 and a square grid). Each bug's test fails on
+  Phase 0's code (checked by stashing the fixes). `yarn test`: 78 files, 586 passed.
+- **The scene runner:** 95 of 104 pass. The 9 that fail are D4b's: `scene01`, `scene01V2` and
+  `thirdPersonGymScene` in the three debug configurations (probe hashes and snapshots; the gym's
+  character path hash too). That's **11 colliders in 3 scenes**, not §1.2's 8 in 2: `scene01V2.ts`
+  has two (`:126`, `:169`) and the gym a seventh (`:654`). In the gym the players pass through the
+  same locomotion states as before (the runner's note) and end on the floor elsewhere; nothing
+  falls through. No other scene moved, so no scene had a worker error hidden by A1 (§4 risk 4).
+- **Step 3 waits for the hand check** (D4b, yours): the gym's moving platforms and carousels, and
+  `scene01` / `scene01V2`, in both worker targets. Then
+  `yarn verify:scenes --update --only scene01,scene01V2,thirdPersonGymScene`.
 
 ### Phase 2: the transport and the stop (D5, D6)
 

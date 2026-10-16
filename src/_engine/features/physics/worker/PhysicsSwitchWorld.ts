@@ -160,7 +160,7 @@ export const physicsSwitchWorld = async (
       const colliderIds: number[] = [];
       physicsWorldAPI.contactPairsWithSync(data.colliderId, (collider2) => {
         const coll2Id = getCollOrRigidId(collider2);
-        if (coll2Id) colliderIds.push(coll2Id);
+        if (coll2Id !== undefined) colliderIds.push(coll2Id);
       });
       return sendMessage({ type: data.type, colliderIds }, data);
     }
@@ -169,7 +169,7 @@ export const physicsSwitchWorld = async (
       const colliderIds: number[] = [];
       physicsWorldAPI.intersectionPairsWithSync(data.colliderId, (collider2) => {
         const coll2Id = getCollOrRigidId(collider2);
-        if (coll2Id) colliderIds.push(coll2Id);
+        if (coll2Id !== undefined) colliderIds.push(coll2Id);
       });
       return sendMessage({ type: data.type, colliderIds }, data);
     }

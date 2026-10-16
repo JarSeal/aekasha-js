@@ -84,19 +84,26 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
   try {
     const subType = getSubType(type);
     if (subType) {
+      // Each awaited: a switch's throw must reach the catch below, which replies ERROR
       switch (subType) {
         case 'WORLD':
           // WORLD
           return await physicsSwitchWorld(data, physicsWorldAPI, sendMessage);
         case 'RIGID':
           // RIGID BODY
-          return physicsSwitchRigid(data, physicsWorldAPI, engAPI, sendMessage, transformBuffer);
+          return await physicsSwitchRigid(
+            data,
+            physicsWorldAPI,
+            engAPI,
+            sendMessage,
+            transformBuffer
+          );
         case 'COLL':
           // COLLIDER
-          return physicsSwitchColl(data, physicsWorldAPI, engAPI, sendMessage);
+          return await physicsSwitchColl(data, physicsWorldAPI, engAPI, sendMessage);
         case 'JOINT':
           // JOINT
-          return physicsSwitchJoint(data, physicsWorldAPI, engAPI, sendMessage);
+          return await physicsSwitchJoint(data, physicsWorldAPI, engAPI, sendMessage);
         default:
           sendMessage(
             {

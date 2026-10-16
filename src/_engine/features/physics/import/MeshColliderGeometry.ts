@@ -120,13 +120,14 @@ const deriveMeshDependentColliderFields = (
     } else if (!nRows && !nCols) {
       nRows = Math.sqrt(totalVertices) - 1;
       nCols = nRows;
-      if (!Number.isInteger(nRows)) {
-        lerror(
-          `The HEIGHTFIELD importing failed because the squareroot of the totalVertices count (${totalVertices}) is not an integer (${nRows}). The vertices are either unindexed or the grid's number of columns does not match the number of rows. Index the vertices, use shade smooth, or provide the ncols and nrows as custom properties.`
-        );
-        geo.dispose();
-        return colliderParams;
-      }
+    }
+    // Skipped like the checks above: params without heights would throw in the backend
+    if (!Number.isInteger(nRows) || !Number.isInteger(nCols)) {
+      lerror(
+        `Import "${info.importId}", node "${info.nodeName}": HEIGHTFIELD collider skipped, the grid of ${totalVertices} vertices gives no whole number of rows and columns (${nRows} × ${nCols}). The vertices are either unindexed or the grid's number of columns does not match the number of rows. Index the vertices, use shade smooth, or provide the ncols and nrows as custom properties.`
+      );
+      geo.dispose();
+      return null;
     }
     const sizeX = nRows + 1;
     const sizeZ = nCols + 1;
