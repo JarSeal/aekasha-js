@@ -1272,6 +1272,41 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
     567 passed, the `@example` check included), the docs ratchet (`features/postfx` 25 / 25,
     `features/viewports` 16 / 16, `schemas` 47 / 121). `docs.json` and the API baseline are
     recorded at the end of the phase.
+- **Section 3 (step 3, the `perf-auditor` pass):**
+  - **Clean:** no per-frame allocation in `renderViewports` and its callees (section 1's
+    `try` / `finally` and `renderViewport` included: module-level functions, an indexed loop, the
+    scratch objects), the layout, the quad material and the render target only redone when they
+    changed, one count check with no viewport enabled. `getActivePostFxPipeline` reads fields and
+    flags, `updatePostFxSize` uses its scratch vectors, and no mode rebuilds the chain per frame
+    (the active camera changes only in `setActiveCamera` / `disposeCamera`, the debug camera
+    through them). Snapshots read the provider twice on purpose (the second sizes the passes).
+  - **Fixed, a bug the audit found (VP6):** `syncCameraAspect` cached the camera and aspect it
+    last applied, but the camera resizer (`updateAllCameraAspectRatios`) sets every camera
+    entity back to the canvas's aspect on a canvas resize, so a viewport syncing a camera
+    entity's aspect (not the main camera) rendered stretched from then on, also when its slot's
+    size didn't change. It now compares with the camera's own projection (a perspective's
+    `aspect`, an orthographic's frustum width with a 1e-9 relative tolerance): a compare per
+    frame, `updateProjectionMatrix` only on a difference; the cache fields went. The prop's doc
+    says so. Tests: `Viewports.test.ts` +2 (perspective and orthographic, a write from outside
+    between two frames, no update when it matches), both checked to fail with a cache.
+  - **Listed, not fixed:**
+    - The camera resizer rebuilds every camera entity's projection on each resize event, the
+      aspect changed or not (a few µs a resize; a mount's size source reports the window's
+      `resize` and the `ResizeObserver` both). `runResizers`' `Object.keys`, `getCanvasSize`'s
+      object and the resizer's `for…of` tuples: one small allocation each per resize. None per
+      frame: not worth the state.
+    - The per-viewport tone mapping and colour space restore inside the loop repeats the
+      `finally`'s: property writes, needed between viewports anyway.
+  - **For Phase 8 to file:**
+    - **PostFX:** a change of the active camera (a gameplay camera cut, the debug camera's F1)
+      rebuilds the whole chain, a shader recompile (a one-frame hitch with GTAO). Swapping the
+      scene pass's camera without a rebuild would need the pass contract to change:
+      `PostFxPassContext.camera` is handed to the passes, which bake it in (GTAO). An issue file.
+    - **p618 (`_dbg__ProfilerSources.ts`):** the PostFX source's `availability()` calls
+      `getRenderPipeline()`, which builds the chain; in an editor view, where `renderScene()`
+      doesn't read the provider, that poll builds the suspended root scene's chain. A
+      side-effect-free check (`isPostFxEnabled` and an enabled pass) would do.
+  - **Checks:** `tsc` (both), the folder's lint, `yarn test` (74 files, 569 passed).
 
 ### Phase 8: the Hub, CLAUDE.md, readme, and what's filed
 

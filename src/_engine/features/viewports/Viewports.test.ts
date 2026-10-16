@@ -163,6 +163,40 @@ describe('renderViewports', () => {
   });
 });
 
+describe('syncCameraAspect', () => {
+  beforeEach(() => deleteViewport('vp'));
+
+  // The slots are 100 × 50 (the fake HUD's `add`): aspect 2
+  it("sets a perspective camera's aspect back after something else changed it", () => {
+    const camera = new THREE.PerspectiveCamera(50, 1);
+    createViewport({ id: 'vp', scene: new THREE.Scene(), camera, syncCameraAspect: true });
+    render(createRenderer());
+    expect(camera.aspect).toBe(2);
+
+    // The camera resizer gives a camera entity the canvas's aspect, the slot's size unchanged
+    camera.aspect = 800 / 600;
+    camera.updateProjectionMatrix();
+    render(createRenderer());
+    expect(camera.aspect).toBe(2);
+  });
+
+  it("keeps an orthographic camera's frustum width and leaves a matching one alone", () => {
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1);
+    createViewport({ id: 'vp', scene: new THREE.Scene(), camera, syncCameraAspect: true });
+    render(createRenderer());
+    expect([camera.left, camera.right]).toEqual([-2, 2]);
+
+    const update = vi.spyOn(camera, 'updateProjectionMatrix');
+    render(createRenderer());
+    expect(update).not.toHaveBeenCalled();
+
+    camera.left = -4 / 3;
+    camera.right = 4 / 3;
+    render(createRenderer());
+    expect([camera.left, camera.right]).toEqual([-2, 2]);
+  });
+});
+
 describe('the layer', () => {
   it("disconnects its body observer once the layer has left the document (a mount's unmount)", () => {
     createViewport({ id: 'vp', scene: new THREE.Scene(), camera: new THREE.PerspectiveCamera() });

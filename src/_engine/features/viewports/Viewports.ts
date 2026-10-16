@@ -98,8 +98,9 @@ export type ViewportProps = {
    * persists across scene changes. */
   sceneId?: string;
   /** Default false. Keeps a perspective camera's aspect (or an orthographic camera's frustum
-   * width) matched to the viewport rect. Don't use it with a camera the main view also renders
-   * with (eg. getMainCamera()). */
+   * width) matched to the viewport rect, checked every frame (a camera entity's is set back
+   * after the camera resizer gives it the canvas's). Don't use it with a camera the main view
+   * also renders with (eg. getMainCamera()). */
   syncCameraAspect?: boolean;
   /** Called every frame before the viewport renders (only while it is enabled and on the
    * canvas). */
@@ -154,9 +155,6 @@ type ViewportState = {
   /** Tone mapping and output colour space the quad material was built with (null = never). */
   builtToneMapping: THREE.ToneMapping | null;
   builtColorSpace: string | null;
-  /** The camera and aspect syncCameraAspect last applied. */
-  syncedCamera: THREE.Camera | null;
-  syncedAspect: number;
   /** Removes its render target from the GPU memory tab's sources (debug env only). */
   removeGPUMemorySource: () => void;
 };
@@ -358,8 +356,6 @@ export const createViewport = (props: ViewportProps): Viewport => {
     uvScale: uniform(new THREE.Vector2(1, 1)),
     builtToneMapping: null,
     builtColorSpace: null,
-    syncedCamera: null,
-    syncedAspect: 0,
     removeGPUMemorySource: registerGPUMemorySource({
       id: `viewport.${props.id}`,
       label: `Viewport "${props.id}"`,
@@ -593,14 +589,17 @@ const layoutViewports = (renderer: THREE.Renderer, pixelRatio: number) => {
  * centre, keeping its height), matched to the viewport rect. */
 const syncCameraAspect = (vp: ViewportState, camera: THREE.Camera) => {
   const aspect = vp.devWidth / vp.devHeight;
-  if (camera === vp.syncedCamera && aspect === vp.syncedAspect) return;
-  vp.syncedCamera = camera;
-  vp.syncedAspect = aspect;
+  // Checked against the camera, not a cache: the camera resizer sets an ECS camera back to the
+  // canvas's aspect on every canvas resize, whatever the viewport's rect did
   if (camera instanceof THREE.PerspectiveCamera) {
+    if (camera.aspect === aspect) return;
     camera.aspect = aspect;
     camera.updateProjectionMatrix();
   } else if (camera instanceof THREE.OrthographicCamera) {
     const halfWidth = ((camera.top - camera.bottom) / 2) * aspect;
+    // A tolerance: the centre recomputed from the written edges can differ in the last bits
+    if (Math.abs((camera.right - camera.left) / 2 - halfWidth) <= Math.abs(halfWidth) * 1e-9)
+      return;
     const centerX = (camera.left + camera.right) / 2;
     camera.left = centerX - halfWidth;
     camera.right = centerX + halfWidth;
