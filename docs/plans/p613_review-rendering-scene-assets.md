@@ -1242,6 +1242,36 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
     (the third is a type check: `tsc`).
   - **Checks:** `tsc` (both), the folder's and `Camera.ts`' lint, `yarn test` (74 files, 567
     passed, the `@example` check included).
+- **Section 2 (step 2):**
+  - **H1:** the `_DONE_p070`, `_DONE_p071` and `p080` paths gone from `PostFX.ts`,
+    `PostFXTypes.ts` and `Viewports.ts` (what they explained kept), and `installPostFx`'s stale
+    `PostFX/PostFXFeature.ts`. `PostFxSchema.ts`' two (p619's file) are left: Phase 8 files them.
+  - **Dead (D7's rule, as in Phase 4):** `togglePostFx`, `togglePostFxPass` and
+    `invalidatePostFxPipeline` removed: no caller, on no entry, nothing in the Hub.
+  - **Entry additions (chosen in review: the types public signatures name go on the entry):**
+    `aekasha/viewports` gets `setViewportInteractive` (the axes gizmo was its only caller) and the
+    types `ViewportAnchor`, `ViewportRect` (`ViewportProps` names them); `aekasha/postfx` the types
+    `PostFxPassContext`, `PostFxPassApi` (`PostFxPassFn` names them), `PostFxLiveParams`
+    (`PostFxPassInfo`) and `PostFxPassProps` (`SceneData.postFx`); `aekasha/schemas` the type
+    `PostFxParamMeta` (`PostFxPassInfo.paramsMeta`), with a summary in its schema file.
+  - **JSDoc:** the entry's functions have `@example`s (`createViewport`, `deleteViewport`,
+    `setViewportEnabled`, `setViewportInteractive`, `getViewport`, `invalidateViewportLayout`,
+    `getViewportPointerNDC`, `setPostFxEnabled`, `setPostFxPassEnabled`, `getPostFxPasses`,
+    `setPostFxPassParam`, and `PostFxPassFn`: a pass file's `fxNode`); the four viewport types,
+    `PostFxPassInfo`, `PostFxPassContext`, `PostFxPassApi` and the stats types document their
+    fields; what's on no entry is `@internal` (`getActivePostFxPipeline`, `buildPostFxForScene`,
+    `isPostFxEnabled`, `disposePostFx`, `addPostFxChainListener`, `createPostFXDebugGUI`,
+    `getPostFxBuiltChain`, `PostFxBuiltChain`, and `PostFxStats` / `PostFxPassStats`, whose
+    `getPostFxPassStats` is on no entry either: p618's); the H2 form gone from both folders.
+    `createViewport` says it `@throws` without the feature; `setPostFxEnabled` has a `@remarks`
+    (the app config wins).
+  - **For Phase 8 (the Hub):** the viewports guide's `scene: getRootScene()` doesn't type-check
+    (`Scene | null`; the `@example` writes `getRootScene()!`), and it can name
+    `setViewportInteractive` now.
+  - **Checks:** `tsc` (both), the two folders' and the schema files' lint, `yarn test` (74 files,
+    567 passed, the `@example` check included), the docs ratchet (`features/postfx` 25 / 25,
+    `features/viewports` 16 / 16, `schemas` 47 / 121). `docs.json` and the API baseline are
+    recorded at the end of the phase.
 
 ### Phase 8: the Hub, CLAUDE.md, readme, and what's filed
 

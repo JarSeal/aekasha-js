@@ -1,5 +1,5 @@
 /**
- * Viewports (docs/plans/p080_multi-viewport-rendering-and-axis-gizmo.md): extra rectangles
+ * Viewports: extra rectangles
  * rendered over the main canvas after the main render (and after PostFX), each with its own
  * scene and camera (picture-in-picture, minimaps, item previews, the debug axes gizmo).
  *
@@ -39,11 +39,27 @@ import type { FeatureContext } from '../../kernel/init/Features';
 import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../ui/HUD';
 import styles from './Viewports.module.scss';
 
-export type ViewportRect = { x: number; y: number; width: number; height: number };
+/** A rectangle relative to the canvas's top-left corner (y down): a viewport's `rect` placement
+ * and its rendered {@link Viewport.rect}. */
+export type ViewportRect = {
+  /** Left edge, from the canvas's left. */
+  x: number;
+  /** Top edge, from the canvas's top. */
+  y: number;
+  /** Width. */
+  width: number;
+  /** Height. */
+  height: number;
+};
 
+/** The canvas corner a viewport's slot stacks in (its `anchor`), when it has no `rect`. */
 export type ViewportAnchor = 'TOP_RIGHT' | 'TOP_LEFT' | 'BOTTOM_RIGHT' | 'BOTTOM_LEFT';
 
+/** What {@link createViewport} takes: the viewport's scene and camera, its placement (a corner
+ * stack, or a `rect`) and how it renders. Kept as given: {@link Viewport.props}. */
 export type ViewportProps = {
+  /** Unique among the viewports (a second one with the id replaces the first, with a warning).
+   * Also names its slot element: `aekViewportsLayer_slot_<id>`. */
   id: string;
   /** A private scene, or getRootScene() for a picture-in-picture of the game. A PiP of the
    * game scene renders it twice per frame (shadow maps, onBeforeRender hooks, draw counts):
@@ -90,13 +106,19 @@ export type ViewportProps = {
   onBeforeRender?: (vp: Viewport, delta: number) => void;
 };
 
+/** A viewport, as {@link createViewport} and {@link getViewport} return it: a live view of its
+ * state (read only: change it through the setters). */
 export type Viewport = {
+  /** Its `props.id`. */
   readonly id: string;
+  /** The props it was created with. */
   readonly props: Readonly<ViewportProps>;
   /** The rendered rect in CSS px, relative to the canvas top-left corner, snapped to whole
    * device pixels (before cropping to the canvas). 0×0 until its first layout. */
   readonly rect: Readonly<ViewportRect>;
+  /** Whether it renders ({@link setViewportEnabled}). */
   readonly enabled: boolean;
+  /** Whether its slot takes pointer events ({@link setViewportInteractive}). */
   readonly interactive: boolean;
   /** The viewport's slot element (listen to pointer events on it when interactive). */
   readonly slotElem: HTMLElement;
@@ -259,9 +281,28 @@ const createSlotCmp = (props: ViewportProps) => {
 
 /**
  * Creates a viewport: an extra rect with its own scene and camera, rendered over the main
- * canvas every frame after the main render (and PostFX).
- * @param props (object) {@link ViewportProps}
- * @returns (object) {@link Viewport}
+ * canvas every frame after the main render (and PostFX). Its slot element is added to the
+ * viewports layer at once; the render target is made on its first layout. An existing viewport
+ * with the same id is deleted first (with a warning).
+ * @throws When the `viewports()` feature isn't installed.
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ * import { createViewport } from 'aekasha/viewports';
+ *
+ * // A minimap: a top-down camera over the game scene, in the bottom-left corner
+ * const mapCamera = new THREE.OrthographicCamera(-50, 50, 50, -50, 0.1, 500);
+ * mapCamera.position.set(0, 200, 0);
+ * mapCamera.lookAt(0, 0, 0);
+ * createViewport({
+ *   id: 'minimap',
+ *   scene: getRootScene()!, // The game's own scene (there once the engine has booted)
+ *   camera: mapCamera,
+ *   anchor: 'BOTTOM_LEFT',
+ *   size: { width: '12rem', height: '12rem' },
+ *   sceneId: 'level1',
+ * });
+ * ```
  */
 export const createViewport = (props: ViewportProps): Viewport => {
   if (!isInstalled) {
@@ -333,8 +374,14 @@ export const createViewport = (props: ViewportProps): Viewport => {
 };
 
 /**
- * Deletes a viewport and disposes its render target, quad material and slot element.
- * @param id (string) viewport id
+ * Deletes a viewport and disposes its render target, quad material and slot element. An unknown
+ * id does nothing. A viewport with a `sceneId` is deleted on that scene's exit without it.
+ * @example
+ * ```ts
+ * import { deleteViewport } from 'aekasha/viewports';
+ *
+ * deleteViewport('minimap');
+ * ```
  */
 export const deleteViewport = (id: string) => {
   const index = viewports.findIndex((vp) => vp.id === id);
@@ -364,9 +411,15 @@ export const deleteSceneViewports = (sceneId: string | undefined) => {
 
 /**
  * Enables or disables a viewport. A disabled viewport costs nothing per frame, keeps its
- * render target (so re-enabling it is cheap), and its slot is hidden (`display: none`).
- * @param id (string) viewport id
- * @param enabled (boolean)
+ * render target (so re-enabling it is cheap), and its slot is hidden (`display: none`). An
+ * unknown id does nothing.
+ * @example
+ * ```ts
+ * import { setViewportEnabled } from 'aekasha/viewports';
+ *
+ * // Hide the minimap while a menu is open
+ * setViewportEnabled('minimap', false);
+ * ```
  */
 export const setViewportEnabled = (id: string, enabled: boolean) => {
   const vp = viewports.find((v) => v.id === id);
@@ -379,9 +432,14 @@ export const setViewportEnabled = (id: string, enabled: boolean) => {
 
 /**
  * Sets whether a viewport's slot takes pointer events (true) or lets them through to the
- * canvas (false).
- * @param id (string) viewport id
- * @param interactive (boolean)
+ * canvas (false), as its `interactive` prop does at creation. An unknown id does nothing.
+ * @example
+ * ```ts
+ * import { setViewportInteractive } from 'aekasha/viewports';
+ *
+ * // The minimap takes clicks only while the map mode is on
+ * setViewportInteractive('minimap', true);
+ * ```
  */
 export const setViewportInteractive = (id: string, interactive: boolean) => {
   const vp = viewports.find((v) => v.id === id);
@@ -391,9 +449,14 @@ export const setViewportInteractive = (id: string, interactive: boolean) => {
 };
 
 /**
- * Returns a viewport by id.
- * @param id (string) viewport id
- * @returns (object | undefined) {@link Viewport}
+ * Returns a viewport by id, or `undefined` when there is none.
+ * @example
+ * ```ts
+ * import { getViewport } from 'aekasha/viewports';
+ *
+ * const minimap = getViewport('minimap');
+ * if (minimap?.enabled) console.log(minimap.rect.width, minimap.rect.height);
+ * ```
  */
 export const getViewport = (id: string): Viewport | undefined =>
   viewports.find((vp) => vp.id === id);
@@ -402,6 +465,14 @@ export const getViewport = (id: string): Viewport | undefined =>
  * Re-reads every viewport's slot box before the next render. Call it after changing something
  * that moves or resizes slots without a transition, a canvas resize or a body class change
  * (eg. a class on a slot's ancestor).
+ * @example
+ * ```ts
+ * import { invalidateViewportLayout } from 'aekasha/viewports';
+ *
+ * // A class on the HUD moves the corner stacks (no transition)
+ * hudElem.classList.add('compact');
+ * invalidateViewportLayout();
+ * ```
  */
 export const invalidateViewportLayout = () => {
   isLayoutDirty = true;
@@ -410,10 +481,23 @@ export const invalidateViewportLayout = () => {
 /**
  * Writes a pointer event's position as normalized device coordinates of a viewport (-1..1,
  * y up, the same as the viewport camera's), eg. for raycasting into the viewport's scene.
- * @param id (string) viewport id
- * @param e (PointerEvent | MouseEvent)
- * @param out (THREE.Vector2) target
- * @returns (boolean) whether the pointer is inside the viewport rect (`out` is written anyway)
+ * @param e the pointer or mouse event
+ * @param out written with the coordinates
+ * @returns whether the pointer is inside the viewport rect (`out` is written anyway); false
+ * without writing `out` for an unknown id or a viewport not laid out yet
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ * import { getViewport, getViewportPointerNDC } from 'aekasha/viewports';
+ *
+ * const ndc = new THREE.Vector2();
+ * const raycaster = new THREE.Raycaster();
+ * getViewport('minimap')?.slotElem.addEventListener('pointerdown', (e) => {
+ *   if (!getViewportPointerNDC('minimap', e, ndc)) return;
+ *   raycaster.setFromCamera(ndc, mapCamera);
+ *   const hits = raycaster.intersectObjects(mapScene.children);
+ * });
+ * ```
  */
 export const getViewportPointerNDC = (
   id: string,

@@ -21,6 +21,8 @@ const PostFxParamMetaSchema = z
   })
   .partial();
 
+/** A PostFX pass JSON's debugger hints for one param (`paramsMeta`'s values): its label, slider
+ * bounds, dropdown options, or that the debugger leaves it out. */
 export type PostFxParamMeta = z.infer<typeof PostFxParamMetaSchema>;
 
 const PostFxOverridesSchema = z.object({

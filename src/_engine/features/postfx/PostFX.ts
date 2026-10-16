@@ -1,5 +1,5 @@
 /**
- * PostFX system (docs/plans/_DONE_p070_post-fx-system.md): an ordered, per-scene chain of authored
+ * PostFX system: an ordered, per-scene chain of authored
  * PostFX passes (a `<name>.postFx.json` + `<name>.tsl.ts` pair each), rendered through a TSL
  * `RenderPipeline` instead of `renderer.render()` while it is switched on.
  *
@@ -44,22 +44,29 @@ type PostFxPassState = {
 };
 
 /**
- * How a PostFX pass takes param edits: 'setParam' live through its own setParam, 'rebuild' by
- * rebuilding the chain (a shader recompile), 'unknown' while it has not been built (disabled, or
- * no frame rendered with it yet), since only a build shows whether it returns a setParam.
+ * How a PostFX pass takes param edits ({@link PostFxPassInfo}'s `liveParams`): `'setParam'` live
+ * through its own `setParam`, `'rebuild'` by rebuilding the chain (a shader recompile),
+ * `'unknown'` while it has not been built (disabled, or no frame rendered with it yet), since only
+ * a build shows whether it returns a `setParam`.
  */
 export type PostFxLiveParams = 'setParam' | 'rebuild' | 'unknown';
 
-/** A PostFX pass as listed by getPostFxPasses() (for the debugger, p071). */
+/** A PostFX pass of the current scene's chain, as {@link getPostFxPasses} lists it: a snapshot,
+ * which later edits don't change. */
 export type PostFxPassInfo = {
+  /** The pass's id (its `*.postFx.json`'s `id`). */
   id: string;
   /** Position in the scene's chain (execution order). */
   index: number;
+  /** Whether the pass is in the chain (a disabled one costs nothing). */
   enabled: boolean;
+  /** The pass JSON's debug data (the debugger's name and description). */
   debugData?: DebugData;
   /** The current (live) param values, a copy. */
   params: Record<string, unknown>;
+  /** The pass JSON's debugger hints per param key (label, slider range, options, hidden). */
   paramsMeta?: Record<string, PostFxParamMeta>;
+  /** How the pass takes a param edit. */
   liveParams: PostFxLiveParams;
 };
 
@@ -83,7 +90,7 @@ const curSize = new THREE.Vector2();
 const loadedPostFxFiles = new Map<string, Record<string, unknown>>();
 
 /**
- * Installs the PostFX system (the `postFx()` feature's install, PostFX/PostFXFeature.ts): reads
+ * Installs the PostFX system (the `postFx()` feature's install, PostFXFeature.ts): reads
  * `AppConfig.postFx.enabled`. Nothing is built here: the pipeline is only created the first time
  * a scene's PostFX chain is actually rendered.
  * @internal
@@ -259,7 +266,7 @@ const updatePostFxSize = (renderer: THREE.WebGPURenderer) => {
  * be rendered directly (PostFX is switched off, or no PostFX pass is enabled). (Re)builds the
  * pipeline when needed, so this is meant to be called once per frame: it's the render pipeline
  * seam's provider (`postFx()`), which renderScene() and snapshots read.
- * @returns (THREE.RenderPipeline | null)
+ * @internal
  */
 export const getActivePostFxPipeline = () => {
   if (!isMasterEnabled || !isEnabled || !enabledPostFxPassCount) return null;
@@ -277,9 +284,11 @@ export const getActivePostFxPipeline = () => {
 
 /**
  * Sets up the PostFX pass chain of a scene (from its scene options: `postFx` and
- * `postFxEnabled`), replacing (and disposing) the previous one.
- * @param sceneId (string) scene id
- * @returns ({@link PostFxPassInfo}[]) the scene's PostFX passes
+ * `postFxEnabled`), replacing (and disposing) the previous one. The `created` scene hook calls it
+ * once the passes' files have loaded (loadScenePostFxFilesAsync); a pass whose file didn't load
+ * is left out with a warning.
+ * @internal
+ * @returns the scene's PostFX passes
  */
 export const buildPostFxForScene = (sceneId: string) => {
   disposePostFx();
@@ -303,9 +312,18 @@ export const buildPostFxForScene = (sceneId: string) => {
 };
 
 /**
- * Switches the current scene's whole PostFX stack on or off (live). Has no effect when
- * AppConfig.postFx.enabled is false.
- * @param enabled (boolean)
+ * Switches the current scene's whole PostFX stack on or off (live). Off renders the frame
+ * directly and keeps the pipeline built, so switching it back on doesn't recompile. The next
+ * scene load sets it again from that scene's `postFxEnabled`.
+ * @remarks Has no effect while `AppConfig.postFx.enabled` is false (it warns): the app config
+ * wins.
+ * @example
+ * ```ts
+ * import { setPostFxEnabled } from 'aekasha/postfx';
+ *
+ * // A graphics setting: render the scene without its PostFX chain
+ * setPostFxEnabled(false);
+ * ```
  */
 export const setPostFxEnabled = (enabled: boolean) => {
   if (enabled && !isMasterEnabled) {
@@ -316,18 +334,9 @@ export const setPostFxEnabled = (enabled: boolean) => {
 
 /**
  * Whether the current scene's PostFX stack is switched on (and allowed by the app config).
- * @returns boolean
+ * @internal
  */
 export const isPostFxEnabled = () => isMasterEnabled && isEnabled;
-
-/**
- * Toggles the current scene's whole PostFX stack on / off.
- * @returns boolean (the new state)
- */
-export const togglePostFx = () => {
-  setPostFxEnabled(!isEnabled);
-  return isPostFxEnabled();
-};
 
 const getPostFxPass = (id: string) => {
   const postFxPass = postFxPasses.find((p) => p.id === id);
@@ -338,9 +347,16 @@ const getPostFxPass = (id: string) => {
 };
 
 /**
- * Adds or removes a PostFX pass from the chain (rebuilds the chain on the next frame).
- * @param id (string) PostFX pass id
- * @param enabled (boolean)
+ * Adds a PostFX pass of the current scene's chain to the rendered chain, or takes it out. The
+ * chain is rebuilt on the next frame that renders it (a shader recompile, so a one-frame hitch);
+ * a disabled pass costs nothing. An id the current scene doesn't have warns.
+ * @param enabled whether the pass is in the chain
+ * @example
+ * ```ts
+ * import { setPostFxPassEnabled } from 'aekasha/postfx';
+ *
+ * setPostFxPassEnabled('ambientOcclusion', false);
+ * ```
  */
 export const setPostFxPassEnabled = (id: string, enabled: boolean) => {
   const postFxPass = getPostFxPass(id);
@@ -351,20 +367,17 @@ export const setPostFxPassEnabled = (id: string, enabled: boolean) => {
 };
 
 /**
- * Toggles a PostFX pass in / out of the chain.
- * @param id (string) PostFX pass id
- * @returns boolean (the new state, false if the PostFX pass was not found)
- */
-export const togglePostFxPass = (id: string) => {
-  const postFxPass = getPostFxPass(id);
-  if (!postFxPass) return false;
-  setPostFxPassEnabled(id, !postFxPass.enabled);
-  return postFxPass.enabled;
-};
-
-/**
- * Returns the current scene's PostFX passes in chain order.
- * @returns ({@link PostFxPassInfo}[])
+ * Returns the current scene's PostFX passes in chain order, the disabled ones included: a new
+ * array of snapshots per call (their `params` copied). Empty before a scene with a chain is
+ * current.
+ * @example
+ * ```ts
+ * import { getPostFxPasses } from 'aekasha/postfx';
+ *
+ * for (const postFxPass of getPostFxPasses()) {
+ *   console.log(postFxPass.index, postFxPass.id, postFxPass.enabled);
+ * }
+ * ```
  */
 export const getPostFxPasses = (): PostFxPassInfo[] =>
   postFxPasses.map((p, index) => ({
@@ -378,11 +391,18 @@ export const getPostFxPasses = (): PostFxPassInfo[] =>
   }));
 
 /**
- * Sets a PostFX pass param live. Goes through the PostFX pass's own setParam when it has one,
- * otherwise the chain is rebuilt (the param is only read at build time).
- * @param id (string) PostFX pass id
- * @param key (string) param key
- * @param value (unknown) param value
+ * Sets a param of a PostFX pass of the current scene's chain, live. Goes through the pass's own
+ * `setParam` when its build returned one, otherwise the chain is rebuilt on the next frame (the
+ * param is only read at build time). The value lasts until the scene is loaded again (the
+ * scene data isn't changed). An id the current scene doesn't have warns.
+ * @param key the param's key in the pass JSON's `params`
+ * @param value the new value, of the type the pass reads
+ * @example
+ * ```ts
+ * import { setPostFxPassParam } from 'aekasha/postfx';
+ *
+ * setPostFxPassParam('ambientOcclusion', 'radius', 0.5);
+ * ```
  */
 export const setPostFxPassParam = (id: string, key: string, value: unknown) => {
   const postFxPass = getPostFxPass(id);
@@ -396,12 +416,11 @@ export const setPostFxPassParam = (id: string, key: string, value: unknown) => {
   }
 };
 
-/** Forces the PostFX chain to be rebuilt on the next rendered frame. */
-export const invalidatePostFxPipeline = () => {
-  needsRebuild = true;
-};
-
-/** Disposes the PostFX pipeline, its nodes, and the current scene's PostFX pass list. */
+/**
+ * Disposes the PostFX pipeline, its nodes, and the current scene's PostFX pass list (the `exit`
+ * scene hook, and the start of buildPostFxForScene).
+ * @internal
+ */
 export const disposePostFx = () => {
   disposePostFxNodes();
   pipeline?.dispose();
@@ -415,9 +434,10 @@ export const disposePostFx = () => {
 };
 
 /**
- * Adds a listener called after the PostFX chain is (re)built or disposed.
- * @param listener (() => void)
- * @returns (() => void) a function that removes the listener
+ * Adds a listener called after the PostFX chain is (re)built or disposed (the debugger's tab and
+ * the profiler).
+ * @internal
+ * @returns the remover
  */
 export const addPostFxChainListener = (listener: () => void) => {
   postFxChainListeners.add(listener);
@@ -430,15 +450,19 @@ export const addPostFxChainListener = (listener: () => void) => {
 type PostFXGUIModule = typeof import('./debug/_dbg__PostFX');
 let debugGUI: DebugModuleRef<PostFXGUIModule> | null = null;
 
-/** Creates the PostFX debugger tab (debug only). */
+/**
+ * Creates the PostFX debugger tab (debug env only: `postFx()`'s `onDebugAfterStart`).
+ * @internal
+ */
 export const createPostFXDebugGUI = async () => {
   debugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__PostFX'));
   await useDebug(debugGUI)?._createPostFXDebugGUI();
 };
 
 /**
- * Returns the currently built PostFX chain (for the debug profiler), or null when none is built.
- * @returns ({@link PostFxBuiltChain} | null)
+ * Returns the currently built PostFX chain (for the debug profiler and the GPU memory tab), or
+ * null when none is built.
+ * @internal
  */
 export const getPostFxBuiltChain = (): PostFxBuiltChain | null => {
   if (!pipeline) return null;
