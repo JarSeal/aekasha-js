@@ -5,8 +5,8 @@
     "aekasha": {
       "public": 142,
       "crossEntry": 219,
-      "internal": 284,
-      "unreferenced": 114
+      "internal": 286,
+      "unreferenced": 110
     },
     "aekasha/character": {
       "public": 18,
@@ -1220,14 +1220,6 @@
           "kind": "Function",
           "usage": "internal"
         },
-        "cameraDebugGUI": {
-          "kind": "Variable",
-          "usage": "unreferenced"
-        },
-        "CameraGUIModule": {
-          "kind": "TypeAlias",
-          "usage": "unreferenced"
-        },
         "cameraLookAtPoint": {
           "kind": "Function",
           "usage": "public",
@@ -1303,6 +1295,10 @@
             "aekasha/lod",
             "aekasha/spatial"
           ]
+        },
+        "getSavedCameraDebugProps": {
+          "kind": "Function",
+          "usage": "internal"
         },
         "initDebugCamera": {
           "kind": "Function",
@@ -2914,6 +2910,10 @@
             "app"
           ]
         },
+        "getSavedLightDebugProps": {
+          "kind": "Function",
+          "usage": "internal"
+        },
         "installLights": {
           "kind": "Function",
           "usage": "internal"
@@ -2924,14 +2924,6 @@
           "by": [
             "aekasha/debug"
           ]
-        },
-        "lightDebugGUI": {
-          "kind": "Variable",
-          "usage": "unreferenced"
-        },
-        "LightGUIModule": {
-          "kind": "TypeAlias",
-          "usage": "unreferenced"
         },
         "LightProps": {
           "kind": "TypeAlias",

@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-8 implemented
+Status: implemented (Phases 0-9)
 Category: Refactoring, Documentation, Rendering, Assets
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -1396,7 +1396,7 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
   - **Checks:** `tsc` (both), the three files' lint, `yarn test` (74 files, 569 passed), the docs
     ratchet recorded (`kernel/camera` 25 / 25, `kernel/light` 16 / 16; exports 1794 / 2286).
 
-### Phase 9: versions and done
+### Phase 9: versions and done — done
 
 1. D14's bumps, a `CHANGELOG.md` entry (D3's behaviour change called out, the
    deprecations with their replacements), `yarn checkVersions --against main`.
@@ -1408,6 +1408,44 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
    `MeshUserData.ts`), p617 (D5's hook in `DraggableWindow.ts`, and the layout report's
    "ui → kernel" imports it added).
 4. Time for a PR: this branch into `main` (p600's "Branches and PRs").
+
+**As built** (one commit per step):
+
+- **Step 1 (versions, changelog):** engine and project 5.3.0 → 5.4.0, app 1.12.1 → 1.12.2. The
+  toolkit keeps 2.1.1: D14's patch was conditional, and no toolkit file changed on the branch
+  (Phase 2: no toolkit caller of the renamed listener). `CHANGELOG.md`'s entry: D3's behaviour
+  change called out, five deprecations with their replacements, the entries' additions (no entry
+  lost an export: the API baseline's `entries`), the fixes without the entity-id-0 ones (Phase 4).
+  `yarn checkVersions --against main` passed.
+- **Step 2 (the checks):**
+  - `yarn test`: 74 files, 569 passed (1 skipped, as before).
+  - `yarn verify:scenes`: 104 passed, 0 failed, hashes and snapshots unchanged in every target and
+    in prod test mode (407.7 s).
+  - `yarn verify:baselines`: no debug code in either production build, `docs.json` unchanged.
+    Recorded: Phase 8 step 4's API change (the GUI refs and their module types private again,
+    `getSavedCameraDebugProps` / `getSavedLightDebugProps` added, all `@internal`), the
+    `EngineRapier.js` / `#2` swap (noise, Phase 6) and gzip moves of 1-3 B (the chunks' new
+    hashes). The app's `index.js` 395,092 → 383,970 B gzip over the branch, the banner's
+    `banner.embed.js` 305,348 → 293,296 B.
+  - `yarn build` (with `yarn sbp --profile all` and `yarn hub:build`): exit 0, no budget over, 366
+    Hub pages, no dead link, Phase 8's 23 warnings.
+  - **The budgets** (`sbp.config.ts`, each with its reason, the file's rule: size + 4%, at least
+    1 KiB, rounded up): `_engine/kernel/assets` app 27 → 20 KiB and banner 25 → 16 (Phase 3's hint
+    said 15: Phase 5's `toThreeColor` and `Hash.ts` joined the group, 14.2 KiB now), `_engine/ui`
+    15 → 7 KiB in both, `index.css` 4 → 3 KiB, `banner.css` 3 → 2. A rerun: all within. The banner's
+    are in the Hub's `banner-profile` region: rebuilt.
+  - **The move map** (Phase 3's deferral): `devTools/refactor/` regenerated, 709 files, 0 feature
+    cycles. Its "ui → kernel" gains D5's two imports (p617's Inputs). Its "schemas → kernel" gains
+    7 type imports from `schemas/RuntimeTypes.test.ts` (D11 placed it next to the schemas' entry):
+    a test file's type imports, left as they are.
+- **Step 3 (done):** this file `_DONE_`, the references to its name updated. p302 (a "From p613"
+  section: bugs A and B fixed with their tests, the asset loading in `SceneDataLoader.ts`, the
+  light cookie gap in `getKeptTextures`, `setTextureOpts` / `applyTexOpts`, the deprecated
+  loaders; D5 and Phase 2 marked done by p613, the in-browser revisit check left optional). p614
+  (D13: the move of `MeshUserData.ts`, M1's two halves, `ThreeVector3`). p617 (D5's hooks, the
+  layout report's "ui → kernel"; its "From p611" UI kit item marked done for the windows). The
+  root and nested `CLAUDE.md` files and the readme were updated in Phase 8; nothing in this phase
+  changed what they describe.
 
 ## 4. Risks
 

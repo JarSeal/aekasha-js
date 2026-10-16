@@ -2,6 +2,7 @@ Status: draft | not-implemented
 Category: Materials, Assets, Refactoring
 Blocks: p303_texture-sets-and-terrain-texture-library.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
+Related: \_DONE_p613_review-rendering-scene-assets.md (fixed bugs A and B, moved the scene's asset loading: "From p613" below)
 
 # Material & Texture System Refactor (terrain prerequisites)
 
@@ -13,7 +14,7 @@ Engine changes the terrain epic needs. Each is general-purpose:
 4. A **material input resolver registry**, so new input kinds (texture sets, arrays) plug in without editing `Material.ts` again.
 5. Material variants that can override the new inputs.
 6. **Per-scene dependency closure** in `gatherAppData`, so a scene doesn't have to list every texture its materials use.
-7. Two existing bugs.
+7. Two existing bugs (fixed by p613: "From p613" below).
 
 Nothing here is terrain-specific, and nothing breaks existing JSON.
 
@@ -37,8 +38,8 @@ Nothing here is terrain-specific, and nothing breaks existing JSON.
   - In production, only for materials a scene references (`:452`).
   - There is no way to register a TSL graph from code: `createMaterial` looks it up in the generated `tslMaterialFileObjects` only (`Material.ts:327-333`).
 - **Input wrapping** (`Material.ts:374-447`): non-`#` string → `texture(getTexture(id))`; `#hex` → colour uniform; number/boolean → uniform; 2–4 arrays and `{x,y,z,w}` / `{r,g,b,a}` objects → vector/colour uniforms; key `staticDefines` → merged defines. Anything else throws.
-- **Bug A** (`Material.ts:384-392`): a missing texture logs "setting a uniform value of 1", sets `uniform(1)`, then unconditionally overwrites it with `texture(undefined)` (no `else`).
-- **Bug B** (`SceneLoader.ts:313`, found by the p301 survey): resolving texture-id params writes the texture **object** back into the cached `material.params` (`params[texKey] = texture`). On a revisit the string check skips it and the old texture object, possibly disposed, is reused. The comment at `SceneLoader.ts:355-356` forbids this pattern for meshes. Verify before fixing.
+- **Bug A** (fixed by p613 Phase 5) (`Material.ts:384-392`): a missing texture logs "setting a uniform value of 1", sets `uniform(1)`, then unconditionally overwrites it with `texture(undefined)` (no `else`).
+- **Bug B** (fixed by p613 Phase 3) (`SceneLoader.ts:313`, found by the p301 survey): resolving texture-id params writes the texture **object** back into the cached `material.params` (`params[texKey] = texture`). On a revisit the string check skips it and the old texture object, possibly disposed, is reused. The comment at `SceneLoader.ts:355-356` forbids this pattern for meshes. Verify before fixing.
 - **Variants** (`getMaterialVariant`, `Material.ts:525-567`) override `params`, `staticDefines` (shallow) and `nodes` (per socket), and are cached by a stable hash. `MaterialVariantOverridesSchema` (`schemas/materialSchema.ts:22-26`) mirrors that. Mesh JSON `matOverrides` uses it.
 - **Texture JSON** (`schemas/textureSchema.ts:5-15`):
   - `texOpts` has `image`, `mapping`, `wrapS`/`wrapT`, `magFilter`/`minFilter`, `type`, `anisotropy` and `colorSpace`, as raw three.js numbers.
@@ -92,7 +93,7 @@ Nothing here is terrain-specific, and nothing breaks existing JSON.
   - `{ "textureSet": "sand01" }` → a set bundle;
   - `{ "textureSetArray": ["sand01", …] }` → an array bundle.
 
-### D5 — Bug fixes
+### D5 — Bug fixes (done by p613)
 
 - **A:** `else` branch. A missing texture becomes `uniform(1)` as the warning says, or, better, a 1×1 white `DataTexture` shared per colour space, so the socket keeps a sampler type. Prefer the texture: a uniform where the graph expects a sampler breaks `.sample(uv)` calls.
 - **B:** resolve into a copy of `params`; never write texture objects into cached props. Add a revisit test to `testECS` or `debugScene`: enter → leave → enter, no "destroyed texture" or disposed-texture warnings.
@@ -104,9 +105,42 @@ Nothing here is terrain-specific, and nothing breaks existing JSON.
   - `nodes` / `inputs` strings that are texture ids;
   - `matOverrides` in mesh JSONs;
   - resolver `dependencies` (via a small `devTools` mirror of each resolver's dependency function, since `gatherAppData` can't run browser code).
-- **Output:** a `__dependencies: { textures: string[] }` per scene. `SceneLoader.loadNextSceneAssets` loads the union of `textures` and `__dependencies.textures`.
+- **Output:** a `__dependencies: { textures: string[] }` per scene. `loadNextSceneAssets` (`kernel/scene/SceneDataLoader.ts` since p613) loads the union of `textures` and `__dependencies.textures`.
 - An explicit `textures` list stays valid; the closure only adds to it.
 - **Code-created materials** (D3) declare their dependencies at runtime: `await ensureMaterialDependencies(props)` loads missing textures before `createMaterial`. The toolkit terrain generator calls it.
+
+## From p613 (2026-10-16)
+
+p613 (the review of rendering, scenes and assets, D2) fixed this plan's two bugs and left its
+rewrites to it. The Context's line numbers are from before it: re-ground them.
+
+- **Bug A, fixed** (`Material.ts`, the TSL input wrapping): a texture input whose id isn't
+  registered warns and samples one white texel (`getMissingTexture`: one `DataTexture`, made on
+  first use, shared, not registered, never disposed), D5's preferred form. Three r186's
+  `texture(undefined)` didn't fail the build as the Context assumed: it sampled three's image-less
+  `EmptyTexture`. Not done: one texture per colour space (D5's "shared per colour space"; white is
+  the same in both). Test: `kernel/assets/Material.test.ts`.
+- **Bug B, fixed:** what a load builds from the scene's data moved out of `SceneLoader.ts` into
+  `kernel/scene/SceneDataLoader.ts` (`@internal`): `loadNextSceneAssets` loads the scene's
+  textures, imports and TSL files, and `resolveTextureParams` resolves a material's texture ids
+  into a copy of its params, never into the cached generated ones (the unused inner `j` loop went).
+  Test: `kernel/scene/SceneLoader.test.ts` (over a revisit: the cached params keep the id, each
+  visit's material gets its own texture). D6's union goes into `loadNextSceneAssets` there.
+- **The texture release keeps more** (p613 A5): a material's last release
+  (`deleteTexturesFromMaterial`) and the scene's release (`releaseSceneOwnedAssets`) keep what
+  `getKeptTextures` (`Material.ts`) names: the `retainedTextures` scene hooks' textures and the
+  root scene's background and environment. **A gap for D6's closure to keep in mind:** a spot
+  light's cookie texture (`map`) isn't kept, so one shared with a material is released with that
+  material's last use while the light still shows it. Covering it needs a scene walk per release,
+  or the lights registering their textures as kept.
+- **`setTextureOpts`** (`Texture.ts`, D1) still skips falsy values. The import path's
+  `applyTexOpts` (`import/GLTFTextures.ts`) does it right (`!== undefined`); once D1 fixes
+  `setTextureOpts`, one of the two goes (its summary says so).
+- **The legacy loaders** (`loadTexture`, `loadTextures`, `createTexture`) moved to
+  `kernel/assets/TextureSync.ts` and the first two are deprecated (use `loadTextureAsync`, removed
+  in engine 6.0.0): D1's texture options need only follow `loadTextureAsync`'s path.
+- `createMaterial` is still over 150 lines: its file header says it waits for D4's resolver
+  registry, which rewrites the TSL path.
 
 ---
 
@@ -119,12 +153,16 @@ Nothing here is terrain-specific, and nothing breaks existing JSON.
 
 **Exit:** `testTexture.texture.json` with `"repeat": [4, 4]`, `"anisotropy": "MAX"` and `"flipY": false` renders as expected on WebGPU and the WebGL2 fallback.
 
-### Phase 2 — Bugs (D5)
+### Phase 2 — Bugs (D5) — done by p613
 
 1. Fix A and B.
 2. Add the revisit check.
 
 **Exit:** scene revisit and missing-texture cases are clean in the console.
+
+p613 did both fixes and their tests (see "From p613"); what's left is the in-browser revisit check
+(enter → leave → enter in `testECS` or `debugScene`, no disposed-texture warning), optional now
+that the unit test covers the cached params: run it with Phase 1's exit check if at all.
 
 ### Phase 3 — `setup` entry + runtime registration (D2, D3)
 
@@ -147,7 +185,7 @@ Nothing here is terrain-specific, and nothing breaks existing JSON.
 
 ### Phase 5 — Dependency closure (D6)
 
-1. Closure computation and `__dependencies`; SceneLoader union.
+1. Closure computation and `__dependencies`; the union in `SceneDataLoader.ts`' `loadNextSceneAssets`.
 2. `ensureMaterialDependencies`.
 3. Remove now-redundant explicit `textures` entries from one app scene to prove it, keeping the others.
 
