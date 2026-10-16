@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three/webgpu';
-import { smoothDampVec3 } from './ThreeMath';
+import { smoothDampVec3, toThreeColor } from './ThreeMath';
 
 describe('smoothDampVec3', () => {
   it('never writes the target, also when maxSpeed clamps', () => {
@@ -39,5 +39,21 @@ describe('smoothDampVec3', () => {
       smoothDampVec3(current, target, velocity, 0.2, 5, dt);
       expect((current.x - before) / dt).toBeLessThanOrEqual(5 + 1e-6);
     }
+  });
+});
+
+describe('toThreeColor', () => {
+  it("reads { r, g, b } in 0-255 as sRGB, as three reads a '#rrggbb' string", () => {
+    const fromJson = toThreeColor({ r: 255, g: 128, b: 0 }) as THREE.Color;
+    expect(fromJson).toBeInstanceOf(THREE.Color);
+    expect(fromJson.getHex()).toBe(new THREE.Color('#ff8000').getHex());
+  });
+
+  it("passes three's own forms through", () => {
+    const color = new THREE.Color(0x123456);
+    expect(toThreeColor(color)).toBe(color);
+    expect(toThreeColor('#abcdef')).toBe('#abcdef');
+    expect(toThreeColor(0xff0000)).toBe(0xff0000);
+    expect(toThreeColor(undefined)).toBeUndefined();
   });
 });

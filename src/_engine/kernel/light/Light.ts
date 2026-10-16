@@ -11,6 +11,7 @@ import { existsOrThrow } from '../../utils/Assert';
 import { lerror, lwarn } from '../../utils/Logger';
 import { getTexture } from '../assets/Texture';
 import { retagAssetOwner } from '../assets/AssetOwners';
+import { toThreeColor } from '../render/ThreeMath';
 import { setFrustumCullingEnabled } from '../ecs/ObjectFrustumCullingSystem';
 import type { FeatureContext } from '../init/Features';
 import type { ShadowQuality } from '../../schemas/_HelperSchemas';
@@ -104,7 +105,8 @@ export const SHADOW_PRESETS: Record<ShadowQuality, ShadowPreset> = {
  * A light's props for {@link createLightEntity}: the runtime type. It's wider than the light JSON
  * schema's `LightProps` (`aekasha/schemas`, what a `*.light.json` holds): it also takes three's
  * colour representations and, for a spot light's `map`, a texture object besides a registered
- * texture id.
+ * texture id. A colour is any of three's forms, or the JSON's `{ r, g, b }` in 0-255 (sRGB, as a
+ * `'#rrggbb'` string is).
  *
  * `enabled: false` creates it disabled. The shadow-casting types (point, directional, spot) cast
  * none unless `castShadow`, and take a `shadowPreset` (`MEDIUM` by default) that the `shadow*`
@@ -118,16 +120,20 @@ export type LightProps = {
   enabled?: boolean;
   appId?: string;
 } & (
-  | { type: 'AMBIENT'; color?: THREE.ColorRepresentation; intensity?: number }
+  | {
+      type: 'AMBIENT';
+      color?: THREE.ColorRepresentation | { r: number; g: number; b: number };
+      intensity?: number;
+    }
   | {
       type: 'HEMISPHERE';
-      color?: THREE.ColorRepresentation;
-      groundColor?: THREE.ColorRepresentation;
+      color?: THREE.ColorRepresentation | { r: number; g: number; b: number };
+      groundColor?: THREE.ColorRepresentation | { r: number; g: number; b: number };
       intensity?: number;
     }
   | {
       type: 'POINT';
-      color?: THREE.ColorRepresentation;
+      color?: THREE.ColorRepresentation | { r: number; g: number; b: number };
       intensity?: number;
       distance?: number;
       decay?: number;
@@ -147,7 +153,7 @@ export type LightProps = {
     }
   | {
       type: 'DIRECTIONAL';
-      color?: THREE.ColorRepresentation;
+      color?: THREE.ColorRepresentation | { r: number; g: number; b: number };
       intensity?: number;
       position?: { x: number; y: number; z: number };
       targetPos?: { x: number; y: number; z: number };
@@ -165,7 +171,7 @@ export type LightProps = {
     }
   | {
       type: 'SPOT';
-      color?: THREE.ColorRepresentation;
+      color?: THREE.ColorRepresentation | { r: number; g: number; b: number };
       intensity?: number;
       distance?: number;
       angle?: number;
@@ -240,20 +246,29 @@ export const createLightEntity = (
 
   switch (props.type) {
     case 'AMBIENT':
-      light = new THREE.AmbientLight(props.color, props.intensity);
+      light = new THREE.AmbientLight(toThreeColor(props.color), props.intensity);
       break;
     case 'HEMISPHERE':
-      light = new THREE.HemisphereLight(props.color, props.groundColor, props.intensity);
+      light = new THREE.HemisphereLight(
+        toThreeColor(props.color),
+        toThreeColor(props.groundColor),
+        props.intensity
+      );
       break;
     case 'POINT':
-      light = new THREE.PointLight(props.color, props.intensity, props.distance, props.decay);
+      light = new THREE.PointLight(
+        toThreeColor(props.color),
+        props.intensity,
+        props.distance,
+        props.decay
+      );
       break;
     case 'DIRECTIONAL':
-      light = new THREE.DirectionalLight(props.color, props.intensity);
+      light = new THREE.DirectionalLight(toThreeColor(props.color), props.intensity);
       break;
     case 'SPOT':
       light = new THREE.SpotLight(
-        props.color,
+        toThreeColor(props.color),
         props.intensity,
         props.distance,
         props.angle,

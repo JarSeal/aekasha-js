@@ -200,6 +200,12 @@ describe('setCurrentScene', () => {
     expect((background as THREE.Color).getHex()).toBe(0);
   });
 
+  it("takes the JSON's { r, g, b } background colour", () => {
+    createScene('bgJson', { backgroundColor: { r: 0, g: 255, b: 0 } });
+    setCurrentScene('bgJson');
+    expect((getRootScene()?.background as THREE.Color).getHex()).toBe(0x00ff00);
+  });
+
   it('clears the background of a scene without one', () => {
     createScene('bgRed', { backgroundColor: '#ff0000' });
     createScene('bgNone');

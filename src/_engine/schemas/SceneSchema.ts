@@ -3,7 +3,7 @@ import { createSaveDataSchema, MetaSchema } from './_SaveDataSchema';
 import { CameraAssetSchema } from './CameraSchema';
 import { LightAssetSchema } from './LightSchema';
 import { GeoPropsSchema } from './GeometrySchema';
-import { InlineTextureOverridesSchema, InlineTextureSchema } from './TextureSchema';
+import { InlineTextureSchema } from './TextureSchema';
 import { MaterialAssetSchema } from './MaterialSchema';
 import { ColorJSONSchema } from './_HelperSchemas';
 import {
@@ -28,7 +28,8 @@ const KERNEL_SCENE_SHAPE = {
   todo: z.any().optional(),
 
   backgroundColor: ColorJSONSchema.optional(),
-  backgroundTexture: z.union([InlineTextureOverridesSchema, z.string()]).optional(),
+  /** The id of a texture the scene lists in `textures`, for the root scene's background */
+  backgroundTexture: z.string().optional(),
 
   // Scene Asset Registries Map arrays
   cameras: z.array(z.union([z.string(), CameraAssetSchema])).optional(),

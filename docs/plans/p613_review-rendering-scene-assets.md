@@ -1071,6 +1071,41 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
     swap of a registered array still writes. The first three checked to fail without the fixes.
   - **Checks:** `tsc` (both), the file's lint, `yarn test` (71 files, 550 passed), the docs ratchet
     unchanged.
+- **Section 4 (step 4, D11):**
+  - **The test** (`schemas/RuntimeTypes.test.ts`, run by `tsc`): per pair (geometry, material,
+    texture, camera, light, mesh, scene) the JSON's type is assignable to the runtime's, and the
+    JSON has no key the runtime lacks but the tooling's (`$schema`, `__saveData`,
+    `__sourcePath`; a texture's `optimize`, `pack` and size fields; a scene's `comments` /
+    `todo`), pinned exactly. Beyond D11: assignability alone lets a JSON have extra keys, hence
+    the key check. The scene is checked as the gatherer leaves it (an id resolved to its asset's
+    props, an inline entry kept).
+  - **What it found, two real bugs (fixed, chosen in review):**
+    - A `{ r, g, b }` colour (the schema's `ColorJSON`, 0-255) for a light's `color` /
+      `groundColor` or the scene's `backgroundColor` rendered white: three ignores a plain
+      object. `toThreeColor` (`kernel/render/ThreeMath.ts`, `@internal`) reads it as sRGB, like a
+      `'#rrggbb'` string; `createLightEntity` and `setCurrentScene` use it, and the runtime types
+      take `{ r, g, b }` (written inline: `ColorJSON` is on no entry). No JSON used the form.
+    - An inline `backgroundTexture` object reached `rootScene.background` as plain JSON (nothing
+      loads one). The scene schema takes a texture id only (`SceneSchema.ts`, p619's file: a
+      narrowing nobody used, chosen in review), `InlineTextureOverridesSchema` went, and
+      `.schemas/scene.schema.json` was regenerated.
+  - **And a widening:** `MeshProps.quaternion` is `{ x, y, z, w }` (the JSON's form, which
+    `setTransformFromProps` already read; a `THREE.Quaternion` still fits).
+  - **Type-only differences, swapped for the runtime's types in the test (each commented), for
+    p619 to tighten on the schema side (Phase 8 files them):** `texOpts`' three constants as plain
+    numbers and its `image` (`unknown`: a JSON has none); a light's shadow tuples typed `number[]`
+    by zod's `.length(n)` (`z.tuple` would say it); a spot light's `map` as `string | unknown`
+    (should be `z.string()`); zod's material object with a `type` enum against the runtime's
+    member per type (TypeScript doesn't split it: `PerType`); the scene's inline `meshes` and
+    `importedAssets` aren't validated at all (`record<string, unknown>`).
+  - **For the sky box (Phase 8 files it):** `toSkyColor` reads `{ r, g, b }` as linear while its
+    `'#rrggbb'` strings are sRGB, so the two forms of one colour differ; the kernel's
+    `toThreeColor` reads both as sRGB.
+  - **Tests:** the type test (7 pairs; with the fixes stashed, the light, mesh and scene pairs
+    fail), `ThreeMath.test.ts` +2 (`toThreeColor`), `Light.test.ts` +1 and `Scene.test.ts` +1
+    (the `{ r, g, b }` colours, both checked to fail without the fix).
+  - **Checks:** `tsc` (both), the touched files' lint, `yarn test` (72 files, 561 passed), the docs
+    ratchet (`kernel/render` 89 / 89; `schemas` 46 / 121, one export fewer).
 
 ### Phase 6: the assets API, worker and import (`AssetsAPI.ts`, `AssetsAPITypes.ts`, `worker/`, `import/`)
 

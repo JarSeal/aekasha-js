@@ -67,8 +67,3 @@ export const InlineTextureSchema = TextureAssetSchema.omit({
 }).extend({
   fileName: PublicFileNameSchema.optional(),
 });
-
-/** A scene's `backgroundTexture` given inline */
-export const InlineTextureOverridesSchema = TextureOverridesSchema.omit({ __meta: true }).extend({
-  fileName: PublicFileNameSchema.optional(),
-});

@@ -35,4 +35,17 @@ describe('createLightEntity', () => {
 
     for (const entityId of [high, medium, tuned]) world.deleteEntity(entityId);
   });
+
+  test("takes the JSON's { r, g, b } colours (three would ignore the plain object)", () => {
+    const entityId = createLightEntity({
+      type: 'HEMISPHERE',
+      color: { r: 255, g: 0, b: 0 },
+      groundColor: { r: 0, g: 0, b: 255 },
+    });
+    const light = world.getComponent(entityId, ComponentType.OBJECT3D)!
+      .value as THREE.HemisphereLight;
+    expect(light.color.getHex()).toBe(0xff0000);
+    expect(light.groundColor.getHex()).toBe(0x0000ff);
+    world.deleteEntity(entityId);
+  });
 });

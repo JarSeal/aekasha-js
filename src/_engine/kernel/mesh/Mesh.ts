@@ -60,7 +60,8 @@ export type MeshProps = {
   position?: { x?: number; y?: number; z?: number };
   /** Euler angles in radians; `quaternion` wins over it */
   rotation?: { x?: number; y?: number; z?: number };
-  quaternion?: THREE.Quaternion;
+  /** A rotation quaternion (a `THREE.Quaternion`, or its four components, as the JSON gives it) */
+  quaternion?: { x: number; y: number; z: number; w: number };
   scale?: { x: number; y: number; z: number };
   /** The entity's app id, over `entityOpts.appId` */
   appId?: string;

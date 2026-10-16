@@ -4,6 +4,7 @@ import type { MatProps } from '../assets/Material';
 import { lerror, lwarn } from '../../utils/Logger';
 import type { TextureProps } from '../assets/Texture';
 import { getTexture } from '../assets/Texture';
+import { toThreeColor } from '../render/ThreeMath';
 import { initMainLoop } from '../loop/MainLoop';
 import { updateDebuggerSceneTitle } from '../../debug/DebuggerGUI';
 import { IS_DEBUG_ENV } from '../config/Config';
@@ -38,8 +39,9 @@ export type SceneData = {
   name?: string;
   /** A description for the debugger. */
   description?: string;
-  /** The root scene's background colour while the scene is current. */
-  backgroundColor?: string | number;
+  /** The root scene's background colour while the scene is current: a CSS colour string, a hex
+   * number, or `{ r, g, b }` in 0-255 (sRGB, as a `'#rrggbb'` string is). */
+  backgroundColor?: string | number | { r: number; g: number; b: number };
   /** A registered texture's id for the root scene's background (over `backgroundColor`). */
   backgroundTexture?: string;
   /** The cameras the loader creates before the assets. */
@@ -89,7 +91,7 @@ export type SceneOptions = {
   /** A description for the debugger. */
   description?: string;
   /** The root scene's background colour while the scene is current. */
-  backgroundColor?: THREE.Color | string | number;
+  backgroundColor?: THREE.ColorRepresentation | { r: number; g: number; b: number };
   /** The root scene's background (a registered texture's id, or the texture), over the colour. */
   backgroundTexture?: THREE.Texture | string;
   /** Ordered PostFX pass chain (array order is execution order), see PostFX.ts. */
@@ -222,7 +224,7 @@ export const setCurrentScene = (id: string | null) => {
     rootScene.environmentNode = null;
     // `!== undefined`: 0 (black) is a colour
     if (opts?.backgroundColor !== undefined) {
-      rootScene.background = new THREE.Color(opts.backgroundColor);
+      rootScene.background = new THREE.Color(toThreeColor(opts.backgroundColor));
     }
     if (opts?.backgroundTexture) {
       if (typeof opts.backgroundTexture === 'string') {

@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import type { ColorJSON } from '../../schemas/_HelperSchemas';
 
 /**
  * Unit directions in three's axes (−z forward, +y up), for ray casting from an angle
@@ -138,4 +139,20 @@ export const smoothDampVec3 = (
   current.x = outputX;
   current.y = outputY;
   current.z = outputZ;
+};
+
+/**
+ * A colour as three takes it, from a JSON colour (`ColorJSON`: a CSS colour string, or
+ * `{ r, g, b }` in 0-255) or one of three's own forms (passed through). `{ r, g, b }` is sRGB, as
+ * a `'#rrggbb'` string is: three would ignore the plain object and keep its default (white).
+ * @internal
+ */
+export const toThreeColor = <T extends THREE.ColorRepresentation | ColorJSON | undefined>(
+  color: T
+): Exclude<T, ColorJSON> | THREE.ColorRepresentation => {
+  if (typeof color !== 'object' || (color as THREE.Color).isColor) {
+    return color as Exclude<T, ColorJSON>;
+  }
+  const { r, g, b } = color as Exclude<ColorJSON, string>;
+  return new THREE.Color().setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace);
 };
