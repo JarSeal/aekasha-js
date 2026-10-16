@@ -94,6 +94,7 @@ import {
   createRigidBodies,
   getPhysicsWorld,
   initPhysics,
+  stopPhysics,
 } from './PhysicsAPI';
 import { PhysicsProtocolType } from './PhysicsAPITypes';
 import { createPhysicsEntity, deleteAllPhysicsEntities } from './PhysicsEntity';
@@ -228,5 +229,21 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
     // The body the create made is deleted again (its DELETE posted after the reply)
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(countBodies()).toBe(bodiesBefore);
+  });
+
+  // Last: physics stays stopped for this file
+  it('D6: the stop terminates the worker and rejects what is pending, and later requests', async () => {
+    bridge.state.holdReplies = true;
+    const pending = createCollider({ type: 'BALL', radius: 0.5 });
+    const captured = settlesWithin(pending, 300);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    stopPhysics();
+    expect(await captured).toMatch(/^rejected: Physics was stopped/);
+    expect(bridge.state.terminated).toBe(true);
+    expect(await settlesWithin(createCollider({ type: 'BALL', radius: 0.5 }), 100)).toMatch(
+      /^rejected: Physics world is not created/
+    );
+    expect(await createPhysicsWorld()).toBeUndefined();
+    bridge.state.releaseReplies();
   });
 });

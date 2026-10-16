@@ -25,6 +25,9 @@ import { lerror } from '../../utils/Logger';
 /** A debug registration a feature hands to `InitEngine` (see {@link FeatureContext.onDebug}). */
 export type FeatureDebugHook = () => void | Promise<void>;
 
+/** A feature's stop, run by a mounted engine's `unmount()` (see {@link FeatureContext.onUnmount}). */
+export type FeatureUnmountHook = () => void;
+
 /** What a feature's `install` gets: the kernel's seams. */
 export type FeatureContext = {
   /** The merged app configuration (the engine defaults under `InitEngine`'s `config`). */
@@ -77,6 +80,15 @@ export type FeatureContext = {
   /** Like `onDebug`, after the app's `start` (the renderer exists then). Gate the call the same
    * way. */
   onDebugAfterStart: (fn: FeatureDebugHook) => void;
+  /**
+   * Runs `fn` when a mounted engine unmounts (`mountAekasha`'s `unmount()`, and its teardown
+   * after a failed boot), right after the loop stops, in reverse install order: stop what the
+   * feature started (a worker, a world, a listener the kernel doesn't own).
+   * @remarks Synchronous: the unmount doesn't wait, so end the work rather than await it. A
+   * full-page app (`InitEngine`) never unmounts, so it never runs. A hook that throws is logged and
+   * the others still run.
+   */
+  onUnmount: (fn: FeatureUnmountHook) => void;
 };
 
 /**
@@ -116,6 +128,8 @@ export type FeatureHost = {
   installed: Set<string>;
   debugHooks: FeatureDebugHook[];
   debugAfterStartHooks: FeatureDebugHook[];
+  /** In install order: {@link runFeatureUnmountHooks} runs them in reverse. */
+  unmountHooks: FeatureUnmountHook[];
 };
 
 /**
@@ -126,6 +140,7 @@ export const createFeatureHost = (config: AppConfig): FeatureHost => {
   const installed = new Set<string>();
   const debugHooks: FeatureDebugHook[] = [];
   const debugAfterStartHooks: FeatureDebugHook[] = [];
+  const unmountHooks: FeatureUnmountHook[] = [];
   const ctx: FeatureContext = {
     config,
     isInstalled: (id) => installed.has(id),
@@ -145,8 +160,11 @@ export const createFeatureHost = (config: AppConfig): FeatureHost => {
     onDebugAfterStart: (fn) => {
       if (__AEK_DEBUG__) debugAfterStartHooks.push(fn);
     },
+    onUnmount: (fn) => {
+      unmountHooks.push(fn);
+    },
   };
-  return { ctx, installed, debugHooks, debugAfterStartHooks };
+  return { ctx, installed, debugHooks, debugAfterStartHooks, unmountHooks };
 };
 
 /**
@@ -260,4 +278,20 @@ export const installFeaturesAsync = async (
  */
 export const runFeatureDebugHooksAsync = async (hooks: readonly FeatureDebugHook[]) => {
   for (const hook of hooks) await hook();
+};
+
+/**
+ * Runs a host's unmount hooks in reverse install order, each once: they're removed as they run,
+ * so a second call runs none. A hook that throws is logged and the rest still run.
+ * @internal
+ */
+export const runFeatureUnmountHooks = (hooks: FeatureUnmountHook[]) => {
+  while (hooks.length) {
+    const hook = hooks.pop() as FeatureUnmountHook;
+    try {
+      hook();
+    } catch (err) {
+      lerror('A feature failed to stop on unmount.', err);
+    }
+  }
 };

@@ -68,7 +68,9 @@ The ones a site sets (see [`MountAekashaOptions`](api:MountAekashaOptions) for a
 
 [`AekashaMount`](api:AekashaMount), the handle, has `loadScene`, `pause`, `resume`, `isPaused`
 and `unmount`. `loadScene` resolves `true` once the scene shows and `false` when it didn't load
-(also after `unmount()`); a call during a load waits for it. `isFallback` is set when the scene
+(also after `unmount()`); a call during a load waits for it. `unmount()` stops the loop, the
+workers (physics' too, with its world) and the renderer, and removes the container. `isFallback`
+is set when the scene
 couldn't start (no WebGPU or WebGL2, or the boot or the first scene failed): then the container
 shows `fallbackImage`, and the methods do nothing.
 

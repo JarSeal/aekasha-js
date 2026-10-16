@@ -41,7 +41,9 @@ import {
   checkFeatures,
   checkSceneFeatures,
   type FeatureDebugHook,
+  type FeatureUnmountHook,
   runFeatureDebugHooksAsync,
+  runFeatureUnmountHooks,
 } from './Features';
 
 import { type ECSWorld, initECSWorld, registerECSDebugGUI } from '../ecs/ECS';
@@ -77,12 +79,21 @@ export type BootOptions = InitEngineOptions & {
 };
 
 let isBooted = false;
+/** The booted features' stops (`FeatureContext.onUnmount`), for a mount's unmount. */
+let unmountHooks: FeatureUnmountHook[] = [];
 
 /**
  * Whether the engine has booted (or is booting) in this page load.
  * @internal
  */
 export const isEngineBooted = () => isBooted;
+
+/**
+ * Stops the booted features (their `onUnmount` hooks, in reverse install order): a mount's
+ * teardown, also after a failed boot (the features installed until then). Each runs once.
+ * @internal
+ */
+export const stopEngineFeatures = () => runFeatureUnmountHooks(unmountHooks);
 
 /**
  * The engine's boot, in order: InitEngine's steps. Once per page load: the engine's state is
@@ -120,6 +131,7 @@ export const bootEngineAsync = async ({ config, data, features, start, hudSlot }
 
   // The kernel before the first world: its core plugin's systems come first in every world
   const featureHost = createFeatureHost(getConfig());
+  unmountHooks = featureHost.unmountHooks;
   installKernel(featureHost.ctx);
 
   // Init ECS

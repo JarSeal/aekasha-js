@@ -55,8 +55,9 @@ of all.
    (an `uninstall` next to `install` on `EngineFeature`, or a remover list the `FeatureContext`
    fills as the feature registers), the kernel's (`uninstallKernel`), then the scene registry, the
    app data, the configuration and `isEngineBooted`.
-2. A stop for the physics worker (`physics()` has none: p614), and for anything else that starts
-   a worker or a timer at boot.
+2. A stop for anything that starts a worker or a timer at boot. `physics()` has one since p614
+   (`FeatureContext.onUnmount`, `stopPhysics`), but it's for good: a reset would have to start
+   physics again.
 3. A test that boots, unmounts and boots again in one module graph, and compares every
    registry's size with the first boot's, so a new registration without its remover fails. Today
    `moduleSideEffects.test.ts` guarantees nothing registers at module load, which is what makes

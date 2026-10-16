@@ -1,4 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+/** The visibility listeners physics added and hasn't removed. */
+const visibility = vi.hoisted(() => ({ listeners: new Set<unknown>() }));
+vi.mock(import('../../kernel/loop/MainLoop'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  onVisibilityChange: (fn: (isHidden: boolean) => void) => {
+    visibility.listeners.add(fn);
+    return () => {
+      visibility.listeners.delete(fn);
+    };
+  },
+}));
+
 import { initEnvironment, loadConfig } from '../../kernel/config/Config';
 import {
   createColliderSync,
@@ -17,6 +30,10 @@ import {
   getAllColliderEntries,
   getAllRigidBodyEntries,
   initPhysics,
+  isPhysicsSteppingHeld,
+  isPhysicsWorldEnabled,
+  holdPhysicsStepping,
+  stopPhysics,
 } from './PhysicsAPI';
 import { getAllRigidBodyIds, getColliderAPIWithId } from './backends/rapier/EngineRapier';
 
@@ -72,5 +89,21 @@ describe('PhysicsAPI (MAIN_THREAD)', () => {
     expect(deleteCollidersSync([1])).toEqual([]);
     expect(deleteJointSync(1)).toBeUndefined();
     expect(await deleteJoint(1)).toBeUndefined();
+  });
+
+  it('D6: the stop deletes the world, releases the hold and the listener, and creates no world', async () => {
+    await createPhysicsWorld();
+    createRigidBodySync({ rigidType: 'DYNAMIC' });
+    expect(visibility.listeners.size).toBe(1);
+    holdPhysicsStepping();
+    stopPhysics();
+    expect(isPhysicsWorldEnabled()).toBe(false);
+    expect(count(getAllRigidBodyEntries())).toBe(0);
+    expect(count(getAllRigidBodyIds())).toBe(0);
+    expect(isPhysicsSteppingHeld()).toBe(false);
+    expect(visibility.listeners.size).toBe(0);
+    expect(await createPhysicsWorld()).toBeUndefined();
+    expect(isPhysicsWorldEnabled()).toBe(false);
+    stopPhysics();
   });
 });

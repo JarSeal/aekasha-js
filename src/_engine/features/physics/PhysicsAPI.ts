@@ -202,6 +202,13 @@ let physicsState: PhysicsState = {
 /** The channel to the worker (WORKER_THREAD mode, from initPhysics): every message to it and from
  * it goes through this (p614 D5). */
 let workerTransport: PhysicsTransport<PhysicsUpProtocol, PhysicsDownProtocol> | null = null;
+/** Requests sent to the worker (or captured for a sub-step) and not settled yet: what stopPhysics
+ * rejects. The resolvers themselves are PromiseResolver's, shared with the assets API. */
+const pendingWorkerRequestIds = new Set<number>();
+/** Set by stopPhysics (a mounted engine's unmount): no world is created after it. */
+let isPhysicsStopped = false;
+/** The visibility listener's remover, from the first world's create until stopPhysics. */
+let removeVisibilityListener: (() => void) | null = null;
 let physicsWorld: WorldAPI = { step: () => {} } as unknown as WorldAPI;
 let physicsWorldEnabled = false;
 let engineInitiated = false;
@@ -859,8 +866,26 @@ const messageWorker = (message: PhysicsUpProtocol) => {
   workerTransport.send(message);
 };
 
+/** A worker request's resolver id, kept in pendingWorkerRequestIds until the request settles. */
+const createWorkerRequest = <T>(resolve: (value: T) => void, reject: (reason: unknown) => void) => {
+  const requestId: number = createNewResolver(
+    (value: T) => {
+      pendingWorkerRequestIds.delete(requestId);
+      resolve(value);
+    },
+    {
+      reject: (reason) => {
+        pendingWorkerRequestIds.delete(requestId);
+        reject(reason);
+      },
+    }
+  );
+  pendingWorkerRequestIds.add(requestId);
+  return requestId;
+};
+
 /** A request to the worker: settled by its reply, or rejected by the worker's ERROR for it (a throw
- * while handling it, see onWorkerMessage). */
+ * while handling it, see onWorkerMessage), or by stopPhysics. */
 const messageWorkerAsync = async <T>(message: PhysicsUpProtocol) =>
   new Promise<T>((resolve, reject) => {
     if (!workerTransport) {
@@ -870,7 +895,7 @@ const messageWorkerAsync = async <T>(message: PhysicsUpProtocol) =>
         )
       );
     }
-    const requestId = createNewResolver(resolve, { reject });
+    const requestId = createWorkerRequest(resolve, reject);
     workerTransport.send({ ...message, requestId });
   });
 
@@ -881,7 +906,7 @@ const messageWorkerAtStep = async <T>(message: PhysicsUpProtocol) => {
   if (!substepCommandCapture) return messageWorkerAsync<T>(message);
   const capture = substepCommandCapture;
   return new Promise<T>((resolve, reject) => {
-    const requestId = createNewResolver(resolve, { reject });
+    const requestId = createWorkerRequest(resolve, reject);
     capture.push(structuredClone({ ...message, requestId }));
   });
 };
@@ -1328,6 +1353,8 @@ export const createPhysicsWorld = async (
     internalPgsIterations?: number;
   }
 ) => {
+  // A scene load still running when the engine unmounted: nothing to create a world for
+  if (isPhysicsStopped) return;
   existsOrThrow(
     engineInitiated,
     'Physics engine not initiated. Initiate the engine (initPhysics) before creating the world'
@@ -1357,7 +1384,7 @@ export const createPhysicsWorld = async (
     );
     physicsWorldEnabled = true;
     resetSimClock();
-    onVisibilityChange(physicsVisibilityChangeHandler);
+    removeVisibilityListener ??= onVisibilityChange(physicsVisibilityChangeHandler);
   } else if (physicsState.workerTarget === 'WORKER_THREAD') {
     const response = await messageWorkerAsync<CreateWorldResponse>({
       type: PhysicsProtocolType.CREATE_WORLD,
@@ -1386,7 +1413,7 @@ export const createPhysicsWorld = async (
         ? new Float64Array(response.statsBuffer, 0, PHYSICS_STEP_STATS_FIELD_COUNT)
         : undefined;
       // MESSAGE_BATCH: transformBuffer stays undefined until the first TRANSFORMS_PUSH arrives.
-      onVisibilityChange(physicsVisibilityChangeHandler);
+      removeVisibilityListener ??= onVisibilityChange(physicsVisibilityChangeHandler);
     } else {
       lerror(
         `Could not create physics world (WORKER_THREAD), gravity: ${JSON.stringify(gravity)}, opts: ${JSON.stringify(opts)}`
@@ -1423,24 +1450,51 @@ export const deletePhysicsWorld = async () => {
     worldDeleted = Boolean(response.worldDeleted);
   }
 
-  if (worldDeleted) {
-    // Reset. Every API object and callback belonged to the deleted world. Keeps the settings
-    // in physicsState (gravity, solver iterations, timestep), which the next world is built from.
-    physicsWorldEnabled = false;
-    physicsWorld = { step: () => {} } as unknown as WorldAPI;
-    rigidBodies.clear();
-    colliders.clear();
-    joints.clear();
-    workerCollisionEventFns.clear();
-    workerContactForceEventFns.clear();
-    pendingEventPushes = [];
-    transformBuffer = undefined;
-    accDelta = 0;
-    simClockEpoch++;
-    simHistoryEpoch++;
-  } else {
-    lerror('Could not delete physics world.');
+  if (worldDeleted) clearDeletedWorld();
+  else lerror('Could not delete physics world.');
+};
+
+/** Forgets the deleted world: every API object and callback belonged to it. Keeps the settings in
+ * physicsState (gravity, solver iterations, timestep), which the next world is built from. */
+const clearDeletedWorld = () => {
+  physicsWorldEnabled = false;
+  physicsWorld = { step: () => {} } as unknown as WorldAPI;
+  rigidBodies.clear();
+  colliders.clear();
+  joints.clear();
+  workerCollisionEventFns.clear();
+  workerContactForceEventFns.clear();
+  pendingEventPushes = [];
+  transformBuffer = undefined;
+  accDelta = 0;
+  simClockEpoch++;
+  simHistoryEpoch++;
+};
+
+/**
+ * Stops physics for good: `physics()`'s `onUnmount` (a mounted engine's `unmount()`). Deletes the
+ * world (`MAIN_THREAD`) or closes the worker's transport (`WORKER_THREAD`: the worker is
+ * terminated, its world with it) and rejects every request still waiting for a reply, releases
+ * the stepping hold and the step gates, and removes the visibility listener. No world is created
+ * after it, and a later request rejects.
+ * @internal
+ */
+export const stopPhysics = () => {
+  if (isPhysicsStopped) return;
+  isPhysicsStopped = true;
+  removeVisibilityListener?.();
+  removeVisibilityListener = null;
+  releasePhysicsStepping();
+  stepGates.clear();
+  noteStepGateHeld(false);
+  if (physicsWorldEnabled && physicsState.workerTarget === 'MAIN_THREAD') engAPI?.deleteWorld();
+  if (workerTransport) {
+    workerTransport.close();
+    workerTransport = null;
+    const reason = new Error('Physics was stopped (the engine was unmounted): no reply will come.');
+    for (const requestId of [...pendingWorkerRequestIds]) rejectRequest(requestId, reason);
   }
+  if (physicsWorldEnabled) clearDeletedWorld();
 };
 
 /**
