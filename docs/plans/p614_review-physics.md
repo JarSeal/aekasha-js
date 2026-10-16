@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 0 implemented
 Category: Refactoring, Documentation, Physics
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md, p511_network-transport-and-replication.md (the transport interface)
@@ -135,6 +135,12 @@ finding says so.
   such, and stay (D3).
 - A9 `ccdSubsteps: 1, // TODO` in `WorldProxyAPI`'s cache (`:2420`), `@CHORE: add isEnabled cache`
   (`:2968`), `@CONSIDER: should we throw` (`:885`; A1 answers it), the two snapshot `@TODO`s (p500's).
+- A10 **(bug, found in Phase 0)** A create of a body and its colliders isn't all or nothing: when a
+  collider throws after its body exists, the body stays in the world (and in `WORKER_THREAD` mode
+  its transform slot stays taken), and `createPhysicsEntity` deletes the entity, so nothing owns
+  it. Both targets: `createRigidBodyWithCollidersSync` (`PhysicsAPI.ts:1996-2005`) and the worker's
+  `CREATE_PHYSICS_ENTITY` (`PhysicsSwitchRigid.ts:84-95`, which already undoes the body on a
+  refused slot).
 
 **The types (`PhysicsAPITypes.ts`)**
 
@@ -190,6 +196,11 @@ finding says so.
   and `rotation` replies the proxy no longer sends (it reads the buffer). Checked and removed in
   Phase 4 if nothing sends them.
 - W6 4 undocumented exports (the switches).
+- W7 **(bug, found in Phase 0: A1's worker half)** `handleMessage` awaits only the WORLD switch
+  (`PhysicsWorker.ts:91`); the RIGID, COLL and JOINT switches are `async` and returned without
+  `await` inside the `try` (`:94-100`), so their throws skip the `catch`: the worker sends no
+  `ERROR` at all, and the browser reports an unhandled rejection in the worker. So A1's facade fix
+  alone settles nothing for a body, collider or joint create.
 
 **Physics entities (`PhysicsEntity.ts`)**
 
@@ -294,7 +305,8 @@ every removal the engine's `@deprecated` tags promise for 6.0.0 (p610's characte
 ### D4. The bugs are fixed first (Phase 1), each with a test
 
 A1, A2, A3 / W1, A4's throws made quiet no-ops (with the error message fixed), R1, R2, R3, E1, M3.
-M1 and M2 go with D13 (Phase 7).
+M1 and M2 go with D13 (Phase 7). Phase 0 added W7 (A1's worker half, fixed with A1) and A10 (the
+create undone when a collider throws, both targets), proposed for Phase 1 too: to confirm.
 
 **D4b, the one behaviour change:** R1's fix gives the eight `friction: 0` colliders of `scene01`
 and `thirdPersonGymScene` the friction their code asks for. Their probe hashes and the gym's
@@ -433,7 +445,7 @@ split phase fixes the Hub links it breaks (`api:PhysicsAPI.createJoint`, the API
 built" list, its files' JSDoc at 100% (exports and members, the `@param x (type)` form rewritten)
 and the updated `docs.json` (`yarn verify:baselines --docs --update`).
 
-### Phase 0: baselines and measurements
+### Phase 0: baselines and measurements — done
 
 1. `yarn verify:scenes --update` on this commit (= `main`), then `yarn verify:baselines` clean.
 2. `perf-auditor` over `features/physics/` and `Raycast.ts`: confirm or add to §1.4's (perf) items.
@@ -444,10 +456,73 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
    tests start red.
 5. Record the numbers here and confirm D1-D15.
 
+As built (2026-10-16, at `b8d29ce` = `3d0d098` plus this plan and p622; macOS, headless Chromium,
+WebGPU):
+
+- **Baselines:** `yarn verify:scenes --update` recorded 104 runs (26 scenes × 4 configurations) in
+  410 s, without errors outside the allowed ones. `yarn verify:baselines`: all unchanged (`docs.json`
+  1794 / 2286 exports, 331 / 434 members).
+- **Repro (step 4):** `features/physics/PhysicsWorkerRequests.test.ts` runs the real worker module
+  and Rapier in Node behind a fake `Worker` (structured clones on a macrotask, replies can be held),
+  for the facade tests of D10 too. Three `it.fails`, each failing on its own assertion: A1's
+  `createCollider` and A1's `createPhysicsEntity` (both stay pending: W7, then A1), E1 (the deleted
+  entity gets its `COLLIDER` back). Red as `it`, green as `it.fails`; `yarn test` 570 passed and 3
+  expected fails.
+- **D1-D15 confirmed** as written (2026-10-16). W7 and A10 added to D4's Phase 1 list, to confirm.
+- **The perf audit (step 2)** confirms A7, E3, R4, R5, W3, P2 and C1 at their lines, with these
+  corrections and additions:
+  - W3: the walk skips a slotless (`FIXED`) body before its proxy lookup, but iterates every body
+    id to find out; the four allocating reads are per slotted body.
+  - R4: Rapier's `Ray` and shapes are plain JS objects: `castShape` builds the raw shape from one
+    and frees it on every call (checked in 0.19.3's bundle), so nothing leaks, and the saving is
+    the JS objects only, as D11 says. Two more `new RAPIER.Ray` per call: `castRay`
+    (`EngineRapier.ts:1366`) and `intersectionsWithRaySync` (`:1569`, plus a closure per call).
+  - R5 is on the main thread too: `readPoseInto` (`syncBodyPose`'s read) allocates Rapier's
+    `translation()` / `rotation()` objects per dynamic visual body per frame (Rapier has no
+    allocation-free getter).
+  - P2: the pass also allocates in `decide` (measured below), and `getEntityBody` reads two
+    components per member.
+  - New, minor: `physicsToTransformSystem`'s moved-statics loop (`PhysicsEntity.ts:530`) iterates
+    `[entityId, untilStep]` entries (an array per entry, against the file's own comment at `:518`);
+    `new THREE.Timer()` at `PhysicsAPI.ts:1071` is a module-load allocation like C1's.
+- **Measurements (step 3)**, 12 s each after a 10 s settle, debug env (`?isDebug=true`, the
+  runner's `AEK_debugPhysicsApiBoot` overrides); the gym with both players walking and turning.
+  Main-thread allocations from CDP's sampling heap profiler (512 B interval, collected objects
+  included), GC from trace events, the worker's write-back from a temporary timing patch in
+  `writeBackTransforms` (reverted, nothing committed):
+
+  | | `physicsTiers` SAB | `physicsTiers` MSG | `physicsTiers` main | gym SAB | gym MSG | gym main |
+  | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+  | Bodies with a slot | 197 | 197 | — | 14 | 14 | — |
+  | Write-back per STEP, avg / p95 (ms) | 0.188 / 0.255 | 0.191 / 0.265 | — | 0.060 / 0.155 | 0.054 / 0.125 | — |
+  | `MESSAGE_BATCH` copy, avg (ms) | — | 0.030 | — | — | 0.062 | — |
+  | `TRANSFORMS_PUSH` size (B) | — | 106,504 | — | — | 106,504 | — |
+  | Main-thread allocations (KiB / frame) | 262.1 | 262.5 | 277.6 | 70.1 | 70.9 | 72.2 |
+  | of which physics, character, Rapier | 10.3 | 11.0 | 16.3 | 12.4 | 12.6 | 6.2 |
+  | Main-thread GC (ms / frame) | 0.055 | 0.076 | 0.052 | 0.030 | 0.026 | 0.029 |
+  | Worker GC (ms / frame) | 0.011 | 0.011 | — | 0.014 | 0.014 | — |
+
+  The largest physics allocators, KiB / frame: `physicsInterpolationSystem` 1.4-4.0 in every run
+  (not on §1.4's list, E3 is its lookups: Phase 6 finds what it allocates), `decide` 2.2 and
+  `measure` 1.2 (P2, `physicsTiers`), `readBodyPositions` 3.6 and `readPoseInto` 3.3 / 1.7 (P2 and
+  R5, `MAIN_THREAD`), `setNextKinematicTranslation` / `Rotation` 1.5 each (the gym's platforms in
+  `WORKER_THREAD`: the captured commands' clones and `toPlainRot`, A7), `castRayAndGetNormal` 1.1
+  (`WORKER_THREAD`: the request and its promise). `castRayAndGetNormalSync` is 0.2 (R4's `Ray`),
+  and no shape cast reaches the top 12.
+
+  What it means for D11: physics is 4-6 % of the main thread's allocations in `physicsTiers` and
+  9-18 % in the gym (three's rendering is the bulk, ~167 KiB / frame in `physicsTiers`), and GC stays under 0.08 ms per frame everywhere.
+  The `Ray` reuse is cheap and stays. The shape cache saves too little to be worth its
+  identity-vs-dimensions trap (§1.2): proposed, Phase 5 drops it unless its own measurement
+  disagrees (to confirm). The
+  `MESSAGE_BATCH` copy of the whole buffer is the clearest win: with 14 bodies it costs more than
+  the write-back itself (106 kB for 728 B of live slots).
+
 ### Phase 1: the bugs (D4)
 
-1. A1 with the transport's error contract (in `PhysicsAPI.ts` for now; Phase 2 moves it).
-2. A2, A3 / W1, A4, R1 (D4b), R2, R3, E1, M3, each with its test (D10).
+1. A1 and W7 with the transport's error contract (in `PhysicsAPI.ts` for now; Phase 2 moves it).
+   `PhysicsWorkerRequests.test.ts`' `it.fails` become `it`.
+2. A2, A3 / W1, A4, A10, R1 (D4b), R2, R3, E1, M3, each with its test (D10).
 3. `yarn verify:scenes`: only `scene01`'s and the gym's hashes move (D4b), re-recorded with the
    reason after the hand check.
 
