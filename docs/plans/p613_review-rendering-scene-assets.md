@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: in progress | Phases 0-5 implemented
 Category: Refactoring, Documentation, Rendering, Assets
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -962,7 +962,7 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
   - **Checks:** `tsc` (both), the three folders' lint, `yarn test` (65 files, 529 passed, the
     `@example` check included).
 
-### Phase 5: asset registries (`Geometry.ts`, `Material.ts`, `Texture.ts`, `TextureArray.ts`, `TextureAtlas.ts`, `AssetFiles.ts`, `AssetOwners.ts`, `AssetUrl.ts`, `SceneAssetRelease.ts`, `Disposal.ts`)
+### Phase 5: asset registries (`Geometry.ts`, `Material.ts`, `Texture.ts`, `TextureArray.ts`, `TextureAtlas.ts`, `AssetFiles.ts`, `AssetOwners.ts`, `AssetUrl.ts`, `SceneAssetRelease.ts`, `Disposal.ts`) — done
 
 1. A1, A2, A3, D2's bug A (A4), A5 (`decMaterialRef` keeps what `retainedTextures` and the scene's
    background name: the same rule as the scene release), A6.
@@ -1135,6 +1135,18 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
   - **Checks:** `tsc` (both), the folder's lint, `yarn test` (72 files, 561 passed, the `@example`
     check included), the docs ratchet. `docs.json` and the API baseline are recorded at the end
     of the phase (step 6).
+- **Step 6 (the checks):**
+  - **`yarn verify:scenes`:** 104 passed, 0 failed, hashes and snapshots unchanged in every target
+    and in prod test mode (407.6 s). So A2, A5, bug A, the moved app loads (D12) and the shared
+    FNV-1a (the random streams' seeds) changed nothing a scene shows or simulates. The runner
+    prints errors, not warnings, so it can't say whether a scene logs section 2's dropped-argument
+    warning or bug A's: none of those strings is in its log.
+  - **`yarn verify:baselines`:** no debug code in either production build; the 31 API changes are
+    this phase's (the removals of A7 and section 4's `InlineTextureOverridesSchema`, the two moved
+    loaders, the new internal helpers, the entry's `decGeometryRef` and `TextureArrayInfo`);
+    within the bundle tolerance: the app's `index.js` 384,520 → 383,926 B gzip (−0.6 kB: the
+    dead code; `kernel/assets` −0.5 kB in the module groups), the banner's `banner.embed.js`
+    293,081 → 293,286 B (+0.2 kB: `ThreeMath.ts` for `toThreeColor` and `Hash.ts` now in it). Recorded (`--update`) with `docs.json` (exports 1774 / 2291).
 
 ### Phase 6: the assets API, worker and import (`AssetsAPI.ts`, `AssetsAPITypes.ts`, `worker/`, `import/`)
 

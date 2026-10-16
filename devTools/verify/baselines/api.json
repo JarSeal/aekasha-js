@@ -1597,9 +1597,7 @@
     "src/_engine/kernel/assets/AssetFiles.ts": {
       "getFileNameExt": "Function",
       "isHDR": "Function",
-      "isJPG": "Function",
-      "isKTX2": "Function",
-      "isPNG": "Function"
+      "isKTX2": "Function"
     },
     "src/_engine/kernel/assets/AssetOwners.ts": {
       "copyAssetOwner": "Function",
@@ -1659,35 +1657,23 @@
       "setAssetBaseUrl": "Function",
       "toAppUrl": "Function"
     },
-    "src/_engine/kernel/assets/Disposal.ts": {
-      "RemovalTypes": "TypeAlias",
-      "removeGeometryFromMemory": "Function",
-      "removeMaterialFromMemory": "Function",
-      "removeObjectAndChildrenFromMemory": "Function",
-      "removeObjectChildrenFromMemory": "Function",
-      "removeObjectFromMemory": "Function",
-      "removeTextureFromMemory": "Function"
-    },
     "src/_engine/kernel/assets/Geometry.ts": {
       "createGeometry": "Function",
       "decGeometryRef": "Function",
       "deleteGeometry": "Function",
       "doesGeoExist": "Function",
-      "freeGeometryGPUMemory": "Function",
       "GeoBaseProps": "TypeAlias",
       "GeoDebugData": "TypeAlias",
       "GeometryDeleteListener": "TypeAlias",
       "GeoProps": "TypeAlias",
       "GeoTypes": "TypeAlias",
-      "getAllGeometries": "Function",
       "getConservativeGeometryRadius": "Function",
       "getGeometry": "Function",
       "getGeometryRegistry": "Function",
       "incGeometryRef": "Function",
       "onGeometryDeleted": "Function",
       "prewarmGeometry": "Function",
-      "saveBufferGeometry": "Function",
-      "setGeometryPersistence": "Function"
+      "saveBufferGeometry": "Function"
     },
     "src/_engine/kernel/assets/import/CustomProps.ts": {
       "parseCustomProps": "Function"
@@ -1792,10 +1778,10 @@
       "deleteMaterial": "Function",
       "deleteTexturesFromMaterial": "Function",
       "doesMatExist": "Function",
-      "getAllMaterials": "Function",
+      "getKeptTextures": "Function",
       "getMaterial": "Function",
+      "getMaterialMapTexture": "Function",
       "getMaterialRegistry": "Function",
-      "getMaterials": "Function",
       "getMaterialVariant": "Function",
       "incMaterialRef": "Function",
       "isTextureUsedByAnyMaterial": "Function",
@@ -1804,31 +1790,26 @@
       "MaterialVariantOverrides": "TypeAlias",
       "MatProps": "TypeAlias",
       "saveMaterial": "Function",
-      "setMaterialPersistence": "Function",
-      "TextureMapKeys": "TypeAlias",
-      "updateAllMaterials": "Function"
+      "TextureMapKeys": "TypeAlias"
     },
     "src/_engine/kernel/assets/SceneAssetRelease.ts": {
       "releaseSceneOwnedAssets": "Function",
       "setSceneImportRelease": "Function"
     },
     "src/_engine/kernel/assets/Texture.ts": {
-      "decTextureRef": "Function",
       "deleteTexture": "Function",
       "doesTextureExist": "Function",
       "getAllTextures": "Function",
+      "getNoFileTexture": "Function",
       "getTexture": "Function",
       "getTextureRegistry": "Function",
-      "getTextures": "Function",
-      "incTextureRef": "Function",
-      "loadTexture": "Function",
+      "importHDRLoader": "Function",
       "loadTextureAsync": "Function",
       "loadTextureFileAsync": "Function",
-      "loadTextures": "Function",
       "resolveTextureUrl": "Function",
+      "saveLoadedTexture": "Function",
       "saveTexture": "Function",
       "setTextureOpts": "Function",
-      "setTexturePersistence": "Function",
       "TexOpts": "TypeAlias",
       "TextureProps": "TypeAlias"
     },
@@ -1854,6 +1835,10 @@
       "sampleAtlasCell": "Function",
       "SampleAtlasCellOpts": "TypeAlias",
       "TextureAtlasInfo": "TypeAlias"
+    },
+    "src/_engine/kernel/assets/TextureSync.ts": {
+      "loadTexture": "Function",
+      "loadTextures": "Function"
     },
     "src/_engine/kernel/assets/worker/AssetsFetch.ts": {
       "AssetsSourceError": "Class",
@@ -2381,7 +2366,8 @@
       "getQuatFromAngle": "Function",
       "LEVEL_GROUND_NORMAL": "Variable",
       "smoothDampVec3": "Function",
-      "ThreeVector3": "Variable"
+      "ThreeVector3": "Variable",
+      "toThreeColor": "Function"
     },
     "src/_engine/kernel/render/Views.ts": {
       "addViewChangeListener": "Function",
@@ -2641,7 +2627,6 @@
       "TextureAtlasSlotTextureSchema": "Variable"
     },
     "src/_engine/schemas/TextureSchema.ts": {
-      "InlineTextureOverridesSchema": "Variable",
       "InlineTextureSchema": "Variable",
       "TexOpts": "TypeAlias",
       "TexOptsSchema": "Variable",
@@ -2812,6 +2797,9 @@
     "src/_engine/utils/DeepMerge.ts": {
       "deepMerge": "Function",
       "isIndexObject": "Function"
+    },
+    "src/_engine/utils/Hash.ts": {
+      "hashStringFNV1a": "Function"
     },
     "src/_engine/utils/IntervalCounterStats.ts": {
       "IntervalCounterSnapshot": "TypeAlias",
@@ -3056,6 +3044,7 @@
       "SpawnImportedResult",
       "TexOpts",
       "TextureArray",
+      "TextureArrayInfo",
       "TextureArrayMember",
       "TextureAtlasInfo",
       "TextureProps",
@@ -3095,6 +3084,7 @@
       "createSceneMainLooper",
       "createSeededRandom",
       "createTouchBinding",
+      "decGeometryRef",
       "decMaterialRef",
       "deepMerge",
       "deleteEntity",

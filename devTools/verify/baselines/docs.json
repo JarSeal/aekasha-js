@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1762,
-      "total": 2305
+      "documented": 1774,
+      "total": 2291
     },
     "members": {
       "documented": 330,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1718,
-        "total": 2242
+        "documented": 1730,
+        "total": 2228
       },
       "members": {
         "documented": 280,
@@ -749,8 +749,8 @@
     },
     "engine/kernel/assets": {
       "exports": {
-        "documented": 109,
-        "total": 141
+        "documented": 119,
+        "total": 126
       },
       "members": {
         "documented": 0,
@@ -764,32 +764,7 @@
           "AssetsAPITypes#AssetsPingResponse",
           "AssetsAPITypes#AssetsProtocolType",
           "AssetsAPITypes#AssetsUpProtocol",
-          "AssetsAPITypes#AssetsWorkerStatus",
-          "Geometry#GeoDebugData",
-          "Geometry#GeoProps",
-          "Geometry#GeoTypes",
-          "Geometry#decGeometryRef",
-          "Geometry#freeGeometryGPUMemory",
-          "Geometry#getGeometryRegistry",
-          "Geometry#incGeometryRef",
-          "Geometry#setGeometryPersistence",
-          "Material#MatProps",
-          "Material#MaterialVariantOverrides",
-          "Material#Materials",
-          "Material#TextureMapKeys",
-          "Material#decMaterialRef",
-          "Material#getMaterialRegistry",
-          "Material#incMaterialRef",
-          "Material#setMaterialPersistence",
-          "Texture#TexOpts",
-          "Texture#TextureProps",
-          "Texture#decTextureRef",
-          "Texture#getTextureRegistry",
-          "Texture#incTextureRef",
-          "Texture#setTexturePersistence",
-          "TextureArray#BuildTextureArrayProps",
-          "TextureAtlas#RemapUVsToAtlasCellOpts",
-          "TextureAtlas#SampleAtlasCellOpts"
+          "AssetsAPITypes#AssetsWorkerStatus"
         ],
         "members": []
       }
@@ -991,8 +966,8 @@
     },
     "engine/kernel/render": {
       "exports": {
-        "documented": 88,
-        "total": 88
+        "documented": 89,
+        "total": 89
       },
       "members": {
         "documented": 0,
@@ -1019,8 +994,8 @@
     },
     "engine/schemas": {
       "exports": {
-        "documented": 47,
-        "total": 122
+        "documented": 46,
+        "total": 121
       },
       "members": {
         "documented": 0,
@@ -1184,8 +1159,8 @@
     },
     "engine/utils": {
       "exports": {
-        "documented": 39,
-        "total": 44
+        "documented": 41,
+        "total": 45
       },
       "members": {
         "documented": 4,
@@ -1196,7 +1171,6 @@
           "Constants#FOUR_PX_TO_8K_LIST",
           "Constants#HALF_PI",
           "Constants#QUARTER_PI",
-          "Constants#textureMapKeys",
           "LocalAndSessionStorage#StorageValue"
         ],
         "members": [
