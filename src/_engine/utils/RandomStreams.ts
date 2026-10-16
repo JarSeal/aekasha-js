@@ -1,3 +1,4 @@
+import { hashStringFNV1a } from './Hash';
 import { createSeededRandom } from './SeededRandom';
 
 /** The world seed until {@link setRandomSeed} sets one. */
@@ -8,14 +9,7 @@ let worldSeed = DEFAULT_RANDOM_SEED;
 const streams = new Map<string, () => number>();
 
 /** FNV-1a over the name's UTF-16 code units, mixed with the world seed: a stream's seed. */
-const getStreamSeed = (name: string) => {
-  let hash = 0x811c9dc5 ^ worldSeed;
-  for (let i = 0; i < name.length; i++) {
-    hash ^= name.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return hash >>> 0;
-};
+const getStreamSeed = (name: string) => hashStringFNV1a(name, 0x811c9dc5 ^ worldSeed);
 
 /**
  * The named random stream `name`: a seeded generator ({@link createSeededRandom}) seeded from the

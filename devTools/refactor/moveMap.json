@@ -1247,6 +1247,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/viewports/Viewports.test.ts": {
+      "to": "src/_engine/features/viewports/Viewports.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/viewports/Viewports.ts": {
       "to": "src/_engine/features/viewports/Viewports.ts",
       "action": "keep",
@@ -1318,8 +1323,8 @@
       "action": "keep",
       "plan": "p608"
     },
-    "src/_engine/kernel/assets/Disposal.ts": {
-      "to": "src/_engine/kernel/assets/Disposal.ts",
+    "src/_engine/kernel/assets/Geometry.test.ts": {
+      "to": "src/_engine/kernel/assets/Geometry.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -1335,6 +1340,11 @@
     },
     "src/_engine/kernel/assets/import/customPropTemplates.blend": {
       "to": "src/_engine/kernel/assets/import/customPropTemplates.blend",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/assets/import/DecoderImports.test.ts": {
+      "to": "src/_engine/kernel/assets/import/DecoderImports.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -1413,8 +1423,18 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/kernel/assets/Material.test.ts": {
+      "to": "src/_engine/kernel/assets/Material.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/kernel/assets/Material.ts": {
       "to": "src/_engine/kernel/assets/Material.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/assets/SceneAssetRelease.test.ts": {
+      "to": "src/_engine/kernel/assets/SceneAssetRelease.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -1428,6 +1448,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/kernel/assets/TextureArray.test.ts": {
+      "to": "src/_engine/kernel/assets/TextureArray.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/kernel/assets/TextureArray.ts": {
       "to": "src/_engine/kernel/assets/TextureArray.ts",
       "action": "keep",
@@ -1435,6 +1460,16 @@
     },
     "src/_engine/kernel/assets/TextureAtlas.ts": {
       "to": "src/_engine/kernel/assets/TextureAtlas.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/assets/TextureSync.test.ts": {
+      "to": "src/_engine/kernel/assets/TextureSync.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/assets/TextureSync.ts": {
+      "to": "src/_engine/kernel/assets/TextureSync.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -1578,6 +1613,16 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/kernel/init/BootHooks.test.ts": {
+      "to": "src/_engine/kernel/init/BootHooks.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/init/BootHooks.ts": {
+      "to": "src/_engine/kernel/init/BootHooks.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/kernel/init/FeatureFactories.test.ts": {
       "to": "src/_engine/kernel/init/FeatureFactories.test.ts",
       "action": "keep",
@@ -1693,6 +1738,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/kernel/light/Light.test.ts": {
+      "to": "src/_engine/kernel/light/Light.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/kernel/light/Light.ts": {
       "to": "src/_engine/kernel/light/Light.ts",
       "action": "keep",
@@ -1725,6 +1775,11 @@
     },
     "src/_engine/kernel/loop/Workers.ts": {
       "to": "src/_engine/kernel/loop/Workers.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/mesh/Mesh.test.ts": {
+      "to": "src/_engine/kernel/mesh/Mesh.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -1808,6 +1863,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/kernel/render/ThreeMath.test.ts": {
+      "to": "src/_engine/kernel/render/ThreeMath.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/kernel/render/ThreeMath.ts": {
       "to": "src/_engine/kernel/render/ThreeMath.ts",
       "action": "keep",
@@ -1833,6 +1893,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/kernel/scene/Group.test.ts": {
+      "to": "src/_engine/kernel/scene/Group.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/kernel/scene/Group.ts": {
       "to": "src/_engine/kernel/scene/Group.ts",
       "action": "keep",
@@ -1843,8 +1908,18 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/kernel/scene/Scene.test.ts": {
+      "to": "src/_engine/kernel/scene/Scene.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/kernel/scene/Scene.ts": {
       "to": "src/_engine/kernel/scene/Scene.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/scene/SceneDataLoader.ts": {
+      "to": "src/_engine/kernel/scene/SceneDataLoader.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -1855,6 +1930,11 @@
     },
     "src/_engine/kernel/scene/SceneHooks.ts": {
       "to": "src/_engine/kernel/scene/SceneHooks.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/scene/SceneLoader.test.ts": {
+      "to": "src/_engine/kernel/scene/SceneLoader.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -1939,6 +2019,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/schemas/RuntimeTypes.test.ts": {
+      "to": "src/_engine/schemas/RuntimeTypes.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/schemas/SceneSchema.ts": {
       "to": "src/_engine/schemas/SceneSchema.ts",
       "action": "keep",
@@ -1986,6 +2071,11 @@
     },
     "src/_engine/ui/DraggableWindow.module.scss": {
       "to": "src/_engine/ui/DraggableWindow.module.scss",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/ui/DraggableWindow.test.ts": {
+      "to": "src/_engine/ui/DraggableWindow.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -2341,6 +2431,16 @@
     },
     "src/_engine/utils/DeepMerge.ts": {
       "to": "src/_engine/utils/DeepMerge.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/utils/Hash.test.ts": {
+      "to": "src/_engine/utils/Hash.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/utils/Hash.ts": {
+      "to": "src/_engine/utils/Hash.ts",
       "action": "keep",
       "plan": "p608"
     },

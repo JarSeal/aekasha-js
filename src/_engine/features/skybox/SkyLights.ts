@@ -22,9 +22,9 @@
 import * as THREE from 'three/webgpu';
 import { getECSWorld, type ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
-import type { ShadowQuality } from '../../kernel/light/Light';
 import { createLightEntity, getLightTargetId, SHADOW_PRESETS } from '../../kernel/light/Light';
 import { getActiveCamera } from '../../kernel/camera/Camera';
+import type { ShadowQuality } from '../../schemas/_HelperSchemas';
 import type {
   SkyBoxAmbientLightDef,
   SkyBoxDef,
@@ -55,9 +55,7 @@ export const SUN_LIGHT_DEFAULTS = {
   intensity: 3,
   color: 'AUTO',
   castShadow: true,
-  // A literal, not ShadowQuality.MEDIUM: LightManager imports Scene, which imports this module
-  // (through SkyBox.ts), so its values aren't set yet while this one loads
-  shadowPreset: 'MEDIUM' as `${ShadowQuality}`,
+  shadowPreset: 'MEDIUM' as ShadowQuality,
   shadowFrustumSize: 30,
   distance: 100,
   shadowFollow: 'ACTIVE_CAMERA' as 'ACTIVE_CAMERA' | 'ORIGIN',

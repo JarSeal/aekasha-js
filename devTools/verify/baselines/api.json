@@ -163,7 +163,6 @@
       "_getEntityWindowOpener": "Function",
       "_getStatsSources": "Function",
       "createProfilerTab": "Function",
-      "DEBUG_HELPER_USER_DATA_KEY": "Variable",
       "DEFAULT_PROFILER_SETTINGS": "Variable",
       "EntityWindowOpener": "TypeAlias",
       "getProfilerSettings": "Function",
@@ -1182,16 +1181,13 @@
       "getPostFxBuiltChain": "Function",
       "getPostFxPasses": "Function",
       "installPostFx": "Function",
-      "invalidatePostFxPipeline": "Function",
       "isPostFxEnabled": "Function",
       "loadScenePostFxFilesAsync": "Function",
       "PostFxLiveParams": "TypeAlias",
       "PostFxPassInfo": "TypeAlias",
       "setPostFxEnabled": "Function",
       "setPostFxPassEnabled": "Function",
-      "setPostFxPassParam": "Function",
-      "togglePostFx": "Function",
-      "togglePostFxPass": "Function"
+      "setPostFxPassParam": "Function"
     },
     "src/_engine/features/postfx/PostFXFeature.ts": {
       "postFx": "Function",
@@ -1338,7 +1334,6 @@
       "getMoonDirection": "Function",
       "getMoonPhase": "Function",
       "getSceneDefaultSkyBoxId": "Function",
-      "getSceneSkyBoxTextureIds": "Function",
       "getSunDirection": "Function",
       "getSunElevation": "Function",
       "getTimeOfDay": "Function",
@@ -1599,9 +1594,7 @@
     "src/_engine/kernel/assets/AssetFiles.ts": {
       "getFileNameExt": "Function",
       "isHDR": "Function",
-      "isJPG": "Function",
-      "isKTX2": "Function",
-      "isPNG": "Function"
+      "isKTX2": "Function"
     },
     "src/_engine/kernel/assets/AssetOwners.ts": {
       "copyAssetOwner": "Function",
@@ -1661,35 +1654,23 @@
       "setAssetBaseUrl": "Function",
       "toAppUrl": "Function"
     },
-    "src/_engine/kernel/assets/Disposal.ts": {
-      "RemovalTypes": "TypeAlias",
-      "removeGeometryFromMemory": "Function",
-      "removeMaterialFromMemory": "Function",
-      "removeObjectAndChildrenFromMemory": "Function",
-      "removeObjectChildrenFromMemory": "Function",
-      "removeObjectFromMemory": "Function",
-      "removeTextureFromMemory": "Function"
-    },
     "src/_engine/kernel/assets/Geometry.ts": {
       "createGeometry": "Function",
       "decGeometryRef": "Function",
       "deleteGeometry": "Function",
       "doesGeoExist": "Function",
-      "freeGeometryGPUMemory": "Function",
       "GeoBaseProps": "TypeAlias",
       "GeoDebugData": "TypeAlias",
       "GeometryDeleteListener": "TypeAlias",
       "GeoProps": "TypeAlias",
       "GeoTypes": "TypeAlias",
-      "getAllGeometries": "Function",
       "getConservativeGeometryRadius": "Function",
       "getGeometry": "Function",
       "getGeometryRegistry": "Function",
       "incGeometryRef": "Function",
       "onGeometryDeleted": "Function",
       "prewarmGeometry": "Function",
-      "saveBufferGeometry": "Function",
-      "setGeometryPersistence": "Function"
+      "saveBufferGeometry": "Function"
     },
     "src/_engine/kernel/assets/import/CustomProps.ts": {
       "parseCustomProps": "Function"
@@ -1794,10 +1775,10 @@
       "deleteMaterial": "Function",
       "deleteTexturesFromMaterial": "Function",
       "doesMatExist": "Function",
-      "getAllMaterials": "Function",
+      "getKeptTextures": "Function",
       "getMaterial": "Function",
+      "getMaterialMapTexture": "Function",
       "getMaterialRegistry": "Function",
-      "getMaterials": "Function",
       "getMaterialVariant": "Function",
       "incMaterialRef": "Function",
       "isTextureUsedByAnyMaterial": "Function",
@@ -1806,30 +1787,26 @@
       "MaterialVariantOverrides": "TypeAlias",
       "MatProps": "TypeAlias",
       "saveMaterial": "Function",
-      "setMaterialPersistence": "Function",
-      "TextureMapKeys": "TypeAlias",
-      "updateAllMaterials": "Function"
+      "TextureMapKeys": "TypeAlias"
     },
     "src/_engine/kernel/assets/SceneAssetRelease.ts": {
-      "releaseSceneOwnedAssets": "Function"
+      "releaseSceneOwnedAssets": "Function",
+      "setSceneImportRelease": "Function"
     },
     "src/_engine/kernel/assets/Texture.ts": {
-      "decTextureRef": "Function",
       "deleteTexture": "Function",
       "doesTextureExist": "Function",
       "getAllTextures": "Function",
+      "getNoFileTexture": "Function",
       "getTexture": "Function",
       "getTextureRegistry": "Function",
-      "getTextures": "Function",
-      "incTextureRef": "Function",
-      "loadTexture": "Function",
+      "importHDRLoader": "Function",
       "loadTextureAsync": "Function",
       "loadTextureFileAsync": "Function",
-      "loadTextures": "Function",
       "resolveTextureUrl": "Function",
+      "saveLoadedTexture": "Function",
       "saveTexture": "Function",
       "setTextureOpts": "Function",
-      "setTexturePersistence": "Function",
       "TexOpts": "TypeAlias",
       "TextureProps": "TypeAlias"
     },
@@ -1856,6 +1833,10 @@
       "SampleAtlasCellOpts": "TypeAlias",
       "TextureAtlasInfo": "TypeAlias"
     },
+    "src/_engine/kernel/assets/TextureSync.ts": {
+      "loadTexture": "Function",
+      "loadTextures": "Function"
+    },
     "src/_engine/kernel/assets/worker/AssetsFetch.ts": {
       "AssetsSourceError": "Class",
       "fetchAsset": "Function"
@@ -1869,24 +1850,18 @@
     "src/_engine/kernel/assets/worker/AssetsWorker.ts": {},
     "src/_engine/kernel/camera/Camera.ts": {
       "applyCameraProjection": "Function",
-      "cameraDebugGUI": "Variable",
-      "CameraDebugLSData": "Interface",
-      "CameraEntityDebugState": "Interface",
       "cameraLookAtPoint": "Function",
-      "CameraSceneDebugState": "Interface",
       "computeResponsiveFov": "Function",
       "computeResponsiveFrustumSize": "Function",
       "createCameraEntity": "Function",
-      "DebugCamLSProps": "Interface",
       "disposeCamera": "Function",
       "getActiveCamera": "Function",
       "getActiveCameraId": "Function",
       "getAllCamerasAsArray": "Function",
       "getCameraByAppId": "Function",
-      "getCurrentCamera": "Function",
-      "getCurrentCameraId": "Function",
       "getMainAppCameraId": "Function",
       "getMainCamera": "Function",
+      "getSavedCameraDebugProps": "Function",
       "initDebugCamera": "Function",
       "installCameras": "Function",
       "isAnyCameraHelperVisible": "Function",
@@ -1896,7 +1871,6 @@
       "setCurrentCamera": "Function",
       "setMainCamera": "Function",
       "setSceneDebugCameraInputEnabled": "Function",
-      "syncCameraHelpersFromLS": "Function",
       "toggleAllCameraHelpers": "Function",
       "toggleDebugCamera": "Function",
       "updateAllCameraAspectRatios": "Function"
@@ -1997,8 +1971,10 @@
       "hasComponent": "Function",
       "inspectEntity": "Function",
       "lookAtPoint": "Function",
+      "ObjectTransformProps": "TypeAlias",
       "removeComponent": "Function",
       "setTransform": "Function",
+      "setTransformFromProps": "Function",
       "teleport": "Function"
     },
     "src/_engine/kernel/ecs/ECSRegistry.ts": {
@@ -2037,6 +2013,10 @@
       "bootEngineAsync": "Function",
       "BootOptions": "TypeAlias",
       "isEngineBooted": "Function"
+    },
+    "src/_engine/kernel/init/BootHooks.ts": {
+      "addBootAfterStartHook": "Function",
+      "runBootAfterStartHooks": "Function"
     },
     "src/_engine/kernel/init/Features.ts": {
       "checkFeatures": "Function",
@@ -2212,13 +2192,11 @@
       "TouchTapBinding": "TypeAlias"
     },
     "src/_engine/kernel/light/Light.ts": {
-      "aimLightAtEntity": "Function",
       "createLightEntity": "Function",
-      "debugGUI": "Variable",
       "disposeLight": "Function",
       "getLightByAppId": "Function",
       "getLightTargetId": "Function",
-      "getLightTargetTransform": "Function",
+      "getSavedLightDebugProps": "Function",
       "installLights": "Function",
       "isAnyLightHelperVisible": "Function",
       "LightProps": "TypeAlias",
@@ -2226,10 +2204,8 @@
       "setLightEnabled": "Function",
       "setLightFrustumCullingEnabled": "Function",
       "setLightObjectCullingEnabled": "Function",
-      "setLightShadowEnabled": "Function",
-      "setLightTargetPosition": "Function",
       "SHADOW_PRESETS": "Variable",
-      "ShadowQuality": "Enum",
+      "ShadowPreset": "TypeAlias",
       "toggleAllLightHelpers": "Function"
     },
     "src/_engine/kernel/light/LightHelpers.ts": {
@@ -2321,6 +2297,8 @@
       "setLodObjectFade": "Function"
     },
     "src/_engine/kernel/render/Object3DHelpers.ts": {
+      "DEBUG_HELPER_USER_DATA_KEY": "Variable",
+      "isDebugHelperObject": "Function",
       "isOnlyObject3D": "Function"
     },
     "src/_engine/kernel/render/Raycast.ts": {
@@ -2381,14 +2359,10 @@
     "src/_engine/kernel/render/ThreeMath.ts": {
       "DIRECTIONS": "Variable",
       "getQuatFromAngle": "Function",
-      "GRAVITY_DOWN_NORMAL": "Variable",
       "LEVEL_GROUND_NORMAL": "Variable",
-      "RENDERER_SHADOW_OPTIONS": "Variable",
-      "slerp": "Function",
       "smoothDampVec3": "Function",
-      "ThreeEuler": "Variable",
-      "ThreeQuoternion": "Variable",
-      "ThreeVector3": "Variable"
+      "ThreeVector3": "Variable",
+      "toThreeColor": "Function"
     },
     "src/_engine/kernel/render/Views.ts": {
       "addViewChangeListener": "Function",
@@ -2441,33 +2415,21 @@
       "createScene": "Function",
       "createSceneAppLooper": "Function",
       "createSceneMainLooper": "Function",
-      "createSceneResizer": "Function",
       "deleteAllSceneLoopers": "Function",
-      "deleteScene": "Function",
       "deleteSceneAppLooper": "Function",
-      "deleteSceneAppLoopers": "Function",
-      "deleteSceneMainLateLoopers": "Function",
       "deleteSceneMainLooper": "Function",
-      "deleteSceneMainLoopers": "Function",
-      "deleteSceneResizer": "Function",
-      "deleteSceneResizers": "Function",
       "doesSceneExist": "Function",
-      "getAllScenes": "Function",
       "getCurrentScene": "Function",
       "getCurrentSceneId": "Function",
-      "getCurrentSceneOpts": "Function",
       "getGeneratedAppData": "Function",
       "getGeneratedSceneData": "Function",
+      "getLoadingSceneId": "Function",
       "getRootScene": "Function",
       "getScene": "Function",
-      "getSceneAppLoopers": "Function",
-      "getSceneMainLateLoopers": "Function",
-      "getSceneMainLoopers": "Function",
       "getSceneOpts": "Function",
-      "getSceneResizers": "Function",
-      "isCurrentScene": "Function",
       "Looper": "TypeAlias",
-      "registerOnAllSceneEnterings": "Function",
+      "registerOnAllSceneEnterings": "Variable",
+      "registerOnAllSceneEnters": "Function",
       "registerOnAllSceneExits": "Function",
       "registerOnSceneEnter": "Function",
       "registerOnSceneExit": "Function",
@@ -2482,15 +2444,18 @@
       "SceneData": "TypeAlias",
       "SceneOptions": "TypeAlias",
       "setCurrentScene": "Function",
-      "setLoadingSceneId": "Function",
-      "setSceneOpts": "Function"
+      "setLoadingSceneId": "Function"
+    },
+    "src/_engine/kernel/scene/SceneDataLoader.ts": {
+      "createCameras": "Function",
+      "createNextSceneObject3Ds": "Function",
+      "loadNextSceneAssets": "Function"
     },
     "src/_engine/kernel/scene/SceneHooks.ts": {
       "addSceneHooks": "Function",
       "getSceneRetainedTextures": "Function",
       "runSceneBeforeAssetsHooksAsync": "Function",
       "runSceneCreatedHooksAsync": "Function",
-      "runSceneDeletedHooks": "Function",
       "runSceneEnteredHooksAsync": "Function",
       "runSceneExitHooks": "Function",
       "runSceneLoadSettledHooks": "Function",
@@ -2500,10 +2465,7 @@
       "SceneHooks": "TypeAlias"
     },
     "src/_engine/kernel/scene/SceneLoader.ts": {
-      "createCameras": "Function",
       "createSceneLoader": "Function",
-      "getCurrentSceneLoader": "Function",
-      "getCurrentSceneLoaderId": "Function",
       "getLoaderStatusUpdater": "Function",
       "getNextSceneId": "Function",
       "hasFirstSceneBeenLoaded": "Function",
@@ -2512,7 +2474,6 @@
       "LoadSceneProps": "TypeAlias",
       "SceneLoader": "TypeAlias",
       "ScenePrimitiveAssets": "TypeAlias",
-      "setCurrentSceneLoader": "Function",
       "UpdateLoaderStatusFn": "TypeAlias"
     },
     "src/_engine/schemas/_HelperSchemas.ts": {
@@ -2661,7 +2622,6 @@
       "TextureAtlasSlotTextureSchema": "Variable"
     },
     "src/_engine/schemas/TextureSchema.ts": {
-      "InlineTextureOverridesSchema": "Variable",
       "InlineTextureSchema": "Variable",
       "TexOpts": "TypeAlias",
       "TexOptsSchema": "Variable",
@@ -2711,10 +2671,7 @@
       "getDraggableWindowsOfKind": "Function",
       "getDraggableWindowsStartingWith": "Function",
       "getKindWindowId": "Function",
-      "handleDraggableWindowsOnSceneChangeEnd": "Function",
-      "handleDraggableWindowsOnSceneChangeStart": "Function",
       "isDraggableWindowOnTop": "Function",
-      "loadDraggableWindowStatesFromLS": "Function",
       "openDraggableWindow": "Function",
       "OpenDraggableWindowProps": "TypeAlias",
       "registerDraggableWindow": "Function",
@@ -2835,6 +2792,9 @@
     "src/_engine/utils/DeepMerge.ts": {
       "deepMerge": "Function",
       "isIndexObject": "Function"
+    },
+    "src/_engine/utils/Hash.ts": {
+      "hashStringFNV1a": "Function"
     },
     "src/_engine/utils/IntervalCounterStats.ts": {
       "IntervalCounterSnapshot": "TypeAlias",
@@ -3079,6 +3039,7 @@
       "SpawnImportedResult",
       "TexOpts",
       "TextureArray",
+      "TextureArrayInfo",
       "TextureArrayMember",
       "TextureAtlasInfo",
       "TextureProps",
@@ -3089,6 +3050,7 @@
       "TransferableGeometry",
       "Transform",
       "TransformResetListener",
+      "UpdateLoaderStatusFn",
       "ViewChangeListener",
       "ViewDef",
       "ViewFrameListener",
@@ -3117,6 +3079,7 @@
       "createSceneMainLooper",
       "createSeededRandom",
       "createTouchBinding",
+      "decGeometryRef",
       "decMaterialRef",
       "deepMerge",
       "deleteEntity",
@@ -3198,6 +3161,7 @@
       "playActionRecording",
       "recordActions",
       "registerOnAllSceneEnterings",
+      "registerOnAllSceneEnters",
       "registerOnAllSceneExits",
       "registerOnSceneEnter",
       "registerOnSceneExit",
@@ -3445,8 +3409,12 @@
       "setPhysicsTierPolicyMember"
     ],
     "aekasha/postfx": [
+      "PostFxLiveParams",
+      "PostFxPassApi",
+      "PostFxPassContext",
       "PostFxPassFn",
       "PostFxPassInfo",
+      "PostFxPassProps",
       "getPostFxPasses",
       "postFx",
       "setPostFxEnabled",
@@ -3484,6 +3452,7 @@
       "PACK_TARGETS",
       "PostFxAsset",
       "PostFxAssetSchema",
+      "PostFxParamMeta",
       "SceneAsset",
       "SkyBoxAsset",
       "SkyBoxAssetSchema",
@@ -3677,13 +3646,16 @@
     ],
     "aekasha/viewports": [
       "Viewport",
+      "ViewportAnchor",
       "ViewportProps",
+      "ViewportRect",
       "createViewport",
       "deleteViewport",
       "getViewport",
       "getViewportPointerNDC",
       "invalidateViewportLayout",
       "setViewportEnabled",
+      "setViewportInteractive",
       "viewports"
     ]
   }

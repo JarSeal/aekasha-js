@@ -19,6 +19,13 @@ Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every 
 ## Inputs
 
 - p600 §2; the three r186 traps CLAUDE.md lists for the sky box (they become `@remarks`).
+- p613 Phase 5 (D11's type test): `toSkyColor` (`features/skybox/SkyColor.ts`, 17 callers) reads
+  a `{ r, g, b }` colour (the schema's `ColorJSON`, 0-255) as linear, while a `'#rrggbb'` string
+  goes through `THREE.Color`'s sRGB conversion, so the two forms of one colour render differently.
+  The kernel's `toThreeColor` (`kernel/render/ThreeMath.ts`, `@internal`) reads both as sRGB (the
+  lights and the scene background since p613). No sky box JSON uses the object form yet (all 7
+  write strings), so moving to `toThreeColor` changes no scene; the debug tab's colour pickers
+  are the thing to check.
 
 ## Done when
 

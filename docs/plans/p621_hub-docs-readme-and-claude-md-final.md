@@ -1,7 +1,7 @@
 Status: stub — not-implemented
 Category: Documentation, Hub
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage D)
-Blocked by: p613_review-rendering-scene-assets.md, p614_review-physics.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p617_review-input-ui-hud.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p620_review-toolkit-and-app-code.md
+Blocked by: p614_review-physics.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p617_review-input-ui-hud.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p620_review-toolkit-and-app-code.md
 
 # Hub Docs, Readme and CLAUDE.md: the Final Pass — Stub
 

@@ -7,6 +7,8 @@ import { getWindowSize } from './Window';
 import { getConfig, IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
 import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from './HUD';
 import { addResizer } from '../kernel/loop/MainLoop';
+import { addSceneHooks } from '../kernel/scene/SceneHooks';
+import { addBootAfterStartHook } from '../kernel/init/BootHooks';
 import styles from './DraggableWindow.module.scss';
 import { getSvgIcon, type SvgIconKey } from './icons/SvgIcon';
 
@@ -253,8 +255,30 @@ const getWindowKind = (config: DraggableWindowConfig) => config.kind ?? config.i
 
 // State
 
+let areWindowHooksAdded = false;
+
+/** Adds the windows' part of every scene load and the boot's restore from LS, on the windows'
+ * first use (p613 D5): neither the scene loader nor the boot names this module, so a build that
+ * uses no window leaves it out. A first use after the boot restores nothing. */
+const addWindowHooks = () => {
+  if (areWindowHooksAdded) return;
+  areWindowHooksAdded = true;
+  addSceneHooks({
+    // Before the features' exit hooks: the windows go before the entities they show
+    loadStart: handleWindowsOnSceneChangeStart,
+    // After the enter listeners, so entities the scene code created exist too
+    entered: () => handleWindowsOnSceneChangeEnd(false),
+    // A failed load (its entered hooks didn't run): the windows it suspended close
+    loadSettled: () => {
+      if (suspendedWindowIds.size) handleWindowsOnSceneChangeEnd(true);
+    },
+  });
+  addBootAfterStartHook(loadDraggableWindowStatesFromLS);
+};
+
 const getWindows = () => {
   if (!windows) {
+    addWindowHooks();
     windows = new Map();
     hydrateFromLS(windows);
   }
@@ -1259,12 +1283,10 @@ const resolveSceneTarget = ({ config }: WindowEntry) => {
   }
 };
 
-/**
- * Handles the windows at a scene change start: removes the windows flagged `removeOnSceneChange`
- * and closes the ones flagged `closeOnSceneChange`, except the ones with a scene target resolver:
- * those are suspended until {@link handleDraggableWindowsOnSceneChangeEnd}.
- */
-export const handleDraggableWindowsOnSceneChangeStart = () => {
+/** A scene load's start (the `loadStart` scene hook): removes the windows flagged
+ * `removeOnSceneChange` and closes the ones flagged `closeOnSceneChange`, except the ones with a
+ * scene target resolver: those are suspended until {@link handleWindowsOnSceneChangeEnd}. */
+const handleWindowsOnSceneChangeStart = () => {
   const entries = [...getWindows().values()];
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
@@ -1290,13 +1312,10 @@ export const handleDraggableWindowsOnSceneChangeStart = () => {
   }
 };
 
-/**
- * Handles the windows suspended at the scene change start: rebuilds the ones whose target exists
- * in the next scene and closes the rest. Call once the next scene's entities exist (after the
- * scene enter hooks).
- * @param loadFailed (boolean) optional, closes every suspended window (the scene failed to load)
- */
-export const handleDraggableWindowsOnSceneChangeEnd = (loadFailed?: boolean) => {
+/** A scene load's end (the `entered` scene hook, or `loadSettled` after a failed load): rebuilds
+ * the suspended windows whose target exists in the next scene and closes the rest, or all of them
+ * when the load failed. */
+const handleWindowsOnSceneChangeEnd = (loadFailed: boolean) => {
   const ids = [...suspendedWindowIds];
   suspendedWindowIds.clear();
   for (let i = 0; i < ids.length; i++) {
@@ -1312,8 +1331,9 @@ export const handleDraggableWindowsOnSceneChangeEnd = (loadFailed?: boolean) => 
   saveDraggableWindowStatesToLS();
 };
 
-/** Opens the windows that were open at the last save, in their saved stack order. */
-export const loadDraggableWindowStatesFromLS = () => {
+/** Opens the windows that were open at the last save, in their saved stack order: the boot's
+ * after-start step (`addBootAfterStartHook`), once the app's start has registered its windows. */
+const loadDraggableWindowStatesFromLS = () => {
   const entries = [...getWindows().values()];
   for (let i = 0; i < entries.length; i++) {
     const { config, runtime } = entries[i];
@@ -1381,6 +1401,7 @@ export const registerDraggableWindowKind = (kind: string, opts?: DraggableWindow
  * passes
  */
 export const registerDraggableWindow = (id: string, opts: DraggableWindowKindOpts) => {
+  addWindowHooks();
   if (opts.content) setContentFn(id, opts.content);
   if (opts.sceneTargetResolver) sceneTargetResolvers[id] = opts.sceneTargetResolver;
   if (opts.onClose) kindOnCloses[id] = opts.onClose;
@@ -1481,6 +1502,7 @@ export const registerDraggableWindowSceneTargetResolver = (
   id: string,
   resolver: SceneTargetResolver
 ) => {
+  addWindowHooks();
   sceneTargetResolvers[id] = resolver;
 };
 
@@ -1500,6 +1522,7 @@ export const registerDraggableWindowContentFn = (
 
 /** Kept in the app config, next to the content functions an app can set there itself. */
 const setContentFn = (id: string, contentFn: (data?: DraggableWindowData) => TCMP) => {
+  addWindowHooks();
   const config = getConfig();
   if (!config.draggableWindows) config.draggableWindows = {};
   config.draggableWindows[id] = { contentFn };

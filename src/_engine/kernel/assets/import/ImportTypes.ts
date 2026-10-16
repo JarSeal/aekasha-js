@@ -12,6 +12,10 @@ export type Vector3Like = { x: number; y: number; z: number };
 /** Plain, structured-clone-safe quaternion. */
 export type QuatLike = { x: number; y: number; z: number; w: number };
 
+/**
+ * What `importAssetAsync` imports: the file, the id its geometries and textures are
+ * registered under, and which parts of it.
+ */
 export type ImportAssetParams = {
   /** Import id, also the geometry id prefix (`${id}/${nodeName}`). Default: file basename
    * without the extension. */
@@ -46,13 +50,21 @@ export type ImportAssetParams = {
 /** Physics override for one imported node. Wins field-by-field over the node's Blender custom
  * props, or adds physics to a node that has none (then a collider and a rigid body are needed). */
 export type ImportPhysicsParams = {
+  /** The collider: `type`, the shape sizes, `density`, `friction`, `restitution` and the combine
+   * rules override the custom props; the other fields are applied as they are. */
   collider?: ColliderParams;
+  /** The rigid body: `rigidType` overrides the custom prop; the other fields are applied as they
+   * are, but `translation` and `rotation` (the node and `transform` place it). */
   rigidBody?: RigidBodyParams;
   /** Overrides the `id` custom prop. */
   meshId?: string;
+  /** Overrides the `isPhysObj` custom prop: whether the node gets physics. */
   isPhysObj?: boolean;
+  /** Overrides the `keepMesh` custom prop: whether a physics node is also rendered. */
   keepMesh?: boolean;
+  /** Overrides the `name` custom prop. */
   name?: string;
+  /** Overrides the `index` custom prop: the compound group sharing one rigid body. */
   index?: number;
 };
 
@@ -61,6 +73,7 @@ export type ParsedCustomProps = {
   /** The node's raw custom props (glTF extras + GLTFLoader's `name`), for re-parsing with an
    * {@link ImportPhysicsParams} override. */
   raw: Record<string, unknown>;
+  /** The node gets physics (the `isPhysObj` custom prop). */
   isPhysObj: boolean;
   /** Only set for physics nodes: whether the node is also rendered (false = collider only). */
   keepMesh?: boolean;
@@ -73,15 +86,20 @@ export type ParsedCustomProps = {
   rigidBodyUserData?: Record<string, unknown>;
   /** Compound group: all physics nodes with the same index share one rigid body. */
   index?: number;
+  /** The `id` custom prop as a string, for the app: the engine doesn't read it. */
   id?: string;
+  /** The `name` custom prop as a string, for the app: the engine doesn't read it. */
   name?: string;
   /** Problems found while parsing (eg. an unknown `colliderType`), logged by the importer. */
   warnings: string[];
 };
 
+/** One imported mesh primitive in an {@link ImportedAssetManifest}: its registered geometry,
+ * where its node sits in the file, and its node's custom props. */
 export type ImportedGeometryInfo = {
   /** Registry id (`${importId}/${nodeName}`, plus `#n` for multi-primitive meshes). */
   geometryId: string;
+  /** The import it belongs to ({@link ImportedAssetManifest.id}). */
   importId: string;
   /** The node's name as GLTFLoader names it (sanitized and unique within the file). */
   nodeName: string;
@@ -89,6 +107,7 @@ export type ImportedGeometryInfo = {
   parentPath: string[];
   /** Relative to the glTF root (after the empty-wrapper unwrap). */
   transform: { position: Vector3Like; quaternion: QuatLike; scale: Vector3Like };
+  /** The node's Blender custom props, parsed (physics, compound group, the app's own). */
   customProps: ParsedCustomProps;
   /** The primitive came from KHR_draco_mesh_compression (vertex order is not preserved). */
   isDracoCompressed: boolean;
@@ -97,13 +116,24 @@ export type ImportedGeometryInfo = {
   textureSlots?: Partial<Record<TextureMapKeys, string>>;
 };
 
+/**
+ * What an import registered: `importAssetAsync`'s result, which `spawnImportedAsset`
+ * spawns entities from. Plain data, the same whether the file was loaded on the main thread or in
+ * the assets worker.
+ */
 export type ImportedAssetManifest = {
+  /** The import id ({@link ImportAssetParams.id}, or the file's basename). */
   id: string;
+  /** The file as the import was given it ({@link ImportAssetParams.fileName}), not the asset
+   * pipeline's output it loaded. */
   fileName: string;
+  /** One per imported mesh primitive, in node order. */
   geometries: ImportedGeometryInfo[];
+  /** The registered textures' ids, with `importTextures` (empty without it). */
   textureIds: string[];
 };
 
+/** How `spawnImportedAsset` places, renders and adds physics to an import's nodes. */
 export type SpawnImportedParams = {
   /** Root transform: every node's glTF-root-relative transform is composed under it. `rotation`
    * (Euler, radians) is only used when `quaternion` isn't given. */
@@ -113,6 +143,7 @@ export type SpawnImportedParams = {
   material?: THREE.Material | string;
   /** Shadow flags for every visible piece (a `meshProps` entry's own flags win). */
   castShadow?: boolean;
+  /** Like `castShadow`, for receiving shadows. */
   receiveShadow?: boolean;
   /** Per-piece mesh overrides, by node order in the manifest (array) or by geometryId (record).
    * `position`/`rotation`/`quaternion`/`scale` replace the composed transform instead of adding
@@ -134,6 +165,7 @@ export type SpawnImportedParams = {
   entityOpts?: CoreEntityOpts;
 };
 
+/** The entities `spawnImportedAsset` created, by the role they have. */
 export type SpawnImportedResult = {
   /** Mesh entities, in manifest order (collider-only nodes get none). */
   meshEntityIds: number[];

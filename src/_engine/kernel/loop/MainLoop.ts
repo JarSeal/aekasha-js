@@ -1,10 +1,8 @@
 import { Timer, type Renderer, type Scene, type Camera } from 'three/webgpu';
 import { getStats, initStats, startCustomMeasurements, updateRestOfStats } from '../../debug/Stats';
-import { getCurrentCamera } from '../camera/Camera';
 import { getRenderer } from '../render/Renderer';
 import {
   getRootScene,
-  getSceneResizers,
   runSceneAppLoopers,
   runSceneMainLateLoopers,
   runSceneMainLoopers,
@@ -469,18 +467,11 @@ const runFrame = () => {
   frameProbe?.end(performance.now(), true);
 };
 
-/** Runs the global resizers, then the current scene's. */
+/** Runs the resizers. */
 const runResizers = () => {
   const ids = Object.keys(resizers);
   for (let i = 0; i < ids.length; i++) {
     resizers[ids[i]]();
-  }
-
-  const sceneResizers = getSceneResizers();
-  if (sceneResizers) {
-    for (let i = 0; i < sceneResizers.length; i++) {
-      sceneResizers[i]();
-    }
   }
 };
 
@@ -493,7 +484,7 @@ export const initMainLoop = () => {
   mainLoopInitiated = true;
 
   const renderer = getRenderer();
-  const currentCamera = getCurrentCamera();
+  const currentCamera = getActiveCamera();
   if (!renderer) {
     const msg = 'Renderer has not been created or has been deleted (initMainLoop).';
     lerror(msg);

@@ -1,14 +1,11 @@
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { EngineFeature } from '../../kernel/init/Features';
-import { isCurrentScene } from '../../kernel/scene/Scene';
 import type { SceneHooks } from '../../kernel/scene/SceneHooks';
-import { deleteTexture, getTexture } from '../../kernel/assets/Texture';
 import {
   activateSceneDefaultSkyBox,
   clearSkyBox,
   createSkyBoxDebugGUI,
   getActiveSkyBoxTexture,
-  getSceneSkyBoxTextureIds,
   installSkyBoxSystem,
   registerSkyBox,
   registerSkyBoxDebugGUI,
@@ -16,8 +13,8 @@ import {
 
 /**
  * The sky box's part of the scenes' life: each scene's JSON sky boxes are registered with it, a
- * load clears the previous scene's sky box and shows the next one's default, and a deleted scene's
- * sky box textures go (except the one showing).
+ * load clears the previous scene's sky box and shows the next one's default, and a scene's asset
+ * release keeps the texture showing.
  * @internal
  */
 export const skyBoxSceneHooks: SceneHooks = {
@@ -25,15 +22,6 @@ export const skyBoxSceneHooks: SceneHooks = {
     for (const def of data.skyboxes ?? []) {
       // The gatherer resolves a sky box asset's id into its definition: a string left is skipped
       if (typeof def !== 'string') registerSkyBox(def, sceneId);
-    }
-  },
-  // Its baked PMREMs go with the textures
-  sceneDeleted: (sceneId) => {
-    if (isCurrentScene(sceneId)) clearSkyBox();
-    const activeTexture = getActiveSkyBoxTexture();
-    for (const textureId of getSceneSkyBoxTextureIds(sceneId)) {
-      const texture = getTexture(textureId);
-      if (texture && texture !== activeTexture) deleteTexture(textureId);
     }
   },
   // The texture showing stays, whichever scene owns it

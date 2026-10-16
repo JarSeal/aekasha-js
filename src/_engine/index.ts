@@ -33,6 +33,7 @@ export { APP_RENDER_SYNC_ORDER, ECSSystemStage } from './kernel/loop/SystemStage
 export type { EngineFeature, FeatureContext, FeatureDebugHook } from './kernel/init/Features';
 export {
   createGeometry,
+  decGeometryRef,
   deleteGeometry,
   getGeometry,
   getGeometryRegistry,
@@ -192,13 +193,19 @@ export {
   getRootScene,
   getScene,
   registerOnAllSceneEnterings,
+  registerOnAllSceneEnters,
   registerOnAllSceneExits,
   registerOnSceneEnter,
   registerOnSceneExit,
 } from './kernel/scene/Scene';
 export type { Looper, SceneData } from './kernel/scene/Scene';
 export { createSceneLoader, getLoaderStatusUpdater, loadScene } from './kernel/scene/SceneLoader';
-export type { LoadSceneProps, SceneLoader, ScenePrimitiveAssets } from './kernel/scene/SceneLoader';
+export type {
+  LoadSceneProps,
+  SceneLoader,
+  ScenePrimitiveAssets,
+  UpdateLoaderStatusFn,
+} from './kernel/scene/SceneLoader';
 export type { SceneHooks } from './kernel/scene/SceneHooks';
 export { snapshotToBlobAsync, takeSnapshotAsync } from './kernel/render/Snapshot';
 export type { Snapshot, SnapshotBlobOpts, SnapshotOpts } from './kernel/render/Snapshot';
@@ -206,11 +213,10 @@ export {
   deleteTexture,
   getAllTextures,
   getTexture,
-  loadTexture,
   loadTextureAsync,
-  loadTextures,
 } from './kernel/assets/Texture';
 export type { TexOpts, TextureProps } from './kernel/assets/Texture';
+export { loadTexture, loadTextures } from './kernel/assets/TextureSync';
 export {
   buildTextureArray,
   getArrayLayerIndex,
@@ -222,6 +228,7 @@ export {
 export type {
   BuildTextureArrayProps,
   TextureArray,
+  TextureArrayInfo,
   TextureArrayMember,
 } from './kernel/assets/TextureArray';
 export {

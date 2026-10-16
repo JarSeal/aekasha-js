@@ -5,7 +5,6 @@ import {
   addSceneHooks,
   getSceneRetainedTextures,
   runSceneBeforeAssetsHooksAsync,
-  runSceneDeletedHooks,
   runSceneEnteredHooksAsync,
   runSceneExitHooks,
   runSceneLoadSettledHooks,
@@ -66,18 +65,14 @@ describe('scene hooks', () => {
     expect(calls).toEqual([]);
   });
 
-  it('runs the scene data phases in install order', () => {
+  it('runs the sceneRegistered hooks in install order', () => {
     const calls: string[] = [];
     const data = { id: 's1', sceneFile: '' } as SceneData;
     add({ sceneRegistered: (id, d) => calls.push(`a:reg:${id}:${d.id}`) });
-    add({
-      sceneRegistered: (id) => calls.push(`b:reg:${id}`),
-      sceneDeleted: (id) => calls.push(`b:del:${id}`),
-    });
-    add({ sceneDeleted: (id) => calls.push(`c:del:${id}`) });
+    add({ loadStart: () => {} });
+    add({ sceneRegistered: (id) => calls.push(`c:reg:${id}`) });
     runSceneRegisteredHooks('s1', data);
-    runSceneDeletedHooks('s1');
-    expect(calls).toEqual(['a:reg:s1:s1', 'b:reg:s1', 'b:del:s1', 'c:del:s1']);
+    expect(calls).toEqual(['a:reg:s1:s1', 'c:reg:s1']);
   });
 
   it("collects every feature's retained textures, once each", () => {

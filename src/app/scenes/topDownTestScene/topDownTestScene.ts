@@ -23,7 +23,7 @@ import {
 } from 'aekasha/toolkit/ecs';
 import { createPhysicsEntity } from 'aekasha/physics';
 import { generateTerrain } from 'aekasha/toolkit/geometry';
-import { createCharacterVisual } from '../thirdPersonGymScene/characterVisual';
+import { createCharacterVisualAsync } from '../thirdPersonGymScene/characterVisual';
 
 /**
  * Top-down character test scene (docs/plans/_DONE_p066_character-definitions-and-refactoring.md
@@ -525,7 +525,7 @@ const createDynamicProps = async (obstacles: Footprint[]) => {
  * follow camera rig. Returns the player's entity id. */
 const createPlayer = async () => {
   const config = { height: 1.6, radius: 0.5 };
-  const visual = createCharacterVisual({
+  const visual = await createCharacterVisualAsync({
     key: 'topDownPlayer',
     height: config.height,
     radius: config.radius,

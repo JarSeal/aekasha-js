@@ -50,11 +50,18 @@ export const getAppBaseUrl = () =>
 export const resolveFileUrl = (fileName: string) =>
   new URL(fileName, assetBaseUrl ?? document.baseURI).href;
 
-/** A generated URL is root-absolute (`/aek-assets/…`): resolved against the app's base, like the
- * decoders' paths, so it also works when the app is served from a sub path or mounted. */
+/**
+ * Resolves a generated URL (root-absolute, `/aek-assets/…`) against the app's base, like the
+ * decoders' paths, so it also works when the app is served from a sub path or mounted.
+ * @internal
+ */
 export const toAppUrl = (url: string) => new URL(url.replace(/^\/+/, ''), getAppBaseUrl()).href;
 
-/** A `fileName` relative to its asset JSON (`./`, `../`), which only the asset pipeline reads. */
+/**
+ * Whether a `fileName` is relative to its asset JSON (`./`, `../`), which only the asset pipeline
+ * reads.
+ * @internal
+ */
 export const isJsonRelativeFileName = (fileName: string) =>
   fileName.startsWith('./') || fileName.startsWith('../');
 
@@ -65,6 +72,7 @@ let loadSourceFiles: boolean | undefined;
  * debug tab's "Load source files" boot override (p300 DD8 level 3, `AEK_debugAssetsBoot`), debug
  * env only. Read once, on the first call. A production build ships no sources, so there it's
  * always false (warned once when the override is saved).
+ * @internal
  */
 export const isLoadingSourceFiles = () => {
   if (loadSourceFiles !== undefined) return loadSourceFiles;
@@ -97,6 +105,23 @@ export const isLoadingSourceFiles = () => {
  * Throws for a `fileName` relative to its JSON with neither URL: nothing serves it at that path.
  * @param asset the asset's id, `fileName` (none for a packed texture) and generated URLs
  * @param legacyUrl resolves a `fileName` the way the asset's loader always did
+ * @returns the absolute URL
+ * @example
+ * ```ts
+ * import { getGeneratedAppData, resolveAssetUrl } from 'aekasha';
+ * import type { TextureProps } from 'aekasha';
+ *
+ * // Where a texture asset loads from: its pipeline output, else its file next to the page
+ * const textures = (getGeneratedAppData() as { textures?: Record<string, TextureProps> }).textures;
+ * const rock = textures?.rockAlbedo;
+ * if (rock && !Array.isArray(rock.fileName)) {
+ *   const url = resolveAssetUrl(
+ *     { ...rock, fileName: rock.fileName },
+ *     (name) => new URL(name, document.baseURI).href
+ *   );
+ *   void fetch(url);
+ * }
+ * ```
  */
 export const resolveAssetUrl = (
   asset: GeneratedAssetUrls & { id?: string; fileName?: string },

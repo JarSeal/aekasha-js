@@ -1,7 +1,6 @@
 /**
- * Returns the file name extension from a string
- * @param fileName (string) optional file name, if not provided then this will return null
- * @returns (string | null)
+ * The extension of a file name (the text after its last `.`), or null for anything but a string.
+ * @internal
  */
 export const getFileNameExt = (fileName?: unknown) => {
   if (typeof fileName !== 'string') return null;
@@ -10,35 +9,16 @@ export const getFileNameExt = (fileName?: unknown) => {
 };
 
 /**
- * Determines whether the file name provided has an 'hdr' extension
- * @param fileName (string) optional file name
- * @returns (boolean)
+ * Whether a file name has an `.hdr` extension (any case).
+ * @internal
  */
 export const isHDR = (fileName?: unknown) =>
   String(getFileNameExt(fileName)).toLowerCase() === 'hdr';
 
 /**
- * Determines whether the file name (or URL, its query and hash ignored) provided has a 'ktx2'
- * extension
- * @param fileName (string) optional file name
- * @returns (boolean)
+ * Whether a file name or URL has a `.ktx2` extension (any case; a URL's query and hash ignored).
+ * @internal
  */
 export const isKTX2 = (fileName?: unknown) =>
   typeof fileName === 'string' &&
   String(getFileNameExt(fileName.split(/[?#]/)[0])).toLowerCase() === 'ktx2';
-
-/**
- * Determines whether the file name provided has an 'jpg' extension
- * @param fileName (string) optional file name
- * @returns (boolean)
- */
-export const isJPG = (fileName?: unknown) =>
-  String(getFileNameExt(fileName)).toLowerCase() === 'jpg';
-
-/**
- * Determines whether the file name provided has an 'png' extension
- * @param fileName (string) optional file name
- * @returns (boolean)
- */
-export const isPNG = (fileName?: unknown) =>
-  String(getFileNameExt(fileName)).toLowerCase() === 'png';

@@ -16,6 +16,11 @@ export const FOUR_PX_TO_8K_LIST = [
   { value: 8192, text: '8192px' },
 ];
 
+/**
+ * The texture slots of three's materials (`map`, `normalMap`, …): the keys whose value is a
+ * texture, which the material registry resolves from texture ids and releases with a material.
+ * @internal
+ */
 export const textureMapKeys = [
   'map',
   'alphaMap',
@@ -42,4 +47,4 @@ export const textureMapKeys = [
   'specularColorMap',
   'thicknessMap',
   'transmissionMap',
-];
+] as const;

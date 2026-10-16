@@ -14,8 +14,8 @@ mapCamera.lookAt(0, 0, 0);
 
 createViewport({
   id: 'minimap',
-  scene: getRootScene(), // The game's own scene, seen from above
-  camera: mapCamera, // Or a function, called every frame: () => getActiveCamera()
+  scene: getRootScene()!, // The game's own scene, seen from above (there once the engine has booted)
+  camera: mapCamera, // Or a function, called every frame: getActiveCamera
   anchor: 'BOTTOM_RIGHT',
   size: { width: '12rem', height: '12rem' },
   transparent: false,
@@ -28,6 +28,9 @@ createViewport({
   frame.
 - `scene` can be a private scene (a preview stage of its own) or the game's root scene. The game
   scene seen twice is rendered twice, shadow maps included: that cost is yours.
+- A `camera` function that returns nothing skips the viewport for that frame. `syncCameraAspect`
+  keeps the camera's aspect matched to the viewport's rect: use it with a camera only the
+  viewport renders with, never the game's main camera.
 - `toneMapping: 'NONE'` (the default) keeps flat colours exact, for overlays; `'RENDERER'` uses
   the renderer's. `transparent` (the default) blends it over the frame.
 - [`setViewportEnabled`](api:setViewportEnabled) shows and hides one, and
@@ -51,7 +54,8 @@ after any other change that moves it.
 A viewport lets the pointer through to the game. `interactive: true` gives it the pointer
 instead: the canvas and its controls don't see those events, and
 [`getViewportPointerNDC`](api:getViewportPointerNDC) gives the pointer's position for a raycast
-into the viewport's own scene.
+into the viewport's own scene. [`setViewportInteractive`](api:setViewportInteractive) switches it
+later.
 
 The debugger's axes gizmo (`F10`) is an interactive viewport: with the debug camera, click a
 bubble to align the camera to an axis, or drag it to orbit.
@@ -77,7 +81,9 @@ Only the debug build registers editor views so far.
 ## Key APIs
 
 - [`createViewport`](api:createViewport), [`setViewportEnabled`](api:setViewportEnabled),
-  [`deleteViewport`](api:deleteViewport) and [`getViewportPointerNDC`](api:getViewportPointerNDC).
+  [`deleteViewport`](api:deleteViewport), [`setViewportInteractive`](api:setViewportInteractive),
+  [`getViewportPointerNDC`](api:getViewportPointerNDC) and
+  [`invalidateViewportLayout`](api:invalidateViewportLayout).
 - [`registerView`](api:registerView), [`setActiveView`](api:setActiveView) and
   [`isRuntimeViewActive`](api:isRuntimeViewActive).
 

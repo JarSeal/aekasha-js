@@ -100,9 +100,25 @@ const getMeshProps = (
  * an engine material, at root transform ∘ node transform (node scale included), and the physics
  * the nodes' Blender custom props (or `physicsParams` overrides) describe, via the Physics API
  * (the `physics()` feature: without it, the physics nodes spawn no bodies, with a warning).
- * @param manifestOrId an {@link ImportedAssetManifest} or the id of an imported asset
- * @param params {@link SpawnImportedParams}
- * @returns Promise<{@link SpawnImportedResult}>
+ * @param manifestOrId an import's manifest, or the id of an imported asset
+ * @param params the root transform, the material, and the mesh and physics overrides
+ * @returns the created entities (none, with an error logged, for an id that isn't imported)
+ * @example
+ * ```ts
+ * import { spawnImportedAsset } from 'aekasha';
+ *
+ * // A crate imported earlier (importAssetAsync), as a dynamic body with a box collider
+ * const { physicsEntityIds } = await spawnImportedAsset('crate', {
+ *   transform: { position: { x: 0, y: 2, z: 0 } },
+ *   material: 'crateMaterial',
+ *   physicsParams: {
+ *     isPhysObj: true,
+ *     keepMesh: true,
+ *     rigidBody: { rigidType: 'DYNAMIC' },
+ *     collider: { type: 'BOX' },
+ *   },
+ * });
+ * ```
  */
 export const spawnImportedAsset = async (
   manifestOrId: ImportedAssetManifest | string,

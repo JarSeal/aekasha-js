@@ -63,8 +63,9 @@ export type AekashaMount = {
   /** Neither WebGPU nor WebGL2 is available (or the boot failed): the container shows
    * `fallbackImage`, and the handle's methods do nothing. */
   readonly isFallback: boolean;
-  /** Loads a scene (by id, from the mount's `data`) in place of the current one. */
-  loadScene: (sceneId: string) => Promise<void>;
+  /** Loads a scene (by id, from the mount's `data`) in place of the current one: `loadScene`'s
+   * queue and result (`false` after `unmount()` and on a fallback handle). */
+  loadScene: (sceneId: string) => Promise<boolean>;
   /** Pauses the loop until `resume()` (out of view and reduced motion pause it too). */
   pause: () => void;
   /** Resumes the loop, a reduced-motion pause included; it stays paused while out of view. */
@@ -135,7 +136,7 @@ const createContainer = (opts: MountAekashaOptions) => {
 const createFallbackMount = (container: HTMLElement): AekashaMount => ({
   container,
   isFallback: true,
-  loadScene: async () => {},
+  loadScene: async () => false,
   pause: () => {},
   resume: () => {},
   isPaused: () => true,
@@ -272,7 +273,8 @@ export const mountAekasha = async (opts: MountAekashaOptions): Promise<AekashaMo
         canvas: { ...opts.canvas, style: `display: block; ${opts.canvas?.style ?? ''}` },
       });
       await createSceneLoader({ id: MOUNT_SCENE_LOADER_ID });
-      await loadScene({ sceneId });
+      // A first scene that fails shows the fallback image, not a dead canvas
+      if (!(await loadScene({ sceneId }))) throw new Error(`The scene "${sceneId}" did not load.`);
     },
   }).then(
     () => true,
@@ -289,9 +291,7 @@ export const mountAekasha = async (opts: MountAekashaOptions): Promise<AekashaMo
   return {
     container,
     isFallback: false,
-    loadScene: async (id) => {
-      if (isMounted) await loadScene({ sceneId: id });
-    },
+    loadScene: async (id) => (isMounted ? loadScene({ sceneId: id }) : false),
     pause: () => {
       holds.user = true;
       if (isMounted) applyPlay();

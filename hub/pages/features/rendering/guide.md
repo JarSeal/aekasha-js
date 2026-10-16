@@ -4,11 +4,13 @@ The app creates the renderer once, first thing in its start callback (`src/index
 
 <<< src/index.ts#create-renderer
 
-- [`createRenderer`](api:createRenderer) uses WebGPU when the browser has it and `forceWebGL`
-  is off, and WebGL 2 otherwise. [`isWebGPURenderer`](api:isWebGPURenderer) tells you which one
-  runs.
-- The options are three's: antialiasing, tone mapping and its exposure, the output colour space,
-  a transparent canvas (`alpha`), shadows and the shadow map type.
+- [`createRenderer`](api:createRenderer) uses WebGPU when the browser gives it a GPU and
+  `forceWebGL` is off, and WebGL 2 otherwise (also in a browser that has WebGPU but no adapter
+  for it). Once `createRenderer` has resolved, [`isWebGPURenderer`](api:isWebGPURenderer) tells
+  you which one runs.
+- The options are three's: antialiasing (off unless you ask for it), tone mapping and its
+  exposure, the output colour space, a transparent canvas (`alpha`), shadows and the shadow map
+  type (three's PCF by default).
 - In the debug env, the drawer's Renderer tab changes them and keeps the change for the next
   reload.
 
@@ -52,8 +54,9 @@ The homepage image above has one pass, a bloom:
 - From code, [`setPostFxEnabled`](api:setPostFxEnabled) switches the whole chain,
   [`setPostFxPassEnabled`](api:setPostFxPassEnabled) one pass, and
   [`setPostFxPassParam`](api:setPostFxPassParam) sets a param.
-- A change to the set of enabled passes recompiles the chain, a one-frame hitch. A disabled pass
-  costs nothing, and switching the whole chain off keeps it compiled.
+- A change to the set of enabled passes recompiles the chain, a one-frame hitch, and so does a
+  change of the active camera (see [Known issues](#known-issues)). A disabled pass costs nothing,
+  and switching the whole chain off keeps it compiled.
 
 The app has another pass to start from: ambient occlusion (GTAO) in `src/app/postFx/`.
 
@@ -70,7 +73,10 @@ const png = await snapshotToBlobAsync(snapshot); // Or { type: 'image/webp' }
 
 By default it's what the canvas shows: the active camera, through the scene's post effects,
 without the viewports, the HUD or the debug helpers. Pass `scene` and `camera` to render
-anything else, and `transparent: true` for a transparent background. The canvas isn't touched.
+anything else, and `transparent: true` for a transparent background (the environment still
+lights the scene). Only the canvas's own scene and camera have post effects: any other scene or
+camera, `transparent` or `postFx: false` renders directly, without them. The canvas isn't
+touched.
 
 ## More on screen
 
@@ -94,6 +100,11 @@ workaround in the engine yet:
 
 - [Disposed lights stay in memory](hub:issues/three-bind-group-cache-light-leak).
 - [A removed `InstancedMesh` leaks its instance attributes](hub:issues/three-instanced-node-attribute-leak).
+
+One of the engine's own:
+
+- [A camera cut rebuilds the PostFX chain](hub:issues/postfx-rebuilds-on-camera-change), a
+  shader recompile.
 
 ## Read more
 

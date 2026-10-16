@@ -20,7 +20,7 @@ import {
   getCurrentScene,
   getCurrentSceneId,
   getRootScene,
-  registerOnAllSceneEnterings,
+  registerOnAllSceneEnters,
 } from '../../scene/Scene';
 import { lsGetItem, lsRemoveItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
 import { confirmClearScope, createClearLSButton } from '../../../debug/_dbg__ClearLSButtons';
@@ -1262,4 +1262,4 @@ for (const kind of Object.keys(WINDOW_IDS) as RayTesterKind[]) {
     onClose: () => cancelPickFor(kind),
   });
 }
-registerOnAllSceneEnterings('rayTester', onSceneEnter);
+registerOnAllSceneEnters('rayTester', onSceneEnter);

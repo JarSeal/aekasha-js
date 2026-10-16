@@ -11,6 +11,17 @@ import { fetchAsset } from './AssetsFetch';
 
 let hdrLoader: HDRLoader | null = null;
 
+/**
+ * The assets worker's texture job (`AssetsWorker.ts` imports this module on the first one):
+ * answers a LOAD_TEXTURE with the file decoded into an ImageBitmap (flipped vertically, alpha not
+ * premultiplied) and a LOAD_HDR_TEXTURE with HDRLoader's half-float data, each transferred.
+ * @internal
+ * @param data the request
+ * @param sendMessage posts the response, with the buffers to transfer
+ * @throws `AssetsSourceError` when the file can't be fetched; any other error (an image
+ * that doesn't decode, an HDR file without half-float data) as is, which the worker answers
+ * with an ERROR
+ */
 export const assetsSwitchTexture = async (
   data: AssetsLoadTextureRequest | AssetsLoadHDRTextureRequest,
   sendMessage: (message: AssetsDownProtocol, transfer?: Transferable[]) => void

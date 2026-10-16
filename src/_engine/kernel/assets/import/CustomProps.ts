@@ -101,6 +101,7 @@ const toShapeParams = (props: Record<string, unknown>, type: ColliderParams['typ
  * `object.userData`) into normalized physics metadata. Pure: `userData` is not mutated and no
  * physics is created. Defaults: density/friction/restitution 0.2, combine rules 'AVERAGE', an
  * unknown `rigidType` → 'FIXED'.
+ * @internal
  * @param userData the node's custom props
  * @param override optional {@link ImportPhysicsParams} that wins field-by-field
  */

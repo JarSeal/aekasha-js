@@ -5,13 +5,20 @@ import {
   updateDebuggerTab,
 } from '../../../debug/DebuggerGUI';
 import type { RendererOptions } from '../Renderer';
-import { RENDERER_SHADOW_OPTIONS } from '../ThreeMath';
 import {
   _recordUndoRedoAction,
   _registerUndoRedoActionHandler,
 } from '../../../debug/_dbg__UndoRedo';
 
 const TAB_ID = 'rendererControls';
+
+/** The shadow map types the tab offers. */
+const RENDERER_SHADOW_OPTIONS = [
+  { value: THREE.BasicShadowMap, text: 'Basic shadow map' },
+  { value: THREE.PCFShadowMap, text: 'PCF shadow map' },
+  { value: THREE.PCFSoftShadowMap, text: 'PCF soft shadow map' },
+  { value: THREE.VSMShadowMap, text: 'VSM shadow map' },
+];
 
 /** Renderer options whose changes are recorded to the (global) undo/redo history. */
 type UndoableOption = 'toneMapping' | 'outputColorSpace' | 'alpha' | 'enableShadows';

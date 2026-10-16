@@ -69,6 +69,19 @@ const getGLTFLoader = (draco: DracoWorkerSettings) => {
   return gltfLoader;
 };
 
+/**
+ * The assets worker's GLTF job (`AssetsWorker.ts` imports this module on the first one): fetches
+ * and parses the file with the worker's own loaders, runs the main-thread import's extraction and
+ * texture collection, and answers with the geometries, textures and prebuilt LOD chains as
+ * transferable data (the rest of the parse is disposed first). A missing node (`meshIndex`) is
+ * answered with `error`: the file loaded, the import fails.
+ * @internal
+ * @param data the request
+ * @param sendMessage posts the response, with the buffers and images to transfer
+ * @throws `AssetsSourceError` when the file can't be fetched; any other error (a parse
+ * failure, KTX2 textures without the main thread's KTX2 settings) as is, which the worker
+ * answers with an ERROR
+ */
 export const assetsSwitchGLTF = async (
   data: AssetsLoadGLTFRequest,
   sendMessage: (message: AssetsDownProtocol, transfer?: Transferable[]) => void

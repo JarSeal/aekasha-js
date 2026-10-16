@@ -2,7 +2,7 @@ Status: implemented (Phases 0-8)
 Category: Refactoring, Documentation, ECS
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
-Related: \_DONE_p607_sbp-foundation-feature-modules.md (D6's type-only seams, the install contract and the loop seams this plan reviews: "From p607" below), \_DONE_p200_component-query-caching.md (its main-camera cache landed here, Phase 2), \_DONE_p604_multiplayer-viability-study.md (§4.4: the `appId` map), \_DONE_p606_layering-inversion-and-public-entry.md (the env flag pairs, `APP_CONFIG`, `CoreComponentType`: left to this plan), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the embed's seams in init and the loop), p613_review-rendering-scene-assets.md (owns `Camera.ts` and the other 13 type-only seams)
+Related: \_DONE_p607_sbp-foundation-feature-modules.md (D6's type-only seams, the install contract and the loop seams this plan reviews: "From p607" below), \_DONE_p200_component-query-caching.md (its main-camera cache landed here, Phase 2), \_DONE_p604_multiplayer-viability-study.md (§4.4: the `appId` map), \_DONE_p606_layering-inversion-and-public-entry.md (the env flag pairs, `APP_CONFIG`, `CoreComponentType`: left to this plan), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the embed's seams in init and the loop), \_DONE_p613_review-rendering-scene-assets.md (owns `Camera.ts` and the other 13 type-only seams)
 
 # Review: ECS, Main Loop, Config and Init
 

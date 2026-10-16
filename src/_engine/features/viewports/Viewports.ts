@@ -1,5 +1,5 @@
 /**
- * Viewports (docs/plans/p080_multi-viewport-rendering-and-axis-gizmo.md): extra rectangles
+ * Viewports: extra rectangles
  * rendered over the main canvas after the main render (and after PostFX), each with its own
  * scene and camera (picture-in-picture, minimaps, item previews, the debug axes gizmo).
  *
@@ -39,19 +39,35 @@ import type { FeatureContext } from '../../kernel/init/Features';
 import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../ui/HUD';
 import styles from './Viewports.module.scss';
 
-export type ViewportRect = { x: number; y: number; width: number; height: number };
+/** A rectangle relative to the canvas's top-left corner (y down): a viewport's `rect` placement
+ * and its rendered {@link Viewport.rect}. */
+export type ViewportRect = {
+  /** Left edge, from the canvas's left. */
+  x: number;
+  /** Top edge, from the canvas's top. */
+  y: number;
+  /** Width. */
+  width: number;
+  /** Height. */
+  height: number;
+};
 
+/** The canvas corner a viewport's slot stacks in (its `anchor`), when it has no `rect`. */
 export type ViewportAnchor = 'TOP_RIGHT' | 'TOP_LEFT' | 'BOTTOM_RIGHT' | 'BOTTOM_LEFT';
 
+/** What {@link createViewport} takes: the viewport's scene and camera, its placement (a corner
+ * stack, or a `rect`) and how it renders. Kept as given: {@link Viewport.props}. */
 export type ViewportProps = {
+  /** Unique among the viewports (a second one with the id replaces the first, with a warning).
+   * Also names its slot element: `aekViewportsLayer_slot_<id>`. */
   id: string;
   /** A private scene, or getRootScene() for a picture-in-picture of the game. A PiP of the
    * game scene renders it twice per frame (shadow maps, onBeforeRender hooks, draw counts):
    * that cost is the consumer's. */
   scene: THREE.Object3D;
-  /** The camera, or a resolver called every frame (eg. `() => getActiveCamera() ?? null`).
-   * The viewport is skipped on frames where the resolver returns null. */
-  camera: THREE.Camera | (() => THREE.Camera | null);
+  /** The camera, or a resolver called every frame (eg. `getActiveCamera`). The viewport is
+   * skipped on frames where the resolver returns null or undefined. */
+  camera: THREE.Camera | (() => THREE.Camera | null | undefined);
   /** Corner stack to place the slot in, when there is no `rect`. Default 'TOP_RIGHT'. Its
    * global class is `aekViewportStack_<anchor>` (for consumer SCSS). */
   anchor?: ViewportAnchor;
@@ -82,21 +98,28 @@ export type ViewportProps = {
    * persists across scene changes. */
   sceneId?: string;
   /** Default false. Keeps a perspective camera's aspect (or an orthographic camera's frustum
-   * width) matched to the viewport rect. Don't use it with a camera the main view also renders
-   * with (eg. getMainCamera()). */
+   * width) matched to the viewport rect, checked every frame (a camera entity's is set back
+   * after the camera resizer gives it the canvas's). Don't use it with a camera the main view
+   * also renders with (eg. getMainCamera()). */
   syncCameraAspect?: boolean;
   /** Called every frame before the viewport renders (only while it is enabled and on the
    * canvas). */
   onBeforeRender?: (vp: Viewport, delta: number) => void;
 };
 
+/** A viewport, as {@link createViewport} and {@link getViewport} return it: a live view of its
+ * state (read only: change it through the setters). */
 export type Viewport = {
+  /** Its `props.id`. */
   readonly id: string;
+  /** The props it was created with. */
   readonly props: Readonly<ViewportProps>;
   /** The rendered rect in CSS px, relative to the canvas top-left corner, snapped to whole
    * device pixels (before cropping to the canvas). 0×0 until its first layout. */
   readonly rect: Readonly<ViewportRect>;
+  /** Whether it renders ({@link setViewportEnabled}). */
   readonly enabled: boolean;
+  /** Whether its slot takes pointer events ({@link setViewportInteractive}). */
   readonly interactive: boolean;
   /** The viewport's slot element (listen to pointer events on it when interactive). */
   readonly slotElem: HTMLElement;
@@ -132,9 +155,6 @@ type ViewportState = {
   /** Tone mapping and output colour space the quad material was built with (null = never). */
   builtToneMapping: THREE.ToneMapping | null;
   builtColorSpace: string | null;
-  /** The camera and aspect syncCameraAspect last applied. */
-  syncedCamera: THREE.Camera | null;
-  syncedAspect: number;
   /** Removes its render target from the GPU memory tab's sources (debug env only). */
   removeGPUMemorySource: () => void;
 };
@@ -182,6 +202,16 @@ const onTransitionStop = () => {
   isLayoutDirty = true;
 };
 
+/** The layer's `<body>` observer. A mount's `unmount()` removes the layer with its container (the
+ * HUD root is in it), so the observer's next call after that disconnects it. */
+const onBodyClassChange = (_records: MutationRecord[], observer: MutationObserver) => {
+  if (layerCmp && !layerCmp.elem.isConnected) {
+    observer.disconnect();
+    return;
+  }
+  invalidateViewportLayout();
+};
+
 /** Creates the viewports layer (on the first createViewport()). */
 const ensureLayer = () => {
   if (layerCmp) return layerCmp;
@@ -198,7 +228,7 @@ const ensureLayer = () => {
   layerCmp.elem.addEventListener('transitionend', onTransitionStop);
   layerCmp.elem.addEventListener('transitioncancel', onTransitionStop);
   // Body classes (eg. the debugger drawer's) can move or hide slots without a transition
-  new MutationObserver(invalidateViewportLayout).observe(document.body, {
+  new MutationObserver(onBodyClassChange).observe(document.body, {
     attributes: true,
     attributeFilter: ['class'],
   });
@@ -249,9 +279,28 @@ const createSlotCmp = (props: ViewportProps) => {
 
 /**
  * Creates a viewport: an extra rect with its own scene and camera, rendered over the main
- * canvas every frame after the main render (and PostFX).
- * @param props (object) {@link ViewportProps}
- * @returns (object) {@link Viewport}
+ * canvas every frame after the main render (and PostFX). Its slot element is added to the
+ * viewports layer at once; the render target is made on its first layout. An existing viewport
+ * with the same id is deleted first (with a warning).
+ * @throws When the `viewports()` feature isn't installed.
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ * import { createViewport } from 'aekasha/viewports';
+ *
+ * // A minimap: a top-down camera over the game scene, in the bottom-left corner
+ * const mapCamera = new THREE.OrthographicCamera(-50, 50, 50, -50, 0.1, 500);
+ * mapCamera.position.set(0, 200, 0);
+ * mapCamera.lookAt(0, 0, 0);
+ * createViewport({
+ *   id: 'minimap',
+ *   scene: getRootScene()!, // The game's own scene (there once the engine has booted)
+ *   camera: mapCamera,
+ *   anchor: 'BOTTOM_LEFT',
+ *   size: { width: '12rem', height: '12rem' },
+ *   sceneId: 'level1',
+ * });
+ * ```
  */
 export const createViewport = (props: ViewportProps): Viewport => {
   if (!isInstalled) {
@@ -307,8 +356,6 @@ export const createViewport = (props: ViewportProps): Viewport => {
     uvScale: uniform(new THREE.Vector2(1, 1)),
     builtToneMapping: null,
     builtColorSpace: null,
-    syncedCamera: null,
-    syncedAspect: 0,
     removeGPUMemorySource: registerGPUMemorySource({
       id: `viewport.${props.id}`,
       label: `Viewport "${props.id}"`,
@@ -323,8 +370,14 @@ export const createViewport = (props: ViewportProps): Viewport => {
 };
 
 /**
- * Deletes a viewport and disposes its render target, quad material and slot element.
- * @param id (string) viewport id
+ * Deletes a viewport and disposes its render target, quad material and slot element. An unknown
+ * id does nothing. A viewport with a `sceneId` is deleted on that scene's exit without it.
+ * @example
+ * ```ts
+ * import { deleteViewport } from 'aekasha/viewports';
+ *
+ * deleteViewport('minimap');
+ * ```
  */
 export const deleteViewport = (id: string) => {
   const index = viewports.findIndex((vp) => vp.id === id);
@@ -340,7 +393,6 @@ export const deleteViewport = (id: string) => {
   isLayoutDirty = true;
 };
 
-/** Deletes the viewports of the scene being exited (registered on all scene exits). */
 /**
  * Deletes the viewports created with the exited scene's `sceneId` (the `viewports()` feature's
  * `exit` scene hook).
@@ -355,9 +407,15 @@ export const deleteSceneViewports = (sceneId: string | undefined) => {
 
 /**
  * Enables or disables a viewport. A disabled viewport costs nothing per frame, keeps its
- * render target (so re-enabling it is cheap), and its slot is hidden (`display: none`).
- * @param id (string) viewport id
- * @param enabled (boolean)
+ * render target (so re-enabling it is cheap), and its slot is hidden (`display: none`). An
+ * unknown id does nothing.
+ * @example
+ * ```ts
+ * import { setViewportEnabled } from 'aekasha/viewports';
+ *
+ * // Hide the minimap while a menu is open
+ * setViewportEnabled('minimap', false);
+ * ```
  */
 export const setViewportEnabled = (id: string, enabled: boolean) => {
   const vp = viewports.find((v) => v.id === id);
@@ -370,9 +428,14 @@ export const setViewportEnabled = (id: string, enabled: boolean) => {
 
 /**
  * Sets whether a viewport's slot takes pointer events (true) or lets them through to the
- * canvas (false).
- * @param id (string) viewport id
- * @param interactive (boolean)
+ * canvas (false), as its `interactive` prop does at creation. An unknown id does nothing.
+ * @example
+ * ```ts
+ * import { setViewportInteractive } from 'aekasha/viewports';
+ *
+ * // The minimap takes clicks only while the map mode is on
+ * setViewportInteractive('minimap', true);
+ * ```
  */
 export const setViewportInteractive = (id: string, interactive: boolean) => {
   const vp = viewports.find((v) => v.id === id);
@@ -382,9 +445,14 @@ export const setViewportInteractive = (id: string, interactive: boolean) => {
 };
 
 /**
- * Returns a viewport by id.
- * @param id (string) viewport id
- * @returns (object | undefined) {@link Viewport}
+ * Returns a viewport by id, or `undefined` when there is none.
+ * @example
+ * ```ts
+ * import { getViewport } from 'aekasha/viewports';
+ *
+ * const minimap = getViewport('minimap');
+ * if (minimap?.enabled) console.log(minimap.rect.width, minimap.rect.height);
+ * ```
  */
 export const getViewport = (id: string): Viewport | undefined =>
   viewports.find((vp) => vp.id === id);
@@ -393,6 +461,14 @@ export const getViewport = (id: string): Viewport | undefined =>
  * Re-reads every viewport's slot box before the next render. Call it after changing something
  * that moves or resizes slots without a transition, a canvas resize or a body class change
  * (eg. a class on a slot's ancestor).
+ * @example
+ * ```ts
+ * import { invalidateViewportLayout } from 'aekasha/viewports';
+ *
+ * // A class on the HUD moves the corner stacks (no transition)
+ * hudElem.classList.add('compact');
+ * invalidateViewportLayout();
+ * ```
  */
 export const invalidateViewportLayout = () => {
   isLayoutDirty = true;
@@ -401,10 +477,23 @@ export const invalidateViewportLayout = () => {
 /**
  * Writes a pointer event's position as normalized device coordinates of a viewport (-1..1,
  * y up, the same as the viewport camera's), eg. for raycasting into the viewport's scene.
- * @param id (string) viewport id
- * @param e (PointerEvent | MouseEvent)
- * @param out (THREE.Vector2) target
- * @returns (boolean) whether the pointer is inside the viewport rect (`out` is written anyway)
+ * @param e the pointer or mouse event
+ * @param out written with the coordinates
+ * @returns whether the pointer is inside the viewport rect (`out` is written anyway); false
+ * without writing `out` for an unknown id or a viewport not laid out yet
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ * import { getViewport, getViewportPointerNDC } from 'aekasha/viewports';
+ *
+ * const ndc = new THREE.Vector2();
+ * const raycaster = new THREE.Raycaster();
+ * getViewport('minimap')?.slotElem.addEventListener('pointerdown', (e) => {
+ *   if (!getViewportPointerNDC('minimap', e, ndc)) return;
+ *   raycaster.setFromCamera(ndc, mapCamera);
+ *   const hits = raycaster.intersectObjects(mapScene.children);
+ * });
+ * ```
  */
 export const getViewportPointerNDC = (
   id: string,
@@ -500,14 +589,17 @@ const layoutViewports = (renderer: THREE.Renderer, pixelRatio: number) => {
  * centre, keeping its height), matched to the viewport rect. */
 const syncCameraAspect = (vp: ViewportState, camera: THREE.Camera) => {
   const aspect = vp.devWidth / vp.devHeight;
-  if (camera === vp.syncedCamera && aspect === vp.syncedAspect) return;
-  vp.syncedCamera = camera;
-  vp.syncedAspect = aspect;
+  // Checked against the camera, not a cache: the camera resizer sets an ECS camera back to the
+  // canvas's aspect on every canvas resize, whatever the viewport's rect did
   if (camera instanceof THREE.PerspectiveCamera) {
+    if (camera.aspect === aspect) return;
     camera.aspect = aspect;
     camera.updateProjectionMatrix();
   } else if (camera instanceof THREE.OrthographicCamera) {
     const halfWidth = ((camera.top - camera.bottom) / 2) * aspect;
+    // A tolerance: the centre recomputed from the written edges can differ in the last bits
+    if (Math.abs((camera.right - camera.left) / 2 - halfWidth) <= Math.abs(halfWidth) * 1e-9)
+      return;
     const centerX = (camera.left + camera.right) / 2;
     camera.left = centerX - halfWidth;
     camera.right = centerX + halfWidth;
@@ -532,6 +624,52 @@ const updateQuadMaterial = (
     colorSpace
   );
   vp.material.needsUpdate = true;
+};
+
+/** Renders one viewport into its render target and composites it onto the canvas (the renderer's
+ * state is renderViewports()' to restore). */
+const renderViewport = (
+  vp: ViewportState,
+  renderer: THREE.Renderer,
+  delta: number,
+  pixelRatio: number,
+  prevToneMapping: THREE.ToneMapping,
+  prevColorSpace: string
+) => {
+  if (!vp.enabled || vp.isEmpty) return;
+
+  vp.props.onBeforeRender?.(vp, delta);
+  // onBeforeRender may disable it
+  if (!vp.enabled) return;
+  const camera = resolveCamera(vp);
+  if (!camera) return;
+  if (vp.props.syncCameraAspect) syncCameraAspect(vp, camera);
+
+  // 1. The viewport's scene into its own render target (not an output target: no tone
+  // mapping, working colour space)
+  renderer.setRenderTarget(vp.renderTarget);
+  renderer.autoClear = true;
+  renderer.setClearColor(vp.clearColor, vp.props.transparent === false ? 1 : 0);
+  renderer.render(vp.props.scene, camera);
+
+  // 2. Composite onto the canvas, inside the viewport rect. With tone mapping and colour
+  // space neutralised, the renderer draws the quad straight to the canvas (no internal
+  // framebuffer target and output pass). The +0.5 device px makes the renderer's
+  // `(css * pixelRatio).floor()` land exactly on the snapped pixel.
+  updateQuadMaterial(vp, prevToneMapping, prevColorSpace);
+  renderer.setRenderTarget(null);
+  renderer.autoClear = false;
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.outputColorSpace = THREE.ColorManagement.workingColorSpace;
+  renderer.setViewport(
+    (vp.drawX + 0.5) / pixelRatio,
+    (vp.drawY + 0.5) / pixelRatio,
+    (vp.drawWidth + 0.5) / pixelRatio,
+    (vp.drawHeight + 0.5) / pixelRatio
+  );
+  vp.quad.render(renderer);
+  renderer.toneMapping = prevToneMapping;
+  renderer.outputColorSpace = prevColorSpace;
 };
 
 /** Renders every enabled viewport over the canvas: the after-render hook `viewports()` adds, so
@@ -573,49 +711,21 @@ const renderViewports = (renderer: THREE.Renderer, delta: number) => {
   renderer.getClearColor(_prevClearColor);
   renderer.getViewport(_prevViewport);
 
-  for (let i = 0; i < viewports.length; i++) {
-    const vp = viewports[i];
-    if (!vp.enabled || vp.isEmpty) continue;
-
-    vp.props.onBeforeRender?.(vp, delta);
-    // onBeforeRender may disable it
-    if (!vp.enabled) continue;
-    const camera = resolveCamera(vp);
-    if (!camera) continue;
-    if (vp.props.syncCameraAspect) syncCameraAspect(vp, camera);
-
-    // 1. The viewport's scene into its own render target (not an output target: no tone
-    // mapping, working colour space)
-    renderer.setRenderTarget(vp.renderTarget);
-    renderer.autoClear = true;
-    renderer.setClearColor(vp.clearColor, vp.props.transparent === false ? 1 : 0);
-    renderer.render(vp.props.scene, camera);
-
-    // 2. Composite onto the canvas, inside the viewport rect. With tone mapping and colour
-    // space neutralised, the renderer draws the quad straight to the canvas (no internal
-    // framebuffer target and output pass). The +0.5 device px makes the renderer's
-    // `(css * pixelRatio).floor()` land exactly on the snapped pixel.
-    updateQuadMaterial(vp, prevToneMapping, prevColorSpace);
-    renderer.setRenderTarget(null);
-    renderer.autoClear = false;
-    renderer.toneMapping = THREE.NoToneMapping;
-    renderer.outputColorSpace = THREE.ColorManagement.workingColorSpace;
-    renderer.setViewport(
-      (vp.drawX + 0.5) / pixelRatio,
-      (vp.drawY + 0.5) / pixelRatio,
-      (vp.drawWidth + 0.5) / pixelRatio,
-      (vp.drawHeight + 0.5) / pixelRatio
-    );
-    vp.quad.render(renderer);
+  // A throw (an onBeforeRender, a render) restores the renderer first, then ends the frame as
+  // before (the loop has already asked for the next one)
+  try {
+    for (let i = 0; i < viewports.length; i++) {
+      renderViewport(viewports[i], renderer, delta, pixelRatio, prevToneMapping, prevColorSpace);
+    }
+  } finally {
+    // The scissor test is never touched: a leaked scissor breaks PMREM, three #31777
     renderer.toneMapping = prevToneMapping;
     renderer.outputColorSpace = prevColorSpace;
+    renderer.setViewport(_prevViewport);
+    renderer.setClearColor(_prevClearColor, prevClearAlpha);
+    renderer.autoClear = prevAutoClear;
+    renderer.setRenderTarget(prevRenderTarget, prevCubeFace, prevMipmapLevel);
   }
-
-  // Restore (the scissor test is never touched: a leaked scissor breaks PMREM, three #31777)
-  renderer.setViewport(_prevViewport);
-  renderer.setClearColor(_prevClearColor, prevClearAlpha);
-  renderer.autoClear = prevAutoClear;
-  renderer.setRenderTarget(prevRenderTarget, prevCubeFace, prevMipmapLevel);
 };
 
 /**

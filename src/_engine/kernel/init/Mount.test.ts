@@ -68,7 +68,7 @@ const fns = vi.hoisted(() => ({
   createRenderer: vi.fn(),
   deleteRenderer: vi.fn(),
   getRenderer: vi.fn(() => ({})),
-  loadScene: vi.fn(),
+  loadScene: vi.fn(async () => true),
   createSceneLoader: vi.fn(),
   toggleMainPlay: vi.fn(),
   stopMainLoop: vi.fn(),

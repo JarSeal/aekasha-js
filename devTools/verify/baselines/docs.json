@@ -2,23 +2,23 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1707,
-      "total": 2332
+      "documented": 1794,
+      "total": 2286
     },
     "members": {
-      "documented": 330,
-      "total": 445
+      "documented": 331,
+      "total": 434
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1663,
-        "total": 2269
+        "documented": 1750,
+        "total": 2223
       },
       "members": {
-        "documented": 280,
-        "total": 365
+        "documented": 281,
+        "total": 354
       }
     },
     "toolkit": {
@@ -35,8 +35,8 @@
   "folders": {
     "engine/debug": {
       "exports": {
-        "documented": 147,
-        "total": 200
+        "documented": 146,
+        "total": 199
       },
       "members": {
         "documented": 0,
@@ -582,8 +582,8 @@
     },
     "engine/features/postfx": {
       "exports": {
-        "documented": 28,
-        "total": 28
+        "documented": 25,
+        "total": 25
       },
       "members": {
         "documented": 0,
@@ -596,8 +596,8 @@
     },
     "engine/features/skybox": {
       "exports": {
-        "documented": 150,
-        "total": 174
+        "documented": 149,
+        "total": 173
       },
       "members": {
         "documented": 0,
@@ -730,7 +730,7 @@
     },
     "engine/features/viewports": {
       "exports": {
-        "documented": 12,
+        "documented": 16,
         "total": 16
       },
       "members": {
@@ -738,65 +738,27 @@
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "Viewports#Viewport",
-          "Viewports#ViewportAnchor",
-          "Viewports#ViewportProps",
-          "Viewports#ViewportRect"
-        ],
+        "exports": [],
         "members": []
       }
     },
     "engine/kernel/assets": {
       "exports": {
-        "documented": 108,
-        "total": 140
+        "documented": 126,
+        "total": 126
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "AssetsAPITypes#AssetsDownProtocol",
-          "AssetsAPITypes#AssetsErrorResponse",
-          "AssetsAPITypes#AssetsPingRequest",
-          "AssetsAPITypes#AssetsPingResponse",
-          "AssetsAPITypes#AssetsProtocolType",
-          "AssetsAPITypes#AssetsUpProtocol",
-          "AssetsAPITypes#AssetsWorkerStatus",
-          "Geometry#GeoDebugData",
-          "Geometry#GeoProps",
-          "Geometry#GeoTypes",
-          "Geometry#decGeometryRef",
-          "Geometry#freeGeometryGPUMemory",
-          "Geometry#getGeometryRegistry",
-          "Geometry#incGeometryRef",
-          "Geometry#setGeometryPersistence",
-          "Material#MatProps",
-          "Material#MaterialVariantOverrides",
-          "Material#Materials",
-          "Material#TextureMapKeys",
-          "Material#decMaterialRef",
-          "Material#getMaterialRegistry",
-          "Material#incMaterialRef",
-          "Material#setMaterialPersistence",
-          "Texture#TexOpts",
-          "Texture#TextureProps",
-          "Texture#decTextureRef",
-          "Texture#getTextureRegistry",
-          "Texture#incTextureRef",
-          "Texture#setTexturePersistence",
-          "TextureArray#BuildTextureArrayProps",
-          "TextureAtlas#RemapUVsToAtlasCellOpts",
-          "TextureAtlas#SampleAtlasCellOpts"
-        ],
+        "exports": [],
         "members": []
       }
     },
     "engine/kernel/assets/import": {
       "exports": {
-        "documented": 55,
+        "documented": 66,
         "total": 66
       },
       "members": {
@@ -804,87 +766,36 @@
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "DracoDecoder#DracoConfig",
-          "GLTFExtract#ExtractResult",
-          "GLTFTextureCollect#CollectedGLTFTexture",
-          "GLTFTextureCollect#CollectedGLTFTextures",
-          "GLTFTextures#RegisteredGLTFTextures",
-          "GeometryTransfer#TransferableAttribute",
-          "ImportTypes#ImportAssetParams",
-          "ImportTypes#ImportedAssetManifest",
-          "ImportTypes#ImportedGeometryInfo",
-          "ImportTypes#SpawnImportedParams",
-          "ImportTypes#SpawnImportedResult"
-        ],
+        "exports": [],
         "members": []
       }
     },
     "engine/kernel/assets/worker": {
       "exports": {
-        "documented": 2,
+        "documented": 4,
         "total": 4
       },
       "members": {
-        "documented": 0,
+        "documented": 1,
         "total": 1
       },
       "undocumented": {
-        "exports": [
-          "AssetsSwitchGLTF#assetsSwitchGLTF",
-          "AssetsSwitchTexture#assetsSwitchTexture"
-        ],
-        "members": [
-          "AssetsFetch#AssetsSourceError.constructor"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "engine/kernel/camera": {
       "exports": {
-        "documented": 10,
-        "total": 32
+        "documented": 25,
+        "total": 25
       },
       "members": {
-        "documented": 1,
-        "total": 11
+        "documented": 0,
+        "total": 0
       },
       "undocumented": {
-        "exports": [
-          "Camera#CameraDebugLSData",
-          "Camera#CameraEntityDebugState",
-          "Camera#CameraSceneDebugState",
-          "Camera#cameraDebugGUI",
-          "Camera#createCameraEntity",
-          "Camera#disposeCamera",
-          "Camera#getActiveCamera",
-          "Camera#getActiveCameraId",
-          "Camera#getAllCamerasAsArray",
-          "Camera#getCameraByAppId",
-          "Camera#getCurrentCamera",
-          "Camera#getCurrentCameraId",
-          "Camera#getMainAppCameraId",
-          "Camera#initDebugCamera",
-          "Camera#isAnyCameraHelperVisible",
-          "Camera#isDebugCameraActive",
-          "Camera#setActiveCamera",
-          "Camera#setCurrentCamera",
-          "Camera#setMainCamera",
-          "Camera#syncCameraHelpersFromLS",
-          "Camera#toggleAllCameraHelpers",
-          "Camera#toggleDebugCamera"
-        ],
-        "members": [
-          "Camera#CameraEntityDebugState.helperVisible",
-          "Camera#CameraSceneDebugState.debugCam",
-          "Camera#DebugCamLSProps.enabled",
-          "Camera#DebugCamLSProps.far",
-          "Camera#DebugCamLSProps.fov",
-          "Camera#DebugCamLSProps.latestAppCameraId",
-          "Camera#DebugCamLSProps.near",
-          "Camera#DebugCamLSProps.position",
-          "Camera#DebugCamLSProps.target",
-          "Camera#DebugCamLSProps.zoom"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "engine/kernel/config": {
@@ -903,8 +814,8 @@
     },
     "engine/kernel/ecs": {
       "exports": {
-        "documented": 79,
-        "total": 79
+        "documented": 81,
+        "total": 81
       },
       "members": {
         "documented": 159,
@@ -931,8 +842,8 @@
     },
     "engine/kernel/init": {
       "exports": {
-        "documented": 19,
-        "total": 19
+        "documented": 21,
+        "total": 21
       },
       "members": {
         "documented": 0,
@@ -983,28 +894,15 @@
     },
     "engine/kernel/light": {
       "exports": {
-        "documented": 8,
-        "total": 20
+        "documented": 16,
+        "total": 16
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "Light#LightProps",
-          "Light#SHADOW_PRESETS",
-          "Light#ShadowQuality",
-          "Light#createLightEntity",
-          "Light#debugGUI",
-          "Light#getLightByAppId",
-          "Light#isAnyLightHelperVisible",
-          "Light#setLightEnabled",
-          "Light#setLightFrustumCullingEnabled",
-          "Light#setLightObjectCullingEnabled",
-          "Light#setLightShadowEnabled",
-          "Light#toggleAllLightHelpers"
-        ],
+        "exports": [],
         "members": []
       }
     },
@@ -1024,7 +922,7 @@
     },
     "engine/kernel/mesh": {
       "exports": {
-        "documented": 8,
+        "documented": 13,
         "total": 13
       },
       "members": {
@@ -1032,94 +930,42 @@
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "Mesh#MeshProps",
-          "Mesh#createMeshEntity",
-          "Mesh#disposeMesh",
-          "Mesh#getMeshByAppId",
-          "MeshUserData#setMeshCreatePropsToUserData"
-        ],
+        "exports": [],
         "members": []
       }
     },
     "engine/kernel/render": {
       "exports": {
-        "documented": 76,
-        "total": 91
+        "documented": 89,
+        "total": 89
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "Renderer#RendererOptions",
-          "Renderer#createRendererDebugGUI",
-          "Renderer#isWebGLRenderer",
-          "Renderer#isWebGPURenderer",
-          "Snapshot#SnapshotBlobOpts",
-          "Snapshot#SnapshotOpts",
-          "ThreeMath#DIRECTIONS",
-          "ThreeMath#GRAVITY_DOWN_NORMAL",
-          "ThreeMath#LEVEL_GROUND_NORMAL",
-          "ThreeMath#RENDERER_SHADOW_OPTIONS",
-          "ThreeMath#ThreeEuler",
-          "ThreeMath#ThreeQuoternion",
-          "ThreeMath#ThreeVector3",
-          "ThreeMath#getQuatFromAngle",
-          "ThreeMath#slerp"
-        ],
+        "exports": [],
         "members": []
       }
     },
     "engine/kernel/scene": {
       "exports": {
-        "documented": 61,
-        "total": 88
+        "documented": 73,
+        "total": 73
       },
       "members": {
-        "documented": 0,
+        "documented": 1,
         "total": 1
       },
       "undocumented": {
-        "exports": [
-          "Group#GroupProps",
-          "Group#getGroupByAppId",
-          "PropertyLoader#LoadableProps",
-          "Scene#Looper",
-          "Scene#SceneData",
-          "Scene#SceneOptions",
-          "Scene#registerOnAllSceneEnterings",
-          "Scene#registerOnAllSceneExits",
-          "Scene#registerOnSceneEnter",
-          "Scene#registerOnSceneExit",
-          "Scene#runOnAllSceneEnters",
-          "Scene#runOnAllSceneExits",
-          "Scene#runOnSceneEnter",
-          "Scene#runOnSceneExit",
-          "Scene#runSceneAppLoopers",
-          "Scene#runSceneMainLateLoopers",
-          "Scene#runSceneMainLoopers",
-          "SceneLoader#SceneLoader",
-          "SceneLoader#ScenePrimitiveAssets",
-          "SceneLoader#UpdateLoaderStatusFn",
-          "SceneLoader#createCameras",
-          "SceneLoader#createSceneLoader",
-          "SceneLoader#getCurrentSceneLoader",
-          "SceneLoader#getCurrentSceneLoaderId",
-          "SceneLoader#getNextSceneId",
-          "SceneLoader#hasFirstSceneBeenLoaded",
-          "SceneLoader#setCurrentSceneLoader"
-        ],
-        "members": [
-          "PropertyLoader#LoadableProps.appId"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "engine/schemas": {
       "exports": {
-        "documented": 46,
-        "total": 122
+        "documented": 47,
+        "total": 121
       },
       "members": {
         "documented": 0,
@@ -1165,7 +1011,6 @@
           "PostFxSchema#PostFxAsset",
           "PostFxSchema#PostFxAssetSchema",
           "PostFxSchema#PostFxOverrides",
-          "PostFxSchema#PostFxParamMeta",
           "SpatialDomainSchema#SceneSpatialDomainEntry",
           "SpatialDomainSchema#SceneSpatialDomainsSchema",
           "TextureArraySchema#TextureArrayAsset",
@@ -1194,7 +1039,6 @@
           "_HelperSchemas#DebugDataSchema",
           "_HelperSchemas#EntityDebugData",
           "_HelperSchemas#EntityDebugDataSchema",
-          "_HelperSchemas#ShadowQuality",
           "_HelperSchemas#ShadowQualitySchema",
           "_HelperSchemas#UserData",
           "_HelperSchemas#UserDataSchema",
@@ -1223,8 +1067,8 @@
     },
     "engine/ui": {
       "exports": {
-        "documented": 45,
-        "total": 77
+        "documented": 42,
+        "total": 74
       },
       "members": {
         "documented": 0,
@@ -1284,8 +1128,8 @@
     },
     "engine/utils": {
       "exports": {
-        "documented": 39,
-        "total": 44
+        "documented": 41,
+        "total": 45
       },
       "members": {
         "documented": 4,
@@ -1296,7 +1140,6 @@
           "Constants#FOUR_PX_TO_8K_LIST",
           "Constants#HALF_PI",
           "Constants#QUARTER_PI",
-          "Constants#textureMapKeys",
           "LocalAndSessionStorage#StorageValue"
         ],
         "members": [

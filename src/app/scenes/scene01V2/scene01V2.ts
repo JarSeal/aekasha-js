@@ -4,7 +4,7 @@ import {
   createGeometry,
   createMaterial,
   getTexture,
-  loadTexture,
+  loadTextureAsync,
   importAssetAsync,
   spawnImportedAsset,
   createMeshEntity,
@@ -143,7 +143,7 @@ export const scene = async () =>
       id: 'box1Material',
       type: 'PHONG',
       params: {
-        map: loadTexture({
+        map: await loadTextureAsync({
           id: 'box1Texture',
           fileName: '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg',
         }),

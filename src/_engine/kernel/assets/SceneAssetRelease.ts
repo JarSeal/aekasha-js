@@ -4,31 +4,44 @@ import { deleteGeometry, getGeometryRegistry } from './Geometry';
 import {
   deleteMaterial,
   deleteTexturesFromMaterial,
+  getKeptTextures,
   getMaterialRegistry,
   isTextureUsedByAnyMaterial,
 } from './Material';
 import { deleteTexture, getTextureRegistry } from './Texture';
-import { releaseImportsOwnedBy } from './import/ImportRegistry';
-import { getSceneRetainedTextures } from '../scene/SceneHooks';
 import { getAssetOwner } from './AssetOwners';
+
+/** The import registry's release of a scene's imports, once anything was imported */
+let releaseSceneImports: ((sceneId: string) => string[]) | null = null;
+
+/**
+ * Sets the release of a scene's import manifests: the import registry sets its own on its first
+ * import, so this module doesn't name it and the glTF import path loads only with an import.
+ * @internal
+ */
+export const setSceneImportRelease = (release: (sceneId: string) => string[]) => {
+  releaseSceneImports = release;
+};
 
 /**
  * Releases the non-persistent assets a scene still owns (see AssetOwners) that nothing uses:
  * its import manifests, its materials and geometries with ref count 0, and its textures that no
- * registered material uses and no feature retains (the current sky box's, a `retainedTextures`
- * scene hook). SceneLoader runs this for the previous scene
+ * registered material uses and nothing keeps (`getKeptTextures`: a `retainedTextures` scene
+ * hook's, such as the current sky box's, and the root scene's background and environment).
+ * SceneLoader runs this for the previous scene
  * once the next one has loaded, so whatever the next scene shares has been re-tagged to it (or
  * has taken refs) and stays.
  *
  * A released material disposes the texture clones it holds alone; registered textures are only
  * released here by owner, never through a material.
+ * @internal
  * @param sceneId owner scene id
  * @returns the released ids by kind
  */
 export const releaseSceneOwnedAssets = (sceneId: string) => {
   const isOwned = (asset: object) => getAssetOwner(asset) === sceneId;
   const released = {
-    imports: releaseImportsOwnedBy(sceneId),
+    imports: releaseSceneImports?.(sceneId) ?? [],
     materials: [] as string[],
     geometries: [] as string[],
     textures: [] as string[],
@@ -51,10 +64,10 @@ export const releaseSceneOwnedAssets = (sceneId: string) => {
   }
 
   // A sky box texture's baked PMREM is disposed with it (SkyBox/SkyEnvironment.ts)
-  const retained = getSceneRetainedTextures();
+  const kept = getKeptTextures();
   for (const [id, entry] of Object.entries(getTextureRegistry())) {
     if (entry.persistent || !isOwned(entry.resource)) continue;
-    if (retained.has(entry.resource) || isTextureUsedByAnyMaterial(entry.resource)) continue;
+    if (kept.has(entry.resource) || isTextureUsedByAnyMaterial(entry.resource)) continue;
     deleteTexture(id);
     released.textures.push(id);
   }

@@ -2,9 +2,8 @@ import * as THREE from 'three/webgpu';
 import type { ECSWorld } from '../ecs/ECS';
 import { getECSWorld, getEntityIdByAppId } from '../ecs/ECS';
 import { getRootScene } from './Scene';
-import { ThreeEuler, ThreeQuoternion } from '../render/ThreeMath';
 import { ComponentType } from '../ecs/ECSCoreComponents';
-import { setTransform } from '../ecs/ECSHelpers';
+import { setTransformFromProps } from '../ecs/ECSHelpers';
 import { lerror, lwarn } from '../../utils/Logger';
 import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
 import { existsOrThrow } from '../../utils/Assert';
@@ -20,16 +19,52 @@ export const installGroups = (ctx: FeatureContext) => {
   });
 };
 
+/** What {@link createGroupEntity} makes a group with. */
 export type GroupProps = {
+  /** The entity's app id (over `entityOpts.appId`); default: the group's uuid, not fixed. */
   appId?: string;
+  /** Objects added to the group at once (see {@link addToGroupEntity}). */
   objects?: THREE.Object3D | THREE.Object3D[];
+  /** The group's position; an axis left out is 0. */
   position?: { x?: number; y?: number; z?: number };
+  /** Euler angles in radians (XYZ order); an axis left out is 0. */
   rotation?: { x?: number; y?: number; z?: number };
+  /** The group's rotation, over `rotation`. */
   quaternion?: THREE.Quaternion;
 };
 
+/** The entity in `world` whose object is `child` (by its `userData.entityId`), if any */
+const getChildEntityId = (child: THREE.Object3D, world: ECSWorld) => {
+  const entityId = child.userData.entityId as number | undefined;
+  if (entityId === undefined) return undefined;
+  return world.getComponent(entityId, ComponentType.OBJECT3D)?.value === child
+    ? entityId
+    : undefined;
+};
+
+/** A group entity's group, or `undefined` (warned) */
+const getGroupOfEntity = (entityId: number, world: ECSWorld, fnName: string) => {
+  const group = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
+  if (!group || !(group as THREE.Group).isGroup) {
+    lwarn(`Entity "${entityId}" has no group (${fnName}).`);
+    return undefined;
+  }
+  return group as THREE.Group;
+};
+
 /**
- * Creates a standard Three.js Group Entity context attached directly to the active ECS World
+ * Creates a group entity: a `THREE.Group` (in the root scene unless `entityOpts.doNotAddToScene`)
+ * with an `OBJECT3D` and a transform. Deleting the entity deletes its children's entities and
+ * detaches the rest.
+ * @param ecsWorld default: the default world
+ * @returns the group's entity id
+ * @example
+ * ```ts
+ * import { addToGroupEntity, createGroupEntity } from 'aekasha';
+ *
+ * const groupId = createGroupEntity({ appId: 'crates', position: { y: 1 } });
+ * addToGroupEntity(groupId, [crateMesh1, crateMesh2]);
+ * ```
  */
 export const createGroupEntity = (
   props: GroupProps,
@@ -51,10 +86,7 @@ export const createGroupEntity = (
     group.userData.description = entityOpts.debugData.description;
   }
 
-  // Add sub-elements immediately if provided on instantiation pass
-  if (props.objects) {
-    addToGroupEntity(group, props.objects);
-  }
+  if (props.objects) addToGroupEntity(group, props.objects);
 
   if (!entityOpts?.doNotAddToScene) {
     const rootScene = existsOrThrow(
@@ -76,73 +108,40 @@ export const createGroupEntity = (
     _lastVersion: -1,
   });
   world.addComponent(entityId, ComponentType.TAG_IS_GROUP, true);
-
-  const tra = {
-    pos: { x: group.position.x, y: group.position.y, z: group.position.z },
-    rot: {
-      x: group.quaternion.x,
-      y: group.quaternion.y,
-      z: group.quaternion.z,
-      w: group.quaternion.w,
-    },
-  };
-
-  if (props.position) {
-    if (props.position.x !== undefined) tra.pos.x = props.position.x;
-    if (props.position.y !== undefined) tra.pos.y = props.position.y;
-    if (props.position.z !== undefined) tra.pos.z = props.position.z;
-  }
-
-  if (props.quaternion) {
-    tra.rot.x = props.quaternion.x;
-    tra.rot.y = props.quaternion.y;
-    tra.rot.z = props.quaternion.z;
-    tra.rot.w = props.quaternion.w;
-  } else if (props.rotation) {
-    const rot = ThreeEuler.set(group.rotation.x, group.rotation.y, group.rotation.z);
-    if (props.rotation.x !== undefined) rot.x = props.rotation.x;
-    if (props.rotation.y !== undefined) rot.y = props.rotation.y;
-    if (props.rotation.z !== undefined) rot.z = props.rotation.z;
-    const quat = ThreeQuoternion.setFromEuler(rot);
-    tra.rot.x = quat.x;
-    tra.rot.y = quat.y;
-    tra.rot.z = quat.z;
-    tra.rot.w = quat.w;
-  }
-
-  setTransform(entityId, tra, world);
+  setTransformFromProps(entityId, group, props, world);
 
   return entityId;
 };
 
 /**
- * Adds an Object3D or an array of elements into a managed Group Entity
+ * Adds objects to a group: an object entity's object (eg. `createMeshEntity`'s, made with
+ * `doNotAddToScene`) or a plain one. Its transform is then relative to the group.
+ * @param entityIdOrGroup a group entity's id (in `ecsWorld`), or a group object
+ * @param ecsWorld the group entity's world; default: the default world
+ * @returns the group, or `undefined` (warned) for an entity without one
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ * import { addToGroupEntity, createGroupEntity } from 'aekasha';
+ *
+ * const groupId = createGroupEntity({ appId: 'crates' });
+ * // A mesh entity made with `doNotAddToScene`, and a plain object
+ * addToGroupEntity(groupId, [crateMesh, new THREE.Object3D()]);
+ * ```
  */
 export const addToGroupEntity = (
   entityIdOrGroup: number | THREE.Group,
   objects: THREE.Object3D | THREE.Object3D[],
   ecsWorld?: ECSWorld
 ): THREE.Group | undefined => {
-  let group: THREE.Group | undefined;
-
-  if (typeof entityIdOrGroup === 'number') {
-    const world = ecsWorld || getECSWorld();
-    const objComp = world?.getComponent(entityIdOrGroup, ComponentType.OBJECT3D);
-    if (!objComp) {
-      lwarn(
-        `[Group Manager] Entity "${entityIdOrGroup}" has no valid OBJECT3D track for additions.`
-      );
-      return;
-    }
-    group = objComp.value as THREE.Group;
-  } else {
-    group = entityIdOrGroup;
-  }
+  const group =
+    typeof entityIdOrGroup === 'number'
+      ? getGroupOfEntity(entityIdOrGroup, ecsWorld || getECSWorld(), 'addToGroupEntity')
+      : entityIdOrGroup;
+  if (!group) return;
 
   if (Array.isArray(objects)) {
-    for (let i = 0; i < objects.length; i++) {
-      group.add(objects[i]);
-    }
+    for (let i = 0; i < objects.length; i++) group.add(objects[i]);
   } else {
     group.add(objects);
   }
@@ -151,122 +150,134 @@ export const addToGroupEntity = (
 };
 
 /**
- * Removes elements from a group entity context, running structural reference reductions if configured
+ * Removes children from a group, by their `userData.id` (an object entity's app id) or their
+ * index in `group.children` (the indexes before this call's removals).
+ * @param entityIdOrGroup a group entity's id (in `ecsWorld`), or a group object
+ * @param objectIdOrIndex one child or several (a missing one is warned and skipped)
+ * @param ecsWorld the group's world: its entity's, and its children's; default: the default world
+ * @returns the group, or `undefined` for an entity without one
+ * @example
+ * ```ts
+ * import { removeFromGroupEntity } from 'aekasha';
+ *
+ * // Takes the crate out of the group and deletes its entity
+ * removeFromGroupEntity(groupId, 'crate1', { deleteMeshes: true });
+ * ```
  */
 export const removeFromGroupEntity = (
   entityIdOrGroup: number | THREE.Group,
   objectIdOrIndex: string | string[] | number | number[],
   opts?: {
+    /** Delete a removed mesh's entity too (in the group's world): its geometry and materials are
+     * released like any mesh entity's. A mesh without an entity is only detached: what it holds
+     * stays its owner's. */
     deleteMeshes?: boolean;
+    /**
+     * Never read.
+     * @deprecated `deleteMeshes` releases an entity's geometry. Removed in engine 6.0.0.
+     */
     deleteGeometries?: boolean;
+    /**
+     * Never read.
+     * @deprecated `deleteMeshes` releases an entity's materials. Removed in engine 6.0.0.
+     */
     deleteMaterials?: boolean;
+    /**
+     * Never read.
+     * @deprecated `deleteMeshes` releases an entity's materials, which release their textures.
+     * Removed in engine 6.0.0.
+     */
     deleteTextures?: boolean;
   },
   ecsWorld?: ECSWorld
 ): THREE.Group | undefined => {
-  let group: THREE.Group | undefined;
   const world = ecsWorld || getECSWorld();
+  const group =
+    typeof entityIdOrGroup === 'number'
+      ? getGroupOfEntity(entityIdOrGroup, world, 'removeFromGroupEntity')
+      : entityIdOrGroup;
+  if (!group) return;
 
-  if (typeof entityIdOrGroup === 'number') {
-    const objComp = world?.getComponent(entityIdOrGroup, ComponentType.OBJECT3D);
-    if (!objComp) return;
-    group = objComp.value as THREE.Group;
-  } else {
-    group = entityIdOrGroup;
-  }
-
-  const groupId = group.userData.id;
   const objectsToRemove: THREE.Object3D[] = [];
-  const targetTokens = Array.isArray(objectIdOrIndex) ? objectIdOrIndex : [objectIdOrIndex];
+  const targets = Array.isArray(objectIdOrIndex) ? objectIdOrIndex : [objectIdOrIndex];
 
-  for (let i = 0; i < targetTokens.length; i++) {
-    const target = targetTokens[i];
-    let foundChild: THREE.Object3D | undefined;
+  for (let i = 0; i < targets.length; i++) {
+    const target = targets[i];
+    const child =
+      typeof target === 'string'
+        ? group.children.find((obj) => obj.userData.id === target)
+        : group.children[target];
 
-    if (typeof target === 'string') {
-      foundChild = group.children.find((child) => child.userData.id === target);
-    } else if (typeof target === 'number') {
-      foundChild = group.children[target];
-    }
-
-    if (foundChild) {
-      objectsToRemove.push(foundChild);
+    if (child) {
+      objectsToRemove.push(child);
     } else {
-      lwarn(
-        `[Group Manager] Object target "${target}" was not found inside entity group space "${groupId}".`
-      );
+      lwarn(`Object "${target}" was not found in group "${group.userData.id}".`);
     }
   }
 
-  // Safely detach tracking and trigger GPU recycling rules
   for (let i = 0; i < objectsToRemove.length; i++) {
     const child = objectsToRemove[i];
     group.remove(child);
-
-    // If the child object has an active ECS presence matching the mesh tag, recycle it cleanly
-    if (opts?.deleteMeshes && 'isMesh' in child && child.isMesh) {
-      // Look up if this matching mesh child exists as a standalone entity to dispose it cleanly
-      const id = child.userData.appId || child.userData.id;
-      const childEntityId = getEntityIdByAppId(id);
-      if (childEntityId !== undefined) {
-        world?.deleteEntity(childEntityId);
-      } else {
-        // Fallback trace to raw memory clearing logic if object is unmanaged by ECS root tracks
-        child.removeFromParent();
-        if ('geometry' in child) (child as THREE.Mesh).geometry.dispose();
-      }
-    }
+    if (!opts?.deleteMeshes || !(child as THREE.Mesh).isMesh) continue;
+    const childEntityId = getChildEntityId(child, world);
+    if (childEntityId !== undefined) world.deleteEntity(childEntityId);
   }
 
   return group;
 };
 
 /**
- * Sweeps and cleans up native Three.js allocations on entity deletion
+ * A group entity's deletion (its `TAG_IS_GROUP` hook): the children's entities in the same world
+ * are deleted, the other children detached, and the group leaves its parent.
+ * @internal
  */
 export const disposeGroup = (entityId: number, ecsWorld?: ECSWorld) => {
   const world = ecsWorld || getECSWorld();
 
-  const groupComp = world.getComponent(entityId, ComponentType.OBJECT3D);
-  if (!groupComp) return;
+  const group = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
+  if (!group) return;
 
-  const group = groupComp.value as THREE.Group;
-
-  // Process children in reverse order to protect underlying tracking array vectors from length mutations
+  // In reverse: a child's deletion removes it from `children`
   for (let i = group.children.length - 1; i >= 0; i--) {
     const child = group.children[i];
-
-    // Auto-cascade resource removal loops to children entities if managed by the ECS world
-    const id = child.userData.appId || child.userData.id;
-    const childEntityId = getEntityIdByAppId(id);
-    if (childEntityId !== undefined) {
-      world.deleteEntity(childEntityId);
-    } else {
-      child.removeFromParent();
-    }
+    const childEntityId = getChildEntityId(child, world);
+    if (childEntityId !== undefined) world.deleteEntity(childEntityId);
+    // Not every object entity's deletion detaches its object (a mesh's does)
+    child.removeFromParent();
   }
 
   group.removeFromParent();
 };
 
+/**
+ * A group entity's group by its app id.
+ * @param ecsWorld default: the default world
+ * @returns the group, or `undefined` when no entity has the app id
+ * @throws when the entity's object isn't a group
+ * @example
+ * ```ts
+ * import { getGroupByAppId } from 'aekasha';
+ *
+ * const crates = getGroupByAppId('crates');
+ * ```
+ */
 export const getGroupByAppId = (appId: string, ecsWorld?: ECSWorld) => {
   const world = ecsWorld || getECSWorld();
   const entityId = getEntityIdByAppId(appId, world);
-  let group: THREE.Group | undefined = undefined;
-  if (entityId) {
-    const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
-    if (obj && !(obj as THREE.Group).isGroup) {
-      const msg = `Found Object3D is not a group (type: ${obj.type}).`;
-      lerror(msg);
-      throw new Error(msg);
-    }
-    group = obj as THREE.Group | undefined;
+  if (entityId === undefined) return undefined;
+  const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
+  if (obj && !(obj as THREE.Group).isGroup) {
+    const msg = `Found Object3D is not a group (type: ${obj.type}).`;
+    lerror(msg);
+    throw new Error(msg);
   }
-  return group;
+  return obj as THREE.Group | undefined;
 };
 
 /**
- * Deletes all registered group entities in the ECS world.
+ * Deletes a world's group entities but the persistent ones (the scene loader, on a scene's exit).
+ * @internal
+ * @param ecsWorld default: the default world
  */
 export const deleteAllGroupEntities = (ecsWorld?: ECSWorld) => {
   const world = ecsWorld || getECSWorld();
@@ -274,6 +285,8 @@ export const deleteAllGroupEntities = (ecsWorld?: ECSWorld) => {
   const storage = world.getStorage(ComponentType.TAG_IS_GROUP);
   const entityIds = Array.from(storage.keys());
   for (let i = 0; i < entityIds.length; i++) {
-    world.deleteEntity(entityIds[i]);
+    if (!world.hasComponent(entityIds[i], ComponentType.PERSISTENT)) {
+      world.deleteEntity(entityIds[i]);
+    }
   }
 };

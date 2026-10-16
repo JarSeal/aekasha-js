@@ -39,6 +39,29 @@ Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every 
   reads p612's cached id (default world only).
 - p612 Phase 7: `CharacterTypes.ts:142`'s `{@link getBodyKind}` links nowhere (`yarn hub:build`
   warns): TypeDoc resolves a link in the file's scope, and the file doesn't import the name.
+- p613 Phase 8 (`yarn hub:build`, from before p613; p610 Phase 7 listed them and left them):
+  three `notExported` in `features/character/`, `CharacterBrainKinds` and `KindSpec` (named by
+  `CharacterBrainSpec`, `ActorTypes.ts:106`) and `PlayerBrainCommonActions` (named by
+  `DirectionalBrainActions`, `brains/PlayerBrains.ts:43`).
+- p613 D13 (a bug and a move, handed over whole): `kernel/mesh/MeshUserData.ts` is physics'
+  collider derivation in the kernel. Its one caller is `features/physics/import/MeshColliderGeometry.ts`;
+  move it next to it (`features/physics/import/`). Its `setMeshCreatePropsToUserData` (`@internal`,
+  documented, its `@remarks` names the bug) has two halves that disagree with
+  `PhysicsEntity.ts`' `deriveColliderDimensionsFromMesh`:
+  - No `break` after `CAPSULE` and `CONE`: a capsule falls through into the cone's and the
+    cylinder's code.
+  - It writes `radius`, `halfHeight` and `orientation` into the scratch geometry's
+    `userData.props.params`, while the reader reads `createGeometry`'s names (`height`,
+    `radiusTop` / `radiusBottom`). So an imported node's `CAPSULE`, `CONE` or `CYLINDER` collider
+    gets no derived `halfHeight` (the Physics API's default applies), and a cone or cylinder no
+    derived radius either. Boxes and spheres work.
+  - Fix it on physics' side (one set of names for the writer and the reader), with a test per
+    shape. No template asset has such a collider (every GLB's are boxes, trimeshes, convex hulls
+    and heightfields), and the code-made cylinder colliders (the gym's carousels, `scene01`) take
+    `createGeometry`'s path, which works: no scene hash waits on it.
+  - With the move, `kernel/render/ThreeMath.ts`' `ThreeVector3` (`@internal`, a shared scratch
+    vector) loses its last user outside its own file: make it private, or give the moved file its
+    own scratch vector.
 
 ## From p611 (2026-10-14)
 

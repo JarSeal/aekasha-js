@@ -29,7 +29,8 @@ const profiles: SbpProfile[] = [
       initial: 404 * KIB,
       chunks: {
         'assets/index.js': 401 * KIB,
-        'assets/index.css': 4 * KIB,
+        // p613 D5: the draggable windows' styles left with the windows
+        'assets/index.css': 3 * KIB,
         'assets/rapier.js': 843 * KIB,
         'assets/PhysicsWorker.js': 11 * KIB,
         'assets/AssetsSwitchGLTF.js': 53 * KIB,
@@ -45,12 +46,14 @@ const profiles: SbpProfile[] = [
         '_engine/features/skybox': 28 * KIB,
         '_engine/features/spatial': 10 * KIB,
         '_engine/features/viewports': 4 * KIB,
-        '_engine/kernel/assets': 27 * KIB,
+        // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`)
+        '_engine/kernel/assets': 20 * KIB,
         // p612's JSDoc (a group counts its comments: sizes before minification); its code +0.4 KiB
         '_engine/kernel/ecs': 17 * KIB,
         '_engine/kernel/input': 13 * KIB,
         '_engine/kernel/scene': 8 * KIB,
-        '_engine/ui': 15 * KIB,
+        // p613 D5: the draggable windows load only where they're used
+        '_engine/ui': 7 * KIB,
         app: 15 * KIB,
         toolkit: 10 * KIB,
       },
@@ -74,15 +77,18 @@ const profiles: SbpProfile[] = [
         // The entry only re-exports `mount` from the shared chunk
         'banner.embed.js': 2 * KIB,
         'assets/banner.embed.js': 311 * KIB,
-        'assets/banner.css': 3 * KIB,
+        // p613 D5: the draggable windows' styles left with the windows
+        'assets/banner.css': 2 * KIB,
       },
       groups: {
         three: 633 * KIB,
-        '_engine/kernel/assets': 25 * KIB,
+        // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`)
+        '_engine/kernel/assets': 16 * KIB,
         // p612's JSDoc counts: a group is measured before minification
         '_engine/kernel/ecs': 17 * KIB,
         '_engine/kernel/scene': 7 * KIB,
-        '_engine/ui': 15 * KIB,
+        // p613 D5: the draggable windows load only where they're used
+        '_engine/ui': 7 * KIB,
         app: 3 * KIB,
         // The floor's promise: no feature reaches the initial chunks
         ...Object.fromEntries(FEATURE_GROUPS.map((group) => [group, 0])),

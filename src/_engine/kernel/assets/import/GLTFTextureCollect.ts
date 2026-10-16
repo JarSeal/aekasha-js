@@ -7,6 +7,11 @@ import { textureMapKeys } from '../../../utils/Constants';
 import type { TextureMapKeys } from '../Material';
 import type { ExtractedPrimitive } from './GLTFExtract';
 
+/**
+ * One texture a primitive's glTF material slot uses, with the names it's registered and
+ * matched by.
+ * @internal
+ */
 export type CollectedGLTFTexture = {
   texture: THREE.Texture;
   /** The id part of the texture's registry id (`${importId}/${name}`). */
@@ -15,6 +20,11 @@ export type CollectedGLTFTexture = {
   gltfTextureKey: string;
 };
 
+/**
+ * {@link collectGLTFTextures}' result: each texture once, and which slot of which primitive uses
+ * it. Plain indexes, so the worker can send it.
+ * @internal
+ */
 export type CollectedGLTFTextures = {
   /** Every texture object used by a primitive's material slot, once, in first-use order. */
   textures: CollectedGLTFTexture[];
@@ -48,6 +58,7 @@ const getGltfTextureKey = (texture: THREE.Texture, gltf: GLTF) => {
  * Finds the textures in the extracted primitives' glTF material slots (only slots in
  * `textureMapKeys`; the first material with a slot filled wins it). Pure: nothing is registered,
  * disposed or logged. GLTFTextures.ts's registerGLTFTextures() registers the result.
+ * @internal
  */
 export const collectGLTFTextures = (
   gltf: GLTF,
@@ -61,7 +72,7 @@ export const collectGLTFTextures = (
     const materials = Array.isArray(material) ? material : [material];
     for (const mat of materials) {
       if (!mat) continue;
-      for (const key of textureMapKeys as TextureMapKeys[]) {
+      for (const key of textureMapKeys) {
         const texture = (mat as unknown as Record<string, unknown>)[key] as THREE.Texture | null;
         if (!texture?.isTexture || slots[key] !== undefined) continue;
         let index = indexByTexture.get(texture);

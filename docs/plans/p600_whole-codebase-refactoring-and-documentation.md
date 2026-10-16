@@ -1,6 +1,6 @@
 Status: draft | epic — not-implemented
 Category: Refactoring, Documentation, Architecture, Build
-Blocks: \_DONE_p601_refactoring-safety-net-tests-and-baselines.md, \_DONE_p602_architecture-and-target-structure.md, \_DONE_p603_gameplay-architecture-contracts.md, \_DONE_p604_multiplayer-viability-study.md, \_DONE_p605_coding-standards-and-documentation-tooling.md, \_DONE_p606_layering-inversion-and-public-entry.md, \_DONE_p607_sbp-foundation-feature-modules.md, \_DONE_p608_engine-folder-restructure.md, \_DONE_p609_toolkit-and-app-restructure.md, \_DONE_p610_character-and-input-action-architecture.md, \_DONE_p611_sbp-tooling-profiles-and-marketing.md, \_DONE_p612_review-ecs-loop-config-init.md, p613_review-rendering-scene-assets.md, p614_review-physics.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p617_review-input-ui-hud.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p620_review-toolkit-and-app-code.md, p621_hub-docs-readme-and-claude-md-final.md
+Blocks: \_DONE_p601_refactoring-safety-net-tests-and-baselines.md, \_DONE_p602_architecture-and-target-structure.md, \_DONE_p603_gameplay-architecture-contracts.md, \_DONE_p604_multiplayer-viability-study.md, \_DONE_p605_coding-standards-and-documentation-tooling.md, \_DONE_p606_layering-inversion-and-public-entry.md, \_DONE_p607_sbp-foundation-feature-modules.md, \_DONE_p608_engine-folder-restructure.md, \_DONE_p609_toolkit-and-app-restructure.md, \_DONE_p610_character-and-input-action-architecture.md, \_DONE_p611_sbp-tooling-profiles-and-marketing.md, \_DONE_p612_review-ecs-loop-config-init.md, \_DONE_p613_review-rendering-scene-assets.md, p614_review-physics.md, p615_review-sky-box.md, p616_review-lod-spatial-instancing-lines.md, p617_review-input-ui-hud.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p620_review-toolkit-and-app-code.md, p621_hub-docs-readme-and-claude-md-final.md
 Related: p990_follow-ups-from-done-plans.md (its bundle size items move to p607), \_DONE_p200_component-query-caching.md (its main-camera cache, implemented in p612), p420_npc-simulation-tiers.md (fits p603's actor model), p500_restore-physics-snapshot.md (p604's rollback prerequisite), p302_material-and-texture-system-refactor.md (p613 leaves what it rewrites), p240_client-device-capability-sniffer.md (SBP-aware: its benchmark is a lazy chunk), `docs/templates/todo-plan-prompts.txt` (the original prompt, and the p800, p450, p070 and p770 prompts this epic sequences)
 
 # Whole Codebase Refactoring and Documentation — Epic
@@ -425,8 +425,9 @@ standards, the structure and the SBP strategy to it would make every session pay
   blocked softly by p603's stubs p421 (kinematic controller) and p424 (AI brains, navmesh).
 - **`p500_restore-physics-snapshot.md`:** stays its own plan; p604 lists it as the prerequisite for
   prediction and rollback.
-- **`p302_material-and-texture-system-refactor.md`:** stays in the terrain epic; p613 leaves
-  whatever p302 rewrites and only moves it.
+- **`p302_material-and-texture-system-refactor.md`:** stays in the terrain epic; p613 left
+  whatever p302 rewrites (documented, moved where a file split), and fixed its two bugs (p613 D2;
+  p302's "From p613").
 - **`p240_client-device-capability-sniffer.md`:** already SBP-shaped (its benchmark is downloaded
   only when it runs).
 - **Prompts in `docs/templates/todo-plan-prompts.txt` that have no plan yet:**
@@ -458,7 +459,7 @@ standards, the structure and the SBP strategy to it would make every session pay
 | B     | \_DONE_p610_character-and-input-action-architecture.md    | The input action layer, the controller contract, `createDynamicCharacter` split, intents                               | p603, p608 |
 | B     | \_DONE_p611_sbp-tooling-profiles-and-marketing.md         | `yarn sbp`, budgets, the banner profile and example, the lite-renderer study, marketing                                | p607, p608 |
 | C     | \_DONE_p612_review-ecs-loop-config-init.md                | ECS, main loop, config, `InitEngine`, views (+ p200's cache)                                                           | p608       |
-| C     | p613_review-rendering-scene-assets.md                     | Renderer, scenes and loader, geometry / material / texture, assets, import, PostFX, viewports, snapshots               | p608       |
+| C     | \_DONE_p613_review-rendering-scene-assets.md              | Renderer, scenes and loader, geometry / material / texture, assets, import, PostFX, viewports, snapshots               | p608       |
 | C     | p614_review-physics.md                                    | PhysicsAPI split, EngineRapier, worker, tiers, raycast (+ the `RayCastOpts` removal)                                   | p608, p610 |
 | C     | p615_review-sky-box.md                                    | The sky box                                                                                                            | p608       |
 | C     | p616_review-lod-spatial-instancing-lines.md               | LOD, impostors, spatial index, instancing, lines                                                                       | p608       |

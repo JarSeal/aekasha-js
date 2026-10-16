@@ -2,7 +2,11 @@ import type * as THREE from 'three/webgpu';
 import type { Renderer } from 'three/webgpu';
 import { textureMapKeys } from '../../utils/Constants';
 import { getGeometryRegistry } from '../../kernel/assets/Geometry';
-import { getMaterialRegistry, type Materials } from '../../kernel/assets/Material';
+import {
+  getMaterialMapTexture,
+  getMaterialRegistry,
+  type Materials,
+} from '../../kernel/assets/Material';
 import { getTextureRegistry } from '../../kernel/assets/Texture';
 import { getAssetOwner } from '../../kernel/assets/AssetOwners';
 import { getCompressedTextureByteSize } from '../../kernel/assets/debug/_dbg__AssetStats';
@@ -100,7 +104,7 @@ const forEachMaterialTexture = (
   fn: (texture: THREE.Texture, slot: string) => void
 ) => {
   for (let i = 0; i < textureMapKeys.length; i++) {
-    const texture = material[textureMapKeys[i] as keyof Materials] as THREE.Texture | undefined;
+    const texture = getMaterialMapTexture(material, textureMapKeys[i]);
     if (texture?.isTexture) fn(texture, textureMapKeys[i]);
   }
   const uniforms = material.userData.uniforms as Record<string, unknown> | undefined;

@@ -27,7 +27,6 @@ import {
   createClearListLSButton,
   createClearTabLSButton,
 } from '../../../debug/_dbg__ClearLSButtons';
-import type { CameraDebugLSData, DebugCamLSProps } from '../Camera';
 import { getActiveCameraId, getAllCamerasAsArray, applyCameraProjection } from '../Camera';
 import { getCanvasSize } from '../../render/CanvasSize';
 import { DEFAULT_DEBUG_CAM_PROPS } from './_dbg__DebugCamera';
@@ -51,18 +50,22 @@ export interface CamEntityDebugState {
   _lensSettingsOpen?: boolean;
 }
 
+/** The debug orbit camera's saved state, per scene */
+export interface DebugCamLSProps {
+  position: { x: number; y: number; z: number };
+  target: { x: number; y: number; z: number };
+  enabled: boolean;
+  latestAppCameraId: string | null;
+  fov: number;
+  near: number;
+  far: number;
+  zoom: number;
+}
+
 export interface CamSceneDebugState {
+  /** By the cameras' fixed app ids */
   cams: Record<string, CamEntityDebugState>;
-  debugCam: {
-    enabled: boolean;
-    far: number;
-    fov: number;
-    latestAppCameraId: string | null;
-    near: number;
-    position: { x: number; y: number; z: number };
-    target: { x: number; y: number; z: number };
-    zoom: number;
-  };
+  debugCam: DebugCamLSProps;
 }
 
 /** The structure of 'AEK_debugCams' in LocalStorage */
@@ -638,7 +641,7 @@ export const _onCameraDeleted = (entityId: number, world: ECSWorld) => {
 };
 
 export const getDebugCamProps = (sceneId: string) => {
-  const saved = lsGetItem(LS_KEY, {}) as CameraDebugLSData;
+  const saved = lsGetItem(LS_KEY, {}) as CamDebugLSData;
   const keys = Object.keys(saved);
   if (!keys.includes(sceneId)) {
     saved[sceneId] = { debugCam: { ...DEFAULT_DEBUG_CAM_PROPS }, cams: {} };
@@ -698,7 +701,7 @@ export const clearCameraFromLS = (appId: string) => {
 export const saveDebugCameraToLS = (debugCamProps: Partial<DebugCamLSProps>) => {
   const sceneId = getCurrentSceneId();
   if (!sceneId) return;
-  const currentData = lsGetItem(LS_KEY, {}) as CameraDebugLSData;
+  const currentData = lsGetItem(LS_KEY, {}) as CamDebugLSData;
   if (!currentData[sceneId]) currentData[sceneId] = { cams: {}, debugCam: DEFAULT_DEBUG_CAM_PROPS };
   currentData[sceneId].debugCam = { ...currentData[sceneId].debugCam, ...debugCamProps };
   lsSetItem(LS_KEY, currentData);

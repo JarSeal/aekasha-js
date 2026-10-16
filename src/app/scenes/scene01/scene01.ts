@@ -4,8 +4,7 @@ import {
   createGeometry,
   createMaterial,
   getTexture,
-  loadTexture,
-  loadTextures,
+  loadTextureAsync,
   llog,
   importAssetAsync,
   spawnImportedAsset,
@@ -83,7 +82,7 @@ export const scene = async () =>
       id: 'box1Material',
       type: 'PHONG',
       params: {
-        map: loadTexture({
+        map: await loadTextureAsync({
           id: 'box1Texture',
           fileName: '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg',
         }),
@@ -189,22 +188,21 @@ export const scene = async () =>
 
     addToGroupEntity(groupEntityId, [groupBox1, groupBox2]);
 
-    // Batch load textures example
-    const updateLoadStatusFn = (
-      loadedTextures: { [id: string]: THREE.Texture },
-      loadedCount: number,
-      totalCount: number
-    ) => {
-      llog(`Loaded textures: ${loadedCount}/${totalCount}`, loadedTextures);
-    };
-    loadTextures(
-      [
-        { fileName: '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg' },
-        { fileName: '/debugger/assets/testTextures/Poliigon_MetalRust_7642_AmbientOcclusion.jpg' },
-        { fileName: '/debugger/assets/testTextures/Poliigon_MetalRust_7642_Metallic.jpg' },
-      ],
-      updateLoadStatusFn
+    // Batch load textures example: in parallel, each counted as it loads
+    const batchFileNames = [
+      '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg',
+      '/debugger/assets/testTextures/Poliigon_MetalRust_7642_AmbientOcclusion.jpg',
+      '/debugger/assets/testTextures/Poliigon_MetalRust_7642_Metallic.jpg',
+    ];
+    let loadedCount = 0;
+    const loadedTextures = await Promise.all(
+      batchFileNames.map(async (fileName) => {
+        const texture = await loadTextureAsync({ fileName });
+        llog(`Loaded textures: ${++loadedCount}/${batchFileNames.length}`);
+        return texture;
+      })
     );
+    llog('Loaded textures:', loadedTextures);
 
     // box01 with a TRIMESH collider from its own geometry. The collider values are the Physics
     // API's defaults this box has always had (the importer's custom-prop defaults are 0.2).

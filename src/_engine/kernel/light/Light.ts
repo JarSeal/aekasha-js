@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { ECSWorld, getECSWorld, getEntityIdByAppId } from '../ecs/ECS';
-import { getCurrentSceneId, getRootScene, registerOnAllSceneEnterings } from '../scene/Scene';
+import { getCurrentSceneId, getRootScene, registerOnAllSceneEnters } from '../scene/Scene';
 import type { DebugModuleRef } from '../config/DebugModules';
 import { getLightCharacteristics } from './LightHelpers';
 import { loadDebugModuleAsync, useDebug } from '../config/DebugModules';
@@ -11,8 +11,10 @@ import { existsOrThrow } from '../../utils/Assert';
 import { lerror, lwarn } from '../../utils/Logger';
 import { getTexture } from '../assets/Texture';
 import { retagAssetOwner } from '../assets/AssetOwners';
+import { toThreeColor } from '../render/ThreeMath';
 import { setFrustumCullingEnabled } from '../ecs/ObjectFrustumCullingSystem';
 import type { FeatureContext } from '../init/Features';
+import type { ShadowQuality } from '../../schemas/_HelperSchemas';
 
 /**
  * Installs the lights (the kernel, p607): a light entity's deletion disposes its light (and its
@@ -33,53 +35,65 @@ export const installLights = (ctx: FeatureContext) => {
 export const registerLightDebugGUI = async (world: ECSWorld) => {
   // Awaited, so the helpers' LATE_MAIN system registers before the debug camera's helpers' (a
   // load race before p607: the system order differed between page loads)
-  debugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__LightGUI'));
+  lightDebugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__LightGUI'));
   await loadDebugModuleAsync(() => import('./debug/_dbg__LightHelpers'));
-  if (!debugGUI) return;
+  if (!lightDebugGUI) return;
 
-  registerOnAllSceneEnterings('lightHelpersSceneSync', () => {
+  registerOnAllSceneEnters('lightHelpersSceneSync', () => {
     const sceneId = getCurrentSceneId();
-    if (sceneId) useDebug(debugGUI)?.syncDebugVisualsFromLS(sceneId, world);
+    if (sceneId) useDebug(lightDebugGUI)?.syncDebugVisualsFromLS(sceneId, world);
 
-    useDebug(debugGUI)?.initLightDebuggerGUI();
+    useDebug(lightDebugGUI)?.initLightDebuggerGUI();
   });
   // After the 3D symbols' and the helpers' hooks on the tag, which attach what the list shows
   ECSWorld.registerComponentHooks(ComponentType.TAG_IS_LIGHT, {
-    onAddComponent: () => useDebug(debugGUI)?.updateLightsDebuggerGUI(),
+    onAddComponent: () => useDebug(lightDebugGUI)?.updateLightsDebuggerGUI(),
   });
 };
 
-export enum ShadowQuality {
-  LOW = 'LOW', // Mobile / Integrated Graphics
-  MEDIUM = 'MEDIUM', // Standard Laptops
-  HIGH = 'HIGH', // Gaming Desktops
-  ULTRA = 'ULTRA', // M4 Max / RTX 4090 Tier
-}
+/**
+ * A shadow quality preset's values: what `createLightEntity` applies before a light's own
+ * `shadow*` props.
+ * @internal
+ */
+export type ShadowPreset = {
+  mapSize: [number, number];
+  blurSamples: number;
+  radius: number;
+  bias: number;
+  normalBias: number;
+};
 
-export const SHADOW_PRESETS = {
-  [ShadowQuality.LOW]: {
-    mapSize: [512, 512] as [number, number],
+/**
+ * The shadow quality presets, by `shadowPreset`: `LOW` for mobile and integrated graphics,
+ * `MEDIUM` (the default) for standard laptops, `HIGH` for gaming desktops, `ULTRA` for the top
+ * tier.
+ * @internal
+ */
+export const SHADOW_PRESETS: Record<ShadowQuality, ShadowPreset> = {
+  LOW: {
+    mapSize: [512, 512],
     blurSamples: 4,
     radius: 1,
     bias: -0.0005,
     normalBias: 0.02,
   },
-  [ShadowQuality.MEDIUM]: {
-    mapSize: [1024, 1024] as [number, number],
+  MEDIUM: {
+    mapSize: [1024, 1024],
     blurSamples: 8,
     radius: 2,
     bias: -0.0002,
     normalBias: 0.04,
   },
-  [ShadowQuality.HIGH]: {
-    mapSize: [2048, 2048] as [number, number],
+  HIGH: {
+    mapSize: [2048, 2048],
     blurSamples: 16,
     radius: 4,
     bias: -0.0001,
     normalBias: 0.05,
   },
-  [ShadowQuality.ULTRA]: {
-    mapSize: [4096, 4096] as [number, number],
+  ULTRA: {
+    mapSize: [4096, 4096],
     blurSamples: 32,
     radius: 5,
     bias: -0.00005,
@@ -87,20 +101,39 @@ export const SHADOW_PRESETS = {
   },
 };
 
+/**
+ * A light's props for {@link createLightEntity}: the runtime type. It's wider than the light JSON
+ * schema's `LightProps` (`aekasha/schemas`, what a `*.light.json` holds): it also takes three's
+ * colour representations and, for a spot light's `map`, a texture object besides a registered
+ * texture id. A colour is any of three's forms, or the JSON's `{ r, g, b }` in 0-255 (sRGB, as a
+ * `'#rrggbb'` string is).
+ *
+ * `enabled: false` creates it disabled. The shadow-casting types (point, directional, spot) cast
+ * none unless `castShadow`, and take a `shadowPreset` (`MEDIUM` by default) that the `shadow*`
+ * values fine-tune; `shadowCameraFrustum` is a directional light's shadow camera's left, right,
+ * top and bottom. A directional or spot light gets a target entity at `targetPos` (the origin by
+ * default). A point or spot light can opt into the ECS frustum culling
+ * (`frustumCullingEnabled`) and the spatial index's object culling (`objectCullingEnabled`). A
+ * spot light's `map` is its cookie texture.
+ */
 export type LightProps = {
   enabled?: boolean;
   appId?: string;
 } & (
-  | { type: 'AMBIENT'; color?: THREE.ColorRepresentation; intensity?: number }
+  | {
+      type: 'AMBIENT';
+      color?: THREE.ColorRepresentation | { r: number; g: number; b: number };
+      intensity?: number;
+    }
   | {
       type: 'HEMISPHERE';
-      color?: THREE.ColorRepresentation;
-      groundColor?: THREE.ColorRepresentation;
+      color?: THREE.ColorRepresentation | { r: number; g: number; b: number };
+      groundColor?: THREE.ColorRepresentation | { r: number; g: number; b: number };
       intensity?: number;
     }
   | {
       type: 'POINT';
-      color?: THREE.ColorRepresentation;
+      color?: THREE.ColorRepresentation | { r: number; g: number; b: number };
       intensity?: number;
       distance?: number;
       decay?: number;
@@ -120,7 +153,7 @@ export type LightProps = {
     }
   | {
       type: 'DIRECTIONAL';
-      color?: THREE.ColorRepresentation;
+      color?: THREE.ColorRepresentation | { r: number; g: number; b: number };
       intensity?: number;
       position?: { x: number; y: number; z: number };
       targetPos?: { x: number; y: number; z: number };
@@ -131,14 +164,14 @@ export type LightProps = {
       shadowNormalBias?: number;
       shadowMapSize?: [number, number];
       shadowCameraNearFar?: [number, number];
-      shadowCameraFrustum?: [number, number, number, number]; // Left, Right, Top, Bottom
+      shadowCameraFrustum?: [number, number, number, number];
       shadowBlurSamples?: number;
       shadowRadius?: number;
       shadowIntensity?: number;
     }
   | {
       type: 'SPOT';
-      color?: THREE.ColorRepresentation;
+      color?: THREE.ColorRepresentation | { r: number; g: number; b: number };
       intensity?: number;
       distance?: number;
       angle?: number;
@@ -162,6 +195,32 @@ export type LightProps = {
     }
 );
 
+/**
+ * Creates a light entity: an ambient, hemisphere, point, directional or spot light (in the root
+ * scene unless `entityOpts.doNotAddToScene`) with an `OBJECT3D` and a transform, and for a
+ * directional or spot light a target entity (deleted with it, see {@link getLightTargetId}).
+ * Point and spot lights join the spatial index unless `entityOpts.spatialIndex` is `false`. In
+ * the debug env the debugger's saved overrides for its app id apply, unless the light has a
+ * manager (`entityOpts.managedBy`).
+ * @param ecsWorld default: the default world
+ * @returns the light's entity id
+ * @example
+ * ```ts
+ * import { createLightEntity } from 'aekasha';
+ *
+ * createLightEntity({ type: 'AMBIENT', intensity: 0.3 }, { appId: 'ambient' });
+ * createLightEntity(
+ *   {
+ *     type: 'DIRECTIONAL',
+ *     intensity: 2,
+ *     position: { x: 5, y: 10, z: 5 },
+ *     castShadow: true,
+ *     shadowPreset: 'HIGH',
+ *   },
+ *   { appId: 'sun' }
+ * );
+ * ```
+ */
 export const createLightEntity = (
   lightProps: LightProps,
   entityOpts?: CoreEntityOpts,
@@ -187,20 +246,29 @@ export const createLightEntity = (
 
   switch (props.type) {
     case 'AMBIENT':
-      light = new THREE.AmbientLight(props.color, props.intensity);
+      light = new THREE.AmbientLight(toThreeColor(props.color), props.intensity);
       break;
     case 'HEMISPHERE':
-      light = new THREE.HemisphereLight(props.color, props.groundColor, props.intensity);
+      light = new THREE.HemisphereLight(
+        toThreeColor(props.color),
+        toThreeColor(props.groundColor),
+        props.intensity
+      );
       break;
     case 'POINT':
-      light = new THREE.PointLight(props.color, props.intensity, props.distance, props.decay);
+      light = new THREE.PointLight(
+        toThreeColor(props.color),
+        props.intensity,
+        props.distance,
+        props.decay
+      );
       break;
     case 'DIRECTIONAL':
-      light = new THREE.DirectionalLight(props.color, props.intensity);
+      light = new THREE.DirectionalLight(toThreeColor(props.color), props.intensity);
       break;
     case 'SPOT':
       light = new THREE.SpotLight(
-        props.color,
+        toThreeColor(props.color),
         props.intensity,
         props.distance,
         props.angle,
@@ -217,7 +285,7 @@ export const createLightEntity = (
             light.map = texResource;
           } else {
             lwarn(
-              `[Light Manager] Could not locate cookie texture resource "${props.map}" for SpotLight entity "${appId}". Leaving map unassigned.`
+              `Could not locate cookie texture resource "${props.map}" for SpotLight entity "${appId}". Leaving map unassigned.`
             );
           }
         } else {
@@ -231,10 +299,9 @@ export const createLightEntity = (
 
   // --- Shadow Logic (Full Tuning) ---
   if (
-    'castShadow' in light &&
-    (light instanceof THREE.PointLight ||
-      light instanceof THREE.DirectionalLight ||
-      light instanceof THREE.SpotLight)
+    light instanceof THREE.PointLight ||
+    light instanceof THREE.DirectionalLight ||
+    light instanceof THREE.SpotLight
   ) {
     light.castShadow =
       'castShadow' in props && props.castShadow !== undefined ? props.castShadow : false;
@@ -244,7 +311,7 @@ export const createLightEntity = (
     const preset =
       'shadowPreset' in props && props.shadowPreset
         ? SHADOW_PRESETS[props.shadowPreset]
-        : SHADOW_PRESETS[ShadowQuality.MEDIUM];
+        : SHADOW_PRESETS.MEDIUM;
     s.mapSize.set(preset.mapSize[0], preset.mapSize[1]);
     s.blurSamples = preset.blurSamples;
     s.radius = preset.radius;
@@ -374,73 +441,32 @@ export const createLightEntity = (
 };
 
 /**
- * Returns the entityId of the light's target, if it exists.
+ * Returns the entity id of a directional or spot light's target: move its transform to aim the
+ * light.
+ * @returns the target's entity id, or `undefined` for a light without one
+ * @example
+ * ```ts
+ * import { getECSWorld, getEntityIdByAppId, getLightTargetId } from 'aekasha';
+ *
+ * const world = getECSWorld();
+ * const sunId = getEntityIdByAppId('sun');
+ * const targetId = sunId !== undefined ? getLightTargetId(sunId, world) : undefined;
+ * if (targetId !== undefined) world.setTransform(targetId, { pos: { x: 0, y: 0, z: -5 } });
+ * ```
  */
 export const getLightTargetId = (lightId: number, world: ECSWorld): number | undefined =>
   world.getComponent(lightId, ComponentType.TARGET_LINK)?.targetId;
 
 /**
- * Returns the Transform component of the light's target.
+ * Enables or disables a light entity (`DISABLED`): a disabled light, and its target, are hidden.
+ * @example
+ * ```ts
+ * import { getECSWorld, getEntityIdByAppId, setLightEnabled } from 'aekasha';
+ *
+ * const lampId = getEntityIdByAppId('lamp');
+ * if (lampId !== undefined) setLightEnabled(lampId, false, getECSWorld());
+ * ```
  */
-export const getLightTargetTransform = (
-  lightId: number,
-  world: ECSWorld
-): Transform | undefined => {
-  const targetId = getLightTargetId(lightId, world);
-  if (targetId === undefined) return undefined;
-  return world.getComponent(targetId, ComponentType.TRANSFORM);
-};
-
-/**
- * Updates the light target's position, if it has a target.
- */
-export const setLightTargetPosition = (
-  lightId: number,
-  pos: { x: number; y: number; z: number },
-  world: ECSWorld
-): void => {
-  const targetId = getLightTargetId(lightId, world);
-  if (targetId === undefined) return;
-  const transform = world.getComponent(targetId, ComponentType.TRANSFORM);
-  if (transform) {
-    transform.position.set(pos.x, pos.y, pos.z);
-    transform.setDirty();
-    world.commitTransform(targetId, transform);
-  }
-};
-
-/**
- * Aim the light target at a specific entity by copying its position.
- * Great for "locking" a spotlight onto a character.
- */
-export const aimLightAtEntity = (
-  lightId: number,
-  targetEntityId: number,
-  world: ECSWorld
-): void => {
-  const targetTransform = world.getComponent(targetEntityId, ComponentType.TRANSFORM);
-  const lightTargetId = getLightTargetId(lightId, world);
-  const lightTargetTransform =
-    lightTargetId !== undefined
-      ? world.getComponent(lightTargetId, ComponentType.TRANSFORM)
-      : undefined;
-
-  if (targetTransform && lightTargetTransform && lightTargetId !== undefined) {
-    lightTargetTransform.position.copy(targetTransform.position);
-    lightTargetTransform.setDirty();
-    world.commitTransform(lightTargetId, lightTargetTransform);
-  }
-};
-
-export const setLightShadowEnabled = (lightId: number, enabled: boolean, world: ECSWorld) => {
-  const objComp = world.getComponent(lightId, ComponentType.OBJECT3D);
-  if (objComp && objComp.value instanceof THREE.Light) {
-    objComp.value.castShadow = enabled;
-    // @Note: Some WebGPU materials might need a re-compile if shadows are toggled,
-    // but the WebGPU renderer generally handles this via its node system.
-  }
-};
-
 export const setLightEnabled = (lightId: number, enabled: boolean, world: ECSWorld) => {
   if (enabled) {
     world.removeComponent(lightId, ComponentType.DISABLED);
@@ -449,27 +475,25 @@ export const setLightEnabled = (lightId: number, enabled: boolean, world: ECSWor
   }
 };
 
-// Generic across entity types as of docs/plans/_DONE_p080_object3d-frustum-culling.md §2.1/§2.4 —
-// kept as a light-named export since `_dbg__LightGUI.ts` and `createLightEntity` already
-// call it by this name, but the actual FRUSTUM_CULLING_ENABLED/TAG_FRUSTUM_CULLED toggling
-// lives in ObjectFrustumCullingSystem.ts, shared with MeshManager.ts.
-//
-// Deliberately a wrapper function, not `export const setLightFrustumCullingEnabled =
-// setFrustumCullingEnabled;` — that direct alias reads the import eagerly at module-evaluation
-// time, and LightManager.ts <-> ObjectFrustumCullingSystem.ts <-> ECSCoreSystems.ts <->
-// LightManager.ts form a circular import (ECSCoreSystems.ts already imports
-// isAnyLightHelperVisible from here). Depending on which module the app happens to import
-// first, that eager read can land before ObjectFrustumCullingSystem.ts's own module body has
-// reached its `setFrustumCullingEnabled` declaration, throwing "Cannot access
-// 'setFrustumCullingEnabled' before initialization". Wrapping it in a function defers the
-// read to call time, by which point every module has finished loading — same reason
-// isAnyLightHelperVisible (used only inside hook closures) never hits this.
+/**
+ * Opts a light entity into the ECS frustum culling, or out of it (`setFrustumCullingEnabled`,
+ * which isn't light specific).
+ * @internal
+ */
+// A function, not an alias (`= setFrustumCullingEnabled`): Light.ts → ObjectFrustumCullingSystem.ts
+// → ECSCoreSystems.ts → Light.ts is an import cycle, and an alias would read the import while
+// this module loads, possibly before ObjectFrustumCullingSystem.ts has defined it
 export const setLightFrustumCullingEnabled = (
   entityId: number,
   enabled: boolean,
   world: ECSWorld
 ) => setFrustumCullingEnabled(entityId, enabled, world);
 
+/**
+ * Opts a point or spot light entity into the spatial index's object culling (`spatial()`), or out
+ * of it, which also shows it if it was culled.
+ * @internal
+ */
 export const setLightObjectCullingEnabled = (
   lightId: number,
   enabled: boolean,
@@ -488,7 +512,8 @@ export const setLightObjectCullingEnabled = (
 };
 
 /**
- * Cleanup Light Resources and its linked Target
+ * A light entity's deletion hook: deletes its target entity, detaches and disposes its light.
+ * @internal
  */
 export const disposeLight = (entityId: number, ecsWorld?: ECSWorld) => {
   const world = ecsWorld || getECSWorld();
@@ -500,7 +525,7 @@ export const disposeLight = (entityId: number, ecsWorld?: ECSWorld) => {
 
   const objComp = world.getComponent(entityId, ComponentType.OBJECT3D);
   if (!objComp) {
-    useDebug(debugGUI)?._onLightDeleted(entityId, world);
+    useDebug(lightDebugGUI)?._onLightDeleted(entityId, world);
     return;
   }
 
@@ -512,26 +537,59 @@ export const disposeLight = (entityId: number, ecsWorld?: ECSWorld) => {
   light.removeFromParent();
   light.dispose();
 
-  useDebug(debugGUI)?._onLightDeleted(entityId, world);
+  useDebug(lightDebugGUI)?._onLightDeleted(entityId, world);
 };
 
 // --- DEBUG LIGHT HELPERS ---
 
 type LightGUIModule = typeof import('./debug/_dbg__LightGUI');
 
-export let debugGUI: DebugModuleRef<LightGUIModule> | null = null;
+/** The lights' debug GUI, loaded by the boot's debug step (debug env only; `null` otherwise) */
+let lightDebugGUI: DebugModuleRef<LightGUIModule> | null = null;
 
+/**
+ * What the Lights tab saved for a light in a scene (debug env; `undefined` otherwise, or when
+ * nothing is saved), for the property loader to merge over its creation props. Typed `object`,
+ * so no exported type names the debug module's.
+ * @internal
+ */
+export const getSavedLightDebugProps = (
+  appId: string,
+  sceneId: string | null
+): object | undefined => useDebug(lightDebugGUI)?.loadLightDebugData(appId, sceneId);
+
+/**
+ * Whether the light helpers show (debug env; `false` otherwise).
+ * @internal
+ */
 export const isAnyLightHelperVisible = (): boolean =>
-  Boolean(useDebug(debugGUI)?.globalHelpersVisible);
+  Boolean(useDebug(lightDebugGUI)?.globalHelpersVisible);
 
+/**
+ * Shows or hides the light helpers, toggling them without `show` (debug env; nothing otherwise).
+ * @internal
+ */
 export const toggleAllLightHelpers = (show?: boolean) =>
-  useDebug(debugGUI)?._toggleAllLightHelpers(show);
+  useDebug(lightDebugGUI)?._toggleAllLightHelpers(show);
 
+/**
+ * Returns the light of the entity with this app id.
+ * @param ecsWorld default: the default world
+ * @returns the light, or `undefined` when no entity has the id (or it has no object)
+ * @throws when the entity's object isn't a light
+ * @example
+ * ```ts
+ * import { getLightByAppId } from 'aekasha';
+ *
+ * const lamp = getLightByAppId('lamp');
+ * if (lamp) lamp.intensity = 4;
+ * ```
+ */
 export const getLightByAppId = (appId: string, ecsWorld?: ECSWorld) => {
   const world = ecsWorld || getECSWorld();
   const entityId = getEntityIdByAppId(appId, world);
   let light: THREE.Light | undefined = undefined;
-  if (entityId) {
+  if (entityId !== undefined) {
     const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
     if (obj && !(obj as THREE.Light).isLight) {
       const msg = `Found Object3D is not a light (type: ${obj.type}).`;

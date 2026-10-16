@@ -38,7 +38,7 @@ import type { PhysicsInterpolationMode } from './PhysicsAPITypes';
 import {
   getCurrentSceneId,
   getRootScene,
-  registerOnAllSceneEnterings,
+  registerOnAllSceneEnters,
 } from '../../kernel/scene/Scene';
 import { readStatsClock } from '../../utils/StatsClock';
 
@@ -156,7 +156,7 @@ export const registerPhysicsWireframeDebugAsync = async () => {
   // Only with the module (the loader returns null outside the debug env)
   if (!draw) return;
   draw._installPhysicsWireframes();
-  registerOnAllSceneEnterings('physicsWireframeMasterVisibilitySync', () => {
+  registerOnAllSceneEnters('physicsWireframeMasterVisibilitySync', () => {
     const sceneId = getCurrentSceneId();
     if (sceneId) useDebug(debugPhysicsDraw)?.syncWireframeMasterVisibilityFromLS(sceneId);
   });
@@ -404,9 +404,9 @@ export const getPhysicsEntityByAppId = (appId: string) => getEntityIdByAppId(app
 /** Deletes every physics-tagged entity in the given world (or the default one) — the
  * scene-agnostic catch-all legacy's deleteAllPhysicsObjects() was, for callers like
  * SceneLoader.ts's "wipe everything before loading the next scene" step. Most physics entities
- * already get cleaned up as a side effect of deleteScene()'s mesh/group traversal (via
+ * already get cleaned up as a side effect of their mesh or group entity's deletion (via
  * TAG_IS_PHYSICS_OBJECT's onDeleteEntity hook), but a meshless physics-only entity has no mesh
- * or group for that traversal to ever find, so it needs this separate sweep. */
+ * or group for that deletion to reach, so it needs this separate sweep. */
 export const deleteAllPhysicsEntities = (ecsWorld?: ECSWorld) => {
   const world = ecsWorld || existsOrThrow(getECSWorld(), 'Could not get ECS world.');
   const ids = [...world.getEntitiesWith(ComponentType.TAG_IS_PHYSICS_OBJECT)];

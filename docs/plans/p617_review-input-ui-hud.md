@@ -27,6 +27,22 @@ Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every 
 - p612 Phase 7: `ActionTypes.ts`' `{@link setActionContextEnabled}` (line 37) and
   `{@link createActionMap}` (lines 162, 194) link nowhere (`yarn hub:build` warns): TypeDoc resolves
   a link in the file's scope, and the file doesn't import the names.
+- p613 D5 (`DraggableWindow.ts`'s scene-change handling left the scene loader and the boot): the
+  windows add their hooks on their first use (`addWindowHooks`, from `getWindows()`' lazy init and
+  the three registration functions; never at module load, `ui/DraggableWindow.test.ts`). The scene
+  hooks are `loadStart` (the windows flagged to go are removed before the exit hooks and the
+  entities they show), `entered` (rebuilt once the scene has entered) and `loadSettled` (a failed
+  load: the windows it suspended close); the restore of the saved states is an after-start step
+  (`addBootAfterStartHook`, `kernel/init/BootHooks.ts`). A hook added after that step is refused,
+  so a window module first used after the boot restores nothing (none in the template). The two
+  handlers and the restore are private. Review the hooks with the rest of the file; keep the
+  module free of load-time registration.
+- p613 Phase 9 (the layout report, `devTools/refactor/layoutReport.md`): its "ui → kernel" now lists
+  `ui/DraggableWindow.ts`' runtime imports of `kernel/scene/SceneHooks.ts` (`addSceneHooks`) and
+  `kernel/init/BootHooks.ts` (`addBootAfterStartHook`), next to the older `kernel/config/Config.ts`
+  and `kernel/loop/MainLoop.ts` (`addResizer`), and its test's three. The target layout
+  (`moveMap.ts`) lets `ui` import only `ui`, `utils` and `types`; the report only lists it. Decide whether the UI kit may name the kernel's hooks (it's the
+  kit's only way to follow scene loads), or whether they move behind a seam.
 
 ## From p611 (2026-10-14)
 
@@ -52,6 +68,10 @@ The embed's seams (p611 Phase 3, D6), each defaulting to the full-page boot's be
   scene-change handlers (`handleDraggableWindowsOnSceneChange*`) and the HUD root (its loader UI)
   statically. The windows could register their handlers through a scene hook when the first one is
   made, and the loader UI could be the full-page boot's.
+  **The windows' part done by p613 D5** (Inputs above): the banner's `ui` group is 5.1 kB (`CMP.ts`
+  and `HUD.ts`, which the boot's HUD root and the loader UI keep), its CSS 0.9 kB, and the
+  budgets are lowered to match (`sbp.config.ts`: `ui` 7 KiB in both profiles). The loader UI is
+  still the loader's.
 
 ## Done when
 

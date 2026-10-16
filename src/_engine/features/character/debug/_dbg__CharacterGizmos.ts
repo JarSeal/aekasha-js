@@ -25,7 +25,7 @@ import {
 } from '../../lines/Lines';
 import type { ColliderParams } from '../../physics/PhysicsAPITypes';
 import { getPhysicsSnapshotStepIndex, getPhysicsState } from '../../physics/PhysicsAPI';
-import { registerOnAllSceneEnterings } from '../../../kernel/scene/Scene';
+import { registerOnAllSceneEnters } from '../../../kernel/scene/Scene';
 import { markDebugHelper } from '../../../debug/Profiler';
 
 /**
@@ -898,7 +898,7 @@ export const syncCharacterGizmoPins = (dropMissing = false) => {
 };
 
 // After the scene code ran, so its characters exist (before the suspended state windows rebuild)
-registerOnAllSceneEnterings('characterGizmoPins', () => syncCharacterGizmoPins(true));
+registerOnAllSceneEnters('characterGizmoPins', () => syncCharacterGizmoPins(true));
 
 export const setCharacterGizmoEnabled = (
   set: CharacterGizmoSet,

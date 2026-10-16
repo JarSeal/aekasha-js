@@ -214,15 +214,6 @@ export const getSceneDefaultSkyBoxId = (sceneId: string) => {
 export const _getSkyBoxRegistry = (): ReadonlyMap<string, ReadonlyMap<string, SkyBoxDef>> =>
   registry;
 
-/** Registry ids of the textures a scene's sky boxes use (their bases' and moons'). */
-export const getSceneSkyBoxTextureIds = (sceneId: string) =>
-  [...(registry.get(sceneId)?.values() || [])]
-    .flatMap((def) => [
-      def.base.type === 'COLOR' ? undefined : def.base.textureId,
-      ...(def.moons?.slice(0, MAX_MOONS).map((moon) => moon.texture?.textureId) ?? []),
-    ])
-    .filter((id): id is string => Boolean(id));
-
 // Activation
 
 /** The definition with its debug overrides merged in (debug env only: production never reads LS). */

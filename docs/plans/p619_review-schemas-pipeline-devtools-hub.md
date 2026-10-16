@@ -38,6 +38,28 @@ Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every 
   `three.module.js#2`) in the sorted order of their hashed names, so a change elsewhere that moves a
   hash swaps their keys, and `yarn verify:baselines` reports a change with no file's size changed.
   A key from the chunk's content (its facade module or its importer) would be stable.
+- p613 Phase 5 (D11): `schemas/RuntimeTypes.test.ts` checks each asset JSON's type against the
+  runtime type it reaches (geometry, material, texture, camera, light, mesh, scene). Where the two
+  differ only in how the schema is written, the test swaps in the runtime's type, each commented
+  there; tighten them on the schema side and drop the swap:
+  - `TexOptsSchema`: three's constants (`wrapS`, `minFilter`, …) are plain numbers (p302's D1
+    adds named enums, so coordinate), and `image` is `unknown` (a JSON has none: drop it).
+  - A light's shadow tuples (`shadowMapSize`, `shadowCameraNearFar`, `shadowCameraFrustum`) use
+    `z.array(z.number()).length(n)`, which zod types as `number[]`; `z.tuple` would say it. A
+    spot light's `map` is `string | unknown`: `z.string()` (an id).
+  - Materials: one object with a `type` enum, against the runtime's member per type
+    (`PerType` in the test). A `z.discriminatedUnion` on `type` would match.
+  - The scene's inline `meshes` and `importedAssets` aren't validated at all
+    (`record<string, unknown>`). The mesh JSON's pair is in the test; an inline import's isn't.
+- p613 Phase 5: `ColorJSON` (`schemas/_HelperSchemas.ts`, `{ r, g, b }` 0-255) is on no entry, so
+  the runtime types that take it (`LightProps`' colours, `SceneData.backgroundColor`) write it
+  inline. Put it on `aekasha/schemas` with a summary, or keep it off and say why.
+- p613 Phase 7: `schemas/PostFxSchema.ts`' two comments cite plans that are gone
+  (`_DONE_p070_post-fx-system.md`, `_DONE_p071_post-fx-debugger-ui.md`): keep what they explain
+  (params as raw JSON values, not uniform nodes; `paramsMeta` as debugger-only hints) and drop the
+  paths.
+- p613 Phase 8 (`yarn hub:build`, from before p613): `UnionToIntersection`
+  (`schemas/FeatureSchemas.ts:32`, named by `FeatureSchemaShape`) is a `notExported`.
 
 ## Done when
 

@@ -25,17 +25,19 @@
  */
 import * as THREE from 'three/webgpu';
 import { texture, unpremultiplyAlpha } from 'three/tsl';
-import { DEBUG_HELPER_USER_DATA_KEY } from '../../debug/Profiler';
 import { getActiveCamera } from '../camera/Camera';
 import { renderFrameNow } from '../loop/MainLoop';
 import { getRenderPipeline } from './RenderHooks';
 import { getRenderer } from './Renderer';
 import { getRootScene } from '../scene/Scene';
+import { isDebugHelperObject } from './Object3DHelpers';
 import { getActiveView, isRuntimeViewActive } from './Views';
 
+/** {@link takeSnapshotAsync}'s options: the image's size, and what it renders and how. */
 export type SnapshotOpts = {
-  /** The image's size in pixels (pixel ratio 1), 1 to {@link MAX_SNAPSHOT_SIZE} */
+  /** The image's width in pixels (pixel ratio 1), 1 to {@link MAX_SNAPSHOT_SIZE} */
   width: number;
+  /** The image's height in pixels, like `width` */
   height: number;
   /** Default: the current view's (the root scene in the Runtime view, else the editor view's) */
   scene?: THREE.Scene;
@@ -60,8 +62,11 @@ export type SnapshotOpts = {
 
 /** A snapshot's pixels: RGBA8, sRGB encoded as the canvas shows them, straight alpha, top row first */
 export type Snapshot = {
+  /** The image's width in pixels */
   width: number;
+  /** The image's height in pixels */
   height: number;
+  /** `width × height × 4` bytes, RGBA per pixel */
   data: Uint8ClampedArray;
   /** Whether it went through the scene's PostFX pipeline */
   postFx: boolean;
@@ -69,11 +74,6 @@ export type Snapshot = {
 
 /** The largest side a snapshot can have (WebGPU's default `maxTextureDimension2D`) */
 export const MAX_SNAPSHOT_SIZE = 8192;
-
-const isDebugHelper = (obj: THREE.Object3D) =>
-  Boolean(obj.userData[DEBUG_HELPER_USER_DATA_KEY]) ||
-  Boolean(obj.userData.isHelperSymbol) ||
-  obj.type.endsWith('Helper');
 
 /** Sets the camera's aspect for the image, as the canvas resizer would; returns what puts it back */
 const fitCamera = (camera: THREE.Camera, aspect: number) => {
@@ -135,7 +135,8 @@ const createOutputTarget = (width: number, height: number) => {
 /**
  * Reads an RGBA8 render target's level 0 back as it's stored (sRGB stays encoded), top row first
  * on both backends: WebGPU pads its rows to 256 bytes, WebGL reads them bottom-up.
- * @param target (THREE.RenderTarget) an `UnsignedByteType` `RGBAFormat` target
+ * @internal
+ * @param target an `UnsignedByteType` `RGBAFormat` target
  * @returns its pixels, `width × height × 4` bytes
  */
 export const readRenderTargetRGBA8Async = async (target: THREE.RenderTarget) => {
@@ -215,8 +216,16 @@ const renderDirect = (
 /**
  * Renders a snapshot (see the module comment) and reads it back. After `InitEngine`. Turn it into
  * a file with {@link snapshotToBlobAsync}, or byte for byte with the dev files' `encodePNG`.
- * @param opts ({@link SnapshotOpts}) the size, and optionally the scene, camera and options
- * @returns ({@link Snapshot}) the pixels
+ * @param opts the size, and optionally the scene, camera and options
+ * @returns the pixels, after every state the render changed is put back
+ * @example
+ * ```ts
+ * import { snapshotToBlobAsync, takeSnapshotAsync } from 'aekasha';
+ *
+ * // A 512 × 512 thumbnail of what the canvas shows, as a PNG
+ * const snapshot = await takeSnapshotAsync({ width: 512, height: 512 });
+ * const png = await snapshotToBlobAsync(snapshot);
+ * ```
  */
 export const takeSnapshotAsync = async (opts: SnapshotOpts): Promise<Snapshot> => {
   const { width, height, hideDebugHelpers = true, transparent = false } = opts;
@@ -266,7 +275,7 @@ export const takeSnapshotAsync = async (opts: SnapshotOpts): Promise<Snapshot> =
   const hidden: THREE.Object3D[] = [];
   if (hideDebugHelpers) {
     scene.traverseVisible((obj) => {
-      if (obj !== scene && isDebugHelper(obj)) hidden.push(obj);
+      if (obj !== scene && isDebugHelperObject(obj)) hidden.push(obj);
     });
   }
 
@@ -323,6 +332,7 @@ export const takeSnapshotAsync = async (opts: SnapshotOpts): Promise<Snapshot> =
   }
 };
 
+/** {@link snapshotToBlobAsync}'s options: the image type and its quality. */
 export type SnapshotBlobOpts = {
   /** Default `image/png` (`image/webp`, `image/jpeg`: what the browser's canvas encodes) */
   type?: string;
@@ -333,8 +343,8 @@ export type SnapshotBlobOpts = {
 /**
  * Encodes a snapshot through a canvas. A canvas stores premultiplied alpha, so a fully
  * transparent pixel loses its colour; the dev files' `encodePNG` keeps every byte.
- * @param snapshot ({@link Snapshot})
- * @param opts ({@link SnapshotBlobOpts}) the image type and quality
+ * @param opts the image type and quality
+ * @returns the encoded image (the canvas's `convertToBlob`)
  */
 export const snapshotToBlobAsync = async (
   { width, height, data }: Snapshot,

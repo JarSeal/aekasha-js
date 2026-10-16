@@ -24,7 +24,7 @@ import { isPostFxMeasureEnabled, setPostFxMeasureEnabled } from '../../../debug/
 import {
   getCurrentSceneId,
   getSceneOpts,
-  registerOnAllSceneEnterings,
+  registerOnAllSceneEnters,
 } from '../../../kernel/scene/Scene';
 import {
   closeDraggableWindow,
@@ -546,7 +546,7 @@ export const _createPostFXDebugGUI = async () => {
   snapshotAuthoredPostFxPasses();
   syncPostFxEnabledFromLS();
   applyPostFxPassOverridesFromLS();
-  registerOnAllSceneEnterings('postFxDebugSync', () => {
+  registerOnAllSceneEnters('postFxDebugSync', () => {
     snapshotAuthoredPostFxPasses();
     syncPostFxEnabledFromLS();
     applyPostFxPassOverridesFromLS();

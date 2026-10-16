@@ -3,6 +3,8 @@ import { lwarn } from '../../../utils/Logger';
 import { getAppBaseUrl, resolveFileUrl } from '../AssetUrl';
 import type { DracoWorkerSettings } from '../AssetsAPITypes';
 
+/** The shared DRACO decoder's settings ({@link configureDraco}): where its files are served, which
+ * decoder, how many workers. */
 export type DracoConfig = {
   /** Directory (with a trailing slash) that serves `draco_decoder.js`, `draco_decoder.wasm` and
    * `draco_wasm_wrapper.js`, resolved like a file name (against the document, or a mounted engine's
@@ -74,7 +76,14 @@ export const getDracoLoaderAsync = async () => {
  * decoder has been requested, `decoderPath` and `decoderType` only take effect after
  * {@link disposeDracoLoader}. `workerLimit` can be changed any time (it doesn't shrink an
  * already started pool).
- * @param newConfig {@link DracoConfig}
+ * @param newConfig the settings to change (the others keep their values)
+ * @example
+ * ```ts
+ * import { configureDraco } from 'aekasha';
+ *
+ * // Before the first compressed import: the decoder from a CDN (it must send CORS/CORP headers)
+ * configureDraco({ decoderPath: 'https://cdn.example.com/draco/', workerLimit: 2 });
+ * ```
  */
 export const configureDraco = (newConfig: DracoConfig) => {
   config = { ...config, ...newConfig };
@@ -96,6 +105,7 @@ export const configureDraco = (newConfig: DracoConfig) => {
  * Returns the DRACO settings the shared (main-thread) loader uses, with an absolute decoder path,
  * for the assets worker's own DRACOLoader: a relative path would resolve against the worker
  * script's URL.
+ * @internal
  */
 export const getDracoWorkerSettings = (): DracoWorkerSettings => {
   // The loader's while it exists (a locked decoder keeps its own), else what it would be set up with
@@ -110,6 +120,14 @@ export const getDracoWorkerSettings = (): DracoWorkerSettings => {
 /**
  * Terminates the shared DRACO worker pool and drops the loader. The next DRACO file gets a new
  * one (and fetches the decoder again). Not called automatically.
+ * @example
+ * ```ts
+ * import { disposeDracoLoader, importAssetAsync } from 'aekasha';
+ *
+ * await importAssetAsync({ id: 'level', fileName: '/models/level.glb' });
+ * // No more DRACO files to come: end the decoder workers
+ * disposeDracoLoader();
+ * ```
  */
 export const disposeDracoLoader = () => {
   if (!dracoLoader) return;
