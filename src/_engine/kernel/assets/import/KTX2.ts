@@ -16,7 +16,8 @@ const getTranscoderPath = () => new URL('basis/', getAppBaseUrl()).href;
  * It detects which GPU formats it can transcode to on the renderer, so it throws before
  * createRenderer() has finished; a new renderer (eg. after deleteRenderer()) gets a new loader.
  * The transcoder (the app's `basis/`, filled by `devTools/copyDecoders.ts`) is only fetched,
- * and its worker pool only started, when the first file is transcoded.
+ * and its worker pool only started, when the first file is transcoded. A failed import (a flaky
+ * network) rejects the calls waiting for it and is tried again by the next call.
  */
 export const getKTX2Loader = () => {
   const renderer = getRenderer();
@@ -29,10 +30,20 @@ export const getKTX2Loader = () => {
 
   disposeKTX2Loader();
   detectedOn = renderer;
-  ktx2Loader = import('three/addons/loaders/KTX2Loader.js').then(({ KTX2Loader }) =>
-    new KTX2Loader().setTranscoderPath(getTranscoderPath()).detectSupport(renderer)
-  );
-  return ktx2Loader;
+  const loading: Promise<KTX2Loader> = import('three/addons/loaders/KTX2Loader.js')
+    .then(({ KTX2Loader }) =>
+      new KTX2Loader().setTranscoderPath(getTranscoderPath()).detectSupport(renderer)
+    )
+    .catch((err: unknown) => {
+      // Unless a newer call (a new renderer) has replaced it meanwhile
+      if (ktx2Loader === loading) {
+        ktx2Loader = null;
+        detectedOn = null;
+      }
+      throw err;
+    });
+  ktx2Loader = loading;
+  return loading;
 };
 
 /**

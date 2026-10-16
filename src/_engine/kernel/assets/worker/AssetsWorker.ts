@@ -32,8 +32,8 @@ const loadSimplifyJob = createJobLoader(
   () => import('../../../features/lod/worker/AssetsSwitchSimplify')
 );
 
-/** The same test GLTFLoader runs (three 0.183.2, GLTFParser constructor) to choose between
- * ImageBitmapLoader and the `document`-dependent TextureLoader. */
+/** The same test GLTFLoader runs (three 0.186.1, GLTFParser constructor; check it on a three
+ * update) to choose between ImageBitmapLoader and the `document`-dependent TextureLoader. */
 const getCapabilities = (): AssetsWorkerCapabilities => {
   const hasCreateImageBitmap = typeof createImageBitmap !== 'undefined';
   const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';

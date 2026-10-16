@@ -16,6 +16,8 @@ export type RegisteredGLTFTextures = {
   keep: Set<THREE.Texture>;
 };
 
+/** `Texture.ts`' `setTextureOpts` without its userData part, applying every defined value (that
+ * one skips falsy ones, eg. `anisotropy: 0`). One of the two goes when p302's D1 fixes it. */
 const applyTexOpts = (texture: THREE.Texture, texOpts?: TexOpts) => {
   if (!texOpts) return;
   if (texOpts.mapping !== undefined) texture.mapping = texOpts.mapping;

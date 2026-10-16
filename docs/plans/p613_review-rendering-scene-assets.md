@@ -1153,6 +1153,25 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
 1. IM1 (a failed `import()` is retried by the next call), AW2, IM2's comment.
 2. JSDoc: the protocol types, the job functions, the import types on the entry.
 
+**As built** (one commit per section):
+
+- **Section 1 (step 1):**
+  - **IM1:** `getMeshoptDecoder` and `getKTX2Loader` drop a rejected `import()` (or a throw in
+    `detectSupport`) from their cache, so the calls waiting for it reject and the next call
+    imports again (the assets worker's `createJobLoader` shape). `getKTX2Loader` clears it only
+    when it's still the current one (a newer renderer's loader isn't touched). Draco's and
+    GLTFLoader's loaders already retried (they cache the loader, not the promise).
+  - **AW2:** the worker's capability test is still three's, word for word (0.186.1,
+    `GLTFParser`'s constructor): only the version in the comment changed, which now says to
+    check it on a three update.
+  - **IM2:** `MeshoptDecoder.ts`' comment says the worker's GLTF job module imports it
+    statically and loads on the first GLTF job (not "can't be code-split"). `applyTexOpts`
+    (`GLTFTextures.ts`) has a summary naming `setTextureOpts`' falsy-skip and p302's D1, which
+    removes one of the two.
+  - **Tests:** `import/DecoderImports.test.ts` (2: each import fails once, then loads and stays
+    cached), both checked to fail without the fix.
+  - **Checks:** `tsc` (both), the two folders' lint, `yarn test` (73 files, 563 passed).
+
 ### Phase 7: PostFX and viewports (`features/postfx/`, `features/viewports/`)
 
 1. VP1 (`try` / `finally` around the per-viewport render: no allocation), VP2 (disconnected with
