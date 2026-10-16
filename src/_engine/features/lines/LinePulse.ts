@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu';
 import { abs, cos, float, floor, fract, min, mix, mod, uniform } from 'three/tsl';
 import type { LineColorNode } from './LineBackend';
 import type { LineColorStyle, LinePulseEasing } from './LineTypes';
+import { hashStringFNV1a } from '../../utils/Hash';
 
 /**
  * Line colour on the GPU: a static colour or a pulse through up to
@@ -112,11 +113,7 @@ export const createLineColorNode = (u: LineColorUniforms, style: LineColorStyle)
  * @internal
  */
 export const hashLinePhase = (id: string) => {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < id.length; i++) {
-    h ^= id.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
+  let h = hashStringFNV1a(id);
   h ^= h >>> 16;
   h = Math.imul(h, 0x85ebca6b);
   h ^= h >>> 13;

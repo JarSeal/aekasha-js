@@ -1016,6 +1016,47 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
     counted), `Mesh.test.ts` +1 (the geometry message).
   - **Checks:** `tsc` (both), the changed folders' lint, `yarn test` (69 files, 543 passed), the
     docs ratchet (`kernel/assets` 110 / 142).
+- **Section 2 (step 2):**
+  - **D7 (assets, A7):** `Disposal.ts` deleted; `isJPG`, `isPNG`, `freeGeometryGPUMemory`,
+    `getAllGeometries`, `setGeometryPersistence`, `setMaterialPersistence`,
+    `setTexturePersistence`, `incTextureRef` / `decTextureRef` (with the texture registry's
+    never-raised `count`), `updateAllMaterials`, `getMaterials`, `getAllMaterials` and
+    `getTextures` removed. None had a caller or was on an entry (only the refactor tools' fixtures
+    and the baselines name them).
+  - **D12:** `loadTexture`, `loadTextures` and `createTexture` (with `applyLoadedHDRTexture`) are
+    in `kernel/assets/TextureSync.ts`; `Texture.ts` exports what they share `@internal`
+    (`getNoFileTexture`, `importHDRLoader`, `saveLoadedTexture`). `Texture.ts` 866 → 590 lines,
+    `TextureSync.ts` 262. The entry exports the two from the new file (same names: not a break).
+    Both `@deprecated` (use `loadTextureAsync`, removed in engine 6.0.0) with full summaries.
+    Section 1's tests moved with them (`TextureSync.test.ts`).
+  - **The app's scenes (D12):** `scene01` and `scene01V2` await `loadTextureAsync` for the box's
+    map; `scene01`'s batch example is a `Promise.all` of `loadTextureAsync` with a counter (awaited
+    now: it ran in the background). `characterVisual.ts`' `createCharacterVisual` is
+    `createCharacterVisualAsync` (it awaits the texture, the material names it by id); its two
+    callers (`thirdPersonGymScene`, `topDownTestScene`) await it. No toolkit file used them.
+  - **A8's types:** `Materials` is `THREE.Material` (the 30-member union was every class
+    extending it, `MeshMatcapNodeMaterial` twice), kept on the entry and documented as the same
+    type. `textureMapKeys` (`utils/Constants.ts`) is `as const` and `TextureMapKeys` its element
+    type; `getMaterialMapTexture` (`Material.ts`, `@internal`) reads a slot, replacing the
+    `keyof Materials` casts (`Material.ts`, `_dbg__GPUMemoryOwners.ts`: a caller change), and
+    `GLTFTextureCollect.ts`' cast went.
+  - **One FNV-1a:** `utils/Hash.ts`' `hashStringFNV1a(text, basis?)` (`@internal`), used by the two
+    asset copies and, beyond the plan, by `RandomStreams.ts` (its basis mixed with the world seed)
+    and `LinePulse.ts`: the same bits, so stream seeds and line phases don't change (the test pins
+    FNV-1a's published values; `verify:scenes`' hashes check the streams). The debug modules'
+    word hashes (`_dbg__PhysicsDeterminism.ts`, `_dbg__TestBridgeInput.ts`) are another function
+    and stay.
+  - **The dropped argument:** `saveBufferGeometry` warns in the debug env when its id holds
+    another geometry (the argument isn't registered, so nothing releases it), and so does
+    `saveMaterial`, which drops its argument the same way (beyond the plan). Gated by
+    `IS_DEBUG_ENV`, so production folds it. A scene that builds its geometry on every load
+    under a fixed id and is reloaded before its release runs would warn: none found yet,
+    `verify:scenes` (step 6) shows.
+  - **Tests:** `utils/Hash.test.ts` (2: the published values, the basis), `Geometry.test.ts` +1
+    (the registered geometry returned, the warning only for another one).
+  - **Checks:** `tsc` (both), the touched files' lint, `yarn test` (70 files, 546 passed), the
+    docs ratchet (`kernel/assets` 102 / 126, `utils` 41 / 45). `yarn verify:baselines` (the
+    production build's debug check, the API changes) at the end of the phase.
 
 ### Phase 6: the assets API, worker and import (`AssetsAPI.ts`, `AssetsAPITypes.ts`, `worker/`, `import/`)
 

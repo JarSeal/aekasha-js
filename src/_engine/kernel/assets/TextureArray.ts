@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { int, texture } from 'three/tsl';
 import { retagAssetOwner } from './AssetOwners';
+import { hashStringFNV1a } from '../../utils/Hash';
 import { getRenderer } from '../render/Renderer';
 import { getGeneratedAppData } from '../scene/Scene';
 import {
@@ -97,14 +98,7 @@ const pendingBuilds = new Map<string, Promise<TextureArray>>();
 const swapQueues = new WeakMap<TextureArray, Promise<void>>();
 
 /** FNV-1a, 32 bits, base 36: the derived ids only need to tell member lists apart. */
-const hashString = (text: string) => {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(36);
-};
+const hashString = (text: string) => hashStringFNV1a(text).toString(36);
 
 const getMemberKey = (member: TextureArrayMember) =>
   typeof member === 'string'

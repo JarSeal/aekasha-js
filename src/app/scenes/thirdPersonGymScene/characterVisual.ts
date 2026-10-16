@@ -4,15 +4,16 @@ import {
   createMaterial,
   createMeshEntity,
   getMeshByAppId,
-  loadTexture,
+  loadTextureAsync,
 } from 'aekasha';
 
 /**
  * The test characters' visual: a capsule sized like the character's collider, with a beak
  * pointing along its facing (+X at yaw 0). Creates the mesh entities (`meshDynamicChar-<key>` and
- * its beak) and returns the capsule mesh, ready for createDynamicCharacter's `visual`.
+ * its beak) and returns the capsule mesh, ready for createDynamicCharacter's `visual`, once its
+ * texture has loaded.
  */
-export const createCharacterVisual = ({
+export const createCharacterVisualAsync = async ({
   key,
   height,
   radius,
@@ -23,7 +24,11 @@ export const createCharacterVisual = ({
   height: number;
   radius: number;
   beakColor: string;
-}): THREE.Mesh => {
+}): Promise<THREE.Mesh> => {
+  await loadTextureAsync({
+    id: 'box1Texture',
+    fileName: '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg',
+  });
   const capsule = createGeometry({
     // Geometries are cached by id: the id carries the size
     id: `capsuleDynamicChar_${height}_${radius}`,
@@ -34,10 +39,7 @@ export const createCharacterVisual = ({
     id: 'materialDynamicChar',
     type: 'PHONG',
     params: {
-      map: loadTexture({
-        id: 'box1Texture',
-        fileName: '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg',
-      }),
+      map: 'box1Texture',
     },
   });
   createMeshEntity(

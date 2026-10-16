@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu';
 import { getRenderer } from '../render/Renderer';
 import { getRootScene } from '../scene/Scene';
 import { lwarn } from '../../utils/Logger';
+import { IS_DEBUG_ENV } from '../config/Config';
 import { recordAssetOwner, retagAssetOwner } from './AssetOwners';
 
 export type GeoDebugData = { name?: string; description?: string };
@@ -139,15 +140,6 @@ export const decGeometryRef = (id: string) => {
   if (!entry) return;
   entry.count--;
   if (entry.count <= 0 && !entry.persistent) removeGeometry(id);
-};
-
-export const setGeometryPersistence = (id: string, state: boolean) => {
-  const geo = geometries[id];
-  if (!geo) return;
-  geo.persistent = state;
-  // If the state changes from persistent to non-persistent (false),
-  // then delete and dispose the geometry if the count is 0.
-  if (!state && geo.count === 0) removeGeometry(id);
 };
 
 // What a geometry's pre-warm compiles with, made on the first one and shared by every later one:
@@ -303,28 +295,6 @@ export const deleteGeometry = (id: string | string[]) => {
   for (let i = 0; i < id.length; i++) removeGeometry(id[i]);
 };
 
-export const freeGeometryGPUMemory = (id: string | string[]) => {
-  if (typeof id === 'string') {
-    const geo = geometries[id];
-    geo?.resource.dispose();
-    return;
-  }
-  for (let i = 0; i < id.length; i++) {
-    const geoId = id[i];
-    const geo = geometries[geoId];
-    geo?.resource.dispose();
-  }
-};
-
-/**
- * Returns all geometries.
- * @returns object: { [id: string]: THREE.BufferGeometry }
- */
-export const getAllGeometries = () => {
-  const keys = Object.keys(geometries);
-  return keys.map((key) => ({ [key]: geometries[key].resource }));
-};
-
 export const getGeometryRegistry = () => geometries;
 
 /**
@@ -336,6 +306,11 @@ export const saveBufferGeometry = (
 ) => {
   const id = props?.id || geometry.uuid;
   if (geometries[id]) {
+    if (IS_DEBUG_ENV && geometries[id].resource !== geometry) {
+      lwarn(
+        `saveBufferGeometry: "${id}" is registered already, so the registered geometry is returned and the one passed in isn't registered (dispose it, or check getGeometry("${id}") before building one).`
+      );
+    }
     retagAssetOwner(geometries[id].resource);
     return geometries[id].resource;
   }

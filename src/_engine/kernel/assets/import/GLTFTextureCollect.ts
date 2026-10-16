@@ -61,7 +61,7 @@ export const collectGLTFTextures = (
     const materials = Array.isArray(material) ? material : [material];
     for (const mat of materials) {
       if (!mat) continue;
-      for (const key of textureMapKeys as TextureMapKeys[]) {
+      for (const key of textureMapKeys) {
         const texture = (mat as unknown as Record<string, unknown>)[key] as THREE.Texture | null;
         if (!texture?.isTexture || slots[key] !== undefined) continue;
         let index = indexByTexture.get(texture);

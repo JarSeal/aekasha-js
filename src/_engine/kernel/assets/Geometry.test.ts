@@ -1,7 +1,8 @@
 import { beforeAll, describe, expect, test, vi } from 'vitest';
-import type * as THREE from 'three/webgpu';
+import * as THREE from 'three/webgpu';
 import { createRootScene } from '../scene/Scene';
-import { createGeometry, getGeometry, prewarmGeometry } from './Geometry';
+import { initEnvironment } from '../config/Config';
+import { createGeometry, getGeometry, prewarmGeometry, saveBufferGeometry } from './Geometry';
 
 // The renderer (only its compileAsync) and the warning log are stand-ins
 const fns = vi.hoisted(() => ({
@@ -58,5 +59,20 @@ describe('prewarmGeometry', () => {
       expect.stringContaining('geometryTestFailing'),
       expect.any(Error)
     );
+  });
+});
+
+describe('saveBufferGeometry', () => {
+  test('returns the registered geometry for a taken id, and warns in the debug env', () => {
+    initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
+    const registered = saveBufferGeometry(new THREE.BufferGeometry(), { id: 'geometryTestSaved' });
+    fns.lwarn.mockClear();
+
+    expect(saveBufferGeometry(registered, { id: 'geometryTestSaved' })).toBe(registered);
+    expect(fns.lwarn).not.toHaveBeenCalled();
+
+    const other = new THREE.BufferGeometry();
+    expect(saveBufferGeometry(other, { id: 'geometryTestSaved' })).toBe(registered);
+    expect(fns.lwarn).toHaveBeenCalledWith(expect.stringContaining('"geometryTestSaved"'));
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 import * as THREE from 'three/webgpu';
-import { getTextureRegistry, loadTexture, loadTextures } from './Texture';
+import { getTextureRegistry } from './Texture';
+import { loadTexture, loadTextures } from './TextureSync';
 
 // The document's base URL (the loaders resolve file names against it), a TextureLoader whose
 // loads end in a microtask and fail for the URLs in `failing`, and the error log are stand-ins

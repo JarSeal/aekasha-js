@@ -32,7 +32,7 @@ import {
 import { initPhysicsStressTest } from './PhysicsStressTest';
 import { getTestObstacle } from './characterTestObstacles';
 import { createPhysicsEntity } from 'aekasha/physics';
-import { createCharacterVisual } from './characterVisual';
+import { createCharacterVisualAsync } from './characterVisual';
 
 export const SCENE_THIRD_PERSON_GYM_META = {
   id: 'thirdPersonGymScene',
@@ -150,14 +150,14 @@ const createGymCharacters = async () => {
     radius: 0.5,
   };
   const createCharacterMesh = (index: number, beakColor: string) =>
-    createCharacterVisual({
+    createCharacterVisualAsync({
       key: index,
       height: characterConfig.height,
       radius: characterConfig.radius,
       beakColor,
     });
 
-  const characterMesh = createCharacterMesh(1, '#333');
+  const characterMesh = await createCharacterMesh(1, '#333');
   const { character: playerCharacter } = await createDynamicCharacter({
     id: 'topDownChar',
     visual: characterMesh,
@@ -217,7 +217,7 @@ const createGymCharacters = async () => {
 
   // A second player character on other keys (the arrow keys, Enter to jump, no run or crouch),
   // moving relative to the follow camera's view and turning toward where it goes
-  const arrowsCharacterMesh = createCharacterMesh(3, '#d08a18');
+  const arrowsCharacterMesh = await createCharacterMesh(3, '#d08a18');
   const { character: arrowsCharacter } = await createDynamicCharacter({
     id: 'arrowKeysChar',
     visual: arrowsCharacterMesh,
@@ -243,7 +243,7 @@ const createGymCharacters = async () => {
   getECSWorld().getRigidBody(arrowsCharacter.entityId)?.setTranslation({ x: 2, y: 3, z: -8 }, true);
 
   // A character without input: its brain writes the intent every step, and goes with it
-  const characterMesh2 = createCharacterMesh(2, '#333');
+  const characterMesh2 = await createCharacterMesh(2, '#333');
   const { character: dummyCharacter } = await createDynamicCharacter({
     id: 'testDummyChar',
     visual: characterMesh2,

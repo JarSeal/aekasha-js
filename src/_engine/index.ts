@@ -212,11 +212,10 @@ export {
   deleteTexture,
   getAllTextures,
   getTexture,
-  loadTexture,
   loadTextureAsync,
-  loadTextures,
 } from './kernel/assets/Texture';
 export type { TexOpts, TextureProps } from './kernel/assets/Texture';
+export { loadTexture, loadTextures } from './kernel/assets/TextureSync';
 export {
   buildTextureArray,
   getArrayLayerIndex,

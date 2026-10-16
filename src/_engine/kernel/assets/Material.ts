@@ -7,39 +7,16 @@ import { lerror, lwarn } from '../../utils/Logger';
 import type { Node } from 'three/tsl';
 import { color, texture, uniform } from 'three/tsl';
 import { textureMapKeys } from '../../utils/Constants';
+import { hashStringFNV1a } from '../../utils/Hash';
+import { IS_DEBUG_ENV } from '../config/Config';
 import { recordAssetOwner, retagAssetOwner } from './AssetOwners';
 import { getSceneRetainedTextures } from '../scene/SceneHooks';
 
-export type Materials =
-  | THREE.LineBasicMaterial
-  | THREE.LineDashedMaterial
-  | THREE.MeshBasicMaterial
-  | THREE.MeshDepthMaterial
-  | THREE.MeshDistanceMaterial
-  | THREE.MeshLambertMaterial
-  | THREE.MeshMatcapMaterial
-  | THREE.MeshNormalMaterial
-  | THREE.MeshPhongMaterial
-  | THREE.MeshPhysicalMaterial
-  | THREE.MeshStandardMaterial
-  | THREE.MeshToonMaterial
-  | THREE.PointsMaterial
-  // RawShaderMaterial does not work with WebGPU, but keeping it here if there is future possibility to transpile
-  | THREE.RawShaderMaterial
-  // ShaderMaterial does not work with WebGPU, but keeping it here if there is future possibility to transpile
-  | THREE.ShaderMaterial
-  | THREE.ShadowMaterial
-  | THREE.SpriteMaterial
-  | THREE.Material
-  | THREE.MeshBasicNodeMaterial
-  | THREE.MeshLambertNodeMaterial
-  | THREE.MeshPhongNodeMaterial
-  | THREE.MeshPhysicalNodeMaterial
-  | THREE.MeshStandardNodeMaterial
-  | THREE.MeshMatcapNodeMaterial
-  | THREE.MeshMatcapNodeMaterial
-  | THREE.MeshNormalNodeMaterial
-  | THREE.MeshToonNodeMaterial;
+/**
+ * A material the registry holds: any of three's materials. The same type as `THREE.Material`
+ * (each material class extends it).
+ */
+export type Materials = THREE.Material;
 
 const materials: {
   [id: string]: {
@@ -53,32 +30,16 @@ const materials: {
   };
 } = {};
 
-export type TextureMapKeys =
-  | 'map'
-  | 'alphaMap'
-  | 'aoMap'
-  | 'bumpMap'
-  | 'envMap'
-  | 'emissiveMap'
-  | 'lightMap'
-  | 'matcap'
-  | 'normalMap'
-  | 'roughnessMap'
-  | 'metalnessMap'
-  | 'specularMap'
-  | 'displacementMap'
-  | 'anisotropyMap'
-  | 'clearcoatMap'
-  | 'clearcoatNormalMap'
-  | 'clearcoatRoughnessMap'
-  | 'iridescenceMap'
-  | 'iridescenceThicknessMap'
-  | 'sheenRoughnessMap'
-  | 'sheenColorMap'
-  | 'specularIntensityMap'
-  | 'specularColorMap'
-  | 'thicknessMap'
-  | 'transmissionMap';
+/** A material's texture slot (`map`, `normalMap`, …), one of `textureMapKeys`. */
+export type TextureMapKeys = (typeof textureMapKeys)[number];
+
+/**
+ * A material's texture in a slot, or undefined when it has none there (a material type has
+ * only some of the slots).
+ * @internal
+ */
+export const getMaterialMapTexture = (mat: THREE.Material, key: TextureMapKeys) =>
+  (mat as unknown as Partial<Record<TextureMapKeys, THREE.Texture | null>>)[key] ?? undefined;
 
 /**
  * A material type's parameters, where every texture map key (`map`, `normalMap`, …) also takes a
@@ -240,18 +201,6 @@ export const decMaterialRef = (id: string) => {
   entry.count--;
 
   if (entry.count <= 0 && !entry.persistent) {
-    deleteTexturesFromMaterial(entry.resource);
-    entry.resource.dispose();
-    delete materials[id];
-  }
-};
-
-export const setMaterialPersistence = (id: string, state: boolean) => {
-  const entry = materials[id];
-  if (!entry) return;
-  entry.persistent = state;
-
-  if (!state && entry.count === 0) {
     deleteTexturesFromMaterial(entry.resource);
     entry.resource.dispose();
     delete materials[id];
@@ -563,15 +512,8 @@ const stableStringify = (value: unknown): string => {
   return JSON.stringify(value);
 };
 
-// FNV-1a, only to keep variant ids short (collisions are resolved in getMaterialVariant)
-const hashString = (str: string) => {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) {
-    hash ^= str.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(36);
-};
+// Only to keep variant ids short (collisions are resolved in getMaterialVariant)
+const hashString = (str: string) => hashStringFNV1a(str).toString(36);
 
 /**
  * Returns a variant of a registered material: a separate material created from the base
@@ -635,26 +577,6 @@ export const getMaterialVariant = (baseId: string, overrides: MaterialVariantOve
  */
 export const getMaterial = (id: string) => materials[id]?.resource;
 
-/**
- * Returns one or multiple materials based on the ids
- * @param id one or multiple material ids
- * @returns Array of Three.js materials
- */
-export const getMaterials = (id: string[]) =>
-  id.map((matId) => materials[matId]?.resource).filter(Boolean) as Materials[];
-
-/**
- * Returns all created materials that exist
- * @returns all materials map object
- */
-export const getAllMaterials = () => {
-  const flatMap: { [id: string]: Materials } = {};
-  Object.keys(materials).forEach((key) => {
-    flatMap[key] = materials[key].resource;
-  });
-  return flatMap;
-};
-
 export const getMaterialRegistry = () => materials;
 
 /** Whether any registered material other than `except` still holds a texture (in a map slot or a
@@ -668,7 +590,7 @@ const isTextureInUseByOtherMaterial = (
     const other = materials[id].resource;
     if (other === except) continue;
     for (let i = 0; i < textureMapKeys.length; i++) {
-      const texture = other[textureMapKeys[i] as keyof Materials] as THREE.Texture | undefined;
+      const texture = getMaterialMapTexture(other, textureMapKeys[i]);
       if (texture && test(texture)) return true;
     }
     // TSL node inputs (createMaterial keeps them in userData.uniforms): texture nodes
@@ -726,8 +648,7 @@ export const getKeptTextures = (): Set<THREE.Texture> => {
 export const deleteTexturesFromMaterial = (mat: Materials, opts?: { keepRegistered?: boolean }) => {
   let kept: Set<THREE.Texture> | undefined;
   for (let i = 0; i < textureMapKeys.length; i++) {
-    const key = textureMapKeys[i] as keyof Materials;
-    const texture = mat[key] as THREE.Texture;
+    const texture = getMaterialMapTexture(mat, textureMapKeys[i]);
     if (!texture) continue;
     if (isTextureInUseByOtherMaterial(mat, (t) => t === texture)) continue;
 
@@ -765,6 +686,15 @@ export const deleteMaterial = (id: string | string[], deleteTextures?: boolean) 
   }
 };
 
+// A material passed to saveMaterial under an id another one holds isn't registered, so nothing
+// releases it: said in the debug env
+const warnDroppedMaterial = (id: string) => {
+  if (!IS_DEBUG_ENV) return;
+  lwarn(
+    `saveMaterial: "${id}" is registered already, so the material passed in isn't registered (dispose it, or check getMaterial("${id}") before creating one).`
+  );
+};
+
 /**
  * Saves a material instance inside the engine tracking array mapping.
  * @param material Target material or multi-material group array.
@@ -779,6 +709,7 @@ export const saveMaterial = (
   if (!Array.isArray(material)) {
     const id = givenId || material.uuid;
     if (materials[id]) {
+      if (materials[id].resource !== material) warnDroppedMaterial(id);
       retagAssetOwner(materials[id].resource);
       return materials[id].resource;
     }
@@ -798,6 +729,7 @@ export const saveMaterial = (
     if (!mat.isMaterial) continue;
     const combinedId = givenId ? `${givenId}-${i}` : mat.uuid;
     if (materials[combinedId]) {
+      if (materials[combinedId].resource !== mat) warnDroppedMaterial(combinedId);
       retagAssetOwner(materials[combinedId].resource);
       continue;
     }
@@ -819,24 +751,3 @@ export const saveMaterial = (
  * @param id target identifier string
  */
 export const doesMatExist = (id: string) => Boolean(materials[id]);
-
-/**
- * Re-flags every material in the active display list to recompile on the next draw wave.
- */
-export const updateAllMaterials = () => {
-  const rootScene = getRootScene();
-  if (!rootScene) return;
-
-  rootScene.traverse((child) => {
-    const c = child as THREE.Mesh;
-    if (c?.material) {
-      if (Array.isArray(c.material)) {
-        for (let i = 0; i < c.material.length; i++) {
-          c.material[i].needsUpdate = true;
-        }
-      } else {
-        c.material.needsUpdate = true;
-      }
-    }
-  });
-};
