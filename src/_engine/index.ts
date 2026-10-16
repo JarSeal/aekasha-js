@@ -33,6 +33,7 @@ export { APP_RENDER_SYNC_ORDER, ECSSystemStage } from './kernel/loop/SystemStage
 export type { EngineFeature, FeatureContext, FeatureDebugHook } from './kernel/init/Features';
 export {
   createGeometry,
+  decGeometryRef,
   deleteGeometry,
   getGeometry,
   getGeometryRegistry,
@@ -227,6 +228,7 @@ export {
 export type {
   BuildTextureArrayProps,
   TextureArray,
+  TextureArrayInfo,
   TextureArrayMember,
 } from './kernel/assets/TextureArray';
 export {

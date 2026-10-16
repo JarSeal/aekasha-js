@@ -1106,6 +1106,35 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
     (the `{ r, g, b }` colours, both checked to fail without the fix).
   - **Checks:** `tsc` (both), the touched files' lint, `yarn test` (72 files, 561 passed), the docs
     ratchet (`kernel/render` 89 / 89; `schemas` 46 / 121, one export fewer).
+- **Section 5 (step 5):**
+  - **JSDoc:** every export of the ten files has a summary; what's on no entry is `@internal`
+    (`AssetFiles.ts`, `AssetOwners.ts`, `SceneAssetRelease.ts`, `toAppUrl`,
+    `isJsonRelativeFileName`, `isLoadingSourceFiles`, the registries' getters but
+    `getGeometryRegistry` (on the entry), `onGeometryDeleted`, `doesGeoExist` / `doesMatExist` /
+    `doesTextureExist`, `saveTexture`, `setTextureOpts`, `resolveTextureUrl`,
+    `loadTextureFileAsync`, `GeometryAtlasCell`, …); the entry's functions have `@example`s (the
+    deprecated `loadTexture(s)` don't: an example would advertise them); the props types document
+    their fields (`GeoBaseProps`, `MatProps`, `TextureProps`, `MaterialVariantOverrides`,
+    `BuildTextureArrayProps`); `@throws` where a function throws. `TextureMapKeys` and
+    `AllowTextureStrings` stay public (the entry's `ImportAssetParams` and `MatProps` name them).
+    `GeoBaseProps.debugData` is written inline rather than naming the `@internal` `GeoDebugData`.
+    `kernel/assets` 102 / 126 → 119 / 126: the 7 left are `AssetsAPITypes.ts`' (Phase 6).
+  - **`Material.ts`' header** says `createMaterial` is over 150 lines and why it waits (D2: p302's
+    resolver registry rewrites the TSL path). The `[Material Manager]` and `[Aekasha Texture
+    Pipeline]` prefixes gone (A10, H3); `createGeometry`'s `@TODO: add all geometry types` removed
+    (no plan wants it; the cone case got its `break`).
+  - **The `notExported` `"three/tsl".Node`:** `sampleAtlasCell` returns `THREE.TextureNode`
+    (three's own), not the type inferred from the project's augmented `three/tsl`
+    (`types/three-node-material-helpers.d.ts`). The TypeDoc model has no reference to the augmented
+    `Node` left; Phase 8's `yarn hub:build` confirms the warning is gone.
+  - **Entry additions (for the changelog):** `decGeometryRef` (the entry had `incGeometryRef`
+    without it; a mesh entity's deletion releases its own ref, so the app's two `incGeometryRef`s
+    don't leak) and the type `TextureArrayInfo` (`getTextureArrayInfo`, on the entry, returns
+    it). Not added, for p618: `saveTexture` is on no entry, so an app can't register a texture it
+    built.
+  - **Checks:** `tsc` (both), the folder's lint, `yarn test` (72 files, 561 passed, the `@example`
+    check included), the docs ratchet. `docs.json` and the API baseline are recorded at the end
+    of the phase (step 6).
 
 ### Phase 6: the assets API, worker and import (`AssetsAPI.ts`, `AssetsAPITypes.ts`, `worker/`, `import/`)
 

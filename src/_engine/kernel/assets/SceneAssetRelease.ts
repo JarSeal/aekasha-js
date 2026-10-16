@@ -34,6 +34,7 @@ export const setSceneImportRelease = (release: (sceneId: string) => string[]) =>
  *
  * A released material disposes the texture clones it holds alone; registered textures are only
  * released here by owner, never through a material.
+ * @internal
  * @param sceneId owner scene id
  * @returns the released ids by kind
  */

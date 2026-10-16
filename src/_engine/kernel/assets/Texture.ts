@@ -15,6 +15,10 @@ import type { TextureArrayInfo } from './TextureArray';
 import type { TextureAtlasInfo } from './TextureAtlas';
 import type { TextureAtlasSlotInfo } from '../../schemas/TextureAtlasSchema';
 
+/**
+ * A texture's sampler state and format, applied over what its loader set (a field left out keeps
+ * the loader's). `image` is only for a texture without a file (its source image).
+ */
 export type TexOpts = {
   image?: TexImageSource | OffscreenCanvas;
   mapping?: THREE.Mapping;
@@ -28,15 +32,31 @@ export type TexOpts = {
   colorSpace?: THREE.ColorSpace;
 };
 
+/**
+ * A texture {@link loadTextureAsync} loads: a `*.texture.json`'s props (with the asset pipeline's
+ * generated fields), or code's.
+ */
 export type TextureProps = {
+  /** The registry id. A registered id returns the registered texture. Default: the texture's
+   * uuid. */
   id?: string;
+  /** The file, served from `src/public` (eg. `/textures/rock.png`); six files (+x, -x, +y, -y,
+   * +z, -z) for a cube texture. A texture from generated data loads its pipeline output instead. */
   fileName?: string | string[];
+  /** A URL prefix for `fileName` (a cube texture's folder, eg. `/skyboxes/space/`). */
   path?: string;
+  /** Loads an `.hdr` file as HDR data (a HalfFloat `DataTexture`). */
   useHDRLoader?: boolean;
+  /** Its sampler state and format, over the loader's. */
   texOpts?: TexOpts;
+  /** Rejects when the file can't load. Default: logs and resolves an empty stand-in texture
+   * (not registered). */
   throwOnError?: boolean;
+  /** Never released by its scene: only {@link deleteTexture} removes it. */
   isPersistent?: boolean;
+  /** The texture's `userData` (the engine adds `id`). */
   userData?: Record<string, unknown>;
+  /** The name (also the texture's `name`) and description for the debug tooling. */
   debugData?: { name?: string; description?: string };
   /**
    * A texture array asset's (`*.textureArray.json`, p299 D2) layer names by layer index, baked in
@@ -149,6 +169,7 @@ const saveAndReport = <T extends THREE.Texture>(
 /**
  * Applies texOpts to a texture and replaces its userData (with `userData`, or an empty object),
  * plus debugData's name and description.
+ * @internal
  */
 export const setTextureOpts = (
   texture: THREE.Texture | THREE.DataTexture | THREE.CubeTexture,
@@ -209,6 +230,7 @@ export const getNoFileTexture = (texOpts?: TexOpts, isCubeTexture?: boolean) =>
 /**
  * The URL loadTextureAsync loads a single-file texture from: the asset pipeline's output, or its
  * `fileName` resolved like three's loaders do (see resolveAssetUrl).
+ * @internal
  */
 export const resolveTextureUrl = ({
   id,
@@ -232,6 +254,7 @@ const getTextureFileLoaderType = (url: string, useHDRLoader?: boolean): TextureF
  * load where AppConfig.assets targets textures. A Texture decoded in the assets worker holds an
  * ImageBitmap with its flip baked in (`flipY` false); one the caller doesn't register is the
  * caller's to close.
+ * @internal
  * @param url the file's URL, as resolveAssetUrl returns it
  * @param useHDRLoader load an `.hdr` file as HDR data
  */
@@ -261,9 +284,7 @@ export const loadTextureFileAsync = async (
     return { texture: result, report };
   }
   if (useHDRLoader) {
-    lwarn(
-      `[Aekasha Texture Pipeline] useHDRLoader override ignored for non-HDR file extension: ${url}`
-    );
+    lwarn(`useHDRLoader is ignored for a file that isn't .hdr: ${url}`);
   }
   const { result, report } = await runAssetTask<THREE.Texture>(
     'TEXTURE',
@@ -451,6 +472,20 @@ const loadTextureAtlasSlotAsync = async ({
  * texture array asset (`*.textureArray.json`, p299 D2) loads its KTX2 output as a
  * `CompressedArrayTexture`, a one-layer array too. A texture atlas slot (`*.textureAtlas.json`,
  * p299 D3) loads its KTX2 output with its cell table on `userData.textureAtlas`.
+ *
+ * The texture is registered under `id` (else its uuid), owned by the scene loading (or current)
+ * and released with it unless a material, a sky box or the scene's background holds it. A
+ * registered `id` resolves that texture without loading; two loads of one id at once register
+ * the first to finish and dispose the other's.
+ * @returns the registered texture, or (when the load fails without `throwOnError`) an empty one
+ * that isn't registered
+ * @example
+ * ```ts
+ * import { createMaterial, loadTextureAsync } from 'aekasha';
+ *
+ * const albedo = await loadTextureAsync({ id: 'crateAlbedo', fileName: '/textures/crate.png' });
+ * createMaterial({ id: 'crateMaterial', type: 'STANDARD', params: { map: albedo } });
+ * ```
  */
 export const loadTextureAsync = async (props: TextureProps) => {
   const {
@@ -515,12 +550,25 @@ export const loadTextureAsync = async (props: TextureProps) => {
 };
 
 /**
- * Returns a texture or undefined based on the id.
+ * The registered texture with the id, or undefined.
+ * @example
+ * ```ts
+ * import { getTexture } from 'aekasha';
+ *
+ * const albedo = getTexture('crateAlbedo');
+ * if (albedo) albedo.anisotropy = 8;
+ * ```
  */
 export const getTexture = (id: string) => textures[id]?.resource;
 
 /**
- * Returns a flat map object of all existing texture resources.
+ * Every registered texture by id, in a new object (the registry itself isn't handed out).
+ * @example
+ * ```ts
+ * import { getAllTextures } from 'aekasha';
+ *
+ * const ids = Object.keys(getAllTextures());
+ * ```
  */
 export const getAllTextures = () => {
   const flatMap: { [id: string]: THREE.Texture } = {};
@@ -530,15 +578,30 @@ export const getAllTextures = () => {
   return flatMap;
 };
 
+/**
+ * The texture registry by id: each entry's texture (`resource`) and persistence. Read it, never
+ * write it.
+ * @internal
+ */
 export const getTextureRegistry = () => textures;
 
 /**
- * Checks whether a texture with a specific id exists in memory cache.
+ * Whether a texture is registered under the id.
+ * @internal
  */
 export const doesTextureExist = (id: string) => Boolean(textures[id]);
 
 /**
- * Forcefully disposes and removes one or multiple textures from memory cache.
+ * Disposes one or many registered textures (closing a worker-decoded image) and removes them from
+ * the registry, whatever their persistence and users: a material still holding one samples a
+ * disposed texture. An id that isn't registered warns.
+ * @param id texture id or array of ids
+ * @example
+ * ```ts
+ * import { deleteTexture } from 'aekasha';
+ *
+ * deleteTexture(['crateAlbedo', 'crateNormal']);
+ * ```
  */
 export const deleteTexture = (id: string | string[]) => {
   const targetIds = Array.isArray(id) ? id : [id];
@@ -567,7 +630,10 @@ export const deleteTexture = (id: string | string[]) => {
 };
 
 /**
- * Saves a texture instance inside the engine tracking registry.
+ * Registers a texture under `givenId` (default: its uuid), owned by the scene loading (or
+ * current). An id already registered keeps its texture, which is returned, re-tagged to the
+ * scene getting it; the texture passed in isn't registered.
+ * @internal
  */
 export const saveTexture = <T extends THREE.Texture = THREE.Texture>(
   texture: T,

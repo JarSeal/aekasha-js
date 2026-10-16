@@ -9,30 +9,45 @@
 const owners = new WeakMap<object, string>();
 let ownerSceneId: string | null = null;
 
-/** Sets the scene that new registrations (and cache hits) belong to. SceneLoader calls this when
- * a load starts, with the scene being loaded, which then stays the owner while it is current. */
+/**
+ * Sets the scene that new registrations (and cache hits) belong to. SceneLoader calls this when a
+ * load starts, with the scene being loaded, which then stays the owner while it is current.
+ * @internal
+ */
 export const setAssetOwnerScene = (sceneId: string | null) => {
   ownerSceneId = sceneId;
 };
 
-/** Records the owner of a newly registered asset (none before the first scene load). */
+/**
+ * Records the owner of a newly registered asset (none before the first scene load).
+ * @internal
+ */
 export const recordAssetOwner = (asset: object) => {
   if (ownerSceneId) owners.set(asset, ownerSceneId);
 };
 
-/** Re-tags an asset returned from the cache to the scene getting it. An asset without an owner
- * (registered before the first scene load) is never claimed by a scene. */
+/**
+ * Re-tags an asset returned from the cache to the scene getting it. An asset without an owner
+ * (registered before the first scene load) is never claimed by a scene.
+ * @internal
+ */
 export const retagAssetOwner = (asset: object) => {
   if (ownerSceneId && owners.has(asset)) owners.set(asset, ownerSceneId);
 };
 
-/** Gives an asset derived from another (eg. a LOD level from its base geometry) the same owner,
- * or none. */
+/**
+ * Gives an asset derived from another (eg. a LOD level from its base geometry) the same owner, or
+ * none.
+ * @internal
+ */
 export const copyAssetOwner = (from: object, to: object) => {
   const owner = owners.get(from);
   if (owner) owners.set(to, owner);
   else owners.delete(to);
 };
 
-/** The id of the scene that owns the asset, or undefined if it has no owner. */
+/**
+ * The id of the scene that owns the asset, or undefined if it has no owner.
+ * @internal
+ */
 export const getAssetOwner = (asset: object) => owners.get(asset);

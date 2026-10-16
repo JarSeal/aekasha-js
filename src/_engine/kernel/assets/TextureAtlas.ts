@@ -35,8 +35,17 @@ export type AtlasCellRect = [u0: number, v0: number, u1: number, v1: number];
 
 type TextureUV = Parameters<typeof texture>[1];
 
-/** A slot texture's cell table and layout (see {@link TextureAtlasInfo}), or undefined for other
- * textures. */
+/**
+ * A slot texture's cell table and layout (see {@link TextureAtlasInfo}), or undefined for other
+ * textures.
+ * @example
+ * ```ts
+ * import { getTexture, getTextureAtlasInfo } from 'aekasha';
+ *
+ * const slot = getTexture('foliage.map');
+ * const cellIds = slot ? Object.keys(getTextureAtlasInfo(slot)?.cells ?? {}) : [];
+ * ```
+ */
 export const getTextureAtlasInfo = (texture: THREE.Texture) =>
   texture.userData.textureAtlas as TextureAtlasInfo | undefined;
 
@@ -60,12 +69,21 @@ const findAtlasInfo = (atlas: string | THREE.Texture) => {
  * @param atlas the atlas id (`*.textureAtlas.json`), a slot's id (`<atlasId>.<slot>`) or a slot
  * texture
  * @param cellId the cell's id in the atlas JSON
+ * @example
+ * ```ts
+ * import { getAtlasCell } from 'aekasha';
+ *
+ * // The fern's size in the atlas layout's px, eg. to size its sprite
+ * const fern = getAtlasCell('foliage', 'fern');
+ * const aspect = fern ? fern.size[0] / fern.size[1] : 1;
+ * ```
  */
 export const getAtlasCell = (
   atlas: string | THREE.Texture,
   cellId: string
 ): TextureAtlasCellInfo | undefined => findAtlasInfo(atlas)?.cells[cellId];
 
+/** How {@link sampleAtlasCell} samples. */
 export type SampleAtlasCellOpts = {
   /** Keeps the sample half a level-0 texel inside the cell's content rect, so a bilinear tap never
    * reaches past the content's edge texels: for UVs outside 0..1, anisotropic taps, or an atlas
@@ -115,13 +133,27 @@ const toRectNode = (slot: THREE.Texture, cell: string | AtlasCellRect | THREE.No
  * @param cell the cell's id, its content rect (`[u0, v0, u1, v1]`, v up), or a `vec4` node of one
  * (eg. a per-instance attribute: one material for many cells)
  * @param opts {@link SampleAtlasCellOpts}
+ * @throws when `cell` is an id and `slot` isn't an atlas slot or has no such cell, or (with
+ * `clampToCell`) when `slot` has no size yet
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ * import { uv } from 'three/tsl';
+ * import { getTexture, sampleAtlasCell } from 'aekasha';
+ *
+ * const slot = getTexture('foliage.map');
+ * if (slot) {
+ *   const material = new THREE.MeshStandardNodeMaterial();
+ *   material.colorNode = sampleAtlasCell(slot, uv() as unknown as THREE.Node<'vec2'>, 'fern');
+ * }
+ * ```
  */
 export const sampleAtlasCell = (
   slot: THREE.Texture,
   uvNode: THREE.Node<'vec2'>,
   cell: string | AtlasCellRect | THREE.Node<'vec4'>,
   { clampToCell = true }: SampleAtlasCellOpts = {}
-) => {
+): THREE.TextureNode => {
   const rect = toRectNode(slot, cell);
   const min = rect.xy as unknown as THREE.Node<'vec2'>;
   const max = rect.zw as unknown as THREE.Node<'vec2'>;
@@ -131,10 +163,14 @@ export const sampleAtlasCell = (
     const half = vec2(0.5 / width, 0.5 / height);
     cellUv = clamp(cellUv, min.add(half), max.sub(half)) as unknown as THREE.Node<'vec2'>;
   }
-  return texture(slot, cellUv as unknown as TextureUV);
+  // three's own node type: the inferred one is the project's augmented `three/tsl` Node
+  return texture(slot, cellUv as unknown as TextureUV) as unknown as THREE.TextureNode;
 };
 
-/** Where a geometry's UVs were remapped to, on its `userData.atlasCell`. */
+/**
+ * Where a geometry's UVs were remapped to, on its `userData.atlasCell`.
+ * @internal
+ */
 export type GeometryAtlasCell = {
   atlas: string;
   cell: string;
@@ -144,6 +180,7 @@ export type GeometryAtlasCell = {
   uv: AtlasCellRect;
 };
 
+/** Which UVs {@link remapUVsToAtlasCell} rewrites, and where. */
 export type RemapUVsToAtlasCellOpts = {
   /** The UV attribute to rewrite. Default `'uv'`. */
   attribute?: string;
@@ -192,6 +229,18 @@ const checkInPlaceAttribute = (attr: THREE.BufferAttribute | THREE.InterleavedBu
  * @param opts {@link RemapUVsToAtlasCellOpts}
  * @returns the registered clone, or the given geometry with `inPlace`. Either has a
  * {@link GeometryAtlasCell} on its `userData.atlasCell`.
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ * import { createMeshEntity, getTexture, remapUVsToAtlasCell, saveBufferGeometry } from 'aekasha';
+ *
+ * // A quad showing the fern, with the atlas slot as its plain map
+ * const quad = saveBufferGeometry(new THREE.PlaneGeometry(1, 1), { id: 'fernQuadSource' });
+ * createMeshEntity({
+ *   geo: remapUVsToAtlasCell(quad, 'foliage', 'fern'),
+ *   mat: new THREE.MeshStandardNodeMaterial({ map: getTexture('foliage.map') ?? null }),
+ * });
+ * ```
  */
 export const remapUVsToAtlasCell = (
   geometry: THREE.BufferGeometry | string,

@@ -24,6 +24,8 @@ import {
  * "Load source files" override is on) make a `DataArrayTexture` with GPU mipmaps.
  */
 
+/** An array texture the engine builds or loads: KTX2 members make a compressed one, images an
+ * uncompressed one. */
 export type TextureArray = THREE.CompressedArrayTexture | THREE.DataArrayTexture;
 
 /**
@@ -33,6 +35,7 @@ export type TextureArray = THREE.CompressedArrayTexture | THREE.DataArrayTexture
  */
 export type TextureArrayMember = string | TextureProps;
 
+/** What {@link buildTextureArray} builds an array from, and how. */
 export type BuildTextureArrayProps = {
   /** Registry id. Default: derived from the members, colorSpace and texOpts (`arr:<hash>`), so
    * two builds of the same array share one, or a unique id for a swappable array. */
@@ -46,7 +49,9 @@ export type BuildTextureArrayProps = {
   /** Keeps the array's CPU copy of its data, for {@link setTextureArrayLayer}. Without it the copy
    * is dropped once the array is on the GPU. */
   swappable?: boolean;
+  /** Never released by its scene: only `deleteTexture` removes it. */
   isPersistent?: boolean;
+  /** The name and description for the debug tooling. */
   debugData?: { name?: string; description?: string };
 };
 
@@ -403,7 +408,17 @@ const build = async (id: string, props: BuildTextureArrayProps, keys: string[]) 
  * Arrays are registered textures: owned by the scene that built them (a build of a registered id
  * re-tags it), released with it unless a material holds them, deleted with deleteTexture. The
  * array holds a copy of its members' data, so the members' own lifecycles don't touch it.
+ *
+ * Two builds of one id at once share one build; a member that fails releases the ones that
+ * loaded.
  * @param props {@link BuildTextureArrayProps}
+ * @example
+ * ```ts
+ * import { buildTextureArray } from 'aekasha';
+ *
+ * // Three ground textures (texture assets of one size and codec) as one binding
+ * const ground = await buildTextureArray({ members: ['grass', 'dirt', 'rock'] });
+ * ```
  */
 export const buildTextureArray = async (props: BuildTextureArrayProps): Promise<TextureArray> => {
   if (!props.members.length) throw new Error('A texture array needs at least one member.');
@@ -420,13 +435,31 @@ export const buildTextureArray = async (props: BuildTextureArrayProps): Promise<
   return pending;
 };
 
-/** The registered array texture with the id, or undefined. */
+/**
+ * The registered array texture with the id, or undefined (also for a texture that isn't an
+ * array).
+ * @example
+ * ```ts
+ * import { getTextureArray } from 'aekasha';
+ *
+ * const ground = getTextureArray('groundLayers');
+ * ```
+ */
 export const getTextureArray = (id: string) => {
   const texture = getTexture(id);
   return texture && isArrayTexture(texture) ? (texture as TextureArray) : undefined;
 };
 
-/** What an array was built from (see {@link TextureArrayInfo}), or undefined for other textures. */
+/**
+ * What an array was built from (see {@link TextureArrayInfo}), or undefined for other textures.
+ * @example
+ * ```ts
+ * import { getTextureArray, getTextureArrayInfo } from 'aekasha';
+ *
+ * const ground = getTextureArray('groundLayers');
+ * const layerNames = ground ? getTextureArrayInfo(ground)?.members : undefined;
+ * ```
+ */
 export const getTextureArrayInfo = (texture: THREE.Texture) =>
   texture.userData.textureArray as TextureArrayInfo | undefined;
 
@@ -436,6 +469,12 @@ export const getTextureArrayInfo = (texture: THREE.Texture) =>
  * array isn't registered, wasn't built by the engine, or has no such member.
  * @param array the array's registry id, or the array texture
  * @param member the member's id or file name, or the asset's layer name
+ * @example
+ * ```ts
+ * import { getArrayLayerIndex } from 'aekasha';
+ *
+ * const rockLayer = getArrayLayerIndex('groundLayers', 'rock'); // 2, or undefined
+ * ```
  */
 export const getArrayLayerIndex = (array: string | THREE.Texture, member: string) => {
   const tex = typeof array === 'string' ? getTexture(array) : array;
@@ -473,6 +512,19 @@ const toLayerNode = (array: THREE.Texture, layer: number | string | THREE.Node) 
  * @param uvNode the UV, eg. the mesh's `uv()`: each layer wraps and mips on its own
  * @param layer the layer's index, its member's name (see {@link getArrayLayerIndex}), or an int
  * node (eg. a per-instance attribute: one material for many layers)
+ * @throws when `array` isn't an array texture, or `layer` names no layer of it
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ * import { uv } from 'three/tsl';
+ * import { getTextureArray, sampleArrayLayer } from 'aekasha';
+ *
+ * const ground = getTextureArray('groundLayers');
+ * if (ground) {
+ *   const material = new THREE.MeshStandardNodeMaterial();
+ *   material.colorNode = sampleArrayLayer(ground, uv() as unknown as THREE.Node<'vec2'>, 'rock');
+ * }
+ * ```
  */
 export const sampleArrayLayer = (
   array: THREE.Texture,
@@ -535,6 +587,15 @@ const swapLayer = async (array: TextureArray, layer: number, member: TextureArra
  * @param id the array's registry id
  * @param layer the layer index
  * @param member the new layer's {@link TextureArrayMember}
+ * @throws (at once) when no swappable array is registered under `id`, or `layer` is out of range;
+ * the promise rejects when the member can't load or doesn't fit
+ * @example
+ * ```ts
+ * import { buildTextureArray, setTextureArrayLayer } from 'aekasha';
+ *
+ * await buildTextureArray({ id: 'seasons', members: ['grassSummer'], swappable: true });
+ * await setTextureArrayLayer('seasons', 0, 'grassAutumn');
+ * ```
  */
 export const setTextureArrayLayer = (id: string, layer: number, member: TextureArrayMember) => {
   const array = getTextureArray(id);

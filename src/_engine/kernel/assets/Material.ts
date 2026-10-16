@@ -1,3 +1,8 @@
+// The material registry: createMaterial builds a material from its props (a `*.material.json`'s,
+// or code's) and registers it, ref counted and owned by a scene like every registered asset.
+// createMaterial is over the 150-line limit: most of it is the TSL path (a material JSON's
+// `tslFile` and `nodes`), which p302's resolver registry rewrites, so it isn't split before that
+// (p613 D2).
 import * as THREE from 'three/webgpu';
 import { deleteTexture, getTexture, getTextureRegistry } from './Texture';
 import { getRootScene } from '../scene/Scene';
@@ -49,10 +54,23 @@ export type AllowTextureStrings<T> = T extends unknown
   ? { [K in keyof T]: K extends TextureMapKeys ? T[K] | string : T[K] }
   : never;
 
+/**
+ * A material {@link createMaterial} builds: its `type` and that three material's parameters in
+ * `params` (a texture slot also takes a registered texture's id). A node material type also takes
+ * a TSL file (`tslFile`, a material JSON's): `nodes` holds each socket's inputs (`colorNode: {
+ * lineColor: '#4fc3f7' }`: a texture id, a `'#rrggbb'` colour, a number, a boolean, or a vector as
+ * an array or `{ x, y, z }`), made into uniforms the file's socket function gets, and
+ * `staticDefines` the build-time flags it branches on. A `*.material.json`'s props.
+ */
 export type MatProps = {
+  /** The registry id. A registered id returns the registered material (see
+   * {@link createMaterial}). Default: the material's uuid. */
   id?: string;
+  /** Never released by its scene or its last ref: only {@link deleteMaterial} removes it. */
   isPersistent?: boolean;
+  /** The name (also the material's `name`) and description for the debug tooling. */
   debugData?: { name?: string; description?: string };
+  /** The material's `userData` (the engine adds its own keys: `id`, `type`, `uniforms`, …). */
   userData?: Record<string, unknown>;
   /** Registry id of the TSL functions (tslFile) to use, defaults to `id` (variants use their base's) */
   tslMaterialId?: string;
@@ -188,12 +206,32 @@ export const loadTslMaterialFileAsync = async (materialId: string) => {
   return true;
 };
 
+/**
+ * Takes a ref on a registered material: it isn't released (by {@link decMaterialRef} or its
+ * scene's release) while it has refs. A mesh entity takes one per material and releases them when
+ * it's deleted or its material is swapped (`setMeshMaterial`); take one for a material something
+ * else holds. An unregistered id does nothing.
+ * @example
+ * ```ts
+ * import { createMaterial, decMaterialRef, incMaterialRef } from 'aekasha';
+ *
+ * createMaterial({ id: 'highlight', type: 'BASIC', params: { color: '#ffd000' } });
+ * incMaterialRef('highlight'); // kept while the scene's code swaps it in and out
+ * // … on the scene's exit:
+ * decMaterialRef('highlight');
+ * ```
+ */
 export const incMaterialRef = (id: string) => {
   if (materials[id]) {
     materials[id].count++;
   }
 };
 
+/**
+ * Releases a ref {@link incMaterialRef} took: a non-persistent material whose last ref this was is
+ * disposed, leaves the registry and releases the registered textures only it held (those a sky
+ * box or the scene's background show stay). An unregistered id does nothing.
+ */
 export const decMaterialRef = (id: string) => {
   const entry = materials[id];
   if (!entry) return;
@@ -208,9 +246,24 @@ export const decMaterialRef = (id: string) => {
 };
 
 /**
- * Creates a Three.js Material supporting both standard descriptions and modern dynamic TSL graphs.
- * @param props Material configuration settings.
- * @returns An instantiated, indexed Three.js material.
+ * Creates and registers a three material from its props (see {@link MatProps}): owned by the
+ * scene loading (or current), released with it when nothing holds a ref. An `id` already
+ * registered returns that material, re-tagged to the scene getting it, and builds nothing (the
+ * props are ignored). A texture id that isn't registered is left out of `params` (warned); in a
+ * TSL input it samples one white texel (warned).
+ * @throws for an unknown `type`; for a TSL material whose file isn't loaded (see
+ * {@link loadTslMaterialFileAsync}), whose socket function is empty, or whose input value can't be
+ * made into a uniform
+ * @example
+ * ```ts
+ * import { createMaterial } from 'aekasha';
+ *
+ * const crate = createMaterial({
+ *   id: 'crateMaterial',
+ *   type: 'STANDARDNODEMATERIAL',
+ *   params: { map: 'crateAlbedo', roughness: 0.8 },
+ * });
+ * ```
  */
 export const createMaterial = (props: MatProps) => {
   const id = props.id;
@@ -240,7 +293,7 @@ export const createMaterial = (props: MatProps) => {
           processedParams[key] = texResource;
         } else {
           lwarn(
-            `[Material Manager] Could not locate texture resource "${texId}" for parameter field "${key}" in material "${id}". Safely stripping field.`
+            `Could not locate texture resource "${texId}" for parameter field "${key}" in material "${id}". Safely stripping field.`
           );
           delete processedParams[key];
         }
@@ -328,7 +381,7 @@ export const createMaterial = (props: MatProps) => {
     if (props.userData) mat.userData = props.userData;
     mat.userData.type = type;
   } else {
-    const msg = `[Material Manager] Incomplete properties for material (id: ${id}).`;
+    const msg = `Incomplete properties for material (id: ${id}).`;
     lerror(msg);
     throw new Error(msg);
   }
@@ -340,13 +393,13 @@ export const createMaterial = (props: MatProps) => {
       !loadedTslMaterialFiles.has(tslMaterialId) &&
       getAppData().tslMaterialFiles[tslMaterialId]
     ) {
-      const msg = `[Material Manager] The TSL file of material "${tslMaterialId}" isn't loaded: a scene load loads its materials' files, other code awaits loadTslMaterialFileAsync("${tslMaterialId}") before createMaterial.`;
+      const msg = `The TSL file of material "${tslMaterialId}" isn't loaded: a scene load loads its materials' files, other code awaits loadTslMaterialFileAsync("${tslMaterialId}") before createMaterial.`;
       lerror(msg);
       throw new Error(msg);
     }
     const activeMaterialRegistry = existsOrThrow(
       loadedTslMaterialFiles.get(tslMaterialId),
-      `[Material Manager] Could not locate compiled TSL Master Graph registry entry for material ID "${id}. Materials with a TSL file must have a *.material.json file."`
+      `Could not locate compiled TSL Master Graph registry entry for material ID "${id}. Materials with a TSL file must have a *.material.json file."`
     );
 
     const staticDefines = props.staticDefines || {};
@@ -368,7 +421,7 @@ export const createMaterial = (props: MatProps) => {
         }
 
         if (masterGraphFunction === ' ' || masterGraphFunction === '') {
-          const msg = `[Material Manager] Empty TSL function export caught at socket "${nodeSocket}" for material entry ID: "${id}".`;
+          const msg = `Empty TSL function export caught at socket "${nodeSocket}" for material entry ID: "${id}".`;
           lerror(msg);
           throw new Error(msg);
         }
@@ -421,7 +474,7 @@ export const createMaterial = (props: MatProps) => {
             } else if (value.length === 2) {
               instantiatedNode = uniform(new THREE.Vector2(value[0], value[1]));
             } else {
-              const msg = `[Material Manager] Unsupported array length (${value.length}) for input "${inputKey}" in material "${id}".`;
+              const msg = `Unsupported array length (${value.length}) for input "${inputKey}" in material "${id}".`;
               lerror(msg);
               throw new Error(msg);
             }
@@ -443,7 +496,7 @@ export const createMaterial = (props: MatProps) => {
             } else if ('r' in obj && 'g' in obj && 'b' in obj) {
               instantiatedNode = uniform(new THREE.Color(obj.r, obj.g, obj.b));
             } else {
-              const msg = `[Material Manager] Unknown object footprint for input "${inputKey}" in material "${id}". Keys: ${Object.keys(obj).join(', ')}`;
+              const msg = `Unknown object footprint for input "${inputKey}" in material "${id}". Keys: ${Object.keys(obj).join(', ')}`;
               lerror(msg);
               throw new Error(msg);
             }
@@ -454,7 +507,7 @@ export const createMaterial = (props: MatProps) => {
           }
           // Everything else is forbidden
           else {
-            const msg = `[Material Manager] Unsupported input value type at socket "${nodeSocket}" for input "${inputKey}" in material entry ID: "${id}". Value: ${JSON.stringify(value)}.`;
+            const msg = `Unsupported input value type at socket "${nodeSocket}" for input "${inputKey}" in material entry ID: "${id}". Value: ${JSON.stringify(value)}.`;
             lerror(msg);
             throw new Error(msg);
           }
@@ -492,9 +545,13 @@ export const createMaterial = (props: MatProps) => {
   return mat;
 };
 
+/** What a {@link getMaterialVariant} variant changes of its base material's props. */
 export type MaterialVariantOverrides = {
+  /** Merged over the base's `params` (shallowly). */
   params?: Record<string, unknown>;
+  /** Merged over the base's `staticDefines` (shallowly): another set is another shader. */
   staticDefines?: Record<string, unknown>;
+  /** Merged over the base's `nodes`, per socket. */
   nodes?: Record<string, Record<string, unknown>>;
 };
 
@@ -526,15 +583,23 @@ const hashString = (str: string) => hashStringFNV1a(str).toString(36);
  * texture objects), since they form the variant's cache key.
  * @param baseId registered material id (created with createMaterial)
  * @param overrides params, staticDefines and TSL node inputs to override
+ * @throws when `baseId` isn't registered, or wasn't created by createMaterial
+ * @example
+ * ```ts
+ * import { getMaterialVariant } from 'aekasha';
+ *
+ * // A darker crate, shared by every caller asking for the same overrides
+ * const darkCrate = getMaterialVariant('crateMaterial', { params: { color: '#606060' } });
+ * ```
  */
 export const getMaterialVariant = (baseId: string, overrides: MaterialVariantOverrides) => {
   const base = existsOrThrow(
     materials[baseId],
-    `[Material Manager] Could not find base material "${baseId}" for a material variant.`
+    `Could not find base material "${baseId}" for a material variant.`
   );
   const baseProps = existsOrThrow(
     base.props,
-    `[Material Manager] Material "${baseId}" has no creation props (it was not created with createMaterial), so it can't have variants.`
+    `Material "${baseId}" has no creation props (it was not created with createMaterial), so it can't have variants.`
   );
 
   const variantKey = stableStringify(overrides);
@@ -572,11 +637,23 @@ export const getMaterialVariant = (baseId: string, overrides: MaterialVariantOve
 };
 
 /**
- * Returns a material or undefined based on the id
- * @returns Three.js material | undefined
+ * The registered material with the id, or undefined.
+ * @example
+ * ```ts
+ * import { getMaterial, getMeshByAppId, setMeshMaterial } from 'aekasha';
+ *
+ * const crate = getMeshByAppId('crate');
+ * const highlight = getMaterial('highlight');
+ * if (crate && highlight) setMeshMaterial(crate, highlight);
+ * ```
  */
 export const getMaterial = (id: string) => materials[id]?.resource;
 
+/**
+ * The material registry by id: each entry's material (`resource`), ref count, persistence,
+ * creation props and variant key. Read it, never write it.
+ * @internal
+ */
 export const getMaterialRegistry = () => materials;
 
 /** Whether any registered material other than `except` still holds a texture (in a map slot or a
@@ -607,6 +684,7 @@ const isTextureInUseByOtherMaterial = (
  * Whether any registered material holds `texture`, or another texture under the same registry id
  * (eg. a clone of it). Texture ref counts aren't tracked, so this is how a registered texture's
  * owner (eg. an import) can tell whether it's safe to delete.
+ * @internal
  * @param texture registered texture
  */
 export const isTextureUsedByAnyMaterial = (texture: THREE.Texture) => {
@@ -641,7 +719,8 @@ export const getKeptTextures = (): Set<THREE.Texture> => {
  * any texture under its id. Persistent registered textures, and those {@link getKeptTextures}
  * names (a sky box's, the scene's background), are never released here: the scene's release
  * takes them once nothing keeps them.
- * @param mat Target material asset.
+ * @internal
+ * @param mat the material being released
  * @param opts.keepRegistered only dispose the textures the material holds alone (eg. clones), and
  * leave registered textures for the caller to release
  */
@@ -669,9 +748,17 @@ export const deleteTexturesFromMaterial = (mat: Materials, opts?: { keepRegister
 };
 
 /**
- * Forcefully destroys one or multiple materials, running cleanup protocols.
+ * Disposes one or many registered materials and removes them from the registry, whatever their
+ * refs and persistence. An unregistered id is skipped.
  * @param id material id or array of ids
- * @param deleteTextures optionally purges texture samplers from GPU memory alongside material
+ * @param deleteTextures also release the textures only this material holds, as its last ref's
+ * release does
+ * @example
+ * ```ts
+ * import { deleteMaterial } from 'aekasha';
+ *
+ * deleteMaterial('highlight', true);
+ * ```
  */
 export const deleteMaterial = (id: string | string[], deleteTextures?: boolean) => {
   const targetIds = Array.isArray(id) ? id : [id];
@@ -696,10 +783,22 @@ const warnDroppedMaterial = (id: string) => {
 };
 
 /**
- * Saves a material instance inside the engine tracking array mapping.
- * @param material Target material or multi-material group array.
- * @param givenId Identifiable registration appId.
- * @param isPersistent Bypasses standard cross-scene cleanup loops when true.
+ * Registers a material you built, or each of an array's (as `<id>-<index>`): owned by the scene
+ * loading (or current), like {@link createMaterial}'s. An id already registered keeps its material
+ * and leaves the one passed in unregistered (the debug env warns when they differ): dispose it, or
+ * check {@link getMaterial} before creating one.
+ * @param material the material, or a mesh's material array
+ * @param givenId its registry id (an array's members get `-0`, `-1`, …). Default: each one's uuid
+ * @param isPersistent never released by its scene or its last ref
+ * @returns the registered material (for an array: the array passed in)
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ * import { getMaterial, saveMaterial } from 'aekasha';
+ *
+ * const glow =
+ *   getMaterial('glow') ?? saveMaterial(new THREE.MeshBasicNodeMaterial({ color: '#80e0ff' }), 'glow');
+ * ```
  */
 export const saveMaterial = (
   material: Materials | Materials[],
@@ -747,7 +846,7 @@ export const saveMaterial = (
 };
 
 /**
- * Checks with an identifier whether a matching material instance exists in memory.
- * @param id target identifier string
+ * Whether a material is registered under the id.
+ * @internal
  */
 export const doesMatExist = (id: string) => Boolean(materials[id]);
