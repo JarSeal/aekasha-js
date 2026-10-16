@@ -323,7 +323,7 @@ export const getActiveCameraId = () => activeCameraEntityId;
  * createViewport({
  *   id: 'pip',
  *   scene: pipScene,
- *   camera: () => getActiveCamera() ?? null,
+ *   camera: getActiveCamera,
  *   anchor: 'BOTTOM_RIGHT',
  * });
  * ```

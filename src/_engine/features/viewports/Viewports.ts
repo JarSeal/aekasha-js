@@ -49,9 +49,9 @@ export type ViewportProps = {
    * game scene renders it twice per frame (shadow maps, onBeforeRender hooks, draw counts):
    * that cost is the consumer's. */
   scene: THREE.Object3D;
-  /** The camera, or a resolver called every frame (eg. `() => getActiveCamera() ?? null`).
-   * The viewport is skipped on frames where the resolver returns null. */
-  camera: THREE.Camera | (() => THREE.Camera | null);
+  /** The camera, or a resolver called every frame (eg. `getActiveCamera`). The viewport is
+   * skipped on frames where the resolver returns null or undefined. */
+  camera: THREE.Camera | (() => THREE.Camera | null | undefined);
   /** Corner stack to place the slot in, when there is no `rect`. Default 'TOP_RIGHT'. Its
    * global class is `aekViewportStack_<anchor>` (for consumer SCSS). */
   anchor?: ViewportAnchor;
@@ -182,6 +182,16 @@ const onTransitionStop = () => {
   isLayoutDirty = true;
 };
 
+/** The layer's `<body>` observer. A mount's `unmount()` removes the layer with its container (the
+ * HUD root is in it), so the observer's next call after that disconnects it. */
+const onBodyClassChange = (_records: MutationRecord[], observer: MutationObserver) => {
+  if (layerCmp && !layerCmp.elem.isConnected) {
+    observer.disconnect();
+    return;
+  }
+  invalidateViewportLayout();
+};
+
 /** Creates the viewports layer (on the first createViewport()). */
 const ensureLayer = () => {
   if (layerCmp) return layerCmp;
@@ -198,7 +208,7 @@ const ensureLayer = () => {
   layerCmp.elem.addEventListener('transitionend', onTransitionStop);
   layerCmp.elem.addEventListener('transitioncancel', onTransitionStop);
   // Body classes (eg. the debugger drawer's) can move or hide slots without a transition
-  new MutationObserver(invalidateViewportLayout).observe(document.body, {
+  new MutationObserver(onBodyClassChange).observe(document.body, {
     attributes: true,
     attributeFilter: ['class'],
   });
@@ -340,7 +350,6 @@ export const deleteViewport = (id: string) => {
   isLayoutDirty = true;
 };
 
-/** Deletes the viewports of the scene being exited (registered on all scene exits). */
 /**
  * Deletes the viewports created with the exited scene's `sceneId` (the `viewports()` feature's
  * `exit` scene hook).
@@ -534,6 +543,52 @@ const updateQuadMaterial = (
   vp.material.needsUpdate = true;
 };
 
+/** Renders one viewport into its render target and composites it onto the canvas (the renderer's
+ * state is renderViewports()' to restore). */
+const renderViewport = (
+  vp: ViewportState,
+  renderer: THREE.Renderer,
+  delta: number,
+  pixelRatio: number,
+  prevToneMapping: THREE.ToneMapping,
+  prevColorSpace: string
+) => {
+  if (!vp.enabled || vp.isEmpty) return;
+
+  vp.props.onBeforeRender?.(vp, delta);
+  // onBeforeRender may disable it
+  if (!vp.enabled) return;
+  const camera = resolveCamera(vp);
+  if (!camera) return;
+  if (vp.props.syncCameraAspect) syncCameraAspect(vp, camera);
+
+  // 1. The viewport's scene into its own render target (not an output target: no tone
+  // mapping, working colour space)
+  renderer.setRenderTarget(vp.renderTarget);
+  renderer.autoClear = true;
+  renderer.setClearColor(vp.clearColor, vp.props.transparent === false ? 1 : 0);
+  renderer.render(vp.props.scene, camera);
+
+  // 2. Composite onto the canvas, inside the viewport rect. With tone mapping and colour
+  // space neutralised, the renderer draws the quad straight to the canvas (no internal
+  // framebuffer target and output pass). The +0.5 device px makes the renderer's
+  // `(css * pixelRatio).floor()` land exactly on the snapped pixel.
+  updateQuadMaterial(vp, prevToneMapping, prevColorSpace);
+  renderer.setRenderTarget(null);
+  renderer.autoClear = false;
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.outputColorSpace = THREE.ColorManagement.workingColorSpace;
+  renderer.setViewport(
+    (vp.drawX + 0.5) / pixelRatio,
+    (vp.drawY + 0.5) / pixelRatio,
+    (vp.drawWidth + 0.5) / pixelRatio,
+    (vp.drawHeight + 0.5) / pixelRatio
+  );
+  vp.quad.render(renderer);
+  renderer.toneMapping = prevToneMapping;
+  renderer.outputColorSpace = prevColorSpace;
+};
+
 /** Renders every enabled viewport over the canvas: the after-render hook `viewports()` adds, so
  * MainLoop's renderScene() calls it once per frame, right after the main render (and PostFX). */
 const renderViewports = (renderer: THREE.Renderer, delta: number) => {
@@ -573,49 +628,21 @@ const renderViewports = (renderer: THREE.Renderer, delta: number) => {
   renderer.getClearColor(_prevClearColor);
   renderer.getViewport(_prevViewport);
 
-  for (let i = 0; i < viewports.length; i++) {
-    const vp = viewports[i];
-    if (!vp.enabled || vp.isEmpty) continue;
-
-    vp.props.onBeforeRender?.(vp, delta);
-    // onBeforeRender may disable it
-    if (!vp.enabled) continue;
-    const camera = resolveCamera(vp);
-    if (!camera) continue;
-    if (vp.props.syncCameraAspect) syncCameraAspect(vp, camera);
-
-    // 1. The viewport's scene into its own render target (not an output target: no tone
-    // mapping, working colour space)
-    renderer.setRenderTarget(vp.renderTarget);
-    renderer.autoClear = true;
-    renderer.setClearColor(vp.clearColor, vp.props.transparent === false ? 1 : 0);
-    renderer.render(vp.props.scene, camera);
-
-    // 2. Composite onto the canvas, inside the viewport rect. With tone mapping and colour
-    // space neutralised, the renderer draws the quad straight to the canvas (no internal
-    // framebuffer target and output pass). The +0.5 device px makes the renderer's
-    // `(css * pixelRatio).floor()` land exactly on the snapped pixel.
-    updateQuadMaterial(vp, prevToneMapping, prevColorSpace);
-    renderer.setRenderTarget(null);
-    renderer.autoClear = false;
-    renderer.toneMapping = THREE.NoToneMapping;
-    renderer.outputColorSpace = THREE.ColorManagement.workingColorSpace;
-    renderer.setViewport(
-      (vp.drawX + 0.5) / pixelRatio,
-      (vp.drawY + 0.5) / pixelRatio,
-      (vp.drawWidth + 0.5) / pixelRatio,
-      (vp.drawHeight + 0.5) / pixelRatio
-    );
-    vp.quad.render(renderer);
+  // A throw (an onBeforeRender, a render) restores the renderer first, then ends the frame as
+  // before (the loop has already asked for the next one)
+  try {
+    for (let i = 0; i < viewports.length; i++) {
+      renderViewport(viewports[i], renderer, delta, pixelRatio, prevToneMapping, prevColorSpace);
+    }
+  } finally {
+    // The scissor test is never touched: a leaked scissor breaks PMREM, three #31777
     renderer.toneMapping = prevToneMapping;
     renderer.outputColorSpace = prevColorSpace;
+    renderer.setViewport(_prevViewport);
+    renderer.setClearColor(_prevClearColor, prevClearAlpha);
+    renderer.autoClear = prevAutoClear;
+    renderer.setRenderTarget(prevRenderTarget, prevCubeFace, prevMipmapLevel);
   }
-
-  // Restore (the scissor test is never touched: a leaked scissor breaks PMREM, three #31777)
-  renderer.setViewport(_prevViewport);
-  renderer.setClearColor(_prevClearColor, prevClearAlpha);
-  renderer.autoClear = prevAutoClear;
-  renderer.setRenderTarget(prevRenderTarget, prevCubeFace, prevMipmapLevel);
 };
 
 /**

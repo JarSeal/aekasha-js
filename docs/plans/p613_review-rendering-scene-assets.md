@@ -1216,6 +1216,33 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
    resizer (the per-frame code in scope); its findings fixed or listed here.
 4. `yarn verify:scenes`.
 
+**As built** (one commit per section):
+
+- **Section 1 (step 1):**
+  - **VP1:** the per-viewport work is `renderViewport` (one viewport's render and composite), and
+    `renderViewports`' loop over it sits in a `try` whose `finally` restores everything it saved,
+    the tone mapping and output colour space included (a throw in the composite left them
+    neutralised). The throw still ends the frame, as before (`runFrame` has already asked for the
+    next one). No allocation; no debug-gated call in the block.
+  - **VP2:** `unmount()` removes the layer with the mount's container (the HUD root is in it), and
+    the transition listeners are on the layer, so they go with it. Only the `<body>`
+    `MutationObserver` stayed: its callback (`onBodyClassChange`) disconnects it once the layer
+    isn't in the document (on the next body class change). No teardown hook for features: there
+    is no such contract, and this is its only user.
+  - **VP3 (the stale block):** `deleteSceneViewports`' first JSDoc block gone. The four types'
+    summaries are step 2's.
+  - **VP5:** `ViewportProps.camera`'s resolver returns `Camera | null | undefined` (a widening:
+    no caller breaks), so `getActiveCamera` is one as it is. `getActiveCamera`'s `@example` is
+    `camera: getActiveCamera`; the root CLAUDE.md (`eg. getActiveCamera`) and the Hub's guide
+    (`() => getActiveCamera()`) were already right for it.
+  - **Tests:** `features/viewports/Viewports.test.ts` (4, fake DOM and renderer): a throw in a
+    second viewport's `onBeforeRender` and one in the composite both leave the renderer as it
+    was, a resolver returning `undefined` renders nothing, the observer disconnects once the
+    layer has left the document. The first, second and fourth checked to fail without the fix
+    (the third is a type check: `tsc`).
+  - **Checks:** `tsc` (both), the folder's and `Camera.ts`' lint, `yarn test` (74 files, 567
+    passed, the `@example` check included).
+
 ### Phase 8: the Hub, CLAUDE.md, readme, and what's filed
 
 1. The rendering, scenes and assets, and viewports feature pages and the examples that include
