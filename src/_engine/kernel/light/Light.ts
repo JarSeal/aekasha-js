@@ -542,17 +542,21 @@ export const disposeLight = (entityId: number, ecsWorld?: ECSWorld) => {
 
 // --- DEBUG LIGHT HELPERS ---
 
-/**
- * The lights' debug GUI module.
- * @internal
- */
-export type LightGUIModule = typeof import('./debug/_dbg__LightGUI');
+type LightGUIModule = typeof import('./debug/_dbg__LightGUI');
+
+/** The lights' debug GUI, loaded by the boot's debug step (debug env only; `null` otherwise) */
+let lightDebugGUI: DebugModuleRef<LightGUIModule> | null = null;
 
 /**
- * The lights' debug GUI, loaded by the boot's debug step (debug env only; `null` otherwise).
+ * What the Lights tab saved for a light in a scene (debug env; `undefined` otherwise, or when
+ * nothing is saved), for the property loader to merge over its creation props. Typed `object`,
+ * so no exported type names the debug module's.
  * @internal
  */
-export let lightDebugGUI: DebugModuleRef<LightGUIModule> | null = null;
+export const getSavedLightDebugProps = (
+  appId: string,
+  sceneId: string | null
+): object | undefined => useDebug(lightDebugGUI)?.loadLightDebugData(appId, sceneId);
 
 /**
  * Whether the light helpers show (debug env; `false` otherwise).

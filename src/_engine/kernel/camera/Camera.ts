@@ -36,17 +36,21 @@ let mainCameraEntityId: number | null = null;
 type DebugCameraModule = typeof import('./debug/_dbg__DebugCamera');
 type CameraHelpersModule = typeof import('./debug/_dbg__CameraHelpers');
 
-/**
- * The cameras' debug GUI module.
- * @internal
- */
-export type CameraGUIModule = typeof import('./debug/_dbg__CameraGUI');
+type CameraGUIModule = typeof import('./debug/_dbg__CameraGUI');
+
+/** The cameras' debug GUI, loaded by the boot's debug step (debug env only; `null` otherwise) */
+let cameraDebugGUI: DebugModuleRef<CameraGUIModule> | null = null;
 
 /**
- * The cameras' debug GUI, loaded by the boot's debug step (debug env only; `null` otherwise).
+ * What the Cameras tab saved for a camera in a scene (debug env; `undefined` otherwise, or when
+ * nothing is saved), for the property loader to merge over its creation props. Typed `object`,
+ * so no exported type names the debug module's.
  * @internal
  */
-export let cameraDebugGUI: DebugModuleRef<CameraGUIModule> | null = null;
+export const getSavedCameraDebugProps = (
+  appId: string,
+  sceneId: string | null
+): object | undefined => useDebug(cameraDebugGUI)?.loadCameraDebugData(appId, sceneId);
 
 let debugHelpers: DebugModuleRef<CameraHelpersModule> | null = null;
 let debugCamera: DebugModuleRef<DebugCameraModule> | null = null;

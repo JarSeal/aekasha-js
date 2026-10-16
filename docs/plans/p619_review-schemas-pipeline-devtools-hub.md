@@ -58,6 +58,8 @@ Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every 
   (`_DONE_p070_post-fx-system.md`, `_DONE_p071_post-fx-debugger-ui.md`): keep what they explain
   (params as raw JSON values, not uniform nodes; `paramsMeta` as debugger-only hints) and drop the
   paths.
+- p613 Phase 8 (`yarn hub:build`, from before p613): `UnionToIntersection`
+  (`schemas/FeatureSchemas.ts:32`, named by `FeatureSchemaShape`) is a `notExported`.
 
 ## Done when
 

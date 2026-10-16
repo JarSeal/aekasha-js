@@ -39,6 +39,10 @@ Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every 
   reads p612's cached id (default world only).
 - p612 Phase 7: `CharacterTypes.ts:142`'s `{@link getBodyKind}` links nowhere (`yarn hub:build`
   warns): TypeDoc resolves a link in the file's scope, and the file doesn't import the name.
+- p613 Phase 8 (`yarn hub:build`, from before p613; p610 Phase 7 listed them and left them):
+  three `notExported` in `features/character/`, `CharacterBrainKinds` and `KindSpec` (named by
+  `CharacterBrainSpec`, `ActorTypes.ts:106`) and `PlayerBrainCommonActions` (named by
+  `DirectionalBrainActions`, `brains/PlayerBrains.ts:43`).
 
 ## From p611 (2026-10-14)
 

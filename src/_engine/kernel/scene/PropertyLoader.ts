@@ -1,6 +1,5 @@
-import { useDebug } from '../config/DebugModules';
-import { cameraDebugGUI } from '../camera/Camera';
-import { lightDebugGUI } from '../light/Light';
+import { getSavedCameraDebugProps } from '../camera/Camera';
+import { getSavedLightDebugProps } from '../light/Light';
 import { IS_DEBUG_ENV } from '../config/Config';
 import { getCurrentSceneId, getLoadingSceneId } from './Scene';
 
@@ -48,8 +47,8 @@ const getSavedDebugProps = (appId: string, propType: PropType) => {
   const sceneId = getLoadingSceneId() ?? getCurrentSceneId();
   switch (propType) {
     case 'LIGHT':
-      return useDebug(lightDebugGUI)?.loadLightDebugData(appId, sceneId) || {};
+      return getSavedLightDebugProps(appId, sceneId) || {};
     case 'CAMERA':
-      return useDebug(cameraDebugGUI)?.loadCameraDebugData(appId, sceneId) || {};
+      return getSavedCameraDebugProps(appId, sceneId) || {};
   }
 };

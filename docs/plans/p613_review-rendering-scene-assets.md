@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-7 implemented
+Status: in progress | Phases 0-8 implemented
 Category: Refactoring, Documentation, Rendering, Assets
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -1317,7 +1317,7 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
     tolerance, `ImportRegistry.js` +16 B in both builds (Phase 6's IM1 retry, whose bundle wasn't
     recorded then), the rest ±2 B gzip.
 
-### Phase 8: the Hub, CLAUDE.md, readme, and what's filed
+### Phase 8: the Hub, CLAUDE.md, readme, and what's filed — done
 
 1. The rendering, scenes and assets, and viewports feature pages and the examples that include
    these files' regions, checked against the code (`loadScene`'s result and queue, the scene
@@ -1376,6 +1376,25 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
   - Not filed: `getScene`'s and `createSceneLoader`'s positional booleans and H4's world
     parameters (kept by decision, documented); the search index warning and the `EngineRapier.js`
     key swap (already in p619's Inputs).
+- **Step 4 (`yarn hub:build`):**
+  - **Two of the three `notExported` were still there:** Phase 4 exported `CameraGUIModule` and
+    `LightGUIModule` `@internal`, but each is `typeof import()` of a `_dbg__` module TypeDoc
+    leaves out, so the warning moved to `__module`. Now the refs (`cameraDebugGUI`,
+    `lightDebugGUI`) and their module types are private again, and `PropertyLoader.ts`, their one
+    outside reader, calls `getSavedCameraDebugProps` / `getSavedLightDebugProps` (`@internal`,
+    returning `object`, so no exported signature names a `_dbg__` type). Still behind
+    `IS_DEBUG_ENV` in the loader, so production folds them. The API baseline's change (four
+    removed, two added, all `@internal`, on no entry) is recorded with Phase 9's
+    `verify:baselines`.
+  - The third, the augmented `"three/tsl".Node`, is gone (Phase 5's `THREE.TextureNode`).
+  - **The build:** exit 0, 366 pages, no dead link, 23 warnings, none in this plan's folders and
+    none new (this branch changed no file a warning points at, but `Profiler.ts`, whose
+    `AnyStatsSource` p618 already lists). Each has an owner: p614 (the four proxy APIs, and now
+    p610's three character types), p616 (`Vec2Node`, `Vec3Node`, `LodTarget`), p617 (the action
+    links), p618 (the five debug types), p619 (`ComponentDataMap`, the search index at 1.28 MB,
+    and now `UnionToIntersection`), p621 (`getRandomStream`).
+  - **Checks:** `tsc` (both), the three files' lint, `yarn test` (74 files, 569 passed), the docs
+    ratchet recorded (`kernel/camera` 25 / 25, `kernel/light` 16 / 16; exports 1794 / 2286).
 
 ### Phase 9: versions and done
 
