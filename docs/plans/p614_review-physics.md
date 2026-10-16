@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented
+Status: in progress | Phases 0-1 implemented
 Category: Refactoring, Documentation, Physics
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md, p511_network-transport-and-replication.md (the transport interface)
@@ -519,7 +519,7 @@ WebGPU):
   `MESSAGE_BATCH` copy of the whole buffer is the clearest win: with 14 bodies it costs more than
   the write-back itself (106 kB for 728 B of live slots).
 
-### Phase 1: the bugs (D4)
+### Phase 1: the bugs (D4) — done
 
 1. A1 and W7 with the transport's error contract (in `PhysicsAPI.ts` for now; Phase 2 moves it).
    `PhysicsWorkerRequests.test.ts`' `it.fails` become `it`.
@@ -569,9 +569,13 @@ As built (2026-10-17):
   has two (`:126`, `:169`) and the gym a seventh (`:654`). In the gym the players pass through the
   same locomotion states as before (the runner's note) and end on the floor elsewhere; nothing
   falls through. No other scene moved, so no scene had a worker error hidden by A1 (§4 risk 4).
-- **Step 3 waits for the hand check** (D4b, yours): the gym's moving platforms and carousels, and
-  `scene01` / `scene01V2`, in both worker targets. Then
-  `yarn verify:scenes --update --only scene01,scene01V2,thirdPersonGymScene`.
+- **Step 3 (D4b):** the hand check (the gym's moving platforms and carousels, `scene01` /
+  `scene01V2`, both worker targets) found nothing to change: the scenes keep their `friction: 0`.
+  `yarn verify:scenes --update --only scene01,scene01V2,thirdPersonGymScene` recorded the 12 runs
+  (2026-10-17, at `c89535c`): probe hashes `7788c6ec` (`scene01`), `803f291b` (`scene01V2`) and
+  `84a78084` (the gym, the same in all three targets), the gym's character path hash `26f43551`
+  (`MAIN_THREAD`). Reason for the new baselines: R1's fix, the colliders get the friction 0 their
+  code asks for.
 
 ### Phase 2: the transport and the stop (D5, D6)
 

@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 // WORKER_THREAD requests against the real worker module and the real Rapier (the compat build
 // runs in Node), on this thread: a fake `Worker` loads the worker module with a stubbed `self` and
-// structured-clones every message both ways on a macrotask, as postMessage does.
+// structured-clones every message both ways on a macrotask, as postMessage does. Both sides talk
+// through their transports (p614 D5), as in the browser. The worker's handler never rejects (its
+// catch replies ERROR); if it did, Vitest would fail the run on the unhandled rejection.
 
 const bridge = vi.hoisted(() => {
   type Listener = (event: { data: unknown }) => unknown;
@@ -10,8 +12,8 @@ const bridge = vi.hoisted(() => {
     /** Queue the worker's messages until `releaseReplies()`: a delete between a request and its reply. */
     holdReplies: false,
     held: [] as unknown[],
-    /** What the worker's message handler rejected with (a browser reports it as unhandled). */
-    workerRejections: [] as unknown[],
+    /** Whether the main thread terminated the worker. */
+    terminated: false,
     /** Every message posted to the worker, as it arrived there. */
     sent: [] as { type: number; [key: string]: unknown }[],
     instance: undefined as { deliver: (data: unknown) => void } | undefined,
@@ -26,13 +28,19 @@ const bridge = vi.hoisted(() => {
   class InProcessWorker {
     onmessage: ((event: { data: unknown }) => void) | null = null;
     onerror: ((err: unknown) => void) | null = null;
+    /** The worker module's listeners on its `self`. */
     private listeners: Listener[] = [];
+    /** The main thread's listeners on this worker (its transport's). */
+    private mainListeners: Listener[] = [];
 
     constructor() {
       state.instance = this;
       vi.stubGlobal('self', {
         crossOriginIsolated: false,
         addEventListener: (_type: string, fn: Listener) => this.listeners.push(fn),
+        removeEventListener: (_type: string, fn: Listener) => {
+          this.listeners = this.listeners.filter((listener) => listener !== fn);
+        },
         postMessage: (message: unknown) => {
           const copy = structuredClone(message);
           if (state.holdReplies) state.held.push(copy);
@@ -43,21 +51,31 @@ const bridge = vi.hoisted(() => {
     }
 
     deliver(data: unknown) {
+      if (state.terminated) return;
       this.onmessage?.({ data });
+      for (const fn of this.mainListeners) fn({ data });
+    }
+
+    addEventListener(_type: string, fn: Listener) {
+      this.mainListeners.push(fn);
+    }
+
+    removeEventListener(_type: string, fn: Listener) {
+      this.mainListeners = this.mainListeners.filter((listener) => listener !== fn);
     }
 
     postMessage(message: unknown) {
+      if (state.terminated) return;
       const copy = structuredClone(message);
       state.sent.push(copy as (typeof state.sent)[number]);
       setTimeout(() => {
-        for (const fn of this.listeners) {
-          const result = fn({ data: copy });
-          if (result instanceof Promise) result.catch((err) => state.workerRejections.push(err));
-        }
+        for (const fn of this.listeners) fn({ data: copy });
       });
     }
 
-    terminate() {}
+    terminate() {
+      state.terminated = true;
+    }
   }
 
   return { state, InProcessWorker };
@@ -156,14 +174,11 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
   // A1: the worker's handler returns the COLL / RIGID / JOINT switch's promise without awaiting it,
   // so a throw there skips its catch (no ERROR reply), and the facade ignores an ERROR's requestId
   it('A1: a request the worker fails rejects, and the worker replies ERROR', async () => {
-    bridge.state.workerRejections.length = 0;
     const creation = createCollider(BROKEN_TRIMESH);
     expect(await settlesWithin(creation, 300)).toMatch(/^rejected: .*indices/);
-    expect(bridge.state.workerRejections).toEqual([]);
   });
 
   it('A1: a createPhysicsEntity the worker fails rejects', async () => {
-    bridge.state.workerRejections.length = 0;
     const world = new ECSWorld({ id: 'p614-a1' });
     const creation = createPhysicsEntity(
       BROKEN_TRIMESH,
@@ -173,7 +188,6 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
       world
     );
     expect(await settlesWithin(creation, 300)).toMatch(/^rejected: .*indices/);
-    expect(bridge.state.workerRejections).toEqual([]);
   });
 
   it('A10: a body whose collider fails is deleted', async () => {

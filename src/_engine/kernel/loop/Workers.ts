@@ -8,8 +8,9 @@ export type InitWorkerOptions<T> = {
   WorkerClass: new (options?: { name?: string }) => Worker;
   /** The worker's name (devtools, the error messages). */
   name: string;
-  /** The worker's messages after the handshake. */
-  onMessage: (event: MessageEvent<T>) => void;
+  /** The worker's messages after the handshake. Leave it out when the caller listens itself once
+   * this resolves (a transport's `addEventListener`, eg. physics'). */
+  onMessage?: (event: MessageEvent<T>) => void;
   /** The worker's errors after the handshake. */
   onError: (err: ErrorEvent) => void;
   /** The handshake's status. Default `'INIT_READY'`. */
@@ -62,7 +63,7 @@ export const initWorker = async <T>({
         clearTimeout(timeoutId);
         onReady?.(event.data);
         // Setup long-term message and error handlers
-        worker.onmessage = onMessage;
+        worker.onmessage = onMessage ?? null;
         worker.onerror = onError;
         resolve(worker);
       }

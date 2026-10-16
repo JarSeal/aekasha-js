@@ -4,6 +4,7 @@ import type { LoopState } from '../../../kernel/loop/MainLoop';
 import type {
   EngineAPIType,
   PhysicsBodyActivity,
+  PhysicsDownProtocol,
   PhysicsState,
   PhysicsUpProtocol,
   WorldAPI,
@@ -31,8 +32,15 @@ import { physicsSwitchColl } from './PhysicsSwitchColl';
 import { physicsSwitchJoint } from './PhysicsSwitchJoint';
 import { physicsSwitchRigid } from './PhysicsSwitchRigid';
 import { physicsSwitchWorld } from './PhysicsSwitchWorld';
+import { createWorkerScopeTransport } from '../transport/WorkerScopeTransport';
 
 const STATUS_READY_STRING = 'INIT_READY';
+/** The channel to the main thread (p614 D5): every message both ways goes through it. Its first
+ * message is initWorker's handshake. */
+const transport = createWorkerScopeTransport<
+  PhysicsDownProtocol | { status: string },
+  PhysicsUpProtocol
+>();
 let engAPI: EngineAPIType;
 let physicsWorldAPI: WorldAPI;
 let workerPhysicsState: PhysicsState | undefined;
@@ -319,9 +327,8 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
   }
 };
 
-self.addEventListener('message', (event: MessageEvent<PhysicsUpProtocol>) =>
-  handleMessage(event.data)
-);
+// handleMessage never rejects: every throw replies ERROR
+transport.onMessage((data) => void handleMessage(data));
 
 const sendMessage = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -334,14 +341,12 @@ const sendMessage = (
   if (data.isOneWay && isError) return;
   const requestId = data.requestId;
   if (requestId === undefined) return sendMessageSimple(message, transfer);
-  return transfer
-    ? self.postMessage({ ...message, requestId }, transfer)
-    : self.postMessage({ ...message, requestId });
+  return transport.send({ ...message, requestId }, transfer);
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sendMessageSimple = (message: any, transfer?: Transferable[]) =>
-  transfer ? self.postMessage(message, transfer) : self.postMessage(message);
+  transport.send(message, transfer);
 
 /** Writes every slotted rigid body's transform into the hot-path buffer after a step, then
  * (MESSAGE_BATCH fallback only) pushes a fresh copy to the main thread as one Transferable
@@ -467,4 +472,4 @@ const getSubType = (type: PhysicsProtocolType) => {
 };
 
 // Automatically send STATUS_READY_STRING when this file is executed (handshake)
-self.postMessage({ status: STATUS_READY_STRING });
+transport.send({ status: STATUS_READY_STRING });

@@ -171,6 +171,8 @@ import {
 } from '../../kernel/render/RayDebugTypes';
 import type { ShapeType } from '@dimforge/rapier3d-compat';
 import { existsOrThrow } from '../../utils/Assert';
+import type { PhysicsTransport } from './transport/PhysicsTransport';
+import { createWorkerTransport } from './transport/WorkerTransport';
 
 let physicsState: PhysicsState = {
   enabled: false,
@@ -197,7 +199,9 @@ let physicsState: PhysicsState = {
   maxBodies: 2048,
   stepStatsEnabled: false,
 };
-let worker: Worker | null = null;
+/** The channel to the worker (WORKER_THREAD mode, from initPhysics): every message to it and from
+ * it goes through this (p614 D5). */
+let workerTransport: PhysicsTransport<PhysicsUpProtocol, PhysicsDownProtocol> | null = null;
 let physicsWorld: WorldAPI = { step: () => {} } as unknown as WorldAPI;
 let physicsWorldEnabled = false;
 let engineInitiated = false;
@@ -314,12 +318,14 @@ export const initPhysics = async (doNotCreateWorld?: boolean) => {
   } else if (target === 'WORKER_THREAD') {
     // Imported here, not at load: an app without physics, or on the main thread, never loads it
     const { default: PhysicsWorker } = await import('./worker/PhysicsWorker?worker');
-    worker = await initWorker<PhysicsDownProtocol>({
+    // No onMessage: the transport listens once the handshake is done
+    const startedWorker = await initWorker<PhysicsDownProtocol>({
       WorkerClass: PhysicsWorker,
       name: 'Physics Worker',
-      onMessage: onWorkerMessage,
       onError: onWorkerError,
     });
+    workerTransport = createWorkerTransport<PhysicsUpProtocol, PhysicsDownProtocol>(startedWorker);
+    workerTransport.onMessage(onWorkerMessage);
     const worldCreated = await messageWorkerAsync<boolean>({
       type: PhysicsProtocolType.INIT_PHYSICS,
       physicsState,
@@ -842,7 +848,7 @@ const isWritePending = (visibleAt: number) =>
   !transformBuffer || transformBuffer.getStepIndex() < visibleAt;
 
 const messageWorker = (message: PhysicsUpProtocol) => {
-  if (!worker) return;
+  if (!workerTransport) return;
   if (substepCommandCapture) {
     // Cloned now, as postMessage would: callers reuse scratch vectors (e.g. a platform's
     // kinematic target), and the STEP message is only cloned after every sub-step's systems
@@ -850,14 +856,14 @@ const messageWorker = (message: PhysicsUpProtocol) => {
     substepCommandCapture.push(structuredClone(message));
     return;
   }
-  worker.postMessage(message);
+  workerTransport.send(message);
 };
 
 /** A request to the worker: settled by its reply, or rejected by the worker's ERROR for it (a throw
  * while handling it, see onWorkerMessage). */
 const messageWorkerAsync = async <T>(message: PhysicsUpProtocol) =>
   new Promise<T>((resolve, reject) => {
-    if (!worker) {
+    if (!workerTransport) {
       return reject(
         new Error(
           'Worker not found in messageWorkerAsync. Make sure you have initialized the worker before using messageWorkerAsync.'
@@ -865,7 +871,7 @@ const messageWorkerAsync = async <T>(message: PhysicsUpProtocol) =>
       );
     }
     const requestId = createNewResolver(resolve, { reject });
-    worker.postMessage({ ...message, requestId });
+    workerTransport.send({ ...message, requestId });
   });
 
 /** A request that runs where a one-way command would (messageWorker): inside an APP_PHYSICS_STEP
@@ -884,8 +890,7 @@ const onWorkerError = (err: ErrorEvent) => {
   lerror(`Physics worker error: ${err.message}`);
 };
 
-const onWorkerMessage = (event: MessageEvent<PhysicsDownProtocol>) => {
-  const data = event.data;
+const onWorkerMessage = (data: PhysicsDownProtocol) => {
   const type = data.type;
   const requestId = data.requestId;
 
@@ -1398,7 +1403,7 @@ export const createPhysicsWorld = async (
  * synchronously, so it resolves right away.
  */
 export const flushPhysics = async () => {
-  if (physicsState.workerTarget !== 'WORKER_THREAD' || !worker) return;
+  if (physicsState.workerTarget !== 'WORKER_THREAD' || !workerTransport) return;
   await messageWorkerAsync<FlushResponse>({ type: PhysicsProtocolType.FLUSH });
 };
 
