@@ -4,6 +4,84 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-16 — review-rendering-scene-assets
+
+### Engine 5.4.0 (Golden Hour)
+
+The kernel's rendering, scenes, cameras, lights, meshes and assets, the assets worker, the glTF import path, PostFX and the viewports are reviewed file by file (p613): the bugs found are fixed, every export is documented, dead code is removed and two more parts of the engine leave the first download. The scene runner gives every scene the same probe hash and snapshot as on `main`, in all three physics targets and in prod test mode. One behaviour change is on purpose, under Changed. No public export is removed or renamed.
+
+**Added**
+
+- `loadScene` resolves `true` once the scene is current and `false` when the load failed or was replaced (it resolved `void`). It never rejects. The mount handle's `loadScene` returns the same, and `false` after `unmount()` and on a fallback handle.
+- `registerOnSceneEnter`, `registerOnSceneExit`, `registerOnAllSceneEnters` and `registerOnAllSceneExits` return a remover, which removes the listener only while it's still the one under its key. Each key still holds one listener: registering again replaces it (a scene file registers on every visit).
+- `registerOnAllSceneEnters`: the correct name of `registerOnAllSceneEnterings` (deprecated below).
+- On `aekasha`: `decGeometryRef` (the pair of `incGeometryRef`), and the types `TextureArrayInfo` (`getTextureArrayInfo`'s result) and `UpdateLoaderStatusFn` (`SceneLoader` names it).
+- On `aekasha/viewports`: `setViewportInteractive`, and the types `ViewportAnchor` and `ViewportRect`. On `aekasha/postfx`: the types `PostFxPassContext`, `PostFxPassApi`, `PostFxLiveParams` and `PostFxPassProps`. On `aekasha/schemas`: the type `PostFxParamMeta`. Each is named by a public signature.
+- JSDoc on every export of `kernel/render`, `kernel/scene`, `kernel/camera`, `kernel/light`, `kernel/mesh`, `kernel/assets` (its `import/` and `worker/` too), `features/postfx` and `features/viewports`, with `@example`s on the entry functions (the deprecated loaders aside).
+
+**Changed**
+
+- **Behaviour change:** one scene load runs at a time. A `loadScene` call during a load used to start at once, so both loads ran every step interleaved (both ran the exit hooks, both created cameras and loaded assets, and the later one became current while the earlier one's hooks still ran). Now it waits for the running load, and a later call replaces the waiting one, which resolves `false` without loading. The waiting load starts as soon as the running one settles. Never await `loadScene` from scene code or a scene hook: the call would wait for the load it runs in.
+- A failed load keeps the page working: the inputs, the canvas's pointer events, the debugger and the draggable windows are back as before the load, and the scene that was current stays current (torn down if the failure came after the teardown). An unknown scene, scene file or loader now resolves `false` before anything changes; it used to reject and leave the loading state set. A mount whose first scene fails shows its `fallbackImage` instead of a blank canvas.
+- The glTF import path (`kernel/assets/import/`) loads with an `import()` the first time a scene's data names an imported asset, or app code calls `importAssetAsync`, instead of being in every first download. A scene file's own imports are still released with its scene.
+- The draggable windows (`ui/DraggableWindow.ts`) are no longer in every production build: they add their scene hooks and the restore of their saved states on their first use, the restore as a step after `start` in every build. Their scene-change handling runs at the start of a load (before the exit hooks, so a window goes before the entities it shows) and once the scene has entered.
+- The production build's first download is smaller: the app's main chunk (`assets/index.js`) is 383,979 B gzip, 11.1 kB less than on `main`, and its CSS 1.6 kB (was 2.7); the banner embed's main chunk is 293,297 B (12.1 kB less) and its CSS 0.9 kB (was 2.0). The new `ImportRegistry.js` chunk (4.6 kB gzip in the app) loads with the first scene that imports a model.
+- `isWebGPURenderer()` and `RendererOptions.currentApi` come from the backend three picked once `createRenderer` has resolved (before, they said WebGPU wherever `navigator.gpu` exists, also when three fell back to WebGL 2 for lack of an adapter). `setRendererOptions` isn't `async`. The shadow map type defaults to PCF (three's own) and is always applied, so the Renderer debug tab's saved type applies in every app.
+- `getGeometry(id)` returns `undefined` for an unregistered id (it threw a `TypeError`), so `createMeshEntity`'s own error message shows and a scene's unknown geometry id is skipped.
+- Wider types, no caller breaks: `MeshProps.mat` takes a registered material's id (`createMeshEntity` already did), `MeshProps.quaternion` a plain `{ x, y, z, w }`, `ViewportProps.camera`'s resolver may return `undefined` (so `camera: getActiveCamera` works), and `LightProps.shadowPreset` the string `'LOW' | 'MEDIUM' | 'HIGH' | 'ULTRA'` (it was typed with a string enum on no entry, which no literal fits). `Materials` is `THREE.Material` (it listed every material class).
+- A light's `color` / `groundColor` and the scene's `backgroundColor` take a `{ r, g, b }` colour (0-255, sRGB, as the asset JSON allows); it rendered white.
+- The scene JSON's `backgroundTexture` takes a texture id only. An inline texture object passed validation and reached the scene's background as plain JSON; no scene used it.
+- A missing texture input of a TSL material warns and samples one white texel (it sampled three's empty texture).
+- A material's last release, and a scene's asset release, keep the textures the scene's background and environment use and those a `retainedTextures` hook names: a texture shared with them was disposed while showing. A light's cookie texture isn't covered.
+- The looper indexes don't restart at 0 when a scene's loopers are cleared on its exit, so an index kept from an earlier visit can't delete a looper of the next one, and an index out of range does nothing.
+- `loadTexture` and `loadTextures` moved to `kernel/assets/TextureSync.ts` (the same names on `aekasha`).
+- Internal (no entry exports them): dead code removed: `Disposal.ts`, `deleteScene`, the scene resizers, `getAllScenes`, `setSceneOpts`, `getCurrentSceneOpts`, the `getScene*Loopers` getters, `getCurrentCamera` / `getCurrentCameraId` (use `getActiveCamera`), `syncCameraHelpersFromLS`, the camera's debug LS types, `getLightTargetTransform`, `setLightTargetPosition`, `aimLightAtEntity`, `setLightShadowEnabled`, the `ShadowQuality` enum, `slerp`, `GRAVITY_DOWN_NORMAL`, `isJPG`, `isPNG`, `freeGeometryGPUMemory`, `getAllGeometries`, the three `set*Persistence`, `incTextureRef` / `decTextureRef`, `updateAllMaterials`, `getMaterials`, `getAllMaterials`, `getTextures`, `togglePostFx`, `togglePostFxPass`, `invalidatePostFxPipeline`, `getCurrentSceneLoaderId`, `setCurrentSceneLoader`. `RENDERER_SHADOW_OPTIONS` moved into the renderer's debug module, `DEBUG_HELPER_USER_DATA_KEY` into `kernel/render/Object3DHelpers.ts` (with `isDebugHelperObject`), and what a load builds from the scene's data into `kernel/scene/SceneDataLoader.ts`. One FNV-1a hash (`utils/Hash.ts`) replaces four copies, with the same values, so the random streams draw the same numbers.
+
+**Fixed**
+
+- A scene revisit reused textures the previous visit's release had disposed: the load wrote the texture objects into the cached scene data's material params.
+- `smoothDampVec3` changed the caller's `target` whenever `maxSpeed` clamped.
+- A camera's `zoom` applied only from the next resize.
+- A camera created in another world could become the active camera, or clear it when deleted; `setCurrentCamera` with an id that isn't a camera threw.
+- `removeFromGroupEntity`'s `deleteMeshes` disposed the child's shared geometry; `disposeGroup` and `removeFromGroupEntity` looked a child's entity up in the default world, not the group's; every scene exit deleted persistent groups too.
+- `setCurrentScene` ignored `backgroundColor: 0`.
+- `loadTexture` without an id registered its texture twice (a release disposed it twice); the synchronous loaders' load errors threw where nobody could catch them (they log now); `loadTextures` didn't register its `EMPTY_TEXTURE` stand-ins and, with `THROW_ERROR`, never counted a failed file.
+- `prewarmGeometry` leaked a material; it and `preWarmMesh` made a camera per call and left a failed compile as an unhandled rejection.
+- `buildTextureArray` kept the members that had loaded when another failed; `setTextureArrayLayer` wrote into an array deleted while its member loaded.
+- A failed chunk load of the KTX2 loader or the meshopt decoder broke KTX2 or meshopt for the rest of the page; the next call now loads again.
+- A throw in a viewport's `onBeforeRender` or render left the renderer's target, viewport, tone mapping and colour space changed; a viewport syncing a camera entity's aspect rendered stretched after the canvas was resized; the viewports' `<body>` observer outlived an unmounted engine.
+
+**Deprecated** (removed in engine 6.0.0)
+
+- `registerOnAllSceneEnterings`: use `registerOnAllSceneEnters`.
+- `loadTexture` and `loadTextures`: use `loadTextureAsync`, which loads the asset pipeline's output (KTX2 too) in the assets worker; await several with `Promise.all`.
+- `SceneHooks.sceneDeleted`: never called, nothing replaces it.
+- `LoadSceneProps.updateLoaderStatusFn`: never read; give the loader its own in `createSceneLoader`.
+- `removeFromGroupEntity`'s `deleteGeometries`, `deleteMaterials` and `deleteTextures`: never read; `deleteMeshes` releases a mesh entity's geometry, materials and their textures.
+
+### App 1.12.2 (Preschooler)
+
+**Changed**
+
+- `scene01` and `scene01V2` load their textures with `loadTextureAsync` instead of the deprecated `loadTexture(s)`; `scene01`'s batch example awaits them. The character visual of the gym and the top-down scene is `createCharacterVisualAsync`, awaiting its texture.
+- The Hub tab of the examples uses `registerOnAllSceneEnters`.
+
+### Project
+
+**Added**
+
+- Tests for the scene loader (the queue, a failed load's cleanup, the cached params over a revisit, the lazy import registry), the scene loopers and listeners, groups, cameras, lights, meshes, geometries, materials, the scene asset release, the synchronous texture loaders, texture arrays, the decoder imports, the viewports, `smoothDampVec3`, `toThreeColor`, the boot's after-start hooks, the draggable windows' lazy hooks and the hash. `schemas/RuntimeTypes.test.ts` checks that each asset JSON's type fits its runtime props type (`tsc`).
+- Issue files: `failed-scene-load-keeps-its-assets.md`, `postfx-rebuilds-on-camera-change.md` and `three-animation-classes-in-builds-without-models.md` (what's left of the import path in a build without models).
+
+**Changed**
+
+- The Hub: the rendering, scenes and assets, viewports and smallest-build pages, and the embed walkthrough.
+- The root `CLAUDE.md` (Bootstrap flow, the data pipeline's scene loads, Viewports, Snapshots, Engine features' `retainedTextures`), the sky box's `CLAUDE.md` and the readme's scene system line.
+- `.schemas/scene.schema.json` regenerated (`backgroundTexture`).
+- `yarn verify:baselines`: `api.json`, `docs.json` (the scope fully documented) and both bundle baselines.
+- The scene loopers issue file's "Also seen" (the scene resizers) is closed: they're removed.
+- p614, p615, p618 and p619 have this review's findings in their Inputs.
+
 ## 2026-10-15 — review-ecs-loop-config-init
 
 ### Engine 5.3.0 (Golden Hour)
