@@ -14,7 +14,10 @@ type GLTFJson = {
 // Runs on both threads (main-thread imports and the assets worker): keep it free of imports that
 // touch `window`/`document` (eg. Config.ts, Logger.ts, kernel/config/DebugModules.ts).
 
-/** One extracted primitive: its (not yet registered) geometry, glTF material and metadata. */
+/**
+ * One extracted primitive: its (not yet registered) geometry, glTF material and metadata.
+ * @internal
+ */
 export type ExtractedPrimitive = {
   geometry: THREE.BufferGeometry;
   /** Only read for texture registration, then disposed with the rest of the glTF. */
@@ -26,6 +29,11 @@ export type ExtractedPrimitive = {
   lodChain?: ExtractedLodChain;
 };
 
+/**
+ * {@link extractPrimitives}' result: the primitives, or why there are none (no node at
+ * `meshIndex`).
+ * @internal
+ */
 export type ExtractResult =
   | { primitives: ExtractedPrimitive[]; error?: undefined }
   | { primitives?: undefined; error: string };
@@ -33,6 +41,7 @@ export type ExtractResult =
 /**
  * A mesh primitive's key in a glTF file (its mesh index and primitive index): what prebuilt
  * per-primitive data, like the LOD chains (`GLTFLodChains`), is keyed by.
+ * @internal
  */
 export const getGLTFPrimitiveKey = (mesh: number, primitive: number) => `${mesh}:${primitive}`;
 
@@ -56,6 +65,7 @@ const getIndexedNode = (root: THREE.Object3D, meshIndex: number | number[]) => {
  * `meshIndex`): its geometry, glTF-root-relative transform, parsed custom props, whether it
  * was DRACO-compressed and its prebuilt LOD chain (`opts.lodChains`, readGLTFLodChains()). Pure:
  * nothing is registered, disposed or logged.
+ * @internal
  */
 export const extractPrimitives = (
   gltf: GLTF,
@@ -142,9 +152,12 @@ export const extractPrimitives = (
   return { primitives };
 };
 
-/** Disposes every material, texture and geometry of a parsed glTF except the kept (registered)
+/**
+ * Disposes every material, texture and geometry of a parsed glTF except the kept (registered)
  * geometries and textures. GLTFLoader decodes images into ImageBitmaps: those are closed too,
- * unless a kept texture shares the image (a clone for another UV channel does). */
+ * unless a kept texture shares the image (a clone for another UV channel does).
+ * @internal
+ */
 export const disposeGLTFLeftovers = (
   gltf: GLTF,
   keep: { geometries?: Set<THREE.BufferGeometry>; textures?: Set<THREE.Texture> }

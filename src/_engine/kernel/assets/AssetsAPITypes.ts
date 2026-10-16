@@ -13,11 +13,17 @@ import type { TextureMapKeys } from './Material';
 /** Where an asset kind is loaded. */
 export type AssetsWorkerTarget = 'MAIN_THREAD' | 'WORKER_THREAD';
 
-/** The asset kinds that can be loaded (or, for SIMPLIFY, LOD chains generated) in the assets
- * worker. Each has its own workerTarget. */
+/**
+ * The asset kinds that can be loaded (or, for SIMPLIFY, LOD chains generated) in the assets
+ * worker. Each has its own workerTarget.
+ * @internal
+ */
 export type AssetKind = 'GLTF' | 'TEXTURE' | 'SIMPLIFY';
 
-/** Resolved assets config (AppConfig.assets with the defaults filled in). */
+/**
+ * Resolved assets config (AppConfig.assets with the defaults filled in).
+ * @internal
+ */
 export type AssetsState = {
   /** Shared default for all asset kinds. */
   workerTarget: AssetsWorkerTarget;
@@ -34,7 +40,10 @@ export type AssetsState = {
   fallbackToMainThread: boolean;
 };
 
-/** What the worker's runtime supports, reported in its INIT_READY handshake. */
+/**
+ * What the worker's runtime supports, reported in its INIT_READY handshake.
+ * @internal
+ */
 export type AssetsWorkerCapabilities = {
   createImageBitmap: boolean;
   /** GLTFLoader decodes images with ImageBitmapLoader (no `document` needed). It falls back to
@@ -43,7 +52,10 @@ export type AssetsWorkerCapabilities = {
   offscreenCanvas: boolean;
 };
 
-/** The main thread's DRACO settings (DracoDecoder.ts), for the worker's own DRACOLoader. */
+/**
+ * The main thread's DRACO settings (DracoDecoder.ts), for the worker's own DRACOLoader.
+ * @internal
+ */
 export type DracoWorkerSettings = {
   /** Absolute URL of the decoder directory. */
   decoderPath: string;
@@ -51,8 +63,11 @@ export type DracoWorkerSettings = {
   workerLimit?: number;
 };
 
-/** The main thread's KTX2 settings (KTX2.ts), for the worker's own KTX2Loader. The worker has no
- * renderer to detect the supported GPU formats with, so it gets the main thread's result. */
+/**
+ * The main thread's KTX2 settings (KTX2.ts), for the worker's own KTX2Loader. The worker has no
+ * renderer to detect the supported GPU formats with, so it gets the main thread's result.
+ * @internal
+ */
 export type KTX2WorkerSettings = {
   /** Absolute URL of the Basis transcoder directory. */
   transcoderPath: string;
@@ -60,9 +75,18 @@ export type KTX2WorkerSettings = {
   workerConfig: KTX2LoaderWorkerConfig;
 };
 
+/**
+ * The assets worker's lifecycle: started by the first worker-targeted request, `FAILED` for
+ * good once a start fails, the worker crashes or `stopAssetsWorker` runs: later requests fall
+ * back at once.
+ * @internal
+ */
 export type AssetsWorkerStatus = 'NOT_STARTED' | 'STARTING' | 'READY' | 'FAILED';
 
-/** Why a worker-targeted request ran on the main thread instead. */
+/**
+ * Why a worker-targeted request ran on the main thread instead.
+ * @internal
+ */
 export type AssetsFallbackCause =
   /** The worker could not be started (or its handshake timed out). */
   | 'INIT_FAILED'
@@ -75,7 +99,10 @@ export type AssetsFallbackCause =
   /** The worker crashed (uncaught error) while the request was in flight, or before it was sent. */
   | 'CRASHED';
 
-/** Where one load ran, and how long it took (debug info, see recordAssetLoadReport()). */
+/**
+ * Where one load ran, and how long it took (debug info, see recordAssetLoadReport()).
+ * @internal
+ */
 export type AssetLoadReport = {
   /** Where the asset kind was targeted. */
   target: AssetsWorkerTarget;
@@ -91,13 +118,22 @@ export type AssetLoadReport = {
   sourceUrl?: string;
 };
 
-/** The worker's handshake message (read by initWorker, not part of the protocol unions). */
+/**
+ * The worker's handshake message (read by initWorker, not part of the protocol unions).
+ * @internal
+ */
 export type AssetsWorkerReadyMessage = {
   status: 'INIT_READY';
   capabilities: AssetsWorkerCapabilities;
 };
 
+/**
+ * The message kinds between the main thread and the assets worker: a request and its response
+ * share one type (see {@link AssetsUpProtocol} and {@link AssetsDownProtocol}).
+ * @internal
+ */
 export enum AssetsProtocolType {
+  /** The worker's answer to a request it could not run, or to an unknown type. */
   ERROR = 0,
   /** Round-trip check, eg. to confirm the worker is alive. */
   PING = 1,
@@ -114,24 +150,37 @@ export enum AssetsProtocolType {
 // UP (main thread → worker). Every request has a requestId; the worker answers each one with
 // a response of the same type, or with an ERROR carrying the same requestId.
 
+/**
+ * Asks the worker to answer at once (see `pingAssetsWorker`).
+ * @internal
+ */
 export type AssetsPingRequest = { type: AssetsProtocolType.PING; requestId: number };
 
-/** `url` must be absolute: a relative one would resolve against the worker script's URL. */
+/**
+ * `url` must be absolute: a relative one would resolve against the worker script's URL.
+ * @internal
+ */
 export type AssetsLoadTextureRequest = {
   type: AssetsProtocolType.LOAD_TEXTURE;
   requestId: number;
   url: string;
 };
 
-/** `url` must be absolute: a relative one would resolve against the worker script's URL. */
+/**
+ * `url` must be absolute: a relative one would resolve against the worker script's URL.
+ * @internal
+ */
 export type AssetsLoadHDRTextureRequest = {
   type: AssetsProtocolType.LOAD_HDR_TEXTURE;
   requestId: number;
   url: string;
 };
 
-/** `url` must be absolute: a relative one would resolve against the worker script's URL (the
- * glTF's own relative .bin/image URIs resolve against `url`). */
+/**
+ * `url` must be absolute: a relative one would resolve against the worker script's URL (the
+ * glTF's own relative .bin/image URIs resolve against `url`).
+ * @internal
+ */
 export type AssetsLoadGLTFRequest = {
   type: AssetsProtocolType.LOAD_GLTF;
   requestId: number;
@@ -150,7 +199,10 @@ export type AssetsLoadGLTFRequest = {
   readLodChains: boolean;
 };
 
-/** The geometry's arrays are copies, transferred: the main thread's geometry stays usable. */
+/**
+ * The geometry's arrays are copies, transferred: the main thread's geometry stays usable.
+ * @internal
+ */
 export type AssetsSimplifyGeometryRequest = {
   type: AssetsProtocolType.SIMPLIFY_GEOMETRY;
   requestId: number;
@@ -158,6 +210,10 @@ export type AssetsSimplifyGeometryRequest = {
   options: ResolvedLodChainOptions;
 };
 
+/**
+ * Every message the main thread sends the worker (`AssetsAPI.ts`' requests).
+ * @internal
+ */
 export type AssetsUpProtocol =
   | AssetsPingRequest
   | AssetsLoadTextureRequest
@@ -167,6 +223,11 @@ export type AssetsUpProtocol =
 
 // DOWN (worker → main thread)
 
+/**
+ * The worker's answer to a request that failed there: the main thread falls back (re-runs it), or
+ * throws `message` as is for a source error.
+ * @internal
+ */
 export type AssetsErrorResponse = {
   type: AssetsProtocolType.ERROR;
   /** Missing when the error isn't tied to a request. */
@@ -177,6 +238,10 @@ export type AssetsErrorResponse = {
   isSourceError?: boolean;
 };
 
+/**
+ * The worker's answer to a PING.
+ * @internal
+ */
 export type AssetsPingResponse = {
   type: AssetsProtocolType.PING;
   requestId: number;
@@ -184,15 +249,21 @@ export type AssetsPingResponse = {
   workerTime: number;
 };
 
-/** The decoded image, already flipped vertically (the flip TextureLoader's default
- * `flipY = true` would do), not premultiplied. Transferred, not copied. */
+/**
+ * The decoded image, already flipped vertically (the flip TextureLoader's default
+ * `flipY = true` would do), not premultiplied. Transferred, not copied.
+ * @internal
+ */
 export type AssetsLoadTextureResponse = {
   type: AssetsProtocolType.LOAD_TEXTURE;
   requestId: number;
   bitmap: ImageBitmap;
 };
 
-/** HDRLoader's parse result in its default HalfFloatType. `data` is transferred, not copied. */
+/**
+ * HDRLoader's parse result in its default HalfFloatType. `data` is transferred, not copied.
+ * @internal
+ */
 export type AssetsLoadHDRTextureResponse = {
   type: AssetsProtocolType.LOAD_HDR_TEXTURE;
   requestId: number;
@@ -201,11 +272,14 @@ export type AssetsLoadHDRTextureResponse = {
   data: Uint16Array;
 };
 
-/** GLTFExtract's extractPrimitives() result, run in the worker. Nodes sharing one glTF mesh share
+/**
+ * GLTFExtract's extractPrimitives() result, run in the worker. Nodes sharing one glTF mesh share
  * one geometry (`geometryIndex`), as they share one BufferGeometry on the main thread. With
  * importTextures, also GLTFTextureCollect's collectGLTFTextures() result (textures sharing one
  * image share its `imageIndex`, as they share one THREE.Source). The geometries' arrays and the
- * images (ImageBitmaps, or compressed mip data) are transferred, not copied. */
+ * images (ImageBitmaps, or compressed mip data) are transferred, not copied.
+ * @internal
+ */
 export type AssetsLoadGLTFResponse = {
   type: AssetsProtocolType.LOAD_GLTF;
   requestId: number;
@@ -223,13 +297,21 @@ export type AssetsLoadGLTFResponse = {
   textureSlotsPerPrimitive: Partial<Record<TextureMapKeys, number>>[];
 };
 
-/** LodSimplify's simplifyLodChain() result, run in the worker. Its arrays are transferred. */
+/**
+ * LodSimplify's simplifyLodChain() result, run in the worker. Its arrays are transferred.
+ * @internal
+ */
 export type AssetsSimplifyGeometryResponse = {
   type: AssetsProtocolType.SIMPLIFY_GEOMETRY;
   requestId: number;
   result: SimplifiedLodChain;
 };
 
+/**
+ * Every message the worker sends the main thread but its handshake
+ * ({@link AssetsWorkerReadyMessage}): one response per request, by `requestId`.
+ * @internal
+ */
 export type AssetsDownProtocol =
   | AssetsErrorResponse
   | AssetsPingResponse

@@ -114,6 +114,7 @@ const loadReports = new Map<string, AssetLoadReport>();
  * Resolves the assets config (AppConfig.assets) with its defaults. Called once from
  * InitEngine, after loadConfig(). Doesn't start the worker: the first worker-targeted request
  * does.
+ * @internal
  */
 export const initAssets = () => {
   const assetsConfig = getConfig().assets || {};
@@ -136,17 +137,23 @@ export const initAssets = () => {
   };
 };
 
-/** Returns the resolved assets config (read-only). */
+/**
+ * Returns the resolved assets config (read-only).
+ * @internal
+ */
 export const getAssetsState = (): Readonly<AssetsState> => assetsState;
 
 /**
  * Returns where an asset kind is loaded: its per-kind override, else the shared workerTarget.
- * @param kind {@link AssetKind}
+ * @internal
  */
 export const getAssetsWorkerTarget = (kind: AssetKind): AssetsWorkerTarget =>
   assetsState[KIND_TARGET_KEY[kind]] ?? assetsState.workerTarget;
 
-/** Returns the assets worker's state, and the fallbacks so far, for debug purposes. */
+/**
+ * Returns the assets worker's state, and the fallbacks so far, for debug purposes.
+ * @internal
+ */
 export const getAssetsWorkerInfo = () => ({
   status: workerStatus,
   failReason: workerFailReason,
@@ -339,7 +346,8 @@ const fallBack = async <T>(
  * the same result, so callers never depend on the thread. A load whose file itself failed in the
  * worker (eg. an HTTP error) is not re-run: its error is thrown as is. Resolves with the result
  * and a report of where the load ran (for {@link recordAssetLoadReport}).
- * @param kind {@link AssetKind}
+ * @internal
+ * @param kind the asset kind, which picks the target and the default capability
  * @param workerTask the load through the worker
  * @param mainThreadTask the same load on the main thread
  * @param requiredCapability the worker capability this load needs (default: the kind's own,
@@ -399,8 +407,9 @@ export const runAssetTask = async <T>(
 /**
  * Keeps a load's report for the debug tooling (the Assets tab's info window). Only kept in a
  * debug environment; a later report for the same key replaces the earlier one.
+ * @internal
  * @param key eg. `texture:${textureId}` or `import:${importId}`
- * @param report {@link AssetLoadReport} (from {@link runAssetTask})
+ * @param report where the load ran and how long it took, from {@link runAssetTask}
  */
 export const recordAssetLoadReport = (key: string, report: AssetLoadReport) => {
   if (IS_DEBUG_ENV) loadReports.set(key, report);
@@ -408,6 +417,7 @@ export const recordAssetLoadReport = (key: string, report: AssetLoadReport) => {
 
 /**
  * Returns the last recorded load report for a key (debug environment only).
+ * @internal
  * @param key eg. `texture:${textureId}` or `import:${importId}`
  */
 export const getAssetLoadReport = (key: string) => loadReports.get(key);
@@ -416,6 +426,7 @@ export const getAssetLoadReport = (key: string) => loadReports.get(key);
  * Round-trips a PING through the assets worker, starting it if needed (whatever the
  * workerTarget: this is a debug/verification helper). Resolves with the round-trip time in ms,
  * or null when the worker could not be started or didn't answer.
+ * @internal
  */
 export const pingAssetsWorker = async () => {
   const startedWorker = await startWorker();
@@ -434,6 +445,7 @@ export const pingAssetsWorker = async () => {
  * Fetches and decodes a standard (non-HDR) image in the assets worker. The bitmap is already
  * flipped vertically (like TextureLoader's default flipY = true), so its texture needs
  * `flipY = false`. Call it inside {@link runAssetTask}.
+ * @internal
  * @param url absolute URL
  */
 export const loadTextureInWorker = async (url: string) =>
@@ -447,6 +459,7 @@ export const loadTextureInWorker = async (url: string) =>
 /**
  * Fetches and parses an .hdr file in the assets worker (HDRLoader, HalfFloatType). Call it
  * inside {@link runAssetTask}.
+ * @internal
  * @param url absolute URL
  */
 export const loadHDRTextureInWorker = async (url: string) => {
@@ -462,6 +475,7 @@ export const loadHDRTextureInWorker = async (url: string) => {
  * same extractPrimitives() the main-thread import runs. The geometries come back as transferable
  * data (GeometryTransfer.ts's deserializeGeometry() rebuilds them). Call it inside
  * {@link runAssetTask}.
+ * @internal
  * @param url absolute URL
  * @param opts.importId the import id (geometry id prefix)
  * @param opts.meshIndex only extract this node (see ImportAssetParams.meshIndex)
@@ -497,6 +511,7 @@ export const loadGLTFInWorker = (
  * Simplifies a geometry into LOD levels in the assets worker (features/lod/LodSimplify.ts's
  * simplifyLodChain()). The geometry's arrays are transferred: pass copies. Call it inside
  * {@link runAssetTask}.
+ * @internal
  * @param geometry the base geometry (serializeGeometry() with `copy`)
  * @param options resolved chain options
  * @param transfer the geometry's ArrayBuffers

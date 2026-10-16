@@ -3,21 +3,33 @@
 // rebuild), so keep it free of imports that touch `window`/`document`.
 import * as THREE from 'three/webgpu';
 
-/** A texture's `offset`, `repeat` or `center` as plain data, for the worker hop. */
+/**
+ * A texture's `offset`, `repeat` or `center` as plain data, for the worker hop.
+ * @internal
+ */
 export type Vector2Like = { x: number; y: number };
 
-/** A CompressedTexture's (eg. a KTX2 texture's) image: its size and its mip levels' block data. */
+/**
+ * A CompressedTexture's (eg. a KTX2 texture's) image: its size and its mip levels' block data.
+ * @internal
+ */
 export type TransferableCompressedImage = {
   width: number;
   height: number;
   mipmaps: { data: Uint8Array; width: number; height: number }[];
 };
 
-/** A texture's image as it crosses the thread boundary. */
+/**
+ * A texture's image as it crosses the thread boundary.
+ * @internal
+ */
 export type TransferableImage = ImageBitmap | TransferableCompressedImage;
 
-/** A transferred image wrapped for the receiving side: the source textures sharing it share, plus
- * the mip levels a compressed texture keeps on itself (not on its source). */
+/**
+ * A transferred image wrapped for the receiving side: the source textures sharing it share, plus
+ * the mip levels a compressed texture keeps on itself (not on its source).
+ * @internal
+ */
 export type TransferredSource = {
   source: THREE.TextureSource<unknown>;
   mipmaps?: TransferableCompressedImage['mipmaps'];
@@ -26,8 +38,11 @@ export type TransferredSource = {
 const isImageBitmap = (image: unknown): image is ImageBitmap =>
   typeof ImageBitmap !== 'undefined' && image instanceof ImageBitmap;
 
-/** Adds an image's transferable buffers (the bitmap itself, or its mip levels' buffers) to a
- * postMessage transfer list. */
+/**
+ * Adds an image's transferable buffers (the bitmap itself, or its mip levels' buffers) to a
+ * postMessage transfer list.
+ * @internal
+ */
 export const collectImageTransferables = (
   image: TransferableImage,
   transfer: Set<Transferable>
@@ -36,13 +51,19 @@ export const collectImageTransferables = (
   else for (const mip of image.mipmaps) transfer.add(mip.data.buffer as ArrayBuffer);
 };
 
-/** Frees a transferred image nothing will use: closes an ImageBitmap (compressed data is left
- * to the garbage collector). */
+/**
+ * Frees a transferred image nothing will use: closes an ImageBitmap (compressed data is left
+ * to the garbage collector).
+ * @internal
+ */
 export const releaseTransferableImage = (image: TransferableImage) => {
   if (isImageBitmap(image)) image.close();
 };
 
-/** Wraps transferred images for {@link deserializeTexture}, one per image. */
+/**
+ * Wraps transferred images for {@link deserializeTexture}, one per image.
+ * @internal
+ */
 export const createTransferredSources = (images: TransferableImage[]): TransferredSource[] =>
   images.map((image) =>
     isImageBitmap(image)
@@ -53,8 +74,11 @@ export const createTransferredSources = (images: TransferableImage[]): Transferr
         }
   );
 
-/** A texture's state (the fields Texture.copy() copies, minus source/mipmaps/render target), with
- * its image as an index into the message's transferred `images`. */
+/**
+ * A texture's state (the fields Texture.copy() copies, minus source/mipmaps/render target), with
+ * its image as an index into the message's transferred `images`.
+ * @internal
+ */
 export type TransferableTexture = {
   imageIndex: number;
   name: string;
@@ -89,6 +113,7 @@ const toVector2Like = (v: THREE.Vector2): Vector2Like => ({ x: v.x, y: v.y });
  * such as a KTX2 one, its mip levels) is added to `images` once per THREE.TextureSource
  * (GLTFLoader's clones for another UV channel or transform share their source), for the
  * postMessage transfer list. Throws for any other texture (eg. a compressed array or cube).
+ * @internal
  * @param texture the texture to describe
  * @param images collects the ImageBitmaps to transfer
  * @param imageIndexBySource the image index per already collected source
@@ -152,7 +177,8 @@ export const serializeTexture = (
  * Rebuilds a texture described by {@link serializeTexture} around a source holding its
  * (transferred) image: a Texture for an ImageBitmap, a CompressedTexture for compressed mip
  * levels. Textures sharing an image must be given the same source.
- * @param data {@link TransferableTexture}
+ * @internal
+ * @param data the description, its image transferred
  * @param transferred the {@link TransferredSource} for `data.imageIndex`
  * (from {@link createTransferredSources})
  */

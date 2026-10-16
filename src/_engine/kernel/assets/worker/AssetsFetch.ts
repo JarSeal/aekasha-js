@@ -1,8 +1,12 @@
 /// <reference lib="webworker" />
 
-/** The file itself could not be fetched: the main thread would fail the same way, so the
- * request is answered with `isSourceError` and not re-run there. */
+/**
+ * The file itself could not be fetched: the main thread would fail the same way, so the
+ * request is answered with `isSourceError` and not re-run there.
+ * @internal
+ */
 export class AssetsSourceError extends Error {
+  /** Creates the error with the fetch's message, which names the URL. */
   constructor(message: string) {
     super(message);
     this.name = 'AssetsSourceError';
@@ -11,7 +15,10 @@ export class AssetsSourceError extends Error {
 
 /**
  * Fetches an asset file (with the same checks as GLTFSource.ts's main-thread fetch).
+ * @internal
  * @param url absolute URL
+ * @throws {@link AssetsSourceError} when the fetch fails, the status isn't OK or the server
+ * answers with an HTML page (a missing file on an SPA server)
  */
 export const fetchAsset = async (url: string) => {
   let response: Response;

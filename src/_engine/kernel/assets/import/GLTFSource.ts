@@ -24,7 +24,10 @@ const getGLTFLoaderAsync = async () => {
   return gltfLoader;
 };
 
-/** Returns an error message for an invalid glTF file name, or null when it is valid. */
+/**
+ * Returns an error message for an invalid glTF file name, or null when it is valid.
+ * @internal
+ */
 export const validateGLTFFileName = (fileName: string) => {
   if (!fileName) return 'To import a model, the "fileName" param is required.';
   const extension = fileName.split(/[?#]/)[0].split('.').pop()?.toLowerCase();
@@ -34,8 +37,11 @@ export const validateGLTFFileName = (fileName: string) => {
   return null;
 };
 
-/** Resolves a file name against the document (or a mounted engine's `assetBaseUrl`), so the same
- * file always has the same key. */
+/**
+ * Resolves a file name against the document (or a mounted engine's `assetBaseUrl`), so the same
+ * file always has the same key.
+ * @internal
+ */
 export const toAbsoluteUrl = (fileName: string) => resolveFileUrl(fileName);
 
 const fetchFile = (url: string) => {
@@ -65,8 +71,8 @@ const fetchFile = (url: string) => {
  * are decoded through the shared DRACO loader, meshopt-compressed ones (EXT_meshopt_compression)
  * through the meshopt decoder, and KTX2 textures (KHR_texture_basisu) through the shared KTX2
  * loader; each is only imported when a file needs it.
+ * @internal
  * @param fileName URL of the file
- * @returns Promise<GLTF>
  */
 export const loadGLTF = async (fileName: string): Promise<GLTF> => {
   const url = toAbsoluteUrl(fileName);

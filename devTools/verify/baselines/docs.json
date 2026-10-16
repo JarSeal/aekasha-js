@@ -2,22 +2,22 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1774,
+      "documented": 1794,
       "total": 2291
     },
     "members": {
-      "documented": 330,
+      "documented": 331,
       "total": 434
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1730,
+        "documented": 1750,
         "total": 2228
       },
       "members": {
-        "documented": 280,
+        "documented": 281,
         "total": 354
       }
     },
@@ -749,7 +749,7 @@
     },
     "engine/kernel/assets": {
       "exports": {
-        "documented": 119,
+        "documented": 126,
         "total": 126
       },
       "members": {
@@ -757,21 +757,13 @@
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "AssetsAPITypes#AssetsDownProtocol",
-          "AssetsAPITypes#AssetsErrorResponse",
-          "AssetsAPITypes#AssetsPingRequest",
-          "AssetsAPITypes#AssetsPingResponse",
-          "AssetsAPITypes#AssetsProtocolType",
-          "AssetsAPITypes#AssetsUpProtocol",
-          "AssetsAPITypes#AssetsWorkerStatus"
-        ],
+        "exports": [],
         "members": []
       }
     },
     "engine/kernel/assets/import": {
       "exports": {
-        "documented": 55,
+        "documented": 66,
         "total": 66
       },
       "members": {
@@ -779,39 +771,22 @@
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "DracoDecoder#DracoConfig",
-          "GLTFExtract#ExtractResult",
-          "GLTFTextureCollect#CollectedGLTFTexture",
-          "GLTFTextureCollect#CollectedGLTFTextures",
-          "GLTFTextures#RegisteredGLTFTextures",
-          "GeometryTransfer#TransferableAttribute",
-          "ImportTypes#ImportAssetParams",
-          "ImportTypes#ImportedAssetManifest",
-          "ImportTypes#ImportedGeometryInfo",
-          "ImportTypes#SpawnImportedParams",
-          "ImportTypes#SpawnImportedResult"
-        ],
+        "exports": [],
         "members": []
       }
     },
     "engine/kernel/assets/worker": {
       "exports": {
-        "documented": 2,
+        "documented": 4,
         "total": 4
       },
       "members": {
-        "documented": 0,
+        "documented": 1,
         "total": 1
       },
       "undocumented": {
-        "exports": [
-          "AssetsSwitchGLTF#assetsSwitchGLTF",
-          "AssetsSwitchTexture#assetsSwitchTexture"
-        ],
-        "members": [
-          "AssetsFetch#AssetsSourceError.constructor"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "engine/kernel/camera": {

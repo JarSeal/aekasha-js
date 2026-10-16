@@ -4,14 +4,22 @@
 import * as THREE from 'three/webgpu';
 import type { Vector3Like } from './ImportTypes';
 
+/** A BufferAttribute as structured-clone-safe data (an interleaved one copied out of its
+ * buffer). */
 export type TransferableAttribute = {
+  /** The values. Its buffer goes in the message's transfer list: detached on the sender after
+   * the transfer, unless it was serialized with `copy`. */
   array: THREE.TypedArray;
+  /** Components per vertex (3 for a position). */
   itemSize: number;
+  /** Integer values map to 0-1 (or -1-1) in the shader. */
   normalized: boolean;
+  /** The BufferAttribute's own `name` (its key in the geometry's attributes is apart). */
   name: string;
 };
 
-/** Everything of a BufferGeometry that GLTFLoader sets, as structured-clone-safe data. */
+/** Everything of a BufferGeometry that GLTFLoader sets, as structured-clone-safe data (see
+ * {@link serializeGeometry} and {@link deserializeGeometry}). */
 export type TransferableGeometry = {
   name: string;
   attributes: Record<string, TransferableAttribute>;
@@ -60,6 +68,7 @@ const toTransferableAttribute = (
  * Describes a geometry as structured-clone-safe data, adding the buffers to transfer to
  * `transfer`. After the transfer, the geometry's buffers are detached: don't touch it again,
  * unless `opts.copy` was set.
+ * @internal
  * @param geometry the geometry to describe
  * @param transfer collects the ArrayBuffers to pass as the postMessage transfer list
  * @param opts.copy describe copies of the arrays, so the geometry stays usable after the transfer
@@ -101,7 +110,10 @@ export const serializeGeometry = (
   };
 };
 
-/** Wraps a {@link TransferableAttribute}'s (transferred) array as a BufferAttribute, uncopied. */
+/**
+ * Wraps a {@link TransferableAttribute}'s (transferred) array as a BufferAttribute, uncopied.
+ * @internal
+ */
 export const deserializeAttribute = ({
   array,
   itemSize,
@@ -116,7 +128,8 @@ export const deserializeAttribute = ({
 /**
  * Rebuilds a geometry described by {@link serializeGeometry}. Wraps the (transferred) arrays
  * as they are: nothing is copied or computed.
- * @param data {@link TransferableGeometry}
+ * @internal
+ * @param data the description, its arrays transferred
  */
 export const deserializeGeometry = (data: TransferableGeometry) => {
   const geometry = new THREE.BufferGeometry();

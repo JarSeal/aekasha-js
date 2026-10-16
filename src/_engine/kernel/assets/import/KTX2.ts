@@ -18,6 +18,7 @@ const getTranscoderPath = () => new URL('basis/', getAppBaseUrl()).href;
  * The transcoder (the app's `basis/`, filled by `devTools/copyDecoders.ts`) is only fetched,
  * and its worker pool only started, when the first file is transcoded. A failed import (a flaky
  * network) rejects the calls waiting for it and is tried again by the next call.
+ * @internal
  */
 export const getKTX2Loader = () => {
   const renderer = getRenderer();
@@ -52,6 +53,7 @@ export const getKTX2Loader = () => {
  * CompressedCubeTexture for an array or cube file) with the file's mip chain: compressed
  * textures can't be flipped (`flipY`) or get mipmaps generated at upload, so both are baked in
  * when the file is encoded.
+ * @internal
  * @param url the file's URL
  */
 export const loadKTX2Texture = async (url: string) =>
@@ -60,6 +62,7 @@ export const loadKTX2Texture = async (url: string) =>
 /**
  * Returns the shared KTX2Loader's settings for the assets worker's own KTX2Loader (which has no
  * renderer to detect support with), or null when there is no renderer yet.
+ * @internal
  */
 export const getKTX2WorkerSettings = async (): Promise<KTX2WorkerSettings | null> => {
   if (!getRenderer()) return null;
@@ -70,6 +73,14 @@ export const getKTX2WorkerSettings = async (): Promise<KTX2WorkerSettings | null
 /**
  * Terminates the shared KTX2Loader's worker pool and drops it. The next {@link getKTX2Loader}
  * call creates a new one. Not called automatically, except when the renderer has changed.
+ * @example
+ * ```ts
+ * import { disposeKTX2Loader, loadTextureAsync } from 'aekasha';
+ *
+ * await loadTextureAsync({ id: 'terrainAlbedo', fileName: '/textures/terrain.ktx2' });
+ * // No more KTX2 files to come: end the transcoder workers
+ * disposeKTX2Loader();
+ * ```
  */
 export const disposeKTX2Loader = () => {
   if (!ktx2Loader) return;

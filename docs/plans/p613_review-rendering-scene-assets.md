@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented
+Status: in progress | Phases 0-6 implemented
 Category: Refactoring, Documentation, Rendering, Assets
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -1148,7 +1148,7 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
     dead code; `kernel/assets` −0.5 kB in the module groups), the banner's `banner.embed.js`
     293,081 → 293,286 B (+0.2 kB: `ThreeMath.ts` for `toThreeColor` and `Hash.ts` now in it). Recorded (`--update`) with `docs.json` (exports 1774 / 2291).
 
-### Phase 6: the assets API, worker and import (`AssetsAPI.ts`, `AssetsAPITypes.ts`, `worker/`, `import/`)
+### Phase 6: the assets API, worker and import (`AssetsAPI.ts`, `AssetsAPITypes.ts`, `worker/`, `import/`) — done
 
 1. IM1 (a failed `import()` is retried by the next call), AW2, IM2's comment.
 2. JSDoc: the protocol types, the job functions, the import types on the entry.
@@ -1171,6 +1171,37 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
   - **Tests:** `import/DecoderImports.test.ts` (2: each import fails once, then loads and stays
     cached), both checked to fail without the fix.
   - **Checks:** `tsc` (both), the two folders' lint, `yarn test` (73 files, 563 passed).
+- **Section 2 (step 2):**
+  - **The ratchet's 21:** the 7 protocol types (`AssetsWorkerStatus`, `AssetsProtocolType` and
+    its `ERROR`, the PING pair, `AssetsErrorResponse`, the two unions), the two job functions
+    (what each answers, what it throws: `AssetsSourceError` for the fetch, anything else as an
+    ERROR), `AssetsSourceError`'s constructor, and the 11 in `import/` (the entry's
+    `DracoConfig`, `TransferableAttribute` and the five import types, with their undocumented
+    fields; `ExtractResult`, the two `CollectedGLTFTexture*`, `RegisteredGLTFTextures`).
+  - **`@internal`, Phase 5's rule (what's on no entry):** every export of `AssetsAPI.ts`, of
+    `AssetsAPITypes.ts` but `AssetsWorkerTarget` (`AppConfig.assets` names it), of `worker/`, and
+    of `import/` but the entry's and the types public signatures name: `ImportExtension` and its
+    members' types (`FeatureContext.registerImportExtension`), `ImportSpawnNode`, and
+    `ImportPhysicsParams`, `ParsedCustomProps`, `Vector3Like`, `QuatLike` (the entry's import
+    types name them). Those four stay off the entry: `Vector3Like` would shadow three's type of
+    the same name, and an app reaches them through `SpawnImportedParams['physicsParams']` and the
+    manifest. The api baseline doesn't record `@internal`, so it didn't change.
+  - **Found while documenting:** `ParsedCustomProps.id` / `name` (the `id` and `name` custom
+    props, which `ImportPhysicsParams.meshId` / `name` override) are parsed and carried in the
+    manifest, but the engine reads neither: documented as the app's.
+  - **The entry's functions** have `@example`s: `importAssetAsync`, `spawnImportedAsset`,
+    `releaseImportedAsset`, `configureDraco`, `disposeDracoLoader`, `disposeKTX2Loader`. The H2
+    form is gone from the scope (`@param x {@link Type}`, `@returns Promise<…>`: 9 tags), and
+    `importAssetAsync` says what it throws with `throwOnError`. Links to another module's
+    function from a types file are backticks (`ImportTypes.ts` imports neither).
+  - **Checks:** `tsc` (both), `kernel/assets`' lint (`jsdoc/sort-tags` put `@internal` before
+    `@param`: reordered only, no line lost), `yarn test` (73 files, 563 passed, the `@example`
+    check included), the docs ratchet: `kernel/assets` 126 / 126, `import` 66 / 66, `worker` 4 / 4
+    and members 1 / 1, recorded (`docs.json`: exports 1794 / 2291).
+  - **`yarn verify:baselines`:** no debug code in either production build, `api.json` and the
+    banner's bundle unchanged. Its one flag is the app's two `EngineRapier.js` chunks (one base
+    name) swapping their 9.2 / 9.3 kB gzip between builds, no physics file touched: noise, so
+    `bundle.json` isn't recorded.
 
 ### Phase 7: PostFX and viewports (`features/postfx/`, `features/viewports/`)
 

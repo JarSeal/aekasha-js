@@ -5,10 +5,19 @@ import { doesTextureExist, getTextureRegistry, saveTexture, type TexOpts } from 
 import type { CollectedGLTFTextures } from './GLTFTextureCollect';
 import { retagAssetOwner } from '../AssetOwners';
 
-/** A primitive's registered texture ids, by material map key. */
+/**
+ * A primitive's registered texture ids, by material map key.
+ * @internal
+ */
 export type TextureSlots = Partial<Record<TextureMapKeys, string>>;
 
+/**
+ * {@link registerGLTFTextures}' result: the ids it registered (or reused), per primitive and in
+ * all.
+ * @internal
+ */
 export type RegisteredGLTFTextures = {
+  /** Every registered texture's id, once, in registration order. */
   textureIds: string[];
   /** Per extracted primitive (same order): slot → registered texture id. */
   slotsPerPrimitive: TextureSlots[];
@@ -50,6 +59,7 @@ const resolveTextureId = (preferredId: string, importId: string, gltfTextureKey:
  * slots, once per texture object even when shared by several slots or materials.
  * GLTFLoader's flipY (false) and per-slot colorSpace are kept, unless `texOpts` override them.
  * Each registered texture gets `userData.gltfSlots` (every slot it fills) and `userData.importId`.
+ * @internal
  */
 export const registerGLTFTextures = (
   collected: CollectedGLTFTextures,

@@ -399,8 +399,16 @@ const resolveImport = async (params: ImportAssetParams): Promise<ImportedAssetMa
  * With `lodChain`, the rendered geometries that have no LOD chain get one after the import (also
  * when the manifest was cached), without delaying it. The LOD chains (`lodChain`, and the ones
  * the asset pipeline built into the file) need the `lod()` feature.
- * @param params {@link ImportAssetParams}
- * @returns Promise<{@link ImportedAssetManifest} | null> (null on error, unless throwOnError)
+ * @param params the file, the import id, and what to import
+ * @returns the manifest, or null when the import failed (logged)
+ * @throws when the import fails and `throwOnError` is set
+ * @example
+ * ```ts
+ * import { importAssetAsync, spawnImportedAsset } from 'aekasha';
+ *
+ * const manifest = await importAssetAsync({ id: 'crate', fileName: '/models/crate.glb' });
+ * if (manifest) await spawnImportedAsset(manifest, { material: 'crateMaterial' });
+ * ```
  */
 export const importAssetAsync = async (
   params: ImportAssetParams
@@ -416,6 +424,7 @@ export const importAssetAsync = async (
 
 /**
  * Returns an import's manifest, if it has been imported (and not released).
+ * @internal
  * @param id import id
  */
 export const getImportedAsset = (id: string): ImportedAssetManifest | undefined =>
@@ -424,6 +433,7 @@ export const getImportedAsset = (id: string): ImportedAssetManifest | undefined 
 /**
  * Re-tags an import (and its geometries and textures) to the scene being loaded, for a scene that
  * references it by id instead of importing it. See AssetOwners.
+ * @internal
  * @param id import id
  */
 export const retagImportedAsset = (id: string) => {
@@ -433,6 +443,7 @@ export const retagImportedAsset = (id: string) => {
 /**
  * Drops the manifests of the non-persistent imports a scene owns (see AssetOwners). Their
  * geometries and textures are left to releaseSceneOwnedAssets, which releases them by owner.
+ * @internal
  * @param sceneId owner scene id
  * @returns the released import ids
  */
@@ -453,6 +464,13 @@ export const releaseImportsOwnedBy = (sceneId: string) => {
  * `includePersistent` is set.
  * @param id import id
  * @param opts.includePersistent also release a persistent import (and its persistent geometries)
+ * @example
+ * ```ts
+ * import { releaseImportedAsset } from 'aekasha';
+ *
+ * // Its entities are deleted: the crate's geometries and textures can go
+ * releaseImportedAsset('crate');
+ * ```
  */
 export const releaseImportedAsset = (id: string, opts?: { includePersistent?: boolean }) => {
   const record = imports[id];

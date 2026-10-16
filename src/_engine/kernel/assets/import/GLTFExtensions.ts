@@ -13,6 +13,7 @@ const GLB_CHUNK_JSON = 0x4e4f534a; // 'JSON'
  * .gltf's whole text) without parsing anything else. GLTFLoader needs its decoders (DRACO,
  * meshopt, KTX2) set before it parses, so this decides which ones a file needs. Empty for a file it
  * can't read: GLTFLoader then reports the real error.
+ * @internal
  * @param data the file's bytes
  */
 export const readGLTFExtensionsUsed = (data: ArrayBuffer): string[] => {
@@ -33,7 +34,10 @@ export const readGLTFExtensionsUsed = (data: ArrayBuffer): string[] => {
   }
 };
 
-/** The decoders a file's extensions need (see {@link readGLTFExtensionsUsed}). */
+/**
+ * The decoders a file's extensions need (see {@link readGLTFExtensionsUsed}).
+ * @internal
+ */
 export const getGLTFDecoderNeeds = (extensionsUsed: string[]) => ({
   draco: extensionsUsed.includes('KHR_draco_mesh_compression'),
   meshopt: extensionsUsed.includes('EXT_meshopt_compression'),
@@ -44,6 +48,7 @@ export const getGLTFDecoderNeeds = (extensionsUsed: string[]) => ({
  * Sets the DRACO loader, the meshopt decoder and the KTX2 loader on a GLTFLoader for the next
  * parse, each only when given (a loader shared between files keeps the ones it got earlier, which
  * is harmless).
+ * @internal
  */
 export const setGLTFDecoders = (
   loader: GLTFLoader,
