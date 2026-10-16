@@ -18,8 +18,8 @@ the asset registry, the loop, cameras and lights, and the HUD's root. The glTF i
 with the first scene that imports a model, and the UI kit's windows are in a build only when the
 app uses one. One
 part a build without a model still carries: three's animation classes, which three's own glTF
-loader names, sit in three's core chunk. Leaving them out of a build that imports no model is
-planned.
+loader names, sit in three's core chunk
+([the issue](hub:issues/three-animation-classes-in-builds-without-models)).
 
 ### Each feature's share
 

@@ -54,8 +54,9 @@ The homepage image above has one pass, a bloom:
 - From code, [`setPostFxEnabled`](api:setPostFxEnabled) switches the whole chain,
   [`setPostFxPassEnabled`](api:setPostFxPassEnabled) one pass, and
   [`setPostFxPassParam`](api:setPostFxPassParam) sets a param.
-- A change to the set of enabled passes recompiles the chain, a one-frame hitch. A disabled pass
-  costs nothing, and switching the whole chain off keeps it compiled.
+- A change to the set of enabled passes recompiles the chain, a one-frame hitch, and so does a
+  change of the active camera (see [Known issues](#known-issues)). A disabled pass costs nothing,
+  and switching the whole chain off keeps it compiled.
 
 The app has another pass to start from: ambient occlusion (GTAO) in `src/app/postFx/`.
 
@@ -99,6 +100,11 @@ workaround in the engine yet:
 
 - [Disposed lights stay in memory](hub:issues/three-bind-group-cache-light-leak).
 - [A removed `InstancedMesh` leaks its instance attributes](hub:issues/three-instanced-node-attribute-leak).
+
+One of the engine's own:
+
+- [A camera cut rebuilds the PostFX chain](hub:issues/postfx-rebuilds-on-camera-change), a
+  shader recompile.
 
 ## Read more
 

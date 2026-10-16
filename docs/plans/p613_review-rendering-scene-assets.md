@@ -1328,14 +1328,66 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
    p614, p617), each named in §1.
 4. `yarn hub:build`: no new warning, no dead link; the three `notExported` gone.
 
+**As built** (one commit per step):
+
+- **Step 1 (the Hub):**
+  - **Rendering:** `isWebGPURenderer` is right once `createRenderer` has resolved (Phase 1), and
+    WebGL 2 runs also where WebGPU has no adapter; antialiasing off unless asked for, PCF the
+    default shadow map; which snapshots render without the post effects.
+  - **Scenes and assets:** the cameras are created before the assets (the page said after the
+    scene file); the load steps in `tearDownPrevScene`'s order; D3's queue and result, with an
+    example and the never-await-from-scene-code rule; D8's listeners (one per key, a remover,
+    `registerOnAllSceneEnters`, the deprecated name); `loadTextureAsync` in the key APIs, and
+    D12's deprecation.
+  - **Viewports:** Phase 7's notes (`getRootScene()!`, `setViewportInteractive`), a resolver
+    returning nothing skips the frame, `syncCameraAspect` never with the main camera.
+  - **The embed walkthrough:** the handle's `loadScene` result and queue, and a first scene that
+    fails shows the fallback image (Phase 3).
+  - **Not in the step, stale since D4 and D5:** the smallest-build page said moving the UI kit
+    and the import path behind an `import()` was planned; it now says what's left (three's
+    animation classes, step 3's issue).
+  - Checked and unchanged: the example scenes' regions, the quick start, the sky box
+    walkthrough's looper, the migration guide.
+- **Step 2 (CLAUDE.md, readme):**
+  - Root CLAUDE.md: the Bootstrap flow's after-start step (the windows' restore is a
+    `BootHooks.ts` hook in every build, not a debug step: D5); the mount's fallback for a failed
+    first scene and its handle's `loadScene`; `retainedTextures` with `getKeptTextures` (A5); a
+    new scene loads paragraph at the end of the data pipeline (D3's queue, result and steps,
+    `SceneDataLoader.ts`, bug B, D4's lazy registry and `setSceneImportRelease`); Viewports
+    (the resolver, `setViewportInteractive`, VP1, VP2, VP6); Snapshots (`isDebugHelperObject`,
+    N1). No nested CLAUDE.md or `docs/techniques/` file named a removed or renamed API.
+  - `readme.md`: the boot example unchanged (`await loadScene(…)` ignores the boolean); the
+    Scene system line says one load at a time and a failed one keeps the current scene.
+- **Step 3 (what's filed):**
+  - Issue files: `postfx-rebuilds-on-camera-change.md` (Phase 7, linked from the rendering
+    page's Known issues), `three-animation-classes-in-builds-without-models.md` (Phase 3's SBP
+    follow-up, linked from the smallest-build page) and `failed-scene-load-keeps-its-assets.md`
+    (Phase 3: a failure's own assets stay tagged with the failed scene until it's visited
+    again; linked from the scenes page, whose "the scene that was current stays" now says it's
+    torn down when the failure came after the teardown).
+  - p615's Inputs: `toSkyColor`'s linear `{ r, g, b }` against sRGB strings (Phase 5; no sky
+    box JSON uses the object form).
+  - p618's Inputs: the PostFX profiler source's `availability()` building the chain (Phase 7),
+    `saveTexture` on no entry (Phase 5).
+  - p619's Inputs: D11's type differences (Phase 5), `ColorJSON` on no entry, `PostFxSchema.ts`'
+    two stale plan paths (Phase 7).
+  - p302, p614 and p617 stay Phase 9's (its step 3, which now lists the light cookie gap and the
+    layout report's "ui → kernel" imports too).
+  - Not filed: `getScene`'s and `createSceneLoader`'s positional booleans and H4's world
+    parameters (kept by decision, documented); the search index warning and the `EngineRapier.js`
+    key swap (already in p619's Inputs).
+
 ### Phase 9: versions and done
 
 1. D14's bumps, a `CHANGELOG.md` entry (D3's behaviour change called out, the
    deprecations with their replacements), `yarn checkVersions --against main`.
 2. `yarn test`, `yarn verify:scenes`, `yarn verify:baselines` (no unexplained growth), `yarn build`
    (the SBP budgets: a group budget moved only with its reason, p612's lesson), `yarn hub:build`.
-3. Mark the plan done (`docs/plans/CLAUDE.md`), update p302 (bugs A and B done here), p614
-   (D13: M1 and `MeshUserData.ts`), p617 (D5's hook in `DraggableWindow.ts`).
+3. Mark the plan done (`docs/plans/CLAUDE.md`), update p302 (bugs A and B done here; its
+   texture-id resolution is in `SceneDataLoader.ts` now; Phase 5's A5 gap: `getKeptTextures` doesn't
+   keep a light's cookie texture, which would need a scene walk per release), p614 (D13: M1 and
+   `MeshUserData.ts`), p617 (D5's hook in `DraggableWindow.ts`, and the layout report's
+   "ui → kernel" imports it added).
 4. Time for a PR: this branch into `main` (p600's "Branches and PRs").
 
 ## 4. Risks

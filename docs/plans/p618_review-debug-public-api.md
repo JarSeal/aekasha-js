@@ -27,6 +27,16 @@ Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every 
 
 - p602 D4, the p800 prompt.
 - p605 Phase 5's `notExported` warnings in scope (`yarn hub:build` lists each with its file and line; export the type with a summary or change the signature): `PhysicsProbeReport`, `DrawerState`, `DebugKeyShortcutsTab` and `EnvBallOpts` (types in `_dbg__` modules, named by `debug/` entry points) and `AnyStatsSource` (named by `_getStatsSources`).
+- p613 Phase 7 (the `perf-auditor` pass): the PostFX profiler source's `availability()`
+  (`debug/profiler/_dbg__ProfilerSources.ts`) calls `getRenderPipeline()`, PostFX's provider,
+  which builds the chain when it's due. In an editor view, where `renderScene()` doesn't read the
+  provider, that poll builds the suspended root scene's chain. A side-effect-free check would do:
+  PostFX's `isPostFxEnabled` (`@internal`) and an enabled pass (the module already imports
+  `features/physics/` the same way).
+- p613 Phase 5: `saveTexture` (`kernel/assets/Texture.ts`, `@internal`) is on no entry, so an app
+  can't register a texture it built (a `DataTexture`, a canvas) for the scene release and the
+  Assets tab, though `saveBufferGeometry` and `saveMaterial` are on `aekasha`. Decide whether it
+  goes there too, with its ownership rules documented.
 
 ## Done when
 
