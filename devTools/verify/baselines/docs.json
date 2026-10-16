@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1794,
-      "total": 2286
+      "documented": 1801,
+      "total": 2293
     },
     "members": {
       "documented": 331,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1750,
-        "total": 2223
+        "documented": 1757,
+        "total": 2230
       },
       "members": {
         "documented": 281,
@@ -310,8 +310,8 @@
     },
     "engine/features/physics": {
       "exports": {
-        "documented": 167,
-        "total": 315
+        "documented": 168,
+        "total": 316
       },
       "members": {
         "documented": 27,
@@ -548,6 +548,20 @@
       }
     },
     "engine/features/physics/import": {
+      "exports": {
+        "documented": 3,
+        "total": 3
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/features/physics/transport": {
       "exports": {
         "documented": 3,
         "total": 3
@@ -842,8 +856,8 @@
     },
     "engine/kernel/init": {
       "exports": {
-        "documented": 21,
-        "total": 21
+        "documented": 24,
+        "total": 24
       },
       "members": {
         "documented": 0,

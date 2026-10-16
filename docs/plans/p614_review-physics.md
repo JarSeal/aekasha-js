@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: Refactoring, Documentation, Physics
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md, p511_network-transport-and-replication.md (the transport interface)
@@ -577,7 +577,7 @@ As built (2026-10-17):
   (`MAIN_THREAD`). Reason for the new baselines: R1's fix, the colliders get the friction 0 their
   code asks for.
 
-### Phase 2: the transport and the stop (D5, D6)
+### Phase 2: the transport and the stop (D5, D6) — done
 
 1. `transport/PhysicsTransport.ts` and its two implementations; every `postMessage` and the
    worker's listener go through them.
@@ -585,6 +585,55 @@ As built (2026-10-17):
    physics' stop (X1).
 3. The facade test with a stub transport (D10). `verify:embed` (the banner's unmount) and the
    scene runner's physics scenes in all three targets.
+
+As built (2026-10-17, at `49e1835`):
+
+- **The transport:** `transport/PhysicsTransport.ts` (the type and its contract, `@internal`),
+  `transport/WorkerTransport.ts` (`createWorkerTransport`, the main thread's, around the `Worker`;
+  `close()` terminates it) and `transport/WorkerScopeTransport.ts` (`createWorkerScopeTransport`,
+  the worker's, around `self`, read when called; `close()` stops this side only). Separate files,
+  importing nothing but the type, so the worker bundle is unchanged. The facade holds
+  `workerTransport` instead of a `Worker`; the worker sends everything through its transport, the
+  handshake included. No `postMessage` or `self.addEventListener` is left in physics outside them.
+- **Requests stay in the facade, not in the transport:** the transport carries messages only.
+  `PromiseResolver`'s map is shared with the assets API, so the facade keeps its own
+  `pendingWorkerRequestIds` (`createWorkerRequest`, also for requests captured for a sub-step),
+  which the stop rejects. The type's comment says so.
+- **`initWorker`'s `onMessage` is optional** (`kernel/loop/Workers.ts`): left out, the handler is
+  cleared after the handshake and the transport listens (`addEventListener`). The assets worker
+  is unchanged.
+- **The worker's handler** is `void handleMessage(…)` (it never rejects since W7). Phase 1's
+  harness lost its `workerRejections` check: an unhandled rejection fails the Vitest run instead.
+- **`FeatureContext.onUnmount(fn)`** (`kernel/init/Features.ts`): synchronous (`unmount()` returns
+  `void`), run in reverse install order and once each by `runFeatureUnmountHooks` (a throw is
+  logged, the rest run), through `Boot.ts`' `stopEngineFeatures()`, which `Mount.ts`' teardown
+  calls right after `stopMainLoop()`, so also after a failed boot. Never under `InitEngine`.
+- **`stopPhysics`** (`@internal`, `PhysicsAPI.ts`; `physics()` registers it before `initPhysics`):
+  `MAIN_THREAD` deletes the world; `WORKER_THREAD` closes the transport (the terminate takes the
+  world, no `DELETE_WORLD` first) and rejects every pending request. Both release the hold, drop
+  the gates, remove the visibility listener (now added once, `??=`, its remover kept; it was
+  re-added per world, harmless in a `Set`) and forget the world (`clearDeletedWorld`, shared with
+  `deletePhysicsWorld`). It's for good: `createPhysicsWorld` returns `undefined` after it, so a
+  scene load still running at unmount makes no world.
+- **Tests:** `transport/PhysicsTransport.test.ts` (both implementations against stub endpoints:
+  order, removers, `close()`), D6 in `PhysicsAPI.test.ts` (`MAIN_THREAD`, the visibility listener
+  through a mocked `onVisibilityChange`) and `PhysicsWorkerRequests.test.ts` (`WORKER_THREAD`: a
+  held request rejected, the worker terminated, later requests and world creates refused),
+  `Features.test.ts` (the hooks' order and errors), `Mount.test.ts` (the teardown calls
+  `stopEngineFeatures`, after the loop stops, also after a failed boot). The "stub transport" of
+  D10 is Phase 0's fake `Worker`: the facade creates its transport from the worker inside
+  `initPhysics`, and no injection seam was added for tests. `yarn test`: 597 passed.
+- **Docs:** the Hub's ECS guide (`ctx.onUnmount`) and embed walkthrough (what `unmount()` stops),
+  the root CLAUDE.md (`onUnmount` in the `FeatureContext` list, the mount line, a transport line
+  in Physics; D14 moves it in Phase 8), `docs/issues/remount-after-unmount.md` step 2.
+  `yarn hub:build` clean; `docs.json` recorded (the `transport` folder 3 / 3, `kernel/init` 24 / 24).
+- **Checks:** `yarn verify:embed` passed (the banner's two unmounts and the Hub's example page; the
+  banner has no physics, so the stop itself is the unit tests'). `yarn verify:scenes`: 103 of 104;
+  `thirdPersonGymScene` `workerMsg` once had a snapshot over the tolerance (0.43 % of pixels, spread
+  over the surfaces) with its probe and character path hashes unchanged, and passed on two reruns:
+  the gym's worker targets aren't deterministic (p428, its `unstableHash`). No hash moved.
+- **Left:** `moveMap.ts --check` reports its outputs stale since Phase 1's test files; Phase 4
+  regenerates them (D7).
 
 ### Phase 3: the types (D7, D9)
 
