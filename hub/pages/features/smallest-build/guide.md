@@ -14,9 +14,12 @@ rest of the build's files load later, or never.
 Most of the banner is three.js. three's `WebGPURenderer` brings its node system (TSL) whatever
 the material, so the same scene in a plain page, without the engine, still needs **237.7 KiB**
 (three r186, measured on 2026-10-14). The rest is the kernel every app runs: the ECS, the scenes,
-the asset registry, the loop, cameras and lights. Part of it a mount without a HUD or a model
-doesn't need yet (the UI kit, the glTF import path): moving those behind an `import()` is planned,
-and helps every build.
+the asset registry, the loop, cameras and lights, and the HUD's root. The glTF import path loads
+with the first scene that imports a model, and the UI kit's windows are in a build only when the
+app uses one. One
+part a build without a model still carries: three's animation classes, which three's own glTF
+loader names, sit in three's core chunk. Leaving them out of a build that imports no model is
+planned.
 
 ### Each feature's share
 
@@ -45,8 +48,8 @@ their share of the minified chunk.
   `sideEffects`), and everything registers when it's installed, never when it's loaded. So the
   bundler keeps only what's used of each entry, and a test fails on a module that registers on
   import.
-- **Heavy parts load on first use.** Rapier loads when physics starts; the glTF, KTX2, Draco and
-  HDR loaders when a scene loads such an asset; each scene's code with the scene, its TSL
+- **Heavy parts load on first use.** Rapier loads when physics starts; the glTF import path, the
+  KTX2, Draco and HDR loaders when a scene loads such an asset; each scene's code with the scene, its TSL
   materials with its assets and its post effects when it's created; the assets worker's jobs on
   their first job.
 - **Debug code folds away.** The debugger, its panels and its assets are behind a flag a

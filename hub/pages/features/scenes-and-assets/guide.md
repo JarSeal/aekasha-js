@@ -5,9 +5,9 @@
 - `sceneFile` is the scene's code, from `src/app/`. It exports `scene`, which the engine calls
   once the JSON's assets are loaded.
 - The lists name assets by their id (or hold one inline): `cameras`, `lights`, `geometries`,
-  `textures`, `materials`, `meshes`, `importedAssets`, `skyboxes` and `postFx`. The lights,
-  cameras and meshes are created right after the scene file runs, so its code reaches them on the
-  scene's enter.
+  `textures`, `materials`, `meshes`, `importedAssets`, `skyboxes` and `postFx`. The cameras are
+  created first, before the assets load; the lights and meshes right after the scene file runs,
+  so its code reaches them on the scene's enter.
 - Other keys set up the scene itself: `postFxEnabled`, `backgroundColor`, `spatialDomains` (see
   [Spatial index](hub:features/spatial-index)) and `impostors` (see
   [LOD and impostors](hub:features/lod#exporting-an-impostor)).
@@ -124,15 +124,30 @@ entry in use comes from another major version. Debug tools write these entries t
 
 [`loadScene`](api:loadScene) switches scenes. A load:
 
-1. Deletes the previous scene's physics entities and loopers, runs its exit hooks, then deletes
-   every other entity it created, except those created with `persistent: true`.
-2. Starts a fresh physics world (see
+1. Tears the previous scene down: the features' part first (its physics entities, its sky box,
+   its post effects, its viewports), then its groups and loopers, then its exit hooks, then every
+   other entity it created, except those created with `persistent: true`.
+2. Creates the next scene's cameras and starts a fresh physics world (see
    [deterministic scene loads](hub:features/physics#deterministic-scene-loads)).
-3. Loads the next scene's assets, then runs its scene file and creates its JSON objects.
+3. Loads the next scene's assets, then runs its scene file and creates its lights and meshes.
 4. Releases what the previous scene loaded and the next one doesn't use. An asset both use is
    kept, not loaded again. (`deletePrevScene: true` releases first instead: a lower peak in
    memory, but shared assets load again.)
 5. Runs the next scene's enter hooks.
+
+One load runs at a time. A `loadScene` call while a scene loads waits for that load, then runs,
+and a later call meanwhile takes its place (the last request wins):
+
+```ts
+const isLoaded = await loadScene({ sceneId: 'level2' });
+if (!isLoaded) showMenu(); // It failed, or a later call took its place
+```
+
+- It resolves `true` once the scene is current, and `false` when the load failed or another call
+  replaced it. It never rejects: a failed load is logged, the input and the debugger come back,
+  and the scene that was current stays.
+- Never `await` it in a scene file or a scene hook: the call would wait for the load it runs in.
+  Call it without `await` there, and it runs once that load has finished.
 
 [`createSceneLoader`](api:createSceneLoader) gives the load its screen: your functions for its
 start and end and its progress, with a HUD element of its own.
@@ -144,18 +159,27 @@ plays (and [`createSceneMainLooper`](api:createSceneMainLooper) also while it's 
 scene-scoped features take a `sceneId` to remove themselves on exit. A system that should run
 in lockstep with physics goes in the ECS instead (see [ECS](hub:features/ecs#systems-and-stages)).
 
+- A scene has one enter hook and one exit hook: registering again replaces it, so a scene file
+  can register on every visit. Each call returns its remover.
+- [`registerOnAllSceneEnters`](api:registerOnAllSceneEnters) and
+  [`registerOnAllSceneExits`](api:registerOnAllSceneExits) run for every scene, one function per
+  id, after the scene's own hook. (`registerOnAllSceneEnterings` is the old name, deprecated.)
+
 ## Key APIs
 
 - [`loadScene`](api:loadScene) and [`createSceneLoader`](api:createSceneLoader).
 - [`registerOnSceneEnter`](api:registerOnSceneEnter),
   [`registerOnSceneExit`](api:registerOnSceneExit),
+  [`registerOnAllSceneEnters`](api:registerOnAllSceneEnters),
   [`createSceneAppLooper`](api:createSceneAppLooper) and
   [`createSceneMainLooper`](api:createSceneMainLooper).
 - [`getMaterial`](api:getMaterial), [`getTexture`](api:getTexture) and
   [`getGeometry`](api:getGeometry): the assets a scene loaded, by id.
-- [`createMeshEntity`](api:createMeshEntity), [`createMaterial`](api:createMaterial) and
-  [`importAssetAsync`](api:importAssetAsync): the same assets from code
-  ([`loadTslMaterialFileAsync`](api:loadTslMaterialFileAsync) before a TSL material).
+- [`createMeshEntity`](api:createMeshEntity), [`createMaterial`](api:createMaterial),
+  [`loadTextureAsync`](api:loadTextureAsync) and [`importAssetAsync`](api:importAssetAsync): the
+  same assets from code ([`loadTslMaterialFileAsync`](api:loadTslMaterialFileAsync) before a TSL
+  material). The synchronous `loadTexture` and `loadTextures` are deprecated: they load neither
+  the asset pipeline's output nor in the assets worker, and their errors never reach you.
 
 ## Read more
 
