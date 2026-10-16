@@ -323,8 +323,22 @@ const getRegisteredArray = (id: string) => {
   return existing as TextureArray;
 };
 
+/** Loads every member; when one fails, releases the ones that loaded and throws the first error. */
+const loadMembers = async (members: TextureArrayMember[]) => {
+  const results = await Promise.allSettled(members.map(loadMember));
+  const loaded: LoadedMember[] = [];
+  let failed: PromiseRejectedResult | undefined;
+  for (const result of results) {
+    if (result.status === 'fulfilled') loaded.push(result.value);
+    else failed ??= result;
+  }
+  if (!failed) return loaded;
+  loaded.forEach(releaseMember);
+  throw failed.reason;
+};
+
 const build = async (id: string, props: BuildTextureArrayProps, keys: string[]) => {
-  const members = await Promise.all(props.members.map(loadMember));
+  const members = await loadMembers(props.members);
   try {
     const spec = getLayerSpec(members[0]);
     if (props.colorSpace) spec.colorSpace = props.colorSpace;
@@ -473,10 +487,18 @@ export const sampleArrayLayer = (
   return texture(array, uvNode as unknown as TextureUV).depth(toLayerNode(array, layer));
 };
 
+/** Whether the array is still the registered one under its id (not deleted, eg. by its scene's
+ * release, which disposes it). */
+const isArrayRegistered = (array: TextureArray) => getTexture(array.userData.id) === array;
+
 const swapLayer = async (array: TextureArray, layer: number, member: TextureArrayMember) => {
   const info = getTextureArrayInfo(array)!;
+  // Deleted while an earlier swap ran: nothing to write into
+  if (!isArrayRegistered(array)) return;
   const loaded = await loadMember(member);
   try {
+    // Deleted while the member loaded: its data is gone, the member is released below
+    if (!isArrayRegistered(array)) return;
     const spec: LayerSpec = {
       kind: info.kind,
       width: info.width,
@@ -508,7 +530,8 @@ const swapLayer = async (array: TextureArray, layer: number, member: TextureArra
 /**
  * Replaces one layer of a swappable array (built with `swappable: true`) with another member,
  * re-uploading that layer only. The member must match the array's size, mip count and format.
- * Swaps of one array run in call order.
+ * Swaps of one array run in call order, so the last call's member ends up in the layer. A swap
+ * whose array is deleted before it writes (eg. its scene's release) resolves without writing.
  * @param id the array's registry id
  * @param layer the layer index
  * @param member the new layer's {@link TextureArrayMember}

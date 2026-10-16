@@ -1057,6 +1057,20 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
   - **Checks:** `tsc` (both), the touched files' lint, `yarn test` (70 files, 546 passed), the
     docs ratchet (`kernel/assets` 102 / 126, `utils` 41 / 45). `yarn verify:baselines` (the
     production build's debug check, the API changes) at the end of the phase.
+- **Section 3 (step 3):**
+  - **TA1:** `build` loads its members through `loadMembers` (`Promise.allSettled`): when one
+    fails, the ones that loaded are released (their ImageBitmaps closed, textures disposed) and
+    the first error is thrown, as before.
+  - **TA2:** `swapLayer` checks that the array is still the registered one under its id
+    (`isArrayRegistered`) before its member loads (a swap queued behind another one) and after
+    (the load's `await`); a deleted array's swap resolves without writing and releases what it
+    loaded. `setTextureArrayLayer`'s JSDoc says so, and that the last call's member wins.
+  - **Tests:** `TextureArray.test.ts` (4, over a stubbed `loadTextureFileAsync` of compressed
+    members): a failed member's siblings released; a swap whose array was deleted before it
+    started (no load), and while its member loaded (nothing written, the member released); a
+    swap of a registered array still writes. The first three checked to fail without the fixes.
+  - **Checks:** `tsc` (both), the file's lint, `yarn test` (71 files, 550 passed), the docs ratchet
+    unchanged.
 
 ### Phase 6: the assets API, worker and import (`AssetsAPI.ts`, `AssetsAPITypes.ts`, `worker/`, `import/`)
 
