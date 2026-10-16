@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-6 implemented
+Status: in progress | Phases 0-7 implemented
 Category: Refactoring, Documentation, Rendering, Assets
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -1203,7 +1203,7 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
     name) swapping their 9.2 / 9.3 kB gzip between builds, no physics file touched: noise, so
     `bundle.json` isn't recorded.
 
-### Phase 7: PostFX and viewports (`features/postfx/`, `features/viewports/`)
+### Phase 7: PostFX and viewports (`features/postfx/`, `features/viewports/`) — done
 
 1. VP1 (`try` / `finally` around the per-viewport render: no allocation), VP2 (disconnected with
    the layer, if the layer can go: check `unmount()`), VP3. VP5 (found in Phase 4): a viewport's
@@ -1307,6 +1307,15 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
       doesn't read the provider, that poll builds the suspended root scene's chain. A
       side-effect-free check (`isPostFxEnabled` and an enabled pass) would do.
   - **Checks:** `tsc` (both), the folder's lint, `yarn test` (74 files, 569 passed).
+- **Step 4 (the checks):**
+  - **`yarn verify:scenes`:** 104 passed, 0 failed, hashes and snapshots unchanged in every target
+    and in prod test mode (407.2 s). The one `console.error` it shows (the texture atlas slot's
+    mip levels) is on its allowed list, as before.
+  - **`yarn verify:baselines`:** no debug code in either production build; the 6 API changes are
+    this phase's (section 2's three removals and the entries' additions). Recorded (`--update`)
+    with `docs.json` (exports 1796 / 2288, members 331 / 434) and the two bundle files: within the
+    tolerance, `ImportRegistry.js` +16 B in both builds (Phase 6's IM1 retry, whose bundle wasn't
+    recorded then), the rest ±2 B gzip.
 
 ### Phase 8: the Hub, CLAUDE.md, readme, and what's filed
 

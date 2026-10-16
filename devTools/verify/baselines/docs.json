@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1794,
-      "total": 2291
+      "documented": 1796,
+      "total": 2288
     },
     "members": {
       "documented": 331,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1750,
-        "total": 2228
+        "documented": 1752,
+        "total": 2225
       },
       "members": {
         "documented": 281,
@@ -582,8 +582,8 @@
     },
     "engine/features/postfx": {
       "exports": {
-        "documented": 28,
-        "total": 28
+        "documented": 25,
+        "total": 25
       },
       "members": {
         "documented": 0,
@@ -730,7 +730,7 @@
     },
     "engine/features/viewports": {
       "exports": {
-        "documented": 12,
+        "documented": 16,
         "total": 16
       },
       "members": {
@@ -738,12 +738,7 @@
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "Viewports#Viewport",
-          "Viewports#ViewportAnchor",
-          "Viewports#ViewportProps",
-          "Viewports#ViewportRect"
-        ],
+        "exports": [],
         "members": []
       }
     },
@@ -969,7 +964,7 @@
     },
     "engine/schemas": {
       "exports": {
-        "documented": 46,
+        "documented": 47,
         "total": 121
       },
       "members": {
@@ -1016,7 +1011,6 @@
           "PostFxSchema#PostFxAsset",
           "PostFxSchema#PostFxAssetSchema",
           "PostFxSchema#PostFxOverrides",
-          "PostFxSchema#PostFxParamMeta",
           "SpatialDomainSchema#SceneSpatialDomainEntry",
           "SpatialDomainSchema#SceneSpatialDomainsSchema",
           "TextureArraySchema#TextureArrayAsset",

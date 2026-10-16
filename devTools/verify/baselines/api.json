@@ -1181,16 +1181,13 @@
       "getPostFxBuiltChain": "Function",
       "getPostFxPasses": "Function",
       "installPostFx": "Function",
-      "invalidatePostFxPipeline": "Function",
       "isPostFxEnabled": "Function",
       "loadScenePostFxFilesAsync": "Function",
       "PostFxLiveParams": "TypeAlias",
       "PostFxPassInfo": "TypeAlias",
       "setPostFxEnabled": "Function",
       "setPostFxPassEnabled": "Function",
-      "setPostFxPassParam": "Function",
-      "togglePostFx": "Function",
-      "togglePostFxPass": "Function"
+      "setPostFxPassParam": "Function"
     },
     "src/_engine/features/postfx/PostFXFeature.ts": {
       "postFx": "Function",
@@ -3414,8 +3411,12 @@
       "setPhysicsTierPolicyMember"
     ],
     "aekasha/postfx": [
+      "PostFxLiveParams",
+      "PostFxPassApi",
+      "PostFxPassContext",
       "PostFxPassFn",
       "PostFxPassInfo",
+      "PostFxPassProps",
       "getPostFxPasses",
       "postFx",
       "setPostFxEnabled",
@@ -3453,6 +3454,7 @@
       "PACK_TARGETS",
       "PostFxAsset",
       "PostFxAssetSchema",
+      "PostFxParamMeta",
       "SceneAsset",
       "SkyBoxAsset",
       "SkyBoxAssetSchema",
@@ -3646,13 +3648,16 @@
     ],
     "aekasha/viewports": [
       "Viewport",
+      "ViewportAnchor",
       "ViewportProps",
+      "ViewportRect",
       "createViewport",
       "deleteViewport",
       "getViewport",
       "getViewportPointerNDC",
       "invalidateViewportLayout",
       "setViewportEnabled",
+      "setViewportInteractive",
       "viewports"
     ]
   }
