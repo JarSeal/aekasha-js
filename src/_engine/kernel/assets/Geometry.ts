@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
-import { getRenderer, isWebGPURenderer } from '../render/Renderer';
+import { getRenderer } from '../render/Renderer';
 import { getRootScene } from '../scene/Scene';
+import { lwarn } from '../../utils/Logger';
 import { recordAssetOwner, retagAssetOwner } from './AssetOwners';
 
 export type GeoDebugData = { name?: string; description?: string };
@@ -149,21 +150,35 @@ export const setGeometryPersistence = (id: string, state: boolean) => {
   if (!state && geo.count === 0) removeGeometry(id);
 };
 
+// What a geometry's pre-warm compiles with, made on the first one and shared by every later one:
+// the compile is there for the geometry's buffers, so any material and camera do
+let preWarmMaterial: THREE.MeshBasicNodeMaterial | null = null;
+let preWarmCamera: THREE.PerspectiveCamera | null = null;
+
 /**
- * Force-uploads a geometry to the GPU.
+ * Uploads a registered geometry's buffers to the GPU ahead of its first draw, by compiling a
+ * stand-in mesh with it (`renderer.compileAsync`, which creates the buffers without drawing). Run
+ * by `createGeometry` and `saveBufferGeometry` for `preWarm`. Does nothing without a renderer or
+ * the root scene, and a failed compile only warns: the first draw uploads them, as without a
+ * pre-warm.
+ * @internal
  */
 export const prewarmGeometry = async (id: string) => {
   const entry = geometries[id];
+  const renderer = getRenderer();
   const rootScene = getRootScene();
-  if (entry && isWebGPURenderer() && rootScene) {
-    // This triggers the creation of GPU buffers without rendering a single pixel.
-    const tempMat = new THREE.MeshBasicNodeMaterial();
-    const stagingMesh = new THREE.Mesh(entry.resource, tempMat);
-    // @TODO: Ask about if this is okay
-    const camera = new THREE.PerspectiveCamera();
-    await getRenderer()?.compileAsync(stagingMesh, camera, rootScene);
-    stagingMesh.geometry = null as unknown as THREE.BufferGeometry;
-    stagingMesh.material = null as unknown as THREE.MeshBasicNodeMaterial;
+  if (!entry || !renderer || !rootScene) return;
+  preWarmMaterial ??= new THREE.MeshBasicNodeMaterial();
+  preWarmCamera ??= new THREE.PerspectiveCamera();
+  const stagingMesh = new THREE.Mesh(entry.resource, preWarmMaterial);
+  try {
+    await renderer.compileAsync(stagingMesh, preWarmCamera, rootScene);
+  } catch (err) {
+    lwarn(`Pre-warming geometry "${id}" failed: its buffers upload on its first draw.`, err);
+  } finally {
+    // The renderer keeps an object's render objects until it's disposed: the stand-in's go (its
+    // geometry's buffers stay, they're the geometry's)
+    stagingMesh.dispose();
   }
 };
 
@@ -254,20 +269,30 @@ export const createGeometry = <T extends GeoTypes>(props: GeoProps): T => {
   };
   recordAssetOwner(geo);
 
-  if (props?.preWarm) prewarmGeometry(id);
+  if (props?.preWarm) void prewarmGeometry(id);
 
   return geo as T;
 };
 
 /**
- * Returns one or many geometries.
+ * Returns a registered geometry by its id, or undefined when none is registered under it. With
+ * an array of ids, the registered ones among them, in the array's order (an unregistered id is
+ * left out).
  * @param id geometry id or array of ids
- * @returns one or many geometries (THREE.BufferGeometry)
  */
-export const getGeometry = (id: string | string[]) => {
-  if (typeof id === 'string') return geometries[id].resource;
-  return id.map((geoId) => geometries[geoId].resource);
-};
+export function getGeometry(id: string): THREE.BufferGeometry | undefined;
+export function getGeometry(id: string[]): THREE.BufferGeometry[];
+export function getGeometry(
+  id: string | string[]
+): THREE.BufferGeometry | THREE.BufferGeometry[] | undefined {
+  if (typeof id === 'string') return geometries[id]?.resource;
+  const found: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < id.length; i++) {
+    const entry = geometries[id[i]];
+    if (entry) found.push(entry.resource);
+  }
+  return found;
+}
 
 /**
  * Forcefully deletes one or many geometries from CPU and GPU memory.
@@ -326,7 +351,7 @@ export const saveBufferGeometry = (
   };
   recordAssetOwner(geometry);
 
-  if (props?.preWarm) prewarmGeometry(id);
+  if (props?.preWarm) void prewarmGeometry(id);
 
   return geometry;
 };

@@ -172,7 +172,7 @@ export const createMeshEntity = (
     geo = props.geo;
   } else if (typeof props.geo === 'string') {
     geo = existsOrThrow(
-      getGeometry(props.geo) as THREE.BufferGeometry,
+      getGeometry(props.geo),
       `Could not find geometry with id "${props.geo}" in createMeshEntity (mesh appId "${props.appId || entityOpts?.appId}").`
     );
   } else {

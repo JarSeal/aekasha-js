@@ -8,6 +8,7 @@ import type { Node } from 'three/tsl';
 import { color, texture, uniform } from 'three/tsl';
 import { textureMapKeys } from '../../utils/Constants';
 import { recordAssetOwner, retagAssetOwner } from './AssetOwners';
+import { getSceneRetainedTextures } from '../scene/SceneHooks';
 
 export type Materials =
   | THREE.LineBasicMaterial
@@ -172,6 +173,18 @@ export type MatProps = {
 
 /** The TSL material files loaded so far, by material id (see loadTslMaterialFileAsync) */
 const loadedTslMaterialFiles = new Map<string, Record<string, unknown>>();
+
+// A TSL texture input whose id isn't registered samples this: one white texel, made on the first
+// one, shared and never disposed (it isn't registered, so no release reaches it)
+let missingTexture: THREE.DataTexture | null = null;
+const getMissingTexture = () => {
+  if (!missingTexture) {
+    missingTexture = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
+    missingTexture.name = 'aekMissingTexture';
+    missingTexture.needsUpdate = true;
+  }
+  return missingTexture;
+};
 
 /**
  * Loads a material's TSL file (its material JSON's `tslFile`) so {@link createMaterial} can build
@@ -431,12 +444,13 @@ export const createMaterial = (props: MatProps) => {
           }
           // Handle textures
           else if (typeof value === 'string' && !value.startsWith('#')) {
-            const texResource = getTexture(value as string);
+            let texResource = getTexture(value);
             if (!texResource) {
               lwarn(
-                `Could not locate texture resource for input "${inputKey}" in material "${id}" with value "${value}", setting a uniform value of 1.`
+                `Could not locate texture resource for input "${inputKey}" in material "${id}" with value "${value}": it samples one white texel.`
               );
-              instantiatedNode = uniform(1);
+              // A sampler still, so the TSL function gets the node type it expects
+              texResource = getMissingTexture();
             }
             // Convert directly into a sampler node, not a uniform buffer allocation
             instantiatedNode = texture(texResource);
@@ -682,17 +696,35 @@ export const isTextureUsedByAnyMaterial = (texture: THREE.Texture) => {
 };
 
 /**
+ * The registered textures that stay though no material holds them: what the `retainedTextures`
+ * scene hooks name (the sky box's) and the root scene's background and environment. The one rule
+ * both a material's release ({@link deleteTexturesFromMaterial}) and a scene's
+ * (`releaseSceneOwnedAssets`) keep by. A new set per call: read it once per release.
+ * @internal
+ */
+export const getKeptTextures = (): Set<THREE.Texture> => {
+  const kept = getSceneRetainedTextures();
+  const rootScene = getRootScene();
+  if (rootScene?.background instanceof THREE.Texture) kept.add(rootScene.background);
+  if (rootScene?.environment) kept.add(rootScene.environment);
+  return kept;
+};
+
+/**
  * Releases a material's textures from VRAM cache, as far as no other registered material still
  * uses them: a texture shared between materials (e.g. the same cached loadTexture id) survives
  * until its last material goes. A texture that isn't the registered one itself — typically a
  * `.clone()` of it, which copies the source's `userData.id` — belongs to the material alone and
  * is disposed directly; the registered source is then released with the last material holding
- * any texture under its id. Persistent registered textures are never released here.
+ * any texture under its id. Persistent registered textures, and those {@link getKeptTextures}
+ * names (a sky box's, the scene's background), are never released here: the scene's release
+ * takes them once nothing keeps them.
  * @param mat Target material asset.
  * @param opts.keepRegistered only dispose the textures the material holds alone (eg. clones), and
  * leave registered textures for the caller to release
  */
 export const deleteTexturesFromMaterial = (mat: Materials, opts?: { keepRegistered?: boolean }) => {
+  let kept: Set<THREE.Texture> | undefined;
   for (let i = 0; i < textureMapKeys.length; i++) {
     const key = textureMapKeys[i] as keyof Materials;
     const texture = mat[key] as THREE.Texture;
@@ -709,7 +741,8 @@ export const deleteTexturesFromMaterial = (mat: Materials, opts?: { keepRegister
       !registered.persistent &&
       !isTextureInUseByOtherMaterial(mat, (t) => t.userData?.id === id)
     ) {
-      deleteTexture(id);
+      kept ??= getKeptTextures();
+      if (!kept.has(registered.resource)) deleteTexture(id);
     }
   }
 };

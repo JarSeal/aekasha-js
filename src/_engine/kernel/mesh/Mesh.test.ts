@@ -40,6 +40,12 @@ describe('createMeshEntity', () => {
     expect(mesh.material).toBe(material);
     world.deleteEntity(entityId);
   });
+
+  test('throws its own message for an unregistered geometry id', () => {
+    expect(() =>
+      createMeshEntity({ geo: 'meshTestNoGeometry', mat: new THREE.MeshBasicNodeMaterial() })
+    ).toThrow('Could not find geometry with id "meshTestNoGeometry"');
+  });
 });
 
 describe('preWarmMesh', () => {

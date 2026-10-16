@@ -975,6 +975,48 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
    `three-node-material-helpers.d.ts`, or name three's own type).
 6. `yarn verify:scenes` (A2, A5 and bug A can change what a scene shows: any diff explained).
 
+**As built** (one commit per section):
+
+- **Section 1 (step 1):**
+  - **A1:** `getGeometry` has two overloads: an id returns the geometry or `undefined`, an array
+    the registered ones in order (an unregistered id left out, as `getTextures` does). So
+    `createMeshEntity`'s message shows, and a scene's string geometry is skipped. The casts in
+    `Mesh.ts` and `SceneDataLoader.ts` gone (and its `doesGeoExist` check, now redundant). A
+    tightening of the entry's return type, not a break (the old union needed a cast anyway).
+  - **A2:** `createTexture` registers everything it makes (the file, HDR, no-file and KTX2
+    stand-in paths), and `loadTexture` passes `id || fileName` in instead of saving a second time:
+    one entry, under the id or else the file name. No-file and HDR textures now also get the
+    caller's `userData` / `debugData` (dropped before).
+  - **A3:** the load error callbacks log, never throw: a failure ends after the loader returned, so
+    a throw was always uncaught. `throwOnError` / `THROW_ERROR` throw only for what's known before
+    the load (a KTX2 file, an empty list), documented. `loadTextures` counts a failed load in every
+    mode (with `THROW_ERROR` it never did: `updateStatusFn` never reached the total), registers the
+    `EMPTY_TEXTURE` stand-ins and the no-file textures, and a parallel load of the same id keeps
+    the registered texture (`saveLoadedTexture`, as `loadTextureAsync` does).
+  - **A4 (bug A), not as §1.2 says:** three r186's `texture(undefined)` doesn't fail the build: it
+    falls back to its shared image-less `EmptyTexture`, and the `uniform(1)` before it was
+    overwritten. Now a missing texture input warns and samples one white texel (`getMissingTexture`,
+    made on first use, shared, not registered, never disposed), as D2 says. Risk 2's "instead of
+    failing its shader build" is "instead of sampling an empty texture".
+  - **A5 (the plan's rule, confirmed):** `getKeptTextures` (`Material.ts`, `@internal`): the
+    `retainedTextures` hooks' textures plus the root scene's background and environment. Both
+    `deleteTexturesFromMaterial` (so `decMaterialRef`) and `releaseSceneOwnedAssets` keep by it; the
+    release keeping the background is new too (a background texture the previous scene owned,
+    which the next scene's data doesn't list, was released while showing). A light's cookie isn't
+    covered (it would need a scene walk per texture). Timing unchanged: a texture still goes with
+    its last material at the scene exit unless kept.
+  - **A6:** `prewarmGeometry` (`@internal`) compiles with one material and camera made on the
+    first call, disposes its stand-in mesh (three keeps an object's render objects until then),
+    and warns on a failed compile; its callers `void` it. The WebGPU-only check is gone: three's
+    `compileAsync` creates the buffers on both backends (`preWarmMesh` never had the check).
+  - **Tests** (each checked to fail without its fix): `Geometry.test.ts` (4), `Material.test.ts`
+    (4: bug A, the release with the last material, the background, a `retainedTextures` hook),
+    `SceneAssetRelease.test.ts` (1: the background kept, then released), `Texture.test.ts` (4: one
+    registration, a failed load logged, `EMPTY_TEXTURE` registered and counted, `THROW_ERROR`
+    counted), `Mesh.test.ts` +1 (the geometry message).
+  - **Checks:** `tsc` (both), the changed folders' lint, `yarn test` (69 files, 543 passed), the
+    docs ratchet (`kernel/assets` 110 / 142).
+
 ### Phase 6: the assets API, worker and import (`AssetsAPI.ts`, `AssetsAPITypes.ts`, `worker/`, `import/`)
 
 1. IM1 (a failed `import()` is retried by the next call), AW2, IM2's comment.
@@ -1019,8 +1061,9 @@ and the updated `docs.json` (`yarn verify:baselines --docs --update`).
 1. **D3's queue.** Code that relies on a second `loadScene` starting at once (none known; Phase 3
    checks the callers: the debugger's scene list, the scene keys, the mount handle) now waits. The scene runner loads
    scenes one at a time, so its baselines don't move.
-2. **D2's bug A.** A material whose texture input is missing renders white instead of failing its
-   shader build; a scene that has one today shows it (the warning names it).
+2. **D2's bug A.** A material whose texture input is missing samples white instead of three's
+   empty texture (Phase 5 found it doesn't fail the build); a scene that has one today shows it
+   (the warning names it).
 3. **D4.** A scene whose imports are listed by id only (`importedAssets: ["id"]`) and loaded by
    another scene still finds the registry: the `import()` runs for either form.
 

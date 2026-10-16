@@ -240,6 +240,16 @@ const getNoFileTexture = (texOpts?: TexOpts, isCubeTexture?: boolean) =>
         texOpts?.colorSpace
       );
 
+/**
+ * Creates and registers a texture for the synchronous loaders (`loadTexture`, `loadTextures`):
+ * from `fileName` with TextureLoader (or HDRLoader for an `.hdr` file), filled when the file has
+ * loaded, or without a file an empty texture (or one from `texOpts.image`). A KTX2 file can't load
+ * synchronously: it gets the empty texture. The texture is registered under `id` (its uuid
+ * without one); an id already registered returns that texture.
+ *
+ * `throwOnError` throws only for what's known before the load starts (a KTX2 file): a failed
+ * load ends after this has returned, so it's logged and the texture stays empty.
+ */
 const createTexture = (
   id?: string,
   fileName?: string,
@@ -254,25 +264,28 @@ const createTexture = (
     return textures[id].resource;
   }
 
-  if (!fileName) return getNoFileTexture(texOpts);
+  if (!fileName) {
+    const texture = setTextureOpts(getNoFileTexture(texOpts), undefined, userData, debugData);
+    return saveTexture(texture, id, isPersistent);
+  }
 
   if (isKTX2(fileName)) {
     const errorMsg = `KTX2 textures can only be loaded with loadTextureAsync (id: "${id}", fileName: "${fileName}")`;
     lerror(errorMsg);
     if (throwOnError) throw new Error(errorMsg);
-    return getNoFileTexture(texOpts);
+    const texture = setTextureOpts(getNoFileTexture(texOpts), undefined, userData, debugData);
+    return saveTexture(texture, id, isPersistent);
   }
+
+  // Ends after the texture was returned: a throw here would be uncaught, never the caller's
+  const onError = (err: unknown) =>
+    lerror(`Could not load texture in createTexture (id: "${id}", fileName: "${fileName}")`, err);
 
   if (isHDR(fileName)) {
     // The texture HDRLoader's load would return, filled the same way when the file has loaded:
     // the loader is imported first
     const texture = new THREE.DataTexture();
-    setTextureOpts(texture, texOpts);
-    const onError = (err: unknown) => {
-      const errorMsg = `Could not load HDR texture in createTexture (id: "${id}", fileName: "${fileName}")`;
-      lerror(errorMsg, err);
-      if (throwOnError) throw new Error(errorMsg);
-    };
+    setTextureOpts(texture, texOpts, userData, debugData);
     importHDRLoader().then(
       (HDRLoader) =>
         new HDRLoader()
@@ -285,40 +298,27 @@ const createTexture = (
           ),
       onError
     );
-    saveTexture(texture, id, isPersistent);
-    return texture;
+    return saveTexture(texture, id, isPersistent);
   }
 
-  const loader = new THREE.TextureLoader();
-  const texture = setTextureOpts(
-    loader.load(
-      resolveFileUrl(fileName),
-      (texture) => texture,
-      undefined,
-      (err) => {
-        const errorMsg = `Could not load texture in createTexture (id: "${id}", fileName: "${fileName}")`;
-        lerror(errorMsg, err);
-        if (throwOnError) throw new Error(errorMsg);
-        return new THREE.Texture();
-      }
-    ),
-    texOpts
+  const texture = new THREE.TextureLoader().load(
+    resolveFileUrl(fileName),
+    undefined,
+    undefined,
+    onError
   );
-  texture.userData = userData || {};
-  if (debugData) {
-    texture.name = debugData.name || texture.name;
-    texture.userData.name = debugData.name;
-    texture.userData.description = debugData.description;
-  }
-  saveTexture(texture, id, isPersistent);
-  return texture;
+  setTextureOpts(texture, texOpts, userData, debugData);
+  return saveTexture(texture, id, isPersistent);
 };
 
 /**
  * Loads one or more textures in the background.
  * @param texData array of objects: { id?: string; fileName?: string; texOpts?: {@link TexOpts} }[]
  * @param updateStatusFn optional status update function
- * @param onErrorAction optional on error action
+ * @param onErrorAction what a texture that can't load gets: `NO_TEXTURE` (the default) none,
+ * `EMPTY_TEXTURE` an empty texture registered under its id, `THROW_ERROR` a throw for what's known
+ * before the loads start (a KTX2 file); a load that fails later can't reach the caller, so it's
+ * logged and counted like `NO_TEXTURE`
  */
 export const loadTextures = (
   texData: {
@@ -344,15 +344,31 @@ export const loadTextures = (
 
   const batchTextures: { [id: string]: THREE.Texture } = {};
 
+  const onOneDone = () => {
+    loadedCount++;
+    if (updateStatusFn) updateStatusFn(batchTextures, loadedCount, totalCount);
+  };
+
   const loadOneBatchTexture = (index: number) => {
     const { id, fileName, texOpts, isPersistent, userData, debugData } = texData[index];
-    const loader = new THREE.TextureLoader();
+    // An empty texture, registered (under the texture's uuid without an id)
+    const addEmptyTexture = () => {
+      const texture = createTexture(
+        id,
+        undefined,
+        texOpts,
+        false,
+        userData,
+        debugData,
+        isPersistent
+      );
+      batchTextures[texture.userData.id as string] = texture;
+    };
 
     if (id && textures[id]) {
       retagAssetOwner(textures[id].resource);
       batchTextures[id] = textures[id].resource;
-      loadedCount++;
-      if (updateStatusFn) updateStatusFn(batchTextures, loadedCount, totalCount);
+      onOneDone();
       return;
     }
 
@@ -363,69 +379,29 @@ export const loadTextures = (
       if (onErrorAction === 'THROW_ERROR') {
         throw new Error(`KTX2 texture in loadTextures (id: ${id}, fileName: ${fileName})`);
       }
-      if (onErrorAction === 'EMPTY_TEXTURE') {
-        const texture = createTexture(
-          id,
-          undefined,
-          texOpts,
-          false,
-          userData,
-          debugData,
-          isPersistent
-        );
-        batchTextures[id || texture.uuid] = texture;
-      }
-      loadedCount++;
-      if (updateStatusFn) updateStatusFn(batchTextures, loadedCount, totalCount);
+      if (onErrorAction === 'EMPTY_TEXTURE') addEmptyTexture();
+      onOneDone();
     } else if (fileName) {
-      loader.load(
+      new THREE.TextureLoader().load(
         resolveFileUrl(fileName),
-        (texture) => {
-          const texId = id || texture.uuid;
-          setTextureOpts(texture, texOpts, userData, debugData);
-          saveTexture(texture, texId, isPersistent);
-          batchTextures[texId] = texture;
-          loadedCount++;
-          if (updateStatusFn) updateStatusFn(batchTextures, loadedCount, totalCount);
+        (loaded) => {
+          setTextureOpts(loaded, texOpts, userData, debugData);
+          // A parallel load of the same id may have registered first: that one is used
+          const texture = saveLoadedTexture(loaded, id, isPersistent);
+          batchTextures[texture.userData.id as string] = texture;
+          onOneDone();
         },
         undefined,
         (err) => {
-          const errorMsg = `Could not load texture in loadTextures (id: ${id}, fileName: ${fileName})`;
-          lerror(errorMsg, err);
-          if (onErrorAction === 'THROW_ERROR') {
-            throw new Error(errorMsg);
-          }
-          if (onErrorAction === 'EMPTY_TEXTURE') {
-            const texture = createTexture(
-              id,
-              undefined,
-              texOpts,
-              false,
-              userData,
-              debugData,
-              isPersistent
-            );
-            const texId = id || texture.uuid;
-            batchTextures[texId] = texture;
-          }
-          loadedCount++;
-          if (updateStatusFn) updateStatusFn(batchTextures, loadedCount, totalCount);
+          // Ends after loadTextures has returned: a throw here would be uncaught
+          lerror(`Could not load texture in loadTextures (id: ${id}, fileName: ${fileName})`, err);
+          if (onErrorAction === 'EMPTY_TEXTURE') addEmptyTexture();
+          onOneDone();
         }
       );
     } else {
-      const texture = createTexture(
-        id,
-        undefined,
-        texOpts,
-        false,
-        userData,
-        debugData,
-        isPersistent
-      );
-      const texId = id || texture.uuid;
-      batchTextures[texId] = texture;
-      loadedCount++;
-      if (updateStatusFn) updateStatusFn(batchTextures, loadedCount, totalCount);
+      addEmptyTexture();
+      onOneDone();
     }
   };
 
@@ -462,8 +438,9 @@ export const loadTexture = ({
     retagAssetOwner(cached);
     return cached;
   }
-  const texture = createTexture(
-    id,
+  // Registered once, under its id or else its file name (createTexture registers it)
+  return createTexture(
+    id || fileName,
     fileName,
     texOpts,
     throwOnError,
@@ -471,8 +448,6 @@ export const loadTexture = ({
     debugData,
     isPersistent
   );
-  saveTexture(texture, id || fileName || texture.uuid, isPersistent);
-  return texture;
 };
 
 /**

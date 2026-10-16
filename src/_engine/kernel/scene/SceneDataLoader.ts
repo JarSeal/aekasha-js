@@ -6,7 +6,7 @@ import { getEntityIdByAppId } from '../ecs/ECS';
 import { getTexture, loadTextureAsync } from '../assets/Texture';
 import { createMaterial, getMaterial, loadTslMaterialFileAsync } from '../assets/Material';
 import { textureMapKeys } from '../../utils/Constants';
-import { createGeometry, doesGeoExist, getGeometry } from '../assets/Geometry';
+import { createGeometry, getGeometry } from '../assets/Geometry';
 import { createLightEntity } from '../light/Light';
 import { createCameraEntity, setActiveCamera } from '../camera/Camera';
 import { createMeshEntity } from '../mesh/Mesh';
@@ -165,8 +165,8 @@ export const loadNextSceneAssets = async (sceneData: SceneData): Promise<ScenePr
     if (typeof geometry === 'string') {
       const geo = getGeometry(geometry);
       if (geo) {
-        retagAssetOwner(geo as THREE.BufferGeometry);
-        geometries[geometry] = geo as THREE.BufferGeometry;
+        retagAssetOwner(geo);
+        geometries[geometry] = geo;
       }
       continue;
     }
@@ -200,14 +200,14 @@ export const createNextSceneObject3Ds = (sceneData: SceneData) => {
     // would otherwise reuse the previous visit's released (disposed) geometry/material objects
     let geo = props.props.geo;
     if (typeof geo === 'string') {
-      const foundGeo = doesGeoExist(geo) ? getGeometry(geo) : undefined;
+      const foundGeo = getGeometry(geo);
       if (!foundGeo) {
         lerror(
           `Could not find geometry with id "${geo}" for mesh "${props.props.appId || props.entityOpts?.appId}" in createNextSceneObject3Ds. Mesh not created.`
         );
         continue;
       }
-      geo = foundGeo as THREE.BufferGeometry;
+      geo = foundGeo;
     }
     let mat = props.props.mat;
     if (typeof mat === 'string') {
