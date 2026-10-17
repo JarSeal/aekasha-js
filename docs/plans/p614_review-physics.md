@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-4 implemented
 Category: Refactoring, Documentation, Physics
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md, p511_network-transport-and-replication.md (the transport interface)
@@ -722,7 +722,7 @@ As built, step 2 (2026-10-17):
   moves; recorded), `yarn hub:build` (no new warning: no public signature names a type marked
   `@internal`), `moveMap.ts` regenerated (729 files).
 
-### Phase 4: the facade (D7, D8)
+### Phase 4: the facade (D7, D8) — done
 
 1. `PhysicsAPI.ts` into its modules and `proxies/`; A5's duplication, A6-A9, W5.
 2. D8's return types. The debug modules' imports updated (p618's files, imports only).
@@ -842,6 +842,19 @@ As built, section 2 (2026-10-17): A5-A9, W5.
   and `DistributiveOmit` exported `@internal` for it), and the physics guide's API list now
   names `PhysicsState` instead of the all-internal `PhysicsWorld`. `moveMap.ts` was regenerated
   (`entryExports.json` follows the `@internal`s).
+
+As built, steps 2 and 3 (2026-10-17):
+
+- **D8 (step 2)** went with section 2: every facade create is annotated with what callers use
+  (`Promise<RigidBodyAPI>`, `RigidBodyAPI[]`, `ColliderAPI`, `JointAPI`; the proxy
+  registrations return the interfaces), and `RigidBodyProxyAPI` implements `RigidBodyAPI`, so no
+  public signature names a proxy class. The debug modules' imports were rewritten in section 1.
+  D8's three character types stay Phase 7's.
+- **Step 3:** `PhysicsWorker.test.ts` forbids the 14 facade modules (section 1);
+  `ModuleLoad.test.ts` and `moduleSideEffects.test.ts` pass (`yarn test`, 603).
+  `yarn verify:scenes`: 104 passed, nothing recorded, in 408 s. No hash or snapshot moved:
+  `physicsTiers` `49157b8f` and the gym `84a78084` (the same in all three targets), the gym's
+  character path hash `26f43551` (`MAIN_THREAD`).
 
 ### Phase 5: the backend (D7, D11)
 
