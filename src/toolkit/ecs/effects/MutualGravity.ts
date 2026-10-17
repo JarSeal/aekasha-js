@@ -129,7 +129,7 @@ const mutualGravitySystem = (world: ECSWorld) => {
  * Adds a dynamic physics entity to the mutual gravity (or updates its mass). Use the body's real
  * mass, so it falls as it's pulled: with a density-based collider that's density × collider volume
  * (eg. `generateAsteroid`'s `hullVolume` for a `CONVEXHULL` collider).
- * @param entityId entity with a dynamic rigid body (see PhysicsManager.createPhysicsEntity)
+ * @param entityId entity with a dynamic rigid body (see `createPhysicsEntity`)
  * @param mass gravitational mass
  * @param world ECS world the entity lives in (default: the default world)
  */

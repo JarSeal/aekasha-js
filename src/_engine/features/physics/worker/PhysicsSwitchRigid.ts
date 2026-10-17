@@ -14,9 +14,6 @@ const toPlainPose = (pos: PhysVector, rot: PhysRotation): RigidBodyPose => ({
   rot: { x: rot.x, y: rot.y, z: rot.z, w: rot.w },
 });
 
-/** A new body's transform buffer slot, seeded with its pose. -1 without a buffer and for a FIXED
- * body, which never moves under simulation: its proxy keeps its pose instead (p352). `refused`
- * when the buffer is full. */
 /** CREATE_PHYSICS_ENTITY's colliders, all or nothing: when one throws, the ones made before it
  * are deleted and the throw goes on (with a body, the caller deletes the body, which takes its
  * colliders along). */
@@ -37,6 +34,9 @@ const createEntityColliders = (
   return ids;
 };
 
+/** A new body's transform buffer slot, seeded with its pose. -1 without a buffer and for a FIXED
+ * body, which never moves under simulation: its proxy keeps its pose instead (p352). `refused`
+ * when the buffer is full. */
 const allocateBodySlot = (rb: RigidBodyAPI, transformBuffer?: PhysicsTransformBuffer) => {
   const pose = toPlainPose(rb.pos, rb.rot);
   let slot = -1;
@@ -241,16 +241,6 @@ export const physicsSwitchRigid = async (
       // RIGID_SOFT_CCD_PREDICTION
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
       return sendMessage({ type, softCcdPrediction: rigidBodyAPI.softCcdPredictionSync() }, data);
-    // @CHORE: remove
-    case PhysicsProtocolType.RIGID_TRANSLATION:
-      // RIGID_TRANSLATION
-      if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, translation: rigidBodyAPI.translation() }, data);
-    // @CHORE: remove
-    case PhysicsProtocolType.RIGID_ROTATION:
-      // RIGID_ROTATION
-      if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, rotation: rigidBodyAPI.rotation() }, data);
     case PhysicsProtocolType.RIGID_NEXT_TRANSLATION:
       // RIGID_NEXT_TRANSLATION
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
@@ -291,11 +281,6 @@ export const physicsSwitchRigid = async (
       // RIGID_SET_NEXT_KINEMATIC_ROTATION
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
       return rigidBodyAPI.setNextKinematicRotation(data.rot);
-    // @CHORE: remove
-    case PhysicsProtocolType.RIGID_LINVEL:
-      // RIGID_LINVEL
-      if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, linvel: rigidBodyAPI.linvel() }, data);
     case PhysicsProtocolType.RIGID_VELOCITY_AT_POINT:
       // RIGID_VELOCITY_AT_POINT
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
@@ -303,11 +288,6 @@ export const physicsSwitchRigid = async (
         { type, velocityAtPoint: rigidBodyAPI.velocityAtPointSync(data.point) },
         data
       );
-    // @CHORE: remove
-    case PhysicsProtocolType.RIGID_ANGVEL:
-      // RIGID_ANGVEL
-      if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, angvel: rigidBodyAPI.angvel() }, data);
     case PhysicsProtocolType.RIGID_MASS:
       // RIGID_MASS
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);

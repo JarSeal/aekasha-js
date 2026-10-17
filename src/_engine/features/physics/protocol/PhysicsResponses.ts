@@ -208,16 +208,6 @@ export type RigidAdditionalSolverIterationsResponse =
 export type RigidSoftCcdPredictionResponse =
   PhysicsResponse<PhysicsProtocolType.RIGID_SOFT_CCD_PREDICTION>;
 /**
- * The worker's reply to `RIGID_TRANSLATION`.
- * @internal
- */
-export type RigidTranslationResponse = PhysicsResponse<PhysicsProtocolType.RIGID_TRANSLATION>;
-/**
- * The worker's reply to `RIGID_ROTATION`.
- * @internal
- */
-export type RigidRotationResponse = PhysicsResponse<PhysicsProtocolType.RIGID_ROTATION>;
-/**
  * The worker's reply to `RIGID_NEXT_TRANSLATION`.
  * @internal
  */
@@ -234,21 +224,11 @@ export type RigidNextRotationResponse = PhysicsResponse<PhysicsProtocolType.RIGI
  */
 export type RigidGravityScaleResponse = PhysicsResponse<PhysicsProtocolType.RIGID_GRAVITY_SCALE>;
 /**
- * The worker's reply to `RIGID_LINVEL`.
- * @internal
- */
-export type RigidLinvelResponse = PhysicsResponse<PhysicsProtocolType.RIGID_LINVEL>;
-/**
  * The worker's reply to `RIGID_VELOCITY_AT_POINT`.
  * @internal
  */
 export type RigidVelocityAtPointResponse =
   PhysicsResponse<PhysicsProtocolType.RIGID_VELOCITY_AT_POINT>;
-/**
- * The worker's reply to `RIGID_ANGVEL`.
- * @internal
- */
-export type RigidAngvelResponse = PhysicsResponse<PhysicsProtocolType.RIGID_ANGVEL>;
 /**
  * The worker's reply to `RIGID_MASS`.
  * @internal

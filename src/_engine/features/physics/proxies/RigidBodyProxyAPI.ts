@@ -2,60 +2,46 @@
 // call a message to the worker.
 
 import { existsOrThrow } from '../../../utils/Assert';
-import { messageWorker, messageWorkerAsync, toPlainRot } from '../PhysicsMessaging';
+import {
+  commandWorker,
+  messageWorkerAsync,
+  queryWorker,
+  throwWorkerSync,
+  toPlainRot,
+} from '../PhysicsMessaging';
+import type { PhysicsCommandFor, PhysicsQueryType } from '../PhysicsMessaging';
 import { colliders, getBodyMovedListener } from '../PhysicsRegistry';
 import { facade } from '../PhysicsState';
 import { getWriteVisibleStep, isWritePending } from '../PhysicsStepping';
 import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
 import type {
-  RigidAdditionalSolverIterationsResponse,
-  RigidAngularDampingResponse,
-  RigidBodyTypeResponse,
   RigidColliderResponse,
-  RigidDominanceGroupResponse,
-  RigidEffectiveInvMassResponse,
-  RigidGetUserDataResponse,
-  RigidGravityScaleResponse,
-  RigidInvMassResponse,
-  RigidInvPrincipalInertiaResponse,
-  RigidIsCcdEnabledResponse,
-  RigidIsDynamicResponse,
-  RigidIsEnabledResponse,
-  RigidIsFixedResponse,
-  RigidIsKinematicResponse,
-  RigidIsMovingResponse,
-  RigidIsSleepingResponse,
-  RigidIsValidResponse,
-  RigidLinearDampingResponse,
-  RigidLocalComResponse,
-  RigidMassResponse,
-  RigidNextRotationResponse,
-  RigidNextTranslationResponse,
-  RigidNumCollidersResponse,
-  RigidPrincipalInertiaLocalFrameResponse,
-  RigidPrincipalInertiaResponse,
-  RigidSoftCcdPredictionResponse,
-  RigidUserForceResponse,
-  RigidUserTorqueResponse,
   RigidVelocityAtPointResponse,
-  RigidWorldComResponse,
 } from '../protocol/PhysicsResponses';
 import { RigidBodyTypeAPI } from '../types/PhysicsBodyTypes';
-import type { PoseArray, RigidBodyPose, RigidBodyWorkerEngine } from '../types/PhysicsBodyTypes';
+import type {
+  PoseArray,
+  RigidBodyAPI,
+  RigidBodyAttachState,
+  RigidBodyPose,
+} from '../types/PhysicsBodyTypes';
 import type { ColliderAPI } from '../types/PhysicsColliderTypes';
 import type { PhysRotation, PhysVector } from '../types/PhysicsCommonTypes';
 
+/** A value written on the main thread, read back until the transform buffer shows it. */
 type PendingWrite<T> = { value: T; visibleAt: number };
+
+/** The `*Sync` twins this proxy can't answer: their value is the worker's. */
+const asyncOnly = (getter: string): never => throwWorkerSync('RigidBodyAPI', getter);
 
 /**
  * A rigid body in WORKER_THREAD mode: its pose and velocities read from the transform buffer by
  * slot (with its own writes until they reach it), every other call a message to the worker.
  * @internal
  */
-export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
+export class RigidBodyProxyAPI implements RigidBodyAPI {
   uData: Record<string, unknown> = {};
   isBeingDeleted: boolean = false;
-  // @CHORE: add isEnabled cache
 
   // Read-your-writes: a value set here reaches the worker (and then the transform buffer) only
   // a step or more later, but code like a character controller sets a velocity and reads it back
@@ -73,16 +59,23 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
    * instead, its creation pose updated by every setTranslation/setRotation, for good. */
   private staticPose?: RigidBodyPose;
 
+  /**
+   * The proxy of a body the worker made, from its create's reply.
+   * @param slot its transform-buffer slot, -1 for a body created FIXED
+   * @param initialPose the pose the worker reported at creation. Read until the first transform
+   * write-back that includes this body, which (without SAB) can arrive a frame or more later, and
+   * until then the slot holds zeros or a deleted body's last pose.
+   * @param cachedBodyType the type it was created with ({@link bodyTypeSync}'s start)
+   * @param cachedEnabled whether it was created enabled ({@link isEnabledSync}'s start)
+   */
   constructor(
+    /** The body's id. */
     public id: number,
     private slot: number,
     userData?: Record<string, unknown>,
-    /** The pose the worker reported at creation. Read until the first transform write-back
-     * that includes this body, which (without SAB) can arrive a frame or more later, and
-     * until then the slot holds zeros or a deleted body's last pose. */
     initialPose?: RigidBodyPose,
-    /** The type the body was created with (bodyTypeSync's start) */
-    private cachedBodyType: RigidBodyTypeAPI = RigidBodyTypeAPI.Dynamic
+    private cachedBodyType: RigidBodyTypeAPI = RigidBodyTypeAPI.Dynamic,
+    private cachedEnabled = true
   ) {
     if (userData) this.uData = userData;
     if (initialPose && slot === -1) {
@@ -92,6 +85,16 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
       this.pendingPos = { value: { ...initialPose.pos }, visibleAt };
       this.pendingRot = { value: { ...initialPose.rot }, visibleAt };
     }
+  }
+
+  /** A one-way command about this body. */
+  private command(message: PhysicsCommandFor<'rigidBodyId'>) {
+    commandWorker(message, 'rigidBodyId', this.id);
+  }
+
+  /** A query for one of this body's fields. */
+  private ask<T extends PhysicsQueryType<'rigidBodyId'>>(type: T) {
+    return queryWorker(type, 'rigidBodyId', this.id);
   }
 
   /** Whether the body holds a transform-buffer slot (every body not created FIXED, unless it's
@@ -134,12 +137,14 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
   }
 
   /**
-   * reattachRigidBody's reply: the new slot, and its pose read until a transform
-   * write-back includes it (as at creation).
+   * reattachRigidBody's reply: the new slot, and its pose read until a transform write-back
+   * includes it (as at creation). The body comes back with `state`'s type and enabled state.
    * @internal
    */
-  _attach(slot: number, pose: RigidBodyPose) {
+  _attach(slot: number, pose: RigidBodyPose, state: RigidBodyAttachState) {
     this.slot = slot;
+    this.cachedBodyType = state.bodyType;
+    this.cachedEnabled = state.enabled;
     const visibleAt = getWriteVisibleStep();
     this.pendingPos = { value: { ...pose.pos }, visibleAt };
     this.pendingRot = { value: { ...pose.rot }, visibleAt };
@@ -243,52 +248,33 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
   }
 
   async getUserData(): Promise<Record<string, unknown>> {
-    const fetchedUserData = (
-      await messageWorkerAsync<RigidGetUserDataResponse>({
-        type: PhysicsProtocolType.RIGID_GET_USERDATA,
-        rigidBodyId: this.id,
-      })
-    ).userData;
-    this.uData = fetchedUserData;
-    return fetchedUserData;
+    this.uData = (await this.ask(PhysicsProtocolType.RIGID_GET_USERDATA)).userData;
+    return this.uData;
   }
   getUserDataSync(): Record<string, unknown> {
     return this.uData;
   }
 
   setUserData(userData: Record<string, unknown>, addToExisting?: boolean): void {
-    messageWorker({
+    this.command({
       type: PhysicsProtocolType.RIGID_SET_USERDATA,
-      rigidBodyId: this.id,
       userData,
       addToExisting,
       isOneWay: true,
     });
-    if (addToExisting) {
-      this.uData = { ...this.uData, ...userData };
-    } else {
-      this.uData = userData;
-    }
+    this.uData = addToExisting ? { ...this.uData, ...userData } : userData;
   }
 
   async isValid(): Promise<boolean> {
-    return (
-      await messageWorkerAsync<RigidIsValidResponse>({
-        type: PhysicsProtocolType.RIGID_IS_VALID,
-        rigidBodyId: this.id,
-      })
-    ).isValid;
+    return (await this.ask(PhysicsProtocolType.RIGID_IS_VALID)).isValid;
   }
   isValidSync(): boolean {
-    throw new Error(
-      'Checking the validity of a rigid body (isValid) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('isValid');
   }
 
   lockTranslations(locked: boolean, wakeUp: boolean): void {
-    return messageWorker({
+    this.command({
       type: PhysicsProtocolType.RIGID_LOCK_TRANSLATIONS,
-      rigidBodyId: this.id,
       locked,
       wakeUp,
       isOneWay: true,
@@ -296,9 +282,8 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
   }
 
   lockRotations(locked: boolean, wakeUp: boolean): void {
-    return messageWorker({
+    this.command({
       type: PhysicsProtocolType.RIGID_LOCK_ROTATIONS,
-      rigidBodyId: this.id,
       locked,
       wakeUp,
       isOneWay: true,
@@ -311,9 +296,8 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
     enableZ: boolean,
     wakeUp: boolean
   ): void {
-    return messageWorker({
+    this.command({
       type: PhysicsProtocolType.RIGID_SET_ENABLED_TRANSLATIONS,
-      rigidBodyId: this.id,
       enableX,
       enableY,
       enableZ,
@@ -323,9 +307,8 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
   }
 
   setEnabledRotations(enableX: boolean, enableY: boolean, enableZ: boolean, wakeUp: boolean): void {
-    return messageWorker({
+    this.command({
       type: PhysicsProtocolType.RIGID_SET_ENABLED_ROTATIONS,
-      rigidBodyId: this.id,
       enableX,
       enableY,
       enableZ,
@@ -335,77 +318,41 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
   }
 
   async dominanceGroup(): Promise<number> {
-    return (
-      await messageWorkerAsync<RigidDominanceGroupResponse>({
-        type: PhysicsProtocolType.RIGID_DOMINANCE_GROUP,
-        rigidBodyId: this.id,
-      })
-    ).dominanceGroup;
+    return (await this.ask(PhysicsProtocolType.RIGID_DOMINANCE_GROUP)).dominanceGroup;
   }
   dominanceGroupSync(): number {
-    throw new Error(
-      'Getting the dominance group of a rigid body (dominanceGroup) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('dominanceGroup');
   }
 
   setDominanceGroup(group: number): void {
-    return messageWorker({
-      type: PhysicsProtocolType.RIGID_SET_DOMINANCE_GROUP,
-      rigidBodyId: this.id,
-      group,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_SET_DOMINANCE_GROUP, group });
   }
 
   async additionalSolverIterations(): Promise<number> {
-    return (
-      await messageWorkerAsync<RigidAdditionalSolverIterationsResponse>({
-        type: PhysicsProtocolType.RIGID_ADDITIONAL_SOLVER_ITERATIONS,
-        rigidBodyId: this.id,
-      })
-    ).additionalIterations;
+    return (await this.ask(PhysicsProtocolType.RIGID_ADDITIONAL_SOLVER_ITERATIONS))
+      .additionalIterations;
   }
   additionalSolverIterationsSync(): number {
-    throw new Error(
-      'Checking the additional solver iteration of a rigid body (additionalSolverIterations) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('additionalSolverIterations');
   }
 
   setAdditionalSolverIterations(iters: number): void {
-    return messageWorker({
-      type: PhysicsProtocolType.RIGID_SET_ADDITIONAL_SOLVER_ITERATIONS,
-      rigidBodyId: this.id,
-      iters,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_SET_ADDITIONAL_SOLVER_ITERATIONS, iters });
   }
 
   enableCcd(enabled: boolean): void {
-    return messageWorker({
-      type: PhysicsProtocolType.RIGID_ENABLE_CCD,
-      rigidBodyId: this.id,
-      enabled,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_ENABLE_CCD, enabled });
   }
 
   setSoftCcdPrediction(distance: number): void {
-    return messageWorker({
-      type: PhysicsProtocolType.RIGID_SET_SOFT_CCD_PREDICTION,
-      rigidBodyId: this.id,
-      distance,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_SET_SOFT_CCD_PREDICTION, distance });
   }
 
   async softCcdPrediction(): Promise<number> {
-    return (
-      await messageWorkerAsync<RigidSoftCcdPredictionResponse>({
-        type: PhysicsProtocolType.RIGID_SOFT_CCD_PREDICTION,
-        rigidBodyId: this.id,
-      })
-    ).softCcdPrediction;
+    return (await this.ask(PhysicsProtocolType.RIGID_SOFT_CCD_PREDICTION)).softCcdPrediction;
   }
   softCcdPredictionSync(): number {
-    throw new Error(
-      'Checking the soft CCD prediction number of a rigid body (softCcdPrediction) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('softCcdPrediction');
   }
 
   translation(): PhysVector {
@@ -417,31 +364,17 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
   }
 
   async nextTranslation(): Promise<PhysVector> {
-    return (
-      await messageWorkerAsync<RigidNextTranslationResponse>({
-        type: PhysicsProtocolType.RIGID_NEXT_TRANSLATION,
-        rigidBodyId: this.id,
-      })
-    ).nextTranslation;
+    return (await this.ask(PhysicsProtocolType.RIGID_NEXT_TRANSLATION)).nextTranslation;
   }
   nextTranslationSync(): PhysVector {
-    throw new Error(
-      'Checking the next translation of a rigid body (nextTranslation) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('nextTranslation');
   }
 
   async nextRotation(): Promise<PhysRotation> {
-    return (
-      await messageWorkerAsync<RigidNextRotationResponse>({
-        type: PhysicsProtocolType.RIGID_NEXT_ROTATION,
-        rigidBodyId: this.id,
-      })
-    ).nextRotation;
+    return (await this.ask(PhysicsProtocolType.RIGID_NEXT_ROTATION)).nextRotation;
   }
   nextRotationSync(): PhysRotation {
-    throw new Error(
-      'Checking the next rotation of a rigid body (nextRotation) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('nextRotation');
   }
 
   setTranslation(tra: PhysVector, wakeUp: boolean): void {
@@ -457,12 +390,7 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
       };
     }
     getBodyMovedListener()?.(this.id);
-    return messageWorker({
-      type: PhysicsProtocolType.RIGID_SET_TRANSLATION,
-      rigidBodyId: this.id,
-      tra,
-      wakeUp,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_SET_TRANSLATION, tra, wakeUp });
   }
 
   setLinvel(vel: PhysVector, wakeUp: boolean): void {
@@ -470,35 +398,18 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
       value: { x: vel.x, y: vel.y, z: vel.z },
       visibleAt: getWriteVisibleStep(),
     };
-    return messageWorker({
-      type: PhysicsProtocolType.RIGID_SET_LINVEL,
-      rigidBodyId: this.id,
-      vel,
-      wakeUp,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_SET_LINVEL, vel, wakeUp });
   }
 
   async gravityScale(): Promise<number> {
-    return (
-      await messageWorkerAsync<RigidGravityScaleResponse>({
-        type: PhysicsProtocolType.RIGID_GRAVITY_SCALE,
-        rigidBodyId: this.id,
-      })
-    ).gravityScale;
+    return (await this.ask(PhysicsProtocolType.RIGID_GRAVITY_SCALE)).gravityScale;
   }
   gravityScaleSync(): number {
-    throw new Error(
-      'Checking the gravity scale of a rigid body (gravityScale) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('gravityScale');
   }
 
   setGravityScale(factor: number, wakeUp: boolean): void {
-    return messageWorker({
-      type: PhysicsProtocolType.RIGID_SET_GRAVITY_SCALE,
-      rigidBodyId: this.id,
-      factor,
-      wakeUp,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_SET_GRAVITY_SCALE, factor, wakeUp });
   }
 
   setRotation(rot: PhysRotation, wakeUp: boolean): void {
@@ -508,12 +419,7 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
       this.pendingRot = { value: toPlainRot(rot), visibleAt: getWriteVisibleStep() };
     }
     getBodyMovedListener()?.(this.id);
-    return messageWorker({
-      type: PhysicsProtocolType.RIGID_SET_ROTATION,
-      rigidBodyId: this.id,
-      rot: toPlainRot(rot),
-      wakeUp,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_SET_ROTATION, rot: toPlainRot(rot), wakeUp });
   }
 
   setAngvel(vel: PhysVector, wakeUp: boolean): void {
@@ -521,26 +427,16 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
       value: { x: vel.x, y: vel.y, z: vel.z },
       visibleAt: getWriteVisibleStep(),
     };
-    return messageWorker({
-      type: PhysicsProtocolType.RIGID_SET_ANGVEL,
-      rigidBodyId: this.id,
-      vel,
-      wakeUp,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_SET_ANGVEL, vel, wakeUp });
   }
 
   setNextKinematicTranslation(t: PhysVector): void {
-    return messageWorker({
-      type: PhysicsProtocolType.RIGID_SET_NEXT_KINEMATIC_TRANSLATION,
-      rigidBodyId: this.id,
-      t,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_SET_NEXT_KINEMATIC_TRANSLATION, t });
   }
 
   setNextKinematicRotation(rot: PhysRotation): void {
-    return messageWorker({
+    this.command({
       type: PhysicsProtocolType.RIGID_SET_NEXT_KINEMATIC_ROTATION,
-      rigidBodyId: this.id,
       rot: toPlainRot(rot),
     });
   }
@@ -558,10 +454,9 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
       })
     ).velocityAtPoint;
   }
-  velocityAtPointSync(): PhysVector {
-    throw new Error(
-      'Checking the velocity at point of a rigid body (velocityAtPoint) cannot be synchronous in the worker mode.'
-    );
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- the interface's signature
+  velocityAtPointSync(_point: PhysVector): PhysVector {
+    return asyncOnly('velocityAtPoint');
   }
 
   angvel(): PhysVector {
@@ -569,159 +464,84 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
   }
 
   async mass(): Promise<number> {
-    const mass = (
-      await messageWorkerAsync<RigidMassResponse>({
-        type: PhysicsProtocolType.RIGID_MASS,
-        rigidBodyId: this.id,
-      })
-    ).mass;
+    const { mass } = await this.ask(PhysicsProtocolType.RIGID_MASS);
     this.cachedMass = mass;
     return mass;
   }
   massSync(): number {
-    throw new Error(
-      'Checking the mass of a rigid body (mass) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('mass');
   }
 
   async effectiveInvMass(): Promise<PhysVector> {
-    return (
-      await messageWorkerAsync<RigidEffectiveInvMassResponse>({
-        type: PhysicsProtocolType.RIGID_EFFECTIVE_INV_MASS,
-        rigidBodyId: this.id,
-      })
-    ).effectiveInvMass;
+    return (await this.ask(PhysicsProtocolType.RIGID_EFFECTIVE_INV_MASS)).effectiveInvMass;
   }
   effectiveInvMassSync(): PhysVector {
-    throw new Error(
-      'Checking the mass of a rigid body (effectiveInvMass) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('effectiveInvMass');
   }
 
   async invMass(): Promise<number> {
-    return (
-      await messageWorkerAsync<RigidInvMassResponse>({
-        type: PhysicsProtocolType.RIGID_INV_MASS,
-        rigidBodyId: this.id,
-      })
-    ).invMass;
+    return (await this.ask(PhysicsProtocolType.RIGID_INV_MASS)).invMass;
   }
   invMassSync(): number {
-    throw new Error(
-      'Checking the mass of a rigid body (invMass) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('invMass');
   }
 
   async localCom(): Promise<PhysVector> {
-    return (
-      await messageWorkerAsync<RigidLocalComResponse>({
-        type: PhysicsProtocolType.RIGID_LOCAL_COM,
-        rigidBodyId: this.id,
-      })
-    ).localCom;
+    return (await this.ask(PhysicsProtocolType.RIGID_LOCAL_COM)).localCom;
   }
   localComSync(): PhysVector {
-    throw new Error(
-      'Checking the local com of a rigid body (localCom) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('localCom');
   }
 
   async worldCom(): Promise<PhysVector> {
-    return (
-      await messageWorkerAsync<RigidWorldComResponse>({
-        type: PhysicsProtocolType.RIGID_WORLD_COM,
-        rigidBodyId: this.id,
-      })
-    ).worldCom;
+    return (await this.ask(PhysicsProtocolType.RIGID_WORLD_COM)).worldCom;
   }
   worldComSync(): PhysVector {
-    throw new Error(
-      'Checking the world com of a rigid body (worldCom) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('worldCom');
   }
 
   async invPrincipalInertia(): Promise<PhysVector> {
-    return (
-      await messageWorkerAsync<RigidInvPrincipalInertiaResponse>({
-        type: PhysicsProtocolType.RIGID_INV_PRINCIPAL_INERTIA,
-        rigidBodyId: this.id,
-      })
-    ).invPrincipalInertia;
+    return (await this.ask(PhysicsProtocolType.RIGID_INV_PRINCIPAL_INERTIA)).invPrincipalInertia;
   }
   invPrincipalInertiaSync(): PhysVector {
-    throw new Error(
-      'Checking the inertia of a rigid body (invPrincipalInertia) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('invPrincipalInertia');
   }
 
   async principalInertia(): Promise<PhysVector> {
-    return (
-      await messageWorkerAsync<RigidPrincipalInertiaResponse>({
-        type: PhysicsProtocolType.RIGID_PRINCIPAL_INERTIA,
-        rigidBodyId: this.id,
-      })
-    ).principalInertia;
+    return (await this.ask(PhysicsProtocolType.RIGID_PRINCIPAL_INERTIA)).principalInertia;
   }
   principalInertiaSync(): PhysVector {
-    throw new Error(
-      'Checking the inertia of a rigid body (principalInertia) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('principalInertia');
   }
 
   async principalInertiaLocalFrame(): Promise<PhysRotation> {
-    return (
-      await messageWorkerAsync<RigidPrincipalInertiaLocalFrameResponse>({
-        type: PhysicsProtocolType.RIGID_PRINCIPAL_INERTIA_LOCAL_FRAME,
-        rigidBodyId: this.id,
-      })
-    ).principalInertiaLocalFrame;
+    return (await this.ask(PhysicsProtocolType.RIGID_PRINCIPAL_INERTIA_LOCAL_FRAME))
+      .principalInertiaLocalFrame;
   }
   principalInertiaLocalFrameSync(): PhysRotation {
-    throw new Error(
-      'Checking the inertia of a rigid body (principalInertiaLocalFrame) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('principalInertiaLocalFrame');
   }
 
   sleep(): void {
-    messageWorker({
-      type: PhysicsProtocolType.RIGID_SLEEP,
-      rigidBodyId: this.id,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_SLEEP });
   }
 
   wakeUp(): void {
-    messageWorker({
-      type: PhysicsProtocolType.RIGID_WAKE_UP,
-      rigidBodyId: this.id,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_WAKE_UP });
   }
 
   async isCcdEnabled(): Promise<boolean> {
-    return (
-      await messageWorkerAsync<RigidIsCcdEnabledResponse>({
-        type: PhysicsProtocolType.RIGID_IS_CCD_ENABLED,
-        rigidBodyId: this.id,
-      })
-    ).isCcdEnabled;
+    return (await this.ask(PhysicsProtocolType.RIGID_IS_CCD_ENABLED)).isCcdEnabled;
   }
   isCcdEnabledSync(): boolean {
-    throw new Error(
-      'Checking the CCD of a rigid body (isCcdEnabled) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('isCcdEnabled');
   }
 
   async numColliders(): Promise<number> {
-    return (
-      await messageWorkerAsync<RigidNumCollidersResponse>({
-        type: PhysicsProtocolType.RIGID_NUM_COLLIDERS,
-        rigidBodyId: this.id,
-      })
-    ).numColliders;
+    return (await this.ask(PhysicsProtocolType.RIGID_NUM_COLLIDERS)).numColliders;
   }
   numCollidersSync(): number {
-    throw new Error(
-      'Checking the number of colliders of a rigid body (numColliders) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('numColliders');
   }
 
   async collider(i: number): Promise<ColliderAPI> {
@@ -735,188 +555,104 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
       `Could not find collider in ColliderAPI.collider(${i}).`
     );
   }
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- the interface's signature
   colliderSync(_i: number): ColliderAPI {
-    throw new Error(
-      'Getting a collider of a rigid body (colllider) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('collider');
   }
 
   setEnabled(enabled: boolean): void {
-    messageWorker({
-      type: PhysicsProtocolType.RIGID_SET_ENABLED,
-      rigidBodyId: this.id,
-      enabled,
-    });
+    this.cachedEnabled = enabled;
+    this.command({ type: PhysicsProtocolType.RIGID_SET_ENABLED, enabled });
   }
 
   async isEnabled(): Promise<boolean> {
-    return (
-      await messageWorkerAsync<RigidIsEnabledResponse>({
-        type: PhysicsProtocolType.RIGID_IS_ENABLED,
-        rigidBodyId: this.id,
-      })
-    ).isEnabled;
+    return (await this.ask(PhysicsProtocolType.RIGID_IS_ENABLED)).isEnabled;
   }
+  /** Whether the body was created enabled or last set so through `setEnabled` (or the REMOVED
+   * tier's reattach), the only ways it changes, so no worker round trip (see
+   * {@link bodyTypeSync}). */
   isEnabledSync(): boolean {
-    throw new Error(
-      'Checking the enabled state of a rigid body (isEnabled) cannot be synchronous in the worker mode.'
-    );
+    return this.cachedEnabled;
   }
 
   async bodyType(): Promise<RigidBodyTypeAPI> {
-    return (
-      await messageWorkerAsync<RigidBodyTypeResponse>({
-        type: PhysicsProtocolType.RIGID_BODY_TYPE,
-        rigidBodyId: this.id,
-      })
-    ).bodyType;
+    return (await this.ask(PhysicsProtocolType.RIGID_BODY_TYPE)).bodyType;
   }
-  /** The type this body was created with or last set to through `setBodyType` (the only way its
-   * type changes), so no worker round trip: what a step's code (eg. a character's sensor) reads
-   * synchronously, the same on every target. */
+  /** The type this body was created with or last set to through `setBodyType` (or the REMOVED
+   * tier's reattach), the only ways its type changes, so no worker round trip: what a step's
+   * code (eg. a character's sensor) reads synchronously, the same on every target. */
   bodyTypeSync(): RigidBodyTypeAPI {
     return this.cachedBodyType;
   }
 
   setBodyType(bodyType: RigidBodyTypeAPI, wakeUp: boolean): void {
     this.cachedBodyType = bodyType;
-    messageWorker({
-      type: PhysicsProtocolType.RIGID_SET_BODY_TYPE,
-      rigidBodyId: this.id,
-      bodyType,
-      wakeUp,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_SET_BODY_TYPE, bodyType, wakeUp });
   }
 
   async isSleeping(): Promise<boolean> {
-    return (
-      await messageWorkerAsync<RigidIsSleepingResponse>({
-        type: PhysicsProtocolType.RIGID_IS_SLEEPING,
-        rigidBodyId: this.id,
-      })
-    ).isSleeping;
+    return (await this.ask(PhysicsProtocolType.RIGID_IS_SLEEPING)).isSleeping;
   }
   isSleepingSync(): boolean {
-    throw new Error(
-      'Checking the sleeping state of a rigid body (isSleeping) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('isSleeping');
   }
 
   async isMoving(): Promise<boolean> {
-    return (
-      await messageWorkerAsync<RigidIsMovingResponse>({
-        type: PhysicsProtocolType.RIGID_IS_MOVING,
-        rigidBodyId: this.id,
-      })
-    ).isMoving;
+    return (await this.ask(PhysicsProtocolType.RIGID_IS_MOVING)).isMoving;
   }
   isMovingSync(): boolean {
-    throw new Error(
-      'Checking the moving state of a rigid body (isMoving) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('isMoving');
   }
 
   async isFixed(): Promise<boolean> {
-    return (
-      await messageWorkerAsync<RigidIsFixedResponse>({
-        type: PhysicsProtocolType.RIGID_IS_FIXED,
-        rigidBodyId: this.id,
-      })
-    ).isFixed;
+    return (await this.ask(PhysicsProtocolType.RIGID_IS_FIXED)).isFixed;
   }
   isFixedSync(): boolean {
-    throw new Error(
-      'Checking the fixed state of a rigid body (isFixed) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('isFixed');
   }
 
   async isKinematic(): Promise<boolean> {
-    return (
-      await messageWorkerAsync<RigidIsKinematicResponse>({
-        type: PhysicsProtocolType.RIGID_IS_KINEMATIC,
-        rigidBodyId: this.id,
-      })
-    ).isKinematic;
+    return (await this.ask(PhysicsProtocolType.RIGID_IS_KINEMATIC)).isKinematic;
   }
   isKinematicSync(): boolean {
-    throw new Error(
-      'Checking the kinematic state of a rigid body (isKinematic) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('isKinematic');
   }
 
   async isDynamic(): Promise<boolean> {
-    return (
-      await messageWorkerAsync<RigidIsDynamicResponse>({
-        type: PhysicsProtocolType.RIGID_IS_DYNAMIC,
-        rigidBodyId: this.id,
-      })
-    ).isDynamic;
+    return (await this.ask(PhysicsProtocolType.RIGID_IS_DYNAMIC)).isDynamic;
   }
   isDynamicSync(): boolean {
-    throw new Error(
-      'Checking the dynamic state of a rigid body (isDynamic) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('isDynamic');
   }
 
   async linearDamping(): Promise<number> {
-    return (
-      await messageWorkerAsync<RigidLinearDampingResponse>({
-        type: PhysicsProtocolType.RIGID_LINEAR_DAMPING,
-        rigidBodyId: this.id,
-      })
-    ).linearDamping;
+    return (await this.ask(PhysicsProtocolType.RIGID_LINEAR_DAMPING)).linearDamping;
   }
   linearDampingSync(): number {
-    throw new Error(
-      'Getting the linear damping of a rigid body (linearDamping) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('linearDamping');
   }
 
   async angularDamping(): Promise<number> {
-    return (
-      await messageWorkerAsync<RigidAngularDampingResponse>({
-        type: PhysicsProtocolType.RIGID_ANGULAR_DAMPING,
-        rigidBodyId: this.id,
-      })
-    ).angularDamping;
+    return (await this.ask(PhysicsProtocolType.RIGID_ANGULAR_DAMPING)).angularDamping;
   }
   angularDampingSync(): number {
-    throw new Error(
-      'Getting the angular damping of a rigid body (angularDamping) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('angularDamping');
   }
 
   setLinearDamping(factor: number): void {
-    messageWorker({
-      type: PhysicsProtocolType.RIGID_SET_LINEAR_DAMPING,
-      rigidBodyId: this.id,
-      factor,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_SET_LINEAR_DAMPING, factor });
   }
 
   setAngularDamping(factor: number): void {
-    messageWorker({
-      type: PhysicsProtocolType.RIGID_SET_ANGULAR_DAMPING,
-      rigidBodyId: this.id,
-      factor,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_SET_ANGULAR_DAMPING, factor });
   }
 
   recomputeMassPropertiesFromColliders(): void {
-    messageWorker({
-      type: PhysicsProtocolType.RIGID_RECOMPUTE_MASS_PROPERTIES,
-      rigidBodyId: this.id,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_RECOMPUTE_MASS_PROPERTIES });
   }
 
   setAdditionalMass(mass: number, wakeUp: boolean): void {
-    messageWorker({
-      type: PhysicsProtocolType.RIGID_SET_ADDITIONAL_MASS,
-      rigidBodyId: this.id,
-      mass,
-      wakeUp,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_SET_ADDITIONAL_MASS, mass, wakeUp });
   }
 
   setAdditionalMassProperties(
@@ -926,9 +662,8 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
     angularInertiaLocalFrame: PhysRotation,
     wakeUp: boolean
   ): void {
-    messageWorker({
+    this.command({
       type: PhysicsProtocolType.RIGID_SET_ADDITIONAL_MASS_PROPERTIES,
-      rigidBodyId: this.id,
       mass,
       centerOfMass,
       principalAngularInertia,
@@ -938,28 +673,15 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
   }
 
   resetForces(wakeUp: boolean): void {
-    messageWorker({
-      type: PhysicsProtocolType.RIGID_RESET_FORCES,
-      rigidBodyId: this.id,
-      wakeUp,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_RESET_FORCES, wakeUp });
   }
 
   resetTorques(wakeUp: boolean): void {
-    messageWorker({
-      type: PhysicsProtocolType.RIGID_RESET_TORQUES,
-      rigidBodyId: this.id,
-      wakeUp,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_RESET_TORQUES, wakeUp });
   }
 
   addForce(force: PhysVector, wakeUp: boolean): void {
-    messageWorker({
-      type: PhysicsProtocolType.RIGID_ADD_FORCE,
-      rigidBodyId: this.id,
-      force,
-      wakeUp,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_ADD_FORCE, force, wakeUp });
   }
 
   applyImpulse(impulse: PhysVector, wakeUp: boolean): void {
@@ -977,46 +699,24 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
       };
     }
     void this.mass().catch(() => {});
-    messageWorker({
-      type: PhysicsProtocolType.RIGID_APPLY_IMPULSE,
-      rigidBodyId: this.id,
-      impulse,
-      wakeUp,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_APPLY_IMPULSE, impulse, wakeUp });
   }
 
   addTorque(torque: PhysVector, wakeUp: boolean): void {
-    messageWorker({
-      type: PhysicsProtocolType.RIGID_ADD_TORQUE,
-      rigidBodyId: this.id,
-      torque,
-      wakeUp,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_ADD_TORQUE, torque, wakeUp });
   }
 
   applyTorqueImpulse(torqueImpulse: PhysVector, wakeUp: boolean): void {
-    messageWorker({
-      type: PhysicsProtocolType.RIGID_APPLY_TORQUE_IMPULSE,
-      rigidBodyId: this.id,
-      torqueImpulse,
-      wakeUp,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_APPLY_TORQUE_IMPULSE, torqueImpulse, wakeUp });
   }
 
   addForceAtPoint(force: PhysVector, point: PhysVector, wakeUp: boolean): void {
-    messageWorker({
-      type: PhysicsProtocolType.RIGID_ADD_FORCE_AT_POINT,
-      rigidBodyId: this.id,
-      force,
-      point,
-      wakeUp,
-    });
+    this.command({ type: PhysicsProtocolType.RIGID_ADD_FORCE_AT_POINT, force, point, wakeUp });
   }
 
   applyImpulseAtPoint(impulse: PhysVector, point: PhysVector, wakeUp: boolean): void {
-    messageWorker({
+    this.command({
       type: PhysicsProtocolType.RIGID_APPLY_IMPULSE_AT_POINT,
-      rigidBodyId: this.id,
       impulse,
       point,
       wakeUp,
@@ -1024,30 +724,16 @@ export class RigidBodyProxyAPI implements RigidBodyWorkerEngine {
   }
 
   async userForce(): Promise<PhysVector> {
-    return (
-      await messageWorkerAsync<RigidUserForceResponse>({
-        type: PhysicsProtocolType.RIGID_USER_FORCE,
-        rigidBodyId: this.id,
-      })
-    ).userForce;
+    return (await this.ask(PhysicsProtocolType.RIGID_USER_FORCE)).userForce;
   }
   userForceSync(): PhysVector {
-    throw new Error(
-      'Getting the user force of a rigid body (userForce) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('userForce');
   }
 
   async userTorque(): Promise<PhysVector> {
-    return (
-      await messageWorkerAsync<RigidUserTorqueResponse>({
-        type: PhysicsProtocolType.RIGID_USER_TORQUE,
-        rigidBodyId: this.id,
-      })
-    ).userTorque;
+    return (await this.ask(PhysicsProtocolType.RIGID_USER_TORQUE)).userTorque;
   }
   userTorqueSync(): PhysVector {
-    throw new Error(
-      'Getting the user torque of a rigid body (userTorque) cannot be synchronous in the worker mode.'
-    );
+    return asyncOnly('userTorque');
   }
 }

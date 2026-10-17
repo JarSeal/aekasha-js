@@ -1,7 +1,6 @@
 // The WORKER_THREAD world: a WorldAPI whose calls are messages to the worker.
 
 import type { RayDebugOpts } from '../../../kernel/render/RayDebugTypes';
-import { existsOrThrow } from '../../../utils/Assert';
 import { lerror } from '../../../utils/Logger';
 import { createRigidBody, deleteRigidBody } from '../PhysicsBodies';
 import { createCollider, deleteCollider } from '../PhysicsColliders';
@@ -12,6 +11,7 @@ import { colliders, joints, rigidBodies } from '../PhysicsRegistry';
 import { facade } from '../PhysicsState';
 import { getCollOrRigidId } from '../PhysicsUtils';
 import { restorePhysicsSnapshot, takePhysicsSnapshot } from '../PhysicsWorld';
+import type { PhysicsResponse } from '../protocol/PhysicsDownProtocol';
 import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
 import type {
   WorldCastRayAndGetNormalResponse,
@@ -63,9 +63,12 @@ export class WorldProxyAPI implements WorldAPI {
     lengthUnit: 1.0,
     solverIters: facade.state.solverIterations,
     pgsIters: facade.state.internalPgsIterations,
-    ccdSubsteps: 1, // TODO: add this as physicsState value, CONFIG value, and physics debugger tab value
+    // Rapier's default, until a getter or setter call (no setting sets it:
+    // docs/issues/physics-ccd-substeps-setting.md)
+    ccdSubsteps: 1,
   };
 
+  /** A world proxy, its settings' copy from the physics state the worker's world was made from. */
   constructor() {
     this.restoringWorld = false;
   }
@@ -193,7 +196,9 @@ export class WorldProxyAPI implements WorldAPI {
   }
 
   async getMaxCcdSubsteps(): Promise<number> {
-    const res = await messageWorkerAsync<{ substeps: number }>({
+    const res = await messageWorkerAsync<
+      PhysicsResponse<PhysicsProtocolType.WORLD_GET_CCD_SUBSTEPS>
+    >({
       type: PhysicsProtocolType.WORLD_GET_CCD_SUBSTEPS,
     });
     this._cache.ccdSubsteps = res.substeps;
@@ -212,66 +217,30 @@ export class WorldProxyAPI implements WorldAPI {
     return await createRigidBody(params);
   }
 
-  createRigidBodySync(params: RigidBodyParams): RigidBodyAPI {
-    if (facade.state.workerTarget === 'MAIN_THREAD') {
-      return existsOrThrow(
-        facade.engAPI?.createRigidBody(params),
-        `Could not create a rigid body ("MAIN_THREAD"). Params: ${JSON.stringify(params)}. Has engineAPI: ${Boolean(facade.engAPI)}`
-      );
-    } else if (facade.state.workerTarget === 'WORKER_THREAD') {
-      const msg =
-        'Synchronous creation is not supported in Worker thread mode. Use createRigidBody(params).';
-      lerror(msg);
-      throw new Error(msg);
-    }
-    // Should not get here
-    const msg = `Unknown facade.state.workerTarget: "${facade.state.workerTarget}".`;
-    lerror(msg);
-    throw new Error(msg);
+  createRigidBodySync(): RigidBodyAPI {
+    throw new Error(
+      'Synchronous creation is not supported in Worker thread mode. Use createRigidBody(params).'
+    );
   }
 
   async createCollider(params: ColliderParams, parentId?: number): Promise<ColliderAPI> {
     return await createCollider(params, parentId);
   }
 
-  createColliderSync(params: ColliderParams, parentId?: number): ColliderAPI {
-    if (facade.state.workerTarget === 'MAIN_THREAD') {
-      return existsOrThrow(
-        facade.engAPI?.createCollider(params, parentId),
-        `Could not create a collider ("MAIN_THREAD"). Params: ${JSON.stringify(params)}. Has engineAPI: ${Boolean(facade.engAPI)}`
-      );
-    } else if (facade.state.workerTarget === 'WORKER_THREAD') {
-      const msg =
-        'Synchronous creation is not supported in Worker thread mode. Use createCollider(params, parent?).';
-      lerror(msg);
-      throw new Error(msg);
-    }
-    // Should not get here
-    const msg = `Unknown facade.state.workerTarget: "${facade.state.workerTarget}".`;
-    lerror(msg);
-    throw new Error(msg);
+  createColliderSync(): ColliderAPI {
+    throw new Error(
+      'Synchronous creation is not supported in Worker thread mode. Use createCollider(params, parent?).'
+    );
   }
 
   async createJoint(params: JointParams): Promise<JointAPI> {
     return await createJoint(params);
   }
 
-  createJointSync(params: JointParams): JointAPI {
-    if (facade.state.workerTarget === 'MAIN_THREAD') {
-      return existsOrThrow(
-        facade.engAPI?.createJoint(params),
-        `Could not create a joint ("MAIN_THREAD"). Params: ${JSON.stringify(params)}. Has engineAPI: ${Boolean(facade.engAPI)}`
-      );
-    } else if (facade.state.workerTarget === 'WORKER_THREAD') {
-      const msg =
-        'Synchronous creation is not supported in Worker thread mode. Use createJoint(params).';
-      lerror(msg);
-      throw new Error(msg);
-    }
-    // Should not get here
-    const msg = `Unknown facade.state.workerTarget: "${facade.state.workerTarget}".`;
-    lerror(msg);
-    throw new Error(msg);
+  createJointSync(): JointAPI {
+    throw new Error(
+      'Synchronous creation is not supported in Worker thread mode. Use createJoint(params).'
+    );
   }
 
   // --- Retrieval ---

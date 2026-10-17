@@ -627,8 +627,18 @@ export const createCollider = (params: ColliderParams, parentIdArg?: number) => 
 export const createRigidBodies = (paramsArray: RigidBodyParams[]) =>
   paramsArray.map((params) => createRigidBody(params));
 
-export const createColliders = (paramsArray: ColliderParams[]) =>
-  paramsArray.map((params) => createCollider(params));
+/** Creates the colliders in order, all or nothing: when one throws, the ones made before it are
+ * deleted and the throw goes on (p614 A10). */
+export const createColliders = (paramsArray: ColliderParams[]) => {
+  const created: EngineColliderProxyAPI[] = [];
+  try {
+    for (let i = 0; i < paramsArray.length; i++) created.push(createCollider(paramsArray[i]));
+  } catch (err) {
+    if (created.length) deleteColliders(created.map((coll) => coll.id));
+    throw err;
+  }
+  return created;
+};
 
 export const createJoint = (params: JointParams) => {
   const body1 = existsOrThrow(

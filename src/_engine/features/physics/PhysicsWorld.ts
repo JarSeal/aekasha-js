@@ -18,7 +18,7 @@ import {
 } from './PhysicsMessaging';
 import { getPhysicsQueryObserver } from './PhysicsQueryStats';
 import { clearPhysicsRegistry, getBodyMovedListener } from './PhysicsRegistry';
-import { facade } from './PhysicsState';
+import { facade, isWorkerTarget } from './PhysicsState';
 import { setStepStatsBuffer } from './PhysicsStepStats';
 import {
   breakSimHistory,
@@ -52,9 +52,11 @@ let removeVisibilityListener: (() => void) | null = null;
 let resolvedTransportMode: 'SHARED_MEMORY' | 'MESSAGE_BATCH' | undefined;
 
 /**
- * Initializes the physics. The MAIN_THREAD branch is the one exercised by this
- * MVP; the WORKER_THREAD branch mirrors createPhysicsWorld/createRigidBody/etc.'s
- * own not-yet-exercised WORKER_THREAD branches further down in this file.
+ * Initializes physics from `AppConfig.physics` (a no-op when it isn't enabled): loads the backend
+ * on this thread (`MAIN_THREAD`), or starts the worker and has it load the backend
+ * (`WORKER_THREAD`, the default), then creates the first world unless `doNotCreateWorld`.
+ * `physics()`'s install calls it.
+ * @internal
  */
 export const initPhysics = async (doNotCreateWorld?: boolean) => {
   const physicsConfig = getConfig().physics;
@@ -62,9 +64,8 @@ export const initPhysics = async (doNotCreateWorld?: boolean) => {
 
   facade.state = { ...facade.state, ...physicsConfig };
   facade.state.timestepRatio = 1 / (facade.state.timestep || 60);
-  const target = facade.state.workerTarget;
 
-  if (target === 'MAIN_THREAD') {
+  if (!isWorkerTarget()) {
     const { engine, engineAPI } = await initPhysicsEngine(facade.state.physicsEngine);
     facade.engineInitiated = Boolean(engine);
     facade.engAPI = engineAPI;
@@ -77,7 +78,7 @@ export const initPhysics = async (doNotCreateWorld?: boolean) => {
       doNotCreateWorld
     );
     if (worldOrUndefined) facade.world = worldOrUndefined;
-  } else if (target === 'WORKER_THREAD') {
+  } else {
     // Imported here, not at load: an app without physics, or on the main thread, never loads it
     const { default: PhysicsWorker } = await import('./worker/PhysicsWorker?worker');
     // No onMessage: the transport listens once the handshake is done
@@ -106,6 +107,12 @@ const onWorkerError = (err: ErrorEvent) => {
   lerror(`Physics worker error: ${err.message}`);
 };
 
+/**
+ * Creates the physics world from the physics state's settings (`gravity` and `opts` over them).
+ * Resolves with it, or undefined after {@link stopPhysics}; warns and does nothing when a world
+ * exists. Throws before {@link initPhysics}.
+ * @internal
+ */
 export const createPhysicsWorld = async (
   gravity?: PhysVector,
   opts?: {
@@ -141,7 +148,7 @@ export const createPhysicsWorld = async (
     numInternalPgsIterations: internalPgsIterations,
   };
 
-  if (facade.state.workerTarget === 'MAIN_THREAD') {
+  if (!isWorkerTarget()) {
     facade.world = existsOrThrow(
       facade.engAPI?.createWorld(gravityArg, optsArg),
       `Could not create physics world (main thread), engineAPI: ${JSON.stringify(getEngineAPI())}`
@@ -149,7 +156,7 @@ export const createPhysicsWorld = async (
     facade.worldEnabled = true;
     resetSimClock();
     removeVisibilityListener ??= onVisibilityChange(physicsVisibilityChangeHandler);
-  } else if (facade.state.workerTarget === 'WORKER_THREAD') {
+  } else {
     const response = await messageWorkerAsync<CreateWorldResponse>({
       type: PhysicsProtocolType.CREATE_WORLD,
       gravity: gravityArg,
@@ -190,22 +197,28 @@ export const createPhysicsWorld = async (
  * Ordering barrier. WORKER_THREAD: resolves once the worker has handled every message posted
  * before this call (including fire-and-forget deletes). MAIN_THREAD: everything already ran
  * synchronously, so it resolves right away.
+ * @internal
  */
 export const flushPhysics = async () => {
-  if (facade.state.workerTarget !== 'WORKER_THREAD' || !hasWorkerTransport()) return;
+  if (!isWorkerTarget() || !hasWorkerTransport()) return;
   await messageWorkerAsync<FlushResponse>({ type: PhysicsProtocolType.FLUSH });
 };
 
+/**
+ * Deletes the physics world and forgets every API object of it (each marked `isBeingDeleted`).
+ * Throws without a world.
+ * @internal
+ */
 export const deletePhysicsWorld = async () => {
   existsOrThrow(
     facade.worldEnabled,
     'Physics world is not created. Create the world before deleting it.'
   );
   let worldDeleted = false;
-  if (facade.state.workerTarget === 'MAIN_THREAD') {
+  if (!isWorkerTarget()) {
     const response = facade.engAPI?.deleteWorld();
     worldDeleted = Boolean(response?.worldDeleted);
-  } else if (facade.state.workerTarget === 'WORKER_THREAD') {
+  } else {
     const response = await messageWorkerAsync<DeleteWorldResponse>({
       type: PhysicsProtocolType.DELETE_WORLD,
     });
@@ -243,18 +256,19 @@ export const stopPhysics = () => {
   removeVisibilityListener = null;
   releasePhysicsStepping();
   clearPhysicsStepGates();
-  if (facade.worldEnabled && facade.state.workerTarget === 'MAIN_THREAD')
-    facade.engAPI?.deleteWorld();
+  if (facade.worldEnabled && !isWorkerTarget()) facade.engAPI?.deleteWorld();
   closeWorkerTransport();
   if (facade.worldEnabled) clearDeletedWorld();
 };
 
 /**
  * Replaces the physics world with a new, empty one built from the current physicsState
- * settings (so debug-tab edits carry over). SceneLoader.ts calls this on every scene load:
+ * settings (so debug-tab edits carry over). Physics' scene hooks call it on every scene load
+ * (beforeAssets):
  * a reused world keeps Rapier's internal history (freed handle slots, broadphase, contact
  * graph, islands), which makes the same scene simulate differently on a revisit.
  * Delete every physics entity first; anything still referencing the old world goes stale.
+ * @internal
  */
 export const resetPhysicsWorld = async () => {
   if (!facade.worldEnabled) return;
@@ -264,15 +278,20 @@ export const resetPhysicsWorld = async () => {
   await createPhysicsWorld();
 };
 
+/**
+ * The world's state, serialized by the backend (p500: without the bodies' and colliders' user
+ * data). Throws without a world.
+ * @internal
+ */
 export const takePhysicsSnapshot = async () => {
   existsOrThrow(
     facade.worldEnabled,
     'Physics world is not created. Create the world before taking a snapshot.'
   );
   let snapshot;
-  if (facade.state.workerTarget === 'MAIN_THREAD') {
+  if (!isWorkerTarget()) {
     snapshot = facade.engAPI?.takeSnapshot();
-  } else if (facade.state.workerTarget === 'WORKER_THREAD') {
+  } else {
     // @TODO: we probably also need to save the userData for the rigid bodies and colliders (separate object/map).
     const response = await messageWorkerAsync<TakeSnapshotResponse>({
       type: PhysicsProtocolType.TAKE_SNAPSHOT,
@@ -282,15 +301,20 @@ export const takePhysicsSnapshot = async () => {
   return snapshot;
 };
 
+/**
+ * Replaces the world with one restored from {@link takePhysicsSnapshot}'s bytes, and resolves with
+ * it (p500: the facade's registry isn't rebuilt). Throws without a world.
+ * @internal
+ */
 export const restorePhysicsSnapshot = async (snapshot: Uint8Array) => {
   existsOrThrow(
     facade.worldEnabled,
     'Physics world is not created. Create the world before restoring a snapshot.'
   );
-  if (facade.state.workerTarget === 'MAIN_THREAD') {
+  if (!isWorkerTarget()) {
     const response = facade.engAPI?.restoreSnapshot(snapshot);
     if (response) facade.world = response;
-  } else if (facade.state.workerTarget === 'WORKER_THREAD') {
+  } else {
     // @TODO: we maybe need check all the rigidBodies and colliders
     // and recreate all the maps here (maybe the new bodies and colliders can come in the response if we also send the next running ids).
     // The problem is the userData. The snapshots do not have that data since the userData is on the rigidBodyAPI and colliderAPI.
@@ -305,7 +329,10 @@ export const restorePhysicsSnapshot = async (snapshot: Uint8Array) => {
   return facade.world;
 };
 
-/** Which hot-path transform transport the current world resolved to (WORKER_THREAD only). Undefined before a world is created or in MAIN_THREAD mode. */
+/**
+ * Which hot-path transform transport the current world resolved to (WORKER_THREAD only). Undefined before a world is created or in MAIN_THREAD mode.
+ * @internal
+ */
 export const getResolvedTransportMode = () => resolvedTransportMode;
 
 /**
@@ -319,12 +346,13 @@ export const getResolvedTransportMode = () => resolvedTransportMode;
  * worker then writes nothing and pushes nothing per step.
  *
  * No-op on MAIN_THREAD, where the *Sync state getters are already free.
+ * @internal
  */
 export const setPhysicsDebugStateTracking = async (
   rigidBodyIds: number[],
   colliderIds: number[]
 ) => {
-  if (facade.state.workerTarget !== 'WORKER_THREAD') return;
+  if (!isWorkerTarget()) return;
   const response = await messageWorkerAsync<SetDebugStateTrackingResponse>({
     type: PhysicsProtocolType.SET_DEBUG_STATE_TRACKING,
     rigidBodyIds,
@@ -337,7 +365,9 @@ export const setPhysicsDebugStateTracking = async (
 };
 
 /** The live debug-state buffer, or undefined while tracking has never been enabled (or
- * MESSAGE_BATCH mode hasn't received its first push yet). WORKER_THREAD only. */
+ * MESSAGE_BATCH mode hasn't received its first push yet). WORKER_THREAD only.
+ * @internal
+ */
 export const getPhysicsDebugStateBuffer = () => facade.debugStateBuffer;
 
 // Debug
@@ -346,13 +376,18 @@ let debugGUI: DebugModuleRef<PhysicsAPIGUIModule> | null = null;
 
 /** Debug env: loads the Physics API debug module and restores its persisted world settings
  * (gravity, timestep, solver iterations...) into the physics state. Call it before the first
- * physics world is created: every world, the boot one and each scene load's, is built from them. */
+ * physics world is created: every world, the boot one and each scene load's, is built from them.
+ * @internal
+ */
 export const registerPhysicsAPIDebugGUI = async () => {
   debugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__PhysicsAPI'));
   useDebug(debugGUI)?._hydratePhysicsLiveSettings();
 };
 
-/** Debug env: creates the Physics API debugger tab (after registerPhysicsAPIDebugGUI). */
+/**
+ * Debug env: creates the Physics API debugger tab (after registerPhysicsAPIDebugGUI).
+ * @internal
+ */
 export const createPhysicsAPIDebugGUI = () => {
   useDebug(debugGUI)?._createPhysicsAPIDebugGUI();
 };

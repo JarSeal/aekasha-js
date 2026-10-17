@@ -77,8 +77,8 @@ export enum PhysicsProtocolType {
   RIGID_ENABLE_CCD = 415,
   RIGID_SET_SOFT_CCD_PREDICTION = 416,
   RIGID_SOFT_CCD_PREDICTION = 417,
-  RIGID_TRANSLATION = 418,
-  RIGID_ROTATION = 419,
+  // 418: RIGID_TRANSLATION, retired (p614 W5: the proxy reads the transform buffer)
+  // 419: RIGID_ROTATION, retired (p614 W5: the proxy reads the transform buffer)
   RIGID_NEXT_TRANSLATION = 420,
   RIGID_NEXT_ROTATION = 421,
   RIGID_SET_TRANSLATION = 422,
@@ -89,9 +89,9 @@ export enum PhysicsProtocolType {
   RIGID_SET_ANGVEL = 427,
   RIGID_SET_NEXT_KINEMATIC_TRANSLATION = 428,
   RIGID_SET_NEXT_KINEMATIC_ROTATION = 429,
-  RIGID_LINVEL = 430,
+  // 430: RIGID_LINVEL, retired (p614 W5: the proxy reads the transform buffer)
   RIGID_VELOCITY_AT_POINT = 431,
-  RIGID_ANGVEL = 432,
+  // 432: RIGID_ANGVEL, retired (p614 W5: the proxy reads the transform buffer)
   RIGID_MASS = 433,
   RIGID_EFFECTIVE_INV_MASS = 434,
   RIGID_INV_MASS = 435,

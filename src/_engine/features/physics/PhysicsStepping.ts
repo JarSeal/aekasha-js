@@ -17,7 +17,7 @@ import {
   flushPhysicsEvents,
   messageWorker,
 } from './PhysicsMessaging';
-import { facade } from './PhysicsState';
+import { facade, isWorkerTarget } from './PhysicsState';
 import {
   readSharedStepStats,
   recordMainThreadStepStats,
@@ -46,6 +46,7 @@ import type { PhysicsUpProtocol } from './protocol/PhysicsUpProtocol';
  *
  * Returns how many fixed-timestep slices were actually taken this call (0 if physics is
  * disabled/paused/hasn't accumulated a full slice yet).
+ * @internal
  */
 export const stepPhysics = (
   loopState: LoopState,
@@ -59,7 +60,18 @@ export const stepPhysics = (
   // Scene load in progress (holdPhysicsStepping): no timer update either, releasing it
   // resumes through the paused branch below.
   if (isSteppingHeld) return 0;
+  const dt = takeFrameDelta(loopState);
+  if (dt === null) return 0;
+  const stepsTaken = takeDueSteps(loopState, dt);
+  if (stepsTaken === 0) return 0;
+  return isWorkerTarget()
+    ? sendWorkerSteps(stepsTaken, onBeforeStep)
+    : runMainThreadSteps(stepsTaken, onBeforeStep);
+};
 
+/** stepPhysics' pause and resume handling: the frame's dt, or null when this frame doesn't step
+ * (paused, hidden with 'PAUSE', or resuming, which restarts the timer). */
+const takeFrameDelta = (loopState: LoopState): number | null => {
   updateTimer();
   // The main loop's fixed frame delta when one is set (debug and test only, setFixedFrameDelta)
   let dt = getFixedFrameDelta() ?? timer.getDelta();
@@ -78,7 +90,7 @@ export const stepPhysics = (
     if (!facade.state.isPaused) setPhysicsPauseTime();
     facade.state.isPaused = true;
     timerRunning = false;
-    return 0;
+    return null;
   }
 
   if (loopState.isWindowHidden) {
@@ -90,7 +102,7 @@ export const stepPhysics = (
       if (!facade.state.isPaused) setPhysicsPauseTime();
       facade.state.isPaused = true;
       timerRunning = false;
-      return 0;
+      return null;
     }
     if (
       facade.state.backgroundBehavior === 'KEEP_RUNNING_USE_MIN_DELTA' &&
@@ -111,9 +123,14 @@ export const stepPhysics = (
     simClockEpoch++;
     timerRunning = true;
     timer.update();
-    return 0;
+    return null;
   }
+  return dt;
+};
 
+/** stepPhysics' accumulator: banks the frame's dt and takes the steps due, within the sub-step
+ * ceiling, the step gates and the debug step limit. */
+const takeDueSteps = (loopState: LoopState, dt: number) => {
   // Debug-only freeze (setPhysicsStepLimit): at the limit, hold there without banking time
   // toward the next step, so releasing it resumes cleanly instead of catching up.
   const stepsToLimit = stepLimit === null ? Infinity : stepLimit - stepsIssued;
@@ -160,74 +177,92 @@ export const stepPhysics = (
     stepsTaken = stepsToLimit;
     accDelta = 0;
   }
+  return stepsTaken;
+};
 
-  if (stepsTaken === 0) return 0;
-
+/** MAIN_THREAD: runs the steps, each after its onBeforeStep (or an event flush). Returns the
+ * steps run (fewer when a gate an earlier sub-step added holds the rest). */
+const runMainThreadSteps = (
+  stepsTaken: number,
+  onBeforeStep: ((stepDelta: number, stepIndex: number) => void) | undefined
+) => {
   const stepDelta = facade.state.timestepRatio;
   const trackStats = facade.state.stepStatsEnabled;
-  if (facade.state.workerTarget === 'MAIN_THREAD') {
-    let stepMs = 0;
-    try {
-      for (let i = 0; i < stepsTaken; i++) {
-        if (isSubStepGated(i, stepsTaken)) {
-          stepsTaken = i;
-          break;
-        }
-        subStepIndex = stepsIssued + i;
-        if (onBeforeStep) onBeforeStep(stepDelta, subStepIndex);
-        else flushPhysicsEvents();
-        if (!trackStats) {
-          facade.engAPI?.step();
-          continue;
-        }
-        // Timed around step() alone: onBeforeStep above runs app/ECS work, and including it
-        // would reproduce exactly the contamination that made the legacy PHY panel misleading.
-        const subStepStart = readStatsClock();
+  let stepMs = 0;
+  try {
+    for (let i = 0; i < stepsTaken; i++) {
+      if (isSubStepGated(i, stepsTaken)) {
+        stepsTaken = i;
+        break;
+      }
+      subStepIndex = stepsIssued + i;
+      if (onBeforeStep) onBeforeStep(stepDelta, subStepIndex);
+      else flushPhysicsEvents();
+      if (!trackStats) {
         facade.engAPI?.step();
-        stepMs += readStatsClock() - subStepStart;
+        continue;
       }
-    } finally {
-      subStepIndex = -1;
+      // Timed around step() alone: onBeforeStep above runs app/ECS work, and including it
+      // would reproduce exactly the contamination that made the legacy PHY panel misleading.
+      const subStepStart = readStatsClock();
+      facade.engAPI?.step();
+      stepMs += readStatsClock() - subStepStart;
     }
-    if (trackStats) recordMainThreadStepStats(stepMs);
-    stampStepBatch(stepsTaken);
-  } else if (facade.state.workerTarget === 'WORKER_THREAD') {
-    let substepCommands: PhysicsUpProtocol[][] | undefined;
-    if (onBeforeStep) {
-      substepCommands = [];
-      for (let i = 0; i < stepsTaken; i++) {
-        if (isSubStepGated(i, stepsTaken)) {
-          stepsTaken = i;
-          break;
-        }
-        beginSubStepCapture();
-        subStepIndex = stepsIssued + i;
-        try {
-          onBeforeStep(stepDelta, subStepIndex);
-        } finally {
-          substepCommands.push(endSubStepCapture());
-          subStepIndex = -1;
-        }
-      }
-    }
-    // One-way, no response awaited — transform results arrive via the hot-path buffer
-    // (transformBuffer), not via a STEP reply. A single message runs all of this frame's
-    // sub-steps (each preceded by its own captured commands) and writes back exactly once,
-    // never one message per sub-step.
-    messageWorker({
-      type: PhysicsProtocolType.STEP,
-      steps: stepsTaken,
-      substepCommands,
-      isOneWay: true,
-      // Only stamped while measuring; the worker derives dispatchMs from it.
-      sentAt: trackStats ? readStatsClock() : undefined,
-    });
-    stampStepBatch(stepsTaken);
-    // SHARED_MEMORY has no per-step return message, so the stats are polled here instead,
-    // one frame behind — the same latency tradeoff the transform buffer itself already makes.
-    if (trackStats) readSharedStepStats();
+  } finally {
+    subStepIndex = -1;
   }
+  if (trackStats) recordMainThreadStepStats(stepMs);
+  stampStepBatch(stepsTaken);
+  return stepsTaken;
+};
 
+/**
+ * WORKER_THREAD: runs every sub-step's onBeforeStep here up front, capturing the one-way commands
+ * each issues, and sends all the steps in one STEP message (A7: a sub-step without commands, and
+ * a frame without any, allocates no capture). Returns the steps sent (fewer when a gate an
+ * earlier sub-step added holds the rest).
+ */
+const sendWorkerSteps = (
+  stepsTaken: number,
+  onBeforeStep: ((stepDelta: number, stepIndex: number) => void) | undefined
+) => {
+  const stepDelta = facade.state.timestepRatio;
+  const trackStats = facade.state.stepStatsEnabled;
+  // Sparse: a sub-step's commands at its index, none for a sub-step that issued none
+  let substepCommands: PhysicsUpProtocol[][] | undefined;
+  if (onBeforeStep) {
+    for (let i = 0; i < stepsTaken; i++) {
+      if (isSubStepGated(i, stepsTaken)) {
+        stepsTaken = i;
+        break;
+      }
+      beginSubStepCapture();
+      subStepIndex = stepsIssued + i;
+      try {
+        onBeforeStep(stepDelta, subStepIndex);
+      } finally {
+        const commands = endSubStepCapture();
+        if (commands) (substepCommands ??= [])[i] = commands;
+        subStepIndex = -1;
+      }
+    }
+  }
+  // One-way, no response awaited — transform results arrive via the hot-path buffer
+  // (transformBuffer), not via a STEP reply. A single message runs all of this frame's
+  // sub-steps (each preceded by its own captured commands) and writes back exactly once,
+  // never one message per sub-step.
+  messageWorker({
+    type: PhysicsProtocolType.STEP,
+    steps: stepsTaken,
+    substepCommands,
+    isOneWay: true,
+    // Only stamped while measuring; the worker derives dispatchMs from it.
+    sentAt: trackStats ? readStatsClock() : undefined,
+  });
+  stampStepBatch(stepsTaken);
+  // SHARED_MEMORY has no per-step return message, so the stats are polled here instead,
+  // one frame behind — the same latency tradeoff the transform buffer itself already makes.
+  if (trackStats) readSharedStepStats();
   return stepsTaken;
 };
 
@@ -241,18 +276,23 @@ export const stepPhysics = (
  * Switching it on clears the last figures, so a reader sees `undefined` ("no measured step
  * yet") instead of what an earlier measuring period left behind. `WORKER_THREAD`: the worker
  * gets a one-way message and measures from its next STEP message on (in every transport).
- * Called before {@link _engine/features/physics/PhysicsWorld!initPhysics}, the config value replaces it.
+ * Called before {@link _engine/features/physics/PhysicsWorld!initPhysics}, the config value
+ * replaces it.
+ * @internal
  */
 export const setPhysicsStepStatsEnabled = (enabled: boolean) => {
   if (facade.state.stepStatsEnabled === enabled) return;
   facade.state.stepStatsEnabled = enabled;
   if (enabled) resetPhysicsStepStats();
-  if (facade.state.workerTarget === 'WORKER_THREAD') {
+  if (isWorkerTarget()) {
     messageWorker({ type: PhysicsProtocolType.SET_STEP_STATS, enabled, isOneWay: true });
   }
 };
 
-/** Whether the physics step measurement is on (see {@link setPhysicsStepStatsEnabled}). */
+/**
+ * Whether the physics step measurement is on (see {@link setPhysicsStepStatsEnabled}).
+ * @internal
+ */
 export const isPhysicsStepStatsEnabled = () => facade.state.stepStatsEnabled;
 
 /** The transform buffer step index from which a write made right now is visible in it: the
@@ -282,6 +322,7 @@ const setPhysicsPauseTime = () => {
 /**
  * The wall clock (ms) minus the time physics was paused. Not deterministic: simulation code
  * counts fixed steps instead.
+ * @internal
  * @deprecated Use the step index ({@link getPhysicsSubStepIndex}) times the fixed timestep
  * (removed in engine 6.0.0).
  */
@@ -327,9 +368,10 @@ export const physicsVisibilityChangeHandler = (isHidden: boolean) => {
 let isSteppingHeld = false;
 
 /**
- * Stops the world from stepping until releasePhysicsStepping() is called. SceneLoader.ts holds
- * it for the whole scene build, so every body of the next scene starts stepping on the same
+ * Stops the world from stepping until releasePhysicsStepping() is called. Physics' scene hooks
+ * hold it for the whole scene load (loadStart to entered), so every body of the next scene starts stepping on the same
  * step no matter how long its assets took to load. Counts as a pause for getPhysGameTime().
+ * @internal
  */
 export const holdPhysicsStepping = () => {
   if (isSteppingHeld) return;
@@ -344,6 +386,7 @@ export const holdPhysicsStepping = () => {
  * discards the dt spanning the hold and the accumulator and restarts the timer, so stepping
  * restarts from a clean step boundary. That also covers the first boot, where the loop only
  * starts after the first load.
+ * @internal
  */
 export const releasePhysicsStepping = () => {
   if (!isSteppingHeld) return;
@@ -351,6 +394,10 @@ export const releasePhysicsStepping = () => {
   if (facade.state.pauseReason === 'SCENE_LOAD') facade.state.pauseReason = null;
 };
 
+/**
+ * Whether {@link holdPhysicsStepping} holds stepping (a scene load).
+ * @internal
+ */
 export const isPhysicsSteppingHeld = () => isSteppingHeld;
 
 // Physics step accumulator variables
@@ -415,7 +462,9 @@ export const resetSimClock = () => {
  * start of every frame, before any stage, held-key polling, APP_PHYSICS_STEP or event callback
  * reads a pose, so all of them see the same complete snapshot. Only SHARED_MEMORY has anything
  * to latch (the worker writes it concurrently); a write-back that lands mid-frame waits for the
- * next frame. MAIN_THREAD and MESSAGE_BATCH are already consistent, and this is a no-op there. */
+ * next frame. MAIN_THREAD and MESSAGE_BATCH are already consistent, and this is a no-op there.
+ * @internal
+ */
 export const latchPhysicsSnapshot = () => {
   facade.transformBuffer?.latch();
 };
@@ -424,19 +473,23 @@ export const latchPhysicsSnapshot = () => {
  * been executed on the current world when its poses were captured (0 before the first one).
  * MAIN_THREAD steps synchronously, so it is simply the steps issued; WORKER_THREAD reads the
  * stamp the worker writes into the transform buffer with every write-back. Changes exactly when
- * a new snapshot becomes visible, and only ever increases within one world. */
+ * a new snapshot becomes visible, and only ever increases within one world.
+ * @internal
+ */
 export const getPhysicsSnapshotStepIndex = () =>
-  facade.state.workerTarget === 'WORKER_THREAD'
-    ? facade.transformBuffer?.getStepIndex() ?? 0
-    : stepsIssued;
+  isWorkerTarget() ? facade.transformBuffer?.getStepIndex() ?? 0 : stepsIssued;
 
 /** The snapshot step index from which a pose/velocity write made right now shows up in the
- * snapshots (see getPhysicsSnapshotStepIndex) — anything stamped earlier predates it. */
+ * snapshots (see getPhysicsSnapshotStepIndex) — anything stamped earlier predates it.
+ * @internal
+ */
 export const getPhysicsWriteVisibleStep = () => getWriteVisibleStep();
 
 /** Stamp of the latest visible snapshot: `step` = getPhysicsSnapshotStepIndex(), `phase` = the
  * accumulator's fraction of a step when its batch was issued (0 if no longer known). Returns
- * false before the first snapshot. Writes into `out`, allocation-free. */
+ * false before the first snapshot. Writes into `out`, allocation-free.
+ * @internal
+ */
 export const readPhysicsSnapshotStamp = (out: { step: number; phase: number }): boolean => {
   const step = getPhysicsSnapshotStepIndex();
   if (step <= 0) return false;
@@ -454,10 +507,16 @@ export const getPhysicsSimClock = () =>
     ? stepsIssued + accDelta / facade.state.timestepRatio
     : stepsIssued;
 
-/** See simClockEpoch: changes whenever getPhysicsSimClock() jumps. */
+/**
+ * See simClockEpoch: changes whenever getPhysicsSimClock() jumps.
+ * @internal
+ */
 export const getPhysicsSimClockEpoch = () => simClockEpoch;
 
-/** See simHistoryEpoch: changes whenever earlier snapshots stop describing the current world. */
+/**
+ * See simHistoryEpoch: changes whenever earlier snapshots stop describing the current world.
+ * @internal
+ */
 export const getPhysicsSimHistoryEpoch = () => simHistoryEpoch;
 
 /** Absolute step index (in stepsIssued) stepPhysics() never steps past; null = no limit. */
@@ -469,6 +528,7 @@ let stepLimit: number | null = null;
  * step index it freezes at, which is what getPhysicsSnapshotStepIndex() reads once the frozen
  * pose is visible (WORKER_THREAD mode gets there a frame or more later than MAIN_THREAD).
  * Used by the physics determinism probe (_dbg__PhysicsDeterminism.ts).
+ * @internal
  */
 export const setPhysicsStepLimit = (steps: number | null) => {
   if (!IS_DEBUG_ENV) return null;
@@ -552,6 +612,7 @@ export const addPhysicsStepGate = (step: number): (() => void) => {
  * Since boot: `waits`, how many times a gate held back steps that were due, and `heldMs`, for how
  * long in total (wall clock, until a frame stepped without being cut). A hold still going counts
  * up to now.
+ * @internal
  */
 export const getPhysicsStepGateStats = () => ({
   waits: stepGateStats.waits,
@@ -563,7 +624,7 @@ export const getPhysicsStepGateStats = () => ({
  * Fixed physics sub-steps issued since boot, over every world (WORKER_THREAD: sent, possibly not
  * executed yet). Never reset, so the difference of two reads is the sub-steps in between, eg. per
  * frame (a count near maxSubSteps warns of the spiral of death).
- * @returns (number) sub-step count
+ * @internal
  */
 export const getPhysicsSubStepTotal = () => subStepTotal;
 

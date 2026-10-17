@@ -1,37 +1,25 @@
 // The WORKER_THREAD collider: each call a message to the worker.
 
 import type { ShapeType } from '@dimforge/rapier3d-compat';
-import { messageWorker, messageWorkerAsync, toPlainRot } from '../PhysicsMessaging';
+import {
+  commandWorker,
+  messageWorkerAsync,
+  queryWorker,
+  throwWorkerSync,
+  toPlainRot,
+} from '../PhysicsMessaging';
+import type { PhysicsCommandFor, PhysicsQueryType } from '../PhysicsMessaging';
+import type { PhysicsResponse } from '../protocol/PhysicsDownProtocol';
 import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
-import type {
-  CollBorderRadiusResponse,
-  CollCollisionGroupsResponse,
-  CollDensityResponse,
-  CollFrictionResponse,
-  CollHalfExtentsResponse,
-  CollHalfHeightResponse,
-  CollHeightsResponse,
-  CollIndicesResponse,
-  CollIsEnabledResponse,
-  CollIsSensorResponse,
-  CollIsValidResponse,
-  CollMassResponse,
-  CollNormalResponse,
-  CollRadiusResponse,
-  CollRestitutionResponse,
-  CollRotationResponse,
-  CollShapeTypeResponse,
-  CollSolverGroupsResponse,
-  CollTranslationResponse,
-  CollUserDataResponse,
-  CollVerticesResponse,
-} from '../protocol/PhysicsResponses';
 import type {
   ColliderAPI,
   HeightFieldData,
   InteractionGroupsAPI,
 } from '../types/PhysicsColliderTypes';
 import type { PhysRotation, PhysVector } from '../types/PhysicsCommonTypes';
+
+/** The `*Sync` twins this proxy can't answer: their value is the worker's. */
+const asyncOnly = (getter: string): never => throwWorkerSync('ColliderAPI', getter);
 
 /**
  * A collider in WORKER_THREAD mode: each call is a message to the worker.
@@ -42,20 +30,30 @@ export class ColliderProxyAPI implements ColliderAPI {
 
   isBeingDeleted: boolean = false;
 
+  /** The proxy of a collider the worker made (its id and parent from the reply). */
   constructor(
+    /** The collider's id. */
     public id: number,
+    /** The rigid body it's attached to, if any. */
     public parentId?: number,
     userData?: Record<string, unknown>
   ) {
     if (userData) this.uData = userData;
   }
 
+  /** A one-way command about this collider. */
+  private command(message: PhysicsCommandFor<'colliderId'>) {
+    commandWorker(message, 'colliderId', this.id);
+  }
+
+  /** A query for one of this collider's fields. */
+  private ask<T extends PhysicsQueryType<'colliderId'>>(type: T) {
+    return queryWorker(type, 'colliderId', this.id);
+  }
+
   // --- Metadata ---
   async getUserData(): Promise<Record<string, unknown>> {
-    const res = await messageWorkerAsync<CollUserDataResponse>({
-      type: PhysicsProtocolType.COLL_GET_USERDATA,
-      colliderId: this.id,
-    });
+    const res = await this.ask(PhysicsProtocolType.COLL_GET_USERDATA);
     this.uData = res.userData;
     return res.userData;
   }
@@ -64,9 +62,8 @@ export class ColliderProxyAPI implements ColliderAPI {
   }
   setUserData(userData: Record<string, unknown>, addToExisting?: boolean): void {
     this.uData = addToExisting ? { ...this.uData, ...userData } : userData;
-    messageWorker({
+    this.command({
       type: PhysicsProtocolType.COLL_SET_USERDATA,
-      colliderId: this.id,
       userData,
       addToExisting,
       isOneWay: true,
@@ -74,169 +71,103 @@ export class ColliderProxyAPI implements ColliderAPI {
   }
 
   async isValid(): Promise<boolean> {
-    return (
-      await messageWorkerAsync<CollIsValidResponse>({
-        type: PhysicsProtocolType.COLL_IS_VALID,
-        colliderId: this.id,
-      })
-    ).isValid;
+    return (await this.ask(PhysicsProtocolType.COLL_IS_VALID)).isValid;
   }
   isValidSync(): boolean {
-    throw new Error('Sync isValid not supported on Proxy');
+    return asyncOnly('isValid');
   }
 
   // --- Transformation ---
   async translation(): Promise<PhysVector> {
-    return (
-      await messageWorkerAsync<CollTranslationResponse>({
-        type: PhysicsProtocolType.COLL_TRANSLATION,
-        colliderId: this.id,
-      })
-    ).translation;
+    return (await this.ask(PhysicsProtocolType.COLL_TRANSLATION)).translation;
   }
   translationSync(): PhysVector {
-    throw new Error('Sync translation not supported on Proxy');
+    return asyncOnly('translation');
   }
 
   async translationWrtParent(): Promise<PhysVector | null> {
-    return (
-      await messageWorkerAsync<{ translation: PhysVector | null }>({
-        type: PhysicsProtocolType.COLL_TRANSLATION_WRT_PARENT,
-        colliderId: this.id,
-      })
-    ).translation;
+    return (await this.ask(PhysicsProtocolType.COLL_TRANSLATION_WRT_PARENT)).translation;
   }
   translationWrtParentSync(): PhysVector | null {
-    throw new Error('Sync translationWrtParent not supported on Proxy');
+    return asyncOnly('translationWrtParent');
   }
 
   async rotation(): Promise<PhysRotation> {
-    return (
-      await messageWorkerAsync<CollRotationResponse>({
-        type: PhysicsProtocolType.COLL_ROTATION,
-        colliderId: this.id,
-      })
-    ).rotation;
+    return (await this.ask(PhysicsProtocolType.COLL_ROTATION)).rotation;
   }
   rotationSync(): PhysRotation {
-    throw new Error('Sync rotation not supported on Proxy');
+    return asyncOnly('rotation');
   }
 
   async rotationWrtParent(): Promise<PhysRotation | null> {
-    return (
-      await messageWorkerAsync<{ rotation: PhysRotation | null }>({
-        type: PhysicsProtocolType.COLL_ROTATION_WRT_PARENT,
-        colliderId: this.id,
-      })
-    ).rotation;
+    return (await this.ask(PhysicsProtocolType.COLL_ROTATION_WRT_PARENT)).rotation;
   }
   rotationWrtParentSync(): PhysRotation | null {
-    throw new Error('Sync rotationWrtParent not supported on Proxy');
+    return asyncOnly('rotationWrtParent');
   }
 
   setTranslation(tra: PhysVector): void {
-    messageWorker({ type: PhysicsProtocolType.COLL_SET_TRANSLATION, colliderId: this.id, tra });
+    this.command({ type: PhysicsProtocolType.COLL_SET_TRANSLATION, tra });
   }
   setTranslationWrtParent(tra: PhysVector): void {
-    messageWorker({
-      type: PhysicsProtocolType.COLL_SET_TRANSLATION_WRT_PARENT,
-      colliderId: this.id,
-      tra,
-    });
+    this.command({ type: PhysicsProtocolType.COLL_SET_TRANSLATION_WRT_PARENT, tra });
   }
   setRotation(rot: PhysRotation): void {
-    messageWorker({
-      type: PhysicsProtocolType.COLL_SET_ROTATION,
-      colliderId: this.id,
-      rot: toPlainRot(rot),
-    });
+    this.command({ type: PhysicsProtocolType.COLL_SET_ROTATION, rot: toPlainRot(rot) });
   }
   setRotationWrtParent(rot: PhysRotation): void {
-    messageWorker({
-      type: PhysicsProtocolType.COLL_SET_ROTATION_WRT_PARENT,
-      colliderId: this.id,
-      rot: toPlainRot(rot),
-    });
+    this.command({ type: PhysicsProtocolType.COLL_SET_ROTATION_WRT_PARENT, rot: toPlainRot(rot) });
   }
 
   // --- Physical Properties ---
   async isSensor(): Promise<boolean> {
-    return (
-      await messageWorkerAsync<CollIsSensorResponse>({
-        type: PhysicsProtocolType.COLL_IS_SENSOR,
-        colliderId: this.id,
-      })
-    ).isSensor;
+    return (await this.ask(PhysicsProtocolType.COLL_IS_SENSOR)).isSensor;
   }
   isSensorSync(): boolean {
-    throw new Error('Sync isSensor not supported on Proxy');
+    return asyncOnly('isSensor');
   }
   setSensor(isSensor: boolean): void {
-    messageWorker({ type: PhysicsProtocolType.COLL_SET_SENSOR, colliderId: this.id, isSensor });
+    this.command({ type: PhysicsProtocolType.COLL_SET_SENSOR, isSensor });
   }
 
   async isEnabled(): Promise<boolean> {
-    return (
-      await messageWorkerAsync<CollIsEnabledResponse>({
-        type: PhysicsProtocolType.COLL_IS_ENABLED,
-        colliderId: this.id,
-      })
-    ).isEnabled;
+    return (await this.ask(PhysicsProtocolType.COLL_IS_ENABLED)).isEnabled;
   }
   isEnabledSync(): boolean {
-    throw new Error('Sync isEnabled not supported on Proxy');
+    return asyncOnly('isEnabled');
   }
   setEnabled(enabled: boolean): void {
-    messageWorker({ type: PhysicsProtocolType.COLL_SET_ENABLED, colliderId: this.id, enabled });
+    this.command({ type: PhysicsProtocolType.COLL_SET_ENABLED, enabled });
   }
 
   async friction(): Promise<number> {
-    return (
-      await messageWorkerAsync<CollFrictionResponse>({
-        type: PhysicsProtocolType.COLL_FRICTION,
-        colliderId: this.id,
-      })
-    ).friction;
+    return (await this.ask(PhysicsProtocolType.COLL_FRICTION)).friction;
   }
   frictionSync(): number {
-    throw new Error('Sync friction not supported on Proxy');
+    return asyncOnly('friction');
   }
   setFriction(friction: number): void {
-    messageWorker({ type: PhysicsProtocolType.COLL_SET_FRICTION, colliderId: this.id, friction });
+    this.command({ type: PhysicsProtocolType.COLL_SET_FRICTION, friction });
   }
 
   async restitution(): Promise<number> {
-    return (
-      await messageWorkerAsync<CollRestitutionResponse>({
-        type: PhysicsProtocolType.COLL_RESTITUTION,
-        colliderId: this.id,
-      })
-    ).restitution;
+    return (await this.ask(PhysicsProtocolType.COLL_RESTITUTION)).restitution;
   }
   restitutionSync(): number {
-    throw new Error('Sync restitution not supported on Proxy');
+    return asyncOnly('restitution');
   }
   setRestitution(restitution: number): void {
-    messageWorker({
-      type: PhysicsProtocolType.COLL_SET_RESTITUTION,
-      colliderId: this.id,
-      restitution,
-    });
+    this.command({ type: PhysicsProtocolType.COLL_SET_RESTITUTION, restitution });
   }
 
   async mass(): Promise<number> {
-    return (
-      await messageWorkerAsync<CollMassResponse>({
-        type: PhysicsProtocolType.COLL_MASS,
-        colliderId: this.id,
-      })
-    ).mass;
+    return (await this.ask(PhysicsProtocolType.COLL_MASS)).mass;
   }
   massSync(): number {
-    throw new Error('Sync mass not supported on Proxy');
+    return asyncOnly('mass');
   }
   setMass(mass: number): void {
-    messageWorker({ type: PhysicsProtocolType.COLL_SET_MASS, colliderId: this.id, mass });
+    this.command({ type: PhysicsProtocolType.COLL_SET_MASS, mass });
   }
 
   setMassProperties(
@@ -245,9 +176,8 @@ export class ColliderProxyAPI implements ColliderAPI {
     principalAngularInertia: PhysVector,
     angularInertiaLocalFrame: PhysRotation
   ): void {
-    messageWorker({
+    this.command({
       type: PhysicsProtocolType.COLL_SET_MASS_PROPERTIES,
-      colliderId: this.id,
       mass,
       centerOfMass,
       principalAngularInertia,
@@ -257,67 +187,42 @@ export class ColliderProxyAPI implements ColliderAPI {
   }
 
   async density(): Promise<number> {
-    return (
-      await messageWorkerAsync<CollDensityResponse>({
-        type: PhysicsProtocolType.COLL_DENSITY,
-        colliderId: this.id,
-      })
-    ).density;
+    return (await this.ask(PhysicsProtocolType.COLL_DENSITY)).density;
   }
   densitySync(): number {
-    throw new Error('Sync density not supported on Proxy');
+    return asyncOnly('density');
   }
   setDensity(density: number): void {
-    messageWorker({ type: PhysicsProtocolType.COLL_SET_DENSITY, colliderId: this.id, density });
+    this.command({ type: PhysicsProtocolType.COLL_SET_DENSITY, density });
   }
 
   // --- Geometry Details ---
   async shapeType(): Promise<ShapeType> {
-    return (
-      await messageWorkerAsync<CollShapeTypeResponse>({
-        type: PhysicsProtocolType.COLL_SHAPE_TYPE,
-        colliderId: this.id,
-      })
-    ).shapeType;
+    return (await this.ask(PhysicsProtocolType.COLL_SHAPE_TYPE)).shapeType;
   }
   shapeTypeSync(): ShapeType {
-    throw new Error('Sync shapeType not supported on Proxy');
+    return asyncOnly('shapeType');
   }
 
   async radius(): Promise<number> {
-    return (
-      await messageWorkerAsync<CollRadiusResponse>({
-        type: PhysicsProtocolType.COLL_RADIUS,
-        colliderId: this.id,
-      })
-    ).radius;
+    return (await this.ask(PhysicsProtocolType.COLL_RADIUS)).radius;
   }
   radiusSync(): number {
-    throw new Error('Sync radius not supported on Proxy');
+    return asyncOnly('radius');
   }
 
   async halfHeight(): Promise<number> {
-    return (
-      await messageWorkerAsync<CollHalfHeightResponse>({
-        type: PhysicsProtocolType.COLL_HALF_HEIGHT,
-        colliderId: this.id,
-      })
-    ).halfHeight;
+    return (await this.ask(PhysicsProtocolType.COLL_HALF_HEIGHT)).halfHeight;
   }
   halfHeightSync(): number {
-    throw new Error('Sync halfHeight not supported on Proxy');
+    return asyncOnly('halfHeight');
   }
 
   async halfExtents(): Promise<PhysVector> {
-    return (
-      await messageWorkerAsync<CollHalfExtentsResponse>({
-        type: PhysicsProtocolType.COLL_HALF_EXTENTS,
-        colliderId: this.id,
-      })
-    ).halfExtents;
+    return (await this.ask(PhysicsProtocolType.COLL_HALF_EXTENTS)).halfExtents;
   }
   halfExtentsSync(): PhysVector {
-    throw new Error('Sync halfExtents not supported on Proxy');
+    return asyncOnly('halfExtents');
   }
 
   // --- Geometry (mesh-type shapes) ---
@@ -326,116 +231,73 @@ export class ColliderProxyAPI implements ColliderAPI {
   // structured clones, since mesh data can be large.
 
   async vertices(): Promise<Float32Array | null> {
-    return (
-      await messageWorkerAsync<CollVerticesResponse>({
-        type: PhysicsProtocolType.COLL_VERTICES,
-        colliderId: this.id,
-      })
-    ).vertices;
+    return (await this.ask(PhysicsProtocolType.COLL_VERTICES)).vertices;
   }
   verticesSync(): Float32Array | null {
-    throw new Error('Sync vertices not supported on Proxy');
+    return asyncOnly('vertices');
   }
 
   async indices(): Promise<Uint32Array | null> {
-    return (
-      await messageWorkerAsync<CollIndicesResponse>({
-        type: PhysicsProtocolType.COLL_INDICES,
-        colliderId: this.id,
-      })
-    ).indices;
+    return (await this.ask(PhysicsProtocolType.COLL_INDICES)).indices;
   }
   indicesSync(): Uint32Array | null {
-    throw new Error('Sync indices not supported on Proxy');
+    return asyncOnly('indices');
   }
 
   async heights(): Promise<HeightFieldData | null> {
-    return (
-      await messageWorkerAsync<CollHeightsResponse>({
-        type: PhysicsProtocolType.COLL_HEIGHTS,
-        colliderId: this.id,
-      })
-    ).heights;
+    return (await this.ask(PhysicsProtocolType.COLL_HEIGHTS)).heights;
   }
   heightsSync(): HeightFieldData | null {
-    throw new Error('Sync heights not supported on Proxy');
+    return asyncOnly('heights');
   }
 
   async normal(): Promise<PhysVector | null> {
-    return (
-      await messageWorkerAsync<CollNormalResponse>({
-        type: PhysicsProtocolType.COLL_NORMAL,
-        colliderId: this.id,
-      })
-    ).normal;
+    return (await this.ask(PhysicsProtocolType.COLL_NORMAL)).normal;
   }
   normalSync(): PhysVector | null {
-    throw new Error('Sync normal not supported on Proxy');
+    return asyncOnly('normal');
   }
 
   async borderRadius(): Promise<number> {
-    return (
-      await messageWorkerAsync<CollBorderRadiusResponse>({
-        type: PhysicsProtocolType.COLL_BORDER_RADIUS,
-        colliderId: this.id,
-      })
-    ).borderRadius;
+    return (await this.ask(PhysicsProtocolType.COLL_BORDER_RADIUS)).borderRadius;
   }
   borderRadiusSync(): number {
-    throw new Error('Sync borderRadius not supported on Proxy');
+    return asyncOnly('borderRadius');
   }
 
   // --- Groups ---
   async collisionGroups(): Promise<InteractionGroupsAPI> {
-    return (
-      await messageWorkerAsync<CollCollisionGroupsResponse>({
-        type: PhysicsProtocolType.COLL_COLLISION_GROUPS,
-        colliderId: this.id,
-      })
-    ).groups;
+    return (await this.ask(PhysicsProtocolType.COLL_COLLISION_GROUPS)).groups;
   }
   collisionGroupsSync(): InteractionGroupsAPI {
-    throw new Error('Sync collisionGroups not supported on Proxy');
+    return asyncOnly('collisionGroups');
   }
   setCollisionGroups(groups: InteractionGroupsAPI): void {
-    messageWorker({
-      type: PhysicsProtocolType.COLL_SET_COLLISION_GROUPS,
-      colliderId: this.id,
-      groups,
-    });
+    this.command({ type: PhysicsProtocolType.COLL_SET_COLLISION_GROUPS, groups });
   }
 
   async solverGroups(): Promise<InteractionGroupsAPI> {
-    return (
-      await messageWorkerAsync<CollSolverGroupsResponse>({
-        type: PhysicsProtocolType.COLL_SOLVER_GROUPS,
-        colliderId: this.id,
-      })
-    ).groups;
+    return (await this.ask(PhysicsProtocolType.COLL_SOLVER_GROUPS)).groups;
   }
   solverGroupsSync(): InteractionGroupsAPI {
-    throw new Error('Sync solverGroups not supported on Proxy');
+    return asyncOnly('solverGroups');
   }
   setSolverGroups(groups: InteractionGroupsAPI): void {
-    messageWorker({
-      type: PhysicsProtocolType.COLL_SET_SOLVER_GROUPS,
-      colliderId: this.id,
-      groups,
-    });
+    this.command({ type: PhysicsProtocolType.COLL_SET_SOLVER_GROUPS, groups });
   }
 
   // --- Queries ---
   async containsPoint(point: PhysVector): Promise<boolean> {
     return (
-      await messageWorkerAsync<{ isInside: boolean }>({
+      await messageWorkerAsync<PhysicsResponse<PhysicsProtocolType.COLL_CONTAINS_POINT>>({
         type: PhysicsProtocolType.COLL_CONTAINS_POINT,
         colliderId: this.id,
         point,
       })
     ).isInside;
   }
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- the interface's signature
   containsPointSync(_point: PhysVector): boolean {
-    throw new Error('Sync containsPoint not supported on Proxy');
+    return asyncOnly('containsPoint');
   }
 }

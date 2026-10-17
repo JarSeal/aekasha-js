@@ -138,7 +138,7 @@ The app's `physicsTiers` scene is its demo: open it with `?isDebug=true&startSce
 
 - The [physics example](hub:examples/physics), with the code of the scene above.
 - [Characters](hub:features/characters): the character controller, built on physics.
-- The API reference: [PhysicsWorld](hub:documentation/engine/features/physics/PhysicsWorld),
+- The API reference: [PhysicsState](hub:documentation/engine/features/physics/PhysicsState),
   [PhysicsBodies](hub:documentation/engine/features/physics/PhysicsBodies),
   [PhysicsColliders](hub:documentation/engine/features/physics/PhysicsColliders),
   [PhysicsJoints](hub:documentation/engine/features/physics/PhysicsJoints),

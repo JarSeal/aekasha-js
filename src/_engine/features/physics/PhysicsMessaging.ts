@@ -7,11 +7,11 @@ import { lerror } from '../../utils/Logger';
 import { createNewResolver, rejectRequest, resolveRequest } from '../../utils/PromiseResolver';
 import { PhysicsDebugStateBuffer } from './PhysicsDebugStateBuffer';
 import { colliders, workerCollisionEventFns, workerContactForceEventFns } from './PhysicsRegistry';
-import { facade } from './PhysicsState';
+import { facade, isWorkerTarget } from './PhysicsState';
 import { recordPushedStepStats } from './PhysicsStepStats';
 import { PhysicsTransformBuffer } from './PhysicsTransformBuffer';
 import { ValidProtocolTypes } from './PhysicsUtils';
-import type { PhysicsDownProtocol } from './protocol/PhysicsDownProtocol';
+import type { PhysicsDownProtocol, PhysicsResponse } from './protocol/PhysicsDownProtocol';
 import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
 import type { EventsPushMessage } from './protocol/PhysicsResponses';
 import type { PhysicsUpProtocol } from './protocol/PhysicsUpProtocol';
@@ -76,6 +76,9 @@ export const toPlainRot = (rot: PhysRotation): PhysRotation => ({
  * calls via messageWorkerAsync are still posted immediately — they reach the worker ahead of
  * the STEP message, i.e. before this frame's first sub-step.) */
 let substepCommandCapture: PhysicsUpProtocol[] | null = null;
+/** Whether a sub-step's callback runs (beginSubStepCapture): its capture is made on its first
+ * command, so a sub-step that issues none allocates nothing. */
+let isCapturingSubStep = false;
 
 /**
  * stepPhysics, WORKER_THREAD: starts capturing the one-way commands of a sub-step's
@@ -83,15 +86,18 @@ let substepCommandCapture: PhysicsUpProtocol[] | null = null;
  * @internal
  */
 export const beginSubStepCapture = () => {
-  substepCommandCapture = [];
+  isCapturingSubStep = true;
+  substepCommandCapture = null;
 };
 
 /**
- * Ends the capture {@link beginSubStepCapture} started, and returns its commands.
+ * Ends the capture {@link beginSubStepCapture} started, and returns its commands: null when the
+ * sub-step issued none.
  * @internal
  */
 export const endSubStepCapture = () => {
-  const captured = substepCommandCapture ?? [];
+  const captured = substepCommandCapture;
+  isCapturingSubStep = false;
   substepCommandCapture = null;
   return captured;
 };
@@ -103,11 +109,11 @@ export const endSubStepCapture = () => {
  */
 export const messageWorker = (message: PhysicsUpProtocol) => {
   if (!workerTransport) return;
-  if (substepCommandCapture) {
+  if (isCapturingSubStep) {
     // Cloned now, as postMessage would: callers reuse scratch vectors (e.g. a platform's
     // kinematic target), and the STEP message is only cloned after every sub-step's systems
     // ran, so a captured reference would carry the last sub-step's value into all of them.
-    substepCommandCapture.push(structuredClone(message));
+    (substepCommandCapture ??= []).push(structuredClone(message));
     return;
   }
   workerTransport.send(message);
@@ -148,14 +154,94 @@ export const messageWorkerAsync = async <T>(message: PhysicsUpProtocol) =>
     workerTransport.send({ ...message, requestId });
   });
 
+/**
+ * Each member of `M` that is only its type and an object's id (`Id`): its type (a query for one
+ * of the object's fields).
+ * @template M the messages
+ * @template Id the id field
+ * @internal
+ */
+export type QueryTypeOf<M, Id extends string> = M extends { type: infer T } & Record<Id, number>
+  ? Exclude<keyof M, 'type' | Id | 'requestId' | 'isOneWay'> extends never
+    ? T
+    : never
+  : never;
+
+/**
+ * The queries for one object named by its id field (`'rigidBodyId'`, `'colliderId'`,
+ * `'jointId'`): the up messages that carry nothing else.
+ * @template Id the id field
+ * @internal
+ */
+export type PhysicsQueryType<Id extends string> = QueryTypeOf<PhysicsUpProtocol, Id>;
+
+/**
+ * A query for one field of one object (a proxy's async getter): resolves with the worker's
+ * reply, typed by the query's type.
+ * @template Id the id field
+ * @template T the query's type
+ * @internal
+ */
+export const queryWorker = <Id extends string, T extends PhysicsQueryType<Id>>(
+  type: T,
+  idField: Id,
+  id: number
+) =>
+  messageWorkerAsync<PhysicsResponse<T>>({ type, [idField]: id } as unknown as PhysicsUpProtocol);
+
+/**
+ * Omit over each member of a union.
+ * @template T the union
+ * @template K the keys left out
+ * @internal
+ */
+export type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
+/**
+ * The up messages about one object named by its id field, without the id: what a proxy's
+ * one-way commands take ({@link commandWorker}).
+ * @template Id the id field
+ * @internal
+ */
+export type PhysicsCommandFor<Id extends string> = DistributiveOmit<
+  Extract<PhysicsUpProtocol, Record<Id, number>>,
+  Id
+>;
+
+/**
+ * A one-way command about one object (a proxy's setter): `message` with its id field set, written
+ * into the literal itself, so a command made every step allocates nothing more.
+ * @template Id the id field
+ * @internal
+ */
+export const commandWorker = <Id extends string>(
+  message: PhysicsCommandFor<Id>,
+  idField: Id,
+  id: number
+) => {
+  (message as Record<string, unknown>)[idField] = id;
+  messageWorker(message as unknown as PhysicsUpProtocol);
+};
+
+/**
+ * What a proxy's `*Sync` getter does when the value lives in the worker: throws, naming the async
+ * form to use (`api` and `getter` name it, eg. `'RigidBodyAPI'` and `'mass'`).
+ * @internal
+ */
+export const throwWorkerSync = (api: string, getter: string): never => {
+  throw new Error(
+    `${api}.${getter}Sync() can't answer in WORKER_THREAD mode, where the value is the worker's: use ${getter}().`
+  );
+};
+
 /** A request that runs where a one-way command would (messageWorker): inside an APP_PHYSICS_STEP
  * sub-step it's captured and replayed right before that sub-step, and the worker replies from
  * the replay. So what it does lands on a fixed step, not on the frame's first one (p352).
  * @internal
  */
 export const messageWorkerAtStep = async <T>(message: PhysicsUpProtocol) => {
-  if (!substepCommandCapture) return messageWorkerAsync<T>(message);
-  const capture = substepCommandCapture;
+  if (!isCapturingSubStep) return messageWorkerAsync<T>(message);
+  const capture = (substepCommandCapture ??= []);
   return new Promise<T>((resolve, reject) => {
     const requestId = createWorkerRequest(resolve, reject);
     capture.push(structuredClone({ ...message, requestId }));
@@ -225,9 +311,10 @@ export const clearPendingEventPushes = () => {
  * pre-event "on platform" state (keeping the platform's velocity), and only the character tick
  * after it sees the ground sensor's "stopped touching". Dispatching straight after each step
  * would flip that state before move() and drop the platform's velocity from the jump.
+ * @internal
  */
 export const flushPhysicsEvents = () => {
-  if (facade.state.workerTarget === 'MAIN_THREAD') {
+  if (!isWorkerTarget()) {
     facade.engAPI?.dispatchPendingEventRecords();
     return;
   }

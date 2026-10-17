@@ -5,6 +5,7 @@
 // transport), PhysicsStepping, PhysicsBodies, PhysicsColliders, PhysicsJoints, PhysicsWorld and
 // proxies/ (the WORKER_THREAD API objects).
 
+import { existsOrThrow } from '../../utils/Assert';
 import type { PhysicsDebugStateBuffer } from './PhysicsDebugStateBuffer';
 import type { PhysicsTransformBuffer } from './PhysicsTransformBuffer';
 import type { EngineAPIType } from './types/PhysicsBackendTypes';
@@ -80,5 +81,36 @@ export const getPhysicsState = () => facade.state;
 export const getPhysicsWorld = () => facade.world;
 
 /** Whether a physics world currently exists (i.e. createPhysicsWorld() has resolved and
- * deletePhysicsWorld() hasn't run since) — guards calls on the getPhysicsWorld() stub. */
+ * deletePhysicsWorld() hasn't run since) — guards calls on the getPhysicsWorld() stub.
+ * @internal
+ */
 export const isPhysicsWorldEnabled = () => facade.worldEnabled;
+
+/**
+ * Whether physics runs in the worker (`AppConfig.physics.workerTarget`): the one branch each
+ * facade operation takes.
+ * @internal
+ */
+export const isWorkerTarget = () => facade.state.workerTarget === 'WORKER_THREAD';
+
+/**
+ * Throws when a facade `*Sync` function is called in `WORKER_THREAD` mode, naming the async form
+ * to use instead.
+ * @internal
+ */
+export const assertMainThread = (syncName: string, asyncName: string) => {
+  if (isWorkerTarget()) {
+    throw new Error(`Cannot use ${syncName} in worker mode. Use ${asyncName} instead.`);
+  }
+};
+
+/**
+ * Throws when there is no world to create `what` in.
+ * @internal
+ */
+export const assertWorldCreated = (what: string) => {
+  existsOrThrow(
+    facade.worldEnabled,
+    `Physics world is not created. Create the world before creating ${what}.`
+  );
+};

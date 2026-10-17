@@ -124,6 +124,7 @@ export const readSharedStepStats = () => {
  * This figure never includes main-thread↔worker messaging overhead, in any `workerTarget` or
  * transport configuration — see {@link getLastPhysicsStepMessagingLatency} for that, which is
  * measured independently and is never summed into this one.
+ * @internal
  */
 export const getLastPhysicsStepDuration = () => lastPhysicsStepDurationMs;
 
@@ -142,6 +143,7 @@ export const getLastPhysicsStepDuration = () => lastPhysicsStepDurationMs;
  *
  * Disjoint from {@link getLastPhysicsStepDuration} by construction: the intervals are
  * adjacent, never overlapping, and the two are never combined into a single figure.
+ * @internal
  */
 export const getLastPhysicsStepMessagingLatency = () => lastPhysicsMessagingLatency;
 
@@ -150,6 +152,7 @@ export const getLastPhysicsStepMessagingLatency = () => lastPhysicsMessagingLate
  * should be resting but stays awake shows here. Measured with the step stats, so `undefined`
  * while they are off and until a measured step has happened, like
  * {@link getLastPhysicsStepDuration}. The returned object is reused: read it, don't keep it.
+ * @internal
  */
 export const getLastPhysicsBodyActivity = (): Readonly<PhysicsBodyActivity> | undefined =>
   hasBodyActivity ? bodyActivity : undefined;

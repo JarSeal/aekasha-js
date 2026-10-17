@@ -782,6 +782,67 @@ As built, section 1 (2026-10-17, on `770613d`): the move.
   module-load and side-effects checks among them), `moveMap.ts` regenerated (742 files, the
   same 41 boundary violations, 0 feature cycles), `yarn hub:build`.
 
+As built, section 2 (2026-10-17): A5-A9, W5.
+
+- **A5, the facade:** each create and delete branches once (`isWorkerTarget()`,
+  `PhysicsState.ts`, used throughout the facade). On MAIN_THREAD the async form runs its `*Sync`
+  one, which holds the main-thread body. `assertWorldCreated` and `assertMainThread` (the "Cannot
+  use X in worker mode" throw) are shared. The registry's `forget*` helpers, `checkDeletedId` and
+  `checkDeletedIds` replace the per-delete bookkeeping. `registerBodyProxy` and
+  `registerColliderProxy` replace the three proxy registrations. The "Should not get here"
+  throws are gone, and so are `WorldProxyAPI`'s `create*Sync` main-thread branches (it now
+  just throws). `PhysicsBodies.ts` 571 → 430 lines, `PhysicsColliders.ts` 257 → 168,
+  `PhysicsJoints.ts` 119 → 85. Small changes on the way: a `*Sync` delete called in
+  WORKER_THREAD mode throws before it forgets the id (it used to forget, then throw), and
+  `createRigidBodies([])` / `createColliders([])` resolve `[]` in WORKER_THREAD mode too (they
+  threw).
+- **A5, the proxies:** `queryWorker(type, idField, id)` (`PhysicsMessaging.ts`) is a query for
+  one field of one object, typed by its `PhysicsQueryType<Id>`: the up messages that carry only
+  `type` and the id, so the reply type follows from the type and the ~100 `*Response` imports
+  are gone. `commandWorker` is the one-way form: it writes the id into the caller's literal, so
+  a command made every step allocates nothing more. `throwWorkerSync` is the twins' throw.
+  `RigidBodyProxyAPI` implements `RigidBodyAPI` (not `RigidBodyWorkerEngine`), so its twins
+  inherit the interface's docs: 1,053 → 738 lines. The collider proxy is 441 → 303, the joint
+  176 → 140.
+- **A10's leftover:** the backend's `createColliders` is all or nothing (both targets call it).
+- **A6:** `initPhysics`' doc rewritten; `holdPhysicsStepping`, `resetPhysicsWorld` and
+  `resetPhysicsRayStats` name physics' scene hooks; the three `PhysicsManager` comments now name
+  `PhysicsEntity.ts`, including `MutualGravity.ts` (D2's toolkit patch).
+  `PhysicsEntity.ts`' two `SceneLoader.ts` mentions are Phase 6's (E5).
+- **A7:** `stepPhysics` split into `takeFrameDelta`, `takeDueSteps`, `runMainThreadSteps` and
+  `sendWorkerSteps`, so no function is over 150 lines. The sub-step capture is made on its first
+  command (`isCapturingSubStep`), and `substepCommands` is sparse and made on the first captured
+  command. A frame whose systems issue no command allocates neither, and its STEP carries no
+  `substepCommands` (the worker reads `?.[i]`).
+- **A8:** every facade export not on `aekasha/physics` is `@internal` (40), per the coding
+  standard. The 8 undocumented ones have summaries, and the `@param x (type)` forms are gone.
+  `isPhysicsSteppingHeld` and `getPhysGameTime` (deprecated) are among the 40.
+- **A9:** the `ccdSubsteps` TODO is filed (`docs/issues/physics-ccd-substeps-setting.md`). The
+  `isEnabled` cache is done: `isEnabledSync` answers on WORKER_THREAD from the proxy's copy
+  (creation, `setEnabled`, reattach). `isBeingDeleted` is now set by every delete and by a world
+  delete (the registry's `forget*` / `clearPhysicsRegistry`), as `MutualGravity.ts` expects. The
+  snapshot `@TODO`s stay (D12).
+- **A bug found on the way:** a REMOVED tier reattach (`PhysicsTiers.ts`' `returnToWorld`, `Fixed`
+  for STATIC) left the WORKER_THREAD proxy's cached type at its old value, so `bodyTypeSync()`
+  was wrong after REMOVED → STATIC. `_attach` takes the reattach state.
+- **W5:** `RIGID_TRANSLATION`, `RIGID_ROTATION`, `RIGID_LINVEL` and `RIGID_ANGVEL` are gone from
+  the switch, both protocols and the responses. Their numbers are commented as retired (418, 419,
+  430, 432), and no other number moved. The worker's misplaced `allocateBodySlot` doc is back in
+  place.
+- **Tests:** createColliders all or nothing (both targets), `isBeingDeleted` (both), the reattach's
+  type and enabled state, and the lazy capture. `yarn test` 603 passed.
+- **Bundle**, against the committed baseline (Phase 3's): `assets/index.js` −7,661 B
+  (−271 B gzip), so the dedupe more than pays back section 1's +2.3 kB, and the physics group
+  is 11.2 kB smaller rendered. The worker chunk is −455 B (W5); `EngineRapier.js` is +100 B
+  (`createColliders`).
+- **Docs and baselines:** the `proxies` folder's members are at 265 / 265 (section 1's 38
+  are documented, most by inheriting `RigidBodyAPI`'s docs), and `features/physics`' exports
+  are at 191 / 205. `api.json` records the four removed response aliases and the new
+  `@internal` helpers. The Hub builds with no warning in the facade's modules (`QueryTypeOf`
+  and `DistributiveOmit` exported `@internal` for it), and the physics guide's API list now
+  names `PhysicsState` instead of the all-internal `PhysicsWorld`. `moveMap.ts` was regenerated
+  (`entryExports.json` follows the `@internal`s).
+
 ### Phase 5: the backend (D7, D11)
 
 1. `EngineRapier.ts` into its modules and `proxies/`; R6-R8.

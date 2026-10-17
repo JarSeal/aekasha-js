@@ -1,14 +1,16 @@
-// Colliders: their creates and deletes.
+// Colliders: their creates and deletes. Each operation branches on the worker target once: on
+// MAIN_THREAD its async form runs its *Sync one.
 
 import { existsOrThrow } from '../../utils/Assert';
-import { lwarn } from '../../utils/Logger';
 import { messageWorkerAsync, toWireColliderParams } from './PhysicsMessaging';
 import {
-  cleanupWorkerColliderEventFns,
+  checkDeletedId,
+  checkDeletedIds,
   colliders,
+  forgetCollider,
   registerWorkerColliderEventFns,
 } from './PhysicsRegistry';
-import { facade } from './PhysicsState';
+import { assertMainThread, assertWorldCreated, facade, isWorkerTarget } from './PhysicsState';
 import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
 import type {
   CreateColliderResponse,
@@ -19,171 +21,120 @@ import type {
 import { ColliderProxyAPI } from './proxies/ColliderProxyAPI';
 import type { ColliderAPI, ColliderParams } from './types/PhysicsColliderTypes';
 
-/** Create a collider. */
-export const createCollider = async (params: ColliderParams, parentId?: number) => {
-  existsOrThrow(
-    facade.worldEnabled,
-    'Physics world is not created. Create the world before creating a collider.'
-  );
-  if (facade.state.workerTarget === 'MAIN_THREAD') {
-    const coll = existsOrThrow(
-      facade.engAPI?.createCollider(params, parentId),
-      `Could not create a collider ("MAIN_THREAD"). Params: ${JSON.stringify(params)}`
-    );
-    colliders.set(coll.id, coll);
-    return coll;
-  } else if (facade.state.workerTarget === 'WORKER_THREAD') {
-    const res = await messageWorkerAsync<CreateColliderResponse>({
-      type: PhysicsProtocolType.CREATE_COLLIDER,
-      params: toWireColliderParams(params),
-      parentId,
-    });
-    const collProxy = new ColliderProxyAPI(res.id, res.parentId, params.userData) as ColliderAPI;
-    colliders.set(res.id, collProxy); // register locally
-    registerWorkerColliderEventFns(res.id, params);
-    return collProxy;
-  }
-  // Should not get here..
-  throw new Error(
-    `Could not create a collider (workerTarget was not 'MAIN_THREAD' nor was it 'WORKER_THREAD'), worker target: ${facade.state.workerTarget}`
-  );
+/**
+ * WORKER_THREAD: registers the proxy of a collider the worker made, with its callbacks.
+ * @internal
+ */
+export const registerColliderProxy = (
+  id: number,
+  parentId: number | undefined,
+  params: ColliderParams
+): ColliderAPI => {
+  const collAPI = new ColliderProxyAPI(id, parentId, params.userData);
+  colliders.set(id, collAPI);
+  registerWorkerColliderEventFns(id, params);
+  return collAPI;
 };
 
-/** Create a collider (sync). Only for main thread mode. */
-export const createColliderSync = (params: ColliderParams, parentId?: number) => {
-  existsOrThrow(
-    facade.worldEnabled,
-    'Physics world is not created. Create the world before creating a collider.'
-  );
-  if (facade.state.workerTarget === 'MAIN_THREAD') {
-    const coll = existsOrThrow(
-      facade.engAPI?.createCollider(params, parentId),
-      `Could not create a collider ("MAIN_THREAD"). Params: ${JSON.stringify(params)}`
-    );
-    colliders.set(coll.id, coll);
-    return coll;
-  } else if (facade.state.workerTarget === 'WORKER_THREAD') {
-    throw new Error('Cannot use createColliderSync in worker mode. Use createCollider instead.');
-  }
-  // Should not get here..
-  throw new Error(
-    `Could not create a collider (workerTarget was not 'MAIN_THREAD' nor was it 'WORKER_THREAD'), worker target: ${facade.state.workerTarget}`
-  );
+/**
+ * Creates a collider, attached to the rigid body `parentId` (or `params.parentId`) when given.
+ * Rejects without a world, and with the backend's error for invalid params (eg. a `TRIMESH`
+ * without indices).
+ */
+export const createCollider = async (
+  params: ColliderParams,
+  parentId?: number
+): Promise<ColliderAPI> => {
+  if (!isWorkerTarget()) return createColliderSync(params, parentId);
+  assertWorldCreated('a collider');
+  const res = await messageWorkerAsync<CreateColliderResponse>({
+    type: PhysicsProtocolType.CREATE_COLLIDER,
+    params: toWireColliderParams(params),
+    parentId,
+  });
+  return registerColliderProxy(res.id, res.parentId, params);
 };
 
-/** Create multiple colliders at once. */
-export const createColliders = async (params: ColliderParams[]) => {
-  existsOrThrow(
-    facade.worldEnabled,
-    'Physics world is not created. Create the world before creating a collider.'
+/**
+ * {@link createCollider}, synchronous: MAIN_THREAD only (it throws in WORKER_THREAD mode).
+ * @internal
+ */
+export const createColliderSync = (params: ColliderParams, parentId?: number): ColliderAPI => {
+  assertWorldCreated('a collider');
+  assertMainThread('createColliderSync', 'createCollider');
+  const coll = existsOrThrow(
+    facade.engAPI?.createCollider(params, parentId),
+    `Could not create a collider ("MAIN_THREAD"). Params: ${JSON.stringify(params)}`
   );
-  if (facade.state.workerTarget === 'MAIN_THREAD') {
-    const collAPIs = existsOrThrow(
-      facade.engAPI?.createColliders(params),
-      `Could not create colliders ("MAIN_THREAD"). Params: ${JSON.stringify(params)}`
-    );
-    // Registered like in WORKER_THREAD mode: deleteColliders skips ids it doesn't know
-    for (const coll of collAPIs) colliders.set(coll.id, coll);
-    return collAPIs;
-  } else if (facade.state.workerTarget === 'WORKER_THREAD') {
-    const collIds = (
-      await messageWorkerAsync<CreateCollidersResponse>({
-        type: PhysicsProtocolType.CREATE_COLLIDERS,
-        params: params.map(toWireColliderParams),
-      })
-    ).ids;
-    existsOrThrow(
-      collIds.length,
-      `Could not create colliders ("WORKER_THREAD"). Params: ${JSON.stringify(params)}`
-    );
-    const collAPIs = [];
-    for (let i = 0; i < collIds.length; i++) {
-      const id = collIds[i];
-      const collAPI = new ColliderProxyAPI(id, params[i].parentId, params[i].userData);
-      collAPIs.push(collAPI);
-      colliders.set(id, collAPI);
-      registerWorkerColliderEventFns(id, params[i]);
-    }
-    return collAPIs;
-  }
-  // Should not get here..
-  throw new Error(
-    `Could not create colliders (workerTarget was not 'MAIN_THREAD' nor was it 'WORKER_THREAD'), worker target: ${facade.state.workerTarget}`
-  );
+  colliders.set(coll.id, coll);
+  return coll;
 };
 
-/** Create multiple colliders at once (sync). Only for main thread mode. */
-export const createCollidersSync = (params: ColliderParams[]) => {
+/**
+ * Creates several colliders at once, each attached to its `params.parentId` when given. All or
+ * nothing: when one throws, the ones made before it are deleted.
+ */
+export const createColliders = async (params: ColliderParams[]): Promise<ColliderAPI[]> => {
+  if (!isWorkerTarget()) return createCollidersSync(params);
+  assertWorldCreated('a collider');
+  const { ids } = await messageWorkerAsync<CreateCollidersResponse>({
+    type: PhysicsProtocolType.CREATE_COLLIDERS,
+    params: params.map(toWireColliderParams),
+  });
   existsOrThrow(
-    facade.worldEnabled,
-    'Physics world is not created. Create the world before creating a collider.'
+    ids.length === params.length,
+    `Could not create colliders ("WORKER_THREAD"). Params: ${JSON.stringify(params)}`
   );
-  if (facade.state.workerTarget === 'MAIN_THREAD') {
-    const collAPIs = existsOrThrow(
-      facade.engAPI?.createColliders(params),
-      `Could not create colliders ("MAIN_THREAD"). Params: ${JSON.stringify(params)}`
-    );
-    // Registered like in WORKER_THREAD mode: deleteColliders skips ids it doesn't know
-    for (const coll of collAPIs) colliders.set(coll.id, coll);
-    return collAPIs;
-  } else if (facade.state.workerTarget === 'WORKER_THREAD') {
-    throw new Error('Cannot use createCollidersSync in worker mode. Use createColliders instead.');
-  }
-  // Should not get here..
-  throw new Error(
-    `Could not create colliders (workerTarget was not 'MAIN_THREAD' nor was it 'WORKER_THREAD'), worker target: ${facade.state.workerTarget}`
-  );
+  return ids.map((id, i) => registerColliderProxy(id, params[i].parentId, params[i]));
 };
 
-/** Deletes a collider. Returns the id of the deleted colliderAPI, or undefined without a world (a
- * quiet no-op, see deleteRigidBody). */
+/**
+ * {@link createColliders}, synchronous: MAIN_THREAD only (it throws in WORKER_THREAD mode).
+ * @internal
+ */
+export const createCollidersSync = (params: ColliderParams[]): ColliderAPI[] => {
+  assertWorldCreated('a collider');
+  assertMainThread('createCollidersSync', 'createColliders');
+  const collAPIs = existsOrThrow(
+    facade.engAPI?.createColliders(params),
+    `Could not create colliders ("MAIN_THREAD"). Params: ${JSON.stringify(params)}`
+  );
+  for (const coll of collAPIs) colliders.set(coll.id, coll);
+  return collAPIs;
+};
+
+/**
+ * Deletes a collider. Resolves with its id, or undefined without a world (a quiet no-op, see
+ * {@link _engine/features/physics/PhysicsBodies!deleteRigidBody}).
+ */
 export const deleteCollider = async (id: number, wakeUp?: boolean) => {
   if (!facade.worldEnabled) return undefined;
-  let deletedId: number | undefined = undefined;
-  if (colliders.has(id)) colliders.delete(id);
-  cleanupWorkerColliderEventFns(id);
-  if (facade.state.workerTarget === 'MAIN_THREAD') {
-    const response = facade.engAPI?.deleteCollider(id, wakeUp);
-    deletedId = response?.id;
-  } else if (facade.state.workerTarget === 'WORKER_THREAD') {
-    const response = await messageWorkerAsync<DeleteColliderResponse>({
-      type: PhysicsProtocolType.DELETE_COLLIDER,
-      id,
-      wakeUp: wakeUp || false,
-    });
-    deletedId = response?.id;
-  }
-  if (deletedId !== id) {
-    throw new Error(
-      `Could not delete a collider, the returned id (${deletedId}) did not match the id: ${id}.`
-    );
-  }
-  return deletedId;
+  if (!isWorkerTarget()) return deleteColliderSync(id, wakeUp);
+  forgetCollider(id);
+  const res = await messageWorkerAsync<DeleteColliderResponse>({
+    type: PhysicsProtocolType.DELETE_COLLIDER,
+    id,
+    wakeUp: wakeUp || false,
+  });
+  return checkDeletedId('a collider', id, res?.id);
 };
 
-/** Deletes a collider. Returns the id of the deleted colliderAPI (sync), or undefined without a world
- * (see deleteRigidBody). Only for main thread mode. */
+/**
+ * {@link deleteCollider}, synchronous: MAIN_THREAD only (it throws in WORKER_THREAD mode).
+ * @internal
+ */
 export const deleteColliderSync = (id: number, wakeUp?: boolean) => {
   if (!facade.worldEnabled) return undefined;
-  let deletedId: number | undefined = undefined;
-  if (colliders.has(id)) colliders.delete(id);
-  cleanupWorkerColliderEventFns(id);
-  if (facade.state.workerTarget === 'MAIN_THREAD') {
-    const response = facade.engAPI?.deleteCollider(id, wakeUp);
-    deletedId = response?.id;
-  } else if (facade.state.workerTarget === 'WORKER_THREAD') {
-    throw new Error('Cannot use deleteColliderSync in worker mode. Use deleteCollider instead.');
-  }
-  if (deletedId !== id) {
-    throw new Error(
-      `Could not delete a collider, the returned id (${deletedId}) did not match the id: ${id}.`
-    );
-  }
-  return deletedId;
+  assertMainThread('deleteColliderSync', 'deleteCollider');
+  forgetCollider(id);
+  return checkDeletedId('a collider', id, facade.engAPI?.deleteCollider(id, wakeUp)?.id);
 };
 
-/** Deletes multiple colliders. Returns the ids of the deleted colliderAPIs. Unknown ids are
- * skipped quietly, and without a world nothing happens (see deleteRigidBody). */
+/**
+ * Deletes several colliders. Resolves with the deleted ids. Unknown ids are skipped quietly, and
+ * without a world nothing happens (see
+ * {@link _engine/features/physics/PhysicsBodies!deleteRigidBody}).
+ */
 export const deleteColliders = async (allIds: number[], allWakeUps?: boolean[]) => {
   if (!facade.worldEnabled) return [];
   const ids: number[] = [];
@@ -194,64 +145,24 @@ export const deleteColliders = async (allIds: number[], allWakeUps?: boolean[]) 
     wakeUps?.push(allWakeUps![i]);
   }
   if (!ids.length) return [];
-  let deletedIds: number[] | undefined = undefined;
-  for (let i = 0; i < ids.length; i++) {
-    if (colliders.has(ids[i])) colliders.delete(ids[i]);
-    cleanupWorkerColliderEventFns(ids[i]);
-  }
-  if (facade.state.workerTarget === 'MAIN_THREAD') {
-    const response = facade.engAPI?.deleteColliders(ids, wakeUps);
-    deletedIds = response?.ids;
-  } else if (facade.state.workerTarget === 'WORKER_THREAD') {
-    const response = await messageWorkerAsync<DeleteCollidersResponse>({
-      type: PhysicsProtocolType.DELETE_COLLIDERS,
-      ids,
-      wakeUps: ids.map((_, index) => Boolean(wakeUps && wakeUps[index])),
-    });
-    deletedIds = response?.ids;
-  }
-  if (deletedIds === undefined) {
-    throw new Error(
-      `Could not delete colliders, the returned ids was undefined for ids: ${ids.join(', ')}.`
-    );
-  }
-  for (let i = 0; i < ids.length; i++) {
-    if (deletedIds[i] !== ids[i]) {
-      lwarn(
-        `Could not delete all colliders, the returned id (${deletedIds[i]}) did not match the id: ${ids[i]}.`
-      );
-    }
-  }
-  return deletedIds;
+  if (!isWorkerTarget()) return deleteCollidersSync(ids, wakeUps);
+  for (let i = 0; i < ids.length; i++) forgetCollider(ids[i]);
+  const res = await messageWorkerAsync<DeleteCollidersResponse>({
+    type: PhysicsProtocolType.DELETE_COLLIDERS,
+    ids,
+    wakeUps: ids.map((_, index) => Boolean(wakeUps && wakeUps[index])),
+  });
+  return checkDeletedIds('colliders', ids, res?.ids);
 };
 
-/** Deletes multiple colliders. Returns the ids of the deleted colliderAPIs (sync); without a world
- * nothing happens (see deleteRigidBody). Only for main thread mode. */
+/**
+ * {@link deleteColliders}, synchronous: MAIN_THREAD only (it throws in WORKER_THREAD mode).
+ * Unlike the async form, it doesn't skip unknown ids.
+ * @internal
+ */
 export const deleteCollidersSync = (ids: number[], wakeUps?: boolean[]) => {
-  if (!facade.worldEnabled) return [];
-  if (!ids.length) return [];
-  let deletedIds: number[] | undefined = undefined;
-  for (let i = 0; i < ids.length; i++) {
-    if (colliders.has(ids[i])) colliders.delete(ids[i]);
-    cleanupWorkerColliderEventFns(ids[i]);
-  }
-  if (facade.state.workerTarget === 'MAIN_THREAD') {
-    const response = facade.engAPI?.deleteColliders(ids, wakeUps);
-    deletedIds = response?.ids;
-  } else if (facade.state.workerTarget === 'WORKER_THREAD') {
-    throw new Error('Cannot use deleteCollidersSync in worker mode. Use deleteColliders instead.');
-  }
-  if (deletedIds === undefined) {
-    throw new Error(
-      `Could not delete colliders, the returned ids was undefined for ids: ${ids.join(', ')}.`
-    );
-  }
-  for (let i = 0; i < ids.length; i++) {
-    if (deletedIds[i] !== ids[i]) {
-      lwarn(
-        `Could not delete all colliders, the returned id (${deletedIds[i]}) did not match the id: ${ids[i]}.`
-      );
-    }
-  }
-  return deletedIds;
+  if (!facade.worldEnabled || !ids.length) return [];
+  assertMainThread('deleteCollidersSync', 'deleteColliders');
+  for (let i = 0; i < ids.length; i++) forgetCollider(ids[i]);
+  return checkDeletedIds('colliders', ids, facade.engAPI?.deleteColliders(ids, wakeUps)?.ids);
 };

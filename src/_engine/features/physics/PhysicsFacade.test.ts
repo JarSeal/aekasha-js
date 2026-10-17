@@ -22,6 +22,7 @@ import {
 } from './PhysicsBodies';
 import {
   createColliderSync,
+  createCollidersSync,
   deleteCollider,
   deleteColliderSync,
   deleteCollidersSync,
@@ -73,6 +74,23 @@ describe('the facade (MAIN_THREAD)', () => {
     ).toThrow(/indices/);
     expect(count(getAllColliderEntries())).toBe(colliders);
     expect(getColliderAPIWithId(probe.id + 1)).toBeUndefined();
+  });
+
+  it('A10: createColliders is all or nothing', () => {
+    const probe = createColliderSync({ type: 'BALL', radius: 0.5 });
+    expect(() => createCollidersSync([{ type: 'BALL', radius: 0.5 }, BROKEN_TRIMESH])).toThrow(
+      /indices/
+    );
+    expect(getColliderAPIWithId(probe.id + 1)).toBeUndefined();
+  });
+
+  it('a deleted body and its colliders are marked isBeingDeleted', () => {
+    const { rigidBody, colliders } = createRigidBodyWithCollidersSync({ rigidType: 'DYNAMIC' }, [
+      { type: 'BALL', radius: 0.5 },
+    ]);
+    deleteRigidBodySync(rigidBody!.id);
+    expect(rigidBody!.isBeingDeleted).toBe(true);
+    expect(colliders[0].isBeingDeleted).toBe(true);
   });
 
   it('A4: deletes without a world are quiet no-ops', async () => {

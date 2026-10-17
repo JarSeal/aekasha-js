@@ -65,8 +65,8 @@ export type PoseArray = Float32Array | Float64Array | number[];
  * give it: Rapier's body API behind an engine-agnostic shape, the same in both worker targets.
  * @remarks Every query has an async form and a `*Sync` twin. On MAIN_THREAD both answer at
  * once. On WORKER_THREAD the async form asks the worker (the reply comes a frame or so later)
- * and the `*Sync` twin throws, except `getUserDataSync` and `bodyTypeSync`, which answer from the
- * proxy's own copy. The pose and velocities (`pos`, `rot`, `lvel`, `avel`, `translation()`,
+ * and the `*Sync` twin throws, except `getUserDataSync`, `bodyTypeSync` and `isEnabledSync`, which
+ * answer from the proxy's own copy. The pose and velocities (`pos`, `rot`, `lvel`, `avel`, `translation()`,
  * `rotation()`, `linvel()`, `angvel()`, the `read*Into` methods) are synchronous in both: on
  * WORKER_THREAD they read the transform buffer the worker writes after each step, or a value
  * this body set and the buffer hasn't caught up with. Setters are one-way: on WORKER_THREAD they
@@ -96,7 +96,8 @@ export type RigidBodyAPI = {
    * [linvelX, linvelY, linvelZ, angvelX, angvelY, angvelZ], starting at `offset` (default 0). */
   readVelocitiesInto(out: PoseArray, offset?: number): void;
 
-  /** Nothing sets it yet, so it reads false: a deleted body's `isValid()` is false. */
+  /** Set when the facade deletes the body, its world included: true for a reference kept past
+   * the delete. */
   isBeingDeleted: boolean;
 
   // --- Metadata & Validity ---
@@ -296,7 +297,8 @@ export type RigidBodyAPI = {
   wakeUp(): void;
   /** Whether the body takes part in the simulation (`setEnabled`). */
   isEnabled(): Promise<boolean>;
-  /** `isEnabled()` without the wait: MAIN_THREAD only. */
+  /** `isEnabled()` without the wait: in both targets (WORKER_THREAD answers from the proxy's copy,
+   * kept by `setEnabled` and the REMOVED tier's reattach). */
   isEnabledSync(): boolean;
   /** Takes the body (with its colliders) out of the simulation or puts it back, keeping it. */
   setEnabled(enabled: boolean): void;
@@ -311,8 +313,8 @@ export type RigidBodyAPI = {
 
   /** The body's type. */
   bodyType(): Promise<RigidBodyTypeAPI>;
-  /** The body's type: on WORKER_THREAD from the proxy's copy (its creation type and the
-   * `setBodyType`s since). */
+  /** The body's type: on WORKER_THREAD from the proxy's copy (its creation type, and the
+   * `setBodyType`s and REMOVED tier reattaches since). */
   bodyTypeSync(): RigidBodyTypeAPI;
   /** Changes the body's type, waking it when `wakeUp`. */
   setBodyType(type: RigidBodyTypeAPI, wakeUp: boolean): void;

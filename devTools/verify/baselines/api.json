@@ -845,7 +845,8 @@
       "deleteCollider": "Function",
       "deleteColliders": "Function",
       "deleteCollidersSync": "Function",
-      "deleteColliderSync": "Function"
+      "deleteColliderSync": "Function",
+      "registerColliderProxy": "Function"
     },
     "src/_engine/features/physics/PhysicsDebugStateBuffer.ts": {
       "createPhysicsDebugStateArrayBuffer": "Function",
@@ -892,6 +893,8 @@
       "beginSubStepCapture": "Function",
       "clearPendingEventPushes": "Function",
       "closeWorkerTransport": "Function",
+      "commandWorker": "Function",
+      "DistributiveOmit": "TypeAlias",
       "endSubStepCapture": "Function",
       "flushPhysicsEvents": "Function",
       "hasWorkerTransport": "Function",
@@ -899,6 +902,11 @@
       "messageWorkerAsync": "Function",
       "messageWorkerAtStep": "Function",
       "openWorkerTransport": "Function",
+      "PhysicsCommandFor": "TypeAlias",
+      "PhysicsQueryType": "TypeAlias",
+      "QueryTypeOf": "TypeAlias",
+      "queryWorker": "Function",
+      "throwWorkerSync": "Function",
       "toPlainRot": "Function",
       "toWireColliderParams": "Function",
       "toWireJointParams": "Function",
@@ -915,11 +923,16 @@
       "setPhysicsRayStatsEnabled": "Function"
     },
     "src/_engine/features/physics/PhysicsRegistry.ts": {
+      "checkDeletedId": "Function",
+      "checkDeletedIds": "Function",
       "cleanupWorkerColliderEventFns": "Function",
       "clearPhysicsRegistry": "Function",
       "colliders": "Variable",
       "CollisionEventFn": "TypeAlias",
       "ContactForceEventFn": "TypeAlias",
+      "forgetCollider": "Function",
+      "forgetJoint": "Function",
+      "forgetRigidBody": "Function",
       "getAllColliderEntries": "Function",
       "getAllJointEntries": "Function",
       "getAllRigidBodyEntries": "Function",
@@ -936,10 +949,13 @@
       "workerContactForceEventFns": "Variable"
     },
     "src/_engine/features/physics/PhysicsState.ts": {
+      "assertMainThread": "Function",
+      "assertWorldCreated": "Function",
       "facade": "Variable",
       "getPhysicsState": "Function",
       "getPhysicsWorld": "Function",
-      "isPhysicsWorldEnabled": "Function"
+      "isPhysicsWorldEnabled": "Function",
+      "isWorkerTarget": "Function"
     },
     "src/_engine/features/physics/PhysicsStepping.ts": {
       "addPhysicsStepGate": "Function",
@@ -1114,7 +1130,6 @@
       "RestoreSnapshotResponse": "TypeAlias",
       "RigidAdditionalSolverIterationsResponse": "TypeAlias",
       "RigidAngularDampingResponse": "TypeAlias",
-      "RigidAngvelResponse": "TypeAlias",
       "RigidBodyTypeResponse": "TypeAlias",
       "RigidColliderResponse": "TypeAlias",
       "RigidDetachResponse": "TypeAlias",
@@ -1133,7 +1148,6 @@
       "RigidIsSleepingResponse": "TypeAlias",
       "RigidIsValidResponse": "TypeAlias",
       "RigidLinearDampingResponse": "TypeAlias",
-      "RigidLinvelResponse": "TypeAlias",
       "RigidLocalComResponse": "TypeAlias",
       "RigidMassResponse": "TypeAlias",
       "RigidNextRotationResponse": "TypeAlias",
@@ -1143,9 +1157,7 @@
       "RigidPrincipalInertiaResponse": "TypeAlias",
       "RigidReadPositionsResponse": "TypeAlias",
       "RigidReattachResponse": "TypeAlias",
-      "RigidRotationResponse": "TypeAlias",
       "RigidSoftCcdPredictionResponse": "TypeAlias",
-      "RigidTranslationResponse": "TypeAlias",
       "RigidUserForceResponse": "TypeAlias",
       "RigidUserTorqueResponse": "TypeAlias",
       "RigidVelocityAtPointResponse": "TypeAlias",

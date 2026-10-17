@@ -229,8 +229,6 @@ export type PhysicsUpProtocol =
         rigidBodyId: number;
       }
     | { type: PhysicsProtocolType.RIGID_SOFT_CCD_PREDICTION; rigidBodyId: number }
-    | { type: PhysicsProtocolType.RIGID_TRANSLATION; rigidBodyId: number }
-    | { type: PhysicsProtocolType.RIGID_ROTATION; rigidBodyId: number }
     | { type: PhysicsProtocolType.RIGID_NEXT_TRANSLATION; rigidBodyId: number }
     | { type: PhysicsProtocolType.RIGID_NEXT_ROTATION; rigidBodyId: number }
     | {
@@ -274,9 +272,7 @@ export type PhysicsUpProtocol =
         rot: PhysRotation;
         rigidBodyId: number;
       }
-    | { type: PhysicsProtocolType.RIGID_LINVEL; rigidBodyId: number }
     | { type: PhysicsProtocolType.RIGID_VELOCITY_AT_POINT; point: PhysVector; rigidBodyId: number }
-    | { type: PhysicsProtocolType.RIGID_ANGVEL; rigidBodyId: number }
     | { type: PhysicsProtocolType.RIGID_MASS; rigidBodyId: number }
     | { type: PhysicsProtocolType.RIGID_EFFECTIVE_INV_MASS; rigidBodyId: number }
     | { type: PhysicsProtocolType.RIGID_INV_MASS; rigidBodyId: number }

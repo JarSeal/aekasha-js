@@ -73,7 +73,8 @@ export type ColliderAPI = {
   /** The id of the body it's attached to, if any. */
   parentId?: number;
 
-  /** Nothing sets it yet, so it reads false: a deleted collider's `isValid()` is false. */
+  /** Set when the facade deletes the collider, with its body or its world too: true for a
+   * reference kept past the delete. */
   isBeingDeleted: boolean;
 
   // --- Metadata ---

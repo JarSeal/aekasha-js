@@ -163,14 +163,10 @@ export type PhysicsDownProtocol =
     | { type: PhysicsProtocolType.RIGID_DOMINANCE_GROUP; dominanceGroup: number }
     | { type: PhysicsProtocolType.RIGID_ADDITIONAL_SOLVER_ITERATIONS; additionalIterations: number }
     | { type: PhysicsProtocolType.RIGID_SOFT_CCD_PREDICTION; softCcdPrediction: number }
-    | { type: PhysicsProtocolType.RIGID_TRANSLATION; translation: PhysVector }
-    | { type: PhysicsProtocolType.RIGID_ROTATION; rotation: PhysRotation }
     | { type: PhysicsProtocolType.RIGID_NEXT_TRANSLATION; nextTranslation: PhysVector }
     | { type: PhysicsProtocolType.RIGID_NEXT_ROTATION; nextRotation: PhysRotation }
     | { type: PhysicsProtocolType.RIGID_GRAVITY_SCALE; gravityScale: number }
-    | { type: PhysicsProtocolType.RIGID_LINVEL; linvel: PhysVector }
     | { type: PhysicsProtocolType.RIGID_VELOCITY_AT_POINT; velocityAtPoint: PhysVector }
-    | { type: PhysicsProtocolType.RIGID_ANGVEL; angvel: PhysVector }
     | { type: PhysicsProtocolType.RIGID_MASS; mass: number }
     | { type: PhysicsProtocolType.RIGID_EFFECTIVE_INV_MASS; effectiveInvMass: PhysVector }
     | { type: PhysicsProtocolType.RIGID_INV_MASS; invMass: number }

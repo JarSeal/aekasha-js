@@ -41,8 +41,8 @@
     "aekasha/physics": {
       "public": 23,
       "crossEntry": 27,
-      "internal": 291,
-      "unreferenced": 59
+      "internal": 249,
+      "unreferenced": 113
     },
     "aekasha/postfx": {
       "public": 7,
@@ -8163,11 +8163,11 @@
         },
         "createColliders": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "createCollidersSync": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "createColliderSync": {
           "kind": "Function",
@@ -8186,6 +8186,10 @@
           "usage": "internal"
         },
         "deleteColliderSync": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "registerColliderProxy": {
           "kind": "Function",
           "usage": "internal"
         }
@@ -8363,6 +8367,14 @@
           "kind": "Function",
           "usage": "internal"
         },
+        "commandWorker": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "DistributiveOmit": {
+          "kind": "TypeAlias",
+          "usage": "unreferenced"
+        },
         "endSubStepCapture": {
           "kind": "Function",
           "usage": "internal"
@@ -8388,6 +8400,26 @@
           "usage": "internal"
         },
         "openWorkerTransport": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "PhysicsCommandFor": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "PhysicsQueryType": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "QueryTypeOf": {
+          "kind": "TypeAlias",
+          "usage": "unreferenced"
+        },
+        "queryWorker": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "throwWorkerSync": {
           "kind": "Function",
           "usage": "internal"
         },
@@ -8458,9 +8490,17 @@
         }
       },
       "src/_engine/features/physics/PhysicsRegistry.ts": {
-        "cleanupWorkerColliderEventFns": {
+        "checkDeletedId": {
           "kind": "Function",
           "usage": "internal"
+        },
+        "checkDeletedIds": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "cleanupWorkerColliderEventFns": {
+          "kind": "Function",
+          "usage": "unreferenced"
         },
         "clearPhysicsRegistry": {
           "kind": "Function",
@@ -8477,6 +8517,18 @@
         "ContactForceEventFn": {
           "kind": "TypeAlias",
           "usage": "unreferenced"
+        },
+        "forgetCollider": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "forgetJoint": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "forgetRigidBody": {
+          "kind": "Function",
+          "usage": "internal"
         },
         "getAllColliderEntries": {
           "kind": "Function",
@@ -8539,6 +8591,14 @@
         }
       },
       "src/_engine/features/physics/PhysicsState.ts": {
+        "assertMainThread": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "assertWorldCreated": {
+          "kind": "Function",
+          "usage": "internal"
+        },
         "facade": {
           "kind": "Variable",
           "usage": "internal"
@@ -8570,6 +8630,10 @@
             "aekasha",
             "aekasha/debug"
           ]
+        },
+        "isWorkerTarget": {
+          "kind": "Function",
+          "usage": "internal"
         }
       },
       "src/_engine/features/physics/PhysicsStepping.ts": {
@@ -9009,11 +9073,11 @@
       "src/_engine/features/physics/protocol/PhysicsResponses.ts": {
         "CollBorderRadiusResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollCollisionGroupsResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollContainsPointResponse": {
           "kind": "TypeAlias",
@@ -9021,79 +9085,79 @@
         },
         "CollDensityResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollFrictionResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollHalfExtentsResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollHalfHeightResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollHeightsResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollIndicesResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollIsEnabledResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollIsSensorResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollIsValidResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollMassResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollNormalResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollRadiusResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollRestitutionResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollRotationResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollShapeTypeResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollSolverGroupsResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollTranslationResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollUserDataResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollVerticesResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollWrtParentRotationResponse": {
           "kind": "TypeAlias",
@@ -9185,11 +9249,11 @@
         },
         "JointAnchor1Response": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "JointAnchor2Response": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "JointBody1IdResponse": {
           "kind": "TypeAlias",
@@ -9201,19 +9265,19 @@
         },
         "JointContactsEnabledResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "JointGetUserDataResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "JointIsValidResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "JointLimitsEnabledResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RestoreSnapshotResponse": {
           "kind": "TypeAlias",
@@ -9221,19 +9285,15 @@
         },
         "RigidAdditionalSolverIterationsResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidAngularDampingResponse": {
-          "kind": "TypeAlias",
-          "usage": "internal"
-        },
-        "RigidAngvelResponse": {
           "kind": "TypeAlias",
           "usage": "unreferenced"
         },
         "RigidBodyTypeResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidColliderResponse": {
           "kind": "TypeAlias",
@@ -9245,95 +9305,91 @@
         },
         "RigidDominanceGroupResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidEffectiveInvMassResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidGetUserDataResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidGravityScaleResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidInvMassResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidInvPrincipalInertiaResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidIsCcdEnabledResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidIsDynamicResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidIsEnabledResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidIsFixedResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidIsKinematicResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidIsMovingResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidIsSleepingResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidIsValidResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidLinearDampingResponse": {
-          "kind": "TypeAlias",
-          "usage": "internal"
-        },
-        "RigidLinvelResponse": {
           "kind": "TypeAlias",
           "usage": "unreferenced"
         },
         "RigidLocalComResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidMassResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidNextRotationResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidNextTranslationResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidNumCollidersResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidPrincipalInertiaLocalFrameResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidPrincipalInertiaResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidReadPositionsResponse": {
           "kind": "TypeAlias",
@@ -9343,25 +9399,17 @@
           "kind": "TypeAlias",
           "usage": "internal"
         },
-        "RigidRotationResponse": {
-          "kind": "TypeAlias",
-          "usage": "unreferenced"
-        },
         "RigidSoftCcdPredictionResponse": {
-          "kind": "TypeAlias",
-          "usage": "internal"
-        },
-        "RigidTranslationResponse": {
           "kind": "TypeAlias",
           "usage": "unreferenced"
         },
         "RigidUserForceResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidUserTorqueResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidVelocityAtPointResponse": {
           "kind": "TypeAlias",
@@ -9369,7 +9417,7 @@
         },
         "RigidWorldComResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "SetDebugStateTrackingResponse": {
           "kind": "TypeAlias",
@@ -9534,7 +9582,7 @@
         },
         "RigidBodyWorkerEngine": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         }
       },
       "src/_engine/features/physics/types/PhysicsColliderTypes.ts": {

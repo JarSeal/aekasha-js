@@ -133,7 +133,8 @@ export type JointAPI = {
   /** Joint id (a running integer id). */
   readonly id: number;
 
-  /** Nothing sets it yet, so it reads false: a deleted joint's `isValid()` is false. */
+  /** Set when the facade deletes the joint, with a body it joins or its world too: true for a
+   * reference kept past the delete. */
   isBeingDeleted: boolean;
 
   /** The user data as this side last saw it (set here, or fetched by `getUserData`). */

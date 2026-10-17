@@ -15,7 +15,10 @@ import type { PhysicsQueryObserver } from './types/PhysicsQueryTypes';
 // MAIN_THREAD: the engine backend calls it (engAPI.setQueryObserver). WORKER_THREAD:
 // WorldProxyAPI calls it.
 
-/** Physics query statistics, per rendered frame (see {@link getPhysicsRayStats}). */
+/**
+ * Physics query statistics, per rendered frame (see {@link getPhysicsRayStats}).
+ * @internal
+ */
 export type PhysicsRayStats = {
   /** CAST_RAY + CAST_RAY_AND_GET_NORMAL + INTERSECTIONS_WITH_RAY queries */
   rays: Readonly<IntervalCounterSnapshot>;
@@ -97,7 +100,7 @@ const updateQueryObserver = () => {
 /**
  * Enables or disables the physics ray statistics. Enabling resets them. While disabled (and no
  * other query instrumentation is on) a query costs one null check and nothing is counted.
- * @param enabled (boolean) whether physics queries are counted
+ * @internal
  */
 export const setPhysicsRayStatsEnabled = (enabled: boolean) => {
   if (enabled && !physicsRayStatsEnabled) resetPhysicsRayStats();
@@ -106,8 +109,8 @@ export const setPhysicsRayStatsEnabled = (enabled: boolean) => {
 };
 
 /**
- * Whether the physics ray statistics are enabled
- * @returns boolean
+ * Whether the physics ray statistics are enabled.
+ * @internal
  */
 export const isPhysicsRayStatsEnabled = () => physicsRayStatsEnabled;
 
@@ -115,7 +118,7 @@ export const isPhysicsRayStatsEnabled = () => physicsRayStatsEnabled;
  * Debug only (a no-op outside the debug env): whether physics queries are drawn as `'PHYSICS'`
  * ray helpers. The Ray cast controls tab calls it with the physics helpers' "Show helpers"
  * setting; the helpers' look is set there too.
- * @param enabled (boolean) whether physics queries are drawn
+ * @internal
  */
 export const setPhysicsRayHelpersEnabled = (enabled: boolean) => {
   physicsRayHelpersEnabled = enabled && IS_DEBUG_ENV;
@@ -136,11 +139,14 @@ export const setPhysicsRayHelpersEnabled = (enabled: boolean) => {
  *
  * The returned object is the same on every call and is updated in place, so polling it
  * allocates nothing. Copy the values out to keep them.
- * @returns ({@link PhysicsRayStats}) the live statistics
+ * @internal
  */
 export const getPhysicsRayStats = (): Readonly<PhysicsRayStats> => physicsRayStats;
 
-/** Resets the physics ray statistics. The scene loader calls it on every scene enter. */
+/**
+ * Resets the physics ray statistics. Physics' scene hooks call it on every scene enter.
+ * @internal
+ */
 export const resetPhysicsRayStats = () => {
   const now = readStatsClock();
   physicsRaysStats.reset(now);
@@ -148,8 +154,10 @@ export const resetPhysicsRayStats = () => {
   physicsRayStats.pendingQueries = 0;
 };
 
-/** Ends the physics ray stats frame. Engine internal: PhysicsManager's LATE_MAIN system calls
- * it once per rendered frame. */
+/** Ends the physics ray stats frame. PhysicsEntity.ts' LATE_MAIN system calls it once per
+ * rendered frame.
+ * @internal
+ */
 export const endPhysicsRayStatsFrame = (nowMs: number) => {
   if (!physicsRayStatsEnabled) return;
   physicsRaysStats.endFrame(nowMs);

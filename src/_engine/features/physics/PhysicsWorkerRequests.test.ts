@@ -87,15 +87,23 @@ import { initEnvironment, loadConfig } from '../../kernel/config/Config';
 import * as THREE from 'three/webgpu';
 import { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
-import { createRigidBodies } from './PhysicsBodies';
-import { createCollider } from './PhysicsColliders';
+import {
+  createRigidBodies,
+  createRigidBody,
+  deleteRigidBody,
+  detachRigidBody,
+  reattachRigidBody,
+} from './PhysicsBodies';
+import { createCollider, createColliders } from './PhysicsColliders';
+import { beginSubStepCapture, endSubStepCapture, messageWorker } from './PhysicsMessaging';
+import { RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import { createJoint } from './PhysicsJoints';
 import { getPhysicsWorld } from './PhysicsState';
 import { createPhysicsWorld, initPhysics, stopPhysics } from './PhysicsWorld';
 import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
 import { createPhysicsEntity, deleteAllPhysicsEntities } from './PhysicsEntity';
 // The worker's own backend module: the in-process worker imports the same instance
-import { getAllRigidBodyIds } from './backends/rapier/EngineRapier';
+import { getAllRigidBodyIds, getColliderAPIWithId } from './backends/rapier/EngineRapier';
 
 /** What `promise` did within `ms` (a reply takes a few macrotasks here). */
 const settlesWithin = (promise: Promise<unknown>, ms: number) =>
@@ -225,6 +233,53 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
     // The body the create made is deleted again (its DELETE posted after the reply)
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(countBodies()).toBe(bodiesBefore);
+  });
+
+  it('A10: createColliders is all or nothing', async () => {
+    const probe = await createCollider({ type: 'BALL', radius: 0.5 });
+    const creation = createColliders([{ type: 'BALL', radius: 0.5 }, BROKEN_TRIMESH]);
+    expect(await settlesWithin(creation, 300)).toMatch(/^rejected: .*indices/);
+    // Ids are handed out in order: the ball made before the broken TRIMESH got the next one
+    expect(getColliderAPIWithId(probe.id + 1)).toBeUndefined();
+  });
+
+  it('A9: a reattached body keeps its new type and enabled state on the proxy', async () => {
+    const body = await createRigidBody({ rigidType: 'DYNAMIC' });
+    expect(body.isEnabledSync()).toBe(true);
+    await detachRigidBody(body.id);
+    await reattachRigidBody(body.id, { bodyType: RigidBodyTypeAPI.Fixed, enabled: false });
+    expect(body.bodyTypeSync()).toBe(RigidBodyTypeAPI.Fixed);
+    expect(body.isEnabledSync()).toBe(false);
+    body.setEnabled(true);
+    expect(body.isEnabledSync()).toBe(true);
+  });
+
+  it('a deleted body, its colliders and its joints are marked isBeingDeleted', async () => {
+    const [body1, body2] = await createRigidBodies([
+      { rigidType: 'DYNAMIC' },
+      { rigidType: 'DYNAMIC', translation: { x: 2, y: 0, z: 0 } },
+    ]);
+    const collider = await createCollider({ type: 'BALL', radius: 0.5 }, body1.id);
+    const joint = await createJoint({
+      type: 'SPHERICAL',
+      body1Id: body1.id,
+      body2Id: body2.id,
+      anchor1: { x: 0, y: 0, z: 0 },
+      anchor2: { x: 0, y: 0, z: 0 },
+    });
+    await deleteRigidBody(body1.id);
+    expect([body1, collider, joint].map((api) => api.isBeingDeleted)).toEqual([true, true, true]);
+    expect(body2.isBeingDeleted).toBe(false);
+  });
+
+  it('A7: a sub-step capture is made on its first command only', () => {
+    beginSubStepCapture();
+    expect(endSubStepCapture()).toBeNull();
+    beginSubStepCapture();
+    messageWorker({ type: PhysicsProtocolType.RIGID_WAKE_UP, rigidBodyId: 0 });
+    expect(endSubStepCapture()).toEqual([
+      { type: PhysicsProtocolType.RIGID_WAKE_UP, rigidBodyId: 0 },
+    ]);
   });
 
   // Last: physics stays stopped for this file
