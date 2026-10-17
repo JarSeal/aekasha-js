@@ -1,15 +1,13 @@
 /// <reference lib="webworker" />
 
 import type { LoopState } from '../../../kernel/loop/MainLoop';
-import type {
-  EngineAPIType,
-  PhysicsBodyActivity,
-  PhysicsDownProtocol,
-  PhysicsState,
-  PhysicsUpProtocol,
-  WorldAPI,
-} from '../PhysicsAPITypes';
-import { PhysicsProtocolType } from '../PhysicsAPITypes';
+import type { PhysicsDownProtocol } from '../protocol/PhysicsDownProtocol';
+import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
+import type { PhysicsUpProtocol } from '../protocol/PhysicsUpProtocol';
+import type { EngineAPIType } from '../types/PhysicsBackendTypes';
+import type { PhysicsBodyActivity } from '../types/PhysicsBodyTypes';
+import type { PhysicsState } from '../types/PhysicsConfigTypes';
+import type { WorldAPI } from '../types/PhysicsWorldTypes';
 import { initPhysicsEngine } from '../PhysicsUtils';
 import { readStatsClock } from '../../../utils/StatsClock';
 import {

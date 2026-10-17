@@ -10,7 +10,8 @@ import type {
   CharacterProbes,
   LocomotionState,
 } from '../../CharacterTypes';
-import type { ColliderAPI, RigidBodyAPI } from '../../../physics/PhysicsAPITypes';
+import type { RigidBodyAPI } from '../../../physics/types/PhysicsBodyTypes';
+import type { ColliderAPI } from '../../../physics/types/PhysicsColliderTypes';
 import type { CharacterCast } from './Casts';
 
 // The dynamic character's data, as three objects on its controller (p610 D5): `state` (written by

@@ -1,11 +1,8 @@
-import type {
-  ColliderAPI,
-  EngineAPIType,
-  PhysicsEngine,
-  PhysicsState,
-  RigidBodyAPI,
-} from './PhysicsAPITypes';
-import { PhysicsProtocolType } from './PhysicsAPITypes';
+import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
+import type { EngineAPIType } from './types/PhysicsBackendTypes';
+import type { RigidBodyAPI } from './types/PhysicsBodyTypes';
+import type { ColliderAPI } from './types/PhysicsColliderTypes';
+import type { PhysicsEngine, PhysicsState } from './types/PhysicsConfigTypes';
 import { ENGINES } from './backends/Engines';
 import { readPhysicsWallClock } from './PhysicsWallClock';
 

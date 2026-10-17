@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { EngineAPIType, PhysicsUpProtocol, WorldAPI } from '../PhysicsAPITypes';
-import { PhysicsProtocolType } from '../PhysicsAPITypes';
+import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
+import type { PhysicsUpProtocol } from '../protocol/PhysicsUpProtocol';
+import type { EngineAPIType } from '../types/PhysicsBackendTypes';
+import type { WorldAPI } from '../types/PhysicsWorldTypes';
 
 const sendNoJointErrorMessage = (
   sendMessage: (message: any, data: PhysicsUpProtocol, isError?: boolean) => void,

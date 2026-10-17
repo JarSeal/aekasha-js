@@ -1,13 +1,10 @@
 export { deriveColliderFromGeometry } from './import/MeshColliderGeometry';
 export type { ColliderSource } from './import/MeshColliderGeometry';
-export { JointAxesMask } from './PhysicsAPITypes';
-export type {
-  ColliderParams,
-  JointParams,
-  PhysVector,
-  RigidBodyAPI,
-  RigidBodyParams,
-} from './PhysicsAPITypes';
+export type { RigidBodyAPI, RigidBodyParams } from './types/PhysicsBodyTypes';
+export type { ColliderParams } from './types/PhysicsColliderTypes';
+export type { PhysVector } from './types/PhysicsCommonTypes';
+export { JointAxesMask } from './types/PhysicsJointTypes';
+export type { JointParams } from './types/PhysicsJointTypes';
 export type { PhysicsTier, PhysicsTierPolicy, PhysicsTierRing } from './PhysicsTierTypes';
 export {
   PhysicsCapacityError,

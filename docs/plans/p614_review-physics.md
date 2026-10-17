@@ -642,6 +642,40 @@ As built (2026-10-17, at `49e1835`):
 2. T2 (`ENGINES` keyed by a literal union), T4, the protocol `@internal`, the public types and
    members documented.
 
+As built, step 1 (2026-10-17, on `a28e28c`):
+
+- **The layout:** 12 modules instead of D7's 6, to keep each under ~800 lines (`WorldAPI` alone is
+  ~750, the protocol ~1,070). `types/`: `PhysicsCommonTypes.ts` (`PhysVector`, `PhysRotation`,
+  `PhysicsBridge`, `OmitSync`: what every area uses), `PhysicsConfigTypes.ts` (the four unions,
+  `PhysicsState`), `PhysicsBackendTypes.ts` (`EngineAPIType` alone: the backend contract, apart
+  from the public types, T1), `PhysicsBodyTypes.ts`, `PhysicsColliderTypes.ts` (shapes, params,
+  the collider enums), `PhysicsJointTypes.ts`, `PhysicsQueryTypes.ts` (the query observer, rays,
+  hits, `QueryFilterFlags`), `PhysicsEventTypes.ts` (the event records, `ContactForceEventSnapshot`,
+  `EventQueue`, `PhysicsHooks`, `SolverFlags`) and `PhysicsWorldTypes.ts` (`WorldAPI`, 771 lines with
+  its commented-out Rapier members, which p421 / p423 / p250 cite). Each `*ProxyAPIType` /
+  `RigidBodyWorkerEngine` alias went to its area. `protocol/`: `PhysicsProtocolType.ts` (the enum,
+  the one runtime value), `PhysicsUpProtocol.ts`, `PhysicsDownProtocol.ts` (with `PhysicsResponse`
+  and the response aliases). The types modules import only types; the enums and the snapshot class
+  are their only runtime code.
+- **A pure move:** the declarations sliced by line range from the old file (a script checked that
+  every line landed once), and the 37 importers rewritten by name to one import per module (the
+  entry keeps its values and types apart). No name, signature or comment changed; T4's line is
+  still there for step 2.
+- **Bundle:** byte-neutral. `QueryFilterFlags`' module is now used only by the character controller
+  and the backend, so it left the main chunk for `DynamicCharacter.js` (main −0.1 kB, that chunk
+  +0.1 kB); the worker's enums moved from `PhysicsWorker.js` to its `EngineRapier.js` chunk (±0.1
+  kB). Checked against `a28e28c` built in a scratch worktree.
+- **Baselines recorded:** `api.json` (164 moves, plus Phase 2's seven additions, which it hadn't
+  recorded: `stopPhysics`, the transport's three, `stopEngineFeatures`, `FeatureUnmountHook`,
+  `runFeatureUnmountHooks`), `bundle.json` / `bundle.banner.json` (Phases 1-3), and `docs.json` with
+  `--allow-docs-drop`: `features/physics` lost 126 undocumented exports and 8 members, and the new
+  `types/` and `protocol/` folders start with exactly those (step 2 brings them to none).
+- **Also:** `moveMap.ts`' outputs regenerated (the new files map under the `features/` rule; the
+  layout report lists the kernel's type imports by their new modules); the root CLAUDE.md's Physics
+  line; the Hub's `yarn sbp --why physics` example now ends at `PhysicsAPI.ts`. `tsc`, the lint,
+  `yarn test` (597 passed, the worker bundle and module-load tests among them) and `yarn hub:build`
+  clean.
+
 ### Phase 4: the facade (D7, D8)
 
 1. `PhysicsAPI.ts` into its modules and `proxies/`; A5's duplication, A6-A9, W5.

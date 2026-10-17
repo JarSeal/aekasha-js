@@ -1,14 +1,14 @@
 import type {
   PhysicsDownProtocol,
-  PhysicsUpProtocol,
-  RayColliderIntersectionAPI,
-  WorldAPI,
   WorldCastRayAndGetNormalResponse,
   WorldCastRayResponse,
   WorldCastShapeResponse,
   WorldIntersectionsWithRayResponse,
-} from '../PhysicsAPITypes';
-import { PhysicsProtocolType } from '../PhysicsAPITypes';
+} from '../protocol/PhysicsDownProtocol';
+import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
+import type { PhysicsUpProtocol } from '../protocol/PhysicsUpProtocol';
+import type { RayColliderIntersectionAPI } from '../types/PhysicsQueryTypes';
+import type { WorldAPI } from '../types/PhysicsWorldTypes';
 import { getCollOrRigidId } from '../PhysicsUtils';
 
 export const physicsSwitchWorld = async (

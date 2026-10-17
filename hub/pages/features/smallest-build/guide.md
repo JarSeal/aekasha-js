@@ -76,7 +76,7 @@ the app it just built, and builds and checks the embeds too.
   builds the embeds.
 - `--why <group | file>`: the chain of static imports that puts something in the build, for
   example `yarn sbp --why physics`:
-  `src/index.ts → aekasha/physics (features/physics/index.ts) → PhysicsAPITypes.ts`.
+  `src/index.ts → aekasha/physics (features/physics/index.ts) → PhysicsAPI.ts`.
 - `--json` prints one profile's report; `--brief` only the totals and the budgets.
 - `AEK_SBP=false` skips it, in `yarn build` too.
 

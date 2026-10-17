@@ -19,7 +19,7 @@ import {
   reattachRigidBody,
   reattachRigidBodySync,
 } from './PhysicsAPI';
-import { RigidBodyTypeAPI, type RigidBodyPose } from './PhysicsAPITypes';
+import { type RigidBodyPose, RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import type { PhysicsSimTierData, PhysicsTier } from './PhysicsTierTypes';
 import {
   getPhysicsBodyOwner,

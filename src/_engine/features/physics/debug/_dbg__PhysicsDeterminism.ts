@@ -16,7 +16,7 @@ import {
   getResolvedTransportMode,
   setPhysicsStepLimit,
 } from '../PhysicsAPI';
-import type { RigidBodyAPI } from '../PhysicsAPITypes';
+import type { RigidBodyAPI } from '../types/PhysicsBodyTypes';
 import type { PhysicsTier } from '../PhysicsTierTypes';
 import { DETERMINISM_PROBE_FREEZE_SOURCE, setPhysicsTierPolicyFrozen } from '../PhysicsTierPolicy';
 import {

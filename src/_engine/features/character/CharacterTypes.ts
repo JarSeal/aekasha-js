@@ -1,4 +1,4 @@
-import type { ColliderParams } from '../physics/PhysicsAPITypes';
+import type { ColliderParams } from '../physics/types/PhysicsColliderTypes';
 import type { ActorBrain, ActorController } from './ActorTypes';
 
 /**

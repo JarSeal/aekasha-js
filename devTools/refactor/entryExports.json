@@ -4,8 +4,8 @@
   "summary": {
     "aekasha": {
       "public": 142,
-      "crossEntry": 219,
-      "internal": 286,
+      "crossEntry": 220,
+      "internal": 285,
       "unreferenced": 110
     },
     "aekasha/character": {
@@ -39,10 +39,10 @@
       "unreferenced": 36
     },
     "aekasha/physics": {
-      "public": 23,
-      "crossEntry": 27,
-      "internal": 225,
-      "unreferenced": 79
+      "public": 18,
+      "crossEntry": 17,
+      "internal": 122,
+      "unreferenced": 197
     },
     "aekasha/postfx": {
       "public": 7,
@@ -1464,7 +1464,8 @@
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "IS_DEBUG_ENV": {
@@ -1502,7 +1503,8 @@
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "PhysicsWireframeColors": {
@@ -2981,7 +2983,8 @@
           "kind": "TypeAlias",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "addResizer": {
@@ -2989,6 +2992,7 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
+            "aekasha/physics",
             "aekasha/ui"
           ]
         },
@@ -2996,28 +3000,32 @@
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "advanceElapsedClock": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "deleteResizer": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "ElapsedClock": {
           "kind": "TypeAlias",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "FixedStepDriver": {
@@ -3032,21 +3040,24 @@
           "kind": "TypeAlias",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "getAppDelta": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "getDelta": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "getElapsedTime": {
@@ -3055,6 +3066,7 @@
           "by": [
             "aekasha/debug",
             "aekasha/lines",
+            "aekasha/physics",
             "aekasha/skybox"
           ]
         },
@@ -3070,7 +3082,8 @@
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "getReadOnlyLoopState": {
@@ -3085,7 +3098,8 @@
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "isAppPlaying": {
@@ -3093,6 +3107,7 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
+            "aekasha/physics",
             "aekasha/skybox"
           ]
         },
@@ -3100,7 +3115,8 @@
           "kind": "Variable",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "LoopState": {
@@ -3115,14 +3131,16 @@
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "onBeforeUnload": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "onVisibilityChange": {
@@ -3137,105 +3155,120 @@
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "registerMainLoopDebugGUI": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "renderFrameNow": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "renderFrameWhileMasterPaused": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "requestMainLoopFrame": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "setActionSampler": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "setFixedFrameDelta": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "setFixedStepDriver": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "setFrameProbe": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "setIsLoadingScene": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "setPlaySpeedMultiplier": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "setPreStepHook": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "setSceneSuspended": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "stopMainLoop": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "toggleAppPlay": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "toggleMainPlay": {
@@ -3250,7 +3283,8 @@
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         },
         "transformMainSpeedValue": {
@@ -3258,6 +3292,7 @@
           "usage": "public",
           "by": [
             "aekasha/debug",
+            "aekasha/physics",
             "app"
           ]
         },
@@ -3265,7 +3300,8 @@
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/physics"
           ]
         }
       },
@@ -4691,7 +4727,10 @@
         },
         "rejectRequest": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/physics"
+          ]
         },
         "RequestTimeoutError": {
           "kind": "Class",
@@ -8034,7 +8073,7 @@
         },
         "createCollider": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "createColliders": {
           "kind": "Function",
@@ -8046,7 +8085,7 @@
         },
         "createColliderSync": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "createJoint": {
           "kind": "Function",
@@ -8070,7 +8109,7 @@
         },
         "createRigidBodies": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "createRigidBodiesSync": {
           "kind": "Function",
@@ -8082,7 +8121,7 @@
         },
         "createRigidBodySync": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "createRigidBodyWithColliders": {
           "kind": "Function",
@@ -8094,7 +8133,7 @@
         },
         "deleteCollider": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "deleteColliders": {
           "kind": "Function",
@@ -8102,11 +8141,11 @@
         },
         "deleteCollidersSync": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "deleteColliderSync": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "deleteJoint": {
           "kind": "Function",
@@ -8117,19 +8156,19 @@
         },
         "deleteJointSync": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "deletePhysicsWorld": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "deleteRigidBodies": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "deleteRigidBodiesSync": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "deleteRigidBody": {
           "kind": "Function",
@@ -8137,7 +8176,7 @@
         },
         "deleteRigidBodySync": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "detachRigidBody": {
           "kind": "Function",
@@ -8165,7 +8204,7 @@
         },
         "getAllColliderEntries": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "getAllJointEntries": {
           "kind": "Function",
@@ -8173,7 +8212,7 @@
         },
         "getAllRigidBodyEntries": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "getCollider": {
           "kind": "Function",
@@ -8327,7 +8366,7 @@
         },
         "isPhysicsSteppingHeld": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "isPhysicsStepStatsEnabled": {
           "kind": "Function",
@@ -8465,11 +8504,11 @@
         },
         "CollBorderRadiusResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollCollisionGroupsResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollContainsPointResponse": {
           "kind": "TypeAlias",
@@ -8477,41 +8516,31 @@
         },
         "CollDensityResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollFrictionResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollHalfExtentsResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollHalfHeightResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollHeightsResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "ColliderAPI": {
           "kind": "TypeAlias",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha",
-            "aekasha/character"
-          ]
+          "usage": "unreferenced"
         },
         "ColliderParams": {
           "kind": "TypeAlias",
-          "usage": "public",
-          "by": [
-            "aekasha",
-            "aekasha/character",
-            "app",
-            "toolkit"
-          ]
+          "usage": "unreferenced"
         },
         "ColliderProxyAPIType": {
           "kind": "TypeAlias",
@@ -8519,63 +8548,63 @@
         },
         "CollIndicesResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollIsEnabledResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollisionEventRecord": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollIsSensorResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollIsValidResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollMassResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollNormalResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollRadiusResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollRestitutionResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollRotationResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollShapeTypeResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollSolverGroupsResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollTranslationResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollUserDataResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollVerticesResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CollWrtParentRotationResponse": {
           "kind": "TypeAlias",
@@ -8587,23 +8616,23 @@
         },
         "ContactForceEventRecord": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "ContactForceEventSnapshot": {
           "kind": "Class",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CreateColliderResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CreateCollidersResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CreateJointResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CreateJointsResponse": {
           "kind": "TypeAlias",
@@ -8611,19 +8640,19 @@
         },
         "CreatePhysicsEntityResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CreateRigidBodiesResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CreateRigidBodyResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "CreateWorldResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "DebugStatePushMessage": {
           "kind": "TypeAlias",
@@ -8631,15 +8660,15 @@
         },
         "DeleteColliderResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "DeleteCollidersResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "DeleteJointResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "DeleteJointsResponse": {
           "kind": "TypeAlias",
@@ -8647,19 +8676,19 @@
         },
         "DeleteRigidBodiesResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "DeleteRigidBodyResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "DeleteWorldResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "EngineAPIType": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "ErrorResponse": {
           "kind": "TypeAlias",
@@ -8667,11 +8696,11 @@
         },
         "EventQueue": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "EventsPushMessage": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "FeatureType": {
           "kind": "Enum",
@@ -8679,11 +8708,11 @@
         },
         "FlushResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "HeightFieldData": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "InitPhysicsResponse": {
           "kind": "TypeAlias",
@@ -8691,26 +8720,23 @@
         },
         "InteractionGroupsAPI": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "JointAnchor1Response": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "JointAnchor2Response": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "JointAPI": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "JointAxesMask": {
           "kind": "Enum",
-          "usage": "public",
-          "by": [
-            "app"
-          ]
+          "usage": "unreferenced"
         },
         "JointBody1IdResponse": {
           "kind": "TypeAlias",
@@ -8722,27 +8748,27 @@
         },
         "JointContactsEnabledResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "JointGetUserDataResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "JointIsValidResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "JointLimitsEnabledResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "JointMotorModel": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "JointParams": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "OmitSync": {
           "kind": "TypeAlias",
@@ -8750,14 +8776,11 @@
         },
         "PhysicsBackgroundBehavior": {
           "kind": "TypeAlias",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "unreferenced"
         },
         "PhysicsBodyActivity": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "PhysicsBridge": {
           "kind": "TypeAlias",
@@ -8765,29 +8788,23 @@
         },
         "PhysicsDownProtocol": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "PhysicsEngine": {
           "kind": "TypeAlias",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "unreferenced"
         },
         "PhysicsHooks": {
           "kind": "Interface",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "PhysicsInterpolationMode": {
           "kind": "TypeAlias",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "unreferenced"
         },
         "PhysicsProtocolType": {
           "kind": "Enum",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "PhysicsQueryKind": {
           "kind": "TypeAlias",
@@ -8795,7 +8812,7 @@
         },
         "PhysicsQueryObserver": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "PhysicsResponse": {
           "kind": "TypeAlias",
@@ -8803,39 +8820,27 @@
         },
         "PhysicsState": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "PhysicsUpProtocol": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "PhysicsWorkerTarget": {
           "kind": "TypeAlias",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "unreferenced"
         },
         "PhysRay": {
           "kind": "TypeAlias",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "unreferenced"
         },
         "PhysRotation": {
           "kind": "Interface",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "PhysVector": {
           "kind": "Interface",
-          "usage": "public",
-          "by": [
-            "aekasha",
-            "aekasha/character",
-            "app",
-            "toolkit"
-          ]
+          "usage": "unreferenced"
         },
         "PointProjection": {
           "kind": "TypeAlias",
@@ -8843,26 +8848,19 @@
         },
         "PoseArray": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "QueryFilterFlags": {
           "kind": "Enum",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha",
-            "aekasha/character"
-          ]
+          "usage": "unreferenced"
         },
         "RayColliderHitAPI": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RayColliderIntersectionAPI": {
           "kind": "TypeAlias",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha/character"
-          ]
+          "usage": "unreferenced"
         },
         "RayIntersection": {
           "kind": "TypeAlias",
@@ -8870,15 +8868,15 @@
         },
         "RestoreSnapshotResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidAdditionalSolverIterationsResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidAngularDampingResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidAngvelResponse": {
           "kind": "TypeAlias",
@@ -8886,112 +8884,99 @@
         },
         "RigidBodyAPI": {
           "kind": "TypeAlias",
-          "usage": "public",
-          "by": [
-            "aekasha",
-            "aekasha/character",
-            "toolkit"
-          ]
+          "usage": "unreferenced"
         },
         "RigidBodyAttachState": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidBodyParams": {
           "kind": "TypeAlias",
-          "usage": "public",
-          "by": [
-            "aekasha",
-            "aekasha/character",
-            "toolkit"
-          ]
+          "usage": "unreferenced"
         },
         "RigidBodyPose": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidBodyTypeAPI": {
           "kind": "Enum",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha/character"
-          ]
+          "usage": "unreferenced"
         },
         "RigidBodyTypeResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidBodyWorkerEngine": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidColliderResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidDetachResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidDominanceGroupResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidEffectiveInvMassResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidGetUserDataResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidGravityScaleResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidInvMassResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidInvPrincipalInertiaResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidIsCcdEnabledResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidIsDynamicResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidIsEnabledResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidIsFixedResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidIsKinematicResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidIsMovingResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidIsSleepingResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidIsValidResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidLinearDampingResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidLinvelResponse": {
           "kind": "TypeAlias",
@@ -8999,39 +8984,39 @@
         },
         "RigidLocalComResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidMassResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidNextRotationResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidNextTranslationResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidNumCollidersResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidPrincipalInertiaLocalFrameResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidPrincipalInertiaResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidReadPositionsResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidReattachResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidRotationResponse": {
           "kind": "TypeAlias",
@@ -9039,7 +9024,7 @@
         },
         "RigidSoftCcdPredictionResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidTranslationResponse": {
           "kind": "TypeAlias",
@@ -9047,38 +9032,35 @@
         },
         "RigidUserForceResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidUserTorqueResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidVelocityAtPointResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "RigidWorldComResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "SetDebugStateTrackingResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "ShapeCastHitAPI": {
           "kind": "TypeAlias",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha/character"
-          ]
+          "usage": "unreferenced"
         },
         "ShapeParams": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "ShapeType": {
           "kind": "Enum",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "SolverFlags": {
           "kind": "Enum",
@@ -9086,11 +9068,11 @@
         },
         "TakeSnapshotResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "TempContactForceEvent": {
           "kind": "Interface",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "TransformsPushMessage": {
           "kind": "TypeAlias",
@@ -9098,43 +9080,43 @@
         },
         "WorldAPI": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "WorldCastRayAndGetNormalResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "WorldCastRayResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "WorldCastShapeResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "WorldContactPairsResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "WorldGravityResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "WorldIntersectionPairResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "WorldIntersectionPairsWithResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "WorldIntersectionsWithRayResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "WorldLengthUnitResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "WorldMaxCcdSubstepsResponse": {
           "kind": "TypeAlias",
@@ -9142,11 +9124,11 @@
         },
         "WorldNumInternalPgsIterationsResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "WorldNumSolverIterationsResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "WorldProxyAPIType": {
           "kind": "TypeAlias",
@@ -9154,7 +9136,7 @@
         },
         "WorldTimestepResponse": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         }
       },
       "src/_engine/features/physics/PhysicsDebugStateBuffer.ts": {

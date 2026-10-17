@@ -1,4 +1,5 @@
-import type { ColliderParams, RigidBodyParams } from '../../../features/physics/PhysicsAPITypes';
+import type { RigidBodyParams } from '../../../features/physics/types/PhysicsBodyTypes';
+import type { ColliderParams } from '../../../features/physics/types/PhysicsColliderTypes';
 import type { ImportPhysicsParams, ParsedCustomProps } from './ImportTypes';
 
 const KNOWN_COLLIDER_TYPES: ColliderParams['type'][] = [

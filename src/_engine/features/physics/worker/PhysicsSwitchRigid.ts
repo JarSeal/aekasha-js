@@ -1,15 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type {
-  ColliderParams,
-  EngineAPIType,
-  PhysicsUpProtocol,
-  PhysRotation,
-  PhysVector,
-  RigidBodyAPI,
-  RigidBodyPose,
-  WorldAPI,
-} from '../PhysicsAPITypes';
-import { PhysicsProtocolType } from '../PhysicsAPITypes';
+import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
+import type { PhysicsUpProtocol } from '../protocol/PhysicsUpProtocol';
+import type { EngineAPIType } from '../types/PhysicsBackendTypes';
+import type { RigidBodyAPI, RigidBodyPose } from '../types/PhysicsBodyTypes';
+import type { ColliderParams } from '../types/PhysicsColliderTypes';
+import type { PhysRotation, PhysVector } from '../types/PhysicsCommonTypes';
+import type { WorldAPI } from '../types/PhysicsWorldTypes';
 import type { PhysicsTransformBuffer } from '../PhysicsTransformBuffer';
 
 /** Copies a pose into plain objects, so it posts as exactly these fields. */

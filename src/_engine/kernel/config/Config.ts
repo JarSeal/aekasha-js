@@ -4,7 +4,7 @@ import type {
   PhysicsEngine,
   PhysicsInterpolationMode,
   PhysicsWorkerTarget,
-} from '../../features/physics/PhysicsAPITypes';
+} from '../../features/physics/types/PhysicsConfigTypes';
 import type { AssetsWorkerTarget } from '../assets/AssetsAPITypes';
 import type { DraggableWindow } from '../../ui/DraggableWindow';
 import type { ECSStorageMode } from '../ecs/ECSComponentStorage';

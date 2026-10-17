@@ -15,14 +15,9 @@ import {
   preloadFatLineBackend,
   type LineObject,
 } from '../../lines/Lines';
-import type {
-  ColliderAPI,
-  HeightFieldData,
-  PhysRotation,
-  PhysVector,
-  RigidBodyAPI,
-} from '../PhysicsAPITypes';
-import { ShapeType } from '../PhysicsAPITypes';
+import type { RigidBodyAPI } from '../types/PhysicsBodyTypes';
+import { type ColliderAPI, type HeightFieldData, ShapeType } from '../types/PhysicsColliderTypes';
+import type { PhysRotation, PhysVector } from '../types/PhysicsCommonTypes';
 import { DebugBodyFlag, DebugColliderFlag } from '../PhysicsDebugStateBuffer';
 import {
   getPhysicsDebugStateBuffer,

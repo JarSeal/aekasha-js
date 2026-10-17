@@ -96,7 +96,7 @@ import {
   initPhysics,
   stopPhysics,
 } from './PhysicsAPI';
-import { PhysicsProtocolType } from './PhysicsAPITypes';
+import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
 import { createPhysicsEntity, deleteAllPhysicsEntities } from './PhysicsEntity';
 // The worker's own backend module: the in-process worker imports the same instance
 import { getAllRigidBodyIds } from './backends/rapier/EngineRapier';

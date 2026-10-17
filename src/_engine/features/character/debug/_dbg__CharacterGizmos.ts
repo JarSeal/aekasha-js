@@ -23,7 +23,7 @@ import {
   type LineObject,
   type LineWriter,
 } from '../../lines/Lines';
-import type { ColliderParams } from '../../physics/PhysicsAPITypes';
+import type { ColliderParams } from '../../physics/types/PhysicsColliderTypes';
 import { getPhysicsSnapshotStepIndex, getPhysicsState } from '../../physics/PhysicsAPI';
 import { registerOnAllSceneEnters } from '../../../kernel/scene/Scene';
 import { markDebugHelper } from '../../../debug/Profiler';

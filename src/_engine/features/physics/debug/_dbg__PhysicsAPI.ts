@@ -33,12 +33,9 @@ import {
 } from '../PhysicsAPI';
 import { setBootOverride } from './_dbg__PhysicsBootOverrides';
 import { getConfig } from '../../../kernel/config/Config';
-import {
-  ShapeType,
-  type PhysicsState,
-  type PhysicsWorkerTarget,
-  type RigidBodyAPI,
-} from '../PhysicsAPITypes';
+import type { RigidBodyAPI } from '../types/PhysicsBodyTypes';
+import { ShapeType } from '../types/PhysicsColliderTypes';
+import type { PhysicsState, PhysicsWorkerTarget } from '../types/PhysicsConfigTypes';
 import {
   getEntityWireframeColor,
   getGlobalWireframeColorOverrides,

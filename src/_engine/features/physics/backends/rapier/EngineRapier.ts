@@ -1,42 +1,43 @@
 import Rapier from '@dimforge/rapier3d-compat';
 import type { Collider, RigidBody, RigidBodyType } from '@dimforge/rapier3d-compat';
 import { getPhysicsEngine } from '../../PhysicsUtils';
+import {
+  type PhysicsBodyActivity,
+  type PoseArray,
+  type RigidBodyAPI,
+  type RigidBodyAttachState,
+  type RigidBodyParams,
+  type RigidBodyPose,
+  RigidBodyTypeAPI,
+} from '../../types/PhysicsBodyTypes';
 import type {
   ColliderAPI,
   ColliderParams,
-  CollisionEventRecord,
-  ContactForceEventRecord,
-  EventQueue,
   HeightFieldData,
   InteractionGroupsAPI,
-  JointAPI,
-  JointMotorModel,
-  JointParams,
-  PhysicsHooks,
-  PhysicsState,
+  ShapeParams,
+  ShapeType,
+} from '../../types/PhysicsColliderTypes';
+import type { PhysRotation, PhysVector } from '../../types/PhysicsCommonTypes';
+import type { PhysicsState } from '../../types/PhysicsConfigTypes';
+import {
+  type CollisionEventRecord,
+  type ContactForceEventRecord,
+  ContactForceEventSnapshot,
+  type EventQueue,
+  type PhysicsHooks,
+  type TempContactForceEvent,
+} from '../../types/PhysicsEventTypes';
+import type { JointAPI, JointMotorModel, JointParams } from '../../types/PhysicsJointTypes';
+import type {
+  PhysicsQueryObserver,
   PhysRay,
-  PhysRotation,
-  PoseArray,
-  PhysVector,
   QueryFilterFlags,
   RayColliderHitAPI,
   RayColliderIntersectionAPI,
-  RigidBodyAPI,
-  RigidBodyAttachState,
-  RigidBodyParams,
-  RigidBodyPose,
   ShapeCastHitAPI,
-  ShapeParams,
-  ShapeType,
-  TempContactForceEvent,
-  WorldAPI,
-} from '../../PhysicsAPITypes';
-import {
-  ContactForceEventSnapshot,
-  RigidBodyTypeAPI,
-  type PhysicsBodyActivity,
-  type PhysicsQueryObserver,
-} from '../../PhysicsAPITypes';
+} from '../../types/PhysicsQueryTypes';
+import type { WorldAPI } from '../../types/PhysicsWorldTypes';
 import type { RayDebugOpts } from '../../../../kernel/render/RayDebugTypes';
 import type { LoopState } from '../../../../kernel/loop/MainLoop';
 import { lwarn } from '../../../../utils/Logger';

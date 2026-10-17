@@ -1,4 +1,6 @@
-import type { ColliderAPI, PhysVector, RigidBodyAPI } from './PhysicsAPITypes';
+import type { RigidBodyAPI } from './types/PhysicsBodyTypes';
+import type { ColliderAPI } from './types/PhysicsColliderTypes';
+import type { PhysVector } from './types/PhysicsCommonTypes';
 
 /**
  * A dynamic rigid body's simulation tier (p352, `PhysicsTiers.ts`):

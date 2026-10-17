@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { lerror } from '../../../utils/Logger';
 import { setMeshCreatePropsToUserData } from '../../../kernel/mesh/MeshUserData';
-import type { ColliderParams } from '../PhysicsAPITypes';
+import type { ColliderParams } from '../types/PhysicsColliderTypes';
 import { deriveColliderDimensionsFromMesh } from '../PhysicsEntity';
 import type { ImportedGeometryInfo, Vector3Like } from '../../../kernel/assets/import/ImportTypes';
 

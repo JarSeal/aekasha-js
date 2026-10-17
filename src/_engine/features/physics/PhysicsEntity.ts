@@ -33,8 +33,9 @@ import {
   readPhysicsSnapshotStamp,
   setBodyMovedListener,
 } from './PhysicsAPI';
-import type { ColliderParams, RigidBodyAPI, RigidBodyParams } from './PhysicsAPITypes';
-import type { PhysicsInterpolationMode } from './PhysicsAPITypes';
+import type { RigidBodyAPI, RigidBodyParams } from './types/PhysicsBodyTypes';
+import type { ColliderParams } from './types/PhysicsColliderTypes';
+import type { PhysicsInterpolationMode } from './types/PhysicsConfigTypes';
 import {
   getCurrentSceneId,
   getRootScene,

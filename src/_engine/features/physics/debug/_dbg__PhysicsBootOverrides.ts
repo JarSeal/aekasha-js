@@ -1,6 +1,6 @@
 import { DEBUG_PHYSICS_API_BOOT_LS_KEY } from '../../../kernel/config/Config';
 import { lsGetItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
-import type { PhysicsWorkerTarget } from '../PhysicsAPITypes';
+import type { PhysicsWorkerTarget } from '../types/PhysicsConfigTypes';
 
 /**
  * Debug-only boot-time physics overrides, applied by loadConfig() on the next reload.

@@ -1,7 +1,8 @@
 // The physics half of spawnImportedAsset (SpawnImported.ts): the physics feature's import
 // extension (p607 D5), loaded on the first spawn with physics nodes.
 import * as THREE from 'three/webgpu';
-import type { ColliderParams, RigidBodyParams } from '../PhysicsAPITypes';
+import type { RigidBodyParams } from '../types/PhysicsBodyTypes';
+import type { ColliderParams } from '../types/PhysicsColliderTypes';
 import { createPhysicsEntity } from '../PhysicsEntity';
 import type { ImportPhysicsSpawn } from '../../../kernel/assets/import/ImportExtensions';
 import type { ImportSpawnNode } from '../../../kernel/assets/import/ImportTypes';

@@ -4,12 +4,9 @@ import {
   getPhysicsSubStepIndex,
   getPhysicsWorld,
 } from '../../../physics/PhysicsAPI';
-import {
-  QueryFilterFlags,
-  RigidBodyTypeAPI,
-  type ColliderAPI,
-  type ShapeCastHitAPI,
-} from '../../../physics/PhysicsAPITypes';
+import { RigidBodyTypeAPI } from '../../../physics/types/PhysicsBodyTypes';
+import type { ColliderAPI } from '../../../physics/types/PhysicsColliderTypes';
+import { QueryFilterFlags, type ShapeCastHitAPI } from '../../../physics/types/PhysicsQueryTypes';
 import {
   castDir,
   castPos,

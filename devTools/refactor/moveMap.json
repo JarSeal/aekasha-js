@@ -817,6 +817,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/physics/backends/rapier/EngineRapier.test.ts": {
+      "to": "src/_engine/features/physics/backends/rapier/EngineRapier.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/physics/backends/rapier/EngineRapier.ts": {
       "to": "src/_engine/features/physics/backends/rapier/EngineRapier.ts",
       "action": "keep",
@@ -847,6 +852,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/physics/import/MeshColliderGeometry.test.ts": {
+      "to": "src/_engine/features/physics/import/MeshColliderGeometry.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/physics/import/MeshColliderGeometry.ts": {
       "to": "src/_engine/features/physics/import/MeshColliderGeometry.ts",
       "action": "keep",
@@ -857,13 +867,13 @@
       "action": "keep",
       "plan": "p608"
     },
-    "src/_engine/features/physics/PhysicsAPI.ts": {
-      "to": "src/_engine/features/physics/PhysicsAPI.ts",
+    "src/_engine/features/physics/PhysicsAPI.test.ts": {
+      "to": "src/_engine/features/physics/PhysicsAPI.test.ts",
       "action": "keep",
       "plan": "p608"
     },
-    "src/_engine/features/physics/PhysicsAPITypes.ts": {
-      "to": "src/_engine/features/physics/PhysicsAPITypes.ts",
+    "src/_engine/features/physics/PhysicsAPI.ts": {
+      "to": "src/_engine/features/physics/PhysicsAPI.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -914,6 +924,91 @@
     },
     "src/_engine/features/physics/PhysicsWallClock.ts": {
       "to": "src/_engine/features/physics/PhysicsWallClock.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/PhysicsWorkerRequests.test.ts": {
+      "to": "src/_engine/features/physics/PhysicsWorkerRequests.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/protocol/PhysicsDownProtocol.ts": {
+      "to": "src/_engine/features/physics/protocol/PhysicsDownProtocol.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/protocol/PhysicsProtocolType.ts": {
+      "to": "src/_engine/features/physics/protocol/PhysicsProtocolType.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/protocol/PhysicsUpProtocol.ts": {
+      "to": "src/_engine/features/physics/protocol/PhysicsUpProtocol.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/transport/PhysicsTransport.test.ts": {
+      "to": "src/_engine/features/physics/transport/PhysicsTransport.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/transport/PhysicsTransport.ts": {
+      "to": "src/_engine/features/physics/transport/PhysicsTransport.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/transport/WorkerScopeTransport.ts": {
+      "to": "src/_engine/features/physics/transport/WorkerScopeTransport.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/transport/WorkerTransport.ts": {
+      "to": "src/_engine/features/physics/transport/WorkerTransport.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/types/PhysicsBackendTypes.ts": {
+      "to": "src/_engine/features/physics/types/PhysicsBackendTypes.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/types/PhysicsBodyTypes.ts": {
+      "to": "src/_engine/features/physics/types/PhysicsBodyTypes.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/types/PhysicsColliderTypes.ts": {
+      "to": "src/_engine/features/physics/types/PhysicsColliderTypes.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/types/PhysicsCommonTypes.ts": {
+      "to": "src/_engine/features/physics/types/PhysicsCommonTypes.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/types/PhysicsConfigTypes.ts": {
+      "to": "src/_engine/features/physics/types/PhysicsConfigTypes.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/types/PhysicsEventTypes.ts": {
+      "to": "src/_engine/features/physics/types/PhysicsEventTypes.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/types/PhysicsJointTypes.ts": {
+      "to": "src/_engine/features/physics/types/PhysicsJointTypes.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/types/PhysicsQueryTypes.ts": {
+      "to": "src/_engine/features/physics/types/PhysicsQueryTypes.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/types/PhysicsWorldTypes.ts": {
+      "to": "src/_engine/features/physics/types/PhysicsWorldTypes.ts",
       "action": "keep",
       "plan": "p608"
     },

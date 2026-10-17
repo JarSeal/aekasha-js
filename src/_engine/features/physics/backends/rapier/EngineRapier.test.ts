@@ -1,13 +1,11 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { LoopState } from '../../../../kernel/loop/MainLoop';
-import type {
-  EngineAPIType,
-  PhysicsDownProtocol,
-  PhysicsState,
-  PhysicsUpProtocol,
-  WorldAPI,
-} from '../../PhysicsAPITypes';
-import { PhysicsProtocolType } from '../../PhysicsAPITypes';
+import type { PhysicsDownProtocol } from '../../protocol/PhysicsDownProtocol';
+import { PhysicsProtocolType } from '../../protocol/PhysicsProtocolType';
+import type { PhysicsUpProtocol } from '../../protocol/PhysicsUpProtocol';
+import type { EngineAPIType } from '../../types/PhysicsBackendTypes';
+import type { PhysicsState } from '../../types/PhysicsConfigTypes';
+import type { WorldAPI } from '../../types/PhysicsWorldTypes';
 import { initPhysicsEngine } from '../../PhysicsUtils';
 import { physicsSwitchWorld } from '../../worker/PhysicsSwitchWorld';
 
