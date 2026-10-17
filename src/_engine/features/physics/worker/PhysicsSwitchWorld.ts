@@ -1,10 +1,10 @@
+import type { PhysicsDownProtocol } from '../protocol/PhysicsDownProtocol';
 import type {
-  PhysicsDownProtocol,
   WorldCastRayAndGetNormalResponse,
   WorldCastRayResponse,
   WorldCastShapeResponse,
   WorldIntersectionsWithRayResponse,
-} from '../protocol/PhysicsDownProtocol';
+} from '../protocol/PhysicsResponses';
 import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
 import type { PhysicsUpProtocol } from '../protocol/PhysicsUpProtocol';
 import type { RayColliderIntersectionAPI } from '../types/PhysicsQueryTypes';

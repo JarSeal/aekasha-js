@@ -1,15 +1,34 @@
-import type { ENGINES } from '../backends/Engines';
+/** A physics backend, by its key in `backends/Engines.ts`' `ENGINES`. Only Rapier exists. */
+export type PhysicsEngine = 'RAPIER';
 
-export type PhysicsEngine = keyof typeof ENGINES;
-export type PhysicsWorkerTarget = 'MAIN_THREAD' | 'WORKER_THREAD'; // + possible 'SERVER_AND_MAIN' | 'SERVER_AND_WORKER' if implemented
+/**
+ * Where the simulation runs: `'MAIN_THREAD'` (synchronous queries, deterministic characters) or
+ * `'WORKER_THREAD'` (a worker, its transforms back through a shared buffer or one message per
+ * frame). A server target would be a third (p511).
+ */
+export type PhysicsWorkerTarget = 'MAIN_THREAD' | 'WORKER_THREAD';
+
+/** What the physics stepping does while the window is hidden: see `PhysicsState.backgroundBehavior`. */
 export type PhysicsBackgroundBehavior = 'KEEP_RUNNING' | 'KEEP_RUNNING_USE_MIN_DELTA' | 'PAUSE';
+
+/** How an `Object3D` shows its body's pose between steps: see `PhysicsState.interpolationMode`. */
 export type PhysicsInterpolationMode = 'NONE' | 'RENDERER' | 'FIXED_PHYSICS' | 'EXTRAPOLATION';
 
+/**
+ * The physics settings and stepping state the facade keeps (`getPhysicsState`): `AppConfig.physics`
+ * resolved at `initPhysics`, and what changes while it runs (the pause). Read it, don't write it:
+ * the setters (`setPhysicsStepStatsEnabled`, the debug tab's) keep the worker in step.
+ */
 export type PhysicsState = {
+  /** Whether a physics world was asked for at boot (`AppConfig.physics.enabled`). */
   enabled: boolean;
+  /** The backend. */
   physicsEngine: PhysicsEngine;
+  /** Where the simulation runs. */
   workerTarget: PhysicsWorkerTarget;
+  /** Fixed steps per second. */
   timestep: number;
+  /** One fixed step's length in seconds (`1 / timestep`). */
   timestepRatio: number;
   /** What stepPhysics() should do while the window is hidden (another tab, another window,
    * minimized). Only consulted while hidden — an explicit pause (loopState.masterPlay or
@@ -20,12 +39,14 @@ export type PhysicsState = {
    * 'PAUSE' = Halt the physics loop (and, via the visibility handler, the whole main loop) while hidden.
    */
   backgroundBehavior: PhysicsBackgroundBehavior;
+  /** Whether stepping is paused (an explicit play toggle, the background behaviour or a scene
+   * load: `pauseReason`). */
   isPaused: boolean;
   /** When the physics loop is on pause (backgroundBehavior = 'PAUSE', loopState.masterPlay = false, or loopState.appPlay = false)
-   * the time it was paused (performance.now()). 0 = not paused.
+   * the time it was paused (the physics wall clock, `PhysicsWallClock.ts`). 0 = not paused.
    */
   pausedTime: number;
-  /** Total pause duration, used for the getPhysGameTime helper (in the helpers.ts) */
+  /** Total pause duration, read by the deprecated `getPhysGameTime` (`PhysicsWallClock.ts`). */
   pauseDurationTotal: number;
   /** Why physics is paused, when something other than an explicit play toggle paused it:
    * 'BACKGROUND_BEHAVIOR' = the app window is hidden, 'SCENE_LOAD' = a scene is loading (see
@@ -46,10 +67,15 @@ export type PhysicsState = {
    * backlog under sustained slowdowns ("spiral of death"). 0 = not in use.
    */
   maxSubSteps: number;
+  /** Whether the world steps at all (false: the bodies exist and nothing moves). */
   worldStepEnabled: boolean;
+  /** Whether Rapier's debug render lines are drawn. */
   visualizerEnabled: boolean;
+  /** Gravity in m/s². */
   gravity: { x: number; y: number; z: number };
+  /** The constraint solver's iterations per step (`WorldAPI.setNumSolverIterations`). */
   solverIterations: number;
+  /** The internal PGS iterations per solver iteration (`WorldAPI.setNumInternalPgsIterations`). */
   internalPgsIterations: number;
   /** Render-time smoothing applied on top of the discrete physics-step pose (never written
    * back into the ECS TRANSFORM, which always stays the authoritative, non-interpolated

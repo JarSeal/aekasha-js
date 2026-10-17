@@ -1,10 +1,15 @@
 import type Rapier from '@dimforge/rapier3d-compat';
 
 import type { EngineAPIType } from '../types/PhysicsBackendTypes';
+import type { PhysicsEngine } from '../types/PhysicsConfigTypes';
 
-// Define the engines (key) and their init functions
+/**
+ * The physics backends by key (`AppConfig.physics.physicsEngine`): how each loads its package and
+ * its {@link EngineAPIType}. A new backend adds its key to `PhysicsEngine` and its entry here.
+ * @internal
+ */
 export const ENGINES: Record<
-  string,
+  PhysicsEngine,
   {
     /** Display name (eg. in the About dialog) */
     name: string;

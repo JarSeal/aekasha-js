@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: Refactoring, Documentation, Physics
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md, p511_network-transport-and-replication.md (the transport interface)
@@ -635,7 +635,7 @@ As built (2026-10-17, at `49e1835`):
 - **Left:** `moveMap.ts --check` reports its outputs stale since Phase 1's test files; Phase 4
   regenerates them (D7).
 
-### Phase 3: the types (D7, D9)
+### Phase 3: the types (D7, D9) — done
 
 1. `PhysicsAPITypes.ts` into `types/` and `protocol/`; every importer updated (no barrel), the
    entry re-exporting from the new files.
@@ -675,6 +675,52 @@ As built, step 1 (2026-10-17, on `a28e28c`):
   line; the Hub's `yarn sbp --why physics` example now ends at `PhysicsAPI.ts`. `tsc`, the lint,
   `yarn test` (597 passed, the worker bundle and module-load tests among them) and `yarn hub:build`
   clean.
+
+As built, step 2 (2026-10-17):
+
+- **T2:** `PhysicsEngine` is the union `'RAPIER'` (`PhysicsConfigTypes.ts`) and `ENGINES` a
+  `Record<PhysicsEngine, …>` (`@internal`), so `AppConfig.physics.physicsEngine` takes only a
+  known key, and the types no longer import `Engines.ts`. **T4:** the line is gone.
+- **D9:** the 107 response aliases moved into their own `protocol/PhysicsResponses.ts` (with a
+  4-line `@internal` block each they'd have taken `PhysicsDownProtocol.ts` past 800 lines);
+  `PhysicsUpProtocol`, `PhysicsDownProtocol`, `PhysicsResponse` and `PhysicsProtocolType` (its
+  ranges per switch written on it) are `@internal` too. Also `@internal`: `EngineAPIType`,
+  `PhysicsBridge`, `OmitSync`, `RigidBodyWorkerEngine`, `ColliderProxyAPIType`, `WorldProxyAPIType`,
+  `ContactForceEventSnapshot`, `ENGINES`. Left public because an exported signature names them:
+  `RigidBodyAttachState` (`reattachRigidBody`), `PhysicsBodyActivity`, `PhysicsQueryObserver`
+  (`EngineRapier.ts`' exports, Phase 5's).
+- **Coverage:** `types/` 52 / 52 exports and 22 / 22 members, `protocol/` 111 / 111, `backends/`
+  1 / 1 (`docs.json` recorded). Past the ratchet, every member of `RigidBodyAPI`, `ColliderAPI`,
+  `JointAPI` and `WorldAPI` (type aliases, which it doesn't count), each params field and each
+  enum member has a summary. Each of the four APIs says once (`@remarks`) how the async forms and
+  the `*Sync` twins behave per worker target, and which twins answer on WORKER_THREAD from the
+  proxy's copy (checked against the proxies: `getUserDataSync` everywhere, `bodyTypeSync`,
+  `body1IdSync` / `body2IdSync`, the world's settings and lookups by id); the `@param x − text`
+  forms are gone. `PhysicsWorldTypes.ts` is 808 lines, ~370 of them the commented-out Rapier
+  members p421 / p423 / p250 cite.
+- **Wrong docs fixed:** `JointAxesMask` names the axes a GENERIC joint **locks**, not the free ones
+  (Rapier's raw binding calls the argument `lockedAxes`); `QueryFilterFlags`' `EXCLUDE_KINEMATIC` /
+  `EXCLUDE_DYNAMIC` comments were swapped (Rapier's own); `TempContactForceEvent` said not to keep
+  it, but both targets hand the callback a copy (`ContactForceEventSnapshot`); `PhysicsState` named
+  `performance.now()` and a `helpers.ts`; `ColliderParams.density` said "Mass", and `translation` /
+  `rotation` "only without a body" (they're relative to the parent body); the copy-pasted "Get or
+  set the numSolverIterations" on the PGS and CCD getters.
+- **Found, for later phases** (documented as they are, nothing changed):
+  - `isBeingDeleted` (rigid body, collider, joint) is never set to true anywhere, but
+    `MutualGravity.ts` reads it: Phase 4 sets it in the deletes, or p622 removes it.
+  - `ActiveHooks`, `ActiveCollisionTypes`, `CoefficientCombineRule`, `ActiveEvents` and
+    `SolverFlags` mirror Rapier's enums that nothing in the API takes or returns: no
+    `ColliderParams` field sets a collider's active hooks or collision types, so `PhysicsHooks`
+    can never run (and the facade's stepping passes none). Phase 8 files it: wire them into
+    `ColliderParams`, or drop them in p622.
+  - `WorldAPI.setMaxCcdSubstepsSync` is a one-way setter named like a sync getter (so `OmitSync`
+    drops it from the worker proxy's type): p622.
+  - `WorldAPI.step`'s `eventQueue` is ignored by the Rapier backend (documented).
+  - The app's `physicsTest.ts:420` comment says the GENERIC demo's `axesMask` "frees" Y: Phase 8
+    corrects it (an app comment; the demo can't show the difference, the box falls from rest).
+- **Checks:** `tsc`, the lint, `yarn test` (597 passed), `yarn verify:baselines` (only the 107 alias
+  moves; recorded), `yarn hub:build` (no new warning: no public signature names a type marked
+  `@internal`), `moveMap.ts` regenerated (729 files).
 
 ### Phase 4: the facade (D7, D8)
 

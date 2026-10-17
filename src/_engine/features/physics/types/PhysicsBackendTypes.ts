@@ -15,17 +15,21 @@ import type { PhysicsQueryObserver } from './PhysicsQueryTypes';
 import type { WorldAPI } from './PhysicsWorldTypes';
 
 /**
- * Physics Engine API, which handles the communication between
- * PhysicsAPI and EngineAPI. Each physics engine file (eg. EngineRapier.ts)
- * needs to have this signature.
+ * The backend contract: what a physics backend module (`backends/rapier/EngineRapier.ts`) exports,
+ * and what the facade (MAIN_THREAD) and the worker (WORKER_THREAD) call. Ids are the backend's own
+ * running integers; nothing here crosses a thread.
+ * @internal
  */
 export type EngineAPIType = {
+  /** Keeps the state and the loop state, and creates the world (none with `doNotCreateWorld`,
+   * then undefined). */
   init: (
     physicsState: PhysicsState,
     isDebugEnvironment: boolean,
     loopState: LoopState,
     doNotCreateWorld?: boolean
   ) => WorldAPI | undefined;
+  /** Creates the world; while one exists, returns it as it is (`deleteWorld` first to replace it). */
   createWorld: (
     gravity: PhysVector,
     opts?: {
@@ -34,27 +38,48 @@ export type EngineAPIType = {
       numInternalPgsIterations?: number;
     }
   ) => WorldAPI;
+  /** Creates a rigid body. */
   createRigidBody: (params: RigidBodyParams) => RigidBodyAPI;
+  /** Creates a collider, on the body `parentId` (or `params.parentId`) when given. */
   createCollider: (params: ColliderParams, parentId?: number) => ColliderAPI;
+  /** Creates rigid bodies, in order. */
   createRigidBodies: (params: RigidBodyParams[]) => RigidBodyAPI[];
+  /** Creates colliders, in order, each on its `params.parentId`. */
   createColliders: (params: ColliderParams[]) => ColliderAPI[];
+  /** Creates an impulse joint between two bodies. */
   createJoint: (params: JointParams) => JointAPI;
+  /** Creates impulse joints, in order. */
   createJoints: (params: JointParams[]) => JointAPI[];
+  /** Frees the world and forgets its bodies, colliders and joints. */
   deleteWorld: () => { worldDeleted: boolean };
+  /** Deletes a body, and with it its colliders and joints, whose ids it returns. */
   deleteRigidBody: (id: number) => { id: number; colliderIds: number[]; jointIds: number[] };
+  /** Deletes bodies, and with them their colliders and joints, whose ids it returns. */
   deleteRigidBodies: (id: number[]) => { ids: number[]; colliderIds: number[]; jointIds: number[] };
+  /** Deletes a collider, waking its body when `wakeUp`. */
   deleteCollider: (id: number, wakeUp?: boolean) => { id: number };
+  /** Deletes colliders, each waking its body when its `wakeUps` entry is true. */
   deleteColliders: (ids: number[], wakeUps?: boolean[]) => { ids: number[] };
+  /** Deletes a joint, waking its bodies when `wakeUp`. */
   deleteJoint: (id: number, wakeUp?: boolean) => { id: number };
+  /** Deletes joints, each waking its bodies when its `wakeUps` entry is true. */
   deleteJoints: (ids: number[], wakeUps?: boolean[]) => { ids: number[] };
+  /** The world serialized by the backend (undefined without a world); see p500. */
   takeSnapshot: () => Uint8Array | undefined;
+  /** Replaces the world with one restored from `takeSnapshot`'s bytes; see p500. */
   restoreSnapshot: (snapshot: Uint8Array) => WorldAPI;
+  /** The body with this id, or undefined. */
   getRigidBodyAPIWithId: (id: number) => RigidBodyAPI | undefined;
+  /** The collider with this id, or undefined. */
   getColliderAPIWithId: (id: number) => ColliderAPI | undefined;
+  /** The joint with this id, or undefined. */
   getJointAPIWithId: (id: number) => JointAPI | undefined;
   /** Enumerates the ids of all currently-live rigid bodies (worker per-step hot-path write-back). */
   getAllRigidBodyIds: () => IterableIterator<number>;
+  /** Runs one fixed step, collecting its events for `dispatchPendingEventRecords` /
+   * `drainPendingEventRecords`. */
   step: (eventQueue?: unknown, hooks?: unknown) => void;
+  /** The world's debug render lines (as {@link WorldAPI.debugRender}); needs a world. */
   debugRender: () => { vertices: Float32Array; colors: Float32Array } | undefined;
   /** WORKER_THREAD only: returns (and clears) collision/contact-force events accumulated
    * since the last call, for the worker's STEP handler to push via EVENTS_PUSH. */

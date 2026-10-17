@@ -75,9 +75,10 @@ export type RayColliderIntersectionAPI = {
   featureId: number | undefined;
 };
 
+/** The first collider a ray hit (`WorldAPI.castRay`), without the normal. */
 export type RayColliderHitAPI = {
   /**
-   * The handle of the collider hit by the ray.
+   * The collider hit by the ray.
    */
   collider: ColliderAPI;
   /**
@@ -88,9 +89,10 @@ export type RayColliderHitAPI = {
   timeOfImpact: number;
 };
 
+/** The first collider a cast shape hit (`WorldAPI.castShape`), with the contact on both. */
 export type ShapeCastHitAPI = {
   /**
-   * The handle of the collider hit by the cast shape.
+   * The collider hit by the cast shape.
    */
   collider: ColliderAPI;
   /**
@@ -132,10 +134,15 @@ export type PointProjection = {
   isInside: boolean;
 };
 
+/** Which part of a shape a ray hit (Rapier's numbers). */
 export enum FeatureType {
+  /** The ray hit a corner point; `featureId` is its index. */
   Vertex = 0,
+  /** The ray hit where two faces meet; `featureId` is its index. */
   Edge = 1,
+  /** The ray hit a face's inside; `featureId` is its index. */
   Face = 2,
+  /** Not known (some shapes don't tell). */
   Unknown = 3,
 }
 
@@ -172,11 +179,11 @@ export enum QueryFilterFlags {
    */
   EXCLUDE_FIXED = 1,
   /**
-   * Exclude from the query any collider attached to a dynamic rigid-body.
+   * Exclude from the query any collider attached to a kinematic rigid-body.
    */
   EXCLUDE_KINEMATIC = 2,
   /**
-   * Exclude from the query any collider attached to a kinematic rigid-body.
+   * Exclude from the query any collider attached to a dynamic rigid-body.
    */
   EXCLUDE_DYNAMIC = 4,
   /**

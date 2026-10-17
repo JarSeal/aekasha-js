@@ -1,3 +1,9 @@
+/**
+ * The physics worker messages' types, in ranges by switch: 0-199 the engine (the worker itself),
+ * 200-399 the world and its queries, 400-599 rigid bodies, 600-799 colliders, 800-999 joints. A
+ * number never changes meaning: a new message takes a new one.
+ * @internal
+ */
 export enum PhysicsProtocolType {
   ERROR = 0,
 

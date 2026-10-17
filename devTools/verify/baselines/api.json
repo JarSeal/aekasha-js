@@ -996,6 +996,13 @@
       "readPhysicsWallClock": "Function"
     },
     "src/_engine/features/physics/protocol/PhysicsDownProtocol.ts": {
+      "PhysicsDownProtocol": "TypeAlias",
+      "PhysicsResponse": "TypeAlias"
+    },
+    "src/_engine/features/physics/protocol/PhysicsProtocolType.ts": {
+      "PhysicsProtocolType": "Enum"
+    },
+    "src/_engine/features/physics/protocol/PhysicsResponses.ts": {
       "CollBorderRadiusResponse": "TypeAlias",
       "CollCollisionGroupsResponse": "TypeAlias",
       "CollContainsPointResponse": "TypeAlias",
@@ -1048,8 +1055,6 @@
       "JointGetUserDataResponse": "TypeAlias",
       "JointIsValidResponse": "TypeAlias",
       "JointLimitsEnabledResponse": "TypeAlias",
-      "PhysicsDownProtocol": "TypeAlias",
-      "PhysicsResponse": "TypeAlias",
       "RestoreSnapshotResponse": "TypeAlias",
       "RigidAdditionalSolverIterationsResponse": "TypeAlias",
       "RigidAngularDampingResponse": "TypeAlias",
@@ -1105,9 +1110,6 @@
       "WorldNumInternalPgsIterationsResponse": "TypeAlias",
       "WorldNumSolverIterationsResponse": "TypeAlias",
       "WorldTimestepResponse": "TypeAlias"
-    },
-    "src/_engine/features/physics/protocol/PhysicsProtocolType.ts": {
-      "PhysicsProtocolType": "Enum"
     },
     "src/_engine/features/physics/protocol/PhysicsUpProtocol.ts": {
       "PhysicsUpProtocol": "TypeAlias"

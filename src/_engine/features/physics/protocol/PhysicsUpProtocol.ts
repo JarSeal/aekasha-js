@@ -15,7 +15,13 @@ import type { JointMotorModel, JointParams } from '../types/PhysicsJointTypes';
 import type { PhysRay, QueryFilterFlags } from '../types/PhysicsQueryTypes';
 import type { PhysicsProtocolType } from './PhysicsProtocolType';
 
-/** Physics worker UP protocol (from main thread to worker) */
+/**
+ * Physics worker UP protocol (from main thread to worker): the requests (with a `requestId`,
+ * answered by a `PhysicsDownProtocol` message of the same `type` or an `ERROR`) and the
+ * one-way commands (`isOneWay`, or no reply expected). Plain data, through the physics transport
+ * (`transport/PhysicsTransport.ts`, whose contract it keeps).
+ * @internal
+ */
 export type PhysicsUpProtocol =
   // Engine --------------------------------------
   (

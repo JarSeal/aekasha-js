@@ -2,22 +2,22 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1801,
+      "documented": 1928,
       "total": 2293
     },
     "members": {
-      "documented": 331,
+      "documented": 339,
       "total": 434
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1757,
+        "documented": 1884,
         "total": 2230
       },
       "members": {
-        "documented": 281,
+        "documented": 289,
         "total": 354
       }
     },
@@ -365,7 +365,7 @@
     },
     "engine/features/physics/backends": {
       "exports": {
-        "documented": 0,
+        "documented": 1,
         "total": 1
       },
       "members": {
@@ -373,9 +373,7 @@
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "Engines#ENGINES"
-        ],
+        "exports": [],
         "members": []
       }
     },
@@ -429,7 +427,7 @@
     },
     "engine/features/physics/protocol": {
       "exports": {
-        "documented": 3,
+        "documented": 111,
         "total": 111
       },
       "members": {
@@ -437,116 +435,7 @@
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "PhysicsDownProtocol#CollBorderRadiusResponse",
-          "PhysicsDownProtocol#CollCollisionGroupsResponse",
-          "PhysicsDownProtocol#CollContainsPointResponse",
-          "PhysicsDownProtocol#CollDensityResponse",
-          "PhysicsDownProtocol#CollFrictionResponse",
-          "PhysicsDownProtocol#CollHalfExtentsResponse",
-          "PhysicsDownProtocol#CollHalfHeightResponse",
-          "PhysicsDownProtocol#CollHeightsResponse",
-          "PhysicsDownProtocol#CollIndicesResponse",
-          "PhysicsDownProtocol#CollIsEnabledResponse",
-          "PhysicsDownProtocol#CollIsSensorResponse",
-          "PhysicsDownProtocol#CollIsValidResponse",
-          "PhysicsDownProtocol#CollMassResponse",
-          "PhysicsDownProtocol#CollNormalResponse",
-          "PhysicsDownProtocol#CollRadiusResponse",
-          "PhysicsDownProtocol#CollRestitutionResponse",
-          "PhysicsDownProtocol#CollRotationResponse",
-          "PhysicsDownProtocol#CollShapeTypeResponse",
-          "PhysicsDownProtocol#CollSolverGroupsResponse",
-          "PhysicsDownProtocol#CollTranslationResponse",
-          "PhysicsDownProtocol#CollUserDataResponse",
-          "PhysicsDownProtocol#CollVerticesResponse",
-          "PhysicsDownProtocol#CollWrtParentRotationResponse",
-          "PhysicsDownProtocol#CollWrtParentTranslationResponse",
-          "PhysicsDownProtocol#CreateColliderResponse",
-          "PhysicsDownProtocol#CreateCollidersResponse",
-          "PhysicsDownProtocol#CreateJointResponse",
-          "PhysicsDownProtocol#CreateJointsResponse",
-          "PhysicsDownProtocol#CreatePhysicsEntityResponse",
-          "PhysicsDownProtocol#CreateRigidBodiesResponse",
-          "PhysicsDownProtocol#CreateRigidBodyResponse",
-          "PhysicsDownProtocol#CreateWorldResponse",
-          "PhysicsDownProtocol#DebugStatePushMessage",
-          "PhysicsDownProtocol#DeleteColliderResponse",
-          "PhysicsDownProtocol#DeleteCollidersResponse",
-          "PhysicsDownProtocol#DeleteJointResponse",
-          "PhysicsDownProtocol#DeleteJointsResponse",
-          "PhysicsDownProtocol#DeleteRigidBodiesResponse",
-          "PhysicsDownProtocol#DeleteRigidBodyResponse",
-          "PhysicsDownProtocol#DeleteWorldResponse",
-          "PhysicsDownProtocol#ErrorResponse",
-          "PhysicsDownProtocol#EventsPushMessage",
-          "PhysicsDownProtocol#FlushResponse",
-          "PhysicsDownProtocol#InitPhysicsResponse",
-          "PhysicsDownProtocol#JointAnchor1Response",
-          "PhysicsDownProtocol#JointAnchor2Response",
-          "PhysicsDownProtocol#JointBody1IdResponse",
-          "PhysicsDownProtocol#JointBody2IdResponse",
-          "PhysicsDownProtocol#JointContactsEnabledResponse",
-          "PhysicsDownProtocol#JointGetUserDataResponse",
-          "PhysicsDownProtocol#JointIsValidResponse",
-          "PhysicsDownProtocol#JointLimitsEnabledResponse",
-          "PhysicsDownProtocol#RestoreSnapshotResponse",
-          "PhysicsDownProtocol#RigidAdditionalSolverIterationsResponse",
-          "PhysicsDownProtocol#RigidAngularDampingResponse",
-          "PhysicsDownProtocol#RigidAngvelResponse",
-          "PhysicsDownProtocol#RigidBodyTypeResponse",
-          "PhysicsDownProtocol#RigidColliderResponse",
-          "PhysicsDownProtocol#RigidDetachResponse",
-          "PhysicsDownProtocol#RigidDominanceGroupResponse",
-          "PhysicsDownProtocol#RigidEffectiveInvMassResponse",
-          "PhysicsDownProtocol#RigidGetUserDataResponse",
-          "PhysicsDownProtocol#RigidGravityScaleResponse",
-          "PhysicsDownProtocol#RigidInvMassResponse",
-          "PhysicsDownProtocol#RigidInvPrincipalInertiaResponse",
-          "PhysicsDownProtocol#RigidIsCcdEnabledResponse",
-          "PhysicsDownProtocol#RigidIsDynamicResponse",
-          "PhysicsDownProtocol#RigidIsEnabledResponse",
-          "PhysicsDownProtocol#RigidIsFixedResponse",
-          "PhysicsDownProtocol#RigidIsKinematicResponse",
-          "PhysicsDownProtocol#RigidIsMovingResponse",
-          "PhysicsDownProtocol#RigidIsSleepingResponse",
-          "PhysicsDownProtocol#RigidIsValidResponse",
-          "PhysicsDownProtocol#RigidLinearDampingResponse",
-          "PhysicsDownProtocol#RigidLinvelResponse",
-          "PhysicsDownProtocol#RigidLocalComResponse",
-          "PhysicsDownProtocol#RigidMassResponse",
-          "PhysicsDownProtocol#RigidNextRotationResponse",
-          "PhysicsDownProtocol#RigidNextTranslationResponse",
-          "PhysicsDownProtocol#RigidNumCollidersResponse",
-          "PhysicsDownProtocol#RigidPrincipalInertiaLocalFrameResponse",
-          "PhysicsDownProtocol#RigidPrincipalInertiaResponse",
-          "PhysicsDownProtocol#RigidReadPositionsResponse",
-          "PhysicsDownProtocol#RigidReattachResponse",
-          "PhysicsDownProtocol#RigidRotationResponse",
-          "PhysicsDownProtocol#RigidSoftCcdPredictionResponse",
-          "PhysicsDownProtocol#RigidTranslationResponse",
-          "PhysicsDownProtocol#RigidUserForceResponse",
-          "PhysicsDownProtocol#RigidUserTorqueResponse",
-          "PhysicsDownProtocol#RigidVelocityAtPointResponse",
-          "PhysicsDownProtocol#RigidWorldComResponse",
-          "PhysicsDownProtocol#SetDebugStateTrackingResponse",
-          "PhysicsDownProtocol#TakeSnapshotResponse",
-          "PhysicsDownProtocol#TransformsPushMessage",
-          "PhysicsDownProtocol#WorldCastRayAndGetNormalResponse",
-          "PhysicsDownProtocol#WorldCastRayResponse",
-          "PhysicsDownProtocol#WorldCastShapeResponse",
-          "PhysicsDownProtocol#WorldContactPairsResponse",
-          "PhysicsDownProtocol#WorldGravityResponse",
-          "PhysicsDownProtocol#WorldIntersectionPairResponse",
-          "PhysicsDownProtocol#WorldIntersectionPairsWithResponse",
-          "PhysicsDownProtocol#WorldIntersectionsWithRayResponse",
-          "PhysicsDownProtocol#WorldLengthUnitResponse",
-          "PhysicsDownProtocol#WorldMaxCcdSubstepsResponse",
-          "PhysicsDownProtocol#WorldNumInternalPgsIterationsResponse",
-          "PhysicsDownProtocol#WorldNumSolverIterationsResponse",
-          "PhysicsDownProtocol#WorldTimestepResponse",
-          "PhysicsProtocolType#PhysicsProtocolType"
-        ],
+        "exports": [],
         "members": []
       }
     },
@@ -566,44 +455,16 @@
     },
     "engine/features/physics/types": {
       "exports": {
-        "documented": 34,
+        "documented": 52,
         "total": 52
       },
       "members": {
-        "documented": 14,
+        "documented": 22,
         "total": 22
       },
       "undocumented": {
-        "exports": [
-          "PhysicsBodyTypes#RigidBodyParams",
-          "PhysicsBodyTypes#RigidBodyWorkerEngine",
-          "PhysicsColliderTypes#ActiveHooks",
-          "PhysicsColliderTypes#ColliderParams",
-          "PhysicsColliderTypes#ColliderProxyAPIType",
-          "PhysicsCommonTypes#PhysRotation",
-          "PhysicsCommonTypes#PhysVector",
-          "PhysicsConfigTypes#PhysicsBackgroundBehavior",
-          "PhysicsConfigTypes#PhysicsEngine",
-          "PhysicsConfigTypes#PhysicsInterpolationMode",
-          "PhysicsConfigTypes#PhysicsState",
-          "PhysicsConfigTypes#PhysicsWorkerTarget",
-          "PhysicsEventTypes#PhysicsHooks",
-          "PhysicsEventTypes#SolverFlags",
-          "PhysicsQueryTypes#FeatureType",
-          "PhysicsQueryTypes#RayColliderHitAPI",
-          "PhysicsQueryTypes#ShapeCastHitAPI",
-          "PhysicsWorldTypes#WorldProxyAPIType"
-        ],
-        "members": [
-          "PhysicsCommonTypes#PhysRotation.w",
-          "PhysicsCommonTypes#PhysRotation.x",
-          "PhysicsCommonTypes#PhysRotation.y",
-          "PhysicsCommonTypes#PhysRotation.z",
-          "PhysicsCommonTypes#PhysVector.x",
-          "PhysicsCommonTypes#PhysVector.y",
-          "PhysicsCommonTypes#PhysVector.z",
-          "PhysicsEventTypes#ContactForceEventSnapshot.constructor"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "engine/features/physics/worker": {

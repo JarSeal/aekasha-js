@@ -309,8 +309,8 @@
   "main": {
     "chunk": "assets/index.js",
     "modules": 162,
-    "rendered": 4079601,
-    "gzip": 838715
+    "rendered": 4079655,
+    "gzip": 838751
   },
   "mainGroups": {
     "_engine/features/character": {
@@ -335,8 +335,8 @@
     },
     "_engine/features/physics": {
       "modules": 15,
-      "rendered": 166259,
-      "gzip": 35600
+      "rendered": 166313,
+      "gzip": 35636
     },
     "_engine/features/postfx": {
       "modules": 2,

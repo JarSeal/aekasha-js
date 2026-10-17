@@ -32,6 +32,7 @@ import {
 import type { DebugModuleRef } from '../../kernel/config/DebugModules';
 import { initWorker } from '../../kernel/loop/Workers';
 import { loadDebugModule, loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
+import type { PhysicsDownProtocol } from './protocol/PhysicsDownProtocol';
 import type {
   CollBorderRadiusResponse,
   CollCollisionGroupsResponse,
@@ -75,7 +76,6 @@ import type {
   JointGetUserDataResponse,
   JointIsValidResponse,
   JointLimitsEnabledResponse,
-  PhysicsDownProtocol,
   RestoreSnapshotResponse,
   RigidAdditionalSolverIterationsResponse,
   RigidAngularDampingResponse,
@@ -125,7 +125,7 @@ import type {
   WorldNumInternalPgsIterationsResponse,
   WorldNumSolverIterationsResponse,
   WorldTimestepResponse,
-} from './protocol/PhysicsDownProtocol';
+} from './protocol/PhysicsResponses';
 import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
 import type { PhysicsUpProtocol } from './protocol/PhysicsUpProtocol';
 import type { EngineAPIType } from './types/PhysicsBackendTypes';
