@@ -36,6 +36,24 @@ import {
   getRigidBodyAPIWithId,
 } from '../RapierState';
 
+/** The one Rapier ray every ray query reuses (p614 R4), made on the first query (Rapier is loaded
+ * by then). Rapier reads its origin and dir into raw vectors before a query runs, so a query
+ * started from an intersectionsWithRay callback can set it again. */
+let scratchRay: Rapier.Ray | undefined;
+
+/** `ray` as the scratch Rapier ray. */
+const toRapierRay = (ray: PhysRay) => {
+  scratchRay ??= new backend.RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+  const { origin, dir } = scratchRay;
+  origin.x = ray.origin.x;
+  origin.y = ray.origin.y;
+  origin.z = ray.origin.z;
+  dir.x = ray.dir.x;
+  dir.y = ray.dir.y;
+  dir.z = ray.dir.z;
+  return scratchRay;
+};
+
 /**
  * The world as a {@link WorldAPI} on Rapier's world (`backend.world`). Its async forms run their
  * `*Sync` twins.
@@ -233,7 +251,7 @@ export class EngineWorldProxyAPI implements WorldAPI {
   ): RayColliderHitAPI | null {
     const observer = backend.queryObserver;
     const token = observer ? observer.onQuery('CAST_RAY', ray.origin, ray.dir, maxToi, debug) : 0;
-    const rapierRay = new backend.RAPIER.Ray(ray.origin, ray.dir);
+    const rapierRay = toRapierRay(ray);
     const hit = backend.world.castRay(
       rapierRay,
       maxToi,
@@ -368,7 +386,7 @@ export class EngineWorldProxyAPI implements WorldAPI {
     const token = observer
       ? observer.onQuery('CAST_RAY_AND_GET_NORMAL', ray.origin, ray.dir, maxToi, debug)
       : 0;
-    const rapierRay = new backend.RAPIER.Ray(ray.origin, ray.dir);
+    const rapierRay = toRapierRay(ray);
     const inter = backend.world.castRayAndGetNormal(
       rapierRay,
       maxToi,
@@ -436,7 +454,7 @@ export class EngineWorldProxyAPI implements WorldAPI {
     let hitCount = 0;
     let firstHitToi = Infinity;
     backend.world.intersectionsWithRay(
-      new backend.RAPIER.Ray(ray.origin, ray.dir),
+      toRapierRay(ray),
       maxToi,
       solid,
       (inter) => {

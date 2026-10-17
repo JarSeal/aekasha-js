@@ -6,8 +6,8 @@
       "total": 2376
     },
     "members": {
-      "documented": 870,
-      "total": 964
+      "documented": 874,
+      "total": 968
     }
   },
   "subtrees": {
@@ -17,8 +17,8 @@
         "total": 2313
       },
       "members": {
-        "documented": 820,
-        "total": 884
+        "documented": 824,
+        "total": 888
       }
     },
     "toolkit": {
@@ -314,8 +314,8 @@
         "total": 203
       },
       "members": {
-        "documented": 14,
-        "total": 30
+        "documented": 18,
+        "total": 34
       },
       "undocumented": {
         "exports": [

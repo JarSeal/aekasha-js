@@ -99,4 +99,28 @@ describe('EngineRapier', () => {
     ];
     for (const [ours, rapiers] of pairs) expect(members(ours)).toEqual(members(rapiers));
   });
+
+  it('reuses one Rapier ray across queries, also from inside an intersectionsWithRay callback (R4)', () => {
+    const down = { x: 0, y: -1, z: 0 };
+    // The ground's top is at y = 0.5 (away from the bodies the tests above put at the origin)
+    const hit = world.castRaySync({ origin: { x: 4, y: 3, z: 4 }, dir: down }, 10, true);
+    expect(hit?.timeOfImpact).toBeCloseTo(2.5);
+    const miss = world.castRaySync({ origin: { x: 20, y: 3, z: 0 }, dir: down }, 10, true);
+    expect(miss).toBeNull();
+
+    const nested: (number | null)[] = [];
+    world.intersectionsWithRaySync(
+      { origin: { x: 4, y: 3, z: 4 }, dir: down },
+      10,
+      true,
+      (intersect) => {
+        // A query in the callback sets the shared ray again: the outer query has read it already
+        const inner = world.castRaySync({ origin: { x: 3, y: 2, z: 3 }, dir: down }, 10, true);
+        nested.push(intersect.collider.id === groundId ? inner?.timeOfImpact ?? null : null);
+        return true;
+      }
+    );
+    expect(nested.filter((toi) => toi !== null)).toHaveLength(1);
+    expect(nested.find((toi) => toi !== null)).toBeCloseTo(1.5);
+  });
 });

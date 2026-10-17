@@ -249,6 +249,7 @@ export type PhysicsDownProtocol =
     // Transforms hot path (unsolicited push, MESSAGE_BATCH fallback only) ----
     | {
         type: PhysicsProtocolType.TRANSFORMS_PUSH;
+        /** The worker bank's used slots and its header (PhysicsTransformBuffer.copyUsedBank). */
         buffer: ArrayBuffer;
         /** Step statistics (p027), only populated when PhysicsState.stepStatsEnabled is on.
          * MESSAGE_BATCH mode only — the SHARED_MEMORY transport has no per-step message, so

@@ -1012,6 +1012,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/physics/PhysicsTransformBuffer.test.ts": {
+      "to": "src/_engine/features/physics/PhysicsTransformBuffer.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/physics/PhysicsTransformBuffer.ts": {
       "to": "src/_engine/features/physics/PhysicsTransformBuffer.ts",
       "action": "keep",

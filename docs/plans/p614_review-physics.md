@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: in progress | Phases 0-5 implemented
 Category: Refactoring, Documentation, Physics
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md, p511_network-transport-and-replication.md (the transport interface)
@@ -856,7 +856,7 @@ As built, steps 2 and 3 (2026-10-17):
   `physicsTiers` `49157b8f` and the gym `84a78084` (the same in all three targets), the gym's
   character path hash `26f43551` (`MAIN_THREAD`).
 
-### Phase 5: the backend (D7, D11)
+### Phase 5: the backend (D7, D11) — done
 
 1. `EngineRapier.ts` into its modules and `proxies/`; R6-R8.
 2. D11 (R4, R5, W3) with Phase 0's measurements repeated; the worker switches typed against
@@ -943,6 +943,58 @@ As built, section 2 (2026-10-17, on `173cad9`): R6-R8, W2, the docs.
 - **Checks:** `tsc` (both projects), the lint, `yarn test` (604 passed, the enum test new),
   `moveMap.ts` regenerated (754 files, the same 41 boundary violations, 0 feature cycles),
   `yarn hub:build` (no warning).
+
+As built, section 3 (2026-10-17, on `4521fb0`): D11 and the measurements.
+
+- **R4:** the world proxy's three ray queries share one Rapier `Ray` (`toRapierRay`, made on the
+  first query), its origin and dir set per call. Rapier 0.19.3 reads them into raw vectors
+  (`intoRaw`) before a query runs (checked in its bundle), so a query started from an
+  `intersectionsWithRay` callback can reuse it; a test does exactly that. The shape cache stays
+  dropped (Phase 0): no shape cast showed among the physics allocators in either run.
+- **W3:** `PhysicsTransformBuffer` keeps each slot's body id (`getUsedSlotCount`, `getSlotId`),
+  so the worker's write-back walks the slots instead of every body (FIXED ones have none), and
+  `writeSlotFrom` writes a body straight into its slot through `readPoseInto` /
+  `readVelocitiesInto`. A `MESSAGE_BATCH` push carries only the used slots (up to the highest
+  one allocated, freed ones included) and the header (`copyUsedBank`); the main thread's wrapper
+  keeps its own buffer and copies each push into it (`receiveUsedBank`), which replaces
+  `rebind` and its new views per push. `buffer` is `readonly` now.
+- **R5:** not changeable. Rapier's getters allocate per read (a raw WASM vector and a JS
+  `Vector`), and it has no allocation-free one; the write-back makes the same four reads per
+  body as before, through `readPoseInto` / `readVelocitiesInto` instead of `pos` / `rot` /
+  `linvel()` / `angvel()`.
+- **Measurements** (Phase 0's, repeated with a rebuilt harness: Playwright on the dev server,
+  `?isDebug=true` with the scene runner's `AEK_debugPhysicsApiBoot` overrides, 12 s after a 10 s
+  settle, the gym with both players walking and turning; CDP heap sampling at 512 B, GC from trace
+  events, the worker's times from a temporary patch in `writeBackTransforms`, reverted; the
+  harness is kept in the gitignored `.cache/p614/`). Before = section 2's code, after = D11, same
+  session:
+
+  | | `physicsTiers` SAB | `physicsTiers` MSG | `physicsTiers` main | gym SAB | gym MSG | gym main |
+  | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+  | Write-back avg, ms | 0.097 → 0.125 | 0.096 → 0.092 | — | 0.014 → 0.013 | 0.015 → 0.011 | — |
+  | `MESSAGE_BATCH` copy avg, ms | — | 0.015 → 0.008 | — | — | 0.015 → 0.002 | — |
+  | `TRANSFORMS_PUSH` size, B | — | 106,504 → 35,732 | — | — | 106,504 → 736 | — |
+  | Physics allocations, KiB / frame | 10.1 → 10.3 | 10.8 → 10.8 | 16.3 → 16.2 | 11.0 → 11.0 | 10.7 → 11.6 | 7.5 → 7.6 |
+  | Main-thread GC, ms / frame | 0.040 → 0.047 | 0.057 → 0.048 | 0.040 → 0.040 | 0.019 → 0.021 | 0.023 → 0.017 | 0.017 → 0.017 |
+
+  The push is the gain: 99 % smaller in the gym, and its copy a seventh of the time.
+  `physicsTiers` keeps 687 used slots (its tiers free and reuse them), so its push is a third.
+  The write-back and the allocations didn't move beyond the run-to-run noise: SAB and MSG run
+  the same write-back code and differ by 0.03 ms in one run, and Phase 0 measured twice these
+  write-back times on the same scenes. The heap sampler doesn't see an `ArrayBuffer`'s backing
+  store, so the 105 kB per frame the push no longer allocates shows at most in the GC column.
+- **Tests:** `PhysicsTransformBuffer.test.ts` (new: the slot walk, `writeSlotFrom`, a push and
+  a larger one copied in with their step stamps) and the ray reuse in `EngineRapier.test.ts`.
+  `yarn test` 608 passed.
+- **Bundle:** the worker chunk +0.2 kB gzip (the buffer's new methods); `assets/index.js` +1.9
+  kB rendered (+0.5 kB in the visualizer's per-module gzip): `PhysicsTransformBuffer` is one
+  class for both sides, so the main chunk carries the worker's methods too. The two
+  `PhysicsWorker.js` chunks swapped their `#2` key again. `api.json` unchanged; `docs.json`:
+  the buffer's 4 new members documented. Recorded.
+- **Step 3:** `yarn verify:scenes`: 104 passed, nothing recorded, in 408 s. No hash or snapshot
+  moved: `physicsTiers` `49157b8f` and the gym `84a78084` (the same in all three targets), the
+  gym's character path hash `26f43551` (`MAIN_THREAD`). Also `tsc` (both projects), the lint,
+  `yarn hub:build` (no warning), `moveMap.ts` regenerated.
 
 ### Phase 6: entities, tiers and the policy
 

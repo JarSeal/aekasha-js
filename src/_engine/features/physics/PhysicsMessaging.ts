@@ -262,9 +262,9 @@ const onWorkerMessage = (data: PhysicsDownProtocol) => {
     return;
   } else if (type === PhysicsProtocolType.TRANSFORMS_PUSH) {
     // Unsolicited push (MESSAGE_BATCH fallback) — no requestId, not a response to resolve.
-    // The wrapper is built once per world and only re-pointed at each new copy after that.
-    if (facade.transformBuffer) facade.transformBuffer.rebind(data.buffer);
-    else facade.transformBuffer = new PhysicsTransformBuffer(facade.state.maxBodies, data.buffer);
+    // The wrapper is built once per world, over a buffer of its own that each push is copied into.
+    facade.transformBuffer ??= new PhysicsTransformBuffer(facade.state.maxBodies);
+    facade.transformBuffer.receiveUsedBank(data.buffer);
     // Step stats (p027) ride along on this message in MESSAGE_BATCH mode, so the receipt
     // time here is the return leg's real arrival time. Only present while measuring.
     recordPushedStepStats(data);

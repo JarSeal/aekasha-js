@@ -1,4 +1,4 @@
-import type { PoseArray } from './types/PhysicsBodyTypes';
+import type { PoseArray, RigidBodyAPI } from './types/PhysicsBodyTypes';
 import type { PhysRotation, PhysVector } from './types/PhysicsCommonTypes';
 
 /** Float32 fields per slot: position(3) + quaternion(4) + linvel(3) + angvel(3). */
@@ -15,6 +15,9 @@ export const PHYSICS_TRANSFORM_SHARED_BANKS = 3;
  * snapshot the main thread hasn't latched yet. */
 const CONTROL_INDEX_MASK = 0b011;
 const CONTROL_FRESH = 0b100;
+
+/** Bytes of a bank's header. */
+const HEADER_BYTES = PHYSICS_TRANSFORM_HEADER_INTS * Int32Array.BYTES_PER_ELEMENT;
 
 /** Bytes per bank: the float slots plus that bank's own header. */
 const getBankByteLength = (maxBodies: number) =>
@@ -50,7 +53,7 @@ export function createPhysicsTransformArrayBuffer(
  * The worker is the allocation authority (allocateSlot/freeSlot tie to rigid
  * body creation/deletion there) and writes into it after every step(). The
  * main thread only ever wraps an existing buffer (SHARED_MEMORY: the same
- * SharedArrayBuffer; MESSAGE_BATCH: the latest received copy) and reads by
+ * SharedArrayBuffer; MESSAGE_BATCH: its own, which receiveUsedBank fills from each push) and reads by
  * the slot number delivered in the rigid body's create response - it never
  * allocates its own slots. A slot number means the same slot in every bank.
  *
@@ -64,8 +67,9 @@ export function createPhysicsTransformArrayBuffer(
 export class PhysicsTransformBuffer {
   readonly maxBodies: number;
   readonly bankCount: number;
-  /** Replaced only by rebind() (MESSAGE_BATCH main-thread copies). */
-  buffer: ArrayBuffer | SharedArrayBuffer;
+  /** The backing buffer: the SharedArrayBuffer both sides wrap (SHARED_MEMORY), or the side's
+   * own (MESSAGE_BATCH: the worker's back bank, the main thread's copy of the pushes). */
+  readonly buffer: ArrayBuffer | SharedArrayBuffer;
   /** Per-bank views, created once per buffer so that switching banks never allocates. */
   private bankFloats: Float32Array[] = [];
   /** Per-bank header: a write counter bumped once per worker write-back, and the step index
@@ -87,6 +91,8 @@ export class PhysicsTransformBuffer {
   private readHeader!: Int32Array;
 
   private readonly slotById = new Map<number, number>();
+  /** Each used slot's body id, -1 for a freed one (writeSlotFrom's walk). Worker-side only. */
+  private readonly idBySlot: number[] = [];
   private readonly freeSlots: number[] = [];
   private liveCount = 0;
 
@@ -127,12 +133,26 @@ export class PhysicsTransformBuffer {
     this.readHeader = this.bankHeaders[this.frontBank];
   }
 
-  /** Re-points this wrapper at another buffer of the same layout. For the MESSAGE_BATCH main
-   * thread, which receives a fresh copy on every step: new views per step instead of a whole
-   * new wrapper (with its own slot map). Main-thread only — the slot map isn't touched. */
-  rebind(buffer: ArrayBuffer | SharedArrayBuffer): void {
-    this.buffer = buffer;
-    this.createViews();
+  /** The used part of the back bank (copyUsedBank's copy) into the read bank: the MESSAGE_BATCH
+   * main thread's wrapper keeps one buffer of its own and copies each push into it. A slot past
+   * the copy keeps what it had, which no body reads: a body's slot is under the used count from
+   * its creation on. Main-thread only. */
+  receiveUsedBank(buffer: ArrayBuffer): void {
+    const floatCount = (buffer.byteLength - HEADER_BYTES) / Float32Array.BYTES_PER_ELEMENT;
+    this.readFloats.set(new Float32Array(buffer, 0, floatCount));
+    this.readHeader.set(new Int32Array(buffer, buffer.byteLength - HEADER_BYTES));
+  }
+
+  /** The back bank's used slots (up to the highest one allocated) and its header, copied into a
+   * new buffer laid out as [slots][header] (MESSAGE_BATCH pushes: a few hundred bytes for a
+   * dozen bodies instead of the whole bank). Worker-side only, after publish(), which with one
+   * bank leaves the back bank in place. */
+  copyUsedBank(): ArrayBuffer {
+    const floatCount = this.liveCount * PHYSICS_TRANSFORM_FIELD_COUNT;
+    const copy = new ArrayBuffer(floatCount * Float32Array.BYTES_PER_ELEMENT + HEADER_BYTES);
+    new Float32Array(copy, 0, floatCount).set(this.writeFloats.subarray(0, floatCount));
+    new Int32Array(copy, copy.byteLength - HEADER_BYTES).set(this.writeHeader);
+    return copy;
   }
 
   /** Marks a completed write-back of all slots into the back bank, stamped with the step index
@@ -192,6 +212,7 @@ export class PhysicsTransformBuffer {
     if (slot >= this.maxBodies) return -1;
     if (slot === this.liveCount) this.liveCount++;
     this.slotById.set(id, slot);
+    this.idBySlot[slot] = id;
     return slot;
   }
 
@@ -203,9 +224,29 @@ export class PhysicsTransformBuffer {
     const slot = this.slotById.get(id);
     if (slot === undefined) return;
     this.slotById.delete(id);
+    this.idBySlot[slot] = -1;
     const o = slot * PHYSICS_TRANSFORM_FIELD_COUNT;
     this.writeFloats.fill(0, o, o + PHYSICS_TRANSFORM_FIELD_COUNT);
     this.freeSlots.push(slot);
+  }
+
+  /** The slots used so far (up to the highest one allocated, freed ones included): the bound of
+   * a walk over getSlotId. Worker-side only. */
+  getUsedSlotCount(): number {
+    return this.liveCount;
+  }
+
+  /** The body id in a slot, or -1 for a freed one. Worker-side only. */
+  getSlotId(slot: number): number {
+    return this.idBySlot[slot] ?? -1;
+  }
+
+  /** Writes a body's pose and velocities into its slot of the back bank, read straight from the
+   * body (readPoseInto / readVelocitiesInto), with no objects in between. Worker-side only. */
+  writeSlotFrom(slot: number, body: Pick<RigidBodyAPI, 'readPoseInto' | 'readVelocitiesInto'>) {
+    const o = slot * PHYSICS_TRANSFORM_FIELD_COUNT;
+    body.readPoseInto(this.writeFloats, o);
+    body.readVelocitiesInto(this.writeFloats, o + 7);
   }
 
   /** Looks up the slot for a rigid body id, or -1 if it has none. */

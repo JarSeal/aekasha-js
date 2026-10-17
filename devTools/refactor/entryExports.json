@@ -41,8 +41,8 @@
     "aekasha/physics": {
       "public": 23,
       "crossEntry": 27,
-      "internal": 281,
-      "unreferenced": 110
+      "internal": 286,
+      "unreferenced": 105
     },
     "aekasha/postfx": {
       "public": 7,
@@ -8004,6 +8004,20 @@
           "usage": "internal"
         }
       },
+      "src/_engine/features/physics/backends/rapier/RapierEnums.ts": {
+        "fromRapierBodyType": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "fromRapierShapeType": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "toRapierBodyType": {
+          "kind": "Function",
+          "usage": "internal"
+        }
+      },
       "src/_engine/features/physics/backends/rapier/RapierEvents.ts": {
         "cleanupColliderEventRegistrations": {
           "kind": "Function",
@@ -9078,7 +9092,7 @@
         },
         "PHYSICS_TRANSFORM_FIELD_COUNT": {
           "kind": "Variable",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "PHYSICS_TRANSFORM_HEADER_INTS": {
           "kind": "Variable",
@@ -9094,33 +9108,17 @@
         }
       },
       "src/_engine/features/physics/PhysicsUtils.ts": {
-        "getColliderShapeName": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
         "getCollOrRigidId": {
           "kind": "Function",
           "usage": "internal"
-        },
-        "getEngineAPI": {
-          "kind": "Function",
-          "usage": "unreferenced"
         },
         "getPhysicsEngine": {
           "kind": "Function",
           "usage": "internal"
         },
-        "getPhysicsEngineKey": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
         "initPhysicsEngine": {
           "kind": "Function",
           "usage": "internal"
-        },
-        "setPhysicsPauseTime": {
-          "kind": "Function",
-          "usage": "unreferenced"
         },
         "ValidProtocolTypes": {
           "kind": "Variable",
@@ -9196,6 +9194,10 @@
           "usage": "internal"
         },
         "PhysicsResponse": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "PhysicsWorkerReply": {
           "kind": "TypeAlias",
           "usage": "internal"
         }

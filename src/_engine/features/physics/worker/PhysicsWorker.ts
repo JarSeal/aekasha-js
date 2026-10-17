@@ -340,8 +340,8 @@ const sendMessageSimple = (message: PhysicsDownProtocol, transfer?: Transferable
   transport.send(message, transfer);
 
 /** Writes every slotted rigid body's transform into the hot-path buffer after a step, then
- * (MESSAGE_BATCH fallback only) pushes a fresh copy to the main thread as one Transferable
- * message — never one message per body. Bodies created FIXED have no slot (p352): they never
+ * (MESSAGE_BATCH fallback only) pushes a copy of the used slots to the main thread as one
+ * Transferable message — never one message per body. Bodies created FIXED have no slot (p352): they never
  * move under simulation, and an explicit reposition (setTranslation/setRotation) reaches the
  * main thread through the body's proxy, which keeps the pose it was given. */
 const writeBackTransforms = (stats?: StepStats) => {
@@ -355,17 +355,17 @@ const writeBackTransforms = (stats?: StepStats) => {
     stepStatsFloats[PHYSICS_STEP_STATS_SLOTS.SLEEPING_BODIES] = stats.sleeping;
   }
   if (!transformBuffer) return;
-  for (const id of engAPI.getAllRigidBodyIds()) {
-    const slot = transformBuffer.getSlot(id);
-    if (slot === -1) continue;
+  // The slots, not every body: a FIXED body has none (p614 W3)
+  for (let slot = 0, used = transformBuffer.getUsedSlotCount(); slot < used; slot++) {
+    const id = transformBuffer.getSlotId(slot);
+    if (id === -1) continue;
     const rb = engAPI.getRigidBodyAPIWithId(id);
-    if (!rb) continue;
-    transformBuffer.setTransform(slot, rb.pos, rb.rot);
-    transformBuffer.setVelocity(slot, rb.linvel(), rb.angvel());
+    if (rb) transformBuffer.writeSlotFrom(slot, rb);
   }
   transformBuffer.publish(stepsExecuted);
   if (!resolvedUseSAB) {
-    const copy = transformBuffer.buffer.slice(0) as ArrayBuffer;
+    // The used slots only (p614 W3): the whole bank is maxBodies × 52 B
+    const copy = transformBuffer.copyUsedBank();
     sendMessageSimple(
       {
         type: PhysicsProtocolType.TRANSFORMS_PUSH,

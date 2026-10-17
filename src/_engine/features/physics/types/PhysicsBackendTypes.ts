@@ -74,7 +74,7 @@ export type EngineAPIType = {
   getColliderAPIWithId: (id: number) => ColliderAPI | undefined;
   /** The joint with this id, or undefined. */
   getJointAPIWithId: (id: number) => JointAPI | undefined;
-  /** Enumerates the ids of all currently-live rigid bodies (worker per-step hot-path write-back). */
+  /** Enumerates the ids of all currently-live rigid bodies. */
   getAllRigidBodyIds: () => IterableIterator<number>;
   /** Runs one fixed step, collecting its events for `dispatchPendingEventRecords` /
    * `drainPendingEventRecords`. */
