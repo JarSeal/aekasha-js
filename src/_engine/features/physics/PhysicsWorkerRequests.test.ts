@@ -87,15 +87,11 @@ import { initEnvironment, loadConfig } from '../../kernel/config/Config';
 import * as THREE from 'three/webgpu';
 import { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
-import {
-  createCollider,
-  createJoint,
-  createPhysicsWorld,
-  createRigidBodies,
-  getPhysicsWorld,
-  initPhysics,
-  stopPhysics,
-} from './PhysicsAPI';
+import { createRigidBodies } from './PhysicsBodies';
+import { createCollider } from './PhysicsColliders';
+import { createJoint } from './PhysicsJoints';
+import { getPhysicsWorld } from './PhysicsState';
+import { createPhysicsWorld, initPhysics, stopPhysics } from './PhysicsWorld';
 import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
 import { createPhysicsEntity, deleteAllPhysicsEntities } from './PhysicsEntity';
 // The worker's own backend module: the in-process worker imports the same instance

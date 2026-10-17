@@ -3,7 +3,8 @@ import { CMP, type TCMP } from '../../../ui/CMP';
 import { lsGetItem, lsSetItem, lsSubscribe } from '../../../utils/LocalAndSessionStorage';
 import { llog } from '../../../utils/Logger';
 import { getCharacterById } from '../Character';
-import { getPhysicsSnapshotStepIndex, getPhysicsState } from '../../physics/PhysicsAPI';
+import { getPhysicsState } from '../../physics/PhysicsState';
+import { getPhysicsSnapshotStepIndex } from '../../physics/PhysicsStepping';
 import type { CharacterObject } from '../CharacterTypes';
 import {
   createSceneMainLooper,

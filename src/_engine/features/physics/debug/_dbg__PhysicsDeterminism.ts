@@ -10,12 +10,9 @@
 import { getECSWorld, getStableAppId } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
 import type { IComponentStorage } from '../../../kernel/ecs/ECSComponentStorage';
-import {
-  getPhysicsSnapshotStepIndex,
-  getPhysicsState,
-  getResolvedTransportMode,
-  setPhysicsStepLimit,
-} from '../PhysicsAPI';
+import { getPhysicsState } from '../PhysicsState';
+import { getPhysicsSnapshotStepIndex, setPhysicsStepLimit } from '../PhysicsStepping';
+import { getResolvedTransportMode } from '../PhysicsWorld';
 import type { RigidBodyAPI } from '../types/PhysicsBodyTypes';
 import type { PhysicsTier } from '../PhysicsTierTypes';
 import { DETERMINISM_PROBE_FREEZE_SOURCE, setPhysicsTierPolicyFrozen } from '../PhysicsTierPolicy';

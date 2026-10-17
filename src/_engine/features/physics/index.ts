@@ -8,26 +8,22 @@ export type { JointParams } from './types/PhysicsJointTypes';
 export type { PhysicsTier, PhysicsTierPolicy, PhysicsTierRing } from './PhysicsTierTypes';
 export {
   PhysicsCapacityError,
-  addPhysicsStepGate,
-  createCollider,
-  createColliders,
-  createJoint,
   createRigidBodies,
   createRigidBody,
-  deleteCollider,
-  deleteColliders,
-  deleteJoint,
   deleteRigidBodies,
   deleteRigidBody,
-  getCollider,
-  getJoint,
-  getPhysicsSimClock,
-  getPhysicsState,
-  getPhysicsSubStepIndex,
-  getPhysicsWorld,
-  getRigidBody,
   readBodyPositionsAtStep,
-} from './PhysicsAPI';
+} from './PhysicsBodies';
+export {
+  createCollider,
+  createColliders,
+  deleteCollider,
+  deleteColliders,
+} from './PhysicsColliders';
+export { createJoint, deleteJoint } from './PhysicsJoints';
+export { getCollider, getJoint, getRigidBody } from './PhysicsRegistry';
+export { getPhysicsState, getPhysicsWorld } from './PhysicsState';
+export { addPhysicsStepGate, getPhysicsSimClock, getPhysicsSubStepIndex } from './PhysicsStepping';
 export { createPhysicsEntity, getPhysicsEntityByAppId } from './PhysicsEntity';
 export type { PhysicsEntityOpts } from './PhysicsEntity';
 export { setPhysicsTierPolicy, setPhysicsTierPolicyMember } from './PhysicsTierPolicy';

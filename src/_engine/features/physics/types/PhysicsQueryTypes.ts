@@ -10,7 +10,7 @@ export type PhysicsQueryKind =
   | 'CAST_SHAPE';
 
 /**
- * Sees every physics query the main thread issues (stats and debug helpers, see PhysicsAPI.ts).
+ * Sees every physics query the main thread issues (stats and debug helpers, see PhysicsQueryStats.ts).
  * Engine-agnostic: a backend calls it from its query methods (MAIN_THREAD), the worker proxy
  * calls it around each query message (WORKER_THREAD). It is never set in the worker.
  *

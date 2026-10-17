@@ -19,11 +19,8 @@ import type { RigidBodyAPI } from '../types/PhysicsBodyTypes';
 import { type ColliderAPI, type HeightFieldData, ShapeType } from '../types/PhysicsColliderTypes';
 import type { PhysRotation, PhysVector } from '../types/PhysicsCommonTypes';
 import { DebugBodyFlag, DebugColliderFlag } from '../PhysicsDebugStateBuffer';
-import {
-  getPhysicsDebugStateBuffer,
-  getPhysicsState,
-  setPhysicsDebugStateTracking,
-} from '../PhysicsAPI';
+import { getPhysicsState } from '../PhysicsState';
+import { getPhysicsDebugStateBuffer, setPhysicsDebugStateTracking } from '../PhysicsWorld';
 import { getCurrentSceneId, getRootScene } from '../../../kernel/scene/Scene';
 import { markDebugHelper } from '../../../debug/Profiler';
 

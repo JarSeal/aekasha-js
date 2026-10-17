@@ -13,12 +13,11 @@ import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import {
   detachRigidBody,
   detachRigidBodySync,
-  forEachJointBodyPair,
-  getPhysicsState,
-  hasJoints,
   reattachRigidBody,
   reattachRigidBodySync,
-} from './PhysicsAPI';
+} from './PhysicsBodies';
+import { forEachJointBodyPair, hasJoints } from './PhysicsJoints';
+import { getPhysicsState } from './PhysicsState';
 import { type RigidBodyPose, RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import type { PhysicsSimTierData, PhysicsTier } from './PhysicsTierTypes';
 import {

@@ -3,21 +3,23 @@ import { getECSWorld } from '../../kernel/ecs/ECS';
 import type { EngineFeature } from '../../kernel/init/Features';
 import type { ImportExtension } from '../../kernel/assets/import/ImportExtensions';
 import type { FixedStepDriver } from '../../kernel/loop/MainLoop';
+import { flushPhysicsEvents } from './PhysicsMessaging';
+import { resetPhysicsRayStats } from './PhysicsQueryStats';
+import { getPhysicsState } from './PhysicsState';
+import {
+  holdPhysicsStepping,
+  latchPhysicsSnapshot,
+  releasePhysicsStepping,
+  stepPhysics,
+} from './PhysicsStepping';
 import {
   createPhysicsAPIDebugGUI,
   createPhysicsWorld,
-  flushPhysicsEvents,
-  getPhysicsState,
-  holdPhysicsStepping,
   initPhysics,
-  latchPhysicsSnapshot,
   registerPhysicsAPIDebugGUI,
-  releasePhysicsStepping,
-  resetPhysicsRayStats,
   resetPhysicsWorld,
-  stepPhysics,
   stopPhysics,
-} from './PhysicsAPI';
+} from './PhysicsWorld';
 import {
   deleteAllPhysicsEntities,
   installPhysicsEntities,

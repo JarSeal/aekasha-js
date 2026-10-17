@@ -20,16 +20,14 @@ import {
 } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import type { IComponentStorage } from '../../kernel/ecs/ECSComponentStorage';
+import { readBodyPositionsAtStep, readBodyPositionsSync } from './PhysicsBodies';
+import { forEachJointBodyPair, hasJoints } from './PhysicsJoints';
+import { getPhysicsState } from './PhysicsState';
 import {
   addPhysicsStepGate,
-  forEachJointBodyPair,
   getPhysicsSimHistoryEpoch,
-  getPhysicsState,
   getPhysicsSubStepIndex,
-  hasJoints,
-  readBodyPositionsAtStep,
-  readBodyPositionsSync,
-} from './PhysicsAPI';
+} from './PhysicsStepping';
 import type {
   PhysicsSimTierData,
   PhysicsTier,

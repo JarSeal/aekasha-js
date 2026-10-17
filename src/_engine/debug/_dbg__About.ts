@@ -8,11 +8,8 @@ import {
 import { getRenderer, isWebGPURenderer } from '../kernel/render/Renderer';
 import { ComponentType } from '../kernel/ecs/ECSCoreComponents';
 import { getECSWorld } from '../kernel/ecs/ECS';
-import {
-  getPhysicsState,
-  getResolvedTransportMode,
-  isPhysicsWorldEnabled,
-} from '../features/physics/PhysicsAPI';
+import { getPhysicsState, isPhysicsWorldEnabled } from '../features/physics/PhysicsState';
+import { getResolvedTransportMode } from '../features/physics/PhysicsWorld';
 import { ENGINES } from '../features/physics/backends/Engines';
 import { openDialog } from '../ui/DialogWindow';
 import { closeDraggableWindow } from '../ui/DraggableWindow';

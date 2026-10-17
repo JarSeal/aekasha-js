@@ -11,7 +11,7 @@ import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
 import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../ui/HUD';
 import { isAnyLightHelperVisible, toggleAllLightHelpers } from '../kernel/light/Light';
 import { getReadOnlyLoopState, toggleMainPlay } from '../kernel/loop/MainLoop';
-import { getPhysicsState } from '../features/physics/PhysicsAPI';
+import { getPhysicsState } from '../features/physics/PhysicsState';
 import { getCurrentSceneId, getGeneratedAppData } from '../kernel/scene/Scene';
 import { isCurrentlyLoading, loadScene } from '../kernel/scene/SceneLoader';
 import { getSvgIcon, type SvgIconKey } from '../ui/icons/SvgIcon';

@@ -867,13 +867,13 @@
       "action": "keep",
       "plan": "p608"
     },
-    "src/_engine/features/physics/PhysicsAPI.test.ts": {
-      "to": "src/_engine/features/physics/PhysicsAPI.test.ts",
+    "src/_engine/features/physics/PhysicsBodies.ts": {
+      "to": "src/_engine/features/physics/PhysicsBodies.ts",
       "action": "keep",
       "plan": "p608"
     },
-    "src/_engine/features/physics/PhysicsAPI.ts": {
-      "to": "src/_engine/features/physics/PhysicsAPI.ts",
+    "src/_engine/features/physics/PhysicsColliders.ts": {
+      "to": "src/_engine/features/physics/PhysicsColliders.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -887,8 +887,48 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/physics/PhysicsFacade.test.ts": {
+      "to": "src/_engine/features/physics/PhysicsFacade.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/physics/PhysicsFeature.ts": {
       "to": "src/_engine/features/physics/PhysicsFeature.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/PhysicsJoints.ts": {
+      "to": "src/_engine/features/physics/PhysicsJoints.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/PhysicsMessaging.ts": {
+      "to": "src/_engine/features/physics/PhysicsMessaging.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/PhysicsQueryStats.ts": {
+      "to": "src/_engine/features/physics/PhysicsQueryStats.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/PhysicsRegistry.ts": {
+      "to": "src/_engine/features/physics/PhysicsRegistry.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/PhysicsState.ts": {
+      "to": "src/_engine/features/physics/PhysicsState.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/PhysicsStepping.ts": {
+      "to": "src/_engine/features/physics/PhysicsStepping.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/PhysicsStepStats.ts": {
+      "to": "src/_engine/features/physics/PhysicsStepStats.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -932,6 +972,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/physics/PhysicsWorld.ts": {
+      "to": "src/_engine/features/physics/PhysicsWorld.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/physics/protocol/PhysicsDownProtocol.ts": {
       "to": "src/_engine/features/physics/protocol/PhysicsDownProtocol.ts",
       "action": "keep",
@@ -949,6 +994,26 @@
     },
     "src/_engine/features/physics/protocol/PhysicsUpProtocol.ts": {
       "to": "src/_engine/features/physics/protocol/PhysicsUpProtocol.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/proxies/ColliderProxyAPI.ts": {
+      "to": "src/_engine/features/physics/proxies/ColliderProxyAPI.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/proxies/JointProxyAPI.ts": {
+      "to": "src/_engine/features/physics/proxies/JointProxyAPI.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/proxies/RigidBodyProxyAPI.ts": {
+      "to": "src/_engine/features/physics/proxies/RigidBodyProxyAPI.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/proxies/WorldProxyAPI.ts": {
+      "to": "src/_engine/features/physics/proxies/WorldProxyAPI.ts",
       "action": "keep",
       "plan": "p608"
     },

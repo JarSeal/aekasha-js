@@ -1,5 +1,5 @@
 import type { CharacterCastRecord } from '../../CharacterTypes';
-import { getPhysicsState } from '../../../physics/PhysicsAPI';
+import { getPhysicsState } from '../../../physics/PhysicsState';
 import type { PhysVector } from '../../../physics/types/PhysicsCommonTypes';
 import type { RayDebugOpts } from '../../../../kernel/render/RayDebugTypes';
 

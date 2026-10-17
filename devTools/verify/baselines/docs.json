@@ -2,23 +2,23 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1928,
-      "total": 2293
+      "documented": 1970,
+      "total": 2335
     },
     "members": {
-      "documented": 339,
-      "total": 434
+      "documented": 566,
+      "total": 699
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1884,
-        "total": 2230
+        "documented": 1926,
+        "total": 2272
       },
       "members": {
-        "documented": 289,
-        "total": 354
+        "documented": 516,
+        "total": 619
       }
     },
     "toolkit": {
@@ -310,8 +310,8 @@
     },
     "engine/features/physics": {
       "exports": {
-        "documented": 131,
-        "total": 153
+        "documented": 169,
+        "total": 191
       },
       "members": {
         "documented": 13,
@@ -319,17 +319,13 @@
       },
       "undocumented": {
         "exports": [
-          "PhysicsAPI#createPhysicsWorld",
-          "PhysicsAPI#deletePhysicsWorld",
-          "PhysicsAPI#getCollider",
-          "PhysicsAPI#getJoint",
-          "PhysicsAPI#getRigidBody",
-          "PhysicsAPI#isPhysicsSteppingHeld",
-          "PhysicsAPI#restorePhysicsSnapshot",
-          "PhysicsAPI#takePhysicsSnapshot",
           "PhysicsEntity#disposePhysicsEntity",
           "PhysicsEntity#getPhysicsEntityByAppId",
+          "PhysicsRegistry#getCollider",
+          "PhysicsRegistry#getJoint",
+          "PhysicsRegistry#getRigidBody",
           "PhysicsStepStatsBuffer#PHYSICS_STEP_STATS_FIELD_COUNT",
+          "PhysicsStepping#isPhysicsSteppingHeld",
           "PhysicsTierPolicy#DEFAULT_TIER_POLICY_CADENCE",
           "PhysicsTierPolicy#DEFAULT_TIER_POLICY_INTERVAL",
           "PhysicsTierTypes#PhysicsTierBucket",
@@ -340,11 +336,15 @@
           "PhysicsUtils#getPhysicsEngine",
           "PhysicsUtils#getPhysicsEngineKey",
           "PhysicsUtils#initPhysicsEngine",
-          "PhysicsUtils#setPhysicsPauseTime"
+          "PhysicsUtils#setPhysicsPauseTime",
+          "PhysicsWorld#createPhysicsWorld",
+          "PhysicsWorld#deletePhysicsWorld",
+          "PhysicsWorld#restorePhysicsSnapshot",
+          "PhysicsWorld#takePhysicsSnapshot"
         ],
         "members": [
-          "PhysicsAPI#PhysicsCapacityError.constructor",
-          "PhysicsAPI#PhysicsCapacityError.maxBodies",
+          "PhysicsBodies#PhysicsCapacityError.constructor",
+          "PhysicsBodies#PhysicsCapacityError.maxBodies",
           "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.buffer",
           "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.constructor",
           "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.flags",
@@ -437,6 +437,59 @@
       "undocumented": {
         "exports": [],
         "members": []
+      }
+    },
+    "engine/features/physics/proxies": {
+      "exports": {
+        "documented": 4,
+        "total": 4
+      },
+      "members": {
+        "documented": 227,
+        "total": 265
+      },
+      "undocumented": {
+        "exports": [],
+        "members": [
+          "ColliderProxyAPI#ColliderProxyAPI.constructor",
+          "ColliderProxyAPI#ColliderProxyAPI.id",
+          "ColliderProxyAPI#ColliderProxyAPI.parentId",
+          "JointProxyAPI#JointProxyAPI.constructor",
+          "JointProxyAPI#JointProxyAPI.id",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.additionalSolverIterationsSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.angularDampingSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.colliderSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.constructor",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.dominanceGroupSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.effectiveInvMassSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.getUserDataSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.gravityScaleSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.id",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.invMassSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.invPrincipalInertiaSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.isCcdEnabledSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.isDynamicSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.isEnabledSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.isFixedSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.isKinematicSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.isMovingSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.isSleepingSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.isValidSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.linearDampingSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.localComSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.massSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.nextRotationSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.nextTranslationSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.numCollidersSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.principalInertiaLocalFrameSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.principalInertiaSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.softCcdPredictionSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.userForceSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.userTorqueSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.velocityAtPointSync",
+          "RigidBodyProxyAPI#RigidBodyProxyAPI.worldComSync",
+          "WorldProxyAPI#WorldProxyAPI.constructor"
+        ]
       }
     },
     "engine/features/physics/transport": {

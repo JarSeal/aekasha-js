@@ -14,27 +14,23 @@ vi.mock(import('../../kernel/loop/MainLoop'), async (importOriginal) => ({
 
 import { initEnvironment, loadConfig } from '../../kernel/config/Config';
 import {
-  createColliderSync,
-  createPhysicsWorld,
   createRigidBodySync,
   createRigidBodyWithCollidersSync,
-  deleteColliderSync,
-  deleteCollider,
-  deleteCollidersSync,
-  deleteJoint,
-  deleteJointSync,
-  deletePhysicsWorld,
-  deleteRigidBodiesSync,
   deleteRigidBodies,
+  deleteRigidBodiesSync,
   deleteRigidBodySync,
-  getAllColliderEntries,
-  getAllRigidBodyEntries,
-  initPhysics,
-  isPhysicsSteppingHeld,
-  isPhysicsWorldEnabled,
-  holdPhysicsStepping,
-  stopPhysics,
-} from './PhysicsAPI';
+} from './PhysicsBodies';
+import {
+  createColliderSync,
+  deleteCollider,
+  deleteColliderSync,
+  deleteCollidersSync,
+} from './PhysicsColliders';
+import { deleteJoint, deleteJointSync } from './PhysicsJoints';
+import { getAllColliderEntries, getAllRigidBodyEntries } from './PhysicsRegistry';
+import { isPhysicsWorldEnabled } from './PhysicsState';
+import { holdPhysicsStepping, isPhysicsSteppingHeld } from './PhysicsStepping';
+import { createPhysicsWorld, deletePhysicsWorld, initPhysics, stopPhysics } from './PhysicsWorld';
 import { getAllRigidBodyIds, getColliderAPIWithId } from './backends/rapier/EngineRapier';
 
 // The facade on MAIN_THREAD, against the real Rapier backend (the compat build runs in Node)
@@ -44,7 +40,7 @@ const BROKEN_TRIMESH = { type: 'TRIMESH', vertices: new Float32Array(9) } as con
 
 const count = (entries: IterableIterator<unknown>) => [...entries].length;
 
-describe('PhysicsAPI (MAIN_THREAD)', () => {
+describe('the facade (MAIN_THREAD)', () => {
   it('boots and creates the world', async () => {
     initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
     loadConfig({ physics: { enabled: true, workerTarget: 'MAIN_THREAD' } });

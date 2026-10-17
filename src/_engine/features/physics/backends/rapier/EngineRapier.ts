@@ -149,13 +149,13 @@ type CollisionEventFn = (collider1: ColliderAPI, collider2: ColliderAPI, started
 type ContactForceEventFn = (event: TempContactForceEvent) => void;
 // { "collider id", callbacks[] } — arrays to match the legacy file's multi-callback support
 // for compound colliders. MAIN_THREAD only; WORKER_THREAD keeps the real callbacks on the
-// main thread in PhysicsAPI.ts and only reads plain records back from this module.
+// main thread (PhysicsRegistry.ts) and only reads plain records back from this module.
 const collisionEventFns = new Map<number, CollisionEventFn[]>();
 const contactForceEventFns = new Map<number, ContactForceEventFn[]>();
 // Plain-data records accumulated by every step() call. WORKER_THREAD: taken by
 // drainPendingEventRecords() once per STEP message (which may run multiple sub-steps) and pushed
 // to the main thread via EVENTS_PUSH. MAIN_THREAD: delivered by dispatchPendingEventRecords() at
-// the start of the next sub-step (see PhysicsAPI.ts's flushPhysicsEvents for why not right away).
+// the start of the next sub-step (see PhysicsMessaging.ts' flushPhysicsEvents for why not right away).
 let pendingCollisionRecords: CollisionEventRecord[] = [];
 let pendingContactForceRecords: ContactForceEventRecord[] = [];
 // Tracks which collider ids counted towards collisionEventFnCount/contactForceEventFnCount,
@@ -219,7 +219,7 @@ export const getAllRigidBodyIds = (): IterableIterator<number> => rigidBodyAPIs.
 /** The query observer (stats and debug helpers), MAIN_THREAD only; see setQueryObserver. */
 let queryObserver: PhysicsQueryObserver | null = null;
 
-/** Sets (or clears, with null) the observer the query methods report to. Only PhysicsAPI.ts
+/** Sets (or clears, with null) the observer the query methods report to. Only the facade
  * sets it, on the main thread: the worker's engine never has one, so worker queries cost
  * nothing extra. */
 export const setQueryObserver = (observer: PhysicsQueryObserver | null) => {
@@ -230,7 +230,7 @@ export const setQueryObserver = (observer: PhysicsQueryObserver | null) => {
  * setBodyMovedObserver. */
 let bodyMovedObserver: ((rigidBodyId: number) => void) | null = null;
 
-/** Sets (or clears, with null) the observer told about moved bodies. Only PhysicsAPI.ts sets
+/** Sets (or clears, with null) the observer told about moved bodies. Only the facade sets
  * it, on the main thread, where it brings the move to the body's entity (p352: BODY_STATIC
  * bodies aren't synced per frame). The worker's engine never has one. */
 export const setBodyMovedObserver = (observer: ((rigidBodyId: number) => void) | null) => {
@@ -482,7 +482,7 @@ const paramsToShape = (params: ShapeParams): Rapier.Shape => {
         : new RAPIER.Triangle(params.a, params.b, params.c);
       break;
     case 'TRIMESH':
-      // @TODO: Make error handling better by returning an error back to the PhysicsAPI.ts
+      // @TODO: Make error handling better by returning an error back to the facade
       const vertices = existsOrThrow(
         params.vertices,
         'Could not find vertices when creating a TRIMESH shape.'
@@ -494,7 +494,7 @@ const paramsToShape = (params: ShapeParams): Rapier.Shape => {
       shape = new RAPIER.TriMesh(vertices, indices);
       break;
     case 'HEIGHTFIELD':
-      // @TODO: Make error handling better by returning an error back to the PhysicsAPI.ts
+      // @TODO: Make error handling better by returning an error back to the facade
       const nRows = existsOrThrow(
         params.nrows,
         'Could not find nRows when creating a HEIGHTFIELD shape.'
@@ -519,7 +519,7 @@ const paramsToShape = (params: ShapeParams): Rapier.Shape => {
       );
       break;
     case 'CONVEXHULL':
-      // @TODO: Make error handling better by returning an error back to the PhysicsAPI.ts
+      // @TODO: Make error handling better by returning an error back to the facade
       const vertParams = existsOrThrow(
         params.vertices,
         'Could not find vertices when creating a CONVEXHULL shape.'
@@ -568,7 +568,7 @@ export const createCollider = (params: ColliderParams, parentIdArg?: number) => 
   if (params.enabled !== undefined) colliderDesc.setEnabled(params.enabled);
 
   // In MAIN_THREAD mode the real callback is available directly on params (no serialization
-  // boundary); in WORKER_THREAD mode PhysicsAPI.ts strips it and sends hasCollisionEventFn/
+  // boundary); in WORKER_THREAD mode the facade (toWireColliderParams) strips it and sends hasCollisionEventFn/
   // hasContactForceEventFn instead. Either one enables the corresponding active events.
   const hasCollisionFn = Boolean(params.collisionEventFn) || Boolean(params.hasCollisionEventFn);
   const hasContactForceFn =

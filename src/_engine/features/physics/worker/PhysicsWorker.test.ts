@@ -12,12 +12,26 @@ const WORKER = path.resolve(__dirname, 'PhysicsWorker.ts');
 /** The packages the worker may load: the physics backend, nothing else. */
 const ALLOWED_PACKAGES = ['@dimforge/rapier3d-compat'];
 
+/** The facade's modules (p614 D7): the main thread's side of physics, never the worker's. */
+const FACADE_MODULES = [
+  'PhysicsState.ts',
+  'PhysicsRegistry.ts',
+  'PhysicsStepStats.ts',
+  'PhysicsQueryStats.ts',
+  'PhysicsMessaging.ts',
+  'PhysicsStepping.ts',
+  'PhysicsBodies.ts',
+  'PhysicsColliders.ts',
+  'PhysicsJoints.ts',
+  'PhysicsWorld.ts',
+  'proxies/WorldProxyAPI.ts',
+  'proxies/RigidBodyProxyAPI.ts',
+  'proxies/ColliderProxyAPI.ts',
+  'proxies/JointProxyAPI.ts',
+].map((file) => `features/physics/${file}`);
+
 /** Main-thread modules that pull the renderer, the loop or the config into the worker. */
-const FORBIDDEN_MODULES = [
-  'kernel/loop/MainLoop.ts',
-  'kernel/config/Config.ts',
-  'features/physics/PhysicsAPI.ts',
-];
+const FORBIDDEN_MODULES = ['kernel/loop/MainLoop.ts', 'kernel/config/Config.ts', ...FACADE_MODULES];
 
 let metafile: Metafile;
 

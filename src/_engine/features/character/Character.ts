@@ -1,6 +1,6 @@
 import type * as THREE from 'three/webgpu';
 import { createPhysicsEntity } from '../physics/PhysicsEntity';
-import { getPhysicsSubStepIndex } from '../physics/PhysicsAPI';
+import { getPhysicsSubStepIndex } from '../physics/PhysicsStepping';
 import type { RigidBodyParams } from '../physics/types/PhysicsBodyTypes';
 import type { ColliderParams } from '../physics/types/PhysicsColliderTypes';
 import {

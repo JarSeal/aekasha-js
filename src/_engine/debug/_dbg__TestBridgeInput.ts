@@ -5,7 +5,7 @@
 
 import { getECSWorld } from '../kernel/ecs/ECS';
 import { setPreStepHook } from '../kernel/loop/MainLoop';
-import { getPhysicsSubStepIndex } from '../features/physics/PhysicsAPI';
+import { getPhysicsSubStepIndex } from '../features/physics/PhysicsStepping';
 import { getPhysicsDeterminismProbeSteps } from '../features/physics/debug/_dbg__PhysicsDeterminism';
 import { getCharacters } from '../features/character/Character';
 import type { TestBridgeCharacterPaths, TestBridgeInputScript } from './TestBridge';

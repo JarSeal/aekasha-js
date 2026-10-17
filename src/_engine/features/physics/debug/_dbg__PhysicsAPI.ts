@@ -22,15 +22,11 @@ import {
   updateDraggableWindow,
 } from '../../../ui/DraggableWindow';
 import { createClearTabLSButton, lsKeyHasData } from '../../../debug/_dbg__ClearLSButtons';
-import {
-  getLastPhysicsBodyActivity,
-  getPhysicsBodyCapacity,
-  getPhysicsStepGateStats,
-  getPhysicsState,
-  getPhysicsWorld,
-  getResolvedTransportMode,
-  isPhysicsWorldEnabled,
-} from '../PhysicsAPI';
+import { getPhysicsBodyCapacity } from '../PhysicsBodies';
+import { getPhysicsState, getPhysicsWorld, isPhysicsWorldEnabled } from '../PhysicsState';
+import { getLastPhysicsBodyActivity } from '../PhysicsStepStats';
+import { getPhysicsStepGateStats } from '../PhysicsStepping';
+import { getResolvedTransportMode } from '../PhysicsWorld';
 import { setBootOverride } from './_dbg__PhysicsBootOverrides';
 import { getConfig } from '../../../kernel/config/Config';
 import type { RigidBodyAPI } from '../types/PhysicsBodyTypes';

@@ -728,6 +728,60 @@ As built, step 2 (2026-10-17):
 2. D8's return types. The debug modules' imports updated (p618's files, imports only).
 3. `PhysicsWorker.test.ts`, `ModuleLoad.test.ts`, `moduleSideEffects.test.ts`; `yarn verify:scenes`.
 
+Step 1 runs in two sections, as Phase 3's did: the move (section 1), then A5-A9 and W5 (section 2).
+
+As built, section 1 (2026-10-17, on `770613d`): the move.
+
+- **The layout:** `PhysicsAPI.ts` is gone, with no barrel. In its place are 10 modules and `proxies/`.
+  `PhysicsState.ts` holds `facade`, the state the modules share (`state`, `engAPI`,
+  `engineInitiated`, `world`, `worldEnabled`, `transformBuffer`, `debugStateBuffer`;
+  `@internal`), and the three getters. It's a leaf: it imports only types. `PhysicsRegistry.ts`
+  holds the three maps, the WORKER_THREAD collider callbacks and the body-moved listener. Then
+  `PhysicsStepStats.ts`, `PhysicsQueryStats.ts`, `PhysicsMessaging.ts` (the transport, requests,
+  the sub-step capture, the pushes, `flushPhysicsEvents`, `toPlainRot` / `toWire*`) and
+  `PhysicsStepping.ts` (`stepPhysics`, the hold, the clock and stamps, the limit, the gates, and
+  `setPhysicsStepStatsEnabled`, which messages the worker, so it's here and StepStats stays below
+  Messaging). Then `PhysicsBodies.ts` (with `PhysicsCapacityError`, `getPhysicsBodyCapacity`,
+  `createRigidBodyWithColliders`), `PhysicsColliders.ts`, `PhysicsJoints.ts` (with the joint
+  walks), `PhysicsWorld.ts` (`initPhysics`, the world's life, `stopPhysics`, the snapshots, the
+  debug-state tracking, the debug tab's two wrappers), and `proxies/{World,RigidBody,Collider,Joint}ProxyAPI.ts`
+  (exported `@internal`). D7's `PhysicsState.ts` had `initPhysics` too; it's in
+  `PhysicsWorld.ts`, so the state module stays a leaf (§4 risk 1).
+- **Imports:** a DAG, State ← Registry / StepStats / QueryStats ← Messaging ← Stepping ← the
+  proxies and Bodies / Colliders / Joints ← World, with one cycle: `PhysicsWorld` ↔
+  `proxies/WorldProxyAPI` (the world makes the proxy; the proxy's `takeSnapshot` /
+  `restoreSnapshot` call the world's). Only calls inside functions cross it, so nothing is read
+  at load.
+- **A pure move:** a script sliced the old file by line ranges and checked that every non-blank
+  line landed once. The state reads became `facade.*` and the cross-module writes became small
+  `@internal` functions (`openWorkerTransport` / `closeWorkerTransport` / `hasWorkerTransport`,
+  `begin` / `endSubStepCapture`, `clearPendingEventPushes`, `recordMainThreadStepStats` /
+  `recordPushedStepStats`, `setStepStatsBuffer`, `resetPhysicsStepStats`, `resetSimClock`,
+  `clearPhysicsStepGates`, `dropStepAccumulator`, `breakSimHistory`, `clearPhysicsRegistry`,
+  `getBodyMovedListener`, `getPhysicsQueryObserver`), each the code it replaced. No exported
+  name or signature changed. The 22 importers were rewritten by name, the entry too, and the
+  comments naming `PhysicsAPI.ts` were updated (engine, `CLAUDE.md`, the Hub,
+  `hub-authoring.md`). `PhysicsAPI.test.ts` is now `PhysicsFacade.test.ts`. `PhysicsWorker.test.ts`
+  forbids the 14 facade modules.
+- **Bundle:** `assets/index.js` +2,335 B (+92 B gzip): the `facade.state.…` property names that
+  the minifier can't shorten as it did the module-local `physicsState`, and the new helpers. The
+  physics group's +4.5 kB gzip in the report is the visualizer's per-module gzip (28 modules
+  instead of 15); its rendered size grew 1.5 kB. The other chunks changed by ±3 B (hashed
+  names). `yarn sbp --why physics` now ends at `PhysicsBodies.ts` (the SBP guide updated).
+- **Baselines:** `api.json` (the moves and the new `@internal` helpers), `bundle.json` and
+  `docs.json`, recorded with `--allow-docs-drop`. The new `proxies` folder starts at 38
+  undocumented members (the throwing `*Sync` twins outside `RigidBodyWorkerEngine`, the
+  constructors, `id` / `parentId`), which section 2's dedupe rewrites and documents. The
+  `notExported` warnings for the four proxy classes are gone, and the Hub builds with no
+  new warning (four cross-module `{@link}`s now take their module path).
+- **Left for later:** five app and toolkit comments that say "once `PhysicsAPI.ts` lands"
+  (`largeWorld.ts` × 3, `Terrain.ts`, `ScatterOnSurface.ts`, all older than the file) go to
+  Phase 8 with D2's toolkit patch. `devTools/sbp`'s tests name `PhysicsAPI.ts` in made-up module
+  graphs (fixture data, not the tree), and stay as they are.
+- **Checks:** `tsc` (both projects), the lint, `yarn test` (597 passed: the worker-bundle,
+  module-load and side-effects checks among them), `moveMap.ts` regenerated (742 files, the
+  same 41 boundary violations, 0 feature cycles), `yarn hub:build`.
+
 ### Phase 5: the backend (D7, D11)
 
 1. `EngineRapier.ts` into its modules and `proxies/`; R6-R8.

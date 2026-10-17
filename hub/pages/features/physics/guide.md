@@ -87,7 +87,7 @@ body's state, and compares the hash with the last run of the same scene.
   counts them per frame.
 - A collider's `collisionEventFn` and `contactForceEventFn` (in its params) are called when it
   starts or stops touching another collider, and with the contact forces.
-- [`createJoint`](api:PhysicsAPI.createJoint) joins two bodies: fixed, revolute, prismatic, spherical, rope,
+- [`createJoint`](api:PhysicsJoints.createJoint) joins two bodies: fixed, revolute, prismatic, spherical, rope,
   spring or generic.
 
 ## Simulation tiers
@@ -128,7 +128,7 @@ The app's `physicsTiers` scene is its demo: open it with `?isDebug=true&startSce
 
 - [`createPhysicsEntity`](api:createPhysicsEntity): a body and its colliders on an entity.
 - [`getPhysicsWorld`](api:getPhysicsWorld): the world, for queries.
-- [`createJoint`](api:PhysicsAPI.createJoint) and [`deleteJoint`](api:PhysicsAPI.deleteJoint).
+- [`createJoint`](api:PhysicsJoints.createJoint) and [`deleteJoint`](api:PhysicsJoints.deleteJoint).
 - [`requestPhysicsTier`](api:requestPhysicsTier), [`getPhysicsTier`](api:getPhysicsTier) and
   [`setPhysicsTierPolicy`](api:setPhysicsTierPolicy).
 - [`getPhysicsSubStepIndex`](api:getPhysicsSubStepIndex): the step clock for `APP_PHYSICS_STEP`
@@ -138,7 +138,11 @@ The app's `physicsTiers` scene is its demo: open it with `?isDebug=true&startSce
 
 - The [physics example](hub:examples/physics), with the code of the scene above.
 - [Characters](hub:features/characters): the character controller, built on physics.
-- The API reference: [PhysicsAPI](hub:documentation/engine/features/physics/PhysicsAPI),
+- The API reference: [PhysicsWorld](hub:documentation/engine/features/physics/PhysicsWorld),
+  [PhysicsBodies](hub:documentation/engine/features/physics/PhysicsBodies),
+  [PhysicsColliders](hub:documentation/engine/features/physics/PhysicsColliders),
+  [PhysicsJoints](hub:documentation/engine/features/physics/PhysicsJoints),
+  [PhysicsStepping](hub:documentation/engine/features/physics/PhysicsStepping),
   [PhysicsEntity](hub:documentation/engine/features/physics/PhysicsEntity),
   [PhysicsTiers](hub:documentation/engine/features/physics/PhysicsTiers) and
   [PhysicsTierPolicy](hub:documentation/engine/features/physics/PhysicsTierPolicy).

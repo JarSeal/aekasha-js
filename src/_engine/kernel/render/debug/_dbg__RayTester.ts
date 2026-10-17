@@ -30,7 +30,7 @@ import { createMouseBinding, deleteMouseBinding } from '../../input/MouseInput';
 import { getECSWorld, getEntityIdByAppId } from '../../ecs/ECS';
 import { ComponentType } from '../../ecs/ECSCoreComponents';
 import { castRayFromDirection, castRayFromPoints, type RayCastOpts } from '../Raycast';
-import { getPhysicsWorld, isPhysicsWorldEnabled } from '../../../features/physics/PhysicsAPI';
+import { getPhysicsWorld, isPhysicsWorldEnabled } from '../../../features/physics/PhysicsState';
 import type { RigidBodyAPI } from '../../../features/physics/types/PhysicsBodyTypes';
 import type { ColliderAPI } from '../../../features/physics/types/PhysicsColliderTypes';
 import type { PhysVector } from '../../../features/physics/types/PhysicsCommonTypes';

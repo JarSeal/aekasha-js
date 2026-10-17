@@ -19,20 +19,22 @@ import type { IComponentStorage } from '../../kernel/ecs/ECSComponentStorage';
 import {
   createRigidBodyWithColliders,
   createRigidBodyWithCollidersSync,
-  type RigidBodyWithColliders,
-  deleteColliders,
   deleteRigidBody,
-  endPhysicsRayStatsFrame,
-  flushPhysics,
+} from './PhysicsBodies';
+import type { RigidBodyWithColliders } from './PhysicsBodies';
+import { deleteColliders } from './PhysicsColliders';
+import { endPhysicsRayStatsFrame } from './PhysicsQueryStats';
+import { setBodyMovedListener } from './PhysicsRegistry';
+import { getPhysicsState } from './PhysicsState';
+import {
   getPhysicsSimClock,
   getPhysicsSimClockEpoch,
   getPhysicsSimHistoryEpoch,
   getPhysicsSnapshotStepIndex,
-  getPhysicsState,
   getPhysicsWriteVisibleStep,
   readPhysicsSnapshotStamp,
-  setBodyMovedListener,
-} from './PhysicsAPI';
+} from './PhysicsStepping';
+import { flushPhysics } from './PhysicsWorld';
 import type { RigidBodyAPI, RigidBodyParams } from './types/PhysicsBodyTypes';
 import type { ColliderParams } from './types/PhysicsColliderTypes';
 import type { PhysicsInterpolationMode } from './types/PhysicsConfigTypes';
@@ -198,7 +200,7 @@ export type PhysicsEntityOpts = CoreEntityOpts & {
 /**
  * Creates a physics entity: an optional rigid body and its colliders, in the bucket its body
  * type and visual call for (BODY_STATIC / BODY_DYNAMIC_VISUAL / BODY_DYNAMIC_HEADLESS).
- * Rejects with a `PhysicsCapacityError` (PhysicsAPI.ts) when a `WORKER_THREAD` world's
+ * Rejects with a `PhysicsCapacityError` (PhysicsBodies.ts) when a `WORKER_THREAD` world's
  * transform buffer is full (`AppConfig.physics.maxBodies`; `FIXED` bodies take no slot), and
  * with the backend's error when a body or collider can't be made (eg. a `TRIMESH` without
  * indices). Then nothing of it exists: a new entity is deleted, an existing `target` entity is
