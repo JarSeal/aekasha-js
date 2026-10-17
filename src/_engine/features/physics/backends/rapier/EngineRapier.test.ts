@@ -1,23 +1,38 @@
+import type Rapier from '@dimforge/rapier3d-compat';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { LoopState } from '../../../../kernel/loop/MainLoop';
 import type { PhysicsDownProtocol } from '../../protocol/PhysicsDownProtocol';
 import { PhysicsProtocolType } from '../../protocol/PhysicsProtocolType';
 import type { PhysicsUpProtocol } from '../../protocol/PhysicsUpProtocol';
 import type { EngineAPIType } from '../../types/PhysicsBackendTypes';
+import { RigidBodyTypeAPI } from '../../types/PhysicsBodyTypes';
+import {
+  ActiveCollisionTypes,
+  ActiveEvents,
+  ActiveHooks,
+  CoefficientCombineRule,
+  ShapeType,
+} from '../../types/PhysicsColliderTypes';
 import type { PhysicsState } from '../../types/PhysicsConfigTypes';
+import { SolverFlags } from '../../types/PhysicsEventTypes';
+import { JointAxesMask } from '../../types/PhysicsJointTypes';
+import { FeatureType, QueryFilterFlags } from '../../types/PhysicsQueryTypes';
 import type { WorldAPI } from '../../types/PhysicsWorldTypes';
 import { initPhysicsEngine } from '../../PhysicsUtils';
 import { physicsSwitchWorld } from '../../worker/PhysicsSwitchWorld';
 
 // The Rapier backend in Node: the compat build carries its WASM inline, so no GPU or DOM is needed.
 
+let RAPIER: typeof Rapier;
 let engAPI: EngineAPIType;
 let world: WorldAPI;
 /** The module's first collider: ids start at 0 and are never reused. */
 let groundId: number;
 
 beforeAll(async () => {
-  ({ engineAPI: engAPI } = await initPhysicsEngine('RAPIER'));
+  const loaded = await initPhysicsEngine('RAPIER');
+  RAPIER = loaded.engine as typeof Rapier;
+  engAPI = loaded.engineAPI;
   const state = { gravity: { x: 0, y: -9.81, z: 0 }, timestepRatio: 1 / 60 } as PhysicsState;
   world = engAPI.init(state, true, {} as LoopState)!;
   groundId = engAPI.createCollider({ type: 'CUBOID', hx: 5, hy: 0.5, hz: 5 }).id;
@@ -64,5 +79,24 @@ describe('EngineRapier', () => {
     const free = engAPI.createCollider(params);
     expect(attached.parentId).toBe(body.id);
     expect(free.parentId).toBeUndefined();
+  });
+
+  it("mirrors Rapier's enums member for member (RapierEnums.ts' casts rely on it)", () => {
+    /** An enum's members by name (a numeric enum also maps its numbers back to names). */
+    const members = (e: object) =>
+      Object.fromEntries(Object.entries(e).filter(([name]) => Number.isNaN(Number(name))));
+    const pairs: [object, object][] = [
+      [RigidBodyTypeAPI, RAPIER.RigidBodyType],
+      [ShapeType, RAPIER.ShapeType],
+      [CoefficientCombineRule, RAPIER.CoefficientCombineRule],
+      [ActiveHooks, RAPIER.ActiveHooks],
+      [ActiveEvents, RAPIER.ActiveEvents],
+      [ActiveCollisionTypes, RAPIER.ActiveCollisionTypes],
+      [FeatureType, RAPIER.FeatureType],
+      [QueryFilterFlags, RAPIER.QueryFilterFlags],
+      [SolverFlags, RAPIER.SolverFlags],
+      [JointAxesMask, RAPIER.JointAxesMask],
+    ];
+    for (const [ours, rapiers] of pairs) expect(members(ours)).toEqual(members(rapiers));
   });
 });

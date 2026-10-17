@@ -838,6 +838,11 @@
       "deleteCollider": "Function",
       "deleteColliders": "Function"
     },
+    "src/_engine/features/physics/backends/rapier/RapierEnums.ts": {
+      "fromRapierBodyType": "Function",
+      "fromRapierShapeType": "Function",
+      "toRapierBodyType": "Function"
+    },
     "src/_engine/features/physics/backends/rapier/RapierEvents.ts": {
       "cleanupColliderEventRegistrations": "Function",
       "clearEventRegistrations": "Function",
@@ -1122,13 +1127,9 @@
       "PhysicsTransformBuffer": "Class"
     },
     "src/_engine/features/physics/PhysicsUtils.ts": {
-      "getColliderShapeName": "Function",
       "getCollOrRigidId": "Function",
-      "getEngineAPI": "Function",
       "getPhysicsEngine": "Function",
-      "getPhysicsEngineKey": "Function",
       "initPhysicsEngine": "Function",
-      "setPhysicsPauseTime": "Function",
       "ValidProtocolTypes": "Variable"
     },
     "src/_engine/features/physics/PhysicsWallClock.ts": {
@@ -1151,7 +1152,8 @@
     },
     "src/_engine/features/physics/protocol/PhysicsDownProtocol.ts": {
       "PhysicsDownProtocol": "TypeAlias",
-      "PhysicsResponse": "TypeAlias"
+      "PhysicsResponse": "TypeAlias",
+      "PhysicsWorkerReply": "TypeAlias"
     },
     "src/_engine/features/physics/protocol/PhysicsProtocolType.ts": {
       "PhysicsProtocolType": "Enum"

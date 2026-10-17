@@ -25,6 +25,11 @@ const getCombineRule = (rule?: 'MAX' | 'MULTIPLY' | 'MIN' | 'AVERAGE') => {
   }
 };
 
+/**
+ * Creates a collider, on the body `parentIdArg` (or `params.parentId`) when given, and returns its
+ * API object. `params` is only read, so a caller may reuse it.
+ * @internal
+ */
 export const createCollider = (params: ColliderParams, parentIdArg?: number) => {
   // Read, never written back: a caller may reuse its params for another collider
   const parentId = parentIdArg ?? params.parentId;
@@ -103,8 +108,11 @@ export const createCollider = (params: ColliderParams, parentIdArg?: number) => 
   return colliderAPI;
 };
 
-/** Creates the colliders in order, all or nothing: when one throws, the ones made before it are
- * deleted and the throw goes on (p614 A10). */
+/**
+ * Creates the colliders in order, all or nothing: when one throws, the ones made before it are
+ * deleted and the throw goes on (p614 A10).
+ * @internal
+ */
 export const createColliders = (paramsArray: ColliderParams[]) => {
   const created: EngineColliderProxyAPI[] = [];
   try {
@@ -116,6 +124,11 @@ export const createColliders = (paramsArray: ColliderParams[]) => {
   return created;
 };
 
+/**
+ * Deletes a collider, waking its body only when `wakeUp`. An unknown id is a no-op (a debug-env
+ * warning).
+ * @internal
+ */
 export const deleteCollider = (id: number, wakeUp?: boolean) => {
   const collHandle = colliders.get(id);
   if (collHandle === undefined) {
@@ -142,6 +155,10 @@ export const deleteCollider = (id: number, wakeUp?: boolean) => {
   return { id };
 };
 
+/**
+ * Deletes colliders as deleteCollider does, each waking its body when its `wakeUps` entry is true.
+ * @internal
+ */
 export const deleteColliders = (ids: number[], wakeUps?: boolean[]) => {
   const deletedIds = [];
   for (let i = 0; i < ids.length; i++) {

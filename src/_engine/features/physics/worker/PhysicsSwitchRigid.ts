@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
+import type { PhysicsWorkerReply } from '../protocol/PhysicsDownProtocol';
 import type { PhysicsUpProtocol } from '../protocol/PhysicsUpProtocol';
 import type { EngineAPIType } from '../types/PhysicsBackendTypes';
 import type { RigidBodyAPI, RigidBodyPose } from '../types/PhysicsBodyTypes';
@@ -50,10 +50,7 @@ const allocateBodySlot = (rb: RigidBodyAPI, transformBuffer?: PhysicsTransformBu
 
 const NO_POSE: RigidBodyPose = { pos: { x: 0, y: 0, z: 0 }, rot: { x: 0, y: 0, z: 0, w: 1 } };
 
-const sendNoRigidBodyErrorMessage = (
-  sendMessage: (message: any, data: PhysicsUpProtocol) => void,
-  data: PhysicsUpProtocol
-) =>
+const sendNoRigidBodyErrorMessage = (sendMessage: PhysicsWorkerReply, data: PhysicsUpProtocol) =>
   sendMessage(
     {
       type: PhysicsProtocolType.ERROR,
@@ -66,12 +63,7 @@ export const physicsSwitchRigid = async (
   data: PhysicsUpProtocol,
   physicsWorldAPI: WorldAPI,
   engAPI: EngineAPIType,
-  sendMessage: (
-    message: any,
-    data: PhysicsUpProtocol,
-    isError?: boolean,
-    transfer?: Transferable[]
-  ) => void,
+  sendMessage: PhysicsWorkerReply,
   transformBuffer?: PhysicsTransformBuffer
 ) => {
   const type = data.type;
@@ -87,16 +79,19 @@ export const physicsSwitchRigid = async (
       if (refused) {
         engAPI.deleteRigidBody(rb.id);
         const capacityExceeded = transformBuffer?.maxBodies;
-        return sendMessage({ type, id: -1, slot, pose: NO_POSE, capacityExceeded }, data);
+        return sendMessage(
+          { type: data.type, id: -1, slot, pose: NO_POSE, capacityExceeded },
+          data
+        );
       }
-      return sendMessage({ type, id: rb.id, slot, pose }, data);
+      return sendMessage({ type: data.type, id: rb.id, slot, pose }, data);
     }
     case PhysicsProtocolType.CREATE_PHYSICS_ENTITY: {
       // CREATE_PHYSICS_ENTITY: body and colliders in one message, so nothing (e.g. a STEP) can
       // run in between, and they're created in the order the main thread asked for them.
       if (!data.rigidBody) {
         const colliderIds = createEntityColliders(engAPI, data.colliders);
-        return sendMessage({ type, slot: -1, colliderIds }, data);
+        return sendMessage({ type: data.type, slot: -1, colliderIds }, data);
       }
       const rb = await physicsWorldAPI.createRigidBody(data.rigidBody);
       const { slot, pose, refused } = allocateBodySlot(rb, transformBuffer);
@@ -104,7 +99,7 @@ export const physicsSwitchRigid = async (
         // Before the colliders, so nothing of the entity is left behind
         engAPI.deleteRigidBody(rb.id);
         const capacityExceeded = transformBuffer?.maxBodies;
-        return sendMessage({ type, slot, colliderIds: [], capacityExceeded }, data);
+        return sendMessage({ type: data.type, slot, colliderIds: [], capacityExceeded }, data);
       }
       let colliderIds: number[];
       try {
@@ -115,7 +110,7 @@ export const physicsSwitchRigid = async (
         engAPI.deleteRigidBody(rb.id);
         throw err;
       }
-      return sendMessage({ type, id: rb.id, slot, pose, colliderIds }, data);
+      return sendMessage({ type: data.type, id: rb.id, slot, pose, colliderIds }, data);
     }
     case PhysicsProtocolType.CREATE_RIGID_BODIES: {
       // CREATE_RIGID_BODIES
@@ -127,25 +122,28 @@ export const physicsSwitchRigid = async (
         for (const id of ids) transformBuffer?.freeSlot(id);
         engAPI.deleteRigidBodies(ids);
         const capacityExceeded = transformBuffer?.maxBodies;
-        return sendMessage({ type, ids: [], slots: [], poses: [], capacityExceeded }, data);
+        return sendMessage(
+          { type: data.type, ids: [], slots: [], poses: [], capacityExceeded },
+          data
+        );
       }
       const slots = allocated.map((a) => a.slot);
       const poses = allocated.map((a) => a.pose);
-      return sendMessage({ type, ids, slots, poses }, data);
+      return sendMessage({ type: data.type, ids, slots, poses }, data);
     }
     case PhysicsProtocolType.DELETE_RIGID_BODY:
       // DELETE_RIGID_BODY
       transformBuffer?.freeSlot(data.id);
-      return sendMessage({ type, ...engAPI.deleteRigidBody(data.id) }, data);
+      return sendMessage({ type: data.type, ...engAPI.deleteRigidBody(data.id) }, data);
     case PhysicsProtocolType.DELETE_RIGID_BODIES:
       // DELETE_RIGID_BODIES
       for (const id of data.ids) transformBuffer?.freeSlot(id);
-      return sendMessage({ type, ...engAPI.deleteRigidBodies(data.ids) }, data);
+      return sendMessage({ type: data.type, ...engAPI.deleteRigidBodies(data.ids) }, data);
     case PhysicsProtocolType.RIGID_DETACH: {
       // RIGID_DETACH (p352 REMOVED tier): the slot goes with the body
       const pose = engAPI.detachRigidBody(data.id);
       if (pose) transformBuffer?.freeSlot(data.id);
-      return sendMessage({ type, pose }, data);
+      return sendMessage({ type: data.type, pose }, data);
     }
     case PhysicsProtocolType.RIGID_REATTACH: {
       // RIGID_REATTACH (p352): a slot first, so a full buffer leaves the body detached. Tier
@@ -155,26 +153,26 @@ export const physicsSwitchRigid = async (
         slot = transformBuffer.allocateSlot(data.id);
         if (slot === -1) {
           const capacityExceeded = transformBuffer.maxBodies;
-          return sendMessage({ type, slot, capacityExceeded }, data);
+          return sendMessage({ type: data.type, slot, capacityExceeded }, data);
         }
       }
       const pose = engAPI.reattachRigidBody(data.id, data.state);
       if (!pose) {
         transformBuffer?.freeSlot(data.id);
-        return sendMessage({ type, slot: -1 }, data);
+        return sendMessage({ type: data.type, slot: -1 }, data);
       }
       if (slot !== -1) transformBuffer?.setTransform(slot, pose.pos, pose.rot);
-      return sendMessage({ type, slot, pose }, data);
+      return sendMessage({ type: data.type, slot, pose }, data);
     }
     case PhysicsProtocolType.RIGID_READ_POSITIONS: {
       // RIGID_READ_POSITIONS (p343): replayed before its sub-step, so read before that step runs
       const positions = engAPI.readBodyPositions(data.ids, new Float32Array(data.ids.length * 3));
-      return sendMessage({ type, positions }, data, false, [positions.buffer]);
+      return sendMessage({ type: data.type, positions }, data, false, [positions.buffer]);
     }
     case PhysicsProtocolType.RIGID_GET_USERDATA: {
       // RIGID_GET_USERDATA
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, userData: rigidBodyAPI.getUserDataSync() }, data);
+      return sendMessage({ type: data.type, userData: rigidBodyAPI.getUserDataSync() }, data);
     }
     case PhysicsProtocolType.RIGID_SET_USERDATA: {
       // RIGID_SET_USERDATA
@@ -183,7 +181,7 @@ export const physicsSwitchRigid = async (
     }
     case PhysicsProtocolType.RIGID_IS_VALID:
       // RIGID_IS_VALID
-      return sendMessage({ type, isValid: Boolean(rigidBodyAPI?.isValidSync()) }, data);
+      return sendMessage({ type: data.type, isValid: Boolean(rigidBodyAPI?.isValidSync()) }, data);
     case PhysicsProtocolType.RIGID_LOCK_TRANSLATIONS:
       // RIGID_LOCK_TRANSLATIONS
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
@@ -213,7 +211,10 @@ export const physicsSwitchRigid = async (
     case PhysicsProtocolType.RIGID_DOMINANCE_GROUP:
       // RIGID_DOMINANCE_GROUP
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, dominanceGroup: rigidBodyAPI.dominanceGroupSync() }, data);
+      return sendMessage(
+        { type: data.type, dominanceGroup: rigidBodyAPI.dominanceGroupSync() },
+        data
+      );
     case PhysicsProtocolType.RIGID_SET_DOMINANCE_GROUP:
       // RIGID_SET_DOMINANCE_GROUP
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
@@ -222,7 +223,7 @@ export const physicsSwitchRigid = async (
       // RIGID_ADDITIONAL_SOLVER_ITERATIONS
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
       return sendMessage(
-        { type, additionalIterations: rigidBodyAPI.additionalSolverIterationsSync() },
+        { type: data.type, additionalIterations: rigidBodyAPI.additionalSolverIterationsSync() },
         data
       );
     case PhysicsProtocolType.RIGID_SET_ADDITIONAL_SOLVER_ITERATIONS:
@@ -240,15 +241,21 @@ export const physicsSwitchRigid = async (
     case PhysicsProtocolType.RIGID_SOFT_CCD_PREDICTION:
       // RIGID_SOFT_CCD_PREDICTION
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, softCcdPrediction: rigidBodyAPI.softCcdPredictionSync() }, data);
+      return sendMessage(
+        { type: data.type, softCcdPrediction: rigidBodyAPI.softCcdPredictionSync() },
+        data
+      );
     case PhysicsProtocolType.RIGID_NEXT_TRANSLATION:
       // RIGID_NEXT_TRANSLATION
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, nextTranslation: rigidBodyAPI.nextTranslationSync() }, data);
+      return sendMessage(
+        { type: data.type, nextTranslation: rigidBodyAPI.nextTranslationSync() },
+        data
+      );
     case PhysicsProtocolType.RIGID_NEXT_ROTATION:
       // RIGID_NEXT_ROTATION
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, nextRotation: rigidBodyAPI.nextRotationSync() }, data);
+      return sendMessage({ type: data.type, nextRotation: rigidBodyAPI.nextRotationSync() }, data);
     case PhysicsProtocolType.RIGID_SET_TRANSLATION:
       // RIGID_SET_TRANSLATION
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
@@ -260,7 +267,7 @@ export const physicsSwitchRigid = async (
     case PhysicsProtocolType.RIGID_GRAVITY_SCALE:
       // RIGID_GRAVITY_SCALE
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, gravityScale: rigidBodyAPI.gravityScaleSync() }, data);
+      return sendMessage({ type: data.type, gravityScale: rigidBodyAPI.gravityScaleSync() }, data);
     case PhysicsProtocolType.RIGID_SET_GRAVITY_SCALE:
       // RIGID_SET_GRAVITY_SCALE
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
@@ -285,45 +292,54 @@ export const physicsSwitchRigid = async (
       // RIGID_VELOCITY_AT_POINT
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
       return sendMessage(
-        { type, velocityAtPoint: rigidBodyAPI.velocityAtPointSync(data.point) },
+        { type: data.type, velocityAtPoint: rigidBodyAPI.velocityAtPointSync(data.point) },
         data
       );
     case PhysicsProtocolType.RIGID_MASS:
       // RIGID_MASS
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, mass: rigidBodyAPI.massSync() }, data);
+      return sendMessage({ type: data.type, mass: rigidBodyAPI.massSync() }, data);
     case PhysicsProtocolType.RIGID_EFFECTIVE_INV_MASS:
       // RIGID_EFFECTIVE_INV_MASS
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, effectiveInvMass: rigidBodyAPI.effectiveInvMassSync() }, data);
+      return sendMessage(
+        { type: data.type, effectiveInvMass: rigidBodyAPI.effectiveInvMassSync() },
+        data
+      );
     case PhysicsProtocolType.RIGID_INV_MASS:
       // RIGID_INV_MASS
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, invMass: rigidBodyAPI.invMassSync() }, data);
+      return sendMessage({ type: data.type, invMass: rigidBodyAPI.invMassSync() }, data);
     case PhysicsProtocolType.RIGID_LOCAL_COM:
       // RIGID_LOCAL_COM
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, localCom: rigidBodyAPI.localComSync() }, data);
+      return sendMessage({ type: data.type, localCom: rigidBodyAPI.localComSync() }, data);
     case PhysicsProtocolType.RIGID_WORLD_COM:
       // RIGID_WORLD_COM
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, worldCom: rigidBodyAPI.worldComSync() }, data);
+      return sendMessage({ type: data.type, worldCom: rigidBodyAPI.worldComSync() }, data);
     case PhysicsProtocolType.RIGID_INV_PRINCIPAL_INERTIA:
       // RIGID_INV_PRINCIPAL_INERTIA
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
       return sendMessage(
-        { type, invPrincipalInertia: rigidBodyAPI.invPrincipalInertiaSync() },
+        { type: data.type, invPrincipalInertia: rigidBodyAPI.invPrincipalInertiaSync() },
         data
       );
     case PhysicsProtocolType.RIGID_PRINCIPAL_INERTIA:
       // RIGID_PRINCIPAL_INERTIA
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, principalInertia: rigidBodyAPI.principalInertiaSync() }, data);
+      return sendMessage(
+        { type: data.type, principalInertia: rigidBodyAPI.principalInertiaSync() },
+        data
+      );
     case PhysicsProtocolType.RIGID_PRINCIPAL_INERTIA_LOCAL_FRAME:
       // RIGID_PRINCIPAL_INERTIA_LOCAL_FRAME
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
       return sendMessage(
-        { type, principalInertiaLocalFrame: rigidBodyAPI.principalInertiaLocalFrameSync() },
+        {
+          type: data.type,
+          principalInertiaLocalFrame: rigidBodyAPI.principalInertiaLocalFrameSync(),
+        },
         data
       );
     case PhysicsProtocolType.RIGID_SLEEP:
@@ -337,18 +353,21 @@ export const physicsSwitchRigid = async (
     case PhysicsProtocolType.RIGID_IS_CCD_ENABLED:
       // RIGID_IS_CCD_ENABLED
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, isCcdEnabled: rigidBodyAPI.isCcdEnabledSync() }, data);
+      return sendMessage({ type: data.type, isCcdEnabled: rigidBodyAPI.isCcdEnabledSync() }, data);
     case PhysicsProtocolType.RIGID_NUM_COLLIDERS:
       // RIGID_NUM_COLLIDERS
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, numColliders: rigidBodyAPI.numCollidersSync() }, data);
+      return sendMessage({ type: data.type, numColliders: rigidBodyAPI.numCollidersSync() }, data);
     case PhysicsProtocolType.RIGID_COLLIDER:
       // RIGID_COLLIDER
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
       // Returns the colliderAPI id
       const colliderAPI = rigidBodyAPI.colliderSync(data.index);
       return sendMessage(
-        { type, colliderId: typeof colliderAPI === 'number' ? colliderAPI : colliderAPI.id },
+        {
+          type: data.type,
+          colliderId: typeof colliderAPI === 'number' ? colliderAPI : colliderAPI.id,
+        },
         data
       );
     case PhysicsProtocolType.RIGID_SET_ENABLED:
@@ -358,11 +377,11 @@ export const physicsSwitchRigid = async (
     case PhysicsProtocolType.RIGID_IS_ENABLED:
       // RIGID_IS_ENABLED
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, isEnabled: rigidBodyAPI.isEnabledSync() }, data);
+      return sendMessage({ type: data.type, isEnabled: rigidBodyAPI.isEnabledSync() }, data);
     case PhysicsProtocolType.RIGID_BODY_TYPE:
       // RIGID_BODY_TYPE
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, bodyType: rigidBodyAPI.bodyTypeSync() }, data);
+      return sendMessage({ type: data.type, bodyType: rigidBodyAPI.bodyTypeSync() }, data);
     case PhysicsProtocolType.RIGID_SET_BODY_TYPE:
       // RIGID_SET_BODY_TYPE
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
@@ -370,31 +389,37 @@ export const physicsSwitchRigid = async (
     case PhysicsProtocolType.RIGID_IS_SLEEPING:
       // RIGID_IS_SLEEPING
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, isSleeping: rigidBodyAPI.isSleepingSync() }, data);
+      return sendMessage({ type: data.type, isSleeping: rigidBodyAPI.isSleepingSync() }, data);
     case PhysicsProtocolType.RIGID_IS_MOVING:
       // RIGID_IS_MOVING
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, isMoving: rigidBodyAPI.isMovingSync() }, data);
+      return sendMessage({ type: data.type, isMoving: rigidBodyAPI.isMovingSync() }, data);
     case PhysicsProtocolType.RIGID_IS_FIXED:
       // RIGID_IS_FIXED
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, isFixed: rigidBodyAPI.isFixedSync() }, data);
+      return sendMessage({ type: data.type, isFixed: rigidBodyAPI.isFixedSync() }, data);
     case PhysicsProtocolType.RIGID_IS_KINEMATIC:
       // RIGID_IS_KINEMATIC
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, isKinematic: rigidBodyAPI.isKinematicSync() }, data);
+      return sendMessage({ type: data.type, isKinematic: rigidBodyAPI.isKinematicSync() }, data);
     case PhysicsProtocolType.RIGID_IS_DYNAMIC:
       // RIGID_IS_DYNAMIC
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, isDynamic: rigidBodyAPI.isDynamicSync() }, data);
+      return sendMessage({ type: data.type, isDynamic: rigidBodyAPI.isDynamicSync() }, data);
     case PhysicsProtocolType.RIGID_LINEAR_DAMPING:
       // RIGID_LINEAR_DAMPING
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, linearDamping: rigidBodyAPI.linearDampingSync() }, data);
+      return sendMessage(
+        { type: data.type, linearDamping: rigidBodyAPI.linearDampingSync() },
+        data
+      );
     case PhysicsProtocolType.RIGID_ANGULAR_DAMPING:
       // RIGID_ANGULAR_DAMPING
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, angularDamping: rigidBodyAPI.angularDampingSync() }, data);
+      return sendMessage(
+        { type: data.type, angularDamping: rigidBodyAPI.angularDampingSync() },
+        data
+      );
     case PhysicsProtocolType.RIGID_SET_LINEAR_DAMPING:
       // RIGID_SET_LINEAR_DAMPING
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
@@ -456,11 +481,11 @@ export const physicsSwitchRigid = async (
     case PhysicsProtocolType.RIGID_USER_FORCE:
       // RIGID_USER_FORCE
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, userForce: rigidBodyAPI.userForceSync() }, data);
+      return sendMessage({ type: data.type, userForce: rigidBodyAPI.userForceSync() }, data);
     case PhysicsProtocolType.RIGID_USER_TORQUE:
       // RIGID_USER_TORQUE
       if (!rigidBodyAPI) return sendNoRigidBodyErrorMessage(sendMessage, data);
-      return sendMessage({ type, userTorque: rigidBodyAPI.userTorqueSync() }, data);
+      return sendMessage({ type: data.type, userTorque: rigidBodyAPI.userTorqueSync() }, data);
 
     default:
       // ERROR

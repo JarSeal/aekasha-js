@@ -79,7 +79,6 @@ export const paramsToShape = (params: ShapeParams): Rapier.Shape => {
         : new backend.RAPIER.Triangle(params.a, params.b, params.c);
       break;
     case 'TRIMESH':
-      // @TODO: Make error handling better by returning an error back to the facade
       const vertices = existsOrThrow(
         params.vertices,
         'Could not find vertices when creating a TRIMESH shape.'
@@ -91,7 +90,6 @@ export const paramsToShape = (params: ShapeParams): Rapier.Shape => {
       shape = new backend.RAPIER.TriMesh(vertices, indices);
       break;
     case 'HEIGHTFIELD':
-      // @TODO: Make error handling better by returning an error back to the facade
       const nRows = existsOrThrow(
         params.nrows,
         'Could not find nRows when creating a HEIGHTFIELD shape.'
@@ -116,7 +114,6 @@ export const paramsToShape = (params: ShapeParams): Rapier.Shape => {
       );
       break;
     case 'CONVEXHULL':
-      // @TODO: Make error handling better by returning an error back to the facade
       const vertParams = existsOrThrow(
         params.vertices,
         'Could not find vertices when creating a CONVEXHULL shape.'

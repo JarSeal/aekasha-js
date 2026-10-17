@@ -44,9 +44,9 @@ export const backend: {
 };
 
 // The maps by running id (next*Id in RapierBodies.ts, RapierColliders.ts and RapierJoints.ts).
-// Running ids. Never reset, not even by deleteWorld(): SceneLoader.ts recreates the world on
-// every scene load, and a stale id from the previous world (e.g. a late delete) must never
-// match a body/collider/joint of the new one.
+// Running ids are never reset, not even by deleteWorld(): physics' scene hooks recreate the world
+// on every scene load (resetPhysicsWorld), and a stale id from the previous world (e.g. a late
+// delete) must never match a body/collider/joint of the new one.
 
 /**
  * Each live body's Rapier handle, by running id.
@@ -205,29 +205,46 @@ export const getJointAPI = (jointOrHandle?: Rapier.ImpulseJoint | number): Joint
   return id !== undefined ? jointAPIs.get(id) : undefined;
 };
 
-/** Get rigidBodyAPI with an id (running id). */
+/**
+ * Get rigidBodyAPI with an id (running id).
+ * @internal
+ */
 export const getRigidBodyAPIWithId = (id: number): RigidBodyAPI | undefined =>
   rigidBodyAPIs.get(id);
 
-/** Get colliderAPI with an id (running id). */
+/**
+ * Get colliderAPI with an id (running id).
+ * @internal
+ */
 export const getColliderAPIWithId = (id: number): ColliderAPI | undefined => colliderAPIs.get(id);
 
-/** Get jointAPI with an id (running id). */
+/**
+ * Get jointAPI with an id (running id).
+ * @internal
+ */
 export const getJointAPIWithId = (id: number): JointAPI | undefined => jointAPIs.get(id);
 
-/** Enumerates the ids of all currently-live rigid bodies. */
+/**
+ * Enumerates the ids of all currently-live rigid bodies.
+ * @internal
+ */
 export const getAllRigidBodyIds = (): IterableIterator<number> => rigidBodyAPIs.keys();
 
-/** Sets (or clears, with null) the observer the query methods report to. Only the facade
- * sets it, on the main thread: the worker's engine never has one, so worker queries cost
- * nothing extra. */
+/**
+ * Sets (or clears, with null) the observer the query methods report to. Only the facade sets it, on
+ * the main thread: the worker's engine never has one, so worker queries cost nothing extra.
+ * @internal
+ */
 export const setQueryObserver = (observer: PhysicsQueryObserver | null) => {
   backend.queryObserver = observer;
 };
 
-/** Sets (or clears, with null) the observer told about moved bodies. Only the facade sets
- * it, on the main thread, where it brings the move to the body's entity (p352: BODY_STATIC
- * bodies aren't synced per frame). The worker's engine never has one. */
+/**
+ * Sets (or clears, with null) the observer told about moved bodies. Only the facade sets it, on the
+ * main thread, where it brings the move to the body's entity (p352: BODY_STATIC bodies aren't
+ * synced per frame). The worker's engine never has one.
+ * @internal
+ */
 export const setBodyMovedObserver = (observer: ((rigidBodyId: number) => void) | null) => {
   backend.bodyMovedObserver = observer;
 };

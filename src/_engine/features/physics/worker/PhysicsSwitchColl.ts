@@ -1,17 +1,14 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
+import type { PhysicsWorkerReply } from '../protocol/PhysicsDownProtocol';
 import type { PhysicsUpProtocol } from '../protocol/PhysicsUpProtocol';
 import type { EngineAPIType } from '../types/PhysicsBackendTypes';
 import type { WorldAPI } from '../types/PhysicsWorldTypes';
 
-const sendNoCollErrorMessage = (
-  sendMessage: (message: any, data: PhysicsUpProtocol, isError?: boolean) => void,
-  data: PhysicsUpProtocol
-) =>
+const sendNoCollErrorMessage = (sendMessage: PhysicsWorkerReply, data: PhysicsUpProtocol) =>
   sendMessage(
     {
       type: PhysicsProtocolType.ERROR,
-      message: `Could not find ColliderAPI in worker (physicsSwitchColl) for ID: ${(data as any).colliderId}`,
+      message: `Could not find ColliderAPI in worker (physicsSwitchColl) for ID: ${'colliderId' in data ? data.colliderId : undefined}`,
     },
     data
   );
@@ -20,43 +17,41 @@ export const physicsSwitchColl = async (
   data: PhysicsUpProtocol,
   physicsWorldAPI: WorldAPI,
   engAPI: EngineAPIType,
-  sendMessage: (
-    message: any,
-    data: PhysicsUpProtocol,
-    isError?: boolean,
-    transfer?: Transferable[]
-  ) => void
+  sendMessage: PhysicsWorkerReply
 ) => {
   const type = data.type;
 
   // Resolve the Engine-side API instance using the ID from the message
   const collAPI = 'colliderId' in data ? engAPI.getColliderAPIWithId(data.colliderId) : undefined;
 
-  switch (type) {
+  switch (data.type) {
     // --- Lifecycle ---
     case PhysicsProtocolType.CREATE_COLLIDER: {
       const coll = await physicsWorldAPI.createCollider(data.params, data.parentId);
-      return sendMessage({ type, id: coll.id, parentId: data.parentId }, data);
+      return sendMessage({ type: data.type, id: coll.id, parentId: data.parentId }, data);
     }
 
     case PhysicsProtocolType.CREATE_COLLIDERS: {
       const colls = await engAPI.createColliders(data.params);
       const ids = colls.map((c) => c.id);
-      return sendMessage({ type, ids }, data);
+      return sendMessage({ type: data.type, ids }, data);
     }
 
     case PhysicsProtocolType.DELETE_COLLIDER: {
-      return sendMessage({ type, ...engAPI.deleteCollider(data.id, data.wakeUp) }, data);
+      return sendMessage({ type: data.type, ...engAPI.deleteCollider(data.id, data.wakeUp) }, data);
     }
 
     case PhysicsProtocolType.DELETE_COLLIDERS: {
-      return sendMessage({ type, ...engAPI.deleteColliders(data.ids, data.wakeUps) }, data);
+      return sendMessage(
+        { type: data.type, ...engAPI.deleteColliders(data.ids, data.wakeUps) },
+        data
+      );
     }
 
     // --- Metadata & Validity ---
     case PhysicsProtocolType.COLL_GET_USERDATA: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, userData: collAPI.getUserDataSync() }, data);
+      return sendMessage({ type: data.type, userData: collAPI.getUserDataSync() }, data);
     }
 
     case PhysicsProtocolType.COLL_SET_USERDATA: {
@@ -66,28 +61,31 @@ export const physicsSwitchColl = async (
 
     case PhysicsProtocolType.COLL_IS_VALID: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, isValid: collAPI.isValidSync() }, data);
+      return sendMessage({ type: data.type, isValid: collAPI.isValidSync() }, data);
     }
 
     // --- Transformation (Getters) ---
     case PhysicsProtocolType.COLL_TRANSLATION: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, translation: collAPI.translationSync() }, data);
+      return sendMessage({ type: data.type, translation: collAPI.translationSync() }, data);
     }
 
     case PhysicsProtocolType.COLL_ROTATION: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, rotation: collAPI.rotationSync() }, data);
+      return sendMessage({ type: data.type, rotation: collAPI.rotationSync() }, data);
     }
 
     case PhysicsProtocolType.COLL_TRANSLATION_WRT_PARENT: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, translation: collAPI.translationWrtParentSync() }, data);
+      return sendMessage(
+        { type: data.type, translation: collAPI.translationWrtParentSync() },
+        data
+      );
     }
 
     case PhysicsProtocolType.COLL_ROTATION_WRT_PARENT: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, rotation: collAPI.rotationWrtParentSync() }, data);
+      return sendMessage({ type: data.type, rotation: collAPI.rotationWrtParentSync() }, data);
     }
 
     // --- Transformation (Setters) ---
@@ -114,7 +112,7 @@ export const physicsSwitchColl = async (
     // --- State & Config ---
     case PhysicsProtocolType.COLL_IS_SENSOR: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, isSensor: collAPI.isSensorSync() }, data);
+      return sendMessage({ type: data.type, isSensor: collAPI.isSensorSync() }, data);
     }
 
     case PhysicsProtocolType.COLL_SET_SENSOR: {
@@ -124,7 +122,7 @@ export const physicsSwitchColl = async (
 
     case PhysicsProtocolType.COLL_IS_ENABLED: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, isEnabled: collAPI.isEnabledSync() }, data);
+      return sendMessage({ type: data.type, isEnabled: collAPI.isEnabledSync() }, data);
     }
 
     case PhysicsProtocolType.COLL_SET_ENABLED: {
@@ -134,7 +132,7 @@ export const physicsSwitchColl = async (
 
     case PhysicsProtocolType.COLL_FRICTION: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, friction: collAPI.frictionSync() }, data);
+      return sendMessage({ type: data.type, friction: collAPI.frictionSync() }, data);
     }
 
     case PhysicsProtocolType.COLL_SET_FRICTION: {
@@ -144,7 +142,7 @@ export const physicsSwitchColl = async (
 
     case PhysicsProtocolType.COLL_RESTITUTION: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, restitution: collAPI.restitutionSync() }, data);
+      return sendMessage({ type: data.type, restitution: collAPI.restitutionSync() }, data);
     }
 
     case PhysicsProtocolType.COLL_SET_RESTITUTION: {
@@ -155,12 +153,12 @@ export const physicsSwitchColl = async (
     // --- Mass Properties ---
     case PhysicsProtocolType.COLL_MASS: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, mass: collAPI.massSync() }, data);
+      return sendMessage({ type: data.type, mass: collAPI.massSync() }, data);
     }
 
     case PhysicsProtocolType.COLL_DENSITY: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, density: collAPI.densitySync() }, data);
+      return sendMessage({ type: data.type, density: collAPI.densitySync() }, data);
     }
 
     case PhysicsProtocolType.COLL_SET_DENSITY: {
@@ -186,22 +184,22 @@ export const physicsSwitchColl = async (
     // --- Geometry ---
     case PhysicsProtocolType.COLL_SHAPE_TYPE: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, shapeType: collAPI.shapeTypeSync() }, data);
+      return sendMessage({ type: data.type, shapeType: collAPI.shapeTypeSync() }, data);
     }
 
     case PhysicsProtocolType.COLL_RADIUS: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, radius: collAPI.radiusSync() }, data);
+      return sendMessage({ type: data.type, radius: collAPI.radiusSync() }, data);
     }
 
     case PhysicsProtocolType.COLL_HALF_HEIGHT: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, halfHeight: collAPI.halfHeightSync() }, data);
+      return sendMessage({ type: data.type, halfHeight: collAPI.halfHeightSync() }, data);
     }
 
     case PhysicsProtocolType.COLL_HALF_EXTENTS: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, halfExtents: collAPI.halfExtentsSync() }, data);
+      return sendMessage({ type: data.type, halfExtents: collAPI.halfExtentsSync() }, data);
     }
 
     // --- Geometry (mesh-type shapes) ---
@@ -214,14 +212,24 @@ export const physicsSwitchColl = async (
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
       const live = collAPI.verticesSync();
       const vertices = live ? new Float32Array(live) : null;
-      return sendMessage({ type, vertices }, data, false, vertices ? [vertices.buffer] : undefined);
+      return sendMessage(
+        { type: data.type, vertices },
+        data,
+        false,
+        vertices ? [vertices.buffer] : undefined
+      );
     }
 
     case PhysicsProtocolType.COLL_INDICES: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
       const live = collAPI.indicesSync();
       const indices = live ? new Uint32Array(live) : null;
-      return sendMessage({ type, indices }, data, false, indices ? [indices.buffer] : undefined);
+      return sendMessage(
+        { type: data.type, indices },
+        data,
+        false,
+        indices ? [indices.buffer] : undefined
+      );
     }
 
     case PhysicsProtocolType.COLL_HEIGHTS: {
@@ -229,7 +237,7 @@ export const physicsSwitchColl = async (
       const live = collAPI.heightsSync();
       const heights = live ? { ...live, heights: new Float32Array(live.heights) } : null;
       return sendMessage(
-        { type, heights },
+        { type: data.type, heights },
         data,
         false,
         heights ? [heights.heights.buffer] : undefined
@@ -238,18 +246,18 @@ export const physicsSwitchColl = async (
 
     case PhysicsProtocolType.COLL_NORMAL: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, normal: collAPI.normalSync() }, data);
+      return sendMessage({ type: data.type, normal: collAPI.normalSync() }, data);
     }
 
     case PhysicsProtocolType.COLL_BORDER_RADIUS: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, borderRadius: collAPI.borderRadiusSync() }, data);
+      return sendMessage({ type: data.type, borderRadius: collAPI.borderRadiusSync() }, data);
     }
 
     // --- Filtering Groups ---
     case PhysicsProtocolType.COLL_COLLISION_GROUPS: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, groups: collAPI.collisionGroupsSync() }, data);
+      return sendMessage({ type: data.type, groups: collAPI.collisionGroupsSync() }, data);
     }
 
     case PhysicsProtocolType.COLL_SET_COLLISION_GROUPS: {
@@ -259,7 +267,7 @@ export const physicsSwitchColl = async (
 
     case PhysicsProtocolType.COLL_SOLVER_GROUPS: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, groups: collAPI.solverGroupsSync() }, data);
+      return sendMessage({ type: data.type, groups: collAPI.solverGroupsSync() }, data);
     }
 
     case PhysicsProtocolType.COLL_SET_SOLVER_GROUPS: {
@@ -270,7 +278,10 @@ export const physicsSwitchColl = async (
     // --- Queries ---
     case PhysicsProtocolType.COLL_CONTAINS_POINT: {
       if (!collAPI) return sendNoCollErrorMessage(sendMessage, data);
-      return sendMessage({ type, isInside: collAPI.containsPointSync(data.point) }, data);
+      return sendMessage(
+        { type: data.type, isInside: collAPI.containsPointSync(data.point) },
+        data
+      );
     }
 
     default:

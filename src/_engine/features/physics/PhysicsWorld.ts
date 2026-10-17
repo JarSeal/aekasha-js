@@ -29,7 +29,7 @@ import {
   resetSimClock,
 } from './PhysicsStepping';
 import { PhysicsTransformBuffer } from './PhysicsTransformBuffer';
-import { getEngineAPI, initPhysicsEngine } from './PhysicsUtils';
+import { initPhysicsEngine } from './PhysicsUtils';
 import type { PhysicsDownProtocol } from './protocol/PhysicsDownProtocol';
 import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
 import type {
@@ -151,7 +151,7 @@ export const createPhysicsWorld = async (
   if (!isWorkerTarget()) {
     facade.world = existsOrThrow(
       facade.engAPI?.createWorld(gravityArg, optsArg),
-      `Could not create physics world (main thread), engineAPI: ${JSON.stringify(getEngineAPI())}`
+      'Could not create physics world (main thread): the physics engine is not initialized.'
     );
     facade.worldEnabled = true;
     resetSimClock();

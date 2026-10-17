@@ -906,6 +906,44 @@ As built, section 1 (2026-10-17, on `bdd6e70`): the move.
 - **For Phase 8:** besides p500's (D12), the open plans p102, p250 and p306 name
   `EngineRapier.ts` and its old lines.
 
+As built, section 2 (2026-10-17, on `173cad9`): R6-R8, W2, the docs.
+
+- **R6:** `RapierWorld.ts` keeps the `PhysicsState` init() is given (`undefined` before), with no
+  defaults of its own. `createWorld`'s timestep falls back to it, then to Rapier's own 1/60 (the
+  facade and the worker always pass one). `physicsWorldAPI` is `WorldAPI | undefined` instead of
+  an `undefined as unknown as` cast.
+- **R7:** the `@CHORE`s and the three error-handling `@TODO`s are gone (A1 made those throws
+  reach the caller); the snapshot `@TODO` stays (D12). The 8 `no-explicit-any` reads of Rapier's
+  shape fields go through one typed view, `RapierShapeFields` (Rapier's JS shape classes share
+  no type for them); `heightsSync` narrows to Rapier's `Heightfield` instead. The enum casts:
+  `RapierEnums.ts` converts body and shape types (`as number as`), and `EngineRapier.test.ts`
+  pins every mirrored enum pair (body type, shape type, the combine rule, active hooks / events
+  / collision types, feature type, query filter flags, solver flags, joint axes) to the
+  installed Rapier's names and numbers. All ten match Rapier 0.19.3. Stale comments fixed: the
+  running ids' (`SceneLoader.ts` → physics' scene hooks), the callbacks map's ("the legacy
+  file's multi-callback support": each collider gets one callback), `PhysicsWorker.ts`' name.
+- **R8:** `PhysicsUtils.ts` lost `getColliderShapeName`, `getPhysicsEngineKey`, its own
+  `setPhysicsPauseTime` (no callers) and `getEngineAPI`, whose one use was a
+  `JSON.stringify` of the backend module in `PhysicsWorld.ts`' error, now "the physics engine is
+  not initialized" (the only way `createWorld` returns nothing there). Its four exports are
+  documented and `@internal` (Phase 6 step 3's part of it done).
+- **W2:** `PhysicsWorkerReply` (`protocol/PhysicsDownProtocol.ts`, `@internal`) types the worker's
+  `sendMessage` and every switch's. The rigid, collider and joint switches switch on `data.type`
+  and reply with it, as the world switch did, so each reply is checked against its type's down
+  message (all already matched: tsc found nothing). The `any`s and the file-wide
+  `eslint-disable`s are gone; the not-found errors read the id with `'jointId' in data`. A string
+  thrown in the worker reaches the caller as it is (no `toUpperCase`).
+- **Docs:** the backend's exports are at 58 / 58, each `@internal` (none is on an entry); the
+  contract's `init` doc no longer says it keeps the loop state (it never did).
+- **Bundle and baselines:** `EngineRapier.js#2` −0.4 kB gzip (the defaults object and
+  `PhysicsUtils.ts`' dead code), `assets/index.js` −0.1 kB rendered; the banner unchanged.
+  `api.json` recorded R8's four removals and the four new `@internal` names (`RapierEnums.ts`' three,
+  `PhysicsWorkerReply`); `docs.json`: `features/physics` 197 / 203 exports, `backends/rapier`
+  58 / 58, `protocol` 108 / 108.
+- **Checks:** `tsc` (both projects), the lint, `yarn test` (604 passed, the enum test new),
+  `moveMap.ts` regenerated (754 files, the same 41 boundary violations, 0 feature cycles),
+  `yarn hub:build` (no warning).
+
 ### Phase 6: entities, tiers and the policy
 
 1. `PhysicsEntity.ts`: the interpolation into `PhysicsInterpolation.ts` (E2), E3, E4's docs and

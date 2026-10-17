@@ -1,17 +1,14 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
+import type { PhysicsWorkerReply } from '../protocol/PhysicsDownProtocol';
 import type { PhysicsUpProtocol } from '../protocol/PhysicsUpProtocol';
 import type { EngineAPIType } from '../types/PhysicsBackendTypes';
 import type { WorldAPI } from '../types/PhysicsWorldTypes';
 
-const sendNoJointErrorMessage = (
-  sendMessage: (message: any, data: PhysicsUpProtocol, isError?: boolean) => void,
-  data: PhysicsUpProtocol
-) =>
+const sendNoJointErrorMessage = (sendMessage: PhysicsWorkerReply, data: PhysicsUpProtocol) =>
   sendMessage(
     {
       type: PhysicsProtocolType.ERROR,
-      message: `Could not find JointAPI in worker (physicsSwitchJoint) for ID: ${(data as any).jointId}`,
+      message: `Could not find JointAPI in worker (physicsSwitchJoint) for ID: ${'jointId' in data ? data.jointId : undefined}`,
     },
     data
   );
@@ -20,43 +17,38 @@ export const physicsSwitchJoint = async (
   data: PhysicsUpProtocol,
   physicsWorldAPI: WorldAPI,
   engAPI: EngineAPIType,
-  sendMessage: (
-    message: any,
-    data: PhysicsUpProtocol,
-    isError?: boolean,
-    transfer?: Transferable[]
-  ) => void
+  sendMessage: PhysicsWorkerReply
 ) => {
   const type = data.type;
 
   // Resolve the Engine-side API instance using the ID from the message
   const jointAPI = 'jointId' in data ? engAPI.getJointAPIWithId(data.jointId) : undefined;
 
-  switch (type) {
+  switch (data.type) {
     // --- Lifecycle ---
     case PhysicsProtocolType.CREATE_JOINT: {
       const joint = await physicsWorldAPI.createJoint(data.params);
-      return sendMessage({ type, id: joint.id }, data);
+      return sendMessage({ type: data.type, id: joint.id }, data);
     }
 
     case PhysicsProtocolType.CREATE_JOINTS: {
       const joints = await engAPI.createJoints(data.params);
       const ids = joints.map((j) => j.id);
-      return sendMessage({ type, ids }, data);
+      return sendMessage({ type: data.type, ids }, data);
     }
 
     case PhysicsProtocolType.DELETE_JOINT: {
-      return sendMessage({ type, ...engAPI.deleteJoint(data.id, data.wakeUp) }, data);
+      return sendMessage({ type: data.type, ...engAPI.deleteJoint(data.id, data.wakeUp) }, data);
     }
 
     case PhysicsProtocolType.DELETE_JOINTS: {
-      return sendMessage({ type, ...engAPI.deleteJoints(data.ids, data.wakeUps) }, data);
+      return sendMessage({ type: data.type, ...engAPI.deleteJoints(data.ids, data.wakeUps) }, data);
     }
 
     // --- Metadata & Validity ---
     case PhysicsProtocolType.JOINT_GET_USERDATA: {
       if (!jointAPI) return sendNoJointErrorMessage(sendMessage, data);
-      return sendMessage({ type, userData: jointAPI.getUserDataSync() }, data);
+      return sendMessage({ type: data.type, userData: jointAPI.getUserDataSync() }, data);
     }
 
     case PhysicsProtocolType.JOINT_SET_USERDATA: {
@@ -66,34 +58,37 @@ export const physicsSwitchJoint = async (
 
     case PhysicsProtocolType.JOINT_IS_VALID: {
       if (!jointAPI) return sendNoJointErrorMessage(sendMessage, data);
-      return sendMessage({ type, isValid: jointAPI.isValidSync() }, data);
+      return sendMessage({ type: data.type, isValid: jointAPI.isValidSync() }, data);
     }
 
     // --- Bodies & Anchors ---
     case PhysicsProtocolType.JOINT_BODY1_ID: {
       if (!jointAPI) return sendNoJointErrorMessage(sendMessage, data);
-      return sendMessage({ type, body1Id: jointAPI.body1IdSync() }, data);
+      return sendMessage({ type: data.type, body1Id: jointAPI.body1IdSync() }, data);
     }
 
     case PhysicsProtocolType.JOINT_BODY2_ID: {
       if (!jointAPI) return sendNoJointErrorMessage(sendMessage, data);
-      return sendMessage({ type, body2Id: jointAPI.body2IdSync() }, data);
+      return sendMessage({ type: data.type, body2Id: jointAPI.body2IdSync() }, data);
     }
 
     case PhysicsProtocolType.JOINT_ANCHOR1: {
       if (!jointAPI) return sendNoJointErrorMessage(sendMessage, data);
-      return sendMessage({ type, anchor1: jointAPI.anchor1Sync() }, data);
+      return sendMessage({ type: data.type, anchor1: jointAPI.anchor1Sync() }, data);
     }
 
     case PhysicsProtocolType.JOINT_ANCHOR2: {
       if (!jointAPI) return sendNoJointErrorMessage(sendMessage, data);
-      return sendMessage({ type, anchor2: jointAPI.anchor2Sync() }, data);
+      return sendMessage({ type: data.type, anchor2: jointAPI.anchor2Sync() }, data);
     }
 
     // --- Contacts ---
     case PhysicsProtocolType.JOINT_CONTACTS_ENABLED: {
       if (!jointAPI) return sendNoJointErrorMessage(sendMessage, data);
-      return sendMessage({ type, contactsEnabled: jointAPI.contactsEnabledSync() }, data);
+      return sendMessage(
+        { type: data.type, contactsEnabled: jointAPI.contactsEnabledSync() },
+        data
+      );
     }
 
     case PhysicsProtocolType.JOINT_SET_CONTACTS_ENABLED: {
@@ -104,7 +99,7 @@ export const physicsSwitchJoint = async (
     // --- Revolute/Prismatic only: limits & motor ---
     case PhysicsProtocolType.JOINT_LIMITS_ENABLED: {
       if (!jointAPI) return sendNoJointErrorMessage(sendMessage, data);
-      return sendMessage({ type, limitsEnabled: jointAPI.limitsEnabledSync() }, data);
+      return sendMessage({ type: data.type, limitsEnabled: jointAPI.limitsEnabledSync() }, data);
     }
 
     case PhysicsProtocolType.JOINT_SET_LIMITS: {

@@ -857,6 +857,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/physics/backends/rapier/RapierEnums.ts": {
+      "to": "src/_engine/features/physics/backends/rapier/RapierEnums.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/physics/backends/rapier/RapierEvents.ts": {
       "to": "src/_engine/features/physics/backends/rapier/RapierEvents.ts",
       "action": "keep",

@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 
 import type { LoopState } from '../../../kernel/loop/MainLoop';
-import type { PhysicsDownProtocol } from '../protocol/PhysicsDownProtocol';
+import type { PhysicsDownProtocol, PhysicsWorkerReply } from '../protocol/PhysicsDownProtocol';
 import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
 import type { PhysicsUpProtocol } from '../protocol/PhysicsUpProtocol';
 import type { EngineAPIType } from '../types/PhysicsBackendTypes';
@@ -122,7 +122,7 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
       }
     }
 
-    switch (type) {
+    switch (data.type) {
       // EngineAPI
       case PhysicsProtocolType.STEP:
         // STEP (one-way, no response — transform results arrive via the hot-path buffer,
@@ -197,7 +197,7 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
         if (isTracking) writeBackDebugState();
         return sendMessage(
           {
-            type,
+            type: data.type,
             transportMode: resolvedUseSAB ? 'SHARED_MEMORY' : 'MESSAGE_BATCH',
             buffer,
           },
@@ -211,15 +211,15 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
         return;
       case PhysicsProtocolType.FLUSH:
         // FLUSH (ordering barrier: messages are handled in arrival order, so replying is enough)
-        return sendMessage({ type }, data);
+        return sendMessage({ type: data.type }, data);
       case PhysicsProtocolType.TAKE_SNAPSHOT:
         // TAKE_SNAPSHOT
         const snapshot = engAPI.takeSnapshot();
-        return sendMessage({ type, snapshot }, data);
+        return sendMessage({ type: data.type, snapshot }, data);
       case PhysicsProtocolType.RESTORE_SNAPSHOT:
         // RESTORE_SNAPSHOT
         physicsWorldAPI = engAPI.restoreSnapshot(data.snapshot);
-        return sendMessage({ type, worldCreated: true }, data);
+        return sendMessage({ type: data.type, worldCreated: true }, data);
       case PhysicsProtocolType.CREATE_WORLD: {
         // CREATE_WORLD
         physicsWorldAPI = engAPI.createWorld(data.gravity, data.opts);
@@ -249,7 +249,7 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
         }
         return sendMessage(
           {
-            type,
+            type: data.type,
             worldCreated: true,
             transportMode: resolvedUseSAB ? 'SHARED_MEMORY' : 'MESSAGE_BATCH',
             buffer: resolvedUseSAB ? transformBuffer.buffer : undefined,
@@ -270,7 +270,7 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
         debugTrackedRigidBodyIds = [];
         debugTrackedColliderIds = [];
         debugStateBuffer?.clear();
-        return sendMessage({ type, ...createdStatus }, data);
+        return sendMessage({ type: data.type, ...createdStatus }, data);
       }
       case PhysicsProtocolType.INIT_PHYSICS:
         // INIT_PHYSICS
@@ -285,7 +285,7 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
         if (response) physicsWorldAPI = response;
         return sendMessage(
           {
-            type,
+            type: data.type,
             worldCreated: !Boolean(data.doNotCreateWorld) && Boolean(response),
           },
           data
@@ -304,7 +304,7 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
   } catch (err) {
     let message: string | undefined = undefined;
     if (typeof err === 'string') {
-      message = err.toUpperCase();
+      message = err;
     } else if (err instanceof Error) {
       message = err.message;
     } else {
@@ -328,13 +328,7 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
 // handleMessage never rejects: every throw replies ERROR
 transport.onMessage((data) => void handleMessage(data));
 
-const sendMessage = (
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  message: any,
-  data: PhysicsUpProtocol,
-  isError?: boolean,
-  transfer?: Transferable[]
-) => {
+const sendMessage: PhysicsWorkerReply = (message, data, isError, transfer) => {
   // If the up message has 'isOneWay: true', don't reply
   if (data.isOneWay && isError) return;
   const requestId = data.requestId;
@@ -342,8 +336,7 @@ const sendMessage = (
   return transport.send({ ...message, requestId }, transfer);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const sendMessageSimple = (message: any, transfer?: Transferable[]) =>
+const sendMessageSimple = (message: PhysicsDownProtocol, transfer?: Transferable[]) =>
   transport.send(message, transfer);
 
 /** Writes every slotted rigid body's transform into the hot-path buffer after a step, then

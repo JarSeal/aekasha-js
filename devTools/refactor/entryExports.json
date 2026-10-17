@@ -41,8 +41,8 @@
     "aekasha/physics": {
       "public": 23,
       "crossEntry": 27,
-      "internal": 220,
-      "unreferenced": 142
+      "internal": 281,
+      "unreferenced": 110
     },
     "aekasha/postfx": {
       "public": 7,
@@ -7924,19 +7924,113 @@
           ]
         }
       },
-      "src/_engine/features/physics/backends/rapier/EngineRapier.ts": {
-        "countDynamicBodyActivity": {
-          "kind": "Function",
+      "src/_engine/features/physics/backends/rapier/proxies/EngineColliderProxyAPI.ts": {
+        "ColliderMassMode": {
+          "kind": "TypeAlias",
           "usage": "unreferenced"
         },
+        "EngineColliderProxyAPI": {
+          "kind": "Class",
+          "usage": "internal"
+        }
+      },
+      "src/_engine/features/physics/backends/rapier/proxies/EngineJointProxyAPI.ts": {
+        "EngineJointProxyAPI": {
+          "kind": "Class",
+          "usage": "internal"
+        }
+      },
+      "src/_engine/features/physics/backends/rapier/proxies/EngineRigidBodyProxyAPI.ts": {
+        "EngineRigidBodyProxyAPI": {
+          "kind": "Class",
+          "usage": "internal"
+        }
+      },
+      "src/_engine/features/physics/backends/rapier/proxies/EngineWorldProxyAPI.ts": {
+        "EngineWorldProxyAPI": {
+          "kind": "Class",
+          "usage": "internal"
+        }
+      },
+      "src/_engine/features/physics/backends/rapier/RapierBodies.ts": {
+        "countDynamicBodyActivity": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "createRigidBodies": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "createRigidBody": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "deleteRigidBodies": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "deleteRigidBody": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "detachRigidBody": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "readBodyPositions": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "reattachRigidBody": {
+          "kind": "Function",
+          "usage": "internal"
+        }
+      },
+      "src/_engine/features/physics/backends/rapier/RapierColliders.ts": {
         "createCollider": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "createColliders": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
+        "deleteCollider": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "deleteColliders": {
+          "kind": "Function",
+          "usage": "internal"
+        }
+      },
+      "src/_engine/features/physics/backends/rapier/RapierEvents.ts": {
+        "cleanupColliderEventRegistrations": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "clearEventRegistrations": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "dispatchPendingEventRecords": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "drainAndDispatchEvents": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "drainPendingEventRecords": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "registerColliderEventFns": {
+          "kind": "Function",
+          "usage": "internal"
+        }
+      },
+      "src/_engine/features/physics/backends/rapier/RapierJoints.ts": {
         "createJoint": {
           "kind": "Function",
           "usage": "public",
@@ -7946,31 +8040,7 @@
         },
         "createJoints": {
           "kind": "Function",
-          "usage": "unreferenced"
-        },
-        "createRigidBodies": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
-        "createRigidBody": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
-        "createWorld": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
-        "debugRender": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
-        "deleteCollider": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
-        "deleteColliders": {
-          "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "deleteJoint": {
           "kind": "Function",
@@ -7981,79 +8051,145 @@
         },
         "deleteJoints": {
           "kind": "Function",
+          "usage": "internal"
+        }
+      },
+      "src/_engine/features/physics/backends/rapier/RapierShapes.ts": {
+        "paramsToShape": {
+          "kind": "Function",
+          "usage": "internal"
+        }
+      },
+      "src/_engine/features/physics/backends/rapier/RapierState.ts": {
+        "backend": {
+          "kind": "Variable",
+          "usage": "internal"
+        },
+        "colliderAPIs": {
+          "kind": "Variable",
+          "usage": "internal"
+        },
+        "colliders": {
+          "kind": "Variable",
+          "usage": "internal"
+        },
+        "detachedBodies": {
+          "kind": "Variable",
+          "usage": "internal"
+        },
+        "DetachedBody": {
+          "kind": "TypeAlias",
           "usage": "unreferenced"
         },
-        "deleteRigidBodies": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
-        "deleteRigidBody": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
-        "deleteWorld": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
-        "detachRigidBody": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
-        "dispatchPendingEventRecords": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
-        "drainPendingEventRecords": {
-          "kind": "Function",
-          "usage": "unreferenced"
+        "DetachedCollider": {
+          "kind": "TypeAlias",
+          "usage": "internal"
         },
         "getAllRigidBodyIds": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
+        },
+        "getCollider": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "getColliderAPI": {
+          "kind": "Function",
+          "usage": "internal"
         },
         "getColliderAPIWithId": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
+        },
+        "getJoint": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "getJointAPI": {
+          "kind": "Function",
+          "usage": "internal"
         },
         "getJointAPIWithId": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
+        },
+        "getRigidBody": {
+          "kind": "Function",
+          "usage": "internal"
         },
         "getRigidBodyAPIWithId": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
-        "init": {
-          "kind": "Function",
-          "usage": "unreferenced"
+        "handleToColliderId": {
+          "kind": "Variable",
+          "usage": "internal"
         },
-        "readBodyPositions": {
-          "kind": "Function",
-          "usage": "unreferenced"
+        "handleToJointId": {
+          "kind": "Variable",
+          "usage": "internal"
         },
-        "reattachRigidBody": {
-          "kind": "Function",
-          "usage": "unreferenced"
+        "jointAPIs": {
+          "kind": "Variable",
+          "usage": "internal"
         },
-        "restoreSnapshot": {
-          "kind": "Function",
-          "usage": "unreferenced"
+        "joints": {
+          "kind": "Variable",
+          "usage": "internal"
+        },
+        "rigidBodies": {
+          "kind": "Variable",
+          "usage": "internal"
+        },
+        "rigidBodyAPIs": {
+          "kind": "Variable",
+          "usage": "internal"
         },
         "setBodyMovedObserver": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "setQueryObserver": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
+        },
+        "toPlainRotation": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "toPlainVec": {
+          "kind": "Function",
+          "usage": "internal"
+        }
+      },
+      "src/_engine/features/physics/backends/rapier/RapierWorld.ts": {
+        "createWorld": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "debugRender": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "deleteWorld": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "init": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "restoreSnapshot": {
+          "kind": "Function",
+          "usage": "internal"
         },
         "step": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "takeSnapshot": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         }
       },
       "src/_engine/features/physics/import/ImportPhysics.ts": {
@@ -8968,7 +9104,7 @@
         },
         "getEngineAPI": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "getPhysicsEngine": {
           "kind": "Function",
@@ -9588,19 +9724,19 @@
       "src/_engine/features/physics/types/PhysicsColliderTypes.ts": {
         "ActiveCollisionTypes": {
           "kind": "Enum",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "ActiveEvents": {
           "kind": "Enum",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "ActiveHooks": {
           "kind": "Enum",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "CoefficientCombineRule": {
           "kind": "Enum",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "ColliderAPI": {
           "kind": "TypeAlias",
@@ -9722,7 +9858,7 @@
         },
         "SolverFlags": {
           "kind": "Enum",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "TempContactForceEvent": {
           "kind": "Interface",
@@ -9753,7 +9889,7 @@
       "src/_engine/features/physics/types/PhysicsQueryTypes.ts": {
         "FeatureType": {
           "kind": "Enum",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "PhysicsQueryKind": {
           "kind": "TypeAlias",

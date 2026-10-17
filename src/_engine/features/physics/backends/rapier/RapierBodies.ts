@@ -1,7 +1,6 @@
 // The Rapier backend's rigid bodies: create, delete, and the REMOVED tier's detach and reattach.
 
 import type Rapier from '@dimforge/rapier3d-compat';
-import type { RigidBodyType } from '@dimforge/rapier3d-compat';
 import {
   type PhysicsBodyActivity,
   type RigidBodyAttachState,
@@ -13,6 +12,7 @@ import type { PhysVector } from '../../types/PhysicsCommonTypes';
 import { lwarn } from '../../../../utils/Logger';
 import { EngineColliderProxyAPI } from './proxies/EngineColliderProxyAPI';
 import { EngineRigidBodyProxyAPI } from './proxies/EngineRigidBodyProxyAPI';
+import { toRapierBodyType } from './RapierEnums';
 import { cleanupColliderEventRegistrations } from './RapierEvents';
 import {
   backend,
@@ -34,7 +34,10 @@ import {
 // The running id (see RapierState.ts' maps)
 let nextRigidBodyId = 0;
 
-/** Awake and sleeping dynamic bodies right now (step stats, p352), written into `out`. */
+/**
+ * Awake and sleeping dynamic bodies right now (step stats, p352), written into `out`.
+ * @internal
+ */
 export const countDynamicBodyActivity = (out: PhysicsBodyActivity) => {
   out.awake = 0;
   out.sleeping = 0;
@@ -50,6 +53,7 @@ export const countDynamicBodyActivity = (out: PhysicsBodyActivity) => {
  * Writes each body's translation into `out` (x, y, z per id, in order), also for a detached body
  * (the REMOVED tier: where it was taken out), NaN for an unknown id. Rapier stores f32, so the
  * values are exact in a Float32Array (p343: a deterministic tier policy reads them on a step).
+ * @internal
  */
 export const readBodyPositions = (ids: ArrayLike<number>, out: Float32Array) => {
   for (let i = 0; i < ids.length; i++) {
@@ -64,6 +68,11 @@ export const readBodyPositions = (ids: ArrayLike<number>, out: Float32Array) => 
   return out;
 };
 
+/**
+ * Creates a rigid body with its params applied (each setter with `wakeUp`, default true) and
+ * returns its API object.
+ * @internal
+ */
 export const createRigidBody = (params: RigidBodyParams) => {
   let rigidBody: Rapier.RigidBody | undefined = undefined;
   let rigidBodyDesc: Rapier.RigidBodyDesc;
@@ -152,9 +161,18 @@ export const createRigidBody = (params: RigidBodyParams) => {
   return rigidBodyAPI;
 };
 
+/**
+ * Creates rigid bodies, in order. Not all or nothing: a throw leaves the bodies made before it.
+ * @internal
+ */
 export const createRigidBodies = (paramsArray: RigidBodyParams[]) =>
   paramsArray.map((params) => createRigidBody(params));
 
+/**
+ * Deletes a body, live or detached, and with it its colliders and joints, whose ids it returns. An
+ * unknown id is a no-op (a debug-env warning).
+ * @internal
+ */
 export const deleteRigidBody = (id: number) => {
   const colliderIds: number[] = [];
   const jointIds: number[] = [];
@@ -176,7 +194,6 @@ export const deleteRigidBody = (id: number) => {
     return { id, colliderIds, jointIds };
   }
   const rb = backend.world.getRigidBody(rbHandle);
-  // @CHORE: we need to get the child collider ids and send them to the
   if (!rb) {
     if (backend.isDebugEnvironment) {
       lwarn(
@@ -216,6 +233,10 @@ export const deleteRigidBody = (id: number) => {
   return { id, colliderIds, jointIds };
 };
 
+/**
+ * Deletes bodies as deleteRigidBody does, returning every deleted id.
+ * @internal
+ */
 export const deleteRigidBodies = (ids: number[]) => {
   const deletedIds: number[] = [];
   const deletedColliderIds: number[] = [];
@@ -230,12 +251,13 @@ export const deleteRigidBodies = (ids: number[]) => {
 };
 
 /**
- * The REMOVED physics tier (p352): takes the body and its colliders out of the world. Their
- * state is read first, so reattachRigidBody can put them back exactly; their ids, proxies and
- * event callbacks are kept for that, outside the live maps (so nothing iterates or finds them).
- * Rapier has no getter for some of it (locked axes, additional mass, how a collider's mass was
- * given): the proxies mirror those writes. Refused (undefined) for a body with joints, which
- * the removal would delete.
+ * The REMOVED physics tier (p352): takes the body and its colliders out of the world. Their state
+ * is read first, so reattachRigidBody can put them back exactly; their ids, proxies and event
+ * callbacks are kept for that, outside the live maps (so nothing iterates or finds them). Rapier
+ * has no getter for some of it (locked axes, additional mass, how a collider's mass was given): the
+ * proxies mirror those writes. Refused (undefined) for a body with joints, which the removal would
+ * delete.
+ * @internal
  */
 export const detachRigidBody = (id: number): RigidBodyPose | undefined => {
   const handle = rigidBodies.get(id);
@@ -325,8 +347,9 @@ const isZeroVector = (v: PhysVector) => v.x === 0 && v.y === 0 && v.z === 0;
 /**
  * Puts a detached body (detachRigidBody) and its colliders back into the world, with the ids and
  * proxies they had and the state they were detached with, except for `state`'s body type and
- * enabled state (the tier it comes back to). A FIXED body comes back at rest, as a body switched
- * to FIXED does. Undefined when the body isn't detached.
+ * enabled state (the tier it comes back to). A FIXED body comes back at rest, as a body switched to
+ * FIXED does. Undefined when the body isn't detached.
+ * @internal
  */
 export const reattachRigidBody = (
   id: number,
@@ -336,7 +359,7 @@ export const reattachRigidBody = (
   if (!detached) return undefined;
   const { api, translation: t, rotation: r } = detached;
   const writeOnly = api.writeOnly;
-  const desc = new backend.RAPIER.RigidBodyDesc(state.bodyType as unknown as RigidBodyType)
+  const desc = new backend.RAPIER.RigidBodyDesc(toRapierBodyType(state.bodyType))
     .setTranslation(t.x, t.y, t.z)
     .setRotation(r)
     .setGravityScale(detached.gravityScale)

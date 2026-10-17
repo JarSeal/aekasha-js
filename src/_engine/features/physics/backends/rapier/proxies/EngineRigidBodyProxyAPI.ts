@@ -1,7 +1,6 @@
 // The Rapier backend's rigid body API object.
 
 import type Rapier from '@dimforge/rapier3d-compat';
-import type { RigidBodyType } from '@dimforge/rapier3d-compat';
 import {
   type PoseArray,
   type RigidBodyAPI,
@@ -10,6 +9,7 @@ import {
 import type { PhysRotation, PhysVector } from '../../../types/PhysicsCommonTypes';
 import { existsOrThrow } from '../../../../../utils/Assert';
 import { lwarn } from '../../../../../utils/Logger';
+import { fromRapierBodyType, toRapierBodyType } from '../RapierEnums';
 import { backend, getColliderAPI, getRigidBody, toPlainRotation, toPlainVec } from '../RapierState';
 /** A body's additional mass, as last set: the mass alone, or full mass properties. */
 type AdditionalMass =
@@ -363,7 +363,7 @@ export class EngineRigidBodyProxyAPI implements RigidBodyAPI {
   }
 
   bodyTypeSync() {
-    return this.rb.bodyType() as unknown as RigidBodyTypeAPI;
+    return fromRapierBodyType(this.rb.bodyType());
   }
   async bodyType() {
     return this.bodyTypeSync();
@@ -377,7 +377,7 @@ export class EngineRigidBodyProxyAPI implements RigidBodyAPI {
         `Rigid body ${this.id} changed from FIXED to another type with setBodyType: a body created FIXED isn't synced to its entity while it moves. Create it with the type it moves as.`
       );
     }
-    this.rb.setBodyType(type as unknown as RigidBodyType, wakeUp);
+    this.rb.setBodyType(toRapierBodyType(type), wakeUp);
   }
 
   isSleepingSync() {

@@ -2,7 +2,7 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2020,
+      "documented": 2046,
       "total": 2376
     },
     "members": {
@@ -13,7 +13,7 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1976,
+        "documented": 2002,
         "total": 2313
       },
       "members": {
@@ -310,8 +310,8 @@
     },
     "engine/features/physics": {
       "exports": {
-        "documented": 193,
-        "total": 207
+        "documented": 197,
+        "total": 203
       },
       "members": {
         "documented": 14,
@@ -324,15 +324,7 @@
           "PhysicsStepStatsBuffer#PHYSICS_STEP_STATS_FIELD_COUNT",
           "PhysicsTierPolicy#DEFAULT_TIER_POLICY_CADENCE",
           "PhysicsTierPolicy#DEFAULT_TIER_POLICY_INTERVAL",
-          "PhysicsTierTypes#PhysicsTierBucket",
-          "PhysicsUtils#ValidProtocolTypes",
-          "PhysicsUtils#getCollOrRigidId",
-          "PhysicsUtils#getColliderShapeName",
-          "PhysicsUtils#getEngineAPI",
-          "PhysicsUtils#getPhysicsEngine",
-          "PhysicsUtils#getPhysicsEngineKey",
-          "PhysicsUtils#initPhysicsEngine",
-          "PhysicsUtils#setPhysicsPauseTime"
+          "PhysicsTierTypes#PhysicsTierBucket"
         ],
         "members": [
           "PhysicsBodies#PhysicsCapacityError.constructor",
@@ -370,34 +362,15 @@
     },
     "engine/features/physics/backends/rapier": {
       "exports": {
-        "documented": 37,
-        "total": 55
+        "documented": 58,
+        "total": 58
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "RapierBodies#createRigidBodies",
-          "RapierBodies#createRigidBody",
-          "RapierBodies#deleteRigidBodies",
-          "RapierBodies#deleteRigidBody",
-          "RapierColliders#createCollider",
-          "RapierColliders#deleteCollider",
-          "RapierColliders#deleteColliders",
-          "RapierJoints#createJoint",
-          "RapierJoints#createJoints",
-          "RapierJoints#deleteJoint",
-          "RapierJoints#deleteJoints",
-          "RapierWorld#createWorld",
-          "RapierWorld#debugRender",
-          "RapierWorld#deleteWorld",
-          "RapierWorld#init",
-          "RapierWorld#restoreSnapshot",
-          "RapierWorld#step",
-          "RapierWorld#takeSnapshot"
-        ],
+        "exports": [],
         "members": []
       }
     },
@@ -431,8 +404,8 @@
     },
     "engine/features/physics/protocol": {
       "exports": {
-        "documented": 107,
-        "total": 107
+        "documented": 108,
+        "total": 108
       },
       "members": {
         "documented": 0,

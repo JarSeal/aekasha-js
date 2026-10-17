@@ -1,4 +1,4 @@
-import type { PhysicsDownProtocol } from '../protocol/PhysicsDownProtocol';
+import type { PhysicsWorkerReply } from '../protocol/PhysicsDownProtocol';
 import type {
   WorldCastRayAndGetNormalResponse,
   WorldCastRayResponse,
@@ -14,10 +14,10 @@ import { getCollOrRigidId } from '../PhysicsUtils';
 export const physicsSwitchWorld = async (
   data: PhysicsUpProtocol,
   physicsWorldAPI: WorldAPI,
-  // Typed against the down protocol (unlike the other switches' `any`), so a reply whose payload
-  // doesn't match its type's response shape fails tsc. Every reply must use the narrowed
-  // `data.type` of its case, not the widened `type` below.
-  sendMessage: (message: PhysicsDownProtocol, data: PhysicsUpProtocol) => void
+  // Typed against the down protocol, as every switch is, so a reply whose payload doesn't match
+  // its type's response shape fails tsc. Every reply must use the narrowed `data.type` of its
+  // case, not the widened `type` below.
+  sendMessage: PhysicsWorkerReply
 ) => {
   const type = data.type;
 

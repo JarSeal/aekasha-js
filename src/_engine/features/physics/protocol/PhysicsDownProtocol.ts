@@ -12,6 +12,7 @@ import type {
   ShapeCastHitAPI,
 } from '../types/PhysicsQueryTypes';
 import type { PhysicsProtocolType } from './PhysicsProtocolType';
+import type { PhysicsUpProtocol } from './PhysicsUpProtocol';
 
 /**
  * Physics worker DOWN protocol (from worker to main thread): each request's reply, under the
@@ -284,3 +285,16 @@ export type PhysicsResponse<T extends PhysicsProtocolType> = Extract<
   PhysicsDownProtocol,
   { type: T }
 >;
+
+/**
+ * How the worker and its switches reply to the up message `data`: the reply gets `data`'s
+ * `requestId` (a message without one goes out as it is), and an error (`isError`) for a one-way
+ * message isn't sent.
+ * @internal
+ */
+export type PhysicsWorkerReply = (
+  message: PhysicsDownProtocol,
+  data: PhysicsUpProtocol,
+  isError?: boolean,
+  transfer?: Transferable[]
+) => void;

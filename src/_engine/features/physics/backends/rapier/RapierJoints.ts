@@ -10,6 +10,11 @@ import { backend, getRigidBody, handleToJointId, jointAPIs, joints } from './Rap
 // The running id (see RapierState.ts' maps)
 let nextJointId = 0;
 
+/**
+ * Creates an impulse joint between two live bodies (throws naming a missing one) and returns its
+ * API object.
+ * @internal
+ */
 export const createJoint = (params: JointParams) => {
   const body1 = existsOrThrow(
     getRigidBody(params.body1Id),
@@ -73,9 +78,18 @@ export const createJoint = (params: JointParams) => {
   return jointAPI;
 };
 
+/**
+ * Creates impulse joints, in order. Not all or nothing: a throw leaves the joints made before it.
+ * @internal
+ */
 export const createJoints = (paramsArray: JointParams[]) =>
   paramsArray.map((params) => createJoint(params));
 
+/**
+ * Deletes a joint, waking its bodies unless `wakeUp` is false. An unknown id is a no-op (a
+ * debug-env warning).
+ * @internal
+ */
 export const deleteJoint = (id: number, wakeUp?: boolean) => {
   const jointHandle = joints.get(id);
   if (jointHandle === undefined) {
@@ -100,6 +114,10 @@ export const deleteJoint = (id: number, wakeUp?: boolean) => {
   return { id };
 };
 
+/**
+ * Deletes joints as deleteJoint does, each with its `wakeUps` entry.
+ * @internal
+ */
 export const deleteJoints = (ids: number[], wakeUps?: boolean[]) => {
   const deletedIds = [];
   for (let i = 0; i < ids.length; i++) {

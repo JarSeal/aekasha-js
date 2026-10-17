@@ -14,9 +14,9 @@ let collisionEventFnCount = 0;
 let contactForceEventFnCount = 0;
 type CollisionEventFn = (collider1: ColliderAPI, collider2: ColliderAPI, started: boolean) => void;
 type ContactForceEventFn = (event: TempContactForceEvent) => void;
-// { "collider id", callbacks[] } — arrays to match the legacy file's multi-callback support
-// for compound colliders. MAIN_THREAD only; WORKER_THREAD keeps the real callbacks on the
-// main thread (PhysicsRegistry.ts) and only reads plain records back from this module.
+// { "collider id", callbacks[] }: each collider gets one, given at its create. MAIN_THREAD only;
+// WORKER_THREAD keeps the real callbacks on the main thread (PhysicsRegistry.ts) and only reads
+// plain records back from this module.
 const collisionEventFns = new Map<number, CollisionEventFn[]>();
 const contactForceEventFns = new Map<number, ContactForceEventFn[]>();
 // Plain-data records accumulated by every step() call. WORKER_THREAD: taken by
@@ -30,7 +30,10 @@ let pendingContactForceRecords: ContactForceEventRecord[] = [];
 const collisionActiveColliderIds = new Set<number>();
 const contactForceActiveColliderIds = new Set<number>();
 
-/** Removes id's event callback/counter/registry bookkeeping (does not touch colliders/colliderAPIs). */
+/**
+ * Removes id's event callback/counter/registry bookkeeping (does not touch colliders/colliderAPIs).
+ * @internal
+ */
 export const cleanupColliderEventRegistrations = (id: number) => {
   collisionEventFns.delete(id);
   contactForceEventFns.delete(id);
@@ -84,11 +87,13 @@ export const clearEventRegistrations = () => {
   pendingContactForceRecords = [];
 };
 
-/** Drains the module's own backend.eventQueue (populated by backend.world.step()) into plain-data
+/**
+ * Drains the module's own backend.eventQueue (populated by backend.world.step()) into plain-data
  * records (pendingCollisionRecords/pendingContactForceRecords), gated by the counters so a scene
  * with no collision/contact-force callbacks pays zero per-step cost. Nothing is dispatched here:
  * WORKER_THREAD hands the records to the main thread (drainPendingEventRecords), MAIN_THREAD
  * delivers them with dispatchPendingEventRecords().
+ * @internal
  */
 export const drainAndDispatchEvents = () => {
   if (!backend.eventQueue) return;
@@ -123,9 +128,12 @@ export const drainAndDispatchEvents = () => {
   }
 };
 
-/** MAIN_THREAD only: invokes the registered callbacks for every event record accumulated since
- * the last call (each side's callbacks get the *other* collider as the second argument), then
- * clears them. Silently skips records naming a collider that no longer exists. */
+/**
+ * MAIN_THREAD only: invokes the registered callbacks for every event record accumulated since the
+ * last call (each side's callbacks get the *other* collider as the second argument), then clears
+ * them. Silently skips records naming a collider that no longer exists.
+ * @internal
+ */
 export const dispatchPendingEventRecords = () => {
   if (!pendingCollisionRecords.length && !pendingContactForceRecords.length) return;
   const { collisions, contactForces } = drainPendingEventRecords();
@@ -152,9 +160,11 @@ export const dispatchPendingEventRecords = () => {
   }
 };
 
-/** WORKER_THREAD: returns everything accumulated by drainAndDispatchEvents() since
- * the last call, and clears the accumulators. Called once per STEP message (which may run
- * multiple sub-steps) from physicsWorker.ts's STEP handler.
+/**
+ * WORKER_THREAD: returns everything accumulated by drainAndDispatchEvents() since the last call,
+ * and clears the accumulators. Called once per STEP message (which may run multiple sub-steps) from
+ * PhysicsWorker.ts' STEP handler.
+ * @internal
  */
 export const drainPendingEventRecords = (): {
   collisions: CollisionEventRecord[];

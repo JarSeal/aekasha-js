@@ -9,6 +9,7 @@ import type {
 } from '../../../types/PhysicsColliderTypes';
 import type { PhysRotation, PhysVector } from '../../../types/PhysicsCommonTypes';
 import { existsOrThrow } from '../../../../../utils/Assert';
+import { fromRapierShapeType } from '../RapierEnums';
 import { backend, getCollider, toPlainRotation, toPlainVec } from '../RapierState';
 /**
  * A collider's mass, as last given: a density, a mass, or full mass properties.
@@ -23,6 +24,21 @@ export type ColliderMassMode =
       principalAngularInertia: PhysVector;
       angularInertiaLocalFrame: PhysRotation;
     };
+
+/** The fields Rapier's shape classes carry, each on the shapes that have it: Rapier's JS layer has
+ * no common type for them, so the geometry getters read them through this view. */
+type RapierShapeFields = {
+  radius?: number;
+  halfHeight?: number;
+  halfExtents?: Rapier.Vector;
+  vertices?: Float32Array;
+  indices?: Uint32Array;
+  normal?: Rapier.Vector;
+  borderRadius?: number;
+  a?: Rapier.Vector;
+  b?: Rapier.Vector;
+  c?: Rapier.Vector;
+};
 
 /**
  * A collider as a {@link ColliderAPI} on its Rapier collider. Its async forms run their `*Sync`
@@ -55,6 +71,11 @@ export class EngineColliderProxyAPI implements ColliderAPI {
       getCollider(id),
       `Could not find collider in the engineAPI with id: ${id}`
     );
+  }
+
+  /** The collider's shape, as the fields its shape class carries. */
+  private shapeFields() {
+    return this.coll.shape as Rapier.Shape & RapierShapeFields;
   }
 
   /**
@@ -224,31 +245,28 @@ export class EngineColliderProxyAPI implements ColliderAPI {
 
   // --- Geometry Details ---
   shapeTypeSync(): ShapeType {
-    return this.coll.shapeType() as unknown as ShapeType;
+    return fromRapierShapeType(this.coll.shapeType());
   }
   async shapeType() {
     return this.shapeTypeSync();
   }
 
   radiusSync(): number {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (this.coll.shape as any).radius || 0;
+    return this.shapeFields().radius || 0;
   }
   async radius() {
     return this.radiusSync();
   }
 
   halfHeightSync(): number {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (this.coll.shape as any).halfHeight || 0;
+    return this.shapeFields().halfHeight || 0;
   }
   async halfHeight() {
     return this.halfHeightSync();
   }
 
   halfExtentsSync(): PhysVector {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const he = (this.coll.shape as any).halfExtents;
+    const he = this.shapeFields().halfExtents;
     return he ? { x: he.x, y: he.y, z: he.z } : { x: 0, y: 0, z: 0 };
   }
   async halfExtents() {
@@ -271,14 +289,13 @@ export class EngineColliderProxyAPI implements ColliderAPI {
     const colliderVertices = this.coll.vertices();
     if (colliderVertices instanceof Float32Array && colliderVertices.length)
       return colliderVertices;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const shape = this.coll.shape as any;
+    const shape = this.shapeFields();
     if (shape?.vertices instanceof Float32Array) return shape.vertices;
     // Segment (a, b) and Triangle/RoundTriangle (a, b, c) are the odd ones out: Rapier's
     // JS layer rebuilds them as separate Vector fields rather than a vertex buffer, even
     // though the WASM side stores them as one. Flatten them so every vertex-based shape
     // answers through this one accessor.
-    const points = [shape?.a, shape?.b, shape?.c].filter(Boolean);
+    const points = [shape.a, shape.b, shape.c].filter((p): p is Rapier.Vector => p !== undefined);
     if (!points.length) return null;
     const out = new Float32Array(points.length * 3);
     for (let i = 0; i < points.length; i++) {
@@ -297,8 +314,7 @@ export class EngineColliderProxyAPI implements ColliderAPI {
     // hull of loose points (Rapier only computes that index buffer on the collider side).
     const colliderIndices = this.coll.indices();
     if (colliderIndices instanceof Uint32Array) return colliderIndices;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const i = (this.coll.shape as any).indices;
+    const i = this.shapeFields().indices;
     return i instanceof Uint32Array ? i : null;
   }
   async indices() {
@@ -306,9 +322,8 @@ export class EngineColliderProxyAPI implements ColliderAPI {
   }
 
   heightsSync(): HeightFieldData | null {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const shape = this.coll.shape as any;
-    if (!(shape?.heights instanceof Float32Array)) return null;
+    const shape = this.coll.shape;
+    if (!(shape instanceof backend.RAPIER.Heightfield)) return null;
     const scale = shape.scale;
     return {
       nrows: shape.nrows,
@@ -322,8 +337,7 @@ export class EngineColliderProxyAPI implements ColliderAPI {
   }
 
   normalSync(): PhysVector | null {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const n = (this.coll.shape as any).normal;
+    const n = this.shapeFields().normal;
     return n ? { x: n.x, y: n.y, z: n.z } : null;
   }
   async normal() {
@@ -331,8 +345,7 @@ export class EngineColliderProxyAPI implements ColliderAPI {
   }
 
   borderRadiusSync(): number {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (this.coll.shape as any).borderRadius || 0;
+    return this.shapeFields().borderRadius || 0;
   }
   async borderRadius() {
     return this.borderRadiusSync();

@@ -22,35 +22,17 @@ import {
   rigidBodyAPIs,
 } from './RapierState';
 
-// @CHORE: needs a setter function
-let physicsState: PhysicsState = {
-  enabled: false,
-  physicsEngine: 'RAPIER',
-  workerTarget: 'MAIN_THREAD',
-  timestep: 60,
-  timestepRatio: 1 / 60,
-  backgroundBehavior: 'PAUSE',
-  isPaused: false,
-  pausedTime: 0,
-  pauseDurationTotal: 0,
-  pauseReason: null,
-  minDeltaTime: 1 / 30,
-  maxDeltaTime: 1 / 10,
-  maxSubSteps: 60,
-  worldStepEnabled: true,
-  visualizerEnabled: false,
-  gravity: { x: 0, y: -9.81, z: 0 },
-  solverIterations: 10,
-  internalPgsIterations: 1,
-  interpolationMode: 'NONE',
-  useSAB: true,
-  maxBodies: 2048,
-  stepStatsEnabled: false,
-};
+/** The settings init() was given: the facade's own (p612 D4, one owner of the defaults). */
+let physicsState: PhysicsState | undefined;
 
 let worldCreated = false;
-let physicsWorldAPI: WorldAPI;
+let physicsWorldAPI: WorldAPI | undefined;
 
+/**
+ * Keeps the settings and the debug flag, and creates the world from the settings (none with
+ * `doNotCreateWorld`, then undefined). Throws when initPhysicsEngine hasn't loaded Rapier.
+ * @internal
+ */
 export const init = (
   physicsSt: PhysicsState,
   isDebugEnv: boolean,
@@ -65,10 +47,10 @@ export const init = (
     physicsState = physicsSt;
     backend.isDebugEnvironment = isDebugEnv || false;
     if (doNotCreateWorld) return;
-    physicsWorldAPI = createWorld(physicsState.gravity, {
-      timestep: physicsState.timestepRatio,
-      numSolverIterations: physicsState.solverIterations,
-      numInternalPgsIterations: physicsState.internalPgsIterations,
+    physicsWorldAPI = createWorld(physicsSt.gravity, {
+      timestep: physicsSt.timestepRatio,
+      numSolverIterations: physicsSt.solverIterations,
+      numInternalPgsIterations: physicsSt.internalPgsIterations,
     });
     return physicsWorldAPI;
   } catch (err) {
@@ -76,6 +58,11 @@ export const init = (
   }
 };
 
+/**
+ * Creates the world; while one exists, returns it as it is (deleteWorld first to replace it). The
+ * timestep defaults to init's settings, then to Rapier's.
+ * @internal
+ */
 export const createWorld = (
   gravity: PhysVector,
   opts?: {
@@ -87,7 +74,7 @@ export const createWorld = (
     numInternalPgsIterations?: number;
   }
 ) => {
-  if (worldCreated) return physicsWorldAPI;
+  if (worldCreated && physicsWorldAPI) return physicsWorldAPI;
   existsOrThrow(
     backend.RAPIER,
     'Could not get physics engine. Make sure the physics is initialized before creating a world.'
@@ -95,7 +82,9 @@ export const createWorld = (
   backend.world = new backend.RAPIER.World(
     new backend.RAPIER.Vector3(gravity.x, gravity.y, gravity.z)
   );
-  backend.world.timestep = opts?.timestep ?? physicsState.timestepRatio;
+  // Without either, Rapier's own default (1/60) stays
+  const timestep = opts?.timestep ?? physicsState?.timestepRatio;
+  if (timestep !== undefined) backend.world.timestep = timestep;
   if (opts?.numSolverIterations) backend.world.numSolverIterations = opts.numSolverIterations;
   if (opts?.numInternalPgsIterations)
     backend.world.numInternalPgsIterations = opts.numInternalPgsIterations;
@@ -104,6 +93,11 @@ export const createWorld = (
   return physicsWorldAPI;
 };
 
+/**
+ * Frees the world and forgets its bodies, colliders, joints and event callbacks. The running ids go
+ * on.
+ * @internal
+ */
 export const deleteWorld = () => {
   // Clear the maps
   rigidBodies.clear();
@@ -119,7 +113,7 @@ export const deleteWorld = () => {
 
   // Reset (the running id counters are deliberately kept, see RapierState.ts' maps)
   worldCreated = false;
-  physicsWorldAPI = undefined as unknown as WorldAPI;
+  physicsWorldAPI = undefined;
   backend.eventQueue?.free();
   backend.eventQueue = undefined;
 
@@ -130,8 +124,17 @@ export const deleteWorld = () => {
   return { worldDeleted: true };
 };
 
+/**
+ * The world serialized by Rapier (undefined without a world); see p500.
+ * @internal
+ */
 export const takeSnapshot = () => backend.world?.takeSnapshot();
 
+/**
+ * Replaces the world with one restored from takeSnapshot's bytes. The id maps aren't rebuilt
+ * (p500).
+ * @internal
+ */
 export const restoreSnapshot = (snapshot: Uint8Array) => {
   // @TODO: we maybe need check all the rigidBodies and colliders
   // and recreate all the maps (rigidBodies, rigidBodyAPIs, colliders, colliderAPIs) here.
@@ -140,11 +143,20 @@ export const restoreSnapshot = (snapshot: Uint8Array) => {
   return physicsWorldAPI;
 };
 
+/**
+ * The world's debug render lines, as Rapier draws them.
+ * @internal
+ */
 export const debugRender = () => {
   const buffers = backend.world.debugRender();
   return { vertices: buffers.vertices, colors: buffers.colors };
 };
 
+/**
+ * Runs one fixed step on Rapier's own event queue (not `_eventQueue`) and collects its events for
+ * dispatchPendingEventRecords / drainPendingEventRecords.
+ * @internal
+ */
 export const step = (_eventQueue?: unknown, hooks?: unknown) => {
   backend.world.step(backend.eventQueue, hooks as Rapier.PhysicsHooks | undefined);
   drainAndDispatchEvents();

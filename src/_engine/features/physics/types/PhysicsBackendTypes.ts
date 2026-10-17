@@ -21,8 +21,8 @@ import type { WorldAPI } from './PhysicsWorldTypes';
  * @internal
  */
 export type EngineAPIType = {
-  /** Keeps the state and the loop state, and creates the world (none with `doNotCreateWorld`,
-   * then undefined). */
+  /** Keeps the settings and the debug flag, and creates the world (none with `doNotCreateWorld`,
+   * then undefined). The loop state is unused. */
   init: (
     physicsState: PhysicsState,
     isDebugEnvironment: boolean,
