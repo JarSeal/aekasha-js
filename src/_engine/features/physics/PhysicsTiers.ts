@@ -20,11 +20,8 @@ import { forEachJointBodyPair, hasJoints } from './PhysicsJoints';
 import { getPhysicsState } from './PhysicsState';
 import { type RigidBodyPose, RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import type { PhysicsSimTierData, PhysicsTier } from './PhysicsTierTypes';
-import {
-  getPhysicsBodyOwner,
-  queueStaticBodySync,
-  resetPhysicsInterpolationHistory,
-} from './PhysicsEntity';
+import { getPhysicsBodyOwner, getPhysicsEntityBody, queueStaticBodySync } from './PhysicsEntity';
+import { resetPhysicsInterpolationHistory } from './PhysicsInterpolation';
 
 export type { PhysicsTier } from './PhysicsTierTypes';
 
@@ -44,11 +41,6 @@ const getPending = (world: ECSWorld) => {
   return pending;
 };
 
-/** The entity's body: also while REMOVED (or in flight back), when it has no bucket component. */
-const getTierBody = (world: ECSWorld, entityId: number) =>
-  world.getRigidBody(entityId) ??
-  world.getComponent(entityId, ComponentType.PHYSICS_SIM_TIER)?.body;
-
 /** Whether any impulse joint is attached to the body. */
 const bodyHasJoints = (bodyId: number) => {
   if (!hasJoints()) return false;
@@ -64,7 +56,7 @@ const getTierRefusal = (world: ECSWorld, entityId: number, tier: PhysicsTier): s
   if (world.hasComponent(entityId, ComponentType.TAG_IS_CHARACTER)) {
     return 'it is a character (p420 owns character tiers)';
   }
-  const rb = getTierBody(world, entityId);
+  const rb = getPhysicsEntityBody(world, entityId);
   if (!rb) return 'it has no rigid body (request a tier once its createPhysicsEntity resolves)';
   const owner = getPhysicsBodyOwner(rb.id);
   if (!owner || owner.world !== world || owner.entityId !== entityId) {
@@ -106,7 +98,7 @@ const resolveTierGroup = (
     link(body2Id, body1Id);
   });
 
-  const startBodyId = getTierBody(world, entityId)!.id;
+  const startBodyId = getPhysicsEntityBody(world, entityId)!.id;
   const members = [entityId];
   const seen = new Set([startBodyId]);
   const queue = [startBodyId];

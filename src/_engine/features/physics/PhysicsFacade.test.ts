@@ -13,6 +13,7 @@ vi.mock(import('../../kernel/loop/MainLoop'), async (importOriginal) => ({
 }));
 
 import { initEnvironment, loadConfig } from '../../kernel/config/Config';
+import { DEFAULT_ECS_WORLD_ID, ECSWorld, getEntityIdByAppId } from '../../kernel/ecs/ECS';
 import {
   createRigidBodySync,
   createRigidBodyWithCollidersSync,
@@ -27,6 +28,11 @@ import {
   deleteColliderSync,
   deleteCollidersSync,
 } from './PhysicsColliders';
+import {
+  createPhysicsEntity,
+  getPhysicsEntityBody,
+  getPhysicsEntityByAppId,
+} from './PhysicsEntity';
 import { deleteJoint, deleteJointSync } from './PhysicsJoints';
 import { getAllColliderEntries, getAllRigidBodyEntries } from './PhysicsRegistry';
 import { isPhysicsWorldEnabled } from './PhysicsState';
@@ -91,6 +97,22 @@ describe('the facade (MAIN_THREAD)', () => {
     deleteRigidBodySync(rigidBody!.id);
     expect(rigidBody!.isBeingDeleted).toBe(true);
     expect(colliders[0].isBeingDeleted).toBe(true);
+  });
+
+  it('E4: getPhysicsEntityByAppId finds only physics entities; E6: their bodies', async () => {
+    const world = new ECSWorld({ id: DEFAULT_ECS_WORLD_ID });
+    world.createEntity({ appId: 'plain' });
+    const ballId = await createPhysicsEntity(
+      { type: 'BALL', radius: 0.5 },
+      { rigidType: 'DYNAMIC' },
+      undefined,
+      { appId: 'ball' }
+    );
+    expect(getPhysicsEntityByAppId('ball')).toBe(ballId);
+    expect(getPhysicsEntityByAppId('plain')).toBeUndefined();
+    expect(getPhysicsEntityByAppId('missing')).toBeUndefined();
+    expect(getPhysicsEntityBody(world, ballId)).toBe(world.getRigidBody(ballId));
+    expect(getPhysicsEntityBody(world, getEntityIdByAppId('plain')!)).toBeUndefined();
   });
 
   it('A4: deletes without a world are quiet no-ops', async () => {

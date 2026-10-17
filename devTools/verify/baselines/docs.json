@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2046,
-      "total": 2376
+      "documented": 2049,
+      "total": 2377
     },
     "members": {
       "documented": 874,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2002,
-        "total": 2313
+        "documented": 2005,
+        "total": 2314
       },
       "members": {
         "documented": 824,
@@ -310,8 +310,8 @@
     },
     "engine/features/physics": {
       "exports": {
-        "documented": 197,
-        "total": 203
+        "documented": 200,
+        "total": 204
       },
       "members": {
         "documented": 18,
@@ -319,8 +319,6 @@
       },
       "undocumented": {
         "exports": [
-          "PhysicsEntity#disposePhysicsEntity",
-          "PhysicsEntity#getPhysicsEntityByAppId",
           "PhysicsStepStatsBuffer#PHYSICS_STEP_STATS_FIELD_COUNT",
           "PhysicsTierPolicy#DEFAULT_TIER_POLICY_CADENCE",
           "PhysicsTierPolicy#DEFAULT_TIER_POLICY_INTERVAL",

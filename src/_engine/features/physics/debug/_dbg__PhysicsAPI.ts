@@ -61,7 +61,8 @@ import {
   getPhysicsDeterminismProbeSteps,
 } from './_dbg__PhysicsDeterminism';
 import { getECSWorld, getEntityIdByAppId, getStableAppId } from '../../../kernel/ecs/ECS';
-import { getPhysicsBodyOwner, getPhysicsInterpolationReadout } from '../PhysicsEntity';
+import { getPhysicsBodyOwner } from '../PhysicsEntity';
+import { getPhysicsInterpolationReadout } from '../PhysicsInterpolation';
 import {
   getPhysicsTierPolicy,
   getPhysicsTierPolicyFreezeSources,
@@ -1106,7 +1107,7 @@ export const _createPhysicsAPIDebugGUI = () => {
               min: 0,
             },
             { type: 'separator' },
-            // physicsInterpolationSystem (PhysicsManager.ts) returns early for
+            // physicsInterpolationSystem (PhysicsInterpolation.ts) returns early for
             // 'EXTRAPOLATION', so selecting it via AppConfig is safe but inert.
             {
               key: 'interpolationMode',

@@ -34,7 +34,7 @@ import type {
   PhysicsTierPolicy,
   PhysicsTierPolicyCadence,
 } from './PhysicsTierTypes';
-import { getPhysicsBodyOwner } from './PhysicsEntity';
+import { getPhysicsBodyOwner, getPhysicsEntityBody } from './PhysicsEntity';
 import { requestPhysicsTier } from './PhysicsTiers';
 import type { FeatureContext } from '../../kernel/init/Features';
 
@@ -249,7 +249,7 @@ export const setPhysicsTierPolicyMember = (
     return true;
   }
   if (world.hasComponent(entityId, ComponentType.PHYSICS_TIER_POLICY)) return true;
-  const body = getEntityBody(world, entityId);
+  const body = getPhysicsEntityBody(world, entityId);
   const owner = body ? getPhysicsBodyOwner(body.id) : undefined;
   if (owner?.world !== world || owner.entityId !== entityId || owner.rigidType !== 'DYNAMIC') {
     if (IS_DEBUG_ENV) {
@@ -308,11 +308,6 @@ export const isPhysicsTierPolicyFrozen = (ecsWorld?: ECSWorld, source?: string) 
  * `STEPS` policy leaves the determinism probe's out). */
 export const getPhysicsTierPolicyFreezeSources = (ecsWorld?: ECSWorld): string[] =>
   getHoldingSources(getWorld(ecsWorld, 'getPhysicsTierPolicyFreezeSources'));
-
-/** The entity's body, also while REMOVED (no bucket component then). */
-const getEntityBody = (world: ECSWorld, entityId: number) =>
-  world.getRigidBody(entityId) ??
-  world.getComponent(entityId, ComponentType.PHYSICS_SIM_TIER)?.body;
 
 const _focus = new THREE.Vector3();
 
@@ -526,7 +521,7 @@ const measure = (world: ECSWorld, policy: ResolvedPolicy, step: number) => {
   if (!policy.def.focus) {
     focus = readCameraFocus(world, new THREE.Vector3());
   } else if (typeof at === 'number') {
-    focusBodyId = getEntityBody(world, at)?.id;
+    focusBodyId = getPhysicsEntityBody(world, at)?.id;
     if (focusBodyId === undefined) {
       const position = world.getComponent(at, ComponentType.TRANSFORM)?.position;
       focus = position ? position.clone() : null;
@@ -540,7 +535,7 @@ const measure = (world: ECSWorld, policy: ResolvedPolicy, step: number) => {
   const entityIds = [...members.keys()].sort((a, b) => a - b);
   const bodyIds: number[] = [];
   for (let i = 0; i < entityIds.length; i++) {
-    const body = getEntityBody(world, entityIds[i]);
+    const body = getPhysicsEntityBody(world, entityIds[i]);
     if (body) bodyIds.push(body.id);
     else entityIds[i] = -1;
   }
@@ -598,7 +593,8 @@ const applyMeasurement = (world: ECSWorld, policy: ResolvedPolicy, measurement: 
   _decisionEntityIds.length = entityIds.length;
   for (let i = 0; i < entityIds.length; i++) {
     const entityId = entityIds[i];
-    _decisionEntityIds[i] = getEntityBody(world, entityId)?.id === bodyIds[i] ? entityId : -1;
+    _decisionEntityIds[i] =
+      getPhysicsEntityBody(world, entityId)?.id === bodyIds[i] ? entityId : -1;
   }
   decide(world, policy, focus, _decisionEntityIds, positions);
 };

@@ -945,21 +945,16 @@
       "createPhysicsEntity": "Function",
       "deleteAllPhysicsEntities": "Function",
       "deriveColliderDimensionsFromMesh": "Function",
-      "disposePhysicsEntity": "Function",
       "getPhysicsBodyOwner": "Function",
+      "getPhysicsEntityBody": "Function",
       "getPhysicsEntityByAppId": "Function",
-      "getPhysicsInterpolationReadout": "Function",
       "installPhysicsEntities": "Function",
       "PhysicsBodyOwner": "TypeAlias",
       "PhysicsEntityOpts": "TypeAlias",
-      "PhysicsInterpolationReadout": "TypeAlias",
-      "physicsInterpolationSystem": "Function",
       "physicsToTransformSystem": "Function",
       "queueStaticBodySync": "Function",
       "registerPhysicsDeterminismProbe": "Function",
       "registerPhysicsWireframeDebugAsync": "Function",
-      "resetPhysicsInterpolationHistory": "Function",
-      "setPhysicsInterpolationPinnedToNewest": "Function",
       "settlePendingPhysicsEntities": "Function"
     },
     "src/_engine/features/physics/PhysicsFeature.ts": {
@@ -967,6 +962,14 @@
       "physicsFixedStepDriver": "Variable",
       "physicsImportExtension": "Variable",
       "physicsSceneHooks": "Variable"
+    },
+    "src/_engine/features/physics/PhysicsInterpolation.ts": {
+      "getPhysicsInterpolationReadout": "Function",
+      "onPhysicsTransformReset": "Variable",
+      "PhysicsInterpolationReadout": "TypeAlias",
+      "physicsInterpolationSystem": "Function",
+      "resetPhysicsInterpolationHistory": "Function",
+      "setPhysicsInterpolationPinnedToNewest": "Function"
     },
     "src/_engine/features/physics/PhysicsJoints.ts": {
       "createJoint": "Function",

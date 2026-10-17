@@ -8,7 +8,7 @@ import { IS_DEBUG_ENV } from '../kernel/config/Config';
 import { getAllECSWorlds, getECSWorld } from '../kernel/ecs/ECS';
 import { ECSSystemStage } from '../kernel/loop/SystemStages';
 import { setFixedFrameDelta, toggleAppPlay, toggleMainPlay } from '../kernel/loop/MainLoop';
-import { setPhysicsInterpolationPinnedToNewest } from '../features/physics/PhysicsEntity';
+import { setPhysicsInterpolationPinnedToNewest } from '../features/physics/PhysicsInterpolation';
 import { getRenderer } from '../kernel/render/Renderer';
 import { getCurrentSceneId } from '../kernel/scene/Scene';
 import { hasFirstSceneBeenLoaded, isCurrentlyLoading } from '../kernel/scene/SceneLoader';

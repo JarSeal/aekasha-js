@@ -53,7 +53,7 @@ let undoRedoToolsCMP: TCMP | null = null;
 // This file (a lazily-loaded _dbg__ module) also loads in IS_PROD_TEST_MODE (see
 // debug/OnScreenTools.ts's registerOnScreenTools), but the physics wireframe system is
 // IS_DEBUG_ENV-only — never reaches prodTest, matching the physics feature's `onDebug` hook
-// (PhysicsManager.registerPhysicsWireframeDebugAsync). Cross-referencing it via loadDebugModule (not a static import) is what keeps
+// (PhysicsEntity.ts' registerPhysicsWireframeDebugAsync). Cross-referencing it via loadDebugModule (not a static import) is what keeps
 // that scoping intact: a static import would run this module's side effects unconditionally
 // the moment _dbg__OnScreenTools.ts itself loads, regardless of IS_DEBUG_ENV.
 const physicsDebugDrawRef: DebugModuleRef<

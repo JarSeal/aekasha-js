@@ -38,7 +38,7 @@ import { markDebugHelper } from '../../../debug/Profiler';
  * survives independently of the others. `setWireframeMasterVisible` layers a scene-level
  * show/hide filter on top of that (bound to the on-screen tools bottom bar), but it only
  * flips `.visible` on what's already built and never touches the per-entity component or
- * its persisted state. Dynamically imported (see PhysicsManager.registerPhysicsWireframeDebugAsync),
+ * its persisted state. Dynamically imported (see PhysicsEntity.ts' registerPhysicsWireframeDebugAsync),
  * so none of this reaches production.
  */
 
@@ -384,7 +384,7 @@ export const setWireframeMasterVisible = (visible: boolean) => {
 export const toggleWireframeMasterVisible = () => setWireframeMasterVisible(!masterVisible);
 
 /** Restores the master filter for the scene being entered. Called on every scene
- * entering (PhysicsManager.registerPhysicsWireframeDebugAsync) so switching scenes doesn't carry a
+ * entering (PhysicsEntity.ts' registerPhysicsWireframeDebugAsync) so switching scenes doesn't carry a
  * previous scene's filter state along. */
 export const syncWireframeMasterVisibilityFromLS = (sceneId: string) => {
   masterVisible = readMasterVisibilityLS()[sceneId] !== false;
@@ -994,7 +994,7 @@ const physicsWireframeSystem = () => {
 let areWireframesInstalled = false;
 
 /**
- * Registers the wireframes' hooks and system, once (PhysicsManager's
+ * Registers the wireframes' hooks and system, once (PhysicsEntity.ts'
  * registerPhysicsWireframeDebugAsync, the physics feature's `onDebug` hook). Not at load: the
  * physics GUI (_dbg__PhysicsAPI.ts) imports this module in the physics install, before the app's,
  * and physicsWireframeSystem ties with the app's camera rig system (APP_RENDER_SYNC, the

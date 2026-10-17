@@ -40,9 +40,9 @@
     },
     "aekasha/physics": {
       "public": 23,
-      "crossEntry": 27,
-      "internal": 286,
-      "unreferenced": 105
+      "crossEntry": 26,
+      "internal": 283,
+      "unreferenced": 109
     },
     "aekasha/postfx": {
       "public": 7,
@@ -1605,7 +1605,10 @@
         },
         "DEFAULT_ECS_WORLD_ID": {
           "kind": "Variable",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/physics"
+          ]
         },
         "deleteECSWorld": {
           "kind": "Function",
@@ -1699,10 +1702,7 @@
         },
         "TransformResetListener": {
           "kind": "TypeAlias",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha/physics"
-          ]
+          "usage": "internal"
         },
         "WorldPlugin": {
           "kind": "TypeAlias",
@@ -8391,11 +8391,11 @@
         },
         "getPhysicsEntityByAppId": {
           "kind": "Function",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "getPhysicsInterpolationReadout": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "installPhysicsEntities": {
           "kind": "Function",
@@ -8435,14 +8435,11 @@
         },
         "resetPhysicsInterpolationHistory": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "setPhysicsInterpolationPinnedToNewest": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha/debug"
-          ]
+          "usage": "unreferenced"
         },
         "settlePendingPhysicsEntities": {
           "kind": "Function",
@@ -8819,7 +8816,7 @@
         },
         "getPhysicsSimClockEpoch": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "getPhysicsSimHistoryEpoch": {
           "kind": "Function",
@@ -8889,7 +8886,7 @@
         },
         "readPhysicsSnapshotStamp": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "releasePhysicsStepping": {
           "kind": "Function",

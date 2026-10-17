@@ -7,12 +7,7 @@ import { lerror, lwarn } from '../../utils/Logger';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { DebugModuleRef } from '../../kernel/config/DebugModules';
 import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
-import {
-  type ECSWorld,
-  getECSWorld,
-  getEntityIdByAppId,
-  type TransformResetListener,
-} from '../../kernel/ecs/ECS';
+import { type ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
 import type { FeatureContext } from '../../kernel/init/Features';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import type { IComponentStorage } from '../../kernel/ecs/ECSComponentStorage';
@@ -23,21 +18,18 @@ import {
 } from './PhysicsBodies';
 import type { RigidBodyWithColliders } from './PhysicsBodies';
 import { deleteColliders } from './PhysicsColliders';
+import {
+  onPhysicsTransformReset,
+  physicsInterpolationSystem,
+  resetPhysicsInterpolationHistory,
+} from './PhysicsInterpolation';
 import { endPhysicsRayStatsFrame } from './PhysicsQueryStats';
 import { setBodyMovedListener } from './PhysicsRegistry';
 import { getPhysicsState } from './PhysicsState';
-import {
-  getPhysicsSimClock,
-  getPhysicsSimClockEpoch,
-  getPhysicsSimHistoryEpoch,
-  getPhysicsSnapshotStepIndex,
-  getPhysicsWriteVisibleStep,
-  readPhysicsSnapshotStamp,
-} from './PhysicsStepping';
+import { getPhysicsSnapshotStepIndex, getPhysicsWriteVisibleStep } from './PhysicsStepping';
 import { flushPhysics } from './PhysicsWorld';
 import type { RigidBodyAPI, RigidBodyParams } from './types/PhysicsBodyTypes';
 import type { ColliderParams } from './types/PhysicsColliderTypes';
-import type { PhysicsInterpolationMode } from './types/PhysicsConfigTypes';
 import {
   getCurrentSceneId,
   getRootScene,
@@ -58,12 +50,14 @@ type PrimitiveGeoParams = {
   radiusBottom?: number;
 };
 
-/** Fills in a primitive collider's missing dimensions (hx/hy/hz, radius, halfHeight) from its
+/**
+ * Fills in a primitive collider's missing dimensions (hx/hy/hz, radius, halfHeight) from its
  * target mesh's createGeometry()-authored params (per-shape-type mesh-geometry fallback) —
- * never overrides a dimension the
- * caller already set explicitly. A no-op for any params/shape it doesn't recognize (TRIMESH/
- * CONVEXHULL/HEIGHTFIELD imports already get their own dedicated derivation in
- * Import/MeshColliderGeometry.ts, which runs before this ever sees them). */
+ * never overrides a dimension the caller already set explicitly. A no-op for any params/shape
+ * it doesn't recognize (TRIMESH/CONVEXHULL/HEIGHTFIELD imports already get their own dedicated
+ * derivation in import/MeshColliderGeometry.ts, which runs before this ever sees them).
+ * @internal
+ */
 export const deriveColliderDimensionsFromMesh = (
   params: ColliderParams,
   mesh: THREE.Object3D | undefined
@@ -117,7 +111,7 @@ export const installPhysicsEntities = (ctx: FeatureContext, world: ECSWorld) => 
   setBodyMovedListener(onBodyMoved);
   ctx.registerComponentHooks(ComponentType.TAG_IS_PHYSICS_OBJECT, {
     onDeleteEntity: (entityId, w) => {
-      const body = getEntityBody(w, entityId);
+      const body = getPhysicsEntityBody(w, entityId);
       if (body) {
         const owner = bodyOwners.get(body.id);
         if (owner?.world === w && owner.entityId === entityId) bodyOwners.delete(body.id);
@@ -127,7 +121,7 @@ export const installPhysicsEntities = (ctx: FeatureContext, world: ECSWorld) => 
       disposePhysicsEntity(entityId, w).catch((err) =>
         lerror(`Failed to dispose physics entity ${entityId}.`, err)
       );
-      worldInterpolationStates.get(w)?.histories.delete(entityId);
+      resetPhysicsInterpolationHistory(w, entityId);
     },
   });
   world.addSystem(
@@ -150,9 +144,12 @@ export const installPhysicsEntities = (ctx: FeatureContext, world: ECSWorld) => 
   );
 };
 
-/** Debug only: loads and installs the per-entity collider wireframes (_dbg__PhysicsDebugDraw.ts:
+/**
+ * Debug only: loads and installs the per-entity collider wireframes (_dbg__PhysicsDebugDraw.ts:
  * its ECS hooks and system; nothing runs until an entity gets a DEBUG_PHYSICS_WIREFRAME
- * component) and syncs their master visibility on every scene enter. */
+ * component) and syncs their master visibility on every scene enter.
+ * @internal
+ */
 export const registerPhysicsWireframeDebugAsync = async () => {
   debugPhysicsDraw = await loadDebugModuleAsync(() => import('./debug/_dbg__PhysicsDebugDraw'));
   const draw = useDebug(debugPhysicsDraw);
@@ -165,8 +162,11 @@ export const registerPhysicsWireframeDebugAsync = async () => {
   });
 };
 
-/** Debug only: loads the physics determinism probe (_dbg__PhysicsDeterminism.ts). Must run
- * before the first scene load, so `?physicsProbe=N` also catches the first scene enter. */
+/**
+ * Debug only: loads the physics determinism probe (_dbg__PhysicsDeterminism.ts). Must run
+ * before the first scene load, so `?physicsProbe=N` also catches the first scene enter.
+ * @internal
+ */
 export const registerPhysicsDeterminismProbe = async () => {
   const probe = await loadDebugModuleAsync(() => import('./debug/_dbg__PhysicsDeterminism'));
   useDebug(probe)?._initPhysicsDeterminismProbe();
@@ -179,8 +179,10 @@ const pendingPhysicsEntityCreates = new Set<Promise<number>>();
 /**
  * Resolves once every createPhysicsEntity() call made so far has finished, including ones
  * started while waiting (e.g. a character created after its mesh loads), and the physics side
- * has handled everything sent before that (flushPhysics). SceneLoader.ts awaits this before it
- * releases the scene-load stepping hold, so fire-and-forget creates still start on step 0.
+ * has handled everything sent before that (flushPhysics). Physics' scene hooks (`entered`) await
+ * this before they release the scene-load stepping hold, so fire-and-forget creates still start
+ * on step 0.
+ * @internal
  */
 export const settlePendingPhysicsEntities = async () => {
   while (pendingPhysicsEntityCreates.size) {
@@ -199,26 +201,46 @@ export type PhysicsEntityOpts = CoreEntityOpts & {
 
 /**
  * Creates a physics entity: an optional rigid body and its colliders, in the bucket its body
- * type and visual call for (BODY_STATIC / BODY_DYNAMIC_VISUAL / BODY_DYNAMIC_HEADLESS).
+ * type and visual call for (BODY_STATIC / BODY_DYNAMIC_VISUAL / BODY_DYNAMIC_HEADLESS), and
+ * resolves with its entity id. A collider without its dimensions takes them from the target
+ * mesh's `createGeometry` params (a `BOX` from the box's width, height and depth).
  * Rejects with a `PhysicsCapacityError` (PhysicsBodies.ts) when a `WORKER_THREAD` world's
  * transform buffer is full (`AppConfig.physics.maxBodies`; `FIXED` bodies take no slot), and
  * with the backend's error when a body or collider can't be made (eg. a `TRIMESH` without
  * indices). Then nothing of it exists: a new entity is deleted, an existing `target` entity is
  * left as it was.
+ * @param colliderParams the colliders, attached to the body when there is one
+ * @param rigidBodyParams the body; none makes the colliders alone (static, in no bucket)
+ * @param target an `Object3D` (a new entity gets it as its OBJECT3D and adds it to the root
+ * scene unless `entityOpts.doNotAddToScene`), or the id of an existing entity (eg. from
+ * `createMeshEntity`) to add the physics components to: its OBJECT3D, if any, picks the
+ * visual bucket, and a body without a `translation` starts at its TRANSFORM. None makes a new
+ * entity without a visual
+ * @param entityOpts the new entity's options (for a `target` id only `tierPolicy` applies)
+ * @param ecsWorld the world; the default one when left out
  * @remarks An entity deleted while its `WORKER_THREAD` create is in flight (a scene exit) gets
  * nothing: what the create made is deleted again, and the promise resolves with the deleted
  * entity's id. Check `world.isAlive(id)` after the await before using it.
+ * @example
+ * ```ts
+ * import { createGeometry, createMaterial, createMeshEntity } from 'aekasha';
+ * import { createPhysicsEntity } from 'aekasha/physics';
+ *
+ * const position = { x: 0, y: 5, z: 0 };
+ * const geo = createGeometry({ id: 'ball', type: 'SPHERE', params: { radius: 0.4 } });
+ * const mat = createMaterial({ id: 'ball', type: 'STANDARD', params: { color: 0xff5533 } });
+ * const ballId = createMeshEntity({ geo, mat, position });
+ *
+ * await createPhysicsEntity(
+ *   { type: 'BALL', restitution: 0.6 }, // the radius comes from the sphere
+ *   { rigidType: 'DYNAMIC', translation: position },
+ *   ballId
+ * );
+ * ```
  */
 export const createPhysicsEntity = (
   colliderParams: ColliderParams | ColliderParams[],
   rigidBodyParams?: RigidBodyParams,
-  /**
-   * Either a raw Object3D (a new entity is created and this is attached to it as its
-   * OBJECT3D component, same as before), or the id of an existing entity to attach the
-   * physics components to directly (e.g. one already created by createMeshEntity) —
-   * no new entity is created, and its own OBJECT3D/other components (if any) already
-   * on it govern the BODY_DYNAMIC_VISUAL/HEADLESS bucket choice (see createPhysicsEntityNow).
-   */
   target?: THREE.Object3D | number,
   entityOpts?: PhysicsEntityOpts,
   ecsWorld?: ECSWorld
@@ -401,14 +423,20 @@ const deleteCreatedBodyAndColliders = async ({ rigidBody, colliders }: RigidBody
   else if (colliders.length) await deleteColliders(colliders.map((c) => c.id));
 };
 
-/** The entity's body, also while a REMOVED physics tier (p352) has taken its bucket component
- * away: the body keeps its id, and deleting it frees what the engine kept of it. */
-const getEntityBody = (world: ECSWorld, entityId: number) =>
+/**
+ * The entity's body, also while a REMOVED physics tier (p352) has taken its bucket component
+ * away (or one in flight back has none yet): the body keeps its id, and deleting it frees what
+ * the engine kept of it. Undefined for an entity without a body.
+ * @internal
+ */
+export const getPhysicsEntityBody = (world: ECSWorld, entityId: number): RigidBodyAPI | undefined =>
   world.getRigidBody(entityId) ??
   world.getComponent(entityId, ComponentType.PHYSICS_SIM_TIER)?.body;
 
-export const disposePhysicsEntity = async (entityId: number, world: ECSWorld) => {
-  const rb = getEntityBody(world, entityId);
+/** Deletes the entity's body (with its colliders), or its colliders when it has no body: the
+ * TAG_IS_PHYSICS_OBJECT delete hook's, which can't await it. */
+const disposePhysicsEntity = async (entityId: number, world: ECSWorld) => {
+  const rb = getPhysicsEntityBody(world, entityId);
   // One call either way, so in WORKER_THREAD mode every delete is posted synchronously, in
   // deletion order, ahead of whatever the next scene creates. Deleting a body also deletes
   // its colliders (they're all attached to it, see createPhysicsEntity).
@@ -420,21 +448,45 @@ export const disposePhysicsEntity = async (entityId: number, world: ECSWorld) =>
   if (colls?.length) await deleteColliders(colls.map((c) => c.id));
 };
 
-export const getPhysicsEntityByAppId = (appId: string) => getEntityIdByAppId(appId);
+/**
+ * The physics entity of the default world that has `appId` (its `APP_ID.id`), or undefined: also
+ * when the entity with the id is no physics entity (`createPhysicsEntity` didn't make it or add to
+ * it). An entity counts from the createPhysicsEntity call on, before its body exists.
+ * @example
+ * ```ts
+ * import { getECSWorld } from 'aekasha';
+ * import { getPhysicsEntityByAppId } from 'aekasha/physics';
+ *
+ * const ballId = getPhysicsEntityByAppId('ball');
+ * const ball = ballId === undefined ? undefined : getECSWorld().getRigidBody(ballId);
+ * ball?.applyImpulse({ x: 0, y: 5, z: 0 }, true);
+ * ```
+ */
+export const getPhysicsEntityByAppId = (appId: string): number | undefined => {
+  const world = getECSWorld();
+  const entityId = world.getEntityIdByAppId(appId);
+  return entityId !== undefined && world.hasComponent(entityId, ComponentType.TAG_IS_PHYSICS_OBJECT)
+    ? entityId
+    : undefined;
+};
 
-/** Deletes every physics-tagged entity in the given world (or the default one) — the
- * scene-agnostic catch-all legacy's deleteAllPhysicsObjects() was, for callers like
- * SceneLoader.ts's "wipe everything before loading the next scene" step. Most physics entities
- * already get cleaned up as a side effect of their mesh or group entity's deletion (via
- * TAG_IS_PHYSICS_OBJECT's onDeleteEntity hook), but a meshless physics-only entity has no mesh
- * or group for that deletion to reach, so it needs this separate sweep. */
+/**
+ * Deletes every physics-tagged entity in the given world (or the default one): physics' scene
+ * hooks (`exit`) run it before the next scene loads. Most physics entities already go with their
+ * mesh or group entity's deletion (TAG_IS_PHYSICS_OBJECT's onDeleteEntity hook), but a meshless
+ * physics-only entity has no mesh or group for that deletion to reach, so it needs this sweep.
+ * @internal
+ */
 export const deleteAllPhysicsEntities = (ecsWorld?: ECSWorld) => {
   const world = ecsWorld || existsOrThrow(getECSWorld(), 'Could not get ECS world.');
   const ids = [...world.getEntitiesWith(ComponentType.TAG_IS_PHYSICS_OBJECT)];
   for (const id of ids) world.deleteEntity(id);
 };
 
-/** The entity of a createPhysicsEntity body and the type it was created as. */
+/**
+ * The entity of a createPhysicsEntity body and the type it was created as.
+ * @internal
+ */
 export type PhysicsBodyOwner = {
   world: ECSWorld;
   entityId: number;
@@ -446,8 +498,11 @@ export type PhysicsBodyOwner = {
  * groups with it (p352). */
 const bodyOwners = new Map<number, PhysicsBodyOwner>();
 
-/** The entity a rigid body was created for by createPhysicsEntity, and its created type;
- * undefined for a body made through the bare Physics API. */
+/**
+ * The entity a rigid body was created for by createPhysicsEntity, and its created type;
+ * undefined for a body made through the bare Physics API.
+ * @internal
+ */
 export const getPhysicsBodyOwner = (rigidBodyId: number): Readonly<PhysicsBodyOwner> | undefined =>
   bodyOwners.get(rigidBodyId);
 
@@ -459,6 +514,7 @@ const movedStaticEntities = new WeakMap<ECSWorld, Map<number, number>>();
  * Syncs `entityId`'s BODY_STATIC body into its TRANSFORM in every physicsToTransformSystem until
  * the visible snapshot includes what changed it now (a move, or a physics tier freezing it): in
  * WORKER_THREAD mode the snapshot a frame reads can predate that change.
+ * @internal
  */
 export const queueStaticBodySync = (world: ECSWorld, entityId: number) => {
   let moved = movedStaticEntities.get(world);
@@ -529,7 +585,9 @@ const syncBodyPose = (world: ECSWorld, entityId: number, rb: RigidBodyAPI) => {
 };
 
 /**
- * Update transform from physics
+ * The physics → TRANSFORM sync (APP_POST_PHYSICS): every BODY_DYNAMIC_VISUAL body's pose into its
+ * entity's TRANSFORM, and the queued BODY_STATIC ones (queueStaticBodySync).
+ * @internal
  */
 export const physicsToTransformSystem = (world: ECSWorld) => {
   // Dynamic/kinematic bodies move every step. BODY_STATIC bodies (created FIXED, or frozen by a
@@ -552,463 +610,5 @@ export const physicsToTransformSystem = (world: ECSWorld) => {
     const rb = world.getComponent(entityId, ComponentType.BODY_STATIC);
     if (rb) syncBodyPose(world, entityId, rb);
     if (!rb || snapshotStep >= untilStep) moved.delete(entityId);
-  }
-};
-
-// --- Render interpolation (p059) ------------------------------------------------------------
-//
-// Every rendered pose is a monotone render clock, measured in simulated fixed steps, evaluated
-// against the last three snapshots, whose endpoints carry the step index they describe:
-//   alpha = (renderClock - prevStep) / (currStep - prevStep)
-// The two modes run identical blend math and differ only in where the render clock comes from:
-// - 'FIXED_PHYSICS' (open-loop): renderClock = simClock - delay, straight from the stepper.
-//   Exact, but only valid when snapshots are visible in the frame they are issued (MAIN_THREAD).
-// - 'RENDERER' (closed-loop): renderClock only ever advances by the stepper's own per-frame
-//   advance, slightly sped up/slowed down (never displaced) toward a target anchored on every
-//   newly visible snapshot. Worker latency is never estimated — it ends up as a constant lag.
-// On MAIN_THREAD the target sits exactly on the FIXED_PHYSICS clock, so both modes converge.
-
-/** Poses kept per entity (oldest → newest). Three, not two: under jitter the render clock can
- * legitimately fall before the previous snapshot, and two slots would clamp/stall there. */
-const HISTORY_SLOTS = 3;
-/** Floats per history slot: position xyz + (normalized) quaternion xyzw. */
-const POSE_FLOATS = 7;
-/** How many recent snapshot intervals the delay is the max of (~0.5s at 60 snapshots/s). */
-const DELAY_WINDOW = 32;
-/** Max render-clock speed-up/slow-down (and delay slew) relative to the simulation: a 15%
- * velocity error on a moving object is invisible, a position jump is not. */
-const MAX_RATE_DEVIATION = 0.15;
-/** Time constant (simulated seconds) of the RENDERER servo's lag correction. */
-const SERVO_TIME_CONSTANT = 0.5;
-/** Extra RENDERER delay under WORKER_THREAD, as a fraction of the delay, absorbing snapshot
- * arrival jitter (dominated by when the main thread gets around to reading). */
-const JITTER_MARGIN_RATIO = 0.5;
-/** RENDERER re-anchors outright (instead of servoing) once off by more than this many delays. */
-const HARD_RESET_ERROR_RATIO = 4;
-/** A quaternion shorter than this is no valid pose yet (e.g. rb.rot before the first snapshot
- * reads all zeros) — the entity is skipped rather than slerping NaN into its matrix. */
-const MIN_QUAT_LENGTH_SQ = 1e-6;
-const NO_SNAPSHOT = -1;
-
-type InterpolationHistory = {
-  /** HISTORY_SLOTS × POSE_FLOATS, oldest → newest, mutated in place. */
-  poses: Float32Array;
-  /** Step index of the snapshot the newest slot was captured at. Anything but the world
-   * state's previous `lastStep` when a new snapshot arrives means this entity missed one (new,
-   * disabled, skipped) — its history has a hole and gets reseeded instead of shifted. */
-  capturedAt: number;
-  /** Set by an explicit pose reset (setTransform/teleport): until a snapshot stamped at least
-   * this step is visible, no snapshot reflects the new pose yet, so snapPose is shown as-is and
-   * nothing is captured. 0 = not snapping. */
-  snapUntilStep: number;
-  /** The reset pose (POSE_FLOATS), allocated on the entity's first reset. */
-  snapPose: Float32Array | null;
-};
-
-/** Throws away one entity's pose history: its next capture reseeds it, so it doesn't blend from
- * a pose it left (a body back from the REMOVED physics tier, p352). */
-export const resetPhysicsInterpolationHistory = (world: ECSWorld, entityId: number) => {
-  worldInterpolationStates.get(world)?.histories.delete(entityId);
-};
-
-/** Live values for the Physics API debug tab, mutated in place (never reallocated). */
-export type PhysicsInterpolationReadout = {
-  /** Render clock behind the stepper's clock (ms of simulated time). */
-  lagMs: number;
-  /** Render clock speed relative to the simulation over the last frame (1 = nominal). */
-  rate: number;
-  /** Current (slewed) delay D (ms) — the max recent snapshot interval. */
-  delayMs: number;
-  /** Most recently measured snapshot interval (ms). */
-  intervalMs: number;
-  /** RENDERER: target minus render clock (ms); 0 for FIXED_PHYSICS. */
-  errorMs: number;
-  /** Hard resets (re-anchors) since boot. */
-  resets: number;
-};
-
-type WorldInterpolationState = {
-  histories: Map<number, InterpolationHistory>;
-  /** Step index of each history slot, oldest → newest. Shared by the whole world — every
-   * entity captures on the same snapshots, and a reseeded history holds one pose in all slots,
-   * so its stamps don't matter. */
-  stamps: Float64Array;
-  /** Step index of the newest snapshot captured (NO_SNAPSHOT: none yet). */
-  lastStep: number;
-  clockEpoch: number;
-  historyEpoch: number;
-  mode: PhysicsInterpolationMode | null;
-  timestepRatio: number;
-  lastSimClock: number;
-  /** Slewed D, in steps. */
-  delay: number;
-  intervals: Int32Array;
-  intervalIndex: number;
-  wasLastIntervalOutlier: boolean;
-  /** RENDERER only. */
-  renderClock: number;
-  targetClock: number;
-  hasTarget: boolean;
-  isClockAnchored: boolean;
-  readout: PhysicsInterpolationReadout;
-  /** Renders the newest snapshot, no blend (setPhysicsInterpolationPinnedToNewest). */
-  isPinnedToNewest: boolean;
-};
-
-// Per world: entity ids (and so history keys) are only unique within one world.
-const worldInterpolationStates = new WeakMap<ECSWorld, WorldInterpolationState>();
-
-const getWorldInterpolationState = (world: ECSWorld) => {
-  let state = worldInterpolationStates.get(world);
-  if (!state) {
-    state = {
-      histories: new Map(),
-      stamps: new Float64Array(HISTORY_SLOTS),
-      lastStep: NO_SNAPSHOT,
-      clockEpoch: -1,
-      historyEpoch: -1,
-      mode: null,
-      timestepRatio: 0,
-      lastSimClock: 0,
-      delay: 1,
-      intervals: new Int32Array(DELAY_WINDOW).fill(1),
-      intervalIndex: 0,
-      wasLastIntervalOutlier: false,
-      renderClock: 0,
-      targetClock: 0,
-      hasTarget: false,
-      isClockAnchored: false,
-      readout: { lagMs: 0, rate: 1, delayMs: 0, intervalMs: 0, errorMs: 0, resets: 0 },
-      isPinnedToNewest: false,
-    };
-    worldInterpolationStates.set(world, state);
-  }
-  return state;
-};
-
-/** Throws away every pose history (they'll reseed on their next capture). Rare — world
- * replaced / snapshot restored — so the per-entity walk is fine. */
-const resetInterpolationHistory = (state: WorldInterpolationState) => {
-  for (const history of state.histories.values()) {
-    history.capturedAt = NO_SNAPSHOT;
-    history.snapUntilStep = 0; // a stale target from the previous timeline could never be reached
-  }
-  state.lastStep = NO_SNAPSHOT;
-  state.intervals.fill(1);
-  state.wasLastIntervalOutlier = false;
-  state.hasTarget = false;
-  state.isClockAnchored = false;
-};
-
-/**
- * Debug and test only: while pinned, every interpolated body of `world` is drawn at the newest
- * visible snapshot, with no blend toward it. The scene runner's test bridge pins it once the
- * determinism probe has held physics, so a still frame shows the exact step the probe hashed,
- * not a pose between the last two steps that depends on frame timing (p601).
- * @param world (ECSWorld) the world
- * @param isPinned (boolean) whether to pin
- */
-export const setPhysicsInterpolationPinnedToNewest = (world: ECSWorld, isPinned: boolean) => {
-  getWorldInterpolationState(world).isPinnedToNewest = isPinned;
-};
-
-/** Live interpolation clock values of `world`, for the debug tab. Stable object, updated every
- * frame the interpolation system runs in an interpolating mode. */
-export const getPhysicsInterpolationReadout = (world: ECSWorld) =>
-  getWorldInterpolationState(world).readout;
-
-const snapshotStamp = { step: 0, phase: 0 };
-const scratchQuatA = new THREE.Quaternion();
-const scratchQuatB = new THREE.Quaternion();
-// Checked here rather than at initPhysics() so it also catches a mode restored from
-// localStorage or switched live from the Physics API debug tab.
-let hasWarnedInvalidInterpolationPairing = false;
-
-/** Writes rb's current pose into history slot `slot`, normalizing the quaternion at capture
- * (Float32 round-trips drift off unit length, and slerp assumes unit inputs). */
-/** [pos xyz, quat xyzw] every capture is read into (rb.readPoseInto, no per-read allocation). */
-const capturePose = new Float64Array(POSE_FLOATS);
-
-/** Normalizes capturePose's quaternion in place — at capture, since Float32 round-trips drift
- * off unit length and slerp assumes unit inputs. False when it is no valid pose yet (a (near)
- * zero quaternion, e.g. rb.rot before the first snapshot): the caller must skip the entity
- * rather than slerp NaN into its matrix. */
-const normalizeCapturePose = (): boolean => {
-  const p = capturePose;
-  const quatLengthSq = p[3] * p[3] + p[4] * p[4] + p[5] * p[5] + p[6] * p[6];
-  if (quatLengthSq < MIN_QUAT_LENGTH_SQ) return false;
-  const invQuatLength = 1 / Math.sqrt(quatLengthSq);
-  p[3] *= invQuatLength;
-  p[4] *= invQuatLength;
-  p[5] *= invQuatLength;
-  p[6] *= invQuatLength;
-  return true;
-};
-
-/** Copies capturePose into history slot `slot`. */
-const writeHistorySlot = (poses: Float32Array, slot: number) => {
-  const o = slot * POSE_FLOATS;
-  for (let i = 0; i < POSE_FLOATS; i++) poses[o + i] = capturePose[i];
-};
-
-const createInterpolationHistory = (): InterpolationHistory => ({
-  poses: new Float32Array(HISTORY_SLOTS * POSE_FLOATS),
-  capturedAt: NO_SNAPSHOT,
-  snapUntilStep: 0,
-  snapPose: null,
-});
-
-// Explicit pose resets (setTransform/teleport) are discontinuities: without this the history
-// would blend from the old position to the new one — a visible streak across the jump. The
-// history isn't reseeded here: under WORKER_THREAD rb.pos is still the not-yet-stepped pending
-// value, and stamping it with the latest snapshot's step would place it at a simulated time it
-// doesn't belong to. The reset pose is shown as-is instead until a later-stamped snapshot lands.
-const onPhysicsTransformReset: TransformResetListener = (world, entityId) => {
-  if (!world.hasComponent(entityId, ComponentType.BODY_DYNAMIC_VISUAL)) return;
-  const transform = world.getComponent(entityId, ComponentType.TRANSFORM);
-  if (!transform) return;
-  const state = getWorldInterpolationState(world);
-  let history = state.histories.get(entityId);
-  if (!history) {
-    history = createInterpolationHistory();
-    state.histories.set(entityId, history);
-  }
-  const { position: pos, quaternion: q } = transform;
-  capturePose[0] = pos.x;
-  capturePose[1] = pos.y;
-  capturePose[2] = pos.z;
-  capturePose[3] = q.x;
-  capturePose[4] = q.y;
-  capturePose[5] = q.z;
-  capturePose[6] = q.w;
-  if (!normalizeCapturePose()) return;
-  history.snapPose ??= new Float32Array(POSE_FLOATS);
-  writeHistorySlot(history.snapPose, 0);
-  history.snapUntilStep = getPhysicsWriteVisibleStep();
-};
-
-/**
- * Render-only smoothing on top of the discrete physics-step pose: writes the blended pose only
- * into the Object3D — TRANSFORM stays the authoritative, non-interpolated pose for gameplay
- * code (collision queries, AI, etc.). No-ops entirely for 'NONE', leaving object3DSyncSystem's
- * own MAIN-stage sync as the sole writer. See the section comment above for the clock model.
- */
-export const physicsInterpolationSystem = (world: ECSWorld) => {
-  const physicsState = getPhysicsState();
-  const mode = physicsState.interpolationMode;
-  if (mode === 'NONE') return;
-  // Reserved, not implemented.
-  if (mode === 'EXTRAPOLATION') return;
-
-  if (
-    IS_DEBUG_ENV &&
-    !hasWarnedInvalidInterpolationPairing &&
-    mode === 'FIXED_PHYSICS' &&
-    physicsState.workerTarget === 'WORKER_THREAD'
-  ) {
-    hasWarnedInvalidInterpolationPairing = true;
-    lwarn(
-      "interpolationMode 'FIXED_PHYSICS' is not valid with workerTarget 'WORKER_THREAD': its clock comes from the main thread's accumulator, but the snapshots arrive asynchronously from the worker, later than that clock assumes, so the pose freezes and jumps. Use 'RENDERER' for WORKER_THREAD (see docs/plans/_DONE_p059_interpolation-optimization-and-fixes.md)."
-    );
-  }
-
-  const state = getWorldInterpolationState(world);
-  const timestepRatio = physicsState.timestepRatio;
-
-  // --- Reset events (snap and re-anchor, no servoing) ---
-  let resetClock = false;
-  const historyEpoch = getPhysicsSimHistoryEpoch();
-  if (state.historyEpoch !== historyEpoch) {
-    state.historyEpoch = historyEpoch;
-    resetInterpolationHistory(state);
-    resetClock = true;
-  }
-  if (state.mode !== mode) {
-    // The mode may have been 'NONE' until now, during which nothing here ran: the snapshot
-    // tracking is stale (its next interval would span the whole gap).
-    if (state.mode !== null) resetInterpolationHistory(state);
-    state.mode = mode;
-    resetClock = true;
-  }
-  const clockEpoch = getPhysicsSimClockEpoch();
-  if (state.clockEpoch !== clockEpoch || state.timestepRatio !== timestepRatio) {
-    state.clockEpoch = clockEpoch;
-    state.timestepRatio = timestepRatio;
-    resetClock = true;
-  }
-
-  // --- Newly visible snapshot? (identified by the step index it was stamped with) ---
-  let prevStep = state.lastStep;
-  let isNewSnapshot = false;
-  if (readPhysicsSnapshotStamp(snapshotStamp) && snapshotStamp.step !== state.lastStep) {
-    isNewSnapshot = true;
-    const newestStep = state.stamps[HISTORY_SLOTS - 1];
-    if (prevStep === NO_SNAPSHOT || snapshotStamp.step <= newestStep) {
-      // First snapshot of a timeline (or one that doesn't follow the last): nothing to
-      // interpolate from yet.
-      if (prevStep !== NO_SNAPSHOT) resetInterpolationHistory(state);
-      prevStep = NO_SNAPSHOT;
-      state.stamps.fill(snapshotStamp.step);
-      resetClock = true;
-    } else {
-      const interval = snapshotStamp.step - newestStep;
-      const isOutlier = interval > HARD_RESET_ERROR_RATIO * state.delay;
-      if (isOutlier && !state.wasLastIntervalOutlier) {
-        // A one-off hitch (or a stall in delivery), not a cadence: snap past it rather than
-        // stretching D — and so the lag — for the whole window.
-        resetClock = true;
-      } else {
-        // Two in a row is a new cadence (e.g. the render rate dropped well below the physics
-        // rate): adopt it at once.
-        if (isOutlier) resetClock = true;
-        state.intervals[state.intervalIndex] = interval;
-        state.intervalIndex = (state.intervalIndex + 1) % DELAY_WINDOW;
-      }
-      state.wasLastIntervalOutlier = isOutlier;
-      state.stamps.copyWithin(0, 1);
-      state.stamps[HISTORY_SLOTS - 1] = snapshotStamp.step;
-    }
-    state.lastStep = snapshotStamp.step;
-  }
-  if (state.lastStep === NO_SNAPSHOT) return; // nothing stamped yet — leave the MAIN sync pose
-
-  // --- Delay D: one snapshot interval, measured (max over the recent window, so alternating
-  // intervals are extra-delayed on the short ones instead of clamping on the long ones) ---
-  let maxInterval = 1;
-  for (let i = 0; i < DELAY_WINDOW; i++) {
-    if (state.intervals[i] > maxInterval) maxInterval = state.intervals[i];
-  }
-  const simClock = getPhysicsSimClock();
-  const simAdvance = resetClock ? 0 : Math.max(0, simClock - state.lastSimClock);
-  state.lastSimClock = simClock;
-  if (resetClock) {
-    state.delay = maxInterval;
-  } else {
-    const maxSlew = MAX_RATE_DEVIATION * simAdvance;
-    state.delay += Math.min(maxSlew, Math.max(-maxSlew, maxInterval - state.delay));
-  }
-
-  // --- Render clock ---
-  const prevRenderClock = state.renderClock;
-  let error = 0;
-  if (mode === 'FIXED_PHYSICS') {
-    state.renderClock = simClock - state.delay;
-  } else {
-    const margin =
-      physicsState.workerTarget === 'WORKER_THREAD' ? JITTER_MARGIN_RATIO * maxInterval : 0;
-    if (isNewSnapshot) {
-      // Where the render clock belongs at the moment this snapshot becomes visible: its step
-      // plus the clock phase it was issued at (on MAIN_THREAD that is exactly simClock now).
-      state.targetClock = snapshotStamp.step + snapshotStamp.phase - state.delay - margin;
-      state.hasTarget = true;
-    } else {
-      state.targetClock += simAdvance;
-    }
-
-    if (!state.hasTarget) {
-      state.renderClock = state.stamps[HISTORY_SLOTS - 1];
-      state.isClockAnchored = false;
-    } else if (resetClock || !state.isClockAnchored) {
-      state.renderClock = state.targetClock;
-      state.isClockAnchored = true;
-      state.readout.resets++;
-    } else {
-      // Against where the clock lands this frame at nominal rate — the target has already
-      // been advanced by this frame's simAdvance above.
-      const nominalRenderClock = state.renderClock + simAdvance;
-      error = state.targetClock - nominalRenderClock;
-      if (Math.abs(error) > HARD_RESET_ERROR_RATIO * maxInterval) {
-        state.renderClock = state.targetClock;
-        state.readout.resets++;
-      } else {
-        // Time dilation, never displacement: the correction is bounded by a fraction of this
-        // frame's own advance, so the clock is monotone and the pose continuous.
-        const maxCorrection = MAX_RATE_DEVIATION * simAdvance;
-        const gain = Math.min(1, (simAdvance * timestepRatio) / SERVO_TIME_CONSTANT);
-        const correction = Math.min(maxCorrection, Math.max(-maxCorrection, error * gain));
-        state.renderClock = nominalRenderClock + correction;
-      }
-    }
-  }
-  // Pinned: the newest snapshot as is (the servoed clock keeps running underneath)
-  const renderClock = state.isPinnedToNewest ? state.stamps[HISTORY_SLOTS - 1] : state.renderClock;
-
-  const toMs = timestepRatio * 1000;
-  const readout = state.readout;
-  readout.lagMs = (simClock - renderClock) * toMs;
-  if (simAdvance > 0) readout.rate = (renderClock - prevRenderClock) / simAdvance;
-  readout.delayMs = state.delay * toMs;
-  readout.intervalMs =
-    state.intervals[(state.intervalIndex + DELAY_WINDOW - 1) % DELAY_WINDOW] * toMs;
-  readout.errorMs = error * toMs;
-
-  // --- Segment (shared by every entity: same stamps) ---
-  const stamps = state.stamps;
-  let slotA = 0;
-  let slotB = 0;
-  let alpha = 0;
-  if (renderClock >= stamps[2]) {
-    slotA = slotB = 2;
-  } else if (renderClock >= stamps[1]) {
-    slotA = 1;
-    slotB = 2;
-    alpha = (renderClock - stamps[1]) / (stamps[2] - stamps[1]);
-  } else if (renderClock >= stamps[0]) {
-    slotB = 1;
-    alpha = (renderClock - stamps[0]) / (stamps[1] - stamps[0]);
-  } // else: before the oldest snapshot — freeze on it rather than reverse (alpha stays 0)
-
-  const a = slotA * POSE_FLOATS;
-  const b = slotB * POSE_FLOATS;
-  const dynamicVisuals = world.getStorage(ComponentType.BODY_DYNAMIC_VISUAL);
-  for (const entityId of dynamicVisuals.keys()) {
-    if (world.isDisabled(entityId)) continue;
-    const rb = dynamicVisuals.get(entityId)!;
-    const obj3D = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
-    if (!obj3D) continue;
-
-    let history = state.histories.get(entityId);
-    if (history && history.snapUntilStep > 0) {
-      if (state.lastStep < history.snapUntilStep) {
-        const p = history.snapPose!;
-        obj3D.position.set(p[0], p[1], p[2]);
-        obj3D.quaternion.set(p[3], p[4], p[5], p[6]);
-        continue;
-      }
-      // The first snapshot that includes the reset: start the history over from it.
-      history.snapUntilStep = 0;
-      history.capturedAt = NO_SNAPSHOT;
-    }
-    if (!history || history.capturedAt !== state.lastStep) {
-      rb.readPoseInto(capturePose);
-      if (!normalizeCapturePose()) continue;
-      if (!history) {
-        history = createInterpolationHistory();
-        state.histories.set(entityId, history);
-      }
-      const poses = history.poses;
-      if (isNewSnapshot && prevStep !== NO_SNAPSHOT && history.capturedAt === prevStep) {
-        poses.copyWithin(0, POSE_FLOATS);
-        writeHistorySlot(poses, HISTORY_SLOTS - 1);
-      } else {
-        // Hole in the history (new, re-enabled, skipped, or reset): reseed every slot with the
-        // current pose, which makes this frame (and the history) snap to it.
-        for (let slot = 0; slot < HISTORY_SLOTS; slot++) {
-          writeHistorySlot(poses, slot);
-        }
-      }
-      history.capturedAt = state.lastStep;
-    }
-
-    const poses = history.poses;
-    const invAlpha = 1 - alpha;
-    obj3D.position.set(
-      poses[a] * invAlpha + poses[b] * alpha,
-      poses[a + 1] * invAlpha + poses[b + 1] * alpha,
-      poses[a + 2] * invAlpha + poses[b + 2] * alpha
-    );
-    scratchQuatA.set(poses[a + 3], poses[a + 4], poses[a + 5], poses[a + 6]);
-    scratchQuatB.set(poses[b + 3], poses[b + 4], poses[b + 5], poses[b + 6]);
-    obj3D.quaternion.copy(scratchQuatA.slerp(scratchQuatB, alpha));
   }
 };

@@ -1003,6 +1003,72 @@ As built, section 3 (2026-10-17, on `4521fb0`): D11 and the measurements.
 2. The tiers and the policy: P1-P4.
 3. `PhysicsUtils.ts`, `Engines.ts`, the buffers' members documented.
 
+As built, section 1 (2026-10-17, on `bd639f7`): `PhysicsEntity.ts`.
+
+- **E2:** the render interpolation is `PhysicsInterpolation.ts` (492 lines; `PhysicsEntity.ts`
+  993 → 614), sliced by line range like the earlier moves. The maths are unchanged. Its exports
+  are `@internal`: `physicsInterpolationSystem`, `onPhysicsTransformReset` (newly exported;
+  `installPhysicsEntities` still registers both, at the same place, so no registration order
+  moved), `resetPhysicsInterpolationHistory` (the delete hook calls it now, instead of reaching
+  into the state map), `setPhysicsInterpolationPinnedToNewest`, `getPhysicsInterpolationReadout`
+  and `PhysicsInterpolationReadout`. The test bridge, the Physics API tab and `PhysicsTiers.ts`
+  import from the new module. Gone: an orphan JSDoc above `capturePose`, and the `@param x (type)`
+  form.
+- **E3:** the system reads the `DISABLED` and `OBJECT3D` storages once per frame. That doesn't
+  change its allocation, and Phase 0's question ("Phase 6 finds what it allocates") has a
+  different answer: **it's V8's tiering, not the code.** Measured with Phase 5's harness
+  (`.cache/p614/measure6.ts`, filtered runs) plus three probes kept next to it (`optStatus.ts`,
+  `storeProbe.ts`, `traceDeopt.ts`; `variants.sh`):
+  - `physicsTiers` blends 30 entities per frame and the gym 14; the system allocates 3.7-3.9 and
+    1.4-1.5 KiB / frame, before and after E3.
+  - Not the pose writes: three temporary variants (direct position field writes, no quaternion
+    write, neither) all measured 3.7-3.8 KiB. Not a callee either: with inlining off
+    (`--max-inlined-bytecode-size=0`) the function's own allocation is the same.
+  - `--trace-opt --trace-deopt`: the system is compiled by **Maglev** and never reaches
+    TurboFan within the 12 s window (one early deopt, "insufficient type feedback for binary
+    operation", then Maglev again). With `--js-flags=--no-maglev` it drops to 1.0 KiB / frame
+    (`physicsTiers`) and 0.47 (the gym): about two thirds is Maglev boxing doubles.
+  - So nothing here to change: GC stays under 0.05 ms / frame (Phase 5), and steering V8's
+    tiers would mean rewriting the maths, which D7 keeps as they are. A side finding: in bare
+    three (Node), a single non-number store into any `Vector3`'s `x` generalizes the field for
+    every `Vector3`, after which each double store allocates. In the app, a `Vector3.set` loop
+    allocated 12 B per call (a `Quaternion.set` loop none), but that probe can't tell a tagged
+    field from the boxed argument of a call Maglev didn't inline. `--trace-generalization`
+    (it doesn't name the map) shows three double → tagged generalizations, all in three's
+    code: `y` in a `set`, `z` in the render list's `resetRenderItem` and `get`. The engine
+    sites it lists are object literals (`Casts.ts`' records, the toaster's offsets). Open,
+    not physics': whether a three maths class is generalized in the app.
+- **E4:** `createPhysicsEntity` has `@param`s for its five parameters (the `target` doc moved out
+  of the signature), the dimensions it derives from a `createGeometry` mesh, and an `@example`
+  (type-checked). `getPhysicsEntityByAppId` now does what its name says: undefined for an entity
+  that isn't a physics entity (no `TAG_IS_PHYSICS_OBJECT`; the tag is added at the call, so an
+  entity counts before its body exists). It has a summary and an `@example`. **A behaviour
+  change** (it returned any entity's id), for D2's changelog; no caller in the template.
+  `disposePhysicsEntity` isn't exported any more (its only caller is the delete hook) and has a
+  summary. `deriveColliderDimensionsFromMesh` is `@internal` until Phase 7 moves it (D13). The
+  other non-entry exports are `@internal`: the installs and debug registrations,
+  `settlePendingPhysicsEntities`, `deleteAllPhysicsEntities`, `PhysicsBodyOwner`,
+  `getPhysicsBodyOwner`, `queueStaticBodySync`, `physicsToTransformSystem` (its doc said only
+  "Update transform from physics").
+- **E5:** `import/MeshColliderGeometry.ts`' path; the two `SceneLoader.ts` mentions now name
+  physics' scene hooks (`entered`, `exit`); the `FIXED_PHYSICS` warning names
+  `PhysicsState.interpolationMode` instead of the deleted p059 plan.
+- **E6:** `getPhysicsEntityBody` (`PhysicsEntity.ts`, `@internal`) replaces the three copies
+  (`PhysicsEntity.ts`, `PhysicsTiers.ts`' `getTierBody`, `PhysicsTierPolicy.ts`).
+- **Also:** the four remaining `PhysicsManager` comments, all in debug files
+  (`_dbg__PhysicsAPI.ts`, `_dbg__PhysicsDebugDraw.ts` × 2, `_dbg__OnScreenTools.ts`), now name
+  `PhysicsInterpolation.ts` / `PhysicsEntity.ts` (comments only, p618's files). No
+  `PhysicsManager` is left in `src/`.
+- **Tests:** `PhysicsFacade.test.ts`, E4 (`getPhysicsEntityByAppId` with a plain entity, a physics
+  one and a missing id; fails on the old code) and E6 (the helper's body). `yarn test` 609 passed.
+- **Baselines:** `api.json` (the five moves, `disposePhysicsEntity` removed, `getPhysicsEntityBody`
+  and `onPhysicsTransformReset` added), `docs.json` (`features/physics` exports 197 / 203 →
+  200 / 204; the four left are steps 2 and 3's), `bundle.json` (only the two `EngineRapier.js`
+  chunks swapping their `#2` key again). No debug code in either build.
+- **Checks:** `tsc` (both projects), the lint, `yarn test`, `moveMap.ts` regenerated (755 files,
+  the same 41 boundary violations, 0 feature cycles), `yarn hub:build` (no warning in the files
+  touched). `yarn verify:scenes` isn't due until Phase 7 (§3).
+
 ### Phase 7: the derivation, ray casting, the character items
 
 1. D13 (M1, M2, M4) with its per-shape tests.
