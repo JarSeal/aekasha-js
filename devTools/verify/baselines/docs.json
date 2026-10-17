@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2049,
-      "total": 2377
+      "documented": 2051,
+      "total": 2376
     },
     "members": {
       "documented": 874,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2005,
-        "total": 2314
+        "documented": 2007,
+        "total": 2313
       },
       "members": {
         "documented": 824,
@@ -310,8 +310,8 @@
     },
     "engine/features/physics": {
       "exports": {
-        "documented": 200,
-        "total": 204
+        "documented": 202,
+        "total": 203
       },
       "members": {
         "documented": 18,
@@ -319,10 +319,7 @@
       },
       "undocumented": {
         "exports": [
-          "PhysicsStepStatsBuffer#PHYSICS_STEP_STATS_FIELD_COUNT",
-          "PhysicsTierPolicy#DEFAULT_TIER_POLICY_CADENCE",
-          "PhysicsTierPolicy#DEFAULT_TIER_POLICY_INTERVAL",
-          "PhysicsTierTypes#PhysicsTierBucket"
+          "PhysicsStepStatsBuffer#PHYSICS_STEP_STATS_FIELD_COUNT"
         ],
         "members": [
           "PhysicsBodies#PhysicsCapacityError.constructor",

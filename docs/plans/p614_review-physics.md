@@ -1068,6 +1068,68 @@ As built, section 1 (2026-10-17, on `bd639f7`): `PhysicsEntity.ts`.
 - **Checks:** `tsc` (both projects), the lint, `yarn test`, `moveMap.ts` regenerated (755 files,
   the same 41 boundary violations, 0 feature cycles), `yarn hub:build` (no warning in the files
   touched). `yarn verify:scenes` isn't due until Phase 7 (§3).
+- **Filed:** `docs/issues/three-vector3-store-allocates-in-app.md` (the `Vector3` finding above).
+
+As built, section 2 (2026-10-17): the tiers and the policy.
+
+- **P1:** `readCameraFocus` reads the default world's main camera through `getMainCamera()`
+  (p612 D7's cached id); another world keeps the `TAG_IS_MAIN_CAMERA` query.
+- **P2:** the `STEPS` pass allocates nothing but a WORKER_THREAD request (its promise and
+  closure). Measured on `physicsTiers` (687 members, a pass every 10 steps), KiB / frame, before
+  → after:
+
+  | | MAIN_THREAD | WORKER_THREAD SAB |
+  | --- | ---: | ---: |
+  | `decide` (own) | 2.15 → 0 | 2.11 → 0 |
+  | `decide`'s `Map.set` | 2.69 → 0 | 2.68 → 0 |
+  | `measure` (own), its `filter` and `sort` | 1.13 + 0.85 + 0.33 → 0 | 1.12 + 0.85 + 0.34 → 0 |
+  | Physics, all | 16.4 → 13.2 | 10.0 → 6.9 |
+
+  Main-thread GC stayed at ~0.05 ms / frame (the noise). What allocated, and the fixes:
+  - `decide`: `for (const [id, ring] of desiredRings)` made an array per entry, and the per-pass
+    maps rebuilt their tables after each `clear()`. The pass now keeps three parallel arrays
+    (entity id, ring, joint group; written by index, never shrunk) in measurement order, which
+    was the maps' insertion order, so the requests go out in the same order. `refusedGroups`
+    (joint groups only) is cleared only when it holds something: a `clear()` allocates a
+    table even for an empty map.
+  - `measure`: `[...keys()].sort()`, the `filter` and the growing `bodyIds`. A measurement is
+    now pooled with its arrays (`takeMeasurement` / `releaseMeasurement`, on decision or drop).
+    Its `use` counter replaces `dropped`, so a late reply to an earlier use is ignored, and so
+    is its error: the error path no longer releases a gate the next use holds. The ids sort in
+    an `Int32Array` (ECS ids are int32: `(gen << 20) | index`, negative from generation 2048, in
+    the same numeric order as before), through a `subarray` view, since no int32 is safe as
+    padding. The MAIN_THREAD positions buffer is kept with the measurement. Pooling `bodyIds`
+    is safe because a request captured for a sub-step is `structuredClone`d at capture, and one
+    outside a sub-step is posted (cloned) at once.
+  - Then `measure`'s own 1.3 KiB stayed: a pass runs 6 times a second, too rarely for V8 to
+    optimize it, and an unoptimized `for … of` over the members allocates a result object per
+    member (~20 B × 687). The member walk is the builtin `Map.prototype.forEach` with a
+    module-level callback, behind an `instanceof Map` check (every storage but a `TYPED_ARRAY`
+    `TRANSFORM` is a `Map`; anything else keeps the walk).
+  - FRAMES: its two arrays are refilled by index instead of `length = 0` (which frees V8's
+    storage).
+  - `yarn verify:scenes --only physicsTiers`, after each change: `49157b8f` in all three
+    targets, prodTest passing. The policy decides as before.
+- **P3:** `getPhysicsTierPolicy`, `getPhysicsTierPolicyStatus`, `setPhysicsTierPolicyFrozen`,
+  `isPhysicsTierPolicyFrozen`, `getPhysicsTierPolicyFreezeSources` and
+  `DETERMINISM_PROBE_FREEZE_SOURCE` are `@internal` (the debug tab and the probe use them).
+  `DEFAULT_TIER_POLICY_CADENCE` / `_INTERVAL` aren't exported any more (no importer;
+  `PhysicsTierPolicy`'s fields document the defaults). The type re-exports in
+  `PhysicsTierPolicy.ts` and `PhysicsTiers.ts` are gone (no importer). `PhysicsTierPolicyCadence`
+  is on `aekasha/physics` now, since the entry's `PhysicsTierPolicy` names it (the standard's "no
+  internal types in public signatures"). `PhysicsTierBucket` is documented and `@internal`, and
+  `PhysicsTierRing.tier` has a summary. `@example`s, type-checked: `setPhysicsTierPolicy` (now
+  fenced, with its import and a `sceneId`), `setPhysicsTierPolicyMember`, `requestPhysicsTier`,
+  `getPhysicsTier`.
+- **P4:** `isBodyJointed` (`PhysicsJoints.ts`, `@internal`) stops at the first joint on the body
+  and needs no closure; it replaces the tiers' `bodyHasJoints`, which walked every joint.
+- **Baselines:** `api.json` (the eight changes above), `docs.json` (`features/physics` exports
+  202 / 203; the last, `PHYSICS_STEP_STATS_FIELD_COUNT`, is step 3's), `bundle.json` (the
+  physics group +0.4 kB gzip, within the tolerance: the pool's code). No debug code in either
+  build.
+- **Checks:** `tsc`, the lint, `yarn test` (609 passed), `moveMap.ts` regenerated (756 files, the
+  same 41 boundary violations, 0 feature cycles), `yarn hub:build` (no warning in the files
+  touched).
 
 ### Phase 7: the derivation, ray casting, the character items
 

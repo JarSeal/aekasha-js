@@ -5,7 +5,12 @@ export type { ColliderParams } from './types/PhysicsColliderTypes';
 export type { PhysVector } from './types/PhysicsCommonTypes';
 export { JointAxesMask } from './types/PhysicsJointTypes';
 export type { JointParams } from './types/PhysicsJointTypes';
-export type { PhysicsTier, PhysicsTierPolicy, PhysicsTierRing } from './PhysicsTierTypes';
+export type {
+  PhysicsTier,
+  PhysicsTierPolicy,
+  PhysicsTierPolicyCadence,
+  PhysicsTierRing,
+} from './PhysicsTierTypes';
 export {
   PhysicsCapacityError,
   createRigidBodies,

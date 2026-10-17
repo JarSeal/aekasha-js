@@ -957,6 +957,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/physics/PhysicsInterpolation.ts": {
+      "to": "src/_engine/features/physics/PhysicsInterpolation.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/physics/PhysicsJoints.ts": {
       "to": "src/_engine/features/physics/PhysicsJoints.ts",
       "action": "keep",

@@ -977,7 +977,8 @@
       "deleteJoint": "Function",
       "deleteJointSync": "Function",
       "forEachJointBodyPair": "Function",
-      "hasJoints": "Function"
+      "hasJoints": "Function",
+      "isBodyJointed": "Function"
     },
     "src/_engine/features/physics/PhysicsMessaging.ts": {
       "beginSubStepCapture": "Function",
@@ -1091,8 +1092,6 @@
       "PHYSICS_STEP_STATS_SLOTS": "Variable"
     },
     "src/_engine/features/physics/PhysicsTierPolicy.ts": {
-      "DEFAULT_TIER_POLICY_CADENCE": "Variable",
-      "DEFAULT_TIER_POLICY_INTERVAL": "Variable",
       "deleteScenePhysicsTierPolicies": "Function",
       "DETERMINISM_PROBE_FREEZE_SOURCE": "Variable",
       "getPhysicsTierPolicy": "Function",
@@ -1100,9 +1099,6 @@
       "getPhysicsTierPolicyStatus": "Function",
       "installPhysicsTierPolicy": "Function",
       "isPhysicsTierPolicyFrozen": "Function",
-      "PhysicsTierPolicy": "Reference",
-      "PhysicsTierPolicyCadence": "Reference",
-      "PhysicsTierRing": "Reference",
       "setPhysicsTierPolicy": "Function",
       "setPhysicsTierPolicyFrozen": "Function",
       "setPhysicsTierPolicyMember": "Function"
@@ -1110,7 +1106,6 @@
     "src/_engine/features/physics/PhysicsTiers.ts": {
       "getPhysicsTier": "Function",
       "installPhysicsTiers": "Function",
-      "PhysicsTier": "Reference",
       "requestPhysicsTier": "Function"
     },
     "src/_engine/features/physics/PhysicsTierTypes.ts": {
@@ -3581,6 +3576,7 @@
       "PhysicsEntityOpts",
       "PhysicsTier",
       "PhysicsTierPolicy",
+      "PhysicsTierPolicyCadence",
       "PhysicsTierRing",
       "RigidBodyAPI",
       "RigidBodyParams",

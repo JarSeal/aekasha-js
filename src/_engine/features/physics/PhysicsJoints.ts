@@ -79,6 +79,17 @@ export const forEachJointBodyPair = (fn: (body1Id: number, body2Id: number) => v
 };
 
 /**
+ * Whether a live impulse joint is attached to the body: the walk stops at the first one.
+ * @internal
+ */
+export const isBodyJointed = (bodyId: number) => {
+  for (const joint of joints.values()) {
+    if (joint.body1IdSync() === bodyId || joint.body2IdSync() === bodyId) return true;
+  }
+  return false;
+};
+
+/**
  * Whether any impulse joint exists, so a joint walk can be skipped.
  * @internal
  */
