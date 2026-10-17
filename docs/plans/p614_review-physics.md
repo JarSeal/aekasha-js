@@ -863,6 +863,49 @@ As built, steps 2 and 3 (2026-10-17):
    `PhysicsDownProtocol` (W2, the `any`s gone).
 3. `yarn verify:scenes` (hashes unchanged: the same Rapier calls in the same order).
 
+Three sections, as Phase 4's: the move (section 1); R6-R8, W2 and the backend's docs (section 2);
+D11 with its measurements, and step 3 (section 3).
+
+As built, section 1 (2026-10-17, on `bdd6e70`): the move.
+
+- **The layout:** `backends/rapier/EngineRapier.ts` holds only the `export … from` lines of the
+  backend contract (the 31 names `EngineAPIType` lists), so `Engines.ts`' `import()` and the two
+  tests that import it are unchanged. The code is in `RapierState.ts` (`backend`, the state the
+  modules share: `RAPIER`, `world`, `isDebugEnvironment`, `eventQueue`, the two observers; the id
+  maps, the detached bodies, the lookups, `toPlainVec` / `toPlainRotation`; a leaf, importing
+  only types), `RapierEvents.ts` (the callbacks, counters and records, the drains),
+  `RapierShapes.ts` (`paramsToShape`), `RapierBodies.ts` (create, delete, detach, reattach, the
+  activity count and `readBodyPositions`), `RapierColliders.ts` (with `getCombineRule`),
+  `RapierJoints.ts`, `RapierWorld.ts` (`init`, the world's life, `step`, the snapshots,
+  `debugRender`; with the static `Rapier` import, D12) and `proxies/Engine{World,RigidBody,Collider,Joint}ProxyAPI.ts`
+  (exported `@internal`). The largest is `EngineWorldProxyAPI.ts`, 532 lines. D7's
+  `RapierState.ts` had the snapshots; they're in `RapierWorld.ts`, so the state module stays a
+  leaf (as Phase 4 did with `initPhysics`).
+- **Imports:** a DAG with no cycle: State ← Events / Shapes / the three object proxies ← Bodies /
+  Colliders / Joints ← the world proxy ← World. Each running id counter (`next*Id`) is
+  module-local in its module.
+- **A pure move:** a script sliced the old file by line ranges and checked that every non-blank
+  line landed once. Dropped: the two "proxy API definitions START / END" markers and R7's
+  "NEW STUFF" line. The shared names became `backend.*` (`physicsWorld` → `backend.world`). Two
+  helpers in `RapierEvents.ts` hold the lines that touched the event state from elsewhere:
+  `registerColliderEventFns` (createCollider's tail) and `clearEventRegistrations` (deleteWorld's).
+  `step` and the world proxy's `step` keep their own copies. Comments naming `EngineRapier.ts`
+  for moved code now name the module (`PhysicsMessaging.ts` × 2, the init error's text, two in
+  the proxies); the root CLAUDE.md's Physics line names the folder.
+- **Docs:** the names the move newly exported (the maps, the detached types, the lookups,
+  `toPlain*`, the proxy classes and their constructors / `id` / `parentId`) are documented and
+  `@internal`. The `rapier` folder keeps the old file's 18 undocumented exports (section 2's);
+  `proxies` is at 265 / 265 members.
+- **Bundle:** unchanged; `bundle.json` recorded only the two `PhysicsWorker.js` chunks swapping
+  their `#2` key (the same noise as the `EngineRapier.js` pair in earlier phases). `api.json`
+  recorded the moves: `EngineRapier.ts`' 31 functions became references, and the new modules'
+  exports were added.
+- **Checks:** `tsc` (both projects), the lint, `yarn test` (603 passed: the worker bundle,
+  module-load and side-effects checks among them), `moveMap.ts` regenerated (753 files, the same
+  41 boundary violations, 0 feature cycles), `yarn hub:build` (no warning).
+- **For Phase 8:** besides p500's (D12), the open plans p102, p250 and p306 name
+  `EngineRapier.ts` and its old lines.
+
 ### Phase 6: entities, tiers and the policy
 
 1. `PhysicsEntity.ts`: the interpolation into `PhysicsInterpolation.ts` (E2), E3, E4's docs and

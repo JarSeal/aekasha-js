@@ -2,23 +2,23 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1991,
-      "total": 2347
+      "documented": 2020,
+      "total": 2376
     },
     "members": {
-      "documented": 605,
-      "total": 699
+      "documented": 870,
+      "total": 964
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1947,
-        "total": 2284
+        "documented": 1976,
+        "total": 2313
       },
       "members": {
-        "documented": 555,
-        "total": 619
+        "documented": 820,
+        "total": 884
       }
     },
     "toolkit": {
@@ -370,8 +370,8 @@
     },
     "engine/features/physics/backends/rapier": {
       "exports": {
-        "documented": 13,
-        "total": 31
+        "documented": 37,
+        "total": 55
       },
       "members": {
         "documented": 0,
@@ -379,25 +379,39 @@
       },
       "undocumented": {
         "exports": [
-          "EngineRapier#createCollider",
-          "EngineRapier#createJoint",
-          "EngineRapier#createJoints",
-          "EngineRapier#createRigidBodies",
-          "EngineRapier#createRigidBody",
-          "EngineRapier#createWorld",
-          "EngineRapier#debugRender",
-          "EngineRapier#deleteCollider",
-          "EngineRapier#deleteColliders",
-          "EngineRapier#deleteJoint",
-          "EngineRapier#deleteJoints",
-          "EngineRapier#deleteRigidBodies",
-          "EngineRapier#deleteRigidBody",
-          "EngineRapier#deleteWorld",
-          "EngineRapier#init",
-          "EngineRapier#restoreSnapshot",
-          "EngineRapier#step",
-          "EngineRapier#takeSnapshot"
+          "RapierBodies#createRigidBodies",
+          "RapierBodies#createRigidBody",
+          "RapierBodies#deleteRigidBodies",
+          "RapierBodies#deleteRigidBody",
+          "RapierColliders#createCollider",
+          "RapierColliders#deleteCollider",
+          "RapierColliders#deleteColliders",
+          "RapierJoints#createJoint",
+          "RapierJoints#createJoints",
+          "RapierJoints#deleteJoint",
+          "RapierJoints#deleteJoints",
+          "RapierWorld#createWorld",
+          "RapierWorld#debugRender",
+          "RapierWorld#deleteWorld",
+          "RapierWorld#init",
+          "RapierWorld#restoreSnapshot",
+          "RapierWorld#step",
+          "RapierWorld#takeSnapshot"
         ],
+        "members": []
+      }
+    },
+    "engine/features/physics/backends/rapier/proxies": {
+      "exports": {
+        "documented": 5,
+        "total": 5
+      },
+      "members": {
+        "documented": 265,
+        "total": 265
+      },
+      "undocumented": {
+        "exports": [],
         "members": []
       }
     },

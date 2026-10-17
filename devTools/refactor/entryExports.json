@@ -41,8 +41,8 @@
     "aekasha/physics": {
       "public": 23,
       "crossEntry": 27,
-      "internal": 249,
-      "unreferenced": 113
+      "internal": 220,
+      "unreferenced": 142
     },
     "aekasha/postfx": {
       "public": 7,
@@ -7927,15 +7927,15 @@
       "src/_engine/features/physics/backends/rapier/EngineRapier.ts": {
         "countDynamicBodyActivity": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "createCollider": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "createColliders": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "createJoint": {
           "kind": "Function",
@@ -7946,31 +7946,31 @@
         },
         "createJoints": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "createRigidBodies": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "createRigidBody": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "createWorld": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "debugRender": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "deleteCollider": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "deleteColliders": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "deleteJoint": {
           "kind": "Function",
@@ -7981,79 +7981,79 @@
         },
         "deleteJoints": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "deleteRigidBodies": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "deleteRigidBody": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "deleteWorld": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "detachRigidBody": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "dispatchPendingEventRecords": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "drainPendingEventRecords": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "getAllRigidBodyIds": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "getColliderAPIWithId": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "getJointAPIWithId": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "getRigidBodyAPIWithId": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "init": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "readBodyPositions": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "reattachRigidBody": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "restoreSnapshot": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "setBodyMovedObserver": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "setQueryObserver": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "step": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "takeSnapshot": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         }
       },
       "src/_engine/features/physics/import/ImportPhysics.ts": {

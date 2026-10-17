@@ -827,6 +827,61 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/physics/backends/rapier/proxies/EngineColliderProxyAPI.ts": {
+      "to": "src/_engine/features/physics/backends/rapier/proxies/EngineColliderProxyAPI.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/backends/rapier/proxies/EngineJointProxyAPI.ts": {
+      "to": "src/_engine/features/physics/backends/rapier/proxies/EngineJointProxyAPI.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/backends/rapier/proxies/EngineRigidBodyProxyAPI.ts": {
+      "to": "src/_engine/features/physics/backends/rapier/proxies/EngineRigidBodyProxyAPI.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/backends/rapier/proxies/EngineWorldProxyAPI.ts": {
+      "to": "src/_engine/features/physics/backends/rapier/proxies/EngineWorldProxyAPI.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/backends/rapier/RapierBodies.ts": {
+      "to": "src/_engine/features/physics/backends/rapier/RapierBodies.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/backends/rapier/RapierColliders.ts": {
+      "to": "src/_engine/features/physics/backends/rapier/RapierColliders.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/backends/rapier/RapierEvents.ts": {
+      "to": "src/_engine/features/physics/backends/rapier/RapierEvents.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/backends/rapier/RapierJoints.ts": {
+      "to": "src/_engine/features/physics/backends/rapier/RapierJoints.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/backends/rapier/RapierShapes.ts": {
+      "to": "src/_engine/features/physics/backends/rapier/RapierShapes.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/backends/rapier/RapierState.ts": {
+      "to": "src/_engine/features/physics/backends/rapier/RapierState.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/backends/rapier/RapierWorld.ts": {
+      "to": "src/_engine/features/physics/backends/rapier/RapierWorld.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/physics/debug/_dbg__PhysicsAPI.ts": {
       "to": "src/_engine/features/physics/debug/_dbg__PhysicsAPI.ts",
       "action": "keep",

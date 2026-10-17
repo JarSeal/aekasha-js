@@ -326,8 +326,8 @@ export const flushPhysicsEvents = () => {
 
 /** Resolves an EVENTS_PUSH message's plain-data records back to ColliderAPIs (via the
  * locally-registered colliders map) and invokes each side's registered WORKER_THREAD
- * callbacks with the *other* collider as the second argument — mirrors EngineRapier.ts's
- * MAIN_THREAD drainAndDispatchEvents() dispatch. Silently skips any record naming a
+ * callbacks with the *other* collider as the second argument — mirrors RapierEvents.ts'
+ * MAIN_THREAD dispatchPendingEventRecords(). Silently skips any record naming a
  * collider id this thread doesn't (or no longer) know about. */
 const dispatchPushedEvents = (data: EventsPushMessage) => {
   for (let i = 0; i < data.collisions.length; i++) {
@@ -373,7 +373,7 @@ export const toWireJointParams = (params: JointParams): JointParams =>
 
 /** Strips collisionEventFn/contactForceEventFn from a ColliderParams before it crosses
  * the postMessage boundary (functions can't be structured-cloned — this is what would
- * otherwise throw DataCloneError), replacing them with the boolean flags EngineRapier.ts
+ * otherwise throw DataCloneError), replacing them with the boolean flags RapierColliders.ts
  * uses to still set up the right Rapier ActiveEvents on the worker side, and makes its
  * rotation a plain object (toPlainRot). Returns the original object unchanged when there's
  * nothing to change.
