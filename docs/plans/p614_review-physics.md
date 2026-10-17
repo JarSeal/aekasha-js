@@ -294,7 +294,8 @@ every removal the engine's `@deprecated` tags promise for 6.0.0 (p610's characte
 `CoreComponentType`, p613's scene and texture deprecations, `getPhysGameTime` and
 `PhysicsWallClock.ts`), plus this plan's:
 
-- the six `RayCastOpts` aliases (this plan tags them "removed in engine 6.0.0");
+- ~~the six `RayCastOpts` aliases (this plan tags them "removed in engine 6.0.0")~~: removed in
+  Phase 7 instead (no entry exports them; confirmed 2026-10-17);
 - p611's `physicsTiers()` feature (the "From p611" analysis below moves there with it). Until
   then `physics()` stays as it is, as p611 advised for a major without it;
 - `createPhysicsEntity`'s options object (E4): 53 callers and the readme's example, so a candidate
@@ -1196,6 +1197,45 @@ As built, section 1 (2026-10-17, on `92d7dd5`): D13.
   primitive imported collider, so no hash should move; `yarn verify:scenes` is step 4's.
 - **Seen, not changed:** every primitive is centred on its node's origin, so a mesh whose bounds
   aren't centred there (a cone with its origin at its base) gets an offset collider. As before.
+
+As built, section 2 (2026-10-17): `Raycast.ts`.
+
+- **C1, measured with `yarn sbp --profile all` before and after:** the premise was half right.
+  Rollup already dropped the module-level `new THREE.Raycaster()` where no cast is reachable (the
+  banner had no `Raycaster` code), and the app keeps it because the input picking
+  (`InputPicking.ts`, from `MouseInput.ts` / `TouchInput.ts`) casts. What the banner did carry was
+  the stats: `new IntervalCounterStats(RAY_STATS_WINDOWS)` at load, reachable from the kernel's
+  frame-end system. Both are now made on first use (`getRaycaster`, `getStats`; only the debug
+  tools enable or read the stats), and the frame-end system returns before `performance.now()`
+  with neither stats nor helpers. **Banner:** `banner.embed.js` −1,379 B rendered, −520 B gzip
+  (67 → 65 modules: `IntervalCounterStats.ts` and `RayDebugTypes.ts` left it; initial 287.6 →
+  287.1 kB gzip in the SBP report). **App:** unchanged (375.6 kB gzip; physics keeps the stats
+  class, the picking the raycaster).
+- **C2, changed from D3 (confirmed 2026-10-17):** the cast functions are on no entry (p606's
+  `entryExports.json`: internal; the input picking and the ray tester are the only callers) and
+  nothing used the six aliases, so they're **removed** in this minor instead of tagged for 6.0.0,
+  with `resolveDebugOpts` and its shared object. p622's item is gone (D3 struck through). Filed:
+  `docs/issues/three-ray-casting-not-public.md` (whether apps should get these functions on
+  `aekasha`).
+- **C3 and the API's shape:** every `Raycast.ts` export is `@internal` (the coding standard: not on
+  an entry), its `@param x (type)` forms rewritten, and its unused type re-export of
+  `RayDebugTypes.ts` dropped. `RayHelperKind`, `RAY_TESTER_ID_PREFIX` and `RAY_STATS_WINDOWS` are
+  `@internal`. **`RayDebugOpts` is on `aekasha` now:** `WorldAPI`'s queries (on `aekasha/physics`)
+  and the character casts name it (the standard's "no internal types in public signatures", as
+  Phase 6 did with `PhysicsTierPolicyCadence`). Its doc says it's the physics queries' `debug`
+  parameter too.
+- **Tests:** `kernel/render/Raycast.test.ts` (new): the stats read and reset before anything made
+  them, a cast on first use with `near` / `far` put back, `castRayFromPoints` stopping at the end
+  point and filling a given `target`. `yarn test` 622 passed.
+- **Baselines:** `api.json` (the re-export's two names removed, `aekasha` exports `RayDebugOpts`),
+  `bundle.banner.json`; `bundle.json` and `docs.json` unchanged. No debug code in either build.
+- **Checks:** `tsc` (both projects), the lint, `moveMap.ts` regenerated, `yarn hub:build` (417
+  pages, no warning).
+- **For Phase 9:** `yarn sbp`'s app profile already fails one budget, the physics group at 41.6 kB
+  gzip against 36.0 kB (`sbp.config.ts`). It was over before this phase (40.9 kB: Phase 4's split
+  counts each module's gzip, Phase 4 section 1), and section 1's new module adds 0.7 kB the same
+  way. `yarn build` runs the budgets, so Phase 9 raises the budget with that reason, or shrinks
+  the group.
 
 ### Phase 8: the Hub, CLAUDE.md, readme, and what's filed
 

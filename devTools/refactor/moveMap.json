@@ -2073,6 +2073,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/kernel/render/Raycast.test.ts": {
+      "to": "src/_engine/kernel/render/Raycast.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/kernel/render/Raycast.ts": {
       "to": "src/_engine/kernel/render/Raycast.ts",
       "action": "keep",

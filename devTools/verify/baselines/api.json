@@ -2516,8 +2516,6 @@
       "installRaycast": "Function",
       "isRayCastStatsEnabled": "Function",
       "RayCastOpts": "TypeAlias",
-      "RayDebugOpts": "Reference",
-      "RayHelperKind": "Reference",
       "registerRaycastDebugGUI": "Function",
       "resetRayCastStats": "Function",
       "setRayCastStatsEnabled": "Function"
@@ -3226,6 +3224,7 @@
       "MouseBinding",
       "MouseButtonActionBinding",
       "MouseDeltaActionBinding",
+      "RayDebugOpts",
       "RemapUVsToAtlasCellOpts",
       "RenderPipelineProvider",
       "RendererCanvasOptions",

@@ -27,8 +27,6 @@ migration page, so an app made from the template upgrades in one step.
   - physics: `getPhysGameTime()` and `PhysicsWallClock.ts` (and its allow-list entry in
     `SIMULATION_FILES`).
 - **From p614 (its D3):**
-  - the six deprecated `RayCastOpts` aliases (`kernel/render/Raycast.ts`; p614 tags them
-    "removed in engine 6.0.0");
   - `physicsTiers()`, a feature of its own (below);
   - `createPhysicsEntity` with an options object instead of five positional parameters (53
     callers in the app and the readme's example: the codemod's job);

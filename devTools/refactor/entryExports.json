@@ -6,7 +6,7 @@
       "public": 142,
       "crossEntry": 220,
       "internal": 286,
-      "unreferenced": 112
+      "unreferenced": 110
     },
     "aekasha/character": {
       "public": 18,
@@ -41,8 +41,8 @@
     "aekasha/physics": {
       "public": 23,
       "crossEntry": 27,
-      "internal": 290,
-      "unreferenced": 101
+      "internal": 293,
+      "unreferenced": 102
     },
     "aekasha/postfx": {
       "public": 7,
@@ -3447,12 +3447,6 @@
           ]
         }
       },
-      "src/_engine/kernel/mesh/MeshUserData.ts": {
-        "setMeshCreatePropsToUserData": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        }
-      },
       "src/_engine/kernel/render/CanvasSize.ts": {
         "CanvasSize": {
           "kind": "TypeAlias",
@@ -3818,10 +3812,6 @@
           "by": [
             "toolkit"
           ]
-        },
-        "ThreeVector3": {
-          "kind": "Variable",
-          "usage": "unreferenced"
         },
         "toThreeColor": {
           "kind": "Function",
@@ -8207,6 +8197,30 @@
           "usage": "internal"
         }
       },
+      "src/_engine/features/physics/ColliderDimensions.ts": {
+        "deriveColliderDimensionsFromMesh": {
+          "kind": "Function",
+          "usage": "internal"
+        }
+      },
+      "src/_engine/features/physics/import/ColliderBounds.ts": {
+        "ColliderBounds": {
+          "kind": "TypeAlias",
+          "usage": "unreferenced"
+        },
+        "getColliderBounds": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "SpineAxis": {
+          "kind": "TypeAlias",
+          "usage": "unreferenced"
+        },
+        "toSpineAxis": {
+          "kind": "Function",
+          "usage": "internal"
+        }
+      },
       "src/_engine/features/physics/import/ImportPhysics.ts": {
         "spawnImportedPhysics": {
           "kind": "Function",
@@ -8377,10 +8391,6 @@
         "deleteAllPhysicsEntities": {
           "kind": "Function",
           "usage": "internal"
-        },
-        "deriveColliderDimensionsFromMesh": {
-          "kind": "Function",
-          "usage": "unreferenced"
         },
         "getPhysicsBodyOwner": {
           "kind": "Function",

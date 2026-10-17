@@ -209,6 +209,7 @@ export type {
 export type { SceneHooks } from './kernel/scene/SceneHooks';
 export { snapshotToBlobAsync, takeSnapshotAsync } from './kernel/render/Snapshot';
 export type { Snapshot, SnapshotBlobOpts, SnapshotOpts } from './kernel/render/Snapshot';
+export type { RayDebugOpts } from './kernel/render/RayDebugTypes';
 export {
   deleteTexture,
   getAllTextures,

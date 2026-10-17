@@ -1,11 +1,15 @@
 import type * as THREE from 'three/webgpu';
 import type { IntervalWindowConfig } from '../../utils/IntervalCounterStats';
 
-/** The ray kinds the debug helper renderer draws, each with its own settings and colors. */
+/**
+ * The ray kinds the debug helper renderer draws, each with its own settings and colors.
+ * @internal
+ */
 export type RayHelperKind = 'THREE' | 'PHYSICS';
 
 /**
- * Debug helper options of a ray cast. Ignored outside debug. Every omitted option falls back
+ * Debug helper options of a ray cast or a physics query (`WorldAPI`'s `debug` parameter): how the
+ * debug tools draw it. Ignored outside debug. Every omitted option falls back
  * to the ray kind's setting (Ray cast controls tab).
  *
  * A helper is active (solid, `color`) while its ray is cast and for `holdMs` after the last
@@ -35,11 +39,15 @@ export type RayDebugOpts = {
  * Helper id prefix of the debug ray tester windows' rays. Physics queries have no
  * `countInStats` option, so the physics ray statistics skip the queries whose `debug.id` starts
  * with it (they are still drawn). Don't use it for gameplay rays.
+ * @internal
  */
 export const RAY_TESTER_ID_PREFIX = 'rayTester_';
 
-/** The interval windows of every ray statistics counter (Three.js rays, physics rays and shape
- * casts), so their numbers are comparable. */
+/**
+ * The interval windows of every ray statistics counter (Three.js rays, physics rays and shape
+ * casts), so their numbers are comparable.
+ * @internal
+ */
 export const RAY_STATS_WINDOWS: readonly IntervalWindowConfig[] = [
   { id: 'minMax3s', intervalMs: 3000, kind: 'MIN_MAX' },
   { id: 'minMax10s', intervalMs: 10000, kind: 'MIN_MAX' },
