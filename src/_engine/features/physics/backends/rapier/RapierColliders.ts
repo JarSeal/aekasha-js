@@ -26,6 +26,21 @@ const getCombineRule = (rule?: 'MAX' | 'MULTIPLY' | 'MIN' | 'AVERAGE') => {
 };
 
 /**
+ * The collider's rotation on its body: `rotation` after the shape's own `orientation` (an imported
+ * capsule, cone or cylinder turned from Rapier's Y onto its spine), so neither replaces the other.
+ */
+const getColliderRotation = ({ rotation: r, orientation: o }: ColliderParams) => {
+  if (!o || !r) return r ?? o;
+  // r * o (Hamilton product)
+  return new backend.RAPIER.Quaternion(
+    r.w * o.x + r.x * o.w + r.y * o.z - r.z * o.y,
+    r.w * o.y - r.x * o.z + r.y * o.w + r.z * o.x,
+    r.w * o.z + r.x * o.y - r.y * o.x + r.z * o.w,
+    r.w * o.w - r.x * o.x - r.y * o.y - r.z * o.z
+  );
+};
+
+/**
  * Creates a collider, on the body `parentIdArg` (or `params.parentId`) when given, and returns its
  * API object. `params` is only read, so a caller may reuse it.
  * @internal
@@ -38,22 +53,11 @@ export const createCollider = (params: ColliderParams, parentIdArg?: number) => 
 
   const colliderDesc = new backend.RAPIER.ColliderDesc(shape);
 
-  // For importing models: since Rapier shapes start on Y, we rotate them if the Blender spine was X or Z (for CYLINDER and CAPSULE)
-  if (params.orientation) {
-    colliderDesc.setRotation(
-      new backend.RAPIER.Quaternion(
-        params.orientation.x,
-        params.orientation.y,
-        params.orientation.z,
-        params.orientation.w
-      )
-    );
-  }
-
   if (params.density !== undefined) colliderDesc.setDensity(params.density);
   if (params.translation)
     colliderDesc.setTranslation(params.translation.x, params.translation.y, params.translation.z);
-  if (params.rotation) colliderDesc.setRotation(params.rotation);
+  const rotation = getColliderRotation(params);
+  if (rotation) colliderDesc.setRotation(rotation);
   // `!== undefined`: 0 is a friction (Rapier's default is 0.5)
   if (params.friction !== undefined) colliderDesc.setFriction(params.friction);
   if (params.restitution) colliderDesc.setRestitution(params.restitution);

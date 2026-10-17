@@ -1,20 +1,18 @@
 import * as THREE from 'three/webgpu';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { lerror } from '../../../utils/Logger';
-import { setMeshCreatePropsToUserData } from '../../../kernel/mesh/MeshUserData';
+import { lerror, lwarn } from '../../../utils/Logger';
 import type { ColliderParams } from '../types/PhysicsColliderTypes';
-import { deriveColliderDimensionsFromMesh } from '../PhysicsEntity';
 import type { ImportedGeometryInfo, Vector3Like } from '../../../kernel/assets/import/ImportTypes';
+import { getColliderBounds, toSpineAxis } from './ColliderBounds';
 
 /** What a collider's shape is derived from: a registered geometry and its node's metadata. */
 export type ColliderSource = { geometry: THREE.BufferGeometry; info: ImportedGeometryInfo };
 
 /**
- * A throwaway mesh for the mesh-based derivations below (setMeshCreatePropsToUserData,
- * deriveColliderDimensionsFromMesh): its geometry shares every buffer attribute (no copies) with
- * the registered geometry but has its own `userData`, so their writes never reach the registered
- * asset. It carries the node's rotation + scale and custom props (eg. `spineAxis`), which those
- * helpers read from the mesh.
+ * A throwaway mesh for the HEIGHTFIELD derivation: its geometry shares every buffer attribute (no
+ * copies) with the registered geometry, so de-interleaving it replaces only its own attributes,
+ * and it carries the node's rotation + scale for the grid's world size. Never rendered, so it
+ * holds no GPU resources and is left to the garbage collector.
  */
 const createScratchMesh = ({ geometry, info }: ColliderSource) => {
   const scratchGeometry = new THREE.BufferGeometry();
@@ -26,7 +24,6 @@ const createScratchMesh = ({ geometry, info }: ColliderSource) => {
   const { quaternion, scale } = info.transform;
   mesh.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
   mesh.scale.set(scale.x, scale.y, scale.z);
-  mesh.userData = { ...info.customProps.raw };
   mesh.updateMatrixWorld();
   return mesh;
 };
@@ -62,8 +59,7 @@ const isQuantizedPosition = (geometry: THREE.BufferGeometry) =>
  */
 const deriveMeshDependentColliderFields = (
   colliderParams: ColliderParams,
-  source: ColliderSource,
-  scratchMesh: THREE.Mesh
+  source: ColliderSource
 ): ColliderParams | null => {
   const { geometry, info } = source;
   const { scale } = info.transform;
@@ -100,6 +96,7 @@ const deriveMeshDependentColliderFields = (
     }
     // Merged into a scratch copy: the registered geometry is never replaced. mergeVertices
     // throws on interleaved attributes, so the scratch gets de-interleaved copies of them
+    const scratchMesh = createScratchMesh(source);
     BufferGeometryUtils.deinterleaveGeometry(scratchMesh.geometry);
     const geo = BufferGeometryUtils.mergeVertices(scratchMesh.geometry);
 
@@ -113,16 +110,17 @@ const deriveMeshDependentColliderFields = (
 
     const totalVertices = geo.attributes.position.count;
 
+    // A grid of nRows × nCols cells has (nRows + 1) × (nCols + 1) vertices
     if (!nCols && nRows > 0) {
-      nCols = totalVertices / nRows;
+      nCols = totalVertices / (nRows + 1) - 1;
     } else if (!nRows && nCols > 0) {
-      nRows = totalVertices / nCols;
+      nRows = totalVertices / (nCols + 1) - 1;
     } else if (!nRows && !nCols) {
       nRows = Math.sqrt(totalVertices) - 1;
       nCols = nRows;
     }
     // Skipped like the checks above: params without heights would throw in the backend
-    if (!Number.isInteger(nRows) || !Number.isInteger(nCols)) {
+    if (!Number.isInteger(nRows) || !Number.isInteger(nCols) || nRows < 1 || nCols < 1) {
       lerror(
         `Import "${info.importId}", node "${info.nodeName}": HEIGHTFIELD collider skipped, the grid of ${totalVertices} vertices gives no whole number of rows and columns (${nRows} × ${nCols}). The vertices are either unindexed or the grid's number of columns does not match the number of rows. Index the vertices, use shade smooth, or provide the ncols and nrows as custom properties.`
       );
@@ -155,18 +153,47 @@ const deriveMeshDependentColliderFields = (
 };
 
 /**
+ * Fills in a primitive collider's dimensions (and, for an X or Z `spineAxis`, its orientation)
+ * from the node's geometry bounds × scale, never overriding one the params already set.
+ */
+const derivePrimitiveDimensions = (
+  colliderParams: ColliderParams,
+  { geometry, info }: ColliderSource
+): ColliderParams => {
+  const { type } = colliderParams;
+  const rawSpineAxis = info.customProps.raw.spineAxis;
+  const spineAxis = toSpineAxis(rawSpineAxis);
+  if (
+    rawSpineAxis !== undefined &&
+    !spineAxis &&
+    (type === 'CAPSULE' || type === 'CONE' || type === 'CYLINDER')
+  ) {
+    lwarn(
+      `Import "${info.importId}", node "${info.nodeName}": unknown "spineAxis" ${JSON.stringify(rawSpineAxis)} (known: x, y, z), the ${type} collider stands on Y.`
+    );
+  }
+  const bounds = getColliderBounds(type, geometry, info.transform.scale, spineAxis);
+  if (!bounds) return colliderParams;
+  const params: Record<string, unknown> = { ...colliderParams };
+  for (const [key, value] of Object.entries(bounds)) {
+    if (params[key] === undefined) params[key] = value;
+  }
+  return params as ColliderParams;
+};
+
+/**
  * Completes a collider's shape from its node's registered geometry: TRIMESH/CONVEXHULL/
- * HEIGHTFIELD shape data, and primitive dimensions (hx/hy/hz, radius, halfHeight) from the
- * geometry's bounds × node scale, never overriding a dimension the params already set. Never
- * mutates the registered geometry.
+ * HEIGHTFIELD shape data, and a primitive's dimensions (hx/hy/hz, radius, halfHeight) from the
+ * geometry's bounds × node scale, with the orientation of a capsule, cone or cylinder whose
+ * `spineAxis` custom prop is X or Z ({@link getColliderBounds}). Never overrides a field the params
+ * already set, and never mutates the registered geometry.
+ * @internal
  * @returns the completed collider params, or null when the collider has to be skipped
  */
 export const deriveColliderFromGeometry = (
   colliderParams: ColliderParams,
   source: ColliderSource
 ): ColliderParams | null => {
-  const scratchMesh = createScratchMesh(source);
-  setMeshCreatePropsToUserData(colliderParams.type, scratchMesh);
-  const withShapeData = deriveMeshDependentColliderFields(colliderParams, source, scratchMesh);
-  return withShapeData ? deriveColliderDimensionsFromMesh(withShapeData, scratchMesh) : null;
+  const withShapeData = deriveMeshDependentColliderFields(colliderParams, source);
+  return withShapeData ? derivePrimitiveDimensions(withShapeData, source) : null;
 };

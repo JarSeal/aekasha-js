@@ -375,14 +375,20 @@ export const toWireJointParams = (params: JointParams): JointParams =>
  * the postMessage boundary (functions can't be structured-cloned — this is what would
  * otherwise throw DataCloneError), replacing them with the boolean flags RapierColliders.ts
  * uses to still set up the right Rapier ActiveEvents on the worker side, and makes its
- * rotation a plain object (toPlainRot). Returns the original object unchanged when there's
+ * rotation and orientation plain objects (toPlainRot). Returns the original object unchanged when there's
  * nothing to change.
  * @internal
  */
 export const toWireColliderParams = (colliderParams: ColliderParams): ColliderParams => {
-  const params = colliderParams.rotation
-    ? { ...colliderParams, rotation: toPlainRot(colliderParams.rotation) }
-    : colliderParams;
+  const { rotation, orientation } = colliderParams;
+  const params =
+    rotation || orientation
+      ? {
+          ...colliderParams,
+          ...(rotation ? { rotation: toPlainRot(rotation) } : {}),
+          ...(orientation ? { orientation: toPlainRot(orientation) } : {}),
+        }
+      : colliderParams;
   if (!params.collisionEventFn && !params.contactForceEventFn) return params;
   const { collisionEventFn, contactForceEventFn, ...rest } = params;
   return {

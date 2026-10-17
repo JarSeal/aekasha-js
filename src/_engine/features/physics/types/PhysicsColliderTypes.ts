@@ -440,7 +440,8 @@ export type ColliderParams = ShapeParams & {
   /** Translation (position): relative to the parent body when there is one, world space otherwise */
   translation?: { x: number; y: number; z: number };
 
-  /** Rotation in quaternion: relative to the parent body when there is one, world space otherwise */
+  /** Rotation in quaternion: relative to the parent body when there is one, world space otherwise.
+   * Applied after the shape's own `orientation`. */
   rotation?: { x: number; y: number; z: number; w: number };
 
   /** Object's friction value, usually between 0 to 1 but can me more (default 0.5, Rapier's) */
@@ -482,7 +483,11 @@ export type ColliderParams = ShapeParams & {
   /** Possible parent id (rigid body) to attach the collider to */
   parentId?: number;
 
-  /** Do not set manually! Orientation to set for imported models (custom property "orientation: 'x' | 'z'" defines this). */
+  /**
+   * The shape's own rotation, applied before {@link ColliderParams.rotation}: Rapier's capsule, cone
+   * and cylinder stand on Y, and the importer turns an imported node's onto its `spineAxis` custom
+   * prop (`'x'` or `'z'`) with it. Code-made colliders set `rotation` instead.
+   */
   orientation?: PhysRotation;
 };
 

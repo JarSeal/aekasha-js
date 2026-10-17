@@ -1154,6 +1154,49 @@ As built, section 3 (2026-10-17): the rest of the folder's docs.
 3. The four character items (D8).
 4. `yarn verify:scenes`.
 
+As built, section 1 (2026-10-17, on `92d7dd5`): D13.
+
+- **`import/ColliderBounds.ts`** replaces `kernel/mesh/MeshUserData.ts` (deleted).
+  `getColliderBounds(type, geometry, scale, spineAxis)` returns the dimensions under
+  `ColliderParams`' names: a box's `hx` / `hy` / `hz`, a sphere's radius (the bounding sphere's ×
+  the largest scale, as before), and a capsule's, cone's or cylinder's `radius`, `halfHeight` and,
+  for an X or Z spine, `orientation`. The maths are the old file's per shape: **M1**, so a capsule's
+  `halfHeight` is its straight part's, a cone's and a cylinder's half the length, and both get a
+  radius. Nothing is written into `userData`, and nothing to the registered geometry: it reads the
+  geometry's cached bounds, or three's `computeBoundingBox` / `computeBoundingSphere` on a geometry
+  sharing only its positions. `toSpineAxis` reads the custom prop (`x` / `y` / `z`, either case); the
+  derivation warns about any other value, naming the import and node, and the shape stays on Y.
+  Every export is `@internal`.
+- **M2, two halves:** the derivation sets `orientation` (+Y onto +X: −90° about Z; onto +Z: +90°
+  about X; a cone's tip goes with it). The backend then applied it and **replaced it with
+  `rotation`** (`setRotation` twice), so a rotated compound member lost its spine. `RapierColliders.ts`
+  now sets `rotation × orientation` (`getColliderRotation`), and `toWireColliderParams` makes
+  `orientation` plain too. `ColliderParams.orientation` lost "Do not set manually", and its doc names
+  the custom prop it really comes from (`spineAxis`; it said "orientation").
+- **`deriveColliderDimensionsFromMesh`** (the code-made path, unchanged) is in its own
+  `features/physics/ColliderDimensions.ts`, not in `import/` as D13 had it: `PhysicsEntity.ts` imports
+  it statically, so it shares no module with the bounds code, which stays in the `ImportPhysics.js`
+  chunk. `MeshColliderGeometry.ts` no longer imports `PhysicsEntity.ts`.
+- **M4:** the scratch mesh is made only for HEIGHTFIELD (left to the garbage collector: never
+  rendered, no GPU resources). `ThreeVector3` is private to `ThreeMath.ts`.
+- **Phase 1's HEIGHTFIELD note:** with only `nrows` or only `ncols` given, the other count is read
+  from the `(rows + 1) × (cols + 1)` grid (it divided the vertex count by the given count), and a
+  grid under 1 × 1 cells is skipped like the other bad grids.
+- **Tests:** `MeshColliderGeometry.test.ts` per shape (BOX, BALL, CAPSULE, CONE, CYLINDER, X and Z
+  spines in either case, an unknown spine, given fields and the geometry left alone, a mesh shape
+  left to its own derivation) and the oblong HEIGHTFIELD; `EngineRapier.test.ts` the rotation
+  composition. Seven fail on `92d7dd5` (checked in a scratch worktree); BOX, BALL and the mesh
+  shape passed before and are regression tests. `yarn test` 619 passed.
+- **Bundle:** `ImportPhysics.js` −1,127 B rendered, +117 B gzip (the old duplicated cases compressed
+  better), each `EngineRapier.js` chunk +74 B (the composition), `assets/index.js` +33 B (+8 B
+  gzip); the banner unchanged. Recorded with `api.json` (the move, `setMeshCreatePropsToUserData`
+  and `ThreeVector3` removed, `ColliderBounds.ts`' four added) and `docs.json` (`import` 7 / 7).
+- **Checks:** `tsc` (both projects), the lint, `moveMap.ts` regenerated (757 files, the same 41
+  boundary violations, 0 feature cycles), `yarn hub:build` (no warning). No template asset has a
+  primitive imported collider, so no hash should move; `yarn verify:scenes` is step 4's.
+- **Seen, not changed:** every primitive is centred on its node's origin, so a mesh whose bounds
+  aren't centred there (a cone with its origin at its base) gets an offset collider. As before.
+
 ### Phase 8: the Hub, CLAUDE.md, readme, and what's filed
 
 1. The physics feature and example pages checked against the code (the stop, the transport's

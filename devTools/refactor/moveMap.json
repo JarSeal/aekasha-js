@@ -887,6 +887,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/physics/ColliderDimensions.ts": {
+      "to": "src/_engine/features/physics/ColliderDimensions.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/physics/debug/_dbg__PhysicsAPI.ts": {
       "to": "src/_engine/features/physics/debug/_dbg__PhysicsAPI.ts",
       "action": "keep",
@@ -904,6 +909,11 @@
     },
     "src/_engine/features/physics/debug/_dbg__PhysicsDeterminism.ts": {
       "to": "src/_engine/features/physics/debug/_dbg__PhysicsDeterminism.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/import/ColliderBounds.ts": {
+      "to": "src/_engine/features/physics/import/ColliderBounds.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -2020,11 +2030,6 @@
     },
     "src/_engine/kernel/mesh/Mesh.ts": {
       "to": "src/_engine/kernel/mesh/Mesh.ts",
-      "action": "keep",
-      "plan": "p608"
-    },
-    "src/_engine/kernel/mesh/MeshUserData.ts": {
-      "to": "src/_engine/kernel/mesh/MeshUserData.ts",
       "action": "keep",
       "plan": "p608"
     },

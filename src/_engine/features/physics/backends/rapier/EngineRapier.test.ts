@@ -1,4 +1,5 @@
 import type Rapier from '@dimforge/rapier3d-compat';
+import * as THREE from 'three/webgpu';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { LoopState } from '../../../../kernel/loop/MainLoop';
 import type { PhysicsDownProtocol } from '../../protocol/PhysicsDownProtocol';
@@ -13,6 +14,7 @@ import {
   CoefficientCombineRule,
   ShapeType,
 } from '../../types/PhysicsColliderTypes';
+import type { ColliderParams } from '../../types/PhysicsColliderTypes';
 import type { PhysicsState } from '../../types/PhysicsConfigTypes';
 import { SolverFlags } from '../../types/PhysicsEventTypes';
 import { JointAxesMask } from '../../types/PhysicsJointTypes';
@@ -79,6 +81,29 @@ describe('EngineRapier', () => {
     const free = engAPI.createCollider(params);
     expect(attached.parentId).toBe(body.id);
     expect(free.parentId).toBeUndefined();
+  });
+
+  it('turns a shape by its orientation, then by its rotation on the body (M2)', () => {
+    const s = Math.SQRT1_2;
+    const body = engAPI.createRigidBody({ rigidType: 'FIXED' });
+    // A cylinder on X (+Y onto +X), and a collider turned 90° about Y on its body (+X onto −Z)
+    const orientation = { x: 0, y: 0, z: -s, w: s };
+    const rotation = { x: 0, y: s, z: 0, w: s };
+    const cylinder = { type: 'CYLINDER', radius: 0.5, halfHeight: 1 } as const;
+    // Where the collider's rotation takes Rapier's spine (+Y), rounded
+    const spineOf = (params: ColliderParams) => {
+      const q = engAPI.createCollider(params, body.id).rotationWrtParentSync()!;
+      const spine = new THREE.Vector3(0, 1, 0).applyQuaternion(
+        new THREE.Quaternion(q.x, q.y, q.z, q.w)
+      );
+      return spine.toArray().map((v) => Math.round(v) + 0);
+    };
+
+    expect(spineOf(cylinder)).toEqual([0, 1, 0]);
+    expect(spineOf({ ...cylinder, orientation })).toEqual([1, 0, 0]);
+    expect(spineOf({ ...cylinder, rotation })).toEqual([0, 1, 0]);
+    // Both: rotation × orientation, the rotation doesn't replace the orientation
+    expect(spineOf({ ...cylinder, orientation, rotation })).toEqual([0, 0, -1]);
   });
 
   it("mirrors Rapier's enums member for member (RapierEnums.ts' casts rely on it)", () => {

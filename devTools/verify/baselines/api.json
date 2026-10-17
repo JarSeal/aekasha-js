@@ -896,6 +896,15 @@
       "step": "Function",
       "takeSnapshot": "Function"
     },
+    "src/_engine/features/physics/ColliderDimensions.ts": {
+      "deriveColliderDimensionsFromMesh": "Function"
+    },
+    "src/_engine/features/physics/import/ColliderBounds.ts": {
+      "ColliderBounds": "TypeAlias",
+      "getColliderBounds": "Function",
+      "SpineAxis": "TypeAlias",
+      "toSpineAxis": "Function"
+    },
     "src/_engine/features/physics/import/ImportPhysics.ts": {
       "spawnImportedPhysics": "Function"
     },
@@ -944,7 +953,6 @@
     "src/_engine/features/physics/PhysicsEntity.ts": {
       "createPhysicsEntity": "Function",
       "deleteAllPhysicsEntities": "Function",
-      "deriveColliderDimensionsFromMesh": "Function",
       "getPhysicsBodyOwner": "Function",
       "getPhysicsEntityBody": "Function",
       "getPhysicsEntityByAppId": "Function",
@@ -2474,9 +2482,6 @@
       "setMeshLod": "Function",
       "setMeshMaterial": "Function"
     },
-    "src/_engine/kernel/mesh/MeshUserData.ts": {
-      "setMeshCreatePropsToUserData": "Function"
-    },
     "src/_engine/kernel/render/CanvasSize.ts": {
       "CanvasSize": "TypeAlias",
       "CanvasSizeSource": "TypeAlias",
@@ -2560,7 +2565,6 @@
       "getQuatFromAngle": "Function",
       "LEVEL_GROUND_NORMAL": "Variable",
       "smoothDampVec3": "Function",
-      "ThreeVector3": "Variable",
       "toThreeColor": "Function"
     },
     "src/_engine/kernel/render/Views.ts": {

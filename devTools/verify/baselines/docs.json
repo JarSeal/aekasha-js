@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2052,
-      "total": 2376
+      "documented": 2054,
+      "total": 2378
     },
     "members": {
       "documented": 890,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2008,
-        "total": 2313
+        "documented": 2010,
+        "total": 2315
       },
       "members": {
         "documented": 840,
@@ -366,8 +366,8 @@
     },
     "engine/features/physics/import": {
       "exports": {
-        "documented": 3,
-        "total": 3
+        "documented": 7,
+        "total": 7
       },
       "members": {
         "documented": 0,
@@ -795,8 +795,8 @@
     },
     "engine/kernel/mesh": {
       "exports": {
-        "documented": 13,
-        "total": 13
+        "documented": 12,
+        "total": 12
       },
       "members": {
         "documented": 0,
@@ -809,8 +809,8 @@
     },
     "engine/kernel/render": {
       "exports": {
-        "documented": 89,
-        "total": 89
+        "documented": 88,
+        "total": 88
       },
       "members": {
         "documented": 0,

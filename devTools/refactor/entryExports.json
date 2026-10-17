@@ -4,9 +4,9 @@
   "summary": {
     "aekasha": {
       "public": 142,
-      "crossEntry": 221,
-      "internal": 287,
-      "unreferenced": 110
+      "crossEntry": 220,
+      "internal": 286,
+      "unreferenced": 112
     },
     "aekasha/character": {
       "public": 18,
@@ -42,7 +42,7 @@
       "public": 23,
       "crossEntry": 27,
       "internal": 290,
-      "unreferenced": 102
+      "unreferenced": 101
     },
     "aekasha/postfx": {
       "public": 7,
@@ -3450,10 +3450,7 @@
       "src/_engine/kernel/mesh/MeshUserData.ts": {
         "setMeshCreatePropsToUserData": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha/physics"
-          ]
+          "usage": "unreferenced"
         }
       },
       "src/_engine/kernel/render/CanvasSize.ts": {
@@ -3824,7 +3821,7 @@
         },
         "ThreeVector3": {
           "kind": "Variable",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "toThreeColor": {
           "kind": "Function",
@@ -8383,7 +8380,7 @@
         },
         "deriveColliderDimensionsFromMesh": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "getPhysicsBodyOwner": {
           "kind": "Function",
@@ -8510,6 +8507,10 @@
           "usage": "internal"
         },
         "hasJoints": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "isBodyJointed": {
           "kind": "Function",
           "usage": "internal"
         }
@@ -8980,14 +8981,6 @@
         }
       },
       "src/_engine/features/physics/PhysicsTierPolicy.ts": {
-        "DEFAULT_TIER_POLICY_CADENCE": {
-          "kind": "Variable",
-          "usage": "unreferenced"
-        },
-        "DEFAULT_TIER_POLICY_INTERVAL": {
-          "kind": "Variable",
-          "usage": "unreferenced"
-        },
         "deleteScenePhysicsTierPolicies": {
           "kind": "Function",
           "usage": "internal"

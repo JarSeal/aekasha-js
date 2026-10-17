@@ -70,7 +70,7 @@ export const spawnImportedPhysics = async ({ nodes, params, appIdPrefix }: Impor
         const pos = new THREE.Vector3();
         const rot = new THREE.Quaternion();
         offset.decompose(pos, rot, new THREE.Vector3());
-        // Identity rotation is left out so it can't override a shape's own `orientation`
+        // An identity rotation is left out (the backend turns the shape by its `orientation` first)
         const isRotated = Math.abs(rot.w) < 1 - 1e-6;
         collider = {
           ...collider,
