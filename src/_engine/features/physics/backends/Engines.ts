@@ -15,7 +15,9 @@ export const ENGINES: Record<
     name: string;
     /** The engine's npm package, whose version package.json pins */
     packageName: string;
+    /** Loads and initializes the engine's package (Rapier: its WASM), resolving with it. */
     init: () => Promise<unknown>;
+    /** Types what init resolved with as the engine's module (a cast, nothing checked). */
     forceTypeEngine: (engineObj: unknown) => unknown;
     /** Loads the backend: only by `import()`, so the engine's package (Rapier: 829 kB gzip) is
      * in no chunk but the one that starts the simulation (p607) */

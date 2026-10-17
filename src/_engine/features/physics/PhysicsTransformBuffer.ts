@@ -1,15 +1,24 @@
 import type { PoseArray, RigidBodyAPI } from './types/PhysicsBodyTypes';
 import type { PhysRotation, PhysVector } from './types/PhysicsCommonTypes';
 
-/** Float32 fields per slot: position(3) + quaternion(4) + linvel(3) + angvel(3). */
+/**
+ * Float32 fields per slot: position(3) + quaternion(4) + linvel(3) + angvel(3).
+ * @internal
+ */
 export const PHYSICS_TRANSFORM_FIELD_COUNT = 13;
 
-/** Int32 header fields trailing each bank's float slots: [write count, step index] (see publish). */
+/**
+ * Int32 header fields trailing each bank's float slots: [write count, step index] (see publish).
+ * @internal
+ */
 export const PHYSICS_TRANSFORM_HEADER_INTS = 2;
 const HEADER_WRITE_COUNT = 0;
 const HEADER_STEP_INDEX = 1;
 
-/** Banks a SHARED_MEMORY buffer uses: a lock-free triple buffer (see publish/latch). */
+/**
+ * Banks a SHARED_MEMORY buffer uses: a lock-free triple buffer (see publish/latch).
+ * @internal
+ */
 export const PHYSICS_TRANSFORM_SHARED_BANKS = 3;
 /** Control word: the middle bank's index in the low bits, plus a bit set while it holds a
  * snapshot the main thread hasn't latched yet. */
@@ -31,6 +40,7 @@ const getBankByteLength = (maxBodies: number) =>
  * With more than one bank, a trailing Int32 control word follows the banks, initialised here
  * (before either side wraps the buffer) to "the middle bank is bank 1, nothing fresh": the
  * main thread starts on bank 0 and the worker on the last bank.
+ * @internal
  */
 export function createPhysicsTransformArrayBuffer(
   maxBodies: number,
@@ -63,9 +73,12 @@ export function createPhysicsTransformArrayBuffer(
  * middle bank is swapped with the back bank by publish() and with the front bank by latch(),
  * each in one atomic exchange of the control word, so neither side ever waits or reads a bank
  * the other is writing, and the main thread reads one complete, stamped snapshot per latch.
+ * @internal
  */
 export class PhysicsTransformBuffer {
+  /** The slots per bank (`AppConfig.physics.maxBodies`). */
   readonly maxBodies: number;
+  /** 1 (MESSAGE_BATCH) or PHYSICS_TRANSFORM_SHARED_BANKS (SHARED_MEMORY). */
   readonly bankCount: number;
   /** The backing buffer: the SharedArrayBuffer both sides wrap (SHARED_MEMORY), or the side's
    * own (MESSAGE_BATCH: the worker's back bank, the main thread's copy of the pushes). */
@@ -96,6 +109,14 @@ export class PhysicsTransformBuffer {
   private readonly freeSlots: number[] = [];
   private liveCount = 0;
 
+  /**
+   * Wraps `buffer` (the other side's SharedArrayBuffer, made by createPhysicsTransformArrayBuffer
+   * with the same `maxBodies` and `bankCount`), or allocates a plain one. Throws on a bank count
+   * other than 1 or 3.
+   * @param maxBodies the slots per bank
+   * @param buffer the buffer to wrap; a new non-shared one when left out
+   * @param bankCount 1, or PHYSICS_TRANSFORM_SHARED_BANKS for a shared triple buffer
+   */
   constructor(maxBodies: number, buffer?: ArrayBuffer | SharedArrayBuffer, bankCount = 1) {
     if (bankCount !== 1 && bankCount !== PHYSICS_TRANSFORM_SHARED_BANKS) {
       throw new Error(
@@ -274,12 +295,14 @@ export class PhysicsTransformBuffer {
     for (let i = 0; i < 7; i++) out[offset + i] = f[o + i];
   }
 
+  /** The slot's position in the read bank, as a new object (readPoseInto reads without one). */
   getPosition(slot: number): PhysVector {
     const o = slot * PHYSICS_TRANSFORM_FIELD_COUNT;
     const f = this.readFloats;
     return { x: f[o], y: f[o + 1], z: f[o + 2] };
   }
 
+  /** The slot's rotation in the read bank, as a new object (readPoseInto reads without one). */
   getRotation(slot: number): PhysRotation {
     const o = slot * PHYSICS_TRANSFORM_FIELD_COUNT;
     const f = this.readFloats;
@@ -305,12 +328,16 @@ export class PhysicsTransformBuffer {
     for (let i = 0; i < 6; i++) out[offset + i] = f[o + i];
   }
 
+  /** The slot's linear velocity in the read bank, as a new object (readVelocitiesInto reads
+   * without one). */
   getLinvel(slot: number): PhysVector {
     const o = slot * PHYSICS_TRANSFORM_FIELD_COUNT;
     const f = this.readFloats;
     return { x: f[o + 7], y: f[o + 8], z: f[o + 9] };
   }
 
+  /** The slot's angular velocity in the read bank, as a new object (readVelocitiesInto reads
+   * without one). */
   getAngvel(slot: number): PhysVector {
     const o = slot * PHYSICS_TRANSFORM_FIELD_COUNT;
     const f = this.readFloats;

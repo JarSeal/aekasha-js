@@ -49,7 +49,10 @@ let refusedBodyCount = 0;
  * or create the bodies that never move as `FIXED` (they take no slot).
  */
 export class PhysicsCapacityError extends Error {
-  /** @param maxBodies the buffer's capacity, `AppConfig.physics.maxBodies` */
+  /**
+   * The error a refused create rejects with; its message names the capacity.
+   * @param maxBodies the buffer's capacity, `AppConfig.physics.maxBodies`
+   */
   constructor(
     /** The buffer's capacity, `AppConfig.physics.maxBodies`. */
     public readonly maxBodies: number

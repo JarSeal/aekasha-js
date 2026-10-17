@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented
+Status: in progress | Phases 0-6 implemented
 Category: Refactoring, Documentation, Physics
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md, p511_network-transport-and-replication.md (the transport interface)
@@ -996,7 +996,7 @@ As built, section 3 (2026-10-17, on `4521fb0`): D11 and the measurements.
   gym's character path hash `26f43551` (`MAIN_THREAD`). Also `tsc` (both projects), the lint,
   `yarn hub:build` (no warning), `moveMap.ts` regenerated.
 
-### Phase 6: entities, tiers and the policy
+### Phase 6: entities, tiers and the policy — done
 
 1. `PhysicsEntity.ts`: the interpolation into `PhysicsInterpolation.ts` (E2), E3, E4's docs and
    `@internal`s, E5, E6's one helper.
@@ -1131,6 +1131,22 @@ As built, section 2 (2026-10-17): the tiers and the policy.
   same 41 boundary violations, 0 feature cycles), `yarn hub:build` (no warning in the files
   touched).
 
+As built, section 3 (2026-10-17): the rest of the folder's docs.
+
+- `PhysicsUtils.ts` and `Engines.ts` were done in Phase 5 section 2 (R8, T2); `ENGINES`' `init`
+  and `forceTypeEngine` fields got their summaries.
+- The three buffer modules (`PhysicsTransformBuffer.ts`, `PhysicsDebugStateBuffer.ts`,
+  `PhysicsStepStatsBuffer.ts`) export nothing on an entry: every export is `@internal` now, and
+  every member documented (the constructors with their `@param`s, the transform buffer's four
+  allocating getters pointing at `readPoseInto` / `readVelocitiesInto`, each debug flag).
+  `PhysicsCapacityError`'s constructor (on the entry) got the summary its lone `@param` lacked.
+- **Docs:** `features/physics` exports 203 / 203 and members 34 / 34 (`docs.json` recorded). Every
+  physics folder of the ratchet is at 100 % but `worker/` (its four switches, 0 / 4), which no
+  phase lists: Phase 8 documents them or files it.
+- **Checks:** `tsc` (both projects), the lint, `yarn test` (609 passed), `yarn verify:baselines`
+  (`api.json` unchanged; the physics group's visualizer gzip +0.5 kB is the comments, so
+  `bundle.json` stays at section 2's), `yarn hub:build` (no warning in the files touched).
+
 ### Phase 7: the derivation, ray casting, the character items
 
 1. D13 (M1, M2, M4) with its per-shape tests.
@@ -1146,6 +1162,8 @@ As built, section 2 (2026-10-17): the tiers and the policy.
 3. `p622_engine-6-major.md` (D3) checked complete; p500's and p428's references updated; p511's
    grounding names the transport's file.
 4. `yarn hub:build` (no new warning in scope; the `notExported`s of §1.2 gone).
+5. W6: the four worker switches (`worker/PhysicsSwitch*.ts`) documented and `@internal`, so the
+   `worker` folder reaches 100 % (Phase 6 section 3 found it the last physics folder below).
 
 ### Phase 9: versions and done
 

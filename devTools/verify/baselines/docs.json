@@ -2,22 +2,22 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2051,
+      "documented": 2052,
       "total": 2376
     },
     "members": {
-      "documented": 874,
+      "documented": 890,
       "total": 968
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2007,
+        "documented": 2008,
         "total": 2313
       },
       "members": {
-        "documented": 824,
+        "documented": 840,
         "total": 888
       }
     },
@@ -310,35 +310,16 @@
     },
     "engine/features/physics": {
       "exports": {
-        "documented": 202,
+        "documented": 203,
         "total": 203
       },
       "members": {
-        "documented": 18,
+        "documented": 34,
         "total": 34
       },
       "undocumented": {
-        "exports": [
-          "PhysicsStepStatsBuffer#PHYSICS_STEP_STATS_FIELD_COUNT"
-        ],
-        "members": [
-          "PhysicsBodies#PhysicsCapacityError.constructor",
-          "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.buffer",
-          "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.constructor",
-          "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.flags",
-          "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.getBodyFlags",
-          "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.getColliderFlags",
-          "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.maxSlots",
-          "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.setBodyFlags",
-          "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.setColliderFlags",
-          "PhysicsTransformBuffer#PhysicsTransformBuffer.bankCount",
-          "PhysicsTransformBuffer#PhysicsTransformBuffer.constructor",
-          "PhysicsTransformBuffer#PhysicsTransformBuffer.getAngvel",
-          "PhysicsTransformBuffer#PhysicsTransformBuffer.getLinvel",
-          "PhysicsTransformBuffer#PhysicsTransformBuffer.getPosition",
-          "PhysicsTransformBuffer#PhysicsTransformBuffer.getRotation",
-          "PhysicsTransformBuffer#PhysicsTransformBuffer.maxBodies"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "engine/features/physics/backends": {
