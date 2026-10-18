@@ -59,6 +59,21 @@ const sendNoRigidBodyErrorMessage = (sendMessage: PhysicsWorkerReply, data: Phys
     data
   );
 
+/**
+ * The worker's switch for the rigid bodies' messages (400-599): creates (a body alone, several,
+ * or a physics entity's body with its colliders, each all or nothing), deletes, detach / reattach
+ * (the REMOVED tier), the tier policy's position reads, and each getter and setter of one body by
+ * id. A create takes a transform buffer slot for every body that isn't FIXED and replies with it;
+ * a full buffer undoes the create and replies `capacityExceeded`. A delete or a detach frees the
+ * slot. An unknown body id replies `ERROR`; a throw reaches `PhysicsWorker.ts`' catch, which does
+ * the same with the request's id.
+ * @internal
+ * @param data the message, already routed here by its type's range
+ * @param physicsWorldAPI the worker's world
+ * @param engAPI the backend, for the creates and deletes
+ * @param sendMessage the worker's reply, sent through its transport
+ * @param transformBuffer the transform buffer the slots come from; none before the world exists
+ */
 export const physicsSwitchRigid = async (
   data: PhysicsUpProtocol,
   physicsWorldAPI: WorldAPI,

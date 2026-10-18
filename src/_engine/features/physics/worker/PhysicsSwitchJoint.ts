@@ -13,6 +13,17 @@ const sendNoJointErrorMessage = (sendMessage: PhysicsWorkerReply, data: PhysicsU
     data
   );
 
+/**
+ * The worker's switch for the joints' messages (800-999): creates and deletes (one or several),
+ * and each getter and setter of one joint by id (motors, limits, contacts between the bodies). An unknown joint id
+ * replies `ERROR`; a throw reaches `PhysicsWorker.ts`' catch, which does the same with the
+ * request's id.
+ * @internal
+ * @param data the message, already routed here by its type's range
+ * @param physicsWorldAPI the worker's world
+ * @param engAPI the backend, for the creates and deletes
+ * @param sendMessage the worker's reply, sent through its transport
+ */
 export const physicsSwitchJoint = async (
   data: PhysicsUpProtocol,
   physicsWorldAPI: WorldAPI,

@@ -11,6 +11,16 @@ import type { RayColliderIntersectionAPI } from '../types/PhysicsQueryTypes';
 import type { WorldAPI } from '../types/PhysicsWorldTypes';
 import { getCollOrRigidId } from '../PhysicsUtils';
 
+/**
+ * The worker's switch for the world's messages (200-399): the world's settings, `free`, the
+ * position propagation and the queries (casts, ray intersections, contact and intersection
+ * pairs), each answered on the worker's world with a reply of the request's type. A throw
+ * reaches `PhysicsWorker.ts`' catch, which replies `ERROR` with the request's id.
+ * @internal
+ * @param data the message, already routed here by its type's range
+ * @param physicsWorldAPI the worker's world
+ * @param sendMessage the worker's reply, sent through its transport
+ */
 export const physicsSwitchWorld = async (
   data: PhysicsUpProtocol,
   physicsWorldAPI: WorldAPI,

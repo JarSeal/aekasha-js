@@ -1,9 +1,16 @@
 import type { PhysicsTransport } from './PhysicsTransport';
 
-/** What the worker's side needs of its global scope (a dedicated worker's `self`). */
-type WorkerScope = {
+/**
+ * What the worker's side needs of its global scope (a dedicated worker's `self`): a test hands a
+ * stand-in.
+ * @internal
+ */
+export type WorkerScope = {
+  /** Sends to the main thread, handing `transfer`'s buffers over. */
   postMessage(message: unknown, transfer?: Transferable[]): void;
+  /** Listens to the main thread's messages. */
   addEventListener(type: 'message', fn: (event: MessageEvent) => void): void;
+  /** Stops listening (`close()`). */
   removeEventListener(type: 'message', fn: (event: MessageEvent) => void): void;
 };
 

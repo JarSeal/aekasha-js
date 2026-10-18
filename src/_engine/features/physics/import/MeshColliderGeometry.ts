@@ -182,13 +182,28 @@ const derivePrimitiveDimensions = (
 };
 
 /**
- * Completes a collider's shape from its node's registered geometry: TRIMESH/CONVEXHULL/
- * HEIGHTFIELD shape data, and a primitive's dimensions (hx/hy/hz, radius, halfHeight) from the
- * geometry's bounds × node scale, with the orientation of a capsule, cone or cylinder whose
- * `spineAxis` custom prop is X or Z ({@link getColliderBounds}). Never overrides a field the params
- * already set, and never mutates the registered geometry.
- * @internal
- * @returns the completed collider params, or null when the collider has to be skipped
+ * Completes a collider's shape from an imported node's registered geometry, as
+ * `spawnImportedAsset` does for its physics nodes: TRIMESH / CONVEXHULL / HEIGHTFIELD shape data,
+ * and a primitive's dimensions (hx / hy / hz, radius, halfHeight) from the geometry's bounds ×
+ * the node's scale, with the orientation of a capsule, cone or cylinder whose `spineAxis` custom
+ * prop is X or Z. Never overrides a field the params already set, and never mutates the
+ * registered geometry. For a collider of your own on an imported node, or to inspect what an
+ * import's nodes would get.
+ * @param colliderParams the collider so far: its `type`, and any field to keep
+ * @param source the node's registered geometry and its manifest entry
+ * @returns the completed collider params, or null when the collider has to be skipped (logged: a
+ * HEIGHTFIELD on Draco-compressed or quantized positions, or whose grid doesn't fit)
+ * @example
+ * ```ts
+ * import { getGeometry, importAssetAsync } from 'aekasha';
+ * import { deriveColliderFromGeometry } from 'aekasha/physics';
+ *
+ * const manifest = await importAssetAsync({ id: 'rocks', fileName: '/models/rocks.glb' });
+ * const info = manifest?.geometries[0];
+ * const geometry = info && getGeometry(info.geometryId);
+ * const hull =
+ *   info && geometry ? deriveColliderFromGeometry({ type: 'CONVEXHULL' }, { geometry, info }) : null;
+ * ```
  */
 export const deriveColliderFromGeometry = (
   colliderParams: ColliderParams,

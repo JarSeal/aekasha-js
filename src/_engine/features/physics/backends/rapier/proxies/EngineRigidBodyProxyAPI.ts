@@ -11,8 +11,11 @@ import { existsOrThrow } from '../../../../../utils/Assert';
 import { lwarn } from '../../../../../utils/Logger';
 import { fromRapierBodyType, toRapierBodyType } from '../RapierEnums';
 import { backend, getColliderAPI, getRigidBody, toPlainRotation, toPlainVec } from '../RapierState';
-/** A body's additional mass, as last set: the mass alone, or full mass properties. */
-type AdditionalMass =
+/**
+ * A body's additional mass, as last set: the mass alone, or full mass properties.
+ * @internal
+ */
+export type AdditionalMass =
   | { mass: number }
   | {
       mass: number;

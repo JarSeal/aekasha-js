@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2056,
-      "total": 2380
+      "documented": 2062,
+      "total": 2382
     },
     "members": {
       "documented": 890,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2012,
-        "total": 2317
+        "documented": 2018,
+        "total": 2319
       },
       "members": {
         "documented": 840,
@@ -352,8 +352,8 @@
     },
     "engine/features/physics/backends/rapier/proxies": {
       "exports": {
-        "documented": 5,
-        "total": 5
+        "documented": 6,
+        "total": 6
       },
       "members": {
         "documented": 265,
@@ -408,8 +408,8 @@
     },
     "engine/features/physics/transport": {
       "exports": {
-        "documented": 3,
-        "total": 3
+        "documented": 4,
+        "total": 4
       },
       "members": {
         "documented": 0,
@@ -436,7 +436,7 @@
     },
     "engine/features/physics/worker": {
       "exports": {
-        "documented": 0,
+        "documented": 4,
         "total": 4
       },
       "members": {
@@ -444,12 +444,7 @@
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "PhysicsSwitchColl#physicsSwitchColl",
-          "PhysicsSwitchJoint#physicsSwitchJoint",
-          "PhysicsSwitchRigid#physicsSwitchRigid",
-          "PhysicsSwitchWorld#physicsSwitchWorld"
-        ],
+        "exports": [],
         "members": []
       }
     },

@@ -819,6 +819,7 @@
       "EngineJointProxyAPI": "Class"
     },
     "src/_engine/features/physics/backends/rapier/proxies/EngineRigidBodyProxyAPI.ts": {
+      "AdditionalMass": "TypeAlias",
       "EngineRigidBodyProxyAPI": "Class"
     },
     "src/_engine/features/physics/backends/rapier/proxies/EngineWorldProxyAPI.ts": {
@@ -1290,7 +1291,8 @@
       "PhysicsTransport": "TypeAlias"
     },
     "src/_engine/features/physics/transport/WorkerScopeTransport.ts": {
-      "createWorkerScopeTransport": "Function"
+      "createWorkerScopeTransport": "Function",
+      "WorkerScope": "TypeAlias"
     },
     "src/_engine/features/physics/transport/WorkerTransport.ts": {
       "createWorkerTransport": "Function"

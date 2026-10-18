@@ -13,6 +13,17 @@ const sendNoCollErrorMessage = (sendMessage: PhysicsWorkerReply, data: PhysicsUp
     data
   );
 
+/**
+ * The worker's switch for the colliders' messages (600-799): creates (one or several, all or
+ * nothing), deletes, and each getter and setter of one collider by id (a mesh shape's vertices,
+ * indices and heights go back as a transferred copy, never the live shape's arrays). An unknown collider id replies `ERROR`; a throw reaches
+ * `PhysicsWorker.ts`' catch, which does the same with the request's id.
+ * @internal
+ * @param data the message, already routed here by its type's range
+ * @param physicsWorldAPI the worker's world
+ * @param engAPI the backend, for the creates and deletes
+ * @param sendMessage the worker's reply, sent through its transport
+ */
 export const physicsSwitchColl = async (
   data: PhysicsUpProtocol,
   physicsWorldAPI: WorldAPI,

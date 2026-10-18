@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-7 implemented
+Status: in progress | Phases 0-8 implemented
 Category: Refactoring, Documentation, Physics
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md, p511_network-transport-and-replication.md (the transport interface)
@@ -1271,7 +1271,7 @@ As built, section 3 and step 4 (2026-10-17, on `4efd87b`): the character items, 
 - **Checks:** `tsc` (both projects), the lint, `yarn test` (622 passed), `moveMap.ts` regenerated
   (758 files, the same 41 boundary violations, 0 feature cycles).
 
-### Phase 8: the Hub, CLAUDE.md, readme, and what's filed
+### Phase 8: the Hub, CLAUDE.md, readme, and what's filed — done
 
 1. The physics feature and example pages checked against the code (the stop, the transport's
    mention for networking, the tiers); the guide's API links.
@@ -1358,6 +1358,27 @@ As built, section 3 (2026-10-18): the plans, the filings, the comments.
   toolkit comments only (D2's toolkit patch; the app's are comments too, for Phase 9's call).
 - **Checks:** `yarn test` (622 passed, 1 skipped as before), the lint on the touched files, `tsc`,
   `yarn hub:build` (no warning).
+
+As built, section 4 (2026-10-18): W6 and the Hub's warnings.
+
+- **W6:** the four switches (`physicsSwitchWorld`, `…Rigid`, `…Coll`, `…Joint`) have a summary
+  each (the switch's message range and what it answers; the rigid switch's slots and
+  `capacityExceeded`; the collider switch's transferred copies; unknown ids and throws both
+  reply `ERROR`) and `@param`s, and are `@internal`. The `worker` folder 0 / 4 → 4 / 4: every
+  physics folder of the ratchet is at 100 %.
+- **The Hub's warnings, 18 → 16:** `WorkerScope` (`WorkerScopeTransport.ts`, with its members
+  documented) and `AdditionalMass` (`EngineRigidBodyProxyAPI.ts`) are exported `@internal`, as
+  Phase 4 did with `QueryTypeOf`. None of the 16 left is in scope: `PhysicsProbeReport` (named by
+  `debug/TestBridge.ts`, defined in `_dbg__PhysicsDeterminism.ts`) is p618's.
+- **`deriveColliderFromGeometry`** (section 1's finding): on `aekasha/physics` and no longer
+  `@internal`, with `@param`s, the skip cases in its `@returns` and a type-checked `@example`
+  (its `{@link getColliderBounds}` to an internal function is plain text now). The physics guide
+  and `features/physics/CLAUDE.md` mention it.
+- **Baselines:** `docs.json` (the three folders above), `api.json` (the two type exports),
+  `bundle.json` (±1 B gzip in a few chunks, the hashed names' noise, recorded with them). No debug
+  code in either build.
+- **Checks:** `tsc` (both projects), the lint, `yarn test` (622 passed, 1 skipped),
+  `devTools/verify/examples.test.ts`, `yarn verify:baselines`, `yarn hub:build`.
 
 ### Phase 9: versions and done
 
