@@ -96,8 +96,13 @@ export interface CharacterControllerKinds {
   DYNAMIC_CHARACTER: DynamicCharacterParams;
 }
 
-/** `{ kind, params }`, with `params` optional when every one of them is. */
-type KindSpec<K extends string, P> = { kind: K } & (Partial<P> extends P
+/**
+ * A kind as plain data, `{ kind, params }`, with `params` optional when every one of them is: what
+ * {@link CharacterBrainSpec} and {@link CharacterControllerSpec} are made of, per kind.
+ * @template K a kind name, a key of the kinds interface
+ * @template P that kind's params
+ */
+export type KindSpec<K extends string, P> = { kind: K } & (Partial<P> extends P
   ? { params?: P }
   : { params: P });
 

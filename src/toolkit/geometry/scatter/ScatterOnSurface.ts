@@ -69,9 +69,9 @@ const _normalMatrix = new THREE.Matrix3();
  * (individual ECS entities, e.g. a handful of static props) to actually place something.
  *
  * Physics is intentionally out of scope here (see docs/plans/p090_large-ecs-test-world-scene.md
- * §1.3) — this only computes where things go, not what collides with them. Once
- * `PhysicsAPI.ts` lands, a caller can use each placement's `position`/`normal` to add a
- * collider without this function needing to change.
+ * §1.3) — this only computes where things go, not what collides with them. A caller can use
+ * each placement's `position`/`normal` to add a collider (`createPhysicsEntity`) without this
+ * function needing to change.
  */
 export const scatterOnSurface = (opts: ScatterOptions): ScatterPlacement[] => {
   const {

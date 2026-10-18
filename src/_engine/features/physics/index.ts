@@ -1,36 +1,34 @@
 export { deriveColliderFromGeometry } from './import/MeshColliderGeometry';
 export type { ColliderSource } from './import/MeshColliderGeometry';
-export { JointAxesMask } from './PhysicsAPITypes';
+export type { RigidBodyAPI, RigidBodyParams } from './types/PhysicsBodyTypes';
+export type { ColliderParams } from './types/PhysicsColliderTypes';
+export type { PhysVector } from './types/PhysicsCommonTypes';
+export { JointAxesMask } from './types/PhysicsJointTypes';
+export type { JointParams } from './types/PhysicsJointTypes';
 export type {
-  ColliderParams,
-  JointParams,
-  PhysVector,
-  RigidBodyAPI,
-  RigidBodyParams,
-} from './PhysicsAPITypes';
-export type { PhysicsTier, PhysicsTierPolicy, PhysicsTierRing } from './PhysicsTierTypes';
+  PhysicsTier,
+  PhysicsTierPolicy,
+  PhysicsTierPolicyCadence,
+  PhysicsTierRing,
+} from './PhysicsTierTypes';
 export {
   PhysicsCapacityError,
-  addPhysicsStepGate,
-  createCollider,
-  createColliders,
-  createJoint,
   createRigidBodies,
   createRigidBody,
-  deleteCollider,
-  deleteColliders,
-  deleteJoint,
   deleteRigidBodies,
   deleteRigidBody,
-  getCollider,
-  getJoint,
-  getPhysicsSimClock,
-  getPhysicsState,
-  getPhysicsSubStepIndex,
-  getPhysicsWorld,
-  getRigidBody,
   readBodyPositionsAtStep,
-} from './PhysicsAPI';
+} from './PhysicsBodies';
+export {
+  createCollider,
+  createColliders,
+  deleteCollider,
+  deleteColliders,
+} from './PhysicsColliders';
+export { createJoint, deleteJoint } from './PhysicsJoints';
+export { getCollider, getJoint, getRigidBody } from './PhysicsRegistry';
+export { getPhysicsState, getPhysicsWorld } from './PhysicsState';
+export { addPhysicsStepGate, getPhysicsSimClock, getPhysicsSubStepIndex } from './PhysicsStepping';
 export { createPhysicsEntity, getPhysicsEntityByAppId } from './PhysicsEntity';
 export type { PhysicsEntityOpts } from './PhysicsEntity';
 export { setPhysicsTierPolicy, setPhysicsTierPolicyMember } from './PhysicsTierPolicy';

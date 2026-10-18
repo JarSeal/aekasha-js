@@ -130,11 +130,11 @@ Link to an engine or toolkit export's entry in the Documentation section with `a
 ```md
 Start a scene with [`loadScene`](api:loadScene).
 Systems run in stages: see [`addSystem`](api:ECSWorld.addSystem).
-Bodies are made through [the facade](api:PhysicsAPI.createRigidBody).
+Bodies are made through [the facade](api:PhysicsBodies.createRigidBody).
 ```
 
 - **A bare name is an export:** `api:loadScene`. A class's or an interface's member needs its owner: `api:ECSWorld.addSystem`.
-- **A name two modules export needs its module:** `api:PhysicsAPI.createRigidBody`, or more of the path when the file name isn't enough (`api:physics/PhysicsAPI.createRigidBody`, `api:toolkit/…`). Re-exports don't count: they point at the original.
+- **A name two modules export needs its module:** `api:PhysicsBodies.createRigidBody`, or more of the path when the file name isn't enough (`api:physics/PhysicsBodies.createRigidBody`, `api:toolkit/…`). Re-exports don't count: they point at the original.
 - **Every `api:` link is checked as it's rendered.** An unknown name fails the build and suggests close ones (`Unknown api:createPhysicEntity (did you mean api:createPhysicsEntity?)`), and an ambiguous one lists each candidate as a link you can copy.
 - `api:` works in a page's markup too: `<a href="api:loadScene">`.
 - In the engine's and the toolkit's JSDoc, `{@link loadScene}` links the same way. TypeDoc resolves it from the file's imports. One that resolves to nothing documented is shown as text, with a warning at its file and line. A link to three's own classes is shown as text, without a warning.

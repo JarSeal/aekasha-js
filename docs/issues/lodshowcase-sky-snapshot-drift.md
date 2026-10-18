@@ -14,6 +14,11 @@ the clouds. The determinism hash was the same as the baseline's. It isn't the ch
 checked (p609's move): the commit before it, run in a worktree against the same baselines, fails
 the same way. Shortly after `--update`, the scene passes.
 
+Seen again 2026-10-17 (p614 Phase 7 step 4), in five scenes: `exampleHubHero`, `exampleLod`,
+`lodShowcase`, `skyShowcase` and `space`, the three debug configurations each (14 runs), 0.00-0.13 %
+of the pixels, against baselines recorded about a day earlier; the commit before the change failed
+the same way, and the five passed once recorded again.
+
 ## Why
 
 The scene uses the `dayNight` sky box (`src/app/skyboxes/dayNight.skybox.json`), whose clouds

@@ -1,4 +1,6 @@
-import type { ColliderAPI, PhysVector, RigidBodyAPI } from './PhysicsAPITypes';
+import type { RigidBodyAPI } from './types/PhysicsBodyTypes';
+import type { ColliderAPI } from './types/PhysicsColliderTypes';
+import type { PhysVector } from './types/PhysicsCommonTypes';
 
 /**
  * A dynamic rigid body's simulation tier (p352, `PhysicsTiers.ts`):
@@ -12,6 +14,10 @@ import type { ColliderAPI, PhysVector, RigidBodyAPI } from './PhysicsAPITypes';
  */
 export type PhysicsTier = 'FULL' | 'STATIC' | 'DISABLED' | 'REMOVED';
 
+/**
+ * The dynamic bucket component a tiered entity was created in (PhysicsSimTierData's `bucket`).
+ * @internal
+ */
 export type PhysicsTierBucket = 'BODY_DYNAMIC_VISUAL' | 'BODY_DYNAMIC_HEADLESS';
 
 /** The PHYSICS_SIM_TIER component, added by the entity's first requestPhysicsTier. */
@@ -39,6 +45,7 @@ export type PhysicsSimTierData = {
 
 /** One ring of a physics tier policy: entities within `within` of the focus get `tier`. */
 export type PhysicsTierRing = {
+  /** The tier of the entities in this ring. */
   tier: PhysicsTier;
   /** Outer radius in world units. Every ring but the last has one; the last has none and
    * covers everything beyond the others. */

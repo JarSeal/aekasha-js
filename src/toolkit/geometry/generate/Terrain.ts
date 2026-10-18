@@ -41,8 +41,8 @@ export interface GeneratedTerrain {
   depthSegments: number;
   /**
    * Bilinear-sampled terrain height at world-space (x, z), clamped to the terrain's extent.
-   * Deliberately physics-engine-agnostic (no Rapier/PhysicsAPI import here) — feed this into
-   * whichever heightfield collider API is current when physics is wired up for this scene
+   * Deliberately physics-engine-agnostic (no Rapier or physics import here) — feed this into
+   * a `HEIGHTFIELD` collider (`createPhysicsEntity`) when physics is wired up for this scene
    * (see docs/plans/p090_large-ecs-test-world-scene.md §1.1: this generator intentionally
    * doesn't commit to any one physics engine's HEIGHTFIELD shape).
    */

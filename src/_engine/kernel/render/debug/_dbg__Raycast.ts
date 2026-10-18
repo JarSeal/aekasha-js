@@ -16,12 +16,11 @@ import type { RayHelperKind } from '../RayDebugTypes';
 import { getRayCastStats, isRayCastStatsEnabled, setRayCastStatsEnabled } from '../Raycast';
 import {
   getPhysicsRayStats,
-  getPhysicsState,
   isPhysicsRayStatsEnabled,
-  isPhysicsWorldEnabled,
   setPhysicsRayHelpersEnabled,
   setPhysicsRayStatsEnabled,
-} from '../../../features/physics/PhysicsAPI';
+} from '../../../features/physics/PhysicsQueryStats';
+import { getPhysicsState, isPhysicsWorldEnabled } from '../../../features/physics/PhysicsState';
 import {
   getRayHelperSettings,
   setRayHelperSettings,

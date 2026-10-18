@@ -60,7 +60,7 @@ describe('loadConfig', () => {
 
     const config = getConfig();
     expect(config.physics?.enabled).toBe(true);
-    // A missing key stays missing: its reader defaults it (PhysicsAPI.ts' physicsState)
+    // A missing key stays missing: its reader defaults it (PhysicsState.ts' facade.state)
     expect(config.physics?.workerTarget).toBeUndefined();
     expect(config.physics?.gravity).toEqual({ x: 0, y: -3, z: 0 });
     expect(config.undoRedo?.historySize).toBe(7);

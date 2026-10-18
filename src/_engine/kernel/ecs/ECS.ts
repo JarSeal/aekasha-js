@@ -7,7 +7,7 @@ import type {
 } from './ECSCoreComponents';
 import { ComponentType, Transform } from './ECSCoreComponents';
 import { existsOrThrow } from '../../utils/Assert';
-import type { RigidBodyAPI } from '../../features/physics/PhysicsAPITypes';
+import type { RigidBodyAPI } from '../../features/physics/types/PhysicsBodyTypes';
 import { getConfig, IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../config/Config';
 import type { ECSStorageMode, IComponentStorage } from './ECSComponentStorage';
 import { getECSStorageLSOverride } from './ECSComponentStorage';

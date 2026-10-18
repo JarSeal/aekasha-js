@@ -1,6 +1,6 @@
 import type { CharacterCastRecord } from '../../CharacterTypes';
-import { getPhysicsState } from '../../../physics/PhysicsAPI';
-import type { PhysVector } from '../../../physics/PhysicsAPITypes';
+import { getPhysicsState } from '../../../physics/PhysicsState';
+import type { PhysVector } from '../../../physics/types/PhysicsCommonTypes';
 import type { RayDebugOpts } from '../../../../kernel/render/RayDebugTypes';
 
 // The dynamic controller's casts (their records and the state of the one in flight), and the

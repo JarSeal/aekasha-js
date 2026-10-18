@@ -1,14 +1,14 @@
 import * as THREE from 'three/webgpu';
+import { getPhysicsWorld } from '../../../physics/PhysicsState';
 import {
   getPhysicsSnapshotStepIndex,
   getPhysicsSubStepIndex,
-  getPhysicsWorld,
-} from '../../../physics/PhysicsAPI';
+} from '../../../physics/PhysicsStepping';
+import type { ColliderAPI } from '../../../physics/types/PhysicsColliderTypes';
 import {
   QueryFilterFlags,
-  type ColliderAPI,
   type RayColliderIntersectionAPI,
-} from '../../../physics/PhysicsAPITypes';
+} from '../../../physics/types/PhysicsQueryTypes';
 import { LEVEL_GROUND_NORMAL } from '../../../../kernel/render/ThreeMath';
 import { hasMoveIntent } from '../../CharacterIntent';
 import {

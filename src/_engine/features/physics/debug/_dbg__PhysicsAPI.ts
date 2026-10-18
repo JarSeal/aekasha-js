@@ -22,23 +22,16 @@ import {
   updateDraggableWindow,
 } from '../../../ui/DraggableWindow';
 import { createClearTabLSButton, lsKeyHasData } from '../../../debug/_dbg__ClearLSButtons';
-import {
-  getLastPhysicsBodyActivity,
-  getPhysicsBodyCapacity,
-  getPhysicsStepGateStats,
-  getPhysicsState,
-  getPhysicsWorld,
-  getResolvedTransportMode,
-  isPhysicsWorldEnabled,
-} from '../PhysicsAPI';
+import { getPhysicsBodyCapacity } from '../PhysicsBodies';
+import { getPhysicsState, getPhysicsWorld, isPhysicsWorldEnabled } from '../PhysicsState';
+import { getLastPhysicsBodyActivity } from '../PhysicsStepStats';
+import { getPhysicsStepGateStats } from '../PhysicsStepping';
+import { getResolvedTransportMode } from '../PhysicsWorld';
 import { setBootOverride } from './_dbg__PhysicsBootOverrides';
 import { getConfig } from '../../../kernel/config/Config';
-import {
-  ShapeType,
-  type PhysicsState,
-  type PhysicsWorkerTarget,
-  type RigidBodyAPI,
-} from '../PhysicsAPITypes';
+import type { RigidBodyAPI } from '../types/PhysicsBodyTypes';
+import { ShapeType } from '../types/PhysicsColliderTypes';
+import type { PhysicsState, PhysicsWorkerTarget } from '../types/PhysicsConfigTypes';
 import {
   getEntityWireframeColor,
   getGlobalWireframeColorOverrides,
@@ -68,7 +61,8 @@ import {
   getPhysicsDeterminismProbeSteps,
 } from './_dbg__PhysicsDeterminism';
 import { getECSWorld, getEntityIdByAppId, getStableAppId } from '../../../kernel/ecs/ECS';
-import { getPhysicsBodyOwner, getPhysicsInterpolationReadout } from '../PhysicsEntity';
+import { getPhysicsBodyOwner } from '../PhysicsEntity';
+import { getPhysicsInterpolationReadout } from '../PhysicsInterpolation';
 import {
   getPhysicsTierPolicy,
   getPhysicsTierPolicyFreezeSources,
@@ -1113,7 +1107,7 @@ export const _createPhysicsAPIDebugGUI = () => {
               min: 0,
             },
             { type: 'separator' },
-            // physicsInterpolationSystem (PhysicsManager.ts) returns early for
+            // physicsInterpolationSystem (PhysicsInterpolation.ts) returns early for
             // 'EXTRAPOLATION', so selecting it via AppConfig is safe but inert.
             {
               key: 'interpolationMode',

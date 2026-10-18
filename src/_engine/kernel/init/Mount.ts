@@ -14,7 +14,7 @@ import type { RendererCanvasOptions, RendererOptions } from '../render/Renderer'
 import { addAfterRender } from '../render/RenderHooks';
 import { createSceneLoader, loadScene } from '../scene/SceneLoader';
 import { lerror, lwarn } from '../../utils/Logger';
-import { bootEngineAsync, isEngineBooted } from './Boot';
+import { bootEngineAsync, isEngineBooted, stopEngineFeatures } from './Boot';
 import type { InitEngineOptions } from './InitEngine';
 
 /** {@link mountAekasha}'s options: {@link InitEngineOptions}' `config`, `data` and `features`
@@ -73,8 +73,9 @@ export type AekashaMount = {
   /** Whether the loop is paused, for any reason. */
   isPaused: () => boolean;
   /**
-   * Stops the loop, removes the listeners, the observers and the container (the canvas with it),
-   * and disposes the renderer. The engine doesn't mount again in this page load.
+   * Stops the loop and the features (physics' worker and world: each feature's `onUnmount`),
+   * removes the listeners, the observers and the container (the canvas with it), and disposes the
+   * renderer. The engine doesn't mount again in this page load.
    */
   unmount: () => void;
 };
@@ -155,8 +156,8 @@ const createFallbackMount = (container: HTMLElement): AekashaMount => ({
  * @remarks
  * One engine per page load: the engine's state is module-level, so a second mount throws, also
  * after `unmount()` (docs/issues/remount-after-unmount.md), and so does a mount after
- * {@link _engine/kernel/init/InitEngine!InitEngine}. `unmount()` doesn't stop a physics worker
- * (`physics()` has no stop yet). The app's files are loaded from `assetBaseUrl`, and workers
+ * {@link _engine/kernel/init/InitEngine!InitEngine}. `unmount()` stops what the features started
+ * (physics' worker and world), through their `onUnmount` hooks. The app's files are loaded from `assetBaseUrl`, and workers
  * start from the embed's own files: serve them from the page's origin.
  * @example
  * ```ts
@@ -251,6 +252,8 @@ export const mountAekasha = async (opts: MountAekashaOptions): Promise<AekashaMo
     removeFirstFrameHook?.();
     removeFirstFrameHook = null;
     stopMainLoop();
+    // The features' own stops (physics' worker and world), with no frame running
+    stopEngineFeatures();
     removeAllInputListeners();
     stopAssetsWorker();
     if (getRenderer()) deleteRenderer();

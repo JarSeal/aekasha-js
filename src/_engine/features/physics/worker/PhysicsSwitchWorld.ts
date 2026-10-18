@@ -1,23 +1,33 @@
+import type { PhysicsWorkerReply } from '../protocol/PhysicsDownProtocol';
 import type {
-  PhysicsDownProtocol,
-  PhysicsUpProtocol,
-  RayColliderIntersectionAPI,
-  WorldAPI,
   WorldCastRayAndGetNormalResponse,
   WorldCastRayResponse,
   WorldCastShapeResponse,
   WorldIntersectionsWithRayResponse,
-} from '../PhysicsAPITypes';
-import { PhysicsProtocolType } from '../PhysicsAPITypes';
+} from '../protocol/PhysicsResponses';
+import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
+import type { PhysicsUpProtocol } from '../protocol/PhysicsUpProtocol';
+import type { RayColliderIntersectionAPI } from '../types/PhysicsQueryTypes';
+import type { WorldAPI } from '../types/PhysicsWorldTypes';
 import { getCollOrRigidId } from '../PhysicsUtils';
 
+/**
+ * The worker's switch for the world's messages (200-399): the world's settings, `free`, the
+ * position propagation and the queries (casts, ray intersections, contact and intersection
+ * pairs), each answered on the worker's world with a reply of the request's type. A throw
+ * reaches `PhysicsWorker.ts`' catch, which replies `ERROR` with the request's id.
+ * @internal
+ * @param data the message, already routed here by its type's range
+ * @param physicsWorldAPI the worker's world
+ * @param sendMessage the worker's reply, sent through its transport
+ */
 export const physicsSwitchWorld = async (
   data: PhysicsUpProtocol,
   physicsWorldAPI: WorldAPI,
-  // Typed against the down protocol (unlike the other switches' `any`), so a reply whose payload
-  // doesn't match its type's response shape fails tsc. Every reply must use the narrowed
-  // `data.type` of its case, not the widened `type` below.
-  sendMessage: (message: PhysicsDownProtocol, data: PhysicsUpProtocol) => void
+  // Typed against the down protocol, as every switch is, so a reply whose payload doesn't match
+  // its type's response shape fails tsc. Every reply must use the narrowed `data.type` of its
+  // case, not the widened `type` below.
+  sendMessage: PhysicsWorkerReply
 ) => {
   const type = data.type;
 
@@ -160,7 +170,7 @@ export const physicsSwitchWorld = async (
       const colliderIds: number[] = [];
       physicsWorldAPI.contactPairsWithSync(data.colliderId, (collider2) => {
         const coll2Id = getCollOrRigidId(collider2);
-        if (coll2Id) colliderIds.push(coll2Id);
+        if (coll2Id !== undefined) colliderIds.push(coll2Id);
       });
       return sendMessage({ type: data.type, colliderIds }, data);
     }
@@ -169,7 +179,7 @@ export const physicsSwitchWorld = async (
       const colliderIds: number[] = [];
       physicsWorldAPI.intersectionPairsWithSync(data.colliderId, (collider2) => {
         const coll2Id = getCollOrRigidId(collider2);
-        if (coll2Id) colliderIds.push(coll2Id);
+        if (coll2Id !== undefined) colliderIds.push(coll2Id);
       });
       return sendMessage({ type: data.type, colliderIds }, data);
     }

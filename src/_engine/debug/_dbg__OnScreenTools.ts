@@ -11,7 +11,7 @@ import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
 import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../ui/HUD';
 import { isAnyLightHelperVisible, toggleAllLightHelpers } from '../kernel/light/Light';
 import { getReadOnlyLoopState, toggleMainPlay } from '../kernel/loop/MainLoop';
-import { getPhysicsState } from '../features/physics/PhysicsAPI';
+import { getPhysicsState } from '../features/physics/PhysicsState';
 import { getCurrentSceneId, getGeneratedAppData } from '../kernel/scene/Scene';
 import { isCurrentlyLoading, loadScene } from '../kernel/scene/SceneLoader';
 import { getSvgIcon, type SvgIconKey } from '../ui/icons/SvgIcon';
@@ -53,7 +53,7 @@ let undoRedoToolsCMP: TCMP | null = null;
 // This file (a lazily-loaded _dbg__ module) also loads in IS_PROD_TEST_MODE (see
 // debug/OnScreenTools.ts's registerOnScreenTools), but the physics wireframe system is
 // IS_DEBUG_ENV-only — never reaches prodTest, matching the physics feature's `onDebug` hook
-// (PhysicsManager.registerPhysicsWireframeDebugAsync). Cross-referencing it via loadDebugModule (not a static import) is what keeps
+// (PhysicsEntity.ts' registerPhysicsWireframeDebugAsync). Cross-referencing it via loadDebugModule (not a static import) is what keeps
 // that scoping intact: a static import would run this module's side effects unconditionally
 // the moment _dbg__OnScreenTools.ts itself loads, regardless of IS_DEBUG_ENV.
 const physicsDebugDrawRef: DebugModuleRef<

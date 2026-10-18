@@ -23,7 +23,8 @@ import { lwarn } from '../../../../utils/Logger';
 import { existsOrThrow } from '../../../../utils/Assert';
 import { getECSWorld } from '../../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../../kernel/ecs/ECSCoreComponents';
-import type { ColliderParams, RigidBodyParams } from '../../../physics/PhysicsAPITypes';
+import type { RigidBodyParams } from '../../../physics/types/PhysicsBodyTypes';
+import type { ColliderParams } from '../../../physics/types/PhysicsColliderTypes';
 import { createCast } from './Casts';
 import { updateCrouch } from './Crouch';
 import {

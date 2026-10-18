@@ -1,4 +1,5 @@
-/** Slot layout for the physics step statistics buffer (p027).
+/**
+ * Slot layout for the physics step statistics buffer (p027).
  *
  * A five-`Float64` scratch buffer the worker writes after every STEP message and the main
  * thread polls once per frame, written and polled only while `PhysicsState.stepStatsEnabled`
@@ -10,6 +11,7 @@
  * The three timings are kept strictly separate and are never summed: STEP_MS is the pure
  * simulation cost, the other two are messaging overhead around it. The body counts (p352)
  * describe the world after the step.
+ * @internal
  */
 export const PHYSICS_STEP_STATS_SLOTS = {
   /** Total time spent inside the engine's step() calls for one STEP message (all sub-steps
@@ -30,9 +32,16 @@ export const PHYSICS_STEP_STATS_SLOTS = {
   SLEEPING_BODIES: 4,
 } as const;
 
+/**
+ * Float64 fields of the step stats buffer: one per PHYSICS_STEP_STATS_SLOTS entry.
+ * @internal
+ */
 export const PHYSICS_STEP_STATS_FIELD_COUNT = 5;
 
-/** Allocates the backing buffer. SAB-only by design: this buffer exists purely as the
- * SHARED_MEMORY transport for the stats, so there is no non-SAB variant to fall back to. */
+/**
+ * Allocates the backing buffer. SAB-only by design: this buffer exists purely as the
+ * SHARED_MEMORY transport for the stats, so there is no non-SAB variant to fall back to.
+ * @internal
+ */
 export const createPhysicsStepStatsArrayBuffer = () =>
   new SharedArrayBuffer(PHYSICS_STEP_STATS_FIELD_COUNT * Float64Array.BYTES_PER_ELEMENT);

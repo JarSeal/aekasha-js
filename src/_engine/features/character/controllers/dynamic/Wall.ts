@@ -1,15 +1,12 @@
 import * as THREE from 'three/webgpu';
+import { getPhysicsWorld } from '../../../physics/PhysicsState';
 import {
   getPhysicsSnapshotStepIndex,
   getPhysicsSubStepIndex,
-  getPhysicsWorld,
-} from '../../../physics/PhysicsAPI';
-import {
-  QueryFilterFlags,
-  RigidBodyTypeAPI,
-  type ColliderAPI,
-  type ShapeCastHitAPI,
-} from '../../../physics/PhysicsAPITypes';
+} from '../../../physics/PhysicsStepping';
+import { RigidBodyTypeAPI } from '../../../physics/types/PhysicsBodyTypes';
+import type { ColliderAPI } from '../../../physics/types/PhysicsColliderTypes';
+import { QueryFilterFlags, type ShapeCastHitAPI } from '../../../physics/types/PhysicsQueryTypes';
 import {
   castDir,
   castPos,

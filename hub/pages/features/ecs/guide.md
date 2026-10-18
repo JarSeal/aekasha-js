@@ -71,7 +71,7 @@ lights, raycasting, input and scenes), then each of its `features`, in list orde
 [How the app starts](hub:examples/quick-start#how-the-app-starts)), then the app's own. A
 feature ([`EngineFeature`](api:EngineFeature)) is an id and an `install` function, which gets the
 kernel's seams ([`FeatureContext`](api:FeatureContext)): the ECS registrations below, the scene
-load's phases, and `onDebug` for its debug tools.
+load's phases, `onDebug` for its debug tools and `onUnmount` for its stop.
 
 - **Nothing registers itself when its module is imported.** A build keeps only the modules whose
   names something uses (`package.json`'s `sideEffects`), so a registration at a module's top level
@@ -83,6 +83,10 @@ load's phases, and `onDebug` for its debug tools.
 - **`ctx.onDebug(fn)`** runs `fn` only in the debug env, before the app's `start`. Load the
   feature's debug code there with an `import()`, and put the call inside `if (IS_DEBUG_ENV)`:
   a production build then leaves both out.
+- **`ctx.onUnmount(fn)`** runs `fn` when an embedded engine's `unmount()` stops it
+  ([`mountAekasha`](api:mountAekasha)), right after the loop, in reverse install order: stop
+  what the feature started (`physics()` terminates its worker). It's synchronous, and a
+  full-page app never runs it.
 
 ## Plugins and hooks
 

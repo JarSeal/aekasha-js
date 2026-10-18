@@ -65,6 +65,7 @@ const m = vi.hoisted(() => {
 const fns = vi.hoisted(() => ({
   bootEngineAsync: vi.fn(),
   isEngineBooted: vi.fn(() => false),
+  stopEngineFeatures: vi.fn(),
   createRenderer: vi.fn(),
   deleteRenderer: vi.fn(),
   getRenderer: vi.fn(() => ({})),
@@ -86,6 +87,7 @@ vi.mock(import('three/addons/capabilities/WebGL.js'), () => ({
 vi.mock(import('./Boot'), () => ({
   bootEngineAsync: fns.bootEngineAsync,
   isEngineBooted: fns.isEngineBooted,
+  stopEngineFeatures: fns.stopEngineFeatures,
 }));
 vi.mock(import('../render/Renderer'), () => ({
   createRenderer: fns.createRenderer,
@@ -270,6 +272,11 @@ describe('mountAekasha: once per page', () => {
     );
     handle.unmount();
     expect(fns.stopMainLoop).toHaveBeenCalledTimes(1);
+    expect(fns.stopEngineFeatures).toHaveBeenCalledTimes(1);
+    // The features stop after the loop: no frame steps physics while it stops
+    expect(fns.stopEngineFeatures.mock.invocationCallOrder[0]).toBeGreaterThan(
+      fns.stopMainLoop.mock.invocationCallOrder[0]
+    );
     expect(fns.removeAllInputListeners).toHaveBeenCalledTimes(1);
     expect(fns.stopAssetsWorker).toHaveBeenCalledTimes(1);
     expect(fns.deleteRenderer).toHaveBeenCalledTimes(1);
@@ -313,6 +320,7 @@ describe('mountAekasha: the fallback', () => {
     const handle = await mount({ fallbackImage: 'banner.webp' });
     expect(handle.isFallback).toBe(true);
     expect(fns.stopMainLoop).toHaveBeenCalledTimes(1);
+    expect(fns.stopEngineFeatures).toHaveBeenCalledTimes(1);
     expect(fns.deleteRenderer).not.toHaveBeenCalled();
     expect(m.state.host.children).toEqual([handle.container]);
     expect(m.state.host.children[0].children.some((c) => c.className === 'aekMountFallback')).toBe(

@@ -1,0 +1,808 @@
+import type { RayDebugOpts } from '../../../kernel/render/RayDebugTypes';
+import type { RigidBodyAPI, RigidBodyParams } from './PhysicsBodyTypes';
+import type {
+  ColliderAPI,
+  ColliderParams,
+  InteractionGroupsAPI,
+  ShapeParams,
+} from './PhysicsColliderTypes';
+import type { OmitSync, PhysRotation, PhysVector } from './PhysicsCommonTypes';
+import type { EventQueue, PhysicsHooks } from './PhysicsEventTypes';
+import type { JointAPI, JointParams } from './PhysicsJointTypes';
+import type {
+  PhysRay,
+  QueryFilterFlags,
+  RayColliderHitAPI,
+  RayColliderIntersectionAPI,
+  ShapeCastHitAPI,
+} from './PhysicsQueryTypes';
+
+/**
+ * The physics world, as `getPhysicsWorld` gives it.
+ *
+ * This contains all the data-structures necessary for creating and simulating
+ * bodies with contacts, joints, and external forces.
+ * @remarks Every query has an async form and a `*Sync` twin. On MAIN_THREAD both answer at
+ * once. On WORKER_THREAD the async form asks the worker, and the `*Sync` twin answers only where
+ * the proxy keeps a copy: the settings (gravity, timestep, length unit, iterations, CCD substeps)
+ * and the lookups by id (`getRigidBodySync`, `getColliderSync`, `getJointSync`); the creates, the
+ * snapshots and the queries throw. Prefer the facade's `createRigidBody` & co.: on MAIN_THREAD
+ * the world's own creates bypass the facade's registries (the tiers' joint checks read them).
+ */
+export type WorldAPI = {
+  /** Whether the world is being restored from a snapshot or not. */
+  restoringWorld: boolean;
+  /** Get gravity vector */
+  getGravity(): Promise<PhysVector>;
+  /** `getGravity()` without the wait (on WORKER_THREAD the proxy's copy). */
+  getGravitySync(): PhysVector;
+  /** Set gravity vector */
+  setGravity(gravity: PhysVector): void;
+  /**
+   * Release the WASM memory occupied by this physics world.
+   *
+   * All the fields of this physics world will be freed as well,
+   * so there is no need to call their `.free()` methods individually.
+   */
+  free(): void;
+  /**
+   * Takes a snapshot of this world.
+   *
+   * Use `World.restoreSnapshot` to create a new physics world with a state identical to
+   * the state when `.takeSnapshot()` is called.
+   */
+  takeSnapshot(): Promise<Uint8Array | undefined>; // @CHORE: change the type to have the rb and coll data
+  /** `takeSnapshot()` without the wait: MAIN_THREAD only (throws on WORKER_THREAD). */
+  takeSnapshotSync(): Uint8Array | undefined; // @CHORE: change the type to have the rb and coll data
+  /**
+   * Creates a new physics world from a snapshot.
+   *
+   * This new physics world will be an identical copy of the snapshoted physics world.
+   */
+  restoreSnapshot(data: Uint8Array): Promise<WorldAPI>; // @CHORE: change the type to have the rb and coll data
+  /** `restoreSnapshot()` without the wait: MAIN_THREAD only (throws on WORKER_THREAD). */
+  restoreSnapshotSync(data: Uint8Array): WorldAPI; // @CHORE: change the type to have the rb and coll data
+  /**
+   * Computes all the lines (and their colors) needed to render the scene.
+   * @param filterFlags Flags for excluding whole subsets of colliders from rendering.
+   * @param filterPredicate Any collider for which this closure returns `false` will be excluded from the
+   *                          debug rendering.
+   */
+  debugRender(
+    filterFlags?: QueryFilterFlags,
+    filterPredicate?: (collider: ColliderAPI) => boolean
+  ): {
+    /**
+     * The lines to render. This is a flat array containing all the lines
+     * to render. Each line is described as two consecutive point. Each
+     * point is described as two (in 2D) or three (in 3D) consecutive
+     * floats. For example, in 2D, the array: `[1, 2, 3, 4, 5, 6, 7, 8]`
+     * describes the two segments `[[1, 2], [3, 4]]` and `[[5, 6], [7, 8]]`.
+     */
+    vertices: Float32Array;
+    /**
+     * The color buffer. There is one color per vertex, and each color
+     * has four consecutive components (in RGBA format).
+     */
+    colors: Float32Array;
+  };
+  /**
+   * Advance the simulation by one time step. MAIN_THREAD only (throws on WORKER_THREAD).
+   * @param eventQueue Ignored by the Rapier backend, which collects the events in its own queue.
+   * @param hooks Contact and intersection filters for this step (see {@link PhysicsHooks}).
+   * @remarks The facade's `stepPhysics` already steps the world every fixed step: call this
+   * yourself only with stepping off (`worldStepEnabled: false`).
+   */
+  step(eventQueue?: EventQueue, hooks?: PhysicsHooks): void;
+  /**
+   * Update colliders positions after rigid-bodies moved.
+   *
+   * When a rigid-body moves, the positions of the colliders attached to it need to be updated. This update is
+   * generally automatically done at the beginning and the end of each simulation step with World.step.
+   * If the positions need to be updated without running a simulation step this method can be called manually.
+   */
+  propagateModifiedBodyPositionsToColliders(): void;
+  /**
+   * Get or set the timestep.
+   *
+   * The simulation timestep governs by how much the physics state of the world will
+   * be integrated. A simulation timestep should:
+   * - be as small as possible. Typical values evolve around 0.016 (assuming the chosen unit is milliseconds,
+   * corresponds to the time between two frames of a game running at 60FPS).
+   * - not vary too much during the course of the simulation. A timestep with large variations may
+   * cause instabilities in the simulation.
+   * `setTimestep`'s `dt` is the timestep length, in seconds.
+   */
+  getTimestep(): Promise<number>;
+  /** `getTimestep()` without the wait (on WORKER_THREAD the proxy's copy). */
+  getTimestepSync(): number;
+  /** Sets the timestep, in seconds. */
+  setTimestep(dt: number): void;
+  /**
+   * Get or set the lengthUnit.
+   *
+   * The approximate size of most dynamic objects in the scene.
+   *
+   * This value is used internally to estimate some length-based tolerance. In particular, the
+   * values `IntegrationParameters.allowedLinearError`,
+   * `IntegrationParameters.maxPenetrationCorrection`,
+   * `IntegrationParameters.predictionDistance`, `RigidBodyActivation.linearThreshold`
+   * are scaled by this value implicitly.
+   *
+   * This value can be understood as the number of units-per-meter in your physical world compared
+   * to a human-sized world in meter. For example, in a 2d game, if your typical object size is 100
+   * pixels, set the `[`Self::length_unit`]` parameter to 100.0. The physics engine will interpret
+   * it as if 100 pixels is equivalent to 1 meter in its various internal threshold.
+   * (default `1.0`).
+   */
+  getLengthUnit(): Promise<number>;
+  /** `getLengthUnit()` without the wait (on WORKER_THREAD the proxy's copy). */
+  getLengthUnitSync(): number;
+  /** Sets the length unit: the world's units per metre. */
+  setLengthUnit(unitsPerMeter: number): void;
+  /**
+   * Get or set the numSolverIterations: the number of solver iterations
+   * run by the constraints solver for calculating forces (default: `4`).
+   *
+   * The greater this value is, the most rigid and realistic the physics simulation will be.
+   * However a greater number of iterations is more computationally intensive.
+   * `setNumSolverIterations`'s `niter` is the new number of solver iterations.
+   */
+  getNumSolverIterations(): Promise<number>;
+  /** `getNumSolverIterations()` without the wait (on WORKER_THREAD the proxy's copy). */
+  getNumSolverIterationsSync(): number;
+  /** Sets the number of solver iterations. */
+  setNumSolverIterations(niter: number): void;
+  /**
+   * Get or set the numInternalPgsIterations: the number of internal
+   * Project Gauss Seidel (PGS) iterations run at each solver iteration (default: `1`).
+   *
+   * Increasing this parameter will improve stability of the simulation. It will have a lesser effect than
+   * increasing `numSolverIterations` but is also less computationally expensive.
+   * `setNumInternalPgsIterations`'s `niter` is the new number of internal PGS iterations.
+   */
+  getNumInternalPgsIterations(): Promise<number>;
+  /** `getNumInternalPgsIterations()` without the wait (on WORKER_THREAD the proxy's copy). */
+  getNumInternalPgsIterationsSync(): number;
+  /** Sets the number of internal PGS iterations per solver iteration. */
+  setNumInternalPgsIterations(niter: number): void;
+  /**
+   * Get or set the maxCcdSubsteps: the number of substeps
+   * continuous collision-detection can run (default: `1`).
+   *
+   * CCD operates using a "motion clamping" mechanism where all fast-moving object trajectories will
+   * be truncated to their first impact on their path. The number of CCD substeps beyond 1 indicate how
+   * many times that trajectory will be updated and continued after a hit. This can results in smoother
+   * paths, but at a significant computational cost.
+   * `setMaxCcdSubstepsSync`'s `substeps` is the new maximum number of CCD substeps. Setting it
+   * to `0` disables CCD entirely.
+   */
+  getMaxCcdSubsteps(): Promise<number>;
+  /** `getMaxCcdSubsteps()` without the wait (on WORKER_THREAD the proxy's copy). */
+  getMaxCcdSubstepsSync(): number;
+  /** Sets the maximum CCD substeps (0 turns CCD off). A one-way setter in both worker targets,
+   * despite its `Sync` name. */
+  setMaxCcdSubstepsSync(substeps: number): void;
+  /**
+   * Creates a new rigid-body from the given rigid-body descriptor.
+   * @param params The parameters of the rigid-body.
+   */
+  createRigidBody: (params: RigidBodyParams) => Promise<RigidBodyAPI>;
+  /** `createRigidBody()` without the wait: MAIN_THREAD only (throws on WORKER_THREAD). */
+  createRigidBodySync: (params: RigidBodyParams) => RigidBodyAPI;
+  /**
+   * Creates a new collider.
+   * @param params The parameters of the collider.
+   * @param parent The rigid-body this collider is attached to.
+   */
+  createCollider: (params: ColliderParams, parent?: number) => Promise<ColliderAPI>;
+  /** `createCollider()` without the wait: MAIN_THREAD only (throws on WORKER_THREAD). */
+  createColliderSync: (params: ColliderParams, parent?: number) => ColliderAPI;
+  /**
+   * Retrieves a rigid-body from its handle.
+   * @param id The integer handle of the rigid-body to retrieve.
+   */
+  getRigidBody(id: number): Promise<RigidBodyAPI | undefined>;
+  /** `getRigidBody()` without the wait, in both worker targets. */
+  getRigidBodySync(id: number): RigidBodyAPI | undefined;
+  /**
+   * Retrieves a collider from its handle.
+   * @param id The integer handle of the collider to retrieve.
+   */
+  getCollider(id: number): Promise<ColliderAPI | undefined>;
+  /** `getCollider()` without the wait, in both worker targets. */
+  getColliderSync(id: number): ColliderAPI | undefined;
+  /**
+   * Removes the given rigid-body from this physics world.
+   *
+   * This will remove this rigid-body as well as all its attached colliders and joints.
+   * Every other bodies touching or attached by joints to this rigid-body will be woken-up.
+   * @param bodyOrId The rigid-body or id to remove.
+   */
+  removeRigidBody(bodyOrId: RigidBodyAPI | number): void;
+  /**
+   * Removes the given collider from this physics world.
+   * @param colliderOrId The collider or id to remove.
+   * @param wakeUp If set to `true`, the rigid-body this collider is attached to will be awaken.
+   */
+  removeCollider(colliderOrId: ColliderAPI | number, wakeUp: boolean): void;
+  /**
+   * Find the closest intersection between a ray and the physics world.
+   * @param ray The ray to cast.
+   * @param maxToi The maximum time-of-impact that can be reported by this cast. This effectively
+   *   limits the length of the ray to `ray.dir.norm() * maxToi`.
+   * @param solid If `false` then the ray will attempt to hit the boundary of a shape, even if its
+   *   origin already lies inside of a shape. In other terms, `true` implies that all shapes are plain,
+   *   whereas `false` implies that all shapes are hollow for this ray-cast.
+   * @param filterGroups Used to filter the colliders that can or cannot be hit by the ray.
+   * @param filterPredicate Not supported yet (ignored): no backend applies it and the worker
+   *   protocol doesn't carry it. Use `filterExcludeCollider`/`filterExcludeRigidBody`/`filterGroups`.
+   * @param debug Debug helper options (debug env only): the helper id, colors, etc. Stays on
+   *   the main thread, never sent to the worker.
+   */
+  castRay(
+    ray: PhysRay,
+    maxToi: number,
+    solid: boolean,
+    filterFlags?: QueryFilterFlags,
+    filterGroups?: InteractionGroupsAPI,
+    filterExcludeCollider?: ColliderAPI | number,
+    filterExcludeRigidBody?: RigidBodyAPI | number,
+    filterPredicate?: (collider: ColliderAPI) => boolean,
+    debug?: RayDebugOpts
+  ): Promise<RayColliderHitAPI | null>;
+  /** `castRay()` without the wait: MAIN_THREAD only (throws on WORKER_THREAD). */
+  castRaySync(
+    ray: PhysRay,
+    maxToi: number,
+    solid: boolean,
+    filterFlags?: QueryFilterFlags,
+    filterGroups?: InteractionGroupsAPI,
+    filterExcludeCollider?: ColliderAPI | number,
+    filterExcludeRigidBody?: RigidBodyAPI | number,
+    filterPredicate?: (collider: ColliderAPI) => boolean,
+    debug?: RayDebugOpts
+  ): RayColliderHitAPI | null;
+  /**
+   * Casts a shape at a constant linear velocity and retrieve the first collider it hits, similar
+   * to `castRay` but casting a whole shape instead of a single point.
+   * @param shapePos The initial position of the shape to cast.
+   * @param shapeRot The initial rotation of the shape to cast.
+   * @param shapeVel The constant velocity (direction and magnitude) of the shape to cast.
+   * @param shape The geometry of the shape being cast.
+   * @param targetDistance A hit is reported once the shape gets this close to a collider.
+   * @param maxToi The maximum time-of-impact that can be reported. Effectively limits the cast
+   *   distance to `shapeVel.norm() * maxToi`.
+   * @param stopAtPenetration If `false`, the linear shape-cast will not stop at the first
+   *   collider that is penetrating the shape at its starting point.
+   * @param filterGroups Used to filter the colliders that can or cannot be hit.
+   * @param filterPredicate Not supported yet (ignored): no backend applies it and the worker
+   *   protocol doesn't carry it. Use `filterExcludeCollider`/`filterExcludeRigidBody`/`filterGroups`.
+   * @param debug Debug helper options (debug env only): the helper id, colors, etc. Stays on
+   *   the main thread, never sent to the worker.
+   */
+  castShape(
+    shapePos: PhysVector,
+    shapeRot: PhysRotation,
+    shapeVel: PhysVector,
+    shape: ShapeParams,
+    targetDistance: number,
+    maxToi: number,
+    stopAtPenetration: boolean,
+    filterFlags?: QueryFilterFlags,
+    filterGroups?: InteractionGroupsAPI,
+    filterExcludeCollider?: ColliderAPI | number,
+    filterExcludeRigidBody?: RigidBodyAPI | number,
+    filterPredicate?: (collider: ColliderAPI) => boolean,
+    debug?: RayDebugOpts
+  ): Promise<ShapeCastHitAPI | null>;
+  /** `castShape()` without the wait: MAIN_THREAD only (throws on WORKER_THREAD). */
+  castShapeSync(
+    shapePos: PhysVector,
+    shapeRot: PhysRotation,
+    shapeVel: PhysVector,
+    shape: ShapeParams,
+    targetDistance: number,
+    maxToi: number,
+    stopAtPenetration: boolean,
+    filterFlags?: QueryFilterFlags,
+    filterGroups?: InteractionGroupsAPI,
+    filterExcludeCollider?: ColliderAPI | number,
+    filterExcludeRigidBody?: RigidBodyAPI | number,
+    filterPredicate?: (collider: ColliderAPI) => boolean,
+    debug?: RayDebugOpts
+  ): ShapeCastHitAPI | null;
+  /**
+   * Find the closest intersection between a ray and the physics world.
+   *
+   * This also computes the normal at the hit point.
+   * @param ray The ray to cast.
+   * @param maxToi The maximum time-of-impact that can be reported by this cast. This effectively
+   *   limits the length of the ray to `ray.dir.norm() * maxToi`.
+   * @param solid If `false` then the ray will attempt to hit the boundary of a shape, even if its
+   *   origin already lies inside of a shape. In other terms, `true` implies that all shapes are plain,
+   *   whereas `false` implies that all shapes are hollow for this ray-cast.
+   * @param filterGroups Used to filter the colliders that can or cannot be hit by the ray.
+   * @param filterPredicate Not supported yet (ignored): no backend applies it and the worker
+   *   protocol doesn't carry it. Use `filterExcludeCollider`/`filterExcludeRigidBody`/`filterGroups`.
+   * @param debug Debug helper options (debug env only): the helper id, colors, etc. Stays on
+   *   the main thread, never sent to the worker.
+   */
+  castRayAndGetNormal(
+    ray: PhysRay,
+    maxToi: number,
+    solid: boolean,
+    filterFlags?: QueryFilterFlags,
+    filterGroups?: InteractionGroupsAPI,
+    filterExcludeCollider?: ColliderAPI | number,
+    filterExcludeRigidBody?: RigidBodyAPI | number,
+    filterPredicate?: (collider: ColliderAPI) => boolean,
+    debug?: RayDebugOpts
+  ): Promise<RayColliderIntersectionAPI | null>;
+  /** `castRayAndGetNormal()` without the wait: MAIN_THREAD only (throws on WORKER_THREAD). */
+  castRayAndGetNormalSync(
+    ray: PhysRay,
+    maxToi: number,
+    solid: boolean,
+    filterFlags?: QueryFilterFlags,
+    filterGroups?: InteractionGroupsAPI,
+    filterExcludeCollider?: ColliderAPI | number,
+    filterExcludeRigidBody?: RigidBodyAPI | number,
+    filterPredicate?: (collider: ColliderAPI) => boolean,
+    debug?: RayDebugOpts
+  ): RayColliderIntersectionAPI | null;
+  /**
+   * Cast a ray and collects all the intersections between a ray and the scene.
+   * @param ray The ray to cast.
+   * @param maxToi The maximum time-of-impact that can be reported by this cast. This effectively
+   *   limits the length of the ray to `ray.dir.norm() * maxToi`.
+   * @param solid If `false` then the ray will attempt to hit the boundary of a shape, even if its
+   *   origin already lies inside of a shape. In other terms, `true` implies that all shapes are plain,
+   *   whereas `false` implies that all shapes are hollow for this ray-cast.
+   * @param callback The callback called once per hit (in no particular order) between a ray and a collider.
+   *   If this callback returns `false`, then the cast will stop and no further hits will be detected/reported.
+   * @param filterGroups Used to filter the colliders that can or cannot be hit by the ray.
+   * @param filterPredicate Not supported yet (ignored): no backend applies it and the worker
+   *   protocol doesn't carry it. Use `filterExcludeCollider`/`filterExcludeRigidBody`/`filterGroups`.
+   * @param debug Debug helper options (debug env only): the helper id, colors, etc. Stays on
+   *   the main thread, never sent to the worker.
+   */
+  intersectionsWithRay(
+    ray: PhysRay,
+    maxToi: number,
+    solid: boolean,
+    callback: (intersect: RayColliderIntersectionAPI) => boolean,
+    filterFlags?: QueryFilterFlags,
+    filterGroups?: InteractionGroupsAPI,
+    filterExcludeCollider?: ColliderAPI | number,
+    filterExcludeRigidBody?: RigidBodyAPI | number,
+    filterPredicate?: (collider: ColliderAPI) => boolean,
+    debug?: RayDebugOpts
+  ): Promise<void>;
+  /** `intersectionsWithRay()` without the wait: MAIN_THREAD only (throws on WORKER_THREAD). */
+  intersectionsWithRaySync(
+    ray: PhysRay,
+    maxToi: number,
+    solid: boolean,
+    callback: (intersect: RayColliderIntersectionAPI) => boolean,
+    filterFlags?: QueryFilterFlags,
+    filterGroups?: InteractionGroupsAPI,
+    filterExcludeCollider?: ColliderAPI | number,
+    filterExcludeRigidBody?: RigidBodyAPI | number,
+    filterPredicate?: (collider: ColliderAPI) => boolean,
+    debug?: RayDebugOpts
+  ): void;
+  /**
+   * Enumerates all the colliders potentially in contact with the given collider.
+   * @param collider1 The second collider involved in the contact.
+   * @param f Closure that will be called on each collider that is in contact with `collider1`.
+   */
+  contactPairsWith(
+    collider1: ColliderAPI | number,
+    f: (collider2: ColliderAPI) => void
+  ): Promise<void>;
+  /** `contactPairsWith()` without the wait: MAIN_THREAD only (throws on WORKER_THREAD). */
+  contactPairsWithSync(collider1: ColliderAPI | number, f: (collider2: ColliderAPI) => void): void;
+  /**
+   * Enumerates all the colliders intersecting the given colliders, assuming one of them
+   * is a sensor.
+   */
+  intersectionPairsWith(
+    collider1: ColliderAPI | number,
+    f: (collider2: ColliderAPI) => void
+  ): Promise<void>;
+  /** `intersectionPairsWith()` without the wait: MAIN_THREAD only (throws on WORKER_THREAD). */
+  intersectionPairsWithSync(
+    collider1: ColliderAPI | number,
+    f: (collider2: ColliderAPI) => void
+  ): void;
+  /**
+   * Returns `true` if `collider1` and `collider2` intersect and at least one of them is a sensor.
+   * @param collider1 − The first collider involved in the intersection.
+   * @param collider2 − The second collider involved in the intersection.
+   */
+  intersectionPair(
+    collider1: ColliderAPI | number,
+    collider2: ColliderAPI | number
+  ): Promise<boolean>;
+  /** `intersectionPair()` without the wait: MAIN_THREAD only (throws on WORKER_THREAD). */
+  intersectionPairSync(collider1: ColliderAPI | number, collider2: ColliderAPI | number): boolean;
+  /**
+   * Creates a new character controller.
+   * @param offset The artificial gap added between the character’s chape and its environment.
+   */
+  // createCharacterController(offset: number): KinematicCharacterController;
+  /**
+   * Removes a character controller from this world.
+   * @param controller The character controller to remove.
+   */
+  // removeCharacterController(controller: KinematicCharacterController): void;
+  /**
+   * Creates a new PID (Proportional-Integral-Derivative) controller.
+   * @param kp The Proportional gain applied to the instantaneous linear position errors.
+   *             This is usually set to a multiple of the inverse of simulation step time
+   *             (e.g. `60` if the delta-time is `1.0 / 60.0`).
+   * @param ki The linear gain applied to the Integral part of the PID controller.
+   * @param kd The Derivative gain applied to the instantaneous linear velocity errors.
+   *             This is usually set to a value in `[0.0, 1.0]` where `0.0` implies no damping
+   *             (no correction of velocity errors) and `1.0` implies complete damping (velocity errors
+   *             are corrected in a single simulation step).
+   * @param axes The axes affected by this controller.
+   *               Only coordinate axes with a bit flags set to `true` will be taken into
+   *               account when calculating the errors and corrections.
+   */
+  // createPidController(kp: number, ki: number, kd: number, axes: PidAxesMask): PidController;
+  /**
+   * Removes a PID controller from this world.
+   * @param controller The PID controller to remove.
+   */
+  // removePidController(controller: PidController): void;
+  /**
+   * Creates a new vehicle controller.
+   * @param chassis The rigid-body used as the chassis of the vehicle controller. When the vehicle
+   *                  controller is updated, it will change directly the rigid-body’s velocity. This
+   *                  rigid-body must be a dynamic or kinematic-velocity-based rigid-body.
+   */
+  // createVehicleController(chassis: RigidBody): DynamicRayCastVehicleController;
+  /**
+   * Removes a vehicle controller from this world.
+   * @param controller The vehicle controller to remove.
+   */
+  // removeVehicleController(controller: DynamicRayCastVehicleController): void;
+  /**
+   * Creates a new impulse joint connecting two rigid bodies (by id).
+   */
+  createJoint(params: JointParams): Promise<JointAPI>;
+  /** `createJoint()` without the wait: MAIN_THREAD only (throws on WORKER_THREAD). */
+  createJointSync(params: JointParams): JointAPI;
+  /**
+   * Creates a new multibody joint from the given joint descriptor.
+   * @param params The description of the joint to create.
+   * @param parent1 The first rigid-body attached to this joint.
+   * @param parent2 The second rigid-body attached to this joint.
+   * @param wakeUp Should the attached rigid-bodies be awakened?
+   */
+  // createMultibodyJoint(
+  //   params: JointData,
+  //   parent1: RigidBody,
+  //   parent2: RigidBody,
+  //   wakeUp: boolean
+  // ): MultibodyJoint;
+  /**
+   * Retrieves a joint from its id.
+   */
+  getJoint(id: number): Promise<JointAPI | undefined>;
+  /** `getJoint()` without the wait, in both worker targets. */
+  getJointSync(id: number): JointAPI | undefined;
+  /**
+   * Retrieves an multibody joint from its handle.
+   * @param handle The integer handle of the multibody joint to retrieve.
+   */
+  // getMultibodyJoint(handle: MultibodyJointHandle): MultibodyJoint;
+  /**
+   * Removes the given impulse joint from this physics world.
+   * @param jointOrId The joint or id to remove.
+   * @param wakeUp If set to `true`, the rigid-bodies attached by this joint will be awaken.
+   */
+  removeJoint(jointOrId: JointAPI | number, wakeUp: boolean): void;
+  /**
+   * Removes the given multibody joint from this physics world.
+   * @param joint The multibody joint to remove.
+   * @param wakeUp If set to `true`, the rigid-bodies attached by this joint will be awaken.
+   */
+  // removeMultibodyJoint(joint: MultibodyJoint, wakeUp: boolean): void;
+  /**
+   * Applies the given closure to each collider managed by this physics world.
+   * @param f(collider) The function to apply to each collider managed by this physics world. Called as `f(collider)`.
+   */
+  // forEachCollider(f: (collider: Collider) => void): void;
+  /**
+   * Applies the given closure to each rigid-body managed by this physics world.
+   * @param f(body) The function to apply to each rigid-body managed by this physics world. Called as `f(collider)`.
+   */
+  // forEachRigidBody(f: (body: RigidBody) => void): void;
+  /**
+   * Applies the given closure to each active rigid-body managed by this physics world.
+   *
+   * After a short time of inactivity, a rigid-body is automatically deactivated ("asleep") by
+   * the physics engine in order to save computational power. A sleeping rigid-body never moves
+   * unless it is moved manually by the user.
+   * @param f The function to apply to each active rigid-body managed by this physics world. Called as `f(collider)`.
+   */
+  // forEachActiveRigidBody(f: (body: RigidBody) => void): void;
+  /**
+   * Gets the handle of up to one collider intersecting the given shape.
+   * @param shapePos The position of the shape used for the intersection test.
+   * @param shapeRot The orientation of the shape used for the intersection test.
+   * @param shape The shape used for the intersection test.
+   * @param groups The bit groups and filter associated to the ray, in order to only
+   *   hit the colliders with collision groups compatible with the ray's group.
+   */
+  // intersectionWithShape(
+  //   shapePos: PhysVector,
+  //   shapeRot: PhysRotation,
+  //   shape: Shape,
+  //   filterFlags?: QueryFilterFlags,
+  //   filterGroups?: InteractionGroups,
+  //   filterExcludeCollider?: Collider,
+  //   filterExcludeRigidBody?: RigidBody,
+  //   filterPredicate?: (collider: Collider) => boolean
+  // ): Collider | null;
+  /**
+   * Find the projection of a point on the closest collider.
+   * @param point The point to project.
+   * @param solid If this is set to `true` then the collider shapes are considered to
+   *   be plain (if the point is located inside of a plain shape, its projection is the point
+   *   itself). If it is set to `false` the collider shapes are considered to be hollow
+   *   (if the point is located inside of an hollow shape, it is projected on the shape's
+   *   boundary).
+   * @param groups The bit groups and filter associated to the point to project, in order to only
+   *   project on colliders with collision groups compatible with the ray's group.
+   */
+  // projectPoint(
+  //   point: Vector,
+  //   solid: boolean,
+  //   filterFlags?: QueryFilterFlags,
+  //   filterGroups?: InteractionGroups,
+  //   filterExcludeCollider?: Collider,
+  //   filterExcludeRigidBody?: RigidBody,
+  //   filterPredicate?: (collider: Collider) => boolean
+  // ): PointColliderProjection | null;
+  /**
+   * Find the projection of a point on the closest collider.
+   * @param point The point to project.
+   * @param groups The bit groups and filter associated to the point to project, in order to only
+   *   project on colliders with collision groups compatible with the ray's group.
+   */
+  // projectPointAndGetFeature(
+  //   point: Vector,
+  //   filterFlags?: QueryFilterFlags,
+  //   filterGroups?: InteractionGroups,
+  //   filterExcludeCollider?: Collider,
+  //   filterExcludeRigidBody?: RigidBody,
+  //   filterPredicate?: (collider: Collider) => boolean
+  // ): PointColliderProjection | null;
+  /**
+   * Find all the colliders containing the given point.
+   * @param point The point used for the containment test.
+   * @param groups The bit groups and filter associated to the point to test, in order to only
+   *   test on colliders with collision groups compatible with the ray's group.
+   * @param callback A function called with the handles of each collider with a shape
+   *   containing the `point`.
+   */
+  // intersectionsWithPoint(
+  //   point: Vector,
+  //   callback: (handle: Collider) => boolean,
+  //   filterFlags?: QueryFilterFlags,
+  //   filterGroups?: InteractionGroups,
+  //   filterExcludeCollider?: Collider,
+  //   filterExcludeRigidBody?: RigidBody,
+  //   filterPredicate?: (collider: Collider) => boolean
+  // ): void;
+  /**
+   * Casts a shape at a constant linear velocity and retrieve the first collider it hits.
+   * This is similar to ray-casting except that we are casting a whole shape instead of
+   * just a point (the ray origin).
+   * @param shapePos The initial position of the shape to cast.
+   * @param shapeRot The initial rotation of the shape to cast.
+   * @param shapeVel The constant velocity of the shape to cast (i.e. the cast direction).
+   * @param shape The shape to cast.
+   * @param targetDistance − If the shape moves closer to this distance from a collider, a hit
+   *                         will be returned.
+   * @param maxToi The maximum time-of-impact that can be reported by this cast. This effectively
+   *   limits the distance traveled by the shape to `shapeVel.norm() * maxToi`.
+   * @param stopAtPenetration If set to `false`, the linear shape-cast won’t immediately stop if
+   *   the shape is penetrating another shape at its starting point **and** its trajectory is such
+   *   that it’s on a path to exit that penetration state.
+   * @param groups The bit groups and filter associated to the shape to cast, in order to only
+   *   test on colliders with collision groups compatible with this group.
+   */
+  // castShape(
+  //   shapePos: Vector,
+  //   shapeRot: Rotation,
+  //   shapeVel: Vector,
+  //   shape: Shape,
+  //   targetDistance: number,
+  //   maxToi: number,
+  //   stopAtPenetration: boolean,
+  //   filterFlags?: QueryFilterFlags,
+  //   filterGroups?: InteractionGroups,
+  //   filterExcludeCollider?: Collider,
+  //   filterExcludeRigidBody?: RigidBody,
+  //   filterPredicate?: (collider: Collider) => boolean
+  // ): ColliderShapeCastHit | null;
+  /**
+   * Retrieve all the colliders intersecting the given shape.
+   * @param shapePos The position of the shape to test.
+   * @param shapeRot The orientation of the shape to test.
+   * @param shape The shape to test.
+   * @param groups The bit groups and filter associated to the shape to test, in order to only
+   *   test on colliders with collision groups compatible with this group.
+   * @param callback A function called with the handles of each collider intersecting the `shape`.
+   */
+  // intersectionsWithShape(
+  //   shapePos: Vector,
+  //   shapeRot: Rotation,
+  //   shape: Shape,
+  //   callback: (collider: Collider) => boolean,
+  //   filterFlags?: QueryFilterFlags,
+  //   filterGroups?: InteractionGroups,
+  //   filterExcludeCollider?: Collider,
+  //   filterExcludeRigidBody?: RigidBody,
+  //   filterPredicate?: (collider: Collider) => boolean
+  // ): void;
+  /**
+   * Finds the handles of all the colliders with an AABB intersecting the given AABB.
+   * @param aabbCenter The center of the AABB to test.
+   * @param aabbHalfExtents The half-extents of the AABB to test.
+   * @param callback The callback that will be called with the handles of all the colliders
+   *                   currently intersecting the given AABB.
+   */
+  // collidersWithAabbIntersectingAabb(
+  //   aabbCenter: Vector,
+  //   aabbHalfExtents: Vector,
+  //   callback: (handle: Collider) => boolean
+  // ): void;
+  /**
+   * Iterates through all the contact manifolds between the given pair of colliders.
+   * @param collider1 The first collider involved in the contact.
+   * @param collider2 The second collider involved in the contact.
+   * @param f Closure that will be called on each contact manifold between the two colliders. If the second argument
+   *            passed to this closure is `true`, then the contact manifold data is flipped, i.e., methods like `localNormal1`
+   *            actually apply to the `collider2` and fields like `localNormal2` apply to the `collider1`.
+   */
+  // contactPair(
+  //   collider1: Collider,
+  //   collider2: Collider,
+  //   f: (manifold: TempContactManifold, flipped: boolean) => void
+  // ): void;
+  /**
+   * Sets whether internal performance profiling is enabled (default: false).
+   *
+   * Only works if the internal profiler is enabled with `World.profilerEnabled = true`.
+   */
+  // set profilerEnabled(enabled: boolean);
+  /**
+   * Indicates if the internal performance profiling is enabled.
+   *
+   * Only works if the internal profiler is enabled with `World.profilerEnabled = true`.
+   */
+  // get profilerEnabled(): boolean;
+  /**
+   * The time spent in milliseconds by the last step to run the entire simulation step.
+   *
+   * Only works if the internal profiler is enabled with `World.profilerEnabled = true`.
+   */
+  // timingStep(): number;
+  /**
+   * The time spent in milliseconds by the last step to run the collision-detection
+   * (broad-phase + narrow-phase).
+   *
+   * Only works if the internal profiler is enabled with `World.profilerEnabled = true`.
+   */
+  // timingCollisionDetection(): number;
+  /**
+   * The time spent in milliseconds by the last step to run the broad-phase.
+   *
+   * This timing is included in `timingCollisionDetection`.
+   * Only works if the internal profiler is enabled with `World.profilerEnabled = true`.
+   */
+  // timingBroadPhase(): number;
+  /**
+   * The time spent in milliseconds by the last step to run the narrow-phase.
+   *
+   * This timing is included in `timingCollisionDetection`.
+   * Only works if the internal profiler is enabled with `World.profilerEnabled = true`.
+   */
+  // timingNarrowPhase(): number;
+  /**
+   * The time spent in milliseconds by the last step to run the constraint solver.
+   *
+   * Only works if the internal profiler is enabled with `World.profilerEnabled = true`.
+   */
+  // timingSolver(): number;
+  /**
+   * The time spent in milliseconds by the last step to run the constraint
+   * initialization.
+   *
+   * This timing is included in `timingSolver`.
+   * Only works if the internal profiler is enabled with `World.profilerEnabled = true`.
+   */
+  // timingVelocityAssembly(): number;
+  /**
+   * The time spent in milliseconds by the last step to run the constraint
+   * resolution.
+   *
+   * This timing is included in `timingSolver`.
+   * Only works if the internal profiler is enabled with `World.profilerEnabled = true`.
+   */
+  // timingVelocityResolution(): number;
+  /**
+   * The time spent in milliseconds by the last step to run the rigid-body
+   * velocity update.
+   *
+   * This timing is included in `timingSolver`.
+   * Only works if the internal profiler is enabled with `World.profilerEnabled = true`.
+   */
+  // timingVelocityUpdate(): number;
+  /**
+   * The time spent in milliseconds by writing rigid-body velocities
+   * calculated by the solver back into the rigid-bodies.
+   *
+   * This timing is included in `timingSolver`.
+   * Only works if the internal profiler is enabled with `World.profilerEnabled = true`.
+   */
+  // timingVelocityWriteback(): number;
+  /**
+   * The total time spent in CCD detection and resolution.
+   *
+   * Only works if the internal profiler is enabled with `World.profilerEnabled = true`.
+   */
+  // timingCcd(): number;
+  /**
+   * The total time spent searching for the continuous hits during CCD.
+   *
+   * This timing is included in `timingCcd`.
+   * Only works if the internal profiler is enabled with `World.profilerEnabled = true`.
+   */
+  // timingCcdToiComputation(): number;
+  /**
+   * The total time spent in the broad-phase during CCD.
+   *
+   * This timing is included in `timingCcd`.
+   * Only works if the internal profiler is enabled with `World.profilerEnabled = true`.
+   */
+  // timingCcdBroadPhase(): number;
+  /**
+   * The total time spent in the narrow-phase during CCD.
+   *
+   * This timing is included in `timingCcd`.
+   * Only works if the internal profiler is enabled with `World.profilerEnabled = true`.
+   */
+  // timingCcdNarrowPhase(): number;
+  /**
+   * The total time spent in the constraints resolution during CCD.
+   *
+   * This timing is included in `timingCcd`.
+   * Only works if the internal profiler is enabled with `World.profilerEnabled = true`.
+   */
+  // timingCcdSolver(): number;
+  /**
+   * The total time spent in the islands calculation during CCD.
+   *
+   * Only works if the internal profiler is enabled with `World.profilerEnabled = true`.
+   */
+  // timingIslandConstruction(): number;
+  /**
+   * The total time spent propagating detected user changes.
+   *
+   * Only works if the internal profiler is enabled with `World.profilerEnabled = true`.
+   */
+  // timingUserChanges(): number;
+};
+
+/**
+ * {@link WorldAPI} without the `*Sync` twins (unused so far).
+ * @internal
+ */
+export type WorldProxyAPIType = OmitSync<WorldAPI>;

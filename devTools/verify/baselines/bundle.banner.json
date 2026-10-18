@@ -23,11 +23,11 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7544,
-      "gzip": 3075
+      "gzip": 3073
     },
     "assets/GLTFLoader.js": {
       "bytes": 45869,
-      "gzip": 13862
+      "gzip": 13860
     },
     "assets/GeometryTransfer.js": {
       "bytes": 4297,
@@ -35,11 +35,11 @@
     },
     "assets/HDRLoader.js": {
       "bytes": 3404,
-      "gzip": 1631
+      "gzip": 1628
     },
     "assets/ImportRegistry.js": {
       "bytes": 16546,
-      "gzip": 6656
+      "gzip": 6653
     },
     "assets/KTX2Loader.js": {
       "bytes": 59894,
@@ -55,11 +55,11 @@
     },
     "assets/banner.js": {
       "bytes": 460,
-      "gzip": 335
+      "gzip": 334
     },
     "assets/banner.embed.js": {
-      "bytes": 1045350,
-      "gzip": 293296
+      "bytes": 1044177,
+      "gzip": 292882
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
@@ -119,14 +119,14 @@
     },
     "banner.embed.js": {
       "bytes": 251,
-      "gzip": 213
+      "gzip": 210
     }
   },
   "main": {
     "chunk": "assets/banner.embed.js",
-    "modules": 67,
-    "rendered": 3418182,
-    "gzip": 688866
+    "modules": 65,
+    "rendered": 3415754,
+    "gzip": 687901
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -151,8 +151,8 @@
     },
     "_engine/kernel/init": {
       "modules": 5,
-      "rendered": 11416,
-      "gzip": 4377
+      "rendered": 11896,
+      "gzip": 4511
     },
     "_engine/kernel/input": {
       "modules": 2,
@@ -166,8 +166,8 @@
     },
     "_engine/kernel/loop": {
       "modules": 3,
-      "rendered": 9640,
-      "gzip": 2968
+      "rendered": 9648,
+      "gzip": 2977
     },
     "_engine/kernel/mesh": {
       "modules": 1,
@@ -175,14 +175,14 @@
       "gzip": 1873
     },
     "_engine/kernel/render": {
-      "modules": 7,
-      "rendered": 6882,
-      "gzip": 2771
+      "modules": 6,
+      "rendered": 6501,
+      "gzip": 2568
     },
     "_engine/kernel/scene": {
       "modules": 7,
-      "rendered": 20902,
-      "gzip": 6144
+      "rendered": 20879,
+      "gzip": 6132
     },
     "_engine/ui": {
       "modules": 3,
@@ -190,9 +190,9 @@
       "gzip": 5217
     },
     "_engine/utils": {
-      "modules": 7,
-      "rendered": 5355,
-      "gzip": 2188
+      "modules": 6,
+      "rendered": 2843,
+      "gzip": 1295
     },
     "app": {
       "modules": 4,

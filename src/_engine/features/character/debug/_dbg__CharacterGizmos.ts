@@ -23,8 +23,9 @@ import {
   type LineObject,
   type LineWriter,
 } from '../../lines/Lines';
-import type { ColliderParams } from '../../physics/PhysicsAPITypes';
-import { getPhysicsSnapshotStepIndex, getPhysicsState } from '../../physics/PhysicsAPI';
+import type { ColliderParams } from '../../physics/types/PhysicsColliderTypes';
+import { getPhysicsState } from '../../physics/PhysicsState';
+import { getPhysicsSnapshotStepIndex } from '../../physics/PhysicsStepping';
 import { registerOnAllSceneEnters } from '../../../kernel/scene/Scene';
 import { markDebugHelper } from '../../../debug/Profiler';
 

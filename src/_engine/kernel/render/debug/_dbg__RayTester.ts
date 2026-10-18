@@ -30,14 +30,11 @@ import { createMouseBinding, deleteMouseBinding } from '../../input/MouseInput';
 import { getECSWorld, getEntityIdByAppId } from '../../ecs/ECS';
 import { ComponentType } from '../../ecs/ECSCoreComponents';
 import { castRayFromDirection, castRayFromPoints, type RayCastOpts } from '../Raycast';
-import { getPhysicsWorld, isPhysicsWorldEnabled } from '../../../features/physics/PhysicsAPI';
-import {
-  QueryFilterFlags,
-  type ColliderAPI,
-  type PhysRay,
-  type PhysVector,
-  type RigidBodyAPI,
-} from '../../../features/physics/PhysicsAPITypes';
+import { getPhysicsWorld, isPhysicsWorldEnabled } from '../../../features/physics/PhysicsState';
+import type { RigidBodyAPI } from '../../../features/physics/types/PhysicsBodyTypes';
+import type { ColliderAPI } from '../../../features/physics/types/PhysicsColliderTypes';
+import type { PhysVector } from '../../../features/physics/types/PhysicsCommonTypes';
+import { type PhysRay, QueryFilterFlags } from '../../../features/physics/types/PhysicsQueryTypes';
 import { RAY_TESTER_ID_PREFIX, type RayDebugOpts, type RayHelperKind } from '../RayDebugTypes';
 import { getRayHelperSettings } from './_dbg__RayHelpers';
 import { _setRayHelpersShown } from './_dbg__Raycast';

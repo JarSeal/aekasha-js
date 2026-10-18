@@ -3,20 +3,23 @@ import { getECSWorld } from '../../kernel/ecs/ECS';
 import type { EngineFeature } from '../../kernel/init/Features';
 import type { ImportExtension } from '../../kernel/assets/import/ImportExtensions';
 import type { FixedStepDriver } from '../../kernel/loop/MainLoop';
+import { flushPhysicsEvents } from './PhysicsMessaging';
+import { resetPhysicsRayStats } from './PhysicsQueryStats';
+import { getPhysicsState } from './PhysicsState';
+import {
+  holdPhysicsStepping,
+  latchPhysicsSnapshot,
+  releasePhysicsStepping,
+  stepPhysics,
+} from './PhysicsStepping';
 import {
   createPhysicsAPIDebugGUI,
   createPhysicsWorld,
-  flushPhysicsEvents,
-  getPhysicsState,
-  holdPhysicsStepping,
   initPhysics,
-  latchPhysicsSnapshot,
   registerPhysicsAPIDebugGUI,
-  releasePhysicsStepping,
-  resetPhysicsRayStats,
   resetPhysicsWorld,
-  stepPhysics,
-} from './PhysicsAPI';
+  stopPhysics,
+} from './PhysicsWorld';
 import {
   deleteAllPhysicsEntities,
   installPhysicsEntities,
@@ -34,7 +37,8 @@ import { existsOrThrow } from '../../utils/Assert';
  * `AppConfig.physics` says), physics entities, simulation tiers and the tier distance policy.
  * It drives the main loop's fixed steps and takes part in every scene load (stepping is held until
  * the next scene's bodies exist, on a fresh world). With `physics.enabled` false it's installed
- * but creates no world at boot; without it in `features`, nothing of physics or Rapier loads.
+ * but creates no world at boot; without it in `features`, nothing of physics or Rapier loads. A
+ * mounted engine's `unmount()` stops it (the worker terminated, the world deleted).
  * @example
  * ```ts
  * import { InitEngine } from 'aekasha';
@@ -56,6 +60,9 @@ export const physics = (): EngineFeature => ({
     ctx.setFixedStepDriver(physicsFixedStepDriver);
     ctx.addSceneHooks(physicsSceneHooks);
     ctx.registerImportExtension(physicsImportExtension);
+    // A mounted engine's unmount: the worker (or the main thread's world) stops with it. Before the
+    // init, so an install that fails after starting the worker still stops it
+    ctx.onUnmount(stopPhysics);
 
     await initPhysics(true); // doNotCreateWorld: createPhysicsWorld() below owns that
     // Before the first world: the debugger's saved world settings are what worlds are built from.

@@ -13,21 +13,15 @@ import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import {
   detachRigidBody,
   detachRigidBodySync,
-  forEachJointBodyPair,
-  getPhysicsState,
-  hasJoints,
   reattachRigidBody,
   reattachRigidBodySync,
-} from './PhysicsAPI';
-import { RigidBodyTypeAPI, type RigidBodyPose } from './PhysicsAPITypes';
+} from './PhysicsBodies';
+import { forEachJointBodyPair, hasJoints, isBodyJointed } from './PhysicsJoints';
+import { getPhysicsState } from './PhysicsState';
+import { type RigidBodyPose, RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import type { PhysicsSimTierData, PhysicsTier } from './PhysicsTierTypes';
-import {
-  getPhysicsBodyOwner,
-  queueStaticBodySync,
-  resetPhysicsInterpolationHistory,
-} from './PhysicsEntity';
-
-export type { PhysicsTier } from './PhysicsTierTypes';
+import { getPhysicsBodyOwner, getPhysicsEntityBody, queueStaticBodySync } from './PhysicsEntity';
+import { resetPhysicsInterpolationHistory } from './PhysicsInterpolation';
 
 /** First in APP_PHYSICS_STEP (higher runs first), so the other systems of that sub-step see
  * the new tiers and buckets. */
@@ -45,27 +39,12 @@ const getPending = (world: ECSWorld) => {
   return pending;
 };
 
-/** The entity's body: also while REMOVED (or in flight back), when it has no bucket component. */
-const getTierBody = (world: ECSWorld, entityId: number) =>
-  world.getRigidBody(entityId) ??
-  world.getComponent(entityId, ComponentType.PHYSICS_SIM_TIER)?.body;
-
-/** Whether any impulse joint is attached to the body. */
-const bodyHasJoints = (bodyId: number) => {
-  if (!hasJoints()) return false;
-  let found = false;
-  forEachJointBodyPair((body1Id, body2Id) => {
-    if (body1Id === bodyId || body2Id === bodyId) found = true;
-  });
-  return found;
-};
-
 /** Why `entityId` can't have `tier`, or null when it can. */
 const getTierRefusal = (world: ECSWorld, entityId: number, tier: PhysicsTier): string | null => {
   if (world.hasComponent(entityId, ComponentType.TAG_IS_CHARACTER)) {
     return 'it is a character (p420 owns character tiers)';
   }
-  const rb = getTierBody(world, entityId);
+  const rb = getPhysicsEntityBody(world, entityId);
   if (!rb) return 'it has no rigid body (request a tier once its createPhysicsEntity resolves)';
   const owner = getPhysicsBodyOwner(rb.id);
   if (!owner || owner.world !== world || owner.entityId !== entityId) {
@@ -74,7 +53,7 @@ const getTierRefusal = (world: ECSWorld, entityId: number, tier: PhysicsTier): s
   if (owner.rigidType !== 'DYNAMIC') {
     return `its body was created ${owner.rigidType}, and only DYNAMIC bodies have tiers`;
   }
-  if (tier === 'REMOVED' && bodyHasJoints(rb.id)) {
+  if (tier === 'REMOVED' && isBodyJointed(rb.id)) {
     return 'it has joints, which REMOVED would delete (p500 owns re-creating joints)';
   }
   return null;
@@ -107,7 +86,7 @@ const resolveTierGroup = (
     link(body2Id, body1Id);
   });
 
-  const startBodyId = getTierBody(world, entityId)!.id;
+  const startBodyId = getPhysicsEntityBody(world, entityId)!.id;
   const members = [entityId];
   const seen = new Set([startBodyId]);
   const queue = [startBodyId];
@@ -157,6 +136,17 @@ const resolveTierGroup = (
  * Returns false and changes nothing when the entity or a member of its joint group can't have a
  * tier: a character, no rigid body (yet), or a body not created `DYNAMIC` by
  * `createPhysicsEntity`.
+ * @example
+ * ```ts
+ * import { createPhysicsEntity, requestPhysicsTier } from 'aekasha/physics';
+ *
+ * const crateId = await createPhysicsEntity({ type: 'BOX', hx: 0.5, hy: 0.5, hz: 0.5 }, {
+ *   rigidType: 'DYNAMIC',
+ *   translation: { x: 0, y: 2, z: 0 },
+ * });
+ * // Out of sight: frozen in place, still collidable
+ * requestPhysicsTier(crateId, 'STATIC');
+ * ```
  */
 export const requestPhysicsTier = (
   entityId: number,
@@ -202,6 +192,14 @@ export const requestPhysicsTier = (
  * `entityId`'s tier, the tier requested for it that hasn't applied yet (null if none), and
  * whether it's in flight back from `REMOVED` (WORKER_THREAD: the body is back, its bucket and
  * COLLIDER components aren't yet). An entity that never got a tier is `FULL`.
+ * @example
+ * ```ts
+ * import { getPhysicsTier } from 'aekasha/physics';
+ *
+ * declare const crateId: number;
+ * const { tier, pending } = getPhysicsTier(crateId);
+ * if (tier === 'REMOVED' && pending === null) console.log('the crate is out of the world');
+ * ```
  */
 export const getPhysicsTier = (
   entityId: number,
@@ -245,7 +243,7 @@ const showRemovedPose = (world: ECSWorld, entityId: number, pose: RigidBodyPose 
 const removeFromWorld = (world: ECSWorld, entityId: number, data: PhysicsSimTierData) => {
   const bodyId = data.body.id;
   // A joint made since the request (getTierRefusal checked then)
-  if (bodyHasJoints(bodyId)) {
+  if (isBodyJointed(bodyId)) {
     if (IS_DEBUG_ENV) {
       lwarn(`requestPhysicsTier: entity ${entityId} got joints, it stays ${data.tier}.`);
     }

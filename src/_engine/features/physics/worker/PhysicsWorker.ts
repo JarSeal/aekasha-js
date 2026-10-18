@@ -1,14 +1,13 @@
 /// <reference lib="webworker" />
 
 import type { LoopState } from '../../../kernel/loop/MainLoop';
-import type {
-  EngineAPIType,
-  PhysicsBodyActivity,
-  PhysicsState,
-  PhysicsUpProtocol,
-  WorldAPI,
-} from '../PhysicsAPITypes';
-import { PhysicsProtocolType } from '../PhysicsAPITypes';
+import type { PhysicsDownProtocol, PhysicsWorkerReply } from '../protocol/PhysicsDownProtocol';
+import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
+import type { PhysicsUpProtocol } from '../protocol/PhysicsUpProtocol';
+import type { EngineAPIType } from '../types/PhysicsBackendTypes';
+import type { PhysicsBodyActivity } from '../types/PhysicsBodyTypes';
+import type { PhysicsState } from '../types/PhysicsConfigTypes';
+import type { WorldAPI } from '../types/PhysicsWorldTypes';
 import { initPhysicsEngine } from '../PhysicsUtils';
 import { readStatsClock } from '../../../utils/StatsClock';
 import {
@@ -31,8 +30,15 @@ import { physicsSwitchColl } from './PhysicsSwitchColl';
 import { physicsSwitchJoint } from './PhysicsSwitchJoint';
 import { physicsSwitchRigid } from './PhysicsSwitchRigid';
 import { physicsSwitchWorld } from './PhysicsSwitchWorld';
+import { createWorkerScopeTransport } from '../transport/WorkerScopeTransport';
 
 const STATUS_READY_STRING = 'INIT_READY';
+/** The channel to the main thread (p614 D5): every message both ways goes through it. Its first
+ * message is initWorker's handshake. */
+const transport = createWorkerScopeTransport<
+  PhysicsDownProtocol | { status: string },
+  PhysicsUpProtocol
+>();
 let engAPI: EngineAPIType;
 let physicsWorldAPI: WorldAPI;
 let workerPhysicsState: PhysicsState | undefined;
@@ -84,19 +90,26 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
   try {
     const subType = getSubType(type);
     if (subType) {
+      // Each awaited: a switch's throw must reach the catch below, which replies ERROR
       switch (subType) {
         case 'WORLD':
           // WORLD
           return await physicsSwitchWorld(data, physicsWorldAPI, sendMessage);
         case 'RIGID':
           // RIGID BODY
-          return physicsSwitchRigid(data, physicsWorldAPI, engAPI, sendMessage, transformBuffer);
+          return await physicsSwitchRigid(
+            data,
+            physicsWorldAPI,
+            engAPI,
+            sendMessage,
+            transformBuffer
+          );
         case 'COLL':
           // COLLIDER
-          return physicsSwitchColl(data, physicsWorldAPI, engAPI, sendMessage);
+          return await physicsSwitchColl(data, physicsWorldAPI, engAPI, sendMessage);
         case 'JOINT':
           // JOINT
-          return physicsSwitchJoint(data, physicsWorldAPI, engAPI, sendMessage);
+          return await physicsSwitchJoint(data, physicsWorldAPI, engAPI, sendMessage);
         default:
           sendMessage(
             {
@@ -109,7 +122,7 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
       }
     }
 
-    switch (type) {
+    switch (data.type) {
       // EngineAPI
       case PhysicsProtocolType.STEP:
         // STEP (one-way, no response — transform results arrive via the hot-path buffer,
@@ -184,7 +197,7 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
         if (isTracking) writeBackDebugState();
         return sendMessage(
           {
-            type,
+            type: data.type,
             transportMode: resolvedUseSAB ? 'SHARED_MEMORY' : 'MESSAGE_BATCH',
             buffer,
           },
@@ -198,15 +211,15 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
         return;
       case PhysicsProtocolType.FLUSH:
         // FLUSH (ordering barrier: messages are handled in arrival order, so replying is enough)
-        return sendMessage({ type }, data);
+        return sendMessage({ type: data.type }, data);
       case PhysicsProtocolType.TAKE_SNAPSHOT:
         // TAKE_SNAPSHOT
         const snapshot = engAPI.takeSnapshot();
-        return sendMessage({ type, snapshot }, data);
+        return sendMessage({ type: data.type, snapshot }, data);
       case PhysicsProtocolType.RESTORE_SNAPSHOT:
         // RESTORE_SNAPSHOT
         physicsWorldAPI = engAPI.restoreSnapshot(data.snapshot);
-        return sendMessage({ type, worldCreated: true }, data);
+        return sendMessage({ type: data.type, worldCreated: true }, data);
       case PhysicsProtocolType.CREATE_WORLD: {
         // CREATE_WORLD
         physicsWorldAPI = engAPI.createWorld(data.gravity, data.opts);
@@ -236,7 +249,7 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
         }
         return sendMessage(
           {
-            type,
+            type: data.type,
             worldCreated: true,
             transportMode: resolvedUseSAB ? 'SHARED_MEMORY' : 'MESSAGE_BATCH',
             buffer: resolvedUseSAB ? transformBuffer.buffer : undefined,
@@ -257,7 +270,7 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
         debugTrackedRigidBodyIds = [];
         debugTrackedColliderIds = [];
         debugStateBuffer?.clear();
-        return sendMessage({ type, ...createdStatus }, data);
+        return sendMessage({ type: data.type, ...createdStatus }, data);
       }
       case PhysicsProtocolType.INIT_PHYSICS:
         // INIT_PHYSICS
@@ -272,7 +285,7 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
         if (response) physicsWorldAPI = response;
         return sendMessage(
           {
-            type,
+            type: data.type,
             worldCreated: !Boolean(data.doNotCreateWorld) && Boolean(response),
           },
           data
@@ -291,7 +304,7 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
   } catch (err) {
     let message: string | undefined = undefined;
     if (typeof err === 'string') {
-      message = err.toUpperCase();
+      message = err;
     } else if (err instanceof Error) {
       message = err.message;
     } else {
@@ -312,33 +325,23 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
   }
 };
 
-self.addEventListener('message', (event: MessageEvent<PhysicsUpProtocol>) =>
-  handleMessage(event.data)
-);
+// handleMessage never rejects: every throw replies ERROR
+transport.onMessage((data) => void handleMessage(data));
 
-const sendMessage = (
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  message: any,
-  data: PhysicsUpProtocol,
-  isError?: boolean,
-  transfer?: Transferable[]
-) => {
+const sendMessage: PhysicsWorkerReply = (message, data, isError, transfer) => {
   // If the up message has 'isOneWay: true', don't reply
   if (data.isOneWay && isError) return;
   const requestId = data.requestId;
   if (requestId === undefined) return sendMessageSimple(message, transfer);
-  return transfer
-    ? self.postMessage({ ...message, requestId }, transfer)
-    : self.postMessage({ ...message, requestId });
+  return transport.send({ ...message, requestId }, transfer);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const sendMessageSimple = (message: any, transfer?: Transferable[]) =>
-  transfer ? self.postMessage(message, transfer) : self.postMessage(message);
+const sendMessageSimple = (message: PhysicsDownProtocol, transfer?: Transferable[]) =>
+  transport.send(message, transfer);
 
 /** Writes every slotted rigid body's transform into the hot-path buffer after a step, then
- * (MESSAGE_BATCH fallback only) pushes a fresh copy to the main thread as one Transferable
- * message — never one message per body. Bodies created FIXED have no slot (p352): they never
+ * (MESSAGE_BATCH fallback only) pushes a copy of the used slots to the main thread as one
+ * Transferable message — never one message per body. Bodies created FIXED have no slot (p352): they never
  * move under simulation, and an explicit reposition (setTranslation/setRotation) reaches the
  * main thread through the body's proxy, which keeps the pose it was given. */
 const writeBackTransforms = (stats?: StepStats) => {
@@ -352,17 +355,17 @@ const writeBackTransforms = (stats?: StepStats) => {
     stepStatsFloats[PHYSICS_STEP_STATS_SLOTS.SLEEPING_BODIES] = stats.sleeping;
   }
   if (!transformBuffer) return;
-  for (const id of engAPI.getAllRigidBodyIds()) {
-    const slot = transformBuffer.getSlot(id);
-    if (slot === -1) continue;
+  // The slots, not every body: a FIXED body has none (p614 W3)
+  for (let slot = 0, used = transformBuffer.getUsedSlotCount(); slot < used; slot++) {
+    const id = transformBuffer.getSlotId(slot);
+    if (id === -1) continue;
     const rb = engAPI.getRigidBodyAPIWithId(id);
-    if (!rb) continue;
-    transformBuffer.setTransform(slot, rb.pos, rb.rot);
-    transformBuffer.setVelocity(slot, rb.linvel(), rb.angvel());
+    if (rb) transformBuffer.writeSlotFrom(slot, rb);
   }
   transformBuffer.publish(stepsExecuted);
   if (!resolvedUseSAB) {
-    const copy = transformBuffer.buffer.slice(0) as ArrayBuffer;
+    // The used slots only (p614 W3): the whole bank is maxBodies × 52 B
+    const copy = transformBuffer.copyUsedBank();
     sendMessageSimple(
       {
         type: PhysicsProtocolType.TRANSFORMS_PUSH,
@@ -460,4 +463,4 @@ const getSubType = (type: PhysicsProtocolType) => {
 };
 
 // Automatically send STATUS_READY_STRING when this file is executed (handshake)
-self.postMessage({ status: STATUS_READY_STRING });
+transport.send({ status: STATUS_READY_STRING });

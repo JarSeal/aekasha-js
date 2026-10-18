@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
-import { getPhysicsWorld } from '../../../physics/PhysicsAPI';
-import type { RigidBodyAPI } from '../../../physics/PhysicsAPITypes';
+import { getPhysicsWorld } from '../../../physics/PhysicsState';
+import type { RigidBodyAPI } from '../../../physics/types/PhysicsBodyTypes';
 import { LEVEL_GROUND_NORMAL } from '../../../../kernel/render/ThreeMath';
 import { setVec } from './Casts';
 import type { DynamicCharacterContext } from './DynamicCharacterData';

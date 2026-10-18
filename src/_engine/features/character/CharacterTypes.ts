@@ -1,4 +1,4 @@
-import type { ColliderParams } from '../physics/PhysicsAPITypes';
+import type { ColliderParams } from '../physics/types/PhysicsColliderTypes';
 import type { ActorBrain, ActorController } from './ActorTypes';
 
 /**
@@ -137,7 +137,7 @@ export type CharacterBodyCollider = {
 
 /**
  * A body's kind (eg. `'HUMANOID'`), given as `bodyKind` or as the deprecated `kind` (at least
- * one; {@link getBodyKind} reads it).
+ * one; `bodyKind` wins when both are given).
  */
 export type CharacterBodyKindField =
   | {

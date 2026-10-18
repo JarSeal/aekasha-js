@@ -22,15 +22,8 @@ export const DIRECTIONS = {
  */
 export const LEVEL_GROUND_NORMAL = new THREE.Vector3(0, 1, 0);
 
-/**
- * A scratch vector shared by the kernel's synchronous helpers.
- * @internal
- * @remarks Only within one synchronous call that calls nothing else that uses it: the next user
- * overwrites it.
- */
-export const ThreeVector3 = new THREE.Vector3();
-
-// A scratch quaternion for this file's helpers
+// Scratch objects for this file's helpers
+const ThreeVector3 = new THREE.Vector3();
 const ThreeQuaternion = new THREE.Quaternion();
 
 /**

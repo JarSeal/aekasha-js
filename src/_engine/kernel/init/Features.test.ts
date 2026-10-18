@@ -9,6 +9,7 @@ import {
   type EngineFeature,
   installFeaturesAsync,
   runFeatureDebugHooksAsync,
+  runFeatureUnmountHooks,
 } from './Features';
 
 vi.mock('../../utils/Logger', () => ({ lerror: vi.fn() }));
@@ -182,6 +183,32 @@ describe('debug hooks', () => {
     expect(log).toEqual(['a', 'b']);
     await runFeatureDebugHooksAsync(host.debugAfterStartHooks);
     expect(log).toEqual(['a', 'b', 'a after start']);
+  });
+});
+
+describe('unmount hooks', () => {
+  test('run in reverse install order, each once, past a hook that throws', async () => {
+    const host = createFeatureHost(getConfig());
+    const log: string[] = [];
+    await installFeaturesAsync(
+      [
+        { id: 'a', install: (ctx) => ctx.onUnmount(() => void log.push('a')) },
+        {
+          id: 'b',
+          install: (ctx) =>
+            ctx.onUnmount(() => {
+              throw new Error('b failed');
+            }),
+        },
+        { id: 'c', install: (ctx) => ctx.onUnmount(() => void log.push('c')) },
+      ],
+      host
+    );
+    expect(log).toEqual([]);
+    runFeatureUnmountHooks(host.unmountHooks);
+    expect(log).toEqual(['c', 'a']);
+    runFeatureUnmountHooks(host.unmountHooks);
+    expect(log).toEqual(['c', 'a']);
   });
 });
 

@@ -24,7 +24,10 @@ Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every 
 - p612 Phase 1: `ComponentDataMap`'s `notExported` (`ECSCoreComponents.ts`, named by
   `ComponentData`) although the entry exports it. The interface is merged by the toolkit's and the
   app's `declare module 'aekasha'`, and TypeDoc resolves the reference to that merged symbol, which
-  has no reflection (a mapped `ComponentData` didn't change it): the Hub's extraction.
+  has no reflection (a mapped `ComponentData` didn't change it): the Hub's extraction. p614
+  Phase 7 found the same for `CharacterBrainKinds` (named by `CharacterBrainSpec`, on
+  `aekasha/character`, documented on its page), which the gym's `GymDummyBrain.ts` augments;
+  `CharacterControllerKinds`, which nothing outside the engine augments, doesn't warn.
 - p612 Phases 2-3: the scene runner stopped twice on a page reload mid-run ("Execution context was
   destroyed … navigation": `thirdPersonGymScene` `workerSab`, then `examplePhysics` `workerSab`),
   with no file touched in the second; each scene passed alone with its baseline hash. Not

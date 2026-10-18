@@ -2,23 +2,23 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 1794,
-      "total": 2286
+      "documented": 2062,
+      "total": 2382
     },
     "members": {
-      "documented": 331,
-      "total": 434
+      "documented": 890,
+      "total": 968
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 1750,
-        "total": 2223
+        "documented": 2018,
+        "total": 2319
       },
       "members": {
-        "documented": 281,
-        "total": 354
+        "documented": 840,
+        "total": 888
       }
     },
     "toolkit": {
@@ -127,8 +127,8 @@
     },
     "engine/features/character": {
       "exports": {
-        "documented": 71,
-        "total": 71
+        "documented": 72,
+        "total": 72
       },
       "members": {
         "documented": 4,
@@ -141,8 +141,8 @@
     },
     "engine/features/character/brains": {
       "exports": {
-        "documented": 12,
-        "total": 12
+        "documented": 13,
+        "total": 13
       },
       "members": {
         "documented": 0,
@@ -310,247 +310,22 @@
     },
     "engine/features/physics": {
       "exports": {
-        "documented": 167,
-        "total": 315
+        "documented": 203,
+        "total": 203
       },
       "members": {
-        "documented": 27,
-        "total": 52
+        "documented": 34,
+        "total": 34
       },
       "undocumented": {
-        "exports": [
-          "PhysicsAPI#createPhysicsWorld",
-          "PhysicsAPI#deletePhysicsWorld",
-          "PhysicsAPI#getCollider",
-          "PhysicsAPI#getJoint",
-          "PhysicsAPI#getRigidBody",
-          "PhysicsAPI#isPhysicsSteppingHeld",
-          "PhysicsAPI#restorePhysicsSnapshot",
-          "PhysicsAPI#takePhysicsSnapshot",
-          "PhysicsAPITypes#ActiveHooks",
-          "PhysicsAPITypes#CollBorderRadiusResponse",
-          "PhysicsAPITypes#CollCollisionGroupsResponse",
-          "PhysicsAPITypes#CollContainsPointResponse",
-          "PhysicsAPITypes#CollDensityResponse",
-          "PhysicsAPITypes#CollFrictionResponse",
-          "PhysicsAPITypes#CollHalfExtentsResponse",
-          "PhysicsAPITypes#CollHalfHeightResponse",
-          "PhysicsAPITypes#CollHeightsResponse",
-          "PhysicsAPITypes#CollIndicesResponse",
-          "PhysicsAPITypes#CollIsEnabledResponse",
-          "PhysicsAPITypes#CollIsSensorResponse",
-          "PhysicsAPITypes#CollIsValidResponse",
-          "PhysicsAPITypes#CollMassResponse",
-          "PhysicsAPITypes#CollNormalResponse",
-          "PhysicsAPITypes#CollRadiusResponse",
-          "PhysicsAPITypes#CollRestitutionResponse",
-          "PhysicsAPITypes#CollRotationResponse",
-          "PhysicsAPITypes#CollShapeTypeResponse",
-          "PhysicsAPITypes#CollSolverGroupsResponse",
-          "PhysicsAPITypes#CollTranslationResponse",
-          "PhysicsAPITypes#CollUserDataResponse",
-          "PhysicsAPITypes#CollVerticesResponse",
-          "PhysicsAPITypes#CollWrtParentRotationResponse",
-          "PhysicsAPITypes#CollWrtParentTranslationResponse",
-          "PhysicsAPITypes#ColliderParams",
-          "PhysicsAPITypes#ColliderProxyAPIType",
-          "PhysicsAPITypes#CreateColliderResponse",
-          "PhysicsAPITypes#CreateCollidersResponse",
-          "PhysicsAPITypes#CreateJointResponse",
-          "PhysicsAPITypes#CreateJointsResponse",
-          "PhysicsAPITypes#CreatePhysicsEntityResponse",
-          "PhysicsAPITypes#CreateRigidBodiesResponse",
-          "PhysicsAPITypes#CreateRigidBodyResponse",
-          "PhysicsAPITypes#CreateWorldResponse",
-          "PhysicsAPITypes#DebugStatePushMessage",
-          "PhysicsAPITypes#DeleteColliderResponse",
-          "PhysicsAPITypes#DeleteCollidersResponse",
-          "PhysicsAPITypes#DeleteJointResponse",
-          "PhysicsAPITypes#DeleteJointsResponse",
-          "PhysicsAPITypes#DeleteRigidBodiesResponse",
-          "PhysicsAPITypes#DeleteRigidBodyResponse",
-          "PhysicsAPITypes#DeleteWorldResponse",
-          "PhysicsAPITypes#ErrorResponse",
-          "PhysicsAPITypes#EventsPushMessage",
-          "PhysicsAPITypes#FeatureType",
-          "PhysicsAPITypes#FlushResponse",
-          "PhysicsAPITypes#InitPhysicsResponse",
-          "PhysicsAPITypes#JointAnchor1Response",
-          "PhysicsAPITypes#JointAnchor2Response",
-          "PhysicsAPITypes#JointBody1IdResponse",
-          "PhysicsAPITypes#JointBody2IdResponse",
-          "PhysicsAPITypes#JointContactsEnabledResponse",
-          "PhysicsAPITypes#JointGetUserDataResponse",
-          "PhysicsAPITypes#JointIsValidResponse",
-          "PhysicsAPITypes#JointLimitsEnabledResponse",
-          "PhysicsAPITypes#PhysRotation",
-          "PhysicsAPITypes#PhysVector",
-          "PhysicsAPITypes#PhysicsBackgroundBehavior",
-          "PhysicsAPITypes#PhysicsEngine",
-          "PhysicsAPITypes#PhysicsHooks",
-          "PhysicsAPITypes#PhysicsInterpolationMode",
-          "PhysicsAPITypes#PhysicsProtocolType",
-          "PhysicsAPITypes#PhysicsState",
-          "PhysicsAPITypes#PhysicsWorkerTarget",
-          "PhysicsAPITypes#RayColliderHitAPI",
-          "PhysicsAPITypes#RestoreSnapshotResponse",
-          "PhysicsAPITypes#RigidAdditionalSolverIterationsResponse",
-          "PhysicsAPITypes#RigidAngularDampingResponse",
-          "PhysicsAPITypes#RigidAngvelResponse",
-          "PhysicsAPITypes#RigidBodyParams",
-          "PhysicsAPITypes#RigidBodyTypeResponse",
-          "PhysicsAPITypes#RigidBodyWorkerEngine",
-          "PhysicsAPITypes#RigidColliderResponse",
-          "PhysicsAPITypes#RigidDetachResponse",
-          "PhysicsAPITypes#RigidDominanceGroupResponse",
-          "PhysicsAPITypes#RigidEffectiveInvMassResponse",
-          "PhysicsAPITypes#RigidGetUserDataResponse",
-          "PhysicsAPITypes#RigidGravityScaleResponse",
-          "PhysicsAPITypes#RigidInvMassResponse",
-          "PhysicsAPITypes#RigidInvPrincipalInertiaResponse",
-          "PhysicsAPITypes#RigidIsCcdEnabledResponse",
-          "PhysicsAPITypes#RigidIsDynamicResponse",
-          "PhysicsAPITypes#RigidIsEnabledResponse",
-          "PhysicsAPITypes#RigidIsFixedResponse",
-          "PhysicsAPITypes#RigidIsKinematicResponse",
-          "PhysicsAPITypes#RigidIsMovingResponse",
-          "PhysicsAPITypes#RigidIsSleepingResponse",
-          "PhysicsAPITypes#RigidIsValidResponse",
-          "PhysicsAPITypes#RigidLinearDampingResponse",
-          "PhysicsAPITypes#RigidLinvelResponse",
-          "PhysicsAPITypes#RigidLocalComResponse",
-          "PhysicsAPITypes#RigidMassResponse",
-          "PhysicsAPITypes#RigidNextRotationResponse",
-          "PhysicsAPITypes#RigidNextTranslationResponse",
-          "PhysicsAPITypes#RigidNumCollidersResponse",
-          "PhysicsAPITypes#RigidPrincipalInertiaLocalFrameResponse",
-          "PhysicsAPITypes#RigidPrincipalInertiaResponse",
-          "PhysicsAPITypes#RigidReadPositionsResponse",
-          "PhysicsAPITypes#RigidReattachResponse",
-          "PhysicsAPITypes#RigidRotationResponse",
-          "PhysicsAPITypes#RigidSoftCcdPredictionResponse",
-          "PhysicsAPITypes#RigidTranslationResponse",
-          "PhysicsAPITypes#RigidUserForceResponse",
-          "PhysicsAPITypes#RigidUserTorqueResponse",
-          "PhysicsAPITypes#RigidVelocityAtPointResponse",
-          "PhysicsAPITypes#RigidWorldComResponse",
-          "PhysicsAPITypes#SetDebugStateTrackingResponse",
-          "PhysicsAPITypes#ShapeCastHitAPI",
-          "PhysicsAPITypes#SolverFlags",
-          "PhysicsAPITypes#TakeSnapshotResponse",
-          "PhysicsAPITypes#TransformsPushMessage",
-          "PhysicsAPITypes#WorldCastRayAndGetNormalResponse",
-          "PhysicsAPITypes#WorldCastRayResponse",
-          "PhysicsAPITypes#WorldCastShapeResponse",
-          "PhysicsAPITypes#WorldContactPairsResponse",
-          "PhysicsAPITypes#WorldGravityResponse",
-          "PhysicsAPITypes#WorldIntersectionPairResponse",
-          "PhysicsAPITypes#WorldIntersectionPairsWithResponse",
-          "PhysicsAPITypes#WorldIntersectionsWithRayResponse",
-          "PhysicsAPITypes#WorldLengthUnitResponse",
-          "PhysicsAPITypes#WorldMaxCcdSubstepsResponse",
-          "PhysicsAPITypes#WorldNumInternalPgsIterationsResponse",
-          "PhysicsAPITypes#WorldNumSolverIterationsResponse",
-          "PhysicsAPITypes#WorldProxyAPIType",
-          "PhysicsAPITypes#WorldTimestepResponse",
-          "PhysicsEntity#disposePhysicsEntity",
-          "PhysicsEntity#getPhysicsEntityByAppId",
-          "PhysicsStepStatsBuffer#PHYSICS_STEP_STATS_FIELD_COUNT",
-          "PhysicsTierPolicy#DEFAULT_TIER_POLICY_CADENCE",
-          "PhysicsTierPolicy#DEFAULT_TIER_POLICY_INTERVAL",
-          "PhysicsTierTypes#PhysicsTierBucket",
-          "PhysicsUtils#ValidProtocolTypes",
-          "PhysicsUtils#getCollOrRigidId",
-          "PhysicsUtils#getColliderShapeName",
-          "PhysicsUtils#getEngineAPI",
-          "PhysicsUtils#getPhysicsEngine",
-          "PhysicsUtils#getPhysicsEngineKey",
-          "PhysicsUtils#initPhysicsEngine",
-          "PhysicsUtils#setPhysicsPauseTime"
-        ],
-        "members": [
-          "PhysicsAPI#PhysicsCapacityError.constructor",
-          "PhysicsAPI#PhysicsCapacityError.maxBodies",
-          "PhysicsAPITypes#ContactForceEventSnapshot.constructor",
-          "PhysicsAPITypes#PhysRotation.w",
-          "PhysicsAPITypes#PhysRotation.x",
-          "PhysicsAPITypes#PhysRotation.y",
-          "PhysicsAPITypes#PhysRotation.z",
-          "PhysicsAPITypes#PhysVector.x",
-          "PhysicsAPITypes#PhysVector.y",
-          "PhysicsAPITypes#PhysVector.z",
-          "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.buffer",
-          "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.constructor",
-          "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.flags",
-          "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.getBodyFlags",
-          "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.getColliderFlags",
-          "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.maxSlots",
-          "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.setBodyFlags",
-          "PhysicsDebugStateBuffer#PhysicsDebugStateBuffer.setColliderFlags",
-          "PhysicsTransformBuffer#PhysicsTransformBuffer.bankCount",
-          "PhysicsTransformBuffer#PhysicsTransformBuffer.constructor",
-          "PhysicsTransformBuffer#PhysicsTransformBuffer.getAngvel",
-          "PhysicsTransformBuffer#PhysicsTransformBuffer.getLinvel",
-          "PhysicsTransformBuffer#PhysicsTransformBuffer.getPosition",
-          "PhysicsTransformBuffer#PhysicsTransformBuffer.getRotation",
-          "PhysicsTransformBuffer#PhysicsTransformBuffer.maxBodies"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "engine/features/physics/backends": {
       "exports": {
-        "documented": 0,
+        "documented": 1,
         "total": 1
-      },
-      "members": {
-        "documented": 0,
-        "total": 0
-      },
-      "undocumented": {
-        "exports": [
-          "Engines#ENGINES"
-        ],
-        "members": []
-      }
-    },
-    "engine/features/physics/backends/rapier": {
-      "exports": {
-        "documented": 12,
-        "total": 31
-      },
-      "members": {
-        "documented": 0,
-        "total": 0
-      },
-      "undocumented": {
-        "exports": [
-          "EngineRapier#createCollider",
-          "EngineRapier#createColliders",
-          "EngineRapier#createJoint",
-          "EngineRapier#createJoints",
-          "EngineRapier#createRigidBodies",
-          "EngineRapier#createRigidBody",
-          "EngineRapier#createWorld",
-          "EngineRapier#debugRender",
-          "EngineRapier#deleteCollider",
-          "EngineRapier#deleteColliders",
-          "EngineRapier#deleteJoint",
-          "EngineRapier#deleteJoints",
-          "EngineRapier#deleteRigidBodies",
-          "EngineRapier#deleteRigidBody",
-          "EngineRapier#deleteWorld",
-          "EngineRapier#init",
-          "EngineRapier#restoreSnapshot",
-          "EngineRapier#step",
-          "EngineRapier#takeSnapshot"
-        ],
-        "members": []
-      }
-    },
-    "engine/features/physics/import": {
-      "exports": {
-        "documented": 3,
-        "total": 3
       },
       "members": {
         "documented": 0,
@@ -561,9 +336,79 @@
         "members": []
       }
     },
-    "engine/features/physics/worker": {
+    "engine/features/physics/backends/rapier": {
       "exports": {
+        "documented": 58,
+        "total": 58
+      },
+      "members": {
         "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/features/physics/backends/rapier/proxies": {
+      "exports": {
+        "documented": 6,
+        "total": 6
+      },
+      "members": {
+        "documented": 265,
+        "total": 265
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/features/physics/import": {
+      "exports": {
+        "documented": 7,
+        "total": 7
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/features/physics/protocol": {
+      "exports": {
+        "documented": 108,
+        "total": 108
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/features/physics/proxies": {
+      "exports": {
+        "documented": 4,
+        "total": 4
+      },
+      "members": {
+        "documented": 265,
+        "total": 265
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/features/physics/transport": {
+      "exports": {
+        "documented": 4,
         "total": 4
       },
       "members": {
@@ -571,12 +416,35 @@
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "PhysicsSwitchColl#physicsSwitchColl",
-          "PhysicsSwitchJoint#physicsSwitchJoint",
-          "PhysicsSwitchRigid#physicsSwitchRigid",
-          "PhysicsSwitchWorld#physicsSwitchWorld"
-        ],
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/features/physics/types": {
+      "exports": {
+        "documented": 52,
+        "total": 52
+      },
+      "members": {
+        "documented": 22,
+        "total": 22
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/features/physics/worker": {
+      "exports": {
+        "documented": 4,
+        "total": 4
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
         "members": []
       }
     },
@@ -842,8 +710,8 @@
     },
     "engine/kernel/init": {
       "exports": {
-        "documented": 21,
-        "total": 21
+        "documented": 24,
+        "total": 24
       },
       "members": {
         "documented": 0,
@@ -922,8 +790,8 @@
     },
     "engine/kernel/mesh": {
       "exports": {
-        "documented": 13,
-        "total": 13
+        "documented": 12,
+        "total": 12
       },
       "members": {
         "documented": 0,
@@ -936,8 +804,8 @@
     },
     "engine/kernel/render": {
       "exports": {
-        "documented": 89,
-        "total": 89
+        "documented": 88,
+        "total": 88
       },
       "members": {
         "documented": 0,

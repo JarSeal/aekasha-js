@@ -43,7 +43,7 @@ The geometry side of the epic. It covers:
   - `scale = {bboxX, scale.y, bboxZ}`;
   - refuses Draco.
   - **Known bug (from p990):** the collider is centred on the node origin, but a mesh whose bbox isn't centred sits ~0.5 units off. Up to ~190 heights near one edge differ from the mesh by ≤ 0.22 units, probably from the vertex order after `mergeVertices`.
-- **Physics:** `createPhysicsEntity({ type: 'HEIGHTFIELD', nrows, ncols, heights, scale }, { rigidType: 'FIXED' }, target)`. Rapier's `HeightFieldData` is column-major (`EngineRapier.ts:396-419`, `:515`).
+- **Physics:** `createPhysicsEntity({ type: 'HEIGHTFIELD', nrows, ncols, heights, scale }, { rigidType: 'FIXED' }, target)`. Rapier's `HeightFieldData` is column-major (`paramsToShape`'s `HEIGHTFIELD` case, `features/physics/backends/rapier/RapierShapes.ts`, since p614).
 - **Scene loads hold physics stepping** until every `createPhysicsEntity` settles (p101), so blocks spawned in `scene()` are deterministic.
 
 ---

@@ -17,6 +17,51 @@ API and the ECS still believe in.
 
 ## Context (grounded in code)
 
+**Where it lives since p614 (2026-10-18).** The grounding below predates p608's move and p614's
+split: its paths and line numbers are the old files'. The code it names moved as it was (p614
+D12), so read each item at its new place, by name:
+
+- `core/Physics/PhysicsAPITypes.ts` → `features/physics/types/` (`WorldAPI` and its four snapshot
+  `@CHORE`s in `PhysicsWorldTypes.ts`, `EngineAPIType` in `PhysicsBackendTypes.ts`; the commented-out
+  controllers are still in `PhysicsWorldTypes.ts`) and `protocol/` (`TAKE_SNAPSHOT = 2` /
+  `RESTORE_SNAPSHOT = 3` in `PhysicsProtocolType.ts`, unchanged).
+- `core/PhysicsAPI.ts` → the facade's modules: `takePhysicsSnapshot` / `restorePhysicsSnapshot`
+  (with their `@TODO`s), `deletePhysicsWorld` and `initPhysics` in `PhysicsWorld.ts`; the id → API
+  maps and the worker event-callback registries in `PhysicsRegistry.ts`; `transformBuffer` on
+  `PhysicsState.ts`' `facade`; `messageWorker` / `messageWorkerAsync` in `PhysicsMessaging.ts`;
+  `WorldProxyAPI` (its `_cache`) and `RigidBodyProxyAPI` in `proxies/`.
+- `core/Physics/EngineRapier.ts` → `backends/rapier/`: the module-level `takeSnapshot` /
+  `restoreSnapshot` (still the static `Rapier` import) in `RapierWorld.ts`; the id → handle maps,
+  `handleToColliderId` / `handleToJointId`, `detachedBodies` and the `getRigidBody` / `getCollider` /
+  `getJoint` resolvers in `RapierState.ts` (on its `backend` object or module-level); the
+  `userData` writes (with `lockRotations*`) in `RapierBodies.ts`; the engine proxy classes, their
+  `private rb` / `coll` / `joint` and `restoreSnapshotSync` / `takeSnapshotSync` in
+  `proxies/Engine*ProxyAPI.ts`.
+- `workers/physicsWorker.ts` → `features/physics/worker/PhysicsWorker.ts` (the snapshot cases);
+  `physicsSwitchRigid.ts` / `physicsSwitchColl.ts` → `worker/PhysicsSwitchRigid.ts` (`allocateBodySlot`)
+  / `PhysicsSwitchColl.ts`.
+- `PhysicsManager.ts` → `features/physics/PhysicsEntity.ts` (the `BODY_*` writes,
+  `physicsToTransformSystem`; `PhysicsTiers.ts` writes `BODY_STATIC` too) and
+  `PhysicsInterpolation.ts` (the interpolation states, now with `resetPhysicsInterpolationHistory`
+  per entity). `registerOnAllSceneEnterings` is gone: physics takes part in scene loads through its
+  scene hooks (`physicsSceneHooks`, `PhysicsFeature.ts`), and `addVisibilityChangeFn` is
+  `onVisibilityChange` (`kernel/loop/MainLoop.ts`).
+- `core/Debug/_dbg__PhysicsAPI.ts` → `features/physics/debug/_dbg__PhysicsAPI.ts`;
+  `core/ECS.ts` → `kernel/ecs/ECS.ts`; `core/Character/DynamicCharacter.ts` →
+  `features/character/controllers/dynamic/DynamicCharacter.ts`.
+
+What p614 changed in what this plan relies on:
+
+- **Fixed:** `deletePhysicsWorld` now clears the facade's maps and event registries
+  (`clearPhysicsRegistry`, marking each API object `isBeingDeleted`), so the second pre-existing
+  bug below is gone. `initPhysics`' always-truthy `worldCreated` is fixed (it reads the reply's
+  field). A worker request now rejects on the worker's `ERROR` and on `stopPhysics`.
+- **Transferables:** every message goes through a `PhysicsTransport` (`transport/`), whose `send`
+  takes `transfer?`; the facade's `messageWorker*` still pass none (decision 9 stands).
+- `restorePhysicsSnapshot` already calls `breakSimHistory()` (`PhysicsStepping.ts`), and the
+  interpolation and the tier policy reset their histories on its epoch
+  (`getPhysicsSimHistoryEpoch`): the `interpolationStates` item below no longer applies.
+
 - **A dead, broken skeleton already exists, and nothing outside the physics files touches it.**
   `PhysicsProtocolType.TAKE_SNAPSHOT = 2` / `RESTORE_SNAPSHOT = 3`
   (`src/_engine/core/Physics/PhysicsAPITypes.ts:2705-2706`, ENGINE band 0–104);

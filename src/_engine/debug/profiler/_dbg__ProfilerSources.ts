@@ -2,19 +2,22 @@ import { ECSSystemStage } from '../../kernel/loop/SystemStages';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { getECSWorld } from '../../kernel/ecs/ECS';
 import {
+  getPhysicsRayStats,
+  isPhysicsRayStatsEnabled,
+  setPhysicsRayStatsEnabled,
+} from '../../features/physics/PhysicsQueryStats';
+import { getPhysicsObjectCounts } from '../../features/physics/PhysicsRegistry';
+import { getPhysicsState, isPhysicsWorldEnabled } from '../../features/physics/PhysicsState';
+import {
   getLastPhysicsStepDuration,
   getLastPhysicsStepMessagingLatency,
-  getPhysicsObjectCounts,
-  getPhysicsRayStats,
-  getPhysicsState,
+} from '../../features/physics/PhysicsStepStats';
+import {
   getPhysicsSubStepTotal,
-  getResolvedTransportMode,
-  isPhysicsRayStatsEnabled,
   isPhysicsStepStatsEnabled,
-  isPhysicsWorldEnabled,
-  setPhysicsRayStatsEnabled,
   setPhysicsStepStatsEnabled,
-} from '../../features/physics/PhysicsAPI';
+} from '../../features/physics/PhysicsStepping';
+import { getResolvedTransportMode } from '../../features/physics/PhysicsWorld';
 import {
   getRayCastStats,
   isRayCastStatsEnabled,

@@ -12,7 +12,9 @@ import { ECSSystemStage } from '../../kernel/loop/SystemStages';
 import { existsOrThrow } from '../../utils/Assert';
 import { lerror, lwarn } from '../../utils/Logger';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
+import { getMainCamera } from '../../kernel/camera/Camera';
 import {
+  DEFAULT_ECS_WORLD_ID,
   type ECSWorld,
   getAllECSWorlds,
   getECSWorld,
@@ -20,58 +22,62 @@ import {
 } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import type { IComponentStorage } from '../../kernel/ecs/ECSComponentStorage';
+import { readBodyPositionsAtStep, readBodyPositionsSync } from './PhysicsBodies';
+import { forEachJointBodyPair, hasJoints } from './PhysicsJoints';
+import { getPhysicsState } from './PhysicsState';
 import {
   addPhysicsStepGate,
-  forEachJointBodyPair,
   getPhysicsSimHistoryEpoch,
-  getPhysicsState,
   getPhysicsSubStepIndex,
-  hasJoints,
-  readBodyPositionsAtStep,
-  readBodyPositionsSync,
-} from './PhysicsAPI';
+} from './PhysicsStepping';
 import type {
   PhysicsSimTierData,
   PhysicsTier,
   PhysicsTierPolicy,
   PhysicsTierPolicyCadence,
 } from './PhysicsTierTypes';
-import { getPhysicsBodyOwner } from './PhysicsEntity';
+import { getPhysicsBodyOwner, getPhysicsEntityBody } from './PhysicsEntity';
 import { requestPhysicsTier } from './PhysicsTiers';
 import type { FeatureContext } from '../../kernel/init/Features';
 
-export type {
-  PhysicsTierPolicy,
-  PhysicsTierPolicyCadence,
-  PhysicsTierRing,
-} from './PhysicsTierTypes';
-
+// The defaults PhysicsTierPolicy's fields name
 const DEFAULT_HYSTERESIS = 0.15;
-export const DEFAULT_TIER_POLICY_CADENCE: PhysicsTierPolicyCadence = 'STEPS';
-export const DEFAULT_TIER_POLICY_INTERVAL = 10;
-/** The determinism probe's freeze source. A STEPS policy ignores it: it's deterministic, so the
- * probe tests it instead of freezing it. */
+const DEFAULT_TIER_POLICY_CADENCE: PhysicsTierPolicyCadence = 'STEPS';
+const DEFAULT_TIER_POLICY_INTERVAL = 10;
+/**
+ * The determinism probe's freeze source. A STEPS policy ignores it: it's deterministic, so the
+ * probe tests it instead of freezing it.
+ * @internal
+ */
 export const DETERMINISM_PROBE_FREEZE_SOURCE = 'DETERMINISM_PROBE';
 /** STEPS: in APP_PHYSICS_STEP before physicsTierSystem (100; higher runs first), so a decision's
  * requests apply in the sub-step it's made in. */
 const POLICY_STEP_SYSTEM_ORDER = 110;
 
-/** STEPS: the positions measured on step `step`, decided on step `applyAt`. */
+/** STEPS: the positions measured on step `step`, decided on step `applyAt`. Pooled with its
+ * arrays (measurementPool), so a pass allocates only a WORKER_THREAD request. */
 type Measurement = {
   step: number;
   applyAt: number;
-  /** The members measured, in entity id order, and their bodies; with a focus entity that has a
-   * body, its body is the last id of `bodyIds`. */
-  entityIds: number[];
+  /** Bumped when it goes back to the pool (decided or dropped): a worker reply to an earlier use
+   * is ignored. */
+  use: number;
+  /** The members measured, in entity id order: the first `count`. Entity ids are int32 (ECS.ts'
+   * packing), and a typed array's read stays a small integer, not a boxed double. */
+  entityIds: Int32Array;
+  count: number;
+  /** The members' bodies (`count` ids); with a focus entity that has a body, its body is the
+   * last id. */
   bodyIds: number[];
-  /** The focus when it isn't a body read with the members. */
-  focus: THREE.Vector3 | null;
+  /** The focus when it isn't a body read with the members (`hasFocus`). */
+  focus: THREE.Vector3;
+  hasFocus: boolean;
   /** x, y, z per body id; null until the worker's reply (WORKER_THREAD). */
   positions: Float32Array | null;
+  /** MAIN_THREAD: what `positions` is read into, kept with the measurement. */
+  positionsBuffer: Float32Array | null;
   /** WORKER_THREAD: holds stepping before `applyAt` until the reply is in. */
   releaseGate: (() => void) | null;
-  /** Dropped (new world, policy replaced): a late reply is ignored. */
-  dropped: boolean;
 };
 
 type ResolvedPolicy = {
@@ -135,13 +141,36 @@ const validatePolicy = (policy: PhysicsTierPolicy) => {
   if (cadence !== 'STEPS' && cadence !== 'FRAMES') fail(`unknown cadence ${cadence}`);
 };
 
-/** Drops a policy's pending measurements and releases their gates. */
+/** The measurements not in use, of every policy. */
+const measurementPool: Measurement[] = [];
+
+const takeMeasurement = (): Measurement =>
+  measurementPool.pop() ?? {
+    step: 0,
+    applyAt: 0,
+    use: 0,
+    entityIds: new Int32Array(0),
+    count: 0,
+    bodyIds: [],
+    focus: new THREE.Vector3(),
+    hasFocus: false,
+    positions: null,
+    positionsBuffer: null,
+    releaseGate: null,
+  };
+
+/** Puts a measurement back in the pool: its gate is released, and a late reply to it ignored. */
+const releaseMeasurement = (measurement: Measurement) => {
+  measurement.releaseGate?.();
+  measurement.releaseGate = null;
+  measurement.positions = null;
+  measurement.use++;
+  measurementPool.push(measurement);
+};
+
+/** Drops a policy's pending measurements (new world, policy replaced) and releases their gates. */
 const dropMeasurements = (policy: ResolvedPolicy) => {
-  for (const measurement of policy.pending) {
-    measurement.dropped = true;
-    measurement.releaseGate?.();
-    measurement.releaseGate = null;
-  }
+  for (const measurement of policy.pending) releaseMeasurement(measurement);
   policy.pending.length = 0;
 };
 
@@ -181,6 +210,9 @@ const deletePolicy = (world: ECSWorld) => {
  * Removing the policy, or an entity from it, leaves its tier as it is. The determinism probe
  * freezes a `FRAMES` policy, and tests a `STEPS` one.
  * @example
+ * ```ts
+ * import { setPhysicsTierPolicy } from 'aekasha/physics';
+ *
  * setPhysicsTierPolicy({
  *   rings: [
  *     { tier: 'FULL', within: 60 },
@@ -188,7 +220,9 @@ const deletePolicy = (world: ECSWorld) => {
  *     { tier: 'DISABLED', within: 400 },
  *     { tier: 'REMOVED' }, // beyond
  *   ],
+ *   sceneId: 'myScene', // removed when the scene is left
  * });
+ * ```
  */
 export const setPhysicsTierPolicy = (policy: PhysicsTierPolicy | null, ecsWorld?: ECSWorld) => {
   const world = getWorld(ecsWorld, 'setPhysicsTierPolicy');
@@ -215,7 +249,10 @@ export const setPhysicsTierPolicy = (policy: PhysicsTierPolicy | null, ecsWorld?
   });
 };
 
-/** `world`'s physics tier policy as it was set, or null. */
+/**
+ * `world`'s physics tier policy as it was set, or null (the debug tab's).
+ * @internal
+ */
 export const getPhysicsTierPolicy = (ecsWorld?: ECSWorld): Readonly<PhysicsTierPolicy> | null =>
   policies.get(getWorld(ecsWorld, 'getPhysicsTierPolicy'))?.def ?? null;
 
@@ -223,6 +260,7 @@ export const getPhysicsTierPolicy = (ecsWorld?: ECSWorld): Readonly<PhysicsTierP
  * `world`'s policy as it runs, or null without one: its cadence and interval (defaults applied),
  * and with `STEPS` the step of its latest measurement (-1 before the first) and how many
  * measurements wait for their decision step. For debug readouts.
+ * @internal
  */
 export const getPhysicsTierPolicyStatus = (ecsWorld?: ECSWorld) => {
   const policy = policies.get(getWorld(ecsWorld, 'getPhysicsTierPolicyStatus'));
@@ -239,6 +277,16 @@ export const getPhysicsTierPolicyStatus = (ecsWorld?: ECSWorld) => {
  * Makes `entityId`'s tier follow its world's policy, or stops it (its tier stays as it is). For
  * an entity created without createPhysicsEntity's `tierPolicy` option. Returns false (with a
  * debug-env warning) for an entity without a body created DYNAMIC by createPhysicsEntity.
+ * @example
+ * ```ts
+ * import { createMeshEntity } from 'aekasha';
+ * import { createPhysicsEntity, setPhysicsTierPolicyMember } from 'aekasha/physics';
+ *
+ * declare const rockMesh: Parameters<typeof createMeshEntity>[0];
+ * const rockId = createMeshEntity(rockMesh);
+ * await createPhysicsEntity({ type: 'BALL', radius: 1 }, { rigidType: 'DYNAMIC' }, rockId);
+ * setPhysicsTierPolicyMember(rockId, true);
+ * ```
  */
 export const setPhysicsTierPolicyMember = (
   entityId: number,
@@ -251,7 +299,7 @@ export const setPhysicsTierPolicyMember = (
     return true;
   }
   if (world.hasComponent(entityId, ComponentType.PHYSICS_TIER_POLICY)) return true;
-  const body = getEntityBody(world, entityId);
+  const body = getPhysicsEntityBody(world, entityId);
   const owner = body ? getPhysicsBodyOwner(body.id) : undefined;
   if (owner?.world !== world || owner.entityId !== entityId || owner.rigidType !== 'DYNAMIC') {
     if (IS_DEBUG_ENV) {
@@ -273,6 +321,7 @@ export const setPhysicsTierPolicyMember = (
  * freezes on its own, and the policy runs again once no source holds it (the determinism probe
  * and the debug tab use their own). A frozen `STEPS` policy measures nothing, but decides what it
  * measured before. The probe's source (DETERMINISM_PROBE_FREEZE_SOURCE) doesn't freeze `STEPS`.
+ * @internal
  */
 export const setPhysicsTierPolicyFrozen = (
   frozen: boolean,
@@ -298,32 +347,38 @@ const getHoldingSources = (world: ECSWorld): string[] => {
   return [...sources].filter((s) => !isSteps || s !== DETERMINISM_PROBE_FREEZE_SOURCE);
 };
 
-/** Whether `world`'s policy is frozen (a `STEPS` policy isn't by the determinism probe), or with
- * `source`, whether that source froze it. */
+/**
+ * Whether `world`'s policy is frozen (a `STEPS` policy isn't by the determinism probe), or with
+ * `source`, whether that source froze it.
+ * @internal
+ */
 export const isPhysicsTierPolicyFrozen = (ecsWorld?: ECSWorld, source?: string) => {
   const world = getWorld(ecsWorld, 'isPhysicsTierPolicyFrozen');
   if (source !== undefined) return freezeSources.get(world)?.has(source) ?? false;
   return getHoldingSources(world).length > 0;
 };
 
-/** The sources that freeze `world`'s policy, in the order they froze it (empty when it runs; a
- * `STEPS` policy leaves the determinism probe's out). */
+/**
+ * The sources that freeze `world`'s policy, in the order they froze it (empty when it runs; a
+ * `STEPS` policy leaves the determinism probe's out).
+ * @internal
+ */
 export const getPhysicsTierPolicyFreezeSources = (ecsWorld?: ECSWorld): string[] =>
   getHoldingSources(getWorld(ecsWorld, 'getPhysicsTierPolicyFreezeSources'));
 
-/** The entity's body, also while REMOVED (no bucket component then). */
-const getEntityBody = (world: ECSWorld, entityId: number) =>
-  world.getRigidBody(entityId) ??
-  world.getComponent(entityId, ComponentType.PHYSICS_SIM_TIER)?.body;
-
 const _focus = new THREE.Vector3();
 
-/** The main camera's position, the default focus (getMainCamera() reads the default world; a
- * policy reads its own world's). */
+/** The main camera's position, the default focus: the default world's main camera is cached
+ * (getMainCamera, p612 D7), another world's is queried. */
 const readCameraFocus = (world: ECSWorld, out: THREE.Vector3): THREE.Vector3 | null => {
-  const cameraId = world.getEntitiesWith(ComponentType.TAG_IS_MAIN_CAMERA).next().value;
-  if (cameraId === undefined) return null;
-  const camera = world.getComponent(cameraId, ComponentType.OBJECT3D)?.value;
+  let camera: THREE.Object3D | undefined;
+  if (world.id === DEFAULT_ECS_WORLD_ID) {
+    camera = getMainCamera();
+  } else {
+    const cameraId = world.getEntitiesWith(ComponentType.TAG_IS_MAIN_CAMERA).next().value;
+    if (cameraId !== undefined)
+      camera = world.getComponent(cameraId, ComponentType.OBJECT3D)?.value;
+  }
   return camera ? camera.getWorldPosition(out) : null;
 };
 
@@ -348,25 +403,25 @@ const ringIndexFor = (distSq: number, radiiSq: number[]) => {
   return radiiSq.length - 1;
 };
 
-/** Per pass: member entity id → the ring it should be in. Reused. */
-const desiredRings = new Map<number, number>();
-/** Per pass: member entity id → its joint group (a root body id), for jointed members only. */
-const jointGroups = new Map<number, number>();
+// Per pass, in measurement order (the order the requests go out in): each member decided on, the
+// ring it should be in, and its joint group (a root body id; NO_GROUP when it has none). Written
+// by index and never shrunk, so a pass allocates nothing; `passCount` entries are this pass's.
+const NO_GROUP = -1;
+const passEntityIds: number[] = [];
+const passRings: number[] = [];
+const passGroups: number[] = [];
+let passCount = 0;
 /** Per pass: joint group → the tier requestPhysicsTier refused it. */
 const refusedGroups = new Map<number, PhysicsTier>();
 
 /**
- * Gives every joint group with members in `desired` the ring of its nearest member, and records
- * each jointed member's group in `jointGroups`. Groups are linked through DYNAMIC
+ * Gives every joint group with members in this pass the ring of its nearest member, and records
+ * each jointed member's group in `passGroups`. Groups are linked through DYNAMIC
  * createPhysicsEntity bodies of `world`, as requestPhysicsTier's are.
  * Without this, a member that stays put wouldn't request, and another member's request would
  * move the whole group away from it (and back on the next pass).
  */
-const unifyJointGroups = (
-  world: ECSWorld,
-  desired: Map<number, number>,
-  tierStorage: IComponentStorage<PhysicsSimTierData>
-) => {
+const unifyJointGroups = (world: ECSWorld, tierStorage: IComponentStorage<PhysicsSimTierData>) => {
   const parent = new Map<number, number>();
   const find = (bodyId: number): number => {
     let root = bodyId;
@@ -400,18 +455,15 @@ const unifyJointGroups = (
   const bodyOf = (entityId: number) =>
     (world.getRigidBody(entityId) ?? tierStorage.get(entityId)?.body)?.id;
   const groupRings = new Map<number, number>();
-  for (const [entityId, ring] of desired) {
-    const bodyId = bodyOf(entityId);
+  for (let i = 0; i < passCount; i++) {
+    const bodyId = bodyOf(passEntityIds[i]);
     if (bodyId === undefined || !parent.has(bodyId)) continue;
     const root = find(bodyId);
-    groupRings.set(root, Math.min(groupRings.get(root) ?? ring, ring));
+    passGroups[i] = root;
+    groupRings.set(root, Math.min(groupRings.get(root) ?? passRings[i], passRings[i]));
   }
-  for (const entityId of desired.keys()) {
-    const bodyId = bodyOf(entityId);
-    if (bodyId === undefined || !parent.has(bodyId)) continue;
-    const root = find(bodyId);
-    desired.set(entityId, groupRings.get(root)!);
-    jointGroups.set(entityId, root);
+  for (let i = 0; i < passCount; i++) {
+    if (passGroups[i] !== NO_GROUP) passRings[i] = groupRings.get(passGroups[i])!;
   }
 };
 
@@ -431,8 +483,7 @@ const decide = (
   const tierStorage = world.getStorage(ComponentType.PHYSICS_SIM_TIER);
   const { tiers, withinSq, leaveSq } = policy;
 
-  desiredRings.clear();
-  jointGroups.clear();
+  passCount = 0;
   for (let i = 0; i < entityIds.length; i++) {
     const entityId = entityIds[i];
     const member = entityId >= 0 ? members.get(entityId) : undefined;
@@ -450,14 +501,18 @@ const decide = (
     if (member.placed && currentRing >= 0 && ring > currentRing) {
       ring = Math.max(currentRing, ringIndexFor(distSq, leaveSq));
     }
-    desiredRings.set(entityId, ring);
+    passEntityIds[passCount] = entityId;
+    passRings[passCount] = ring;
+    passGroups[passCount] = NO_GROUP;
+    passCount++;
     member.placed = true;
   }
-  if (hasJoints()) unifyJointGroups(world, desiredRings, tierStorage);
+  if (hasJoints()) unifyJointGroups(world, tierStorage);
 
-  for (const [entityId, ring] of desiredRings) {
+  for (let i = 0; i < passCount; i++) {
+    const entityId = passEntityIds[i];
     const member = members.get(entityId)!;
-    const tier = tiers[ring];
+    const tier = tiers[passRings[i]];
     // Read again: a joint group member's request may have moved this one already
     if (tier === (tierStorage.get(entityId)?.target ?? 'FULL')) {
       member.refusedTier = null;
@@ -466,22 +521,22 @@ const decide = (
     if (member.refusedTier === tier) continue;
     // requestPhysicsTier refuses a whole joint group: its other members aren't asked (or warned
     // about) again
-    const group = jointGroups.get(entityId);
-    if (group !== undefined && refusedGroups.get(group) === tier) {
+    const group = passGroups[i];
+    if (group !== NO_GROUP && refusedGroups.get(group) === tier) {
       member.refusedTier = tier;
       continue;
     }
     member.refusedTier = requestPhysicsTier(entityId, tier, world) ? null : tier;
-    if (member.refusedTier && group !== undefined) refusedGroups.set(group, tier);
+    if (member.refusedTier && group !== NO_GROUP) refusedGroups.set(group, tier);
   }
-  desiredRings.clear();
-  jointGroups.clear();
-  refusedGroups.clear();
+  // A clear allocates a new table, also for an empty map
+  if (refusedGroups.size) refusedGroups.clear();
 };
 
 // --- FRAMES ---------------------------------------------------------------------------------
 
-/** FRAMES: the members and their TRANSFORM positions, refilled every pass. */
+/** FRAMES: the members and their TRANSFORM positions, refilled by index every pass (a length of
+ * 0 would free their storage). */
 const frameEntityIds: number[] = [];
 const framePositions: number[] = [];
 
@@ -491,14 +546,18 @@ const runFramePass = (world: ECSWorld, policy: ResolvedPolicy) => {
   const focus = resolveFrameFocus(world, policy);
   if (!focus) return;
   const transforms = world.getStorage(ComponentType.TRANSFORM);
-  frameEntityIds.length = 0;
-  framePositions.length = 0;
+  let count = 0;
   for (const entityId of members.keys()) {
     const position = transforms.get(entityId)?.position;
     if (!position) continue;
-    frameEntityIds.push(entityId);
-    framePositions.push(position.x, position.y, position.z);
+    frameEntityIds[count] = entityId;
+    framePositions[count * 3] = position.x;
+    framePositions[count * 3 + 1] = position.y;
+    framePositions[count * 3 + 2] = position.z;
+    count++;
   }
+  frameEntityIds.length = count;
+  framePositions.length = count * 3;
   decide(world, policy, focus, frameEntityIds, framePositions);
 };
 
@@ -514,68 +573,104 @@ const physicsTierPolicyFrameSystem = (world: ECSWorld) => {
 
 const isMainThread = () => getPhysicsState().workerTarget === 'MAIN_THREAD';
 
+// measure's member walk: a pass runs every `interval` steps, too rarely for V8 to optimize it,
+// and an unoptimized `for … of` allocates a result object per member; the builtin forEach
+// allocates none (and a module-level callback no closure)
+let collectedIds = new Int32Array(0);
+let collectedCount = 0;
+const collectMemberId = (_member: unknown, entityId: number) => {
+  collectedIds[collectedCount++] = entityId;
+};
+
 /** STEPS, on step `step`: reads the members' bodies and the focus, and keeps them for the
  * decision `interval` steps later. MAIN_THREAD reads now; WORKER_THREAD asks the worker to read
  * right before this step, and holds stepping before the decision step until it has the reply. */
 const measure = (world: ECSWorld, policy: ResolvedPolicy, step: number) => {
   const members = world.getStorage(ComponentType.PHYSICS_TIER_POLICY);
   if (!members.size) return;
+  const measurement = takeMeasurement();
 
   // The focus, called with the step: a body is read with the members
-  let focus: THREE.Vector3 | null = null;
   let focusBodyId: number | undefined;
+  measurement.hasFocus = false;
   const at = policy.def.focus ? policy.def.focus(step) : undefined;
   if (!policy.def.focus) {
-    focus = readCameraFocus(world, new THREE.Vector3());
+    measurement.hasFocus = readCameraFocus(world, measurement.focus) !== null;
   } else if (typeof at === 'number') {
-    focusBodyId = getEntityBody(world, at)?.id;
+    focusBodyId = getPhysicsEntityBody(world, at)?.id;
     if (focusBodyId === undefined) {
       const position = world.getComponent(at, ComponentType.TRANSFORM)?.position;
-      focus = position ? position.clone() : null;
+      if (position) {
+        measurement.focus.copy(position);
+        measurement.hasFocus = true;
+      }
     }
   } else if (at) {
-    focus = new THREE.Vector3(at.x, at.y, at.z);
+    measurement.focus.set(at.x, at.y, at.z);
+    measurement.hasFocus = true;
   }
-  if (!focus && focusBodyId === undefined) return;
-
-  // In entity id order: the requests of a decision then go out in the same order on every load
-  const entityIds = [...members.keys()].sort((a, b) => a - b);
-  const bodyIds: number[] = [];
-  for (let i = 0; i < entityIds.length; i++) {
-    const body = getEntityBody(world, entityIds[i]);
-    if (body) bodyIds.push(body.id);
-    else entityIds[i] = -1;
+  if (!measurement.hasFocus && focusBodyId === undefined) {
+    measurementPool.push(measurement);
+    return;
   }
-  const measuredIds = entityIds.filter((id) => id >= 0);
-  if (!measuredIds.length) return;
-  if (focusBodyId !== undefined) bodyIds.push(focusBodyId);
 
-  const measurement: Measurement = {
-    step,
-    applyAt: step + policy.interval,
-    entityIds: measuredIds,
-    bodyIds,
-    focus,
-    positions: null,
-    releaseGate: null,
-    dropped: false,
-  };
+  // In entity id order: the requests of a decision then go out in the same order on every load.
+  // A typed array sorts numerically in place (no work array: one view per pass)
+  let entityIds = measurement.entityIds;
+  if (entityIds.length < members.size) {
+    entityIds = measurement.entityIds = new Int32Array(members.size + (members.size >> 1));
+  }
+  collectedIds = entityIds;
+  collectedCount = 0;
+  // Every storage but a TYPED_ARRAY TRANSFORM's is a Map (ECSComponentStorage.ts)
+  if (members instanceof Map) members.forEach(collectMemberId);
+  else for (const entityId of members.keys()) collectMemberId(undefined, entityId);
+  const memberCount = collectedCount;
+  entityIds.subarray(0, memberCount).sort();
+  // The members with a body, in place
+  const bodyIds = measurement.bodyIds;
+  let count = 0;
+  for (let i = 0; i < memberCount; i++) {
+    const body = getPhysicsEntityBody(world, entityIds[i]);
+    if (!body) continue;
+    entityIds[count] = entityIds[i];
+    bodyIds[count] = body.id;
+    count++;
+  }
+  if (!count) {
+    measurementPool.push(measurement);
+    return;
+  }
+  if (focusBodyId !== undefined) bodyIds[count] = focusBodyId;
+  bodyIds.length = focusBodyId !== undefined ? count + 1 : count;
+
+  measurement.count = count;
+  measurement.step = step;
+  measurement.applyAt = step + policy.interval;
+  measurement.positions = null;
   policy.pending.push(measurement);
   policy.lastMeasuredStep = step;
 
   if (isMainThread()) {
-    measurement.positions = readBodyPositionsSync(bodyIds, new Float32Array(bodyIds.length * 3));
+    const size = bodyIds.length * 3;
+    if (!measurement.positionsBuffer || measurement.positionsBuffer.length < size) {
+      measurement.positionsBuffer = new Float32Array(size + (size >> 1));
+    }
+    measurement.positions = readBodyPositionsSync(bodyIds, measurement.positionsBuffer);
     return;
   }
   measurement.releaseGate = addPhysicsStepGate(measurement.applyAt);
+  // The request clones bodyIds (at the sub-step's capture), so the pooled array can be reused
+  const use = measurement.use;
   readBodyPositionsAtStep(bodyIds).then(
     (positions) => {
-      if (measurement.dropped) return;
+      if (measurement.use !== use) return;
       measurement.positions = positions;
       measurement.releaseGate?.();
       measurement.releaseGate = null;
     },
     (err) => {
+      if (measurement.use !== use) return;
       lerror(`Physics tier policy: the positions measured on step ${step} didn't arrive.`, err);
       measurement.releaseGate?.();
       measurement.releaseGate = null;
@@ -588,19 +683,20 @@ const _decisionEntityIds: number[] = [];
 
 /** STEPS: the decision on a measurement's `applyAt` step. */
 const applyMeasurement = (world: ECSWorld, policy: ResolvedPolicy, measurement: Measurement) => {
-  const { entityIds, bodyIds, positions } = measurement;
+  const { entityIds, bodyIds, positions, count } = measurement;
   if (!positions) return;
   let focus = measurement.focus;
-  if (!focus) {
-    const o = entityIds.length * 3;
+  if (!measurement.hasFocus) {
+    const o = count * 3;
     focus = _focus.set(positions[o], positions[o + 1], positions[o + 2]);
     if (Number.isNaN(focus.x)) return;
   }
   // One taken out of the policy or given another body since the measurement isn't decided
-  _decisionEntityIds.length = entityIds.length;
-  for (let i = 0; i < entityIds.length; i++) {
+  _decisionEntityIds.length = count;
+  for (let i = 0; i < count; i++) {
     const entityId = entityIds[i];
-    _decisionEntityIds[i] = getEntityBody(world, entityId)?.id === bodyIds[i] ? entityId : -1;
+    _decisionEntityIds[i] =
+      getPhysicsEntityBody(world, entityId)?.id === bodyIds[i] ? entityId : -1;
   }
   decide(world, policy, focus, _decisionEntityIds, positions);
 };
@@ -628,6 +724,7 @@ const physicsTierPolicyStepSystem = (world: ECSWorld) => {
         `Physics tier policy: the measurement of step ${measurement.step} missed its decision step ${measurement.applyAt} (now ${step}).`
       );
     }
+    releaseMeasurement(measurement);
   }
   if (step % policy.interval === 0 && !isPhysicsTierPolicyFrozen(world)) {
     measure(world, policy, step);

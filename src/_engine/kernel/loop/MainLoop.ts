@@ -268,7 +268,7 @@ export const setPreStepHook = (fn: (() => void) | null) => {
 /** Everything that has to run in lockstep with the simulation, once per fixed sub-step right
  * before it (see FixedStepDriver.step): the pre-step hook, the action sample, held-key input,
  * then the previous step's events, then every world's APP_PHYSICS_STEP systems (see
- * PhysicsAPI.ts's flushPhysicsEvents for why the order matters). Only called by the driver, so it
+ * PhysicsMessaging.ts' flushPhysicsEvents for why the order matters). Only called by the driver, so it
  * is set. */
 const runFixedSubStep = (stepDelta: number, stepIndex = -1) => {
   preStepHook?.();
