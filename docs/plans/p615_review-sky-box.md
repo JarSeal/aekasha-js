@@ -1,4 +1,4 @@
-Status: draft | expanded 2026-10-18, decisions proposed — not-implemented
+Status: in progress | Phase 0 implemented
 Category: Refactoring, Documentation, Sky box
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -124,9 +124,22 @@ hygiene, placement and API shape. Read from the code, not reproduced, unless a f
 **Composite and layers (`SkyComposite.ts`, `layers/`)**
 
 - C1 **(perf)** `applySkyTimeUniforms` runs every frame while the cycle plays and says it
-  allocates nothing, but calls `hasStaticLayers` (`SkyComposite.ts:320`), whose
-  `getEnabledNebulae` makes two arrays (`filter`, `slice`; `layers/Nebula.ts:131`). Phase 0's
-  `perf-auditor` looks for the rest.
+  allocates nothing, but (Phase 0's `perf-auditor`, corrected and completed):
+  - `getSunAtmosphere` (`SkyComposite.ts:278`, called at `:315`) makes a `{ u, def }` object every
+    moved frame with an atmosphere: the one allocation every day-night sky pays.
+  - `hasStaticLayers` (`:320`, reached only with the stars off: `isStarsEnabled(def) ||` comes
+    first) makes two or three arrays through `getEnabledNebulae` (`layers/Nebula.ts:131`) to
+    compare a length with 0.
+- C1b **(perf, CPU)** Redundant work on the same path, every moved frame: each extra sun with
+  `rotateWithSky` computes the start time's sky rotation again (`turnWithSky`, `SkyTime.ts:296`:
+  two `computeSkyRotation` per sun, the `from` one never changes); sun 0's extinction is computed
+  twice (`applyAtmosphereSunUniforms`' `extinctionAtSun` and `applySunLightingUniforms`); and
+  every frame, sky still or not, each disc light calls `getActiveCamera()?.getWorldPosition(p)`
+  (`SkyLights.ts:343`), which updates the camera's world matrix up its parents, once per light (up
+  to 6) and against the function's own comment ("the camera's world matrix is last frame's").
+  Smaller, left as they are: array destructuring and `for…of` on hot paths (V8 optimises them),
+  unchanged intensity writes, `applyMoonPosition` for an absent moon, the trig of `SkyTime.ts`'
+  getters per call. No redundant GPU state change; bakes run once per request.
 - C2 Dead code: `SUN_STRUCTURAL_KEYS`, `GROUND_STRUCTURAL_KEYS`, `ATMOSPHERE_STRUCTURAL_KEYS`,
   `CLOUDS_STRUCTURAL_KEYS` have no reader (only `BASE_STRUCTURAL_KEYS` is read, by `SkyBox.ts`).
 - C3 `layers/Nebula.ts:134`'s `seededRandom` is `createSeededRandom` (`utils/SeededRandom.ts`,
@@ -203,7 +216,7 @@ hygiene, placement and API shape. Read from the code, not reproduced, unless a f
 - K3 It says the clouds and the time stop as described; D5 changes the clouds' clock, F1 adds the
   stop.
 
-## 2. Decisions (proposed 2026-10-18; confirm before Phase 1)
+## 2. Decisions (confirmed 2026-10-18, as recommended)
 
 ### D1. Scope: §1.1's files
 
@@ -244,6 +257,14 @@ and its private-field read go (S8). It's a visible change only in that paused cl
 Phase 0 measures whether that alone makes the five scenes of the drift issue snapshot-stable
 across runs; if it doesn't (the elapsed time at the snapshot varies with the page's load), the
 test bridge gets a debug hook to set it before a snapshot. The issue is closed in Phase 6.
+
+**Added in Phase 0** (the test clock, below): the sky box's own schedules read the same clock.
+`scheduleDayNightBake`'s rate limit and the nebula bake's 150 ms throttle use `performance.now()`
+today, so how many bakes run before a snapshot, and when (the env bake freezes its clouds and the
+sun's place at that moment), depends on how fast the page ran, even under the test clock. They
+move to the main loop's elapsed time, which is real time in an app and frame-counted under
+`setFixedFrameDelta`. A bake's CPU timing for the debug stats keeps `performance.now()` (it's a
+measurement, read only with the hooks set).
 
 **Alternative:** keep three's `time` and only pin three's node frame time in the runner. That
 leaves the clouds running while the game is paused, which the root `CLAUDE.md`'s Views section
@@ -300,7 +321,7 @@ and hashes unchanged unless a phase says otherwise; no file is edited while it r
 ends with its "As built" list, its files' JSDoc at 100 % and `docs.json` updated
 (`yarn verify:baselines --docs --update`).
 
-### Phase 0: baselines and measurements
+### Phase 0: baselines and measurements — done
 
 1. `yarn verify:scenes --update` on this commit (= `main`), then `yarn verify:baselines` clean.
 2. `perf-auditor` over `features/skybox/`: confirm or add to C1. The functions over 150 lines, if any.
@@ -311,17 +332,58 @@ ends with its "As built" list, its files' JSDoc at 100 % and `docs.json` updated
    moves.
 6. Record the numbers here and confirm D1-D11.
 
+As built (2026-10-18, at `698b502` plus this plan; macOS, headless Chromium, WebGPU):
+
+- **D1-D11 confirmed** as recommended (2026-10-18), before Phase 0.
+- **Baselines:** `yarn verify:scenes --update` recorded 104 runs (26 scenes × 4 configurations) in
+  407 s, without errors outside the allowed ones. `yarn verify:baselines`: all unchanged, no debug
+  code in either build (`docs.json` 2,062 / 2,382 exports, 890 / 968 members).
+- **The perf audit (step 2)** is §1.4's C1 (corrected: `hasStaticLayers` runs only with the stars
+  off; `getSunAtmosphere`'s object added) and C1b (new). No function in scope is over 150 lines
+  (the longest: `starGrid` ~67, `nebulaNode` ~57, `updateSkyBox` ~51), so G1 is the only size item.
+  The module-level allocations are scratch vectors, default objects and TSL `Fn` nodes, none a
+  registration.
+- **`yarn hub:build` (step 3):** 419 pages, 16 warnings, **none in the sky box**. TypeDoc documents
+  every engine module, not only the entry, so `ActiveSkyBox` and the layer types count as included:
+  D7's "the layer types `SkyBoxDef` names go on the entry if Phase 0's list names them" adds
+  nothing. S4 stays an entry-shape item (an app can't name `ActiveSkyBox`).
+- **Repro (step 4):** `features/skybox/SkyBox.test.ts` drives `SkyBox.ts` in Node (a plain root
+  scene, a fixed current scene id, the texture loads as promises the test settles, a default ECS
+  world for the lights). Two `it.fails`, each failing on its own assertion when run as `it`: S1
+  (`backgroundIntensity` is `undefined`, not 0.5, after the structural activation lands) and S2
+  (the activation rejects with the load's error). `yarn test`: 622 passed, 2 expected fails, 1
+  skipped.
+- **B1 (step 4):** no path. `src/index.ts`' `start` and `mountAekasha` both await
+  `createRenderer` (`renderer.init()`) before their first `loadScene`; an app that loads a scene
+  before creating its renderer has no canvas to show it on. Phase 4 states it as a `@remarks` on
+  the activation instead of guarding it.
+- **The drift (step 5):** the five scenes passed twice, 3 and 6 minutes after recording (20 / 20
+  each, snapshots within tolerance: at most 13 levels on a pixel, 0.00 % changed). The drift
+  isn't reproducible minutes apart. Two things learned:
+  - The test bridge already pins three's `time` to a frame-counted clock
+    (`_dbg__TestBridge.ts:98-110`, `NodeFrame.prototype.update` replaced), so the VIEW clouds
+    aren't on the wall clock under the runner.
+  - What still reads the wall clock is the sky box's bake schedule (`performance.now()` in
+    `scheduleDayNightBake` and the nebula throttle), and `space`, which has no clouds but has the
+    throttled nebula bake, shows the same small noise. So D5 now covers the schedules too (D5's
+    "Added in Phase 0"). Phase 2 runs the five scenes before and after, with an hour or more
+    between the recording and a run.
+
 ### Phase 1: the bugs (D4) and the stop (D8)
 
 1. S1 and S2, each with its test (D10).
 2. F1: `skyBox()`'s `onUnmount`; `yarn verify:embed`.
-3. C1 (the per-frame arrays) and B1 if Phase 0 found a path.
+3. C1 (`getSunAtmosphere`'s object kept on the uniforms; `hasStaticLayers` a loop), C1b (the
+   start-time rotation kept per activation, sun 0 reusing `extinctionAtSun`, the camera position
+   read once per frame from its `matrixWorld`), and B1 if Phase 0 found a path.
 4. `yarn verify:scenes`: unchanged.
 
 ### Phase 2: colours and the clouds' clock (D5, D6)
 
 1. C5 / G3 with its test.
-2. D5: the sky box's time uniform, the bake's frozen clouds from it, `getFrameTime` removed.
+2. D5: the sky box's time uniform, the bake's frozen clouds from it, `getFrameTime` removed, and
+   the bake schedules (`scheduleDayNightBake`, the nebula throttle) on the main loop's elapsed
+   time.
 3. `yarn verify:scenes`: hashes unchanged; snapshots of the scenes with clouds may move once
    (recorded again with the reason), then stay put across two runs.
 
