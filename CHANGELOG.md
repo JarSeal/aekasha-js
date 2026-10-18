@@ -4,6 +4,78 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-18 — review-physics
+
+### Engine 5.5.0 (Golden Hour)
+
+The physics feature is reviewed file by file (p614), along with ray casting and the collider derivation of imported models. The bugs found are fixed, and every export and member is documented. The three largest files of the engine are split into modules of under ~800 lines each. A transport interface now sits in front of the physics worker's messages, and `physics()` stops when a mounted engine unmounts. The scene runner gives every scene the same probe hash and snapshot as on `main`, in all three physics targets and in prod test mode. The exception is the three scenes with `friction: 0` colliders (the first behaviour change under Changed). No public export is removed or renamed.
+
+**Added**
+
+- `FeatureContext.onUnmount(fn)`: a feature's stop, run by `mountAekasha`'s `unmount()` (and its teardown after a failed boot) right after the loop stops, in reverse install order. It's synchronous, and a hook that throws is logged while the others still run. A full-page app (`InitEngine`) never unmounts, so it never runs them. Physics registers one (see Changed).
+- On `aekasha`: the type `RayDebugOpts`. On `aekasha/physics`: the type `PhysicsTierPolicyCadence`. On `aekasha/character`: the types `KindSpec` and `PlayerBrainCommonActions`. A public signature names each of them.
+- JSDoc on every export and member of `features/physics` (its types, the worker protocol, the backend, the worker, the transport and the proxies), of `kernel/render/Raycast.ts` and of the character types that name physics. `@example`s on `createPhysicsEntity`, `getPhysicsEntityByAppId`, `deriveColliderFromGeometry`, `setPhysicsTierPolicy`, `setPhysicsTierPolicyMember`, `requestPhysicsTier` and `getPhysicsTier`. The four body, collider, joint and world APIs each say which `*Sync` twins answer on `WORKER_THREAD` from the proxy's copy, and which throw.
+- The physics transport (`features/physics/transport/`, internal): every message between the main thread and the physics worker goes through one interface, in both directions. Its contract: plain data, delivered in order, one message handled to the end before the next. It's the seam for networked physics (p511).
+
+**Changed**
+
+- **Behaviour change:** a collider's `friction: 0` applies. The backend skipped a friction of 0, so such a collider got Rapier's default of 0.5. In the template, eleven colliders in `scene01`, `scene01V2` and `thirdPersonGymScene` ask for 0, so those scenes' probe hashes changed, and so did the gym's character path hash. The gym's players pass through the same locomotion states and end elsewhere on the floor. The moving platforms and carousels were played by hand in both worker targets, and the scenes keep their `friction: 0`.
+- **Behaviour change:** a mounted engine's `unmount()` stops physics. `MAIN_THREAD` deletes the world. `WORKER_THREAD` terminates the worker and rejects every pending request. Both release the stepping hold and the step gates, and remove the visibility listener. After the stop no world is created, so a scene load still running at unmount makes none. It used to leave the worker, its world and the listener running.
+- **Behaviour change:** `getPhysicsEntityByAppId` returns `undefined` for an entity that isn't a physics entity. It returned any entity's id, like `getEntityIdByAppId`. An entity counts as a physics entity as soon as `createPhysicsEntity` is called, before its body exists.
+- Deleting with no world is a quiet no-op for every delete. Eight of them threw: `deleteRigidBodySync`, `deleteRigidBodies(Sync)`, `deleteCollider(Sync)`, `deleteCollidersSync` and `deleteJoint(Sync)`. A `*Sync` delete still throws on `WORKER_THREAD` (a misuse, not a stale id), now before it forgets the id. The world proxy's `removeRigidBody`, `removeCollider` and `removeJoint` log a rejected delete instead of leaving an unhandled rejection.
+- `createRigidBodies([])` and `createColliders([])` resolve `[]` on `WORKER_THREAD` too (they threw). On `WORKER_THREAD`, a rigid body's `isEnabledSync()` answers from the proxy's copy (it threw). `isBeingDeleted` (bodies, colliders, joints) is set by every delete and by a world delete, as `MutualGravity` expects; it was never set.
+- `AppConfig.physics.physicsEngine` is typed `'RAPIER'`. It accepted any string.
+- Less work per frame. In `MESSAGE_BATCH` mode a transforms push carries only the used body slots: 736 B in the gym instead of 106 kB, and its copy takes a seventh of the time. The worker's write-back walks the slots, not every body. A `WORKER_THREAD` frame whose systems issue no physics command allocates no capture arrays. The tier policy's pass allocates nothing on `MAIN_THREAD` (3 KiB per frame less in `physicsTiers`), and on `WORKER_THREAD` nothing beyond its request. The world proxy's ray queries reuse one Rapier `Ray`, and the interpolation reads its storages once per frame.
+- The ray caster and the ray stats are made on first use. The banner embed's main chunk (`assets/banner.embed.js`) is 292,882 B gzip, 414 B less than on `main`. The app's main chunk (`assets/index.js`) is 4.7 kB smaller rendered and 593 B larger gzip (384,563 B): the split's shared state is read through property names the minifier can't shorten.
+- Docs that said the wrong thing: `JointAxesMask` names the axes a `GENERIC` joint locks (it said the free ones). `QueryFilterFlags`' `EXCLUDE_KINEMATIC` and `EXCLUDE_DYNAMIC` were swapped. `ColliderParams.density` said "Mass", and its `translation` / `rotation` are relative to the parent body. `ColliderParams.orientation` comes from an imported node's `spineAxis`. A contact force callback gets a copy, so keeping it is fine.
+- Internal (no entry exports them). `PhysicsAPI.ts` is split into the facade's modules (`PhysicsState.ts`, `PhysicsRegistry.ts`, `PhysicsMessaging.ts`, `PhysicsStepping.ts`, `PhysicsBodies.ts`, `PhysicsColliders.ts`, `PhysicsJoints.ts`, `PhysicsWorld.ts`, the two stats modules) and `proxies/`. `PhysicsAPITypes.ts` is split into `types/` and `protocol/`, and `EngineRapier.ts` into `backends/rapier/`'s modules and `proxies/`. Each create and delete has one branch per worker target instead of four copies. The render interpolation is in `PhysicsInterpolation.ts`. `kernel/mesh/MeshUserData.ts` is `features/physics/import/ColliderBounds.ts`, a pure function. `deriveColliderDimensionsFromMesh` is in `features/physics/ColliderDimensions.ts`.
+- Internal, removed: `RayCastOpts`' six deprecated fields (`helperId`, `helperColor`, `startLength`, `endLength`, `perIntersectFn`, `optionalTargetArr`; nothing passed them) and `resolveDebugOpts`. Also removed: `PhysicsUtils.ts`' `getColliderShapeName`, `getPhysicsEngineKey`, `setPhysicsPauseTime` and `getEngineAPI`; `setMeshCreatePropsToUserData`; `DEFAULT_TIER_POLICY_CADENCE` and `DEFAULT_TIER_POLICY_INTERVAL`; and the export of `disposePhysicsEntity` and `ThreeVector3`. The worker protocol's `RIGID_TRANSLATION`, `RIGID_ROTATION`, `RIGID_LINVEL` and `RIGID_ANGVEL` are removed (nothing sent them), and no other message number moved. Now `@internal`: every physics export not on `aekasha/physics` (`getPhysGameTime` among them, still deprecated), the tier policy's debug getters and setters, every `Raycast.ts` export, and `getBodyKind`.
+
+**Fixed**
+
+- A physics worker request whose call threw in the worker never settled. The facade only logged the worker's `ERROR`, and the rigid body, collider and joint calls threw past the worker's `catch`. So a `createPhysicsEntity` with a bad collider (a `TRIMESH` without indices, a shape the backend refuses) hung its scene load. It now rejects with `Error('Physics worker: …')`, and the scene load resolves `false`.
+- A body created with its colliders wasn't all or nothing in either target. A collider that threw left the body in the world (and its transform slot taken), owned by nothing. Now the body and the colliders made before it are deleted. `createColliders` is all or nothing too.
+- An entity deleted while its `WORKER_THREAD` create was in flight (a scene exit) got its components and body registered again. The create now deletes what it made and resolves with the dead id.
+- `createRigidBodies` with a `THREE.Quaternion` rotation, and a `FIXED` joint's `frame1` / `frame2`, reached the worker without `x` / `y` / `z` / `w`.
+- Collider 0 (the page's first collider) got no contact or intersection pairs on `WORKER_THREAD`, and was nobody's pair.
+- `createCollider` wrote `parentId` into the caller's params object, so on `MAIN_THREAD` a params object reused for a second collider carried the first's parent.
+- Three backend warnings about a body, collider or joint Rapier no longer has were logged only in production builds. They now log only in the debug env.
+- Imported `CAPSULE`, `CONE` and `CYLINDER` colliders got the default `halfHeight`, and a cone or cylinder no radius from its mesh. A capsule's `halfHeight` is now its straight part's, and a cone's or cylinder's half its length.
+- An imported node's `spineAxis` (`x` / `z`) was ignored, so the shape stayed Y-up. Separately, a collider's `orientation` was replaced by its `rotation` instead of composed with it, so a rotated compound member lost its spine.
+- An imported `HEIGHTFIELD` whose vertex count isn't a grid is skipped. It logged "importing failed" and then made a collider without heights, which threw. With only `nrows` or only `ncols` given, the other count was read wrong for an oblong grid.
+- On `WORKER_THREAD`, a body's `bodyTypeSync()` was stale after a `REMOVED` tier returned it to the world as `STATIC`.
+- On `WORKER_THREAD` with `physics.enabled: false`, `getPhysicsWorld()` returned a worker proxy with no world behind it.
+
+### Toolkit 2.1.2 (Half Moon)
+
+**Changed**
+
+- The comments of `MutualGravity`, `Terrain` and `ScatterOnSurface` name `createPhysicsEntity` (they named `PhysicsManager` or a `PhysicsAPI.ts` still to come). No behaviour change.
+
+### App 1.12.3 (Preschooler)
+
+**Changed**
+
+- Comments only. `physicsTest`'s `GENERIC` joint demo says what its `axesMask` does: it names the axes the joint locks, in the joint's frame. `largeWorld`'s comments name `createPhysicsEntity`. No behaviour change: the scenes with `friction: 0` colliders keep them (see Engine).
+
+### Project
+
+**Added**
+
+- Tests: `PhysicsWorkerRequests.test.ts` runs the real worker module and Rapier in Node behind a fake `Worker`, covering the worker request errors, the stop, plain rotations, collider 0, all-or-nothing creates and the in-flight delete. `PhysicsFacade.test.ts` covers `MAIN_THREAD`: deletes, the stop, `getPhysicsEntityByAppId`, `isBeingDeleted` and the tiers' reattach. `backends/rapier/EngineRapier.test.ts` covers friction 0, the params left alone, the rotation composition, the ray reuse, and every mirrored enum pinned to Rapier's. The other new tests are `PhysicsTransformBuffer.test.ts`, `transport/PhysicsTransport.test.ts`, `import/MeshColliderGeometry.test.ts` (the derivation per shape, the heightfield grids), `kernel/render/Raycast.test.ts`, and the unmount hooks in `Features.test.ts` and `Mount.test.ts`.
+- `src/_engine/features/physics/CLAUDE.md`: the physics detail (the layout, the worker targets, the deterministic loads, the tiers, imported physics), moved from the root `CLAUDE.md`, which keeps the rules for simulation code.
+- `docs/plans/p622_engine-6-major.md`: every removal the engine's `@deprecated` tags promise for 6.0.0, plus this review's candidates (`physicsTiers()`, `createPhysicsEntity`'s options object).
+- Issue files: `ecs-components-on-deleted-entities.md`, `import-physics-second-body-without-index.md`, `physics-ccd-substeps-setting.md`, `physics-unused-rapier-enums.md`, `three-ray-casting-not-public.md` and `three-vector3-store-allocates-in-app.md`.
+
+**Changed**
+
+- The Hub: the physics guide (the stop, the transport, the `*Sync` twins, what a failed create leaves, a new "From imported models" section), the ECS guide (`ctx.onUnmount`), the embed walkthrough (what `unmount()` stops) and the smallest-build guide (`yarn sbp --why physics`).
+- The root `CLAUDE.md` (Physics, `onUnmount`, the map line), `docs/techniques/hub-authoring.md`'s `api:` examples, and the readme's physics, threading, embedding and ray casting lines.
+- `yarn verify:baselines`: `api.json`, `docs.json` (every physics folder fully documented) and both bundle baselines.
+- The scene runner's baselines are local: after this merge, `yarn verify:scenes --update --only scene01,scene01V2,thirdPersonGymScene` on `main` records the friction fix's hashes and snapshots.
+- `devTools/refactor/`'s layout report, move map and entry exports regenerated.
+- p102, p250, p306, p428, p500, p511 and p619 name the files the physics code is in now. `lodshowcase-sky-snapshot-drift.md` lists the five scenes it shows in, and `remount-after-unmount.md` says physics stops.
+
 ## 2026-10-16 — review-rendering-scene-assets
 
 ### Engine 5.4.0 (Golden Hour)
