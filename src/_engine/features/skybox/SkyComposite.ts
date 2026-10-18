@@ -73,8 +73,8 @@ import type { StaticLayersSource } from './SkyStaticLayers';
 import {
   applyNebulaeUniforms,
   createNebulaeUniforms,
-  getEnabledNebulae,
   getNebulaeSignature,
+  hasEnabledNebula,
   nebulaeNode,
   type NebulaUniforms,
 } from './layers/Nebula';
@@ -112,6 +112,9 @@ export type SkyUniforms = {
   staticLayers: StaticLayersUniforms;
   /** One set per possible nebula (MAX_NEBULAE); the i-th enabled nebula uses set i. */
   nebulae: NebulaUniforms[];
+  /** What the suns are seen through while the atmosphere is on (getSunAtmosphere): one object,
+   * its `def` written per use, so the day-night step makes none. */
+  sunAtmosphere: NonNullable<SunAtmosphere>;
 };
 
 export type StaticLayersUniforms = {
@@ -159,7 +162,7 @@ export const isMilkyWayEnabled = (def: SkyBoxDef) =>
 export const isCloudsEnabled = (def: SkyBoxDef) => isOn(def.clouds) && isAtmosphereEnabled(def);
 export const isGroundEnabled = (def: SkyBoxDef) => isOn(def.ground);
 /** Whether it has static layers: an enabled nebula (baked into a cube, SkyStaticLayers.ts). */
-export const hasStaticLayers = (def: SkyBoxDef) => getEnabledNebulae(def.nebulae).length > 0;
+export const hasStaticLayers = (def: SkyBoxDef) => hasEnabledNebula(def.nebulae);
 /** The nebula cube's face size. */
 export const getNebulaSize = (def: SkyBoxDef | undefined) =>
   def?.env?.nebulaSize ?? ENV_DEFAULTS.nebulaSize;
@@ -181,12 +184,13 @@ export const getEnvSize = (def: SkyBoxDef | undefined) =>
 const DAY_NIGHT_ENV_SIZE = 128;
 
 export const createSkyUniforms = (def: SkyBoxDef, time: SkyTimeState): SkyUniforms => {
+  const atmosphere = createAtmosphereUniforms();
   const u = {
     base: createBaseUniforms(def.base, def.env),
     suns: Array.from({ length: MAX_SUNS }, createSunUniforms),
     moons: Array.from({ length: MAX_MOONS }, createMoonUniforms),
     stars: createStarsUniforms(),
-    atmosphere: createAtmosphereUniforms(),
+    atmosphere,
     clouds: createCloudsUniforms(),
     ground: createGroundUniforms(),
     staticLayers: {
@@ -194,6 +198,7 @@ export const createSkyUniforms = (def: SkyBoxDef, time: SkyTimeState): SkyUnifor
       starsToStatic: uniform(new THREE.Matrix3()),
     },
     nebulae: createNebulaeUniforms(),
+    sunAtmosphere: { u: atmosphere, def: def.atmosphere },
   };
   applySkyUniforms(u, def, time);
   return u;
@@ -275,8 +280,11 @@ const applyMoonPosition = (u: SkyUniforms, def: SkyBoxDef, time: SkyTimeState) =
   applyCloudsMoonUniforms(u.clouds, moon, u.atmosphere, sunDirection);
 };
 
-const getSunAtmosphere = (u: SkyUniforms, def: SkyBoxDef): SunAtmosphere =>
-  isAtmosphereEnabled(def) ? { u: u.atmosphere, def: def.atmosphere } : null;
+const getSunAtmosphere = (u: SkyUniforms, def: SkyBoxDef): SunAtmosphere => {
+  if (!isAtmosphereEnabled(def)) return null;
+  u.sunAtmosphere.def = def.atmosphere;
+  return u.sunAtmosphere;
+};
 
 /** Writes every layer's non-structural values to its uniforms. The primary sun's direction
  * comes first: the atmosphere's terms depend on it, and the discs on the atmosphere's. */
@@ -288,7 +296,9 @@ export const applySkyUniforms = (u: SkyUniforms, def: SkyBoxDef, time: SkyTimeSt
   const atmosphere = getSunAtmosphere(u, def);
   const envSize = getEnvSize(def);
   const suns = Math.max(1, getSunCount(def));
-  for (let i = 0; i < suns; i++) applySunUniforms(u.suns[i], def.suns?.[i], atmosphere, envSize);
+  for (let i = 0; i < suns; i++) {
+    applySunUniforms(u.suns[i], def.suns?.[i], atmosphere, envSize, i === 0);
+  }
   const moons = Math.max(1, getMoonCount(def));
   for (let i = 0; i < moons; i++) applyMoonUniforms(u.moons[i], def.moons?.[i], envSize);
   applyStarsUniforms(u.stars, def.stars);
@@ -314,7 +324,7 @@ export const applySkyTimeUniforms = (u: SkyUniforms, def: SkyBoxDef, time: SkyTi
   if (hasAtmosphere) applyAtmosphereSunUniforms(u.atmosphere, def.atmosphere, sunDirection);
   const atmosphere = getSunAtmosphere(u, def);
   const suns = Math.max(1, getSunCount(def));
-  for (let i = 0; i < suns; i++) applySunLightingUniforms(u.suns[i], atmosphere);
+  for (let i = 0; i < suns; i++) applySunLightingUniforms(u.suns[i], atmosphere, i === 0);
   if (isCloudsEnabled(def)) applyCloudsSunUniforms(u.clouds, sunDirection);
   applyMoonPosition(u, def, time);
   if (isStarsEnabled(def) || hasStaticLayers(def)) applySkyRotation(u, def, time);

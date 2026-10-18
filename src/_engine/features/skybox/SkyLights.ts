@@ -137,6 +137,7 @@ let warnedShadowCasters = 0;
 let ambientLight: { entityId: number; type: 'HEMISPHERE' | 'AMBIENT' } | null = null;
 
 // Scratch objects (no allocations on the per-frame path)
+const _cameraPosition = new THREE.Vector3();
 const _followPoint = new THREE.Vector3();
 const _color = new THREE.Color();
 const _vec = new THREE.Vector3();
@@ -331,16 +332,25 @@ const writeTransform = (entityId: number, position: THREE.Vector3, world: ECSWor
  * shadow map texels in light space so the shadows don't shimmer as it slides (depth unsnapped:
  * moving along the light doesn't shimmer). Called every frame by skyBoxSystem (MAIN, before
  * object3DSyncSystem); writes nothing while the follow point and settings are unchanged. The
- * camera's world matrix is last frame's here, which a texel-snapped frustum doesn't notice.
+ * camera's position is read once, from its world matrix as the last render left it, which a
+ * texel-snapped frustum doesn't notice.
  */
 export const updateSkyLightsFrame = (world: ECSWorld) => {
-  for (const state of discLights.SUN) if (state) updateDiscLightTransform(state, world);
-  for (const state of discLights.MOON) if (state) updateDiscLightTransform(state, world);
+  const camera = getActiveCamera();
+  if (camera) _cameraPosition.setFromMatrixPosition(camera.matrixWorld);
+  else _cameraPosition.set(0, 0, 0);
+  for (let i = 0; i < MAX_SUNS; i++) {
+    const state = discLights.SUN[i];
+    if (state) updateDiscLightTransform(state, world);
+  }
+  for (let i = 0; i < MAX_MOONS; i++) {
+    const state = discLights.MOON[i];
+    if (state) updateDiscLightTransform(state, world);
+  }
 };
 
 const updateDiscLightTransform = (state: DiscLightState, world: ECSWorld) => {
-  const p = _vec.set(0, 0, 0);
-  if (state.follow === 'ACTIVE_CAMERA') getActiveCamera()?.getWorldPosition(p);
+  const p = state.follow === 'ACTIVE_CAMERA' ? _cameraPosition : _vec.set(0, 0, 0);
   const { axisX, axisY, axisZ, texelSize } = state;
   _followPoint
     .copy(axisX)

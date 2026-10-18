@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented
+Status: in progress | Phases 0-1 implemented
 Category: Refactoring, Documentation, Sky box
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -369,7 +369,7 @@ As built (2026-10-18, at `698b502` plus this plan; macOS, headless Chromium, Web
     "Added in Phase 0"). Phase 2 runs the five scenes before and after, with an hour or more
     between the recording and a run.
 
-### Phase 1: the bugs (D4) and the stop (D8)
+### Phase 1: the bugs (D4) and the stop (D8) — done
 
 1. S1 and S2, each with its test (D10).
 2. F1: `skyBox()`'s `onUnmount`; `yarn verify:embed`.
@@ -418,6 +418,31 @@ As built, section 2 (2026-10-18): the stop (F1, D8).
 - **`yarn verify:embed`:** passed (the banner: `INLINE` and `BACKGROUND`, each then unmounted, and
   the Hub's example page). The only embed profile has no features, so it doesn't exercise the sky
   box's stop: the Node test does.
+
+As built, section 3 (2026-10-18): C1, C1b, and the scenes.
+
+- **C1:** `SkyUniforms.sunAtmosphere`, one `{ u, def }` per activation that `getSunAtmosphere`
+  writes `def` into, so the day-night step makes no object. `hasStaticLayers` is
+  `layers/Nebula.ts`' new `hasEnabledNebula` (an indexed loop; `getEnabledNebulae`' cap at
+  `MAX_NEBULAE` never decided "any").
+- **C1b:**
+  - Sun 0 reads the atmosphere's `extinctionAtSun` and `sunE` instead of computing them again:
+    `applySunUniforms` and `applySunLightingUniforms` take `isPrimary` (the same inputs, so the
+    same values to the bit).
+  - `turnWithSky` keeps its two rotations (`SkyTime.ts`' `SkyRotationCache`), keyed by the
+    day-night definition object and the time: the start time's is computed once per definition,
+    now's once per frame for all extra suns (was two per sun). Definitions are never changed in
+    place, which the cache's comment says. A test checks the turns against uncached ones over
+    changing definitions and times.
+  - `updateSkyLightsFrame` reads the active camera's position once per frame from its
+    `matrixWorld` (the last render's), not once per light through `getWorldPosition` (which
+    updated the matrix up its parents every time), and walks the lights with indexed loops.
+  - Left as the audit found them (listed in C1b): the destructuring, the unchanged intensity
+    writes, `applyMoonPosition` without a moon, `SkyTime.ts`' getter trig.
+- B1: no path (Phase 0); its `@remarks` is Phase 4's.
+- **Checks:** `yarn test` 628 passed, 1 skipped; `tsc` and the lint clean. `yarn verify:scenes`:
+  104 passed in 409 s, every probe hash unchanged, snapshots within the tolerance with Phase 0's
+  noise (at most 9 levels on a pixel, 0.00 % changed).
 
 ### Phase 2: colours and the clouds' clock (D5, D6)
 

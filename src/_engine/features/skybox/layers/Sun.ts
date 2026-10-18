@@ -102,12 +102,15 @@ export type SunAtmosphere = { u: AtmosphereUniforms; def: SkyBoxAtmosphereDef | 
 
 /**
  * Writes the sun's uniforms (its direction is written first, see applySkyUniforms).
+ * @param isPrimary suns[0], whose terms the atmosphere has computed already (see
+ * applySunLightingUniforms)
  */
 export const applySunUniforms = (
   u: SunUniforms,
   sun: SkyBoxSunDef | undefined,
   atmosphere: SunAtmosphere,
-  envSize: SkyBoxEnvSize
+  envSize: SkyBoxEnvSize,
+  isPrimary: boolean
 ) => {
   const radius = SUN_DISC_RADIUS * (sun?.discSize ?? SUN_DEFAULTS.discSize);
   u.discCos.value = Math.cos(radius);
@@ -122,27 +125,35 @@ export const applySunUniforms = (
   u.isAutoColor = color === 'AUTO';
   if (color !== 'AUTO') u.color.copy(toSkyColor(color));
 
-  applySunLightingUniforms(u, atmosphere);
+  applySunLightingUniforms(u, atmosphere, isPrimary);
 };
 
 /**
  * Writes what the atmosphere changes along the sun's direction: the disc's radiance, the
- * extinction and a custom colour's compensation for it. For suns[0] that's the atmosphere's own
- * sunE and extinctionAtSun; any other sun gets its own, from its height. The day-night step calls
- * it every time the sky moves: it allocates nothing.
+ * extinction and a custom colour's compensation for it. For suns[0] (`isPrimary`) that's the
+ * atmosphere's own sunE and extinctionAtSun, read as applyAtmosphereSunUniforms wrote them (the
+ * same direction); any other sun gets its own, from its height. The day-night step calls it every
+ * time the sky moves: it allocates nothing.
  */
-export const applySunLightingUniforms = (u: SunUniforms, atmosphere: SunAtmosphere) => {
+export const applySunLightingUniforms = (
+  u: SunUniforms,
+  atmosphere: SunAtmosphere,
+  isPrimary: boolean
+) => {
   const y = u.direction.value.y;
-  if (atmosphere) {
+  let sunE = 0;
+  if (atmosphere && isPrimary) {
+    u.extinction.copy(atmosphere.u.extinctionAtSun);
+    sunE = atmosphere.u.sunE.value;
+  } else if (atmosphere) {
     computeExtinction(y, atmosphere.u.betaR.value, atmosphere.u.betaM.value, u.extinction);
+    sunE = computeSunE(atmosphere.def, y);
   } else {
     u.extinction.set(1, 1, 1);
   }
   // SkyMesh's peak is min(sunE · Fex, 80) · 760 (~60,800): here the peak is discIntensity, and
   // the sun's energy only takes it down (below the horizon, sunE goes to 0)
-  const radiance = atmosphere
-    ? Math.min(computeSunE(atmosphere.def, y) * DISC_SCALE, u.peakRadiance)
-    : u.peakRadiance;
+  const radiance = atmosphere ? Math.min(sunE * DISC_SCALE, u.peakRadiance) : u.peakRadiance;
   u.discRadiance.value = radiance;
   u.envDiscRadiance.value = Math.min(radiance, ENV_DISC_CLAMP);
 

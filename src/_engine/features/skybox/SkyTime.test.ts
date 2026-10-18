@@ -138,6 +138,34 @@ describe('sky rotation', () => {
     const dir = new THREE.Vector3(0.2, 0.5, -0.8).normalize();
     expectVec(turnWithSky(undefined, dir, 8, 32, out), dir);
   });
+
+  test('its kept rotations follow the definition and the times it is given', () => {
+    // What turnWithSky computes, without its cache
+    const uncached = (
+      def: SkyBoxDayNightDef | undefined,
+      d: THREE.Vector3,
+      from: number,
+      to: number
+    ) =>
+      d
+        .clone()
+        .applyMatrix3(computeSkyRotation(def, from, new THREE.Matrix3()))
+        .applyMatrix3(computeSkyRotation(def, to, new THREE.Matrix3()).transpose());
+    const north = { latitude: 60 } as SkyBoxDayNightDef;
+    const south = { latitude: -30 } as SkyBoxDayNightDef;
+    const dir = new THREE.Vector3(0.3, 0.6, -0.7).normalize();
+    const out = new THREE.Vector3();
+    for (const [def, from, to] of [
+      [north, 12, 15],
+      [south, 12, 15],
+      [north, 12, 15],
+      [north, 12, 16],
+      [north, 9, 16],
+      [undefined, 9, 16],
+    ] as const) {
+      expectVec(turnWithSky(def, dir, from, to, out), uncached(def, dir, from, to));
+    }
+  });
 });
 
 describe('advanceSkyTime', () => {

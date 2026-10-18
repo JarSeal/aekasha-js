@@ -130,6 +130,14 @@ export const createNebulaeUniforms = () =>
 export const getEnabledNebulae = (nebulae: SkyBoxNebulaDef[] | undefined) =>
   (nebulae || []).filter((nebula) => nebula.enabled !== false).slice(0, MAX_NEBULAE);
 
+/** Whether any nebula is enabled (what getEnabledNebulae would return some of), without making
+ * an array: the day-night step asks every frame. */
+export const hasEnabledNebula = (nebulae: SkyBoxNebulaDef[] | undefined) => {
+  if (!nebulae) return false;
+  for (let i = 0; i < nebulae.length; i++) if (nebulae[i].enabled !== false) return true;
+  return false;
+};
+
 /** mulberry32: the same seed always gives the same offsets. */
 const seededRandom = (seed: number) => {
   let a = seed >>> 0;

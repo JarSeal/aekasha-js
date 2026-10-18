@@ -276,14 +276,49 @@ export const computeSkyRotation = (
   return out.set(c0.x, c0.y, c0.z, c1.x, c1.y, c1.z, c2.x, c2.y, c2.z);
 };
 
-const _fromRotation = new THREE.Matrix3();
-const _toRotation = new THREE.Matrix3();
+/** A sky rotation kept for one definition and time: turnWithSky's start-time one changes only
+ * with the definition, and its current one is the same for every extra sun of a frame.
+ * Definitions are never changed in place (a change merges into a copy), so the object is the key. */
+type SkyRotationCache = {
+  isSet: boolean;
+  def: SkyBoxDayNightDef | undefined;
+  timeOfDay: number;
+  transposed: boolean;
+  matrix: THREE.Matrix3;
+};
+
+const createSkyRotationCache = (transposed: boolean): SkyRotationCache => ({
+  isSet: false,
+  def: undefined,
+  timeOfDay: 0,
+  transposed,
+  matrix: new THREE.Matrix3(),
+});
+
+const _fromRotation = createSkyRotationCache(false);
+const _toRotation = createSkyRotationCache(true);
+
+const getCachedSkyRotation = (
+  cache: SkyRotationCache,
+  def: SkyBoxDayNightDef | undefined,
+  timeOfDay: number
+) => {
+  if (!cache.isSet || cache.def !== def || cache.timeOfDay !== timeOfDay) {
+    computeSkyRotation(def, timeOfDay, cache.matrix);
+    if (cache.transposed) cache.matrix.transpose();
+    cache.isSet = true;
+    cache.def = def;
+    cache.timeOfDay = timeOfDay;
+  }
+  return cache.matrix;
+};
 
 /**
  * A world direction turned with the sky from one time of day to another (about the celestial
  * pole, by the change in sidereal time), into `out` (may be `direction`). An extra sun that
  * turns with the sky is its start-time direction turned to now; the debugger turns the view
- * direction back to the start time to place one there. Allocates nothing.
+ * direction back to the start time to place one there. Allocates nothing, and computes each
+ * rotation once per definition and time (the extra suns of a frame share them).
  */
 export const turnWithSky = (
   def: SkyBoxDayNightDef | undefined,
@@ -291,12 +326,12 @@ export const turnWithSky = (
   fromTimeOfDay: number,
   toTimeOfDay: number,
   out: THREE.Vector3
-) => {
+) =>
   // Into the star frame at `from`, back out of it at `to` (the transpose: out of the frame)
-  computeSkyRotation(def, fromTimeOfDay, _fromRotation);
-  computeSkyRotation(def, toTimeOfDay, _toRotation).transpose();
-  return out.copy(direction).applyMatrix3(_fromRotation).applyMatrix3(_toRotation);
-};
+  out
+    .copy(direction)
+    .applyMatrix3(getCachedSkyRotation(_fromRotation, def, fromTimeOfDay))
+    .applyMatrix3(getCachedSkyRotation(_toRotation, def, toTimeOfDay));
 
 /** The day-night start time (hours), from which the extra suns turn with the sky. */
 export const getDayNightStartTime = (def: SkyBoxDayNightDef | undefined) =>
