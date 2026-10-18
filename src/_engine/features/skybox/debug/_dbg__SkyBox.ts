@@ -20,8 +20,8 @@ import {
   getSceneDefaultSkyBoxId,
   setActiveSkyBox,
   SKYBOX_DEBUG_OVERRIDES_LS_KEY,
-  SKYBOX_MANAGER_ID,
 } from '../SkyBox';
+import { SKYBOX_MANAGER_ID } from '../SkyLights';
 import { _registerManagerDebugInfo } from '../../../debug/_dbg__ManagedEntities';
 import { getCurrentSceneId } from '../../../kernel/scene/Scene';
 import {

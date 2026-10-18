@@ -73,15 +73,24 @@ import {
   type SkyTimeState,
 } from './SkyTime';
 
-export type { SkyBoxDef } from './SkyBoxTypes';
-export {
-  resolveSkyBoxPreset,
-  SKYBOX_PRESET_NAMES,
-  type SkyBoxPresetDef,
-  type SkyBoxPresetName,
-} from './Presets';
+/**
+ * The sky box the root scene shows, as the API hands it out: which one, the scene it belongs to,
+ * and its definition with every change made since its activation merged in (`updateSkyBox`, and
+ * in the debug env the debug tab's overrides). A new object on every change: compare it, don't
+ * keep it.
+ */
+export type SkyBoxState = Readonly<{
+  id: string;
+  sceneId: string;
+  def: SkyBoxDef;
+}>;
 
-/** The one sky box the root scene shows. */
+/**
+ * The one sky box the root scene shows, with its internals (uniforms, nodes, textures, the running
+ * time): the feature's own state, read by its debug tab, the env ball, GPU memory and the tests.
+ * The API hands out its {@link SkyBoxState} part.
+ * @internal
+ */
 export type ActiveSkyBox = {
   id: string;
   sceneId: string;
@@ -126,16 +135,16 @@ export type SkyBoxUpdate = {
   dayNight?: SkyBoxOverrides['dayNight'];
 };
 
+/**
+ * Why the active sky box changed: `'activate'` (another sky box, or the same one loaded again
+ * after a structural update), `'update'` (an `updateSkyBox` that kept its nodes or rebuilt them)
+ * or `'clear'` (none shows, eg. on a scene's exit).
+ */
 export type SkyBoxChangeReason = 'activate' | 'update' | 'clear';
 /**
  * A listener for {@link onSkyBoxChange}: the active sky box (null once cleared) and why it changed.
  */
-export type SkyBoxChangeListener = (
-  active: ActiveSkyBox | null,
-  reason: SkyBoxChangeReason
-) => void;
-
-export { SKYBOX_MANAGER_ID } from './SkyLights';
+export type SkyBoxChangeListener = (skyBox: SkyBoxState | null, reason: SkyBoxChangeReason) => void;
 
 /**
  * The debug tab's override store: `{ [sceneId]: { [skyBoxId]: SkyBoxOverrides } }`.
@@ -157,7 +166,7 @@ let activationInFlight: Promise<ActiveSkyBox | null> | null = null;
  * in call order, and the callers to settle once it's applied. */
 const queuedUpdates = new Map<
   string,
-  { update: SkyBoxUpdate; settle: ((active: ActiveSkyBox | null) => void)[] }
+  { update: SkyBoxUpdate; settle: ((active: SkyBoxState | null) => void)[] }
 >();
 const listeners = new Set<SkyBoxChangeListener>();
 
@@ -175,7 +184,9 @@ const resolveSceneId = (sceneId?: string) =>
 
 /**
  * Registers (or replaces, by id) a sky box definition without showing it. Without a sceneId,
- * it belongs to the loading scene, or else the current one.
+ * it belongs to the loading scene, or else the current one. Used by `createSkyBox` and the
+ * feature's `sceneRegistered` hook (a scene's JSON sky boxes); apps call `createSkyBox`.
+ * @internal
  * @returns the scene id it was registered in
  */
 export const registerSkyBox = (def: SkyBoxDef, sceneId?: string) => {
@@ -187,7 +198,7 @@ export const registerSkyBox = (def: SkyBoxDef, sceneId?: string) => {
   }
   if ('preset' in def && IS_DEBUG_ENV) {
     lwarn(
-      `Sky box "${def.id}" still has a preset, which is ignored here: pass the definition through resolveSkyBoxPreset first (JSON sky boxes are resolved at build time).`
+      `Sky box "${def.id}" still has a preset, which is ignored here: pass the definition through resolveSkyBoxPreset (aekasha/skybox) first (JSON sky boxes are resolved at build time).`
     );
   }
   let sceneDefs = registry.get(targetSceneId);
@@ -205,7 +216,11 @@ export const registerSkyBox = (def: SkyBoxDef, sceneId?: string) => {
   return targetSceneId;
 };
 
-/** The sky box a scene starts with: the last registered with `isDefault: true`, else the first registered. */
+/**
+ * The sky box a scene starts with: the last registered with `isDefault: true`, else the first
+ * registered. Read by the feature's `created` hook and the debug tab.
+ * @internal
+ */
 export const getSceneDefaultSkyBoxId = (sceneId: string) => {
   const sceneDefs = registry.get(sceneId);
   if (!sceneDefs?.size) return null;
@@ -402,7 +417,10 @@ const loadAndShow = async (
  * latest call wins.
  * @returns the active sky box, or null
  */
-export const setActiveSkyBox = async (id: string | null, sceneId?: string) => {
+export const setActiveSkyBox = async (
+  id: string | null,
+  sceneId?: string
+): Promise<SkyBoxState | null> => {
   if (id === null) {
     clearSkyBox();
     return null;
@@ -423,15 +441,23 @@ export const setActiveSkyBox = async (id: string | null, sceneId?: string) => {
   return activate(targetSceneId, resolveSkyBoxDef(def, targetSceneId));
 };
 
-/** Shows a scene's default sky box (see getSceneDefaultSkyBoxId), if it has any. Called by the
- * scene loader when a scene is entered. */
+/**
+ * Shows a scene's default sky box (see getSceneDefaultSkyBoxId), if it has any: the feature's
+ * `created` hook, once the scene code has run and the scene is current.
+ * @internal
+ */
 export const activateSceneDefaultSkyBox = async (sceneId: string) => {
   const id = getSceneDefaultSkyBoxId(sceneId);
   if (!id) return null;
   return setActiveSkyBox(id, sceneId);
 };
 
-/** The sky box the root scene shows, or null. */
+/**
+ * The sky box the root scene shows with its internals, or null: for the feature's debug tab, the
+ * env ball, GPU memory and the tests. Apps get its {@link SkyBoxState} from the API's results and
+ * {@link onSkyBoxChange}.
+ * @internal
+ */
 export const getActiveSkyBox = () => active;
 
 const LEGACY_WARN = (message: string) => {
@@ -446,7 +472,9 @@ const LEGACY_WARN = (message: string) => {
  * the last sky box created for a scene is its default.
  * The legacy `{ type, params }` props still work (with a dev warning).
  */
-export const createSkyBox = async (defOrLegacy: SkyBoxDef | LegacySkyBoxProps) => {
+export const createSkyBox = async (
+  defOrLegacy: SkyBoxDef | LegacySkyBoxProps
+): Promise<SkyBoxState | null> => {
   const converted = isLegacySkyBoxProps(defOrLegacy)
     ? fromLegacySkyBoxProps(defOrLegacy, LEGACY_WARN)
     : defOrLegacy;
@@ -492,7 +520,7 @@ const isStructuralBaseUpdate = (current: SkyBoxBaseDef, update: SkyBoxUpdate['ba
  * by then does nothing.
  * @returns the active sky box once the update is applied
  */
-export const updateSkyBox = (id: string, update: SkyBoxUpdate): Promise<ActiveSkyBox | null> => {
+export const updateSkyBox = (id: string, update: SkyBoxUpdate): Promise<SkyBoxState | null> => {
   if (!activationInFlight) return applyUpdate(id, update);
   const queued = queuedUpdates.get(id);
   if (queued) queued.update = deepMerge(queued.update, update);
@@ -507,7 +535,7 @@ const applyQueuedUpdates = () => {
   queuedUpdates.clear();
   for (const [id, { update, settle }] of entries) {
     const applied = updateSkyBox(id, update);
-    const resolve = (result: ActiveSkyBox | null) => settle.forEach((fn) => fn(result));
+    const resolve = (result: SkyBoxState | null) => settle.forEach((fn) => fn(result));
     void applied.then(resolve, () => resolve(active));
   }
 };
@@ -564,7 +592,11 @@ const applyUpdate = async (id: string, update: SkyBoxUpdate) => {
   return active;
 };
 
-/** Removes the shown sky box (and resets the scene's environment intensity and rotation). */
+/**
+ * Removes the shown sky box (and resets the scene's environment intensity and rotation): the
+ * feature's `exit` hook, `setActiveSkyBox(null)`, `stopSkyBox` and the legacy "no sky box".
+ * @internal
+ */
 export const clearSkyBox = () => {
   activationSeq++;
   active = null;
@@ -600,10 +632,17 @@ export const stopSkyBox = () => {
  */
 export const bakeEnvironment = () => requestEnvBake();
 
-/** The source texture of the sky box the root scene shows, or null. */
+/**
+ * The source texture of the sky box the root scene shows, or null: the feature's
+ * `retainedTextures` hook keeps it through a scene's asset release.
+ * @internal
+ */
 export const getActiveSkyBoxTexture = () => active?.textures.source ?? null;
 
-/** The PMREM the root scene's environment samples, or null. */
+/**
+ * The PMREM the root scene's environment samples, or null: for the env ball.
+ * @internal
+ */
 export const getActiveEnvironmentTexture = () =>
   active?.nodes.environment ? active.textures.environment : null;
 
@@ -833,11 +872,19 @@ function skyBoxSystem(world: ECSWorld) {
 type SkyBoxGUIModule = typeof import('./debug/_dbg__SkyBox');
 let debugGUI: DebugModuleRef<SkyBoxGUIModule> | null = null;
 
+/**
+ * Loads the sky box debug tab's module (the feature's `onDebug` hook; null outside the debug env).
+ * @internal
+ */
 export const registerSkyBoxDebugGUI = async () => {
   debugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__SkyBox'));
 };
 
-/** Builds the sky box debug tab, or rebuilds (default) or refreshes it. */
+/**
+ * Builds the sky box debug tab, or rebuilds (default) or refreshes it: the feature's
+ * `onDebugAfterStart` hook, and this module on every change. A no-op until its module has loaded.
+ * @internal
+ */
 export const createSkyBoxDebugGUI = (opts?: { rebuild?: boolean }) => {
   useDebug(debugGUI)?._createSkyBoxDebugGUI(opts);
 };
