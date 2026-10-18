@@ -1,31 +1,376 @@
-Status: stub — not-implemented
+Status: draft | expanded 2026-10-18, decisions proposed — not-implemented
 Category: Refactoring, Documentation, Sky box
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
+Related: \_DONE_p613_review-rendering-scene-assets.md (Phase 5's `toSkyColor` input, §1.2), \_DONE_p614_review-physics.md (D6's `onUnmount`, which the sky box gets too: F1), p622_engine-6-major.md (what waits for the major: D3), `docs/issues/lodshowcase-sky-snapshot-drift.md` (the clouds' clock: D5), p990_follow-ups-from-done-plans.md (its "Sky box" items stay there: out of scope)
 
-# Review: Sky Box — Stub
+# Review: Sky Box
 
-**This is a stub.** It fixes the scope, the inputs and the done criteria. Expand it into a full plan (grounding checked against the code, non-breaking phases, the Hub phase, versioning) when its blockers land: its details depend on p602's decisions.
+Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every file in scope,
+records the findings per file group, and fixes them or files them. It also fixes two activation
+bugs, puts the preset helper code is told to use on the entry, reads the sky's colours the way
+the kernel does (p613's input), gives `skyBox()` a stop for `unmount()`, and moves the clouds off
+three's wall clock (the snapshot drift issue).
 
-## Goal
+## 1. As found (2026-10-18, branch `review-skybox` at `698b502`, = `main` after p614's merge, Engine 5.5.0)
 
-Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every file in scope, and records the findings per file group in an "As found" list.
+### 1.1 The stub's names, checked
 
-## Scope
+The stub was written before p608's move (and p605's ratchet, which changed the counts).
 
-- `SkyBox/` (10 files) and `SkyBox/layers/` (8; 47 of 79 exports documented), its debug folders (17 files: structure and docs only, p800 rewrites the panels).
-- The folder's nested `CLAUDE.md` (the sky box section, moved there verbatim by `_DONE_p605`) is checked against the code.
+| Stub | Now |
+| --- | --- |
+| `SkyBox/` (10 files) | `features/skybox/`: 12 modules (`SkyBox.ts` 771 lines, `SkyLights.ts` 580, `SkyBoxSchema.ts` 579, `SkyComposite.ts` 405, `SkyTime.ts` 303, `SkyEnvironment.ts` 197, `SkyStaticLayers.ts` 196, `LegacySkyBox.ts` 159, `Presets.ts` 150, `SkyBoxTypes.ts` 95, `SkyBoxFeature.ts` 64, `SkyColor.ts` 7), the entry `index.ts`, `SkyTime.test.ts` and the nested `CLAUDE.md` |
+| `SkyBox/layers/` (8; 47 of 79 exports documented) | `features/skybox/layers/`: the same 8 (85-324 lines each), still **47 / 79** |
+| its debug folders (17 files) | `features/skybox/debug/`: **18** `_dbg__` modules, 2,981 lines; `_dbg__SkyBoxShared.ts` is 850 (G1) |
+| "the folder's nested `CLAUDE.md` (the sky box section, moved there verbatim by `_DONE_p605`)" | `features/skybox/CLAUDE.md`, one `## Sky box` section (§1.4 K) |
 
-## Inputs
+Every file is under the 800-line limit but `_dbg__SkyBoxShared.ts`; Phase 0 checks the functions against the 150-line one.
 
-- p600 §2; the three r186 traps CLAUDE.md lists for the sky box (they become `@remarks`).
-- p613 Phase 5 (D11's type test): `toSkyColor` (`features/skybox/SkyColor.ts`, 17 callers) reads
-  a `{ r, g, b }` colour (the schema's `ColorJSON`, 0-255) as linear, while a `'#rrggbb'` string
-  goes through `THREE.Color`'s sRGB conversion, so the two forms of one colour render differently.
-  The kernel's `toThreeColor` (`kernel/render/ThreeMath.ts`, `@internal`) reads both as sRGB (the
-  lights and the scene background since p613). No sky box JSON uses the object form yet (all 7
-  write strings), so moving to `toThreeColor` changes no scene; the debug tab's colour pickers
-  are the thing to check.
+In scope (D1): `features/skybox/` with its `layers/` and `debug/` (the debug modules for
+structure and docs only: p800 rewrites the panels), and its `CLAUDE.md`. Outside it, only what a
+change here breaks: the debug modules that import the feature's internals (`debug/_dbg__EnvBall.ts`,
+`debug/gpuMemory/_dbg__GPUMemorySources.ts`, `debug/_dbg__TestBridge.ts`), the schemas entry, and
+the Hub's two sky box pages.
+
+### 1.2 The stub's inputs, checked
+
+- **The three r186 traps** the nested `CLAUDE.md` lists: a TSL `If` mustn't be the first to build
+  a shared node (`layers/Stars.ts`); a render target sampled before its first render gets its GPU
+  texture destroyed in place (`SkyEnvironment.ts`' `initEnvBakeTarget`, `SkyStaticLayers.ts`'
+  `initTarget`, `SkyLights.ts`' first shadow map); a `castShadow` toggled back on in place crashes
+  with PostFX (`SkyLights.ts`' header). Plus two direction traps written as comments: the
+  background looks up `normalWorldGeometry`, not `normalWorld`, and PMREMNode applies
+  `environmentRotation` only to materials without an `envMap` (`layers/Base.ts`). Each is a
+  comment at its code; none is a `@remarks` yet (Phase 4).
+- **p613's `toSkyColor`** (`SkyColor.ts`, 17 callers, as the stub says): a `'#rrggbb'` string goes
+  through `THREE.Color`'s sRGB → linear conversion, a `{ r, g, b }` (0-255) is taken as linear,
+  so the two forms of one colour render differently. The kernel's `toThreeColor`
+  (`kernel/render/ThreeMath.ts:143`) reads both as sRGB. **All 7 sky box JSONs write strings**, so
+  moving to it changes no scene. The debug tab's colour pickers: `_dbg__SkyBoxShared.ts:429`'s
+  `toHex` is `toSkyColor(value).getHexString()`, which converts back to sRGB, so a `{ r, g, b }`
+  value shows a different hex than its JSON gives; the pickers write strings, so nothing they
+  store changes. C5.
+- **`docs/issues/lodshowcase-sky-snapshot-drift.md`** (not in the stub): five scenes' snapshots
+  drift in the clouds, because `layers/Clouds.ts`' `VIEW` clouds read three's `time` node (the
+  renderer's wall clock), and the env bake's frozen clouds read its private
+  `_nodes.nodeFrame.time` (`SkyBox.ts:755`, `getFrameTime`). It's the sky box's own clock. D5.
+- **p614 D6** gave `FeatureContext` an `onUnmount`; `skyBox()` has none (F1).
+- **p990's "Sky box" items** (the day sky's tuning, three upgrades, the deferred epic ideas, a lit
+  env ball) are features or look changes, not review findings: they stay in p990.
+
+### 1.3 Documentation (the ratchet's `docs.json`)
+
+| Folder | Exports documented | Undocumented |
+| --- | ---: | --- |
+| `features/skybox` | 149 / 173 | `LEGACY_SKYBOX_WARNING`; `SKYBOX_PRESETS`, `SKYBOX_PRESET_NAMES`, `SkyBoxPresetName`, `isSkyBoxPresetName`; `SkyBoxChangeReason`, `isDayNightPlaying`, `registerSkyBoxDebugGUI`; `SkyBoxBaseType`; `StaticLayersUniforms`, `createSkyUniforms`, `getMoonCount`, `isAtmosphereEnabled`, `isGroundEnabled`, `isMilkyWayEnabled`, `isStarsEnabled`; `_setEnvBakeHooks`, `isEnvBakeRequested`; `SUN_LIGHT_DEFAULTS`, `MOON_LIGHT_DEFAULTS`, `AMBIENT_LIGHT_DEFAULTS`; `_setStaticLayersBakeHooks`; `DAY_NIGHT_DEFAULTS`, `createSkyTimeState` |
+| `features/skybox/layers` | 47 / 79 | each layer's `*_DEFAULTS`, `*Uniforms` type and `create*Uniforms`, four `*_STRUCTURAL_KEYS` (C2), `BaseLayer`, `ENV_DEFAULTS`, `MOON_TEXTURE_DEFAULTS`, `atmosphereParts`, `applyCloudsUniforms`, `applyGroundUniforms` |
+
+56 exports; the ratchet counts no members here. The `_dbg__` modules are outside TypeDoc: 10 of
+their exports have no comment (`BakeStats`, `createBakeStats`, `hasNoEntries`, `SKYBOX_TAB_ID`,
+`LIST_MAX`, `getSelectedIndex`, `getSkyBoxOverrides`, `skyBoxProxy`, `NO_SKYBOX_ID`,
+`syncSkyBoxProxy`; G2). The schema's Zod shapes are documented on most keys, not all (P3).
+
+### 1.4 Findings by file group
+
+Numbered for the phases. **(bug)** marks wrong behaviour, **(perf)** per-frame cost; the rest are
+hygiene, placement and API shape. Read from the code, not reproduced, unless a finding says so.
+
+**State and API (`SkyBox.ts`)**
+
+- S1 **(bug)** An `updateSkyBox` made while a structural one is loading its texture is lost.
+  The structural update calls `activate` (`:490`), which awaits the textures and then shows a new
+  `ActiveSkyBox` built from the definition it was given and fresh uniforms (`:360-369`). Until it
+  does, `active` is still the old one, so a second `updateSkyBox` merges into the old definition
+  and writes the old uniforms (`:467`, `:493`): both are dropped when the activation lands. The
+  debug tab can do it (a base file change, then a slider before the file has loaded). The JSDoc
+  says nothing about overlapping calls (the coding standard asks it to).
+- S2 **(bug, debug env)** A sky box texture that fails to load fails the scene load in the debug
+  env only. `layers/Base.ts:80` / `:103` and `layers/Moon.ts:170` pass `throwOnError: IS_DEBUG_ENV`,
+  so `loadBaseTexture` / `loadMoonTexture` reject, `activate` rejects, and with it the `created`
+  scene hook (`SkyBoxFeature.ts:34`), which `loadScene` treats as a failed load (p613 D3). In
+  production `loadTextureAsync` returns its placeholder and the sky shows black. `setActiveSkyBox`
+  and `createSkyBox` reject the same way.
+- S3 Placement and API: `resolveSkyBoxPreset` (the typed helper: `Presets.ts:149`) isn't on the
+  entry, while the entry exports `mergeSkyBoxPreset`, whose own JSDoc says code uses
+  `resolveSkyBoxPreset`. `registerSkyBox`' warning (`:183`), `SkyBoxTypes.ts:86` and the nested
+  `CLAUDE.md` send app code to it, and the lint forbids the deep import, so an app can't put a
+  preset under a code sky box. `SkyBoxPresetDef`, `SkyBoxPresetName` and `SKYBOX_PRESET_NAMES`
+  aren't on the entry either. `SkyBox.ts:78-83` and `:139` re-export the presets and
+  `SKYBOX_MANAGER_ID`, so each has two paths.
+- S4 API shape: the public `SkyBoxChangeListener` takes an `ActiveSkyBox` (not on the entry), which
+  carries the internals: `uniforms: SkyUniforms`, the nodes, the textures, `time: SkyTimeState`.
+  `SkyBoxChangeReason` is exported, undocumented and not on the entry. `SkyBoxUpdate` names
+  `SkyBoxOverrides` and `SkyBoxEnvDef`, and `SkyBoxDef` the layer types, none on the entry (Phase 0
+  lists `yarn hub:build`'s `notExported` warnings for the folder). The template's one listener
+  (`largeWorld.ts:594`) reads neither argument.
+- S5 API shape: `setActiveSkyBox(id, sceneId?)`, `registerSkyBox(def, sceneId?)`,
+  `getSunDirection(out, i = 0)`, `getMoonDirection(out, i = 0)`, `getSunElevation(i = 0)` and
+  `getMoonPhase(i = 0)` take optional positional parameters (the standard asks for an options
+  object). Changing them is breaking (D3).
+- S6 Exports that aren't on the entry and aren't `@internal`: `registerSkyBox`,
+  `getSceneDefaultSkyBoxId`, `activateSceneDefaultSkyBox`, `getActiveSkyBox`, `clearSkyBox`,
+  `getActiveSkyBoxTexture`, `getActiveEnvironmentTexture`, `registerSkyBoxDebugGUI`,
+  `createSkyBoxDebugGUI`, `ActiveSkyBox`. Their users are the feature, its debug tab, the env
+  ball, GPU memory and the test bridge. Undocumented: `isDayNightPlaying`, `SkyBoxChangeReason`,
+  `registerSkyBoxDebugGUI` (§1.3).
+- S7 Stale: `layers/base.ts` (`:254`), `SkyBox/presets.ts` (`SkyBoxTypes.ts:86`),
+  `SkyBox/SkyBoxTypes.ts` (`SkyBoxSchema.ts:506`), `layers/sun.ts`, `layers/moon.ts`,
+  `layers/stars.ts` in the layers' comments (the files are PascalCase since p608);
+  `activateSceneDefaultSkyBox` "called by the scene loader" (the feature's `created` hook is).
+- S8 `getFrameTime` (`:755`) reads the renderer's private `_nodes.nodeFrame.time` through an
+  `unknown` cast: it goes with D5.
+
+**Composite and layers (`SkyComposite.ts`, `layers/`)**
+
+- C1 **(perf)** `applySkyTimeUniforms` runs every frame while the cycle plays and says it
+  allocates nothing, but calls `hasStaticLayers` (`SkyComposite.ts:320`), whose
+  `getEnabledNebulae` makes two arrays (`filter`, `slice`; `layers/Nebula.ts:131`). Phase 0's
+  `perf-auditor` looks for the rest.
+- C2 Dead code: `SUN_STRUCTURAL_KEYS`, `GROUND_STRUCTURAL_KEYS`, `ATMOSPHERE_STRUCTURAL_KEYS`,
+  `CLOUDS_STRUCTURAL_KEYS` have no reader (only `BASE_STRUCTURAL_KEYS` is read, by `SkyBox.ts`).
+- C3 `layers/Nebula.ts:134`'s `seededRandom` is `createSeededRandom` (`utils/SeededRandom.ts`,
+  p610) line for line: the same numbers, so using it changes no nebula.
+- C4 The layers are internal (nothing on the entry), and 32 of their exports are undocumented
+  (§1.3). Their defaults repeat the schema's "Default …" comments; the schema is what an author
+  reads, the constants are what the code reads, and both stay (the debug tab shows the constants).
+- C5 The colour conversion (§1.2): `toSkyColor` should read both forms as sRGB, as
+  `toThreeColor` does. It's on the activation and update paths only (it allocates a `THREE.Color` per call), never per
+  frame: checked at its 17 callers.
+
+**Bakes (`SkyEnvironment.ts`, `SkyStaticLayers.ts`)**
+
+- B1 Activation before the renderer has initialized skips `initEnvBakeTarget` / `initTarget`
+  (`hasInitialized()`), so the destroyed-texture trap would come back, and `setEnvBake` creates its
+  `PMREMGenerator` with `getRenderer() as THREE.Renderer` even when it's `undefined`. The boot
+  creates the renderer before the first scene loads, so no path is known to hit it: Phase 0
+  checks (a `createSkyBox` in `start` before `createRenderer`, a mount).
+- B2 Undocumented: `_setEnvBakeHooks`, `_setStaticLayersBakeHooks` (debug hooks, `@internal`),
+  `isEnvBakeRequested`.
+- B3 Otherwise clean: new targets cleared on allocation, a bake scene disposed with its one node
+  (three r186's `Background.js` ties its mesh's disposal to the first node a scene is given, so a
+  bake scene is never given a second: checked), one long-lived generator per size, the texture
+  PMREMs disposed with their source.
+
+**Lights (`SkyLights.ts`)**
+
+- L1 `SUN_LIGHT_DEFAULTS`, `MOON_LIGHT_DEFAULTS`, `AMBIENT_LIGHT_DEFAULTS` undocumented;
+  `getSkyLightIds` says "(debug and tests)", but it's on the entry and the Hub tells apps to use it
+  (largeWorld does). Otherwise clean: the per-frame path allocates nothing, the light is read from
+  `OBJECT3D` every time, an entity deleted from outside is created again.
+
+**Time (`SkyTime.ts`, `SkyTime.test.ts`)**
+
+- T1 Clean and tested. `DAY_NIGHT_DEFAULTS` and `createSkyTimeState` undocumented; `layers/moon.ts`
+  in two comments (S7).
+
+**Presets, legacy, schema and types (`Presets.ts`, `LegacySkyBox.ts`, `SkyBoxSchema.ts`, `SkyBoxTypes.ts`)**
+
+- P1 S3's entry gap.
+- P2 Undocumented: §1.3's preset and legacy names, `SkyBoxBaseType`.
+- P3 The Zod rule (each shape key documented): undocumented keys are `id`, `env`, `atmosphere`,
+  `stars`, `ambientLight`, `ground`, `debugData` and the meta keys of `SkyBoxDefSchema`; `type`,
+  `color`, `file`, `path`, `textureId`, `intensity` of the base shapes; `backgroundIntensity`,
+  `environmentIntensity`; `zenithTint`; `shadowBias`, `shadowNormalBias`; the moon texture's
+  `file`, `path`, `textureId`; and the type `SkyBoxAsset`.
+- P4 The pre-3.0 legacy shape (`{ type, params }`, `LegacySkyBox.ts`, `createSkyBox`'s second
+  form, the schema's preprocess) has no `@deprecated` and no removal version. Nothing in the
+  template uses it (no JSON, no `createSkyBox` call). D3.
+
+**The feature and the entry (`SkyBoxFeature.ts`, `index.ts`)**
+
+- F1 `skyBox()` has no `onUnmount` (p614 D6): `unmount()` leaves the env bake's target and
+  generator, the nebula cube, the sky lights' state and the listeners; `deleteRenderer()` runs
+  right after the features' stops, so the GPU side goes with the device, and the module state is
+  what's left (`docs/issues/remount-after-unmount.md` lists the sky box among it).
+- F2 The entry: S3's additions; otherwise every name on it is used and documented.
+
+**The debug tab (`debug/`, structure and docs only)**
+
+- G1 `_dbg__SkyBoxShared.ts` is 850 lines: overrides and the proxy (`:192-520`), then undo / redo,
+  "Apply preset" and the pre-p111 migration (`:522-850`). Split in two along that line, moved
+  as is.
+- G2 10 exports without a comment (§1.3).
+- G3 C5's `toHex`, fixed with it.
+- G4 Otherwise clean: no `any`, no `eslint-disable`, no TODO; it imports the feature's modules and
+  the debugger framework only.
+
+**The nested `CLAUDE.md` (K)**
+
+- K1 The `skyBox()` feature is described twice (its first bullet, and again in the second's
+  middle).
+- K2 `resolveSkyBoxPreset` "for code definitions" (S3: not reachable from the entry today).
+- K3 It says the clouds and the time stop as described; D5 changes the clouds' clock, F1 adds the
+  stop.
+
+## 2. Decisions (proposed 2026-10-18; confirm before Phase 1)
+
+### D1. Scope: §1.1's files
+
+`features/skybox/` with `layers/`, `debug/` (structure and docs: G1, G2, G3) and `CLAUDE.md`;
+outside it, only the imports a change breaks and the Hub's sky box pages.
+
+### D2. Versions
+
+Engine **minor** (5.5.0 → 5.6.0): new names on the entry (S3, S4's type), the stop (F1), the
+fixes (S1, S2), the clouds' clock (D5, a behaviour change: they stop with the loop), the
+deprecations (D3). Toolkit: no change expected. App **patch** only if an app file changes. Project
+= engine.
+
+### D3. What waits for engine 6.0.0 (p622)
+
+- The legacy `{ type, params }` shape (P4): `@deprecated` now, removed in engine 6.0.0 with
+  `LegacySkyBox.ts`, `createSkyBox`'s legacy form and the schema's conversion. The save data's
+  pre-p111 migration (`fromLegacySkyBoxOverrides`, the debug tab's one-time key migration) goes
+  with it. **Recommended:** deprecate (nothing uses it, and 6.0.0 is a breaking major already).
+- S5's positional parameters: listed in p622 as candidates, not changed in a minor (as p614 did
+  with `createPhysicsEntity`). An index parameter (`i`) is common enough that p622 decides.
+
+### D4. Two bugs fixed first, each with a test where it runs in Node
+
+- **S1:** activations and updates run one after another: an `updateSkyBox` made while an
+  activation is in flight waits for it, then applies to what it showed (or drops itself if that
+  is another sky box, as today's id check does). The JSDoc says which call wins.
+- **S2:** the sky box loads its textures without throwing, in every env: a failed texture is
+  logged (and in the debug env shown as a toast), and the sky shows its black base, as production
+  does today. A scene load never fails on a sky texture.
+
+### D5. The clouds run on the engine's clock
+
+The clouds' drift (and the env bake's frozen clouds) read a `time` uniform of the sky box's,
+advanced in `skyBoxSystem` by `getElapsedTime()`'s change, like the day-night step: it stands
+still while the master loop is paused, in editor views and during a scene load. `getFrameTime`
+and its private-field read go (S8). It's a visible change only in that paused clouds stop.
+Phase 0 measures whether that alone makes the five scenes of the drift issue snapshot-stable
+across runs; if it doesn't (the elapsed time at the snapshot varies with the page's load), the
+test bridge gets a debug hook to set it before a snapshot. The issue is closed in Phase 6.
+
+**Alternative:** keep three's `time` and only pin three's node frame time in the runner. That
+leaves the clouds running while the game is paused, which the root `CLAUDE.md`'s Views section
+lists as a known gap.
+
+### D6. Colours: one reading (C5)
+
+`toSkyColor` keeps its name and callers and reads both forms as sRGB (`toThreeColor`), so the
+debug pickers show what the JSON says. No template scene changes (§1.2): the scene baselines
+must not move.
+
+### D7. The public API
+
+- **On the entry** (S3): `resolveSkyBoxPreset`, `SKYBOX_PRESET_NAMES`, `SkyBoxPresetDef`,
+  `SkyBoxPresetName`. `mergeSkyBoxPreset` stays on it (the gatherer's untyped form; documented
+  as such) but its JSDoc points at the new one. `SkyBox.ts`' re-exports go: one path per name.
+- **The listener's type** (S4): a public `SkyBoxState` (`Readonly<{ id, sceneId, def }>`) on the
+  entry; `SkyBoxChangeListener` takes it, and `SkyBoxChangeReason` goes on the entry documented.
+  `ActiveSkyBox` (the internals) is `@internal`. Every `ActiveSkyBox` is a `SkyBoxState`, so no
+  caller breaks. The layer types `SkyBoxDef` names go on the entry if Phase 0's `notExported`
+  list names them.
+- **`@internal`** (S6): everything exported and not on the entry, with a summary saying who uses
+  it.
+
+### D8. `skyBox()` gets a stop (F1)
+
+`ctx.onUnmount(clearSkyBox)` plus the listener set cleared: the bakes disposed, the lights
+deleted, the scene properties reset, before `deleteRenderer()`. The Hub's SBP page and the mount
+JSDoc say which features stop.
+
+### D9. Documentation
+
+§1.3's 56 exports to 100 %, the schema's keys (P3), the debug tab's 10 (G2), the five traps of §1.2
+as `@remarks` on the functions that guard them (`setEnvBake`, `setStaticLayers`, the disc light's
+create, `buildBaseLayer`, `starsNode`), stale names fixed (S7).
+
+### D10. Tests
+
+`SkyTime.test.ts` stays. New, in Node: `toSkyColor` (both forms equal; C5), the presets
+(`resolveSkyBoxPreset` against each template, arrays and `base` replaced), the composite
+signature and `needsRebuild`'s cases, and S1 / S2 through `SkyBox.ts` with a stub root scene and
+texture loader if its imports allow it in Node (else the test bridge in the scene runner).
+
+### D11. No example scene
+
+A review plan adds no feature to show. The sky box feature and example pages are checked against
+the code (Phase 6).
+
+## 3. Phases
+
+Each phase leaves the tree green: `yarn test`, the lint and `tsc` (the Stop hook), and the phase's
+own checks. `yarn verify:scenes` runs at the end of Phases 1, 2 and 4 and in Phase 7 (snapshots
+and hashes unchanged unless a phase says otherwise; no file is edited while it runs). Each phase
+ends with its "As built" list, its files' JSDoc at 100 % and `docs.json` updated
+(`yarn verify:baselines --docs --update`).
+
+### Phase 0: baselines and measurements
+
+1. `yarn verify:scenes --update` on this commit (= `main`), then `yarn verify:baselines` clean.
+2. `perf-auditor` over `features/skybox/`: confirm or add to C1. The functions over 150 lines, if any.
+3. `yarn hub:build`: the folder's `notExported` warnings (S4's list for D7).
+4. Reproduce S1 (the debug tab: a base file change, then a slider) and S2 (a missing base file
+   with `?isDebug=true`); check B1's paths (a sky box before `createRenderer`, a mount).
+5. D5's measurement: run the drift issue's five scenes twice, minutes apart, and record what
+   moves.
+6. Record the numbers here and confirm D1-D11.
+
+### Phase 1: the bugs (D4) and the stop (D8)
+
+1. S1 and S2, each with its test (D10).
+2. F1: `skyBox()`'s `onUnmount`; `yarn verify:embed`.
+3. C1 (the per-frame arrays) and B1 if Phase 0 found a path.
+4. `yarn verify:scenes`: unchanged.
+
+### Phase 2: colours and the clouds' clock (D5, D6)
+
+1. C5 / G3 with its test.
+2. D5: the sky box's time uniform, the bake's frozen clouds from it, `getFrameTime` removed.
+3. `yarn verify:scenes`: hashes unchanged; snapshots of the scenes with clouds may move once
+   (recorded again with the reason), then stay put across two runs.
+
+### Phase 3: the API (D7) and the deprecations (D3)
+
+1. The entry's additions, `SkyBoxState`, the re-exports removed, `@internal` on S6's names.
+2. `@deprecated` on the legacy shape; p622's list.
+3. JSDoc of `SkyBox.ts`, `SkyBoxFeature.ts`, `Presets.ts`, `LegacySkyBox.ts`, `SkyBoxTypes.ts`,
+   `SkyBoxSchema.ts` (P3), and S7's stale names.
+4. `yarn hub:build`: no `notExported` left in the folder.
+
+### Phase 4: the internals
+
+1. `SkyComposite.ts`, `SkyEnvironment.ts`, `SkyStaticLayers.ts`, `SkyLights.ts`, `SkyTime.ts` and
+   `layers/`: C2 (removed), C3, C4, B2, L1, T1, the `@remarks` (D9).
+2. D10's remaining tests (the presets, the signature).
+3. `yarn verify:scenes`: unchanged.
+
+### Phase 5: the debug tab (G1, G2)
+
+1. `_dbg__SkyBoxShared.ts` split, moved as is; its importers updated.
+2. G2's comments.
+3. The tab checked by hand on `skyShowcase` (a param, undo / redo, a list edit, "Apply preset").
+
+### Phase 6: the Hub, CLAUDE.md, readme, and what's filed
+
+1. The sky box feature and example pages against the code (the preset helper, the stop, the
+   clouds' clock, the API links); `yarn hub:build`.
+2. The nested `CLAUDE.md` (K1-K3, D5, D8); the root's map line if it changes; `readme.md` if a
+   listed API changed.
+3. p622's sky box items; the drift issue closed (or updated, if D5's runner hook was needed).
+
+### Phase 7: versions and done
+
+1. D2's bumps, a `CHANGELOG.md` entry (D5's paused clouds and D8 called out),
+   `yarn checkVersions --against main`.
+2. `yarn test`, `yarn verify:scenes`, `yarn verify:baselines` (no unexplained growth), `yarn build`
+   (the SBP budgets), `yarn hub:build`.
+3. Mark the plan done (`docs/plans/CLAUDE.md`); time for a PR: `review-skybox` into `main`.
+
+## 4. Risks
+
+1. **D5 and the scene runner.** If the elapsed time at the snapshot varies between runs, the
+   clouds still drift: Phase 0 measures it before Phase 2 commits to the hook.
+2. **D7's narrowed listener type.** An app reading `uniforms` or `time` from the listener's
+   argument stops compiling; the template has no such reader, and `ActiveSkyBox` stays reachable
+   through `@internal` for the debug tools.
+3. **S1's queue.** A debug-tab drag issues an update per frame: queued behind an activation, they
+   must coalesce (the latest wins), not replay one by one.
 
 ## Done when
 
