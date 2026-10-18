@@ -1,8 +1,8 @@
 Status: stub — not-implemented
 Category: Networking
-Blocked by: p510_headless-simulation-runtime.md (a server to talk to), p614_review-physics.md (the transport interface in front of `postMessage`)
+Blocked by: p510_headless-simulation-runtime.md (a server to talk to)
 Blocks: p512_client-prediction-and-reconciliation.md
-Related: \_DONE_p604_multiplayer-viability-study.md (§3.1, §4.4-§4.7, Phase 1.3 the bandwidth measurements), \_DONE_p612_review-ecs-loop-config-init.md (the `appId` → entity map), p425_game-events-missions-and-save-games.md (serializable components, shared with save games), \_DONE_p346_spatial-domains.md and \_DONE_p352_physics-simulation-tiers.md (interest management), \_DONE_p603_gameplay-architecture-contracts.md (C4 the network brain, C5 recorded actions)
+Related: \_DONE_p614_review-physics.md (the transport interface in front of `postMessage`, `features/physics/transport/`), \_DONE_p604_multiplayer-viability-study.md (§3.1, §4.4-§4.7, Phase 1.3 the bandwidth measurements), \_DONE_p612_review-ecs-loop-config-init.md (the `appId` → entity map), p425_game-events-missions-and-save-games.md (serializable components, shared with save games), \_DONE_p346_spatial-domains.md and \_DONE_p352_physics-simulation-tiers.md (interest management), \_DONE_p603_gameplay-architecture-contracts.md (C4 the network brain, C5 recorded actions)
 
 # Network Transport and Replication — Stub
 

@@ -1,7 +1,7 @@
 Status: implemented (Phases 1-8)
 Category: Characters, Input, Architecture
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B; a minor bump per part, D7)
-Blocks: p614_review-physics.md, p617_review-input-ui-hud.md, p512_client-prediction-and-reconciliation.md, p420_npc-simulation-tiers.md, p421_kinematic-character-controller.md, p422_animation-state-graph-and-ik.md, p423_vehicles.md, p424_ai-brains-and-navigation.md, p426_sequencer-splines-and-cutscenes.md
+Blocks: \_DONE_p614_review-physics.md, p617_review-input-ui-hud.md, p512_client-prediction-and-reconciliation.md, p420_npc-simulation-tiers.md, p421_kinematic-character-controller.md, p422_animation-state-graph-and-ik.md, p423_vehicles.md, p424_ai-brains-and-navigation.md, p426_sequencer-splines-and-cutscenes.md
 Related: \_DONE_p603_gameplay-architecture-contracts.md (the contracts C1-C5 this plan builds, and the stub plans p421-p427 that build on it), \_DONE_p604_multiplayer-viability-study.md (§4: step-index time, seeded RNG, the simulation reads its own state), p420_npc-simulation-tiers.md, the "Refactor dynamic character code" (p070) and "Key binding refactoring" (p770) prompts in `docs/templates/todo-plan-prompts.txt` (they build on this plan), p428_character-determinism-in-worker-targets.md (D1: characters in the worker targets, left to it)
 
 # Character and Input Action Architecture

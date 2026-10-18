@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-8 implemented
+Status: implemented (Phases 0-9)
 Category: Refactoring, Documentation, Physics
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md, p511_network-transport-and-replication.md (the transport interface)
@@ -1380,7 +1380,7 @@ As built, section 4 (2026-10-18): W6 and the Hub's warnings.
 - **Checks:** `tsc` (both projects), the lint, `yarn test` (622 passed, 1 skipped),
   `devTools/verify/examples.test.ts`, `yarn verify:baselines`, `yarn hub:build`.
 
-### Phase 9: versions and done
+### Phase 9: versions and done — done
 
 1. D2's bumps, a `CHANGELOG.md` entry (D4b's behaviour change and D6 called out),
    `yarn checkVersions --against main`.
@@ -1424,6 +1424,21 @@ As built, section 2 (2026-10-18): the checks.
 - **`yarn build`:** `tsc` (both projects), the build, both SBP profiles within their budgets, and
   the Hub (419 pages, the 16 warnings of Phase 8, none in scope). The Hub step is
   `yarn hub:build`, so step 2's own run of it is covered.
+
+As built, section 3 (2026-10-18): the plan done.
+
+- Renamed to `_DONE_p614_review-physics.md`. The references to the old name: the `Blocks` lines of
+  p600, p605 and p610, p600's roadmap table, and the `Related` lines of p428, p510, p613 and
+  p622. `Blocked by` lines: p621 drops it, and so does p511 (it keeps p510; p614 moves to its
+  `Related`, with the transport). p102, p250 and p306 had no `Blocked by` p614 line (Phase 8 section 3
+  expected one); their "Paths since p614" paragraphs stay.
+- The root and nested `CLAUDE.md` files and the readme were updated in Phase 8 (D14), and no CLAUDE.md
+  names the plan's file. Phase 9 changed only `sbp.config.ts` (the budget) and versions, which they
+  don't list.
+- **Time for a PR:** `review-physics` into `main` (p600's "Branches and PRs": Stage C, one PR per
+  plan), with Engine 5.5.0, Toolkit 2.1.2 and App 1.12.3. After the merge, `yarn tagRelease` on
+  `main`, and `yarn verify:scenes --update --only scene01,scene01V2,thirdPersonGymScene` there
+  (the changelog's note: the friction fix's baselines are local).
 
 ## 4. Risks
 
