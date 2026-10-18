@@ -6,6 +6,10 @@ physics entities, simulation tiers and the tier policy, and drives the fixed ste
 neither physics nor Rapier is loaded, or in a production build. With
 `AppConfig.physics.enabled: false` it's installed, but no world is created at boot.
 
+An [embedded engine](hub:examples/embed)'s `unmount()` stops physics for good: the world is
+deleted (in worker mode, the worker is terminated with it), and every query or create still
+waiting for the worker rejects.
+
 ## Bodies on entities
 
 A physics object is an ECS entity with a rigid body and its colliders.
@@ -17,11 +21,33 @@ mesh from [`createMeshEntity`](api:createMeshEntity)), or makes a new one:
 - A body is `FIXED` (nothing moves it), `DYNAMIC` (the simulation moves it), or kinematic:
   `POS_BASED` or `VELO_BASED`, moved by your code through its next position or its velocity.
 - A collider is a box, ball, capsule, cone, cylinder, triangle, triangle mesh, convex hull or
-  heightfield. A primitive collider without its sizes takes them from the entity's mesh.
+  heightfield. A primitive collider without its sizes takes them from the entity's mesh, when
+  [`createGeometry`](api:createGeometry) made its geometry.
 - It resolves with the entity id once the body exists (in `WORKER_THREAD` mode, after the
   worker's reply). Deleting the entity removes its body and colliders.
+- When the body or a collider can't be made (a `TRIMESH` without indices), it rejects with the
+  error, and nothing of it is left: a new entity is deleted, an entity you passed is left as it
+  was.
 - A dynamic body's pose is written into the entity's transform every frame (at
   `APP_POST_PHYSICS`), and the transform moves its mesh. Your code never copies a position.
+
+## From imported models
+
+[`spawnImportedAsset`](api:spawnImportedAsset) gives a glTF node physics from its custom
+properties (Blender's custom properties, the glTF `extras`):
+
+- `isPhysObj: true` makes it a physics node, and `colliderType` picks its collider: `BOX`,
+  `BALL`, `CAPSULE`, `CONE`, `CYLINDER`, `TRIMESH`, `CONVEXHULL` or `HEIGHTFIELD`. A physics node
+  is a collider only, unless `keepMesh` keeps it rendered too.
+- The node with a `rigidType` (`FIXED`, `DYNAMIC`, `POS_BASED`, `VELO_BASED`) carries the body,
+  and the physics nodes with the same `index` are its colliders: one compound body. The nodes
+  without an `index` are one group too, so give each body of a file its own `index`.
+- A collider's sizes come from its node's geometry and scale, unless the properties give them
+  (`hx`, `radius`, `halfHeight`, …). A capsule, cone or cylinder stands on Y, and `spineAxis:
+  'x'` or `'z'` lays it along that axis. Each shape is centred on its node's origin.
+- `density`, `friction` and `restitution` default to 0.2.
+- `spawnImportedAsset`'s `physicsParams` override the properties per node from code, or give
+  physics to a node without any.
 
 ## Where the simulation runs
 
@@ -36,8 +62,12 @@ mesh from [`createMeshEntity`](api:createMeshEntity)), or makes a new one:
   the debug wireframes) sees the same step.
 - `maxBodies` (default 2048) is the buffer's size. A full buffer rejects `createPhysicsEntity`
   with a `PhysicsCapacityError`. `FIXED` bodies take no slot.
-- Queries (ray and shape casts) return a promise. The `…Sync` functions are for `MAIN_THREAD`
-  mode only and throw in worker mode.
+- Queries (ray and shape casts) and the body, collider and joint getters return a promise. Their
+  `…Sync` twins answer at once on `MAIN_THREAD` and throw in worker mode, except the few the
+  worker side keeps a copy of (`bodyTypeSync`, `isEnabledSync`, `getUserDataSync`, …): each API's
+  reference says which.
+- Every message between the main thread and the worker goes through one transport, as plain
+  data and in order. It's internal for now: the seam a network channel will plug into.
 
 ::: tip Hosting
 `SharedArrayBuffer` needs cross-origin isolation: the headers `Cross-Origin-Opener-Policy:
@@ -126,7 +156,9 @@ The app's `physicsTiers` scene is its demo: open it with `?isDebug=true&startSce
 
 ## Key APIs
 
-- [`createPhysicsEntity`](api:createPhysicsEntity): a body and its colliders on an entity.
+- [`createPhysicsEntity`](api:createPhysicsEntity): a body and its colliders on an entity, and
+  [`getPhysicsEntityByAppId`](api:getPhysicsEntityByAppId) to find one again.
+- [`spawnImportedAsset`](api:spawnImportedAsset): an imported model's nodes, with their physics.
 - [`getPhysicsWorld`](api:getPhysicsWorld): the world, for queries.
 - [`createJoint`](api:PhysicsJoints.createJoint) and [`deleteJoint`](api:PhysicsJoints.deleteJoint).
 - [`requestPhysicsTier`](api:requestPhysicsTier), [`getPhysicsTier`](api:getPhysicsTier) and
