@@ -1390,6 +1390,41 @@ As built, section 4 (2026-10-18): W6 and the Hub's warnings.
 3. Mark the plan done (`docs/plans/CLAUDE.md`); time for a PR: this branch into `main`
    (p600's "Branches and PRs").
 
+As built, section 1 (2026-10-18, committed as `a7c7729`): the versions.
+
+- Engine and project 5.4.0 → **5.5.0**, toolkit 2.1.1 → **2.1.2**, and app 1.12.2 → **1.12.3**,
+  not D2's "only if a scene changes": Phase 8 section 3's two app comments (`largeWorld.ts`,
+  `physicsTest.ts`) are app files, so `checkVersions --against main` asks for the bump.
+- `CHANGELOG.md`'s `review-physics` entry. Three behaviour changes are called out: D4b (`friction: 0`), D6
+  (`unmount()` stops physics) and Phase 6's `getPhysicsEntityByAppId`. The entries add
+  `RayDebugOpts`, `PhysicsTierPolicyCadence`, `KindSpec` and `PlayerBrainCommonActions` and remove
+  nothing (`api.json` against `main`'s). The sizes come from the bundle baselines against `main`'s.
+  The scene runner's baselines are local, so the entry says to record the three friction scenes
+  again on `main` after the merge. `yarn checkVersions --against main` passed.
+
+As built, section 2 (2026-10-18): the checks.
+
+- **The SBP budget:** the app's `_engine/features/physics` group 36 → **44 KiB** (41.6 KiB + the
+  config's ~4 %, rounded up), with the reason in `sbp.config.ts` and the changelog. D7's split
+  took the group from 12 to 30 modules, and a group sums its modules' gzip: 34,727 → 42,552 B,
+  while its code is 1,441 B smaller rendered (`bundle.json`'s `mainGroups` against `main`'s).
+  Every other budget of both profiles is within its budget, and none is well under.
+- `yarn test`: 622 passed, 1 skipped.
+- **`yarn verify:scenes`:** 89 passed and 15 failed. The 15 are snapshots only, in the three debug
+  configurations of the five scenes of `docs/issues/lodshowcase-sky-snapshot-drift.md`
+  (`exampleHubHero`, `exampleLod`, `lodShowcase`, `skyShowcase`, `space`; 0.00-0.12 % of the
+  pixels), with every probe hash unchanged. Recorded on `main` (`3d0d098`, a scratch worktree
+  sharing `.cache/`) and run on this tree right after: 20 passed. So all 104 pass, and those five
+  now compare `main` with the branch directly. Hashes: `physicsTiers` `49157b8f`, the gym
+  `84a78084` (all three targets) with its path hash `26f43551`, and `space` `f9619ec1`.
+- **`yarn verify:scenes --browser firefox`:** 78 passed (26 scenes × the three debug
+  configurations), so Firefox's probe hashes equal Chromium's.
+- **`yarn verify:baselines`:** all unchanged, no debug code in either build. `docs.json` is at
+  2,062 / 2,382 exports and 890 / 968 members (Phase 0: 1,794 / 2,286 and 331 / 434).
+- **`yarn build`:** `tsc` (both projects), the build, both SBP profiles within their budgets, and
+  the Hub (419 pages, the 16 warnings of Phase 8, none in scope). The Hub step is
+  `yarn hub:build`, so step 2's own run of it is covered.
+
 ## 4. Risks
 
 1. **The splits and import cycles.** The facade's modules share state; a cycle between them reads

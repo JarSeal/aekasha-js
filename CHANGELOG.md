@@ -73,6 +73,7 @@ The physics feature is reviewed file by file (p614), along with ray casting and 
 - The root `CLAUDE.md` (Physics, `onUnmount`, the map line), `docs/techniques/hub-authoring.md`'s `api:` examples, and the readme's physics, threading, embedding and ray casting lines.
 - `yarn verify:baselines`: `api.json`, `docs.json` (every physics folder fully documented) and both bundle baselines.
 - The scene runner's baselines are local: after this merge, `yarn verify:scenes --update --only scene01,scene01V2,thirdPersonGymScene` on `main` records the friction fix's hashes and snapshots.
+- `sbp.config.ts`: the app's physics group budget raised from 36 to 44 KiB. The split took the group from 12 to 30 modules, and a group sums its modules' gzip, so it measures 34.7 → 42.6 kB while its code is 1.4 kB smaller rendered.
 - `devTools/refactor/`'s layout report, move map and entry exports regenerated.
 - p102, p250, p306, p428, p500, p511 and p619 name the files the physics code is in now. `lodshowcase-sky-snapshot-drift.md` lists the five scenes it shows in, and `remount-after-unmount.md` says physics stops.
 

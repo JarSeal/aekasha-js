@@ -41,7 +41,9 @@ const profiles: SbpProfile[] = [
         '_engine/features/instancing': 5 * KIB,
         '_engine/features/lines': 10 * KIB,
         '_engine/features/lod': 9 * KIB,
-        '_engine/features/physics': 36 * KIB,
+        // p614 D7's split: 12 → 30 modules, and a group sums its modules' gzip, so 34.7 → 42.6 kB
+        // while its code is 1.4 kB smaller rendered (the main chunk's gzip +0.6 kB in all)
+        '_engine/features/physics': 44 * KIB,
         '_engine/features/postfx': 3 * KIB,
         '_engine/features/skybox': 28 * KIB,
         '_engine/features/spatial': 10 * KIB,
