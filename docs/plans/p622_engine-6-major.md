@@ -1,6 +1,6 @@
 Status: stub — not-implemented
 Category: Refactoring, API
-Related: p600_whole-codebase-refactoring-and-documentation.md (Stage C bumps are minor or patch, so its deprecations wait here), \_DONE_p614_review-physics.md (D3: the physics items below), \_DONE_p610_character-and-input-action-architecture.md, \_DONE_p612_review-ecs-loop-config-init.md, \_DONE_p613_review-rendering-scene-assets.md (their deprecations), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the tiers' measurement)
+Related: p600_whole-codebase-refactoring-and-documentation.md (Stage C bumps are minor or patch, so its deprecations wait here), \_DONE_p614_review-physics.md (D3: the physics items below), p615_review-sky-box.md (D3: the sky box items below), \_DONE_p610_character-and-input-action-architecture.md, \_DONE_p612_review-ecs-loop-config-init.md, \_DONE_p613_review-rendering-scene-assets.md (their deprecations), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the tiers' measurement)
 
 # Engine 6.0.0 — Stub
 
@@ -25,7 +25,8 @@ migration page, so an app made from the template upgrades in one step.
     (`SceneHooks.ts`), `Group.ts`' three release options, `SceneLoader.ts`' status option,
     `Scene.ts`' old all-scene-enters hook, `TextureSync.ts`' synchronous loaders;
   - physics: `getPhysGameTime()` and `PhysicsWallClock.ts` (and its allow-list entry in
-    `SIMULATION_FILES`).
+    `SIMULATION_FILES`);
+  - the sky box (p615): `LegacySkyBox.ts` and `SkyBox.ts`' legacy `createSkyBox` overload (below).
 - **From p614 (its D3):**
   - `physicsTiers()`, a feature of its own (below);
   - `createPhysicsEntity` with an options object instead of five positional parameters (36 call
@@ -40,6 +41,19 @@ migration page, so an app made from the template upgrades in one step.
     `CoefficientCombineRule`, `ActiveEvents`, `SolverFlags`; `PhysicsHooks` can't run without
     them): dropped here, unless `docs/issues/physics-unused-rapier-enums.md` wires them into
     `ColliderParams` in a minor first.
+- **From p615 (its D3):**
+  - the pre-3.0 sky box shape (`{ type, params }`): `features/skybox/LegacySkyBox.ts` with its
+    entry names (`LegacySkyBoxProps`, `isLegacySkyBoxProps`, `LEGACY_SKYBOX_WARNING`),
+    `createSkyBox`'s legacy overload (`SkyBox.ts`), the schema's two conversions
+    (`SkyBoxAssetSchema`'s preprocess and the `__saveData` entries' `fromLegacySkyBoxOverrides`,
+    `SkyBoxSchema.ts`), the gatherer's `warnOnLegacySkyBox` (`devTools/gatherAppData.ts`) and the
+    debug tab's one-time `AEK_debugSkyBoxStates` migration (`migrateLegacySkyBoxLS`). Nothing in
+    the template uses the shape (no JSON, no `createSkyBox` call; checked 2026-10-18);
+  - candidates, decided here: the optional positional parameters of `setActiveSkyBox(id,
+    sceneId?)`, `getSunDirection(out, i = 0)`, `getMoonDirection(out, i = 0)`,
+    `getSunElevation(i = 0)` and `getMoonPhase(i = 0)` (the coding standard asks for an options
+    object; a trailing index is common enough that keeping them is an option).
+    `registerSkyBox(def, sceneId?)` is `@internal` since p615, so it can change in any release.
 - **The deprecations without a version** (`ui/DraggableWindow.ts`'s six, `debug/Stats.ts`' two,
   `debug/PercentagePieHtml.ts`' one): each gets a version or a removal here.
 - **The toolkit** keeps its own scale: its `createSeededRandom` re-export goes in toolkit 3.0.0,

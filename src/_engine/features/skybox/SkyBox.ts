@@ -470,11 +470,18 @@ const LEGACY_WARN = (message: string) => {
  * only registered, and the loader shows the scene's default once the scene is entered.
  * Unlike registerSkyBox, `isDefault` defaults to true here (as the legacy `isCurrent` did), so
  * the last sky box created for a scene is its default.
- * The legacy `{ type, params }` props still work (with a dev warning).
  */
-export const createSkyBox = async (
+export function createSkyBox(def: SkyBoxDef): Promise<SkyBoxState | null>;
+/**
+ * The pre-3.0 `{ type, params }` form: converted to a layered definition, with a warning in the
+ * debug env; `type: ''` clears the current scene's sky box.
+ * @deprecated Write a layered definition ({@link SkyBoxDef}: `base`, `env`); removed in engine
+ * 6.0.0 with the legacy shape.
+ */
+export function createSkyBox(legacy: LegacySkyBoxProps): Promise<SkyBoxState | null>;
+export async function createSkyBox(
   defOrLegacy: SkyBoxDef | LegacySkyBoxProps
-): Promise<SkyBoxState | null> => {
+): Promise<SkyBoxState | null> {
   const converted = isLegacySkyBoxProps(defOrLegacy)
     ? fromLegacySkyBoxProps(defOrLegacy, LEGACY_WARN)
     : defOrLegacy;
@@ -490,7 +497,7 @@ export const createSkyBox = async (
   const sceneId = registerSkyBox(def);
   if (def.isDefault && sceneId === getCurrentSceneId()) return setActiveSkyBox(def.id, sceneId);
   return null;
-};
+}
 
 const isStructuralBaseUpdate = (current: SkyBoxBaseDef, update: SkyBoxUpdate['base']) => {
   if (!update) return false;

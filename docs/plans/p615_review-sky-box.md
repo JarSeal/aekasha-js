@@ -513,8 +513,49 @@ As built, section 3 (2026-10-18): the scenes.
 1. The entry's additions, `SkyBoxState`, the re-exports removed, `@internal` on S6's names.
 2. `@deprecated` on the legacy shape; p622's list.
 3. JSDoc of `SkyBox.ts`, `SkyBoxFeature.ts`, `Presets.ts`, `LegacySkyBox.ts`, `SkyBoxTypes.ts`,
-   `SkyBoxSchema.ts` (P3), and S7's stale names.
+   `SkyBoxSchema.ts` (P3), and S7's stale names. **And `SkyBox.ts` split** (decided 2026-10-18,
+   below): the day-night API, its bake schedule, the sky clock and `skyBoxSystem` move into a
+   module of their own, importing from `SkyBox.ts` one way (`clearSkyBox`'s clock reset through a
+   small hook, not an import back).
 4. `yarn hub:build`: no `notExported` left in the folder.
+
+As built, section 1 (2026-10-18): the entry, `SkyBoxState`, `@internal`.
+
+- **Found:** `SkyBox.ts` was 843 lines when Phase 3 started (771 at Phase 0: Phase 1's queue and
+  stop, Phase 2's clock), over the 800-line limit, and section 1 took it to 890. Decided: split it
+  in section 3 (step 3 above), not a header note.
+- The entry adds `resolveSkyBoxPreset`, `SKYBOX_PRESET_NAMES`, `SkyBoxPresetDef`,
+  `SkyBoxPresetName`, `SkyBoxChangeReason` and `SkyBoxState`. `resolveSkyBoxPreset` has an
+  `@example` and `@throws`; `mergeSkyBoxPreset` says it's the untyped form (schema, gatherer) and
+  links the typed one.
+- `SkyBoxState` = `Readonly<{ id, sceneId, def }>`. **Beyond D7's letter:** besides the listener,
+  `setActiveSkyBox`, `createSkyBox` and `updateSkyBox` return `Promise<SkyBoxState | null>` (they
+  returned `ActiveSkyBox`, the same leak). `ActiveSkyBox` is `@internal`.
+- `SkyBox.ts`' re-exports (the presets, `SkyBoxDef`, `SKYBOX_MANAGER_ID`) are gone;
+  `_dbg__SkyBox.ts` imports `SKYBOX_MANAGER_ID` from `SkyLights.ts`.
+- `@internal`, each with who uses it: `registerSkyBox`, `getSceneDefaultSkyBoxId`,
+  `activateSceneDefaultSkyBox` (its stale "called by the scene loader" fixed, S7),
+  `getActiveSkyBox`, `clearSkyBox`, `getActiveSkyBoxTexture`, `getActiveEnvironmentTexture`,
+  `registerSkyBoxDebugGUI`, `createSkyBoxDebugGUI`. `registerSkyBox`'s preset warning names the
+  entry. Left for section 3: the non-entry names of `Presets.ts` and `SkyBoxTypes.ts`,
+  `isDayNightPlaying`'s comment.
+
+As built, section 2 (2026-10-18): the legacy shape deprecated (D3).
+
+- `LegacySkyBox.ts`: the header says the module goes in 6.0.0 and with what; `@deprecated`
+  ("removed in engine 6.0.0") on `LegacySkyBoxParams`, `LegacySkyBoxProps`,
+  `LEGACY_SKYBOX_WARNING`, `isLegacySkyBoxProps`, and (also `@internal`) `fromLegacySkyBoxProps`,
+  `fromLegacySkyBoxOverrides`. `LEGACY_SKYBOX_WARNING`'s text named "p111 migration notes", which
+  no longer exist: it now says the shape is deprecated, removed in engine 6.0.0, and to write a
+  layered definition (base, env).
+- `createSkyBox` is two `export function` overloads (as `getGeometry`): the `SkyBoxDef` one, and
+  the `LegacySkyBoxProps` one `@deprecated`, so a legacy call is struck through in the editor.
+  A caller passing the union type would no longer compile (none does).
+- The schema's two conversions, the gatherer's `warnOnLegacySkyBox` and the debug tab's
+  `migrateLegacySkyBoxLS` say they go in 6.0.0 (so p622's `grep 6\.0\.0` finds them).
+- p622: the sky box under "Every `@deprecated` that names engine 6.0.0", and a "From p615" list
+  (the legacy shape's parts; S5's positional parameters as candidates).
+- `yarn test` 633 passed, 1 skipped; `tsc` and the lint clean; the docs ratchet: skybox 156 / 175.
 
 ### Phase 4: the internals
 

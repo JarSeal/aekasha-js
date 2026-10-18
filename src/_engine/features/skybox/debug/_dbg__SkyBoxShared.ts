@@ -809,7 +809,8 @@ export const clearSkyBoxOverrides = (sceneIds: string[]) => {
   writeAllOverrides(all);
 };
 
-// One-time migration of the pre-p111 key (a full copy of each sky box's flat state)
+// One-time migration of the pre-p111 key (a full copy of each sky box's flat state). Goes in
+// engine 6.0.0 with the legacy shape (LegacySkyBox.ts).
 
 const LEGACY_LS_KEY = 'AEK_debugSkyBoxStates';
 

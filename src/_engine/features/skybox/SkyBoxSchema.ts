@@ -539,6 +539,7 @@ export const SkyBoxDefSchema = z
     // Meta
     $schema: z.string().optional(),
     __sourcePath: z.string().optional(),
+    // A pre-p111 (flat) entry is converted first: deprecated, removed in engine 6.0.0
     __saveData: createSaveDataSchema(
       z.preprocess((entry) => fromLegacySkyBoxOverrides(entry) ?? entry, SkyBoxOverridesSchema)
     ),
@@ -561,7 +562,8 @@ export const SkyBoxDefSchema = z
   );
 
 /** A sky box asset file (or an inline sky box in scene JSON): the definition, with the legacy
- * `{ type, params }` shape converted to it first. */
+ * `{ type, params }` shape converted to it first (deprecated: the conversion goes in engine 6.0.0,
+ * LegacySkyBox.ts). */
 export const SkyBoxAssetSchema = z.preprocess(
   (input) => (isLegacySkyBoxProps(input) ? fromLegacySkyBoxProps(input) ?? input : input),
   SkyBoxDefSchema

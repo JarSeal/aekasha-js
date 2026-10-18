@@ -1,10 +1,17 @@
-// Converts the pre-p111 sky box shape (`{ type, params }`) to a layered definition. Used by both
-// the schema (legacy *.skybox.json and inline scene sky boxes) and createSkyBox.
+// Converts the pre-3.0 (pre-p111) sky box shape (`{ type, params }`) to a layered definition. Used
+// by both the schema (legacy *.skybox.json, inline scene sky boxes and save data entries) and
+// createSkyBox. Deprecated: the whole module goes in engine 6.0.0 (p615 D3, listed in p622), with
+// createSkyBox's legacy overload, the schema's conversions, the gatherer's warning and the debug
+// tab's one-time LS migration. Nothing in the template uses it.
 // Import only types here: the data pipeline (devTools/gatherAppData.ts) runs this in Node.
 import type * as THREE from 'three/webgpu';
 import type { SkyBoxBaseDef, SkyBoxDef, SkyBoxEnvDef, SkyBoxOverrides } from './SkyBoxTypes';
 
-/** The pre-3.0 `{ type, params }` sky box's `params` (see {@link LegacySkyBoxProps}). */
+/**
+ * The pre-3.0 `{ type, params }` sky box's `params` (see {@link LegacySkyBoxProps}).
+ * @deprecated Write a layered definition ({@link SkyBoxDef}: `base`, `env`); removed in engine
+ * 6.0.0 with the legacy shape.
+ */
 export type LegacySkyBoxParams = {
   file?: string | THREE.Texture;
   fileNames?: string[] | string;
@@ -21,7 +28,12 @@ export type LegacySkyBoxParams = {
   flipY?: boolean;
 };
 
-/** The pre-p111 createSkyBox props and *.skybox.json shape. */
+/**
+ * The pre-3.0 createSkyBox props and *.skybox.json shape, converted to a layered definition with a
+ * warning: an equirect gets `rotate: π` and a cube `flipY: true`, which keeps its old look.
+ * @deprecated Write a layered definition ({@link SkyBoxDef}: `base`, `env`); removed in engine
+ * 6.0.0 with the legacy shape.
+ */
 export type LegacySkyBoxProps = {
   id: string;
   /** Default true. */
@@ -36,13 +48,21 @@ export type LegacySkyBoxProps = {
   __saveData?: SkyBoxDef['__saveData'];
 };
 
+/**
+ * The warning a legacy sky box gets (from createSkyBox in the debug env, and from the data
+ * pipeline), after `Sky box "<id>": `.
+ * @deprecated Removed in engine 6.0.0 with the legacy shape.
+ */
 export const LEGACY_SKYBOX_WARNING =
-  'legacy sky box shape ({ type, params }), see p111 migration notes';
+  'deprecated sky box shape ({ type, params }), removed in engine 6.0.0: write a layered definition (base, env)';
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-/** Whether `input` has the legacy `{ type, params }` shape, not the layered one. */
+/**
+ * Whether `input` has the legacy `{ type, params }` shape, not the layered one.
+ * @deprecated Removed in engine 6.0.0 with the legacy shape.
+ */
 export const isLegacySkyBoxProps = (input: unknown): input is LegacySkyBoxProps =>
   isObject(input) && 'type' in input && !('base' in input);
 
@@ -64,7 +84,9 @@ const warnedIds = new Set<string>();
 
 /**
  * Converts legacy sky box props to a definition, or returns null for `type: ''` ("no sky box").
- * With `warn`, warns once per sky box id.
+ * With `warn`, warns once per sky box id. Used by createSkyBox and the schema.
+ * @internal
+ * @deprecated Removed in engine 6.0.0 with the legacy shape.
  */
 export const fromLegacySkyBoxProps = (
   input: LegacySkyBoxProps,
@@ -136,7 +158,9 @@ const LEGACY_OVERRIDE_KEYS = [
 
 /**
  * Converts a legacy (flat, pre-p111) save data entry, eg. `{ colorSpace, roughness }`, to layered
- * overrides. Returns null when `entry` isn't a legacy entry.
+ * overrides. Returns null when `entry` isn't a legacy entry. Used by the schema's `__saveData`.
+ * @internal
+ * @deprecated Removed in engine 6.0.0 with the legacy shape.
  */
 export const fromLegacySkyBoxOverrides = (entry: unknown): SkyBoxOverrides | null => {
   if (!isObject(entry) || 'base' in entry || 'env' in entry) return null;
