@@ -11,6 +11,7 @@ import {
   type SkyBoxUpdate,
 } from '../SkyBox';
 import type { SkyBoxDef, SkyBoxOverrides } from '../SkyBoxTypes';
+import type { ColorJSON } from '../../../schemas/_HelperSchemas';
 import { BASE_DEFAULTS, ENV_DEFAULTS } from '../layers/Base';
 import { toSkyColor } from '../SkyColor';
 import { ATMOSPHERE_DEFAULTS } from '../layers/Atmosphere';
@@ -426,9 +427,8 @@ const AUTO_COLOR_KEYS: Partial<Record<SkyBoxLayerKey, Record<string, string>>> =
   ambient: { skyColor: '#9ec9ff', groundColor: '#3b3a36' },
 };
 
-/** A ColorJSON as '#rrggbb' (sRGB). */
-const toHex = (value: unknown) =>
-  `#${toSkyColor(value as string | { r: number; g: number; b: number }).getHexString()}`;
+/** A ColorJSON as '#rrggbb' (sRGB): both forms read as sRGB, so `{ r, g, b }` shows its own hex. */
+const toHex = (value: unknown) => `#${toSkyColor(value as ColorJSON).getHexString()}`;
 
 export const NO_SKYBOX_ID = '__noSkyBox';
 

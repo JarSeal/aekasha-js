@@ -453,6 +453,23 @@ As built, section 3 (2026-10-18): C1, C1b, and the scenes.
 3. `yarn verify:scenes`: hashes unchanged; snapshots of the scenes with clouds may move once
    (recorded again with the reason), then stay put across two runs.
 
+As built, section 0 (2026-10-18, before any Phase 2 change): the drift "before" run. The five
+scenes against the 15:21 baselines at 16:31 (70 minutes): 20 passed, snapshots within the
+tolerance (at most 3 levels on a pixel, 0.00 % changed). The issue's drift (0.12 % of the pixels)
+didn't reproduce an hour on either.
+
+As built, section 1 (2026-10-18): the colours (C5, G3, D6).
+
+- `SkyColor.ts`' `toSkyColor` takes a `ColorJSON` and is `new THREE.Color(toThreeColor(color))`:
+  `{ r, g, b }` is sRGB like a `'#rrggbb'`, and still a new linear Color per call (activation
+  and updates only). Its 17 callers are unchanged. `@internal`.
+- The debug tab's `toHex` (`_dbg__SkyBoxShared.ts`) types its value as `ColorJSON`; a
+  `{ r, g, b }` now shows its own hex in a picker.
+- Nothing writes the object form (no sky box JSON, preset, default or debug value: checked), so
+  no scene changes.
+- **Test:** `SkyColor.test.ts` (each form of three colours equal, and back to the same hex; mid
+  grey linear).
+
 ### Phase 3: the API (D7) and the deprecations (D3)
 
 1. The entry's additions, `SkyBoxState`, the re-exports removed, `@internal` on S6's names.
