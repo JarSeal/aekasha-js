@@ -28,9 +28,8 @@ import {
 import type { SkyBoxEnvSize, SkyBoxMoonDef, SkyBoxMoonTextureDef } from '../SkyBoxTypes';
 import type { SkyCompositeMode } from '../SkyComposite';
 import { toSkyColor } from '../SkyColor';
-import { getTexture, loadTextureAsync } from '../../../kernel/assets/Texture';
-import { IS_DEBUG_ENV } from '../../../kernel/config/Config';
-import { lerror } from '../../../utils/Logger';
+import { getTexture } from '../../../kernel/assets/Texture';
+import { loadSkyTextureAsync, reportSkyTextureFailure } from './Base';
 import { MOON_TIME_DEFAULTS } from '../SkyTime';
 
 export { MAX_MOONS } from '../SkyTime';
@@ -164,17 +163,14 @@ export const loadMoonTexture = async (moon: SkyBoxMoonDef | undefined) => {
   if (!def) return null;
   let texture: THREE.Texture | null = null;
   if (def.file) {
-    texture = await loadTextureAsync({
-      id: def.textureId,
-      fileName: def.file,
-      path: def.path,
-      throwOnError: IS_DEBUG_ENV,
-    });
+    texture = await loadSkyTextureAsync({ id: def.textureId, fileName: def.file, path: def.path });
   } else if (def.textureId) {
     texture = getTexture(def.textureId) || null;
   }
   if (!texture) {
-    lerror(`Could not find or load the moon texture (${JSON.stringify(def)}).`);
+    reportSkyTextureFailure(
+      `Could not find or load the moon texture (${JSON.stringify(def)}): the moon shows a plain disc.`
+    );
     return null;
   }
   const colorSpace = (def.colorSpace as THREE.ColorSpace) || THREE.SRGBColorSpace;

@@ -378,6 +378,27 @@ As built (2026-10-18, at `698b502` plus this plan; macOS, headless Chromium, Web
    read once per frame from its `matrixWorld`), and B1 if Phase 0 found a path.
 4. `yarn verify:scenes`: unchanged.
 
+As built, section 1 (2026-10-18): S1 and S2.
+
+- **S1:** `SkyBox.ts` keeps the latest activation in flight (`activate` wraps `loadAndShow`, the
+  former body). `updateSkyBox` made meanwhile is queued by sky box id, its changes `deepMerge`d in
+  call order (a drag is one update), and applied when that activation has shown, through the
+  ordinary path (`applyUpdate`, the former body): a structural one among them starts another
+  activation, and the ones after it queue again. A superseded activation leaves the queue to the
+  later one; an update for a sky box no longer active resolves with the active one and changes
+  nothing (as the id check did). The structural call resolves with what its own activation
+  showed. The JSDoc says which call wins.
+- **S2:** `layers/Base.ts`' `loadSkyTextureAsync` loads with `throwOnError: true` in every env
+  and turns a failure into `null` with a promise `catch` (not a `try`: the debug toast's gate
+  would keep it in the bundle), and `reportSkyTextureFailure` logs it once more with what the sky
+  shows instead (and a debug toast). The base shows black, a moon a plain disc. Production
+  behaves the same as before on screen (its placeholder was image-less, so black too) but no
+  longer holds an unregistered placeholder texture. The cube loader had no null check: it has
+  one now.
+- **Tests:** `SkyBox.test.ts`' two `it.fails` are `it`, plus the queue's call order (a drag
+  merged, the later value winning, every caller settled) and an update dropped for a sky box
+  replaced meanwhile. `yarn test`: 626 passed, 1 skipped.
+
 ### Phase 2: colours and the clouds' clock (D5, D6)
 
 1. C5 / G3 with its test.

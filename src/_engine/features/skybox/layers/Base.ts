@@ -6,6 +6,7 @@ import { toSkyColor } from '../SkyColor';
 import { getTexture, loadTextureAsync } from '../../../kernel/assets/Texture';
 import { IS_DEBUG_ENV } from '../../../kernel/config/Config';
 import { isHDR } from '../../../kernel/assets/AssetFiles';
+import { addDebugToastWhenReady } from '../../../debug/DebuggerGUI';
 import { lerror } from '../../../utils/Logger';
 
 /** Base keys that change the texture or the node graph: changing one re-runs the activation.
@@ -67,23 +68,44 @@ const setColorSpace = (texture: THREE.Texture, colorSpace: THREE.ColorSpace) => 
   texture.needsPMREMUpdate = true;
 };
 
+/**
+ * Logs a sky texture that couldn't be found or loaded (and shows it as a toast in the debug env).
+ * The sky box still shows: without its texture, a base is black and a moon a plain disc.
+ * @internal
+ */
+export const reportSkyTextureFailure = (message: string) => {
+  lerror(message);
+  if (IS_DEBUG_ENV) {
+    addDebugToastWhenReady({ type: 'warning', title: 'Sky box texture', message });
+  }
+};
+
+/**
+ * Loads a sky texture file, or null when it fails (`loadTextureAsync` has logged why). Every env
+ * loads the same way: a failed texture never rejects an activation, and with it a scene load.
+ * @internal
+ */
+export const loadSkyTextureAsync = (props: Parameters<typeof loadTextureAsync>[0]) =>
+  loadTextureAsync({ ...props, throwOnError: true }).catch(() => null);
+
 const loadEquirectTexture = async (
   base: Extract<SkyBoxBaseDef, { type: 'EQUIRECTANGULAR' }>
 ): Promise<THREE.Texture | null> => {
   let texture: THREE.Texture | null = base.texture || null;
   if (!texture && base.file) {
-    texture = await loadTextureAsync({
+    texture = await loadSkyTextureAsync({
       id: base.textureId,
       fileName: base.file,
       path: base.path,
       useHDRLoader: isHDR(base.file),
-      throwOnError: IS_DEBUG_ENV,
     });
   } else if (!texture && base.textureId) {
     texture = getTexture(base.textureId) || null;
   }
   if (!texture) {
-    lerror(`Could not find or load the equirectangular sky box texture (${JSON.stringify(base)}).`);
+    reportSkyTextureFailure(
+      `Could not find or load the equirectangular sky box texture (${JSON.stringify(base)}): the base shows black.`
+    );
     return null;
   }
   texture.mapping = THREE.EquirectangularReflectionMapping;
@@ -93,15 +115,20 @@ const loadEquirectTexture = async (
 
 const loadCubeTexture = async (
   base: Extract<SkyBoxBaseDef, { type: 'CUBE_TEXTURE' }>
-): Promise<THREE.Texture> => {
+): Promise<THREE.Texture | null> => {
   const texture =
     base.texture ||
-    ((await loadTextureAsync({
+    ((await loadSkyTextureAsync({
       id: base.textureId,
       fileName: base.fileNames,
       path: base.path,
-      throwOnError: IS_DEBUG_ENV,
-    })) as THREE.CubeTexture);
+    })) as THREE.CubeTexture | null);
+  if (!texture) {
+    reportSkyTextureFailure(
+      `Could not load the cube sky box texture (${JSON.stringify(base)}): the base shows black.`
+    );
+    return null;
+  }
   texture.userData.id = base.textureId || texture.userData.id || texture.uuid;
   texture.generateMipmaps = true;
   texture.minFilter = THREE.LinearMipmapLinearFilter;

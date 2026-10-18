@@ -152,6 +152,14 @@ let active: ActiveSkyBox | null = null;
 /** Every activation and clear takes the next number; an activation that finds a newer one when
  * its texture has loaded was superseded, and drops its result. */
 let activationSeq = 0;
+/** The latest activation, while its textures load: an updateSkyBox waits for it. */
+let activationInFlight: Promise<ActiveSkyBox | null> | null = null;
+/** The updates made while an activation is in flight, by sky box id: each one's changes merged
+ * in call order, and the callers to settle once it's applied. */
+const queuedUpdates = new Map<
+  string,
+  { update: SkyBoxUpdate; settle: ((active: ActiveSkyBox | null) => void)[] }
+>();
 const listeners = new Set<SkyBoxChangeListener>();
 
 const notify = (reason: SkyBoxChangeReason) => {
@@ -338,9 +346,27 @@ const show = (next: ActiveSkyBox) => {
 };
 
 /** Loads, builds and shows a resolved definition. `time` carries a running cycle's time over
- * (a structural update of the same sky box); without it, the cycle starts from the definition. */
-const activate = async (sceneId: string, def: SkyBoxDef, time?: SkyTimeState) => {
+ * (a structural update of the same sky box); without it, the cycle starts from the definition.
+ * Until it has shown (or been superseded), updates wait for it. */
+const activate = (sceneId: string, def: SkyBoxDef, time?: SkyTimeState) => {
   const seq = ++activationSeq;
+  const run = loadAndShow(seq, sceneId, def, time);
+  activationInFlight = run;
+  const done = () => {
+    if (activationInFlight !== run) return; // A later activation runs the queue
+    activationInFlight = null;
+    applyQueuedUpdates();
+  };
+  void run.then(done, done);
+  return run;
+};
+
+const loadAndShow = async (
+  seq: number,
+  sceneId: string,
+  def: SkyBoxDef,
+  time: SkyTimeState | undefined
+) => {
   const [texture, ...moonTextures] = await Promise.all([
     loadBaseTexture(def.base),
     ...Array.from({ length: getMoonCount(def) }, (_, i) => loadMoonTexture(def.moons?.[i])),
@@ -460,8 +486,34 @@ const isStructuralBaseUpdate = (current: SkyBoxBaseDef, update: SkyBoxUpdate['ba
  * rebuilds the nodes; any other change only writes uniforms and scene properties, and (with
  * env.dynamic) re-bakes the environment (a nebula change re-bakes the nebula cube first). Changes last until
  * it's activated again, which starts from its definition.
+ *
+ * While an activation is loading its textures (a structural change, or setActiveSkyBox), an update
+ * waits for it and then applies to what it showed: updates keep their call order, those made
+ * meanwhile are applied as one (a slider drag), and one for a sky box that is no longer active
+ * by then does nothing.
+ * @returns the active sky box once the update is applied
  */
-export const updateSkyBox = async (id: string, update: SkyBoxUpdate) => {
+export const updateSkyBox = (id: string, update: SkyBoxUpdate): Promise<ActiveSkyBox | null> => {
+  if (!activationInFlight) return applyUpdate(id, update);
+  const queued = queuedUpdates.get(id);
+  if (queued) queued.update = deepMerge(queued.update, update);
+  else queuedUpdates.set(id, { update, settle: [] });
+  return new Promise((resolve) => queuedUpdates.get(id)!.settle.push(resolve));
+};
+
+/** Applies the updates made while an activation was in flight, in call order (one may start
+ * another activation: the ones after it wait for that). */
+const applyQueuedUpdates = () => {
+  const entries = [...queuedUpdates];
+  queuedUpdates.clear();
+  for (const [id, { update, settle }] of entries) {
+    const applied = updateSkyBox(id, update);
+    const resolve = (result: ActiveSkyBox | null) => settle.forEach((fn) => fn(result));
+    void applied.then(resolve, () => resolve(active));
+  }
+};
+
+const applyUpdate = async (id: string, update: SkyBoxUpdate) => {
   if (!active || active.id !== id) return active;
   const current = active;
   const def = mergeSkyBoxDef(current.def, update);
