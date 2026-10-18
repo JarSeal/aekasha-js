@@ -28,10 +28,18 @@ migration page, so an app made from the template upgrades in one step.
     `SIMULATION_FILES`).
 - **From p614 (its D3):**
   - `physicsTiers()`, a feature of its own (below);
-  - `createPhysicsEntity` with an options object instead of five positional parameters (53
-    callers in the app and the readme's example: the codemod's job);
+  - `createPhysicsEntity` with an options object instead of five positional parameters (36 call
+    sites in the app and the toolkit, 2 in the engine, the readme's and the Hub's examples, counted
+    2026-10-18: the codemod's job);
   - only if a second physics backend is planned: `WorldAPI`'s positional queries (they mirror
-    Rapier's today).
+    Rapier's today);
+  - `WorldAPI.setMaxCcdSubstepsSync`: a one-way setter named like a sync getter, so `OmitSync`
+    drops it from the worker proxy's type (p614 Phase 3). Renamed `setMaxCcdSubsteps` (the old name
+    deprecated in a minor first, or removed here);
+  - the Rapier enums nothing in the API takes or returns (`ActiveHooks`, `ActiveCollisionTypes`,
+    `CoefficientCombineRule`, `ActiveEvents`, `SolverFlags`; `PhysicsHooks` can't run without
+    them): dropped here, unless `docs/issues/physics-unused-rapier-enums.md` wires them into
+    `ColliderParams` in a minor first.
 - **The deprecations without a version** (`ui/DraggableWindow.ts`'s six, `debug/Stats.ts`' two,
   `debug/PercentagePieHtml.ts`' one): each gets a version or a removal here.
 - **The toolkit** keeps its own scale: its `createSeededRandom` re-export goes in toolkit 3.0.0,
@@ -50,7 +58,9 @@ migration page, so an app made from the template upgrades in one step.
   - Not counted, and kept unless split further: the tiers' parts of `PhysicsAPI.ts` (`detach` /
     `reattachRigidBody`, `readBodyPositionsAtStep`; `addPhysicsStepGate` is public API of its own,
     though only the policy uses it today), of `PhysicsEntity.ts` (the `REMOVED` body) and of the
-    worker. (p614 splits `PhysicsAPI.ts`: these are in its `PhysicsBodies.ts` then.)
+    worker. (Since p614: `detach` / `reattachRigidBody` and `readBodyPositionsAtStep` in
+    `PhysicsBodies.ts`, `addPhysicsStepGate` in `PhysicsStepping.ts`, the `REMOVED` body in
+    `PhysicsEntity.ts`' `getPhysicsEntityBody`, `isBodyJointed` in `PhysicsJoints.ts`.)
 - **The shape:**
   - A runtime option (`physics({ tiers: false })`) saves nothing: `physics()`'s install still
     names the install functions, so the build keeps them.

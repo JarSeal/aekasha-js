@@ -417,9 +417,10 @@ export const scene = async () => {
     joint.setContactsEnabled(false);
   }
 
-  // GENERIC (lime) — a box whose axesMask frees only the Y translation axis: it falls straight
-  // down onto the ground with zero rotation and zero horizontal drift, the joint type most
-  // others (Fixed/Revolute/Prismatic/Spherical) are specializations of.
+  // GENERIC (lime) — the joint type most others (Fixed/Revolute/Prismatic/Spherical) are
+  // specializations of. axesMask names the axes it locks, in a frame whose x axis is `axis`
+  // (world Y here): LinY locks one horizontal translation, and the fall, the other horizontal
+  // axis and every rotation stay free. Falling from rest, the box drops straight onto the ground.
   {
     const x = 21;
     const anchorPos = { x, y: 6, z: JOINT_DEMO_Z };

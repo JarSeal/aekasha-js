@@ -1,8 +1,18 @@
 Status: draft | not-implemented
 Category: Physics
-Related: p101 scene-load determinism (implemented, see the Physics section of `.claude/CLAUDE.md`: exits must happen on a fixed step, and the determinism probe must stay green), p500_restore-physics-snapshot.md (bounds are configuration, not simulation state, see §8), the line rendering system (`LineManager.ts`, p058, implemented: Phase 3 draws the bounds with it), \_DONE_p352_physics-simulation-tiers.md (simulation tiers and their distance policy, §8)
+Related: p101 scene-load determinism (implemented, see the Physics section of `.claude/CLAUDE.md` and `src/_engine/features/physics/CLAUDE.md`'s Deterministic scene loads: exits must happen on a fixed step, and the determinism probe must stay green), p500_restore-physics-snapshot.md (bounds are configuration, not simulation state, see §8), the line rendering system (`LineManager.ts`, p058, implemented: Phase 3 draws the bounds with it), \_DONE_p352_physics-simulation-tiers.md (simulation tiers and their distance policy, §8)
 
 # Physics World Bounds (Kill Volume) — Plan
+
+**Paths since p614 (2026-10-18).** The files below are the pre-p608 / pre-p614 ones, now in
+`src/_engine/features/physics/`: `Physics/EngineRapier.ts` → `backends/rapier/` (`step` in
+`RapierWorld.ts`, the event records in `RapierEvents.ts`); `Physics/PhysicsAPITypes.ts` → `types/`
+(one module per area) and `protocol/` (the message types and their ranges); `PhysicsAPI.ts` → the
+facade's modules (`flushPhysicsEvents` and the `EVENTS_PUSH` queue in `PhysicsMessaging.ts`,
+stepping in `PhysicsStepping.ts`); `PhysicsManager.ts` → `PhysicsEntity.ts`; the worker switches →
+`worker/PhysicsSwitch*.ts`; `SceneLoader.ts`' physics calls → physics' scene hooks
+(`physicsSceneHooks`, `PhysicsFeature.ts`: bounds applied right after `resetPhysicsWorld`, the
+`beforeAssets` hook); `LineManager.ts` → the `lines()` feature (`features/lines/`).
 
 Dynamic physics bodies that leave a defined region of the world are taken out of the simulation and handled: deleted by default, or disabled, or handed to a callback. A body that tunnels through a thin floor, gets launched by a bad impulse or rolls off the edge of a level currently falls forever: it keeps stepping, keeps syncing its transform, keeps a slot in the transform buffer (`maxBodies`) and never goes away until the scene is switched.
 

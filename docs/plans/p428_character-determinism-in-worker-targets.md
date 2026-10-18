@@ -40,8 +40,9 @@ replay the local player there.
   the characters' path hash on `MAIN_THREAD` only (`devTools/verify/scenes.ts`). The `space` scene's
   `MutualGravity` has the same cause (it reads the worker's last synced poses) and the same entry.
 - **The controller's dependencies:** `controllers/dynamic/` is built on `three/webgpu` maths, the
-  physics facade (`PhysicsAPI.ts`) and the ECS, and its configuration's hooks are app closures. The
-  physics worker bundles without three, `MainLoop`, `Config` or the facade
+  physics facade (since p614: `PhysicsState.ts`' `getPhysicsWorld` for its casts and
+  `PhysicsStepping.ts`' step clock, plus the `types/` enums) and the ECS, and its configuration's hooks are app closures. The physics worker
+  bundles without three, `MainLoop`, `Config` or the facade's 14 modules
   (`features/physics/worker/PhysicsWorker.test.ts`), and a worker can't be handed code: it
   `import()`s a module by name, as the assets worker does with its jobs.
 
@@ -63,8 +64,11 @@ replay the local player there.
 
 ## Open questions
 
-1. **Which direction**, decided with p614 (the worker protocol, the transport interface in front of
-   `postMessage`) and p421 (the KCC's `computeColliderMovement` is a synchronous query too: one
+1. **Which direction**, decided here: p614 left both open (its D5). The protocol is in
+   `features/physics/protocol/` (a new message takes the next free number in its switch's range,
+   `PhysicsProtocolType.ts`), the transport in `transport/PhysicsTransport.ts` (plain data, in order,
+   one message handled to the end before the next); the first direction adds a message type, the
+   second a step stamp on the `EVENTS_PUSH` records. With p421 (the KCC's `computeColliderMovement` is a synchronous query too: one
    answer for both controllers).
 2. **One baseline or one per target:** must a worker target give `MAIN_THREAD`'s path hash (only
    the first direction can), or only the same hash on every run of that target?

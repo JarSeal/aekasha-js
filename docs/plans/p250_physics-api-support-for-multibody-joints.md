@@ -5,6 +5,17 @@ Epic: https://trello.com/c/8ROzNdXe/161-make-a-possibility-to-run-the-physics-en
 
 # Physics API Support for Multibody Joints — Plan
 
+**Paths since p614 (2026-10-18).** The files below are the pre-p608 / pre-p614 ones, now in
+`src/_engine/features/physics/`: `Physics/PhysicsAPITypes.ts` → `types/PhysicsJointTypes.ts`
+(`JointParams`, `JointAPI`; `WorldAPI`'s commented-out multibody members in
+`types/PhysicsWorldTypes.ts`) and `protocol/` (the `JOINT` range 800-999 in
+`PhysicsProtocolType.ts`); `Physics/EngineRapier.ts` → `backends/rapier/` (`RapierJoints.ts`, the
+maps in `RapierState.ts`, `proxies/EngineJointProxyAPI.ts`); `PhysicsAPI.ts` → `PhysicsJoints.ts`
+(the facade's creates and deletes), `PhysicsRegistry.ts` (its joint map) and
+`proxies/JointProxyAPI.ts`; `workers/physics/physicsSwitchJoint.ts` →
+`worker/PhysicsSwitchJoint.ts`; `app/physicsTest.ts` → `src/app/scenes/physicsTest/physicsTest.ts`.
+A new message type takes free numbers in a range; a retired one keeps its number, commented.
+
 Adds Rapier **multibody-joint** support to the engine-agnostic Physics API, as a follow-up to
 p026's impulse-joint work (implemented). Split out because multibody joints
 are a genuinely separate Rapier solver with different tradeoffs and a smaller JS-level surface —

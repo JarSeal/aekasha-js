@@ -1323,6 +1323,42 @@ As built, section 2 (2026-10-18): D14.
   offers Three.js ray APIs (internal since Phase 7: only the input picking casts them). The
   example's `createPhysicsEntity` call is unchanged.
 
+As built, section 3 (2026-10-18): the plans, the filings, the comments.
+
+- **p622, checked against every "p622" this plan wrote:** added `setMaxCcdSubstepsSync`'s rename
+  (Phase 3) and the unused enums as the fallback of their issue (below); the tiers section names
+  the modules the tiers' code is in since the split; `createPhysicsEntity`'s count corrected to
+  36 call sites in the app and toolkit, 2 in the engine, plus the readme's and the Hub's
+  examples (§1.2's 53 counted something else). The `RayCastOpts` item stays gone (Phase 7).
+- **p500 (D12):** a dated "Where it lives since p614" block at the top of its grounding maps each
+  file it names (the old `core/` paths, `PhysicsManager.ts`, `PhysicsAPI.ts`, `EngineRapier.ts`)
+  to the module that holds the code now, by name, rather than rewriting its line numbers. It
+  also says what p614 changed under it: `deletePhysicsWorld` clears the maps (its second
+  pre-existing bug is gone), the interpolation already resets on `breakSimHistory`'s epoch (its
+  `interpolationStates` item no longer applies), the transport's `transfer?`.
+- **p428:** the controller's real physics imports (`PhysicsState.ts`, `PhysicsStepping.ts`, the
+  types), and its open question 1 names the protocol and the transport files (p614 left both
+  directions open). **p511:** its grounding names `transport/PhysicsTransport.ts`, the type, its
+  contract and both implementations, and that requests stay in the facade. **p102, p250:** a
+  "Paths since p614" paragraph each; **p306:** the HEIGHTFIELD reference names `RapierShapes.ts`.
+  Their `Blocked by: p614` lines go in Phase 9 with the rename.
+- **A bug found on the way (p500's "latent always-truthy" note):** `initPhysics` awaited
+  `messageWorkerAsync<boolean>` and tested the reply object, so in WORKER_THREAD mode it set a
+  `WorldProxyAPI` even with `doNotCreateWorld` (what `physics()` always passes): with
+  `physics.enabled: false`, `getPhysicsWorld()` returned a worker proxy with no world behind it.
+  It reads the reply's `worldCreated` now; `PhysicsWorkerRequests.test.ts`' boot test checks it
+  (red before the fix).
+- **Filed:** `docs/issues/physics-unused-rapier-enums.md` (Phase 3's five enums and `PhysicsHooks`,
+  checked in the backend: no collider can set active hooks or collision types; wire them in or
+  drop them in p622) and `docs/issues/import-physics-second-body-without-index.md` (section 1's
+  finding; the physics guide links it).
+- **Comments:** `physicsTest.ts`' GENERIC demo (the mask locks, in a frame whose x axis is `axis`:
+  `LinY` is a horizontal axis there, so the fall is free); the five "once `PhysicsAPI.ts` lands"
+  (`largeWorld.ts` × 3, `ScatterOnSurface.ts`, `Terrain.ts`) now name `createPhysicsEntity`. App and
+  toolkit comments only (D2's toolkit patch; the app's are comments too, for Phase 9's call).
+- **Checks:** `yarn test` (622 passed, 1 skipped as before), the lint on the touched files, `tsc`,
+  `yarn hub:build` (no warning).
+
 ### Phase 9: versions and done
 
 1. D2's bumps, a `CHANGELOG.md` entry (D4b's behaviour change and D6 called out),

@@ -102,6 +102,7 @@ import { getPhysicsWorld } from './PhysicsState';
 import { createPhysicsWorld, initPhysics, stopPhysics } from './PhysicsWorld';
 import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
 import { createPhysicsEntity, deleteAllPhysicsEntities } from './PhysicsEntity';
+import { WorldProxyAPI } from './proxies/WorldProxyAPI';
 // The worker's own backend module: the in-process worker imports the same instance
 import { getAllRigidBodyIds, getColliderAPIWithId } from './backends/rapier/EngineRapier';
 
@@ -135,7 +136,10 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
     initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
     loadConfig({ physics: { enabled: true, workerTarget: 'WORKER_THREAD', useSAB: false } });
     await initPhysics(true);
+    // doNotCreateWorld: the worker answers worldCreated false, so no world proxy yet
+    expect(getPhysicsWorld()).not.toBeInstanceOf(WorldProxyAPI);
     await createPhysicsWorld();
+    expect(getPhysicsWorld()).toBeInstanceOf(WorldProxyAPI);
     const collider = await createCollider({ type: 'BALL', radius: 0.5 });
     expect(collider.id).toBe(0);
   });

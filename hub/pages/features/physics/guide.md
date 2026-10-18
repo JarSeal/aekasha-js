@@ -41,7 +41,8 @@ properties (Blender's custom properties, the glTF `extras`):
   is a collider only, unless `keepMesh` keeps it rendered too.
 - The node with a `rigidType` (`FIXED`, `DYNAMIC`, `POS_BASED`, `VELO_BASED`) carries the body,
   and the physics nodes with the same `index` are its colliders: one compound body. The nodes
-  without an `index` are one group too, so give each body of a file its own `index`.
+  without an `index` are one group too, so give each body of a file its own `index`
+  ([the issue](hub:issues/import-physics-second-body-without-index)).
 - A collider's sizes come from its node's geometry and scale, unless the properties give them
   (`hx`, `radius`, `halfHeight`, …). A capsule, cone or cylinder stands on Y, and `spineAxis:
   'x'` or `'z'` lays it along that axis. Each shape is centred on its node's origin.

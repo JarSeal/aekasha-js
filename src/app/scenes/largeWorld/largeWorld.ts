@@ -42,8 +42,8 @@ import { registerSpatialDomain } from 'aekasha/spatial';
  * The camera/lights/skybox are declared in `largeWorld.scene.json` and created automatically by
  * the scene loader (the camera before this runs, the lights and the sky box after it) — terrain
  * has no JSON authoring support (§1.1), so it's built here imperatively instead. Render-only for
- * now: real colliders (terrain heightfield, static props) are deferred to whichever scene-code
- * convention exists once `PhysicsAPI.ts` lands (§1.3).
+ * now: real colliders (a terrain `HEIGHTFIELD`, static props) aren't added yet; `createPhysicsEntity`
+ * (`aekasha/physics`) is how they would be.
  */
 export const scene = async () => {
   const updateLoaderFn = getLoaderStatusUpdater();
@@ -377,9 +377,8 @@ export const scene = async () => {
   }
 
   // --- Dynamic objects (Phase 6) — physics-less for now (§1.3/§5): placed at rest on the
-  // terrain, not simulated. Real rigid bodies/colliders are deferred to whichever scene-code
-  // convention exists once `PhysicsAPI.ts` lands; this is the render-only fallback the plan
-  // calls for if Phase 6 is reached before that API exists.
+  // terrain, not simulated. Real rigid bodies/colliders (`createPhysicsEntity`) aren't added
+  // yet; this is the render-only version.
 
   const dynamicMat = createMaterial({
     id: 'largeWorldDynamicMat',
@@ -524,7 +523,7 @@ export const scene = async () => {
   // --- Dynamic camera (Phase 6) — follows the crate stack via `FollowTool.ts`'s existing
   // leader-relative lerped following (position-only; it isn't light-specific despite living
   // under "effects", and isn't extended here beyond what it already does, per §2/§3 Phase 6).
-  // Static until PhysicsAPI.ts lands and the leader actually moves.
+  // Static until the crates get rigid bodies and the leader actually moves.
 
   const followOffset = new THREE.Vector3(4, 3, 6);
   const leaderTransform = ecsWorld.getComponent(crateStackId, ComponentType.TRANSFORM)!;

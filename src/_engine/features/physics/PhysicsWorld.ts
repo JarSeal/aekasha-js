@@ -36,6 +36,7 @@ import type {
   CreateWorldResponse,
   DeleteWorldResponse,
   FlushResponse,
+  InitPhysicsResponse,
   RestoreSnapshotResponse,
   SetDebugStateTrackingResponse,
   TakeSnapshotResponse,
@@ -88,7 +89,7 @@ export const initPhysics = async (doNotCreateWorld?: boolean) => {
       onError: onWorkerError,
     });
     openWorkerTransport(startedWorker);
-    const worldCreated = await messageWorkerAsync<boolean>({
+    const { worldCreated } = await messageWorkerAsync<InitPhysicsResponse>({
       type: PhysicsProtocolType.INIT_PHYSICS,
       physicsState: facade.state,
       isDebugEnvironment: IS_DEBUG_ENV,

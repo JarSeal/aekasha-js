@@ -21,8 +21,15 @@ is a network brain (p603 C4) on the server and an interpolated entity on other c
 - **The physics protocol is the model:** `STEP` carries the steps and the per-sub-step commands,
   replies match by `requestId`, poses come back in one batch per step. All 2,580 messages of p604's
   recording were plain data, which is why a recording, a Node replay and a network can carry them
-  (p604 §4.5 keeps it so). p614 puts a transport interface (`send`, `onMessage`) in front of
-  `postMessage`; a WebSocket and a WebTransport channel are implementations of it.
+  (p604 §4.5 keeps it so). p614 put a transport interface in front of `postMessage`:
+  `PhysicsTransport<Out, In>` (`send(message, transfer?)`, `onMessage(fn)` returning its remover,
+  `close()`) in `src/_engine/features/physics/transport/PhysicsTransport.ts`, `@internal` until a
+  second implementation, with its contract on the type (plain data, in order, one message handled
+  to the end before the next). Its two implementations are `WorkerTransport.ts` (the main thread's,
+  `close()` terminates the worker) and `WorkerScopeTransport.ts` (the worker's, around `self`).
+  Requests stay in the facade (`PhysicsMessaging.ts`: `requestId`s, `ERROR` replies, `stopPhysics`
+  rejecting what's pending), not in the transport. A WebSocket and a WebTransport channel are
+  further implementations of it.
 - **Bandwidth** (`physicsTiers`, 687 bodies, p604 Phase 1.3): full snapshots cost 4-18 Mbit/s per
   client at 60 Hz, so they aren't an option. Only the changed bodies, quantized to 12 B (16-bit
   position at 1/64 m, smallest-three rotation in 32 bits), at 20 Hz: 45 kbit/s mean, 62 kbit/s
