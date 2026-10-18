@@ -32,8 +32,10 @@ import { DEFAULT_ECS_WORLD_ID, ECSWorld } from '../../kernel/ecs/ECS';
 import {
   clearSkyBox,
   getActiveSkyBox,
+  onSkyBoxChange,
   registerSkyBox,
   setActiveSkyBox,
+  stopSkyBox,
   updateSkyBox,
 } from './SkyBox';
 
@@ -123,5 +125,31 @@ describe('a sky box texture that fails to load', () => {
     await result;
     expect(getActiveSkyBox()?.textures.source).toBeNull();
     expect(m.rootScene.backgroundNode).not.toBeNull();
+  });
+});
+
+describe('stopSkyBox, for unmount()', () => {
+  it('clears the sky box, settles what waits and drops the listeners', async () => {
+    registerSkyBox({ id: 'sky', base: equirect('a.png') }, 'scene');
+    const shown = setActiveSkyBox('sky');
+    m.loads[0].resolve(loadedTexture());
+    await shown;
+    const listener = vi.fn();
+    onSkyBoxChange(listener);
+
+    const pending = setActiveSkyBox('sky');
+    const update = updateSkyBox('sky', { env: { backgroundIntensity: 0.5 } });
+    stopSkyBox();
+    expect(listener).toHaveBeenCalledWith(null, 'clear');
+    m.loads[1].resolve(loadedTexture());
+
+    expect(await update).toBeNull();
+    expect(await pending).toBeNull(); // Superseded by the stop's clear
+    expect(getActiveSkyBox()).toBeNull();
+    expect(m.rootScene.backgroundNode).toBeNull();
+    expect(m.rootScene.environmentNode).toBeNull();
+    listener.mockClear();
+    clearSkyBox();
+    expect(listener).not.toHaveBeenCalled();
   });
 });

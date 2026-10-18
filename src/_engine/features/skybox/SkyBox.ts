@@ -577,6 +577,21 @@ export const clearSkyBox = () => {
 };
 
 /**
+ * Stops the sky box for good, for a mounted engine's `unmount()` (the feature's `onUnmount`): it's
+ * cleared while the renderer and the ECS world still exist (its bakes disposed, its lights
+ * deleted, the root scene's background and environment reset), the updates waiting for an
+ * activation settle with null, and the change listeners are dropped.
+ * @internal
+ */
+export const stopSkyBox = () => {
+  const queued = [...queuedUpdates.values()];
+  queuedUpdates.clear();
+  clearSkyBox();
+  listeners.clear();
+  for (const { settle } of queued) settle.forEach((fn) => fn(null));
+};
+
+/**
  * Re-bakes the active sky box's environment on the next frame (at most one bake per frame,
  * and none while a scene loads). Only a composite sky box (procedural layers) has an env bake:
  * for any other this is a no-op. Useful with `env.dynamic: false`, which bakes only on

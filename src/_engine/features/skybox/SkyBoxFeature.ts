@@ -9,6 +9,7 @@ import {
   installSkyBoxSystem,
   registerSkyBox,
   registerSkyBoxDebugGUI,
+  stopSkyBox,
 } from './SkyBox';
 
 /**
@@ -54,6 +55,8 @@ export const skyBox = (): EngineFeature => ({
   install: (ctx) => {
     installSkyBoxSystem(ctx);
     ctx.addSceneHooks(skyBoxSceneHooks);
+    // A mounted engine's unmount: the bakes and lights go before the renderer and the world do
+    ctx.onUnmount(stopSkyBox);
     // Gated like every debug hook (the hooks run only in the debug env): a production build then
     // drops the calls and the debug wrappers they name (verify:baselines fails on an ungated one)
     if (IS_DEBUG_ENV) {

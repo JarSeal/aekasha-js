@@ -73,7 +73,8 @@ export type AekashaMount = {
   /** Whether the loop is paused, for any reason. */
   isPaused: () => boolean;
   /**
-   * Stops the loop and the features (physics' worker and world: each feature's `onUnmount`),
+   * Stops the loop and the features (each feature's `onUnmount`: physics' worker and world, the
+   * sky box's bakes and lights),
    * removes the listeners, the observers and the container (the canvas with it), and disposes the
    * renderer. The engine doesn't mount again in this page load.
    */
@@ -157,7 +158,7 @@ const createFallbackMount = (container: HTMLElement): AekashaMount => ({
  * One engine per page load: the engine's state is module-level, so a second mount throws, also
  * after `unmount()` (docs/issues/remount-after-unmount.md), and so does a mount after
  * {@link _engine/kernel/init/InitEngine!InitEngine}. `unmount()` stops what the features started
- * (physics' worker and world), through their `onUnmount` hooks. The app's files are loaded from `assetBaseUrl`, and workers
+ * (physics' worker and world, the sky box's bakes and lights), through their `onUnmount` hooks. The app's files are loaded from `assetBaseUrl`, and workers
  * start from the embed's own files: serve them from the page's origin.
  * @example
  * ```ts
@@ -252,7 +253,8 @@ export const mountAekasha = async (opts: MountAekashaOptions): Promise<AekashaMo
     removeFirstFrameHook?.();
     removeFirstFrameHook = null;
     stopMainLoop();
-    // The features' own stops (physics' worker and world), with no frame running
+    // The features' own stops (physics' worker and world, the sky box's bakes and lights), with no
+    // frame running and before the renderer goes
     stopEngineFeatures();
     removeAllInputListeners();
     stopAssetsWorker();

@@ -399,6 +399,26 @@ As built, section 1 (2026-10-18): S1 and S2.
   merged, the later value winning, every caller settled) and an update dropped for a sky box
   replaced meanwhile. `yarn test`: 626 passed, 1 skipped.
 
+As built, section 2 (2026-10-18): the stop (F1, D8).
+
+- `SkyBox.ts`' `stopSkyBox` (`@internal`): the updates waiting for an activation are taken off
+  the queue, `clearSkyBox` runs (the in-flight activation is superseded by its sequence number,
+  the bakes disposed, the lights deleted, the root scene's background, environment and their
+  intensities reset, and the listeners told `'clear'` one last time), the listener set is
+  cleared, and the queued callers settle with `null`. `skyBox()` registers it with
+  `ctx.onUnmount`; `teardown` runs the features' stops before `deleteRenderer()`, so the sky box
+  disposes its targets while the renderer and the ECS world still exist. The registry and the
+  definitions stay: nothing mounts again in the page load.
+- `Mount.ts`' JSDoc (the handle's `unmount`, `mountAekasha`'s `@remarks`) and `teardown`'s comment
+  name the sky box next to physics. The Hub pages (the embed walkthrough's `unmount()` line, the
+  sky box guide) are Phase 6's.
+- **Test:** `SkyBox.test.ts`' `stopSkyBox, for unmount()` (the sky box cleared, a waiting update and
+  a pending activation settled with `null`, the listener told and then dropped). `yarn test`: 627
+  passed, 1 skipped.
+- **`yarn verify:embed`:** passed (the banner: `INLINE` and `BACKGROUND`, each then unmounted, and
+  the Hub's example page). The only embed profile has no features, so it doesn't exercise the sky
+  box's stop: the Node test does.
+
 ### Phase 2: colours and the clouds' clock (D5, D6)
 
 1. C5 / G3 with its test.
