@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: Refactoring, Documentation, Sky box
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -444,7 +444,7 @@ As built, section 3 (2026-10-18): C1, C1b, and the scenes.
   104 passed in 409 s, every probe hash unchanged, snapshots within the tolerance with Phase 0's
   noise (at most 9 levels on a pixel, 0.00 % changed).
 
-### Phase 2: colours and the clouds' clock (D5, D6)
+### Phase 2: colours and the clouds' clock (D5, D6) — done
 
 1. C5 / G3 with its test.
 2. D5: the sky box's time uniform, the bake's frozen clouds from it, `getFrameTime` removed, and
@@ -492,6 +492,22 @@ As built, section 2 (2026-10-18): the sky clock (D5, S8).
   still while loading, survives a rebuild, and restarts after a clear. `yarn test`: 633 passed,
   1 skipped.
 
+As built, section 3 (2026-10-18): the scenes.
+
+- `yarn verify:scenes`: 92 passed, 12 failed. The 12 are the snapshots of the four scenes with
+  clouds (`exampleLod`, `exampleSkyBox`, `lodShowcase`, `skyShowcase`) in the three debug
+  configurations: 0.00-1.49 % of the pixels, at most 179 levels, every probe hash unchanged. The
+  diffs are the clouds and their reflections in mirror balls (the env bake's frozen clouds),
+  nothing else: the clouds now start from 0 per scene (D5). `exampleHubHero` and `space` (no
+  clouds) passed.
+- Recorded again: `yarn verify:scenes --update --only exampleLod,exampleSkyBox,lodShowcase,skyShowcase`
+  (16 runs). Right after, the six sky scenes (those four, `exampleHubHero`, `space`): 24 passed,
+  most identical to the baseline, the rest within the tolerance (at most 13 levels, 0.00 %).
+- The check an hour or more later is Phase 4's `yarn verify:scenes` (it runs against these
+  baselines); the drift issue is closed in Phase 6 if it holds.
+- The scene runner's baselines are local: the changelog says to record these four scenes again on
+  `main` after the merge (Phase 7).
+
 ### Phase 3: the API (D7) and the deprecations (D3)
 
 1. The entry's additions, `SkyBoxState`, the re-exports removed, `@internal` on S6's names.
@@ -501,6 +517,9 @@ As built, section 2 (2026-10-18): the sky clock (D5, S8).
 4. `yarn hub:build`: no `notExported` left in the folder.
 
 ### Phase 4: the internals
+
+(Its `yarn verify:scenes` runs more than an hour after Phase 2's recording: it's D5's late check
+of the six sky scenes too.)
 
 1. `SkyComposite.ts`, `SkyEnvironment.ts`, `SkyStaticLayers.ts`, `SkyLights.ts`, `SkyTime.ts` and
    `layers/`: C2 (removed), C3, C4, B2, L1, T1, the `@remarks` (D9).
