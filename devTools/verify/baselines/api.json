@@ -271,7 +271,8 @@
       "CharacterControllerFactory": "TypeAlias",
       "CharacterControllerFactoryOpts": "TypeAlias",
       "CharacterControllerKinds": "Interface",
-      "CharacterControllerSpec": "TypeAlias"
+      "CharacterControllerSpec": "TypeAlias",
+      "KindSpec": "TypeAlias"
     },
     "src/_engine/features/character/brains/PlayerBrains.ts": {
       "CameraRelativeBrainParams": "TypeAlias",
@@ -280,6 +281,7 @@
       "createWorldFixedBrain": "Function",
       "DirectionalBrainActions": "TypeAlias",
       "getPlayerBrainActionMapId": "Function",
+      "PlayerBrainCommonActions": "TypeAlias",
       "PlayerBrainCommonParams": "TypeAlias",
       "PlayerBrainHoldMode": "TypeAlias",
       "registerPlayerBrains": "Function",
@@ -3428,7 +3430,9 @@
       "DynamicCharacterOpts",
       "DynamicCharacterParams",
       "DynamicCharacterState",
+      "KindSpec",
       "LocomotionStateListener",
+      "PlayerBrainCommonActions",
       "PlayerBrainCommonParams",
       "PlayerBrainHoldMode",
       "TankBrainActions",

@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2054,
-      "total": 2378
+      "documented": 2056,
+      "total": 2380
     },
     "members": {
       "documented": 890,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2010,
-        "total": 2315
+        "documented": 2012,
+        "total": 2317
       },
       "members": {
         "documented": 840,
@@ -127,8 +127,8 @@
     },
     "engine/features/character": {
       "exports": {
-        "documented": 71,
-        "total": 71
+        "documented": 72,
+        "total": 72
       },
       "members": {
         "documented": 4,
@@ -141,8 +141,8 @@
     },
     "engine/features/character/brains": {
       "exports": {
-        "documented": 12,
-        "total": 12
+        "documented": 13,
+        "total": 13
       },
       "members": {
         "documented": 0,

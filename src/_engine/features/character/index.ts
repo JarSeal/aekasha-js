@@ -29,6 +29,7 @@ export type {
   CharacterControllerFactoryOpts,
   CharacterControllerKinds,
   CharacterControllerSpec,
+  KindSpec,
 } from './ActorTypes';
 export type {
   CharacterConfigValues,
@@ -42,6 +43,7 @@ export type {
 export type {
   CameraRelativeBrainParams,
   DirectionalBrainActions,
+  PlayerBrainCommonActions,
   PlayerBrainCommonParams,
   PlayerBrainHoldMode,
   TankBrainActions,

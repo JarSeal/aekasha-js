@@ -21,8 +21,9 @@ import { registerBrainKind } from '../ActorKinds';
 /** `TOGGLE`: a press switches the state (default). `HOLD`: on while the binding is held. */
 export type PlayerBrainHoldMode = 'TOGGLE' | 'HOLD';
 
-/** The actions every player brain has besides its movement. */
-type PlayerBrainCommonActions = {
+/** The actions every player brain has besides its movement: part of {@link TankBrainActions} and
+ * {@link DirectionalBrainActions}. */
+export type PlayerBrainCommonActions = {
   /** A press jumps (on the step it's sampled for). */
   jump: { type: 'BUTTON' };
   /** Run (see `runMode`). */

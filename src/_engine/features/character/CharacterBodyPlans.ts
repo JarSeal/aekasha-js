@@ -26,7 +26,10 @@ export type HumanoidCapsuleDimensions = CharacterDimensions & {
   floorSensorOffsetY: number;
 };
 
-/** A body plan's (or `createCharacter` options') kind: `bodyKind`, else the deprecated `kind`. */
+/**
+ * A body plan's (or `createCharacter` options') kind: `bodyKind`, else the deprecated `kind`.
+ * @internal
+ */
 export const getBodyKind = (field: CharacterBodyKindField): string =>
   field.bodyKind ?? field.kind ?? '';
 

@@ -12,7 +12,7 @@
       "public": 18,
       "crossEntry": 1,
       "internal": 90,
-      "unreferenced": 21
+      "unreferenced": 23
     },
     "aekasha/debug": {
       "public": 40,
@@ -4882,6 +4882,10 @@
         "CharacterControllerSpec": {
           "kind": "TypeAlias",
           "usage": "internal"
+        },
+        "KindSpec": {
+          "kind": "TypeAlias",
+          "usage": "unreferenced"
         }
       },
       "src/_engine/features/character/brains/PlayerBrains.ts": {
@@ -4908,6 +4912,10 @@
         "getPlayerBrainActionMapId": {
           "kind": "Function",
           "usage": "internal"
+        },
+        "PlayerBrainCommonActions": {
+          "kind": "TypeAlias",
+          "usage": "unreferenced"
         },
         "PlayerBrainCommonParams": {
           "kind": "TypeAlias",

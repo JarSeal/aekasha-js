@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-6 implemented
+Status: in progress | Phases 0-7 implemented
 Category: Refactoring, Documentation, Physics
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md, p511_network-transport-and-replication.md (the transport interface)
@@ -1148,7 +1148,7 @@ As built, section 3 (2026-10-17): the rest of the folder's docs.
   (`api.json` unchanged; the physics group's visualizer gzip +0.5 kB is the comments, so
   `bundle.json` stays at section 2's), `yarn hub:build` (no warning in the files touched).
 
-### Phase 7: the derivation, ray casting, the character items
+### Phase 7: the derivation, ray casting, the character items — done
 
 1. D13 (M1, M2, M4) with its per-shape tests.
 2. `Raycast.ts`: C1 (the raycaster made on first use, measured with `yarn sbp`), C2, C3.
@@ -1193,7 +1193,7 @@ As built, section 1 (2026-10-17, on `92d7dd5`): D13.
   gzip); the banner unchanged. Recorded with `api.json` (the move, `setMeshCreatePropsToUserData`
   and `ThreeVector3` removed, `ColliderBounds.ts`' four added) and `docs.json` (`import` 7 / 7).
 - **Checks:** `tsc` (both projects), the lint, `moveMap.ts` regenerated (757 files, the same 41
-  boundary violations, 0 feature cycles), `yarn hub:build` (no warning). No template asset has a
+  boundary violations, 0 feature cycles), `yarn hub:build` (no new warning: 21, as before). No template asset has a
   primitive imported collider, so no hash should move; `yarn verify:scenes` is step 4's.
 - **Seen, not changed:** every primitive is centred on its node's origin, so a mesh whose bounds
   aren't centred there (a cone with its origin at its base) gets an offset collider. As before.
@@ -1230,12 +1230,46 @@ As built, section 2 (2026-10-17): `Raycast.ts`.
 - **Baselines:** `api.json` (the re-export's two names removed, `aekasha` exports `RayDebugOpts`),
   `bundle.banner.json`; `bundle.json` and `docs.json` unchanged. No debug code in either build.
 - **Checks:** `tsc` (both projects), the lint, `moveMap.ts` regenerated, `yarn hub:build` (417
-  pages, no warning).
+  pages, no new warning: 21, as before).
 - **For Phase 9:** `yarn sbp`'s app profile already fails one budget, the physics group at 41.6 kB
   gzip against 36.0 kB (`sbp.config.ts`). It was over before this phase (40.9 kB: Phase 4's split
   counts each module's gzip, Phase 4 section 1), and section 1's new module adds 0.7 kB the same
   way. `yarn build` runs the budgets, so Phase 9 raises the budget with that reason, or shrinks
   the group.
+
+As built, section 3 and step 4 (2026-10-17, on `4efd87b`): the character items, the scene runner.
+
+- **`{@link getBodyKind}`** (`CharacterTypes.ts`): `getBodyKind` is on no entry, so it's `@internal`
+  and the doc says what it did instead (`bodyKind` wins when both are given).
+- **D8, per type:** `KindSpec` (`ActorTypes.ts`) and `PlayerBrainCommonActions`
+  (`brains/PlayerBrains.ts`) are exported on `aekasha/character` with summaries (`KindSpec` with
+  its `@template`s), since entry types name them: `KindSpec` makes both `CharacterBrainSpec` and
+  `CharacterControllerSpec` (inlining it would write it twice; p423's vehicles can reuse it), and
+  `PlayerBrainCommonActions` is part of `TankBrainActions` and `DirectionalBrainActions`.
+- **`CharacterBrainKinds` is on the entry** (`index.ts`) and documented on its page. Its Hub
+  warning stays: TypeDoc resolves `CharacterBrainSpec`'s reference to the merged interface, which
+  the gym's `GymDummyBrain.ts` augments (`CharacterControllerKinds`, augmented nowhere outside the
+  engine, doesn't warn). It's `ComponentDataMap`'s case, which p619 owns: added to p619's note.
+- **The Hub's warnings:** 21 → 18 (`KindSpec`, `PlayerBrainCommonActions`, `getBodyKind` gone).
+  The physics ones left, `WorkerScope` (`transport/WorkerScopeTransport.ts`) and `AdditionalMass`
+  (`EngineRigidBodyProxyAPI.ts`), are Phase 8 step 4's.
+- **Baselines:** `api.json` (the two added, `aekasha/character` exports them), `docs.json`
+  (`character` 72 / 72, `character/brains` 13 / 13). Bundles unchanged (types only).
+- **Step 4, `yarn verify:scenes`** (all of Phase 7): 90 passed, 14 failed. The 14 are snapshots
+  only, 0.00-0.13 % of the pixels, in the three debug configurations of `exampleHubHero`,
+  `exampleLod`, `lodShowcase`, `skyShowcase` and `space`, with every probe hash and the gym's
+  character path hash unchanged: `docs/issues/lodshowcase-sky-snapshot-drift.md` (the clouds read
+  three's wall-clock `time`), now in five scenes. `92d7dd5` (before this phase), run in a
+  scratch worktree against the same baselines, failed the same 14 the same way. Following the
+  issue's workaround, the five scenes were recorded on `92d7dd5` and run on this phase's tree:
+  20 passed. With the full run's 84 passes, all 104 pass. Hashes: `physicsTiers` `49157b8f`, the
+  gym `84a78084` (all three targets) and its path hash `26f43551`, `space` `f9619ec1`
+  (`MAIN_THREAD`; its worker targets are its known `unstableHash`).
+- **The runner on this machine:** the recording runs stalled for minutes at a time (single runs of
+  500-1,060 s, likely the machine sleeping), and two runs failed on the way (a page reload
+  mid-run, p619's; a boot that never finished), recorded again after. Not a code change.
+- **Checks:** `tsc` (both projects), the lint, `yarn test` (622 passed), `moveMap.ts` regenerated
+  (758 files, the same 41 boundary violations, 0 feature cycles).
 
 ### Phase 8: the Hub, CLAUDE.md, readme, and what's filed
 
