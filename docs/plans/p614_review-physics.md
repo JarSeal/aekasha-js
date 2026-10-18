@@ -1282,6 +1282,47 @@ As built, section 3 and step 4 (2026-10-17, on `4efd87b`): the character items, 
 5. W6: the four worker switches (`worker/PhysicsSwitch*.ts`) documented and `@internal`, so the
    `worker` folder reaches 100 % (Phase 6 section 3 found it the last physics folder below).
 
+Four sections: the Hub pages (step 1); CLAUDE.md and the readme (step 2); the plans, the filings
+and the leftover app / toolkit comments (step 3); W6 and the Hub's warnings (steps 5 and 4).
+
+As built, section 1 (2026-10-18, committed as `80f8afc`): the physics guide.
+
+- **Checked and right:** the body, shape and joint types, the defaults (`maxBodies` 2048, 60 steps
+  a second), the tier table, the policy's `focus`, the `api:` links; the physics example page
+  (its regions and text); `yarn sbp --why physics` still ends at `PhysicsBodies.ts` (the SBP
+  guide).
+- **Added to `hub/pages/features/physics/guide.md`:** `unmount()` stops physics (D6);
+  `createPhysicsEntity` rejects and leaves nothing (A1 / A10), and a collider's sizes come from
+  the mesh only for a `createGeometry` geometry; the `…Sync` twins (not all throw on
+  WORKER_THREAD: the proxy's copies); the transport (D5, the seam for networking); a new "From
+  imported models" section (the custom props, `index` groups, sizes from the geometry, `spineAxis`,
+  the 0.2 defaults, `physicsParams`; the Hub had nothing on it); `getPhysicsEntityByAppId` and
+  `spawnImportedAsset` in Key APIs.
+- **Found:** the nodes without an `index` form one group (`ImportPhysics.ts`), so a second
+  `rigidType` node without one gets no body, silently (section 3 files it). And
+  `deriveColliderFromGeometry` is on `aekasha/physics` but `@internal` (section 4).
+
+As built, section 2 (2026-10-18): D14.
+
+- **`src/_engine/features/physics/CLAUDE.md`** (new), four `##` sections and the root's name:
+  `Physics` (the feature, the layout of the facade, backend, types, protocol and the rest as
+  Phases 3-7 built it, the create / delete contract, the tests and the worker bundle check),
+  `Worker targets` (the `*Sync` twins, the transport, requests and `ERROR`, the stop, the
+  transform buffer, the triple buffer, the sub-step capture), `Deterministic scene loads` (the
+  hooks, E1's resolve, p500's snapshots, the probe and the scene runner), `Simulation tiers`
+  (the tiers, the policy, the step clock and gates, p622's `physicsTiers()`) and `Imported
+  physics` (new: the custom props, the groups and anchor, D13's derivation).
+- **The root's Physics section** keeps a paragraph on the feature, the deterministic loads in
+  one sentence, and the rules for simulation code (stale references, writes in
+  `APP_PHYSICS_STEP`, the step clock and gates, the characters, the random streams, the
+  simulation lint). A map line for the new file; the URL flags' `?physicsProbe=N` points at it.
+- **The Hub:** the physics page's `aek:covers` names the four new sections next to `Physics`
+  (`yarn hub:build`: no coverage warning).
+- **`readme.md`:** the Physics API line names imported nodes' bodies and colliders, Threaded
+  physics the transport, Embedding that `unmount()` stops the workers, and Ray casting no longer
+  offers Three.js ray APIs (internal since Phase 7: only the input picking casts them). The
+  example's `createPhysicsEntity` call is unchanged.
+
 ### Phase 9: versions and done
 
 1. D2's bumps, a `CHANGELOG.md` entry (D4b's behaviour change and D6 called out),
