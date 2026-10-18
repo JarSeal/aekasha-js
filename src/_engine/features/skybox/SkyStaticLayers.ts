@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { positionLocal } from 'three/tsl';
 import { getRenderer } from '../../kernel/render/Renderer';
+import { getElapsedTime } from '../../kernel/loop/MainLoop';
 import type { SkyBoxNebulaSize } from './SkyBoxTypes';
 
 /**
@@ -23,8 +24,8 @@ export type StaticLayersSource = {
   build: (dir: THREE.Node<'vec3'>) => THREE.Node<'vec4'>;
 };
 
-/** A param change's bake: at most one per this many ms (the latest request always runs, so a
- * drag ends on its final value). */
+/** A param change's bake: at most one per this many ms of the main loop's elapsed time (the
+ * latest request always runs, so a drag ends on its final value). */
 export const STATIC_LAYERS_THROTTLE_MS = 150;
 /** RGBA HalfFloat, no mipmaps. */
 const BYTES_PER_TEXEL = 8;
@@ -51,6 +52,8 @@ let bake: StaticLayersBake | null = null;
 /** NOW: on the next tick. THROTTLED: once STATIC_LAYERS_THROTTLE_MS has passed since the last
  * bake. */
 let request: 'NOW' | 'THROTTLED' | null = null;
+/** The main loop's elapsed time at the last bake, in ms (real time, or frames counted under a
+ * fixed frame delta, so the bakes run on the same frames in every run of a test). */
 let lastBakeMs = -Infinity;
 
 /**
@@ -183,14 +186,16 @@ export const requestStaticLayersBake = (throttled = false) => {
  * @returns whether it baked */
 export const runRequestedStaticLayersBake = () => {
   if (!request || !bake) return false;
-  const now = performance.now();
-  if (request === 'THROTTLED' && now - lastBakeMs < STATIC_LAYERS_THROTTLE_MS) return false;
+  const nowMs = getElapsedTime() * 1000;
+  if (request === 'THROTTLED' && nowMs - lastBakeMs < STATIC_LAYERS_THROTTLE_MS) return false;
   const renderer = getRenderer();
   if (!renderer?.hasInitialized()) return false;
   request = null;
-  lastBakeMs = now;
+  lastBakeMs = nowMs;
+  // The debug stats' CPU time: a measurement, read only while they're on
+  const startMs = bakeHooks ? performance.now() : 0;
   bakeHooks?.onBakeStart();
   bake.camera.update(renderer as THREE.Renderer, bake.scene);
-  bakeHooks?.onBakeEnd(performance.now() - now);
+  bakeHooks?.onBakeEnd(performance.now() - startMs);
   return true;
 };

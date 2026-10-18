@@ -10,7 +10,6 @@ import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules
 import { deepMerge, isIndexObject } from '../../utils/DeepMerge';
 import { type ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
 import type { FeatureContext } from '../../kernel/init/Features';
-import { getRenderer } from '../../kernel/render/Renderer';
 import { ECSSystemStage } from '../../kernel/loop/SystemStages';
 import { getElapsedTime, isAppPlaying } from '../../kernel/loop/MainLoop';
 import type { SkyBoxBaseDef, SkyBoxDef, SkyBoxEnvDef, SkyBoxOverrides } from './SkyBoxTypes';
@@ -569,6 +568,8 @@ const applyUpdate = async (id: string, update: SkyBoxUpdate) => {
 export const clearSkyBox = () => {
   activationSeq++;
   active = null;
+  // A scene's clouds start from the same place on every visit
+  skyClockSec = 0;
   disposeEnvBake();
   disposeStaticLayers();
   deleteSkyLights();
@@ -693,11 +694,12 @@ export const getSunElevation = (i = 0) => {
 // reverses. A cycle that keeps playing after a setTimeOfDay jump catches up within the rate
 // cap (bakeEnvironment() bakes on the next frame). env.dynamic: false turns all of it off.
 
-/** The sun's and moon's directions the last env bake saw (any bake), and when it ran
- * (performance.now). */
+/** The sun's and moon's directions the last env bake saw (any bake), and when it ran (the main
+ * loop's elapsed time in seconds: real time, or frames counted under a fixed frame delta, so the
+ * bakes run on the same frames in every run of a test). */
 const lastBakeSunDir = new THREE.Vector3();
 const lastBakeMoonDir = new THREE.Vector3();
-let lastBakeTimeMs = -Infinity;
+let lastBakeTimeSec = -Infinity;
 /** Whether the time moved on the previous day-night step. */
 let wasTimeMoving = false;
 /** Set when the cycle reverses: the next step bakes once to catch up. */
@@ -718,7 +720,7 @@ const scheduleDayNightBake = (current: ActiveSkyBox, moved: boolean) => {
   if (!current.isComposite || !isBakeDynamic(def)) return;
   if (moved && !needsCatchUpBake) {
     const maxPerSec = def.env?.maxUpdatesPerSec ?? ENV_DEFAULTS.maxUpdatesPerSec;
-    if (maxPerSec <= 0 || performance.now() - lastBakeTimeMs < 1000 / maxPerSec) return;
+    if (maxPerSec <= 0 || getElapsedTime() - lastBakeTimeSec < 1 / maxPerSec) return;
     const angleDeg = def.env?.updateAngleDeg ?? ENV_DEFAULTS.updateAngleDeg;
     if (hasSkyTurnedSinceBake(current.uniforms, Math.cos(THREE.MathUtils.degToRad(angleDeg)))) {
       requestEnvBake();
@@ -735,7 +737,7 @@ const noteEnvBake = () => {
   if (!active) return;
   lastBakeSunDir.copy(active.uniforms.suns[0].direction.value);
   lastBakeMoonDir.copy(active.uniforms.moons[0].direction.value);
-  lastBakeTimeMs = performance.now();
+  lastBakeTimeSec = getElapsedTime();
 };
 
 /**
@@ -755,9 +757,14 @@ export const getMoonPhase = (i = 0) => {
   return getMoonPhaseOf(active.def, active.time, isDayNightEnabled(active.def), i);
 };
 
-/** Last frame's getElapsedTime: the day-night step advances by the difference, which (unlike
- * the MAIN delta) is 0 on the frame the master loop pauses and the frame it resumes. */
+/** Last frame's getElapsedTime: the day-night step and the sky clock advance by the difference,
+ * which (unlike the MAIN delta) is 0 on the frame the master loop pauses and the frame it resumes. */
 let lastElapsedTime = 0;
+/** The sky box's own clock (seconds), which the clouds drift by: it advances with the main loop's
+ * elapsed time, so it stands still while the master loop is paused and in editor views, and
+ * (here) while a scene loads. Under a fixed frame delta (the scene runner's test clock) it counts
+ * frames. Restarts with every clear. */
+let skyClockSec = 0;
 
 const isTimeSourceRunning = (def: SkyBoxDef) => {
   const source = def.dayNight?.timeSource ?? DAY_NIGHT_DEFAULTS.timeSource;
@@ -765,14 +772,11 @@ const isTimeSourceRunning = (def: SkyBoxDef) => {
 };
 
 /**
- * Advances the active sky box's day-night time and, when it changed, writes the sun-dependent
- * uniforms and lights. Stands still while a scene loads, so a scene starts at its start time.
- * Allocates nothing.
+ * Advances the active sky box's day-night time by `dt` (seconds) and, when it changed, writes the
+ * sun-dependent uniforms and lights. Stands still while a scene loads, so a scene starts at its
+ * start time. Allocates nothing.
  */
-const stepDayNight = (world: ECSWorld) => {
-  const elapsed = getElapsedTime();
-  const dt = elapsed - lastElapsedTime;
-  lastElapsedTime = elapsed;
+const stepDayNight = (world: ECSWorld, dt: number) => {
   const current = active;
   if (!current || !isDayNightEnabled(current.def) || isCurrentlyLoading()) return;
   const time = current.time;
@@ -802,26 +806,27 @@ export const installSkyBoxSystem = (ctx: FeatureContext) => {
   });
 };
 
-/** Steps the day-night cycle, moves the sky lights with their follow point, and runs a
- * requested static-layer bake and then env bake (it samples the static layers), never while a
- * scene loads. The sky box is global: only the default world drives it. */
+/** Advances the sky clock and steps the day-night cycle, moves the sky lights with their follow
+ * point, and runs a requested static-layer bake and then env bake (it samples the static layers),
+ * never while a scene loads. The sky box is global: only the default world drives it. */
 function skyBoxSystem(world: ECSWorld) {
   if (world !== getECSWorld()) return;
-  stepDayNight(world);
+  const elapsed = getElapsedTime();
+  const dt = elapsed - lastElapsedTime;
+  lastElapsedTime = elapsed;
+  const isLoading = isCurrentlyLoading();
+  if (!isLoading) skyClockSec += dt;
+  if (active) active.uniforms.clouds.time.value = skyClockSec;
+  stepDayNight(world, dt);
   updateSkyLightsFrame(world);
-  if (isCurrentlyLoading()) return;
+  if (isLoading) return;
   // The environment follows the static layers (activation requests both anyway)
   if (runRequestedStaticLayersBake() && active && isBakeDynamic(active.def)) requestEnvBake();
   if (!isEnvBakeRequested()) return;
   // The bake's clouds are frozen where the view's are now
-  if (active) active.uniforms.clouds.bakeTime.value = getFrameTime();
+  if (active) active.uniforms.clouds.bakeTime.value = skyClockSec;
   if (runRequestedEnvBake()) noteEnvBake();
 }
-
-/** three's `time` node value (the renderer's node frame time, in seconds). */
-const getFrameTime = () =>
-  (getRenderer() as unknown as { _nodes?: { nodeFrame?: { time?: number } } } | undefined)?._nodes
-    ?.nodeFrame?.time ?? 0;
 
 // Debug
 

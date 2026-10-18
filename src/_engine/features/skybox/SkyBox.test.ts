@@ -6,6 +6,8 @@ import * as THREE from 'three/webgpu';
 // renderer, getPMREMTexture returns the source texture as is)
 const m = vi.hoisted(() => ({
   rootScene: null as unknown as THREE.Scene,
+  elapsed: 0,
+  isLoading: false,
   loads: [] as {
     fileName: unknown;
     resolve: (texture: THREE.Texture) => void;
@@ -16,6 +18,14 @@ vi.mock(import('../../kernel/scene/Scene'), async (importOriginal) => ({
   ...(await importOriginal()),
   getCurrentSceneId: () => 'scene',
   getRootScene: () => m.rootScene,
+}));
+vi.mock(import('../../kernel/loop/MainLoop'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  getElapsedTime: () => m.elapsed,
+}));
+vi.mock(import('../../kernel/scene/SceneLoader'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  isCurrentlyLoading: () => m.isLoading,
 }));
 vi.mock(import('../../kernel/assets/Texture'), async (importOriginal) => {
   const original = await importOriginal();
@@ -28,10 +38,12 @@ vi.mock(import('../../kernel/assets/Texture'), async (importOriginal) => {
   };
 });
 
-import { DEFAULT_ECS_WORLD_ID, ECSWorld } from '../../kernel/ecs/ECS';
+import { DEFAULT_ECS_WORLD_ID, ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
+import type { FeatureContext } from '../../kernel/init/Features';
 import {
   clearSkyBox,
   getActiveSkyBox,
+  installSkyBoxSystem,
   onSkyBoxChange,
   registerSkyBox,
   setActiveSkyBox,
@@ -54,6 +66,7 @@ new ECSWorld({ id: DEFAULT_ECS_WORLD_ID });
 beforeEach(() => {
   m.rootScene = new THREE.Scene();
   m.loads.length = 0;
+  m.isLoading = false;
   clearSkyBox();
 });
 
@@ -151,5 +164,57 @@ describe('stopSkyBox, for unmount()', () => {
     listener.mockClear();
     clearSkyBox();
     expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe('the sky clock', () => {
+  /** skyBoxSystem, as the feature's install registers it. */
+  const getSkyBoxSystem = () => {
+    let system: ((world: ECSWorld) => void) | null = null;
+    const fakeWorld = {
+      addSystem: (_stage: unknown, _name: string, fn: typeof system) => (system = fn),
+    };
+    installSkyBoxSystem({
+      registerPlugin: (plugin: (world: unknown) => void) => plugin(fakeWorld),
+    } as unknown as FeatureContext);
+    return system!;
+  };
+
+  it('drifts the clouds with the elapsed time, but not while a scene loads, from 0 per scene', async () => {
+    const skyBoxSystem = getSkyBoxSystem();
+    const world = getECSWorld();
+    // A colour base with an atmosphere and clouds: the composite path, no texture to load
+    registerSkyBox(
+      { id: 'cloudy', base: { type: 'COLOR', color: '#000000' }, atmosphere: {}, clouds: {} },
+      'scene'
+    );
+    const tick = (elapsed: number) => {
+      m.elapsed = elapsed;
+      skyBoxSystem(world);
+    };
+    const cloudsTime = () => getActiveSkyBox()!.uniforms.clouds.time.value;
+
+    tick(10);
+    clearSkyBox();
+    await setActiveSkyBox('cloudy');
+    tick(10.5);
+    expect(cloudsTime()).toBeCloseTo(0.5, 9);
+    m.isLoading = true;
+    tick(12);
+    expect(cloudsTime()).toBeCloseTo(0.5, 9);
+    m.isLoading = false;
+    tick(12.25);
+    expect(cloudsTime()).toBeCloseTo(0.75, 9);
+
+    // A structural change (a rebuild) keeps the clock: the clouds don't jump
+    await updateSkyBox('cloudy', { ground: {} });
+    tick(12.5);
+    expect(cloudsTime()).toBeCloseTo(1, 9);
+
+    // The next scene's sky starts from 0
+    clearSkyBox();
+    await setActiveSkyBox('cloudy');
+    tick(13);
+    expect(cloudsTime()).toBeCloseTo(0.5, 9);
   });
 });

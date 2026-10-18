@@ -187,7 +187,8 @@ export const runRequestedEnvBake = () => {
   const renderer = getRenderer();
   if (!envBake || !renderer?.hasInitialized()) return false;
   bakeHooks?.onBakeStart();
-  const start = performance.now();
+  // The debug stats' CPU time: a measurement, read only while they're on
+  const start = bakeHooks ? performance.now() : 0;
   envBake.generator.fromScene(envBake.scene, 0, 0.1, 100, {
     size: envBake.size,
     renderTarget: envBake.target,

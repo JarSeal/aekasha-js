@@ -7,7 +7,8 @@
  *
  * Differences from SkyMesh: a `color` tint and a `windDirection` (SkyMesh scrolls along
  * (1, 1), the default here); the dayFactor and the horizon fade width are computed on the CPU;
- * and the env bake's clouds are frozen at the bake's time (ENV_BAKE).
+ * the clouds drift by the sky box's own clock (`time`, which stops with the loop), not three's
+ * wall-clock `time` node; and the env bake's clouds are frozen at the bake's time (ENV_BAKE).
  * With the defaults, the atmosphere's exposure at 1 and no sun disc, it's SkyMesh's clouds.
  */
 import * as THREE from 'three/webgpu';
@@ -26,7 +27,6 @@ import {
   pow,
   smoothstep,
   sub,
-  time,
   uniform,
   vec2,
   vec3,
@@ -70,7 +70,10 @@ export type CloudsUniforms = {
   windDirection: THREE.UniformNode<'vec2', THREE.Vector2>;
   /** SkyMesh's day factor, smoothstep(-0.08, 0.3, sun y) (:351). */
   dayFactor: THREE.UniformNode<'float', number>;
-  /** The env bake's frozen time (the view uses three's `time`); set before each bake. */
+  /** The sky box's clock in seconds (SkyBox.ts, written every frame): the view's clouds drift by
+   * it, so they stop while the master loop is paused, in editor views and while a scene loads. */
+  time: THREE.UniformNode<'float', number>;
+  /** The env bake's frozen time: `time` as it was at the bake, set before each bake. */
   bakeTime: THREE.UniformNode<'float', number>;
   /** The moonlight on the clouds (black by day, or without a moon). */
   moonLight: THREE.UniformNode<'color', THREE.Color>;
@@ -86,6 +89,7 @@ export const createCloudsUniforms = (): CloudsUniforms => ({
   color: uniform(new THREE.Color(1, 1, 1)),
   windDirection: uniform(new THREE.Vector2(1, 1)),
   dayFactor: uniform(1),
+  time: uniform(0),
   bakeTime: uniform(0),
   moonLight: uniform(new THREE.Color(0, 0, 0)),
 });
@@ -204,7 +208,7 @@ export const cloudsNode = (
     const color = composeAtmosphere(parts, atmosphere).toVar();
     const fex = terms.fex as THREE.Node<'vec3'>;
     const cosTheta = terms.cosTheta as THREE.Node<'float'>;
-    const t = (mode === 'VIEW' ? time : u.bakeTime) as THREE.Node<'float'>;
+    const t = mode === 'VIEW' ? u.time : u.bakeTime;
 
     If(dir.y.greaterThan(0.0).and(u.coverage.greaterThan(0.0)), () => {
       // Project onto the cloud plane (a higher elevation brings the clouds lower and closer)

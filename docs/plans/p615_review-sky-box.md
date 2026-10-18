@@ -470,6 +470,28 @@ As built, section 1 (2026-10-18): the colours (C5, G3, D6).
 - **Test:** `SkyColor.test.ts` (each form of three colours equal, and back to the same hex; mid
   grey linear).
 
+As built, section 2 (2026-10-18): the sky clock (D5, S8).
+
+- `SkyBox.ts`' `skyClockSec`: `skyBoxSystem` computes the elapsed time's change once per frame
+  (it was `stepDayNight`'s, which now takes it), adds it to the clock unless a scene is loading,
+  and writes it to the clouds' new `time` uniform every frame (`layers/Clouds.ts`; the VIEW
+  clouds read it instead of three's `time` node, and `bakeTime` is set from it before an env
+  bake). The clock lives in the module, not the uniforms, so a rebuild or a structural update
+  doesn't make the clouds jump; `clearSkyBox` (a scene's exit) restarts it at 0, so a scene's
+  clouds start from the same place on every visit. `getFrameTime` and its read of the renderer's
+  private `_nodes.nodeFrame.time` are gone (S8), and with them `SkyBox.ts`' import of the
+  renderer.
+- The bake schedules: `scheduleDayNightBake`'s rate limit (`lastBakeTimeSec`) and
+  `SkyStaticLayers.ts`' 150 ms throttle read `getElapsedTime()` (monotonic, never reset: a reset
+  clock would block a re-bake). The two bakes' debug CPU timing keeps `performance.now()`, read
+  only while the stats' hooks are set.
+- The stars' twinkle stays on three's `time` (ambient; the test clock pins it): the test bridge's
+  comment says which of the two clocks covers what.
+- **Test:** `SkyBox.test.ts`' "the sky clock" drives the system the feature installs, with the
+  elapsed time and the loading flag mocked: the clouds' time follows the elapsed time, stands
+  still while loading, survives a rebuild, and restarts after a clear. `yarn test`: 633 passed,
+  1 skipped.
+
 ### Phase 3: the API (D7) and the deprecations (D3)
 
 1. The entry's additions, `SkyBoxState`, the re-exports removed, `@internal` on S6's names.
