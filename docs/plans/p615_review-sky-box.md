@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented
+Status: in progress | Phases 0-6 implemented
 Category: Refactoring, Documentation, Sky box
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -756,7 +756,7 @@ and the undo history after each step. Every step did what it should:
 - Console: no errors; the only warning is Rapier's "deprecated parameters" on init, once per
   load (outside the sky box).
 
-### Phase 6: the Hub, CLAUDE.md, readme, and what's filed
+### Phase 6: the Hub, CLAUDE.md, readme, and what's filed — done
 
 1. The sky box feature and example pages against the code (the preset helper, the stop, the
    clouds' clock, the API links); `yarn hub:build`.
@@ -814,6 +814,22 @@ As built, section 2 (2026-10-19): the CLAUDE.md files and the readme.
   clock; Engine features' `onUnmount` sentence names the sky box's stop next to physics'.
 - `readme.md`: unchanged. Its sky box bullet and its examples (`skyBox()` in `features`, a
   scene's `skyboxes`) still hold, and no API it lists changed.
+
+As built, section 3 (2026-10-19): p622 and the drift issue.
+
+- p622: its "From p615" list (Phase 3) covers every `6.0.0` the sky box names (checked with its
+  own grep). Added the files the grep finds that its summary line left out (`SkyBoxSchema.ts`,
+  `debug/_dbg__SkyBoxShared.ts`, where Phase 5's split put `migrateLegacySkyBoxLS`). S5's
+  positional parameters stay candidates there.
+- `docs/issues/lodshowcase-sky-snapshot-drift.md`: **fixed** (decided 2026-10-19 on Phase 4's
+  evidence, not waiting for a run on the Mac). A `## Fix` section says what D5 moved off the wall
+  clock (the clouds, the bake schedules), what Phase 0 found (the test bridge already pinned
+  three's `time`; the schedules weren't), and the evidence with its limits: Phase 2's runs right
+  after the recording (WebGPU), Phase 4's at about 55 minutes (WebGL2, SwiftShader), and the
+  drift never reproduced within the hour before the change either. Phase 7's `yarn
+  verify:scenes` is the day-later check; the issue opens again if the drift comes back there.
+  The workaround line says it was until p615. No runner hook was needed (D5's fallback).
+- `yarn hub:build`: 420 pages, 16 warnings; the Issues page lists the issue as fixed.
 
 ### Phase 7: versions and done
 

@@ -26,7 +26,9 @@ migration page, so an app made from the template upgrades in one step.
     `Scene.ts`' old all-scene-enters hook, `TextureSync.ts`' synchronous loaders;
   - physics: `getPhysGameTime()` and `PhysicsWallClock.ts` (and its allow-list entry in
     `SIMULATION_FILES`);
-  - the sky box (p615): `LegacySkyBox.ts` and `SkyBox.ts`' legacy `createSkyBox` overload (below).
+  - the sky box (p615): `LegacySkyBox.ts`, `SkyBox.ts`' legacy `createSkyBox` overload,
+    `SkyBoxSchema.ts`' conversions and the debug tab's migration (`debug/_dbg__SkyBoxShared.ts`;
+    below).
 - **From p614 (its D3):**
   - `physicsTiers()`, a feature of its own (below);
   - `createPhysicsEntity` with an options object instead of five positional parameters (36 call
@@ -47,8 +49,9 @@ migration page, so an app made from the template upgrades in one step.
     `createSkyBox`'s legacy overload (`SkyBox.ts`), the schema's two conversions
     (`SkyBoxAssetSchema`'s preprocess and the `__saveData` entries' `fromLegacySkyBoxOverrides`,
     `SkyBoxSchema.ts`), the gatherer's `warnOnLegacySkyBox` (`devTools/gatherAppData.ts`) and the
-    debug tab's one-time `AEK_debugSkyBoxStates` migration (`migrateLegacySkyBoxLS`). Nothing in
-    the template uses the shape (no JSON, no `createSkyBox` call; checked 2026-10-18);
+    debug tab's one-time `AEK_debugSkyBoxStates` migration (`migrateLegacySkyBoxLS`,
+    `debug/_dbg__SkyBoxShared.ts`). Nothing in the template uses the shape (no JSON, no
+    `createSkyBox` call; checked 2026-10-18);
   - candidates, decided here: the optional positional parameters of `setActiveSkyBox(id,
     sceneId?)`, `getSunDirection(out, i = 0)`, `getMoonDirection(out, i = 0)`,
     `getSunElevation(i = 0)` and `getMoonPhase(i = 0)` (the coding standard asks for an options
