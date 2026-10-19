@@ -851,6 +851,39 @@ As built, section 1 (2026-10-19): the versions and the changelog.
   (F1 said the issue lists the sky box's state; no phase updated it).
 - `yarn checkVersions --against main`: passed.
 
+As built, section 2 (2026-10-19): the checks, on WSL2 (WebGL2, SwiftShader).
+
+- `yarn test`: 692 passed, 1 skipped.
+- **The SBP budget:** raised in `sbp.config.ts`, 28 → 30 KiB (29,122 B + 4 %, rounded up), with a
+  comment. `yarn sbp --why _engine/features/skybox`: the entry's chain, 17 → 18 modules (the new one
+  `SkyDayNight.ts`), nothing from outside the folder. Measured per module (TypeScript's output with
+  and without comments, `main` against the branch): the code about +1.1 kB summed (almost all
+  `SkyDayNight.ts`: `SkyBox.ts` −1.0 kB, the new module +1.8 kB, the clock and a module's own
+  overhead), the rest the JSDoc, which a group counts. Shrinking it would undo reviewed work. Nothing
+  else over; the main chunk 384,563 → 386,054 B gzip (+1,491 B; +3.7 kB minified).
+- `yarn verify:scenes` (64 min): **101 passed**, 3 failed: `thirdPersonGymScene`'s debug runs timing
+  out at step 600 as in Phase 4 (no debug baseline here). Every probe hash and system order
+  unchanged; `space`'s worker targets hash apart from `mainThread`, its `unstableHash` in
+  `scenes.config.ts`. **The drift:** the six sky scenes passed, snapshots within the tolerance (at
+  most 18 levels on a pixel, `exampleHubHero` `workerSab`; `skyShowcase` 7, `exampleSkyBox` 5;
+  0.00 % changed; `exampleLod`, `lodShowcase` and `space` identical). Against Phase 3's recording
+  on this machine (09:51), so about 2.5 hours later, not a day: the issue stays fixed on this
+  evidence, and the merge's re-recording on `main` restarts the clock.
+- `yarn verify:baselines`: every change one the plan explains (Phase 3's moves to
+  `SkyDayNight.ts`, D7's entry and removed re-exports, C2, the internal names Phases 1-4 added; the
+  sky box and `utils` groups; the two `EngineRapier.js` chunks trading places, ±0.2 kB). Banner
+  unchanged but for a few bytes of gzip in its lazy chunks (hashed names). `docs.json` unchanged,
+  no debug code in either build. Recorded with `--update`: `api.json`, `bundle.json`,
+  `bundle.banner.json`.
+- `yarn build`: passed, every SBP budget within (app 25, banner 19); its `yarn hub:build` step:
+  420 pages, Phase 0's 16 warnings, none in the sky box.
+- `moveMap.ts`: 765 files mapped (758 before: the sky box's new module, test files and debug
+  module, and p614's physics `CLAUDE.md`); 41 boundary violations and no cycles, as before;
+  `--check` passes. The entry exports count every name of `MainLoop.ts`, `Scene.ts` and
+  `Texture.ts` as used by `aekasha/skybox` because `SkyBox.test.ts` mocks those modules whole (the
+  physics tests show the same), and record the Hub pages p614 added as importers.
+- The changelog's Project section has these lines now.
+
 ## 4. Risks
 
 1. **D5 and the scene runner.** If the elapsed time at the snapshot varies between runs, the

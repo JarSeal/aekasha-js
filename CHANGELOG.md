@@ -47,7 +47,10 @@ The sky box feature is reviewed file by file (p615). Two bugs are fixed, `skyBox
 - The Hub: the sky box guide (the stop, presets in code, the clouds' clock, `SkyBoxState`, overlapping calls, failed textures; `bakeEnvironment` bakes on the next frame, not now), the sky box example's walkthrough (the clouds' clock), the embed walkthrough (what `unmount()` stops) and the ECS guide (`ctx.onUnmount`).
 - `src/_engine/features/skybox/CLAUDE.md`: the feature described once with its stop, the public API, the presets, the update queue, failed textures, the sky clock and the colour reading. The root `CLAUDE.md`'s map line and `onUnmount` sentence name the sky box's stop. `docs/plans/CLAUDE.md`'s "Epic" line covers epics made of plans.
 - `lodshowcase-sky-snapshot-drift.md` is fixed (the clouds and the bake schedules off the wall clock). `remount-after-unmount.md` says the sky box stops.
+- `yarn verify:baselines`: `api.json` (the day-night functions in `SkyDayNight.ts`, the entry's additions, the internal names added and removed) and both bundle baselines. `docs.json` (every sky box folder fully documented) was recorded with the phases.
+- `sbp.config.ts`: the app's sky box group budget raised from 28 to 30 KiB. The group measures 26.4 → 28.4 kB, mostly its new JSDoc, since a group counts its comments. Its code is about 1.1 kB larger: the sky clock, the update queue, the stop, and `SkyDayNight.ts` as a module of its own. The app's main chunk (`assets/index.js`) is 386,054 B gzip, 1,491 B more than on `main`.
 - The scene runner's baselines are local: after this merge, `yarn verify:scenes --update --only exampleLod,exampleSkyBox,lodShowcase,skyShowcase` on `main` records the clouds' snapshots.
+- `devTools/refactor/`'s layout report, move map and entry exports regenerated.
 
 ## 2026-10-18 — review-physics
 

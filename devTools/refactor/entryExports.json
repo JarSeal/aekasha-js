@@ -4,9 +4,9 @@
   "summary": {
     "aekasha": {
       "public": 142,
-      "crossEntry": 220,
-      "internal": 286,
-      "unreferenced": 110
+      "crossEntry": 249,
+      "internal": 259,
+      "unreferenced": 108
     },
     "aekasha/character": {
       "public": 18,
@@ -39,10 +39,10 @@
       "unreferenced": 36
     },
     "aekasha/physics": {
-      "public": 23,
+      "public": 24,
       "crossEntry": 27,
       "internal": 293,
-      "unreferenced": 102
+      "unreferenced": 103
     },
     "aekasha/postfx": {
       "public": 7,
@@ -57,10 +57,10 @@
       "unreferenced": 39
     },
     "aekasha/skybox": {
-      "public": 25,
+      "public": 28,
       "crossEntry": 7,
-      "internal": 182,
-      "unreferenced": 38
+      "internal": 188,
+      "unreferenced": 32
     },
     "aekasha/spatial": {
       "public": 12,
@@ -365,6 +365,7 @@
           "usage": "public",
           "by": [
             "app",
+            "hub",
             "toolkit"
           ]
         },
@@ -778,7 +779,8 @@
           "kind": "Function",
           "usage": "public",
           "by": [
-            "app"
+            "app",
+            "hub"
           ]
         }
       },
@@ -976,6 +978,7 @@
           "usage": "public",
           "by": [
             "aekasha/lod",
+            "aekasha/skybox",
             "app"
           ]
         },
@@ -983,19 +986,24 @@
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/lod"
+            "aekasha/lod",
+            "aekasha/skybox"
           ]
         },
         "getAllTextures": {
           "kind": "Function",
           "usage": "public",
           "by": [
+            "aekasha/skybox",
             "app"
           ]
         },
         "getNoFileTexture": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "getTexture": {
           "kind": "Function",
@@ -1012,12 +1020,16 @@
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/skybox"
           ]
         },
         "importHDRLoader": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "loadTextureAsync": {
           "kind": "Function",
@@ -1031,31 +1043,45 @@
         },
         "loadTextureFileAsync": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "resolveTextureUrl": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "saveLoadedTexture": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "saveTexture": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/lod"
+            "aekasha/lod",
+            "aekasha/skybox"
           ]
         },
         "setTextureOpts": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "TexOpts": {
           "kind": "TypeAlias",
           "usage": "public",
           "by": [
+            "aekasha/skybox",
             "app"
           ]
         },
@@ -1065,6 +1091,7 @@
           "by": [
             "aekasha/debug",
             "aekasha/schemas",
+            "aekasha/skybox",
             "app"
           ]
         }
@@ -1608,7 +1635,8 @@
           "kind": "Variable",
           "usage": "crossEntry",
           "by": [
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "deleteECSWorld": {
@@ -3000,7 +3028,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "addResizer": {
@@ -3009,6 +3038,7 @@
           "by": [
             "aekasha/debug",
             "aekasha/physics",
+            "aekasha/skybox",
             "aekasha/ui"
           ]
         },
@@ -3017,7 +3047,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "advanceElapsedClock": {
@@ -3025,7 +3056,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "deleteResizer": {
@@ -3033,7 +3065,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "ElapsedClock": {
@@ -3041,7 +3074,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "FixedStepDriver": {
@@ -3049,7 +3083,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "FrameProbe": {
@@ -3057,7 +3092,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "getAppDelta": {
@@ -3065,7 +3101,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "getDelta": {
@@ -3073,7 +3110,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "getElapsedTime": {
@@ -3091,7 +3129,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "getPlaySpeedMultiplier": {
@@ -3099,7 +3138,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "getReadOnlyLoopState": {
@@ -3107,7 +3147,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "initMainLoop": {
@@ -3115,7 +3156,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "isAppPlaying": {
@@ -3132,7 +3174,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "LoopState": {
@@ -3140,7 +3183,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "nextMaxFPSReference": {
@@ -3148,7 +3192,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "onBeforeUnload": {
@@ -3156,7 +3201,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "onVisibilityChange": {
@@ -3164,7 +3210,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "onWindowBlur": {
@@ -3172,7 +3219,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "registerMainLoopDebugGUI": {
@@ -3180,7 +3228,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "renderFrameNow": {
@@ -3188,7 +3237,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "renderFrameWhileMasterPaused": {
@@ -3196,7 +3246,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "requestMainLoopFrame": {
@@ -3204,7 +3255,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "setActionSampler": {
@@ -3212,7 +3264,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "setFixedFrameDelta": {
@@ -3220,7 +3273,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "setFixedStepDriver": {
@@ -3228,7 +3282,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "setFrameProbe": {
@@ -3236,7 +3291,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "setIsLoadingScene": {
@@ -3244,7 +3300,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "setPlaySpeedMultiplier": {
@@ -3252,7 +3309,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "setPreStepHook": {
@@ -3260,7 +3318,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "setSceneSuspended": {
@@ -3268,7 +3327,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "stopMainLoop": {
@@ -3276,7 +3336,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "toggleAppPlay": {
@@ -3284,7 +3345,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "toggleMainPlay": {
@@ -3292,7 +3354,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "transformAppSpeedValue": {
@@ -3300,7 +3363,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         },
         "transformMainSpeedValue": {
@@ -3309,6 +3373,7 @@
           "by": [
             "aekasha/debug",
             "aekasha/physics",
+            "aekasha/skybox",
             "app"
           ]
         },
@@ -3317,7 +3382,8 @@
           "usage": "crossEntry",
           "by": [
             "aekasha/debug",
-            "aekasha/physics"
+            "aekasha/physics",
+            "aekasha/skybox"
           ]
         }
       },
@@ -3815,7 +3881,10 @@
         },
         "toThreeColor": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         }
       },
       "src/_engine/kernel/render/Views.ts": {
@@ -4069,16 +4138,23 @@
       "src/_engine/kernel/scene/Scene.ts": {
         "createRootScene": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "createScene": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "createSceneAppLooper": {
           "kind": "Function",
           "usage": "public",
           "by": [
+            "aekasha/skybox",
             "app",
             "hub"
           ]
@@ -4088,35 +4164,47 @@
           "usage": "public",
           "by": [
             "aekasha/character",
+            "aekasha/skybox",
             "app",
             "hub"
           ]
         },
         "deleteAllSceneLoopers": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "deleteSceneAppLooper": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "deleteSceneMainLooper": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/character"
+            "aekasha/character",
+            "aekasha/skybox"
           ]
         },
         "doesSceneExist": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/skybox"
           ]
         },
         "getCurrentScene": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "getCurrentSceneId": {
           "kind": "Function",
@@ -4139,6 +4227,7 @@
             "aekasha/debug",
             "aekasha/lod",
             "aekasha/postfx",
+            "aekasha/skybox",
             "app"
           ]
         },
@@ -4147,12 +4236,16 @@
           "usage": "public",
           "by": [
             "aekasha/lod",
+            "aekasha/skybox",
             "app"
           ]
         },
         "getLoadingSceneId": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "getRootScene": {
           "kind": "Function",
@@ -4170,6 +4263,7 @@
           "kind": "Function",
           "usage": "public",
           "by": [
+            "aekasha/skybox",
             "app"
           ]
         },
@@ -4177,16 +4271,23 @@
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/postfx"
+            "aekasha/postfx",
+            "aekasha/skybox"
           ]
         },
         "Looper": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "registerOnAllSceneEnterings": {
           "kind": "Variable",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "registerOnAllSceneEnters": {
           "kind": "Function",
@@ -4196,6 +4297,7 @@
             "aekasha/debug",
             "aekasha/physics",
             "aekasha/postfx",
+            "aekasha/skybox",
             "app",
             "hub"
           ]
@@ -4206,6 +4308,7 @@
           "by": [
             "aekasha/debug",
             "aekasha/physics",
+            "aekasha/skybox",
             "app",
             "hub",
             "toolkit"
@@ -4215,6 +4318,7 @@
           "kind": "Function",
           "usage": "public",
           "by": [
+            "aekasha/skybox",
             "app",
             "hub"
           ]
@@ -4223,61 +4327,96 @@
           "kind": "Function",
           "usage": "public",
           "by": [
+            "aekasha/skybox",
             "app",
             "hub"
           ]
         },
         "registerScenesFromGeneratedData": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "runOnAllSceneEnters": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "runOnAllSceneExits": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "runOnSceneEnter": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "runOnSceneExit": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "runSceneAppLoopers": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "runSceneMainLateLoopers": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "runSceneMainLoopers": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "SceneData": {
           "kind": "TypeAlias",
           "usage": "public",
           "by": [
             "aekasha/schemas",
+            "aekasha/skybox",
             "app"
           ]
         },
         "SceneOptions": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "setCurrentScene": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "setLoadingSceneId": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         }
       },
       "src/_engine/kernel/scene/SceneDataLoader.ts": {
@@ -4385,6 +4524,7 @@
           "kind": "Function",
           "usage": "public",
           "by": [
+            "aekasha/skybox",
             "app",
             "hub"
           ]
@@ -4393,6 +4533,7 @@
           "kind": "Function",
           "usage": "public",
           "by": [
+            "aekasha/skybox",
             "app"
           ]
         },
@@ -4411,7 +4552,8 @@
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha/debug"
+            "aekasha/debug",
+            "aekasha/skybox"
           ]
         },
         "isCurrentlyLoading": {
@@ -4430,28 +4572,39 @@
           "usage": "public",
           "by": [
             "aekasha/debug",
+            "aekasha/skybox",
             "app",
             "hub"
           ]
         },
         "LoadSceneProps": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "SceneLoader": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         },
         "ScenePrimitiveAssets": {
           "kind": "TypeAlias",
           "usage": "public",
           "by": [
+            "aekasha/skybox",
             "app"
           ]
         },
         "UpdateLoaderStatusFn": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/skybox"
+          ]
         }
       },
       "src/_engine/utils/Assert.ts": {
@@ -4775,6 +4928,7 @@
           "kind": "Function",
           "usage": "public",
           "by": [
+            "aekasha/skybox",
             "app",
             "hub",
             "toolkit"
@@ -5468,7 +5622,8 @@
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
-            "aekasha"
+            "aekasha",
+            "aekasha/skybox"
           ]
         },
         "AnyDebuggerTabDef": {
@@ -7940,6 +8095,10 @@
         }
       },
       "src/_engine/features/physics/backends/rapier/proxies/EngineRigidBodyProxyAPI.ts": {
+        "AdditionalMass": {
+          "kind": "TypeAlias",
+          "usage": "unreferenced"
+        },
         "EngineRigidBodyProxyAPI": {
           "kind": "Class",
           "usage": "internal"
@@ -8244,7 +8403,8 @@
           "kind": "Function",
           "usage": "public",
           "by": [
-            "app"
+            "app",
+            "hub"
           ]
         }
       },
@@ -8410,7 +8570,10 @@
         },
         "getPhysicsEntityByAppId": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "public",
+          "by": [
+            "hub"
+          ]
         },
         "installPhysicsEntities": {
           "kind": "Function",
@@ -9404,7 +9567,7 @@
         },
         "InitPhysicsResponse": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "JointAnchor1Response": {
           "kind": "TypeAlias",
@@ -9683,6 +9846,10 @@
         "createWorkerScopeTransport": {
           "kind": "Function",
           "usage": "internal"
+        },
+        "WorkerScope": {
+          "kind": "TypeAlias",
+          "usage": "unreferenced"
         }
       },
       "src/_engine/features/physics/transport/WorkerTransport.ts": {
@@ -10143,7 +10310,8 @@
           "kind": "TypeAlias",
           "usage": "crossEntry",
           "by": [
-            "aekasha"
+            "aekasha",
+            "aekasha/skybox"
           ]
         },
         "ColorJSONSchema": {
@@ -10861,10 +11029,6 @@
           "kind": "Variable",
           "usage": "internal"
         },
-        "ATMOSPHERE_STRUCTURAL_KEYS": {
-          "kind": "Variable",
-          "usage": "unreferenced"
-        },
         "atmosphereParts": {
           "kind": "Function",
           "usage": "internal"
@@ -10962,6 +11126,14 @@
           "kind": "Function",
           "usage": "internal"
         },
+        "loadSkyTextureAsync": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "reportSkyTextureFailure": {
+          "kind": "Function",
+          "usage": "internal"
+        },
         "turnUpsideDown": {
           "kind": "Function",
           "usage": "crossEntry",
@@ -10986,10 +11158,6 @@
         "CLOUDS_DEFAULTS": {
           "kind": "Variable",
           "usage": "internal"
-        },
-        "CLOUDS_STRUCTURAL_KEYS": {
-          "kind": "Variable",
-          "usage": "unreferenced"
         },
         "cloudsNode": {
           "kind": "Function",
@@ -11020,10 +11188,6 @@
         "GROUND_DEFAULTS": {
           "kind": "Variable",
           "usage": "internal"
-        },
-        "GROUND_STRUCTURAL_KEYS": {
-          "kind": "Variable",
-          "usage": "unreferenced"
         },
         "groundNode": {
           "kind": "Function",
@@ -11087,9 +11251,13 @@
         },
         "getEnabledNebulae": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "getNebulaeSignature": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "hasEnabledNebula": {
           "kind": "Function",
           "usage": "internal"
         },
@@ -11169,10 +11337,6 @@
           "kind": "Variable",
           "usage": "internal"
         },
-        "SUN_STRUCTURAL_KEYS": {
-          "kind": "Variable",
-          "usage": "unreferenced"
-        },
         "SunAtmosphere": {
           "kind": "TypeAlias",
           "usage": "internal"
@@ -11232,15 +11396,21 @@
         },
         "resolveSkyBoxPreset": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "public",
+          "by": [
+            "hub"
+          ]
         },
         "SKYBOX_PRESET_NAMES": {
           "kind": "Variable",
-          "usage": "internal"
+          "usage": "public",
+          "by": [
+            "hub"
+          ]
         },
         "SKYBOX_PRESETS": {
           "kind": "Variable",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "SkyBoxPreset": {
           "kind": "TypeAlias",
@@ -11248,7 +11418,7 @@
         },
         "SkyBoxPresetDef": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "SkyBoxPresetName": {
           "kind": "TypeAlias",
@@ -11260,13 +11430,17 @@
           "kind": "Function",
           "usage": "internal"
         },
+        "_setSkyBoxClearHook": {
+          "kind": "Function",
+          "usage": "internal"
+        },
         "activateSceneDefaultSkyBox": {
           "kind": "Function",
           "usage": "internal"
         },
         "ActiveSkyBox": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "bakeEnvironment": {
           "kind": "Function",
@@ -11309,88 +11483,19 @@
           "kind": "Function",
           "usage": "internal"
         },
-        "getDayNightSpeed": {
-          "kind": "Function",
-          "usage": "public",
-          "by": [
-            "app",
-            "hub"
-          ]
-        },
-        "getMoonDirection": {
-          "kind": "Function",
-          "usage": "public",
-          "by": [
-            "hub"
-          ]
-        },
-        "getMoonPhase": {
-          "kind": "Function",
-          "usage": "public",
-          "by": [
-            "hub"
-          ]
-        },
         "getSceneDefaultSkyBoxId": {
           "kind": "Function",
           "usage": "internal"
         },
-        "getSunDirection": {
-          "kind": "Function",
-          "usage": "public",
-          "by": [
-            "hub"
-          ]
-        },
-        "getSunElevation": {
-          "kind": "Function",
-          "usage": "public",
-          "by": [
-            "hub"
-          ]
-        },
-        "getTimeOfDay": {
-          "kind": "Function",
-          "usage": "public",
-          "by": [
-            "app",
-            "hub"
-          ]
-        },
-        "installSkyBoxSystem": {
+        "isBakeDynamic": {
           "kind": "Function",
           "usage": "internal"
-        },
-        "isDayNightPlaying": {
-          "kind": "Function",
-          "usage": "public",
-          "by": [
-            "app",
-            "hub"
-          ]
         },
         "onSkyBoxChange": {
           "kind": "Function",
           "usage": "public",
           "by": [
             "aekasha/debug",
-            "app",
-            "hub"
-          ]
-        },
-        "pauseDayNight": {
-          "kind": "Function",
-          "usage": "public",
-          "by": [
-            "aekasha/debug",
-            "app",
-            "hub"
-          ]
-        },
-        "playDayNight": {
-          "kind": "Function",
-          "usage": "public",
-          "by": [
             "app",
             "hub"
           ]
@@ -11410,29 +11515,6 @@
             "hub"
           ]
         },
-        "setDayNightCycleDuration": {
-          "kind": "Function",
-          "usage": "public",
-          "by": [
-            "hub"
-          ]
-        },
-        "setDayNightSpeed": {
-          "kind": "Function",
-          "usage": "public",
-          "by": [
-            "app",
-            "hub"
-          ]
-        },
-        "setTimeOfDay": {
-          "kind": "Function",
-          "usage": "public",
-          "by": [
-            "app",
-            "hub"
-          ]
-        },
         "SKYBOX_DEBUG_OVERRIDES_LS_KEY": {
           "kind": "Variable",
           "usage": "internal"
@@ -11445,8 +11527,19 @@
           "kind": "TypeAlias",
           "usage": "unreferenced"
         },
+        "SkyBoxState": {
+          "kind": "TypeAlias",
+          "usage": "public",
+          "by": [
+            "hub"
+          ]
+        },
         "SkyBoxUpdate": {
           "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "stopSkyBox": {
+          "kind": "Function",
           "usage": "internal"
         },
         "updateSkyBox": {
@@ -11773,6 +11866,104 @@
         "StaticLayersUniforms": {
           "kind": "TypeAlias",
           "usage": "unreferenced"
+        }
+      },
+      "src/_engine/features/skybox/SkyDayNight.ts": {
+        "getDayNightSpeed": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "app",
+            "hub"
+          ]
+        },
+        "getMoonDirection": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "hub"
+          ]
+        },
+        "getMoonPhase": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "hub"
+          ]
+        },
+        "getSunDirection": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "hub"
+          ]
+        },
+        "getSunElevation": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "hub"
+          ]
+        },
+        "getTimeOfDay": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "app",
+            "hub"
+          ]
+        },
+        "installSkyBoxSystem": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "isDayNightPlaying": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "app",
+            "hub"
+          ]
+        },
+        "pauseDayNight": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "aekasha/debug",
+            "app",
+            "hub"
+          ]
+        },
+        "playDayNight": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "app",
+            "hub"
+          ]
+        },
+        "setDayNightCycleDuration": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "hub"
+          ]
+        },
+        "setDayNightSpeed": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "app",
+            "hub"
+          ]
+        },
+        "setTimeOfDay": {
+          "kind": "Function",
+          "usage": "public",
+          "by": [
+            "app",
+            "hub"
+          ]
         }
       },
       "src/_engine/features/skybox/SkyEnvironment.ts": {

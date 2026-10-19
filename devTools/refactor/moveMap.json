@@ -887,6 +887,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/physics/CLAUDE.md": {
+      "to": "src/_engine/features/physics/CLAUDE.md",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/physics/ColliderDimensions.ts": {
       "to": "src/_engine/features/physics/ColliderDimensions.ts",
       "action": "keep",
@@ -1307,6 +1312,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/skybox/debug/_dbg__SkyBoxEdits.ts": {
+      "to": "src/_engine/features/skybox/debug/_dbg__SkyBoxEdits.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/skybox/debug/_dbg__SkyBoxShared.ts": {
       "to": "src/_engine/features/skybox/debug/_dbg__SkyBoxShared.ts",
       "action": "keep",
@@ -1372,8 +1382,18 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/skybox/Presets.test.ts": {
+      "to": "src/_engine/features/skybox/Presets.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/skybox/Presets.ts": {
       "to": "src/_engine/features/skybox/Presets.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/skybox/SkyBox.test.ts": {
+      "to": "src/_engine/features/skybox/SkyBox.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -1397,13 +1417,28 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/skybox/SkyColor.test.ts": {
+      "to": "src/_engine/features/skybox/SkyColor.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/skybox/SkyColor.ts": {
       "to": "src/_engine/features/skybox/SkyColor.ts",
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/skybox/SkyComposite.test.ts": {
+      "to": "src/_engine/features/skybox/SkyComposite.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/skybox/SkyComposite.ts": {
       "to": "src/_engine/features/skybox/SkyComposite.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/skybox/SkyDayNight.ts": {
+      "to": "src/_engine/features/skybox/SkyDayNight.ts",
       "action": "keep",
       "plan": "p608"
     },
