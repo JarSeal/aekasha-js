@@ -1,31 +1,490 @@
-Status: stub — not-implemented
+Status: draft | not-implemented
 Category: Refactoring, Documentation, LOD, Rendering
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
+Related: \_DONE_p612_review-ecs-loop-config-init.md (Phase 7's `LodSystem.ts` link, §1.2), \_DONE_p605_coding-standards-and-documentation-tooling.md (Phase 5's `Vec2Node` / `Vec3Node`, §1.2), \_DONE_p613_review-rendering-scene-assets.md (`kernel/render/LodFade.ts`, reviewed there; §1.4 L7), \_DONE_p615_review-sky-box.md (the plan this one follows), p622_engine-6-major.md (what waits for the major: D3), \_DONE_p050_spatial-index.md (the grid's design and its deferred optimizations), `docs/issues/three-instanced-node-attribute-leak.md` (three's, not ours: out of scope)
 
-# Review: LOD, Spatial Index, Instancing and Lines — Stub
+# Review: LOD, Spatial Index, Instancing and Lines
 
-**This is a stub.** It fixes the scope, the inputs and the done criteria. Expand it into a full plan (grounding checked against the code, non-breaking phases, the Hub phase, versioning) when its blockers land: its details depend on p602's decisions.
+Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every file in scope,
+records the findings per file group, and fixes or files them. It also fixes a spatial grid
+false negative between rebuilds, takes the per-frame lookups and allocations out of the pool
+sync, the spatial refresh and light culling, puts on the entries what their own docs tell apps
+to call, and gives lines the nested `CLAUDE.md` and Hub page every other feature has.
 
-## Goal
+## 1. As found (2026-10-19, branch `review-lod-spatial-instancing-lines` at `5bdd370`, = `main` after p615's merge, Engine 5.6.0)
 
-Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every file in scope, and records the findings per file group in an "As found" list.
+### 1.1 The stub's names, checked
 
-## Scope
+The stub was written before p608's move (and p605's ratchet, which changed the counts).
 
-- `Lod/` (10 files, `LodSystem.ts` 1,086 lines) and `Lod/Impostors/` (9), `Spatial/` (`SpatialIndexSystem.ts` 1,128 lines), `Instancing/`, `Lines/` and the line manager.
-- The hot loops (LOD selection's ~0.15-0.2 µs per entity, the spatial rebuild): measured before and after with the profiler, no regression.
+| Stub | Now |
+| --- | --- |
+| `Lod/` (10 files), `LodSystem.ts` 1,086 lines | `features/lod/`: 12 modules (`LodSystem.ts` **1,097**, `LodChains.ts` 370, `LodSimplify.ts` 280, `LodChainGLTF.ts` 212, `LodSchema.ts` 134, `LodAuto.ts` 122, `LodTypes.ts` 115, `LodChainOptions.ts` 73, `LodImport.ts` 70, `LodBounds.ts` 66, `LodFeature.ts` 35, `LodChainRequests.ts` 23), the entry, `worker/AssetsSwitchSimplify.ts`, `debug/` (4 `_dbg__` modules, 1,596 lines) and the nested `CLAUDE.md` (two sections) |
+| `Lod/Impostors/` (9) | `features/lod/impostors/`: 10 modules (`CrossQuads.ts` 483, `OctahedralImpostor.ts` 459, `OctahedralImpostorMaterial.ts` 427, `ImpostorBake.ts` 376, `ImpostorSourceHash.ts` 183, `Octahedral.ts` 149, `ImpostorSchema.ts` 123, `ImpostorExports.ts` 91, `ImpostorRegistry.ts` 60, `ImpostorFormat.ts` 42), 2 tests, a nested `CLAUDE.md` |
+| `Spatial/` (`SpatialIndexSystem.ts` 1,128) | `features/spatial/`: `SpatialIndexSystem.ts` **1,108**, `SpatialGrid.ts` 447, `LightObjectCullingSystem.ts` 133, `CellKey.ts` 80, `SpatialFeature.ts` 53, `SpatialSchema.ts` 11, the entry, `CellKey.test.ts`, `debug/_dbg__SpatialGrid.ts` 706, a nested `CLAUDE.md` |
+| `Instancing/` | `features/instancing/`: `InstancedMeshPool.ts` 643, `InstancedMeshPoolTypes.ts` 31, `InstancingFeature.ts` 23, the entry, a nested `CLAUDE.md` |
+| `Lines/` "and the line manager" | `features/lines/`: 13 modules (`LineObject.ts` 521, `LineBackendFat.ts` 338, `Lines.ts` 206, `LineBuilders.ts` 166, `LinePulse.ts` 123, `LineTypes.ts` 120, `LineWriter.ts` 94, `LineBackendThin.ts` 93, `LineBackend.ts` 90, `LineEntity.ts` 59, `LinesFeature.ts` 34, `LineRegistry.ts` 28, `LineSystem.ts` 27) and the entry. The line manager (`core/LineManager.ts`) is gone: p608 split it into these. **No nested `CLAUDE.md`, no Hub feature page** (§1.4 N) |
+| "the LOD sections of CLAUDE.md (they become nested files)" | Done by `_DONE_p605`: `features/lod/CLAUDE.md` (LOD chains, LOD selection), `features/lod/impostors/CLAUDE.md`, `features/spatial/CLAUDE.md`, `features/instancing/CLAUDE.md` |
 
-## Inputs
+Two files are over the 800-line limit: `LodSystem.ts` and `SpatialIndexSystem.ts`. Three functions are over 150 lines:
+`createOctahedralImpostorNodes` (`OctahedralImpostorMaterial.ts:176`, 217 lines) and two debug tab
+builders, `_createLodDebugGUI` (`_dbg__LOD.ts:212`, 425; its `content` closure 324) and
+`_createSpatialGridDebugGUI` (`_dbg__SpatialGrid.ts:335`, 372; `content` 197).
 
-- p600 §2; the LOD sections of CLAUDE.md (they become nested files).
-- p605 Phase 5's `notExported` warnings in scope (`yarn hub:build` lists each with its file and line; export the type with a summary or change the signature): `Vec2Node` / `Vec3Node` (`Lod/Impostors/Octahedral.ts`'s local TSL aliases, named by `encodeOctahedralNode` / `decodeOctahedralNode`).
-- p612 Phase 7: `LodSystem.ts:994`'s `{@link LodTarget}` links nowhere (`yarn hub:build` warns):
-  TypeDoc resolves a link in the file's scope, and the file doesn't import the name.
+In scope (D1): the four feature folders with their `debug/` modules (structure and docs only:
+p800 rewrites the panels) and nested `CLAUDE.md` files. Outside them, only what a change here
+touches: the kernel seams `kernel/ecs/LodTargets.ts` and `kernel/ecs/SpatialMembership.ts` (their
+docs), the imports a moved name breaks (the kernel's assets types import LOD chain types; the
+physics, character and ray debug modules import from `lines/Lines.ts`), and the Hub's LOD,
+spatial index and new lines pages. Not in scope: `kernel/render/LodFade.ts` (p613 reviewed it;
+only its entry exposure, L7), `schemas/SpatialDomainSchema.ts` and `schemas/LodChainSchema.ts`
+(p619's).
+
+### 1.2 The stub's inputs, checked
+
+- **p605 Phase 5's `notExported`:** `Octahedral.ts:106-107`'s local `Vec2Node` / `Vec3Node`, named
+  by the exported `encodeOctahedralNode` / `decodeOctahedralNode`. `OctahedralImpostorMaterial.ts`
+  declares the same two (and `Vec4Node`) for its own use. Writing `THREE.Node<'vec2'>` in the two
+  signatures removes the warning with no new export (D7).
+- **p612 Phase 7's link:** `LodSystem.ts:993` (`lodApplySystem`'s doc) links `{@link LodTarget}`,
+  and the file imports only `LodData` and `LodResolvedLevel` from `LodTypes.ts`. An `import type`
+  fixes it (D7).
+- **The hot loops:** CLAUDE.md quotes LOD selection at about 0.15-0.2 µs per entity (largeWorld's
+  3,500 pool instances). The selection reads its storages once per frame, as the standard asks.
+  The spatial rebuild doesn't (P2), nor does the pool sync that runs over the same 3,500 instances
+  every frame (P1). Phase 0 measures all of them; Phase 2 measures again.
+- **The three r186 traps** in the nested files: a chain's shared vertex buffers freed by
+  disposing any of its geometries (`LodChains.ts`), a plain mesh's fade copy kept until it fires
+  `dispose` (`LodSystem.ts`), `tangentLocal` not rotated per instance and double-sided normal maps
+  negating the frame (`CrossQuads.ts`), the instance matrix applied before `positionNode` and kept
+  private (`OctahedralImpostorMaterial.ts`), `VSMShadowMap` drawing receivers into the shadow
+  map, a shadow map rendered once per node frame, `NodeMaterial.clone()` losing `alphaTest`, a
+  16 / 8-bit index widened to 32 bits on upload (`ImpostorSourceHash.ts`). Each is a comment at
+  its code; none is a `@remarks` yet (D9).
+
+### 1.3 Documentation (the ratchet's `docs.json`)
+
+| Folder | Exports | Members | Undocumented exports |
+| --- | ---: | ---: | --- |
+| `features/lod` | 60 / 72 | — | `InstancedLodBounds`; `TransferableLodChain`; `DEFAULT_LOD_CHAIN_OPTIONS`, `LodChainOptions`, `ResolvedLodChainOptions`; `LodChain`, `LodChainLevel`; `SimplifiedLevel`, `SimplifiedLodChain`; `getLodDebugOptions`, `registerLodDebugGUI`; **`LodDef`** |
+| `features/lod/impostors` | 64 / 73 | — | **`CrossQuads`, `CrossQuadsOptions`**; `disposeBakeMaterials`; `IMPOSTOR_KINDS`, **`ImpostorKind`**; `ImpostorRecord`; **`OctahedralImpostor`, `OctahedralImpostorOptions`**; `OctahedralImpostorNodes` |
+| `features/lod/worker` | 1 / 1 | — | |
+| `features/spatial` | 41 / 55 | 20 / 38 | `CELL_AXIS_*` (4), `CellCoords`; `lightObjectCullingSystem`; **`SpatialGrid`, `SpatialGridOptions`, `SpatialGridStats`**; **`SpatialDomainOptions`**, **`isInSpatialDomain`**, `getOracleMismatchCount`, `isSpatialGridOracleEnabled`, `registerSpatialIndexDebugGUI` |
+| `features/instancing` | 7 / 12 | 26 / 35 | **all five option and result types** of `InstancedMeshPool.ts` |
+| `features/lines` | 56 / 70 | 38 / 54 | `LineOpacityNode`; `createThinLineBackend`; **the five `*ToSegments` builders**; `LineColorUniforms`; `LineRegistry.ts`' five (`@internal` without a summary); **`LineProps`** |
+
+54 exports and 43 members; **bold** names are on an entry. The `_dbg__` modules are outside
+TypeDoc: 5 of their exports have no comment (`_createLodDebugGUI`, `isImpostorKindExported`,
+`LOD_OVERLAY_COLOR_NAMES`, `isLodOverlayEnabled`, `_createSpatialGridDebugGUI`; G2).
+
+### 1.4 Findings by file group
+
+Numbered for the phases. **(bug)** marks wrong behaviour, **(perf)** per-frame cost; the rest are
+hygiene, placement and API shape. Read from the code, not reproduced, unless a finding says so.
+Type hygiene is clean in scope: no `any`, no `eslint-disable`, no TODO / FIXME.
+
+**LOD selection (`LodSystem.ts`, `LodTypes.ts`, `LodBounds.ts`, `LodAuto.ts`, `LodFeature.ts`)**
+
+- L1 Size: 1,097 lines. Its parts are separate already: the settings (fade seconds, bias, the
+  budget, the debug options and frame stats, `:67-437`), the plain-mesh and per-kind fades
+  (`:91-245`), the measuring (camera terms, `measureEntity`, `getScreenSize`, `getLodWorldSphere`,
+  `measureLodEntity`, `:676-988`), and the hooks, selection, apply, fade system and install.
+  No function is over 150 lines.
+- L2 API gaps: the docs send apps to names no entry has. `refreshLodBounds` (`:566`: the nested
+  `CLAUDE.md` says "call `refreshLodBounds` after they change"), `setLodMaxSelectionsPerFrame`
+  (`AppConfig.lod.maxSelectionsPerFrame`'s JSDoc names it), `getLodFadeSeconds`, and `LodLevelDef`
+  (named by `LodDef`, which is on the entry). `setLodDebugOptions` / `LodDebugOptions` are debug
+  API the tab uses.
+- L3 Exports that aren't on the entry and aren't `@internal`: `getLodFadeSeconds`,
+  `getLodMaxSelectionsPerFrame`, `getLodDebugOptions`, `setLodDebugOptions`, `LodDebugOptions`,
+  `lodSelectionSystem`, `lodApplySystem`, `lodFadeSystem`, `getLodSelectionCamera`, `LodMeasure`,
+  `measureLodEntity`, `registerLodDebugGUI`, `LOD_AUTO_REFERENCE_HEIGHT`, `lodDefFromChain`,
+  `getInstancedLodBounds`, `InstancedLodBounds`, `LodResolvedLevel`. Their users are the feature,
+  its debug tab and instancing.
+- L4 Undocumented: `LodDef` (on the entry), `registerLodDebugGUI`, `getLodDebugOptions`,
+  `InstancedLodBounds`. `:993`'s link (§1.2).
+- L5 Trap without a `@remarks`: adding a `LOD` to an entity that has one replaces it without the
+  remove hook, so the old levels keep their refs and a running fade its copy. `setMeshLod` removes
+  first (`kernel/mesh/Mesh.ts:361`); a direct `world.addComponent(id, LOD, …)` doesn't.
+  `LodData`'s JSDoc tells apps how to add one.
+- L6 Stale: `Lod/LodBounds.ts` (`LodSystem.ts:56`, `LodTypes.ts:62`), `Lod/LodSystem.ts`
+  (`LodTypes.ts:68`), `ECS/LodTargets.ts` (`LodSystem.ts:284`), `MeshManager.ts` (`LodAuto.ts:2`).
+- L7 The `LodTarget` contract (on the entry, with `registerLodTarget`) says a target with
+  `setFade` cross-fades, but `enableLodDither`, `createLodFadeAttribute` and `LOD_FADE_OPAQUE`
+  (`kernel/render/LodFade.ts`), which a fading target needs (the pool calls them), are on no
+  entry. `lodDither`'s own JSDoc says custom node materials "can combine it".
+- L8 Otherwise clean: the selection loop reads its storages once per frame and allocates nothing
+  (the queue, cursor and pending arrays are per world and reused); no race (nothing async but
+  `AUTO`, which `setMeshLod` cancels on a later call, a geometry swap or the entity's delete).
+
+**LOD chains (`LodChains.ts`, `LodSimplify.ts`, `LodChainGLTF.ts`, `LodChainOptions.ts`, `LodChainRequests.ts`, `LodImport.ts`, `worker/`)**
+
+- C1 One path per name: `LodChains.ts:42` re-exports the option types, `LodSimplify.ts:17-22`
+  the options and their resolver, `LodChainGLTF.ts:23` `GLTF_LOD_FORMAT_VERSION`. The kernel
+  imports `ResolvedLodChainOptions` through `LodSimplify` (`kernel/assets/AssetsAPI.ts:39`,
+  `AssetsAPITypes.ts:7`).
+- C2 Exports that aren't on the entry and aren't `@internal`: `getLodChains`,
+  `getLodChainOfLevel`, `isLodChainPending`, `getPendingLodChain`, `registerPrebuiltLodChain`,
+  `LodChainLevel`, `releaseLodChain` (the Assets tab's "release"; public-shaped, no app use), and
+  the GLB transfer types and functions.
+- C3 Undocumented: §1.3's chain types and options.
+- C4 Stale: `LodChains.ts:3` "Nothing selects a level yet (p348)"; `Import/GLTFExtract.ts`
+  (`LodChainGLTF.ts:58`), `Import/ImportRegistry.ts` (`LodImport.ts:2`).
+- C5 Otherwise clean: the generation re-checks the base after its `await` (`:228`), a pending
+  generation is shared, the module and meshoptimizer load on first use, and the delete listener is
+  added with the first chain, not at load.
+
+**Impostors (`impostors/`)**
+
+- I1 Size: `createOctahedralImpostorNodes` is 217 lines: the vertex part (the instance basis, the
+  billboard, the grid position, the varyings, `:186-237`), the per-frame sampler (`:252-316`), and
+  the blend, normal and depth nodes. A TSL graph builder split into helpers builds the same graph.
+- I2 `Octahedral.ts`' `Vec2Node` / `Vec3Node` (§1.2).
+- I3 Two types named `ImpostorShading`: `ImpostorBake.ts:83` (`'AUTO' | 'PHONG' | …`, the option)
+  and `ImpostorSchema.ts:116` (the resolved `{ type, params }`, undocumented). Only the first is
+  public (it's in `CrossQuadsOptions`); the second is on no entry.
+- I4 `ImpostorSchema.ts:5-11` is a `/** */` module comment followed by a `const`: TypeDoc attaches
+  it to `Vec3Schema`. The schema's shape keys `alphaTest`, `shading`, `debugData`, `$schema`,
+  `__sourcePath` have no description.
+- I5 Duplicated: `CrossQuads.ts`' and `OctahedralImpostor.ts`' `getRegistered` / `deleteLeftovers`
+  differ only in the slot names. Small; left as is unless Phase 4 finds a third copy.
+- I6 Stale: "core loads no zod" (`ImpostorFormat.ts:3`), "core imports no zod"
+  (`ImpostorExports.ts:24`).
+- I7 Undocumented: §1.3's impostor names (four of them on the entry).
+- I8 Otherwise clean: every bake restores the renderer state in a `finally`, disposes its bake
+  materials, dilate copies and frame target (and its atlases when it throws), and clears every
+  atlas before the first cell. A registered result is a cache hit retagged to the loading scene.
+
+**Spatial index (`SpatialGrid.ts`, `SpatialIndexSystem.ts`, `LightObjectCullingSystem.ts`, `CellKey.ts`, `SpatialFeature.ts`, `SpatialSchema.ts`)**
+
+- S1 **(bug)** Between a removal and the next rebuild, a query can miss a live member. Removal
+  is a swap-remove (`SpatialGrid.ts:167`): the last slot's member moves into the freed slot, and
+  the cells still hold the old slots, so the moved member is found only in the *removed* member's
+  cell (its own cell's entry now points at the emptied slot, which queries skip). The nested
+  `CLAUDE.md` asks a `MANUAL` owner to rebuild first, but `DEFAULT` is `DYNAMIC` and rebuilds at
+  `APP_POST_PHYSICS`. Light culling then queries it at `APP_RENDER_SYNC`, so deleting any indexed
+  entity in `APP_LOGIC` (a projectile mesh, a despawned pickup) can hide another mesh from its
+  light for that frame. If that was the light's only receiver, the light is culled for a frame
+  (a flicker). A new member is missing until the rebuild too, which only makes a light come on
+  a frame late. Phase 0 reproduces it with a Node test of `SpatialGrid` (D4).
+- S2 **(perf)** `refreshDomainMembers` (`SpatialIndexSystem.ts:821`), every frame for each
+  `DYNAMIC` domain, does four Map lookups per member: `world.getComponent(TRANSFORM)` (the
+  storage looked up again for each member, which the standard forbids in a hot loop),
+  `grid.updatePosition` and `grid.updateRadius` (each `entityToSlot.get` for a slot the loop
+  already has), and `localRadius.get`. largeWorld's `FOLIAGE` domain has 3,500 members.
+- S3 **(perf)** `LightObjectCullingSystem.ts:121` allocates a closure per opted-in light per
+  frame (`grid.queryVisit(…, (candidateId) => …)`), and the visit goes on after a receiver is
+  found. `light.updateWorldMatrix` (`:154`) and `getWorldPosition` (`:115`, which updates it
+  again) do the same work twice.
+- S4 Dead per-frame write: `SpatialGrid`'s `lastCell` (`:63-70`, "not read by anything in Phase
+  1") is written for every member on every rebuild and never read. S1's fix reads it.
+- S5 Size: `SpatialIndexSystem.ts` is 1,108 lines: the domain registry and its settings layers
+  (scene scope, the debug override, the stats, `:49-610`), membership and radii (`:612-782`), the
+  rebuild (`:820-915`), and the brute-force oracle (debug env only, `:917-1065`).
+- S6 API: `DEFAULT_SPATIAL_DOMAIN` (what `joinSpatialDomain` and `getSpatialDomain` take for the
+  default domain) and `SpatialUpdatePolicy` (named by `SpatialDomainOptions`, on the entry) are on
+  no entry. `setSpatialGridCellSize` and `validateSpatialGridQuery` (its JSDoc tells a consumer to
+  call it after its own query) are public-shaped and on no entry either. The rest of what isn't
+  on the entry (`releaseSceneSpatialDomains`, `registerSceneSpatialDomains`,
+  `getSpatialDomainIds` / `Options` / `SceneId`, the override, the stats, the oracle,
+  `computeLightInfluenceRadius`, `spatialIndexRebuildSystem`, `lightObjectCullingSystem`,
+  `CellKey.ts`' helpers) isn't `@internal`.
+- S7 API shape: argument order differs within the API, `registerSpatialDomain(world, opts)` and
+  `getSpatialDomain(world, id)` but `joinSpatialDomain(entityId, domainId, world?)`; changing it
+  is breaking (D3).
+- S8 Pool instances that join `DEFAULT` are never light receivers: `meshIsVisibleReceiver` reads
+  `getMeshWorldBoundingSphere`, which needs an `OBJECT3D` an instance doesn't have. Nothing in the
+  template does it (largeWorld's pools join `FOLIAGE`). D5.
+- S9 Detached module comments: `SpatialIndexSystem.ts:33-47` (a `/** */` before another one: the
+  first is lost), `SpatialGrid.ts:5-14` (stale too: "nothing else in the engine references it
+  yet"), `CellKey.ts`' header (attached to `CELL_AXIS_BITS` by accident). Stale:
+  `ECS/SpatialMembership.ts` (`:728`, `:1090`), `computeIsVisible` (`:712`, a function that no
+  longer exists), `SpatialGrid`'s "Phase 4" dedup stamps (`:82-87`).
+- S10 Undocumented: §1.3's spatial names (seven on the entry, `SpatialGrid`'s members among them).
+- S11 Otherwise clean: domain re-registration, scene scope and unregistering keep the masks and
+  grids consistent, and the debug-only work (the oracle, rebuild timings, `Math.random` probes)
+  sits behind `IS_DEBUG_ENV`.
+
+**Instanced mesh pools (`InstancedMeshPool.ts`, `InstancedMeshPoolTypes.ts`, `InstancingFeature.ts`)**
+
+- P1 **(perf)** `instancedMeshPoolSyncSystem` (`:588`) allocates a `Set` every frame (`:592`) and
+  looks up `world.getComponent(entityId, TRANSFORM)` per instance (`:598`): 3,500 storage
+  lookups a frame in largeWorld, whether or not anything moved.
+- P2 **(bug)** A plain pool's bounds are computed at `spawn` (`:406`) and never again, so
+  instances moved through their `Transform` (which the docs invite: "can be queried/moved later
+  like any other entity") can leave them. three then frustum-culls the whole `InstancedMesh` while
+  moved instances are on screen. An instanced LOD pool keeps the union of every placement at
+  spawn (`:569`), with the same gap. Nothing in the template moves pool instances; Phase 0
+  checks. D5.
+- P3 API shape: `spawn(world, placements, entityOpts?)` and `despawn(world, entityId)` take a
+  world besides the pool's own (`opts.world`, which owns the mesh). Instances spawned into another
+  world outlive the mesh's scene there and keep slots in a disposed mesh. Breaking to change (D3).
+- P4 `export type * from './InstancedMeshPoolTypes'` (`:31`) is a second path. `InstancePlacement`
+  (what `spawn` takes) and `InstancedLodPoolLevel` are on no entry.
+- P5 Undocumented: the five interfaces and nine of their members (§1.3). Stale: `MeshManager`
+  (`:218`, `:239`, `:323-324`), `ECS/SpatialMembership.ts` (`:254`).
+- P6 Otherwise clean: the swap-remove patches the moved instance's slot or fade copy, a LOD-culled
+  instance re-bakes from its `Transform`, and both hooks free the slot.
+
+**Lines (`features/lines/`)**
+
+- N1 No nested `CLAUDE.md` and no Hub feature page: lines are the one engine feature without
+  either. Their traps live only in comments: a thick line is a `Mesh` retagged from `TAG_IS_MESH`
+  to `TAG_IS_LINE` (else the mesh delete hook would dispose it too), `object3D` changes on a
+  backend swap, the thick backend is a lazy chunk (a wide line draws 1px until it loads), a scene
+  exit disposes every line that isn't `persistent` or bound to an entity.
+- N2 API gaps: `createLines` returns a `LineObject` whose type isn't on the entry, and
+  `beginWrite()` a `LineWriter` (neither is). The types `LineProps` names (`LineColorStyle`,
+  `LineDash`, `LineAttachment`, `LineBackendChoice`, `LineGrowth`, `LineLocalTransform`,
+  `LinePulseEasing`, `LinePulseMode`) aren't there either. `createLineEntity`, which
+  `lines()`' own JSDoc names, isn't, nor are `bindLineToEntity`, `getLineForEntity`,
+  `isFatLineBackendAvailable`, or the allocation-free writers (`writeBox3Edges`, `writeBoxEdges`,
+  `writePolyline`, `BOX_EDGE_SEGMENT_COUNT`, `polylineSegmentCount`) that the per-frame refill is
+  for.
+- N3 One path per name: `Lines.ts:14-18` re-exports `LineObject`, `LineWriter`, `LineTypes`,
+  `LineBuilders` and `LinePulse`; five debug modules import them from there.
+- N4 API shape: `createLineEntity(props, entityOpts?, ecsWorld?)` and `bindLineToEntity(line,
+  entityId, ecsWorld?)` take optional positional parameters (D3).
+- N5 Undocumented: §1.3's line names; `LineRegistry.ts`' five `@internal` without a summary;
+  `@returns (number)` and `@returns (Promise<boolean>)` (`Lines.ts:132`, `:201`) write a type,
+  which the style forbids. Detached module comments: `LinePulse.ts:7-19`, `LineBuilders.ts:4-12`.
+  Stale: `LineManager` (`LineEntity.ts:49`, `LineObject.ts:73`, `:100`), `MeshManager`
+  (`LineEntity.ts:17`).
+- N6 Otherwise clean: the refill writes in place and uploads only the written range, a backend
+  swap keeps the object's place, transform and children, the thick backend's load re-checks
+  `disposed`, `FIXED` lines warn once and never reallocate.
+
+**The debug modules (`lod/debug/`, `spatial/debug/`, structure and docs only)**
+
+- G1 The two tab builders are 425 and 372 lines (§1.1). p800 rewrites the panels; D8.
+- G2 5 exports without a comment (§1.3). Stale `Lod/` paths (`_dbg__LOD.ts:47`, `:49`).
+- G3 Otherwise clean: no `any`, no `eslint-disable`; they import the features' modules and the
+  debugger framework only, and register their systems on first use.
+
+**The nested `CLAUDE.md` files (K)**
+
+- K1 Each describes its subsystem correctly as of today; D4-D7 change what they say about the
+  grid between rebuilds, the pool bounds and what's on the entries.
+- K2 Lines has none (N1).
+
+## 2. Decisions (recommended, to confirm)
+
+### D1. Scope: §1.1's files
+
+The four feature folders with `debug/` (structure and docs: G1, G2) and their `CLAUDE.md` files.
+Outside them, only the kernel seams' docs, the imports a change breaks, and the Hub's pages for
+these features.
+
+### D2. Versions
+
+Engine **minor** (5.6.0 → 5.7.0): new names on the entries (D6), the grid fix (D4), the pool
+bounds (D5), the perf work (D10). Toolkit: no change expected (its scatter feeds the pools'
+`InstancePlacement`, by shape). App **patch** only if an app file changes. Project = engine.
+
+### D3. What waits for engine 6.0.0 (p622)
+
+Listed in p622 as candidates, not changed in a minor (as p614 and p615 did):
+
+- The spatial API's argument order (S7): world first everywhere, or an options object.
+- A pool's `spawn` / `despawn` without their `world` (P3): the pool's own.
+- `createLineEntity` and `bindLineToEntity`'s optional positional parameters (N4).
+
+### D4. The grid's false negative fixed first, with a test (S1)
+
+`SpatialGrid.removeMember` keeps the swap-remove (dense slots: the members are iterated by
+index) and patches the cells: the moved member's entry in its own cell (found through
+`lastCell`) is pointed at its new slot, and the removed member's entry becomes a sentinel that
+queries skip. That's one cell scan per removal, never a false negative, and `lastCell` gets its
+reader (S4). A member added since the last rebuild stays missing until the rebuild (documented,
+not a false negative of a member queries could see before). Test first (`SpatialGrid.test.ts`,
+in Node: add, rebuild, remove a member whose slot isn't last, query at the moved member's
+position): `it.fails` in Phase 0, `it` after the fix.
+
+**Alternative:** tombstones (no move until the rebuild compacts), which needs a sparse member
+iteration everywhere `memberAt` is used.
+
+### D5. The pool bounds grow with their instances (P2); `DEFAULT` receivers documented (S8)
+
+- **P2:** `instancedMeshPoolSyncSystem`, which already visits each moved instance, grows its
+  mesh's bounds when the instance's sphere leaves them (allocation-free, never shrinking, like
+  `removeAt` already assumes). A LOD pool grows every level mesh's. No change for pools whose
+  instances don't move, so no template scene should change (the hashes say).
+- **S8:** a `@remarks` on `spatialDomain` and in the spatial index's `CLAUDE.md` (pool instances
+  in `DEFAULT` aren't light receivers), and an issue file (`docs/issues/`) with the fix: a
+  receiver test that reads the grid's own position and radius. Not fixed here: it changes which
+  lights are culled for meshes too.
+
+**Alternative for P2:** a `@remarks` only (move pool instances and the bounds are yours).
+
+### D6. The public API
+
+- **On the entries** (minor additions):
+  - `aekasha/lod`: `refreshLodBounds`, `setLodMaxSelectionsPerFrame`, `getLodFadeSeconds`,
+    `LodLevelDef` (L2); `enableLodDither`, `createLodFadeAttribute`, `LOD_FADE_OPAQUE` from the
+    kernel's `LodFade.ts`, as `registerLodTarget` already is (L7); `ImpostorShading`,
+    `CrossQuadsLayout`, `OctahedralImpostorLayout` (named by the options and results).
+  - `aekasha/spatial`: `DEFAULT_SPATIAL_DOMAIN`, `SpatialUpdatePolicy`, `validateSpatialGridQuery`
+    (S6).
+  - `aekasha/instancing`: `InstancePlacement`, `InstancedLodPoolLevel` (P4).
+  - `aekasha/lines`: `LineObject` and `LineWriter` (as types), `LineProps`' named types,
+    `createLineEntity`, `bindLineToEntity`, `getLineForEntity`, `isFatLineBackendAvailable`, and
+    the writers with their counts (N2).
+- **Not added:** `setLodDebugOptions` / `LodDebugOptions` (the tab's; a harness reaches them
+  through the test bridge), `setSpatialGridCellSize` (`registerSpatialDomain` does it), the chain
+  internals (C2), `releaseLodChain` (no app use).
+- **`@internal`** (L3, C2, S6): everything exported and on no entry, with a summary saying who
+  uses it.
+- **One path per name** (C1, P4, N3): the re-exports go, and the importers name the defining
+  module.
+- **`ImpostorSchema.ts`' `ImpostorShading`** becomes `ResolvedImpostorShading` (I3; on no entry,
+  so nothing breaks).
+
+### D7. The two inherited warnings
+
+`Octahedral.ts`' exported signatures write `THREE.Node<'vec2'>` / `<'vec3'>` (no new export);
+`LodSystem.ts` imports `LodTarget` as a type for its link. `yarn hub:build` then has none in scope.
+
+### D8. Size
+
+- `LodSystem.ts` (L1) splits along its parts, moved as they are: `LodSettings.ts` (fade seconds,
+  bias, the budget, the debug options, the frame stats), `LodMeasure.ts` (camera terms, measuring,
+  `getLodWorldSphere`, `measureLodEntity`, the selection camera), `LodFades.ts` (plain-mesh fade
+  copies and the per-kind fade helpers); `LodSystem.ts` keeps the hooks, the selection, apply and
+  fade systems and the install (about 550 lines).
+- `SpatialIndexSystem.ts` (S5): `SpatialDomains.ts` (the registry, settings layers, scene scope,
+  the debug override and stats) and `SpatialOracle.ts` (the oracle's state and checks, handed the
+  domain, so no import cycle); `SpatialIndexSystem.ts` keeps membership, radii, the rebuild and
+  the install.
+- `createOctahedralImpostorNodes` (I1): its vertex part and its frame sampler become functions
+  of their own; the snapshots must not move.
+- The debug tab builders (G1) stay: a `Size:` line in each header says why (p800 rewrites the
+  panels, and a builder split now is churn p800 throws away).
+- Registration order doesn't change (the install functions call the same registrations in the
+  same order): the scene runner's system order baseline must not move.
+
+### D9. Documentation
+
+§1.3's 54 exports and 43 members to 100 %, the debug modules' 5 (G2), `LodDef` and the other
+entry types first. The r186 traps of §1.2 as `@remarks` on the functions that guard them, L5's
+`LOD` replacement as a `@remarks` on `LodData`, the detached comments as `//` headers (I4, S9, N5),
+stale names fixed (L6, C4, I6, S9, P5, N5, G2), the schema's undescribed keys (I4).
+
+### D10. Performance
+
+S2 (the TRANSFORM storage read once, slot-indexed position and radius writes on the grid), S3
+(one module-level visitor, an early exit once found, one world matrix update), P1 (the storage read
+once, the dirty-mesh set reused). Each measured before (Phase 0) and after (Phase 2) on the same
+camera; LOD selection is measured both times and must not regress. `perf-auditor` runs over the
+four folders in Phase 0 and confirms or adds to these.
+
+### D11. Tests
+
+New, in Node: `SpatialGrid.test.ts` (D4's case, add / remove / update / query, the oversized tier,
+capacity), LOD level selection (`selectLevel` with hysteresis, exported `@internal` for the test or
+tested through the module), `lodDefFromChain`, `resolveLodChainOptions`, `LineWriter` and the
+builders (counts, `FIXED` overflow, `raw`'s partial segment), `hashLinePhase`'s spread. The pool's
+swap-remove and bounds (P2) through `InstancedMeshPool.ts` with a plain ECS world if its imports
+allow it in Node (else the scene runner).
+
+### D12. Lines get their docs (N1)
+
+A nested `features/lines/CLAUDE.md` (one `## Lines` section: the feature, the backends, the
+refill, the entity binding, the scene exit, the traps above), its line in the root's map, and a
+Hub feature page "Lines" (group Rendering) whose `aek:covers` names it, pointing at the
+`physicsTiers` scene, which draws with lines. No example scene: a review plan adds no feature to
+show.
+
+## 3. Phases
+
+Each phase leaves the tree green: `yarn test`, the lint and `tsc` (the Stop hook), and the
+phase's own checks. `yarn verify:scenes` runs at the end of Phases 1, 2 and 4 and in Phase 6
+(snapshots, hashes and system order unchanged unless a phase says otherwise; no file is edited
+while it runs). Each phase ends with its "As built" list, its files' JSDoc at 100 % and
+`docs.json` updated (`yarn verify:baselines --docs --update`).
+
+### Phase 0: baselines and measurements
+
+1. `yarn verify:scenes --update` on this commit (= `main`), then `yarn verify:baselines` clean.
+2. `perf-auditor` over the four folders: confirm or add to S2, S3, P1. The functions over 150
+   lines rechecked.
+3. `yarn hub:build`: the folders' warnings (D7's two expected; D6's type list checked against it).
+4. The hot loops, measured in `largeWorld` (3,500 pool instances, the `FOLIAGE` domain) and
+   `lodShowcase` from their start cameras, debug env, three runs each: `lodSelectionSystem`
+   (`getLodFrameStats(world).selectionMs` over the `LOD` count), `spatialIndexRebuildSystem`
+   whole (the profiler's system time: `lastRebuildMs` leaves out the refresh),
+   `instancedMeshPoolSync` and `lightObjectCullingSystem`.
+5. Reproduce S1 with D4's test (`it.fails`), and check P2 in a scene (a pool instance moved out of
+   the spawn bounds, the camera turned toward it) and S8 (an indexed pool in `DEFAULT` beside an
+   object-culled light).
+6. Record the numbers here and confirm D1-D12.
+
+### Phase 1: the grid fix (D4), the pool bounds (D5) and the tests (D11)
+
+1. S1 with its test; S4 goes with it.
+2. P2 (the bounds grown in the sync system), with its test or a scene check.
+3. D11's other tests.
+4. S8's `@remarks` and issue file.
+5. `yarn verify:scenes`: unchanged.
+
+### Phase 2: performance (D10)
+
+1. S2, S3, P1, and what Phase 0's audit added.
+2. The Phase 0 measurements again, same scenes and cameras; recorded here side by side.
+3. `yarn verify:scenes`: unchanged.
+
+### Phase 3: the API (D6, D7) and the deferrals (D3)
+
+1. The entry additions, each with its JSDoc and an `@example` where it's an entry API.
+2. `@internal` on the rest; the re-exports gone and their importers repointed; the schema type
+   renamed.
+3. D7's two warnings; `yarn hub:build` has none in scope.
+4. p622's candidate list gets D3's three items.
+5. `yarn verify:baselines`: the API baseline's changes are exactly D6's (recorded with `--update`).
+
+### Phase 4: the internals (D8, D9)
+
+1. The three splits, moved as they are.
+2. Stale names, detached comments, the traps as `@remarks`, the remaining undocumented exports and
+   members; the debug builders' `Size:` lines.
+3. `yarn verify:scenes`: unchanged (system order included).
+
+### Phase 5: the Hub, CLAUDE.md, readme, and what's filed
+
+1. D12: `features/lines/CLAUDE.md`, the root map's line, the Lines feature page.
+2. The LOD and spatial index pages and the nested `CLAUDE.md` files checked against the code
+   (D4's grid, D5's bounds and receivers, D6's names in their Key APIs).
+3. `readme.md` if a listed API changed (none expected: D6 only adds).
+4. `yarn hub:build`: no dead link, no new warning.
+
+### Phase 6: versions and done
+
+1. D2's bumps, a `CHANGELOG.md` entry, `yarn checkVersions --against main`.
+2. `yarn test`, `yarn verify:scenes`, `yarn verify:baselines` (no unexplained growth), `yarn build`
+   (the SBP budgets: the `lod`, `spatial`, `instancing` and `lines` groups), `yarn hub:build`.
+3. Mark the plan done (`docs/plans/CLAUDE.md`).
+4. Time for a PR: this branch into `main` (p600's "Branches and PRs").
+
+## 4. Risks
+
+1. **D4 changes what queries return** between a removal and a rebuild: fewer misses, a few more
+   candidates (the sentinel). Light culling may then keep a light on in a frame where it was
+   wrongly culled; the scene runner's snapshots are taken in steady state, so none should move.
+2. **D8's splits move registration-adjacent code.** The install functions keep their order; the
+   system order baseline is the check.
+3. **SBP groups count comments** (p612's lesson): D9's JSDoc grows the `lod` and `spatial` groups
+   before minification. Phase 6's `yarn build` says whether a budget needs its reason updated.
 
 ## Done when
 
-- Every file in scope reviewed against p600 §5, the findings fixed or filed (`docs/issues/` or a plan item).
-- JSDoc coverage of the scope's public exports at 100% (p601's `docs.json`), members included; the ratchet raised.
-- `yarn test`, `yarn verify:scenes` (snapshots and hashes unchanged unless stated), `yarn verify:baselines` (no unexplained growth), `yarn build`, `yarn hub:build`. The verify commands run for minutes to hours: when one starts, give the watch command, `tail -f .cache/verify/progress.log`.
-- The Hub pages of the features in scope checked against the code; CLAUDE.md's nested files for them current.
+- Every file in scope reviewed against p600 §5, the findings fixed or filed (`docs/issues/` or a
+  plan item: S8's issue, D3's p622 items).
+- JSDoc coverage of the scope's public exports at 100 % (`docs.json`), members included; the
+  ratchet raised.
+- `yarn test`, `yarn verify:scenes` (snapshots and hashes unchanged unless stated),
+  `yarn verify:baselines` (no unexplained growth), `yarn build`, `yarn hub:build`. The verify
+  commands run for minutes to hours: when one starts, give the watch command,
+  `tail -f .cache/verify/progress.log`.
+- The hot loops measured before and after: no regression, and Phase 2's numbers recorded.
+- The Hub pages of the features in scope checked against the code; the nested `CLAUDE.md` files
+  current, lines' new.
