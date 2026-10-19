@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-4 implemented
 Category: Refactoring, Documentation, Sky box
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -595,7 +595,7 @@ As built, section 3 (2026-10-18): the split, the JSDoc, S7.
 As built, section 4: `yarn hub:build` passed, 420 pages, 16 warnings (Phase 0's count), none in
 the sky box: no `notExported`, no dead link.
 
-### Phase 4: the internals
+### Phase 4: the internals — done
 
 (Its `yarn verify:scenes` runs more than an hour after Phase 2's recording: it's D5's late check
 of the six sky scenes too.)
@@ -667,6 +667,25 @@ As built, section 2 (2026-10-19): D10's remaining tests (with Phase 1's S1 / S2 
   composite and back, a layer, a sun, `env.size`, day-night's own 128 default size, the blur
   leaving 0). Checked that the 7 fail with `needsRebuild` forced to false.
 - `yarn test` 692 passed, 1 skipped; `tsc` and the lint clean.
+
+As built, section 3 (2026-10-19): the scenes, on WSL2 (WebGL2, SwiftShader) instead of the Mac.
+
+- **Found:** this machine's only scene baselines were WebGL ones from 2026-10-10 (239 `main`
+  commits older, before p614 and Phase 2's re-recorded clouds), and Phase 2's recording, which
+  D5's late check compares against, is on the Mac (WebGPU). Decided: record here at Phase 3's
+  end, then run Phase 4.
+- `yarn verify:scenes --update` at `8850b46` (detached; 64 min): 101 runs recorded.
+  `thirdPersonGymScene`'s three debug runs timed out ("the physics probe didn't reach step 600 in
+  300 s", SwiftShader's speed; its `prodTest` passed), so the gym has no debug baseline here.
+- `yarn verify:scenes --only <the 25 other scenes>` at `41eb0fa` (49 min): **100 passed**, every
+  probe hash and system order unchanged, no new errors.
+- **D5's late check** (the six sky scenes, each about 55 minutes between its recording and its
+  check: the recording writes its baselines at its end, so the gap comes from the run order):
+  no pixel over the 24-level threshold in any of the 18 snapshots (0.00 % changed); 11 are
+  identical, the rest at most 22 levels on a pixel (`space` `workerMsg`, a mean of 0.001),
+  `skyShowcase` up to 15, `exampleSkyBox` 5. Under an hour, and on WebGL2 rather than Phase 2's
+  WebGPU: a run on the Mac against Phase 2's baselines (Phase 7's, if it runs there) is still the
+  issue's own check. Phase 6 decides whether to close the issue on this evidence or after that run.
 
 ### Phase 5: the debug tab (G1, G2)
 
