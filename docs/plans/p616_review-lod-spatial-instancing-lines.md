@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 0 done
 Category: Refactoring, Documentation, LOD, Rendering
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -173,10 +173,10 @@ Type hygiene is clean in scope: no `any`, no `eslint-disable`, no TODO / FIXME.
   storage looked up again for each member, which the standard forbids in a hot loop),
   `grid.updatePosition` and `grid.updateRadius` (each `entityToSlot.get` for a slot the loop
   already has), and `localRadius.get`. largeWorld's `FOLIAGE` domain has 3,500 members.
-- S3 **(perf)** `LightObjectCullingSystem.ts:121` allocates a closure per opted-in light per
+- S3 **(perf)** `LightObjectCullingSystem.ts:57` allocates a closure per opted-in light per
   frame (`grid.queryVisit(…, (candidateId) => …)`), and the visit goes on after a receiver is
-  found. `light.updateWorldMatrix` (`:154`) and `getWorldPosition` (`:115`, which updates it
-  again) do the same work twice.
+  found: `queryVisit` has no way to stop. `light.updateWorldMatrix` (`:90`) and
+  `getWorldPosition` (`:51`, which updates it again) do the same work twice.
 - S4 Dead per-frame write: `SpatialGrid`'s `lastCell` (`:63-70`, "not read by anything in Phase
   1") is written for every member on every rebuild and never read. S1's fix reads it.
 - S5 Size: `SpatialIndexSystem.ts` is 1,108 lines: the domain registry and its settings layers
@@ -268,7 +268,7 @@ Type hygiene is clean in scope: no `any`, no `eslint-disable`, no TODO / FIXME.
   grid between rebuilds, the pool bounds and what's on the entries.
 - K2 Lines has none (N1).
 
-## 2. Decisions (recommended, to confirm)
+## 2. Decisions (confirmed 2026-10-19, as recommended)
 
 ### D1. Scope: §1.1's files
 
@@ -372,9 +372,10 @@ stale names fixed (L6, C4, I6, S9, P5, N5, G2), the schema's undescribed keys (I
 
 ### D10. Performance
 
-S2 (the TRANSFORM storage read once, slot-indexed position and radius writes on the grid), S3
-(one module-level visitor, an early exit once found, one world matrix update), P1 (the storage read
-once, the dirty-mesh set reused). Each measured before (Phase 0) and after (Phase 2) on the same
+S2 (the TRANSFORM storage read once, slot-indexed position and radius writes on the grid: the
+refresh loop's index is the slot), S3 (one module-level visitor, a `queryVisit` visitor that may
+return `true` to stop, which void visitors don't, one world matrix update), P1 (the storage read
+once, `needsUpdate` set at each write instead of the per-frame `Set` and its second loop). Each measured before (Phase 0) and after (Phase 2) on the same
 camera; LOD selection is measured both times and must not regress. `perf-auditor` runs over the
 four folders in Phase 0 and confirms or adds to these.
 
@@ -403,7 +404,7 @@ phase's own checks. `yarn verify:scenes` runs at the end of Phases 1, 2 and 4 an
 while it runs). Each phase ends with its "As built" list, its files' JSDoc at 100 % and
 `docs.json` updated (`yarn verify:baselines --docs --update`).
 
-### Phase 0: baselines and measurements
+### Phase 0: baselines and measurements — done
 
 1. `yarn verify:scenes --update` on this commit (= `main`), then `yarn verify:baselines` clean.
 2. `perf-auditor` over the four folders: confirm or add to S2, S3, P1. The functions over 150
@@ -417,7 +418,59 @@ while it runs). Each phase ends with its "As built" list, its files' JSDoc at 10
 5. Reproduce S1 with D4's test (`it.fails`), and check P2 in a scene (a pool instance moved out of
    the spawn bounds, the camera turned toward it) and S8 (an indexed pool in `DEFAULT` beside an
    object-culled light).
-6. Record the numbers here and confirm D1-D12.
+6. Record the numbers here.
+
+As built (2026-10-19, at `5bdd370` plus this plan and the two repro tests; WSL2, headless Chromium,
+WebGL2 through SwiftShader):
+
+- **D1-D12 confirmed** as recommended (2026-10-19), before Phase 0.
+- **Baselines (step 1):** `yarn verify:scenes --update` recorded 101 of 104 runs in 3,979 s. The
+  three it didn't are `thirdPersonGymScene`'s debug configurations: "the physics probe didn't
+  reach step 600 in 300 s" on SwiftShader. That's this machine, not the branch: both of the
+  day's earlier runs (09:51 and 12:49, `main` before p616) failed the same three the same way,
+  and the gym's `prodTest` passes. Phase 1's and later runs compare the other 101. `yarn
+  verify:baselines`: all unchanged, no debug code in either build (`docs.json` 2,121 / 2,385
+  exports, 890 / 968 members).
+- **The perf audit (step 2)** confirmed S2, S3, P1 and S4, and added three, now in D10: a
+  `queryVisit` visitor can't stop (S3: an existence check walks the whole range); the pool sync's
+  per-frame `Set` exists only for its second loop, and `needsUpdate` set at each write needs
+  neither (P1); `refreshDomainMembers`' loop index is already the slot (S2). It found nothing to
+  fix in the LOD selection's per-entity path (no allocation, every storage read once per frame),
+  the line writers and backends, `lodApplySystem` / `lodFadeSystem` (bounded by the frame's
+  changes) or the impostor material's per-object update. No new function over 150 lines.
+- **`yarn hub:build` (step 3):** 420 pages, 16 warnings; in scope exactly D7's three
+  (`Octahedral.ts:112` `Vec2Node`, `:128` `Vec3Node`, `LodSystem.ts:994` `{@link LodTarget}`).
+  TypeDoc documents every engine module, so D6's type additions are about what an app can import,
+  not about warnings (as p615 found).
+- **The hot loops (step 4)**, timed in the page by wrapping each system's function
+  (`.cache/runs/p616-measure.ts`, gitignored: `npx tsx .cache/runs/p616-measure.ts <label>
+  [scenes]`, results in `.cache/runs/p616-measure-<label>.json`). Debug env with the test bridge's
+  frame clock, 512 × 288, 30 warm-up and 300 measured frames, three page loads per scene; the
+  page is cross-origin isolated (5 µs timer steps, averaged over the frames). Mean µs per frame,
+  the three runs:
+
+  | System | largeWorld | largeWorld, FOLIAGE refreshed every frame | lodShowcase |
+  | --- | --- | --- | --- |
+  | `lodSelectionSystem` | 649, 518, 510 | 526, 524, 521 | 30, 29, 28 |
+  | `lodApplySystem` / `lodFadeSystem` | 1.7-1.9 / 1.2-1.6 | 1.2-2.2 / 0.9-1.5 | 1.3-1.4 / 0.5-0.8 |
+  | `spatialIndexRebuildSystem` | 35, 33, 31 | 344, 371, 344 | 22, 23, 21 |
+  | `instancedMeshPoolSync` | 188, 190, 172 | 116, 141, 166 | 3.5, 8.1, 3.3 |
+  | `lightObjectCullingSystem` | 59, 49, 51 | 45, 54, 66 | 1.2, 1.0, 1.1 |
+
+  largeWorld has 3,800 `LOD` entities and pool instances, `DEFAULT` with 26 members (`DYNAMIC`),
+  `FOLIAGE` with 1,500 (`STATIC`: it never refreshes in steady state, so the third column
+  invalidates it every frame from an `APP_LOGIC` system to time S2's path) and 10 object-culled
+  lights; lodShowcase 30 `LOD` entities, 18 pool instances, 18 indexed. LOD selection is
+  0.13-0.17 µs per entity, as CLAUDE.md says. The pool sync costs 170-190 µs a frame with nothing
+  moving (P1); the refresh path 310-340 µs over the static rebuild for 1,500 members (S2).
+- **Repro (step 5):** both bugs reproduced in Node, each kept as a `test.fails` that fails on its
+  own assertion when run as `test`. S1: `features/spatial/SpatialGrid.test.ts` (after a
+  removal moved entity 2's slot, the query at its position returns `[]`, not `[2]`). P2:
+  `features/instancing/InstancedMeshPool.test.ts` (an instance moved 100 units through its
+  `Transform`, synced, is outside `pool.mesh.boundingSphere`; three's frustum test reads that
+  sphere). S8 is read from the code and needs no scene: `meshIsVisibleReceiver` asks
+  `getMeshWorldBoundingSphere`, which returns undefined for an entity without `OBJECT3D`, which a
+  pool instance is. `yarn test`: 87 files, 692 passed, 2 expected fails, 1 skipped.
 
 ### Phase 1: the grid fix (D4), the pool bounds (D5) and the tests (D11)
 
