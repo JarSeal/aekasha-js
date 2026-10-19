@@ -48,8 +48,10 @@ import {
   setActiveSkyBox,
   stopSkyBox,
   updateSkyBox,
+  type SkyBoxUpdate,
 } from './SkyBox';
 import { installSkyBoxSystem } from './SkyDayNight';
+import type { SkyBoxDef } from './SkyBoxTypes';
 
 const equirect = (file: string) => ({ type: 'EQUIRECTANGULAR' as const, file });
 
@@ -216,5 +218,63 @@ describe('the sky clock', () => {
     await setActiveSkyBox('cloudy');
     tick(13);
     expect(cloudsTime()).toBeCloseTo(0.5, 9);
+  });
+});
+
+describe('updateSkyBox: new nodes or uniform writes', () => {
+  const black = { type: 'COLOR' as const, color: '#000000' };
+
+  /** Shows `def` (a colour base: nothing to load), then updates it with `update`.
+   * @returns whether the update gave the background new nodes, and whether it kept the
+   * activation's uniforms */
+  const update = async (def: Omit<SkyBoxDef, 'id'>, change: SkyBoxUpdate) => {
+    registerSkyBox({ id: 'sky', ...def }, 'scene');
+    await setActiveSkyBox('sky');
+    const before = { node: m.rootScene.backgroundNode, uniforms: getActiveSkyBox()!.uniforms };
+    await updateSkyBox('sky', change);
+    return {
+      rebuilt: m.rootScene.backgroundNode !== before.node,
+      keptUniforms: getActiveSkyBox()!.uniforms === before.uniforms,
+    };
+  };
+
+  it.each<[string, Omit<SkyBoxDef, 'id'>, SkyBoxUpdate]>([
+    ["a direct path's value", { base: black }, { base: { color: '#204060' } }],
+    ['a layer value', { base: black, atmosphere: {} }, { atmosphere: { turbidity: 8 } }],
+    ['a sun moved', { base: black, suns: [{}] }, { suns: { 0: { elevation: -20 } } }],
+    [
+      'the background blur, staying above 0',
+      { base: black, stars: {}, env: { backgroundRoughness: 0.2 } },
+      { env: { backgroundRoughness: 0.5 } },
+    ],
+    ['the env intensities', { base: black, stars: {} }, { env: { environmentIntensity: 0.3 } }],
+  ])('writes uniforms for %s', async (_, def, change) => {
+    expect(await update(def, change)).toEqual({ rebuilt: false, keptUniforms: true });
+  });
+
+  it.each<[string, Omit<SkyBoxDef, 'id'>, SkyBoxUpdate]>([
+    ['a first procedural layer (direct to composite)', { base: black }, { ground: {} }],
+    [
+      'the last one turned off (composite to direct)',
+      { base: black, ground: {} },
+      { ground: { enabled: false } },
+    ],
+    ['a layer added (the signature)', { base: black, atmosphere: {} }, { clouds: {} }],
+    ['a sun added', { base: black, suns: [{}] }, { suns: [{}, {}] }],
+    ['env.size', { base: black, stars: {} }, { env: { size: 64 } }],
+    // Day-night's default env size is 128, not 256
+    ['day-night without an env.size', { base: black, stars: {} }, { dayNight: {} }],
+    [
+      'the background blur leaving 0 (the background samples the bake)',
+      { base: black, stars: {} },
+      { env: { backgroundRoughness: 0.3 } },
+    ],
+  ])('rebuilds the nodes, keeping the uniforms, for %s', async (_, def, change) => {
+    expect(await update(def, change)).toEqual({ rebuilt: true, keptUniforms: true });
+  });
+
+  it("writes a direct path's colour without new nodes", async () => {
+    await update({ base: black }, { base: { color: '#ff0000' } });
+    expect(getActiveSkyBox()!.uniforms.base.color.value.getHexString()).toBe('ff0000');
   });
 });

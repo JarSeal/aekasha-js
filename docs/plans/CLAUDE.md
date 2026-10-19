@@ -11,7 +11,7 @@ Notes for writing and implementing the plans in `docs/plans/`; the root `.claude
   - "Category" (optional): a general category that this particular plan falls into, usually one or two words like "ECS", "Assets", "Bug fix", "Refactoring", or "Physics".
   - "Blocked by" (optional): describes a plan file name that blocks this plan from implementation.
   - "Blocks" (optional): describes a plan file name that this plan is blocking the implementation.
-  - "Epic" (optional): link to the epic (usually a Trello ticket).
+  - "Epic" (optional): link to the epic (can be a Trello ticket or an epic for set of plans that continue from the epic's priority number).
 - Bigger plans should have non-breaking phases described so that the changes can be reviewed and committed in smaller chunks.
 - **Epics: branches and PRs.** An epic (a plan split into child plans, eg. p600) has a "Branches and PRs" section, written with the epic and kept current as its children decide things: which child plans share a branch (an integration branch, or document plans together) and which get their own, what each branch merges into (`main`, or an integration branch that merges to `main` later), and when each PR opens. A merge to `main` is what the versioning counts (one bump per merge, `yarn checkVersions --against main`), so several plans sharing one major means an integration branch. An epic written before this rule gets the section before its next child plan starts.
 - **Time for a PR:** when a plan's last phase is done, or the last plan of a group sharing a branch, say so: what goes in, from which branch into which (from the epic's section; without an epic, the plan's branch into `main`). Open it only when asked.

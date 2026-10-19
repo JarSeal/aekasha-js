@@ -645,6 +645,29 @@ As built, section 1 (2026-10-19): the internals' code and JSDoc.
   skybox 177 / 177, layers 78 / 78 (4 fewer: C2). `api.json` still lists C2's constants and
   Phase 3's removed re-exports: Phase 7's `yarn verify:baselines --update` records them.
 
+As built, section 2 (2026-10-19): D10's remaining tests (with Phase 1's S1 / S2 and Phase 2's
+`toSkyColor`, D10 is complete).
+
+- `Presets.test.ts` (10): each template through `resolveSkyBoxPreset` (the template with the id,
+  no `preset` key), a definition without a preset as it is, a layer merged key by key, the arrays
+  (`suns`, `moons`) and `base` replacing the template's, no result sharing the template (a
+  changed result leaves the next one and `SKYBOX_PRESETS` as they were), an unknown name throwing
+  with the list, and `resolveSkyBoxPreset` equal to `mergeSkyBoxPreset`.
+- `SkyComposite.test.ts` (36): `getCompositeSignature` stays the same for 11 value changes (the
+  base, positions, a light's values, a nebula's values but its octaves, day-night, the env values)
+  and changes with 16 structural ones (each layer, sun, moon, light, moon texture and nebula
+  added or turned off, a nebula's octaves, the cube size); suns and moons past MAX_SUNS /
+  MAX_MOONS don't count; clouds without an atmosphere and the cube size without nebulae are left
+  out. `hasProceduralLayer`: false for a base alone and with every layer off (day-night isn't
+  one), true with each layer.
+- `SkyBox.test.ts`' "updateSkyBox: new nodes or uniform writes" (13): `needsRebuild` is private,
+  so the cases run through `updateSkyBox` with a colour base and check whether the root scene's
+  `backgroundNode` was replaced and the activation's uniforms kept. Uniform writes for 5 value
+  changes (a blur staying above 0 among them); new nodes, the uniforms kept, for 7 (direct to
+  composite and back, a layer, a sun, `env.size`, day-night's own 128 default size, the blur
+  leaving 0). Checked that the 7 fail with `needsRebuild` forced to false.
+- `yarn test` 692 passed, 1 skipped; `tsc` and the lint clean.
+
 ### Phase 5: the debug tab (G1, G2)
 
 1. `_dbg__SkyBoxShared.ts` split, moved as is; its importers updated.
