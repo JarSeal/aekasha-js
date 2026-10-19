@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: in progress | Phases 0-5 implemented
 Category: Refactoring, Documentation, Sky box
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -687,7 +687,7 @@ As built, section 3 (2026-10-19): the scenes, on WSL2 (WebGL2, SwiftShader) inst
   WebGPU: a run on the Mac against Phase 2's baselines (Phase 7's, if it runs there) is still the
   issue's own check. Phase 6 decides whether to close the issue on this evidence or after that run.
 
-### Phase 5: the debug tab (G1, G2)
+### Phase 5: the debug tab (G1, G2) — done
 
 1. `_dbg__SkyBoxShared.ts` split, moved as is; its importers updated.
 2. G2's comments.
@@ -730,6 +730,31 @@ As built, section 2 (2026-10-19): the comments (G2).
   the long string and template literals Prettier leaves are as they were.
 - **Checks:** `yarn test` 692 passed, 1 skipped; `tsc` and the lint clean; the docs ratchet
   unchanged (the `_dbg__` modules are outside TypeDoc).
+
+As built, section 3 (2026-10-19): the hand check, on WSL2 (`yarn dev`, headless Chromium,
+WebGL2 on SwiftShader, `?isDebug=true&startScene=skyShowcase`, a fresh profile). A Playwright
+script drove the tab's own controls (text fields, slider, buttons, the preset dropdown, Ctrl+Z /
+Ctrl+Shift+Z) and read the active sky box, the atmosphere's `betaM` uniform, `AEK_debugSkyBox`
+and the undo history after each step. Every step did what it should:
+
+- **A param:** Atmosphere › Turbidity 2 → 5 → 8 (two commits over a second apart: two undo
+  steps). The definition, the proxy, the uniform and the override (`{ atmosphere: { turbidity } }`)
+  followed; undo went back to 5, redo to 8.
+- **A drag** (12 ticks on the slider): coalesced within the 800 ms window. Under SwiftShader
+  (about 3 FPS) the ticks came about 700 ms apart, and the history split exactly where a gap
+  went over 800 ms (3 steps for 12 ticks): the environment's speed, not the split.
+- **Reset layer** (Atmosphere): the override removed (`AEK_debugSkyBox` gone), turbidity back to
+  the definition's 2; undo restored 8.
+- **A list edit:** Suns › "Add (at view)": 2 suns, the whole `suns` array stored, the new sun
+  selected and its disc in view; undo and redo; "Remove" then removed the selected sun. After the
+  redo the selection was the first sun (undo clamped it to 0, redo doesn't restore it), so the
+  definition's sun went and the added one stayed: as the tab works, noted for p800.
+- **Apply preset** NIGHT_SKY: one override (day-night off, the sun below the horizon, a moon with
+  its light, cloud coverage), replacing the turbidity and suns overrides; no toast (both bases are
+  colours); undo restored the previous override, redo the preset's.
+- **A reload:** the stored override applied again, and the undo history kept.
+- Console: no errors; the only warning is Rapier's "deprecated parameters" on init, once per
+  load (outside the sky box).
 
 ### Phase 6: the Hub, CLAUDE.md, readme, and what's filed
 
