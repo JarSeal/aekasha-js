@@ -226,7 +226,7 @@ const diffLayer = (from: SkyBoxDef, to: SkyBoxDef, path: string): Obj | undefine
  * lists are whole arrays. Overrides can't change the base's type, so a texture base is kept
  * (`keptBase`).
  */
-export const getPresetOverrides = (def: SkyBoxDef, presetName: SkyBoxPresetName) => {
+const getPresetOverrides = (def: SkyBoxDef, presetName: SkyBoxPresetName) => {
   const to = resolveSkyBoxPreset({ id: def.id, preset: presetName });
   const overrides: Obj = {};
   const keptBase = def.base.type !== to.base.type;

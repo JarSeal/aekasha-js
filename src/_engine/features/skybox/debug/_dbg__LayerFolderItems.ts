@@ -2,7 +2,8 @@ import type { DebuggerPaneItem } from '../../../debug/DebuggerGUI';
 import { setSkyBoxParam } from './_dbg__SkyBoxEdits';
 import { LAYER_PATHS, type SkyBoxLayerKey } from './_dbg__SkyBoxShared';
 
-/** Turns a camelCase key into the undo history's label, eg. 'mieCoefficient' → 'mie coefficient'. */
+/** Turns a camelCase key into the undo history's label, eg. 'mieCoefficient' →
+ * 'mie coefficient'. */
 const toUndoLabel = (key: string) => key.replace(/[A-Z]/g, (c) => ` ${c.toLowerCase()}`);
 
 /** A number slider for one layer value (stored, rendered and undoable via setSkyBoxParam). */

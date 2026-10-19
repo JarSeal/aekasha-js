@@ -715,6 +715,22 @@ As built, section 1 (2026-10-19): the split (G1).
   regenerated with Phase 7's checks, as p614 did.
 - **Checks:** `yarn test` 692 passed, 1 skipped; `tsc`, `tsc -p hub` and the lint clean.
 
+As built, section 2 (2026-10-19): the comments (G2).
+
+- G2's 10, as JSDoc: `BakeStats`, `createBakeStats` (`_dbg__BakeStats.ts`), `hasNoEntries`
+  (`_dbg__ListFolderItems.ts`), `SKYBOX_TAB_ID`, `LIST_MAX`, `getSelectedIndex`,
+  `getSkyBoxOverrides`, `skyBoxProxy` (its `//` section comment made its JSDoc, plus what
+  `select.skyBoxId` is), `NO_SKYBOX_ID`, `syncSkyBoxProxy` (what it copies, and that the tab's
+  `onRefresh` runs it before every build and refresh: `_dbg__TabHost.ts`). Plus the four helpers
+  section 1 exported without one (`Obj`, `isObj`, `asObj`, `isEqual`).
+- Section 1's finds: `currentSceneHasOverrides` removed (no caller, with its `getCurrentSceneId`
+  import); `getPresetOverrides` no longer exported (read only by `applySkyBoxPreset`).
+- Every export of `features/skybox/debug/` has a JSDoc comment now (checked by a scan). Comment
+  lines over 100 columns reflowed (the new ones, and `_dbg__LayerFolderItems.ts`' label helper);
+  the long string and template literals Prettier leaves are as they were.
+- **Checks:** `yarn test` 692 passed, 1 skipped; `tsc` and the lint clean; the docs ratchet
+  unchanged (the `_dbg__` modules are outside TypeDoc).
+
 ### Phase 6: the Hub, CLAUDE.md, readme, and what's filed
 
 1. The sky box feature and example pages against the code (the preset helper, the stop, the

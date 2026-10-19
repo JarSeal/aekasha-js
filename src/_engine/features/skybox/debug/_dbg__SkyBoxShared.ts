@@ -1,5 +1,4 @@
 import { lsGetItem, lsRemoveItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
-import { getCurrentSceneId } from '../../../kernel/scene/Scene';
 import {
   _getSkyBoxRegistry,
   getActiveSkyBox,
@@ -29,6 +28,7 @@ import { MAX_NEBULAE, NEBULA_DEFAULTS } from '../layers/Nebula';
 import { SHADOW_PRESETS } from '../../../kernel/light/Light';
 import { getEnvSize } from '../SkyComposite';
 
+/** The sky box tab's id in the debug drawer (`updateDebuggerTab` refreshes or rebuilds it). */
 export const SKYBOX_TAB_ID = 'skyBoxControls';
 
 /** The layers the tab edits. p112-p114 add theirs here (and a folder file each). */
@@ -72,6 +72,8 @@ export const LAYER_PATHS: Record<SkyBoxLayerKey, string> = {
 /** The definition's lists the tab edits one entry at a time (p114). */
 export type SkyBoxListKey = 'suns' | 'moons' | 'nebulae';
 
+/** How many entries of each list the sky box draws (MAX_SUNS, MAX_MOONS, MAX_NEBULAE): the tab
+ * shows no more, and "Add" stops there. */
 export const LIST_MAX: Record<SkyBoxListKey, number> = {
   suns: MAX_SUNS,
   moons: MAX_MOONS,
@@ -88,6 +90,7 @@ const LIST_LAYERS: Record<SkyBoxListKey, SkyBoxLayerKey[]> = {
 /** The entry each list's folder edits (session only). */
 const selectedIndex: Record<SkyBoxListKey, number> = { suns: 0, moons: 0, nebulae: 0 };
 
+/** The index of the entry a list's folder edits. */
 export const getSelectedIndex = (list: SkyBoxListKey) => selectedIndex[list];
 
 /** Selects the entry a list's folder edits (repoints its layer paths; the tab must be rebuilt,
@@ -139,12 +142,16 @@ const getPresetDefault = (def: SkyBoxDef | undefined, path: string) => {
   return preset.mapSize[0];
 };
 
+/** A plain object: a definition's or an override's layer. */
 export type Obj = Record<string, unknown>;
 type AllOverrides = { [sceneId: string]: { [skyBoxId: string]: SkyBoxOverrides } };
 
+/** Whether a value is a plain object (not null, not an array). */
 export const isObj = (value: unknown): value is Obj =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+/** The value if it's a plain object, else an empty one (not stored anywhere). */
 export const asObj = (value: unknown): Obj => (isObj(value) ? value : {});
+/** Deep equality of JSON values, by their JSON text (so key order counts). */
 export const isEqual = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 /** A value by path; array entries by index ('suns.0.elevation'). */
@@ -189,6 +196,8 @@ const writeAllOverrides = (all: AllOverrides) => {
   else lsRemoveItem(SKYBOX_DEBUG_OVERRIDES_LS_KEY);
 };
 
+/** A sky box's stored overrides in a scene (only the values changed from the definition), or
+ * undefined. Read from local storage on every call. */
 export const getSkyBoxOverrides = (sceneId: string, skyBoxId: string) =>
   readAllOverrides()[sceneId]?.[skyBoxId];
 
@@ -271,9 +280,11 @@ export const isListOverrideAnArray = (list: SkyBoxListKey) => {
   return Boolean(active && Array.isArray(getSkyBoxOverrides(active.sceneId, active.id)?.[list]));
 };
 
-// What the panes bind to: every edited layer value of the active sky box, synced before every
-// build and refresh. Mutated in place, so the bindings stay valid across refreshes.
-
+/**
+ * What the panes bind to: every edited layer value of the active sky box, synced before every
+ * build and refresh (syncSkyBoxProxy). Mutated in place, so the bindings stay valid across
+ * refreshes. `select.skyBoxId` is the sky box dropdown's value (NO_SKYBOX_ID for none).
+ */
 export const skyBoxProxy: Record<SkyBoxLayerKey, Obj> & { select: { skyBoxId: string } } = {
   select: { skyBoxId: '' },
   base: {},
@@ -425,6 +436,7 @@ const AUTO_COLOR_KEYS: Partial<Record<SkyBoxLayerKey, Record<string, string>>> =
 /** A ColorJSON as '#rrggbb' (sRGB): both forms read as sRGB, so `{ r, g, b }` shows its own hex. */
 const toHex = (value: unknown) => `#${toSkyColor(value as ColorJSON).getHexString()}`;
 
+/** The sky box dropdown's value for "no sky box" (`setActiveSkyBox(null)`). */
 export const NO_SKYBOX_ID = '__noSkyBox';
 
 const toDegrees = (radians: number) => Math.round(((radians * 180) / Math.PI) * 100) / 100;
@@ -478,6 +490,12 @@ const syncNebulaProxy = (def: SkyBoxDef | undefined) => {
   setElevationAzimuth(proxy, { x: x / length, y: y / length, z: z / length });
 };
 
+/**
+ * Copies the active sky box's values into skyBoxProxy (the definition's, else the layer
+ * defaults): colours as '#rrggbb', 2-tuples and auto colours split into their bindings, with
+ * day-night the derived sun and moon positions, and each list's selection clamped to its
+ * entries. The tab's `onRefresh` calls it, before every build and every refresh.
+ */
 export const syncSkyBoxProxy = () => {
   const active = getActiveSkyBox();
   skyBoxProxy.select.skyBoxId = active?.id ?? NO_SKYBOX_ID;
@@ -512,12 +530,6 @@ export const syncSkyBoxProxy = () => {
   const base = active?.def.base;
   skyBoxProxy.base.fileNames = base?.type === 'CUBE_TEXTURE' ? base.fileNames.join('\n') : '';
   skyBoxProxy.base.color = base?.type === 'COLOR' ? base.color : '#000000';
-};
-
-/** Whether the current scene has any sky box overrides stored. */
-export const currentSceneHasOverrides = () => {
-  const sceneId = getCurrentSceneId();
-  return Boolean(sceneId && readAllOverrides()[sceneId]);
 };
 
 /** Scene ids that have overrides stored. */

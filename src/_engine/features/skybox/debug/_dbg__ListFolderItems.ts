@@ -30,6 +30,8 @@ export type ListConfig<T extends object> = {
   addTitle?: string;
 };
 
+/** Whether the active sky box has no entries in a list (its folder hides or disables the entry
+ * controls). */
 export const hasNoEntries = (list: SkyBoxListKey) => getListEntries(list).length === 0;
 const isFull = (list: SkyBoxListKey) => getListEntries(list).length >= LIST_MAX[list];
 

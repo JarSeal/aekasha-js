@@ -36,6 +36,7 @@ export type BakeStatsView = {
   readonly bakesPerSec: string;
 };
 
+/** One bake kind's tracker: its view for the folder, its hooks for the bake. */
 export type BakeStats = {
   view: BakeStatsView;
   /** Pass to the bake's hook setter (eg. _setEnvBakeHooks). */
@@ -51,6 +52,8 @@ const addSample = (avg: Avg, value: number) => {
 const formatAvg = (avg: Avg) =>
   avg.hasValue ? `${avg.last.toFixed(3)} (avg ${avg.avg.toFixed(3)})` : '-';
 
+/** A new tracker, counting from 0. Each bake kind makes one when its debug module loads, and
+ * keeps it for the page's life (the GPU timer is held only while a bake is pending). */
 export const createBakeStats = (): BakeStats => {
   const cpu: Avg = { last: 0, avg: 0, hasValue: false };
   const gpu: Avg = { last: 0, avg: 0, hasValue: false };
