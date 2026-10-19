@@ -3,13 +3,15 @@
  * (SkyStaticLayers.ts), never evaluated per frame. Each nebula is a patch of the sky around its
  * direction: an elliptical shape (size, stretch, orientation, falloff) that erodes a
  * domain-warped fbm cloud (filaments over a soft glow), coloured by density through 2-3 colour
- * stops, with dark dust lanes (ridged fbm) cut out of it. The cube's alpha holds each nebula's star boost (the live stars
- * layer reads it, see layers/Stars.ts).
+ * stops, with dark dust lanes (ridged fbm) cut out of it. The cube's alpha holds each nebula's
+ * star boost (the live stars layer reads it, see layers/Stars.ts).
  *
  * The noise runs on the 3D direction (never on cube face UVs), so the bake is seamless. The warp
  * uses three float fbm calls instead of mx_fractal_noise_vec3, which hangs SwiftShader's WebGL2.
  * Everything but `octaves` (and which nebulae exist) is a uniform, so a param change only
  * re-bakes; the nebulae are unrolled at build time.
+ *
+ * Like every layer, internal to the sky box (the composite) and its debug tab.
  */
 import * as THREE from 'three/webgpu';
 import {
@@ -30,7 +32,13 @@ import {
 } from 'three/tsl';
 import type { SkyBoxNebulaDef } from '../SkyBoxTypes';
 import { toSkyColor } from '../SkyColor';
+import { createSeededRandom } from '../../../utils/SeededRandom';
 
+/**
+ * A nebula's defaults (the schema's "Default …" comments say the same; the debug tab shows
+ * these).
+ * @internal
+ */
 export const NEBULA_DEFAULTS = {
   enabled: true,
   seed: 0,
@@ -48,7 +56,10 @@ export const NEBULA_DEFAULTS = {
   starBoost: 0,
 };
 
-/** The most nebulae a sky box can have (the schema's limit): one uniform set each. */
+/**
+ * The most nebulae a sky box can have (the schema's limit): one uniform set each.
+ * @internal
+ */
 export const MAX_NEBULAE = 8;
 
 /** Noise cycles per radian of the nebula's size: its detail scales with it. */
@@ -74,6 +85,10 @@ const WARP_OFFSETS = [
 ] as const;
 const DUST_OFFSET = [41.7, 33.3, 19.9] as const;
 
+/**
+ * A nebula's uniforms (one set per possible nebula), created once per activation.
+ * @internal
+ */
 export type NebulaUniforms = {
   /** The centre direction (unit, in the static layers' frame), and the shape's long and short
    * axes on the sky (unit, perpendicular to it). */
@@ -122,31 +137,29 @@ const createNebulaUniforms = (): NebulaUniforms => ({
   segments: uniform(2),
 });
 
-/** One uniform set per possible nebula, created once per activation. */
+/**
+ * One uniform set per possible nebula, created once per activation.
+ * @internal
+ */
 export const createNebulaeUniforms = () =>
   Array.from({ length: MAX_NEBULAE }, () => createNebulaUniforms());
 
-/** The enabled nebulae (the ones in the bake, in order: the i-th gets uniform set i). */
+/**
+ * The enabled nebulae (the ones in the bake, in order: the i-th gets uniform set i).
+ * @internal
+ */
 export const getEnabledNebulae = (nebulae: SkyBoxNebulaDef[] | undefined) =>
   (nebulae || []).filter((nebula) => nebula.enabled !== false).slice(0, MAX_NEBULAE);
 
-/** Whether any nebula is enabled (what getEnabledNebulae would return some of), without making
- * an array: the day-night step asks every frame. */
+/**
+ * Whether any nebula is enabled (what getEnabledNebulae would return some of), without making
+ * an array: the day-night step asks every frame.
+ * @internal
+ */
 export const hasEnabledNebula = (nebulae: SkyBoxNebulaDef[] | undefined) => {
   if (!nebulae) return false;
   for (let i = 0; i < nebulae.length; i++) if (nebulae[i].enabled !== false) return true;
   return false;
-};
-
-/** mulberry32: the same seed always gives the same offsets. */
-const seededRandom = (seed: number) => {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 };
 
 const _up = new THREE.Vector3();
@@ -172,7 +185,10 @@ const writeFrame = (u: NebulaUniforms, def: SkyBoxNebulaDef) => {
   axisV.multiplyScalar(cos).addScaledVector(_up, -sin);
 };
 
-/** Writes the enabled nebulae's values to their uniform sets. */
+/**
+ * Writes the enabled nebulae's values to their uniform sets.
+ * @internal
+ */
 export const applyNebulaeUniforms = (
   uniforms: NebulaUniforms[],
   nebulae: SkyBoxNebulaDef[] | undefined
@@ -191,7 +207,8 @@ export const applyNebulaeUniforms = (
       0.999
     );
     u.frequency.value = NOISE_FREQUENCY / size;
-    const random = seededRandom(def.seed ?? NEBULA_DEFAULTS.seed);
+    // The same seed always gives the same offsets
+    const random = createSeededRandom(def.seed ?? NEBULA_DEFAULTS.seed);
     u.offset.value.set(random() * 1000, random() * 1000, random() * 1000);
     u.density.value = def.density ?? NEBULA_DEFAULTS.density;
     u.warp.value = def.warp ?? NEBULA_DEFAULTS.warp;
@@ -206,7 +223,10 @@ export const applyNebulaeUniforms = (
   });
 };
 
-/** The structural part of the nebulae: which exist, and their octaves. */
+/**
+ * The structural part of the nebulae: which exist, and their octaves.
+ * @internal
+ */
 export const getNebulaeSignature = (nebulae: SkyBoxNebulaDef[] | undefined) =>
   getEnabledNebulae(nebulae)
     .map((nebula) => getOctaves(nebula))
@@ -287,6 +307,7 @@ const nebulaNode = (s: THREE.Node<'vec3'>, u: NebulaUniforms, octaves: number) =
 /**
  * Every enabled nebula summed (rgb, additive) with the strongest star boost (a), in direction
  * `dir` (the static layers' frame). What the static-layers cube bakes.
+ * @internal
  */
 export const nebulaeNode = (
   dir: THREE.Node<'vec3'>,

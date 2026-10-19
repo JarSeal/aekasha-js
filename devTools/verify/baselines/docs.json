@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2078,
-      "total": 2389
+      "documented": 2121,
+      "total": 2385
     },
     "members": {
       "documented": 890,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2034,
-        "total": 2326
+        "documented": 2077,
+        "total": 2322
       },
       "members": {
         "documented": 840,
@@ -464,7 +464,7 @@
     },
     "engine/features/skybox": {
       "exports": {
-        "documented": 162,
+        "documented": 177,
         "total": 177
       },
       "members": {
@@ -472,70 +472,21 @@
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "SkyComposite#StaticLayersUniforms",
-          "SkyComposite#createSkyUniforms",
-          "SkyComposite#getMoonCount",
-          "SkyComposite#isAtmosphereEnabled",
-          "SkyComposite#isGroundEnabled",
-          "SkyComposite#isMilkyWayEnabled",
-          "SkyComposite#isStarsEnabled",
-          "SkyEnvironment#_setEnvBakeHooks",
-          "SkyEnvironment#isEnvBakeRequested",
-          "SkyLights#AMBIENT_LIGHT_DEFAULTS",
-          "SkyLights#MOON_LIGHT_DEFAULTS",
-          "SkyLights#SUN_LIGHT_DEFAULTS",
-          "SkyStaticLayers#_setStaticLayersBakeHooks",
-          "SkyTime#DAY_NIGHT_DEFAULTS",
-          "SkyTime#createSkyTimeState"
-        ],
+        "exports": [],
         "members": []
       }
     },
     "engine/features/skybox/layers": {
       "exports": {
-        "documented": 50,
-        "total": 82
+        "documented": 78,
+        "total": 78
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "Atmosphere#ATMOSPHERE_DEFAULTS",
-          "Atmosphere#ATMOSPHERE_STRUCTURAL_KEYS",
-          "Atmosphere#AtmosphereUniforms",
-          "Atmosphere#atmosphereParts",
-          "Atmosphere#createAtmosphereUniforms",
-          "Base#BASE_DEFAULTS",
-          "Base#BaseLayer",
-          "Base#ENV_DEFAULTS",
-          "Base#createBaseUniforms",
-          "Clouds#CLOUDS_DEFAULTS",
-          "Clouds#CLOUDS_STRUCTURAL_KEYS",
-          "Clouds#CloudsUniforms",
-          "Clouds#applyCloudsUniforms",
-          "Clouds#createCloudsUniforms",
-          "Ground#GROUND_DEFAULTS",
-          "Ground#GROUND_STRUCTURAL_KEYS",
-          "Ground#GroundUniforms",
-          "Ground#applyGroundUniforms",
-          "Ground#createGroundUniforms",
-          "Moon#MOON_DEFAULTS",
-          "Moon#MOON_TEXTURE_DEFAULTS",
-          "Moon#MoonUniforms",
-          "Moon#createMoonUniforms",
-          "Nebula#NEBULA_DEFAULTS",
-          "Nebula#NebulaUniforms",
-          "Stars#STARS_DEFAULTS",
-          "Stars#StarsUniforms",
-          "Stars#createStarsUniforms",
-          "Sun#SUN_DEFAULTS",
-          "Sun#SUN_STRUCTURAL_KEYS",
-          "Sun#SunUniforms",
-          "Sun#createSunUniforms"
-        ],
+        "exports": [],
         "members": []
       }
     },

@@ -10,13 +10,15 @@
  * cell decides whether it has a star, where in the cell it is (away from the edges, so a star is
  * never cut by its cell), how bright (a power distribution: mostly faint) and its colour
  * temperature (blue, white, orange). A star is a disc of at least half a pixel's radius,
- * antialiased over one pixel; the pixel's angular size comes from `fwidth` of the (continuous) direction, not of the
- * per-cell distance, which jumps at cell edges.
+ * antialiased over one pixel; the pixel's angular size comes from `fwidth` of the (continuous)
+ * direction, not of the per-cell distance, which jumps at cell edges.
  *
  * With the sun above fadeRange[0], the whole layer is skipped: its fade is a uniform, so the
  * branch stays in uniform control flow (fwidth is legal in it on WebGPU), and by day it costs a
  * uniform read and one matrix multiply. Nodes other layers share (the view direction) must be
  * built before the branch (see starsNode).
+ *
+ * Like every layer, internal to the sky box (the composite) and its debug tab.
  */
 import * as THREE from 'three/webgpu';
 import {
@@ -46,6 +48,11 @@ import {
 } from 'three/tsl';
 import type { SkyBoxStarsDef } from '../SkyBoxTypes';
 
+/**
+ * The stars' defaults (the schema's "Default …" comments say the same; the debug tab shows
+ * these).
+ * @internal
+ */
 export const STARS_DEFAULTS = {
   enabled: true,
   density: 0.5,
@@ -93,6 +100,10 @@ const STAR_BOOST_GAIN = 2;
 const MILKY_WAY_COLOR = new THREE.Color('#c9d4ff');
 const MILKY_WAY_NOISE_SCALE = 3;
 
+/**
+ * The stars' uniforms, created once per activation.
+ * @internal
+ */
 export type StarsUniforms = {
   /** World direction → stars' frame (identity unless it turns with the sky). */
   rotation: THREE.UniformNode<'mat3', THREE.Matrix3>;
@@ -112,6 +123,11 @@ export type StarsUniforms = {
   milkyWayWidth: THREE.UniformNode<'float', number>;
 };
 
+/**
+ * The stars' uniforms at the defaults (applyStarsUniforms and applyStarsSkyUniforms write the
+ * definition's).
+ * @internal
+ */
 export const createStarsUniforms = (): StarsUniforms => ({
   rotation: uniform(new THREE.Matrix3()),
   fade: uniform(0),
@@ -128,14 +144,20 @@ export const createStarsUniforms = (): StarsUniforms => ({
   milkyWayWidth: uniform(Math.sin(THREE.MathUtils.degToRad(STARS_DEFAULTS.milkyWay.width))),
 });
 
-/** The nebulae's star boost: their baked cube (its alpha is the mask) and where to look it up. */
+/**
+ * The nebulae's star boost: their baked cube (its alpha is the mask) and where to look it up.
+ * @internal
+ */
 export type StarBoostSource = {
   cube: THREE.CubeTexture;
   /** The stars' frame → the cube's (static layers') frame. */
   starsToStatic: THREE.Node<'mat3'>;
 };
 
-/** Writes the stars' settings (the rotation and fade follow in applyStarsSkyUniforms). */
+/**
+ * Writes the stars' settings (the rotation and fade follow in applyStarsSkyUniforms).
+ * @internal
+ */
 export const applyStarsUniforms = (u: StarsUniforms, def: SkyBoxStarsDef | undefined) => {
   const density = def?.density ?? STARS_DEFAULTS.density;
   const grid = Math.round(THREE.MathUtils.lerp(GRID_MIN, GRID_MAX, density));
@@ -162,6 +184,7 @@ export const applyStarsUniforms = (u: StarsUniforms, def: SkyBoxStarsDef | undef
  * Writes what follows the sky: the fade from the sun's elevation, and the rotation (the
  * sidereal one, written by the caller, or identity). The day-night step calls it every time the
  * sky moves: it allocates nothing.
+ * @internal
  * @param skyRotation the sidereal rotation (computeSkyRotation), or null for none
  */
 export const applyStarsSkyUniforms = (
@@ -285,8 +308,17 @@ const milkyWay = (s: THREE.Node<'vec3'>, u: StarsUniforms) => {
   );
 };
 
-/** The stars (and Milky Way) over `behind`; skipped entirely while their fade is 0 (by day).
- * @param boost the nebulae's star boost (their cube), or null without nebulae */
+/**
+ * The stars (and Milky Way) over `behind`; skipped entirely while their fade is 0 (by day).
+ * @internal
+ * @param boost the nebulae's star boost (their cube), or null without nebulae
+ * @remarks
+ * A three r186 TSL trap: a node's value is cached where it's first built, so a node other
+ * layers share (here, the lookup direction from `dir`) must not be built first inside an `If`.
+ * Built in the night-only branch, it was unassigned whenever the branch was skipped (a COLOR
+ * base doesn't build `dir` before the stars), and by day the whole sky became one flat colour.
+ * So the rotated direction is built, as a var, before the branch.
+ */
 export const starsNode = (
   dir: THREE.Node<'vec3'>,
   behind: THREE.Node,
@@ -296,10 +328,7 @@ export const starsNode = (
 ): THREE.Node =>
   Fn(() => {
     const color = vec3(behind as THREE.Node<'vec3'>).toVar();
-    // Built before the branch: TSL caches a node's value where it's first built, and `dir` is
-    // shared with every layer after this one. First built inside the branch (a COLOR base
-    // doesn't use it), it was unassigned whenever the branch was skipped, and by day the whole
-    // sky became one flat colour.
+    // Built before the branch (see the remarks): `dir` is shared with every layer after this one
     const s = u.rotation.mul(dir).toVar();
     If(u.fade.greaterThan(0), () => {
       // One pixel's angular size (from the continuous direction)

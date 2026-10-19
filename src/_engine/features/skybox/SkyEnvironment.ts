@@ -3,10 +3,20 @@ import { pmremTexture } from 'three/tsl';
 import { getRenderer } from '../../kernel/render/Renderer';
 import type { SkyBoxEnvSize } from './SkyBoxTypes';
 
+/**
+ * The sky box's PMREMs: a texture base's (getPMREMTexture, disposed with its source texture) and
+ * the composite path's env bake (one target re-rendered by every bake). Internal to the sky box
+ * (its activation, the day-night step) and its debug tools (the bake stats, GPU memory).
+ */
+
 /** Baked PMREMs by source texture, disposed with the source texture. */
 const pmrems = new WeakMap<THREE.Texture, { target: THREE.RenderTarget; version: number }>();
 
-/** Same checks as PMREMNode's (isEquirectangularMapReady / isCubeMapReady). */
+/**
+ * Whether a texture can be baked into a PMREM yet: PMREMNode's own checks
+ * (isEquirectangularMapReady / isCubeMapReady).
+ * @internal
+ */
 export const isPMREMSourceReady = (texture: THREE.Texture) => {
   const image = texture.image as { height?: number; [index: number]: unknown } | null | undefined;
   if (!image) return false;
@@ -22,6 +32,8 @@ export const isPMREMSourceReady = (texture: THREE.Texture) => {
  * version), disposed when its source texture is disposed. A PMREMNode given the source texture
  * itself bakes it with a PMREMGenerator of its own, and nothing ever disposes either. A source
  * that isn't ready (eg. a failed load) is returned as is, for PMREMNode to bake once it is.
+ * Without a renderer, the source is returned as is too.
+ * @internal
  */
 export const getPMREMTexture = (texture: THREE.Texture) => {
   const renderer = getRenderer();
@@ -53,7 +65,8 @@ export const getPMREMTexture = (texture: THREE.Texture) => {
 
 /**
  * The active composite sky box's bake resources. The target and generator live as long as the
- * activation (and its size); the scene is replaced on every node rebuild.
+ * activation (and its size); the scene is replaced on every node rebuild. GPU memory lists it.
+ * @internal
  */
 export type EnvBake = {
   size: SkyBoxEnvSize;
@@ -78,6 +91,11 @@ let isBakeRequested = false;
  */
 export type EnvBakeHooks = { onBakeStart: () => void; onBakeEnd: (cpuMs: number) => void };
 let bakeHooks: EnvBakeHooks | null = null;
+/**
+ * Sets (or with null, removes) the hooks every env bake calls: the Environment folder's bake
+ * stats set them when their module loads (debug env). Without hooks, a bake reads no wall clock.
+ * @internal
+ */
 export const _setEnvBakeHooks = (hooks: EnvBakeHooks | null) => {
   bakeHooks = hooks;
 };
@@ -132,8 +150,18 @@ const disposeBakeScene = (scene: THREE.Scene) => {
 
 /**
  * The env bake for `size`, with `source` (the ENV_BAKE composite) as what it bakes, and a bake
- * requested. Keeps the current target, generator and environment node when the size is the
- * same; a new size replaces all three (one lit-material rebuild).
+ * requested (the activation and every composite rebuild). Keeps the current target, generator
+ * and environment node when the size is the same; a new size replaces all three (one
+ * lit-material rebuild).
+ * @internal
+ * @remarks
+ * A new target is cleared right away (initEnvBakeTarget): every lit material samples it for
+ * the whole scene load, before the first bake, and three r186 destroys a target's placeholder
+ * GPU texture in place on its first render without invalidating the bind groups that sample it
+ * (WebGPU: "Destroyed texture used in a submit" on every frame). That needs an initialized
+ * renderer: activated before `createRenderer` has resolved, the clear is skipped and the
+ * generator gets no renderer. No path does (the boot and `mountAekasha` create the renderer
+ * before the first scene loads), so it isn't guarded.
  */
 export const setEnvBake = (size: SkyBoxEnvSize, source: THREE.Node): EnvBake => {
   const renderer = getRenderer();
@@ -158,8 +186,12 @@ export const setEnvBake = (size: SkyBoxEnvSize, source: THREE.Node): EnvBake => 
   return envBake;
 };
 
-/** Disposes the env bake's target, generator and bake scene. Texture PMREMs (getPMREMTexture)
- * are not touched: they belong to their source textures. */
+/**
+ * Disposes the env bake's target, generator and bake scene, and drops a requested bake (the
+ * direct path, a clear). Texture PMREMs (getPMREMTexture) are not touched: they belong to their
+ * source textures.
+ * @internal
+ */
 export const disposeEnvBake = () => {
   isBakeRequested = false;
   if (!envBake) return;
@@ -169,19 +201,34 @@ export const disposeEnvBake = () => {
   envBake = null;
 };
 
-/** The active env bake, or null (direct path, or no sky box). */
+/**
+ * The active env bake, or null (direct path, or no sky box).
+ * @internal
+ */
 export const getEnvBake = () => envBake;
 
-/** Asks for a bake on the next sky box system tick (at most one per frame, never while a scene
- * loads). A no-op without an env bake. */
+/**
+ * Asks for a bake on the next sky box system tick (at most one per frame, never while a scene
+ * loads). A no-op without an env bake.
+ * @internal
+ */
 export const requestEnvBake = () => {
   if (envBake) isBakeRequested = true;
 };
 
+/**
+ * Whether a bake waits for the next sky box system tick (the system checks it before it freezes
+ * the bake's clouds at the sky clock and bakes).
+ * @internal
+ */
 export const isEnvBakeRequested = () => isBakeRequested;
 
-/** Bakes the environment now, if one is requested (called by skyBoxSystem).
- * @returns whether it baked */
+/**
+ * Bakes the environment now, if one is requested (called by skyBoxSystem). The request is
+ * dropped either way: without an env bake or an initialized renderer, nothing bakes.
+ * @internal
+ * @returns whether it baked
+ */
 export const runRequestedEnvBake = () => {
   isBakeRequested = false;
   const renderer = getRenderer();

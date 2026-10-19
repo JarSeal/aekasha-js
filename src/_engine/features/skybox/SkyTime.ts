@@ -19,10 +19,19 @@
  *   a star where the sun is stays with the sun.
  * - the extra suns (p114) that turn with the sky stand at their elevation and azimuth at the
  *   start time, and turn by the sidereal time from there (turnWithSky).
+ *
+ * Internal to the sky box (the composite, SkyDayNight.ts' API and step) and its debug tab;
+ * SkyTime.test.ts covers it.
  */
 import * as THREE from 'three/webgpu';
 import type { SkyBoxDayNightDef, SkyBoxDef, SkyBoxMoonDef, SkyTimeSource } from './SkyBoxTypes';
 
+/**
+ * The day-night layer's defaults (noon on the June solstice at 45° north, a 20-minute day,
+ * playing with the app loop). The schema's "Default …" comments say the same; the debug tab
+ * shows these.
+ * @internal
+ */
 export const DAY_NIGHT_DEFAULTS = {
   enabled: true,
   timeOfDay: 12,
@@ -36,11 +45,18 @@ export const DAY_NIGHT_DEFAULTS = {
   northOffset: 0,
 };
 
-/** How many moons a sky box draws (moons[0..1]; layers/Moon.ts re-exports it). Here, not in
- * layers/Moon.ts: that module imports this one at load. */
+/**
+ * How many moons a sky box draws (moons[0..1]; layers/Moon.ts re-exports it). Here, not in
+ * layers/Moon.ts: that module imports this one at load.
+ * @internal
+ */
 export const MAX_MOONS = 2;
 
-/** The moon's time-related values (the rest of its defaults are in layers/Moon.ts). */
+/**
+ * A moon's time-related defaults (the rest of its defaults are in layers/Moon.ts, which spreads
+ * these in).
+ * @internal
+ */
 export const MOON_TIME_DEFAULTS = {
   phase: 0.5,
   phaseMode: 'FIXED' as 'FIXED' | 'CYCLE',
@@ -52,8 +68,9 @@ const TWO_PI = Math.PI * 2;
 const DEG_TO_RAD = Math.PI / 180;
 
 /**
- * The runtime day-night state (on ActiveSkyBox). Games drive it through the SkyDayNight.ts API; it's
- * never written to the definition, so driving time writes no debug overrides.
+ * The runtime day-night state (on ActiveSkyBox). Games drive it through the SkyDayNight.ts API;
+ * it's never written to the definition, so driving time writes no debug overrides.
+ * @internal
  */
 export type SkyTimeState = {
   /** Hours, [0, 24). */
@@ -71,7 +88,10 @@ export type SkyTimeState = {
   isDirty: boolean;
 };
 
-/** Hours wrapped into [0, 24). */
+/**
+ * Hours wrapped into [0, 24) (24 itself, and the float edge just under 0, give 0).
+ * @internal
+ */
 export const wrap24 = (hours: number) => {
   const wrapped = ((hours % 24) + 24) % 24;
   // -1e-17 % 24 + 24 is 24 in floating point
@@ -84,7 +104,12 @@ const wrap1 = (phase: number) => {
   return wrapped >= 1 ? 0 : wrapped;
 };
 
-/** Sets the runtime state to the definition's start values (activation, or day-night turned on). */
+/**
+ * Sets the runtime state to the definition's start values (activation, or day-night turned on),
+ * and marks it dirty.
+ * @internal
+ * @returns the object it was given
+ */
 export const resetSkyTimeState = (state: SkyTimeState, def: SkyBoxDef) => {
   const dayNight = def.dayNight;
   state.timeOfDay = wrap24(dayNight?.timeOfDay ?? DAY_NIGHT_DEFAULTS.timeOfDay);
@@ -98,6 +123,10 @@ export const resetSkyTimeState = (state: SkyTimeState, def: SkyBoxDef) => {
   return state;
 };
 
+/**
+ * A new runtime state at the definition's start values (one per activation).
+ * @internal
+ */
 export const createSkyTimeState = (def: SkyBoxDef): SkyTimeState =>
   resetSkyTimeState(
     {
@@ -111,7 +140,11 @@ export const createSkyTimeState = (def: SkyBoxDef): SkyTimeState =>
     def
   );
 
-/** Applies the runtime keys a definition change sets (the others only change the maths). */
+/**
+ * Applies the runtime keys a definition change sets (timeOfDay, speed, cycleDurationSec,
+ * playing; the others only change the maths), and marks the state dirty.
+ * @internal
+ */
 export const applyDayNightChange = (state: SkyTimeState, change: Partial<SkyBoxDayNightDef>) => {
   if (change.timeOfDay !== undefined) state.timeOfDay = wrap24(change.timeOfDay);
   if (change.speed !== undefined) state.speed = change.speed;
@@ -120,7 +153,10 @@ export const applyDayNightChange = (state: SkyTimeState, change: Partial<SkyBoxD
   state.isDirty = true;
 };
 
-/** Sets a moon's running phase (a definition change of its phase). */
+/**
+ * Sets a moon's running phase (a definition change of its phase), wrapped into [0, 1).
+ * @internal
+ */
 export const setSkyTimeMoonPhase = (state: SkyTimeState, index: number, phase: number) => {
   state.moonPhases[index] = wrap1(phase);
   state.isDirty = true;
@@ -128,7 +164,9 @@ export const setSkyTimeMoonPhase = (state: SkyTimeState, index: number, phase: n
 
 /**
  * Advances the time by `dtSec` real seconds: `timeOfDay += dt · speed · 24 / cycleDurationSec`,
- * and each 'CYCLE' moon's phase by `1 / lunarCycleDays` per in-game day.
+ * and each 'CYCLE' moon's phase by `1 / lunarCycleDays` per in-game day. Paused, at speed 0 or
+ * for a dt of 0, nothing changes.
+ * @internal
  * @returns whether the time moved
  */
 export const advanceSkyTime = (state: SkyTimeState, dtSec: number, def: SkyBoxDef) => {
@@ -145,7 +183,10 @@ export const advanceSkyTime = (state: SkyTimeState, dtSec: number, def: SkyBoxDe
   return true;
 };
 
-/** The phase a moon shows: the running one with day-night, else its definition's. */
+/**
+ * The phase a moon shows, in [0, 1): the running one with day-night, else its definition's.
+ * @internal
+ */
 export const getMoonPhaseOf = (
   def: SkyBoxDef,
   state: SkyTimeState,
@@ -215,7 +256,11 @@ const getLatitude = (def: SkyBoxDayNightDef | undefined) =>
 const getNorthOffset = (def: SkyBoxDayNightDef | undefined) =>
   (def?.northOffset ?? DAY_NIGHT_DEFAULTS.northOffset) * DEG_TO_RAD;
 
-/** The sun's unit world direction at `timeOfDay` (hours), into `out`. */
+/**
+ * The sun's unit world direction at `timeOfDay` (hours), into `out`.
+ * @internal
+ * @returns `out`
+ */
 export const computeSunDirection = (
   def: SkyBoxDayNightDef | undefined,
   timeOfDay: number,
@@ -229,7 +274,11 @@ export const computeSunDirection = (
     out
   );
 
-/** The moon's unit world direction at `timeOfDay` (hours) and `phase`, into `out`. */
+/**
+ * A moon's unit world direction at `timeOfDay` (hours) and `phase`, into `out`.
+ * @internal
+ * @returns `out`
+ */
 export const computeMoonDirection = (
   def: SkyBoxDayNightDef | undefined,
   moon: SkyBoxMoonDef | undefined,
@@ -257,6 +306,8 @@ const _column2 = new THREE.Vector3();
  * transpose of the star frame's turn into world space by the local sidereal time). A star at
  * right ascension α and declination δ sits at `(cos δ cos α, −cos δ sin α, sin δ)` in that
  * frame.
+ * @internal
+ * @returns `out`
  */
 export const computeSkyRotation = (
   def: SkyBoxDayNightDef | undefined,
@@ -278,7 +329,8 @@ export const computeSkyRotation = (
 
 /** A sky rotation kept for one definition and time: turnWithSky's start-time one changes only
  * with the definition, and its current one is the same for every extra sun of a frame.
- * Definitions are never changed in place (a change merges into a copy), so the object is the key. */
+ * Definitions are never changed in place (a change merges into a copy), so the object is the
+ * key. */
 type SkyRotationCache = {
   isSet: boolean;
   def: SkyBoxDayNightDef | undefined;
@@ -319,6 +371,8 @@ const getCachedSkyRotation = (
  * turns with the sky is its start-time direction turned to now; the debugger turns the view
  * direction back to the start time to place one there. Allocates nothing, and computes each
  * rotation once per definition and time (the extra suns of a frame share them).
+ * @internal
+ * @returns `out`
  */
 export const turnWithSky = (
   def: SkyBoxDayNightDef | undefined,
@@ -333,6 +387,9 @@ export const turnWithSky = (
     .applyMatrix3(getCachedSkyRotation(_fromRotation, def, fromTimeOfDay))
     .applyMatrix3(getCachedSkyRotation(_toRotation, def, toTimeOfDay));
 
-/** The day-night start time (hours), from which the extra suns turn with the sky. */
+/**
+ * The day-night start time (hours, wrapped), from which the extra suns turn with the sky.
+ * @internal
+ */
 export const getDayNightStartTime = (def: SkyBoxDayNightDef | undefined) =>
   wrap24(def?.timeOfDay ?? DAY_NIGHT_DEFAULTS.timeOfDay);

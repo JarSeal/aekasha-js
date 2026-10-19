@@ -86,18 +86,28 @@ import {
  * (buildBaseLayer), which needs no bake.
  *
  * Layer order, back to front (p110 "Composite order"): base, static layers (the nebulae's baked
- * cube, p114), stars, discs (the suns, then the moons, p114), atmosphere, clouds, ground. Each layer takes the colour behind it and
- * returns the new colour; an absent or disabled layer is left out of the graph (changing which
- * layers exist is a rebuild, anything else is a uniform write).
+ * cube, p114), stars, discs (the suns, then the moons, p114), atmosphere, clouds, ground. Each
+ * layer takes the colour behind it and returns the new colour; an absent or disabled layer is
+ * left out of the graph (changing which layers exist is a rebuild, anything else is a uniform
+ * write).
+ *
+ * Internal to the sky box: its modules, layers and debug tab read it; nothing is on the entry.
  */
 
-/** VIEW: the background the camera sees. ENV_BAKE: what the environment is baked from (a
- * wider, clamped sun disc, no disc where a sun or moon light gives the specular, frozen
- * clouds, no stars). */
+/**
+ * VIEW: the background the camera sees. ENV_BAKE: what the environment is baked from (a wider,
+ * clamped sun disc, no disc where a sun or moon light gives the specular, frozen clouds, no
+ * stars). The layers' node builders take it.
+ * @internal
+ */
 export type SkyCompositeMode = 'VIEW' | 'ENV_BAKE';
 
-/** Every layer's uniforms, created once per activation (whether the layer is on or not, so
- * turning one on only rebuilds nodes) and shared by both modes' nodes. */
+/**
+ * Every layer's uniforms, created once per activation (whether the layer is on or not, so
+ * turning one on only rebuilds nodes) and shared by both modes' nodes. On `ActiveSkyBox`; the
+ * lights and the debug tab read it.
+ * @internal
+ */
 export type SkyUniforms = {
   base: BaseUniforms;
   /** One set per possible sun (MAX_SUNS), by index; suns[0]'s direction drives the atmosphere
@@ -117,6 +127,11 @@ export type SkyUniforms = {
   sunAtmosphere: NonNullable<SunAtmosphere>;
 };
 
+/**
+ * The static layers' lookup rotations (`SkyUniforms.staticLayers`), written by the sky rotation
+ * with the stars'.
+ * @internal
+ */
 export type StaticLayersUniforms = {
   /** World direction → the static layers' frame (the sidereal rotation with day-night on, else
    * identity). */
@@ -126,7 +141,10 @@ export type StaticLayersUniforms = {
   starsToStatic: THREE.UniformNode<'mat3', THREE.Matrix3>;
 };
 
-/** What the composite samples that isn't a uniform. */
+/**
+ * What the composite samples that isn't a uniform (SkyBox.ts gathers it per build).
+ * @internal
+ */
 export type SkyCompositeSources = {
   /** The base texture's PMREM (getPMREMTexture), null for a COLOR base or a failed load. */
   basePMREM: THREE.Texture | null;
@@ -136,37 +154,92 @@ export type SkyCompositeSources = {
   staticLayers: THREE.CubeTexture | null;
 };
 
-/** A procedural layer is on when its key is there, unless it says `enabled: false`. */
+/**
+ * Whether a procedural layer is on: its key is there, unless it says `enabled: false` (the rule
+ * every layer and light check below applies).
+ * @internal
+ */
 export const isOn = (layer: { enabled?: boolean } | undefined) =>
   Boolean(layer && layer.enabled !== false);
 
+/**
+ * Whether the atmosphere is on (the clouds need it, and it colours the suns, moons and lights).
+ * @internal
+ */
 export const isAtmosphereEnabled = (def: SkyBoxDef) => isOn(def.atmosphere);
-/** How many suns (moons) the sky box draws: its entries, up to MAX_SUNS (MAX_MOONS). */
+/**
+ * How many suns the sky box draws: its entries, up to MAX_SUNS (enabled or not: an index keeps
+ * its uniforms and light).
+ * @internal
+ */
 export const getSunCount = (def: SkyBoxDef) => Math.min(def.suns?.length ?? 0, MAX_SUNS);
+/**
+ * How many moons the sky box draws: its entries, up to MAX_MOONS (enabled or not).
+ * @internal
+ */
 export const getMoonCount = (def: SkyBoxDef) => Math.min(def.moons?.length ?? 0, MAX_MOONS);
-/** A sun's disc (suns[0]'s direction drives the atmosphere either way). */
+/**
+ * Whether a sun's disc is drawn (suns[0]'s direction drives the atmosphere either way).
+ * @internal
+ */
 export const isSunEnabled = (def: SkyBoxDef, i: number) => i < MAX_SUNS && isOn(def.suns?.[i]);
-/** Whether a sun has a light: then the env bake leaves its disc out (the light gives that
- * highlight already). */
+/**
+ * Whether a sun has a light: then the env bake leaves its disc out (the light gives that
+ * highlight already).
+ * @internal
+ */
 export const isSunLightEnabled = (def: SkyBoxDef, i: number) =>
   i < MAX_SUNS && isOn(def.suns?.[i]?.light);
-/** A moon's disc. */
+/**
+ * Whether a moon's disc is drawn.
+ * @internal
+ */
 export const isMoonEnabled = (def: SkyBoxDef, i: number) => i < MAX_MOONS && isOn(def.moons?.[i]);
-/** Whether a moon has a light: then the env bake leaves its disc out. */
+/**
+ * Whether a moon has a light: then the env bake leaves its disc out.
+ * @internal
+ */
 export const isMoonLightEnabled = (def: SkyBoxDef, i: number) =>
   i < MAX_MOONS && isOn(def.moons?.[i]?.light);
+/**
+ * Whether the stars are drawn (in the view only: never baked).
+ * @internal
+ */
 export const isStarsEnabled = (def: SkyBoxDef) => isOn(def.stars);
+/**
+ * Whether the Milky Way is drawn: it's part of the stars layer, so off with the stars.
+ * @internal
+ */
 export const isMilkyWayEnabled = (def: SkyBoxDef) =>
   isStarsEnabled(def) && isOn(def.stars?.milkyWay);
-/** Clouds need the atmosphere (the schema rejects them without one). */
+/**
+ * Whether the clouds are drawn: they need the atmosphere (the schema rejects them without one).
+ * @internal
+ */
 export const isCloudsEnabled = (def: SkyBoxDef) => isOn(def.clouds) && isAtmosphereEnabled(def);
+/**
+ * Whether the ground is drawn (without it, the ambient light's AUTO ground colour is the ground
+ * layer's default).
+ * @internal
+ */
 export const isGroundEnabled = (def: SkyBoxDef) => isOn(def.ground);
-/** Whether it has static layers: an enabled nebula (baked into a cube, SkyStaticLayers.ts). */
+/**
+ * Whether it has static layers: an enabled nebula (baked into a cube, SkyStaticLayers.ts). The
+ * day-night step asks every frame, so it makes no array.
+ * @internal
+ */
 export const hasStaticLayers = (def: SkyBoxDef) => hasEnabledNebula(def.nebulae);
-/** The nebula cube's face size. */
+/**
+ * The nebula cube's face size (`env.nebulaSize`, default 512).
+ * @internal
+ */
 export const getNebulaSize = (def: SkyBoxDef | undefined) =>
   def?.env?.nebulaSize ?? ENV_DEFAULTS.nebulaSize;
-/** A definition's static layers (its enabled nebulae), or null without any. */
+/**
+ * A definition's static layers (its enabled nebulae), for setStaticLayers.
+ * @internal
+ * @returns the source, or null without an enabled nebula
+ */
 export const getStaticLayersSourceOf = (
   def: SkyBoxDef,
   u: SkyUniforms
@@ -174,15 +247,27 @@ export const getStaticLayersSourceOf = (
   hasStaticLayers(def)
     ? { resolution: getNebulaSize(def), build: (dir) => nebulaeNode(dir, def.nebulae, u.nebulae) }
     : null;
-/** While on, suns[0]'s and every moon's directions come from the time of day, and the other
- * suns turn with the sky (SkyTime.ts). */
+/**
+ * Whether day-night is on: then suns[0]'s and every moon's directions come from the time of
+ * day, and the other suns turn with the sky (SkyTime.ts).
+ * @internal
+ */
 export const isDayNightEnabled = (def: SkyBoxDef | undefined) => isOn(def?.dayNight);
 
-/** The env bake's size: 256 by default, 128 with day-night (it re-bakes as the sun moves). */
+/**
+ * The env bake's size (`env.size`): 256 by default, 128 with day-night (it re-bakes as the sun
+ * moves).
+ * @internal
+ */
 export const getEnvSize = (def: SkyBoxDef | undefined) =>
   def?.env?.size ?? (isDayNightEnabled(def) ? DAY_NIGHT_ENV_SIZE : ENV_DEFAULTS.size);
 const DAY_NIGHT_ENV_SIZE = 128;
 
+/**
+ * Every layer's uniforms for an activation, with the definition's values and `time`'s
+ * directions written (applySkyUniforms). Called once per activation: a rebuild keeps them.
+ * @internal
+ */
 export const createSkyUniforms = (def: SkyBoxDef, time: SkyTimeState): SkyUniforms => {
   const atmosphere = createAtmosphereUniforms();
   const u = {
@@ -208,7 +293,9 @@ export const createSkyUniforms = (def: SkyBoxDef, time: SkyTimeState): SkyUnifor
  * A sun's unit direction at `timeOfDay`, into `out`. suns[0]: from the time of day with
  * day-night on, else its elevation and azimuth. Any other sun: its elevation and azimuth, which
  * with day-night and `rotateWithSky` are where it stands at the start time, turned with the sky
- * from there.
+ * from there. The debug tab shows it on the Suns folder's disabled sliders.
+ * @internal
+ * @returns `out`
  */
 export const computeSunDirectionOf = (
   def: SkyBoxDef,
@@ -224,8 +311,12 @@ export const computeSunDirectionOf = (
   return turnWithSky(def.dayNight, out, getDayNightStartTime(def.dayNight), timeOfDay, out);
 };
 
-/** A moon's unit direction, into `out`: from the time of day and its running phase with
- * day-night on, else its elevation and azimuth. */
+/**
+ * A moon's unit direction, into `out`: from the time of day and its running phase with
+ * day-night on, else its elevation and azimuth.
+ * @internal
+ * @returns `out`
+ */
 export const computeMoonDirectionOf = (
   def: SkyBoxDef,
   i: number,
@@ -286,8 +377,12 @@ const getSunAtmosphere = (u: SkyUniforms, def: SkyBoxDef): SunAtmosphere => {
   return u.sunAtmosphere;
 };
 
-/** Writes every layer's non-structural values to its uniforms. The primary sun's direction
- * comes first: the atmosphere's terms depend on it, and the discs on the atmosphere's. */
+/**
+ * Writes every layer's non-structural values to its uniforms (activation and every update).
+ * The primary sun's direction comes first: the atmosphere's terms depend on it, and the discs
+ * on the atmosphere's.
+ * @internal
+ */
 export const applySkyUniforms = (u: SkyUniforms, def: SkyBoxDef, time: SkyTimeState) => {
   applyBaseUniforms(u.base, def.base, def.env);
   writeDirections(u, def, time);
@@ -311,8 +406,9 @@ export const applySkyUniforms = (u: SkyUniforms, def: SkyBoxDef, time: SkyTimeSt
 
 /**
  * The day-night step's write, after the time changed: the sun's and moon's directions and only
- * what depends on them (every other value is as applySkyUniforms left it). Runs every frame while the cycle
- * plays, so it allocates nothing.
+ * what depends on them (every other value is as applySkyUniforms left it). Runs every frame
+ * while the cycle plays, so it allocates nothing.
+ * @internal
  */
 export const applySkyTimeUniforms = (u: SkyUniforms, def: SkyBoxDef, time: SkyTimeState) => {
   writeDirections(u, def, time);
@@ -331,7 +427,11 @@ export const applySkyTimeUniforms = (u: SkyUniforms, def: SkyBoxDef, time: SkyTi
   if (isGroundEnabled(def)) applyGroundSunUniforms(u.ground, hasAtmosphere, sunDirection);
 };
 
-/** Whether a definition has an enabled procedural layer (then it's on the composite path). */
+/**
+ * Whether a definition has an enabled procedural layer: then it's on the composite path, else
+ * on the direct one (buildBaseLayer).
+ * @internal
+ */
 export const hasProceduralLayer = (def: SkyBoxDef) =>
   isAtmosphereEnabled(def) ||
   (def.suns?.some((_, i) => isSunEnabled(def, i)) ?? false) ||
@@ -340,7 +440,13 @@ export const hasProceduralLayer = (def: SkyBoxDef) =>
   isGroundEnabled(def) ||
   hasStaticLayers(def);
 
-/** Which layers exist: a change to it is a rebuild. */
+/**
+ * Which nodes the composite builds, as a string: which suns, moons (and their lights and
+ * textures), stars, Milky Way, atmosphere, clouds, ground and nebulae (with their octaves)
+ * exist, and the nebula cube's size. Two definitions with the same signature share a graph, so
+ * a change to it is a rebuild (SkyBox.ts' update), any other a uniform write.
+ * @internal
+ */
 export const getCompositeSignature = (def: SkyBoxDef) =>
   [
     Array.from(
@@ -372,7 +478,9 @@ const staticLayersNode = (
 
 /**
  * The composite colour in direction `dir` (a world direction: normalWorldGeometry of the
- * background sphere, in both modes: the bake scene's background is drawn the same way).
+ * background sphere, in both modes: the bake scene's background is drawn the same way). Only
+ * the layers the definition has are in the graph (getCompositeSignature).
+ * @internal
  */
 export const buildSkyComposite = (
   def: SkyBoxDef,

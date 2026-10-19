@@ -10,6 +10,8 @@
  * the clouds drift by the sky box's own clock (`time`, which stops with the loop), not three's
  * wall-clock `time` node; and the env bake's clouds are frozen at the bake's time (ENV_BAKE).
  * With the defaults, the atmosphere's exposure at 1 and no sun disc, it's SkyMesh's clouds.
+ *
+ * Like every layer, internal to the sky box (the composite) and its debug tab.
  */
 import * as THREE from 'three/webgpu';
 import {
@@ -44,8 +46,11 @@ import {
 } from './Atmosphere';
 import { MOONLIGHT_COLOR, type MoonUniforms } from './Moon';
 
-export const CLOUDS_STRUCTURAL_KEYS = ['enabled'] as const;
-
+/**
+ * The clouds' defaults (SkyMesh's; the schema's "Default …" comments say the same, the debug
+ * tab shows these).
+ * @internal
+ */
 export const CLOUDS_DEFAULTS = {
   enabled: true,
   coverage: 0.4,
@@ -57,6 +62,10 @@ export const CLOUDS_DEFAULTS = {
   windDirection: [1, 1] as [number, number],
 };
 
+/**
+ * The clouds' uniforms, created once per activation.
+ * @internal
+ */
 export type CloudsUniforms = {
   coverage: THREE.UniformNode<'float', number>;
   density: THREE.UniformNode<'float', number>;
@@ -70,8 +79,9 @@ export type CloudsUniforms = {
   windDirection: THREE.UniformNode<'vec2', THREE.Vector2>;
   /** SkyMesh's day factor, smoothstep(-0.08, 0.3, sun y) (:351). */
   dayFactor: THREE.UniformNode<'float', number>;
-  /** The sky box's clock in seconds (SkyDayNight.ts, written every frame): the view's clouds drift by
-   * it, so they stop while the master loop is paused, in editor views and while a scene loads. */
+  /** The sky box's clock in seconds (SkyDayNight.ts, written every frame): the view's clouds
+   * drift by it, so they stop while the master loop is paused, in editor views and while a scene
+   * loads. */
   time: THREE.UniformNode<'float', number>;
   /** The env bake's frozen time: `time` as it was at the bake, set before each bake. */
   bakeTime: THREE.UniformNode<'float', number>;
@@ -79,6 +89,10 @@ export type CloudsUniforms = {
   moonLight: THREE.UniformNode<'color', THREE.Color>;
 };
 
+/**
+ * The clouds' uniforms at the defaults (applyCloudsUniforms writes the definition's).
+ * @internal
+ */
 export const createCloudsUniforms = (): CloudsUniforms => ({
   coverage: uniform(CLOUDS_DEFAULTS.coverage),
   density: uniform(CLOUDS_DEFAULTS.density),
@@ -94,6 +108,11 @@ export const createCloudsUniforms = (): CloudsUniforms => ({
   moonLight: uniform(new THREE.Color(0, 0, 0)),
 });
 
+/**
+ * Writes the clouds' values to their uniforms, and the sun-dependent day factor. The clock
+ * (`time`, `bakeTime`) is the day-night step's, the moonlight applyCloudsMoonUniforms'.
+ * @internal
+ */
 export const applyCloudsUniforms = (
   u: CloudsUniforms,
   def: SkyBoxCloudsDef | undefined,
@@ -112,7 +131,10 @@ export const applyCloudsUniforms = (
   applyCloudsSunUniforms(u, sunDirection);
 };
 
-/** Writes the sun-dependent day factor (the day-night step, every time the sun moves). */
+/**
+ * Writes the sun-dependent day factor (the day-night step, every time the sun moves).
+ * @internal
+ */
 export const applyCloudsSunUniforms = (u: CloudsUniforms, sunDirection: THREE.Vector3) => {
   u.dayFactor.value = getDayFactor(sunDirection);
 };
@@ -125,8 +147,9 @@ const _fex = new THREE.Vector3();
 
 /**
  * Writes the clouds' moonlight: the moon's radiance times its lit fraction, faded below the
- * horizon and by day, through the extinction along it (relative to the zenith's). The day-night step calls it every time
- * the sky moves: it allocates nothing.
+ * horizon and by day, through the extinction along it (relative to the zenith's). The day-night
+ * step calls it every time the sky moves: it allocates nothing.
+ * @internal
  * @param moon the moon's uniforms (position written), null without a moon
  * @param atmosphere the atmosphere's uniforms (clouds always have one)
  */
@@ -195,6 +218,7 @@ const fbm = Fn(([position, drift]: [THREE.Node<'vec2'>, THREE.Node<'float'>]) =>
  * The atmosphere with clouds: its composed colour, with the clouds over it (SkyMesh.js:325-379).
  * What they cover (the layers behind the atmosphere, eg. the sun disc, and the night floor) is
  * hidden by their opacity; they are seen through the atmosphere's extinction.
+ * @internal
  */
 export const cloudsNode = (
   dir: THREE.Node<'vec3'>,

@@ -7,6 +7,8 @@
  * elongation, taken the short way (`2π · phase` folded into [0, π]): the phase always shows as
  * given (0 new, 0.5 full) with the lit side facing the sun, whether day-night places the moon
  * (SkyTime.ts, where that is about the true elongation) or its elevation and azimuth do.
+ *
+ * Like every layer, internal to the sky box (the composite, the lights) and its debug tab.
  */
 import * as THREE from 'three/webgpu';
 import {
@@ -31,10 +33,15 @@ import { toSkyColor } from '../SkyColor';
 import { getTexture } from '../../../kernel/assets/Texture';
 import { loadSkyTextureAsync, reportSkyTextureFailure } from './Base';
 import { MOON_TIME_DEFAULTS } from '../SkyTime';
-
-export { MAX_MOONS } from '../SkyTime';
 import { SUN_DISC_RADIUS } from './Sun';
 
+export { MAX_MOONS } from '../SkyTime';
+
+/**
+ * A moon's defaults, its time-related ones (SkyTime.ts) included (the schema's "Default …"
+ * comments say the same; the debug tab shows these).
+ * @internal
+ */
 export const MOON_DEFAULTS = {
   enabled: true,
   elevation: 30,
@@ -47,7 +54,10 @@ export const MOON_DEFAULTS = {
   ...MOON_TIME_DEFAULTS,
 };
 
-/** Moonlight's colour (#b8c6ff): the moon light's AUTO colour, and the clouds' moonlight. */
+/**
+ * Moonlight's colour (#b8c6ff): the moon light's AUTO colour, and the clouds' moonlight.
+ * @internal
+ */
 export const MOONLIGHT_COLOR = new THREE.Color('#b8c6ff');
 
 /** The env bake's glow (without a moon light): at most this bright, at least this many bake
@@ -55,6 +65,11 @@ export const MOONLIGHT_COLOR = new THREE.Color('#b8c6ff');
 const ENV_DISC_CLAMP = 20;
 const ENV_DISC_MIN_TEXELS = 2;
 
+/**
+ * A moon's uniforms (one set per possible moon), created once per activation. The clouds'
+ * moonlight and the moon's light read them too.
+ * @internal
+ */
 export type MoonUniforms = {
   /** The moon's unit direction. */
   direction: THREE.UniformNode<'vec3', THREE.Vector3>;
@@ -77,6 +92,11 @@ export type MoonUniforms = {
   illuminatedFraction: number;
 };
 
+/**
+ * A moon's uniforms at neutral values (applyMoonUniforms and applyMoonPositionUniforms write
+ * the definition's).
+ * @internal
+ */
 export const createMoonUniforms = (): MoonUniforms => ({
   direction: uniform(new THREE.Vector3(0, 1, 0)),
   axisU: uniform(new THREE.Vector3(1, 0, 0)),
@@ -92,8 +112,11 @@ export const createMoonUniforms = (): MoonUniforms => ({
   illuminatedFraction: 1,
 });
 
-/** The moon's unit direction from its elevation and azimuth (degrees), as the sun's
- * (getFixedSunDirection). Day-night places it from the time and phase instead (SkyTime.ts). */
+/**
+ * The moon's unit direction from its elevation and azimuth (degrees), as the sun's
+ * (getFixedSunDirection). Day-night places it from the time and phase instead (SkyTime.ts).
+ * @internal
+ */
 export const getFixedMoonDirection = (moon: SkyBoxMoonDef | undefined, out: THREE.Vector3) =>
   out.setFromSphericalCoords(
     1,
@@ -101,7 +124,10 @@ export const getFixedMoonDirection = (moon: SkyBoxMoonDef | undefined, out: THRE
     THREE.MathUtils.degToRad(moon?.azimuth ?? MOON_DEFAULTS.azimuth)
   );
 
-/** Writes the moon's settings (its direction and phase follow in applyMoonPositionUniforms). */
+/**
+ * Writes the moon's settings (its direction and phase follow in applyMoonPositionUniforms).
+ * @internal
+ */
 export const applyMoonUniforms = (
   u: MoonUniforms,
   moon: SkyBoxMoonDef | undefined,
@@ -123,6 +149,7 @@ const _toSun = new THREE.Vector3();
  * Writes what follows the moon's direction (written first) and phase: the disc's axes, its lit
  * direction, lit fraction and env glow. The day-night step calls it every time the sky moves:
  * it allocates nothing.
+ * @internal
  */
 export const applyMoonPositionUniforms = (
   u: MoonUniforms,
@@ -155,9 +182,18 @@ export const applyMoonPositionUniforms = (
 
 // Texture
 
+/**
+ * A moon texture's defaults: a disc image (not an equirectangular map of the sphere).
+ * @internal
+ */
 export const MOON_TEXTURE_DEFAULTS = { projection: 'DISC' as 'DISC' | 'EQUIRECTANGULAR' };
 
-/** Loads (or finds, by textureId) the moon's texture; null without one or on a failed load. */
+/**
+ * Loads (or finds, by textureId) the moon's texture, with its colour space set. Never rejects.
+ * @internal
+ * @returns the texture, or null without one or on a failed load (logged, and shown as a debug
+ * toast)
+ */
 export const loadMoonTexture = async (moon: SkyBoxMoonDef | undefined) => {
   const def = moon?.texture;
   if (!def) return null;
@@ -206,10 +242,11 @@ const sampleMoonTexture = (
 
 /**
  * The moon over `behind`. VIEW: the lit sphere (the phase, earthshine and limb darkening, and the
- * texture), antialiased at the rim, hiding what's behind it. No branch: implicit-derivative work (fwidth, the texture
- * sample) must stay in uniform control flow on WebGPU, and a few dot products per sky pixel are
- * cheap. ENV_BAKE: nothing when the moon has a light (it gives that highlight); otherwise a
+ * texture), antialiased at the rim, hiding what's behind it. No branch: implicit-derivative work
+ * (fwidth, the texture sample) must stay in uniform control flow on WebGPU, and a few dot
+ * products per sky pixel are cheap. ENV_BAKE: nothing when the moon has a light (it gives that highlight); otherwise a
  * clamped glow a few bake texels wide, scaled by the lit fraction.
+ * @internal
  */
 export const moonNode = (
   dir: THREE.Node<'vec3'>,

@@ -9,8 +9,18 @@ import { isHDR } from '../../../kernel/assets/AssetFiles';
 import { addDebugToastWhenReady } from '../../../debug/DebuggerGUI';
 import { lerror } from '../../../utils/Logger';
 
-/** Base keys that change the texture or the node graph: changing one re-runs the activation.
- * Any other base key is a uniform or scene property write. */
+/**
+ * Base layer: a colour, an equirectangular texture or a cube texture, and the env layer's
+ * defaults. Without a procedural layer it's the whole sky box (the direct path, buildBaseLayer);
+ * with one, the composite's back layer (baseNode). Internal to the sky box, its debug tab and the
+ * env ball.
+ */
+
+/**
+ * Base keys that change the texture or the node graph: changing one re-runs the activation
+ * (SkyBox.ts' update). Any other base key is a uniform or scene property write.
+ * @internal
+ */
 export const BASE_STRUCTURAL_KEYS = [
   'type',
   'file',
@@ -22,7 +32,16 @@ export const BASE_STRUCTURAL_KEYS = [
   'flipY',
 ] as const;
 
+/**
+ * The base layer's defaults (the schema's "Default …" comments say the same; the debug tab
+ * shows these).
+ * @internal
+ */
 export const BASE_DEFAULTS = { rotate: 0, intensity: 1, flipY: false };
+/**
+ * The env layer's defaults; `size` is 128 instead with day-night (SkyComposite.ts' getEnvSize).
+ * @internal
+ */
 export const ENV_DEFAULTS = {
   backgroundRoughness: 0,
   backgroundIntensity: 1,
@@ -34,7 +53,10 @@ export const ENV_DEFAULTS = {
   nebulaSize: 512 as SkyBoxNebulaSize,
 };
 
-/** The base layer's uniforms, created once per activation and kept across node rebuilds. */
+/**
+ * The base layer's uniforms, created once per activation and kept across node rebuilds.
+ * @internal
+ */
 export type BaseUniforms = {
   intensity: THREE.UniformNode<'float', number>;
   backgroundRoughness: THREE.UniformNode<'float', number>;
@@ -44,10 +66,15 @@ export type BaseUniforms = {
   rotation: THREE.UniformNode<'mat3', THREE.Matrix3>;
 };
 
+/**
+ * The direct path's nodes and textures (buildBaseLayer), kept on `ActiveSkyBox`.
+ * @internal
+ */
 export type BaseLayer = {
   /** The source texture (its PMREM is what's sampled), null for a COLOR base. */
   texture: THREE.Texture | null;
-  /** The PMREM both nodes sample (the source texture itself until it's ready), null for a COLOR base. */
+  /** The PMREM both nodes sample (the source texture itself until it's ready), null for a COLOR
+   * base. */
   environmentTexture: THREE.Texture | null;
   backgroundNode: THREE.Node;
   /** Null for a COLOR base (the composite path bakes one, see SkyBox.ts). */
@@ -137,8 +164,11 @@ const loadCubeTexture = async (
 };
 
 /**
- * Loads (or gets, by texture id) a texture base's texture. Returns null for a COLOR base, or
- * when the texture can't be found or loaded (the error is logged).
+ * Loads (or gets, by texture id) a texture base's texture, with the base's colour space set (a
+ * change marks its upload and PMREM stale). Never rejects.
+ * @internal
+ * @returns the texture, or null for a COLOR base or when it can't be found or loaded (logged,
+ * and shown as a debug toast)
  */
 export const loadBaseTexture = (base: SkyBoxBaseDef): Promise<THREE.Texture | null> => {
   if (base.type === 'EQUIRECTANGULAR') return loadEquirectTexture(base);
@@ -146,11 +176,17 @@ export const loadBaseTexture = (base: SkyBoxBaseDef): Promise<THREE.Texture | nu
   return Promise.resolve(null);
 };
 
-/** Whether the base is a cube with flipY on. */
+/**
+ * Whether the base is a cube with flipY on (the env ball flips its lookup by it too).
+ * @internal
+ */
 export const isBaseFlipY = (base: SkyBoxBaseDef) =>
   base.type === 'CUBE_TEXTURE' && Boolean(base.flipY);
 
-/** A cube's flipY: turns a world direction a half turn about the X axis (upside down). */
+/**
+ * A cube's flipY: turns a world direction a half turn about the X axis (upside down).
+ * @internal
+ */
 export const turnUpsideDown = (dir: THREE.Node) => {
   const d = dir as THREE.Node<'vec3'>;
   return vec3(d.x, d.y.negate(), d.z.negate());
@@ -199,6 +235,10 @@ const getRotate = (base: SkyBoxBaseDef) =>
 const getIntensity = (base: SkyBoxBaseDef) =>
   base.type === 'COLOR' ? 1 : base.intensity ?? BASE_DEFAULTS.intensity;
 
+/**
+ * The base layer's uniforms, with the definition's values (once per activation).
+ * @internal
+ */
 export const createBaseUniforms = (
   base: SkyBoxBaseDef,
   env: SkyBoxEnvDef | undefined
@@ -209,7 +249,11 @@ export const createBaseUniforms = (
   rotation: uniform(setRotation(new THREE.Matrix3(), getRotate(base))),
 });
 
-/** Writes the base layer's non-structural values to its uniforms. */
+/**
+ * Writes the base layer's non-structural values to its uniforms (a COLOR base's colour included;
+ * a texture base keeps black, what a failed load shows).
+ * @internal
+ */
 export const applyBaseUniforms = (
   u: BaseUniforms,
   base: SkyBoxBaseDef,
@@ -231,6 +275,7 @@ const toLookupDir = (base: SkyBoxBaseDef, u: BaseUniforms, dir: THREE.Node) => {
  * The base layer in the composite (SkyComposite.ts): the colour it shows in direction `dir`,
  * with the flip and rotation applied here (the bake then holds them, so the environment node
  * gets neither). Sampled sharp: the composite's background blur comes from the env bake.
+ * @internal
  * @param pmrem the source texture's PMREM (getPMREMTexture), null for a COLOR base or a
  * texture that failed to load (black, as on the direct path)
  */
@@ -248,14 +293,17 @@ export const baseNode = (
  * Builds the base layer's nodes from one PMREM (the direct path, for sky boxes without
  * procedural layers): the background (blurred by env.backgroundRoughness), and the environment
  * (a bare PMREM, so the lighting context drives its direction and level). Both look up the same
- * world direction (the background's is its view direction, normalWorldGeometry of the back-side
- * background box; not normalWorld, which is negated on back sides), so what materials reflect
- * matches the background.
- *
- * Rotation: PMREMNode applies scene.environmentRotation (set by SkyBox.ts) to the environment,
- * but only for materials whose `envMap` is null, and the background box's plain NodeMaterial has
- * no envMap at all, so it always gets the identity there. The background applies the same
- * (transposed) rotation itself, after the flip, exactly as the environment gets it.
+ * world direction, so what materials reflect matches the background. A texture that failed to
+ * load (null) gives the black background of a COLOR base and no environment node.
+ * @internal
+ * @remarks
+ * Two three r186 direction traps:
+ * - The background's lookup is its view direction, `normalWorldGeometry` of the back-side
+ *   background box, not `normalWorld`, which is negated on back sides.
+ * - PMREMNode applies `scene.environmentRotation` (set by SkyBox.ts) to the environment, but
+ *   only for materials whose `envMap` is null, and the background box's plain NodeMaterial has
+ *   no `envMap` at all, so it always gets the identity there. The background applies the same
+ *   (transposed) rotation itself, after the flip, exactly as the environment gets it.
  */
 export const buildBaseLayer = (
   base: SkyBoxBaseDef,

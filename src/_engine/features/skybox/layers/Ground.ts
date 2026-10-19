@@ -4,6 +4,8 @@
  * a sea of clouds), and with `useAtmosphereHorizon` the ground fades toward the sky's own
  * horizon colour near it (aerial perspective). It also gives the ambient light's AUTO ground
  * colour.
+ *
+ * Like every layer, internal to the sky box (the composite, the lights) and its debug tab.
  */
 import * as THREE from 'three/webgpu';
 import { float, mix, smoothstep, uniform } from 'three/tsl';
@@ -11,8 +13,11 @@ import type { SkyBoxGroundDef } from '../SkyBoxTypes';
 import { toSkyColor } from '../SkyColor';
 import { getDayFactor } from './Atmosphere';
 
-export const GROUND_STRUCTURAL_KEYS = ['enabled'] as const;
-
+/**
+ * The ground's defaults (the schema's "Default …" comments say the same; the debug tab and
+ * the ambient light's AUTO ground colour read them).
+ * @internal
+ */
 export const GROUND_DEFAULTS = {
   enabled: true,
   color: '#3b3a36',
@@ -26,6 +31,10 @@ const AERIAL_DEPTH = 0.3;
 /** Keeps the blend band's smoothstep defined. */
 const MIN_BLEND = 1e-4;
 
+/**
+ * The ground's uniforms, created once per activation.
+ * @internal
+ */
 export type GroundUniforms = {
   color: THREE.UniformNode<'color', THREE.Color>;
   /** The view direction's height of the ground's horizon line: -sin(height). */
@@ -37,6 +46,10 @@ export type GroundUniforms = {
   light: THREE.UniformNode<'float', number>;
 };
 
+/**
+ * The ground's uniforms at neutral values (applyGroundUniforms writes the definition's).
+ * @internal
+ */
 export const createGroundUniforms = (): GroundUniforms => ({
   color: uniform(new THREE.Color()),
   horizonY: uniform(0),
@@ -45,6 +58,11 @@ export const createGroundUniforms = (): GroundUniforms => ({
   light: uniform(1),
 });
 
+/**
+ * Writes the ground's values to its uniforms, and the sun-dependent light. The aerial fade
+ * needs the atmosphere: without one it's off whatever `useAtmosphereHorizon` says.
+ * @internal
+ */
 export const applyGroundUniforms = (
   u: GroundUniforms,
   def: SkyBoxGroundDef | undefined,
@@ -59,7 +77,10 @@ export const applyGroundUniforms = (
   applyGroundSunUniforms(u, hasAtmosphere, sunDirection);
 };
 
-/** Writes the sun-dependent ground light (the day-night step, every time the sun moves). */
+/**
+ * Writes the sun-dependent ground light (the day-night step, every time the sun moves).
+ * @internal
+ */
 export const applyGroundSunUniforms = (
   u: GroundUniforms,
   hasAtmosphere: boolean,
@@ -68,7 +89,10 @@ export const applyGroundSunUniforms = (
   u.light.value = hasAtmosphere ? Math.max(getDayFactor(sunDirection), 0.03) : 1;
 };
 
-/** The ground over `behind` (everything above it, seen below the horizon too). */
+/**
+ * The ground over `behind` (everything above it, seen below the horizon too).
+ * @internal
+ */
 export const groundNode = (
   dir: THREE.Node<'vec3'>,
   behind: THREE.Node,

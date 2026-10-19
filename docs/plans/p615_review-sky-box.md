@@ -605,6 +605,46 @@ of the six sky scenes too.)
 2. D10's remaining tests (the presets, the signature).
 3. `yarn verify:scenes`: unchanged.
 
+As built, section 1 (2026-10-19): the internals' code and JSDoc.
+
+- **`@internal` throughout** (the coding standard, as Phase 3 did for `Presets.ts` and
+  `SkyBoxTypes.ts`): every export of `SkyComposite.ts`, `SkyEnvironment.ts`, `SkyStaticLayers.ts`,
+  `SkyTime.ts`, `SkyLights.ts` (but `getSkyLightIds`) and `layers/` has a summary and `@internal`;
+  each module's header says who uses it (the sky box, its debug tab; the env ball for `Base.ts`,
+  GPU memory for the two bakes). Nothing outside `features/skybox/` and those two debug modules
+  imports them (checked).
+- **C2:** the four unread `*_STRUCTURAL_KEYS` removed (`Sun.ts`, `Ground.ts`, `Atmosphere.ts`,
+  `Clouds.ts`); `BASE_STRUCTURAL_KEYS` stays (SkyBox.ts' update reads it).
+- **C3:** `layers/Nebula.ts` draws its offsets from `createSeededRandom` (its own mulberry32 copy
+  removed, the same numbers).
+- **C4:** the layers' 28 remaining undocumented exports documented: the defaults say the schema's
+  "Default …" comments match and the debug tab shows them (both stay, as C4 says), the uniform
+  types and creators what writes their real values.
+- **B2:** `_setEnvBakeHooks` / `_setStaticLayersBakeHooks` (the bake stats set them when their
+  debug module loads; without hooks a bake reads no wall clock), `isEnvBakeRequested`.
+- **L1:** the three light defaults documented; `getSkyLightIds` is public: its summary says what
+  it returns and to read it in an `onSkyBoxChange` listener, with a type-checked `@example`
+  (largeWorld's use). It was "(debug and tests)".
+- **T1:** `DAY_NIGHT_DEFAULTS`, `createSkyTimeState` and the rest of `SkyTime.ts` (`@returns` where
+  a function returns its `out`). S7's `layers/moon.ts` there was already fixed in Phase 3.
+- **D9's `@remarks`**, from the comments that held them (each comment at the code shortened to
+  point at it, or kept where it explains a line):
+  - `setEnvBake`: the destroyed-texture trap (`initEnvBakeTarget`), and **B1** (activated before
+    `createRenderer` resolves, the clear is skipped and the generator gets no renderer; no path
+    does, so it isn't guarded). Put here, not on `setActiveSkyBox`: the public call has no path
+    that hits it, so its JSDoc would only warn about the boot's own order.
+  - `setStaticLayers`: the same trap (`initTarget`), pointing at `setEnvBake`'s.
+  - The disc light's create: on `syncSkyLights` (exported; `createDiscLight` isn't): the first
+    shadow map render, and a `castShadow` change re-creating the light (the PostFX crash).
+  - `buildBaseLayer`: `normalWorldGeometry` (not `normalWorld`), and PMREMNode's
+    `environmentRotation` skipping materials without an `envMap`.
+  - `starsNode`: the TSL `If` that mustn't build a shared node first.
+- Hygiene: comment lines over 100 columns reflowed (left over from earlier phases' renames);
+  `Moon.ts`' import that sat after its re-export moved above it.
+- **Checks:** `yarn test` 633 passed, 1 skipped; `tsc` and the lint clean. `docs.json` recorded:
+  skybox 177 / 177, layers 78 / 78 (4 fewer: C2). `api.json` still lists C2's constants and
+  Phase 3's removed re-exports: Phase 7's `yarn verify:baselines --update` records them.
+
 ### Phase 5: the debug tab (G1, G2)
 
 1. `_dbg__SkyBoxShared.ts` split, moved as is; its importers updated.

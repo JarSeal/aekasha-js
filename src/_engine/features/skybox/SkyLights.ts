@@ -18,6 +18,8 @@
  * ("Texture 'output' ... writable usage and another usage in the same synchronization scope"),
  * while a new light with `castShadow: true` renders fine. The cost is the same one lit-material
  * rebuild either way.
+ *
+ * Internal to the sky box and its debug tab, but getSkyLightIds (on the entry).
  */
 import * as THREE from 'three/webgpu';
 import { getECSWorld, type ECSWorld } from '../../kernel/ecs/ECS';
@@ -47,9 +49,18 @@ import { toSkyColor } from './SkyColor';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { lwarn } from '../../utils/Logger';
 
-/** The MANAGED_BY manager id of the entities a sky box owns. */
+/**
+ * The MANAGED_BY manager id of the entities a sky box owns (the Lights tab links them to the
+ * sky box tab by it).
+ * @internal
+ */
 export const SKYBOX_MANAGER_ID = 'SKYBOX';
 
+/**
+ * suns[0]'s light's defaults (the schema's "Default …" comments say the same; the debug tab
+ * shows these). The extra suns' and the moons' derive from them.
+ * @internal
+ */
 export const SUN_LIGHT_DEFAULTS = {
   enabled: true,
   intensity: 3,
@@ -62,21 +73,37 @@ export const SUN_LIGHT_DEFAULTS = {
   horizonFade: [6, -3] as [number, number],
 };
 
-/** suns[1..3]'s lights: no shadow by default (one shadow-casting sky light by default). */
+/**
+ * suns[1..3]'s lights' defaults: suns[0]'s without a shadow (one shadow-casting sky light by
+ * default).
+ * @internal
+ */
 export const EXTRA_SUN_LIGHT_DEFAULTS = {
   ...SUN_LIGHT_DEFAULTS,
   castShadow: false,
 };
 
+/**
+ * A moon light's defaults: suns[0]'s, dimmer and without a shadow.
+ * @internal
+ */
 export const MOON_LIGHT_DEFAULTS = {
   ...SUN_LIGHT_DEFAULTS,
   intensity: 0.3,
   castShadow: false,
 };
 
-/** Above this many shadow-casting sky lights, the debug env warns. */
+/**
+ * Above this many shadow-casting sky lights, the debug env warns (and the tab says so).
+ * @internal
+ */
 export const MAX_SHADOW_CASTERS_HINT = 2;
 
+/**
+ * The ambient (or hemisphere) light's defaults: a hemisphere light whose colours follow the sky
+ * and the ground (`'AUTO'`).
+ * @internal
+ */
 export const AMBIENT_LIGHT_DEFAULTS = {
   enabled: true,
   type: 'HEMISPHERE' as 'HEMISPHERE' | 'AMBIENT',
@@ -88,10 +115,16 @@ export const AMBIENT_LIGHT_DEFAULTS = {
 /** The shadow camera's near plane; its far plane is twice the light's distance. */
 const SHADOW_NEAR = 0.5;
 
-/** Which kind of sky disc a directional light follows. */
+/**
+ * Which kind of sky disc a directional light follows.
+ * @internal
+ */
 export type DiscKind = 'SUN' | 'MOON';
 
-/** A disc light's defaults, by kind and index. */
+/**
+ * A disc light's defaults, by kind and index (suns[0], the extra suns, or a moon).
+ * @internal
+ */
 export const getDiscLightDefaults = (kind: DiscKind, index: number) =>
   kind === 'MOON'
     ? MOON_LIGHT_DEFAULTS
@@ -334,6 +367,7 @@ const writeTransform = (entityId: number, position: THREE.Vector3, world: ECSWor
  * object3DSyncSystem); writes nothing while the follow point and settings are unchanged. The
  * camera's position is read once, from its world matrix as the last render left it, which a
  * texel-snapped frustum doesn't notice.
+ * @internal
  */
 export const updateSkyLightsFrame = (world: ECSWorld) => {
   const camera = getActiveCamera();
@@ -447,6 +481,7 @@ const applyAmbientLightSun = (
  * The day-night step's light write, after the sky moved (applySkyTimeUniforms first): each
  * light's motion-dependent values only. The transforms follow in updateSkyLightsFrame. Runs
  * every frame while the cycle plays, so it allocates nothing.
+ * @internal
  */
 export const updateSkyLightsForTime = (def: SkyBoxDef, u: SkyUniforms, world: ECSWorld) => {
   for (let i = 0; i < MAX_SUNS; i++) updateDiscLightForTime('SUN', i, def, u, world);
@@ -516,7 +551,11 @@ const syncDiscLight = (
   applyDiscLight(next, lightDef, def, u, world);
 };
 
-/** How many of the sky box's lights cast shadows (each is a full extra scene render). */
+/**
+ * How many of the sky box's lights cast shadows (each is a full extra scene render): the debug
+ * warning's and the tab's count.
+ * @internal
+ */
 export const getSkyShadowCasterCount = () =>
   [...discLights.SUN, ...discLights.MOON].filter((state) => state?.castShadow).length;
 
@@ -539,7 +578,11 @@ const deleteAmbientLight = (world: ECSWorld) => {
   ambientLight = null;
 };
 
-/** Deletes the sky box's lights (clearSkyBox, or another sky box activating). */
+/**
+ * Deletes the sky box's lights (clearSkyBox, or another sky box activating). A light already
+ * deleted from outside is skipped.
+ * @internal
+ */
 export const deleteSkyLights = () => {
   const world = getECSWorld();
   for (let i = 0; i < MAX_SUNS; i++) deleteDiscLight('SUN', i, world);
@@ -551,7 +594,20 @@ export const deleteSkyLights = () => {
 
 /**
  * Creates, updates or deletes the sky box's lights to match its definition (after every
- * activation and change). The transforms follow on the next skyBoxSystem tick.
+ * activation and change). Another sky box's lights are deleted first, and an entity deleted
+ * from outside (eg. a world reset) is created again. The transforms follow on the next
+ * skyBoxSystem tick.
+ * @internal
+ * @remarks
+ * Two three r186 traps (WebGPU), each guarded here:
+ * - A new shadow-casting disc light renders its shadow map once right away, even faded out
+ *   (`shadow.autoUpdate` false): a map sampled before its first render gets its GPU texture
+ *   destroyed in place by that render ("Destroyed texture used in a submit" on every frame, as
+ *   setEnvBake's remarks describe).
+ * - A `castShadow` change deletes the light and creates a new one, never sets the flag: with
+ *   PostFX on, a light whose shadow is turned back on after it was off crashes the frame
+ *   ("Texture 'output' ... writable usage and another usage in the same synchronization
+ *   scope"). Something else changing the light's flag is treated the same way.
  */
 export const syncSkyLights = (skyBoxId: string, def: SkyBoxDef, u: SkyUniforms) => {
   const world = getECSWorld();
@@ -582,7 +638,25 @@ export const syncSkyLights = (skyBoxId: string, def: SkyBoxDef, u: SkyUniforms) 
   }
 };
 
-/** The sky box's managed light entity ids, by sun and moon index (debug and tests). */
+/**
+ * The active sky box's light entities (made by `createLightEntity`, MANAGED_BY the sky box): by
+ * sun and moon index, null where that sun or moon has no light (or there's none), and the
+ * ambient light's. The lights change with the sky box, so read them in an
+ * {@link _engine/features/skybox/SkyBox!onSkyBoxChange} listener, not once.
+ * @returns new arrays on every call (`suns` MAX_SUNS long, `moons` MAX_MOONS)
+ * @example
+ * ```ts
+ * import { getECSWorld, getEntityIdByAppId, setLightEnabled } from 'aekasha';
+ * import { getSkyLightIds, onSkyBoxChange } from 'aekasha/skybox';
+ *
+ * // The scene's own sun is off while the sky box brings a sun light
+ * const removeListener = onSkyBoxChange(() => {
+ *   const hasSkySun = getSkyLightIds().suns.some((id) => id !== null);
+ *   const sunId = getEntityIdByAppId('mySun');
+ *   if (sunId !== undefined) setLightEnabled(sunId, !hasSkySun, getECSWorld());
+ * });
+ * ```
+ */
 export const getSkyLightIds = () => ({
   suns: discLights.SUN.map((state) => state?.entityId ?? null),
   moons: discLights.MOON.map((state) => state?.entityId ?? null),
