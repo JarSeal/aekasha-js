@@ -789,6 +789,32 @@ As built, section 1 (2026-10-19): the Hub pages.
   chunk does). Phase 7 decides between shrinking it (`yarn sbp --why _engine/features/skybox`)
   and raising the budget in `sbp.config.ts` with a comment that says why, as p614 did for physics.
 
+As built, section 2 (2026-10-19): the CLAUDE.md files and the readme.
+
+- `features/skybox/CLAUDE.md` (still one `## Sky box` section, so no `aek:covers` change):
+  - **K1:** the feature in one bullet (the state-flow bullet's copy removed, its details,
+    `activateSceneDefaultSkyBox`'s default rule among them, moved into it), with **D8**'s stop:
+    what `stopSkyBox` settles, clears and drops, before `deleteRenderer()`, and what stays.
+  - A new bullet on the public API: the entry, `@internal` for the rest with who uses it,
+    `SkyBoxState` and `SkyBoxChangeReason` for the listener and the three calls' results,
+    `ActiveSkyBox` internal (D7).
+  - **K2:** `resolveSkyBoxPreset` on the entry with `SKYBOX_PRESET_NAMES`, and
+    `mergeSkyBoxPreset` as its untyped form; the state flow says a `preset` left on a code
+    definition is ignored with a debug warning.
+  - The state flow: S1's queue (how updates during an activation coalesce and which win) and
+    S2's texture failures (`loadSkyTextureAsync`, `reportSkyTextureFailure`, black base, plain
+    moon, a promise `catch` rather than a `try`).
+  - **K3 / D5:** a sky clock bullet (`skyClockSec`: what advances it, what stops it, why it's
+    module state, the restart through `_setSkyBoxClearHook`, the stars left on three's `time`
+    with the test bridge pinning it, the bake schedules on `getElapsedTime()`); the static
+    layers' throttle says whose 150 ms; `skyBoxSystem` names `SkyDayNight.ts`.
+  - C5's colour reading (both forms sRGB), the traps' `@remarks` locations (D9), and the legacy
+    shape's deprecation with what goes in 6.0.0.
+- The root `.claude/CLAUDE.md`: the map line names the state flow and the stop and the sky
+  clock; Engine features' `onUnmount` sentence names the sky box's stop next to physics'.
+- `readme.md`: unchanged. Its sky box bullet and its examples (`skyBox()` in `features`, a
+  scene's `skyboxes`) still hold, and no API it lists changed.
+
 ### Phase 7: versions and done
 
 1. D2's bumps, a `CHANGELOG.md` entry (D5's paused clouds and D8 called out),
