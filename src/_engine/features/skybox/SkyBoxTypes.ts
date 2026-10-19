@@ -29,12 +29,20 @@ export type SkyBoxBaseDef =
   | Extract<SkyBoxBaseInput, { type: 'COLOR' }>
   | (Exclude<SkyBoxBaseInput, { type: 'COLOR' }> & { texture?: THREE.Texture });
 
+/**
+ * A base layer's type: `'COLOR'`, `'EQUIRECTANGULAR'` or `'CUBE_TEXTURE'` (the debug tab's base
+ * folder).
+ * @internal
+ */
 export type SkyBoxBaseType = SkyBoxBaseDef['type'];
 
 /** A sky box's env layer (background blur and intensities, and the env bake settings). */
 export type SkyBoxEnvDef = z.input<typeof SkyBoxEnvSchema>;
 
-/** The env bake's cube face size. */
+/**
+ * The env bake's cube face size (`env.size`; the layers' and the env bake's code).
+ * @internal
+ */
 export type SkyBoxEnvSize = z.infer<typeof SkyBoxEnvSizeSchema>;
 
 /** The atmosphere layer (Preetham scattering, driven by suns[0]). */
@@ -62,7 +70,10 @@ export type SkyBoxStarsDef = z.input<typeof SkyBoxStarsSchema>;
 /** A nebula (baked into the nebula cube, SkyStaticLayers.ts). */
 export type SkyBoxNebulaDef = z.input<typeof SkyBoxNebulaSchema>;
 
-/** The nebula cube's face size. */
+/**
+ * The nebula cube's face size (`env.nebulaSize`; the static layers' bake).
+ * @internal
+ */
 export type SkyBoxNebulaSize = NonNullable<SkyBoxEnvDef['nebulaSize']>;
 
 /** The clouds layer (needs the atmosphere). */
@@ -77,13 +88,30 @@ export type SkyBoxAmbientLightDef = z.input<typeof SkyBoxAmbientLightSchema>;
 /** The day-night cycle's values on activation (the runtime time is SkyTimeState). */
 export type SkyBoxDayNightDef = z.input<typeof SkyBoxDayNightSchema>;
 
-/** What advances the day-night time. */
+/**
+ * What advances the day-night time (`dayNight.timeSource`; SkyTime.ts).
+ * @internal
+ */
 export type SkyTimeSource = NonNullable<SkyBoxDayNightDef['timeSource']>;
 
 /**
  * A sky box definition: the JSON shape (`SkyBoxDefSchema`), plus what only code can give, a
  * loaded texture and the scene to register in. It has no `preset`: JSON presets are resolved at
- * build time, and code resolves one with `resolveSkyBoxPreset` (SkyBox/presets.ts).
+ * build time, and code resolves one with `resolveSkyBoxPreset`.
+ * @example
+ * ```ts
+ * import { createSkyBox, type SkyBoxDef } from 'aekasha/skybox';
+ *
+ * // A clear day: the atmosphere, one sun with a shadow-casting light, and a ground
+ * const day: SkyBoxDef = {
+ *   id: 'clearDay',
+ *   base: { type: 'COLOR', color: '#000000' },
+ *   atmosphere: {},
+ *   suns: [{ elevation: 40, azimuth: 150, light: {} }],
+ *   ground: {},
+ * };
+ * void createSkyBox(day);
+ * ```
  */
 export type SkyBoxDef = Omit<z.input<typeof SkyBoxDefSchema>, 'base' | 'preset'> & {
   base: SkyBoxBaseDef;

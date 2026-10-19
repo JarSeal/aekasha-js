@@ -51,7 +51,7 @@ export const MOON_DEFAULTS = {
 export const MOONLIGHT_COLOR = new THREE.Color('#b8c6ff');
 
 /** The env bake's glow (without a moon light): at most this bright, at least this many bake
- * texels wide (as the sun's, layers/sun.ts). */
+ * texels wide (as the sun's, layers/Sun.ts). */
 const ENV_DISC_CLAMP = 20;
 const ENV_DISC_MIN_TEXELS = 2;
 

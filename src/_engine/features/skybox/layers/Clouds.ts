@@ -70,7 +70,7 @@ export type CloudsUniforms = {
   windDirection: THREE.UniformNode<'vec2', THREE.Vector2>;
   /** SkyMesh's day factor, smoothstep(-0.08, 0.3, sun y) (:351). */
   dayFactor: THREE.UniformNode<'float', number>;
-  /** The sky box's clock in seconds (SkyBox.ts, written every frame): the view's clouds drift by
+  /** The sky box's clock in seconds (SkyDayNight.ts, written every frame): the view's clouds drift by
    * it, so they stop while the master loop is paused, in editor views and while a scene loads. */
   time: THREE.UniformNode<'float', number>;
   /** The env bake's frozen time: `time` as it was at the bake, set before each bake. */

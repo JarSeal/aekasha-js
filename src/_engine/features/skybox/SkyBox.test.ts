@@ -43,13 +43,13 @@ import type { FeatureContext } from '../../kernel/init/Features';
 import {
   clearSkyBox,
   getActiveSkyBox,
-  installSkyBoxSystem,
   onSkyBoxChange,
   registerSkyBox,
   setActiveSkyBox,
   stopSkyBox,
   updateSkyBox,
 } from './SkyBox';
+import { installSkyBoxSystem } from './SkyDayNight';
 
 const equirect = (file: string) => ({ type: 'EQUIRECTANGULAR' as const, file });
 

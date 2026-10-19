@@ -20,7 +20,7 @@ export type StaticLayersResolution = SkyBoxNebulaSize;
 export type StaticLayersSource = {
   resolution: StaticLayersResolution;
   /** The layers in direction `dir` (the static layers' own frame): the colour (rgb) and the
-   * star boost mask (a, see layers/stars.ts). */
+   * star boost mask (a, see layers/Stars.ts). */
   build: (dir: THREE.Node<'vec3'>) => THREE.Node<'vec4'>;
 };
 

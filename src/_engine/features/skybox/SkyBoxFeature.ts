@@ -6,11 +6,11 @@ import {
   clearSkyBox,
   createSkyBoxDebugGUI,
   getActiveSkyBoxTexture,
-  installSkyBoxSystem,
   registerSkyBox,
   registerSkyBoxDebugGUI,
   stopSkyBox,
 } from './SkyBox';
+import { installSkyBoxSystem } from './SkyDayNight';
 
 /**
  * The sky box's part of the scenes' life: each scene's JSON sky boxes are registered with it, a
@@ -40,7 +40,8 @@ export const skyBoxSceneHooks: SceneHooks = {
 /**
  * The sky box feature: a procedural or texture sky as the root scene's background and
  * environment, with day-night, sky lights and the scenes' JSON sky boxes (`skyboxes`).
- * Without it, a scene's sky boxes aren't registered or shown.
+ * Without it, a scene's sky boxes aren't registered or shown. A mounted engine's `unmount()`
+ * stops it: the sky box cleared (its bakes and lights with it) and its change listeners dropped.
  * @example
  * ```ts
  * import { InitEngine } from 'aekasha';

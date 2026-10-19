@@ -21,20 +21,28 @@ import type { FeatureSchemaPart } from '../../schemas/FeatureSchemas';
 // Base layer
 
 const SkyBoxColorBaseSchema = z.object({
+  /** A flat colour. */
   type: z.literal('COLOR'),
+  /** The sky's colour (sRGB). */
   color: ColorJSONSchema,
 });
 
 const SkyBoxEquirectBaseSchema = z
   .object({
+    /** One image of the whole sphere (2:1, eg. an `.hdr`). */
     type: z.literal('EQUIRECTANGULAR'),
+    /** The image file to load (`.hdr` loads as HDR), relative to `path`. */
     file: z.string().optional(),
+    /** The folder `file` is in. Default: the site's root (`./`). */
     path: z.string().optional(),
+    /** With `file`, the id the loaded texture is registered under; without it, a registered
+     * texture's id. One of `file` and `textureId` is needed. */
     textureId: z.string().optional(),
     /** Default: 'srgb', or 'srgb-linear' for .hdr files. An empty string is unset. */
     colorSpace: ColorSpaceSchema.optional(),
     /** Rotation around the Y axis, in radians. */
     rotate: z.number().optional(),
+    /** The background's and the environment's brightness multiplier. Default 1. */
     intensity: z.number().min(0).optional(),
   })
   .refine((base) => Boolean(base.file || base.textureId), {
@@ -43,10 +51,13 @@ const SkyBoxEquirectBaseSchema = z
   });
 
 const SkyBoxCubeBaseSchema = z.object({
+  /** Six images, one per cube face. */
   type: z.literal('CUBE_TEXTURE'),
-  /** In the order +x, -x, +y, -y, +z, -z. */
+  /** In the order +x, -x, +y, -y, +z, -z, relative to `path`. */
   fileNames: z.array(z.string()).length(6),
+  /** The folder the files are in. Default: the site's root (`./`). */
   path: z.string().optional(),
+  /** The id the loaded cube texture is registered under. */
   textureId: z.string().optional(),
   /** Default: 'srgb', or 'srgb-linear' for .hdr files. An empty string is unset. */
   colorSpace: ColorSpaceSchema.optional(),
@@ -54,6 +65,7 @@ const SkyBoxCubeBaseSchema = z.object({
   rotate: z.number().optional(),
   /** Turns the cube upside down (a half turn about the X axis). */
   flipY: z.boolean().optional(),
+  /** The background's and the environment's brightness multiplier. Default 1. */
   intensity: z.number().min(0).optional(),
 });
 
@@ -78,7 +90,10 @@ export const SkyBoxEnvSizeSchema = z.union([
 export const SkyBoxEnvSchema = z.object({
   /** Blur of the background (PMREM roughness, 0-1). Materials' own roughness drives the environment. */
   backgroundRoughness: z.number().min(0).max(1).optional(),
+  /** The background's brightness (the root scene's `backgroundIntensity`). Default 1. */
   backgroundIntensity: z.number().min(0).optional(),
+  /** How strongly the environment lights materials (the root scene's `environmentIntensity`).
+   * Default 1. */
   environmentIntensity: z.number().min(0).optional(),
 
   // Environment bake settings: used by sky boxes on the composite path (procedural layers),
@@ -133,6 +148,7 @@ export const SkyBoxAtmosphereSchema = z.object({
   /** Colour grading of the scattered light at the horizon and the zenith (multiplied, blended by
    * height). Default white. */
   horizonTint: ColorJSONSchema.optional(),
+  /** As `horizonTint`, at the zenith. Default white. */
   zenithTint: ColorJSONSchema.optional(),
 });
 
@@ -153,7 +169,9 @@ export const SkyBoxSunLightSchema = z.object({
   castShadow: z.boolean().optional(),
   /** Default 'MEDIUM'. The bias, normal bias and map size below override it. */
   shadowPreset: ShadowQualitySchema.optional(),
+  /** The shadow's depth bias (against acne). Default: the preset's. */
   shadowBias: z.number().optional(),
+  /** The shadow's bias along the surface normal (against acne on slopes). Default: the preset's. */
   shadowNormalBias: z.number().optional(),
   /** The (square) shadow map's size in texels. */
   shadowMapSize: z.number().int().positive().optional(),
@@ -218,8 +236,12 @@ export const SkyBoxMoonLightSchema = SkyBoxSunLightSchema.extend({
 
 const SkyBoxMoonTextureSchema = z
   .object({
+    /** The image file to load, relative to `path`. */
     file: z.string().optional(),
+    /** The folder `file` is in. Default: the site's root (`./`). */
     path: z.string().optional(),
+    /** With `file`, the id the loaded texture is registered under; without it, a registered
+     * texture's id. One of `file` and `textureId` is needed. */
     textureId: z.string().optional(),
     /** Default 'srgb'. */
     colorSpace: ColorSpaceSchema.optional(),
@@ -503,9 +525,11 @@ export type SkyBoxOverrides = z.infer<typeof SkyBoxOverridesSchema>;
 const isLayerOn = (layer: { enabled?: boolean } | undefined) =>
   Boolean(layer && layer.enabled !== false);
 
-/** A sky box definition as authored (JSON or code). `SkyBoxDef` (SkyBox/SkyBoxTypes.ts) is its runtime type. */
+/** A sky box definition as authored (JSON or code). `SkyBoxDef` (SkyBoxTypes.ts) is its runtime type. */
 export const SkyBoxDefSchema = z
   .object({
+    /** What `setActiveSkyBox`, `updateSkyBox` and the save data name it by. A second sky box with
+     * the same id in a scene replaces the first. */
     id: z.string(),
     /** Whether this is the sky box its scene starts with. Without one, the first registered is. */
     isDefault: z.boolean().optional(),
@@ -517,28 +541,37 @@ export const SkyBoxDefSchema = z
     preset: z.enum(SKYBOX_PRESET_NAMES).optional(),
     /** Required, unless a preset gives it. */
     base: SkyBoxBaseSchema.optional(),
+    /** The background's blur and intensity, the environment's intensity and its bake. */
     env: SkyBoxEnvSchema.optional(),
+    /** Preetham scattering lit by suns[0] (three's SkyMesh): the day sky, dusk and night. */
     atmosphere: SkyBoxAtmosphereSchema.optional(),
     /** Up to 4. suns[0] is the primary: it drives the atmosphere, the clouds' light and the
      * stars' fade. */
     suns: z.array(SkyBoxSunSchema).max(4).optional(),
     /** Up to 2. moons[0] lights the clouds at night. */
     moons: z.array(SkyBoxMoonSchema).max(2).optional(),
+    /** Procedural stars (and the Milky Way), faded out by day. */
     stars: SkyBoxStarsSchema.optional(),
     /** Up to 8, baked into a cube (env.nebulaSize) once per change. */
     nebulae: z.array(SkyBoxNebulaSchema).max(8).optional(),
+    /** A managed hemisphere or ambient light that follows the sun (for non-PBR materials). */
     ambientLight: SkyBoxAmbientLightSchema.optional(),
     /** Needs an enabled atmosphere. */
     clouds: SkyBoxCloudsSchema.optional(),
+    /** The colour below the horizon. */
     ground: SkyBoxGroundSchema.optional(),
     /** While on, suns[0]'s and every moon's positions are derived from the time of day (and
      * the extra suns turn with the sky, see `rotateWithSky`). */
     dayNight: SkyBoxDayNightSchema.optional(),
+    /** The debugger's data for this sky box. */
     debugData: DebugDataSchema.optional(),
 
     // Meta
+    /** The JSON Schema the editor validates the file with (`.schemas/`). */
     $schema: z.string().optional(),
+    /** Written by the data pipeline: the file the definition came from. */
     __sourcePath: z.string().optional(),
+    /** Per-scene overrides (`{ [sceneId]: [latest, ...older] }`; only the latest applies). */
     // A pre-p111 (flat) entry is converted first: deprecated, removed in engine 6.0.0
     __saveData: createSaveDataSchema(
       z.preprocess((entry) => fromLegacySkyBoxOverrides(entry) ?? entry, SkyBoxOverridesSchema)
@@ -569,6 +602,8 @@ export const SkyBoxAssetSchema = z.preprocess(
   SkyBoxDefSchema
 );
 
+/** A sky box asset as the data pipeline outputs it: a {@link SkyBoxAssetSchema} after its
+ * conversion and validation, its preset still unresolved (the gatherer resolves it). */
 export type SkyBoxAsset = z.infer<typeof SkyBoxAssetSchema>;
 
 /** The sky box feature's scene field (p607 D10): `skyboxes`, ids of `*.skybox.json` files or

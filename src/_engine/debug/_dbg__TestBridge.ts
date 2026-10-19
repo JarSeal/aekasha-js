@@ -12,7 +12,7 @@ import { setPhysicsInterpolationPinnedToNewest } from '../features/physics/Physi
 import { getRenderer } from '../kernel/render/Renderer';
 import { getCurrentSceneId } from '../kernel/scene/Scene';
 import { hasFirstSceneBeenLoaded, isCurrentlyLoading } from '../kernel/scene/SceneLoader';
-import { pauseDayNight } from '../features/skybox/SkyBox';
+import { pauseDayNight } from '../features/skybox/SkyDayNight';
 import { takeSnapshotAsync } from '../kernel/render/Snapshot';
 import {
   getPhysicsDeterminismProbeSteps,

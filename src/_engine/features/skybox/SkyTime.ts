@@ -36,11 +36,11 @@ export const DAY_NIGHT_DEFAULTS = {
   northOffset: 0,
 };
 
-/** How many moons a sky box draws (moons[0..1]; layers/moon.ts re-exports it). Here, not in
- * layers/moon.ts: that module imports this one at load. */
+/** How many moons a sky box draws (moons[0..1]; layers/Moon.ts re-exports it). Here, not in
+ * layers/Moon.ts: that module imports this one at load. */
 export const MAX_MOONS = 2;
 
-/** The moon's time-related values (the rest of its defaults are in layers/moon.ts). */
+/** The moon's time-related values (the rest of its defaults are in layers/Moon.ts). */
 export const MOON_TIME_DEFAULTS = {
   phase: 0.5,
   phaseMode: 'FIXED' as 'FIXED' | 'CYCLE',
@@ -52,7 +52,7 @@ const TWO_PI = Math.PI * 2;
 const DEG_TO_RAD = Math.PI / 180;
 
 /**
- * The runtime day-night state (on ActiveSkyBox). Games drive it through the SkyBox.ts API; it's
+ * The runtime day-night state (on ActiveSkyBox). Games drive it through the SkyDayNight.ts API; it's
  * never written to the definition, so driving time writes no debug overrides.
  */
 export type SkyTimeState = {

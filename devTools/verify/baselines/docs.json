@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2062,
-      "total": 2382
+      "documented": 2078,
+      "total": 2389
     },
     "members": {
       "documented": 890,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2018,
-        "total": 2319
+        "documented": 2034,
+        "total": 2326
       },
       "members": {
         "documented": 840,
@@ -464,8 +464,8 @@
     },
     "engine/features/skybox": {
       "exports": {
-        "documented": 149,
-        "total": 173
+        "documented": 162,
+        "total": 177
       },
       "members": {
         "documented": 0,
@@ -473,15 +473,6 @@
       },
       "undocumented": {
         "exports": [
-          "LegacySkyBox#LEGACY_SKYBOX_WARNING",
-          "Presets#SKYBOX_PRESETS",
-          "Presets#SKYBOX_PRESET_NAMES",
-          "Presets#SkyBoxPresetName",
-          "Presets#isSkyBoxPresetName",
-          "SkyBox#SkyBoxChangeReason",
-          "SkyBox#isDayNightPlaying",
-          "SkyBox#registerSkyBoxDebugGUI",
-          "SkyBoxTypes#SkyBoxBaseType",
           "SkyComposite#StaticLayersUniforms",
           "SkyComposite#createSkyUniforms",
           "SkyComposite#getMoonCount",
@@ -503,8 +494,8 @@
     },
     "engine/features/skybox/layers": {
       "exports": {
-        "documented": 47,
-        "total": 79
+        "documented": 50,
+        "total": 82
       },
       "members": {
         "documented": 0,

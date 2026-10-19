@@ -5,6 +5,13 @@ export type { SkyBoxPresetDef, SkyBoxPresetName } from './Presets';
 export {
   bakeEnvironment,
   createSkyBox,
+  onSkyBoxChange,
+  setActiveSkyBox,
+  updateSkyBox,
+} from './SkyBox';
+export type { SkyBoxChangeListener, SkyBoxChangeReason, SkyBoxState, SkyBoxUpdate } from './SkyBox';
+export { skyBox } from './SkyBoxFeature';
+export {
   getDayNightSpeed,
   getMoonDirection,
   getMoonPhase,
@@ -12,16 +19,11 @@ export {
   getSunElevation,
   getTimeOfDay,
   isDayNightPlaying,
-  onSkyBoxChange,
   pauseDayNight,
   playDayNight,
-  setActiveSkyBox,
   setDayNightCycleDuration,
   setDayNightSpeed,
   setTimeOfDay,
-  updateSkyBox,
-} from './SkyBox';
-export type { SkyBoxChangeListener, SkyBoxChangeReason, SkyBoxState, SkyBoxUpdate } from './SkyBox';
-export { skyBox } from './SkyBoxFeature';
+} from './SkyDayNight';
 export type { SkyBoxDef } from './SkyBoxTypes';
 export { getSkyLightIds } from './SkyLights';

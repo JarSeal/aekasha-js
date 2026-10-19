@@ -13,7 +13,10 @@ export const SKYBOX_PRESET_NAMES = ['DAY_SKY', 'NIGHT_SKY', 'DAY_NIGHT', 'SPACE'
 /** A preset's name: one of {@link SKYBOX_PRESET_NAMES}. */
 export type SkyBoxPresetName = (typeof SKYBOX_PRESET_NAMES)[number];
 
-/** A preset template: a definition's layers, without its id and meta. */
+/**
+ * A preset template: a definition's layers, without its id and meta.
+ * @internal
+ */
 export type SkyBoxPreset = Omit<
   SkyBoxDef,
   'id' | 'isDefault' | 'debugData' | 'sceneId' | '$schema' | '__sourcePath' | '__saveData'
@@ -28,6 +31,11 @@ export type SkyBoxPresetDef = Omit<SkyBoxDef, 'base'> & {
 
 const BLACK_BASE: SkyBoxBaseDef = { type: 'COLOR', color: '#000000' };
 
+/**
+ * The preset templates by name (template version 1): what {@link mergeSkyBoxPreset} merges a
+ * definition over. Never handed out: a merge works on a copy.
+ * @internal
+ */
 export const SKYBOX_PRESETS: Record<SkyBoxPresetName, SkyBoxPreset> = {
   /** A clear afternoon: atmosphere, a sun with a shadow-casting light, light clouds and ground. */
   DAY_SKY: {
@@ -114,6 +122,10 @@ export const SKYBOX_PRESETS: Record<SkyBoxPresetName, SkyBoxPreset> = {
   },
 };
 
+/**
+ * Whether `name` is one of {@link SKYBOX_PRESET_NAMES} (mergeSkyBoxPreset's check).
+ * @internal
+ */
 export const isSkyBoxPresetName = (name: unknown): name is SkyBoxPresetName =>
   SKYBOX_PRESET_NAMES.includes(name as SkyBoxPresetName);
 

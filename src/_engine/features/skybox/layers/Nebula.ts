@@ -4,7 +4,7 @@
  * direction: an elliptical shape (size, stretch, orientation, falloff) that erodes a
  * domain-warped fbm cloud (filaments over a soft glow), coloured by density through 2-3 colour
  * stops, with dark dust lanes (ridged fbm) cut out of it. The cube's alpha holds each nebula's star boost (the live stars
- * layer reads it, see layers/stars.ts).
+ * layer reads it, see layers/Stars.ts).
  *
  * The noise runs on the 3D direction (never on cube face UVs), so the bake is seamless. The warp
  * uses three float fbm calls instead of mx_fractal_noise_vec3, which hangs SwiftShader's WebGL2.

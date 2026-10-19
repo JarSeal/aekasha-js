@@ -176,7 +176,7 @@ export const applyAtmosphereUniforms = (
 /**
  * SkyMesh's sun energy (:188-190) for a sun at height `dirY`: twilightLength moves the cutoff
  * below the horizon, and softens the fade. The atmosphere's is suns[0]'s; every sun's disc is
- * capped by its own (layers/sun.ts).
+ * capped by its own (layers/Sun.ts).
  */
 export const computeSunE = (def: SkyBoxAtmosphereDef | undefined, dirY: number) => {
   const sunIntensity = def?.sunIntensity ?? ATMOSPHERE_DEFAULTS.sunIntensity;

@@ -26,7 +26,7 @@ import { CLOUDS_DEFAULTS } from '../layers/Clouds';
 import { MAX_MOONS, MOON_DEFAULTS } from '../layers/Moon';
 import { STARS_DEFAULTS } from '../layers/Stars';
 import { DAY_NIGHT_DEFAULTS } from '../SkyTime';
-import { getMoonPhase } from '../SkyBox';
+import { getMoonPhase } from '../SkyDayNight';
 import { isDayNightEnabled } from '../SkyComposite';
 import { GROUND_DEFAULTS } from '../layers/Ground';
 import { MAX_NEBULAE, NEBULA_DEFAULTS } from '../layers/Nebula';

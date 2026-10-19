@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: Refactoring, Documentation, Sky box
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -508,7 +508,7 @@ As built, section 3 (2026-10-18): the scenes.
 - The scene runner's baselines are local: the changelog says to record these four scenes again on
   `main` after the merge (Phase 7).
 
-### Phase 3: the API (D7) and the deprecations (D3)
+### Phase 3: the API (D7) and the deprecations (D3) — done
 
 1. The entry's additions, `SkyBoxState`, the re-exports removed, `@internal` on S6's names.
 2. `@deprecated` on the legacy shape; p622's list.
@@ -556,6 +556,44 @@ As built, section 2 (2026-10-18): the legacy shape deprecated (D3).
 - p622: the sky box under "Every `@deprecated` that names engine 6.0.0", and a "From p615" list
   (the legacy shape's parts; S5's positional parameters as candidates).
 - `yarn test` 633 passed, 1 skipped; `tsc` and the lint clean; the docs ratchet: skybox 156 / 175.
+
+As built, section 3 (2026-10-18): the split, the JSDoc, S7.
+
+- **The split:** `SkyDayNight.ts` (279 lines) holds the day-night API (`setTimeOfDay` …
+  `getMoonPhase`), the env bake schedule, the sky clock, `stepDayNight`, `installSkyBoxSystem` and
+  `skyBoxSystem`, moved as they were except that they read the active sky box through
+  `getActiveSkyBox()` (once per frame in the system, passed to `stepDayNight` and `noteEnvBake`).
+  `SkyBox.ts` (729 lines with this section's JSDoc) imports nothing from it: `clearSkyBox` runs a
+  hook (`_setSkyBoxClearHook`, `@internal`) that `installSkyBoxSystem` sets to restart the clock.
+  `isBakeDynamic` is exported `@internal` for the schedule. The entry, `SkyBoxFeature.ts`, the
+  test, `_dbg__DayNightFolder.ts`, `_dbg__SkyBoxShared.ts` and `_dbg__TestBridge.ts` import from
+  the new module; the comments that named `SkyBox.ts` for it (`SkyTime.ts`, `layers/Clouds.ts`, the
+  nested `CLAUDE.md`'s "all in `SkyBox.ts`") name `SkyDayNight.ts`. The rest of the nested
+  `CLAUDE.md` is Phase 6's.
+- **JSDoc:** `@example`s (type-checked) on `createSkyBox`, `updateSkyBox`, `onSkyBoxChange`,
+  `setTimeOfDay`, `getSunDirection` and `SkyBoxDef`, as p614 did for its main entry calls, not every
+  function. `setActiveSkyBox` gets `@param`s and its failure cases (S2's black base; an unknown id
+  warns), `updateSkyBox` its three costs as a list, `onSkyBoxChange` when a listener in scene code
+  hears its own scene's sky box, `isDayNightPlaying` that playing isn't moving. `SkyBoxState`'s,
+  `ActiveSkyBox`'s and `SkyBoxUpdate`'s members are documented. `skyBox()` names its unmount stop.
+- `@internal` with who uses them: `Presets.ts`' `SkyBoxPreset`, `SKYBOX_PRESETS`,
+  `isSkyBoxPresetName`; `SkyBoxTypes.ts`' `SkyBoxBaseType`, `SkyBoxEnvSize`, `SkyBoxNebulaSize`,
+  `SkyTimeSource`. The types `SkyBoxDef` names stay public.
+- **P3:** every shape key in `SkyBoxSchema.ts` has a comment (the base types', `file` / `path` /
+  `textureId` from the loaders: `file` loads relative to `path`, default `./`, and registers under
+  `textureId`; without `file`, `textureId` names a registered texture), the meta keys included
+  (no other schema documents them yet), and `SkyBoxAsset`.
+- **S7:** `layers/base.ts`, `sun.ts`, `moon.ts`, `stars.ts` → PascalCase in six files;
+  `SkyBox/presets.ts`, `SkyBox/SkyBoxTypes.ts` gone with their comments' rewrites.
+- `{@link resolveSkyBoxPreset}` from `SkyBox.ts` and `SkyBoxTypes.ts` linked nowhere (TypeDoc
+  resolves a link by what the module has in scope; a type-only import for it is a lint warning):
+  written in backticks there. Within `Presets.ts` the links resolve.
+- **Checks:** `yarn test` 633 passed, 1 skipped; `tsc`, `tsc -p hub` and the lint clean.
+  `docs.json` recorded: skybox 162 / 177 (the 15 left are Phase 4's files), layers 50 / 82
+  (Phase 2's clouds `time` uniform, recorded now).
+
+As built, section 4: `yarn hub:build` passed, 420 pages, 16 warnings (Phase 0's count), none in
+the sky box: no `notExported`, no dead link.
 
 ### Phase 4: the internals
 
