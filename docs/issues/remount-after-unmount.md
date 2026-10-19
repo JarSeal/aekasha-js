@@ -57,7 +57,8 @@ of all.
    app data, the configuration and `isEngineBooted`.
 2. A stop for anything that starts a worker or a timer at boot. `physics()` has one since p614
    (`FeatureContext.onUnmount`, `stopPhysics`), but it's for good: a reset would have to start
-   physics again.
+   physics again. `skyBox()` has one since p615 (`stopSkyBox`: the sky box cleared, its bakes and
+   lights gone, its listeners dropped); its registered definitions stay.
 3. A test that boots, unmounts and boots again in one module graph, and compares every
    registry's size with the first boot's, so a new registration without its remover fails. Today
    `moduleSideEffects.test.ts` guarantees nothing registers at module load, which is what makes

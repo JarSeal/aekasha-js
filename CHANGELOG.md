@@ -4,6 +4,51 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-19 — review-skybox
+
+### Engine 5.6.0 (Golden Hour)
+
+The sky box feature is reviewed file by file (p615). Two bugs are fixed, `skyBox()` stops when a mounted engine unmounts, the clouds move on the engine's clock instead of the browser's, and every export of the feature and its layers is documented. The preset helper the docs sent code to is on the entry now. The scene runner gives every scene the same probe hash as on `main`. The snapshots of the four scenes with clouds changed once (the first behaviour change under Changed). No public export is removed or renamed.
+
+**Added**
+
+- On `aekasha/skybox`: `resolveSkyBoxPreset` (a code definition's `preset` merged under it, typed; an unknown name throws with the list) and `SKYBOX_PRESET_NAMES`, with the types `SkyBoxPresetDef` and `SkyBoxPresetName`. `registerSkyBox`'s warning and the docs told code to use it, but it wasn't on the entry, so an app couldn't. Also the types `SkyBoxState` (`Readonly<{ id, sceneId, def }>`) and `SkyBoxChangeReason`, for the change listener and the three calls' results (see Changed).
+- JSDoc on every export of `features/skybox` and `features/skybox/layers` (149 / 173 and 47 / 79 were documented), on every key of the sky box schema and on the debug tab's exports. `@example`s on `createSkyBox`, `updateSkyBox`, `onSkyBoxChange`, `setTimeOfDay`, `getSunDirection`, `getSkyLightIds`, `resolveSkyBoxPreset` and `SkyBoxDef`. The three r186 traps the sky box works around are `@remarks` on the functions that guard them (the env bake, the static layers, the sky lights, the base layer, the stars).
+
+**Changed**
+
+- **Behaviour change:** the clouds move on the engine's clock (the main loop's elapsed time). They keep drifting while only the app is paused, and stop with the master pause, in an editor view and while a scene loads. They start from the same place on every visit to a scene. They read three's `time` before, the browser's clock, so they drifted through all of those, and the env bake's frozen clouds read the renderer's private node frame time. The sky box's bake schedules (the day-night env bake's rate limit, the nebula bake's 150 ms throttle) read the same clock instead of `performance.now()`. The stars' twinkle stays on three's `time`. The four template scenes with clouds (`exampleLod`, `exampleSkyBox`, `lodShowcase`, `skyShowcase`) render other clouds in the scene runner's snapshots (see Project).
+- **Behaviour change:** a mounted engine's `unmount()` stops the sky box (`skyBox()` registers a `FeatureContext.onUnmount`). The updates waiting for an activation and an activation still loading settle with `null`. The sky box is cleared: its env bake and nebula cube are disposed, its lights deleted, and the root scene's background, environment and their intensities reset. The change listeners are told `'clear'` one last time, then dropped. It runs before the renderer is disposed. The registered definitions stay.
+- `setActiveSkyBox`, `createSkyBox` and `updateSkyBox` resolve with a `SkyBoxState`, and an `onSkyBoxChange` listener gets one. It's the same object as before, typed by what an app may read (`id`, `sceneId`, `def`): code reading the sky box's internals from it (`uniforms`, the nodes, `time`) stops compiling. The template has none.
+- Less work per frame while the day-night cycle plays. The atmosphere's sun makes no object per frame. Sun 0 reuses the atmosphere's extinction instead of computing it again. A sun turning with the sky computes the start time's rotation once per definition (two rotations per sun per frame before). The sky lights read the camera's position once per frame from its world matrix: once per light, they updated the camera's matrices up its parents.
+- Docs that said the wrong thing: `getSkyLightIds` is public API (it said "debug and tests"). `LEGACY_SKYBOX_WARNING` named migration notes that no longer exist. Comments named the files before their PascalCase renames.
+- Internal (no entry exports them). The day-night API, its env bake schedule, the sky clock and `skyBoxSystem` moved from `SkyBox.ts` to `SkyDayNight.ts`. The debug tab's undo / redo edits and "Apply preset" moved from `_dbg__SkyBoxShared.ts` (850 lines) to `_dbg__SkyBoxEdits.ts`. The nebula draws its offsets from `createSeededRandom` (the same numbers). Every sky box export not on the entry is `@internal`, with who uses it (`ActiveSkyBox`, `registerSkyBox`, `getActiveSkyBox`, `clearSkyBox` among them).
+- Internal, removed: `SkyBox.ts`' re-exports of the presets, `SkyBoxDef` and `SKYBOX_MANAGER_ID` (one path per name), the four unread `*_STRUCTURAL_KEYS` of the sun, ground, atmosphere and clouds layers, `getFrameTime`, the nebula's own copy of the seeded random, and the debug tab's unused `currentSceneHasOverrides`.
+
+**Deprecated**
+
+- The legacy `{ type, params }` sky box shape, removed in engine 6.0.0: `LegacySkyBoxProps`, `isLegacySkyBoxProps`, `LEGACY_SKYBOX_WARNING` and `createSkyBox`'s legacy form (now an overload of its own, struck through in the editor). The schema's conversion, the gatherer's warning and the save data's pre-p111 migration go with it. Write a layered definition (`base`, `env` and the layers). Nothing in the template uses the shape.
+
+**Fixed**
+
+- An `updateSkyBox` made while an activation was loading a texture was lost when the activation showed. That was a structural update or a `setActiveSkyBox` meanwhile, or in the debug tab a base file change, then a slider before the file had loaded. Updates made meanwhile now wait for that activation, merged in call order (a drag is one update, its last value wins), and apply to what it showed. One for a sky box no longer active changes nothing, as before.
+- In the debug env, a sky box texture that failed to load failed the scene load, and `setActiveSkyBox` and `createSkyBox` rejected. In every env now, it's logged (in the debug env also a toast) and the sky shows a black base (a moon, a plain disc). Production shows what it did, without holding an unregistered placeholder texture. A cube texture's failed load wasn't checked for at all.
+- A sky colour written as `{ r, g, b }` was read as linear, so it rendered unlike the same colour written `'#rrggbb'`. Both are sRGB now, as in the kernel's colours, and the debug tab's pickers show the object form's own hex. No template sky box writes the object form.
+
+### Project
+
+**Added**
+
+- Tests: `features/skybox/SkyBox.test.ts` drives the sky box in Node with a plain root scene and texture loads the test settles. It covers the update queue, a failed texture, the stop, the sky clock and which updates rebuild the sky. Also `Presets.test.ts` (each template, the merge rules), `SkyComposite.test.ts` (which changes rebuild the composite), `SkyColor.test.ts` (both colour forms equal), and the cached sky rotation in `SkyTime.test.ts`.
+- `docs/plans/p622_engine-6-major.md`: the sky box's 6.0.0 removals, and its positional parameters (`setActiveSkyBox`, `getSunDirection` and the like) as candidates for options objects.
+
+**Changed**
+
+- The Hub: the sky box guide (the stop, presets in code, the clouds' clock, `SkyBoxState`, overlapping calls, failed textures; `bakeEnvironment` bakes on the next frame, not now), the sky box example's walkthrough (the clouds' clock), the embed walkthrough (what `unmount()` stops) and the ECS guide (`ctx.onUnmount`).
+- `src/_engine/features/skybox/CLAUDE.md`: the feature described once with its stop, the public API, the presets, the update queue, failed textures, the sky clock and the colour reading. The root `CLAUDE.md`'s map line and `onUnmount` sentence name the sky box's stop. `docs/plans/CLAUDE.md`'s "Epic" line covers epics made of plans.
+- `lodshowcase-sky-snapshot-drift.md` is fixed (the clouds and the bake schedules off the wall clock). `remount-after-unmount.md` says the sky box stops.
+- The scene runner's baselines are local: after this merge, `yarn verify:scenes --update --only exampleLod,exampleSkyBox,lodShowcase,skyShowcase` on `main` records the clouds' snapshots.
+
 ## 2026-10-18 — review-physics
 
 ### Engine 5.5.0 (Golden Hour)

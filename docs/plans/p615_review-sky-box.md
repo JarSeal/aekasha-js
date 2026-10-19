@@ -840,6 +840,17 @@ As built, section 3 (2026-10-19): p622 and the drift issue.
    are stale since Phase 3's `SkyDayNight.ts`; `--check` passing after).
 3. Mark the plan done (`docs/plans/CLAUDE.md`); time for a PR: `review-skybox` into `main`.
 
+As built, section 1 (2026-10-19): the versions and the changelog.
+
+- Engine and project 5.5.0 → **5.6.0**. Toolkit (2.1.2) and app (1.12.3) unchanged: no file of
+  theirs changed on the branch (checked against `main`).
+- `CHANGELOG.md`'s `2026-10-19 — review-skybox` entry: Engine (Added, Changed, Deprecated,
+  Fixed) and Project. D5's paused clouds and D8's stop are the two **Behaviour change** items.
+  The Project section's baselines, SBP and move map lines wait for section 2's results.
+- `docs/issues/remount-after-unmount.md`'s fix list names the sky box's stop next to physics'
+  (F1 said the issue lists the sky box's state; no phase updated it).
+- `yarn checkVersions --against main`: passed.
+
 ## 4. Risks
 
 1. **D5 and the scene runner.** If the elapsed time at the snapshot varies between runs, the
