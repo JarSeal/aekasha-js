@@ -764,6 +764,31 @@ and the undo history after each step. Every step did what it should:
    listed API changed.
 3. p622's sky box items; the drift issue closed (or updated, if D5's runner hook was needed).
 
+As built, section 1 (2026-10-19): the Hub pages.
+
+- `features/sky-box/guide.md`: the stop (`unmount()` clears the sky box, its bakes and lights,
+  and drops the listeners); presets in code through `resolveSkyBoxPreset` (the JSDoc's
+  `@example`; a `preset` left on a code definition is ignored with a debug warning) and
+  `SKYBOX_PRESET_NAMES`; the clouds on the engine's clock (they drift while only the app is
+  paused, stop with the master pause, in an editor view and while a scene loads, and restart per
+  scene visit); the listener's `SkyBoxState` and reason; `setActiveSkyBox`'s latest-wins,
+  `updateSkyBox`'s texture reload and its wait for a loading texture; a failed sky texture shows
+  black and never fails a call or a load (S2); `bakeEnvironment` runs on the next frame (it said
+  "now"); the `suns` row says only the first sun's light casts shadows by default.
+- `examples/sky-box/walkthrough.md`: the clouds' clock next to the day's.
+- Outside the sky box pages, the stop where the other features' are named: the embed
+  walkthrough's `unmount()` line and the ECS guide's `ctx.onUnmount`.
+- `yarn hub:build`: 420 pages, 16 warnings (Phase 0's), none in the sky box.
+- **Found, for Phase 7:** the `app` SBP report (`yarn sbp --profile app`, needed by the Hub's
+  `{{sbp:app.*}}`: this machine's report had only the banner) fails one budget:
+  `_engine/features/skybox` 28.4 kB against 28.0 kB (the baseline 26.4 kB, 17 → 18 modules,
+  rendered 84.0 → 91.4 kB). The main chunk: 384.6 → 386.1 kB gzip (+1.5 kB; +3.7 kB minified).
+  `_engine/utils` +0.4 kB (9 → 10 modules: C3's `createSeededRandom`). The growth is Phases 1-5's
+  (the update queue and the stop, the sky clock, the rotation cache, `SkyDayNight.ts` as a module
+  of its own; a group sums its modules' gzip before minification, so it grows more than the
+  chunk does). Phase 7 decides between shrinking it (`yarn sbp --why _engine/features/skybox`)
+  and raising the budget in `sbp.config.ts` with a comment that says why, as p614 did for physics.
+
 ### Phase 7: versions and done
 
 1. D2's bumps, a `CHANGELOG.md` entry (D5's paused clouds and D8 called out),

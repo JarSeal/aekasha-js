@@ -85,7 +85,7 @@ load's phases, `onDebug` for its debug tools and `onUnmount` for its stop.
   a production build then leaves both out.
 - **`ctx.onUnmount(fn)`** runs `fn` when an embedded engine's `unmount()` stops it
   ([`mountAekasha`](api:mountAekasha)), right after the loop, in reverse install order: stop
-  what the feature started (`physics()` terminates its worker). It's synchronous, and a
+  what the feature started (`physics()` terminates its worker, `skyBox()` clears its sky box). It's synchronous, and a
   full-page app never runs it.
 
 ## Plugins and hooks
