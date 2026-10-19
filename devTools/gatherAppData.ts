@@ -251,7 +251,7 @@ const warnOnStaleSaveData = (
 };
 
 /** Warns (doesn't fail) about a sky box in the legacy `{ type, params }` shape: the schema still
- * converts it, but it should be migrated to the layered one. */
+ * converts it, but it should be migrated to the layered one. Goes in engine 6.0.0 with the shape. */
 const warnOnLegacySkyBox = (file: string, data: unknown) => {
   if (!isLegacySkyBoxProps(data)) return;
   const skyAndSunNote =

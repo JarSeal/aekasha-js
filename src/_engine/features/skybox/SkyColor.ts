@@ -1,7 +1,12 @@
 import * as THREE from 'three/webgpu';
+import { toThreeColor } from '../../kernel/render/ThreeMath';
+import type { ColorJSON } from '../../schemas/_HelperSchemas';
 
-/** A ColorJSON value ('#rrggbb', or { r, g, b } in 0-255) as a THREE.Color (linear, the working colour space). */
-export const toSkyColor = (color: string | { r: number; g: number; b: number }) =>
-  typeof color === 'string'
-    ? new THREE.Color(color)
-    : new THREE.Color(color.r / 255, color.g / 255, color.b / 255);
+/**
+ * A JSON colour (`'#rrggbb'`, or `{ r, g, b }` in 0-255) as a THREE.Color in the working colour
+ * space (linear). Both forms are sRGB, as the kernel reads them (`toThreeColor`): one colour
+ * written either way renders the same. A new Color per call: for activation and updates, never
+ * the per-frame path.
+ * @internal
+ */
+export const toSkyColor = (color: ColorJSON) => new THREE.Color(toThreeColor(color));

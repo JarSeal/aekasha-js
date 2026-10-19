@@ -1,6 +1,6 @@
 Status: stub — not-implemented
 Category: Weather, Rendering, Gameplay
-Related: \_DONE_p603_gameplay-architecture-contracts.md (C7: weather and mood, the time-of-day clock), p307_wet-and-dry-surface-states.md (its surface conditions state is what this plan drives), p615_review-sky-box.md (the sky box reads the clock from here once it moves), p425_game-events-missions-and-save-games.md (the world state is saved), p990_follow-ups-from-done-plans.md (volumetric clouds and weather)
+Related: \_DONE_p603_gameplay-architecture-contracts.md (C7: weather and mood, the time-of-day clock), p307_wet-and-dry-surface-states.md (its surface conditions state is what this plan drives), \_DONE_p615_review-sky-box.md (the sky box reads the clock from here once it moves), p425_game-events-missions-and-save-games.md (the world state is saved), p990_follow-ups-from-done-plans.md (volumetric clouds and weather)
 
 # Weather and Mood — Stub
 

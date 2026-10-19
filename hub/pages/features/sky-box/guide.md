@@ -5,6 +5,10 @@ List [`skyBox()`](api:skyBox), from `aekasha/skybox`, in `InitEngine`'s `feature
 registered or shown, and a scene whose JSON lists `skyboxes` fails the boot, naming the feature
 (see [the feature manifest](hub:features/scenes-and-assets#the-feature-manifest)).
 
+An [embedded engine](hub:examples/embed)'s `unmount()` stops the sky box: it's cleared (its
+environment bakes and its sky lights with it) and the [`onSkyBoxChange`](api:onSkyBoxChange)
+listeners are dropped.
+
 ## A definition
 
 A sky box is a `*.skybox.json` (or the same object in code). A `preset` is the starting point,
@@ -17,6 +21,25 @@ its preset: a list (the suns here) and `base` replace the preset's whole, other 
 it. A scene lists its sky boxes in its JSON's `skyboxes`, and the first one (or the last one
 marked `isDefault`) shows when the scene starts.
 
+The build resolves a JSON sky box's preset. A definition made in code goes through
+[`resolveSkyBoxPreset`](api:resolveSkyBoxPreset) first (a `preset` left on it is ignored, with a
+warning in debug mode):
+
+```ts
+import { createSkyBox, resolveSkyBoxPreset } from 'aekasha/skybox';
+
+// The SPACE preset with its sun moved: the definition's suns replace the preset's
+void createSkyBox(
+  resolveSkyBoxPreset({
+    id: 'deepSpace',
+    preset: 'SPACE',
+    suns: [{ elevation: 5, azimuth: 270, light: {} }],
+  })
+);
+```
+
+[`SKYBOX_PRESET_NAMES`](api:SKYBOX_PRESET_NAMES) lists the presets.
+
 ## The layers
 
 Each layer is on when its key is there, unless it has `enabled: false`:
@@ -26,7 +49,7 @@ Each layer is on when its key is there, unless it has `enabled: false`:
 | `base`         | A colour, an equirectangular panorama (HDR too) or a cube map, with its rotation and intensity. |
 | `env`          | How the sky lights the scene: background blur and intensity, environment intensity, bake size.  |
 | `atmosphere`   | A physically based sky, lit by the first sun.                                                   |
-| `suns`         | Up to four, each a disc and a halo. A sun's `light` is a directional light, casting shadows.    |
+| `suns`         | Up to four, each a disc and a halo, with a directional `light` (the first's casts shadows).     |
 | `moons`        | Up to two, lit into their phase, with an optional texture and a light of their own at night.    |
 | `stars`        | Procedural stars and an optional Milky Way, fading out by day.                                  |
 | `nebulae`      | Up to eight, baked once into a cube, since they're costly per pixel.                            |
@@ -56,21 +79,32 @@ With `dayNight`, the sky keeps a running time of day. Your game drives it:
 By default the time stops when the app is paused (`dayNight.timeSource: "APP"`). `MAIN` keeps it
 going, and `MANUAL` moves it only when you set it. It stands still while a scene loads.
 
+The clouds drift on the engine's clock (the main loop's elapsed time), not the browser's: they
+keep drifting while only the app is paused, stop with the master pause, in an editor view and
+while a scene loads, and start from the same place on every visit to a scene.
+
 ## Sky lights
 
 A sun's or a moon's `light` is an ordinary ECS light that the sky box manages: it's created when
 the sky box shows and deleted when it goes, and the debugger shows it read-only. The sun's light
 follows the camera with its shadows and fades out below the horizon. Read the ids with
 [`getSkyLightIds`](api:getSkyLightIds) to react to them, and
-[`onSkyBoxChange`](api:onSkyBoxChange) when the sky box changes.
+[`onSkyBoxChange`](api:onSkyBoxChange) when the sky box changes: its listener gets the active
+sky box's [`SkyBoxState`](api:SkyBoxState) (`id`, `sceneId`, `def`), or null, and the reason.
 
 ## From code
 
 - [`createSkyBox`](api:createSkyBox): registers a definition and shows it.
 - [`setActiveSkyBox`](api:setActiveSkyBox): shows another of the scene's sky boxes, or none.
+  When calls overlap, the latest wins.
 - [`updateSkyBox`](api:updateSkyBox): changes part of the active one. A value change is cheap; a
-  change to the set of layers rebuilds the sky.
-- [`bakeEnvironment`](api:bakeEnvironment): bakes the environment again now.
+  change to the set of layers rebuilds the sky, and a change to the base's texture loads it
+  again. An update made while a texture loads waits for it, then applies to what shows.
+- [`bakeEnvironment`](api:bakeEnvironment): bakes the environment again on the next frame (for
+  `env.dynamic: false`).
+
+A sky texture that fails to load never fails the call or the scene load: it's logged, and the
+sky shows black (a moon, a plain disc).
 
 ## The debug tab
 

@@ -1,12 +1,12 @@
 import { updateDebuggerTab, type DebuggerPaneItem } from '../../../debug/DebuggerGUI';
 import { getActiveSkyBox } from '../SkyBox';
+import { setSkyBoxArray } from './_dbg__SkyBoxEdits';
 import {
   getListEntries,
   getSelectedIndex,
   getSkyBoxDef,
   LIST_MAX,
   selectListEntry,
-  setSkyBoxArray,
   SKYBOX_TAB_ID,
   type SkyBoxListKey,
 } from './_dbg__SkyBoxShared';
@@ -30,6 +30,8 @@ export type ListConfig<T extends object> = {
   addTitle?: string;
 };
 
+/** Whether the active sky box has no entries in a list (its folder hides or disables the entry
+ * controls). */
 export const hasNoEntries = (list: SkyBoxListKey) => getListEntries(list).length === 0;
 const isFull = (list: SkyBoxListKey) => getListEntries(list).length >= LIST_MAX[list];
 

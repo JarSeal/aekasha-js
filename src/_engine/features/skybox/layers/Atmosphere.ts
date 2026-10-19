@@ -15,14 +15,19 @@
  *   floor, :272, :278), twilightLength (on the earth-shadow cutoff and steepness, :177-178),
  *   and horizon/zenith tints.
  * With exposure 1 and the extras at their defaults it computes exactly what SkyMesh does.
+ *
+ * Like every layer, internal to the sky box (the composite, the lights) and its debug tab.
  */
 import * as THREE from 'three/webgpu';
 import { acos, cos, dot, exp, float, max, mix, pow, uniform, vec3 } from 'three/tsl';
 import type { SkyBoxAtmosphereDef } from '../SkyBoxTypes';
 import { toSkyColor } from '../SkyColor';
 
-export const ATMOSPHERE_STRUCTURAL_KEYS = ['enabled'] as const;
-
+/**
+ * The atmosphere's defaults (the schema's "Default …" comments say the same; the debug tab
+ * shows these).
+ * @internal
+ */
 export const ATMOSPHERE_DEFAULTS = {
   enabled: true,
   turbidity: 2,
@@ -66,6 +71,11 @@ const SKY_SCALE = 0.04;
 const NIGHT_L0 = 0.1;
 const NIGHT_OFFSET = new THREE.Vector3(0, 0.0003, 0.00075);
 
+/**
+ * The atmosphere's uniforms (SkyMesh's vertex-stage terms among them), created once per
+ * activation. The clouds, the suns, the ground and the lights read them too.
+ * @internal
+ */
 export type AtmosphereUniforms = {
   sunE: THREE.UniformNode<'float', number>;
   betaR: THREE.UniformNode<'vec3', THREE.Vector3>;
@@ -84,6 +94,10 @@ export type AtmosphereUniforms = {
   extinctionAtSun: THREE.Vector3;
 };
 
+/**
+ * The atmosphere's uniforms at neutral values (applyAtmosphereUniforms writes the real ones).
+ * @internal
+ */
 export const createAtmosphereUniforms = (): AtmosphereUniforms => ({
   sunE: uniform(0),
   betaR: uniform(new THREE.Vector3()),
@@ -98,8 +112,11 @@ export const createAtmosphereUniforms = (): AtmosphereUniforms => ({
   extinctionAtSun: new THREE.Vector3(1, 1, 1),
 });
 
-/** SkyMesh's day factor (its clouds' daylight, :351): 0 with the sun well below the horizon, 1
- * from ~17° up. The clouds, the ground and the moon light share it. */
+/**
+ * SkyMesh's day factor (its clouds' daylight, :351): 0 with the sun well below the horizon, 1
+ * from ~17° up. The clouds, the ground and the moon light share it.
+ * @internal
+ */
 export const getDayFactor = (sunDirection: THREE.Vector3) =>
   THREE.MathUtils.smoothstep(sunDirection.y, -0.08, 0.3);
 
@@ -109,7 +126,10 @@ const opticalLengthFactor = (dirY: number) => {
   return 1 / (Math.cos(zenithAngle) + 0.15 * (93.885 - (zenithAngle * 180) / Math.PI) ** -1.253);
 };
 
-/** The extinction (Fex) along a direction of height `dirY`, into `out` (:249). */
+/**
+ * The extinction (Fex) along a direction of height `dirY`, into `out` (:249).
+ * @internal
+ */
 export const computeExtinction = (
   dirY: number,
   betaR: THREE.Vector3,
@@ -132,6 +152,7 @@ const _zenithFex = new THREE.Vector3();
  * The extinction along a direction of height `dirY` relative to the zenith's, into `out`: 1 at
  * the zenith, redder (and dimmer) toward the horizon. A colour times it is seen as given
  * overhead (the moon light's AUTO colour, and the clouds' moonlight).
+ * @internal
  */
 export const computeRelativeExtinction = (
   dirY: number,
@@ -147,6 +168,7 @@ export const computeRelativeExtinction = (
 /**
  * Writes the atmosphere's uniforms, including SkyMesh's vertex-stage terms, for the primary
  * sun's (unit) direction.
+ * @internal
  */
 export const applyAtmosphereUniforms = (
   u: AtmosphereUniforms,
@@ -176,7 +198,8 @@ export const applyAtmosphereUniforms = (
 /**
  * SkyMesh's sun energy (:188-190) for a sun at height `dirY`: twilightLength moves the cutoff
  * below the horizon, and softens the fade. The atmosphere's is suns[0]'s; every sun's disc is
- * capped by its own (layers/sun.ts).
+ * capped by its own (layers/Sun.ts).
+ * @internal
  */
 export const computeSunE = (def: SkyBoxAtmosphereDef | undefined, dirY: number) => {
   const sunIntensity = def?.sunIntensity ?? ATMOSPHERE_DEFAULTS.sunIntensity;
@@ -191,6 +214,7 @@ export const computeSunE = (def: SkyBoxAtmosphereDef | undefined, dirY: number) 
  * Writes the terms that depend on the sun's direction (sunE, betaR, linMix and the extinction
  * at the sun); the rest must be written already. The day-night step calls it every time the
  * sun moves: it allocates nothing.
+ * @internal
  */
 export const applyAtmosphereSunUniforms = (
   u: AtmosphereUniforms,
@@ -212,7 +236,10 @@ export const applyAtmosphereSunUniforms = (
   computeExtinction(y, u.betaR.value, u.betaM.value, u.extinctionAtSun);
 };
 
-/** The atmosphere's per-direction terms (the clouds reuse them, p112 Phase 5). */
+/**
+ * The atmosphere's per-direction terms (the clouds reuse them, p112 Phase 5).
+ * @internal
+ */
 export type AtmosphereTerms = {
   /** Extinction: what reaches the eye of the light behind. */
   fex: THREE.Node;
@@ -222,7 +249,10 @@ export type AtmosphereTerms = {
   cosTheta: THREE.Node;
 };
 
-/** SkyMesh's fragment stage (:239-268) for direction `dir`. */
+/**
+ * SkyMesh's fragment stage (:239-268) for direction `dir`.
+ * @internal
+ */
 export const atmosphereTerms = (
   dir: THREE.Node<'vec3'>,
   u: AtmosphereUniforms,
@@ -255,7 +285,10 @@ export const atmosphereTerms = (
   return { fex, lin, cosTheta };
 };
 
-/** The atmosphere over what's behind it, in pieces (the clouds hide some of them). */
+/**
+ * The atmosphere over what's behind it, in pieces (the clouds hide some of them).
+ * @internal
+ */
 export type AtmosphereParts = {
   /** What's behind, seen through the atmosphere: `behind · Fex`. */
   transmitted: THREE.Node<'vec3'>;
@@ -266,6 +299,10 @@ export type AtmosphereParts = {
   floor: THREE.Node<'vec3'>;
 };
 
+/**
+ * The atmosphere's parts over `behind` in direction `dir`, from its per-direction terms.
+ * @internal
+ */
 export const atmosphereParts = (
   dir: THREE.Node<'vec3'>,
   behind: THREE.Node,
@@ -284,7 +321,10 @@ export const atmosphereParts = (
   };
 };
 
-/** The atmosphere's colour from its parts: `transmitted + (inscatter + floor) · exposure`. */
+/**
+ * The atmosphere's colour from its parts: `transmitted + (inscatter + floor) · exposure`.
+ * @internal
+ */
 export const composeAtmosphere = (parts: AtmosphereParts, u: AtmosphereUniforms) =>
   parts.transmitted.add(parts.inscatter.add(parts.floor).mul(u.exposure));
 
@@ -294,6 +334,7 @@ const _fex = new THREE.Vector3();
  * The atmosphere's scattered light seen in direction `dir` (unit), on the CPU: the same maths
  * as atmosphereTerms' `lin`, with SkyMesh's output scale, into `out` (linear RGB). Used for the
  * ambient light's AUTO sky colour. Uses the uniforms' current values.
+ * @internal
  */
 export const computeInscatter = (
   dir: THREE.Vector3,

@@ -9,13 +9,8 @@ import {
   requestStaticLayersBake,
 } from '../SkyStaticLayers';
 import { getActiveCamera } from '../../../kernel/camera/Camera';
-import {
-  isListOverrideAnArray,
-  LAYER_PATHS,
-  resetSkyBoxLayer,
-  setSkyBoxParam,
-  skyBoxProxy,
-} from './_dbg__SkyBoxShared';
+import { resetSkyBoxLayer, setSkyBoxParam } from './_dbg__SkyBoxEdits';
+import { isListOverrideAnArray, LAYER_PATHS, skyBoxProxy } from './_dbg__SkyBoxShared';
 import { numberParam } from './_dbg__LayerFolderItems';
 import { createBakeStats } from './_dbg__BakeStats';
 import {

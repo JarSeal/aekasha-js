@@ -7,11 +7,16 @@
 import { deepMerge } from '../../utils/DeepMerge';
 import type { SkyBoxBaseDef, SkyBoxDef } from './SkyBoxTypes';
 
+/** The presets a sky box can start from (its `preset` key), eg. for a picker. */
 export const SKYBOX_PRESET_NAMES = ['DAY_SKY', 'NIGHT_SKY', 'DAY_NIGHT', 'SPACE'] as const;
 
+/** A preset's name: one of {@link SKYBOX_PRESET_NAMES}. */
 export type SkyBoxPresetName = (typeof SKYBOX_PRESET_NAMES)[number];
 
-/** A preset template: a definition's layers, without its id and meta. */
+/**
+ * A preset template: a definition's layers, without its id and meta.
+ * @internal
+ */
 export type SkyBoxPreset = Omit<
   SkyBoxDef,
   'id' | 'isDefault' | 'debugData' | 'sceneId' | '$schema' | '__sourcePath' | '__saveData'
@@ -26,6 +31,11 @@ export type SkyBoxPresetDef = Omit<SkyBoxDef, 'base'> & {
 
 const BLACK_BASE: SkyBoxBaseDef = { type: 'COLOR', color: '#000000' };
 
+/**
+ * The preset templates by name (template version 1): what {@link mergeSkyBoxPreset} merges a
+ * definition over. Never handed out: a merge works on a copy.
+ * @internal
+ */
 export const SKYBOX_PRESETS: Record<SkyBoxPresetName, SkyBoxPreset> = {
   /** A clear afternoon: atmosphere, a sun with a shadow-casting light, light clouds and ground. */
   DAY_SKY: {
@@ -112,15 +122,20 @@ export const SKYBOX_PRESETS: Record<SkyBoxPresetName, SkyBoxPreset> = {
   },
 };
 
+/**
+ * Whether `name` is one of {@link SKYBOX_PRESET_NAMES} (mergeSkyBoxPreset's check).
+ * @internal
+ */
 export const isSkyBoxPresetName = (name: unknown): name is SkyBoxPresetName =>
   SKYBOX_PRESET_NAMES.includes(name as SkyBoxPresetName);
 
 /**
  * A definition with its preset (if any) under it, and the `preset` key dropped: the plain
  * definition the runtime takes. The definition's layers are merged over the preset's key by key;
- * its arrays (suns, moons, nebulae, colours) and its base replace the preset's. Untyped by the
- * definition (the schema, which the definition's type comes from, uses it): code uses
- * resolveSkyBoxPreset.
+ * its arrays (suns, moons, nebulae, colours) and its base replace the preset's. The untyped form,
+ * for the schema and the data pipeline (the definition's type comes from the schema): code uses
+ * {@link resolveSkyBoxPreset}.
+ * @throws When `preset` names no preset.
  */
 export const mergeSkyBoxPreset = <T extends { preset?: string; base?: unknown }>(
   def: T
@@ -142,9 +157,23 @@ export const mergeSkyBoxPreset = <T extends { preset?: string; base?: unknown }>
 };
 
 /**
- * A definition made in code, with its preset merged under it (see mergeSkyBoxPreset), for
- * createSkyBox / registerSkyBox: eg. `createSkyBox(resolveSkyBoxPreset({ id: 'space', preset:
- * 'SPACE' }))`. JSON sky boxes are resolved at build time.
+ * A definition made in code, with its preset merged under it (as {@link mergeSkyBoxPreset} does),
+ * for `createSkyBox`, which takes no `preset`. A definition without one comes back as it is. JSON
+ * sky boxes are resolved at build time.
+ * @throws When `preset` names no preset.
+ * @example
+ * ```ts
+ * import { createSkyBox, resolveSkyBoxPreset } from 'aekasha/skybox';
+ *
+ * // The SPACE preset with its sun moved: the definition's suns replace the preset's
+ * void createSkyBox(
+ *   resolveSkyBoxPreset({
+ *     id: 'deepSpace',
+ *     preset: 'SPACE',
+ *     suns: [{ elevation: 5, azimuth: 270, light: {} }],
+ *   })
+ * );
+ * ```
  */
 export const resolveSkyBoxPreset = (def: SkyBoxPresetDef | SkyBoxDef): SkyBoxDef =>
   mergeSkyBoxPreset(def as SkyBoxPresetDef) as SkyBoxDef;

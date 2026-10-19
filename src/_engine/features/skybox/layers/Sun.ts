@@ -3,6 +3,8 @@
  * extinction colour, as SkyMesh does, three r186 `SkyMesh.js:275-276`). Up to MAX_SUNS suns
  * (p114), each with its own uniforms; suns[0] is the primary, whose direction also drives the
  * atmosphere. Every sun is dimmed and coloured by the atmosphere along its own direction.
+ *
+ * Like every layer, internal to the sky box (the composite, the lights) and its debug tab.
  */
 import * as THREE from 'three/webgpu';
 import { dot, max, pow, smoothstep, uniform } from 'three/tsl';
@@ -11,11 +13,17 @@ import type { SkyCompositeMode } from '../SkyComposite';
 import { toSkyColor } from '../SkyColor';
 import { computeExtinction, computeSunE, type AtmosphereUniforms } from './Atmosphere';
 
-export const SUN_STRUCTURAL_KEYS = ['enabled'] as const;
-
-/** How many suns a sky box draws (suns[0..3], unrolled in the composite). */
+/**
+ * How many suns a sky box draws (suns[0..3], unrolled in the composite).
+ * @internal
+ */
 export const MAX_SUNS = 4;
 
+/**
+ * A sun's defaults (the schema's "Default …" comments say the same; the debug tab shows
+ * these).
+ * @internal
+ */
 export const SUN_DEFAULTS = {
   enabled: true,
   elevation: 30,
@@ -28,9 +36,12 @@ export const SUN_DEFAULTS = {
   rotateWithSky: true,
 };
 
-/** SkyMesh's disc (:230, :275-276): it compares the angle to the sun against 0.533° (its
+/**
+ * SkyMesh's disc (:230, :275-276): it compares the angle to the sun against 0.533° (its
  * comment says the angular diameter, but it's used as the radius), with this edge sharpness and
- * scale. */
+ * scale.
+ * @internal
+ */
 export const SUN_DISC_RADIUS = Math.acos(0.9999566769464484);
 const DISC_EDGE = 50000;
 const DISC_SCALE = 760;
@@ -41,6 +52,11 @@ const ENV_DISC_MIN_TEXELS = 2;
 /** Keeps a custom colour's extinction compensation finite near the horizon. */
 const MIN_EXTINCTION = 1e-3;
 
+/**
+ * A sun's uniforms (one set per possible sun), created once per activation. Some are CPU only:
+ * the lighting write and the sun's light read them.
+ * @internal
+ */
 export type SunUniforms = {
   /** The sun's unit direction (suns[0]'s is the atmosphere's too). */
   direction: THREE.UniformNode<'vec3', THREE.Vector3>;
@@ -66,6 +82,10 @@ export type SunUniforms = {
   extinction: THREE.Vector3;
 };
 
+/**
+ * A sun's uniforms at neutral values (applySunUniforms writes the definition's).
+ * @internal
+ */
 export const createSunUniforms = (): SunUniforms => ({
   direction: uniform(new THREE.Vector3(0, 1, 0)),
   discCos: uniform(1),
@@ -85,6 +105,7 @@ export const createSunUniforms = (): SunUniforms => ({
  * A sun's unit direction from its elevation and azimuth (degrees), the way three's sky example
  * places it: azimuth 0 = +z, 90 = +x, 180 = -z. Day-night derives it from the time instead
  * (SkyTime.ts).
+ * @internal
  */
 export const getFixedSunDirection = (sun: SkyBoxSunDef | undefined, out: THREE.Vector3) => {
   const elevation = sun?.elevation ?? SUN_DEFAULTS.elevation;
@@ -96,18 +117,25 @@ export const getFixedSunDirection = (sun: SkyBoxSunDef | undefined, out: THREE.V
   );
 };
 
-/** The atmosphere a sun is seen through: its uniforms (their sun terms written already) and
- * its definition. Null without an enabled atmosphere. */
+/**
+ * The atmosphere a sun is seen through: its uniforms (their sun terms written already) and
+ * its definition. Null without an enabled atmosphere.
+ * @internal
+ */
 export type SunAtmosphere = { u: AtmosphereUniforms; def: SkyBoxAtmosphereDef | undefined } | null;
 
 /**
  * Writes the sun's uniforms (its direction is written first, see applySkyUniforms).
+ * @internal
+ * @param isPrimary suns[0], whose terms the atmosphere has computed already (see
+ * applySunLightingUniforms)
  */
 export const applySunUniforms = (
   u: SunUniforms,
   sun: SkyBoxSunDef | undefined,
   atmosphere: SunAtmosphere,
-  envSize: SkyBoxEnvSize
+  envSize: SkyBoxEnvSize,
+  isPrimary: boolean
 ) => {
   const radius = SUN_DISC_RADIUS * (sun?.discSize ?? SUN_DEFAULTS.discSize);
   u.discCos.value = Math.cos(radius);
@@ -122,27 +150,36 @@ export const applySunUniforms = (
   u.isAutoColor = color === 'AUTO';
   if (color !== 'AUTO') u.color.copy(toSkyColor(color));
 
-  applySunLightingUniforms(u, atmosphere);
+  applySunLightingUniforms(u, atmosphere, isPrimary);
 };
 
 /**
  * Writes what the atmosphere changes along the sun's direction: the disc's radiance, the
- * extinction and a custom colour's compensation for it. For suns[0] that's the atmosphere's own
- * sunE and extinctionAtSun; any other sun gets its own, from its height. The day-night step calls
- * it every time the sky moves: it allocates nothing.
+ * extinction and a custom colour's compensation for it. For suns[0] (`isPrimary`) that's the
+ * atmosphere's own sunE and extinctionAtSun, read as applyAtmosphereSunUniforms wrote them (the
+ * same direction); any other sun gets its own, from its height. The day-night step calls it every
+ * time the sky moves: it allocates nothing.
+ * @internal
  */
-export const applySunLightingUniforms = (u: SunUniforms, atmosphere: SunAtmosphere) => {
+export const applySunLightingUniforms = (
+  u: SunUniforms,
+  atmosphere: SunAtmosphere,
+  isPrimary: boolean
+) => {
   const y = u.direction.value.y;
-  if (atmosphere) {
+  let sunE = 0;
+  if (atmosphere && isPrimary) {
+    u.extinction.copy(atmosphere.u.extinctionAtSun);
+    sunE = atmosphere.u.sunE.value;
+  } else if (atmosphere) {
     computeExtinction(y, atmosphere.u.betaR.value, atmosphere.u.betaM.value, u.extinction);
+    sunE = computeSunE(atmosphere.def, y);
   } else {
     u.extinction.set(1, 1, 1);
   }
   // SkyMesh's peak is min(sunE · Fex, 80) · 760 (~60,800): here the peak is discIntensity, and
   // the sun's energy only takes it down (below the horizon, sunE goes to 0)
-  const radiance = atmosphere
-    ? Math.min(computeSunE(atmosphere.def, y) * DISC_SCALE, u.peakRadiance)
-    : u.peakRadiance;
+  const radiance = atmosphere ? Math.min(sunE * DISC_SCALE, u.peakRadiance) : u.peakRadiance;
   u.discRadiance.value = radiance;
   u.envDiscRadiance.value = Math.min(radiance, ENV_DISC_CLAMP);
 
@@ -162,6 +199,7 @@ export const applySunLightingUniforms = (u: SunUniforms, atmosphere: SunAtmosphe
  * The sun over `behind`. ENV_BAKE: no disc when the sun has a light (the light gives that
  * highlight, twice would double it); otherwise the disc widened to a few bake texels (a 0.5°
  * disc is sub-texel there) and clamped, so the GGX filter doesn't sparkle. The halo stays.
+ * @internal
  */
 export const sunNode = (
   dir: THREE.Node<'vec3'>,

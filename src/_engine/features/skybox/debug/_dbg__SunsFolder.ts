@@ -5,13 +5,12 @@ import type { SkyBoxSunDef } from '../SkyBoxTypes';
 import { isDayNightEnabled, isOn } from '../SkyComposite';
 import { getDayNightStartTime, turnWithSky } from '../SkyTime';
 import { getActiveCamera } from '../../../kernel/camera/Camera';
+import { resetSkyBoxLayer, setSkyBoxParam } from './_dbg__SkyBoxEdits';
 import {
   getElevationAzimuth,
   getSelectedIndex,
   isListOverrideAnArray,
   LAYER_PATHS,
-  resetSkyBoxLayer,
-  setSkyBoxParam,
   skyBoxProxy,
 } from './_dbg__SkyBoxShared';
 import { buildAutoColorItems, numberParam } from './_dbg__LayerFolderItems';

@@ -45,7 +45,9 @@ const profiles: SbpProfile[] = [
         // while its code is 1.4 kB smaller rendered (the main chunk's gzip +0.6 kB in all)
         '_engine/features/physics': 44 * KIB,
         '_engine/features/postfx': 3 * KIB,
-        '_engine/features/skybox': 28 * KIB,
+        // p615: 26.4 → 28.4 kB, mostly its JSDoc (a group counts its comments); its code about
+        // +1.1 kB (the sky clock, the update queue, the stop, `SkyDayNight.ts` a module of its own)
+        '_engine/features/skybox': 30 * KIB,
         '_engine/features/spatial': 10 * KIB,
         '_engine/features/viewports': 4 * KIB,
         // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`)

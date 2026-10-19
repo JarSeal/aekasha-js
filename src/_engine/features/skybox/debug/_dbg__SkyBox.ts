@@ -20,8 +20,8 @@ import {
   getSceneDefaultSkyBoxId,
   setActiveSkyBox,
   SKYBOX_DEBUG_OVERRIDES_LS_KEY,
-  SKYBOX_MANAGER_ID,
 } from '../SkyBox';
+import { SKYBOX_MANAGER_ID } from '../SkyLights';
 import { _registerManagerDebugInfo } from '../../../debug/_dbg__ManagedEntities';
 import { getCurrentSceneId } from '../../../kernel/scene/Scene';
 import {
@@ -29,8 +29,8 @@ import {
   _registerUndoRedoActionHandler,
 } from '../../../debug/_dbg__UndoRedo';
 import { SKYBOX_PRESET_NAMES, type SkyBoxPresetName } from '../Presets';
+import { applySkyBoxPreset } from './_dbg__SkyBoxEdits';
 import {
-  applySkyBoxPreset,
   clearSkyBoxOverrides,
   getSceneIdsWithOverrides,
   migrateLegacySkyBoxLS,

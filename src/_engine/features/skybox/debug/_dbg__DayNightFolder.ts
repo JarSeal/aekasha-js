@@ -1,7 +1,7 @@
 import type { FolderApi, Pane } from 'tweakpane';
 import type { DebuggerPaneItem } from '../../../debug/DebuggerGUI';
+import { getActiveSkyBox } from '../SkyBox';
 import {
-  getActiveSkyBox,
   getDayNightSpeed,
   getMoonPhase,
   getSunElevation,
@@ -11,11 +11,12 @@ import {
   playDayNight,
   setDayNightSpeed,
   setTimeOfDay,
-} from '../SkyBox';
+} from '../SkyDayNight';
 import { isDayNightEnabled } from '../SkyComposite';
 import { DAY_NIGHT_DEFAULTS } from '../SkyTime';
 import { envBakeStatsView } from './_dbg__EnvBakeStats';
-import { getDefValue, resetSkyBoxLayer, setSkyBoxParam, skyBoxProxy } from './_dbg__SkyBoxShared';
+import { resetSkyBoxLayer, setSkyBoxParam } from './_dbg__SkyBoxEdits';
+import { getDefValue, skyBoxProxy } from './_dbg__SkyBoxShared';
 import { numberParam } from './_dbg__LayerFolderItems';
 
 const isOff = () => !isDayNightEnabled(getActiveSkyBox()?.def);

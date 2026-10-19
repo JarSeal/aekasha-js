@@ -1,4 +1,4 @@
-import * as THREE from 'three/webgpu';
+import type * as THREE from 'three/webgpu';
 import { normalWorldGeometry, pmremTexture } from 'three/tsl';
 import { lerror, lwarn } from '../../utils/Logger';
 import { getCurrentSceneId, getRootScene } from '../../kernel/scene/Scene';
@@ -8,11 +8,6 @@ import { lsGetItem } from '../../utils/LocalAndSessionStorage';
 import type { DebugModuleRef } from '../../kernel/config/DebugModules';
 import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
 import { deepMerge, isIndexObject } from '../../utils/DeepMerge';
-import { type ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
-import type { FeatureContext } from '../../kernel/init/Features';
-import { getRenderer } from '../../kernel/render/Renderer';
-import { ECSSystemStage } from '../../kernel/loop/SystemStages';
-import { getElapsedTime, isAppPlaying } from '../../kernel/loop/MainLoop';
 import type { SkyBoxBaseDef, SkyBoxDef, SkyBoxEnvDef, SkyBoxOverrides } from './SkyBoxTypes';
 import { fromLegacySkyBoxProps, isLegacySkyBoxProps, type LegacySkyBoxProps } from './LegacySkyBox';
 import {
@@ -23,16 +18,12 @@ import {
   loadBaseTexture,
 } from './layers/Base';
 import {
-  applySkyTimeUniforms,
   applySkyUniforms,
   buildSkyComposite,
-  computeMoonDirectionOf,
-  computeSunDirectionOf,
   createSkyUniforms,
   getCompositeSignature,
   getEnvSize,
   getMoonCount,
-  getSunCount,
   getStaticLayersSourceOf,
   hasProceduralLayer,
   isAtmosphereEnabled,
@@ -40,51 +31,44 @@ import {
   isOn,
   type SkyUniforms,
 } from './SkyComposite';
-import {
-  disposeEnvBake,
-  getPMREMTexture,
-  isEnvBakeRequested,
-  requestEnvBake,
-  runRequestedEnvBake,
-  setEnvBake,
-} from './SkyEnvironment';
-import {
-  disposeStaticLayers,
-  requestStaticLayersBake,
-  runRequestedStaticLayersBake,
-  setStaticLayers,
-} from './SkyStaticLayers';
-import {
-  deleteSkyLights,
-  syncSkyLights,
-  updateSkyLightsForTime,
-  updateSkyLightsFrame,
-} from './SkyLights';
+import { disposeEnvBake, getPMREMTexture, requestEnvBake, setEnvBake } from './SkyEnvironment';
+import { disposeStaticLayers, requestStaticLayersBake, setStaticLayers } from './SkyStaticLayers';
+import { deleteSkyLights, syncSkyLights } from './SkyLights';
 import { loadMoonTexture, MAX_MOONS } from './layers/Moon';
 import { MAX_SUNS } from './layers/Sun';
 import {
-  advanceSkyTime,
   applyDayNightChange,
   createSkyTimeState,
-  DAY_NIGHT_DEFAULTS,
-  getMoonPhaseOf,
   resetSkyTimeState,
   setSkyTimeMoonPhase,
-  wrap24,
   type SkyTimeState,
 } from './SkyTime';
 
-export type { SkyBoxDef } from './SkyBoxTypes';
-export {
-  resolveSkyBoxPreset,
-  SKYBOX_PRESET_NAMES,
-  type SkyBoxPresetDef,
-  type SkyBoxPresetName,
-} from './Presets';
-
-/** The one sky box the root scene shows. */
-export type ActiveSkyBox = {
+/**
+ * The sky box the root scene shows, as the API hands it out: which one, the scene it belongs to,
+ * and its definition with every change made since its activation merged in (`updateSkyBox`, and
+ * in the debug env the debug tab's overrides). Every change makes a new one, and none changes in
+ * place: a kept one is the sky box as it was then.
+ */
+export type SkyBoxState = Readonly<{
+  /** The sky box's id (its definition's). */
   id: string;
+  /** The scene it's registered in. */
+  sceneId: string;
+  /** Its definition, with the changes made since its activation. */
+  def: SkyBoxDef;
+}>;
+
+/**
+ * The one sky box the root scene shows, with its internals (uniforms, nodes, textures, the running
+ * time): the feature's own state, read by its debug tab, the env ball, GPU memory and the tests.
+ * The API hands out its {@link SkyBoxState} part.
+ * @internal
+ */
+export type ActiveSkyBox = {
+  /** As {@link SkyBoxState}'s. */
+  id: string;
+  /** As {@link SkyBoxState}'s. */
   sceneId: string;
   /** The definition with the debug overrides (debug env only) and updateSkyBox changes merged in. */
   def: SkyBoxDef;
@@ -93,6 +77,8 @@ export type ActiveSkyBox = {
   /** Whether it's on the composite path (SkyComposite.ts), whose environment is an env bake,
    * or on the direct path (a texture or colour base only, sampled as is). */
   isComposite: boolean;
+  /** The root scene's `backgroundNode` and `environmentNode` (null: a colour base on the direct
+   * path has no environment). */
   nodes: { background: THREE.Node; environment: THREE.Node | null };
   /** The base's source texture, the PMREM the environment samples (the texture's, or the env
    * bake's target), and each moon's texture (by index). */
@@ -108,8 +94,12 @@ export type ActiveSkyBox = {
 
 /** A change to the active sky box: any subset of its layers' values. */
 export type SkyBoxUpdate = {
+  /** The base's values (its `type` can't change: another type is another definition). A change
+   * to file, fileNames, path, textureId, texture, colorSpace or flipY reloads the sky box. */
   base?: NonNullable<SkyBoxOverrides['base']> & { texture?: THREE.Texture };
+  /** A change to `size`, or `backgroundRoughness` crossing 0, rebuilds the nodes. */
   env?: SkyBoxEnvDef;
+  /** Adding or removing it (or `enabled`) rebuilds the nodes, as for every layer below. */
   atmosphere?: SkyBoxOverrides['atmosphere'];
   /** An array replaces the suns; an index object (`{ 0: { ... } }`) changes those entries.
    * Adding or removing one rebuilds the nodes. */
@@ -119,24 +109,27 @@ export type SkyBoxUpdate = {
   moons?: SkyBoxOverrides['moons'];
   /** As `suns`. A change re-bakes the nebula cube (throttled: at most every 150 ms). */
   nebulae?: SkyBoxOverrides['nebulae'];
+  /** The managed ambient light's values. */
   ambientLight?: SkyBoxOverrides['ambientLight'];
+  /** The clouds' values (they need the atmosphere). */
   clouds?: SkyBoxOverrides['clouds'];
+  /** The ground's values. */
   ground?: SkyBoxOverrides['ground'];
   /** Its runtime keys (timeOfDay, speed, cycleDurationSec, playing) also set the running
    * cycle's; turning it on starts the cycle from the definition's values. */
   dayNight?: SkyBoxOverrides['dayNight'];
 };
 
+/**
+ * Why the active sky box changed: `'activate'` (another sky box, or the same one loaded again
+ * after a structural update), `'update'` (an `updateSkyBox` that kept its nodes or rebuilt them)
+ * or `'clear'` (none shows, eg. on a scene's exit).
+ */
 export type SkyBoxChangeReason = 'activate' | 'update' | 'clear';
 /**
  * A listener for {@link onSkyBoxChange}: the active sky box (null once cleared) and why it changed.
  */
-export type SkyBoxChangeListener = (
-  active: ActiveSkyBox | null,
-  reason: SkyBoxChangeReason
-) => void;
-
-export { SKYBOX_MANAGER_ID } from './SkyLights';
+export type SkyBoxChangeListener = (skyBox: SkyBoxState | null, reason: SkyBoxChangeReason) => void;
 
 /**
  * The debug tab's override store: `{ [sceneId]: { [skyBoxId]: SkyBoxOverrides } }`.
@@ -152,7 +145,26 @@ let active: ActiveSkyBox | null = null;
 /** Every activation and clear takes the next number; an activation that finds a newer one when
  * its texture has loaded was superseded, and drops its result. */
 let activationSeq = 0;
+/** The latest activation, while its textures load: an updateSkyBox waits for it. */
+let activationInFlight: Promise<ActiveSkyBox | null> | null = null;
+/** The updates made while an activation is in flight, by sky box id: each one's changes merged
+ * in call order, and the callers to settle once it's applied. */
+const queuedUpdates = new Map<
+  string,
+  { update: SkyBoxUpdate; settle: ((active: SkyBoxState | null) => void)[] }
+>();
 const listeners = new Set<SkyBoxChangeListener>();
+/** Run by every clear: the sky clock's restart (SkyDayNight.ts, which imports this module). */
+let onClear: (() => void) | null = null;
+
+/**
+ * Sets what every clear runs: SkyDayNight.ts' install restarts the sky clock with it, so a
+ * scene's clouds start from the same place on every visit.
+ * @internal
+ */
+export const _setSkyBoxClearHook = (hook: (() => void) | null) => {
+  onClear = hook;
+};
 
 const notify = (reason: SkyBoxChangeReason) => {
   for (const listener of listeners) listener(active, reason);
@@ -168,7 +180,9 @@ const resolveSceneId = (sceneId?: string) =>
 
 /**
  * Registers (or replaces, by id) a sky box definition without showing it. Without a sceneId,
- * it belongs to the loading scene, or else the current one.
+ * it belongs to the loading scene, or else the current one. Used by `createSkyBox` and the
+ * feature's `sceneRegistered` hook (a scene's JSON sky boxes); apps call `createSkyBox`.
+ * @internal
  * @returns the scene id it was registered in
  */
 export const registerSkyBox = (def: SkyBoxDef, sceneId?: string) => {
@@ -180,7 +194,7 @@ export const registerSkyBox = (def: SkyBoxDef, sceneId?: string) => {
   }
   if ('preset' in def && IS_DEBUG_ENV) {
     lwarn(
-      `Sky box "${def.id}" still has a preset, which is ignored here: pass the definition through resolveSkyBoxPreset first (JSON sky boxes are resolved at build time).`
+      `Sky box "${def.id}" still has a preset, which is ignored here: pass the definition through resolveSkyBoxPreset (aekasha/skybox) first (JSON sky boxes are resolved at build time).`
     );
   }
   let sceneDefs = registry.get(targetSceneId);
@@ -198,7 +212,11 @@ export const registerSkyBox = (def: SkyBoxDef, sceneId?: string) => {
   return targetSceneId;
 };
 
-/** The sky box a scene starts with: the last registered with `isDefault: true`, else the first registered. */
+/**
+ * The sky box a scene starts with: the last registered with `isDefault: true`, else the first
+ * registered. Read by the feature's `created` hook and the debug tab.
+ * @internal
+ */
 export const getSceneDefaultSkyBoxId = (sceneId: string) => {
   const sceneDefs = registry.get(sceneId);
   if (!sceneDefs?.size) return null;
@@ -251,7 +269,7 @@ const applySceneProperties = (def: SkyBoxDef, isComposite: boolean) => {
     def.env?.environmentIntensity ?? ENV_DEFAULTS.environmentIntensity;
   rootScene.backgroundIntensity = def.env?.backgroundIntensity ?? ENV_DEFAULTS.backgroundIntensity;
   // Direct path: PMREMNode applies it to the environment; the background applies it itself
-  // (layers/base.ts). Composite path: the rotation is baked into the environment already.
+  // (layers/Base.ts). Composite path: the rotation is baked into the environment already.
   const rotate =
     isComposite || def.base.type === 'COLOR' ? 0 : def.base.rotate ?? BASE_DEFAULTS.rotate;
   rootScene.environmentRotation.set(0, rotate, 0);
@@ -271,7 +289,12 @@ const resetSceneProperties = () => {
 const isBackgroundFromBake = (def: SkyBoxDef) =>
   (def.env?.backgroundRoughness ?? ENV_DEFAULTS.backgroundRoughness) > 0;
 
-const isBakeDynamic = (def: SkyBoxDef) => def.env?.dynamic ?? ENV_DEFAULTS.dynamic;
+/**
+ * Whether a value change re-bakes the environment (`env.dynamic`): for updates here and the
+ * day-night bake schedule (SkyDayNight.ts).
+ * @internal
+ */
+export const isBakeDynamic = (def: SkyBoxDef) => def.env?.dynamic ?? ENV_DEFAULTS.dynamic;
 
 type SkyBoxBuild = Pick<ActiveSkyBox, 'isComposite' | 'nodes' | 'textures'>;
 
@@ -338,9 +361,27 @@ const show = (next: ActiveSkyBox) => {
 };
 
 /** Loads, builds and shows a resolved definition. `time` carries a running cycle's time over
- * (a structural update of the same sky box); without it, the cycle starts from the definition. */
-const activate = async (sceneId: string, def: SkyBoxDef, time?: SkyTimeState) => {
+ * (a structural update of the same sky box); without it, the cycle starts from the definition.
+ * Until it has shown (or been superseded), updates wait for it. */
+const activate = (sceneId: string, def: SkyBoxDef, time?: SkyTimeState) => {
   const seq = ++activationSeq;
+  const run = loadAndShow(seq, sceneId, def, time);
+  activationInFlight = run;
+  const done = () => {
+    if (activationInFlight !== run) return; // A later activation runs the queue
+    activationInFlight = null;
+    applyQueuedUpdates();
+  };
+  void run.then(done, done);
+  return run;
+};
+
+const loadAndShow = async (
+  seq: number,
+  sceneId: string,
+  def: SkyBoxDef,
+  time: SkyTimeState | undefined
+) => {
   const [texture, ...moonTextures] = await Promise.all([
     loadBaseTexture(def.base),
     ...Array.from({ length: getMoonCount(def) }, (_, i) => loadMoonTexture(def.moons?.[i])),
@@ -374,10 +415,18 @@ const activate = async (sceneId: string, def: SkyBoxDef, time?: SkyTimeState) =>
 /**
  * Shows a registered sky box of the current scene (with its debug overrides, in the debug env),
  * or none with null. When called again before an earlier call has loaded its texture, the
- * latest call wins.
- * @returns the active sky box, or null
+ * latest call wins. A texture that fails to load shows black (a moon's, a plain disc): it never
+ * fails the call.
+ * @param id one of the current scene's sky boxes (its JSON `skyboxes`, or a `createSkyBox`), or
+ * null for none
+ * @param sceneId the current scene's id (default); another scene's warns and changes nothing
+ * @returns the active sky box once it shows (unchanged when `id` isn't registered, which warns),
+ * or null
  */
-export const setActiveSkyBox = async (id: string | null, sceneId?: string) => {
+export const setActiveSkyBox = async (
+  id: string | null,
+  sceneId?: string
+): Promise<SkyBoxState | null> => {
   if (id === null) {
     clearSkyBox();
     return null;
@@ -398,15 +447,23 @@ export const setActiveSkyBox = async (id: string | null, sceneId?: string) => {
   return activate(targetSceneId, resolveSkyBoxDef(def, targetSceneId));
 };
 
-/** Shows a scene's default sky box (see getSceneDefaultSkyBoxId), if it has any. Called by the
- * scene loader when a scene is entered. */
+/**
+ * Shows a scene's default sky box (see getSceneDefaultSkyBoxId), if it has any: the feature's
+ * `created` hook, once the scene code has run and the scene is current.
+ * @internal
+ */
 export const activateSceneDefaultSkyBox = async (sceneId: string) => {
   const id = getSceneDefaultSkyBoxId(sceneId);
   if (!id) return null;
   return setActiveSkyBox(id, sceneId);
 };
 
-/** The sky box the root scene shows, or null. */
+/**
+ * The sky box the root scene shows with its internals, or null: for the feature's debug tab, the
+ * env ball, GPU memory and the tests. Apps get its {@link SkyBoxState} from the API's results and
+ * {@link onSkyBoxChange}.
+ * @internal
+ */
 export const getActiveSkyBox = () => active;
 
 const LEGACY_WARN = (message: string) => {
@@ -415,13 +472,35 @@ const LEGACY_WARN = (message: string) => {
 
 /**
  * Registers a sky box and, when it belongs to the current scene and `isDefault` isn't false,
- * shows it. While a scene loads, a sky box without a sceneId belongs to the loading scene: it's
+ * shows it. While a scene loads, a sky box without a `sceneId` belongs to the loading scene: it's
  * only registered, and the loader shows the scene's default once the scene is entered.
- * Unlike registerSkyBox, `isDefault` defaults to true here (as the legacy `isCurrent` did), so
- * the last sky box created for a scene is its default.
- * The legacy `{ type, params }` props still work (with a dev warning).
+ * `isDefault` defaults to true here, so the last sky box created for a scene is its default. A
+ * definition with a `preset` goes through
+ * `resolveSkyBoxPreset` first.
+ * @returns the sky box once it shows, or null when it was only registered
+ * @example
+ * ```ts
+ * import { createSkyBox } from 'aekasha/skybox';
+ *
+ * // In a scene file: an HDR sky with a slightly blurred background, the scene's default
+ * void createSkyBox({
+ *   id: 'studio',
+ *   base: { type: 'EQUIRECTANGULAR', file: 'studio.hdr', path: './textures/' },
+ *   env: { backgroundRoughness: 0.2 },
+ * });
+ * ```
  */
-export const createSkyBox = async (defOrLegacy: SkyBoxDef | LegacySkyBoxProps) => {
+export function createSkyBox(def: SkyBoxDef): Promise<SkyBoxState | null>;
+/**
+ * The pre-3.0 `{ type, params }` form: converted to a layered definition, with a warning in the
+ * debug env; `type: ''` clears the current scene's sky box.
+ * @deprecated Write a layered definition ({@link SkyBoxDef}: `base`, `env`); removed in engine
+ * 6.0.0 with the legacy shape.
+ */
+export function createSkyBox(legacy: LegacySkyBoxProps): Promise<SkyBoxState | null>;
+export async function createSkyBox(
+  defOrLegacy: SkyBoxDef | LegacySkyBoxProps
+): Promise<SkyBoxState | null> {
   const converted = isLegacySkyBoxProps(defOrLegacy)
     ? fromLegacySkyBoxProps(defOrLegacy, LEGACY_WARN)
     : defOrLegacy;
@@ -437,7 +516,7 @@ export const createSkyBox = async (defOrLegacy: SkyBoxDef | LegacySkyBoxProps) =
   const sceneId = registerSkyBox(def);
   if (def.isDefault && sceneId === getCurrentSceneId()) return setActiveSkyBox(def.id, sceneId);
   return null;
-};
+}
 
 const isStructuralBaseUpdate = (current: SkyBoxBaseDef, update: SkyBoxUpdate['base']) => {
   if (!update) return false;
@@ -452,16 +531,54 @@ const isStructuralBaseUpdate = (current: SkyBoxBaseDef, update: SkyBoxUpdate['ba
 };
 
 /**
- * Changes the active sky box (a no-op for any other id). A change to a structural key (for the
- * base: type, file, fileNames, path, textureId, texture, colorSpace, flipY; a moon's texture) re-runs the
- * activation; one that changes which nodes exist (on the composite path: env.size, or
- * env.backgroundRoughness crossing 0; which suns, moons and their lights exist; which nebulae
- * exist, their octaves, env.nebulaSize)
- * rebuilds the nodes; any other change only writes uniforms and scene properties, and (with
- * env.dynamic) re-bakes the environment (a nebula change re-bakes the nebula cube first). Changes last until
- * it's activated again, which starts from its definition.
+ * Changes the active sky box (a no-op for any other id). Three costs, by what changes:
+ * - a structural key (the base's file, fileNames, path, textureId, texture, colorSpace or flipY;
+ *   a moon's texture) re-runs the activation, its texture load included;
+ * - one that changes which nodes exist (on the composite path: which layers, suns, moons, their
+ *   lights and nebulae exist, the nebulae's octaves, env.size, env.nebulaSize, or
+ *   env.backgroundRoughness crossing 0) rebuilds the nodes;
+ * - any other only writes uniforms and scene properties, and (with env.dynamic) re-bakes the
+ *   environment (a nebula change re-bakes the nebula cube first).
+ *
+ * Changes last until the sky box is activated again, which starts from its definition.
+ *
+ * While an activation is loading its textures (a structural change, or setActiveSkyBox), an update
+ * waits for it and then applies to what it showed: updates keep their call order, those made
+ * meanwhile are applied as one (a slider drag), and one for a sky box that is no longer active
+ * by then does nothing.
+ * @returns the active sky box once the update is applied
+ * @example
+ * ```ts
+ * import { updateSkyBox } from 'aekasha/skybox';
+ *
+ * // A storm rolls in: more clouds, a dimmer sun light (uniform writes, no reload)
+ * void updateSkyBox('clearDay', {
+ *   clouds: { coverage: 0.8, density: 0.7 },
+ *   suns: { 0: { light: { intensity: 1 } } },
+ * });
+ * ```
  */
-export const updateSkyBox = async (id: string, update: SkyBoxUpdate) => {
+export const updateSkyBox = (id: string, update: SkyBoxUpdate): Promise<SkyBoxState | null> => {
+  if (!activationInFlight) return applyUpdate(id, update);
+  const queued = queuedUpdates.get(id);
+  if (queued) queued.update = deepMerge(queued.update, update);
+  else queuedUpdates.set(id, { update, settle: [] });
+  return new Promise((resolve) => queuedUpdates.get(id)!.settle.push(resolve));
+};
+
+/** Applies the updates made while an activation was in flight, in call order (one may start
+ * another activation: the ones after it wait for that). */
+const applyQueuedUpdates = () => {
+  const entries = [...queuedUpdates];
+  queuedUpdates.clear();
+  for (const [id, { update, settle }] of entries) {
+    const applied = updateSkyBox(id, update);
+    const resolve = (result: SkyBoxState | null) => settle.forEach((fn) => fn(result));
+    void applied.then(resolve, () => resolve(active));
+  }
+};
+
+const applyUpdate = async (id: string, update: SkyBoxUpdate) => {
   if (!active || active.id !== id) return active;
   const current = active;
   const def = mergeSkyBoxDef(current.def, update);
@@ -513,15 +630,35 @@ export const updateSkyBox = async (id: string, update: SkyBoxUpdate) => {
   return active;
 };
 
-/** Removes the shown sky box (and resets the scene's environment intensity and rotation). */
+/**
+ * Removes the shown sky box (and resets the scene's environment intensity and rotation): the
+ * feature's `exit` hook, `setActiveSkyBox(null)`, `stopSkyBox` and the legacy "no sky box".
+ * @internal
+ */
 export const clearSkyBox = () => {
   activationSeq++;
   active = null;
+  onClear?.();
   disposeEnvBake();
   disposeStaticLayers();
   deleteSkyLights();
   resetSceneProperties();
   notify('clear');
+};
+
+/**
+ * Stops the sky box for good, for a mounted engine's `unmount()` (the feature's `onUnmount`): it's
+ * cleared while the renderer and the ECS world still exist (its bakes disposed, its lights
+ * deleted, the root scene's background and environment reset), the updates waiting for an
+ * activation settle with null, and the change listeners are dropped.
+ * @internal
+ */
+export const stopSkyBox = () => {
+  const queued = [...queuedUpdates.values()];
+  queuedUpdates.clear();
+  clearSkyBox();
+  listeners.clear();
+  for (const { settle } of queued) settle.forEach((fn) => fn(null));
 };
 
 /**
@@ -532,15 +669,36 @@ export const clearSkyBox = () => {
  */
 export const bakeEnvironment = () => requestEnvBake();
 
-/** The source texture of the sky box the root scene shows, or null. */
+/**
+ * The source texture of the sky box the root scene shows, or null: the feature's
+ * `retainedTextures` hook keeps it through a scene's asset release.
+ * @internal
+ */
 export const getActiveSkyBoxTexture = () => active?.textures.source ?? null;
 
-/** The PMREM the root scene's environment samples, or null. */
+/**
+ * The PMREM the root scene's environment samples, or null: for the env ball.
+ * @internal
+ */
 export const getActiveEnvironmentTexture = () =>
   active?.nodes.environment ? active.textures.environment : null;
 
-/** Calls `listener` whenever the active sky box is activated, updated or cleared.
- * @returns a function that removes the listener */
+/**
+ * Calls `listener` whenever the active sky box is activated, updated or cleared, after the change
+ * shows. One added in scene code hears that scene's own sky box activate: the feature shows a
+ * scene's default after its code has run.
+ * @returns a function that removes the listener
+ * @example
+ * ```ts
+ * import { onSkyBoxChange } from 'aekasha/skybox';
+ *
+ * // Keep the scene's own sun off while the sky box brings a sun light
+ * const removeListener = onSkyBoxChange((skyBox) => {
+ *   const sun = skyBox?.def.suns?.[0];
+ *   mySunLight.visible = !(sun?.light && sun.light.enabled !== false);
+ * });
+ * ```
+ */
 export const onSkyBoxChange = (listener: SkyBoxChangeListener) => {
   listeners.add(listener);
   return () => {
@@ -548,224 +706,24 @@ export const onSkyBoxChange = (listener: SkyBoxChangeListener) => {
   };
 };
 
-// Day-night (p113). Runtime only: nothing here writes the definition or the debug overrides.
-// The setters are no-ops without an active sky box with day-night on.
-
-/** The active sky box's day-night time, or null (no sky box, or day-night off). */
-const getSkyTime = () => (active && isDayNightEnabled(active.def) ? active.time : null);
-
-/**
- * Sets the time of day (hours, wrapped into [0, 24)). The sky, sun and lights follow on the
- * next frame, whether the cycle is playing or not.
- */
-export const setTimeOfDay = (hours: number) => {
-  const time = getSkyTime();
-  if (!time || !Number.isFinite(hours)) return;
-  time.timeOfDay = wrap24(hours);
-  time.isDirty = true;
-};
-
-/** The time of day in hours [0, 24), or null without day-night. */
-export const getTimeOfDay = () => getSkyTime()?.timeOfDay ?? null;
-
-/** Runs the day-night cycle (it advances with its `timeSource`). */
-export const playDayNight = () => {
-  const time = getSkyTime();
-  if (time) time.playing = true;
-};
-
-/** Stops the day-night cycle where it is (setTimeOfDay still moves it). */
-export const pauseDayNight = () => {
-  const time = getSkyTime();
-  if (time) time.playing = false;
-};
-
-export const isDayNightPlaying = () => Boolean(getSkyTime()?.playing);
-
-/** Sets the cycle's time multiplier: negative runs it backwards, 0 freezes it. */
-export const setDayNightSpeed = (multiplier: number) => {
-  const time = getSkyTime();
-  if (!time || !Number.isFinite(multiplier)) return;
-  // Reversing catches the environment up once (a stop does too, see scheduleDayNightBake)
-  if (multiplier * time.speed < 0) needsCatchUpBake = true;
-  time.speed = multiplier;
-};
-
-/** The cycle's time multiplier, or null without day-night. */
-export const getDayNightSpeed = () => getSkyTime()?.speed ?? null;
-
-/** Sets how many real seconds 24 in-game hours take (at speed 1). */
-export const setDayNightCycleDuration = (seconds: number) => {
-  const time = getSkyTime();
-  if (time && Number.isFinite(seconds) && seconds > 0) time.cycleDurationSec = seconds;
-};
-
-/**
- * The unit world direction toward a sun, into `out` (with day-night on, for the current time
- * of day, including a setTimeOfDay made this frame). suns[0]'s is there without any suns too:
- * it's the atmosphere's.
- * @returns `out`, or null (no active sky box, or no such sun)
- */
-export const getSunDirection = (out: THREE.Vector3, i = 0) => {
-  if (!active || i < 0 || (i > 0 && i >= getSunCount(active.def))) return null;
-  return computeSunDirectionOf(active.def, i, active.time.timeOfDay, out);
-};
-
-const _sunDirection = new THREE.Vector3();
-
-/** A sun's elevation above the horizon in radians (negative below it), or null (see
- * getSunDirection). */
-export const getSunElevation = (i = 0) => {
-  const direction = getSunDirection(_sunDirection, i);
-  return direction ? Math.asin(THREE.MathUtils.clamp(direction.y, -1, 1)) : null;
-};
-
-// Budgeted re-bakes while the cycle moves (p110 §0.3): a re-bake once the sky has turned more
-// than env.updateAngleDeg since the last bake, at most env.maxUpdatesPerSec, plus one bake to
-// catch up when it stops (pause, speed 0, the end of a scrub or a one-off setTimeOfDay) or
-// reverses. A cycle that keeps playing after a setTimeOfDay jump catches up within the rate
-// cap (bakeEnvironment() bakes on the next frame). env.dynamic: false turns all of it off.
-
-/** The sun's and moon's directions the last env bake saw (any bake), and when it ran
- * (performance.now). */
-const lastBakeSunDir = new THREE.Vector3();
-const lastBakeMoonDir = new THREE.Vector3();
-let lastBakeTimeMs = -Infinity;
-/** Whether the time moved on the previous day-night step. */
-let wasTimeMoving = false;
-/** Set when the cycle reverses: the next step bakes once to catch up. */
-let needsCatchUpBake = false;
-/** Any movement at all counts for the catch-up bake. */
-const CATCH_UP_ANGLE_COS = Math.cos(THREE.MathUtils.degToRad(0.01));
-
-/** Whether the sun or the moon has turned further from the last bake's direction than
- * `angleCos` (a cosine). */
-const hasSkyTurnedSinceBake = (u: SkyUniforms, angleCos: number) =>
-  // The primary sun and moon only: the extra suns turn with the sky and the second moon moves
-  // like the first (by the time of day), about as fast
-  u.suns[0].direction.value.dot(lastBakeSunDir) < angleCos ||
-  u.moons[0].direction.value.dot(lastBakeMoonDir) < angleCos;
-
-const scheduleDayNightBake = (current: ActiveSkyBox, moved: boolean) => {
-  const def = current.def;
-  if (!current.isComposite || !isBakeDynamic(def)) return;
-  if (moved && !needsCatchUpBake) {
-    const maxPerSec = def.env?.maxUpdatesPerSec ?? ENV_DEFAULTS.maxUpdatesPerSec;
-    if (maxPerSec <= 0 || performance.now() - lastBakeTimeMs < 1000 / maxPerSec) return;
-    const angleDeg = def.env?.updateAngleDeg ?? ENV_DEFAULTS.updateAngleDeg;
-    if (hasSkyTurnedSinceBake(current.uniforms, Math.cos(THREE.MathUtils.degToRad(angleDeg)))) {
-      requestEnvBake();
-    }
-    return;
-  }
-  if (!wasTimeMoving && !needsCatchUpBake) return;
-  needsCatchUpBake = false;
-  if (hasSkyTurnedSinceBake(current.uniforms, CATCH_UP_ANGLE_COS)) requestEnvBake();
-};
-
-/** Records what a bake that just ran saw (for the day-night bake rules). */
-const noteEnvBake = () => {
-  if (!active) return;
-  lastBakeSunDir.copy(active.uniforms.suns[0].direction.value);
-  lastBakeMoonDir.copy(active.uniforms.moons[0].direction.value);
-  lastBakeTimeMs = performance.now();
-};
-
-/**
- * The unit world direction toward a moon, into `out` (with day-night on, for the current time
- * and its phase).
- * @returns `out`, or null (no active sky box, or no such moon)
- */
-export const getMoonDirection = (out: THREE.Vector3, i = 0) => {
-  if (!active || i < 0 || i >= getMoonCount(active.def)) return null;
-  return computeMoonDirectionOf(active.def, i, active.time, out);
-};
-
-/** A moon's phase in [0, 1) (0 new, 0.5 full): with day-night, the running one (a 'CYCLE' moon
- * advances with the days). Null without an active sky box or such a moon. */
-export const getMoonPhase = (i = 0) => {
-  if (!active || i < 0 || i >= getMoonCount(active.def)) return null;
-  return getMoonPhaseOf(active.def, active.time, isDayNightEnabled(active.def), i);
-};
-
-/** Last frame's getElapsedTime: the day-night step advances by the difference, which (unlike
- * the MAIN delta) is 0 on the frame the master loop pauses and the frame it resumes. */
-let lastElapsedTime = 0;
-
-const isTimeSourceRunning = (def: SkyBoxDef) => {
-  const source = def.dayNight?.timeSource ?? DAY_NIGHT_DEFAULTS.timeSource;
-  return source === 'MAIN' || (source === 'APP' && isAppPlaying());
-};
-
-/**
- * Advances the active sky box's day-night time and, when it changed, writes the sun-dependent
- * uniforms and lights. Stands still while a scene loads, so a scene starts at its start time.
- * Allocates nothing.
- */
-const stepDayNight = (world: ECSWorld) => {
-  const elapsed = getElapsedTime();
-  const dt = elapsed - lastElapsedTime;
-  lastElapsedTime = elapsed;
-  const current = active;
-  if (!current || !isDayNightEnabled(current.def) || isCurrentlyLoading()) return;
-  const time = current.time;
-  if (isTimeSourceRunning(current.def) && advanceSkyTime(time, dt, current.def)) {
-    time.isDirty = true;
-  }
-  const moved = time.isDirty;
-  if (moved) {
-    time.isDirty = false;
-    applySkyTimeUniforms(current.uniforms, current.def, time);
-    updateSkyLightsForTime(current.def, current.uniforms, world);
-  }
-  scheduleDayNightBake(current, moved);
-  wasTimeMoving = moved;
-};
-
-// System
-
-/**
- * Installs the sky box's system (the `skyBox()` feature's install, SkyBoxFeature.ts).
- * @internal
- */
-export const installSkyBoxSystem = (ctx: FeatureContext) => {
-  ctx.registerPlugin((world) => {
-    // MAIN, order 1: before object3DSyncSystem (order 0), where the sky lights' transforms go
-    world.addSystem(ECSSystemStage.MAIN, 'skyBoxSystem', skyBoxSystem, 1);
-  });
-};
-
-/** Steps the day-night cycle, moves the sky lights with their follow point, and runs a
- * requested static-layer bake and then env bake (it samples the static layers), never while a
- * scene loads. The sky box is global: only the default world drives it. */
-function skyBoxSystem(world: ECSWorld) {
-  if (world !== getECSWorld()) return;
-  stepDayNight(world);
-  updateSkyLightsFrame(world);
-  if (isCurrentlyLoading()) return;
-  // The environment follows the static layers (activation requests both anyway)
-  if (runRequestedStaticLayersBake() && active && isBakeDynamic(active.def)) requestEnvBake();
-  if (!isEnvBakeRequested()) return;
-  // The bake's clouds are frozen where the view's are now
-  if (active) active.uniforms.clouds.bakeTime.value = getFrameTime();
-  if (runRequestedEnvBake()) noteEnvBake();
-}
-
-/** three's `time` node value (the renderer's node frame time, in seconds). */
-const getFrameTime = () =>
-  (getRenderer() as unknown as { _nodes?: { nodeFrame?: { time?: number } } } | undefined)?._nodes
-    ?.nodeFrame?.time ?? 0;
-
 // Debug
 
 type SkyBoxGUIModule = typeof import('./debug/_dbg__SkyBox');
 let debugGUI: DebugModuleRef<SkyBoxGUIModule> | null = null;
 
+/**
+ * Loads the sky box debug tab's module (the feature's `onDebug` hook; null outside the debug env).
+ * @internal
+ */
 export const registerSkyBoxDebugGUI = async () => {
   debugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__SkyBox'));
 };
 
-/** Builds the sky box debug tab, or rebuilds (default) or refreshes it. */
+/**
+ * Builds the sky box debug tab, or rebuilds (default) or refreshes it: the feature's
+ * `onDebugAfterStart` hook, and this module on every change. A no-op until its module has loaded.
+ * @internal
+ */
 export const createSkyBoxDebugGUI = (opts?: { rebuild?: boolean }) => {
   useDebug(debugGUI)?._createSkyBoxDebugGUI(opts);
 };
