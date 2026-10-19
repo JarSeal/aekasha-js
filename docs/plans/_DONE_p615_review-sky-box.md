@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-6 implemented
+Status: implemented (Phases 0-7)
 Category: Refactoring, Documentation, Sky box
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -831,7 +831,7 @@ As built, section 3 (2026-10-19): p622 and the drift issue.
   The workaround line says it was until p615. No runner hook was needed (D5's fallback).
 - `yarn hub:build`: 420 pages, 16 warnings; the Issues page lists the issue as fixed.
 
-### Phase 7: versions and done
+### Phase 7: versions and done — done
 
 1. D2's bumps, a `CHANGELOG.md` entry (D5's paused clouds and D8 called out),
    `yarn checkVersions --against main`.
@@ -883,6 +883,17 @@ As built, section 2 (2026-10-19): the checks, on WSL2 (WebGL2, SwiftShader).
   `Texture.ts` as used by `aekasha/skybox` because `SkyBox.test.ts` mocks those modules whole (the
   physics tests show the same), and record the Hub pages p614 added as importers.
 - The changelog's Project section has these lines now.
+
+As built, section 3 (2026-10-19): the plan done.
+
+- Status `implemented (Phases 0-7)`; `git mv` to `_DONE_p615_review-sky-box.md`. References
+  updated as p614 did: p621's `Blocked by` drops it (the others stay), p600's `Blocks` and its
+  Stage C table, p605's and p608's `Blocks`, p622's and p427's `Related` name the new file. No
+  `CLAUDE.md`, Hub page, issue or code names the file (checked).
+- The root `.claude/CLAUDE.md`, the nested `features/skybox/CLAUDE.md` and `readme.md`: Phase 6
+  brought them up to date; nothing in Phase 7 changes what they describe (the SBP budget isn't
+  listed in either `CLAUDE.md`).
+- Time for a PR (p600's Stage C row: one per plan): `review-skybox` into `main`.
 
 ## 4. Risks
 
