@@ -1,7 +1,8 @@
 import type { DebuggerPaneItem } from '../../../debug/DebuggerGUI';
 import { bakeEnvironment, getActiveSkyBox } from '../SkyBox';
 import { isDayNightEnabled } from '../SkyComposite';
-import { resetSkyBoxLayer, setSkyBoxParam, skyBoxProxy } from './_dbg__SkyBoxShared';
+import { resetSkyBoxLayer, setSkyBoxParam } from './_dbg__SkyBoxEdits';
+import { skyBoxProxy } from './_dbg__SkyBoxShared';
 import { numberParam } from './_dbg__LayerFolderItems';
 import { envBakeStatsView } from './_dbg__EnvBakeStats';
 

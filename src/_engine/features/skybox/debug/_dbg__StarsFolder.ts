@@ -1,6 +1,7 @@
 import type { DebuggerPaneItem } from '../../../debug/DebuggerGUI';
 import { getActiveSkyBox } from '../SkyBox';
-import { resetSkyBoxLayer, setSkyBoxParam, skyBoxProxy } from './_dbg__SkyBoxShared';
+import { resetSkyBoxLayer, setSkyBoxParam } from './_dbg__SkyBoxEdits';
+import { skyBoxProxy } from './_dbg__SkyBoxShared';
 import { numberParam, tupleParams } from './_dbg__LayerFolderItems';
 
 const isOff = () => !skyBoxProxy.stars.enabled;

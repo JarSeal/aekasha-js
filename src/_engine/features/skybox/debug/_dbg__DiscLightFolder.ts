@@ -1,7 +1,8 @@
 import type { DebuggerPaneItem } from '../../../debug/DebuggerGUI';
 import { FOUR_PX_TO_8K_LIST } from '../../../utils/Constants';
 import { getSkyShadowCasterCount, MAX_SHADOW_CASTERS_HINT } from '../SkyLights';
-import { LAYER_PATHS, setSkyBoxParam, skyBoxProxy } from './_dbg__SkyBoxShared';
+import { setSkyBoxParam } from './_dbg__SkyBoxEdits';
+import { LAYER_PATHS, skyBoxProxy } from './_dbg__SkyBoxShared';
 import { buildAutoColorItems, numberParam, tupleParams } from './_dbg__LayerFolderItems';
 
 const PRESET_OPTIONS = ['LOW', 'MEDIUM', 'HIGH', 'ULTRA'].map((value) => ({ text: value, value }));

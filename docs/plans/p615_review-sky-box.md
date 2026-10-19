@@ -693,6 +693,28 @@ As built, section 3 (2026-10-19): the scenes, on WSL2 (WebGL2, SwiftShader) inst
 2. G2's comments.
 3. The tab checked by hand on `skyShowcase` (a param, undo / redo, a list edit, "Apply preset").
 
+As built, section 1 (2026-10-19): the split (G1).
+
+- `_dbg__SkyBoxShared.ts` (572 lines): the layer paths and lists, the defaults lookup, the
+  override store and the proxy, as before; plus the store's three queries
+  (`currentSceneHasOverrides`, `getSceneIdsWithOverrides`, `clearSkyBoxOverrides`) and the
+  pre-p111 key migration, which read and write the store only. **Not along `:522` exactly:** with
+  them in the edits module, the store's `readAllOverrides` / `writeAllOverrides` would have to be
+  exported. New `_dbg__SkyBoxEdits.ts` (302 lines): the undo / redo edits (`setSkyBoxParam`,
+  `setSkyBoxArray`, `resetSkyBoxLayer`, their action handlers) and "Apply preset"
+  (`getPresetOverrides`, `applySkyBoxPreset`).
+- Moved as is: the bodies are the same lines (checked by a sorted diff against the original);
+  the only change is `export` on the six helpers the edits read (`Obj`, `isObj`, `asObj`,
+  `isEqual`, `getPath`, `withPath`), and Prettier wrapping `withPath`'s longer signature.
+- The 14 importers import the edits from the new module. The undo handlers still register when
+  `_dbg__SkyBox.ts` loads (it imports `applySkyBoxPreset`), as before. The nested `CLAUDE.md`'s
+  debug-tab bullet names both modules.
+- Found: `currentSceneHasOverrides` has no caller (dead since before this plan), and
+  `getPresetOverrides` is exported but read only in its module. Left for section 2.
+- `devTools/refactor/moveMap.json` doesn't list `SkyDayNight.ts` (Phase 3) or the new module:
+  regenerated with Phase 7's checks, as p614 did.
+- **Checks:** `yarn test` 692 passed, 1 skipped; `tsc`, `tsc -p hub` and the lint clean.
+
 ### Phase 6: the Hub, CLAUDE.md, readme, and what's filed
 
 1. The sky box feature and example pages against the code (the preset helper, the stop, the
@@ -706,7 +728,8 @@ As built, section 3 (2026-10-19): the scenes, on WSL2 (WebGL2, SwiftShader) inst
 1. D2's bumps, a `CHANGELOG.md` entry (D5's paused clouds and D8 called out),
    `yarn checkVersions --against main`.
 2. `yarn test`, `yarn verify:scenes`, `yarn verify:baselines` (no unexplained growth), `yarn build`
-   (the SBP budgets), `yarn hub:build`.
+   (the SBP budgets), `yarn hub:build`, and `npx tsx devTools/refactor/moveMap.ts` (its outputs
+   are stale since Phase 3's `SkyDayNight.ts`; `--check` passing after).
 3. Mark the plan done (`docs/plans/CLAUDE.md`); time for a PR: `review-skybox` into `main`.
 
 ## 4. Risks

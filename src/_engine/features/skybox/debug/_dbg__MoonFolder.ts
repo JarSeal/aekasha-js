@@ -5,12 +5,11 @@ import type { SkyBoxMoonDef } from '../SkyBoxTypes';
 import { isDayNightEnabled, isOn } from '../SkyComposite';
 import { MOON_DEFAULTS } from '../layers/Moon';
 import { getActiveCamera } from '../../../kernel/camera/Camera';
+import { resetSkyBoxLayer, setSkyBoxParam } from './_dbg__SkyBoxEdits';
 import {
   getElevationAzimuth,
   isListOverrideAnArray,
   LAYER_PATHS,
-  resetSkyBoxLayer,
-  setSkyBoxParam,
   skyBoxProxy,
 } from './_dbg__SkyBoxShared';
 import { numberParam } from './_dbg__LayerFolderItems';

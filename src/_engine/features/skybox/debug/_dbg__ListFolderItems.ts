@@ -1,12 +1,12 @@
 import { updateDebuggerTab, type DebuggerPaneItem } from '../../../debug/DebuggerGUI';
 import { getActiveSkyBox } from '../SkyBox';
+import { setSkyBoxArray } from './_dbg__SkyBoxEdits';
 import {
   getListEntries,
   getSelectedIndex,
   getSkyBoxDef,
   LIST_MAX,
   selectListEntry,
-  setSkyBoxArray,
   SKYBOX_TAB_ID,
   type SkyBoxListKey,
 } from './_dbg__SkyBoxShared';

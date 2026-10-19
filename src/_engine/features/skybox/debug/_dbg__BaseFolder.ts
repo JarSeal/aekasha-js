@@ -1,7 +1,8 @@
 import type { DebuggerPaneItem } from '../../../debug/DebuggerGUI';
 import { getActiveSkyBox } from '../SkyBox';
 import type { SkyBoxBaseType } from '../SkyBoxTypes';
-import { resetSkyBoxLayer, setSkyBoxParam, skyBoxProxy } from './_dbg__SkyBoxShared';
+import { resetSkyBoxLayer, setSkyBoxParam } from './_dbg__SkyBoxEdits';
+import { skyBoxProxy } from './_dbg__SkyBoxShared';
 
 const baseType = () => getActiveSkyBox()?.def.base.type;
 const isNot =

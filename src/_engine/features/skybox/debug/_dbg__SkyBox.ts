@@ -29,8 +29,8 @@ import {
   _registerUndoRedoActionHandler,
 } from '../../../debug/_dbg__UndoRedo';
 import { SKYBOX_PRESET_NAMES, type SkyBoxPresetName } from '../Presets';
+import { applySkyBoxPreset } from './_dbg__SkyBoxEdits';
 import {
-  applySkyBoxPreset,
   clearSkyBoxOverrides,
   getSceneIdsWithOverrides,
   migrateLegacySkyBoxLS,
