@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: Refactoring, Documentation, UI, Input
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -37,7 +37,7 @@ In scope (D1): `kernel/input/` with its `CLAUDE.md`, and `ui/` with its styles a
 them, only what a change here touches: `kernel/loop/MainLoop.ts` (the held-key hook, I2),
 `kernel/init/Boot.ts` (the style import, S1), `debug/debugger.scss` (where it's imported from, not
 its rules), `devTools/verify/moduleSideEffects.test.ts` (G1), `kernel/config/Config.ts`
-(`draggableWindows`, W3), `devTools/refactor/moveRules.ts` (the ui → kernel edge, D7), the root
+(`draggableWindows`, W3), `devTools/refactor/moveMap.ts` (the ui → kernel edge, D7), the root
 `CLAUDE.md`'s window paragraph (moved, D13), and the Hub's Input and new UI kit pages. Not in scope:
 the debug modules that build panels from the kit (p618's; p800 rewrites them), and the scene
 loader's loader UI (p613's, §1.2).
@@ -341,7 +341,8 @@ the file, as the test rules ask): `it.fails` in Phase 0, `it` after the fix.
 
 ### D7. The UI kit may name the kernel's hooks (W4)
 
-The target layout (`moveRules.ts`) allows ui → kernel for `kernel/config/Config.ts` (the env
+The target layout (`moveMap.ts`' `checkEdge`, as built: `moveRules.ts` holds only the path rules)
+allows ui → kernel for `kernel/config/Config.ts` (the env
 flags), `kernel/loop/MainLoop.ts` (`addResizer`), `kernel/scene/SceneHooks.ts` and
 `kernel/init/BootHooks.ts`, so the layout report stops listing them. The kit is engine code that
 ships only with the kernel, and these registries are how it follows a scene load, the boot and a
@@ -625,18 +626,67 @@ As built (2026-10-20):
   again (Phase 0's noise). No debug code in either build. `yarn test`: 99 files, 810 passed, 1
   skipped.
 
-### Phase 3: the API (D6, D7) and the deferrals (D3)
+### Phase 3: the API (D6, D7) and the deferrals (D3) — done
 
 1. The entries, the removals, `@internal`, `draggableWindows`' module map.
-2. `moveRules.ts`' edge; `npx tsx devTools/refactor/moveMap.ts` regenerated.
+2. `moveMap.ts`' edge (`checkEdge`); `npx tsx devTools/refactor/moveMap.ts` regenerated.
 3. p622's list; `api.json` (`yarn verify:baselines --update`) with D6's additions and removals.
+
+As built (2026-10-20):
+
+- **The entries (D6):** `aekasha` gets I5's types (`KeyChord`, `KeyBindingType`, `KeyBindingBase`,
+  `KeyUpDownBinding`, `KeyHeldBinding`, `MouseButton`, `MouseBindingBase`, `MouseBindingType`, the
+  four mouse binding types, `TouchBindingBase`, `TouchBindingType`, the three touch binding
+  types, `EnabledInDebugCam`, `Modifiers`, `BindingMeta`, `TargetList`, `PickOpts`),
+  `GAMEPAD_BUTTON_NAMES` and `getKeyChordLabel`. `aekasha/ui` (rewritten in path order) gets D6's
+  list, and **`TListenerCache`** beside it: `TCMP.listeners` names it. **`ClassProp`** (named by
+  `DropDownProps`) is gone rather than exported: its five fields are `string | string[]`, as the
+  window config's class fields are. `yarn hub:build` lists no type a public signature names
+  outside the entries in scope.
+- **Removed:** W2's eight, `createNewId`, `addStylesToHead` (with `stylesInHead`), the three
+  per-device switches (I4) and their checks, and the exports of `getCmpById`, `toggleCollapse`
+  and `getGUIContainerElem` (the first two have callers in their module: only the `export`
+  went). `pendingRuntimes` went with `registerDraggableWindowCmp`, its only writer. The comments
+  naming the switches (`InputState.ts`' header, `Actions.ts`') went too.
+- **`@internal`**, each with a summary naming its users: the five master switches and
+  `InputScope` (the mount's `input` option is its own literal union), `pickTargetsAt`,
+  `getKeyBindings`, `doKeyChordsCollide`, `isChordHeld` (no caller at all), `pollHeldKeyBindings`,
+  `markChordReserved`, `CLICK_MAX_MOVE_PX`, `GUI_CONTAINER_ID`, `HUD_ROOT_ID`,
+  `createHudContainer` and `getWindowSize`. `Units` is `DraggableWindowUnit`.
+- **W3:** a registered content function goes into the module's `contentFns`; `buildContent` reads
+  it, then `getConfig().draggableWindows` as the fallback, so `DraggableWindow.ts` still reads
+  `getConfig()` until 6.0.0 (D7's "only the flags" holds after p622). `AppConfig.draggableWindows`'
+  doc said "size, place, content": only `contentFn` was ever read, and it says so. A test: a
+  registered content stays out of the config and wins over its `contentFn`, which is still read
+  for a window without one.
+- **D3:** `AppConfig.draggableWindows` and `AddToastResponse.timeout` are `@deprecated` (removed in
+  engine 6.0.0). p622 gets a "From p617" block (the two, and the `T`-prefixed names as a
+  candidate), and its "deprecations without a version" line drops `ui/DraggableWindow.ts`' six.
+- **D7:** the edge is in `moveMap.ts`' `checkEdge` (`UI_KERNEL_HOOKS`, the four modules), not
+  `moveRules.ts`, which holds only path rules. `layoutReport.md` has no "ui → kernel" section left.
+  The regenerated outputs also picked up p616's and Phase 2's files (765 → 788) and p616's
+  `LodChainOptions.ts` split (Kernel → feature 26 → 27 type-only imports), which no run had
+  recorded since.
+- **The baselines** (`yarn verify:baselines --update`): `api.json` lists exactly the removals and
+  additions above, plus Phase 2's three `@internal` ones (`compileKeyChord`, `CompiledKeyChord`,
+  `setHeldKeyPoller`); the entries 808 exports. `docs.json`: input 108 / 126, ui 32 / 61 (fewer
+  exports, none more undocumented; Phase 4's D11 takes both to 100 %). The bundle baselines
+  record Phase 2's numbers (banner input 0.1 kB, its CSS 0.1 kB gzip; the app's `index.css` 0.9
+  kB) and `EngineRapier.js` / `#2`'s size swap again (Phase 0's noise). No debug code in either
+  build. `yarn hub:build`: 428 pages; in scope only I8's three warnings (Phase 4).
+- **For Phase 4 (found here):** U9 (CMP's `three` import for ids, in no phase) goes with the CMP
+  split. `registerDraggableWindow` / `registerDraggableWindowKind` say "call it once at module
+  load", which the side-effects rule forbids outside `_dbg__` modules, now that an app can call
+  them: D11's docs say where (an install, or the app's `start`, before the boot's after-start
+  restore), and Phase 5's moved `CLAUDE.md` paragraph too.
 
 ### Phase 4: the internals (D10, D11)
 
 1. The CMP and window splits; I3 (one debug camera rule, in `InputState.ts`' neighbourhood:
    `InputPicking.ts` is the mouse's and touch's, so a small `InputRules.ts` or the shared types'
    file made a module).
-2. D11's docs, I7, I8, U8, U12.
+2. D11's docs, I7, I8, U8, U12; U9 (Phase 3); the window registrations' "at module load" wording
+   (Phase 3).
 
 ### Phase 5: the Hub, CLAUDE.md, readme, and what's filed
 
