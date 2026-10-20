@@ -843,6 +843,12 @@ As built (2026-10-20):
   either build; recorded (`--update --no-build`). `yarn build` (with `yarn sbp`: every budget
   within, and `yarn hub:build`: 438 pages, no warning in scope; the search index 1.66 MB, the
   older warning).
+- **Versions (step 2):** engine 5.7.0 → 5.8.0 (and the project), app 1.12.4 → 1.13.0, the
+  toolkit unchanged (no file of it changed). `CHANGELOG.md`'s entry `review-input-ui-hud`: Engine
+  (Added, Changed with its five behaviour changes, Deprecated, Fixed), App (the example scene),
+  Project (the tests, the docs, the lint and side-effects test changes, the baselines: the main
+  chunk 387,312 B gzip, +491 B on `main`; the banner's 291,970 B, −910 B).
+  `yarn checkVersions --against main` passes.
 
 ## 4. Risks
 
