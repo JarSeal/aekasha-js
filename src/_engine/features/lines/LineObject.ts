@@ -70,7 +70,7 @@ class LineBuffer implements LineWriteTarget {
 
 /**
  * A line-segment object: a handle usable from any gameplay code, no ECS world involved.
- * Create one with `createLines` (LineManager).
+ * Create one with `createLines` (or `createLineEntity`, which gives it an entity).
  *
  * Two ways to feed it:
  * - **Build once**: pass `segments` in the props, or call `setSegments`, and move it with

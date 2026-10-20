@@ -129,7 +129,19 @@ export const disposeNonPersistentLines = () => {
  * places it (`props.localTransform` seeds it), deleting the entity disposes the line and
  * disposing the line deletes the entity. A backend swap re-points OBJECT3D at the new
  * Object3D, so read OBJECT3D (or `getLineForEntity(id).object3D`) each time, never cache it.
- * @returns (number) the entity id
+ * @param props the line's props, as `createLines`'; `entityOpts.appId` is its id when it has none
+ * @param entityOpts the entity's options; `doNotAddToScene` attaches the line nowhere
+ * @param ecsWorld the entity's world (default: the default world)
+ * @returns the entity id
+ * @example
+ * ```ts
+ * import { setTransform } from 'aekasha';
+ * import { createLineEntity, polylineToSegments } from 'aekasha/lines';
+ *
+ * // A ring marker: moved like any entity, deleted with its scene
+ * const markerId = createLineEntity({ segments: polylineToSegments(ring, true), color: 0xffcc00 });
+ * setTransform(markerId, { pos: { x: 0, y: 0.05, z: 10 } });
+ * ```
  */
 export const createLineEntity = (
   props: LineProps = {},
@@ -173,6 +185,18 @@ export const createLineEntity = (
  * component) disposes the line, disposing the line removes the component. Placement is
  * separate — `line.attach({ to: 'ENTITY', entityId })` parents it to the entity's Object3D.
  * An entity holds at most one line.
+ * @param line the line, not disposed and bound to no entity
+ * @param entityId an entity without a line
+ * @param ecsWorld the entity's world (default: the default world)
+ * @example
+ * ```ts
+ * import { bindLineToEntity, createLines, polylineToSegments } from 'aekasha/lines';
+ *
+ * // A path drawn under an NPC: it follows the NPC and goes when the NPC is deleted
+ * const path = createLines({ segments: polylineToSegments(waypoints), width: 2 });
+ * path.attach({ to: 'ENTITY', entityId: npcId });
+ * bindLineToEntity(path, npcId);
+ * ```
  */
 export const bindLineToEntity = (line: LineObject, entityId: number, ecsWorld?: ECSWorld) => {
   const world =

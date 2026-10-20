@@ -490,7 +490,10 @@ export const createInstancedMeshPool = (
   return { mesh, meshEntityId, spawn, despawn };
 };
 
+/** One level of an instanced LOD pool (`CreateInstancedLodPoolOptions.levels`): its own
+ * `InstancedMesh`, sized for every instance of the pool. */
 export interface InstancedLodPoolLevel {
+  /** The level's geometry. */
   geometry: THREE.BufferGeometry;
   /** A material array works like on `createInstancedMeshPool`. */
   material: THREE.Material | THREE.Material[];

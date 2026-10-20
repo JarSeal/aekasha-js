@@ -82,7 +82,8 @@ export interface SpatialDomainOptions {
 /** A domain's settings in use: every default filled in, without the scope. */
 export type ResolvedSpatialDomainOptions = Required<Omit<SpatialDomainOptions, 'sceneId'>>;
 
-/** The domain SPATIAL_INDEXED entities are members of. */
+/** The id of the domain SPATIAL_INDEXED entities are members of, which light culling queries:
+ * what `joinSpatialDomain` and `getSpatialDomain` take for it. */
 export const DEFAULT_SPATIAL_DOMAIN = 'DEFAULT';
 
 // Starting guess pending real tuning data — §9's occupancy histogram (see
@@ -1076,6 +1077,19 @@ function runOracleProbes(world: ECSWorld, domain: SpatialDomain): void {
  * Call after a real `queryVisit`/`queryInto` call on domain `domainId`'s grid, to validate that
  * call's result. No-op unless both `IS_DEBUG_ENV` and the oracle are on for that domain — safe
  * to call unconditionally from a hot path.
+ * @param world the domain's world
+ * @param p the query's centre
+ * @param r the query's radius
+ * @param domainId the queried domain
+ * @example
+ * ```ts
+ * import { getSpatialDomain, validateSpatialGridQuery } from 'aekasha/spatial';
+ *
+ * const grid = getSpatialDomain(world, 'PICKUPS');
+ * const count = grid?.queryInto(player.position, 5, nearby) ?? 0;
+ * // With the Spatial grid tab's oracle on, logs a pickup the grid missed
+ * validateSpatialGridQuery(world, player.position, 5, 'PICKUPS');
+ * ```
  */
 export function validateSpatialGridQuery(
   world: ECSWorld,

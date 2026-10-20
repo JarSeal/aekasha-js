@@ -85,9 +85,13 @@ export type OctahedralImpostorOptions = {
 /** Where an impostor's frames are and what they show: what its material needs besides the atlases.
  * Stored on the albedo atlas (`userData.octahedralImpostor`), so a registered bake can be reused. */
 export type OctahedralImpostorLayout = {
+  /** Frames along each side of the grid (`OctahedralImpostorOptions.frames`). */
   frames: number;
+  /** Whether the frames cover the upper hemisphere only. */
   hemi: boolean;
+  /** A frame's side, in texels. */
   frameSize: number;
+  /** Texels between a frame and its cell's edge. */
   gutter: number;
   /** Texels per side of the (square) atlases: `frames × (frameSize + 2 × gutter)`. Frame (`i`, `j`)'s
    * cell starts at texel (`i`, `j`) × the cell size, from the image's top left (v = 0 is the top). */

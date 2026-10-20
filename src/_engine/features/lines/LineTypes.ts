@@ -71,6 +71,8 @@ export type LineDash = {
   gapPx: number;
 };
 
+/** What `createLines` and `createLineEntity` take: the segments, their look, the backend and
+ * where the line is attached. Every key is optional. */
 export type LineProps = {
   /** Registry id. Auto-generated when omitted; must be unique among live lines. */
   id?: string;
@@ -104,11 +106,13 @@ export type LineProps = {
    * PERSISTENT entity. For lines whose owner manages their lifetime itself. Default false.
    * Lines bound to an entity follow that entity instead. */
   persistent?: boolean;
+  /** Placed relative to what the line is attached to (an entity line: its `Transform`'s start). */
   localTransform?: LineLocalTransform;
   /** Default true. */
   visible?: boolean;
   /** Default true. False draws the line on top of everything it would be hidden behind. */
   depthTest?: boolean;
+  /** The Object3D's `renderOrder`. Default 0. */
   renderOrder?: number;
   /** Default false. A line is an overlay primitive; culling one against stale bounds makes
    * it vanish at unpredictable camera angles. Enable together with `recomputeBounds` for

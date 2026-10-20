@@ -5,6 +5,7 @@ export { spatial } from './SpatialFeature';
 export { SpatialGrid } from './SpatialGrid';
 export type { ReadonlyVec3, SpatialGridOptions, SpatialGridStats } from './SpatialGrid';
 export {
+  DEFAULT_SPATIAL_DOMAIN,
   getSpatialDomain,
   getSpatialGrid,
   invalidateSpatialDomain,
@@ -15,5 +16,6 @@ export {
   refreshSpatialRadius,
   registerSpatialDomain,
   unregisterSpatialDomain,
+  validateSpatialGridQuery,
 } from './SpatialIndexSystem';
-export type { SpatialDomainOptions } from './SpatialIndexSystem';
+export type { SpatialDomainOptions, SpatialUpdatePolicy } from './SpatialIndexSystem';

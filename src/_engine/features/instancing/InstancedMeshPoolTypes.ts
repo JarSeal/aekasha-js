@@ -26,7 +26,10 @@ export interface InstancedMeshSlotData {
 
 /** Where `spawn()` puts an instance. The toolkit's `ScatterPlacement` is one. */
 export interface InstancePlacement {
+  /** The instance's `Transform` position. */
   position: THREE.Vector3;
+  /** The instance's `Transform` rotation. */
   quaternion: THREE.Quaternion;
+  /** The instance's scale, the same on every axis. */
   scale: number;
 }

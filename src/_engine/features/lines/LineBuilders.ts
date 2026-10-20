@@ -44,7 +44,19 @@ export const writeBox3Edges = (writer: LineWriter, box: THREE.Box3) => {
   return writeCorners(writer);
 };
 
-/** Appends the 12 edges of a box of `size`, centred on `center`, optionally rotated. */
+/**
+ * Appends the 12 edges of a box of `size`, centred on `center`, optionally rotated.
+ * @example
+ * ```ts
+ * import { BOX_EDGE_SEGMENT_COUNT, createLines, writeBoxEdges } from 'aekasha/lines';
+ *
+ * // Up to 32 trigger boxes outlined, refilled every frame without allocating
+ * const outlines = createLines({ capacity: 32 * BOX_EDGE_SEGMENT_COUNT, growth: 'FIXED' });
+ * const w = outlines.beginWrite();
+ * for (const t of triggers) writeBoxEdges(w, t.center, t.size, t.quaternion);
+ * outlines.endWrite();
+ * ```
+ */
 export const writeBoxEdges = (
   writer: LineWriter,
   center: THREE.Vector3Like,
@@ -65,8 +77,18 @@ export const writeBoxEdges = (
   return writeCorners(writer);
 };
 
-/** Appends one segment between each consecutive pair of points, plus last → first when
- * `closed`. */
+/**
+ * Appends one segment between each consecutive pair of points, plus last → first when `closed`.
+ * @example
+ * ```ts
+ * import { createLines, polylineSegmentCount, writePolyline } from 'aekasha/lines';
+ *
+ * // A trail of the last 64 positions, rewritten every frame
+ * const trail = createLines({ capacity: polylineSegmentCount(64), growth: 'FIXED' });
+ * writePolyline(trail.beginWrite(), lastPositions);
+ * trail.endWrite();
+ * ```
+ */
 export const writePolyline = (
   writer: LineWriter,
   points: ArrayLike<THREE.Vector3Like>,

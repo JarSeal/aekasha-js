@@ -16,6 +16,11 @@ export type LodLevelDef = {
   castShadow?: boolean;
 };
 
+/**
+ * An entity's levels of detail: the `LOD` component's definition, a mesh's `lod` prop and
+ * `setMeshLod`'s argument. The selection picks the finest level whose `screenSize` the entity's
+ * screen size reaches, with `hysteresis` against flicker at a threshold.
+ */
 export type LodDef = {
   /** Level 0 first, `screenSize` descending. */
   levels: LodLevelDef[];
@@ -43,10 +48,14 @@ export type LodAutoDef = {
  * LOD chain. */
 export type MeshLodDef = LodDef | LodAutoDef | 'AUTO';
 
-/** A level with its assets resolved, what the apply step assigns to the mesh. */
+/** A level with its assets resolved: what the apply step assigns to a plain mesh, and what a
+ * {@link LodTarget}'s `resolveLevels` returns, one per level of the definition. */
 export type LodResolvedLevel = {
+  /** The level's geometry. */
   geometry: THREE.BufferGeometry;
+  /** The level's material, or a per-group array. */
   material: THREE.Material | THREE.Material[];
+  /** Whether the level casts shadows. */
   castShadow: boolean;
 };
 

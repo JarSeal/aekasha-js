@@ -333,6 +333,14 @@ export const getLodMaxSelectionsPerFrame = () =>
  * `LOD` entities round-robin from where it stopped, so each one is reconsidered every few frames.
  * Entities that come into view (frustum culling, DISABLED removed) or just got their `LOD` are
  * selected in that frame even past the cap, so none shows a stale level; they count against it.
+ * @param max at least 1, or Infinity; anything else warns and removes the cap
+ * @example
+ * ```ts
+ * import { setLodMaxSelectionsPerFrame } from 'aekasha/lod';
+ *
+ * // A large world: each LOD entity is reconsidered about every 4th frame
+ * setLodMaxSelectionsPerFrame(1000);
+ * ```
  */
 export const setLodMaxSelectionsPerFrame = (max: number) => {
   maxSelectionsPerFrame = normalizeMaxSelections(max);
@@ -562,6 +570,15 @@ const setMeshLodBounds = (mesh: THREE.Mesh, lod: LodData) => {
  * again. A no-op for other entities (their bounds are level 0's geometry) and without a LOD.
  * @param entityId the mesh entity
  * @param ecsWorld the entity's world (default: the default world)
+ * @example
+ * ```ts
+ * import { refreshLodBounds } from 'aekasha/lod';
+ *
+ * // A static instance cell got more instances: its LOD measures all of them again
+ * cell.count = placements.length;
+ * cell.instanceMatrix.needsUpdate = true;
+ * refreshLodBounds(cellEntityId);
+ * ```
  */
 export const refreshLodBounds = (entityId: number, ecsWorld?: ECSWorld) => {
   const world = ecsWorld || getECSWorld();
