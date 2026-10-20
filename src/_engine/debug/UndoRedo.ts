@@ -71,8 +71,18 @@ export const initUndoRedo = () => {
 };
 
 /**
- * Registers the undo/redo handler for an action type. Call once per action type, at module
- * load time.
+ * An action type's handler and scope, as registered.
+ * @internal
+ */
+export type RegisteredUndoRedoActionHandler = UndoRedoActionHandler & { scope: UndoRedoScope };
+
+// Kept here, not in the implementation, so a handler registered before it loads (eg. in a
+// feature's install, which runs before the boot's debug step) still works
+const actionHandlers = new Map<string, RegisteredUndoRedoActionHandler>();
+
+/**
+ * Registers the undo/redo handler for an action type (registering the type again replaces it).
+ * Works at any time, also before the debugger has loaded.
  * @param actionType (string) the action type
  * @param handler ({@link UndoRedoActionHandler}) applies the payload in either direction
  * @param scope ({@link UndoRedoScope}) where the entries are kept, default 'perScene'
@@ -82,8 +92,19 @@ export const registerUndoRedoActionHandler = <TPayload>(
   handler: UndoRedoActionHandler<TPayload>,
   scope?: UndoRedoScope
 ) => {
-  useDebug(debugGUI)?._registerUndoRedoActionHandler(actionType, handler, scope);
+  // Folds the map out of a production build
+  if (!__AEK_DEBUG__) return;
+  actionHandlers.set(actionType, {
+    ...(handler as UndoRedoActionHandler),
+    scope: scope ?? 'perScene',
+  });
 };
+
+/**
+ * The handler registered for an action type (the undo / redo implementation).
+ * @internal
+ */
+export const _getUndoRedoActionHandler = (actionType: string) => actionHandlers.get(actionType);
 
 /**
  * Records an already-applied action to its scope's history (the current scene's or the global

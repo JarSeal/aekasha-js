@@ -21,15 +21,18 @@ export const PROFILER_UI_LS_KEY = 'AEK_debugProfilerUI';
 /** The Overview and Objects refresh rates offered in the Settings tab. */
 export const PROFILER_UPDATE_RATES_HZ = [1, 2, 4, 10] as const;
 
-/** One Overview row: its metric id and whether it is shown. */
+/** One Overview row: its metric id (an app stats source's is `app:` and the source id) and whether
+ * it is shown. */
 export type ProfilerOverviewMetricEntry = { id: string; visible: boolean };
 
 export type ProfilerSettings = {
   /** Overview and Objects refresh rate, one of {@link PROFILER_UPDATE_RATES_HZ}. */
   updateRateHz: number;
-  /** The Overview rows in order. Unknown ids are dropped and new metrics appended (with their
-   * default visibility) when the profiler loads, so a saved list survives new metrics. Empty =
-   * the default order. */
+  /** The Overview rows in order, the engine's first, then the app stats sources'. Unknown ids are
+   * dropped and new metrics appended (with their default visibility) when the profiler loads, so
+   * a saved list survives new metrics. An app source's row is kept while the source isn't
+   * registered, and a newly registered source's row is appended, shown. Empty = the default
+   * order. */
   overviewMetrics: ProfilerOverviewMetricEntry[];
   /** Clicking the on-screen stats panels toggles the profiler window. */
   openFromStatsPanels: boolean;
@@ -102,6 +105,11 @@ export const registerProfiler = async () => {
     true,
     'Profiler'
   );
+  const module = useProfiler();
+  if (!module) return;
+  // The tabs created before it loaded, in their creation order
+  for (const def of pendingTabs.values()) module._createProfilerTab(def);
+  pendingTabs.clear();
 };
 
 /**
@@ -121,16 +129,40 @@ export const toggleProfilerWindow = () => {
  */
 export const isProfilerWindowOpen = () => useProfiler()?._isProfilerWindowOpen() ?? false;
 
+// Tabs created before the profiler has loaded (eg. in a feature's `onDebug` hook, which runs
+// before `registerProfiler`): it creates them when it loads
+const pendingTabs = new Map<string, AnyDebuggerTabDef>();
+
 /**
  * Creates (or replaces, by id) a profiler window tab. The same {@link DebuggerTabDef} contract as
  * `createDebuggerTab`, so a tab can move between the drawer and the profiler by changing this
- * call. Ordered by `orderNr`, then registration order. Profiler tabs have no `sceneId`.
+ * call. Ordered by `orderNr`, then registration order. Profiler tabs have no `sceneId`. Works at
+ * any time: a tab created before the profiler has loaded is added when it loads.
  * @param def (object) tab definition {@link DebuggerTabDef}
  */
 export const createProfilerTab = <S extends object>(def: DebuggerTabDef<S>) => {
+  // Folds the pending tabs out of a production build
+  if (!__AEK_DEBUG__) return;
   hydrateDebuggerTabState(def);
   // The builder only works with string keys, S only types the call site
-  useProfiler()?._createProfilerTab(def as unknown as AnyDebuggerTabDef);
+  const anyDef = def as unknown as AnyDebuggerTabDef;
+  const module = useProfiler();
+  if (module) {
+    module._createProfilerTab(anyDef);
+    return;
+  }
+  // A replaced pending tab keeps its creation position, as a replaced tab does in the window
+  pendingTabs.set(def.id, anyDef);
+};
+
+/**
+ * Removes a profiler window tab (an open window shows its first tab if it was the shown one).
+ * @param id (string) tab id
+ */
+export const removeProfilerTab = (id: string) => {
+  if (!__AEK_DEBUG__) return;
+  if (pendingTabs.delete(id)) return;
+  useProfiler()?._removeProfilerTab(id);
 };
 
 /**
@@ -210,6 +242,9 @@ export type StatsSource<T = unknown> = {
    * the source is not acquired (an acquired one is released), and it is acquired as soon as it
    * becomes available. */
   availability?: () => true | string;
+  /** The value as the Overview shows it (a source that isn't the engine's gets a row there, under
+   * "App"). Without it a number shows with two decimals, a string as is, anything else as JSON. */
+  format?: (value: T) => string;
 };
 
 type AnyStatsSource = StatsSource<unknown>;

@@ -23,11 +23,11 @@ import {
   isRayCastStatsEnabled,
   setRayCastStatsEnabled,
 } from '../../kernel/render/Raycast';
-import { getRenderPipeline } from '../../kernel/render/RenderHooks';
 import { getRenderer } from '../../kernel/render/Renderer';
 import { getCurrentSceneId } from '../../kernel/scene/Scene';
 import { getNextSceneId, isCurrentlyLoading } from '../../kernel/scene/SceneLoader';
-import { addViewFrameListener } from '../../kernel/render/Views';
+import { addViewFrameListener, isRuntimeViewActive } from '../../kernel/render/Views';
+import { getPostFxPasses, isPostFxEnabled } from '../../features/postfx/PostFX';
 import { registerStatsSource, type ProfilerSettings } from '../Profiler';
 import {
   getPostFxPassStats,
@@ -512,10 +512,14 @@ export const registerBuiltInStatsSources = (settings: Readonly<ProfilerSettings>
   registerStatsSource<PostFxGpuStats>({
     id: PROFILER_SOURCE.POSTFX,
     label: 'PostFX',
+    // Builds nothing: the render pipeline's provider builds the chain when it's due (p618 B2)
     availability: () => {
       if (!IS_DEBUG_ENV) return 'debug env only';
       if (!getRenderer()) return NO_RENDERER;
-      return getRenderPipeline() ? true : 'PostFX off';
+      // An editor view renders its own scene without PostFX (Views.ts)
+      if (!isRuntimeViewActive()) return 'not rendered in this view';
+      if (!isPostFxEnabled()) return 'PostFX off';
+      return getPostFxPasses().some((postFxPass) => postFxPass.enabled) ? true : 'no PostFX passes';
     },
     acquire: acquirePostFx,
     release: releasePostFx,

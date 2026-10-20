@@ -266,21 +266,31 @@ export const _startCustomMeasurements = () => {
 let tFpsPrevCurrentTime = 0;
 let tFpsPrevCurrentGraphsTime = 0;
 let tFpsMax = 0;
-const tFPSsamples: number[] = [];
+// The last TFPS_SAMPLES logic durations in a ring, with their running sum (no allocation per frame)
+const TFPS_SAMPLES = 60;
+const tFpsSamples = new Float64Array(TFPS_SAMPLES);
+let tFpsSampleHead = 0;
+let tFpsSampleCount = 0;
+let tFpsSampleSum = 0;
 const updateTFPSPanel = (duration: number) => {
   // Absent when TFPS tracking is off — skip the sampling work too, not just the draw.
   if (!tFpsPanel) return;
   const currentTime = performance.now();
-  tFPSsamples.push(duration);
-  if (tFPSsamples.length > 60) tFPSsamples.shift();
+  if (tFpsSampleCount === TFPS_SAMPLES) {
+    tFpsSampleSum -= tFpsSamples[tFpsSampleHead];
+  } else {
+    tFpsSampleCount++;
+  }
+  tFpsSamples[tFpsSampleHead] = duration;
+  tFpsSampleSum += duration;
+  tFpsSampleHead = (tFpsSampleHead + 1) % TFPS_SAMPLES;
+  const avgDuration = tFpsSampleSum / tFpsSampleCount;
   if (currentTime >= tFpsPrevCurrentTime + 1000 / (stats?.logsPerSecond || 4)) {
-    const avgDuration = tFPSsamples.reduce((a, b) => a + b, 0) / tFPSsamples.length;
     const tfps = 1000 / avgDuration;
     tFpsPanel?.update(tfps, tFpsMax, 0);
     tFpsPrevCurrentTime = currentTime;
   }
   if (currentTime >= tFpsPrevCurrentGraphsTime + 1000 / (stats?.graphsPerSecond || 30)) {
-    const avgDuration = tFPSsamples.reduce((a, b) => a + b, 0) / tFPSsamples.length;
     const tfps = 1000 / avgDuration;
     tFpsMax = Math.max(10, tFpsMax, tfps);
     tFpsPanel?.updateGraph(tfps, tFpsMax * 1.25);

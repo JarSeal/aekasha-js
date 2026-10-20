@@ -132,6 +132,11 @@
     }
   }
 
+  :global(.debuggerTabError) {
+    color: variables.$errorDark;
+    line-height: 1.4;
+  }
+
   &:first-of-type {
     :global(.debuggerHeading) {
       margin-top: 0 !important;

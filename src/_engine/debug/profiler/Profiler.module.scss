@@ -67,6 +67,17 @@
       color: color.adjust(variables.$debugTextColor, $lightness: -20%);
     }
 
+    :global(.profilerGroup) tr:first-child {
+      background-color: transparent;
+    }
+
+    :global(.profilerGroupHead) {
+      padding-top: 1rem;
+      font-size: 1rem;
+      font-weight: 700;
+      color: color.adjust(variables.$debugTextColor, $lightness: -20%);
+    }
+
     :global(.isNA) :global(.profilerValue) {
       color: variables.$debugTextColorDark;
     }
@@ -126,6 +137,12 @@
       margin: 0;
       padding: 0;
       list-style: none;
+    }
+
+    :global(.profilerMetricGroupHead) {
+      margin: 0.8rem 0 0.4rem;
+      font-size: 1rem;
+      color: color.adjust(variables.$debugTextColor, $lightness: -20%);
     }
 
     li {

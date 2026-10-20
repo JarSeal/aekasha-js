@@ -1,5 +1,5 @@
 import { lerror } from '../../utils/Logger';
-import { IS_DEBUG_ENV } from './Config';
+import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from './Config';
 
 /**
  * A debug module that loads asynchronously: `current` is null until it has loaded (and stays null
@@ -53,7 +53,7 @@ export async function loadDebugModuleAsync<T>(
 ): Promise<DebugModuleRef<T> | null> {
   // A production build drops the importer, and with it the debug chunk
   if (!__AEK_DEBUG__) return null;
-  if (!IS_DEBUG_ENV && !includeInProdTestMode) return null;
+  if (!IS_DEBUG_ENV && !(includeInProdTestMode && IS_PROD_TEST_MODE)) return null;
   const ref: DebugModuleRef<T> = { current: null };
   return importer()
     .then((module) => {
@@ -90,6 +90,6 @@ export const useDebug = <T>(
 ): T | undefined =>
   // `__AEK_DEBUG__` first: a production build folds the result to undefined, so a wrapper's
   // `useDebug(ref)?.fn()` and the wrapper itself leave the bundle
-  __AEK_DEBUG__ && (IS_DEBUG_ENV || includeInProdTestMode) && ref?.current
+  __AEK_DEBUG__ && (IS_DEBUG_ENV || (includeInProdTestMode && IS_PROD_TEST_MODE)) && ref?.current
     ? ref.current
     : undefined;

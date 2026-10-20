@@ -550,6 +550,52 @@ headless Chromium, WebGL2 through SwiftShader):
    `it`s.
 2. The panels: K1-K19 (D4), each checked by hand in the dev server (debug env, Chromium).
 
+As built, section 1 (2026-10-21, uncommitted on `review-debug-public-api` after `3d5b459`):
+
+- **B1:** `UndoRedo.ts` keeps the handlers (`registerUndoRedoActionHandler`, gated on
+  `__AEK_DEBUG__` only, so it works before `initEnvironment` too; `_getUndoRedoActionHandler` and
+  `RegisteredUndoRedoActionHandler`, `@internal`). `_dbg__UndoRedo.ts`' `_registerUndoRedoActionHandler`
+  is the same function, so the engine's direct imports stay. A malformed stored history or settings
+  value is ignored with a warning (it threw in the boot).
+- **B3:** the tab host builds the heading's buttons and the sections in a `try`: a throw logs, leaves
+  the heading and an error line (`.debuggerTabError`), skips `onOpen` and the interval, and keeps the
+  tab mounted until another one is. A section refresh that throws logs once and stops the interval.
+  The Overview takes its holds in `onOpen` and updates them in `onRefresh` only while open; the
+  Objects tab takes them in `onOpen`.
+- **B4:** `Profiler.ts` keeps the tabs created before the profiler loads (pending, in creation order,
+  a replaced one keeping its place) and hands them over in `registerProfiler`; `removeProfilerTab`
+  (public, documented; the entry export is Phase 3's) removes a pending tab or calls
+  `_removeProfilerTab`, which rebuilds an open window.
+- **B2 / B6:** the PostFX source's availability: `not rendered in this view` while an editor view is
+  active, `PostFX off` (`isPostFxEnabled`), `no PostFX passes` (`getPostFxPasses()`), building
+  nothing. Checked in the dev server (WebGL2, `topDownTestScene`, a Playwright script): a pass
+  toggled off and on in the material editor isn't rebuilt there (it was before), and is by the
+  Runtime view's render. The PostFX row reads "measuring…" in the Runtime view on SwiftShader before
+  and after the change (older, not looked into).
+- **F1, as built differently:** the title is updated in place, but the open tab is still rebuilt
+  (`host.refresh(true)`) on a scene change: the cameras, lights, characters and Ray cast (K10) tabs
+  build from the current scene's data and counted on the old whole-drawer rebuild. Only the drawer's
+  chrome isn't rebuilt any more.
+- **F3:** a changed section is rendered with the html string the comparison computed (a wrapper set
+  as its `html` on its first change). Its build still computes it twice (creation, then the first
+  comparison value).
+- **F4:** written with `lsSetItem(key, object)` (the same stored text as before), read in a `try`, each
+  field type-checked. `hydrateDebuggerTabState` ignores a malformed value too (it threw out of the
+  registration).
+- **D14:** app rows are `app:<sourceId>` entries in `overviewMetrics`, kept after the engine's
+  (`sanitizeOverviewMetrics` partitions; `getOverviewMetricEntries` appends a source registered
+  since, shown). The Overview renders them in a second `<tbody>` headed "App"; the Settings list
+  shows them under an "App" heading, moving only within their group, an unregistered one labelled
+  "(not registered)". A throwing `format` logs once per source and reads n/a.
+- **Found by D11's loader test (fixed):** `loadDebugModuleAsync(…, true)` and `useDebug(ref, true)`
+  loaded in any mode of a development build, not only prod test mode (every engine caller is gated
+  by the boot, so nothing loaded wrongly; an app's ungated call would have).
+- **Tests:** `UndoRedo.test.ts`, `Profiler.test.ts`, `_dbg__TabHost.test.ts` (the repros now `it`s),
+  and new `GPUMemory.test.ts`, `DebuggerGUI.test.ts`, `DevFiles.test.ts`,
+  `kernel/config/DebugModules.test.ts`, `_dbg__DebuggerGUI.test.ts` (F1, F2, F4, B3 in the drawer)
+  and `profiler/_dbg__ProfilerOverview.test.ts` (D14). Each fails on the code before the fix.
+  `yarn test`: 108 files, 864 passed, 1 skipped. `docs.json` recorded (debug 149 / 202).
+
 ### Phase 2: structure (D5, D7)
 
 1. The two wrappers merged; the production check and `yarn sbp` against Phase 0's numbers.

@@ -479,6 +479,13 @@ type ObjectsTabOpts = {
 export const createProfilerObjectsTabDef = (opts: ObjectsTabOpts): AnyDebuggerTabDef => {
   const { settings, setSettings } = opts;
   const sources = createStatsSourceHolder();
+  const onClose = () => {
+    sources.releaseAll();
+    resetHistory();
+    census = null;
+    draw = null;
+    shownHeavyTargets.length = 0;
+  };
   return {
     id: PROFILER_OBJECTS_TAB_ID,
     title: 'Objects',
@@ -488,16 +495,12 @@ export const createProfilerObjectsTabDef = (opts: ObjectsTabOpts): AnyDebuggerTa
       return 1000 / settings.updateRateHz;
     },
     // Runs before the build and every refresh: one census read for every section
-    onRefresh: () => {
+    onRefresh: readSample,
+    // The holds are taken here, not in onRefresh, which also runs for a build that can fail
+    // before this cleanup exists
+    onOpen: () => {
       sources.set(HELD_SOURCES);
-      readSample();
-    },
-    onOpen: () => () => {
-      sources.releaseAll();
-      resetHistory();
-      census = null;
-      draw = null;
-      shownHeavyTargets.length = 0;
+      return onClose;
     },
     content: () => [
       CMP({ html: () => renderHeader(settings), onClick: onHeaderClick(setSettings) }),

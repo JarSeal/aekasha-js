@@ -322,11 +322,18 @@ export const hydrateDebuggerTabState = <S extends object>(
   if (!IS_DEBUG_ENV && !IS_PROD_TEST_MODE) return;
   const { lsKey, state, persistKeys } = def;
   if (!lsKey || !state || !persistKeys?.length) return;
-  const saved = lsGetItem(lsKey, {});
+  let saved: unknown;
+  try {
+    saved = lsGetItem(lsKey, {});
+  } catch {
+    // Not JSON (a hand edit, another version's value): the state keeps its values
+    return;
+  }
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return;
   for (let i = 0; i < persistKeys.length; i++) {
     const key = persistKeys[i];
-    if (key in saved) (state as Record<string, unknown>)[key] = saved[key];
+    if (key in saved)
+      (state as Record<string, unknown>)[key] = (saved as Record<string, unknown>)[key];
   }
 };
 
