@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 done
+Status: implemented (Phases 0-6)
 Category: Refactoring, Documentation, LOD, Rendering
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -766,7 +766,7 @@ As built (2026-10-20):
   each has its own buffer, in a registry); rewritten to what the feature does.
 - **Step 4:** `yarn hub:build`: 428 pages, no dead link, 13 warnings (Phase 4's 13, none in scope).
 
-### Phase 6: versions and done
+### Phase 6: versions and done — done
 
 1. D2's bumps, a `CHANGELOG.md` entry, `yarn checkVersions --against main`.
 2. `yarn test`, `yarn verify:scenes`, `yarn verify:baselines` (no unexplained growth), `yarn build`
@@ -776,6 +776,28 @@ As built (2026-10-20):
    is traced to its phase through the scene and what moved.
 3. Mark the plan done (`docs/plans/CLAUDE.md`).
 4. Time for a PR: this branch into `main` (p600's "Branches and PRs").
+
+As built (2026-10-20):
+
+- **Step 1 (D2):** Engine and project 5.6.0 → 5.7.0 (Golden Hour). Toolkit 2.1.2 (nothing under
+  `src/toolkit/` changed). App 1.12.4, bumped in Phase 4 for `lodShowcase/layout.ts`' comment.
+  `CHANGELOG.md`'s entry "review-lod-spatial-instancing-lines": Engine, App and Project sections.
+  `yarn checkVersions --against main` passes.
+- **Step 2:** `yarn test` 92 files, 749 passed, 1 skipped. `yarn build` passes with every SBP
+  budget within (app 25, banner 19). The four groups equal the committed baseline. In gzip, from
+  `main`: `lod` 7,810 → 8,578 (budget 9 KiB), `spatial` 8,526 → 9,925 (10 KiB, the tightest),
+  `lines` 8,978 → 9,198 (10 KiB) and `instancing` 3,167 → 3,715 (5 KiB). Mostly JSDoc (Risk 3),
+  so no budget changed. `yarn hub:build`: 428 pages, no dead link, 13 warnings, none in scope.
+  `yarn verify:baselines`: all four unchanged, no debug code in either build. The main chunk is
+  386,821 B gzip, 767 B more than on `main`. `yarn verify:scenes`: 101 passed, 3 failed in
+  3,807 s. The three are Phase 0's (`thirdPersonGymScene`'s debug configurations, the probe's
+  300 s timeout on SwiftShader). Every snapshot is within tolerance, and no hash or system order
+  moved (Risks 1 and 2). `space`'s worker targets hash apart from `mainThread` as before
+  (`MutualGravity`), and its `mainThread` hash equals the baseline.
+- **Step 3:** the plan is `_DONE_p616_…`, and the references to it are updated: p600's `Blocks`
+  line and Stage C table, p605's and p608's `Blocks`, p622's `Related`. p621's `Blocked by` no
+  longer lists it. No `CLAUDE.md` named the file. The root and nested `CLAUDE.md` files and
+  `readme.md` were updated in Phase 5.
 
 ## 4. Risks
 
