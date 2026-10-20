@@ -23,7 +23,7 @@ import {
 import { lsRemoveItem } from '../../../utils/LocalAndSessionStorage';
 import { createClearListLSButton, lsKeyHasData } from '../../../debug/_dbg__ClearLSButtons';
 import { ComponentType } from '../ECSCoreComponents';
-import { resetECSStressTest, spawnECSStressTestBatch } from './ECSStressTest';
+import { resetECSStressTest, spawnECSStressTestBatch } from './_dbg__ECSStressTest';
 import { CMP } from '../../../ui/CMP';
 import {
   closeDraggableWindow,
@@ -42,7 +42,7 @@ const refreshECSTab = () => updateDebuggerTab(TAB_ID);
 
 // Coalesces list refreshes to at most once per animation frame. Entity
 // creation/deletion can happen thousands of times in one stress-test batch
-// (ECSStressTest.ts) — rebuilding the whole list's HTML on every single one
+// (_dbg__ECSStressTest.ts) — rebuilding the whole list's HTML on every single one
 // would be a real cost, unlike the rare world create/delete case (which
 // still refreshes synchronously via updateECSWorldsDebuggerGUI below).
 let listRefreshScheduled = false;
@@ -229,7 +229,7 @@ export const _initECSDebugGUI = () => {
         perItemConfig: { onClick: openEditECSWorldWindow },
       }),
       // --- Benchmark ---
-      // Always targets the default world — reuses ECSStressTest.ts's spawn logic so Map vs
+      // Always targets the default world — reuses _dbg__ECSStressTest.ts' spawn logic so Map vs
       // Typed Array can be compared live: pick a mode in a world's edit window (reloads), then
       // spawn a batch here and watch the Stats tab's FPS/frame-time panel.
       {

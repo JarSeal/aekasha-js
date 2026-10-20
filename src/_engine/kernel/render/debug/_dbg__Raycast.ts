@@ -8,7 +8,7 @@ import {
   type DebuggerPaneItem,
 } from '../../../debug/DebuggerGUI';
 import { lsGetItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
-import { createPercentagePie, type PercentagePie } from '../../../debug/PercentagePieHtml';
+import { createPercentagePie, type PercentagePie } from '../../../debug/_dbg__PercentagePie';
 import type {
   IntervalCounterSnapshot,
   IntervalWindowSnapshot,

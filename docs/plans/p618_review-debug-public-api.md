@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: Refactoring, Documentation, Debug
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -319,8 +319,9 @@ hand)
 ### D2. Versions
 
 Engine **minor** (5.8.0 → 5.9.0): names added to `aekasha/debug` (D6) and `saveTexture` on
-`aekasha` (D9), B1's fix, deprecations. Toolkit: no change expected. App **patch** if an app file
-changes (S3's copy, D12's example). Project = engine.
+`aekasha` (D9), B1's fix, deprecations. Toolkit **patch** (Phase 2: `bakeScatterToInstancedMesh`'s
+JSDoc named the stress test's moved file; it names `createInstancedMeshPool` now, confirmed
+2026-10-21). App **patch** if an app file changes (D12's example). Project = engine.
 
 ### D3. What waits for engine 6.0.0 (p622)
 
@@ -645,13 +646,13 @@ As built, section 2 (2026-10-21, uncommitted on top of `cc94f9b`):
   can't easily make (a key before the tab, a rejected generation or worker reply, an HMR scene load,
   a full LS).
 
-### Phase 2: structure (D5, D7)
+### Phase 2: structure (D5, D7) — done
 
 1. The two wrappers merged; the production check and `yarn sbp` against Phase 0's numbers.
 2. S2's renames, S3's move with the thin wrapper (D7 as revised), S4's buttons; `moveMap.ts`
    regenerated.
 
-As built, section 1 (2026-10-21, uncommitted on top of `9c63d8f`):
+As built, section 1 (2026-10-21, committed as `4b7e32c`):
 
 - **`debug/Assets.ts` → `kernel/assets/AssetsAPI.ts`:** `createAssetsDebugGUI` at the file's end
   under `// Debug`, `@internal`; `Boot.ts` imports it with `initAssets`.
@@ -668,6 +669,43 @@ As built, section 1 (2026-10-21, uncommitted on top of `9c63d8f`):
   `kernel/assets` 127 / 127. `yarn sbp --profile all`: Phase 0's numbers exactly (the app's
   initial 379.2 kB, `kernel/assets` 18.2 / 8.7 kB, `features/postfx` 2.0 kB; the banner's
   285.5 kB), every budget within.
+
+As built, section 2 (2026-10-21, uncommitted on top of `4b7e32c`; the renames staged, since
+`moveMap.ts` reads the tracked tree):
+
+- **S2:** `debug/SceneHelpers.ts` → `debug/_dbg__SceneHelpers.ts`, `debug/PercentagePieHtml.ts` →
+  `debug/_dbg__PercentagePie.ts` (`PercentagePie.scss` keeps its name; its header comment and p622's
+  line follow the rename). Their importers (`_dbg__DebugTools.ts`, `_dbg__Raycast.ts`) renamed.
+  Their 10 exports leave TypeDoc and `api.json` with them (D6's removal of `PercentagePieHtml` and
+  `PercentagePieOpts.size` is still Phase 3's).
+- **S3:** the implementation is `kernel/ecs/debug/_dbg__ECSStressTest.ts` (spawn, reset, count,
+  the systems, `_initECSStressTest(batchSize, targetId, sceneId)`, `@internal`); the ECS tab imports
+  it directly. `kernel/ecs/ECSStressTest.ts` is the thin wrapper `aekasha` exports:
+  `initECSStressTest` (same signature, still returns `void`) returns at once outside the debug env
+  (so a production build folds it), resolves the calling scene's id, loads the module through
+  `loadDebugModuleAsync` and binds the keys only while that scene is still loading or current. A
+  failed load is the loader's log (the wrapper's `.catch` only stops the rejection). The JSDoc's
+  `@remarks` says the keys come a moment after the call. `ECSRegistry.ts`' and
+  `ECSCoreComponents.ts`' comments name the new file. The `kernel/ecs/debug` docs folder is gone
+  (`docs.json`); `kernel/ecs` is 82 / 82. No app change.
+- **The toolkit:** `ScatterOnSurface.ts`' `bakeScatterToInstancedMesh` JSDoc pointed at the stress
+  test's old path; it points at the instancing feature's `createInstancedMeshPool` now (the public
+  pattern for per-instance ECS state). A toolkit patch (D2).
+- **S4:** the five test buttons and their TODO gone from the Debug tools tab's Logging folder, with
+  the `openDraggableWindow`, `openDialog` and `addToast` imports only they used.
+- **`moveMap.ts`:** regenerated, `--check` clean. Its diff also carries what earlier work left
+  unregenerated (p617's `ui/CLAUDE.md` and entry counts, Phase 1's tests): 811 files mapped, 35
+  boundary violations, 0 feature cycles.
+- **Checks:** `tsc` (both), the lint and `yarn test` (108 files, 864 passed, 1 skipped).
+  `yarn verify:baselines`: no debug code in the production build or the banner, both bundles
+  unchanged (186 modules, 832.0 kB gzip; 670.3 kB). `api.json` (not recorded, Phase 3): section 1's
+  eight, `initECSStressTest`'s move, and the 13 exports of the renamed and moved `_dbg__` modules
+  removed. `docs.json` recorded: `debug` 141 / 187 (the 46 left are D10's, Phase 4),
+  `features/postfx` 29 / 29, `kernel/assets` 127 / 127. `yarn sbp --profile all`: Phase 0's numbers
+  (379.2 kB, 285.5 kB). In the dev server (debug env, WebGL2 on SwiftShader, `sceneTestECS`, a
+  Playwright script): `k` and `l` spawn 100 each; in `physicsTest` `k` spawns nothing; back in
+  `sceneTestECS` the keys are bound again and the count starts over; all 15 drawer tabs build, none
+  of S4's buttons is left, no console errors.
 
 ### Phase 3: the API (D6, D9) and the deferrals (D3)
 

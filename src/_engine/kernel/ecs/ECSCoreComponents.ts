@@ -178,9 +178,9 @@ export interface CoreComponentData {
   /** The scene debug camera's entity. Debug env only. */
   [CoreType.DEBUG_TAG_IS_DEBUG_CAMERA]: boolean;
   /** An ECS stress test entity drawn as one instance of the test's InstancedMesh
-   * (kernel/ecs/debug/ECSStressTest.ts). */
+   * (kernel/ecs/debug/_dbg__ECSStressTest.ts). */
   [CoreType.DEBUG_STRESS_TEST_INSTANCE]: { mesh: THREE.InstancedMesh; index: number };
-  /** An ECS stress test entity's bobbing (kernel/ecs/debug/ECSStressTest.ts). */
+  /** An ECS stress test entity's bobbing (kernel/ecs/debug/_dbg__ECSStressTest.ts). */
   [CoreType.DEBUG_STRESS_TEST_HOVER]: {
     speed: number;
     amplitude: number;

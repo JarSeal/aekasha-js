@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2278,
-      "total": 2433
+      "documented": 2272,
+      "total": 2420
     },
     "members": {
       "documented": 935,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2234,
-        "total": 2370
+        "documented": 2228,
+        "total": 2357
       },
       "members": {
         "documented": 885,
@@ -35,8 +35,8 @@
   "folders": {
     "engine/debug": {
       "exports": {
-        "documented": 149,
-        "total": 202
+        "documented": 141,
+        "total": 187
       },
       "members": {
         "documented": 0,
@@ -72,16 +72,9 @@
           "OnScreenTools#ToolTypes",
           "OnScreenTools#registerOnScreenTools",
           "OnScreenTools#updateOnScreenTools",
-          "PercentagePieHtml#PercentagePieOpts",
           "Profiler#DEFAULT_PROFILER_SETTINGS",
           "Profiler#ProfilerBarMeasure",
           "Profiler#ProfilerSettings",
-          "SceneHelpers#createAxesHelper",
-          "SceneHelpers#createGridHelper",
-          "SceneHelpers#createPolarGridHelper",
-          "SceneHelpers#toggleAxesHelperVisibility",
-          "SceneHelpers#toggleGridHelperVisibility",
-          "SceneHelpers#togglePolarGridHelperVisibility",
           "Stats#StatsOptions",
           "Stats#defaultStatsOptions",
           "Stats#getStatsCmp",
@@ -379,8 +372,8 @@
     },
     "engine/features/postfx": {
       "exports": {
-        "documented": 25,
-        "total": 25
+        "documented": 29,
+        "total": 29
       },
       "members": {
         "documented": 0,
@@ -449,8 +442,8 @@
     },
     "engine/kernel/assets": {
       "exports": {
-        "documented": 126,
-        "total": 126
+        "documented": 127,
+        "total": 127
       },
       "members": {
         "documented": 0,
@@ -519,26 +512,12 @@
     },
     "engine/kernel/ecs": {
       "exports": {
-        "documented": 81,
-        "total": 81
+        "documented": 82,
+        "total": 82
       },
       "members": {
         "documented": 159,
         "total": 159
-      },
-      "undocumented": {
-        "exports": [],
-        "members": []
-      }
-    },
-    "engine/kernel/ecs/debug": {
-      "exports": {
-        "documented": 4,
-        "total": 4
-      },
-      "members": {
-        "documented": 0,
-        "total": 0
       },
       "undocumented": {
         "exports": [],

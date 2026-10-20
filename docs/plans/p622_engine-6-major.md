@@ -85,7 +85,7 @@ migration page, so an app made from the template upgrades in one step.
     `TStyle`, `TAttr`, `TClassAction`, `TAnimChain`, `TAnimState`, `TSettings` in `ui/CMPTypes.ts`, and
     `ui/DropDown.ts`' `TDropDown`), all on `aekasha/ui`, renamed together (the old names
     deprecated aliases in a minor first, or removed here: the codemod's job).
-- **The deprecations without a version** (`debug/Stats.ts`' two, `debug/PercentagePieHtml.ts`'
+- **The deprecations without a version** (`debug/Stats.ts`' two, `debug/_dbg__PercentagePie.ts`'
   one): each gets a version or a removal here. (`ui/DraggableWindow.ts`' six were removed in
   p617: on no entry, no caller.)
 - **The toolkit** keeps its own scale: its `createSeededRandom` re-export goes in toolkit 3.0.0,

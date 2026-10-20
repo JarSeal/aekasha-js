@@ -13,8 +13,7 @@ import { getCurrentSceneId, getGeneratedAppData, getRootScene } from '../kernel/
 import { getConfig, getCurrentEnvironment, getEnvs, IS_DEBUG_ENV } from '../kernel/config/Config';
 import { isCurrentlyLoading, loadScene } from '../kernel/scene/SceneLoader';
 import { lerror, llog } from '../utils/Logger';
-import { fitAllDraggableWindowsToScreen, openDraggableWindow } from '../ui/DraggableWindow';
-import { openDialog } from '../ui/DialogWindow';
+import { fitAllDraggableWindowsToScreen } from '../ui/DraggableWindow';
 import {
   createAxesHelper,
   createGridHelper,
@@ -22,9 +21,8 @@ import {
   toggleAxesHelperVisibility,
   toggleGridHelperVisibility,
   togglePolarGridHelperVisibility,
-} from './SceneHelpers';
+} from './_dbg__SceneHelpers';
 import { updateOnScreenTools } from './OnScreenTools';
-import { addToast } from '../ui/Toaster';
 import type { SceneAsset } from '../schemas/SceneSchema';
 import type { DebugToolsState } from './DebugTools';
 import { DEBUG_CAMERA_ID } from './DebugTools';
@@ -830,71 +828,6 @@ const buildDebugToolsItems = (): DebuggerPaneItem<DebugToolsState>[] => {
             onClick: () => llog(...getLogActionList()[key]),
           })
         ),
-
-        // @TODO: REMOVE THESE!
-        {
-          type: 'button',
-          title: 'OPEN DRAGGABLE WINDOW',
-          onClick: () =>
-            openDraggableWindow({
-              id: 'myFirstDraggableTest',
-              closeIfOpen: true,
-              position: { x: 400, y: 400 },
-              size: { w: 200, h: 100 },
-              saveToLS: true,
-              title: 'My draggable window',
-              isDebugWindow: true,
-              disableHoriResize: false,
-              disableVertResize: false,
-              disableDragging: false,
-              resetPosition: true,
-              closeOnSceneChange: true,
-            }),
-        },
-        {
-          type: 'button',
-          title: 'OPEN DIALOG WINDOW',
-          onClick: () =>
-            openDialog({
-              id: 'myFirstDialogTest',
-              saveToLS: true,
-              title: 'My dialog window',
-              isDebugWindow: true,
-              backDropClickClosesWindow: true,
-              closeOnSceneChange: true,
-            }),
-        },
-        {
-          type: 'button',
-          title: 'TEST TOASTER (info)',
-          onClick: () =>
-            addToast({
-              title: 'INFO',
-              message: 'Hello world! ' + performance.now(),
-              showingTime: 4800,
-            }),
-        },
-        {
-          type: 'button',
-          title: 'TEST TOASTER (warning)',
-          onClick: () =>
-            addToast({
-              type: 'warning',
-              title: 'WARNING',
-              message: 'Hello world! ' + performance.now(),
-              showingTime: 4800,
-            }),
-        },
-        {
-          type: 'button',
-          title: 'TEST TOASTER (alert)',
-          onClick: () =>
-            addToast({
-              type: 'alert',
-              title: 'ALERT',
-              message: 'Hello world! ' + performance.now(),
-            }),
-        },
       ],
     },
   ];

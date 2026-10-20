@@ -1,3 +1,8 @@
+/**
+ * The ECS stress test (debug env only): hovering spheres spawned in batches, as individual meshes
+ * or as instances of one InstancedMesh. Loaded by `kernel/ecs/ECSStressTest.ts`'
+ * `initECSStressTest` (the `k` / `l` bindings) and imported by the ECS tab's benchmark.
+ */
 import * as THREE from 'three/webgpu';
 
 import { createKeyBinding } from '../../input/KeyboardInput';
@@ -6,13 +11,7 @@ import { createMeshEntity } from '../../mesh/Mesh';
 import type { ECSWorld } from '../ECS';
 import { getECSWorld } from '../ECS';
 import { ComponentType } from '../ECSCoreComponents';
-import { IS_DEBUG_ENV } from '../../config/Config';
-import {
-  getCurrentSceneId,
-  getLoadingSceneId,
-  getRootScene,
-  registerOnAllSceneExits,
-} from '../../scene/Scene';
+import { getRootScene, registerOnAllSceneExits } from '../../scene/Scene';
 import { ECSSystemStage } from '../../loop/SystemStages';
 
 let instancedMesh: THREE.InstancedMesh | null = null;
@@ -181,18 +180,13 @@ export const resetECSStressTest = (world: ECSWorld) => {
 };
 
 /**
- * Debug env only: binds `K` (individual meshes, a draw call each) and `L` (instances of one
- * InstancedMesh) to spawn `batchSize` hovering spheres each press, for measuring the ECS and the
- * renderer under load. With `targetId`, instanced spheres near that entity turn red. The keys work
- * in the scene that calls it (its scene code), and the spheres go with that scene. The ECS debug
- * tab's benchmark spawns and clears batches too.
+ * Binds `K` (individual meshes) and `L` (instances) to spawn `batchSize` spheres each press, in
+ * the scene `sceneId` (the wrapper's `initECSStressTest`, which resolved it before loading this
+ * module).
+ * @internal
  */
-export const initECSStressTest = (batchSize: number = 100, targetId?: number) => {
-  if (!IS_DEBUG_ENV) return;
-
+export const _initECSStressTest = (batchSize: number, targetId?: number, sceneId?: string) => {
   const world = getECSWorld();
-  // The scene calling it (its scene code runs while it loads): the keys work only there
-  const sceneId = getLoadingSceneId() || getCurrentSceneId() || undefined;
 
   // Bind 'K' for Individual Meshes (Draw Call stress)
   createKeyBinding({
