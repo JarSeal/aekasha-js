@@ -359,7 +359,14 @@ export interface CreateInstancedMeshPoolOptions {
   receiveShadow?: boolean;
   /** Passed to the mesh's own owning entity (e.g. to mark a long-lived pool `persistent`). */
   entityOpts?: CoreEntityOpts;
-  /** A registered spatial domain `spawn()` joins every instance to (docs/plans/_DONE_p346_spatial-domains.md). Default: none. */
+  /**
+   * A registered spatial domain `spawn()` joins every instance to
+   * (docs/plans/_DONE_p346_spatial-domains.md). Default: none.
+   * @remarks An instance in `DEFAULT` is never a light's receiver: light culling's receiver test
+   * reads a mesh's `OBJECT3D`, which an instance hasn't, so an object-culled light whose only
+   * nearby meshes are pool instances is culled (docs/issues/pool-instances-not-light-receivers.md).
+   * Give the pool a domain of its own, or leave object culling off for the lights that light it.
+   */
   spatialDomain?: string;
 }
 
@@ -491,7 +498,13 @@ export interface CreateInstancedLodPoolOptions {
   receiveShadow?: boolean;
   /** Passed to each level mesh's owning entity. */
   entityOpts?: CoreEntityOpts;
-  /** A registered spatial domain `spawn()` joins every instance to. Default: none. */
+  /**
+   * A registered spatial domain `spawn()` joins every instance to. Default: none.
+   * @remarks An instance in `DEFAULT` is never a light's receiver: light culling's receiver test
+   * reads a mesh's `OBJECT3D`, which an instance hasn't, so an object-culled light whose only
+   * nearby meshes are pool instances is culled (docs/issues/pool-instances-not-light-receivers.md).
+   * Give the pool a domain of its own, or leave object culling off for the lights that light it.
+   */
   spatialDomain?: string;
 }
 
