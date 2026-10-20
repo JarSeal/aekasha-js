@@ -352,7 +352,8 @@ const addTemplateChildCmp = (cmp: TCMP) => {
       if (replaceWithCmp.props?.focus) focusComponent = replaceWithCmp;
       cmp.children.push(replaceWithCmp);
       runAnims(replaceWithCmp);
-      if (cmp.props?.onCreateCmp) cmp.props.onCreateCmp(cmp);
+      // The template child is mounted in its parent now (the parent's own runs when it is)
+      replaceWithCmp.props?.onCreateCmp?.(replaceWithCmp);
     }
   }
   if (focusComponent) setTimeout(() => focusComponent && focusCmp(focusComponent), 0);
@@ -432,14 +433,7 @@ const createElem = (cmp: TCMP, props?: TProps) => {
   if (props?.style) {
     const styleProps = Object.keys(props.style);
     for (let i = 0; i < styleProps.length; i++) {
-      const prop = styleProps[i];
-      const value = props.style[styleProps[i]];
-      if (prop && value !== null) {
-        // @TODO: test if null values remove the rule?
-        elem.style[prop as unknown as number] = String(value);
-      } else if (value === null) {
-        elem.style.removeProperty(prop);
-      }
+      if (styleProps[i]) setElemStyle(elem, styleProps[i], props.style[styleProps[i]]);
     }
   }
 
@@ -549,12 +543,11 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
         if (activeCmp) listenerFn(e, cmp);
       };
       const type = props.listeners[i].type;
-      listeners[type] = {
-        fn,
-        type,
-        ...(props.listeners[i].options ? { options: props.listeners[i].options } : {}),
-      };
-      cmp.elem.addEventListener(type, fn, true);
+      // Capture by default, like the prop listeners; the options can change it
+      const options = { capture: true, ...props.listeners[i].options };
+      // Keyed apart from the prop listeners and each other: one type can have several
+      listeners[`${type}#${i}`] = { fn, type, options };
+      cmp.elem.addEventListener(type, fn, options);
     }
   }
   return listeners;
@@ -568,7 +561,9 @@ const removeListeners = (cmp: TCMP, nullify?: boolean) => {
   for (let i = 0; i < keys.length; i++) {
     const listener = listeners[keys[i]];
     if (listener?.fn) {
-      cmp.elem.removeEventListener(keys[i], listener.fn, true);
+      cmp.elem.removeEventListener(listener.type, listener.fn, {
+        capture: listener.options?.capture ?? true,
+      });
       if (nullify) listeners[keys[i]] = null;
     }
   }
@@ -750,13 +745,14 @@ const updateCmpClass = (
 
 const updateCmpAttr = (cmp: TCMP, newAttr: TAttr) => {
   const attrKeys = Object.keys(newAttr);
+  const attr: TAttr = { ...cmp.props?.attr };
   for (let i = 0; i < attrKeys.length; i++) {
-    const value = newAttr[attrKeys[i]];
-    cmp.elem.setAttribute(attrKeys[i], String(value));
-    if (cmp.props?.attr) {
-      cmp.props.attr[attrKeys[i]] = String(value);
-    }
+    const value = String(newAttr[attrKeys[i]]);
+    cmp.elem.setAttribute(attrKeys[i], value);
+    attr[attrKeys[i]] = value;
   }
+  // Recorded, so an update() rebuilds the element with them
+  setPropsValue(cmp, { attr });
 
   return cmp;
 };
@@ -778,20 +774,28 @@ const removeCmpAttr = (cmp: TCMP, attrKey: string | string[]) => {
   return cmp;
 };
 
+/** Sets one inline style, or removes it (null). A custom property (`--x`) or a kebab-case name
+ * goes through setProperty: the indexed form (`style['--x']`) ignores it. */
+const setElemStyle = (elem: HTMLElement, prop: string, value: string | number | null) => {
+  if (prop.includes('-')) {
+    if (value === null) elem.style.removeProperty(prop);
+    else elem.style.setProperty(prop, String(value));
+    return;
+  }
+  elem.style[prop as unknown as number] = value === null ? '' : String(value);
+};
+
 const updateCmpStyle = (cmp: TCMP, newStyle: TStyle) => {
   const styleProps = Object.keys(newStyle);
   for (let i = 0; i < styleProps.length; i++) {
     const prop = styleProps[i];
     const value = newStyle[styleProps[i]];
-    if (prop && value !== null) {
-      // @TODO: test if null values remove the rule?
-      const valueAsString = String(value);
-      cmp.elem.style[prop as unknown as number] = valueAsString;
-      setPropsValue(cmp, { style: { ...cmp.props?.style, [prop]: valueAsString } });
-    } else if (value === null) {
-      cmp.elem.style.removeProperty(prop);
-      cmp.elem.style[prop as unknown as number] = '';
-      if (cmp.props?.style) delete cmp.props.style[prop];
+    if (!prop) continue;
+    setElemStyle(cmp.elem, prop, value);
+    if (value !== null) {
+      setPropsValue(cmp, { style: { ...cmp.props?.style, [prop]: String(value) } });
+    } else if (cmp.props?.style) {
+      delete cmp.props.style[prop];
     }
   }
 
@@ -840,8 +844,10 @@ const updateCmpAnim = (cmp: TCMP, animChain: TAnimChain[]) => {
         : null;
       nextIndex = typeof phaseEndResult === 'number' ? phaseEndResult : null;
       if (nextIndex !== null) {
+        // The jump runs the phase it names, which sets the next timer: this one ends here
         cmp.timers.cmpAnim.curIndex = nextIndex;
         timerFn();
+        return;
       }
     }
 
@@ -885,8 +891,11 @@ const updateCmpAnim = (cmp: TCMP, animChain: TAnimChain[]) => {
 
 const focusCmp = (cmp: TCMP, focusValueToProps?: boolean) => {
   cmp.elem.focus();
-  if (cmp.elem instanceof HTMLInputElement) {
-    cmp.elem.setSelectionRange(9999999999999, 9999999999999);
+  // The caret at the end, in an input that has a selection (a number, checkbox or range input
+  // has none: its setSelectionRange throws)
+  const input = cmp.elem;
+  if (input instanceof HTMLInputElement && typeof input.selectionStart === 'number') {
+    input.setSelectionRange(input.value.length, input.value.length);
   }
   if (focusValueToProps !== undefined) {
     setPropsValue(cmp, { focus: focusValueToProps });

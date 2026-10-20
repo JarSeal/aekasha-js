@@ -35,7 +35,7 @@ import type {
 } from './ActionTypes';
 import { pollGamepads } from './GamepadInput';
 import type { EnabledInDebugCam } from './InputSharedTypes';
-import { areAllInputsEnabled, areAppInputsEnabled } from './InputState';
+import { addInputListenerRemover, areAllInputsEnabled, areAppInputsEnabled } from './InputState';
 import { setKeyActionListener, warnIfKeyChordReserved } from './KeyboardInput';
 import { setMouseActionSource } from './MouseInput';
 import { setTouchActionSource } from './TouchInput';
@@ -112,6 +112,7 @@ let isSamplerSet = false;
 let hasKeySource = false;
 let hasMouseSource = false;
 let hasTouchSource = false;
+let isSourceRemoverAdded = false;
 let usesGamepad = false;
 let usesRightMouseButton = false;
 let usesTouchDrag = false;
@@ -274,9 +275,18 @@ const matchWheel = (c: CompiledBinding) =>
   c.kind === 'MOUSE_DELTA' && c.delta === 'WHEEL' ? c.scale : null;
 const matchTouchDrag = (c: CompiledBinding) => (c.kind === 'TOUCH_DRAG' ? c.scale : null);
 
+/** A wheel page in pixels: the height of what listens, the canvas in the `CANVAS` input scope (an
+ * embed's page is the host's), else the window. */
+const getWheelPagePx = (e: WheelEvent) => {
+  const target = e.currentTarget as { clientHeight?: number } | null;
+  return target && target !== window && target.clientHeight
+    ? target.clientHeight
+    : window.innerHeight;
+};
+
 const onWheel = (e: WheelEvent) => {
   // DOM_DELTA_LINE (1) and DOM_DELTA_PAGE (2) in pixels
-  const unit = e.deltaMode === 1 ? WHEEL_LINE_PX : e.deltaMode === 2 ? window.innerHeight : 1;
+  const unit = e.deltaMode === 1 ? WHEEL_LINE_PX : e.deltaMode === 2 ? getWheelPagePx(e) : 1;
   addDeltas(matchWheel, e.deltaX * unit, -e.deltaY * unit);
 };
 
@@ -297,8 +307,17 @@ const onTap = (e: TouchEvent) => {
   }
 };
 
-/** Adds the device sources the maps' bindings need (once added, they stay) and notes what the
- * devices should prevent (the context menu, scrolling). */
+/** Forgets the device sources when every device's listeners are removed (a mount's unmount,
+ * `removeAllInputListeners`), so the next map adds them again by the input scope then. */
+const resetDeviceSources = () => {
+  hasKeySource = false;
+  hasMouseSource = false;
+  hasTouchSource = false;
+  isSourceRemoverAdded = false;
+};
+
+/** Adds the device sources the maps' bindings need (they stay until every device's listeners are
+ * removed) and notes what the devices should prevent (the context menu, scrolling). */
 const updateDeviceSources = () => {
   let needsKeys = false;
   let needsMouse = false;
@@ -322,6 +341,10 @@ const updateDeviceSources = () => {
         }
       }
     }
+  }
+  if ((needsKeys || needsMouse || needsTouch) && !isSourceRemoverAdded) {
+    isSourceRemoverAdded = true;
+    addInputListenerRemover(resetDeviceSources);
   }
   if (needsKeys && !hasKeySource) {
     hasKeySource = true;

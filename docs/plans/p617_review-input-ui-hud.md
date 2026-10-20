@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented
+Status: in progress | Phases 0-1 implemented
 Category: Refactoring, Documentation, UI, Input
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -430,8 +430,8 @@ changes against them. The banner's bytes are measured (`yarn sbp --profile banne
 ## 3. Phases
 
 Each phase leaves the tree green: `yarn test`, the lint and `tsc` (the Stop hook), and the phase's
-own checks. `yarn verify:scenes` runs in Phase 0 (`--update`, on this commit = `main`), at the end
-of Phase 1, and once in Phase 6 for Phases 2-5 together (snapshots, hashes and system order
+own checks. `yarn verify:scenes` runs in Phase 0 (`--update`, on this commit = `main`) and once in
+Phase 6 for Phases 1-5 together (decided 2026-10-20; snapshots, hashes and system order
 unchanged unless a phase says otherwise; no file is edited while it runs). Each phase ends with
 its "As built" list, its files' JSDoc at 100 % and `docs.json` updated (`yarn verify:baselines
 --docs --update`).
@@ -488,11 +488,67 @@ WebGL2 through SwiftShader):
   stays read from the code and is checked in Chromium by hand in Phase 1. `yarn test`: 93 files,
   749 passed, 6 expected fails, 1 skipped.
 
-### Phase 1: the bugs (D4) and the tests (D12)
+### Phase 1: the bugs (D4) and the tests (D12) — done
 
 1. U1-U6 with their tests; I9 and I10.
 2. D12's other tests (input devices, dialogs, windows).
-3. `yarn verify:scenes`: unchanged.
+
+As built (2026-10-20):
+
+- **No `yarn verify:scenes` here** (decided 2026-10-20): Phase 6 runs it once for Phases 1-5.
+- **U1:** `addTemplateChildCmp` calls the template child's own `onCreateCmp` when it puts it in
+  place of its placeholder, never the parent's: a CMP's own runs when it's added (or a template
+  child is adopted) and after each `update()`. `_dbg__AssetsPreview.ts`' comment says so.
+- **U2:** a custom listener is added with `{ capture: true, ...options }` and keyed
+  `` `${type}#${index}` ``, so several of one type, or one beside `onClick`, keep their own entry;
+  `removeListeners` removes each by its own type and capture flag (it removed by the key before).
+- **U3:** a phase end's jump returns after the recursive run. **U4:** the caret goes to the end
+  (`value.length`, not `9999999999999`) only where `selectionStart` is a number. **U5:**
+  `updateAttr` records into a copy of `props.attr`, made when there's none.
+- **U6:** one `setElemStyle` for `createElem` and `updateStyle`: a name with a `-` goes through
+  `setProperty` / `removeProperty`, the rest through the indexed form (`''` removes). The two
+  `@TODO`s beside the old code went with it. Checked in Chromium (playwright, a scratch script):
+  `style['--x'] = …` sets nothing, `setProperty` does; Chromium takes kebab-case names in the
+  indexed form too, so only custom properties changed behaviour. No Node test (linkedom takes
+  either form).
+- **I9:** `Actions.ts`' wheel page is the height of the event's `currentTarget` (the canvas in the
+  `CANVAS` scope), else `window.innerHeight`; no import added. **I10:** the first source a map
+  adds registers `resetDeviceSources` with `addInputListenerRemover`, which forgets the three
+  sources, so a map made after `removeAllInputListeners()` adds the listeners again. Both tests
+  fail against `HEAD`'s `Actions.ts` and pass now.
+- **D12's tests** (Node; linkedom stubbed per file where a test needs DOM), 99 files, 807 passed,
+  1 skipped, no expected fails left:
+  - `ui/CMP.test.ts` (11): U1 (two), U2-U5, then add / update keeping added children, template
+    children rebuilt by an update, remove (children, listeners, timers, the id freed), the class,
+    style (a custom property included) and text updates, `classes`. U3's repro needed the CMP
+    added first (a chain starts on add), and U1's makes its template children in the `html`
+    function (an update removes them and makes them again).
+  - `ui/DraggableWindow.test.ts` (7): the hooks test, then open and mount, the reopen rules
+    (layout kept unless reset, a passed flag and title win), a kind (content from `data`, removed
+    on close, its `onClose` with the id), a scene window suspended over a load and kept or closed
+    by its resolver, a failed load (`loadSettled` without `entered`) closing it, and the LS round
+    trip through `vi.resetModules()` and the after-start hook. The mocks keep the hooks they get:
+    Vitest clears a mock's calls between tests.
+  - `ui/DialogWindow.test.ts` (3): Escape closes the top `closeOnEscape` dialog and no later
+    listener gets the press or its keyup, one dialog per press (a repeat closes none), and Escape
+    passes without such a dialog. The module is imported after the DOM is stubbed (its listeners
+    are added at load until Phase 2); linkedom's window dispatches only its own `Event`.
+  - `ui/Toaster.test.ts` (3, fake timers): a toast's phases with one timer at a time, an early
+    removal and `removeToaster` clearing the timers and the styles, a missing toaster.
+  - `ui/DropDown.test.ts` (3): the label and the list opened on the value, the arrows and Enter
+    (the keys `preventDefault`ed), Escape without a change.
+  - `kernel/input/KeyboardInput.test.ts` (16): exact chords, modifiers, `ignoreModifiers`, a
+    modifier key's own chord, case, chord lists and `KEY_UP`, a replaced id, `enabled` (written on
+    the passed object), `sceneId`, the master switches and `isDebugKey`, yielding, `KEY_HELD`
+    polling (also a letter pressed with Shift and released after it), the labels and collisions.
+  - `kernel/input/MouseInput.test.ts` (9, picking and the ECS world mocked): a click's button and
+    hit, drag vs click at `CLICK_MAX_MOVE_PX`, a press and release both on the canvas, the right
+    double-click's timing and the third click, the native left one, the master switch, the wheel
+    over the canvas only, the context menu, hover enter and leave once per moved frame.
+  - `kernel/input/TouchInput.test.ts` (4): a tap with its hit, too long or too far, a drag's
+    start, deltas and end (and `preventDefault`), a pinch's distance and change with no tap.
+    Phase 2's I12 makes `onMove`'s delta a reused object: this test then copies it per call.
+  - `kernel/input/Actions.test.ts` (+3): I9 (the window and the `CANVAS` scope) and I10.
 
 ### Phase 2: the build and the hot paths (D5, D9, D14)
 
@@ -524,7 +580,7 @@ WebGL2 through SwiftShader):
 
 ### Phase 6: versions and done
 
-1. `yarn verify:scenes` (Phases 2-5), `yarn verify:baselines`, `yarn build`, `yarn hub:build`.
+1. `yarn verify:scenes` (Phases 1-5), `yarn verify:baselines`, `yarn build`, `yarn hub:build`.
 2. `package.json` (D2), the `CHANGELOG.md` entry, `yarn checkVersions --against main`.
 3. Mark the plan done (`docs/plans/CLAUDE.md`), p621's and p622's references.
 
