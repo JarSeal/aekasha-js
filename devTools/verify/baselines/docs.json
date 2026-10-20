@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2199,
-      "total": 2401
+      "documented": 2275,
+      "total": 2430
     },
     "members": {
       "documented": 935,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2155,
-        "total": 2338
+        "documented": 2231,
+        "total": 2367
       },
       "members": {
         "documented": 885,
@@ -561,34 +561,15 @@
     },
     "engine/kernel/input": {
       "exports": {
-        "documented": 108,
-        "total": 126
+        "documented": 127,
+        "total": 127
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "KeyboardInput#KeyBinding",
-          "KeyboardInput#KeyBindingType",
-          "KeyboardInput#KeyChord",
-          "KeyboardInput#KeyUpDownBinding",
-          "KeyboardInput#createKeyBinding",
-          "KeyboardInput#deleteKeyBinding",
-          "KeyboardInput#setKeyBindingEnabled",
-          "MouseInput#MouseBinding",
-          "MouseInput#MouseBindingType",
-          "MouseInput#MouseButton",
-          "MouseInput#createMouseBinding",
-          "MouseInput#deleteMouseBinding",
-          "MouseInput#setMouseBindingEnabled",
-          "TouchInput#TouchBinding",
-          "TouchInput#TouchBindingType",
-          "TouchInput#createTouchBinding",
-          "TouchInput#deleteTouchBinding",
-          "TouchInput#setTouchBindingEnabled"
-        ],
+        "exports": [],
         "members": []
       }
     },
@@ -767,45 +748,15 @@
     },
     "engine/ui": {
       "exports": {
-        "documented": 32,
-        "total": 61
+        "documented": 89,
+        "total": 89
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "CMP#TAnimChain",
-          "CMP#TAnimState",
-          "CMP#TAttr",
-          "CMP#TCMP",
-          "CMP#TClassAction",
-          "CMP#TListener",
-          "CMP#TListenerCache",
-          "CMP#TListenerCreator",
-          "CMP#TProps",
-          "CMP#TSettings",
-          "CMP#TStyle",
-          "DialogWindow#DialogProps",
-          "DialogWindow#openDialog",
-          "DraggableWindow#DraggableWindowContent",
-          "DraggableWindow#DraggableWindowData",
-          "DraggableWindow#DraggableWindowUnits",
-          "DraggableWindow#OpenDraggableWindowProps",
-          "DraggableWindow#closeDraggableWindow",
-          "DraggableWindow#getDraggableWindow",
-          "DraggableWindow#openDraggableWindow",
-          "DraggableWindow#removeDraggableWindow",
-          "DropDown#DropDownOption",
-          "DropDown#DropDownProps",
-          "DropDown#TDropDown",
-          "Toaster#AddToastResponse",
-          "Toaster#DEFAULT_TOASTER_SETTINGS",
-          "Toaster#ToastProps",
-          "Toaster#addToast",
-          "Toaster#createToaster"
-        ],
+        "exports": [],
         "members": []
       }
     },

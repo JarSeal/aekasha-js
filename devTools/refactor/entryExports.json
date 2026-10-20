@@ -4,7 +4,7 @@
   "summary": {
     "aekasha": {
       "public": 144,
-      "crossEntry": 250,
+      "crossEntry": 251,
       "internal": 262,
       "unreferenced": 102
     },
@@ -87,10 +87,10 @@
       "unreferenced": 3
     },
     "aekasha/ui": {
-      "public": 6,
-      "crossEntry": 25,
-      "internal": 8,
-      "unreferenced": 28
+      "public": 7,
+      "crossEntry": 27,
+      "internal": 46,
+      "unreferenced": 15
     },
     "aekasha/viewports": {
       "public": 7,
@@ -2611,6 +2611,15 @@
         "pickTargetsAt": {
           "kind": "Function",
           "usage": "internal"
+        }
+      },
+      "src/_engine/kernel/input/InputRules.ts": {
+        "isDebugCamRuleMet": {
+          "kind": "Function",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/debug"
+          ]
         }
       },
       "src/_engine/kernel/input/InputSharedTypes.ts": {
@@ -13058,26 +13067,49 @@
             "aekasha/postfx",
             "app"
           ]
+        }
+      },
+      "src/_engine/ui/CMPAnim.ts": {
+        "removeAnims": {
+          "kind": "Function",
+          "usage": "internal"
         },
+        "runAnims": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "updateCmpAnim": {
+          "kind": "Function",
+          "usage": "internal"
+        }
+      },
+      "src/_engine/ui/CMPTypes.ts": {
         "TAnimChain": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "TAnimState": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "TAttr": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "TClassAction": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "TCMP": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "public",
+          "by": [
+            "aekasha",
+            "aekasha/character",
+            "aekasha/debug",
+            "aekasha/viewports",
+            "app"
+          ]
         },
         "TListener": {
           "kind": "TypeAlias",
@@ -13093,15 +13125,15 @@
         },
         "TProps": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "TSettings": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "internal"
         },
         "TStyle": {
           "kind": "TypeAlias",
-          "usage": "unreferenced"
+          "usage": "internal"
         }
       },
       "src/_engine/ui/DialogWindow.ts": {
@@ -13132,34 +13164,6 @@
             "aekasha/physics",
             "aekasha/postfx"
           ]
-        },
-        "DraggableWindow": {
-          "kind": "TypeAlias",
-          "usage": "unreferenced"
-        },
-        "DraggableWindowConfig": {
-          "kind": "TypeAlias",
-          "usage": "unreferenced"
-        },
-        "DraggableWindowContent": {
-          "kind": "TypeAlias",
-          "usage": "unreferenced"
-        },
-        "DraggableWindowData": {
-          "kind": "TypeAlias",
-          "usage": "unreferenced"
-        },
-        "DraggableWindowKindOpts": {
-          "kind": "TypeAlias",
-          "usage": "unreferenced"
-        },
-        "DraggableWindowUnit": {
-          "kind": "TypeAlias",
-          "usage": "unreferenced"
-        },
-        "DraggableWindowUnits": {
-          "kind": "TypeAlias",
-          "usage": "unreferenced"
         },
         "fitAllDraggableWindowsToScreen": {
           "kind": "Function",
@@ -13213,10 +13217,6 @@
             "aekasha/debug"
           ]
         },
-        "OpenDraggableWindowProps": {
-          "kind": "TypeAlias",
-          "usage": "unreferenced"
-        },
         "registerDraggableWindow": {
           "kind": "Function",
           "usage": "crossEntry",
@@ -13239,10 +13239,6 @@
         "removeDraggableWindow": {
           "kind": "Function",
           "usage": "internal"
-        },
-        "SceneTargetResolver": {
-          "kind": "TypeAlias",
-          "usage": "unreferenced"
         },
         "toggleDraggableWindow": {
           "kind": "Function",
@@ -13274,6 +13270,157 @@
             "aekasha/character",
             "aekasha/postfx"
           ]
+        }
+      },
+      "src/_engine/ui/DraggableWindowDrag.ts": {
+        "addDragHandle": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "cancelDragSession": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "DragCommit": {
+          "kind": "TypeAlias",
+          "usage": "unreferenced"
+        }
+      },
+      "src/_engine/ui/DraggableWindowGeometry.ts": {
+        "clampToGrabbable": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "fitWindow": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "getGeometryStyle": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "getGrabArea": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "isCssCentred": {
+          "kind": "Function",
+          "usage": "unreferenced"
+        },
+        "isFittable": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "keepOnScreen": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "placeWindow": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "writePosition": {
+          "kind": "Function",
+          "usage": "internal"
+        }
+      },
+      "src/_engine/ui/DraggableWindowStore.ts": {
+        "createRuntime": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "hydrateFromLS": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "kindGeometry": {
+          "kind": "Variable",
+          "usage": "internal"
+        },
+        "recordKindGeometry": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "resolveWindowConfig": {
+          "kind": "Function",
+          "usage": "internal"
+        },
+        "writeWindowStatesToLS": {
+          "kind": "Function",
+          "usage": "internal"
+        }
+      },
+      "src/_engine/ui/DraggableWindowTypes.ts": {
+        "DraggableWindow": {
+          "kind": "TypeAlias",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha"
+          ]
+        },
+        "DraggableWindowConfig": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "DraggableWindowContent": {
+          "kind": "TypeAlias",
+          "usage": "unreferenced"
+        },
+        "DraggableWindowData": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "DraggableWindowKindOpts": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "DraggableWindowRuntime": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "DraggableWindowUnit": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "DraggableWindowUnits": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "DragMode": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "DragSession": {
+          "kind": "TypeAlias",
+          "usage": "unreferenced"
+        },
+        "GrabArea": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "KindGeometry": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "OpenDraggableWindowProps": {
+          "kind": "TypeAlias",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/character",
+            "aekasha/debug"
+          ]
+        },
+        "SceneTargetResolver": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "StoredWindow": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "WindowEntry": {
+          "kind": "TypeAlias",
+          "usage": "internal"
         }
       },
       "src/_engine/ui/DropDown.ts": {

@@ -2329,6 +2329,9 @@
       "PickOpts": "TypeAlias",
       "pickTargetsAt": "Function"
     },
+    "src/_engine/kernel/input/InputRules.ts": {
+      "isDebugCamRuleMet": "Function"
+    },
     "src/_engine/kernel/input/InputSharedTypes.ts": {
       "BindingMeta": "TypeAlias",
       "EnabledInDebugCam": "TypeAlias",
@@ -2838,7 +2841,14 @@
     "src/_engine/types/three-node-material-helpers.d.ts": {},
     "src/_engine/ui/CMP.ts": {
       "classes": "Function",
-      "CMP": "Function",
+      "CMP": "Function"
+    },
+    "src/_engine/ui/CMPAnim.ts": {
+      "removeAnims": "Function",
+      "runAnims": "Function",
+      "updateCmpAnim": "Function"
+    },
+    "src/_engine/ui/CMPTypes.ts": {
       "TAnimChain": "TypeAlias",
       "TAnimState": "TypeAlias",
       "TAttr": "TypeAlias",
@@ -2858,13 +2868,6 @@
     "src/_engine/ui/DraggableWindow.ts": {
       "bringDraggableWindowToFront": "Function",
       "closeDraggableWindow": "Function",
-      "DraggableWindow": "TypeAlias",
-      "DraggableWindowConfig": "TypeAlias",
-      "DraggableWindowContent": "TypeAlias",
-      "DraggableWindowData": "TypeAlias",
-      "DraggableWindowKindOpts": "TypeAlias",
-      "DraggableWindowUnit": "TypeAlias",
-      "DraggableWindowUnits": "TypeAlias",
       "fitAllDraggableWindowsToScreen": "Function",
       "fitDraggableWindowToScreen": "Function",
       "getDraggableWindow": "Function",
@@ -2872,14 +2875,54 @@
       "getKindWindowId": "Function",
       "isDraggableWindowOnTop": "Function",
       "openDraggableWindow": "Function",
-      "OpenDraggableWindowProps": "TypeAlias",
       "registerDraggableWindow": "Function",
       "registerDraggableWindowKind": "Function",
       "removeDraggableWindow": "Function",
-      "SceneTargetResolver": "TypeAlias",
       "toggleDraggableWindow": "Function",
       "updateDraggableWindow": "Function",
       "updateDraggableWindowsOfKind": "Function"
+    },
+    "src/_engine/ui/DraggableWindowDrag.ts": {
+      "addDragHandle": "Function",
+      "cancelDragSession": "Function",
+      "DragCommit": "TypeAlias"
+    },
+    "src/_engine/ui/DraggableWindowGeometry.ts": {
+      "clampToGrabbable": "Function",
+      "fitWindow": "Function",
+      "getGeometryStyle": "Function",
+      "getGrabArea": "Function",
+      "isCssCentred": "Function",
+      "isFittable": "Function",
+      "keepOnScreen": "Function",
+      "placeWindow": "Function",
+      "writePosition": "Function"
+    },
+    "src/_engine/ui/DraggableWindowStore.ts": {
+      "createRuntime": "Function",
+      "hydrateFromLS": "Function",
+      "kindGeometry": "Variable",
+      "recordKindGeometry": "Function",
+      "resolveWindowConfig": "Function",
+      "writeWindowStatesToLS": "Function"
+    },
+    "src/_engine/ui/DraggableWindowTypes.ts": {
+      "DraggableWindow": "TypeAlias",
+      "DraggableWindowConfig": "TypeAlias",
+      "DraggableWindowContent": "TypeAlias",
+      "DraggableWindowData": "TypeAlias",
+      "DraggableWindowKindOpts": "TypeAlias",
+      "DraggableWindowRuntime": "TypeAlias",
+      "DraggableWindowUnit": "TypeAlias",
+      "DraggableWindowUnits": "TypeAlias",
+      "DragMode": "TypeAlias",
+      "DragSession": "TypeAlias",
+      "GrabArea": "TypeAlias",
+      "KindGeometry": "TypeAlias",
+      "OpenDraggableWindowProps": "TypeAlias",
+      "SceneTargetResolver": "TypeAlias",
+      "StoredWindow": "TypeAlias",
+      "WindowEntry": "TypeAlias"
     },
     "src/_engine/ui/DropDown.ts": {
       "createDropDown": "Function",

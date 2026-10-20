@@ -5,8 +5,12 @@ import styles from './DraggableWindow.module.scss';
 import { clampToGrabbable, getGrabArea, writePosition } from './DraggableWindowGeometry';
 import type { DragMode, WindowEntry } from './DraggableWindowTypes';
 
-/** Runs at the end of a drag that changed the window's geometry. */
-type DragCommit = (entry: WindowEntry) => void;
+/**
+ * Runs at the end of a drag that changed the window's geometry: DraggableWindow.ts' record and
+ * save.
+ * @internal
+ */
+export type DragCommit = (entry: WindowEntry) => void;
 
 const startDragSession = (entry: WindowEntry, mode: DragMode, e: PointerEvent) => {
   const { config, runtime } = entry;

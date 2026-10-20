@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-4 implemented
 Category: Refactoring, Documentation, UI, Input
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -680,13 +680,72 @@ As built (2026-10-20):
   them: D11's docs say where (an install, or the app's `start`, before the boot's after-start
   restore), and Phase 5's moved `CLAUDE.md` paragraph too.
 
-### Phase 4: the internals (D10, D11)
+### Phase 4: the internals (D10, D11) — done
 
 1. The CMP and window splits; I3 (one debug camera rule, in `InputState.ts`' neighbourhood:
    `InputPicking.ts` is the mouse's and touch's, so a small `InputRules.ts` or the shared types'
    file made a module).
 2. D11's docs, I7, I8, U8, U12; U9 (Phase 3); the window registrations' "at module load" wording
    (Phase 3).
+
+As built (2026-10-20):
+
+- **I3:** `kernel/input/InputRules.ts`' `isDebugCamRuleMet` (`@internal`), the one rule. There
+  were five copies, not four: the fifth was `debug/DefaultDebugKeyBindings.ts`' (p618's folder;
+  only its import changed). The devices and `Actions.ts` dropped their camera and flag imports.
+- **The CMP split (D10):** the animation chain in `ui/CMPAnim.ts` (118), moved as it was; it
+  writes the CMP through its own methods (`cmp.updateClass`, `cmp.updateStyle`), so it imports
+  only CMP's types and there's no cycle. `createListeners` is one loop over `PROP_LISTENERS` (the
+  same events, phase and keys). **Beyond the plan (decided 2026-10-20):** the types moved to
+  `ui/CMPTypes.ts` (239 with their docs), since the docs would have taken `CMP.ts` past 800; the
+  entry and the 40-odd modules that import them name the new file (only those import lines
+  changed). `CMP.ts`: 721.
+- **The window split (D10)**, cut by statement with the TypeScript compiler, moved as it was:
+  `DraggableWindowTypes.ts` (299: the public types and, `@internal`, the shared internal ones),
+  `DraggableWindowStore.ts` (229), `DraggableWindowGeometry.ts` (221), `DraggableWindowDrag.ts`
+  (147). None imports `DraggableWindow.ts`: the LS write takes the windows map
+  (`writeWindowStatesToLS`) and a drag's end calls back (`DragCommit`, `commitDrag`). The type
+  importers (the entry, `DialogWindow.ts`, `Config.ts`, the test, seven debug modules) name
+  `DraggableWindowTypes.ts`. `DraggableWindow.ts` is 822 with its docs (not about 650): over the
+  limit, so its header says why (decided 2026-10-20): what is left shares the module's state, and
+  a further split would make the modules import each other. The LS round trip test passes
+  unchanged.
+- **D11's docs:** `kernel/input` 127 / 127 and `ui` 89 / 89 exports documented (`docs.json`), and
+  the aliases' members by reading: `TCMP`'s methods and fields, every `TProps`, `TSettings` and
+  `TAnimChain` field, every `OpenDraggableWindowProps` / `DraggableWindowConfig` field, the key,
+  mouse and touch bindings' fields, the toast and toaster fields, the drop-down's. `@example`s on
+  `CMP`, `openDraggableWindow`, `registerDraggableWindowKind` (with `toggleDraggableWindow` and
+  `getKindWindowId`), `openDialog`, `createDropDown`, `createToaster`, `addToast`,
+  `createKeyBinding`, `createMouseBinding` and `createTouchBinding`, all type-checked. `@remarks`:
+  CMP's capture listeners (on `TProps`, U2), `set*BindingEnabled` writing the passed object (and
+  on each `create*Binding`, I7), the touch tap's emulated mouse click. The toaster's docs say the
+  engine makes a toaster only in the debug env, so an app that shows toasts makes its own. The
+  registrations say where to register: in `start` or a feature's install, before the boot's
+  restore (a `_dbg__` module at its load).
+- **I7, I8, U8, U12:** I7's stale text fixed (`InputSharedTypes.ts`, `InputState.ts`' header and
+  `setAllInputsEnabled`). I8's three links use the coding standard's module form
+  (`{@link _engine/kernel/input/Actions!createActionMap}`): an `import type` for a link trips
+  `no-unused-vars`. `yarn hub:build` no longer warns about them. U8: the seven `any` casts (a
+  field set to `undefined` instead of `null` where its type has no null), the `@TODO` and the
+  `@SUGGESTION` block gone. U12: `TSettings`' doc and the old-style tags rewritten.
+- **U9:** generated ids are a counter (`aekCmp_N`, skipping one taken by a given id), so `CMP.ts`
+  imports no three.
+- **Found:** `TSettings.doCheckIsInDom` is stored and never read: `@deprecated` (no effect), on
+  p622's list. `DragCommit` had to be exported (`@internal`): TypeDoc warned that `addDragHandle`
+  names a type its module doesn't export.
+- **`eslint.config.js`:** `dist-embed/` and `dist-stats/` in the global ignores (decided
+  2026-10-20). A bare `yarn lint` read the minified embed build that `yarn verify:baselines`
+  makes and ran for 20 minutes; it takes 15 s now.
+- **The checks:** `tsc` (both), `yarn lint`, `yarn test` (99 files, 811 passed, 1 skipped),
+  `yarn hub:build` (435 pages, no warning in scope), `moveMap.ts --check` (795 files, no new
+  boundary violation; the seven new files `git add -N`'d before their commit).
+  `yarn verify:baselines --update`: `api.json` lists the moved types under their new modules and
+  the new modules' `@internal` exports, the entries still 808; the app's main chunk 184 → 186
+  modules at 831.7 kB gzip (+0.1), the banner unchanged; `EngineRapier.js` / `#2` swapped sizes
+  again (Phase 0's noise). No debug code in either build.
+- **For Phase 5:** `ui/CLAUDE.md` names the kit's files (CMP's three, the window's five) and the
+  toaster rule above; the root's window paragraph says "register once at module load", which
+  moves with it in the new wording.
 
 ### Phase 5: the Hub, CLAUDE.md, readme, and what's filed
 
