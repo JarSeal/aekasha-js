@@ -1,6 +1,7 @@
 /**
- * Returns the window inner width and height, and their aspect ratio
- * @returns ({ width: number, height: number, aspect: number })
+ * The browser window's inner width and height, and their aspect ratio: the draggable windows' and
+ * the debug drawer's bounds.
+ * @internal
  */
 export const getWindowSize = () => {
   const width = window.innerWidth;

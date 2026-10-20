@@ -12,8 +12,12 @@ export type PickOpts = {
   recursive?: boolean;
 };
 
-/** Closest hit among `targets` at a viewport position (MouseEvent/Touch clientX/clientY)
- * on `canvas`, if any. `targetArr` is cleared and reused to avoid allocating per call. */
+/**
+ * Closest hit among `targets` at a viewport position (MouseEvent/Touch clientX/clientY) on
+ * `canvas`, if any: the mouse's and touch's picking. `targetArr` is cleared and reused to avoid
+ * allocating per call.
+ * @internal
+ */
 export const pickTargetsAt = (
   clientX: number,
   clientY: number,

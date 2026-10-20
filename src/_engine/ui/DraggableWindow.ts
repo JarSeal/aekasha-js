@@ -13,7 +13,7 @@ import styles from './DraggableWindow.module.scss';
 import { getSvgIcon, type SvgIconKey } from './icons/SvgIcon';
 
 /** The CSS unit of a window's position or size value. */
-export type Units = 'px' | '%' | 'vw' | 'vh';
+export type DraggableWindowUnit = 'px' | '%' | 'vw' | 'vh';
 
 export type DraggableWindowData = { [key: string]: unknown };
 
@@ -23,10 +23,10 @@ export type DraggableWindowUnits = {
   // Default is 'px'
   /** A non-px position is the window's centre. A draggable window converts it to px (its
    * left/top) when it mounts; a non-draggable one (eg. a dialog) stays CSS-centred. */
-  position?: { x?: Units; y?: Units };
-  size?: { w?: Units; h?: Units };
-  maxSize?: { w?: Units; h?: Units };
-  minSize?: { w?: Units; h?: Units };
+  position?: { x?: DraggableWindowUnit; y?: DraggableWindowUnit };
+  size?: { w?: DraggableWindowUnit; h?: DraggableWindowUnit };
+  maxSize?: { w?: DraggableWindowUnit; h?: DraggableWindowUnit };
+  minSize?: { w?: DraggableWindowUnit; h?: DraggableWindowUnit };
 };
 
 /** The persisted part of a window (LS): serializable values only. */
@@ -197,7 +197,9 @@ export type DraggableWindowKindOpts = {
   content?: (data?: DraggableWindowData) => TCMP;
   /** Runs after a window of the kind closes (or is removed), unless the window has its own */
   onClose?: (id: string) => void;
-  /** See {@link registerDraggableWindowSceneTargetResolver} */
+  /** For a window flagged `closeOnSceneChange`: on a scene change the window stays open (rebuilt
+   * for the next scene) when it returns true for the window's `data`, and closes otherwise. Also
+   * checked when the window is restored on a reload. */
   sceneTargetResolver?: SceneTargetResolver;
   /** Keeps the kind's windows visible in editor views (Views.ts), which hide the other
    * windows with the rest of the suspended scene's HUD. Debug dialogs (`isDebugWindow` with a
@@ -233,9 +235,8 @@ const FIT_MARGIN_PX = 8;
 let windows: Map<string, WindowEntry> | null = null;
 /** Each layer's open windows, bottom to top. */
 const stacks: Record<Layer, string[]> = { APP: [], DEBUG: [] };
-/** Content and onClose registered for a window that doesn't exist yet. */
-const pendingRuntimes: { [id: string]: Pick<DraggableWindowRuntime, 'content' | 'onClose'> } = {};
 /** Keyed by kind (a window's kind, or its id when it has none) */
+const contentFns: { [kind: string]: (data?: DraggableWindowData) => TCMP } = {};
 const sceneTargetResolvers: { [kind: string]: SceneTargetResolver } = {};
 const registeredKinds = new Set<string>();
 const kindOnCloses: { [kind: string]: (id: string) => void } = {};
@@ -287,11 +288,7 @@ const getWindows = () => {
   return windows;
 };
 
-const createRuntime = (id: string): DraggableWindowRuntime => {
-  const pending = pendingRuntimes[id];
-  delete pendingRuntimes[id];
-  return { content: pending?.content, onClose: pending?.onClose, session: null, zIndex: -1 };
-};
+const createRuntime = (): DraggableWindowRuntime => ({ session: null, zIndex: -1 });
 
 /** A full config from partial values: lists every persisted key, so nothing else (runtime
  * objects, pre-p094 keys) ends up in LS. */
@@ -464,7 +461,7 @@ const hydrateFromLS = (map: Map<string, WindowEntry>) => {
     const maxSize = s.units?.maxSize ? s.maxSize : undefined;
     map.set(ids[i], {
       config: createConfig(ids[i], { ...s, geometry, maxSize }),
-      runtime: createRuntime(ids[i]),
+      runtime: createRuntime(),
     });
   }
 };
@@ -556,18 +553,9 @@ export const isDraggableWindowOnTop = (id: string) => {
   return stack[stack.length - 1] === id;
 };
 
-/** The z-index bases of the window layers, and the z-index of each layer's top (active) window. */
-export const getDraggableWindowsDefaultZIndexes = () => ({
-  defaultZIndex: Z_INDEX_BASES.APP,
-  defaultZIndexActive: Z_INDEX_BASES.APP + 2 * Math.max(0, stacks.APP.length - 1),
-  defaultDebugZIndex: Z_INDEX_BASES.DEBUG,
-  defaultDebugZIndexActive: Z_INDEX_BASES.DEBUG + 2 * Math.max(0, stacks.DEBUG.length - 1),
-  defaultDebugAdditionToCustomZIndex: DEBUG_ADDITION_TO_CUSTOM_Z_INDEX,
-});
-
 // Geometry
 
-const isNonPx = (unit?: Units) => Boolean(unit && unit !== 'px');
+const isNonPx = (unit?: DraggableWindowUnit) => Boolean(unit && unit !== 'px');
 
 /** A window with a non-px position axis is CSS-centred on that axis (a dialog): it follows a
  * viewport resize without JS, and the clamps leave it alone. */
@@ -967,7 +955,9 @@ const buildContent = ({ config, runtime }: WindowEntry) => {
   const { content } = runtime;
   if (typeof content === 'function') return content(config.data);
   if (content) return content;
-  return getConfig().draggableWindows?.[getWindowKind(config)]?.contentFn?.(config.data);
+  const kind = getWindowKind(config);
+  const contentFn = contentFns[kind] ?? getConfig().draggableWindows?.[kind]?.contentFn;
+  return contentFn?.(config.data);
 };
 
 /** Content passed as a CMP (not a function) outlives the window's DOM: it is detached before the
@@ -1157,7 +1147,7 @@ export const openDraggableWindow = (props: OpenDraggableWindowProps) => {
   }
 
   if (!entry) {
-    entry = { config, runtime: createRuntime(id) };
+    entry = { config, runtime: createRuntime() };
     map.set(id, entry);
   }
   const prev = entry.config;
@@ -1200,15 +1190,7 @@ export const closeDraggableWindow = (id: string) => {
   runOnClose(entry);
 };
 
-/** @deprecated Use window kinds: close each of {@link getDraggableWindowsOfKind}'s windows. */
-export const closeAllDraggableWindowsStartingWith = (startingWithId: string) => {
-  const ids = [...getWindows().keys()];
-  for (let i = 0; i < ids.length; i++) {
-    if (ids[i].startsWith(startingWithId)) closeDraggableWindow(ids[i]);
-  }
-};
-
-export const toggleCollapse = (id: string) => {
+const toggleCollapse = (id: string) => {
   const entry = getWindows().get(id);
   if (!entry?.runtime.windowCMP) return;
   entry.config.isCollapsed = !entry.config.isCollapsed;
@@ -1405,7 +1387,7 @@ export const registerDraggableWindowKind = (kind: string, opts?: DraggableWindow
  */
 export const registerDraggableWindow = (id: string, opts: DraggableWindowKindOpts) => {
   addWindowHooks();
-  if (opts.content) setContentFn(id, opts.content);
+  if (opts.content) contentFns[id] = opts.content;
   if (opts.sceneTargetResolver) sceneTargetResolvers[id] = opts.sceneTargetResolver;
   if (opts.onClose) kindOnCloses[id] = opts.onClose;
   if (opts.keepInViews !== undefined) {
@@ -1456,77 +1438,4 @@ export const toggleDraggableWindow = (props: OpenDraggableWindowProps) => {
     return;
   }
   closeDraggableWindow(props.id);
-};
-
-/** @deprecated Use window kinds: {@link getDraggableWindowsOfKind}. */
-export const getDraggableWindowsStartingWith = (startingWithId: string) => {
-  const result: DraggableWindow[] = [];
-  for (const entry of getWindows().values()) {
-    if (entry.config.id.startsWith(startingWithId)) result.push(toPublicWindow(entry));
-  }
-  return result;
-};
-
-/** @deprecated Register the window's onClose once with {@link registerDraggableWindow} (or
- * {@link registerDraggableWindowKind}): it also covers a window restored from LS. */
-export const addOnCloseToWindow = (id: string, onClose: () => void) => {
-  const entry = getWindows().get(id);
-  if (entry) entry.runtime.onClose = onClose;
-};
-
-/** @deprecated Register the window's content and onClose once with
- * {@link registerDraggableWindow} (or {@link registerDraggableWindowKind}). */
-export const registerDraggableWindowCmp = (
-  id: string,
-  fn: { content?: DraggableWindowContent; onClose?: () => void }
-) => {
-  const entry = getWindows().get(id);
-  if (!entry) {
-    pendingRuntimes[id] = fn;
-    return;
-  }
-  if (fn.content) entry.runtime.content = fn.content;
-  if (fn.onClose) entry.runtime.onClose = fn.onClose;
-  if (entry.config.isOpen) updateDraggableWindow(id);
-};
-
-/**
- * @param id (string) window kind (a window's id when it has no kind)
- * @param resolver ((data) => boolean) whether the window's target exists in the current scene
- * @deprecated Use {@link registerDraggableWindow}'s `sceneTargetResolver` (or
- * {@link registerDraggableWindowKind}'s).
- *
- * Registers a scene target resolver for a window flagged `closeOnSceneChange`: on a scene change
- * the window stays open (rebuilt for the next scene) when the resolver returns true for the
- * window's `data`, and closes otherwise. It is also checked when restoring the window on reload.
- * One registration covers every window of the kind.
- */
-export const registerDraggableWindowSceneTargetResolver = (
-  id: string,
-  resolver: SceneTargetResolver
-) => {
-  addWindowHooks();
-  sceneTargetResolvers[id] = resolver;
-};
-
-/**
- * @param id (string) window kind (a window's id when it has no kind)
- * @param registerContentFn ((data) => TCMP) builds the content from the window's `data`
- * @deprecated Use {@link registerDraggableWindow}'s `content` (or
- * {@link registerDraggableWindowKind}'s).
- *
- * Registers the content function of a window, for the opens without `content` (eg. a restore from
- * LS). One registration covers every window of the kind.
- */
-export const registerDraggableWindowContentFn = (
-  id: string,
-  registerContentFn: (data?: DraggableWindowData) => TCMP
-) => setContentFn(id, registerContentFn);
-
-/** Kept in the app config, next to the content functions an app can set there itself. */
-const setContentFn = (id: string, contentFn: (data?: DraggableWindowData) => TCMP) => {
-  addWindowHooks();
-  const config = getConfig();
-  if (!config.draggableWindows) config.draggableWindows = {};
-  config.draggableWindows[id] = { contentFn };
 };

@@ -75,19 +75,17 @@ export type MouseBinding =
 
 export type MouseBindingType = MouseBinding['type'];
 
-/** A press that moves at most this far (CSS px) before its release is a click, not a drag. */
+/**
+ * A press that moves at most this far (CSS px) before its release is a click, not a drag. The axes
+ * gizmo's click uses it too.
+ * @internal
+ */
 export const CLICK_MAX_MOVE_PX = 5;
 const DEFAULT_DBLCLICK_MAX_INTERVAL_MS = 300;
 const HOVER_SYSTEM_ID = 'inputMouseHoverSystem';
 const MOUSE_BUTTONS: MouseButton[] = ['LEFT', 'MIDDLE', 'RIGHT'];
 
 let bindings: MouseBinding[] = [];
-
-let mouseInputsEnabled = true;
-export const setMouseInputsEnabled = (enabled: boolean): void => {
-  mouseInputsEnabled = enabled;
-  hoverDirty = true; // fire onLeave / re-enter next frame
-};
 
 /** Where each button was pressed down on the canvas (cleared on release). */
 const pressStarts: { [button in MouseButton]?: { x: number; y: number } } = {};
@@ -133,7 +131,6 @@ const isInputInDebugCamInvalid = (enabledInDebugCam?: EnabledInDebugCam) =>
     (enabledInDebugCam === 'ENABLED_ONLY_IN_DEBUG' && !isDebugCameraActive()));
 
 const isBindingActive = (binding: MouseBinding) =>
-  mouseInputsEnabled &&
   areAppInputsEnabled() &&
   binding.enabled !== false &&
   !isInputInDebugCamInvalid(binding.enabledInDebugCam) &&

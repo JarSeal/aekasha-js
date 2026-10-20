@@ -267,8 +267,13 @@ export type AppConfig = {
      * env. Default 20. */
     saveHistorySize?: number;
   };
-  /** Draggable window defaults (size, place, content), keyed by window kind (a window's id when
-   * it has no kind); `ui/DraggableWindow.ts` reads them when a window opens. */
+  /**
+   * Draggable windows' content functions, keyed by window kind (a window's id when it has no
+   * kind): a window opened without `content` builds it with its kind's `contentFn`, when none is
+   * registered for the kind. Only `contentFn` is read.
+   * @deprecated Register the content with `registerDraggableWindow` or
+   * `registerDraggableWindowKind` (`aekasha/ui`). Removed in engine 6.0.0.
+   */
   draggableWindows?: {
     [kind: string]: Partial<DraggableWindow> & {
       contentFn?: (data?: { [key: string]: unknown }) => TCMP;

@@ -109,8 +109,11 @@ export type AddToastResponse = {
   totalTime: number;
   toastCmp: TCMP;
   hasCloseButton: boolean;
-  /** The toast's first lifecycle timer (later phases replace it internally). Use
-   * `removeToast` to remove the toast early, not `clearTimeout`. */
+  /**
+   * The toast's first lifecycle timer (later phases replace it internally).
+   * @deprecated Use `removeToast` to remove the toast early, not `clearTimeout`. Removed in engine
+   * 6.0.0.
+   */
   timeout: ReturnType<typeof setTimeout>;
   type: ToastType;
   title: TCMP | string | undefined;

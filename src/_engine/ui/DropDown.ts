@@ -4,9 +4,6 @@ import './DropDown.scss';
 
 export type DropDownOption = { value: string; label: string };
 
-/** A class name, or several, for one of the drop-down's elements. */
-export type ClassProp = string | string[];
-
 export type DropDownProps = {
   /** The options, or a getter re-read on every open (and refresh). */
   options: DropDownOption[] | (() => DropDownOption[]);
@@ -24,13 +21,14 @@ export type DropDownProps = {
   /** Which side of the trigger the list opens on. Default 'bottom'. */
   placement?: 'top' | 'bottom';
   disabled?: boolean;
-  /** Extra classes. The default styles (DropDown.scss) have zero specificity (`:where()`), so
-   * any class overrides them; the elements also carry the global `aekDropDown*` classes. */
-  className?: ClassProp;
-  triggerClass?: ClassProp;
-  labelClass?: ClassProp;
-  listClass?: ClassProp;
-  itemClass?: ClassProp;
+  /** Extra classes (a class name, or several) for the root. The default styles (DropDown.scss)
+   * have zero specificity (`:where()`), so any class overrides them; the elements also carry the
+   * global `aekDropDown*` classes. */
+  className?: string | string[];
+  triggerClass?: string | string[];
+  labelClass?: string | string[];
+  listClass?: string | string[];
+  itemClass?: string | string[];
   onOpen?: () => void;
   onClose?: () => void;
 };

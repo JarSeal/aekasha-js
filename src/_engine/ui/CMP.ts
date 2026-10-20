@@ -361,18 +361,8 @@ const addTemplateChildCmp = (cmp: TCMP) => {
   if (focusComponent) setTimeout(() => focusComponent && focusCmp(focusComponent), 0);
 };
 
-/**
- * Returns a CMP depending on the id
- * @param id (string) CMP id
- * @returns ({@link TCMP} | null)
- */
-export const getCmpById = (id: string): TCMP | null => cmps[id] || null;
-
-/**
- * Creates a new id in the form of c-[uuid]
- * @returns (string)
- */
-export const createNewId = () => `c-${THREE.MathUtils.generateUUID()}`;
+/** A live CMP by its id (the listeners look their CMP up by it). */
+const getCmpById = (id: string): TCMP | null => cmps[id] || null;
 
 const getTempTemplate = (id: string, tag: string = 'cmp') => `<${tag} id="${id}"></${tag}>`;
 
@@ -1036,29 +1026,6 @@ const replaceCmpWithAnother = (oldCmp: TCMP, newCmp: TCMP) => {
 
   // Set the replaced cmp back to cache
   cmps[id] = oldCmp;
-};
-
-const stylesInHead: { [key: string]: boolean } = {};
-
-/**
- * Adds styles to the Document head
- * @param id (string) id of the styles addition to the Document head
- * @param css (string) CSS string to be added inside the style tags
- */
-export const addStylesToHead = (id: string, css: string) => {
-  if (stylesInHead[id]) return;
-
-  const headElem = document.querySelector('head');
-  const styleElem = document.createElement('style');
-  styleElem.textContent = css;
-  if (headElem) {
-    headElem.insertAdjacentElement('afterbegin', styleElem);
-  } else {
-    const bodyElem = document.querySelector('body');
-    if (bodyElem) bodyElem.appendChild(styleElem);
-  }
-
-  stylesInHead[id] = true;
 };
 
 /**

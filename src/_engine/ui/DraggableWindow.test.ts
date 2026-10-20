@@ -41,6 +41,7 @@ vi.mock(import('../kernel/init/BootHooks'), () => ({
   addBootAfterStartHook: fns.addBootAfterStartHook,
 }));
 
+import { getConfig, loadConfig } from '../kernel/config/Config';
 import { CMP } from './CMP';
 import {
   closeDraggableWindow,
@@ -124,6 +125,24 @@ describe('draggable windows: open, reopen, kinds, scene changes, LS', () => {
     closeDraggableWindow(id);
     expect(getDraggableWindow(id)).toBeUndefined();
     expect(onClose).toHaveBeenCalledWith(id);
+  });
+
+  it("keeps a registered content out of the app's config; the deprecated key is the fallback", () => {
+    loadConfig({
+      draggableWindows: {
+        configWin: { contentFn: () => CMP({ text: 'from config' }) },
+        bothWin: { contentFn: () => CMP({ text: 'from config' }) },
+      },
+    });
+    registerDraggableWindow('bothWin', { content: () => CMP({ text: 'registered' }) });
+    registerDraggableWindow('newWin', { content: () => CMP({ text: 'registered' }) });
+    expect(Object.keys(getConfig().draggableWindows!).sort()).toEqual(['bothWin', 'configWin']);
+
+    openDraggableWindow({ id: 'configWin' });
+    openDraggableWindow({ id: 'bothWin' });
+    expect(getDraggableWindow('configWin')?.windowCMP?.elem.textContent).toContain('from config');
+    expect(getDraggableWindow('bothWin')?.windowCMP?.elem.textContent).toContain('registered');
+    loadConfig();
   });
 
   it('suspends a scene window over a load, and keeps it when its target exists', () => {

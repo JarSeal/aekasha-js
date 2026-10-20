@@ -92,11 +92,6 @@ const heldLowerKeys = new Set<string>();
 /** Written in place on each key event */
 const heldModifiers: Modifiers = {};
 
-let keyInputsEnabled = true;
-export const setKeyInputsEnabled = (enabled: boolean): void => {
-  keyInputsEnabled = enabled;
-};
-
 let keydownListener: ((e: KeyboardEvent) => void) | null = null;
 let keyupListener: ((e: KeyboardEvent) => void) | null = null;
 /** Removes the key listeners (null: none added) */
@@ -201,7 +196,11 @@ const chordIsHeld = (
   return keyHeld && (!!ignoreModifiers || modifiersMatch(c, heldModifiers));
 };
 
-/** Whether two chords (or chord lists) share a chord: same key (any case), same modifiers. */
+/**
+ * Whether two chords (or chord lists) share a chord: same key (any case), same modifiers. Used by
+ * the debug key shortcuts list and the reserved-chord warning.
+ * @internal
+ */
 export const doKeyChordsCollide = (a: KeyChord | KeyChord[], b: KeyChord | KeyChord[]): boolean => {
   const arrA = getChordArray(a);
   const arrB = getChordArray(b);
@@ -278,7 +277,7 @@ const isEventTakenByOther = (
 };
 
 const dispatchKeyEvent = (e: KeyboardEvent, type: 'KEY_UP' | 'KEY_DOWN') => {
-  if (!keyInputsEnabled || !areAllInputsEnabled()) return;
+  if (!areAllInputsEnabled()) return;
   const timeNow = performance.now();
   // A binding's callback may create or delete bindings: walk this event's list
   const list = entries;
@@ -413,7 +412,10 @@ export const createKeyBinding = (binding: KeyBinding): void => {
   }
 };
 
-/** The registered key bindings, in registration order (read-only, eg. for listing shortcuts). */
+/**
+ * The registered key bindings, in registration order (read-only): the debug key shortcuts list.
+ * @internal
+ */
 export const getKeyBindings = (): readonly Readonly<KeyBinding>[] => bindings;
 
 export const deleteKeyBinding = (id: string): void => {
@@ -429,7 +431,11 @@ export const setKeyBindingEnabled = (id: string, enabled: boolean): void => {
   binding.enabled = enabled;
 };
 
-/** Pure query: is this chord currently physically held? No registration needed. */
+/**
+ * Pure query: is this chord currently physically held? No registration needed. Not on the entry:
+ * gameplay code reads an action map.
+ * @internal
+ */
 export const isChordHeld = (chord: KeyChord, caseInsensitive: boolean = true): boolean => {
   initKeyListeners();
   return chordIsHeld(compileKeyChord(chord), caseInsensitive);
@@ -441,9 +447,10 @@ export const isChordHeld = (chord: KeyChord, caseInsensitive: boolean = true): b
  * runFixedSubStep (once per fixed physics sub-step) and in the no-stepping branch, so a held key's
  * binding runs once per sub-step, before that step's systems. Gameplay code should read an action
  * map instead (createActionMap: sampled at the same place, right before).
+ * @internal
  */
 export const pollHeldKeyBindings = (delta: number): void => {
-  if (!keyInputsEnabled || !areAppInputsEnabled()) return;
+  if (!areAppInputsEnabled()) return;
   const list = entries;
   for (let i = 0; i < list.length; i++) {
     const { binding, chords } = list[i];
@@ -494,6 +501,7 @@ export const doesKeyEventMatchChord = (
 /**
  * Reserves a debug key's chord: a key binding or an action map binding it later gets a console
  * warning (debug env). Used by DefaultDebugKeyBindings.ts.
+ * @internal
  * @param mapId the action map that binds it, whose own bindings don't collide with it
  */
 export const markChordReserved = (
@@ -511,4 +519,4 @@ export const markChordReserved = (
  * @internal
  */
 export const isKeyEventTakenByBindings = (e: KeyboardEvent, type: 'KEY_UP' | 'KEY_DOWN'): boolean =>
-  keyInputsEnabled && areAllInputsEnabled() && isEventTakenByOther(null, type, e);
+  areAllInputsEnabled() && isEventTakenByOther(null, type, e);

@@ -69,11 +69,6 @@ const dragDelta = { x: 0, y: 0 };
 
 let bindings: TouchBinding[] = [];
 
-let touchInputsEnabled = true;
-export const setTouchInputsEnabled = (enabled: boolean): void => {
-  touchInputsEnabled = enabled;
-};
-
 type SingleTouchGesture = {
   identifier: number;
   startX: number;
@@ -115,7 +110,6 @@ const isInputInDebugCamInvalid = (enabledInDebugCam?: EnabledInDebugCam) =>
     (enabledInDebugCam === 'ENABLED_ONLY_IN_DEBUG' && !isDebugCameraActive()));
 
 const isBindingActive = (binding: TouchBinding) =>
-  touchInputsEnabled &&
   areAppInputsEnabled() &&
   binding.enabled !== false &&
   !isInputInDebugCamInvalid(binding.enabledInDebugCam) &&

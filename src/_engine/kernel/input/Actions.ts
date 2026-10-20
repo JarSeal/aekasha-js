@@ -7,8 +7,7 @@
 //   per-frame poll), so UI and debug keys work while the loop is paused.
 // Each device's live state is followed all the time, also while a map is inactive; only the
 // counts, deltas and callbacks need it active. So a key held through a menu reads down when the
-// menu closes, without a press. The per-device switches (setKeyInputsEnabled, ...) are the
-// bindings' own and don't apply here; the master switches (InputState.ts) do, through contexts.
+// menu closes, without a press. The master switches (InputState.ts) apply, through contexts.
 
 import { isDebugCameraActive } from '../camera/Camera';
 import { IS_DEBUG_ENV } from '../config/Config';

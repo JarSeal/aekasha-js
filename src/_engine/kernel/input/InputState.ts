@@ -1,30 +1,48 @@
 // Master input switch shared by every input domain (Keyboard/Mouse/Touch). Lives in its own
 // tiny file so engine code that only needs to pause input (e.g. SceneLoader.ts during a scene
-// load) doesn't pull any domain module into the bundle. Each domain's own
-// set*InputsEnabled switch still applies on top of this one.
+// load) doesn't pull any domain module into the bundle.
 
 let allInputsEnabled = true;
 let appInputsSuspended = false;
 
-/** Enables/disables every input binding (keyboard, mouse, touch) at once. */
+/**
+ * Enables/disables every input binding (keyboard, mouse, touch) at once: the scene loader's
+ * switch over a load.
+ * @internal
+ */
 export const setAllInputsEnabled = (enabled: boolean): void => {
   allInputsEnabled = enabled;
 };
 
+/**
+ * Whether every input is enabled ({@link setAllInputsEnabled}): read by the devices and the action
+ * layer.
+ * @internal
+ */
 export const areAllInputsEnabled = (): boolean => allInputsEnabled;
 
 /**
  * Suspends the app's input bindings (keyboard, mouse, touch) while an editor view is active
  * (Views.ts). Debug key bindings (`isDebugKey`) keep running. Apart from
  * {@link setAllInputsEnabled}, so a scene load's re-enable at its end doesn't lift it.
+ * @internal
  */
 export const setAppInputsSuspended = (suspended: boolean): void => {
   appInputsSuspended = suspended;
 };
 
+/**
+ * Whether an editor view suspends the app's inputs ({@link setAppInputsSuspended}): read by the
+ * keyboard's debug keys.
+ * @internal
+ */
 export const areAppInputsSuspended = (): boolean => appInputsSuspended;
 
-/** Whether the app's input bindings run: every input is enabled and no editor view suspends them. */
+/**
+ * Whether the app's input bindings run: every input is enabled and no editor view suspends them.
+ * Read by the devices and the action layer.
+ * @internal
+ */
 export const areAppInputsEnabled = (): boolean => allInputsEnabled && !appInputsSuspended;
 
 /**
@@ -32,7 +50,8 @@ export const areAppInputsEnabled = (): boolean => allInputsEnabled && !appInputs
  * `InitEngine`). `CANVAS`: the canvas only, for an engine mounted into a page it doesn't own
  * (`mountAekasha`): the pointer and touch events on the canvas, the keys while it has focus (it
  * gets a `tabindex`), the gamepads too. `NONE`: no listeners at all, so the bindings and action
- * maps never fire.
+ * maps never fire. The mount's `input` option sets it.
+ * @internal
  */
 export type InputScope = 'WINDOW' | 'CANVAS' | 'NONE';
 
