@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 done
+Status: in progress | Phases 0-5 done
 Category: Refactoring, Documentation, LOD, Rendering
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -729,13 +729,42 @@ As built (2026-10-20):
   `#2` again (names only). `bundle.banner.json`: `LodChainGLTF.js` 2,222 → 2,193 B, Phase 3's
   removed re-export (Phase 3 left the file as gzip noise), recorded with it.
 
-### Phase 5: the Hub, CLAUDE.md, readme, and what's filed
+### Phase 5: the Hub, CLAUDE.md, readme, and what's filed — done
 
 1. D12: `features/lines/CLAUDE.md`, the root map's line, the Lines feature page.
 2. The LOD and spatial index pages and the nested `CLAUDE.md` files checked against the code
    (D4's grid, D5's bounds and receivers, D6's names in their Key APIs).
 3. `readme.md` if a listed API changed (none expected: D6 only adds).
 4. `yarn hub:build`: no dead link, no new warning.
+
+As built (2026-10-20):
+
+- **Step 1 (D12):** `features/lines/CLAUDE.md` (one `## Lines` section: the modules, no world
+  and the one time system, build once or refill, the backends and `object3D` swaps, bounds and
+  culling, the entity binding, the `TAG_IS_MESH` trap, the scene exit), its line in the root's map,
+  and `lines` in `hub/CLAUDE.md`'s list of feature page slugs. The Hub's Lines page
+  (`hub/pages/features/lines/`, `aek:covers` "Lines") is in group **World** at order 72, next to
+  Viewports: D12's "Rendering" isn't one of the Features page's groups (Core, World, Performance,
+  Tools). No `::: scene` panel: `physicsTiers` has no Hub image (the Hub tab isn't given to it, and
+  adding it to `OTHER_HUB_SCENES` is an app change), and a panel without one warns. The page names
+  it with its `?startScene` URL, as the physics page does. New icon `hub/_assets/icons/spline.svg`
+  (lucide). Two summaries Phase 3's `@internal` pass had doubled (`lineTimeUniform`,
+  `disposeNonPersistentLines`) lost their repeated sentence.
+- **Step 2:** every name and file the four nested files and the two pages quote exists. What they
+  lacked was Phases 1-3's. The spatial index page: when a leave, a join and a move are seen (D4), a
+  `queryVisit` visitor that stops, `DEFAULT_SPATIAL_DOMAIN`, `validateSpatialGridQuery`, the pool
+  receivers (S8), a "Known issues" section linking both filed issues, and `isInSpatialDomain`,
+  `invalidateSpatialDomain`, `rebuildSpatialDomain` in its Key APIs. The LOD page: the pool bounds
+  growing (D5), the receivers (S8), and `setLodMaxSelectionsPerFrame`, `refreshLodBounds`,
+  `enableLodDither`, `createLodFadeAttribute` in its Key APIs. Nested files: `lod` (the selection's
+  cost as measured here, 0.12-0.17 µs per entity over 3,800; the `LodFade` names on the entry; L5's
+  trap), `spatial` ("31 per world besides `DEFAULT`", `validateSpatialGridQuery`, a `DYNAMIC`
+  domain's per-member cost with the issue), `instancing` (a pointer to the receivers). `impostors`
+  unchanged. What's filed checked against the code after Phase 4's splits: both issue files' names
+  and paths hold, and p622's "From p616" has D3's three items.
+- **Step 3:** no API the readme's examples use changed. Its Lines line said "pooled" (lines aren't:
+  each has its own buffer, in a registry); rewritten to what the feature does.
+- **Step 4:** `yarn hub:build`: 428 pages, no dead link, 13 warnings (Phase 4's 13, none in scope).
 
 ### Phase 6: versions and done
 
