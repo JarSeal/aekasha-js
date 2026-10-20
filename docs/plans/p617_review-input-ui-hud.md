@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 0 implemented
 Category: Refactoring, Documentation, UI, Input
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -126,6 +126,10 @@ shape. Read from the code, not reproduced, unless a finding says so. Type hygien
   `InputState.ts`' header and `setAllInputsEnabled` name "Keyboard/Mouse/Touch" (the gamepad and
   the action contexts read it too). `set*BindingEnabled` writes `enabled` on the object the app
   passed (the binding is kept as given): nowhere said.
+- I12 **(perf)** `TouchInput.ts`' `onTouchMove` makes a `{ x, y }` delta object on every
+  `touchmove` (found by Phase 0's audit): touch events aren't gated per frame, and a drag on a
+  phone fires them at 60-120 Hz. A module-level scratch object, valid during the call (as
+  `ActionBindings.ts`' `_stick`), with a `@remarks` on `TouchDragBinding.onMove`.
 
 **The action layer (`Actions.ts`, `ActionBindings.ts`, `ActionTypes.ts`, `ActionRecording.ts`, `GamepadInput.ts`)**
 
@@ -248,7 +252,7 @@ docs.
   The toaster's injected CSS too.
 - `variables.scss` is mostly the debugger's colours: p800's.
 
-## 2. Decisions (proposed, for review)
+## 2. Decisions (confirmed 2026-10-20, as recommended)
 
 ### D1. Scope: §1.1's files
 
@@ -411,13 +415,14 @@ reads (`offsetWidth`, `focus`); else the scene runner and a check by hand.
   panel, a toast, a window of a kind, a dialog, a drop-down), with the embed caveat (D8).
 - The Input page: the binding types and the two names D6 adds, under Key APIs.
 - `readme.md`: the UI kit in Features if it isn't there.
-- **Open:** whether to build an example scene for the page (an app HUD: a menu dialog opened by an
-  action map in its own context, a settings window, a drop-down, toasts), or point it at the
-  existing examples' HUD (`app/examples/exampleHud.ts`).
+- An example scene for the page (`examples/uiKit/`, chosen 2026-10-20 with the recommendations):
+  an app HUD built from the kit, a menu dialog opened by an action map in its own context, a
+  settings window, a drop-down and toasts. The stub asks for "a Hub page showing an app HUD built
+  from it", and the kit is new on the entry, so the page shows it running.
 
 ### D14. Performance
 
-I1, I2 (D5) and U7 (in-place props writes). Nothing in the template polls a `KEY_HELD` binding
+I1, I2 (D5), U7 (in-place props writes) and I12 (the touch delta's scratch object). Nothing in the template polls a `KEY_HELD` binding
 or updates the HUD every frame, so there is no scene to time: `perf-auditor` runs over
 `kernel/input/` and `ui/` in Phase 0 and confirms or adds to these, and Phase 2 reads the
 changes against them. The banner's bytes are measured (`yarn sbp --profile banner`).
@@ -431,7 +436,7 @@ unchanged unless a phase says otherwise; no file is edited while it runs). Each 
 its "As built" list, its files' JSDoc at 100 % and `docs.json` updated (`yarn verify:baselines
 --docs --update`).
 
-### Phase 0: baselines, measurements and repro
+### Phase 0: baselines, measurements and repro — done
 
 1. `yarn verify:scenes --update` on this commit, then `yarn verify:baselines` clean.
 2. `perf-auditor` over `kernel/input/` and `ui/`: confirm or add to I1, U7, W8. The functions over
@@ -443,9 +448,49 @@ its "As built" list, its files' JSDoc at 100 % and `docs.json` updated (`yarn ve
 6. Repro: D4's tests as `it.fails` (U1-U6) in `ui/CMP.test.ts`, with linkedom.
 7. Record the numbers here.
 
+As built (2026-10-20, at `f4095d4` plus this plan and the Phase 0 tests; WSL2, headless Chromium,
+WebGL2 through SwiftShader):
+
+- **D1-D14 confirmed** as recommended (2026-10-20), before Phase 0. D13's example scene: yes
+  (`examples/uiKit/`).
+- **Baselines (step 1):** `yarn verify:scenes --update` recorded 101 of 104 runs
+  in 3,837 s. The three it didn't are `thirdPersonGymScene`'s debug configurations ("the physics
+  probe didn't reach step 600 in 300 s" on SwiftShader), the same three as every run of p616's on
+  this machine; the gym's `prodTest` passes. Phase 1's and later runs compare the other 101. `yarn verify:baselines`
+  on this commit: `api.json`, `docs.json` and the banner's bundle unchanged, no debug code in
+  either build; its one "change" is `assets/EngineRapier.js` and `EngineRapier.js#2` swapping
+  their sizes (9.3 / 9.5 kB gzip): two chunks with one name whose `#n` order flipped between
+  builds, not a change of this branch (`docs.json` 2,204 / 2,414 exports, 935 / 970 members).
+- **The perf audit (step 2)** confirmed I1 (every part: `initKeyListeners()` per call, the array
+  and closure per `KEY_HELD` binding, `chord.key.toLowerCase()` and a lowercased string per held
+  key per chord test, also through the action layer on every key event and gamepad-change frame),
+  U7 (`setPropsValue`'s copy per call, and `updateStyle`'s style copy per key) and W8 (one closure
+  per animation frame of a drag). It added I12 (the touch delta per `touchmove`) and
+  `pickTargetsAt`'s options object per raycast (per pointer-moved frame or click: left as is). It
+  found the action layer's per-step and per-event paths, the hover system, the gamepad poll, the
+  recording and the toaster clean. No function over 150 lines in either folder (the longest:
+  `createListeners` 112, `createActionMap` 93, `mountWindow` 74).
+- **`yarn hub:build` (step 3):** 428 pages; in scope exactly I8's three (`ActionTypes.ts:37`,
+  `:162`, `:194`). The `icons` `notExported` warning is gone (p607 D12), as §1.2 expected.
+- **The banner (step 4)**, `yarn sbp --profile banner --why src/_engine/kernel/input/KeyboardInput.ts`:
+  the input group is in the initial chunk, 2 modules (`KeyboardInput.ts`, `InputState.ts`),
+  5,565 B rendered, 1,755 B gzip; the `ui` group 3 modules, 22,360 B rendered, 5,217 B gzip.
+  CSS: `banner.css` 2,300 B (896 gzip), with the `rayCastStats` and `.statsContainer` rules (S1);
+  the app's `index.css` 4,416 B (1,636 gzip). `--why` takes one profile.
+- **The side-effects test (step 5)** now flags every top-level statement that isn't a
+  declaration (`isDeclaration`; `export default` and a declaration's initializer aren't read). It
+  finds one in `src/`: `DialogWindow.ts:58`, G1. It's on `NOT_YET_INSTALLED` (count 1) until
+  Phase 2, so the test stays green and fails once the count can drop.
+- **Repro (step 6):** `ui/CMP.test.ts`, linkedom stubbed in the file: U1 (two cases: the parent's
+  calls, a template child's own), U2, U3, U4 (a number input's `selectionStart` null and a
+  throwing `setSelectionRange`, as a browser's), U5, each `it.fails` failing on its own assertion.
+  U6 isn't reproducible in Node: linkedom's style takes `style['--x']`, which browsers ignore; it
+  stays read from the code and is checked in Chromium by hand in Phase 1. `yarn test`: 93 files,
+  749 passed, 6 expected fails, 1 skipped.
+
 ### Phase 1: the bugs (D4) and the tests (D12)
 
-1. U1-U6 with their tests; I10.
+1. U1-U6 with their tests; I9 and I10.
 2. D12's other tests (input devices, dialogs, windows).
 3. `yarn verify:scenes`: unchanged.
 
@@ -453,7 +498,7 @@ its "As built" list, its files' JSDoc at 100 % and `docs.json` updated (`yarn ve
 
 1. D5: the held-key hook, the poll, the lowercased keys.
 2. D9: the dialog listeners and the test; the styles out of `index.scss`.
-3. U7 and W8.
+3. U7, W8 and I12.
 4. Phase 0's banner and CSS numbers again, side by side.
 
 ### Phase 3: the API (D6, D7) and the deferrals (D3)
