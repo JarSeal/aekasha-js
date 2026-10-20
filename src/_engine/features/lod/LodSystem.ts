@@ -652,9 +652,15 @@ const lodHooks: ComponentHooks = {
  * The level for screen size `s`, coming from level `current` (-1 = first selection). The finest
  * level whose screenSize `s` reaches (below all of them, the last level). A move to a finer level
  * happens at its screenSize; a move to a coarser one only once `s` is below the current level's
- * screenSize × (1 - hysteresis).
+ * screenSize × (1 - hysteresis). Exported for its test.
+ * @internal
  */
-const selectLevel = (levels: LodData['def']['levels'], s: number, current: number, h: number) => {
+export const selectLevel = (
+  levels: LodData['def']['levels'],
+  s: number,
+  current: number,
+  h: number
+) => {
   const last = levels.length - 1;
   let raw = last;
   for (let i = 0; i < last; i++) {

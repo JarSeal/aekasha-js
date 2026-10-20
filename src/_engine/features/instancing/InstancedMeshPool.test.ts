@@ -13,12 +13,12 @@ import {
 
 let world: ECSWorld;
 beforeAll(() => {
-  world = new ECSWorld();
-  // For the LOD target only: the tests call the sync system themselves
+  // The slot hooks and the LOD target; the tests call the sync system themselves
   installInstancedMeshPools({
-    registerComponentHooks: () => {},
+    registerComponentHooks: (type, hooks) => ECSWorld.registerComponentHooks(type, hooks),
     registerPlugin: () => {},
-  } as unknown as FeatureContext);
+  } as Pick<FeatureContext, 'registerComponentHooks' | 'registerPlugin'> as FeatureContext);
+  world = new ECSWorld();
 });
 
 const placeAt = (x: number) => ({
@@ -52,7 +52,48 @@ const createLodPool = () =>
     maxInstances: 4,
   });
 
+const xOf = (mesh: THREE.InstancedMesh, index: number) =>
+  new THREE.Vector3().setFromMatrixPosition(mesh.getMatrixAt(index, new THREE.Matrix4())).x;
+
 describe('createInstancedMeshPool', () => {
+  test('despawn moves the last instance into the freed slot and patches its index', () => {
+    const pool = createInstancedMeshPool({
+      world,
+      geometry: new THREE.BoxGeometry(),
+      material: new THREE.MeshBasicNodeMaterial(),
+      maxInstances: 3,
+    });
+    const [first, second, third] = pool.spawn(world, [placeAt(1), placeAt(2), placeAt(3)]);
+
+    expect(pool.despawn(world, first)).toBe(true);
+
+    expect(pool.mesh.count).toBe(2);
+    expect(world.getComponent(third, ComponentType.INSTANCED_MESH_SLOT)!.index).toBe(0);
+    expect(world.getComponent(second, ComponentType.INSTANCED_MESH_SLOT)!.index).toBe(1);
+    expect(xOf(pool.mesh, 0)).toBe(3);
+    expect(xOf(pool.mesh, 1)).toBe(2);
+    // Not an instance any more, and never one of another pool
+    expect(pool.despawn(world, first)).toBe(false);
+  });
+
+  test('removing the slot component frees the slot too, and spawn reuses it', () => {
+    const pool = createInstancedMeshPool({
+      world,
+      geometry: new THREE.BoxGeometry(),
+      material: new THREE.MeshBasicNodeMaterial(),
+      maxInstances: 2,
+    });
+    const [first, second] = pool.spawn(world, [placeAt(1), placeAt(2)]);
+
+    world.removeComponent(second, ComponentType.INSTANCED_MESH_SLOT);
+    expect(pool.mesh.count).toBe(1);
+    const [third] = pool.spawn(world, [placeAt(5)]);
+
+    expect(pool.mesh.count).toBe(2);
+    expect(world.getComponent(third, ComponentType.INSTANCED_MESH_SLOT)!.index).toBe(1);
+    expect(world.getComponent(first, ComponentType.INSTANCED_MESH_SLOT)!.index).toBe(0);
+  });
+
   // p616 P2: the sync grows the bounds spawn computed, so three never frustum-culls the whole mesh
   // while a moved instance is on screen
   test('keeps an instance moved through its Transform inside the mesh bounds', () => {
