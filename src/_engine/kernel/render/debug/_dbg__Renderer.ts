@@ -78,6 +78,7 @@ export const _createRendererDebugGUI = async (
   };
   registerHandler('toneMapping');
   registerHandler('outputColorSpace');
+  // No longer recorded (it reloads): kept for the entries recorded before, applied on the next load
   registerHandler('alpha');
   registerHandler('enableShadows');
 
@@ -159,7 +160,9 @@ export const _createRendererDebugGUI = async (
             ],
             onChange: undoableChange('outputColorSpace'),
           },
-          { key: 'alpha', label: 'Enable alpha', onChange: undoableChange('alpha') },
+          // The canvas' alpha mode is set when the renderer is made (three r186's WebGPU backend),
+          // so a change only shows after a reload: not recorded to undo, like the others here
+          { key: 'alpha', label: 'Enable alpha (reloads)', onChange: () => location.reload() },
           {
             key: 'enableShadows',
             label: 'Enable shadows',

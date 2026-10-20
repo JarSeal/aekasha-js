@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented
+Status: in progress | Phases 0-1 implemented
 Category: Refactoring, Documentation, Debug
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -544,13 +544,15 @@ headless Chromium, WebGL2 through SwiftShader):
   leaves `mount`; Tweakpane imports in Node with linkedom). Each `it.fails` checked to fail on its
   own assertion. `yarn test`: 102 files, 817 passed, 3 expected fails, 1 skipped.
 
-### Phase 1: the bugs (D4, D14) and the tests (D11)
+### Phase 1: the bugs (D4, D14) and the tests (D11) — done
 
 1. The framework: B1-B7, F1-F4, Z2 and D14, with D11's tests and Phase 0's repros turned into
    `it`s.
-2. The panels: K1-K19 (D4), each checked by hand in the dev server (debug env, Chromium).
+2. The panels: K1-K19 (D4), each checked by hand in the dev server (debug env, Chromium). K10
+   still needs its own fix after F1: a physics world created or deleted while the Ray cast tab is
+   open comes without a scene change, so the open-tab rebuild doesn't cover it.
 
-As built, section 1 (2026-10-21, uncommitted on `review-debug-public-api` after `3d5b459`):
+As built, section 1 (2026-10-21, committed as `cc94f9b`):
 
 - **B1:** `UndoRedo.ts` keeps the handlers (`registerUndoRedoActionHandler`, gated on
   `__AEK_DEBUG__` only, so it works before `initEnvironment` too; `_getUndoRedoActionHandler` and
@@ -575,7 +577,8 @@ As built, section 1 (2026-10-21, uncommitted on `review-debug-public-api` after 
 - **F1, as built differently:** the title is updated in place, but the open tab is still rebuilt
   (`host.refresh(true)`) on a scene change: the cameras, lights, characters and Ray cast (K10) tabs
   build from the current scene's data and counted on the old whole-drawer rebuild. Only the drawer's
-  chrome isn't rebuilt any more.
+  chrome isn't rebuilt any more. **Confirmed 2026-10-21** (over making each tab refresh itself: that
+  changes the tab contract for apps' tabs too, on panels p800 replaces); documented in Phase 4.
 - **F3:** a changed section is rendered with the html string the comparison computed (a wrapper set
   as its `html` on its first change). Its build still computes it twice (creation, then the first
   comparison value).
@@ -596,6 +599,52 @@ As built, section 1 (2026-10-21, uncommitted on `review-debug-public-api` after 
   and `profiler/_dbg__ProfilerOverview.test.ts` (D14). Each fails on the code before the fix.
   `yarn test`: 108 files, 864 passed, 1 skipped. `docs.json` recorded (debug 149 / 202).
 
+As built, section 2 (2026-10-21, uncommitted on top of `cc94f9b`):
+
+- **K1:** the camera window's delete is disabled, with a tooltip saying why, for the only camera,
+  the active one and the main one (the debug camera's toggle returns to it), and re-checked on the
+  click (the active camera can change while the window is open).
+- **K2:** a `create*Helper` keeps the replaced helper's visibility (the "Show" setting when there
+  is none); `toggle*Visibility` creates and then sets it.
+- **K3:** the symbol's own materials are disposed on its entity's delete and on `DEBUG_SYMBOL`'s
+  removal (the geometries are the templates'). **K4:** the symbols' and the light helpers'
+  `TAG_IS_*` hooks registered once at their `_dbg__` module's load, not per world.
+- **K5:** the About dialog's timer is cleared, and a pending copy's result dropped, when it closes.
+- **K6:** F9 / F10 before the Debug tools tab exists write their value to its LS key, as the
+  on-screen tools toggle did (`persistShortcutValue`, shared by the three).
+- **K7:** `freezing` is reset once `whenProbeDone` has awaited it.
+- **K8:** a failed LOD chain generation is logged and the window refreshed.
+- **K9:** "Enable alpha (reloads)", not recorded to undo; its handler stays for older entries.
+- **K10:** the Ray cast tab rebuilds itself (a microtask after the refresh that noticed) when the
+  physics world comes or goes while it's mounted.
+- **K11:** the boot overrides are compared by value (`haveBootOverridesChanged`).
+- **K12:** the drawer also rebuilds when the selected material's stage settings come or go.
+- **K13:** an undone or redone fov goes to the camera whenever the camera shows that material's
+  pose (the previous material while another loads), before the selection check.
+- **K14:** the textures the editor loaded during a visit are retagged to the current scene on its
+  exit (`retagAssetOwner`).
+- **K15 (in place; Phase 2 moves the file):** a scene exit hook (registered on the first spawn)
+  removes and disposes the InstancedMesh and resets the counts; the instanced spawn stops at
+  50,000 with a warning; `k` / `l` get the calling scene's id; the proximity system reads the
+  latest target.
+- **K16:** the light helper's initial visibility condition fixed; the `DISABLED` hooks reconcile
+  only entities with a symbol or a light helper; the shadow map size rebuild is caught and logged,
+  and re-checks the entity after its `import()`.
+- **K17:** a wireframe build disposes every line it made unless it stored them (a rejected pose read
+  included); the early return's own dispose loop went into the `finally`.
+- **K18:** a rejected `shapeType()` shows "[Unavailable]".
+- **K19:** the report goes to its listeners first; the stored runs are read and written in a `try`,
+  and pruned to the newest 40.
+- **Checked in the dev server** (WebGL2 on SwiftShader, `sceneTestECS`, a Playwright script): K1
+  (the active camera's delete disabled, tooltip shown), K2 (a hidden grid stays hidden on a size
+  change), K3 (a deleted light's two symbol materials disposed), K4 (the `TAG_IS_LIGHT` hook count
+  unchanged by a new world), K5 (the dialog closed during a copy, no error), K15 (the mesh gone and
+  the count 0 after a switch to `physicsTest`, the overfill stopped at 50,000), then all 15 drawer
+  tabs opened in turn (none failed to build) and the material editor entered and left, with no
+  console errors. K6-K14 and K16-K19 by reading the code path only: they need a state a script
+  can't easily make (a key before the tab, a rejected generation or worker reply, an HMR scene load,
+  a full LS).
+
 ### Phase 2: structure (D5, D7)
 
 1. The two wrappers merged; the production check and `yarn sbp` against Phase 0's numbers.
@@ -609,7 +658,9 @@ As built, section 1 (2026-10-21, uncommitted on `review-debug-public-api` after 
 
 ### Phase 4: docs and hygiene (D8, D10)
 
-1. D10's docs, P6's stale text.
+1. D10's docs, P6's stale text. `DebuggerTabDef` (`content`, `onRefresh`) and `debug/CLAUDE.md` say
+   the open tab is rebuilt on a scene change (F1 as built) and the other tabs are built fresh on
+   their next mount.
 2. H1, H2, Z1's headers.
 
 ### Phase 5: the Hub, `CLAUDE.md`, readme, and what's filed

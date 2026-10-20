@@ -215,6 +215,18 @@ export const _applyOnScreenToolsDisabled = () => {
   );
 };
 
+/** Persists a value a shortcut changed, and refreshes the tab. Before the tab is registered (the
+ * key bindings are, during the first scene load) it is written to LS directly, or the tab's
+ * hydration would restore the old value over this one. */
+const persistShortcutValue = (key: 'onScreenTools' | 'axesGizmo' | 'envBall') => {
+  if (firstDebugToolsStateLoaded) {
+    persistDebuggerTabValue(TAB_ID, key);
+    updateDebuggerTab(TAB_ID);
+    return;
+  }
+  lsSetItem(LS_KEY, { ...(lsGetItem(LS_KEY, {}) as object), [key]: debugToolsState[key] });
+};
+
 /**
  * The on-screen tools shortcut (§): flips the "Disable on-screen tools" option and shows a toast.
  * @param keyHint (string) optional readable chord that was pressed, for the toast
@@ -223,14 +235,7 @@ export const _toggleOnScreenToolsDisabled = (keyHint?: string) => {
   const onScreenTools = debugToolsState.onScreenTools;
   onScreenTools.disableOnScreenTools = !onScreenTools.disableOnScreenTools;
   _applyOnScreenToolsDisabled();
-  if (firstDebugToolsStateLoaded) {
-    persistDebuggerTabValue(TAB_ID, 'onScreenTools');
-    updateDebuggerTab(TAB_ID);
-  } else {
-    // The tab isn't registered yet (the key bindings are, during the first scene load). Written
-    // directly, or the tab's hydration would restore the old value over this one.
-    lsSetItem(LS_KEY, { ...(lsGetItem(LS_KEY, {}) as object), onScreenTools });
-  }
+  persistShortcutValue('onScreenTools');
   addDebugToast({
     title: 'On-screen tools',
     message: onScreenTools.disableOnScreenTools
@@ -273,8 +278,7 @@ const toggleGizmoFromShortcut = (key: GizmoKey) => {
   }
   setVisible(opts.show);
   setInMainCamera(opts.showInMainCamera);
-  persistDebuggerTabValue(TAB_ID, key);
-  updateDebuggerTab(TAB_ID);
+  persistShortcutValue(key);
 
   let title = `${name} hidden`;
   if (opts.show && isMainCamera) title = `${name} visible and showing in main camera`;

@@ -405,24 +405,44 @@ export const createEditCameraContent = (data?: { [key: string]: unknown }) => {
     clearLSBtn.disabled = true;
   });
 
-  pane
-    .addButton({
-      title: 'Delete camera',
-      disabled: getAllCamerasAsArray().length <= 1,
-    })
-    .on('click', () => {
-      closeDraggableWindow(winId);
-      world.deleteEntity(entityId);
-      // deleteEntity fires disposeCamera's onDeleteEntity hook (which already
-      // refreshes this list) before clearing the entity's component storages,
-      // so that refresh still sees the entity in TAG_IS_CAMERA. Refresh again
-      // now that deletion has fully completed.
-      updateCamerasDebuggerGUI('LIST');
-    });
+  const initialBlocker = getCameraDeleteBlocker(entityId, world);
+  const deleteBtn = pane.addButton({ title: 'Delete camera', disabled: initialBlocker !== null });
+  // The tooltip says why it's disabled
+  deleteBtn.element.title = initialBlocker ? `Can't delete ${initialBlocker}` : '';
+  deleteBtn.on('click', () => {
+    // Re-checked: the active camera may have changed since the window was built
+    const blocker = getCameraDeleteBlocker(entityId, world);
+    if (blocker) {
+      lwarn(`Could not delete camera "${appId}": ${blocker}`);
+      deleteBtn.disabled = true;
+      deleteBtn.element.title = `Can't delete ${blocker}`;
+      return;
+    }
+    closeDraggableWindow(winId);
+    world.deleteEntity(entityId);
+    // deleteEntity fires disposeCamera's onDeleteEntity hook (which already
+    // refreshes this list) before clearing the entity's component storages,
+    // so that refresh still sees the entity in TAG_IS_CAMERA. Refresh again
+    // now that deletion has fully completed.
+    updateCamerasDebuggerGUI('LIST');
+  });
 
   // The content is built before the window state is open: refresh the list selection after it
   queueMicrotask(() => updateDebuggerTab(CAMERAS_TAB_ID));
   return container;
+};
+
+/** Why a camera can't be deleted from its edit window, or null: the scene renders through the
+ * active camera (the debug camera's toggle returns to the main one), and needs one camera. */
+const getCameraDeleteBlocker = (entityId: number, world: ECSWorld) => {
+  if (getAllCamerasAsArray().length <= 1) return 'the only camera';
+  if (world === getECSWorld() && entityId === getActiveCameraId()) {
+    return 'the active camera (make another one active first)';
+  }
+  if (world.hasComponent(entityId, ComponentType.TAG_IS_MAIN_CAMERA)) {
+    return 'the main camera (make another one the main camera first)';
+  }
+  return null;
 };
 
 /** Sets a camera's helper visibility and its saved preference (edit window and list toggle). */

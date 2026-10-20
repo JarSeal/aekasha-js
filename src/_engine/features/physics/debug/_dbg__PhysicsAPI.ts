@@ -519,12 +519,18 @@ const createEditPhysicsEntityContent = (data?: { [key: string]: unknown }) => {
 </div>`,
   });
   if (colliders && colliders.length) {
-    Promise.all(colliders.map((collider) => collider.shapeType())).then((shapeTypes) => {
-      if (isClosed) return;
-      shapeCmp.updateText(
-        shapeTypes.map((shapeType) => ShapeType[shapeType] ?? '[UNKNOWN]').join(', ')
-      );
-    });
+    Promise.all(colliders.map((collider) => collider.shapeType())).then(
+      (shapeTypes) => {
+        if (isClosed) return;
+        shapeCmp.updateText(
+          shapeTypes.map((shapeType) => ShapeType[shapeType] ?? '[UNKNOWN]').join(', ')
+        );
+      },
+      // Eg. the entity deleted before the worker answered (the window closes with it)
+      () => {
+        if (!isClosed) shapeCmp.updateText('[Unavailable]');
+      }
+    );
   } else {
     shapeCmp.updateText('[No collider]');
   }

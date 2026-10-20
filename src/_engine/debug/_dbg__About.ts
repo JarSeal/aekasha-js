@@ -253,14 +253,21 @@ const getSectionsHtml = (sections: InfoSection[]) =>
 const createDialogContent = (): TCMP => {
   // Read on every open: the renderer, physics state and viewport can change
   const sections = getSections();
-  const root = CMP({ class: styles.dialogContent });
+  let copiedTimer: ReturnType<typeof setTimeout> | null = null;
+  let isRemoved = false;
+  // The dialog can close while the copy is pending or its result shows
+  const onRemoveCmp = () => {
+    isRemoved = true;
+    if (copiedTimer) clearTimeout(copiedTimer);
+    copiedTimer = null;
+  };
+  const root = CMP({ class: styles.dialogContent, onRemoveCmp });
   root.add({
     class: styles.panel,
     html: () => `<div>${getHeaderHtml()}${getSectionsHtml(sections)}</div>`,
   });
 
   const footer = root.add({ class: styles.footer });
-  let copiedTimer: ReturnType<typeof setTimeout> | null = null;
   const copyBtn = footer.add({
     tag: 'button',
     text: 'Copy info',
@@ -268,6 +275,7 @@ const createDialogContent = (): TCMP => {
     attr: { type: 'button', title: 'Copy this information as text, eg. for a bug report' },
     onClick: () => {
       const showResult = (text: string) => {
+        if (isRemoved) return;
         copyBtn.updateText(text);
         if (copiedTimer) clearTimeout(copiedTimer);
         copiedTimer = setTimeout(() => copyBtn.updateText('Copy info'), 2000);

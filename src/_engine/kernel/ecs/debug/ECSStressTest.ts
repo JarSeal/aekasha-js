@@ -1,13 +1,18 @@
 import * as THREE from 'three/webgpu';
 
 import { createKeyBinding } from '../../input/KeyboardInput';
-import { getLogger } from '../../../utils/Logger';
+import { getLogger, lwarn } from '../../../utils/Logger';
 import { createMeshEntity } from '../../mesh/Mesh';
 import type { ECSWorld } from '../ECS';
 import { getECSWorld } from '../ECS';
 import { ComponentType } from '../ECSCoreComponents';
 import { IS_DEBUG_ENV } from '../../config/Config';
-import { getRootScene } from '../../scene/Scene';
+import {
+  getCurrentSceneId,
+  getLoadingSceneId,
+  getRootScene,
+  registerOnAllSceneExits,
+} from '../../scene/Scene';
 import { ECSSystemStage } from '../../loop/SystemStages';
 
 let instancedMesh: THREE.InstancedMesh | null = null;
@@ -15,7 +20,10 @@ const MAX_INSTANCES = 50000; // High ceiling for the stress test
 let totalCount = 0;
 let currentInstanceCount = 0;
 let stressSystemsRegistered = false;
+let proximitySystemRegistered = false;
 let hoverSystemRegistered = false;
+/** The entity the instanced spheres turn red near (the latest batch's), null for none. */
+let proximityTargetId: number | null = null;
 const individualEntityIds: number[] = [];
 const instancedEntityIds: number[] = [];
 
@@ -29,8 +37,28 @@ const matProps = { type: 'PHONG' as const, params: { color: 0x00ff88 } };
 /** Total number of entities spawned by the ECS stress test so far (survives across batches, reset by `resetECSStressTest`). */
 export const getECSStressTestCount = () => totalCount;
 
+const SCENE_EXIT_HOOK_ID = 'ecsStressTest';
+
+/** The spheres are the scene's: the scene change deletes their entities, this the InstancedMesh
+ * (in the root scene, it would stay drawn) and the counts. The systems stay, with nothing to do. */
+const resetOnSceneExit = () => {
+  if (instancedMesh) {
+    instancedMesh.removeFromParent();
+    instancedMesh.geometry.dispose();
+    (instancedMesh.material as THREE.Material).dispose();
+    instancedMesh.dispose();
+    instancedMesh = null;
+  }
+  individualEntityIds.length = 0;
+  instancedEntityIds.length = 0;
+  currentInstanceCount = 0;
+  totalCount = 0;
+  proximityTargetId = null;
+};
+
 const ensureInstancedMeshAndSystems = (world: ECSWorld, targetId?: number) => {
   const scene = getRootScene()!;
+  registerOnAllSceneExits(SCENE_EXIT_HOOK_ID, resetOnSceneExit);
 
   if (!instancedMesh) {
     const geo = new THREE.SphereGeometry(0.2, 8, 8);
@@ -58,14 +86,15 @@ const ensureInstancedMeshAndSystems = (world: ECSWorld, targetId?: number) => {
     getLogger().log('ECS Stress: InstancedMesh Container Initialized.');
   }
 
-  if (!stressSystemsRegistered) {
-    if (targetId !== undefined) {
-      world.addSystem(ECSSystemStage.APP_LOGIC, 'proximitySystem', (w) => {
-        // We pass the global ballId (your red ball) here
-        proximitySystem(w, targetId);
-      });
-    }
+  if (targetId !== undefined) proximityTargetId = targetId;
+  if (targetId !== undefined && !proximitySystemRegistered) {
+    world.addSystem(ECSSystemStage.APP_LOGIC, 'proximitySystem', (w) => {
+      if (proximityTargetId !== null) proximitySystem(w, proximityTargetId);
+    });
+    proximitySystemRegistered = true;
+  }
 
+  if (!stressSystemsRegistered) {
     // Inject the specialized sync system for instancing
     world.addSystem(ECSSystemStage.APP_RENDER_SYNC, 'instancedSync', instancedSyncSystem);
     stressSystemsRegistered = true;
@@ -85,12 +114,17 @@ export const spawnECSStressTestBatch = (
   targetId?: number
 ) => {
   if (isInstanced) ensureInstancedMeshAndSystems(world, targetId);
+  registerOnAllSceneExits(SCENE_EXIT_HOOK_ID, resetOnSceneExit);
   if (!hoverSystemRegistered) {
     world.addSystem(ECSSystemStage.APP_LOGIC, 'ecsStressTestHoverSystem', hoverSystem);
     hoverSystemRegistered = true;
   }
 
   for (let i = 0; i < count; i++) {
+    if (isInstanced && currentInstanceCount >= MAX_INSTANCES) {
+      lwarn(`ECS Stress: the InstancedMesh is full (${MAX_INSTANCES} instances), spawned ${i}.`);
+      break;
+    }
     totalCount++;
     const x = (Math.random() - 0.5) * 50;
     const y = Math.random() * 5;
@@ -149,17 +183,21 @@ export const resetECSStressTest = (world: ECSWorld) => {
 /**
  * Debug env only: binds `K` (individual meshes, a draw call each) and `L` (instances of one
  * InstancedMesh) to spawn `batchSize` hovering spheres each press, for measuring the ECS and the
- * renderer under load. With `targetId`, instanced spheres near that entity turn red. The ECS debug
+ * renderer under load. With `targetId`, instanced spheres near that entity turn red. The keys work
+ * in the scene that calls it (its scene code), and the spheres go with that scene. The ECS debug
  * tab's benchmark spawns and clears batches too.
  */
 export const initECSStressTest = (batchSize: number = 100, targetId?: number) => {
   if (!IS_DEBUG_ENV) return;
 
   const world = getECSWorld();
+  // The scene calling it (its scene code runs while it loads): the keys work only there
+  const sceneId = getLoadingSceneId() || getCurrentSceneId() || undefined;
 
   // Bind 'K' for Individual Meshes (Draw Call stress)
   createKeyBinding({
     id: 'spawn_individual',
+    sceneId,
     chord: { key: 'k' },
     type: 'KEY_DOWN',
     fn: () => spawnECSStressTestBatch(world, batchSize, false, targetId),
@@ -168,6 +206,7 @@ export const initECSStressTest = (batchSize: number = 100, targetId?: number) =>
   // Bind 'L' for Instanced Meshes (Pure ECS stress)
   createKeyBinding({
     id: 'spawn_instanced',
+    sceneId,
     chord: { key: 'l' },
     type: 'KEY_DOWN',
     fn: () => spawnECSStressTestBatch(world, batchSize, true, targetId),

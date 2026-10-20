@@ -28,31 +28,25 @@ ECSWorld.registerComponentHooks(ComponentType.DEBUG_LIGHT_HELPER, {
   },
 });
 
-ECSWorld.registerPlugin((world) => {
+/** Attaches a light entity's helpers, unless it has them (or isn't a three light). */
+const attachMissingLightHelpers = (entityId: number, world: ECSWorld) => {
+  if (world.hasComponent(entityId, ComponentType.DEBUG_LIGHT_HELPER)) return;
+  const objComp = world.getComponent(entityId, ComponentType.OBJECT3D);
+  if (!(objComp?.value instanceof THREE.Light)) return;
   const rootScene = existsOrThrow(getRootScene(), 'No root scene');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  attachLightHelpers(entityId, objComp.value as any, world, rootScene);
+};
 
-  const lightStorage = world.getStorage(ComponentType.TAG_IS_LIGHT);
-  for (const [entityId] of lightStorage) {
-    if (!world.hasComponent(entityId, ComponentType.DEBUG_LIGHT_HELPER)) {
-      const objComp = world.getComponent(entityId, ComponentType.OBJECT3D);
-      if (objComp?.value instanceof THREE.Light) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        attachLightHelpers(entityId, objComp.value as any, world, rootScene);
-      }
-    }
+// Static, so registered once here, not per world in the plugin below
+ECSWorld.registerComponentHooks(ComponentType.TAG_IS_LIGHT, {
+  onAddComponent: attachMissingLightHelpers,
+});
+
+ECSWorld.registerPlugin((world) => {
+  for (const [entityId] of world.getStorage(ComponentType.TAG_IS_LIGHT)) {
+    attachMissingLightHelpers(entityId, world);
   }
-
-  ECSWorld.registerComponentHooks(ComponentType.TAG_IS_LIGHT, {
-    onAddComponent: (entityId, w) => {
-      if (!w.hasComponent(entityId, ComponentType.DEBUG_LIGHT_HELPER)) {
-        const objComp = w.getComponent(entityId, ComponentType.OBJECT3D);
-        if (objComp?.value instanceof THREE.Light) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          attachLightHelpers(entityId, objComp.value as any, w, rootScene);
-        }
-      }
-    },
-  });
 
   world.addSystem(ECSSystemStage.LATE_MAIN, 'lightHelperSyncSystem', (w) => {
     const storage = w.getStorage(ComponentType.DEBUG_LIGHT_HELPER);
@@ -111,7 +105,7 @@ export const attachLightHelpers = (
   if (helper) {
     const isEnabled = !ecsWorld.getComponent(entityId, ComponentType.DISABLED);
     const obj = ecsWorld.getComponent(entityId, ComponentType.OBJECT3D)?.value;
-    const isVisible = !isEnabled && Boolean(obj?.visible);
+    const isVisible = isEnabled && Boolean(obj?.visible);
     helper.visible = isVisible && isAnyLightHelperVisible();
 
     rootScene.add(markDebugHelper(helper));

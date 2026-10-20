@@ -41,7 +41,7 @@ import { FOUR_PX_TO_8K_LIST } from '../../../utils/Constants';
 import { getRendererOptions } from '../../render/Renderer';
 import { refreshSpatialRadius } from '../../../features/spatial/SpatialIndexSystem';
 import { updateOnScreenTools } from '../../../debug/OnScreenTools';
-import { lwarn } from '../../../utils/Logger';
+import { lerror, lwarn } from '../../../utils/Logger';
 import {
   _recordOrCoalesceUndoRedoAction,
   _recordUndoRedoAction,
@@ -1334,7 +1334,7 @@ export const syncDebugVisualsFromLS = (sceneId: string, world: ECSWorld) => {
   }
 };
 
-const refreshLightShadows = async (light: THREE.Light, entityId: number, world: ECSWorld) => {
+const refreshLightShadowsAsync = async (light: THREE.Light, entityId: number, world: ECSWorld) => {
   const rootScene = getRootScene();
   if (!rootScene) return;
 
@@ -1387,6 +1387,8 @@ const refreshLightShadows = async (light: THREE.Light, entityId: number, world: 
   // Re-attach Helpers
   const { attachLightHelpers, disposeLightHelpers } = await import('./_dbg__LightHelpers');
   if (oldHelperComp) disposeLightHelpers(oldHelperComp);
+  // Deleted while the module loaded (eg. a scene change): nothing to attach the helpers to
+  if (!world.isAlive(entityId)) return;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   attachLightHelpers(entityId, newLight as any, world, rootScene);
 
@@ -1398,6 +1400,13 @@ const refreshLightShadows = async (light: THREE.Light, entityId: number, world: 
 
   reconcileDebugVisuals(entityId, world);
   updateLightsDebuggerGUI(undefined, world.getComponent(entityId, ComponentType.APP_ID)?.id);
+};
+
+/** Rebuilds a light for a new shadow map size (logged when it fails). */
+const refreshLightShadows = (light: THREE.Light, entityId: number, world: ECSWorld) => {
+  refreshLightShadowsAsync(light, entityId, world).catch((err: unknown) => {
+    lerror('Rebuilding the light for its new shadow map size failed', err);
+  });
 };
 
 /**
@@ -1461,9 +1470,19 @@ const saveLightToLS = <K extends keyof LightEntityDebugState>(
   lsSetItem(LS_LIGHTS_KEY, currentData);
 };
 
+/** Whether an entity has debug visuals to reconcile (a light's helper, a light's or camera's
+ * symbol): DISABLED is added and removed on every kind of entity. */
+const hasDebugVisuals = (id: number, w: ECSWorld) =>
+  w.hasComponent(id, ComponentType.DEBUG_SYMBOL) ||
+  w.hasComponent(id, ComponentType.DEBUG_LIGHT_HELPER);
+
 ECSWorld.registerComponentHooks(ComponentType.DISABLED, {
-  onAddComponent: (id, w) => reconcileDebugVisuals(id, w),
-  onRemoveComponent: (id, w) => reconcileDebugVisuals(id, w, undefined, false),
+  onAddComponent: (id, w) => {
+    if (hasDebugVisuals(id, w)) reconcileDebugVisuals(id, w);
+  },
+  onRemoveComponent: (id, w) => {
+    if (hasDebugVisuals(id, w)) reconcileDebugVisuals(id, w, undefined, false);
+  },
 });
 
 // Run reconciler when a debug component is first attached to an entity

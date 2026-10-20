@@ -237,6 +237,19 @@ const logDiff = (bodies: ProbeBody[], hash: string, prev: StoredRun | undefined)
   lwarn(parts.join(' | '));
 };
 
+/** The stored runs kept (by scene and step count): the newest, so the key can't fill LS. */
+const MAX_STORED_RUNS = 40;
+
+const pruneStoredRuns = (runs: Record<string, StoredRun>) => {
+  const keys = Object.keys(runs);
+  if (keys.length <= MAX_STORED_RUNS) return runs;
+  // ISO dates sort as text
+  keys.sort((a, b) => (runs[b].at < runs[a].at ? -1 : runs[b].at > runs[a].at ? 1 : 0));
+  const kept: Record<string, StoredRun> = {};
+  for (let i = 0; i < MAX_STORED_RUNS; i++) kept[keys[i]] = runs[keys[i]];
+  return kept;
+};
+
 const report = (run: ActiveRun) => {
   const { bodies, characters } = collectBodies();
   const hash = hashBodies(bodies);
@@ -257,17 +270,6 @@ const report = (run: ActiveRun) => {
     console.table(toTableRows(characters));
   }
 
-  const runKey = `${run.sceneId}|${run.steps}`;
-  const runs = (lsGetItem(LS_KEY, {}) as Record<string, StoredRun>) || {};
-  logDiff(bodies, hash, runs[runKey]);
-  runs[runKey] = {
-    hash,
-    config,
-    at: new Date().toISOString(),
-    bodies: bodies.map(({ key, values }) => ({ key, values })),
-  };
-  lsSetItem(LS_KEY, runs);
-
   const result: PhysicsProbeReport = {
     sceneId: run.sceneId,
     config,
@@ -276,7 +278,26 @@ const report = (run: ActiveRun) => {
     bodyCount: bodies.length,
     characterCount: characters.length,
   };
+  // Before the stored runs: a full or malformed LS must not keep the report from the test bridge
   for (const listener of reportListeners) listener(result);
+
+  const runKey = `${run.sceneId}|${run.steps}`;
+  try {
+    const runs = (lsGetItem(LS_KEY, {}) as Record<string, StoredRun>) || {};
+    logDiff(bodies, hash, runs[runKey]);
+    runs[runKey] = {
+      hash,
+      config,
+      at: new Date().toISOString(),
+      bodies: bodies.map(({ key, values }) => ({ key, values })),
+    };
+    lsSetItem(LS_KEY, pruneStoredRuns(runs));
+  } catch (err) {
+    lwarn(
+      `[PhysicsProbe] Could not compare with or store the run in LocalStorage ("${LS_KEY}")`,
+      err
+    );
+  }
 };
 
 /** Calls `fn` with every finished probe run (the scene runner's test bridge reads the hashes
