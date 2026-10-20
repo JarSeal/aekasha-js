@@ -831,6 +831,18 @@ As built (2026-10-20):
   that follows (fails on the old code: `[1, 1]`), and the next press closes it. The example
   keeps its dialog's `closeOnEscape`.
 - `yarn test` (99 files, 817 passed, 1 skipped), `tsc` (both), the lint.
+- **The checks (step 1):** `yarn verify:scenes --update --only exampleUiKit` recorded the new
+  scene in the four configurations (hash `811c9dc5`, the empty one: no physics). The full
+  `yarn verify:scenes` (Phases 1-6, WebGL2 on SwiftShader, 3,819 s): 105 passed, the hashes,
+  snapshots and system order unchanged; the three that failed are `thirdPersonGymScene`'s debug
+  configurations ("the physics probe didn't reach step 600 in 300 s"), as in Phase 0 and every
+  p616 run on this machine, its `prodTest` passing. `yarn verify:baselines`: the two new chunks
+  (`exampleUiKit.js` 12.3 kB gzip, `exampleUiKit.css` 2.1 kB), `EngineRapier.js` / `#2` swapped
+  again (Phase 0's noise), `_engine/ui` 5.3 → 5.4 kB gzip (the two fixes), the main chunk 186
+  modules at 832.0 kB gzip; `api.json`, `docs.json` and the banner unchanged, no debug code in
+  either build; recorded (`--update --no-build`). `yarn build` (with `yarn sbp`: every budget
+  within, and `yarn hub:build`: 438 pages, no warning in scope; the search index 1.66 MB, the
+  older warning).
 
 ## 4. Risks
 
