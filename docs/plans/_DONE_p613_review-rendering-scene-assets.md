@@ -2,7 +2,7 @@ Status: implemented (Phases 0-9)
 Category: Refactoring, Documentation, Rendering, Assets
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
-Related: \_DONE_p612_review-ecs-loop-config-init.md (D2's rule for the type-only seams; `Camera.ts`' main-camera lookups are its D7), p302_material-and-texture-system-refactor.md (rewrites part of `Material.ts`, `Texture.ts` and `SceneLoader.ts`: D2), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the embed's seams and the lazy import path, "From p611" below), \_DONE_p614_review-physics.md (owns `Raycast.ts` and gets `MeshUserData.ts`, D13), p617_review-input-ui-hud.md (owns `DraggableWindow.ts` and the HUD, D5), p618_review-debug-public-api.md (owns the `_dbg__` modules)
+Related: \_DONE_p612_review-ecs-loop-config-init.md (D2's rule for the type-only seams; `Camera.ts`' main-camera lookups are its D7), p302_material-and-texture-system-refactor.md (rewrites part of `Material.ts`, `Texture.ts` and `SceneLoader.ts`: D2), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the embed's seams and the lazy import path, "From p611" below), \_DONE_p614_review-physics.md (owns `Raycast.ts` and gets `MeshUserData.ts`, D13), \_DONE_p617_review-input-ui-hud.md (owns `DraggableWindow.ts` and the HUD, D5), p618_review-debug-public-api.md (owns the `_dbg__` modules)
 
 # Review: Rendering, Scenes and Assets
 

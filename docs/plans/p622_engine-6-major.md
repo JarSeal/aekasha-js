@@ -1,6 +1,6 @@
 Status: stub — not-implemented
 Category: Refactoring, API
-Related: p600_whole-codebase-refactoring-and-documentation.md (Stage C bumps are minor or patch, so its deprecations wait here), \_DONE_p614_review-physics.md (D3: the physics items below), \_DONE_p615_review-sky-box.md (D3: the sky box items below), \_DONE_p616_review-lod-spatial-instancing-lines.md (D3: the LOD, spatial, instancing and lines items below), p617_review-input-ui-hud.md (D3: the UI kit items below), \_DONE_p610_character-and-input-action-architecture.md, \_DONE_p612_review-ecs-loop-config-init.md, \_DONE_p613_review-rendering-scene-assets.md (their deprecations), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the tiers' measurement)
+Related: p600_whole-codebase-refactoring-and-documentation.md (Stage C bumps are minor or patch, so its deprecations wait here), \_DONE_p614_review-physics.md (D3: the physics items below), \_DONE_p615_review-sky-box.md (D3: the sky box items below), \_DONE_p616_review-lod-spatial-instancing-lines.md (D3: the LOD, spatial, instancing and lines items below), \_DONE_p617_review-input-ui-hud.md (D3: the UI kit items below), \_DONE_p610_character-and-input-action-architecture.md, \_DONE_p612_review-ecs-loop-config-init.md, \_DONE_p613_review-rendering-scene-assets.md (their deprecations), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the tiers' measurement)
 
 # Engine 6.0.0 — Stub
 
@@ -82,7 +82,7 @@ migration page, so an app made from the template upgrades in one step.
   - `TSettings.doCheckIsInDom` (`ui/CMPTypes.ts`, deprecated in engine 5.8.0): stored, never read;
   - a candidate, decided here: the UI kit's `T`-prefixed type names, the only ones in the engine
     (`TCMP` → `Cmp`, `TProps` → `CmpProps`, `TListener`, `TListenerCache`, `TListenerCreator`,
-    `TStyle`, `TAttr`, `TClassAction`, `TAnimChain`, `TAnimState`, `TSettings` in `ui/CMP.ts`, and
+    `TStyle`, `TAttr`, `TClassAction`, `TAnimChain`, `TAnimState`, `TSettings` in `ui/CMPTypes.ts`, and
     `ui/DropDown.ts`' `TDropDown`), all on `aekasha/ui`, renamed together (the old names
     deprecated aliases in a minor first, or removed here: the codemod's job).
 - **The deprecations without a version** (`debug/Stats.ts`' two, `debug/PercentagePieHtml.ts`'

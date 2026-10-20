@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented
+Status: implemented (Phases 0-6)
 Category: Refactoring, Documentation, UI, Input
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -803,7 +803,7 @@ As built (2026-10-20):
   exampleUiKit` before the full run), and `yarn verify:baselines` shows its chunk as new. D2's
   app bump: a new example scene reads as an app minor rather than a patch.
 
-### Phase 6: versions and done
+### Phase 6: versions and done — done
 
 0. Phase 5's two findings, fixed (decided 2026-10-20), so the checks cover them.
 1. `yarn verify:scenes` (Phases 1-6; `--update --only exampleUiKit` first, the new scene having
@@ -849,6 +849,11 @@ As built (2026-10-20):
   Project (the tests, the docs, the lint and side-effects test changes, the baselines: the main
   chunk 387,312 B gzip, +491 B on `main`; the banner's 291,970 B, −910 B).
   `yarn checkVersions --against main` passes.
+- **Done (step 3):** the status `implemented (Phases 0-6)`, the file `git mv`'d to
+  `_DONE_p617_review-input-ui-hud.md`. p621's `Blocked by` drops it; p600 (`Blocks`, the Stage C
+  table), p622 (`Related`), p605's and p610's `Blocks` and p613's `Related` name the new file.
+  p622's p617 block names `ui/CMPTypes.ts` for the `T`-prefixed types (Phase 4 moved them). The
+  root and nested `CLAUDE.md` files and `readme.md` were updated in Phase 5 and step 0.
 
 ## 4. Risks
 
