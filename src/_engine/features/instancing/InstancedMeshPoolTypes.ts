@@ -19,7 +19,8 @@ export interface InstancedMeshSlotData {
   /** The outgoing copy's slot in `_fadeOutMesh`, -1 without one. Changes like `index`. */
   _fadeOutIndex: number;
   /** Last `Transform.version` baked into `mesh`'s instance matrix — skips the write once a
-   * (typically static, e.g. foliage) instance's transform stops changing. */
+   * (typically static, e.g. foliage) instance's transform stops changing. `MAP` storage mode only:
+   * in `TYPED_ARRAY` mode the store's dirty flag says it. */
   _lastVersion: number;
 }
 

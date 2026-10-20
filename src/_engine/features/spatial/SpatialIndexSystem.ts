@@ -817,18 +817,42 @@ export function getSpatialDomainRebuildStats(
   };
 }
 
-/** Re-reads every member's position and scaled radius from its Transform. */
+/**
+ * Re-reads every member's position and scaled radius from its Transform: the storage read once,
+ * the grid written by slot (the loop's index), and in `TYPED_ARRAY` mode from the store's arrays
+ * (its `get` would make a `Transform` per member).
+ */
 function refreshDomainMembers(world: ECSWorld, domain: SpatialDomain): void {
   const grid = domain.grid;
   const localRadius = domain.localRadius;
+  const typedStore = world.getTypedTransformStore();
+  if (typedStore) {
+    const { posX, posY, posZ, scaleX, scaleY, scaleZ } = typedStore;
+    for (let i = 0; i < grid.memberCount; i++) {
+      const entityId = grid.memberAt(i);
+      const slot = typedStore.getSlot(entityId);
+      if (slot === -1) continue;
+      grid.updatePositionAt(i, posX[slot], posY[slot], posZ[slot]);
+      const local = localRadius.get(entityId);
+      if (local === undefined) continue;
+      const scale = Math.max(
+        Math.abs(scaleX[slot]),
+        Math.abs(scaleY[slot]),
+        Math.abs(scaleZ[slot])
+      );
+      grid.updateRadiusAt(i, local * scale);
+    }
+    return;
+  }
+  const transforms = world.getStorage(ComponentType.TRANSFORM);
   for (let i = 0; i < grid.memberCount; i++) {
     const entityId = grid.memberAt(i);
-    const transform = world.getComponent(entityId, ComponentType.TRANSFORM);
+    const transform = transforms.get(entityId);
     if (!transform) continue;
     const pos = transform.position;
-    grid.updatePosition(entityId, pos.x, pos.y, pos.z);
+    grid.updatePositionAt(i, pos.x, pos.y, pos.z);
     const local = localRadius.get(entityId);
-    if (local !== undefined) grid.updateRadius(entityId, local * maxAbsScale(transform.scale));
+    if (local !== undefined) grid.updateRadiusAt(i, local * maxAbsScale(transform.scale));
   }
 }
 
@@ -1011,7 +1035,9 @@ function checkQuery(
 ): void {
   const exact = bruteForceQuery(world, domain, p, r);
   const found = new Set<number>();
-  domain.grid.queryVisit(p, r, (id) => found.add(id));
+  domain.grid.queryVisit(p, r, (id) => {
+    found.add(id);
+  });
   oracle.checked++;
 
   for (const id of exact) {

@@ -16,6 +16,7 @@ import { CELL_AXIS_OFFSET, cellBounds, isCellInRange, packCellKey, worldToCell }
 /** An `items` entry whose member was removed since the last rebuild; queries skip it. */
 const REMOVED_ITEM = 0xffffffff;
 
+/** A query's point or corner: any `{ x, y, z }`, a `THREE.Vector3` among them. */
 export interface ReadonlyVec3 {
   readonly x: number;
   readonly y: number;
@@ -227,18 +228,33 @@ export class SpatialGrid {
 
   updatePosition(entityId: number, x: number, y: number, z: number): void {
     const slot = this.entityToSlot.get(entityId);
-    if (slot === undefined) return;
-    this.posX[slot] = x;
-    this.posY[slot] = y;
-    this.posZ[slot] = z;
+    if (slot !== undefined) this.updatePositionAt(slot, x, y, z);
+  }
+
+  /**
+   * {@link SpatialGrid.updatePosition} for the member at `index` (as {@link SpatialGrid.memberAt}'s),
+   * without the entity lookup: for a loop over the members.
+   */
+  updatePositionAt(index: number, x: number, y: number, z: number): void {
+    this.posX[index] = x;
+    this.posY[index] = y;
+    this.posZ[index] = z;
   }
 
   /** O(1); a shrinking radius leaves `maxIndexedRadius` high until the next rebuild(). */
   updateRadius(entityId: number, radius: number): void {
     const slot = this.entityToSlot.get(entityId);
+    if (slot !== undefined) this.updateRadiusAt(slot, radius);
+  }
+
+  /**
+   * {@link SpatialGrid.updateRadius} for the member at `index` (as {@link SpatialGrid.memberAt}'s),
+   * without the entity lookup: for a loop over the members.
+   */
+  updateRadiusAt(index: number, radius: number): void {
     // Unchanged (as stored, in float32): already counted in maxIndexedRadius and the tiers
-    if (slot === undefined || this.radius[slot] === Math.fround(radius)) return;
-    this._setRadius(slot, radius);
+    if (this.radius[index] === Math.fround(radius)) return;
+    this._setRadius(index, radius);
   }
 
   /** The member's radius as last set, or undefined for a non-member. */
@@ -395,10 +411,15 @@ export class SpatialGrid {
     }
   }
 
-  /** Zero-allocation candidate visit for a sphere query. Candidates only — caller does the exact test (§7). */
-  queryVisit(p: ReadonlyVec3, r: number, visit: (entityId: number) => void): void {
+  /**
+   * Zero-allocation candidate visit for a sphere query. Candidates only — caller does the exact test (§7).
+   * @param visit called once per candidate; returning `true` stops the visit (an existence check
+   * needs no more candidates). Pass a function made once, not a closure per call.
+   * @returns whether `visit` stopped it
+   */
+  queryVisit(p: ReadonlyVec3, r: number, visit: (entityId: number) => boolean | void): boolean {
     const expanded = r + this.maxIndexedRadius;
-    this._walkCellRange(
+    return this._walkCellRange(
       p.x - expanded,
       p.x + expanded,
       p.y - expanded,
@@ -409,10 +430,26 @@ export class SpatialGrid {
     );
   }
 
-  /** Zero-allocation candidate visit for an AABB query. Candidates only — caller does the exact test (§7). */
-  queryAABBVisit(min: ReadonlyVec3, max: ReadonlyVec3, visit: (entityId: number) => void): void {
+  /**
+   * Zero-allocation candidate visit for an AABB query. Candidates only — caller does the exact test (§7).
+   * @param visit as {@link SpatialGrid.queryVisit}'s: returning `true` stops the visit
+   * @returns whether `visit` stopped it
+   */
+  queryAABBVisit(
+    min: ReadonlyVec3,
+    max: ReadonlyVec3,
+    visit: (entityId: number) => boolean | void
+  ): boolean {
     const e = this.maxIndexedRadius;
-    this._walkCellRange(min.x - e, max.x + e, min.y - e, max.y + e, min.z - e, max.z + e, visit);
+    return this._walkCellRange(
+      min.x - e,
+      max.x + e,
+      min.y - e,
+      max.y + e,
+      min.z - e,
+      max.z + e,
+      visit
+    );
   }
 
   /** Same as queryVisit but writes into `out` and returns the candidate count (may exceed out.length; extras are dropped). */
@@ -438,8 +475,8 @@ export class SpatialGrid {
     maxY: number,
     minZ: number,
     maxZ: number,
-    visit: (entityId: number) => void
-  ): void {
+    visit: (entityId: number) => boolean | void
+  ): boolean {
     this.currentStamp++;
     const stamp = this.currentStamp;
 
@@ -461,7 +498,7 @@ export class SpatialGrid {
             const slot = this.items[k];
             if (slot === REMOVED_ITEM || this.queryStamp[slot] === stamp) continue;
             this.queryStamp[slot] = stamp;
-            visit(this.slotToEntity[slot]);
+            if (visit(this.slotToEntity[slot]) === true) return true;
           }
         }
       }
@@ -470,7 +507,8 @@ export class SpatialGrid {
     for (const slot of this.oversizedSlots) {
       if (this.queryStamp[slot] === stamp) continue;
       this.queryStamp[slot] = stamp;
-      visit(this.slotToEntity[slot]);
+      if (visit(this.slotToEntity[slot]) === true) return true;
     }
+    return false;
   }
 }

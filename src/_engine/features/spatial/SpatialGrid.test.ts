@@ -3,7 +3,9 @@ import { SpatialGrid } from './SpatialGrid';
 
 const query = (grid: SpatialGrid, x: number, y: number, z: number, r: number) => {
   const found: number[] = [];
-  grid.queryVisit({ x, y, z }, r, (id) => found.push(id));
+  grid.queryVisit({ x, y, z }, r, (id) => {
+    found.push(id);
+  });
   return found.sort((a, b) => a - b);
 };
 

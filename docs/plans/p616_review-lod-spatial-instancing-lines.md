@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 done
+Status: in progress | Phases 0-2 done
 Category: Refactoring, Documentation, LOD, Rendering
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -224,6 +224,13 @@ Type hygiene is clean in scope: no `any`, no `eslint-disable`, no TODO / FIXME.
   (what `spawn` takes) and `InstancedLodPoolLevel` are on no entry.
 - P5 Undocumented: the five interfaces and nine of their members (§1.3). Stale: `MeshManager`
   (`:218`, `:239`, `:323-324`), `ECS/SpatialMembership.ts` (`:254`).
+- P7 **(bug, found in Phase 2)** In `TYPED_ARRAY` storage mode pool instances never move after
+  spawn: the store's `Transform` copy carries the slot's dirty flag (0 / 1) as its `version`, and
+  only `object3DSyncSystem` clears the flag, for `OBJECT3D` holders, which an instance isn't. So
+  its flag stays 1 and the sync's `_lastVersion === version` check skips every later move.
+  Reproduced in Node (a move to x = 50 left the matrix at x = 1). The same mode also makes a
+  `Transform` per instance per frame in the sync, and per member in the spatial refresh. `MAP` is
+  the default, and the scene runner never runs `TYPED_ARRAY`.
 - P6 Otherwise clean: the swap-remove patches the moved instance's slot or fade copy, a LOD-culled
   instance re-bakes from its `Transform`, and both hooks free the slot.
 
@@ -375,7 +382,11 @@ stale names fixed (L6, C4, I6, S9, P5, N5, G2), the schema's undescribed keys (I
 S2 (the TRANSFORM storage read once, slot-indexed position and radius writes on the grid: the
 refresh loop's index is the slot), S3 (one module-level visitor, a `queryVisit` visitor that may
 return `true` to stop, which void visitors don't, one world matrix update), P1 (the storage read
-once, `needsUpdate` set at each write instead of the per-frame `Set` and its second loop). Each measured before (Phase 0) and after (Phase 2) on the same
+once, `needsUpdate` set at each write instead of the per-frame `Set` and its second loop), P7
+(confirmed 2026-10-20, found in Phase 2: a `TYPED_ARRAY` branch in the pool sync and the spatial
+refresh that reads the store's arrays by slot, as `object3DSyncSystem` does; the pool sync clears
+an instance's dirty flag once baked, which nothing else reads for an entity without `OBJECT3D`;
+spawn and the un-cull path, which bake outside the sync, clear it too). Each measured before (Phase 0) and after (Phase 2) on the same
 camera; LOD selection is measured both times and must not regress. `perf-auditor` runs over the
 four folders in Phase 0 and confirms or adds to these.
 
@@ -521,10 +532,74 @@ As built (2026-10-20):
   snapshot within tolerance, no hash or system order moved; `space`'s worker targets hash apart
   from `mainThread` as in Phase 0 (`MutualGravity`, its JSDoc), its `mainThread` hash = baseline.
 
-### Phase 2: performance (D10)
+### Phase 2: performance (D10) — done
 
-1. S2, S3, P1, and what Phase 0's audit added.
+1. S2, S3, P1, P7, and what Phase 0's audit added.
 2. The Phase 0 measurements again, same scenes and cameras; recorded here side by side.
+
+As built (2026-10-20):
+
+- **S2:** `SpatialGrid` got `updatePositionAt(index, …)` and `updateRadiusAt(index, …)` (the index
+  as `memberAt`'s; `updatePosition` / `updateRadius` call them). `refreshDomainMembers` reads the
+  TRANSFORM storage once and writes by slot. The `localRadius` Map stays: every `FOLIAGE` member
+  is in it, and moving it into the grid would have to follow the swap-remove (filed, below).
+- **S3:** a `queryVisit` / `queryAABBVisit` visitor may return `true` to stop, and both return
+  whether it stopped (an additive change on the entry's `SpatialGrid`). The visitor type is written
+  out, not a new exported name (entry additions are Phase 3's). Light culling has one module-level
+  visitor (the light id and world in module state, the world cleared after the query) that stops
+  at the first visible receiver, and one world matrix update per light (`setFromMatrixPosition`
+  after `updateWorldMatrix`, not `getWorldPosition`). Beyond D10: the system reads its
+  `OBJECT3D`, `TAG_FRUSTUM_CULLED` and `TAG_OBJECT_CULLED` storages once per frame (`addComponent`
+  and `removeComponent` keep the same storage object). The oracle's and `SpatialGrid.test.ts`'
+  visitors got braces (`found.add(id)` returns the Set).
+- **P1:** the TRANSFORM storage read once; `instanceMatrix.needsUpdate` set at each write, no
+  per-frame `Set` and no second loop. Phase 1's `lodPoolsByMesh` lookup in `growPoolBounds` is a
+  one-entry cache in the loop (`growPoolBounds` takes the pool state).
+- **P7 (§1.4, found here, confirmed 2026-10-20):** both loops have a `TYPED_ARRAY` branch reading
+  the store's arrays by slot (`getTypedTransformStore`, as `object3DSyncSystem` does). The pool
+  sync bakes on `isDirty` and clears it. `clearTypedTransformDirty` clears it at spawn and on the
+  un-cull path too, which bake outside the sync (else the first sync baked every instance again).
+  `_lastVersion` is documented as `MAP` mode's. The instancing `CLAUDE.md` says how the sync
+  decides; the spatial one says a visitor can stop.
+- **Tests** (92 files, 749 passed, 1 skipped): `spatial/SpatialIndexSystem.test.ts` (new: the
+  refresh's position and scaled radius, in both storage modes, through the real install), and in
+  `InstancedMeshPool.test.ts` the P7 repro and "nothing moved, nothing uploaded", in both modes.
+- **`ReadonlyVec3`** got a summary. Phase 1's `REMOVED_ITEM` came between it and the detached module
+  comment (S9) that used to document it by accident, so the ratchet saw a new undocumented export.
+  The comment itself stays for Phase 4. `yarn verify:baselines --docs`: nothing to look at.
+- **The measurements**, Phase 0's script, scenes and settings (`.cache/runs/p616-measure-after.json`).
+  Mean µs per frame, the three runs:
+
+  | System | Phase 0 | Phase 2 |
+  | --- | --- | --- |
+  | **largeWorld** | | |
+  | `lodSelectionSystem` | 649, 518, 510 | 460, 474, 441 |
+  | `lodApplySystem` / `lodFadeSystem` | 1.7-1.9 / 1.2-1.6 | 1.8-3.0 / 1.6-2.1 |
+  | `spatialIndexRebuildSystem` | 35, 33, 31 | 29, 30, 28 |
+  | `instancedMeshPoolSync` | 188, 190, 172 | 132, 151, 130 |
+  | `lightObjectCullingSystem` | 59, 49, 51 | 38, 42, 48 |
+  | **largeWorld, FOLIAGE refreshed every frame** | | |
+  | `lodSelectionSystem` | 526, 524, 521 | 449, 514, 439 |
+  | `spatialIndexRebuildSystem` | 344, 371, 344 | 318, 329, 322 |
+  | `instancedMeshPoolSync` | 116, 141, 166 | 106, 91, 92 |
+  | `lightObjectCullingSystem` | 45, 54, 66 | 55, 50, 62 |
+  | **lodShowcase** | | |
+  | `lodSelectionSystem` | 30, 29, 28 | 27, 32, 31 |
+  | `spatialIndexRebuildSystem` | 22, 23, 21 | 21, 24, 27 |
+  | `instancedMeshPoolSync` | 3.5, 8.1, 3.3 | 2.5, 3.5, 3.5 |
+  | `lightObjectCullingSystem` | 1.2, 1.0, 1.1 | 1.1, 1.3, 1.1 |
+
+  The pool sync is about 25 % cheaper with nothing moving. It still pays about 35 ns per instance
+  for the slot iteration and the TRANSFORM `get`. Light culling is about 20 % cheaper in
+  largeWorld and within noise in the refreshed variant: `DEFAULT`'s 26 members leave the early
+  stop few candidates to skip. LOD selection didn't regress. It wasn't touched, so its lower
+  numbers are noise (Phase 0's runs ranged 510-649). The refresh path saved only about 25 µs.
+- **The refresh path split** (`.cache/runs/p616-measure-split.ts`, the refreshed variant with
+  `getLastRebuildDurationMs` averaged per frame): of 300-349 µs, the `FOLIAGE` rebuild is 113-158,
+  `DEFAULT`'s 16-17, and the refresh with the rest ~171-174 (~110 ns per member, with the TRANSFORM
+  `get` and the `localRadius` lookup left). Not changed here. The real largeWorld's `FOLIAGE` is
+  `STATIC` and costs nothing in steady state. Filed: `docs/issues/spatial-refresh-and-rebuild-cost.md`
+  (skip a rebuild when no member changed cell, through `lastCell`; the local radius per slot).
 
 ### Phase 3: the API (D6, D7) and the deferrals (D3)
 

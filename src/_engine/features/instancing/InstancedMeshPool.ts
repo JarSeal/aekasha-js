@@ -41,6 +41,9 @@ const getInstanceRadius: SpatialRadiusProvider = (entityId, world) => {
 
 const _matrix = new THREE.Matrix4();
 const _moveMatrix = new THREE.Matrix4();
+const _position = new THREE.Vector3();
+const _quaternion = new THREE.Quaternion();
+const _scale = new THREE.Vector3();
 const _color = new THREE.Color();
 const _box = new THREE.Box3();
 const _sphere = new THREE.Sphere();
@@ -83,13 +86,16 @@ const writeFade = (mesh: THREE.InstancedMesh, index: number, fade: number) => {
 const isSphereInside = (inner: THREE.Sphere, outer: THREE.Sphere) =>
   inner.center.distanceTo(outer.center) + inner.radius <= outer.radius;
 
-/** Grows `mesh`'s bounds (an instanced LOD pool: every level mesh's) to hold an instance drawn at
- * `matrix`, so three's frustum culling never culls the whole mesh while a moved instance is on
- * screen. Never shrinks them (removeAt relies on that), and changes nothing while the instance is
+/** Grows `mesh`'s bounds (an instanced LOD pool, `lodPool`: every level mesh's) to hold an instance
+ * drawn at `matrix`, so three's frustum culling never culls the whole mesh while a moved instance is
+ * on screen. Never shrinks them (removeAt relies on that), and changes nothing while the instance is
  * inside. A plain pool's bounds three hasn't computed yet stay null: three computes them over every
  * instance on first use. */
-const growPoolBounds = (mesh: THREE.InstancedMesh, matrix: THREE.Matrix4) => {
-  const lodPool = lodPoolsByMesh.get(mesh);
+const growPoolBounds = (
+  mesh: THREE.InstancedMesh,
+  lodPool: LodPoolState | undefined,
+  matrix: THREE.Matrix4
+) => {
   if (lodPool) {
     _box.copy(lodPool.localBox).applyMatrix4(matrix);
     _sphere.copy(lodPool.localSphere).applyMatrix4(matrix);
@@ -112,6 +118,15 @@ const growPoolBounds = (mesh: THREE.InstancedMesh, matrix: THREE.Matrix4) => {
     if (!geometry.boundingSphere) geometry.computeBoundingSphere();
     boundingSphere.union(_sphere.copy(geometry.boundingSphere!).applyMatrix4(matrix));
   }
+};
+
+/** `TYPED_ARRAY` storage mode: marks the instance's `Transform` synced once its matrix is baked
+ * outside the sync, which then skips it until it changes (`MAP` mode: `_lastVersion` says it). */
+const clearTypedTransformDirty = (world: ECSWorld, entityId: number) => {
+  const typedStore = world.getTypedTransformStore();
+  if (!typedStore) return;
+  const transformSlot = typedStore.getSlot(entityId);
+  if (transformSlot !== -1) typedStore.clearDirty(transformSlot);
 };
 
 /** Appends an instance to `mesh` with `matrix` and the LOD fade `fade`, returning its slot index. */
@@ -243,8 +258,9 @@ const instanceLodTarget: LodTarget = {
     _moveMatrix.compose(transform.position, transform.quaternion, transform.scale);
     slot.index = appendInstance(slot.mesh, entityId, _moveMatrix, fade ? 0 : LOD_FADE_OPAQUE);
     // It may have moved while culled
-    growPoolBounds(slot.mesh, _moveMatrix);
+    growPoolBounds(slot.mesh, lodPoolsByMesh.get(slot.mesh), _moveMatrix);
     slot._lastVersion = transform.version;
+    clearTypedTransformDirty(world, entityId);
   },
   setFade: (entityId, world, progress) => {
     const slot = getSlot(entityId, world);
@@ -343,6 +359,7 @@ const createInstanceEntity = (
   // see real placement data immediately, and so nothing flashes at the pool's default
   // (identity, i.e. world-origin) matrix for one frame.
   _matrix.compose(transform.position, transform.quaternion, transform.scale);
+  clearTypedTransformDirty(world, entityId);
   return { entityId, version: transform.version };
 };
 
@@ -647,36 +664,64 @@ export const createInstancedLodPool = (opts: CreateInstancedLodPoolOptions): Ins
   return { meshes: state.meshes, meshEntityIds, spawn, despawn };
 };
 
-/** Bakes each pooled entity's `Transform` into its `InstancedMesh` slot, skipping instances whose transform hasn't changed since the last bake (see `InstancedMeshSlotData._lastVersion`, mirroring `object3DSyncSystem`'s version-diff), and grows the mesh's bounds to hold each instance it bakes. */
+/**
+ * Bakes each pooled entity's `Transform` into its `InstancedMesh` slot, skipping instances whose
+ * transform hasn't changed since the last bake (`InstancedMeshSlotData._lastVersion` in `MAP`
+ * storage mode, the store's dirty flag in `TYPED_ARRAY` mode, as `object3DSyncSystem` does), and
+ * grows the mesh's bounds to hold each instance it bakes.
+ */
 export const instancedMeshPoolSyncSystem = (world: ECSWorld) => {
   const storage = world.getStorage(ComponentType.INSTANCED_MESH_SLOT);
   if (storage.size === 0) return;
-
-  const dirtyMeshes = new Set<THREE.InstancedMesh>();
+  // TYPED_ARRAY mode: the store's arrays (its `get` makes a Transform copy whose version is only
+  // the dirty flag). An instance has no OBJECT3D, whose sync clears the flag for everything else,
+  // so this system clears it once baked
+  const typedStore = world.getTypedTransformStore();
+  const transforms = typedStore ? undefined : world.getStorage(ComponentType.TRANSFORM);
+  // The pool of the last instance baked: a pool's instances mostly come one after another
+  let lastMesh: THREE.InstancedMesh | null = null;
+  let lastLodPool: LodPoolState | undefined;
 
   for (const [entityId, slot] of storage) {
     // LOD culled: in no mesh (re-baked from its Transform when it comes back), unless it's still
     // fading out
     if (slot.index < 0 && !slot._fadeOutMesh) continue;
-    const transform = world.getComponent(entityId, ComponentType.TRANSFORM);
-    if (!transform || slot._lastVersion === transform.version) continue;
+    if (typedStore) {
+      const t = typedStore.getSlot(entityId);
+      if (t === -1 || !typedStore.isDirty(t)) continue;
+      _position.set(typedStore.posX[t], typedStore.posY[t], typedStore.posZ[t]);
+      _quaternion.set(
+        typedStore.quatX[t],
+        typedStore.quatY[t],
+        typedStore.quatZ[t],
+        typedStore.quatW[t]
+      );
+      _scale.set(typedStore.scaleX[t], typedStore.scaleY[t], typedStore.scaleZ[t]);
+      _matrix.compose(_position, _quaternion, _scale);
+      typedStore.clearDirty(t);
+    } else {
+      const transform = transforms!.get(entityId);
+      if (!transform || slot._lastVersion === transform.version) continue;
+      _matrix.compose(transform.position, transform.quaternion, transform.scale);
+      slot._lastVersion = transform.version;
+    }
 
-    _matrix.compose(transform.position, transform.quaternion, transform.scale);
     if (slot.index >= 0) {
       slot.mesh.setMatrixAt(slot.index, _matrix);
-      dirtyMeshes.add(slot.mesh);
+      slot.mesh.instanceMatrix.needsUpdate = true;
     }
     if (slot._fadeOutMesh) {
       slot._fadeOutMesh.setMatrixAt(slot._fadeOutIndex, _matrix);
-      dirtyMeshes.add(slot._fadeOutMesh);
+      slot._fadeOutMesh.instanceMatrix.needsUpdate = true;
     }
     // A fade-out copy is in a level mesh of the same LOD pool (to culled: `slot.mesh` itself),
     // whose level meshes share their bounds
-    growPoolBounds(slot.mesh, _matrix);
-    slot._lastVersion = transform.version;
+    if (slot.mesh !== lastMesh) {
+      lastMesh = slot.mesh;
+      lastLodPool = lodPoolsByMesh.get(lastMesh);
+    }
+    growPoolBounds(slot.mesh, lastLodPool, _matrix);
   }
-
-  for (const dirtyMesh of dirtyMeshes) dirtyMesh.instanceMatrix.needsUpdate = true;
 };
 
 /**

@@ -27,11 +27,11 @@ const placeAt = (x: number) => ({
   scale: 1,
 });
 
-const moveTo = (entityId: number, x: number) => {
-  const transform = world.getComponent(entityId, ComponentType.TRANSFORM)!;
+const moveTo = (entityId: number, x: number, inWorld = world) => {
+  const transform = inWorld.getComponent(entityId, ComponentType.TRANSFORM)!;
   transform.position.set(x, 0, 0);
   transform.setDirty();
-  world.commitTransform(entityId, transform);
+  inWorld.commitTransform(entityId, transform);
 };
 
 const createLodPool = () =>
@@ -114,6 +114,27 @@ describe('createInstancedMeshPool', () => {
     expect(pool.mesh.boundingSphere!.containsPoint(new THREE.Vector3(0, 0, 0))).toBe(true);
   });
 
+  // p616 P1: the instance matrix is uploaded only in a frame that wrote it
+  test('uploads nothing while no instance moved', () => {
+    const pool = createInstancedMeshPool({
+      world,
+      geometry: new THREE.BoxGeometry(),
+      material: new THREE.MeshBasicNodeMaterial(),
+      maxInstances: 2,
+    });
+    const [entityId] = pool.spawn(world, [placeAt(0)]);
+    instancedMeshPoolSyncSystem(world);
+    const version = pool.mesh.instanceMatrix.version;
+
+    instancedMeshPoolSyncSystem(world);
+    expect(pool.mesh.instanceMatrix.version).toBe(version);
+
+    moveTo(entityId, 3);
+    instancedMeshPoolSyncSystem(world);
+    expect(pool.mesh.instanceMatrix.version).toBeGreaterThan(version);
+    expect(xOf(pool.mesh, 0)).toBe(3);
+  });
+
   test('leaves the bounds as they are while a moved instance stays inside them', () => {
     const pool = createInstancedMeshPool({
       world,
@@ -164,5 +185,47 @@ describe('createInstancedLodPool', () => {
     for (const mesh of pool.meshes) {
       expect(mesh.boundingSphere!.containsPoint(new THREE.Vector3(-100, 0, 0))).toBe(true);
     }
+  });
+});
+
+// p616 P7: in TYPED_ARRAY mode a Transform's version is only its dirty flag, which nothing cleared
+// for a pool instance (no OBJECT3D), so the sync skipped every move after spawn
+describe('TYPED_ARRAY storage', () => {
+  let typedWorld: ECSWorld;
+  beforeAll(() => {
+    typedWorld = new ECSWorld({ id: 'typedPools', storageMode: 'TYPED_ARRAY', maxEntities: 64 });
+  });
+
+  const createTypedPool = () =>
+    createInstancedMeshPool({
+      world: typedWorld,
+      geometry: new THREE.BoxGeometry(),
+      material: new THREE.MeshBasicNodeMaterial(),
+      maxInstances: 2,
+    });
+
+  test('bakes every move of an instance, and grows the bounds for it', () => {
+    const pool = createTypedPool();
+    const [entityId] = pool.spawn(typedWorld, [placeAt(1)]);
+    instancedMeshPoolSyncSystem(typedWorld);
+
+    moveTo(entityId, 50, typedWorld);
+    instancedMeshPoolSyncSystem(typedWorld);
+    expect(xOf(pool.mesh, 0)).toBe(50);
+
+    moveTo(entityId, 100, typedWorld);
+    instancedMeshPoolSyncSystem(typedWorld);
+    expect(xOf(pool.mesh, 0)).toBe(100);
+    expect(pool.mesh.boundingSphere!.containsPoint(new THREE.Vector3(100, 0, 0))).toBe(true);
+  });
+
+  test('uploads nothing after spawn while no instance moved', () => {
+    const pool = createTypedPool();
+    pool.spawn(typedWorld, [placeAt(1), placeAt(2)]);
+    const version = pool.mesh.instanceMatrix.version;
+
+    instancedMeshPoolSyncSystem(typedWorld);
+
+    expect(pool.mesh.instanceMatrix.version).toBe(version);
   });
 });
