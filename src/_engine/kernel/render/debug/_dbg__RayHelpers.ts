@@ -3,8 +3,8 @@ import {
   createLines,
   isLinesInstalledFor,
   preloadFatLineBackend,
-  type LineObject,
 } from '../../../features/lines/Lines';
+import type { LineObject } from '../../../features/lines/LineObject';
 import { lwarn } from '../../../utils/Logger';
 import { markDebugHelper } from '../../../debug/Profiler';
 import type { RayDebugOpts, RayHelperKind } from '../RayDebugTypes';

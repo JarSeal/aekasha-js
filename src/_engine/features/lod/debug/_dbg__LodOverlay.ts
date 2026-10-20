@@ -3,15 +3,11 @@ import { markDebugHelper } from '../../../debug/Profiler';
 import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../../../kernel/loop/SystemStages';
 import { ECSWorld, getECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
-import type { LineObject } from '../../lines/Lines';
-import {
-  BOX_EDGE_SEGMENT_COUNT,
-  createLines,
-  isLinesInstalledFor,
-  type LineWriter,
-  writeBox3Edges,
-} from '../../lines/Lines';
-import { getLodSelectionCamera, getLodWorldSphere } from '../LodSystem';
+import { BOX_EDGE_SEGMENT_COUNT, writeBox3Edges } from '../../lines/LineBuilders';
+import type { LineObject } from '../../lines/LineObject';
+import { createLines, isLinesInstalledFor } from '../../lines/Lines';
+import type { LineWriter } from '../../lines/LineWriter';
+import { getLodSelectionCamera, getLodWorldSphere } from '../LodMeasure';
 
 // The LOD overlay (docs/plans/_DONE_p348_ecs-lod-selection.md §6): a wire box per LOD entity in view,
 // coloured by the level it shows. The box bounds the sphere the selection measures (level 0's
@@ -23,6 +19,7 @@ import { getLodSelectionCamera, getLodWorldSphere } from '../LodSystem';
 
 /** Level 0 green, 1 yellow, 2 orange, 3 red, 4 magenta, 5 and on blue. */
 export const LOD_OVERLAY_COLORS = [0x30c040, 0xe0c020, 0xf08020, 0xd03020, 0xc040d0, 0x4080f0];
+/** {@link LOD_OVERLAY_COLORS}' names, for the LOD tab's legend. */
 export const LOD_OVERLAY_COLOR_NAMES = ['green', 'yellow', 'orange', 'red', 'magenta', 'blue'];
 
 /** Boxes per level line. Past it the FIXED line drops the rest, with its own warning. */
@@ -90,6 +87,7 @@ const lodOverlaySystem = (world: ECSWorld) => {
   }
 };
 
+/** Whether the level overlay is drawn (`setLodOverlayEnabled`). */
 export const isLodOverlayEnabled = () => isEnabled;
 
 /** Shows or hides the overlay. The lines and the system are created on the first enable. */

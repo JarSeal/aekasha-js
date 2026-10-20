@@ -2,23 +2,26 @@ import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { lwarn } from '../../utils/Logger';
 import { CELL_AXIS_OFFSET, cellBounds, isCellInRange, packCellKey, worldToCell } from './CellKey';
 
-/**
- * Standalone, instantiable "what's near this point/volume" primitive.
- * See docs/plans/_DONE_p050_spatial-index.md for the full design rationale.
- *
- * Phase 1 scope (per that plan's §11): the grid itself only. It has no ECS
- * wiring, no membership hooks, and nothing else in the engine references it
- * yet. Positions/radii are pushed in explicitly via addMember/updatePosition/
- * updateRadius — a later phase wires those calls to ECS Transform data and
- * component-add/remove hooks.
- */
+// The spatial grid (docs/plans/_DONE_p050_spatial-index.md for the design): a standalone
+// "what's near this point or volume" structure with no ECS of its own. Positions and radii are
+// pushed in through addMember / updatePosition / updateRadius; the spatial index's domains
+// (SpatialDomains.ts, SpatialIndexSystem.ts) keep one grid per domain current from the members'
+// Transforms.
 
+/** An `items` entry whose member was removed since the last rebuild; queries skip it. */
+const REMOVED_ITEM = 0xffffffff;
+
+/** A query's point or corner: any `{ x, y, z }`, a `THREE.Vector3` among them. */
 export interface ReadonlyVec3 {
+  /** World x. */
   readonly x: number;
+  /** World y. */
   readonly y: number;
+  /** World z. */
   readonly z: number;
 }
 
+/** What a {@link SpatialGrid} is built with: its cell size, capacity and oversized threshold. */
 export interface SpatialGridOptions {
   /** World-space edge length of one grid cell. Tune against the occupancy histogram (§9 of the plan). */
   cellSize: number;
@@ -28,13 +31,32 @@ export interface SpatialGridOptions {
   oversizedRadiusMultiplier?: number;
 }
 
+/** A grid's counts, from {@link SpatialGrid.getStats}. */
 export interface SpatialGridStats {
+  /** Members, oversized ones included. */
   memberCount: number;
+  /** Members in the oversized tier: in no cell, a candidate of every query. */
   oversizedCount: number;
+  /** Cells holding at least one member, as of the last rebuild. */
   occupiedCellCount: number;
+  /** The largest radius of a member in a cell, which queries expand by. Exact after a rebuild; can
+   * be high between rebuilds. */
   maxIndexedRadius: number;
 }
 
+/**
+ * A uniform grid over world space that answers "which members are near this point or box" with
+ * candidates, not results: a query returns every member within range and maybe a few more, and
+ * the caller does the exact test. Members are entity ids with a position and a radius. A member
+ * whose radius is over `cellSize × oversizedRadiusMultiplier` goes into an oversized tier that
+ * every query returns. The cells are rebuilt from the members' positions by
+ * {@link SpatialGrid.rebuild} (sparse, as flat arrays); queries allocate nothing.
+ *
+ * Read a domain's grid with `getSpatialDomain` / `getSpatialGrid`, where it's used: the spatial
+ * index keeps it current (its update policy) and replaces it when the domain's settings change.
+ * @remarks Between rebuilds a removed member is gone at once, but a member added or moved since is
+ * found only where the last rebuild put it (an oversized one is always found).
+ */
 export class SpatialGrid {
   private readonly _cellSize: number;
   private readonly invCellSize: number;
@@ -60,12 +82,11 @@ export class SpatialGrid {
   private maxIndexedRadius = 0;
 
   /**
-   * Packed world-cell key each slot landed in at the last rebuild. Not read
-   * by anything in Phase 1 (the dynamic index does a full rebuild every
-   * frame) — kept from day one so a future incremental-update pass (§6) can
-   * diff against it without a data-model change. A plain number, not a
-   * fixed-width typed array, because the packed key intentionally exceeds
-   * 32 bits (see CELL_AXIS_BITS above).
+   * Packed world-cell key of the cell holding each slot's `items` entry, set by the last rebuild
+   * (NaN for a member in no cell: oversized at the rebuild, or added since). `removeMember`
+   * finds the entries it patches through it, and moves it with the slot. A plain number, not a
+   * fixed-width typed array, because the packed key intentionally exceeds 32 bits (see
+   * CELL_AXIS_BITS in CellKey.ts).
    */
   private readonly lastCell: number[];
 
@@ -79,10 +100,9 @@ export class SpatialGrid {
   private readonly items: Uint32Array; // dense cell index's members, as slots
   private occupiedCellCount = 0;
 
-  // Dedup stamps: forward-compatible with multi-cell insert (Phase 4). With
-  // today's origin-only insert a member can only ever be in one cell, so
-  // this never actually filters anything yet — it's here so Phase 4 doesn't
-  // need a data-model change, only a query-time behavior change.
+  // Dedup stamps, for a member in several cells: the multi-cell insert of p050 §11's Phase 4, an
+  // optimization that plan defers until measured. A member is in one cell (its centre's) today,
+  // so they filter nothing; they're here so that insert needs no data-model change.
   private readonly queryStamp: Uint32Array;
   private currentStamp = 0;
 
@@ -122,6 +142,7 @@ export class SpatialGrid {
     out[i + 5] = this.posZ[slot] + r;
   };
 
+  /** Allocates every per-member array for `opts.maxMembers` members at once. */
   constructor(opts: SpatialGridOptions) {
     this._cellSize = opts.cellSize;
     this.invCellSize = 1 / opts.cellSize;
@@ -145,6 +166,10 @@ export class SpatialGrid {
     this.queryStamp = new Uint32Array(this.maxMembers);
   }
 
+  /**
+   * Adds a member, or updates its position and radius when it's one already.
+   * @remarks Queries find a new member only after the next `rebuild()`, unless it's oversized.
+   */
   addMember(entityId: number, x: number, y: number, z: number, radius: number): void {
     if (this.entityToSlot.has(entityId)) {
       this.updatePosition(entityId, x, y, z);
@@ -164,12 +189,21 @@ export class SpatialGrid {
     this._setRadius(slot, radius);
   }
 
+  /**
+   * Removes a member. Queries stop returning it at once and find every other member where the
+   * last `rebuild()` put it: the slot move patches the two cell entries it touches (one scan of
+   * each cell).
+   */
   removeMember(entityId: number): void {
     const slot = this.entityToSlot.get(entityId);
     if (slot === undefined) return;
 
     const lastSlot = this.liveCount - 1;
+    // The cells keep pointing at the right members: the removed member's entry first, so a cell
+    // holding both entries can't match the moved one's after it was pointed at `slot`
+    this._replaceCellItem(this.lastCell[slot], slot, REMOVED_ITEM);
     if (slot !== lastSlot) {
+      this._replaceCellItem(this.lastCell[lastSlot], lastSlot, slot);
       this.posX[slot] = this.posX[lastSlot];
       this.posY[slot] = this.posY[lastSlot];
       this.posZ[slot] = this.posZ[lastSlot];
@@ -190,27 +224,56 @@ export class SpatialGrid {
     }
 
     this.slotToEntity[lastSlot] = -1;
+    this.lastCell[lastSlot] = NaN;
     this.entityToSlot.delete(entityId);
     this.liveCount--;
-    // maxIndexedRadius may now overestimate; the next rebuild() makes it exact. Until then the
-    // cells still hold the old slots: queries skip the emptied one, but the member moved into
-    // `slot` shows up at the removed member's cell instead of its own.
+    // maxIndexedRadius may now overestimate; the next rebuild() makes it exact
   }
 
+  /** Points the entry `from` of the cell `key` at `to`: one scan of that cell, nothing for a member in no cell. */
+  private _replaceCellItem(key: number, from: number, to: number): void {
+    // NaN is no cell's key
+    const cellIndex = this.cellKeyToIndex.get(key);
+    if (cellIndex === undefined) return;
+    const end = this.cellStart[cellIndex + 1];
+    for (let k = this.cellStart[cellIndex]; k < end; k++) {
+      if (this.items[k] === from) {
+        this.items[k] = to;
+        return;
+      }
+    }
+  }
+
+  /** Moves a member (a no-op for a non-member). Queries see the move after the next rebuild. */
   updatePosition(entityId: number, x: number, y: number, z: number): void {
     const slot = this.entityToSlot.get(entityId);
-    if (slot === undefined) return;
-    this.posX[slot] = x;
-    this.posY[slot] = y;
-    this.posZ[slot] = z;
+    if (slot !== undefined) this.updatePositionAt(slot, x, y, z);
+  }
+
+  /**
+   * {@link SpatialGrid.updatePosition} for the member at `index` (as {@link SpatialGrid.memberAt}'s),
+   * without the entity lookup: for a loop over the members.
+   */
+  updatePositionAt(index: number, x: number, y: number, z: number): void {
+    this.posX[index] = x;
+    this.posY[index] = y;
+    this.posZ[index] = z;
   }
 
   /** O(1); a shrinking radius leaves `maxIndexedRadius` high until the next rebuild(). */
   updateRadius(entityId: number, radius: number): void {
     const slot = this.entityToSlot.get(entityId);
+    if (slot !== undefined) this.updateRadiusAt(slot, radius);
+  }
+
+  /**
+   * {@link SpatialGrid.updateRadius} for the member at `index` (as {@link SpatialGrid.memberAt}'s),
+   * without the entity lookup: for a loop over the members.
+   */
+  updateRadiusAt(index: number, radius: number): void {
     // Unchanged (as stored, in float32): already counted in maxIndexedRadius and the tiers
-    if (slot === undefined || this.radius[slot] === Math.fround(radius)) return;
-    this._setRadius(slot, radius);
+    if (this.radius[index] === Math.fround(radius)) return;
+    this._setRadius(index, radius);
   }
 
   /** The member's radius as last set, or undefined for a non-member. */
@@ -219,6 +282,7 @@ export class SpatialGrid {
     return slot === undefined ? undefined : this.radius[slot];
   }
 
+  /** Whether `entityId` is a member. */
   has(entityId: number): boolean {
     return this.entityToSlot.has(entityId);
   }
@@ -231,6 +295,7 @@ export class SpatialGrid {
     return this.slotToEntity[index];
   }
 
+  /** How many members the grid holds (the bound of {@link SpatialGrid.memberAt}'s index). */
   get memberCount(): number {
     return this.liveCount;
   }
@@ -240,6 +305,7 @@ export class SpatialGrid {
     return this._cellSize;
   }
 
+  /** The grid's counts, in a new object: for the debug tools, not a per-frame read. */
   getStats(): SpatialGridStats {
     return {
       memberCount: this.liveCount,
@@ -314,7 +380,10 @@ export class SpatialGrid {
     this.compactCount = 0;
     let maxRadius = 0;
     for (let slot = 0; slot < this.liveCount; slot++) {
-      if (this.isOversized[slot]) continue;
+      if (this.isOversized[slot]) {
+        this.lastCell[slot] = NaN;
+        continue;
+      }
       this.memberSlotByCompactIndex[this.compactCount++] = slot;
       if (this.radius[slot] > maxRadius) maxRadius = this.radius[slot];
     }
@@ -364,10 +433,15 @@ export class SpatialGrid {
     }
   }
 
-  /** Zero-allocation candidate visit for a sphere query. Candidates only — caller does the exact test (§7). */
-  queryVisit(p: ReadonlyVec3, r: number, visit: (entityId: number) => void): void {
+  /**
+   * Zero-allocation candidate visit for a sphere query. Candidates only — caller does the exact test (§7).
+   * @param visit called once per candidate; returning `true` stops the visit (an existence check
+   * needs no more candidates). Pass a function made once, not a closure per call.
+   * @returns whether `visit` stopped it
+   */
+  queryVisit(p: ReadonlyVec3, r: number, visit: (entityId: number) => boolean | void): boolean {
     const expanded = r + this.maxIndexedRadius;
-    this._walkCellRange(
+    return this._walkCellRange(
       p.x - expanded,
       p.x + expanded,
       p.y - expanded,
@@ -378,10 +452,26 @@ export class SpatialGrid {
     );
   }
 
-  /** Zero-allocation candidate visit for an AABB query. Candidates only — caller does the exact test (§7). */
-  queryAABBVisit(min: ReadonlyVec3, max: ReadonlyVec3, visit: (entityId: number) => void): void {
+  /**
+   * Zero-allocation candidate visit for an AABB query. Candidates only — caller does the exact test (§7).
+   * @param visit as {@link SpatialGrid.queryVisit}'s: returning `true` stops the visit
+   * @returns whether `visit` stopped it
+   */
+  queryAABBVisit(
+    min: ReadonlyVec3,
+    max: ReadonlyVec3,
+    visit: (entityId: number) => boolean | void
+  ): boolean {
     const e = this.maxIndexedRadius;
-    this._walkCellRange(min.x - e, max.x + e, min.y - e, max.y + e, min.z - e, max.z + e, visit);
+    return this._walkCellRange(
+      min.x - e,
+      max.x + e,
+      min.y - e,
+      max.y + e,
+      min.z - e,
+      max.z + e,
+      visit
+    );
   }
 
   /** Same as queryVisit but writes into `out` and returns the candidate count (may exceed out.length; extras are dropped). */
@@ -407,8 +497,8 @@ export class SpatialGrid {
     maxY: number,
     minZ: number,
     maxZ: number,
-    visit: (entityId: number) => void
-  ): void {
+    visit: (entityId: number) => boolean | void
+  ): boolean {
     this.currentStamp++;
     const stamp = this.currentStamp;
 
@@ -428,11 +518,9 @@ export class SpatialGrid {
           const end = this.cellStart[cellIndex + 1];
           for (let k = start; k < end; k++) {
             const slot = this.items[k];
-            if (this.queryStamp[slot] === stamp) continue;
+            if (slot === REMOVED_ITEM || this.queryStamp[slot] === stamp) continue;
             this.queryStamp[slot] = stamp;
-            const entityId = this.slotToEntity[slot];
-            // A slot emptied by removeMember since the last rebuild (-1)
-            if (entityId >= 0) visit(entityId);
+            if (visit(this.slotToEntity[slot]) === true) return true;
           }
         }
       }
@@ -441,7 +529,8 @@ export class SpatialGrid {
     for (const slot of this.oversizedSlots) {
       if (this.queryStamp[slot] === stamp) continue;
       this.queryStamp[slot] = stamp;
-      visit(this.slotToEntity[slot]);
+      if (visit(this.slotToEntity[slot]) === true) return true;
     }
+    return false;
   }
 }

@@ -1,5 +1,5 @@
 // LOD's part of the imports (p607 D5): the `lod()` feature's import extension. The kernel's
-// import (Import/ImportRegistry.ts) calls it to read a file's prebuilt chains and to start the
+// import (kernel/assets/import/ImportRegistry.ts) calls it to read a file's prebuilt chains and to start the
 // chains an import's `lodChain` asks for.
 import { lerror } from '../../utils/Logger';
 import type { ImportExtension } from '../../kernel/assets/import/ImportExtensions';

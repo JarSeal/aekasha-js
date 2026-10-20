@@ -98,6 +98,7 @@ export const getImpostorExportState = (record: ImpostorRecord): ImpostorExportSt
   return gathered.sourceHash === getSourceHash(record) ? 'EXPORTED' : 'STALE';
 };
 
+/** Whether the Export supports impostors of `kind` (the LOD tab lists the others without it). */
 export const isImpostorKindExported = (kind: ImpostorKind) => KINDS_EXPORTED.includes(kind);
 
 const toRepoPath = (path: string) => path.replace(/\\/g, '/').replace(/^\.?\/+|\/+$/g, '');

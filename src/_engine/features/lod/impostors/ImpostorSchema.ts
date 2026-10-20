@@ -2,18 +2,20 @@ import { z } from 'zod';
 import { DebugDataSchema } from '../../../schemas/_HelperSchemas';
 import { IMPOSTOR_EXPORT_FORMAT_VERSION, IMPOSTOR_MATERIAL_TYPES } from './ImpostorFormat';
 
-/**
- * An exported impostor (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): everything its
- * material needs besides the atlas, which is a `*.textureAtlas.json` (p299) with the kind's slots
- * (`IMPOSTOR_ATLAS_SLOTS`). Written by the LOD tab's Export, not by hand. A scene lists it in
- * `impostors`, which loads the atlas's slots with the scene; `generateOctahedralImpostor` (or
- * `generateCrossQuads`) with its id then builds from it instead of baking.
- */
+// An exported impostor (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): everything its
+// material needs besides the atlas, which is a `*.textureAtlas.json` (p299) with the kind's slots
+// (`IMPOSTOR_ATLAS_SLOTS`). Written by the LOD tab's Export, not by hand. A scene lists it in
+// `impostors`, which loads the atlas's slots with the scene; `generateOctahedralImpostor` (or
+// `generateCrossQuads`) with its id then builds from it instead of baking.
 
 const Vec3Schema = z.tuple([z.number(), z.number(), z.number()]);
 const PxSchema = z.number().int();
 
-/** `OctahedralImpostorLayout` (features/lod/impostors/OctahedralImpostor.ts) */
+/**
+ * `OctahedralImpostorLayout` (features/lod/impostors/OctahedralImpostor.ts)
+ * A part of {@link ImpostorAssetSchema}.
+ * @internal
+ */
 export const OctahedralImpostorLayoutSchema = z
   .strictObject({
     frames: PxSchema.min(2).max(32).describe('Frames along each side of the grid.'),
@@ -31,7 +33,11 @@ export const OctahedralImpostorLayoutSchema = z
     message: 'atlasSize must be frames × (frameSize + 2 × gutter)',
   });
 
-/** `CrossQuadsLayout` (features/lod/impostors/CrossQuads.ts) */
+/**
+ * `CrossQuadsLayout` (features/lod/impostors/CrossQuads.ts)
+ * A part of {@link ImpostorAssetSchema}.
+ * @internal
+ */
 export const CrossQuadsLayoutSchema = z
   .strictObject({
     planes: z.union([z.literal(2), z.literal(3)]).describe('Vertical planes, 180° / planes apart.'),
@@ -55,8 +61,12 @@ export const CrossQuadsLayoutSchema = z
     { message: 'atlasSize must be [planes × (frameWidth + 2 × gutter), frameHeight + 2 × gutter]' }
   );
 
-/** The impostor material's resolved shading (`getShadingProps`: never `AUTO`, the source material
- * isn't needed at runtime) */
+/**
+ * The impostor material's resolved shading (`getShadingProps`: never `AUTO`, the source material
+ * isn't needed at runtime)
+ * A part of {@link ImpostorAssetSchema}.
+ * @internal
+ */
 export const ImpostorShadingSchema = z.strictObject({
   type: z.enum(IMPOSTOR_MATERIAL_TYPES),
   params: z.strictObject({
@@ -68,7 +78,7 @@ export const ImpostorShadingSchema = z.strictObject({
 });
 
 const ImpostorBaseSchema = z.object({
-  $schema: z.string().optional(),
+  $schema: z.string().optional().describe('The JSON Schema the editor validates the file with.'),
   id: z.string().optional().describe("Default: the file name. The generator's `id` option."),
   atlas: z
     .string()
@@ -83,20 +93,39 @@ const ImpostorBaseSchema = z.object({
     .describe(
       "The fingerprint of the source geometry, its materials' bake inputs, the resolved shading and the options it was baked with (getImpostorSourceHash): the debug env warns when the source it's used with differs (re-export)."
     ),
-  alphaTest: z.number().min(0).max(1),
-  shading: ImpostorShadingSchema,
-  debugData: DebugDataSchema.optional(),
-  __sourcePath: z.string().optional(),
+  alphaTest: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe("The material's alpha cut the impostor was baked and exported with."),
+  shading: ImpostorShadingSchema.describe(
+    "The material's shading as baked: the model and its parameters, never `AUTO`."
+  ),
+  debugData: DebugDataSchema.optional().describe(
+    'Notes for the debug tools: a name, a description.'
+  ),
+  __sourcePath: z
+    .string()
+    .optional()
+    .describe('Written by the gatherer: the file it was read from, relative to the repo root.'),
 });
 
-/** An exported octahedral impostor (`kind: 'OCTAHEDRAL'`). */
+/**
+ * An exported octahedral impostor (`kind: 'OCTAHEDRAL'`).
+ * A part of {@link ImpostorAssetSchema}.
+ * @internal
+ */
 export const OctahedralImpostorAssetSchema = ImpostorBaseSchema.extend({
   kind: z.literal('OCTAHEDRAL'),
   layout: OctahedralImpostorLayoutSchema,
   surfaceDepth: z.boolean(),
 });
 
-/** An exported cross-quads impostor (`kind: 'CROSS_QUADS'`). */
+/**
+ * An exported cross-quads impostor (`kind: 'CROSS_QUADS'`).
+ * A part of {@link ImpostorAssetSchema}.
+ * @internal
+ */
 export const CrossQuadsImpostorAssetSchema = ImpostorBaseSchema.extend({
   kind: z.literal('CROSS_QUADS'),
   layout: CrossQuadsLayoutSchema,
@@ -113,7 +142,12 @@ export const ImpostorAssetSchema = z.discriminatedUnion('kind', [
 
 /** {@link ImpostorAssetSchema}'s type. */
 export type ImpostorAsset = z.infer<typeof ImpostorAssetSchema>;
-export type ImpostorShading = z.infer<typeof ImpostorShadingSchema>;
+/**
+ * {@link ImpostorShadingSchema}'s type: an export's shading as baked, never `AUTO` (the option is
+ * `ImpostorShading`, ImpostorBake.ts).
+ * @internal
+ */
+export type ResolvedImpostorShading = z.infer<typeof ImpostorShadingSchema>;
 
 /** An impostor as a scene's generated data carries it (its `impostors`), per kind */
 export type ImpostorDef = ImpostorAsset extends infer T

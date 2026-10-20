@@ -34,22 +34,40 @@ import type { MatProps } from '../../../kernel/assets/Material';
  * - `NORMAL_DEPTH`: its normal in the object's (and the bake scene's world) space, encoded the same
  *   way, and in the alpha its depth toward the camera (see {@link encodeImpostorDepth}), never 0
  *   where the object is (octahedral impostors).
+ *
+ * Shared by the two generators' bakes.
+ * @internal
  */
 export type ImpostorBakePass = 'ALBEDO' | 'NORMAL' | 'NORMAL_DEPTH';
 
-/** Where a `NORMAL_DEPTH` pass measures depth: the bake camera is `distance` from the object's
- * centre, and depth runs from `-radius` (away from the camera) to `radius` (toward it). */
+/**
+ * Where a `NORMAL_DEPTH` pass measures depth: the bake camera is `distance` from the object's
+ * centre, and depth runs from `-radius` (away from the camera) to `radius` (toward it).
+ * @internal
+ */
 export type ImpostorDepthRange = { distance: number; radius: number };
 
-/** The smallest encoded depth: 0 is left for texels the object doesn't cover. */
+/**
+ * The smallest encoded depth: 0 is left for texels the object doesn't cover.
+ * For the octahedral bake and material.
+ * @internal
+ */
 export const IMPOSTOR_DEPTH_MIN = 2 / 255;
 
-/** A `NORMAL_DEPTH` alpha for a signed depth `h` (−radius..radius, toward the camera positive):
- * `IMPOSTOR_DEPTH_MIN` at `-radius` up to 1 at `radius`. */
+/**
+ * A `NORMAL_DEPTH` alpha for a signed depth `h` (−radius..radius, toward the camera positive):
+ * `IMPOSTOR_DEPTH_MIN` at `-radius` up to 1 at `radius`.
+ * For the octahedral bake and export.
+ * @internal
+ */
 export const encodeImpostorDepth = (h: number, radius: number) =>
   IMPOSTOR_DEPTH_MIN + (1 - IMPOSTOR_DEPTH_MIN) * Math.min(1, Math.max(0, h / (2 * radius) + 0.5));
 
-/** The signed depth of a `NORMAL_DEPTH` alpha (the inverse of {@link encodeImpostorDepth}). */
+/**
+ * The signed depth of a `NORMAL_DEPTH` alpha (the inverse of {@link encodeImpostorDepth}).
+ * Nothing reads it yet.
+ * @internal
+ */
 export const decodeImpostorDepth = (alpha: number, radius: number) =>
   ((alpha - IMPOSTOR_DEPTH_MIN) / (1 - IMPOSTOR_DEPTH_MIN) - 0.5) * 2 * radius;
 
@@ -68,7 +86,11 @@ const DILATE_DIRECTIONS = [
   [-0.7071, -0.7071],
 ];
 
-/** The renderer, or a throw: a bake needs an initialized one. */
+/**
+ * The renderer, or a throw: a bake needs an initialized one.
+ * For the generators and the texture preview.
+ * @internal
+ */
 export const getBakeRenderer = (caller: string) => {
   const renderer = getRenderer() as THREE.Renderer | undefined;
   if (!renderer?.hasInitialized()) {
@@ -82,7 +104,11 @@ export const getBakeRenderer = (caller: string) => {
  * metalness. Matching it keeps colours from jumping at the switch. */
 export type ImpostorShading = 'AUTO' | 'PHONG' | 'LAMBERT' | 'STANDARD';
 
-/** The material drawing the most triangles of `geometry`. */
+/**
+ * The material drawing the most triangles of `geometry`.
+ * For the generators' `AUTO` shading.
+ * @internal
+ */
 export const getDominantMaterial = (
   geometry: THREE.BufferGeometry,
   material: THREE.Material | THREE.Material[]
@@ -101,7 +127,11 @@ export const getDominantMaterial = (
   return material[best];
 };
 
-/** The impostor material's type and shading params, from `shading` and the source. */
+/**
+ * The impostor material's type and shading params, from `shading` and the source.
+ * For the generators and an export.
+ * @internal
+ */
 export const getShadingProps = (
   source: THREE.Material,
   shading: ImpostorShading
@@ -149,7 +179,11 @@ export const getShadingProps = (
   }
 };
 
-/** Runs `fn` with the renderer's target, clear colour and auto clear restored afterwards. */
+/**
+ * Runs `fn` with the renderer's target, clear colour and auto clear restored afterwards.
+ * For the generators' bakes and the texture preview.
+ * @internal
+ */
 export const withBakeRendererState = <T>(renderer: THREE.Renderer, fn: () => T): T => {
   const prevTarget = renderer.getRenderTarget();
   const prevFace = renderer.getActiveCubeFace();
@@ -172,6 +206,8 @@ export const withBakeRendererState = <T>(renderer: THREE.Renderer, fn: () => T):
  * per-group colours bake as they render. The normal passes keep the source's flat shading, so a
  * faceted object bakes faceted normals, and leave its vertex colours out (three multiplies them
  * into `colorNode`, the normal).
+ * For {@link createBakeMaterials} and the source fingerprint.
+ * @internal
  * @param depthRange required by `NORMAL_DEPTH`
  */
 export const createBakeMaterial = (
@@ -232,7 +268,11 @@ export const createBakeMaterial = (
   return material;
 };
 
-/** The bake materials for a mesh's material (or per-group material array). */
+/**
+ * The bake materials for a mesh's material (or per-group material array).
+ * For the generators' bakes.
+ * @internal
+ */
 export const createBakeMaterials = (
   material: THREE.Material | THREE.Material[],
   pass: ImpostorBakePass,
@@ -242,13 +282,21 @@ export const createBakeMaterials = (
     ? material.map((m) => createBakeMaterial(m, pass, depthRange))
     : createBakeMaterial(material, pass, depthRange);
 
+/**
+ * Disposes the materials {@link createBakeMaterials} made, after a generator's bake.
+ * @internal
+ */
 export const disposeBakeMaterials = (material: THREE.Material | THREE.Material[]) => {
   for (const m of Array.isArray(material) ? material : [material]) m.dispose();
 };
 
-/** The target one frame is rendered into before it's copied to its atlas cell: HalfFloat, so the
+/**
+ * The target one frame is rendered into before it's copied to its atlas cell: HalfFloat, so the
  * normals keep their precision until the copy, with a depth buffer for the object's own
- * occlusion. */
+ * occlusion.
+ * For the generators' bakes.
+ * @internal
+ */
 export const createFrameTarget = (width: number, height: number) => {
   const target = new THREE.RenderTarget(width, height, {
     type: THREE.HalfFloatType,
@@ -267,6 +315,8 @@ export const createFrameTarget = (width: number, height: number) => {
  * An atlas target for `pass`: RGBA8 with mipmaps, sRGB for albedo (hardware-encoded on write) and
  * linear for normals. Disposing its texture (eg. the scene asset release deleting the registered
  * texture) disposes the whole target.
+ * For the generators' bakes.
+ * @internal
  */
 export const createAtlasTarget = (
   width: number,
@@ -296,7 +346,11 @@ export const createAtlasTarget = (
   return target;
 };
 
-/** Clears a target to transparent black (also sets up its GPU texture before anything samples it). */
+/**
+ * Clears a target to transparent black (also sets up its GPU texture before anything samples it).
+ * For the generators' bakes and the texture preview.
+ * @internal
+ */
 export const clearBakeTarget = (renderer: THREE.Renderer, target: THREE.RenderTarget) => {
   renderer.setRenderTarget(target);
   renderer.setClearColor(0x000000, 0);
@@ -309,6 +363,8 @@ export const clearBakeTarget = (renderer: THREE.Renderer, target: THREE.RenderTa
  * the nearest one it does (within the largest search radius), with its own alpha kept. Without it,
  * filtering and mipmaps blend the clear colour into the object's edges (dark fringes at the alpha
  * cut, darker far mips).
+ * For the generators' bakes.
+ * @internal
  * @param opts.coverage the alpha a texel the object covers has at least (default 0.5)
  * @param opts.dilateAlpha a filled texel takes the alpha of the one it copies too (a `NORMAL_DEPTH`
  * frame's depth), not its own. Default false.

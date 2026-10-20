@@ -7,6 +7,7 @@ const requests = new Map<string, Promise<unknown>>();
 
 /**
  * Records a requested LOD chain until `settled` settles (resolved or rejected).
+ * @internal
  * @param geometryId the base geometry
  * @param settled settles once the chain is registered, refused or skipped
  */
@@ -19,5 +20,9 @@ export const trackLodChainRequest = (geometryId: string, settled: Promise<unknow
   requests.set(geometryId, tracked);
 };
 
-/** A requested LOD chain's settle promise (never rejects), or undefined without a request. */
+/**
+ * A requested LOD chain's settle promise (never rejects), or undefined without a request.
+ * `AUTO` LODs wait on it.
+ * @internal
+ */
 export const getLodChainRequest = (geometryId: string) => requests.get(geometryId);

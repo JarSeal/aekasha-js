@@ -68,6 +68,7 @@ Subsystem detail lives in nested `CLAUDE.md` files next to its code. A session l
 - `src/_engine/features/lod/impostors/CLAUDE.md`: impostors (cross-quads, octahedral, exports).
 - `src/_engine/features/spatial/CLAUDE.md`: the spatial index (domains, scene scope, update policies, radii).
 - `src/_engine/features/instancing/CLAUDE.md`: instanced mesh pools.
+- `src/_engine/features/lines/CLAUDE.md`: lines (the backends, the refill, the entity binding, the scene exit).
 - `hub/CLAUDE.md`: authoring the Hub (pages, Markdown, code blocks, snippets, scenes and examples, feature pages, issue files).
 - `devTools/hub/CLAUDE.md`: the Hub's generator (search, output, modes, dev plugin, generated sections, the API Documentation) and `yarn hub:build`'s detail.
 - `devTools/assetPipeline/CLAUDE.md`: the asset pipeline's commands in detail (`yarn assets`, `yarn setupAssetTools`, the build's budgets).

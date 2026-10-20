@@ -69,6 +69,20 @@ const objectFade = uniform(LOD_FADE_OPAQUE).onObjectUpdate(
  * Moving an instance between slots moves its fade too; set `needsUpdate` after writing.
  * @param mesh the instanced mesh
  * @returns the attribute, `maxInstances` (the mesh's capacity) long
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ * import { createLodFadeAttribute, enableLodDither, LOD_FADE_OPAQUE } from 'aekasha/lod';
+ *
+ * // A custom LodTarget's level mesh: each instance dithered by its own fade
+ * const mesh = new THREE.InstancedMesh(geometry, material, 1000);
+ * const fades = createLodFadeAttribute(mesh);
+ * enableLodDither(material);
+ *
+ * // In the target's setFade: the incoming copy at `progress`, the outgoing one at `progress - 1`
+ * fades.setX(incomingSlot, progress >= 1 ? LOD_FADE_OPAQUE : progress);
+ * fades.needsUpdate = true;
+ * ```
  */
 export const createLodFadeAttribute = (mesh: THREE.InstancedMesh) => {
   const existing = fadeAttributes.get(mesh);
@@ -140,6 +154,13 @@ const ditherMaterials = new WeakSet<THREE.Material>();
  * uniform written per draw.
  * @param material one material, or a per-group array
  * @returns whether a material changed (its shaders are rebuilt at its next draw or compile)
+ * @example
+ * ```ts
+ * import { enableLodDither } from 'aekasha/lod';
+ *
+ * // A material shared by a custom LodTarget's level meshes: they dither in and out
+ * enableLodDither(leavesMaterial);
+ * ```
  */
 export const enableLodDither = (material: THREE.Material | THREE.Material[]) => {
   let isChanged = false;

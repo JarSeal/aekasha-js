@@ -2,12 +2,10 @@ import * as THREE from 'three/webgpu';
 import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../../kernel/loop/SystemStages';
 import { type ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
 import type { FeatureContext } from '../../kernel/init/Features';
-import type { ComponentData } from '../../kernel/ecs/ECSCoreComponents';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import type { IComponentStorage } from '../../kernel/ecs/ECSComponentStorage';
 import { reconcileObject3DVisibility } from '../../kernel/ecs/ECSCoreSystems';
-import { getActiveCamera, getMainCamera } from '../../kernel/camera/Camera';
-import { getConfig, IS_DEBUG_ENV } from '../../kernel/config/Config';
+import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import {
   decGeometryRef,
   getConservativeGeometryRadius,
@@ -16,17 +14,40 @@ import {
 } from '../../kernel/assets/Geometry';
 import { getLodTargets } from '../../kernel/ecs/LodTargets';
 import { decMaterialRef, getMaterialRegistry, incMaterialRef } from '../../kernel/assets/Material';
-import { preWarmMesh, setMeshGeometry, setMeshMaterial } from '../../kernel/mesh/Mesh';
+import { preWarmMesh } from '../../kernel/mesh/Mesh';
 import { lwarn } from '../../utils/Logger';
 import type { DebugModuleRef } from '../../kernel/config/DebugModules';
 import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
 import { getInstancedLodBounds } from './LodBounds';
+import { enableLodDither } from '../../kernel/render/LodFade';
 import {
-  clearLodObjectFade,
-  enableLodDither,
-  LOD_FADE_OPAQUE,
-  setLodObjectFade,
-} from '../../kernel/render/LodFade';
+  applyLevelTo,
+  createStandIn,
+  drawFade,
+  endFade,
+  getLodMesh,
+  prepareChange,
+  removeLodCulledInstantly,
+  setCulledTo,
+  setMeshFade,
+  setMeshLevel,
+  startFade,
+} from './LodFades';
+import {
+  type CameraTerms,
+  computeCameraTerms,
+  getLodSelectionCamera,
+  getScreenSize,
+  measureEntity,
+  type StorageOf,
+} from './LodMeasure';
+import {
+  getLodDebugOptions,
+  getLodFadeSeconds,
+  getLodMaxSelectionsPerFrame,
+  getWritableLodFrameStats,
+  type LodFrameStats,
+} from './LodSettings';
 import type { LodData, LodResolvedLevel } from './LodTypes';
 
 /** A component type's hooks, as `FeatureContext.registerComponentHooks` takes them. */
@@ -36,6 +57,10 @@ type ComponentHooks = Parameters<FeatureContext['registerComponentHooks']>[1];
 type LodDebugModule = typeof import('./debug/_dbg__LOD');
 let debugGUI: DebugModuleRef<LodDebugModule> | null = null;
 
+/**
+ * Loads and builds the LOD debug tab: the `lod()` feature's `onDebug` hook.
+ * @internal
+ */
 export const registerLodDebugGUI = async () => {
   debugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__LOD'));
   useDebug(debugGUI)?._createLodDebugGUI();
@@ -53,196 +78,13 @@ export const registerLodDebugGUI = async () => {
 // registered for one of its components, which then applies them and handles LOD culling.
 //
 // An InstancedMesh entity (a static instance cell, §4.3) is a plain mesh whose swap changes every
-// instance: its bounds are level 0 over all its instances (Lod/LodBounds.ts), not one instance.
-
+// instance: its bounds are level 0 over all its instances (LodBounds.ts), not one instance.
 //
-// Cross-fades (docs/plans/_DONE_p351_impostor-billboard-lod.md §2.4): a level change, or hiding and
-// showing, dissolves over `fadeSeconds` (LodFade.ts). The entity gets TAG_LOD_TRANSITIONING and
-// `_fade` (its progress) and lodFadeSystem drives it; a change while a fade runs finishes that fade
-// first. The first apply after the LOD is added never fades (the load), nor does removing the LOD;
-// an entity LOD culled at its first selection fades in when it's first shown.
-// Targets fade when they have `setFade`; plain meshes always can (see PLAIN MESH FADES), except
-// skinned ones.
+// The settings are in LodSettings.ts, the measuring in LodMeasure.ts, the cross-fades in
+// LodFades.ts; this module has the hooks, the selection, apply and fade systems and the install.
 
 /** A definition's `hysteresis` when it has none. */
 export const DEFAULT_LOD_HYSTERESIS = 0.1;
-
-// --- FADES ---
-
-let globalFadeSeconds: number | undefined;
-
-/** How long a LOD change cross-fades, in seconds, for LODs without their own `fadeSeconds`. */
-export const getLodFadeSeconds = () => (globalFadeSeconds ??= getConfig().lod?.fadeSeconds ?? 0.25);
-
-/**
- * Sets how long a LOD change (or hiding and showing) cross-fades, in seconds, for LODs without
- * their own `fadeSeconds` (initially `AppConfig.lod.fadeSeconds`); 0 switches at once. Fades
- * already running take the new duration from the next frame.
- */
-export const setLodFadeSeconds = (seconds: number) => {
-  globalFadeSeconds = Math.max(seconds, 0);
-};
-
-const getFadeSeconds = (lod: LodData) => lod.def.fadeSeconds ?? getLodFadeSeconds();
-
-/** Set while a LOD component is removed: everything it does then is instant. */
-let areFadesSuppressed = false;
-
-// --- PLAIN MESH FADES ---
-//
-// A level change draws the previous level through a temporary copy of the mesh: a child of it, so
-// it follows the mesh and hides with it (frustum culling, DISABLED). The copy is disposed when the
-// fade ends, as three r186 keeps an object's render objects until it is. A plain mesh's copy shares
-// the mesh's shader builds; an InstancedMesh's builds its own (three keys its builds by uuid).
-// Hiding and showing fade the mesh itself: a LOD-culled mesh stays visible while it fades out
-// (reconcileObject3DVisibility). Both copies take the per-object fade (setLodObjectFade).
-
-/** Shows a resolved level on a plain mesh at once. */
-const setMeshLevel = (mesh: THREE.Mesh, level: LodResolvedLevel) => {
-  setMeshGeometry(mesh, level.geometry);
-  setMeshMaterial(mesh, level.material);
-  mesh.castShadow = level.castShadow;
-};
-
-/** A copy of what `mesh` shows now, for a fade's outgoing level: added to the mesh, never picked by
- * raycasts, holding no registry refs (the LOD component holds every level's). */
-const createFadeOutCopy = (mesh: THREE.Mesh) => {
-  const copy = createStandIn(mesh, {
-    geometry: mesh.geometry,
-    material: mesh.material,
-    castShadow: mesh.castShadow,
-  });
-  copy.frustumCulled = mesh.frustumCulled;
-  copy.renderOrder = mesh.renderOrder;
-  copy.layers.mask = mesh.layers.mask;
-  copy.raycast = () => {};
-  copy.userData.isLodFadeCopy = true;
-  mesh.add(copy);
-  return copy;
-};
-
-const applyMeshLevel = (
-  entityId: number,
-  world: ECSWorld,
-  lod: LodData,
-  level: number,
-  fade: boolean
-) => {
-  const mesh = getLodMesh(entityId, world);
-  const resolved = lod._levels[level];
-  if (!mesh || !resolved) return;
-  if (fade) {
-    lod._fadeOut = createFadeOutCopy(mesh);
-    lod._fadeIn = mesh;
-    setLodObjectFade(lod._fadeOut, -LOD_FADE_OPAQUE);
-    setLodObjectFade(mesh, 0);
-  }
-  setMeshLevel(mesh, resolved);
-};
-
-/** Without a fade, TAG_LOD_CULLED's visibility reconcile already hid or showed the mesh. */
-const setMeshCulled = (
-  entityId: number,
-  world: ECSWorld,
-  lod: LodData,
-  isCulled: boolean,
-  fade: boolean
-) => {
-  const mesh = fade ? getLodMesh(entityId, world) : undefined;
-  if (!mesh) return;
-  if (isCulled) {
-    lod._fadeOut = mesh;
-    setLodObjectFade(mesh, -LOD_FADE_OPAQUE);
-  } else {
-    lod._fadeIn = mesh;
-    setLodObjectFade(mesh, 0);
-  }
-};
-
-/** Draws a plain mesh's fade at `progress`; 1 ends it (the copy goes, the mesh is drawn whole). */
-const setMeshFade = (lod: LodData, progress: number) => {
-  const fadeIn = lod._fadeIn;
-  const fadeOut = lod._fadeOut;
-  if (progress < 1) {
-    if (fadeIn) setLodObjectFade(fadeIn, progress);
-    if (fadeOut) setLodObjectFade(fadeOut, progress - 1);
-    return;
-  }
-  lod._fadeIn = undefined;
-  lod._fadeOut = undefined;
-  if (fadeIn) clearLodObjectFade(fadeIn);
-  if (!fadeOut) return;
-  clearLodObjectFade(fadeOut);
-  if (fadeOut.userData.isLodFadeCopy) {
-    fadeOut.removeFromParent();
-    fadeOut.dispose();
-  }
-};
-
-// --- FADES BY KIND: a target's, or a plain mesh's ---
-
-const applyLevelTo = (
-  entityId: number,
-  world: ECSWorld,
-  lod: LodData,
-  level: number,
-  fade: boolean
-) => {
-  if (lod._target) lod._target.applyLevel(entityId, world, level, fade);
-  else applyMeshLevel(entityId, world, lod, level, fade);
-};
-
-const setCulledTo = (
-  entityId: number,
-  world: ECSWorld,
-  lod: LodData,
-  isCulled: boolean,
-  fade: boolean
-) => {
-  if (lod._target) lod._target.setCulled(entityId, world, isCulled, fade);
-  else setMeshCulled(entityId, world, lod, isCulled, fade);
-};
-
-const drawFade = (entityId: number, world: ECSWorld, lod: LodData, progress: number) => {
-  if (lod._target) lod._target.setFade?.(entityId, world, progress);
-  else setMeshFade(lod, progress);
-};
-
-/** A target fades when it has `setFade`, a plain mesh unless it's skinned (a copy wouldn't be). */
-const canFade = (entityId: number, world: ECSWorld, lod: LodData) => {
-  if (lod._target) return lod._target.setFade !== undefined;
-  const mesh = getLodMesh(entityId, world);
-  return mesh !== undefined && !(mesh as THREE.SkinnedMesh).isSkinnedMesh;
-};
-
-/** Ends the entity's running fade, if any: only the incoming copy stays, drawn whole. */
-const endFade = (entityId: number, world: ECSWorld, lod: LodData) => {
-  if (!world.hasComponent(entityId, ComponentType.TAG_LOD_TRANSITIONING)) return;
-  drawFade(entityId, world, lod, 1);
-  lod._fade = undefined;
-  lod._fadeFrom = undefined;
-  world.removeComponent(entityId, ComponentType.TAG_LOD_TRANSITIONING);
-};
-
-/** Before a change of what the entity shows: finishes a running fade, and says whether the change
- * fades (not the first apply, unless it shows an entity LOD culled since its first selection; not
- * while the LOD is removed; not for an entity that can't). */
-const prepareChange = (entityId: number, world: ECSWorld, lod: LodData, isShowing = false) => {
-  endFade(entityId, world, lod);
-  return (
-    !areFadesSuppressed &&
-    (lod.applied >= 0 || isShowing) &&
-    getFadeSeconds(lod) > 0 &&
-    canFade(entityId, world, lod)
-  );
-};
-
-/** `from`: the level shown until now, -1 from LOD culled (LodData._fadeFrom). */
-const startFade = (entityId: number, world: ECSWorld, lod: LodData, from: number) => {
-  lod._fade = 0;
-  lod._fadeFrom = from;
-  world.addComponent(entityId, ComponentType.TAG_LOD_TRANSITIONING, true);
-};
 
 const lodCulledHooks: ComponentHooks = {
   onAddComponent: (entityId, world) => {
@@ -281,7 +123,7 @@ const lodTransitioningHooks: ComponentHooks = {
 };
 
 // --- TARGETS ---
-// Registered with registerLodTarget (ECS/LodTargets.ts, the kernel's registry)
+// Registered with registerLodTarget (kernel/ecs/LodTargets.ts, the kernel's registry)
 
 /** Sets the entity's levels from the first target that has them. False when none does. */
 const resolveTargetLevels = (entityId: number, world: ECSWorld, lod: LodData) => {
@@ -297,46 +139,7 @@ const resolveTargetLevels = (entityId: number, world: ECSWorld, lod: LodData) =>
   return false;
 };
 
-// --- GLOBAL BIAS ---
-
-let globalBias: number | undefined;
-
-/** The global LOD bias: multiplies every entity's screen size, >1 keeps detail longer. */
-export const getLodBias = () => (globalBias ??= getConfig().lod?.bias ?? 1);
-
-/** Sets the global LOD bias (initially `AppConfig.lod.bias`). Takes effect at the next selection. */
-export const setLodBias = (bias: number) => {
-  globalBias = bias;
-};
-
 // --- SELECTION BUDGET ---
-
-let maxSelectionsPerFrame: number | undefined;
-
-/** Infinity (no cap) or a whole number ≥ 1. Anything else warns and means no cap. */
-const normalizeMaxSelections = (max: number | undefined) => {
-  if (max === undefined || max === Infinity) return Infinity;
-  if (!(max >= 1)) {
-    lwarn(`[LOD] maxSelectionsPerFrame must be ≥ 1 or Infinity, got ${max}: no cap.`);
-    return Infinity;
-  }
-  return Math.floor(max);
-};
-
-/** How many entities the selection reconsiders per frame and world (Infinity = all of them). */
-export const getLodMaxSelectionsPerFrame = () =>
-  (maxSelectionsPerFrame ??= normalizeMaxSelections(getConfig().lod?.maxSelectionsPerFrame));
-
-/**
- * Caps the entities the selection reconsiders per frame and world (initially
- * `AppConfig.lod.maxSelectionsPerFrame`, Infinity = no cap). With a cap, the selection walks the
- * `LOD` entities round-robin from where it stopped, so each one is reconsidered every few frames.
- * Entities that come into view (frustum culling, DISABLED removed) or just got their `LOD` are
- * selected in that frame even past the cap, so none shows a stale level; they count against it.
- */
-export const setLodMaxSelectionsPerFrame = (max: number) => {
-  maxSelectionsPerFrame = normalizeMaxSelections(max);
-};
 
 /** Per world: entities to select in the next frame whatever the budget (see
  * setLodMaxSelectionsPerFrame). Filled only while there is a cap. */
@@ -363,78 +166,6 @@ type SelectionCursor = {
 };
 
 const selectionCursors = new WeakMap<ECSWorld, SelectionCursor>();
-
-// --- DEBUG CONTROLS AND STATS ---
-
-/** Overrides of the selection and the fades, for inspecting levels (the LOD debug tab). Every
- * world. */
-export type LodDebugOptions = {
-  /** Stops selecting: every entity keeps its level and LOD-culled state. */
-  freeze: boolean;
-  /** -1 = off. Otherwise every entity shows this level (or its last, when it has fewer) and none
-   * is LOD-culled. Wins over `freeze`. */
-  forceLevel: number;
-  /** Selects against the active camera (eg. the debug camera) instead of the main camera. */
-  useActiveCamera: boolean;
-  /** Multiplies the time cross-fades advance by: 1 = real time, below 1 slow motion (for judging
-   * the dither), 0 holds every running fade. */
-  fadeTimeScale: number;
-};
-
-const debugOptions: LodDebugOptions = {
-  freeze: false,
-  forceLevel: -1,
-  useActiveCamera: false,
-  fadeTimeScale: 1,
-};
-
-export const getLodDebugOptions = (): Readonly<LodDebugOptions> => debugOptions;
-
-/** Changes the selection's debug overrides ({@link LodDebugOptions}), from the next frame. */
-export const setLodDebugOptions = (opts: Partial<LodDebugOptions>) => {
-  Object.assign(debugOptions, opts);
-};
-
-/** What the LOD systems did in a world's last frame. */
-export type LodFrameStats = {
-  /** Entities whose level was (re)selected. */
-  selections: number;
-  /** Frames the last full walk over the `LOD` entities took: 1 without a selection budget
-   * (setLodMaxSelectionsPerFrame), else how many frames an entity in view can keep a stale level. */
-  lapFrames: number;
-  /** Level swaps applied. */
-  applies: number;
-  /** Level swaps applied since the start. */
-  totalApplies: number;
-  /** lodSelectionSystem's duration. Measured in the debug environment only (else 0). */
-  selectionMs: number;
-  /** Entities cross-fading (TAG_LOD_TRANSITIONING) after lodFadeSystem. */
-  fading: number;
-  /** lodFadeSystem's duration. Measured in the debug environment only (else 0). */
-  fadeMs: number;
-};
-
-const frameStats = new WeakMap<ECSWorld, LodFrameStats>();
-
-const getFrameStats = (world: ECSWorld) => {
-  let stats = frameStats.get(world);
-  if (!stats) {
-    stats = {
-      selections: 0,
-      lapFrames: 1,
-      applies: 0,
-      totalApplies: 0,
-      selectionMs: 0,
-      fading: 0,
-      fadeMs: 0,
-    };
-    frameStats.set(world, stats);
-  }
-  return stats;
-};
-
-/** What the LOD systems did in the world's last frame. */
-export const getLodFrameStats = (world: ECSWorld): Readonly<LodFrameStats> => getFrameStats(world);
 
 // --- LEVELS AND REFS ---
 
@@ -497,26 +228,6 @@ const resolveLevels = (mesh: THREE.Mesh, lod: LodData): LodResolvedLevel[] => {
   return resolved;
 };
 
-/** A mesh that compiles to the pipelines `mesh` would draw `level` with: an InstancedMesh's shares
- * its instance attributes. Never frustum culled, as compileAsync culls against its own camera. */
-const createStandIn = (mesh: THREE.Mesh, level: LodResolvedLevel) => {
-  let standIn: THREE.Mesh;
-  if ((mesh as THREE.InstancedMesh).isInstancedMesh) {
-    const instanced = mesh as THREE.InstancedMesh;
-    const standInInstanced = new THREE.InstancedMesh(level.geometry, level.material, 0);
-    standInInstanced.instanceMatrix = instanced.instanceMatrix;
-    standInInstanced.instanceColor = instanced.instanceColor;
-    standInInstanced.count = instanced.count;
-    standIn = standInInstanced;
-  } else {
-    standIn = new THREE.Mesh(level.geometry, level.material);
-  }
-  standIn.castShadow = level.castShadow;
-  standIn.receiveShadow = mesh.receiveShadow;
-  standIn.frustumCulled = false;
-  return standIn;
-};
-
 /** Pre-warms the levels the mesh doesn't already show (createMeshEntity pre-warmed that one), or
  * every level with `includeOwn` (its material changed since: enableLodDither). */
 const preWarmLevels = (mesh: THREE.Mesh, levels: LodResolvedLevel[], includeOwn: boolean) => {
@@ -535,11 +246,6 @@ const preWarmLevels = (mesh: THREE.Mesh, levels: LodResolvedLevel[], includeOwn:
     warmed.push(level);
     preWarmMesh(createStandIn(mesh, level), label);
   }
-};
-
-const getLodMesh = (entityId: number, world: ECSWorld) => {
-  const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
-  return obj instanceof THREE.Mesh ? obj : undefined;
 };
 
 /** Sets the LOD's radius (and an InstancedMesh's centre) from level 0. */
@@ -562,6 +268,15 @@ const setMeshLodBounds = (mesh: THREE.Mesh, lod: LodData) => {
  * again. A no-op for other entities (their bounds are level 0's geometry) and without a LOD.
  * @param entityId the mesh entity
  * @param ecsWorld the entity's world (default: the default world)
+ * @example
+ * ```ts
+ * import { refreshLodBounds } from 'aekasha/lod';
+ *
+ * // A static instance cell got more instances: its LOD measures all of them again
+ * cell.count = placements.length;
+ * cell.instanceMatrix.needsUpdate = true;
+ * refreshLodBounds(cellEntityId);
+ * ```
  */
 export const refreshLodBounds = (entityId: number, ecsWorld?: ECSWorld) => {
   const world = ecsWorld || getECSWorld();
@@ -613,12 +328,7 @@ const lodHooks: ComponentHooks = {
     if (!lod) return;
     endFade(entityId, world, lod);
     if (world.hasComponent(entityId, ComponentType.TAG_LOD_CULLED)) {
-      areFadesSuppressed = true;
-      try {
-        world.removeComponent(entityId, ComponentType.TAG_LOD_CULLED);
-      } finally {
-        areFadesSuppressed = false;
-      }
+      removeLodCulledInstantly(entityId, world);
     }
     const target = lod._target;
     if (target) {
@@ -652,9 +362,15 @@ const lodHooks: ComponentHooks = {
  * The level for screen size `s`, coming from level `current` (-1 = first selection). The finest
  * level whose screenSize `s` reaches (below all of them, the last level). A move to a finer level
  * happens at its screenSize; a move to a coarser one only once `s` is below the current level's
- * screenSize × (1 - hysteresis).
+ * screenSize × (1 - hysteresis). Exported for its test.
+ * @internal
  */
-const selectLevel = (levels: LodData['def']['levels'], s: number, current: number, h: number) => {
+export const selectLevel = (
+  levels: LodData['def']['levels'],
+  s: number,
+  current: number,
+  h: number
+) => {
   const last = levels.length - 1;
   let raw = last;
   for (let i = 0; i < last; i++) {
@@ -674,81 +390,9 @@ const selectLevel = (levels: LodData['def']['levels'], s: number, current: numbe
 /** Per world: entities whose selected level differs from the applied one, for lodApplySystem. */
 const pendingApplies = new WeakMap<ECSWorld, number[]>();
 
-// Screen size = worldRadius × k / distance (perspective) or worldRadius × k (orthographic), k
-// including the global bias
-type CameraTerms = { k: number; isOrtho: boolean; position: THREE.Vector3 };
-
-/** Computes a camera's terms into `out`. False for a camera that is neither perspective nor
- * orthographic. */
-const computeCameraTerms = (camera: THREE.Camera, out: CameraTerms) => {
-  if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
-    const cam = camera as THREE.PerspectiveCamera;
-    out.k = cam.zoom / Math.tan(THREE.MathUtils.DEG2RAD * cam.fov * 0.5);
-    out.isOrtho = false;
-  } else if ((camera as THREE.OrthographicCamera).isOrthographicCamera) {
-    const cam = camera as THREE.OrthographicCamera;
-    out.k = (2 * cam.zoom) / (cam.top - cam.bottom);
-    out.isOrtho = true;
-  } else {
-    return false;
-  }
-  out.k *= getLodBias();
-  camera.updateWorldMatrix(true, false);
-  out.position.setFromMatrixPosition(camera.matrixWorld);
-  return true;
-};
-
 /** The frame's camera terms. */
 const _terms: CameraTerms = { k: 0, isOrtho: false, position: new THREE.Vector3() };
 const _objPos = new THREE.Vector3();
-
-type StorageOf<K extends ComponentType> = IComponentStorage<ComponentData[K]>;
-
-/**
- * Writes the world position the selection measures the entity from into `out` and returns its
- * largest scale (-1: nothing to measure). A target's entity (LodTarget) reads its Transform, which
- * is in world space. A mesh directly under the scene (the usual case) reads the local transform
- * object3DSyncSystem wrote, which is the world one; nested, the world matrix. An InstancedMesh
- * measures from its bounds' centre.
- */
-const measureEntity = (
-  entityId: number,
-  lod: LodData,
-  object3Ds: StorageOf<(typeof ComponentType)['OBJECT3D']>,
-  transforms: StorageOf<(typeof ComponentType)['TRANSFORM']>,
-  out: THREE.Vector3
-) => {
-  if (lod._target) {
-    const transform = transforms.get(entityId);
-    if (!transform) return -1;
-    out.copy(transform.position);
-    const { x, y, z } = transform.scale;
-    return Math.max(Math.abs(x), Math.abs(y), Math.abs(z));
-  }
-  const obj = object3Ds.get(entityId)?.value;
-  if (!obj) return -1;
-  if (lod._center) {
-    obj.updateWorldMatrix(true, false);
-    out.copy(lod._center).applyMatrix4(obj.matrixWorld);
-    return obj.matrixWorld.getMaxScaleOnAxis();
-  }
-  if (!obj.parent || !obj.parent.parent) {
-    out.copy(obj.position);
-    const { x, y, z } = obj.scale;
-    return Math.max(Math.abs(x), Math.abs(y), Math.abs(z));
-  }
-  obj.updateWorldMatrix(true, false);
-  out.setFromMatrixPosition(obj.matrixWorld);
-  return obj.matrixWorld.getMaxScaleOnAxis();
-};
-
-/** The screen size of a sphere of `worldRadius` at `center`, with the global bias (not the
- * entity's). */
-const getScreenSize = (center: THREE.Vector3, worldRadius: number, terms: CameraTerms) => {
-  if (terms.isOrtho) return worldRadius * terms.k;
-  const distance = center.distanceTo(terms.position);
-  return distance > 0 ? (worldRadius * terms.k) / distance : Infinity;
-};
 
 // The frame's inputs to selectEntity, read once per frame: a world.hasComponent / getComponent per
 // entity looks the storage up again every time, which dominated the loop for a few thousand pool
@@ -844,17 +488,22 @@ const walkCapped = (
  * viewport height, × its `def.bias` × the global bias), with hysteresis, and adds or removes
  * TAG_LOD_CULLED. Uses the main camera, like frustum culling. Skips DISABLED and frustum-culled
  * entities, which keep their level: frustum culling runs first, so an entity re-entering the
- * view gets a fresh level in the same frame. {@link setLodDebugOptions} can freeze or force the
- * levels, or select against the active camera. {@link setLodMaxSelectionsPerFrame} caps the
- * entities reconsidered per frame (a forced level ignores the cap).
+ * view gets a fresh level in the same frame.
+ * {@link _engine/features/lod/LodSettings!setLodDebugOptions} can freeze or force the levels, or
+ * select against the active camera.
+ * {@link _engine/features/lod/LodSettings!setLodMaxSelectionsPerFrame} caps the entities
+ * reconsidered per frame (a forced level ignores the cap).
+ * Registered by the feature's install.
+ * @internal
  */
 export const lodSelectionSystem = (world: ECSWorld) => {
-  const stats = getFrameStats(world);
+  const stats = getWritableLodFrameStats(world);
   stats.selections = 0;
   stats.selectionMs = 0;
 
   const queue = prioritySelections.get(world);
   const storage = world.getStorage(ComponentType.LOD);
+  const debugOptions = getLodDebugOptions();
   const forceLevel = debugOptions.forceLevel;
   const isForced = forceLevel >= 0;
   const camera =
@@ -909,90 +558,17 @@ export const lodSelectionSystem = (world: ECSWorld) => {
   if (IS_DEBUG_ENV) stats.selectionMs = performance.now() - start;
 };
 
-/** The camera the selection measures against: the main camera, or the active one with the
- * `useActiveCamera` debug option ({@link setLodDebugOptions}). */
-export const getLodSelectionCamera = () =>
-  debugOptions.useActiveCamera ? getActiveCamera() : getMainCamera();
-
-/** What the selection measures for an entity, from {@link measureLodEntity}. */
-export type LodMeasure = {
-  /** The world position the distance is measured from. */
-  center: THREE.Vector3;
-  /** Level 0's bounding radius in world space. */
-  worldRadius: number;
-  /** From the camera to `center`. */
-  distance: number;
-  /** What the selection compares with the levels' `screenSize`: the global bias and the
-   * definition's `bias` included. */
-  screenSize: number;
-  /** screenSize = worldRadius × k / distance (perspective) or worldRadius × k (orthographic), both
-   * biases included. */
-  k: number;
-  isOrtho: boolean;
-};
-
-/**
- * The sphere the selection measures a `LOD` entity by, in world space (level 0's bounds), without
- * the camera terms: for the debug overlay's per-entity loop. False when there is nothing to
- * measure.
- * @param lod its `LOD` data
- * @param out written in place
- */
-export const getLodWorldSphere = (
-  entityId: number,
-  lod: LodData,
-  world: ECSWorld,
-  out: THREE.Sphere
-) => {
-  if (lod._levels.length === 0) return false;
-  const maxScale = measureEntity(
-    entityId,
-    lod,
-    world.getStorage(ComponentType.OBJECT3D),
-    world.getStorage(ComponentType.TRANSFORM),
-    out.center
-  );
-  if (maxScale < 0) return false;
-  out.radius = lod.radius * maxScale;
-  return true;
-};
-
-const _measureTerms: CameraTerms = { k: 0, isOrtho: false, position: new THREE.Vector3() };
-
-/**
- * Measures a `LOD` entity the way the selection does, against {@link getLodSelectionCamera} now:
- * for the debug tools (the overlay and the LOD window). Writes into `out`; false when there is
- * nothing to measure (no `LOD`, no levels, no mesh or Transform, no usable camera).
- * @param out written in place
- */
-export const measureLodEntity = (entityId: number, world: ECSWorld, out: LodMeasure) => {
-  const lod = world.getComponent(entityId, ComponentType.LOD);
-  if (!lod || lod._levels.length === 0) return false;
-  const camera = getLodSelectionCamera();
-  if (!camera || !computeCameraTerms(camera, _measureTerms)) return false;
-  const maxScale = measureEntity(
-    entityId,
-    lod,
-    world.getStorage(ComponentType.OBJECT3D),
-    world.getStorage(ComponentType.TRANSFORM),
-    out.center
-  );
-  if (maxScale < 0) return false;
-  const bias = lod.def.bias ?? 1;
-  out.worldRadius = lod.radius * maxScale;
-  out.distance = out.center.distanceTo(_measureTerms.position);
-  out.screenSize = getScreenSize(out.center, out.worldRadius, _measureTerms) * bias;
-  out.k = _measureTerms.k * bias;
-  out.isOrtho = _measureTerms.isOrtho;
-  return true;
-};
-
 // --- APPLY ---
 
-/** Applies the levels lodSelectionSystem changed this frame: a mesh's geometry, material(s) and
- * `castShadow`, or the entity's {@link LodTarget}, cross-fading when it can. */
+/**
+ * Applies the levels lodSelectionSystem changed this frame: a mesh's geometry, material(s) and
+ * `castShadow`, or the entity's {@link _engine/features/lod/LodTypes!LodTarget}, cross-fading
+ * when it can.
+ * Registered by the feature's install.
+ * @internal
+ */
 export const lodApplySystem = (world: ECSWorld) => {
-  const stats = getFrameStats(world);
+  const stats = getWritableLodFrameStats(world);
   stats.applies = 0;
   const pending = pendingApplies.get(world);
   if (!pending || pending.length === 0) return;
@@ -1019,9 +595,11 @@ export const lodApplySystem = (world: ECSWorld) => {
  * Advances every running cross-fade (the TAG_LOD_TRANSITIONING entities) by the frame's `dt` (times
  * the `fadeTimeScale` debug option) over its `fadeSeconds`, and ends the ones that are done. Runs
  * right after lodApplySystem, so a fade started this frame is drawn at its first step.
+ * Registered by the feature's install.
+ * @internal
  */
 export const lodFadeSystem = (world: ECSWorld, dt: number) => {
-  const stats = getFrameStats(world);
+  const stats = getWritableLodFrameStats(world);
   const storage = world.getStorage(ComponentType.TAG_LOD_TRANSITIONING);
   stats.fadeMs = 0;
   if (storage.size === 0) {
@@ -1032,7 +610,7 @@ export const lodFadeSystem = (world: ECSWorld, dt: number) => {
 
   const lods = world.getStorage(ComponentType.LOD);
   const globalSeconds = getLodFadeSeconds();
-  const step = dt * Math.max(debugOptions.fadeTimeScale, 0);
+  const step = dt * Math.max(getLodDebugOptions().fadeTimeScale, 0);
   // Removing the current entry while iterating a Map is safe
   for (const [entityId] of storage) {
     const lod = lods.get(entityId);

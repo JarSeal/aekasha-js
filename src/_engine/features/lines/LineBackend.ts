@@ -7,7 +7,10 @@ import type { LineBackendChoice, LineBackendKind } from './LineTypes';
  * @internal
  */
 export type LineColorNode = NonNullable<THREE.NodeMaterial['colorNode']>;
-/** @internal */
+/**
+ * What a line material's opacityNode accepts.
+ * @internal
+ */
 export type LineOpacityNode = NonNullable<THREE.NodeMaterial['opacityNode']>;
 
 /**
@@ -21,6 +24,7 @@ export type LineOpacityNode = NonNullable<THREE.NodeMaterial['opacityNode']>;
  * @internal
  */
 export interface LineBackend {
+  /** Which backend this is. */
   readonly kind: LineBackendKind;
   /** Not stable across a backend swap — LineObject re-reads it, and so must everyone. */
   readonly object3D: THREE.Object3D;
@@ -28,6 +32,7 @@ export interface LineBackend {
   setPositions(positions: Float32Array): void;
   /** Uploads the first `segmentCount` segments and draws exactly those. */
   commit(segmentCount: number): void;
+  /** Sets the object's bounds (the LineObject computes them from its segments). */
   setBounds(box: THREE.Box3, sphere: THREE.Sphere): void;
   /** The line's colour graph (owned by its LineObject, shared across a swap). Rebuilds
    * the pipeline, so it is only called when the graph itself changes. */
@@ -36,14 +41,21 @@ export interface LineBackend {
   setTransparent(transparent: boolean): void;
   /** Screen pixels. A no-op on THIN, which is always 1px. */
   setWidth(width: number): void;
+  /** Whether the line is hidden behind nearer surfaces. */
   setDepthTest(depthTest: boolean): void;
   /** CSS pixels, a gap of 0 draws solid. Only a dashable FAT backend draws dashes; a no-op
    * everywhere else. */
   setDash(dashPx: number, gapPx: number): void;
+  /** Removes the object from its parent and frees its geometry and material (not the
+   * LineObject's buffer or colour graph). */
   dispose(): void;
 }
 
-/** The backend a line should end up on for its choice and width. */
+/**
+ * The backend a line should end up on for its choice and width.
+ * For `LineObject`.
+ * @internal
+ */
 export const resolveLineBackendKind = (
   choice: LineBackendChoice,
   width: number

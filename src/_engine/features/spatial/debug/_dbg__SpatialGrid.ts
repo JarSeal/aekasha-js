@@ -8,30 +8,37 @@ import { markDebugHelper } from '../../../debug/Profiler';
 import { ECSWorld, getECSWorld } from '../../../kernel/ecs/ECS';
 import { ECSSystemStage } from '../../../kernel/loop/SystemStages';
 import type { SpatialGrid } from '../SpatialGrid';
-import type { LineObject } from '../../lines/Lines';
-import {
-  BOX_EDGE_SEGMENT_COUNT,
-  createLines,
-  isLinesInstalledFor,
-  writeBox3Edges,
-} from '../../lines/Lines';
+import { BOX_EDGE_SEGMENT_COUNT, writeBox3Edges } from '../../lines/LineBuilders';
+import type { LineObject } from '../../lines/LineObject';
+import { createLines, isLinesInstalledFor } from '../../lines/Lines';
 import { lsGetItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
 import { getCurrentSceneId } from '../../../kernel/scene/Scene';
 import {
   DEFAULT_SPATIAL_DOMAIN,
   getLastRebuildDurationMs,
-  getOracleCheckedQueryCount,
-  getOracleMismatchCount,
   getSpatialDomain,
   getSpatialDomainIds,
   getSpatialDomainOptions,
   getSpatialDomainRebuildStats,
   getSpatialDomainSceneId,
-  isSpatialGridOracleEnabled,
   reapplySpatialDomainOptions,
   setSpatialDomainOptionsOverride,
+} from '../SpatialDomains';
+import {
+  getOracleCheckedQueryCount,
+  getOracleMismatchCount,
+  isSpatialGridOracleEnabled,
   setSpatialGridOracleEnabled,
-} from '../SpatialIndexSystem';
+} from '../SpatialOracle';
+
+// The "Spatial index" drawer tab (docs/plans/_DONE_p050_spatial-index.md §9,
+// docs/plans/_DONE_p346_spatial-domains.md §3.6): per domain, the cell size override, the
+// brute-force oracle, the overlays and the rebuild counts, and an all-domains summary. Default
+// world only.
+//
+// Size: `_createSpatialGridDebugGUI` is over 150 lines (its `content` closure builds the whole
+// tab). Left whole: p800 rewrites the debug panels, and a split now is churn it throws away (p616
+// D8).
 
 const TAB_ID = 'spatialGridControls';
 const formatInt = (v: number) => v.toFixed(0);
@@ -332,6 +339,8 @@ const syncOverlays = (domainId: string) => {
   setOverlayEnabled(overlays.oversized, settings.showOversized);
 };
 
+/** Creates the "Spatial index" drawer tab (`spatialGridControls`): the spatial index's debug
+ * module entry, which `registerSpatialIndexDebugGUI` loads. */
 export const _createSpatialGridDebugGUI = () => {
   const world = getECSWorld();
   // Before createDebuggerTab, which hydrates `state` from the saved settings

@@ -1,6 +1,9 @@
 // LOD chain options (docs/plans/_DONE_p347_lod-chain-generation.md §2.2). Import-free: the asset pipeline
 // resolves them in Node without loading three.
 
+/** How {@link _engine/features/lod/LodChains!generateLodChain} (and an import's or an asset JSON's
+ * `lodChain`) simplifies a geometry; every field is optional, {@link resolveLodChainOptions} fills
+ * in the defaults. */
 export type LodChainOptions = {
   /** Target triangle counts, as ratios of the base's, one per level. Default [0.5, 0.25, 0.1]. */
   ratios?: number[];
@@ -19,6 +22,8 @@ export type LodChainOptions = {
   permissive?: boolean;
 };
 
+/** {@link LodChainOptions} with every default filled in ({@link resolveLodChainOptions}): what a
+ * chain records as its `options`, and the asset pipeline's cache key holds. */
 export type ResolvedLodChainOptions = {
   ratios: number[];
   maxError: number;
@@ -43,6 +48,10 @@ export const LOD_SIMPLIFY_VERSION = 1;
  * runtime, when its import asks). In the asset pipeline's cache key, so the GLBs are built again. */
 export const GLTF_LOD_FORMAT_VERSION = 1;
 
+/**
+ * The defaults `resolveLodChainOptions` fills in (its test reads them).
+ * @internal
+ */
 export const DEFAULT_LOD_CHAIN_OPTIONS: ResolvedLodChainOptions = {
   ratios: [0.5, 0.25, 0.1],
   maxError: 0.05,

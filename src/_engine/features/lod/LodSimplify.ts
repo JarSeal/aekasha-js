@@ -14,18 +14,14 @@ import {
 } from '../../kernel/assets/import/GeometryTransfer';
 import type { ResolvedLodChainOptions } from './LodChainOptions';
 
-export {
-  DEFAULT_LOD_CHAIN_OPTIONS,
-  resolveLodChainOptions,
-  type LodChainOptions,
-  type ResolvedLodChainOptions,
-} from './LodChainOptions';
-
+/** One simplified level of a {@link SimplifiedLodChain}: an index over the base's (or the welded)
+ * vertices, or its own vertex arrays with `compactVertices`. */
 export type SimplifiedLevel = {
   /** Uint16 when the vertices it indexes fit. */
   index: Uint16Array | Uint32Array;
   /** Rebuilt over the new index, one per base group (empty when the base has none). */
   groups: { start: number; count: number; materialIndex?: number }[];
+  /** The level's triangle count. */
   triangles: number;
   /** meshoptimizer's error, relative to the chain's `extent`; includes the attribute deviation. */
   error: number;
@@ -33,7 +29,10 @@ export type SimplifiedLevel = {
   attributes?: Record<string, TransferableAttribute>;
 };
 
+/** What {@link simplifyLodChain} returns: the simplified levels as transferable arrays, before
+ * they're registered as geometries. */
 export type SimplifiedLodChain = {
+  /** The base's triangle count. */
   baseTriangles: number;
   /** The base's largest bounding box side: the scale the levels' `error` is relative to. */
   extent: number;
@@ -165,7 +164,7 @@ const compactLevel = (
  * `maxError`. A level that drops less than 10 % from the previous one is left out, and the chain
  * stops once no group can go further. A base without an index is welded first.
  * @param data the base geometry (GeometryTransfer.ts's serializeGeometry()), without morph targets
- * @param options {@link resolveLodChainOptions}
+ * @param options resolved by {@link _engine/features/lod/LodChainOptions!resolveLodChainOptions}
  * @param transfer collects the result's ArrayBuffers (for the postMessage transfer list)
  */
 export const simplifyLodChain = async (

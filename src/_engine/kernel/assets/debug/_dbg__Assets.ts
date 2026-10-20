@@ -37,8 +37,8 @@ import {
   isLodChainPending,
   releaseLodChain,
   type LodChain,
-  type LodLevelVertices,
 } from '../../../features/lod/LodChains';
+import type { LodLevelVertices } from '../../../features/lod/LodChainOptions';
 import type { GeneratedAssetFields } from '../../../schemas/AssetsConfigSchema';
 import type { TextureAtlasSlotInfo } from '../../../schemas/TextureAtlasSchema';
 import { getTextureArrayInfo } from '../TextureArray';

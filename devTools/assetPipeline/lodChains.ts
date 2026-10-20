@@ -9,12 +9,12 @@ import {
 import type { TransferableAttribute } from '../../src/_engine/kernel/assets/import/GeometryTransfer';
 import {
   GLTF_LOD_EXTRAS_KEY,
-  GLTF_LOD_FORMAT_VERSION,
   type GLTFLodChainsExtras,
 } from '../../src/_engine/features/lod/LodChainGLTF';
-import type {
-  LodLevelVertices,
-  ResolvedLodChainOptions,
+import {
+  GLTF_LOD_FORMAT_VERSION,
+  type LodLevelVertices,
+  type ResolvedLodChainOptions,
 } from '../../src/_engine/features/lod/LodChainOptions';
 import { simplifyLodChain } from '../../src/_engine/features/lod/LodSimplify';
 

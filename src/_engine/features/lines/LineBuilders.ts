@@ -1,15 +1,13 @@
 import * as THREE from 'three/webgpu';
 import { createArrayWriteTarget, FLOATS_PER_SEGMENT, LineWriter } from './LineWriter';
 
-/**
- * Segment builders. Every `write*` appends to a {@link LineWriter} (use them between
- * `beginWrite()`/`endWrite()`), every `*ToSegments` returns a new flat `xyzxyz` array for
- * `setSegments`/`LineProps.segments`.
- *
- * The box and polyline writers are allocation-free and fit a per-frame refill. The
- * geometry ones build a three.js EdgesGeometry/WireframeGeometry each call — build-once
- * use only.
- */
+// Segment builders. Every `write*` appends to a LineWriter (use them between
+// `beginWrite()`/`endWrite()`), every `*ToSegments` returns a new flat `xyzxyz` array for
+// `setSegments`/`LineProps.segments`.
+//
+// The box and polyline writers are allocation-free and fit a per-frame refill. The
+// geometry ones build a three.js EdgesGeometry/WireframeGeometry each call — build-once
+// use only.
 
 /** Segments in a box outline. */
 export const BOX_EDGE_SEGMENT_COUNT = 12;
@@ -44,7 +42,19 @@ export const writeBox3Edges = (writer: LineWriter, box: THREE.Box3) => {
   return writeCorners(writer);
 };
 
-/** Appends the 12 edges of a box of `size`, centred on `center`, optionally rotated. */
+/**
+ * Appends the 12 edges of a box of `size`, centred on `center`, optionally rotated.
+ * @example
+ * ```ts
+ * import { BOX_EDGE_SEGMENT_COUNT, createLines, writeBoxEdges } from 'aekasha/lines';
+ *
+ * // Up to 32 trigger boxes outlined, refilled every frame without allocating
+ * const outlines = createLines({ capacity: 32 * BOX_EDGE_SEGMENT_COUNT, growth: 'FIXED' });
+ * const w = outlines.beginWrite();
+ * for (const t of triggers) writeBoxEdges(w, t.center, t.size, t.quaternion);
+ * outlines.endWrite();
+ * ```
+ */
 export const writeBoxEdges = (
   writer: LineWriter,
   center: THREE.Vector3Like,
@@ -65,8 +75,18 @@ export const writeBoxEdges = (
   return writeCorners(writer);
 };
 
-/** Appends one segment between each consecutive pair of points, plus last → first when
- * `closed`. */
+/**
+ * Appends one segment between each consecutive pair of points, plus last → first when `closed`.
+ * @example
+ * ```ts
+ * import { createLines, polylineSegmentCount, writePolyline } from 'aekasha/lines';
+ *
+ * // A trail of the last 64 positions, rewritten every frame
+ * const trail = createLines({ capacity: polylineSegmentCount(64), growth: 'FIXED' });
+ * writePolyline(trail.beginWrite(), lastPositions);
+ * trail.endWrite();
+ * ```
+ */
 export const writePolyline = (
   writer: LineWriter,
   points: ArrayLike<THREE.Vector3Like>,
@@ -112,18 +132,27 @@ const toSegments = (segmentCount: number, write: (writer: LineWriter) => void) =
   return target.positions;
 };
 
+/** The 12 edges of an axis-aligned Box3 as a new `xyzxyz` array (empty for an empty box): the
+ * one-shot form of {@link writeBox3Edges}. */
 export const box3EdgesToSegments = (box: THREE.Box3) =>
   toSegments(box.isEmpty() ? 0 : BOX_EDGE_SEGMENT_COUNT, (w) => writeBox3Edges(w, box));
 
+/** The 12 edges of a box of `size` centred on `center`, optionally rotated, as a new `xyzxyz`
+ * array: the one-shot form of {@link writeBoxEdges}. */
 export const boxEdgesToSegments = (
   center: THREE.Vector3Like,
   size: THREE.Vector3Like,
   quaternion?: THREE.QuaternionLike
 ) => toSegments(BOX_EDGE_SEGMENT_COUNT, (w) => writeBoxEdges(w, center, size, quaternion));
 
+/** A polyline through `points` (`closed` joins the last to the first) as a new `xyzxyz` array:
+ * the one-shot form of {@link writePolyline}. */
 export const polylineToSegments = (points: ArrayLike<THREE.Vector3Like>, closed = false) =>
   toSegments(polylineSegmentCount(points.length, closed), (w) => writePolyline(w, points, closed));
 
+/** A geometry's edges whose faces meet at over `thresholdAngle` degrees (three's
+ * `EdgesGeometry`, default 1) as a new `xyzxyz` array. Builds and disposes a geometry: not for a
+ * per-frame refill. */
 export const geometryEdgesToSegments = (
   geometry: THREE.BufferGeometry,
   thresholdAngle?: number
@@ -134,6 +163,8 @@ export const geometryEdgesToSegments = (
   return segments;
 };
 
+/** Every triangle edge of a geometry (three's `WireframeGeometry`) as a new `xyzxyz` array.
+ * Builds and disposes a geometry: not for a per-frame refill. */
 export const geometryWireframeToSegments = (geometry: THREE.BufferGeometry) => {
   const wireframe = new THREE.WireframeGeometry(geometry);
   const segments = flattenSegmentGeometry(wireframe);
@@ -141,7 +172,10 @@ export const geometryWireframeToSegments = (geometry: THREE.BufferGeometry) => {
   return segments;
 };
 
-/** Segment count of a flat `xyzxyz` list. */
+/**
+ * Segment count of a flat `xyzxyz` list.
+ * @internal
+ */
 export const segmentCountOf = (segments: ArrayLike<number>) =>
   Math.floor(segments.length / FLOATS_PER_SEGMENT);
 
@@ -149,6 +183,8 @@ export const segmentCountOf = (segments: ArrayLike<number>) =>
  * A segment geometry (LineSegments-style: every two vertices are one segment) as a flat
  * `xyzxyz` list. WireframeGeometry/EdgesGeometry already are one; an indexed geometry
  * (eg. a Polyline's) is expanded through its index.
+ * For the geometry writers and the physics debug draw.
+ * @internal
  */
 export const flattenSegmentGeometry = (geometry: THREE.BufferGeometry): Float32Array => {
   const position = geometry.getAttribute('position');

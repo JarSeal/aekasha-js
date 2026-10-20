@@ -28,8 +28,6 @@ import type { InstancePlacement, InstancedMeshSlotData } from './InstancedMeshPo
 // instance matrix by instancedMeshPoolSyncSystem. An instanced LOD pool has one mesh per level
 // (docs/plans/_DONE_p348_ecs-lod-selection.md §4.2). The `instancing()` feature installs the sync system.
 
-export type * from './InstancedMeshPoolTypes';
-
 // A pool instance's spatial radius (docs/plans/_DONE_p346_spatial-domains.md §3.3): the pool
 // geometry's (an instanced LOD pool: level 0's), scaled by the instance's Transform.
 const getInstanceRadius: SpatialRadiusProvider = (entityId, world) => {
@@ -41,6 +39,9 @@ const getInstanceRadius: SpatialRadiusProvider = (entityId, world) => {
 
 const _matrix = new THREE.Matrix4();
 const _moveMatrix = new THREE.Matrix4();
+const _position = new THREE.Vector3();
+const _quaternion = new THREE.Quaternion();
+const _scale = new THREE.Vector3();
 const _color = new THREE.Color();
 const _box = new THREE.Box3();
 const _sphere = new THREE.Sphere();
@@ -57,6 +58,14 @@ type LodPoolState = {
   levels: LodResolvedLevel[];
   /** Instances alive, in a level mesh or LOD culled (in none). */
   liveCount: number;
+  /** One instance's bounds in its own space: the union of every level's, so they cover whichever
+   * one is shown. */
+  localBox: THREE.Box3;
+  localSphere: THREE.Sphere;
+  /** The union of every instance's bounds, copied to each level mesh: instances moving between
+   * levels never change them. */
+  box: THREE.Box3;
+  sphere: THREE.Sphere;
 };
 const lodPoolsByMesh = new WeakMap<THREE.InstancedMesh, LodPoolState>();
 
@@ -69,6 +78,53 @@ const writeFade = (mesh: THREE.InstancedMesh, index: number, fade: number) => {
   if (!fades) return;
   fades.setX(index, fade);
   fades.needsUpdate = true;
+};
+
+/** Whether `inner` lies inside `outer` (false while `outer` is empty). */
+const isSphereInside = (inner: THREE.Sphere, outer: THREE.Sphere) =>
+  inner.center.distanceTo(outer.center) + inner.radius <= outer.radius;
+
+/** Grows `mesh`'s bounds (an instanced LOD pool, `lodPool`: every level mesh's) to hold an instance
+ * drawn at `matrix`, so three's frustum culling never culls the whole mesh while a moved instance is
+ * on screen. Never shrinks them (removeAt relies on that), and changes nothing while the instance is
+ * inside. A plain pool's bounds three hasn't computed yet stay null: three computes them over every
+ * instance on first use. */
+const growPoolBounds = (
+  mesh: THREE.InstancedMesh,
+  lodPool: LodPoolState | undefined,
+  matrix: THREE.Matrix4
+) => {
+  if (lodPool) {
+    _box.copy(lodPool.localBox).applyMatrix4(matrix);
+    _sphere.copy(lodPool.localSphere).applyMatrix4(matrix);
+    if (lodPool.box.containsBox(_box) && isSphereInside(_sphere, lodPool.sphere)) return;
+    lodPool.box.union(_box);
+    lodPool.sphere.union(_sphere);
+    for (const levelMesh of lodPool.meshes) {
+      levelMesh.boundingBox!.copy(lodPool.box);
+      levelMesh.boundingSphere!.copy(lodPool.sphere);
+    }
+    return;
+  }
+  // three's unions only ever grow, and leave bounds that hold the instance as they are
+  const { geometry, boundingBox, boundingSphere } = mesh;
+  if (boundingBox) {
+    if (!geometry.boundingBox) geometry.computeBoundingBox();
+    boundingBox.union(_box.copy(geometry.boundingBox!).applyMatrix4(matrix));
+  }
+  if (boundingSphere) {
+    if (!geometry.boundingSphere) geometry.computeBoundingSphere();
+    boundingSphere.union(_sphere.copy(geometry.boundingSphere!).applyMatrix4(matrix));
+  }
+};
+
+/** `TYPED_ARRAY` storage mode: marks the instance's `Transform` synced once its matrix is baked
+ * outside the sync, which then skips it until it changes (`MAP` mode: `_lastVersion` says it). */
+const clearTypedTransformDirty = (world: ECSWorld, entityId: number) => {
+  const typedStore = world.getTypedTransformStore();
+  if (!typedStore) return;
+  const transformSlot = typedStore.getSlot(entityId);
+  if (transformSlot !== -1) typedStore.clearDirty(transformSlot);
 };
 
 /** Appends an instance to `mesh` with `matrix` and the LOD fade `fade`, returning its slot index. */
@@ -199,7 +255,10 @@ const instanceLodTarget: LodTarget = {
     if (!transform) return;
     _moveMatrix.compose(transform.position, transform.quaternion, transform.scale);
     slot.index = appendInstance(slot.mesh, entityId, _moveMatrix, fade ? 0 : LOD_FADE_OPAQUE);
+    // It may have moved while culled
+    growPoolBounds(slot.mesh, lodPoolsByMesh.get(slot.mesh), _moveMatrix);
     slot._lastVersion = transform.version;
+    clearTypedTransformDirty(world, entityId);
   },
   setFade: (entityId, world, progress) => {
     const slot = getSlot(entityId, world);
@@ -215,7 +274,8 @@ const instanceLodTarget: LodTarget = {
 };
 
 /** Creates a pool's `InstancedMesh` and the entity that owns it. The mesh takes a registry ref on
- * its geometry and material(s), which `MeshManager`'s `TAG_IS_MESH` delete hook releases. */
+ * its geometry and material(s), which the `TAG_IS_MESH` delete hook (`kernel/mesh/Mesh.ts`)
+ * releases. */
 const createPoolMesh = (
   world: ECSWorld,
   geometry: THREE.BufferGeometry,
@@ -236,7 +296,7 @@ const createPoolMesh = (
     if (m.userData.id) incMaterialRef(m.userData.id);
   }
 
-  // TAG_IS_MESH: MeshManager's delete hook removes and disposes the mesh with its entity
+  // TAG_IS_MESH: its delete hook (kernel/mesh/Mesh.ts) disposes the mesh with its entity
   const meshEntityId = world.createEntity(entityOpts);
   // Marks the mesh as holding refs: setMeshGeometry / setMeshMaterial then move them
   mesh.userData.entityId = meshEntityId;
@@ -251,7 +311,7 @@ const createPoolMesh = (
 };
 
 /** How `spawn()` joins its instances to their spatial domain (the spatial index's membership,
- * ECS/SpatialMembership.ts), undefined without a domain, and undefined with a warning without
+ * kernel/ecs/SpatialMembership.ts), undefined without a domain, and undefined with a warning without
  * `spatial()` or when the domain isn't registered. Checked once per spawn, or joining would warn
  * for every instance. */
 const getSpawnSpatialMembership = (
@@ -298,31 +358,45 @@ const createInstanceEntity = (
   // see real placement data immediately, and so nothing flashes at the pool's default
   // (identity, i.e. world-origin) matrix for one frame.
   _matrix.compose(transform.position, transform.quaternion, transform.scale);
+  clearTypedTransformDirty(world, entityId);
   return { entityId, version: transform.version };
 };
 
+/** What {@link createInstancedMeshPool} takes. */
 export interface CreateInstancedMeshPoolOptions {
   /** Used to create one dedicated ECS entity that owns `mesh` itself (distinct from the
    * per-instance slot entities `spawn()` creates) — see `InstancedMeshPool.mesh`'s doc comment. */
   world: ECSWorld;
+  /** Every instance's geometry. The mesh holds a registry ref on it while it lives. */
   geometry: THREE.BufferGeometry;
   /** A material array (with a matching-length `geometry.groups`) works the same as on a plain `Mesh`. */
   material: THREE.Material | THREE.Material[];
   /** Hard cap on live instances this pool can hold at once, sized once. Despawning frees a slot for a later spawn. */
   maxInstances: number;
+  /** Whether the instances cast shadows. Default true. */
   castShadow?: boolean;
+  /** Whether the instances receive shadows. Default true. */
   receiveShadow?: boolean;
   /** Passed to the mesh's own owning entity (e.g. to mark a long-lived pool `persistent`). */
   entityOpts?: CoreEntityOpts;
-  /** A registered spatial domain `spawn()` joins every instance to (docs/plans/_DONE_p346_spatial-domains.md). Default: none. */
+  /**
+   * A registered spatial domain `spawn()` joins every instance to
+   * (docs/plans/_DONE_p346_spatial-domains.md). Default: none.
+   * @remarks An instance in `DEFAULT` is never a light's receiver: light culling's receiver test
+   * reads a mesh's `OBJECT3D`, which an instance hasn't, so an object-culled light whose only
+   * nearby meshes are pool instances is culled (docs/issues/pool-instances-not-light-receivers.md).
+   * Give the pool a domain of its own, or leave object culling off for the lights that light it.
+   */
   spatialDomain?: string;
 }
 
+/** What {@link createInstancedMeshPool} returns: the mesh, its owning entity and the instances'
+ * spawn and despawn. */
 export interface InstancedMeshPool {
   /** Not added to any scene yet — add `pool.mesh` to the scene yourself. `mesh` is still owned by `meshEntityId`
-   * (holding `OBJECT3D`/`TAG_IS_MESH`, like any plain mesh entity), so `MeshManager`'s existing
-   * `TAG_IS_MESH` `onDeleteEntity` hook removes it from wherever it was added and disposes it once
-   * that entity is deleted (e.g. by `ECSWorld.clearNonPersistent()` on scene switch) — without this,
+   * (holding `OBJECT3D`/`TAG_IS_MESH`, like any plain mesh entity), so the `TAG_IS_MESH`
+   * `onDeleteEntity` hook (`kernel/mesh/Mesh.ts`) removes it from wherever it was added and disposes
+   * it once that entity is deleted (e.g. by `ECSWorld.clearNonPersistent()` on scene switch) — without this,
    * the shared mesh would silently outlive every scene that created it. */
   mesh: THREE.InstancedMesh;
   /** The entity that owns `mesh` for lifecycle purposes (see `mesh`'s doc comment above). */
@@ -352,7 +426,8 @@ export interface InstancedMeshPool {
  * Creates a single `THREE.InstancedMesh` backed by an ECS-addressable pool: each spawned
  * instance is a real entity (holding a slot index) whose `Transform` can be queried/moved
  * later like any other entity, kept in sync onto the instance matrix by
- * `instancedMeshPoolSyncSystem`.
+ * `instancedMeshPoolSyncSystem`. `spawn` computes the mesh's bounds over every instance, and the
+ * sync grows them when a moved instance leaves them; they never shrink until the next `spawn`.
  */
 export const createInstancedMeshPool = (
   opts: CreateInstancedMeshPoolOptions
@@ -420,7 +495,10 @@ export const createInstancedMeshPool = (
   return { mesh, meshEntityId, spawn, despawn };
 };
 
+/** One level of an instanced LOD pool (`CreateInstancedLodPoolOptions.levels`): its own
+ * `InstancedMesh`, sized for every instance of the pool. */
 export interface InstancedLodPoolLevel {
+  /** The level's geometry. */
   geometry: THREE.BufferGeometry;
   /** A material array works like on `createInstancedMeshPool`. */
   material: THREE.Material | THREE.Material[];
@@ -431,6 +509,7 @@ export interface InstancedLodPoolLevel {
   castShadow?: boolean;
 }
 
+/** What {@link createInstancedLodPool} takes. */
 export interface CreateInstancedLodPoolOptions {
   /** Owns one entity per level mesh, like `CreateInstancedMeshPoolOptions.world`. */
   world: ECSWorld;
@@ -442,19 +521,29 @@ export interface CreateInstancedLodPoolOptions {
   /** The selection settings every instance shares (`cullScreenSize`, `hysteresis`, `bias`,
    * `fadeSeconds`). */
   lod?: Omit<LodDef, 'levels'>;
+  /** Whether the instances receive shadows, in every level. Default true (casting is per level). */
   receiveShadow?: boolean;
   /** Passed to each level mesh's owning entity. */
   entityOpts?: CoreEntityOpts;
-  /** A registered spatial domain `spawn()` joins every instance to. Default: none. */
+  /**
+   * A registered spatial domain `spawn()` joins every instance to. Default: none.
+   * @remarks An instance in `DEFAULT` is never a light's receiver: light culling's receiver test
+   * reads a mesh's `OBJECT3D`, which an instance hasn't, so an object-culled light whose only
+   * nearby meshes are pool instances is culled (docs/issues/pool-instances-not-light-receivers.md).
+   * Give the pool a domain of its own, or leave object culling off for the lights that light it.
+   */
   spatialDomain?: string;
 }
 
+/** What {@link createInstancedLodPool} returns: the level meshes, their owning entities and the
+ * instances' spawn and despawn. */
 export interface InstancedLodPool {
   /** One `InstancedMesh` per level, level 0 first. Not added to any scene: add them all yourself
    * (`rootScene.add(...pool.meshes)`), directly under the scene, since the selection reads each
    * instance's `Transform` as its world position. Each is owned by its entity in `meshEntityIds`,
    * which disposes it like `InstancedMeshPool.mesh`. */
   meshes: THREE.InstancedMesh[];
+  /** The entity owning each mesh of `meshes`, in the same order. */
   meshEntityIds: number[];
   /** Spawns one entity per placement with `INSTANCED_MESH_SLOT` and `LOD`, starting in level 0's
    * mesh. Returns the created entity ids (fewer than `placements.length` past `maxInstances`). */
@@ -478,8 +567,9 @@ export interface InstancedLodPool {
  * docs/plans/_DONE_p351_impostor-billboard-lod.md §2.4): during a fade the instance is in both levels'
  * meshes, dithered by a per-instance fade. The pool calls `enableLodDither` on its level materials.
  *
- * Every level mesh gets the bounds of every placement, at spawn: instances moving between levels
- * never change them, so they are never recomputed.
+ * Every level mesh gets the union bounds of every placement, at spawn, grown by the sync when a
+ * moved instance leaves them: instances moving between levels never change them, and they never
+ * shrink.
  */
 export const createInstancedLodPool = (opts: CreateInstancedLodPoolOptions): InstancedLodPool => {
   const { world, levels: levelDefs, maxInstances, receiveShadow = true } = opts;
@@ -497,11 +587,17 @@ export const createInstancedLodPool = (opts: CreateInstancedLodPoolOptions): Ins
     ...opts.lod,
     levels: levelDefs.map((level) => ({ screenSize: level.screenSize })),
   };
-  const state: LodPoolState = { meshes: [], levels: [], liveCount: 0 };
+  const state: LodPoolState = {
+    meshes: [],
+    levels: [],
+    liveCount: 0,
+    localBox: new THREE.Box3(),
+    localSphere: new THREE.Sphere(),
+    box: new THREE.Box3(),
+    sphere: new THREE.Sphere(),
+  };
+  const { localBox, localSphere, box, sphere } = state;
   const meshEntityIds: number[] = [];
-  // A level's local bounds: the union of every level's, so it covers whichever one is shown
-  const localBox = new THREE.Box3();
-  const localSphere = new THREE.Sphere();
   for (const level of levelDefs) {
     const castShadow = level.castShadow ?? true;
     const { mesh, meshEntityId } = createPoolMesh(
@@ -529,9 +625,6 @@ export const createInstancedLodPool = (opts: CreateInstancedLodPoolOptions): Ins
     localSphere.union(level.geometry.boundingSphere!);
   }
   const level0Mesh = state.meshes[0];
-  // The union of every placement's bounds so far, copied to each level mesh
-  const box = new THREE.Box3();
-  const sphere = new THREE.Sphere();
 
   const spawn: InstancedLodPool['spawn'] = (world, placements, entityOpts) => {
     const entityIds: number[] = [];
@@ -584,33 +677,66 @@ export const createInstancedLodPool = (opts: CreateInstancedLodPoolOptions): Ins
   return { meshes: state.meshes, meshEntityIds, spawn, despawn };
 };
 
-/** Bakes each pooled entity's `Transform` into its `InstancedMesh` slot, skipping instances whose transform hasn't changed since the last bake (see `InstancedMeshSlotData._lastVersion`, mirroring `object3DSyncSystem`'s version-diff). */
+/**
+ * Bakes each pooled entity's `Transform` into its `InstancedMesh` slot, skipping instances whose
+ * transform hasn't changed since the last bake (`InstancedMeshSlotData._lastVersion` in `MAP`
+ * storage mode, the store's dirty flag in `TYPED_ARRAY` mode, as `object3DSyncSystem` does), and
+ * grows the mesh's bounds to hold each instance it bakes.
+ * Registered by the `instancing()` feature's install.
+ * @internal
+ */
 export const instancedMeshPoolSyncSystem = (world: ECSWorld) => {
   const storage = world.getStorage(ComponentType.INSTANCED_MESH_SLOT);
   if (storage.size === 0) return;
-
-  const dirtyMeshes = new Set<THREE.InstancedMesh>();
+  // TYPED_ARRAY mode: the store's arrays (its `get` makes a Transform copy whose version is only
+  // the dirty flag). An instance has no OBJECT3D, whose sync clears the flag for everything else,
+  // so this system clears it once baked
+  const typedStore = world.getTypedTransformStore();
+  const transforms = typedStore ? undefined : world.getStorage(ComponentType.TRANSFORM);
+  // The pool of the last instance baked: a pool's instances mostly come one after another
+  let lastMesh: THREE.InstancedMesh | null = null;
+  let lastLodPool: LodPoolState | undefined;
 
   for (const [entityId, slot] of storage) {
     // LOD culled: in no mesh (re-baked from its Transform when it comes back), unless it's still
     // fading out
     if (slot.index < 0 && !slot._fadeOutMesh) continue;
-    const transform = world.getComponent(entityId, ComponentType.TRANSFORM);
-    if (!transform || slot._lastVersion === transform.version) continue;
+    if (typedStore) {
+      const t = typedStore.getSlot(entityId);
+      if (t === -1 || !typedStore.isDirty(t)) continue;
+      _position.set(typedStore.posX[t], typedStore.posY[t], typedStore.posZ[t]);
+      _quaternion.set(
+        typedStore.quatX[t],
+        typedStore.quatY[t],
+        typedStore.quatZ[t],
+        typedStore.quatW[t]
+      );
+      _scale.set(typedStore.scaleX[t], typedStore.scaleY[t], typedStore.scaleZ[t]);
+      _matrix.compose(_position, _quaternion, _scale);
+      typedStore.clearDirty(t);
+    } else {
+      const transform = transforms!.get(entityId);
+      if (!transform || slot._lastVersion === transform.version) continue;
+      _matrix.compose(transform.position, transform.quaternion, transform.scale);
+      slot._lastVersion = transform.version;
+    }
 
-    _matrix.compose(transform.position, transform.quaternion, transform.scale);
     if (slot.index >= 0) {
       slot.mesh.setMatrixAt(slot.index, _matrix);
-      dirtyMeshes.add(slot.mesh);
+      slot.mesh.instanceMatrix.needsUpdate = true;
     }
     if (slot._fadeOutMesh) {
       slot._fadeOutMesh.setMatrixAt(slot._fadeOutIndex, _matrix);
-      dirtyMeshes.add(slot._fadeOutMesh);
+      slot._fadeOutMesh.instanceMatrix.needsUpdate = true;
     }
-    slot._lastVersion = transform.version;
+    // A fade-out copy is in a level mesh of the same LOD pool (to culled: `slot.mesh` itself),
+    // whose level meshes share their bounds
+    if (slot.mesh !== lastMesh) {
+      lastMesh = slot.mesh;
+      lastLodPool = lodPoolsByMesh.get(lastMesh);
+    }
+    growPoolBounds(slot.mesh, lastLodPool, _matrix);
   }
-
-  for (const dirtyMesh of dirtyMeshes) dirtyMesh.instanceMatrix.needsUpdate = true;
 };
 
 /**

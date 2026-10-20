@@ -3,7 +3,8 @@ export type {
   CreateInstancedLodPoolOptions,
   CreateInstancedMeshPoolOptions,
   InstancedLodPool,
+  InstancedLodPoolLevel,
   InstancedMeshPool,
 } from './InstancedMeshPool';
-export type { InstancedMeshSlotData } from './InstancedMeshPoolTypes';
+export type { InstancedMeshSlotData, InstancePlacement } from './InstancedMeshPoolTypes';
 export { instancing } from './InstancingFeature';

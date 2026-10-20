@@ -52,6 +52,8 @@ import {
   createOctahedralImpostorQuad,
 } from './OctahedralImpostorMaterial';
 
+/** What {@link generateOctahedralImpostor} takes: the id, the frame grid, the atlas resolution,
+ * the shading and the surface depth. Every field is optional. */
 export type OctahedralImpostorOptions = {
   /** The id the generated assets are registered under: the geometry `id`, the material
    * `${id}.mat`, the atlases `${id}.albedo` and `${id}.normalDepth`. Default
@@ -66,7 +68,7 @@ export type OctahedralImpostorOptions = {
   frameSize?: number;
   /** Texels between a frame and its cell's edge, which keep mipmaps from mixing frames. Default 4. */
   gutter?: number;
-  /** Default 0.5. */
+  /** The material's alpha cut, which the blended frames' coverage is tested against. Default 0.5. */
   alphaTest?: number;
   /** The shading model (see {@link ImpostorShading}). Default `AUTO`. */
   shading?: ImpostorShading;
@@ -85,9 +87,13 @@ export type OctahedralImpostorOptions = {
 /** Where an impostor's frames are and what they show: what its material needs besides the atlases.
  * Stored on the albedo atlas (`userData.octahedralImpostor`), so a registered bake can be reused. */
 export type OctahedralImpostorLayout = {
+  /** Frames along each side of the grid (`OctahedralImpostorOptions.frames`). */
   frames: number;
+  /** Whether the frames cover the upper hemisphere only. */
   hemi: boolean;
+  /** A frame's side, in texels. */
   frameSize: number;
+  /** Texels between a frame and its cell's edge. */
   gutter: number;
   /** Texels per side of the (square) atlases: `frames × (frameSize + 2 × gutter)`. Frame (`i`, `j`)'s
    * cell starts at texel (`i`, `j`) × the cell size, from the image's top left (v = 0 is the top). */
@@ -100,8 +106,13 @@ export type OctahedralImpostorLayout = {
   extent: number;
 };
 
+/** What {@link generateOctahedralImpostor} returns: the registered quad, material and atlases of an
+ * octahedral impostor, and their layout, for an instanced LOD pool's last level. */
 export type OctahedralImpostor = {
+  /** The id they're registered under (`OctahedralImpostorOptions.id`). */
   id: string;
+  /** Where the frames are in the atlases and what they show (also on the albedo atlas's
+   * `userData.octahedralImpostor`). */
   layout: OctahedralImpostorLayout;
   /** Registered: one quad around the bounding sphere's centre (its bounds are the sphere), turned
    * to face the camera by `material`. */
@@ -161,6 +172,8 @@ const deleteLeftovers = (id: string, keepAtlases = false) => {
  * The options a bake of `geometry` drawn with `material` uses: `opts` with their defaults, and the
  * shading resolved (never `AUTO`). What an export writes, and its fingerprint covers
  * (`getImpostorSourceHash`).
+ * For the bake, the export tab and the source fingerprint.
+ * @internal
  */
 export const resolveOctahedralImpostorOptions = (
   geometry: THREE.BufferGeometry,
@@ -201,12 +214,17 @@ export const resolveOctahedralImpostorOptions = (
  * When the loading scene lists `id` in its JSON's `impostors` (an export: `*.impostor.json` and
  * its atlas, written by the LOD tab's Impostors), the impostor is built from the export and its
  * loaded atlas slots instead, with the export's layout, shading, `alphaTest` and `surfaceDepth`:
- * nothing is baked, and the other `opts` only feed the staleness check below. In the debug env a source or options that
- * changed since the export warn that it's stale (it's still used). An export that can't be used
- * (another format, a slot that didn't load) warns and bakes.
+ * nothing is baked, and the other `opts` only feed the staleness check. In the debug env a source
+ * or options that changed since the export warn that it's stale (it's still used). An export that
+ * can't be used (another format, a slot that didn't load) warns and bakes.
  *
  * Bakes synchronously with the renderer (after `InitEngine`), restoring its target and clear
  * state. Frames are in the object's local space, so they're used with its instance transforms.
+ * @remarks three r186 traps around its material: `NodeMaterial.clone()` loses `alphaTest`
+ * (`NodeMaterial.copy` skips `_alphaTest`), so set it again on a clone; `VSMShadowMap` draws every
+ * object that receives shadows into the shadow map whatever its `castShadow`; and a shadow map
+ * renders once per camera and node frame (`ShadowNode.updateBefore`), so two renders in one task
+ * share it (a harness bumps `renderer._nodes.nodeFrame.frameId` between them).
  */
 export const generateOctahedralImpostor = (
   geometry: THREE.BufferGeometry,
@@ -273,8 +291,11 @@ export const generateOctahedralImpostor = (
   return impostor;
 };
 
-/** What {@link buildOctahedralImpostor} needs besides the layout and the atlases: the resolved
- * options of a bake, or an export's */
+/**
+ * What {@link buildOctahedralImpostor} needs besides the layout and the atlases: the resolved
+ * options of a bake, or an export's
+ * @internal
+ */
 export type OctahedralImpostorBuildOptions = {
   /** Registers the quad under `id` and the material under `${id}.mat` */
   id: string;
@@ -290,6 +311,8 @@ export type OctahedralImpostorBuildOptions = {
  * Builds and registers an octahedral impostor's quad and material over registered atlases (a
  * bake's, or an export's loaded slots), and stores `layout` on the albedo atlas, so a later
  * `generateOctahedralImpostor` with the same id returns them. Both of its paths end here.
+ * For `generateOctahedralImpostor`.
+ * @internal
  */
 export const buildOctahedralImpostor = (
   layout: OctahedralImpostorLayout,
@@ -328,7 +351,10 @@ export const buildOctahedralImpostor = (
   return { id, layout, geometry: quad, material: impostorMaterial, albedo, normalDepth };
 };
 
-/** What {@link bakeOctahedralImpostorAtlases} reads of the resolved options */
+/**
+ * What {@link bakeOctahedralImpostorAtlases} reads of the resolved options
+ * @internal
+ */
 export type OctahedralImpostorBakeSettings = Pick<
   ReturnType<typeof resolveOctahedralImpostorOptions>,
   'frames' | 'hemi' | 'frameSize' | 'gutter'
@@ -342,6 +368,8 @@ export type OctahedralImpostorBakeSettings = Pick<
  * `generateOctahedralImpostor` registers, and what an export reads back.
  *
  * Synchronous, with the renderer (after `InitEngine`), restoring its target and clear state.
+ * For `generateOctahedralImpostor` and the export tab.
+ * @internal
  */
 export const bakeOctahedralImpostorAtlases = (
   geometry: THREE.BufferGeometry,

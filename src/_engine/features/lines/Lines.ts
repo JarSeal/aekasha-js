@@ -11,12 +11,6 @@ import { getRegisteredLine, getRegisteredLines, nextLineId, registerLine } from 
 import { installLineTimeSystem } from './LineSystem';
 import type { LineProps } from './LineTypes';
 
-export { LineObject } from './LineObject';
-export type { LineWriter } from './LineWriter';
-export type * from './LineTypes';
-export * from './LineBuilders';
-export { LINE_PULSE_MAX_COLORS, lineTimeUniform } from './LinePulse';
-
 let isInstalled = false;
 const toolsLoggedOff = new Set<string>();
 
@@ -102,17 +96,15 @@ export const createLines = (props: LineProps = {}): LineObject => {
 /** Returns a live line by id. */
 export const getLine = (id: string) => getRegisteredLine(id);
 
-/** Returns every live line. */
-export const getAllLines = () => Array.from(getRegisteredLines().values());
+/** Every live line, copied: disposing one removes it from the registry. */
+const getAllLines = () => Array.from(getRegisteredLines().values());
 
-/** Disposes every live line, entity-owned and persistent ones included. */
-export const disposeAllLines = () => {
-  for (const line of getAllLines()) line.dispose();
-};
-
-/** Disposes every line that is neither `persistent` nor owned by an entity (those follow
+/**
+ * Disposes every line that is neither `persistent` nor owned by an entity (those follow
  * their entity: clearNonPersistent deletes it, and its line with it). Runs on every scene
- * switch (the `lines()` feature's `exit` scene hook). */
+ * switch (the `lines()` feature's `exit` scene hook).
+ * @internal
+ */
 export const disposeNonPersistentLines = () => {
   for (const line of getAllLines()) {
     if (!line.persistent && !line.entityBinding) line.dispose();
@@ -129,7 +121,19 @@ export const disposeNonPersistentLines = () => {
  * places it (`props.localTransform` seeds it), deleting the entity disposes the line and
  * disposing the line deletes the entity. A backend swap re-points OBJECT3D at the new
  * Object3D, so read OBJECT3D (or `getLineForEntity(id).object3D`) each time, never cache it.
- * @returns (number) the entity id
+ * @param props the line's props, as `createLines`'; `entityOpts.appId` is its id when it has none
+ * @param entityOpts the entity's options; `doNotAddToScene` attaches the line nowhere
+ * @param ecsWorld the entity's world (default: the default world)
+ * @returns the entity id
+ * @example
+ * ```ts
+ * import { setTransform } from 'aekasha';
+ * import { createLineEntity, polylineToSegments } from 'aekasha/lines';
+ *
+ * // A ring marker: moved like any entity, deleted with its scene
+ * const markerId = createLineEntity({ segments: polylineToSegments(ring, true), color: 0xffcc00 });
+ * setTransform(markerId, { pos: { x: 0, y: 0.05, z: 10 } });
+ * ```
  */
 export const createLineEntity = (
   props: LineProps = {},
@@ -173,6 +177,18 @@ export const createLineEntity = (
  * component) disposes the line, disposing the line removes the component. Placement is
  * separate — `line.attach({ to: 'ENTITY', entityId })` parents it to the entity's Object3D.
  * An entity holds at most one line.
+ * @param line the line, not disposed and bound to no entity
+ * @param entityId an entity without a line
+ * @param ecsWorld the entity's world (default: the default world)
+ * @example
+ * ```ts
+ * import { bindLineToEntity, createLines, polylineToSegments } from 'aekasha/lines';
+ *
+ * // A path drawn under an NPC: it follows the NPC and goes when the NPC is deleted
+ * const path = createLines({ segments: polylineToSegments(waypoints), width: 2 });
+ * path.attach({ to: 'ENTITY', entityId: npcId });
+ * bindLineToEntity(path, npcId);
+ * ```
  */
 export const bindLineToEntity = (line: LineObject, entityId: number, ecsWorld?: ECSWorld) => {
   const world =
@@ -198,7 +214,8 @@ export const getLineForEntity = (entityId: number, ecsWorld?: ECSWorld) => {
  * chunk so an app that only draws 1px lines never downloads it — which also means a width
  * above 1px can never be honoured synchronously. Lines created before it has loaded draw
  * 1px and upgrade themselves when it arrives; await this first to avoid that.
- * @returns (Promise<boolean>) whether the backend is available
+ * @returns resolves whether the backend is available (false when its chunk failed to load; a
+ * later call retries)
  */
 export const preloadFatLineBackend = () => loadFatLineBackend();
 

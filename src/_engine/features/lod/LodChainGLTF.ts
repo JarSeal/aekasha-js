@@ -19,9 +19,6 @@ import {
   type ResolvedLodChainOptions,
 } from './LodChainOptions';
 
-// In the import-free LodChainOptions.ts: the asset pipeline's cache key reads it without three
-export { GLTF_LOD_FORMAT_VERSION };
-
 /** The key of the chains' description in the glTF root's extras. */
 export const GLTF_LOD_EXTRAS_KEY = 'aekLodChains';
 
@@ -44,7 +41,11 @@ export type GLTFLodChainsExtras = {
   }[];
 };
 
-/** A base primitive's prebuilt chain, as loaded. */
+/**
+ * A base primitive's prebuilt chain, as loaded.
+ * For the kernel's glTF import and the LOD feature's import extension.
+ * @internal
+ */
 export type ExtractedLodChain = {
   extent: number;
   baseTriangles: number;
@@ -55,7 +56,11 @@ export type ExtractedLodChain = {
   levels: { geometry: THREE.BufferGeometry; triangles: number; error: number }[];
 };
 
-/** A file's prebuilt chains, by `getGLTFPrimitiveKey` (Import/GLTFExtract.ts) of their base. */
+/**
+ * A file's prebuilt chains, by `getGLTFPrimitiveKey` (kernel/assets/import/GLTFExtract.ts) of their base.
+ * What the LOD import extension hands the kernel's glTF extraction.
+ * @internal
+ */
 export type GLTFLodChains = Map<string, ExtractedLodChain>;
 
 /** A level mesh's geometry, loaded through the parser (cached, so its attributes are the same
@@ -73,6 +78,8 @@ const loadLevelGeometry = async (gltf: GLTF, meshIndex: number) => {
 /**
  * Loads the prebuilt LOD chains of a parsed glTF, by `getGLTFPrimitiveKey` of their base, for
  * extractPrimitives(). Empty for a file without any, or with another format version.
+ * Called through the LOD import extension, on both threads.
+ * @internal
  */
 export const readGLTFLodChains = async (gltf: GLTF): Promise<GLTFLodChains> => {
   const chains: GLTFLodChains = new Map();
@@ -98,9 +105,17 @@ export const readGLTFLodChains = async (gltf: GLTF): Promise<GLTFLodChains> => {
   return chains;
 };
 
-/** A level's vertex arrays: the base's, the ones every level shares, or its own. */
+/**
+ * A level's vertex arrays: the base's, the ones every level shares, or its own.
+ * @internal
+ */
 export type TransferableLevelAttributes = 'BASE' | 'SHARED' | Record<string, TransferableAttribute>;
 
+/**
+ * A prebuilt chain as the assets worker sends it to the main thread: {@link serializeLodChain}'s
+ * result, {@link deserializeLodChain}'s input.
+ * @internal
+ */
 export type TransferableLodChain = Omit<ExtractedLodChain, 'levels'> & {
   /** `WELDED` only: the vertex arrays every level indexes, sent once */
   shared?: Record<string, TransferableAttribute>;
@@ -137,6 +152,8 @@ const serializeParts = (
  * Describes a prebuilt chain for the worker hop. GLTFLoader gives the levels the base's attribute
  * objects (or, `WELDED`, the first level's), and serializing each level on its own would copy
  * them per level: a level that shares them is sent as its index only.
+ * The assets worker's GLTF job calls it.
+ * @internal
  * @param base the chain's base geometry, serialized into the same message
  * @param transfer collects the ArrayBuffers to pass as the postMessage transfer list
  */
@@ -180,6 +197,8 @@ export const serializeLodChain = (
 /**
  * Rebuilds a chain described by {@link serializeLodChain}: a level that shared its attributes gets
  * the same attribute objects again (the base's, or one set for every level).
+ * The LOD import extension calls it.
+ * @internal
  * @param base the chain's base geometry, already rebuilt
  */
 export const deserializeLodChain = (

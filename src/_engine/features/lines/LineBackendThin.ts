@@ -88,6 +88,10 @@ class ThinLineBackend implements LineBackend {
   }
 }
 
-/** @internal */
+/**
+ * The THIN backend over `positions`: a 1px `LineSegments`, always available (the FAT one is a
+ * lazy chunk). For `LineObject`.
+ * @internal
+ */
 export const createThinLineBackend = (positions: Float32Array): LineBackend =>
   new ThinLineBackend(positions);

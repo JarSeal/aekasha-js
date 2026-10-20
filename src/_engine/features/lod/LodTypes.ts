@@ -16,6 +16,11 @@ export type LodLevelDef = {
   castShadow?: boolean;
 };
 
+/**
+ * An entity's levels of detail: the `LOD` component's definition, a mesh's `lod` prop and
+ * `setMeshLod`'s argument. The selection picks the finest level whose `screenSize` the entity's
+ * screen size reaches, with `hysteresis` against flicker at a threshold.
+ */
 export type LodDef = {
   /** Level 0 first, `screenSize` descending. */
   levels: LodLevelDef[];
@@ -43,29 +48,40 @@ export type LodAutoDef = {
  * LOD chain. */
 export type MeshLodDef = LodDef | LodAutoDef | 'AUTO';
 
-/** A level with its assets resolved, what the apply step assigns to the mesh. */
+/** A level with its assets resolved: what the apply step assigns to a plain mesh, and what a
+ * {@link LodTarget}'s `resolveLevels` returns, one per level of the definition. */
 export type LodResolvedLevel = {
+  /** The level's geometry. */
   geometry: THREE.BufferGeometry;
+  /** The level's material, or a per-group array. */
   material: THREE.Material | THREE.Material[];
+  /** Whether the level casts shadows. */
   castShadow: boolean;
 };
 
-/** The `LOD` component's data. Add it with `level: -1, applied: -1, radius: 0, _levels: []`: the
- * component's add hook resolves the levels and the radius. */
+/**
+ * The `LOD` component's data. Add it with `level: -1, applied: -1, radius: 0, _levels: []`: the
+ * component's add hook resolves the levels and the radius.
+ * @remarks Adding a `LOD` to an entity that has one replaces the data without the remove hook: the
+ * old levels keep their registry refs, a running fade keeps its copy, and level 0 resolves from
+ * what the mesh shows then (maybe a coarser level). Remove the old `LOD` first, or use
+ * `setMeshLod` (`kernel/mesh/Mesh.ts`), which does.
+ */
 export type LodData = {
+  /** The levels and the selection settings it was added with. */
   def: LodDef;
   /** The selected level, -1 before the first selection. */
   level: number;
   /** The level the render side last applied, -1 before the first apply. */
   applied: number;
   /** Level 0's local bounding radius, cached when the component is added. The world radius is
-   * `radius × max(|scale|)`. An `InstancedMesh`'s covers level 0 at every instance (Lod/LodBounds.ts),
+   * `radius × max(|scale|)`. An `InstancedMesh`'s covers level 0 at every instance (LodBounds.ts),
    * re-read by `refreshLodBounds`. */
   radius: number;
   /** An `InstancedMesh`'s: the centre of its bounds in the mesh's space, which the selection
    * measures the distance from. Undefined for other meshes (their origin). */
   _center?: THREE.Vector3;
-  /** `def.levels` resolved when the component was added (Lod/LodSystem.ts), each holding a
+  /** `def.levels` resolved when the component was added (LodSystem.ts), each holding a
    * registry ref on its geometry and material(s) until the component goes. A target's levels hold
    * none. */
   _levels: LodResolvedLevel[];

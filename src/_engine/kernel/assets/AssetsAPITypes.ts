@@ -4,7 +4,8 @@
 
 import type { KTX2LoaderWorkerConfig } from 'three/addons/loaders/KTX2Loader.js';
 import type { TransferableGeometry } from './import/GeometryTransfer';
-import type { ResolvedLodChainOptions, SimplifiedLodChain } from '../../features/lod/LodSimplify';
+import type { ResolvedLodChainOptions } from '../../features/lod/LodChainOptions';
+import type { SimplifiedLodChain } from '../../features/lod/LodSimplify';
 import type { TransferableLodChain } from '../../features/lod/LodChainGLTF';
 import type { ImportedGeometryInfo } from './import/ImportTypes';
 import type { TransferableImage, TransferableTexture } from './import/TextureTransfer';

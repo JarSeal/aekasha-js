@@ -61,12 +61,18 @@ pixels. Both stay opaque, so shadows, depth and post effects work through a fade
 instance into its level's mesh, so a whole forest is a draw call per level. A fading instance is
 in two level meshes, which adds no draw call.
 
+Move an instance through its transform, like any entity: the pool writes it into the instance
+matrix, and grows the mesh's bounds when the instance leaves them, so three never culls the whole
+mesh while a moved instance is on screen.
+
 The pools need `instancing()`, an instanced LOD pool's levels `lod()` too, and a pool's
-`spatialDomain` option `spatial()` (without it, the pool warns and indexes nothing).
+`spatialDomain` option `spatial()` (without it, the pool warns and indexes nothing). Give a pool
+a domain of its own: instances in `DEFAULT` [aren't a light's receivers](hub:issues/pool-instances-not-light-receivers).
 
 The selection costs one distance and one multiply per entity, after frustum culling, and only an
-entity whose level changed is touched. `AppConfig.lod.maxSelectionsPerFrame` spreads it over
-frames when there are very many.
+entity whose level changed is touched. `AppConfig.lod.maxSelectionsPerFrame`
+([`setLodMaxSelectionsPerFrame`](api:setLodMaxSelectionsPerFrame)) spreads it over frames when
+there are very many.
 
 ## Impostors
 
@@ -129,14 +135,20 @@ down the lanes.
 
 ## Key APIs
 
-- [`setMeshLod`](api:setMeshLod), [`setLodBias`](api:setLodBias) and
-  [`setLodFadeSeconds`](api:setLodFadeSeconds).
+- [`setMeshLod`](api:setMeshLod), [`setLodBias`](api:setLodBias),
+  [`setLodFadeSeconds`](api:setLodFadeSeconds) and
+  [`setLodMaxSelectionsPerFrame`](api:setLodMaxSelectionsPerFrame).
+- [`refreshLodBounds`](api:refreshLodBounds): after an `InstancedMesh` entity's instance matrices
+  change.
 - [`generateLodChain`](api:generateLodChain).
 - [`createInstancedMeshPool`](api:createInstancedMeshPool) and
   [`createInstancedLodPool`](api:createInstancedLodPool).
 - [`generateCrossQuads`](api:generateCrossQuads) and
   [`generateOctahedralImpostor`](api:generateOctahedralImpostor).
 - [`registerLodTarget`](api:registerLodTarget): levels for entities that aren't plain meshes.
+  A target that cross-fades dithers its materials with [`enableLodDither`](api:enableLodDither)
+  and gives an instanced level mesh a fade per instance with
+  [`createLodFadeAttribute`](api:createLodFadeAttribute).
 
 ## Read more
 

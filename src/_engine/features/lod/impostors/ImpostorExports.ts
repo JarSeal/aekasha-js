@@ -14,14 +14,18 @@ import { getTextureAtlasInfo } from '../../../kernel/assets/TextureAtlas';
 import { getImpostorDefSlots, IMPOSTOR_EXPORT_FORMAT_VERSION } from './ImpostorFormat';
 import { getImpostorSourceHash } from './ImpostorSourceHash';
 
-/** A listed export, ready to build from: its definition and the atlas slots it reads, loaded
- * (`getImpostorDefSlots`) */
+/**
+ * A listed export, ready to build from: its definition and the atlas slots it reads, loaded
+ * (`getImpostorDefSlots`)
+ * {@link getImpostorExport}'s result.
+ * @internal
+ */
 export type ImpostorExport<Kind extends ImpostorDef['kind']> = {
   def: Extract<ImpostorDef, { kind: Kind }>;
   slots: Partial<Record<string, THREE.Texture>>;
 };
 
-/** A slot's texture id (the schema's getAtlasSlotTextureId; core imports no zod) */
+/** A slot's texture id (the schema's getAtlasSlotTextureId; the runtime imports no zod) */
 const getSlotTextureId = (atlasId: string, slot: string) => `${atlasId}.${slot}`;
 
 /** The definition of `id` in the loading scene's `impostors` (else the current scene's) */
@@ -37,6 +41,8 @@ const getListedImpostorDef = (id: string) => {
  * when the scene lists it but it can't be used (the caller bakes instead). Each slot must be the
  * loaded atlas slot: a texture registered under its id by something else (a bake under the same
  * id) is refused.
+ * The two generators look an export up first.
+ * @internal
  */
 export const getImpostorExport = <Kind extends ImpostorDef['kind']>(
   id: string,
@@ -74,6 +80,8 @@ export const getImpostorExport = <Kind extends ImpostorDef['kind']>(
  * Debug env only: warns when `def`'s source fingerprint isn't the one of `geometry` and
  * `material` with `settings` (the generator's resolved options), ie. the export was made from
  * another source or other options. The export is used anyway: re-exporting it is the fix.
+ * Called by the two generators.
+ * @internal
  */
 export const warnIfImpostorExportStale = (
   def: ImpostorDef,

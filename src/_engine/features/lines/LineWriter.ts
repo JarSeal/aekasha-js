@@ -1,6 +1,9 @@
 import type * as THREE from 'three/webgpu';
 
-/** Floats per segment: two xyz endpoints. */
+/**
+ * Floats per segment: two xyz endpoints.
+ * @internal
+ */
 export const FLOATS_PER_SEGMENT = 6;
 
 /**
@@ -9,6 +12,7 @@ export const FLOATS_PER_SEGMENT = 6;
  * @internal
  */
 export interface LineWriteTarget {
+  /** The flat `xyzxyz` buffer the writer fills from its start. */
   readonly positions: Float32Array;
   /** Makes room for `floatCount` floats in total. False means no room (a FIXED line
    * overflowed) and the write is dropped. */
@@ -23,10 +27,16 @@ export interface LineWriteTarget {
 export class LineWriter {
   private cursor = 0;
 
-  /** @internal */
+  /**
+   * A writer over `target`, made by `LineObject` (one per line) and the one-shot builders.
+   * @internal
+   */
   constructor(private readonly target: LineWriteTarget) {}
 
-  /** @internal */
+  /**
+   * Moves the cursor back to the buffer's start: `LineObject.beginWrite()`'s.
+   * @internal
+   */
   reset() {
     this.cursor = 0;
     return this;

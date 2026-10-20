@@ -5,15 +5,13 @@ import type { ECSWorld } from '../../../kernel/ecs/ECS';
 import { getECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
 import {
-  DEFAULT_LOD_HYSTERESIS,
-  getLodBias,
-  getLodDebugOptions,
-  getLodFadeSeconds,
   getLodSelectionCamera,
   getLodWorldSphere,
   type LodMeasure,
   measureLodEntity,
-} from '../LodSystem';
+} from '../LodMeasure';
+import { getLodBias, getLodDebugOptions, getLodFadeSeconds } from '../LodSettings';
+import { DEFAULT_LOD_HYSTERESIS } from '../LodSystem';
 import type { LodData } from '../LodTypes';
 import {
   getKindWindowId,
@@ -108,7 +106,7 @@ const getStateText = (entityId: number, lod: LodData, world: ECSWorld) => {
 };
 
 /** How the entity fades: its duration and where it comes from, or why it never fades (the same
- * rules as LodSystem.ts's canFade). */
+ * rules as LodFades.ts' canFade). */
 const getFadeText = (entityId: number, lod: LodData, world: ECSWorld) => {
   const mesh = getLodMesh(entityId, world) as THREE.SkinnedMesh | undefined;
   if (lod._target ? !lod._target.setFade : mesh?.isSkinnedMesh) {

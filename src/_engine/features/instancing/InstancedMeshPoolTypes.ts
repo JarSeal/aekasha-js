@@ -19,13 +19,17 @@ export interface InstancedMeshSlotData {
   /** The outgoing copy's slot in `_fadeOutMesh`, -1 without one. Changes like `index`. */
   _fadeOutIndex: number;
   /** Last `Transform.version` baked into `mesh`'s instance matrix — skips the write once a
-   * (typically static, e.g. foliage) instance's transform stops changing. */
+   * (typically static, e.g. foliage) instance's transform stops changing. `MAP` storage mode only:
+   * in `TYPED_ARRAY` mode the store's dirty flag says it. */
   _lastVersion: number;
 }
 
 /** Where `spawn()` puts an instance. The toolkit's `ScatterPlacement` is one. */
 export interface InstancePlacement {
+  /** The instance's `Transform` position. */
   position: THREE.Vector3;
+  /** The instance's `Transform` rotation. */
   quaternion: THREE.Quaternion;
+  /** The instance's scale, the same on every axis. */
   scale: number;
 }

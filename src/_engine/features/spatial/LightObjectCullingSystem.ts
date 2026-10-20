@@ -7,12 +7,9 @@ import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { reconcileObject3DVisibility } from '../../kernel/ecs/ECSCoreSystems';
 import { getMeshWorldBoundingSphere } from '../../kernel/ecs/ObjectFrustumCullingSystem';
 import type { SpatialGrid } from './SpatialGrid';
-import {
-  computeLightInfluenceRadius,
-  DEFAULT_SPATIAL_DOMAIN,
-  getSpatialDomain,
-  validateSpatialGridQuery,
-} from './SpatialIndexSystem';
+import { DEFAULT_SPATIAL_DOMAIN, getSpatialDomain } from './SpatialDomains';
+import { computeLightInfluenceRadius } from './SpatialIndexSystem';
+import { validateSpatialGridQuery } from './SpatialOracle';
 
 // --- NEARBY-MESH TEST ---
 // Candidates come from the spatial index (docs/plans/_DONE_p050_spatial-index.md);
@@ -36,6 +33,14 @@ function meshIsVisibleReceiver(entityId: number, world: ECSWorld): boolean {
   return _lightSphere.intersectsSphere(meshSphere) && _frustum.intersectsSphere(meshSphere);
 }
 
+// The query's light and world, for the visitor (one function, not a closure per light)
+let _visitLightId = 0;
+let _visitWorld: ECSWorld | null = null;
+
+/** Stops the query (true) at the first visible receiver: one is enough to keep the light on. */
+const receiverVisitor = (candidateId: number): boolean =>
+  candidateId !== _visitLightId && meshIsVisibleReceiver(candidateId, _visitWorld!);
+
 /**
  * Whether `lightId` has at least one nearby, in-frustum mesh that could
  * receive its light. The caller doesn't need to know this queries a spatial index rather than
@@ -48,21 +53,27 @@ function testLightAgainstMeshList(
   light: THREE.PointLight | THREE.SpotLight
 ): boolean {
   const radius = computeLightInfluenceRadius(light);
-  light.getWorldPosition(_lightSphere.center);
+  // One world matrix update (getWorldPosition would do it again)
+  light.updateWorldMatrix(true, false);
+  _lightSphere.center.setFromMatrixPosition(light.matrixWorld);
   _lightSphere.radius = radius;
 
   validateSpatialGridQuery(world, _lightSphere.center, radius);
 
-  let found = false;
-  grid.queryVisit(_lightSphere.center, radius, (candidateId) => {
-    if (found || candidateId === lightId) return;
-    if (meshIsVisibleReceiver(candidateId, world)) found = true;
-  });
+  _visitLightId = lightId;
+  _visitWorld = world;
+  const found = grid.queryVisit(_lightSphere.center, radius, receiverVisitor);
+  _visitWorld = null;
   return found;
 }
 
 // --- THE SYSTEM ---
 
+/**
+ * Culls each object-culled point and spot light that lights no visible mesh in its influence
+ * sphere (the `DEFAULT` domain's members), every frame. Registered by the feature's install.
+ * @internal
+ */
 export const lightObjectCullingSystem = (world: ECSWorld) => {
   const storage = world.getStorage(ComponentType.OBJECT_CULLING_ENABLED);
   if (storage.size === 0) return; // nothing opted in — skip the frustum build entirely
@@ -79,20 +90,24 @@ export const lightObjectCullingSystem = (world: ECSWorld) => {
     _projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
   );
 
+  // Read once per frame; adding and removing TAG_OBJECT_CULLED below keeps the same storage
+  const object3Ds = world.getStorage(ComponentType.OBJECT3D);
+  const frustumCulled = world.getStorage(ComponentType.TAG_FRUSTUM_CULLED);
+  const objectCulled = world.getStorage(ComponentType.TAG_OBJECT_CULLED);
+
   for (const [entityId] of storage) {
     if (world.isDisabled(entityId)) continue; // already invisible; don't fight over .visible
     // Already known to have nothing looking at it this frame — skip the (more expensive) mesh scan.
-    if (world.hasComponent(entityId, ComponentType.TAG_FRUSTUM_CULLED)) continue;
+    if (frustumCulled.has(entityId)) continue;
 
-    const objComp = world.getComponent(entityId, ComponentType.OBJECT3D);
+    const objComp = object3Ds.get(entityId);
     if (!objComp) continue;
     const light = objComp.value as THREE.PointLight | THREE.SpotLight;
-    light.updateWorldMatrix(true, false);
 
     const hasNearbyVisibleMesh = grid
       ? testLightAgainstMeshList(entityId, world, grid, light)
       : false;
-    const isCulled = world.hasComponent(entityId, ComponentType.TAG_OBJECT_CULLED);
+    const isCulled = objectCulled.has(entityId);
     if (hasNearbyVisibleMesh && isCulled) {
       world.removeComponent(entityId, ComponentType.TAG_OBJECT_CULLED);
     } else if (!hasNearbyVisibleMesh && !isCulled) {

@@ -1,6 +1,6 @@
 Status: stub — not-implemented
 Category: Refactoring, API
-Related: p600_whole-codebase-refactoring-and-documentation.md (Stage C bumps are minor or patch, so its deprecations wait here), \_DONE_p614_review-physics.md (D3: the physics items below), \_DONE_p615_review-sky-box.md (D3: the sky box items below), \_DONE_p610_character-and-input-action-architecture.md, \_DONE_p612_review-ecs-loop-config-init.md, \_DONE_p613_review-rendering-scene-assets.md (their deprecations), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the tiers' measurement)
+Related: p600_whole-codebase-refactoring-and-documentation.md (Stage C bumps are minor or patch, so its deprecations wait here), \_DONE_p614_review-physics.md (D3: the physics items below), \_DONE_p615_review-sky-box.md (D3: the sky box items below), \_DONE_p616_review-lod-spatial-instancing-lines.md (D3: the LOD, spatial, instancing and lines items below), \_DONE_p610_character-and-input-action-architecture.md, \_DONE_p612_review-ecs-loop-config-init.md, \_DONE_p613_review-rendering-scene-assets.md (their deprecations), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the tiers' measurement)
 
 # Engine 6.0.0 — Stub
 
@@ -57,6 +57,20 @@ migration page, so an app made from the template upgrades in one step.
     `getSunElevation(i = 0)` and `getMoonPhase(i = 0)` (the coding standard asks for an options
     object; a trailing index is common enough that keeping them is an option).
     `registerSkyBox(def, sceneId?)` is `@internal` since p615, so it can change in any release.
+- **From p616 (its D3; candidates, decided here; call sites counted 2026-10-20):**
+  - the spatial API's argument order: `registerSpatialDomain(world, opts)`,
+    `getSpatialDomain(world, id)`, `invalidateSpatialDomain(world, id)` and the rest take the world
+    first, but `joinSpatialDomain`, `leaveSpatialDomain` and `isInSpatialDomain` take
+    `(entityId, domainId, world?)` and `refreshSpatialRadius` `(entityId, world?)`. World first
+    everywhere, or an options object (outside their module: `joinSpatialDomain` once in the Hub,
+    `refreshSpatialRadius` three times in the engine);
+  - an instanced pool's `spawn(world, placements, entityOpts?)` and `despawn(world, entityId)`
+    without their `world`: the pool's own (`opts.world`, which owns the mesh). Instances spawned
+    into another world outlive the mesh's scene there and keep slots in a disposed mesh (6 calls
+    in the app and the Hub's LOD example, all passing the pool's world);
+  - `createLineEntity(props, entityOpts?, ecsWorld?)` and `bindLineToEntity(line, entityId,
+    ecsWorld?)`: optional positional parameters, where the coding standard asks for an options
+    object (no call outside the engine).
 - **The deprecations without a version** (`ui/DraggableWindow.ts`'s six, `debug/Stats.ts`' two,
   `debug/PercentagePieHtml.ts`' one): each gets a version or a removal here.
 - **The toolkit** keeps its own scale: its `createSeededRandom` re-export goes in toolkit 3.0.0,

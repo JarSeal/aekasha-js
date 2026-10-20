@@ -5,15 +5,19 @@ export { spatial } from './SpatialFeature';
 export { SpatialGrid } from './SpatialGrid';
 export type { ReadonlyVec3, SpatialGridOptions, SpatialGridStats } from './SpatialGrid';
 export {
+  DEFAULT_SPATIAL_DOMAIN,
   getSpatialDomain,
   getSpatialGrid,
+  registerSpatialDomain,
+  unregisterSpatialDomain,
+} from './SpatialDomains';
+export type { SpatialDomainOptions, SpatialUpdatePolicy } from './SpatialDomains';
+export {
   invalidateSpatialDomain,
   isInSpatialDomain,
   joinSpatialDomain,
   leaveSpatialDomain,
   rebuildSpatialDomain,
   refreshSpatialRadius,
-  registerSpatialDomain,
-  unregisterSpatialDomain,
 } from './SpatialIndexSystem';
-export type { SpatialDomainOptions } from './SpatialIndexSystem';
+export { validateSpatialGridQuery } from './SpatialOracle';
