@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 done
+Status: in progress | Phases 0-1 done
 Category: Refactoring, Documentation, LOD, Rendering
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -399,9 +399,9 @@ show.
 ## 3. Phases
 
 Each phase leaves the tree green: `yarn test`, the lint and `tsc` (the Stop hook), and the
-phase's own checks. `yarn verify:scenes` runs at the end of Phases 1, 2 and 4 and in Phase 6
-(snapshots, hashes and system order unchanged unless a phase says otherwise; no file is edited
-while it runs). Each phase ends with its "As built" list, its files' JSDoc at 100 % and
+phase's own checks. `yarn verify:scenes` ran at the end of Phase 1; after that it runs once, in
+Phase 6, for Phases 2-5 together (an hour a run on this machine; snapshots, hashes and system
+order unchanged unless a phase says otherwise; no file is edited while it runs). Each phase ends with its "As built" list, its files' JSDoc at 100 % and
 `docs.json` updated (`yarn verify:baselines --docs --update`).
 
 ### Phase 0: baselines and measurements — done
@@ -472,7 +472,7 @@ WebGL2 through SwiftShader):
   `getMeshWorldBoundingSphere`, which returns undefined for an entity without `OBJECT3D`, which a
   pool instance is. `yarn test`: 87 files, 692 passed, 2 expected fails, 1 skipped.
 
-### Phase 1: the grid fix (D4), the pool bounds (D5) and the tests (D11)
+### Phase 1: the grid fix (D4), the pool bounds (D5) and the tests (D11) — done
 
 1. S1 with its test; S4 goes with it.
 2. P2 (the bounds grown in the sync system), with its test or a scene check.
@@ -480,11 +480,51 @@ WebGL2 through SwiftShader):
 4. S8's `@remarks` and issue file.
 5. `yarn verify:scenes`: unchanged.
 
+As built (2026-10-20):
+
+- **S1 / S4 (D4):** `SpatialGrid.removeMember` patches the cells through `lastCell`: the removed
+  member's entry becomes `REMOVED_ITEM` (`0xffffffff`) first, then the moved member's entry is
+  pointed at its new slot (that order, so a cell holding both can't match the wrong one). Beyond
+  D4: removing the *last* slot also turns its entry into the sentinel (else a member added into
+  the freed slot was an extra candidate at the old cell), `lastCell` moves with the slot and is
+  NaN for the emptied slot and, at rebuild, for oversized members. Queries skip the sentinel
+  instead of the old `entityId >= 0` check: no entry points at an empty slot any more.
+  `addMember` / `removeMember` got JSDoc; the spatial `CLAUDE.md`'s "stale slots after a leave"
+  became "a leave is seen at once, a join or a move after the rebuild".
+- **P2 (D5):** `growPoolBounds(mesh, matrix)` in `InstancedMeshPool.ts`, allocation-free, never
+  shrinking. A plain pool unions into the mesh's own bounds (three's `union` leaves bounds that
+  hold the instance as they are; null bounds stay null, three computes them on first use). A LOD
+  pool's local and union bounds moved from `spawn`'s closure to `LodPoolState`; the union is
+  copied to each level mesh only when it grew (copies, not one shared Box3 / Sphere: a
+  `computeBoundingSphere()` on one level mesh would overwrite the others'). Called by the sync for
+  each instance it bakes and, beyond D5, by the LOD target's un-cull path (it re-bakes from the
+  `Transform` without a sync, so an instance moved while culled came back outside). A re-baked
+  instance pays a WeakMap lookup and the box and sphere transforms: Phase 2's P1 rework can fold
+  the lookup into the loop. The pools' JSDoc and the instancing `CLAUDE.md` say what the bounds do.
+- **D11's tests** (91 files, 744 tests, no expected fails left): `SpatialGrid.test.ts` (S1 and
+  five removal cases, then add / update / query, the radius expansion, the oversized tier and its
+  multiplier, capacity, `queryInto` overflow, the AABB query, `memberAt`),
+  `InstancedMeshPool.test.ts` (P2 for both pools and the un-cull path, the bounds left alone
+  inside them, `despawn`'s swap-remove, removing the slot component; the test context registers
+  the slot hooks for real), `lod/LodSystem.test.ts` (`selectLevel`), `lod/LodAuto.test.ts`
+  (`lodDefFromChain`), `lod/LodChainOptions.test.ts`, `lines/LineWriter.test.ts` (the writer, the
+  builders, `hashLinePhase`'s spread). All in Node: the pool needed no scene runner.
+- **`selectLevel` is exported `@internal`** for its test (D11's option): one `api.json` entry
+  (`features/lod/LodSystem`) that Phase 3's `--update` records on top of D6's.
+- **S8 (D5):** a `@remarks` on both pools' `spatialDomain`, a sentence in the spatial
+  `CLAUDE.md`, and `docs/issues/pool-instances-not-light-receivers.md` (open; the fix: the grid
+  member's sphere for an entity without `OBJECT3D`, counting a pool instance only while drawn, or
+  a bounding-volume provider per component type). Only largeWorld's tree pool joins a domain
+  (`FOLIAGE`); its other pools and lodShowcase's join none.
+- **`yarn verify:scenes`:** 101 passed, 3 failed in 3,887 s, the same three as Phase 0
+  (`thirdPersonGymScene`'s debug configurations, the probe's 300 s timeout on SwiftShader). Every
+  snapshot within tolerance, no hash or system order moved; `space`'s worker targets hash apart
+  from `mainThread` as in Phase 0 (`MutualGravity`, its JSDoc), its `mainThread` hash = baseline.
+
 ### Phase 2: performance (D10)
 
 1. S2, S3, P1, and what Phase 0's audit added.
 2. The Phase 0 measurements again, same scenes and cameras; recorded here side by side.
-3. `yarn verify:scenes`: unchanged.
 
 ### Phase 3: the API (D6, D7) and the deferrals (D3)
 
@@ -500,7 +540,6 @@ WebGL2 through SwiftShader):
 1. The three splits, moved as they are.
 2. Stale names, detached comments, the traps as `@remarks`, the remaining undocumented exports and
    members; the debug builders' `Size:` lines.
-3. `yarn verify:scenes`: unchanged (system order included).
 
 ### Phase 5: the Hub, CLAUDE.md, readme, and what's filed
 
@@ -515,6 +554,9 @@ WebGL2 through SwiftShader):
 1. D2's bumps, a `CHANGELOG.md` entry, `yarn checkVersions --against main`.
 2. `yarn test`, `yarn verify:scenes`, `yarn verify:baselines` (no unexplained growth), `yarn build`
    (the SBP budgets: the `lod`, `spatial`, `instancing` and `lines` groups), `yarn hub:build`.
+   The scene run is the only one since Phase 1: it covers Phase 2's per-frame changes (snapshots
+   and hashes unchanged) and Phase 4's splits (the system order unchanged, Risk 2). A difference
+   is traced to its phase through the scene and what moved.
 3. Mark the plan done (`docs/plans/CLAUDE.md`).
 4. Time for a PR: this branch into `main` (p600's "Branches and PRs").
 
@@ -524,7 +566,7 @@ WebGL2 through SwiftShader):
    candidates (the sentinel). Light culling may then keep a light on in a frame where it was
    wrongly culled; the scene runner's snapshots are taken in steady state, so none should move.
 2. **D8's splits move registration-adjacent code.** The install functions keep their order; the
-   system order baseline is the check.
+   system order baseline is the check, in Phase 6's scene run.
 3. **SBP groups count comments** (p612's lesson): D9's JSDoc grows the `lod` and `spatial` groups
    before minification. Phase 6's `yarn build` says whether a budget needs its reason updated.
 
