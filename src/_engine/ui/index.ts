@@ -11,7 +11,7 @@ export type {
   TProps,
   TSettings,
   TStyle,
-} from './CMP';
+} from './CMPTypes';
 export { openDialog } from './DialogWindow';
 export type { DialogProps } from './DialogWindow';
 export {

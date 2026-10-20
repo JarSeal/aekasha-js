@@ -1,4 +1,5 @@
-import { CMP, type TCMP } from '../ui/CMP';
+import { CMP } from '../ui/CMP';
+import type { TCMP } from '../ui/CMPTypes';
 import { getSvgIcon } from '../ui/icons/SvgIcon';
 import type { DebuggerListDef, DebuggerListItem } from './DebuggerGUI';
 

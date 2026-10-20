@@ -1,65 +1,94 @@
 // The draggable windows' types: the public ones (on `aekasha/ui`) and the internal ones the
 // window modules share (DraggableWindow.ts, its store, geometry and drag modules).
-import type { TCMP } from './CMP';
+import type { TCMP } from './CMPTypes';
 import type { SvgIconKey } from './icons/SvgIcon';
 
 /** The CSS unit of a window's position or size value. */
 export type DraggableWindowUnit = 'px' | '%' | 'vw' | 'vh';
 
+/** What a window is for (eg. `{ entityId }`): serializable, since a `saveToLS` window keeps it,
+ * and handed to its content function. */
 export type DraggableWindowData = { [key: string]: unknown };
 
+/** A window's content: a CMP (kept over closes: detached, not removed, so a reopen shows it
+ * again), or a function that builds it from the window's `data` on every mount. */
 export type DraggableWindowContent = TCMP | ((data?: DraggableWindowData) => TCMP);
 
+/** The units of a window's position and sizes, per axis (default 'px'). */
 export type DraggableWindowUnits = {
-  // Default is 'px'
   /** A non-px position is the window's centre. A draggable window converts it to px (its
    * left/top) when it mounts; a non-draggable one (eg. a dialog) stays CSS-centred. */
   position?: { x?: DraggableWindowUnit; y?: DraggableWindowUnit };
+  /** The size's units. A resize stores the resized axis in px. */
   size?: { w?: DraggableWindowUnit; h?: DraggableWindowUnit };
+  /** The max size's units */
   maxSize?: { w?: DraggableWindowUnit; h?: DraggableWindowUnit };
+  /** The min size's units */
   minSize?: { w?: DraggableWindowUnit; h?: DraggableWindowUnit };
 };
 
 /** The persisted part of a window (LS): serializable values only. */
 export type DraggableWindowConfig = {
+  /** The window's id */
   id: string;
   /** The window's kind (see {@link OpenDraggableWindowProps.kind}). Without one, the window's
    * kind is its id. */
   kind?: string;
+  /** The header's title */
   title: string;
   /** An icon before the title in the header */
   icon?: SvgIconKey;
+  /** What the window is for (see {@link DraggableWindowData}) */
   data?: DraggableWindowData;
   /** Position (left/top) and size, in `units` (px by default). A draggable window's position is
    * always px. */
   geometry: { x: number; y: number; w: number; h: number };
+  /** The smallest size a resize leaves (default 100 × 120 px) */
   minSize: { w: number; h: number };
   /** Without one, the window is at most the viewport's size (100vw × 100vh) */
   maxSize?: { w: number; h: number };
+  /** The units of `geometry`, `minSize` and `maxSize` */
   units?: DraggableWindowUnits;
   /** The window's index in its layer's stack (0 = bottom) */
   orderNr: number;
+  /** Whether it's open (a window suspended over a scene load is open, without its DOM) */
   isOpen: boolean;
+  /** Whether only its header shows */
   isCollapsed: boolean;
+  /** See {@link OpenDraggableWindowProps.saveToLS} */
   saveToLS: boolean;
+  /** See {@link OpenDraggableWindowProps.isDebugWindow} */
   isDebugWindow: boolean;
   /** Shows this debug window (`isDebugWindow`) in prodTest mode too (default false, debug
    * windows are debug mode only). The window's content module must then be loaded in prodTest
    * mode as well, ie. with `loadDebugModuleAsync(importer, true)` / `useDebug(ref, true)`,
    * otherwise the window opens without content. */
   showInProdTest: boolean;
+  /** See {@link OpenDraggableWindowProps.disableVertResize} */
   disableVertResize: boolean;
+  /** See {@link OpenDraggableWindowProps.disableHoriResize} */
   disableHoriResize: boolean;
+  /** See {@link OpenDraggableWindowProps.disableDragging} */
   disableDragging: boolean;
+  /** See {@link OpenDraggableWindowProps.disableCollapseBtn} */
   disableCollapseBtn: boolean;
+  /** See {@link OpenDraggableWindowProps.disableCloseBtn} */
   disableCloseBtn: boolean;
+  /** See {@link OpenDraggableWindowProps.closeOnSceneChange} */
   closeOnSceneChange: boolean;
+  /** See {@link OpenDraggableWindowProps.removeOnSceneChange} */
   removeOnSceneChange: boolean;
+  /** See {@link OpenDraggableWindowProps.removeOnClose} */
   removeOnClose: boolean;
+  /** See {@link OpenDraggableWindowProps.customZIndex} */
   customZIndex?: number;
+  /** See {@link OpenDraggableWindowProps.hasBackDrop} */
   hasBackDrop: boolean;
+  /** See {@link OpenDraggableWindowProps.backDropClickClosesWindow} */
   backDropClickClosesWindow: boolean;
+  /** Extra classes for the window's element */
   windowClass?: string | string[];
+  /** Extra classes for the backdrop's element */
   backDropClass?: string | string[];
 };
 
@@ -69,12 +98,21 @@ export type DraggableWindow = DraggableWindowConfig & {
   isActive: boolean;
   /** Only a mounted window has one (not a closed one, or one suspended over a scene change) */
   windowCMP?: TCMP;
+  /** The backdrop's CMP, while it's mounted with one */
   backDropCMP?: TCMP;
+  /** The content its last open passed */
   content?: DraggableWindowContent;
+  /** The `onClose` its last open passed */
   onClose?: () => void;
 };
 
+/**
+ * What {@link _engine/ui/DraggableWindow!openDraggableWindow} opens a window with. A reopen keeps
+ * the user's layout (position, size, collapsed) unless `resetPosition` / `resetSize`; for the other
+ * flags, a passed value wins over the stored one, and a default comes last.
+ */
 export type OpenDraggableWindowProps = {
+  /** The window's id: opening an id again reopens (or updates) that window. */
   id: string;
   /**
    * Makes this one of several windows of a kind (eg. one edit window per entity), with the id
@@ -84,40 +122,74 @@ export type OpenDraggableWindowProps = {
    * removes it. Without a kind, the window's kind is its id.
    */
   kind?: string;
+  /** The content; without, the content function registered for the window's kind builds it
+   * (`registerDraggableWindowKind`, `registerDraggableWindow`) */
   content?: DraggableWindowContent;
+  /** What the window is for, handed to its content function. A reopen with other data rebuilds
+   * the content. */
   data?: DraggableWindowData;
+  /** Opens a new window collapsed (a stored window keeps its own state) */
   isCollapsed?: boolean;
+  /** Where it opens, in `units.position` (default: the screen's centre) */
   position?: { x: number; y: number };
+  /** Its size, in `units.size` (default 320 × 320 px) */
   size?: { w: number; h: number };
+  /** The largest size a resize leaves, in `units.maxSize` (default the viewport's) */
   maxSize?: { w: number; h: number };
+  /** The smallest size a resize leaves, in `units.minSize` (default 100 × 120 px) */
   minSize?: { w: number; h: number };
+  /** The units of the position and the sizes (default px) */
   units?: DraggableWindowUnits;
+  /** Opens it at `position` (or the default), not where the user left it */
   resetPosition?: boolean;
+  /** Opens it at `size` (or the default), not the user's size */
   resetSize?: boolean;
+  /** Closes the window instead when it's open: the open is a toggle */
   closeIfOpen?: boolean;
+  /** Keeps the window's state in LS (`AEK_popupWindows`): open after a reload, with its layout
+   * (default false). Its content then comes from its kind's registered content function. */
   saveToLS?: boolean;
+  /** The header's title */
   title?: string;
   /** An icon before the title in the header */
   icon?: SvgIconKey;
+  /** A debug tool's window: above the app's windows, and shown only in the debug env (default
+   * false) */
   isDebugWindow?: boolean;
   /** Shows this debug window (`isDebugWindow`) in prodTest mode too (default false, debug
    * windows are debug mode only). The window's content module must then be loaded in prodTest
    * mode as well, ie. with `loadDebugModuleAsync(importer, true)` / `useDebug(ref, true)`,
    * otherwise the window opens without content. */
   showInProdTest?: boolean;
+  /** No vertical resize handle */
   disableVertResize?: boolean;
+  /** No horizontal resize handle */
   disableHoriResize?: boolean;
+  /** The header doesn't move the window */
   disableDragging?: boolean;
+  /** No collapse button */
   disableCollapseBtn?: boolean;
+  /** No close button */
   disableCloseBtn?: boolean;
+  /** Closes the window when a scene load starts, unless its kind's scene target resolver finds
+   * its target in the next scene: then it's rebuilt there */
   closeOnSceneChange?: boolean;
+  /** Removes the window (its state too) when a scene load starts */
   removeOnSceneChange?: boolean;
+  /** Closing removes the window and its state (a kind's window always is) */
   removeOnClose?: boolean;
+  /** A z-index of its own, instead of its place in its layer's stack (a debug window's gets 100
+   * added) */
   customZIndex?: number;
+  /** A backdrop behind the window that covers the screen (and takes its clicks) */
   hasBackDrop?: boolean;
+  /** A click on the backdrop closes the window */
   backDropClickClosesWindow?: boolean;
+  /** Extra classes for the window's element */
   windowClass?: string | string[];
+  /** Extra classes for the backdrop's element */
   backDropClass?: string | string[];
+  /** Runs after the window closes or is removed, instead of its kind's `onClose` */
   onClose?: () => void;
   /** Focuses the first focusable element of the window (its content first, then its header
    * buttons) when it opens. Default true. The engine's own reopens (restoring from LS, rebuilding

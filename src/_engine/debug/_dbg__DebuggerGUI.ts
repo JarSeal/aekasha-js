@@ -1,4 +1,4 @@
-import type { TCMP } from '../ui/CMP';
+import type { TCMP } from '../ui/CMPTypes';
 import { CMP } from '../ui/CMP';
 import styles from './DebuggerGUI.module.scss';
 import { lsGetItem, lsSetItem } from '../utils/LocalAndSessionStorage';

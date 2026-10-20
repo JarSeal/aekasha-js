@@ -1,6 +1,7 @@
 import { Pane, type FolderApi } from 'tweakpane';
 import type { BindingApi } from '@tweakpane/core';
-import { CMP, type TCMP } from '../ui/CMP';
+import { CMP } from '../ui/CMP';
+import type { TCMP } from '../ui/CMPTypes';
 import { lsGetItem, lsSetItem } from '../utils/LocalAndSessionStorage';
 import { lwarn } from '../utils/Logger';
 import type {

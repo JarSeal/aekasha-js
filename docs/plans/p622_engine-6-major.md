@@ -79,6 +79,7 @@ migration page, so an app made from the template upgrades in one step.
     kernel → ui imports of `Config.ts`;
   - `AddToastResponse.timeout` (`ui/Toaster.ts`, deprecated in engine 5.8.0): the toast's first
     timer, which its later phases replace;
+  - `TSettings.doCheckIsInDom` (`ui/CMPTypes.ts`, deprecated in engine 5.8.0): stored, never read;
   - a candidate, decided here: the UI kit's `T`-prefixed type names, the only ones in the engine
     (`TCMP` → `Cmp`, `TProps` → `CmpProps`, `TListener`, `TListenerCache`, `TListenerCreator`,
     `TStyle`, `TAttr`, `TClassAction`, `TAnimChain`, `TAnimState`, `TSettings` in `ui/CMP.ts`, and

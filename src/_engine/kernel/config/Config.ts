@@ -1,4 +1,4 @@
-import type { TCMP } from '../../ui/CMP';
+import type { TCMP } from '../../ui/CMPTypes';
 import type {
   PhysicsBackgroundBehavior,
   PhysicsEngine,

@@ -15,6 +15,7 @@ import type { BindingMeta, EnabledInDebugCam, TargetList } from './InputSharedTy
 // frame (only on frames the pointer moved), and click/dblclick bindings once per event. Cheap
 // for small curated target lists; hundreds of objects across many hover bindings will add up.
 
+/** A mouse button, by `MouseEvent.button` (0, 1, 2). */
 export type MouseButton = 'LEFT' | 'MIDDLE' | 'RIGHT';
 
 /**
@@ -22,9 +23,14 @@ export type MouseButton = 'LEFT' | 'MIDDLE' | 'RIGHT';
  * `Mouse*Binding`s).
  */
 export type MouseBindingBase = BindingMeta & {
+  /** Unique among the mouse bindings: creating a binding with an id in use replaces that one. */
   id: string;
-  enabled?: boolean; // default true
+  /** False keeps the binding registered without firing (default true); see
+   * {@link setMouseBindingEnabled}. */
+  enabled?: boolean;
+  /** Fires only while this scene is the current one. */
   sceneId?: string;
+  /** Whether it fires while the debug (orbit) camera is active (debug env; default it does). */
   enabledInDebugCam?: EnabledInDebugCam;
 };
 
@@ -34,7 +40,9 @@ export type MouseClickBinding = MouseBindingBase &
   PickOpts & {
     type: 'MOUSE_CLICK';
     button: MouseButton;
+    /** What the click raycasts against (only these, never the whole scene). */
     targets: TargetList;
+    /** Runs on the release, with the closest hit. */
     fn: (e: MouseEvent, intersection: THREE.Intersection) => void;
   };
 
@@ -43,14 +51,18 @@ export type MouseClickBinding = MouseBindingBase &
 export type MouseHoverBinding = MouseBindingBase &
   PickOpts & {
     type: 'MOUSE_HOVER';
+    /** What the hover raycasts against: at most once per frame the pointer moved. */
     targets: TargetList;
+    /** A new closest hit, with it. */
     onEnter?: (e: MouseEvent, intersection: THREE.Intersection) => void;
+    /** The hovered object is no longer the closest hit, or the pointer left the canvas. */
     onLeave?: (e: MouseEvent) => void;
   };
 
 /** Wheel over the canvas, no raycast. */
 export type MouseWheelBinding = MouseBindingBase & {
   type: 'MOUSE_WHEEL';
+  /** Runs for each wheel event over the canvas. */
   fn: (e: WheelEvent) => void;
 };
 
@@ -60,18 +72,22 @@ export type MouseDblClickBinding = MouseBindingBase &
   PickOpts & {
     type: 'MOUSE_DBLCLICK';
     button: 'LEFT' | 'RIGHT';
+    /** What the double-click raycasts against; without, it fires wherever it lands. */
     targets?: TargetList;
     /** Max time between the two clicks, RIGHT only (LEFT follows the OS setting). Default 300. */
     maxIntervalMs?: number;
+    /** Runs on the second click, with the closest hit when there are `targets`. */
     fn: (e: MouseEvent, intersection?: THREE.Intersection) => void;
   };
 
+/** A mouse binding, by its `type`. Each raycasts only its own `targets`. */
 export type MouseBinding =
   | MouseClickBinding
   | MouseHoverBinding
   | MouseWheelBinding
   | MouseDblClickBinding;
 
+/** The mouse binding types (`MouseBinding['type']`). */
 export type MouseBindingType = MouseBinding['type'];
 
 /**
@@ -334,6 +350,23 @@ const removeMouseListeners = (): void => {
   listenersInitiated = false;
 };
 
+/**
+ * Registers a mouse binding, replacing the one with its id. The first binding adds the pointer
+ * listeners (on the window, or on the canvas in an embed's `CANVAS` input scope), and the first
+ * `MOUSE_HOVER` one the hover system, which resolves it against the pointer right away.
+ * @remarks The binding is kept as given (not copied): {@link setMouseBindingEnabled} writes its
+ * `enabled`.
+ * @example
+ * ```ts
+ * createMouseBinding({
+ *   id: 'pickCrate',
+ *   type: 'MOUSE_CLICK',
+ *   button: 'LEFT',
+ *   targets: () => crates,
+ *   fn: (_e, hit) => selectCrate(hit.object),
+ * });
+ * ```
+ */
 export const createMouseBinding = (binding: MouseBinding): void => {
   deleteMouseBinding(binding.id);
   bindings.push(binding);
@@ -344,6 +377,7 @@ export const createMouseBinding = (binding: MouseBinding): void => {
   }
 };
 
+/** Removes a mouse binding (a no-op for an unknown id). The pointer listeners stay. */
 export const deleteMouseBinding = (id: string): void => {
   bindings = bindings.filter((b) => b.id !== id);
   hoveredUuids.delete(id);
@@ -366,6 +400,12 @@ export const setMouseActionSource = (source: MouseActionSource | null): void => 
 export const isMouseButtonHeld = (button: MouseButton): boolean =>
   pressStarts[button] !== undefined;
 
+/**
+ * Turns a mouse binding on or off without removing it (warns for an unknown id). A hover binding
+ * resolves again on the next frame: an off one leaves its object, an on one enters it.
+ * @remarks It writes `enabled` on the binding object passed to {@link createMouseBinding}, which
+ * is kept as given: a binding object shared by two calls changes for both.
+ */
 export const setMouseBindingEnabled = (id: string, enabled: boolean): void => {
   const binding = bindings.find((b) => b.id === id);
   if (!binding) {

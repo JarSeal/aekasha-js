@@ -13,11 +13,19 @@ import {
 import { isDebugCamRuleMet } from './InputRules';
 import type { BindingMeta, EnabledInDebugCam, Modifiers } from './InputSharedTypes';
 
+/**
+ * A key and the modifiers held with it. A chord matches only its own modifiers: `{ key: 'z', ctrl:
+ * true }` doesn't fire for Ctrl+Shift+Z, and `{ key: 'z' }` doesn't fire with Ctrl held (see
+ * {@link KeyBindingBase.ignoreModifiers}). A modifier key's own flag is ignored, so `{ key:
+ * 'Shift' }` matches the Shift press itself.
+ */
 export type KeyChord = Modifiers & {
-  /** KeyboardEvent.key value, e.g. 'h', 'F1', 'z', 'Escape'. */
+  /** `KeyboardEvent.key` value, eg. 'h', 'F1', 'z', 'Escape', ' ' (space). */
   key: string;
 };
 
+/** When a key binding fires: on the release, on the press (its key repeats included), or every
+ * fixed step while held. */
 export type KeyBindingType = 'KEY_UP' | 'KEY_DOWN' | 'KEY_HELD';
 
 /**
@@ -25,24 +33,33 @@ export type KeyBindingType = 'KEY_UP' | 'KEY_DOWN' | 'KEY_HELD';
  * KeyHeldBinding}).
  */
 export type KeyBindingBase = BindingMeta & {
+  /** Unique among the key bindings: creating a binding with an id in use replaces that one. */
   id: string;
-  /** Array = "any of these chords triggers this binding". */
+  /** The chord, or several: any of them fires the binding. */
   chord: KeyChord | KeyChord[];
-  caseInsensitive?: boolean; // default true
+  /** Matches the key in any case, so 'z' also fires for Caps Lock's 'Z' (default true). Shift is
+   * a modifier: `{ key: 'z' }` doesn't fire with it held. */
+  caseInsensitive?: boolean;
   /** Match on the key alone, whatever modifiers are (or aren't) held — the chord's own modifier
    * fields are ignored too. For continuous controls like movement that must keep working while
    * an unrelated modifier is pressed (e.g. a Shift run toggle). Default false (exact match). */
   ignoreModifiers?: boolean;
-  enabled?: boolean; // default true
+  /** False keeps the binding registered without firing (default true); see
+   * {@link setKeyBindingEnabled}. */
+  enabled?: boolean;
+  /** Fires only while this scene is the current one. */
   sceneId?: string;
+  /** Whether it fires while the debug (orbit) camera is active (debug env; default it does). */
   enabledInDebugCam?: EnabledInDebugCam;
   /** Runs in editor views too (Views.ts), which suspend the other bindings. (The engine's
    * debug keys and the CONFIG.ts `debugKeys` are action maps in the `DEBUG` context instead.) */
   isDebugKey?: boolean;
 };
 
+/** A key binding that fires on a key event: the release (`KEY_UP`) or the press (`KEY_DOWN`). */
 export type KeyUpDownBinding = KeyBindingBase & {
   type: 'KEY_UP' | 'KEY_DOWN';
+  /** Runs for the event, with `performance.now()` at the event. */
   fn: (e: KeyboardEvent, time: number) => void;
   /** Default false. When true, the binding doesn't fire for an event that another (not
    * yielding) binding also fires for, whenever that one was registered (eg. the engine's
@@ -50,13 +67,16 @@ export type KeyUpDownBinding = KeyBindingBase & {
   yieldToOtherBindings?: boolean;
 };
 
-/** KEY_HELD bindings are polled once per tick (see pollHeldKeyBindings), not event-driven,
- * so their fn receives the poll's delta instead of a KeyboardEvent. */
+/** A key binding polled while its chord is held: once per fixed physics step (once per frame
+ * without stepping), right after the action maps' sample, not on key events. */
 export type KeyHeldBinding = KeyBindingBase & {
   type: 'KEY_HELD';
+  /** Runs once per poll while held, with the poll's delta (the fixed timestep, or the frame's). */
   fn: (delta: number) => void;
 };
 
+/** A key binding, by its `type`. Gameplay that reads input every step is an action map
+ * (`createActionMap`); a binding suits a one-off shortcut. */
 export type KeyBinding = KeyUpDownBinding | KeyHeldBinding;
 
 type ReservedChord = {
@@ -389,6 +409,23 @@ const setEntries = (next: KeyBindingEntry[]) => {
   bindings = next.map((entry) => entry.binding);
 };
 
+/**
+ * Registers a key binding, replacing the one with its id. The first binding adds the key
+ * listeners (on the window, or on the canvas in an embed's `CANVAS` input scope), and the first
+ * `KEY_HELD` one the loop's held-key poll. A chord the engine's debug keys reserve gets a warning
+ * (debug env).
+ * @remarks The binding is kept as given (not copied): {@link setKeyBindingEnabled} writes its
+ * `enabled`.
+ * @example
+ * ```ts
+ * createKeyBinding({
+ *   id: 'toggleMap',
+ *   type: 'KEY_DOWN',
+ *   chord: [{ key: 'm' }, { key: 'Tab' }],
+ *   fn: () => toggleMap(),
+ * });
+ * ```
+ */
 export const createKeyBinding = (binding: KeyBinding): void => {
   warnIfKeyChordReserved(
     `the key binding "${binding.id}"`,
@@ -413,10 +450,16 @@ export const createKeyBinding = (binding: KeyBinding): void => {
  */
 export const getKeyBindings = (): readonly Readonly<KeyBinding>[] => bindings;
 
+/** Removes a key binding (a no-op for an unknown id). The key listeners stay. */
 export const deleteKeyBinding = (id: string): void => {
   setEntries(entries.filter((e) => e.binding.id !== id));
 };
 
+/**
+ * Turns a key binding on or off without removing it (warns for an unknown id).
+ * @remarks It writes `enabled` on the binding object passed to {@link createKeyBinding}, which is
+ * kept as given: a binding object shared by two calls changes for both.
+ */
 export const setKeyBindingEnabled = (id: string, enabled: boolean): void => {
   const binding = bindings.find((b) => b.id === id);
   if (!binding) {

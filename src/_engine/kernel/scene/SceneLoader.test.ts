@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { TCMP } from '../../ui/CMP';
+import type { TCMP } from '../../ui/CMPTypes';
 import type { AppData } from './AppData';
 import type { SceneData } from './Scene';
 

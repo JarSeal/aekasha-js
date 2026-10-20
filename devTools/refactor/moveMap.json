@@ -2454,6 +2454,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/ui/CMPTypes.ts": {
+      "to": "src/_engine/ui/CMPTypes.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/ui/DialogWindow.test.ts": {
       "to": "src/_engine/ui/DialogWindow.test.ts",
       "action": "keep",

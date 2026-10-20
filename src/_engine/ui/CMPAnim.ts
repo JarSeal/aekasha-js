@@ -1,7 +1,7 @@
 // A CMP's animation chain (TAnimChain): timers that step through phases of classes and styles,
 // kept in the CMP's `timers`. CMP.ts starts and clears it; it writes the CMP only through the
 // CMP's own methods (updateClass, updateStyle), so it imports no CMP code (only its types).
-import type { TAnimChain, TAnimState, TCMP } from './CMP';
+import type { TAnimChain, TAnimState, TCMP } from './CMPTypes';
 
 type SetTimeout = ReturnType<typeof setTimeout>;
 
@@ -12,8 +12,7 @@ const removeAnim = (cmp: TCMP, animKey: string) => {
     // Explicitly nullify the animState to break closure bonds
     if (timerData.animState) {
       timerData.animState.state = {};
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (timerData as any).animState = null;
+      timerData.animState = undefined;
     }
   }
   delete cmp.timers[animKey];

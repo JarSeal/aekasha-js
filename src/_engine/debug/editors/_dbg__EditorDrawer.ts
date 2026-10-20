@@ -11,7 +11,8 @@
  * (`setActive`). While active and open, it sets the `debugDrawerOpen` body class, so the top
  * on-screen row, the viewport stack and the editor's own UI shift with it.
  */
-import { CMP, type TCMP } from '../../ui/CMP';
+import { CMP } from '../../ui/CMP';
+import type { TCMP } from '../../ui/CMPTypes';
 import type { AnyDebuggerTabDef } from '../DebuggerGUI';
 import { getSvgIcon } from '../../ui/icons/SvgIcon';
 import { createTabHost } from '../_dbg__TabHost';

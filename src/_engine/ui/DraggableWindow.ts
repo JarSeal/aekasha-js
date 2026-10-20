@@ -1,4 +1,10 @@
-import type { TCMP } from './CMP';
+// The draggable windows: their registries, the stacks, the DOM build, the scene load and boot
+// hooks, and the public API (types: DraggableWindowTypes.ts; configs and LS:
+// DraggableWindowStore.ts; geometry: DraggableWindowGeometry.ts; drags: DraggableWindowDrag.ts).
+// Over the 800-line limit (p617 D10), with docs: what is left shares the module's state (the
+// windows map, the stacks, the kind registries, the suspended windows), so a further split
+// would make the modules import each other.
+import type { TCMP } from './CMPTypes';
 import { CMP } from './CMP';
 import { lerror } from '../utils/Logger';
 import { getConfig, IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
@@ -181,16 +187,16 @@ const moveToTop = (id: string) => {
 };
 
 /**
- * Brings an open window to the front of its layer (app or debug windows).
- * @param id (string) window id
+ * Brings an open window to the front of its layer (app or debug windows); a no-op for one
+ * that's closed or on top already.
  */
 export const bringDraggableWindowToFront = (id: string) => {
   if (moveToTop(id)) saveDraggableWindowStatesToLS();
 };
 
 /**
- * Whether the window is on top of its layer (app or debug windows).
- * @param id (string) window id
+ * Whether the window is on top of its layer (app or debug windows): false for an unknown or a
+ * closed one.
  */
 export const isDraggableWindowOnTop = (id: string) => {
   const entry = getWindows().get(id);
@@ -462,6 +468,22 @@ const focusFirstFocusableElement = ({ runtime }: WindowEntry) => {
 
 // Public API
 
+/**
+ * Opens a window, or reopens (and updates) the one with its id: its config resolved from `props`
+ * and its stored state (see {@link OpenDraggableWindowProps}), mounted under the HUD root, put on
+ * top of its layer and saved to LS when it's `saveToLS`. A debug window outside the debug env
+ * isn't opened. Throws without an id.
+ * @example
+ * ```ts
+ * openDraggableWindow({
+ *   id: 'inventory',
+ *   title: 'Inventory',
+ *   content: () => createInventoryPanel(),
+ *   size: { w: 360, h: 480 },
+ *   saveToLS: true,
+ * });
+ * ```
+ */
 export const openDraggableWindow = (props: OpenDraggableWindowProps) => {
   const { id, focusFirstElement = true } = props;
   if (!id) {
@@ -513,6 +535,10 @@ export const openDraggableWindow = (props: OpenDraggableWindowProps) => {
   if (focusFirstElement) focusFirstFocusableElement(entry);
 };
 
+/**
+ * Closes a window and runs its `onClose`: its state stays (a reopen restores its layout), unless
+ * it's `removeOnClose` or of a kind, which are removed instead. A no-op for an unknown id.
+ */
 export const closeDraggableWindow = (id: string) => {
   const entry = getWindows().get(id);
   if (!entry) return;
@@ -545,9 +571,8 @@ const toggleCollapse = (id: string) => {
  * Moves an open draggable window to the top center of the screen, and shrinks a resizable one
  * that still overflows (never below its min size). A collapsed window fits its expanded size.
  * Dialogs and other non-draggable windows are skipped. Header double-clicks call this.
- * @param id (string) window id
- * @param cascadeIndex (number) optional, offsets the window by this many header heights (x and y),
- * wrapping before the offset passes a third of the viewport
+ * @param cascadeIndex offsets the window by this many header heights (x and y), wrapping before
+ * the offset passes a third of the viewport (default 0)
  * @returns whether the window was fitted (false when it is closed or not draggable)
  */
 export const fitDraggableWindowToScreen = (id: string, cascadeIndex = 0) => {
@@ -585,6 +610,11 @@ export const updateDraggableWindow = (id: string) => {
   rebuildContent(entry);
 };
 
+/**
+ * Removes a window and its state (from LS too), and runs its `onClose`. A kind's window leaves its
+ * geometry as the kind's, for the kind's next window. A no-op for an unknown id.
+ * @param doNotSaveToLS leaves LS as it is (the engine's own removals that save later)
+ */
 export const removeDraggableWindow = (id: string, doNotSaveToLS?: boolean) => {
   const map = getWindows();
   const entry = map.get(id);
@@ -681,6 +711,7 @@ const loadDraggableWindowStatesFromLS = () => {
   saveDraggableWindowStatesToLS();
 };
 
+/** A window: a copy of its config, with its live CMPs; undefined for an unknown id. */
 export const getDraggableWindow = (id: string): DraggableWindow | undefined => {
   const entry = getWindows().get(id);
   return entry ? toPublicWindow(entry) : undefined;
@@ -688,25 +719,38 @@ export const getDraggableWindow = (id: string): DraggableWindow | undefined => {
 
 /**
  * The id of a kind's window for one key (eg. an entity id): `${kind}_${key}`.
- * @param kind (string) the window kind
- * @param key (string | number) what the window is for, unique in the kind
+ * @param key what the window is for, unique in the kind
  */
 export const getKindWindowId = (kind: string, key: string | number) => `${kind}_${key}`;
 
 /**
  * Registers a window kind (see {@link OpenDraggableWindowProps.kind}) and what its windows share:
- * their content function, onClose and scene target resolver. Call it once at module load (before
- * the engine restores the windows from LS), and every window of the kind, also one restored after
- * a reload, gets them without any per-window registration. Opening a window with a `kind` also
- * registers the kind (without options).
+ * their content function, onClose and scene target resolver. Register it once, before the boot
+ * restores the saved windows (its step after the app's `start`): in `start` or a feature's
+ * install (a `_dbg__` module may at its load). Then every window of the kind, also one restored
+ * after a reload, gets them without any per-window registration. Opening a window with a `kind`
+ * also registers the kind (without options).
  *
  * The first registration brings the kind's stored windows in: the window whose id is the kind
  * (from before the kind existed) only seeds the kind's geometry and is dropped, and a window
  * without a kind whose id is `getKindWindowId(kind, key)` gets the kind. So a single window uses
  * {@link registerDraggableWindow} (keyed by its id), not this.
- * @param kind (string) the window kind
- * @param opts ({@link DraggableWindowKindOpts}) optional, a later registration replaces the
- * options it passes
+ * @param opts a later registration replaces the options it passes
+ * @example
+ * ```ts
+ * registerDraggableWindowKind('enemyInfo', {
+ *   content: (data) => createEnemyPanel(data?.entityId as number),
+ *   sceneTargetResolver: (data) => isEntityAlive(data?.entityId as number),
+ * });
+ * // One window per enemy, reopened on top when it's open
+ * toggleDraggableWindow({
+ *   id: getKindWindowId('enemyInfo', entityId),
+ *   kind: 'enemyInfo',
+ *   data: { entityId },
+ *   title: 'Enemy',
+ *   closeOnSceneChange: true,
+ * });
+ * ```
  */
 export const registerDraggableWindowKind = (kind: string, opts?: DraggableWindowKindOpts) => {
   if (opts) registerDraggableWindow(kind, opts);
@@ -718,12 +762,10 @@ export const registerDraggableWindowKind = (kind: string, opts?: DraggableWindow
 /**
  * Registers what a single window (one without a kind) gets on every open, also one restored after
  * a reload: its content function, onClose and scene target resolver (the functions LS can't
- * hold). Call it once at module load, before the engine restores the windows from LS. The
- * window's own `content`/`onClose` passed on an open win. For several windows of a kind, see
- * {@link registerDraggableWindowKind}.
- * @param id (string) window id
- * @param opts ({@link DraggableWindowKindOpts}) a later registration replaces the options it
- * passes
+ * hold). Register it once, before the boot restores the saved windows (as
+ * {@link registerDraggableWindowKind}). The window's own `content` / `onClose` passed on an open
+ * win. For several windows of a kind, see {@link registerDraggableWindowKind}.
+ * @param opts a later registration replaces the options it passes
  */
 export const registerDraggableWindow = (id: string, opts: DraggableWindowKindOpts) => {
   addWindowHooks();
@@ -740,9 +782,9 @@ export const registerDraggableWindow = (id: string, opts: DraggableWindowKindOpt
 };
 
 /**
- * The windows of a kind (a window without a `kind` is the only one of the kind named by its id).
- * @param kind (string) the window kind
- * @param onlyOpen (boolean) optional, only the open windows (default true)
+ * The windows of a kind (a window without a `kind` is the only one of the kind named by its id),
+ * each as {@link getDraggableWindow} gives it.
+ * @param onlyOpen only the open windows (default true)
  */
 export const getDraggableWindowsOfKind = (kind: string, onlyOpen = true) => {
   const result: DraggableWindow[] = [];
@@ -755,7 +797,6 @@ export const getDraggableWindowsOfKind = (kind: string, onlyOpen = true) => {
 
 /**
  * Rebuilds the content of every open window of a kind (see {@link updateDraggableWindow}).
- * @param kind (string) the window kind
  */
 export const updateDraggableWindowsOfKind = (kind: string) => {
   const entries = getOpenWindowsOfKind(kind);
@@ -765,7 +806,7 @@ export const updateDraggableWindowsOfKind = (kind: string) => {
 /**
  * The list row click rule: opens the window when it isn't open, brings it to the front when it is
  * open under another window of its layer, and closes it when it is on top.
- * @param props (OpenDraggableWindowProps) the props to open the window with
+ * @param props the props it opens the window with
  */
 export const toggleDraggableWindow = (props: OpenDraggableWindowProps) => {
   const entry = getWindows().get(props.id);

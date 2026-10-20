@@ -1,6 +1,8 @@
 import type { OpenDraggableWindowProps } from './DraggableWindowTypes';
 import { closeDraggableWindow, getDraggableWindow, openDraggableWindow } from './DraggableWindow';
 
+/** A dialog's props: a draggable window's, without the ones a dialog fixes (its place, and no
+ * drag, resize or collapse), plus `closeOnEscape`. */
 export type DialogProps = Omit<
   OpenDraggableWindowProps,
   | 'isCollapsed'
@@ -65,6 +67,23 @@ const addEscapeListeners = () => {
   window.addEventListener('keyup', onEscapeKey, true);
 };
 
+/**
+ * Opens a modal dialog: a draggable window centred on the screen over a backdrop, that doesn't
+ * move, resize or collapse, 600 × 600 px unless `size` says otherwise (at least 320 px, at most
+ * 90 % of the screen). Every open resets its place and size. It closes like any window (its close
+ * button, `closeDraggableWindow(id)`, or `backDropClickClosesWindow`), and with Escape when
+ * `closeOnEscape` is set.
+ * @example
+ * ```ts
+ * openDialog({
+ *   id: 'pauseMenu',
+ *   title: 'Paused',
+ *   content: () => createPauseMenu(),
+ *   size: { w: 400, h: 300 },
+ *   closeOnEscape: true,
+ * });
+ * ```
+ */
 export const openDialog = ({ closeOnEscape, ...props }: DialogProps) => {
   openDraggableWindow({
     maxSize: { w: 90, h: 90 },

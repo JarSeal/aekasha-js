@@ -1,4 +1,4 @@
-import type { TCMP, TStyle } from './CMP';
+import type { TCMP, TStyle } from './CMPTypes';
 import { CMP } from './CMP';
 
 /**
@@ -80,34 +80,58 @@ export type ToasterSettings = {
  * DEFAULT_TOASTER_SETTINGS}, and whether it becomes the default toaster.
  */
 export type ToasterProps = {
+  /** The toaster's id, which `addToast`'s `toasterId` names (default: a generated one) */
   id?: string;
+  /** An extra class for the toaster's element */
   className?: string;
+  /** Its settings, over {@link DEFAULT_TOASTER_SETTINGS} */
   settings?: Partial<ToasterSettings>;
+  /** Makes it the default toaster, which a toast without a `toasterId` goes to (the first toaster
+   * made is the default until another takes it) */
   setAsDefaultToaster?: boolean;
 };
 
+/** What {@link addToast} makes a toast from. */
 export type ToastProps = {
+  /** Its kind, which picks the toaster's per-kind settings (default 'info') */
   type?: ToastType;
+  /** Its title: text, or a CMP (moved into the toast) */
   title?: string | TCMP;
+  /** Its message: text, or a CMP (moved into the toast) */
   message?: string | TCMP;
   /** Overrides the toaster's icon for this toast. An empty string ("") omits the icon. */
   icon?: string | TCMP;
+  /** How long it shows, in ms, over the toaster's (0: until it's closed) */
   showingTime?: number;
+  /** How long it slides in and fades out, in ms, over the toaster's */
   animationTime?: number;
+  /** An extra class for the toast's element */
   className?: string;
+  /** The toaster it goes to (default: the default toaster) */
   toasterId?: string;
+  /** Gives it a close button, over the toaster's setting */
   isClosable?: boolean;
 };
 
+/** A toast {@link addToast} added: its id, what it resolved from its toaster, and its remover. */
 export type AddToastResponse = {
+  /** The toast's id, for {@link removeToast} */
   id: string;
+  /** The toaster it went to */
   toasterId: string;
+  /** Its size in px, measured when it was added */
   dimensions: { x: number; y: number };
+  /** `performance.now()` when it was added */
   startedTime: number;
+  /** How long it slides in and fades out, in ms */
   animationTime: number;
+  /** How long it shows, in ms (0: until it's closed) */
   showingTime: number;
+  /** Its whole life in ms: the showing time and both animations */
   totalTime: number;
+  /** The toast's CMP */
   toastCmp: TCMP;
+  /** Whether it has a close button */
   hasCloseButton: boolean;
   /**
    * The toast's first lifecycle timer (later phases replace it internally).
@@ -115,10 +139,15 @@ export type AddToastResponse = {
    * 6.0.0.
    */
   timeout: ReturnType<typeof setTimeout>;
+  /** Its kind */
   type: ToastType;
+  /** Its title, as given */
   title: TCMP | string | undefined;
+  /** Its message, as given */
   message: TCMP | string | undefined;
+  /** Its own icon, as given */
   icon: TCMP | string | undefined;
+  /** Fades it out and disposes it (as {@link removeToast}) */
   removeToast: () => void;
 };
 
@@ -151,6 +180,9 @@ const DEFAULT_SHOW_TIMES = {
   warning: DEFAULT_SHOW_TIME,
   alert: 0,
 };
+/** A toaster's settings where {@link ToasterProps}' don't say: bottom left, toasts 200 px wide
+ * lining up upwards and coming in from the left, info and warning toasts showing 3.2 s, alerts
+ * until closed (with a close button). */
 export const DEFAULT_TOASTER_SETTINGS: ToasterSettings = {
   verticalPosition: 'bottom',
   horizontalPosition: 'left',
@@ -338,6 +370,25 @@ const getToasterCss = (id: string, config: ToasterSettings) => {
   `;
 };
 
+/**
+ * Makes a toaster: a fixed element that lines up toasts, with its settings' CSS in the document's
+ * head. It isn't added anywhere: add the returned CMP under the HUD root. The first toaster made
+ * is the default one (see {@link ToasterProps.setAsDefaultToaster}). The engine makes one only in
+ * the debug env (the debug toaster), so an app that shows toasts makes its own.
+ * @returns the toaster's CMP
+ * @example
+ * ```ts
+ * getHUDRootCMP().add(
+ *   createToaster({
+ *     id: 'gameToasts',
+ *     settings: { verticalPosition: 'top', horizontalPosition: 'right', toastDirection: 'down' },
+ *     setAsDefaultToaster: true,
+ *   })
+ * );
+ * addToast({ title: 'Checkpoint', message: 'Progress saved' });
+ * addToast({ type: 'warning', message: 'Low fuel', toasterId: 'gameToasts' });
+ * ```
+ */
 export const createToaster = ({ id, className, settings, setAsDefaultToaster }: ToasterProps) => {
   const toasterId = id || `toaster-${++toasterCount}`;
   const config: ToasterSettings = { ...DEFAULT_TOASTER_SETTINGS, ...settings };
@@ -445,6 +496,16 @@ const disposeToast = (toast: Toast) => {
   toasts.delete(toast.id);
 };
 
+/**
+ * Adds a toast to a toaster (`toasterId`, else the default one): it slides in, making room in the
+ * queue, shows for its showing time and fades out. Throws when there's no such toaster, or no
+ * toaster at all.
+ * @example
+ * ```ts
+ * const toast = addToast({ type: 'alert', title: 'Disconnected', isClosable: true });
+ * onReconnected(() => toast.removeToast());
+ * ```
+ */
 export const addToast = (props: ToastProps): AddToastResponse => {
   const { type = 'info', toasterId, showingTime, animationTime, isClosable } = props;
   const toaster = toasterId ? toasters.get(toasterId) : defaultToaster;

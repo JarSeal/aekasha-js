@@ -1,12 +1,14 @@
-// Master input switch shared by every input domain (Keyboard/Mouse/Touch). Lives in its own
-// tiny file so engine code that only needs to pause input (e.g. SceneLoader.ts during a scene
-// load) doesn't pull any domain module into the bundle.
+// The master input switches every device (keyboard, mouse, touch, gamepad) and the action
+// layer's contexts read, the input scope and the listener removers. Lives in its own tiny file so
+// engine code that only needs to pause input (e.g. SceneLoader.ts during a scene load) doesn't
+// pull any device module into the bundle.
 
 let allInputsEnabled = true;
 let appInputsSuspended = false;
 
 /**
- * Enables/disables every input binding (keyboard, mouse, touch) at once: the scene loader's
+ * Enables/disables every input at once: the key, mouse and touch bindings and every action map,
+ * the `DEBUG` context's included (the gamepad is read only through maps). The scene loader's
  * switch over a load.
  * @internal
  */

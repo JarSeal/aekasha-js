@@ -87,10 +87,10 @@
       "unreferenced": 3
     },
     "aekasha/ui": {
-      "public": 7,
+      "public": 6,
       "crossEntry": 25,
-      "internal": 18,
-      "unreferenced": 17
+      "internal": 8,
+      "unreferenced": 28
     },
     "aekasha/viewports": {
       "public": 7,
@@ -13061,54 +13061,47 @@
         },
         "TAnimChain": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "TAnimState": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "TAttr": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "TClassAction": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "TCMP": {
           "kind": "TypeAlias",
-          "usage": "public",
-          "by": [
-            "aekasha",
-            "aekasha/character",
-            "aekasha/debug",
-            "aekasha/viewports",
-            "app"
-          ]
+          "usage": "unreferenced"
         },
         "TListener": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "TListenerCache": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "TListenerCreator": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "TProps": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "TSettings": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "TStyle": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         }
       },
       "src/_engine/ui/DialogWindow.ts": {

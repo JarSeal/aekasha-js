@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu';
-import { CMP, type TCMP } from '../../../ui/CMP';
+import { CMP } from '../../../ui/CMP';
+import type { TCMP } from '../../../ui/CMPTypes';
 import {
   DEBUG_TOASTER_ID,
   type DebuggerPaneItem,

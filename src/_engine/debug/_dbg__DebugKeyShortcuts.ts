@@ -1,4 +1,5 @@
-import { CMP, type TCMP } from '../ui/CMP';
+import { CMP } from '../ui/CMP';
+import type { TCMP } from '../ui/CMPTypes';
 import { getConfig } from '../kernel/config/Config';
 import { getCurrentSceneId } from '../kernel/scene/Scene';
 import { openDialog } from '../ui/DialogWindow';

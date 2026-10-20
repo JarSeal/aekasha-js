@@ -28,7 +28,8 @@ export type ActionDef = {
 export type ActionDefs = { readonly [actionId: string]: ActionDef };
 
 /**
- * A set of maps enabled or suspended together ({@link setActionContextEnabled}):
+ * A set of maps enabled or suspended together
+ * ({@link _engine/kernel/input/Actions!setActionContextEnabled}):
  * - `GAMEPLAY` (a map's default): suspended in editor views and during a scene load, and while the
  *   debug camera is on unless the map's `enabledInDebugCam` allows it.
  * - `DEBUG`: the engine's and the app's debug keys; runs in every view, off during a scene load.
@@ -158,7 +159,7 @@ export type ActionState = {
  * or null without one. */
 export type ActionEventFn = (e: Event | null) => void;
 
-/** {@link createActionMap}'s options. */
+/** {@link _engine/kernel/input/Actions!createActionMap}'s options. */
 export type ActionMapOpts<TActions extends ActionDefs> = {
   /** Unique: a second map with the same id replaces the first. */
   id: string;
@@ -188,7 +189,8 @@ export type ActionMapOpts<TActions extends ActionDefs> = {
 
 /**
  * Actions read from devices through bindings: what gameplay code reads instead of keys. Made by
- * {@link createActionMap}. Its members are methods, so a map of any actions is an `ActionMap`.
+ * {@link _engine/kernel/input/Actions!createActionMap}. Its members are methods, so a map of any
+ * actions is an `ActionMap`.
  * @template TActions the map's action definitions, which type its action ids and bindings
  */
 export type ActionMap<TActions extends ActionDefs = ActionDefs> = {

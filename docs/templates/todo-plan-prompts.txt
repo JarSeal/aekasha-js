@@ -274,3 +274,12 @@ We need a system to detect when the scene is stable and nothing happens (nothing
 If for some reason this plan or some of its features can't or shouldn't be created with this specification or has some high risks of failing the implementation, notify immediately. You are allowed to change the naming of the plan or the header information if they are not well described, but please notify about this.
 
 ************************************
+
+Could the Hub search indexes be spread out to be two different searches to save indexing space? Meaning that the documentation would be one search and the rest of the site would be another. Then we would maybe have tabs for the the different searches and maybe we could also have a all tab that would then just do two searches and show the closest matches to the Hub and the documentation (two different sections). Then I would also like to add a section for the different implementation techniques that would be like tutorials for creating assets (models, textures, rigging, animation, etc.). At this point it would be enough to just have one technique/tutorial there and then I can later add more. If this is viable then create a plan for this:
+- Name: "Hub indexing refactoring and techniques section"
+- File: docs/plans/p580_hub-indexing-refactoring-and-techniques-section
+- Category: Hub
+
+If for some reason this plan or some of its features can't or shouldn't be created with this specification or has some high risks of failing the implementation, notify immediately. You are allowed to change the naming of the plan or the header information if they are not well described, but please notify about this.
+
+************************************

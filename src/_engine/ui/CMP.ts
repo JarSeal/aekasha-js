@@ -1,10 +1,22 @@
-import * as THREE from 'three/webgpu';
 import { removeAnims, runAnims, updateCmpAnim } from './CMPAnim';
+import type { TAnimChain, TAttr, TClassAction, TCMP, TProps, TSettings, TStyle } from './CMPTypes';
 
 type SetTimeout = ReturnType<typeof setTimeout>;
 
 let rootCMP: TCMP | null = null;
 const cmps: { [key: string]: TCMP } = {};
+/** The last generated id's number: a counter, unique for the page's life (an id given in the
+ * props that a generated one would take is skipped). */
+let lastGeneratedId = 0;
+
+/** An id for a CMP made without one. */
+const generateCmpId = () => {
+  let id: string;
+  do {
+    id = `aekCmp_${++lastGeneratedId}`;
+  } while (cmps[id]);
+  return id;
+};
 const cmpWrappers: {
   [key: string]: {
     wrapper: (props?: unknown) => TCMP;
@@ -19,192 +31,6 @@ const removeWrapper = (id: string) => {
   if (cmpWrappers[id]) delete cmpWrappers[id];
 };
 
-export type TListener = (e: Event | InputEvent, cmp: TCMP) => void;
-
-export type TListenerCreator = {
-  type: string;
-  fn: ((e: Event, cmp: TCMP) => void) | null;
-  options?: AddEventListenerOptions;
-};
-
-export type TListenerCache = {
-  type: string;
-  fn: ((e: Event) => void) | null;
-  options?: AddEventListenerOptions;
-};
-
-export type TClassAction = 'add' | 'remove' | 'replace' | 'toggle';
-
-export type TStyle = { [key: string]: string | number | null };
-
-export type TAttr = { [key: string]: unknown };
-
-export type TAnimState = {
-  setState: (key: string, value: unknown) => void;
-  removeState: (key: string) => void;
-  state: { [key: string]: unknown };
-};
-
-export type TAnimChain = {
-  duration: number;
-  gotoIndex?: number | ((cmp: TCMP, animState?: TAnimState) => number);
-  style?: TStyle;
-  class?: string | string[];
-  classAction?: TClassAction;
-  phaseStartFn?: (cmp: TCMP, animState: TAnimState) => void | number;
-  phaseEndFn?: (cmp: TCMP, animState: TAnimState) => void | number;
-};
-
-export type TSettings = {
-  sanitizer?: ((html: string) => string) | null;
-  sanitizeAll?: boolean;
-  doCheckIsInDom?: boolean;
-  replaceRootDom?: boolean;
-};
-
-export type TProps = {
-  /** Lighter settings can only be set when the
-   * root component is defined.
-   */
-  settings?: TSettings;
-
-  /** Component ID. If no component is provided
-   * a UUID will be created. Has to be unique.
-   */
-  id?: string;
-
-  /** Whether the component elem will get an id
-   * attribute or not.
-   */
-  idAttr?: boolean;
-
-  /** Root component's attach to element. */
-  attach?: HTMLElement;
-
-  /** Element text content. */
-  text?: string;
-
-  /** Instead of append, prepend the element to the parent */
-  prepend?: boolean;
-
-  /** Component element's tag. */
-  tag?: string;
-
-  /** Component's html content. The string can
-   * include other components by inserting them
-   * in the string template (back ticks strings).
-   */
-  html?: string | ((cmp: TCMP) => string);
-
-  /** Whether to sanitize the html content. A
-   * sanitizer function must be set in the root
-   * component's settings.
-   */
-  sanitize?: boolean;
-
-  /** Component element's class or classes.  */
-  class?: string | string[];
-
-  /** Component element's attributes. */
-  attr?: TAttr;
-
-  /** Component element's inline styles. */
-  style?: TStyle;
-
-  /** Timeout animation array. */
-  anim?: TAnimChain[];
-
-  /** Component element's 'click' listener function. */
-  onClick?: TListener;
-
-  /** Component element's outside click listener function.
-   * One window click listener for all components.
-   */
-  onClickOutside?: TListener;
-
-  /** Component element's 'mousemove' listener function. */
-  onHover?: TListener;
-
-  /** Component element's 'mouseleave' listener function. */
-  onHoverOutside?: TListener;
-
-  /** Component element's 'focus' listener function. */
-  onFocus?: TListener;
-
-  /** Component element's 'blur' listener function. */
-  onBlur?: TListener;
-
-  /** Component element's 'input' listener function. */
-  onInput?: TListener;
-
-  /** Component element's 'change' listener function. */
-  onChange?: TListener;
-
-  /** Callback function after the component has been
-   * created / updated.
-   */
-  onCreateCmp?: (cmp: TCMP) => void;
-
-  /** Callback function after the component has been removed. */
-  onRemoveCmp?: (cmp: TCMP) => void;
-
-  /** Component element's listener creator. Will create
-   * a Javascript event listener with 'type', 'fn' (function),
-   * and 'options'.
-   */
-  listeners?: TListenerCreator[];
-
-  /** Whether the element should have focus after render
-   * or not (this can be sometimes challenging, so using
-   * the focus function on the component after render is
-   * recommended).
-   */
-  focus?: boolean;
-
-  // @TODO
-  /** Component's on resize listener. One window resize
-   * listener for all components.
-   */
-  // onWindowResize?: TListener; // This is going to be the same as onClickOutside
-};
-
-export type TCMP = {
-  id: string;
-  children: TCMP[];
-  props?: TProps;
-  elem: HTMLElement;
-  parent: TCMP | null;
-  parentElem: HTMLElement | null;
-  isTemplateCmp?: boolean;
-  isRoot?: boolean;
-  isCmp: boolean;
-  listeners: { [key: string]: TListenerCache | null };
-  timers: { [key: string]: { fn: unknown; curIndex?: number; animState?: TAnimState } };
-  add: (child?: TCMP | TProps) => TCMP;
-  remove: () => TCMP;
-  removeChildren: () => TCMP;
-  update: <WrapP extends TProps>(newProps?: WrapP, callback?: (cmp: TCMP) => void) => TCMP;
-  updateClass: (newClass: string | string[], action?: TClassAction) => TCMP;
-  updateAttr: (newAttr: TAttr) => TCMP;
-  removeAttr: (attrKey: string | string[]) => TCMP;
-  updateStyle: (newStyle: TStyle) => TCMP;
-  updateText: (newText: string) => TCMP;
-  updateAnim: (animChain: TAnimChain[]) => TCMP;
-  focus: (focusValueToProps?: boolean) => TCMP;
-  blur: (focusValueToProps?: boolean) => TCMP;
-  scrollIntoView: (params?: boolean | ScrollIntoViewOptions, timeout?: number) => TCMP;
-  getWrapperProps: <WrapP = undefined>() => WrapP | null;
-  controls: { [key: string]: unknown };
-  // @SUGGESTION:
-  // updateListener: (TListenerCreator) => TCMP;
-  // removeListener: (key: string) => TCMP;
-  // removeAllListeners: () => TCMP;
-  // removeTimer: (key: string) => TCMP;
-  // removeAllTimers: () => TCMP;
-  // getChildCmpById: (id: string) => TCMP;
-  // getParentCmpById: (id: string) => TCMP;
-};
-
 const globalSettings: TSettings = {
   sanitizer: null,
   sanitizeAll: false,
@@ -213,11 +39,23 @@ const globalSettings: TSettings = {
 };
 
 /**
- * Creates and renders a CMP
- * @param props ({@link TProps}) optional component props
- * @param wrapper ((props?: never) => {@link TCMP} | (props: never) => TCMP) optional wrapper for the CMP to attach to
- * @param wrapperProps (unknown) optional wrapper props to set when a wrapper is used
- * @returns ({@link TCMP})
+ * Makes a UI kit component: its element, built from `props`, and its listeners. It's in the DOM
+ * once it's added to a CMP that is (`TCMP.add`, or another CMP's `html`); an app's UI goes under the
+ * HUD root (`getHUDRootCMP`). A taken id throws, and so does a second root (`attach`).
+ * @param props what it's made from (none: an empty div)
+ * @param wrapper the component function that made it, which `update()` calls again with
+ * `{ ...wrapperProps, ...newProps }` to make it anew (`const Badge = (p) => CMP({ … }, Badge, p)`)
+ * @param wrapperProps the props `wrapper` was called with
+ * @example
+ * ```ts
+ * const panel = getHUDRootCMP().add({ class: 'scorePanel' });
+ * const score = panel.add({ tag: 'span', text: '0' });
+ * panel.add({ tag: 'button', text: 'Reset', onClick: () => score.updateText('0') });
+ *
+ * // Other CMPs in a template: the html must be a function
+ * const star = CMP({ tag: 'span', class: 'star', text: '★' });
+ * panel.add(CMP({ html: () => `<h2>${star} High scores</h2>` }));
+ * ```
  */
 export const CMP = (
   props?: TProps,
@@ -233,7 +71,7 @@ export const CMP = (
 
   // Its own copy: the update methods write it in place
   props = toOwnProps(props);
-  const id = props?.id || THREE.MathUtils.generateUUID();
+  const id = props?.id || generateCmpId();
 
   // Create cmp object
   const cmp: TCMP = {
@@ -533,18 +371,12 @@ const removeCmp = (cmp: TCMP, doNotRemoveElem?: boolean) => {
   delete cmps[cmp.id];
 
   // Clear every internal property to ensure GC can claim them independently
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (cmp as any).props = null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (cmp as any).children = [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (cmp as any).parent = null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (cmp as any).parentElem = null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (cmp as any).listeners = {};
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (cmp as any).timers = {};
+  cmp.props = undefined;
+  cmp.children = [];
+  cmp.parent = null;
+  cmp.parentElem = null;
+  cmp.listeners = {};
+  cmp.timers = {};
 
   return cmp;
 };
@@ -871,9 +703,8 @@ const replaceCmpWithAnother = (oldCmp: TCMP, newCmp: TCMP) => {
 };
 
 /**
- * Returns an array of CSS class strings
- * @param classArgs ((string | string[] | undefined | null)[]) classes to be added to the classes array
- * @returns (string[])
+ * Joins class names and lists into one list, skipping the empty ones, eg. for a `class` prop:
+ * `classes('btn', isActive ? 'active' : null, extraClasses)`.
  */
 export const classes = (...classArgs: (string | string[] | undefined | null)[]) => {
   let classes: string[] = [];
