@@ -127,11 +127,6 @@
       "action": "keep",
       "plan": "p608"
     },
-    "src/_engine/debug/debugger.scss": {
-      "to": "src/_engine/debug/debugger.scss",
-      "action": "keep",
-      "plan": "p608"
-    },
     "src/_engine/debug/DebuggerGUI.module.scss": {
       "to": "src/_engine/debug/DebuggerGUI.module.scss",
       "action": "keep",
@@ -144,6 +139,11 @@
     },
     "src/_engine/debug/DebugKeyShortcuts.module.scss": {
       "to": "src/_engine/debug/DebugKeyShortcuts.module.scss",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/debug/DebugToaster.scss": {
+      "to": "src/_engine/debug/DebugToaster.scss",
       "action": "keep",
       "plan": "p608"
     },
@@ -292,6 +292,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/debug/PercentagePie.scss": {
+      "to": "src/_engine/debug/PercentagePie.scss",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/debug/PercentagePieHtml.ts": {
       "to": "src/_engine/debug/PercentagePieHtml.ts",
       "action": "keep",
@@ -359,6 +364,11 @@
     },
     "src/_engine/debug/SceneHelpers.ts": {
       "to": "src/_engine/debug/SceneHelpers.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/debug/Stats.scss": {
+      "to": "src/_engine/debug/Stats.scss",
       "action": "keep",
       "plan": "p608"
     },
@@ -567,6 +577,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/instancing/InstancedMeshPool.test.ts": {
+      "to": "src/_engine/features/instancing/InstancedMeshPool.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/instancing/InstancedMeshPool.ts": {
       "to": "src/_engine/features/instancing/InstancedMeshPool.ts",
       "action": "keep",
@@ -579,6 +594,11 @@
     },
     "src/_engine/features/instancing/InstancingFeature.ts": {
       "to": "src/_engine/features/instancing/InstancingFeature.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/lines/CLAUDE.md": {
+      "to": "src/_engine/features/lines/CLAUDE.md",
       "action": "keep",
       "plan": "p608"
     },
@@ -644,6 +664,11 @@
     },
     "src/_engine/features/lines/LineTypes.ts": {
       "to": "src/_engine/features/lines/LineTypes.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/lines/LineWriter.test.ts": {
+      "to": "src/_engine/features/lines/LineWriter.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -747,6 +772,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/lod/LodAuto.test.ts": {
+      "to": "src/_engine/features/lod/LodAuto.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/lod/LodAuto.ts": {
       "to": "src/_engine/features/lod/LodAuto.ts",
       "action": "keep",
@@ -759,6 +789,11 @@
     },
     "src/_engine/features/lod/LodChainGLTF.ts": {
       "to": "src/_engine/features/lod/LodChainGLTF.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/lod/LodChainOptions.test.ts": {
+      "to": "src/_engine/features/lod/LodChainOptions.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -777,6 +812,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/lod/LodFades.ts": {
+      "to": "src/_engine/features/lod/LodFades.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/lod/LodFeature.ts": {
       "to": "src/_engine/features/lod/LodFeature.ts",
       "action": "keep",
@@ -787,13 +827,28 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/lod/LodMeasure.ts": {
+      "to": "src/_engine/features/lod/LodMeasure.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/lod/LodSchema.ts": {
       "to": "src/_engine/features/lod/LodSchema.ts",
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/lod/LodSettings.ts": {
+      "to": "src/_engine/features/lod/LodSettings.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/lod/LodSimplify.ts": {
       "to": "src/_engine/features/lod/LodSimplify.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/lod/LodSystem.test.ts": {
+      "to": "src/_engine/features/lod/LodSystem.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -1497,8 +1552,18 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/spatial/SpatialDomains.ts": {
+      "to": "src/_engine/features/spatial/SpatialDomains.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/spatial/SpatialFeature.ts": {
       "to": "src/_engine/features/spatial/SpatialFeature.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/spatial/SpatialGrid.test.ts": {
+      "to": "src/_engine/features/spatial/SpatialGrid.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -1507,8 +1572,18 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/spatial/SpatialIndexSystem.test.ts": {
+      "to": "src/_engine/features/spatial/SpatialIndexSystem.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/spatial/SpatialIndexSystem.ts": {
       "to": "src/_engine/features/spatial/SpatialIndexSystem.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/spatial/SpatialOracle.ts": {
+      "to": "src/_engine/features/spatial/SpatialOracle.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -1993,13 +2068,28 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/kernel/input/KeyboardInput.test.ts": {
+      "to": "src/_engine/kernel/input/KeyboardInput.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/kernel/input/KeyboardInput.ts": {
       "to": "src/_engine/kernel/input/KeyboardInput.ts",
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/kernel/input/MouseInput.test.ts": {
+      "to": "src/_engine/kernel/input/MouseInput.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/kernel/input/MouseInput.ts": {
       "to": "src/_engine/kernel/input/MouseInput.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/input/TouchInput.test.ts": {
+      "to": "src/_engine/kernel/input/TouchInput.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -2095,6 +2185,11 @@
     },
     "src/_engine/kernel/render/debug/_dbg__Renderer.ts": {
       "to": "src/_engine/kernel/render/debug/_dbg__Renderer.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/render/debug/RayDebug.scss": {
+      "to": "src/_engine/kernel/render/debug/RayDebug.scss",
       "action": "keep",
       "plan": "p608"
     },
@@ -2339,8 +2434,18 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/ui/CMP.test.ts": {
+      "to": "src/_engine/ui/CMP.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/ui/CMP.ts": {
       "to": "src/_engine/ui/CMP.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/ui/DialogWindow.test.ts": {
+      "to": "src/_engine/ui/DialogWindow.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -2366,6 +2471,11 @@
     },
     "src/_engine/ui/DropDown.scss": {
       "to": "src/_engine/ui/DropDown.scss",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/ui/DropDown.test.ts": {
+      "to": "src/_engine/ui/DropDown.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -2681,6 +2791,11 @@
     },
     "src/_engine/ui/styles/variables.scss": {
       "to": "src/_engine/ui/styles/variables.scss",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/ui/Toaster.test.ts": {
+      "to": "src/_engine/ui/Toaster.test.ts",
       "action": "keep",
       "plan": "p608"
     },
