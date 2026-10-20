@@ -11,7 +11,7 @@ contribution, and a scene whose JSON has `spatialDomains` fails the boot, naming
 Each ECS world holds named domains, each its own grid with its own cell size, capacity and
 update policy. An entity can be in several.
 
-- **`DEFAULT`** is the engine's. Meshes and point and spot lights join it by default (a mesh
+- **`DEFAULT`** ([`DEFAULT_SPATIAL_DOMAIN`](api:DEFAULT_SPATIAL_DOMAIN)) is the engine's. Meshes and point and spot lights join it by default (a mesh
   created with `spatialIndex: false` doesn't), and the engine culls lights with it. Its grid is
   built per scene, only once something is in it.
 - **Your own** domains hold what your game asks about:
@@ -43,8 +43,8 @@ for (let i = 0; i < Math.min(count, candidates.length); i++) {
 }
 ```
 
-`queryVisit` calls a function per candidate instead, and `queryAABBInto` / `queryAABBVisit` take
-a box. A member whose radius is over twice the cell size (`oversizedRadiusMultiplier`) goes into
+`queryVisit` calls a function per candidate instead, which returns `true` to stop (enough for "is
+anything there?"), and `queryAABBInto` / `queryAABBVisit` take a box. A member whose radius is over twice the cell size (`oversizedRadiusMultiplier`) goes into
 an oversized tier that every query checks, so one huge object doesn't slow the grid down.
 
 ## Keeping it current
@@ -55,9 +55,13 @@ an oversized tier that every query checks, so one huge object doesn't slow the g
 | `STATIC`      | In a frame where a member joined or left.                   | Things that stay put. |
 | `MANUAL`      | Only on [`rebuildSpatialDomain`](api:rebuildSpatialDomain). | You decide when.      |
 
-The rebuild runs at `APP_POST_PHYSICS`, so it sees this frame's physics poses.
+The rebuild runs at `APP_POST_PHYSICS`, so it sees this frame's physics poses. A member that
+leaves a domain (or is deleted) is gone from its queries at once; one that joins or moves is
+found at its new place after the next rebuild. So a `MANUAL` domain is rebuilt before it's
+queried.
 [`invalidateSpatialDomain`](api:invalidateSpatialDomain) refreshes a `STATIC` domain whose
-members moved. A member's radius comes from its component (a mesh's geometry, a light's range),
+members moved: a large domain whose members rarely move is cheaper `STATIC` and invalidated than
+`DYNAMIC` (see [Known issues](#known-issues)). A member's radius comes from its component (a mesh's geometry, a light's range),
 scaled by its transform; [`refreshSpatialRadius`](api:refreshSpatialRadius) reads it again after
 a geometry change, and [`registerSpatialRadiusProvider`](api:registerSpatialRadiusProvider) gives
 your own components one.
@@ -74,19 +78,32 @@ grid's cells:
 ```
 
 Instanced pool instances can join a domain too (the pool's `spatialDomain` option): see
-[LOD and impostors](hub:features/lod#many-instances).
+[LOD and impostors](hub:features/lod#many-instances). Give them a domain of their own: in
+`DEFAULT` they never count as a light's receivers (see [Known issues](#known-issues)).
 
 ## The debug tab
 
 The drawer's Spatial index tab works per domain: its cells and members drawn over the scene, the
 rebuild times, a cell size to try out (kept for the world or for one scene), and a brute-force
-check that compares every query with a full scan.
+check that compares every query with a full scan. The engine's light culling is checked that
+way; call [`validateSpatialGridQuery`](api:validateSpatialGridQuery) after a query of your own to
+have it checked too (it does nothing unless the check is on).
+
+## Known issues
+
+- [Pool instances in `DEFAULT` never count as light receivers](hub:issues/pool-instances-not-light-receivers):
+  a light whose only receivers nearby are pool instances is culled.
+- [A large `DYNAMIC` domain costs about 0.2 µs per member every frame](hub:issues/spatial-refresh-and-rebuild-cost),
+  even when nothing moved.
 
 ## Key APIs
 
 - [`registerSpatialDomain`](api:registerSpatialDomain) and
   [`unregisterSpatialDomain`](api:unregisterSpatialDomain).
-- [`joinSpatialDomain`](api:joinSpatialDomain) and [`leaveSpatialDomain`](api:leaveSpatialDomain).
+- [`joinSpatialDomain`](api:joinSpatialDomain), [`leaveSpatialDomain`](api:leaveSpatialDomain)
+  and [`isInSpatialDomain`](api:isInSpatialDomain).
+- [`invalidateSpatialDomain`](api:invalidateSpatialDomain) and
+  [`rebuildSpatialDomain`](api:rebuildSpatialDomain).
 - [`getSpatialDomain`](api:getSpatialDomain) and [`getSpatialGrid`](api:getSpatialGrid) (the
   `DEFAULT` grid, built if needed).
 - [`SpatialGrid.queryInto`](api:SpatialGrid.queryInto) and
