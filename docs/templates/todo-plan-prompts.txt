@@ -227,6 +227,8 @@ One more thing to focus here is semantics and accessibility. The UI should follo
 
 This complete overhaul should replace all of the debugger UI code, get rid of the Tweakpane library and possibly even replace the stats-gl library.
 
+(Added by p617, 2026-10-20.) p617 put the existing UI kit on `aekasha/ui` (CMP, the HUD root, draggable windows and kinds, dialogs, the drop-down, toasters, icons), documented it (`src/_engine/ui/CLAUDE.md`, the Hub's UI kit page and its example scene `examples/uiKit/`) and fixed its bugs, without changing its look. This plan starts from that public API: a restyle keeps it working for apps, and a breaking change goes with engine 6.0.0 (p622 lists the `T`-prefixed type renames, `TCMP` → `Cmp` and the rest, as candidates). Requirement: the components must work in an embed as well as in the full-page boot (docs/issues/ui-kit-in-an-embed.md). Today the kit's sizes are `rem`s on the full-page template's `html { font-size: 62.5% }`, which a mount (`mountAekasha`) doesn't load, so in an embed they follow the host page's root size; and the windows measure the browser window (`getWindowSize`, the `100vw` / `100vh` max size), not the mount's container. Pick units that hold in both, make the windows measure the HUD root's container, and add a `yarn verify:embed` check that mounts a profile showing a window, a dialog and a toast. Close the issue file when it's done.
+
 ************************************
 
 Create "HUB SEO optimization" plan in docs/plans/p180_hub-seo-optimization.md

@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: in progress | Phases 0-5 implemented
 Category: Refactoring, Documentation, UI, Input
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -747,13 +747,61 @@ As built (2026-10-20):
   toaster rule above; the root's window paragraph says "register once at module load", which
   moves with it in the new wording.
 
-### Phase 5: the Hub, CLAUDE.md, readme, and what's filed
+### Phase 5: the Hub, CLAUDE.md, readme, and what's filed — done
 
 1. D13's `ui/CLAUDE.md`, the root map line and the moved paragraph; the input `CLAUDE.md` (D5's
    hook, I4's switches gone, D6's entry names).
 2. The UI kit page (and the example scene, if D13 chooses one); the Input page.
 3. D8's issue file and p800's prompt; `readme.md`.
 4. `yarn hub:build`.
+
+As built (2026-10-20):
+
+- **`ui/CLAUDE.md`** (one `## UI kit` section): CMP (its three files, templates, props copied once
+  and written in place, the hooks' timing, capture listeners, custom properties), the HUD root,
+  the windows (their five files, layers, the moved root paragraph with the new registration
+  wording, LS, scene loads, D7's four kernel names), dialogs, the drop-down, toasters, icons, the
+  styles, the embed caveat, the tests, what waits for 6.0.0. **Found:** the boot registers the
+  built-in icons only in the debug env and prodTest, so a production app registers the ones it
+  shows (else `??` and a warning); the file and the Hub page say so. The root `CLAUDE.md`: the map
+  line, the `ui/` folder line, the windows paragraph replaced by a pointer. The input `CLAUDE.md`:
+  `InputRules.ts`, the entry's types and names, the held-key hook and the compiled chords, the
+  removed switches, I9, I10, I12, the device tests. `hub/CLAUDE.md` lists `ui-kit` among the
+  feature pages.
+- **The example scene** (`src/app/examples/uiKit/`, `exampleUiKit`, an app file: D2's app bump):
+  three shapes, a HUD panel (a button per shape with a `--swatch` custom property), a window kind
+  per shape with a colour drop-down, a settings window (the ground's colour, two toasts), the
+  scene's toaster, and a pause menu dialog: Escape opens it through the `GAMEPLAY` map, the
+  dialog's `closeOnEscape` closes it, and its arrow keys are a map in a `MENU` context that is
+  off until it opens (`onClose` switches back, however it closes). No animation over time, so
+  the scene runner's snapshot is stable. Driven in Chromium (WebGL2, debug and prodTest): the
+  contexts, Escape both ways, the focus moves, the cascade, the cleanup on a scene change. Its
+  Hub image (`exampleUiKit.hub.png`) was saved on SwiftShader through `saveHubImageAsync`; the
+  example's card is a page screenshot with the HUD (`hub/pages/examples/ui-kit/ui-kit-hud.png`,
+  `aek:image`), since the Hub image is the canvas only.
+- **The Hub:** the feature page `features/ui-kit/` (Core, order 47, Lucide's `app-window` icon
+  added; `aek:covers` `UI kit`), the example page `examples/ui-kit/` (order 75, the scene's four
+  regions), the Input page (a key and a mouse binding, the binding types, `getKeyChordLabel` and
+  `GAMEPAD_BUTTON_NAMES`, the held keys and the bundling, a link to the UI kit's dialogs).
+- **D8:** `docs/issues/ui-kit-in-an-embed.md` (open, for p800), and p800's prompt in
+  `docs/templates/todo-plan-prompts.txt` gets a paragraph marked as p617's: the kit's public API
+  as its start, the 6.0.0 renames, and the embed requirement with its check.
+- **`readme.md`:** the Features line is "UI kit" with what's on the entry, and the project
+  structure's `ui/` line names the dialogs and toasts.
+- **The checks:** `tsc`, the lint, `yarn test` (99 files, 815 passed, 1 skipped), `yarn hub:build`
+  (438 pages, no warning in scope; the search index size warning is older, 1.56 MB at p616).
+- **Found, not fixed (decide before Phase 6):**
+  - The drop-down re-reads `value` only on an open and on `refresh()`, so an app's `onChange`
+    calls `refresh()` (the example does). Proposed: `choose` refreshes after `onChange` (one line
+    and a test).
+  - A context switch in a press callback applies to the maps after it in the same key event
+    (`updateAllMaps` checks each map's activity as it reaches it), so a menu that opens and closes
+    on one key through two maps closes again on the same press, or reopens. The example avoids it
+    (the dialog closes on Escape). Proposed: fix the active maps at the event's start, with a
+    test; else a `@remarks` on `setActionContextEnabled` and a line on the Input page.
+- **For Phase 6:** the new scene has no local scene runner baseline (`--update --only
+  exampleUiKit` before the full run), and `yarn verify:baselines` shows its chunk as new. D2's
+  app bump: a new example scene reads as an app minor rather than a patch.
 
 ### Phase 6: versions and done
 
