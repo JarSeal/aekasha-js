@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-/** DEFAULT_SPATIAL_DOMAIN (features/spatial/SpatialIndexSystem.ts), repeated so the schemas don't import the engine. */
+/** DEFAULT_SPATIAL_DOMAIN (features/spatial/SpatialDomains.ts), repeated so the schemas don't import the engine. */
 const DEFAULT_DOMAIN_ID = 'DEFAULT';
 
 /**

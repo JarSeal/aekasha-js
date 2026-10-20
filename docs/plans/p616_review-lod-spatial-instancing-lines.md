@@ -662,6 +662,42 @@ As built (2026-10-20):
    `getAllLines` is no longer exported (only `Lines.ts` uses it). `decodeImpostorDepth` stays
    (`@internal`, the encoding's inverse).
 
+As built (2026-10-20):
+
+- **Step 1, `LodSystem.ts`** (1,153 → 673 lines): `LodSettings.ts` (160: fade seconds, bias, the
+  budget setting, the debug options, the frame stats; the stats' writer is
+  `getWritableLodFrameStats`, `@internal`), `LodMeasure.ts` (184: camera terms, `measureEntity`,
+  `getScreenSize`, the selection camera, `getLodWorldSphere`, `measureLodEntity`), `LodFades.ts`
+  (257: the plain-mesh helpers both sides use, `getLodMesh`, `setMeshLevel`, `createStandIn`, the
+  plain-mesh fades and the per-kind helpers). The suppression flag stays private behind
+  `removeLodCulledInstantly` (the `LOD` remove hook's try / finally). `LodSystem.ts` keeps the
+  priority queue and the walk's cursor (the selection's state, not a setting), `DEFAULT_LOD_HYSTERESIS`,
+  `selectLevel`, the hooks, the three systems and the install; the systems read
+  `getLodDebugOptions()` once per call.
+- **Step 1, `SpatialIndexSystem.ts`** (1,191 → 364): `SpatialDomains.ts` (721: D8's registry,
+  settings layers, scene scope, debug override and stats, plus what the registry does to members:
+  `insertMember`, `addToDomain`, `removeFromDomain`, the mask bits, `rebuildDomain`,
+  `maxAbsScale`; else the registry and the membership would import each other) and
+  `SpatialOracle.ts` (199: the oracle, `validateSpatialGridQuery`, and `computeSpatialRadius`, its
+  only user). No cycle: the oracle's per-domain state moved onto the world's registry
+  (`WorldDomains.oracles`, the same per-world lifetime, dropped by `unregisterSpatialDomain` as
+  before), so `SpatialOracle.ts` imports `SpatialDomains.ts` and nothing imports back. The
+  detached module comment (S9) became `SpatialDomains.ts`' `//` header.
+- **Step 1, `createOctahedralImpostorNodes`** (217 → about 100 lines): `createImpostorVertexNodes`
+  and `createFrameSampler`, called in the original order. The TSL graph is identical: every node's
+  type and creation id walked from the five outputs, both v origins, 2,781 lines the same before
+  and after (`.cache/runs/p616-tslgraph.ts`).
+- Importers name the defining modules (the entries, the debug modules, `SpatialFeature.ts`,
+  `LightObjectCullingSystem.ts`, the spatial test); comments naming a moved symbol's module fixed
+  (`Scene.ts`, `SpatialDomainSchema.ts`, `_dbg__LodEntityWindow.ts`), and both nested `CLAUDE.md`
+  files say where things are. Not changed: `app/scenes/lodShowcase/layout.ts:87`'s "`k` …
+  (LodSystem.ts's perspective projection)", now in `LodMeasure.ts` (an app file: an app patch
+  for a comment).
+- Checks: `tsc`, the lint, `yarn test` (92 files, 749 passed, 1 skipped, as Phase 2).
+  `yarn verify:baselines`: 40 exports moved and 31 new `@internal` ones, no entry change, no debug
+  code; the main chunk within tolerance (per folder before minification `lod` +0.8 kB and
+  `spatial` +0.5 kB gzip, the new headers), the banner unchanged. Recorded at the phase's end.
+
 ### Phase 5: the Hub, CLAUDE.md, readme, and what's filed
 
 1. D12: `features/lines/CLAUDE.md`, the root map's line, the Lines feature page.

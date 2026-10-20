@@ -16,18 +16,20 @@ import { getCurrentSceneId } from '../../../kernel/scene/Scene';
 import {
   DEFAULT_SPATIAL_DOMAIN,
   getLastRebuildDurationMs,
-  getOracleCheckedQueryCount,
-  getOracleMismatchCount,
   getSpatialDomain,
   getSpatialDomainIds,
   getSpatialDomainOptions,
   getSpatialDomainRebuildStats,
   getSpatialDomainSceneId,
-  isSpatialGridOracleEnabled,
   reapplySpatialDomainOptions,
   setSpatialDomainOptionsOverride,
+} from '../SpatialDomains';
+import {
+  getOracleCheckedQueryCount,
+  getOracleMismatchCount,
+  isSpatialGridOracleEnabled,
   setSpatialGridOracleEnabled,
-} from '../SpatialIndexSystem';
+} from '../SpatialOracle';
 
 const TAB_ID = 'spatialGridControls';
 const formatInt = (v: number) => v.toFixed(0);

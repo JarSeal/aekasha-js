@@ -7,12 +7,9 @@ import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { reconcileObject3DVisibility } from '../../kernel/ecs/ECSCoreSystems';
 import { getMeshWorldBoundingSphere } from '../../kernel/ecs/ObjectFrustumCullingSystem';
 import type { SpatialGrid } from './SpatialGrid';
-import {
-  computeLightInfluenceRadius,
-  DEFAULT_SPATIAL_DOMAIN,
-  getSpatialDomain,
-  validateSpatialGridQuery,
-} from './SpatialIndexSystem';
+import { DEFAULT_SPATIAL_DOMAIN, getSpatialDomain } from './SpatialDomains';
+import { computeLightInfluenceRadius } from './SpatialIndexSystem';
+import { validateSpatialGridQuery } from './SpatialOracle';
 
 // --- NEARBY-MESH TEST ---
 // Candidates come from the spatial index (docs/plans/_DONE_p050_spatial-index.md);

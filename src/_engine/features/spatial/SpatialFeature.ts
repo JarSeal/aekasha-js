@@ -2,12 +2,8 @@ import { installLightObjectCulling } from './LightObjectCullingSystem';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { EngineFeature } from '../../kernel/init/Features';
 import type { SceneHooks } from '../../kernel/scene/SceneHooks';
-import {
-  installSpatialIndex,
-  registerSceneSpatialDomains,
-  registerSpatialIndexDebugGUI,
-  releaseSceneSpatialDomains,
-} from './SpatialIndexSystem';
+import { registerSceneSpatialDomains, releaseSceneSpatialDomains } from './SpatialDomains';
+import { installSpatialIndex, registerSpatialIndexDebugGUI } from './SpatialIndexSystem';
 
 /**
  * The spatial index's part of a scene load: the previous scene's domain settings go and the next

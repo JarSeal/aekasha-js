@@ -21,7 +21,7 @@ import {
   setLodDebugOptions,
   setLodFadeSeconds,
   setLodMaxSelectionsPerFrame,
-} from '../LodSystem';
+} from '../LodSettings';
 import {
   findNearestLodEntityInView,
   getLodEntityName,

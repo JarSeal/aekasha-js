@@ -7,7 +7,7 @@ import { BOX_EDGE_SEGMENT_COUNT, writeBox3Edges } from '../../lines/LineBuilders
 import type { LineObject } from '../../lines/LineObject';
 import { createLines, isLinesInstalledFor } from '../../lines/Lines';
 import type { LineWriter } from '../../lines/LineWriter';
-import { getLodSelectionCamera, getLodWorldSphere } from '../LodSystem';
+import { getLodSelectionCamera, getLodWorldSphere } from '../LodMeasure';
 
 // The LOD overlay (docs/plans/_DONE_p348_ecs-lod-selection.md §6): a wire box per LOD entity in view,
 // coloured by the level it shows. The box bounds the sphere the selection measures (level 0's

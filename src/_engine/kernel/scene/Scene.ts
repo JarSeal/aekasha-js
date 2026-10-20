@@ -70,7 +70,7 @@ export type SceneData = {
   postFx?: (PostFxPassProps | string)[];
   /** Whether the PostFX chain starts switched on. Default true. */
   postFxEnabled?: boolean;
-  /** Registered for this scene by the loader, see registerSceneSpatialDomains (SpatialIndexSystem.ts). */
+  /** Registered for this scene by the loader, see registerSceneSpatialDomains (SpatialDomains.ts). */
   spatialDomains?: SceneSpatialDomainEntry[];
   /** The exported impostors the scene lists, resolved by the gatherer (their atlas slots are in
    * `textures`). */

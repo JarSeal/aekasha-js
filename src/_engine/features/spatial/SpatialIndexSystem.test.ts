@@ -4,13 +4,8 @@ import { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import type { ECSStorageMode } from '../../kernel/ecs/ECSComponentStorage';
 import type { FeatureContext } from '../../kernel/init/Features';
-import {
-  getSpatialDomain,
-  installSpatialIndex,
-  joinSpatialDomain,
-  rebuildSpatialDomain,
-  registerSpatialDomain,
-} from './SpatialIndexSystem';
+import { getSpatialDomain, registerSpatialDomain } from './SpatialDomains';
+import { installSpatialIndex, joinSpatialDomain, rebuildSpatialDomain } from './SpatialIndexSystem';
 
 beforeAll(() => {
   // The membership hooks and the radius providers; the tests rebuild the domains themselves

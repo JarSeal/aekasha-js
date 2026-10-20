@@ -171,25 +171,13 @@ export type OctahedralImpostorNodes = {
 };
 
 /**
- * The nodes that draw an octahedral impostor's atlases on its quad geometry (see
- * `generateOctahedralImpostor`): set them on a material as `positionNode`, `colorNode`,
- * `normalNode`, `depthNode` and `receivedShadowPositionNode`, with an `alphaTest`. `vOrigin` is the
- * atlases' (both the same), fixed in the shader; the layout's cells are from the image's top left
- * either way.
- * For `buildOctahedralImpostor`.
- * @internal
+ * The vertex stage, per instance and constant over its quad: the quad turned to face the camera
+ * from the instance's centre, and what the fragment stage reads of it (the view ray through each
+ * corner, the grid position, the hemi parallax fade).
  */
-export const createOctahedralImpostorNodes = (
-  layout: OctahedralImpostorLayout,
-  albedo: THREE.Texture,
-  normalDepth: THREE.Texture,
-  vOrigin: ImpostorAtlasVOrigin = 'TOP'
-): OctahedralImpostorNodes => {
-  const { frames, hemi, frameSize, gutter, atlasSize, center, radius, extent } = layout;
-  const cellSize = frameSize + 2 * gutter;
+const createImpostorVertexNodes = (layout: OctahedralImpostorLayout) => {
+  const { frames, hemi, center } = layout;
   const centerLocal = vec3(...center);
-
-  // --- VERTEX: per instance, constant over its quad ---
 
   // The camera in the instance's space, relative to its centre (an orthographic camera's forward
   // is the same everywhere, eg. a directional light's shadow camera)
@@ -242,18 +230,36 @@ export const createOctahedralImpostorNodes = (
       )
     : float(1);
 
-  // --- FRAGMENT: the three frames ---
+  return {
+    worldBasisInverse,
+    isOrthographic,
+    positionNode,
+    pixelOffset,
+    pixelRayLocal,
+    pixelRay,
+    pixelCornerWorld,
+    pixelRayWorld,
+    pixelGrid,
+    parallax,
+  };
+};
 
-  // The grid cell's diagonal splits it into two triangles: the base and far corners, plus the
-  // corner on the view's side of the diagonal. Barycentric weights, continuous across cells
-  const base = clamp(floor(pixelGrid), 0, frames - 2);
-  const f = clamp(pixelGrid.sub(base), 0, 1);
-  const cells: Vec2Node[] = [
-    base,
-    base.add(select(f.x.greaterThan(f.y), vec2(1, 0), vec2(0, 1))),
-    base.add(1),
-  ];
-  const weights = [max(f.x, f.y).oneMinus(), abs(f.x.sub(f.y)), min(f.x, f.y)];
+type ImpostorVertexNodes = ReturnType<typeof createImpostorVertexNodes>;
+
+/**
+ * The fragment stage's frame sampler: frame `cell`'s albedo and normal-depth where the pixel's
+ * view ray meets the object's surface, after PARALLAX_STEPS parallax steps.
+ */
+const createFrameSampler = (
+  layout: OctahedralImpostorLayout,
+  vertex: ImpostorVertexNodes,
+  albedo: THREE.Texture,
+  normalDepth: THREE.Texture,
+  vOrigin: ImpostorAtlasVOrigin
+) => {
+  const { frames, hemi, frameSize, gutter, atlasSize, radius, extent } = layout;
+  const cellSize = frameSize + 2 * gutter;
+  const { pixelOffset, pixelRay, parallax } = vertex;
 
   /** The atlas uv of a point (relative to the centre) in frame `cell`'s image: from the cell's top
    * left, clamped to the frame (its edge is clear, and a neighbouring frame never shows through),
@@ -321,6 +327,43 @@ export const createOctahedralImpostorNodes = (
     };
   };
 
+  return sampleFrame;
+};
+
+/**
+ * The nodes that draw an octahedral impostor's atlases on its quad geometry (see
+ * `generateOctahedralImpostor`): set them on a material as `positionNode`, `colorNode`,
+ * `normalNode`, `depthNode` and `receivedShadowPositionNode`, with an `alphaTest`. `vOrigin` is the
+ * atlases' (both the same), fixed in the shader; the layout's cells are from the image's top left
+ * either way.
+ * For `buildOctahedralImpostor`.
+ * @internal
+ */
+export const createOctahedralImpostorNodes = (
+  layout: OctahedralImpostorLayout,
+  albedo: THREE.Texture,
+  normalDepth: THREE.Texture,
+  vOrigin: ImpostorAtlasVOrigin = 'TOP'
+): OctahedralImpostorNodes => {
+  const { frames, frameSize, extent } = layout;
+  const vertex = createImpostorVertexNodes(layout);
+  const { worldBasisInverse, isOrthographic, pixelGrid } = vertex;
+  const { pixelRayLocal, pixelCornerWorld, pixelRayWorld } = vertex;
+
+  // --- FRAGMENT: the three frames ---
+
+  // The grid cell's diagonal splits it into two triangles: the base and far corners, plus the
+  // corner on the view's side of the diagonal. Barycentric weights, continuous across cells
+  const base = clamp(floor(pixelGrid), 0, frames - 2);
+  const f = clamp(pixelGrid.sub(base), 0, 1);
+  const cells: Vec2Node[] = [
+    base,
+    base.add(select(f.x.greaterThan(f.y), vec2(1, 0), vec2(0, 1))),
+    base.add(1),
+  ];
+  const weights = [max(f.x, f.y).oneMinus(), abs(f.x.sub(f.y)), min(f.x, f.y)];
+
+  const sampleFrame = createFrameSampler(layout, vertex, albedo, normalDepth, vOrigin);
   const samples = cells.map(sampleFrame);
   const colorNode = samples
     .map((sample, i) => sample.albedo.mul(weights[i]))
@@ -389,7 +432,7 @@ export const createOctahedralImpostorNodes = (
   })();
 
   return {
-    positionNode: positionNode as unknown as THREE.Node<'vec3'>,
+    positionNode: vertex.positionNode as unknown as THREE.Node<'vec3'>,
     colorNode: colorNode as unknown as THREE.Node<'vec4'>,
     normalNode: normalNode as unknown as THREE.Node<'vec3'>,
     depthNode: depthNode as unknown as THREE.Node<'float'>,

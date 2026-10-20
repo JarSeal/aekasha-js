@@ -8,14 +8,16 @@ export {
   DEFAULT_SPATIAL_DOMAIN,
   getSpatialDomain,
   getSpatialGrid,
+  registerSpatialDomain,
+  unregisterSpatialDomain,
+} from './SpatialDomains';
+export type { SpatialDomainOptions, SpatialUpdatePolicy } from './SpatialDomains';
+export {
   invalidateSpatialDomain,
   isInSpatialDomain,
   joinSpatialDomain,
   leaveSpatialDomain,
   rebuildSpatialDomain,
   refreshSpatialRadius,
-  registerSpatialDomain,
-  unregisterSpatialDomain,
-  validateSpatialGridQuery,
 } from './SpatialIndexSystem';
-export type { SpatialDomainOptions, SpatialUpdatePolicy } from './SpatialIndexSystem';
+export { validateSpatialGridQuery } from './SpatialOracle';
