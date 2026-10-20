@@ -93,11 +93,12 @@ class LineBuffer implements LineWriteTarget {
  * transform, visibility, name, userData and children).
  */
 export class LineObject {
+  /** The line's id: `LineProps.id`, or a generated `line_<n>` (`getLine` finds it). */
   readonly id: string;
   /** Kept on scene switches (see LineProps.persistent). */
   readonly persistent: boolean;
   /**
-   * Set by LineManager while an entity owns this line.
+   * Set by Lines.ts (`createLineEntity`, `bindLineToEntity`) while an entity owns this line.
    * @internal
    */
   entityBinding: LineEntityBinding | null = null;
@@ -197,6 +198,7 @@ export class LineObject {
     return this.segments;
   }
 
+  /** Whether `dispose()` ran (by the app, its entity or a scene exit): the line draws no more. */
   get isDisposed() {
     return this.disposed;
   }
@@ -272,6 +274,7 @@ export class LineObject {
     this.syncBackend();
   }
 
+  /** Shows or hides the line (its object's `visible`, kept across a backend swap). */
   setVisible(visible: boolean) {
     this.backend.object3D.visible = visible;
   }

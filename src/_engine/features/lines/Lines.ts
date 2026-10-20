@@ -215,7 +215,8 @@ export const getLineForEntity = (entityId: number, ecsWorld?: ECSWorld) => {
  * chunk so an app that only draws 1px lines never downloads it — which also means a width
  * above 1px can never be honoured synchronously. Lines created before it has loaded draw
  * 1px and upgrade themselves when it arrives; await this first to avoid that.
- * @returns (Promise<boolean>) whether the backend is available
+ * @returns resolves whether the backend is available (false when its chunk failed to load; a
+ * later call retries)
  */
 export const preloadFatLineBackend = () => loadFatLineBackend();
 

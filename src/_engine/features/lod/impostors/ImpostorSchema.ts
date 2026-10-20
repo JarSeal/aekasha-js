@@ -2,13 +2,11 @@ import { z } from 'zod';
 import { DebugDataSchema } from '../../../schemas/_HelperSchemas';
 import { IMPOSTOR_EXPORT_FORMAT_VERSION, IMPOSTOR_MATERIAL_TYPES } from './ImpostorFormat';
 
-/**
- * An exported impostor (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): everything its
- * material needs besides the atlas, which is a `*.textureAtlas.json` (p299) with the kind's slots
- * (`IMPOSTOR_ATLAS_SLOTS`). Written by the LOD tab's Export, not by hand. A scene lists it in
- * `impostors`, which loads the atlas's slots with the scene; `generateOctahedralImpostor` (or
- * `generateCrossQuads`) with its id then builds from it instead of baking.
- */
+// An exported impostor (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): everything its
+// material needs besides the atlas, which is a `*.textureAtlas.json` (p299) with the kind's slots
+// (`IMPOSTOR_ATLAS_SLOTS`). Written by the LOD tab's Export, not by hand. A scene lists it in
+// `impostors`, which loads the atlas's slots with the scene; `generateOctahedralImpostor` (or
+// `generateCrossQuads`) with its id then builds from it instead of baking.
 
 const Vec3Schema = z.tuple([z.number(), z.number(), z.number()]);
 const PxSchema = z.number().int();
@@ -80,7 +78,7 @@ export const ImpostorShadingSchema = z.strictObject({
 });
 
 const ImpostorBaseSchema = z.object({
-  $schema: z.string().optional(),
+  $schema: z.string().optional().describe('The JSON Schema the editor validates the file with.'),
   id: z.string().optional().describe("Default: the file name. The generator's `id` option."),
   atlas: z
     .string()
@@ -95,10 +93,21 @@ const ImpostorBaseSchema = z.object({
     .describe(
       "The fingerprint of the source geometry, its materials' bake inputs, the resolved shading and the options it was baked with (getImpostorSourceHash): the debug env warns when the source it's used with differs (re-export)."
     ),
-  alphaTest: z.number().min(0).max(1),
-  shading: ImpostorShadingSchema,
-  debugData: DebugDataSchema.optional(),
-  __sourcePath: z.string().optional(),
+  alphaTest: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe("The material's alpha cut the impostor was baked and exported with."),
+  shading: ImpostorShadingSchema.describe(
+    "The material's shading as baked: the model and its parameters, never `AUTO`."
+  ),
+  debugData: DebugDataSchema.optional().describe(
+    'Notes for the debug tools: a name, a description.'
+  ),
+  __sourcePath: z
+    .string()
+    .optional()
+    .describe('Written by the gatherer: the file it was read from, relative to the repo root.'),
 });
 
 /**

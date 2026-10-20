@@ -106,6 +106,8 @@ export function leaveSpatialDomain(
   clearMaskBit(world, domain, entityId);
 }
 
+/** Whether `entityId` is a member of `world`'s domain `domainId` (false when the domain isn't
+ * registered). `DEFAULT`: whether it has SPATIAL_INDEXED. */
 export function isInSpatialDomain(
   entityId: number,
   domainId: string,
@@ -145,11 +147,11 @@ const leaveMaskedDomains = (entityId: number, world: ECSWorld) => {
 };
 
 /**
- * A point/spot light's influence-sphere radius — shared with
- * LightObjectCullingSystem.ts so both consumers agree on what "this light's
- * volume" means. Kept separate from ObjectFrustumCullingSystem.ts's own
- * `computeIsVisible` (which only ever needs a boolean, not the radius
- * itself) rather than touching that already-shipped system.
+ * A point/spot light's influence-sphere radius (a spot's cone as the sphere around its apex,
+ * `distance / cos(angle)`; Infinity for an unattenuated light or a cone past `MAX_SPOT_ANGLE`):
+ * the light's radius in the grid, and what light culling (LightObjectCullingSystem.ts) queries
+ * with, so both agree on the light's volume. Frustum culling's light spheres
+ * (ObjectFrustumCullingSystem.ts) use the same formula and cutoff.
  * @internal
  */
 export function computeLightInfluenceRadius(light: THREE.PointLight | THREE.SpotLight): number {
@@ -165,8 +167,9 @@ export function computeLightInfluenceRadius(light: THREE.PointLight | THREE.Spot
 }
 
 // --- RADIUS PROVIDERS (p346 §3.3) ---
-// The registry is the kernel's (ECS/SpatialMembership.ts), so other features register into it
-// without importing this module; the mesh and light providers are registered by the install.
+// The registry is the kernel's (kernel/ecs/SpatialMembership.ts), so other features register
+// into it without importing this module; the mesh and light providers are registered by the
+// install.
 
 const getLightRadius: SpatialRadiusProvider = (entityId, world) => {
   const light = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
@@ -343,7 +346,7 @@ export const installSpatialIndex = (ctx: FeatureContext) => {
 
   ctx.registerComponentHooks(ComponentType.SPATIAL_INDEXED, spatialIndexedHooks);
 
-  // How instancing's pools join their `spatialDomain` (ECS/SpatialMembership.ts)
+  // How instancing's pools join their `spatialDomain` (kernel/ecs/SpatialMembership.ts)
   setSpatialDomainMembership({
     hasDomain: (world, domainId) =>
       domainId === DEFAULT_SPATIAL_DOMAIN || Boolean(getSpatialDomain(world, domainId)),

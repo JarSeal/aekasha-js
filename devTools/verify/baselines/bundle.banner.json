@@ -3,7 +3,7 @@
   "chunks": {
     "assets/AssetsSwitchGLTF.js": {
       "bytes": 148112,
-      "gzip": 51863
+      "gzip": 51864
     },
     "assets/AssetsSwitchSimplify.js": {
       "bytes": 3889,
@@ -11,15 +11,15 @@
     },
     "assets/AssetsSwitchTexture.js": {
       "bytes": 4039,
-      "gzip": 1943
+      "gzip": 1944
     },
     "assets/AssetsWorker.js": {
       "bytes": 158,
-      "gzip": 156
+      "gzip": 157
     },
     "assets/AssetsWorker.js#2": {
       "bytes": 2027,
-      "gzip": 1047
+      "gzip": 1046
     },
     "assets/DRACOLoader.js": {
       "bytes": 7544,
@@ -27,7 +27,7 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 45869,
-      "gzip": 13861
+      "gzip": 13862
     },
     "assets/GeometryTransfer.js": {
       "bytes": 4297,
@@ -43,11 +43,11 @@
     },
     "assets/KTX2Loader.js": {
       "bytes": 59894,
-      "gzip": 24363
+      "gzip": 24364
     },
     "assets/LodChainGLTF.js": {
-      "bytes": 2222,
-      "gzip": 984
+      "bytes": 2193,
+      "gzip": 968
     },
     "assets/banner.css": {
       "bytes": 2300,
@@ -59,11 +59,11 @@
     },
     "assets/banner.embed.js": {
       "bytes": 1044177,
-      "gzip": 292881
+      "gzip": 292880
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
-      "gzip": 285
+      "gzip": 284
     },
     "assets/basis_transcoder.wasm": {
       "bytes": 527333,
@@ -115,7 +115,7 @@
     },
     "assets/three.module.js#2": {
       "bytes": 220,
-      "gzip": 183
+      "gzip": 182
     },
     "banner.embed.js": {
       "bytes": 251,

@@ -44,10 +44,13 @@ import {
 // The LOD tab (docs/plans/_DONE_p348_ecs-lod-selection.md §6): counts per level, the last frame's
 // selections, applies and fades, the selection's runtime overrides, the fades' duration and time
 // scale (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 2), the level overlay
-// (Lod/_dbg__LodOverlay.ts), the per-entity LOD windows (Lod/_dbg__LodEntityWindow.ts) and the
+// (_dbg__LodOverlay.ts), the per-entity LOD windows (_dbg__LodEntityWindow.ts) and the
 // impostors generated in this session with their Export (p351 Phase 4,
-// Lod/_dbg__ImpostorExport.ts). Nothing is persisted: it's all for inspecting, and a reload starts
+// _dbg__ImpostorExport.ts). Nothing is persisted: it's all for inspecting, and a reload starts
 // from the app's values. Default world only.
+//
+// Size: `_createLodDebugGUI` is over 150 lines (its `content` closure builds the whole tab). Left
+// whole: p800 rewrites the debug panels, and a split now is churn it throws away (p616 D8).
 
 const TAB_ID = 'lodControls';
 const formatInt = (v: number) => v.toFixed(0);
@@ -209,6 +212,8 @@ const getImpostorsSignature = () =>
     .map((record) => `${record.id}:${record.kind}:${record.origin}`)
     .join('|');
 
+/** Creates the "LOD" drawer tab (`lodControls`): the LOD debug module's entry, which
+ * `registerLodDebugGUI` loads. */
 export const _createLodDebugGUI = () => {
   const world = getECSWorld();
 

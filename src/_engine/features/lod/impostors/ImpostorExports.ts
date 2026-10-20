@@ -25,7 +25,7 @@ export type ImpostorExport<Kind extends ImpostorDef['kind']> = {
   slots: Partial<Record<string, THREE.Texture>>;
 };
 
-/** A slot's texture id (the schema's getAtlasSlotTextureId; core imports no zod) */
+/** A slot's texture id (the schema's getAtlasSlotTextureId; the runtime imports no zod) */
 const getSlotTextureId = (atlasId: string, slot: string) => `${atlasId}.${slot}`;
 
 /** The definition of `id` in the loading scene's `impostors` (else the current scene's) */

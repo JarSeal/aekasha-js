@@ -144,6 +144,9 @@ const setMeshCulled = (
 /**
  * Draws a plain mesh's fade at `progress`; 1 ends it (the copy goes, the mesh is drawn whole).
  * @internal
+ * @remarks Ending a fade disposes the outgoing copy, and so does the `LOD` delete hook through
+ * this: three r186 keeps an object's render objects until it fires `dispose`, so a copy only
+ * removed from its parent would leak them.
  */
 export const setMeshFade = (lod: LodData, progress: number) => {
   const fadeIn = lod._fadeIn;

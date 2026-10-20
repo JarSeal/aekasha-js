@@ -40,7 +40,10 @@ import { findSpatialRadiusProvider } from '../../kernel/ecs/SpatialMembership';
  */
 export type SpatialUpdatePolicy = 'DYNAMIC' | 'STATIC' | 'MANUAL';
 
+/** A spatial domain's settings, for {@link registerSpatialDomain} (and a scene JSON's
+ * `spatialDomains`). */
 export interface SpatialDomainOptions {
+  /** The domain's id, unique per world: what `joinSpatialDomain` and `getSpatialDomain` take. */
   id: string;
   /** World-space edge length of one grid cell. */
   cellSize: number;
@@ -78,8 +81,11 @@ const DEFAULT_CELL_SIZE = 20;
 /** Bits 0-30 of SPATIAL_DOMAINS' mask, so the mask stays a small positive integer. */
 const MAX_NON_DEFAULT_DOMAINS = 31;
 
-/** A domain's settings layers (p349 §3.1), as the app registered them (before the debug override). */
-type DomainSettingsLayers = {
+/**
+ * A domain's settings layers (p349 §3.1), as the app registered them (before the debug override).
+ * @internal
+ */
+export type DomainSettingsLayers = {
   /** The last registration without a scene. Always set for DEFAULT. */
   worldRequested?: SpatialDomainOptions;
   /** The last registration with a scene. Wins while it's set. */

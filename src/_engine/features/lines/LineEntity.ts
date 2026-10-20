@@ -13,10 +13,11 @@ export type LineEntityBinding = { world: ECSWorld; entityId: number; ownsEntity:
 
 /**
  * Makes an entity whose OBJECT3D is a line tagged as a line. A thick line is a Mesh
- * subclass, so the OBJECT3D auto-tagger (ECSCoreSystems.ts) stamps it TAG_IS_MESH, which
- * would subscribe it to MeshManager's disposeMesh — a second owner tearing the same
- * object down. Neither tag has add/remove hooks, so swapping them is side-effect free.
+ * subclass, so the OBJECT3D auto-tagger stamps it TAG_IS_MESH. Neither tag has add/remove
+ * hooks, so swapping them is side-effect free.
  * @internal
+ * @remarks Left TAG_IS_MESH, the mesh delete hook (`kernel/mesh/Mesh.ts`) would dispose the
+ * line's object too: a second owner tearing the same object down.
  */
 export const retagLineEntity = (world: ECSWorld, entityId: number) => {
   if (world.hasComponent(entityId, ComponentType.TAG_IS_MESH)) {
@@ -46,7 +47,7 @@ export const repointLineEntity = (
 
 /**
  * A bound line was disposed by its owner: take the entity side down too. (When
- * the entity goes first, LineManager's hooks clear the binding before disposing.)
+ * the entity goes first, the `LINE` hooks (Lines.ts) clear the binding before disposing.)
  * @internal
  */
 export const releaseLineEntity = ({ world, entityId, ownsEntity }: LineEntityBinding) => {

@@ -19,6 +19,7 @@ import { getLodSelectionCamera, getLodWorldSphere } from '../LodMeasure';
 
 /** Level 0 green, 1 yellow, 2 orange, 3 red, 4 magenta, 5 and on blue. */
 export const LOD_OVERLAY_COLORS = [0x30c040, 0xe0c020, 0xf08020, 0xd03020, 0xc040d0, 0x4080f0];
+/** {@link LOD_OVERLAY_COLORS}' names, for the LOD tab's legend. */
 export const LOD_OVERLAY_COLOR_NAMES = ['green', 'yellow', 'orange', 'red', 'magenta', 'blue'];
 
 /** Boxes per level line. Past it the FIXED line drops the rest, with its own warning. */
@@ -86,6 +87,7 @@ const lodOverlaySystem = (world: ECSWorld) => {
   }
 };
 
+/** Whether the level overlay is drawn (`setLodOverlayEnabled`). */
 export const isLodOverlayEnabled = () => isEnabled;
 
 /** Shows or hides the overlay. The lines and the system are created on the first enable. */

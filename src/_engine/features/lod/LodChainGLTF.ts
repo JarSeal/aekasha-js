@@ -57,7 +57,7 @@ export type ExtractedLodChain = {
 };
 
 /**
- * A file's prebuilt chains, by `getGLTFPrimitiveKey` (Import/GLTFExtract.ts) of their base.
+ * A file's prebuilt chains, by `getGLTFPrimitiveKey` (kernel/assets/import/GLTFExtract.ts) of their base.
  * What the LOD import extension hands the kernel's glTF extraction.
  * @internal
  */

@@ -274,7 +274,8 @@ const instanceLodTarget: LodTarget = {
 };
 
 /** Creates a pool's `InstancedMesh` and the entity that owns it. The mesh takes a registry ref on
- * its geometry and material(s), which `MeshManager`'s `TAG_IS_MESH` delete hook releases. */
+ * its geometry and material(s), which the `TAG_IS_MESH` delete hook (`kernel/mesh/Mesh.ts`)
+ * releases. */
 const createPoolMesh = (
   world: ECSWorld,
   geometry: THREE.BufferGeometry,
@@ -295,7 +296,7 @@ const createPoolMesh = (
     if (m.userData.id) incMaterialRef(m.userData.id);
   }
 
-  // TAG_IS_MESH: MeshManager's delete hook removes and disposes the mesh with its entity
+  // TAG_IS_MESH: its delete hook (kernel/mesh/Mesh.ts) disposes the mesh with its entity
   const meshEntityId = world.createEntity(entityOpts);
   // Marks the mesh as holding refs: setMeshGeometry / setMeshMaterial then move them
   mesh.userData.entityId = meshEntityId;
@@ -310,7 +311,7 @@ const createPoolMesh = (
 };
 
 /** How `spawn()` joins its instances to their spatial domain (the spatial index's membership,
- * ECS/SpatialMembership.ts), undefined without a domain, and undefined with a warning without
+ * kernel/ecs/SpatialMembership.ts), undefined without a domain, and undefined with a warning without
  * `spatial()` or when the domain isn't registered. Checked once per spawn, or joining would warn
  * for every instance. */
 const getSpawnSpatialMembership = (
@@ -361,16 +362,20 @@ const createInstanceEntity = (
   return { entityId, version: transform.version };
 };
 
+/** What {@link createInstancedMeshPool} takes. */
 export interface CreateInstancedMeshPoolOptions {
   /** Used to create one dedicated ECS entity that owns `mesh` itself (distinct from the
    * per-instance slot entities `spawn()` creates) — see `InstancedMeshPool.mesh`'s doc comment. */
   world: ECSWorld;
+  /** Every instance's geometry. The mesh holds a registry ref on it while it lives. */
   geometry: THREE.BufferGeometry;
   /** A material array (with a matching-length `geometry.groups`) works the same as on a plain `Mesh`. */
   material: THREE.Material | THREE.Material[];
   /** Hard cap on live instances this pool can hold at once, sized once. Despawning frees a slot for a later spawn. */
   maxInstances: number;
+  /** Whether the instances cast shadows. Default true. */
   castShadow?: boolean;
+  /** Whether the instances receive shadows. Default true. */
   receiveShadow?: boolean;
   /** Passed to the mesh's own owning entity (e.g. to mark a long-lived pool `persistent`). */
   entityOpts?: CoreEntityOpts;
@@ -385,11 +390,13 @@ export interface CreateInstancedMeshPoolOptions {
   spatialDomain?: string;
 }
 
+/** What {@link createInstancedMeshPool} returns: the mesh, its owning entity and the instances'
+ * spawn and despawn. */
 export interface InstancedMeshPool {
   /** Not added to any scene yet — add `pool.mesh` to the scene yourself. `mesh` is still owned by `meshEntityId`
-   * (holding `OBJECT3D`/`TAG_IS_MESH`, like any plain mesh entity), so `MeshManager`'s existing
-   * `TAG_IS_MESH` `onDeleteEntity` hook removes it from wherever it was added and disposes it once
-   * that entity is deleted (e.g. by `ECSWorld.clearNonPersistent()` on scene switch) — without this,
+   * (holding `OBJECT3D`/`TAG_IS_MESH`, like any plain mesh entity), so the `TAG_IS_MESH`
+   * `onDeleteEntity` hook (`kernel/mesh/Mesh.ts`) removes it from wherever it was added and disposes
+   * it once that entity is deleted (e.g. by `ECSWorld.clearNonPersistent()` on scene switch) — without this,
    * the shared mesh would silently outlive every scene that created it. */
   mesh: THREE.InstancedMesh;
   /** The entity that owns `mesh` for lifecycle purposes (see `mesh`'s doc comment above). */
@@ -502,6 +509,7 @@ export interface InstancedLodPoolLevel {
   castShadow?: boolean;
 }
 
+/** What {@link createInstancedLodPool} takes. */
 export interface CreateInstancedLodPoolOptions {
   /** Owns one entity per level mesh, like `CreateInstancedMeshPoolOptions.world`. */
   world: ECSWorld;
@@ -513,6 +521,7 @@ export interface CreateInstancedLodPoolOptions {
   /** The selection settings every instance shares (`cullScreenSize`, `hysteresis`, `bias`,
    * `fadeSeconds`). */
   lod?: Omit<LodDef, 'levels'>;
+  /** Whether the instances receive shadows, in every level. Default true (casting is per level). */
   receiveShadow?: boolean;
   /** Passed to each level mesh's owning entity. */
   entityOpts?: CoreEntityOpts;
@@ -526,12 +535,15 @@ export interface CreateInstancedLodPoolOptions {
   spatialDomain?: string;
 }
 
+/** What {@link createInstancedLodPool} returns: the level meshes, their owning entities and the
+ * instances' spawn and despawn. */
 export interface InstancedLodPool {
   /** One `InstancedMesh` per level, level 0 first. Not added to any scene: add them all yourself
    * (`rootScene.add(...pool.meshes)`), directly under the scene, since the selection reads each
    * instance's `Transform` as its world position. Each is owned by its entity in `meshEntityIds`,
    * which disposes it like `InstancedMeshPool.mesh`. */
   meshes: THREE.InstancedMesh[];
+  /** The entity owning each mesh of `meshes`, in the same order. */
   meshEntityIds: number[];
   /** Spawns one entity per placement with `INSTANCED_MESH_SLOT` and `LOD`, starting in level 0's
    * mesh. Returns the created entity ids (fewer than `placements.length` past `maxInstances`). */

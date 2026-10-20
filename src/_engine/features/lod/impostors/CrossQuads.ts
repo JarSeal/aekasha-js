@@ -40,6 +40,8 @@ import { getImpostorExport, warnIfImpostorExportStale } from './ImpostorExports'
 import type { ImpostorAtlasVOrigin } from './ImpostorFormat';
 import { recordImpostor } from './ImpostorRegistry';
 
+/** What {@link generateCrossQuads} takes: the id, the planes, the atlas resolution and the
+ * shading. Every field is optional. */
 export type CrossQuadsOptions = {
   /** The id the generated assets are registered under: the geometry `id`, the material
    * `${id}.mat`, the atlases `${id}.albedo` and `${id}.normal`. Default
@@ -51,7 +53,7 @@ export type CrossQuadsOptions = {
   frameSize?: number;
   /** Texels between a frame and its cell's edge, which keep mipmaps from mixing frames. Default 4. */
   gutter?: number;
-  /** Default 0.5. */
+  /** The material's alpha cut, which the albedo atlas's coverage is tested against. Default 0.5. */
   alphaTest?: number;
   /** Bake a normal atlas, so the planes shade like the object. Default true; false lights each
    * plane flat. */
@@ -60,7 +62,10 @@ export type CrossQuadsOptions = {
   shading?: ImpostorShading;
 };
 
+/** What {@link generateCrossQuads} returns: the registered geometry, material and atlases of a
+ * cross-quad impostor, for an instanced LOD pool's last level. */
 export type CrossQuads = {
+  /** The id they're registered under (`CrossQuadsOptions.id`). */
   id: string;
   /** Registered: one plane per direction, four vertices each, uvs into the atlases. */
   geometry: THREE.BufferGeometry;
@@ -116,11 +121,12 @@ const getPlaneAxes = (i: number, planes: number, dir: THREE.Vector3, right: THRE
 /**
  * The view-space normal of a plane texel: the baked normal is in the plane's own frame (x along
  * its u, y up, z out of its front), so it's rebuilt from the plane's screen-space cotangent frame
- * and its geometry normal, which three rotates per instance (its tangent attribute it doesn't,
- * r186). On the back face only the out component flips, which mirrors the normal through the
- * plane: three's own double-sided normal maps negate the whole frame instead, which would light a
- * plane seen from behind from below. Up is along -v on a bake's atlas (v runs down the image),
- * along +v on a loaded one (`vOrigin`).
+ * and its geometry normal. On the back face only the out component flips, which mirrors the
+ * normal through the plane. Up is along -v on a bake's atlas (v runs down the image), along +v on
+ * a loaded one (`vOrigin`).
+ * @remarks Not three's normal map: r186 rotates `normalLocal` per instance but not
+ * `tangentLocal`, and its double-sided normal maps negate the whole frame on a back face, which
+ * would light a plane seen from behind from below.
  */
 const createPlaneNormalNode = (normalMap: THREE.Texture, vOrigin: ImpostorAtlasVOrigin) =>
   Fn(() => {

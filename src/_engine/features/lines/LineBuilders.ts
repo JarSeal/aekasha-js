@@ -1,15 +1,13 @@
 import * as THREE from 'three/webgpu';
 import { createArrayWriteTarget, FLOATS_PER_SEGMENT, LineWriter } from './LineWriter';
 
-/**
- * Segment builders. Every `write*` appends to a {@link LineWriter} (use them between
- * `beginWrite()`/`endWrite()`), every `*ToSegments` returns a new flat `xyzxyz` array for
- * `setSegments`/`LineProps.segments`.
- *
- * The box and polyline writers are allocation-free and fit a per-frame refill. The
- * geometry ones build a three.js EdgesGeometry/WireframeGeometry each call — build-once
- * use only.
- */
+// Segment builders. Every `write*` appends to a LineWriter (use them between
+// `beginWrite()`/`endWrite()`), every `*ToSegments` returns a new flat `xyzxyz` array for
+// `setSegments`/`LineProps.segments`.
+//
+// The box and polyline writers are allocation-free and fit a per-frame refill. The
+// geometry ones build a three.js EdgesGeometry/WireframeGeometry each call — build-once
+// use only.
 
 /** Segments in a box outline. */
 export const BOX_EDGE_SEGMENT_COUNT = 12;
@@ -134,18 +132,27 @@ const toSegments = (segmentCount: number, write: (writer: LineWriter) => void) =
   return target.positions;
 };
 
+/** The 12 edges of an axis-aligned Box3 as a new `xyzxyz` array (empty for an empty box): the
+ * one-shot form of {@link writeBox3Edges}. */
 export const box3EdgesToSegments = (box: THREE.Box3) =>
   toSegments(box.isEmpty() ? 0 : BOX_EDGE_SEGMENT_COUNT, (w) => writeBox3Edges(w, box));
 
+/** The 12 edges of a box of `size` centred on `center`, optionally rotated, as a new `xyzxyz`
+ * array: the one-shot form of {@link writeBoxEdges}. */
 export const boxEdgesToSegments = (
   center: THREE.Vector3Like,
   size: THREE.Vector3Like,
   quaternion?: THREE.QuaternionLike
 ) => toSegments(BOX_EDGE_SEGMENT_COUNT, (w) => writeBoxEdges(w, center, size, quaternion));
 
+/** A polyline through `points` (`closed` joins the last to the first) as a new `xyzxyz` array:
+ * the one-shot form of {@link writePolyline}. */
 export const polylineToSegments = (points: ArrayLike<THREE.Vector3Like>, closed = false) =>
   toSegments(polylineSegmentCount(points.length, closed), (w) => writePolyline(w, points, closed));
 
+/** A geometry's edges whose faces meet at over `thresholdAngle` degrees (three's
+ * `EdgesGeometry`, default 1) as a new `xyzxyz` array. Builds and disposes a geometry: not for a
+ * per-frame refill. */
 export const geometryEdgesToSegments = (
   geometry: THREE.BufferGeometry,
   thresholdAngle?: number
@@ -156,6 +163,8 @@ export const geometryEdgesToSegments = (
   return segments;
 };
 
+/** Every triangle edge of a geometry (three's `WireframeGeometry`) as a new `xyzxyz` array.
+ * Builds and disposes a geometry: not for a per-frame refill. */
 export const geometryWireframeToSegments = (geometry: THREE.BufferGeometry) => {
   const wireframe = new THREE.WireframeGeometry(geometry);
   const segments = flattenSegmentGeometry(wireframe);

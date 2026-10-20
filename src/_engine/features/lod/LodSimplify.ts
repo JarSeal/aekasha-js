@@ -29,7 +29,10 @@ export type SimplifiedLevel = {
   attributes?: Record<string, TransferableAttribute>;
 };
 
+/** What {@link simplifyLodChain} returns: the simplified levels as transferable arrays, before
+ * they're registered as geometries. */
 export type SimplifiedLodChain = {
+  /** The base's triangle count. */
   baseTriangles: number;
   /** The base's largest bounding box side: the scale the levels' `error` is relative to. */
   extent: number;

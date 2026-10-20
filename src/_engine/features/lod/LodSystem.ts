@@ -78,7 +78,7 @@ export const registerLodDebugGUI = async () => {
 // registered for one of its components, which then applies them and handles LOD culling.
 //
 // An InstancedMesh entity (a static instance cell, §4.3) is a plain mesh whose swap changes every
-// instance: its bounds are level 0 over all its instances (Lod/LodBounds.ts), not one instance.
+// instance: its bounds are level 0 over all its instances (LodBounds.ts), not one instance.
 //
 // The settings are in LodSettings.ts, the measuring in LodMeasure.ts, the cross-fades in
 // LodFades.ts; this module has the hooks, the selection, apply and fade systems and the install.
@@ -123,7 +123,7 @@ const lodTransitioningHooks: ComponentHooks = {
 };
 
 // --- TARGETS ---
-// Registered with registerLodTarget (ECS/LodTargets.ts, the kernel's registry)
+// Registered with registerLodTarget (kernel/ecs/LodTargets.ts, the kernel's registry)
 
 /** Sets the entity's levels from the first target that has them. False when none does. */
 const resolveTargetLevels = (entityId: number, world: ECSWorld, lod: LodData) => {
@@ -488,9 +488,11 @@ const walkCapped = (
  * viewport height, × its `def.bias` × the global bias), with hysteresis, and adds or removes
  * TAG_LOD_CULLED. Uses the main camera, like frustum culling. Skips DISABLED and frustum-culled
  * entities, which keep their level: frustum culling runs first, so an entity re-entering the
- * view gets a fresh level in the same frame. {@link setLodDebugOptions} can freeze or force the
- * levels, or select against the active camera. {@link setLodMaxSelectionsPerFrame} caps the
- * entities reconsidered per frame (a forced level ignores the cap).
+ * view gets a fresh level in the same frame.
+ * {@link _engine/features/lod/LodSettings!setLodDebugOptions} can freeze or force the levels, or
+ * select against the active camera.
+ * {@link _engine/features/lod/LodSettings!setLodMaxSelectionsPerFrame} caps the entities
+ * reconsidered per frame (a forced level ignores the cap).
  * Registered by the feature's install.
  * @internal
  */

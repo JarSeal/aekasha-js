@@ -5,6 +5,7 @@
       "type": "object",
       "properties": {
         "$schema": {
+          "description": "The JSON Schema the editor validates the file with.",
           "type": "string"
         },
         "id": {
@@ -30,7 +31,8 @@
         "alphaTest": {
           "type": "number",
           "minimum": 0,
-          "maximum": 1
+          "maximum": 1,
+          "description": "The material's alpha cut the impostor was baked and exported with."
         },
         "shading": {
           "type": "object",
@@ -68,9 +70,11 @@
             "type",
             "params"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "The material's shading as baked: the model and its parameters, never `AUTO`."
         },
         "debugData": {
+          "description": "Notes for the debug tools: a name, a description.",
           "type": "object",
           "properties": {
             "name": {
@@ -116,6 +120,7 @@
           "additionalProperties": false
         },
         "__sourcePath": {
+          "description": "Written by the gatherer: the file it was read from, relative to the repo root.",
           "type": "string"
         },
         "kind": {
@@ -211,6 +216,7 @@
       "type": "object",
       "properties": {
         "$schema": {
+          "description": "The JSON Schema the editor validates the file with.",
           "type": "string"
         },
         "id": {
@@ -236,7 +242,8 @@
         "alphaTest": {
           "type": "number",
           "minimum": 0,
-          "maximum": 1
+          "maximum": 1,
+          "description": "The material's alpha cut the impostor was baked and exported with."
         },
         "shading": {
           "type": "object",
@@ -274,9 +281,11 @@
             "type",
             "params"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "The material's shading as baked: the model and its parameters, never `AUTO`."
         },
         "debugData": {
+          "description": "Notes for the debug tools: a name, a description.",
           "type": "object",
           "properties": {
             "name": {
@@ -322,6 +331,7 @@
           "additionalProperties": false
         },
         "__sourcePath": {
+          "description": "Written by the gatherer: the file it was read from, relative to the repo root.",
           "type": "string"
         },
         "kind": {

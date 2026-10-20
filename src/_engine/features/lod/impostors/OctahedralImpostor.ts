@@ -52,6 +52,8 @@ import {
   createOctahedralImpostorQuad,
 } from './OctahedralImpostorMaterial';
 
+/** What {@link generateOctahedralImpostor} takes: the id, the frame grid, the atlas resolution,
+ * the shading and the surface depth. Every field is optional. */
 export type OctahedralImpostorOptions = {
   /** The id the generated assets are registered under: the geometry `id`, the material
    * `${id}.mat`, the atlases `${id}.albedo` and `${id}.normalDepth`. Default
@@ -66,7 +68,7 @@ export type OctahedralImpostorOptions = {
   frameSize?: number;
   /** Texels between a frame and its cell's edge, which keep mipmaps from mixing frames. Default 4. */
   gutter?: number;
-  /** Default 0.5. */
+  /** The material's alpha cut, which the blended frames' coverage is tested against. Default 0.5. */
   alphaTest?: number;
   /** The shading model (see {@link ImpostorShading}). Default `AUTO`. */
   shading?: ImpostorShading;
@@ -104,8 +106,13 @@ export type OctahedralImpostorLayout = {
   extent: number;
 };
 
+/** What {@link generateOctahedralImpostor} returns: the registered quad, material and atlases of an
+ * octahedral impostor, and their layout, for an instanced LOD pool's last level. */
 export type OctahedralImpostor = {
+  /** The id they're registered under (`OctahedralImpostorOptions.id`). */
   id: string;
+  /** Where the frames are in the atlases and what they show (also on the albedo atlas's
+   * `userData.octahedralImpostor`). */
   layout: OctahedralImpostorLayout;
   /** Registered: one quad around the bounding sphere's centre (its bounds are the sphere), turned
    * to face the camera by `material`. */
@@ -207,12 +214,17 @@ export const resolveOctahedralImpostorOptions = (
  * When the loading scene lists `id` in its JSON's `impostors` (an export: `*.impostor.json` and
  * its atlas, written by the LOD tab's Impostors), the impostor is built from the export and its
  * loaded atlas slots instead, with the export's layout, shading, `alphaTest` and `surfaceDepth`:
- * nothing is baked, and the other `opts` only feed the staleness check below. In the debug env a source or options that
- * changed since the export warn that it's stale (it's still used). An export that can't be used
- * (another format, a slot that didn't load) warns and bakes.
+ * nothing is baked, and the other `opts` only feed the staleness check. In the debug env a source
+ * or options that changed since the export warn that it's stale (it's still used). An export that
+ * can't be used (another format, a slot that didn't load) warns and bakes.
  *
  * Bakes synchronously with the renderer (after `InitEngine`), restoring its target and clear
  * state. Frames are in the object's local space, so they're used with its instance transforms.
+ * @remarks three r186 traps around its material: `NodeMaterial.clone()` loses `alphaTest`
+ * (`NodeMaterial.copy` skips `_alphaTest`), so set it again on a clone; `VSMShadowMap` draws every
+ * object that receives shadows into the shadow map whatever its `castShadow`; and a shadow map
+ * renders once per camera and node frame (`ShadowNode.updateBefore`), so two renders in one task
+ * share it (a harness bumps `renderer._nodes.nodeFrame.frameId` between them).
  */
 export const generateOctahedralImpostor = (
   geometry: THREE.BufferGeometry,

@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 done
+Status: in progress | Phases 0-4 done
 Category: Refactoring, Documentation, LOD, Rendering
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -652,7 +652,7 @@ As built (2026-10-20):
 - **Found, not fixed:** `LodChain.report` names the kernel's `AssetLoadReport`, on no entry (D1:
   outside scope).
 
-### Phase 4: the internals (D8, D9)
+### Phase 4: the internals (D8, D9) — done
 
 1. The three splits, moved as they are.
 2. Stale names, detached comments, the traps as `@remarks`, the remaining undocumented exports and
@@ -690,13 +690,44 @@ As built (2026-10-20):
 - Importers name the defining modules (the entries, the debug modules, `SpatialFeature.ts`,
   `LightObjectCullingSystem.ts`, the spatial test); comments naming a moved symbol's module fixed
   (`Scene.ts`, `SpatialDomainSchema.ts`, `_dbg__LodEntityWindow.ts`), and both nested `CLAUDE.md`
-  files say where things are. Not changed: `app/scenes/lodShowcase/layout.ts:87`'s "`k` …
-  (LodSystem.ts's perspective projection)", now in `LodMeasure.ts` (an app file: an app patch
-  for a comment).
+  files say where things are, and `app/scenes/lodShowcase/layout.ts:87`'s "`k` … (LodSystem.ts's
+  perspective projection)" names `LodMeasure.ts`: an app file, so the app is 1.12.4 already
+  (confirmed 2026-10-20; D2's patch, its changelog line in Phase 6).
 - Checks: `tsc`, the lint, `yarn test` (92 files, 749 passed, 1 skipped, as Phase 2).
   `yarn verify:baselines`: 40 exports moved and 31 new `@internal` ones, no entry change, no debug
   code; the main chunk within tolerance (per folder before minification `lod` +0.8 kB and
   `spatial` +0.5 kB gzip, the new headers), the banner unchanged. Recorded at the phase's end.
+- **Step 2 (D9):** §1.3's names and the members the ratchet still listed (25 exports, 37 members;
+  Phase 3 had done the rest) and G2's five: `instancing`, `lines`, `lod`, `lod/impostors`,
+  `lod/worker` and `spatial` at 100 %, exports and members. The traps as `@remarks` where they're
+  guarded: the chain's shared buffers on `generateLodChain`, the fade copy's `dispose` on
+  `setMeshFade`, `tangentLocal` and double-sided normal maps on cross-quads'
+  `createPlaneNormalNode`, the instance matrix on `ImpostorInstanceMatrixNode`, the widened
+  uploads on `asUploaded` and `getImpostorSourceHash`, the line's `TAG_IS_MESH` on
+  `retagLineEntity`. §1.2's other three (`VSMShadowMap`, one shadow map per node frame,
+  `NodeMaterial.clone()` losing `alphaTest`) were only in `impostors/CLAUDE.md`, at no code: a
+  `@remarks` on `generateOctahedralImpostor`. L5 on `LodData` (with `setMeshLod`'s second
+  consequence: level 0 resolves from what the mesh shows then). New types got summaries
+  (`SpatialGrid` a class summary with its between-rebuilds `@remarks`).
+- Detached comments as `//` headers: `ImpostorSchema.ts`, `SpatialGrid.ts` (rewritten: it said
+  nothing referenced the grid), `LinePulse.ts`, `LineBuilders.ts`, and one the plan didn't list,
+  `LineBackendFat.ts`. Stale names: L6, C4, I6, S9 (`computeIsVisible`: the light radius doc now
+  says what it shares with frustum culling; the dedup stamps name p050 §11's Phase 4), P5, N5
+  (`@returns (Promise<boolean>)` on `preloadFatLineBackend`), G2. `ImpostorSchema`'s five keys
+  described (`.schemas/impostor.schema.json` regenerated).
+- The debug builders' `Size:` lines: a `// Size:` line in `_dbg__LOD.ts`' header and in a new
+  header for `_dbg__SpatialGrid.ts` (it had none). No other file uses the form yet.
+- Step 1's split had added three Hub warnings, fixed: `lodSelectionSystem` links the two moved
+  setters module-qualified, and `DomainSettingsLayers` is exported `@internal` (the exported
+  `SpatialDomain` names it). `yarn hub:build`: 13 warnings, none in scope (as Phase 3).
+- Checks: `tsc`, the lint, `yarn test` (92 files, 749 passed, 1 skipped). `yarn verify:baselines
+  --update` recorded: `api.json` step 1's moves and internal exports (40 moved, 32 added with
+  `DomainSettingsLayers`), no entry change; `docs.json` the gains; `bundle.json`: chunk bytes
+  changed only in `OctahedralImpostor.js` (lazy, +338 B: the builder's helpers and the object
+  they return) and the main chunk (+39 B, the splits), per folder before minification `lod`
+  +0.8, `spatial` +0.6, `lines` +0.2 kB gzip (comments); the two `EngineRapier.js` chunks swapped
+  `#2` again (names only). `bundle.banner.json`: `LodChainGLTF.js` 2,222 → 2,193 B, Phase 3's
+  removed re-export (Phase 3 left the file as gzip noise), recorded with it.
 
 ### Phase 5: the Hub, CLAUDE.md, readme, and what's filed
 

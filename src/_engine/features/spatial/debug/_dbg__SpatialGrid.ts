@@ -31,6 +31,15 @@ import {
   setSpatialGridOracleEnabled,
 } from '../SpatialOracle';
 
+// The "Spatial index" drawer tab (docs/plans/_DONE_p050_spatial-index.md §9,
+// docs/plans/_DONE_p346_spatial-domains.md §3.6): per domain, the cell size override, the
+// brute-force oracle, the overlays and the rebuild counts, and an all-domains summary. Default
+// world only.
+//
+// Size: `_createSpatialGridDebugGUI` is over 150 lines (its `content` closure builds the whole
+// tab). Left whole: p800 rewrites the debug panels, and a split now is churn it throws away (p616
+// D8).
+
 const TAB_ID = 'spatialGridControls';
 const formatInt = (v: number) => v.toFixed(0);
 const LS_KEY = 'AEK_debugSpatialGrid';
@@ -330,6 +339,8 @@ const syncOverlays = (domainId: string) => {
   setOverlayEnabled(overlays.oversized, settings.showOversized);
 };
 
+/** Creates the "Spatial index" drawer tab (`spatialGridControls`): the spatial index's debug
+ * module entry, which `registerSpatialIndexDebugGUI` loads. */
 export const _createSpatialGridDebugGUI = () => {
   const world = getECSWorld();
   // Before createDebuggerTab, which hydrates `state` from the saved settings

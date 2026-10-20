@@ -2,22 +2,22 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2142,
-      "total": 2382
+      "documented": 2204,
+      "total": 2414
     },
     "members": {
-      "documented": 898,
+      "documented": 935,
       "total": 970
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2098,
-        "total": 2319
+        "documented": 2160,
+        "total": 2351
       },
       "members": {
-        "documented": 848,
+        "documented": 885,
         "total": 890
       }
     },
@@ -169,95 +169,49 @@
     },
     "engine/features/instancing": {
       "exports": {
-        "documented": 8,
+        "documented": 12,
         "total": 12
       },
       "members": {
-        "documented": 30,
+        "documented": 35,
         "total": 35
       },
       "undocumented": {
-        "exports": [
-          "InstancedMeshPool#CreateInstancedLodPoolOptions",
-          "InstancedMeshPool#CreateInstancedMeshPoolOptions",
-          "InstancedMeshPool#InstancedLodPool",
-          "InstancedMeshPool#InstancedMeshPool"
-        ],
-        "members": [
-          "InstancedMeshPool#CreateInstancedLodPoolOptions.receiveShadow",
-          "InstancedMeshPool#CreateInstancedMeshPoolOptions.castShadow",
-          "InstancedMeshPool#CreateInstancedMeshPoolOptions.geometry",
-          "InstancedMeshPool#CreateInstancedMeshPoolOptions.receiveShadow",
-          "InstancedMeshPool#InstancedLodPool.meshEntityIds"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "engine/features/lines": {
       "exports": {
-        "documented": 56,
+        "documented": 68,
         "total": 68
       },
       "members": {
-        "documented": 38,
+        "documented": 54,
         "total": 54
       },
       "undocumented": {
-        "exports": [
-          "LineBackend#LineOpacityNode",
-          "LineBackendThin#createThinLineBackend",
-          "LineBuilders#box3EdgesToSegments",
-          "LineBuilders#boxEdgesToSegments",
-          "LineBuilders#geometryEdgesToSegments",
-          "LineBuilders#geometryWireframeToSegments",
-          "LineBuilders#polylineToSegments",
-          "LineRegistry#getRegisteredLine",
-          "LineRegistry#getRegisteredLines",
-          "LineRegistry#nextLineId",
-          "LineRegistry#registerLine",
-          "LineRegistry#unregisterLine"
-        ],
-        "members": [
-          "LineBackend#LineBackend.dispose",
-          "LineBackend#LineBackend.kind",
-          "LineBackend#LineBackend.setBounds",
-          "LineBackend#LineBackend.setDepthTest",
-          "LineBackendFat#FatLineSegments.isFatLineSegments",
-          "LineBackendFat#LineNodeMaterial.constructor",
-          "LineBackendFat#LineNodeMaterial.gapPx",
-          "LineBackendFat#LineNodeMaterial.isLineNodeMaterial",
-          "LineBackendFat#LineNodeMaterial.lineWidth",
-          "LineBackendFat#LineNodeMaterial.type",
-          "LineObject#LineObject.id",
-          "LineObject#LineObject.isDisposed",
-          "LineObject#LineObject.setVisible",
-          "LineWriter#LineWriteTarget.positions",
-          "LineWriter#LineWriter.constructor",
-          "LineWriter#LineWriter.reset"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "engine/features/lod": {
       "exports": {
-        "documented": 68,
-        "total": 72
+        "documented": 89,
+        "total": 89
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "LodChainOptions#LodChainOptions",
-          "LodChainOptions#ResolvedLodChainOptions",
-          "LodChains#LodChain",
-          "LodSimplify#SimplifiedLodChain"
-        ],
+        "exports": [],
         "members": []
       }
     },
     "engine/features/lod/impostors": {
       "exports": {
-        "documented": 68,
+        "documented": 73,
         "total": 73
       },
       "members": {
@@ -265,13 +219,7 @@
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "CrossQuads#CrossQuads",
-          "CrossQuads#CrossQuadsOptions",
-          "ImpostorFormat#ImpostorKind",
-          "OctahedralImpostor#OctahedralImpostor",
-          "OctahedralImpostor#OctahedralImpostorOptions"
-        ],
+        "exports": [],
         "members": []
       }
     },
@@ -473,39 +421,16 @@
     },
     "engine/features/spatial": {
       "exports": {
-        "documented": 49,
-        "total": 54
+        "documented": 69,
+        "total": 69
       },
       "members": {
-        "documented": 24,
+        "documented": 40,
         "total": 40
       },
       "undocumented": {
-        "exports": [
-          "SpatialGrid#SpatialGrid",
-          "SpatialGrid#SpatialGridOptions",
-          "SpatialGrid#SpatialGridStats",
-          "SpatialIndexSystem#SpatialDomainOptions",
-          "SpatialIndexSystem#isInSpatialDomain"
-        ],
-        "members": [
-          "CellKey#CellCoords.x",
-          "CellKey#CellCoords.y",
-          "CellKey#CellCoords.z",
-          "SpatialGrid#ReadonlyVec3.x",
-          "SpatialGrid#ReadonlyVec3.y",
-          "SpatialGrid#ReadonlyVec3.z",
-          "SpatialGrid#SpatialGrid.constructor",
-          "SpatialGrid#SpatialGrid.getStats",
-          "SpatialGrid#SpatialGrid.has",
-          "SpatialGrid#SpatialGrid.memberCount",
-          "SpatialGrid#SpatialGrid.updatePosition",
-          "SpatialGrid#SpatialGridStats.maxIndexedRadius",
-          "SpatialGrid#SpatialGridStats.memberCount",
-          "SpatialGrid#SpatialGridStats.occupiedCellCount",
-          "SpatialGrid#SpatialGridStats.oversizedCount",
-          "SpatialIndexSystem#SpatialDomainOptions.id"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "engine/features/viewports": {

@@ -84,7 +84,7 @@ export const getStartCamera = (sceneData: SceneData, appId: string) => {
   return camera;
 };
 
-/** `k` in r × k / d (LodSystem.ts's perspective projection). */
+/** `k` in r × k / d (LodMeasure.ts' perspective projection). */
 export const getScreenSizeFactor = (camera: THREE.PerspectiveCamera) =>
   camera.zoom / Math.tan(THREE.MathUtils.DEG2RAD * camera.fov * 0.5);
 

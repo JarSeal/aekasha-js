@@ -2,27 +2,26 @@ import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { lwarn } from '../../utils/Logger';
 import { CELL_AXIS_OFFSET, cellBounds, isCellInRange, packCellKey, worldToCell } from './CellKey';
 
-/**
- * Standalone, instantiable "what's near this point/volume" primitive.
- * See docs/plans/_DONE_p050_spatial-index.md for the full design rationale.
- *
- * Phase 1 scope (per that plan's §11): the grid itself only. It has no ECS
- * wiring, no membership hooks, and nothing else in the engine references it
- * yet. Positions/radii are pushed in explicitly via addMember/updatePosition/
- * updateRadius — a later phase wires those calls to ECS Transform data and
- * component-add/remove hooks.
- */
+// The spatial grid (docs/plans/_DONE_p050_spatial-index.md for the design): a standalone
+// "what's near this point or volume" structure with no ECS of its own. Positions and radii are
+// pushed in through addMember / updatePosition / updateRadius; the spatial index's domains
+// (SpatialDomains.ts, SpatialIndexSystem.ts) keep one grid per domain current from the members'
+// Transforms.
 
 /** An `items` entry whose member was removed since the last rebuild; queries skip it. */
 const REMOVED_ITEM = 0xffffffff;
 
 /** A query's point or corner: any `{ x, y, z }`, a `THREE.Vector3` among them. */
 export interface ReadonlyVec3 {
+  /** World x. */
   readonly x: number;
+  /** World y. */
   readonly y: number;
+  /** World z. */
   readonly z: number;
 }
 
+/** What a {@link SpatialGrid} is built with: its cell size, capacity and oversized threshold. */
 export interface SpatialGridOptions {
   /** World-space edge length of one grid cell. Tune against the occupancy histogram (§9 of the plan). */
   cellSize: number;
@@ -32,13 +31,32 @@ export interface SpatialGridOptions {
   oversizedRadiusMultiplier?: number;
 }
 
+/** A grid's counts, from {@link SpatialGrid.getStats}. */
 export interface SpatialGridStats {
+  /** Members, oversized ones included. */
   memberCount: number;
+  /** Members in the oversized tier: in no cell, a candidate of every query. */
   oversizedCount: number;
+  /** Cells holding at least one member, as of the last rebuild. */
   occupiedCellCount: number;
+  /** The largest radius of a member in a cell, which queries expand by. Exact after a rebuild; can
+   * be high between rebuilds. */
   maxIndexedRadius: number;
 }
 
+/**
+ * A uniform grid over world space that answers "which members are near this point or box" with
+ * candidates, not results: a query returns every member within range and maybe a few more, and
+ * the caller does the exact test. Members are entity ids with a position and a radius. A member
+ * whose radius is over `cellSize × oversizedRadiusMultiplier` goes into an oversized tier that
+ * every query returns. The cells are rebuilt from the members' positions by
+ * {@link SpatialGrid.rebuild} (sparse, as flat arrays); queries allocate nothing.
+ *
+ * Read a domain's grid with `getSpatialDomain` / `getSpatialGrid`, where it's used: the spatial
+ * index keeps it current (its update policy) and replaces it when the domain's settings change.
+ * @remarks Between rebuilds a removed member is gone at once, but a member added or moved since is
+ * found only where the last rebuild put it (an oversized one is always found).
+ */
 export class SpatialGrid {
   private readonly _cellSize: number;
   private readonly invCellSize: number;
@@ -82,10 +100,9 @@ export class SpatialGrid {
   private readonly items: Uint32Array; // dense cell index's members, as slots
   private occupiedCellCount = 0;
 
-  // Dedup stamps: forward-compatible with multi-cell insert (Phase 4). With
-  // today's origin-only insert a member can only ever be in one cell, so
-  // this never actually filters anything yet — it's here so Phase 4 doesn't
-  // need a data-model change, only a query-time behavior change.
+  // Dedup stamps, for a member in several cells: the multi-cell insert of p050 §11's Phase 4, an
+  // optimization that plan defers until measured. A member is in one cell (its centre's) today,
+  // so they filter nothing; they're here so that insert needs no data-model change.
   private readonly queryStamp: Uint32Array;
   private currentStamp = 0;
 
@@ -125,6 +142,7 @@ export class SpatialGrid {
     out[i + 5] = this.posZ[slot] + r;
   };
 
+  /** Allocates every per-member array for `opts.maxMembers` members at once. */
   constructor(opts: SpatialGridOptions) {
     this._cellSize = opts.cellSize;
     this.invCellSize = 1 / opts.cellSize;
@@ -226,6 +244,7 @@ export class SpatialGrid {
     }
   }
 
+  /** Moves a member (a no-op for a non-member). Queries see the move after the next rebuild. */
   updatePosition(entityId: number, x: number, y: number, z: number): void {
     const slot = this.entityToSlot.get(entityId);
     if (slot !== undefined) this.updatePositionAt(slot, x, y, z);
@@ -263,6 +282,7 @@ export class SpatialGrid {
     return slot === undefined ? undefined : this.radius[slot];
   }
 
+  /** Whether `entityId` is a member. */
   has(entityId: number): boolean {
     return this.entityToSlot.has(entityId);
   }
@@ -275,6 +295,7 @@ export class SpatialGrid {
     return this.slotToEntity[index];
   }
 
+  /** How many members the grid holds (the bound of {@link SpatialGrid.memberAt}'s index). */
   get memberCount(): number {
     return this.liveCount;
   }
@@ -284,6 +305,7 @@ export class SpatialGrid {
     return this._cellSize;
   }
 
+  /** The grid's counts, in a new object: for the debug tools, not a per-frame read. */
   getStats(): SpatialGridStats {
     return {
       memberCount: this.liveCount,

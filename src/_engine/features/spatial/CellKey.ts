@@ -37,8 +37,11 @@ export const CELL_AXIS_MAX = CELL_AXIS_OFFSET - 1;
  * @internal
  */
 export interface CellCoords {
+  /** The cell's index along x: `floor(x / cellSize)`. */
   x: number;
+  /** The cell's index along y. */
   y: number;
+  /** The cell's index along z. */
   z: number;
 }
 

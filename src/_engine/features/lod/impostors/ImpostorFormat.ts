@@ -1,6 +1,6 @@
 // What an exported impostor (`*.impostor.json`, docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4)
 // is made of, shared by the schema (`ImpostorSchema.ts`), the gatherer and the runtime. No
-// imports: core loads no zod, and the gatherer (Node) loads no three.
+// imports: the runtime loads no zod, and the gatherer (Node) loads no three.
 
 /**
  * The export format's version, written into every `*.impostor.json`. Bump it when what an export
@@ -15,6 +15,7 @@ export const IMPOSTOR_EXPORT_FORMAT_VERSION = 1;
  * @internal
  */
 export const IMPOSTOR_KINDS = ['OCTAHEDRAL', 'CROSS_QUADS'] as const;
+/** An impostor's kind: an octahedral impostor or cross-quads, the `kind` of an `*.impostor.json`. */
 export type ImpostorKind = (typeof IMPOSTOR_KINDS)[number];
 
 /**

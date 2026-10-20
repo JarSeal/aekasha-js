@@ -4,19 +4,17 @@ import type { LineColorNode } from './LineBackend';
 import type { LineColorStyle, LinePulseEasing } from './LineTypes';
 import { hashStringFNV1a } from '../../utils/Hash';
 
-/**
- * Line colour on the GPU: a static colour or a pulse through up to
- * {@link LINE_PULSE_MAX_COLORS} colours, driven by one engine-wide time uniform. Every line
- * reads the same time value, so pulsing costs no per-line CPU work.
- *
- * For `N` colours, `speed` in cycles per second and `phase` in [0, 1):
- * `t = phase + time * speed`, then
- * - CYCLE: `u = fract(t) * N`, blending colour `floor(u)` into the next one (wrapping N-1 → 0),
- * - PING_PONG: `u = (1 - |1 - 2 * fract(t / 2)|) * (N - 1)`, sweeping first → last → first
- *   (one cycle is one sweep in one direction),
- * with the blend factor `u - floor(u)` passed through the easing. Blending happens in the
- * working colour space (linear sRGB).
- */
+// Line colour on the GPU: a static colour or a pulse through up to LINE_PULSE_MAX_COLORS
+// colours, driven by one engine-wide time uniform. Every line reads the same time value, so
+// pulsing costs no per-line CPU work.
+//
+// For `N` colours, `speed` in cycles per second and `phase` in [0, 1):
+// `t = phase + time * speed`, then
+// - CYCLE: `u = fract(t) * N`, blending colour `floor(u)` into the next one (wrapping N-1 → 0),
+// - PING_PONG: `u = (1 - |1 - 2 * fract(t / 2)|) * (N - 1)`, sweeping first → last → first
+//   (one cycle is one sweep in one direction),
+// with the blend factor `u - floor(u)` passed through the easing. Blending happens in the
+// working colour space (linear sRGB).
 
 /**
  * Colours a pulse can blend between. Four uniforms and a select chain keep every palette

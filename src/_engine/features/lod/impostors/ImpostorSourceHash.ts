@@ -65,11 +65,12 @@ const createHasher = () => {
 };
 
 /**
- * An attribute's or index's array as three r186's WebGPU backend uploads it: an 8 or 16-bit
- * integer array that isn't normalized is widened to 32 bits (and an index's 0xffff to 0xffffffff),
- * and the attribute's `array` is replaced with it in place on the first upload
- * (`WebGPUAttributeUtils.createAttribute`). So a source's bytes change once it's drawn: hashed this
- * way, the same geometry fingerprints alike before and after. A 32-bit or float array is itself.
+ * An attribute's or index's array as three r186's WebGPU backend uploads it, so the same geometry
+ * fingerprints alike before and after it's drawn. A 32-bit or float array is itself.
+ * @remarks three r186's WebGPU backend widens an 8 or 16-bit integer array that isn't normalized
+ * to 32 bits (and an index's 0xffff to 0xffffffff), and replaces the attribute's `array` with it in
+ * place on the first upload (`WebGPUAttributeUtils.createAttribute`): a source's bytes change once
+ * it's drawn.
  */
 const asUploaded = (
   array: ArrayLike<number> & ArrayBufferView,
@@ -136,6 +137,9 @@ const getMaterialBakeInputs = (material: THREE.Material) => {
  * 16 hex digits; the same inputs give the same fingerprint in every session and on every backend.
  * For the generators, the export and its staleness check.
  * @internal
+ * @remarks Integer arrays are hashed as three r186's WebGPU backend uploads them (widened to 32
+ * bits, `asUploaded`), since the upload replaces them in place: else a geometry's fingerprint
+ * changed after its first draw.
  */
 export const getImpostorSourceHash = (
   geometry: THREE.BufferGeometry,

@@ -85,7 +85,12 @@ const getInstanceMatrixBuffer = (matrices: THREE.InstancedBufferAttribute) => {
   return buffer;
 };
 
-/** The drawn object's instance matrix: an InstancedMesh's per instance, else the identity. */
+/**
+ * The drawn object's instance matrix: an InstancedMesh's per instance, else the identity.
+ * @remarks three r186 multiplies `positionLocal` by the instance matrix before `positionNode` runs
+ * (`NodeMaterial.setupPosition`) and keeps its binding private, so the billboard reads the matrix
+ * through a second binding over the same array, version-synced before each draw.
+ */
 class ImpostorInstanceMatrixNode extends THREE.Node {
   static get type() {
     return 'ImpostorInstanceMatrixNode';

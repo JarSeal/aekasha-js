@@ -26,27 +26,25 @@ import {
 import type { LineBackend, LineColorNode, LineOpacityNode } from './LineBackend';
 import { FLOATS_PER_SEGMENT } from './LineWriter';
 
-/**
- * The FAT line backend: screen-space thick lines as instanced quads, one instance per
- * segment. Only ever loaded through a dynamic import (see LineBackend.ts), so an app that
- * never draws a line wider than 1px ships none of it.
- *
- * The material is a trimmed-down port of three's Line2NodeMaterial (screen-space width and
- * round caps only: no world-unit widths, no raycasting), with four behavioural
- * differences:
- * - Normal blending, so `opacity` works (Line2NodeMaterial hard-sets NoBlending).
- * - Smooth round caps whenever something can smooth them: alpha-to-coverage with MSAA,
- *   blending when transparent (Line2NodeMaterial only smooths them with MSAA). Opaque
- *   without MSAA they are cut out hard, as every other mesh edge in that scene is — a
- *   partial alpha there would write through to the (alpha: true) canvas instead. The
- *   quad's sides are real triangle edges, which MSAA smooths like any mesh edge.
- * - Width is a uniform (the physics wireframe thickness slider drags live) and colour is
- *   the LineObject's uniform-driven graph: changing either never rebuilds the pipeline.
- * - Dashes are opt-in per material (a dashable line compiles the dash branch, every other
- *   line the exact shader it had before), measured in screen pixels and restarting at each
- *   segment's start, so they need no cumulative distance attribute. Dash and gap are
- *   uniforms; a gap of 0 draws solid.
- */
+// The FAT line backend: screen-space thick lines as instanced quads, one instance per
+// segment. Only ever loaded through a dynamic import (see LineBackend.ts), so an app that
+// never draws a line wider than 1px ships none of it.
+//
+// The material is a trimmed-down port of three's Line2NodeMaterial (screen-space width and
+// round caps only: no world-unit widths, no raycasting), with four behavioural
+// differences:
+// - Normal blending, so `opacity` works (Line2NodeMaterial hard-sets NoBlending).
+// - Smooth round caps whenever something can smooth them: alpha-to-coverage with MSAA,
+//   blending when transparent (Line2NodeMaterial only smooths them with MSAA). Opaque
+//   without MSAA they are cut out hard, as every other mesh edge in that scene is — a
+//   partial alpha there would write through to the (alpha: true) canvas instead. The
+//   quad's sides are real triangle edges, which MSAA smooths like any mesh edge.
+// - Width is a uniform (the physics wireframe thickness slider drags live) and colour is
+//   the LineObject's uniform-driven graph: changing either never rebuilds the pipeline.
+// - Dashes are opt-in per material (a dashable line compiles the dash branch, every other
+//   line the exact shader it had before), measured in screen pixels and restarting at each
+//   segment's start, so they need no cumulative distance attribute. Dash and gap are
+//   uniforms; a gap of 0 draws solid.
 
 // ----------------------------------------------------------------------------
 // Shader
@@ -168,18 +166,26 @@ const hardRoundCapCoverage = Fn(() => {
  * @internal
  */
 export class LineNodeMaterial extends THREE.NodeMaterial {
+  /** Marks the material as a thick line's, for checks without `instanceof`. */
   readonly isLineNodeMaterial = true;
+  /** The width in screen pixels. */
   readonly lineWidth = uniform(1);
   /** Fixed at construction: only a dashable material compiles the dash branch. */
   readonly dashable: boolean;
   /** CSS pixels. A gap of 0 draws solid. Only read by a dashable material. */
   readonly dashPx = uniform(0);
+  /** CSS pixels between dashes. A gap of 0 draws solid. Only read by a dashable material. */
   readonly gapPx = uniform(0);
 
+  /** three's node material type name. */
   static get type() {
     return 'LineNodeMaterial';
   }
 
+  /**
+   * A thick-line material, alpha-to-coverage on for smooth edges.
+   * @param dashable compile the dash branch (fixed for the material's life)
+   */
   constructor(dashable = false) {
     super();
     this.dashable = dashable;
@@ -236,6 +242,7 @@ const QUAD_INDEX = [0, 2, 1, 2, 3, 1, 2, 4, 3, 4, 5, 3, 4, 6, 5, 6, 7, 5];
  * @internal
  */
 export class FatLineSegments extends THREE.Mesh<THREE.InstancedBufferGeometry, LineNodeMaterial> {
+  /** Marks the object as a thick line, not a mesh. */
   readonly isFatLineSegments = true;
 
   /** Lines are not pickable (neither backend is), so scene-wide raycasts skip them. */
