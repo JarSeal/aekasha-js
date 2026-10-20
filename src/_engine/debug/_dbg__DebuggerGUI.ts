@@ -12,6 +12,7 @@ import { getSvgIcon } from '../ui/icons/SvgIcon';
 import { persistDebuggerTabStateValue } from './_dbg__DebuggerPaneBuilder';
 import { createTabHost } from './_dbg__TabHost';
 import { doesSceneExist, getCurrentSceneId, registerOnAllSceneExits } from '../kernel/scene/Scene';
+import './DebugToaster.scss';
 
 export { _debuggerListCMP } from './_dbg__DebuggerList';
 

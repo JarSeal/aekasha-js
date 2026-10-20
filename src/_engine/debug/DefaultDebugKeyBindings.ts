@@ -35,6 +35,7 @@ import {
 import { createActionMap, isKeyEventInActiveMaps } from '../kernel/input/Actions';
 import type { ActionDef, KeyActionBinding } from '../kernel/input/ActionTypes';
 import {
+  compileKeyChord,
   doesKeyEventMatchChord,
   isKeyEventTakenByBindings,
   markChordReserved,
@@ -308,7 +309,8 @@ const runDebugKey = (mapId: string, key: KeyUpDownBinding, e: Event | null) => {
   const keyEvent = e as KeyboardEvent;
   const caseInsensitive = key.caseInsensitive ?? true;
   const ignoreModifiers = !!key.ignoreModifiers;
-  const chords = getChordArray(key.chord);
+  // Compiled here: a debug key runs only at its own action's press or release
+  const chords = getChordArray(key.chord).map(compileKeyChord);
   if (!chords.some((c) => doesKeyEventMatchChord(keyEvent, c, caseInsensitive, ignoreModifiers))) {
     return;
   }

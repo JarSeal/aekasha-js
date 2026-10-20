@@ -1,4 +1,5 @@
 import { CMP, type TCMP } from '../ui/CMP';
+import './PercentagePie.scss';
 
 export type PercentagePieOpts = {
   /** Width and height of the pie (CSS length), default 1rem (from the .percentagePie style) */
@@ -34,7 +35,7 @@ const getPieClasses = (opts?: PercentagePieOpts) => {
 };
 
 /**
- * Percentage pie as an HTML string (one span, styled by `.percentagePie` in debugger.scss), for
+ * Percentage pie as an HTML string (one span, styled by `.percentagePie` in PercentagePie.scss), for
  * one-off markup. Use {@link createPercentagePie} for a pie that updates.
  * @param percentage (number) filled percentage, 0..100
  * @param opts ({@link PercentagePieOpts}) optional pie options
@@ -48,7 +49,7 @@ export const PercentagePieHtml = (percentage: number = 0, opts?: PercentagePieOp
 };
 
 /**
- * Creates a percentage pie CMP (one span, styled by `.percentagePie` in debugger.scss) that is
+ * Creates a percentage pie CMP (one span, styled by `.percentagePie` in PercentagePie.scss) that is
  * updated with `set`, without touching its html.
  * @param opts ({@link PercentagePieOpts}) optional pie options
  * @returns ({@link PercentagePie}) the pie CMP and its setter

@@ -52,13 +52,18 @@ const onEscapeKey = (e: KeyboardEvent) => {
   if (!e.repeat) closeDraggableWindow(id);
 };
 
-// Registered at module load, in the capture phase on window: the first listener on the first
-// target of the event, so it runs before KeyboardInput's (bubble phase) and before any capture
-// listener added later (eg. the ray tester's Esc cancel)
-if (typeof window !== 'undefined') {
+let areEscapeListenersAdded = false;
+
+/** Adds the Escape listeners on the first closeOnEscape dialog (never at module load), and keeps
+ * them: a no-op while no such dialog is open. In the capture phase on the window, the first target
+ * of the event, so they run before KeyboardInput's and the action maps' (bubble phase) and before
+ * any capture listener added later. */
+const addEscapeListeners = () => {
+  if (areEscapeListenersAdded) return;
+  areEscapeListenersAdded = true;
   window.addEventListener('keydown', onEscapeKey, true);
   window.addEventListener('keyup', onEscapeKey, true);
-}
+};
 
 export const openDialog = ({ closeOnEscape, ...props }: DialogProps) => {
   openDraggableWindow({
@@ -85,5 +90,8 @@ export const openDialog = ({ closeOnEscape, ...props }: DialogProps) => {
 
   const index = escapeDialogIds.indexOf(props.id);
   if (index !== -1) escapeDialogIds.splice(index, 1);
-  if (closeOnEscape) escapeDialogIds.push(props.id); // (re)opened: on top
+  if (closeOnEscape) {
+    addEscapeListeners();
+    escapeDialogIds.push(props.id); // (re)opened: on top
+  }
 };

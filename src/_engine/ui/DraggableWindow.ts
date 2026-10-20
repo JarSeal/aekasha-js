@@ -155,6 +155,8 @@ type DragSession = {
   /** The geometry last written to the DOM */
   geometry: { x: number; y: number; w: number; h: number };
   rafId: number | null;
+  /** The animation frame's callback, made once per session (not per frame) */
+  apply: () => void;
 };
 
 /** The live part of a window: never persisted. */
@@ -825,6 +827,7 @@ const startDragSession = (entry: WindowEntry, mode: DragMode, e: PointerEvent) =
     pointer: { x: e.clientX, y: e.clientY },
     geometry: { ...startGeometry },
     rafId: null,
+    apply: () => applyDragSession(entry),
   };
   if (mode !== 'MOVE') runtime.windowCMP?.updateClass(styles.resizing, 'add');
 };
@@ -862,7 +865,7 @@ const onDragPointerMove = (entry: WindowEntry, e: PointerEvent) => {
   if (!s || e.pointerId !== s.pointerId) return;
   s.pointer.x = e.clientX;
   s.pointer.y = e.clientY;
-  if (s.rafId === null) s.rafId = requestAnimationFrame(() => applyDragSession(entry));
+  if (s.rafId === null) s.rafId = requestAnimationFrame(s.apply);
 };
 
 /** Ends the drag and commits the geometry to the config. */

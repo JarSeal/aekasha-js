@@ -22,10 +22,7 @@ const EXEMPT = [
  * The statements p607 hasn't moved into an install yet, by file: the phases remove them, and a
  * count that drops must drop here too (so the list only shrinks). Empty when p607 is done.
  */
-const NOT_YET_INSTALLED: Record<string, number> = {
-  // Its Escape listeners, in an `if` the test didn't read before p617 (Phase 2 moves them)
-  'src/_engine/ui/DialogWindow.ts': 1,
-};
+const NOT_YET_INSTALLED: Record<string, number> = {};
 
 const SCANNED = ['src/_engine', 'src/toolkit', 'src/app'];
 

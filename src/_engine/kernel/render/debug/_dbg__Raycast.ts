@@ -31,6 +31,7 @@ import {
   _refreshRayTesterHelperNotices,
   _toggleRayTesterWindow,
 } from './_dbg__RayTester';
+import './RayDebug.scss';
 
 const LS_KEY = 'debugRayCast';
 const TAB_ID = 'rayCastControls';

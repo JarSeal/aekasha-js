@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { setHeldKeyPoller } from '../loop/MainLoop';
 import { setAllInputsEnabled, setAppInputsSuspended } from './InputState';
 import {
   createKeyBinding,
@@ -22,6 +23,12 @@ const scene = vi.hoisted(() => ({ id: 'level1' as string | null }));
 vi.mock(import('../scene/Scene'), async (importOriginal) => ({
   ...(await importOriginal()),
   getCurrentSceneId: () => scene.id,
+}));
+
+// The loop's held-key hook (D5): set by the first KEY_HELD binding
+vi.mock(import('../loop/MainLoop'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  setHeldKeyPoller: vi.fn(),
 }));
 
 type Mods = { shift?: boolean; ctrl?: boolean; alt?: boolean; meta?: boolean; repeat?: boolean };
@@ -59,6 +66,18 @@ afterEach(() => {
   setAllInputsEnabled(true);
   setAppInputsSuspended(false);
   scene.id = 'level1';
+});
+
+describe("the loop's held-key poll", () => {
+  // First in the file: the hook is set once per module
+  it('is set by the first KEY_HELD binding only (the loop imports no keyboard code)', () => {
+    onDown('notHeld', { key: 'a' });
+    expect(setHeldKeyPoller).not.toHaveBeenCalled();
+    bind({ id: 'held1', type: 'KEY_HELD', chord: { key: 'w' }, fn: () => {} });
+    bind({ id: 'held2', type: 'KEY_HELD', chord: { key: 's' }, fn: () => {} });
+    expect(setHeldKeyPoller).toHaveBeenCalledTimes(1);
+    expect(setHeldKeyPoller).toHaveBeenCalledWith(pollHeldKeyBindings);
+  });
 });
 
 describe('key bindings: matching', () => {

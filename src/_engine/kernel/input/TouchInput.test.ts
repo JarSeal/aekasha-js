@@ -78,7 +78,11 @@ describe('touch bindings', () => {
 
   it('drags one finger past the tap distance, in CSS pixel deltas', () => {
     const onStart = vi.fn();
-    const onMove = vi.fn();
+    // The delta is one object reused per move (I12): copied per call
+    const moves: { x: number; y: number }[] = [];
+    const onMove = vi.fn((_e: TouchEvent, delta: { x: number; y: number }) => {
+      moves.push({ ...delta });
+    });
     const onEnd = vi.fn();
     bind({ id: 'drag', type: 'TOUCH_DRAG', onStart, onMove, onEnd });
     touchEvent('touchstart', [finger(10, 10)]);
@@ -87,9 +91,10 @@ describe('touch bindings', () => {
     expect(small.defaultPrevented).toBe(true); // no native scrolling while a drag binding is on
     touchEvent('touchmove', [finger(30, 10)]);
     expect(onStart).toHaveBeenCalledTimes(1);
-    expect(onMove.mock.calls[0][1]).toEqual({ x: 20, y: 0 });
+    expect(moves[0]).toEqual({ x: 20, y: 0 });
     touchEvent('touchmove', [finger(30, 25)]);
-    expect(onMove.mock.calls[1][1]).toEqual({ x: 0, y: 15 });
+    expect(moves[1]).toEqual({ x: 0, y: 15 });
+    expect(onMove.mock.calls[0][1]).toBe(onMove.mock.calls[1][1]);
     touchEvent('touchend', [], [finger(30, 25)]);
     expect(onEnd).toHaveBeenCalledTimes(1);
   });

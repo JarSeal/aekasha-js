@@ -1,6 +1,6 @@
 import { isDebugCameraActive } from '../camera/Camera';
 import { IS_DEBUG_ENV } from '../config/Config';
-import { onVisibilityChange, onWindowBlur } from '../loop/MainLoop';
+import { onVisibilityChange, onWindowBlur, setHeldKeyPoller } from '../loop/MainLoop';
 import { onRendererCreated } from '../render/Renderer';
 import { getCurrentSceneId } from '../scene/Scene';
 import { lwarn } from '../../utils/Logger';
@@ -67,11 +67,30 @@ type ReservedChord = {
   mapId: string | undefined;
 };
 
+/**
+ * A chord with its key lowercased once, so matching it makes no string (the held-key poll runs
+ * every fixed step, the action layer's reads on every key event).
+ * @internal
+ */
+export type CompiledKeyChord = {
+  chord: KeyChord;
+  /** `chord.key.toLowerCase()` */
+  lowerKey: string;
+};
+
+/** A key binding as given, with its chords compiled at createKeyBinding. */
+type KeyBindingEntry = { binding: KeyBinding; chords: CompiledKeyChord[] };
+
+let entries: KeyBindingEntry[] = [];
+/** The bindings as given, in registration order (getKeyBindings), rebuilt with `entries`. */
 let bindings: KeyBinding[] = [];
 let reservedChords: ReservedChord[] = [];
 
 const heldRawKeys = new Set<string>();
-let heldModifiers: Modifiers = {};
+/** The held keys lowercased, for the case-insensitive tests (a lookup, no string made) */
+const heldLowerKeys = new Set<string>();
+/** Written in place on each key event */
+const heldModifiers: Modifiers = {};
 
 let keyInputsEnabled = true;
 export const setKeyInputsEnabled = (enabled: boolean): void => {
@@ -85,9 +104,19 @@ let removeListeners: (() => void) | null = null;
 /** The action layer's source (Actions.ts): every key event after the held keys are updated, and
  * null when they are cleared. */
 let keyActionListener: ((e: KeyboardEvent | null) => void) | null = null;
+let isHeldKeyPollerSet = false;
 
 const getChordArray = (chord: KeyChord | KeyChord[]): KeyChord[] =>
   Array.isArray(chord) ? chord : [chord];
+
+/**
+ * A chord with its key lowercased, for {@link isKeyChordHeld} and {@link doesKeyEventMatchChord}.
+ * @internal
+ */
+export const compileKeyChord = (chord: KeyChord): CompiledKeyChord => ({
+  chord,
+  lowerKey: chord.key.toLowerCase(),
+});
 
 /** A chord as readable text, eg. 'Ctrl+Shift+Z' (alternative chords joined with ' / '). */
 export const getKeyChordLabel = (chord: KeyChord | KeyChord[]): string =>
@@ -121,8 +150,9 @@ const MODIFIER_OF_KEY: { [key: string]: keyof Modifiers } = {
 /** Exact modifier match, except that a chord whose key is itself a modifier (e.g.
  * `{ key: 'Shift' }`) doesn't require its own flag to be off: pressing Shift always reports
  * shiftKey, so such a chord could never match otherwise. */
-const modifiersMatch = (chord: KeyChord, held: Modifiers): boolean => {
-  const own = MODIFIER_OF_KEY[chord.key.toLowerCase()];
+const modifiersMatch = (c: CompiledKeyChord, held: Modifiers): boolean => {
+  const own = MODIFIER_OF_KEY[c.lowerKey];
+  const { chord } = c;
   return (
     (own === 'ctrl' || !!chord.ctrl === !!held.ctrl) &&
     (own === 'shift' || !!chord.shift === !!held.shift) &&
@@ -131,45 +161,44 @@ const modifiersMatch = (chord: KeyChord, held: Modifiers): boolean => {
   );
 };
 
+// The last key event read: its key lowercased and its modifiers, once per event however many
+// chords test it (the bindings and every action map)
+let readEvent: KeyboardEvent | null = null;
+let readEventLowerKey = '';
+const readEventModifiers: Modifiers = {};
+
+const readKeyEvent = (e: KeyboardEvent) => {
+  if (e === readEvent) return;
+  readEvent = e;
+  readEventLowerKey = e.key.toLowerCase();
+  readEventModifiers.ctrl = e.ctrlKey;
+  readEventModifiers.shift = e.shiftKey;
+  readEventModifiers.alt = e.altKey;
+  readEventModifiers.meta = e.metaKey;
+};
+
 /** Chord match against a live DOM event: key (case rule per binding) plus an exact modifier
  * match (a plain `{ key: 'h' }` requires no modifiers held) unless ignoreModifiers is set. */
 const eventMatchesChord = (
   e: KeyboardEvent,
-  chord: KeyChord,
+  c: CompiledKeyChord,
   caseInsensitive: boolean,
   ignoreModifiers?: boolean
 ): boolean => {
-  const keyMatches = caseInsensitive
-    ? e.key.toLowerCase() === chord.key.toLowerCase()
-    : e.key === chord.key;
-  return (
-    keyMatches &&
-    (ignoreModifiers ||
-      modifiersMatch(chord, {
-        ctrl: e.ctrlKey,
-        shift: e.shiftKey,
-        alt: e.altKey,
-        meta: e.metaKey,
-      }))
-  );
+  readKeyEvent(e);
+  const keyMatches = caseInsensitive ? readEventLowerKey === c.lowerKey : e.key === c.chord.key;
+  return keyMatches && (!!ignoreModifiers || modifiersMatch(c, readEventModifiers));
 };
 
 /** Same exact-match rule as eventMatchesChord, but against the live held-key/modifier
  * snapshot instead of a single DOM event (used by isChordHeld / pollHeldKeyBindings). */
 const chordIsHeld = (
-  chord: KeyChord,
+  c: CompiledKeyChord,
   caseInsensitive: boolean,
   ignoreModifiers?: boolean
 ): boolean => {
-  const chordKeyLower = chord.key.toLowerCase();
-  let keyHeld = false;
-  for (const k of heldRawKeys) {
-    if (caseInsensitive ? k.toLowerCase() === chordKeyLower : k === chord.key) {
-      keyHeld = true;
-      break;
-    }
-  }
-  return keyHeld && (!!ignoreModifiers || modifiersMatch(chord, heldModifiers));
+  const keyHeld = caseInsensitive ? heldLowerKeys.has(c.lowerKey) : heldRawKeys.has(c.chord.key);
+  return keyHeld && (!!ignoreModifiers || modifiersMatch(c, heldModifiers));
 };
 
 /** Whether two chords (or chord lists) share a chord: same key (any case), same modifiers. */
@@ -195,40 +224,55 @@ export const doKeyChordsCollide = (a: KeyChord | KeyChord[], b: KeyChord | KeyCh
 };
 
 const updateHeldModifiers = (e: KeyboardEvent) => {
-  heldModifiers = { ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey, meta: e.metaKey };
+  heldModifiers.ctrl = e.ctrlKey;
+  heldModifiers.shift = e.shiftKey;
+  heldModifiers.alt = e.altKey;
+  heldModifiers.meta = e.metaKey;
 };
 
 const clearHeldKeys = () => {
   heldRawKeys.clear();
-  heldModifiers = {};
+  heldLowerKeys.clear();
+  heldModifiers.ctrl = false;
+  heldModifiers.shift = false;
+  heldModifiers.alt = false;
+  heldModifiers.meta = false;
   keyActionListener?.(null);
+};
+
+/** Whether one of the entry's chords matches the event. */
+const entryMatchesEvent = (entry: KeyBindingEntry, e: KeyboardEvent) => {
+  const { binding, chords } = entry;
+  const caseInsensitive = binding.caseInsensitive ?? true;
+  for (let i = 0; i < chords.length; i++) {
+    if (eventMatchesChord(e, chords[i], caseInsensitive, binding.ignoreModifiers)) return true;
+  }
+  return false;
 };
 
 /** Whether a binding is active and its chord matches the event. */
 const bindingMatchesEvent = (
-  binding: KeyBinding,
+  entry: KeyBindingEntry,
   type: 'KEY_UP' | 'KEY_DOWN',
   e: KeyboardEvent
-): binding is KeyUpDownBinding => {
+): boolean => {
+  const { binding } = entry;
   if (binding.type !== type) return false;
   if (isBindingDisabled(binding) || !isSceneMatch(binding.sceneId)) return false;
   if (areAppInputsSuspended() && !binding.isDebugKey) return false;
-  const caseInsensitive = binding.caseInsensitive ?? true;
-  return getChordArray(binding.chord).some((c) =>
-    eventMatchesChord(e, c, caseInsensitive, binding.ignoreModifiers)
-  );
+  return entryMatchesEvent(entry, e);
 };
 
 /** Whether a binding other than `self`, and not yielding itself, fires for the event. */
 const isEventTakenByOther = (
-  self: KeyUpDownBinding | null,
+  self: KeyBindingEntry | null,
   type: 'KEY_UP' | 'KEY_DOWN',
   e: KeyboardEvent
 ) => {
-  for (let i = 0; i < bindings.length; i++) {
-    const binding = bindings[i];
-    if (binding === self || (binding as KeyUpDownBinding).yieldToOtherBindings) continue;
-    if (bindingMatchesEvent(binding, type, e)) return true;
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    if (entry === self || (entry.binding as KeyUpDownBinding).yieldToOtherBindings) continue;
+    if (bindingMatchesEvent(entry, type, e)) return true;
   }
   return false;
 };
@@ -236,10 +280,13 @@ const isEventTakenByOther = (
 const dispatchKeyEvent = (e: KeyboardEvent, type: 'KEY_UP' | 'KEY_DOWN') => {
   if (!keyInputsEnabled || !areAllInputsEnabled()) return;
   const timeNow = performance.now();
-  for (let i = 0; i < bindings.length; i++) {
-    const binding = bindings[i];
-    if (!bindingMatchesEvent(binding, type, e)) continue;
-    if (binding.yieldToOtherBindings && isEventTakenByOther(binding, type, e)) continue;
+  // A binding's callback may create or delete bindings: walk this event's list
+  const list = entries;
+  for (let i = 0; i < list.length; i++) {
+    const entry = list[i];
+    if (!bindingMatchesEvent(entry, type, e)) continue;
+    const binding = entry.binding as KeyUpDownBinding;
+    if (binding.yieldToOtherBindings && isEventTakenByOther(entry, type, e)) continue;
     binding.fn(e, timeNow);
   }
 };
@@ -248,7 +295,10 @@ const initKeyListeners = () => {
   if (keydownListener) return;
 
   keydownListener = (e: KeyboardEvent) => {
-    if (!e.repeat) heldRawKeys.add(e.key);
+    if (!e.repeat) {
+      heldRawKeys.add(e.key);
+      heldLowerKeys.add(e.key.toLowerCase());
+    }
     updateHeldModifiers(e);
     keyActionListener?.(e);
     dispatchKeyEvent(e, 'KEY_DOWN');
@@ -257,9 +307,11 @@ const initKeyListeners = () => {
   keyupListener = (e: KeyboardEvent) => {
     // A letter's e.key follows the Shift state at the time of each event, so one pressed with
     // Shift down ('W') and released after Shift ('w') must be cleared in either case.
+    const lowerKey = e.key.toLowerCase();
     heldRawKeys.delete(e.key);
-    heldRawKeys.delete(e.key.toLowerCase());
+    heldRawKeys.delete(lowerKey);
     heldRawKeys.delete(e.key.toUpperCase());
+    heldLowerKeys.delete(lowerKey);
     updateHeldModifiers(e);
     keyActionListener?.(e);
     dispatchKeyEvent(e, 'KEY_UP');
@@ -338,6 +390,11 @@ export const warnIfKeyChordReserved = (
   }
 };
 
+const setEntries = (next: KeyBindingEntry[]) => {
+  entries = next;
+  bindings = next.map((entry) => entry.binding);
+};
+
 export const createKeyBinding = (binding: KeyBinding): void => {
   warnIfKeyChordReserved(
     `the key binding "${binding.id}"`,
@@ -346,16 +403,21 @@ export const createKeyBinding = (binding: KeyBinding): void => {
     undefined,
     binding.ignoreModifiers
   );
-  bindings = bindings.filter((b) => b.id !== binding.id);
-  bindings.push(binding);
+  const entry = { binding, chords: getChordArray(binding.chord).map(compileKeyChord) };
+  setEntries([...entries.filter((e) => e.binding.id !== binding.id), entry]);
   initKeyListeners();
+  // The loop polls held keys only once a binding needs it (the loop imports no keyboard code)
+  if (binding.type === 'KEY_HELD' && !isHeldKeyPollerSet) {
+    isHeldKeyPollerSet = true;
+    setHeldKeyPoller(pollHeldKeyBindings);
+  }
 };
 
 /** The registered key bindings, in registration order (read-only, eg. for listing shortcuts). */
 export const getKeyBindings = (): readonly Readonly<KeyBinding>[] => bindings;
 
 export const deleteKeyBinding = (id: string): void => {
-  bindings = bindings.filter((b) => b.id !== id);
+  setEntries(entries.filter((e) => e.binding.id !== id));
 };
 
 export const setKeyBindingEnabled = (id: string, enabled: boolean): void => {
@@ -370,27 +432,30 @@ export const setKeyBindingEnabled = (id: string, enabled: boolean): void => {
 /** Pure query: is this chord currently physically held? No registration needed. */
 export const isChordHeld = (chord: KeyChord, caseInsensitive: boolean = true): boolean => {
   initKeyListeners();
-  return chordIsHeld(chord, caseInsensitive);
+  return chordIsHeld(compileKeyChord(chord), caseInsensitive);
 };
 
 /**
- * Drives KEY_HELD bindings once per tick. Called from exactly two places in MainLoop.ts
- * (runFixedSubStep, once per fixed physics sub-step, and the no-stepping branch), so a
- * held key's binding runs once per sub-step, before that step's systems. Gameplay code should
- * read an action map instead (createActionMap: sampled at the same place, right before).
+ * Drives KEY_HELD bindings once per tick: the loop's held-key poll (`MainLoop.ts`'
+ * `setHeldKeyPoller`, set by the first KEY_HELD binding), run right after the action sample in
+ * runFixedSubStep (once per fixed physics sub-step) and in the no-stepping branch, so a held key's
+ * binding runs once per sub-step, before that step's systems. Gameplay code should read an action
+ * map instead (createActionMap: sampled at the same place, right before).
  */
 export const pollHeldKeyBindings = (delta: number): void => {
-  initKeyListeners();
   if (!keyInputsEnabled || !areAppInputsEnabled()) return;
-  for (let i = 0; i < bindings.length; i++) {
-    const binding = bindings[i];
+  const list = entries;
+  for (let i = 0; i < list.length; i++) {
+    const { binding, chords } = list[i];
     if (binding.type !== 'KEY_HELD') continue;
     if (isBindingDisabled(binding) || !isSceneMatch(binding.sceneId)) continue;
     const caseInsensitive = binding.caseInsensitive ?? true;
-    const matched = getChordArray(binding.chord).some((c) =>
-      chordIsHeld(c, caseInsensitive, binding.ignoreModifiers)
-    );
-    if (matched) binding.fn(delta);
+    for (let j = 0; j < chords.length; j++) {
+      if (chordIsHeld(chords[j], caseInsensitive, binding.ignoreModifiers)) {
+        binding.fn(delta);
+        break;
+      }
+    }
   }
 };
 
@@ -410,7 +475,7 @@ export const setKeyActionListener = (fn: ((e: KeyboardEvent | null) => void) | n
  * @internal
  */
 export const isKeyChordHeld = (
-  chord: KeyChord,
+  chord: CompiledKeyChord,
   caseInsensitive: boolean,
   ignoreModifiers: boolean
 ): boolean => chordIsHeld(chord, caseInsensitive, ignoreModifiers);
@@ -421,7 +486,7 @@ export const isKeyChordHeld = (
  */
 export const doesKeyEventMatchChord = (
   e: KeyboardEvent,
-  chord: KeyChord,
+  chord: CompiledKeyChord,
   caseInsensitive: boolean,
   ignoreModifiers: boolean
 ): boolean => eventMatchesChord(e, chord, caseInsensitive, ignoreModifiers);

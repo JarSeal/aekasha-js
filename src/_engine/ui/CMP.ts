@@ -230,6 +230,8 @@ export const CMP = (
     throw new Error(`Id is already in use / taken: ${props.id}`);
   }
 
+  // Its own copy: the update methods write it in place
+  props = toOwnProps(props);
   const id = props?.id || THREE.MathUtils.generateUUID();
 
   // Create cmp object
@@ -404,7 +406,7 @@ const createElem = (cmp: TCMP, props?: TProps) => {
         }
       }
     }
-    setPropsValue(cmp, { tag: elem.tagName.toLowerCase() });
+    ownProps(cmp).tag = elem.tagName.toLowerCase();
   } else {
     elem = document.createElement(props?.tag ? props.tag : 'div') as HTMLElement;
   }
@@ -651,7 +653,7 @@ const updateCmp = <WrapP extends TProps>(
   } else {
     // Added or template component type
     removeListeners(cmp, true);
-    cmp.props = { ...cmp.props, ...newProps };
+    cmp.props = { ...cmp.props, ...toOwnProps(newProps) };
     const elem = createElem(cmp, cmp.props);
     cmp.elem.replaceWith(elem);
     cmp.elem = elem;
@@ -712,7 +714,7 @@ const updateCmpClass = (
       oldClasses = oldClasses.filter((c) => c !== classes[i].trim());
       cmp.elem.classList.remove(classes[i].trim());
     }
-    setPropsValue(cmp, { class: oldClasses.join(' ').trim().split(' ') });
+    ownProps(cmp).class = oldClasses.join(' ').trim().split(' ');
   } else if (action === 'toggle') {
     // Toggle
     for (let i = 0; i < classes.length; i++) {
@@ -724,16 +726,16 @@ const updateCmpClass = (
       cmp.elem.classList.add(classes[i].trim());
       oldClasses.push(classes[i].trim());
     }
-    setPropsValue(cmp, { class: oldClasses.join(' ').trim().split(' ') });
+    ownProps(cmp).class = oldClasses.join(' ').trim().split(' ');
   } else {
     if (action === 'replace') {
       // Replace
       cmp.elem.removeAttribute('class');
-      setPropsValue(cmp, { class: classes });
+      ownProps(cmp).class = classes;
     } else {
       // Add
       const addedClass = `${oldClasses.join(' ').trim()} ${classes.join(' ')}`.trim();
-      setPropsValue(cmp, { class: addedClass.split(' ') });
+      ownProps(cmp).class = addedClass.split(' ');
     }
     for (let i = 0; i < classes.length; i++) {
       cmp.elem.classList.add(classes[i].trim());
@@ -745,14 +747,13 @@ const updateCmpClass = (
 
 const updateCmpAttr = (cmp: TCMP, newAttr: TAttr) => {
   const attrKeys = Object.keys(newAttr);
-  const attr: TAttr = { ...cmp.props?.attr };
+  // Recorded, so an update() rebuilds the element with them
+  const attr = (ownProps(cmp).attr ??= {});
   for (let i = 0; i < attrKeys.length; i++) {
     const value = String(newAttr[attrKeys[i]]);
     cmp.elem.setAttribute(attrKeys[i], value);
     attr[attrKeys[i]] = value;
   }
-  // Recorded, so an update() rebuilds the element with them
-  setPropsValue(cmp, { attr });
 
   return cmp;
 };
@@ -769,7 +770,6 @@ const removeCmpAttr = (cmp: TCMP, attrKey: string | string[]) => {
     cmp.elem.removeAttribute(attributeKeys[i]);
     if (attrProps) delete attrProps[attributeKeys[i]];
   }
-  setPropsValue(cmp, { attr: attrProps });
 
   return cmp;
 };
@@ -793,7 +793,7 @@ const updateCmpStyle = (cmp: TCMP, newStyle: TStyle) => {
     if (!prop) continue;
     setElemStyle(cmp.elem, prop, value);
     if (value !== null) {
-      setPropsValue(cmp, { style: { ...cmp.props?.style, [prop]: String(value) } });
+      (ownProps(cmp).style ??= {})[prop] = String(value);
     } else if (cmp.props?.style) {
       delete cmp.props.style[prop];
     }
@@ -809,7 +809,7 @@ const updateCmpText = (cmp: TCMP, newText: string) => {
     );
   }
   cmp.elem.textContent = newText;
-  setPropsValue(cmp, { text: newText });
+  ownProps(cmp).text = newText;
 
   return cmp;
 };
@@ -898,7 +898,7 @@ const focusCmp = (cmp: TCMP, focusValueToProps?: boolean) => {
     input.setSelectionRange(input.value.length, input.value.length);
   }
   if (focusValueToProps !== undefined) {
-    setPropsValue(cmp, { focus: focusValueToProps });
+    ownProps(cmp).focus = focusValueToProps;
   }
   return cmp;
 };
@@ -906,7 +906,7 @@ const focusCmp = (cmp: TCMP, focusValueToProps?: boolean) => {
 const blurCmp = (cmp: TCMP, focusValueToProps?: boolean) => {
   cmp.elem.blur();
   if (focusValueToProps !== undefined) {
-    setPropsValue(cmp, { focus: focusValueToProps });
+    ownProps(cmp).focus = focusValueToProps;
   }
   return cmp;
 };
@@ -1002,8 +1002,18 @@ const removeAnims = (cmp: TCMP) => {
   }
 };
 
-const setPropsValue = (cmp: TCMP, props: Partial<TProps>) =>
-  (cmp.props = { ...cmp.props, ...props });
+/** A copy of the props a CMP is given (`style` and `attr` too), so its in-place writes never reach
+ * the caller's objects (eg. a style constant several CMPs share). Made once per create or update. */
+const toOwnProps = <P extends TProps | undefined>(props: P): P =>
+  (props && {
+    ...props,
+    ...(props.style ? { style: { ...props.style } } : {}),
+    ...(props.attr ? { attr: { ...props.attr } } : {}),
+  }) as P;
+
+/** The CMP's own props (made when it has none), which the update methods write in place: an app
+ * HUD that updates a text or a style every frame makes no object for it. */
+const ownProps = (cmp: TCMP): TProps => (cmp.props ??= {});
 
 const replaceCmpWithAnother = (oldCmp: TCMP, newCmp: TCMP) => {
   const id = oldCmp.id;

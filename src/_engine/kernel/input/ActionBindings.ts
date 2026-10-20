@@ -13,7 +13,13 @@ import {
   type GamepadButtonName,
   type GamepadStickName,
 } from './GamepadInput';
-import { doesKeyEventMatchChord, isKeyChordHeld, type KeyChord } from './KeyboardInput';
+import {
+  compileKeyChord,
+  doesKeyEventMatchChord,
+  isKeyChordHeld,
+  type CompiledKeyChord,
+  type KeyChord,
+} from './KeyboardInput';
 import { isMouseButtonHeld, type MouseButton } from './MouseInput';
 
 const DEFAULT_DEADZONE = 0.15;
@@ -23,14 +29,14 @@ const DEFAULT_DEADZONE = 0.15;
  * @internal
  */
 export type CompiledBinding =
-  | { kind: 'KEYS'; chords: KeyChord[]; ignoreModifiers: boolean }
-  | { kind: 'KEY_AXIS'; neg: KeyChord[]; pos: KeyChord[]; ignoreModifiers: boolean }
+  | { kind: 'KEYS'; chords: CompiledKeyChord[]; ignoreModifiers: boolean }
+  | { kind: 'KEY_AXIS'; neg: CompiledKeyChord[]; pos: CompiledKeyChord[]; ignoreModifiers: boolean }
   | {
       kind: 'KEY_COMPOSITE';
-      up: KeyChord[];
-      down: KeyChord[];
-      left: KeyChord[];
-      right: KeyChord[];
+      up: CompiledKeyChord[];
+      down: CompiledKeyChord[];
+      left: CompiledKeyChord[];
+      right: CompiledKeyChord[];
       ignoreModifiers: boolean;
     }
   | { kind: 'MOUSE_BUTTON'; button: MouseButton }
@@ -56,17 +62,18 @@ export type LiveActionValue = { value: number; x: number; y: number };
 
 const _stick = { x: 0, y: 0 };
 
-const toChords = (keys: readonly (string | KeyChord)[]): KeyChord[] =>
-  keys.map((k) => (typeof k === 'string' ? { key: k } : k));
+/** Keys as chords, each lowercased once (the reads run on every key event) */
+const toChords = (keys: readonly (string | KeyChord)[]): CompiledKeyChord[] =>
+  keys.map((k) => compileKeyChord(typeof k === 'string' ? { key: k } : k));
 
-const isAnyHeld = (chords: KeyChord[], ignoreModifiers: boolean) => {
+const isAnyHeld = (chords: CompiledKeyChord[], ignoreModifiers: boolean) => {
   for (let i = 0; i < chords.length; i++) {
     if (isKeyChordHeld(chords[i], true, ignoreModifiers)) return true;
   }
   return false;
 };
 
-const heldAxis = (neg: KeyChord[], pos: KeyChord[], ignoreModifiers: boolean) =>
+const heldAxis = (neg: CompiledKeyChord[], pos: CompiledKeyChord[], ignoreModifiers: boolean) =>
   (isAnyHeld(pos, ignoreModifiers) ? 1 : 0) - (isAnyHeld(neg, ignoreModifiers) ? 1 : 0);
 
 const applyDeadzone1D = (value: number, deadzone: number) => {
@@ -167,7 +174,7 @@ export const readActionDevices = (
   return type === 'BUTTON' ? isDown : value !== 0;
 };
 
-const matchesAny = (e: KeyboardEvent, chords: KeyChord[], ignoreModifiers: boolean) => {
+const matchesAny = (e: KeyboardEvent, chords: CompiledKeyChord[], ignoreModifiers: boolean) => {
   for (let i = 0; i < chords.length; i++) {
     if (doesKeyEventMatchChord(e, chords[i], true, ignoreModifiers)) return true;
   }

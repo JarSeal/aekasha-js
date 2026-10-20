@@ -388,7 +388,8 @@ const setActionBindings = (
         : c.kind === 'KEY_AXIS'
           ? [...c.neg, ...c.pos]
           : [...c.up, ...c.down, ...c.left, ...c.right];
-    warnIfKeyChordReserved(owner, a.id, chords, map.id, c.ignoreModifiers);
+    const keyChords = chords.map((compiled) => compiled.chord);
+    warnIfKeyChordReserved(owner, a.id, keyChords, map.id, c.ignoreModifiers);
   }
 };
 

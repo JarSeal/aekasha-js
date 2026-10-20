@@ -41,7 +41,12 @@ export type TouchTapBinding = TouchBindingBase &
 export type TouchDragBinding = TouchBindingBase & {
   type: 'TOUCH_DRAG';
   onStart?: (e: TouchEvent) => void;
-  onMove?: (e: TouchEvent, delta: { x: number; y: number }) => void;
+  /**
+   * Called on each move of the drag.
+   * @remarks `delta` is one object, reused for every move (touchmove fires up to 120 times a
+   * second): read it in the call, and copy it to keep it.
+   */
+  onMove?: (e: TouchEvent, delta: { readonly x: number; readonly y: number }) => void;
   onEnd?: (e: TouchEvent) => void;
 };
 
@@ -59,6 +64,8 @@ export type TouchBindingType = TouchBinding['type'];
 const DEFAULT_TAP_MAX_DURATION_MS = 250;
 const DEFAULT_TAP_MAX_MOVE_PX = 10;
 const DRAG_START_PX = DEFAULT_TAP_MAX_MOVE_PX;
+/** The drag's delta, written in place on each move (TouchDragBinding.onMove) */
+const dragDelta = { x: 0, y: 0 };
 
 let bindings: TouchBinding[] = [];
 
@@ -213,13 +220,14 @@ const onTouchMove = (e: TouchEvent) => {
       if (binding.type === 'TOUCH_DRAG' && isBindingActive(binding)) binding.onStart?.(e);
     }
   }
-  const delta = { x: t.clientX - single.lastX, y: t.clientY - single.lastY };
+  dragDelta.x = t.clientX - single.lastX;
+  dragDelta.y = t.clientY - single.lastY;
   single.lastX = t.clientX;
   single.lastY = t.clientY;
-  touchActionSource?.onDrag(e, delta.x, delta.y);
+  touchActionSource?.onDrag(e, dragDelta.x, dragDelta.y);
   for (let i = 0; i < bindings.length; i++) {
     const binding = bindings[i];
-    if (binding.type === 'TOUCH_DRAG' && isBindingActive(binding)) binding.onMove?.(e, delta);
+    if (binding.type === 'TOUCH_DRAG' && isBindingActive(binding)) binding.onMove?.(e, dragDelta);
   }
 };
 

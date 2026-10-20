@@ -11,6 +11,8 @@ let m: Modules;
 let win: Window;
 /** linkedom's Event (its window dispatches only its own) */
 let DomEvent: typeof Event;
+/** Every addEventListener call on the window, recorded */
+const addListener = vi.fn<(type: string, fn: unknown, options?: unknown) => void>();
 
 /** An Escape key event on the window; whether a listener added after the dialogs' got it */
 const escape = (type: 'keydown' | 'keyup', repeat = false) => {
@@ -38,14 +40,34 @@ describe('dialogs: Escape', () => {
     vi.stubGlobal('HTMLInputElement', window.HTMLInputElement);
     win = window as unknown as Window;
     DomEvent = window.Event as unknown as typeof Event;
-    // Imported once the DOM exists (the module adds its listeners to the window)
+    // linkedom's window is a proxy (no spyOn): a wrapper that records each call
+    const addEventListener = window.addEventListener.bind(window);
+    Object.assign(window, {
+      addEventListener: (...args: Parameters<typeof addEventListener>) => {
+        addListener(args[0], args[1], args[2]);
+        addEventListener(...args);
+      },
+    });
     const hud = await import('./HUD');
     hud.createHudContainer(document.getElementById('hudSlot') as HTMLElement);
     m = { dialogs: await import('./DialogWindow'), windows: await import('./DraggableWindow') };
   });
 
-  it('closes the top closeOnEscape dialog, and no later listener gets the press', () => {
+  it('adds no listener before the first closeOnEscape dialog (G1)', () => {
+    const keyListeners = () =>
+      addListener.mock.calls.filter(([type]) => type === 'keydown' || type === 'keyup');
+    expect(keyListeners()).toEqual([]);
+    m.dialogs.openDialog({ id: 'noEscape', title: 'No Escape' });
+    expect(keyListeners()).toEqual([]);
     m.dialogs.openDialog({ id: 'first', title: 'First', closeOnEscape: true });
+    expect(keyListeners().map(([type, , capture]) => [type, capture])).toEqual([
+      ['keydown', true],
+      ['keyup', true],
+    ]);
+    m.windows.closeDraggableWindow('noEscape');
+  });
+
+  it('closes the top closeOnEscape dialog, and no later listener gets the press', () => {
     m.dialogs.openDialog({ id: 'second', title: 'Second', closeOnEscape: true });
     expect(escape('keydown')).toBe(false);
     expect(isOpen('second')).toBe(false);

@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: Refactoring, Documentation, UI, Input
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -550,12 +550,80 @@ As built (2026-10-20):
     Phase 2's I12 makes `onMove`'s delta a reused object: this test then copies it per call.
   - `kernel/input/Actions.test.ts` (+3): I9 (the window and the `CANVAS` scope) and I10.
 
-### Phase 2: the build and the hot paths (D5, D9, D14)
+### Phase 2: the build and the hot paths (D5, D9, D14) — done
 
 1. D5: the held-key hook, the poll, the lowercased keys.
 2. D9: the dialog listeners and the test; the styles out of `index.scss`.
 3. U7, W8 and I12.
 4. Phase 0's banner and CSS numbers again, side by side.
+
+As built (2026-10-20):
+
+- **D5, the hook:** `MainLoop.ts` imports no keyboard code. It runs `heldKeyPoller?.(delta)` at
+  the two places it called `pollHeldKeyBindings`, in the same order (after the action sample);
+  `setHeldKeyPoller` (`@internal`) is set by the first `KEY_HELD` binding's `createKeyBinding`.
+  The no-stepping comment's "debug camera movement" example was stale (nothing in `src/` binds
+  `KEY_HELD`): it says a `KEY_HELD` binding now.
+- **D5, the matching:** each binding is kept as an entry with its chords compiled once
+  (`compileKeyChord`, `CompiledKeyChord`: the chord and its key lowercased, both `@internal`);
+  `getKeyBindings` returns the bindings as given, rebuilt with the entries. The held keys are also
+  kept in `heldLowerKeys`, and the held modifiers are written in place. A key event is read once
+  (`readKeyEvent`: its key lowercased and its modifiers, memoized by the event), so every binding
+  and map that tests it shares one string. `chordIsHeld` is two `Set` lookups and the modifier
+  test, with no string made; `pollHeldKeyBindings` makes no closure or array and no longer calls
+  `initKeyListeners()` (its binding added the listeners). Beyond D5: the old event path made a
+  modifiers object per chord test (`eventMatchesChord`), now gone too, and `dispatchKeyEvent` walks
+  the event's list, so a callback that creates or deletes a binding doesn't shift it.
+  `isKeyChordHeld` / `doesKeyEventMatchChord` take a compiled chord: `ActionBindings.ts`' `toChords`
+  compiles at compile time, `Actions.ts`' reserved-chord warning maps them back, and
+  `DefaultDebugKeyBindings.ts`' `runDebugKey` compiles its key's chords at the call (only at its own
+  action's press or release). A test: the poll is set by the first `KEY_HELD` binding only.
+- **G1:** `DialogWindow.ts` adds its two capture listeners on the first `openDialog` with
+  `closeOnEscape` (`addEscapeListeners`) and keeps them (a no-op while no such dialog is open).
+  `NOT_YET_INSTALLED` is empty again; `devTools/verify/CLAUDE.md` describes the wider test. A test
+  records the window's `addEventListener` calls (linkedom's window is a proxy, so a wrapper, not
+  `vi.spyOn`): none at import or for a dialog without `closeOnEscape`, then keydown and keyup with
+  capture. The order the old comment wanted (first among the window's capture listeners) holds
+  unless the ray tester arms a pick before the first escape dialog ever opens: then one Escape
+  cancels the pick and closes the dialog. Its `stopPropagation` doesn't stop listeners on the same
+  target, and a dialog's backdrop covers the canvas, so a pick can't complete under one: accepted.
+- **S1:** `debug/debugger.scss` is split by user and deleted, each part imported by the module that
+  renders it: `kernel/render/debug/RayDebug.scss` (the ray cast stats and the ray tester, from
+  `_dbg__Raycast.ts` and `_dbg__RayTester.ts`), `debug/PercentagePie.scss` (from
+  `PercentagePieHtml.ts`), `debug/DebugToaster.scss` (the debug toaster's icon colours, from
+  `_dbg__DebuggerGUI.ts`: the toaster is the debug env's) and `debug/Stats.scss` (`.statsContainer`,
+  from `_dbg__Stats.ts`). `styles/index.scss` keeps the editor views' HUD rule and `.uiIcon`.
+  Checked in a dev server (Chromium, WebGL2): with `?isDebug=true` every moved rule is present
+  after the boot, `.statsContainer` is fixed at the bottom left, the debug toaster exists, no
+  console error; with `?isProdTest=true` only the stats rule loads (with its module), no error.
+  The production build's `index.css` has none of the moved selectors. The four new files are
+  `git add -N`'d so `moveMap.ts` (the tracked tree) resolves their imports; its outputs are
+  regenerated in Phase 3.
+- **U7:** CMP copies the props it's given once, at create and at `update()` (`toOwnProps`: `style`
+  and `attr` copied too, so a style constant several CMPs share is never written), and the update
+  methods write `ownProps(cmp)` in place (`setPropsValue` and its copy per call are gone). A test:
+  the props object stays the same through `updateStyle`, `updateText` and `updateAttr`, and a
+  shared style constant and its other CMP are untouched.
+- **W8:** a drag session makes its animation-frame callback once (`DragSession.apply`).
+  **I12:** the touch drag's delta is one module object written in place; `onMove`'s type reads it
+  as `readonly`, with a `@remarks` (read it in the call, copy it to keep it). No `TOUCH_DRAG`
+  binding outside `kernel/input/` keeps it. The touch test copies it per call and checks it's one
+  object.
+- **The numbers (step 4)**, `yarn verify:baselines` and `yarn sbp --profile banner`:
+
+  | | Phase 0 | Phase 2 |
+  | --- | --- | --- |
+  | Banner, input group (initial, gzip) | 1,755 B, 2 modules | 0.1 kB, 1 module (`InputState.ts`; `KeyboardInput.ts` "no code in the build") |
+  | Banner, `ui` group (gzip) | 5,217 B | 5.2 kB (+0.1: `toOwnProps`, `ownProps`) |
+  | `banner.css` | 2,300 B (896 gzip) | 120 B (147 gzip): the two kit rules |
+  | App `index.css` | 4,416 B (1,636 gzip) | 2,236 B (981 gzip) |
+  | App, input group (gzip) | 11.9 kB | 12.3 kB (+0.4: the compiled chords, the second held-key set, the event read) |
+
+  `api.json` lists three additions (`compileKeyChord`, `CompiledKeyChord`, `setHeldKeyPoller`,
+  all `@internal`), recorded in Phase 3 with D6's changes; `docs.json` recorded here (input 106 /
+  129, loop 45 / 45). The bundle diff's other line is `EngineRapier.js` / `#2` swapping sizes
+  again (Phase 0's noise). No debug code in either build. `yarn test`: 99 files, 810 passed, 1
+  skipped.
 
 ### Phase 3: the API (D6, D7) and the deferrals (D3)
 

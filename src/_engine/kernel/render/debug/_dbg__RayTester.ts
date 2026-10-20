@@ -38,6 +38,7 @@ import { type PhysRay, QueryFilterFlags } from '../../../features/physics/types/
 import { RAY_TESTER_ID_PREFIX, type RayDebugOpts, type RayHelperKind } from '../RayDebugTypes';
 import { getRayHelperSettings } from './_dbg__RayHelpers';
 import { _setRayHelpersShown } from './_dbg__Raycast';
+import './RayDebug.scss';
 
 /**
  * Ray tester windows (p143), opened from the Ray cast controls tab: configure a ray, fire it

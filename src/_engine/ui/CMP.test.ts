@@ -139,6 +139,22 @@ describe('CMP: building and updating', () => {
     expect(cmp.props).toMatchObject({ text: 'b', style: { opacity: '0.5' } });
   });
 
+  it("writes its own props in place, never the caller's objects (U7)", () => {
+    const SHARED_STYLE = { color: 'red' };
+    const a = CMP({ text: 'a', style: SHARED_STYLE });
+    const b = CMP({ text: 'b', style: SHARED_STYLE });
+    const props = a.props;
+    a.updateStyle({ color: 'blue' }).updateText('a2').updateAttr({ 'data-x': '1' });
+    expect(a.props).toBe(props); // no copy per update
+    expect(a.props).toMatchObject({
+      text: 'a2',
+      style: { color: 'blue' },
+      attr: { 'data-x': '1' },
+    });
+    expect(SHARED_STYLE).toEqual({ color: 'red' });
+    expect(b.props?.style).toEqual({ color: 'red' });
+  });
+
   it('joins classes from strings, arrays and empty values', () => {
     expect(classes('a', ['b', 'c'], null, undefined, '')).toEqual(['a', 'b', 'c']);
   });
