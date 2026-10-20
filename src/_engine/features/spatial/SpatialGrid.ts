@@ -13,6 +13,9 @@ import { CELL_AXIS_OFFSET, cellBounds, isCellInRange, packCellKey, worldToCell }
  * component-add/remove hooks.
  */
 
+/** An `items` entry whose member was removed since the last rebuild; queries skip it. */
+const REMOVED_ITEM = 0xffffffff;
+
 export interface ReadonlyVec3 {
   readonly x: number;
   readonly y: number;
@@ -60,12 +63,11 @@ export class SpatialGrid {
   private maxIndexedRadius = 0;
 
   /**
-   * Packed world-cell key each slot landed in at the last rebuild. Not read
-   * by anything in Phase 1 (the dynamic index does a full rebuild every
-   * frame) — kept from day one so a future incremental-update pass (§6) can
-   * diff against it without a data-model change. A plain number, not a
-   * fixed-width typed array, because the packed key intentionally exceeds
-   * 32 bits (see CELL_AXIS_BITS above).
+   * Packed world-cell key of the cell holding each slot's `items` entry, set by the last rebuild
+   * (NaN for a member in no cell: oversized at the rebuild, or added since). `removeMember`
+   * finds the entries it patches through it, and moves it with the slot. A plain number, not a
+   * fixed-width typed array, because the packed key intentionally exceeds 32 bits (see
+   * CELL_AXIS_BITS in CellKey.ts).
    */
   private readonly lastCell: number[];
 
@@ -145,6 +147,10 @@ export class SpatialGrid {
     this.queryStamp = new Uint32Array(this.maxMembers);
   }
 
+  /**
+   * Adds a member, or updates its position and radius when it's one already.
+   * @remarks Queries find a new member only after the next `rebuild()`, unless it's oversized.
+   */
   addMember(entityId: number, x: number, y: number, z: number, radius: number): void {
     if (this.entityToSlot.has(entityId)) {
       this.updatePosition(entityId, x, y, z);
@@ -164,12 +170,21 @@ export class SpatialGrid {
     this._setRadius(slot, radius);
   }
 
+  /**
+   * Removes a member. Queries stop returning it at once and find every other member where the
+   * last `rebuild()` put it: the slot move patches the two cell entries it touches (one scan of
+   * each cell).
+   */
   removeMember(entityId: number): void {
     const slot = this.entityToSlot.get(entityId);
     if (slot === undefined) return;
 
     const lastSlot = this.liveCount - 1;
+    // The cells keep pointing at the right members: the removed member's entry first, so a cell
+    // holding both entries can't match the moved one's after it was pointed at `slot`
+    this._replaceCellItem(this.lastCell[slot], slot, REMOVED_ITEM);
     if (slot !== lastSlot) {
+      this._replaceCellItem(this.lastCell[lastSlot], lastSlot, slot);
       this.posX[slot] = this.posX[lastSlot];
       this.posY[slot] = this.posY[lastSlot];
       this.posZ[slot] = this.posZ[lastSlot];
@@ -190,11 +205,24 @@ export class SpatialGrid {
     }
 
     this.slotToEntity[lastSlot] = -1;
+    this.lastCell[lastSlot] = NaN;
     this.entityToSlot.delete(entityId);
     this.liveCount--;
-    // maxIndexedRadius may now overestimate; the next rebuild() makes it exact. Until then the
-    // cells still hold the old slots: queries skip the emptied one, but the member moved into
-    // `slot` shows up at the removed member's cell instead of its own.
+    // maxIndexedRadius may now overestimate; the next rebuild() makes it exact
+  }
+
+  /** Points the entry `from` of the cell `key` at `to`: one scan of that cell, nothing for a member in no cell. */
+  private _replaceCellItem(key: number, from: number, to: number): void {
+    // NaN is no cell's key
+    const cellIndex = this.cellKeyToIndex.get(key);
+    if (cellIndex === undefined) return;
+    const end = this.cellStart[cellIndex + 1];
+    for (let k = this.cellStart[cellIndex]; k < end; k++) {
+      if (this.items[k] === from) {
+        this.items[k] = to;
+        return;
+      }
+    }
   }
 
   updatePosition(entityId: number, x: number, y: number, z: number): void {
@@ -314,7 +342,10 @@ export class SpatialGrid {
     this.compactCount = 0;
     let maxRadius = 0;
     for (let slot = 0; slot < this.liveCount; slot++) {
-      if (this.isOversized[slot]) continue;
+      if (this.isOversized[slot]) {
+        this.lastCell[slot] = NaN;
+        continue;
+      }
       this.memberSlotByCompactIndex[this.compactCount++] = slot;
       if (this.radius[slot] > maxRadius) maxRadius = this.radius[slot];
     }
@@ -428,11 +459,9 @@ export class SpatialGrid {
           const end = this.cellStart[cellIndex + 1];
           for (let k = start; k < end; k++) {
             const slot = this.items[k];
-            if (this.queryStamp[slot] === stamp) continue;
+            if (slot === REMOVED_ITEM || this.queryStamp[slot] === stamp) continue;
             this.queryStamp[slot] = stamp;
-            const entityId = this.slotToEntity[slot];
-            // A slot emptied by removeMember since the last rebuild (-1)
-            if (entityId >= 0) visit(entityId);
+            visit(this.slotToEntity[slot]);
           }
         }
       }
