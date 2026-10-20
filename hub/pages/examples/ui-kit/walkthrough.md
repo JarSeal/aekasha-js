@@ -28,8 +28,8 @@ its content passed on the open.
   after a reload.
 - `closeOnSceneChange` closes the windows when another scene loads (a kind's window is removed
   on close).
-- A drop-down shows its `value` getter's label on an open and on `refresh()`, so `onChange`
-  refreshes it. Reset rebuilds the open shape windows with `updateDraggableWindowsOfKind`.
+- A drop-down re-reads its `value` getter after `onChange`, so the trigger shows the pick.
+  Reset rebuilds the open shape windows with `updateDraggableWindowsOfKind`.
 
 ## Toasts
 

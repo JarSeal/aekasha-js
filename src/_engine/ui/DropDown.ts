@@ -15,9 +15,11 @@ export type DropDownProps = {
   /** The options, or a getter re-read on every open (and refresh). */
   options: DropDownOption[] | (() => DropDownOption[]);
   /** The current value: the trigger shows its label, and the list opens on it and marks it. A
-   * getter is re-read on every open (and refresh). */
+   * getter is re-read on every open, after every pick and on refresh. */
   value?: string | null | (() => string | null);
-  /** A picked option, also the current one (the handler decides what that does). */
+  /** A picked option, also the current one (the handler decides what that does). The trigger's
+   * label is refreshed after it returns, so a `value` getter that reads what it set shows the
+   * pick. */
   onChange: (value: string) => void;
   /** The trigger's text when no option matches the value. */
   placeholder?: string;
@@ -59,7 +61,8 @@ export type TDropDown = {
   toggle: () => void;
   /** Whether the list is open */
   isOpen: () => boolean;
-  /** Re-reads the value (and options) into the trigger's label. */
+  /** Re-reads the value (and options) into the trigger's label: for a change made elsewhere (a
+   * pick refreshes it itself). */
   refresh: () => void;
 };
 
@@ -225,6 +228,7 @@ export const createDropDown = (props: DropDownProps): TDropDown => {
     const choose = (chosenIndex: number) => {
       close();
       props.onChange(options[chosenIndex].value);
+      refresh();
     };
 
     const onKeyDown = (e: KeyboardEvent) => {

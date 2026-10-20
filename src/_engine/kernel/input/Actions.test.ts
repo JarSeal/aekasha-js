@@ -411,6 +411,39 @@ describe('contexts and activity', () => {
     expect(player.isActive()).toBe(false);
   });
 
+  it("a context switched by a press callback applies from the next event, not the event's later maps", () => {
+    const player = createPlayerMap();
+    const menu = track(
+      createActionMap({
+        id: 'menu',
+        context: 'MENU',
+        actions: { close: { type: 'BUTTON' } },
+        bindings: { close: [{ device: 'KEYBOARD', keys: ['Escape'] }] },
+      })
+    );
+    setActionContextEnabled('MENU', false);
+    player.setBindings('jump', [{ device: 'KEYBOARD', keys: ['Escape'] }]);
+    const opened = vi.fn(() => {
+      setActionContextEnabled('GAMEPLAY', false);
+      setActionContextEnabled('MENU', true);
+    });
+    const closed = vi.fn(() => {
+      setActionContextEnabled('MENU', false);
+      setActionContextEnabled('GAMEPLAY', true);
+    });
+    player.onPressed('jump', opened);
+    menu.onPressed('close', closed);
+    // The menu map comes after the player map, so it would have taken the same press
+    const e = down('Escape');
+    expect([opened.mock.calls.length, closed.mock.calls.length]).toEqual([1, 0]);
+    // Prevented by the map that took it
+    expect(e.defaultPrevented).toBe(true);
+    up('Escape');
+    down('Escape');
+    expect([opened.mock.calls.length, closed.mock.calls.length]).toEqual([1, 1]);
+    setActionContextEnabled('MENU', true);
+  });
+
   it('a map with a taken id replaces the old one', () => {
     const first = createPlayerMap();
     const second = createPlayerMap();

@@ -114,6 +114,10 @@ A map belongs to a context, which enables or suspends all of its maps at once:
 - Any other name is your own and behaves like `GAMEPLAY`: a menu turns `GAMEPLAY` off and its
   own context on with [`setActionContextEnabled`](api:setActionContextEnabled).
 
+A switch made in a callback applies from the next key, button or gamepad event: the maps that
+take an event are fixed when it arrives. So one key can open a menu in the gameplay map and close
+it in the menu's map, and the press that opens it doesn't close it again.
+
 A map with a `sceneId` is active in that scene only, and its `setEnabled` turns one map off. An
 inactive map reads idle and calls nothing back; its `isActive()` tells whether devices drive it
 now.

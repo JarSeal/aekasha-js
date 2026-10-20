@@ -790,7 +790,7 @@ As built (2026-10-20):
   structure's `ui/` line names the dialogs and toasts.
 - **The checks:** `tsc`, the lint, `yarn test` (99 files, 815 passed, 1 skipped), `yarn hub:build`
   (438 pages, no warning in scope; the search index size warning is older, 1.56 MB at p616).
-- **Found, not fixed (decide before Phase 6):**
+- **Found, not fixed (decided 2026-10-20: both fixed, in Phase 6 before its checks):**
   - The drop-down re-reads `value` only on an open and on `refresh()`, so an app's `onChange`
     calls `refresh()` (the example does). Proposed: `choose` refreshes after `onChange` (one line
     and a test).
@@ -805,9 +805,32 @@ As built (2026-10-20):
 
 ### Phase 6: versions and done
 
-1. `yarn verify:scenes` (Phases 1-5), `yarn verify:baselines`, `yarn build`, `yarn hub:build`.
-2. `package.json` (D2), the `CHANGELOG.md` entry, `yarn checkVersions --against main`.
+0. Phase 5's two findings, fixed (decided 2026-10-20), so the checks cover them.
+1. `yarn verify:scenes` (Phases 1-6; `--update --only exampleUiKit` first, the new scene having
+   no baseline), `yarn verify:baselines`, `yarn build`, `yarn hub:build`.
+2. `package.json` (D2, with the app **minor**, decided 2026-10-20: a new example scene), the
+   `CHANGELOG.md` entry, `yarn checkVersions --against main`.
 3. Mark the plan done (`docs/plans/CLAUDE.md`), p621's and p622's references.
+
+As built (2026-10-20):
+
+- **The drop-down's refresh:** `choose` calls `refresh()` after `onChange` returns, so a `value`
+  getter that reads what `onChange` set shows the pick; `refresh()` stays for a change made
+  elsewhere (its doc and `value`'s and `onChange`'s say so). `DropDown.test.ts`: the pick shows
+  without a `refresh()`, and a new test for `refresh()` after an outside change. The example's
+  two `refresh()` calls, the UI kit page's snippet and the example page's line dropped them;
+  `ui/CLAUDE.md` says it.
+- **A context switch in a callback:** `updateAllMaps` fixes which maps count the event first
+  (`MapRuntime.isActiveAtEvent`, one pass, no allocation), then updates them; `onKeyEvent`'s
+  `preventDefault` reads the same flag (a map deleted by the callbacks is skipped, one they made
+  hasn't counted the event). So a switch, a `setEnabled` or a new map applies from the next
+  event. A device event dispatched from inside a callback re-fixes the flags for the outer
+  event's later maps (the old behaviour for them; nothing does that). `@remarks` on
+  `setActionContextEnabled`; the Input page's Contexts section and the input `CLAUDE.md` say it.
+  `Actions.test.ts`: Escape opens a menu in the player map and doesn't close it in the menu map
+  that follows (fails on the old code: `[1, 1]`), and the next press closes it. The example
+  keeps its dialog's `closeOnEscape`.
+- `yarn test` (99 files, 817 passed, 1 skipped), `tsc` (both), the lint.
 
 ## 4. Risks
 

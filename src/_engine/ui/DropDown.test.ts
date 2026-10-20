@@ -64,8 +64,17 @@ describe('drop-down', () => {
     key(list, 'keydown', 'Enter');
     expect(onChange).toHaveBeenCalledWith('high');
     expect(dropDown.isOpen()).toBe(false);
-    dropDown.refresh();
+    // The pick refreshes the label itself
     expect(dropDown.cmp.elem.querySelector('.aekDropDownLabel')?.textContent).toBe('High');
+  });
+
+  it('refresh() shows a change made elsewhere', () => {
+    let value = 'mid';
+    const dropDown = createDropDown({ options: OPTIONS, value: () => value, onChange: () => {} });
+    value = 'low';
+    expect(dropDown.cmp.elem.querySelector('.aekDropDownLabel')?.textContent).toBe('Medium');
+    dropDown.refresh();
+    expect(dropDown.cmp.elem.querySelector('.aekDropDownLabel')?.textContent).toBe('Low');
   });
 
   it('closes on Escape without a change', () => {

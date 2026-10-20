@@ -166,9 +166,8 @@ const createShapePanel = (shapeId: ShapeId) => {
     options: COLORS,
     value: () => shapeColors[shapeId],
     onChange: (color) => {
+      // The trigger's label re-reads `value` after this
       setShapeColor(shapeId, color);
-      // The label re-reads `value` on an open and on refresh()
-      colorDropDown.refresh();
     },
     title: 'Colour',
   });
@@ -212,7 +211,6 @@ const createSettingsPanel = () => {
     onChange: (color) => {
       groundColor = color;
       setMaterialColor('uiKitGround', color);
-      groundDropDown.refresh();
     },
     title: 'Ground',
   });

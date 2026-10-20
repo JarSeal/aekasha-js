@@ -146,6 +146,7 @@ with [action contexts](hub:features/input#contexts-and-scenes).
 [`createDropDown`](api:createDropDown) makes a trigger button and an in-page list (not a native
 `<select>`): arrows, Home and End move, Enter, Space or a click picks, and Escape, Tab or a click
 outside closes it without a change. Its keys reach no key binding. Add its `cmp` where it goes.
+The trigger re-reads `value` after a pick; when the value changes elsewhere, call `refresh()`.
 
 ```ts
 const quality = createDropDown({
@@ -153,11 +154,8 @@ const quality = createDropDown({
     { value: 'low', label: 'Low' },
     { value: 'high', label: 'High' },
   ],
-  value: () => settings.quality, // Re-read on every open and refresh()
-  onChange: (value) => {
-    setQuality(value);
-    quality.refresh(); // The trigger shows the new label
-  },
+  value: () => settings.quality, // Re-read on every open and after every pick
+  onChange: (value) => setQuality(value), // Then the trigger shows the new label
   title: 'Quality',
 });
 settingsPanel.add(quality.cmp);

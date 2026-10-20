@@ -93,6 +93,8 @@ type MapRuntime = {
   gamepadIndex: number | undefined;
   enabled: boolean;
   isDeleted: boolean;
+  /** Whether it counted the current device event, fixed at the event's start (updateAllMaps). */
+  isActiveAtEvent: boolean;
   actions: ActionRuntime[];
   byId: Map<string, ActionRuntime>;
   handle: ActionMap;
@@ -134,6 +136,9 @@ const isMapActive = (map: MapRuntime) =>
 /**
  * Enables or disables a context: every map in it reads idle and fires no callbacks while it's off
  * (a menu turns `GAMEPLAY` off and its own context on). Every context starts enabled.
+ * @remarks Called from a map's callback, it applies from the next device event: the maps that
+ * take an event are fixed at its start, so a menu opened by a key's press in one map isn't closed
+ * by the same press in its own map.
  */
 export const setActionContextEnabled = (context: ActionContext, enabled: boolean): void => {
   if (enabled) disabledContexts.delete(context);
@@ -190,11 +195,15 @@ const updateMap = (map: MapRuntime, e: Event | null, active: boolean) => {
 
 const isCountingEvents = (map: MapRuntime) => !map.replay && isMapActive(map);
 
+/** Re-reads every map for a device event. Which maps count it is fixed first, so a callback that
+ * switches a context, enables a map or loads a scene changes what the next event reaches, never
+ * this one's later maps. A map the callbacks delete is skipped, one they create isn't in `list`. */
 const updateAllMaps = (e: Event | null) => {
   const list = maps;
+  for (let i = 0; i < list.length; i++) list[i].isActiveAtEvent = isCountingEvents(list[i]);
   for (let i = 0; i < list.length; i++) {
     const map = list[i];
-    if (!map.isDeleted) updateMap(map, e, isCountingEvents(map));
+    if (!map.isDeleted) updateMap(map, e, map.isActiveAtEvent);
   }
 };
 
@@ -214,7 +223,8 @@ const onKeyEvent = (e: KeyboardEvent | null) => {
   const list = maps;
   for (let i = 0; i < list.length; i++) {
     const map = list[i];
-    if (!map.preventDefault || !isCountingEvents(map)) continue;
+    // The maps that took the event (a map made by its callbacks hasn't counted one yet)
+    if (!map.preventDefault || map.isDeleted || !map.isActiveAtEvent) continue;
     for (let j = 0; j < map.actions.length; j++) {
       if (isKeyEventInBindings(map.actions[j].compiled, e, true)) {
         e.preventDefault();
@@ -571,6 +581,7 @@ export const createActionMap = <const TActions extends ActionDefs>(
     gamepadIndex: opts.gamepadIndex,
     enabled: opts.enabled ?? true,
     isDeleted: false,
+    isActiveAtEvent: false,
     actions: [],
     byId: new Map(),
     handle: undefined as unknown as ActionMap, // set below, once the handle exists
