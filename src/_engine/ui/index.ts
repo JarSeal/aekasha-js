@@ -41,7 +41,7 @@ export type {
   DraggableWindowUnits,
   OpenDraggableWindowProps,
   SceneTargetResolver,
-} from './DraggableWindow';
+} from './DraggableWindowTypes';
 export { createDropDown } from './DropDown';
 export type { DropDownOption, DropDownProps, TDropDown } from './DropDown';
 export { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from './HUD';

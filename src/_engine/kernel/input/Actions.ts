@@ -9,7 +9,6 @@
 // counts, deltas and callbacks need it active. So a key held through a menu reads down when the
 // menu closes, without a press. The master switches (InputState.ts) apply, through contexts.
 
-import { isDebugCameraActive } from '../camera/Camera';
 import { IS_DEBUG_ENV } from '../config/Config';
 import { setActionSampler } from '../loop/MainLoop';
 import { getCurrentSceneId } from '../scene/Scene';
@@ -33,6 +32,7 @@ import type {
   ActionType,
 } from './ActionTypes';
 import { pollGamepads } from './GamepadInput';
+import { isDebugCamRuleMet } from './InputRules';
 import type { EnabledInDebugCam } from './InputSharedTypes';
 import { addInputListenerRemover, areAllInputsEnabled, areAppInputsEnabled } from './InputState';
 import { setKeyActionListener, warnIfKeyChordReserved } from './KeyboardInput';
@@ -118,13 +118,6 @@ let usesTouchDrag = false;
 
 // Activity
 // **************************************
-
-const isDebugCamRuleMet = (rule: EnabledInDebugCam) =>
-  !IS_DEBUG_ENV ||
-  !(
-    (rule === 'NOT_ENABLED_IN_DEBUG' && isDebugCameraActive()) ||
-    (rule === 'ENABLED_ONLY_IN_DEBUG' && !isDebugCameraActive())
-  );
 
 const isContextOn = (context: ActionContext) =>
   !disabledContexts.has(context) &&

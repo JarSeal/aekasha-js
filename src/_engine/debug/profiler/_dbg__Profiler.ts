@@ -8,8 +8,8 @@ import {
   registerDraggableWindow,
   toggleDraggableWindow,
   updateDraggableWindow,
-  type OpenDraggableWindowProps,
 } from '../../ui/DraggableWindow';
+import type { OpenDraggableWindowProps } from '../../ui/DraggableWindowTypes';
 import {
   hydrateDebuggerTabState,
   type AnyDebuggerTabDef,

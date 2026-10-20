@@ -17,8 +17,8 @@ import {
   openDraggableWindow,
   registerDraggableWindowKind,
   toggleDraggableWindow,
-  type OpenDraggableWindowProps,
 } from '../../../ui/DraggableWindow';
+import type { OpenDraggableWindowProps } from '../../../ui/DraggableWindowTypes';
 import { getSvgIcon, type SvgIconKey } from '../../../ui/icons/SvgIcon';
 import {
   acquireCharacterGizmos,

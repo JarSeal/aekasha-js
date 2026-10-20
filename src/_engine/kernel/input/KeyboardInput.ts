@@ -1,4 +1,3 @@
-import { isDebugCameraActive } from '../camera/Camera';
 import { IS_DEBUG_ENV } from '../config/Config';
 import { onVisibilityChange, onWindowBlur, setHeldKeyPoller } from '../loop/MainLoop';
 import { onRendererCreated } from '../render/Renderer';
@@ -11,6 +10,7 @@ import {
   addInputListenerRemover,
   getInputScope,
 } from './InputState';
+import { isDebugCamRuleMet } from './InputRules';
 import type { BindingMeta, EnabledInDebugCam, Modifiers } from './InputSharedTypes';
 
 export type KeyChord = Modifiers & {
@@ -124,13 +124,8 @@ export const getKeyChordLabel = (chord: KeyChord | KeyChord[]): string =>
     })
     .join(' / ');
 
-const isInputInDebugCamInvalid = (enabledInDebugCam?: EnabledInDebugCam) =>
-  IS_DEBUG_ENV &&
-  ((enabledInDebugCam === 'NOT_ENABLED_IN_DEBUG' && isDebugCameraActive()) ||
-    (enabledInDebugCam === 'ENABLED_ONLY_IN_DEBUG' && !isDebugCameraActive()));
-
 const isBindingDisabled = (binding: KeyBinding) =>
-  binding.enabled === false || isInputInDebugCamInvalid(binding.enabledInDebugCam);
+  binding.enabled === false || !isDebugCamRuleMet(binding.enabledInDebugCam);
 
 const isSceneMatch = (sceneId?: string) => !sceneId || sceneId === getCurrentSceneId();
 

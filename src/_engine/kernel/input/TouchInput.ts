@@ -1,11 +1,10 @@
 import type * as THREE from 'three/webgpu';
-import { isDebugCameraActive } from '../camera/Camera';
-import { IS_DEBUG_ENV } from '../config/Config';
 import { onWindowBlur } from '../loop/MainLoop';
 import { getCanvasElem } from '../render/Renderer';
 import { getCurrentSceneId } from '../scene/Scene';
 import { lwarn } from '../../utils/Logger';
 import { pickTargetsAt, type PickOpts } from './InputPicking';
+import { isDebugCamRuleMet } from './InputRules';
 import { addInputListenerRemover, areAppInputsEnabled, getInputScope } from './InputState';
 import type { BindingMeta, EnabledInDebugCam, TargetList } from './InputSharedTypes';
 
@@ -104,15 +103,10 @@ export type TouchActionSource = {
 
 let touchActionSource: TouchActionSource | null = null;
 
-const isInputInDebugCamInvalid = (enabledInDebugCam?: EnabledInDebugCam) =>
-  IS_DEBUG_ENV &&
-  ((enabledInDebugCam === 'NOT_ENABLED_IN_DEBUG' && isDebugCameraActive()) ||
-    (enabledInDebugCam === 'ENABLED_ONLY_IN_DEBUG' && !isDebugCameraActive()));
-
 const isBindingActive = (binding: TouchBinding) =>
   areAppInputsEnabled() &&
   binding.enabled !== false &&
-  !isInputInDebugCamInvalid(binding.enabledInDebugCam) &&
+  isDebugCamRuleMet(binding.enabledInDebugCam) &&
   (!binding.sceneId || binding.sceneId === getCurrentSceneId());
 
 const hasActiveBinding = (type: TouchBindingType) =>

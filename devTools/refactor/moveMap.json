@@ -2053,6 +2053,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/kernel/input/InputRules.ts": {
+      "to": "src/_engine/kernel/input/InputRules.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/kernel/input/InputScope.test.ts": {
       "to": "src/_engine/kernel/input/InputScope.test.ts",
       "action": "keep",
@@ -2444,6 +2449,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/ui/CMPAnim.ts": {
+      "to": "src/_engine/ui/CMPAnim.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/ui/DialogWindow.test.ts": {
       "to": "src/_engine/ui/DialogWindow.test.ts",
       "action": "keep",
@@ -2466,6 +2476,26 @@
     },
     "src/_engine/ui/DraggableWindow.ts": {
       "to": "src/_engine/ui/DraggableWindow.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/ui/DraggableWindowDrag.ts": {
+      "to": "src/_engine/ui/DraggableWindowDrag.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/ui/DraggableWindowGeometry.ts": {
+      "to": "src/_engine/ui/DraggableWindowGeometry.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/ui/DraggableWindowStore.ts": {
+      "to": "src/_engine/ui/DraggableWindowStore.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/ui/DraggableWindowTypes.ts": {
+      "to": "src/_engine/ui/DraggableWindowTypes.ts",
       "action": "keep",
       "plan": "p608"
     },

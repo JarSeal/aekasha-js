@@ -6,7 +6,7 @@ import type {
   PhysicsWorkerTarget,
 } from '../../features/physics/types/PhysicsConfigTypes';
 import type { AssetsWorkerTarget } from '../assets/AssetsAPITypes';
-import type { DraggableWindow } from '../../ui/DraggableWindow';
+import type { DraggableWindow } from '../../ui/DraggableWindowTypes';
 import type { ECSStorageMode } from '../ecs/ECSComponentStorage';
 import { lsGetItem } from '../../utils/LocalAndSessionStorage';
 import type { DebugKeyBindingConfig } from '../../debug/DefaultDebugKeyBindings';

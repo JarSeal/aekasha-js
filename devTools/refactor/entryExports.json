@@ -4,9 +4,9 @@
   "summary": {
     "aekasha": {
       "public": 144,
-      "crossEntry": 248,
-      "internal": 261,
-      "unreferenced": 105
+      "crossEntry": 250,
+      "internal": 262,
+      "unreferenced": 102
     },
     "aekasha/character": {
       "public": 18,
@@ -88,9 +88,9 @@
     },
     "aekasha/ui": {
       "public": 7,
-      "crossEntry": 27,
-      "internal": 24,
-      "unreferenced": 22
+      "crossEntry": 25,
+      "internal": 18,
+      "unreferenced": 17
     },
     "aekasha/viewports": {
       "public": 7,
@@ -2677,6 +2677,17 @@
         }
       },
       "src/_engine/kernel/input/KeyboardInput.ts": {
+        "CompiledKeyChord": {
+          "kind": "TypeAlias",
+          "usage": "internal"
+        },
+        "compileKeyChord": {
+          "kind": "Function",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/debug"
+          ]
+        },
         "createKeyBinding": {
           "kind": "Function",
           "usage": "public",
@@ -2791,10 +2802,6 @@
           "kind": "Function",
           "usage": "internal"
         },
-        "setKeyInputsEnabled": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
         "warnIfKeyChordReserved": {
           "kind": "Function",
           "usage": "internal"
@@ -2873,10 +2880,6 @@
         "setMouseBindingEnabled": {
           "kind": "Function",
           "usage": "unreferenced"
-        },
-        "setMouseInputsEnabled": {
-          "kind": "Function",
-          "usage": "unreferenced"
         }
       },
       "src/_engine/kernel/input/TouchInput.ts": {
@@ -2896,10 +2899,6 @@
           "usage": "internal"
         },
         "setTouchBindingEnabled": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
-        "setTouchInputsEnabled": {
           "kind": "Function",
           "usage": "unreferenced"
         },
@@ -3292,6 +3291,15 @@
           ]
         },
         "setFrameProbe": {
+          "kind": "Function",
+          "usage": "crossEntry",
+          "by": [
+            "aekasha/debug",
+            "aekasha/physics",
+            "aekasha/skybox"
+          ]
+        },
+        "setHeldKeyPoller": {
           "kind": "Function",
           "usage": "crossEntry",
           "by": [
@@ -13034,10 +13042,6 @@
     },
     "aekasha/ui": {
       "src/_engine/ui/CMP.ts": {
-        "addStylesToHead": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
         "classes": {
           "kind": "Function",
           "usage": "internal"
@@ -13054,14 +13058,6 @@
             "aekasha/postfx",
             "app"
           ]
-        },
-        "createNewId": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
-        "getCmpById": {
-          "kind": "Function",
-          "usage": "unreferenced"
         },
         "TAnimChain": {
           "kind": "TypeAlias",
@@ -13129,17 +13125,9 @@
         }
       },
       "src/_engine/ui/DraggableWindow.ts": {
-        "addOnCloseToWindow": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
         "bringDraggableWindowToFront": {
           "kind": "Function",
           "usage": "internal"
-        },
-        "closeAllDraggableWindowsStartingWith": {
-          "kind": "Function",
-          "usage": "unreferenced"
         },
         "closeDraggableWindow": {
           "kind": "Function",
@@ -13154,30 +13142,31 @@
         },
         "DraggableWindow": {
           "kind": "TypeAlias",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "unreferenced"
         },
         "DraggableWindowConfig": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "DraggableWindowContent": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "DraggableWindowData": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "DraggableWindowKindOpts": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
+        },
+        "DraggableWindowUnit": {
+          "kind": "TypeAlias",
+          "usage": "unreferenced"
         },
         "DraggableWindowUnits": {
           "kind": "TypeAlias",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "fitAllDraggableWindowsToScreen": {
           "kind": "Function",
@@ -13197,10 +13186,6 @@
             "aekasha/character"
           ]
         },
-        "getDraggableWindowsDefaultZIndexes": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
         "getDraggableWindowsOfKind": {
           "kind": "Function",
           "usage": "crossEntry",
@@ -13211,10 +13196,6 @@
             "aekasha/physics",
             "aekasha/postfx"
           ]
-        },
-        "getDraggableWindowsStartingWith": {
-          "kind": "Function",
-          "usage": "unreferenced"
         },
         "getKindWindowId": {
           "kind": "Function",
@@ -13241,11 +13222,7 @@
         },
         "OpenDraggableWindowProps": {
           "kind": "TypeAlias",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha/character",
-            "aekasha/debug"
-          ]
+          "usage": "unreferenced"
         },
         "registerDraggableWindow": {
           "kind": "Function",
@@ -13254,14 +13231,6 @@
             "aekasha",
             "aekasha/debug"
           ]
-        },
-        "registerDraggableWindowCmp": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
-        "registerDraggableWindowContentFn": {
-          "kind": "Function",
-          "usage": "unreferenced"
         },
         "registerDraggableWindowKind": {
           "kind": "Function",
@@ -13274,20 +13243,12 @@
             "aekasha/postfx"
           ]
         },
-        "registerDraggableWindowSceneTargetResolver": {
-          "kind": "Function",
-          "usage": "unreferenced"
-        },
         "removeDraggableWindow": {
           "kind": "Function",
           "usage": "internal"
         },
         "SceneTargetResolver": {
           "kind": "TypeAlias",
-          "usage": "internal"
-        },
-        "toggleCollapse": {
-          "kind": "Function",
           "usage": "unreferenced"
         },
         "toggleDraggableWindow": {
@@ -13301,10 +13262,6 @@
             "aekasha/physics",
             "aekasha/postfx"
           ]
-        },
-        "Units": {
-          "kind": "TypeAlias",
-          "usage": "unreferenced"
         },
         "updateDraggableWindow": {
           "kind": "Function",
@@ -13327,10 +13284,6 @@
         }
       },
       "src/_engine/ui/DropDown.ts": {
-        "ClassProp": {
-          "kind": "TypeAlias",
-          "usage": "unreferenced"
-        },
         "createDropDown": {
           "kind": "Function",
           "usage": "crossEntry",
@@ -13364,10 +13317,6 @@
           "by": [
             "aekasha"
           ]
-        },
-        "getGUIContainerElem": {
-          "kind": "Function",
-          "usage": "unreferenced"
         },
         "getHUDRootCMP": {
           "kind": "Function",

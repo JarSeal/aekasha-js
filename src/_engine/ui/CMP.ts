@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import { removeAnims, runAnims, updateCmpAnim } from './CMPAnim';
 
 type SetTimeout = ReturnType<typeof setTimeout>;
 
@@ -432,6 +433,17 @@ const createElem = (cmp: TCMP, props?: TProps) => {
   return elem;
 };
 
+/** The listener props and the event each one listens to (in the capture phase), keyed by it. */
+const PROP_LISTENERS = [
+  ['onClick', 'click'],
+  ['onHover', 'mousemove'],
+  ['onHoverOutside', 'mouseleave'],
+  ['onFocus', 'focus'],
+  ['onBlur', 'blur'],
+  ['onInput', 'input'],
+  ['onChange', 'change'],
+] as const;
+
 const createListeners = (cmp: TCMP, props?: TProps) => {
   // Remove possiple listeners
   removeListeners(cmp, true);
@@ -439,92 +451,22 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
 
   const cmpId = cmp.id;
 
-  if (props?.onClick) {
-    // Add "click" listener
-    const onClick = props.onClick;
-    const fn = (e: Event) => {
-      const activeCmp = getCmpById(cmpId);
-      if (activeCmp) onClick(e, cmp);
-    };
-    listeners.click = { fn, type: 'click' };
-    cmp.elem.addEventListener('click', fn, true);
-  } else {
-    if (listeners.click || listeners.click === null) delete listeners.click;
+  for (let i = 0; i < PROP_LISTENERS.length; i++) {
+    const [prop, type] = PROP_LISTENERS[i];
+    const listener = props?.[prop];
+    if (listener) {
+      const fn = (e: Event) => {
+        const activeCmp = getCmpById(cmpId);
+        if (activeCmp) listener(e, cmp);
+      };
+      listeners[type] = { fn, type };
+      cmp.elem.addEventListener(type, fn, true);
+    } else if (type in listeners) {
+      delete listeners[type];
+    }
   }
   // Add "outsideClick" listener
   createOutsideClickListener(cmp);
-  if (props?.onHover) {
-    // Add "mousemove" listener
-    const onHover = props.onHover;
-    const fn = (e: Event) => {
-      const activeCmp = getCmpById(cmpId);
-      if (activeCmp) onHover(e, cmp);
-    };
-    listeners.mousemove = { fn, type: 'mousemove' };
-    cmp.elem.addEventListener('mousemove', fn, true);
-  } else {
-    if (listeners.mousemove || listeners.mousemove === null) delete listeners.mousemove;
-  }
-  if (props?.onHoverOutside) {
-    // Add "mouseleave" listener
-    const onHoverOutside = props.onHoverOutside;
-    const fn = (e: Event) => {
-      const activeCmp = getCmpById(cmpId);
-      if (activeCmp) onHoverOutside(e, cmp);
-    };
-    listeners.mouseleave = { fn, type: 'mouseleave' };
-    cmp.elem.addEventListener('mouseleave', fn, true);
-  } else {
-    if (listeners.mouseleave || listeners.mouseleave === null) delete listeners.mouseleave;
-  }
-  if (props?.onFocus) {
-    // Add "focus" listener
-    const onFocus = props.onFocus;
-    const fn = (e: Event) => {
-      const activeCmp = getCmpById(cmpId);
-      if (activeCmp) onFocus(e, cmp);
-    };
-    listeners.focus = { fn, type: 'focus' };
-    cmp.elem.addEventListener('focus', fn, true);
-  } else {
-    if (listeners.focus || listeners.focus === null) delete listeners.focus;
-  }
-  if (props?.onBlur) {
-    // Add "blur" listener
-    const onBlur = props.onBlur;
-    const fn = (e: Event) => {
-      const activeCmp = getCmpById(cmpId);
-      if (activeCmp) onBlur(e, cmp);
-    };
-    listeners.blur = { fn, type: 'blur' };
-    cmp.elem.addEventListener('blur', fn, true);
-  } else {
-    if (listeners.blur || listeners.blur === null) delete listeners.blur;
-  }
-  if (props?.onInput) {
-    // Add "input" listener
-    const onInput = props.onInput;
-    const fn = (e: Event) => {
-      const activeCmp = getCmpById(cmpId);
-      if (activeCmp) onInput(e, cmp);
-    };
-    listeners.input = { fn, type: 'input' };
-    cmp.elem.addEventListener('input', fn, true);
-  } else {
-    if (listeners.input || listeners.input === null) delete listeners.input;
-  }
-  if (props?.onChange) {
-    // Add "change" listener
-    const onChange = props.onChange;
-    const fn = (e: Event) => {
-      const activeCmp = getCmpById(cmpId);
-      if (activeCmp) onChange(e, cmp);
-    };
-    listeners.change = { fn, type: 'change' };
-    cmp.elem.addEventListener('change', fn, true);
-  } else {
-    if (listeners.change || listeners.change === null) delete listeners.change;
-  }
   if (props?.listeners) {
     // Add custom listeners
     for (let i = 0; i < props.listeners.length; i++) {
@@ -804,81 +746,6 @@ const updateCmpText = (cmp: TCMP, newText: string) => {
   return cmp;
 };
 
-const updateCmpAnim = (cmp: TCMP, animChain: TAnimChain[]) => {
-  removeAnim(cmp, 'cmpAnim');
-
-  if (!animChain?.length) {
-    delete cmp.timers.cmpAnim;
-    return cmp;
-  }
-
-  const animState: TAnimState = {
-    setState: (key, value) => (animState.state[key] = value),
-    removeState: (key) => delete animState.state[key],
-    state: {},
-  };
-
-  cmp.timers.cmpAnim = { fn: null, curIndex: 0, animState };
-
-  const timerFn = () => {
-    const curIndex = cmp.timers.cmpAnim.curIndex || 0;
-    const curAnim = animChain[curIndex];
-
-    let nextIndex: null | number = null;
-
-    // Check previous anim phaseEndFn
-    const prevAnim = animChain[curIndex - 1];
-    if (prevAnim?.phaseEndFn) {
-      const phaseEndResult = cmp.timers.cmpAnim.animState
-        ? prevAnim.phaseEndFn(cmp, cmp.timers.cmpAnim.animState)
-        : null;
-      nextIndex = typeof phaseEndResult === 'number' ? phaseEndResult : null;
-      if (nextIndex !== null) {
-        // The jump runs the phase it names, which sets the next timer: this one ends here
-        cmp.timers.cmpAnim.curIndex = nextIndex;
-        timerFn();
-        return;
-      }
-    }
-
-    // Check if we are at the end of the chain
-    if (curIndex >= animChain.length) {
-      return;
-    }
-
-    // Check current anim phaseStartFn
-    if (curAnim?.phaseStartFn) {
-      const phaseStartResult = cmp.timers.cmpAnim.animState
-        ? curAnim.phaseStartFn(cmp, cmp.timers.cmpAnim.animState)
-        : null;
-      nextIndex = typeof phaseStartResult === 'number' ? phaseStartResult : null;
-    }
-
-    if (curAnim.class) {
-      updateCmpClass(cmp, curAnim.class, curAnim.classAction);
-    }
-
-    if (curAnim.style) {
-      updateCmpStyle(cmp, curAnim.style);
-    }
-
-    cmp.timers.cmpAnim.fn = setTimeout(timerFn, curAnim.duration);
-
-    if (curAnim.gotoIndex !== undefined) {
-      cmp.timers.cmpAnim.curIndex =
-        typeof curAnim.gotoIndex === 'number'
-          ? curAnim.gotoIndex
-          : curAnim.gotoIndex(cmp, cmp.timers.cmpAnim.animState);
-      return;
-    }
-    cmp.timers.cmpAnim.curIndex =
-      nextIndex !== null ? nextIndex : (cmp.timers.cmpAnim.curIndex || 0) + 1;
-  };
-  timerFn();
-
-  return cmp;
-};
-
 const focusCmp = (cmp: TCMP, focusValueToProps?: boolean) => {
   cmp.elem.focus();
   // The caret at the end, in an input that has a selection (a number, checkbox or range input
@@ -965,31 +832,6 @@ const removeOutsideClickListener = (cmp: TCMP) => {
   }
   delete onClickOutsideListener.fns[cmp.id];
   onClickOutsideListener.count -= 1;
-};
-
-const runAnims = (cmp: TCMP) => {
-  if (cmp.props?.anim) updateCmpAnim(cmp, cmp.props?.anim);
-};
-
-const removeAnim = (cmp: TCMP, animKey: string) => {
-  const timerData = cmp.timers[animKey];
-  if (timerData) {
-    clearTimeout(timerData.fn as SetTimeout);
-    // Explicitly nullify the animState to break closure bonds
-    if (timerData.animState) {
-      timerData.animState.state = {};
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (timerData as any).animState = null;
-    }
-  }
-  delete cmp.timers[animKey];
-};
-
-const removeAnims = (cmp: TCMP) => {
-  const timerKeys = Object.keys(cmp.timers);
-  for (let i = 0; i < timerKeys.length; i++) {
-    removeAnim(cmp, timerKeys[i]);
-  }
 };
 
 /** A copy of the props a CMP is given (`style` and `attr` too), so its in-place writes never reach

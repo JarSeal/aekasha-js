@@ -1,235 +1,46 @@
 import type { TCMP } from './CMP';
 import { CMP } from './CMP';
-import type { StorageValue } from '../utils/LocalAndSessionStorage';
-import { lsGetItem, lsSetItem } from '../utils/LocalAndSessionStorage';
 import { lerror } from '../utils/Logger';
-import { getWindowSize } from './Window';
 import { getConfig, IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
 import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from './HUD';
 import { addResizer } from '../kernel/loop/MainLoop';
 import { addSceneHooks } from '../kernel/scene/SceneHooks';
 import { addBootAfterStartHook } from '../kernel/init/BootHooks';
 import styles from './DraggableWindow.module.scss';
-import { getSvgIcon, type SvgIconKey } from './icons/SvgIcon';
-
-/** The CSS unit of a window's position or size value. */
-export type DraggableWindowUnit = 'px' | '%' | 'vw' | 'vh';
-
-export type DraggableWindowData = { [key: string]: unknown };
-
-export type DraggableWindowContent = TCMP | ((data?: DraggableWindowData) => TCMP);
-
-export type DraggableWindowUnits = {
-  // Default is 'px'
-  /** A non-px position is the window's centre. A draggable window converts it to px (its
-   * left/top) when it mounts; a non-draggable one (eg. a dialog) stays CSS-centred. */
-  position?: { x?: DraggableWindowUnit; y?: DraggableWindowUnit };
-  size?: { w?: DraggableWindowUnit; h?: DraggableWindowUnit };
-  maxSize?: { w?: DraggableWindowUnit; h?: DraggableWindowUnit };
-  minSize?: { w?: DraggableWindowUnit; h?: DraggableWindowUnit };
-};
-
-/** The persisted part of a window (LS): serializable values only. */
-export type DraggableWindowConfig = {
-  id: string;
-  /** The window's kind (see {@link OpenDraggableWindowProps.kind}). Without one, the window's
-   * kind is its id. */
-  kind?: string;
-  title: string;
-  /** An icon before the title in the header */
-  icon?: SvgIconKey;
-  data?: DraggableWindowData;
-  /** Position (left/top) and size, in `units` (px by default). A draggable window's position is
-   * always px. */
-  geometry: { x: number; y: number; w: number; h: number };
-  minSize: { w: number; h: number };
-  /** Without one, the window is at most the viewport's size (100vw × 100vh) */
-  maxSize?: { w: number; h: number };
-  units?: DraggableWindowUnits;
-  /** The window's index in its layer's stack (0 = bottom) */
-  orderNr: number;
-  isOpen: boolean;
-  isCollapsed: boolean;
-  saveToLS: boolean;
-  isDebugWindow: boolean;
-  /** Shows this debug window (`isDebugWindow`) in prodTest mode too (default false, debug
-   * windows are debug mode only). The window's content module must then be loaded in prodTest
-   * mode as well, ie. with `loadDebugModuleAsync(importer, true)` / `useDebug(ref, true)`,
-   * otherwise the window opens without content. */
-  showInProdTest: boolean;
-  disableVertResize: boolean;
-  disableHoriResize: boolean;
-  disableDragging: boolean;
-  disableCollapseBtn: boolean;
-  disableCloseBtn: boolean;
-  closeOnSceneChange: boolean;
-  removeOnSceneChange: boolean;
-  removeOnClose: boolean;
-  customZIndex?: number;
-  hasBackDrop: boolean;
-  backDropClickClosesWindow: boolean;
-  windowClass?: string | string[];
-  backDropClass?: string | string[];
-};
-
-/** A window as seen from outside this module: its config plus its live objects. */
-export type DraggableWindow = DraggableWindowConfig & {
-  /** Whether the window is on top of its layer (app or debug windows) */
-  isActive: boolean;
-  /** Only a mounted window has one (not a closed one, or one suspended over a scene change) */
-  windowCMP?: TCMP;
-  backDropCMP?: TCMP;
-  content?: DraggableWindowContent;
-  onClose?: () => void;
-};
-
-export type OpenDraggableWindowProps = {
-  id: string;
-  /**
-   * Makes this one of several windows of a kind (eg. one edit window per entity), with the id
-   * `getKindWindowId(kind, key)`. The content function and scene target resolver registered for
-   * the kind cover each of its windows. A new window of the kind starts from where the kind's
-   * last window was dragged, resized or closed, cascaded by the kind's open windows. Closing it
-   * removes it. Without a kind, the window's kind is its id.
-   */
-  kind?: string;
-  content?: DraggableWindowContent;
-  data?: DraggableWindowData;
-  isCollapsed?: boolean;
-  position?: { x: number; y: number };
-  size?: { w: number; h: number };
-  maxSize?: { w: number; h: number };
-  minSize?: { w: number; h: number };
-  units?: DraggableWindowUnits;
-  resetPosition?: boolean;
-  resetSize?: boolean;
-  closeIfOpen?: boolean;
-  saveToLS?: boolean;
-  title?: string;
-  /** An icon before the title in the header */
-  icon?: SvgIconKey;
-  isDebugWindow?: boolean;
-  /** Shows this debug window (`isDebugWindow`) in prodTest mode too (default false, debug
-   * windows are debug mode only). The window's content module must then be loaded in prodTest
-   * mode as well, ie. with `loadDebugModuleAsync(importer, true)` / `useDebug(ref, true)`,
-   * otherwise the window opens without content. */
-  showInProdTest?: boolean;
-  disableVertResize?: boolean;
-  disableHoriResize?: boolean;
-  disableDragging?: boolean;
-  disableCollapseBtn?: boolean;
-  disableCloseBtn?: boolean;
-  closeOnSceneChange?: boolean;
-  removeOnSceneChange?: boolean;
-  removeOnClose?: boolean;
-  customZIndex?: number;
-  hasBackDrop?: boolean;
-  backDropClickClosesWindow?: boolean;
-  windowClass?: string | string[];
-  backDropClass?: string | string[];
-  onClose?: () => void;
-  /** Focuses the first focusable element of the window (its content first, then its header
-   * buttons) when it opens. Default true. The engine's own reopens (restoring from LS, rebuilding
-   * after a scene change or an update) pass false, so they never steal the focus. */
-  focusFirstElement?: boolean;
-};
-
-type DragMode = 'MOVE' | 'RESIZE_H' | 'RESIZE_V' | 'RESIZE_HV';
-
-/** The part of the header that can be grabbed (the title, without the buttons), relative to the
- * window's left edge, and the header's height. */
-type GrabArea = { left: number; width: number; headerH: number };
-
-/** One pointer drag of a window's header (move) or of one of its resize handles. */
-type DragSession = {
-  mode: DragMode;
-  pointerId: number;
-  /** The element that holds the pointer capture */
-  target: HTMLElement;
-  startPointer: { x: number; y: number };
-  startGeometry: { x: number; y: number; w: number; h: number };
-  /** MOVE only: the header's title area, which clampToGrabbable keeps on screen */
-  grabArea: GrabArea | null;
-  /** The latest pointer position, applied at most once per animation frame */
-  pointer: { x: number; y: number };
-  /** The geometry last written to the DOM */
-  geometry: { x: number; y: number; w: number; h: number };
-  rafId: number | null;
-  /** The animation frame's callback, made once per session (not per frame) */
-  apply: () => void;
-};
-
-/** The live part of a window: never persisted. */
-type DraggableWindowRuntime = {
-  content?: DraggableWindowContent;
-  onClose?: () => void;
-  windowCMP?: TCMP;
-  backDropCMP?: TCMP;
-  headerCMP?: TCMP;
-  titleCMP?: TCMP;
-  contentWrapperCMP?: TCMP;
-  session: DragSession | null;
-  /** The z-index last written, so a restack only writes the windows whose index changed */
-  zIndex: number;
-};
-
-type WindowEntry = { config: DraggableWindowConfig; runtime: DraggableWindowRuntime };
-
-/** What a window stored in LS can carry: the config, or a pre-p094 state. */
-type StoredWindow = Partial<DraggableWindowConfig> & {
-  position?: { x: number; y: number };
-  size?: { w: number; h: number };
-  isActive?: boolean;
-};
-
-/** Where a kind's next window starts: the last geometry of one of its windows. */
-type KindGeometry = {
-  geometry: DraggableWindowConfig['geometry'];
-  units?: Pick<DraggableWindowUnits, 'position' | 'size'>;
-  saveToLS: boolean;
-};
-
-/** What every window of a kind (or every open of a single window) shares: the functions LS can't
- * hold. */
-export type DraggableWindowKindOpts = {
-  /** Builds a window's content from its `data`, for the opens without `content` (eg. the restore
-   * from LS after a reload) */
-  content?: (data?: DraggableWindowData) => TCMP;
-  /** Runs after a window of the kind closes (or is removed), unless the window has its own */
-  onClose?: (id: string) => void;
-  /** For a window flagged `closeOnSceneChange`: on a scene change the window stays open (rebuilt
-   * for the next scene) when it returns true for the window's `data`, and closes otherwise. Also
-   * checked when the window is restored on a reload. */
-  sceneTargetResolver?: SceneTargetResolver;
-  /** Keeps the kind's windows visible in editor views (Views.ts), which hide the other
-   * windows with the rest of the suspended scene's HUD. Debug dialogs (`isDebugWindow` with a
-   * backdrop) are always kept. */
-  keepInViews?: boolean;
-};
+import { getSvgIcon } from './icons/SvgIcon';
+import { addDragHandle, cancelDragSession } from './DraggableWindowDrag';
+import {
+  fitWindow,
+  getGeometryStyle,
+  isFittable,
+  keepOnScreen,
+  placeWindow,
+} from './DraggableWindowGeometry';
+import {
+  createRuntime,
+  hydrateFromLS,
+  kindGeometry,
+  recordKindGeometry,
+  resolveWindowConfig,
+  writeWindowStatesToLS,
+} from './DraggableWindowStore';
+import type {
+  DraggableWindow,
+  DraggableWindowConfig,
+  DraggableWindowData,
+  DraggableWindowKindOpts,
+  DraggableWindowRuntime,
+  OpenDraggableWindowProps,
+  SceneTargetResolver,
+  WindowEntry,
+} from './DraggableWindowTypes';
 
 type Layer = 'APP' | 'DEBUG';
-
-/** Checks whether a window's target (eg. an entity, by the window's `data`) exists in the
- * current scene. Not persisted (functions can't go into LS), so registered next to each window's
- * content function. */
-export type SceneTargetResolver = (data?: DraggableWindowData) => boolean;
-
-const LS_KEY = 'AEK_popupWindows';
-/** The kinds' geometries, in the same LS object as the windows */
-const LS_KIND_GEOMETRY_KEY = '__kindGeometry';
-const DEFAULT_WIDTH = 320;
-const DEFAULT_HEIGHT = 320;
-const DEFAULT_MIN_WIDTH = 100;
-const DEFAULT_MIN_HEIGHT = 120;
 /** Each window takes two z levels (its backdrop sits right below it). App windows stay below the
  * engine's loaders (1000), so there is room for about 450 of them. */
 const Z_INDEX_BASES: Record<Layer, number> = { APP: 100, DEBUG: 20000 };
 const DEBUG_ADDITION_TO_CUSTOM_Z_INDEX = 100;
-/** How much of a window's title area a drag keeps horizontally on screen */
-const MIN_GRAB_VISIBLE_PX = 80;
 const RESIZE_DEBOUNCE_MS = 150;
-/** The gap a fit keeps from the viewport's edges */
-const FIT_MARGIN_PX = 8;
 
 /** Every known window, open or not. Hydrated from LS on the first access (see getWindows). */
 let windows: Map<string, WindowEntry> | null = null;
@@ -241,7 +52,6 @@ const sceneTargetResolvers: { [kind: string]: SceneTargetResolver } = {};
 const registeredKinds = new Set<string>();
 const kindOnCloses: { [kind: string]: (id: string) => void } = {};
 const keepInViewsKinds = new Set<string>();
-const kindGeometry: { [kind: string]: KindGeometry } = {};
 /** Windows suspended at a scene change start: torn down but kept open until the scene change end
  * decides whether their target exists in the next scene. */
 const suspendedWindowIds = new Set<string>();
@@ -288,130 +98,13 @@ const getWindows = () => {
   return windows;
 };
 
-const createRuntime = (): DraggableWindowRuntime => ({ session: null, zIndex: -1 });
+/** Writes the windows' states to LS (`DraggableWindowStore.ts`). Called on finished changes only. */
+const saveDraggableWindowStatesToLS = () => writeWindowStatesToLS(getWindows());
 
-/** A full config from partial values: lists every persisted key, so nothing else (runtime
- * objects, pre-p094 keys) ends up in LS. */
-const createConfig = (
-  id: string,
-  v: Partial<DraggableWindowConfig> & Pick<DraggableWindowConfig, 'geometry'>
-): DraggableWindowConfig => ({
-  id,
-  ...(v.kind ? { kind: v.kind } : {}),
-  title: v.title || '',
-  ...(v.icon ? { icon: v.icon } : {}),
-  ...(v.data !== undefined ? { data: v.data } : {}),
-  geometry: v.geometry,
-  minSize: v.minSize || { w: DEFAULT_MIN_WIDTH, h: DEFAULT_MIN_HEIGHT },
-  ...(v.maxSize ? { maxSize: v.maxSize } : {}),
-  ...(v.units && Object.keys(v.units).length ? { units: v.units } : {}),
-  orderNr: v.orderNr ?? 0,
-  isOpen: Boolean(v.isOpen),
-  isCollapsed: Boolean(v.isCollapsed),
-  saveToLS: Boolean(v.saveToLS),
-  isDebugWindow: Boolean(v.isDebugWindow),
-  showInProdTest: Boolean(v.showInProdTest),
-  disableVertResize: Boolean(v.disableVertResize),
-  disableHoriResize: Boolean(v.disableHoriResize),
-  disableDragging: Boolean(v.disableDragging),
-  disableCollapseBtn: Boolean(v.disableCollapseBtn),
-  disableCloseBtn: Boolean(v.disableCloseBtn),
-  closeOnSceneChange: Boolean(v.closeOnSceneChange),
-  removeOnSceneChange: Boolean(v.removeOnSceneChange),
-  removeOnClose: Boolean(v.removeOnClose),
-  ...(v.customZIndex !== undefined ? { customZIndex: v.customZIndex } : {}),
-  hasBackDrop: Boolean(v.hasBackDrop),
-  backDropClickClosesWindow: Boolean(v.backDropClickClosesWindow),
-  ...(v.windowClass !== undefined ? { windowClass: v.windowClass } : {}),
-  ...(v.backDropClass !== undefined ? { backDropClass: v.backDropClass } : {}),
-});
-
-/**
- * Resolves a window's config from the open props and its stored config (live, closed or from
- * LS). One rule set:
- * - Behaviour flags, min/max size and classes: a passed prop wins, then the stored value, then
- *   the default.
- * - Geometry and the collapsed state (the user's layout): the stored value wins, unless
- *   `resetPosition`/`resetSize` is set. Then the prop wins, and the default (centred) comes last.
- *   A new window of a kind takes the kind's geometry as its stored geometry.
- * - Units go with their value: a stored position or size keeps its stored units, a passed one
- *   takes the passed units.
- * - Title and `data`: the passed value wins.
- */
-const resolveWindowConfig = (
-  props: OpenDraggableWindowProps,
-  stored?: DraggableWindowConfig,
-  storedKindGeometry?: KindGeometry
-): DraggableWindowConfig => {
-  const layout = stored ?? storedKindGeometry;
-  const units: DraggableWindowUnits = {};
-  const setUnits = <K extends keyof DraggableWindowUnits>(key: K, u?: DraggableWindowUnits[K]) => {
-    if (u) units[key] = u;
-  };
-
-  let size: { w: number; h: number };
-  if (layout && !props.resetSize) {
-    size = { w: layout.geometry.w, h: layout.geometry.h };
-    setUnits('size', layout.units?.size);
-  } else {
-    size = props.size || { w: DEFAULT_WIDTH, h: DEFAULT_HEIGHT };
-    if (props.size) setUnits('size', props.units?.size);
-  }
-
-  let position: { x: number; y: number };
-  if (layout && !props.resetPosition) {
-    position = { x: layout.geometry.x, y: layout.geometry.y };
-    setUnits('position', layout.units?.position);
-  } else if (props.position) {
-    position = props.position;
-    setUnits('position', props.units?.position);
-  } else {
-    // The viewport's centre (converted to px at mount when the window is draggable)
-    position = { x: 50, y: 50 };
-    setUnits('position', { x: '%', y: '%' });
-  }
-
-  const minSize = props.minSize ?? stored?.minSize;
-  setUnits('minSize', props.minSize ? props.units?.minSize : stored?.units?.minSize);
-  const maxSize = props.maxSize ?? stored?.maxSize;
-  // Always stored with its units: LS tells a pre-p094 viewport snapshot apart by the missing units
-  if (maxSize) {
-    const maxUnits = props.maxSize ? props.units?.maxSize : stored?.units?.maxSize;
-    setUnits('maxSize', { w: 'px', h: 'px', ...maxUnits });
-  }
-
-  const flag = <K extends keyof OpenDraggableWindowProps & keyof DraggableWindowConfig>(key: K) =>
-    props[key] !== undefined ? props[key] : stored?.[key];
-
-  return createConfig(props.id, {
-    kind: props.kind ?? stored?.kind,
-    title: props.title ?? stored?.title,
-    icon: props.icon ?? stored?.icon,
-    data: props.data ?? stored?.data,
-    geometry: { ...position, ...size },
-    minSize,
-    maxSize,
-    units,
-    orderNr: stored?.orderNr,
-    isOpen: true,
-    isCollapsed: stored ? stored.isCollapsed : props.isCollapsed,
-    saveToLS: flag('saveToLS'),
-    isDebugWindow: flag('isDebugWindow'),
-    showInProdTest: flag('showInProdTest'),
-    disableVertResize: flag('disableVertResize'),
-    disableHoriResize: flag('disableHoriResize'),
-    disableDragging: flag('disableDragging'),
-    disableCollapseBtn: flag('disableCollapseBtn'),
-    disableCloseBtn: flag('disableCloseBtn'),
-    closeOnSceneChange: flag('closeOnSceneChange'),
-    removeOnSceneChange: flag('removeOnSceneChange'),
-    removeOnClose: flag('removeOnClose'),
-    customZIndex: flag('customZIndex'),
-    hasBackDrop: flag('hasBackDrop'),
-    backDropClickClosesWindow: flag('backDropClickClosesWindow'),
-    windowClass: flag('windowClass'),
-    backDropClass: flag('backDropClass'),
-  });
+/** A drag's end that changed a window: its geometry becomes its kind's, and LS gets it. */
+const commitDrag = (entry: WindowEntry) => {
+  recordKindGeometry(entry);
+  saveDraggableWindowStatesToLS();
 };
 
 /** Runs the window's own onClose, else its kind's. */
@@ -431,53 +124,6 @@ const toPublicWindow = ({ config, runtime }: WindowEntry): DraggableWindow => ({
   content: runtime.content,
   onClose: runtime.onClose,
 });
-
-// LS
-
-/** Reads LS once. The entries go into the map in their saved stack order, so restoring them in
- * map order rebuilds the stacks. */
-const hydrateFromLS = (map: Map<string, WindowEntry>) => {
-  const { [LS_KIND_GEOMETRY_KEY]: storedKindGeometry, ...stored } = (lsGetItem(LS_KEY, {}) ||
-    {}) as { [id: string]: StoredWindow } & { [LS_KIND_GEOMETRY_KEY]?: typeof kindGeometry };
-  if (storedKindGeometry && typeof storedKindGeometry === 'object') {
-    Object.assign(kindGeometry, storedKindGeometry);
-  }
-  // A pre-p094 state flags its last clicked window instead of saving the stack: restore it last
-  const order = (s: StoredWindow) => (s.isActive ? Infinity : s.orderNr ?? 9999);
-  const ids = Object.keys(stored).sort((a, b) => order(stored[a]) - order(stored[b]));
-  for (let i = 0; i < ids.length; i++) {
-    const s = stored[ids[i]];
-    if (!s || typeof s !== 'object') continue;
-    // Closing a kind window removes it, so a closed one is a leftover
-    if (s.kind && !s.isOpen) continue;
-    const geometry = s.geometry || {
-      x: s.position?.x ?? 0,
-      y: s.position?.y ?? 0,
-      w: s.size?.w ?? DEFAULT_WIDTH,
-      h: s.size?.h ?? DEFAULT_HEIGHT,
-    };
-    // A maxSize without units is the viewport snapshot pre-p094 windows took at open: dropped,
-    // so the window gets the default (the current viewport)
-    const maxSize = s.units?.maxSize ? s.maxSize : undefined;
-    map.set(ids[i], {
-      config: createConfig(ids[i], { ...s, geometry, maxSize }),
-      runtime: createRuntime(),
-    });
-  }
-};
-
-/** Writes every `saveToLS` window's config. Called on finished changes only. */
-const saveDraggableWindowStatesToLS = () => {
-  const saved: { [id: string]: unknown } = {};
-  for (const { config } of getWindows().values()) {
-    if (config.saveToLS) saved[config.id] = config;
-  }
-  const kinds = Object.keys(kindGeometry).filter((kind) => kindGeometry[kind].saveToLS);
-  if (kinds.length) {
-    saved[LS_KIND_GEOMETRY_KEY] = Object.fromEntries(kinds.map((k) => [k, kindGeometry[k]]));
-  }
-  lsSetItem(LS_KEY, saved as unknown as StorageValue);
-};
 
 // Stacking
 
@@ -553,192 +199,6 @@ export const isDraggableWindowOnTop = (id: string) => {
   return stack[stack.length - 1] === id;
 };
 
-// Geometry
-
-const isNonPx = (unit?: DraggableWindowUnit) => Boolean(unit && unit !== 'px');
-
-/** A window with a non-px position axis is CSS-centred on that axis (a dialog): it follows a
- * viewport resize without JS, and the clamps leave it alone. */
-const isCssCentred = ({ units }: DraggableWindowConfig) =>
-  isNonPx(units?.position?.x) || isNonPx(units?.position?.y);
-
-/** A non-px position is the window's centre, so it is translated by half its size. */
-const getGeometryStyle = ({ geometry: g, minSize, maxSize, units }: DraggableWindowConfig) => {
-  const isCentredX = isNonPx(units?.position?.x);
-  const isCentredY = isNonPx(units?.position?.y);
-  return {
-    left: `${g.x}${units?.position?.x || 'px'}`,
-    top: `${g.y}${units?.position?.y || 'px'}`,
-    width: `${g.w}${units?.size?.w || 'px'}`,
-    height: `${g.h}${units?.size?.h || 'px'}`,
-    minWidth: `${minSize.w}${units?.minSize?.w || 'px'}`,
-    minHeight: `${minSize.h}${units?.minSize?.h || 'px'}`,
-    maxWidth: maxSize ? `${maxSize.w}${units?.maxSize?.w || 'px'}` : '100vw',
-    maxHeight: maxSize ? `${maxSize.h}${units?.maxSize?.h || 'px'}` : '100vh',
-    transform:
-      isCentredX || isCentredY
-        ? `translate3d(${isCentredX ? '-50%' : '0'}, ${isCentredY ? '-50%' : '0'}, 0)`
-        : null,
-  };
-};
-
-const writePosition = (elem: HTMLElement, { x, y }: { x: number; y: number }) => {
-  elem.style.left = `${x}px`;
-  elem.style.top = `${y}px`;
-};
-
-/** Converts a mounted draggable window's non-px (centre) position to px left/top, where the CSS
- * centring rendered it, and drops `units.position`. */
-const convertPositionToPx = ({ config, runtime }: WindowEntry) => {
-  const elem = runtime.windowCMP?.elem;
-  if (!elem || config.disableDragging || !isCssCentred(config)) return;
-  const rect = elem.getBoundingClientRect();
-  config.geometry.x = Math.round(rect.left);
-  config.geometry.y = Math.round(rect.top);
-  if (config.units) delete config.units.position;
-  elem.style.transform = '';
-  writePosition(elem, config.geometry);
-};
-
-const getGrabArea = ({ windowCMP, headerCMP, titleCMP }: DraggableWindowRuntime): GrabArea => {
-  const windowRect = windowCMP?.elem.getBoundingClientRect();
-  const titleRect = titleCMP?.elem.getBoundingClientRect();
-  return {
-    left: windowRect && titleRect ? titleRect.left - windowRect.left : 0,
-    width: titleRect?.width || 0,
-    headerH: headerCMP?.elem.getBoundingClientRect().height || 0,
-  };
-};
-
-/** Lets a window hang off an edge, but keeps MIN_GRAB_VISIBLE_PX of its title area horizontally
- * and its whole header vertically on screen, so it can always be grabbed. */
-const clampToGrabbable = (pos: { x: number; y: number }, area: GrabArea) => {
-  const { width, height } = getWindowSize();
-  const grab = Math.min(MIN_GRAB_VISIBLE_PX, area.width);
-  // The min bound last: on a viewport too narrow for both, the title's start stays visible
-  pos.x = Math.max(grab - area.left - area.width, Math.min(pos.x, width - grab - area.left));
-  pos.y = Math.max(0, Math.min(pos.y, height - area.headerH));
-};
-
-/**
- * Moves a mounted window fully on screen, per axis: a window that fits is shifted in, a larger
- * one is aligned to the left / top edge. The size never changes. CSS-centred windows are skipped.
- * Returns whether it moved.
- */
-const keepOnScreen = ({ config, runtime }: WindowEntry) => {
-  const elem = runtime.windowCMP?.elem;
-  if (!elem || isCssCentred(config)) return false;
-  const { width, height } = getWindowSize();
-  const rect = elem.getBoundingClientRect();
-  const g = config.geometry;
-  const x = rect.width > width ? 0 : Math.max(0, Math.min(g.x, width - rect.width));
-  const y = rect.height > height ? 0 : Math.max(0, Math.min(g.y, height - rect.height));
-  if (x === g.x && y === g.y) return false;
-  g.x = Math.round(x);
-  g.y = Math.round(y);
-  writePosition(elem, g);
-  return true;
-};
-
-/** Whether the fit actions apply to the window: an open, mounted, draggable one (never a dialog). */
-const isFittable = ({ config, runtime }: WindowEntry) =>
-  config.isOpen && Boolean(runtime.windowCMP) && !config.disableDragging && !isCssCentred(config);
-
-/** The cascade step's offset (x and y), wrapping before it passes a third of the viewport. */
-const getCascadeOffset = (cascadeIndex: number, headerH: number) => {
-  if (!headerH || cascadeIndex <= 0) return 0;
-  const { width, height } = getWindowSize();
-  const steps = Math.floor(Math.min(width, height) / 3 / headerH) + 1;
-  return (cascadeIndex % steps) * headerH;
-};
-
-/**
- * Moves a fittable window to the top center (plus the cascade offset), shrinks a resizable axis
- * that overflows (the CSS min size wins), and falls back to keepOnScreen for what still overflows.
- * A collapsed window fits its expanded size. Returns whether the geometry changed.
- */
-const fitWindow = (entry: WindowEntry, cascadeIndex: number) => {
-  const { config, runtime } = entry;
-  const elem = runtime.windowCMP?.elem;
-  if (!elem || !isFittable(entry)) return false;
-  const { width, height } = getWindowSize();
-  const offset = getCascadeOffset(cascadeIndex, runtime.headerCMP?.elem.offsetHeight || 0);
-  const g = config.geometry;
-  const prev = JSON.stringify([g, config.units?.size]);
-
-  // Measured expanded and without the height transition, so the reads are the final size
-  elem.classList.add(styles.resizing);
-  if (config.isCollapsed) elem.classList.remove(styles.collapsed);
-
-  let rect = elem.getBoundingClientRect();
-  const sizeUnits = { ...config.units?.size };
-  const maxW = width - 2 * FIT_MARGIN_PX;
-  const maxH = height - 2 * FIT_MARGIN_PX - offset;
-  const shrinkW = rect.width > maxW && !config.disableHoriResize;
-  const shrinkH = rect.height > maxH && !config.disableVertResize;
-  if (shrinkW) elem.style.width = `${Math.max(0, maxW)}px`;
-  if (shrinkH) elem.style.height = `${Math.max(0, maxH)}px`;
-  if (shrinkW || shrinkH) {
-    rect = elem.getBoundingClientRect();
-    // A shrunk axis is stored in px from now on, like a manual resize
-    if (shrinkW) {
-      g.w = Math.round(rect.width);
-      sizeUnits.w = 'px';
-      elem.style.width = `${g.w}px`;
-    }
-    if (shrinkH) {
-      g.h = Math.round(rect.height);
-      sizeUnits.h = 'px';
-      elem.style.height = `${g.h}px`;
-    }
-    config.units = { ...config.units, size: sizeUnits };
-  }
-
-  // The right edge stays inside the margin, so a wide window gives up its x offset
-  const x = Math.min((width - rect.width) / 2 + offset, width - FIT_MARGIN_PX - rect.width);
-  g.x = Math.round(Math.max(FIT_MARGIN_PX, x));
-  g.y = Math.round(FIT_MARGIN_PX + offset);
-  writePosition(elem, g);
-  keepOnScreen(entry);
-
-  if (config.isCollapsed) {
-    elem.classList.add(styles.collapsed);
-    // Flushes the collapsed height before the transition comes back, so it doesn't animate
-    void elem.offsetHeight;
-  }
-  elem.classList.remove(styles.resizing);
-  return JSON.stringify([g, config.units?.size]) !== prev;
-};
-
-/** Settles a freshly mounted (or reset) window's position: px for a draggable window, offset by
- * `cascadeIndex` header heights (a new window of a kind), then fully on screen. */
-const placeWindow = (entry: WindowEntry, cascadeIndex = 0) => {
-  convertPositionToPx(entry);
-  const elem = entry.runtime.windowCMP?.elem;
-  if (elem && cascadeIndex && !isCssCentred(entry.config)) {
-    const offset = getCascadeOffset(cascadeIndex, entry.runtime.headerCMP?.elem.offsetHeight || 0);
-    entry.config.geometry.x += offset;
-    entry.config.geometry.y += offset;
-    writePosition(elem, entry.config.geometry);
-  }
-  keepOnScreen(entry);
-};
-
-// Kinds
-
-/** Stores a kind window's geometry as where the kind's next window starts. */
-const recordKindGeometry = ({ config }: WindowEntry) => {
-  if (!config.kind) return;
-  const units: KindGeometry['units'] = {};
-  if (config.units?.position) units.position = config.units.position;
-  if (config.units?.size) units.size = config.units.size;
-  kindGeometry[config.kind] = {
-    geometry: { ...config.geometry },
-    ...(Object.keys(units).length ? { units } : {}),
-    saveToLS: config.saveToLS,
-  };
-};
-
 const getOpenWindowsOfKind = (kind: string) => {
   const result: WindowEntry[] = [];
   for (const entry of getWindows().values()) {
@@ -789,131 +249,6 @@ const ensureViewportResizer = () => {
     if (viewportResizeTimer) clearTimeout(viewportResizeTimer);
     viewportResizeTimer = setTimeout(onViewportResized, RESIZE_DEBOUNCE_MS);
   });
-};
-
-// Input
-
-const startDragSession = (entry: WindowEntry, mode: DragMode, e: PointerEvent) => {
-  const { config, runtime } = entry;
-  const windowElem = runtime.windowCMP?.elem;
-  if (!windowElem || runtime.session || e.button !== 0 || !e.isPrimary) return;
-  if (mode === 'MOVE' && (config.disableDragging || (e.target as Element).closest('button'))) {
-    return;
-  }
-
-  const target = e.currentTarget as HTMLElement;
-  target.setPointerCapture(e.pointerId);
-  const rect = windowElem.getBoundingClientRect();
-  const startGeometry = { x: rect.left, y: rect.top, w: rect.width, h: rect.height };
-  runtime.session = {
-    mode,
-    pointerId: e.pointerId,
-    target,
-    startPointer: { x: e.clientX, y: e.clientY },
-    startGeometry,
-    grabArea: mode === 'MOVE' ? getGrabArea(runtime) : null,
-    pointer: { x: e.clientX, y: e.clientY },
-    geometry: { ...startGeometry },
-    rafId: null,
-    apply: () => applyDragSession(entry),
-  };
-  if (mode !== 'MOVE') runtime.windowCMP?.updateClass(styles.resizing, 'add');
-};
-
-const applyDragSession = ({ runtime }: WindowEntry) => {
-  const s = runtime.session;
-  const elem = runtime.windowCMP?.elem;
-  if (!s || !elem) return;
-  s.rafId = null;
-  const dx = s.pointer.x - s.startPointer.x;
-  const dy = s.pointer.y - s.startPointer.y;
-  const start = s.startGeometry;
-  const g = s.geometry;
-
-  if (s.mode === 'MOVE') {
-    g.x = start.x + dx;
-    g.y = start.y + dy;
-    if (s.grabArea) clampToGrabbable(g, s.grabArea);
-    writePosition(elem, g);
-    return;
-  }
-  // The CSS min/max size clamps what is shown, the end of the drag stores that
-  if (s.mode !== 'RESIZE_V') {
-    g.w = start.w + dx;
-    elem.style.width = `${g.w}px`;
-  }
-  if (s.mode !== 'RESIZE_H') {
-    g.h = start.h + dy;
-    elem.style.height = `${g.h}px`;
-  }
-};
-
-const onDragPointerMove = (entry: WindowEntry, e: PointerEvent) => {
-  const s = entry.runtime.session;
-  if (!s || e.pointerId !== s.pointerId) return;
-  s.pointer.x = e.clientX;
-  s.pointer.y = e.clientY;
-  if (s.rafId === null) s.rafId = requestAnimationFrame(s.apply);
-};
-
-/** Ends the drag and commits the geometry to the config. */
-const onDragPointerEnd = (entry: WindowEntry, e: PointerEvent) => {
-  const { config, runtime } = entry;
-  const s = runtime.session;
-  if (!s || e.pointerId !== s.pointerId) return;
-  if (s.rafId !== null) {
-    cancelAnimationFrame(s.rafId);
-    applyDragSession(entry);
-  }
-  runtime.session = null;
-  if (s.target.hasPointerCapture(s.pointerId)) s.target.releasePointerCapture(s.pointerId);
-
-  const g = config.geometry;
-  const { x, y } = g;
-  if (s.mode === 'MOVE') {
-    g.x = Math.round(s.geometry.x);
-    g.y = Math.round(s.geometry.y);
-  } else {
-    runtime.windowCMP?.updateClass(styles.resizing, 'remove');
-    const elem = runtime.windowCMP?.elem;
-    if (elem) {
-      // A resized axis is stored in px from now on, whatever unit it had
-      const rect = elem.getBoundingClientRect();
-      const sizeUnits = { ...config.units?.size };
-      if (s.mode !== 'RESIZE_V') {
-        g.w = Math.round(rect.width);
-        sizeUnits.w = 'px';
-        elem.style.width = `${g.w}px`;
-      }
-      if (s.mode !== 'RESIZE_H') {
-        g.h = Math.round(rect.height);
-        sizeUnits.h = 'px';
-        elem.style.height = `${g.h}px`;
-      }
-      config.units = { ...config.units, size: sizeUnits };
-    }
-  }
-  // A resize always saves: its units may have changed even when the numbers didn't
-  if (s.mode !== 'MOVE' || g.x !== x || g.y !== y) {
-    recordKindGeometry(entry);
-    saveDraggableWindowStatesToLS();
-  }
-};
-
-/** Drops an unfinished drag without committing it (eg. the window closes mid drag). */
-const cancelDragSession = ({ runtime }: WindowEntry) => {
-  const s = runtime.session;
-  if (!s) return;
-  if (s.rafId !== null) cancelAnimationFrame(s.rafId);
-  runtime.session = null;
-};
-
-const addDragHandle = (entry: WindowEntry, elem: HTMLElement, mode: DragMode) => {
-  const onEnd = (e: PointerEvent) => onDragPointerEnd(entry, e);
-  elem.addEventListener('pointerdown', (e) => startDragSession(entry, mode, e));
-  elem.addEventListener('pointermove', (e) => onDragPointerMove(entry, e));
-  elem.addEventListener('pointerup', onEnd);
-  elem.addEventListener('pointercancel', onEnd);
 };
 
 // DOM
@@ -1034,7 +369,7 @@ const mountWindow = (entry: WindowEntry) => {
       attr: { title: 'Close' },
     });
   }
-  addDragHandle(entry, headerCMP.elem, 'MOVE');
+  addDragHandle(entry, headerCMP.elem, 'MOVE', commitDrag);
   headerCMP.elem.addEventListener('dblclick', (e) => {
     if (!(e.target as Element).closest('button')) fitDraggableWindowToScreen(id);
   });
@@ -1042,13 +377,18 @@ const mountWindow = (entry: WindowEntry) => {
   runtime.contentWrapperCMP = windowCMP.add({ class: styles.contentWrapper });
 
   if (!config.disableVertResize) {
-    addDragHandle(entry, windowCMP.add({ class: styles.vertHandle }).elem, 'RESIZE_V');
+    addDragHandle(entry, windowCMP.add({ class: styles.vertHandle }).elem, 'RESIZE_V', commitDrag);
   }
   if (!config.disableHoriResize) {
-    addDragHandle(entry, windowCMP.add({ class: styles.horiHandle }).elem, 'RESIZE_H');
+    addDragHandle(entry, windowCMP.add({ class: styles.horiHandle }).elem, 'RESIZE_H', commitDrag);
   }
   if (!config.disableVertResize && !config.disableHoriResize) {
-    addDragHandle(entry, windowCMP.add({ class: styles.vertAndHoriHandle }).elem, 'RESIZE_HV');
+    addDragHandle(
+      entry,
+      windowCMP.add({ class: styles.vertAndHoriHandle }).elem,
+      'RESIZE_HV',
+      commitDrag
+    );
   }
 
   const content = buildContent(entry);
