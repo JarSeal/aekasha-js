@@ -117,8 +117,6 @@ export const getOctahedralFrameBasis = (
 // --- TSL: THE SAME MAPS ON THE GPU ---
 
 type FloatNode = THREE.Node<'float'>;
-type Vec2Node = THREE.Node<'vec2'>;
-type Vec3Node = THREE.Node<'vec3'>;
 
 const signNotZeroNode = (x: FloatNode) => select(x.greaterThanEqual(0), float(1), float(-1));
 
@@ -127,7 +125,10 @@ const signNotZeroNode = (x: FloatNode) => select(x.greaterThanEqual(0), float(1)
  * For the octahedral impostor's material.
  * @internal
  */
-export const encodeOctahedralNode = (dir: Vec3Node, hemi: boolean): Vec2Node => {
+export const encodeOctahedralNode = (
+  dir: THREE.Node<'vec3'>,
+  hemi: boolean
+): THREE.Node<'vec2'> => {
   if (hemi) {
     const sum = max(abs(dir.x).add(max(dir.y, 0)).add(abs(dir.z)), 1e-6);
     const p = dir.xz.div(sum);
@@ -147,7 +148,7 @@ export const encodeOctahedralNode = (dir: Vec3Node, hemi: boolean): Vec2Node => 
  * For the octahedral impostor's material.
  * @internal
  */
-export const decodeOctahedralNode = (uv: Vec2Node, hemi: boolean): Vec3Node => {
+export const decodeOctahedralNode = (uv: THREE.Node<'vec2'>, hemi: boolean): THREE.Node<'vec3'> => {
   if (hemi) {
     const x = uv.x.add(uv.y).mul(0.5);
     const z = uv.x.sub(uv.y).mul(0.5);
@@ -168,7 +169,7 @@ export const decodeOctahedralNode = (uv: Vec2Node, hemi: boolean): Vec3Node => {
  * For the octahedral impostor's material.
  * @internal
  */
-export const getOctahedralFrameBasisNode = (dir: Vec3Node) => {
+export const getOctahedralFrameBasisNode = (dir: THREE.Node<'vec3'>) => {
   const upRef = select(abs(dir.y).greaterThan(FRAME_POLE_Y), vec3(0, 0, -1), vec3(0, 1, 0));
   const right = cross(upRef, dir).normalize();
   return { right, up: cross(dir, right) };

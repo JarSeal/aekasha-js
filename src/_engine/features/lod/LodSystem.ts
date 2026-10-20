@@ -1040,7 +1040,8 @@ export const measureLodEntity = (entityId: number, world: ECSWorld, out: LodMeas
 
 /**
  * Applies the levels lodSelectionSystem changed this frame: a mesh's geometry, material(s) and
- * `castShadow`, or the entity's {@link LodTarget}, cross-fading when it can.
+ * `castShadow`, or the entity's {@link _engine/features/lod/LodTypes!LodTarget}, cross-fading
+ * when it can.
  * Registered by the feature's install.
  * @internal
  */
