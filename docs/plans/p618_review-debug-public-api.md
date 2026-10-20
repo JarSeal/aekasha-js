@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 0 implemented
 Category: Refactoring, Documentation, Debug
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -181,18 +181,129 @@ reproduced. Phase 0 adds what the perf audit and the framework read find.
 - Z1 Nine files over 800 lines, all Tweakpane panels or editors: `_dbg__CharacterStateWindow.ts`
   1,490, `_dbg__LightGUI.ts` 1,475, `_dbg__RayTester.ts` 1,264, `_dbg__PhysicsAPI.ts` 1,177,
   `_dbg__Assets.ts` 1,102, `_dbg__PhysicsDebugDraw.ts` 1,094, `_dbg__MaterialEditor.ts` 1,044,
-  `_dbg__CharacterGizmos.ts` 947, `_dbg__DebugTools.ts` 897. Functions over 150 lines: Phase 0.
+  `_dbg__CharacterGizmos.ts` 947, `_dbg__DebugTools.ts` 897.
+- Z3 Twelve functions over 150 lines (Phase 0, by the TypeScript AST). Two are the framework's:
+  `registerBuiltInStatsSources` 211 (`profiler/_dbg__ProfilerSources.ts:376`) and
+  `createEditorDrawer` 189 (`editors/_dbg__EditorDrawer.ts:75`); `createTabHost` is 149. The
+  other ten are panels' content factories: `createEditLightContent` 499, `buildDebugToolsItems`
+  467, `_createLodDebugGUI` 425 (its `content` 324), `_createSpatialGridDebugGUI` 372 (its
+  `content` 197), `_createPhysicsAPIDebugGUI` 268 (its `content` 225), `createEditCameraContent`
+  232, `createEditPhysicsEntityContent` 151.
 
-**Not yet read**
+**Found in Phase 0: the framework** (p600 §5's full read of `_dbg__DebuggerGUI.ts`,
+`_dbg__TabHost.ts`, `_dbg__DebuggerPaneBuilder.ts`, `_dbg__DebuggerList.ts`, `_dbg__UndoRedo.ts`,
+`_dbg__DevFiles.ts`, `profiler/`, `gpuMemory/`, `_dbg__GPUTimer.ts`)
 
-The framework's implementation (`_dbg__DebuggerGUI.ts`, `_dbg__TabHost.ts`,
-`_dbg__DebuggerPaneBuilder.ts`, `_dbg__DebuggerList.ts`, `_dbg__UndoRedo.ts`, `_dbg__DevFiles.ts`,
-`profiler/`, `gpuMemory/`, about 6,000 lines) gets p600 §5's full read in Phase 0: it's what the
-public API runs. The rest, the panels, editors and tools (about 28,000 lines), get the correctness items
-only (D1), by a read for async and stale references across scene switches and for disposal, plus
-the scene runner's debug configurations.
+- B3 **(bug)** A tab whose `content()` throws isn't caught (`_dbg__TabHost.ts`' `buildTabContent`,
+  nor `mount`, nor the drawer's build). The drawer is rebuilt on every `setCurrentScene` (to
+  change its title, `_updateDebuggerSceneTitle` → `_createDebugGui`) and on every tab registration,
+  and each rebuild mounts the saved tab: while a throwing tab is the saved one, `setCurrentScene`
+  throws before `initMainLoop()`, so **every scene load fails in the debug env** until the LS key
+  is cleared. In the profiler window the same throw leaks the tab's stats source holds, which the
+  Overview and Objects tabs take in `onRefresh`, before `content()` (the frame sampler stays added).
+- B4 **(bug)** `createProfilerTab` before the profiler has loaded does nothing and says nothing
+  (`useProfiler()?.`), B1's pattern: the features' `onDebug` hooks run before `registerProfiler`
+  (`Boot.ts`), so a feature can't add a profiler tab from its install. `registerStatsSource` and
+  `registerEntityWindowOpener` keep their input in the public module and work.
+- B5 **(bug)** **A stats source an app or the toolkit registers is never shown.** The Overview and
+  Objects tabs read sources only by their fixed ids (`OVERVIEW_METRICS`), so `registerStatsSource`
+  does nothing visible for anyone but the engine, while the Hub ("your own figures join it") and
+  `debug/CLAUDE.md` say it does.
+- B6 With B2: in an editor view the PostFX row reads "available" and shows the last pass times as
+  current (nothing renders the root scene's PostFX there).
+- B7 `_dbg__GPUTimer.ts`' timestamp resolve has `.then().finally()` and no `.catch`: on a lost
+  device every frame with records logs an unhandled rejection (plausible).
+- F1 The whole drawer is rebuilt on every scene change (only its title text changed) and on every
+  tab registration (each scene tab, one by one), re-running the saved tab's `content()` each time.
+  An in-place title update removes the per-scene rebuild and narrows B3.
+- F2 `_isDebuggerTabOpen` ignores the editor-view suspension, so `updateDebuggerTab` refreshes the
+  drawer's hidden tab during an editor view (its doc says a hidden tab is skipped).
+- F3 The tab host runs a changed CMP section's `html` twice per refresh (to compare, then in
+  `update()`): the GPU memory tab walks the asset registries and the scene twice per 500 ms.
+- F4 The drawer state is JSON-encoded twice (`lsSetItem(LS_KEY, JSON.stringify(…))`), and the
+  read's `JSON.parse` has no `try`: a malformed value throws in the drawer's build.
+- F5 Undo: an entry whose handler isn't registered (B1, or a scene's `_dbg__` module not loaded
+  yet after a reload) stops undo at that entry for the whole timeline (warned, pointer kept).
+  Right (skipping would apply out of order), undocumented. A coalesced drag writes the whole
+  history to LS on every tick (debug cost only).
+- P8 `createDebuggerTab`'s second parameter (`DebugGUIOpts`, on the entry) only sets the drawer
+  button's place (`drawerBtnPlace`) for the whole drawer; nothing passes it.
+- P9 `GPUMemoryResource` (named by `GPUMemorySource.getResources`) isn't on the entry, nor
+  `GPU_MEMORY_TAB_ID` (for `openProfilerTab`); there is no `removeProfilerTab`.
+- Doc drift: `debug/CLAUDE.md` says the frame probe is set in "all three loops" (one `runFrame`
+  since p612 D10); `kernel/render/Object3DHelpers.ts` says `markDebugHelper` is on `aekasha/debug`
+  (it's on no entry, P1); `_dbg__GPUTimer.ts:158`'s comment describes a check the code doesn't do.
+- Clean: the pane builder (persistence, `onChange` suppression on refresh, folder states), the
+  list (escaping, focus kept on a toggle), removal (a rebuild disposes every pane and list:
+  `remove()` recurses), the dev files client, the stats sources' refcounting (unmount, window
+  close, replace, unavailable then available), the census, the allocation tracker.
 
-## 2. Decisions (proposed 2026-10-20, to confirm)
+**Found in Phase 0: the panels, editors and tools** (D1's correctness read; confirmed by reading
+the code path unless marked plausible; K1, K2, K5 and the stress test's ECS tab use rechecked by
+hand)
+
+- K1 **(bug)** Deleting the active camera from its edit window stops rendering: the button is
+  disabled only for the last camera, `disposeCamera` clears the active camera and nothing picks
+  another, so `renderScene` throws every frame (`_dbg__CameraGUI.ts:408`).
+- K2 **(bug)** Changing a scene helper's size or colour with its "Show" off makes it visible:
+  `SceneHelpers.ts`' `create*Helper` adds a new, visible helper, and the checkbox stays off.
+- K3 **(bug)** The 3D symbols' cloned materials (two per light, three per camera) are never
+  disposed: the delete hook only `removeFromParent()`s (`symbols/3DSymbols.ts:160`,
+  `_dbg__Symbols.ts:340`). Every scene visit leaves them.
+- K4 Static component hooks registered inside a `registerPlugin` callback, so once per world that
+  takes the global plugins: the symbols' (`_dbg__Symbols.ts:332`) and the light helpers'
+  (`_dbg__LightHelpers.ts:45`). Guarded against duplicates, so a cost per added world only.
+- K5 **(bug)** The About dialog's "Copy info" timer throws if the dialog closes within 2 s
+  (`updateText` on a removed CMP, `_dbg__About.ts:263`).
+- K6 An F9 / F10 press before the Debug tools tab exists (an app whose `start` shows UI before its
+  first scene) is lost: the persist warns, the tab's hydration restores the old value
+  (`_dbg__DebugTools.ts:263`; the on-screen tools toggle beside it handles the case). Plausible.
+- K7 The test bridge's `freeze` runs once per page (`freezing` never reset): latent, the runner
+  freezes once per page load.
+- K8 **(bug)** The Assets window's "Generate LOD chain" stays on "Generating…" when the generation
+  rejects (no catch, the refreshes skipped; `_dbg__Assets.ts:886`).
+- K9 "Enable alpha" (Renderer tab) does nothing visible on WebGPU until a reload: the canvas'
+  `alphaMode` is set at construction (three r186). Its undo is a no-op too.
+- K10 The Ray cast tab's physics section is built once per mount: a world created or deleted while
+  it's open isn't shown until it's reopened (`_dbg__Raycast.ts:305`).
+- K11 The Assets tab's "Reload to apply" lights up with no change: it compares `JSON.stringify`
+  of objects whose key order an edit changes (`_dbg__Assets.ts:345`).
+- K12 **(bug)** Material editor: a selected material whose load fails leaves the Settings tab
+  without its Stage and Preview folders (`refreshUI` doesn't rebuild when only the settings'
+  presence changed).
+- K13 **(bug)** Material editor: undoing a fov change while another material loads is written to
+  the record, not the camera, and the next orbit end saves the old fov back.
+- K14 Material editor: a scene loaded during the view (HMR) can leave a texture the editor copy
+  used registered with the old scene as owner, after that owner's release ran. Plausible.
+- K15 **(bug)** The ECS stress test (`kernel/ecs/debug/ECSStressTest.ts`; the ECS tab's benchmark
+  buttons use its spawn and reset too): its `InstancedMesh` and counts outlive the scene (the
+  spheres stay drawn in later scenes); the instance count isn't clamped to its 50,000 buffer; its
+  `k` / `l` bindings have no `sceneId`; its proximity system keeps the first visit's target id.
+- K16 Lights: `_dbg__LightHelpers.ts:112`'s visibility condition is inverted (overwritten right
+  after, so latent); the `DISABLED` hooks reconcile debug visuals for every entity, not only
+  lights (an LS parse per enable or disable); `refreshLightShadows` is called without a catch.
+- K17 **(bug)** Physics wireframes: a build that rejects (a collider gone from the worker
+  mid-build: a scene switch, a delete, the `REMOVED` tier) leaks the persistent fat lines it made
+  (`_dbg__PhysicsDebugDraw.ts:674`).
+- K18 The physics entity window's `shapeType()` query has no catch: deleting the entity before the
+  worker answers is an unhandled rejection and a stale "Loading…".
+- K19 The determinism probe's LS store (`AEK_debugPhysicsProbeRuns`) is never pruned, and its
+  write comes before the report listeners: a full LS skips them, so `whenProbeDone` would time
+  out. Plausible (the runner's browser starts empty).
+- Determinism: no debug code writes simulation state from a per-frame stage (the reads checked
+  every edit window, the character config and undo); `Math.random` and `performance.now` feed only
+  visuals and measurements.
+
+**Found in Phase 0: performance** (`perf-auditor` over D13's scope)
+
+- Z2 **(perf, always-on)** `_dbg__Stats.ts`' TFPS panel keeps its samples with `push` / `shift`
+  every frame (on by default). A ring buffer, or `profiler/_dbg__SampleWindow.ts`.
+- Clean: `runFrame`'s debug calls, the gizmo and env ball (scratch objects), the camera and light
+  helper syncs, the debug camera, the profiler's sources and sampler (refcounted, pooled), the
+  census (throttled), the GPU timer, the GPU memory sampler (always on by design, typed arrays),
+  the physics wireframe sync.
+
+## 2. Decisions (confirmed 2026-10-20, as recommended)
 
 ### D1. Scope
 
@@ -219,7 +330,8 @@ Listed in p622, deprecated here:
   constants, `AEK_GATHER_EVENT`, `DevFilesStageBody`, `DevFilesSaveDataWrite`,
   `DevFilesErrorBody`, the three test bridge types): `@deprecated`, removed from the entry in
   6.0.0 (`@internal` then).
-- `initECSStressTest` on `aekasha` (S3, D7).
+- `createDebuggerTab`'s second parameter and `DebugGUIOpts` (P8): `@deprecated`, removed in
+  6.0.0 (the drawer button stays in the middle; an app moves it with CSS).
 - P7, Tweakpane in the tab types: not deprecated (nothing replaces it yet); p800's break, noted in
   p622 and in p800's prompt.
 
@@ -233,7 +345,28 @@ Listed in p622, deprecated here:
   (`getPostFxPasses()`), building nothing; `_dbg__ProfilerSources.ts` imports them from
   `features/postfx/` (the source already imports `features/physics/` this way). Checked in an
   editor view in the dev server: the chain isn't built while the view is active.
-- Phase 0's framework read and perf audit may add bugs; each gets a test where Node can run it.
+- **Added in Phase 0** (the framework, each with a Node test where linkedom runs it):
+  - B3: the tab host builds a tab inside a `try`; a throwing `content()` (or `onRefresh`) logs,
+    shows an error line in the tab's place and leaves the host mountable, so neither the drawer
+    nor `setCurrentScene` throws. The Overview and Objects tabs take their source holds in
+    `onOpen` (released by its cleanup) instead of `onRefresh`.
+  - B4: `Profiler.ts` keeps the tab definitions (as it keeps the stats sources) and the profiler
+    mounts them when it loads; `removeProfilerTab` added beside it (P9).
+  - B5: D14.
+  - B6: the PostFX row reads "not rendered in this view" while an editor view is active.
+  - B7: the resolve gets a `.catch` that logs once.
+  - F1: `_updateDebuggerSceneTitle` updates the title in place when the drawer exists; a tab
+    registration still rebuilds (the menu changes).
+  - F2: `_isDebuggerTabOpen` is false while the drawer is suspended by a view.
+  - F3: a section's html is computed once per refresh (passed to its update).
+  - F4: the drawer state is written as an object (read back either way, so a saved string still
+    loads) and a malformed value falls back to the defaults.
+  - Z2: a ring buffer.
+- **The panels** (D1: fixed because they're broken, checked by hand in the dev server; no Node
+  tests): K1 (the active camera's delete disabled, its tooltip says why), K2, K3, K5, K8, K12,
+  K13, K15 (with D7), K17, K18, and the one-line ones K4, K6, K7, K10, K11, K16, K19 (the listeners
+  first, the write in a `try`). K9: the option reloads, as `antialias` does. K14: the copy's
+  textures retagged to the current scene on the editor's exit.
 
 ### D5. The wrappers merge (S1)
 
@@ -248,7 +381,8 @@ Listed in p622, deprecated here:
 
 ### D6. The public API of `aekasha/debug`
 
-- **Added** (minor): P1's list.
+- **Added** (minor): P1's list, and from Phase 0 `removeProfilerTab`, `GPU_MEMORY_TAB_ID` and
+  `GPUMemoryResource` (P9).
 - **`@internal`**, each with a summary naming its user: everything else exported in scope and on
   no entry (P3).
 - **Removed** (on no entry, no caller): `isDebugReady`, `PercentagePieHtml`, `getStatsConfig`,
@@ -271,18 +405,24 @@ pane types and the rest stay off the entry until p800 shapes its own.
 - S2: `debug/SceneHelpers.ts` → `debug/_dbg__SceneHelpers.ts`, `debug/PercentagePieHtml.ts` →
   `debug/_dbg__PercentagePie.ts` (with its stylesheet's import), their importers renamed.
   `moveMap.ts` regenerated.
-- S3: the stress test is copied into the app (`app/scenes/sceneTestECS/ECSStressTest.ts`, through
-  the entries, an app patch); the engine's stays on `aekasha`, `@deprecated` (removed in 6.0.0),
-  and moves to `kernel/ecs/debug/_dbg__ECSStressTest.ts` only then.
+- S3, **revised in Phase 0 (confirmed 2026-10-20):** the confirmed plan was to copy the stress test into the
+  app and deprecate the engine's. Phase 0 found that the ECS tab's benchmark buttons use its
+  spawn and reset too, so a copy would duplicate engine debug code in the app. Instead: the
+  implementation moves to `kernel/ecs/debug/_dbg__ECSStressTest.ts` (the ECS tab imports it
+  directly), with K15's fixes; `initECSStressTest` stays on `aekasha`, not deprecated, as a thin
+  wrapper in `kernel/ecs/ECSStressTest.ts` that loads it through `loadDebugModuleAsync` (debug env
+  only, folded in production), documented as a debug-only stress test. No app change.
 - S4: the test buttons go.
 
-**Alternative for S3:** leave it on the entry, documented as a debug-only stress test.
+**Alternative for S3:** as confirmed: the app gets its own copy (spawn, reset and the bindings),
+the engine's `initECSStressTest` is deprecated, and the engine keeps only what the ECS tab needs.
 
 ### D8. Size and hygiene (Z1, H1, H2)
 
 - Z1: each file over 800 gets the header line the coding standard asks for ("a Tweakpane panel:
-  p800 replaces it, so it isn't split"). A function over 150 lines (Phase 0) in the framework is
-  split; one in a panel gets the same note.
+  p800 replaces it, so it isn't split"). Z3: the framework's two functions over 150 are split
+  (`registerBuiltInStatsSources` per source group, `createEditorDrawer` by its parts); the
+  panels' ten get the same header note in their file.
 - H1: the six `any` casts typed (three's helper types have `update` / `dispose`; a light is a
   `THREE.Light`); the two `no-console` get their reason.
 - H2: S4's goes with the buttons; `_disableDebugger`'s and `_dbg__Stats.ts`' are filed as one
@@ -341,7 +481,22 @@ Debug code never ships, but the profiler's figures are measured in the debug env
 debug systems cost per frame shows in them. `perf-auditor` runs over `debug/` (the framework, the
 on-screen tools, the gizmo and env ball, the stats) and the kernel's and features' per-frame debug
 systems in Phase 0; what it finds in an always-on system (one that runs with the drawer closed) is
-fixed, the rest recorded.
+fixed, the rest recorded. Phase 0 found one, Z2 (fixed in Phase 1), and F3 while a tab is open.
+
+### D14. An app's stats sources in the profiler (B5; added in Phase 0, confirmed 2026-10-20)
+
+The Overview lists every registered source that isn't a built-in one in a group of its own,
+"App", after the engine's rows: its `label` and its value, n/a with its reason, "measuring…"
+before its first value, acquired and released like the built-in rows (shown and visible). Its
+rows join the Settings tab's order and visibility list (`overviewMetrics`) by source id, so they
+can be hidden and moved like the others, and a saved list survives a source that comes and goes.
+`StatsSource` gets an optional `format?: (value: T) => string` (minor); without it a number shows
+with two decimals and a string as is, anything else as `JSON.stringify`. The Hub's example (D12)
+registers one.
+
+**Alternative:** no automatic rows: the entry exports a hold and read API for the sources
+(`createStatsSourceHolder`, `readStatsSource`), and an app shows its figures in its own profiler
+tab (P1).
 
 ## 3. Phases
 
@@ -351,7 +506,7 @@ Phases 1-5 together (snapshots, hashes and system order unchanged unless a phase
 no file edited while it runs). Each phase ends with its "As built" list, its files' JSDoc at
 100 % and `docs.json` updated (`yarn verify:baselines --docs --update`).
 
-### Phase 0: baselines, measurements and the framework read
+### Phase 0: baselines, measurements and the framework read — done
 
 1. `yarn verify:scenes --update` on this commit, then `yarn verify:baselines` clean.
 2. `yarn hub:build`: the warnings in scope (§1.2's five expected).
@@ -359,12 +514,41 @@ no file edited while it runs). Each phase ends with its "As built" list, its fil
 4. The framework read (§1.4's "Not yet read"), and the correctness read of the panels (D1), each
    finding added to §1.4.
 5. `yarn sbp` (app and banner) for the debug check's numbers before the wrappers move.
-6. Repro: B1 as an `it.fails` in `UndoRedo.test.ts`.
+6. Repro: B1 as an `it.fails` in `UndoRedo.test.ts` (and B3, B4 where Node can run them).
 
-### Phase 1: the bugs (D4) and the tests (D11)
+As built (2026-10-20, branch `review-debug-public-api` at `4f9d30f` = `main` plus the plan; WSL2,
+headless Chromium, WebGL2 through SwiftShader):
 
-1. B1, B2 and Phase 0's.
-2. D11's tests.
+- **D1-D13 confirmed** as recommended (2026-10-20), before Phase 0. Phase 0 added D14 and revised
+  D7's S3, both confirmed as recommended (2026-10-20).
+- **Steps 3 and 4 (the reads):** §1.4's "Found in Phase 0" blocks. The framework read in this
+  session; the profiler and GPU memory, the panels (kernel areas, features, editors, tools) and the
+  perf audit by agents, read-only, with K1, K2, K5 and the stress test's ECS tab use rechecked by
+  hand. The functions over 150 lines measured with a script over the TypeScript AST (Z3; the perf
+  agent's "none in the framework" was wrong).
+- **Baselines (step 1):** `yarn verify:scenes --update` recorded 105 runs in 3,862 s. The three
+  failures are `thirdPersonGymScene`'s debug configurations ("the physics probe didn't reach step
+  600 in 300 s" on SwiftShader), the same three as every p616 and p617 run on this machine; its
+  `prodTest` passes. `yarn verify:baselines`: all unchanged (the main chunk 186 modules at 832.0 kB
+  gzip, the banner's 670.3 kB; `api.json` 2,526 exports, 808 on 16 entries; `docs.json` 2,275 /
+  2,430 exports, 935 / 970 members), no debug code in either build.
+- **`yarn hub:build` (step 2):** 438 pages; in scope exactly §1.2's five warnings
+  (`PhysicsProbeReport`, `DrawerState`, `AnyStatsSource`, `DebugKeyShortcutsTab`, `EnvBallOpts`);
+  the search index warning (1.66 MB) is older and p619's.
+- **`yarn sbp --profile all` (step 5):** every budget within. The app's initial download 379.2 kB
+  gzip (`_engine/kernel/assets` 18.2 kB initial and 8.7 kB lazy, `features/postfx` 2.0 kB); the
+  banner's 285.5 kB. Phase 2 compares the wrappers' move against these.
+- **Repro (step 6):** `debug/UndoRedo.test.ts` (B1, the real module: a handler registered before
+  it loads, an undo returns `false`), `debug/Profiler.test.ts` (B4, the implementation mocked: the
+  tab is never handed over), `debug/_dbg__TabHost.test.ts` (B3, linkedom: `content()`'s throw
+  leaves `mount`; Tweakpane imports in Node with linkedom). Each `it.fails` checked to fail on its
+  own assertion. `yarn test`: 102 files, 817 passed, 3 expected fails, 1 skipped.
+
+### Phase 1: the bugs (D4, D14) and the tests (D11)
+
+1. The framework: B1-B7, F1-F4, Z2 and D14, with D11's tests and Phase 0's repros turned into
+   `it`s.
+2. The panels: K1-K19 (D4), each checked by hand in the dev server (debug env, Chromium).
 
 ### Phase 2: structure (D5, D7)
 
