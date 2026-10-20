@@ -969,6 +969,93 @@
       "sceneFile": "./examples/toolkit/exampleToolkit.ts",
       "__features": []
     },
+    "exampleUiKit": {
+      "name": "Example: An app HUD from the UI kit",
+      "description": "Three shapes and a HUD built from the UI kit: a panel of buttons, a window per shape with a colour drop-down, a settings window, toasts, and a pause menu dialog opened with Escape, whose arrow keys are an action map in a context of its own.",
+      "backgroundColor": "#1c212b",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.1,
+            "far": 100,
+            "position": {
+              "x": 0,
+              "y": 4.5,
+              "z": 9
+            },
+            "lookAtPoint": {
+              "x": 0,
+              "y": 0.8,
+              "z": 0
+            },
+            "type": "PERSPECTIVE",
+            "fov": 45,
+            "appId": "exampleUiKitCamera"
+          },
+          "entityOpts": {
+            "appId": "exampleUiKitCamera",
+            "debugData": {
+              "name": "UI kit example camera"
+            }
+          }
+        }
+      ],
+      "lights": [
+        {
+          "lightProps": {
+            "type": "AMBIENT",
+            "color": "#ffffff",
+            "intensity": 0.6,
+            "appId": "exampleUiKitAmbient"
+          },
+          "entityOpts": {
+            "appId": "exampleUiKitAmbient",
+            "debugData": {
+              "name": "UI kit example ambient light"
+            }
+          }
+        },
+        {
+          "lightProps": {
+            "type": "DIRECTIONAL",
+            "color": "#fff2d9",
+            "intensity": 3,
+            "position": {
+              "x": 5,
+              "y": 10,
+              "z": 4
+            },
+            "targetPos": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "castShadow": true,
+            "shadowCameraNearFar": [
+              1,
+              30
+            ],
+            "shadowCameraFrustum": [
+              -8,
+              8,
+              8,
+              -8
+            ],
+            "appId": "exampleUiKitSun"
+          },
+          "entityOpts": {
+            "appId": "exampleUiKitSun",
+            "debugData": {
+              "name": "UI kit example sun"
+            }
+          }
+        }
+      ],
+      "id": "exampleUiKit",
+      "sceneFile": "./examples/uiKit/exampleUiKit.ts",
+      "__features": []
+    },
     "banner": {
       "name": "Banner (the SBP floor)",
       "description": "The banner embed's scene (p611 D8): a dodecahedron, Plato's solid of the aether, made in code with a TSL material, one light and the camera, slowly turning on a transparent background. No loader, no feature: the smallest build an embed can be.",
@@ -14788,6 +14875,33 @@
       },
       "__sourcePath": "src/app/examples/toolkit/exampleToolkitCamera.camera.json"
     },
+    "exampleUiKitCamera": {
+      "camProps": {
+        "active": true,
+        "near": 0.1,
+        "far": 100,
+        "position": {
+          "x": 0,
+          "y": 4.5,
+          "z": 9
+        },
+        "lookAtPoint": {
+          "x": 0,
+          "y": 0.8,
+          "z": 0
+        },
+        "type": "PERSPECTIVE",
+        "fov": 45,
+        "appId": "exampleUiKitCamera"
+      },
+      "entityOpts": {
+        "appId": "exampleUiKitCamera",
+        "debugData": {
+          "name": "UI kit example camera"
+        }
+      },
+      "__sourcePath": "src/app/examples/uiKit/exampleUiKitCamera.camera.json"
+    },
     "bannerCamera": {
       "camProps": {
         "active": true,
@@ -15437,6 +15551,57 @@
         }
       },
       "__sourcePath": "src/app/examples/toolkit/exampleToolkitSun.light.json"
+    },
+    "exampleUiKitAmbient": {
+      "lightProps": {
+        "type": "AMBIENT",
+        "color": "#ffffff",
+        "intensity": 0.6,
+        "appId": "exampleUiKitAmbient"
+      },
+      "entityOpts": {
+        "appId": "exampleUiKitAmbient",
+        "debugData": {
+          "name": "UI kit example ambient light"
+        }
+      },
+      "__sourcePath": "src/app/examples/uiKit/exampleUiKitAmbient.light.json"
+    },
+    "exampleUiKitSun": {
+      "lightProps": {
+        "type": "DIRECTIONAL",
+        "color": "#fff2d9",
+        "intensity": 3,
+        "position": {
+          "x": 5,
+          "y": 10,
+          "z": 4
+        },
+        "targetPos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "castShadow": true,
+        "shadowCameraNearFar": [
+          1,
+          30
+        ],
+        "shadowCameraFrustum": [
+          -8,
+          8,
+          8,
+          -8
+        ],
+        "appId": "exampleUiKitSun"
+      },
+      "entityOpts": {
+        "appId": "exampleUiKitSun",
+        "debugData": {
+          "name": "UI kit example sun"
+        }
+      },
+      "__sourcePath": "src/app/examples/uiKit/exampleUiKitSun.light.json"
     },
     "bannerLight": {
       "lightProps": {

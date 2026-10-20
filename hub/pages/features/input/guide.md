@@ -71,7 +71,10 @@ Bindings are plain data, so they can come from a config file or a settings scree
   is rescaled to 0-1.
 - A map's `setBindings` replaces an action's bindings at runtime, for a rebinding screen, and
   [`getActionMap`](api:getActionMap) finds a map by its id (a player brain's map is
-  `<characterId>:input`).
+  `<characterId>:input`). The screen's labels come from
+  [`getKeyChordLabel`](api:getKeyChordLabel) (`{ key: 'z', ctrl: true }`{ts} reads `Ctrl+Z`) and
+  [`GAMEPAD_BUTTON_NAMES`](api:GAMEPAD_BUTTON_NAMES) (the pad's buttons in the standard
+  mapping's order).
 
 ## Reading actions
 
@@ -158,6 +161,35 @@ no sampling. Use them for what isn't an action: clicking or hovering a 3D object
 binding's `targets` are raycast), a pinch, or a tool that wants the raw event. Gameplay belongs on
 action maps.
 
+```ts
+import { createKeyBinding, createMouseBinding } from 'aekasha';
+
+createKeyBinding({
+  id: 'toggleMap',
+  type: 'KEY_DOWN',
+  chord: [{ key: 'm' }, { key: 'Tab' }],
+  fn: () => toggleMap(),
+});
+createMouseBinding({
+  id: 'pickCrate',
+  type: 'MOUSE_CLICK',
+  button: 'LEFT',
+  targets: () => crates, // Only these are raycast, never the whole scene
+  fn: (_e, hit) => selectCrate(hit.object), // The closest hit
+});
+```
+
+- The bindings are plain data like the maps', with their types on `aekasha`:
+  [`KeyBinding`](api:KeyBinding), [`MouseBinding`](api:MouseBinding) and
+  [`TouchBinding`](api:TouchBinding), each a union of one type per event (`KEY_DOWN` /
+  `KEY_UP`, `KEY_HELD`; `MOUSE_CLICK`, `MOUSE_HOVER`, …), and [`KeyChord`](api:KeyChord).
+- A binding is kept as given: `setKeyBindingEnabled` (and the mouse's and touch's) writes
+  `enabled` on the object you passed.
+- A `KEY_HELD` binding is called once per physics step while its chord is held (once a frame
+  when physics doesn't step).
+- A device adds its listeners with its first binding or map, so an app with no key binding and no
+  map with a key bundles no keyboard code.
+
 ## Debug keys
 
 The engine's debug keys are action maps in the `DEBUG` context, so they work while the loop is
@@ -177,12 +209,17 @@ own; a gameplay binding on a debug key's chord logs a warning in debug mode.
   [`onGamepadConnected`](api:onGamepadConnected) and
   [`onGamepadDisconnected`](api:onGamepadDisconnected).
 - [`createKeyBinding`](api:createKeyBinding), [`createMouseBinding`](api:createMouseBinding) and
-  [`createTouchBinding`](api:createTouchBinding).
+  [`createTouchBinding`](api:createTouchBinding); [`KeyBinding`](api:KeyBinding),
+  [`MouseBinding`](api:MouseBinding), [`TouchBinding`](api:TouchBinding) and
+  [`KeyChord`](api:KeyChord).
+- [`getKeyChordLabel`](api:getKeyChordLabel) and
+  [`GAMEPAD_BUTTON_NAMES`](api:GAMEPAD_BUTTON_NAMES), for a rebinding screen.
 
 ## Read more
 
 - [Characters](hub:features/characters): the player brains read action maps.
 - [Physics](hub:features/physics#stepping): the fixed steps the actions are sampled for.
+- [UI kit](hub:features/ui-kit#dialogs): a pause menu that switches the contexts.
 - The API reference: [Actions](hub:documentation/engine/kernel/input/Actions).
 
 ::: claude-md

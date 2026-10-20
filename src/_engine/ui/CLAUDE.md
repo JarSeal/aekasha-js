@@ -2,7 +2,7 @@ Notes for the UI kit (`src/_engine/ui/`, `aekasha/ui`: CMP, the HUD root, the dr
 
 ## UI kit
 
-The DOM UI the app's HUD and the debug tools are built from, public on `aekasha/ui` (p617 D6). The Hub's UI kit page is the user guide. p800 restyles the kit and adds components; until then a change here keeps its look.
+The DOM UI the app's HUD and the debug tools are built from, public on `aekasha/ui` (p617 D6). The Hub's UI kit page is the user guide, and its example scene (`src/app/examples/uiKit/`) builds an app HUD from every piece. p800 restyles the kit and adds components; until then a change here keeps its look.
 
 - **CMP** (`CMP.ts`; its types in `CMPTypes.ts`, the animation chain in `CMPAnim.ts`, which writes the CMP through its methods and imports only the types): `CMP(props, wrapper?, wrapperProps?)` makes an element from its props (`tag`, `text`, `html`, `class`, `style`, `attr`, the `on*` listener props and `listeners`, `anim`, `onCreateCmp` / `onRemoveCmp`) and returns its handle, `TCMP` (`add`, `remove`, `update`, `updateText`, `updateClass`, `updateStyle`, `updateAttr`, `focus`, …). `classes(...)` joins class arguments.
   - It's in the DOM once it's added under a CMP that is: an app's UI goes under the HUD root (`getHUDRootCMP().add(…)`). The one root is the CMP made with `attach` (the boot's HUD root): a second one throws, and so does a taken id. A generated id is a counter (`aekCmp_N`).
