@@ -165,6 +165,8 @@ const deleteLeftovers = (id: string, keepAtlases = false) => {
  * The options a bake of `geometry` drawn with `material` uses: `opts` with their defaults, and the
  * shading resolved (never `AUTO`). What an export writes, and its fingerprint covers
  * (`getImpostorSourceHash`).
+ * For the bake, the export tab and the source fingerprint.
+ * @internal
  */
 export const resolveOctahedralImpostorOptions = (
   geometry: THREE.BufferGeometry,
@@ -277,8 +279,11 @@ export const generateOctahedralImpostor = (
   return impostor;
 };
 
-/** What {@link buildOctahedralImpostor} needs besides the layout and the atlases: the resolved
- * options of a bake, or an export's */
+/**
+ * What {@link buildOctahedralImpostor} needs besides the layout and the atlases: the resolved
+ * options of a bake, or an export's
+ * @internal
+ */
 export type OctahedralImpostorBuildOptions = {
   /** Registers the quad under `id` and the material under `${id}.mat` */
   id: string;
@@ -294,6 +299,8 @@ export type OctahedralImpostorBuildOptions = {
  * Builds and registers an octahedral impostor's quad and material over registered atlases (a
  * bake's, or an export's loaded slots), and stores `layout` on the albedo atlas, so a later
  * `generateOctahedralImpostor` with the same id returns them. Both of its paths end here.
+ * For `generateOctahedralImpostor`.
+ * @internal
  */
 export const buildOctahedralImpostor = (
   layout: OctahedralImpostorLayout,
@@ -332,7 +339,10 @@ export const buildOctahedralImpostor = (
   return { id, layout, geometry: quad, material: impostorMaterial, albedo, normalDepth };
 };
 
-/** What {@link bakeOctahedralImpostorAtlases} reads of the resolved options */
+/**
+ * What {@link bakeOctahedralImpostorAtlases} reads of the resolved options
+ * @internal
+ */
 export type OctahedralImpostorBakeSettings = Pick<
   ReturnType<typeof resolveOctahedralImpostorOptions>,
   'frames' | 'hemi' | 'frameSize' | 'gutter'
@@ -346,6 +356,8 @@ export type OctahedralImpostorBakeSettings = Pick<
  * `generateOctahedralImpostor` registers, and what an export reads back.
  *
  * Synchronous, with the renderer (after `InitEngine`), restoring its target and clear state.
+ * For `generateOctahedralImpostor` and the export tab.
+ * @internal
  */
 export const bakeOctahedralImpostorAtlases = (
   geometry: THREE.BufferGeometry,

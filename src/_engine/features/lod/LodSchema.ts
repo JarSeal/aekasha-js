@@ -2,7 +2,11 @@ import { z } from 'zod';
 import type { LodAutoDef, LodDef, MeshLodDef } from './LodTypes';
 import type { FeatureSchemaPart } from '../../schemas/FeatureSchemas';
 
-/** One level of a mesh's `lod` (LodLevelDef in features/lod/LodTypes.ts, p348 §2.2). */
+/**
+ * One level of a mesh's `lod` (LodLevelDef in features/lod/LodTypes.ts, p348 §2.2).
+ * A part of {@link lodSchemaPart}.
+ * @internal
+ */
 export const LodLevelDefSchema = z
   .strictObject({
     screenSize: z
@@ -32,8 +36,12 @@ export const LodLevelDefSchema = z
   })
   .describe('A level of detail.');
 
-/** A mesh's `lod` (LodDef in features/lod/LodTypes.ts, p348 §2.2). The type is hand-written there (the
- * documented API); `satisfies` keeps this schema's output assignable to it. */
+/**
+ * A mesh's `lod` (LodDef in features/lod/LodTypes.ts, p348 §2.2). The type is hand-written there (the
+ * documented API); `satisfies` keeps this schema's output assignable to it.
+ * A part of {@link lodSchemaPart}.
+ * @internal
+ */
 export const LodDefSchema = z
   .strictObject({
     levels: z
@@ -84,7 +92,11 @@ export const LodDefSchema = z
     'Levels of detail (p348): each frame the mesh shows the level its screen size reaches, swapping its geometry, material and castShadow, cross-faded over fadeSeconds.'
   ) satisfies z.ZodType<LodDef>;
 
-/** A mesh's `lod: { auto: true, ... }` (LodAutoDef in features/lod/LodTypes.ts, p348 §5). */
+/**
+ * A mesh's `lod: { auto: true, ... }` (LodAutoDef in features/lod/LodTypes.ts, p348 §5).
+ * A part of {@link lodSchemaPart}.
+ * @internal
+ */
 export const LodAutoDefSchema = z
   .strictObject({
     auto: z.literal(true),
@@ -104,7 +116,11 @@ export const LodAutoDefSchema = z
     "Levels of detail (p348) from the geometry's LOD chain (p347: `lodChain` in its *.importedAsset.json): each level is used while its simplification error stays within maxPixelError pixels. Without a chain the mesh stays on level 0 (warned)."
   ) satisfies z.ZodType<LodAutoDef>;
 
-/** A mesh's `lod`: its levels, or `AUTO` for its geometry's LOD chain (MeshLodDef). */
+/**
+ * A mesh's `lod`: its levels, or `AUTO` for its geometry's LOD chain (MeshLodDef).
+ * A part of {@link lodSchemaPart}.
+ * @internal
+ */
 export const MeshLodDefSchema = z.union([
   LodDefSchema,
   LodAutoDefSchema,

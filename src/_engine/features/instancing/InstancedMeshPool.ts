@@ -28,8 +28,6 @@ import type { InstancePlacement, InstancedMeshSlotData } from './InstancedMeshPo
 // instance matrix by instancedMeshPoolSyncSystem. An instanced LOD pool has one mesh per level
 // (docs/plans/_DONE_p348_ecs-lod-selection.md §4.2). The `instancing()` feature installs the sync system.
 
-export type * from './InstancedMeshPoolTypes';
-
 // A pool instance's spatial radius (docs/plans/_DONE_p346_spatial-domains.md §3.3): the pool
 // geometry's (an instanced LOD pool: level 0's), scaled by the instance's Transform.
 const getInstanceRadius: SpatialRadiusProvider = (entityId, world) => {
@@ -672,6 +670,8 @@ export const createInstancedLodPool = (opts: CreateInstancedLodPoolOptions): Ins
  * transform hasn't changed since the last bake (`InstancedMeshSlotData._lastVersion` in `MAP`
  * storage mode, the store's dirty flag in `TYPED_ARRAY` mode, as `object3DSyncSystem` does), and
  * grows the mesh's bounds to hold each instance it bakes.
+ * Registered by the `instancing()` feature's install.
+ * @internal
  */
 export const instancedMeshPoolSyncSystem = (world: ECSWorld) => {
   const storage = world.getStorage(ComponentType.INSTANCED_MESH_SLOT);

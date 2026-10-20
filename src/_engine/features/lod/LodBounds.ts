@@ -4,6 +4,10 @@
 // on demand) both use it.
 import * as THREE from 'three/webgpu';
 
+/**
+ * An `InstancedMesh`'s LOD bounds, from {@link getInstancedLodBounds}.
+ * @internal
+ */
 export type InstancedLodBounds = {
   /** The centre, in the mesh's space. */
   center: THREE.Vector3;
@@ -31,6 +35,8 @@ const placeSphere = (mesh: THREE.InstancedMesh, index: number, geometrySphere: T
  * incremental union depends on the instance order (a 5×5 grid gets a radius 24% too large). It
  * reads the geometry passed (level 0's, whichever level the mesh shows) and leaves
  * `mesh.boundingSphere` alone.
+ * For the LOD selection and `AUTO` LODs.
+ * @internal
  * @param mesh the instanced mesh, its instance matrices written
  * @param geometry the geometry the bounds are for (level 0's)
  */

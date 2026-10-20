@@ -163,7 +163,10 @@ export const geometryWireframeToSegments = (geometry: THREE.BufferGeometry) => {
   return segments;
 };
 
-/** Segment count of a flat `xyzxyz` list. */
+/**
+ * Segment count of a flat `xyzxyz` list.
+ * @internal
+ */
 export const segmentCountOf = (segments: ArrayLike<number>) =>
   Math.floor(segments.length / FLOATS_PER_SEGMENT);
 
@@ -171,6 +174,8 @@ export const segmentCountOf = (segments: ArrayLike<number>) =>
  * A segment geometry (LineSegments-style: every two vertices are one segment) as a flat
  * `xyzxyz` list. WireframeGeometry/EdgesGeometry already are one; an indexed geometry
  * (eg. a Polyline's) is expanded through its index.
+ * For the geometry writers and the physics debug draw.
+ * @internal
  */
 export const flattenSegmentGeometry = (geometry: THREE.BufferGeometry): Float32Array => {
   const position = geometry.getAttribute('position');

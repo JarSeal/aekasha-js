@@ -134,6 +134,8 @@ const getMaterialBakeInputs = (material: THREE.Material) => {
  * `settings`: the kind, its options with their defaults and the resolved shading, everything the
  * export writes besides the layout (`resolveOctahedralImpostorOptions`, `resolveCrossQuadsOptions`).
  * 16 hex digits; the same inputs give the same fingerprint in every session and on every backend.
+ * For the generators, the export and its staleness check.
+ * @internal
  */
 export const getImpostorSourceHash = (
   geometry: THREE.BufferGeometry,

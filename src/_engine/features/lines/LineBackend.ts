@@ -43,7 +43,11 @@ export interface LineBackend {
   dispose(): void;
 }
 
-/** The backend a line should end up on for its choice and width. */
+/**
+ * The backend a line should end up on for its choice and width.
+ * For `LineObject`.
+ * @internal
+ */
 export const resolveLineBackendKind = (
   choice: LineBackendChoice,
   width: number

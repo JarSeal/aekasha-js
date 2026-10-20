@@ -149,6 +149,10 @@ type Vec3Node = THREE.Node<'vec3'>;
 type Vec4Node = THREE.Node<'vec4'>;
 type TextureUV = Parameters<typeof texture>[1];
 
+/**
+ * The nodes {@link createOctahedralImpostorNodes} builds for an octahedral impostor's material.
+ * @internal
+ */
 export type OctahedralImpostorNodes = {
   /** The quad's corner, facing the camera from the instance's centre (local space, after the
    * instance transform: what `positionLocal` would be). */
@@ -172,6 +176,8 @@ export type OctahedralImpostorNodes = {
  * `normalNode`, `depthNode` and `receivedShadowPositionNode`, with an `alphaTest`. `vOrigin` is the
  * atlases' (both the same), fixed in the shader; the layout's cells are from the image's top left
  * either way.
+ * For `buildOctahedralImpostor`.
+ * @internal
  */
 export const createOctahedralImpostorNodes = (
   layout: OctahedralImpostorLayout,
@@ -395,6 +401,8 @@ export const createOctahedralImpostorNodes = (
  * The impostor's quad: four corners ±`extent` around the bounding sphere's centre in its xy plane
  * (the material turns them to face the camera), and the sphere as its bounds, so frustum culling
  * and LOD screen sizes measure the object, not the quad.
+ * For `buildOctahedralImpostor`.
+ * @internal
  */
 export const createOctahedralImpostorQuad = (layout: OctahedralImpostorLayout) => {
   const { center, radius, extent } = layout;

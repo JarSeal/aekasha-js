@@ -16,13 +16,9 @@ import type {
 } from '../controllers/dynamic/DynamicCharacterData';
 import { getECSWorld, type ECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
-import {
-  createLines,
-  isLinesInstalledFor,
-  preloadFatLineBackend,
-  type LineObject,
-  type LineWriter,
-} from '../../lines/Lines';
+import { createLines, isLinesInstalledFor, preloadFatLineBackend } from '../../lines/Lines';
+import type { LineObject } from '../../lines/LineObject';
+import type { LineWriter } from '../../lines/LineWriter';
 import type { ColliderParams } from '../../physics/types/PhysicsColliderTypes';
 import { getPhysicsState } from '../../physics/PhysicsState';
 import { getPhysicsSnapshotStepIndex } from '../../physics/PhysicsStepping';

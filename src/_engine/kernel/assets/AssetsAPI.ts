@@ -36,7 +36,7 @@ import type {
 } from './AssetsAPITypes';
 import { AssetsProtocolType } from './AssetsAPITypes';
 import type { TransferableGeometry } from './import/GeometryTransfer';
-import type { ResolvedLodChainOptions } from '../../features/lod/LodSimplify';
+import type { ResolvedLodChainOptions } from '../../features/lod/LodChainOptions';
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 

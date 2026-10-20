@@ -39,15 +39,16 @@ import {
 import type { ExtractedLodChain } from './LodChainGLTF';
 import { simplifyLodChain, type SimplifiedLodChain } from './LodSimplify';
 
-export type { LodChainOptions, LodLevelVertices, ResolvedLodChainOptions } from './LodChainOptions';
-
+/** One level of a {@link LodChain}: its registered geometry and how far it is from the base. */
 export type LodChainLevel = {
   /** Level 0 is the base geometry's id, level n is `${baseId}#lod${n}`. */
   geometryId: string;
+  /** The level's triangle count. */
   triangles: number;
   /** meshoptimizer's error, relative to the chain's `extent` (0 for the base). It includes the
    * normal and uv deviation, so `error × extent` overestimates the world-space deviation. */
   error: number;
+  /** Where the level's vertex arrays come from: the base's, the welded copy, or its own. */
   vertices: LodLevelVertices;
 };
 
@@ -106,6 +107,7 @@ type LevelInput = {
   geometry: THREE.BufferGeometry;
   triangles: number;
   error: number;
+  /** Where the level's vertex arrays come from: the base's, the welded copy, or its own. */
   vertices: LodLevelVertices;
 };
 
@@ -293,6 +295,8 @@ export const generateLodChain = (
  * import just registered: its levels become geometries `${geometryId}#lod${n}` as generated ones
  * do. A chain without levels is registered too (the build found nothing to remove), so a
  * `lodChain` import doesn't simplify it again on the client.
+ * The LOD import extension calls it.
+ * @internal
  * @param geometryId the base geometry (registered, without a chain)
  * @param prebuilt the chain the import extracted (LodChainGLTF.ts)
  * @returns the chain, or null when the base isn't registered or already has or awaits one
@@ -327,26 +331,44 @@ export const registerPrebuiltLodChain = (geometryId: string, prebuilt: Extracted
 /** Returns a base geometry's LOD chain, if it has one. */
 export const getLodChain = (baseId: string) => chains.get(baseId);
 
-/** Returns every LOD chain, by base geometry id (read-only). */
+/**
+ * Returns every LOD chain, by base geometry id (read-only).
+ * Nothing reads it yet.
+ * @internal
+ */
 export const getLodChains = (): ReadonlyMap<string, LodChain> => chains;
 
-/** Returns the chain a LOD level geometry belongs to and its level number, if it is one. */
+/**
+ * Returns the chain a LOD level geometry belongs to and its level number, if it is one.
+ * For the Assets debug tab.
+ * @internal
+ */
 export const getLodChainOfLevel = (levelId: string) => {
   const chain = chains.get(baseIdOfLevel.get(levelId) ?? '');
   const level = chain?.levels.findIndex((l) => l.geometryId === levelId) ?? -1;
   return chain && level > 0 ? { chain, level } : undefined;
 };
 
-/** Whether a LOD chain is being generated for the geometry. */
+/**
+ * Whether a LOD chain is being generated for the geometry.
+ * For the LOD import extension and the Assets debug tab.
+ * @internal
+ */
 export const isLodChainPending = (baseId: string) => pending.has(baseId);
 
-/** The generation pending for the geometry (resolves to the chain, or null when it was refused),
- * or undefined when none is. */
+/**
+ * The generation pending for the geometry (resolves to the chain, or null when it was refused),
+ * or undefined when none is.
+ * `AUTO` LODs wait on it.
+ * @internal
+ */
 export const getPendingLodChain = (baseId: string) => pending.get(baseId);
 
 /**
  * Releases a base geometry's LOD chain: its refs on the levels, which are then disposed unless
  * something else holds them. Deleting the base does this too.
+ * The Assets debug tab's release button.
+ * @internal
  * @param baseId base geometry id
  */
 export const releaseLodChain = (baseId: string) => {

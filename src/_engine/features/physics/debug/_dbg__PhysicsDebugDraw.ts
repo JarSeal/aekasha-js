@@ -8,13 +8,9 @@ import type { PhysicsWireframeColors } from '../../../kernel/config/Config';
 import { getConfig } from '../../../kernel/config/Config';
 import { ECSWorld, getStableAppId } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
-import {
-  createLines,
-  flattenSegmentGeometry,
-  isLinesInstalledFor,
-  preloadFatLineBackend,
-  type LineObject,
-} from '../../lines/Lines';
+import { flattenSegmentGeometry } from '../../lines/LineBuilders';
+import type { LineObject } from '../../lines/LineObject';
+import { createLines, isLinesInstalledFor, preloadFatLineBackend } from '../../lines/Lines';
 import type { RigidBodyAPI } from '../types/PhysicsBodyTypes';
 import { type ColliderAPI, type HeightFieldData, ShapeType } from '../types/PhysicsColliderTypes';
 import type { PhysRotation, PhysVector } from '../types/PhysicsCommonTypes';

@@ -1,6 +1,9 @@
 import type * as THREE from 'three/webgpu';
 
-/** Floats per segment: two xyz endpoints. */
+/**
+ * Floats per segment: two xyz endpoints.
+ * @internal
+ */
 export const FLOATS_PER_SEGMENT = 6;
 
 /**

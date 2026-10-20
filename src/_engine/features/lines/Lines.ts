@@ -11,12 +11,6 @@ import { getRegisteredLine, getRegisteredLines, nextLineId, registerLine } from 
 import { installLineTimeSystem } from './LineSystem';
 import type { LineProps } from './LineTypes';
 
-export { LineObject } from './LineObject';
-export type { LineWriter } from './LineWriter';
-export type * from './LineTypes';
-export * from './LineBuilders';
-export { LINE_PULSE_MAX_COLORS, lineTimeUniform } from './LinePulse';
-
 let isInstalled = false;
 const toolsLoggedOff = new Set<string>();
 
@@ -102,17 +96,29 @@ export const createLines = (props: LineProps = {}): LineObject => {
 /** Returns a live line by id. */
 export const getLine = (id: string) => getRegisteredLine(id);
 
-/** Returns every live line. */
+/**
+ * Returns every live line.
+ * Nothing reads it yet.
+ * @internal
+ */
 export const getAllLines = () => Array.from(getRegisteredLines().values());
 
-/** Disposes every live line, entity-owned and persistent ones included. */
+/**
+ * Disposes every live line, entity-owned and persistent ones included.
+ * Nothing calls it yet.
+ * @internal
+ */
 export const disposeAllLines = () => {
   for (const line of getAllLines()) line.dispose();
 };
 
-/** Disposes every line that is neither `persistent` nor owned by an entity (those follow
+/**
+ * Disposes every line that is neither `persistent` nor owned by an entity (those follow
  * their entity: clearNonPersistent deletes it, and its line with it). Runs on every scene
- * switch (the `lines()` feature's `exit` scene hook). */
+ * switch (the `lines()` feature's `exit` scene hook).
+ * The `lines()` feature's `exit` hook.
+ * @internal
+ */
 export const disposeNonPersistentLines = () => {
   for (const line of getAllLines()) {
     if (!line.persistent && !line.entityBinding) line.dispose();

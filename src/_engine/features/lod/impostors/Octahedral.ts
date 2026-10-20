@@ -10,13 +10,18 @@
 import type * as THREE from 'three/webgpu';
 import { abs, cross, float, max, select, vec2, vec3 } from 'three/tsl';
 
-/** Above this |y| a frame's up reference is -z instead of +y (the frame looks straight down or up). */
+/**
+ * Above this |y| a frame's up reference is -z instead of +y (the frame looks straight down or up).
+ * @internal
+ */
 export const FRAME_POLE_Y = 0.999;
 
 const signNotZero = (x: number) => (x >= 0 ? 1 : -1);
 
 /**
  * The octahedral coordinates of a direction.
+ * The octahedral impostor's maths, here for the tests and the TSL twin.
+ * @internal
  * @param x the direction (any length but 0)
  * @param hemi the hemi map: a direction below the horizon is clamped onto it
  * @param out receives (u, v), each in [-1, 1]
@@ -44,6 +49,8 @@ export const encodeOctahedral = (
 
 /**
  * The direction at octahedral coordinates (the inverse of {@link encodeOctahedral}).
+ * The octahedral impostor's maths, here for the tests and the TSL twin.
+ * @internal
  * @param out receives the unit direction
  */
 export const decodeOctahedral = (u: number, v: number, hemi: boolean, out: THREE.Vector3) => {
@@ -59,14 +66,19 @@ export const decodeOctahedral = (u: number, v: number, hemi: boolean, out: THREE
     .normalize();
 };
 
-/** Frame `index`'s octahedral coordinate (-1 to 1) along one side of a `frames`-wide grid: the
- * grid's first and last frames sit on the square's edges. */
+/**
+ * Frame `index`'s octahedral coordinate (-1 to 1) along one side of a `frames`-wide grid: the
+ * grid's first and last frames sit on the square's edges.
+ * @internal
+ */
 export const getOctahedralFrameCoord = (index: number, frames: number) =>
   (index / (frames - 1)) * 2 - 1;
 
 /**
  * The direction frame (`i`, `j`) of a `frames` × `frames` grid is baked from: the bake camera sits
  * on it, looking at the object's centre.
+ * For the octahedral bake.
+ * @internal
  * @param out receives the unit direction
  */
 export const getOctahedralFrameDirection = (
@@ -87,6 +99,8 @@ export const getOctahedralFrameDirection = (
  * The image axes of the frame seen from `dir`: `right` and `up` as the bake camera's x and y, with
  * `dir` its z (it looks along -dir). Up is +y projected onto the image plane, except within
  * {@link FRAME_POLE_Y} of a pole, where it's -z.
+ * For the octahedral bake.
+ * @internal
  * @param dir the unit direction toward the camera
  */
 export const getOctahedralFrameBasis = (
@@ -108,7 +122,11 @@ type Vec3Node = THREE.Node<'vec3'>;
 
 const signNotZeroNode = (x: FloatNode) => select(x.greaterThanEqual(0), float(1), float(-1));
 
-/** {@link encodeOctahedral} as a TSL node: the (u, v) of a direction (any length but 0). */
+/**
+ * {@link encodeOctahedral} as a TSL node: the (u, v) of a direction (any length but 0).
+ * For the octahedral impostor's material.
+ * @internal
+ */
 export const encodeOctahedralNode = (dir: Vec3Node, hemi: boolean): Vec2Node => {
   if (hemi) {
     const sum = max(abs(dir.x).add(max(dir.y, 0)).add(abs(dir.z)), 1e-6);
@@ -124,7 +142,11 @@ export const encodeOctahedralNode = (dir: Vec3Node, hemi: boolean): Vec2Node => 
   return select(dir.y.greaterThanEqual(0), p, folded);
 };
 
-/** {@link decodeOctahedral} as a TSL node: the unit direction at octahedral coordinates `uv`. */
+/**
+ * {@link decodeOctahedral} as a TSL node: the unit direction at octahedral coordinates `uv`.
+ * For the octahedral impostor's material.
+ * @internal
+ */
 export const decodeOctahedralNode = (uv: Vec2Node, hemi: boolean): Vec3Node => {
   if (hemi) {
     const x = uv.x.add(uv.y).mul(0.5);
@@ -140,8 +162,12 @@ export const decodeOctahedralNode = (uv: Vec2Node, hemi: boolean): Vec3Node => {
   return select(y.greaterThanEqual(0), vec3(uv.x, y, uv.y), folded).normalize();
 };
 
-/** {@link getOctahedralFrameBasis} as TSL nodes: the image axes of the frame seen from the unit
- * direction `dir`. */
+/**
+ * {@link getOctahedralFrameBasis} as TSL nodes: the image axes of the frame seen from the unit
+ * direction `dir`.
+ * For the octahedral impostor's material.
+ * @internal
+ */
 export const getOctahedralFrameBasisNode = (dir: Vec3Node) => {
   const upRef = select(abs(dir.y).greaterThan(FRAME_POLE_Y), vec3(0, 0, -1), vec3(0, 1, 0));
   const right = cross(upRef, dir).normalize();

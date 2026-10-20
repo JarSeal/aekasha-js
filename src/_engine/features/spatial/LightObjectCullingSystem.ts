@@ -72,6 +72,11 @@ function testLightAgainstMeshList(
 
 // --- THE SYSTEM ---
 
+/**
+ * Culls each object-culled point and spot light that lights no visible mesh in its influence
+ * sphere (the `DEFAULT` domain's members), every frame. Registered by the feature's install.
+ * @internal
+ */
 export const lightObjectCullingSystem = (world: ECSWorld) => {
   const storage = world.getStorage(ComponentType.OBJECT_CULLING_ENABLED);
   if (storage.size === 0) return; // nothing opted in — skip the frustum build entirely

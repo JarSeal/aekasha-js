@@ -73,8 +73,11 @@ export type CrossQuads = {
   normal: THREE.Texture | null;
 };
 
-/** Where a cross-quad impostor's frames are and how its planes stand: what its geometry needs
- * besides the atlases. What an export writes (`*.impostor.json`'s `layout`). */
+/**
+ * Where a cross-quad impostor's frames are and how its planes stand: what its geometry needs
+ * besides the atlases. What an export writes (`*.impostor.json`'s `layout`).
+ * @internal
+ */
 export type CrossQuadsLayout = {
   planes: 2 | 3;
   /** A frame's size in texels: the object's bounds plus a margin, grown so a cell is a whole number
@@ -234,6 +237,8 @@ const getAxisRadius = (geometry: THREE.BufferGeometry, cx: number, cz: number) =
  * The options a bake of `geometry` drawn with `material` uses: `opts` with their defaults, and the
  * shading resolved (never `AUTO`; an unlit one bakes no normals). What an export writes, and its
  * fingerprint covers (`getImpostorSourceHash`).
+ * For the bake, the export tab and the source fingerprint.
+ * @internal
  */
 export const resolveCrossQuadsOptions = (
   geometry: THREE.BufferGeometry,
@@ -320,8 +325,11 @@ export const generateCrossQuads = (
   return impostor;
 };
 
-/** What {@link buildCrossQuads} needs besides the layout and the atlases: the resolved options of
- * a bake, or an export's */
+/**
+ * What {@link buildCrossQuads} needs besides the layout and the atlases: the resolved options of
+ * a bake, or an export's
+ * @internal
+ */
 export type CrossQuadsBuildOptions = {
   /** Registers the planes under `id` and the material under `${id}.mat` */
   id: string;
@@ -336,6 +344,8 @@ export type CrossQuadsBuildOptions = {
  * Builds and registers a cross-quad impostor's planes and material over registered atlases (a
  * bake's, or an export's loaded slots; `normal` null lights each plane flat), so a later
  * `generateCrossQuads` with the same id returns them. Both of its paths end here.
+ * For `generateCrossQuads`.
+ * @internal
  */
 export const buildCrossQuads = (
   layout: CrossQuadsLayout,
@@ -364,7 +374,10 @@ export const buildCrossQuads = (
   return { id, geometry: quads, material: impostorMaterial, albedo, normal };
 };
 
-/** What {@link bakeCrossQuadsAtlases} reads of the resolved options */
+/**
+ * What {@link bakeCrossQuadsAtlases} reads of the resolved options
+ * @internal
+ */
 export type CrossQuadsBakeSettings = Pick<
   ReturnType<typeof resolveCrossQuadsOptions>,
   'planes' | 'frameSize' | 'gutter' | 'normals'
@@ -378,6 +391,8 @@ export type CrossQuadsBakeSettings = Pick<
  * `generateCrossQuads` registers, and what an export reads back.
  *
  * Synchronous, with the renderer (after `InitEngine`), restoring its target and clear state.
+ * For `generateCrossQuads` and the export tab.
+ * @internal
  */
 export const bakeCrossQuadsAtlases = (
   geometry: THREE.BufferGeometry,

@@ -43,6 +43,10 @@ export const LOD_SIMPLIFY_VERSION = 1;
  * runtime, when its import asks). In the asset pipeline's cache key, so the GLBs are built again. */
 export const GLTF_LOD_FORMAT_VERSION = 1;
 
+/**
+ * The defaults `resolveLodChainOptions` fills in (its test reads them).
+ * @internal
+ */
 export const DEFAULT_LOD_CHAIN_OPTIONS: ResolvedLodChainOptions = {
   ratios: [0.5, 0.25, 0.1],
   maxError: 0.05,

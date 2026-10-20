@@ -14,18 +14,14 @@ import {
 } from '../../kernel/assets/import/GeometryTransfer';
 import type { ResolvedLodChainOptions } from './LodChainOptions';
 
-export {
-  DEFAULT_LOD_CHAIN_OPTIONS,
-  resolveLodChainOptions,
-  type LodChainOptions,
-  type ResolvedLodChainOptions,
-} from './LodChainOptions';
-
+/** One simplified level of a {@link SimplifiedLodChain}: an index over the base's (or the welded)
+ * vertices, or its own vertex arrays with `compactVertices`. */
 export type SimplifiedLevel = {
   /** Uint16 when the vertices it indexes fit. */
   index: Uint16Array | Uint32Array;
   /** Rebuilt over the new index, one per base group (empty when the base has none). */
   groups: { start: number; count: number; materialIndex?: number }[];
+  /** The level's triangle count. */
   triangles: number;
   /** meshoptimizer's error, relative to the chain's `extent`; includes the attribute deviation. */
   error: number;

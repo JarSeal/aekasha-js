@@ -25,15 +25,16 @@ export {
 } from './LodChainOptions';
 export type { LodChainOptions, LodLevelVertices, ResolvedLodChainOptions } from './LodChainOptions';
 export { generateLodChain, getLodChain } from './LodChains';
-export type { LodChain } from './LodChains';
+export type { LodChain, LodChainLevel } from './LodChains';
 export { lod } from './LodFeature';
 export { simplifyLodChain } from './LodSimplify';
-export type { SimplifiedLodChain } from './LodSimplify';
+export type { SimplifiedLevel, SimplifiedLodChain } from './LodSimplify';
 export {
   DEFAULT_LOD_HYSTERESIS,
   getLodBias,
   getLodFadeSeconds,
   getLodFrameStats,
+  getLodMaxSelectionsPerFrame,
   getLodWorldSphere,
   refreshLodBounds,
   setLodBias,

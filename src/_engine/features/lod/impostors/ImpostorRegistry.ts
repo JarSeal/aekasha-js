@@ -9,10 +9,16 @@ import type { CrossQuadsOptions } from './CrossQuads';
 import type { ImpostorKind } from './ImpostorFormat';
 import type { OctahedralImpostorOptions } from './OctahedralImpostor';
 
-/** `BAKED`: rendered at load. `EXPORTED`: built from a `*.impostor.json` and its atlas. */
+/**
+ * `BAKED`: rendered at load. `EXPORTED`: built from a `*.impostor.json` and its atlas.
+ * @internal
+ */
 export type ImpostorOrigin = 'BAKED' | 'EXPORTED';
 
-/** What a generator call got, so an export (or a re-export) can bake it again */
+/**
+ * What a generator call got, so an export (or a re-export) can bake it again
+ * @internal
+ */
 export type ImpostorSource<Options> = {
   geometry: THREE.BufferGeometry;
   material: THREE.Material | THREE.Material[];
@@ -20,6 +26,10 @@ export type ImpostorSource<Options> = {
   options: Options & { id: string };
 };
 
+/**
+ * A generated impostor as the registry keeps it, for the LOD and the export debug tabs.
+ * @internal
+ */
 export type ImpostorRecord = {
   id: string;
   origin: ImpostorOrigin;
@@ -41,7 +51,11 @@ const isSourceKept = () => IS_DEBUG_ENV || IS_PROD_TEST_MODE;
 
 let isListeningForDeletes = false;
 
-/** Records an impostor a generator just made, replacing an earlier record under its id. */
+/**
+ * Records an impostor a generator just made, replacing an earlier record under its id.
+ * Called by the two generators.
+ * @internal
+ */
 export const recordImpostor = (record: ImpostorRecord) => {
   // With the first record (nothing to forget before it; no registration at module load, p607)
   if (!isListeningForDeletes) {
@@ -53,8 +67,16 @@ export const recordImpostor = (record: ImpostorRecord) => {
   records.set(record.id, isSourceKept() ? record : { ...record, source: null });
 };
 
-/** The record of the impostor `id`, while its assets are registered. */
+/**
+ * The record of the impostor `id`, while its assets are registered.
+ * For the export tab.
+ * @internal
+ */
 export const getImpostorRecord = (id: string) => records.get(id);
 
-/** Every impostor whose assets are registered, in the order they were generated. */
+/**
+ * Every impostor whose assets are registered, in the order they were generated.
+ * For the LOD debug tab.
+ * @internal
+ */
 export const getImpostorRecords = () => [...records.values()];

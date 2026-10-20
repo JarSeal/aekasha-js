@@ -8,13 +8,9 @@ import { markDebugHelper } from '../../../debug/Profiler';
 import { ECSWorld, getECSWorld } from '../../../kernel/ecs/ECS';
 import { ECSSystemStage } from '../../../kernel/loop/SystemStages';
 import type { SpatialGrid } from '../SpatialGrid';
-import type { LineObject } from '../../lines/Lines';
-import {
-  BOX_EDGE_SEGMENT_COUNT,
-  createLines,
-  isLinesInstalledFor,
-  writeBox3Edges,
-} from '../../lines/Lines';
+import { BOX_EDGE_SEGMENT_COUNT, writeBox3Edges } from '../../lines/LineBuilders';
+import type { LineObject } from '../../lines/LineObject';
+import { createLines, isLinesInstalledFor } from '../../lines/Lines';
 import { lsGetItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
 import { getCurrentSceneId } from '../../../kernel/scene/Scene';
 import {

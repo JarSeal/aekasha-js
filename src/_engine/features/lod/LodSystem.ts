@@ -36,6 +36,10 @@ type ComponentHooks = Parameters<FeatureContext['registerComponentHooks']>[1];
 type LodDebugModule = typeof import('./debug/_dbg__LOD');
 let debugGUI: DebugModuleRef<LodDebugModule> | null = null;
 
+/**
+ * Loads and builds the LOD debug tab: the `lod()` feature's `onDebug` hook.
+ * @internal
+ */
 export const registerLodDebugGUI = async () => {
   debugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__LOD'));
   useDebug(debugGUI)?._createLodDebugGUI();
@@ -374,8 +378,11 @@ const selectionCursors = new WeakMap<ECSWorld, SelectionCursor>();
 
 // --- DEBUG CONTROLS AND STATS ---
 
-/** Overrides of the selection and the fades, for inspecting levels (the LOD debug tab). Every
- * world. */
+/**
+ * Overrides of the selection and the fades, for inspecting levels (the LOD debug tab). Every
+ * world.
+ * @internal
+ */
 export type LodDebugOptions = {
   /** Stops selecting: every entity keeps its level and LOD-culled state. */
   freeze: boolean;
@@ -396,9 +403,18 @@ const debugOptions: LodDebugOptions = {
   fadeTimeScale: 1,
 };
 
+/**
+ * The selection's debug overrides ({@link LodDebugOptions}), for the LOD debug tab and its entity
+ * windows.
+ * @internal
+ */
 export const getLodDebugOptions = (): Readonly<LodDebugOptions> => debugOptions;
 
-/** Changes the selection's debug overrides ({@link LodDebugOptions}), from the next frame. */
+/**
+ * Changes the selection's debug overrides ({@link LodDebugOptions}), from the next frame.
+ * For the LOD debug tab.
+ * @internal
+ */
 export const setLodDebugOptions = (opts: Partial<LodDebugOptions>) => {
   Object.assign(debugOptions, opts);
 };
@@ -870,6 +886,8 @@ const walkCapped = (
  * view gets a fresh level in the same frame. {@link setLodDebugOptions} can freeze or force the
  * levels, or select against the active camera. {@link setLodMaxSelectionsPerFrame} caps the
  * entities reconsidered per frame (a forced level ignores the cap).
+ * Registered by the feature's install.
+ * @internal
  */
 export const lodSelectionSystem = (world: ECSWorld) => {
   const stats = getFrameStats(world);
@@ -932,12 +950,19 @@ export const lodSelectionSystem = (world: ECSWorld) => {
   if (IS_DEBUG_ENV) stats.selectionMs = performance.now() - start;
 };
 
-/** The camera the selection measures against: the main camera, or the active one with the
- * `useActiveCamera` debug option ({@link setLodDebugOptions}). */
+/**
+ * The camera the selection measures against: the main camera, or the active one with the
+ * `useActiveCamera` debug option ({@link setLodDebugOptions}).
+ * For the LOD overlay and entity windows.
+ * @internal
+ */
 export const getLodSelectionCamera = () =>
   debugOptions.useActiveCamera ? getActiveCamera() : getMainCamera();
 
-/** What the selection measures for an entity, from {@link measureLodEntity}. */
+/**
+ * What the selection measures for an entity, from {@link measureLodEntity}.
+ * @internal
+ */
 export type LodMeasure = {
   /** The world position the distance is measured from. */
   center: THREE.Vector3;
@@ -986,6 +1011,7 @@ const _measureTerms: CameraTerms = { k: 0, isOrtho: false, position: new THREE.V
  * Measures a `LOD` entity the way the selection does, against {@link getLodSelectionCamera} now:
  * for the debug tools (the overlay and the LOD window). Writes into `out`; false when there is
  * nothing to measure (no `LOD`, no levels, no mesh or Transform, no usable camera).
+ * @internal
  * @param out written in place
  */
 export const measureLodEntity = (entityId: number, world: ECSWorld, out: LodMeasure) => {
@@ -1012,8 +1038,12 @@ export const measureLodEntity = (entityId: number, world: ECSWorld, out: LodMeas
 
 // --- APPLY ---
 
-/** Applies the levels lodSelectionSystem changed this frame: a mesh's geometry, material(s) and
- * `castShadow`, or the entity's {@link LodTarget}, cross-fading when it can. */
+/**
+ * Applies the levels lodSelectionSystem changed this frame: a mesh's geometry, material(s) and
+ * `castShadow`, or the entity's {@link LodTarget}, cross-fading when it can.
+ * Registered by the feature's install.
+ * @internal
+ */
 export const lodApplySystem = (world: ECSWorld) => {
   const stats = getFrameStats(world);
   stats.applies = 0;
@@ -1042,6 +1072,8 @@ export const lodApplySystem = (world: ECSWorld) => {
  * Advances every running cross-fade (the TAG_LOD_TRANSITIONING entities) by the frame's `dt` (times
  * the `fadeTimeScale` debug option) over its `fadeSeconds`, and ends the ones that are done. Runs
  * right after lodApplySystem, so a fade started this frame is drawn at its first step.
+ * Registered by the feature's install.
+ * @internal
  */
 export const lodFadeSystem = (world: ECSWorld, dt: number) => {
   const stats = getFrameStats(world);

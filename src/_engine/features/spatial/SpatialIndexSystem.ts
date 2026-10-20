@@ -25,6 +25,10 @@ import {
 type SpatialGridDebugModule = typeof import('./debug/_dbg__SpatialGrid');
 let debugGUI: DebugModuleRef<SpatialGridDebugModule> | null = null;
 
+/**
+ * Loads and builds the Spatial grid debug tab: the `spatial()` feature's `onDebug` hook.
+ * @internal
+ */
 export const registerSpatialIndexDebugGUI = async () => {
   debugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__SpatialGrid'));
   useDebug(debugGUI)?._createSpatialGridDebugGUI();
@@ -79,7 +83,10 @@ export interface SpatialDomainOptions {
   sceneId?: string;
 }
 
-/** A domain's settings in use: every default filled in, without the scope. */
+/**
+ * A domain's settings in use: every default filled in, without the scope.
+ * @internal
+ */
 export type ResolvedSpatialDomainOptions = Required<Omit<SpatialDomainOptions, 'sceneId'>>;
 
 /** The id of the domain SPATIAL_INDEXED entities are members of, which light culling queries:
@@ -436,6 +443,7 @@ function applyDomainOptions(
  * its own when it needs one (§3.6). Spatial's scene hook (SpatialFeature.ts) calls it for the
  * default world right after the previous scene's entities are deleted, so a reverted grid
  * re-inserts only the persistent ones.
+ * @internal
  */
 export function releaseSceneSpatialDomains(
   world: ECSWorld,
@@ -465,6 +473,7 @@ export function releaseSceneSpatialDomains(
  * built by the scene's first join, at those settings); every other domain is created here.
  * Spatial's scene hook calls it for the default world right after `releaseSceneSpatialDomains`,
  * before anything of the scene joins a domain, so each grid is created once at its final size.
+ * @internal
  */
 export function registerSceneSpatialDomains(
   world: ECSWorld,
@@ -530,7 +539,11 @@ export function getSpatialDomain(world: ECSWorld, id: string): SpatialGrid | und
   return domainsByWorld.get(world)?.byId.get(id)?.grid;
 }
 
-/** The ids of `world`'s registered domains, in registration order (`DEFAULT` only while it has a grid). */
+/**
+ * The ids of `world`'s registered domains, in registration order (`DEFAULT` only while it has a grid).
+ * For the Spatial grid debug tab.
+ * @internal
+ */
 export function getSpatialDomainIds(world: ECSWorld): string[] {
   return domainsByWorld.get(world)?.list.map((domain) => domain.id) ?? [];
 }
@@ -538,6 +551,8 @@ export function getSpatialDomainIds(world: ECSWorld): string[] {
 /**
  * The resolved settings of `world`'s domain `id`, or undefined if it isn't registered. For
  * `DEFAULT` without a grid: the settings its next grid would be built with.
+ * For the Spatial grid debug tab.
+ * @internal
  */
 export function getSpatialDomainOptions(
   world: ECSWorld,
@@ -551,6 +566,8 @@ export function getSpatialDomainOptions(
 /**
  * The scene whose settings `world`'s domain `id` uses, or undefined when it uses its world
  * settings (or isn't registered). Known for `DEFAULT` without a grid too.
+ * For the Spatial grid debug tab.
+ * @internal
  */
 export function getSpatialDomainSceneId(world: ECSWorld, id: string): string | undefined {
   const domains = domainsByWorld.get(world);
@@ -574,6 +591,8 @@ export function getSpatialGrid(world: ECSWorld): SpatialGrid {
  * yet), which revert on the scene's exit. Without a grid it only stores them (see
  * {@link registerSpatialDomain}). In the debug env, a cell size set in the "Spatial index" tab
  * wins.
+ * Nothing calls it: `registerSpatialDomain` does the same.
+ * @internal
  */
 export function setSpatialGridCellSize(world: ECSWorld, cellSize: number, sceneId?: string): void {
   const layers = getWorldDomains(world).defaultLayers;
@@ -589,6 +608,7 @@ export function setSpatialGridCellSize(world: ECSWorld, cellSize: number, sceneI
 /**
  * Gets the settings of a registration without its scope, and the scope separately: `sceneId`
  * for a scene's settings, undefined for the world settings (p349 §3.5).
+ * @internal
  */
 export type SpatialDomainOptionsOverride = (
   world: ECSWorld,
@@ -598,12 +618,20 @@ export type SpatialDomainOptionsOverride = (
 
 let debugOptionsOverride: SpatialDomainOptionsOverride | null = null;
 
-/** Debug env only: sets (or clears) the function that adjusts every domain's settings when they take effect (the id and scope can't be changed). Call {@link reapplySpatialDomainOptions} for the domains it now treats differently. */
+/**
+ * Debug env only: sets (or clears) the function that adjusts every domain's settings when they take effect (the id and scope can't be changed). Call {@link reapplySpatialDomainOptions} for the domains it now treats differently.
+ * For the Spatial grid debug tab.
+ * @internal
+ */
 export function setSpatialDomainOptionsOverride(fn: SpatialDomainOptionsOverride | null): void {
   debugOptionsOverride = fn;
 }
 
-/** Debug env only: registers `world`'s domain `id` again with the settings the app asked for, through the current override. A no-op for `DEFAULT` without a grid, whose next build reads the override. */
+/**
+ * Debug env only: registers `world`'s domain `id` again with the settings the app asked for, through the current override. A no-op for `DEFAULT` without a grid, whose next build reads the override.
+ * For the Spatial grid debug tab.
+ * @internal
+ */
 export function reapplySpatialDomainOptions(world: ECSWorld, id: string): void {
   const domains = domainsByWorld.get(world);
   const domain = domains?.byId.get(id);
@@ -712,6 +740,7 @@ const leaveMaskedDomains = (entityId: number, world: ECSWorld) => {
  * volume" means. Kept separate from ObjectFrustumCullingSystem.ts's own
  * `computeIsVisible` (which only ever needs a boolean, not the radius
  * itself) rather than touching that already-shipped system.
+ * @internal
  */
 export function computeLightInfluenceRadius(light: THREE.PointLight | THREE.SpotLight): number {
   // distance === 0 is Three.js's own convention for "never attenuate / infinite
@@ -782,7 +811,11 @@ function leaveDefaultDomain(entityId: number, world: ECSWorld) {
   if (domain) removeFromDomain(domain, entityId);
 }
 
-/** Debug env only (§9) — the last rebuild's wall-clock cost of `world`'s domain `domainId`. */
+/**
+ * Debug env only (§9) — the last rebuild's wall-clock cost of `world`'s domain `domainId`.
+ * For the Spatial grid debug tab.
+ * @internal
+ */
 export function getLastRebuildDurationMs(
   world: ECSWorld,
   domainId: string = DEFAULT_SPATIAL_DOMAIN
@@ -790,7 +823,10 @@ export function getLastRebuildDurationMs(
   return domainsByWorld.get(world)?.byId.get(domainId)?.lastRebuildMs ?? 0;
 }
 
-/** Debug env only (p346 Phase 3): how often a domain actually rebuilds, and what it costs. */
+/**
+ * Debug env only (p346 Phase 3): how often a domain actually rebuilds, and what it costs.
+ * @internal
+ */
 export type SpatialDomainRebuildStats = {
   /** Wall-clock cost of the last rebuild (the grid's `rebuild()`, not the position refresh). */
   lastRebuildMs: number;
@@ -802,7 +838,11 @@ export type SpatialDomainRebuildStats = {
   framesSinceRebuild: number;
 };
 
-/** Debug env only — the rebuild counts of `world`'s domain `domainId`, or undefined if it isn't registered. */
+/**
+ * Debug env only — the rebuild counts of `world`'s domain `domainId`, or undefined if it isn't registered.
+ * For the Spatial grid debug tab.
+ * @internal
+ */
 export function getSpatialDomainRebuildStats(
   world: ECSWorld,
   domainId: string
@@ -909,6 +949,8 @@ export function rebuildSpatialDomain(world: ECSWorld, domainId: string): void {
  * and rebuilt, `STATIC` is rebuilt when a member joined or left, and any domain is refreshed and
  * rebuilt when invalidated. Registered last in APP_POST_PHYSICS (§8) so APP_LOGIC/APP_RENDER_SYNC
  * consumers see a current snapshot.
+ * Registered by the feature's install.
+ * @internal
  */
 export const spatialIndexRebuildSystem = (world: ECSWorld) => {
   const domains = domainsByWorld.get(world);
@@ -962,7 +1004,11 @@ function getOracle(world: ECSWorld, domainId: string): OracleState | undefined {
   return oracleByWorld.get(world)?.get(domainId);
 }
 
-/** Turns the oracle on or off for one domain, and resets its counts. */
+/**
+ * Turns the oracle on or off for one domain, and resets its counts.
+ * For the Spatial grid debug tab.
+ * @internal
+ */
 export function setSpatialGridOracleEnabled(
   world: ECSWorld,
   enabled: boolean,
@@ -976,6 +1022,10 @@ export function setSpatialGridOracleEnabled(
   byDomain.set(domainId, { enabled, checked: 0, mismatches: 0, warned: 0 });
 }
 
+/**
+ * Whether the oracle checks the domain's queries, for the Spatial grid debug tab.
+ * @internal
+ */
 export function isSpatialGridOracleEnabled(
   world: ECSWorld,
   domainId: string = DEFAULT_SPATIAL_DOMAIN
@@ -983,6 +1033,11 @@ export function isSpatialGridOracleEnabled(
   return getOracle(world, domainId)?.enabled ?? false;
 }
 
+/**
+ * How many checked queries in the domain missed a member the oracle found, since it was turned
+ * on: for the Spatial grid debug tab.
+ * @internal
+ */
 export function getOracleMismatchCount(
   world: ECSWorld,
   domainId: string = DEFAULT_SPATIAL_DOMAIN
@@ -990,7 +1045,11 @@ export function getOracleMismatchCount(
   return getOracle(world, domainId)?.mismatches ?? 0;
 }
 
-/** How many queries the oracle has checked in the domain since it was turned on. */
+/**
+ * How many queries the oracle has checked in the domain since it was turned on.
+ * For the Spatial grid debug tab.
+ * @internal
+ */
 export function getOracleCheckedQueryCount(
   world: ECSWorld,
   domainId: string = DEFAULT_SPATIAL_DOMAIN

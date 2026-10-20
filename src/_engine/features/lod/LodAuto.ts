@@ -19,7 +19,10 @@ import { getLodChain, getPendingLodChain, type LodChain } from './LodChains';
 import { getLodChainRequest } from './LodChainRequests';
 import type { LodAutoDef, LodDef, LodLevelDef } from './LodTypes';
 
-/** The viewport height `maxPixelError` is measured at. */
+/**
+ * The viewport height `maxPixelError` is measured at.
+ * @internal
+ */
 export const LOD_AUTO_REFERENCE_HEIGHT = 1080;
 const DEFAULT_MAX_PIXEL_ERROR = 1;
 // A level simplified without error is fine at any size (a huge but finite bound)
@@ -29,6 +32,7 @@ const MIN_ERROR = 1e-9;
  * Builds a mesh's levels from a LOD chain: each level is used down to the screen size where the
  * next one's error projects to `maxPixelError` pixels at a viewport height of 1080. A level the
  * next one is never worse than (its error isn't below the next one's) is left out.
+ * @internal
  * @param chain the geometry's chain
  * @param radius the LOD radius (the base's `|center| + radius`, as the LOD component caches it)
  * @param auto `maxPixelError`, and the `cullScreenSize`, `hysteresis`, `bias` and `fadeSeconds`
