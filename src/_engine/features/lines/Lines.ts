@@ -103,7 +103,6 @@ const getAllLines = () => Array.from(getRegisteredLines().values());
  * Disposes every line that is neither `persistent` nor owned by an entity (those follow
  * their entity: clearNonPersistent deletes it, and its line with it). Runs on every scene
  * switch (the `lines()` feature's `exit` scene hook).
- * The `lines()` feature's `exit` hook.
  * @internal
  */
 export const disposeNonPersistentLines = () => {

@@ -27,7 +27,6 @@ export const LINE_PULSE_MAX_COLORS = 4;
  * Seconds of main loop time (getElapsedTime): scales with play speed and stands still
  * while the master loop is paused, unlike TSL's wall-clock `time`. Written once per frame
  * by the line time system (LineSystem.ts).
- * The line time system writes it every frame.
  * @internal
  */
 export const lineTimeUniform = uniform(0);
