@@ -96,21 +96,8 @@ export const createLines = (props: LineProps = {}): LineObject => {
 /** Returns a live line by id. */
 export const getLine = (id: string) => getRegisteredLine(id);
 
-/**
- * Returns every live line.
- * Nothing reads it yet.
- * @internal
- */
-export const getAllLines = () => Array.from(getRegisteredLines().values());
-
-/**
- * Disposes every live line, entity-owned and persistent ones included.
- * Nothing calls it yet.
- * @internal
- */
-export const disposeAllLines = () => {
-  for (const line of getAllLines()) line.dispose();
-};
+/** Every live line, copied: disposing one removes it from the registry. */
+const getAllLines = () => Array.from(getRegisteredLines().values());
 
 /**
  * Disposes every line that is neither `persistent` nor owned by an entity (those follow

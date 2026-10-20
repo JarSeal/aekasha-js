@@ -585,22 +585,6 @@ export function getSpatialGrid(world: ECSWorld): SpatialGrid {
   return (domains.byId.get(DEFAULT_SPATIAL_DOMAIN) ?? buildDefaultDomain(world, domains)).grid;
 }
 
-/**
- * Re-registers `DEFAULT` with a new cell size and its other settings unchanged: its world
- * settings, or with `sceneId` that scene's settings (its world settings when the scene has none
- * yet), which revert on the scene's exit. Without a grid it only stores them (see
- * {@link registerSpatialDomain}). In the debug env, a cell size set in the "Spatial index" tab
- * wins.
- * Nothing calls it: `registerSpatialDomain` does the same.
- * @internal
- */
-export function setSpatialGridCellSize(world: ECSWorld, cellSize: number, sceneId?: string): void {
-  const layers = getWorldDomains(world).defaultLayers;
-  const scene = layers.sceneRequested;
-  const base = sceneId !== undefined && scene?.sceneId === sceneId ? scene : layers.worldRequested!;
-  registerSpatialDomain(world, { ...base, cellSize, sceneId });
-}
-
 // --- DEBUG OVERRIDES ---
 // The "Spatial index" tab's per-domain settings (_dbg__SpatialGrid.ts). Applied on every
 // registration, so they hold when the app registers a domain again on its next scene visit.

@@ -2,23 +2,23 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2121,
-      "total": 2385
+      "documented": 2142,
+      "total": 2382
     },
     "members": {
-      "documented": 890,
-      "total": 968
+      "documented": 898,
+      "total": 970
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2077,
-        "total": 2322
+        "documented": 2098,
+        "total": 2319
       },
       "members": {
-        "documented": 840,
-        "total": 888
+        "documented": 848,
+        "total": 890
       }
     },
     "toolkit": {
@@ -169,11 +169,11 @@
     },
     "engine/features/instancing": {
       "exports": {
-        "documented": 7,
+        "documented": 8,
         "total": 12
       },
       "members": {
-        "documented": 26,
+        "documented": 30,
         "total": 35
       },
       "undocumented": {
@@ -181,7 +181,6 @@
           "InstancedMeshPool#CreateInstancedLodPoolOptions",
           "InstancedMeshPool#CreateInstancedMeshPoolOptions",
           "InstancedMeshPool#InstancedLodPool",
-          "InstancedMeshPool#InstancedLodPoolLevel",
           "InstancedMeshPool#InstancedMeshPool"
         ],
         "members": [
@@ -189,18 +188,14 @@
           "InstancedMeshPool#CreateInstancedMeshPoolOptions.castShadow",
           "InstancedMeshPool#CreateInstancedMeshPoolOptions.geometry",
           "InstancedMeshPool#CreateInstancedMeshPoolOptions.receiveShadow",
-          "InstancedMeshPool#InstancedLodPool.meshEntityIds",
-          "InstancedMeshPool#InstancedLodPoolLevel.geometry",
-          "InstancedMeshPoolTypes#InstancePlacement.position",
-          "InstancedMeshPoolTypes#InstancePlacement.quaternion",
-          "InstancedMeshPoolTypes#InstancePlacement.scale"
+          "InstancedMeshPool#InstancedLodPool.meshEntityIds"
         ]
       }
     },
     "engine/features/lines": {
       "exports": {
         "documented": 56,
-        "total": 70
+        "total": 68
       },
       "members": {
         "documented": 38,
@@ -215,13 +210,11 @@
           "LineBuilders#geometryEdgesToSegments",
           "LineBuilders#geometryWireframeToSegments",
           "LineBuilders#polylineToSegments",
-          "LinePulse#LineColorUniforms",
           "LineRegistry#getRegisteredLine",
           "LineRegistry#getRegisteredLines",
           "LineRegistry#nextLineId",
           "LineRegistry#registerLine",
-          "LineRegistry#unregisterLine",
-          "LineTypes#LineProps"
+          "LineRegistry#unregisterLine"
         ],
         "members": [
           "LineBackend#LineBackend.dispose",
@@ -245,7 +238,7 @@
     },
     "engine/features/lod": {
       "exports": {
-        "documented": 60,
+        "documented": 68,
         "total": 72
       },
       "members": {
@@ -254,25 +247,17 @@
       },
       "undocumented": {
         "exports": [
-          "LodBounds#InstancedLodBounds",
-          "LodChainGLTF#TransferableLodChain",
-          "LodChainOptions#DEFAULT_LOD_CHAIN_OPTIONS",
           "LodChainOptions#LodChainOptions",
           "LodChainOptions#ResolvedLodChainOptions",
           "LodChains#LodChain",
-          "LodChains#LodChainLevel",
-          "LodSimplify#SimplifiedLevel",
-          "LodSimplify#SimplifiedLodChain",
-          "LodSystem#getLodDebugOptions",
-          "LodSystem#registerLodDebugGUI",
-          "LodTypes#LodDef"
+          "LodSimplify#SimplifiedLodChain"
         ],
         "members": []
       }
     },
     "engine/features/lod/impostors": {
       "exports": {
-        "documented": 64,
+        "documented": 68,
         "total": 73
       },
       "members": {
@@ -283,13 +268,9 @@
         "exports": [
           "CrossQuads#CrossQuads",
           "CrossQuads#CrossQuadsOptions",
-          "ImpostorBake#disposeBakeMaterials",
-          "ImpostorFormat#IMPOSTOR_KINDS",
           "ImpostorFormat#ImpostorKind",
-          "ImpostorRegistry#ImpostorRecord",
           "OctahedralImpostor#OctahedralImpostor",
-          "OctahedralImpostor#OctahedralImpostorOptions",
-          "OctahedralImpostorMaterial#OctahedralImpostorNodes"
+          "OctahedralImpostor#OctahedralImpostorOptions"
         ],
         "members": []
       }
@@ -492,29 +473,20 @@
     },
     "engine/features/spatial": {
       "exports": {
-        "documented": 41,
-        "total": 55
+        "documented": 49,
+        "total": 54
       },
       "members": {
-        "documented": 20,
-        "total": 38
+        "documented": 24,
+        "total": 40
       },
       "undocumented": {
         "exports": [
-          "CellKey#CELL_AXIS_MAX",
-          "CellKey#CELL_AXIS_MIN",
-          "CellKey#CELL_AXIS_OFFSET",
-          "CellKey#CELL_AXIS_SIZE",
-          "CellKey#CellCoords",
-          "LightObjectCullingSystem#lightObjectCullingSystem",
           "SpatialGrid#SpatialGrid",
           "SpatialGrid#SpatialGridOptions",
           "SpatialGrid#SpatialGridStats",
           "SpatialIndexSystem#SpatialDomainOptions",
-          "SpatialIndexSystem#getOracleMismatchCount",
-          "SpatialIndexSystem#isInSpatialDomain",
-          "SpatialIndexSystem#isSpatialGridOracleEnabled",
-          "SpatialIndexSystem#registerSpatialIndexDebugGUI"
+          "SpatialIndexSystem#isInSpatialDomain"
         ],
         "members": [
           "CellKey#CellCoords.x",
@@ -523,12 +495,10 @@
           "SpatialGrid#ReadonlyVec3.x",
           "SpatialGrid#ReadonlyVec3.y",
           "SpatialGrid#ReadonlyVec3.z",
-          "SpatialGrid#SpatialGrid.addMember",
           "SpatialGrid#SpatialGrid.constructor",
           "SpatialGrid#SpatialGrid.getStats",
           "SpatialGrid#SpatialGrid.has",
           "SpatialGrid#SpatialGrid.memberCount",
-          "SpatialGrid#SpatialGrid.removeMember",
           "SpatialGrid#SpatialGrid.updatePosition",
           "SpatialGrid#SpatialGridStats.maxIndexedRadius",
           "SpatialGrid#SpatialGridStats.memberCount",

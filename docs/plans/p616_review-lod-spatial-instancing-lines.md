@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 done
+Status: in progress | Phases 0-3 done
 Category: Refactoring, Documentation, LOD, Rendering
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -601,7 +601,7 @@ As built (2026-10-20):
   `STATIC` and costs nothing in steady state. Filed: `docs/issues/spatial-refresh-and-rebuild-cost.md`
   (skip a rebuild when no member changed cell, through `lastCell`; the local radius per slot).
 
-### Phase 3: the API (D6, D7) and the deferrals (D3)
+### Phase 3: the API (D6, D7) and the deferrals (D3) — done
 
 1. The entry additions, each with its JSDoc and an `@example` where it's an entry API.
 2. `@internal` on the rest; the re-exports gone and their importers repointed; the schema type
@@ -610,11 +610,57 @@ As built (2026-10-20):
 4. p622's candidate list gets D3's three items.
 5. `yarn verify:baselines`: the API baseline's changes are exactly D6's (recorded with `--update`).
 
+As built (2026-10-20):
+
+- **The entries (D6)**, each addition with its JSDoc, and an `@example` on `createLodFadeAttribute`,
+  `enableLodDither`, `refreshLodBounds`, `setLodMaxSelectionsPerFrame`, `validateSpatialGridQuery`,
+  `createLineEntity`, `bindLineToEntity`, `writeBoxEdges` and `writePolyline`. Beyond D6, the names
+  an entry's types name: `LodResolvedLevel` (`LodTarget.resolveLevels` returns it),
+  `LodChainLevel` (`LodChain.levels`), `SimplifiedLevel` (`SimplifiedLodChain.levels`),
+  `LineBackendKind` (`LineBackendChoice`, `LineObject.backendKind`); and
+  `getLodMaxSelectionsPerFrame` (the setter's getter, as `getLodBias`), `writeGeometryEdges` /
+  `writeGeometryWireframe` (the writer twins of the two `*ToSegments` already there). Not added:
+  `CrossQuadsLayout` (no public signature names it: the `CrossQuads` result has no `layout`; it's
+  `@internal`), `lodDither` (`enableLodDither` already ANDs an existing `maskNode`),
+  `LINE_PULSE_MAX_COLORS` and `lineTimeUniform` (no use outside `lines/`). Stale bits of entry docs
+  fixed with them: `LineObject`'s "(LineManager)", `createLineEntity`'s `@returns (number)`.
+- **`@internal`** on the 136 exports on no entry, each summary saying who uses it (p615's pattern);
+  17 had no summary. CellKey's header, attached to `CELL_AXIS_BITS`, is a `//` header now (S9),
+  and its constants' trailing comments went into their summaries. D6's "a harness reaches
+  `setLodDebugOptions` through the test bridge" doesn't hold (the bridge has nothing for LOD); its
+  summary says the LOD debug tab only.
+- **One path per name:** the re-exports in `Lines.ts`, `InstancedMeshPool.ts`, `LodChains.ts`,
+  `LodSimplify.ts` and `LodChainGLTF.ts` are gone; ten importers name the defining module (five
+  debug modules, `AssetsAPI.ts`, `AssetsAPITypes.ts`, `_dbg__Assets.ts`, `_dbg__RayHelpers.ts`,
+  `devTools/assetPipeline/lodChains.ts`). `ImpostorSchema.ts`' type is `ResolvedImpostorShading`.
+- **Unused code** (Phase 4's step 3, done here): `setSpatialGridCellSize`, `disposeAllLines`,
+  `getLodChains` deleted, `getAllLines` unexported.
+- **D7:** `Octahedral.ts`' three exported TSL signatures (D7 named two; `getOctahedralFrameBasisNode`
+  took the alias too) write `THREE.Node<'vec2'>` / `<'vec3'>`, the aliases gone. `LodSystem.ts`
+  links `{@link _engine/features/lod/LodTypes!LodTarget}` instead of importing it: an `import type`
+  used only in JSDoc trips `no-unused-vars`, and the JSDoc standard prescribes the module form.
+  Removing `LodSimplify`'s re-export broke its `{@link resolveLodChainOptions}`, now
+  module-qualified too. `yarn hub:build`: none in scope, 13 in all (Phase 0's 16 less D7's three).
+- **D3:** p622's "From p616" section (the three candidates, with their call sites: 6 pool `spawn`
+  calls, all with the pool's world; `joinSpatialDomain` once in the Hub; no line entity call outside
+  the engine).
+- **Baselines** (`--update`): `api.json` exactly the above, plus Phase 1's `selectLevel`.
+  `bundle.json`: the main chunk within tolerance; per folder (before minification, comments
+  counted: Risk 3) `spatial` +0.8 kB and `instancing` +0.5 kB gzip, Phases 1-3 together; the two
+  `EngineRapier.js` chunks swapped their `#2` (9.5 / 9.3 kB). `bundle.banner.json` moved only by
+  gzip noise and was left as committed. `docs.json`: only gains.
+- **Found, not fixed:** `LodChain.report` names the kernel's `AssetLoadReport`, on no entry (D1:
+  outside scope).
+
 ### Phase 4: the internals (D8, D9)
 
 1. The three splits, moved as they are.
 2. Stale names, detached comments, the traps as `@remarks`, the remaining undocumented exports and
    members; the debug builders' `Size:` lines.
+3. Unused code (found in Phase 3's `@internal` pass, confirmed 2026-10-20; done then): deleted
+   `setSpatialGridCellSize` (`registerSpatialDomain` does it), `disposeAllLines` and `getLodChains`;
+   `getAllLines` is no longer exported (only `Lines.ts` uses it). `decodeImpostorDepth` stays
+   (`@internal`, the encoding's inverse).
 
 ### Phase 5: the Hub, CLAUDE.md, readme, and what's filed
 

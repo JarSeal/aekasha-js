@@ -332,13 +332,6 @@ export const registerPrebuiltLodChain = (geometryId: string, prebuilt: Extracted
 export const getLodChain = (baseId: string) => chains.get(baseId);
 
 /**
- * Returns every LOD chain, by base geometry id (read-only).
- * Nothing reads it yet.
- * @internal
- */
-export const getLodChains = (): ReadonlyMap<string, LodChain> => chains;
-
-/**
  * Returns the chain a LOD level geometry belongs to and its level number, if it is one.
  * For the Assets debug tab.
  * @internal
