@@ -12,7 +12,12 @@ import {
 } from './Actions';
 import type { ActionMap } from './ActionTypes';
 import { onGamepadConnected } from './GamepadInput';
-import { setAllInputsEnabled, setAppInputsSuspended } from './InputState';
+import {
+  removeAllInputListeners,
+  setAllInputsEnabled,
+  setAppInputsSuspended,
+  setInputScope,
+} from './InputState';
 
 // The devices' DOM: window and the canvas are event targets, the gamepads a stubbed list
 const dom = vi.hoisted(() => {
@@ -406,6 +411,39 @@ describe('contexts and activity', () => {
     expect(player.isActive()).toBe(false);
   });
 
+  it("a context switched by a press callback applies from the next event, not the event's later maps", () => {
+    const player = createPlayerMap();
+    const menu = track(
+      createActionMap({
+        id: 'menu',
+        context: 'MENU',
+        actions: { close: { type: 'BUTTON' } },
+        bindings: { close: [{ device: 'KEYBOARD', keys: ['Escape'] }] },
+      })
+    );
+    setActionContextEnabled('MENU', false);
+    player.setBindings('jump', [{ device: 'KEYBOARD', keys: ['Escape'] }]);
+    const opened = vi.fn(() => {
+      setActionContextEnabled('GAMEPLAY', false);
+      setActionContextEnabled('MENU', true);
+    });
+    const closed = vi.fn(() => {
+      setActionContextEnabled('MENU', false);
+      setActionContextEnabled('GAMEPLAY', true);
+    });
+    player.onPressed('jump', opened);
+    menu.onPressed('close', closed);
+    // The menu map comes after the player map, so it would have taken the same press
+    const e = down('Escape');
+    expect([opened.mock.calls.length, closed.mock.calls.length]).toEqual([1, 0]);
+    // Prevented by the map that took it
+    expect(e.defaultPrevented).toBe(true);
+    up('Escape');
+    down('Escape');
+    expect([opened.mock.calls.length, closed.mock.calls.length]).toEqual([1, 1]);
+    setActionContextEnabled('MENU', true);
+  });
+
   it('a map with a taken id replaces the old one', () => {
     const first = createPlayerMap();
     const second = createPlayerMap();
@@ -519,6 +557,56 @@ describe('the mouse', () => {
     sampleActions(1);
     expect(map.read('look')).toMatchObject({ x: 0, y: 0, isDown: false });
     expect(map.read('fire')).toMatchObject({ isDown: false, releasedCount: 1 });
+  });
+});
+
+describe('the wheel', () => {
+  const createWheelMap = () =>
+    track(
+      createActionMap({
+        id: 'zoom',
+        actions: { zoom: { type: 'DELTA_2D' } },
+        bindings: { zoom: [{ device: 'MOUSE', delta: 'WHEEL' }] },
+      })
+    );
+
+  it('reads a page as the window height (I9)', () => {
+    Object.assign(dom.win, { innerHeight: 500 });
+    const map = createWheelMap();
+    mouseEvent('wheel', { deltaX: 0, deltaY: 1, deltaMode: 2 });
+    sampleActions(0);
+    expect(map.read('zoom').y).toBe(-500);
+  });
+
+  it("reads a page as the canvas' height in the CANVAS scope (I9)", () => {
+    Object.assign(dom.win, { innerHeight: 500 });
+    Object.assign(dom.canvas, { clientHeight: 288 });
+    removeAllInputListeners();
+    setInputScope('CANVAS');
+    try {
+      const map = createWheelMap();
+      const e = Object.assign(new Event('wheel'), { deltaX: 0, deltaY: 1, deltaMode: 2 });
+      Object.defineProperty(e, 'target', { value: dom.canvas });
+      dom.canvas.dispatchEvent(e);
+      sampleActions(0);
+      expect(map.read('zoom').y).toBe(-288);
+    } finally {
+      while (maps.length) maps.pop()!.delete();
+      removeAllInputListeners();
+      setInputScope('WINDOW');
+    }
+  });
+});
+
+describe('device sources', () => {
+  it('adds the listeners again for a map made after they were all removed (I10)', () => {
+    createPlayerMap('beforeUnmount');
+    // A mount's unmount
+    removeAllInputListeners();
+    const map = createPlayerMap('afterUnmount');
+    down(' ');
+    sampleActions(0);
+    expect(map.read('jump').pressedCount).toBe(1);
   });
 });
 

@@ -1,17 +1,24 @@
-import { CMP, type TCMP } from './CMP';
+import { CMP } from './CMP';
+import type { TCMP } from './CMPTypes';
 
 let hudRoot: TCMP | null = null;
+/**
+ * The page element the full-page boot's HUD root takes the place of, when there's no `#hudRoot`.
+ * @internal
+ */
 export const GUI_CONTAINER_ID = 'guiContainer';
+/**
+ * The HUD root's element id (`#hudRoot`), which the page may hold for it.
+ * @internal
+ */
 export const HUD_ROOT_ID = 'hudRoot';
-/** A direct child of the HUD root with this class stays visible in editor views (Views.ts);
- * every other one is hidden there (display: none, so it stays mounted). */
+/** A direct child of the HUD root with this class stays visible in editor views (the debug
+ * env's material editor and the like); every other one is hidden there (`display: none`, so it
+ * stays mounted). */
 export const KEEP_IN_VIEWS_CLASS = 'aekKeepInViews';
 
-/**
- * Returns the main/root GUI container element
- * @returns guiContainerElem (HTMLElement)
- */
-export const getGUIContainerElem = () => {
+/** The page element the HUD root takes the place of: `#hudRoot`, else `#guiContainer`. */
+const getGUIContainerElem = () => {
   let guiContainerElem = document.getElementById(HUD_ROOT_ID);
   if (!guiContainerElem) {
     guiContainerElem = document.getElementById(GUI_CONTAINER_ID);
@@ -24,7 +31,8 @@ export const getGUIContainerElem = () => {
 
 /**
  * Creates the HUD container and sets it to DOM, in place of `slot` (the UI kit's root component
- * replaces the element it attaches to).
+ * replaces the element it attaches to): the boot's.
+ * @internal
  * @param slot the element the HUD root takes the place of. Default: the page's `#hudRoot` or
  * `#guiContainer` element. A mounted engine's is an element in its container (`mountAekasha`),
  * whose layout containment makes the HUD's fixed elements relative to the container.
@@ -40,8 +48,8 @@ export const createHudContainer = (slot?: HTMLElement) => {
 };
 
 /**
- * Returns the HUD root CMP
- * @returns hudRoot (TCMP)
+ * The HUD root: the CMP the engine's and the app's UI go under, made by the boot (a fixed, zero
+ * size element over the canvas, so each child places itself). Throws before the boot made it.
  */
 export const getHUDRootCMP = () => {
   if (!hudRoot) {

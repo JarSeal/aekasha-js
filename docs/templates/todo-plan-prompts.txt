@@ -227,6 +227,8 @@ One more thing to focus here is semantics and accessibility. The UI should follo
 
 This complete overhaul should replace all of the debugger UI code, get rid of the Tweakpane library and possibly even replace the stats-gl library.
 
+(Added by p617, 2026-10-20.) p617 put the existing UI kit on `aekasha/ui` (CMP, the HUD root, draggable windows and kinds, dialogs, the drop-down, toasters, icons), documented it (`src/_engine/ui/CLAUDE.md`, the Hub's UI kit page and its example scene `examples/uiKit/`) and fixed its bugs, without changing its look. This plan starts from that public API: a restyle keeps it working for apps, and a breaking change goes with engine 6.0.0 (p622 lists the `T`-prefixed type renames, `TCMP` → `Cmp` and the rest, as candidates). Requirement: the components must work in an embed as well as in the full-page boot (docs/issues/ui-kit-in-an-embed.md). Today the kit's sizes are `rem`s on the full-page template's `html { font-size: 62.5% }`, which a mount (`mountAekasha`) doesn't load, so in an embed they follow the host page's root size; and the windows measure the browser window (`getWindowSize`, the `100vw` / `100vh` max size), not the mount's container. Pick units that hold in both, make the windows measure the HUD root's container, and add a `yarn verify:embed` check that mounts a profile showing a window, a dialog and a toast. Close the issue file when it's done.
+
 ************************************
 
 Create "HUB SEO optimization" plan in docs/plans/p180_hub-seo-optimization.md
@@ -270,6 +272,15 @@ Create "Stop loop when nothing happens system" plan in docs/plans/p115_stop-loop
 Category: Loop
 
 We need a system to detect when the scene is stable and nothing happens (nothing moves). This should only be opt-in and the default should be off. This means that if nothing happens then the main loop is paused. This is mainly for banners, site backgrounds, decorative features that would make for example mobile sites save battery so that the scene wouldn't be rendered constantly. I am not sure if this would really work on scene's that use physics but at least scene's without them should have these feature as an option. Study the possibility for physics (maybe if all of the physics bodies are sleeping or something like that?). We then naturally some logic to wake the scene up when something happens or is about to happen (like a mouse click/move).
+
+If for some reason this plan or some of its features can't or shouldn't be created with this specification or has some high risks of failing the implementation, notify immediately. You are allowed to change the naming of the plan or the header information if they are not well described, but please notify about this.
+
+************************************
+
+Could the Hub search indexes be spread out to be two different searches to save indexing space? Meaning that the documentation would be one search and the rest of the site would be another. Then we would maybe have tabs for the the different searches and maybe we could also have a all tab that would then just do two searches and show the closest matches to the Hub and the documentation (two different sections). Then I would also like to add a section for the different implementation techniques that would be like tutorials for creating assets (models, textures, rigging, animation, etc.). At this point it would be enough to just have one technique/tutorial there and then I can later add more. If this is viable then create a plan for this:
+- Name: "Hub indexing refactoring and techniques section"
+- File: docs/plans/p580_hub-indexing-refactoring-and-techniques-section
+- Category: Hub
 
 If for some reason this plan or some of its features can't or shouldn't be created with this specification or has some high risks of failing the implementation, notify immediately. You are allowed to change the naming of the plan or the header information if they are not well described, but please notify about this.
 

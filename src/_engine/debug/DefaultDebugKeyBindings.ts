@@ -20,8 +20,7 @@ import {
 import { toggleProfilerWindow } from './Profiler';
 import { redoLastAction, undoLastAction } from './UndoRedo';
 import { lwarn } from '../utils/Logger';
-import { isDebugCameraActive } from '../kernel/camera/Camera';
-import { getConfig, IS_DEBUG_ENV } from '../kernel/config/Config';
+import { getConfig } from '../kernel/config/Config';
 import { getReadOnlyLoopState, toggleAppPlay, toggleMainPlay } from '../kernel/loop/MainLoop';
 import { getCurrentSceneId } from '../kernel/scene/Scene';
 import { getSvgIcon } from '../ui/icons/SvgIcon';
@@ -33,8 +32,10 @@ import {
   toggleViewPlay,
 } from '../kernel/render/Views';
 import { createActionMap, isKeyEventInActiveMaps } from '../kernel/input/Actions';
+import { isDebugCamRuleMet } from '../kernel/input/InputRules';
 import type { ActionDef, KeyActionBinding } from '../kernel/input/ActionTypes';
 import {
+  compileKeyChord,
   doesKeyEventMatchChord,
   isKeyEventTakenByBindings,
   markChordReserved,
@@ -294,13 +295,6 @@ const DEFAULT_DEBUG_KEY_BINDINGS: DefaultDebugKeyBinding[] = [
 
 const getChordArray = (chord: KeyChord | KeyChord[]) => (Array.isArray(chord) ? chord : [chord]);
 
-const isDebugCamRuleMet = (rule: KeyUpDownBinding['enabledInDebugCam']) =>
-  !IS_DEBUG_ENV ||
-  !(
-    (rule === 'NOT_ENABLED_IN_DEBUG' && isDebugCameraActive()) ||
-    (rule === 'ENABLED_ONLY_IN_DEBUG' && !isDebugCameraActive())
-  );
-
 /** Runs a debug key for its action's press or release: only for its own key's event of its type
  * (not an edge a modifier made, a blur's release or a replay), then by the binding's own rules. */
 const runDebugKey = (mapId: string, key: KeyUpDownBinding, e: Event | null) => {
@@ -308,7 +302,8 @@ const runDebugKey = (mapId: string, key: KeyUpDownBinding, e: Event | null) => {
   const keyEvent = e as KeyboardEvent;
   const caseInsensitive = key.caseInsensitive ?? true;
   const ignoreModifiers = !!key.ignoreModifiers;
-  const chords = getChordArray(key.chord);
+  // Compiled here: a debug key runs only at its own action's press or release
+  const chords = getChordArray(key.chord).map(compileKeyChord);
   if (!chords.some((c) => doesKeyEventMatchChord(keyEvent, c, caseInsensitive, ignoreModifiers))) {
     return;
   }

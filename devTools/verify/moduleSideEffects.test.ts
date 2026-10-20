@@ -6,8 +6,10 @@ import { ROOT } from '../assetPipeline/sources';
 
 // No module-level side effects (p607 D8): a module registers nothing when it's imported, only when
 // its feature is installed, so importing it costs a build nothing it doesn't use and its
-// registration order doesn't depend on import order. Checked: every top-level expression
-// statement (a call, an assignment) in the engine, the toolkit, the app and `src/*.ts`.
+// registration order doesn't depend on import order. Checked: every top-level statement that
+// isn't a declaration (a call, an assignment, and an `if`, a loop, a block or a `try` around one,
+// p617 G1) in the engine, the toolkit, the app and `src/*.ts`. A declaration's initializer isn't
+// read: `const x = register()` is still a side effect this test can't see.
 
 /** Run only by the debug loader's `import()` (their load is their install), or entry points */
 const EXEMPT = [
@@ -40,13 +42,30 @@ const listModules = () => {
   return files.filter((file) => !EXEMPT.some((re) => re.test(file)));
 };
 
+/** A top-level statement that runs nothing at load: an import, an export of names, a declaration */
+const isDeclaration = (statement: ts.Statement) =>
+  ts.isImportDeclaration(statement) ||
+  ts.isImportEqualsDeclaration(statement) ||
+  ts.isExportDeclaration(statement) ||
+  ts.isExportAssignment(statement) ||
+  ts.isVariableStatement(statement) ||
+  ts.isFunctionDeclaration(statement) ||
+  ts.isClassDeclaration(statement) ||
+  ts.isInterfaceDeclaration(statement) ||
+  ts.isTypeAliasDeclaration(statement) ||
+  ts.isEnumDeclaration(statement) ||
+  ts.isModuleDeclaration(statement) ||
+  ts.isEmptyStatement(statement);
+
 const findTopLevelStatements = (file: string) => {
   const text = fs.readFileSync(path.join(ROOT, file), 'utf-8');
   const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
-  return sf.statements.filter(ts.isExpressionStatement).map((statement) => {
-    const line = sf.getLineAndCharacterOfPosition(statement.getStart(sf)).line + 1;
-    return `${file}:${line} ${statement.getText(sf).split('\n')[0]}`;
-  });
+  return sf.statements
+    .filter((statement) => !isDeclaration(statement))
+    .map((statement) => {
+      const line = sf.getLineAndCharacterOfPosition(statement.getStart(sf)).line + 1;
+      return `${file}:${line} ${statement.getText(sf).split('\n')[0]}`;
+    });
 };
 
 describe('module-level side effects', () => {

@@ -116,8 +116,17 @@ const SIMULATION_RESTRICTED_SYNTAX = [
 
 export default [
   // Generated/vendored files (DRACO/Basis decoders copied by devTools/copyDecoders.ts, TypeDoc
-  // output, the Hub's build)
-  { ignores: ['src/public/draco/', 'src/public/basis/', 'docs-api/', 'dist-hub/'] },
+  // output, the Hub's build, the SBP embed builds and the bundle treemap)
+  {
+    ignores: [
+      'src/public/draco/',
+      'src/public/basis/',
+      'docs-api/',
+      'dist-hub/',
+      'dist-embed/',
+      'dist-stats/',
+    ],
+  },
 
   // Old .eslintrc config (old style for plugins that don't support flat config)
   ...compat.config({

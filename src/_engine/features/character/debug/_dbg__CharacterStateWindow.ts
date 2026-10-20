@@ -1,5 +1,6 @@
 import { addDebugToast } from '../../../debug/DebuggerGUI';
-import { CMP, type TCMP } from '../../../ui/CMP';
+import { CMP } from '../../../ui/CMP';
+import type { TCMP } from '../../../ui/CMPTypes';
 import { lsGetItem, lsSetItem, lsSubscribe } from '../../../utils/LocalAndSessionStorage';
 import { llog } from '../../../utils/Logger';
 import { getCharacterById } from '../Character';
@@ -17,8 +18,8 @@ import {
   openDraggableWindow,
   registerDraggableWindowKind,
   toggleDraggableWindow,
-  type OpenDraggableWindowProps,
 } from '../../../ui/DraggableWindow';
+import type { OpenDraggableWindowProps } from '../../../ui/DraggableWindowTypes';
 import { getSvgIcon, type SvgIconKey } from '../../../ui/icons/SvgIcon';
 import {
   acquireCharacterGizmos,

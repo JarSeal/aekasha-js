@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../.schemas/scene.schema.json",
+  "id": "exampleUiKit",
+  "sceneFile": "./examples/uiKit/exampleUiKit.ts",
+  "name": "Example: An app HUD from the UI kit",
+  "description": "Three shapes and a HUD built from the UI kit: a panel of buttons, a window per shape with a colour drop-down, a settings window, toasts, and a pause menu dialog opened with Escape, whose arrow keys are an action map in a context of its own.",
+  "backgroundColor": "#1c212b",
+  "cameras": ["exampleUiKitCamera"],
+  "lights": ["exampleUiKitAmbient", "exampleUiKitSun"]
+}

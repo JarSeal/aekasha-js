@@ -1,4 +1,4 @@
-import type { TCMP } from '../ui/CMP';
+import type { TCMP } from '../ui/CMPTypes';
 import { CMP } from '../ui/CMP';
 import { getSvgIcon, type SvgIconKey } from '../ui/icons/SvgIcon';
 import { openDialog } from '../ui/DialogWindow';

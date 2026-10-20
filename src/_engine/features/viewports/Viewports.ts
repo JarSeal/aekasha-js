@@ -33,7 +33,7 @@
 import * as THREE from 'three/webgpu';
 import { texture, uniform, uv } from 'three/tsl';
 import { registerGPUMemorySource } from '../../debug/GPUMemory';
-import type { TCMP } from '../../ui/CMP';
+import type { TCMP } from '../../ui/CMPTypes';
 import { llog, lwarn } from '../../utils/Logger';
 import type { FeatureContext } from '../../kernel/init/Features';
 import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../ui/HUD';

@@ -4,7 +4,8 @@ import { getRenderer } from '../kernel/render/Renderer';
 import { createDebuggerTab, updateDebuggerTab } from './DebuggerGUI';
 import { GPU_MEMORY_TAB_ID } from './GPUMemory';
 import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../ui/HUD';
-import { CMP, type TCMP } from '../ui/CMP';
+import { CMP } from '../ui/CMP';
+import type { TCMP } from '../ui/CMPTypes';
 import { defaultStatsOptions, type StatsOptions } from './Stats';
 import { setBootOverride } from '../features/physics/debug/_dbg__PhysicsBootOverrides';
 import { getConfig } from '../kernel/config/Config';
@@ -16,6 +17,7 @@ import {
   toggleProfilerWindow,
   type ProfilerSettings,
 } from './Profiler';
+import './Stats.scss';
 
 type StatsPanel = {
   update: (value: number, maxValue: number, decimals: number) => void;
@@ -153,7 +155,7 @@ export const _initStats = (config?: StatsOptions) => {
  * Lays the visible panels out in PANEL_ORDER, top to bottom.
  *
  * Note that stats-gl's own positioning plays no part in this. It places panels absolutely
- * from `panel.id`, but `.statsContainer` in ui/styles/index.scss overrides every panel canvas
+ * from `panel.id`, but `.statsContainer` (Stats.scss) overrides every panel canvas
  * with `position: static !important` and lays `stats.dom` out as a flexbox — so what
  * actually decides the on-screen order is DOM order, and in the vertical (default) case
  * `flex-direction: column-reverse` means the FIRST DOM child renders at the BOTTOM. Hence

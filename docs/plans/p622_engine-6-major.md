@@ -1,6 +1,6 @@
 Status: stub — not-implemented
 Category: Refactoring, API
-Related: p600_whole-codebase-refactoring-and-documentation.md (Stage C bumps are minor or patch, so its deprecations wait here), \_DONE_p614_review-physics.md (D3: the physics items below), \_DONE_p615_review-sky-box.md (D3: the sky box items below), \_DONE_p616_review-lod-spatial-instancing-lines.md (D3: the LOD, spatial, instancing and lines items below), \_DONE_p610_character-and-input-action-architecture.md, \_DONE_p612_review-ecs-loop-config-init.md, \_DONE_p613_review-rendering-scene-assets.md (their deprecations), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the tiers' measurement)
+Related: p600_whole-codebase-refactoring-and-documentation.md (Stage C bumps are minor or patch, so its deprecations wait here), \_DONE_p614_review-physics.md (D3: the physics items below), \_DONE_p615_review-sky-box.md (D3: the sky box items below), \_DONE_p616_review-lod-spatial-instancing-lines.md (D3: the LOD, spatial, instancing and lines items below), \_DONE_p617_review-input-ui-hud.md (D3: the UI kit items below), \_DONE_p610_character-and-input-action-architecture.md, \_DONE_p612_review-ecs-loop-config-init.md, \_DONE_p613_review-rendering-scene-assets.md (their deprecations), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the tiers' measurement)
 
 # Engine 6.0.0 — Stub
 
@@ -71,8 +71,23 @@ migration page, so an app made from the template upgrades in one step.
   - `createLineEntity(props, entityOpts?, ecsWorld?)` and `bindLineToEntity(line, entityId,
     ecsWorld?)`: optional positional parameters, where the coding standard asks for an options
     object (no call outside the engine).
-- **The deprecations without a version** (`ui/DraggableWindow.ts`'s six, `debug/Stats.ts`' two,
-  `debug/PercentagePieHtml.ts`' one): each gets a version or a removal here.
+- **From p617 (its D3):**
+  - `AppConfig.draggableWindows` (`kernel/config/Config.ts`, deprecated in engine 5.8.0): the
+    windows' content functions are a module map since p617 (`registerDraggableWindow`,
+    `registerDraggableWindowKind`), and the key is only read as a fallback (`buildContent`,
+    `ui/DraggableWindow.ts`). Removed with its `TCMP` and `DraggableWindow` type imports, the last
+    kernel → ui imports of `Config.ts`;
+  - `AddToastResponse.timeout` (`ui/Toaster.ts`, deprecated in engine 5.8.0): the toast's first
+    timer, which its later phases replace;
+  - `TSettings.doCheckIsInDom` (`ui/CMPTypes.ts`, deprecated in engine 5.8.0): stored, never read;
+  - a candidate, decided here: the UI kit's `T`-prefixed type names, the only ones in the engine
+    (`TCMP` → `Cmp`, `TProps` → `CmpProps`, `TListener`, `TListenerCache`, `TListenerCreator`,
+    `TStyle`, `TAttr`, `TClassAction`, `TAnimChain`, `TAnimState`, `TSettings` in `ui/CMPTypes.ts`, and
+    `ui/DropDown.ts`' `TDropDown`), all on `aekasha/ui`, renamed together (the old names
+    deprecated aliases in a minor first, or removed here: the codemod's job).
+- **The deprecations without a version** (`debug/Stats.ts`' two, `debug/PercentagePieHtml.ts`'
+  one): each gets a version or a removal here. (`ui/DraggableWindow.ts`' six were removed in
+  p617: on no entry, no caller.)
 - **The toolkit** keeps its own scale: its `createSeededRandom` re-export goes in toolkit 3.0.0,
   which ships with this major only if an engine change requires it (Versioning).
 

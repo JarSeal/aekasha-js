@@ -1,0 +1,84 @@
+// The UI kit example's HUD and window contents (exampleUiKit.ts). Plain px: the kit's own sizes
+// are rems on the full-page boot's 62.5 % root.
+
+.exampleUiKitHud {
+  position: fixed;
+  top: 72px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 168px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(16, 20, 28, 0.82);
+  color: #e8eaee;
+  font: 14px/1.4 sans-serif;
+
+  h2 {
+    margin: 0 0 4px;
+    font-size: 15px;
+  }
+}
+
+.exampleUiKitHud,
+.exampleUiKitPanel,
+.exampleUiKitMenu {
+  button {
+    padding: 6px 10px;
+    border: 1px solid #4a5263;
+    border-radius: 5px;
+    background: #2a303c;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      border-color: #8fa1c4;
+      background: #343b4a;
+    }
+  }
+}
+
+.exampleUiKitShapeButton::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 8px;
+  border-radius: 2px;
+  background: var(--swatch);
+}
+
+.exampleUiKitRow {
+  display: flex;
+  gap: 6px;
+
+  button {
+    flex: 1;
+    text-align: center;
+  }
+}
+
+.exampleUiKitHint {
+  margin-top: 4px;
+  opacity: 0.7;
+  font-size: 12px;
+  white-space: pre-line;
+}
+
+.exampleUiKitPanel,
+.exampleUiKitMenu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  font: 14px/1.4 sans-serif;
+}
+
+.exampleUiKitMenu button {
+  padding: 10px;
+  text-align: center;
+}

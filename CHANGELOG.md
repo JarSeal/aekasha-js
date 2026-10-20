@@ -4,6 +4,70 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-20 — review-input-ui-hud
+
+### Engine 5.8.0 (Golden Hour)
+
+Input, the UI kit and the HUD are reviewed file by file (p617). Six CMP bugs and two in the action layer are fixed. The UI kit an app needs is on `aekasha/ui`: windows, dialogs, the drop-down and toasters. The input entry gets the binding types it was missing. A build that binds no key no longer bundles the keyboard module, and debug CSS and a load-time listener are gone from production builds. Every export in `kernel/input` and `ui` is documented, and the UI kit gets its nested `CLAUDE.md` and Hub page. No export of an entry is removed or renamed.
+
+**Added**
+
+- On `aekasha/ui`: the draggable windows (`openDraggableWindow`, `closeDraggableWindow`, `removeDraggableWindow`, `toggleDraggableWindow`, `getDraggableWindow`, `updateDraggableWindow`, `bringDraggableWindowToFront`, `isDraggableWindowOnTop`, `fitDraggableWindowToScreen`, `fitAllDraggableWindowsToScreen`, `registerDraggableWindow`, `registerDraggableWindowKind`, `getKindWindowId`, `getDraggableWindowsOfKind`, `updateDraggableWindowsOfKind`) with their types (`OpenDraggableWindowProps`, `DraggableWindow`, `DraggableWindowConfig`, `DraggableWindowContent`, `DraggableWindowData`, `DraggableWindowKindOpts`, `DraggableWindowUnits`, `DraggableWindowUnit`, `SceneTargetResolver`). Also `openDialog` and `DialogProps`; `createDropDown`, `DropDownProps`, `DropDownOption` and `TDropDown`; `createToaster`, `hasToaster`, `removeToaster`, `ToasterProps`, `ToasterSettings`, `ToastType`, `ToastDirection` and `DEFAULT_TOASTER_SETTINGS`; `KEEP_IN_VIEWS_CLASS`; `classes`; and the types `TProps` and `TCMP` name (`TListener`, `TListenerCreator`, `TListenerCache`, `TStyle`, `TAttr`, `TClassAction`, `TAnimChain`, `TAnimState`, `TSettings`). The root `CLAUDE.md` described the windows as the way to build them, but only engine code could import them.
+- On `aekasha`: the types the input bindings name (`KeyChord`, `KeyBindingType`, `KeyBindingBase`, `KeyUpDownBinding`, `KeyHeldBinding`, `MouseButton`, `MouseBindingBase`, `MouseBindingType` and the four mouse binding types, `TouchBindingBase`, `TouchBindingType` and the three touch binding types, `EnabledInDebugCam`, `Modifiers`, `BindingMeta`, `TargetList`, `PickOpts`), and `GAMEPAD_BUTTON_NAMES` and `getKeyChordLabel` for a rebinding screen.
+- JSDoc on every export of `kernel/input` (127 / 127) and `ui` (89 / 89), and on the members of the types an app writes: `TCMP`'s methods, every `TProps`, `TSettings`, `TAnimChain`, window prop and window config field, the bindings', the toasts' and the drop-down's. `@example`s on `CMP`, `openDraggableWindow`, `registerDraggableWindowKind`, `openDialog`, `createDropDown`, `createToaster`, `addToast`, `createKeyBinding`, `createMouseBinding` and `createTouchBinding`. The traps are `@remarks`: CMP's capture listeners, `set*BindingEnabled` writing the object the app passed, the touch tap's emulated mouse click, and a context switch made in a callback. The docs say where to register a window kind: in `start` or a feature's install, before the boot restores the saved windows.
+
+**Changed**
+
+- **Behaviour change:** the key listeners start with the first key binding, action map or `isChordHeld`, not at the first step. `MainLoop.ts` no longer imports the keyboard module: the first `KEY_HELD` binding sets a held-key poller hook, which runs at the same two places as before. An app without key bindings or maps doesn't bundle `KeyboardInput.ts` (the banner's input group went from 1.8 kB to 0.1 kB gzip) and adds no key listener.
+- **Behaviour change:** a context switch, `setEnabled` or a new action map made in an action's callback applies from the next device event. The maps that take an event are fixed when it arrives. Before, a switch applied to the maps after the caller's in the same event, so a menu that opened on a key in one map and closed on it in the next closed again on the same press.
+- **Behaviour change:** a drop-down's trigger re-reads `value` after `onChange` returns, so it shows the pick without a `refresh()` (which stays for a change made elsewhere).
+- **Behaviour change:** `DialogWindow.ts` adds its Escape listeners on the first `openDialog` with `closeOnEscape`, not when the module loads.
+- **Behaviour change:** a `TOUCH_DRAG` binding's `onMove` gets one delta object, written in place on every `touchmove` (it was a new object per event): read it in the call, or copy it to keep it.
+- Less work per key event and step. Key chords are compiled once (lowercased, kept beside the binding), the held keys are also kept lowercased, and a key event is read once for every binding and map that tests it. Polling `KEY_HELD` bindings makes no closure or array. A case-insensitive chord test is two `Set` lookups and makes no string. CMP's update methods write the props in place: CMP copies the props it's given once, at create and at `update()`, so a style constant several CMPs share is never written. A window drag makes one animation-frame callback per session.
+- Debug CSS is out of production builds. `styles/index.scss`, which every build loads, forwarded the debugger's styles and the stats rule. Each debug module now imports its own: `banner.css` went from 2,300 B to 120 B, the app's `index.css` from 4,416 B to 2,236 B.
+- The wheel's page unit (`deltaMode` 2) in the `CANVAS` input scope is the canvas' height, not the browser window's.
+- A registered window content function is kept in the windows module, not written into the app's config. `AppConfig.draggableWindows` is still read as a fallback (see Deprecated).
+- CMP's generated ids are a counter (`aekCmp_N`), so `CMP.ts` imports no three.
+- Internal (no entry exports them). The debug camera rule is one function (`InputRules.ts`; there were five copies). `CMP.ts` is split into `CMPTypes.ts` and `CMPAnim.ts`, and `DraggableWindow.ts` into `DraggableWindowTypes.ts`, `DraggableWindowStore.ts`, `DraggableWindowGeometry.ts` and `DraggableWindowDrag.ts`, moved as they were. The windows' saved format (`AEK_popupWindows`) didn't change. `createListeners` is one loop over a table. Every export in scope that's on no entry is `@internal`, with who uses it. The UI kit may import four kernel modules (the env flags and the resize, scene and boot hooks), and the layout report knows it.
+- Internal, removed (on no entry, no caller): the six `@deprecated` window functions without a removal version (`closeAllDraggableWindowsStartingWith`, `getDraggableWindowsStartingWith`, `addOnCloseToWindow`, `registerDraggableWindowCmp`, `registerDraggableWindowSceneTargetResolver`, `registerDraggableWindowContentFn`), `getDraggableWindowsDefaultZIndexes`, `createNewId`, `addStylesToHead`, and the per-device switches `setKeyInputsEnabled`, `setMouseInputsEnabled` and `setTouchInputsEnabled`. `getCmpById`, `toggleCollapse` and `getGUIContainerElem` aren't exported. `ClassProp` is gone: its fields are `string | string[]`.
+
+**Deprecated**
+
+- `AppConfig.draggableWindows`, removed in engine 6.0.0: register the content with `registerDraggableWindow` or `registerDraggableWindowKind`.
+- `AddToastResponse.timeout`, removed in engine 6.0.0: it's the toast's first timer only, which the next phase replaces.
+- `TSettings.doCheckIsInDom`, which nothing reads.
+
+**Fixed**
+
+- CMP's `onCreateCmp` ran once per template child, on the parent, before it was in the DOM (and N + 1 times on every `update()`), and a template child never got its own. Each CMP's runs once when it's added (or a template child is put in place) and once after each `update()`.
+- A CMP listener's `options` were stored but never passed (`passive` and `once` did nothing). Several listeners of one type also shared one cache entry, so only the last was removed. Listeners are capture by default, as before, which `TProps` now documents.
+- An animation chain's phase-end jump ran two timers.
+- `focusCmp` threw on a number, checkbox, range or email input (`setSelectionRange`).
+- `updateAttr` on a CMP made without `attr` lost the attributes at the next `update()`.
+- A custom property in a CMP's style (`--x`) was ignored. It goes through `setProperty` / `removeProperty`.
+- The action layer's device listeners weren't added again for a map made after `removeAllInputListeners()` (latent: one mount per page load).
+
+### App 1.13.0 (Preschooler)
+
+**Added**
+
+- The `exampleUiKit` example scene (`src/app/examples/uiKit/`): an app HUD built from the UI kit. It has a panel with a button per shape, a window kind per shape with a colour drop-down, a settings window, the scene's own toaster, and a pause menu dialog. Escape opens the dialog through the `GAMEPLAY` action map, and the dialog's arrow keys are an action map in a `MENU` context.
+
+### Project
+
+**Added**
+
+- Tests, in Node: `ui/CMP.test.ts` (the six bugs, add / update / remove, template children, the in-place props), `DraggableWindow.test.ts` grows (the reopen rules, kinds, scene loads, the LS round trip, the content registry), `DialogWindow.test.ts`, `Toaster.test.ts`, `DropDown.test.ts`, `KeyboardInput.test.ts` (chords, modifiers, case, `KEY_HELD` polling and the hook, yielding), `MouseInput.test.ts` (click vs drag, double-clicks, the wheel, hover) and `TouchInput.test.ts` (tap, drag, pinch). `Actions.test.ts` covers the wheel's page unit, the listeners after their removal and a context switch in a callback.
+- `src/_engine/ui/CLAUDE.md`, its line in the root `CLAUDE.md`'s map (the windows paragraph moved there), and the Hub's UI kit feature page and example page.
+- `docs/issues/ui-kit-in-an-embed.md` (the kit's `rem` sizes and the windows' measurements in an embed; for p800, whose prompt in `docs/templates/todo-plan-prompts.txt` gets the requirement). `docs/plans/p622_engine-6-major.md`: the two deprecations above and the `T`-prefixed type names, as candidates.
+
+**Changed**
+
+- `moduleSideEffects.test.ts` checks every top-level statement that isn't a declaration (an `if`, a loop, a block or a `try` around a call); it only read expression statements, so the dialog's listeners in an `if` passed.
+- `eslint.config.js` ignores `dist-embed/` and `dist-stats/`: a bare `yarn lint` read the minified embed build and ran for 20 minutes.
+- The Hub's Input page (a key and a mouse binding, the binding types, `getKeyChordLabel`, `GAMEPAD_BUTTON_NAMES`, the held keys, context switches in callbacks). The input `CLAUDE.md` (the held-key hook, the compiled chords, the removed switches). `readme.md`'s UI kit line. The `moveMap.ts` outputs regenerated.
+- `yarn verify:baselines`: `api.json` (the entries' additions, the removals, the splits' moves, the internal names), `docs.json` (exports 2,204 / 2,414 → 2,275 / 2,430 documented, `kernel/input` and `ui` at 100 %) and both bundle baselines. The app's main chunk (`assets/index.js`) is 387,312 B gzip, 491 B more than on `main`. The banner's is 291,970 B, 910 B less. The new example's chunks are `exampleUiKit.js` (12.3 kB gzip) and `exampleUiKit.css` (2.1 kB).
+
 ## 2026-10-20 — review-lod-spatial-instancing-lines
 
 ### Engine 5.7.0 (Golden Hour)

@@ -11,7 +11,6 @@ import { lerror, lwarn } from '../../utils/Logger';
 import { getCanvasSize, onCanvasResize } from '../render/CanvasSize';
 import { getEnv, IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../config/Config';
 import { initDebugTools } from '../../debug/DebugTools';
-import { pollHeldKeyBindings } from '../input/KeyboardInput';
 import { initRayCasting } from '../render/Raycast';
 import { getAllECSWorlds } from '../ecs/ECS';
 import { getActiveCamera } from '../camera/Camera';
@@ -248,6 +247,20 @@ export type ActionSampler = {
 
 let actionSampler: ActionSampler | null = null;
 
+/** The key bindings' held-key poll (`KeyboardInput.ts`' `pollHeldKeyBindings`), null until the
+ * first `KEY_HELD` binding: the loop doesn't import the keyboard module, so a build that binds no
+ * key bundles none of it. */
+let heldKeyPoller: ((delta: number) => void) | null = null;
+
+/**
+ * Sets the held-key poll the loop runs right after each action sample (`KeyboardInput.ts`, on its
+ * first `KEY_HELD` binding).
+ * @internal
+ */
+export const setHeldKeyPoller = (poller: (delta: number) => void): void => {
+  heldKeyPoller = poller;
+};
+
 /**
  * Sets the action layer's hooks (`Actions.ts`, once).
  * @internal
@@ -273,7 +286,7 @@ export const setPreStepHook = (fn: (() => void) | null) => {
 const runFixedSubStep = (stepDelta: number, stepIndex = -1) => {
   preStepHook?.();
   actionSampler?.sample(stepIndex);
-  pollHeldKeyBindings(stepDelta);
+  heldKeyPoller?.(stepDelta);
   fixedStepDriver!.flushEvents();
   const worlds = getAllECSWorlds();
   for (let i = 0; i < worlds.length; i++) worlds[i].updatePhysicsStep(stepDelta);
@@ -281,7 +294,7 @@ const runFixedSubStep = (stepDelta: number, stepIndex = -1) => {
 
 /** Takes the frame's fixed steps (running runFixedSubStep before each). Falls back to polling
  * held keys once with the raw frame delta whenever nothing steps (no driver, or physics off), so
- * held-key-driven input (e.g. debug camera movement) still works without physics. */
+ * a `KEY_HELD` binding still runs without physics. */
 const stepFixedAndPollHeldKeys = (delta: number) => {
   const driver = fixedStepDriver;
   if (driver) {
@@ -289,7 +302,7 @@ const stepFixedAndPollHeldKeys = (delta: number) => {
     if (driver.isStepping()) return;
   }
   actionSampler?.sample(-1);
-  pollHeldKeyBindings(delta);
+  heldKeyPoller?.(delta);
 };
 
 /** Called instead of stepFixedAndPollHeldKeys while the app loop is paused (or the scene is

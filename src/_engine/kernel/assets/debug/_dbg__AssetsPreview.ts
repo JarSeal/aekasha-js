@@ -1,5 +1,6 @@
 import type * as THREE from 'three/webgpu';
-import { CMP, type TCMP } from '../../../ui/CMP';
+import { CMP } from '../../../ui/CMP';
+import type { TCMP } from '../../../ui/CMPTypes';
 import { getTextureArrayInfo } from '../TextureArray';
 import { getTextureAtlasInfo, type TextureAtlasInfo } from '../TextureAtlas';
 import { getTextureDepth } from './_dbg__AssetStats';
@@ -210,8 +211,8 @@ ${atlas ? `<div class="${styles.assetsTableSub}" data-role="hover">${HOVER_HINT}
     },
   });
   markLevel();
-  // A template child gets no onCreateCmp: the render starts now and fills the element when the
-  // readback arrives (the window attaches it before that)
+  // The render starts now, not in onCreateCmp (which runs when a parent mounts it, and again on
+  // every update): it fills the element when the readback arrives (the window attaches it before)
   render();
   return cmp;
 };

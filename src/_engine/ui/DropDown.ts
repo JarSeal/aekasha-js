@@ -1,19 +1,25 @@
-import type { TCMP } from './CMP';
+import type { TCMP } from './CMPTypes';
 import { CMP, classes } from './CMP';
 import './DropDown.scss';
 
-export type DropDownOption = { value: string; label: string };
+/** One of a drop-down's options. */
+export type DropDownOption = {
+  /** What `onChange` gets */
+  value: string;
+  /** What the list and the trigger show */
+  label: string;
+};
 
-/** A class name, or several, for one of the drop-down's elements. */
-export type ClassProp = string | string[];
-
+/** What {@link createDropDown} makes a drop-down from. */
 export type DropDownProps = {
   /** The options, or a getter re-read on every open (and refresh). */
   options: DropDownOption[] | (() => DropDownOption[]);
   /** The current value: the trigger shows its label, and the list opens on it and marks it. A
-   * getter is re-read on every open (and refresh). */
+   * getter is re-read on every open, after every pick and on refresh. */
   value?: string | null | (() => string | null);
-  /** A picked option, also the current one (the handler decides what that does). */
+  /** A picked option, also the current one (the handler decides what that does). The trigger's
+   * label is refreshed after it returns, so a `value` getter that reads what it set shows the
+   * pick. */
   onChange: (value: string) => void;
   /** The trigger's text when no option matches the value. */
   placeholder?: string;
@@ -23,18 +29,27 @@ export type DropDownProps = {
   title?: string;
   /** Which side of the trigger the list opens on. Default 'bottom'. */
   placement?: 'top' | 'bottom';
+  /** Disables the trigger (default false). */
   disabled?: boolean;
-  /** Extra classes. The default styles (DropDown.scss) have zero specificity (`:where()`), so
-   * any class overrides them; the elements also carry the global `aekDropDown*` classes. */
-  className?: ClassProp;
-  triggerClass?: ClassProp;
-  labelClass?: ClassProp;
-  listClass?: ClassProp;
-  itemClass?: ClassProp;
+  /** Extra classes (a class name, or several) for the root. The default styles (DropDown.scss)
+   * have zero specificity (`:where()`), so any class overrides them; the elements also carry the
+   * global `aekDropDown*` classes. */
+  className?: string | string[];
+  /** Extra classes for the trigger button */
+  triggerClass?: string | string[];
+  /** Extra classes for the trigger's label */
+  labelClass?: string | string[];
+  /** Extra classes for the list */
+  listClass?: string | string[];
+  /** Extra classes for each option */
+  itemClass?: string | string[];
+  /** Runs when the list opens */
   onOpen?: () => void;
+  /** Runs when the list closes, however it closes */
   onClose?: () => void;
 };
 
+/** A drop-down {@link createDropDown} made: its CMP, to add where it goes, and its controls. */
 export type TDropDown = {
   /** The dropdown's root (the trigger, and the list while it is open). */
   cmp: TCMP;
@@ -42,9 +57,12 @@ export type TDropDown = {
   open: () => void;
   /** Closes the list without a change. */
   close: () => void;
+  /** Opens the list, or closes it when it's open. */
   toggle: () => void;
+  /** Whether the list is open */
   isOpen: () => boolean;
-  /** Re-reads the value (and options) into the trigger's label. */
+  /** Re-reads the value (and options) into the trigger's label: for a change made elsewhere (a
+   * pick refreshes it itself). */
   refresh: () => void;
 };
 
@@ -77,8 +95,21 @@ const swallowNextKeyUp = (key: string) => {
  * Chrome on Windows commits the highlighted option when it is closed with Escape).
  * A click on the trigger toggles the list. In the list, arrow keys, Home and End move, Enter,
  * Space or a click picks, and Escape, Tab or a click outside closes it without a change. The
- * list's keys reach no key binding (their keyups included).
- * @param props (object) {@link DropDownProps}
+ * list's keys reach no key binding (their keyups included). The drop-down isn't added anywhere:
+ * add its `cmp` where it goes.
+ * @example
+ * ```ts
+ * const quality = createDropDown({
+ *   options: [
+ *     { value: 'low', label: 'Low' },
+ *     { value: 'high', label: 'High' },
+ *   ],
+ *   value: () => settings.quality,
+ *   onChange: (value) => setQuality(value),
+ *   title: 'Quality',
+ * });
+ * settingsPanel.add(quality.cmp);
+ * ```
  */
 export const createDropDown = (props: DropDownProps): TDropDown => {
   const placement = props.placement || 'bottom';
@@ -197,6 +228,7 @@ export const createDropDown = (props: DropDownProps): TDropDown => {
     const choose = (chosenIndex: number) => {
       close();
       props.onChange(options[chosenIndex].value);
+      refresh();
     };
 
     const onKeyDown = (e: KeyboardEvent) => {

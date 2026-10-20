@@ -106,6 +106,7 @@ export {
   setActionContextEnabled,
 } from './kernel/input/Actions';
 export {
+  GAMEPAD_BUTTON_NAMES,
   getConnectedGamepads,
   onGamepadConnected,
   onGamepadDisconnected,
@@ -116,24 +117,55 @@ export type {
   GamepadInfo,
   GamepadStickName,
 } from './kernel/input/GamepadInput';
+export type { PickOpts } from './kernel/input/InputPicking';
+export type {
+  BindingMeta,
+  EnabledInDebugCam,
+  Modifiers,
+  TargetList,
+} from './kernel/input/InputSharedTypes';
 export {
   createKeyBinding,
   deleteKeyBinding,
+  getKeyChordLabel,
   setKeyBindingEnabled,
 } from './kernel/input/KeyboardInput';
-export type { KeyBinding } from './kernel/input/KeyboardInput';
+export type {
+  KeyBinding,
+  KeyBindingBase,
+  KeyBindingType,
+  KeyChord,
+  KeyHeldBinding,
+  KeyUpDownBinding,
+} from './kernel/input/KeyboardInput';
 export {
   createMouseBinding,
   deleteMouseBinding,
   setMouseBindingEnabled,
 } from './kernel/input/MouseInput';
-export type { MouseBinding } from './kernel/input/MouseInput';
+export type {
+  MouseBinding,
+  MouseBindingBase,
+  MouseBindingType,
+  MouseButton,
+  MouseClickBinding,
+  MouseDblClickBinding,
+  MouseHoverBinding,
+  MouseWheelBinding,
+} from './kernel/input/MouseInput';
 export {
   createTouchBinding,
   deleteTouchBinding,
   setTouchBindingEnabled,
 } from './kernel/input/TouchInput';
-export type { TouchBinding } from './kernel/input/TouchInput';
+export type {
+  TouchBinding,
+  TouchBindingBase,
+  TouchBindingType,
+  TouchDragBinding,
+  TouchPinchBinding,
+  TouchTapBinding,
+} from './kernel/input/TouchInput';
 export {
   createLightEntity,
   getLightByAppId,

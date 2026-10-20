@@ -7,10 +7,8 @@
 //   per-frame poll), so UI and debug keys work while the loop is paused.
 // Each device's live state is followed all the time, also while a map is inactive; only the
 // counts, deltas and callbacks need it active. So a key held through a menu reads down when the
-// menu closes, without a press. The per-device switches (setKeyInputsEnabled, ...) are the
-// bindings' own and don't apply here; the master switches (InputState.ts) do, through contexts.
+// menu closes, without a press. The master switches (InputState.ts) apply, through contexts.
 
-import { isDebugCameraActive } from '../camera/Camera';
 import { IS_DEBUG_ENV } from '../config/Config';
 import { setActionSampler } from '../loop/MainLoop';
 import { getCurrentSceneId } from '../scene/Scene';
@@ -34,8 +32,9 @@ import type {
   ActionType,
 } from './ActionTypes';
 import { pollGamepads } from './GamepadInput';
+import { isDebugCamRuleMet } from './InputRules';
 import type { EnabledInDebugCam } from './InputSharedTypes';
-import { areAllInputsEnabled, areAppInputsEnabled } from './InputState';
+import { addInputListenerRemover, areAllInputsEnabled, areAppInputsEnabled } from './InputState';
 import { setKeyActionListener, warnIfKeyChordReserved } from './KeyboardInput';
 import { setMouseActionSource } from './MouseInput';
 import { setTouchActionSource } from './TouchInput';
@@ -94,6 +93,8 @@ type MapRuntime = {
   gamepadIndex: number | undefined;
   enabled: boolean;
   isDeleted: boolean;
+  /** Whether it counted the current device event, fixed at the event's start (updateAllMaps). */
+  isActiveAtEvent: boolean;
   actions: ActionRuntime[];
   byId: Map<string, ActionRuntime>;
   handle: ActionMap;
@@ -112,19 +113,13 @@ let isSamplerSet = false;
 let hasKeySource = false;
 let hasMouseSource = false;
 let hasTouchSource = false;
+let isSourceRemoverAdded = false;
 let usesGamepad = false;
 let usesRightMouseButton = false;
 let usesTouchDrag = false;
 
 // Activity
 // **************************************
-
-const isDebugCamRuleMet = (rule: EnabledInDebugCam) =>
-  !IS_DEBUG_ENV ||
-  !(
-    (rule === 'NOT_ENABLED_IN_DEBUG' && isDebugCameraActive()) ||
-    (rule === 'ENABLED_ONLY_IN_DEBUG' && !isDebugCameraActive())
-  );
 
 const isContextOn = (context: ActionContext) =>
   !disabledContexts.has(context) &&
@@ -141,6 +136,9 @@ const isMapActive = (map: MapRuntime) =>
 /**
  * Enables or disables a context: every map in it reads idle and fires no callbacks while it's off
  * (a menu turns `GAMEPLAY` off and its own context on). Every context starts enabled.
+ * @remarks Called from a map's callback, it applies from the next device event: the maps that
+ * take an event are fixed at its start, so a menu opened by a key's press in one map isn't closed
+ * by the same press in its own map.
  */
 export const setActionContextEnabled = (context: ActionContext, enabled: boolean): void => {
   if (enabled) disabledContexts.delete(context);
@@ -197,11 +195,15 @@ const updateMap = (map: MapRuntime, e: Event | null, active: boolean) => {
 
 const isCountingEvents = (map: MapRuntime) => !map.replay && isMapActive(map);
 
+/** Re-reads every map for a device event. Which maps count it is fixed first, so a callback that
+ * switches a context, enables a map or loads a scene changes what the next event reaches, never
+ * this one's later maps. A map the callbacks delete is skipped, one they create isn't in `list`. */
 const updateAllMaps = (e: Event | null) => {
   const list = maps;
+  for (let i = 0; i < list.length; i++) list[i].isActiveAtEvent = isCountingEvents(list[i]);
   for (let i = 0; i < list.length; i++) {
     const map = list[i];
-    if (!map.isDeleted) updateMap(map, e, isCountingEvents(map));
+    if (!map.isDeleted) updateMap(map, e, map.isActiveAtEvent);
   }
 };
 
@@ -221,7 +223,8 @@ const onKeyEvent = (e: KeyboardEvent | null) => {
   const list = maps;
   for (let i = 0; i < list.length; i++) {
     const map = list[i];
-    if (!map.preventDefault || !isCountingEvents(map)) continue;
+    // The maps that took the event (a map made by its callbacks hasn't counted one yet)
+    if (!map.preventDefault || map.isDeleted || !map.isActiveAtEvent) continue;
     for (let j = 0; j < map.actions.length; j++) {
       if (isKeyEventInBindings(map.actions[j].compiled, e, true)) {
         e.preventDefault();
@@ -274,9 +277,18 @@ const matchWheel = (c: CompiledBinding) =>
   c.kind === 'MOUSE_DELTA' && c.delta === 'WHEEL' ? c.scale : null;
 const matchTouchDrag = (c: CompiledBinding) => (c.kind === 'TOUCH_DRAG' ? c.scale : null);
 
+/** A wheel page in pixels: the height of what listens, the canvas in the `CANVAS` input scope (an
+ * embed's page is the host's), else the window. */
+const getWheelPagePx = (e: WheelEvent) => {
+  const target = e.currentTarget as { clientHeight?: number } | null;
+  return target && target !== window && target.clientHeight
+    ? target.clientHeight
+    : window.innerHeight;
+};
+
 const onWheel = (e: WheelEvent) => {
   // DOM_DELTA_LINE (1) and DOM_DELTA_PAGE (2) in pixels
-  const unit = e.deltaMode === 1 ? WHEEL_LINE_PX : e.deltaMode === 2 ? window.innerHeight : 1;
+  const unit = e.deltaMode === 1 ? WHEEL_LINE_PX : e.deltaMode === 2 ? getWheelPagePx(e) : 1;
   addDeltas(matchWheel, e.deltaX * unit, -e.deltaY * unit);
 };
 
@@ -297,8 +309,17 @@ const onTap = (e: TouchEvent) => {
   }
 };
 
-/** Adds the device sources the maps' bindings need (once added, they stay) and notes what the
- * devices should prevent (the context menu, scrolling). */
+/** Forgets the device sources when every device's listeners are removed (a mount's unmount,
+ * `removeAllInputListeners`), so the next map adds them again by the input scope then. */
+const resetDeviceSources = () => {
+  hasKeySource = false;
+  hasMouseSource = false;
+  hasTouchSource = false;
+  isSourceRemoverAdded = false;
+};
+
+/** Adds the device sources the maps' bindings need (they stay until every device's listeners are
+ * removed) and notes what the devices should prevent (the context menu, scrolling). */
 const updateDeviceSources = () => {
   let needsKeys = false;
   let needsMouse = false;
@@ -322,6 +343,10 @@ const updateDeviceSources = () => {
         }
       }
     }
+  }
+  if ((needsKeys || needsMouse || needsTouch) && !isSourceRemoverAdded) {
+    isSourceRemoverAdded = true;
+    addInputListenerRemover(resetDeviceSources);
   }
   if (needsKeys && !hasKeySource) {
     hasKeySource = true;
@@ -365,7 +390,8 @@ const setActionBindings = (
         : c.kind === 'KEY_AXIS'
           ? [...c.neg, ...c.pos]
           : [...c.up, ...c.down, ...c.left, ...c.right];
-    warnIfKeyChordReserved(owner, a.id, chords, map.id, c.ignoreModifiers);
+    const keyChords = chords.map((compiled) => compiled.chord);
+    warnIfKeyChordReserved(owner, a.id, keyChords, map.id, c.ignoreModifiers);
   }
 };
 
@@ -555,6 +581,7 @@ export const createActionMap = <const TActions extends ActionDefs>(
     gamepadIndex: opts.gamepadIndex,
     enabled: opts.enabled ?? true,
     isDeleted: false,
+    isActiveAtEvent: false,
     actions: [],
     byId: new Map(),
     handle: undefined as unknown as ActionMap, // set below, once the handle exists

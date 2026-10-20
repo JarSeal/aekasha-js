@@ -1,7 +1,7 @@
-// The engine's component styles: the debugger's, the editor views' HUD rule, the icons and the
-// stats. Nothing on html, body or other elements a host page owns: those are page.scss's, which
-// only the full-page boot loads (p611 D6).
-@forward '../../debug/debugger.scss';
+// The UI kit's global styles, in every build: the editor views' HUD rule and the icons. Nothing on
+// html, body or other elements a host page owns: those are page.scss's, which only the full-page
+// boot loads (p611 D6). Nothing of the debug tools either: each debug module loads its own (p617
+// S1).
 
 // Editor views (kernel/render/Views.ts) hide the suspended scene's HUD: the debug drawer, the switch
 // tools, draggable windows, the scene loader and any app HUD. display: none keeps them mounted, so
@@ -15,34 +15,5 @@ body.aekEditorView #hudRoot > :not(.aekKeepInViews) {
     display: inline-block;
     width: 100%;
     height: auto;
-  }
-}
-
-.statsContainer {
-  position: fixed;
-  left: 0;
-  bottom: 0;
-  z-index: 10000;
-  background: #222;
-  padding: 0.4rem 0.4rem 0 0;
-  border-radius: 0 0.4rem 0 0;
-  -webkit-filter: grayscale(100%);
-  filter: brightness(200%) contrast(100%) grayscale(100%);
-  transition: opacity 0.2s ease-in-out;
-
-  > div {
-    display: flex;
-    position: static !important;
-    opacity: 0.45 !important;
-  }
-
-  &.vertical {
-    > div {
-      flex-direction: column-reverse;
-    }
-  }
-
-  canvas {
-    position: static !important;
   }
 }

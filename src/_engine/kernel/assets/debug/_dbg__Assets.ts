@@ -9,7 +9,8 @@ import {
 import { lsGetItem, lsRemoveItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
 import { llog } from '../../../utils/Logger';
 import { textureMapKeys } from '../../../utils/Constants';
-import { CMP, type TCMP } from '../../../ui/CMP';
+import { CMP } from '../../../ui/CMP';
+import type { TCMP } from '../../../ui/CMPTypes';
 import { getSvgIcon } from '../../../ui/icons/SvgIcon';
 import {
   getDraggableWindowsOfKind,

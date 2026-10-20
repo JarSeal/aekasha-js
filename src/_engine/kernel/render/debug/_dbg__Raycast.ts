@@ -1,4 +1,5 @@
-import { CMP, type TCMP } from '../../../ui/CMP';
+import { CMP } from '../../../ui/CMP';
+import type { TCMP } from '../../../ui/CMPTypes';
 import { IS_DEBUG_ENV } from '../../config/Config';
 import {
   createDebuggerTab,
@@ -31,6 +32,7 @@ import {
   _refreshRayTesterHelperNotices,
   _toggleRayTesterWindow,
 } from './_dbg__RayTester';
+import './RayDebug.scss';
 
 const LS_KEY = 'debugRayCast';
 const TAB_ID = 'rayCastControls';

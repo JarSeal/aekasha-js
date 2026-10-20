@@ -80,6 +80,14 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  exampleUiKit: async ({ sceneData, assets }) => {
+    const module = await import('../app/./examples/uiKit/exampleUiKit.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   banner: async ({ sceneData, assets }) => {
     const module = await import('../app/./profiles/banner/banner.ts');
     await (

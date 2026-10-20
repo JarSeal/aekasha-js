@@ -10,7 +10,8 @@
  *   module name that isn't PascalCase (p602 D7).
  * - `layoutReport.md`: the import graph checked against the target layout: kernel code importing a
  *   feature, cycles between features, the engine importing the app, static `_dbg__` imports
- *   outside debug code, and the `utils/` / `ui/` / `schemas/` boundaries. What p606 must fix
+ *   outside debug code, and the `utils/` / `ui/` / `schemas/` boundaries (the UI kit may name
+ *   the kernel's hooks, `UI_KERNEL_HOOKS`). What p606 must fix
  *   before the boundary lint (p602 D10) can be an error.
  * - `entryExports.json`: every export of the documented API (p601's `api.json`) under the entry
  *   point its module lands in (p602 D3), with who imports it today: `public` (the app, the
@@ -182,6 +183,16 @@ const addViolation = (category: string, edge: Edge) => {
   violations.set(category, list);
 };
 
+/** The kernel modules the UI kit may name (p617 D7): the env flags, and the registries through
+ * which the windows follow a resize, a scene load and the boot while the kernel names no window
+ * (p613 D5). */
+const UI_KERNEL_HOOKS = new Set([
+  'src/_engine/kernel/config/Config.ts',
+  'src/_engine/kernel/loop/MainLoop.ts',
+  'src/_engine/kernel/scene/SceneHooks.ts',
+  'src/_engine/kernel/init/BootHooks.ts',
+]);
+
 const checkEdge = (fz: Zone, tz: Zone, edge: Edge): string | null => {
   if (fz.layer === 'toolkit')
     return tz.layer === 'app' || tz.layer === 'generated' ? 'Toolkit → app' : null;
@@ -202,6 +213,7 @@ const checkEdge = (fz: Zone, tz: Zone, edge: Edge): string | null => {
     case 'schemas':
       return tz.layer === 'schemas' || tz.layer === 'utils' ? null : `schemas → ${tz.layer}`;
     case 'ui':
+      if (tz.layer === 'kernel' && UI_KERNEL_HOOKS.has(edge.toTarget)) return null;
       return ['ui', 'utils', 'types'].includes(tz.layer) ? null : `ui → ${tz.layer}`;
     case 'kernel':
       return tz.layer === 'feature' ? 'Kernel → feature' : null;

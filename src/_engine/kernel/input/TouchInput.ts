@@ -1,11 +1,10 @@
 import type * as THREE from 'three/webgpu';
-import { isDebugCameraActive } from '../camera/Camera';
-import { IS_DEBUG_ENV } from '../config/Config';
 import { onWindowBlur } from '../loop/MainLoop';
 import { getCanvasElem } from '../render/Renderer';
 import { getCurrentSceneId } from '../scene/Scene';
 import { lwarn } from '../../utils/Logger';
 import { pickTargetsAt, type PickOpts } from './InputPicking';
+import { isDebugCamRuleMet } from './InputRules';
 import { addInputListenerRemover, areAppInputsEnabled, getInputScope } from './InputState';
 import type { BindingMeta, EnabledInDebugCam, TargetList } from './InputSharedTypes';
 
@@ -17,9 +16,14 @@ import type { BindingMeta, EnabledInDebugCam, TargetList } from './InputSharedTy
  * `Touch*Binding`s).
  */
 export type TouchBindingBase = BindingMeta & {
+  /** Unique among the touch bindings: creating a binding with an id in use replaces that one. */
   id: string;
-  enabled?: boolean; // default true
+  /** False keeps the binding registered without firing (default true); see
+   * {@link setTouchBindingEnabled}. */
+  enabled?: boolean;
+  /** Fires only while this scene is the current one. */
   sceneId?: string;
+  /** Whether it fires while the debug (orbit) camera is active (debug env; default it does). */
   enabledInDebugCam?: EnabledInDebugCam;
 };
 
@@ -28,11 +32,13 @@ export type TouchBindingBase = BindingMeta & {
 export type TouchTapBinding = TouchBindingBase &
   PickOpts & {
     type: 'TOUCH_TAP';
+    /** What the tap raycasts against; without, it fires wherever it lands. */
     targets?: TargetList;
     /** touchstart -> touchend under this is a tap. Default 250. */
     maxDurationMs?: number;
     /** Moving further than this makes it a drag, not a tap. Default 10. */
     maxMoveDistancePx?: number;
+    /** Runs on the touchend, with the closest hit when there are `targets`. */
     fn: (e: TouchEvent, intersection?: THREE.Intersection) => void;
   };
 
@@ -40,8 +46,15 @@ export type TouchTapBinding = TouchBindingBase &
  * onMove's delta is in CSS pixels since the previous onMove (or onStart). */
 export type TouchDragBinding = TouchBindingBase & {
   type: 'TOUCH_DRAG';
+  /** The finger moved past the tap distance: the drag starts. */
   onStart?: (e: TouchEvent) => void;
-  onMove?: (e: TouchEvent, delta: { x: number; y: number }) => void;
+  /**
+   * Called on each move of the drag.
+   * @remarks `delta` is one object, reused for every move (touchmove fires up to 120 times a
+   * second): read it in the call, and copy it to keep it.
+   */
+  onMove?: (e: TouchEvent, delta: { readonly x: number; readonly y: number }) => void;
+  /** The finger lifted, a second one came down, or the touch was cancelled. */
   onEnd?: (e: TouchEvent) => void;
 };
 
@@ -49,23 +62,23 @@ export type TouchDragBinding = TouchBindingBase & {
  * deltaDistance its change since the previous onPinch (positive = spreading apart). */
 export type TouchPinchBinding = TouchBindingBase & {
   type: 'TOUCH_PINCH';
+  /** Runs on each move of the fingers. */
   onPinch: (e: TouchEvent, distance: number, deltaDistance: number) => void;
 };
 
+/** A touch binding, by its `type`. Only gestures that start on the canvas count. */
 export type TouchBinding = TouchTapBinding | TouchDragBinding | TouchPinchBinding;
 
+/** The touch binding types (`TouchBinding['type']`). */
 export type TouchBindingType = TouchBinding['type'];
 
 const DEFAULT_TAP_MAX_DURATION_MS = 250;
 const DEFAULT_TAP_MAX_MOVE_PX = 10;
 const DRAG_START_PX = DEFAULT_TAP_MAX_MOVE_PX;
+/** The drag's delta, written in place on each move (TouchDragBinding.onMove) */
+const dragDelta = { x: 0, y: 0 };
 
 let bindings: TouchBinding[] = [];
-
-let touchInputsEnabled = true;
-export const setTouchInputsEnabled = (enabled: boolean): void => {
-  touchInputsEnabled = enabled;
-};
 
 type SingleTouchGesture = {
   identifier: number;
@@ -102,16 +115,10 @@ export type TouchActionSource = {
 
 let touchActionSource: TouchActionSource | null = null;
 
-const isInputInDebugCamInvalid = (enabledInDebugCam?: EnabledInDebugCam) =>
-  IS_DEBUG_ENV &&
-  ((enabledInDebugCam === 'NOT_ENABLED_IN_DEBUG' && isDebugCameraActive()) ||
-    (enabledInDebugCam === 'ENABLED_ONLY_IN_DEBUG' && !isDebugCameraActive()));
-
 const isBindingActive = (binding: TouchBinding) =>
-  touchInputsEnabled &&
   areAppInputsEnabled() &&
   binding.enabled !== false &&
-  !isInputInDebugCamInvalid(binding.enabledInDebugCam) &&
+  isDebugCamRuleMet(binding.enabledInDebugCam) &&
   (!binding.sceneId || binding.sceneId === getCurrentSceneId());
 
 const hasActiveBinding = (type: TouchBindingType) =>
@@ -213,13 +220,14 @@ const onTouchMove = (e: TouchEvent) => {
       if (binding.type === 'TOUCH_DRAG' && isBindingActive(binding)) binding.onStart?.(e);
     }
   }
-  const delta = { x: t.clientX - single.lastX, y: t.clientY - single.lastY };
+  dragDelta.x = t.clientX - single.lastX;
+  dragDelta.y = t.clientY - single.lastY;
   single.lastX = t.clientX;
   single.lastY = t.clientY;
-  touchActionSource?.onDrag(e, delta.x, delta.y);
+  touchActionSource?.onDrag(e, dragDelta.x, dragDelta.y);
   for (let i = 0; i < bindings.length; i++) {
     const binding = bindings[i];
-    if (binding.type === 'TOUCH_DRAG' && isBindingActive(binding)) binding.onMove?.(e, delta);
+    if (binding.type === 'TOUCH_DRAG' && isBindingActive(binding)) binding.onMove?.(e, dragDelta);
   }
 };
 
@@ -290,12 +298,28 @@ const removeTouchListeners = (): void => {
   listenersInitiated = false;
 };
 
+/**
+ * Registers a touch binding, replacing the one with its id. The first binding adds the touch
+ * listeners (on the window, or on the canvas in an embed's `CANVAS` input scope).
+ * @remarks The binding is kept as given (not copied): {@link setTouchBindingEnabled} writes its
+ * `enabled`. A browser also emulates mouse events after a tap, so a tap can fire a `MOUSE_CLICK`
+ * binding too.
+ * @example
+ * ```ts
+ * createTouchBinding({
+ *   id: 'orbitDrag',
+ *   type: 'TOUCH_DRAG',
+ *   onMove: (_e, delta) => orbitBy(delta.x, delta.y),
+ * });
+ * ```
+ */
 export const createTouchBinding = (binding: TouchBinding): void => {
   deleteTouchBinding(binding.id);
   bindings.push(binding);
   initTouchListeners();
 };
 
+/** Removes a touch binding (a no-op for an unknown id). The touch listeners stay. */
 export const deleteTouchBinding = (id: string): void => {
   bindings = bindings.filter((b) => b.id !== id);
 };
@@ -309,6 +333,11 @@ export const setTouchActionSource = (source: TouchActionSource | null): void => 
   if (source) initTouchListeners();
 };
 
+/**
+ * Turns a touch binding on or off without removing it (warns for an unknown id).
+ * @remarks It writes `enabled` on the binding object passed to {@link createTouchBinding}, which
+ * is kept as given: a binding object shared by two calls changes for both.
+ */
 export const setTouchBindingEnabled = (id: string, enabled: boolean): void => {
   const binding = bindings.find((b) => b.id === id);
   if (!binding) {

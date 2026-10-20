@@ -1,4 +1,4 @@
-import type { TCMP } from '../ui/CMP';
+import type { TCMP } from '../ui/CMPTypes';
 import { CMP } from '../ui/CMP';
 import styles from './DebuggerGUI.module.scss';
 import { lsGetItem, lsSetItem } from '../utils/LocalAndSessionStorage';
@@ -12,6 +12,7 @@ import { getSvgIcon } from '../ui/icons/SvgIcon';
 import { persistDebuggerTabStateValue } from './_dbg__DebuggerPaneBuilder';
 import { createTabHost } from './_dbg__TabHost';
 import { doesSceneExist, getCurrentSceneId, registerOnAllSceneExits } from '../kernel/scene/Scene';
+import './DebugToaster.scss';
 
 export { _debuggerListCMP } from './_dbg__DebuggerList';
 

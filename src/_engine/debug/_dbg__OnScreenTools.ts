@@ -16,7 +16,7 @@ import { getCurrentSceneId, getGeneratedAppData } from '../kernel/scene/Scene';
 import { isCurrentlyLoading, loadScene } from '../kernel/scene/SceneLoader';
 import { getSvgIcon, type SvgIconKey } from '../ui/icons/SvgIcon';
 import { createDropDown, type DropDownProps, type TDropDown } from '../ui/DropDown';
-import type { TCMP } from '../ui/CMP';
+import type { TCMP } from '../ui/CMPTypes';
 import { CMP } from '../ui/CMP';
 import styles from './OnScreenTools.module.scss';
 import { getECSWorld } from '../kernel/ecs/ECS';

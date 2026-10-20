@@ -1,4 +1,5 @@
-import { CMP, type TCMP } from '../../ui/CMP';
+import { CMP } from '../../ui/CMP';
+import type { TCMP } from '../../ui/CMPTypes';
 import styles from './Profiler.module.scss';
 import { lsGetItem, lsSetItem } from '../../utils/LocalAndSessionStorage';
 import { lwarn } from '../../utils/Logger';
@@ -8,8 +9,8 @@ import {
   registerDraggableWindow,
   toggleDraggableWindow,
   updateDraggableWindow,
-  type OpenDraggableWindowProps,
 } from '../../ui/DraggableWindow';
+import type { OpenDraggableWindowProps } from '../../ui/DraggableWindowTypes';
 import {
   hydrateDebuggerTabState,
   type AnyDebuggerTabDef,
