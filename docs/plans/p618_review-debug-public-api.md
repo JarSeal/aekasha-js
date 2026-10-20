@@ -648,7 +648,26 @@ As built, section 2 (2026-10-21, uncommitted on top of `cc94f9b`):
 ### Phase 2: structure (D5, D7)
 
 1. The two wrappers merged; the production check and `yarn sbp` against Phase 0's numbers.
-2. S2's renames, S3's copy and deprecation, S4's buttons; `moveMap.ts` regenerated.
+2. S2's renames, S3's move with the thin wrapper (D7 as revised), S4's buttons; `moveMap.ts`
+   regenerated.
+
+As built, section 1 (2026-10-21, uncommitted on top of `9c63d8f`):
+
+- **`debug/Assets.ts` → `kernel/assets/AssetsAPI.ts`:** `createAssetsDebugGUI` at the file's end
+  under `// Debug`, `@internal`; `Boot.ts` imports it with `initAssets`.
+- **`debug/PostFXProfiler.ts` → `features/postfx/PostFX.ts`:** its four functions after
+  `createPostFXDebugGUI`, each `@internal`, the two loads shared by a module-private
+  `loadPostFxProfilerAsync`. `PostFXFeature.ts`, `_dbg__PostFX.ts` and `_dbg__ProfilerSources.ts`
+  import them from `PostFX.ts`; the gated `ctx.onDebugAfterStart` closure is unchanged.
+  `Config.ts`' `postFx.measureEnabled` says the PostFX tab and the profiler switch it live.
+- **Checks:** `yarn verify:baselines`: no debug code in the production build or the banner,
+  `bundle.json` and `bundle.banner.json` unchanged (186 modules, 832.0 kB gzip; 670.3 kB).
+  `api.json` lists the five moves and Phase 1's three additions (`removeProfilerTab`,
+  `_getUndoRedoActionHandler`, `RegisteredUndoRedoActionHandler`), recorded in Phase 3 with the
+  rest. `docs.json`: `debug` 149 / 202 → 144 / 197, `features/postfx` 29 / 29,
+  `kernel/assets` 127 / 127. `yarn sbp --profile all`: Phase 0's numbers exactly (the app's
+  initial 379.2 kB, `kernel/assets` 18.2 / 8.7 kB, `features/postfx` 2.0 kB; the banner's
+  285.5 kB), every budget within.
 
 ### Phase 3: the API (D6, D9) and the deferrals (D3)
 

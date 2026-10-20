@@ -15,7 +15,7 @@
  */
 import * as THREE from 'three/webgpu';
 import { mrt, normalView, pass } from 'three/tsl';
-import { IS_DEBUG_ENV } from '../../kernel/config/Config';
+import { getConfig, IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { FeatureContext } from '../../kernel/init/Features';
 import { getRenderer } from '../../kernel/render/Renderer';
 import { getGeneratedAppData, getRootScene, getSceneOpts } from '../../kernel/scene/Scene';
@@ -458,6 +458,50 @@ export const createPostFXDebugGUI = async () => {
   debugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__PostFX'));
   await useDebug(debugGUI)?._createPostFXDebugGUI();
 };
+
+type PostFxProfilerModule = typeof import('./debug/_dbg__PostFXProfiler');
+let profiler: DebugModuleRef<PostFxProfilerModule> | null = null;
+
+const loadPostFxProfilerAsync = async () => {
+  if (!profiler)
+    profiler = await loadDebugModuleAsync(() => import('./debug/_dbg__PostFXProfiler'));
+  return useDebug(profiler);
+};
+
+/**
+ * Loads the PostFX per-pass profiler (debug env only: `postFx()`'s `onDebugAfterStart`, since
+ * measuring needs the renderer), and starts measuring when `AppConfig.postFx.measureEnabled` is
+ * set.
+ * @internal
+ */
+export const registerPostFxProfiler = async () => {
+  if (!IS_DEBUG_ENV) return;
+  const module = await loadPostFxProfilerAsync();
+  if (getConfig().postFx?.measureEnabled) module?._setPostFxMeasureEnabled(true);
+};
+
+/**
+ * Switches PostFX per-pass measuring on or off, live (debug env only; the PostFX tab and the
+ * profiler's PostFX source).
+ * @internal
+ */
+export const setPostFxMeasureEnabled = async (enabled: boolean) => {
+  if (!IS_DEBUG_ENV) return;
+  (await loadPostFxProfilerAsync())?._setPostFxMeasureEnabled(enabled);
+};
+
+/**
+ * Whether PostFX per-pass measuring is on (false until the profiler has loaded).
+ * @internal
+ */
+export const isPostFxMeasureEnabled = () => useDebug(profiler)?._isPostFxMeasureEnabled() || false;
+
+/**
+ * The smoothed CPU and GPU times per PostFX pass, or null while not measuring (the profiler's
+ * PostFX source).
+ * @internal
+ */
+export const getPostFxPassStats = () => useDebug(profiler)?._getPostFxPassStats() || null;
 
 /**
  * Returns the currently built PostFX chain (for the debug profiler and the GPU memory tab), or

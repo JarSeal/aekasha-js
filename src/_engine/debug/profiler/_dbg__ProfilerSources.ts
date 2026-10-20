@@ -27,13 +27,14 @@ import { getRenderer } from '../../kernel/render/Renderer';
 import { getCurrentSceneId } from '../../kernel/scene/Scene';
 import { getNextSceneId, isCurrentlyLoading } from '../../kernel/scene/SceneLoader';
 import { addViewFrameListener, isRuntimeViewActive } from '../../kernel/render/Views';
-import { getPostFxPasses, isPostFxEnabled } from '../../features/postfx/PostFX';
-import { registerStatsSource, type ProfilerSettings } from '../Profiler';
 import {
+  getPostFxPasses,
   getPostFxPassStats,
+  isPostFxEnabled,
   isPostFxMeasureEnabled,
   setPostFxMeasureEnabled,
-} from '../PostFXProfiler';
+} from '../../features/postfx/PostFX';
+import { registerStatsSource, type ProfilerSettings } from '../Profiler';
 import type { IntervalCounterSnapshot } from '../../utils/IntervalCounterStats';
 import {
   _acquireGpuTimer,
