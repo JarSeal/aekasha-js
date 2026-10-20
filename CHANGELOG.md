@@ -4,6 +4,54 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-20 — review-lod-spatial-instancing-lines
+
+### Engine 5.7.0 (Golden Hour)
+
+LOD, the spatial index, instanced mesh pools and lines are reviewed file by file (p616). Three bugs are fixed, the per-frame work of the pool sync, the spatial refresh and light culling is lighter, and the entries carry the names their own docs told apps to call. Every export and member of the four features is documented. Lines get the nested `CLAUDE.md` and the Hub page every other feature has. No public export is removed or renamed.
+
+**Added**
+
+- On `aekasha/lod`: `refreshLodBounds`, `setLodMaxSelectionsPerFrame` with its getter `getLodMaxSelectionsPerFrame`, and `getLodFadeSeconds` (the docs and `AppConfig.lod.maxSelectionsPerFrame` named them). The kernel's `enableLodDither`, `createLodFadeAttribute` and `LOD_FADE_OPAQUE`, which a `LodTarget` that cross-fades needs (the contract was on the entry, the helpers weren't). The types `LodLevelDef`, `LodResolvedLevel`, `LodChainLevel`, `SimplifiedLevel`, `ImpostorShading` and `OctahedralImpostorLayout`, each named by a public signature.
+- On `aekasha/spatial`: `DEFAULT_SPATIAL_DOMAIN`, the type `SpatialUpdatePolicy` and `validateSpatialGridQuery`. `SpatialGrid.queryVisit` and `queryAABBVisit` stop when the visitor returns `true`, and return whether one did (a void visitor visits everything, as before).
+- On `aekasha/instancing`: the types `InstancePlacement` (what `spawn` takes) and `InstancedLodPoolLevel`.
+- On `aekasha/lines`: `createLineEntity`, `bindLineToEntity`, `getLineForEntity` and `isFatLineBackendAvailable`; the allocation-free writers for a per-frame refill, `writeBoxEdges`, `writeBox3Edges`, `writePolyline`, `writeGeometryEdges` and `writeGeometryWireframe`, with `BOX_EDGE_SEGMENT_COUNT` and `polylineSegmentCount`; the types `LineObject` (what `createLines` returns), `LineWriter` (what `beginWrite()` returns), and the ones `LineProps` names (`LineColorStyle`, `LineDash`, `LineAttachment`, `LineBackendChoice`, `LineBackendKind`, `LineGrowth`, `LineLocalTransform`, `LinePulseEasing`, `LinePulseMode`).
+- JSDoc on every export and member of `features/lod` (with `impostors` and `worker`), `features/spatial`, `features/instancing` and `features/lines`, and on their debug modules' exports. `@example`s on the additions an app calls. The r186 traps the four features work around are `@remarks` on the functions that guard them (a chain's shared vertex buffers, the fade copy's `dispose`, cross-quads' tangents, the impostor's instance matrix, the widened index uploads, the impostor bake's shadow and `alphaTest` traps, a line's `TAG_IS_MESH` retag). Adding a `LOD` to an entity that has one is a `@remarks` on `LodData`.
+
+**Changed**
+
+- **Behaviour change:** an instanced mesh pool's bounds grow with its instances. A plain pool's bounds were computed at `spawn` and a LOD pool's at the union of its placements, so an instance moved through its `Transform` could leave them, and three culled the whole `InstancedMesh` while it was on screen. The sync now grows them for each instance it bakes (never shrinking, allocation-free), as does the LOD pool's un-cull path. Pools whose instances don't move are unchanged, and no template scene's snapshot moved.
+- **Behaviour change:** a spatial query sees a leave at once. Between a removal and the next rebuild it could miss a live member, the one the removal moved into the freed slot, so light culling could cull a light for a frame (a flicker) after any indexed entity was deleted in `APP_LOGIC`. A join or a move is still seen after the rebuild.
+- Less work per frame. The pool sync reads the `TRANSFORM` storage once, sets `needsUpdate` where it writes and makes no `Set` a frame: about 25 % cheaper in `largeWorld` with nothing moving (3,500 instances). The spatial refresh reads the storage once and writes by slot (`SpatialGrid.updatePositionAt` / `updateRadiusAt`). Light culling makes no closure per light, stops at the first visible receiver, updates each light's world matrix once and reads its storages once per frame: about 20 % cheaper in `largeWorld`. LOD selection didn't change (0.12-0.17 µs per entity).
+- Docs that said the wrong thing: lines aren't pooled (the readme), `LineObject` named the removed `LineManager`, the spatial grid's header said nothing used it, and comments named files and modules from before p608's move (`Lod/`, `ECS/`, `MeshManager`, `LineManager`).
+- Internal (no entry exports them). `LodSystem.ts` is split into `LodSettings.ts`, `LodMeasure.ts` and `LodFades.ts`, and `SpatialIndexSystem.ts` into `SpatialDomains.ts` and `SpatialOracle.ts`; the system registrations kept their order. The octahedral impostor's node builder is split into helpers that build the same graph. One path per name: `Lines.ts`, `InstancedMeshPool.ts`, `LodChains.ts`, `LodSimplify.ts` and `LodChainGLTF.ts` re-export nothing, and their importers name the defining module. `ImpostorSchema.ts`' `ImpostorShading` is `ResolvedImpostorShading` (the entry's `ImpostorShading` is the bake option). Every export of the four features not on an entry is `@internal`, with who uses it.
+- Internal, removed: `setSpatialGridCellSize` (`registerSpatialDomain` sets it), `disposeAllLines` and `getLodChains`; `getAllLines` isn't exported.
+
+**Fixed**
+
+- In `TYPED_ARRAY` storage mode, pool instances never moved after spawn: the store's dirty flag, which only `object3DSyncSystem` cleared (for entities with an `OBJECT3D`), stood in for the `Transform`'s version, so the sync skipped every later move. The pool sync and the spatial refresh read the store's arrays by slot in that mode, and the pool clears an instance's flag once baked. `MAP`, the default, wasn't affected.
+
+### App 1.12.4 (Preschooler)
+
+**Changed**
+
+- `lodShowcase`'s layout comment names `LodMeasure.ts`, where the LOD's projection moved.
+
+### Project
+
+**Added**
+
+- Tests, in Node: `SpatialGrid.test.ts` (the removal case and the grid's queries, tiers and capacity), `SpatialIndexSystem.test.ts` (the refresh in both storage modes), `InstancedMeshPool.test.ts` (the bounds for both pools, the swap-remove, `TYPED_ARRAY` moves), `LodSystem.test.ts` (level selection), `LodAuto.test.ts`, `LodChainOptions.test.ts` and `LineWriter.test.ts` (the writer, the builders, the pulse phase's spread).
+- `src/_engine/features/lines/CLAUDE.md`, its line in the root `CLAUDE.md`'s map, and the Hub's Lines feature page (group World).
+- `docs/issues/pool-instances-not-light-receivers.md` (pool instances in `DEFAULT` never count as light receivers; documented on the pools' `spatialDomain`, not fixed) and `docs/issues/spatial-refresh-and-rebuild-cost.md` (a large `DYNAMIC` domain's per-member cost).
+- `docs/plans/p622_engine-6-major.md`: the spatial API's argument order, a pool's `spawn` / `despawn` without their `world`, and the line entity functions' positional parameters, as candidates.
+
+**Changed**
+
+- The Hub: the LOD guide (the pool bounds, the receivers, the new Key APIs) and the spatial index guide (when a leave, a join and a move are seen, a visitor that stops, `DEFAULT_SPATIAL_DOMAIN`, `validateSpatialGridQuery`, the receivers, its known issues). The LOD, impostor, spatial and instancing `CLAUDE.md` files say where the split modules are and what changed. `readme.md`'s Lines line.
+- `.schemas/impostor.schema.json`: the schema's five undescribed keys have descriptions.
+- `yarn verify:baselines`: `api.json` (the entries' additions, the splits' moves, the internal names added and removed, `selectLevel` for its test), `docs.json` (the four features fully documented) and both bundle baselines. The app's main chunk (`assets/index.js`) is 386,821 B gzip, 767 B more than on `main`.
+
 ## 2026-10-19 — review-skybox
 
 ### Engine 5.6.0 (Golden Hour)
