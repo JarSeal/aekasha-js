@@ -9,6 +9,7 @@ import { ROOT } from '../paths';
 import { isGrowthToFlag } from './bundleGrowth';
 import { BUNDLE_FORMAT_VERSION, type BundleBaseline } from './bundleModel';
 
+/** The app's committed bundle baseline */
 export const BUNDLE_BASELINE_FILE = path.join(ROOT, 'devTools/verify/baselines/bundle.json');
 
 /** A profile's committed bundle baseline: `bundle.json` for the app, `bundle.<id>.json` next to
@@ -21,7 +22,9 @@ export const getBundleBaselineFile = (profileId: string) =>
 /** A diff line; `attention` ones need a look (`verify:baselines` exits 1 on them) */
 export type BundleFinding = { line: string; attention: boolean };
 
+/** Bytes as `yarn sbp` and `verify:baselines` print them: KiB, one decimal, written "kB" */
 export const formatKB = (bytes: number) => `${(bytes / 1024).toFixed(1)} kB`;
+/** A size change with its sign (`+1.2 kB`, `−0.4 kB`) */
 export const formatSigned = (bytes: number) =>
   `${bytes >= 0 ? '+' : '−'}${formatKB(Math.abs(bytes))}`;
 

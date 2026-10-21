@@ -11,8 +11,10 @@
 import type { SplitGroupSize } from './bundleSplit';
 import { type ImportChain, type ModuleGraph, findBestImportChain } from './bundleWhy';
 
+/** The start of an engine feature's group (`getModuleGroup`) */
 export const FEATURE_GROUP_PREFIX = '_engine/features/';
 
+/** An engine feature in the build: a row of the feature view */
 export type FeatureRow = {
   /** The feature's folder and id (`physics`, `skybox`) */
   feature: string;

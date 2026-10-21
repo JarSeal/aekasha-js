@@ -17,11 +17,15 @@ import {
   measureMainChunk,
 } from './bundleModel';
 
+/** The fixture's entry chunk */
 export const MAIN = 'assets/index-AAAAAAAA.js';
+/** The fixture's `import()`ed chunk */
 export const LAZY = 'assets/GLTFLoader-BBBBBBBB.js';
+/** The fixture's manifest: the entry alone */
 export const MANIFEST: Manifest = {
   'index.html': { file: MAIN, src: 'index.html', isEntry: true },
 };
+/** The fixture's files by key */
 export const FILE_KEYS = { [MAIN]: 'assets/index.js', [LAZY]: 'assets/GLTFLoader.js' };
 
 /**
@@ -76,6 +80,7 @@ const MODULES: [
   ['/node_modules/three/GLTFLoader.js', [], { [LAZY]: 50 }],
 ];
 
+/** The fixture's visualizer data (the graph above) */
 export const DATA: VisualizerData = (() => {
   const uid = new Map(MODULES.map(([id], i) => [id, `m${i}`]));
   const data: VisualizerData = { nodeParts: {}, nodeMetas: {} };
@@ -99,6 +104,7 @@ export const DATA: VisualizerData = (() => {
   return data;
 })();
 
+/** The fixture's module sizes */
 export const SIZES: ModuleSizesFile = (() => {
   const sizes: ModuleSizesFile = { formatVersion: 1, chunks: {}, modules: [] };
   for (const [id, , parts] of MODULES) {

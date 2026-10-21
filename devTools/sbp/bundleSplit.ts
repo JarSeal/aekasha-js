@@ -14,8 +14,10 @@ import {
   sortKeys,
 } from './bundleModel';
 
+/** When a file loads: before the first frame, or on demand */
 export type ChunkLoad = 'initial' | 'lazy';
 
+/** A build's files split by when they load */
 export type BundleSplit = {
   /** Keys (`assets/index.js`) of what loads before the first frame, sorted */
   initial: string[];

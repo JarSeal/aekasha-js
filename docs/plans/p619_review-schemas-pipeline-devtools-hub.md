@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-6 implemented
+Status: in progress | Phases 0-7 implemented
 Category: Refactoring, Documentation, Dev tooling
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -1477,7 +1477,7 @@ As built (2026-10-21, uncommitted):
   contrast test. No engine, toolkit or app file changed in Phase 6 (the `eslint-disable` reasons
   in `hub/_assets/ts` are the Hub's).
 
-### Phase 7: verify, sbp and refactor (D9, D12, D13)
+### Phase 7: verify, sbp and refactor (D9, D12, D13) — done
 
 The runner's split and reload handling, the sizes plugin, the keys, the budgets re-set,
 `bundle.json` re-recorded, `refactor/` → `layout/`. Checked: a `--config quick` run with a
@@ -1562,7 +1562,7 @@ Sections:
    the record), `yarn sbp --profile all` (within every budget), `yarn verify:embed`,
    `yarn hub:build`, `yarn test`.
 
-As built (2026-10-22; sections 1-2 committed as `b1083be` and `07e486a`, 3 after them):
+As built (2026-10-22; sections 1-4 committed as `b1083be`, `07e486a`, `85dab64` and `7464a5a`, 5 after them):
 
 - **Section 1, `refactor/` → `layout/` (D9).**
   - Deleted: the codemod (`applyMoveMap.ts`, `moveApply.ts`, `moveSplit.ts`, `moveText.ts`,
@@ -1730,6 +1730,36 @@ As built (2026-10-22; sections 1-2 committed as `b1083be` and `07e486a`, 3 after
     debug module), `bundleSplit.test.ts` (groups from the sizes, a worker chunk lazy),
     `bundleDiff.test.ts` reads temp baselines (the committed one is format 1 until section 5), the
     fixture `testBuild.ts` gains `SIZES`. `yarn test` 1126 passed, lint, both `tsc`.
+- **Section 5, re-recorded, the budgets and the docs (D12).**
+  - `bundle.json` and `bundle.banner.json` recorded in format 2 (`verify:baselines --update`;
+    `api.json` and `docs.json` unchanged, no debug code). Against the format-1 files, besides the
+    keys (`#2` → the plain key or `@<worker>` / `@<folder>`; the banner's `AssetsWorker` pair was
+    numbered the other way round from the app's, B2's swap): `assets/index.js` +75 B gzip and
+    `assets/banner.embed.js` +80 B (Phase 4's `StableStringify.ts`, Phase 5's note), and
+    `assets/LodChainGLTF.js` −20 B (Phase 5's `GLTF_LOD_EXTRAS_KEY` move to `LodChainOptions.ts`).
+  - `sbp.config.ts`: every `groups` budget re-set with `suggestBudget` from the new report (app:
+    `three` 642 → 265 KiB, physics 44 → 25, skybox 30 → 19, `kernel/ecs` 17 → 9, …; banner:
+    `three` 633 → 262, `kernel/ecs` 17 → 8, …), one note per profile saying so; the "a group counts
+    its comments" notes (p612's, p614's, p615's) went, p613's D4 / D5 notes stayed.
+    `'assets/PhysicsWorker.js'` → `'assets/PhysicsWorker.js@PhysicsWorker'` (9.3 kB of 11 KiB,
+    unchanged), with a note that the plain key is the wrapper. `initial`, `chunks` and the
+    `modules` budgets (the icons at 0) as they were; `assets/index.css` stays well under (3 KiB),
+    as D12 says.
+  - `sbp/`'s hygiene: `sbp.ts`' `fail` a `function … never`; summaries on its 30 undocumented
+    exports (`testBuild.ts`' fixture included); `embedBuild.ts`' `eslint-disable` has its reason;
+    `bundleGrowth.ts`' header no longer names the deleted `compareBaselines.ts`.
+  - Docs: `sbp/CLAUDE.md` (the groups' text; new bullets for the module sizes and the keys; the
+    `modules` budgets; the debug check's workers), `verify/CLAUDE.md` (`bundle.json`'s keys and
+    sizes; the debug check's workers; section 3's runner server, reruns and the generated data
+    warning), the root `CLAUDE.md` (`yarn sbp`'s line, the build config's plugin line, the map's
+    sbp line), the Hub's SBP guide (the features' table now minified, the groups about 2 % over the
+    chunk).
+  - Checks: `yarn test` 1126 passed, `yarn lint`, both `tsc`; `yarn verify:baselines` (a fresh
+    build): all four baselines unchanged, no debug code in either build; `yarn sbp --profile all
+    --no-build` on that build: every budget within (the app's `assets/index.css` well under, as
+    kept), both diffs unchanged; `yarn verify:embed --no-build` 3 / 3; `yarn hub:build` 84 pages
+    with Phase 5's warnings only (the toolkit's 4, `{@link getRandomStream}`); the guide's table
+    reads physics 23.5 KiB, sky box 17.6 KiB.
 
 
 ### Phase 8: the Hub, CLAUDE.md, versions and done (D15, D2)

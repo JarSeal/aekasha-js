@@ -7,8 +7,10 @@ import type { ModuleSizesFile, Size } from './bundleModel';
 import type { SplitGroupSize } from './bundleSplit';
 import { KIB, type SbpBudgets, isWellUnderBudget } from './config';
 
+/** Which of `SbpBudgets`' lists a budget is from */
 export type BudgetKind = 'initial' | 'chunk' | 'group' | 'module';
 
+/** One budget checked against the build */
 export type BudgetCheck = {
   kind: BudgetKind;
   /** The chunk's key, the group, the module path; `initial` for the initial budget */

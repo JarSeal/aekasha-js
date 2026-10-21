@@ -32,34 +32,32 @@ const profiles: SbpProfile[] = [
         // p613 D5: the draggable windows' styles left with the windows
         'assets/index.css': 3 * KIB,
         'assets/rapier.js': 843 * KIB,
-        'assets/PhysicsWorker.js': 11 * KIB,
+        // The physics worker's own file (`assets/PhysicsWorker.js` is its 0.1 kB `?worker` wrapper)
+        'assets/PhysicsWorker.js@PhysicsWorker': 11 * KIB,
         'assets/AssetsSwitchGLTF.js': 53 * KIB,
       },
+      // Set from p619's report (the modules minified, a group's code gzipped per chunk; three
+      // 254.5 KiB, physics 23.5 KiB)
       groups: {
-        three: 642 * KIB,
-        '_engine/features/character': 7 * KIB,
-        '_engine/features/instancing': 5 * KIB,
-        '_engine/features/lines': 10 * KIB,
-        '_engine/features/lod': 9 * KIB,
-        // p614 D7's split: 12 → 30 modules, and a group sums its modules' gzip, so 34.7 → 42.6 kB
-        // while its code is 1.4 kB smaller rendered (the main chunk's gzip +0.6 kB in all)
-        '_engine/features/physics': 44 * KIB,
+        three: 265 * KIB,
+        '_engine/features/character': 5 * KIB,
+        '_engine/features/instancing': 4 * KIB,
+        '_engine/features/lines': 6 * KIB,
+        '_engine/features/lod': 7 * KIB,
+        '_engine/features/physics': 25 * KIB,
         '_engine/features/postfx': 3 * KIB,
-        // p615: 26.4 → 28.4 kB, mostly its JSDoc (a group counts its comments); its code about
-        // +1.1 kB (the sky clock, the update queue, the stop, `SkyDayNight.ts` a module of its own)
-        '_engine/features/skybox': 30 * KIB,
-        '_engine/features/spatial': 10 * KIB,
-        '_engine/features/viewports': 4 * KIB,
+        '_engine/features/skybox': 19 * KIB,
+        '_engine/features/spatial': 7 * KIB,
+        '_engine/features/viewports': 3 * KIB,
         // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`)
-        '_engine/kernel/assets': 20 * KIB,
-        // p612's JSDoc (a group counts its comments: sizes before minification); its code +0.4 KiB
-        '_engine/kernel/ecs': 17 * KIB,
-        '_engine/kernel/input': 13 * KIB,
-        '_engine/kernel/scene': 8 * KIB,
+        '_engine/kernel/assets': 13 * KIB,
+        '_engine/kernel/ecs': 9 * KIB,
+        '_engine/kernel/input': 9 * KIB,
+        '_engine/kernel/scene': 6 * KIB,
         // p613 D5: the draggable windows load only where they're used
-        '_engine/ui': 7 * KIB,
-        app: 15 * KIB,
-        toolkit: 10 * KIB,
+        '_engine/ui': 5 * KIB,
+        app: 14 * KIB,
+        toolkit: 7 * KIB,
       },
       modules: {
         // The built-in icons register only in the debug env (p611 D10)
@@ -84,16 +82,16 @@ const profiles: SbpProfile[] = [
         // p613 D5: the draggable windows' styles left with the windows
         'assets/banner.css': 2 * KIB,
       },
+      // Set from p619's report (the modules minified, as the app's)
       groups: {
-        three: 633 * KIB,
+        three: 262 * KIB,
         // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`)
-        '_engine/kernel/assets': 16 * KIB,
-        // p612's JSDoc counts: a group is measured before minification
-        '_engine/kernel/ecs': 17 * KIB,
-        '_engine/kernel/scene': 7 * KIB,
+        '_engine/kernel/assets': 11 * KIB,
+        '_engine/kernel/ecs': 8 * KIB,
+        '_engine/kernel/scene': 5 * KIB,
         // p613 D5: the draggable windows load only where they're used
-        '_engine/ui': 7 * KIB,
-        app: 3 * KIB,
+        '_engine/ui': 5 * KIB,
+        app: 2 * KIB,
         // The floor's promise: no feature reaches the initial chunks
         ...Object.fromEntries(FEATURE_GROUPS.map((group) => [group, 0])),
       },

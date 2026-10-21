@@ -32,8 +32,10 @@ export const REPORT_FORMAT_VERSION = 3;
 /** The last run's report, a key per profile (`yarn sbp` keeps the profiles it didn't measure) */
 export const SBP_REPORT_FILE = path.join(ROOT, '.cache/sbp/report.json');
 
+/** The files of one load (initial or lazy) by key, and their total */
 export type LoadReport = { total: Size; files: Record<string, Size> };
 
+/** A feature view row as the report file holds it (its chain as one line) */
 export type FeatureReport = {
   feature: string;
   initialGzip: number;
@@ -45,6 +47,7 @@ export type FeatureReport = {
   isUnneededByData: boolean;
 };
 
+/** One profile's measured build: a key of `.cache/sbp/report.json` */
 export type ProfileReport = {
   profile: { id: string; entry: string; scenes: string[] };
   /** What loads before the first frame: the entry chunk, its static imports, their CSS */
@@ -60,6 +63,7 @@ export type ProfileReport = {
   budgets: BudgetCheck[] | null;
 };
 
+/** `.cache/sbp/report.json`: the last report of each profile */
 export type SbpReportFile = { formatVersion: number; profiles: Record<string, ProfileReport> };
 
 const pick = (keys: string[], sizes: Record<string, Size>): LoadReport => ({
@@ -134,6 +138,7 @@ export const mergeReport = (file: SbpReportFile | null, report: ProfileReport): 
 
 // --- Text ---
 
+/** The ANSI colour codes the text uses (empty strings without colour) */
 export type Colors = { red: string; green: string; yellow: string; dim: string; reset: string };
 
 /** Files listed per load in the text; the rest are summed in one line */

@@ -1,5 +1,5 @@
 {
-  "formatVersion": 1,
+  "formatVersion": 2,
   "chunks": {
     "assets/AssetsSwitchGLTF.js": {
       "bytes": 148112,
@@ -11,87 +11,87 @@
     },
     "assets/AssetsSwitchTexture.js": {
       "bytes": 4039,
-      "gzip": 1944
+      "gzip": 1942
     },
     "assets/AssetsWorker.js": {
       "bytes": 158,
-      "gzip": 157
+      "gzip": 156
     },
-    "assets/AssetsWorker.js#2": {
+    "assets/AssetsWorker.js@AssetsWorker": {
       "bytes": 2027,
       "gzip": 1046
-    },
-    "assets/DRACOLoader.js": {
-      "bytes": 7544,
-      "gzip": 3074
-    },
-    "assets/GLTFLoader.js": {
-      "bytes": 45869,
-      "gzip": 13859
-    },
-    "assets/GeometryTransfer.js": {
-      "bytes": 4297,
-      "gzip": 1793
-    },
-    "assets/HDRLoader.js": {
-      "bytes": 3404,
-      "gzip": 1629
-    },
-    "assets/ImportRegistry.js": {
-      "bytes": 16546,
-      "gzip": 6653
-    },
-    "assets/KTX2Loader.js": {
-      "bytes": 59894,
-      "gzip": 24363
-    },
-    "assets/LodChainGLTF.js": {
-      "bytes": 2193,
-      "gzip": 968
-    },
-    "assets/banner.js": {
-      "bytes": 460,
-      "gzip": 334
     },
     "assets/banner.css": {
       "bytes": 120,
       "gzip": 128
     },
     "assets/banner.embed.js": {
-      "bytes": 1041050,
-      "gzip": 291970
+      "bytes": 1041130,
+      "gzip": 292050
+    },
+    "assets/banner.js": {
+      "bytes": 460,
+      "gzip": 337
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
-      "gzip": 284
-    },
-    "assets/basis_transcoder.wasm": {
-      "bytes": 527333,
-      "gzip": 247535
+      "gzip": 286
     },
     "assets/basis_transcoder.js": {
       "bytes": 57529,
       "gzip": 15143
     },
-    "assets/draco_decoder.wasm": {
-      "bytes": 285747,
-      "gzip": 88507
-    },
-    "assets/draco_decoder.wasm#2": {
-      "bytes": 192420,
-      "gzip": 63395
+    "assets/basis_transcoder.wasm": {
+      "bytes": 527333,
+      "gzip": 247535
     },
     "assets/draco_decoder.js": {
       "bytes": 719410,
       "gzip": 147373
     },
-    "assets/draco_wasm_wrapper.js": {
+    "assets/draco_decoder.wasm@draco": {
+      "bytes": 285747,
+      "gzip": 88507
+    },
+    "assets/draco_decoder.wasm@gltf": {
+      "bytes": 192420,
+      "gzip": 63395
+    },
+    "assets/draco_wasm_wrapper.js@draco": {
       "bytes": 58763,
       "gzip": 11823
     },
-    "assets/draco_wasm_wrapper.js#2": {
+    "assets/draco_wasm_wrapper.js@gltf": {
       "bytes": 58456,
       "gzip": 11667
+    },
+    "assets/DRACOLoader.js": {
+      "bytes": 7544,
+      "gzip": 3076
+    },
+    "assets/GeometryTransfer.js": {
+      "bytes": 4297,
+      "gzip": 1793
+    },
+    "assets/GLTFLoader.js": {
+      "bytes": 45869,
+      "gzip": 13862
+    },
+    "assets/HDRLoader.js": {
+      "bytes": 3404,
+      "gzip": 1631
+    },
+    "assets/ImportRegistry.js": {
+      "bytes": 16546,
+      "gzip": 6656
+    },
+    "assets/KTX2Loader.js": {
+      "bytes": 59894,
+      "gzip": 24363
+    },
+    "assets/LodChainGLTF.js": {
+      "bytes": 2168,
+      "gzip": 947
     },
     "assets/meshopt_decoder.module.js": {
       "bytes": 26491,
@@ -110,104 +110,104 @@
       "gzip": 52038
     },
     "assets/three.module.js": {
+      "bytes": 220,
+      "gzip": 183
+    },
+    "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
       "gzip": 179
     },
-    "assets/three.module.js#2": {
-      "bytes": 220,
-      "gzip": 182
-    },
     "banner.embed.js": {
       "bytes": 251,
-      "gzip": 211
+      "gzip": 214
     }
   },
   "main": {
     "chunk": "assets/banner.embed.js",
     "modules": 65,
-    "rendered": 3408134,
-    "gzip": 686344
+    "minified": 1060370,
+    "gzip": 297461
   },
   "mainGroups": {
     "_engine/kernel/assets": {
       "modules": 12,
-      "rendered": 50165,
-      "gzip": 14572
+      "minified": 27641,
+      "gzip": 9615
     },
     "_engine/kernel/camera": {
       "modules": 1,
-      "rendered": 6429,
-      "gzip": 1830
+      "minified": 3251,
+      "gzip": 1378
     },
     "_engine/kernel/config": {
       "modules": 1,
-      "rendered": 4241,
-      "gzip": 1383
+      "minified": 2378,
+      "gzip": 1073
     },
     "_engine/kernel/ecs": {
       "modules": 7,
-      "rendered": 56747,
-      "gzip": 16114
+      "minified": 24692,
+      "gzip": 7012
     },
     "_engine/kernel/init": {
       "modules": 5,
-      "rendered": 11828,
-      "gzip": 4479
+      "minified": 7182,
+      "gzip": 3108
     },
     "_engine/kernel/input": {
       "modules": 1,
-      "rendered": 207,
-      "gzip": 147
+      "minified": 71,
+      "gzip": 83
     },
     "_engine/kernel/light": {
       "modules": 2,
-      "rendered": 8878,
-      "gzip": 2559
+      "minified": 5525,
+      "gzip": 2011
     },
     "_engine/kernel/loop": {
       "modules": 3,
-      "rendered": 9314,
-      "gzip": 2915
+      "minified": 4526,
+      "gzip": 1978
     },
     "_engine/kernel/mesh": {
       "modules": 1,
-      "rendered": 5681,
-      "gzip": 1873
+      "minified": 3550,
+      "gzip": 1524
     },
     "_engine/kernel/render": {
       "modules": 6,
-      "rendered": 6404,
-      "gzip": 2543
+      "minified": 3301,
+      "gzip": 1564
     },
     "_engine/kernel/scene": {
       "modules": 7,
-      "rendered": 20789,
-      "gzip": 6110
+      "minified": 10718,
+      "gzip": 3972
     },
     "_engine/ui": {
-      "modules": 4,
-      "rendered": 20687,
-      "gzip": 5409
+      "modules": 3,
+      "minified": 11182,
+      "gzip": 4033
     },
     "_engine/utils": {
-      "modules": 6,
-      "rendered": 2843,
-      "gzip": 1295
+      "modules": 7,
+      "minified": 1756,
+      "gzip": 876
     },
     "app": {
       "modules": 4,
-      "rendered": 1773,
-      "gzip": 1061
+      "minified": 1351,
+      "gzip": 716
     },
     "three": {
       "modules": 4,
-      "rendered": 3199576,
-      "gzip": 623029
+      "minified": 951975,
+      "gzip": 257778
     },
     "vite": {
       "modules": 1,
-      "rendered": 2572,
-      "gzip": 1025
+      "minified": 1271,
+      "gzip": 740
     }
   }
 }

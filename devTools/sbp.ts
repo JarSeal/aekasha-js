@@ -71,10 +71,11 @@ const COLORS: Colors = {
 const USAGE =
   'yarn sbp [--profile <id>[,<id>…] | all] [--no-build | --no-app-build] [--why <group | module path>] [--json] [--brief]';
 
-const fail = (msg: string): never => {
+/** Prints the message and exits 2 */
+function fail(msg: string): never {
   out(`${COLORS.red}${msg}${COLORS.reset}`, true);
   process.exit(2);
-};
+}
 
 const parseArgs = (argv: string[]) => {
   const args = {

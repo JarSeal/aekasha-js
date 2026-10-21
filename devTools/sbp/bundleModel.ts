@@ -17,8 +17,11 @@ import { keyBuildFiles, stripHash } from './bundleKeys';
 
 /** Bump when `bundle.json`'s shape changes: an old one is then read as missing */
 export const BUNDLE_FORMAT_VERSION = 2;
+/** The app build's visualizer report: the import graph and the treemap */
 export const VISUALIZER_FILE = path.join(ROOT, 'dist-stats/bundle-stats.html');
+/** The module sizes' file name, next to a build's visualizer report */
 export const MODULE_SIZES_FILE_NAME = 'module-sizes.json';
+/** The app build's module sizes (`moduleSizesPlugin.ts`) */
 export const MODULE_SIZES_FILE = path.join(ROOT, 'dist-stats', MODULE_SIZES_FILE_NAME);
 
 /** Where a build is: its output folder, its visualizer report and module sizes, and which of its
@@ -40,10 +43,12 @@ export const APP_BUILD: BuildLocation = {
   isAssetsOnly: true,
 };
 
+/** A file's bytes and its gzip (level 9) */
 export type Size = { bytes: number; gzip: number };
 /** A group's modules in a chunk (or summed over chunks): their minified bytes, and the gzip of
  * their minified code concatenated per chunk */
 export type GroupSize = { modules: number; minified: number; gzip: number };
+/** `bundle.json` (an embed's `bundle.<id>.json`) */
 export type BundleBaseline = {
   formatVersion: number;
   /** Every file of the build by its key */
@@ -134,6 +139,7 @@ export const getModuleGroup = (id: string) => {
   return parts[0] === 'toolkit' ? 'toolkit' : 'app';
 };
 
+/** A copy with the keys in sorted order, for stable JSON */
 export const sortKeys = <T>(obj: Record<string, T>) =>
   Object.fromEntries(Object.entries(obj).sort(([a], [b]) => a.localeCompare(b)));
 

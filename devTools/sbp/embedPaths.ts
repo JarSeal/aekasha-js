@@ -7,8 +7,10 @@ import path from 'path';
 import { ROOT } from '../paths';
 import type { SbpProfile } from './config';
 
+/** The embed profiles' builds, a folder each (gitignored) */
 export const EMBED_ROOT_DIR = path.join(ROOT, 'dist-embed');
 
+/** An embed profile's build folder (`dist-embed/<id>/`) */
 export const getEmbedOutDir = (id: string) => path.join(EMBED_ROOT_DIR, id);
 
 /** The entry's file name in the output: its source's without `.ts` (`banner.embed.js`) */

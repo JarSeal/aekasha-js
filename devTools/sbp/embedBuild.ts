@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- the build's one line on what the embed holds and pruned */
 /**
  * An embed profile's build (p611 D7): `vite build` with `AEK_EMBED_PROFILE=<id>` builds the
  * profile's entry module (`sbp.config.ts`) into `dist-embed/<id>/` instead of the app:
