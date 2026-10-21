@@ -1,11 +1,15 @@
 import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
 import { loadDebugModuleAsync, useDebug } from '../kernel/config/DebugModules';
-import type { PhysicsProbeReport } from '../features/physics/debug/_dbg__PhysicsDeterminism';
+import type { PhysicsProbeReport } from '../features/physics/PhysicsProbeTypes';
 
 /** The URL param that installs the test bridge: `?aekTest=true`, next to `?isDebug=true` or `?isProdTest=true` */
-export const TEST_BRIDGE_QUERY_PARAM = 'aekTest';
+const TEST_BRIDGE_QUERY_PARAM = 'aekTest';
 
-/** The bridge's protocol version: bump it when a method's arguments or results change */
+/**
+ * The bridge's protocol version: bump it when a method's arguments or results change. The test
+ * bridge's and the scene runner's.
+ * @internal
+ */
 export const TEST_BRIDGE_VERSION = 4;
 
 /**
@@ -13,7 +17,8 @@ export const TEST_BRIDGE_VERSION = 4;
  * (`step`: its getPhysicsSubStepIndex, 0 = the first step after the load). Set as
  * `window.__AEK_TEST_INPUT__` before the page's scripts run (the runner's init script), so the
  * first step is covered. Keys are `KeyboardEvent.key` values; the modifier flags follow the held
- * modifier keys.
+ * modifier keys. The test bridge's and the scene runner's.
+ * @internal
  */
 export type TestBridgeInputScript = {
   frames: { step: number; down?: string[]; up?: string[] }[];
@@ -21,7 +26,9 @@ export type TestBridgeInputScript = {
 
 /**
  * A scene's character paths ({@link AekTestBridge.getCharacterPaths}): what the scene runner
- * compares, run to run, to check that the characters move the same way (p610).
+ * compares, run to run, to check that the characters move the same way (p610). The test bridge's
+ * and the scene runner's.
+ * @internal
  */
 export type TestBridgeCharacterPaths =
   /** Every character's pose (and locomotion state) per step, over the probe's steps: `hash` covers
@@ -36,11 +43,21 @@ export type TestBridgeCharacterPaths =
   /** No probe armed, or no character */
   | { status: 'NONE' };
 
+/**
+ * `whenSceneReady`'s result: the first scene is ready, or the wait timed out.
+ * @deprecated Only the test bridge and the scene runner (by path, in `devTools/verify/`) use it.
+ * It leaves `aekasha/debug` in engine 6.0.0 (`@internal` then). No replacement.
+ */
 export type TestBridgeSceneReady =
   /** `backend`: what the renderer runs on (WebGPU falls back to WebGL2 without `navigator.gpu`) */
   | { status: 'READY'; sceneId: string; backend: 'WEBGPU' | 'WEBGL' }
   | { status: 'TIMEOUT'; sceneId: string | null };
 
+/**
+ * `whenProbeDone`'s result: the determinism probe's report, or why there is none.
+ * @deprecated Only the test bridge and the scene runner (by path, in `devTools/verify/`) use it.
+ * It leaves `aekasha/debug` in engine 6.0.0 (`@internal` then). No replacement.
+ */
 export type TestBridgeProbeResult =
   | ({ status: 'DONE' } & PhysicsProbeReport)
   /** The probe isn't armed (no `?physicsProbe=N`, or prod test mode, where it doesn't load) */
@@ -48,6 +65,11 @@ export type TestBridgeProbeResult =
   /** No report for the current scene in time (eg. a scene whose physics doesn't step) */
   | { status: 'TIMEOUT'; sceneId: string | null };
 
+/**
+ * `snapshot`'s result: what the canvas shows, as a PNG.
+ * @deprecated Only the test bridge and the scene runner (by path, in `devTools/verify/`) use it.
+ * It leaves `aekasha/debug` in engine 6.0.0 (`@internal` then). No replacement.
+ */
 export type TestBridgeSnapshot = {
   width: number;
   height: number;
@@ -59,13 +81,16 @@ export type TestBridgeSnapshot = {
 
 /**
  * Every ECS world's systems in the order they run: world id → stage → `id@order` per system. Equal
- * `order`s run in registration order, so this is what a change in registration order shows in.
+ * `order`s run in registration order, so this is what a change in registration order shows in. The
+ * test bridge's and the scene runner's.
+ * @internal
  */
 export type TestBridgeSystemOrder = Record<string, Record<string, string[]>>;
 
 /**
  * `window.__AEK_TEST__`: what the scene runner (`devTools/verify/scenes.ts`, p601) drives a page
  * through. Every method is safe to call more than once.
+ * @internal
  */
 export type AekTestBridge = {
   version: number;
@@ -106,7 +131,9 @@ declare global {
  * Installs `window.__AEK_TEST__` ({@link AekTestBridge}) when the page has `?aekTest=true`, in the
  * debug env and prod test mode only (never in a production build). Before the first scene load.
  * It also starts the test clock: every frame advances by 1/60 s (`setFixedFrameDelta`, and three's
- * TSL `time`), so what a page shows depends on how many frames ran, not on how long they took.
+ * TSL `time`), so what a page shows depends on how many frames ran, not on how long they took. The
+ * boot's.
+ * @internal
  */
 export const registerTestBridge = async () => {
   if (!IS_DEBUG_ENV && !IS_PROD_TEST_MODE) return;

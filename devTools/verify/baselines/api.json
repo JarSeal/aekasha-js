@@ -1,9 +1,6 @@
 {
   "formatVersion": 1,
   "modules": {
-    "src/_engine/debug/Assets.ts": {
-      "createAssetsDebugGUI": "Function"
-    },
     "src/_engine/debug/AxesGizmo.ts": {
       "initAxesGizmo": "Function",
       "registerAxesGizmoModule": "Function",
@@ -15,7 +12,6 @@
       "addDebugToastWhenReady": "Function",
       "AnyDebuggerTabDef": "TypeAlias",
       "createDebuggerTab": "Function",
-      "createDebugGui": "Function",
       "DEBUG_TOASTER_ID": "Variable",
       "DEBUGGER_SCENE_LOADER_ID": "Variable",
       "DebuggerDyn": "TypeAlias",
@@ -36,9 +32,7 @@
       "DebugGUIOpts": "TypeAlias",
       "disableDebugger": "Function",
       "flushQueuedDebugToasts": "Function",
-      "getDrawerState": "Function",
       "hydrateDebuggerTabState": "Function",
-      "isDebuggerDisabled": "Function",
       "isDebuggerTabOpen": "Function",
       "openDebuggerTab": "Function",
       "persistDebuggerTabValue": "Function",
@@ -52,9 +46,9 @@
     },
     "src/_engine/debug/DebugTools.ts": {
       "DEBUG_CAMERA_ID": "Variable",
+      "DebugKeyShortcutsTab": "TypeAlias",
       "DebugToolsState": "TypeAlias",
       "getDebugToolsState": "Function",
-      "handleDebugCameraSwitch": "Function",
       "initDebugTools": "Function",
       "openDebugKeyShortcutsDialog": "Function",
       "registerDebugToolsModule": "Function",
@@ -119,6 +113,7 @@
       "DevFilesWriteStatus": "TypeAlias"
     },
     "src/_engine/debug/EnvBall.ts": {
+      "EnvBallOpts": "TypeAlias",
       "initEnvBall": "Function",
       "registerEnvBallModule": "Function",
       "setEnvBallInMainCamera": "Function",
@@ -147,27 +142,15 @@
       "ToolTypes": "TypeAlias",
       "updateOnScreenTools": "Function"
     },
-    "src/_engine/debug/PercentagePieHtml.ts": {
-      "createPercentagePie": "Function",
-      "PercentagePie": "TypeAlias",
-      "PercentagePieHtml": "Function",
-      "PercentagePieOpts": "TypeAlias"
-    },
-    "src/_engine/debug/PostFXProfiler.ts": {
-      "getPostFxPassStats": "Function",
-      "isPostFxMeasureEnabled": "Function",
-      "registerPostFxProfiler": "Function",
-      "setPostFxMeasureEnabled": "Function"
-    },
     "src/_engine/debug/Profiler.ts": {
       "_getEntityWindowOpener": "Function",
       "_getStatsSources": "Function",
+      "AnyStatsSource": "TypeAlias",
       "createProfilerTab": "Function",
       "DEFAULT_PROFILER_SETTINGS": "Variable",
       "EntityWindowOpener": "TypeAlias",
       "getProfilerSettings": "Function",
       "isProfilerAvailable": "Function",
-      "isProfilerEnabledInProdTest": "Function",
       "isProfilerLoadedInThisMode": "Function",
       "isProfilerTabOpen": "Function",
       "isProfilerWindowOpen": "Function",
@@ -184,24 +167,16 @@
       "registerEntityWindowOpener": "Function",
       "registerProfiler": "Function",
       "registerStatsSource": "Function",
+      "removeProfilerTab": "Function",
       "setProfilerSettings": "Function",
       "StatsSource": "TypeAlias",
       "toggleProfilerWindow": "Function",
       "updateProfilerTab": "Function"
     },
-    "src/_engine/debug/SceneHelpers.ts": {
-      "createAxesHelper": "Function",
-      "createGridHelper": "Function",
-      "createPolarGridHelper": "Function",
-      "toggleAxesHelperVisibility": "Function",
-      "toggleGridHelperVisibility": "Function",
-      "togglePolarGridHelperVisibility": "Function"
-    },
     "src/_engine/debug/Stats.ts": {
       "defaultStatsOptions": "Variable",
       "getStats": "Function",
       "getStatsCmp": "Function",
-      "getStatsConfig": "Function",
       "initStats": "Function",
       "registerStatsModule": "Function",
       "startCustomMeasurements": "Function",
@@ -220,7 +195,6 @@
     "src/_engine/debug/TestBridge.ts": {
       "AekTestBridge": "TypeAlias",
       "registerTestBridge": "Function",
-      "TEST_BRIDGE_QUERY_PARAM": "Variable",
       "TEST_BRIDGE_VERSION": "Variable",
       "TestBridgeCharacterPaths": "TypeAlias",
       "TestBridgeInputScript": "TypeAlias",
@@ -230,6 +204,7 @@
       "TestBridgeSystemOrder": "TypeAlias"
     },
     "src/_engine/debug/UndoRedo.ts": {
+      "_getUndoRedoActionHandler": "Function",
       "canRedo": "Function",
       "canUndo": "Function",
       "clearUndoRedoHistory": "Function",
@@ -239,6 +214,7 @@
       "recordOrCoalesceUndoRedoAction": "Function",
       "recordUndoRedoAction": "Function",
       "redoLastAction": "Function",
+      "RegisteredUndoRedoActionHandler": "TypeAlias",
       "registerUndoRedoActionHandler": "Function",
       "registerUndoRedoModule": "Function",
       "setUndoRedoSettings": "Function",
@@ -997,6 +973,9 @@
       "toWireJointParams": "Function",
       "toWireRigidBodyParams": "Function"
     },
+    "src/_engine/features/physics/PhysicsProbeTypes.ts": {
+      "PhysicsProbeReport": "TypeAlias"
+    },
     "src/_engine/features/physics/PhysicsQueryStats.ts": {
       "endPhysicsRayStatsFrame": "Function",
       "getPhysicsQueryObserver": "Function",
@@ -1371,12 +1350,16 @@
       "getActivePostFxPipeline": "Function",
       "getPostFxBuiltChain": "Function",
       "getPostFxPasses": "Function",
+      "getPostFxPassStats": "Function",
       "installPostFx": "Function",
       "isPostFxEnabled": "Function",
+      "isPostFxMeasureEnabled": "Function",
       "loadScenePostFxFilesAsync": "Function",
       "PostFxLiveParams": "TypeAlias",
       "PostFxPassInfo": "TypeAlias",
+      "registerPostFxProfiler": "Function",
       "setPostFxEnabled": "Function",
+      "setPostFxMeasureEnabled": "Function",
       "setPostFxPassEnabled": "Function",
       "setPostFxPassParam": "Function"
     },
@@ -1812,6 +1795,7 @@
       "setAssetOwnerScene": "Function"
     },
     "src/_engine/kernel/assets/AssetsAPI.ts": {
+      "createAssetsDebugGUI": "Function",
       "getAssetLoadReport": "Function",
       "getAssetsState": "Function",
       "getAssetsWorkerInfo": "Function",
@@ -2106,16 +2090,9 @@
     },
     "src/_engine/kernel/config/DebugModules.ts": {
       "DebugModuleRef": "Interface",
-      "isDebugReady": "Function",
       "loadDebugModule": "Function",
       "loadDebugModuleAsync": "Function",
       "useDebug": "Function"
-    },
-    "src/_engine/kernel/ecs/debug/ECSStressTest.ts": {
-      "getECSStressTestCount": "Function",
-      "initECSStressTest": "Function",
-      "resetECSStressTest": "Function",
-      "spawnECSStressTestBatch": "Function"
     },
     "src/_engine/kernel/ecs/ECS.ts": {
       "ComponentHook": "TypeAlias",
@@ -2189,6 +2166,9 @@
       "CoreComponentType": "Enum",
       "EntityDebugData": "TypeAlias",
       "ManagedByData": "TypeAlias"
+    },
+    "src/_engine/kernel/ecs/ECSStressTest.ts": {
+      "initECSStressTest": "Function"
     },
     "src/_engine/kernel/ecs/LodTargets.ts": {
       "getLodTargets": "Function",
@@ -3436,6 +3416,7 @@
       "sampleAtlasCell",
       "saveBufferGeometry",
       "saveMaterial",
+      "saveTexture",
       "setActionContextEnabled",
       "setActiveView",
       "setKeyBindingEnabled",
@@ -3519,10 +3500,22 @@
       "DEV_FILES_TOKEN_HEADER",
       "DEV_FILES_TOKEN_META",
       "DebugGUIOpts",
+      "DebugKeyBindingConfig",
       "DebugModuleRef",
+      "DebuggerDyn",
       "DebuggerListDef",
       "DebuggerListItem",
+      "DebuggerListToggle",
+      "DebuggerPaneBinding",
+      "DebuggerPaneButton",
+      "DebuggerPaneCustom",
+      "DebuggerPaneFolder",
+      "DebuggerPaneItem",
+      "DebuggerPaneSection",
+      "DebuggerPaneSeparator",
+      "DebuggerStateKey",
       "DebuggerTabDef",
+      "DebuggerTabSection",
       "DevDataGatheredEvent",
       "DevFileRead",
       "DevFileWrite",
@@ -3532,14 +3525,19 @@
       "DevFilesError",
       "DevFilesErrorBody",
       "DevFilesErrorCode",
+      "DevFilesSaveData",
       "DevFilesSaveDataWrite",
       "DevFilesSchemaIssues",
       "DevFilesStageBody",
       "DevFilesStatus",
       "DevFilesStatusBody",
+      "DevFilesUnavailableReason",
       "DevFilesWriteStatus",
       "EncodePNGOpts",
+      "EntityWindowOpener",
+      "GPUMemoryResource",
       "GPUMemorySource",
+      "GPU_MEMORY_TAB_ID",
       "PNGSource",
       "StatsSource",
       "TestBridgeProbeResult",
@@ -3550,22 +3548,34 @@
       "UpdateDebuggerTabOpts",
       "addDebugToast",
       "createDebuggerTab",
+      "createProfilerTab",
       "debuggerListCMP",
       "encodePNG",
+      "getDevFilesSaveHistorySize",
       "getDevFilesStatus",
+      "isDebuggerTabOpen",
       "isProfilerAvailable",
+      "isProfilerLoadedInThisMode",
+      "isProfilerTabOpen",
       "isProfilerWindowOpen",
       "loadDebugModuleAsync",
+      "markDebugHelper",
+      "onDevDataGathered",
       "openDebuggerTab",
+      "openProfilerTab",
       "persistDebuggerTabValue",
       "readDevFile",
+      "recordOrCoalesceUndoRedoAction",
       "recordUndoRedoAction",
+      "registerEntityWindowOpener",
       "registerGPUMemorySource",
       "registerStatsSource",
       "registerUndoRedoActionHandler",
       "removeDebuggerTab",
+      "removeProfilerTab",
       "toggleProfilerWindow",
       "updateDebuggerTab",
+      "updateProfilerTab",
       "writeDevFiles"
     ],
     "aekasha/instancing": [

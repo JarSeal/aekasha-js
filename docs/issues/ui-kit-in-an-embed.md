@@ -1,6 +1,6 @@
 **Title:** The UI kit sizes itself for the full page: `rem`s on the template's root and the browser window's box
 
-Status: open | for p800 (the UI kit restyle)
+Status: open | for p801 (p800's design foundation, its D4)
 Category: UI, Embed
 Found: 2026-10-20, p617 §1.4 (S2, W5); filed in p617 D8
 Our workaround: none needed yet: no embed profile shows kit UI (the banner has none). An app that does sets its own sizes on the components it makes
@@ -30,7 +30,7 @@ p617 fixed, documented and exported the kit as it is; p800 restyles every compon
 new ones, and picks their units then. Changing about 115 values in four style files now, for p800
 to rewrite, would be work done twice, and no embed shows kit UI yet.
 
-## What a fix needs (p800)
+## What a fix needs (p800 D4, done in p801)
 
 1. Units that work in both boots: a `--aek-rem`-style custom property set on the HUD root (by
    `page.scss` for the full page, by the mount's container otherwise), or `px`, or `em` from a

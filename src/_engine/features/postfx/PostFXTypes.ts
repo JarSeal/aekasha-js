@@ -84,7 +84,8 @@ export type PostFxBuiltChain = {
 };
 
 /**
- * Per-PostFX pass measurement (smoothed ms per frame), see getPostFxPassStats().
+ * Per-PostFX pass measurement (smoothed ms per frame), as `getPostFxPassStats` reports it to the
+ * PostFX tab and the profiler.
  * @internal
  */
 export type PostFxPassStats = {
@@ -103,7 +104,7 @@ export type PostFxPassStats = {
 };
 
 /**
- * PostFX measurement results, see getPostFxPassStats() (the debug profiler).
+ * PostFX measurement results: what `getPostFxPassStats` returns to the PostFX tab and the profiler.
  * @internal
  */
 export type PostFxStats = {

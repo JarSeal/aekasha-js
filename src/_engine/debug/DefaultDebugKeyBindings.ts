@@ -43,13 +43,24 @@ import {
   type KeyUpDownBinding,
 } from '../kernel/input/KeyboardInput';
 
-/** The action map of the engine's debug keys, with the CONFIG.ts `debugKeys` overrides applied
- * (debug env). An action per key, by the key's id. */
+/**
+ * The action map of the engine's debug keys, with the CONFIG.ts `debugKeys` overrides applied
+ * (debug env). An action per key, by the key's id. The debug keys' and the Debug key shortcuts
+ * dialog's.
+ * @internal
+ */
 export const DEBUG_KEYS_ACTION_MAP_ID = 'aek:debugKeys';
-/** The action map of the CONFIG.ts `debugKeys` that add a key (debug env, made only when there
- * are some). */
+/**
+ * The action map of the CONFIG.ts `debugKeys` that add a key (debug env, made only when there
+ * are some). The debug keys' and the Debug key shortcuts dialog's.
+ * @internal
+ */
 export const APP_DEBUG_KEYS_ACTION_MAP_ID = 'aek:appDebugKeys';
-/** The action map of the production test mode keys (prod test mode). */
+/**
+ * The action map of the production test mode keys (prod test mode). The prod test keys' and the
+ * Debug key shortcuts dialog's.
+ * @internal
+ */
 export const PROD_TEST_KEYS_ACTION_MAP_ID = 'aek:prodTestKeys';
 
 /**
@@ -87,10 +98,17 @@ const getPressedChordHint = (e: KeyboardEvent) => {
   return [...modifiers, key].join('+');
 };
 
-/** The sub category a default debug key is listed under (the Debug key shortcuts dialog). */
+/**
+ * The sub category a default debug key is listed under (the Debug key shortcuts dialog). The Debug
+ * key shortcuts dialog's.
+ * @internal
+ */
 export type DebugKeyCategory = 'DEBUGGER' | 'CAMERA' | 'LOOPS_AND_MODES' | 'VIEWPORT' | 'PROD_TEST';
 
-/** An engine default key binding with its listing category. */
+/**
+ * An engine default key binding with its listing category. The Debug key shortcuts dialog's.
+ * @internal
+ */
 export type DefaultDebugKeyBinding = KeyUpDownBinding & { category: DebugKeyCategory };
 
 const DEFAULT_DEBUG_KEY_BINDINGS: DefaultDebugKeyBinding[] = [
@@ -357,7 +375,8 @@ const createDebugKeyMap = (mapId: string, keys: readonly Readonly<KeyUpDownBindi
  * Creates the engine's debug keys' action map ({@link DEBUG_KEYS_ACTION_MAP_ID}), its defaults
  * merged with the CONFIG.ts `debugKeys` overrides, and the app's own `debugKeys` as a map of their
  * own ({@link APP_DEBUG_KEYS_ACTION_MAP_ID}). Reserves the engine keys' chords, so a key binding or
- * an action map binding one of them gets a console warning. Debug environment only.
+ * an action map binding one of them gets a console warning. Debug environment only. The boot's.
+ * @internal
  */
 export const registerDefaultDebugKeyBindings = (): void => {
   const { debugKeys = [] } = getConfig();
@@ -453,7 +472,8 @@ const DEFAULT_PROD_TEST_KEY_BINDINGS: DefaultDebugKeyBinding[] = [
 /**
  * Creates the production test mode keys' action map ({@link PROD_TEST_KEYS_ACTION_MAP_ID}: F5
  * stop, F6 main loop, F7 app loop pause, F8 profiler window, no toasts). An app key binding or
- * action map of the same key takes over. Production test mode only.
+ * action map of the same key takes over. Production test mode only. The boot's.
+ * @internal
  */
 export const registerDefaultProdTestKeyBindings = (): void => {
   createDebugKeyMap(PROD_TEST_KEYS_ACTION_MAP_ID, DEFAULT_PROD_TEST_KEY_BINDINGS);
@@ -461,7 +481,9 @@ export const registerDefaultProdTestKeyBindings = (): void => {
 
 /**
  * The engine's default key bindings as defined (before any CONFIG.ts `debugKeys` override), for
- * listing them: `debug` for the debug environment, `prodTest` for production test mode.
+ * listing them: `debug` for the debug environment, `prodTest` for production test mode. The Debug
+ * key shortcuts dialog's.
+ * @internal
  */
 export const getDefaultDebugKeyBindings = (): {
   debug: readonly Readonly<DefaultDebugKeyBinding>[];

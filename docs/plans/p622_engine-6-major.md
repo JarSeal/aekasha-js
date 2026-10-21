@@ -1,6 +1,6 @@
 Status: stub — not-implemented
 Category: Refactoring, API
-Related: p600_whole-codebase-refactoring-and-documentation.md (Stage C bumps are minor or patch, so its deprecations wait here), \_DONE_p614_review-physics.md (D3: the physics items below), \_DONE_p615_review-sky-box.md (D3: the sky box items below), \_DONE_p616_review-lod-spatial-instancing-lines.md (D3: the LOD, spatial, instancing and lines items below), \_DONE_p617_review-input-ui-hud.md (D3: the UI kit items below), \_DONE_p610_character-and-input-action-architecture.md, \_DONE_p612_review-ecs-loop-config-init.md, \_DONE_p613_review-rendering-scene-assets.md (their deprecations), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the tiers' measurement)
+Related: p800_debugger-ui-overhaul.md (D12: its p806 ships here on the `engine-6` branch), p600_whole-codebase-refactoring-and-documentation.md (Stage C bumps are minor or patch, so its deprecations wait here), \_DONE_p614_review-physics.md (D3: the physics items below), \_DONE_p615_review-sky-box.md (D3: the sky box items below), \_DONE_p616_review-lod-spatial-instancing-lines.md (D3: the LOD, spatial, instancing and lines items below), \_DONE_p617_review-input-ui-hud.md (D3: the UI kit items below), \_DONE_p618_review-debug-public-api.md (D3: the debug items below), \_DONE_p610_character-and-input-action-architecture.md, \_DONE_p612_review-ecs-loop-config-init.md, \_DONE_p613_review-rendering-scene-assets.md (their deprecations), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the tiers' measurement)
 
 # Engine 6.0.0 — Stub
 
@@ -28,7 +28,9 @@ migration page, so an app made from the template upgrades in one step.
     `SIMULATION_FILES`);
   - the sky box (p615): `LegacySkyBox.ts`, `SkyBox.ts`' legacy `createSkyBox` overload,
     `SkyBoxSchema.ts`' conversions and the debug tab's migration (`debug/_dbg__SkyBoxShared.ts`;
-    below).
+    below);
+  - the debug entry (p618): `debug/DevFilesProtocol.ts`, `debug/TestBridge.ts`,
+    `debug/DebuggerGUI.ts` (below).
 - **From p614 (its D3):**
   - `physicsTiers()`, a feature of its own (below);
   - `createPhysicsEntity` with an options object instead of five positional parameters (36 call
@@ -84,10 +86,32 @@ migration page, so an app made from the template upgrades in one step.
     (`TCMP` → `Cmp`, `TProps` → `CmpProps`, `TListener`, `TListenerCache`, `TListenerCreator`,
     `TStyle`, `TAttr`, `TClassAction`, `TAnimChain`, `TAnimState`, `TSettings` in `ui/CMPTypes.ts`, and
     `ui/DropDown.ts`' `TDropDown`), all on `aekasha/ui`, renamed together (the old names
-    deprecated aliases in a minor first, or removed here: the codemod's job).
-- **The deprecations without a version** (`debug/Stats.ts`' two, `debug/PercentagePieHtml.ts`'
-  one): each gets a version or a removal here. (`ui/DraggableWindow.ts`' six were removed in
-  p617: on no entry, no caller.)
+    deprecated aliases in a minor first, or removed here: the codemod's job). p800 (D12) decides
+    it: p803 adds the new names with the old ones as deprecated aliases, and this major removes
+    the aliases.
+- **From p618 (its D3):**
+  - the names on `aekasha/debug` that only the dev files protocol's two sides and the scene runner
+    use (deprecated in engine 5.9.0): the dev server's route, header and meta constants
+    (`DEV_FILES_ROUTE_BASE`, `DEV_FILES_TOKEN_HEADER`, `DEV_FILES_TOKEN_META`,
+    `DEV_FILES_HASH_HEADER`), `AEK_GATHER_EVENT`, `DevFilesStageBody`, `DevFilesSaveDataWrite`,
+    `DevFilesErrorBody` (`debug/DevFilesProtocol.ts`) and the test bridge's `TestBridgeProbeResult`,
+    `TestBridgeSceneReady`, `TestBridgeSnapshot` (`debug/TestBridge.ts`). They leave the entry and
+    become `@internal`; `devTools/` already imports them by path, so only the entry changes. The
+    protocol types the client API names stay public (`DevFilesStatusBody`, `DevFilesCommitBody`,
+    `DevFilesConflicts`, `DevFilesSchemaIssues`, `DevFilesErrorCode`, `DevFilesWriteStatus`,
+    `DevFilesSaveData`, `DevDataGatheredEvent`);
+  - `createDebuggerTab`'s second parameter and `DebugGUIOpts` (`debug/DebuggerGUI.ts`, deprecated
+    in engine 5.9.0): it moves the drawer's button for the whole drawer, whichever tab passes it,
+    and nothing passes it. Removed; the button stays in the middle (an app moves it with CSS);
+  - not deprecated, p800's break: the tab types' Tweakpane fields (`DebuggerPaneBinding` passes its
+    other fields to Tweakpane's `addBinding` and its `onCreate` gets a `BindingApi`;
+    `DebuggerPaneCustom.build` gets a Tweakpane `Pane | FolderApi`). Decided in p800 (D12): its
+    debugger migration, p806, replaces them on the `engine-6` integration branch and ships with
+    this major (p800 §6); this major's migration page lists p806's tab type changes (p800 §5,
+    p806);
+- **The deprecations without a version:** none left. (`ui/DraggableWindow.ts`' six were removed in
+  p617, `debug/Stats.ts`' two and `debug/_dbg__PercentagePie.ts`' one in p618: on no entry, no
+  caller.)
 - **The toolkit** keeps its own scale: its `createSeededRandom` re-export goes in toolkit 3.0.0,
   which ships with this major only if an engine change requires it (Versioning).
 

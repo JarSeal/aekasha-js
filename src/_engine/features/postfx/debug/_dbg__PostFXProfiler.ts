@@ -1,6 +1,6 @@
 /**
  * PostFX per-pass performance measuring (docs/plans/_DONE_p070_post-fx-system.md, Design decision 8).
- * Debug-only, lazily loaded through debug/PostFXProfiler.ts, and switchable live (no reload).
+ * Debug-only, lazily loaded through PostFX.ts' registerPostFxProfiler(), and switchable live (no reload).
  * While off nothing is installed: no inspector, no wrappers, no timing calls.
  *
  * - CPU: each PostFX pass's profileNodes' updateBefore() is wrapped with performance.now().

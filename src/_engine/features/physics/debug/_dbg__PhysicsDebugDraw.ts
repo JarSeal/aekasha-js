@@ -1,3 +1,6 @@
+// The physics wireframes: their colours (config, tab and per-entity overrides, persisted), the pose
+// source, the line build and the sync. Over 800 lines as one feature's debug drawing; p618 reviewed
+// it for correctness only (D1), so it is split when it is next reworked.
 import * as THREE from 'three/webgpu';
 
 import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../../../kernel/loop/SystemStages';
@@ -678,6 +681,10 @@ const buildEntityWireframes = async (entityId: number, world: ECSWorld) => {
 
   building.add(entityId);
   const built: ColliderWireframe[] = [];
+  // Every line made, also one whose pose reads are still awaited: a rejected read (the collider
+  // gone from the worker: a scene switch, a delete, the REMOVED tier) disposes them all
+  const createdLines: LineObject[] = [];
+  let isStored = false;
 
   try {
     // Resolved once and cached; only the very first wireframe waits for it. Without it the
@@ -705,6 +712,7 @@ const buildEntityWireframes = async (entityId: number, world: ECSWorld) => {
       // Engine lines are never frustum culled by default: physics debug geometry should
       // never disappear because its own bounds were mis-estimated.
       const line = createColliderLine(geometry, `physicsWireframe_e${entityId}_c${collider.id}`);
+      createdLines.push(line);
 
       let localPos: THREE.Vector3;
       let localQuat: THREE.Quaternion;
@@ -723,13 +731,12 @@ const buildEntityWireframes = async (entityId: number, world: ECSWorld) => {
     }
 
     // The component may have been removed (or the entity deleted, or its colliders taken out
-    // of the world) while the awaits above were in flight — throw the work away rather than
-    // leaking orphaned lines.
+    // of the world) while the awaits above were in flight — throw the work away (the finally
+    // disposes the lines) rather than leaking orphaned lines.
     if (
       !world.hasComponent(entityId, ComponentType.DEBUG_PHYSICS_WIREFRAME) ||
       !world.hasComponent(entityId, ComponentType.COLLIDER)
     ) {
-      for (const cw of built) disposeColliderWireframe(cw);
       return;
     }
     if (!built.length) return;
@@ -757,11 +764,14 @@ const buildEntityWireframes = async (entityId: number, world: ECSWorld) => {
       colliders: built,
     };
     wireframes.set(entityId, entry);
+    isStored = true;
     applyLocalTransforms(entry);
     applyMasterVisibilityToEntry(entry);
     trackingDirty = true;
   } finally {
     building.delete(entityId);
+    // Thrown, or thrown away above
+    if (!isStored) for (const line of createdLines) line.dispose();
   }
 };
 

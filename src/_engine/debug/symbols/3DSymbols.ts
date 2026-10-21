@@ -17,6 +17,11 @@ const symbols: {
 
 type SymbolsModule = DebugModuleRef<typeof import('./_dbg__Symbols')> | null;
 
+/**
+ * Loads the 3D symbols (the camera and light icons in the scene) and attaches them: the boot's
+ * debug step.
+ * @internal
+ */
 export const load3DSymbols = async () => {
   if (!IS_DEBUG_ENV) return;
 
@@ -167,7 +172,24 @@ const createSymbolClone = (template?: THREE.Group): THREE.Group | null => {
   return clone;
 };
 
+/**
+ * A camera's 3D symbol, a clone with its own materials (null before the symbols have loaded): the
+ * symbols module's.
+ * @internal
+ */
 export const createNewCameraSymbol = () => createSymbolClone(symbols.camera);
+/**
+ * A point light's 3D symbol, as {@link createNewCameraSymbol}: the symbols module's.
+ * @internal
+ */
 export const createNewPointLightSymbol = () => createSymbolClone(symbols.point);
+/**
+ * A spot light's 3D symbol, as {@link createNewCameraSymbol}: the symbols module's.
+ * @internal
+ */
 export const createNewSpotLightSymbol = () => createSymbolClone(symbols.spot);
+/**
+ * A directional light's 3D symbol, as {@link createNewCameraSymbol}: the symbols module's.
+ * @internal
+ */
 export const createNewDirectionalLightSymbol = () => createSymbolClone(symbols.directional);

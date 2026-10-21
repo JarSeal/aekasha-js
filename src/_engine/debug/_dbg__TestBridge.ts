@@ -17,8 +17,8 @@ import { takeSnapshotAsync } from '../kernel/render/Snapshot';
 import {
   getPhysicsDeterminismProbeSteps,
   onPhysicsProbeReport,
-  type PhysicsProbeReport,
 } from '../features/physics/debug/_dbg__PhysicsDeterminism';
+import type { PhysicsProbeReport } from '../features/physics/PhysicsProbeTypes';
 import { encodeRGBA8PNG } from './_dbg__PNGEncoder';
 import { getCharacterPaths, installTestInput } from './_dbg__TestBridgeInput';
 import { TEST_BRIDGE_VERSION, type AekTestBridge, type TestBridgeSystemOrder } from './TestBridge';
@@ -33,6 +33,7 @@ let isTestClockFrozen = false;
 const probeReports = new Map<string, PhysicsProbeReport>();
 /** whenProbeDone({ freeze: true }) is waiting: freeze in the report's own listener call */
 let freezeOnProbeReport = false;
+/** The freeze one whenProbeDone call started (never two for one report), until it's awaited */
 let freezing: Promise<void> | null = null;
 
 const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
@@ -79,7 +80,11 @@ const whenProbeDone: AekTestBridge['whenProbeDone'] = async (opts) => {
   if (!report) {
     return { status: 'TIMEOUT', sceneId: getCurrentSceneId() ?? null };
   }
-  if (freezing) await freezing;
+  if (freezing) {
+    await freezing;
+    // Done: a later whenProbeDone({ freeze: true }) (a later visit) freezes again
+    freezing = null;
+  }
   return { status: 'DONE', ...report };
 };
 

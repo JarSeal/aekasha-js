@@ -8,7 +8,7 @@ import {
   type DebuggerPaneItem,
 } from '../../../debug/DebuggerGUI';
 import { lsGetItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
-import { createPercentagePie, type PercentagePie } from '../../../debug/PercentagePieHtml';
+import { createPercentagePie, type PercentagePie } from '../../../debug/_dbg__PercentagePie';
 import type {
   IntervalCounterSnapshot,
   IntervalWindowSnapshot,
@@ -176,15 +176,20 @@ const createDebugControls = () => {
     ],
     // Only while the tab is visible
     refreshIntervalMs: STATS_VIEW_REFRESH_MS,
-    onRefresh: refreshStatsView,
+    onRefresh: () => {
+      rebuildIfPhysicsWorldChanged();
+      refreshStatsView();
+    },
     onOpen: () => () => {
       statsBlocks = [];
       pendingQueriesView = null;
+      physicsViewHasWorld = null;
     },
     content: () => {
       // Re-run on every mount and rebuild: the views below re-register themselves
       statsBlocks = [];
       pendingQueriesView = null;
+      physicsViewHasWorld = null;
       return [
         {
           pane: true,
@@ -301,10 +306,22 @@ const buildThreeStatsView = () => {
 const getPhysicsRaysSnapshot = () => getPhysicsRayStats().rays;
 const getPhysicsShapeCastsSnapshot = () => getPhysicsRayStats().shapeCasts;
 
+/** Whether the mounted physics stats view was built with a physics world (null: not built). */
+let physicsViewHasWorld: boolean | null = null;
+
+/** A physics world created or deleted while the tab is open (no scene change, which rebuilds the
+ * open tab anyway) rebuilds it, after the refresh that noticed. */
+const rebuildIfPhysicsWorldChanged = () => {
+  if (physicsViewHasWorld === null || physicsViewHasWorld === isPhysicsWorldEnabled()) return;
+  physicsViewHasWorld = null;
+  queueMicrotask(() => updateDebuggerTab(TAB_ID, { rebuild: true }));
+};
+
 /** The physics stats, or a note when there is no physics world (the settings above stay). */
 const buildPhysicsStatsView = () => {
   const root = CMP({ class: 'rayCastStats' });
-  if (!isPhysicsWorldEnabled()) {
+  physicsViewHasWorld = isPhysicsWorldEnabled();
+  if (!physicsViewHasWorld) {
     root.add({ tag: 'p', class: 'rayStatNote', text: 'No physics world' });
     return root;
   }

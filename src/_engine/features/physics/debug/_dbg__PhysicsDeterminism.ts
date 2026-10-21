@@ -24,6 +24,7 @@ import {
 import { getCharacters } from '../../character/Character';
 import { lsGetItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
 import { llog, lwarn } from '../../../utils/Logger';
+import type { PhysicsProbeReport } from '../PhysicsProbeTypes';
 
 const LS_KEY = 'AEK_debugPhysicsProbeRuns';
 const URL_PARAM = 'physicsProbe';
@@ -51,18 +52,6 @@ type ActiveRun = {
   startStep: number;
   targetStep: number;
   rafId: number;
-};
-
-/** A finished probe run, as the `[PhysicsProbe] <sceneId> | <config> | <steps> | <hash>` line logs it */
-export type PhysicsProbeReport = {
-  sceneId: string;
-  /** `<workerTarget>/<transport> | <interpolation>` */
-  config: string;
-  steps: number;
-  hash: string;
-  bodyCount: number;
-  /** Characters aren't hashed */
-  characterCount: number;
 };
 
 /** Steps to probe on every scene enter; null = disarmed. */
@@ -237,6 +226,19 @@ const logDiff = (bodies: ProbeBody[], hash: string, prev: StoredRun | undefined)
   lwarn(parts.join(' | '));
 };
 
+/** The stored runs kept (by scene and step count): the newest, so the key can't fill LS. */
+const MAX_STORED_RUNS = 40;
+
+const pruneStoredRuns = (runs: Record<string, StoredRun>) => {
+  const keys = Object.keys(runs);
+  if (keys.length <= MAX_STORED_RUNS) return runs;
+  // ISO dates sort as text
+  keys.sort((a, b) => (runs[b].at < runs[a].at ? -1 : runs[b].at > runs[a].at ? 1 : 0));
+  const kept: Record<string, StoredRun> = {};
+  for (let i = 0; i < MAX_STORED_RUNS; i++) kept[keys[i]] = runs[keys[i]];
+  return kept;
+};
+
 const report = (run: ActiveRun) => {
   const { bodies, characters } = collectBodies();
   const hash = hashBodies(bodies);
@@ -249,24 +251,13 @@ const report = (run: ActiveRun) => {
   llog(
     `[PhysicsProbe] steps ${run.startStep} → ${run.targetStep} of the current world, ${bodies.length} bodies hashed`
   );
-  // eslint-disable-next-line no-console
+  // eslint-disable-next-line no-console -- the probe's report: the bodies as a table, which the logger can't print
   console.table(toTableRows(bodies));
   if (characters.length) {
     llog('[PhysicsProbe] characters (not hashed):');
-    // eslint-disable-next-line no-console
+    // eslint-disable-next-line no-console -- as the bodies' table above
     console.table(toTableRows(characters));
   }
-
-  const runKey = `${run.sceneId}|${run.steps}`;
-  const runs = (lsGetItem(LS_KEY, {}) as Record<string, StoredRun>) || {};
-  logDiff(bodies, hash, runs[runKey]);
-  runs[runKey] = {
-    hash,
-    config,
-    at: new Date().toISOString(),
-    bodies: bodies.map(({ key, values }) => ({ key, values })),
-  };
-  lsSetItem(LS_KEY, runs);
 
   const result: PhysicsProbeReport = {
     sceneId: run.sceneId,
@@ -276,7 +267,26 @@ const report = (run: ActiveRun) => {
     bodyCount: bodies.length,
     characterCount: characters.length,
   };
+  // Before the stored runs: a full or malformed LS must not keep the report from the test bridge
   for (const listener of reportListeners) listener(result);
+
+  const runKey = `${run.sceneId}|${run.steps}`;
+  try {
+    const runs = (lsGetItem(LS_KEY, {}) as Record<string, StoredRun>) || {};
+    logDiff(bodies, hash, runs[runKey]);
+    runs[runKey] = {
+      hash,
+      config,
+      at: new Date().toISOString(),
+      bodies: bodies.map(({ key, values }) => ({ key, values })),
+    };
+    lsSetItem(LS_KEY, pruneStoredRuns(runs));
+  } catch (err) {
+    lwarn(
+      `[PhysicsProbe] Could not compare with or store the run in LocalStorage ("${LS_KEY}")`,
+      err
+    );
+  }
 };
 
 /** Calls `fn` with every finished probe run (the scene runner's test bridge reads the hashes

@@ -1,6 +1,12 @@
 import { CMP } from '../../ui/CMP';
 import type { AnyDebuggerTabDef } from '../DebuggerGUI';
-import type { ProfilerOverviewMetricEntry, ProfilerSettings } from '../Profiler';
+import {
+  _getStatsSources,
+  type ProfilerOverviewMetricEntry,
+  type ProfilerSettings,
+  type StatsSource,
+} from '../Profiler';
+import { lerror } from '../../utils/Logger';
 import { formatBytes, formatNumber } from '../../kernel/assets/debug/_dbg__AssetStats';
 import { _getFrameProbeSummary, type FrameProbeSummary } from './_dbg__FrameProbe';
 import {
@@ -358,35 +364,119 @@ const OVERVIEW_METRICS: OverviewMetric[] = [
 
 const metricsById = new Map(OVERVIEW_METRICS.map((m) => [m.id, m]));
 
+// APP ROWS (p618 D14: every registered stats source that isn't the engine's)
+
+/** An app stats source's metric id is this prefix and the source id. */
+export const APP_METRIC_PREFIX = 'app:';
+
+const BUILT_IN_SOURCE_IDS: ReadonlySet<string> = new Set(Object.values(PROFILER_SOURCE));
+
+export const isAppMetricId = (id: string) => id.startsWith(APP_METRIC_PREFIX);
+
+/** The registered app stats source of an app metric id, if it is registered now. */
+const getAppSource = (metricId: string) => {
+  if (!isAppMetricId(metricId)) return undefined;
+  const sourceId = metricId.slice(APP_METRIC_PREFIX.length);
+  return BUILT_IN_SOURCE_IDS.has(sourceId) ? undefined : _getStatsSources().get(sourceId);
+};
+
+/** The metric ids of the registered app stats sources, in registration order. */
+const getAppMetricIds = () => {
+  const ids: string[] = [];
+  for (const id of _getStatsSources().keys()) {
+    if (!BUILT_IN_SOURCE_IDS.has(id)) ids.push(APP_METRIC_PREFIX + id);
+  }
+  return ids;
+};
+
+const formatAppValue = (value: unknown) => {
+  if (typeof value === 'number') return value.toFixed(2);
+  if (typeof value === 'string') return value;
+  return JSON.stringify(value) ?? String(value);
+};
+
+/** The sources whose `format` threw, logged once each. */
+const failedFormats = new WeakSet<StatsSource<unknown>>();
+
+/** An app row: the source's value (its `format`), its n/a reason, "measuring…" until it has one. */
+const readAppSource = (source: StatsSource<unknown>, sample: OverviewSample): MetricValue => {
+  const reading = sample.get<unknown>(source.id);
+  if (reading.na) return { value: '—', na: reading.na };
+  if (reading.value === null) return { value: '—', sub: MEASURING };
+  try {
+    return { value: source.format ? source.format(reading.value) : formatAppValue(reading.value) };
+  } catch (err) {
+    if (!failedFormats.has(source)) {
+      failedFormats.add(source);
+      lerror(`Stats source "${source.id}" format failed`, err);
+    }
+    return { value: '—', na: 'format failed' };
+  }
+};
+
 // METRIC LIST (the Settings tab's order and visibility)
 
 /**
  * A stored metric list made valid: unknown and repeated ids dropped, missing metrics appended
- * with their default visibility. Always a new array.
+ * with their default visibility, the engine's rows first and the app rows after them. An app
+ * row is kept while its source isn't registered (it comes back with it), and a registered app
+ * source without a row gets one, shown. Always a new array.
  * @param list (unknown) the stored list
  */
 export const sanitizeOverviewMetrics = (list: unknown): ProfilerOverviewMetricEntry[] => {
-  const result: ProfilerOverviewMetricEntry[] = [];
+  const engineRows: ProfilerOverviewMetricEntry[] = [];
+  const appRows: ProfilerOverviewMetricEntry[] = [];
   const seen = new Set<string>();
   if (Array.isArray(list)) {
     for (const entry of list as Partial<ProfilerOverviewMetricEntry>[]) {
       const id = entry?.id;
-      if (typeof id !== 'string' || !metricsById.has(id) || seen.has(id)) continue;
+      if (typeof id !== 'string' || seen.has(id)) continue;
+      const isEngine = metricsById.has(id);
+      if (!isEngine && !(isAppMetricId(id) && id.length > APP_METRIC_PREFIX.length)) continue;
       seen.add(id);
-      result.push({ id, visible: Boolean(entry.visible) });
+      (isEngine ? engineRows : appRows).push({ id, visible: Boolean(entry.visible) });
     }
   }
   for (let i = 0; i < OVERVIEW_METRICS.length; i++) {
     const { id, defaultVisible } = OVERVIEW_METRICS[i];
-    if (!seen.has(id)) result.push({ id, visible: defaultVisible });
+    if (!seen.has(id)) engineRows.push({ id, visible: defaultVisible });
   }
-  return result;
+  const appIds = getAppMetricIds();
+  for (let i = 0; i < appIds.length; i++) {
+    if (!seen.has(appIds[i])) appRows.push({ id: appIds[i], visible: true });
+  }
+  return engineRows.concat(appRows);
+};
+
+/**
+ * The rows to show and edit: the stored list, with a row appended (shown) for each app source
+ * registered since the list was last sanitized. The stored list itself when nothing is missing.
+ * @param settings (object) the live profiler settings
+ */
+export const getOverviewMetricEntries = (
+  settings: Readonly<ProfilerSettings>
+): ProfilerOverviewMetricEntry[] => {
+  const list = settings.overviewMetrics;
+  const appIds = getAppMetricIds();
+  let missing: ProfilerOverviewMetricEntry[] | null = null;
+  for (let i = 0; i < appIds.length; i++) {
+    if (list.some((entry) => entry.id === appIds[i])) continue;
+    (missing ??= []).push({ id: appIds[i], visible: true });
+  }
+  return missing ? list.concat(missing) : list;
 };
 
 /** The default order and visibility. */
 export const getDefaultOverviewMetrics = () => sanitizeOverviewMetrics([]);
 
-export const getOverviewMetricLabel = (id: string) => metricsById.get(id)?.label ?? id;
+/** A row's label: the engine metric's, or the app source's (its id while it isn't registered). */
+export const getOverviewMetricLabel = (id: string) => {
+  const metric = metricsById.get(id);
+  if (metric) return metric.label;
+  if (!isAppMetricId(id)) return id;
+  const source = getAppSource(id);
+  return source ? source.label : `${id.slice(APP_METRIC_PREFIX.length)} (not registered)`;
+};
 
 // RENDERING
 
@@ -404,20 +494,30 @@ const esc = escapeProfilerHtml;
 /** The shown rows' actions of the last render, by metric id (the table's click handler). */
 const shownActions = new Map<string, MetricAction>();
 
-const getVisibleMetrics = (settings: ProfilerSettings) => {
-  const visible: OverviewMetric[] = [];
-  for (let i = 0; i < settings.overviewMetrics.length; i++) {
-    const entry = settings.overviewMetrics[i];
-    const metric = entry.visible ? metricsById.get(entry.id) : undefined;
-    if (metric) visible.push(metric);
+/** The shown rows: the engine metrics, then the registered app sources, each in list order. */
+const getVisibleRows = (settings: ProfilerSettings) => {
+  const metrics: OverviewMetric[] = [];
+  const appSources: StatsSource<unknown>[] = [];
+  const entries = getOverviewMetricEntries(settings);
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    if (!entry.visible) continue;
+    const metric = metricsById.get(entry.id);
+    if (metric) {
+      metrics.push(metric);
+      continue;
+    }
+    const source = getAppSource(entry.id);
+    if (source) appSources.push(source);
   }
-  return visible;
+  return { metrics, appSources };
 };
 
 const getVisibleSourceIds = (settings: ProfilerSettings) => {
   const ids: string[] = [];
-  const metrics = getVisibleMetrics(settings);
+  const { metrics, appSources } = getVisibleRows(settings);
   for (let i = 0; i < metrics.length; i++) ids.push(...(metrics[i].sources || []));
+  for (let i = 0; i < appSources.length; i++) ids.push(appSources[i].id);
   return ids;
 };
 
@@ -436,9 +536,20 @@ const createSample = (): OverviewSample => {
   };
 };
 
+const renderRow = (label: string, { value, sub, na, warn }: MetricValue, actionHtml = '') => {
+  let secondary = na ? `n/a (${na})` : '';
+  if (sub) secondary += secondary ? ` · ${sub}` : sub;
+  const classes = [na ? 'isNA' : '', warn ? 'isWarn' : ''].filter(Boolean).join(' ');
+  return (
+    `<tr${classes ? ` class="${classes}"` : ''}><th>${esc(label)}</th>` +
+    `<td class="profilerValue">${esc(value)}</td>` +
+    `<td class="profilerSub">${esc(secondary)}${actionHtml}</td></tr>`
+  );
+};
+
 const renderOverviewTable = (settings: ProfilerSettings) => {
-  const metrics = getVisibleMetrics(settings);
-  if (!metrics.length) {
+  const { metrics, appSources } = getVisibleRows(settings);
+  if (!metrics.length && !appSources.length) {
     return '<div class="profilerNote">No rows are shown. Pick them in the Settings tab.</div>';
   }
   const sample = createSample();
@@ -446,9 +557,8 @@ const renderOverviewTable = (settings: ProfilerSettings) => {
   let rows = '';
   for (let i = 0; i < metrics.length; i++) {
     const metric = metrics[i];
-    const { value, sub, na, warn, action } = metric.read(sample);
-    let secondary = na ? `n/a (${na})` : '';
-    if (sub) secondary += secondary ? ` · ${sub}` : sub;
+    const metricValue = metric.read(sample);
+    const { action } = metricValue;
     let actionHtml = '';
     if (action) {
       shownActions.set(metric.id, action);
@@ -456,13 +566,17 @@ const renderOverviewTable = (settings: ProfilerSettings) => {
         ` <button class="profilerAction" data-metric="${esc(metric.id)}" ` +
         `title="${esc(action.title)}">${esc(action.label)}</button>`;
     }
-    const classes = [na ? 'isNA' : '', warn ? 'isWarn' : ''].filter(Boolean).join(' ');
-    rows +=
-      `<tr${classes ? ` class="${classes}"` : ''}><th>${esc(metric.label)}</th>` +
-      `<td class="profilerValue">${esc(value)}</td>` +
-      `<td class="profilerSub">${esc(secondary)}${actionHtml}</td></tr>`;
+    rows += renderRow(metric.label, metricValue, actionHtml);
   }
-  return `<div><table class="profilerTable"><tbody>${rows}</tbody></table></div>`;
+  let appRows = '';
+  for (let i = 0; i < appSources.length; i++) {
+    appRows += renderRow(appSources[i].label, readAppSource(appSources[i], sample));
+  }
+  const appGroup = appRows
+    ? `<tbody class="profilerGroup"><tr><th class="profilerGroupHead" colspan="3">App</th></tr>` +
+      `${appRows}</tbody>`
+    : '';
+  return `<div><table class="profilerTable"><tbody>${rows}</tbody>${appGroup}</table></div>`;
 };
 
 const onTableClick = (e: Event) => {
@@ -479,6 +593,7 @@ const onTableClick = (e: Event) => {
  */
 export const createProfilerOverviewTabDef = (settings: ProfilerSettings): AnyDebuggerTabDef => {
   const sources = createStatsSourceHolder();
+  let isOpen = false;
   return {
     id: PROFILER_OVERVIEW_TAB_ID,
     title: 'Overview',
@@ -487,9 +602,20 @@ export const createProfilerOverviewTabDef = (settings: ProfilerSettings): AnyDeb
     get refreshIntervalMs() {
       return 1000 / settings.updateRateHz;
     },
-    // Runs before every build and refresh: a row shown or hidden in Settings applies here
-    onRefresh: () => sources.set(getVisibleSourceIds(settings)),
-    onOpen: () => sources.releaseAll,
+    // Runs before every build and refresh: a row shown or hidden in Settings (or an app source
+    // registered) applies here. Only once the tab is open: a build can fail before onOpen's
+    // cleanup exists, which would leak the holds.
+    onRefresh: () => {
+      if (isOpen) sources.set(getVisibleSourceIds(settings));
+    },
+    onOpen: () => {
+      isOpen = true;
+      sources.set(getVisibleSourceIds(settings));
+      return () => {
+        isOpen = false;
+        sources.releaseAll();
+      };
+    },
     content: () => [CMP({ html: () => renderOverviewTable(settings), onClick: onTableClick })],
   };
 };

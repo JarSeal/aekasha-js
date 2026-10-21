@@ -18,6 +18,7 @@ export { _debuggerListCMP } from './_dbg__DebuggerList';
 
 let drawerCMP: TCMP | null = null;
 let currentSceneTitleCMP: TCMP | null = null;
+let currentSceneTitleTextCMP: TCMP | null = null;
 let currentSceneTitleText: string = '';
 let tabsContainerWrapper: null | TCMP = null;
 let debugSceneLoaderCreated = false;
@@ -46,7 +47,28 @@ let drawerState: DrawerState = {
 const saveDrawerState = (newState?: Partial<DrawerState>) => {
   const updatedState = { ...drawerState, ...newState };
   drawerState = updatedState;
-  lsSetItem(LS_KEY, JSON.stringify(updatedState));
+  lsSetItem(LS_KEY, updatedState);
+};
+
+/** The saved drawer state's valid fields; anything malformed falls back to the defaults. The
+ * stored text is JSON either way (older versions wrote it as a string, the same text). */
+const readSavedDrawerState = (): Partial<DrawerState> => {
+  let saved: unknown;
+  try {
+    saved = lsGetItem(LS_KEY, {});
+  } catch {
+    lwarn(`The saved debug drawer state ("${LS_KEY}") isn't valid JSON, so it is ignored.`);
+    return {};
+  }
+  if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return {};
+  const { isOpen, currentTabId, currentScrollPos } = saved as Partial<Record<string, unknown>>;
+  const result: Partial<DrawerState> = {};
+  if (typeof isOpen === 'boolean') result.isOpen = isOpen;
+  if (typeof currentTabId === 'string') result.currentTabId = currentTabId;
+  if (typeof currentScrollPos === 'number' && Number.isFinite(currentScrollPos)) {
+    result.currentScrollPos = currentScrollPos;
+  }
+  return result;
 };
 
 /**
@@ -62,11 +84,7 @@ export const _ensureDebuggerSceneLoader = () => {
 const initDrawerState = () => {
   _ensureDebuggerSceneLoader();
 
-  // Setup drawerState
-  const savedState = lsGetItem(LS_KEY, '{}');
-  if (!savedState || typeof savedState !== 'string') return drawerState;
-  const parsedSavedState = JSON.parse(savedState);
-  drawerState = { ...drawerState, ...parsedSavedState };
+  drawerState = { ...drawerState, ...readSavedDrawerState() };
   if (drawerState.isOpen && !isSuspendedByView) {
     document.body.classList.add(DRAWER_OPEN_BODY_CLASS);
   }
@@ -181,7 +199,7 @@ export const _createDebugGui = (opts?: DebugGUIOpts) => {
     tag: 'span',
     class: [styles.debugCurrentSceneTitleHeading, 'debugCurrentSceneTitleHeading'],
   });
-  currentSceneTitleCMP.add({
+  currentSceneTitleTextCMP = currentSceneTitleCMP.add({
     id: 'debugCurrentSceneTitleText',
     text: currentSceneTitleText,
     tag: 'span',
@@ -388,31 +406,35 @@ export const _persistDebuggerTabValue = (id: string, key: string) => {
   persistDebuggerTabStateValue(entry.def, key);
 };
 
+/** Hidden in an editor view too (_setDrawerSuspendedByView), so updateDebuggerTab skips the tab. */
 export const _isDebuggerTabOpen = (id: string) =>
-  Boolean(drawerCMP) && drawerState.isOpen && host.mountedId === id;
+  Boolean(drawerCMP) && drawerState.isOpen && !isSuspendedByView && host.mountedId === id;
 
 export const _updateDebuggerTab = (id: string, opts?: UpdateDebuggerTabOpts) => {
   if (!_isDebuggerTabOpen(id)) return;
   host.refresh(opts?.rebuild);
 };
 
-export const _getDrawerState = () => drawerState;
-
+/** Builds the drawer on the first call (the first `setCurrentScene`). Later calls change the title
+ * in place and rebuild only the open tab: tabs built from the current scene's data (lists, the
+ * Ray cast tab's physics section) were always rebuilt on a scene change, and still are. */
 export const _updateDebuggerSceneTitle = (title: string) => {
   currentSceneTitleText = title;
+  if (drawerCMP && currentSceneTitleTextCMP) {
+    currentSceneTitleTextCMP.updateText(title);
+    host.refresh(true);
+    return;
+  }
   _createDebugGui(guiOpts);
 };
 
 export const _disableDebugger = (disable: boolean) => {
   if (!IS_DEBUG_ENV) return;
   debuggerDisabled = disable;
+  // TODO: the on-screen tools stay clickable (docs/issues/on-screen-tools-during-scene-load.md)
   if (disable) {
     drawerCMP?.updateClass(styles.debuggerDisabled, 'add');
     return;
   }
   drawerCMP?.updateClass(styles.debuggerDisabled, 'remove');
-
-  // @TODO: disable also the on screen tools
 };
-
-export const _isDebuggerDisabled = () => debuggerDisabled;

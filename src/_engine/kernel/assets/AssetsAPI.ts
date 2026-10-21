@@ -5,6 +5,8 @@
 // registries stay the single source of truth.
 
 import { getConfig, IS_DEBUG_ENV } from '../config/Config';
+import type { DebugModuleRef } from '../config/DebugModules';
+import { loadDebugModuleAsync, useDebug } from '../config/DebugModules';
 import { initWorker } from '../loop/Workers';
 import { lerror, llog, lwarn } from '../../utils/Logger';
 import { releaseTransferableImage } from './import/TextureTransfer';
@@ -527,3 +529,16 @@ export const simplifyGeometryInWorker = async (
       [...transfer]
     )
   ).result;
+
+// Debug
+let debugGUI: DebugModuleRef<typeof import('./debug/_dbg__Assets')> | null = null;
+
+/**
+ * Creates the Assets debugger tab (the loaded textures and geometries, imported ones included).
+ * Debug env only: the boot's debug step after `start`.
+ * @internal
+ */
+export const createAssetsDebugGUI = async () => {
+  debugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__Assets'));
+  useDebug(debugGUI)?._createAssetsDebugGUI();
+};

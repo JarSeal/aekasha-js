@@ -2,22 +2,22 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2275,
-      "total": 2430
+      "documented": 2319,
+      "total": 2416
     },
     "members": {
-      "documented": 935,
+      "documented": 938,
       "total": 970
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2231,
-        "total": 2367
+        "documented": 2275,
+        "total": 2353
       },
       "members": {
-        "documented": 885,
+        "documented": 888,
         "total": 890
       }
     },
@@ -35,79 +35,21 @@
   "folders": {
     "engine/debug": {
       "exports": {
-        "documented": 146,
-        "total": 199
+        "documented": 183,
+        "total": 183
       },
       "members": {
-        "documented": 0,
+        "documented": 3,
         "total": 3
       },
       "undocumented": {
-        "exports": [
-          "DebugTools#DEBUG_CAMERA_ID",
-          "DebugTools#DebugToolsState",
-          "DebugTools#registerDebugToolsModule",
-          "DebuggerGUI#DEBUGGER_SCENE_LOADER_ID",
-          "DebuggerGUI#DEBUG_TOASTER_ID",
-          "DebuggerGUI#DebugGUIOpts",
-          "DebuggerGUI#DebuggerListItem",
-          "DebuggerGUI#DebuggerPaneButton",
-          "DebuggerGUI#DebuggerPaneItem",
-          "DebuggerGUI#DebuggerPaneSeparator",
-          "DebuggerGUI#disableDebugger",
-          "DebuggerGUI#isDebuggerDisabled",
-          "DebuggerGUI#registerDebuggerGUI",
-          "DebuggerGUI#updateDebuggerSceneTitle",
-          "DevFiles#DevFileRead",
-          "DevFiles#DevFilesStatus",
-          "DevFiles#DevFilesUnavailableReason",
-          "DevFiles#EncodePNGOpts",
-          "DevFilesProtocol#DevDataGatheredEvent",
-          "DevFilesProtocol#DevFilesCommitRequest",
-          "DevFilesProtocol#DevFilesErrorBody",
-          "DevFilesProtocol#DevFilesErrorCode",
-          "DevFilesProtocol#DevFilesWriteStatus",
-          "GPUMemory#GPUMemorySource",
-          "OnScreenTools#InitOnScreenTools",
-          "OnScreenTools#ToolTypes",
-          "OnScreenTools#registerOnScreenTools",
-          "OnScreenTools#updateOnScreenTools",
-          "PercentagePieHtml#PercentagePieOpts",
-          "Profiler#DEFAULT_PROFILER_SETTINGS",
-          "Profiler#ProfilerBarMeasure",
-          "Profiler#ProfilerSettings",
-          "SceneHelpers#createAxesHelper",
-          "SceneHelpers#createGridHelper",
-          "SceneHelpers#createPolarGridHelper",
-          "SceneHelpers#toggleAxesHelperVisibility",
-          "SceneHelpers#toggleGridHelperVisibility",
-          "SceneHelpers#togglePolarGridHelperVisibility",
-          "Stats#StatsOptions",
-          "Stats#defaultStatsOptions",
-          "Stats#getStatsCmp",
-          "Stats#registerStatsModule",
-          "Stats#startCustomMeasurements",
-          "Stats#updatePhysicsPanel",
-          "Stats#updateRestOfStats",
-          "TestBridge#TestBridgeProbeResult",
-          "TestBridge#TestBridgeSceneReady",
-          "TestBridge#TestBridgeSnapshot",
-          "UndoRedo#UndoRedoClearScope",
-          "UndoRedo#UndoRedoHistoryState",
-          "UndoRedo#canRedo",
-          "UndoRedo#canUndo",
-          "UndoRedo#registerUndoRedoModule"
-        ],
-        "members": [
-          "DevFiles#DevFilesError.code",
-          "DevFiles#DevFilesError.constructor",
-          "DevFiles#DevFilesError.details"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "engine/debug/symbols": {
       "exports": {
-        "documented": 0,
+        "documented": 5,
         "total": 5
       },
       "members": {
@@ -115,13 +57,7 @@
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "3DSymbols#createNewCameraSymbol",
-          "3DSymbols#createNewDirectionalLightSymbol",
-          "3DSymbols#createNewPointLightSymbol",
-          "3DSymbols#createNewSpotLightSymbol",
-          "3DSymbols#load3DSymbols"
-        ],
+        "exports": [],
         "members": []
       }
     },
@@ -239,8 +175,8 @@
     },
     "engine/features/physics": {
       "exports": {
-        "documented": 203,
-        "total": 203
+        "documented": 204,
+        "total": 204
       },
       "members": {
         "documented": 34,
@@ -379,8 +315,8 @@
     },
     "engine/features/postfx": {
       "exports": {
-        "documented": 25,
-        "total": 25
+        "documented": 29,
+        "total": 29
       },
       "members": {
         "documented": 0,
@@ -449,8 +385,8 @@
     },
     "engine/kernel/assets": {
       "exports": {
-        "documented": 126,
-        "total": 126
+        "documented": 127,
+        "total": 127
       },
       "members": {
         "documented": 0,
@@ -505,8 +441,8 @@
     },
     "engine/kernel/config": {
       "exports": {
-        "documented": 24,
-        "total": 24
+        "documented": 23,
+        "total": 23
       },
       "members": {
         "documented": 1,
@@ -519,26 +455,12 @@
     },
     "engine/kernel/ecs": {
       "exports": {
-        "documented": 81,
-        "total": 81
+        "documented": 82,
+        "total": 82
       },
       "members": {
         "documented": 159,
         "total": 159
-      },
-      "undocumented": {
-        "exports": [],
-        "members": []
-      }
-    },
-    "engine/kernel/ecs/debug": {
-      "exports": {
-        "documented": 4,
-        "total": 4
-      },
-      "members": {
-        "documented": 0,
-        "total": 0
       },
       "undocumented": {
         "exports": [],

@@ -10,7 +10,9 @@ import {
 import {
   escapeProfilerHtml as esc,
   getDefaultOverviewMetrics,
+  getOverviewMetricEntries,
   getOverviewMetricLabel,
+  isAppMetricId,
 } from './_dbg__ProfilerOverview';
 
 export const PROFILER_SETTINGS_TAB_ID = 'profilerSettings';
@@ -44,31 +46,48 @@ const isDefaultMetricList = (list: ProfilerOverviewMetricEntry[]) =>
   JSON.stringify(list) === JSON.stringify(getDefaultOverviewMetrics());
 
 /**
- * The Overview rows editor: a visibility checkbox and ▲ / ▼ per row, and "Reset to default". A
- * plain CMP list (the debugger list has no reordering). Re-rendered by the tab refresh that
- * every change triggers; its click handler survives the re-render.
+ * The Overview rows editor: a visibility checkbox and ▲ / ▼ per row, and "Reset to default". The
+ * app stats sources' rows are a group of their own after the engine's (the Overview shows them
+ * there), so a row moves only within its group. A plain CMP list (the debugger list has no
+ * reordering). Re-rendered by the tab refresh that every change triggers; its click handler
+ * survives the re-render.
  */
 const createMetricListEditor = (opts: SettingsTabOpts) => {
+  const renderRow = (list: ProfilerOverviewMetricEntry[], i: number) => {
+    const { id, visible } = list[i];
+    const isApp = isAppMetricId(id);
+    const isFirst = i === 0 || isAppMetricId(list[i - 1].id) !== isApp;
+    const isLast = i === list.length - 1 || isAppMetricId(list[i + 1].id) !== isApp;
+    return (
+      `<li${visible ? '' : ' class="isHidden"'}>` +
+      `<label><input type="checkbox" data-action="toggle" data-index="${i}"` +
+      `${visible ? ' checked' : ''}> ${esc(getOverviewMetricLabel(id))}</label>` +
+      `<button data-action="up" data-index="${i}" title="Move up"${isFirst ? ' disabled' : ''}>▲</button>` +
+      `<button data-action="down" data-index="${i}" title="Move down"` +
+      `${isLast ? ' disabled' : ''}>▼</button></li>`
+    );
+  };
+
   const renderList = () => {
-    const list = opts.settings.overviewMetrics;
-    let rows = '';
+    const list = getOverviewMetricEntries(opts.settings);
+    let engineRows = '';
+    let appRows = '';
     for (let i = 0; i < list.length; i++) {
-      const { id, visible } = list[i];
-      const label = esc(getOverviewMetricLabel(id));
-      rows +=
-        `<li${visible ? '' : ' class="isHidden"'}>` +
-        `<label><input type="checkbox" data-action="toggle" data-index="${i}"` +
-        `${visible ? ' checked' : ''}> ${label}</label>` +
-        `<button data-action="up" data-index="${i}" title="Move up"${i === 0 ? ' disabled' : ''}>▲</button>` +
-        `<button data-action="down" data-index="${i}" title="Move down"` +
-        `${i === list.length - 1 ? ' disabled' : ''}>▼</button></li>`;
+      if (isAppMetricId(list[i].id)) {
+        appRows += renderRow(list, i);
+      } else {
+        engineRows += renderRow(list, i);
+      }
     }
     const resetDisabled = isDefaultMetricList(list) ? ' disabled' : '';
+    const appGroup = appRows
+      ? `<h5 class="profilerMetricGroupHead">App</h5><ol>${appRows}</ol>`
+      : '';
     return (
       `<div class="profilerMetricList"><div class="profilerMetricListHead">` +
       `<h4>Overview rows</h4>` +
       `<button data-action="reset" title="Default rows and order"${resetDisabled}>Reset to default</button>` +
-      `</div><ol>${rows}</ol></div>`
+      `</div><ol>${engineRows}</ol>${appGroup}</div>`
     );
   };
 
@@ -81,13 +100,13 @@ const createMetricListEditor = (opts: SettingsTabOpts) => {
       return;
     }
     const index = Number(indexAttr);
-    const next = opts.settings.overviewMetrics.map((entry) => ({ ...entry }));
+    const next = getOverviewMetricEntries(opts.settings).map((entry) => ({ ...entry }));
     if (!next[index]) return;
     if (action === 'toggle') {
       next[index].visible = !next[index].visible;
     } else {
       const other = action === 'up' ? index - 1 : index + 1;
-      if (!next[other]) return;
+      if (!next[other] || isAppMetricId(next[other].id) !== isAppMetricId(next[index].id)) return;
       [next[index], next[other]] = [next[other], next[index]];
     }
     opts.setSettings({ overviewMetrics: next });

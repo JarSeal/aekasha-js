@@ -242,8 +242,8 @@ export type AppConfig = {
     /** Global master switch: when false, no scene's PostFX chain is ever rendered. A scene
      * still has to declare PostFX passes for anything to happen. Default true. */
     enabled?: boolean;
-    /** Start the debug-only per-PostFX pass performance measuring at boot (it can also be
-     * switched on and off live with setPostFxMeasureEnabled()). Default false. */
+    /** Start the debug-only per-PostFX pass performance measuring at boot. The PostFX tab and
+     * the profiler switch it on and off live too. Default false. */
     measureEnabled?: boolean;
   };
   /** Debug drawer settings (debug-only, see `debug/DebuggerGUI.ts`). */

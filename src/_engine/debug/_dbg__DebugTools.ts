@@ -1,3 +1,5 @@
+// The Debug tools tab. Over 800 lines, and `buildDebugToolsItems` over 150: a Tweakpane panel,
+// which p800 replaces, so it isn't split (p618 D8).
 import type * as THREE from 'three/webgpu';
 import { getRenderer, getRendererOptions } from '../kernel/render/Renderer';
 import { lsGetItem, lsSetItem } from '../utils/LocalAndSessionStorage';
@@ -13,8 +15,7 @@ import { getCurrentSceneId, getGeneratedAppData, getRootScene } from '../kernel/
 import { getConfig, getCurrentEnvironment, getEnvs, IS_DEBUG_ENV } from '../kernel/config/Config';
 import { isCurrentlyLoading, loadScene } from '../kernel/scene/SceneLoader';
 import { lerror, llog } from '../utils/Logger';
-import { fitAllDraggableWindowsToScreen, openDraggableWindow } from '../ui/DraggableWindow';
-import { openDialog } from '../ui/DialogWindow';
+import { fitAllDraggableWindowsToScreen } from '../ui/DraggableWindow';
 import {
   createAxesHelper,
   createGridHelper,
@@ -22,9 +23,7 @@ import {
   toggleAxesHelperVisibility,
   toggleGridHelperVisibility,
   togglePolarGridHelperVisibility,
-} from './SceneHelpers';
-import { updateOnScreenTools } from './OnScreenTools';
-import { addToast } from '../ui/Toaster';
+} from './_dbg__SceneHelpers';
 import type { SceneAsset } from '../schemas/SceneSchema';
 import type { DebugToolsState } from './DebugTools';
 import { DEBUG_CAMERA_ID } from './DebugTools';
@@ -215,6 +214,18 @@ export const _applyOnScreenToolsDisabled = () => {
   );
 };
 
+/** Persists a value a shortcut changed, and refreshes the tab. Before the tab is registered (the
+ * key bindings are, during the first scene load) it is written to LS directly, or the tab's
+ * hydration would restore the old value over this one. */
+const persistShortcutValue = (key: 'onScreenTools' | 'axesGizmo' | 'envBall') => {
+  if (firstDebugToolsStateLoaded) {
+    persistDebuggerTabValue(TAB_ID, key);
+    updateDebuggerTab(TAB_ID);
+    return;
+  }
+  lsSetItem(LS_KEY, { ...(lsGetItem(LS_KEY, {}) as object), [key]: debugToolsState[key] });
+};
+
 /**
  * The on-screen tools shortcut (§): flips the "Disable on-screen tools" option and shows a toast.
  * @param keyHint (string) optional readable chord that was pressed, for the toast
@@ -223,14 +234,7 @@ export const _toggleOnScreenToolsDisabled = (keyHint?: string) => {
   const onScreenTools = debugToolsState.onScreenTools;
   onScreenTools.disableOnScreenTools = !onScreenTools.disableOnScreenTools;
   _applyOnScreenToolsDisabled();
-  if (firstDebugToolsStateLoaded) {
-    persistDebuggerTabValue(TAB_ID, 'onScreenTools');
-    updateDebuggerTab(TAB_ID);
-  } else {
-    // The tab isn't registered yet (the key bindings are, during the first scene load). Written
-    // directly, or the tab's hydration would restore the old value over this one.
-    lsSetItem(LS_KEY, { ...(lsGetItem(LS_KEY, {}) as object), onScreenTools });
-  }
+  persistShortcutValue('onScreenTools');
   addDebugToast({
     title: 'On-screen tools',
     message: onScreenTools.disableOnScreenTools
@@ -273,8 +277,7 @@ const toggleGizmoFromShortcut = (key: GizmoKey) => {
   }
   setVisible(opts.show);
   setInMainCamera(opts.showInMainCamera);
-  persistDebuggerTabValue(TAB_ID, key);
-  updateDebuggerTab(TAB_ID);
+  persistShortcutValue(key);
 
   let title = `${name} hidden`;
   if (opts.show && isMainCamera) title = `${name} visible and showing in main camera`;
@@ -332,18 +335,6 @@ const getSceneStarterDropDownOptions = () => {
     { value: '', text: '---NOT-SET---' },
     ...scenes.map((s) => ({ value: s.id, text: s.name || `[${s.id}]` })),
   ];
-};
-
-/**
- * Handles debug camera switching
- */
-export const _handleDebugCameraSwitch = () => {
-  const currentSceneId = getCurrentSceneId();
-  if (!currentSceneId) return;
-  // @CHORE: set the new camera here
-  setTimeout(() => {
-    updateOnScreenTools('SWITCH');
-  }, 0);
 };
 
 const getDebugCamera = () => {
@@ -826,71 +817,6 @@ const buildDebugToolsItems = (): DebuggerPaneItem<DebugToolsState>[] => {
             onClick: () => llog(...getLogActionList()[key]),
           })
         ),
-
-        // @TODO: REMOVE THESE!
-        {
-          type: 'button',
-          title: 'OPEN DRAGGABLE WINDOW',
-          onClick: () =>
-            openDraggableWindow({
-              id: 'myFirstDraggableTest',
-              closeIfOpen: true,
-              position: { x: 400, y: 400 },
-              size: { w: 200, h: 100 },
-              saveToLS: true,
-              title: 'My draggable window',
-              isDebugWindow: true,
-              disableHoriResize: false,
-              disableVertResize: false,
-              disableDragging: false,
-              resetPosition: true,
-              closeOnSceneChange: true,
-            }),
-        },
-        {
-          type: 'button',
-          title: 'OPEN DIALOG WINDOW',
-          onClick: () =>
-            openDialog({
-              id: 'myFirstDialogTest',
-              saveToLS: true,
-              title: 'My dialog window',
-              isDebugWindow: true,
-              backDropClickClosesWindow: true,
-              closeOnSceneChange: true,
-            }),
-        },
-        {
-          type: 'button',
-          title: 'TEST TOASTER (info)',
-          onClick: () =>
-            addToast({
-              title: 'INFO',
-              message: 'Hello world! ' + performance.now(),
-              showingTime: 4800,
-            }),
-        },
-        {
-          type: 'button',
-          title: 'TEST TOASTER (warning)',
-          onClick: () =>
-            addToast({
-              type: 'warning',
-              title: 'WARNING',
-              message: 'Hello world! ' + performance.now(),
-              showingTime: 4800,
-            }),
-        },
-        {
-          type: 'button',
-          title: 'TEST TOASTER (alert)',
-          onClick: () =>
-            addToast({
-              type: 'alert',
-              title: 'ALERT',
-              message: 'Hello world! ' + performance.now(),
-            }),
-        },
       ],
     },
   ];

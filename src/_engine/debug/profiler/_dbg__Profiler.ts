@@ -262,6 +262,19 @@ export const _createProfilerTab = (def: AnyDebuggerTabDef) => {
   if (tabContentCMP) tabContentCMP.elem.scrollTop = scrollPos;
 };
 
+export const _removeProfilerTab = (id: string) => {
+  if (!tabs.delete(id)) {
+    lwarn(`Could not find a profiler tab to remove with id "${id}" in removeProfilerTab`);
+    return;
+  }
+  if (!windowRoot) return;
+  // The menu is part of the window content: the rebuild unmounts the tab (its cleanup runs) and
+  // mounts the saved tab, or the first one when the removed tab was the saved one
+  const scrollPos = host.mountedId === id ? 0 : tabContentCMP?.elem.scrollTop || 0;
+  updateDraggableWindow(PROFILER_WINDOW_ID);
+  if (tabContentCMP) tabContentCMP.elem.scrollTop = scrollPos;
+};
+
 export const _openProfilerTab = (id: string) => {
   const def = tabs.get(id);
   if (!def) {

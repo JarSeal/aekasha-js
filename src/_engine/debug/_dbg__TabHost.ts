@@ -48,32 +48,74 @@ type MountedTab = {
   intervalId: ReturnType<typeof setInterval> | null;
 };
 
-/**
- * Creates a tab host: the lifecycle of one mounted debugger tab ({@link AnyDebuggerTabDef}) in a
- * container. It builds the heading row and the sections, refreshes them, runs `onOpen` and its
- * cleanup, and runs `refreshIntervalMs` only while the host is visible. The owner keeps its own
- * menu, ordering and state (the debug drawer and the profiler window each use one host).
- * @param opts ({@link TabHostOpts})
- */
-export const createTabHost = (opts: TabHostOpts): TabHost => {
-  const { getContainer, isVisible, onMount, label = 'Debugger tab' } = opts;
-  let mountedTab: MountedTab | null = null;
+/** Runs a tab's `onRefresh`; a throw is logged. */
+const runOnRefresh = (def: AnyDebuggerTabDef, label: string) => {
+  try {
+    def.onRefresh?.();
+  } catch (err) {
+    lerror(`${label} "${def.id}" onRefresh failed`, err);
+  }
+};
 
-  const runOnRefresh = (def: AnyDebuggerTabDef) => {
+/** Adds a dynamic CMP section's refresher: only a dynamic template has anything to refresh (a
+ * static CMP is left alone), and it is only re-rendered when its html changed (a re-render
+ * replaces the element: hover, focus). The html is computed once per refresh: the update
+ * renders the string the comparison computed. */
+const addCmpSectionRefresher = (section: TCMP, sectionRefreshers: (() => void)[]) => {
+  const html = section.props?.html;
+  if (typeof html !== 'function') return;
+  let lastHtml = html(section);
+  let renderedHtml: string | null = null;
+  const cachedHtml = (cmp: TCMP) => renderedHtml ?? html(cmp);
+  sectionRefreshers.push(() => {
+    const nextHtml = html(section);
+    if (nextHtml === lastHtml) return;
+    lastHtml = nextHtml;
+    renderedHtml = nextHtml;
     try {
-      def.onRefresh?.();
-    } catch (err) {
-      lerror(`${label} "${def.id}" onRefresh failed`, err);
+      section.update({ html: cachedHtml });
+    } finally {
+      renderedHtml = null;
     }
-  };
+  });
+};
 
-  /** Builds a tab: container with the heading row, then the content sections. */
-  const buildTabContent = (def: AnyDebuggerTabDef) => {
-    const container = CMP({ id: `debuggerPane-${def.id}`, class: styles.childContainer });
+/** Builds the content sections into the container. Throws what the tab's code throws. */
+const buildSections = (
+  def: AnyDebuggerTabDef,
+  container: TCMP,
+  sectionRefreshers: (() => void)[],
+  label: string
+) => {
+  runOnRefresh(def, label);
+  const sections = def.content();
+  for (let i = 0; i < sections.length; i++) {
+    const section = sections[i];
+    if ('isCmp' in section) {
+      container.add(section);
+      addCmpSectionRefresher(section, sectionRefreshers);
+      continue;
+    }
+    const built = _buildDebuggerPane(def, section);
+    container.add(built.cmp);
+    sectionRefreshers.push(built.refresh);
+  }
+};
 
-    const headingRow = container.add({ class: 'debuggerTabHeadingRow' });
-    const icon = getSvgIcon(def.icon);
-    headingRow.add({ html: () => `<h3>${icon} ${def.title}</h3>`, class: 'debuggerTabHeading' });
+/**
+ * Builds a tab: container with the heading row, then the content sections. A tab whose code
+ * throws gets an error line in place of its content (logged), so a broken tab never breaks
+ * the drawer's or the window's build.
+ * @returns the container, its sections' refreshers, and whether the build failed
+ */
+const buildTabContent = (def: AnyDebuggerTabDef, label: string) => {
+  const container = CMP({ id: `debuggerPane-${def.id}`, class: styles.childContainer });
+  const sectionRefreshers: (() => void)[] = [];
+
+  const headingRow = container.add({ class: 'debuggerTabHeadingRow' });
+  const icon = getSvgIcon(def.icon);
+  headingRow.add({ html: () => `<h3>${icon} ${def.title}</h3>`, class: 'debuggerTabHeading' });
+  try {
     const lsKey = def.lsKey;
     if (def.clearLSButton ?? Boolean(lsKey)) {
       headingRow.add(
@@ -91,42 +133,48 @@ export const createTabHost = (opts: TabHostOpts): TabHost => {
     const headerButtons = def.headerButtons?.() || [];
     for (let i = 0; i < headerButtons.length; i++) headingRow.add(headerButtons[i]);
 
-    runOnRefresh(def);
-    const sections = def.content();
-    const sectionRefreshers: (() => void)[] = [];
-    for (let i = 0; i < sections.length; i++) {
-      const section = sections[i];
-      if ('isCmp' in section) {
-        container.add(section);
-        // Only a dynamic template has anything to refresh (a static CMP is left alone), and it is
-        // only re-rendered when its html changed (a re-render replaces the element: hover, focus)
-        const html = section.props?.html;
-        if (typeof html === 'function') {
-          let lastHtml = html(section);
-          sectionRefreshers.push(() => {
-            const nextHtml = html(section);
-            if (nextHtml === lastHtml) return;
-            lastHtml = nextHtml;
-            section.update();
-          });
-        }
-        continue;
-      }
-      const built = _buildDebuggerPane(def, section);
-      container.add(built.cmp);
-      sectionRefreshers.push(built.refresh);
+    buildSections(def, container, sectionRefreshers, label);
+  } catch (err) {
+    lerror(`${label} "${def.id}" failed to build`, err);
+    // What was built before the throw stays out: only the heading and the error line
+    for (const child of [...container.children]) {
+      if (child !== headingRow) child.remove();
     }
+    const message = err instanceof Error ? err.message : String(err);
+    container.add({
+      class: 'debuggerTabError',
+      text: `This tab failed to build: ${message} (see the console).`,
+    });
+    return { container, sectionRefreshers: [], failed: true };
+  }
 
-    return { container, sectionRefreshers };
-  };
+  return { container, sectionRefreshers, failed: false };
+};
+
+/**
+ * Creates a tab host: the lifecycle of one mounted debugger tab ({@link AnyDebuggerTabDef}) in a
+ * container. It builds the heading row and the sections, refreshes them, runs `onOpen` and its
+ * cleanup, and runs `refreshIntervalMs` only while the host is visible. The owner keeps its own
+ * menu, ordering and state (the debug drawer and the profiler window each use one host).
+ * @param opts ({@link TabHostOpts})
+ */
+export const createTabHost = (opts: TabHostOpts): TabHost => {
+  const { getContainer, isVisible, onMount, label = 'Debugger tab' } = opts;
+  let mountedTab: MountedTab | null = null;
 
   const refreshMountedTab = () => {
     if (!mountedTab) return;
-    runOnRefresh(mountedTab.def);
+    runOnRefresh(mountedTab.def, label);
     const refreshers = mountedTab.sectionRefreshers;
-    for (let i = 0; i < refreshers.length; i++) refreshers[i]();
-    const container = getContainer();
-    if (container) _refreshDebuggerLists(container.elem);
+    try {
+      for (let i = 0; i < refreshers.length; i++) refreshers[i]();
+      const container = getContainer();
+      if (container) _refreshDebuggerLists(container.elem);
+    } catch (err) {
+      // Logged once: the interval stops, and the content stays as it was last refreshed
+      lerror(`${label} "${mountedTab.def.id}" failed to refresh`, err);
+      stopInterval();
+    }
   };
 
   const startInterval = () => {
@@ -163,11 +211,14 @@ export const createTabHost = (opts: TabHostOpts): TabHost => {
     unmount();
     hostContainer.removeChildren();
 
-    const { container, sectionRefreshers } = buildTabContent(def);
+    const { container, sectionRefreshers, failed } = buildTabContent(def, label);
     hostContainer.add(container);
 
     mountedTab = { def, sectionRefreshers, onOpenCleanup: null, intervalId: null };
     onMount?.(def);
+    // A failed tab has nothing to open or refresh: it stays mounted (its menu button selected)
+    // until another tab is mounted, or it is mounted again
+    if (failed) return;
     if (def.onOpen) {
       try {
         mountedTab.onOpenCleanup = def.onOpen() || null;

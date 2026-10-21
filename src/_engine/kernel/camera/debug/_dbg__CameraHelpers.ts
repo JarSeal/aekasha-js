@@ -20,8 +20,7 @@ ECSWorld.registerComponentHooks(ComponentType.DEBUG_CAMERA_HELPER, {
     const helper = world.getComponent(entityId, ComponentType.DEBUG_CAMERA_HELPER);
     if (helper) {
       helper.value.removeFromParent();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if ((helper.value as any).dispose) (helper.value as any).dispose();
+      helper.value.dispose();
     }
   },
 });

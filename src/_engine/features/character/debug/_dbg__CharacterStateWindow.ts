@@ -1,3 +1,5 @@
+// The character state window. Over 800 lines: debugger UI (HTML through CMP), which p800 replaces,
+// so it isn't split (p618 D8).
 import { addDebugToast } from '../../../debug/DebuggerGUI';
 import { CMP } from '../../../ui/CMP';
 import type { TCMP } from '../../../ui/CMPTypes';

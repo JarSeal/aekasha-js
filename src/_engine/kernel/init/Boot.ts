@@ -10,7 +10,7 @@ import {
   loadConfig,
   PROJECT_METADATA,
 } from '../config/Config';
-import { initAssets } from '../assets/AssetsAPI';
+import { createAssetsDebugGUI, initAssets } from '../assets/AssetsAPI';
 import { setAppData } from '../scene/AppData';
 import { createHudContainer, getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../ui/HUD';
 import {
@@ -28,7 +28,6 @@ import { createRendererDebugGUI } from '../render/Renderer';
 import { runBootAfterStartHooks } from './BootHooks';
 import { createToaster } from '../../ui/Toaster';
 import { getStatsCmp, registerStatsModule } from '../../debug/Stats';
-import { createAssetsDebugGUI } from '../../debug/Assets';
 import { getSvgIcon, registerBuiltInIcons } from '../../ui/icons/SvgIcon';
 import { restoreSavedView } from '../render/Views';
 

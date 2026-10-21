@@ -23,6 +23,7 @@ import {
   type WebGPURenderer,
 } from 'three/webgpu';
 import { getRenderer } from '../kernel/render/Renderer';
+import { lerror } from '../utils/Logger';
 
 type TimestampPool = { timestamps: Map<string, number> };
 type TimedBackend = {
@@ -45,6 +46,7 @@ let tap: RenderContextTap | null = null;
 let isResolving = false;
 const renderContextListeners = new Set<RenderContextListener>();
 const resolveListeners = new Set<ResolveListener>();
+let hasLoggedResolveError = false;
 const NO_TIMESTAMPS: ReadonlyMap<string, number> = new Map();
 
 /** Reports render contexts, and forwards everything to the previously installed inspector, so
@@ -155,7 +157,8 @@ export const _releaseGpuTimer = () => {
   if (holders > 0) return;
   // Leave an inspector installed after ours alone (it forwards to ours, which keeps forwarding)
   if (renderer && prevInspector && renderer.inspector === tap) renderer.inspector = prevInspector;
-  // Keep timestamps on if something else (eg. the stats-gl GPU panel) switched them on meanwhile
+  // Back to the state before the first hold: on if it was on then. Something that switched it on
+  // while held (eg. the stats-gl GPU panel) isn't seen, so it goes off with the last hold
   if (backend && !prevTrackTimestamp) backend.trackTimestamp = false;
   prevInspector = null;
   tap = null;
@@ -195,6 +198,12 @@ export const _requestTimestampResolve = () => {
       const timestamps =
         resolvingBackend?.timestampQueryPool[TimestampQuery.RENDER]?.timestamps ?? NO_TIMESTAMPS;
       for (const listener of resolveListeners) listener(timestamps);
+    })
+    .catch((err: unknown) => {
+      // Eg. a lost device: every later frame with records would reject the same way
+      if (hasLoggedResolveError) return;
+      hasLoggedResolveError = true;
+      lerror('GPU timer: resolving the render timestamps failed (logged once)', err);
     })
     .finally(() => {
       isResolving = false;

@@ -1,8 +1,10 @@
 ::: scene exampleDebugTab
 A ring of boxes. In debug mode, press `h` and open the drawer's Boxes tab: it sets the number of
-boxes and their colour, and shuffles them.
+boxes and their colour, and shuffles them. `Ctrl/⌘ + Z` undoes a change, and the profiler (`F8`)
+counts the boxes.
 :::
 
 The debug drawer is where the engine's own tools are, and your scenes can add tabs to it. A tab
 is one [`createDebuggerTab`](api:createDebuggerTab) call: a list of controls bound to an object,
-with what to save and when to refresh.
+with what to save and when to refresh. The same scene also makes its changes undoable and adds a
+figure to the profiler.

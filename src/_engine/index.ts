@@ -247,6 +247,7 @@ export {
   getAllTextures,
   getTexture,
   loadTextureAsync,
+  saveTexture,
 } from './kernel/assets/Texture';
 export type { TexOpts, TextureProps } from './kernel/assets/Texture';
 export { loadTexture, loadTextures } from './kernel/assets/TextureSync';
@@ -311,7 +312,7 @@ export {
   setTransform,
   teleport,
 } from './kernel/ecs/ECSHelpers';
-export { initECSStressTest } from './kernel/ecs/debug/ECSStressTest';
+export { initECSStressTest } from './kernel/ecs/ECSStressTest';
 export { getQuatFromAngle, smoothDampVec3 } from './kernel/render/ThreeMath';
 export { toUniqueJsIdentifier } from './utils/JsIdentifier';
 export { getLogger, lerror, llog, lwarn } from './utils/Logger';

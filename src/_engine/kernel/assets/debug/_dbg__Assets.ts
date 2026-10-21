@@ -1,3 +1,5 @@
+// The Assets tab and its windows. Over 800 lines: a Tweakpane panel, which p800 replaces, so it
+// isn't split (p618 D8).
 import type * as THREE from 'three/webgpu';
 import {
   createDebuggerTab,
@@ -7,7 +9,7 @@ import {
   type DebuggerPaneItem,
 } from '../../../debug/DebuggerGUI';
 import { lsGetItem, lsRemoveItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
-import { llog } from '../../../utils/Logger';
+import { lerror, llog } from '../../../utils/Logger';
 import { textureMapKeys } from '../../../utils/Constants';
 import { CMP } from '../../../ui/CMP';
 import type { TCMP } from '../../../ui/CMPTypes';
@@ -280,6 +282,18 @@ const getBootOverrides = () => lsGetItem(DEBUG_ASSETS_BOOT_LS_KEY, {}) as DebugA
 /** The overrides this page load booted with (nothing else writes the key before this tab). */
 let bootedOverrides: DebugAssetsBoot = {};
 
+/** Whether the stored overrides differ from the booted ones, by value (an edit deletes and adds
+ * keys, so the stored key order isn't the booted one; a false or empty value is no override). */
+const haveBootOverridesChanged = () => {
+  const stored = getBootOverrides() as Record<string, unknown>;
+  const booted = bootedOverrides as Record<string, unknown>;
+  const keys = new Set([...Object.keys(stored), ...Object.keys(booted)]);
+  for (const key of keys) {
+    if ((stored[key] || undefined) !== (booted[key] || undefined)) return true;
+  }
+  return false;
+};
+
 const THREAD_TEXT: Record<AssetsWorkerTarget, string> = {
   MAIN_THREAD: 'Main thread',
   WORKER_THREAD: 'Worker thread',
@@ -388,7 +402,7 @@ const getLoadingFolder = (): DebuggerPaneItem => {
         type: 'button',
         title: 'Reload to apply',
         // Enabled while the saved overrides differ from the ones this page load booted with
-        disabled: () => JSON.stringify(getBootOverrides()) === JSON.stringify(bootedOverrides),
+        disabled: () => !haveBootOverridesChanged(),
         onClick: () => location.reload(),
       },
       {
@@ -892,7 +906,12 @@ const createLodChainCmp = (id: string) => {
         const pendingChain = generateLodChain(id, { permissive: action === 'generatePermissive' });
         // Pending now: the content shows "Generating…"
         cmp.update();
-        await pendingChain;
+        try {
+          await pendingChain;
+        } catch (err) {
+          // Not pending any more: the refreshes below show the chain as it is
+          lerror(`Generating the LOD chain of "${id}" failed`, err);
+        }
       }
       updateDraggableWindow(windowId);
       refreshAssetsTab();

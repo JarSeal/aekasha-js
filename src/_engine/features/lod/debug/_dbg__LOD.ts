@@ -1,3 +1,5 @@
+// The LOD tab. `_createLodDebugGUI` (its `content`) is over 150 lines: a Tweakpane panel, which
+// p800 replaces, so it isn't split (p618 D8).
 import {
   addDebugToast,
   createDebuggerTab,

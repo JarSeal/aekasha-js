@@ -23,17 +23,18 @@ import {
   isRayCastStatsEnabled,
   setRayCastStatsEnabled,
 } from '../../kernel/render/Raycast';
-import { getRenderPipeline } from '../../kernel/render/RenderHooks';
 import { getRenderer } from '../../kernel/render/Renderer';
 import { getCurrentSceneId } from '../../kernel/scene/Scene';
 import { getNextSceneId, isCurrentlyLoading } from '../../kernel/scene/SceneLoader';
-import { addViewFrameListener } from '../../kernel/render/Views';
-import { registerStatsSource, type ProfilerSettings } from '../Profiler';
+import { addViewFrameListener, isRuntimeViewActive } from '../../kernel/render/Views';
 import {
+  getPostFxPasses,
   getPostFxPassStats,
+  isPostFxEnabled,
   isPostFxMeasureEnabled,
   setPostFxMeasureEnabled,
-} from '../PostFXProfiler';
+} from '../../features/postfx/PostFX';
+import { registerStatsSource, type ProfilerSettings } from '../Profiler';
 import type { IntervalCounterSnapshot } from '../../utils/IntervalCounterStats';
 import {
   _acquireGpuTimer,
@@ -369,11 +370,8 @@ const readCensus = (settings: Readonly<ProfilerSettings>) => {
 
 // --- REGISTRATION ---
 
-/**
- * Registers the built-in stats sources. Called once by the profiler module.
- * @param settings (object) the live profiler settings (`measureGpu`)
- */
-export const registerBuiltInStatsSources = (settings: Readonly<ProfilerSettings>) => {
+/** The GPU frame time and the draw counters. */
+const registerFrameSources = (settings: Readonly<ProfilerSettings>) => {
   registerStatsSource<GpuFrameStats>({
     id: PROFILER_SOURCE.GPU_FRAME,
     label: 'GPU frame time',
@@ -408,7 +406,10 @@ export const registerBuiltInStatsSources = (settings: Readonly<ProfilerSettings>
       return drawStats.frames ? drawStats : null;
     },
   });
+};
 
+/** The physics step, its sub-steps and the physics objects. */
+const registerPhysicsSources = () => {
   registerStatsSource<PhysicsStepStats>({
     id: PROFILER_SOURCE.PHYSICS_STEP,
     label: 'Physics step',
@@ -457,7 +458,10 @@ export const registerBuiltInStatsSources = (settings: Readonly<ProfilerSettings>
     availability: () => (isPhysicsWorldEnabled() ? true : 'no physics world'),
     read: getPhysicsObjectCounts,
   });
+};
 
+/** The JS heap (Chromium) and three's GPU memory estimate. */
+const registerMemorySources = () => {
   registerStatsSource<JsMemoryStats>({
     id: PROFILER_SOURCE.MEMORY_JS,
     label: 'JS heap',
@@ -482,7 +486,10 @@ export const registerBuiltInStatsSources = (settings: Readonly<ProfilerSettings>
       return renderer ? { bytes: renderer.info.memory.total } : null;
     },
   });
+};
 
+/** The ray casts and PostFX. */
+const registerRenderSources = () => {
   registerStatsSource<RayStats>({
     id: PROFILER_SOURCE.RAYS,
     label: 'Ray casts',
@@ -512,10 +519,14 @@ export const registerBuiltInStatsSources = (settings: Readonly<ProfilerSettings>
   registerStatsSource<PostFxGpuStats>({
     id: PROFILER_SOURCE.POSTFX,
     label: 'PostFX',
+    // Builds nothing: the render pipeline's provider builds the chain when it's due (p618 B2)
     availability: () => {
       if (!IS_DEBUG_ENV) return 'debug env only';
       if (!getRenderer()) return NO_RENDERER;
-      return getRenderPipeline() ? true : 'PostFX off';
+      // An editor view renders its own scene without PostFX (Views.ts)
+      if (!isRuntimeViewActive()) return 'not rendered in this view';
+      if (!isPostFxEnabled()) return 'PostFX off';
+      return getPostFxPasses().some((postFxPass) => postFxPass.enabled) ? true : 'no PostFX passes';
     },
     acquire: acquirePostFx,
     release: releasePostFx,
@@ -537,7 +548,10 @@ export const registerBuiltInStatsSources = (settings: Readonly<ProfilerSettings>
       };
     },
   });
+};
 
+/** The long tasks, the scene and the in-view census. */
+const registerPageSources = (settings: Readonly<ProfilerSettings>) => {
   registerStatsSource<LongTaskStats>({
     id: PROFILER_SOURCE.LONG_TASKS,
     label: 'Long tasks',
@@ -583,4 +597,16 @@ export const registerBuiltInStatsSources = (settings: Readonly<ProfilerSettings>
     availability: getCensusAvailability,
     read: readCensus(settings),
   });
+};
+
+/**
+ * Registers the built-in stats sources. Called once by the profiler module.
+ * @param settings the live profiler settings (`measureGpu`, the census' update rate and helpers)
+ */
+export const registerBuiltInStatsSources = (settings: Readonly<ProfilerSettings>) => {
+  registerFrameSources(settings);
+  registerPhysicsSources();
+  registerMemorySources();
+  registerRenderSources();
+  registerPageSources(settings);
 };

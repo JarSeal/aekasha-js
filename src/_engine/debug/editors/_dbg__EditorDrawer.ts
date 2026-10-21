@@ -67,30 +67,19 @@ export type EditorDrawer = {
   dispose: () => void;
 };
 
-/**
- * Creates an editor view's right drawer in `opts.parent` (see the file comment).
- * @param opts ({@link EditorDrawerOpts})
- * @returns ({@link EditorDrawer})
- */
-export const createEditorDrawer = (opts: EditorDrawerOpts): EditorDrawer => {
-  const { id } = opts;
-  const state: EditorDrawerState = {
-    isOpen: opts.initialState?.isOpen ?? false,
-    currentTabId: opts.initialState?.currentTabId ?? '',
-    scrollPos: { ...opts.initialState?.scrollPos },
-  };
-  const notify = () => opts.onStateChange?.({ ...state, scrollPos: { ...state.scrollPos } });
-
-  let isActive = false;
-  let tabs: AnyDebuggerTabDef[] = [];
-  const menuButtons = new Map<string, TCMP>();
-
+/** The drawer's elements: its root (open or closed), the toggler, the title row with its close
+ * button, the tab menu and the tabs' container. `toggle` gets `false` from the close button. */
+const createDrawerElements = (
+  opts: EditorDrawerOpts,
+  isOpen: boolean,
+  toggle: (open?: boolean) => void
+) => {
   const root = CMP({
-    id: `${id}-editorDrawer`,
+    id: `${opts.id}-editorDrawer`,
     class: [
       debuggerStyles.debuggerGUI,
       styles.editorDrawer,
-      state.isOpen ? debuggerStyles.debuggerGUI_open : debuggerStyles.debuggerGUI_closed,
+      isOpen ? debuggerStyles.debuggerGUI_open : debuggerStyles.debuggerGUI_closed,
     ],
   });
 
@@ -124,6 +113,54 @@ export const createEditorDrawer = (opts: EditorDrawerOpts): EditorDrawer => {
   const tabsContainer = root.add({
     class: [debuggerStyles.debugDrawerTabsContainer, styles.tabsContainer],
   });
+  return { root, titleText, menu, tabsContainer };
+};
+
+/** Replaces the menu's buttons with one per tab (`menuButtons` by tab id). */
+const buildTabMenu = (
+  menu: TCMP,
+  menuButtons: Map<string, TCMP>,
+  tabs: AnyDebuggerTabDef[],
+  onSelect: (def: AnyDebuggerTabDef) => void
+) => {
+  for (const button of menuButtons.values()) button.remove();
+  menuButtons.clear();
+  for (const def of tabs) {
+    const icon = getSvgIcon(def.icon);
+    const button = CMP({
+      class: debuggerStyles.debugDrawerTabButton,
+      html: () => `<button>${icon}</button>`,
+      attr: { title: def.title },
+      onClick: () => onSelect(def),
+    });
+    menuButtons.set(def.id, button);
+    menu.add(button);
+  }
+};
+
+/**
+ * Creates an editor view's right drawer in `opts.parent` (see the file comment).
+ * @param opts ({@link EditorDrawerOpts})
+ * @returns ({@link EditorDrawer})
+ */
+export const createEditorDrawer = (opts: EditorDrawerOpts): EditorDrawer => {
+  const { id } = opts;
+  const state: EditorDrawerState = {
+    isOpen: opts.initialState?.isOpen ?? false,
+    currentTabId: opts.initialState?.currentTabId ?? '',
+    scrollPos: { ...opts.initialState?.scrollPos },
+  };
+  const notify = () => opts.onStateChange?.({ ...state, scrollPos: { ...state.scrollPos } });
+
+  let isActive = false;
+  let tabs: AnyDebuggerTabDef[] = [];
+  const menuButtons = new Map<string, TCMP>();
+
+  const { root, titleText, menu, tabsContainer } = createDrawerElements(
+    opts,
+    state.isOpen,
+    (open) => toggle(open)
+  );
 
   const isVisible = () => isActive && state.isOpen;
 
@@ -163,26 +200,10 @@ export const createEditorDrawer = (opts: EditorDrawerOpts): EditorDrawer => {
     notify();
   };
 
-  const buildMenu = () => {
-    for (const button of menuButtons.values()) button.remove();
-    menuButtons.clear();
-    for (const def of tabs) {
-      const icon = getSvgIcon(def.icon);
-      const button = CMP({
-        class: debuggerStyles.debugDrawerTabButton,
-        html: () => `<button>${icon}</button>`,
-        attr: { title: def.title },
-        onClick: () => selectTab(def),
-      });
-      menuButtons.set(def.id, button);
-      menu.add(button);
-    }
-  };
-
   const rebuild = () => {
     titleText.updateText(opts.getTitle());
     tabs = opts.getTabs();
-    buildMenu();
+    buildTabMenu(menu, menuButtons, tabs, selectTab);
     const def = getCurrentTab();
     if (def) mountTab(def);
     else {

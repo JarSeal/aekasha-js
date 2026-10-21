@@ -1,4 +1,3 @@
-import { registerPostFxProfiler } from '../../debug/PostFXProfiler';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { EngineFeature } from '../../kernel/init/Features';
 import {
@@ -8,6 +7,7 @@ import {
   getActivePostFxPipeline,
   installPostFx,
   loadScenePostFxFilesAsync,
+  registerPostFxProfiler,
 } from './PostFX';
 import type { SceneHooks } from '../../kernel/scene/SceneHooks';
 
@@ -46,7 +46,7 @@ export const postFx = (): EngineFeature => ({
     ctx.setRenderPipeline(getActivePostFxPipeline);
     ctx.addSceneHooks(postFxSceneHooks);
     // The flag here too (the hooks run only in the debug env): Rollup keeps a closure handed to
-    // the context, so a production build would keep the profiler's debug wrapper without it
+    // the context, so a production build would keep the profiler's loader without it
     if (IS_DEBUG_ENV) {
       ctx.onDebugAfterStart(async () => {
         // Measuring needs the renderer

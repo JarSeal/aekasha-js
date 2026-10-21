@@ -7,8 +7,8 @@ import { lerror, lwarn } from '../utils/Logger';
 import { updateOnScreenTools } from './OnScreenTools';
 import { addDebugToast } from './DebuggerGUI';
 import { getSvgIcon } from '../ui/icons/SvgIcon';
+import { _getUndoRedoActionHandler, registerUndoRedoActionHandler } from './UndoRedo';
 import type {
-  UndoRedoActionHandler,
   UndoRedoClearScope,
   UndoRedoEntry,
   UndoRedoHistoryEntry,
@@ -25,8 +25,6 @@ type UndoRedoLSData = {
 /** The structure of 'AEK_debugUndoRedoSettings' in LocalStorage (global, not scene data): only
  * the settings changed in the debugger, so CONFIG.ts / the defaults still apply to the rest. */
 type UndoRedoSettingsLSData = Partial<UndoRedoSettings>;
-
-type RegisteredHandler = UndoRedoActionHandler & { scope: UndoRedoScope };
 
 const LS_KEY = 'AEK_debugUndoRedo';
 const SETTINGS_LS_KEY = 'AEK_debugUndoRedoSettings';
@@ -46,7 +44,6 @@ let settings: UndoRedoSettings = {
   historySize: DEFAULT_HISTORY_SIZE,
   showToasts: DEFAULT_SHOW_TOASTS,
 };
-const actionHandlers = new Map<string, RegisteredHandler>();
 
 const toValidHistorySize = (size: number) => Math.max(1, Math.round(size));
 
@@ -74,7 +71,7 @@ const getVisibleBucketIds = () => {
 };
 
 const getScope = (actionType: string): UndoRedoScope => {
-  const handler = actionHandlers.get(actionType);
+  const handler = _getUndoRedoActionHandler(actionType);
   if (!handler) {
     lwarn(
       `Recording undo/redo action "${actionType}" before its handler is registered, assuming 'perScene' scope.`
@@ -142,24 +139,30 @@ const persist = () => {
  * undo after a reload see the same payload (e.g. undefined fields are already gone). */
 const toStoredData = <T>(data: T): T => JSON.parse(JSON.stringify(data ?? null));
 
+/** A stored object, or the empty one when the value isn't JSON (a hand edit). */
+const readStoredObject = <T extends object>(key: string): T => {
+  try {
+    const value = lsGetItem(key, {});
+    return value && typeof value === 'object' && !Array.isArray(value) ? (value as T) : ({} as T);
+  } catch {
+    lwarn(`The stored undo/redo data ("${key}") isn't valid JSON, so it is ignored.`);
+    return {} as T;
+  }
+};
+
 export const _initUndoRedo = () => {
-  settingsOverrides = lsGetItem(SETTINGS_LS_KEY, {}) as UndoRedoSettingsLSData;
+  settingsOverrides = readStoredObject<UndoRedoSettingsLSData>(SETTINGS_LS_KEY);
   settings = resolveSettings();
 
-  state = lsGetItem(LS_KEY, {}) as UndoRedoLSData;
+  state = readStoredObject<UndoRedoLSData>(LS_KEY);
   lastTimestamp = 0;
   for (const bucket of Object.values(state)) {
     for (const entry of bucket.entries) lastTimestamp = Math.max(lastTimestamp, entry.timestamp);
   }
 };
 
-export const _registerUndoRedoActionHandler = <TPayload>(
-  actionType: string,
-  handler: UndoRedoActionHandler<TPayload>,
-  scope: UndoRedoScope = 'perScene'
-) => {
-  actionHandlers.set(actionType, { ...(handler as UndoRedoActionHandler), scope });
-};
+/** The engine's debug modules import it from here; the handlers are kept in `UndoRedo.ts`. */
+export const _registerUndoRedoActionHandler = registerUndoRedoActionHandler;
 
 export const _recordUndoRedoAction = <TPayload>(
   actionType: string,
@@ -228,7 +231,7 @@ const showActionToast = (entry: UndoRedoEntry, direction: 'undo' | 'redo') => {
 /** Runs one direction of an entry's handler. Returns false (pointer must not move) when the
  * handler is missing or throws. */
 const applyEntry = (entry: UndoRedoEntry, direction: 'undo' | 'redo') => {
-  const handler = actionHandlers.get(entry.actionType);
+  const handler = _getUndoRedoActionHandler(entry.actionType);
   if (!handler) {
     lwarn(
       `Could not ${direction} "${entry.label}": no undo/redo handler registered for action type "${entry.actionType}".`

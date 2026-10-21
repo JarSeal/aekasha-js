@@ -66,7 +66,6 @@ const statsConfig: StatsOptions = {
   samplesLog: undefined,
   samplesGraph: undefined,
   precision: undefined,
-  outlookFolderExpanded: false,
   horizontal: false,
   mode: undefined,
   enabled: true,
@@ -266,21 +265,31 @@ export const _startCustomMeasurements = () => {
 let tFpsPrevCurrentTime = 0;
 let tFpsPrevCurrentGraphsTime = 0;
 let tFpsMax = 0;
-const tFPSsamples: number[] = [];
+// The last TFPS_SAMPLES logic durations in a ring, with their running sum (no allocation per frame)
+const TFPS_SAMPLES = 60;
+const tFpsSamples = new Float64Array(TFPS_SAMPLES);
+let tFpsSampleHead = 0;
+let tFpsSampleCount = 0;
+let tFpsSampleSum = 0;
 const updateTFPSPanel = (duration: number) => {
   // Absent when TFPS tracking is off — skip the sampling work too, not just the draw.
   if (!tFpsPanel) return;
   const currentTime = performance.now();
-  tFPSsamples.push(duration);
-  if (tFPSsamples.length > 60) tFPSsamples.shift();
+  if (tFpsSampleCount === TFPS_SAMPLES) {
+    tFpsSampleSum -= tFpsSamples[tFpsSampleHead];
+  } else {
+    tFpsSampleCount++;
+  }
+  tFpsSamples[tFpsSampleHead] = duration;
+  tFpsSampleSum += duration;
+  tFpsSampleHead = (tFpsSampleHead + 1) % TFPS_SAMPLES;
+  const avgDuration = tFpsSampleSum / tFpsSampleCount;
   if (currentTime >= tFpsPrevCurrentTime + 1000 / (stats?.logsPerSecond || 4)) {
-    const avgDuration = tFPSsamples.reduce((a, b) => a + b, 0) / tFPSsamples.length;
     const tfps = 1000 / avgDuration;
     tFpsPanel?.update(tfps, tFpsMax, 0);
     tFpsPrevCurrentTime = currentTime;
   }
   if (currentTime >= tFpsPrevCurrentGraphsTime + 1000 / (stats?.graphsPerSecond || 30)) {
-    const avgDuration = tFPSsamples.reduce((a, b) => a + b, 0) / tFPSsamples.length;
     const tfps = 1000 / avgDuration;
     tFpsMax = Math.max(10, tFpsMax, tfps);
     tFpsPanel?.updateGraph(tfps, tFpsMax * 1.25);
@@ -293,11 +302,6 @@ const updateTFPSPanel = (duration: number) => {
  * @returns ({@link Stats} | null)
  */
 export const _getStats = () => stats;
-
-/**
- * Returns the stats configurations
- */
-export const _getStatsConfig = () => statsConfig;
 
 const setDebuggerUI = () => {
   const reloadApp = () => location.reload();
@@ -403,17 +407,6 @@ const setDebuggerUI = () => {
     },
   });
 
-  // @TODO: add current scene and all loaded scene stats (draw calls and GPU memory are in the
-  // profiler's GPU memory tab, _dbg__GPUMemory.ts)
-  // Current and all scenes stats:
-  // - objects count (Object3D)
-  // - mesh count
-  // - face count
-  // - edge count
-  // - vertex count
-  // - imported objects count
-  // - list of imported objects (and sizes, face count, edge count, vertex count)
-  // - list of primitive objects (face count, edge count, vertex count)
   // - texture count, texture sizes, list of textures (and type, sizes, dimensions)
 };
 

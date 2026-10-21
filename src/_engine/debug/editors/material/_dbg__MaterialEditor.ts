@@ -8,6 +8,8 @@
  * The copy is a separate registered material (`__matEditor__<id>`), so the scene's own instance
  * of the material is never used or changed. It only lives while the view is active: it is
  * created on enter and deleted on exit.
+ *
+ * Over 800 lines: an editor view's UI, which p800 replaces, so it isn't split (p618 D8).
  */
 import * as THREE from 'three/webgpu';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
@@ -21,6 +23,7 @@ import {
   type MatProps,
 } from '../../../kernel/assets/Material';
 import { getTexture, loadTextureAsync, type TextureProps } from '../../../kernel/assets/Texture';
+import { retagAssetOwner } from '../../../kernel/assets/AssetOwners';
 import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../../ui/HUD';
 import { getAppData } from '../../../kernel/scene/AppData';
 import type { MaterialAsset } from '../../../schemas/MaterialSchema';
@@ -171,10 +174,12 @@ let current: {
  * discarded. */
 let loadToken = 0;
 let loadingMaterialId: string | null = null;
-/** The material and its copy the right drawer's tabs were built for (they are rebuilt per
- * material, and per copy: their bindings are made from it). */
+/** The material, its copy and whether it had stage settings when the right drawer's tabs were
+ * built (they are rebuilt per material, per copy: their bindings are made from it, and when the
+ * settings come or go: the Settings tab's Stage and Preview folders are made from them). */
 let drawerMaterialId: string | null = null;
 let drawerCopy: THREE.Material | null = null;
+let drawerHasSettings = false;
 /** Why a material failed to load, by material id (cleared by its next successful load). */
 const failures = new Map<string, string>();
 /** The selector's and the right drawer's UI state, as saved (read at registration, kept in sync
@@ -569,6 +574,13 @@ const splitNodePath = (path: string) => {
  * Returns false when that part of the material isn't on the stage (another material is selected,
  * or its copy or settings aren't there yet). */
 const applyLiveValue = ({ materialId, section, path }: SetValuePayload, value: unknown) => {
+  // The camera shows the previous material's pose while the selected one loads: an fov of that
+  // material goes to the camera, or its next orbit end would save the old fov back over the record
+  if (section === 'camera') {
+    if (viewCam?.getPoseKey() !== materialId || typeof value !== 'number') return false;
+    viewCam.setFov(value, true);
+    return true;
+  }
   if (materialId !== selectedMaterialId) return false;
   switch (section) {
     case 'params': {
@@ -586,10 +598,6 @@ const applyLiveValue = ({ materialId, section, path }: SetValuePayload, value: u
     case 'settings':
       if (!getSelectedSettings()) return false;
       setStageSetting(path as MaterialEditorSettingKey, value, true);
-      return true;
-    case 'camera':
-      if (viewCam?.getPoseKey() !== materialId || typeof value !== 'number') return false;
-      viewCam.setFov(value, true);
       return true;
   }
 };
@@ -723,10 +731,14 @@ const getUnavailableReason = (asset: MaterialAsset) => {
   return 'its TSL graph is not in this build (a production-gathered build only has the graphs of the materials a scene uses; run yarn dev)';
 };
 
+/** The textures the editor loaded during this visit, which the exit retags to the current scene. */
+const loadedTextureIds = new Set<string>();
+
 /** Loads the material's textures that aren't loaded yet (like SceneLoader's
  * loadNextSceneAssets). A texture that fails is left out (createMaterial warns about it). */
 const loadMissingTextures = async (asset: MaterialAsset) => {
   const missing = getMaterialTextureIds(asset).filter((id) => !getTexture(id));
+  for (const id of missing) loadedTextureIds.add(id);
   await Promise.all(
     missing.map(async (id) => {
       const declaration = findTextureDeclaration(id);
@@ -788,12 +800,18 @@ const refreshUI = () => {
   if (!ui) return;
   ui.selector.refresh();
   const copy = getSelectedCopy();
-  if (drawerMaterialId === selectedMaterialId && drawerCopy === copy) {
+  const hasSettings = Boolean(getSelectedSettings());
+  if (
+    drawerMaterialId === selectedMaterialId &&
+    drawerCopy === copy &&
+    drawerHasSettings === hasSettings
+  ) {
     ui.drawer.refresh();
     return;
   }
   drawerMaterialId = selectedMaterialId;
   drawerCopy = copy;
+  drawerHasSettings = hasSettings;
   ui.drawer.rebuild();
 };
 
@@ -943,6 +961,7 @@ const createUI = (): EditorUI => {
   });
   drawerMaterialId = selectedMaterialId;
   drawerCopy = getSelectedCopy();
+  drawerHasSettings = Boolean(getSelectedSettings());
   const drawer = createEditorDrawer({
     id: MATERIAL_EDITOR_VIEW_ID,
     parent: hud,
@@ -1007,6 +1026,14 @@ const onExit = () => {
   loadingMaterialId = null;
   // Nothing the editor holds outlives the view (a scene switch can release the copy's textures)
   deleteCurrentCopy();
+  // A texture it loaded is owned by the scene that was current then: one loaded meanwhile (app
+  // code, HMR) has released that scene's assets already, so the texture would never be released.
+  // The current scene takes them, as a cache hit would.
+  for (const id of loadedTextureIds) {
+    const texture = getTexture(id);
+    if (texture) retagAssetOwner(texture);
+  }
+  loadedTextureIds.clear();
 };
 
 /** Registers the material editor view (once). */

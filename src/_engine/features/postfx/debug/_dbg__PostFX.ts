@@ -17,10 +17,11 @@ import {
   setPostFxEnabled,
   setPostFxPassEnabled,
   setPostFxPassParam,
+  isPostFxMeasureEnabled,
+  setPostFxMeasureEnabled,
   type PostFxLiveParams,
   type PostFxPassInfo,
 } from '../PostFX';
-import { isPostFxMeasureEnabled, setPostFxMeasureEnabled } from '../../../debug/PostFXProfiler';
 import {
   getCurrentSceneId,
   getSceneOpts,

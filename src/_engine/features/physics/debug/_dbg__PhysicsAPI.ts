@@ -1,3 +1,6 @@
+// The Physics API tab and the physics entity window. Over 800 lines, and
+// `_createPhysicsAPIDebugGUI` (its `content`) and `createEditPhysicsEntityContent` over 150: a
+// Tweakpane panel, which p800 replaces, so it isn't split (p618 D8).
 import * as THREE from 'three/webgpu';
 import { Pane } from 'tweakpane';
 import {
@@ -519,12 +522,18 @@ const createEditPhysicsEntityContent = (data?: { [key: string]: unknown }) => {
 </div>`,
   });
   if (colliders && colliders.length) {
-    Promise.all(colliders.map((collider) => collider.shapeType())).then((shapeTypes) => {
-      if (isClosed) return;
-      shapeCmp.updateText(
-        shapeTypes.map((shapeType) => ShapeType[shapeType] ?? '[UNKNOWN]').join(', ')
-      );
-    });
+    Promise.all(colliders.map((collider) => collider.shapeType())).then(
+      (shapeTypes) => {
+        if (isClosed) return;
+        shapeCmp.updateText(
+          shapeTypes.map((shapeType) => ShapeType[shapeType] ?? '[UNKNOWN]').join(', ')
+        );
+      },
+      // Eg. the entity deleted before the worker answered (the window closes with it)
+      () => {
+        if (!isClosed) shapeCmp.updateText('[Unavailable]');
+      }
+    );
   } else {
     shapeCmp.updateText('[No collider]');
   }

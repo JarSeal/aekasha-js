@@ -17,6 +17,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/debug/_dbg__DebuggerGUI.test.ts": {
+      "to": "src/_engine/debug/_dbg__DebuggerGUI.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/debug/_dbg__DebuggerGUI.ts": {
       "to": "src/_engine/debug/_dbg__DebuggerGUI.ts",
       "action": "keep",
@@ -67,13 +72,28 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/debug/_dbg__PercentagePie.ts": {
+      "to": "src/_engine/debug/_dbg__PercentagePie.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/debug/_dbg__PNGEncoder.ts": {
       "to": "src/_engine/debug/_dbg__PNGEncoder.ts",
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/debug/_dbg__SceneHelpers.ts": {
+      "to": "src/_engine/debug/_dbg__SceneHelpers.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/debug/_dbg__Stats.ts": {
       "to": "src/_engine/debug/_dbg__Stats.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/debug/_dbg__TabHost.test.ts": {
+      "to": "src/_engine/debug/_dbg__TabHost.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -107,11 +127,6 @@
       "action": "keep",
       "plan": "p608"
     },
-    "src/_engine/debug/Assets.ts": {
-      "to": "src/_engine/debug/Assets.ts",
-      "action": "keep",
-      "plan": "p608"
-    },
     "src/_engine/debug/AxesGizmo.module.scss": {
       "to": "src/_engine/debug/AxesGizmo.module.scss",
       "action": "keep",
@@ -129,6 +144,11 @@
     },
     "src/_engine/debug/DebuggerGUI.module.scss": {
       "to": "src/_engine/debug/DebuggerGUI.module.scss",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/debug/DebuggerGUI.test.ts": {
+      "to": "src/_engine/debug/DebuggerGUI.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -159,6 +179,11 @@
     },
     "src/_engine/debug/DefaultDebugKeyBindings.ts": {
       "to": "src/_engine/debug/DefaultDebugKeyBindings.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/debug/DevFiles.test.ts": {
+      "to": "src/_engine/debug/DevFiles.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -237,6 +262,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/debug/GPUMemory.test.ts": {
+      "to": "src/_engine/debug/GPUMemory.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/debug/GPUMemory.ts": {
       "to": "src/_engine/debug/GPUMemory.ts",
       "action": "keep",
@@ -297,13 +327,8 @@
       "action": "keep",
       "plan": "p608"
     },
-    "src/_engine/debug/PercentagePieHtml.ts": {
-      "to": "src/_engine/debug/PercentagePieHtml.ts",
-      "action": "keep",
-      "plan": "p608"
-    },
-    "src/_engine/debug/PostFXProfiler.ts": {
-      "to": "src/_engine/debug/PostFXProfiler.ts",
+    "src/_engine/debug/Profiler.test.ts": {
+      "to": "src/_engine/debug/Profiler.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -329,6 +354,11 @@
     },
     "src/_engine/debug/profiler/_dbg__ProfilerObjects.ts": {
       "to": "src/_engine/debug/profiler/_dbg__ProfilerObjects.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/debug/profiler/_dbg__ProfilerOverview.test.ts": {
+      "to": "src/_engine/debug/profiler/_dbg__ProfilerOverview.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -359,11 +389,6 @@
     },
     "src/_engine/debug/profiler/Profiler.module.scss": {
       "to": "src/_engine/debug/profiler/Profiler.module.scss",
-      "action": "keep",
-      "plan": "p608"
-    },
-    "src/_engine/debug/SceneHelpers.ts": {
-      "to": "src/_engine/debug/SceneHelpers.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -414,6 +439,11 @@
     },
     "src/_engine/debug/TestBridge.ts": {
       "to": "src/_engine/debug/TestBridge.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/debug/UndoRedo.test.ts": {
+      "to": "src/_engine/debug/UndoRedo.test.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -1039,6 +1069,11 @@
     },
     "src/_engine/features/physics/PhysicsMessaging.ts": {
       "to": "src/_engine/features/physics/PhysicsMessaging.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/features/physics/PhysicsProbeTypes.ts": {
+      "to": "src/_engine/features/physics/PhysicsProbeTypes.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -1798,6 +1833,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/kernel/assets/Texture.test.ts": {
+      "to": "src/_engine/kernel/assets/Texture.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/kernel/assets/Texture.ts": {
       "to": "src/_engine/kernel/assets/Texture.ts",
       "action": "keep",
@@ -1888,6 +1928,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/kernel/config/DebugModules.test.ts": {
+      "to": "src/_engine/kernel/config/DebugModules.test.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/kernel/config/DebugModules.ts": {
       "to": "src/_engine/kernel/config/DebugModules.ts",
       "action": "keep",
@@ -1898,8 +1943,8 @@
       "action": "keep",
       "plan": "p608"
     },
-    "src/_engine/kernel/ecs/debug/ECSStressTest.ts": {
-      "to": "src/_engine/kernel/ecs/debug/ECSStressTest.ts",
+    "src/_engine/kernel/ecs/debug/_dbg__ECSStressTest.ts": {
+      "to": "src/_engine/kernel/ecs/debug/_dbg__ECSStressTest.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -1940,6 +1985,11 @@
     },
     "src/_engine/kernel/ecs/ECSRegistry.ts": {
       "to": "src/_engine/kernel/ecs/ECSRegistry.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/ecs/ECSStressTest.ts": {
+      "to": "src/_engine/kernel/ecs/ECSStressTest.ts",
       "action": "keep",
       "plan": "p608"
     },
@@ -2436,6 +2486,11 @@
     },
     "src/_engine/types/typings.d.ts": {
       "to": "src/_engine/types/typings.d.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/ui/CLAUDE.md": {
+      "to": "src/_engine/ui/CLAUDE.md",
       "action": "keep",
       "plan": "p608"
     },
@@ -3221,6 +3276,41 @@
     },
     "src/app/examples/toolkit/exampleToolkitSun.light.json": {
       "to": "src/app/examples/toolkit/exampleToolkitSun.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/uiKit/exampleUiKit.hub.png": {
+      "to": "src/app/examples/uiKit/exampleUiKit.hub.png",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/uiKit/exampleUiKit.scene.json": {
+      "to": "src/app/examples/uiKit/exampleUiKit.scene.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/uiKit/exampleUiKit.scss": {
+      "to": "src/app/examples/uiKit/exampleUiKit.scss",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/uiKit/exampleUiKit.ts": {
+      "to": "src/app/examples/uiKit/exampleUiKit.ts",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/uiKit/exampleUiKitAmbient.light.json": {
+      "to": "src/app/examples/uiKit/exampleUiKitAmbient.light.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/uiKit/exampleUiKitCamera.camera.json": {
+      "to": "src/app/examples/uiKit/exampleUiKitCamera.camera.json",
+      "action": "keep",
+      "plan": "p609"
+    },
+    "src/app/examples/uiKit/exampleUiKitSun.light.json": {
+      "to": "src/app/examples/uiKit/exampleUiKitSun.light.json",
       "action": "keep",
       "plan": "p609"
     },

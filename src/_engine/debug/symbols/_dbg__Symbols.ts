@@ -5,7 +5,7 @@ import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { ECSSystemStage } from '../../kernel/loop/SystemStages';
 import { getRootScene } from '../../kernel/scene/Scene';
 import { existsOrThrow } from '../../utils/Assert';
-import { getActiveCameraId } from '../../kernel/camera/Camera'; // ADD THIS IMPORT
+import { getActiveCameraId } from '../../kernel/camera/Camera';
 import {
   createNewCameraSymbol,
   createNewDirectionalLightSymbol,
@@ -94,8 +94,6 @@ const applySymbolTint = (symbol: THREE.Object3D, state: SymbolTintState) => {
 };
 
 ECSWorld.registerPlugin((world) => {
-  const rootScene = existsOrThrow(getRootScene(), 'No root scene for symbols');
-
   world.addSystem(ECSSystemStage.LATE_MAIN, 'debugSymbolSyncSystem', (w) => {
     const storage = w.getStorage(ComponentType.DEBUG_SYMBOL);
     const activeCamId = getActiveCameraId();
@@ -155,20 +153,26 @@ ECSWorld.registerPlugin((world) => {
       }
     }
   });
-
-  ECSWorld.registerComponentHooks(ComponentType.TAG_IS_LIGHT, {
-    onAddComponent: (id, w) => attachToEntity(id, w, rootScene),
-  });
-  ECSWorld.registerComponentHooks(ComponentType.TAG_IS_CAMERA, {
-    onAddComponent: (id, w) => attachToEntity(id, w, rootScene),
-  });
 });
 
+// Static hooks, so registered once here, not per world in the plugin above
+const attachToNewEntity = (id: number, w: ECSWorld) =>
+  attachToEntity(id, w, existsOrThrow(getRootScene(), 'No root scene for symbols'));
+ECSWorld.registerComponentHooks(ComponentType.TAG_IS_LIGHT, { onAddComponent: attachToNewEntity });
+ECSWorld.registerComponentHooks(ComponentType.TAG_IS_CAMERA, { onAddComponent: attachToNewEntity });
+
+/** Removes a symbol and disposes its own materials (createSymbolClone's per-instance copies; the
+ * geometries are the templates', shared). */
+const disposeSymbol = (id: number, w: ECSWorld) => {
+  const symbol = w.getComponent(id, ComponentType.DEBUG_SYMBOL)?.value;
+  if (!symbol) return;
+  symbol.removeFromParent();
+  symbol.traverse((child) => {
+    if (child instanceof THREE.Mesh) (child.material as THREE.Material).dispose();
+  });
+};
+
 ECSWorld.registerComponentHooks(ComponentType.DEBUG_SYMBOL, {
-  onDeleteEntity: (id, w) => {
-    const symbolComp = w.getComponent(id, ComponentType.DEBUG_SYMBOL);
-    if (symbolComp) {
-      symbolComp.value.removeFromParent();
-    }
-  },
+  onRemoveComponent: disposeSymbol,
+  onDeleteEntity: disposeSymbol,
 });

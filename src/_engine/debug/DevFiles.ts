@@ -71,9 +71,17 @@ export type DevFilesClientErrorCode = DevFilesErrorCode | 'UNAVAILABLE' | 'NETWO
 /** A refused or failed dev files request. `details` is the server's: `CONFLICT` has
  * {@link DevFilesConflicts}, `INVALID_SCHEMA` {@link DevFilesSchemaIssues}. */
 export class DevFilesError extends Error {
+  /**
+   * A dev files error, as the client throws it.
+   * @param code the server's code, or the client's own
+   * @param details the server's, by `code`
+   */
   constructor(
+    /** Why the request failed: the server's code, or the client's own */
     readonly code: DevFilesClientErrorCode,
     message: string,
+    /** The server's details: `CONFLICT`'s {@link DevFilesConflicts}, `INVALID_SCHEMA`'s
+     * {@link DevFilesSchemaIssues}; undefined for the other codes */
     readonly details?: unknown
   ) {
     super(message);
@@ -81,6 +89,7 @@ export class DevFilesError extends Error {
   }
 }
 
+/** Why the page can't write dev files ({@link DevFilesStatus}'s `reason`). */
 export type DevFilesUnavailableReason =
   /** Not the debug env (`?isDebug=true` in a development or test env) */
   | 'NOT_DEBUG_ENV'
@@ -95,11 +104,20 @@ export type DevFilesUnavailableReason =
   /** The page has no token (it was served before the routes were turned on): reload it */
   | 'NO_TOKEN';
 
+/** {@link getDevFilesStatus}'s answer: available with the server's settings, or why not. */
 export type DevFilesStatus =
-  | { available: true; server: DevFilesStatusBody }
   | {
+      /** The page can write dev files */
+      available: true;
+      /** The server's settings: the roots, the extensions, the size limits */
+      server: DevFilesStatusBody;
+    }
+  | {
+      /** The page can't write dev files */
       available: false;
+      /** Why not */
       reason: DevFilesUnavailableReason;
+      /** The reason as a sentence, for a tool's tooltip */
       message: string;
       /** The server's status, when it answered */
       server: DevFilesStatusBody | null;
@@ -138,9 +156,13 @@ export type DevFileWrite = {
     }
 );
 
+/** A file {@link readDevFile} read. */
 export type DevFileRead = {
+  /** The path as it was asked for */
   path: string;
+  /** The file's hash: a later write's `expectedHash` */
   sha256: string;
+  /** The file's bytes */
   bytes: Uint8Array;
   /** The parsed file, for a `.json` path */
   json?: unknown;
@@ -153,12 +175,16 @@ export type PNGSource =
   | OffscreenCanvas
   | { data: Uint8Array | Uint8ClampedArray; width: number; height: number };
 
+/** {@link encodePNG}'s options. */
 export type EncodePNGOpts = {
   /** Writes the rows bottom-up (pixels read back with the first row at the bottom) */
   flipY?: boolean;
 };
 
-/** `AppConfig.devFiles.saveHistorySize`'s default */
+/**
+ * `AppConfig.devFiles.saveHistorySize`'s default. The Debug tools tab's.
+ * @internal
+ */
 export const DEFAULT_SAVE_HISTORY_SIZE = 20;
 
 const toValidSaveHistorySize = (size: unknown) =>
@@ -179,9 +205,8 @@ export const getDevFilesSaveHistorySize = (): number => {
   );
 };
 
-/**
- * Whether this page can write dev files, and the server's settings. Never rejects.
- */
+/** Whether this page can write dev files, and the server's settings. Never rejects: outside the
+ * debug env it resolves `NOT_DEBUG_ENV` without loading anything. */
 export const getDevFilesStatus = async (): Promise<DevFilesStatus> => {
   if (!IS_DEBUG_ENV) {
     return {
@@ -201,13 +226,32 @@ export const getDevFilesStatus = async (): Promise<DevFilesStatus> => {
  * unchanged file isn't written, so it sets off no gather: a batch of unchanged files gets no
  * {@link onDevDataGathered} event)
  * @throws {@link DevFilesError}
+ * @example
+ * ```ts
+ * import { DevFilesError, onDevDataGathered, writeDevFiles } from 'aekasha/debug';
+ *
+ * const path = 'src/app/cameras/scene01Camera.camera.json';
+ * const removeListener = onDevDataGathered((event) => {
+ *   if (!event.files.includes(path)) return;
+ *   removeListener();
+ *   if (event.status === 'failed') console.warn('The gather failed', event.message);
+ * });
+ *
+ * try {
+ *   await writeDevFiles([{ path, saveData: { sceneId: 'scene01', entry: { fov: 60 } } }]);
+ * } catch (err) {
+ *   removeListener();
+ *   if (err instanceof DevFilesError && err.code === 'CONFLICT') console.warn(err.details);
+ * }
+ * ```
  */
 export const writeDevFiles = async (writes: DevFileWrite[]): Promise<DevFilesCommitBody> =>
   (await requireDevFiles())._writeDevFiles(writes);
 
 /**
  * Reads a file the dev files may write, with the `sha256` to pass as a write's `expectedHash`.
- * @returns null when the file doesn't exist
+ * @param path repo-relative and `/`-separated, in a root the dev files may write
+ * @returns the file, or null when it doesn't exist
  * @throws {@link DevFilesError}
  */
 export const readDevFile = async (path: string): Promise<DevFileRead | null> =>
