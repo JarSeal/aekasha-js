@@ -4,7 +4,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import sharp from 'sharp';
 
 // p619 §1.4 A1-A3: `yarn assets`' prune keeps what it can't rebuild, and what another run is
-// writing. Run in a temp repo root: `sources.ts`' ROOT (every path the pipeline writes) is
+// writing; A5: an output of the wrong size is written again. Run in a temp repo root: `sources.ts`' ROOT (every path the pipeline writes) is
 // redirected there, so the repo's own outputs are never touched. `ktx` is missing, as on a clone
 // without `yarn setupAssetTools`.
 
@@ -45,6 +45,7 @@ vi.mock('./ktxEncode', async (importOriginal) => {
 const { runAssetsCommand } = await import('./command');
 const { ROOT } = await import('./sources');
 const { RUN_LOCK_FILE } = await import('./runLock');
+const { getContentHash, writeOutput } = await import('./outputs');
 
 const TEXTURE_DIR = path.join(TMP, 'src/app/t');
 const AEK_ASSETS = path.join(TMP, 'src/public/aek-assets');
@@ -208,5 +209,21 @@ describe('A3: the prune leaves alone what another run is writing', () => {
     await runFullAssets();
     expect(lockKeys()).toEqual([]);
     expect(fs.existsSync(RUN_LOCK_FILE)).toBe(false);
+  });
+});
+
+describe('A5: writeOutput', () => {
+  it('writes a present output of the wrong size again, and leaves a right one alone', () => {
+    const bytes = new TextEncoder().encode('the whole output');
+    const file = path.join(AEK_ASSETS, `app/t/w.${getContentHash(bytes)}.bin`);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, 'the who');
+    expect(writeOutput('app/t/w', '.bin', bytes).file).toBe(file);
+    expect(fs.readFileSync(file, 'utf8')).toBe('the whole output');
+    const anHourAgo = new Date(Date.now() - 3_600_000);
+    fs.utimesSync(file, anHourAgo, anHourAgo);
+    writeOutput('app/t/w', '.bin', bytes);
+    // Not written again: still about an hour old (utimes rounds below the millisecond)
+    expect(fs.statSync(file).mtimeMs).toBeLessThan(Date.now() - 60_000);
   });
 });

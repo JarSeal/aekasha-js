@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import fs from 'fs';
 import path from 'path';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from './assetPipeline/sources';
 
 /**
  * The verify commands' shared progress log (p601): every line they print also goes to

@@ -28,10 +28,29 @@ export const diffSystemOrders = (
   return diffs;
 };
 
-/** The first place two lists differ, with what's missing or added */
+const countIds = (ids: string[]) => {
+  const counts = new Map<string, number>();
+  for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
+  return counts;
+};
+
+/** The ids `a` has more of than `b`, each as often as it's over (a system registered twice) */
+const surplus = (a: string[], b: string[]) => {
+  const counts = countIds(b);
+  return a.filter((id) => {
+    const left = counts.get(id) ?? 0;
+    counts.set(id, left - 1);
+    return left <= 0;
+  });
+};
+
+/**
+ * The first place two lists differ, with what's missing or added; counted, so a system
+ * registered twice shows (`includes` missed it, p619 §1.4 V6)
+ */
 const diffStage = (was: string[], now: string[]) => {
-  const added = now.filter((id) => !was.includes(id));
-  const removed = was.filter((id) => !now.includes(id));
+  const added = surplus(now, was);
+  const removed = surplus(was, now);
   if (added.length || removed.length) {
     return [
       added.length ? `added ${added.join(', ')}` : '',

@@ -33,9 +33,11 @@ export type HubRoute =
 
 /**
  * The response for a URL path under `base` (`/`, `/hub/`), served from `dir`. `pathname` is
- * decoded; the base without its slash (`/hub`) redirects to it.
+ * decoded; the base without its slash (`/hub`) redirects to it. A NUL byte (`%00`) is not found,
+ * not a throw from `fs` (p619 §1.4 H2).
  */
 export const resolveHubRoute = (dir: string, base: string, pathname: string): HubRoute => {
+  if (pathname.includes('\0')) return { kind: 'notFound' };
   if (base !== '/' && pathname === base.slice(0, -1)) return { kind: 'redirect', location: base };
   if (!pathname.startsWith(base)) return { kind: 'notFound' };
   const file = path.join(dir, pathname.slice(base.length));

@@ -26,7 +26,8 @@ import { createStage } from './devFiles/stage';
  * - `GET read?path=`: the file's bytes, its hash in the `x-aek-sha256` header;
  * - `PUT stage`: a raw body (a PNG) staged for a commit, `{ stageId, bytes, sha256 }`;
  * - `POST commit`: `{ writes: [{ path, json | stageId | saveData, expectedHash? }] }`, all or
- *   nothing (`saveData`: `{ sceneId, entry }`, a stamped save entry, `devFiles/saveData.ts`).
+ *   nothing (`saveData`: `{ sceneId, entry, historySize }`, a stamped save entry kept with the
+ *   scene's last `historySize` ones, `devFiles/saveData.ts`).
  * The checks are in `devFiles/security.ts`, the path policy in `devFiles/paths.ts`. A write is
  * an ordinary file event: the scene gatherer runs as it does for an editor save.
  *
@@ -129,7 +130,8 @@ export const devFilesPlugin = (): Plugin => {
           for (const file of filesInNewFolders) server.watcher.emit('add', file);
           sendJson(res, 200, result);
         } else {
-          throw new DevFilesError('NOT_FOUND', `No route ${method} ${route.name}`);
+          // Not NOT_FOUND: the client reads that as a missing file (F6)
+          throw new DevFilesError('BAD_REQUEST', `No route ${method} ${route.name}`);
         }
       };
 

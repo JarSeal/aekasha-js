@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
 import hubConfig from '../../hub/hub.config';
-import { getProjectMetadata } from '../projectMetadata';
+import { getProjectMetadata, type ProjectMetadata } from '../projectMetadata';
 import {
   buildScripts,
   buildStyles,
@@ -41,6 +41,7 @@ import {
   type HubMarkdownEnv,
   type HubRenderContext,
 } from './markdown';
+import { commitHubStagingDir, createHubStagingDir, getHubOutDirError } from './outDir';
 import { discoverPages, relativeRoot, type HubPageTree } from './pages';
 import {
   loadAppScenes,
@@ -72,7 +73,8 @@ import type { HubBuildMode, HubHeading, HubPage } from './types';
 
 /**
  * Builds the Hub (p551 §2.2): `hub/` → static pages in `outDir`, in the layout p550 §3.5
- * describes. `public` (`yarn hub:build` → `dist-hub/`) writes nothing when there's an error.
+ * describes. `public` (`yarn hub:build` → `dist-hub/`) replaces `outDir` only when there's no
+ * error, and throws before building for an `outDir` it may not replace (`getHubOutDirError`).
  * `dev` (the dev plugin, `devTools/hubPlugin.ts`) writes every page, and a page with an error
  * becomes an error page listing it (§2.3): one in its own files, or one that isn't any page's
  * (the shell, the SCSS, the TS), which every page lists. Dev pages also load the dev client.
@@ -91,10 +93,11 @@ export type HubBuildOptions = {
   /** `dev`: the last build's assets, kept when this build's fail, so error pages keep styles */
   fallback?: HubBuildAssets;
   /**
-   * The build time the Version page and `hub-data.js` show (default now). The dev plugin passes
-   * its first build's, so a rebuild doesn't change the Version page by itself.
+   * The build's commit, local changes and time the Version page and `hub-data.js` show (default:
+   * now's). The dev plugin passes its first build's, so a rebuild doesn't change the Version page
+   * by itself: an edit and its undo flipped "local changes" and reloaded it (p619 §1.4 H3).
    */
-  buildTime?: string;
+  build?: ProjectMetadata['build'];
   /** The API docs' model (p553 §2.5): `current` by default, `last` in the dev plugin */
   api?: ApiModelSource;
   /**
@@ -355,17 +358,22 @@ export const buildHub = async ({
   outDir,
   basePath = '/',
   fallback,
-  buildTime,
+  build,
   api: apiModel = 'current',
   isEmbedLive = true,
 }: HubBuildOptions): Promise<HubBuildResult> => {
   const startTime = performance.now();
+  // Before the build's work: a folder the build may not replace throws (p619 §1.4 H1)
+  if (mode === 'public') {
+    const outDirError = getHubOutDirError(outDir);
+    if (outDirError) throw new Error(outDirError);
+  }
   const diag = new HubDiagnostics();
   const rendered: RenderedPage[] = [];
   const builtPages: HubBuiltPage[] = [];
   const assets: HubBuildAssets = { styles: null, scripts: null };
   const meta = getProjectMetadata();
-  if (buildTime) meta.build.time = buildTime;
+  if (build) meta.build = { ...build };
   const version = createVersionSection(meta, diag);
   const api = await createApiSection({ mode, diag, meta, model: apiModel });
   const sections: HubGeneratedSection[] = [
@@ -653,21 +661,33 @@ export const buildHub = async ({
     return result(sourceFiles);
   }
 
-  if (mode === 'public') fs.rmSync(outDir, { recursive: true, force: true });
-  for (const { outPath, html } of builtPages) writeFile(path.join(outDir, outPath), html);
-  for (const file of [assets.styles, data, search, ...(assets.scripts ?? [])]) {
-    if (file) writeFile(path.join(outDir, file.outPath), file.content);
+  // `public` writes into a staging folder and swaps it in only when nothing failed (H1), so a
+  // failed build leaves the last output as it was; `dev` writes its own folder in place
+  const writeDir = mode === 'public' ? createHubStagingDir(outDir) : outDir;
+  try {
+    for (const { outPath, html } of builtPages) writeFile(path.join(writeDir, outPath), html);
+    for (const file of [assets.styles, data, search, ...(assets.scripts ?? [])]) {
+      if (file) writeFile(path.join(writeDir, file.outPath), file.content);
+    }
+    copyStaticAssets(writeDir);
+    if (mode === 'public') copyHubEmbeds(context.embeds, writeDir);
+    await writeImages(
+      rendered.flatMap(({ env }) => env.images),
+      writeDir,
+      mode,
+      diag
+    );
+    for (const file of FAVICON_FILES) {
+      fs.copyFileSync(file, path.join(writeDir, path.basename(file)));
+    }
+    if (mode === 'public') {
+      writeFile(path.join(writeDir, '_headers'), NETLIFY_HEADERS);
+      if (diag.errors.length) builtPages.length = 0;
+      else commitHubStagingDir(writeDir, outDir);
+    }
+  } finally {
+    if (writeDir !== outDir) fs.rmSync(writeDir, { recursive: true, force: true });
   }
-  copyStaticAssets(outDir);
-  if (mode === 'public') copyHubEmbeds(context.embeds, outDir);
-  await writeImages(
-    rendered.flatMap(({ env }) => env.images),
-    outDir,
-    mode,
-    diag
-  );
-  for (const file of FAVICON_FILES) fs.copyFileSync(file, path.join(outDir, path.basename(file)));
-  if (mode === 'public') writeFile(path.join(outDir, '_headers'), NETLIFY_HEADERS);
 
   return result(sourceFiles);
 };

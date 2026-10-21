@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createHash } from 'crypto';
+import { writeFileAtomic } from '../files';
 import { KTX_VERSION } from './ktxTool';
 import { AEK_ASSETS_DIR, getOutputFile } from './outputs';
 import { ROOT } from './sources';
@@ -61,12 +62,18 @@ export const stableStringify = (value: unknown): string =>
       : v
   );
 
-const readPackageVersion = (name: string) =>
-  (
-    JSON.parse(fs.readFileSync(path.join(ROOT, 'node_modules', name, 'package.json'), 'utf-8')) as {
-      version: string;
-    }
-  ).version;
+const packageVersions = new Map<string, string>();
+
+/** An installed package's version (`node_modules/<name>/package.json`), read once per process */
+export const getPackageVersion = (name: string) => {
+  let version = packageVersions.get(name);
+  if (version === undefined) {
+    const file = path.join(ROOT, 'node_modules', name, 'package.json');
+    version = (JSON.parse(fs.readFileSync(file, 'utf-8')) as { version: string }).version;
+    packageVersions.set(name, version);
+  }
+  return version;
+};
 
 let toolVersions: Record<'texture' | 'importedAsset', Record<string, string | number>> | null =
   null;
@@ -81,15 +88,15 @@ const getToolVersions = (type: 'texture' | 'importedAsset') => {
     const texture = {
       pipeline: PIPELINE_VERSION,
       ktx: KTX_VERSION,
-      sharp: readPackageVersion('sharp'),
+      sharp: getPackageVersion('sharp'),
     };
     toolVersions = {
       texture,
       importedAsset: {
         ...texture,
-        gltfTransform: readPackageVersion('@gltf-transform/core'),
-        meshoptimizer: readPackageVersion('meshoptimizer'),
-        draco3dgltf: readPackageVersion('draco3dgltf'),
+        gltfTransform: getPackageVersion('@gltf-transform/core'),
+        meshoptimizer: getPackageVersion('meshoptimizer'),
+        draco3dgltf: getPackageVersion('draco3dgltf'),
       },
     };
   }
@@ -133,13 +140,6 @@ export const getCacheKey = (input: {
   if (keyMemo.size >= KEY_MEMO_LIMIT) keyMemo.clear();
   keyMemo.set(memoKey, key);
   return key;
-};
-
-const writeFileAtomic = (file: string, bytes: Uint8Array | string) => {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  const tempFile = `${file}.${process.pid}.tmp`;
-  fs.writeFileSync(tempFile, bytes);
-  fs.renameSync(tempFile, file);
 };
 
 const readLockEntries = (lockFile: string): Record<string, CacheEntry> => {

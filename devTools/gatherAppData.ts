@@ -402,8 +402,14 @@ const getProfileOutputs = (
   return null;
 };
 
-// Helper to write JSON Schema definitions to a hidden workspace folder
-const compileJsonSchemas = () => {
+/**
+ * Writes the asset JSONs' JSON Schemas into `.schemas/` (the editors' autocompletion and
+ * validation), each only when its content changed. Called by the commands that gather (`yarn
+ * gatherAppData`, `yarn assets`) and by the dev server's gatherer plugin on each (re)start, never
+ * at module load (p619 §1.4 G3: every import rewrote the 14 tracked files).
+ * @returns the files written, by name
+ */
+export const writeJsonSchemas = () => {
   const schemasDir = path.resolve(__dirname, '../.schemas');
   fs.mkdirSync(schemasDir, { recursive: true });
 
@@ -424,24 +430,26 @@ const compileJsonSchemas = () => {
     { name: 'assetsConfig.schema.json', schema: AssetsConfigSchema },
   ];
 
+  const written: string[] = [];
   for (const target of targets) {
     const nativeSchema = z.toJSONSchema(target.schema, { target: 'draft-07' });
     const finalSchema = {
       $schema: 'http://json-schema.org/draft-07/schema#',
       ...nativeSchema,
     };
-    fs.writeFileSync(
-      path.resolve(schemasDir, target.name),
-      JSON.stringify(finalSchema, null, 2),
-      'utf-8'
+    const file = path.resolve(schemasDir, target.name);
+    const content = JSON.stringify(finalSchema, null, 2);
+    if (fs.existsSync(file) && fs.readFileSync(file, 'utf-8') === content) continue;
+    fs.writeFileSync(file, content, 'utf-8');
+    written.push(target.name);
+  }
+  if (written.length) {
+    console.log(
+      `\x1b[32m✓ [Schema Compiler] Wrote the JSON Schemas of ${written.join(', ')} in .schemas/\x1b[0m`
     );
   }
-  console.log(
-    '\x1b[32m✓ [Schema Compiler] Natively generated IDE autocompletion blueprints.\x1b[0m'
-  );
+  return written;
 };
-// Execute compilation immediately when the script spins up
-compileJsonSchemas();
 
 /**
  * Gathers the asset JSONs into the generated data.
@@ -553,10 +561,14 @@ export const gatherSceneData = (
     impostors: [],
   };
 
-  const logJSONError = (file: string) =>
+  /** A file that isn't JSON (an editor's half-written save), or another throw while reading it:
+   * fails the gather (p619 §1.4 G2), so the dev server keeps the page as it was */
+  const logJSONError = (file: string, error: unknown) => {
     console.error(
-      `\x1b[31m✗ [Scene Gatherer] File content for file '${file}' is invalid or empty.\x1b[0m`
+      `\x1b[31m✗ [Scene Gatherer] ${file} is invalid or empty: ${(error as Error).message}\x1b[0m`
     );
+    hasError = true;
+  };
 
   // Validates assets.config.json (p300); its errors stop the gathering like an asset's would
   let resolveSettings: ReturnType<typeof createSettingsResolver>;
@@ -573,6 +585,8 @@ export const gatherSceneData = (
 
     // Gather scene files
     const sceneFilesArray = [];
+    // The file that registered each scene id: pass 2 skips a duplicate's (G1)
+    const registeredSceneFiles = new Set<string>();
     const sceneFiles = files.filter(
       (file) => typeof file === 'string' && file.endsWith(JSON_ENDING_SIGNATURES.scene)
     ) as string[];
@@ -595,17 +609,22 @@ export const gatherSceneData = (
         const sceneId = validation.data.id || path.basename(file, JSON_ENDING_SIGNATURES.scene);
         if (ids.scenes.includes(sceneId)) {
           logDuplicateIdError('scene', sceneId, file);
+          hasError = true;
           continue;
         }
         ids.scenes.push(sceneId);
+        registeredSceneFiles.add(file);
 
         const latestSave = validation.data.__saveData?.[sceneId]?.[0] || {};
         const fileContentJSON = { ...validation.data, ...latestSave };
         fileContentJSON.__sourcePath = path.relative(path.resolve(__dirname, '..'), fullPath);
-        if (fileContentJSON.sceneFile) sceneFilesArray.push(fileContentJSON);
+        // The scenes whose TSL materials and PostFX passes get loaders: a production build leaves
+        // the debug scenes out, and their files with them (G6)
+        if (fileContentJSON.sceneFile && !(isProduction && fileContentJSON.isDebugScene)) {
+          sceneFilesArray.push(fileContentJSON);
+        }
       } catch (e) {
-        logJSONError(file);
-        throw new Error((e as Error).message);
+        logJSONError(file, e);
       }
     }
 
@@ -636,6 +655,7 @@ export const gatherSceneData = (
           path.basename(file, JSON_ENDING_SIGNATURES.camera);
         if (ids.cameras.includes(cameraId)) {
           logDuplicateIdError('camera', cameraId, file);
+          hasError = true;
           continue;
         }
         ids.cameras.push(cameraId);
@@ -643,8 +663,8 @@ export const gatherSceneData = (
         cameraJSON.__sourcePath = path.relative(path.resolve(__dirname, '..'), fullPath);
         delete cameraJSON.$schema;
         cameraRegistry[cameraId] = cameraJSON;
-      } catch {
-        logJSONError(file);
+      } catch (e) {
+        logJSONError(file, e);
       }
     }
     combinedData.cameras = cameraRegistry;
@@ -673,6 +693,7 @@ export const gatherSceneData = (
           path.basename(file, JSON_ENDING_SIGNATURES.light);
         if (ids.lights.includes(lightId)) {
           logDuplicateIdError('light', lightId, file);
+          hasError = true;
           continue;
         }
         ids.lights.push(lightId);
@@ -680,8 +701,8 @@ export const gatherSceneData = (
         lightJSON.__sourcePath = path.relative(path.resolve(__dirname, '..'), fullPath);
         delete lightJSON.$schema;
         lightRegistry[lightId] = lightJSON;
-      } catch {
-        logJSONError(file);
+      } catch (e) {
+        logJSONError(file, e);
       }
     }
     combinedData.lights = lightRegistry;
@@ -710,6 +731,7 @@ export const gatherSceneData = (
         const geoId = geoJSON.geoProps.id || path.basename(file, JSON_ENDING_SIGNATURES.geometry);
         if (ids.geometries.includes(geoId)) {
           logDuplicateIdError('geometry', geoId, file);
+          hasError = true;
           continue;
         }
         ids.geometries.push(geoId);
@@ -717,8 +739,8 @@ export const gatherSceneData = (
         geoJSON.__sourcePath = path.relative(path.resolve(__dirname, '..'), fullPath);
         delete geoJSON.$schema;
         geoRegistry[geoId] = geoJSON;
-      } catch {
-        logJSONError(file);
+      } catch (e) {
+        logJSONError(file, e);
       }
     }
     combinedData.geometries = geoRegistry;
@@ -751,6 +773,7 @@ export const gatherSceneData = (
         const texId = texJSON.id || path.basename(file, JSON_ENDING_SIGNATURES.texture);
         if (ids.textures.includes(texId)) {
           logDuplicateIdError('texture', texId, file);
+          hasError = true;
           continue;
         }
         ids.textures.push(texId);
@@ -760,8 +783,8 @@ export const gatherSceneData = (
         texJSON.id = texId;
         delete texJSON.$schema;
         texRegistry[texId] = texJSON;
-      } catch {
-        logJSONError(file);
+      } catch (e) {
+        logJSONError(file, e);
       }
     }
 
@@ -816,6 +839,7 @@ export const gatherSceneData = (
         const arrayId = arrayJSON.id || path.basename(file, JSON_ENDING_SIGNATURES.textureArray);
         if (ids.textures.includes(arrayId)) {
           logDuplicateIdError('texture (or texture array)', arrayId, file);
+          hasError = true;
           continue;
         }
         ids.textures.push(arrayId);
@@ -826,8 +850,8 @@ export const gatherSceneData = (
         arrayJSON.id = arrayId;
         delete arrayJSON.$schema;
         arrayRegistry[arrayId] = arrayJSON;
-      } catch {
-        logJSONError(file);
+      } catch (e) {
+        logJSONError(file, e);
       }
     }
     // Texture atlases (p299 D3): each slot is a texture at runtime (`<atlasId>.<slot>`), in the
@@ -882,6 +906,7 @@ export const gatherSceneData = (
         const takenId = [atlasId, ...slotIds].find((id) => ids.textures.includes(id));
         if (takenId) {
           logDuplicateIdError('texture (or a texture atlas or its slot)', takenId, file);
+          hasError = true;
           continue;
         }
         ids.textures.push(atlasId, ...slotIds);
@@ -914,8 +939,8 @@ export const gatherSceneData = (
             ...getTextureAtlasSlotGeneratedFields(opts.pipeline, fullPath, slot),
           };
         }
-      } catch {
-        logJSONError(file);
+      } catch (e) {
+        logJSONError(file, e);
       }
     }
     combinedData.textures = { ...texRegistry, ...arrayRegistry, ...atlasSlotRegistry };
@@ -980,6 +1005,7 @@ export const gatherSceneData = (
         const impostorId = impostorJSON.id || path.basename(file, JSON_ENDING_SIGNATURES.impostor);
         if (ids.impostors.includes(impostorId)) {
           logDuplicateIdError('impostor', impostorId, file);
+          hasError = true;
           continue;
         }
         ids.impostors.push(impostorId);
@@ -987,8 +1013,8 @@ export const gatherSceneData = (
         impostorJSON.__sourcePath = path.relative(path.resolve(__dirname, '..'), fullPath);
         delete impostorJSON.$schema;
         impostorRegistry[impostorId] = impostorJSON;
-      } catch {
-        logJSONError(file);
+      } catch (e) {
+        logJSONError(file, e);
       }
     }
     combinedData.impostors = impostorRegistry;
@@ -1017,6 +1043,7 @@ export const gatherSceneData = (
         const matId = matJSON.id || path.basename(file, JSON_ENDING_SIGNATURES.material);
         if (ids.materials.includes(matId)) {
           logDuplicateIdError('material', matId, file);
+          hasError = true;
           continue;
         }
         ids.materials.push(matId);
@@ -1050,8 +1077,8 @@ export const gatherSceneData = (
           // createMaterial reads the node functions (the JSON's `nodes` keys) from the module
           loaders.tslMaterials[matId] = `${basePath}/${matJSON.tslFile}`;
         }
-      } catch {
-        logJSONError(file);
+      } catch (e) {
+        logJSONError(file, e);
       }
     }
     combinedData.materials = matRegistry;
@@ -1080,6 +1107,7 @@ export const gatherSceneData = (
           path.basename(file, JSON_ENDING_SIGNATURES.mesh);
         if (ids.meshes.includes(meshId)) {
           logDuplicateIdError('mesh', meshId, file);
+          hasError = true;
           continue;
         }
         ids.meshes.push(meshId);
@@ -1087,8 +1115,8 @@ export const gatherSceneData = (
         meshJSON.__sourcePath = path.relative(path.resolve(__dirname, '..'), fullPath);
         delete meshJSON.$schema;
         meshRegistry[meshId] = meshJSON;
-      } catch {
-        logJSONError(file);
+      } catch (e) {
+        logJSONError(file, e);
       }
     }
     combinedData.meshes = meshRegistry;
@@ -1122,6 +1150,7 @@ export const gatherSceneData = (
           importedAssetJSON.id || path.basename(file, JSON_ENDING_SIGNATURES.importedAsset);
         if (ids.importedAssets.includes(id)) {
           logDuplicateIdError('imported asset', id, file);
+          hasError = true;
           continue;
         }
         ids.importedAssets.push(id);
@@ -1131,8 +1160,8 @@ export const gatherSceneData = (
         setGeneratedFields(importedAssetJSON, 'importedAsset', fullPath);
         delete importedAssetJSON.$schema;
         importedAssetRegistry[id] = importedAssetJSON;
-      } catch {
-        logJSONError(file);
+      } catch (e) {
+        logJSONError(file, e);
       }
     }
     combinedData.importedAssets = importedAssetRegistry;
@@ -1167,14 +1196,15 @@ export const gatherSceneData = (
         const skyId = skyJSON.id;
         if (ids.skyboxes.includes(skyId)) {
           logDuplicateIdError('skybox', skyId, file);
+          hasError = true;
           continue;
         }
         ids.skyboxes.push(skyId);
         skyJSON.__sourcePath = path.relative(path.resolve(__dirname, '..'), fullPath);
         delete skyJSON.$schema;
         skyRegistry[skyId] = skyJSON;
-      } catch {
-        logJSONError(file);
+      } catch (e) {
+        logJSONError(file, e);
       }
     }
     combinedData.skyboxes = skyRegistry;
@@ -1203,6 +1233,7 @@ export const gatherSceneData = (
         const postFxId = postFxJSON.id || path.basename(file, JSON_ENDING_SIGNATURES.postFx);
         if (ids.postFx.includes(postFxId)) {
           logDuplicateIdError('PostFX pass', postFxId, file);
+          hasError = true;
           continue;
         }
         ids.postFx.push(postFxId);
@@ -1236,28 +1267,41 @@ export const gatherSceneData = (
           // it builds the chain
           loaders.postFx[postFxId] = `${basePath}/${postFxJSON.tslFile}`;
         }
-      } catch {
-        logJSONError(file);
+      } catch (e) {
+        logJSONError(file, e);
       }
     }
     combinedData.postFx = postFxRegistry;
 
     // --- SCENES ---
     // --------------
+    /** An id a scene lists that no asset JSON has (p619 G12): fails the gather, kept as it was */
+    const reportUnknownId = (sceneId: string, kind: string, id: string) => {
+      console.error(
+        `\x1b[31m✗ [Scene Gatherer] Scene "${sceneId}" lists the ${kind} "${id}", which no asset JSON (or only an invalid one) has.\x1b[0m`
+      );
+      hasError = true;
+      return id;
+    };
     for (const file of sceneFiles) {
+      if (!registeredSceneFiles.has(file)) continue;
       const fullPath = path.resolve(srcDir, file);
       const fileContent = fs.readFileSync(fullPath, 'utf-8');
       const parsedData = JSON.parse(fileContent);
       const validation = SceneAssetSchema.safeParse(parsedData);
       if (!validation.success) continue;
-      const fileContentJSON = validation.data;
-      delete fileContentJSON.$schema;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- build time only, as in pass 1
+      const { $schema, __saveData: sceneSaveData, ...sceneJSON } = validation.data;
 
       // Use the scene id as a key or filename (minus extension) as the key
-      const sceneId =
-        'id' in fileContentJSON && fileContentJSON.id
-          ? fileContentJSON.id
-          : path.basename(file, JSON_ENDING_SIGNATURES.scene);
+      const sceneId = sceneJSON.id || path.basename(file, JSON_ENDING_SIGNATURES.scene);
+      // The scene's own latest save entry, as pass 1 reads it (G5); the output has no __saveData
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- the stamp isn't data
+      const { __meta: sceneSaveMeta, ...sceneSave } = sceneSaveData?.[sceneId]?.[0] ?? {};
+      const fileContentJSON: Omit<SceneAsset, '$schema' | '__saveData'> = {
+        ...sceneJSON,
+        ...sceneSave,
+      };
       fileContentJSON.id = sceneId;
 
       // Check if the file has a sceneFile property set
@@ -1310,9 +1354,10 @@ export const gatherSceneData = (
             if ('__meta' in cameraData.camProps) delete cameraData.camProps.__meta;
             return cameraData;
           }
-          return camId; // Fallback to raw string ID if asset file doesn't exist yet
+          return reportUnknownId(sceneId, 'camera', camId);
         });
-      } else if (!Object.keys(fileContentJSON.cameras || {}).length) {
+      }
+      if (!Object.keys(fileContentJSON.cameras || {}).length) {
         // If the scene does not have a camera, a temp camera is created (every scene needs a camera)
         fileContentJSON.cameras = [
           {
@@ -1348,7 +1393,7 @@ export const gatherSceneData = (
             if ('__meta' in lightData.lightProps) delete lightData.lightProps.__meta;
             return lightData;
           }
-          return lightId; // Fallback to raw string ID if asset file doesn't exist yet
+          return reportUnknownId(sceneId, 'light', lightId);
         });
       }
 
@@ -1377,7 +1422,7 @@ export const gatherSceneData = (
             if ('__meta' in geoData.params && geoData.params.__meta) delete geoData.params.__meta;
             return geoData;
           }
-          return geoId; // Fallback to raw string ID if asset file doesn't exist yet
+          return reportUnknownId(sceneId, 'geometry', geoId);
         });
       }
 
@@ -1433,8 +1478,8 @@ export const gatherSceneData = (
             const __saveData = texRegistry[texId].__saveData?.[sceneId]?.length
               ? texRegistry[texId].__saveData?.[sceneId]?.[0] || {}
               : {};
-            if (isProduction) delete texRegistry[texId].debugData;
             const texData = { ...texRegistry[texId], ...__saveData };
+            if (isProduction) delete texData.debugData;
             // A per-scene override can point at another file
             texData.__fileSize = getSourceFileSize(
               texRegistry[texId].__sourcePath || '',
@@ -1466,7 +1511,7 @@ export const gatherSceneData = (
             if (isProduction) delete slotData.debugData;
             return slotData;
           }
-          return texId; // Fallback to raw string ID if asset file doesn't exist yet
+          return reportUnknownId(sceneId, 'texture', texId);
         });
       }
 
@@ -1478,7 +1523,6 @@ export const gatherSceneData = (
             const __saveData = matRegistry[matId].__saveData?.[sceneId]?.length
               ? matRegistry[matId].__saveData?.[sceneId]?.[0] || {}
               : {};
-            if (isProduction) delete matRegistry[matId].debugData;
             const registryData = matRegistry[matId];
             const nodeKeys =
               'nodes' in registryData && registryData.nodes ? Object.keys(registryData.nodes) : [];
@@ -1502,19 +1546,21 @@ export const gatherSceneData = (
             const matData = {
               ...registryData,
               ...__saveData,
-              ...(nodes ? { nodes } : {}),
+              // Only a material with nodes (a TSL one) gets them, not an empty object (G6)
+              ...(nodeKeys.length ? { nodes } : {}),
               ...('params' in registryData
                 ? { params: { ...registryData.params, ...__saveData.params } }
                 : {}),
               id: matId,
               type: registryData.type,
             };
+            if (isProduction) delete matData.debugData;
             if ('__meta' in matData) delete matData.__meta;
             if ('__sourcePath' in matData) delete matData.__sourcePath;
             if ('__saveData' in matData) delete matData.__saveData;
             return matData as MaterialAsset;
           }
-          return matId; // Fallback to raw string ID if asset file doesn't exist yet
+          return reportUnknownId(sceneId, 'material', matId);
         });
       }
 
@@ -1538,7 +1584,7 @@ export const gatherSceneData = (
             delete meshData.__saveData;
             return meshData;
           }
-          return meshId; // Fallback to raw string ID if asset file doesn't exist yet
+          return reportUnknownId(sceneId, 'mesh', meshId);
         });
       }
 
@@ -1550,8 +1596,8 @@ export const gatherSceneData = (
             const __saveData = importedAssetRegistry[importId].__saveData?.[sceneId]?.length
               ? importedAssetRegistry[importId].__saveData?.[sceneId]?.[0] || {}
               : {};
-            if (isProduction) delete importedAssetRegistry[importId].debugData;
             const importData = { ...importedAssetRegistry[importId], ...__saveData, id: importId };
+            if (isProduction) delete importData.debugData;
             importData.__fileSize = getSourceFileSize(
               importedAssetRegistry[importId].__sourcePath || '',
               importData.fileName
@@ -1573,7 +1619,7 @@ export const gatherSceneData = (
             delete importData.__saveData;
             return importData;
           }
-          return importId; // Fallback to raw string ID if asset file doesn't exist yet
+          return reportUnknownId(sceneId, 'imported asset', importId);
         });
       }
 
@@ -1585,7 +1631,7 @@ export const gatherSceneData = (
             typeof skyIdOrInline === 'string'
               ? skyRegistry[skyIdOrInline]
               : mergeSkyBoxPreset(skyIdOrInline);
-          if (!sky) return skyIdOrInline; // Fallback to raw string ID if asset file doesn't exist yet
+          if (!sky) return reportUnknownId(sceneId, 'sky box', skyIdOrInline as string);
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { $schema, __sourcePath, __saveData, ...def } = sky;
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -1604,7 +1650,6 @@ export const gatherSceneData = (
             const __saveData = postFxRegistry[postFxId].__saveData?.[sceneId]?.length
               ? postFxRegistry[postFxId].__saveData?.[sceneId]?.[0] || {}
               : {};
-            if (isProduction) delete postFxRegistry[postFxId].debugData;
             const registryData = postFxRegistry[postFxId];
             const postFxData = {
               ...registryData,
@@ -1612,12 +1657,13 @@ export const gatherSceneData = (
               params: { ...registryData.params, ...__saveData.params },
               id: postFxId,
             };
+            if (isProduction) delete postFxData.debugData;
             if ('__meta' in postFxData) delete postFxData.__meta;
             delete postFxData.__sourcePath;
             delete postFxData.__saveData;
             return postFxData;
           }
-          return postFxId; // Fallback to raw string ID if asset file doesn't exist yet
+          return reportUnknownId(sceneId, 'PostFX pass', postFxId);
         });
       }
 
@@ -1751,6 +1797,7 @@ export const gatherSceneData = (
  * ships the ones that lack `ktx` unoptimized instead.
  */
 const gatherWithAssetPipeline = async () => {
+  writeJsonSchemas();
   const { runAssetsCommand } = await import('./assetPipeline/command');
   const isProduction = process.env.NODE_ENV === 'production';
   let pipeline: PipelineRun;

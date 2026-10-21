@@ -44,7 +44,7 @@ import { ENTRY_FILES } from '../aliases';
 import { loadApiModel } from '../hub/api/extract';
 import { parseModuleSource } from '../refactor/importGraph';
 import { getOwnMembers, indexApiModel, isDocumented, Kind } from '../hub/api/model';
-import { out, PROGRESS_LOG_WATCH, setProgressLogEnabled } from './progressLog';
+import { out, PROGRESS_LOG_WATCH, setProgressLogEnabled } from '../progressLog';
 import { type BuildScript, findDebugCodeInBuild } from './debugInProduction';
 import { APP_BUILD, type CollectedBundle, collectBundle, sortKeys } from '../sbp/bundleModel';
 import { diffBundle, formatKB } from '../sbp/bundleDiff';
@@ -53,6 +53,7 @@ import { getBundleBaselineFile } from '../sbp/bundleDiff';
 import { getEmbedBuildLocation } from '../sbp/embedBuild';
 import { getEmbedProfiles } from '../gatherOutput';
 import sbpProfiles from '../../sbp.config';
+import { writeFileAtomic } from '../files';
 
 /** Bump when that file's shape changes: an old one is then read as missing (`bundle.json`'s is
  * `bundleModel.ts`') */
@@ -394,7 +395,7 @@ const diffDocs =
 
 const writeBaseline = (name: string, data: unknown) => {
   fs.mkdirSync(BASELINES_DIR, { recursive: true });
-  fs.writeFileSync(path.join(BASELINES_DIR, name), `${JSON.stringify(data, null, 2)}\n`);
+  writeFileAtomic(path.join(BASELINES_DIR, name), `${JSON.stringify(data, null, 2)}\n`);
 };
 
 const readBaseline = <T extends { formatVersion: number }>(name: string, formatVersion: number) => {

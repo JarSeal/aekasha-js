@@ -92,8 +92,8 @@ describe('formatGeneratedAppFns', () => {
     expect(text).toContain("  '1mat': () => import('../../../app/m.tsl.ts'),\n");
   });
 
-  // p619 Phase 0 (§1.4 G4): an id is quoted only when it starts with a digit, a scene id never,
-  // and a path isn't escaped. The schemas allow each of these ids and paths.
+  // p619 §1.4 G4: an id was quoted only when it started with a digit, a scene id never, and a path
+  // wasn't escaped. The schemas allow each of these ids and paths.
   const syntaxErrors = (text: string) =>
     (
       ts.transpileModule(text, { reportDiagnostics: true, fileName: 'generatedAppFns.ts' })
@@ -108,7 +108,7 @@ describe('formatGeneratedAppFns', () => {
     expect(syntaxErrors(text)).toEqual([]);
   });
 
-  it.fails.each([
+  it.each([
     ['a scene id with a dash', { scenes: { 'my-scene': 'app/./s.ts' } }],
     ['a scene id starting with a digit', { scenes: { '1scene': 'app/./s.ts' } }],
     ['a material id with a dot', { tslMaterials: { 'mat.v2': 'app/m.tsl.ts' } }],
@@ -117,6 +117,17 @@ describe('formatGeneratedAppFns', () => {
   ])('writes valid TS for %s', (_name, loaders) => {
     const text = formatGeneratedAppFns({ ...EMPTY, ...loaders }, '../');
     expect(syntaxErrors(text)).toEqual([]);
+  });
+
+  it('keeps each id and path as it is', () => {
+    const text = formatGeneratedAppFns(
+      { ...EMPTY, tslMaterials: { 'mat.v2': "app/o'neil/m.tsl.ts", plain: 'app/"q"\\x.ts' } },
+      '../'
+    );
+    expect(syntaxErrors(text)).toEqual([]);
+    expect(text).toContain("  'mat.v2': () =>");
+    expect(text).toContain("import('../app/o\\'neil/m.tsl.ts')");
+    expect(text).toContain(`import('../app/"q"\\\\x.ts')`);
   });
 });
 

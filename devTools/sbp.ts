@@ -54,7 +54,7 @@ import {
   mergeReport,
   SBP_REPORT_FILE,
 } from './sbp/report';
-import { out, setProgressLogConsole, setProgressLogFile } from './verify/progressLog';
+import { out, setProgressLogConsole, setProgressLogFile } from './progressLog';
 
 const LOG_FILE = path.join(ROOT, '.cache/sbp/progress.log');
 const APP_DATA_FILE = path.join(ROOT, 'src/generated/generatedAppData.json');

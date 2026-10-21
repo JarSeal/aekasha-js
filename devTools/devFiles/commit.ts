@@ -1,9 +1,10 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { randomBytes } from 'crypto';
-import { format, resolveConfig } from 'prettier';
 import { validateGatheredJson } from '../gatherAppData';
+import { formatDevFileJson } from './format';
 import { DevFilesError } from './http';
+import { checkImageBytes } from './imageCheck';
 import { resolveDevFilePath, type DevFilePath } from './paths';
 import { applySaveDataWrite, checkSaveDataRequest } from './saveData';
 import type {
@@ -18,9 +19,10 @@ import { DEV_FILES_CACHE_DIR, sha256, type DevFilesStage } from './stage';
 /**
  * `POST commit` (p342 §2.3): a batch of writes that all land or none does.
  * 1. Every write is checked before anything is written: its path, its content (a JSON value is
- *    validated against its gathered schema and formatted with Prettier; a staged file must not
- *    have expired; a save entry is put into the file's JSON, `devFiles/saveData.ts`, which is
- *    then a JSON value), the sizes and the `expectedHash`es. A write whose bytes equal the
+ *    validated against its gathered schema and formatted with Prettier and the repo root's
+ *    config, `devFiles/format.ts`; a staged file must not have expired and must start like its
+ *    image format, `devFiles/imageCheck.ts`; a save entry is put into the file's JSON,
+ *    `devFiles/saveData.ts`, which is then a JSON value), the sizes and the `expectedHash`es. A write whose bytes equal the
  *    file's is `unchanged` and isn't written (no file event, no gather).
  * 2. Each write goes to a temporary file next to its target, then each existing target is copied
  *    to `.cache/dev-files/backup/<commit>/`, then the temporaries are renamed into place. A
@@ -110,12 +112,6 @@ const readHash = async (file: string) => {
   }
 };
 
-/** The JSON as the file gets it: Prettier-formatted with the target's config */
-const formatJson = async (value: unknown, absPath: string) => {
-  const options = (await resolveConfig(absPath)) ?? {};
-  return format(JSON.stringify(value, null, 2), { ...options, filepath: absPath });
-};
-
 const planWrites = async (requested: RequestedWrite[], stage: DevFilesStage) => {
   const targets = await Promise.all(requested.map((write) => resolveDevFilePath(write.path)));
 
@@ -139,12 +135,22 @@ const planWrites = async (requested: RequestedWrite[], stage: DevFilesStage) => 
       badRequest(`${target.repoPath}: a .json file takes json or saveData, any other a stageId`);
     }
     if (write.hasJson || write.saveData) {
+      // Formatting only adds whitespace: a value over the limit before it is over after it, and
+      // isn't formatted at all (p619 §1.4 F5)
+      if (Buffer.byteLength(JSON.stringify(json) ?? '') > MAX_FILE_BYTES) {
+        throw new DevFilesError('TOO_LARGE', `${target.repoPath} is over ${MAX_FILE_BYTES} bytes`);
+      }
       const issues = validateGatheredJson(target.repoPath, json);
       if (issues) schemaIssues.push({ path: target.repoPath, issues });
-      contents.push({ data: Buffer.from(await formatJson(json, target.absPath)), currentHash });
+      contents.push({
+        data: Buffer.from(await formatDevFileJson(json, target.absPath)),
+        currentHash,
+      });
     } else {
       const entry = stage.get(write.stageId as string);
-      contents.push({ data: await fs.readFile(entry.file), stageId: write.stageId });
+      const data = await fs.readFile(entry.file);
+      checkImageBytes(target.repoPath, data);
+      contents.push({ data, stageId: write.stageId });
     }
   }
 
@@ -254,6 +260,27 @@ const applyWrites = async (writes: PlannedWrite[], faults: CommitFaults) => {
     await cleanUp();
     await removeQuietly(backupDir);
     writeFailed('The batch could not be prepared, nothing was written', err);
+  }
+
+  // The plan read each file before Prettier and the temporaries: a save in between (an editor's)
+  // would be overwritten, so each target is checked again, as its backup holds it (F5)
+  const conflicts: DevFilesConflicts = [];
+  for (const write of writes) {
+    const backup = path.join(backupDir, ...write.target.repoPath.split('/'));
+    const hashNow = await readHash(write.currentHash === null ? write.target.absPath : backup);
+    if (hashNow !== write.currentHash) {
+      const currentHash = await readHash(write.target.absPath);
+      conflicts.push({ path: write.target.repoPath, currentHash });
+    }
+  }
+  if (conflicts.length) {
+    await cleanUp();
+    await removeQuietly(backupDir);
+    throw new DevFilesError(
+      'CONFLICT',
+      `Changed on disk while the batch was prepared: ${conflicts.map((c) => c.path).join(', ')}`,
+      conflicts
+    );
   }
 
   let renamed = 0;

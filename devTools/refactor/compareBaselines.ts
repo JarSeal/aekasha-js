@@ -28,7 +28,7 @@ import { ROOT } from '../assetPipeline/sources';
 import { API_SUBTREES } from '../hub/api/model';
 import type { ApiBaseline, DocsBaseline, DocsPart, FolderCoverage } from '../verify/baselines';
 import { type BundleBaseline, type Size, readVisualizerData, stripHash } from '../sbp/bundleModel';
-import { isGrowthToFlag } from '../verify/bundleGrowth';
+import { isGrowthToFlag } from '../sbp/bundleGrowth';
 import { buildPathMap, type PathMap } from './moveApply';
 import type { MovePlan } from './moveRules';
 

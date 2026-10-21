@@ -44,13 +44,22 @@ const formatBytes = (bytes: number) =>
 
 export const assetOutputsBuildPlugin = (): Plugin => {
   let outDir = '';
+  /** `closeBundle` runs after a failed build too: its own throw would hide the build's (B4) */
+  let hasFailed = false;
   return {
     name: 'vite-plugin-aek-asset-outputs',
     apply: 'build',
     configResolved(config) {
       outDir = path.resolve(config.root, config.build.outDir);
     },
+    buildEnd(error) {
+      if (error) hasFailed = true;
+    },
+    renderError() {
+      hasFailed = true;
+    },
     closeBundle() {
+      if (hasFailed) return;
       const urls = new Set<string>();
       collectUrls(JSON.parse(fs.readFileSync(OUTPUT_FILE_DATA, 'utf-8')), urls);
       const sizes = getFileSizes(path.join(outDir, 'aek-assets'));

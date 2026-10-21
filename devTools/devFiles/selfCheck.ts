@@ -1,11 +1,11 @@
-/* eslint-disable no-console */
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import http from 'http';
 import { createHash } from 'crypto';
-import { format, resolveConfig } from 'prettier';
 import { ROOT } from '../assetPipeline/sources';
+import { out, PROGRESS_LOG_WATCH } from '../progressLog';
+import { formatDevFileJson } from './format';
 import {
   DEV_FILES_HASH_HEADER,
   DEV_FILES_ROUTE_BASE,
@@ -19,15 +19,17 @@ import {
 
 /**
  * The dev file server's self-check (p342 Phases 1 and 3), no test framework:
- *   source .claude/hooks/use-node.sh && npx tsx devTools/devFiles/selfCheck.ts
+ *   source .claude/hooks/use-node.sh && yarn verify:devFiles
  * starts its own dev server (port 8091 or the next free one) with `AEK_DEV_FILES_FAULTS=true`,
  * so it can force a failure in a commit's renames. `--url http://localhost:8080` runs against a
  * running `yarn dev` instead and skips the forced failures. The token is read from `index.html`.
  *
  * It writes into `src/app/__devFilesSelfCheck__/` and removes the folder at the end. The save
- * entry cases (Phase 3) write a material and two debug scenes there and wait for the dev server's
- * gather to apply them (a running `yarn dev` reloads its page on it too). At the end it waits for
- * the gather that drops them again, else it restores `src/generated/` as it was.
+ * entry cases (Phase 3) write a material and two debug scenes there, with a scene file of their
+ * own (never loaded: the gather only needs it to exist), and wait for the dev server's gather to
+ * apply them (a running `yarn dev` reloads its page on it too). At the end it waits for the
+ * gather that drops them again, else it restores `src/generated/` as it was. Its lines also go
+ * to the verify commands' progress log (`.cache/verify/progress.log`).
  */
 
 const TEST_DIR = 'src/app/__devFilesSelfCheck__';
@@ -45,10 +47,11 @@ const GENERATED_FILES = [
   path.join(ROOT, 'src/generated/index.ts'),
 ];
 const GATHER_TIMEOUT_MS = 60_000;
-// The save entry cases' assets; the scenes reuse an app scene file (never loaded here)
+// The save entry cases' assets, and their scenes' file (never loaded here), relative to src/app/
 const SAVE_MAT_ID = 'aekSelfCheckMat';
 const SAVE_SCENE_IDS = ['aekSelfCheckA', 'aekSelfCheckB'];
-const SAVE_SCENE_FILE = './scene01.ts';
+const SAVE_SCENE_FILE_NAME = 'selfCheckScene.ts';
+const SAVE_SCENE_FILE = `./${path.posix.relative('src/app', TEST_DIR)}/${SAVE_SCENE_FILE_NAME}`;
 
 type Response = { status: number; headers: http.IncomingHttpHeaders; body: Buffer };
 
@@ -109,10 +112,10 @@ const errorCode = (res: Response) => {
 const check = (name: string, isOk: boolean, detail = '') => {
   if (isOk) {
     passes++;
-    console.log(`\x1b[32m✓\x1b[0m ${name}`);
+    out(`\x1b[32m✓\x1b[0m ${name}`);
   } else {
     failures++;
-    console.log(`\x1b[31m✗ ${name}\x1b[0m${detail ? ` (${detail})` : ''}`);
+    out(`\x1b[31m✗ ${name}\x1b[0m${detail ? ` (${detail})` : ''}`);
   }
 };
 
@@ -141,10 +144,7 @@ const testFile = (name: string) => path.join(TEST_DIR_ABS, name);
 const readTestFile = (name: string) =>
   fs.existsSync(testFile(name)) ? fs.readFileSync(testFile(name)) : null;
 
-const formatted = async (value: unknown, name: string) => {
-  const options = (await resolveConfig(testFile(name))) ?? {};
-  return format(JSON.stringify(value, null, 2), { ...options, filepath: testFile(name) });
-};
+const formatted = (value: unknown, name: string) => formatDevFileJson(value, testFile(name));
 
 type GeneratedScenes = Record<
   string,
@@ -261,6 +261,16 @@ const run = async (hasFaults: boolean) => {
     commit(write, { Host: `evil.example:${baseUrl.port}` }),
     'BAD_HOST'
   );
+  await expectCode(
+    'a DNS name starting "127."',
+    commit(write, { Host: `127.evil.example:${baseUrl.port}` }),
+    'BAD_HOST'
+  );
+  await expectCode(
+    'a request through a tunnel (X-Forwarded-For)',
+    commit(write, { 'X-Forwarded-For': '203.0.113.7' }),
+    'NOT_LOCAL'
+  );
   const lanAddress = findLanAddress();
   if (lanAddress) {
     await expectCode(
@@ -275,7 +285,7 @@ const run = async (hasFaults: boolean) => {
       'NOT_LOCAL'
     );
   } else {
-    console.log('- skipped the LAN case: this machine has no non-loopback IPv4 address');
+    out('- skipped the LAN case: this machine has no non-loopback IPv4 address');
   }
   await expectCode(
     '"../"',
@@ -291,6 +301,17 @@ const run = async (hasFaults: boolean) => {
   );
   check('nothing was written through the symlink', fs.readdirSync(OUTSIDE_DIR).length === 0);
   await expectCode('a .ts file', commit([{ path: testPath('x.ts'), json: {} }]), 'FORBIDDEN_PATH');
+  const script = await stage(Buffer.from("require('fs');"));
+  await expectCode(
+    "a staged .png that isn't a PNG",
+    commit([{ path: testPath('x.png'), stageId: script.stageId }]),
+    'INVALID_IMAGE'
+  );
+  await expectCode(
+    'a package.json (Prettier would load its "prettier" config)',
+    commit([{ path: testPath('package.json'), json: { prettier: './x.png' } }]),
+    'FORBIDDEN_PATH'
+  );
   await expectCode(
     'src/_engine/',
     commit([{ path: 'src/_engine/x.json', json: {} }]),
@@ -325,6 +346,11 @@ const run = async (hasFaults: boolean) => {
     'an unknown stageId',
     commit([{ path: testPath('x.png'), stageId: 'f'.repeat(32) }]),
     'STAGE_EXPIRED'
+  );
+  await expectCode(
+    'an unknown route (not NOT_FOUND, which reads as a missing file)',
+    request({ method: 'GET', route: 'nope' }),
+    'BAD_REQUEST'
   );
   await expectCode(
     'a body that is not JSON',
@@ -377,7 +403,7 @@ const run = async (hasFaults: boolean) => {
       );
     }
   } else {
-    console.log('- skipped the forced rename failures: they need AEK_DEV_FILES_FAULTS=true');
+    out('- skipped the forced rename failures: they need AEK_DEV_FILES_FAULTS=true');
   }
 
   // An expectedHash that matches lands
@@ -419,6 +445,12 @@ const runSaveDataChecks = async () => {
   const GREEN = '#00ff00';
   const BLUE = '#0000ff';
 
+  // Written directly: the dev files never write code
+  fs.mkdirSync(TEST_DIR_ABS, { recursive: true });
+  fs.writeFileSync(
+    testFile(SAVE_SCENE_FILE_NAME),
+    "// The dev files self-check's scenes (devTools/devFiles/selfCheck.ts): never loaded\nexport const scene = async () => {};\n"
+  );
   let res = await commit([
     { path: matPath, json: { id: SAVE_MAT_ID, type: 'PHONG', params: { color: RED } } },
     ...SAVE_SCENE_IDS.map((id) => ({
@@ -569,7 +601,7 @@ const cleanUp = async (generatedBefore: Buffer[], closeServer: () => Promise<voi
   await closeServer();
   if (isClean) return;
   GENERATED_FILES.forEach((file, i) => fs.writeFileSync(file, generatedBefore[i]));
-  console.log('- the gather kept the test scenes: restored src/generated/ as it was');
+  out('- the gather kept the test scenes: restored src/generated/ as it was');
 };
 
 const main = async () => {
@@ -577,19 +609,19 @@ const main = async () => {
   const own = urlIndex === -1 ? await startOwnServer() : null;
   baseUrl = new URL(own ? own.url : process.argv[urlIndex + 1]);
   if (baseUrl.hostname === 'localhost') baseUrl.hostname = '127.0.0.1';
-  console.log(`Dev files self-check against ${baseUrl.origin}`);
+  out(`Dev files self-check against ${baseUrl.origin} (watch: ${PROGRESS_LOG_WATCH})`);
   const generatedBefore = GENERATED_FILES.map((file) => fs.readFileSync(file));
   try {
     await run(!!own);
   } catch (err) {
     failures++;
-    console.error('\x1b[31m✗ The self-check stopped:\x1b[0m', err);
+    out(`\x1b[31m✗ The self-check stopped:\x1b[0m ${(err as Error).stack ?? String(err)}`, true);
   } finally {
     await cleanUp(generatedBefore, async () => {
       await own?.server.close();
     });
   }
-  console.log(`\n${passes} passed, ${failures} failed`);
+  out(`\n${passes} passed, ${failures} failed`);
   process.exit(failures ? 1 : 0);
 };
 

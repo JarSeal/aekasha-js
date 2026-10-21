@@ -29,8 +29,8 @@ describe('fillShell', () => {
     expect(diag.errors.map((error) => error.message)).toEqual(['Unknown placeholder {{nope}}']);
   });
 
-  // p619 Phase 0 (§1.4 H2): `key in values` / `key in helpers` read Object.prototype
-  it.fails.each(['{{constructor}}', '{{toString}}', '{{toString:x}}', '{{hasOwnProperty:x}}'])(
+  // p619 §1.4 H2: `key in values` / `key in helpers` read Object.prototype
+  it.each(['{{constructor}}', '{{toString}}', '{{toString:x}}', '{{hasOwnProperty:x}}'])(
     'reports %s as unknown',
     (shell) => {
       const { html, diag } = fill(shell);

@@ -1,6 +1,6 @@
-import { networkInterfaces } from 'os';
 import { randomBytes, timingSafeEqual } from 'crypto';
 import type { IncomingMessage } from 'http';
+import { getHostAndOriginError, isLoopbackAddress, type RequestCheckOpts } from '../hostCheck';
 import { DevFilesError } from './http';
 import { DEV_FILES_TOKEN_HEADER } from '../../src/_engine/debug/DevFilesProtocol';
 
@@ -12,82 +12,31 @@ import { DEV_FILES_TOKEN_HEADER } from '../../src/_engine/debug/DevFilesProtocol
  * - the token (per server start, in `index.html`) keeps out a cross-origin page: it can't read
  *   the HTML, and the custom header forces a preflight that gets no CORS answer;
  * - the Host check keeps out a rebound page, which can read the token;
- * - the remote address check keeps out the LAN unless it's allowed.
+ * - the remote address check keeps out the LAN unless it's allowed. A request that came through
+ *   a proxy (a localhost tunnel: ngrok, VS Code's port forwarding) arrives on a loopback socket
+ *   too, so one carrying a proxy header isn't local (p619 §1.4 F4).
  * Vite's own host check runs after these routes (configureServer's middlewares come first), and
  * not at all under HTTPS, so it doesn't cover them.
  */
 
 export const createDevFilesToken = () => randomBytes(32).toString('hex');
 
-/** The header's value; under HTTP/2 (`dev:https`) the host is `:authority` */
-const getHostHeader = (req: IncomingMessage) => {
-  const value = req.headers.host ?? req.headers[':authority'];
-  return typeof value === 'string' ? value : undefined;
-};
-
-/** `example.com:8080` → `example.com`, `[::1]:8080` → `::1` */
-const toHostName = (host: string) => {
-  if (host.startsWith('[')) return host.slice(1, host.indexOf(']')).toLowerCase();
-  const colon = host.indexOf(':');
-  return (colon === -1 ? host : host.slice(0, colon)).toLowerCase();
-};
-
-const normaliseAddress = (address: string) =>
-  address.startsWith('::ffff:') ? address.slice('::ffff:'.length) : address;
-
-export const isLoopbackAddress = (address: string | undefined) => {
-  if (!address) return false;
-  const normalised = normaliseAddress(address);
-  return normalised === '::1' || normalised.startsWith('127.');
-};
-
-const isLoopbackHostName = (name: string) =>
-  name === 'localhost' || name.endsWith('.localhost') || isLoopbackAddress(name);
-
-/** The machine's own addresses, read per request: a DHCP lease can change them */
-const isOwnAddress = (name: string) =>
-  Object.values(networkInterfaces()).some((infos) =>
-    infos?.some((info) => normaliseAddress(info.address).toLowerCase() === name)
-  );
-
-/** Vite's `server.allowedHosts` rules: an exact name, or `.example.com` for it and subdomains */
-const isInAllowedHosts = (name: string, allowedHosts: string[] | true) => {
-  if (allowedHosts === true) return true;
-  return allowedHosts.some((allowed) => {
-    const entry = allowed.toLowerCase();
-    if (!entry.startsWith('.')) return entry === name;
-    return name === entry.slice(1) || name.endsWith(entry);
-  });
-};
-
-export type RequestCheckOpts = {
-  allowedHosts: string[] | true;
-  isHttps: boolean;
-};
-
-/** BAD_HOST and BAD_ORIGIN, for every route */
+/** BAD_HOST and BAD_ORIGIN, for every route (`hostCheck.ts`) */
 export const checkHostAndOrigin = (req: IncomingMessage, opts: RequestCheckOpts) => {
-  const host = getHostHeader(req);
-  const name = host ? toHostName(host) : '';
-  if (
-    !name ||
-    !(isLoopbackHostName(name) || isOwnAddress(name) || isInAllowedHosts(name, opts.allowedHosts))
-  ) {
-    throw new DevFilesError(
-      'BAD_HOST',
-      `The Host "${host ?? ''}" isn't this machine or in server.allowedHosts`
-    );
-  }
-  const origin = req.headers.origin;
-  if (origin !== undefined) {
-    const ownOrigin = `${opts.isHttps ? 'https' : 'http'}://${host}`.toLowerCase();
-    if (origin.toLowerCase() !== ownOrigin) {
-      throw new DevFilesError('BAD_ORIGIN', `The Origin "${origin}" isn't ${ownOrigin}`);
-    }
-  }
+  const error = getHostAndOriginError(req, opts);
+  if (error) throw new DevFilesError(error.code, error.message);
 };
 
-export const isLocalRequest = (req: IncomingMessage) => isLoopbackAddress(req.socket.remoteAddress);
+/** The headers a proxy or tunnel adds: their request came from somewhere else */
+const PROXY_HEADERS = ['forwarded', 'x-forwarded-for', 'x-forwarded-host', 'x-real-ip', 'via'];
+
+/**
+ * A request from this machine: on a loopback socket, and without a proxy header (a tunnel to
+ * localhost forwards other machines' requests on a loopback socket)
+ */
+export const isLocalRequest = (req: IncomingMessage) =>
+  isLoopbackAddress(req.socket.remoteAddress) &&
+  !PROXY_HEADERS.some((header) => req.headers[header] !== undefined);
 
 /** NOT_LOCAL and BAD_TOKEN, for every route but `status` */
 export const checkDeviceAndToken = (
@@ -97,7 +46,7 @@ export const checkDeviceAndToken = (
   if (!opts.isLANAllowed && !isLocalRequest(req)) {
     throw new DevFilesError(
       'NOT_LOCAL',
-      'Dev files take requests from this machine only (AEK_DEV_FILES_LAN=true allows the LAN)'
+      'Dev files take requests from this machine only, not through a proxy or tunnel (AEK_DEV_FILES_LAN=true allows the LAN)'
     );
   }
   const header = req.headers[DEV_FILES_TOKEN_HEADER];

@@ -60,7 +60,10 @@ export type PipelineOutput = {
   bytes: number;
 };
 
-/** Writes an output unless it exists (same name, same content). Atomic: temp file + rename. */
+/**
+ * Writes an output unless it exists (same name, same content): one of another size (a truncated
+ * copy, an interrupted checkout) is written again (p619 §1.4 A5). Atomic: temp file + rename.
+ */
 export const writeOutput = (
   logicalPath: string,
   ext: string,
@@ -68,7 +71,7 @@ export const writeOutput = (
 ): PipelineOutput => {
   const fileName = `${logicalPath}.${getContentHash(bytes)}${ext}`;
   const file = path.join(AEK_ASSETS_DIR, fileName);
-  if (!fs.existsSync(file)) {
+  if (fs.statSync(file, { throwIfNoEntry: false })?.size !== bytes.byteLength) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     const tempFile = `${file}.${process.pid}.tmp`;
     fs.writeFileSync(tempFile, bytes);

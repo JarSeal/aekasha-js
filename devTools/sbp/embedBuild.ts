@@ -138,9 +138,17 @@ const formatCssLinks = (hrefs: string[]) =>
 export const embedOutputsPlugin = (profile: SbpProfile): Plugin => {
   const outDir = getEmbedOutDir(profile.id);
   const entryFile = getEmbedEntryFileName(profile);
+  /** `closeBundle` runs after a failed build too: its own throw would hide the build's (B4) */
+  let hasFailed = false;
   return {
     name: 'vite-plugin-aek-embed-outputs',
     apply: 'build',
+    buildEnd(error) {
+      if (error) hasFailed = true;
+    },
+    renderError() {
+      hasFailed = true;
+    },
     generateBundle(_, bundle) {
       const entry = bundle[entryFile];
       if (!entry || entry.type !== 'chunk') {
@@ -162,6 +170,7 @@ export const embedOutputsPlugin = (profile: SbpProfile): Plugin => {
       if (css.size) entry.code = formatCssLinks([...css].map((file) => `./${file}`)) + entry.code;
     },
     closeBundle() {
+      if (hasFailed) return;
       // The data's files, and the decoders it can need
       const data: unknown = JSON.parse(fs.readFileSync(getEmbedDataFile(profile.id), 'utf-8'));
       const urls = new Set<string>();

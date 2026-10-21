@@ -3,11 +3,11 @@ import fs from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import path from 'node:path';
 import type { Plugin } from 'vite';
-import { DevFilesError } from './devFiles/http';
-import { checkHostAndOrigin } from './devFiles/security';
+import { getHostAndOriginError } from './hostCheck';
 import { extractApiModelInChildProcess, isApiInputFile } from './hub/api/extract';
 import { isApiPagePath } from './hub/api/model';
 import { buildHub, type HubBuildResult } from './hub/build';
+import { getProjectMetadata, type ProjectMetadata } from './projectMetadata';
 import {
   HUB_API_REBUILDING_STATUS,
   HUB_DEV_EVENT,
@@ -72,6 +72,27 @@ const STATIC_DIRS = HUB_STATIC_ASSET_DIRS.map((name) => path.join(HUB_ASSETS_DIR
 const isStaticAsset = (file: string) =>
   FAVICON_FILES.includes(file) || STATIC_DIRS.some((dir) => file.startsWith(dir + path.sep));
 
+/** A static asset's copy in the dev output: the favicons at its root, the rest in `_assets/` */
+const getStaticAssetCopy = (file: string) =>
+  FAVICON_FILES.includes(file)
+    ? path.join(HUB_DEV_OUT_DIR, path.basename(file))
+    : path.join(HUB_DEV_OUT_DIR, '_assets', path.relative(HUB_ASSETS_DIR, file));
+
+/**
+ * An editor's temporary or backup file (vim's `.swp` and `4913`, `~` backups, emacs' `.#` locks,
+ * JetBrains' `___jb_tmp___`, VS Code's `.crswap`), or a dot file: no rebuild, so it can't reload
+ * the open tabs (p619 §1.4 H3)
+ */
+const isEditorTempFile = (file: string) => {
+  const name = path.basename(file);
+  return (
+    name.startsWith('.') ||
+    name.endsWith('~') ||
+    name === '4913' ||
+    /\.(swp|swx|swo|tmp|crswap)$|___jb_(tmp|old)___$/.test(name)
+  );
+};
+
 const getPathname = (req: IncomingMessage) => {
   try {
     return decodeURIComponent(new URL(req.url ?? '/', 'http://localhost').pathname);
@@ -132,266 +153,306 @@ const describeEvents = (events: HubDevEvent[]) =>
     })
     .join(', ');
 
-export const hubPlugin = (): Plugin => ({
-  name: 'vite-plugin-aek-hub',
-  apply: 'serve',
-  configureServer(server) {
-    if (process.env.AEK_HUB === 'false') return;
-    const checkOpts = {
-      allowedHosts: server.config.server.allowedHosts,
-      isHttps: !!server.config.server.https,
-    };
+export const hubPlugin = (): Plugin => {
+  /** Stops the watching and the pending run: on the HTTP server's close, or in middleware mode
+   * (no HTTP server) on Vite's `closeBundle` when the dev server closes (H3) */
+  let dispose = () => {};
+  return {
+    name: 'vite-plugin-aek-hub',
+    apply: 'serve',
+    closeBundle() {
+      dispose();
+    },
+    configureServer(server) {
+      if (process.env.AEK_HUB === 'false') return;
+      const checkOpts = {
+        allowedHosts: server.config.server.allowedHosts,
+        isHttps: !!server.config.server.https,
+      };
 
-    let lastBuild: HubBuildResult | null = null;
-    /** The first build (lazy), then the run in progress: requests wait for it */
-    let building: Promise<void> | null = null;
-    let isWatching = false;
-    let isClosed = false;
-    let pendingFiles = new Set<string>();
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    let hubWatcher: fs.FSWatcher | null = null;
-    /** The build's sources and folders outside `hub/`, watched through Vite's watcher */
-    let outsideFiles = new Set<string>();
-    let outsideDirs = new Set<string>();
-    /** The first build's time, shown on the Version page until the server restarts */
-    let buildTime: string | undefined;
-    /** An API input changed since the model was built, or there's none yet */
-    let isApiStale = false;
-    /** From the rebuild's start until the run that renders its model has written the pages */
-    let isApiRebuilding = false;
-    /** The rebuild's conversion has ended: the next run renders it */
-    let apiExtract: { isOk: boolean; durationMs: number } | null = null;
+      let lastBuild: HubBuildResult | null = null;
+      /** The first build (lazy), then the run in progress: requests wait for it */
+      let building: Promise<void> | null = null;
+      let isWatching = false;
+      let isClosed = false;
+      let pendingFiles = new Set<string>();
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      let hubWatcher: fs.FSWatcher | null = null;
+      /** The build's sources and folders outside `hub/`, watched through Vite's watcher */
+      let outsideFiles = new Set<string>();
+      let outsideDirs = new Set<string>();
+      /** The first build's commit, local changes and time, on the Version page until a restart */
+      let buildInfo: ProjectMetadata['build'] | undefined;
+      /** The run in progress: a request waits for it, not for the runs queued after it (H3) */
+      let currentRun: Promise<void> | null = null;
+      /** Files Vite's watcher reported during the first build, before its sources were known */
+      const earlyFiles = new Set<string>();
+      /** An API input changed since the model was built, or there's none yet */
+      let isApiStale = false;
+      /** From the rebuild's start until the run that renders its model has written the pages */
+      let isApiRebuilding = false;
+      /** The rebuild's conversion has ended: the next run renders it */
+      let apiExtract: { isOk: boolean; durationMs: number } | null = null;
 
-    const report = (result: HubBuildResult, prev: HubBuildResult | null) => {
-      const prevKeys = new Set(prev?.diag.items.map(diagnosticKey));
-      for (const item of result.diag.items) {
-        if (prevKeys.has(diagnosticKey(item))) continue;
-        if (item.level === 'error')
-          console.error(`${RED}✗ [Hub] ${formatDiagnostic(item)}${RESET}`);
-        else console.warn(`${YELLOW}⚠ [Hub] ${formatDiagnostic(item)}${RESET}`);
-      }
-      if (prev?.diag.errors.length && result.isOk) {
-        console.log(`${GREEN}✓ [Hub] No errors${RESET}`);
-      }
-    };
-
-    /** Removed pages, and script chunks a TS change renamed (every page reloads for it) */
-    const removeStaleFiles = (result: HubBuildResult, prev: HubBuildResult) => {
-      const outPaths = (build: HubBuildResult) => [
-        ...build.pages.map((page) => page.outPath),
-        ...(build.assets.scripts ?? []).map((file) => file.outPath),
-      ];
-      const current = new Set(outPaths(result));
-      for (const outPath of outPaths(prev)) {
-        if (!current.has(outPath)) fs.rmSync(path.join(HUB_DEV_OUT_DIR, outPath), { force: true });
-      }
-    };
-
-    const watchOutsideFiles = ({ files, dirs }: HubBuildResult) => {
-      const isOutside = (file: string) => !file.startsWith(HUB_DIR + path.sep);
-      outsideFiles = new Set(files.filter(isOutside));
-      outsideDirs = new Set(dirs.filter(isOutside));
-      server.watcher.add([...outsideFiles, ...outsideDirs]);
-    };
-
-    /** `extracted`: the run renders an API rebuild's model, and tells the rebuilding pages */
-    const runBuild = async (changedFiles: Set<string>, extracted: typeof apiExtract = null) => {
-      buildTime ??= new Date().toISOString();
-      const result = await buildHub({
-        mode: 'dev',
-        outDir: HUB_DEV_OUT_DIR,
-        basePath: HUB_DEV_URL_BASE,
-        fallback: lastBuild?.assets,
-        buildTime,
-        api: 'last',
-      });
-      const prev = lastBuild;
-      lastBuild = result;
-      if (isClosed) return;
-      watchOutsideFiles(result);
-      report(result, prev);
-      if (!prev) {
-        isApiStale = result.isApiStale;
-        const errors = result.diag.errors.length;
-        console.log(
-          `${errors ? YELLOW : GREEN}${errors ? '⚠' : '✓'} [Hub] ${result.pageCount} page${s(result.pageCount)} at ${HUB_DEV_URL_BASE}${errors ? `, ${errors} with errors` : ''} ${DIM}(${Math.round(result.durationMs)} ms${isApiStale ? '; the API docs aren’t current: rebuilt on their first request' : ''})${RESET}`
-        );
-        return;
-      }
-      removeStaleFiles(result, prev);
-      const events = diffBuilds(prev, result, changedFiles);
-      if (extracted) {
-        isApiRebuilding = false;
-        events.push({ kind: 'api' });
-        const seconds = (extracted.durationMs / 1000).toFixed(1);
-        if (extracted.isOk) {
-          console.log(
-            `${GREEN}✓ [Hub] API docs rebuilt${RESET} ${DIM}(TypeDoc ${seconds} s)${RESET}`
-          );
-        } else {
-          console.error(
-            `${RED}✗ [Hub] The API docs didn't rebuild: their pages list the errors, the other pages keep the last good api: links${RESET}`
-          );
+      const report = (result: HubBuildResult, prev: HubBuildResult | null) => {
+        const prevKeys = new Set(prev?.diag.items.map(diagnosticKey));
+        for (const item of result.diag.items) {
+          if (prevKeys.has(diagnosticKey(item))) continue;
+          if (item.level === 'error')
+            console.error(`${RED}✗ [Hub] ${formatDiagnostic(item)}${RESET}`);
+          else console.warn(`${YELLOW}⚠ [Hub] ${formatDiagnostic(item)}${RESET}`);
         }
-      }
-      for (const data of events) server.hot.send({ type: 'custom', event: HUB_DEV_EVENT, data });
-      if (events.length) {
-        console.log(
-          `[Hub] Updated: ${describeEvents(events)} ${DIM}(${Math.round(result.durationMs)} ms)${RESET}`
-        );
-      }
-    };
-
-    /** Runs the pending changes, one run at a time; changes during a run go into the next */
-    const flush = () => {
-      timer = null;
-      if (building) return; // The run in progress picks them up when it ends
-      const run = async () => {
-        while ((pendingFiles.size || apiExtract) && !isClosed) {
-          const files = pendingFiles;
-          const extracted = apiExtract;
-          pendingFiles = new Set();
-          apiExtract = null;
-          try {
-            await runBuild(files, extracted);
-          } catch (err) {
-            console.error(`${RED}✗ [Hub] The build failed:${RESET}`, err);
-          } finally {
-            // A failed run: the rebuilding pages reload into the last build's pages
-            if (extracted && isApiRebuilding) {
-              isApiRebuilding = false;
-              const data: HubDevEvent = { kind: 'api' };
-              if (!isClosed) server.hot.send({ type: 'custom', event: HUB_DEV_EVENT, data });
-            }
-          }
+        if (prev?.diag.errors.length && result.isOk) {
+          console.log(`${GREEN}✓ [Hub] No errors${RESET}`);
         }
       };
-      building = run().finally(() => (building = null));
-    };
 
-    /** Converts in a child process; the next run renders the new model */
-    const rebuildApi = () => {
-      if (isApiRebuilding) return;
-      isApiRebuilding = true;
-      isApiStale = false; // A save from now on is newer than this conversion
-      console.log(`[Hub] Rebuilding the API docs… ${DIM}(TypeDoc in a child process)${RESET}`);
-      void extractApiModelInChildProcess().then((extract) => {
+      /**
+       * Removed pages, script chunks a TS change renamed (every page reloads for it), and the copies
+       * of static assets removed from `hub/_assets/` (H3: they kept being served)
+       */
+      const removeStaleFiles = (
+        result: HubBuildResult,
+        prev: HubBuildResult,
+        changedFiles: Set<string>
+      ) => {
+        for (const file of changedFiles) {
+          if (isStaticAsset(file) && !fs.existsSync(file)) {
+            fs.rmSync(getStaticAssetCopy(file), { recursive: true, force: true });
+          }
+        }
+        const outPaths = (build: HubBuildResult) => [
+          ...build.pages.map((page) => page.outPath),
+          ...(build.assets.scripts ?? []).map((file) => file.outPath),
+        ];
+        const current = new Set(outPaths(result));
+        for (const outPath of outPaths(prev)) {
+          if (!current.has(outPath))
+            fs.rmSync(path.join(HUB_DEV_OUT_DIR, outPath), { force: true });
+        }
+      };
+
+      const watchOutsideFiles = ({ files, dirs }: HubBuildResult) => {
+        const isOutside = (file: string) => !file.startsWith(HUB_DIR + path.sep);
+        outsideFiles = new Set(files.filter(isOutside));
+        outsideDirs = new Set(dirs.filter(isOutside));
+        server.watcher.add([...outsideFiles, ...outsideDirs]);
+      };
+
+      /** `extracted`: the run renders an API rebuild's model, and tells the rebuilding pages */
+      const runBuild = async (changedFiles: Set<string>, extracted: typeof apiExtract = null) => {
+        buildInfo ??= getProjectMetadata().build;
+        const result = await buildHub({
+          mode: 'dev',
+          outDir: HUB_DEV_OUT_DIR,
+          basePath: HUB_DEV_URL_BASE,
+          fallback: lastBuild?.assets,
+          build: buildInfo,
+          api: 'last',
+        });
+        const prev = lastBuild;
+        lastBuild = result;
         if (isClosed) return;
-        apiExtract = extract;
+        watchOutsideFiles(result);
+        report(result, prev);
+        if (!prev) {
+          isApiStale = result.isApiStale;
+          const errors = result.diag.errors.length;
+          console.log(
+            `${errors ? YELLOW : GREEN}${errors ? '⚠' : '✓'} [Hub] ${result.pageCount} page${s(result.pageCount)} at ${HUB_DEV_URL_BASE}${errors ? `, ${errors} with errors` : ''} ${DIM}(${Math.round(result.durationMs)} ms${isApiStale ? '; the API docs aren’t current: rebuilt on their first request' : ''})${RESET}`
+          );
+          return;
+        }
+        removeStaleFiles(result, prev, changedFiles);
+        const events = diffBuilds(prev, result, changedFiles);
+        if (extracted) {
+          isApiRebuilding = false;
+          events.push({ kind: 'api' });
+          const seconds = (extracted.durationMs / 1000).toFixed(1);
+          if (extracted.isOk) {
+            console.log(
+              `${GREEN}✓ [Hub] API docs rebuilt${RESET} ${DIM}(TypeDoc ${seconds} s)${RESET}`
+            );
+          } else {
+            console.error(
+              `${RED}✗ [Hub] The API docs didn't rebuild: their pages list the errors, the other pages keep the last good api: links${RESET}`
+            );
+          }
+        }
+        for (const data of events) server.hot.send({ type: 'custom', event: HUB_DEV_EVENT, data });
+        if (events.length) {
+          console.log(
+            `[Hub] Updated: ${describeEvents(events)} ${DIM}(${Math.round(result.durationMs)} ms)${RESET}`
+          );
+        }
+      };
+
+      /** Runs the pending changes, one run at a time; changes during a run go into the next */
+      const flush = () => {
+        timer = null;
+        if (building) return; // The run in progress picks them up when it ends
+        const run = async () => {
+          while ((pendingFiles.size || apiExtract) && !isClosed) {
+            const files = pendingFiles;
+            const extracted = apiExtract;
+            pendingFiles = new Set();
+            apiExtract = null;
+            try {
+              currentRun = runBuild(files, extracted);
+              await currentRun;
+            } catch (err) {
+              console.error(`${RED}✗ [Hub] The build failed:${RESET}`, err);
+            } finally {
+              currentRun = null;
+              // A failed run: the rebuilding pages reload into the last build's pages
+              if (extracted && isApiRebuilding) {
+                isApiRebuilding = false;
+                const data: HubDevEvent = { kind: 'api' };
+                if (!isClosed) server.hot.send({ type: 'custom', event: HUB_DEV_EVENT, data });
+              }
+            }
+          }
+        };
+        building = run().finally(() => (building = null));
+      };
+
+      /** Converts in a child process; the next run renders the new model */
+      const rebuildApi = () => {
+        if (isApiRebuilding) return;
+        isApiRebuilding = true;
+        isApiStale = false; // A save from now on is newer than this conversion
+        console.log(`[Hub] Rebuilding the API docs… ${DIM}(TypeDoc in a child process)${RESET}`);
+        void extractApiModelInChildProcess().then((extract) => {
+          if (isClosed) return;
+          apiExtract = extract;
+          if (timer) clearTimeout(timer);
+          flush();
+        });
+      };
+
+      const schedule = (file: string) => {
+        if (!isWatching || isClosed || isEditorTempFile(file)) return;
+        pendingFiles.add(file);
         if (timer) clearTimeout(timer);
-        flush();
-      });
-    };
+        timer = setTimeout(flush, DEBOUNCE_MS);
+      };
 
-    const schedule = (file: string) => {
-      if (!isWatching || isClosed) return;
-      pendingFiles.add(file);
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(flush, DEBOUNCE_MS);
-    };
-
-    const startWatching = () => {
-      isWatching = true;
-      hubWatcher = fs.watch(HUB_DIR, { recursive: true }, (_event, name) => {
-        const file = name ? path.join(HUB_DIR, name) : HUB_DIR;
-        // Vite restarts the server for it (a config dependency): the next request rebuilds
-        if (file !== HUB_CONFIG_FILE) schedule(file);
-      });
-      hubWatcher.on('error', (err) =>
-        console.error(`${RED}✗ [Hub] Watching hub/ failed:${RESET}`, err)
-      );
-      for (const event of ['add', 'change', 'unlink']) {
-        server.watcher.on(event, (filePath: string) => {
-          const file = path.resolve(filePath);
-          // Only marked: the next API page request rebuilds them
-          if (isApiInputFile(file)) isApiStale = true;
-          if (outsideFiles.has(file) || outsideDirs.has(path.dirname(file))) schedule(file);
+      const startWatching = () => {
+        isWatching = true;
+        hubWatcher = fs.watch(HUB_DIR, { recursive: true }, (_event, name) => {
+          const file = name ? path.join(HUB_DIR, name) : HUB_DIR;
+          // Vite restarts the server for it (a config dependency): the next request rebuilds
+          if (file !== HUB_CONFIG_FILE) schedule(file);
         });
-      }
-    };
-
-    /** The first request builds; one that comes during a rebuild waits for it */
-    const ensureBuilt = async () => {
-      if (!lastBuild && !building) {
-        // Pages of an earlier session may be gone from hub/ since
-        fs.rmSync(HUB_DEV_OUT_DIR, { recursive: true, force: true });
-        building = runBuild(new Set())
-          .then(startWatching)
-          .finally(() => {
-            building = null;
-            if (pendingFiles.size) flush(); // Saved while it ran
+        hubWatcher.on('error', (err) =>
+          console.error(`${RED}✗ [Hub] Watching hub/ failed:${RESET}`, err)
+        );
+        for (const event of ['add', 'change', 'unlink']) {
+          server.watcher.on(event, (filePath: string) => {
+            const file = path.resolve(filePath);
+            // Only marked: the next API page request rebuilds them
+            if (isApiInputFile(file)) isApiStale = true;
+            // The first build's sources aren't known yet: checked when it ends
+            if (!lastBuild) earlyFiles.add(file);
+            else if (outsideFiles.has(file) || outsideDirs.has(path.dirname(file))) schedule(file);
           });
-      }
-      await building;
-      if (!lastBuild) throw new Error('The first Hub build failed: see the terminal');
-    };
+        }
+      };
 
-    /** The socket path and token, for the dev client (never written to disk) */
-    const socketPath = () =>
-      server.config.server.ws === false
-        ? ''
-        : `${server.config.base}?token=${encodeURIComponent(server.config.webSocketToken)}`;
+      /**
+       * The first request builds; one that comes during a rebuild waits for that run only, not for
+       * the runs saves queue after it (H3). The watching starts before the first build, so a save
+       * during it is the next run's (it was lost).
+       */
+      const ensureBuilt = async () => {
+        if (!lastBuild && !building) {
+          // Pages of an earlier session may be gone from hub/ since
+          fs.rmSync(HUB_DEV_OUT_DIR, { recursive: true, force: true });
+          if (!isWatching) startWatching();
+          building = runBuild(new Set()).finally(() => {
+            building = null;
+            // Saved while it ran: hub/'s files are pending already, the others once known
+            for (const file of earlyFiles) {
+              if (outsideFiles.has(file) || outsideDirs.has(path.dirname(file))) schedule(file);
+            }
+            earlyFiles.clear();
+            if (pendingFiles.size) flush();
+          });
+          await building;
+        } else if (!lastBuild) {
+          await building;
+        } else if (currentRun) {
+          await currentRun.catch(() => undefined);
+        }
+        if (!lastBuild) throw new Error('The first Hub build failed: see the terminal');
+      };
 
-    const serve = async (pathname: string, res: ServerResponse) => {
-      await ensureBuilt();
-      const route = resolveHubRoute(HUB_DEV_OUT_DIR, HUB_DEV_URL_BASE, pathname);
-      if (route.kind === 'redirect') {
-        res.writeHead(301, { Location: route.location }).end();
-        return;
-      }
-      const rebuildingHtml = lastBuild?.apiRebuildingHtml;
-      if (
-        (isApiStale || isApiRebuilding) &&
-        rebuildingHtml &&
-        isApiPagePath(pathname.slice(HUB_DEV_URL_BASE.length))
-      ) {
-        rebuildApi();
-        res.writeHead(HUB_API_REBUILDING_STATUS, {
-          'Content-Type': getHubContentType('.html'),
+      /** The socket path and token, for the dev client (never written to disk) */
+      const socketPath = () =>
+        server.config.server.ws === false
+          ? ''
+          : `${server.config.base}?token=${encodeURIComponent(server.config.webSocketToken)}`;
+
+      const serve = async (pathname: string, res: ServerResponse) => {
+        await ensureBuilt();
+        const route = resolveHubRoute(HUB_DEV_OUT_DIR, HUB_DEV_URL_BASE, pathname);
+        if (route.kind === 'redirect') {
+          res.writeHead(301, { Location: route.location }).end();
+          return;
+        }
+        const rebuildingHtml = lastBuild?.apiRebuildingHtml;
+        if (
+          (isApiStale || isApiRebuilding) &&
+          rebuildingHtml &&
+          isApiPagePath(pathname.slice(HUB_DEV_URL_BASE.length))
+        ) {
+          rebuildApi();
+          res.writeHead(HUB_API_REBUILDING_STATUS, {
+            'Content-Type': getHubContentType('.html'),
+            'Cache-Control': 'no-cache',
+            'Retry-After': '5',
+          });
+          res.end(rebuildingHtml.replace(HUB_DEV_SOCKET_PLACEHOLDER, socketPath()));
+          return;
+        }
+        const file = route.kind === 'file' ? route.file : path.join(HUB_DEV_OUT_DIR, '404.html');
+        let content: string | Buffer = fs.readFileSync(file);
+        if (file.endsWith('.html')) {
+          content = content.toString('utf-8').replace(HUB_DEV_SOCKET_PLACEHOLDER, socketPath());
+        }
+        res.writeHead(route.kind === 'file' ? 200 : 404, {
+          'Content-Type': getHubContentType(file),
           'Cache-Control': 'no-cache',
-          'Retry-After': '5',
         });
-        res.end(rebuildingHtml.replace(HUB_DEV_SOCKET_PLACEHOLDER, socketPath()));
-        return;
-      }
-      const file = route.kind === 'file' ? route.file : path.join(HUB_DEV_OUT_DIR, '404.html');
-      let content: string | Buffer = fs.readFileSync(file);
-      if (file.endsWith('.html')) {
-        content = content.toString('utf-8').replace(HUB_DEV_SOCKET_PLACEHOLDER, socketPath());
-      }
-      res.writeHead(route.kind === 'file' ? 200 : 404, {
-        'Content-Type': getHubContentType(file),
-        'Cache-Control': 'no-cache',
-      });
-      res.end(content);
-    };
+        res.end(content);
+      };
 
-    server.httpServer?.once('close', () => {
-      isClosed = true;
-      if (timer) clearTimeout(timer);
-      hubWatcher?.close();
-    });
+      dispose = () => {
+        isClosed = true;
+        if (timer) clearTimeout(timer);
+        hubWatcher?.close();
+      };
+      server.httpServer?.once('close', dispose);
 
-    server.middlewares.use((req, res, next) => {
-      const pathname = getPathname(req);
-      if (pathname === null) return next();
-      if (pathname !== '/hub' && !pathname.startsWith(HUB_DEV_URL_BASE)) return next();
-      if (req.method !== 'GET' && req.method !== 'HEAD') {
-        sendText(res, 405, 'The Hub only serves GET and HEAD');
-        return;
-      }
-      // Vite's own host check runs after this, and the pages carry the HMR socket's token
-      try {
-        checkHostAndOrigin(req, checkOpts);
-      } catch (err) {
-        if (err instanceof DevFilesError) sendText(res, 403, err.message);
-        else throw err;
-        return;
-      }
-      serve(pathname, res).catch((err: Error) => {
-        console.error(`${RED}✗ [Hub] ${toRepoPath(HUB_DEV_OUT_DIR)}: ${err.message}${RESET}`);
-        if (!res.headersSent) sendText(res, 500, `[Hub] ${err.stack ?? err.message}`);
+      server.middlewares.use((req, res, next) => {
+        const pathname = getPathname(req);
+        if (pathname === null) return next();
+        if (pathname !== '/hub' && !pathname.startsWith(HUB_DEV_URL_BASE)) return next();
+        if (req.method !== 'GET' && req.method !== 'HEAD') {
+          sendText(res, 405, 'The Hub only serves GET and HEAD');
+          return;
+        }
+        // Vite's own host check runs after this, and the pages carry the HMR socket's token
+        const hostError = getHostAndOriginError(req, checkOpts);
+        if (hostError) {
+          sendText(res, 403, hostError.message);
+          return;
+        }
+        serve(pathname, res).catch((err: Error) => {
+          console.error(`${RED}✗ [Hub] ${toRepoPath(HUB_DEV_OUT_DIR)}: ${err.message}${RESET}`);
+          if (!res.headersSent) sendText(res, 500, `[Hub] ${err.stack ?? err.message}`);
+        });
       });
-    });
-  },
-});
+    },
+  };
+};

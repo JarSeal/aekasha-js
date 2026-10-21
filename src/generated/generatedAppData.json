@@ -5236,8 +5236,7 @@
             "roughness": 0.45,
             "metalness": 0.1
           },
-          "type": "STANDARD",
-          "nodes": {}
+          "type": "STANDARD"
         }
       ],
       "meshes": [
@@ -13114,8 +13113,7 @@
             "color": "#ff00ff",
             "wireframe": false
           },
-          "type": "PHONG",
-          "nodes": {}
+          "type": "PHONG"
         },
         {
           "id": "testTslMat",

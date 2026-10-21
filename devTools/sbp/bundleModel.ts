@@ -11,7 +11,6 @@ import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
 import { ROOT } from '../assetPipeline/sources';
-import type { BuildModule, EmittedAsset } from '../verify/debugInProduction';
 
 /** Bump when `bundle.json`'s shape changes: an old one is then read as missing */
 export const BUNDLE_FORMAT_VERSION = 1;
@@ -57,6 +56,15 @@ export type Manifest = Record<
     assets?: string[];
   }
 >;
+
+/** A module of the build, as the visualizer lists it: its id (`/src/…`) and its rendered length
+ * per chunk (chunk names without their content hash). A tree-shaken module has no chunks. */
+export type BuildModule = { id: string; chunks: Record<string, number> };
+
+/** A file Vite emitted for a module (an image, a model, a `.wasm`), from the manifest: its key
+ * (`assets/3DSymbols.glb`), its source as a module id (`/src/…`, `/node_modules/…`) and the ids
+ * of the modules that import it */
+export type EmittedAsset = { file: string; id: string; importers: string[] };
 
 /** An import edge of the visualizer's graph: `dynamic` for an `import()` */
 export type ModuleRef = { uid: string; dynamic?: boolean };

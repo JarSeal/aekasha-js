@@ -7,8 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { resolveHubRoute } from './serve';
 import { ROOT } from './paths';
 
-// docs/plans/p619_review-schemas-pipeline-devtools-hub.md Phase 0 (§1.4 H2): `yarn hub:preview`
-// against a temp build. An `it.fails` is a bug not fixed yet: Phase 2 turns it into an `it`.
+// p619 §1.4 H2: `yarn hub:preview` against a temp build, and its route resolution.
 
 const DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'aek-p619-preview-'));
 fs.writeFileSync(path.join(DIR, 'index.html'), '<p>home</p>');
@@ -62,7 +61,7 @@ describe('resolveHubRoute', () => {
     expect(resolveHubRoute(DIR, '/', '/nope.html')).toEqual({ kind: 'notFound' });
   });
 
-  it.fails('404s a path with a NUL byte instead of throwing', () => {
+  it('404s a path with a NUL byte instead of throwing', () => {
     expect(resolveHubRoute(DIR, '/', '/a\0b')).toEqual({ kind: 'notFound' });
   });
 });
@@ -73,14 +72,14 @@ describe('yarn hub:preview', () => {
     expect(await get('/nope.html')).toBe(404);
   });
 
-  // Run in this order: the first malformed request kills the server today
-  it.fails('answers a malformed escape with 400 and keeps serving', async () => {
+  // A malformed request used to kill the server: each case checks it still serves after
+  it('answers a malformed escape with 400 and keeps serving', async () => {
     const status = await get('/%E0%A4%A').catch(() => 0);
     expect(status).toBe(400);
     expect(await get('/')).toBe(200);
   });
 
-  it.fails('answers %00 and keeps serving', async () => {
+  it('answers %00 and keeps serving', async () => {
     const status = await get('/%00').catch(() => 0);
     expect([400, 404]).toContain(status);
     expect(await get('/')).toBe(200);

@@ -28,9 +28,10 @@ describe('diffSystemOrders', () => {
     ]);
   });
 
-  // p619 Phase 0 (§1.4 V6): `includes` and a walk of the old list miss a system registered twice
-  it.fails('names a system registered twice', () => {
-    const current = { default: { MAIN: ['a@0', 'b@0', 'a@0'], APP_LOGIC: ['c@1', 'd@0'] } };
-    expect(diffSystemOrders(baseline, current)).not.toEqual([]);
+  // p619 §1.4 V6: `includes` and a walk of the old list missed a system registered twice
+  it('names a system registered twice, and one no longer registered twice', () => {
+    const twice = { default: { MAIN: ['a@0', 'b@0', 'a@0'], APP_LOGIC: ['c@1', 'd@0'] } };
+    expect(diffSystemOrders(baseline, twice)).toEqual(['default MAIN: added a@0']);
+    expect(diffSystemOrders(twice, baseline)).toEqual(['default MAIN: removed a@0']);
   });
 });

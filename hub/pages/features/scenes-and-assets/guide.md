@@ -36,6 +36,10 @@ The engine finds every file with one of these suffixes under `src/` by itself:
 Each has a Zod schema in `src/_engine/schemas/`. Start a file with a `$schema` line pointing at
 `.schemas/<type>.schema.json`, and your editor checks and autocompletes it as you type.
 
+The gather fails, naming the file, on a JSON that doesn't parse or fails its schema, on an id two
+files give, and on an id a scene lists that no asset JSON has. In `yarn dev` the page then stays
+as it was until the next save fixes it, and `yarn build` stops.
+
 ## Where the files go
 
 The gatherer finds an asset JSON anywhere under `src/`, so a folder is a convention, not a rule

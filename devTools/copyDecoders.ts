@@ -83,4 +83,5 @@ export const copyDecoders = () => {
   }
 };
 
-copyDecoders();
+// Only as a script (`yarn copyDecoders`): an import copies nothing (p619 §1.4 G3)
+if (process.argv[1] === fileURLToPath(import.meta.url)) copyDecoders();

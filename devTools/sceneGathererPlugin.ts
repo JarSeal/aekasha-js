@@ -15,7 +15,7 @@ import { ASSETS_CONFIG_FILE } from './assetPipeline/settings';
 import { ROOT } from './assetPipeline/sources';
 import { CONFIG_FILE, resolveProjectOptOut, type ProjectOptOut } from './assetPipeline/switches';
 import { DEV_FILES_TEMP_SUFFIX } from './devFiles/commit';
-import { gatherSceneData, isFilePathValid, OUTPUT_DIR } from './gatherAppData';
+import { gatherSceneData, isFilePathValid, OUTPUT_DIR, writeJsonSchemas } from './gatherAppData';
 
 /**
  * The dev server's gatherer (`yarn dev`): re-gathers the generated data when an asset JSON is
@@ -119,6 +119,8 @@ export const sceneGathererPlugin = (): Plugin => ({
   name: 'vite-plugin-scene-gatherer',
   apply: 'serve',
   configureServer(server) {
+    // On each (re)start: a schema change restarts the server (it's a config dependency)
+    writeJsonSchemas();
     // The repo root isn't watched (the Vite root is src/)
     server.watcher.add(ASSETS_CONFIG_FILE);
     const configUrl = `/${path.relative(server.config.root, CONFIG_FILE).split(path.sep).join('/')}`;

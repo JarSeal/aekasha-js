@@ -4,9 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { GeneratedOutput } from './gatherOutput';
 
-// docs/plans/p619_review-schemas-pipeline-devtools-hub.md Phase 0: the gather's bugs (§1.4 G1-G3),
-// reproduced against the repo's own data with fake files added to the gather's walk of src/. An
-// `it.fails` is a bug not fixed yet: the phase that fixes it turns it into an `it`.
+// p619 §1.4 G1-G3, G5, G6 and G12: the gather's bugs, checked against the repo's own data with fake
+// files added to the gather's walk of src/ (nothing is written: the output is recorded).
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(REPO_ROOT, 'src');
@@ -60,6 +59,44 @@ const addFakeFiles = (files: Record<string, string>) => {
   }) as typeof fs.readFileSync);
 };
 
+/** A fake scene's JSON: the repo's first scene's file (never loaded), and `fields` */
+const fakeScene = (id: string, fields: Record<string, unknown>) => {
+  const { sceneFile } = JSON.parse(firstOf('.scene.json').text) as { sceneFile: string };
+  return JSON.stringify({ id, sceneFile, ...fields });
+};
+
+/** The repo's first TSL material, as a fake one in FAKE_DIR with its file and another id */
+const fakeTslMaterial = (id: string) => {
+  const file = (readdirSync(SRC, { recursive: true }) as string[]).find(
+    (f) =>
+      f.endsWith('.material.json') && readFileSync(path.join(SRC, f), 'utf8').includes('"tslFile"')
+  );
+  if (!file) throw new Error('No TSL material in src/');
+  const json = JSON.parse(readFileSync(path.join(SRC, file), 'utf8')) as Record<string, unknown>;
+  // The gather resolves `tslFile` from the JSON's top folder under src/ (app/ for the fake)
+  const tslFile = path.posix.join('..', file.split(path.sep)[0], String(json.tslFile));
+  return JSON.stringify({ ...json, id, tslFile, __saveData: undefined });
+};
+
+/** Runs `fn` as a production gather (`NODE_ENV`, which the gather reads per call) */
+const inProduction = <T>(fn: () => T) => {
+  const before = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'production';
+  try {
+    return fn();
+  } finally {
+    process.env.NODE_ENV = before;
+  }
+};
+
+type OutputScene = {
+  cameras?: { camProps?: { type?: string } }[];
+  materials?: Record<string, unknown>[];
+  backgroundColor?: unknown;
+  __saveData?: unknown;
+};
+const outputScene = (id: string) => written[0]?.json.scenes[id] as OutputScene | undefined;
+
 let gatherSceneData: typeof import('./gatherAppData').gatherSceneData;
 
 beforeAll(async () => {
@@ -85,19 +122,19 @@ describe('the gather on the repo’s data', () => {
 });
 
 describe('G1: a duplicate id fails the gather', () => {
-  it.fails('a second camera with the same id', () => {
+  it('a second camera with the same id', () => {
     const camera = firstOf('.camera.json');
     addFakeFiles({ [`${FAKE_DIR}/dup.camera.json`]: camera.text });
     expect(gatherSceneData()).toBe(false);
   });
 
-  it.fails('a second scene with the same id', () => {
+  it('a second scene with the same id', () => {
     const scene = firstOf('.scene.json');
     addFakeFiles({ [`${FAKE_DIR}/dup.scene.json`]: scene.text });
     expect(gatherSceneData()).toBe(false);
   });
 
-  it.fails('the first scene file keeps its id (pass 2 doesn’t let the later one win)', () => {
+  it('the first scene file keeps its id (pass 2 doesn’t let the later one win)', () => {
     const scene = firstOf('.scene.json');
     const json = JSON.parse(scene.text) as { id: string; name?: string };
     addFakeFiles({
@@ -110,13 +147,13 @@ describe('G1: a duplicate id fails the gather', () => {
 });
 
 describe('G2: a malformed asset JSON fails the gather', () => {
-  it.fails('a camera JSON cut off mid-save', () => {
+  it('a camera JSON cut off mid-save', () => {
     const camera = firstOf('.camera.json');
     addFakeFiles({ [`${FAKE_DIR}/broken.camera.json`]: camera.text.slice(0, 20) });
     expect(gatherSceneData()).toBe(false);
   });
 
-  it.fails('an empty light JSON', () => {
+  it('an empty light JSON', () => {
     addFakeFiles({ [`${FAKE_DIR}/empty.light.json`]: '' });
     expect(gatherSceneData()).toBe(false);
   });
@@ -129,8 +166,82 @@ describe('G2: a malformed asset JSON fails the gather', () => {
 });
 
 describe('G3: importing the gatherer writes nothing', () => {
-  it.fails('no .schemas/ write at module load', () => {
+  it('no .schemas/ write at module load', () => {
     // The beforeAll's import recorded the writes of the load
     expect(schemaWrites).toEqual([]);
+  });
+});
+
+describe('G5: save entries', () => {
+  const files = {
+    [`${FAKE_DIR}/saved.material.json`]: JSON.stringify({
+      id: 'p619Mat',
+      type: 'BASIC',
+      debugData: { name: 'the asset’s' },
+      __saveData: { p619Saved: [{ debugData: { name: 'the entry’s' } }] },
+    }),
+    [`${FAKE_DIR}/saved.scene.json`]: fakeScene('p619Saved', {
+      materials: ['p619Mat'],
+      __saveData: { p619Saved: [{ backgroundColor: '#123456' }] },
+    }),
+  };
+
+  it('a scene’s own latest entry is applied, and the output has no __saveData', () => {
+    addFakeFiles(files);
+    expect(gatherSceneData()).toBe(true);
+    expect(outputScene('p619Saved')?.backgroundColor).toBe('#123456');
+    expect(outputScene('p619Saved')).not.toHaveProperty('__saveData');
+  });
+
+  it('production strips debugData after the entry is merged (an entry can hold one)', () => {
+    addFakeFiles(files);
+    expect(inProduction(() => gatherSceneData())).toBe(true);
+    expect(outputScene('p619Saved')?.materials?.[0]).not.toHaveProperty('debugData');
+  });
+});
+
+describe('G6', () => {
+  it('an empty camera list gets the auto camera, as a missing one does', () => {
+    addFakeFiles({ [`${FAKE_DIR}/noCams.scene.json`]: fakeScene('p619NoCams', { cameras: [] }) });
+    expect(gatherSceneData()).toBe(true);
+    expect(outputScene('p619NoCams')?.cameras?.map((cam) => cam.camProps?.type)).toEqual([
+      'PERSPECTIVE',
+    ]);
+  });
+
+  it('no material ships an empty nodes object', () => {
+    expect(gatherSceneData()).toBe(true);
+    const materials = Object.values(written[0].json.scenes).flatMap(
+      (scene) => (scene as OutputScene).materials ?? []
+    );
+    expect(materials.length).toBeGreaterThan(0);
+    expect(materials.filter((mat) => JSON.stringify(mat.nodes) === '{}')).toEqual([]);
+  });
+
+  it('a TSL material only a debug scene lists has no loader in production', () => {
+    const files = {
+      [`${FAKE_DIR}/debugOnly.material.json`]: fakeTslMaterial('p619DebugOnlyMat'),
+      [`${FAKE_DIR}/debugOnly.scene.json`]: fakeScene('p619DebugOnly', {
+        isDebugScene: true,
+        materials: ['p619DebugOnlyMat'],
+      }),
+    };
+    addFakeFiles(files);
+    expect(gatherSceneData()).toBe(true);
+    expect(written[0].loaders.tslMaterials).toHaveProperty('p619DebugOnlyMat');
+    written.length = 0;
+    expect(inProduction(() => gatherSceneData())).toBe(true);
+    expect(written[0].loaders.tslMaterials).not.toHaveProperty('p619DebugOnlyMat');
+  });
+});
+
+describe('G12: an id no asset JSON has fails the gather', () => {
+  it.each([
+    ['a material', { materials: ['p619NoSuchMaterial'] }],
+    ['a camera', { cameras: ['p619NoSuchCamera'] }],
+    ['a sky box', { skyboxes: ['p619NoSuchSky'] }],
+  ])('%s', (_kind, fields) => {
+    addFakeFiles({ [`${FAKE_DIR}/unknown.scene.json`]: fakeScene('p619Unknown', fields) });
+    expect(gatherSceneData()).toBe(false);
   });
 });

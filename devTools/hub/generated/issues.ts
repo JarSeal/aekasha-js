@@ -5,7 +5,7 @@ import type Token from 'markdown-it/lib/token.mjs';
 import type { HubDiagnostics } from '../diagnostics';
 import { decodeEntities, escapeHtml } from '../html';
 import { renderMarkdownText, slugify, type HubMarkdownEnv } from '../markdown';
-import { ISSUES_DIR } from '../paths';
+import { ISSUES_DIR, toRepoPath } from '../paths';
 import type { HubGeneratedPage, HubGeneratedSection } from './section';
 
 /**
@@ -240,7 +240,23 @@ export const createIssuesSection = (diag: HubDiagnostics): HubGeneratedSection =
         .sort()
         .map((name) => path.join(ISSUES_DIR, name))
     : [];
-  const issues = files.map((file) => parseIssue(file, diag));
+  // Two files whose names slug alike (`a b.md`, `a-b.md`) would write one page: the second is an
+  // error and gets none (p619 §1.4 H2)
+  const byPath = new Map<string, Issue>();
+  const issues = files.flatMap((file) => {
+    const issue = parseIssue(file, diag);
+    const taken = byPath.get(issue.path);
+    if (taken) {
+      diag.error(
+        file,
+        1,
+        `Its page ${issue.path} is ${toRepoPath(taken.file)}'s too: rename one of the two files`
+      );
+      return [];
+    }
+    byPath.set(issue.path, issue);
+    return [issue];
+  });
   return {
     path: ISSUES_SECTION_PATH,
     slots: { [LIST_SLOT]: (md, env) => renderList(issues, md, env) },

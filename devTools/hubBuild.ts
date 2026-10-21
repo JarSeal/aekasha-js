@@ -8,12 +8,15 @@ import { buildHub, formatBytes, rebaseNotFoundPage } from './hub/build';
 import { readSbpReport } from './hub/sbp';
 import { getEmbedEntryFileName, getEmbedOutDir } from './sbp/embedPaths';
 import { formatDiagnostic } from './hub/diagnostics';
+import { getHubOutDirError } from './hub/outDir';
 import { APP_DIST_DIR, HUB_DIST_DIR, ROOT, toRepoPath } from './hub/paths';
 
 /**
  * `yarn hub:build [--out <dir>] [--no-api] [--no-embed]`: builds the Ækasha Hub's public site
- * (p551) into `dist-hub/` (emptied first), and exits 1 on an error, without writing anything.
- * `yarn build` runs it last.
+ * (p551) into `dist-hub/`, and exits 1 on an error, leaving the last output as it was: it builds
+ * into a staging folder next to it and replaces the folder only when nothing failed. `--out`
+ * refuses a folder the build may not replace (`devTools/hub/outDir.ts`: the repo root or above,
+ * a source folder, a non-empty folder that isn't a Hub output). `yarn build` runs it last.
  * - `--no-api`: no API docs (p553 §2.5), for fast content work: no TypeDoc conversion, the
  *   Documentation page says they aren't built, and `api:` links aren't checked (one warning).
  * - `--no-embed`: `::: embed` shows its poster only (p611 D9). Without it, an embed profile with
@@ -105,6 +108,8 @@ const main = async () => {
     return;
   }
   const { outDir, isApiSkipped, isEmbedSkipped } = parseArgs(process.argv.slice(2));
+  const outDirError = getHubOutDirError(outDir);
+  if (outDirError) fail(outDirError);
   if (!isEmbedSkipped) buildMissingEmbeds();
   const result = await buildHub({
     mode: 'public',
@@ -121,7 +126,7 @@ const main = async () => {
   }
   if (!result.isOk) {
     const count = result.diag.errors.length;
-    fail(`${count} error${count === 1 ? '' : 's'}: ${toRepoPath(outDir)}/ not written`);
+    fail(`${count} error${count === 1 ? '' : 's'}: ${toRepoPath(outDir)}/ left as it was`);
   }
   console.log(
     `${GREEN}✓ [Hub] ${result.pageCount} pages → ${toRepoPath(outDir)}/ (${Math.round(result.durationMs)} ms)${RESET}`

@@ -51,6 +51,8 @@ export type DevFilesErrorCode =
   | 'CONFLICT'
   | 'INVALID_JSON'
   | 'INVALID_SCHEMA'
+  /** A staged file that doesn't start like the image its path's extension names */
+  | 'INVALID_IMAGE'
   | 'STAGE_EXPIRED'
   | 'SAVE_DATA_DISABLED'
   | 'WRITE_FAILED';

@@ -69,8 +69,8 @@ describe('checkSbpProfiles', () => {
       'profile app: budgets.modules "/src/_engine/ui/": a path from src/ (_engine/ui/icons/ or …/BuiltInIcons.ts)',
     ]);
   });
-  // p619 Phase 0 (§1.4 B3): a key that matches nothing measures 0, so its budget always passes
-  it.fails.each([
+  // p619 §1.4 B3: a key that matched nothing measured 0, so its budget always passed
+  it.each([
     ['a group no module can be in', { groups: { '_engine/features/physic': 1 } }],
     ['a group of a package that isn’t installed', { groups: { thre: 1 } }],
     ['a module path that doesn’t exist', { modules: { '_engine/ui/icns/': 1 } }],

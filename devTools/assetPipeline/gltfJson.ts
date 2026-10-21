@@ -10,8 +10,11 @@ import path from 'path';
 const GLB_MAGIC = 0x46546c67; // 'glTF'
 const GLB_CHUNK_JSON = 0x4e4f534a; // 'JSON'
 
+type ColliderExtras = { extras?: { colliderType?: unknown } };
+
 export type GLTFJson = {
-  nodes?: { mesh?: number; extras?: { colliderType?: unknown } }[];
+  nodes?: ({ mesh?: number } & ColliderExtras)[];
+  meshes?: ColliderExtras[];
   buffers?: { uri?: string }[];
   images?: { uri?: string }[];
 };
@@ -54,6 +57,18 @@ export const listExternalGLTFFiles = (file: string, json: GLTFJson) =>
     path.resolve(path.dirname(file), decodeURIComponent(uri))
   );
 
-/** A node with a mesh and a `colliderType` custom property (CustomProps.ts reads the same). */
+/**
+ * A node with a mesh and a `colliderType` custom property, as CustomProps.ts reads it: three's
+ * GLTFLoader puts the mesh's extras on the object's `userData`, then the node's over them, so a
+ * `colliderType` authored on the mesh counts too, and a node's own one wins (p619 §1.4 A6).
+ */
 export const hasColliderNodes = (json: GLTFJson) =>
-  (json.nodes ?? []).some((node) => node.mesh !== undefined && !!node.extras?.colliderType);
+  (json.nodes ?? []).some((node) => {
+    if (node.mesh === undefined) return false;
+    const nodeExtras = node.extras ?? {};
+    const colliderType =
+      'colliderType' in nodeExtras
+        ? nodeExtras.colliderType
+        : json.meshes?.[node.mesh]?.extras?.colliderType;
+    return !!colliderType;
+  });

@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented (decisions to confirm: D5 materials, F3 image check)
+Status: in progress | Phases 0-2 implemented (decision to confirm: D5 materials)
 Category: Refactoring, Documentation, Dev tooling
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -742,13 +742,137 @@ As built (2026-10-21, on the branch at `de92474`, whose code is `main`'s `baac01
   rewritten (100 ms of it the debounce), the same for a camera and a texture JSON; each rewrites
   the generated files and logs its lines (G7).
 
-### Phase 1: loss and security (D4's first list)
+### Phase 1: loss and security (D4's first list) — done
 
 A1-A4, H1, F1-F4, each with its test, and the self-check run (`yarn verify:devFiles`) passing.
 
-### Phase 2: the other bugs (D4's second list)
+As built (2026-10-21; section A committed as `93f2edf`, H1 and F after it):
+
+- **A1, A2.** `readAssetJsons` and `collectPipelineAssets` return `{ …, dropped }` (`DroppedAsset`:
+  the JSON and why: not JSON, its schema's first issue, a use's unresolved source, an array's
+  layers, an atlas's layout). `getPruneBlockers` (`command.ts`) keeps the outputs and the lock on
+  an `error`, an `encoderMissing`, a `skipped` public source that's missing (its output may be the
+  only copy of the image) or anything dropped, and the run lists each reason. A remote source
+  and an array or atlas slot whose textures side is off (`src/CONFIG.ts`) have no output by
+  design and don't block. The old "an asset failed" note is one of the blockers.
+- **A3.** `runLock.ts`: `withRunLockAsync` around the prune and `cache.save()` in every
+  `runAssetsCommand` (so the dev server's save waits on `yarn assets`' prune), `O_EXCL`, the
+  owner's pid in the file, taken over when that pid is gone, 30 s then an error naming the file.
+  `removeStaleOutputs(urls, publicDir, { since })`: a file changed since the run started stays;
+  a `*.<pid>.tmp` stays while its pid runs and is deleted otherwise (the old cleanup of
+  leftovers kept). Not handled: two waiters both taking over a dead owner's lock at once.
+- **A4.** `resolveAssetSource`'s public branch returns `{ error }` for a decoded path outside
+  `src/public` and for a malformed escape; every caller already reports it, and under A2 it
+  blocks the prune.
+- **H1.** `devTools/hub/outDir.ts`: `getHubOutDirError` takes a missing or empty folder or an
+  earlier Hub output (one holding `_headers`, `404.html` and `_assets/`: no marker file, so
+  today's `dist-hub/` passes), and refuses the repo root and every folder above it, `src/`,
+  `hub/`, `devTools/`, `docs/`, `node_modules/`, `.git/`, a file and any other non-empty folder.
+  The CLI checks before the embeds' `yarn sbp`, `buildHub` before its work and again before the
+  swap. A public build writes into `<out>.tmp-<pid>` (a sibling: a rename can't cross disks) and
+  `commitHubStagingDir` swaps it in (old output moved aside, put back if the rename fails); a
+  diagnostic or a throw in a write step leaves the last output and removes the staging folder.
+  `buildGuard.test.ts` runs one full build with a failing embed copy (about 2 s).
+- **F1.** The self-check writes its scenes' own `selfCheckScene.ts` into its folder (directly:
+  dev files never write code), runs as `yarn verify:devFiles` (`package.json`, `readme.md`, the
+  root `CLAUDE.md`), and prints through `verify/progressLog.ts`' `out`. 60 checks pass, with new
+  ones for F2-F4 and the image check. No hook runs it.
+- **F2.** A host name is loopback only as `localhost`, `*.localhost` or a loopback IP
+  (`net.isIP`).
+- **F3.** Three parts: `DEV_FILES_DENIED_NAMES` refuses `package.json`, `tsconfig*.json` and
+  `jsconfig*.json` in any folder; `devFiles/format.ts` formats with the root's `.prettierrc` only
+  (`resolveConfig(file, { config })`), shared with the self-check; and (confirmed) a staged image
+  must start with its format's signature (`imageCheck.ts`, PNG, JPEG, WebP), else the new code
+  `INVALID_IMAGE` (422) on `DevFilesErrorCode` (`aekasha/debug`: an engine minor item for D2).
+  `config.test.ts` replays Phase 0's chain in a temp folder.
+- **F4.** `isLocalRequest` also needs no proxy header: the plan's `Forwarded`, `X-Forwarded-For`
+  and `Via`, plus `X-Forwarded-Host` and `X-Real-IP`. A developer behind their own local reverse
+  proxy needs `AEK_DEV_FILES_LAN=true` to write; the refusal says so.
+- **Docs:** the prune rule in the root `CLAUDE.md`, `assetPipeline/CLAUDE.md`,
+  `asset-optimization.md` and the Hub's asset optimization guide (D15's page item, done here); the
+  `hub:build` lines in the root and `hub/CLAUDE.md`; the dev files rules in `devFiles/CLAUDE.md`.
+- `yarn test`: 22 `it.fails` left (Phase 0's 31 less A1 ×2, A2 ×2, A4 ×2, H1, F2 ×2), each for a
+  later phase. `yarn hub:build` passed with Phase 0's five warnings.
+
+### Phase 2: the other bugs (D4's second list) — done
 
 G1-G6, A5, A6, F5, F6, H2, H3, V2, V4-V6, B3, B4, with D14's tests for them.
+
+As built (2026-10-21; uncommitted at the end of the session, in five sections: the gatherer,
+the asset pipeline, the dev files, the Hub, verify and sbp):
+
+- **G1, G2, G12.** Every duplicate id sets the error (the first file keeps it; pass 2 skips the
+  duplicate's file, `registeredSceneFiles`). A file that doesn't parse, or any other throw while
+  reading it, fails the gather with the parser's message (`logJSONError` sets the error; a scene
+  file no longer aborts the whole gather). An id a scene lists that no asset JSON has fails it
+  (`reportUnknownId`, all nine kinds; unlisted impostors still only warn: they bake). No repo data
+  tripped either.
+- **G3.** `writeJsonSchemas` (exported, writes a file only when it changed, logs only then),
+  called by `yarn gatherAppData`, `yarn assets` and `sceneGathererPlugin`'s `configureServer`
+  (each restart). `copyDecoders.ts` copies only when run as a script.
+- **G4.** `gatherOutput.ts`: `toKey` quotes any non-identifier (scene ids too), paths go through
+  `toStringLiteral`.
+- **G5.** Pass 2 applies the scene's own latest save entry and drops `__saveData` from the output;
+  production strips `debugData` after the merge (textures, materials, imports, PostFX).
+- **G6.** `cameras: []` gets the auto camera; a material without nodes ships no `nodes: {}` (the
+  generated data loses two lines, dev and production); a debug scene isn't counted for the
+  production TSL / PostFX loaders (no repo loader changed: compared in a scratch worktree).
+- **A5.** three's version in a `lodChain` GLB's key only (`getPackageVersion`, `cache.ts`; no
+  repo asset has a chain, so no key changed); `writeOutput` rewrites a present file of another
+  size; the `ktx` install's staging folder goes on any throw, and a working copy another process
+  installed meanwhile is kept (`--force` still replaces it); `ktx --version` 15 s and `ktx create`
+  15 min, then killed. No test for the install race and the timeouts.
+- **A6.** `hasColliderNodes` reads the mesh's extras under the node's (node wins), as
+  GLTFLoader merges them.
+- **F5.** Each target is checked again right before the renames (the backup's hash, or still
+  missing): a change after the plan is `CONFLICT` (a plain JSON write without `expectedHash`
+  included, a small window). A server's stage is `.cache/dev-files/stage/<pid>-<id>/`, removed
+  on close or by a later server once the pid is gone. A JSON whose compact form is over 32 MB is
+  refused before Prettier.
+- **F6.** A broken symlink folder is `FORBIDDEN_PATH`; `__saveData` read by own keys, `__proto__`
+  refused; the client (`_dbg__DevFiles.ts`, p618's file) uses a zero hash when the read has no
+  hash header, so the write is a `CONFLICT`; an unknown route is `BAD_REQUEST`; `historySize` in
+  the protocol summary. The Host / Origin check moved to `devTools/hostCheck.ts`
+  (`getHostAndOriginError`), wrapped by `devFiles/security.ts` and used by `hubPlugin.ts`.
+- **H2.** The shell's placeholders by own keys; `resolveHubRoute` 404s a NUL byte;
+  `hubPreview.ts` answers a bad escape with 400, catches any throw (500), handles stream errors
+  and listens on `localhost`; `tryDecodeURI` makes a bad escape in `api:`, `repo:` or an image an
+  error at its line; issue files whose slugs collide are an error and the second gets no page.
+- **H3.** The watching starts with the first build (Vite's events during it are checked against
+  its sources after it); a request waits for the run in progress only (`currentRun`); editor
+  temp files and dot files trigger no run; a removed static asset's copy is removed; the watcher
+  also closes on `closeBundle` (middleware mode). Phase 0's `version/` reload: the page's "local
+  changes" comes from `git status`, which an edit and its undo flip; the plugin keeps the first
+  build's commit, local changes and time (`buildHub`'s `buildTime` option became `build`). Checked
+  on a real dev server; no unit test until Phase 6's `createHubDevRunner`.
+- **V2.** A baseline that's there but unreadable or of another format stops the run (`RunAbort`:
+  exit 2 after the run so far is written and the browser closed), unless `--update`; an input
+  script problem fails its scene; a `scenes.config.ts` entry naming no scene of the data, and a
+  `VITE_APP_ENV` other than development / test, fail the start; `baseline.json`, `last-run.json`
+  and the committed baselines are written atomically (`devTools/files.ts`' `writeFileAtomic`,
+  which the asset cache now uses too: K3's start).
+- **V4.** Every `page.evaluate` in `runOne` has a timeout (`withTimeout`: the bridge's own plus
+  60 s, or 60 s).
+- **V5.** `verify:embed` takes a free port on `localhost`, loads and waits for the page inside the
+  scenario's `try`, and polls each state for up to 10 s instead of fixed 400 ms settles (the
+  pause check keeps its 400 ms window: it measures).
+- **V6.** `diffSystemOrders` counts, so a system registered twice shows; `NOT_YET_INSTALLED` is
+  gone from `moduleSideEffects.test.ts` (no allow-list); `debugInProduction`'s fixtures use
+  today's paths.
+- **B3.** A `groups` key must name a possible group (an installed package, an existing engine
+  folder, `app`, `toolkit`, `vite`, `other`) and a `modules` key an existing file or folder.
+- **B4.** `buildAppBundle` removed; `buildBundles` rethrows the build's error and only reports a
+  failed dev gather after it; both build plugins skip `closeBundle` after a failed build
+  (`buildEnd` / `renderError`). `sbp/` imports nothing of `verify/`: the progress log moved to
+  `devTools/progressLog.ts`, `bundleGrowth.ts` into `sbp/`, `BuildModule` / `EmittedAsset` into
+  `sbp/bundleModel.ts`.
+- **Checks:** `yarn test` 996 passed, no `it.fails` left. `yarn verify:devFiles` 61 / 61.
+  `yarn verify:embed --no-build` 3 / 3. `yarn verify:baselines`: B2's `EngineRapier.js` swap
+  alone (Phase 7), no debug code. `yarn verify:scenes --only scene01 --config quick` passes on
+  Phase 0's baseline. `yarn hub:build` with Phase 0's warnings. `yarn assets` all cache hits.
+- **Docs:** the root `CLAUDE.md` (data pipeline steps 2 and 4, the side effects test, the
+  progress log), the nested `CLAUDE.md` of assetPipeline, devFiles, hub, verify and sbp, the
+  Hub's scenes-and-assets guide and `asset-optimization.md`.
 
 ### Phase 3: the schemas (D5)
 

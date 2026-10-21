@@ -6,7 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import { ROOT } from '../assetPipeline/sources';
-import { isGrowthToFlag } from '../verify/bundleGrowth';
+import { isGrowthToFlag } from './bundleGrowth';
 import { BUNDLE_FORMAT_VERSION, type BundleBaseline } from './bundleModel';
 
 export const BUNDLE_BASELINE_FILE = path.join(ROOT, 'devTools/verify/baselines/bundle.json');

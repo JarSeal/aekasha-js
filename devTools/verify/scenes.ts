@@ -57,9 +57,10 @@ import {
   type VerifyConfigDef,
   type VerifyConfigName,
 } from './scenes.config';
-import { out, PROGRESS_LOG_WATCH } from './progressLog';
+import { out, PROGRESS_LOG_WATCH } from '../progressLog';
 import { compareSnapshots } from './snapshotDiff';
 import { diffSystemOrders } from './systemOrder';
+import { writeFileAtomic } from '../files';
 
 /** Bump when the baseline file's shape changes: an old one is then ignored */
 const BASELINE_FORMAT_VERSION = 1;
@@ -248,6 +249,12 @@ const launchBrowser = async (browser: VerifyBrowser, useWebGL: boolean, headed: 
 };
 
 const startOwnServer = async () => {
+  // Only a development or test build installs the test bridge: in another, every page would
+  // wait 120 s for it (p619 §1.4 V2)
+  const env = process.env.VITE_APP_ENV;
+  if (env && env !== 'development' && env !== 'test') {
+    fail(`VITE_APP_ENV=${env}: the runner's server needs development or test (unset it)`);
+  }
   process.env.VITE_APP_ENV ??= 'development';
   delete process.env.AEK_DEV_HTTPS;
   const { createServer } = await import('vite');
@@ -282,13 +289,49 @@ const getPaths = (resultDir: ResultDir) => {
   };
 };
 
-const readBaseline = (backend: Backend): BaselineFile => {
-  const file = readJSON<BaselineFile>(getPaths(backend).baselineFile);
-  if (!file || file.formatVersion !== BASELINE_FORMAT_VERSION) {
-    return { formatVersion: BASELINE_FORMAT_VERSION, entries: {} };
+/**
+ * Stops the whole run, not one page (a baseline it can't compare with): the run so far is written
+ * and the browser and server closed before the exit (2)
+ */
+class RunAbort extends Error {}
+
+/**
+ * The backend's baseline; empty when there's none (every run is NEW). One that's there but
+ * unreadable or of another format stops the run (p619 §1.4 V2: it read as none, so every run was
+ * NEW and passed), unless `--update` records a new one over it.
+ */
+const readBaseline = (backend: Backend, isRecording: boolean): BaselineFile => {
+  const empty = { formatVersion: BASELINE_FORMAT_VERSION, entries: {} };
+  const baselineFile = getPaths(backend).baselineFile;
+  if (!fs.existsSync(baselineFile)) return empty;
+  const file = readJSON<BaselineFile>(baselineFile);
+  const problem = !file
+    ? "isn't readable JSON"
+    : file.formatVersion !== BASELINE_FORMAT_VERSION
+      ? `is format ${String(file.formatVersion)}, this runner reads ${BASELINE_FORMAT_VERSION}`
+      : null;
+  if (!problem) return file!;
+  const where = path.relative(ROOT, baselineFile);
+  if (isRecording) {
+    out(`${YELLOW}${where} ${problem}: --update records a new one${RESET}`);
+    return empty;
   }
-  return file;
+  throw new RunAbort(
+    `${where} ${problem}. Record a new one: yarn verify:scenes --update (on main)`
+  );
 };
+
+/** A page call that can hang (a stuck GPU readback): rejected after `ms`, so the run goes on */
+const withTimeout = <T>(promise: Promise<T>, ms: number, what: string): Promise<T> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${what}: no answer in ${ms / 1000} s`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+};
+
+/** A page call's limit beyond the bridge's own (its `timeoutMs`), and for the calls without one */
+const EVALUATE_MARGIN_MS = 60_000;
 
 const runKey = (sceneId: string, config: VerifyConfigName) => `${sceneId}|${config}`;
 const snapshotFileName = (sceneId: string, config: VerifyConfigName) => `${sceneId}.${config}.png`;
@@ -317,18 +360,18 @@ type LoadContext = {
   /** `--update`: nothing is compared with the baseline, so a run that passes the other checks
    * (errors, timeouts, the probe config) is recorded even where the baseline differs */
   isRecording: boolean;
-  /** Read on first use, per backend */
+  /** Read on first use, per backend (`readBaseline`) */
   baselines: Map<Backend, BaselineFile>;
   /** What the first page rendered on (WebGPU falls back to WebGL2 where it isn't available) */
   backend: Backend | null;
 };
 
-type BaselineContext = Pick<LoadContext, 'baselines'>;
+type BaselineContext = Pick<LoadContext, 'baselines' | 'isRecording'>;
 
 const getBaseline = (ctx: BaselineContext, backend: Backend) => {
   let baseline = ctx.baselines.get(backend);
   if (!baseline) {
-    baseline = readBaseline(backend);
+    baseline = readBaseline(backend, ctx.isRecording);
     ctx.baselines.set(backend, baseline);
   }
   return baseline;
@@ -424,13 +467,19 @@ const runOne = async (
       .then(() => true)
       .catch(() => false);
     if (!hasBridge) {
-      result.failures.push("the test bridge never installed (the engine didn't boot)");
+      result.failures.push(
+        "the test bridge never installed (the engine didn't boot, or the server isn't a development or test build)"
+      );
       return finish();
     }
 
-    const ready: TestBridgeSceneReady = await page.evaluate(
-      (timeoutMs) => window.__AEK_TEST__!.whenSceneReady({ timeoutMs }),
-      READY_TIMEOUT_MS
+    const ready: TestBridgeSceneReady = await withTimeout(
+      page.evaluate(
+        (timeoutMs) => window.__AEK_TEST__!.whenSceneReady({ timeoutMs }),
+        READY_TIMEOUT_MS
+      ),
+      READY_TIMEOUT_MS + EVALUATE_MARGIN_MS,
+      'whenSceneReady'
     );
     if (ready.status !== 'READY') {
       result.failures.push(`the scene didn't finish loading in ${READY_TIMEOUT_MS / 1000} s`);
@@ -451,9 +500,13 @@ const runOne = async (
     if (def.mode === 'PROD_TEST') {
       await page.waitForTimeout(PROD_TEST_SETTLE_MS);
     } else {
-      const probe: TestBridgeProbeResult = await page.evaluate(
-        (timeoutMs) => window.__AEK_TEST__!.whenProbeDone({ timeoutMs, freeze: true }),
-        PROBE_TIMEOUT_MS
+      const probe: TestBridgeProbeResult = await withTimeout(
+        page.evaluate(
+          (timeoutMs) => window.__AEK_TEST__!.whenProbeDone({ timeoutMs, freeze: true }),
+          PROBE_TIMEOUT_MS
+        ),
+        PROBE_TIMEOUT_MS + EVALUATE_MARGIN_MS,
+        'whenProbeDone'
       );
       if (probe.status !== 'DONE') {
         result.failures.push(
@@ -481,8 +534,10 @@ const runOne = async (
         } else if (!ctx.isRecording) {
           compareHash(baseline.entries[runKey(sceneId, config)], result, ctx.browserName);
         }
-        const paths: TestBridgeCharacterPaths = await page.evaluate(() =>
-          window.__AEK_TEST__!.getCharacterPaths()
+        const paths: TestBridgeCharacterPaths = await withTimeout(
+          page.evaluate(() => window.__AEK_TEST__!.getCharacterPaths()),
+          EVALUATE_MARGIN_MS,
+          'getCharacterPaths'
         );
         // MAIN_THREAD only: in the worker targets the recorder reads the latched snapshot, whose
         // step depends on the frame timing (p610 D1, p428)
@@ -514,9 +569,10 @@ const runOne = async (
         } else if (sceneConfig.snapshot && 'skip' in sceneConfig.snapshot) {
           result.notes.push(`snapshot skipped: ${sceneConfig.snapshot.reason}`);
         } else {
-          const shot: TestBridgeSnapshot = await page.evaluate(
-            (size) => window.__AEK_TEST__!.snapshot(size),
-            SNAPSHOT_SIZE
+          const shot: TestBridgeSnapshot = await withTimeout(
+            page.evaluate((size) => window.__AEK_TEST__!.snapshot(size), SNAPSHOT_SIZE),
+            EVALUATE_MARGIN_MS,
+            'snapshot'
           );
           await handleSnapshot(
             backend,
@@ -531,7 +587,11 @@ const runOne = async (
     // Last: after the probe's steps (or the prod test settle), so the debug modules that register
     // systems from a lazy chunk have loaded
     if (ctx.browserName === 'chromium') {
-      result.systemOrder = await page.evaluate(() => window.__AEK_TEST__!.getSystemOrder());
+      result.systemOrder = await withTimeout(
+        page.evaluate(() => window.__AEK_TEST__!.getSystemOrder()),
+        EVALUATE_MARGIN_MS,
+        'getSystemOrder'
+      );
       if (!ctx.isRecording) compareSystemOrder(baseline.entries[runKey(sceneId, config)], result);
     }
 
@@ -541,6 +601,7 @@ const runOne = async (
       result.failures.push(`${unallowed.length} error(s) not allowed in scenes.config.ts`);
     }
   } catch (err) {
+    if (err instanceof RunAbort) throw err;
     result.failures.push(`the runner stopped: ${(err as Error).message.split('\n')[0]}`);
   } finally {
     await context?.close().catch(() => undefined);
@@ -604,11 +665,16 @@ const comparePathHash = (
   }
 };
 
-/** A scene's input script, `devTools/verify/inputs/<name>.json` */
+/**
+ * A scene's input script, `devTools/verify/inputs/<name>.json`. A missing or invalid one throws:
+ * that scene's failure, not an exit mid-run (V2: the run wasn't written, the browser not closed)
+ */
 const readInputScript = (name: string): TestBridgeInputScript => {
   const file = path.join(INPUTS_DIR, `${name}.json`);
-  if (!fs.existsSync(file)) fail(`The input script ${path.relative(ROOT, file)} doesn't exist.`);
-  return JSON.parse(fs.readFileSync(file, 'utf8')) as TestBridgeInputScript;
+  const script = readJSON<TestBridgeInputScript>(file);
+  if (!script)
+    throw new Error(`the input script ${path.relative(ROOT, file)} is missing or not JSON`);
+  return script;
 };
 
 const compareSystemOrder = (entry: BaselineEntry | undefined, result: RunResult) => {
@@ -717,7 +783,7 @@ const recordBaseline = (
     baseline.entries[runKey(r.sceneId, r.config)] = entry;
     r.status = 'UPDATED';
   }
-  fs.writeFileSync(paths.baselineFile, `${JSON.stringify(baseline, null, 2)}\n`);
+  writeFileAtomic(paths.baselineFile, `${JSON.stringify(baseline, null, 2)}\n`);
 };
 
 /** Firefox: fails without a Chromium baseline to compare with, and warns when the two Chromium
@@ -753,12 +819,19 @@ const main = async () => {
   const generated = readJSON<{ scenes: Record<string, unknown> }>(GENERATED_DATA);
   if (!generated) fail(`Can't read ${path.relative(ROOT, GENERATED_DATA)}: run yarn gatherAppData`);
   const sceneIds = selectScenes(Object.keys(generated!.scenes), args.only);
+  // A scene renamed in the data would lose its settings (allowed errors, skips) without a word
+  const unknown = Object.keys(SCENE_VERIFY_CONFIG).filter((id) => !(id in generated!.scenes));
+  if (unknown.length) {
+    fail(
+      `scenes.config.ts names scene(s) the data doesn't have: ${unknown.join(', ')} (renamed or removed?)`
+    );
+  }
 
   const isFirefox = args.browser === 'firefox';
   const useWebGL = isFirefox || args.webgl || (isWSL() && !args.headed);
   const requested: Backend = useWebGL ? 'webgl' : 'webgpu';
   const baselines = new Map<Backend, BaselineFile>();
-  if (isFirefox) checkChromiumBaselines({ baselines });
+  if (isFirefox) checkChromiumBaselines({ baselines, isRecording: false });
   const own = args.url ? null : await startOwnServer();
   const baseUrl = own ? own.url : args.url!;
   const browser = await launchBrowser(args.browser, useWebGL, args.headed);
@@ -794,6 +867,7 @@ const main = async () => {
   };
   const results: RunResult[] = [];
   const started = Date.now();
+  let aborted: string | null = null;
   try {
     for (const sceneId of sceneIds) {
       const sceneResults: RunResult[] = [];
@@ -813,15 +887,17 @@ const main = async () => {
         out(`        ${YELLOW}! the physics targets hash differently: ${mismatch}${RESET}`);
       results.push(...sceneResults);
     }
+  } catch (err) {
+    if (!(err instanceof RunAbort)) throw err;
+    aborted = err.message;
   } finally {
     await close();
   }
 
   const backend = ctx.backend ?? requested;
-  if (args.update) recordBaseline(backend, getBaseline(ctx, backend), results, commit);
+  if (args.update && !aborted) recordBaseline(backend, getBaseline(ctx, backend), results, commit);
   const paths = getPaths(isFirefox ? 'firefox' : backend);
-  fs.mkdirSync(path.dirname(paths.lastRunFile), { recursive: true });
-  fs.writeFileSync(
+  writeFileAtomic(
     paths.lastRunFile,
     `${JSON.stringify({ commit, at: new Date().toISOString(), baseUrl, browser: args.browser, backend, results }, null, 2)}\n`
   );
@@ -833,7 +909,10 @@ const main = async () => {
       `${count('SKIPPED')} skipped in ${formatDuration(Date.now() - started)} ` +
       `${DIM}(${path.relative(ROOT, paths.lastRunFile)})${RESET}`
   );
+  if (aborted) fail(`The run stopped: ${aborted}`);
   process.exit(failed ? 1 : 0);
 };
 
-void main();
+main().catch((err: Error) =>
+  fail(err instanceof RunAbort ? err.message : err.stack ?? err.message)
+);

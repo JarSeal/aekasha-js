@@ -42,14 +42,21 @@ export type GeneratedOutput = {
   loaders: GeneratedLoaders;
 };
 
-/** An id as an object key: quoted when it starts with a digit (the lint rules) */
-const toKey = (id: string) => (/^[0-9]/.test(id) ? `'${id}'` : id);
+/** A single-quoted TS string literal (the lint's quotes) of any text: a path or an id */
+const toStringLiteral = (text: string) =>
+  `'${JSON.stringify(text).slice(1, -1).replace(/\\"/g, '"').replace(/'/g, "\\'")}'`;
+
+/**
+ * An id as an object key: bare when it's an identifier, else quoted (the schemas allow `-`, `.`, a
+ * space or a leading digit, p619 §1.4 G4)
+ */
+const toKey = (id: string) => (/^[A-Za-z_$][\w$]*$/.test(id) ? id : toStringLiteral(id));
 
 const formatLoaderObject = (name: string, loaders: Record<string, string>, prefix: string) => {
   const entries = Object.entries(loaders);
   if (!entries.length) return `export const ${name} = {};\n`;
   return `export const ${name} = {\n${entries
-    .map(([id, file]) => `  ${toKey(id)}: () => import('${prefix}${file}'),\n`)
+    .map(([id, file]) => `  ${toKey(id)}: () => import(${toStringLiteral(prefix + file)}),\n`)
     .join('')}};\n`;
 };
 
@@ -74,8 +81,8 @@ export const formatGeneratedAppFns = (loaders: GeneratedLoaders, prefix: string)
       scenes
         .map(
           ([sceneId, file]) =>
-            `  ${sceneId}: async ({ sceneData, assets }) => {\n` +
-            `    const module = await import('${prefix}${file}');\n` +
+            `  ${toKey(sceneId)}: async ({ sceneData, assets }) => {\n` +
+            `    const module = await import(${toStringLiteral(prefix + file)});\n` +
             `    await (\n` +
             `      module as {\n` +
             `        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;\n` +

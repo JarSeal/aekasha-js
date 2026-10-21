@@ -26,13 +26,20 @@ type JsonObject = Record<string, unknown>;
 const isPlainObject = (value: unknown): value is JsonObject =>
   !!value && typeof value === 'object' && !Array.isArray(value);
 
-/** Throws BAD_REQUEST unless the write's `saveData` is `{ sceneId, entry }` */
+/** Throws BAD_REQUEST unless the write's `saveData` is `{ sceneId, entry, historySize }` */
 export const checkSaveDataRequest = (writePath: string, saveData: unknown) => {
   if (!isPlainObject(saveData)) {
-    throw new DevFilesError('BAD_REQUEST', `${writePath}: saveData must be { sceneId, entry }`);
+    throw new DevFilesError(
+      'BAD_REQUEST',
+      `${writePath}: saveData must be { sceneId, entry, historySize }`
+    );
   }
   if (typeof saveData.sceneId !== 'string' || !saveData.sceneId) {
     throw new DevFilesError('BAD_REQUEST', `${writePath}: saveData.sceneId must be a string`);
+  }
+  // Assigning `__proto__` sets the object's prototype: the entry would be lost (F6)
+  if (saveData.sceneId === '__proto__') {
+    throw new DevFilesError('BAD_REQUEST', `${writePath}: "__proto__" isn't a scene id`);
   }
   if (!isPlainObject(saveData.entry)) {
     throw new DevFilesError('BAD_REQUEST', `${writePath}: saveData.entry must be an object`);
@@ -129,7 +136,10 @@ export const applySaveDataWrite = async (
     invalidFile(repoPath, '__saveData', 'Must be an object');
   }
   const allSaveData = (file.__saveData ?? {}) as JsonObject;
-  const entries = allSaveData[sceneId] ?? [];
+  // Own keys only: `toString` is a scene id like any other (F6)
+  const entries = Object.prototype.hasOwnProperty.call(allSaveData, sceneId)
+    ? allSaveData[sceneId]
+    : [];
   if (!Array.isArray(entries)) {
     return invalidFile(repoPath, `__saveData.${sceneId}`, 'Must be a list');
   }

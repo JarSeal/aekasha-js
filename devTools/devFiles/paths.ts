@@ -6,8 +6,9 @@ import { DevFilesError } from './http';
 /**
  * The path policy (p342 §2.3): a path is repo-relative and `/`-separated, inside one of the roots
  * and none of the denied folders, with an image or JSON extension (never code: Vite would run a
- * written `.ts`), no dot segment and no `node_modules`. Its nearest existing folder's real path
- * must still be inside the root (no symlink out), and an existing target must be a plain file.
+ * written `.ts`), no dot segment, no `node_modules` and no config file name
+ * ({@link DEV_FILES_DENIED_NAMES}). Its nearest existing folder's real path must still be inside
+ * the root (no symlink out), and an existing target must be a plain file.
  */
 
 export const DEV_FILES_ROOTS = ['src/app/', 'src/toolkit/', 'src/public/'];
@@ -18,6 +19,13 @@ export const DEV_FILES_DENIED_ROOTS = [
   'src/public/basis/',
 ];
 export const DEV_FILES_EXTENSIONS = ['.json', '.png', '.jpg', '.jpeg', '.webp'];
+/**
+ * File names tools read as their config in any folder (p619 §1.4 F3): Prettier loads the module a
+ * `package.json`'s `"prettier"` key names, Vite and Node resolve imports by a `package.json`, and
+ * esbuild and TypeScript read the nearest `tsconfig.json`. Never written, whatever the folder.
+ * (`.prettierrc*`, `.babelrc` and the like are dot files, refused anyway.)
+ */
+export const DEV_FILES_DENIED_NAMES = [/^package\.json$/i, /^(ts|js)config(\..+)?\.json$/i];
 
 export type DevFilePath = {
   /** Repo-relative, `/`-separated */
@@ -70,6 +78,10 @@ const checkPathString = (input: unknown) => {
   if (!DEV_FILES_EXTENSIONS.includes(ext)) {
     forbid(input, `the extension must be one of ${DEV_FILES_EXTENSIONS.join(', ')}`);
   }
+  const name = segments[segments.length - 1];
+  if (DEV_FILES_DENIED_NAMES.some((pattern) => pattern.test(name))) {
+    forbid(input, `"${name}" is a tool's config file, which a tool would load`);
+  }
   return { repoPath: input, root: root as string, isJson: ext === '.json' };
 };
 
@@ -81,7 +93,9 @@ export const resolveDevFilePath = async (input: unknown): Promise<DevFilePath> =
   // Symlinks: the nearest existing folder must really be inside the root, outside the denied ones
   const rootReal = await fs.realpath(toAbs(root)).catch(() => toAbs(root));
   const ancestor = await findExistingAncestor(path.dirname(absPath));
-  const ancestorReal = await fs.realpath(ancestor);
+  // A dangling symlink exists for lstat but has no real path: refused, not a 500 (F6)
+  const ancestorReal = await fs.realpath(ancestor).catch(() => null);
+  if (ancestorReal === null) return forbid(repoPath, 'its folder is a broken symlink');
   if (!isInside(rootReal, ancestorReal)) forbid(repoPath, `its folder leads out of ${root}`);
   for (const denied of DEV_FILES_DENIED_ROOTS) {
     const deniedReal = await fs.realpath(toAbs(denied)).catch(() => null);

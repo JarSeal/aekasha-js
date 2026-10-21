@@ -65,8 +65,9 @@ const run = async () => {
     verbosity: 'full',
   });
 
-  // Imported here: it compiles the JSON schemas on load
-  const { gatherSceneData } = await import('./gatherAppData');
+  // Imported here: the schemas and the gather are only needed after the run
+  const { gatherSceneData, writeJsonSchemas } = await import('./gatherAppData');
+  writeJsonSchemas();
   const isGathered = gatherSceneData({ pipeline: pipelineRun });
   if (hasErrors || overBudget.length || !isGathered) process.exitCode = 1;
 };

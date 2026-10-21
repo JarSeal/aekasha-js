@@ -15,6 +15,11 @@ import { ROOT } from './sources';
  */
 
 const TMP_DIR = path.join(ROOT, '.cache', 'asset-pipeline', 'tmp');
+/**
+ * One `ktx create`: a large UASTC encode with RDO takes minutes, a hung one would block the dev
+ * server's queue for good (p619 §1.4 A5)
+ */
+const KTX_CREATE_TIMEOUT_MS = 15 * 60_000;
 
 export type KtxSettings = Exclude<ResolvedTextureSettings, { codec: 'none' }>;
 
@@ -101,10 +106,19 @@ const runKtxCreate = async (
       await promisify(execFile)(tool.path, ['create', ...args, ...inputFiles, outputFile], {
         env: getKtxEnv(tool),
         maxBuffer: 16 * 1024 * 1024,
+        timeout: KTX_CREATE_TIMEOUT_MS,
+        killSignal: 'SIGKILL',
       });
     } catch (error) {
-      const { stderr, stdout, message } = error as { stderr?: string; stdout?: string } & Error;
-      throw new Error(`ktx create ${args.join(' ')} failed: ${stderr || stdout || message}`);
+      const { stderr, stdout, message, killed } = error as {
+        stderr?: string;
+        stdout?: string;
+        killed?: boolean;
+      } & Error;
+      const reason = killed
+        ? `no result in ${KTX_CREATE_TIMEOUT_MS / 60_000} min, stopped`
+        : stderr || stdout || message;
+      throw new Error(`ktx create ${args.join(' ')} failed: ${reason}`);
     }
     return new Uint8Array(fs.readFileSync(outputFile));
   } finally {

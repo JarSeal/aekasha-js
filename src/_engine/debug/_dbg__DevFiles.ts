@@ -178,7 +178,9 @@ export const _readDevFile = async (path: string): Promise<DevFileRead | null> =>
     if (err instanceof DevFilesError && err.code === 'NOT_FOUND') return null;
     throw err;
   }
-  const sha256 = response.headers.get(DEV_FILES_HASH_HEADER) ?? '';
+  // Without the header (a proxy dropped it) the hash is unknown: a write with zeros fails with
+  // CONFLICT and the file's real hash, as after a change on disk, not BAD_REQUEST (p619 F6)
+  const sha256 = response.headers.get(DEV_FILES_HASH_HEADER) ?? '0'.repeat(64);
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (!path.toLowerCase().endsWith('.json')) return { path, sha256, bytes };
   try {

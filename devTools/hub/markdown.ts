@@ -326,6 +326,18 @@ export const resolveHubLink = (href: string, env: HubMarkdownEnv, file: string, 
 
 export const isHubLink = (href: string) => href.startsWith(HUB_LINK_PREFIX);
 
+/** `decodeURI`, or null for a malformed escape (a stray `%`), which threw out of the whole build */
+const tryDecodeURI = (text: string) => {
+  try {
+    return decodeURI(text);
+  } catch {
+    return null;
+  }
+};
+
+const reportBadEscape = (env: HubMarkdownEnv, file: string, line: number, url: string) =>
+  env.diag.error(file, line, `${url}: a "%" not followed by two hex digits (write %25 for a "%")`);
+
 const API_LINK_PREFIX = 'api:';
 
 export const isApiLink = (href: string) => href.startsWith(API_LINK_PREFIX);
@@ -335,7 +347,12 @@ export const isApiLink = (href: string) => href.startsWith(API_LINK_PREFIX);
  * error (with its candidates), and the link points nowhere (`#`)
  */
 export const resolveApiLink = (href: string, env: HubMarkdownEnv, file: string, line: number) => {
-  const ref = decodeURI(href.slice(API_LINK_PREFIX.length)).trim();
+  const decoded = tryDecodeURI(href.slice(API_LINK_PREFIX.length));
+  if (decoded === null) {
+    reportBadEscape(env, file, line, href);
+    return '#';
+  }
+  const ref = decoded.trim();
   if (!env.apiLinks) {
     env.diag.warn(file, undefined, `api: links are unchecked here: the API docs didn't build`);
     return '#';
@@ -366,7 +383,12 @@ export const openInEditorHref = (file: string, line: number) =>
  * @returns the href, and whether it opens the editor
  */
 export const resolveRepoLink = (href: string, env: HubMarkdownEnv, file: string, line: number) => {
-  const [target, hash = ''] = decodeURI(href.slice(REPO_LINK_PREFIX.length)).split('#');
+  const decoded = tryDecodeURI(href.slice(REPO_LINK_PREFIX.length));
+  if (decoded === null) {
+    reportBadEscape(env, file, line, href);
+    return { href: '#', isEditor: false };
+  }
+  const [target, hash = ''] = decoded.split('#');
   const source = path.resolve(ROOT, target.replace(/^\/+/, ''));
   if (
     !source.startsWith(ROOT + path.sep) ||
@@ -413,7 +435,12 @@ const CONVERTED_IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg'];
 
 const resolveImage = (src: string, env: HubMarkdownEnv, line: number) => {
   const [file] = src.split(/[?#]/);
-  const source = path.resolve(path.dirname(env.file), decodeURI(file));
+  const decoded = tryDecodeURI(file);
+  if (decoded === null) {
+    reportBadEscape(env, env.file, line, src);
+    return src;
+  }
+  const source = path.resolve(path.dirname(env.file), decoded);
   if (!fs.existsSync(source)) {
     env.diag.error(env.file, line, `Image not found: ${src}`);
     return src;

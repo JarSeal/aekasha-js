@@ -62,6 +62,9 @@ export type ShellValues = ShellSiteValues & ShellPageValues;
 const TOC_LEVELS = [2, 3];
 const TOC_MIN_HEADINGS = 3;
 
+/** Own keys only: `key in` would find `constructor` and `toString` on Object.prototype (H2) */
+const hasOwn = (object: object, key: string) => Object.prototype.hasOwnProperty.call(object, key);
+
 export const fillShell = (
   shell: string,
   shellFile: string,
@@ -72,7 +75,7 @@ export const fillShell = (
   shell.replace(
     PLACEHOLDER_REGEX,
     (match, key: string, arg: string | undefined, offset: number) => {
-      if (arg !== undefined && key in helpers) {
+      if (arg !== undefined && hasOwn(helpers, key)) {
         return helpers[key as keyof HubMarkupHelpers](
           arg,
           values.root,
@@ -80,7 +83,7 @@ export const fillShell = (
           lineAt(shell, offset)
         );
       }
-      if (arg === undefined && key in values) return values[key as keyof ShellValues];
+      if (arg === undefined && hasOwn(values, key)) return values[key as keyof ShellValues];
       diag.error(shellFile, lineAt(shell, offset), `Unknown placeholder ${match}`);
       return '';
     }

@@ -14,7 +14,13 @@ import {
   type KtxProvider,
   type KtxSettings,
 } from './ktxEncode';
-import { getCacheKey, type CacheEntry, type CacheHit, type PipelineCache } from './cache';
+import {
+  getCacheKey,
+  getPackageVersion,
+  type CacheEntry,
+  type CacheHit,
+  type PipelineCache,
+} from './cache';
 import { hasColliderNodes, listExternalGLTFFiles, readGLTFJson, type GLTFJson } from './gltfJson';
 import { KTX_VERSION } from './ktxTool';
 import {
@@ -407,7 +413,8 @@ const runAsset = async (
     const importTextures = !!asset.importTextures;
     // Only built with the mesh side on (else the runtime generates the chains), and only in the
     // key when set: the keys of the assets without one don't change. The simplifier is engine
-    // code and the format is what the runtime reads, so both versions are in it too.
+    // code and the format is what the runtime reads, so both versions are in it too, and so is
+    // three's: the simplifier welds with its `mergeVertices` (p619 §1.4 A5).
     const lodChain = settings.mesh ? asset.lodChain : undefined;
     keyInput = {
       type: 'importedAsset',
@@ -424,6 +431,7 @@ const runAsset = async (
                 options: lodChain,
                 simplifier: LOD_SIMPLIFY_VERSION,
                 format: GLTF_LOD_FORMAT_VERSION,
+                three: getPackageVersion('three'),
               },
             }
           : {}),
