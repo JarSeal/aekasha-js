@@ -3,7 +3,7 @@ import fs from 'fs';
 /**
  * Image I/O and resizing for the pipeline (p300 DD5, §4). sharp only reads and writes files; the
  * maths runs in plain JS on floats (0..1), colour channels linear, and is quantized to 8 bits
- * once, when written. The arithmetic matches Phase 1's (`phase1Variants.ts`), so the same source
+ * once, when written. The arithmetic matches Phase 1's (`fixtures/assetCompareVariants.ts`), so the same source
  * and settings give the same encoder input, byte for byte.
  */
 

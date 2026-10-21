@@ -11,7 +11,7 @@ import { ROOT } from './sources';
  * KTX2 encoding with the `ktx` CLI (p300 DD4): an image is written as an 8-bit PNG and encoded
  * by `ktx create`. The output depends only on the pixels and the options (not on the file
  * names), and `ktx` records the options in the order given (`KTXwriterScParams`), so the
- * argument order is Phase 1's (`phase1Variants.ts`), to reproduce its files byte for byte.
+ * argument order is Phase 1's (`fixtures/assetCompareVariants.ts`), to reproduce its files byte for byte.
  */
 
 const TMP_DIR = path.join(ROOT, '.cache', 'asset-pipeline', 'tmp');

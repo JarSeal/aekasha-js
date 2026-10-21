@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { collectPipelineAssets, readAssetJsons, type DroppedAsset } from './assets';
 import { BUDGET_FIX, getBudgetViolations } from './budgets';
-import { createPipelineCache } from './cache';
+import { createPipelineCache, saveKeyMemo } from './cache';
 import { getResultFigures, isKtxOnlyAsset } from './generated';
 import { createKtxProvider } from './ktxEncode';
 import { KTX_FIX } from './ktxTool';
@@ -436,6 +436,8 @@ export const runAssetsCommand = async (opts: AssetsCommandOpts): Promise<AssetsC
     }
     cache.save();
   });
+  // Outside the lock: a cache of this process's keys, for the next one
+  saveKeyMemo();
 
   const overBudget = new Map(
     [...pipelineRun.results].flatMap(([key, result]) => {

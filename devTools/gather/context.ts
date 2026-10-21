@@ -15,6 +15,7 @@ import type {
   TextureAtlasSlotTexture,
 } from '../../src/_engine/schemas';
 import type { PipelineRun } from '../assetPipeline/run';
+import { listSourceFiles } from '../files';
 import type { createSettingsResolver } from '../assetPipeline/settings';
 import type { GeneratedLoaders } from './output';
 import type { EngineMeshAsset, EngineSceneAsset } from './engineSchemas';
@@ -123,14 +124,15 @@ export const createRegistries = (): { registries: Registries; taken: TakenIds } 
   },
 });
 
-/** The walk's files bucketed by gathered type, once (paths from `srcDir`) */
+/** The walk's files bucketed by gathered type, once (paths from `srcDir`, the outputs' folders
+ * skipped) */
 export const listGatheredFiles = (srcDir: string): Record<GatheredJsonType, string[]> => {
   const types = Object.keys(GATHERED_SUFFIXES) as GatheredJsonType[];
   const files = Object.fromEntries(types.map((type) => [type, [] as string[]])) as Record<
     GatheredJsonType,
     string[]
   >;
-  for (const file of fs.readdirSync(srcDir, { recursive: true }) as string[]) {
+  for (const file of listSourceFiles(srcDir)) {
     const type = types.find((key) => file.endsWith(GATHERED_SUFFIXES[key]));
     if (type) files[type].push(file);
   }

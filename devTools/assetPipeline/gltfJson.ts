@@ -19,11 +19,10 @@ export type GLTFJson = {
   images?: { uri?: string }[];
 };
 
-/**
- * Throws for a file that isn't a .glb or a .gltf's JSON. A .glb's binary chunk isn't read: the
- * dev server reads every GLB's JSON on each asset change (Phase 3).
- */
-export const readGLTFJson = (file: string): GLTFJson => {
+/** Parsed JSONs by file and stats: a run reads each GLB's for its key and its source files */
+const jsonMemo = new Map<string, { stamp: string; json: GLTFJson }>();
+
+const parseGLTFJson = (file: string): GLTFJson => {
   const fd = fs.openSync(file, 'r');
   try {
     const header = Buffer.alloc(20);
@@ -43,6 +42,21 @@ export const readGLTFJson = (file: string): GLTFJson => {
   } finally {
     fs.closeSync(fd);
   }
+};
+
+/**
+ * A .glb's or a .gltf's JSON, read once while the file doesn't change (the result is shared:
+ * don't change it). Throws for a file that isn't a .glb or a .gltf's JSON. A .glb's binary chunk
+ * isn't read: the dev server reads every GLB's JSON on each asset change.
+ */
+export const readGLTFJson = (file: string): GLTFJson => {
+  const stat = fs.statSync(file);
+  const stamp = `${stat.size}\0${stat.mtimeMs}\0${stat.ctimeMs}\0${stat.ino}`;
+  const memoized = jsonMemo.get(file);
+  if (memoized?.stamp === stamp) return memoized.json;
+  const json = parseGLTFJson(file);
+  jsonMemo.set(file, { stamp, json });
+  return json;
 };
 
 /** A .gltf's buffers and images that are separate files (not data URIs), as written in it. */

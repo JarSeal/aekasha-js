@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { listSourceFiles } from '../files';
 import path from 'path';
 import {
   getAtlasSlotTextureId,
@@ -149,16 +150,13 @@ export type DroppedAsset = {
 
 /**
  * Reads every `*.texture.json`, `*.importedAsset.json`, `*.textureArray.json` and
- * `*.textureAtlas.json` under `src/`. An invalid one (not JSON, or failing its schema) is left
+ * `*.textureAtlas.json` under `src/` (not in the outputs' folders). An invalid one (not JSON, or failing its schema) is left
  * out and listed in `dropped`: the gatherer reports it.
  */
 export const readAssetJsons = (
   srcDir = SRC_DIR
 ): { assetJsons: AssetJson[]; dropped: DroppedAsset[] } => {
-  const files = fs
-    .readdirSync(srcDir, { recursive: true })
-    .filter((file): file is string => typeof file === 'string')
-    .sort();
+  const files = listSourceFiles(srcDir).sort();
   const assets: AssetJson[] = [];
   const dropped: DroppedAsset[] = [];
   for (const type of ['texture', 'importedAsset', 'textureArray', 'textureAtlas'] as const) {

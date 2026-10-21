@@ -37,7 +37,7 @@ const TAB_ID = 'assetCompare';
 const LS_KEY = 'appDebugAssetCompare';
 
 // ---------------------------------------------------------------------------------------------
-// phase1Variants.ts's report.json (the fields read here)
+// assetCompareVariants.ts's report.json (the fields read here)
 // ---------------------------------------------------------------------------------------------
 
 type ReportTexture = {

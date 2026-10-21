@@ -2,12 +2,13 @@
 import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
-import { fileURLToPath } from 'url';
 import sharp from 'sharp';
-import { ensureKtx, getKtxEnv } from './ktxTool';
+import { ROOT } from '../../paths';
+import { ensureKtx, getKtxEnv } from '../ktxTool';
 
 /**
- * p299: the test files of the `textureArrays` scene (Phase 0 spike, then the verification scene).
+ * The `textureArrays` scene's fixtures (`src/app/scenes/textureArrays/`): its runtime-built arrays'
+ * files, built by hand, not by the pipeline (p299's Phase 0 spike, then the verification scene).
  *
  * - `arr2_<codec>.ktx2`: a two-layer array encoded by `ktx create --layers 2` (layers 0 and 1).
  * - `s<i>_<codec>.ktx2`: layers 0-3 as single textures, for runtime assembly and the layer swap.
@@ -19,10 +20,9 @@ import { ensureKtx, getKtxEnv } from './ktxTool';
  * wrong layer or a flipped one shows. Encoded flipped, like the pipeline's standalone textures.
  * A throwaway for Phase 0: Phase 2 adds `--layers` to the pipeline itself.
  *
- * Usage: `npx tsx devTools/assetPipeline/p299ArraySpike.ts [--force]`
+ * Usage: `npx tsx devTools/assetPipeline/fixtures/textureArraysFiles.ts [--force]`
  */
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const OUT_DIR = path.join(ROOT, 'src/public/debugger/assets/testOptimized/p299');
 const TMP_DIR = path.join(ROOT, '.cache', 'p299-spike');
 const FORCE = process.argv.includes('--force');

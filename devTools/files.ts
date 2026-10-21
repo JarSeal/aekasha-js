@@ -29,3 +29,24 @@ export const writeFileIfChanged = (file: string, content: string) => {
   writeFileAtomic(file, content);
   return true;
 };
+
+/** The folders under `src/` that hold outputs, never a source: the gather's and the pipeline's */
+const OUTPUT_FOLDERS = [path.join('generated'), path.join('public', 'aek-assets')];
+
+/**
+ * Every file under a source folder (`src/`), as paths from it, without the outputs' folders
+ * (`generated/`, `public/aek-assets/`). In `fs.readdirSync`'s recursive order: a folder's
+ * entries, then each of its folders' in turn.
+ */
+export const listSourceFiles = (srcDir: string) => {
+  const files: string[] = [];
+  const folders = [''];
+  for (let i = 0; i < folders.length; i++) {
+    for (const entry of fs.readdirSync(path.join(srcDir, folders[i]), { withFileTypes: true })) {
+      const file = folders[i] ? path.join(folders[i], entry.name) : entry.name;
+      if (!entry.isDirectory()) files.push(file);
+      else if (!OUTPUT_FOLDERS.includes(file)) folders.push(file);
+    }
+  }
+  return files;
+};

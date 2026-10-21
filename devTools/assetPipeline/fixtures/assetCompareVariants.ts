@@ -3,7 +3,6 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { spawnSync } from 'child_process';
-import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import { NodeIO, type Document } from '@gltf-transform/core';
 import {
@@ -14,9 +13,13 @@ import {
 import { listTextureSlots, meshopt, quantize } from '@gltf-transform/functions';
 import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer';
 import { unzipSync } from 'three/examples/jsm/libs/fflate.module.js';
-import { ensureKtx, getKtxEnv, type KtxTool } from './ktxTool';
+import { ROOT } from '../../paths';
+import { ensureKtx, getKtxEnv, type KtxTool } from '../ktxTool';
 
 /**
+ * The `assetCompare` scene's fixtures (`src/app/scenes/assetCompare/`): built by hand, not by the
+ * pipeline, and gitignored where they're large (the scene says which one is missing).
+ *
  * p300 Phase 1c: builds the codec variants Phase 1 compares, from downloaded and committed
  * sources, plus a report of each one's size, estimated VRAM and error against its encoder input.
  * A throwaway for Phase 1: Phase 2's pipeline replaces it (its packing, encoding and metrics are
@@ -32,11 +35,10 @@ import { ensureKtx, getKtxEnv, type KtxTool } from './ktxTool';
  * apply), glTF textures as they are. Downloads go to the gitignored `.cache/p300-phase1/`, the
  * outputs to `src/public/debugger/assets/testOptimized/phase1/` (with `report.json`).
  *
- * Usage: `npx tsx devTools/assetPipeline/phase1Variants.ts [--only <group>] [--force]`
+ * Usage: `npx tsx devTools/assetPipeline/fixtures/assetCompareVariants.ts [--only <group>] [--force]`
  * (`--force` re-encodes outputs that exist; groups: rocks01, metalRust, metalToolbox, colliders)
  */
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const CACHE_DIR = path.join(ROOT, '.cache', 'p300-phase1');
 const TMP_DIR = path.join(CACHE_DIR, 'tmp');
 const TEST_ASSETS_DIR = path.join(ROOT, 'src/public/debugger/assets');

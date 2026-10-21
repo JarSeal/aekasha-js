@@ -192,6 +192,13 @@ before fixing.
 - A8 **(perf)** Each GLB's JSON is read twice per run, every source byte is re-hashed by every
   gather (the key memo is per process), and the source walk includes `src/public/aek-assets` and
   `src/generated`.
+- A10 **(found in Phase 4)** A clean encode isn't reproducible across machines: three of the
+  repo's outputs (`p299TestArray`, `largeWorldTreeCross`'s `normal` slot, `p299TestAtlas`'s
+  `mask` slot, each with a resized or upscaled source) encode to other bytes on this machine than
+  the lock's, with the same `ktx` 4.4.2 and sharp, and `HEAD`'s code gives the same other bytes.
+  The keys are the inputs', so cache hits don't change; only a re-encode (a `PIPELINE_VERSION`
+  bump) gives each machine its own outputs. Likely sharp's decode or resize. Not fixed: noted in
+  `assetPipeline/CLAUDE.md`, and the golden hash test leaves sharp out.
 - A9 No unit test. About 25 pure functions (the settings resolver, the cache key, the packer, the
   atlas layout, alpha coverage, `getKtxCreateArgs`' byte-critical argument order, the archive
   readers) and a golden-hash test that would catch a forgotten `PIPELINE_VERSION` bump.
@@ -1025,6 +1032,34 @@ As built (2026-10-21, in progress; uncommitted):
     with `willReload: false` and no reload; a changed `fov` reloads; a burst of three saves is one
     gather; a save cut off mid-write fails with the overlay, and its fix reloads.
     `yarn verify:devFiles` 61 / 61.
+- **Section 4, the asset pipeline (D10, D16, D14).**
+  - D10: `runAsset` (222 lines) is `runPassThroughAsync`, `planEncode` (one plan per kind:
+    `planArrayEncode`, `planTextureEncode`, `planGLTFEncode`, each the settings, the key's inputs
+    and the texture settings), `encodeAsync` and `getEncodingKtxVersionAsync`; it is 45 lines.
+    `encodeTextureAtlasSlot` (180) is `probeAtlasSources`, `getStoredLevels`,
+    `composeAtlasLevel0` and `createAtlasCoverageScaler`, and 60 lines. Checked by a clean
+    re-encode of all 18 assets (empty cache): the outputs' content-hashed names are `HEAD`'s,
+    asset for asset (15 are the lock's; three are A10's, the same with `HEAD`'s code).
+  - Fixtures: `phase1Variants.ts` → `fixtures/assetCompareVariants.ts`, `p299ArraySpike.ts` →
+    `fixtures/textureArraysFiles.ts`, each headed as its scene's fixture generator, `ROOT` from
+    `devTools/paths.ts`. The app files naming them (both scenes' JSON and code, the "run this"
+    message) follow: an app patch item for D2; the generated data's two descriptions change.
+  - D16: the key memo is kept across processes (`.cache/asset-pipeline/key-memo.json`,
+    `saveKeyMemo` at the end of `runAssetsCommand`; the entries looked up since the last save, so
+    it holds today's assets). Its stamp adds ctime and inode to size and mtime: a write always
+    changes ctime. The key's derivation didn't change (a new one would miss every lock entry,
+    A1's hazard). The up-to-date lookup of `yarn gatherAppData`: 37-41 ms → 25-33 ms here. A GLB's
+    JSON is parsed once while it doesn't change (`readGLTFJson`'s memo, A8). The asset JSON walk
+    and the gather's skip `generated/` and `public/aek-assets/` (`listSourceFiles`, in
+    `readdirSync`'s recursive order, so the gather's output order stands; 6.4 → 2.1 ms).
+  - D14: `settings.test.ts` (the levels, the slot, the pass-through reasons, the switches, the
+    collider default, unknown profiles), `cache.test.ts` (the key's inputs, the memo across a
+    module reload, a same-size same-mtime write, a broken memo file; the ctime case fails without
+    ctime), `textureAtlases.test.ts` (the shelf packer, explicit rects, every error, the levels),
+    `images.test.ts` (the packer on PNGs sharp writes, the alpha coverage, a golden hash of the
+    resize, mip chain and coverage floats with `PIPELINE_VERSION`), `ktxEncode.test.ts`
+    (`getKtxCreateArgs` for three settings), `archives.test.ts` (ar, tar plain and gzipped,
+    cpio, xar, built byte by byte). `yarn assets`: 18 cache hits, the lock unchanged.
 
 ### Phase 5: the API reference per entry (D6)
 
