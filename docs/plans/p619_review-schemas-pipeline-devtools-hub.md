@@ -1562,7 +1562,7 @@ Sections:
    the record), `yarn sbp --profile all` (within every budget), `yarn verify:embed`,
    `yarn hub:build`, `yarn test`.
 
-As built (2026-10-22; section 1 committed as `b1083be`, 2 after it):
+As built (2026-10-22; sections 1-2 committed as `b1083be` and `07e486a`, 3 after them):
 
 - **Section 1, `refactor/` → `layout/` (D9).**
   - Deleted: the codemod (`applyMoveMap.ts`, `moveApply.ts`, `moveSplit.ts`, `moveText.ts`,
@@ -1635,6 +1635,42 @@ As built (2026-10-22; section 1 committed as `b1083be`, 2 after it):
   - Checks: `yarn test` 1120 passed (135 files), lint, both `tsc`; the argument errors exit 2 with
     their messages; `--only scene01 --config quick` before and after: the same output and the
     same `last-run.json` results (hash `7788c6ec`), the timings aside.
+- **Section 3, the runner's reloads (V3).**
+  - The runner's server: `cacheDir: node_modules/.vite-verify` (cause 2: no more sharing with
+    every `yarn dev*`), `server.host: 'localhost'`, and a `customLogger` (Vite's at `warn`) whose
+    `info` sends Vite's dependency, optimize and page reload lines to the progress log as
+    `[vite] …`.
+  - **Differs from D13: no `optimizeDeps.entries`, and the `include` list went.** A server on an
+    empty cache folder, its scan's `_metadata.json` read: the 22 deps, the five the `include`
+    named among them, with the worker files as entries and without them (Vite 6.4.3's scan follows
+    the workers now). Entries would add a list that changes nothing (and drop the default HTML
+    discovery); `vite.config.ts` says why there's no `optimizeDeps`.
+  - A page whose main frame navigates more than once (`framenavigated`), or whose page call
+    Playwright cuts off with "Execution context was destroyed … navigation" (the reload rejects
+    the call before the next document's navigation is seen: the first try counted
+    `domcontentloaded` and missed it), runs once more in a fresh context with
+    `RELOAD_RERUN_NOTE`; a reload in that second run fails it.
+  - The run hashes `generatedAppData.json` at its start and end and warns when it changed.
+  - Checks:
+    - `--config quick`, all 27 scenes on the empty `.vite-verify` (1,192 s): 26 passed;
+      `thirdPersonGymScene` failed as on this machine in Phase 0 (the probe didn't reach step 600
+      in 300 s). After the third scene, a camera JSON written with its own bytes and
+      `yarn gatherAppData`: the dev server's gather ran, "the generated data unchanged", no
+      `[vite]` line, no rerun, no warning.
+    - A reload mid-run (a comment added to `src/AppECSPlugins.ts` 20 s in, no HMR boundary):
+      `[vite] page reload AppECSPlugins.ts`, then `scene01` passed in its second run with the
+      note and its hash `7788c6ec`.
+    - The optimizer case (a bare `import 'three/addons/math/ImprovedNoise.js'` added to
+      `scene01.ts`, the cache warm, `--only scene01`): `[vite] ✨ new dependencies optimized`,
+      `✨ optimized dependencies changed. reloading`, then the rerun passed with the note and
+      `7788c6ec`. Vite didn't scan again at start with a warm cache, so cause 1 needs the rerun
+      even with a perfect scan. Both edits undone after.
+    - Both reloaded runs' second runs noted "snapshot within tolerance (mean 0.002, changed
+      0.01 %, max 116)", which the runs without a reload don't: within the tolerance, not chased.
+    - `yarn test` 1120 passed, lint, both `tsc`. The first Stop hook run had
+      `FeatureFactories.test.ts` time out at 5 s while SwiftShader ran beside it; alone 1.4 s, and
+      the full suite passed after.
+  - Docs (`verify/CLAUDE.md`'s runner text) are section 5's.
 
 
 ### Phase 8: the Hub, CLAUDE.md, versions and done (D15, D2)

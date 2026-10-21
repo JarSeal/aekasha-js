@@ -79,17 +79,11 @@ const appConfig = defineConfig({
   // meshopt simplifier on demand (docs/plans/_DONE_p347_lod-chain-generation.md, Phase 0). The dev server
   // loads workers as modules either way.
   worker: { format: 'es' },
-  optimizeDeps: {
-    // Deps only the assets worker imports: Vite's dep scan doesn't follow `?worker` imports, so
-    // without these, the first dev run re-optimizes when the worker starts and reloads the page
-    include: [
-      'three/addons/loaders/HDRLoader.js',
-      'three/addons/loaders/KTX2Loader.js',
-      'three/addons/libs/meshopt_decoder.module.js',
-      'meshoptimizer/simplifier',
-      'meshoptimizer/encoder',
-    ],
-  },
+  // No `optimizeDeps`: the dep scan from `index.html` finds the workers' deps too (checked on
+  // Vite 6.4.3 with an empty cache: the 22 deps with or without the worker files as entries; the
+  // `include` list for the assets worker's loaders went, p619 §1.4 V3). One it misses would be
+  // found when a worker starts, and Vite would re-optimize and reload the page: the scene runner
+  // logs that and runs the page again.
   server: {
     // Only the repo is served through /@fs/: the dev server is on the LAN (`--host`)
     fs: {

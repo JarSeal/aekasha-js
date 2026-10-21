@@ -30,6 +30,7 @@
  * `sceneRun.ts`', the baseline files `sceneBaseline.ts`' and the arguments and selection
  * `sceneSelect.ts`' (p619 V1).
  */
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { firefox } from 'playwright-core';
@@ -38,7 +39,8 @@ import { ROOT } from '../paths';
 import { readGit } from '../git';
 import { SCENE_VERIFY_CONFIG, type VerifyBrowser } from './scenes.config';
 import { out, PROGRESS_LOG_WATCH } from '../progressLog';
-import { writeFileAtomic } from '../files';
+import { sha256, writeFileAtomic } from '../files';
+import type { Logger } from 'vite';
 import {
   type Backend,
   type BaselineContext,
@@ -71,6 +73,15 @@ function fail(msg: string): never {
 
 // --- Environment ---
 
+/** The generated data's hash; '' when it can't be read */
+const readDataHash = () => {
+  try {
+    return sha256(fs.readFileSync(GENERATED_DATA));
+  } catch {
+    return '';
+  }
+};
+
 /** The commit the run is on, `+dirty` with local changes; `unknown` without git */
 const getCommit = () => {
   const sha = readGit(['rev-parse', '--short', 'HEAD']);
@@ -97,6 +108,25 @@ const launchBrowser = async (browser: VerifyBrowser, useWebGL: boolean, headed: 
   }
 };
 
+/** Vite's own lines that explain a page reloading mid-run (p619 V3): its dep optimizer's (a
+ * new dependency found at runtime, a re-optimize) and its page reloads */
+const VITE_RELOAD_LINE = /dependenc|optimiz|page reload/i;
+
+/** Vite's logger at `warn`, but its lines about optimizing and reloading go to the progress log
+ * too (`logLevel: 'warn'` hid them, so a reload mid-run had no trace) */
+const createRunnerLogger = (createLogger: typeof import('vite').createLogger): Logger => {
+  const logger = createLogger('warn');
+  logger.info = (msg) => {
+    if (VITE_RELOAD_LINE.test(msg.replace(/\x1b\[[0-9;]*m/g, '')))
+      out(`${DIM}[vite]${RESET} ${msg}`);
+  };
+  return logger;
+};
+
+/** The runner's own dep cache (p619 V3): `node_modules/.vite` is every `yarn dev*`'s, and
+ * `dev:https` (another plugin, another config hash) re-optimizes under it */
+const VERIFY_CACHE_DIR = path.join(ROOT, 'node_modules/.vite-verify');
+
 const startOwnServer = async () => {
   // Only a development or test build installs the test bridge: in another, every page would
   // wait 120 s for it (p619 §1.4 V2)
@@ -106,11 +136,13 @@ const startOwnServer = async () => {
   }
   process.env.VITE_APP_ENV ??= 'development';
   delete process.env.AEK_DEV_HTTPS;
-  const { createServer } = await import('vite');
+  const { createServer, createLogger } = await import('vite');
   const server = await createServer({
     configFile: path.join(ROOT, 'vite.config.ts'),
-    server: { port: 8092, host: true },
-    logLevel: 'warn',
+    cacheDir: VERIFY_CACHE_DIR,
+    // This machine only: the app's dev server is on the LAN (`--host`), the runner's needn't be
+    server: { port: 8092, host: 'localhost' },
+    customLogger: createRunnerLogger(createLogger),
   });
   await server.listen();
   const address = server.httpServer?.address();
@@ -173,6 +205,7 @@ const main = async () => {
   const parsed = parseSceneRunArgs(process.argv.slice(2));
   if ('error' in parsed) fail(parsed.error);
   const { args } = parsed;
+  const dataHashAtStart = readDataHash();
   const generated = readJSON<{ scenes: Record<string, unknown> }>(GENERATED_DATA);
   if (!generated) fail(`Can't read ${path.relative(ROOT, GENERATED_DATA)}: run yarn gatherAppData`);
   const selected = selectScenes(Object.keys(generated.scenes), args.only);
@@ -271,6 +304,13 @@ const main = async () => {
     `${JSON.stringify({ commit, at: new Date().toISOString(), baseUrl, browser: args.browser, backend, results }, null, 2)}\n`
   );
 
+  // A gather during the run (a save in the editor, `yarn gatherAppData`): the pages after it
+  // loaded other data than the ones before (p619 V3)
+  if (readDataHash() !== dataHashAtStart) {
+    out(
+      `\n${YELLOW}! ${path.relative(ROOT, GENERATED_DATA)} changed during the run: the pages after the gather loaded the new data${RESET}`
+    );
+  }
   const count = (status: RunStatus) => results.filter((r) => r.status === status).length;
   const failed = count('FAIL');
   out(

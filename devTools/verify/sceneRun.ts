@@ -236,7 +236,14 @@ const openPage = async (
     else if (msg.type() === 'warning') warnings.add(text.slice(0, 300));
   });
   page.on('pageerror', (err) => result.errors.push(`[pageerror] ${err.message}`));
-  return { context, page, warnings };
+  // The main frame's navigations: more than one is a reload mid-run (Vite's dep optimizer, a file
+  // change without an HMR boundary, the gatherer's reload), p619 V3. The engine never changes its
+  // URL in place, so a same-document navigation doesn't count one either.
+  const loads = { count: 0 };
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame()) loads.count++;
+  });
+  return { context, page, warnings, loads };
 };
 
 /** Loads the scene's page and waits for the bridge and the scene; the backend it rendered on, or
@@ -365,15 +372,20 @@ const runProbe = async (
   }
 };
 
-/**
- * Runs a scene in a configuration on a fresh page and compares it with the baseline.
- * @throws {@link RunAbort} when a baseline can't be read: the whole run stops
- */
-export const runOne = async (
+/** Playwright's error for a page call the page's navigation cut off */
+const NAVIGATION_ERROR = /Execution context was destroyed|because of a navigation/;
+
+/** The note on a run that ran again because its page reloaded the first time */
+export const RELOAD_RERUN_NOTE =
+  "the page reloaded mid-run (see the progress log's [vite] lines): run again in a fresh context";
+
+/** One attempt at a run; `isReloaded` when the page loaded more than once */
+const runAttempt = async (
   ctx: LoadContext,
   sceneId: string,
-  config: VerifyConfigName
-): Promise<RunResult> => {
+  config: VerifyConfigName,
+  isRetry: boolean
+): Promise<{ result: RunResult; isReloaded: boolean }> => {
   const started = Date.now();
   const def: VerifyConfigDef = VERIFY_CONFIGS[config];
   const sceneConfig = SCENE_VERIFY_CONFIG[sceneId] ?? {};
@@ -388,11 +400,17 @@ export const runOne = async (
     errors: [],
     durationMs: 0,
   };
+  let loads: { count: number } | null = null;
   const finish = () => {
+    const isReloaded = (loads?.count ?? 0) > 1;
+    if (isRetry) {
+      result.notes.unshift(RELOAD_RERUN_NOTE);
+      if (isReloaded) result.failures.push('the page reloaded again mid-run, in its second run');
+    }
     result.durationMs = Date.now() - started;
     if (result.failures.length) result.status = 'FAIL';
     else if (result.notes.some((n) => n.startsWith('no baseline'))) result.status = 'NEW';
-    return result;
+    return { result, isReloaded };
   };
 
   if (sceneConfig.skip && appliesTo(sceneConfig.skip, config, ctx.browserName)) {
@@ -405,6 +423,7 @@ export const runOne = async (
   try {
     const opened = await openPage(ctx, def, sceneConfig, result);
     context = opened.context;
+    loads = opened.loads;
     const { page, warnings } = opened;
     const backend = await loadScene(ctx, page, def, steps, result);
     if (!backend) return finish();
@@ -431,9 +450,28 @@ export const runOne = async (
     }
   } catch (err) {
     if (err instanceof RunAbort) throw err;
-    result.failures.push(`the runner stopped: ${(err as Error).message.split('\n')[0]}`);
+    const message = (err as Error).message;
+    // A reload mid-call rejects it before the next document's navigation is seen
+    if (loads && NAVIGATION_ERROR.test(message)) loads.count = Math.max(loads.count, 2);
+    result.failures.push(`the runner stopped: ${message.split('\n')[0]}`);
   } finally {
     await context?.close().catch(() => undefined);
   }
   return finish();
+};
+
+/**
+ * Runs a scene in a configuration on a fresh page and compares it with the baseline. A page that
+ * reloads mid-run (its state is from two loads) runs once more in a fresh context, noted
+ * ({@link RELOAD_RERUN_NOTE}); a second reload fails it.
+ * @throws {@link RunAbort} when a baseline can't be read: the whole run stops
+ */
+export const runOne = async (
+  ctx: LoadContext,
+  sceneId: string,
+  config: VerifyConfigName
+): Promise<RunResult> => {
+  const first = await runAttempt(ctx, sceneId, config, false);
+  if (!first.isReloaded) return first.result;
+  return (await runAttempt(ctx, sceneId, config, true)).result;
 };
