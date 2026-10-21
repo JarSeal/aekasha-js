@@ -19,8 +19,12 @@ import {
   embedOutputsPlugin,
   getEmbedBuildConfig,
   getEmbedProfileFromEnv,
+  getEmbedSizesFile,
   getEmbedStatsFile,
 } from './devTools/sbp/embedBuild.ts';
+// The modules' sizes after minification, the workers' too, for `yarn sbp` and the debug check (p619)
+import { createModuleSizesPlugins } from './devTools/sbp/moduleSizesPlugin.ts';
+import { MODULE_SIZES_FILE } from './devTools/sbp/bundleModel.ts';
 
 const REPO_ROOT = fileURLToPath(new URL('.', import.meta.url));
 
@@ -59,6 +63,11 @@ const isDebugBuild = ['development', 'test'].includes(process.env.VITE_APP_ENV ?
 // module into dist-embed/<id>/ (devTools/sbp/embedBuild.ts)
 const embedProfile = getEmbedProfileFromEnv();
 
+// One collector for the main build and its worker builds, written next to the visualizer's report
+const moduleSizes = createModuleSizesPlugins({
+  file: embedProfile ? getEmbedSizesFile(embedProfile.id) : MODULE_SIZES_FILE,
+});
+
 const appConfig = defineConfig({
   root: './src',
   // Workers resolve with these too
@@ -78,7 +87,7 @@ const appConfig = defineConfig({
   // ES module workers: an IIFE worker can't be code-split, and the assets worker loads the
   // meshopt simplifier on demand (docs/plans/_DONE_p347_lod-chain-generation.md, Phase 0). The dev server
   // loads workers as modules either way.
-  worker: { format: 'es' },
+  worker: { format: 'es', plugins: () => [moduleSizes.workerPlugin()] },
   // No `optimizeDeps`: the dep scan from `index.html` finds the workers' deps too (checked on
   // Vite 6.4.3 with an empty cache: the 22 deps with or without the worker files as entries; the
   // `include` list for the assets worker's loaders went, p619 §1.4 V3). One it misses would be
@@ -126,6 +135,7 @@ const appConfig = defineConfig({
         });
       },
     },
+    moduleSizes.plugin(),
     visualizer({
       title: meta.app.name,
       filename: embedProfile

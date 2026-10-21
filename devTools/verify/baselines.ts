@@ -5,10 +5,11 @@
  *
  *   yarn verify:baselines [--update [--allow-docs-drop]] [--no-build] [--docs]
  *
- * - `bundle.json`: every file in `dist/assets/` (name without its content hash, bytes and gzip),
- *   and the main chunk's modules summed per group (three, Rapier, each engine folder, toolkit,
- *   app; the visualizer's rendered and gzip sizes, before minification, as p600 §2.4 counts).
- *   The measuring is `devTools/sbp/bundleModel.ts`', which `yarn sbp` shares (p611 D1).
+ * - `bundle.json`: every file in `dist/assets/` by its key (its name without the content hash,
+ *   `@<worker>` or `@<folder>` where two share one, `sbp/bundleKeys.ts`; bytes and gzip), and the
+ *   main chunk's modules per group (three, Rapier, each engine folder, toolkit, app; minified, and
+ *   the gzip of each group's minified code, `sbp/moduleSizesPlugin.ts`). The measuring is
+ *   `devTools/sbp/bundleModel.ts`', which `yarn sbp` shares (p611 D1).
  * - `bundle.<id>.json`: the same for each embed profile (`sbp.config.ts`, p611 D7), every file of
  *   its `dist-embed/<id>/`, built after the app on the same production gather.
  * - `api.json`: every export of the documented API (the Hub's TypeDoc model: `src/_engine` and
@@ -28,7 +29,8 @@
  * count unless it's given `--allow-docs-drop` as well, so a drop is recorded only on purpose.
  *
  * The same builds are checked for debug code (p607 D7, `debugInProduction.ts`): a `_dbg__` chunk or
- * module, or a `debug/*.ts` wrapper, fails the run and `--update` records nothing.
+ * module, or a `debug/*.ts` wrapper, in the main build or a worker's, fails the run and `--update`
+ * records nothing.
  *
  * It runs the production build's steps first (decoders, the production gather, `vite build`, then
  * the dev gather again, as `yarn build` does, without `tsc` and the Hub); `--no-build` reuses
@@ -308,7 +310,7 @@ const main = async () => {
       ? [
           report(
             'bundle.json',
-            `${Object.keys(bundle.chunks).length} files; main ${bundle.main.chunk} ${bundle.main.modules} modules, ${formatKB(bundle.main.rendered)} rendered, ${formatKB(bundle.main.gzip)} gzip`,
+            `${Object.keys(bundle.chunks).length} files; main ${bundle.main.chunk} ${bundle.main.modules} modules, ${formatKB(bundle.main.minified)} minified, ${formatKB(bundle.main.gzip)} gzip`,
             bundle,
             diffBundle,
             args.update

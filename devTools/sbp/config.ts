@@ -24,11 +24,12 @@ export type SbpBudgets = {
    * too */
   chunks?: Record<string, number>;
   /** A group's modules in the initial chunks (`three`, `_engine/features/physics`, `app`: the
-   * report's groups, the modules' gzip before minification); a group with no code there is 0 */
+   * report's groups: their modules minified, gzipped together per chunk); a group with no code
+   * there is 0 */
   groups?: Record<string, number>;
   /** The modules under a path from `src/` in the initial chunks, a file
    * (`_engine/ui/icons/BuiltInIcons.ts`) or a folder ending in `/`, measured as the groups are:
-   * for what a group is too coarse for */
+   * (each module's minified code gzipped alone): for what a group is too coarse for */
   modules?: Record<string, number>;
 };
 

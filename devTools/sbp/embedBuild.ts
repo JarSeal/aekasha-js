@@ -27,7 +27,8 @@ import sbpProfiles from '../../sbp.config';
 import { ROOT } from '../paths';
 import { collectUrls } from '../assetOutputsBuildPlugin';
 import { getEmbedProfiles } from '../gather/output';
-import type { BuildLocation } from './bundleModel';
+import { findReachableFiles } from './bundleKeys';
+import { type BuildLocation, MODULE_SIZES_FILE_NAME } from './bundleModel';
 import type { SbpProfile } from './config';
 import { getEmbedEntryFileName, getEmbedOutDir } from './embedPaths';
 
@@ -40,10 +41,14 @@ export const PRUNED_FILE_NAME = 'aek-pruned.json';
 /** The visualizer's report of an embed build */
 export const getEmbedStatsFile = (id: string) =>
   path.join(ROOT, 'dist-stats', `embed-${id}`, 'bundle-stats.html');
+/** The module sizes of an embed build (`moduleSizesPlugin.ts`), next to its visualizer report */
+export const getEmbedSizesFile = (id: string) =>
+  path.join(ROOT, 'dist-stats', `embed-${id}`, MODULE_SIZES_FILE_NAME);
 /** Where `collectBundle` measures an embed's build: every file of its folder */
 export const getEmbedBuildLocation = (id: string): BuildLocation => ({
   outDir: getEmbedOutDir(id),
   statsFile: getEmbedStatsFile(id),
+  sizesFile: getEmbedSizesFile(id),
   isAssetsOnly: false,
 });
 /** The profile's generated data (`devTools/gather/output.ts`) */
@@ -91,36 +96,6 @@ const listFiles = (dir: string, prefix = ''): string[] =>
       return rel === '.vite' ? [] : listFiles(path.join(dir, rel), `${rel}/`);
     return [rel];
   });
-
-const TEXT_FILE = /\.(js|mjs|css)$/;
-
-/**
- * The files reachable from the roots: a text file (JS, CSS) reaches every file whose name it
- * contains. A name is only in code that ships (a tree-shaken importer leaves none), so what isn't
- * reached is never loaded.
- * @param files every file of the build (relative paths)
- * @param read a text file's content
- */
-export const findReachableFiles = (
-  roots: string[],
-  files: string[],
-  read: (file: string) => string
-) => {
-  const byName = new Map(files.map((file) => [path.posix.basename(file), file]));
-  const reached = new Set<string>();
-  const queue = [...roots];
-  while (queue.length) {
-    const file = queue.pop()!;
-    if (reached.has(file)) continue;
-    reached.add(file);
-    if (!TEXT_FILE.test(file)) continue;
-    const text = read(file);
-    for (const [name, other] of byName) {
-      if (!reached.has(other) && text.includes(name)) queue.push(other);
-    }
-  }
-  return reached;
-};
 
 /** Copies a file or folder from `src/public/` into the build, when it's there */
 const copyFromPublic = (rel: string, outDir: string) => {

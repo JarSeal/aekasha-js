@@ -57,29 +57,18 @@ describe('listEmittedAssets', () => {
 });
 
 describe('findMainChunkFile', () => {
-  const meta = (id: string, moduleParts: Record<string, string>) => ({
-    id,
-    moduleParts,
-    imported: [],
-    importedBy: [],
-  });
-  const data: VisualizerData = {
-    nodeParts: {
-      p1: { renderedLength: 10, gzipLength: 5 },
-      p2: { renderedLength: 90, gzipLength: 50 },
-    },
-    nodeMetas: {
-      a: meta('/src/a.ts', { 'assets/small-AAAAAAAA.js': 'p1' }),
-      b: meta('/src/b.ts', { 'assets/big-BBBBBBBB.js': 'p2' }),
-    },
+  const gzip: Record<string, number> = {
+    'assets/small-AAAAAAAA.js': 5,
+    'assets/big-BBBBBBBB.js': 50,
   };
+  const gzipOf = (file: string) => gzip[file] ?? 0;
 
   it('is the entry’s chunk when it’s the largest', () => {
     const manifest: Manifest = {
       'index.html': { file: 'assets/big-BBBBBBBB.js', isEntry: true, imports: ['_small'] },
       _small: { file: 'assets/small-AAAAAAAA.js' },
     };
-    expect(findMainChunkFile(manifest, data)).toBe('assets/big-BBBBBBBB.js');
+    expect(findMainChunkFile(manifest, gzipOf)).toBe('assets/big-BBBBBBBB.js');
   });
 
   it('is the largest static import of an entry that re-exports it (an embed’s facade)', () => {
@@ -87,6 +76,6 @@ describe('findMainChunkFile', () => {
       'x.embed.ts': { file: 'assets/small-AAAAAAAA.js', isEntry: true, imports: ['_big'] },
       _big: { file: 'assets/big-BBBBBBBB.js' },
     };
-    expect(findMainChunkFile(manifest, data)).toBe('assets/big-BBBBBBBB.js');
+    expect(findMainChunkFile(manifest, gzipOf)).toBe('assets/big-BBBBBBBB.js');
   });
 });

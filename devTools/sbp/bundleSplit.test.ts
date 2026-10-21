@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type Manifest, type VisualizerData, keyFiles } from './bundleModel';
+import type { Manifest, ModuleSizesFile } from './bundleModel';
 import { measureSplitGroups, splitBundle, sumSizes } from './bundleSplit';
 
 // The entry imports a shared chunk statically; a loader is import()ed and imports the shared
@@ -20,28 +20,19 @@ const MANIFEST: Manifest = {
     imports: ['_shared-BBBBBBBB.js', 'index.html'],
   },
 };
-const FILES = [
-  'assets/index-AAAAAAAA.js',
-  'assets/index-CCCCCCCC.css',
-  'assets/shared-BBBBBBBB.js',
-  'assets/shared-EEEEEEEE.css',
-  'assets/GLTFLoader-FFFFFFFF.js',
-  'assets/3DSymbols-DDDDDDDD.glb',
-  'assets/EngineRapier-GGGGGGGG.js',
-  'assets/EngineRapier-HHHHHHHH.js',
-];
-
-describe('keyFiles', () => {
-  it('strips the hash and numbers a repeated name in sorted order', () => {
-    const keys = keyFiles(FILES);
-    expect(keys['assets/index-AAAAAAAA.js']).toBe('assets/index.js');
-    expect(keys['assets/EngineRapier-GGGGGGGG.js']).toBe('assets/EngineRapier.js');
-    expect(keys['assets/EngineRapier-HHHHHHHH.js']).toBe('assets/EngineRapier.js#2');
-  });
-});
+const FILE_KEYS = {
+  'assets/index-AAAAAAAA.js': 'assets/index.js',
+  'assets/index-CCCCCCCC.css': 'assets/index.css',
+  'assets/shared-BBBBBBBB.js': 'assets/shared.js',
+  'assets/shared-EEEEEEEE.css': 'assets/shared.css',
+  'assets/GLTFLoader-FFFFFFFF.js': 'assets/GLTFLoader.js',
+  'assets/3DSymbols-DDDDDDDD.glb': 'assets/3DSymbols.glb',
+  'assets/EngineRapier-GGGGGGGG.js': 'assets/EngineRapier.js',
+  'assets/EngineRapier-HHHHHHHH.js': 'assets/EngineRapier.js@PhysicsWorker',
+};
 
 describe('splitBundle', () => {
-  const split = splitBundle(MANIFEST, keyFiles(FILES));
+  const split = splitBundle(MANIFEST, FILE_KEYS);
 
   it('puts the entry, its static imports and their CSS in initial', () => {
     expect(split.initial).toEqual([
@@ -56,7 +47,7 @@ describe('splitBundle', () => {
     expect(split.lazy).toEqual([
       'assets/3DSymbols.glb',
       'assets/EngineRapier.js',
-      'assets/EngineRapier.js#2',
+      'assets/EngineRapier.js@PhysicsWorker',
       'assets/GLTFLoader.js',
     ]);
   });
@@ -76,41 +67,27 @@ describe('splitBundle', () => {
 });
 
 describe('measureSplitGroups', () => {
-  it('sums each group in the initial and the lazy chunks', () => {
-    const data: VisualizerData = {
-      nodeParts: {
-        p1: { renderedLength: 100, gzipLength: 40 },
-        p2: { renderedLength: 50, gzipLength: 20 },
-        p3: { renderedLength: 30, gzipLength: 10 },
-      },
-      nodeMetas: {
-        m1: {
-          id: '/src/_engine/features/physics/PhysicsAPI.ts',
-          moduleParts: {
-            'assets/index-AAAAAAAA.js': 'p1',
-            'assets/EngineRapier-GGGGGGGG.js': 'p2',
-          },
-          imported: [],
-          importedBy: [],
+  it('sums each group in the initial and the lazy chunks, a worker’s chunks lazy', () => {
+    const group = (modules: number, gzip: number) => ({ modules, minified: gzip * 2, gzip });
+    const sizes: ModuleSizesFile = {
+      formatVersion: 1,
+      chunks: {
+        'assets/index-AAAAAAAA.js': { build: 'main', groups: { physics: group(2, 40) } },
+        'assets/shared-BBBBBBBB.js': {
+          build: 'main',
+          groups: { physics: group(1, 5), three: group(3, 100) },
         },
-        m2: {
-          id: '/node_modules/three/build/three.core.js',
-          moduleParts: { 'assets/GLTFLoader-FFFFFFFF.js': 'p3' },
-          imported: [],
-          importedBy: [],
+        'assets/EngineRapier-HHHHHHHH.js': {
+          build: 'PhysicsWorker',
+          groups: { physics: group(1, 20) },
         },
+        'assets/GLTFLoader-FFFFFFFF.js': { build: 'main', groups: { three: group(1, 10) } },
       },
+      modules: [],
     };
-    const groups = measureSplitGroups(data, splitBundle(MANIFEST, keyFiles(FILES)));
-    expect(groups).toEqual({
-      '_engine/features/physics': {
-        initial: { modules: 1, rendered: 100, gzip: 40 },
-        lazy: { modules: 1, rendered: 50, gzip: 20 },
-      },
-      three: {
-        initial: { modules: 0, rendered: 0, gzip: 0 },
-        lazy: { modules: 1, rendered: 30, gzip: 10 },
-      },
+    expect(measureSplitGroups(sizes, splitBundle(MANIFEST, FILE_KEYS))).toEqual({
+      physics: { initial: group(3, 45), lazy: group(1, 20) },
+      three: { initial: group(3, 100), lazy: group(1, 10) },
     });
   });
 });

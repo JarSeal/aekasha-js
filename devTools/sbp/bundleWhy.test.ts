@@ -9,7 +9,7 @@ import {
   getEntryModuleId,
   indexModuleGraph,
 } from './bundleWhy';
-import { DATA, FILE_KEYS, MANIFEST } from './testBuild';
+import { DATA, FILE_KEYS, MANIFEST, SIZES } from './testBuild';
 
 const split = splitBundle(MANIFEST, FILE_KEYS);
 const graph = indexModuleGraph(DATA, split.initialFiles);
@@ -106,7 +106,7 @@ describe('the feature view', () => {
     const [row] = buildFeatureView({
       graph,
       from: FROM,
-      groups: measureSplitGroups(DATA, split),
+      groups: measureSplitGroups(SIZES, split),
       scenes,
       dataFeatures: ['physics'],
     });

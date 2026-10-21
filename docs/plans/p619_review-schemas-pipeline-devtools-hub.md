@@ -1671,6 +1671,65 @@ As built (2026-10-22; sections 1-2 committed as `b1083be` and `07e486a`, 3 after
       `FeatureFactories.test.ts` time out at 5 s while SwiftShader ran beside it; alone 1.4 s, and
       the full suite passed after.
   - Docs (`verify/CLAUDE.md`'s runner text) are section 5's.
+- **Section 4, the sizes and the keys (B1, B2, V7).**
+  - `sbp/moduleSizesPlugin.ts`: `createModuleSizesPlugins({ file, root? })` gives `plugin()` (in
+    `plugins`) and `workerPlugin()` (in `worker.plugins`, a new one per worker build), one
+    collector: each build's chunks measured in **`generateBundle`, not `renderChunk`** (the final
+    file names; `renderChunk` has hash placeholders, and `RenderedModule.code` is the same
+    pre-minification code in both). Each module's rendered code minified with esbuild (`format:
+    'esm'`, `treeShaking: false`, `charset: 'utf8'`, the build's target; a parse error counts it
+    unminified with a warning), a group's gzip is its modules' minified code concatenated per
+    chunk, and each module's own gzip is kept too. The main build's `buildStart` resets it, its
+    `writeBundle` writes `dist-stats/module-sizes.json` (an embed's
+    `dist-stats/embed-<id>/module-sizes.json`, `getEmbedSizesFile`). A worker build is named by its
+    entry chunk (`PhysicsWorker`, `AssetsWorker`). **Not in the plan:** Rapier and the two meshopt
+    chunks are one file both the main and a worker build emit (the same code, so the same name);
+    the main build's record keeps it and the worker's records of it are dropped at the write
+    (`dropSharedChunks`), or a `modules` budget would count them twice. Cost: 0.5-2.5 s per app
+    build (two timed builds each way, noisy); the plugin's test build (a worker, two `shared`
+    chunks) 0.4 s.
+  - `bundleModel.ts`: `BUNDLE_FORMAT_VERSION` 2; `GroupSize` is `{ modules, minified, gzip }`,
+    `main` is `{ chunk } & GroupSize` (its groups summed); the sizes file's types,
+    `MODULE_SIZES_FORMAT_VERSION`, `MAIN_BUILD` and `readModuleSizes` live here (the plugin imports
+    `getModuleGroup`, so no runtime cycle). `BuildLocation` gains `sizesFile`. `collectBundle`
+    throws on a missing or other-format sizes file, and on sizes or visualizer data with no module
+    in the main chunk; it returns `sizes` (the build's files only: an embed's pruned ones dropped).
+    `findMainChunkFile` takes the files' measured gzip, `measureMainChunk`, `measureSplitGroups`
+    and `measureModulesUnder` (a `modules` budget: the modules' own gzip summed, a little over a
+    group's) read the sizes. The visualizer stays for `--why`, the emitted files' importers and the
+    treemap. `REPORT_FORMAT_VERSION` 3 (`hub/sbp.ts` follows through the import; its comment says
+    "minified").
+  - **B2's keys, `sbp/bundleKeys.ts`** (`stripHash`, `findReachableFiles` moved from
+    `embedBuild.ts` with its test, `keyBuildFiles`). **Differs from the plan:** a worker's files
+    are its chunks from the sizes file plus what they reach by name, not a crawl from the file the
+    `?worker` wrapper names: a static `?worker` import inlines the wrapper (no manifest key), which
+    the plan's way couldn't follow. The rest as planned: a name one file has is its key; in a
+    collision the manifest's file (a chunk, its CSS or assets) keeps it, a worker's copy is
+    `<key>@<worker>`, two manifest files are `<key>@<source folder>`; a file outside the manifest
+    reached by no worker or by two, a manifest file without a source, and two equal keys throw.
+    Today's build: `assets/EngineRapier.js@PhysicsWorker`, `assets/PhysicsWorker.js@PhysicsWorker`
+    (the 134 B wrapper keeps `assets/PhysicsWorker.js`, so section 5 renames the budget to the
+    worker's key), `assets/AssetsWorker.js@AssetsWorker`, `assets/three.module.js@AssetsWorker`, and
+    `assets/draco_decoder.wasm@draco` / `@gltf`, `assets/draco_wasm_wrapper.js@draco` / `@gltf`.
+  - V7: `BuildModule` gains `build`; `listBuildModules` reads the sizes file, so the debug check
+    sees the workers' modules (372 in the app's build, 59 from the two workers), and a finding in
+    a worker says so (`… in assets/w.js (the w worker)`).
+  - The report: a feature with lazy code only and no scene needing it read "scenes: " with
+    nothing after (the banner's `lod`, the assets worker's LOD jobs, now measured): it says "no
+    scene's data needs it (lazy only …)".
+  - Numbers (not recorded): the app's initial groups sum to about 388 kB against the 378.3 kB
+    `assets/index.js` (832 kB before); `three` 254.5 kB (642 kB budget), physics 23.5 (44),
+    skybox 17.6 (30), `kernel/ecs` 7.0 (17). Every budget passes, 18 of the app's and 6 of the
+    banner's well under, and `'assets/PhysicsWorker.js'` now measures the wrapper: section 5's
+    re-set. `verify:baselines --no-build`: `bundle.json` and `bundle.banner.json` read as no
+    baseline (format 2), `api.json` and `docs.json` unchanged, no debug code in either build.
+  - Tests: `bundleKeys.test.ts` (the crawl; the app's collisions, a hash swap giving the same keys,
+    three throws), `moduleSizesPlugin.test.ts` (a real `vite build` of a tiny app with a worker in
+    a temp folder: both builds measured and minified, the `shared.js` / `shared.js@w` keys through
+    `collectBundle`, the worker's `_dbg__` module found), `debugInProduction.test.ts` (a worker's
+    debug module), `bundleSplit.test.ts` (groups from the sizes, a worker chunk lazy),
+    `bundleDiff.test.ts` reads temp baselines (the committed one is format 1 until section 5), the
+    fixture `testBuild.ts` gains `SIZES`. `yarn test` 1126 passed, lint, both `tsc`.
 
 
 ### Phase 8: the Hub, CLAUDE.md, versions and done (D15, D2)

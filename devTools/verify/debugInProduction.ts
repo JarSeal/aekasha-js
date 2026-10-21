@@ -1,4 +1,4 @@
-import type { BuildModule, EmittedAsset } from '../sbp/bundleModel';
+import { type BuildModule, type EmittedAsset, MAIN_BUILD } from '../sbp/bundleModel';
 
 /**
  * The production build's debug check (p607 D7), run by `yarn verify:baselines` on the build it
@@ -6,7 +6,8 @@ import type { BuildModule, EmittedAsset } from '../sbp/bundleModel';
  * isn't a diff: a finding is never something to record.
  *
  * - A file named `_dbg__*` in `dist/assets/` (a chunk, its CSS, an orphan chunk nothing loads).
- * - A debug module with rendered code in a chunk: a `_dbg__*` module, or any module under an engine
+ * - A debug module with rendered code in a chunk of the main build or a worker build (the module
+ *   sizes, `sbp/moduleSizesPlugin.ts`, p619 V7): a `_dbg__*` module, or any module under an engine
  *   folder named `debug` without regard to case (`debug/`, `kernel/<area>/debug/`,
  *   `features/<name>/debug/`), the entry `debug/index.ts` aside (p608 D4). A debug
  *   folder holds nothing that ships: a wrapper's body folds out, so one still there is called from
@@ -35,7 +36,7 @@ const isDebugModule = (id: string) =>
 /**
  * Lists the debug code a production build holds, one line each, sorted.
  * @param build.files the names in `dist/assets/` without their content hash (`assets/index.js`)
- * @param build.modules every module the visualizer lists, tree-shaken ones included
+ * @param build.modules every module with code in the build, the worker builds' too
  * @param build.assets the files Vite emitted for modules
  * @param build.scripts the build's scripts, for the ungated debug hook calls (none: not checked)
  * @returns the findings; empty when the build holds no debug code
@@ -53,13 +54,16 @@ export const findDebugCodeInBuild = (build: {
       findings.push(`debug chunk ${file}`);
     }
   }
-  for (const { id, chunks } of modules) {
+  for (const { id, build, chunks } of modules) {
     if (!isDebugModule(id)) continue;
     const inChunks = Object.entries(chunks)
       .filter(([, rendered]) => rendered > 0)
       .map(([chunk]) => chunk)
       .sort();
-    if (inChunks.length) findings.push(`debug module ${id.slice(1)} in ${inChunks.join(', ')}`);
+    const worker = build === MAIN_BUILD ? '' : ` (the ${build} worker)`;
+    if (inChunks.length) {
+      findings.push(`debug module ${id.slice(1)} in ${inChunks.join(', ')}${worker}`);
+    }
   }
   for (const { file, id, importers } of assets) {
     if (isDebugModule(id)) {

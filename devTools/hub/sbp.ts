@@ -19,7 +19,7 @@ import type { HubBuildMode } from './types';
  * - `initial`, `lazy`: what loads before the first frame, and the rest of the build's files;
  * - `lazyFiles`: how many lazy files (a count, no unit);
  * - `chunk:<key>`: a file (`assets/index.js`, an embed's `banner.embed.js`);
- * - `group:<group>`: a group's code in the initial chunks, before minification (`three`,
+ * - `group:<group>`: a group's code in the initial chunks, minified (`three`,
  *   `_engine/features/physics`);
  * - `budget:<key>`: the profile's budget (`initial`, a chunk's key, a group).
  *
