@@ -1,4 +1,4 @@
-Status: draft | not-implemented (expanded 2026-10-21, decisions to confirm)
+Status: in progress | Phase 0 implemented (decisions to confirm: D5 materials, F3 image check)
 Category: Refactoring, Documentation, Dev tooling
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -624,7 +624,7 @@ own checks. `yarn verify:scenes` runs in Phase 0 (`--update`, on `main`) and in 
 phase ends with its "As built" list, its files' JSDoc at 100 % where the ratchet counts them, and
 `docs.json` updated. Branch `review-schemas-pipeline-devtools-hub` from `main`.
 
-### Phase 0: baselines, repros and the open checks
+### Phase 0: baselines, repros and the open checks — done
 
 1. `yarn verify:scenes --update` on `main`, then `yarn verify:baselines`, `yarn sbp --profile all`
    and `yarn hub:build` (warnings, the index size).
@@ -638,6 +638,109 @@ phase ends with its "As built" list, its files' JSDoc at 100 % where the ratchet
    - GLTFLoader's mesh extras on `userData` (A6);
    - R2's list from the current model, each type's proposed fix (D6).
 5. Timings: a dev Hub rebuild after a page edit, a dev gather after an asset save (D16's before).
+
+As built (2026-10-21, on the branch at `de92474`, whose code is `main`'s `baac01e`):
+
+- **Step 1.** `verify:scenes --update` (WebGL2 on SwiftShader, 63.6 min): 105 of 108 recorded; the
+  3 failures are `thirdPersonGymScene`'s debug configurations ("the physics probe didn't reach
+  step 600 in 300 s"), this machine's, as in p615-p618 (its baseline still holds a 120-step entry
+  of 2026-10-09). `space` notes `mainThread` hashing apart from the workers (`f9619ec1` /
+  `35fbc0e9`), not a failure. `verify:baselines` exits 1 on B2 alone: the committed
+  `assets/EngineRapier.js` (9.5 kB gzip) and `#2` (9.3 kB) swapped; `bundle.banner.json`,
+  `api.json` (2,512 exports in 322 modules, 838 on 16 entries) and `docs.json` (2,319 / 2,416)
+  unchanged, no debug code. `sbp --profile all` within every budget (the app's initial 379.2 kB
+  gzip against its groups' 832.0 kB, B1; `assets/index.css` 0.9 kB of 3.0 kB "well under").
+  `hub:build`: the four `notExported` / link warnings and the index warning; `hub-search.js`
+  1,779,249 B raw, 403,961 B `gzip -9`. The warning's "1.69 MB" is MiB (H6's `formatBytes`) and
+  cites the deleted p552.
+- **Step 2,** 31 `it.fails` tests, each checked to fail on its own assertion (as an `it`), in
+  `459abf0`: `gatherSceneData.test.ts` (G1 ×3, G2 ×2, G3; the gather can't take a source folder
+  yet, D10, so fake files are added to its walk through `fs` spies and `writeGeneratedOutput` is
+  replaced by a recorder; a cut-off scene JSON already fails, kept as an `it`),
+  `gatherOutput.test.ts` (G4 ×5, through `ts.transpileModule`'s syntax errors),
+  `assetPipeline/prune.test.ts` (A1 ×2, A2 ×2: `sources.ts`' own `fileURLToPath` result is
+  redirected into a temp root, so `ROOT` and every path under it is there; `ktx` stubbed missing),
+  `assetPipeline/sources.test.ts` (A4 ×2), `devFiles/security.test.ts` (F2 ×2),
+  `hub/buildGuard.test.ts` (H1: `rmSync` throws on the repo root, its parent and `src/`; the build
+  reaches `rmSync(<repo root>)` in 1.8 s), `hub/shell.test.ts` (H2 ×4), `hub/preview.test.ts` (H2
+  ×3: `resolveHubRoute` throws on a NUL byte, and `/%E0%A4%A` or `/%00` each kill the spawned
+  preview), `verify/systemOrder.test.ts` (V6), `sbp/config.test.ts` (B3 ×3). Each fixing phase
+  turns its `it.fails` into an `it`. Not reproduced: H1's second half (by reading), the rest of
+  H2 (Phase 2), `copyDecoders.ts`' copy at load (only its script runs it).
+- **Step 3, F3 confirmed.** In one folder under a root: a staged `evil.png` holding JavaScript (no
+  content check on images), a committed `package.json` `{ "prettier": "./evil.png" }` (allowed:
+  `.json`, no dot segment, `validateGatheredJson` has no type for it), then any JSON commit there:
+  `formatJson` → Prettier 3.2.5's `resolveConfig` loads the config with `require()`, which runs an
+  unknown extension as JavaScript, in the dev server's process. Reproduced against the repo's
+  Prettier on Node 22.13.0 (the payload's options were used and its marker file written);
+  `resolveDevFilePath` allows `package.json`, `evil.png`, `tsconfig.json` and refuses
+  `.prettierrc.json` (a dot file). Reachable with the token: this machine by default, any LAN
+  device under `AEK_DEV_FILES_LAN=true`. **D4's F3 fix gains a third part (to confirm):** staged
+  images are checked by their magic bytes per extension.
+- **Step 4.**
+  - D8: `aekasha/schemas` doesn't resolve in Vite's config bundle (`loadConfigFromFile` on a temp
+    config: "Cannot find package 'aekasha'"; Vite externalises the bare id). D8's relative path
+    to `src/_engine/schemas/index.ts` it is.
+  - D5 inline entries: no scene, and no save entry, holds an inline mesh or import (3 meshes and
+    2 imports, all by id), so validating them fails no repo data. **New finding G12:** the scene
+    pass returns an inline entry as it is (no validation, no generated fields, no shipped-output
+    check for an inline import), and an id with no asset JSON as the raw string ("Fallback to raw
+    string ID"), without an error. Fixed with G1-G2 (Phase 2): an unknown id fails the gather.
+  - D5 materials, measured: the 25 literal variants write a 152 KB JSON Schema (today 13 KB) and
+    give ajv 33-58 errors per mistake; `z.discriminatedUnion('type', [tsl, plain])` over today's
+    two branches (zod 4 takes enum discriminators) gives the same zod issue paths (`tslFile`,
+    `params`, `type`, never the root) at 13 KB (`oneOf` × 2). **Proposed (to confirm), replacing
+    D5's materials bullet:** the two-branch discriminated union, and the runtime's member per type
+    from `RuntimeTypes.test.ts`' `PerType`, moved onto the exported `MaterialAsset` type.
+  - A6 confirmed from three's GLTFLoader: a node with one single-primitive mesh is that mesh
+    object, `loadMesh` assigns the mesh's extras to its `userData` and the node's extras go over
+    them (the node wins), so `parseCustomProps` sees a mesh's `colliderType` and
+    `hasColliderNodes` (node extras only) doesn't.
+  - R2: **60** internal types named by public exports (not 64), from a walk of
+    `.cache/hub/typedoc.json` over the 838 entry names (each entry's `export { … } from` mapped to
+    its module's reflection; every `reference` in their signatures and members followed; TypeDoc's
+    back-links `implementedBy`, `extendedBy`, `inheritedFrom`, `overwrites` skipped, which took
+    the two rigid body proxy classes off; `Error.*` and `Iterable` are lib symbols). Phase 5's
+    check starts from this walk. Per folder:
+    - character: `CharacterInputOpts`, `CharacterBodyKindField`, `CharacterBodyPlan`,
+      `CharacterProbes`, `LocomotionState`
+    - lines: `LineEntityBinding`, `LineWriteTarget`; LOD: `IMPOSTOR_KINDS`
+    - physics: `PhysicsProbeReport`, `PhysicsSimTierData`, `PhysicsTierPolicyMemberData`,
+      `PoseArray`, `RigidBodyTypeAPI`, `ColliderAPI`, `ShapeParams`, `PhysRotation`,
+      `PhysicsBackgroundBehavior`, `PhysicsEngine`, `PhysicsInterpolationMode`, `PhysicsState`,
+      `PhysicsWorkerTarget`, `TempContactForceEvent`, `JointAPI`, `WorldAPI`
+    - sky box: `LegacySkyBoxParams`, `SkyBoxDefSchema`, `SkyBoxBaseDef`, `SkyBoxEnvDef`,
+      `SkyBoxOverrides`
+    - kernel/assets: `AssetLoadReport`, `AssetsWorkerTarget`, `GeoDebugData`,
+      `AllowTextureStrings`, `TextureMapKeys`, `ImportExtension`, `ImportPhysicsParams`,
+      `ParsedCustomProps`, `QuatLike`, `Vector3Like`
+    - kernel/config: `DebugPhysicsWireframeConfig`, `PhysicsWireframeColors`; kernel/init:
+      `FeatureUnmountHook`; kernel/render: `ViewCameraRig`
+    - kernel/ecs: `ECSStorageMode`, `CoreComponentData`, `LifetimeData`, `EntityDebugData`,
+      `ManagedByData`, `TypedArrayTransformStore`
+    - schemas: `FeatureSchemaShape`, `SceneSpatialDomainEntry`, `ATLAS_MIP_CHAINS`,
+      `TextureAtlasSlotInfo`, `CoreEntityOptsSchema`, `DebugData`, `ShadowQuality`
+    - toolkit (4, p620's): `MovingPlatformControls`, `AsteroidCraterOptions`,
+      `AsteroidNoiseOptions`, `TerrainNoiseOctave`
+
+    Proposed per group (decided in Phase 5): **43** added to their entry with a summary (the
+    feature's for its types, `aekasha` for the kernel's; `ParsedCustomProps`, `TextureMapKeys`,
+    `GeoDebugData` and `AllowTextureStrings` checked for a signature change first); **4**
+    constants behind a derived type (`IMPOSTOR_KINDS`, `ATLAS_MIP_CHAINS`, `SkyBoxDefSchema`,
+    `CoreEntityOptsSchema`): the type written out with a type test against the constant, the
+    constant stays off the entry; **7** `ComponentDataMap` member types (`PhysicsSimTierData`,
+    `PhysicsTierPolicyMemberData`, `PhysicsWireframeColors`, `CoreComponentData`, `LifetimeData`,
+    `EntityDebugData`, `ManagedByData`) with R3, `EntityDebugData` as D5's alias;
+    `TypedArrayTransformStore` (a public `ECSWorld` method's return union) by a signature change
+    to `IComponentStorage`; `PhysicsProbeReport` (only through p618 D3's deprecated
+    `TestBridgeProbeResult`) an accepted exception until 6.0.0; the toolkit's 4 to p620.
+- **Step 5, D16's before** (`yarn dev`, this machine): the dev Hub's lazy first build 5.1 s; a
+  rebuild after a page edit 837-983 ms (six edits, median about 880 ms, plus the 100 ms debounce),
+  not "tens of ms". **New finding (H3):** every rebuild reported `version/` as the changed page
+  (the edits were to `documentation/intro.md`), so each one reloads an open Version tab. A dev
+  gather after an identical asset save: 118-150 ms from the save to `generatedAppData.json`
+  rewritten (100 ms of it the debounce), the same for a camera and a texture JSON; each rewrites
+  the generated files and logs its lines (G7).
 
 ### Phase 1: loss and security (D4's first list)
 
