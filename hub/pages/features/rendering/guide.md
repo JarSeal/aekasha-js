@@ -110,9 +110,8 @@ One of the engine's own:
 
 - The [quick start](hub:examples/quick-start): the dev environment and the smallest complete
   scene.
-- The API reference: [Renderer](hub:documentation/engine/kernel/render/Renderer),
-  [PostFX](hub:documentation/engine/features/postfx/PostFX) and
-  [Snapshot](hub:documentation/engine/kernel/render/Snapshot).
+- The API reference: [`render/`](hub:documentation/aekasha/render) of `aekasha` (the renderer and snapshots) and
+  [`aekasha/postfx`](hub:documentation/aekasha/postfx).
 
 ::: claude-md
 :::

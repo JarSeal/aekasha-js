@@ -89,8 +89,8 @@ Only the debug build registers editor views so far.
 
 ## Read more
 
-- The API reference: [Viewports](hub:documentation/engine/features/viewports/Viewports) and
-  [Views](hub:documentation/engine/kernel/render/Views).
+- The API reference: [`aekasha/viewports`](hub:documentation/aekasha/viewports), and [`render/`](hub:documentation/aekasha/render) of
+  `aekasha` for the views.
 
 ::: claude-md
 :::

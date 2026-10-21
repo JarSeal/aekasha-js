@@ -129,7 +129,7 @@ export type CharacterColliderRole = 'MAIN' | 'CROUCH' | 'WALL_SENSOR' | 'FLOOR_S
 
 /** One collider of a body plan. */
 export type CharacterBodyCollider = {
-  /** A {@link CharacterColliderRole}, or a role of the plan's own. */
+  /** A `CharacterColliderRole`, or a role of the plan's own. */
   role: string;
   /** The collider's shape, size, offset (`translation`) and material. */
   params: ColliderParams;

@@ -67,8 +67,8 @@ export const PROD_TEST_KEYS_ACTION_MAP_ID = 'aek:prodTestKeys';
  * An `AppConfig.debugKeys` entry (CONFIG.ts). Reusing a default debug key's id overrides that
  * default — only the given fields change (e.g. just `chord`), and `enabled: false` removes it.
  * Any other id adds a debug-only key, which needs `chord` and `fn` (`type` defaults to 'KEY_UP').
- * Each is an action of a `DEBUG` action map ({@link DEBUG_KEYS_ACTION_MAP_ID},
- * {@link APP_DEBUG_KEYS_ACTION_MAP_ID}): `fn` runs at the key's own keydown (`KEY_DOWN`) or keyup
+ * Each is an action of a `DEBUG` action map (`DEBUG_KEYS_ACTION_MAP_ID`,
+ * `APP_DEBUG_KEYS_ACTION_MAP_ID`): `fn` runs at the key's own keydown (`KEY_DOWN`) or keyup
  * (`KEY_UP`), not for a key-repeat.
  */
 export type DebugKeyBindingConfig = Partial<Omit<KeyUpDownBinding, 'id'>> & { id: string };
@@ -372,9 +372,9 @@ const createDebugKeyMap = (mapId: string, keys: readonly Readonly<KeyUpDownBindi
 };
 
 /**
- * Creates the engine's debug keys' action map ({@link DEBUG_KEYS_ACTION_MAP_ID}), its defaults
+ * Creates the engine's debug keys' action map (`DEBUG_KEYS_ACTION_MAP_ID`), its defaults
  * merged with the CONFIG.ts `debugKeys` overrides, and the app's own `debugKeys` as a map of their
- * own ({@link APP_DEBUG_KEYS_ACTION_MAP_ID}). Reserves the engine keys' chords, so a key binding or
+ * own (`APP_DEBUG_KEYS_ACTION_MAP_ID`). Reserves the engine keys' chords, so a key binding or
  * an action map binding one of them gets a console warning. Debug environment only. The boot's.
  * @internal
  */

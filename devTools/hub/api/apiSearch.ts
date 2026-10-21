@@ -1,18 +1,12 @@
-import path from 'node:path';
 import type { HubSearchExtraDoc } from '../search';
 import { firstSentence, partsToMarkdown } from './comments';
-import { getOwnMembers, Kind, type ApiIndex, type DeclarationReflection } from './model';
-import {
-  getModuleSummary,
-  kindLabel,
-  MEMBER_KIND_LABELS,
-  symbolSummary,
-  toPlainText,
-} from './renderSymbol';
+import { getOwnMembers, Kind, type DeclarationReflection } from './model';
+import type { PublicApi } from './publicApi';
+import { kindLabel, MEMBER_KIND_LABELS, symbolSummary, toPlainText } from './renderSymbol';
 
 /**
- * The search's API documents (p619 R4, from `render.ts`): one per module, export and class or
- * interface member, built once per model.
+ * The search's API documents (p619 R4, from `render.ts`): one per entry's page, public name and
+ * class or interface member, built once per model. Internal exports have no page, so no document.
  */
 
 /**
@@ -29,11 +23,12 @@ const clipSearchSummary = (text: string) => {
 };
 
 /**
- * The search's API documents (§2.4): each module, symbol and class or interface member, found by
- * its name, with its kind and its summary's first sentence for the result (stored, not indexed,
- * and clipped: the index stays under p552's 1 MB). Empty values are left out, not stored.
+ * The search's API documents (§2.4): each entry, public name and class or interface member, found
+ * by its name, with its kind and its summary's first sentence for the result (stored, not indexed,
+ * and clipped: the index stays under p552's 1 MB). Empty values are left out, not stored. A second
+ * entry's re-export has none: the name finds its first entry's.
  */
-const createSearchDocs = (index: ApiIndex): HubSearchExtraDoc[] => {
+const createSearchDocs = (api: PublicApi): HubSearchExtraDoc[] => {
   const doc = (
     pagePath: string,
     anchor: string,
@@ -58,41 +53,38 @@ const createSearchDocs = (index: ApiIndex): HubSearchExtraDoc[] => {
     return summary ? firstSentence(partsToMarkdown(summary)) : '';
   };
   const docs: HubSearchExtraDoc[] = [];
-  for (const module of index.modules) {
-    const name = path.posix.basename(module.relPath);
-    docs.push(doc(module.pagePath, '', name, 'module', getModuleSummary(module)));
-    for (const symbol of module.symbols) {
-      if (symbol.kind === Kind.Reference) continue;
-      const target = index.targets.get(symbol.id);
-      if (!target) continue;
+  for (const page of api.pages) {
+    if (page.kind === 'entry') docs.push(doc(page.pagePath, '', page.title, 'entry', ''));
+  }
+  for (const { name, reflection, target, isReexport } of api.symbols) {
+    if (isReexport) continue;
+    docs.push(
+      doc(target.pagePath, target.anchor, name, kindLabel(reflection), sentence(reflection))
+    );
+    if (reflection.kind !== Kind.Class && reflection.kind !== Kind.Interface) continue;
+    for (const member of getOwnMembers(reflection)) {
+      const memberTarget = api.targets.get(member.id);
+      if (!memberTarget || member.flags.isPrivate) continue;
+      const memberName = member.kind === Kind.Constructor ? 'constructor' : member.name;
+      const kind = MEMBER_KIND_LABELS[member.kind] ?? 'property';
       docs.push(
-        doc(module.pagePath, target.anchor, symbol.name, kindLabel(symbol), sentence(symbol))
+        doc(
+          memberTarget.pagePath,
+          memberTarget.anchor,
+          `${name}.${memberName}`,
+          kind,
+          sentence(member)
+        )
       );
-      if (symbol.kind !== Kind.Class && symbol.kind !== Kind.Interface) continue;
-      for (const member of getOwnMembers(symbol)) {
-        const memberTarget = index.targets.get(member.id);
-        if (!memberTarget || member.flags.isPrivate) continue;
-        const memberName = member.kind === Kind.Constructor ? 'constructor' : member.name;
-        const kind = MEMBER_KIND_LABELS[member.kind] ?? 'property';
-        docs.push(
-          doc(
-            module.pagePath,
-            memberTarget.anchor,
-            `${symbol.name}.${memberName}`,
-            kind,
-            sentence(member)
-          )
-        );
-      }
     }
   }
   return docs;
 };
 
-const searchDocs = new WeakMap<ApiIndex, HubSearchExtraDoc[]>();
+const searchDocs = new WeakMap<PublicApi, HubSearchExtraDoc[]>();
 
-export const getSearchDocs = (index: ApiIndex) => {
-  let docs = searchDocs.get(index);
-  if (!docs) searchDocs.set(index, (docs = createSearchDocs(index)));
+export const getSearchDocs = (api: PublicApi) => {
+  let docs = searchDocs.get(api);
+  if (!docs) searchDocs.set(api, (docs = createSearchDocs(api)));
   return docs;
 };

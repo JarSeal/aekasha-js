@@ -194,9 +194,8 @@ in lockstep with physics goes in the ECS instead (see [ECS](hub:features/ecs#sys
 ## Read more
 
 - The [quick start](hub:examples/quick-start).
-- The API reference: [Scene](hub:documentation/engine/kernel/scene/Scene),
-  [SceneLoader](hub:documentation/engine/kernel/scene/SceneLoader) and the
-  [schemas](hub:documentation/engine/schemas).
+- The API reference: [`scene/`](hub:documentation/aekasha/scene) and [`assets/`](hub:documentation/aekasha/assets) of
+  `aekasha`, and [`aekasha/schemas`](hub:documentation/aekasha/schemas).
 
 ::: claude-md
 :::

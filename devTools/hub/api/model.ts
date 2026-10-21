@@ -3,14 +3,10 @@ import type { JSONOutput, ReflectionKind } from 'typedoc';
 import { ROOT } from '../paths';
 
 /**
- * The API model indexed for the pages (p553 §2.2): every module (a source file) with its page
- * path, the folders above them, each symbol's page and anchor, and the doc coverage.
- *
- * Two subtrees, `engine/` (`src/_engine/`) and `toolkit/` (`src/toolkit/`), each a folder tree
- * under `documentation/`. A module's page is its file's path without `.ts`
- * (`documentation/engine/kernel/scene/SceneLoader/`), and a folder's page its path. A module next to a
- * folder of the same name (`Foo.ts` and `Foo/`) has the folder's URL: its page is both,
- * the module's symbols and the folder's list.
+ * The API model indexed (p553 §2.2): every module (a source file) of the two subtrees, the engine
+ * (`src/_engine/`) and the toolkit (`src/toolkit/`), with its exports, and every export and member
+ * by reflection id. The model stays per module (the docs ratchet counts every export); the pages
+ * are the public entries' (`publicApi.ts`, p619 D6).
  */
 
 export type DeclarationReflection = JSONOutput.DeclarationReflection;
@@ -57,13 +53,15 @@ export const API_SUBTREES: { id: ApiSubtree; sourceDir: string; title: string }[
   { id: 'toolkit', sourceDir: 'src/toolkit', title: 'Toolkit' },
 ];
 
+/** The entries' pages are under this one: `documentation/aekasha/physics/` (`publicApi.ts`) */
+export const API_ENTRIES_PATH = `${API_SECTION_PATH}aekasha/`;
+
 /**
- * Whether a site path (`documentation/engine/kernel/scene/SceneLoader/`) is one of the pages the API
- * model renders: the landing page and both subtrees, not the section's hand-written children
+ * Whether a site path (`documentation/aekasha/physics/`) is one of the pages the API model
+ * renders: the landing page and the entries' pages, not the section's hand-written children
  */
 export const isApiPagePath = (sitePath: string) =>
-  sitePath === API_SECTION_PATH ||
-  API_SUBTREES.some(({ id }) => sitePath.startsWith(`${API_SECTION_PATH}${id}/`));
+  sitePath === API_SECTION_PATH || sitePath.startsWith(API_ENTRIES_PATH);
 
 /** Documented or not: a comment on it, or on one of its signatures */
 export type Coverage = { documented: number; total: number };
@@ -75,45 +73,21 @@ export type ApiModule = {
   relPath: string;
   /** From the repo root: `src/_engine/kernel/scene/SceneLoader.ts` */
   sourcePath: string;
-  /** Absolute: its page's diagnostics point here */
+  /** Absolute: its comments' diagnostics point here */
   file: string;
-  pagePath: string;
   /** Its exports, references (re-exports) included */
   symbols: DeclarationReflection[];
-  /** References don't count: their target does, where it's declared */
-  coverage: Coverage;
 };
 
-export type ApiFolder = {
-  subtree: ApiSubtree;
-  /** From its subtree's folder: `features/physics`, '' for the subtree's own */
-  relPath: string;
-  /** From the repo root: `src/_engine/features/physics` */
-  sourcePath: string;
-  pagePath: string;
-  folders: ApiFolder[];
-  modules: ApiModule[];
-  /** The module with this folder's URL (`Foo.ts` for `Foo/`): its page is the folder's */
-  module: ApiModule | null;
-  /** Its own modules', for the landing page's groups */
-  coverage: Coverage;
-  /** With its subfolders' */
-  totalCoverage: Coverage;
-};
-
-/** Where a reflection is shown: its module's page and its anchor there */
-export type ApiTarget = { module: ApiModule; anchor: string };
+/** Where a reflection is shown: its page and its anchor there */
+export type ApiTarget = { pagePath: string; anchor: string };
 
 export type ApiIndex = {
   project: JSONOutput.ProjectReflection;
+  /** Sorted by source path */
   modules: ApiModule[];
-  roots: Record<ApiSubtree, ApiFolder>;
-  /** Every page's folder, by page path */
-  folders: Map<string, ApiFolder>;
-  /** Symbols and their members (a class's methods) by reflection id */
-  targets: Map<number, ApiTarget>;
+  /** Exports and their members (a class's methods) by reflection id */
   reflections: Map<number, DeclarationReflection>;
-  coverage: Record<ApiSubtree, Coverage>;
 };
 
 const hasComment = (comment: Comment | undefined) =>
@@ -125,32 +99,12 @@ export const isDocumented = (reflection: DeclarationReflection) =>
   hasComment(reflection.getSignature?.comment) ||
   hasComment(reflection.setSignature?.comment);
 
-const addCoverage = (into: Coverage, from: Coverage) => {
-  into.documented += from.documented;
-  into.total += from.total;
-};
-
 /** Members that get an anchor of their own: what a class or an interface declares itself */
 export const getOwnMembers = (symbol: DeclarationReflection) =>
   (symbol.children ?? []).filter((child) => !child.inheritedFrom);
 
 const getPagePath = (subtree: ApiSubtree, relPath: string) =>
   `${API_SECTION_PATH}${subtree}/${relPath ? `${relPath}/` : ''}`;
-
-const createFolder = (subtree: ApiSubtree, relPath: string): ApiFolder => {
-  const { sourceDir } = API_SUBTREES.find((s) => s.id === subtree)!;
-  return {
-    subtree,
-    relPath,
-    sourcePath: relPath ? `${sourceDir}/${relPath}` : sourceDir,
-    pagePath: getPagePath(subtree, relPath),
-    folders: [],
-    modules: [],
-    module: null,
-    coverage: { documented: 0, total: 0 },
-    totalCoverage: { documented: 0, total: 0 },
-  };
-};
 
 /** `src/_engine/kernel/scene/SceneLoader.ts` → its subtree and `kernel/scene/SceneLoader` */
 const locateModule = (sourcePath: string) => {
@@ -166,10 +120,10 @@ const locateModule = (sourcePath: string) => {
 };
 
 /**
- * The page of a module (`src/_engine/kernel/scene/SceneLoader.ts` →
+ * The page a module (`src/_engine/kernel/scene/SceneLoader.ts` →
  * `documentation/engine/kernel/scene/SceneLoader/`) or a folder (`src/_engine/kernel/` →
- * `documentation/engine/kernel/`), whether the API has it or not;
- * `null` outside both subtrees. p608's codemod rewrites `hub:` links with it.
+ * `documentation/engine/kernel/`) had before the pages became the entries' (p619 D6); `null`
+ * outside both subtrees. Only p608's dormant codemod reads it, which p619 D9 removes.
  */
 export const getApiPagePath = (sourcePath: string): string | null => {
   const isFolder = sourcePath.endsWith('/');
@@ -180,91 +134,26 @@ export const getApiPagePath = (sourcePath: string): string | null => {
 };
 
 export const indexApiModel = (project: JSONOutput.ProjectReflection): ApiIndex => {
-  const roots = {
-    engine: createFolder('engine', ''),
-    toolkit: createFolder('toolkit', ''),
-  };
-  const folders = new Map<string, ApiFolder>(
-    Object.values(roots).map((folder) => [folder.pagePath, folder])
-  );
-  const getFolder = (subtree: ApiSubtree, relPath: string): ApiFolder => {
-    const pagePath = createFolder(subtree, relPath).pagePath;
-    const existing = folders.get(pagePath);
-    if (existing) return existing;
-    const folder = createFolder(subtree, relPath);
-    folders.set(pagePath, folder);
-    const parentRel = relPath.includes('/') ? relPath.slice(0, relPath.lastIndexOf('/')) : '';
-    getFolder(subtree, parentRel).folders.push(folder);
-    return folder;
-  };
-
   const modules: ApiModule[] = [];
-  const targets = new Map<number, ApiTarget>();
   const reflections = new Map<number, DeclarationReflection>();
   for (const reflection of project.children ?? []) {
     const sourcePath = reflection.sources?.[0]?.fileName;
     const location = sourcePath ? locateModule(sourcePath) : null;
     if (!sourcePath || !location) continue;
     const symbols = reflection.children ?? [];
-    const counted = symbols.filter((symbol) => symbol.kind !== Kind.Reference);
-    const module: ApiModule = {
+    modules.push({
       reflection,
       ...location,
       sourcePath,
       file: path.join(ROOT, sourcePath),
-      pagePath: getPagePath(location.subtree, location.relPath),
       symbols,
-      coverage: { documented: counted.filter(isDocumented).length, total: counted.length },
-    };
-    modules.push(module);
-    const dir = location.relPath.includes('/')
-      ? location.relPath.slice(0, location.relPath.lastIndexOf('/'))
-      : '';
-    getFolder(location.subtree, dir).modules.push(module);
-
-    // Anchors: the symbol's name (`#loadScene`), a member's after it (`#ECSWorld.addSystem`).
-    // The same name twice in a module (a value and a type) gets `-2`.
-    const anchors = new Set<string>();
-    const unique = (base: string) => {
-      let anchor = base;
-      for (let n = 2; anchors.has(anchor); n++) anchor = `${base}-${n}`;
-      anchors.add(anchor);
-      return anchor;
-    };
+    });
     for (const symbol of symbols) {
-      const anchor = unique(symbol.name);
-      targets.set(symbol.id, { module, anchor });
       reflections.set(symbol.id, symbol);
       if (symbol.kind !== Kind.Class && symbol.kind !== Kind.Interface) continue;
-      for (const member of getOwnMembers(symbol)) {
-        targets.set(member.id, { module, anchor: unique(`${anchor}.${member.name}`) });
-        reflections.set(member.id, member);
-      }
+      for (const member of getOwnMembers(symbol)) reflections.set(member.id, member);
     }
   }
-
-  // A module with a folder's URL is that folder's page
-  for (const module of modules) {
-    const folder = folders.get(module.pagePath);
-    if (folder) folder.module = module;
-  }
-
-  const sumFolder = (folder: ApiFolder): Coverage => {
-    for (const module of folder.modules) addCoverage(folder.coverage, module.coverage);
-    addCoverage(folder.totalCoverage, folder.coverage);
-    for (const child of folder.folders) addCoverage(folder.totalCoverage, sumFolder(child));
-    folder.folders.sort((a, b) => a.relPath.localeCompare(b.relPath));
-    folder.modules.sort((a, b) => a.relPath.localeCompare(b.relPath));
-    return folder.totalCoverage;
-  };
-  const coverage = { engine: sumFolder(roots.engine), toolkit: sumFolder(roots.toolkit) };
-  modules.sort((a, b) => a.pagePath.localeCompare(b.pagePath));
-
-  return { project, modules, roots, folders, targets, reflections, coverage };
+  modules.sort((a, b) => a.sourcePath.localeCompare(b.sourcePath));
+  return { project, modules, reflections };
 };
-
-/** The folders under a subtree, depth first, the subtree's own first */
-export const listFolders = (folder: ApiFolder): ApiFolder[] => [
-  folder,
-  ...folder.folders.flatMap(listFolders),
-];

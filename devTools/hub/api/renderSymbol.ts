@@ -16,6 +16,7 @@ import {
   type InlineTagPart,
 } from './comments';
 import type { ApiLinks } from './links';
+import type { PublicApi, PublicSymbol } from './publicApi';
 import {
   getOwnMembers,
   isDocumented,
@@ -64,6 +65,7 @@ export type SourceLink = (source: JSONOutput.SourceReference) => string;
 
 export type Ctx = {
   index: ApiIndex;
+  api: PublicApi;
   links: ApiLinks;
   highlighter: Highlighter;
   md: MarkdownIt;
@@ -73,7 +75,7 @@ export type Ctx = {
   sourceLink: SourceLink;
 };
 
-/** The shortest relative URL between two site paths: `../SceneLoader/`, `engine/kernel/` */
+/** The shortest relative URL between two site paths: `../physics/`, `aekasha/scene/` */
 const relativeUrl = (from: string, to: string) => {
   const fromParts = from.split('/').filter(Boolean);
   const toParts = to.split('/').filter(Boolean);
@@ -101,8 +103,7 @@ export const href = (ctx: Ctx, pagePath: string, anchor = '') => {
   return `${relativeUrl(ctx.env.page.path, pagePath)}${anchor ? `#${anchor}` : ''}`;
 };
 
-const targetHref = (ctx: Ctx, target: ApiTarget) =>
-  href(ctx, target.module.pagePath, target.anchor);
+const targetHref = (ctx: Ctx, target: ApiTarget) => href(ctx, target.pagePath, target.anchor);
 
 /** A type in a signature or a table links its symbol (or its nearest owner with an anchor) */
 const typeHref =
@@ -216,15 +217,19 @@ const SUMMARY_KINDS: number[] = [Kind.Function, Kind.Class];
 
 /**
  * A module's one line: its `@module` comment's first sentence, else its first documented function
- * or class's (by source line), else its first documented export's. Its `{@link}`s are code unless
- * `resolveLink` links them.
+ * or class's (by source line), else its first documented export's, of `symbols` (its public
+ * ones). Its `{@link}`s are code unless `resolveLink` links them.
  */
-export const getModuleSummary = (module: ApiModule, resolveLink?: CommentLinkResolver) => {
+export const getModuleSummary = (
+  module: ApiModule,
+  symbols: DeclarationReflection[],
+  resolveLink?: CommentLinkResolver
+) => {
   if (module.reflection.comment?.summary.length) {
     return firstSentence(partsToMarkdown(module.reflection.comment.summary, resolveLink));
   }
-  const documented = module.symbols
-    .filter((symbol) => symbol.kind !== Kind.Reference && symbolSummary(symbol))
+  const documented = symbols
+    .filter((symbol) => symbolSummary(symbol))
     .sort((a, b) => (a.sources?.[0]?.line ?? 0) - (b.sources?.[0]?.line ?? 0));
   const first = documented.find((symbol) => SUMMARY_KINDS.includes(symbol.kind)) ?? documented[0];
   return first ? firstSentence(partsToMarkdown(symbolSummary(first), resolveLink)) : '';
@@ -244,6 +249,11 @@ export const toPlainText = (markdown: string) =>
 /** Tags shown in their own place, not in the list of other tags */
 const PLACED_TAGS = ['@returns', '@example', '@see', '@remarks', '@deprecated', '@param'];
 const DEFAULT_TAGS = ['@default', '@defaultValue'];
+
+/** A public type's member that isn't public API: shown, with a badge (p619 R2 skips it) */
+const isInternal = (member: DeclarationReflection) =>
+  hasModifierTag(member.comment, '@internal') ||
+  !!member.signatures?.some((signature) => hasModifierTag(signature.comment, '@internal'));
 
 const isDeprecated = (symbol: DeclarationReflection) =>
   hasBlockTag(symbol.comment, '@deprecated') ||
@@ -357,6 +367,7 @@ const memberRows = (ctx: Ctx, members: DeclarationReflection[], prefix = '', dep
       member.setSignature && badge('set'),
       member.flags.isProtected && badge('protected'),
       isDeprecated(member) && badge('deprecated', 'deprecated'),
+      isInternal(member) && badge('internal'),
     ].filter((b): b is string => !!b);
     const comment =
       member.comment ??
@@ -439,7 +450,6 @@ const KIND_LABELS: Record<number, string> = {
   [Kind.Variable]: 'const',
   [Kind.Namespace]: 'namespace',
   [Kind.Module]: 'module',
-  [Kind.Reference]: 're-export',
 };
 
 export const MEMBER_KIND_LABELS: Record<number, string> = {
@@ -477,13 +487,15 @@ const renderSignatureDocs = (ctx: Ctx, signature: SignatureReflection, hasReturn
 
 /** A class's or an interface's method, or a class's constructor, under its symbol (h4) */
 const renderMember = (ctx: Ctx, member: DeclarationReflection) => {
-  const target = ctx.index.targets.get(member.id);
+  const target = ctx.api.targets.get(member.id);
   if (!target) return '';
   const isConstructor = member.kind === Kind.Constructor;
   const name = isConstructor ? 'constructor' : member.name;
   const inner = `<code>${escapeHtml(`${name}()`)}</code>${
     member.flags.isStatic ? badge('static') : ''
-  }${isDeprecated(member) ? badge('deprecated', 'deprecated') : ''}`;
+  }${isDeprecated(member) ? badge('deprecated', 'deprecated') : ''}${
+    isInternal(member) ? badge('internal') : ''
+  }`;
   let html = anchorHeading(ctx, 4, target.anchor, name, inner);
   for (const signature of member.signatures ?? []) {
     const w = printSignature(name, signature, {
@@ -524,30 +536,29 @@ const renderFunctionType = (ctx: Ctx, type: SomeType | undefined) => {
   );
 };
 
-const renderReference = (ctx: Ctx, symbol: DeclarationReflection) => {
-  const { target: targetId } = symbol as unknown as JSONOutput.ReferenceReflection;
-  const target = ctx.index.targets.get(targetId);
-  const original = ctx.index.reflections.get(targetId);
-  if (!target || !original) {
-    return `<p>Re-exports <code>${escapeHtml(symbol.name)}</code> from outside the documented API.</p>\n`;
-  }
-  const name = original.name === symbol.name ? '' : ` as <code>${escapeHtml(symbol.name)}</code>`;
-  return `<p>Re-exports <a href="${escapeHtml(href(ctx, target.module.pagePath, target.anchor))}"><code>${escapeHtml(original.name)}</code></a>${name} from <a href="${escapeHtml(href(ctx, target.module.pagePath))}"><code>${escapeHtml(target.module.relPath)}</code></a>.</p>\n`;
+/** A second entry's name for a declaration the first entry documents: a link to it */
+const renderReexport = (ctx: Ctx, symbol: PublicSymbol) => {
+  const home = ctx.api.symbols.find(
+    (other) => other.reflection.id === symbol.reflection.id && !other.isReexport
+  )!;
+  return `<p>Re-exports <a href="${escapeHtml(href(ctx, symbol.target.pagePath, symbol.target.anchor))}"><code>${escapeHtml(symbol.reflection.name)}</code></a> from <code>${escapeHtml(home.entry)}</code>.</p>\n`;
 };
 
-export const renderSymbol = (ctx: Ctx, symbol: DeclarationReflection) => {
-  const target = ctx.index.targets.get(symbol.id);
-  if (!target) return '';
-  const kind = kindLabel(symbol);
-  const badges = [
-    isDeprecated(symbol) && badge('deprecated', 'deprecated'),
-    hasModifierTag(symbol.comment, '@internal') && badge('internal'),
-  ].filter(Boolean);
-  const inner = `<span class="hubApiKind hubApiKind_${kind.replace(/\W/g, '')}">${escapeHtml(kind)}</span><code>${escapeHtml(symbol.name)}</code>${badges.join('')}`;
-  let html = anchorHeading(ctx, 3, target.anchor, symbol.name, inner);
+/**
+ * A name of the page's entry: its heading and anchor, then the declaration's docs, or for a
+ * second entry's re-export a link to the first's
+ */
+export const renderSymbol = (ctx: Ctx, publicSymbol: PublicSymbol) => {
+  const { reflection: symbol, name, anchor } = publicSymbol;
+  const kind = publicSymbol.isReexport ? 're-export' : kindLabel(symbol);
+  const badges = [isDeprecated(symbol) && badge('deprecated', 'deprecated')].filter(Boolean);
+  const inner = `<span class="hubApiKind hubApiKind_${kind.replace(/\W/g, '')}">${escapeHtml(kind)}</span><code>${escapeHtml(name)}</code>${badges.join('')}`;
+  let html = anchorHeading(ctx, 3, anchor, name, inner);
+  if (publicSymbol.isReexport) {
+    return `<section class="hubApiSymbol">\n${html}${renderReexport(ctx, publicSymbol)}</section>\n`;
+  }
   const line = symbol.sources?.[0]?.line;
-  const isMissing = symbol.kind !== Kind.Reference && !isDocumented(symbol);
-  if (isMissing) html += '<p class="hubApiMissing">No description</p>\n';
+  if (!isDocumented(symbol)) html += '<p class="hubApiMissing">No description</p>\n';
 
   switch (symbol.kind) {
     case Kind.Function:
@@ -611,9 +622,6 @@ export const renderSymbol = (ctx: Ctx, symbol: DeclarationReflection) => {
       html += renderFunctionType(ctx, symbol.type);
       html += renderCommentTail(ctx, symbol.comment, line);
       break;
-    case Kind.Reference:
-      html += renderReference(ctx, symbol);
-      break;
     default:
       html += codeBlock(
         ctx,
@@ -626,5 +634,5 @@ export const renderSymbol = (ctx: Ctx, symbol: DeclarationReflection) => {
       html += renderCommentHead(ctx, symbol.comment, line);
       html += renderCommentTail(ctx, symbol.comment, line);
   }
-  return `<section class="hubApiSymbol">\n${html}${symbol.kind === Kind.Reference ? '' : renderSource(ctx, symbol)}</section>\n`;
+  return `<section class="hubApiSymbol">\n${html}${renderSource(ctx, symbol)}</section>\n`;
 };

@@ -82,7 +82,7 @@ const getAutoLodRadius = (geometry: THREE.BufferGeometry, mesh?: THREE.Mesh) => 
 
 /**
  * Resolves a mesh's `AUTO` LOD: waits for a chain its geometry's import requested or one being
- * generated, then builds the levels from it ({@link lodDefFromChain}). Warns when the geometry has
+ * generated, then builds the levels from it (`lodDefFromChain`). Warns when the geometry has
  * no chain: chains come from the asset (`lodChain` in its `*.importedAsset.json`, or
  * `generateLodChain` in code), never from a mesh.
  * @param geometry the mesh's geometry (level 0)

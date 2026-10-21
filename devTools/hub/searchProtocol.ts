@@ -10,10 +10,10 @@ import type { Options } from 'minisearch';
 /**
  * One indexed section of a page: its text before the first heading, then each heading's.
  *
- * Or an API module, symbol or member (p553 §2.4): found by its name only (`symbol`), with its
- * `kind` and `summary` stored for the result. It leaves the page fields out, and stores no name:
- * a symbol's or a member's is its anchor (`loadScene`, `ECSWorld.addSystem`), a module's its
- * page's folder (`apiSearchName`). About 2,700 of them: every stored byte counts.
+ * Or an API entry, public name or member (p553 §2.4, p619 D6): found by its name only (`symbol`),
+ * with its `kind` and `summary` stored for the result. It leaves the page fields out, and stores
+ * no name: a name's or a member's is its anchor (`loadScene`, `ECSWorld.addSystem`), an entry's
+ * its page's path (`apiSearchName`). Thousands of them: every stored byte counts.
  */
 export type HubSearchDoc = {
   id: number;
@@ -32,7 +32,7 @@ export type HubSearchDoc = {
   code?: string;
   /** An API doc's name, indexed, not stored */
   symbol?: string;
-  /** An API doc's kind badge (`function`, `type`, `method`, `module`) */
+  /** An API doc's kind badge (`function`, `type`, `method`, `entry`) */
   kind?: string;
   /** An API doc's summary, its first sentence: stored for the snippet, not indexed */
   summary?: string;
@@ -70,10 +70,12 @@ export const HUB_SEARCH_BOOST = { title: 4, symbol: 4, heading: 3, tags: 2 };
 
 /**
  * An API result's name: a symbol's or a member's anchor without the `-2` a second declaration
- * of the same name in a module gets (`api/model.ts`), a module's page's folder
+ * of the same name on a page gets (`api/publicApi.ts`), an entry's specifier (its page's path
+ * under `documentation/`: `aekasha/physics`)
  */
 export const apiSearchName = ({ path, anchor, kind }: HubSearchStored) => {
-  if (kind !== 'module' && anchor) return anchor.replace(/-\d+$/, '');
+  if (kind === 'entry') return path.replace(/^documentation\/|\/$/g, '');
+  if (anchor) return anchor.replace(/-\d+$/, '');
   const parts = path.split('/').filter(Boolean);
   return parts[parts.length - 1] ?? path;
 };

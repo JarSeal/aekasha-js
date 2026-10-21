@@ -111,7 +111,7 @@ have it checked too (it does nothing unless the check is on).
 
 ## Read more
 
-- The API reference: [Spatial](hub:documentation/engine/features/spatial).
+- The API reference: [`aekasha/spatial`](hub:documentation/aekasha/spatial).
 
 ::: claude-md
 :::

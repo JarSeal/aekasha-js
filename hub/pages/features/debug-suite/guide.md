@@ -395,8 +395,7 @@ it all for a bug report.
 
 - The [debug tab example](hub:examples/debug-tab): a tab, undo and a profiler figure in one
   scene.
-- The API reference: [debug](hub:documentation/engine/debug), the public entry points of the
-  debug tools.
+- The API reference: [`aekasha/debug`](hub:documentation/aekasha/debug), the debug tools' public entry.
 
 ::: claude-md
 :::

@@ -35,7 +35,7 @@ import { getActiveView, isRuntimeViewActive } from './Views';
 
 /** {@link takeSnapshotAsync}'s options: the image's size, and what it renders and how. */
 export type SnapshotOpts = {
-  /** The image's width in pixels (pixel ratio 1), 1 to {@link MAX_SNAPSHOT_SIZE} */
+  /** The image's width in pixels (pixel ratio 1), 1 to `MAX_SNAPSHOT_SIZE` */
   width: number;
   /** The image's height in pixels, like `width` */
   height: number;

@@ -154,6 +154,7 @@
 .hubApiKind_let,
 .hubApiKind_namespace,
 .hubApiKind_module,
+.hubApiKind_entry,
 .hubApiKind_property,
 .hubApiKind_reexport {
   --hub-api-kind: var(--hub-text-muted);

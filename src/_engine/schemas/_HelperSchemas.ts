@@ -100,7 +100,7 @@ export const DebugDataSchema = z
   .describe('What the debug tools show for it. Production data has none.');
 
 /**
- * An asset's or an entity's `debugData` ({@link DebugDataSchema}). The ECS's `EntityDebugData` has
+ * An asset's or an entity's `debugData` (`DebugDataSchema`). The ECS's `EntityDebugData` has
  * the same fields.
  */
 export type DebugData = z.infer<typeof DebugDataSchema>;

@@ -20,6 +20,8 @@ export type HubGeneratedPage = {
   title: string;
   /** The breadcrumbs' label */
   menu: string;
+  /** Its menu position among its siblings (`aek:order`), 0 by default; then by `menu` */
+  order?: number;
   description: string;
   tags: string[];
   isInMenu: boolean;

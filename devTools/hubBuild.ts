@@ -132,10 +132,10 @@ const main = async () => {
     `${GREEN}✓ [Hub] ${result.pageCount} pages → ${toRepoPath(outDir)}/ (${Math.round(result.durationMs)} ms)${RESET}`
   );
   if (result.api) {
-    const { isCached, extractMs, moduleCount, symbolCount, coverage } = result.api;
+    const { isCached, extractMs, entryCount, symbolCount, coverage } = result.api;
     const share = coverage.total ? Math.round((coverage.documented / coverage.total) * 100) : 100;
     console.log(
-      `  API: ${moduleCount} modules, ${symbolCount} symbols, ${share}% documented; model ${isCached ? 'reused' : 'extracted'} (${(extractMs / 1000).toFixed(1)} s)`
+      `  API: ${entryCount} entries, ${symbolCount} names, ${share}% documented; model ${isCached ? 'reused' : 'extracted'} (${(extractMs / 1000).toFixed(1)} s)`
     );
   } else if (isApiSkipped) {
     console.log('  API: not built (--no-api)');

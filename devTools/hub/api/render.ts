@@ -25,13 +25,10 @@ import {
   API_SECTION_PATH,
   API_SUBTREES,
   indexApiModel,
-  Kind,
-  listFolders,
-  type ApiFolder,
   type ApiIndex,
-  type ApiModule,
   type Coverage,
 } from './model';
+import { buildPublicApi, type ApiPage, type ApiPageSection, type PublicApi } from './publicApi';
 import {
   commentLinks,
   getModuleSummary,
@@ -43,7 +40,6 @@ import {
   renderSymbol,
   resolveCommentLink,
   sectionHeading,
-  toPlainText,
   type Ctx,
   type SourceLink,
 } from './renderSymbol';
@@ -80,7 +76,9 @@ export type ApiModelSource = 'current' | 'last' | 'none';
 export type ApiBuildStats = {
   isCached: boolean;
   extractMs: number;
-  moduleCount: number;
+  /** The public entries */
+  entryCount: number;
+  /** Their names, a second entry's re-exports aside */
   symbolCount: number;
   coverage: Coverage;
 };
@@ -176,98 +174,81 @@ const replayDiagnostics = (diag: HubDiagnostics, items: HubDiagnostic[]) => {
 
 // --- Pages ---
 
-const SECTIONS: { title: string; id: string; kinds: number[] }[] = [
-  { title: 'Functions', id: 'functions', kinds: [Kind.Function] },
-  { title: 'Classes', id: 'classes', kinds: [Kind.Class] },
-  { title: 'Interfaces', id: 'interfaces', kinds: [Kind.Interface] },
-  { title: 'Type aliases', id: 'type-aliases', kinds: [Kind.TypeAlias] },
-  { title: 'Enums', id: 'enums', kinds: [Kind.Enum] },
-  { title: 'Variables', id: 'variables', kinds: [Kind.Variable] },
-  { title: 'Namespaces', id: 'namespaces', kinds: [Kind.Namespace, Kind.Module] },
-  { title: 'Re-exports', id: 're-exports', kinds: [Kind.Reference] },
-];
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-const renderModuleList = (ctx: Ctx, modules: ApiModule[]) => {
-  if (!modules.length) return '';
-  const items = modules.map((module) => {
+/** A page's names, its children's included, re-exports aside (a value and a type of one name
+ * are one) */
+const countNames = (page: ApiPage): number =>
+  page.sections.reduce(
+    (n, section) =>
+      n + new Set(section.symbols.filter((s) => !s.isReexport).map((s) => s.name)).size,
+    0
+  ) + page.children.reduce((n, child) => n + countNames(child), 0);
+
+/** The import it documents (`from 'aekasha/physics'`), its source and its coverage */
+const renderPageLine = (page: ApiPage) => {
+  const from = page.entry ? `<code>from '${escapeHtml(page.entry)}'</code> ` : '';
+  const source = page.kind === 'entry' ? page.sourcePath : `${page.sourcePath}/`;
+  return `<p class="hubApiPath">${from}<code>${escapeHtml(source)}</code>${renderCoverage(page.coverage)}</p>\n`;
+};
+
+/** Entries or folder pages, each with its coverage and how many names it holds */
+const renderPageList = (ctx: Ctx, pages: ApiPage[]) => {
+  if (!pages.length) return '';
+  const items = pages.map((page) => {
+    const label = page.kind === 'folder' ? page.menu : page.title;
+    const folders = page.children.length
+      ? `, ${plural(page.children.length, page.kind === 'group' ? 'entry' : 'folder').replace('entrys', 'entries')}`
+      : '';
+    return `<li><div class="hubApiListHead"><a href="${escapeHtml(href(ctx, page.pagePath))}"><code>${escapeHtml(label)}</code></a>${renderCoverage(page.coverage)}</div><p class="hubApiSummary">${plural(countNames(page), 'name')}${folders}</p></li>`;
+  });
+  return `<ul class="hubApiList">${items.join('')}</ul>\n`;
+};
+
+/** A module's names on the page: its heading, path and summary, then each name */
+const renderSection = (ctx: Ctx, { module, symbols }: ApiPageSection) => {
+  ctx.file = module.file;
+  const name = path.posix.basename(module.relPath);
+  const declarations = symbols.filter((s) => !s.isReexport).map((s) => s.reflection);
+  const summary = renderInline(ctx, getModuleSummary(module, declarations, commentLinks(ctx)));
+  let html = heading(ctx, 2, uniqueId(ctx.env, `module-${name}`), name);
+  html += `<p class="hubApiPath"><code>${escapeHtml(module.sourcePath)}</code></p>\n`;
+  if (summary) html += `<p class="hubApiSummary">${summary}</p>\n`;
+  for (const symbol of symbols) {
     ctx.file = module.file;
-    const summary = renderInline(ctx, getModuleSummary(module, commentLinks(ctx)));
-    return `<li><div class="hubApiListHead"><a href="${escapeHtml(href(ctx, module.pagePath))}"><code>${escapeHtml(path.posix.basename(module.relPath))}</code></a>${renderCoverage(module.coverage)}</div>${summary ? `<p class="hubApiSummary">${summary}</p>` : ''}</li>`;
-  });
-  return `<ul class="hubApiList">${items.join('')}</ul>\n`;
-};
-
-const renderFolderList = (ctx: Ctx, folders: ApiFolder[]) => {
-  if (!folders.length) return '';
-  const items = folders.map((folder) => {
-    const count = listFolders(folder).reduce((n, f) => n + f.modules.length, 0);
-    return `<li><div class="hubApiListHead"><a href="${escapeHtml(href(ctx, folder.pagePath))}"><code>${escapeHtml(path.posix.basename(folder.relPath))}/</code></a>${renderCoverage(folder.totalCoverage)}</div><p class="hubApiSummary">${count} module${count === 1 ? '' : 's'}</p></li>`;
-  });
-  return `<ul class="hubApiList">${items.join('')}</ul>\n`;
-};
-
-/** A folder's contents: its subfolders and its modules */
-const renderFolderContents = (ctx: Ctx, folder: ApiFolder, ownModule: ApiModule | null) => {
-  const modules = folder.modules.filter((module) => module !== ownModule);
-  let html = '';
-  if (folder.folders.length) {
-    html += sectionHeading(ctx, 'Folders', 'folders') + renderFolderList(ctx, folder.folders);
-  }
-  if (modules.length) {
-    html += sectionHeading(ctx, 'Modules', 'modules') + renderModuleList(ctx, modules);
+    html += renderSymbol(ctx, symbol);
   }
   return html;
 };
 
-const renderPathLine = (sourcePath: string, coverage: Coverage) =>
-  `<p class="hubApiPath"><code>${escapeHtml(sourcePath)}</code>${renderCoverage(coverage)}</p>\n`;
-
-const renderModulePage = (ctx: Ctx, module: ApiModule, folder: ApiFolder | null) => {
-  ctx.file = module.file;
-  let html = renderPathLine(module.sourcePath, module.coverage);
-  if (folder) {
-    html += `<p>This module sits next to its folder, <code>${escapeHtml(folder.sourcePath)}/</code>, so its page lists the folder too.</p>\n`;
-    html += renderFolderContents(ctx, folder, module);
+const renderApiPage = (ctx: Ctx, page: ApiPage) => {
+  ctx.file = path.join(ROOT, page.sourcePath);
+  let html = renderPageLine(page);
+  if (page.kind === 'group') {
+    html += `<p>The entries under <code>${escapeHtml(page.title)}/</code>, one per category.</p>\n`;
+    html += sectionHeading(ctx, 'Entries', 'entries') + renderPageList(ctx, page.children);
+  } else if (page.children.length) {
+    html += `<p>Its ${countNames(page)} names, by the source folder they come from: each folder is a page below. Import every one of them from <code>${escapeHtml(page.entry!)}</code>.</p>\n`;
+    html += sectionHeading(ctx, 'Folders', 'folders') + renderPageList(ctx, page.children);
+  } else if (page.kind === 'folder') {
+    html += `<p>The names <code>${escapeHtml(page.entry!)}</code> exports from <code>${escapeHtml(page.sourcePath)}/</code>.</p>\n`;
   }
-  if (!module.symbols.length) html += '<p>This module exports nothing.</p>\n';
-  for (const section of SECTIONS) {
-    const symbols = module.symbols
-      .filter((symbol) => section.kinds.includes(symbol.kind))
-      .sort((a, b) => a.name.localeCompare(b.name));
-    if (!symbols.length) continue;
-    html += sectionHeading(ctx, section.title, section.id);
-    for (const symbol of symbols) {
-      ctx.file = module.file;
-      html += renderSymbol(ctx, symbol);
-    }
-  }
+  for (const section of page.sections) html += renderSection(ctx, section);
   return `<div class="hubApi">\n${html}</div>\n`;
 };
 
-const renderFolderPage = (ctx: Ctx, folder: ApiFolder) => {
-  ctx.file = path.join(ROOT, folder.sourcePath);
-  const html =
-    renderPathLine(`${folder.sourcePath}/`, folder.totalCoverage) +
-    renderFolderContents(ctx, folder, null);
-  return `<div class="hubApi">\n${html}</div>\n`;
-};
-
-/** Every symbol, A-Z by first letter, with its module */
+/** Every public name, A-Z by first letter, with its entry */
 const renderAzIndex = (ctx: Ctx) => {
-  const entries = ctx.index.modules
-    .flatMap((module) =>
-      module.symbols
-        .filter((symbol) => symbol.kind !== Kind.Reference)
-        .map((symbol) => ({ symbol, module, target: ctx.index.targets.get(symbol.id)! }))
-    )
+  const entries = ctx.api.symbols
+    .filter((symbol) => !symbol.isReexport)
     .sort(
       (a, b) =>
-        a.symbol.name.localeCompare(b.symbol.name, 'en', { sensitivity: 'base' }) ||
-        a.module.pagePath.localeCompare(b.module.pagePath)
+        a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }) ||
+        a.entry.localeCompare(b.entry)
     );
   const groups = new Map<string, typeof entries>();
   for (const entry of entries) {
-    const first = entry.symbol.name.charAt(0).toUpperCase();
+    const first = entry.name.charAt(0).toUpperCase();
     const letter = /[A-Z]/.test(first) ? first : '#';
     groups.set(letter, [...(groups.get(letter) ?? []), entry]);
   }
@@ -287,44 +268,40 @@ const renderAzIndex = (ctx: Ctx) => {
     const items = groups
       .get(letter)!
       .map(
-        ({ symbol, module, target }) =>
-          `<li><a href="${escapeHtml(href(ctx, module.pagePath, target.anchor))}">${escapeHtml(symbol.name)}</a><span class="hubApiAzModule">${escapeHtml(module.subtree === 'engine' ? module.relPath : `${module.subtree}/${module.relPath}`)}</span></li>`
+        ({ name, entry, target }) =>
+          `<li><a href="${escapeHtml(href(ctx, target.pagePath, target.anchor))}">${escapeHtml(name)}</a><span class="hubApiAzModule">${escapeHtml(entry)}</span></li>`
       );
     return `<p class="hubApiAzLetter" id="${ids.get(letter)}">${escapeHtml(letter)}</p><ul class="hubApiAzList">${items.join('')}</ul>`;
   });
   return `${sectionHeading(ctx, 'A–Z index', 'a-z-index')}<p class="hubApiLetters">${bar}</p>\n${lists.join('\n')}\n`;
 };
 
-/** `documentation/`'s slot: each subtree's modules by folder, then the A-Z index */
+/** `documentation/`'s slot: each subtree's entries, then the A-Z index */
 const renderLanding = (ctx: Ctx) => {
   let html = '';
-  for (const { id, title, sourceDir } of API_SUBTREES) {
-    const root = ctx.index.roots[id];
-    const total = ctx.index.coverage[id];
-    html += sectionHeading(ctx, title, id);
-    html += `<p class="hubApiPath"><a href="${escapeHtml(href(ctx, root.pagePath))}"><code>${escapeHtml(sourceDir)}/</code></a>${renderCoverage(total)}</p>\n`;
-    for (const folder of listFolders(root)) {
-      const modules = folder.module ? [folder.module, ...folder.modules] : folder.modules;
-      if (!modules.length) continue;
-      const label = folder.relPath ? `${folder.relPath}/` : 'Top level';
-      const inner = `<a href="${escapeHtml(href(ctx, folder.pagePath))}">${escapeHtml(label)}</a>${renderCoverage(folder.coverage)}`;
-      html += heading(
-        ctx,
-        3,
-        uniqueId(
-          ctx.env,
-          `${id}-${folder.relPath || 'top-level'}`.replace(/[^\w-]+/g, '-').toLowerCase()
-        ),
-        label,
-        inner
-      );
-      html += renderModuleList(ctx, modules);
+  for (const { id, title } of API_SUBTREES) {
+    const pages = ctx.api.roots[id];
+    const coverage = { documented: 0, total: 0 };
+    for (const page of pages) {
+      coverage.documented += page.coverage.documented;
+      coverage.total += page.coverage.total;
     }
+    html += sectionHeading(ctx, title, id);
+    html += `<p class="hubApiPath">${plural(pages.length, 'entry').replace('entrys', 'entries')}${renderCoverage(coverage)}</p>\n`;
+    html += renderPageList(ctx, pages);
   }
   html += renderAzIndex(ctx);
-  // The section's symbols get their own search entries (Phase 2): the lists aren't indexed
+  // The section's names get their own search entries: the lists aren't indexed
   return `<div class="hubApi hubSearchSkip">\n${html}</div>\n`;
 };
+
+/** A page's `<meta name="description">` */
+const describePage = (page: ApiPage) =>
+  page.kind === 'group'
+    ? `The entries under ${page.title}.`
+    : page.kind === 'folder'
+      ? `The names ${page.entry} exports from ${page.sourcePath}/.`
+      : `The API of ${page.entry}: ${plural(countNames(page), 'name')}.`;
 
 // --- The section ---
 
@@ -347,20 +324,23 @@ const createSourceLink = (mode: HubBuildMode, meta: ProjectMetadata): SourceLink
 };
 
 /**
- * The `{@link}`s that link nowhere, once per build (not per render: a module's summary is on
- * several pages). Another package's symbol (three's) is fine as text.
+ * The `{@link}`s on the pages that link nowhere, once per build (not per render: a module's
+ * summary is on several pages): to an internal export (it has no page), or to a name TypeDoc found
+ * no symbol for. Another package's symbol (three's) is fine as text.
  */
 const reportCommentLinks = (diag: HubDiagnostics, index: ApiIndex, links: ApiLinks) => {
-  for (const { part, ownerId, fileName, line } of links.namedLinks) {
+  for (const { part, ownerId, fileName, line } of links.commentLinks) {
     if (typeof part.target === 'string' || isForeignTarget(index, part)) continue;
     // A member inherited from three: its comment is three's, and the pages leave it out
     if (fileName?.startsWith('node_modules/')) continue;
+    if (!links.resolveId(ownerId)) continue; // Not on any page
     if (resolveCommentLink(index, links, part)) continue;
-    const owner = links.resolveId(ownerId);
-    if (!owner) continue; // Not on any page
-    const file = fileName ? path.join(ROOT, fileName) : owner.module.file;
-    const why = part.target ? 'it isn’t in the API docs' : 'TypeDoc found no such symbol';
-    diag.warn(file, line, `{@link ${linkName(part)}} links nowhere (${why}): shown as text`);
+    const file = fileName ? path.join(ROOT, fileName) : TSCONFIG_FILE;
+    const why =
+      typeof part.target === 'number' || part.target
+        ? 'it’s internal: on no entry, so on no page'
+        : 'TypeDoc found no such symbol';
+    diag.warn(file, line, `{@link ${linkName(part)}} links nowhere (${why}): shown as code`);
   }
 };
 
@@ -416,7 +396,7 @@ const createLinkResolver =
   (ref) => {
     const result = links.resolveName(ref);
     return result.isOk
-      ? { pagePath: result.target.module.pagePath, anchor: result.target.anchor }
+      ? { pagePath: result.target.pagePath, anchor: result.target.anchor }
       : { error: result.message };
   };
 
@@ -440,13 +420,16 @@ const getIndex = (project: ApiIndex['project']) => {
   return index;
 };
 
-const entryIndexes = new WeakMap<ApiIndex, { entries: ApiEntryIndex; leaks: LeakedType[] }>();
+type EntryResult = { entries: ApiEntryIndex; leaks: LeakedType[]; api: PublicApi };
+const entryIndexes = new WeakMap<ApiIndex, EntryResult>();
 
+/** The entries, R2's leaked types and the pages: once per model */
 const getEntries = (index: ApiIndex, apiEntries: ApiEntry[]) => {
   let result = entryIndexes.get(index);
   if (!result) {
     const entries = indexEntries(index, apiEntries);
-    entryIndexes.set(index, (result = { entries, leaks: findLeakedTypes(index, entries) }));
+    result = { entries, leaks: findLeakedTypes(index, entries), api: buildPublicApi(entries) };
+    entryIndexes.set(index, result);
   }
   return result;
 };
@@ -518,9 +501,11 @@ export const createApiSection = async ({
   }
 
   const index = getIndex(extract.model.project);
-  const { entries, leaks } = getEntries(index, extract.model.entries);
+  const { entries, leaks, api } = getEntries(index, extract.model.entries);
   reportEntries(diag, entries, leaks);
-  const links = getApiLinks(index);
+  for (const { file, message } of api.problems)
+    diag.error(path.join(ROOT, file), undefined, message);
+  const links = getApiLinks(index, api);
   reportCommentLinks(diag, index, links);
   const highlighter = await loadHubHighlighter();
   const sourceLink = createSourceLink(mode, meta);
@@ -529,55 +514,23 @@ export const createApiSection = async ({
   );
   const generator = (key: string, render: (ctx: Ctx) => string): HubSlotGenerator =>
     memoized(key, (md, env) =>
-      render({ index, links, highlighter, md, env, file: env.page.file, sourceLink })
+      render({ index, api, links, highlighter, md, env, file: env.page.file, sourceLink })
     );
 
-  const pages: HubGeneratedPage[] = [];
-  for (const folder of index.folders.values()) {
-    if (folder.module) continue; // Its module's page is the folder's
-    const subtree = API_SUBTREES.find((s) => s.id === folder.subtree)!;
-    const name = path.posix.basename(folder.relPath);
-    const title = folder.relPath ? `${name}/` : `${subtree.title} API`;
-    pages.push({
-      path: folder.pagePath,
-      file: path.join(ROOT, folder.sourcePath),
-      title,
-      menu: folder.relPath ? name : subtree.title,
-      description: `The modules in ${folder.sourcePath}/.`,
-      tags: ['api', folder.subtree],
-      isInMenu: true,
-      isSearchable: false,
-      body: pageBody(title),
-      slots: { [PAGE_SLOT]: generator(folder.pagePath, (ctx) => renderFolderPage(ctx, folder)) },
-    });
-  }
-  for (const module of index.modules) {
-    const folder = index.folders.get(module.pagePath) ?? null;
-    const name = path.posix.basename(module.relPath);
-    pages.push({
-      path: module.pagePath,
-      file: module.file,
-      title: name,
-      menu: name,
-      description: shorten(toPlainText(getModuleSummary(module)), DESCRIPTION_LENGTH),
-      tags: ['api', module.subtree],
-      isInMenu: !!folder,
-      isSearchable: false,
-      body: pageBody(name),
-      slots: {
-        [PAGE_SLOT]: generator(module.pagePath, (ctx) => renderModulePage(ctx, module, folder)),
-      },
-    });
-  }
+  const pages: HubGeneratedPage[] = api.pages.map((page) => ({
+    path: page.pagePath,
+    file: path.join(ROOT, page.sourcePath),
+    title: page.title,
+    menu: page.menu,
+    order: page.order,
+    description: shorten(describePage(page), DESCRIPTION_LENGTH),
+    tags: ['api', page.subtree, ...(page.entry ? [page.entry] : [])],
+    isInMenu: true,
+    isSearchable: false,
+    body: pageBody(page.title),
+    slots: { [PAGE_SLOT]: generator(page.pagePath, (ctx) => renderApiPage(ctx, page)) },
+  }));
 
-  const symbolCount = index.modules.reduce(
-    (n, module) => n + module.symbols.filter((s) => s.kind !== Kind.Reference).length,
-    0
-  );
-  const coverage = {
-    documented: index.coverage.engine.documented + index.coverage.toolkit.documented,
-    total: index.coverage.engine.total + index.coverage.toolkit.total,
-  };
   return {
     section: {
       path: API_SECTION_PATH,
@@ -585,7 +538,7 @@ export const createApiSection = async ({
       pages,
       files: [TSCONFIG_FILE],
       dirs: [],
-      searchDocs: getSearchDocs(index),
+      searchDocs: getSearchDocs(api),
     },
     links: createLinkResolver(links),
     isStale,
@@ -593,9 +546,9 @@ export const createApiSection = async ({
     stats: {
       isCached: extract.isCached,
       extractMs: extract.durationMs,
-      moduleCount: index.modules.length,
-      symbolCount,
-      coverage,
+      entryCount: api.roots.engine.length + api.roots.toolkit.length,
+      symbolCount: api.coverage.total,
+      coverage: api.coverage,
     },
   };
 };

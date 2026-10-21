@@ -1198,6 +1198,44 @@ As built (2026-10-21, on `aece8b0`):
   rendering. `apiSearch.ts` (98): the search documents, memoized per model. Checked: `dist-hub/`
   before and after, with the build commit, the `?v=` hashes and the build time normalized, is the
   same but for the Version page's build time (and its words' counts in the search index).
+- **Section 4, the pages per entry.**
+  - `api/publicApi.ts` (`buildPublicApi`): a page per entry at its specifier
+    (`documentation/aekasha/physics/`), an h2 per source module (`#module-<Name>`, its path and its
+    summary over its public names), each name an h3 as before (functions, classes, interfaces,
+    types, enums, constants, then by name). `aekasha` (300 names, over `MAX_ENTRY_PAGE_NAMES`
+    150) has a page per source folder (a kernel area or `utils`: 12, `documentation/aekasha/scene/`,
+    titled `aekasha · scene/`, `scene/` in the menu, before the other entries under it); its own
+    page lists them. **Not in the plan:** `documentation/aekasha/toolkit/`, a group page listing
+    the three toolkit entries (the menu needs a parent page). A name on two entries (the toolkit's
+    `createSeededRandom`) is documented on the first and listed on the second as a re-export
+    linking to it. A page URL two pages give is an error.
+  - `model.ts` keeps the modules and the reflections only (the module pages, folders, targets and
+    per-module coverage went); `ApiTarget` is `{ pagePath, anchor }`; `isApiPagePath` covers
+    `documentation/aekasha/`. `getApiPagePath` (the old URLs) stays for p608's dormant codemod
+    until D9. `HubGeneratedPage.order` (menu order) is new.
+  - Links (`links.ts`): ids and names resolve against the public targets only. An `api:` link to
+    an internal name fails with "is internal (<module>): it's on no entry, so it has no page" (no
+    page had one). Every `{@link}` is collected; one in a public comment to an internal export is
+    code with a warning. **The 18 such names (24 links, 15 engine files) became code spans**, so the
+    build has no new warning (`DEBUG_KEYS_ACTION_MAP_ID`, `createRigidBodyWithColliders`,
+    `RUNTIME_VIEW_ID`, `MAX_SNAPSHOT_SIZE`, `DebugDataSchema`, …).
+  - The A-Z index and the search hold public names only, an entry page being a search document of
+    kind `entry` (named by its specifier, `apiSearchName`). **The index went from 1.70 MB to
+    985 kB** (3,677 → 1,281 API documents), under the 1 MB warning before Phase 6's cuts.
+  - The symbol's `internal` badge moved to `@internal` members of public types (an `@internal`
+    name on an entry warns since section 2).
+  - The landing page lists each subtree's entries (names, folders, coverage), then the A-Z index.
+    `hub:build`'s line: "16 entries, 920 names" (declarations: a value and a type of one name are
+    two).
+  - The 30 `hub:documentation/…` links (15 feature guides' "The API reference" bullets) point at
+    the entry pages, or at `aekasha`'s folder pages for the kernel's areas; `intro.md`'s text and
+    its entry table link the pages.
+  - Tests: `publicApi.test.ts` (6: the pages and the group page, the re-export's home target, the
+    sections' order, the folder split, an internal `api:` name, the nearest public owner); the
+    model builder is `testModel.ts`, shared with `entries.test.ts`. Writing them found a re-export's
+    `target` set to its own page, not its home's (fixed).
+  - Checks: `yarn test` 1080 passed, lint, both `tsc`; `yarn hub:build`: 84 pages (436 before), no
+    dead link, the toolkit's 4 and `{@link getRandomStream}` only.
 
 ### Phase 6: the rest of the Hub generator and the search (D7, D10, D11, D16)
 

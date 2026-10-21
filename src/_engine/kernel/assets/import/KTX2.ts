@@ -71,7 +71,7 @@ export const getKTX2WorkerSettings = async (): Promise<KTX2WorkerSettings | null
 };
 
 /**
- * Terminates the shared KTX2Loader's worker pool and drops it. The next {@link getKTX2Loader}
+ * Terminates the shared KTX2Loader's worker pool and drops it. The next `getKTX2Loader`
  * call creates a new one. Not called automatically, except when the renderer has changed.
  * @example
  * ```ts

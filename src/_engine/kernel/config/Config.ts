@@ -248,7 +248,7 @@ export type AppConfig = {
   };
   /** Debug drawer settings (debug-only, see `debug/DebuggerGUI.ts`). */
   debugDrawer?: {
-    /** Tab ids in menu order. Replaces the engine default ({@link DEFAULT_DEBUG_DRAWER_TAB_ORDER})
+    /** Tab ids in menu order. Replaces the engine default (`DEFAULT_DEBUG_DRAWER_TAB_ORDER`)
      * whole, it is not merged. Tabs not listed go last, in registration order. A tab's own
      * `orderNr` overrides its place on this 0-based scale (eg. 1.5 = between the 2nd and 3rd tab). */
     tabOrder?: string[];

@@ -1,15 +1,15 @@
 ## The pieces
 
-| Piece          | Made with                                                          | For                                                              |
-| -------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------- |
-| Component      | [`CMP`](api:CMP)                                                   | Any element: a panel, a button, a readout                        |
-| HUD root       | [`getHUDRootCMP`](api:getHUDRootCMP)                               | Where the app's UI goes, over the canvas                         |
-| Window         | [`openDraggableWindow`](api:openDraggableWindow)                   | A panel the player moves, resizes, collapses and closes          |
-| Window kind    | [`registerDraggableWindowKind`](api:registerDraggableWindowKind)   | One window per thing (an entity, an item), each with its data    |
-| Dialog         | [`openDialog`](api:openDialog)                                     | A modal window over a backdrop: a pause menu, a confirmation     |
-| Drop-down      | [`createDropDown`](api:createDropDown)                             | A choice from a list, with the keyboard                          |
-| Toaster, toast | [`createToaster`](api:createToaster), [`addToast`](api:addToast)   | Short messages that come and go                                  |
-| Icon           | [`registerIcon`](api:registerIcon), [`getSvgIcon`](api:getSvgIcon) | SVG icons by name, in the text colour                            |
+| Piece          | Made with                                                          | For                                                           |
+| -------------- | ------------------------------------------------------------------ | ------------------------------------------------------------- |
+| Component      | [`CMP`](api:CMP)                                                   | Any element: a panel, a button, a readout                     |
+| HUD root       | [`getHUDRootCMP`](api:getHUDRootCMP)                               | Where the app's UI goes, over the canvas                      |
+| Window         | [`openDraggableWindow`](api:openDraggableWindow)                   | A panel the player moves, resizes, collapses and closes       |
+| Window kind    | [`registerDraggableWindowKind`](api:registerDraggableWindowKind)   | One window per thing (an entity, an item), each with its data |
+| Dialog         | [`openDialog`](api:openDialog)                                     | A modal window over a backdrop: a pause menu, a confirmation  |
+| Drop-down      | [`createDropDown`](api:createDropDown)                             | A choice from a list, with the keyboard                       |
+| Toaster, toast | [`createToaster`](api:createToaster), [`addToast`](api:addToast)   | Short messages that come and go                               |
+| Icon           | [`registerIcon`](api:registerIcon), [`getSvgIcon`](api:getSvgIcon) | SVG icons by name, in the text colour                         |
 
 ## Components
 
@@ -235,8 +235,7 @@ profile shows kit UI yet; a later version picks units that work in both
 
 - [The UI kit example](hub:examples/ui-kit): every piece in one scene.
 - [Input](hub:features/input#contexts-and-scenes): the action contexts a menu switches.
-- The API reference: [CMP](hub:documentation/engine/ui/CMP) and
-  [DraggableWindow](hub:documentation/engine/ui/DraggableWindow).
+- The API reference: [`aekasha/ui`](hub:documentation/aekasha/ui).
 
 ::: claude-md
 :::

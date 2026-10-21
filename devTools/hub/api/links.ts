@@ -1,13 +1,15 @@
 import type { JSONOutput } from 'typedoc';
 import { getOwnMembers, Kind, type ApiIndex, type ApiTarget } from './model';
+import type { PublicApi } from './publicApi';
 
 /**
- * Links into the API pages (p553 §2.3):
+ * Links into the API pages (p553 §2.3), which hold the public entries' names only (p619 D6):
  * - by reflection id: a `{@link}` TypeDoc resolved, a type in a signature. A reflection without
  *   an anchor of its own (a type alias's property, a parameter, a signature) links to its nearest
- *   owner that has one;
+ *   owner that has one; an internal export's has none;
  * - by name: `api:` links (`api:loadScene`, `api:SceneLoader.loadScene`,
- *   `api:ECSWorld.addSystem`), and a `{@link}` TypeDoc only resolved to a name in this package.
+ *   `api:ECSWorld.addSystem`), and a `{@link}` TypeDoc only resolved to a name in this package. An
+ *   internal export's name fails, saying so.
  *
  * The index is built once per model (`getApiLinks`): it walks the whole model for the owners.
  */
@@ -17,11 +19,11 @@ export type ApiNameResult =
   | { isOk: false; message: string; candidates: string[] };
 
 /**
- * A `{@link}` TypeDoc didn't resolve to a reflection: no target, or another package's symbol
- * (three's), or a name in this package that has none (not exported). With the reflection whose
- * comment has it, and the nearest source position.
+ * A `{@link}` with the reflection whose comment has it and the nearest source position. Its
+ * target is a reflection id, a URL, another package's symbol (three's), a name in this package
+ * TypeDoc found no reflection for (not exported), or none.
  */
-export type NamedApiLink = {
+export type CommentApiLink = {
   part: JSONOutput.InlineTagDisplayPart;
   ownerId: number;
   /** From the repo root */
@@ -32,10 +34,10 @@ export type NamedApiLink = {
 export type ApiLinks = {
   /** A reflection's page and anchor: its own, else its nearest owner's */
   resolveId: (id: number) => ApiTarget | undefined;
-  /** An `api:` link's name; ambiguous and unknown names say why, with candidates */
+  /** An `api:` link's name; ambiguous, unknown and internal names say why, with candidates */
   resolveName: (ref: string) => ApiNameResult;
-  /** The `{@link}`s without a reflection id */
-  namedLinks: NamedApiLink[];
+  /** Every `{@link}` in the model */
+  commentLinks: CommentApiLink[];
 };
 
 type NameEntry = {
@@ -56,12 +58,11 @@ type WalkState = { ownerId: number; source?: JSONOutput.SourceReference };
 
 /**
  * Every reflection's owner (the reflection it's nested in: a member's class, a parameter's
- * signature, an object literal type's declaring property), and the `{@link}`s without a
- * reflection id
+ * signature, an object literal type's declaring property), and the `{@link}`s
  */
 const walkModel = (project: JSONOutput.ProjectReflection) => {
   const owners = new Map<number, number>();
-  const namedLinks: NamedApiLink[] = [];
+  const commentLinks: CommentApiLink[] = [];
   const walk = (value: unknown, state: WalkState) => {
     if (!value || typeof value !== 'object') return;
     if (Array.isArray(value)) {
@@ -76,16 +77,16 @@ const walkModel = (project: JSONOutput.ProjectReflection) => {
     }
     const part = value as JSONOutput.InlineTagDisplayPart;
     if (part.kind === 'inline-tag') {
-      if (part.tag.startsWith('@link') && typeof part.target !== 'number') {
+      if (part.tag.startsWith('@link')) {
         const { fileName, line } = next.source ?? {};
-        namedLinks.push({ part, ownerId: next.ownerId, fileName, line });
+        commentLinks.push({ part, ownerId: next.ownerId, fileName, line });
       }
       return;
     }
     for (const key in value) walk((value as Record<string, unknown>)[key], next);
   };
   walk(project, { ownerId: project.id });
-  return { owners, namedLinks };
+  return { owners, commentLinks };
 };
 
 /** `engine/kernel/scene/SceneLoader` → `SceneLoader`, `scene/SceneLoader`, `kernel/scene/SceneLoader`, `engine/kernel/scene/SceneLoader` */
@@ -94,7 +95,7 @@ const modulePathSuffixes = (subtree: string, relPath: string) => {
   return parts.map((_part, i) => parts.slice(parts.length - 1 - i).join('/'));
 };
 
-const buildNameTable = (index: ApiIndex) => {
+const buildNameTable = (api: PublicApi) => {
   const byKey = new Map<string, NameEntry[]>();
   const entries: NameEntry[] = [];
   const add = (target: ApiTarget, name: string, keys: string[]) => {
@@ -102,28 +103,36 @@ const buildNameTable = (index: ApiIndex) => {
     entries.push(entry);
     for (const key of keys) byKey.set(key, [...(byKey.get(key) ?? []), entry]);
   };
-  for (const module of index.modules) {
+  for (const { reflection, module, target, isReexport } of api.symbols) {
+    // A second entry's re-export is the first's: its own name would only make that ambiguous
+    if (isReexport) continue;
     const suffixes = modulePathSuffixes(module.subtree, module.relPath);
-    for (const symbol of module.symbols) {
-      // A re-export is its original's: its own name would only make that ambiguous
-      if (symbol.kind === Kind.Reference) continue;
-      const target = index.targets.get(symbol.id);
-      if (!target) continue;
-      add(target, symbol.name, [
-        symbol.name,
-        ...suffixes.map((suffix) => `${suffix}.${symbol.name}`),
-      ]);
-      if (symbol.kind !== Kind.Class && symbol.kind !== Kind.Interface) continue;
-      // A member needs its owner's name: `addSystem` alone would match every class's
-      for (const member of getOwnMembers(symbol)) {
-        const memberTarget = index.targets.get(member.id);
-        if (!memberTarget) continue;
-        const own = `${symbol.name}.${member.name}`;
-        add(memberTarget, member.name, [own, ...suffixes.map((suffix) => `${suffix}.${own}`)]);
-      }
+    add(target, reflection.name, [
+      reflection.name,
+      ...suffixes.map((suffix) => `${suffix}.${reflection.name}`),
+    ]);
+    if (reflection.kind !== Kind.Class && reflection.kind !== Kind.Interface) continue;
+    // A member needs its owner's name: `addSystem` alone would match every class's
+    for (const member of getOwnMembers(reflection)) {
+      const memberTarget = api.targets.get(member.id);
+      if (!memberTarget) continue;
+      const own = `${reflection.name}.${member.name}`;
+      add(memberTarget, member.name, [own, ...suffixes.map((suffix) => `${suffix}.${own}`)]);
     }
   }
   return { byKey, entries };
+};
+
+/** The internal exports by name, with their modules: an `api:` link to one says why it fails */
+const buildInternalNames = (index: ApiIndex, api: PublicApi) => {
+  const names = new Map<string, string[]>();
+  for (const module of index.modules) {
+    for (const symbol of module.symbols) {
+      if (symbol.kind === Kind.Reference || api.targets.has(symbol.id)) continue;
+      names.set(symbol.name, [...(names.get(symbol.name) ?? []), module.sourcePath]);
+    }
+  }
+  return names;
 };
 
 /** The entry's shortest name that names only it */
@@ -148,13 +157,14 @@ const distance = (a: string, b: string, max: number) => {
   return previous[b.length];
 };
 
-const createLinks = (index: ApiIndex): ApiLinks => {
-  const { owners, namedLinks } = walkModel(index.project);
-  const { byKey, entries } = buildNameTable(index);
+const createLinks = (index: ApiIndex, api: PublicApi): ApiLinks => {
+  const { owners, commentLinks } = walkModel(index.project);
+  const { byKey, entries } = buildNameTable(api);
+  const internalNames = buildInternalNames(index, api);
 
   const resolveId = (id: number) => {
     for (let at: number | undefined = id; at !== undefined; at = owners.get(at)) {
-      const target = index.targets.get(at);
+      const target = api.targets.get(at);
       if (target) return target;
     }
     return undefined;
@@ -181,6 +191,14 @@ const createLinks = (index: ApiIndex): ApiLinks => {
     const found = byKey.get(ref) ?? [];
     if (found.length === 1) return { isOk: true, target: found[0].target };
     if (!found.length) {
+      const internal = internalNames.get(ref);
+      if (internal) {
+        return {
+          isOk: false,
+          message: `api:${ref} is internal (${internal.join(', ')}): it's on no entry, so it has no page`,
+          candidates: [],
+        };
+      }
       const candidates = suggest(ref);
       return {
         isOk: false,
@@ -191,7 +209,7 @@ const createLinks = (index: ApiIndex): ApiLinks => {
     // A value and a type of the same name in one module (`ComponentType`): the one whose anchor
     // is the bare name
     const [first] = found;
-    if (found.every((entry) => entry.target.module === first.target.module)) {
+    if (found.every((entry) => entry.target.pagePath === first.target.pagePath)) {
       return { isOk: true, target: first.target };
     }
     const candidates = found.map((entry) => `api:${shortestKey(entry, byKey)}`);
@@ -202,14 +220,14 @@ const createLinks = (index: ApiIndex): ApiLinks => {
     };
   };
 
-  return { resolveId, resolveName, namedLinks };
+  return { resolveId, resolveName, commentLinks };
 };
 
-const cache = new WeakMap<ApiIndex, ApiLinks>();
+const cache = new WeakMap<PublicApi, ApiLinks>();
 
-/** The links of an index, built on its first use */
-export const getApiLinks = (index: ApiIndex) => {
-  let links = cache.get(index);
-  if (!links) cache.set(index, (links = createLinks(index)));
+/** The links of the public API, built on its first use */
+export const getApiLinks = (index: ApiIndex, api: PublicApi) => {
+  let links = cache.get(api);
+  if (!links) cache.set(api, (links = createLinks(index, api)));
   return links;
 };

@@ -225,7 +225,7 @@ const attachSection = (
       file: generated.file,
       title: generated.title,
       menu: generated.menu,
-      order: 0,
+      order: generated.order ?? 0,
       tags: generated.tags,
       description: generated.description,
       icon: '',
