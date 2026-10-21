@@ -2,22 +2,22 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2319,
-      "total": 2416
+      "documented": 2363,
+      "total": 2382
     },
     "members": {
-      "documented": 938,
+      "documented": 940,
       "total": 970
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2275,
-        "total": 2353
+        "documented": 2319,
+        "total": 2319
       },
       "members": {
-        "documented": 888,
+        "documented": 890,
         "total": 890
       }
     },
@@ -567,90 +567,15 @@
     },
     "engine/schemas": {
       "exports": {
-        "documented": 47,
-        "total": 121
+        "documented": 89,
+        "total": 89
       },
       "members": {
         "documented": 0,
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "AssetsConfigSchema#AssetFileNameSchema",
-          "AssetsConfigSchema#AssetsConfig",
-          "AssetsConfigSchema#AssetsConfigRule",
-          "AssetsConfigSchema#AssetsConfigRuleSchema",
-          "AssetsConfigSchema#AssetsConfigSchema",
-          "AssetsConfigSchema#MeshSettings",
-          "AssetsConfigSchema#MeshSettingsSchema",
-          "AssetsConfigSchema#PACK_TARGETS",
-          "AssetsConfigSchema#PackTarget",
-          "AssetsConfigSchema#TEXTURE_SLOTS",
-          "AssetsConfigSchema#TextureSettings",
-          "AssetsConfigSchema#TextureSettingsSchema",
-          "AssetsConfigSchema#TextureSlot",
-          "AssetsConfigSchema#TextureSlotSchema",
-          "CameraSchema#CameraAsset",
-          "CameraSchema#CameraAssetSchema",
-          "CameraSchema#CameraOverrides",
-          "CameraSchema#CameraOverridesSchema",
-          "CameraSchema#CameraProps",
-          "CameraSchema#CameraProps",
-          "GeometrySchema#GeoAsset",
-          "GeometrySchema#GeoAssetSchema",
-          "GeometrySchema#GeoOverrides",
-          "GeometrySchema#GeoProps",
-          "GeometrySchema#GeoPropsSchema",
-          "ImportedAssetSchema#ImportedAsset",
-          "ImportedAssetSchema#ImportedAssetSchema",
-          "LightSchema#LightAsset",
-          "LightSchema#LightAssetSchema",
-          "LightSchema#LightOverrides",
-          "LightSchema#LightProps",
-          "LodChainSchema#LodChainSchema",
-          "MaterialSchema#MaterialAsset",
-          "MaterialSchema#MaterialAssetSchema",
-          "MaterialSchema#MaterialOverrides",
-          "PostFxSchema#PostFxAsset",
-          "PostFxSchema#PostFxAssetSchema",
-          "PostFxSchema#PostFxOverrides",
-          "SpatialDomainSchema#SceneSpatialDomainEntry",
-          "SpatialDomainSchema#SceneSpatialDomainsSchema",
-          "TextureArraySchema#TextureArrayAsset",
-          "TextureArraySchema#TextureArrayAssetSchema",
-          "TextureAtlasSchema#ATLAS_MIP_CHAINS",
-          "TextureAtlasSchema#AtlasMipChain",
-          "TextureAtlasSchema#DEFAULT_ATLAS_PADDING",
-          "TextureAtlasSchema#TextureAtlasAsset",
-          "TextureAtlasSchema#TextureAtlasAssetSchema",
-          "TextureAtlasSchema#TextureAtlasCell",
-          "TextureAtlasSchema#TextureAtlasCellSchema",
-          "TextureAtlasSchema#TextureAtlasSlot",
-          "TextureAtlasSchema#TextureAtlasSlotSchema",
-          "TextureSchema#TexOpts",
-          "TextureSchema#TexOptsSchema",
-          "TextureSchema#TextureAsset",
-          "TextureSchema#TextureAssetSchema",
-          "TextureSchema#TextureOverrides",
-          "TextureSchema#TextureOverridesSchema",
-          "_HelperSchemas#ColorJSON",
-          "_HelperSchemas#ColorJSONSchema",
-          "_HelperSchemas#ColorSpaceSchema",
-          "_HelperSchemas#CoreEntityOpts",
-          "_HelperSchemas#CoreEntityOptsSchema",
-          "_HelperSchemas#DebugData",
-          "_HelperSchemas#DebugDataSchema",
-          "_HelperSchemas#EntityDebugData",
-          "_HelperSchemas#EntityDebugDataSchema",
-          "_HelperSchemas#ShadowQualitySchema",
-          "_HelperSchemas#UserData",
-          "_HelperSchemas#UserDataSchema",
-          "_HelperSchemas#Vector3",
-          "_HelperSchemas#Vector3Schema",
-          "_HelperSchemas#Vector4Schema",
-          "_SaveDataSchema#MetaSchema",
-          "_SaveDataSchema#createSaveDataSchema"
-        ],
+        "exports": [],
         "members": []
       }
     },
@@ -698,24 +623,16 @@
     },
     "engine/utils": {
       "exports": {
-        "documented": 41,
-        "total": 45
+        "documented": 43,
+        "total": 43
       },
       "members": {
-        "documented": 4,
+        "documented": 6,
         "total": 6
       },
       "undocumented": {
-        "exports": [
-          "Constants#FOUR_PX_TO_8K_LIST",
-          "Constants#HALF_PI",
-          "Constants#QUARTER_PI",
-          "LocalAndSessionStorage#StorageValue"
-        ],
-        "members": [
-          "IntervalCounterStats#IntervalCounterStats.constructor",
-          "PromiseResolver#RequestTimeoutError.constructor"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "toolkit/ecs/effects": {

@@ -3,240 +3,750 @@
   "type": "object",
   "properties": {
     "$schema": {
-      "type": "string"
+      "type": "string",
+      "description": "The JSON Schema in .schemas/ an editor validates this file with. The gatherer ignores it."
     },
     "geoProps": {
       "oneOf": [
         {
-          "type": "object",
-          "properties": {
-            "id": {
-              "$ref": "#/definitions/__schema0"
-            },
-            "debugData": {
-              "$ref": "#/definitions/__schema1"
-            },
-            "type": {
-              "type": "string",
-              "const": "BOX"
-            },
-            "params": {
-              "type": "object",
-              "properties": {
-                "width": {
-                  "$ref": "#/definitions/__schema3"
-                },
-                "height": {
-                  "type": "number"
-                },
-                "depth": {
-                  "$ref": "#/definitions/__schema4"
-                },
-                "widthSegments": {
-                  "type": "number"
-                },
-                "heightSegments": {
-                  "type": "number"
-                },
-                "depthSegments": {
-                  "$ref": "#/definitions/__schema5"
-                }
-              },
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "type"
-          ],
-          "additionalProperties": false
+          "$ref": "#/definitions/__schema0"
         },
         {
-          "type": "object",
-          "properties": {
-            "id": {
-              "$ref": "#/definitions/__schema0"
-            },
-            "debugData": {
-              "$ref": "#/definitions/__schema1"
-            },
-            "type": {
-              "type": "string",
-              "const": "SPHERE"
-            },
-            "params": {
-              "type": "object",
-              "properties": {
-                "radius": {
-                  "type": "number"
-                },
-                "widthSegments": {
-                  "$ref": "#/definitions/__schema6"
-                },
-                "heightSegments": {
-                  "type": "number"
-                },
-                "phiStart": {
-                  "$ref": "#/definitions/__schema7"
-                },
-                "phiLength": {
-                  "$ref": "#/definitions/__schema8"
-                },
-                "thetaStart": {
-                  "type": "number"
-                },
-                "thetaLength": {
-                  "type": "number"
-                }
-              },
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "type"
-          ],
-          "additionalProperties": false
+          "$ref": "#/definitions/__schema25"
         },
         {
-          "type": "object",
-          "properties": {
-            "id": {
-              "$ref": "#/definitions/__schema0"
-            },
-            "debugData": {
-              "$ref": "#/definitions/__schema1"
-            },
-            "type": {
-              "type": "string",
-              "const": "CYLINDER"
-            },
-            "params": {
-              "type": "object",
-              "properties": {
-                "radiusTop": {
-                  "$ref": "#/definitions/__schema9"
-                },
-                "radiusBottom": {
-                  "$ref": "#/definitions/__schema10"
-                },
-                "height": {
-                  "type": "number"
-                },
-                "radialSegments": {
-                  "type": "number"
-                },
-                "heightSegments": {
-                  "type": "number"
-                },
-                "openEnded": {
-                  "type": "boolean"
-                },
-                "thetaStart": {
-                  "type": "number"
-                },
-                "thetaLength": {
-                  "type": "number"
-                }
-              },
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "type"
-          ],
-          "additionalProperties": false
+          "$ref": "#/definitions/__schema37"
         },
         {
-          "type": "object",
-          "properties": {
-            "id": {
-              "$ref": "#/definitions/__schema0"
-            },
-            "debugData": {
-              "$ref": "#/definitions/__schema1"
-            },
-            "type": {
-              "type": "string",
-              "const": "CAPSULE"
-            },
-            "params": {
-              "type": "object",
-              "properties": {
-                "radius": {
-                  "type": "number"
-                },
-                "height": {
-                  "type": "number"
-                },
-                "capSegments": {
-                  "$ref": "#/definitions/__schema11"
-                },
-                "radialSegments": {
-                  "type": "number"
-                },
-                "heightSegments": {
-                  "type": "number"
-                }
-              },
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "type"
-          ],
-          "additionalProperties": false
+          "$ref": "#/definitions/__schema49"
         },
         {
-          "type": "object",
-          "properties": {
-            "id": {
-              "$ref": "#/definitions/__schema0"
-            },
-            "debugData": {
-              "$ref": "#/definitions/__schema1"
-            },
-            "type": {
-              "type": "string",
-              "const": "CONE"
-            },
-            "params": {
-              "type": "object",
-              "properties": {
-                "radius": {
-                  "$ref": "#/definitions/__schema12"
-                },
-                "height": {
-                  "$ref": "#/definitions/__schema13"
-                },
-                "radialSegments": {
-                  "$ref": "#/definitions/__schema14"
-                },
-                "heightSegments": {
-                  "$ref": "#/definitions/__schema15"
-                },
-                "openEnded": {
-                  "$ref": "#/definitions/__schema16"
-                },
-                "thetaStart": {
-                  "$ref": "#/definitions/__schema17"
-                },
-                "thetaLength": {
-                  "$ref": "#/definitions/__schema18"
-                }
-              },
-              "additionalProperties": false
+          "$ref": "#/definitions/__schema57"
+        }
+      ],
+      "description": "The geometry: BOX, SPHERE, CYLINDER, CAPSULE or CONE, and its params."
+    },
+    "__sourcePath": {
+      "type": "string",
+      "description": "Set by the gatherer: the JSON file the asset came from. Not written by hand."
+    },
+    "__saveData": {
+      "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema73"
+        }
+      ]
+    }
+  },
+  "required": [
+    "geoProps"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "__schema0": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/__schema1"
+        },
+        "debugData": {
+          "$ref": "#/definitions/__schema3"
+        },
+        "type": {
+          "type": "string",
+          "const": "BOX",
+          "description": "A box."
+        },
+        "params": {
+          "description": "The constructor's arguments by name; three's defaults for those left out.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema15"
             }
-          },
-          "required": [
-            "type"
-          ],
-          "additionalProperties": false
+          ]
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "__schema1": {
+      "description": "The registry id. Default: the file's name.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema2"
         }
       ]
     },
-    "__sourcePath": {
+    "__schema2": {
       "type": "string"
     },
-    "__saveData": {
+    "__schema3": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema4"
+        }
+      ]
+    },
+    "__schema4": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/__schema5"
+        },
+        "description": {
+          "$ref": "#/definitions/__schema7"
+        },
+        "comments": {
+          "$ref": "#/definitions/__schema9"
+        },
+        "todo": {
+          "$ref": "#/definitions/__schema11"
+        },
+        "debugObj": {
+          "$ref": "#/definitions/__schema13"
+        }
+      },
+      "additionalProperties": false,
+      "description": "What the debug tools show for it. Production data has none."
+    },
+    "__schema5": {
+      "description": "The name the debug tools show.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema6": {
+      "type": "string"
+    },
+    "__schema7": {
+      "description": "A longer description for the debug tools.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema8"
+        }
+      ]
+    },
+    "__schema8": {
+      "type": "string"
+    },
+    "__schema9": {
+      "description": "Notes with their times.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema10"
+        }
+      ]
+    },
+    "__schema10": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "number",
+            "description": "Milliseconds since the UNIX epoch."
+          },
+          "comment": {
+            "type": "string",
+            "description": "The note."
+          }
+        },
+        "required": [
+          "timestamp",
+          "comment"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "__schema11": {
+      "description": "Open items, by key.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema12"
+        }
+      ]
+    },
+    "__schema12": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema13": {
+      "description": "Anything else a debug tool keeps for it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema14"
+        }
+      ]
+    },
+    "__schema14": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema15": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "$ref": "#/definitions/__schema16"
+        },
+        "height": {
+          "description": "The height (y). Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema18"
+            }
+          ]
+        },
+        "depth": {
+          "$ref": "#/definitions/__schema19"
+        },
+        "widthSegments": {
+          "description": "Segments along the width. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema21"
+            }
+          ]
+        },
+        "heightSegments": {
+          "description": "Segments along the height. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema22"
+            }
+          ]
+        },
+        "depthSegments": {
+          "$ref": "#/definitions/__schema23"
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema16": {
+      "description": "The width (x). Default 1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema17"
+        }
+      ]
+    },
+    "__schema17": {
+      "type": "number"
+    },
+    "__schema18": {
+      "type": "number"
+    },
+    "__schema19": {
+      "description": "The depth (z). Default 1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema20"
+        }
+      ]
+    },
+    "__schema20": {
+      "type": "number"
+    },
+    "__schema21": {
+      "type": "number"
+    },
+    "__schema22": {
+      "type": "number"
+    },
+    "__schema23": {
+      "description": "Segments along the depth. Default 1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema24"
+        }
+      ]
+    },
+    "__schema24": {
+      "type": "number"
+    },
+    "__schema25": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/__schema1"
+        },
+        "debugData": {
+          "$ref": "#/definitions/__schema3"
+        },
+        "type": {
+          "type": "string",
+          "const": "SPHERE",
+          "description": "A sphere."
+        },
+        "params": {
+          "description": "The constructor's arguments by name; three's defaults for those left out.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema26"
+            }
+          ]
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "__schema26": {
+      "type": "object",
+      "properties": {
+        "radius": {
+          "description": "The radius. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema27"
+            }
+          ]
+        },
+        "widthSegments": {
+          "$ref": "#/definitions/__schema28"
+        },
+        "heightSegments": {
+          "description": "Segments along the height. Default 16.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema30"
+            }
+          ]
+        },
+        "phiStart": {
+          "$ref": "#/definitions/__schema31"
+        },
+        "phiLength": {
+          "$ref": "#/definitions/__schema33"
+        },
+        "thetaStart": {
+          "description": "The vertical start angle in radians. Default 0.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema35"
+            }
+          ]
+        },
+        "thetaLength": {
+          "description": "The vertical sweep in radians. Default π.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema36"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema27": {
+      "type": "number"
+    },
+    "__schema28": {
+      "description": "Segments along the width. Default 32.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema29"
+        }
+      ]
+    },
+    "__schema29": {
+      "type": "number"
+    },
+    "__schema30": {
+      "type": "number"
+    },
+    "__schema31": {
+      "description": "The horizontal start angle in radians. Default 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema32"
+        }
+      ]
+    },
+    "__schema32": {
+      "type": "number"
+    },
+    "__schema33": {
+      "description": "The horizontal sweep in radians. Default 2π.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema34"
+        }
+      ]
+    },
+    "__schema34": {
+      "type": "number"
+    },
+    "__schema35": {
+      "type": "number"
+    },
+    "__schema36": {
+      "type": "number"
+    },
+    "__schema37": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/__schema1"
+        },
+        "debugData": {
+          "$ref": "#/definitions/__schema3"
+        },
+        "type": {
+          "type": "string",
+          "const": "CYLINDER",
+          "description": "A cylinder."
+        },
+        "params": {
+          "description": "The constructor's arguments by name; three's defaults for those left out.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema38"
+            }
+          ]
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "__schema38": {
+      "type": "object",
+      "properties": {
+        "radiusTop": {
+          "$ref": "#/definitions/__schema39"
+        },
+        "radiusBottom": {
+          "$ref": "#/definitions/__schema41"
+        },
+        "height": {
+          "description": "The height (y). Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema43"
+            }
+          ]
+        },
+        "radialSegments": {
+          "description": "Segments around the circumference. Default 32.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema44"
+            }
+          ]
+        },
+        "heightSegments": {
+          "description": "Segments along the height. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema45"
+            }
+          ]
+        },
+        "openEnded": {
+          "description": "Leaves the ends open. Default false.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema46"
+            }
+          ]
+        },
+        "thetaStart": {
+          "description": "The start angle in radians. Default 0.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema47"
+            }
+          ]
+        },
+        "thetaLength": {
+          "description": "The sweep in radians. Default 2π.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema48"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema39": {
+      "description": "The top radius. Default 1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema40"
+        }
+      ]
+    },
+    "__schema40": {
+      "type": "number"
+    },
+    "__schema41": {
+      "description": "The bottom radius. Default 1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema42"
+        }
+      ]
+    },
+    "__schema42": {
+      "type": "number"
+    },
+    "__schema43": {
+      "type": "number"
+    },
+    "__schema44": {
+      "type": "number"
+    },
+    "__schema45": {
+      "type": "number"
+    },
+    "__schema46": {
+      "type": "boolean"
+    },
+    "__schema47": {
+      "type": "number"
+    },
+    "__schema48": {
+      "type": "number"
+    },
+    "__schema49": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/__schema1"
+        },
+        "debugData": {
+          "$ref": "#/definitions/__schema3"
+        },
+        "type": {
+          "type": "string",
+          "const": "CAPSULE",
+          "description": "A capsule (height is the middle section's)."
+        },
+        "params": {
+          "description": "The constructor's arguments by name; three's defaults for those left out.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema50"
+            }
+          ]
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "__schema50": {
+      "type": "object",
+      "properties": {
+        "radius": {
+          "description": "The radius. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema51"
+            }
+          ]
+        },
+        "height": {
+          "description": "The middle section's height. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema52"
+            }
+          ]
+        },
+        "capSegments": {
+          "$ref": "#/definitions/__schema53"
+        },
+        "radialSegments": {
+          "description": "Segments around the circumference. Default 8.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema55"
+            }
+          ]
+        },
+        "heightSegments": {
+          "description": "Segments along the height. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema56"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema51": {
+      "type": "number"
+    },
+    "__schema52": {
+      "type": "number"
+    },
+    "__schema53": {
+      "description": "Segments of each end cap's curve. Default 4.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema54"
+        }
+      ]
+    },
+    "__schema54": {
+      "type": "number"
+    },
+    "__schema55": {
+      "type": "number"
+    },
+    "__schema56": {
+      "type": "number"
+    },
+    "__schema57": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/__schema1"
+        },
+        "debugData": {
+          "$ref": "#/definitions/__schema3"
+        },
+        "type": {
+          "type": "string",
+          "const": "CONE",
+          "description": "A cone."
+        },
+        "params": {
+          "description": "The constructor's arguments by name; three's defaults for those left out.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema58"
+            }
+          ]
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "__schema58": {
+      "type": "object",
+      "properties": {
+        "radius": {
+          "$ref": "#/definitions/__schema59"
+        },
+        "height": {
+          "$ref": "#/definitions/__schema61"
+        },
+        "radialSegments": {
+          "$ref": "#/definitions/__schema63"
+        },
+        "heightSegments": {
+          "$ref": "#/definitions/__schema65"
+        },
+        "openEnded": {
+          "$ref": "#/definitions/__schema67"
+        },
+        "thetaStart": {
+          "$ref": "#/definitions/__schema69"
+        },
+        "thetaLength": {
+          "$ref": "#/definitions/__schema71"
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema59": {
+      "description": "The base radius. Default 1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema60"
+        }
+      ]
+    },
+    "__schema60": {
+      "type": "number"
+    },
+    "__schema61": {
+      "description": "The height (y). Default 1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema62"
+        }
+      ]
+    },
+    "__schema62": {
+      "type": "number"
+    },
+    "__schema63": {
+      "description": "Segments around the circumference. Default 32.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema64"
+        }
+      ]
+    },
+    "__schema64": {
+      "type": "number"
+    },
+    "__schema65": {
+      "description": "Segments along the height. Default 1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema66"
+        }
+      ]
+    },
+    "__schema66": {
+      "type": "number"
+    },
+    "__schema67": {
+      "description": "Leaves the ends open. Default false.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema68"
+        }
+      ]
+    },
+    "__schema68": {
+      "type": "boolean"
+    },
+    "__schema69": {
+      "description": "The start angle in radians. Default 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema70"
+        }
+      ]
+    },
+    "__schema70": {
+      "type": "number"
+    },
+    "__schema71": {
+      "description": "The sweep in radians. Default 2π.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema72"
+        }
+      ]
+    },
+    "__schema72": {
+      "type": "number"
+    },
+    "__schema73": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -250,36 +760,25 @@
               "type": "object",
               "properties": {
                 "date": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema74"
                 },
                 "engineVersion": {
-                  "allOf": [
-                    {
-                      "$ref": "#/definitions/__schema19"
-                    }
-                  ]
+                  "$ref": "#/definitions/__schema76"
                 },
                 "toolkitVersion": {
-                  "allOf": [
-                    {
-                      "$ref": "#/definitions/__schema19"
-                    }
-                  ]
+                  "$ref": "#/definitions/__schema78"
                 },
                 "appVersion": {
-                  "allOf": [
-                    {
-                      "$ref": "#/definitions/__schema19"
-                    }
-                  ]
+                  "$ref": "#/definitions/__schema79"
                 }
               },
-              "additionalProperties": false
+              "additionalProperties": false,
+              "description": "When the entry was saved, and the versions of each part then."
             },
             "debugData": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema2"
+                  "$ref": "#/definitions/__schema4"
                 }
               ]
             },
@@ -287,52 +786,52 @@
               "type": "object",
               "properties": {
                 "width": {
-                  "$ref": "#/definitions/__schema3"
-                },
-                "height": {
-                  "$ref": "#/definitions/__schema13"
-                },
-                "depth": {
-                  "$ref": "#/definitions/__schema4"
-                },
-                "widthSegments": {
-                  "$ref": "#/definitions/__schema6"
-                },
-                "heightSegments": {
-                  "$ref": "#/definitions/__schema15"
-                },
-                "depthSegments": {
-                  "$ref": "#/definitions/__schema5"
-                },
-                "radius": {
-                  "$ref": "#/definitions/__schema12"
-                },
-                "phiStart": {
-                  "$ref": "#/definitions/__schema7"
-                },
-                "phiLength": {
-                  "$ref": "#/definitions/__schema8"
-                },
-                "thetaStart": {
-                  "$ref": "#/definitions/__schema17"
-                },
-                "thetaLength": {
-                  "$ref": "#/definitions/__schema18"
-                },
-                "radiusTop": {
-                  "$ref": "#/definitions/__schema9"
-                },
-                "radiusBottom": {
-                  "$ref": "#/definitions/__schema10"
-                },
-                "radialSegments": {
-                  "$ref": "#/definitions/__schema14"
-                },
-                "openEnded": {
                   "$ref": "#/definitions/__schema16"
                 },
+                "height": {
+                  "$ref": "#/definitions/__schema61"
+                },
+                "depth": {
+                  "$ref": "#/definitions/__schema19"
+                },
+                "widthSegments": {
+                  "$ref": "#/definitions/__schema28"
+                },
+                "heightSegments": {
+                  "$ref": "#/definitions/__schema65"
+                },
+                "depthSegments": {
+                  "$ref": "#/definitions/__schema23"
+                },
+                "radius": {
+                  "$ref": "#/definitions/__schema59"
+                },
+                "phiStart": {
+                  "$ref": "#/definitions/__schema31"
+                },
+                "phiLength": {
+                  "$ref": "#/definitions/__schema33"
+                },
+                "thetaStart": {
+                  "$ref": "#/definitions/__schema69"
+                },
+                "thetaLength": {
+                  "$ref": "#/definitions/__schema71"
+                },
+                "radiusTop": {
+                  "$ref": "#/definitions/__schema39"
+                },
+                "radiusBottom": {
+                  "$ref": "#/definitions/__schema41"
+                },
+                "radialSegments": {
+                  "$ref": "#/definitions/__schema63"
+                },
+                "openEnded": {
+                  "$ref": "#/definitions/__schema67"
+                },
                 "capSegments": {
-                  "$ref": "#/definitions/__schema11"
+                  "$ref": "#/definitions/__schema53"
                 }
               },
               "additionalProperties": false
@@ -341,119 +840,45 @@
           "additionalProperties": false
         }
       }
-    }
-  },
-  "required": [
-    "geoProps"
-  ],
-  "additionalProperties": false,
-  "definitions": {
-    "__schema0": {
-      "type": "string"
     },
-    "__schema1": {
+    "__schema74": {
+      "description": "When the entry was saved: milliseconds since the UNIX epoch.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema2"
+          "$ref": "#/definitions/__schema75"
         }
       ]
     },
-    "__schema2": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "comments": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "timestamp": {
-                "type": "number"
-              },
-              "comment": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "timestamp",
-              "comment"
-            ],
-            "additionalProperties": false
-          }
-        },
-        "todo": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {}
-        },
-        "debugObj": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {}
+    "__schema75": {
+      "type": "number"
+    },
+    "__schema76": {
+      "description": "The engine's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema77"
         }
-      },
-      "additionalProperties": false
+      ]
     },
-    "__schema3": {
-      "type": "number"
-    },
-    "__schema4": {
-      "type": "number"
-    },
-    "__schema5": {
-      "type": "number"
-    },
-    "__schema6": {
-      "type": "number"
-    },
-    "__schema7": {
-      "type": "number"
-    },
-    "__schema8": {
-      "type": "number"
-    },
-    "__schema9": {
-      "type": "number"
-    },
-    "__schema10": {
-      "type": "number"
-    },
-    "__schema11": {
-      "type": "number"
-    },
-    "__schema12": {
-      "type": "number"
-    },
-    "__schema13": {
-      "type": "number"
-    },
-    "__schema14": {
-      "type": "number"
-    },
-    "__schema15": {
-      "type": "number"
-    },
-    "__schema16": {
-      "type": "boolean"
-    },
-    "__schema17": {
-      "type": "number"
-    },
-    "__schema18": {
-      "type": "number"
-    },
-    "__schema19": {
+    "__schema77": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "__schema78": {
+      "description": "The toolkit's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema77"
+        }
+      ]
+    },
+    "__schema79": {
+      "description": "The app's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema77"
+        }
+      ]
     }
   }
 }

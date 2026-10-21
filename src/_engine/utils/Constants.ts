@@ -1,6 +1,5 @@
-export const HALF_PI = Math.PI / 2;
-export const QUARTER_PI = Math.PI / 4;
-
+/** The power-of-two sizes from 4 to 8192 px as drop-down options (the debug GUIs' shadow map
+ * sizes). */
 export const FOUR_PX_TO_8K_LIST = [
   { value: 4, text: '4px' },
   { value: 8, text: '8px' },

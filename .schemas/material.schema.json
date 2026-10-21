@@ -2,50 +2,58 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "oneOf": [
     {
+      "$ref": "#/definitions/__schema0"
+    },
+    {
+      "$ref": "#/definitions/__schema40"
+    }
+  ],
+  "description": "A material: its type and three parameters, and a node material's TSL file and inputs.",
+  "definitions": {
+    "__schema0": {
       "type": "object",
       "properties": {
         "id": {
-          "$ref": "#/definitions/__schema0"
-        },
-        "isPersistent": {
           "$ref": "#/definitions/__schema1"
         },
-        "debugData": {
+        "isPersistent": {
           "$ref": "#/definitions/__schema2"
         },
-        "userData": {
+        "debugData": {
           "$ref": "#/definitions/__schema4"
         },
+        "userData": {
+          "$ref": "#/definitions/__schema16"
+        },
         "params": {
-          "$ref": "#/definitions/__schema6"
+          "$ref": "#/definitions/__schema20"
         },
         "$schema": {
-          "$ref": "#/definitions/__schema8"
+          "$ref": "#/definitions/__schema24"
         },
         "__sourcePath": {
-          "$ref": "#/definitions/__schema9"
+          "$ref": "#/definitions/__schema25"
         },
         "__saveData": {
-          "$ref": "#/definitions/__schema10"
+          "$ref": "#/definitions/__schema26"
         },
         "tslFile": {
-          "type": "string"
+          "type": "string",
+          "description": "The TSL file, relative to the first folder under src/ (\"materials/asteroid/asteroid.tsl.ts\")."
         },
         "staticDefines": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {}
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema34"
+            }
+          ]
         },
         "nodes": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {
-            "$ref": "#/definitions/__schema12"
-          }
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema37"
+            }
+          ]
         },
         "type": {
           "type": "string",
@@ -58,7 +66,8 @@
             "MATCAPNODEMATERIAL",
             "NORMALNODEMATERIAL",
             "TOONNODEMATERIAL"
-          ]
+          ],
+          "description": "A node material: three's node material of that name, with the TSL file's sockets."
         }
       },
       "required": [
@@ -68,32 +77,360 @@
       ],
       "additionalProperties": false
     },
-    {
+    "__schema1": {
+      "type": "string",
+      "description": "The registry id scenes and meshes name it by."
+    },
+    "__schema2": {
+      "description": "Never released by its scene or its last ref (only deleteMaterial removes it).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema3": {
+      "type": "boolean"
+    },
+    "__schema4": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema5"
+        }
+      ]
+    },
+    "__schema5": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/__schema6"
+        },
+        "description": {
+          "$ref": "#/definitions/__schema8"
+        },
+        "comments": {
+          "$ref": "#/definitions/__schema10"
+        },
+        "todo": {
+          "$ref": "#/definitions/__schema12"
+        },
+        "debugObj": {
+          "$ref": "#/definitions/__schema14"
+        }
+      },
+      "additionalProperties": false,
+      "description": "What the debug tools show for it. Production data has none."
+    },
+    "__schema6": {
+      "description": "The name the debug tools show.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema7"
+        }
+      ]
+    },
+    "__schema7": {
+      "type": "string"
+    },
+    "__schema8": {
+      "description": "A longer description for the debug tools.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema9"
+        }
+      ]
+    },
+    "__schema9": {
+      "type": "string"
+    },
+    "__schema10": {
+      "description": "Notes with their times.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema11"
+        }
+      ]
+    },
+    "__schema11": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "number",
+            "description": "Milliseconds since the UNIX epoch."
+          },
+          "comment": {
+            "type": "string",
+            "description": "The note."
+          }
+        },
+        "required": [
+          "timestamp",
+          "comment"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "__schema12": {
+      "description": "Open items, by key.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema13"
+        }
+      ]
+    },
+    "__schema13": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema14": {
+      "description": "Anything else a debug tool keeps for it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema15"
+        }
+      ]
+    },
+    "__schema15": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema16": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema17"
+        }
+      ]
+    },
+    "__schema17": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema18"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema19"
+      },
+      "description": "Free-form data for the app: the entity's USER_DATA, or the asset's userData."
+    },
+    "__schema18": {
+      "type": "string"
+    },
+    "__schema19": {},
+    "__schema20": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema21"
+        }
+      ]
+    },
+    "__schema21": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema22"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema23"
+      },
+      "description": "That three material's parameters by name (color, roughness, …); a texture map key (map, normalMap, …) takes a texture's id."
+    },
+    "__schema22": {
+      "type": "string"
+    },
+    "__schema23": {},
+    "__schema24": {
+      "type": "string",
+      "description": "The JSON Schema in .schemas/ an editor validates this file with. The gatherer ignores it."
+    },
+    "__schema25": {
+      "type": "string",
+      "description": "Set by the gatherer: the JSON file the asset came from. Not written by hand."
+    },
+    "__schema26": {
+      "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema27"
+        }
+      ]
+    },
+    "__schema27": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "__meta": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "$ref": "#/definitions/__schema28"
+                },
+                "engineVersion": {
+                  "$ref": "#/definitions/__schema30"
+                },
+                "toolkitVersion": {
+                  "$ref": "#/definitions/__schema32"
+                },
+                "appVersion": {
+                  "$ref": "#/definitions/__schema33"
+                }
+              },
+              "additionalProperties": false,
+              "description": "When the entry was saved, and the versions of each part then."
+            },
+            "params": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema21"
+                }
+              ]
+            },
+            "staticDefines": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema34"
+                }
+              ]
+            },
+            "nodes": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema37"
+                }
+              ]
+            },
+            "debugData": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema5"
+                }
+              ]
+            },
+            "userData": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema17"
+                }
+              ]
+            },
+            "isPersistent": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "__schema28": {
+      "description": "When the entry was saved: milliseconds since the UNIX epoch.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema29"
+        }
+      ]
+    },
+    "__schema29": {
+      "type": "number"
+    },
+    "__schema30": {
+      "description": "The engine's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema31"
+        }
+      ]
+    },
+    "__schema31": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "__schema32": {
+      "description": "The toolkit's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema31"
+        }
+      ]
+    },
+    "__schema33": {
+      "description": "The app's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema31"
+        }
+      ]
+    },
+    "__schema34": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema35"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema36"
+      },
+      "description": "Build-time flags the TSL file branches on: another set is another shader."
+    },
+    "__schema35": {
+      "type": "string"
+    },
+    "__schema36": {},
+    "__schema37": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema38"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema39"
+      },
+      "description": "Per socket (colorNode, …), its inputs: a texture id, a '#rrggbb' colour, a number, a boolean, or a vector as an array or { x, y, z }. Each becomes a uniform the TSL file's socket function gets."
+    },
+    "__schema38": {
+      "type": "string"
+    },
+    "__schema39": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema40": {
       "type": "object",
       "properties": {
         "id": {
-          "$ref": "#/definitions/__schema0"
-        },
-        "isPersistent": {
           "$ref": "#/definitions/__schema1"
         },
-        "debugData": {
+        "isPersistent": {
           "$ref": "#/definitions/__schema2"
         },
-        "userData": {
+        "debugData": {
           "$ref": "#/definitions/__schema4"
         },
+        "userData": {
+          "$ref": "#/definitions/__schema16"
+        },
         "params": {
-          "$ref": "#/definitions/__schema6"
+          "$ref": "#/definitions/__schema20"
         },
         "$schema": {
-          "$ref": "#/definitions/__schema8"
+          "$ref": "#/definitions/__schema24"
         },
         "__sourcePath": {
-          "$ref": "#/definitions/__schema9"
+          "$ref": "#/definitions/__schema25"
         },
         "__saveData": {
-          "$ref": "#/definitions/__schema10"
+          "$ref": "#/definitions/__schema26"
         },
         "type": {
           "type": "string",
@@ -115,7 +452,8 @@
             "SHADER",
             "SHADOW",
             "SPRITE"
-          ]
+          ],
+          "description": "A three material: STANDARD is MeshStandardMaterial, LINEBASIC LineBasicMaterial, …"
         }
       },
       "required": [
@@ -123,196 +461,6 @@
         "type"
       ],
       "additionalProperties": false
-    }
-  ],
-  "definitions": {
-    "__schema0": {
-      "type": "string"
-    },
-    "__schema1": {
-      "type": "boolean"
-    },
-    "__schema2": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema3"
-        }
-      ]
-    },
-    "__schema3": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "comments": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "timestamp": {
-                "type": "number"
-              },
-              "comment": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "timestamp",
-              "comment"
-            ],
-            "additionalProperties": false
-          }
-        },
-        "todo": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {}
-        },
-        "debugObj": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {}
-        }
-      },
-      "additionalProperties": false
-    },
-    "__schema4": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema5"
-        }
-      ]
-    },
-    "__schema5": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {}
-    },
-    "__schema6": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema7"
-        }
-      ]
-    },
-    "__schema7": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {}
-    },
-    "__schema8": {
-      "type": "string"
-    },
-    "__schema9": {
-      "type": "string"
-    },
-    "__schema10": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "__meta": {
-              "type": "object",
-              "properties": {
-                "date": {
-                  "type": "number"
-                },
-                "engineVersion": {
-                  "allOf": [
-                    {
-                      "$ref": "#/definitions/__schema11"
-                    }
-                  ]
-                },
-                "toolkitVersion": {
-                  "allOf": [
-                    {
-                      "$ref": "#/definitions/__schema11"
-                    }
-                  ]
-                },
-                "appVersion": {
-                  "allOf": [
-                    {
-                      "$ref": "#/definitions/__schema11"
-                    }
-                  ]
-                }
-              },
-              "additionalProperties": false
-            },
-            "params": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema7"
-                }
-              ]
-            },
-            "staticDefines": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
-            },
-            "nodes": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {
-                "$ref": "#/definitions/__schema12"
-              }
-            },
-            "debugData": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema3"
-                }
-              ]
-            },
-            "userData": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema5"
-                }
-              ]
-            },
-            "isPersistent": {
-              "type": "boolean"
-            }
-          },
-          "additionalProperties": false
-        }
-      }
-    },
-    "__schema11": {
-      "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$"
-    },
-    "__schema12": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {}
     }
   }
 }

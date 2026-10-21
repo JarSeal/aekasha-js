@@ -3,16 +3,22 @@
   "type": "object",
   "properties": {
     "$schema": {
-      "type": "string"
+      "type": "string",
+      "description": "The JSON Schema in .schemas/ an editor validates this file with. The gatherer ignores it."
     },
     "id": {
-      "type": "string"
+      "description": "The registry id scenes and materials name it by. Default: the file's name.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema0"
+        }
+      ]
     },
     "layers": {
       "minItems": 1,
       "type": "array",
       "items": {
-        "$ref": "#/definitions/__schema0"
+        "$ref": "#/definitions/__schema1"
       },
       "description": "The layers, in layer index order."
     },
@@ -20,7 +26,7 @@
       "description": "Width and height every layer is resized to (default: the layers' size, which must then agree). The optimize step fits it into its maxSize.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema1"
+          "$ref": "#/definitions/__schema2"
         }
       ]
     },
@@ -28,149 +34,132 @@
       "type": "object",
       "properties": {
         "mapping": {
-          "type": "number"
+          "$ref": "#/definitions/__schema3"
         },
         "wrapS": {
-          "type": "number"
+          "$ref": "#/definitions/__schema5"
         },
         "wrapT": {
-          "type": "number"
+          "$ref": "#/definitions/__schema7"
         },
         "magFilter": {
-          "type": "number"
+          "$ref": "#/definitions/__schema9"
         },
         "minFilter": {
-          "type": "number"
+          "$ref": "#/definitions/__schema11"
         },
         "type": {
-          "type": "number"
+          "$ref": "#/definitions/__schema13"
         },
         "anisotropy": {
-          "type": "number"
+          "$ref": "#/definitions/__schema15"
         },
         "colorSpace": {
-          "anyOf": [
-            {
-              "type": "string",
-              "const": ""
-            },
-            {
-              "type": "string",
-              "const": "srgb"
-            },
-            {
-              "type": "string",
-              "const": "srgb-linear"
-            }
-          ]
+          "$ref": "#/definitions/__schema17"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The sampler state over the loader's, and the colour space."
     },
     "optimize": {
       "type": "object",
       "properties": {
         "profile": {
-          "$ref": "#/definitions/__schema2"
+          "$ref": "#/definitions/__schema21"
         },
         "slot": {
-          "$ref": "#/definitions/__schema4"
+          "$ref": "#/definitions/__schema23"
         },
         "textures": {
-          "$ref": "#/definitions/__schema6"
+          "$ref": "#/definitions/__schema25"
         },
         "budget": {
-          "$ref": "#/definitions/__schema17"
+          "$ref": "#/definitions/__schema44"
         }
       },
       "additionalProperties": false,
-      "description": "Asset optimization (p300): a profile, the slot and per-slot overrides, applied to every layer. The codec can't be none: an array is a KTX2 file."
+      "description": "The asset pipeline's settings: a profile, the slot and per-slot overrides, applied to every layer. The codec can't be none: an array is a KTX2 file."
     },
     "throwOnError": {
-      "type": "boolean"
+      "description": "Fails the load when the file can't load. Default: logs and uses an empty stand-in.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema49"
+        }
+      ]
     },
     "userData": {
       "type": "object",
       "propertyNames": {
-        "type": "string"
+        "$ref": "#/definitions/__schema50"
       },
-      "additionalProperties": {}
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema51"
+      },
+      "description": "Free-form data for the app: the entity's USER_DATA, or the asset's userData."
     },
     "debugData": {
       "type": "object",
       "properties": {
         "name": {
-          "type": "string"
+          "$ref": "#/definitions/__schema52"
         },
         "description": {
-          "type": "string"
+          "$ref": "#/definitions/__schema54"
         },
         "comments": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "timestamp": {
-                "type": "number"
-              },
-              "comment": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "timestamp",
-              "comment"
-            ],
-            "additionalProperties": false
-          }
+          "$ref": "#/definitions/__schema56"
         },
         "todo": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {}
+          "$ref": "#/definitions/__schema58"
         },
         "debugObj": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {}
+          "$ref": "#/definitions/__schema60"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "What the debug tools show for it. Production data has none."
     },
     "__sourcePath": {
-      "type": "string"
+      "type": "string",
+      "description": "Set by the gatherer: the JSON file the asset came from. Not written by hand."
     },
     "__layers": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "__url": {
-      "type": "string"
-    },
-    "__bytes": {
+      "description": "Set by the gatherer: each layer's name, by layer index.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema22"
+          "$ref": "#/definitions/__schema62"
+        }
+      ]
+    },
+    "__url": {
+      "description": "Set by the gatherer: the pipeline's output.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema63"
+        }
+      ]
+    },
+    "__bytes": {
+      "description": "Set by the gatherer: the download in bytes.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema64"
         }
       ]
     },
     "__vramBytes": {
+      "description": "Set by the gatherer: the estimated GPU memory in bytes.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema22"
+          "$ref": "#/definitions/__schema64"
         }
       ]
     },
     "__codec": {
       "allOf": [
         {
-          "$ref": "#/definitions/__schema9"
+          "$ref": "#/definitions/__schema29"
         }
       ]
     }
@@ -181,11 +170,14 @@
   "additionalProperties": false,
   "definitions": {
     "__schema0": {
+      "type": "string"
+    },
+    "__schema1": {
       "type": "string",
       "minLength": 1,
       "description": "A texture asset's id (its source file or pack, not its output), or a source image relative to this JSON (\"./source/moss.png\") or served from src/public (\"/textures/moss.png\")."
     },
-    "__schema1": {
+    "__schema2": {
       "type": "array",
       "items": [
         {
@@ -203,26 +195,129 @@
       "maxItems": 2,
       "additionalItems": false
     },
-    "__schema2": {
+    "__schema3": {
+      "description": "three's mapping: 300 UV, 301 cube reflection, 303 equirectangular reflection.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema4"
+        }
+      ]
+    },
+    "__schema4": {
+      "type": "number"
+    },
+    "__schema5": {
+      "description": "three's horizontal wrapping: 1000 repeat, 1001 clamp to edge, 1002 mirrored.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema6": {
+      "type": "number"
+    },
+    "__schema7": {
+      "description": "three's vertical wrapping: 1000 repeat, 1001 clamp to edge, 1002 mirrored.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema8"
+        }
+      ]
+    },
+    "__schema8": {
+      "type": "number"
+    },
+    "__schema9": {
+      "description": "three's magnification filter: 1003 nearest, 1006 linear.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema10"
+        }
+      ]
+    },
+    "__schema10": {
+      "type": "number"
+    },
+    "__schema11": {
+      "description": "three's minification filter: 1003 nearest, 1006 linear, 1008 trilinear.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema12"
+        }
+      ]
+    },
+    "__schema12": {
+      "type": "number"
+    },
+    "__schema13": {
+      "description": "three's texel type: 1009 unsigned byte, 1015 float, 1016 half float.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema14"
+        }
+      ]
+    },
+    "__schema14": {
+      "type": "number"
+    },
+    "__schema15": {
+      "description": "Anisotropic filtering samples (1: off; the device caps it).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema16"
+        }
+      ]
+    },
+    "__schema16": {
+      "type": "number"
+    },
+    "__schema17": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/__schema18"
+        },
+        {
+          "$ref": "#/definitions/__schema19"
+        },
+        {
+          "$ref": "#/definitions/__schema20"
+        }
+      ],
+      "description": "\"srgb\" for colour maps, \"srgb-linear\" or \"\" (none) for data: normal, roughness, masks."
+    },
+    "__schema18": {
+      "type": "string",
+      "const": ""
+    },
+    "__schema19": {
+      "type": "string",
+      "const": "srgb"
+    },
+    "__schema20": {
+      "type": "string",
+      "const": "srgb-linear"
+    },
+    "__schema21": {
       "description": "A profile of assets.config.json.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema3"
+          "$ref": "#/definitions/__schema22"
         }
       ]
     },
-    "__schema3": {
+    "__schema22": {
       "type": "string"
     },
-    "__schema4": {
+    "__schema23": {
       "description": "A standalone texture's slot (default: default). A GLB's textures are classified by their material slot.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema5"
+          "$ref": "#/definitions/__schema24"
         }
       ]
     },
-    "__schema5": {
+    "__schema24": {
       "type": "string",
       "enum": [
         "default",
@@ -236,131 +331,108 @@
       ],
       "description": "glTF slots, orm (packed occlusion / roughness / metalness), data (splat maps, masks, LUTs, height) or default."
     },
-    "__schema6": {
+    "__schema25": {
       "description": "Per-slot overrides.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema7"
+          "$ref": "#/definitions/__schema26"
         }
       ]
     },
-    "__schema7": {
+    "__schema26": {
       "type": "object",
       "properties": {
         "default": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema8"
-            }
-          ]
+          "$ref": "#/definitions/__schema27"
         },
         "baseColor": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema8"
-            }
-          ]
+          "$ref": "#/definitions/__schema37"
         },
         "normal": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema8"
-            }
-          ]
+          "$ref": "#/definitions/__schema38"
         },
         "metallicRoughness": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema8"
-            }
-          ]
+          "$ref": "#/definitions/__schema39"
         },
         "occlusion": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema8"
-            }
-          ]
+          "$ref": "#/definitions/__schema40"
         },
         "emissive": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema8"
-            }
-          ]
+          "$ref": "#/definitions/__schema41"
         },
         "orm": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema8"
-            }
-          ]
+          "$ref": "#/definitions/__schema42"
         },
         "data": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema8"
-            }
-          ]
+          "$ref": "#/definitions/__schema43"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Per slot; each slot's entry merges over default."
     },
-    "__schema8": {
+    "__schema27": {
+      "description": "Every slot's, under the slot's own.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema28"
+        }
+      ]
+    },
+    "__schema28": {
       "type": "object",
       "properties": {
         "codec": {
           "allOf": [
             {
-              "$ref": "#/definitions/__schema9"
+              "$ref": "#/definitions/__schema29"
             }
           ]
         },
         "maxSize": {
-          "description": "Largest side in px, downscaled to fit (null: the source size).",
+          "description": "Largest side in px, downscaled to fit (null: the source size). Default 1024.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema10"
+              "$ref": "#/definitions/__schema30"
             }
           ]
         },
         "mipmaps": {
-          "description": "Write the full mip chain (default true).",
+          "description": "Writes the full mip chain. Default true.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema11"
+              "$ref": "#/definitions/__schema31"
             }
           ]
         },
         "level": {
-          "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
+          "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest). Default 2.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema12"
+              "$ref": "#/definitions/__schema32"
             }
           ]
         },
         "rdo": {
-          "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
+          "description": "UASTC only: the RDO lambda (0: off). Default 2; 1 for normal, orm, metallicRoughness and occlusion.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema13"
+              "$ref": "#/definitions/__schema33"
             }
           ]
         },
         "zstd": {
-          "description": "UASTC only: Zstandard supercompression level (0: off).",
+          "description": "UASTC only: Zstandard supercompression level (0: off). Default 18.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema14"
+              "$ref": "#/definitions/__schema34"
             }
           ]
         },
         "quality": {
-          "description": "ETC1S only: --qlevel, 1 to 255.",
+          "description": "ETC1S only: --qlevel, 1 to 255. Default 128.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema15"
+              "$ref": "#/definitions/__schema35"
             }
           ]
         },
@@ -368,14 +440,14 @@
           "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema16"
+              "$ref": "#/definitions/__schema36"
             }
           ]
         }
       },
       "additionalProperties": false
     },
-    "__schema9": {
+    "__schema29": {
       "type": "string",
       "enum": [
         "uastc",
@@ -384,7 +456,7 @@
       ],
       "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
     },
-    "__schema10": {
+    "__schema30": {
       "anyOf": [
         {
           "type": "integer",
@@ -396,54 +468,110 @@
         }
       ]
     },
-    "__schema11": {
+    "__schema31": {
       "type": "boolean"
     },
-    "__schema12": {
+    "__schema32": {
       "type": "integer",
       "minimum": 0,
       "maximum": 4
     },
-    "__schema13": {
+    "__schema33": {
       "type": "number",
       "minimum": 0
     },
-    "__schema14": {
+    "__schema34": {
       "type": "integer",
       "minimum": 0,
       "maximum": 22
     },
-    "__schema15": {
+    "__schema35": {
       "type": "integer",
       "minimum": 1,
       "maximum": 255
     },
-    "__schema16": {
+    "__schema36": {
       "type": "boolean"
     },
-    "__schema17": {
+    "__schema37": {
+      "description": "The base colour (albedo).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema28"
+        }
+      ]
+    },
+    "__schema38": {
+      "description": "The normal map.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema28"
+        }
+      ]
+    },
+    "__schema39": {
+      "description": "glTF's metallic-roughness map.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema28"
+        }
+      ]
+    },
+    "__schema40": {
+      "description": "The ambient occlusion map.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema28"
+        }
+      ]
+    },
+    "__schema41": {
+      "description": "The emissive map.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema28"
+        }
+      ]
+    },
+    "__schema42": {
+      "description": "Packed occlusion, roughness and metalness.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema28"
+        }
+      ]
+    },
+    "__schema43": {
+      "description": "Splat maps, masks, LUTs, height.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema28"
+        }
+      ]
+    },
+    "__schema44": {
       "type": "object",
       "properties": {
         "vramMB": {
-          "$ref": "#/definitions/__schema18"
+          "$ref": "#/definitions/__schema45"
         },
         "downloadMB": {
-          "$ref": "#/definitions/__schema21"
+          "$ref": "#/definitions/__schema48"
         }
       },
       "additionalProperties": false,
       "description": "Per-asset limits. Set in an asset JSON's own optimize, it also replaces the per-texture ceiling (each texture's VRAM must fit its slot's maxSize and codec as set without the asset JSON's overrides)."
     },
-    "__schema18": {
+    "__schema45": {
       "description": "Estimated GPU memory of the whole asset in MB: its textures (KTX2 at 1 B/px, the most it takes on any device) plus a GLB's geometry (null: no limit).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema19"
+          "$ref": "#/definitions/__schema46"
         }
       ],
-      "$ref": "#/definitions/__schema20"
+      "$ref": "#/definitions/__schema47"
     },
-    "__schema19": {
+    "__schema46": {
       "anyOf": [
         {
           "type": "number",
@@ -454,30 +582,129 @@
         }
       ]
     },
-    "__schema20": {
+    "__schema47": {
       "allOf": [
         {
-          "$ref": "#/definitions/__schema19"
+          "$ref": "#/definitions/__schema46"
         }
       ]
     },
-    "__schema21": {
+    "__schema48": {
       "description": "The output file's size in MB (null: no limit).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema19"
+          "$ref": "#/definitions/__schema46"
         }
       ],
-      "$ref": "#/definitions/__schema20"
+      "$ref": "#/definitions/__schema47"
     },
-    "__schema22": {
+    "__schema49": {
+      "type": "boolean"
+    },
+    "__schema50": {
+      "type": "string"
+    },
+    "__schema51": {},
+    "__schema52": {
+      "description": "The name the debug tools show.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema53"
+        }
+      ]
+    },
+    "__schema53": {
+      "type": "string"
+    },
+    "__schema54": {
+      "description": "A longer description for the debug tools.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema55"
+        }
+      ]
+    },
+    "__schema55": {
+      "type": "string"
+    },
+    "__schema56": {
+      "description": "Notes with their times.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema57"
+        }
+      ]
+    },
+    "__schema57": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "number",
+            "description": "Milliseconds since the UNIX epoch."
+          },
+          "comment": {
+            "type": "string",
+            "description": "The note."
+          }
+        },
+        "required": [
+          "timestamp",
+          "comment"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "__schema58": {
+      "description": "Open items, by key.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema59"
+        }
+      ]
+    },
+    "__schema59": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema60": {
+      "description": "Anything else a debug tool keeps for it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema61"
+        }
+      ]
+    },
+    "__schema61": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema62": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "__schema63": {
+      "type": "string"
+    },
+    "__schema64": {
       "type": "object",
       "properties": {
         "in": {
-          "type": "number"
+          "type": "number",
+          "description": "The source's."
         },
         "out": {
-          "type": "number"
+          "type": "number",
+          "description": "The output's."
         }
       },
       "required": [

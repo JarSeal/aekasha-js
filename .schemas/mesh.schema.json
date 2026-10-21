@@ -3,317 +3,1684 @@
   "type": "object",
   "properties": {
     "$schema": {
-      "type": "string"
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema0"
+        }
+      ]
     },
     "props": {
       "type": "object",
       "properties": {
         "geo": {
-          "anyOf": [
-            {
-              "oneOf": [
-                {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "$ref": "#/definitions/__schema0"
-                    },
-                    "debugData": {
-                      "$ref": "#/definitions/__schema1"
-                    },
-                    "type": {
-                      "$ref": "#/definitions/__schema3"
-                    },
-                    "params": {
-                      "$ref": "#/definitions/__schema4"
-                    }
-                  },
-                  "required": [
-                    "type"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "$ref": "#/definitions/__schema0"
-                    },
-                    "debugData": {
-                      "$ref": "#/definitions/__schema1"
-                    },
-                    "type": {
-                      "$ref": "#/definitions/__schema5"
-                    },
-                    "params": {
-                      "$ref": "#/definitions/__schema6"
-                    }
-                  },
-                  "required": [
-                    "type"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "$ref": "#/definitions/__schema0"
-                    },
-                    "debugData": {
-                      "$ref": "#/definitions/__schema1"
-                    },
-                    "type": {
-                      "$ref": "#/definitions/__schema7"
-                    },
-                    "params": {
-                      "$ref": "#/definitions/__schema8"
-                    }
-                  },
-                  "required": [
-                    "type"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "$ref": "#/definitions/__schema0"
-                    },
-                    "debugData": {
-                      "$ref": "#/definitions/__schema1"
-                    },
-                    "type": {
-                      "$ref": "#/definitions/__schema9"
-                    },
-                    "params": {
-                      "$ref": "#/definitions/__schema10"
-                    }
-                  },
-                  "required": [
-                    "type"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "$ref": "#/definitions/__schema0"
-                    },
-                    "debugData": {
-                      "$ref": "#/definitions/__schema1"
-                    },
-                    "type": {
-                      "$ref": "#/definitions/__schema11"
-                    },
-                    "params": {
-                      "$ref": "#/definitions/__schema12"
-                    }
-                  },
-                  "required": [
-                    "type"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
-            },
-            {
-              "type": "string"
-            }
-          ]
+          "$ref": "#/definitions/__schema1"
         },
         "mat": {
-          "anyOf": [
-            {
-              "oneOf": [
-                {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "$ref": "#/definitions/__schema13"
-                    },
-                    "isPersistent": {
-                      "$ref": "#/definitions/__schema14"
-                    },
-                    "debugData": {
-                      "$ref": "#/definitions/__schema15"
-                    },
-                    "userData": {
-                      "$ref": "#/definitions/__schema16"
-                    },
-                    "params": {
-                      "$ref": "#/definitions/__schema18"
-                    },
-                    "$schema": {
-                      "$ref": "#/definitions/__schema20"
-                    },
-                    "__sourcePath": {
-                      "$ref": "#/definitions/__schema21"
-                    },
-                    "__saveData": {
-                      "$ref": "#/definitions/__schema22"
-                    },
-                    "tslFile": {
-                      "$ref": "#/definitions/__schema26"
-                    },
-                    "staticDefines": {
-                      "$ref": "#/definitions/__schema27"
-                    },
-                    "nodes": {
-                      "$ref": "#/definitions/__schema28"
-                    },
-                    "type": {
-                      "$ref": "#/definitions/__schema29"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "tslFile",
-                    "type"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "$ref": "#/definitions/__schema13"
-                    },
-                    "isPersistent": {
-                      "$ref": "#/definitions/__schema14"
-                    },
-                    "debugData": {
-                      "$ref": "#/definitions/__schema15"
-                    },
-                    "userData": {
-                      "$ref": "#/definitions/__schema16"
-                    },
-                    "params": {
-                      "$ref": "#/definitions/__schema18"
-                    },
-                    "$schema": {
-                      "$ref": "#/definitions/__schema20"
-                    },
-                    "__sourcePath": {
-                      "$ref": "#/definitions/__schema21"
-                    },
-                    "__saveData": {
-                      "$ref": "#/definitions/__schema22"
-                    },
-                    "type": {
-                      "$ref": "#/definitions/__schema30"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "type"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
-            },
-            {
-              "type": "string"
-            }
-          ]
+          "$ref": "#/definitions/__schema71"
         },
         "matOverrides": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema31"
-            }
-          ]
+          "$ref": "#/definitions/__schema111"
         },
         "castShadow": {
-          "type": "boolean"
+          "$ref": "#/definitions/__schema115"
         },
         "receiveShadow": {
-          "type": "boolean"
+          "$ref": "#/definitions/__schema117"
         },
         "preWarm": {
-          "type": "boolean"
+          "$ref": "#/definitions/__schema119"
         },
         "position": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema32"
-            }
-          ]
+          "$ref": "#/definitions/__schema121"
         },
         "rotation": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema32"
-            }
-          ]
+          "$ref": "#/definitions/__schema123"
         },
         "quaternion": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema33"
-            }
-          ]
+          "$ref": "#/definitions/__schema124"
         },
         "appId": {
-          "type": "string"
+          "$ref": "#/definitions/__schema126"
         },
         "frustumCullingEnabled": {
-          "type": "boolean"
+          "$ref": "#/definitions/__schema128"
         },
         "lod": {
-          "$ref": "#/definitions/__schema34"
+          "$ref": "#/definitions/__schema130"
         }
       },
       "required": [
         "geo",
         "mat"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The mesh: its geometry and material, shadows, transform and culling."
     },
     "entityOpts": {
       "type": "object",
       "properties": {
         "appId": {
-          "type": "string"
+          "$ref": "#/definitions/__schema151"
         },
         "disabled": {
-          "type": "boolean"
+          "$ref": "#/definitions/__schema153"
         },
         "persistent": {
-          "type": "boolean"
+          "$ref": "#/definitions/__schema155"
         },
         "doNotAddToScene": {
-          "type": "boolean"
+          "$ref": "#/definitions/__schema157"
         },
         "userData": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema17"
-            }
-          ]
+          "$ref": "#/definitions/__schema159"
         },
         "debugData": {
+          "$ref": "#/definitions/__schema160"
+        },
+        "spatialIndex": {
+          "$ref": "#/definitions/__schema161"
+        },
+        "ecsFrustumCullingEnabled": {
+          "$ref": "#/definitions/__schema163"
+        }
+      },
+      "additionalProperties": false,
+      "description": "The entity options: its app id, state, user data and culling."
+    },
+    "__sourcePath": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema88"
+        }
+      ]
+    },
+    "__saveData": {
+      "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema165"
+        }
+      ]
+    }
+  },
+  "required": [
+    "props"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "__schema0": {
+      "type": "string",
+      "description": "The JSON Schema in .schemas/ an editor validates this file with. The gatherer ignores it."
+    },
+    "__schema1": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/__schema2"
+        },
+        {
+          "$ref": "#/definitions/__schema70"
+        }
+      ],
+      "description": "The geometry: its props, or a geometry's id."
+    },
+    "__schema2": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        },
+        {
+          "$ref": "#/definitions/__schema27"
+        },
+        {
+          "$ref": "#/definitions/__schema38"
+        },
+        {
+          "$ref": "#/definitions/__schema50"
+        },
+        {
+          "$ref": "#/definitions/__schema59"
+        }
+      ],
+      "description": "The geometry: BOX, SPHERE, CYLINDER, CAPSULE or CONE, and its params."
+    },
+    "__schema3": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/__schema4"
+        },
+        "debugData": {
+          "$ref": "#/definitions/__schema6"
+        },
+        "type": {
+          "$ref": "#/definitions/__schema18"
+        },
+        "params": {
+          "$ref": "#/definitions/__schema19"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "__schema4": {
+      "description": "The registry id. Default: the file's name.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema5"
+        }
+      ]
+    },
+    "__schema5": {
+      "type": "string"
+    },
+    "__schema6": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema7"
+        }
+      ]
+    },
+    "__schema7": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/__schema8"
+        },
+        "description": {
+          "$ref": "#/definitions/__schema10"
+        },
+        "comments": {
+          "$ref": "#/definitions/__schema12"
+        },
+        "todo": {
+          "$ref": "#/definitions/__schema14"
+        },
+        "debugObj": {
+          "$ref": "#/definitions/__schema16"
+        }
+      },
+      "additionalProperties": false,
+      "description": "What the debug tools show for it. Production data has none."
+    },
+    "__schema8": {
+      "description": "The name the debug tools show.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema9"
+        }
+      ]
+    },
+    "__schema9": {
+      "type": "string"
+    },
+    "__schema10": {
+      "description": "A longer description for the debug tools.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema11"
+        }
+      ]
+    },
+    "__schema11": {
+      "type": "string"
+    },
+    "__schema12": {
+      "description": "Notes with their times.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema13"
+        }
+      ]
+    },
+    "__schema13": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "number",
+            "description": "Milliseconds since the UNIX epoch."
+          },
+          "comment": {
+            "type": "string",
+            "description": "The note."
+          }
+        },
+        "required": [
+          "timestamp",
+          "comment"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "__schema14": {
+      "description": "Open items, by key.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema15"
+        }
+      ]
+    },
+    "__schema15": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema16": {
+      "description": "Anything else a debug tool keeps for it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema17"
+        }
+      ]
+    },
+    "__schema17": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema18": {
+      "type": "string",
+      "const": "BOX",
+      "description": "A box."
+    },
+    "__schema19": {
+      "description": "The constructor's arguments by name; three's defaults for those left out.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema20"
+        }
+      ]
+    },
+    "__schema20": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "description": "The width (x). Default 1.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema2"
+              "$ref": "#/definitions/__schema21"
             }
           ]
         },
-        "spatialIndex": {
-          "type": "boolean"
+        "height": {
+          "description": "The height (y). Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema22"
+            }
+          ]
         },
-        "ecsFrustumCullingEnabled": {
-          "type": "boolean"
+        "depth": {
+          "description": "The depth (z). Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema23"
+            }
+          ]
+        },
+        "widthSegments": {
+          "description": "Segments along the width. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema24"
+            }
+          ]
+        },
+        "heightSegments": {
+          "description": "Segments along the height. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema25"
+            }
+          ]
+        },
+        "depthSegments": {
+          "description": "Segments along the depth. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema26"
+            }
+          ]
         }
       },
       "additionalProperties": false
     },
-    "__sourcePath": {
+    "__schema21": {
+      "type": "number"
+    },
+    "__schema22": {
+      "type": "number"
+    },
+    "__schema23": {
+      "type": "number"
+    },
+    "__schema24": {
+      "type": "number"
+    },
+    "__schema25": {
+      "type": "number"
+    },
+    "__schema26": {
+      "type": "number"
+    },
+    "__schema27": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/__schema4"
+        },
+        "debugData": {
+          "$ref": "#/definitions/__schema6"
+        },
+        "type": {
+          "$ref": "#/definitions/__schema28"
+        },
+        "params": {
+          "$ref": "#/definitions/__schema29"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "__schema28": {
+      "type": "string",
+      "const": "SPHERE",
+      "description": "A sphere."
+    },
+    "__schema29": {
+      "description": "The constructor's arguments by name; three's defaults for those left out.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema30"
+        }
+      ]
+    },
+    "__schema30": {
+      "type": "object",
+      "properties": {
+        "radius": {
+          "description": "The radius. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema31"
+            }
+          ]
+        },
+        "widthSegments": {
+          "description": "Segments along the width. Default 32.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema32"
+            }
+          ]
+        },
+        "heightSegments": {
+          "description": "Segments along the height. Default 16.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema33"
+            }
+          ]
+        },
+        "phiStart": {
+          "description": "The horizontal start angle in radians. Default 0.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema34"
+            }
+          ]
+        },
+        "phiLength": {
+          "description": "The horizontal sweep in radians. Default 2π.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema35"
+            }
+          ]
+        },
+        "thetaStart": {
+          "description": "The vertical start angle in radians. Default 0.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema36"
+            }
+          ]
+        },
+        "thetaLength": {
+          "description": "The vertical sweep in radians. Default π.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema37"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema31": {
+      "type": "number"
+    },
+    "__schema32": {
+      "type": "number"
+    },
+    "__schema33": {
+      "type": "number"
+    },
+    "__schema34": {
+      "type": "number"
+    },
+    "__schema35": {
+      "type": "number"
+    },
+    "__schema36": {
+      "type": "number"
+    },
+    "__schema37": {
+      "type": "number"
+    },
+    "__schema38": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/__schema4"
+        },
+        "debugData": {
+          "$ref": "#/definitions/__schema6"
+        },
+        "type": {
+          "$ref": "#/definitions/__schema39"
+        },
+        "params": {
+          "$ref": "#/definitions/__schema40"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "__schema39": {
+      "type": "string",
+      "const": "CYLINDER",
+      "description": "A cylinder."
+    },
+    "__schema40": {
+      "description": "The constructor's arguments by name; three's defaults for those left out.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema41"
+        }
+      ]
+    },
+    "__schema41": {
+      "type": "object",
+      "properties": {
+        "radiusTop": {
+          "description": "The top radius. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema42"
+            }
+          ]
+        },
+        "radiusBottom": {
+          "description": "The bottom radius. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema43"
+            }
+          ]
+        },
+        "height": {
+          "description": "The height (y). Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema44"
+            }
+          ]
+        },
+        "radialSegments": {
+          "description": "Segments around the circumference. Default 32.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema45"
+            }
+          ]
+        },
+        "heightSegments": {
+          "description": "Segments along the height. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema46"
+            }
+          ]
+        },
+        "openEnded": {
+          "description": "Leaves the ends open. Default false.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema47"
+            }
+          ]
+        },
+        "thetaStart": {
+          "description": "The start angle in radians. Default 0.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema48"
+            }
+          ]
+        },
+        "thetaLength": {
+          "description": "The sweep in radians. Default 2π.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema49"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema42": {
+      "type": "number"
+    },
+    "__schema43": {
+      "type": "number"
+    },
+    "__schema44": {
+      "type": "number"
+    },
+    "__schema45": {
+      "type": "number"
+    },
+    "__schema46": {
+      "type": "number"
+    },
+    "__schema47": {
+      "type": "boolean"
+    },
+    "__schema48": {
+      "type": "number"
+    },
+    "__schema49": {
+      "type": "number"
+    },
+    "__schema50": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/__schema4"
+        },
+        "debugData": {
+          "$ref": "#/definitions/__schema6"
+        },
+        "type": {
+          "$ref": "#/definitions/__schema51"
+        },
+        "params": {
+          "$ref": "#/definitions/__schema52"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "__schema51": {
+      "type": "string",
+      "const": "CAPSULE",
+      "description": "A capsule (height is the middle section's)."
+    },
+    "__schema52": {
+      "description": "The constructor's arguments by name; three's defaults for those left out.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema53"
+        }
+      ]
+    },
+    "__schema53": {
+      "type": "object",
+      "properties": {
+        "radius": {
+          "description": "The radius. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema54"
+            }
+          ]
+        },
+        "height": {
+          "description": "The middle section's height. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema55"
+            }
+          ]
+        },
+        "capSegments": {
+          "description": "Segments of each end cap's curve. Default 4.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema56"
+            }
+          ]
+        },
+        "radialSegments": {
+          "description": "Segments around the circumference. Default 8.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema57"
+            }
+          ]
+        },
+        "heightSegments": {
+          "description": "Segments along the height. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema58"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema54": {
+      "type": "number"
+    },
+    "__schema55": {
+      "type": "number"
+    },
+    "__schema56": {
+      "type": "number"
+    },
+    "__schema57": {
+      "type": "number"
+    },
+    "__schema58": {
+      "type": "number"
+    },
+    "__schema59": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/__schema4"
+        },
+        "debugData": {
+          "$ref": "#/definitions/__schema6"
+        },
+        "type": {
+          "$ref": "#/definitions/__schema60"
+        },
+        "params": {
+          "$ref": "#/definitions/__schema61"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "__schema60": {
+      "type": "string",
+      "const": "CONE",
+      "description": "A cone."
+    },
+    "__schema61": {
+      "description": "The constructor's arguments by name; three's defaults for those left out.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema62"
+        }
+      ]
+    },
+    "__schema62": {
+      "type": "object",
+      "properties": {
+        "radius": {
+          "description": "The base radius. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema63"
+            }
+          ]
+        },
+        "height": {
+          "description": "The height (y). Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema64"
+            }
+          ]
+        },
+        "radialSegments": {
+          "description": "Segments around the circumference. Default 32.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema65"
+            }
+          ]
+        },
+        "heightSegments": {
+          "description": "Segments along the height. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema66"
+            }
+          ]
+        },
+        "openEnded": {
+          "description": "Leaves the ends open. Default false.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema67"
+            }
+          ]
+        },
+        "thetaStart": {
+          "description": "The start angle in radians. Default 0.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema68"
+            }
+          ]
+        },
+        "thetaLength": {
+          "description": "The sweep in radians. Default 2π.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema69"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema63": {
+      "type": "number"
+    },
+    "__schema64": {
+      "type": "number"
+    },
+    "__schema65": {
+      "type": "number"
+    },
+    "__schema66": {
+      "type": "number"
+    },
+    "__schema67": {
+      "type": "boolean"
+    },
+    "__schema68": {
+      "type": "number"
+    },
+    "__schema69": {
+      "type": "number"
+    },
+    "__schema70": {
       "type": "string"
     },
-    "__saveData": {
+    "__schema71": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/__schema72"
+        },
+        {
+          "$ref": "#/definitions/__schema110"
+        }
+      ],
+      "description": "The material: its props, or a material's id."
+    },
+    "__schema72": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/__schema73"
+        },
+        {
+          "$ref": "#/definitions/__schema108"
+        }
+      ],
+      "description": "A material: its type and three parameters, and a node material's TSL file and inputs."
+    },
+    "__schema73": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/__schema74"
+        },
+        "isPersistent": {
+          "$ref": "#/definitions/__schema75"
+        },
+        "debugData": {
+          "$ref": "#/definitions/__schema77"
+        },
+        "userData": {
+          "$ref": "#/definitions/__schema78"
+        },
+        "params": {
+          "$ref": "#/definitions/__schema82"
+        },
+        "$schema": {
+          "$ref": "#/definitions/__schema86"
+        },
+        "__sourcePath": {
+          "$ref": "#/definitions/__schema87"
+        },
+        "__saveData": {
+          "$ref": "#/definitions/__schema89"
+        },
+        "tslFile": {
+          "$ref": "#/definitions/__schema104"
+        },
+        "staticDefines": {
+          "$ref": "#/definitions/__schema105"
+        },
+        "nodes": {
+          "$ref": "#/definitions/__schema106"
+        },
+        "type": {
+          "$ref": "#/definitions/__schema107"
+        }
+      },
+      "required": [
+        "id",
+        "tslFile",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "__schema74": {
+      "type": "string",
+      "description": "The registry id scenes and meshes name it by."
+    },
+    "__schema75": {
+      "description": "Never released by its scene or its last ref (only deleteMaterial removes it).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema76"
+        }
+      ]
+    },
+    "__schema76": {
+      "type": "boolean"
+    },
+    "__schema77": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema7"
+        }
+      ]
+    },
+    "__schema78": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema79"
+        }
+      ]
+    },
+    "__schema79": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema80"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema81"
+      },
+      "description": "Free-form data for the app: the entity's USER_DATA, or the asset's userData."
+    },
+    "__schema80": {
+      "type": "string"
+    },
+    "__schema81": {},
+    "__schema82": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema83"
+        }
+      ]
+    },
+    "__schema83": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema84"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema85"
+      },
+      "description": "That three material's parameters by name (color, roughness, …); a texture map key (map, normalMap, …) takes a texture's id."
+    },
+    "__schema84": {
+      "type": "string"
+    },
+    "__schema85": {},
+    "__schema86": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema0"
+        }
+      ]
+    },
+    "__schema87": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema88"
+        }
+      ]
+    },
+    "__schema88": {
+      "type": "string",
+      "description": "Set by the gatherer: the JSON file the asset came from. Not written by hand."
+    },
+    "__schema89": {
+      "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema90"
+        }
+      ]
+    },
+    "__schema90": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "__meta": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema91"
+                }
+              ]
+            },
+            "params": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema83"
+                }
+              ]
+            },
+            "staticDefines": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema98"
+                }
+              ]
+            },
+            "nodes": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema101"
+                }
+              ]
+            },
+            "debugData": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema7"
+                }
+              ]
+            },
+            "userData": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema79"
+                }
+              ]
+            },
+            "isPersistent": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "__schema91": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "$ref": "#/definitions/__schema92"
+        },
+        "engineVersion": {
+          "$ref": "#/definitions/__schema94"
+        },
+        "toolkitVersion": {
+          "$ref": "#/definitions/__schema96"
+        },
+        "appVersion": {
+          "$ref": "#/definitions/__schema97"
+        }
+      },
+      "additionalProperties": false,
+      "description": "When the entry was saved, and the versions of each part then."
+    },
+    "__schema92": {
+      "description": "When the entry was saved: milliseconds since the UNIX epoch.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema93"
+        }
+      ]
+    },
+    "__schema93": {
+      "type": "number"
+    },
+    "__schema94": {
+      "description": "The engine's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema95"
+        }
+      ]
+    },
+    "__schema95": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "__schema96": {
+      "description": "The toolkit's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema95"
+        }
+      ]
+    },
+    "__schema97": {
+      "description": "The app's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema95"
+        }
+      ]
+    },
+    "__schema98": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema99"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema100"
+      },
+      "description": "Build-time flags the TSL file branches on: another set is another shader."
+    },
+    "__schema99": {
+      "type": "string"
+    },
+    "__schema100": {},
+    "__schema101": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema102"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema103"
+      },
+      "description": "Per socket (colorNode, …), its inputs: a texture id, a '#rrggbb' colour, a number, a boolean, or a vector as an array or { x, y, z }. Each becomes a uniform the TSL file's socket function gets."
+    },
+    "__schema102": {
+      "type": "string"
+    },
+    "__schema103": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema104": {
+      "type": "string",
+      "description": "The TSL file, relative to the first folder under src/ (\"materials/asteroid/asteroid.tsl.ts\")."
+    },
+    "__schema105": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema98"
+        }
+      ]
+    },
+    "__schema106": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema101"
+        }
+      ]
+    },
+    "__schema107": {
+      "type": "string",
+      "enum": [
+        "BASICNODEMATERIAL",
+        "LAMBERTNODEMATERIAL",
+        "PHONGNODEMATERIAL",
+        "PHYSICALNODEMATERIAL",
+        "STANDARDNODEMATERIAL",
+        "MATCAPNODEMATERIAL",
+        "NORMALNODEMATERIAL",
+        "TOONNODEMATERIAL"
+      ],
+      "description": "A node material: three's node material of that name, with the TSL file's sockets."
+    },
+    "__schema108": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/__schema74"
+        },
+        "isPersistent": {
+          "$ref": "#/definitions/__schema75"
+        },
+        "debugData": {
+          "$ref": "#/definitions/__schema77"
+        },
+        "userData": {
+          "$ref": "#/definitions/__schema78"
+        },
+        "params": {
+          "$ref": "#/definitions/__schema82"
+        },
+        "$schema": {
+          "$ref": "#/definitions/__schema86"
+        },
+        "__sourcePath": {
+          "$ref": "#/definitions/__schema87"
+        },
+        "__saveData": {
+          "$ref": "#/definitions/__schema89"
+        },
+        "type": {
+          "$ref": "#/definitions/__schema109"
+        }
+      },
+      "required": [
+        "id",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "__schema109": {
+      "type": "string",
+      "enum": [
+        "LINEBASIC",
+        "LINEDASHED",
+        "BASIC",
+        "DEPTH",
+        "DISTANCE",
+        "LAMBERT",
+        "MATCAP",
+        "NORMAL",
+        "PHONG",
+        "PHYSICAL",
+        "STANDARD",
+        "TOON",
+        "POINTS",
+        "SHADERRAW",
+        "SHADER",
+        "SHADOW",
+        "SPRITE"
+      ],
+      "description": "A three material: STANDARD is MeshStandardMaterial, LINEBASIC LineBasicMaterial, …"
+    },
+    "__schema110": {
+      "type": "string"
+    },
+    "__schema111": {
+      "type": "object",
+      "properties": {
+        "params": {
+          "$ref": "#/definitions/__schema112"
+        },
+        "staticDefines": {
+          "$ref": "#/definitions/__schema113"
+        },
+        "nodes": {
+          "$ref": "#/definitions/__schema114"
+        }
+      },
+      "additionalProperties": false,
+      "description": "The mesh's variant of its material: params, staticDefines and nodes over its own."
+    },
+    "__schema112": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema83"
+        }
+      ]
+    },
+    "__schema113": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema98"
+        }
+      ]
+    },
+    "__schema114": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema101"
+        }
+      ]
+    },
+    "__schema115": {
+      "description": "Casts shadows. Default false.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema116"
+        }
+      ]
+    },
+    "__schema116": {
+      "type": "boolean"
+    },
+    "__schema117": {
+      "description": "Receives shadows. Default false.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema118"
+        }
+      ]
+    },
+    "__schema118": {
+      "type": "boolean"
+    },
+    "__schema119": {
+      "description": "Compiles its pipelines at creation, so its first frame doesn't stall on it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema120"
+        }
+      ]
+    },
+    "__schema120": {
+      "type": "boolean"
+    },
+    "__schema121": {
+      "description": "Where the mesh is. Default: the origin.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema122"
+        }
+      ]
+    },
+    "__schema122": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "The x component."
+        },
+        "y": {
+          "type": "number",
+          "description": "The y component (up)."
+        },
+        "z": {
+          "type": "number",
+          "description": "The z component."
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
+      "additionalProperties": false
+    },
+    "__schema123": {
+      "description": "Euler angles in radians; quaternion wins over it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema122"
+        }
+      ]
+    },
+    "__schema124": {
+      "description": "A rotation quaternion.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema125"
+        }
+      ]
+    },
+    "__schema125": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "The x component."
+        },
+        "y": {
+          "type": "number",
+          "description": "The y component."
+        },
+        "z": {
+          "type": "number",
+          "description": "The z component."
+        },
+        "w": {
+          "type": "number",
+          "description": "The w (scalar) component."
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z",
+        "w"
+      ],
+      "additionalProperties": false
+    },
+    "__schema126": {
+      "description": "The id scenes list it by (default: the file's name), and the entity's app id (default: a UUID).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema127"
+        }
+      ]
+    },
+    "__schema127": {
+      "type": "string"
+    },
+    "__schema128": {
+      "description": "three's own render-list culling (Object3D.frustumCulled). Default true.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema129"
+        }
+      ]
+    },
+    "__schema129": {
+      "type": "boolean"
+    },
+    "__schema130": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "levels": {
+              "$ref": "#/definitions/__schema131"
+            },
+            "cullScreenSize": {
+              "$ref": "#/definitions/__schema140"
+            },
+            "hysteresis": {
+              "$ref": "#/definitions/__schema142"
+            },
+            "bias": {
+              "$ref": "#/definitions/__schema144"
+            },
+            "fadeSeconds": {
+              "$ref": "#/definitions/__schema146"
+            }
+          },
+          "required": [
+            "levels"
+          ],
+          "additionalProperties": false,
+          "description": "Levels of detail (p348): each frame the mesh shows the level its screen size reaches, swapping its geometry, material and castShadow, cross-faded over fadeSeconds."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "auto": {
+              "$ref": "#/definitions/__schema148"
+            },
+            "maxPixelError": {
+              "$ref": "#/definitions/__schema149"
+            },
+            "cullScreenSize": {
+              "$ref": "#/definitions/__schema140"
+            },
+            "hysteresis": {
+              "$ref": "#/definitions/__schema142"
+            },
+            "bias": {
+              "$ref": "#/definitions/__schema144"
+            },
+            "fadeSeconds": {
+              "$ref": "#/definitions/__schema146"
+            }
+          },
+          "required": [
+            "auto"
+          ],
+          "additionalProperties": false,
+          "description": "Levels of detail (p348) from the geometry's LOD chain (p347: `lodChain` in its *.importedAsset.json): each level is used while its simplification error stays within maxPixelError pixels. Without a chain the mesh stays on level 0 (warned)."
+        },
+        {
+          "type": "string",
+          "const": "AUTO",
+          "description": "Levels of detail (p348) from the geometry's LOD chain, with the defaults: `{ auto: true }`."
+        }
+      ]
+    },
+    "__schema131": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/__schema132"
+      },
+      "description": "Level 0 (the finest) first, screenSize descending."
+    },
+    "__schema132": {
+      "type": "object",
+      "properties": {
+        "screenSize": {
+          "$ref": "#/definitions/__schema133"
+        },
+        "geo": {
+          "$ref": "#/definitions/__schema134"
+        },
+        "mat": {
+          "$ref": "#/definitions/__schema136"
+        },
+        "castShadow": {
+          "$ref": "#/definitions/__schema138"
+        }
+      },
+      "required": [
+        "screenSize"
+      ],
+      "additionalProperties": false,
+      "description": "A level of detail."
+    },
+    "__schema133": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Smallest screen size (bounding-sphere diameter / viewport height) this level is used at. Coarser levels need smaller values. Moving to a coarser level waits for `hysteresis` below it."
+    },
+    "__schema134": {
+      "description": "Registered geometry id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema135"
+        }
+      ]
+    },
+    "__schema135": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema136": {
+      "description": "Registered material id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema137"
+        }
+      ]
+    },
+    "__schema137": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema138": {
+      "description": "Omitted = the previous level's (level 0: the mesh's own).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema139"
+        }
+      ]
+    },
+    "__schema139": {
+      "type": "boolean"
+    },
+    "__schema140": {
+      "description": "Below this screen size the mesh is hidden (with hysteresis, like the levels). 0 = never hidden. Default 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema141"
+        }
+      ]
+    },
+    "__schema141": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema142": {
+      "description": "Moving to a coarser level (or hiding) waits until the screen size is this fraction below the threshold, so a mesh on a boundary does not flip every frame. Default 0.1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema143"
+        }
+      ]
+    },
+    "__schema143": {
+      "type": "number",
+      "minimum": 0,
+      "exclusiveMaximum": 1
+    },
+    "__schema144": {
+      "description": "Multiplies the screen size: >1 keeps detail longer. Default 1. The global bias (AppConfig.lod.bias, setLodBias) applies on top.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema145"
+        }
+      ]
+    },
+    "__schema145": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "__schema146": {
+      "description": "How long a level change (or hiding and showing) cross-fades with a dither, in seconds; 0 switches at once and leaves the level materials undithered. Default AppConfig.lod.fadeSeconds (0.25, setLodFadeSeconds).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema147"
+        }
+      ]
+    },
+    "__schema147": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema148": {
+      "type": "boolean",
+      "const": true
+    },
+    "__schema149": {
+      "description": "The largest simplification error, in pixels at a viewport height of 1080, a level may show. Smaller keeps detail longer. Default 1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema150"
+        }
+      ]
+    },
+    "__schema150": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "__schema151": {
+      "description": "The entity's app id, for getEntityIdByAppId. Default: a generated UUID.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema152"
+        }
+      ]
+    },
+    "__schema152": {
+      "type": "string"
+    },
+    "__schema153": {
+      "description": "Creates the entity disabled.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema154"
+        }
+      ]
+    },
+    "__schema154": {
+      "type": "boolean"
+    },
+    "__schema155": {
+      "description": "Keeps the entity on a scene switch. Read only by lines and a light's target entity so far.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema156"
+        }
+      ]
+    },
+    "__schema156": {
+      "type": "boolean"
+    },
+    "__schema157": {
+      "description": "Leaves the entity's object out of the root scene.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema158"
+        }
+      ]
+    },
+    "__schema158": {
+      "type": "boolean"
+    },
+    "__schema159": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema79"
+        }
+      ]
+    },
+    "__schema160": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema7"
+        }
+      ]
+    },
+    "__schema161": {
+      "description": "false keeps a mesh or a point or spot light out of the spatial index.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema162"
+        }
+      ]
+    },
+    "__schema162": {
+      "type": "boolean"
+    },
+    "__schema163": {
+      "description": "A mesh's TAG_FRUSTUM_CULLED follows the camera's frustum, for gameplay systems to read (not three's render culling).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema164"
+        }
+      ]
+    },
+    "__schema164": {
+      "type": "boolean"
+    },
+    "__schema165": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -333,96 +1700,28 @@
                         "id": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema0"
-                            }
-                          ]
-                        },
-                        "debugData": {
-                          "allOf": [
-                            {
-                              "$ref": "#/definitions/__schema1"
-                            }
-                          ]
-                        },
-                        "type": {
-                          "allOf": [
-                            {
-                              "$ref": "#/definitions/__schema3"
-                            }
-                          ]
-                        },
-                        "params": {
-                          "allOf": [
-                            {
                               "$ref": "#/definitions/__schema4"
                             }
                           ]
-                        }
-                      },
-                      "additionalProperties": false
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "allOf": [
-                            {
-                              "$ref": "#/definitions/__schema0"
-                            }
-                          ]
                         },
                         "debugData": {
-                          "allOf": [
-                            {
-                              "$ref": "#/definitions/__schema1"
-                            }
-                          ]
-                        },
-                        "type": {
-                          "allOf": [
-                            {
-                              "$ref": "#/definitions/__schema5"
-                            }
-                          ]
-                        },
-                        "params": {
                           "allOf": [
                             {
                               "$ref": "#/definitions/__schema6"
                             }
                           ]
-                        }
-                      },
-                      "additionalProperties": false
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "allOf": [
-                            {
-                              "$ref": "#/definitions/__schema0"
-                            }
-                          ]
-                        },
-                        "debugData": {
-                          "allOf": [
-                            {
-                              "$ref": "#/definitions/__schema1"
-                            }
-                          ]
                         },
                         "type": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema7"
+                              "$ref": "#/definitions/__schema18"
                             }
                           ]
                         },
                         "params": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema8"
+                              "$ref": "#/definitions/__schema19"
                             }
                           ]
                         }
@@ -435,28 +1734,28 @@
                         "id": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema0"
+                              "$ref": "#/definitions/__schema4"
                             }
                           ]
                         },
                         "debugData": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema1"
+                              "$ref": "#/definitions/__schema6"
                             }
                           ]
                         },
                         "type": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema9"
+                              "$ref": "#/definitions/__schema28"
                             }
                           ]
                         },
                         "params": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema10"
+                              "$ref": "#/definitions/__schema29"
                             }
                           ]
                         }
@@ -469,28 +1768,96 @@
                         "id": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema0"
+                              "$ref": "#/definitions/__schema4"
                             }
                           ]
                         },
                         "debugData": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema1"
+                              "$ref": "#/definitions/__schema6"
                             }
                           ]
                         },
                         "type": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema11"
+                              "$ref": "#/definitions/__schema39"
                             }
                           ]
                         },
                         "params": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema12"
+                              "$ref": "#/definitions/__schema40"
+                            }
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema4"
+                            }
+                          ]
+                        },
+                        "debugData": {
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema6"
+                            }
+                          ]
+                        },
+                        "type": {
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema51"
+                            }
+                          ]
+                        },
+                        "params": {
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema52"
+                            }
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema4"
+                            }
+                          ]
+                        },
+                        "debugData": {
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema6"
+                            }
+                          ]
+                        },
+                        "type": {
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema60"
+                            }
+                          ]
+                        },
+                        "params": {
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema61"
                             }
                           ]
                         }
@@ -514,84 +1881,84 @@
                         "id": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema13"
+                              "$ref": "#/definitions/__schema74"
                             }
                           ]
                         },
                         "isPersistent": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema14"
+                              "$ref": "#/definitions/__schema75"
                             }
                           ]
                         },
                         "debugData": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema15"
+                              "$ref": "#/definitions/__schema77"
                             }
                           ]
                         },
                         "userData": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema16"
+                              "$ref": "#/definitions/__schema78"
                             }
                           ]
                         },
                         "params": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema18"
+                              "$ref": "#/definitions/__schema82"
                             }
                           ]
                         },
                         "$schema": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema20"
+                              "$ref": "#/definitions/__schema86"
                             }
                           ]
                         },
                         "__sourcePath": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema21"
+                              "$ref": "#/definitions/__schema87"
                             }
                           ]
                         },
                         "__saveData": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema22"
+                              "$ref": "#/definitions/__schema89"
                             }
                           ]
                         },
                         "tslFile": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema26"
+                              "$ref": "#/definitions/__schema104"
                             }
                           ]
                         },
                         "staticDefines": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema27"
+                              "$ref": "#/definitions/__schema105"
                             }
                           ]
                         },
                         "nodes": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema28"
+                              "$ref": "#/definitions/__schema106"
                             }
                           ]
                         },
                         "type": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema29"
+                              "$ref": "#/definitions/__schema107"
                             }
                           ]
                         }
@@ -604,63 +1971,63 @@
                         "id": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema13"
+                              "$ref": "#/definitions/__schema74"
                             }
                           ]
                         },
                         "isPersistent": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema14"
+                              "$ref": "#/definitions/__schema75"
                             }
                           ]
                         },
                         "debugData": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema15"
+                              "$ref": "#/definitions/__schema77"
                             }
                           ]
                         },
                         "userData": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema16"
+                              "$ref": "#/definitions/__schema78"
                             }
                           ]
                         },
                         "params": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema18"
+                              "$ref": "#/definitions/__schema82"
                             }
                           ]
                         },
                         "$schema": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema20"
+                              "$ref": "#/definitions/__schema86"
                             }
                           ]
                         },
                         "__sourcePath": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema21"
+                              "$ref": "#/definitions/__schema87"
                             }
                           ]
                         },
                         "__saveData": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema22"
+                              "$ref": "#/definitions/__schema89"
                             }
                           ]
                         },
                         "type": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema30"
+                              "$ref": "#/definitions/__schema109"
                             }
                           ]
                         }
@@ -675,52 +2042,36 @@
               ]
             },
             "matOverrides": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema31"
-                }
-              ]
+              "$ref": "#/definitions/__schema111"
             },
             "castShadow": {
-              "type": "boolean"
+              "$ref": "#/definitions/__schema115"
             },
             "receiveShadow": {
-              "type": "boolean"
+              "$ref": "#/definitions/__schema117"
             },
             "preWarm": {
-              "type": "boolean"
+              "$ref": "#/definitions/__schema119"
             },
             "position": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema32"
-                }
-              ]
+              "$ref": "#/definitions/__schema121"
             },
             "rotation": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema32"
-                }
-              ]
+              "$ref": "#/definitions/__schema123"
             },
             "quaternion": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema33"
-                }
-              ]
+              "$ref": "#/definitions/__schema124"
             },
             "frustumCullingEnabled": {
-              "type": "boolean"
+              "$ref": "#/definitions/__schema128"
             },
             "lod": {
-              "$ref": "#/definitions/__schema34"
+              "$ref": "#/definitions/__schema130"
             },
             "__meta": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema23"
+                  "$ref": "#/definitions/__schema91"
                 }
               ]
             }
@@ -728,690 +2079,6 @@
           "additionalProperties": false
         }
       }
-    }
-  },
-  "required": [
-    "props"
-  ],
-  "additionalProperties": false,
-  "definitions": {
-    "__schema0": {
-      "type": "string"
-    },
-    "__schema1": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema2"
-        }
-      ]
-    },
-    "__schema2": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "comments": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "timestamp": {
-                "type": "number"
-              },
-              "comment": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "timestamp",
-              "comment"
-            ],
-            "additionalProperties": false
-          }
-        },
-        "todo": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {}
-        },
-        "debugObj": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {}
-        }
-      },
-      "additionalProperties": false
-    },
-    "__schema3": {
-      "type": "string",
-      "const": "BOX"
-    },
-    "__schema4": {
-      "type": "object",
-      "properties": {
-        "width": {
-          "type": "number"
-        },
-        "height": {
-          "type": "number"
-        },
-        "depth": {
-          "type": "number"
-        },
-        "widthSegments": {
-          "type": "number"
-        },
-        "heightSegments": {
-          "type": "number"
-        },
-        "depthSegments": {
-          "type": "number"
-        }
-      },
-      "additionalProperties": false
-    },
-    "__schema5": {
-      "type": "string",
-      "const": "SPHERE"
-    },
-    "__schema6": {
-      "type": "object",
-      "properties": {
-        "radius": {
-          "type": "number"
-        },
-        "widthSegments": {
-          "type": "number"
-        },
-        "heightSegments": {
-          "type": "number"
-        },
-        "phiStart": {
-          "type": "number"
-        },
-        "phiLength": {
-          "type": "number"
-        },
-        "thetaStart": {
-          "type": "number"
-        },
-        "thetaLength": {
-          "type": "number"
-        }
-      },
-      "additionalProperties": false
-    },
-    "__schema7": {
-      "type": "string",
-      "const": "CYLINDER"
-    },
-    "__schema8": {
-      "type": "object",
-      "properties": {
-        "radiusTop": {
-          "type": "number"
-        },
-        "radiusBottom": {
-          "type": "number"
-        },
-        "height": {
-          "type": "number"
-        },
-        "radialSegments": {
-          "type": "number"
-        },
-        "heightSegments": {
-          "type": "number"
-        },
-        "openEnded": {
-          "type": "boolean"
-        },
-        "thetaStart": {
-          "type": "number"
-        },
-        "thetaLength": {
-          "type": "number"
-        }
-      },
-      "additionalProperties": false
-    },
-    "__schema9": {
-      "type": "string",
-      "const": "CAPSULE"
-    },
-    "__schema10": {
-      "type": "object",
-      "properties": {
-        "radius": {
-          "type": "number"
-        },
-        "height": {
-          "type": "number"
-        },
-        "capSegments": {
-          "type": "number"
-        },
-        "radialSegments": {
-          "type": "number"
-        },
-        "heightSegments": {
-          "type": "number"
-        }
-      },
-      "additionalProperties": false
-    },
-    "__schema11": {
-      "type": "string",
-      "const": "CONE"
-    },
-    "__schema12": {
-      "type": "object",
-      "properties": {
-        "radius": {
-          "type": "number"
-        },
-        "height": {
-          "type": "number"
-        },
-        "radialSegments": {
-          "type": "number"
-        },
-        "heightSegments": {
-          "type": "number"
-        },
-        "openEnded": {
-          "type": "boolean"
-        },
-        "thetaStart": {
-          "type": "number"
-        },
-        "thetaLength": {
-          "type": "number"
-        }
-      },
-      "additionalProperties": false
-    },
-    "__schema13": {
-      "type": "string"
-    },
-    "__schema14": {
-      "type": "boolean"
-    },
-    "__schema15": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema2"
-        }
-      ]
-    },
-    "__schema16": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema17"
-        }
-      ]
-    },
-    "__schema17": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {}
-    },
-    "__schema18": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema19"
-        }
-      ]
-    },
-    "__schema19": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {}
-    },
-    "__schema20": {
-      "type": "string"
-    },
-    "__schema21": {
-      "type": "string"
-    },
-    "__schema22": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "__meta": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema23"
-                }
-              ]
-            },
-            "params": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema19"
-                }
-              ]
-            },
-            "staticDefines": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
-            },
-            "nodes": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {
-                "$ref": "#/definitions/__schema25"
-              }
-            },
-            "debugData": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema2"
-                }
-              ]
-            },
-            "userData": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema17"
-                }
-              ]
-            },
-            "isPersistent": {
-              "type": "boolean"
-            }
-          },
-          "additionalProperties": false
-        }
-      }
-    },
-    "__schema23": {
-      "type": "object",
-      "properties": {
-        "date": {
-          "type": "number"
-        },
-        "engineVersion": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema24"
-            }
-          ]
-        },
-        "toolkitVersion": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema24"
-            }
-          ]
-        },
-        "appVersion": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema24"
-            }
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
-    "__schema24": {
-      "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$"
-    },
-    "__schema25": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {}
-    },
-    "__schema26": {
-      "type": "string"
-    },
-    "__schema27": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {}
-    },
-    "__schema28": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "$ref": "#/definitions/__schema25"
-      }
-    },
-    "__schema29": {
-      "type": "string",
-      "enum": [
-        "BASICNODEMATERIAL",
-        "LAMBERTNODEMATERIAL",
-        "PHONGNODEMATERIAL",
-        "PHYSICALNODEMATERIAL",
-        "STANDARDNODEMATERIAL",
-        "MATCAPNODEMATERIAL",
-        "NORMALNODEMATERIAL",
-        "TOONNODEMATERIAL"
-      ]
-    },
-    "__schema30": {
-      "type": "string",
-      "enum": [
-        "LINEBASIC",
-        "LINEDASHED",
-        "BASIC",
-        "DEPTH",
-        "DISTANCE",
-        "LAMBERT",
-        "MATCAP",
-        "NORMAL",
-        "PHONG",
-        "PHYSICAL",
-        "STANDARD",
-        "TOON",
-        "POINTS",
-        "SHADERRAW",
-        "SHADER",
-        "SHADOW",
-        "SPRITE"
-      ]
-    },
-    "__schema31": {
-      "type": "object",
-      "properties": {
-        "params": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema19"
-            }
-          ]
-        },
-        "staticDefines": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {}
-        },
-        "nodes": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {
-            "$ref": "#/definitions/__schema25"
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    "__schema32": {
-      "type": "object",
-      "properties": {
-        "x": {
-          "type": "number"
-        },
-        "y": {
-          "type": "number"
-        },
-        "z": {
-          "type": "number"
-        }
-      },
-      "required": [
-        "x",
-        "y",
-        "z"
-      ],
-      "additionalProperties": false
-    },
-    "__schema33": {
-      "type": "object",
-      "properties": {
-        "x": {
-          "type": "number"
-        },
-        "y": {
-          "type": "number"
-        },
-        "z": {
-          "type": "number"
-        },
-        "w": {
-          "type": "number"
-        }
-      },
-      "required": [
-        "x",
-        "y",
-        "z",
-        "w"
-      ],
-      "additionalProperties": false
-    },
-    "__schema34": {
-      "anyOf": [
-        {
-          "type": "object",
-          "properties": {
-            "levels": {
-              "$ref": "#/definitions/__schema35"
-            },
-            "cullScreenSize": {
-              "$ref": "#/definitions/__schema44"
-            },
-            "hysteresis": {
-              "$ref": "#/definitions/__schema46"
-            },
-            "bias": {
-              "$ref": "#/definitions/__schema48"
-            },
-            "fadeSeconds": {
-              "$ref": "#/definitions/__schema50"
-            }
-          },
-          "required": [
-            "levels"
-          ],
-          "additionalProperties": false,
-          "description": "Levels of detail (p348): each frame the mesh shows the level its screen size reaches, swapping its geometry, material and castShadow, cross-faded over fadeSeconds."
-        },
-        {
-          "type": "object",
-          "properties": {
-            "auto": {
-              "$ref": "#/definitions/__schema52"
-            },
-            "maxPixelError": {
-              "$ref": "#/definitions/__schema53"
-            },
-            "cullScreenSize": {
-              "$ref": "#/definitions/__schema44"
-            },
-            "hysteresis": {
-              "$ref": "#/definitions/__schema46"
-            },
-            "bias": {
-              "$ref": "#/definitions/__schema48"
-            },
-            "fadeSeconds": {
-              "$ref": "#/definitions/__schema50"
-            }
-          },
-          "required": [
-            "auto"
-          ],
-          "additionalProperties": false,
-          "description": "Levels of detail (p348) from the geometry's LOD chain (p347: `lodChain` in its *.importedAsset.json): each level is used while its simplification error stays within maxPixelError pixels. Without a chain the mesh stays on level 0 (warned)."
-        },
-        {
-          "type": "string",
-          "const": "AUTO",
-          "description": "Levels of detail (p348) from the geometry's LOD chain, with the defaults: `{ auto: true }`."
-        }
-      ]
-    },
-    "__schema35": {
-      "minItems": 1,
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/__schema36"
-      },
-      "description": "Level 0 (the finest) first, screenSize descending."
-    },
-    "__schema36": {
-      "type": "object",
-      "properties": {
-        "screenSize": {
-          "$ref": "#/definitions/__schema37"
-        },
-        "geo": {
-          "$ref": "#/definitions/__schema38"
-        },
-        "mat": {
-          "$ref": "#/definitions/__schema40"
-        },
-        "castShadow": {
-          "$ref": "#/definitions/__schema42"
-        }
-      },
-      "required": [
-        "screenSize"
-      ],
-      "additionalProperties": false,
-      "description": "A level of detail."
-    },
-    "__schema37": {
-      "type": "number",
-      "minimum": 0,
-      "description": "Smallest screen size (bounding-sphere diameter / viewport height) this level is used at. Coarser levels need smaller values. Moving to a coarser level waits for `hysteresis` below it."
-    },
-    "__schema38": {
-      "description": "Registered geometry id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema39"
-        }
-      ]
-    },
-    "__schema39": {
-      "type": "string",
-      "minLength": 1
-    },
-    "__schema40": {
-      "description": "Registered material id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema41"
-        }
-      ]
-    },
-    "__schema41": {
-      "type": "string",
-      "minLength": 1
-    },
-    "__schema42": {
-      "description": "Omitted = the previous level's (level 0: the mesh's own).",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema43"
-        }
-      ]
-    },
-    "__schema43": {
-      "type": "boolean"
-    },
-    "__schema44": {
-      "description": "Below this screen size the mesh is hidden (with hysteresis, like the levels). 0 = never hidden. Default 0.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema45"
-        }
-      ]
-    },
-    "__schema45": {
-      "type": "number",
-      "minimum": 0
-    },
-    "__schema46": {
-      "description": "Moving to a coarser level (or hiding) waits until the screen size is this fraction below the threshold, so a mesh on a boundary does not flip every frame. Default 0.1.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema47"
-        }
-      ]
-    },
-    "__schema47": {
-      "type": "number",
-      "minimum": 0,
-      "exclusiveMaximum": 1
-    },
-    "__schema48": {
-      "description": "Multiplies the screen size: >1 keeps detail longer. Default 1. The global bias (AppConfig.lod.bias, setLodBias) applies on top.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema49"
-        }
-      ]
-    },
-    "__schema49": {
-      "type": "number",
-      "exclusiveMinimum": 0
-    },
-    "__schema50": {
-      "description": "How long a level change (or hiding and showing) cross-fades with a dither, in seconds; 0 switches at once and leaves the level materials undithered. Default AppConfig.lod.fadeSeconds (0.25, setLodFadeSeconds).",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema51"
-        }
-      ]
-    },
-    "__schema51": {
-      "type": "number",
-      "minimum": 0
-    },
-    "__schema52": {
-      "type": "boolean",
-      "const": true
-    },
-    "__schema53": {
-      "description": "The largest simplification error, in pixels at a viewport height of 1080, a level may show. Smaller keeps detail longer. Default 1.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema54"
-        }
-      ]
-    },
-    "__schema54": {
-      "type": "number",
-      "exclusiveMinimum": 0
     }
   }
 }

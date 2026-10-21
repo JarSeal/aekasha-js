@@ -3,22 +3,98 @@
   "type": "object",
   "properties": {
     "id": {
-      "type": "string"
+      "type": "string",
+      "description": "The pass's id, which a scene's postFx names it by."
     },
     "tslFile": {
-      "type": "string"
+      "type": "string",
+      "description": "The pass's TS file (exporting fxNode), relative to the first folder under src/ (\"postFx/ambientOcclusion.tsl.ts\")."
     },
     "enabled": {
-      "type": "boolean"
-    },
-    "params": {
+      "description": "Whether the pass is part of the chain. Default true.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema0"
         }
       ]
     },
+    "params": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema1"
+        }
+      ]
+    },
     "paramsMeta": {
+      "description": "The debugger's control hints per param key (the pass never reads them).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema4"
+        }
+      ]
+    },
+    "staticDefines": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema13"
+        }
+      ]
+    },
+    "debugData": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema16"
+        }
+      ]
+    },
+    "userData": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema27"
+        }
+      ]
+    },
+    "$schema": {
+      "type": "string",
+      "description": "The JSON Schema in .schemas/ an editor validates this file with. The gatherer ignores it."
+    },
+    "__sourcePath": {
+      "type": "string",
+      "description": "Set by the gatherer: the JSON file the asset came from. Not written by hand."
+    },
+    "__saveData": {
+      "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema30"
+        }
+      ]
+    }
+  },
+  "required": [
+    "id",
+    "tslFile"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "__schema0": {
+      "type": "boolean"
+    },
+    "__schema1": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema2"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema3"
+      },
+      "description": "Flat params, handed to the pass's fxNode as JSON values (not uniforms)."
+    },
+    "__schema2": {
+      "type": "string"
+    },
+    "__schema3": {},
+    "__schema4": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -27,71 +103,206 @@
         "type": "object",
         "properties": {
           "label": {
-            "type": "string"
+            "$ref": "#/definitions/__schema5"
           },
           "min": {
-            "type": "number"
+            "$ref": "#/definitions/__schema6"
           },
           "max": {
-            "type": "number"
+            "$ref": "#/definitions/__schema7"
           },
           "step": {
-            "type": "number"
+            "$ref": "#/definitions/__schema8"
           },
           "options": {
-            "type": "object",
-            "propertyNames": {
-              "type": "string"
-            },
-            "additionalProperties": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "boolean"
-                }
-              ]
-            }
+            "$ref": "#/definitions/__schema9"
           },
           "hidden": {
-            "type": "boolean"
+            "$ref": "#/definitions/__schema12"
           }
         },
+        "additionalProperties": false,
+        "description": "The debugger's hints for the param's control."
+      }
+    },
+    "__schema5": {
+      "type": "string",
+      "description": "The control's label. Default: the param's key."
+    },
+    "__schema6": {
+      "type": "number",
+      "description": "A number param's slider minimum."
+    },
+    "__schema7": {
+      "type": "number",
+      "description": "A number param's slider maximum."
+    },
+    "__schema8": {
+      "type": "number",
+      "description": "A number param's slider step."
+    },
+    "__schema9": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema10"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema11"
+      },
+      "description": "A drop-down: each option's text → the param's value."
+    },
+    "__schema10": {
+      "type": "string"
+    },
+    "__schema11": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "__schema12": {
+      "type": "boolean",
+      "description": "Leaves the param out of the debugger."
+    },
+    "__schema13": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema14"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema15"
+      },
+      "description": "Handed to the pass's fxNode as its third argument (build-time flags)."
+    },
+    "__schema14": {
+      "type": "string"
+    },
+    "__schema15": {},
+    "__schema16": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/__schema17"
+        },
+        "description": {
+          "$ref": "#/definitions/__schema19"
+        },
+        "comments": {
+          "$ref": "#/definitions/__schema21"
+        },
+        "todo": {
+          "$ref": "#/definitions/__schema23"
+        },
+        "debugObj": {
+          "$ref": "#/definitions/__schema25"
+        }
+      },
+      "additionalProperties": false,
+      "description": "What the debug tools show for it. Production data has none."
+    },
+    "__schema17": {
+      "description": "The name the debug tools show.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema18"
+        }
+      ]
+    },
+    "__schema18": {
+      "type": "string"
+    },
+    "__schema19": {
+      "description": "A longer description for the debug tools.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema20"
+        }
+      ]
+    },
+    "__schema20": {
+      "type": "string"
+    },
+    "__schema21": {
+      "description": "Notes with their times.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema22"
+        }
+      ]
+    },
+    "__schema22": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "number",
+            "description": "Milliseconds since the UNIX epoch."
+          },
+          "comment": {
+            "type": "string",
+            "description": "The note."
+          }
+        },
+        "required": [
+          "timestamp",
+          "comment"
+        ],
         "additionalProperties": false
       }
     },
-    "staticDefines": {
+    "__schema23": {
+      "description": "Open items, by key.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema24"
+        }
+      ]
+    },
+    "__schema24": {
       "type": "object",
       "propertyNames": {
         "type": "string"
       },
       "additionalProperties": {}
     },
-    "debugData": {
+    "__schema25": {
+      "description": "Anything else a debug tool keeps for it.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema1"
+          "$ref": "#/definitions/__schema26"
         }
       ]
     },
-    "userData": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema2"
-        }
-      ]
+    "__schema26": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
     },
-    "$schema": {
+    "__schema27": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema28"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema29"
+      },
+      "description": "Free-form data for the app: the entity's USER_DATA, or the asset's userData."
+    },
+    "__schema28": {
       "type": "string"
     },
-    "__sourcePath": {
-      "type": "string"
-    },
-    "__saveData": {
+    "__schema29": {},
+    "__schema30": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -105,60 +316,54 @@
               "type": "object",
               "properties": {
                 "date": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema31"
                 },
                 "engineVersion": {
-                  "allOf": [
-                    {
-                      "$ref": "#/definitions/__schema3"
-                    }
-                  ]
+                  "$ref": "#/definitions/__schema33"
                 },
                 "toolkitVersion": {
-                  "allOf": [
-                    {
-                      "$ref": "#/definitions/__schema3"
-                    }
-                  ]
+                  "$ref": "#/definitions/__schema35"
                 },
                 "appVersion": {
-                  "allOf": [
-                    {
-                      "$ref": "#/definitions/__schema3"
-                    }
-                  ]
+                  "$ref": "#/definitions/__schema36"
                 }
               },
-              "additionalProperties": false
+              "additionalProperties": false,
+              "description": "When the entry was saved, and the versions of each part then."
             },
             "enabled": {
-              "type": "boolean"
-            },
-            "params": {
+              "description": "Whether the pass is part of the chain. Default true.",
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema0"
+                  "$ref": "#/definitions/__schema37"
                 }
               ]
             },
-            "staticDefines": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
-            },
-            "debugData": {
+            "params": {
               "allOf": [
                 {
                   "$ref": "#/definitions/__schema1"
                 }
               ]
             },
+            "staticDefines": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema13"
+                }
+              ]
+            },
+            "debugData": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema16"
+                }
+              ]
+            },
             "userData": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema2"
+                  "$ref": "#/definitions/__schema27"
                 }
               ]
             }
@@ -166,76 +371,48 @@
           "additionalProperties": false
         }
       }
-    }
-  },
-  "required": [
-    "id",
-    "tslFile"
-  ],
-  "additionalProperties": false,
-  "definitions": {
-    "__schema0": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {}
     },
-    "__schema1": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "comments": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "timestamp": {
-                "type": "number"
-              },
-              "comment": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "timestamp",
-              "comment"
-            ],
-            "additionalProperties": false
-          }
-        },
-        "todo": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {}
-        },
-        "debugObj": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {}
+    "__schema31": {
+      "description": "When the entry was saved: milliseconds since the UNIX epoch.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema32"
         }
-      },
-      "additionalProperties": false
+      ]
     },
-    "__schema2": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {}
+    "__schema32": {
+      "type": "number"
     },
-    "__schema3": {
+    "__schema33": {
+      "description": "The engine's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema34"
+        }
+      ]
+    },
+    "__schema34": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "__schema35": {
+      "description": "The toolkit's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema34"
+        }
+      ]
+    },
+    "__schema36": {
+      "description": "The app's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema34"
+        }
+      ]
+    },
+    "__schema37": {
+      "type": "boolean"
     }
   }
 }

@@ -3,7 +3,8 @@
   "type": "object",
   "properties": {
     "$schema": {
-      "type": "string"
+      "type": "string",
+      "description": "The JSON Schema in .schemas/ an editor validates this file with. The gatherer ignores it."
     },
     "defaults": {
       "description": "Merged over the engine's built-in defaults (devTools/assetPipeline/settings.ts).",
@@ -14,19 +15,18 @@
       ]
     },
     "profiles": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "$ref": "#/definitions/__schema0"
-      }
+      "description": "Named settings an asset's or a rule's profile picks.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema27"
+        }
+      ]
     },
     "rules": {
       "description": "Applied in order (later wins) to every asset whose source path matches.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema19"
+          "$ref": "#/definitions/__schema28"
         }
       ]
     }
@@ -44,16 +44,17 @@
           ]
         },
         "mesh": {
+          "description": "A GLB's geometry: compression, quantization, simplification.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema10"
+              "$ref": "#/definitions/__schema18"
             }
           ]
         },
         "budget": {
           "allOf": [
             {
-              "$ref": "#/definitions/__schema14"
+              "$ref": "#/definitions/__schema22"
             }
           ]
         }
@@ -64,65 +65,42 @@
       "type": "object",
       "properties": {
         "default": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema2"
-            }
-          ]
+          "$ref": "#/definitions/__schema2"
         },
         "baseColor": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema2"
-            }
-          ]
+          "$ref": "#/definitions/__schema11"
         },
         "normal": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema2"
-            }
-          ]
+          "$ref": "#/definitions/__schema12"
         },
         "metallicRoughness": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema2"
-            }
-          ]
+          "$ref": "#/definitions/__schema13"
         },
         "occlusion": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema2"
-            }
-          ]
+          "$ref": "#/definitions/__schema14"
         },
         "emissive": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema2"
-            }
-          ]
+          "$ref": "#/definitions/__schema15"
         },
         "orm": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema2"
-            }
-          ]
+          "$ref": "#/definitions/__schema16"
         },
         "data": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema2"
-            }
-          ]
+          "$ref": "#/definitions/__schema17"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Per slot; each slot's entry merges over default."
     },
     "__schema2": {
+      "description": "Every slot's, under the slot's own.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema3": {
       "type": "object",
       "properties": {
         "codec": {
@@ -135,50 +113,50 @@
           "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
         },
         "maxSize": {
-          "description": "Largest side in px, downscaled to fit (null: the source size).",
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema3"
-            }
-          ]
-        },
-        "mipmaps": {
-          "description": "Write the full mip chain (default true).",
+          "description": "Largest side in px, downscaled to fit (null: the source size). Default 1024.",
           "allOf": [
             {
               "$ref": "#/definitions/__schema4"
             }
           ]
         },
-        "level": {
-          "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
+        "mipmaps": {
+          "description": "Writes the full mip chain. Default true.",
           "allOf": [
             {
               "$ref": "#/definitions/__schema5"
             }
           ]
         },
-        "rdo": {
-          "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
+        "level": {
+          "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest). Default 2.",
           "allOf": [
             {
               "$ref": "#/definitions/__schema6"
             }
           ]
         },
-        "zstd": {
-          "description": "UASTC only: Zstandard supercompression level (0: off).",
+        "rdo": {
+          "description": "UASTC only: the RDO lambda (0: off). Default 2; 1 for normal, orm, metallicRoughness and occlusion.",
           "allOf": [
             {
               "$ref": "#/definitions/__schema7"
             }
           ]
         },
-        "quality": {
-          "description": "ETC1S only: --qlevel, 1 to 255.",
+        "zstd": {
+          "description": "UASTC only: Zstandard supercompression level (0: off). Default 18.",
           "allOf": [
             {
               "$ref": "#/definitions/__schema8"
+            }
+          ]
+        },
+        "quality": {
+          "description": "ETC1S only: --qlevel, 1 to 255. Default 128.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema9"
             }
           ]
         },
@@ -186,14 +164,14 @@
           "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema9"
+              "$ref": "#/definitions/__schema10"
             }
           ]
         }
       },
       "additionalProperties": false
     },
-    "__schema3": {
+    "__schema4": {
       "anyOf": [
         {
           "type": "integer",
@@ -205,39 +183,95 @@
         }
       ]
     },
-    "__schema4": {
+    "__schema5": {
       "type": "boolean"
     },
-    "__schema5": {
+    "__schema6": {
       "type": "integer",
       "minimum": 0,
       "maximum": 4
     },
-    "__schema6": {
+    "__schema7": {
       "type": "number",
       "minimum": 0
     },
-    "__schema7": {
+    "__schema8": {
       "type": "integer",
       "minimum": 0,
       "maximum": 22
     },
-    "__schema8": {
+    "__schema9": {
       "type": "integer",
       "minimum": 1,
       "maximum": 255
     },
-    "__schema9": {
+    "__schema10": {
       "type": "boolean"
     },
-    "__schema10": {
+    "__schema11": {
+      "description": "The base colour (albedo).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema12": {
+      "description": "The normal map.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema13": {
+      "description": "glTF's metallic-roughness map.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema14": {
+      "description": "The ambient occlusion map.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema15": {
+      "description": "The emissive map.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema16": {
+      "description": "Packed occlusion, roughness and metalness.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema17": {
+      "description": "Splat maps, masks, LUTs, height.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema18": {
       "type": "object",
       "properties": {
         "codec": {
           "description": "Geometry compression. meshopt (default) also shrinks VRAM when quantized.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema11"
+              "$ref": "#/definitions/__schema19"
             }
           ]
         },
@@ -245,7 +279,7 @@
           "description": "Quantize, reorder and filter the vertices. false: lossless (EXT_meshopt_compression alone), the collider default.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema12"
+              "$ref": "#/definitions/__schema20"
             }
           ]
         },
@@ -253,14 +287,14 @@
           "description": "Target triangle ratio (null: off).",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema13"
+              "$ref": "#/definitions/__schema21"
             }
           ]
         }
       },
       "additionalProperties": false
     },
-    "__schema11": {
+    "__schema19": {
       "type": "string",
       "enum": [
         "meshopt",
@@ -268,10 +302,10 @@
         "none"
       ]
     },
-    "__schema12": {
+    "__schema20": {
       "type": "boolean"
     },
-    "__schema13": {
+    "__schema21": {
       "anyOf": [
         {
           "type": "number",
@@ -283,29 +317,29 @@
         }
       ]
     },
-    "__schema14": {
+    "__schema22": {
       "type": "object",
       "properties": {
         "vramMB": {
-          "$ref": "#/definitions/__schema15"
+          "$ref": "#/definitions/__schema23"
         },
         "downloadMB": {
-          "$ref": "#/definitions/__schema18"
+          "$ref": "#/definitions/__schema26"
         }
       },
       "additionalProperties": false,
       "description": "Per-asset limits. Set in an asset JSON's own optimize, it also replaces the per-texture ceiling (each texture's VRAM must fit its slot's maxSize and codec as set without the asset JSON's overrides)."
     },
-    "__schema15": {
+    "__schema23": {
       "description": "Estimated GPU memory of the whole asset in MB: its textures (KTX2 at 1 B/px, the most it takes on any device) plus a GLB's geometry (null: no limit).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema16"
+          "$ref": "#/definitions/__schema24"
         }
       ],
-      "$ref": "#/definitions/__schema17"
+      "$ref": "#/definitions/__schema25"
     },
-    "__schema16": {
+    "__schema24": {
       "anyOf": [
         {
           "type": "number",
@@ -316,23 +350,32 @@
         }
       ]
     },
-    "__schema17": {
+    "__schema25": {
       "allOf": [
         {
-          "$ref": "#/definitions/__schema16"
+          "$ref": "#/definitions/__schema24"
         }
       ]
     },
-    "__schema18": {
+    "__schema26": {
       "description": "The output file's size in MB (null: no limit).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema16"
+          "$ref": "#/definitions/__schema24"
         }
       ],
-      "$ref": "#/definitions/__schema17"
+      "$ref": "#/definitions/__schema25"
     },
-    "__schema19": {
+    "__schema27": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema0"
+      }
+    },
+    "__schema28": {
       "type": "array",
       "items": {
         "type": "object",
@@ -345,7 +388,7 @@
             "description": "Pass the matched assets through as they are. Wins over everything else.",
             "allOf": [
               {
-                "$ref": "#/definitions/__schema20"
+                "$ref": "#/definitions/__schema29"
               }
             ]
           },
@@ -353,7 +396,7 @@
             "description": "A profile of assets.config.json.",
             "allOf": [
               {
-                "$ref": "#/definitions/__schema21"
+                "$ref": "#/definitions/__schema30"
               }
             ]
           },
@@ -361,7 +404,7 @@
             "description": "A standalone texture's slot (default: default). A GLB's textures are classified by their material slot.",
             "allOf": [
               {
-                "$ref": "#/definitions/__schema22"
+                "$ref": "#/definitions/__schema31"
               }
             ]
           },
@@ -369,7 +412,7 @@
             "description": "Per-slot overrides, or false to keep the textures as they are.",
             "allOf": [
               {
-                "$ref": "#/definitions/__schema23"
+                "$ref": "#/definitions/__schema32"
               }
             ]
           },
@@ -377,14 +420,14 @@
             "description": "Overrides, or false to keep the geometry as it is.",
             "allOf": [
               {
-                "$ref": "#/definitions/__schema24"
+                "$ref": "#/definitions/__schema33"
               }
             ]
           },
           "budget": {
             "allOf": [
               {
-                "$ref": "#/definitions/__schema14"
+                "$ref": "#/definitions/__schema22"
               }
             ]
           }
@@ -395,14 +438,14 @@
         "additionalProperties": false
       }
     },
-    "__schema20": {
+    "__schema29": {
       "type": "boolean",
       "const": false
     },
-    "__schema21": {
+    "__schema30": {
       "type": "string"
     },
-    "__schema22": {
+    "__schema31": {
       "type": "string",
       "enum": [
         "default",
@@ -416,7 +459,7 @@
       ],
       "description": "glTF slots, orm (packed occlusion / roughness / metalness), data (splat maps, masks, LUTs, height) or default."
     },
-    "__schema23": {
+    "__schema32": {
       "anyOf": [
         {
           "type": "boolean",
@@ -427,14 +470,14 @@
         }
       ]
     },
-    "__schema24": {
+    "__schema33": {
       "anyOf": [
         {
           "type": "boolean",
           "const": false
         },
         {
-          "$ref": "#/definitions/__schema10"
+          "$ref": "#/definitions/__schema18"
         }
       ]
     }

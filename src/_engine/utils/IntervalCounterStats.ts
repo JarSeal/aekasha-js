@@ -55,6 +55,7 @@ export class IntervalCounterStats {
   private readonly windowSnaps: IntervalWindowSnapshot[];
   private readonly acc: WindowAccumulator[];
 
+  /** Sets up a counter with the given rolling windows (all its storage, allocated once). */
   constructor(windows: readonly IntervalWindowConfig[]) {
     this.windowSnaps = windows.map(({ id, intervalMs, kind }) => ({
       id,

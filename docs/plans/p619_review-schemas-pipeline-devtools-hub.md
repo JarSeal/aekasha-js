@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented (decision to confirm: D5 materials)
+Status: in progress | Phases 0-3 implemented
 Category: Refactoring, Documentation, Dev tooling
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -114,6 +114,12 @@ before fixing.
 - S7 Comments: §1.2's stale plan paths. `AssetsConfigSchema.ts:3-8`'s file header sits on
   `TextureCodecSchema`, so it is that export's doc. The `rdo` describe says "1 for normal / ORM /
   data", but the `data` slot's default codec is `none`.
+- S8 **(bug, latent; found in Phase 3)** `CoreEntityOpts.persistent` is read only by `createLines`
+  and by a directional or spot light's target entity: `ECSWorld.createEntity` doesn't add
+  `PERSISTENT`, so a camera, light or mesh entity whose JSON (or code) says `persistent: true`
+  isn't kept on a scene switch (the debug camera adds the component itself). Documented on the
+  field (`@remarks`); the fix (`createEntity` adds it) is a kernel behaviour change for the ECS's
+  owner, not done here.
 
 **The data pipeline (`gatherAppData.ts` and its neighbours)**
 
@@ -878,11 +884,70 @@ the asset pipeline, the dev files, the Hub, verify and sbp):
   progress log), the nested `CLAUDE.md` of assetPipeline, devFiles, hub, verify and sbp, the
   Hub's scenes-and-assets guide and `asset-optimization.md`.
 
-### Phase 3: the schemas (D5)
+### Phase 3: the schemas (D5) — done
 
 The unions, the tuples, the inline entries, the derived overrides, the exports, `ColorJSON`, the
 docs (with `utils`' six, D1). `RuntimeTypes.test.ts` loses its swaps but p302's. The generated
 JSON Schemas are checked in an asset JSON in the editor.
+
+As built (2026-10-21; sections 1-2 committed as `5254323` and `104682b`, 3-4 after them):
+
+- **Unions.** Lights, cameras and geometries are `z.discriminatedUnion('type', …)`; a bad field is
+  reported at the field (`lightProps.intensity`), an unknown type at `lightProps.type`.
+  `gatherAppData.test.ts` now requires the issue at the broken path or inside it, never above,
+  with cases for a tuple length, a spot `map`, a camera and a geometry field, the materials and
+  the inline entries. The JSON Schemas have `oneOf`.
+- **Materials: Phase 0's proposal, confirmed.** `z.discriminatedUnion('type', [tsl, plain])` over
+  the two enums (13 KB JSON Schema); `MaterialAsset` is `PerType<…>` (exported `@internal`, which
+  `RuntimeTypes.test.ts` imports), one member per type. The enums' own error messages went: the
+  union reports the discriminator.
+- **Tuples and `map`.** The light tuples are `z.tuple`, a spot `map` a texture id. zod writes a
+  draft-07 tuple as `items` alone: `writeJsonSchemas`' `override` adds `minItems`, `maxItems` and
+  `additionalItems: false` (every tuple, the atlas and pack ones included).
+- **`reused: 'ref'`** in `writeJsonSchemas` (not in the plan; to confirm in review): a sub-schema
+  used twice is written once under `definitions` (`__schema0`, …, renumbered when one is added).
+  The inline mesh took `scene.schema.json` from 489 KB to 653 KB; with refs it is 137 KB, and
+  164 KB with the descriptions.
+- **Overrides (S2).** Camera and light save entries are every variant's fields `.partial()`, `type`
+  an enum built from the literals; geometry's `params` merge every variant's. Key orders as the
+  hand copies had them, so `src/generated/` didn't change (checked after every edit).
+- **`TexOptsSchema`** has no `image`; the test keeps the constants' swap, commented as p302 D1's.
+- **Inline entries.** `createSceneAssetSchema(parts)` validates an inline mesh with
+  `createMeshAssetSchema(parts)`' `props` and `entityOpts` (through `createKernelSceneShape`:
+  `.extend()` on the generic shape lost its keys in the type), an inline import with the new
+  `InlineImportedAssetSchema` (no `optimize`, no generated fields, a `src/public` file). The test
+  checks both pairs. **G13** (a mesh save entry's partial `geo` / `mat` replaces the whole field)
+  surfaced in the gatherer's types: cast with a comment naming it, for Phase 4.
+- **S3.** `EntityDebugDataSchema` went; `ECSRegistry.ts`' `EntityDebugData` stays written out (its
+  file takes no local import) with a type test equal to `DebugData`. The typo, the `__meta.date`
+  message, the scene's `comments` / `todo` (`DebugData`'s shapes, not `z.any()`). `z.any()` stays
+  on three's material params, with the reason (a record of `unknown` doesn't fit `MatProps`).
+- **Exports (S6): 41, not 13.** 19 schema constants unexported, 18 type aliases deleted (the save
+  entry types, `Vector3`, `UserData`, the schema-side `LightProps` and `TexOpts`, …),
+  `PackTarget` private. `AssetOptimize` is the type of the new `OptimizeObjectSchema`
+  (`@internal`), which the three per-type optimize schemas build on. 32 building blocks are
+  `@internal` with their users named; R2's names stay internal for Phase 5. `ColorJSON` on
+  `aekasha/schemas`; `UnionToIntersection` exported `@internal` (its `notExported` went).
+- **Docs.** JSDoc on every shape key of the kernel's schemas (shared fields documented once:
+  `LIGHT_FIELDS`, `MESH_FIELDS`, `TEXTURE_FIELDS`, a `pick` keeping the key order; the TypeDoc
+  model carries the docs through the `Pick`), a `describe` on every field of the kernel's schemas
+  (a scan of `.schemas/` finds none missing outside the feature parts' fields, D1's), the shared
+  `JsonSchemaRefSchema` and `SourcePathSchema`. Defaults read from the code (three's
+  constructors, `createCameraEntity`, the asset pipeline's built-in defaults: the `rdo` text is
+  fixed). The plan citations replaced; `LodChainSchema`'s "until p348" made current; the atlas
+  and assets config file headers moved off the first export (S7). S8 found (§1.4).
+- **`utils`:** `HALF_PI` and `QUARTER_PI` removed (on no entry, no user); the other four exports
+  and two constructors documented.
+- **API page limits, for Phase 5:** the field table doesn't expand a union's members
+  (`lightProps` reads `{ … } | …`, though the model has every member's docs), and a cross-module
+  `{@link}` resolves only names in scope (`createCameraEntity` is in backticks).
+- **Checks:** `yarn test` 1008 passed; `docs.json` recorded, `engine/schemas` 89 / 89 and
+  `engine/utils` 43 / 43, members 6 / 6; `yarn hub:build` with Phase 0's warnings less
+  `UnionToIntersection`'s; ajv: the 115 repo asset JSONs and `assets.config.json` pass, the bad
+  cases fail. `yarn verify:baselines --no-build`: the intended API changes (the removed and added
+  exports, `ColorJSON` on the entry) and B2's swap; `api.json` not recorded (an `--update` would
+  also record `bundle.json` from a stale build): Phase 8's full run records it. Not done: the
+  hand check in VS Code (an asset JSON's hovers and a bad tuple).
 
 ### Phase 4: the data pipeline and the asset pipeline (D8, D10, D11, D16)
 
