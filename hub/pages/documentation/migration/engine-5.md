@@ -244,8 +244,8 @@ its [entries](hub:documentation#importing-the-engine), and the app imports the t
 `aekasha/toolkit/*`. A codemod rewrites the imports:
 
 ```bash
-npx tsx devTools/refactor/migrateToEntries.ts --check src/app src/*.ts  # lists what would change
-npx tsx devTools/refactor/migrateToEntries.ts src/app src/*.ts
+npx tsx devTools/layout/migrateToEntries.ts --check src/app src/*.ts  # lists what would change
+npx tsx devTools/layout/migrateToEntries.ts src/app src/*.ts
 ```
 
 It takes folders and files (add your own toolkit modules' folders), and needs the repo's Node

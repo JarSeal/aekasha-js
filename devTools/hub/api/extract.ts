@@ -204,7 +204,7 @@ const findModuleFile = (message: string, project: JSONOutput.ProjectReflection) 
  */
 const readEntries = async (): Promise<{ entries: ApiEntry[]; messages: ApiExtractMessage[] }> => {
   // TypeScript, through the import graph's parser: only a conversion loads it
-  const { parseModuleSource } = await import('../../refactor/importGraph');
+  const { parseModuleSource } = await import('../../layout/importGraph');
   const messages: ApiExtractMessage[] = [];
   const parsed = new Map(
     Object.entries(ENTRY_FILES).map(([entry, file]) => {

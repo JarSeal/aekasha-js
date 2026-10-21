@@ -1,11 +1,11 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- a CLI: its output is the console */
 /**
  * Rewrites deep imports of the engine and the toolkit to entry imports (p606 Phase 7), for this
  * repo and for apps made from the template when they move to the engine's next major:
  *
- *   npx tsx devTools/refactor/migrateToEntries.ts [--check] <folder | file>...
+ *   npx tsx devTools/layout/migrateToEntries.ts [--check] <folder | file>...
  *
- *   eg. npx tsx devTools/refactor/migrateToEntries.ts src/app src/toolkit src/index.ts
+ *   eg. npx tsx devTools/layout/migrateToEntries.ts src/app src/toolkit src/index.ts
  *
  * Each imported name goes to the entry that exports it (`aekasha`, `aekasha/physics`,
  * `aekasha/toolkit/ecs`, …, from `devTools/aliases.ts`): the rules are `entryImports.ts`'s. The
@@ -28,9 +28,7 @@ const args = process.argv.slice(2);
 const isCheck = args.includes('--check');
 const targets = args.filter((a) => !a.startsWith('--'));
 if (!targets.length) {
-  console.error(
-    'Usage: npx tsx devTools/refactor/migrateToEntries.ts [--check] <folder | file>...'
-  );
+  console.error('Usage: npx tsx devTools/layout/migrateToEntries.ts [--check] <folder | file>...');
   process.exit(1);
 }
 

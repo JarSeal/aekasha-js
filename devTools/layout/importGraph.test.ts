@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { buildImportGraph, parseModuleSource, resolveSpecifier } from './importGraph';
-import { applyMoveRules, toModuleFileName, type MoveRule } from './moveRules';
 
 describe('parseModuleSource', () => {
   it('reads import kinds and names', () => {
@@ -122,36 +121,5 @@ describe('buildImportGraph', () => {
       file: 'src/engine/deep.ts',
       name: 'inner',
     });
-  });
-});
-
-describe('moveRules', () => {
-  it('names modules in PascalCase, keeping asset-id files and entries', () => {
-    expect(toModuleFileName('atmosphere.ts')).toBe('Atmosphere.ts');
-    expect(toModuleFileName('deepMerge.test.ts')).toBe('DeepMerge.test.ts');
-    expect(toModuleFileName('_helperSchemas.ts')).toBe('_HelperSchemas.ts');
-    expect(toModuleFileName('_dbg__thing.ts')).toBe('_dbg__Thing.ts');
-    expect(toModuleFileName('asteroid.tsl.ts')).toBe('asteroid.tsl.ts');
-    expect(toModuleFileName('index.ts')).toBe('index.ts');
-    expect(toModuleFileName('typings.d.ts')).toBe('typings.d.ts');
-    expect(toModuleFileName('DropDown.scss')).toBe('DropDown.scss');
-  });
-
-  it('takes the longest matching rule', () => {
-    const rules: MoveRule[] = [
-      { from: 'src/_engine/core/', to: 'src/_engine/kernel/' },
-      { from: 'src/_engine/core/Lod/', to: 'src/_engine/features/lod/' },
-      { from: 'src/_engine/core/Lod/old.ts', action: 'delete' },
-    ];
-    expect(applyMoveRules(rules, 'src/_engine/core/Lod/layers/sun.ts')).toEqual({
-      to: 'src/_engine/features/lod/layers/Sun.ts',
-      action: 'move',
-      plan: 'p608',
-    });
-    expect(applyMoveRules(rules, 'src/_engine/core/Lod/old.ts')).toMatchObject({
-      to: null,
-      action: 'delete',
-    });
-    expect(applyMoveRules(rules, 'src/other.ts')).toBeUndefined();
   });
 });

@@ -1484,6 +1484,129 @@ The runner's split and reload handling, the sizes plugin, the keys, the budgets 
 `yarn gatherAppData` run alongside (no reload), and the V3 optimizer case from §1.4 (a new bare
 import in a scene, then a `--only` run).
 
+Sections:
+
+1. **`refactor/` → `layout/` (D9).** Deleted with their tests: `applyMoveMap.ts`, `moveApply.ts`,
+   `moveSplit.ts`, `moveText.ts`, `moveEdits.ts`, `moveJson.ts`, `moveTree.ts`,
+   `compareBaselines.ts`, and the generated `moveMap.json`, `layoutReport.md`, `entryExports.json`
+   (the last commit that has them goes into Phase 8's changelog entry: the parent of this
+   section's commit). Into `devTools/layout/`: `importGraph.ts` (+ test; `hub/api/extract.ts`
+   imports it), `moveRules.ts` as `layoutRules.ts` (every rule is a keep since p609, so the
+   move, delete, merge and split machinery goes: a rule says which folder a file belongs to),
+   `migrateToEntries.ts` and `entryImports.ts` (+ test). `moveMap.ts`' layout half becomes
+   `layout.ts` (the zones, the edge checks, the cycles; no file system but what the caller
+   hands it) with `layout.test.ts` on the tracked tree: every engine, toolkit and app file under a
+   rule, module names PascalCase, no engine → toolkit / app / generated import, no runtime
+   kernel → feature import (the assets worker's job `import()`s apart), no feature cycle, the
+   `utils/`, `schemas/` and `ui/` boundaries as the report has them (the type-only edges are
+   listed, not failed), plus cases on a small in-memory tree for each check. The report on
+   demand: `npx tsx devTools/layout/layoutReport.ts` writes `.cache/layout/layoutReport.md`.
+   `ROOT` from `devTools/paths.ts`, git through `devTools/git.ts`. References follow: the root
+   `CLAUDE.md` (the three refactor commands become two, the Three-folder split's
+   `moveRules.ts` / `moveMap.ts` mentions), `sbp/CLAUDE.md`, `eslint.config.js`' comment, the
+   coding standards' layout report line, the engine-5 migration page's codemod path,
+   `docs/techniques/` where named. Checks: `yarn test`, lint, both `tsc`, `yarn hub:build`
+   (the migration page), the report written.
+2. **The scene runner's split (V1) and `verify/`'s tests and hygiene.** `scenes.ts` (918 lines)
+   into `scenes.ts` (the CLI: arguments, the server, the browser, the loop, the summary; `main()`
+   only when run as a script), `sceneRun.ts` (`runOne` and its compares, `runOne` split into the
+   page setup, the probe and paths, the snapshot and the system order), `sceneBaseline.ts`
+   (paths, read, record, the Firefox lookups) and `sceneSelect.ts` (the pure parts: `parseArgs`
+   returning its errors instead of exiting, `appliesTo`, `selectScenes`, `buildUrl`,
+   `checkCrossTargetHashes`). `getCommit` through `devTools/git.ts`; the `fail` helpers of
+   `scenes.ts`, `embed.ts` and `baselines.ts` become `function … never` (K2). D14's tests:
+   `sceneSelect.test.ts` (arguments, sets, Firefox's limits, globs, URLs, the cross-target
+   check), `sceneBaseline.test.ts` (a missing, unreadable and other-format baseline, with and
+   without `--update`; the record merge; Chromium's entry for Firefox), `baselines`' `diffApi` /
+   `diffDocs` on small inputs. Summaries on `verify/`'s undocumented exports, the `eslint-disable`
+   reasons. The runner's output unchanged (a `--only scene01 --config quick` run before and
+   after).
+3. **The runner's reloads (V3, D13).** The runner's server: `cacheDir: node_modules/.vite-verify`,
+   `server.host: 'localhost'`, a `customLogger` whose Vite info lines about optimizing and
+   reloading go to the progress log (`logLevel` stays `warn` for the rest). `vite.config.ts`:
+   `optimizeDeps.entries` with `index.html` and the two worker entries; the hand-kept `include`
+   list goes if a cold start (an empty cache folder) then a load of every worker-using scene
+   shows no re-optimize, else it stays with a comment saying why. A page whose main frame
+   navigates after its first load (a reload) is run once more in a fresh context, with a note
+   naming it; a second navigation is a failure. The run hashes `generatedAppData.json` at its
+   start and end and warns when it changed. Checks: a `--config quick` run with
+   `yarn gatherAppData` (and a no-op asset save) alongside: no reload, no warning but the
+   gather's; the V3 optimizer case (a bare import of a not-yet-optimized dep added to a scene,
+   then `--only` that scene: the rerun note, or no reload with the entries); undone after.
+4. **The sizes and the keys (B1, B2, V7).** `devTools/sbp/moduleSizesPlugin.ts` (build, `post`,
+   `renderChunk`): each module's rendered code per chunk minified with esbuild, summed per group
+   and chunk, and the gzip of each group's concatenated minified code per chunk; in the main build
+   and in `worker.plugins` (one collector, written by the main build's `writeBundle` to
+   `dist-stats/module-sizes.json`, an embed's next to its visualizer report). Each module's record
+   says which build it's from (`main`, or the worker's name). `bundleModel.ts` reads it:
+   `mainGroups` become `{ modules, minified, gzip }`, the split groups the same,
+   `BUNDLE_FORMAT_VERSION` 2, `REPORT_FORMAT_VERSION` 3 (the Hub's reader follows); the
+   visualizer stays for the import graph (`--why`) and the treemap. The debug check reads its
+   modules from the new file, so the worker builds' modules are checked (V7). B2's keys
+   (`keyFiles` replaced): a base one file has keeps it; in a collision the manifest's chunk keeps
+   the plain base, a worker build's copy is `<key>@<worker>` (`assets/EngineRapier.js@PhysicsWorker`;
+   the worker's files found by `findReachableFiles` from the file its `?worker` wrapper names),
+   manifest files of one base are `<key>@<source folder>` (`assets/draco_decoder.wasm@gltf`), and
+   any other collision throws. Tests: the keys (a hash swap gives the same keys, the Draco pair,
+   an ambiguous one), the plugin on `testBuild.ts`' fixture build or a tiny real `vite build` with
+   a worker, the debug check on a worker module. Nothing recorded yet.
+5. **Re-recorded, the budgets and the docs (D12).** `bundle.json` and `bundle.banner.json`
+   recorded with the new format and keys (Phase 5's `StableStringify.ts` growth with them);
+   `sbp.config.ts`' `groups` and `modules` budgets re-set from the first new report
+   (`suggestBudget`), its "a group counts its comments" notes gone, the `'assets/PhysicsWorker.js'`
+   budget renamed to the worker's key, `initial` and `chunks` as they are. `sbp/`'s hygiene
+   (`sbp.ts`' `fail`, summaries, `eslint-disable` reasons). Docs: `sbp/CLAUDE.md` and
+   `verify/CLAUDE.md` (the sizes, the keys, the workers in the debug check, the runner's server
+   and reloads), the root `CLAUDE.md`'s lines, the Hub's SBP guide's "before minification"
+   (D15's page item, done here with its numbers). Checks: `yarn verify:baselines` (passes after
+   the record), `yarn sbp --profile all` (within every budget), `yarn verify:embed`,
+   `yarn hub:build`, `yarn test`.
+
+As built (2026-10-22, uncommitted):
+
+- **Section 1, `refactor/` → `layout/` (D9).**
+  - Deleted: the codemod (`applyMoveMap.ts`, `moveApply.ts`, `moveSplit.ts`, `moveText.ts`,
+    `moveEdits.ts`, `moveJson.ts`, `moveTree.ts`), `compareBaselines.ts`, their seven tests, and
+    `moveMap.json`, `layoutReport.md`, `entryExports.json`. **For Phase 8's changelog:** the last
+    commit that has them is `057cbae` (Phase 6 section 4), if this section is committed next.
+  - `devTools/layout/`: `importGraph.ts` (+ test, its rules block moved out), `layoutRules.ts`
+    (was `moveRules.ts`: a rule is `{ from, note? }` and `findLayoutRule` the longest match; the
+    `to`, `action`, `plan` and `split` fields and `applyMoveRules` went, since every rule was a
+    keep), `layout.ts` (the check, no file system: `checkLayout` and `getLayoutErrors`, the zones
+    and edge categories of `moveMap.ts`, with the target mapping gone), `layoutTree.ts` (the
+    working tree: `git ls-files --cached --others --exclude-standard`, existing files only, so a
+    new file counts before it's added and an ignored one never), `layoutReport.ts` (the report
+    on demand into `.cache/layout/layoutReport.md`; exits 1 on a layout error after writing it),
+    `entryImports.ts` (+ test) and `migrateToEntries.ts`. `hub/api/extract.ts` imports the
+    parser from there.
+  - `layout.test.ts` (11): the working tree passes (577 modules of `src/`, 3,898 imports, 0.75 s
+    for the file), and on small trees: a file outside the rules, a camelCase module, a case
+    clash; a kernel `import type` of a feature passes and a runtime one through an entry alias
+    fails; the assets worker's job `import()` and a kernel debug module's import pass; a feature
+    cycle fails, not through types or debug code; an engine `import type` of the app fails; a
+    package in `utils/`, a runtime ui → kernel import, a type-only schemas → kernel import
+    listed but not failed; an unresolved relative import. A new untracked file outside the rules
+    fails the tree test (checked with a stray `src/app/zz/Stray.json`).
+  - **What fails (decided here, not in D9's text):** any runtime or dynamic edge of a boundary,
+    type-only edges only where the lint refuses `import type` too (engine → app, toolkit,
+    generated data), a feature cycle, a package imported by `utils/` (not a test), an unresolved
+    relative import, and the three file checks. Today's type-only edges stay listed: kernel →
+    feature 27, schemas → kernel 10 (8 in the old report: two `RuntimeTypes.test.ts` imports
+    since). The old report's sections that described moves (split, merged and deleted files'
+    imports, the paths outside the import graph, the entry exports) went with them.
+  - **Not in the plan:** `src/app/x/new.json` (`{ "a": 1 }`), committed in Phase 4 section 5, is
+    deleted: a dev files test's write that reached the repo while that section moved `ROOT` (today's
+    `commit.test.ts` writes only into its temp root: its run leaves the file's mtime alone). The
+    old `moveMap.ts --check` already reported it; the new test fails on it.
+  - References: the root `CLAUDE.md` (the move map and codemod lines become the layout check's
+    line, the codemod's path, the Three-folder split's three rule mentions, the lint line's
+    report), `sbp/CLAUDE.md`, `ui/CLAUDE.md` (`UI_KERNEL_HOOKS`' home), `eslint.config.js`'
+    comment, the coding standards' layout line (the test and the report), the engine-5 migration
+    page's codemod commands. `readme.md` names the codemod by file name only, unchanged.
+  - Checks: `yarn test` 1091 passed (132 files), lint, both `tsc`; the report written (0 errors,
+    37 boundary imports, no feature cycle); `yarn hub:build --no-embed` with Phase 5's warnings
+    only (the toolkit's 4, `{@link getRandomStream}`).
+
 ### Phase 8: the Hub, CLAUDE.md, versions and done (D15, D2)
 
 1. D15's pages and files; `readme.md` where it names a command or the refactor tools.

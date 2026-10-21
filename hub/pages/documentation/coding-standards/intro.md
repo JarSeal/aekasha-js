@@ -24,8 +24,8 @@ follows them; a file you touch is a good time to fix what it breaks.
   mesh's definition, import params, an assets worker message. It names those types with
   `import type` from the feature's folder, which costs no bytes and loads nothing; the types stay
   next to the code that owns them. The lint makes any other kernel import of a feature an error,
-  and the layout report (`devTools/refactor/layoutReport.md`, written by `moveMap.ts`) lists each
-  type import.
+  the layout test (`devTools/layout/layout.test.ts`, in `yarn test`) checks it through the entries
+  too, and the layout report (`npx tsx devTools/layout/layoutReport.ts`) lists each type import.
 - **A feature owns its folder** (`src/_engine/features/<name>/`): its public entry, its
   implementation, its ECS registrations, its worker if it has one, and its debug modules. Removing
   the folder and its install line removes the feature.

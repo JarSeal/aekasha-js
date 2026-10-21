@@ -65,7 +65,7 @@ const ENTRY_IMPORT = {
     'Engine code imports engine code by relative path: an entry imported inside the engine makes barrel cycles.',
 };
 // The kernel runs without any feature: it names a feature's types for the data it holds or carries
-// for it, and imports none of its code (p612 D2; devTools/refactor/layoutReport.md lists each)
+// for it, and imports none of its code (p612 D2; `npx tsx devTools/layout/layoutReport.ts` lists each)
 const KERNEL_FEATURE_IMPORT = {
   regex: '^(\\.\\./)+features/',
   allowTypeImports: true,
