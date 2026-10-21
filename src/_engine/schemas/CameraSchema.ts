@@ -30,7 +30,7 @@ export const CameraProps = z.discriminatedUnion('type', CAMERA_VARIANTS);
 export type CameraProps = z.infer<typeof CameraProps>;
 
 // Both types' fields, each optional: a save entry replaces the fields it gives
-export const CameraOverridesSchema = z
+const CameraOverridesSchema = z
   .object({
     __meta: MetaSchema,
     ...CameraPerspective.shape,
@@ -38,8 +38,6 @@ export const CameraOverridesSchema = z
     type: z.enum(CAMERA_VARIANTS.map((variant) => variant.shape.type.value)),
   })
   .partial();
-
-export type CameraOverrides = z.infer<typeof CameraOverridesSchema>;
 
 export const CameraAssetSchema = z.object({
   $schema: z.string().optional(),

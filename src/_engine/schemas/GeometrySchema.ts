@@ -88,8 +88,18 @@ const GEO_VARIANTS = [
   ConeVariant,
 ] as const;
 
+/**
+ * A geometry's props (`*.geometry.json`'s `geoProps`): one variant per `type`, each with its three
+ * params. The scene's inline `geometries` and a mesh's `geo` use it.
+ * @internal
+ */
 export const GeoPropsSchema = z.discriminatedUnion('type', GEO_VARIANTS);
 
+/**
+ * A geometry JSON's props, as {@link GeoAssetSchema} validates them. `RuntimeTypes.test.ts` checks
+ * it against the runtime's `GeoProps`.
+ * @internal
+ */
 export type GeoProps = z.infer<typeof GeoPropsSchema>;
 
 // Every type's params, each optional: a save entry's params go over the geometry's
@@ -106,8 +116,6 @@ const GeoOverridesSchema = z.object({
     })
     .optional(),
 });
-
-export type GeoOverrides = z.infer<typeof GeoOverridesSchema>;
 
 export const GeoAssetSchema = z.object({
   $schema: z.string().optional(),

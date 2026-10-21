@@ -9,6 +9,12 @@ import {
   TexturePackSchema,
 } from './AssetsConfigSchema';
 
+/**
+ * A texture's `texOpts` in a JSON: three's sampler constants as numbers, and the colour space. The
+ * runtime's `TexOpts` also takes an `image`. The texture, texture array, atlas and import schemas
+ * use it.
+ * @internal
+ */
 export const TexOptsSchema = z.object({
   mapping: z.number().optional(),
   wrapS: z.number().optional(),
@@ -20,9 +26,7 @@ export const TexOptsSchema = z.object({
   colorSpace: ColorSpaceSchema.optional(),
 });
 
-export type TexOpts = z.infer<typeof TexOptsSchema>;
-
-export const TextureOverridesSchema = z.object({
+const TextureOverridesSchema = z.object({
   __meta: MetaSchema.optional(),
 
   id: z.string().optional(),
@@ -35,8 +39,6 @@ export const TextureOverridesSchema = z.object({
   userData: UserDataSchema.optional(),
   debugData: DebugDataSchema.optional(),
 });
-
-export type TextureOverrides = z.infer<typeof TextureOverridesSchema>;
 
 export const TextureAssetSchema = z.object({
   $schema: z.string().optional(),
@@ -54,7 +56,11 @@ export const TextureAssetSchema = z.object({
 
 export type TextureAsset = z.infer<typeof TextureAssetSchema>;
 
-/** A texture declared inline in a scene JSON: the asset pipeline only reads `*.texture.json`s. */
+/**
+ * A texture declared inline in a scene JSON: the asset pipeline only reads `*.texture.json`s. A
+ * scene's inline `textures` (`createSceneAssetSchema`).
+ * @internal
+ */
 export const InlineTextureSchema = TextureAssetSchema.omit({
   optimize: true,
   pack: true,

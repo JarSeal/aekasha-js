@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** generateLodChain's options (LodChainOptions in features/lod/LodSimplify.ts, p347 §2.2). */
-export const LodChainOptionsSchema = z
+const LodChainOptionsSchema = z
   .strictObject({
     ratios: z
       .array(z.number().gt(0).lt(1))
@@ -47,6 +47,10 @@ export const LodChainOptionsSchema = z
   })
   .describe('generateLodChain options.');
 
+/**
+ * An import's `lodChain`: `true` for the default options, or the options. `ImportedAssetSchema`'s.
+ * @internal
+ */
 export const LodChainSchema = z
   .union([z.boolean(), LodChainOptionsSchema])
   .describe(

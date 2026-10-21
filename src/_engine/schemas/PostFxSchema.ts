@@ -35,8 +35,6 @@ const PostFxOverridesSchema = z.object({
   userData: UserDataSchema.optional(),
 });
 
-export type PostFxOverrides = z.infer<typeof PostFxOverridesSchema>;
-
 export const PostFxAssetSchema = z.object({
   id: z.string({ error: "PostFX pass 'id' key is required." }),
   /** Path to the pass's TS file (exporting `fxNode`), relative to the first folder under `src/` (eg. "postFx/ambientOcclusion.tsl.ts"). */

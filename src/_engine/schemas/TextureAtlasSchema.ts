@@ -16,11 +16,15 @@ import { TexOptsSchema } from './TextureSchema';
  */
 
 /** A slot's name: it ends its texture's id, so no dots */
-export const ATLAS_SLOT_NAME_PATTERN = /^[A-Za-z][A-Za-z\d_-]*$/;
+const ATLAS_SLOT_NAME_PATTERN = /^[A-Za-z][A-Za-z\d_-]*$/;
 
 /** A slot's texture id */
 export const getAtlasSlotTextureId = (atlasId: string, slot: string) => `${atlasId}.${slot}`;
 
+/**
+ * An atlas's `mipChain` values. {@link AtlasMipChain} is its type.
+ * @internal
+ */
 export const ATLAS_MIP_CHAINS = ['PROTECTED', 'FULL'] as const;
 export type AtlasMipChain = (typeof ATLAS_MIP_CHAINS)[number];
 
@@ -31,7 +35,7 @@ export const getFullMipLevelCount = (width: number, height: number) =>
 const PxSchema = z.number().int();
 
 /** A slot's `optimize`: an array's, plus `alphaCoverage` (p341), which is the slot's own */
-export const TextureAtlasSlotOptimizeSchema = TextureArrayOptimizeSchema.extend({
+const TextureAtlasSlotOptimizeSchema = TextureArrayOptimizeSchema.extend({
   alphaCoverage: AlphaCoverageSchema.optional(),
 })
   .superRefine(refineAlphaCoverageSlot)
@@ -39,7 +43,7 @@ export const TextureAtlasSlotOptimizeSchema = TextureArrayOptimizeSchema.extend(
     "Asset optimization (p300): a profile, the slot and per-slot overrides, and the slot's alphaCoverage. The codec can't be none: an atlas slot is a KTX2 file."
   );
 
-export const TextureAtlasSlotSchema = z
+const TextureAtlasSlotSchema = z
   .strictObject({
     /** The slot texture's sampler state and colour space (`colorSpace` decides how its sources
      * are read) */
@@ -71,7 +75,7 @@ export const TextureAtlasSlotSchema = z
 
 export type TextureAtlasSlot = z.infer<typeof TextureAtlasSlotSchema>;
 
-export const TextureAtlasCellSchema = z
+const TextureAtlasCellSchema = z
   .strictObject({
     id: z.string().min(1),
     rect: z
@@ -108,8 +112,6 @@ export const TextureAtlasCellSchema = z
   .refine((cell) => !(cell.rect && cell.size), {
     message: '"rect" places the cell and sets its size: "size" is for a packed cell',
   });
-
-export type TextureAtlasCell = z.infer<typeof TextureAtlasCellSchema>;
 
 export const TextureAtlasAssetSchema = z.object({
   $schema: z.string().optional(),
@@ -154,7 +156,7 @@ export type TextureAtlasAsset = z.infer<typeof TextureAtlasAssetSchema>;
 export const DEFAULT_ATLAS_PADDING = 8;
 
 /** One cell in the cell table */
-export const TextureAtlasCellInfoSchema = z.object({
+const TextureAtlasCellInfoSchema = z.object({
   /** The content rect as UVs, [u0, v0, u1, v1] with v up (three's, like a mesh's UVs) */
   uv: z.tuple([z.number(), z.number(), z.number(), z.number()]),
   /** The content's width and height in the layout's px */
@@ -165,7 +167,7 @@ export const TextureAtlasCellInfoSchema = z.object({
 export type TextureAtlasCellInfo = z.infer<typeof TextureAtlasCellInfoSchema>;
 
 /** A slot texture's `__atlas`, baked in by gatherAppData */
-export const TextureAtlasSlotInfoSchema = z.object({
+const TextureAtlasSlotInfoSchema = z.object({
   /** The atlas's id */
   id: z.string(),
   slot: z.string(),
@@ -182,10 +184,17 @@ export const TextureAtlasSlotInfoSchema = z.object({
   cells: z.record(z.string(), TextureAtlasCellInfoSchema),
 });
 
+/**
+ * An atlas slot texture's `__atlas`, baked in by the gatherer: the layout, its padding and levels,
+ * and the cell table. The kernel's texture and atlas registries read it.
+ * @internal
+ */
 export type TextureAtlasSlotInfo = z.infer<typeof TextureAtlasSlotInfoSchema>;
 
-/** A slot as a texture in the generated data */
-export const TextureAtlasSlotTextureSchema = z.object({
+// A slot as a texture in the generated data: written by the gatherer, never validated, so the
+// schema is only its type's
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- the type's source
+const TextureAtlasSlotTextureSchema = z.object({
   id: z.string(),
   texOpts: TexOptsSchema.optional(),
   throwOnError: z.boolean().optional(),

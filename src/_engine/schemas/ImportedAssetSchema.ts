@@ -12,7 +12,7 @@ import {
 
 /** A GLTF/GLB import: only assets (geometries + opt-in textures) are registered, no entities.
  * Scene `meshes` reference the imported geometries by id (`${id}/${nodeName}`). */
-export const ImportedAssetOverridesSchema = z.object({
+const ImportedAssetOverridesSchema = z.object({
   __meta: MetaSchema.optional(),
 
   /** Import id, also the prefix of the imported geometry/texture ids. Default: the JSON file's
@@ -35,8 +35,6 @@ export const ImportedAssetOverridesSchema = z.object({
   debugData: DebugDataSchema.optional(),
 });
 
-export type ImportedAssetOverrides = z.infer<typeof ImportedAssetOverridesSchema>;
-
 export const ImportedAssetSchema = z.object({
   $schema: z.string().optional(),
   ...ImportedAssetOverridesSchema.omit({ __meta: true }).shape,
@@ -52,8 +50,11 @@ export const ImportedAssetSchema = z.object({
 
 export type ImportedAsset = z.infer<typeof ImportedAssetSchema>;
 
-/** An import declared inline in a scene JSON: the asset pipeline only reads
- * `*.importedAsset.json`s. */
+/**
+ * An import declared inline in a scene JSON: the asset pipeline only reads `*.importedAsset.json`s.
+ * A scene's inline `importedAssets` (`createSceneAssetSchema`).
+ * @internal
+ */
 export const InlineImportedAssetSchema = ImportedAssetSchema.omit({
   optimize: true,
   __url: true,

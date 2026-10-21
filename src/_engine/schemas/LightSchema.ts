@@ -94,8 +94,6 @@ const LIGHT_VARIANTS = [Ambient, Hemisphere, Point, Directional, Spot] as const;
 
 const LightProps = z.discriminatedUnion('type', LIGHT_VARIANTS);
 
-export type LightProps = z.infer<typeof LightProps>;
-
 // Every type's fields, each optional: a save entry replaces the fields it gives
 const LightOverridesSchema = z
   .object({
@@ -108,8 +106,6 @@ const LightOverridesSchema = z
     type: z.enum(LIGHT_VARIANTS.map((variant) => variant.shape.type.value)),
   })
   .partial();
-
-export type LightOverrides = z.infer<typeof LightOverridesSchema>;
 
 export const LightAssetSchema = z.object({
   $schema: z.string().optional(),

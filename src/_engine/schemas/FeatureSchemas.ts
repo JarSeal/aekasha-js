@@ -19,7 +19,12 @@ export type FeatureSchemaPart = {
   mesh?: z.ZodRawShape;
 };
 
-type UnionToIntersection<U> = (U extends unknown ? (arg: U) => void : never) extends (
+/**
+ * The intersection of a union's members (`A | B` → `A & B`), for {@link FeatureSchemaShape}'s
+ * fields of every part at once.
+ * @internal
+ */
+export type UnionToIntersection<U> = (U extends unknown ? (arg: U) => void : never) extends (
   arg: infer I
 ) => void
   ? I

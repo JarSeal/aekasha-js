@@ -13,7 +13,7 @@ import type { CameraAsset } from './CameraSchema';
 import type { GeoProps as GeoPropsJson } from './GeometrySchema';
 import type { ImportedAsset } from './ImportedAssetSchema';
 import type { LightAsset } from './LightSchema';
-import type { MaterialAsset } from './MaterialSchema';
+import type { MaterialAsset, PerType } from './MaterialSchema';
 import type { MeshAsset } from './MeshSchema';
 import type { SceneAsset } from './SceneSchema';
 import type { TextureAsset } from './TextureSchema';
@@ -41,13 +41,6 @@ type ExtraKeys<Json, Runtime> = Exclude<AllKeys<Json>, AllKeys<Runtime>>;
 type ToolingKeys = '$schema' | '__saveData' | '__sourcePath';
 /** `Json` with its keys `K` typed as the runtime's. */
 type Swap<Json, Runtime, K extends PropertyKey> = Omit<Json, K> & Pick<Runtime, K & keyof Runtime>;
-
-/** One object per `type` literal, as the runtime's union has them. */
-type PerType<T> = T extends { type: infer Type }
-  ? Type extends unknown
-    ? Omit<T, 'type'> & { type: Type }
-    : never
-  : never;
 
 type TexOptsJson = NonNullable<TextureAsset['texOpts']>;
 type TexOptsRuntime = NonNullable<TextureProps['texOpts']>;

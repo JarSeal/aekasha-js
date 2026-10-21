@@ -32,8 +32,18 @@ const SpatialDomainEntrySchema = z
     }
   });
 
+/**
+ * One spatial domain a scene registers for itself (a scene's `spatialDomains` entry). The kernel's
+ * `SceneData` and the spatial feature's domains name it.
+ * @internal
+ */
 export type SceneSpatialDomainEntry = z.infer<typeof SpatialDomainEntrySchema>;
 
+/**
+ * A scene's `spatialDomains`: the entries, each id once. The spatial feature's schema part
+ * (`spatialSchemaPart`) gives it to the scene.
+ * @internal
+ */
 export const SceneSpatialDomainsSchema = z
   .array(SpatialDomainEntrySchema)
   .superRefine((entries, ctx) => {

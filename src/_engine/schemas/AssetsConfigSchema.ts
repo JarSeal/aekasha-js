@@ -7,7 +7,7 @@ import { z } from 'zod';
  * reads these. Strict objects, so a misspelt key is an error instead of a silently ignored one.
  */
 
-export const TextureCodecSchema = z
+const TextureCodecSchema = z
   .enum(['uastc', 'etc1s', 'none'])
   .describe(
     'uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback).'
@@ -15,7 +15,7 @@ export const TextureCodecSchema = z
 
 export type TextureCodec = z.infer<typeof TextureCodecSchema>;
 
-export const TextureSettingsSchema = z.strictObject({
+const TextureSettingsSchema = z.strictObject({
   codec: TextureCodecSchema.optional(),
   maxSize: z
     .number()
@@ -64,7 +64,7 @@ export const TEXTURE_SLOTS = [
   'data',
 ] as const;
 
-export const TextureSlotSchema = z
+const TextureSlotSchema = z
   .enum(TEXTURE_SLOTS)
   .describe(
     'glTF slots, orm (packed occlusion / roughness / metalness), data (splat maps, masks, LUTs, height) or default.'
@@ -73,7 +73,7 @@ export const TextureSlotSchema = z
 export type TextureSlot = z.infer<typeof TextureSlotSchema>;
 
 /** Per-slot settings; at each level a slot's entry merges over that level's `default`. */
-export const TexturesSettingsSchema = z.strictObject({
+const TexturesSettingsSchema = z.strictObject({
   default: TextureSettingsSchema.optional(),
   baseColor: TextureSettingsSchema.optional(),
   normal: TextureSettingsSchema.optional(),
@@ -84,9 +84,7 @@ export const TexturesSettingsSchema = z.strictObject({
   data: TextureSettingsSchema.optional(),
 });
 
-export type TexturesSettings = z.infer<typeof TexturesSettingsSchema>;
-
-export const MeshSettingsSchema = z.strictObject({
+const MeshSettingsSchema = z.strictObject({
   codec: z
     .enum(['meshopt', 'draco', 'none'])
     .optional()
@@ -114,7 +112,7 @@ const BudgetMBSchema = z.number().positive().nullable().optional();
  * Limits an optimized asset must stay within (p300 Phase 4), or the production build fails for an
  * asset that a shipped scene uses and `yarn assets` exits 1. MB are 10^6 bytes.
  */
-export const AssetBudgetSchema = z
+const AssetBudgetSchema = z
   .strictObject({
     vramMB: BudgetMBSchema.describe(
       "Estimated GPU memory of the whole asset in MB: its textures (KTX2 at 1 B/px, the most it takes on any device) plus a GLB's geometry (null: no limit)."
@@ -125,10 +123,8 @@ export const AssetBudgetSchema = z
     "Per-asset limits. Set in an asset JSON's own optimize, it also replaces the per-texture ceiling (each texture's VRAM must fit its slot's maxSize and codec as set without the asset JSON's overrides)."
   );
 
-export type AssetBudget = z.infer<typeof AssetBudgetSchema>;
-
 /** One level of settings: the defaults, a profile, a rule's or an asset's own overrides. */
-export const OptimizeLevelSchema = z.strictObject({
+const OptimizeLevelSchema = z.strictObject({
   textures: TexturesSettingsSchema.optional(),
   mesh: MeshSettingsSchema.optional(),
   budget: AssetBudgetSchema.optional(),
@@ -152,20 +148,24 @@ const OptimizeObjectShape = {
   budget: AssetBudgetSchema.optional(),
 };
 
-/** The `optimize` key of an asset JSON: false passes the asset through as it is. */
-export const AssetOptimizeSchema = z
-  .union([z.literal(false), z.strictObject(OptimizeObjectShape)])
-  .describe('Asset optimization (p300): a profile plus overrides, or false to pass it through.');
+/**
+ * The fields every type's `optimize` object can have; each type's schema narrows it
+ * (`TextureOptimizeSchema`, `TextureArrayOptimizeSchema`, `ImportedAssetOptimizeSchema`).
+ * @internal
+ */
+export const OptimizeObjectSchema = z.strictObject(OptimizeObjectShape);
 
-export type AssetOptimize = z.infer<typeof AssetOptimizeSchema>;
+/** The `optimize` key of an asset JSON, any type's: false passes the asset through as it is. */
+export type AssetOptimize = false | z.infer<typeof OptimizeObjectSchema>;
 
 /** Slots whose alpha isn't coverage (a normal map's, data packed into it): never scaled */
 export const NON_COVERAGE_SLOTS: readonly TextureSlot[] = ['normal', 'data'];
 
 /**
- * p341: the alpha test's cut, so each mip level's alpha is scaled to keep level 0's coverage.
- * Only for alpha that an `alphaTest` cuts (an albedo), set per asset (or atlas slot), since the
- * cut is its material's.
+ * p341: the alpha test's cut, so each mip level's alpha is scaled to keep level 0's coverage. Only
+ * for alpha that an `alphaTest` cuts (an albedo), set per asset (or atlas slot), since the cut is
+ * its material's. A texture's and an atlas slot's `optimize` share it.
+ * @internal
  */
 export const AlphaCoverageSchema = z
   .number()
@@ -175,7 +175,11 @@ export const AlphaCoverageSchema = z
     "The material's alphaTest (0-1, eg. 0.5): each mip level's alpha is scaled so the share of it passing this cut stays level 0's, so thin alpha-cut features (leaves, trunks, an impostor's edges) don't thin out with distance. Needs an alpha channel and mipmaps; not for a normal or data slot, or normalMode (their alpha isn't coverage). Default: off."
   );
 
-/** Refuses `alphaCoverage` on an optimize that names a slot whose alpha isn't coverage */
+/**
+ * Refuses `alphaCoverage` on an optimize that names a slot whose alpha isn't coverage. A texture's
+ * and an atlas slot's `optimize` run it.
+ * @internal
+ */
 export const refineAlphaCoverageSlot = (
   optimize: { slot?: TextureSlot; alphaCoverage?: number },
   ctx: z.RefinementCtx
@@ -191,15 +195,14 @@ export const refineAlphaCoverageSlot = (
 };
 
 /**
- * A `*.texture.json`'s `optimize`: it names its slot and has no geometry. `alphaCoverage` (p341)
- * is the texture's own, like an atlas slot's: not in a profile or a rule.
+ * A `*.texture.json`'s `optimize`: it names its slot and has no geometry. `alphaCoverage` (p341) is
+ * the texture's own, like an atlas slot's: not in a profile or a rule. `TextureAssetSchema`'s.
+ * @internal
  */
 export const TextureOptimizeSchema = z
   .union([
     z.literal(false),
-    z
-      .strictObject(OptimizeObjectShape)
-      .omit({ mesh: true })
+    OptimizeObjectSchema.omit({ mesh: true })
       .extend({ alphaCoverage: AlphaCoverageSchema.optional() })
       .superRefine(refineAlphaCoverageSlot),
   ])
@@ -210,21 +213,24 @@ export const TextureOptimizeSchema = z
 /**
  * A `*.textureArray.json`'s `optimize` (p299 D2): like a texture's, but never `false` (nor
  * `textures: false`). An array is only ever a KTX2 file `ktx` encodes, so it has no form "as it
- * is".
+ * is". `TextureArrayAssetSchema`'s, and the base of an atlas slot's.
+ * @internal
  */
-export const TextureArrayOptimizeSchema = z
-  .strictObject({
-    ...OptimizeObjectShape,
-    textures: TexturesSettingsSchema.optional().describe('Per-slot overrides.'),
-  })
+export const TextureArrayOptimizeSchema = OptimizeObjectSchema.extend({
+  textures: TexturesSettingsSchema.optional().describe('Per-slot overrides.'),
+})
   .omit({ mesh: true })
   .describe(
     "Asset optimization (p300): a profile, the slot and per-slot overrides, applied to every layer. The codec can't be none: an array is a KTX2 file."
   );
 
-/** A `*.importedAsset.json`'s `optimize`: its textures are classified by their material slot. */
+/**
+ * A `*.importedAsset.json`'s `optimize`: its textures are classified by their material slot.
+ * `ImportedAssetSchema`'s.
+ * @internal
+ */
 export const ImportedAssetOptimizeSchema = z
-  .union([z.literal(false), z.strictObject(OptimizeObjectShape).omit({ slot: true })])
+  .union([z.literal(false), OptimizeObjectSchema.omit({ slot: true })])
   .describe(
     'Asset optimization (p300): a profile plus texture / mesh overrides, or false to keep the file as it is.'
   );
@@ -232,13 +238,22 @@ export const ImportedAssetOptimizeSchema = z
 /** `./` or `../`: a source file relative to its asset JSON (p300 DD3). */
 export const isJsonRelativeFileName = (fileName: string) => /^\.\.?\//.test(fileName);
 
+/**
+ * A texture's or an import's `fileName`: relative to its JSON, or a `src/public` URL path.
+ * `TextureAssetSchema` and `ImportedAssetSchema` use it.
+ * @internal
+ */
 export const AssetFileNameSchema = z
   .string()
   .describe(
     'Relative to this JSON file ("./source/rock.png", optimized into src/public/aek-assets/), or a URL path served from src/public ("/textures/rock.png", optionally after `path`).'
   );
 
-/** For assets declared inline in a scene JSON: the pipeline doesn't see those, so no `./` sources. */
+/**
+ * For assets declared inline in a scene JSON: the pipeline doesn't see those, so no `./` sources.
+ * `InlineTextureSchema` and `InlineImportedAssetSchema` use it.
+ * @internal
+ */
 export const PublicFileNameSchema = z
   .string()
   .refine((fileName) => !isJsonRelativeFileName(fileName), {
@@ -273,7 +288,7 @@ const PackMultiplySchema = z
 
 export const PACK_TARGETS = ['r', 'g', 'b', 'a', 'rg', 'rgb', 'rgba'] as const;
 
-export type PackTarget = (typeof PACK_TARGETS)[number];
+type PackTarget = (typeof PACK_TARGETS)[number];
 
 const PackChannelSchema = z.union([
   z.number().describe('A constant (0..1, linear) in every channel of the target.'),
@@ -308,8 +323,10 @@ const PackChannelSchema = z.union([
 ]);
 
 /**
- * A texture built from several source images (p300 DD5), in place of `fileName`. The output has
- * the channels its targets cover: r, rg, rgb or rgba (two channels are written as RGB, B = 0).
+ * A texture built from several source images (p300 DD5), in place of `fileName`. The output has the
+ * channels its targets cover: r, rg, rgb or rgba (two channels are written as RGB, B = 0).
+ * `TextureAssetSchema`'s `pack`.
+ * @internal
  */
 export const TexturePackSchema = z
   .strictObject({
@@ -387,7 +404,7 @@ export const TexturePackSchema = z
 
 export type TexturePack = z.infer<typeof TexturePackSchema>;
 
-export const AssetsConfigRuleSchema = z.strictObject({
+const AssetsConfigRuleSchema = z.strictObject({
   glob: z
     .string()
     .describe(
@@ -399,8 +416,6 @@ export const AssetsConfigRuleSchema = z.strictObject({
     .describe('Pass the matched assets through as they are. Wins over everything else.'),
   ...OptimizeObjectShape,
 });
-
-export type AssetsConfigRule = z.infer<typeof AssetsConfigRuleSchema>;
 
 export const AssetsConfigSchema = z.strictObject({
   $schema: z.string().optional(),
@@ -420,7 +435,9 @@ const BytesInOutSchema = z.object({ in: z.number(), out: z.number() });
 
 /**
  * Baked into the generated data by gatherAppData from a pipeline run (p300 §5), never written by
- * hand. Every key is unset without a run.
+ * hand. Every key is unset without a run. The texture, texture array, atlas slot and import schemas
+ * spread the fields they get.
+ * @internal
  */
 export const GeneratedAssetFieldsSchema = z.object({
   /** The pipeline's output, what the runtime loads. Unset when there's none (encoder missing, a

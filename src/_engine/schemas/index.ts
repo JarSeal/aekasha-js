@@ -1,4 +1,4 @@
-export type { CoreEntityOpts } from './_HelperSchemas';
+export type { ColorJSON, CoreEntityOpts } from './_HelperSchemas';
 export { MetaSchema } from './_SaveDataSchema';
 export {
   AssetsConfigSchema,

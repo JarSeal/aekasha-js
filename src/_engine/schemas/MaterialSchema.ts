@@ -16,9 +16,11 @@ const MaterialOverridesSchema = z.object({
   isPersistent: z.boolean().optional(),
 });
 
-export type MaterialOverrides = z.infer<typeof MaterialOverridesSchema>;
-
-/** Per-mesh material overrides (mesh `matOverrides`), see getMaterialVariant */
+/**
+ * Per-mesh material overrides (mesh `matOverrides`), see getMaterialVariant.
+ * `createMeshAssetSchema`'s `matOverrides`.
+ * @internal
+ */
 export const MaterialVariantOverridesSchema = z.object({
   params: ThreeJsParamsSchema.optional(),
   staticDefines: z.record(z.string(), z.any()).optional(),
@@ -86,9 +88,13 @@ export const MaterialAssetSchema = z.discriminatedUnion('type', [
   PlainMaterialSchema,
 ]);
 
-/** One object per `type` literal, as the runtime's `MatProps` has them (zod infers one object
- * per branch, with the `type` enum). */
-type PerType<T> = T extends { type: infer Type }
+/**
+ * A union with one member per `type` literal, as the runtime's `MatProps` has them: zod infers one
+ * object per branch, with the `type` enum, which TypeScript doesn't split on its own.
+ * `MaterialAsset` and `RuntimeTypes.test.ts` use it.
+ * @internal
+ */
+export type PerType<T> = T extends { type: infer Type }
   ? Type extends unknown
     ? Omit<T, 'type'> & { type: Type }
     : never
