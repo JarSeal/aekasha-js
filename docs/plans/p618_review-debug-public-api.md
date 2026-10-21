@@ -981,6 +981,15 @@ As built, section 1 (2026-10-21, on `15882c0`; nothing edited during the runs):
   view. No tab showed B3's error line, no console error; the two warnings are
   `@dimforge/rapier3d-compat`'s own ("deprecated parameters for the initialization function").
 
+As built, section 2 (2026-10-21, uncommitted on top of `9364ebf`):
+
+- **`package.json` (D2):** engine and project 5.8.0 → 5.9.0 (Golden Hour), toolkit 2.1.2 → 2.1.3
+  (Half Moon), app 1.13.0 → 1.13.1 (Preschooler).
+- **`CHANGELOG.md`:** the `2026-10-21 — review-debug-public-api` entry, with an Engine, a Toolkit, an
+  App and a Project section. The Project section also carries `208b177` (p800's epic plan and its
+  references), which merges with this branch.
+- **`yarn checkVersions --against main`:** passes.
+
 ## 4. Risks
 
 - **The debug env is the scene runner's main configuration.** A change to the framework (B1, the

@@ -4,6 +4,110 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-21 — review-debug-public-api
+
+### Engine 5.9.0 (Golden Hour)
+
+The debugger's public API and every debug module in the engine are reviewed (p618). An app can now write its own drawer tab, profiler figure and tab, GPU memory source, undoable action and dev files tool from the Hub page alone, through `aekasha/debug`. The entry gets the names its docs told apps to use. Its registrations work at any time, including before the debugger has loaded. An app's stats sources show in the profiler. Seven framework bugs and nineteen in the panels are fixed. The two debug wrappers p608 left are merged into their feature's module. Every export of `debug` is documented. Production builds are the same size as on `main`: debug code still never ships. No export of an entry is removed or renamed.
+
+**Added**
+
+- On `aekasha/debug`:
+  - Profiler tabs: `createProfilerTab`, `updateProfilerTab`, `openProfilerTab`, `isProfilerTabOpen`, `removeProfilerTab` (new), `GPU_MEMORY_TAB_ID` and `isProfilerLoadedInThisMode`, the gate the docs name.
+  - `markDebugHelper`, and `registerEntityWindowOpener` with `EntityWindowOpener`.
+  - `recordOrCoalesceUndoRedoAction`, which a slider binding needs (one undo entry per drag).
+  - `onDevDataGathered` and `getDevFilesSaveHistorySize`, with `DevFilesSaveData` and `DevFilesUnavailableReason`.
+  - `isDebuggerTabOpen`, and the types `DebuggerTabDef` names: `DebuggerTabSection`, `DebuggerPaneSection`, `DebuggerPaneItem`, `DebuggerPaneBinding`, `DebuggerPaneFolder`, `DebuggerPaneButton`, `DebuggerPaneSeparator`, `DebuggerPaneCustom`, `DebuggerStateKey`, `DebuggerDyn`, `DebuggerListToggle`. A function that returns pane items can be typed now.
+  - `GPUMemoryResource` and `DebugKeyBindingConfig` (named by `GPUMemorySource` and `AppConfig.debugKeys`).
+- On `aekasha`: `saveTexture`, documented like `saveMaterial` (ownership, an `@example`). In the debug env it warns when the id already holds another texture.
+- The profiler's Overview lists every stats source that isn't the engine's in a group of its own, "App", after the engine's rows. Each row shows its value, its reason when n/a, or "measuring…". Its rows can be hidden and moved in the Settings tab. Until now an app's `registerStatsSource` showed nothing. `StatsSource.format` (optional) formats the value; without it a number shows with two decimals.
+- JSDoc on every export of `debug` (183 / 183) and on `DevFilesError`'s members. The fields of the types an app writes are documented too: the list items, every pane item, `DebugToolsState`, `StatsSource`, `GPUMemorySource`, `UndoRedoEntry` and the dev files bodies. `@example`s on `createDebuggerTab`, `debuggerListCMP`, `addDebugToast`, `createProfilerTab`, `registerStatsSource`, `markDebugHelper`, `registerGPUMemorySource`, `registerUndoRedoActionHandler` (with `recordOrCoalesceUndoRedoAction`), `writeDevFiles` (with `onDevDataGathered`) and `loadDebugModuleAsync`. The traps are `@remarks`: the profiler's mode gate, the Tweakpane fields in the pane types (p800 replaces them), `updateDebuggerTab` on a hidden tab, undo stopping at an entry without a handler, and when a plain `if (IS_DEBUG_ENV) await import()` does what `loadDebugModuleAsync` does.
+
+**Changed**
+
+- **Behaviour change:** a scene change updates the drawer's title in place instead of rebuilding the whole drawer. The open tab is still rebuilt from its `content()`, since the camera, light, character and ray cast tabs build from the current scene. A tab registration still rebuilds the drawer.
+- **Behaviour change:** `initECSStressTest` loads its implementation on demand (debug env only, so a production build drops it). Its `k` / `l` keys are bound a moment after the call, and only while the calling scene is loading or current.
+- **Behaviour change:** the camera window's Delete is disabled for the active camera and the main camera, not only for the last one. A tooltip says why.
+- **Behaviour change:** the Renderer tab's "Enable alpha (reloads)" reloads the page, as `antialias` does, and isn't recorded to undo. On WebGPU it did nothing visible until a reload.
+- Less debug work per frame. The Statistics tab's TFPS panel keeps its samples in a ring buffer: it used `push` / `shift` every frame, and it's on by default. A tab refresh renders a changed section's html once, not twice (the GPU memory tab walked the asset registries and the scene twice per 500 ms). The 3D symbols' and the light helpers' component hooks are registered once, not once per world. The light helpers' `DISABLED` hooks look only at entities with a symbol or a helper.
+- Internal (no entry exports them):
+  - `debug/Assets.ts` merged into `kernel/assets/AssetsAPI.ts`, and `debug/PostFXProfiler.ts` into `features/postfx/PostFX.ts`.
+  - `debug/SceneHelpers.ts` and `debug/PercentagePieHtml.ts` renamed `_dbg__SceneHelpers.ts` and `_dbg__PercentagePie.ts` (debug code is found by its name).
+  - The stress test's implementation is `kernel/ecs/debug/_dbg__ECSStressTest.ts`, and `aekasha`'s `initECSStressTest` is a thin wrapper in `kernel/ecs/ECSStressTest.ts`.
+  - `PhysicsProbeReport` moved to `features/physics/PhysicsProbeTypes.ts`.
+  - Every export in scope that's on no entry is `@internal` (101 names), each naming its user.
+  - The three framework functions over 150 lines are split: `registerBuiltInStatsSources`, `createEditorDrawer` and `createTabHost`.
+  - The debug files over 800 lines get a header saying p800 replaces them.
+  - Six `any` casts in the light and camera helpers are typed.
+  - The Debug tools tab's test buttons are gone.
+
+**Deprecated**
+
+- On `aekasha/debug`, names only the dev files client, the dev server and the scene runner use, removed from the entry in engine 6.0.0 (`@internal` then) with no replacement: `DEV_FILES_ROUTE_BASE`, `DEV_FILES_TOKEN_HEADER`, `DEV_FILES_TOKEN_META`, `DEV_FILES_HASH_HEADER`, `AEK_GATHER_EVENT`, `DevFilesStageBody`, `DevFilesSaveDataWrite`, `DevFilesErrorBody`, `TestBridgeProbeResult`, `TestBridgeSceneReady` and `TestBridgeSnapshot`.
+- `createDebuggerTab`'s second parameter and `DebugGUIOpts`, removed in engine 6.0.0: it only placed the drawer button for the whole drawer. Move the button with CSS.
+
+**Removed**
+
+- Internal (on no entry, no caller): `isDebugReady`, `PercentagePieHtml`, `PercentagePieOpts.size`, `getStatsConfig`, `StatsOptions.performanceFolderExpanded` and `outlookFolderExpanded` (deprecated, unused), `createDebugGui`, `getDrawerState`, `isDebuggerDisabled` and `handleDebugCameraSwitch` (with their `_dbg__` sides). `TEST_BRIDGE_QUERY_PARAM` and `isProfilerEnabledInProdTest` aren't exported.
+
+**Fixed**
+
+- `registerUndoRedoActionHandler` before the undo module had loaded (in a feature's install, or before `InitEngine`) did nothing and said nothing, so the action was never undoable. The public module keeps the handlers now. `createProfilerTab` and `createDebuggerTab` before the profiler or the drawer had loaded did nothing either. A feature's `onDebug` hook couldn't add a profiler tab. They're kept and created when it loads.
+- A tab whose `content()` or `onRefresh` threw took the drawer down. While it was the saved tab, every scene load in the debug env failed until its LS key was cleared. It shows an error line now. In the profiler window the throw also leaked the tab's stats source holds.
+- The profiler's PostFX row built the PostFX chain when it polled in an editor view, and showed the last pass times as current there. It reads "not rendered in this view" now and builds nothing.
+- On a lost device, the GPU timer's resolve logged an unhandled rejection every frame. It logs once.
+- `isDebuggerTabOpen` was true for the drawer's hidden tab during an editor view, so `updateDebuggerTab` refreshed it.
+- A malformed value in LS threw where it was read: the drawer's state in the drawer's build, the undo history or its settings in the boot, a tab's saved state in its registration. Each is ignored now, with a warning where it's the boot's.
+- `loadDebugModuleAsync(…, true)` and `useDebug(ref, true)` loaded in every mode of a development build, not only in prod test mode.
+- The panels:
+  - Deleting the active camera from its window stopped rendering.
+  - Changing a scene helper's size or colour while it was hidden showed it.
+  - The 3D symbols' cloned materials leaked on every scene visit.
+  - The About dialog's "Copy info" threw when the dialog closed within 2 s.
+  - F9 / F10 pressed before the Debug tools tab existed were lost.
+  - The test bridge froze only once per page.
+  - The Assets window stayed on "Generating…" after a failed LOD chain.
+  - The Ray cast tab missed a physics world created or deleted while it was open.
+  - The Assets tab lit "Reload to apply" with nothing changed.
+  - The material editor lost its Stage and Preview folders after a failed load, and wrote an undone fov to the wrong material while another loaded. Textures it loaded during a visit kept an owner whose release had run.
+  - The ECS stress test's mesh and counts outlived the scene, its instance count overran its buffer, its keys weren't scene-scoped and its proximity system kept the first visit's target.
+  - A light helper's first visibility was inverted, and its shadow map rebuild had no catch.
+  - Physics wireframes leaked their lines when a build rejected.
+  - The physics entity window's shape query left an unhandled rejection and a stale "Loading…".
+  - The determinism probe's runs in LS were never pruned, and a full LS skipped its report listeners.
+
+### Toolkit 2.1.3 (Half Moon)
+
+**Changed**
+
+- `bakeScatterToInstancedMesh`'s JSDoc pointed at the ECS stress test's old file. It points at the instancing feature's `createInstancedMeshPool` now, the public pattern for per-instance ECS state.
+
+### App 1.13.1 (Preschooler)
+
+**Changed**
+
+- The debug tab example (`exampleDebugTab`) adds undo for its two settings, one action type coalesced per drag, and a figure in the profiler: the box count, an App row in the Overview, removed on the scene's exit. The scene looks the same.
+
+### Project
+
+**Added**
+
+- Tests, in Node:
+  - `UndoRedo.test.ts`: early registration, record and coalesce, the buckets, the LS round trip.
+  - `Profiler.test.ts`: stats sources, entity window openers, early tabs, the mode gate.
+  - `GPUMemory.test.ts`.
+  - `DebuggerGUI.test.ts` (tab state hydration, the toast queue, early tabs) and `_dbg__DebuggerGUI.test.ts` (the title in place, the hidden tab, the LS state, a throwing tab).
+  - `_dbg__TabHost.test.ts` (a throwing tab, linkedom) and `profiler/_dbg__ProfilerOverview.test.ts` (the App rows).
+  - `DevFiles.test.ts`, `kernel/config/DebugModules.test.ts` (the loaders' modes) and `kernel/assets/Texture.test.ts` (`saveTexture`'s warning).
+- `docs/plans/p800_debugger-ui-overhaul.md`, the epic that replaces the debugger's Tweakpane panels with Ækasha's own UI components. Its references go into p150, p355, p373, p600, p622, the two issue files and the prompt it came from.
+- `docs/issues/on-screen-tools-during-scene-load.md` (the on-screen tools stay clickable during a scene load; for p800).
+
+**Changed**
+
+- The Hub's Debug suite page has a "Write your own tab" how-to: loading in debug builds, state and persistence, refresh, lists, scene tabs, toasts. It also covers the profiler's figures and tabs, GPU memory sources, `markDebugHelper`, undo / redo with coalescing, and the dev file server with the gather event. Its Key APIs list follows the entry. The debug tab example page has two new walkthrough sections.
+- `src/_engine/debug/CLAUDE.md`: the entry's shape and deprecations, the "registrations work at any time" rule, which loader an app uses, the moved and renamed modules, and undo / redo. `readme.md`'s debug drawer line names what an app adds through `aekasha/debug`. `docs/plans/p622_engine-6-major.md` lists the deprecations above. p800's prompt has the guide and Tweakpane's place in the tab types.
+- `yarn verify:baselines`: `api.json` (2,526 → 2,512 exports, 808 → 838 names on the 16 entries) and `docs.json` (exports 2,275 / 2,430 → 2,319 / 2,416 documented, members 935 → 938 / 970, `debug` at 100 %). `bundle.json` only swaps two Rapier chunks' names, which trade places between builds. The app's first download (379.2 kB gzip) and the banner's (285.5 kB) are what they were on `main`. The `moveMap.ts` outputs are regenerated.
+
 ## 2026-10-20 — review-input-ui-hud
 
 ### Engine 5.8.0 (Golden Hour)
