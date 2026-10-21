@@ -832,7 +832,7 @@ As built, section 1 (2026-10-21, uncommitted on top of `6390367`):
   (pending tabs, as `createProfilerTab` keeps them) or an issue file. **Answered 2026-10-21: fixed
   in Phase 5** (its section 1).
 
-As built, section 2 (2026-10-21, uncommitted on top of section 1):
+As built, section 2 (2026-10-21, uncommitted on top of `ce9d693`):
 
 - **H1:** the six `any` casts gone. `DEBUG_LIGHT_HELPER`'s helpers all have `update()` and
   `CameraHelper` has `dispose()` (on `Object3D` in three's types), so the light GUI's two
@@ -874,7 +874,7 @@ As built, section 2 (2026-10-21, uncommitted on top of section 1):
 2. The issue files (H2), p800's prompt (P7), `readme.md` if its debug line changes.
 3. `yarn hub:build`.
 
-As built, section 1 (2026-10-21, uncommitted on top of `d45ed4c`):
+As built, section 1 (2026-10-21, committed as `ce9d693`):
 
 - **`createDebuggerTab` before the drawer loads (Phase 4's open item, fixed):** `DebuggerGUI.ts`
   keeps the tabs created before `registerDebuggerGUI` (pending, in creation order, a replaced one
@@ -913,6 +913,22 @@ As built, section 1 (2026-10-21, uncommitted on top of `d45ed4c`):
   `CLAUDE.md` names none of the moved files: unchanged.
 - **Checks:** `tsc` (both), the lint, `yarn test` (109 files, 869 passed, 1 skipped),
   `yarn hub:build` (435 pages, no warning in scope; the search index's is p619's).
+
+As built, section 2 (2026-10-21, uncommitted on top of `ce9d693`):
+
+- **The issue files (H2):** nothing left; Phase 4 filed `docs/issues/on-screen-tools-during-scene-load.md`.
+- **p800's prompt (`docs/templates/todo-plan-prompts.txt`):** a "(Added by p618, 2026-10-21.)"
+  paragraph after p617's: the Debug suite page's "Write your own tab" and the debug tab example
+  are the guide the prompt asks for, which p800 rewrites for its components; P7's Tweakpane fields
+  (the binding's passed-through params, `onCreate`'s and `onChange`'s `BindingApi`, `custom`'s
+  `Pane | FolderApi`), to be replaced by its components' binding options and deprecated in its own
+  minor or changed with p622's major, the rest of `DebuggerTabDef` kept working; the tab contract
+  as p618 left it (F1 as built, B3, the any-time registrations), a self-refreshing tab being p800's
+  choice; the panels with their size headers (D1, D8) and the on-screen tools issue file to close.
+- **`readme.md`:** the debug drawer bullet gets one sentence: an app adds its own tabs, profiler
+  figures and tabs, GPU memory sources and undoable actions through `aekasha/debug` (D14 made the
+  figures real), with the Debug suite page and the example. Nothing else in its debug lines
+  changed.
 
 ### Phase 6: versions and done
 
