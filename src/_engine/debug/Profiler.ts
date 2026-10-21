@@ -219,7 +219,7 @@ export const removeProfilerTab = (id: string) => {
 };
 
 /** Opens the profiler window on a tab (switching to it if another one is showing), eg.
- * {@link GPU_MEMORY_TAB_ID}. A no-op while the profiler isn't loaded. */
+ * `GPU_MEMORY_TAB_ID`. A no-op while the profiler isn't loaded. */
 export const openProfilerTab = (id: string) => {
   useProfiler()?._openProfilerTab(id);
 };

@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: in progress | Phases 0-5 implemented
 Category: Refactoring, Documentation, Debug
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -825,14 +825,16 @@ As built, section 1 (2026-10-21, uncommitted on top of `6390367`):
   switched on while held goes off with it). `Object3DHelpers.ts`' "`markDebugHelper` is on
   `aekasha/debug`" became true in Phase 3.
 - **Checks:** `tsc` (both), `yarn lint`, `yarn test` (109 files, 867 passed, 1 skipped; the new
-  examples among them). `yarn hub:build`: 434 pages, no warning in scope (Phase 0's five
-  `notExported` ones are gone; the search index size warning is p619's). `moveMap.ts --check`
+  examples among them). `yarn hub:build`: 434 pages; Phase 0's five `notExported` warnings are
+  gone (the search index size warning is p619's). **Corrected in Phase 5 §3:** one warning in
+  scope was missed (the log was filtered for words the warning lines don't contain):
+  `openProfilerTab`'s `{@link GPU_MEMORY_TAB_ID}`, which `Profiler.ts` can't resolve. `moveMap.ts --check`
   clean.
 - **Open (asked 2026-10-21):** `createDebuggerTab`'s drop before the drawer loads: a Phase 5 fix
   (pending tabs, as `createProfilerTab` keeps them) or an issue file. **Answered 2026-10-21: fixed
   in Phase 5** (its section 1).
 
-As built, section 2 (2026-10-21, uncommitted on top of `ce9d693`):
+As built, section 2 (2026-10-21, uncommitted on top of section 1):
 
 - **H1:** the six `any` casts gone. `DEBUG_LIGHT_HELPER`'s helpers all have `update()` and
   `CameraHelper` has `dispose()` (on `Object3D` in three's types), so the light GUI's two
@@ -868,7 +870,7 @@ As built, section 2 (2026-10-21, uncommitted on top of `ce9d693`):
   `yarn verify:baselines`: all unchanged, no debug code in the production build or the banner.
   `docs.json` unchanged, `moveMap.ts --check` clean.
 
-### Phase 5: the Hub, `CLAUDE.md`, readme, and what's filed
+### Phase 5: the Hub, `CLAUDE.md`, readme, and what's filed — done
 
 1. D12's page (and the example, if chosen), `debug/CLAUDE.md`, the root's references.
 2. The issue files (H2), p800's prompt (P7), `readme.md` if its debug line changes.
@@ -912,9 +914,9 @@ As built, section 1 (2026-10-21, committed as `ce9d693`):
   bullet says an app's get "App" rows (D14), the drawer tab bullet "at any time". The root
   `CLAUDE.md` names none of the moved files: unchanged.
 - **Checks:** `tsc` (both), the lint, `yarn test` (109 files, 869 passed, 1 skipped),
-  `yarn hub:build` (435 pages, no warning in scope; the search index's is p619's).
+  `yarn hub:build` (435 pages; it missed Phase 4's link warning, see section 3).
 
-As built, section 2 (2026-10-21, uncommitted on top of `ce9d693`):
+As built, section 2 (2026-10-21, committed as `5901201`):
 
 - **The issue files (H2):** nothing left; Phase 4 filed `docs/issues/on-screen-tools-during-scene-load.md`.
 - **p800's prompt (`docs/templates/todo-plan-prompts.txt`):** a "(Added by p618, 2026-10-21.)"
@@ -929,6 +931,20 @@ As built, section 2 (2026-10-21, uncommitted on top of `ce9d693`):
   figures and tabs, GPU memory sources and undoable actions through `aekasha/debug` (D14 made the
   figures real), with the Debug suite page and the example. Nothing else in its debug lines
   changed.
+
+As built, section 3 (2026-10-21, uncommitted on top of `5901201`):
+
+- **`yarn hub:build`:** 435 pages. One warning in scope, from Phase 4 section 1 (`8a32410`) and
+  missed by its check and section 1's: `Profiler.ts`' `openProfilerTab` had
+  `{@link GPU_MEMORY_TAB_ID}`, which TypeDoc can't resolve there (`GPUMemory.ts` imports
+  `Profiler.ts`, not the other way). Now a code span (the Hub page links the constant). Rebuilt:
+  no warning in scope. The four left are outside it and older than the branch:
+  `CharacterBrainKinds` (`features/character/ActorTypes.ts`), `ComponentDataMap`
+  (`kernel/ecs/ECSCoreComponents.ts`; the branch changed only two comment paths there),
+  `UnionToIntersection` (`schemas/FeatureSchemas.ts`) not in the docs, and `SeededRandom.ts`'
+  `{@link getRandomStream}`; plus p619's search index size. Phase 6's `yarn hub:build` reads the
+  `⚠` lines, not a word filter.
+- **Checks:** `tsc`, the lint on `Profiler.ts`.
 
 ### Phase 6: versions and done
 
