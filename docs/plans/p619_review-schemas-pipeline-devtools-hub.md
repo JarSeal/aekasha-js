@@ -1191,6 +1191,13 @@ As built (2026-10-21, on `aece8b0`):
     ctime moves on (12 / 12).
   - Checks: `yarn test` 1074 passed, lint, `tsc`; the docs ratchet unchanged (99 % / 97 %);
     `yarn hub:build`: the toolkit's 4, `{@link getRandomStream}` and the index size warning.
+- **Section 3, `render.ts`' split (R4).** `render.ts` (599 lines): the memo, the pages, the
+  section, the build's reports (`{@link}`s, R2, TypeDoc's messages) and the source links.
+  `renderSymbol.ts` (630): the render context (`Ctx`, the links from the page being rendered,
+  the headings), the coverage bar, the summaries, the comments, the tables and a symbol's
+  rendering. `apiSearch.ts` (98): the search documents, memoized per model. Checked: `dist-hub/`
+  before and after, with the build commit, the `?v=` hashes and the build time normalized, is the
+  same but for the Version page's build time (and its words' counts in the search index).
 
 ### Phase 6: the rest of the Hub generator and the search (D7, D10, D11, D16)
 
