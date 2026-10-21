@@ -2,9 +2,11 @@ import zlib from 'node:zlib';
 import MiniSearch from 'minisearch';
 import type { HubAssetFile } from './assets';
 import { ASSETS_URL_DIR } from './assets';
+import type { HubDiagnostics } from './diagnostics';
 import { hashContent } from './hash';
 import { decodeEntities, parseAttributes } from './html';
 import { getPageSection } from './pages';
+import { HUB_PAGES_DIR } from './paths';
 import {
   HUB_SEARCH_FILE,
   HUB_SEARCH_OPTIONS,
@@ -339,4 +341,25 @@ export const buildSearchIndex = (
     pageDocCount,
     gzipBytes: zlib.gzipSync(content, { level: 9 }).length,
   };
+};
+
+/**
+ * Over it, the build warns: the search payload's `gzip -9` size, what a reader downloads on the
+ * first search (p619 D7; 256 KiB after its cuts)
+ */
+const SEARCH_INDEX_WARN_GZIP_BYTES = 450 * 1024;
+
+export const formatBytes = (bytes: number) =>
+  bytes < 1024 * 1024
+    ? `${Math.round(bytes / 1024)} KiB`
+    : `${(bytes / (1024 * 1024)).toFixed(2)} MiB`;
+
+/** Warns when the payload is over `SEARCH_INDEX_WARN_GZIP_BYTES` gzipped */
+export const checkSearchIndexSize = ({ gzipBytes }: HubSearchIndexFile, diag: HubDiagnostics) => {
+  if (gzipBytes <= SEARCH_INDEX_WARN_GZIP_BYTES) return;
+  diag.warn(
+    HUB_PAGES_DIR,
+    undefined,
+    `The search index is ${formatBytes(gzipBytes)} gzipped, over ${formatBytes(SEARCH_INDEX_WARN_GZIP_BYTES)}: index fewer fields or store less (searchProtocol.ts)`
+  );
 };

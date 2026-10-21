@@ -1355,6 +1355,42 @@ As built (2026-10-21, uncommitted):
     page), the comments naming `hub-data.js`.
   - Checks: `yarn test` 1089 passed (135 files), lint, both `tsc`; `yarn hub:build` with Phase 5's
     warnings (the toolkit's 4, `{@link getRandomStream}`).
+- **Section 2, the splits (D10).**
+  - `buildHub` (338 lines → 149; `build.ts` 693 → 281) keeps the order and the options; its
+    steps are modules: `renderPages.ts` (`createMarkupHelpers`, the markup and slot fills,
+    `renderHubPages` with the page images first, `checkLinks`), `shellPages.ts`
+    (`createShellPages`: a page, the 404 page, the rebuilding page and an error page in the
+    shell; `rebaseNotFoundPage`), `errorPages.ts` (`applyErrorPages`, the owner lookup),
+    `writeOutput.ts` (`writeHubOutputAsync`: the writes, the images, the staging swap), and in
+    `build.ts` `createSectionsAsync` and `collectSourceFiles`. The search's size check and
+    `formatBytes` moved into `search.ts`. `dist-hub/` before and after (`--no-embed`): the same
+    bytes in every file but the Version page's build time and status, and the search payload's
+    `?v=` that follows from them.
+  - `createHubDevRunner` (`devTools/hub/devRunner.ts`, 144 lines): the first build, the runs, the
+    API's stale and rebuilding state, the reports and `diffBuilds`, with its dependencies
+    injected (`buildAsync`, `extractApiAsync`, `start`, `watch`, `send`, `log`, `isApiInput`,
+    `outDir`). `hubPlugin.ts` (458 → 187 lines, `configureServer` 291 → 117) wires the
+    watchers, the HMR socket and the middleware.
+  - The runs go through Phase 4's queue, moved to `devTools/workQueue.ts` (and its test; the
+    gatherer's plugin imports it there), so the burst straddling a run's end is one more run here
+    too. An API conversion's end is queued like a save (a 100 ms debounce, where it ran at once).
+    **Not in the plan:** the saves during the first build, `hub/`'s and the watcher's, are queued
+    as one run when it ends (the old loop ran `hub/`'s at once, then the others in a second run).
+    A first build that throws is tried again on the next request, as before.
+  - `devRunner.test.ts` (21, fake timers, a fake build per call): the first build once with the
+    watching first, a save during it (one run after it, and none before the first request),
+    editor temp files, a request waiting for the run in progress only, the straddling burst, the
+    API's stale → rebuilding → `api` (one conversion), a failed run's `api`, a stale model from
+    the first build, a first build that threw, `close`, a removed page's output deleted;
+    `diffBuilds` (the volatile `?v=`s, `css`, `all`), `isEditorTempFile`.
+  - On a dev server: a Markdown edit and its undo, each "Updated: 1 page (documentation/)"
+    (906 / 816 ms); an engine save (`features/lines/Lines.ts`), then `aekasha/lines/` answered
+    503 while `examples/` answered 200, "API docs rebuilt (TypeDoc 7.7 s)", "Updated: the API
+    docs", then 200. (A save of `utils/StableStringify.ts` restarts the server instead: the Vite
+    config imports it through the asset pipeline's cache keys, Phase 4.)
+  - Docs: `devTools/hub/CLAUDE.md` (the build's steps, the dev plugin and its runner), the root
+    `CLAUDE.md`'s queue path.
+  - Checks: `yarn test` 1110 passed (136 files), lint, both `tsc`.
 
 ### Phase 7: verify, sbp and refactor (D9, D12, D13)
 

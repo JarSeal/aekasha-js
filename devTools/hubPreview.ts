@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { rebaseNotFoundPage } from './hub/build';
+import { rebaseNotFoundPage } from './hub/shellPages';
 import { HUB_DIST_DIR, ROOT } from './hub/paths';
 import { getHubContentType, resolveHubRoute } from './hub/serve';
 

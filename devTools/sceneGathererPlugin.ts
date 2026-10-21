@@ -14,7 +14,7 @@ import { ASSETS_CONFIG_FILE } from './assetPipeline/settings';
 import { CONFIG_FILE, resolveProjectOptOut, type ProjectOptOut } from './assetPipeline/switches';
 import { DEV_FILES_TEMP_SUFFIX } from './devFiles/commit';
 import { gatherSceneData } from './gatherAppData';
-import { createWorkQueue } from './gather/devQueue';
+import { createWorkQueue } from './workQueue';
 import { isGatheredJsonFile } from './gather/gatheredJson';
 import { writeJsonSchemas } from './gather/jsonSchemas';
 import { GENERATED_DIR, ROOT } from './paths';
@@ -31,7 +31,7 @@ import { GENERATED_DIR, ROOT } from './paths';
  *   through Vite: Node can't import .ts): every asset is built, which is a cache hit for those
  *   whose settings didn't change.
  * Every other asset is only looked up in the cache, so the gather keeps its `__url`. A run never
- * removes stale outputs (`yarn assets` does). Changes are queued (`gather/devQueue.ts`): one run
+ * removes stale outputs (`yarn assets` does). Changes are queued (`devTools/workQueue.ts`): one run
  * at a time, and the changes that come in during a run go into the next one.
  *
  * Each gather ends with the custom HMR event `aek:gather` (`DevDataGatheredEvent`: how it went,

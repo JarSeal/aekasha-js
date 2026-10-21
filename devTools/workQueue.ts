@@ -1,7 +1,7 @@
 /**
- * The dev server's gather queue (`sceneGathererPlugin`): file events fold into one pending work
- * item, which runs once the events have been quiet for the debounce. One run at a time: events
- * during a run go into the next one.
+ * The dev server plugins' queue (the gatherer's `sceneGathererPlugin`, the Hub's
+ * `createHubDevRunner`): file events fold into one pending work item, which runs once the events
+ * have been quiet for the debounce. One run at a time: events during a run go into the next one.
  */
 
 /** A debounced queue of work, run one item at a time */

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createWorkQueue } from './devQueue';
+import { createWorkQueue } from './workQueue';
 
 const DEBOUNCE_MS = 100;
 const RUN_MS = 300;
