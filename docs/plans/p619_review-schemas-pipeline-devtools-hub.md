@@ -1110,6 +1110,46 @@ pass, `render.ts`' split, the `hub:documentation/` links. `yarn hub:build` with 
 no R2 warning outside p620's three, no dead link. `yarn verify:baselines`' `api.json` records the
 added entry names.
 
+Sections: 1. the entry map, R2's check and R3's pass (`api/entries.ts`, `extract.ts`), with their
+tests, giving today's list; 2. R2's decisions (the engine's types added to entries, the derived
+types, the signature changes); 3. `render.ts`' split (R4), the output unchanged; 4. the pages per
+entry, the links (internal `{@link}`, `api:`, the `hub:documentation/` links), the A-Z index and
+the search on public names; 5. the checks and the docs.
+
+As built (2026-10-21, on `aece8b0`):
+
+- **Section 1, the entry map, R2's check and R3's pass.**
+  - The model carries the entries: `ApiModel.entries` (`ApiEntry`: each entry's names with their
+    module and name there), read by `extract.ts`' `readEntries` with the conversion, through
+    `importGraph.ts`' parser (TypeScript is loaded then anyway; the Hub's builds, in the Vite
+    config process too, never load it). A name re-exported from another entry
+    (`createSeededRandom`) resolves through that entry. The entry files are in the model's hash
+    and `isApiInputFile`; `EXTRACT_VERSION` 4. `verify:baselines`' `collectEntries` reads the
+    model's list (one parse), and fails on a model error.
+  - `api/entries.ts`: `indexEntries` (each name → its declaration, a module's re-export followed;
+    a name the model lacks is an error) and `findLeakedTypes` (R2). **Transitive (not in the
+    plan):** a leaked type's own types are leaked too, reported with the leaked type that names
+    them, so a build shows the whole set rather than one layer per fix (`ComponentDataMap`'s
+    member types are only reached through `CoreComponentData`, since its members are inherited
+    copies). Skipped: private and inherited members, type parameters, `{@link}`s, other packages.
+  - `yarn hub:build` warns once per leaked type at its first namer's reference, naming up to
+    three more; memoized per model.
+  - **TypeDoc's validation no longer runs (not in the plan):** `notExported` checked against
+    every module, R2's check against the entries covers it. `locateValidationMessages` and its
+    regexes went.
+  - R3: `linkNamedReferences` (after `projectToObject`): a reference by name to a declaration the
+    model has (`symbolIdMap`, kinds a module declares) gets its id; type parameters (`K`) and
+    other packages stay. It links `ComponentDataMap` (23) and `CharacterBrainKinds` (4), and both
+    `notExported` warnings went.
+  - Tests: `entries.test.ts` (6, a hand-built model; the private / inherited skip and the
+    transitive walk each fail when removed), `extract.test.ts` (R3).
+  - **Today's list: 97** (58 named by public exports, 39 through leaked types), against Phase 0's
+    60: Phase 3's `OptimizeObjectSchema`, `UnionToIntersection` and `PerType` are new, and the
+    transitive ones (12 under `WorldAPI`, 8 under `FeatureContext.registerImportExtension`'s
+    `ImportExtension`, 6 character input mappings, 5 character body types, …).
+  - Checks: `yarn test` 1073 passed; `yarn hub:build` with the 97, `{@link getRandomStream}`
+    and the index size warning.
+
 ### Phase 6: the rest of the Hub generator and the search (D7, D10, D11, D16)
 
 The search cuts and `hub-data.js`, `buildHub`'s and the plugin's splits, the dev rebuild costs

@@ -33,7 +33,14 @@ import {
   type CommentParts,
   type InlineTagPart,
 } from './comments';
-import { getLastApiModel, loadApiModel, type ApiExtractMessage } from './extract';
+import {
+  findLeakedTypes,
+  indexEntries,
+  type ApiEntryIndex,
+  type LeakedType,
+  type LeakNamer,
+} from './entries';
+import { getLastApiModel, loadApiModel, type ApiEntry, type ApiExtractMessage } from './extract';
 import { getApiLinks, type ApiLinks } from './links';
 import {
   API_SECTION_PATH,
@@ -952,6 +959,30 @@ const reportCommentLinks = (diag: HubDiagnostics, index: ApiIndex, links: ApiLin
   }
 };
 
+const namerLabel = ({ name, entry }: LeakNamer) =>
+  entry ? `\`${name}\` (${entry})` : `\`${name}\` (itself on no entry)`;
+
+/**
+ * p619 R2: a type the public API names that no entry exports, once per type at its first
+ * namer's reference. An entry name the model doesn't have is an error: it would have no page.
+ */
+const reportEntries = (diag: HubDiagnostics, entries: ApiEntryIndex, leaks: LeakedType[]) => {
+  for (const { file, message } of entries.problems)
+    diag.error(path.join(ROOT, file), undefined, message);
+  for (const leak of leaks) {
+    const [first, ...rest] = leak.namedBy;
+    const where = leak.sourcePath ? ` (${leak.sourcePath}${leak.line ? `:${leak.line}` : ''})` : '';
+    const more = rest.length
+      ? `, and ${rest.length} more: ${rest.slice(0, 3).map(namerLabel).join(', ')}${rest.length > 3 ? ', …' : ''}`
+      : '';
+    diag.warn(
+      first.fileName ? path.join(ROOT, first.fileName) : TSCONFIG_FILE,
+      first.line,
+      `\`${leak.name}\`${where} is on no entry, but ${namerLabel(first)} names it${more}: add it to an entry, or change the signature`
+    );
+  }
+};
+
 /** `api:` links on every page, by name (§2.3) */
 const createLinkResolver =
   (links: ApiLinks): HubApiLinkResolver =>
@@ -1057,6 +1088,17 @@ const getIndex = (project: ApiIndex['project']) => {
   return index;
 };
 
+const entryIndexes = new WeakMap<ApiIndex, { entries: ApiEntryIndex; leaks: LeakedType[] }>();
+
+const getEntries = (index: ApiIndex, apiEntries: ApiEntry[]) => {
+  let result = entryIndexes.get(index);
+  if (!result) {
+    const entries = indexEntries(index, apiEntries);
+    entryIndexes.set(index, (result = { entries, leaks: findLeakedTypes(index, entries) }));
+  }
+  return result;
+};
+
 const getSearchDocs = (index: ApiIndex) => {
   let docs = searchDocs.get(index);
   if (!docs) searchDocs.set(index, (docs = createSearchDocs(index)));
@@ -1130,6 +1172,8 @@ export const createApiSection = async ({
   }
 
   const index = getIndex(extract.model.project);
+  const { entries, leaks } = getEntries(index, extract.model.entries);
+  reportEntries(diag, entries, leaks);
   const links = getApiLinks(index);
   reportCommentLinks(diag, index, links);
   const highlighter = await loadHubHighlighter();

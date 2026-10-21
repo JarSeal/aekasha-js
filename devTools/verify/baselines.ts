@@ -40,9 +40,7 @@
 import fs from 'fs';
 import path from 'path';
 import { ROOT } from '../paths';
-import { ENTRY_FILES } from '../aliases';
-import { loadApiModel } from '../hub/api/extract';
-import { parseModuleSource } from '../refactor/importGraph';
+import { loadApiModel, type ApiEntry } from '../hub/api/extract';
 import { getOwnMembers, indexApiModel, isDocumented, Kind } from '../hub/api/model';
 import { out, PROGRESS_LOG_WATCH, setProgressLogEnabled } from '../progressLog';
 import { type BuildScript, findDebugCodeInBuild } from './debugInProduction';
@@ -180,16 +178,11 @@ const getSourceLocation = (reflection: { sources?: { fileName: string; line: num
   return source ? `${source.fileName}:${source.line}` : '?';
 };
 
-/** Each entry's export names, from its file's AST (an entry re-exports by name) */
-const collectEntries = (): Record<string, string[]> =>
+/** Each entry's export names, read from its file with the model (`ApiModel.entries`) */
+const collectEntries = (entries: ApiEntry[]): Record<string, string[]> =>
   sortKeys(
     Object.fromEntries(
-      Object.entries(ENTRY_FILES).map(([entry, file]) => {
-        const text = fs.readFileSync(path.join(ROOT, file), 'utf-8');
-        const { exports } = parseModuleSource(file, text);
-        if (exports.star.length) fail(`${file}: an entry re-exports by name, not \`export *\``);
-        return [entry, [...exports.local, ...Object.keys(exports.named)].sort()];
-      })
+      entries.map(({ entry, exports }) => [entry, exports.map(({ name }) => name).sort()])
     )
   );
 
@@ -199,6 +192,12 @@ const collectApiAndDocs = async () => {
   if (!result.model) {
     for (const m of result.messages) out(`  ${m.message}`, true);
     return fail('The TypeDoc conversion failed');
+  }
+  // An entry the model couldn't read (an `export *`, a missing module) would record its names short
+  const errors = result.messages.filter((m) => m.level === 'error');
+  if (errors.length) {
+    for (const m of errors) out(`  ${m.message}`, true);
+    return fail('The API model has errors');
   }
   out(
     `${DIM}  ${result.isCached ? 'cached' : 'converted'} in ${(result.durationMs / 1000).toFixed(1)} s${RESET}`
@@ -258,7 +257,7 @@ const collectApiAndDocs = async () => {
     api: {
       formatVersion: API_FORMAT_VERSION,
       modules: sortKeys(modules),
-      entries: collectEntries(),
+      entries: collectEntries(result.model.entries),
     } as ApiBaseline,
     docs,
     locations,

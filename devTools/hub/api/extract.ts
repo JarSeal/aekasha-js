@@ -1,17 +1,11 @@
 import { fork } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import type {
-  DeclarationReflection,
-  JSONOutput,
-  MinimalNode,
-  MinimalSourceFile,
-  ProjectReflection,
-  Reflection,
-  SignatureReflection,
-} from 'typedoc';
+import type { JSONOutput, MinimalNode, MinimalSourceFile } from 'typedoc';
+import { ENTRY_FILES, type EntryName } from '../../aliases';
 import { hashContent } from '../hash';
 import { HUB_API_CACHE_FILE, PACKAGE_JSON_FILE, ROOT, toRepoPath, TSCONFIG_FILE } from '../paths';
+import { Kind } from './model';
 
 /**
  * The API model (p553 §2.1): TypeDoc's JSON for the engine and the toolkit, from the
@@ -30,15 +24,17 @@ import { HUB_API_CACHE_FILE, PACKAGE_JSON_FILE, ROOT, toRepoPath, TSCONFIG_FILE 
  * good model whatever its inputs (`getLastApiModel`), and its rebuilds convert in a child process
  * (`extractApiModelInChildProcess`), which writes the cache file this process then reads.
  *
- * After the conversion it runs TypeDoc's validation (p605 S5; `convert()` alone runs none):
- * `notExported` (a public signature naming a type the API doesn't export), never `notDocumented`
- * (the docs ratchet in `yarn verify:baselines` gates presence). A warning about a member inherited
- * from another class is dropped: it's the base class's comment (three's, mostly). The model has
- * `typedoc-plugin-zod` (`typedocOptions.plugin`): a `z.infer` / `z.input` alias shows its fields.
+ * The model carries the public entries (`ENTRY_FILES`, p619 D6): each entry file's names and the
+ * modules they come from, read with the conversion (TypeScript is loaded then anyway; the Hub's
+ * builds never load it). After the conversion, `linkNamedReferences` gives a type reference
+ * TypeDoc left by name its reflection (p619 R3). TypeDoc's own validation doesn't run: its
+ * `notExported` checked against every module, and the Hub's leaked type check (`entries.ts`)
+ * checks against the entries, which covers it. The model has `typedoc-plugin-zod`
+ * (`typedocOptions.plugin`): a `z.infer` / `z.input` alias shows its fields.
  */
 
-/** Bump when the options below, the validation or the cache file's shape change */
-const EXTRACT_VERSION = 3;
+/** Bump when the options below, the passes after the conversion or the cache file's shape change */
+const EXTRACT_VERSION = 4;
 
 /** The folders the entry points are in; the engine also imports `src/`'s own files */
 const SOURCE_DIRS = ['src/_engine', 'src/toolkit'].map((dir) => path.join(ROOT, dir));
@@ -47,9 +43,11 @@ const SRC_DIR = path.join(ROOT, 'src');
 const LOCK_FILE = path.join(ROOT, 'yarn.lock');
 /**
  * `typedocOptions.exclude`: they aren't in the model, so they aren't in its hash. The entries
- * (`index.ts`, p606) only re-export: TypeDoc documents the source files until p619.
+ * (`index.ts`, p606) only re-export: TypeDoc documents the source files, and the entry files are
+ * hashed apart (`ENTRY_PATHS`), since the model's entry list comes from them.
  */
 const EXCLUDED_FILE_REGEX = /^(_dbg__|index\.ts$)|\.test\.ts$/;
+const ENTRY_PATHS = Object.values(ENTRY_FILES).map((file) => path.join(ROOT, file));
 /** The child process's entry, run through tsx */
 const CHILD_PROCESS_ENTRY = path.join(ROOT, 'devTools', 'hub', 'api', 'extractProcess.ts');
 
@@ -61,10 +59,29 @@ export type ApiExtractMessage = {
   line?: number;
 };
 
+/** A name on an entry: the module it comes from and its name there */
+export type ApiEntryExport = {
+  name: string;
+  /** Its name in `sourcePath` (`export { a as b }`: `a`) */
+  imported: string;
+  /** From the repo root: `src/_engine/kernel/scene/SceneLoader.ts` */
+  sourcePath: string;
+};
+
+/** An entry (`aekasha/physics`) and its names, in the entry file's order */
+export type ApiEntry = {
+  entry: EntryName;
+  /** From the repo root */
+  file: string;
+  exports: ApiEntryExport[];
+};
+
 export type ApiModel = {
   /** The inputs' hash: an unchanged one is the same model */
   hash: string;
   project: JSONOutput.ProjectReflection;
+  /** In `ENTRY_FILES`' order */
+  entries: ApiEntry[];
   /** TypeDoc's warnings, kept with the model so a cache hit reports them too */
   messages: ApiExtractMessage[];
 };
@@ -96,6 +113,7 @@ const listSourceFiles = (dir: string, files: string[] = []) => {
 /** Whether `file` (absolute) is one of `hashApiInputs`' inputs: the dev plugin's stale check */
 export const isApiInputFile = (file: string) => {
   if (file === TSCONFIG_FILE || file === PACKAGE_JSON_FILE || file === LOCK_FILE) return true;
+  if (ENTRY_PATHS.includes(file)) return true;
   if (!isSourceFileName(path.basename(file))) return false;
   return (
     path.dirname(file) === SRC_DIR || SOURCE_DIRS.some((dir) => file.startsWith(dir + path.sep))
@@ -117,6 +135,7 @@ export const hashApiInputs = () => {
       .readdirSync(SRC_DIR)
       .filter((name) => name.endsWith('.ts'))
       .map((name) => path.join(SRC_DIR, name)),
+    ...ENTRY_PATHS,
     TSCONFIG_FILE,
     PACKAGE_JSON_FILE,
     LOCK_FILE,
@@ -142,7 +161,12 @@ const readCacheFile = (): CacheFile | null => {
   }
 };
 
-const toModel = ({ hash, project, messages }: CacheFile): ApiModel => ({ hash, project, messages });
+const toModel = ({ hash, project, entries, messages }: CacheFile): ApiModel => ({
+  hash,
+  project,
+  entries,
+  messages,
+});
 
 const readCache = (hash: string): ApiModel | null => {
   if (memory?.hash === hash) return memory;
@@ -169,53 +193,128 @@ const findModuleFile = (message: string, project: JSONOutput.ProjectReflection) 
   return fileName ? path.join(ROOT, fileName) : undefined;
 };
 
-/** The reflection a validation warning is about, by its friendly name (TypeDoc 0.28's messages) */
-const VALIDATION_OWNER_REGEXES = [
-  /^Failed to resolve link to .+? in comment for (.+?)(?:\. You may have wanted .*)?$/s,
-  /^The comment for (.+?) links to "/,
-  /, is referenced by (.+?) but not included in the documentation/,
+/**
+ * The entry files' names (p606: an entry holds only named `export … from`; `aliases.test.ts`),
+ * each with the module it comes from; a name re-exported from another entry (the toolkit's
+ * deprecated `createSeededRandom`) with that entry's module. A star re-export, a declaration in
+ * the entry file or a module that isn't there is an error.
+ */
+const readEntries = async (): Promise<{ entries: ApiEntry[]; messages: ApiExtractMessage[] }> => {
+  // TypeScript, through the import graph's parser: only a conversion loads it
+  const { parseModuleSource } = await import('../../refactor/importGraph');
+  const messages: ApiExtractMessage[] = [];
+  const parsed = new Map(
+    Object.entries(ENTRY_FILES).map(([entry, file]) => {
+      const text = fs.readFileSync(path.join(ROOT, file), 'utf-8');
+      return [entry, { file, exports: parseModuleSource(file, text).exports }] as const;
+    })
+  );
+  const resolve = (
+    entry: string,
+    name: string,
+    seen = new Set<string>()
+  ): Omit<ApiEntryExport, 'name'> | string => {
+    const { file, exports } = parsed.get(entry)!;
+    const from = exports.named[name];
+    if (!from) return `\`${name}\` isn't on ${entry}`;
+    if (parsed.has(from.specifier)) {
+      if (seen.has(from.specifier)) return `\`${name}\` is re-exported in a cycle of entries`;
+      return resolve(from.specifier, from.imported, new Set([...seen, entry]));
+    }
+    const base = path.posix.join(path.posix.dirname(file), from.specifier);
+    const sourcePath = [`${base}.ts`, `${base}/index.ts`].find((candidate) =>
+      fs.existsSync(path.join(ROOT, candidate))
+    );
+    return sourcePath
+      ? { imported: from.imported, sourcePath }
+      : `\`${name}\` comes from '${from.specifier}', which isn't a module`;
+  };
+  const entries = [...parsed].map(([entry, { file, exports }]): ApiEntry => {
+    const error = (message: string) =>
+      messages.push({
+        level: 'error',
+        message: `${entry}: ${message}`,
+        file: path.join(ROOT, file),
+      });
+    for (const specifier of exports.star)
+      error(`\`export * from '${specifier}'\`: name each export`);
+    for (const name of exports.local) error(`\`${name}\` is declared in the entry file`);
+    const resolved: ApiEntryExport[] = [];
+    for (const name of Object.keys(exports.named)) {
+      const result = resolve(entry, name);
+      if (typeof result === 'string') error(result);
+      else resolved.push({ name, ...result });
+    }
+    return { entry: entry as EntryName, file, exports: resolved };
+  });
+  return { entries, messages };
+};
+
+/** The reflection kinds a reference by name can mean: what a module declares */
+const NAMED_REFERENCE_KINDS: number[] = [
+  Kind.Enum,
+  Kind.Variable,
+  Kind.Function,
+  Kind.Class,
+  Kind.Interface,
+  Kind.TypeAlias,
 ];
 
 /**
- * Validation warnings name their reflection but carry no position: this finds it, drops the
- * warnings about inherited members (or their parameters) and adds the file and line
+ * p619 R3: a type reference TypeDoc left by name (`{ packagePath, qualifiedName }`) while the
+ * model has its reflection gets that reflection's id. An interface merged by
+ * `declare module 'aekasha'` (`ComponentDataMap`, `CharacterBrainKinds`) is one: the reference
+ * names the merged symbol, which has no reflection of its own. A type parameter (`K`) and another
+ * package's type are left as they are. Changes `project` in place.
  */
-const locateValidationMessages = (project: ProjectReflection, messages: ApiExtractMessage[]) => {
-  const byName = new Map<string, Reflection>();
-  for (const reflection of Object.values(project.reflections)) {
-    // A signature has its declaration's name: the declaration is the one to find
-    const name = reflection.getFriendlyFullName();
-    if (!byName.has(name) || reflection.isDeclaration()) byName.set(name, reflection);
-  }
-  const find = (name: string) => {
-    for (let n = name; n; n = n.includes('.') ? n.slice(0, n.lastIndexOf('.')) : '') {
-      const reflection = byName.get(n);
-      if (reflection) return reflection;
+export const linkNamedReferences = (project: JSONOutput.ProjectReflection) => {
+  const kinds = new Map<number, number>();
+  const collect = (value: unknown) => {
+    if (!value || typeof value !== 'object') return;
+    if (Array.isArray(value)) return value.forEach(collect);
+    const reflection = value as { id?: unknown; variant?: unknown; kind?: unknown };
+    if (typeof reflection.id === 'number' && typeof reflection.variant === 'string') {
+      kinds.set(reflection.id, reflection.kind as number);
     }
-    return undefined;
+    for (const key in value) collect((value as Record<string, unknown>)[key]);
   };
-  return messages.filter((message) => {
-    const owner = VALIDATION_OWNER_REGEXES.map((regex) => message.message.match(regex)?.[1]).find(
-      Boolean
-    );
-    const reflection = owner ? find(owner) : undefined;
-    const chain: Reflection[] = [];
-    for (let r = reflection; r; r = r.parent) chain.push(r);
-    const declarations = chain.filter(
-      (r): r is DeclarationReflection | SignatureReflection => r.isDeclaration() || r.isSignature()
-    );
-    if (declarations.some((r) => r.inheritedFrom)) return false;
-    const source = declarations.find((r) => r.sources?.length)?.sources?.[0];
-    if (source) {
-      message.file = source.fullFileName;
-      message.line = source.line;
+  collect(project.children);
+  /** TypeDoc's `ReflectionId`, a branded number */
+  type Id = Extract<JSONOutput.ReferenceType['target'], number>;
+  const ids = new Map<string, Id>();
+  for (const [id, { packageName, packagePath, qualifiedName }] of Object.entries(
+    project.symbolIdMap ?? {}
+  )) {
+    if (packageName !== project.packageName) continue;
+    if (!NAMED_REFERENCE_KINDS.includes(kinds.get(Number(id)) ?? 0)) continue;
+    ids.set(`${packagePath}\0${qualifiedName}`, Number(id) as Id);
+  }
+  let count = 0;
+  const link = (value: unknown) => {
+    if (!value || typeof value !== 'object') return;
+    if (Array.isArray(value)) return value.forEach(link);
+    const type = value as JSONOutput.ReferenceType;
+    if (
+      type.type === 'reference' &&
+      !type.refersToTypeParameter &&
+      typeof type.target === 'object' &&
+      type.target.packageName === project.packageName
+    ) {
+      const id = ids.get(`${type.target.packagePath}\0${type.target.qualifiedName}`);
+      if (id !== undefined) {
+        type.target = id;
+        count++;
+      }
     }
-    return true;
-  });
+    for (const key in value) link((value as Record<string, unknown>)[key]);
+  };
+  link(project.children);
+  return count;
 };
 
 const convert = async (): Promise<{
   project: JSONOutput.ProjectReflection | null;
+  entries: ApiEntry[];
   messages: ApiExtractMessage[];
 }> => {
   const { Application, Logger, LogLevel } = await import('typedoc');
@@ -268,22 +367,19 @@ const convert = async (): Promise<{
     // Required with `disableGit`; the Hub builds its own links from the file and line
     sourceLinkTemplate: '{path}#L{line}',
     logLevel: 'Warn',
-    // `invalidLink` is off: the Hub's renderer reports every `{@link}` that links nowhere already
-    // (`comments.ts`), and TypeDoc's would repeat each one
-    validation: { notExported: true, invalidLink: false, notDocumented: false },
   });
   app.logger = new CapturingLogger();
   const project = await app.convert();
-  if (!project) return { project: null, messages };
-  const converted = messages.splice(0);
-  app.validate(project);
-  messages.unshift(...converted, ...locateValidationMessages(project, messages.splice(0)));
+  if (!project) return { project: null, entries: [], messages };
   const json = app.serializer.projectToObject(
     project,
     ROOT as Parameters<typeof app.serializer.projectToObject>[1]
   );
+  linkNamedReferences(json);
   for (const message of messages) message.file ??= findModuleFile(message.message, json);
-  return { project: json, messages };
+  const { entries, messages: entryMessages } = await readEntries();
+  messages.push(...entryMessages);
+  return { project: json, entries, messages };
 };
 
 /**
@@ -300,7 +396,7 @@ export const loadApiModel = async (): Promise<ApiExtractResult> => {
   }
 
   try {
-    const { project, messages } = await convert();
+    const { project, entries, messages } = await convert();
     if (!project) {
       if (!messages.some((m) => m.level === 'error')) {
         messages.push({
@@ -311,7 +407,7 @@ export const loadApiModel = async (): Promise<ApiExtractResult> => {
       }
       return { model: null, messages, isCached: false, durationMs: durationMs() };
     }
-    memory = { hash, project, messages };
+    memory = { hash, project, entries, messages };
     failure = null;
     writeCache(memory);
     return { model: memory, messages, isCached: false, durationMs: durationMs() };
