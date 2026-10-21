@@ -1,3 +1,5 @@
+// The Lights tab and the light edit window. Over 800 lines, and `createEditLightContent` over 150:
+// a Tweakpane panel, which p800 replaces, so it isn't split (p618 D8).
 import * as THREE from 'three/webgpu';
 import type { ButtonApi, ListBladeApi } from 'tweakpane';
 import { Pane } from 'tweakpane';
@@ -349,9 +351,7 @@ const applyLightField: {
     setLightObjectCullingEnabled(entityId, value, world),
   position: ({ world, entityId }, value) => {
     world.setTransform(entityId, { pos: value });
-    const helper = world.getComponent(entityId, ComponentType.DEBUG_LIGHT_HELPER);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (helper && 'update' in helper.value) (helper.value as any).update();
+    world.getComponent(entityId, ComponentType.DEBUG_LIGHT_HELPER)?.value.update();
   },
   // The target entity is found through the light's current TARGET_LINK, so it doesn't
   // need a stable app id of its own.
@@ -759,11 +759,7 @@ export const createEditLightContent = (data?: { [key: string]: unknown }) => {
         // to avoid the double-trigger from setTransform calls.
         if (!e.last) return;
         world.setTransform(entityId, { pos: transform.position });
-        const helper = world.getComponent(entityId, ComponentType.DEBUG_LIGHT_HELPER);
-        if (helper && 'update' in helper.value) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (helper.value as any).update();
-        }
+        world.getComponent(entityId, ComponentType.DEBUG_LIGHT_HELPER)?.value.update();
         save('position', transform.position);
         record('position', toLightPos(transform.position));
       });
@@ -1389,8 +1385,7 @@ const refreshLightShadowsAsync = async (light: THREE.Light, entityId: number, wo
   if (oldHelperComp) disposeLightHelpers(oldHelperComp);
   // Deleted while the module loaded (eg. a scene change): nothing to attach the helpers to
   if (!world.isAlive(entityId)) return;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  attachLightHelpers(entityId, newLight as any, world, rootScene);
+  attachLightHelpers(entityId, newLight, world, rootScene);
 
   // The helper geometry needs to be rebuilt based on the new projection
   const newHelperComp = world.getComponent(entityId, ComponentType.DEBUG_LIGHT_HELPER);

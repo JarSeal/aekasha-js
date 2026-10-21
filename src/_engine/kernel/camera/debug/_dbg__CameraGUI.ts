@@ -1,3 +1,5 @@
+// The Cameras tab and the camera edit window. `createEditCameraContent` is over 150 lines: a
+// Tweakpane panel, which p800 replaces, so it isn't split (p618 D8).
 import * as THREE from 'three/webgpu';
 import { Pane, type ButtonApi } from 'tweakpane';
 import type { ECSWorld } from '../../ecs/ECS';

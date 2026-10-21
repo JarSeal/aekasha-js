@@ -1,3 +1,5 @@
+// The Debug tools tab. Over 800 lines, and `buildDebugToolsItems` over 150: a Tweakpane panel,
+// which p800 replaces, so it isn't split (p618 D8).
 import type * as THREE from 'three/webgpu';
 import { getRenderer, getRendererOptions } from '../kernel/render/Renderer';
 import { lsGetItem, lsSetItem } from '../utils/LocalAndSessionStorage';

@@ -431,11 +431,10 @@ export const _updateDebuggerSceneTitle = (title: string) => {
 export const _disableDebugger = (disable: boolean) => {
   if (!IS_DEBUG_ENV) return;
   debuggerDisabled = disable;
+  // TODO: the on-screen tools stay clickable (docs/issues/on-screen-tools-during-scene-load.md)
   if (disable) {
     drawerCMP?.updateClass(styles.debuggerDisabled, 'add');
     return;
   }
   drawerCMP?.updateClass(styles.debuggerDisabled, 'remove');
-
-  // @TODO: disable also the on screen tools
 };

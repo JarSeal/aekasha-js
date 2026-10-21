@@ -370,11 +370,8 @@ const readCensus = (settings: Readonly<ProfilerSettings>) => {
 
 // --- REGISTRATION ---
 
-/**
- * Registers the built-in stats sources. Called once by the profiler module.
- * @param settings (object) the live profiler settings (`measureGpu`)
- */
-export const registerBuiltInStatsSources = (settings: Readonly<ProfilerSettings>) => {
+/** The GPU frame time and the draw counters. */
+const registerFrameSources = (settings: Readonly<ProfilerSettings>) => {
   registerStatsSource<GpuFrameStats>({
     id: PROFILER_SOURCE.GPU_FRAME,
     label: 'GPU frame time',
@@ -409,7 +406,10 @@ export const registerBuiltInStatsSources = (settings: Readonly<ProfilerSettings>
       return drawStats.frames ? drawStats : null;
     },
   });
+};
 
+/** The physics step, its sub-steps and the physics objects. */
+const registerPhysicsSources = () => {
   registerStatsSource<PhysicsStepStats>({
     id: PROFILER_SOURCE.PHYSICS_STEP,
     label: 'Physics step',
@@ -458,7 +458,10 @@ export const registerBuiltInStatsSources = (settings: Readonly<ProfilerSettings>
     availability: () => (isPhysicsWorldEnabled() ? true : 'no physics world'),
     read: getPhysicsObjectCounts,
   });
+};
 
+/** The JS heap (Chromium) and three's GPU memory estimate. */
+const registerMemorySources = () => {
   registerStatsSource<JsMemoryStats>({
     id: PROFILER_SOURCE.MEMORY_JS,
     label: 'JS heap',
@@ -483,7 +486,10 @@ export const registerBuiltInStatsSources = (settings: Readonly<ProfilerSettings>
       return renderer ? { bytes: renderer.info.memory.total } : null;
     },
   });
+};
 
+/** The ray casts and PostFX. */
+const registerRenderSources = () => {
   registerStatsSource<RayStats>({
     id: PROFILER_SOURCE.RAYS,
     label: 'Ray casts',
@@ -542,7 +548,10 @@ export const registerBuiltInStatsSources = (settings: Readonly<ProfilerSettings>
       };
     },
   });
+};
 
+/** The long tasks, the scene and the in-view census. */
+const registerPageSources = (settings: Readonly<ProfilerSettings>) => {
   registerStatsSource<LongTaskStats>({
     id: PROFILER_SOURCE.LONG_TASKS,
     label: 'Long tasks',
@@ -588,4 +597,16 @@ export const registerBuiltInStatsSources = (settings: Readonly<ProfilerSettings>
     availability: getCensusAvailability,
     read: readCensus(settings),
   });
+};
+
+/**
+ * Registers the built-in stats sources. Called once by the profiler module.
+ * @param settings the live profiler settings (`measureGpu`, the census' update rate and helpers)
+ */
+export const registerBuiltInStatsSources = (settings: Readonly<ProfilerSettings>) => {
+  registerFrameSources(settings);
+  registerPhysicsSources();
+  registerMemorySources();
+  registerRenderSources();
+  registerPageSources(settings);
 };

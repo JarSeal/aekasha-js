@@ -1,3 +1,6 @@
+// The Physics API tab and the physics entity window. Over 800 lines, and
+// `_createPhysicsAPIDebugGUI` (its `content`) and `createEditPhysicsEntityContent` over 150: a
+// Tweakpane panel, which p800 replaces, so it isn't split (p618 D8).
 import * as THREE from 'three/webgpu';
 import { Pane } from 'tweakpane';
 import {

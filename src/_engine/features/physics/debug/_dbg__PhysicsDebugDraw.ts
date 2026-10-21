@@ -1,3 +1,6 @@
+// The physics wireframes: their colours (config, tab and per-entity overrides, persisted), the pose
+// source, the line build and the sync. Over 800 lines as one feature's debug drawing; p618 reviewed
+// it for correctness only (D1), so it is split when it is next reworked.
 import * as THREE from 'three/webgpu';
 
 import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../../../kernel/loop/SystemStages';

@@ -8,6 +8,8 @@
  * The copy is a separate registered material (`__matEditor__<id>`), so the scene's own instance
  * of the material is never used or changed. It only lives while the view is active: it is
  * created on enter and deleted on exit.
+ *
+ * Over 800 lines: an editor view's UI, which p800 replaces, so it isn't split (p618 D8).
  */
 import * as THREE from 'three/webgpu';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';

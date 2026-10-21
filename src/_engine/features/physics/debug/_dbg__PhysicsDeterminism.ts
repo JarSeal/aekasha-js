@@ -251,11 +251,11 @@ const report = (run: ActiveRun) => {
   llog(
     `[PhysicsProbe] steps ${run.startStep} → ${run.targetStep} of the current world, ${bodies.length} bodies hashed`
   );
-  // eslint-disable-next-line no-console
+  // eslint-disable-next-line no-console -- the probe's report: the bodies as a table, which the logger can't print
   console.table(toTableRows(bodies));
   if (characters.length) {
     llog('[PhysicsProbe] characters (not hashed):');
-    // eslint-disable-next-line no-console
+    // eslint-disable-next-line no-console -- as the bodies' table above
     console.table(toTableRows(characters));
   }
 

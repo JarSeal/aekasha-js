@@ -1,3 +1,5 @@
+// The Assets tab and its windows. Over 800 lines: a Tweakpane panel, which p800 replaces, so it
+// isn't split (p618 D8).
 import type * as THREE from 'three/webgpu';
 import {
   createDebuggerTab,

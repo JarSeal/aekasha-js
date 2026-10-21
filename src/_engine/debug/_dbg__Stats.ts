@@ -407,17 +407,6 @@ const setDebuggerUI = () => {
     },
   });
 
-  // @TODO: add current scene and all loaded scene stats (draw calls and GPU memory are in the
-  // profiler's GPU memory tab, _dbg__GPUMemory.ts)
-  // Current and all scenes stats:
-  // - objects count (Object3D)
-  // - mesh count
-  // - face count
-  // - edge count
-  // - vertex count
-  // - imported objects count
-  // - list of imported objects (and sizes, face count, edge count, vertex count)
-  // - list of primitive objects (face count, edge count, vertex count)
   // - texture count, texture sizes, list of textures (and type, sizes, dimensions)
 };
 

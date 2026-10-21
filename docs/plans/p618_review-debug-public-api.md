@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-4 implemented
 Category: Refactoring, Documentation, Debug
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -780,7 +780,7 @@ As built, section 2 (2026-10-21, uncommitted on top of `cf071c3`):
   `--check` clean.
 - **Checks:** `tsc` (both), `yarn lint`, `yarn test` (109 files, 867 passed, 1 skipped).
 
-### Phase 4: docs and hygiene (D8, D10)
+### Phase 4: docs and hygiene (D8, D10) — done
 
 1. D10's docs, P6's stale text. `DebuggerTabDef` (`content`, `onRefresh`) and `debug/CLAUDE.md` say
    the open tab is rebuilt on a scene change (F1 as built) and the other tabs are built fresh on
@@ -828,6 +828,44 @@ As built, section 1 (2026-10-21, uncommitted on top of `6390367`):
   examples among them). `yarn hub:build`: 434 pages, no warning in scope (Phase 0's five
   `notExported` ones are gone; the search index size warning is p619's). `moveMap.ts --check`
   clean.
+- **Open (asked 2026-10-21, not yet answered):** `createDebuggerTab`'s drop before the drawer
+  loads: a Phase 5 fix (pending tabs, as `createProfilerTab` keeps them) or an issue file.
+
+As built, section 2 (2026-10-21, uncommitted on top of section 1):
+
+- **H1:** the six `any` casts gone. `DEBUG_LIGHT_HELPER`'s helpers all have `update()` and
+  `CameraHelper` has `dispose()` (on `Object3D` in three's types), so the light GUI's two
+  position handlers and the camera helper's delete hook call them directly. `attachLightHelpers`
+  takes a `THREE.Light` and narrows it itself: the helper and its shadow camera per light class
+  (the old `'castShadow' in light` was true for any `Object3D`; the same three classes get a
+  shadow camera helper as before). The probe's two `console.table`s got their reason.
+- **H2:** `_dbg__Stats.ts`' TODO dropped as obsolete (the scene's object, triangle and vertex
+  figures are the profiler's Objects tab and census, the imports the Assets tab).
+  `_disableDebugger`'s is real (the on-screen tools stay clickable during a load; plausible
+  effects: an undo mid-load, an editor view entered mid-load): filed as
+  `docs/issues/on-screen-tools-during-scene-load.md`, the TODO naming it. Phase 5's "issue files
+  (H2)" is done with it.
+- **Z1 / Z3 headers:** a header line on each debug file over 800 lines or with a function over
+  150, naming the function. The panels (`_dbg__Assets.ts`, `_dbg__PhysicsAPI.ts`,
+  `_dbg__RayTester.ts`, `_dbg__LightGUI.ts`, `_dbg__DebugTools.ts`, `_dbg__SpatialGrid.ts`,
+  `_dbg__CameraGUI.ts`, `_dbg__LOD.ts`): "a Tweakpane panel, which p800 replaces, so it isn't
+  split (p618 D8)"; `_dbg__CharacterStateWindow.ts` the same as "debugger UI (HTML through CMP)",
+  `_dbg__MaterialEditor.ts` as "an editor view's UI". The two that draw rather than show UI,
+  `_dbg__PhysicsDebugDraw.ts` and `_dbg__CharacterGizmos.ts`, say what they hold and that p618
+  reviewed them for correctness only (D1), to be split when next reworked: p800 doesn't replace
+  them.
+- **Z3 splits (the framework's):** `registerBuiltInStatsSources` (215 lines) into five group
+  functions in the same registration order (frame, physics, memory, render, page);
+  `createEditorDrawer` (189) with its elements (`createDrawerElements`) and its menu
+  (`buildTabMenu`) moved out; and `createTabHost`, which B3's `try` had grown from 149 to 198, with
+  its build helpers (`runOnRefresh`, `addCmpSectionRefresher`, `buildSections`,
+  `buildTabContent`) moved to module level (they read only the host's `label`, now a parameter).
+  No function in the framework is over 150 lines now; the code is moved, not changed. Not checked in
+  the dev server: the tab host's and the drawer's tests cover the host, and Phase 6's scene run and
+  drawer pass cover the rest.
+- **Checks:** `tsc` (both), `yarn lint`, `yarn test` (109 files, 867 passed, 1 skipped).
+  `yarn verify:baselines`: all unchanged, no debug code in the production build or the banner.
+  `docs.json` unchanged, `moveMap.ts --check` clean.
 
 ### Phase 5: the Hub, `CLAUDE.md`, readme, and what's filed
 

@@ -1,3 +1,6 @@
+// The character gizmos: their toggles, the line writers (arrows, casts, sensors, the trail) and the
+// refill. Over 800 lines as one feature's debug drawing; p618 reviewed it for correctness only
+// (D1), so it is split when it is next reworked.
 import { getBodyKind } from '../CharacterBodyPlans';
 import * as THREE from 'three/webgpu';
 import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../../../kernel/loop/SystemStages';
