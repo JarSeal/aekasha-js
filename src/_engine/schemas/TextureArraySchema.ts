@@ -38,7 +38,7 @@ export const TextureArrayAssetSchema = z.object({
       "Width and height every layer is resized to (default: the layers' size, which must then agree). The optimize step fits it into its maxSize."
     ),
   /** The array's sampler state and colour space (`colorSpace` decides how the layers are read) */
-  texOpts: TexOptsSchema.omit({ image: true }).optional(),
+  texOpts: TexOptsSchema.optional(),
   /** Build time only: never read by the runtime */
   optimize: TextureArrayOptimizeSchema.optional(),
   throwOnError: z.boolean().optional(),

@@ -12,6 +12,9 @@ const LightBaseProps = z.object({
   appId: z.string().optional(),
 });
 
+// A shadow map's width and height, a shadow camera's near and far
+const PairSchema = z.tuple([z.number(), z.number()]);
+
 const Ambient = LightBaseProps.extend({
   type: z.literal('AMBIENT'),
   color: ColorJSONSchema.optional(),
@@ -38,8 +41,8 @@ const Point = LightBaseProps.extend({
   shadowPreset: ShadowQualitySchema.optional(),
   shadowBias: z.number().optional(),
   shadowNormalBias: z.number().optional(),
-  shadowMapSize: z.array(z.number()).length(2).optional(),
-  shadowCameraNearFar: z.array(z.number()).length(2).optional(),
+  shadowMapSize: PairSchema.optional(),
+  shadowCameraNearFar: PairSchema.optional(),
   shadowBlurSamples: z.number().optional(),
   shadowRadius: z.number().optional(),
   shadowIntensity: z.number().optional(),
@@ -55,9 +58,9 @@ const Directional = LightBaseProps.extend({
   shadowPreset: ShadowQualitySchema.optional(),
   shadowBias: z.number().optional(),
   shadowNormalBias: z.number().optional(),
-  shadowMapSize: z.array(z.number()).length(2).optional(),
-  shadowCameraNearFar: z.array(z.number()).length(2).optional(),
-  shadowCameraFrustum: z.array(z.number()).length(4).optional(), // left, right, top, bottom for directional light shadow camera
+  shadowMapSize: PairSchema.optional(),
+  shadowCameraNearFar: PairSchema.optional(),
+  shadowCameraFrustum: z.tuple([z.number(), z.number(), z.number(), z.number()]).optional(),
   shadowBlurSamples: z.number().optional(),
   shadowRadius: z.number().optional(),
   shadowIntensity: z.number().optional(),
@@ -79,28 +82,32 @@ const Spot = LightBaseProps.extend({
   shadowPreset: ShadowQualitySchema.optional(),
   shadowBias: z.number().optional(),
   shadowNormalBias: z.number().optional(),
-  shadowMapSize: z.array(z.number()).length(2).optional(),
-  shadowCameraNearFar: z.array(z.number()).length(2).optional(),
+  shadowMapSize: PairSchema.optional(),
+  shadowCameraNearFar: PairSchema.optional(),
   shadowBlurSamples: z.number().optional(),
   shadowRadius: z.number().optional(),
   shadowIntensity: z.number().optional(),
-  map: z.union([z.string(), z.unknown()]).optional(),
+  map: z.string().optional(),
 });
 
-const LightProps = z.union([Ambient, Hemisphere, Point, Directional, Spot]);
+const LIGHT_VARIANTS = [Ambient, Hemisphere, Point, Directional, Spot] as const;
+
+const LightProps = z.discriminatedUnion('type', LIGHT_VARIANTS);
 
 export type LightProps = z.infer<typeof LightProps>;
 
-const LightOverridesSchema = z.object({
-  __meta: MetaSchema.optional(),
-  ...Ambient.shape,
-  ...Hemisphere.shape,
-  ...Point.shape,
-  ...Directional.shape,
-  ...Spot.shape,
-  enabled: z.boolean().optional(),
-  type: z.enum(['AMBIENT', 'HEMISPHERE', 'POINT', 'DIRECTIONAL', 'SPOT']).optional(),
-});
+// Every type's fields, each optional: a save entry replaces the fields it gives
+const LightOverridesSchema = z
+  .object({
+    __meta: MetaSchema,
+    ...Ambient.shape,
+    ...Hemisphere.shape,
+    ...Point.shape,
+    ...Directional.shape,
+    ...Spot.shape,
+    type: z.enum(LIGHT_VARIANTS.map((variant) => variant.shape.type.value)),
+  })
+  .partial();
 
 export type LightOverrides = z.infer<typeof LightOverridesSchema>;
 

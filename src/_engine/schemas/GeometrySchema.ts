@@ -80,37 +80,29 @@ const ConeVariant = GeoBaseProps.extend({
     .optional(),
 });
 
-export const GeoPropsSchema = z.union([
+const GEO_VARIANTS = [
   BoxVariant,
   SphereVariant,
   CylinderVariant,
   CapsuleVariant,
   ConeVariant,
-]);
+] as const;
+
+export const GeoPropsSchema = z.discriminatedUnion('type', GEO_VARIANTS);
 
 export type GeoProps = z.infer<typeof GeoPropsSchema>;
 
+// Every type's params, each optional: a save entry's params go over the geometry's
 const GeoOverridesSchema = z.object({
   __meta: MetaSchema.optional(),
   debugData: DebugDataSchema.optional(),
   params: z
     .object({
-      width: z.number().optional(),
-      height: z.number().optional(),
-      depth: z.number().optional(),
-      widthSegments: z.number().optional(),
-      heightSegments: z.number().optional(),
-      depthSegments: z.number().optional(),
-      radius: z.number().optional(),
-      phiStart: z.number().optional(),
-      phiLength: z.number().optional(),
-      thetaStart: z.number().optional(),
-      thetaLength: z.number().optional(),
-      radiusTop: z.number().optional(),
-      radiusBottom: z.number().optional(),
-      radialSegments: z.number().optional(),
-      openEnded: z.boolean().optional(),
-      capSegments: z.number().optional(),
+      ...BoxVariant.shape.params.unwrap().shape,
+      ...SphereVariant.shape.params.unwrap().shape,
+      ...CylinderVariant.shape.params.unwrap().shape,
+      ...CapsuleVariant.shape.params.unwrap().shape,
+      ...ConeVariant.shape.params.unwrap().shape,
     })
     .optional(),
 });

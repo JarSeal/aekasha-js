@@ -6,7 +6,7 @@
       "type": "string"
     },
     "geoProps": {
-      "anyOf": [
+      "oneOf": [
         {
           "type": "object",
           "properties": {

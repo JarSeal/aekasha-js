@@ -43,7 +43,7 @@ export const TextureAtlasSlotSchema = z
   .strictObject({
     /** The slot texture's sampler state and colour space (`colorSpace` decides how its sources
      * are read) */
-    texOpts: TexOptsSchema.omit({ image: true }).optional(),
+    texOpts: TexOptsSchema.optional(),
     image: z
       .string()
       .min(1)
@@ -187,7 +187,7 @@ export type TextureAtlasSlotInfo = z.infer<typeof TextureAtlasSlotInfoSchema>;
 /** A slot as a texture in the generated data */
 export const TextureAtlasSlotTextureSchema = z.object({
   id: z.string(),
-  texOpts: TexOptsSchema.omit({ image: true }).optional(),
+  texOpts: TexOptsSchema.optional(),
   throwOnError: z.boolean().optional(),
   userData: UserDataSchema.optional(),
   debugData: DebugDataSchema.optional(),

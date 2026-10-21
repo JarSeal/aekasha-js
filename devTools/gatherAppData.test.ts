@@ -37,9 +37,8 @@ describe('the repo’s asset JSONs', () => {
 });
 
 describe('bad assets fail', () => {
-  // Each is a repo asset with one thing broken, and must fail on a path along the broken one (at
-  // it, inside it or above it). A light's bad intensity is reported on `lightProps` alone: it's a
-  // plain union of the light types, which the gatherer's expandUnionIssues can't narrow.
+  // Each is a repo asset with one thing broken, and must fail at the broken path or inside it (the
+  // unions discriminate on `type`, so a light's bad field is reported at the field).
   const cases: [string, string, string, (json: Record<string, unknown>) => unknown][] = [
     ['a scene without an id', '.scene.json', 'id', (json) => omit(json, 'id')],
     ['a scene without a sceneFile', '.scene.json', 'sceneFile', (json) => omit(json, 'sceneFile')],
@@ -47,7 +46,7 @@ describe('bad assets fail', () => {
     [
       'a light of an unknown type',
       '.light.json',
-      'lightProps',
+      'lightProps.type',
       (json) => ({ ...json, lightProps: { ...(json.lightProps as object), type: 'LASER' } }),
     ],
     [
@@ -55,6 +54,30 @@ describe('bad assets fail', () => {
       '.light.json',
       'lightProps.intensity',
       (json) => ({ ...json, lightProps: { ...(json.lightProps as object), intensity: 'bright' } }),
+    ],
+    [
+      'a shadow map size that isn’t a pair',
+      '.light.json',
+      'lightProps.shadowMapSize',
+      (json) => ({ ...json, lightProps: { type: 'DIRECTIONAL', shadowMapSize: [1024, 1024, 1] } }),
+    ],
+    [
+      'a spot light whose map isn’t a texture id',
+      '.light.json',
+      'lightProps.map',
+      (json) => ({ ...json, lightProps: { type: 'SPOT', map: { image: 'x' } } }),
+    ],
+    [
+      'a camera with a string fov',
+      '.camera.json',
+      'camProps.fov',
+      (json) => ({ ...json, camProps: { type: 'PERSPECTIVE', fov: 'wide' } }),
+    ],
+    [
+      'a geometry with a string param',
+      '.geometry.json',
+      'geoProps.params.radius',
+      (json) => ({ ...json, geoProps: { type: 'SPHERE', params: { radius: 'big' } } }),
     ],
     [
       'an impostor of an unknown kind',
@@ -76,9 +99,7 @@ describe('bad assets fail', () => {
     const issues = validateGatheredJson(file, breakIt(json));
     const paths = issues?.map((issue) => issue.path) ?? [];
     expect(
-      paths.some(
-        (p) => p === issuePath || p.startsWith(`${issuePath}.`) || issuePath.startsWith(`${p}.`)
-      ),
+      paths.some((p) => p === issuePath || !issuePath || p.startsWith(`${issuePath}.`)),
       `issues at ${JSON.stringify(paths)}`
     ).toBe(true);
   });

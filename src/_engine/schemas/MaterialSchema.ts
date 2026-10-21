@@ -25,7 +25,7 @@ export const MaterialVariantOverridesSchema = z.object({
   nodes: z.record(z.string(), TslNodeInputsSchema).optional(),
 });
 
-const MaterailBaseProps = z.object({
+const MaterialBaseProps = z.object({
   // Common props
   id: z.string({ error: "Material 'id' key is required." }),
   isPersistent: z.boolean().optional(),
@@ -43,7 +43,7 @@ const MaterailBaseProps = z.object({
 
 export const MaterialAssetSchema = z.union([
   z.object({
-    ...MaterailBaseProps.shape,
+    ...MaterialBaseProps.shape,
     tslFile: z.string(),
     staticDefines: z.record(z.string(), z.any()).optional(),
     nodes: z.record(z.string(), TslNodeInputsSchema).optional(),
@@ -62,7 +62,7 @@ export const MaterialAssetSchema = z.union([
     ),
   }),
   z.object({
-    ...MaterailBaseProps.shape,
+    ...MaterialBaseProps.shape,
     type: z.enum(
       [
         'LINEBASIC',

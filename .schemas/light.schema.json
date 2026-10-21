@@ -6,7 +6,7 @@
       "type": "string"
     },
     "lightProps": {
-      "anyOf": [
+      "oneOf": [
         {
           "type": "object",
           "properties": {
@@ -226,20 +226,32 @@
               "type": "number"
             },
             "shadowMapSize": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
               "minItems": 2,
               "maxItems": 2,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
+              "additionalItems": false
             },
             "shadowCameraNearFar": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
               "minItems": 2,
               "maxItems": 2,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
+              "additionalItems": false
             },
             "shadowBlurSamples": {
               "type": "number"
@@ -358,28 +370,52 @@
               "type": "number"
             },
             "shadowMapSize": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
               "minItems": 2,
               "maxItems": 2,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
+              "additionalItems": false
             },
             "shadowCameraNearFar": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
               "minItems": 2,
               "maxItems": 2,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
+              "additionalItems": false
             },
             "shadowCameraFrustum": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
               "minItems": 4,
               "maxItems": 4,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
+              "additionalItems": false
             },
             "shadowBlurSamples": {
               "type": "number"
@@ -516,20 +552,32 @@
               "type": "number"
             },
             "shadowMapSize": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
               "minItems": 2,
               "maxItems": 2,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
+              "additionalItems": false
             },
             "shadowCameraNearFar": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
               "minItems": 2,
               "maxItems": 2,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
+              "additionalItems": false
             },
             "shadowBlurSamples": {
               "type": "number"
@@ -541,12 +589,7 @@
               "type": "number"
             },
             "map": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {}
-              ]
+              "type": "string"
             }
           },
           "required": [
@@ -790,20 +833,32 @@
               "type": "number"
             },
             "shadowMapSize": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
               "minItems": 2,
               "maxItems": 2,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
+              "additionalItems": false
             },
             "shadowCameraNearFar": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
               "minItems": 2,
               "maxItems": 2,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
+              "additionalItems": false
             },
             "shadowBlurSamples": {
               "type": "number"
@@ -835,12 +890,24 @@
               "additionalProperties": false
             },
             "shadowCameraFrustum": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
               "minItems": 4,
               "maxItems": 4,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
+              "additionalItems": false
             },
             "angle": {
               "type": "number"
@@ -849,12 +916,7 @@
               "type": "number"
             },
             "map": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {}
-              ]
+              "type": "string"
             }
           },
           "additionalProperties": false

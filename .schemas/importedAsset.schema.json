@@ -23,7 +23,6 @@
             "texOpts": {
               "type": "object",
               "properties": {
-                "image": {},
                 "mapping": {
                   "type": "number"
                 },
@@ -916,7 +915,6 @@
                     "texOpts": {
                       "type": "object",
                       "properties": {
-                        "image": {},
                         "mapping": {
                           "type": "number"
                         },

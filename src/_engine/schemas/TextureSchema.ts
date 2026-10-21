@@ -10,7 +10,6 @@ import {
 } from './AssetsConfigSchema';
 
 export const TexOptsSchema = z.object({
-  image: z.unknown().optional(), // Can't validate TexImageSource or OffscreenCanvas with zod, so using unknown
   mapping: z.number().optional(),
   wrapS: z.number().optional(),
   wrapT: z.number().optional(),

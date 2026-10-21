@@ -6,6 +6,8 @@ import type { createCameraEntity } from '../kernel/camera/Camera';
 import type { LightProps } from '../kernel/light/Light';
 import type { MeshProps } from '../kernel/mesh/Mesh';
 import type { SceneData } from '../kernel/scene/Scene';
+import type { EntityDebugData } from '../kernel/ecs/ECSRegistry';
+import type { DebugData } from './_HelperSchemas';
 import type { CameraAsset } from './CameraSchema';
 import type { GeoProps as GeoPropsJson } from './GeometrySchema';
 import type { LightAsset } from './LightSchema';
@@ -22,11 +24,9 @@ import type { TextureAsset } from './TextureSchema';
 // types to each other in a scratch file to read TypeScript's own.
 //
 // The differences only in how the types are written, each swapped for the runtime's before the
-// comparison (the schema side is p619's to tighten):
-// - `texOpts`: three's constants (wrapS, minFilter, …) are plain numbers in a JSON, and a JSON
-//   has no `image` (the schema's `unknown`).
-// - A light's shadow sizes: zod's `.length(n)` types a tuple as `number[]`; a spot light's `map`
-//   is the schema's `string | unknown` (a JSON gives an id).
+// comparison:
+// - `texOpts`: three's constants (wrapS, minFilter, …) are plain numbers in a JSON. p302 D1 gives
+//   the JSON named constants ("wrapS": "REPEAT"), which this swap then maps.
 // - Materials: zod's object with a `type` enum is one runtime member per type, which TypeScript
 //   doesn't split on its own (`PerType`).
 // - A scene's `meshes` and `importedAssets`: the scene schema doesn't validate an inline entry
@@ -50,15 +50,12 @@ type PerType<T> = T extends { type: infer Type }
 
 type TexOptsJson = NonNullable<TextureAsset['texOpts']>;
 type TexOptsRuntime = NonNullable<TextureProps['texOpts']>;
-type TexOptsSwapped = 'image' | 'mapping' | 'wrapS' | 'wrapT' | 'magFilter' | 'minFilter' | 'type';
+type TexOptsSwapped = 'mapping' | 'wrapS' | 'wrapT' | 'magFilter' | 'minFilter' | 'type';
 type WithTexOpts<T> = Omit<T, 'texOpts'> & {
   texOpts?: Swap<TexOptsJson, TexOptsRuntime, TexOptsSwapped>;
 };
 
-type LightSwapped = 'shadowMapSize' | 'shadowCameraNearFar' | 'shadowCameraFrustum' | 'map';
-type LightPropsJson<T = LightAsset['lightProps']> = T extends { type: infer Type }
-  ? Swap<T, Extract<LightProps, { type: Type }>, LightSwapped>
-  : never;
+type LightPropsJson = LightAsset['lightProps'];
 
 type SceneLightJson = Exclude<NonNullable<SceneAsset['lights']>[number], string>;
 type SceneTextureJson = Exclude<NonNullable<SceneAsset['textures']>[number], string>;
@@ -110,6 +107,11 @@ describe('the asset JSONs fit their runtime types', () => {
       Omit<MeshPropsJson, 'mat'> & { mat: string | PerType<MeshMatJson> }
     >().toExtend<MeshProps>();
     expectTypeOf<ExtraKeys<MeshPropsJson, MeshProps>>().toEqualTypeOf<never>();
+  });
+
+  test('debugData (an entity’s or an asset’s) → EntityDebugData', () => {
+    // The same fields: ECSRegistry.ts imports nothing, so it writes the type out
+    expectTypeOf<DebugData>().toEqualTypeOf<EntityDebugData>();
   });
 
   test('scene (*.scene.json, its inline entries as the gatherer keeps them) → SceneData', () => {

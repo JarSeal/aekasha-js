@@ -402,6 +402,17 @@ const getProfileOutputs = (
   return null;
 };
 
+/** zod writes a draft-07 tuple as its `items` alone, which any length passes: the length is
+ * added (`additionalItems: false` unless it has a rest). */
+const sizeTuple: NonNullable<Parameters<typeof z.toJSONSchema>[1]>['override'] = (ctx) => {
+  const def = ctx.zodSchema._zod.def;
+  if (def.type !== 'tuple') return;
+  ctx.jsonSchema.minItems = def.items.filter((item) => item._zod.optin !== 'optional').length;
+  if (def.rest) return;
+  ctx.jsonSchema.maxItems = def.items.length;
+  ctx.jsonSchema.additionalItems = false;
+};
+
 /**
  * Writes the asset JSONs' JSON Schemas into `.schemas/` (the editors' autocompletion and
  * validation), each only when its content changed. Called by the commands that gather (`yarn
@@ -432,7 +443,7 @@ export const writeJsonSchemas = () => {
 
   const written: string[] = [];
   for (const target of targets) {
-    const nativeSchema = z.toJSONSchema(target.schema, { target: 'draft-07' });
+    const nativeSchema = z.toJSONSchema(target.schema, { target: 'draft-07', override: sizeTuple });
     const finalSchema = {
       $schema: 'http://json-schema.org/draft-07/schema#',
       ...nativeSchema,

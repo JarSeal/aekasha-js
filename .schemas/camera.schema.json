@@ -6,7 +6,7 @@
       "type": "string"
     },
     "camProps": {
-      "anyOf": [
+      "oneOf": [
         {
           "type": "object",
           "properties": {
@@ -273,13 +273,6 @@
               },
               "additionalProperties": false
             },
-            "type": {
-              "type": "string",
-              "enum": [
-                "PERSPECTIVE",
-                "ORTHOGRAPHIC"
-              ]
-            },
             "active": {
               "type": "boolean"
             },
@@ -335,16 +328,23 @@
               ],
               "additionalProperties": false
             },
-            "fov": {
-              "type": "number"
-            },
-            "frustumSize": {
-              "type": "number"
-            },
             "responsiveAspect": {
               "type": "boolean"
             },
             "referenceAspect": {
+              "type": "number"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "PERSPECTIVE",
+                "ORTHOGRAPHIC"
+              ]
+            },
+            "fov": {
+              "type": "number"
+            },
+            "frustumSize": {
               "type": "number"
             }
           },

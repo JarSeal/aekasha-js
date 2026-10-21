@@ -24,24 +24,20 @@ const CameraOrthographic = CameraBaseProps.extend({
   frustumSize: z.number().optional(),
 });
 
-export const CameraProps = z.union([CameraPerspective, CameraOrthographic]);
+const CAMERA_VARIANTS = [CameraPerspective, CameraOrthographic] as const;
+
+export const CameraProps = z.discriminatedUnion('type', CAMERA_VARIANTS);
 export type CameraProps = z.infer<typeof CameraProps>;
 
-export const CameraOverridesSchema = z.object({
-  __meta: MetaSchema.optional(),
-  type: z.enum(['PERSPECTIVE', 'ORTHOGRAPHIC']).optional(),
-  active: z.boolean().optional(),
-  near: z.number().optional(),
-  far: z.number().optional(),
-  zoom: z.number().optional(),
-  appId: z.string().optional(),
-  position: Vector3Schema.optional(),
-  lookAtPoint: Vector3Schema.optional(),
-  fov: z.number().optional(),
-  frustumSize: z.number().optional(),
-  responsiveAspect: z.boolean().optional(),
-  referenceAspect: z.number().optional(),
-});
+// Both types' fields, each optional: a save entry replaces the fields it gives
+export const CameraOverridesSchema = z
+  .object({
+    __meta: MetaSchema,
+    ...CameraPerspective.shape,
+    ...CameraOrthographic.shape,
+    type: z.enum(CAMERA_VARIANTS.map((variant) => variant.shape.type.value)),
+  })
+  .partial();
 
 export type CameraOverrides = z.infer<typeof CameraOverridesSchema>;
 

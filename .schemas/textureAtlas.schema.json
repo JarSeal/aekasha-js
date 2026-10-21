@@ -24,7 +24,10 @@
           "multipleOf": 4
         }
       ],
-      "description": "The layout's width and height in px (multiples of 4). A slot over its maxSize drops its top mip levels."
+      "description": "The layout's width and height in px (multiples of 4). A slot over its maxSize drops its top mip levels.",
+      "minItems": 2,
+      "maxItems": 2,
+      "additionalItems": false
     },
     "padding": {
       "description": "Px of edge extension around each cell's content (default 8). The mip chain stops at the level it protects: 2^level ≤ padding, so 16 keeps levels 0-4. Packed cells go on a grid of 4 · 2^⌊log2 padding⌋ px (64 for 16), so the last level's 4 × 4 compression blocks never hold two cells; an explicit rect off that grid shortens the chain.",
@@ -112,7 +115,10 @@
                   {
                     "type": "number"
                   }
-                ]
+                ],
+                "minItems": 3,
+                "maxItems": 3,
+                "additionalItems": false
               },
               {
                 "type": "array",
@@ -129,7 +135,10 @@
                   {
                     "type": "number"
                   }
-                ]
+                ],
+                "minItems": 4,
+                "maxItems": 4,
+                "additionalItems": false
               }
             ]
           },
@@ -765,7 +774,10 @@
                 "minimum": 1,
                 "maximum": 9007199254740991
               }
-            ]
+            ],
+            "minItems": 4,
+            "maxItems": 4,
+            "additionalItems": false
           },
           "size": {
             "description": "A packed cell's content width and height in px, the padding not included (default: its first source's size, in the order of `slots`). Not with `rect`.",
@@ -781,7 +793,10 @@
                 "minimum": 1,
                 "maximum": 9007199254740991
               }
-            ]
+            ],
+            "minItems": 2,
+            "maxItems": 2,
+            "additionalItems": false
           },
           "sources": {
             "description": "Per slot: the image resized into the cell. A slot left out gets its fill; a slot with an `image` takes none. Only left out when every slot has an `image`.",

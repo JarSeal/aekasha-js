@@ -5,7 +5,7 @@ import { LightAssetSchema } from './LightSchema';
 import { GeoPropsSchema } from './GeometrySchema';
 import { InlineTextureSchema } from './TextureSchema';
 import { MaterialAssetSchema } from './MaterialSchema';
-import { ColorJSONSchema } from './_HelperSchemas';
+import { ColorJSONSchema, DebugDataSchema } from './_HelperSchemas';
 import {
   type FeatureSchemaPart,
   type FeatureSchemaShape,
@@ -24,8 +24,8 @@ const KERNEL_SCENE_SHAPE = {
   // Optional Metadata (Stripped during production bundling)
   name: z.string().optional(),
   description: z.string().optional(),
-  comments: z.any().optional(),
-  todo: z.any().optional(),
+  comments: DebugDataSchema.shape.comments,
+  todo: DebugDataSchema.shape.todo,
 
   backgroundColor: ColorJSONSchema.optional(),
   /** The id of a texture the scene lists in `textures`, for the root scene's background */

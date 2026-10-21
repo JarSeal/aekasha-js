@@ -21,7 +21,6 @@
     "texOpts": {
       "type": "object",
       "properties": {
-        "image": {},
         "mapping": {
           "type": "number"
         },
@@ -691,7 +690,10 @@
               "minimum": 1,
               "maximum": 9007199254740991
             }
-          ]
+          ],
+          "minItems": 2,
+          "maxItems": 2,
+          "additionalItems": false
         },
         "channels": {
           "type": "object",
@@ -742,7 +744,10 @@
                             {
                               "type": "number"
                             }
-                          ]
+                          ],
+                          "minItems": 2,
+                          "maxItems": 2,
+                          "additionalItems": false
                         }
                       ]
                     },
@@ -841,7 +846,10 @@
                             {
                               "type": "number"
                             }
-                          ]
+                          ],
+                          "minItems": 2,
+                          "maxItems": 2,
+                          "additionalItems": false
                         }
                       ]
                     },
@@ -940,7 +948,10 @@
                             {
                               "type": "number"
                             }
-                          ]
+                          ],
+                          "minItems": 2,
+                          "maxItems": 2,
+                          "additionalItems": false
                         }
                       ]
                     },
@@ -1039,7 +1050,10 @@
                             {
                               "type": "number"
                             }
-                          ]
+                          ],
+                          "minItems": 2,
+                          "maxItems": 2,
+                          "additionalItems": false
                         }
                       ]
                     },
@@ -1138,7 +1152,10 @@
                             {
                               "type": "number"
                             }
-                          ]
+                          ],
+                          "minItems": 2,
+                          "maxItems": 2,
+                          "additionalItems": false
                         }
                       ]
                     },
@@ -1237,7 +1254,10 @@
                             {
                               "type": "number"
                             }
-                          ]
+                          ],
+                          "minItems": 2,
+                          "maxItems": 2,
+                          "additionalItems": false
                         }
                       ]
                     },
@@ -1336,7 +1356,10 @@
                             {
                               "type": "number"
                             }
-                          ]
+                          ],
+                          "minItems": 2,
+                          "maxItems": 2,
+                          "additionalItems": false
                         }
                       ]
                     },
@@ -1447,7 +1470,6 @@
             "texOpts": {
               "type": "object",
               "properties": {
-                "image": {},
                 "mapping": {
                   "type": "number"
                 },

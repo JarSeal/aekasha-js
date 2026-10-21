@@ -7,7 +7,7 @@ const SemverSchema = z
 export const MetaSchema = z.object({
   date: z
     .number({
-      error: 'Metadata timestamp must be a valid numeric UNIX tracking sign.',
+      error: 'The save time must be a number: milliseconds since the UNIX epoch (Date.now()).',
     })
     .optional(),
 

@@ -171,7 +171,10 @@
                   "type": "number"
                 }
               ],
-              "description": "The object's bounding sphere centre (local space)."
+              "description": "The object's bounding sphere centre (local space).",
+              "minItems": 3,
+              "maxItems": 3,
+              "additionalItems": false
             },
             "radius": {
               "type": "number",
@@ -386,7 +389,10 @@
                   "maximum": 9007199254740991
                 }
               ],
-              "description": "The atlas's width and height: [planes × (frameWidth + 2 × gutter), frameHeight + 2 × gutter], the frames side by side."
+              "description": "The atlas's width and height: [planes × (frameWidth + 2 × gutter), frameHeight + 2 × gutter], the frames side by side.",
+              "minItems": 2,
+              "maxItems": 2,
+              "additionalItems": false
             },
             "center": {
               "type": "array",
@@ -401,7 +407,10 @@
                   "type": "number"
                 }
               ],
-              "description": "Where the planes cross (local space): the object's vertical axis, at its bounds' middle height."
+              "description": "Where the planes cross (local space): the object's vertical axis, at its bounds' middle height.",
+              "minItems": 3,
+              "maxItems": 3,
+              "additionalItems": false
             },
             "halfWidth": {
               "type": "number",

@@ -34,8 +34,11 @@ export const ColorSpaceSchema = z.union([
 ]);
 
 export const DebugDataSchema = z.object({
+  /** A display name (the on-screen tools' camera names, the debug listings). */
   name: z.string().optional(),
+  /** A longer description. */
   description: z.string().optional(),
+  /** Notes with their times. */
   comments: z
     .array(
       z.object({
@@ -44,7 +47,9 @@ export const DebugDataSchema = z.object({
       })
     )
     .optional(),
+  /** Open items, by key. */
   todo: z.record(z.string(), z.unknown()).optional(),
+  /** Anything else a debug tool keeps for the entity or asset. */
   debugObj: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -54,30 +59,13 @@ export const UserDataSchema = z.record(z.string(), z.unknown());
 
 export type UserData = z.infer<typeof UserDataSchema>;
 
-export const EntityDebugDataSchema = z.object({
-  name: z.string().optional(),
-  description: z.string().optional(),
-  comments: z
-    .array(
-      z.object({
-        timestamp: z.number(),
-        comment: z.string(),
-      })
-    )
-    .optional(),
-  todo: z.record(z.string(), z.unknown()).optional(),
-  debugObj: z.record(z.string(), z.unknown()).optional(),
-});
-
-export type EntityDebugData = z.infer<typeof EntityDebugDataSchema>;
-
 export const CoreEntityOptsSchema = z.object({
   appId: z.string().optional(),
   disabled: z.boolean().optional(),
   persistent: z.boolean().optional(),
   doNotAddToScene: z.boolean().optional(),
   userData: UserDataSchema.optional(),
-  debugData: EntityDebugDataSchema.optional(),
+  debugData: DebugDataSchema.optional(),
   /** Opt out of the spatial index (docs/plans/_DONE_p050_spatial-index.md §3.1) for an entity kind whose manager opts in by default. */
   spatialIndex: z.boolean().optional(),
   /**
