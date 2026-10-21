@@ -222,14 +222,14 @@ document.addEventListener('click', (e) => {
 // --- Search (p552) ---
 
 /**
- * The dialog and the index load on first use (`_search.ts`, a chunk of its own): the first focus
+ * The dialog and its payload load on first use (`_search.ts`, a chunk of its own): the first focus
  * or hover of the search button preloads them, a click, ⌘K / Ctrl+K or `/` opens the dialog
  */
 const searchButton = document.querySelector<HTMLButtonElement>('[data-hub-search]');
 const searchKey = document.querySelector<HTMLElement>('[data-hub-search-key]');
 if (searchKey && !/Mac|iPhone|iPad/.test(navigator.userAgent)) searchKey.textContent = 'Ctrl K';
 
-/** `_assets/hub.js`: the index's URL in `hub-data.js` and the site root resolve against it */
+/** `_assets/hub.js`: the search results' links resolve against it (the site root is its parent) */
 const hubJsUrl = import.meta.url;
 let searchModule: Promise<typeof import('./_search')> | null = null;
 

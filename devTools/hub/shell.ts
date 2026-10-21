@@ -34,10 +34,10 @@ export type ShellSiteValues = {
   /** Extra `<head>` markup (the 404 page's `<base>` script, p551 Phase 2's dev client) */
   head: string;
   nav: string;
-  /** The asset URLs with their `?v=` */
+  /** The asset URLs with their `?v=` (the search payload's in a `<meta>`: loaded on first use) */
   css: string;
   js: string;
-  dataJs: string;
+  searchJs: string;
   engineVersion: string;
   githubUrl: string;
 };

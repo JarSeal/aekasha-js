@@ -64,8 +64,8 @@ const GREEN = '\x1b[32m';
 const DIM = '\x1b[2m';
 const RESET = '\x1b[0m';
 
-/** The `?v=` of these changes with any page's headings or with the SCSS: not a page change */
-const VOLATILE_ASSET_REF_REGEX = /(_assets\/(?:hub\.css|hub-data\.js))\?v=[\w-]+/g;
+/** The `?v=` of these changes with any page's text or with the SCSS: not a page change */
+const VOLATILE_ASSET_REF_REGEX = /(_assets\/(?:hub\.css|hub-search\.js))\?v=[\w-]+/g;
 
 /** Static files copied as they are: no `?v=` changes when they do, so open pages reload */
 const STATIC_DIRS = HUB_STATIC_ASSET_DIRS.map((name) => path.join(HUB_ASSETS_DIR, name));

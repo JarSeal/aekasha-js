@@ -19,7 +19,7 @@ import type { HubBuildMode, HubHeading, HubPage } from './types';
 /**
  * The Hub's Markdown: markdown-it with its plugins (p551 §2.2):
  * - heading anchors: slugged ids (unique per page, slot ids included), a `#` link, and the
- *   page's heading list (the TOC and `hub-data.js`);
+ *   page's heading list (the TOC and the search's `pages`);
  * - directives `::: name args` … `:::`, from a registry other plans add to
  *   (`registerHubDirective`); the callouts `tip`, `note`, `warning` and `danger` are the first,
  *   and `dev-only` (content the `public` build leaves out unparsed: `HubDirective.devOnly`).

@@ -12,7 +12,7 @@ import type { HubGeneratedSection } from './section';
  * their codenames and the build's commit and time, then `CHANGELOG.md`. The changelog's headings
  * move one level down (`# Changelog` is the page's h2, an entry an h3), so the TOC lists the
  * entries and each one has its anchor: `#2026-10-07-dev-server-implementation`. The latest
- * entry goes into `hub-data.js` as `latestChange`, for the homepage's "What's new". The changelog
+ * entry is `latestChange`, for the homepage's "What's new". The changelog
  * is out of the search (`hubSearchSkip`, p555): it was a large share of the index, and the
  * browser's own find searches it on this page.
  */

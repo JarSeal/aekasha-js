@@ -7,7 +7,7 @@ import { readGit } from './git';
  * The project's metadata: the engine, toolkit and app versions and codenames, the packages, and
  * the build's commit and time. `vite.config.ts` defines it as `__PROJECT_METADATA__` (the About
  * dialog) and fills `index.html`'s placeholders with it; the Hub generator puts its versions and
- * build into `hub-data.js` and the Version page.
+ * build on the Version page.
  */
 
 type PackageJson = typeof import('../package.json');

@@ -84,7 +84,7 @@ export type HubPage = {
   /** Listed in the nav's dropdowns (generated pages can leave themselves out) */
   isInMenu: boolean;
   /**
-   * In the search: its sections in the index, and the page in `hub-data.js`'s `pages` (the
+   * In the search: its sections in the index, and the page in the search payload's `pages` (the
    * dialog's breadcrumbs). The API pages leave themselves out: their symbols are indexed apart.
    */
   isSearchable: boolean;
@@ -96,7 +96,7 @@ export type HubPage = {
   children: HubPage[];
 };
 
-/** A menu item in `hub-data.js` */
+/** A menu item in the search payload (`HubSearchPayload.nav`): the results' labels */
 export type HubNavItem = {
   path: string;
   title: string;
@@ -104,7 +104,7 @@ export type HubNavItem = {
   children: HubNavItem[];
 };
 
-/** A page in `hub-data.js` (here, not in `data.ts`: the search dialog reads it too) */
+/** A page in the search payload (`HubSearchPayload.pages`): the results' groups and breadcrumbs */
 export type HubDataPage = {
   path: string;
   title: string;

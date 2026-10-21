@@ -13,7 +13,7 @@ hub/_assets/ (SCSS, TS, icons, fonts) ──┘
                                         ▼
             .cache/hub/dev/ or dist-hub/
               examples/physics/index.html
-              _assets/hub.css?v=…, hub.js?v=…, hub-data.js?v=…, hub-search.js?v=…
+              _assets/hub.css?v=…, hub.js?v=…, hub-search.js?v=…
 ```
 
 - **Sources** are in `hub/` at the repo root, outside Vite's root. The app's dev server never serves them raw, and nothing can import them into the app's bundle.
@@ -316,12 +316,12 @@ Renaming or removing a region that a page includes fails `yarn hub:build`, and s
 
 ## Search
 
-The search box (⌘K, Ctrl+K or `/`) searches every page except the homepage. `yarn hub:build` builds the index (`devTools/hub/search.ts`) from each page's rendered body: its markup, its Markdown and the generated sections. The browser loads the search code and the index only when someone first uses the search.
+The search box (⌘K, Ctrl+K or `/`) searches every page except the homepage. `yarn hub:build` builds the index (`devTools/hub/search.ts`) from each page's rendered body: its markup, its Markdown and the generated sections. The browser loads the search code and the index (with the menu and page list its results need) only when someone first uses the search: a page itself loads neither.
 
 - **A heading with an id is a search result.** Each section from a heading to the next is one result, with the headings above it as the breadcrumb. The text before a page's first heading is the page's own result, along with its `<title>`, `aek:tags` and `aek:description`. Headings make a long page easier to search as well as to read.
 - **The title, headings and tags weigh the most.** Put the words a reader would search for in `aek:tags`, especially those the page doesn't spell out (`rapier` on the physics page).
 - **Code blocks add their identifiers, not their keywords.** Identifiers are split at camelCase too, so `mesh` finds `createMeshEntity`.
-- **The API is searched by name.** Every entry, public name and class or interface member is a result of its own, weighted like a title and split at camelCase, with its kind and its summary's first sentence (clipped to 120 characters). Only the name is searched: the summary is shown, not indexed, which keeps the index under 1 MB.
+- **The API is searched by name.** Every entry, public name and class or interface member is a result of its own, weighted like a title and split at camelCase, with its kind and its summary's first sentence (clipped to 120 characters). Only the name is searched: the summary is shown, not indexed, which keeps the index small.
 - **Content with the class `hubSearchSkip` is left out**, headings included: the cards, the API lists (indexed their own way) and the Version page's changelog, which the browser's own find searches on that page.
 - **`yarn hub:build` prints the index's size.** Over 1 MB it warns. The index is loaded whole on first use, so keep it lean.
 
@@ -478,7 +478,7 @@ What happens, and how to reproduce it …
 
 ### Version
 
-`/hub/version/` shows the engine, toolkit, app and project versions with their codenames, and the build's commit (marked when there were local changes) and time. Below that comes the whole `CHANGELOG.md`, with each entry's heading as an anchor (`/hub/version/#2026-10-07-impostor-billboard-lod`). The newest entry is also the homepage's "What's new" data (`latestChange` in `hub-data.js`). Nothing to write here: keep `package.json` and `CHANGELOG.md` current, as the versioning rules ask.
+`/hub/version/` shows the engine, toolkit, app and project versions with their codenames, and the build's commit (marked when there were local changes) and time. Below that comes the whole `CHANGELOG.md`, with each entry's heading as an anchor (`/hub/version/#2026-10-07-impostor-billboard-lod`). The newest entry is also the homepage's "What's new". Nothing to write here: keep `package.json` and `CHANGELOG.md` current, as the versioning rules ask.
 
 ## Refreshing in dev
 
@@ -537,7 +537,7 @@ The same checks run in dev and in `yarn hub:build`. In dev, an error shows the e
 | Warning: `Unknown "…" in the code block's meta`        | A misspelt fence option.                              |
 | Warning: `The scene "x" has no Hub image yet (…)`      | Save it from the scene's Hub tab.                     |
 | Warning: `::: cards takes no content`                  | Move the text out of the directive.                   |
-| Warning: `The search index is …, over 1 MB`            | Index less: fewer or shorter pages, fewer fields.     |
+| Warning: `The search index is … gzipped, over 450 KiB` | Index less: fewer or shorter pages, fewer fields.     |
 | Warning: `{@link X} links nowhere (…)`                 | In the JSDoc: fix the name, export it, or use code.   |
 | Warning: `X … is on no entry, but Y … names it`        | Put `X` on its entry, or change `Y`'s signature.      |
 

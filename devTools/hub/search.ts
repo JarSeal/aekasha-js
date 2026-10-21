@@ -1,13 +1,22 @@
+import zlib from 'node:zlib';
 import MiniSearch from 'minisearch';
 import type { HubAssetFile } from './assets';
 import { ASSETS_URL_DIR } from './assets';
 import { hashContent } from './hash';
 import { decodeEntities, parseAttributes } from './html';
-import { HUB_SEARCH_FILE, HUB_SEARCH_OPTIONS, type HubSearchDoc } from './searchProtocol';
-import type { HubPage } from './types';
+import { getPageSection } from './pages';
+import {
+  HUB_SEARCH_FILE,
+  HUB_SEARCH_OPTIONS,
+  toHubSearchId,
+  type HubSearchDoc,
+  type HubSearchIndexedDoc,
+  type HubSearchPayload,
+} from './searchProtocol';
+import type { HubDataPage, HubHeading, HubNavItem, HubPage } from './types';
 
 /**
- * The search index (p552 §2.4): `_assets/hub-search.js`, loaded by the search dialog on first
+ * The search index: `_assets/hub-search.js` (`HubSearchPayload`), loaded by the search dialog on first
  * use. One document per section of every page but the homepage (whose sections are its layout),
  * read from the page's rendered body, so the page's own markup, its Markdown and the generated
  * sections are all in it. Code blocks give their identifiers only. The index is serialized here
@@ -217,24 +226,42 @@ export const splitSections = (body: string) => {
   }));
 };
 
-export type HubSearchIndexFile = HubAssetFile & { docCount: number; pageDocCount: number };
+export type HubSearchIndexFile = HubAssetFile & {
+  docCount: number;
+  pageDocCount: number;
+  /** Its `gzip -9` size: what a reader downloads (the build warns over a limit) */
+  gzipBytes: number;
+};
 
-/** A document a generated section adds by itself (p553's API symbols), without its id */
-export type HubSearchExtraDoc = Omit<HubSearchDoc, 'id'>;
+/** A document a generated section adds by itself (the API's names) */
+export type HubSearchExtraDoc = HubSearchDoc;
+
+/** A page as the search reads it: its rendered body and its headings (the TOC's) */
+export type HubSearchPage = { page: HubPage; body: string; headings: HubHeading[] };
 
 /**
- * The index as `JSON.parse('…')`: parsed faster than the same object as a JS literal, and in
+ * The payload as `JSON.parse('…')`: parsed faster than the same object as a JS literal, and in
  * single quotes, so the JSON's own double quotes (most of its punctuation) aren't escaped
  */
 const toModuleSource = (json: string) =>
   `export default JSON.parse('${json.replace(/[\\']/g, '\\$&')}');\n`;
 
+const toNavItem = (page: HubPage): HubNavItem => ({
+  path: page.path,
+  title: page.menu,
+  icon: page.icon,
+  children: page.children.filter((child) => child.isInMenu).map(toNavItem),
+});
+
 /**
- * Builds `_assets/hub-search.js` from the pages' rendered bodies, and the documents the
- * generated sections add (`extraDocs`)
+ * Builds `_assets/hub-search.js` (`HubSearchPayload`) from the pages' rendered bodies, the
+ * documents the generated sections add (`extraDocs`), the menu from `homepage` and the searchable
+ * pages with their headings. A document's `path` and `anchor` go into its id, and its heading is
+ * stored only when its page's headings don't give it (`HubSearchIndexedDoc`).
  */
 export const buildSearchIndex = (
-  pages: { page: HubPage; body: string }[],
+  homepage: HubPage,
+  pages: HubSearchPage[],
   extraDocs: HubSearchExtraDoc[] = []
 ): HubSearchIndexFile => {
   const docs: HubSearchDoc[] = [];
@@ -249,7 +276,6 @@ export const buildSearchIndex = (
           ? `${description} ${section.text}`.trim()
           : section.text;
       docs.push({
-        id: docs.length,
         path: page.path,
         anchor: section.anchor,
         title: isPageSection ? page.title : '',
@@ -261,15 +287,56 @@ export const buildSearchIndex = (
     });
   }
   const pageDocCount = docs.length;
-  for (const doc of extraDocs) docs.push({ ...doc, id: docs.length });
+  docs.push(...extraDocs);
+
+  const searchablePages: HubDataPage[] = pages
+    .filter(({ page }) => page.isSearchable)
+    .map(({ page, headings }) => ({
+      path: page.path,
+      title: page.title,
+      tags: page.tags,
+      description: page.description,
+      section: getPageSection(page),
+      headings,
+    }));
+  const headingTexts = new Map(
+    searchablePages.map((page) => [page.path, new Map(page.headings.map((h) => [h.id, h.text]))])
+  );
+  const paths: string[] = [];
+  const pathIndexes = new Map<string, number>();
+  const indexed = docs.map(
+    ({ path, anchor = '', heading, text, ...fields }): HubSearchIndexedDoc => {
+      let pathIndex = pathIndexes.get(path);
+      if (pathIndex === undefined) {
+        pathIndex = paths.push(path) - 1;
+        pathIndexes.set(path, pathIndex);
+      }
+      const isHeadingKnown = !anchor || headingTexts.get(path)?.get(anchor) === heading;
+      return {
+        id: toHubSearchId(pathIndex, anchor),
+        ...fields,
+        // Indexed always; stored only when the page's headings can't give it back
+        ...(heading && { heading }),
+        ...(heading && !isHeadingKnown && { storedHeading: heading }),
+        ...(text && { text }),
+      };
+    }
+  );
   const index = new MiniSearch(HUB_SEARCH_OPTIONS);
-  index.addAll(docs);
-  const content = toModuleSource(JSON.stringify(index));
+  index.addAll(indexed);
+  const payload: HubSearchPayload = {
+    index: index.toJSON(),
+    paths,
+    nav: [toNavItem(homepage)],
+    pages: searchablePages,
+  };
+  const content = toModuleSource(JSON.stringify(payload));
   return {
     outPath: `${ASSETS_URL_DIR}${HUB_SEARCH_FILE}`,
     content,
     hash: hashContent(content),
     docCount: docs.length,
     pageDocCount,
+    gzipBytes: zlib.gzipSync(content, { level: 9 }).length,
   };
 };

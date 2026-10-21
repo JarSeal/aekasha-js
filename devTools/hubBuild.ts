@@ -142,7 +142,7 @@ const main = async () => {
   }
   if (result.search) {
     console.log(
-      `  Search index: ${formatBytes(result.search.bytes)}, ${result.search.pageDocCount} page sections and ${result.search.docCount - result.search.pageDocCount} API docs`
+      `  Search index: ${formatBytes(result.search.gzipBytes)} gzipped (${formatBytes(result.search.bytes)}), ${result.search.pageDocCount} page sections and ${result.search.docCount - result.search.pageDocCount} API docs`
     );
   }
 

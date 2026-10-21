@@ -314,3 +314,10 @@ export const getPageTrail = (page: HubPage) => {
 /** A link from one page (or the root, '') to another site path: `../../features/`, `./` */
 export const relativeRoot = (fromPath: string) =>
   fromPath ? '../'.repeat(fromPath.split('/').length - 1) : './';
+
+/** The page's top-level section's path ('' for the homepage): its search group and its styles */
+export const getPageSection = (page: HubPage) => {
+  let top = page;
+  while (top.parent?.parent) top = top.parent;
+  return top.parent ? top.path : '';
+};

@@ -1271,6 +1271,91 @@ As built (2026-10-21, on `aece8b0`):
 The search cuts and `hub-data.js`, `buildHub`'s and the plugin's splits, the dev rebuild costs
 (measured against Phase 0), the citations and the dead exports, the generator's tests.
 
+Sections:
+
+1. **The search (D7).** From Phase 5's 1,009,470 B raw / 259,575 B `gzip -9` (`hub-data.js`
+   55,615 / 13,364). Cut 1: a document's id is `<path index>#<anchor>` into a path table, and
+   `path` and `anchor` aren't stored. Cut 9: a page section's `heading` isn't stored, the dialog
+   reads it from its page's headings (the round-trip test checks every one matches). Cut 7 is
+   done already (Phase 5: the entry documents store no summary). `hub-search.js` becomes the
+   whole payload (`{ index, paths, pages, nav }`), and the decoding is `searchProtocol.ts`'s,
+   shared by the build's test and the dialog. **`hub-data.js` (to confirm, beyond D7):** with
+   `nav` and `pages` gone, nothing in the browser reads its other fields (`versions`, `build`,
+   `latestChange`: the pages render them), so it goes, and the shell carries the index's URL
+   in a `<meta>` (one request less per page; `diffBuilds` ignores its `?v=` as it did
+   `hub-data.js`'). The warning measures gzip, over 450 kB, and `hub:build`'s line gives both
+   sizes (`formatBytes` in KiB, H6). Tests: `search.test.ts` (the round trip on a small build:
+   a page section, a heading, an API name, an entry, the decoded results; `splitSections`).
+2. **The splits (D10).** `buildHub` (338 lines) into its steps: the page render and link check,
+   the shell's page values, the dev error pages, the writes; `buildHub` keeps the order. The
+   plugin's run state into `createHubDevRunner` (`devTools/hub/devRunner.ts`, with `diffBuilds`),
+   on Phase 4's work queue (moved to `devTools/workQueue.ts`, shared with the gatherer's plugin),
+   which also fixes the straddling burst here (G9's case: the loop took a debounced burst
+   early). Tests on fake timers with a fake build: a save during the first build, a request
+   waiting for the run in progress only, a straddling burst, the API's stale → rebuilding →
+   `api` event, a failed run's `api` event. `dist-hub/` the same before and after (the build
+   time normalized, as Phase 5 compared).
+3. **The dev rebuild (D16).** Measured first, per step, against Phase 0's 837-983 ms. Then: the
+   styles and scripts reused unless a changed file is under `hub/_assets/` (or there's no last
+   build), shiki's output memoized per fence, the search index per documents' hash, the static
+   asset hashes per file stamp across runs, and whatever else the measurement shows (the git
+   processes, the page writes). Measured after; `devTools/hub/CLAUDE.md` and the plugin's
+   header get the number instead of "tens of ms".
+4. **The hygiene (D11) and the docs.** The plan citations (108 of p550-p555 and others in the
+   generator, the Hub's TS and SCSS) replaced by what they explained; the 23 runtime exports
+   nothing else imports made module-private or removed; the three file-wide `no-console`
+   disables get their reason; `hubBuild.ts`' `fail` a `function … never`; `repoFiles.ts`' git
+   call through `devTools/git.ts`; `buildPublicApi` (163 lines) split. H6's directive registry:
+   the directives become an explicit list `createHubMarkdown` takes (no `import './cards'`), and
+   `package.json`'s `sideEffects` loses `./devTools/**` if the Vite config bundle and the dev Hub
+   work without it. D14's snippets test. Docs: `devTools/hub/CLAUDE.md`, `hub-authoring.md`,
+   the root `CLAUDE.md` where a line changes. Checks: `yarn test`, lint, both `tsc`,
+   `yarn hub:build`, the dev Hub by hand (a page edit, an SCSS edit, an engine save).
+
+As built (2026-10-21, uncommitted):
+
+- **Section 1, the search (D7).**
+  - `hub-search.js` is the payload `HubSearchPayload` (`searchProtocol.ts`): `{ index, paths, nav,
+    pages }`. A document's id is `toHubSearchId(pathIndex, anchor)` (`3#setup`); `path` and
+    `anchor` aren't stored (cut 1). The heading is indexed, and stored (as `storedHeading`) only
+    when the page's headings don't give the same text for its anchor (cut 9): on today's pages
+    none needs it. `createHubSearchReader` decodes a result, the dialog's and the test's. The
+    entry documents stored no summary already (cut 7, Phase 5). Empty `heading` and `text` are no
+    longer stored.
+  - **`hub-data.js` removed (beyond D7, to confirm):** nothing in the browser read its
+    `versions`, `build` or `latestChange` (the pages render them), so with `nav` and `pages` in
+    the payload it held one URL. The shell has `<meta name="aek-hub-search" content="…?v=…">`
+    instead of the `<script defer>`, which the dialog resolves against `document.baseURI` (the
+    404 page's `<base>`); `diffBuilds` ignores its `?v=` as it did `hub-data.js`'. `data.ts` went
+    (`getPageSection` is in `pages.ts`, the nav and page list in `search.ts`), with its dead
+    `HUB_DATA_GLOBAL`.
+  - Sizes (`dist-hub/`, `--no-embed`): the payload 978,532 B raw, 263,529 B `gzip -9`, against
+    Phase 5's index 1,009,470 / 259,575 plus `hub-data.js` 55,615 / 13,364. So every page load
+    is 13.4 kB gzip and a request lighter; the first search downloads 3.9 kB gzip more (the menu
+    and pages moved in), the two together 9.4 kB less. In it: the
+    inverted index 444 kB, the stored fields 396 kB (`text` 245, `summary` 115, `kind` 20), the
+    ids 49 kB, `pages` 49 kB, `nav` 5 kB, `paths` 2.5 kB. Cut 2 (the alternative) would act on
+    `text`.
+  - The warning is on gzip, over 450 KiB (`SEARCH_INDEX_WARN_GZIP_BYTES`); `hub:build`'s line
+    reads "Search index: 256 KiB gzipped (954 KiB), 372 page sections and 1281 API docs".
+    `formatBytes` says KiB / MiB (H6). The warning's text no longer cites p552.
+  - `search.test.ts` (9): the payload's tables, nothing of `path` / `anchor` stored and only the
+    markup heading stored, then round trips through the built module (imported as a `data:` URL,
+    as the browser imports it, so the quoting is tested too): a page by its title with its
+    description first, a heading read back from its page, a camelCase code part, the markup
+    heading, an API name and an entry with `apiSearchName`, the homepage and an API page left
+    out; `splitSections`.
+  - Checked in Chromium on `yarn hub:preview`: `createPhysicsEntity` from a feature page, `fixed
+    step` from Documentation, `sky box` from the 404 page (`/no/such/page/`), groups, crumbs and
+    links as before; a page load fetches the font, `hub.css`, `hub.js` and its images, no
+    `hub-data.js`. On a dev server: a Markdown edit and its undo each "Updated: 1 page
+    (documentation/)" (891 and 837 ms, section 3's subject).
+  - Docs: `devTools/hub/CLAUDE.md` (Search, Output, Version, the API's search line),
+    `hub-authoring.md` (the output sketch, the search's loading, the warning row, the Version
+    page), the comments naming `hub-data.js`.
+  - Checks: `yarn test` 1089 passed (135 files), lint, both `tsc`; `yarn hub:build` with Phase 5's
+    warnings (the toolkit's 4, `{@link getRandomStream}`).
+
 ### Phase 7: verify, sbp and refactor (D9, D12, D13)
 
 The runner's split and reload handling, the sizes plugin, the keys, the budgets re-set,

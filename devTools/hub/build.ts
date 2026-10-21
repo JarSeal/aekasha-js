@@ -14,7 +14,6 @@ import {
 } from './assets';
 import { isApiPagePath } from './api/model';
 import { createApiSection, type ApiBuildStats, type ApiModelSource } from './api/render';
-import { buildHubData, getPageSection } from './data';
 import './cards'; // Registers the `cards` directive
 import { copyHubEmbeds, createHubEmbedState } from './embed'; // Also registers the `embed` directive
 import { checkClaudeMdCoverage } from './claudeMd'; // Also registers the `claude-md` directive
@@ -42,7 +41,7 @@ import {
   type HubRenderContext,
 } from './markdown';
 import { commitHubStagingDir, createHubStagingDir, getHubOutDirError } from './outDir';
-import { discoverPages, relativeRoot, type HubPageTree } from './pages';
+import { discoverPages, getPageSection, relativeRoot, type HubPageTree } from './pages';
 import {
   loadAppScenes,
   resolvePageImage,
@@ -69,7 +68,7 @@ import {
   type ShellPageValues,
   type ShellSiteValues,
 } from './shell';
-import type { HubBuildMode, HubHeading, HubPage } from './types';
+import type { HubBuildMode, HubPage } from './types';
 
 /**
  * Builds the Hub (p551 §2.2): `hub/` → static pages in `outDir`, in the layout p550 §3.5
@@ -93,7 +92,7 @@ export type HubBuildOptions = {
   /** `dev`: the last build's assets, kept when this build's fail, so error pages keep styles */
   fallback?: HubBuildAssets;
   /**
-   * The build's commit, local changes and time the Version page and `hub-data.js` show (default:
+   * The build's commit, local changes and time the Version page shows (default:
    * now's). The dev plugin passes its first build's, so a rebuild doesn't change the Version page
    * by itself: an edit and its undo flipped "local changes" and reloaded it (p619 §1.4 H3).
    */
@@ -130,10 +129,10 @@ export type HubBuildResult = {
   pages: HubBuiltPage[];
   assets: HubBuildAssets;
   /**
-   * The search index's size (`hub:build` reports it), its documents and how many of them are
-   * page sections (the rest are the API's), null when not built
+   * The search payload's size and `gzip -9` size (`hub:build` reports them), its documents and how
+   * many of them are page sections (the rest are the API's), null when not built
    */
-  search: { bytes: number; docCount: number; pageDocCount: number } | null;
+  search: { bytes: number; gzipBytes: number; docCount: number; pageDocCount: number } | null;
   /** The API docs (p553): whether the model was reused, its size, null when it didn't build */
   api: ApiBuildStats | null;
   /** `api: 'last'`: the model is older than its inputs, or there's none yet */
@@ -145,13 +144,16 @@ export type HubBuildResult = {
   apiRebuildingHtml: string | null;
 };
 
-/** p552 §2.4: over it, the build warns (the API docs are the risk) */
-const SEARCH_INDEX_WARN_BYTES = 1024 * 1024;
+/**
+ * Over it, the build warns: the search payload's `gzip -9` size, what a reader downloads on the
+ * first search (p619 D7; 254 KiB after its cuts)
+ */
+const SEARCH_INDEX_WARN_GZIP_BYTES = 450 * 1024;
 
 export const formatBytes = (bytes: number) =>
   bytes < 1024 * 1024
-    ? `${Math.round(bytes / 1024)} kB`
-    : `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    ? `${Math.round(bytes / 1024)} KiB`
+    : `${(bytes / (1024 * 1024)).toFixed(2)} MiB`;
 
 /**
  * The 404 page is served at any depth, so its links resolve against a `<base>`: the site root's
@@ -472,41 +474,26 @@ export const buildHub = async ({
   }
   if (tree) checkLinks(rendered, tree, api.areApiPagesUnchecked, diag);
 
-  const headings = new Map<HubPage, HubHeading[]>(
-    rendered.map(({ page, env }) => [page, env.headings])
-  );
   const assetUrl = (root: string, file: HubAssetFile | null | undefined) =>
     file ? `${root}${file.outPath}?v=${file.hash}` : '';
   const search = tree
     ? buildSearchIndex(
-        rendered,
+        tree.root,
+        rendered.map(({ page, body, env }) => ({ page, body, headings: env.headings })),
         sections.flatMap((section) => section.searchDocs ?? [])
       )
     : null;
   if (search) {
-    const { content, docCount, pageDocCount } = search;
-    searchStats = { bytes: content.length, docCount, pageDocCount };
+    const { content, gzipBytes, docCount, pageDocCount } = search;
+    searchStats = { bytes: content.length, gzipBytes, docCount, pageDocCount };
+    if (gzipBytes > SEARCH_INDEX_WARN_GZIP_BYTES) {
+      diag.warn(
+        HUB_PAGES_DIR,
+        undefined,
+        `The search index is ${formatBytes(gzipBytes)} gzipped, over ${formatBytes(SEARCH_INDEX_WARN_GZIP_BYTES)}: index fewer fields or store less (searchProtocol.ts)`
+      );
+    }
   }
-  if (search && search.content.length > SEARCH_INDEX_WARN_BYTES) {
-    diag.warn(
-      HUB_PAGES_DIR,
-      undefined,
-      `The search index is ${formatBytes(search.content.length)}, over ${formatBytes(SEARCH_INDEX_WARN_BYTES)}: index fewer fields (p552 §2.4)`
-    );
-  }
-  // After the render: the changelog's render fills `latestChange.hash`
-  const data =
-    tree && search
-      ? buildHubData(
-          meta,
-          tree.root,
-          tree.pages,
-          headings,
-          version.latestChange,
-          // Relative to `_assets/`, where hub.js resolves it from
-          assetUrl('', search).slice(ASSETS_URL_DIR.length)
-        )
-      : null;
   const findScript = (outPath: string) => assets.scripts?.find((file) => file.outPath === outPath);
   const devClient = mode === 'dev' ? findScript(HUB_DEV_CLIENT_OUT_PATH) : undefined;
 
@@ -520,7 +507,7 @@ export const buildHub = async ({
     nav: tree ? renderNav(tree.root, page, root, icons) : '',
     css: assetUrl(root, assets.styles),
     js: assetUrl(root, findScript('_assets/hub.js')),
-    dataJs: assetUrl(root, data),
+    searchJs: assetUrl(root, search),
     engineVersion: meta.engine.version,
     githubUrl: escapeHtml(getRepoWebUrl(meta)),
   });
@@ -666,7 +653,7 @@ export const buildHub = async ({
   const writeDir = mode === 'public' ? createHubStagingDir(outDir) : outDir;
   try {
     for (const { outPath, html } of builtPages) writeFile(path.join(writeDir, outPath), html);
-    for (const file of [assets.styles, data, search, ...(assets.scripts ?? [])]) {
+    for (const file of [assets.styles, search, ...(assets.scripts ?? [])]) {
       if (file) writeFile(path.join(writeDir, file.outPath), file.content);
     }
     copyStaticAssets(writeDir);
