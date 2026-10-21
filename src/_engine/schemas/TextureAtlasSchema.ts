@@ -17,7 +17,6 @@ export const getAtlasSlotTextureId = (atlasId: string, slot: string) => `${atlas
 
 /**
  * An atlas's `mipChain` values. {@link AtlasMipChain} is its type.
- * @internal
  */
 export const ATLAS_MIP_CHAINS = ['PROTECTED', 'FULL'] as const;
 /** An atlas's `mipChain`: `PROTECTED` stops the mip chain where the cells would mix, `FULL` goes
@@ -232,7 +231,6 @@ const TextureAtlasSlotInfoSchema = z.object({
 /**
  * An atlas slot texture's `__atlas`, baked in by the gatherer: the layout, its padding and levels,
  * and the cell table. The kernel's texture and atlas registries read it.
- * @internal
  */
 export type TextureAtlasSlotInfo = z.infer<typeof TextureAtlasSlotInfoSchema>;
 

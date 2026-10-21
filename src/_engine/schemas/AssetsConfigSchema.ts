@@ -200,7 +200,6 @@ const OptimizeObjectShape = {
 /**
  * The fields every type's `optimize` object can have; each type's schema narrows it
  * (`TextureOptimizeSchema`, `TextureArrayOptimizeSchema`, `ImportedAssetOptimizeSchema`).
- * @internal
  */
 export const OptimizeObjectSchema = z.strictObject(OptimizeObjectShape);
 

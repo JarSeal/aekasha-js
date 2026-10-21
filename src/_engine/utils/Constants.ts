@@ -18,7 +18,6 @@ export const FOUR_PX_TO_8K_LIST = [
 /**
  * The texture slots of three's materials (`map`, `normalMap`, …): the keys whose value is a
  * texture, which the material registry resolves from texture ids and releases with a material.
- * @internal
  */
 export const textureMapKeys = [
   'map',

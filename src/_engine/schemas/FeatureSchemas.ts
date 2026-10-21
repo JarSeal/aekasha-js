@@ -22,7 +22,7 @@ export type FeatureSchemaPart = {
 /**
  * The intersection of a union's members (`A | B` → `A & B`), for {@link FeatureSchemaShape}'s
  * fields of every part at once.
- * @internal
+ * @template U the members to intersect, as a union
  */
 export type UnionToIntersection<U> = (U extends unknown ? (arg: U) => void : never) extends (
   arg: infer I
@@ -31,8 +31,10 @@ export type UnionToIntersection<U> = (U extends unknown ? (arg: U) => void : nev
   : never;
 
 /**
- * The fields the parts add to one schema (`scene` or `mesh`), as one shape type.
- * @internal
+ * The fields the parts add to one schema (`scene` or `mesh`), as one shape type: what
+ * `createSceneAssetSchema` and `createMeshAssetSchema` add to the kernel's.
+ * @template P the feature schema parts
+ * @template K the schema they add to
  */
 export type FeatureSchemaShape<
   P extends readonly FeatureSchemaPart[],

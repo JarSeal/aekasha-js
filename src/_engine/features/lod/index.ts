@@ -7,7 +7,11 @@ export {
 export { generateCrossQuads } from './impostors/CrossQuads';
 export type { CrossQuads, CrossQuadsOptions } from './impostors/CrossQuads';
 export type { ImpostorShading } from './impostors/ImpostorBake';
-export { IMPOSTOR_EXPORT_FORMAT_VERSION, getImpostorDefSlots } from './impostors/ImpostorFormat';
+export {
+  getImpostorDefSlots,
+  IMPOSTOR_EXPORT_FORMAT_VERSION,
+  IMPOSTOR_KINDS,
+} from './impostors/ImpostorFormat';
 export type { ImpostorKind } from './impostors/ImpostorFormat';
 export { generateOctahedralImpostor } from './impostors/OctahedralImpostor';
 export type {

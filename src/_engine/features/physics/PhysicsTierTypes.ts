@@ -16,7 +16,6 @@ export type PhysicsTier = 'FULL' | 'STATIC' | 'DISABLED' | 'REMOVED';
 
 /**
  * The dynamic bucket component a tiered entity was created in (PhysicsSimTierData's `bucket`).
- * @internal
  */
 export type PhysicsTierBucket = 'BODY_DYNAMIC_VISUAL' | 'BODY_DYNAMIC_HEADLESS';
 

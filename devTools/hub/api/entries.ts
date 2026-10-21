@@ -1,5 +1,6 @@
 import type { JSONOutput } from 'typedoc';
 import type { EntryName } from '../../aliases';
+import { hasModifierTag } from './comments';
 import type { ApiEntry } from './extract';
 import { Kind, type ApiIndex, type ApiModule, type DeclarationReflection } from './model';
 
@@ -12,6 +13,11 @@ import { Kind, type ApiIndex, type ApiModule, type DeclarationReflection } from 
  * And R2's check, `findLeakedTypes`: a type a public export names (in a signature, a property, a
  * base type) that no entry exports. An app can't name it, and its page would be a dead link.
  */
+
+/** A declaration or member tagged `@internal` (on itself, or a method's on its signature) isn't public API */
+const isInternalMember = (reflection: DeclarationReflection) =>
+  hasModifierTag(reflection.comment, '@internal') ||
+  !!reflection.signatures?.some((signature) => hasModifierTag(signature.comment, '@internal'));
 
 /** A name on an entry and the declaration it is */
 export type EntrySymbol = {
@@ -31,6 +37,8 @@ export type ApiEntryIndex = {
   byId: Map<number, EntrySymbol[]>;
   /** A name the model doesn't have (its module left out of the docs, or no such export) */
   problems: EntryProblem[];
+  /** Names tagged `@internal`: public is what an entry exports, so the tag contradicts it */
+  internal: EntrySymbol[];
 };
 
 /**
@@ -45,6 +53,7 @@ export const indexEntries = (index: ApiIndex, entries: ApiEntry[]): ApiEntryInde
   }
   const byId = new Map<number, EntrySymbol[]>();
   const problems: EntryProblem[] = [];
+  const internal: EntrySymbol[] = [];
 
   /** A re-export's declaration, through every module that re-exports it */
   const declarationOf = (symbol: DeclarationReflection) => {
@@ -71,6 +80,9 @@ export const indexEntries = (index: ApiIndex, entries: ApiEntry[]): ApiEntryInde
         continue;
       }
       for (const reflection of declarations as DeclarationReflection[]) {
+        if (isInternalMember(reflection)) {
+          internal.push({ entry, name, reflection, module: moduleOf.get(reflection.id)! });
+        }
         const symbol: EntrySymbol = {
           entry,
           name,
@@ -83,7 +95,7 @@ export const indexEntries = (index: ApiIndex, entries: ApiEntry[]): ApiEntryInde
     }
     return { entry, file, symbols };
   });
-  return { entries: result, byId, problems };
+  return { entries: result, byId, problems, internal };
 };
 
 // --- R2: the types the public API names but no entry exports ---
@@ -109,6 +121,8 @@ export type LeakedType = {
   line?: number;
   /** Public exports first (in entry order), then the leaked types that name it */
   namedBy: LeakNamer[];
+  /** On `ACCEPTED_LEAKS`: the reason, and no warning */
+  accepted?: string;
 };
 
 /** Keys that point back from a declaration (its subclasses, its base's member) or aren't types */
@@ -129,10 +143,22 @@ const isReflection = (value: object): value is DeclarationReflection =>
   typeof (value as { variant?: unknown }).variant === 'string';
 
 /**
+ * Leaked types kept until their namer goes, by `<file>#<name>`: each a deprecated public name's
+ * only type, removed with it. A key that no longer leaks is a warning (`reportEntries`).
+ */
+export const ACCEPTED_LEAKS: Record<string, string> = {
+  'src/_engine/features/physics/PhysicsProbeTypes.ts#PhysicsProbeReport':
+    'only `TestBridgeProbeResult` names it (`aekasha/debug`, deprecated by p618 D3), removed in engine 6.0.0',
+  'src/_engine/features/skybox/LegacySkyBox.ts#LegacySkyBoxParams':
+    'only `LegacySkyBoxProps` names it (`aekasha/skybox`, deprecated), removed in engine 6.0.0',
+};
+
+/**
  * The types the public exports name that no entry exports, sorted by source, and the types those
  * name in turn (each would be public once its namer is on an entry). A private member, an
- * inherited one (its base is named instead) and a `{@link}` don't count; a type parameter, three's
- * and the lib's types neither.
+ * `@internal` one, an inherited one (its base is named instead) and a `{@link}` don't count; a
+ * type parameter, three's and the lib's types neither. An accepted leak's own types aren't
+ * followed: they go with it.
  */
 export const findLeakedTypes = (index: ApiIndex, entries: ApiEntryIndex): LeakedType[] => {
   // Every reflection nested in a module's export → that export (a member's type names its owner)
@@ -162,7 +188,7 @@ export const findLeakedTypes = (index: ApiIndex, entries: ApiEntryIndex): Leaked
   };
 
   type State = { namer: Omit<LeakNamer, 'fileName' | 'line'>; source?: JSONOutput.SourceReference };
-  const walk = (value: unknown, state: State) => {
+  const walk = (value: unknown, state: State, isRoot = false) => {
     if (!value || typeof value !== 'object') return;
     if (Array.isArray(value)) {
       for (const item of value) walk(item, state);
@@ -171,6 +197,7 @@ export const findLeakedTypes = (index: ApiIndex, entries: ApiEntryIndex): Leaked
     let next = state;
     if (isReflection(value)) {
       if (value.flags?.isPrivate || value.inheritedFrom) return;
+      if (!isRoot && isInternalMember(value)) return;
       next = { namer: state.namer, source: value.sources?.[0] ?? state.source };
     }
     const type = value as JSONOutput.ReferenceType;
@@ -182,12 +209,19 @@ export const findLeakedTypes = (index: ApiIndex, entries: ApiEntryIndex): Leaked
           const key = String(owner.id);
           const isNew = !leaks.has(key);
           const source = owner.sources?.[0];
+          const accepted = ACCEPTED_LEAKS[`${source?.fileName}#${owner.name}`];
           const leak = record(
             key,
-            { key, name: owner.name, sourcePath: source?.fileName, line: source?.line },
+            {
+              key,
+              name: owner.name,
+              sourcePath: source?.fileName,
+              line: source?.line,
+              ...(accepted && { accepted }),
+            },
             namer
           );
-          if (isNew) queue.push({ reflection: owner, leak });
+          if (isNew && !accepted) queue.push({ reflection: owner, leak });
         }
       } else if (
         typeof type.target === 'object' &&
@@ -211,12 +245,12 @@ export const findLeakedTypes = (index: ApiIndex, entries: ApiEntryIndex): Leaked
     for (const { entry, name, reflection } of symbols) {
       if (walked.has(reflection.id)) continue;
       walked.add(reflection.id);
-      walk(reflection, { namer: { name, entry, id: reflection.id } });
+      walk(reflection, { namer: { name, entry, id: reflection.id } }, true);
     }
   }
   for (let i = 0; i < queue.length; i++) {
     const { reflection, leak } = queue[i];
-    walk(reflection, { namer: { name: leak.name, id: reflection.id } });
+    walk(reflection, { namer: { name: leak.name, id: reflection.id } }, true);
   }
   return [...leaks.values()].sort(
     (a, b) =>

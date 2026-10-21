@@ -60,7 +60,6 @@ const SpatialDomainEntrySchema = z
 /**
  * One spatial domain a scene registers for itself (a scene's `spatialDomains` entry). The kernel's
  * `SceneData` and the spatial feature's domains name it.
- * @internal
  */
 export type SceneSpatialDomainEntry = z.infer<typeof SpatialDomainEntrySchema>;
 

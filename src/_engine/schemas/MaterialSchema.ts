@@ -153,8 +153,8 @@ export const MaterialAssetSchema = z
 /**
  * A union with one member per `type` literal, as the runtime's `MatProps` has them: zod infers one
  * object per branch, with the `type` enum, which TypeScript doesn't split on its own.
- * `MaterialAsset` and `RuntimeTypes.test.ts` use it.
- * @internal
+ * {@link MaterialAsset} is built with it.
+ * @template T an object type whose `type` is a union of literals
  */
 export type PerType<T> = T extends { type: infer Type }
   ? Type extends unknown

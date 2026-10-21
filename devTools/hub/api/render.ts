@@ -34,6 +34,7 @@ import {
   type InlineTagPart,
 } from './comments';
 import {
+  ACCEPTED_LEAKS,
   findLeakedTypes,
   indexEntries,
   type ApiEntryIndex,
@@ -964,12 +965,23 @@ const namerLabel = ({ name, entry }: LeakNamer) =>
 
 /**
  * p619 R2: a type the public API names that no entry exports, once per type at its first
- * namer's reference. An entry name the model doesn't have is an error: it would have no page.
+ * namer's reference (an accepted one not at all, and an accepted key that no longer leaks warns).
+ * An entry name the model doesn't have is an error: it would have no page.
  */
 const reportEntries = (diag: HubDiagnostics, entries: ApiEntryIndex, leaks: LeakedType[]) => {
-  for (const { file, message } of entries.problems)
+  for (const { file, message } of entries.problems) {
     diag.error(path.join(ROOT, file), undefined, message);
+  }
+  for (const { entry, name, reflection } of entries.internal) {
+    const source = reflection.sources?.[0];
+    diag.warn(
+      source ? path.join(ROOT, source.fileName) : TSCONFIG_FILE,
+      source?.line,
+      `\`${name}\` is on ${entry} but tagged @internal: drop the tag, or take it off the entry`
+    );
+  }
   for (const leak of leaks) {
+    if (leak.accepted) continue;
     const [first, ...rest] = leak.namedBy;
     const where = leak.sourcePath ? ` (${leak.sourcePath}${leak.line ? `:${leak.line}` : ''})` : '';
     const more = rest.length
@@ -979,6 +991,17 @@ const reportEntries = (diag: HubDiagnostics, entries: ApiEntryIndex, leaks: Leak
       first.fileName ? path.join(ROOT, first.fileName) : TSCONFIG_FILE,
       first.line,
       `\`${leak.name}\`${where} is on no entry, but ${namerLabel(first)} names it${more}: add it to an entry, or change the signature`
+    );
+  }
+  const accepted = new Set(
+    leaks.filter((leak) => leak.accepted).map((leak) => `${leak.sourcePath}#${leak.name}`)
+  );
+  for (const key of Object.keys(ACCEPTED_LEAKS)) {
+    if (accepted.has(key)) continue;
+    diag.warn(
+      path.join(ROOT, 'devTools/hub/api/entries.ts'),
+      undefined,
+      `ACCEPTED_LEAKS: ${key} no longer leaks: remove it`
     );
   }
 };

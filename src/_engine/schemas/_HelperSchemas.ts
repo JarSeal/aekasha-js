@@ -101,8 +101,7 @@ export const DebugDataSchema = z
 
 /**
  * An asset's or an entity's `debugData` ({@link DebugDataSchema}). The ECS's `EntityDebugData` has
- * the same fields (`RuntimeTypes.test.ts`).
- * @internal
+ * the same fields.
  */
 export type DebugData = z.infer<typeof DebugDataSchema>;
 
@@ -118,7 +117,6 @@ export const UserDataSchema = z
 /**
  * An entity's options in a JSON (the camera, light and mesh JSONs' `entityOpts`):
  * {@link CoreEntityOpts} without its code-only `managedBy`. The camera, light and mesh schemas use it.
- * @internal
  */
 export const CoreEntityOptsSchema = z
   .object({
@@ -192,6 +190,5 @@ export const ShadowQualitySchema = z
 /**
  * A light's shadow quality preset (`MEDIUM` by default): the light's `shadowPreset`. The runtime's
  * `LightProps` and the sky box's lights name it.
- * @internal
  */
 export type ShadowQuality = z.infer<typeof ShadowQualitySchema>;

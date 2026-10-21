@@ -68,6 +68,26 @@ describe('indexEntries', () => {
     expect(entries.byId.has(type.id)).toBe(true);
   });
 
+  it('lists a name tagged @internal', () => {
+    const { decl, module, project } = createModel();
+    const hidden = decl(A, 2, 'hidden', Kind.Function, {
+      signatures: [
+        {
+          ...decl(A, 2, 'hidden', Kind.CallSignature),
+          comment: { summary: [], modifierTags: ['@internal'] },
+        },
+      ],
+    });
+    module(A, [hidden, decl(A, 3, 'shown', Kind.Variable)]);
+    const entries = indexEntries(indexApiModel(project()), [
+      entry([
+        [A, 'hidden'],
+        [A, 'shown'],
+      ]),
+    ]);
+    expect(entries.internal.map((s) => s.name)).toEqual(['hidden']);
+  });
+
   it('reports a name the model lacks', () => {
     const { module, project } = createModel();
     module(A, []);

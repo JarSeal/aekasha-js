@@ -25,5 +25,11 @@ export {
   setDayNightSpeed,
   setTimeOfDay,
 } from './SkyDayNight';
-export type { SkyBoxDef } from './SkyBoxTypes';
+export type {
+  SkyBoxBaseDef,
+  SkyBoxBaseInput,
+  SkyBoxDef,
+  SkyBoxEnvDef,
+  SkyBoxOverrides,
+} from './SkyBoxTypes';
 export { getSkyLightIds } from './SkyLights';

@@ -1149,6 +1149,48 @@ As built (2026-10-21, on `aece8b0`):
     `ImportExtension`, 6 character input mappings, 5 character body types, …).
   - Checks: `yarn test` 1073 passed; `yarn hub:build` with the 97, `{@link getRandomStream}`
     and the index size warning.
+- **Section 2, R2's decisions** (section 1's three proposals taken: the constants on their
+  entries, `@internal` members skipped, an accepted list). **79 names added** to six entries
+  (838 → 919 with Phase 3's `ColorJSON` and Phase 4's `applySkyBoxSaveEntry`), each documented
+  already; no name clashes with another entry's:
+  - `aekasha` (19): `AllowTextureStrings`, `AssetsWorkerTarget`, `CoreComponentData`,
+    `DebugPhysicsWireframeConfig`, `ECSStorageMode`, `EntityDebugData`, `FeatureUnmountHook`,
+    `GeoDebugData`, `ImportPhysicsParams`, `LifetimeData`, `ManagedByData`, `ParsedCustomProps`,
+    `PhysicsWireframeColors`, `QuatLike`, `TextureMapKeys`, `TypedArrayTransformStore` (type
+    only), `Vector3Like`, `ViewCameraRig`, and the value `textureMapKeys`.
+  - `aekasha/character` (16): the seven input scheme types (`CharacterInputOpts`, its mappings,
+    `CharacterInputHoldMode`) and nine of `CharacterTypes.ts` (`CharacterProbes`,
+    `CharacterBodyPlan` and theirs, `LocomotionState`).
+  - `aekasha/physics` (28): `WorldAPI`, `ColliderAPI`, `JointAPI` and every type they name (the
+    query, event and hook types, `ShapeParams`, `HeightFieldData`, `JointMotorModel`), the config
+    and state types (`PhysicsState`, `PhysicsEngine`, `PhysicsWorkerTarget`,
+    `PhysicsBackgroundBehavior`, `PhysicsInterpolationMode`), the tier component data, `PoseArray`,
+    `PhysRotation`; the enums `RigidBodyTypeAPI`, `ShapeType`, `SolverFlags`, `FeatureType`,
+    `QueryFilterFlags` as values, as `JointAxesMask` is.
+  - `aekasha/schemas` (11): `ATLAS_MIP_CHAINS`, `CoreEntityOptsSchema`, `OptimizeObjectSchema`,
+    `SkyBoxDefSchema` (values; Phase 0's written-out types not done), `DebugData`,
+    `ShadowQuality`, `SceneSpatialDomainEntry`, `TextureAtlasSlotInfo`, `FeatureSchemaShape`,
+    `UnionToIntersection`, `PerType`. `aekasha/skybox` (4): `SkyBoxBaseDef`, `SkyBoxBaseInput`,
+    `SkyBoxEnvDef`, `SkyBoxOverrides`. `aekasha/lod` (1): `IMPOSTOR_KINDS`.
+  - The 14 of them tagged `@internal` lost the tag (summaries checked; `@template` on the three
+    generic helpers). A new warning: a name on an entry tagged `@internal` (none today).
+  - **Differs from Phase 0:** `TypedArrayTransformStore` goes on `aekasha` instead of
+    `getTypedTransformStore()` returning `IComponentStorage`: the toolkit's `HoverEffect`,
+    `FollowTool` and `SunShadowFit` read its typed methods on their hot paths.
+  - **Taken off the public surface instead (`@internal` members):**
+    `FeatureContext.registerImportExtension` (one provider per member, physics' and LOD's: its 10
+    `ImportExtension` types stay internal) and `LodChain.report` (debug info: `AssetLoadReport`,
+    `AssetsFallbackCause`).
+  - **Accepted until 6.0.0** (`ACCEPTED_LEAKS`, `entries.ts`; a key that no longer leaks warns):
+    `PhysicsProbeReport` (through `TestBridgeProbeResult`) and `LegacySkyBoxParams` (through
+    `LegacySkyBoxProps`), each a deprecated name's only type.
+  - Left: the toolkit's 4 (p620): `MovingPlatformControls`, `AsteroidNoiseOptions`,
+    `AsteroidCraterOptions`, `TerrainNoiseOctave`.
+  - Not in the plan: `cache.test.ts`' ctime case (Phase 4) failed 2 runs in 5: the kernel's ctime
+    clock is coarse, so a write in the stamp's tick kept the ctime. The test touches until the
+    ctime moves on (12 / 12).
+  - Checks: `yarn test` 1074 passed, lint, `tsc`; the docs ratchet unchanged (99 % / 97 %);
+    `yarn hub:build`: the toolkit's 4, `{@link getRandomStream}` and the index size warning.
 
 ### Phase 6: the rest of the Hub generator and the search (D7, D10, D11, D16)
 

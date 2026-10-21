@@ -64,9 +64,12 @@ export type FeatureContext = {
   setRenderPipeline: (provider: RenderPipelineProvider) => void;
   /** Draws over every finished frame ({@link AfterRenderHook}): viewports. Returns the remover. */
   addAfterRender: (hook: AfterRenderHook) => () => void;
-  /** Adds the feature's part of `importAssetAsync` and `spawnImportedAsset`
-   * ({@link ImportExtension}): physics' bodies, LOD's chains. Each member has one provider; a
-   * second throws. */
+  /**
+   * Adds the feature's part of `importAssetAsync` and `spawnImportedAsset`
+   * ({@link ImportExtension}): physics' bodies, LOD's chains. Each member has one provider, and a
+   * second throws, so only those two engine features call it: not public API.
+   * @internal
+   */
   registerImportExtension: (extension: ImportExtension) => void;
   /**
    * Runs `fn` in `InitEngine`'s debug block, before the app's `start`, in install order (the

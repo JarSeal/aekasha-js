@@ -91,8 +91,12 @@ describe('getCacheKey', () => {
     const first = await loadCache();
     const key = first.getCacheKey(input({ a: 1 }));
     first.saveKeyMemo();
+    const { ctimeMs } = fs.statSync(SOURCE);
     fs.writeFileSync(SOURCE, 'SOURCE BYTES'); // Same length
     fs.utimesSync(SOURCE, 1_000_000, 1_000_000);
+    // The kernel's ctime clock is coarse (a few ms): a write in the same tick keeps the ctime,
+    // which a save a person makes never does. Touch again until it moves on.
+    while (fs.statSync(SOURCE).ctimeMs === ctimeMs) fs.utimesSync(SOURCE, 1_000_000, 1_000_000);
 
     const second = await loadCache();
     expect(second.getCacheKey(input({ a: 1 }))).not.toBe(key);
