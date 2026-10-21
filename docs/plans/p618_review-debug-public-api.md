@@ -953,6 +953,34 @@ As built, section 3 (2026-10-21, uncommitted on top of `5901201`):
 2. `package.json` (D2), the `CHANGELOG.md` entry, `yarn checkVersions --against main`.
 3. Mark the plan done (`docs/plans/CLAUDE.md`), p621's and p622's references.
 
+As built, section 1 (2026-10-21, on `15882c0`; nothing edited during the runs):
+
+- **`yarn verify:scenes`** (Phases 1-5; no `--update --only exampleDebugTab` first: Phase 5 left
+  the example's look unchanged): 105 passed, 3 failed in 3,885 s. The three failures are Phase 0's
+  (`thirdPersonGymScene`'s debug configurations, "the physics probe didn't reach step 600 in
+  300 s" on SwiftShader); its `prodTest` passes. Every hash and system order as recorded, every
+  snapshot within tolerance (most exactly equal), `exampleDebugTab` passing in all four. The
+  `space` note ("the physics targets hash differently", `35fbc0e9` on the workers, `f9619ec1` on
+  the main thread) is in Phase 0's, p617's and p616's runs too, each target matching its own
+  baseline.
+- **`yarn verify:baselines`:** all unchanged (the main chunk 186 modules at 832.0 kB gzip, the
+  banner's 670.3 kB; `api.json` 2,512 exports, 838 on 16 entries; `docs.json` 2,319 / 2,416
+  exports, 938 / 970 members), no debug code in the production build or the banner.
+- **`yarn build`:** passes (`tsc` both, the build, `yarn sbp --profile all`, the Hub). SBP: the
+  app's initial 379.2 kB gzip, the banner's 285.5 kB, Phase 0's numbers; every budget within, one
+  "well under" (`assets/index.css` 0.9 kB against 3.0 kB, from p617's debug CSS move, not this
+  branch).
+- **`yarn hub:build`:** 435 pages; the `⚠` lines are Phase 5 section 3's four outside the scope
+  (`CharacterBrainKinds`, `ComponentDataMap`, `UnionToIntersection`, `SeededRandom.ts`'
+  `{@link getRandomStream}`) and p619's search index (1.69 MB). None in scope.
+- **The drawer and profiler pass (the Risks' check; Phase 4's moved framework functions):** in
+  the dev server (debug env, WebGL2 on SwiftShader, a Playwright script): `sceneTestECS`'s 15
+  drawer tabs, the profiler's four (Overview, Objects, GPU memory, Settings), `exampleDebugTab`'s
+  two scene tabs and its "Example boxes · N boxes" row under App in the Overview, then the material
+  editor entered, its drawer opened and both its tabs (Params, Settings), and back to the Runtime
+  view. No tab showed B3's error line, no console error; the two warnings are
+  `@dimforge/rapier3d-compat`'s own ("deprecated parameters for the initialization function").
+
 ## 4. Risks
 
 - **The debug env is the scene runner's main configuration.** A change to the framework (B1, the
