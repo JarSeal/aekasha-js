@@ -1,5 +1,6 @@
 Status: draft | not-implemented
 Category: Debugger
+Related: p800_debugger-ui-overhaul.md (its p806 rebuilds the edit windows on the UI kit: after it, this plan's rows use the components)
 
 # Current Entity Data Source Information on Edit Windows — Plan
 

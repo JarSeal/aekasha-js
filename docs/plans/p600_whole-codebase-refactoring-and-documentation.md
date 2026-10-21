@@ -1,7 +1,7 @@
 Status: draft | epic — not-implemented
 Category: Refactoring, Documentation, Architecture, Build
 Blocks: \_DONE_p601_refactoring-safety-net-tests-and-baselines.md, \_DONE_p602_architecture-and-target-structure.md, \_DONE_p603_gameplay-architecture-contracts.md, \_DONE_p604_multiplayer-viability-study.md, \_DONE_p605_coding-standards-and-documentation-tooling.md, \_DONE_p606_layering-inversion-and-public-entry.md, \_DONE_p607_sbp-foundation-feature-modules.md, \_DONE_p608_engine-folder-restructure.md, \_DONE_p609_toolkit-and-app-restructure.md, \_DONE_p610_character-and-input-action-architecture.md, \_DONE_p611_sbp-tooling-profiles-and-marketing.md, \_DONE_p612_review-ecs-loop-config-init.md, \_DONE_p613_review-rendering-scene-assets.md, \_DONE_p614_review-physics.md, \_DONE_p615_review-sky-box.md, \_DONE_p616_review-lod-spatial-instancing-lines.md, \_DONE_p617_review-input-ui-hud.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p620_review-toolkit-and-app-code.md, p621_hub-docs-readme-and-claude-md-final.md
-Related: p990_follow-ups-from-done-plans.md (its bundle size items move to p607), \_DONE_p200_component-query-caching.md (its main-camera cache, implemented in p612), p420_npc-simulation-tiers.md (fits p603's actor model), p500_restore-physics-snapshot.md (p604's rollback prerequisite), p302_material-and-texture-system-refactor.md (p613 leaves what it rewrites), p240_client-device-capability-sniffer.md (SBP-aware: its benchmark is a lazy chunk), `docs/templates/todo-plan-prompts.txt` (the original prompt, and the p800, p450, p070 and p770 prompts this epic sequences)
+Related: p990_follow-ups-from-done-plans.md (its bundle size items move to p607), \_DONE_p200_component-query-caching.md (its main-camera cache, implemented in p612), p420_npc-simulation-tiers.md (fits p603's actor model), p500_restore-physics-snapshot.md (p604's rollback prerequisite), p302_material-and-texture-system-refactor.md (p613 leaves what it rewrites), p240_client-device-capability-sniffer.md (SBP-aware: its benchmark is a lazy chunk), `docs/templates/todo-plan-prompts.txt` (the original prompt, and the p800, p450, p070 and p770 prompts this epic sequences), p800_debugger-ui-overhaul.md (the p800 prompt's epic)
 
 # Whole Codebase Refactoring and Documentation — Epic
 
@@ -240,7 +240,7 @@ Every child plan follows these; p602 turns §3.1-§3.5 into exact decisions.
 - One gate and one pattern: the feature's public module stays thin, its debug implementation
   lives in an `_dbg__` module next to the feature (colocated, p602 D4), and it is
   reached through one loader, compiled out of shipping builds (§4.1).
-- p800 (the debugger UI overhaul, not planned yet) replaces Tweakpane later, so p600 moves and
+- p800 (`p800_debugger-ui-overhaul.md`, the debugger UI overhaul epic) replaces Tweakpane later, so p600 moves and
   documents debug code but doesn't polish its panels.
 
 ### 3.6 Naming and API shape
@@ -431,8 +431,9 @@ standards, the structure and the SBP strategy to it would make every session pay
 - **`p240_client-device-capability-sniffer.md`:** already SBP-shaped (its benchmark is downloaded
   only when it runs).
 - **Prompts in `docs/templates/todo-plan-prompts.txt` that have no plan yet:**
-  - p800 "Debugger UI overhaul": its own epic, after p608 (the moved debug structure) and aligned
-    with p617 (the UI kit apps can use).
+  - p800 "Debugger UI overhaul": its own epic (`p800_debugger-ui-overhaul.md`), after p608 (the
+    moved debug structure), starting from p617's kit and p618's debug API; its debugger migration
+    (p806) ships with engine 6.0.0 (p622).
   - p450 "Toolkit and asset housekeeping": its toolkit folder structure is absorbed by p609; its
     new PBR textures, models and LOD test scene stay in p450.
   - p070 "Refactor dynamic character code": its sensor bug fixes and new options go on the

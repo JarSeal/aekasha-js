@@ -27,5 +27,5 @@ Most of it is harmless: a scene picked from the drop-down queues behind the runn
 
 `_disableDebugger` also disables the on-screen tools (a class on their row, as the "Disable
 on-screen tools" option sets, `_applyOnScreenToolsDisabled`), or each button checks
-`isCurrentlyLoading()` (`SceneLoader.ts`) on click. Either is small; p800 replaces the on-screen
-tools' UI, so it can also land there.
+`isCurrentlyLoading()` (`SceneLoader.ts`) on click. Either is small; p800's p806 (the debugger
+migration) replaces the on-screen tools' UI, so it can also land there.
