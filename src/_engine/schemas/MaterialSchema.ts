@@ -41,51 +41,57 @@ const MaterialBaseProps = z.object({
   __saveData: createSaveDataSchema(MaterialOverridesSchema),
 });
 
-export const MaterialAssetSchema = z.union([
-  z.object({
-    ...MaterialBaseProps.shape,
-    tslFile: z.string(),
-    staticDefines: z.record(z.string(), z.any()).optional(),
-    nodes: z.record(z.string(), TslNodeInputsSchema).optional(),
-    type: z.enum(
-      [
-        'BASICNODEMATERIAL',
-        'LAMBERTNODEMATERIAL',
-        'PHONGNODEMATERIAL',
-        'PHYSICALNODEMATERIAL',
-        'STANDARDNODEMATERIAL',
-        'MATCAPNODEMATERIAL',
-        'NORMALNODEMATERIAL',
-        'TOONNODEMATERIAL',
-      ],
-      { error: "Engine material 'type' is missing (TSL node material)." }
-    ),
-  }),
-  z.object({
-    ...MaterialBaseProps.shape,
-    type: z.enum(
-      [
-        'LINEBASIC',
-        'LINEDASHED',
-        'BASIC',
-        'DEPTH',
-        'DISTANCE',
-        'LAMBERT',
-        'MATCAP',
-        'NORMAL',
-        'PHONG',
-        'PHYSICAL',
-        'STANDARD',
-        'TOON',
-        'POINTS',
-        'SHADERRAW',
-        'SHADER',
-        'SHADOW',
-        'SPRITE',
-      ],
-      { error: "Engine material 'type' is missing (non-TSL material)." }
-    ),
-  }),
+// The TSL node materials: a `tslFile` and its inputs
+const TslMaterialSchema = MaterialBaseProps.extend({
+  tslFile: z.string(),
+  staticDefines: z.record(z.string(), z.any()).optional(),
+  nodes: z.record(z.string(), TslNodeInputsSchema).optional(),
+  type: z.enum([
+    'BASICNODEMATERIAL',
+    'LAMBERTNODEMATERIAL',
+    'PHONGNODEMATERIAL',
+    'PHYSICALNODEMATERIAL',
+    'STANDARDNODEMATERIAL',
+    'MATCAPNODEMATERIAL',
+    'NORMALNODEMATERIAL',
+    'TOONNODEMATERIAL',
+  ]),
+});
+
+// three's other materials: `params` only
+const PlainMaterialSchema = MaterialBaseProps.extend({
+  type: z.enum([
+    'LINEBASIC',
+    'LINEDASHED',
+    'BASIC',
+    'DEPTH',
+    'DISTANCE',
+    'LAMBERT',
+    'MATCAP',
+    'NORMAL',
+    'PHONG',
+    'PHYSICAL',
+    'STANDARD',
+    'TOON',
+    'POINTS',
+    'SHADERRAW',
+    'SHADER',
+    'SHADOW',
+    'SPRITE',
+  ]),
+});
+
+export const MaterialAssetSchema = z.discriminatedUnion('type', [
+  TslMaterialSchema,
+  PlainMaterialSchema,
 ]);
 
-export type MaterialAsset = z.infer<typeof MaterialAssetSchema>;
+/** One object per `type` literal, as the runtime's `MatProps` has them (zod infers one object
+ * per branch, with the `type` enum). */
+type PerType<T> = T extends { type: infer Type }
+  ? Type extends unknown
+    ? Omit<T, 'type'> & { type: Type }
+    : never
+  : never;
+
+export type MaterialAsset = PerType<z.infer<typeof MaterialAssetSchema>>;

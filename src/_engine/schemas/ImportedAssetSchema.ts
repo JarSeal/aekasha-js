@@ -7,6 +7,7 @@ import {
   AssetFileNameSchema,
   GeneratedAssetFieldsSchema,
   ImportedAssetOptimizeSchema,
+  PublicFileNameSchema,
 } from './AssetsConfigSchema';
 
 /** A GLTF/GLB import: only assets (geometries + opt-in textures) are registered, no entities.
@@ -50,3 +51,16 @@ export const ImportedAssetSchema = z.object({
 });
 
 export type ImportedAsset = z.infer<typeof ImportedAssetSchema>;
+
+/** An import declared inline in a scene JSON: the asset pipeline only reads
+ * `*.importedAsset.json`s. */
+export const InlineImportedAssetSchema = ImportedAssetSchema.omit({
+  optimize: true,
+  __url: true,
+  __sourceUrl: true,
+  __bytes: true,
+  __vramBytes: true,
+  __lodChain: true,
+}).extend({
+  fileName: PublicFileNameSchema,
+});

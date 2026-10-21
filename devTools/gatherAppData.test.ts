@@ -87,6 +87,45 @@ describe('bad assets fail', () => {
     ],
     ['a material that is an array', '.material.json', '', () => []],
     [
+      'a material of an unknown type',
+      '.material.json',
+      'type',
+      (json) => ({ ...omit(json, 'tslFile'), type: 'GLASS' }),
+    ],
+    [
+      'a TSL material without its tslFile',
+      '.material.json',
+      'tslFile',
+      (json) => ({ ...omit(json, 'tslFile'), type: 'STANDARDNODEMATERIAL' }),
+    ],
+    [
+      'a scene with an inline mesh without props',
+      '.scene.json',
+      'meshes.0',
+      (json) => ({ ...json, meshes: [{ entityOpts: {} }] }),
+    ],
+    [
+      'a scene with an inline mesh whose geometry has a bad param',
+      '.scene.json',
+      'meshes.0.props.geo',
+      (json) => ({
+        ...json,
+        meshes: [{ props: { geo: { type: 'BOX', params: { width: 'wide' } }, mat: 'grey' } }],
+      }),
+    ],
+    [
+      'a scene with an inline import without a fileName',
+      '.scene.json',
+      'importedAssets.0',
+      (json) => ({ ...json, importedAssets: [{ id: 'x' }] }),
+    ],
+    [
+      'a scene with an inline import of a file relative to the JSON',
+      '.scene.json',
+      'importedAssets.0',
+      (json) => ({ ...json, importedAssets: [{ fileName: './model.glb' }] }),
+    ],
+    [
       'a save entry that is not a list',
       '.scene.json',
       '__saveData.someScene',

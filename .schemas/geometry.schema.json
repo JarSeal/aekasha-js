@@ -11,52 +11,10 @@
           "type": "object",
           "properties": {
             "id": {
-              "type": "string"
+              "$ref": "#/definitions/__schema0"
             },
             "debugData": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string"
-                },
-                "comments": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "timestamp": {
-                        "type": "number"
-                      },
-                      "comment": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "timestamp",
-                      "comment"
-                    ],
-                    "additionalProperties": false
-                  }
-                },
-                "todo": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "debugObj": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                }
-              },
-              "additionalProperties": false
+              "$ref": "#/definitions/__schema1"
             },
             "type": {
               "type": "string",
@@ -66,13 +24,13 @@
               "type": "object",
               "properties": {
                 "width": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema3"
                 },
                 "height": {
                   "type": "number"
                 },
                 "depth": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema4"
                 },
                 "widthSegments": {
                   "type": "number"
@@ -81,7 +39,7 @@
                   "type": "number"
                 },
                 "depthSegments": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema5"
                 }
               },
               "additionalProperties": false
@@ -96,52 +54,10 @@
           "type": "object",
           "properties": {
             "id": {
-              "type": "string"
+              "$ref": "#/definitions/__schema0"
             },
             "debugData": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string"
-                },
-                "comments": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "timestamp": {
-                        "type": "number"
-                      },
-                      "comment": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "timestamp",
-                      "comment"
-                    ],
-                    "additionalProperties": false
-                  }
-                },
-                "todo": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "debugObj": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                }
-              },
-              "additionalProperties": false
+              "$ref": "#/definitions/__schema1"
             },
             "type": {
               "type": "string",
@@ -154,16 +70,16 @@
                   "type": "number"
                 },
                 "widthSegments": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema6"
                 },
                 "heightSegments": {
                   "type": "number"
                 },
                 "phiStart": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema7"
                 },
                 "phiLength": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema8"
                 },
                 "thetaStart": {
                   "type": "number"
@@ -184,52 +100,10 @@
           "type": "object",
           "properties": {
             "id": {
-              "type": "string"
+              "$ref": "#/definitions/__schema0"
             },
             "debugData": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string"
-                },
-                "comments": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "timestamp": {
-                        "type": "number"
-                      },
-                      "comment": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "timestamp",
-                      "comment"
-                    ],
-                    "additionalProperties": false
-                  }
-                },
-                "todo": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "debugObj": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                }
-              },
-              "additionalProperties": false
+              "$ref": "#/definitions/__schema1"
             },
             "type": {
               "type": "string",
@@ -239,10 +113,10 @@
               "type": "object",
               "properties": {
                 "radiusTop": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema9"
                 },
                 "radiusBottom": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema10"
                 },
                 "height": {
                   "type": "number"
@@ -275,52 +149,10 @@
           "type": "object",
           "properties": {
             "id": {
-              "type": "string"
+              "$ref": "#/definitions/__schema0"
             },
             "debugData": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string"
-                },
-                "comments": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "timestamp": {
-                        "type": "number"
-                      },
-                      "comment": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "timestamp",
-                      "comment"
-                    ],
-                    "additionalProperties": false
-                  }
-                },
-                "todo": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "debugObj": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                }
-              },
-              "additionalProperties": false
+              "$ref": "#/definitions/__schema1"
             },
             "type": {
               "type": "string",
@@ -336,7 +168,7 @@
                   "type": "number"
                 },
                 "capSegments": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema11"
                 },
                 "radialSegments": {
                   "type": "number"
@@ -357,52 +189,10 @@
           "type": "object",
           "properties": {
             "id": {
-              "type": "string"
+              "$ref": "#/definitions/__schema0"
             },
             "debugData": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string"
-                },
-                "comments": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "timestamp": {
-                        "type": "number"
-                      },
-                      "comment": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "timestamp",
-                      "comment"
-                    ],
-                    "additionalProperties": false
-                  }
-                },
-                "todo": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "debugObj": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                }
-              },
-              "additionalProperties": false
+              "$ref": "#/definitions/__schema1"
             },
             "type": {
               "type": "string",
@@ -412,25 +202,25 @@
               "type": "object",
               "properties": {
                 "radius": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema12"
                 },
                 "height": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema13"
                 },
                 "radialSegments": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema14"
                 },
                 "heightSegments": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema15"
                 },
                 "openEnded": {
-                  "type": "boolean"
+                  "$ref": "#/definitions/__schema16"
                 },
                 "thetaStart": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema17"
                 },
                 "thetaLength": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema18"
                 }
               },
               "additionalProperties": false
@@ -463,115 +253,86 @@
                   "type": "number"
                 },
                 "engineVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema19"
+                    }
+                  ]
                 },
                 "toolkitVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema19"
+                    }
+                  ]
                 },
                 "appVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema19"
+                    }
+                  ]
                 }
               },
               "additionalProperties": false
             },
             "debugData": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string"
-                },
-                "comments": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "timestamp": {
-                        "type": "number"
-                      },
-                      "comment": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "timestamp",
-                      "comment"
-                    ],
-                    "additionalProperties": false
-                  }
-                },
-                "todo": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "debugObj": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema2"
                 }
-              },
-              "additionalProperties": false
+              ]
             },
             "params": {
               "type": "object",
               "properties": {
                 "width": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema3"
                 },
                 "height": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema13"
                 },
                 "depth": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema4"
                 },
                 "widthSegments": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema6"
                 },
                 "heightSegments": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema15"
                 },
                 "depthSegments": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema5"
                 },
                 "radius": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema12"
                 },
                 "phiStart": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema7"
                 },
                 "phiLength": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema8"
                 },
                 "thetaStart": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema17"
                 },
                 "thetaLength": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema18"
                 },
                 "radiusTop": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema9"
                 },
                 "radiusBottom": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema10"
                 },
                 "radialSegments": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema14"
                 },
                 "openEnded": {
-                  "type": "boolean"
+                  "$ref": "#/definitions/__schema16"
                 },
                 "capSegments": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema11"
                 }
               },
               "additionalProperties": false
@@ -585,5 +346,114 @@
   "required": [
     "geoProps"
   ],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "definitions": {
+    "__schema0": {
+      "type": "string"
+    },
+    "__schema1": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema2"
+        }
+      ]
+    },
+    "__schema2": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "comments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "timestamp": {
+                "type": "number"
+              },
+              "comment": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "timestamp",
+              "comment"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "todo": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "debugObj": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema3": {
+      "type": "number"
+    },
+    "__schema4": {
+      "type": "number"
+    },
+    "__schema5": {
+      "type": "number"
+    },
+    "__schema6": {
+      "type": "number"
+    },
+    "__schema7": {
+      "type": "number"
+    },
+    "__schema8": {
+      "type": "number"
+    },
+    "__schema9": {
+      "type": "number"
+    },
+    "__schema10": {
+      "type": "number"
+    },
+    "__schema11": {
+      "type": "number"
+    },
+    "__schema12": {
+      "type": "number"
+    },
+    "__schema13": {
+      "type": "number"
+    },
+    "__schema14": {
+      "type": "number"
+    },
+    "__schema15": {
+      "type": "number"
+    },
+    "__schema16": {
+      "type": "boolean"
+    },
+    "__schema17": {
+      "type": "number"
+    },
+    "__schema18": {
+      "type": "number"
+    },
+    "__schema19": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    }
+  }
 }

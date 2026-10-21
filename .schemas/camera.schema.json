@@ -11,72 +11,38 @@
           "type": "object",
           "properties": {
             "active": {
-              "type": "boolean"
+              "$ref": "#/definitions/__schema0"
             },
             "near": {
-              "type": "number"
+              "$ref": "#/definitions/__schema1"
             },
             "far": {
-              "type": "number"
+              "$ref": "#/definitions/__schema2"
             },
             "zoom": {
-              "type": "number"
+              "$ref": "#/definitions/__schema3"
             },
             "appId": {
-              "type": "string"
+              "$ref": "#/definitions/__schema4"
             },
             "position": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
-                }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
+              "$ref": "#/definitions/__schema5"
             },
             "lookAtPoint": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
-                }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
+              "$ref": "#/definitions/__schema7"
             },
             "responsiveAspect": {
-              "type": "boolean"
+              "$ref": "#/definitions/__schema8"
             },
             "referenceAspect": {
-              "type": "number"
+              "$ref": "#/definitions/__schema9"
             },
             "type": {
               "type": "string",
               "const": "PERSPECTIVE"
             },
             "fov": {
-              "type": "number"
+              "$ref": "#/definitions/__schema10"
             }
           },
           "required": [
@@ -88,72 +54,38 @@
           "type": "object",
           "properties": {
             "active": {
-              "type": "boolean"
+              "$ref": "#/definitions/__schema0"
             },
             "near": {
-              "type": "number"
+              "$ref": "#/definitions/__schema1"
             },
             "far": {
-              "type": "number"
+              "$ref": "#/definitions/__schema2"
             },
             "zoom": {
-              "type": "number"
+              "$ref": "#/definitions/__schema3"
             },
             "appId": {
-              "type": "string"
+              "$ref": "#/definitions/__schema4"
             },
             "position": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
-                }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
+              "$ref": "#/definitions/__schema5"
             },
             "lookAtPoint": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
-                }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
+              "$ref": "#/definitions/__schema7"
             },
             "responsiveAspect": {
-              "type": "boolean"
+              "$ref": "#/definitions/__schema8"
             },
             "referenceAspect": {
-              "type": "number"
+              "$ref": "#/definitions/__schema9"
             },
             "type": {
               "type": "string",
               "const": "ORTHOGRAPHIC"
             },
             "frustumSize": {
-              "type": "number"
+              "$ref": "#/definitions/__schema11"
             }
           },
           "required": [
@@ -259,80 +191,91 @@
                   "type": "number"
                 },
                 "engineVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema12"
+                    }
+                  ]
                 },
                 "toolkitVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema12"
+                    }
+                  ]
                 },
                 "appVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema12"
+                    }
+                  ]
                 }
               },
               "additionalProperties": false
             },
             "active": {
-              "type": "boolean"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema0"
+                }
+              ]
             },
             "near": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema1"
+                }
+              ]
             },
             "far": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema2"
+                }
+              ]
             },
             "zoom": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema3"
+                }
+              ]
             },
             "appId": {
-              "type": "string"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema4"
+                }
+              ]
             },
             "position": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema5"
                 }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
+              ]
             },
             "lookAtPoint": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema7"
                 }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
+              ]
             },
             "responsiveAspect": {
-              "type": "boolean"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema8"
+                }
+              ]
             },
             "referenceAspect": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema9"
+                }
+              ]
             },
             "type": {
               "type": "string",
@@ -342,10 +285,18 @@
               ]
             },
             "fov": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema10"
+                }
+              ]
             },
             "frustumSize": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema11"
+                }
+              ]
             }
           },
           "additionalProperties": false
@@ -356,5 +307,72 @@
   "required": [
     "camProps"
   ],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "definitions": {
+    "__schema0": {
+      "type": "boolean"
+    },
+    "__schema1": {
+      "type": "number"
+    },
+    "__schema2": {
+      "type": "number"
+    },
+    "__schema3": {
+      "type": "number"
+    },
+    "__schema4": {
+      "type": "string"
+    },
+    "__schema5": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema6": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
+      "additionalProperties": false
+    },
+    "__schema7": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema8": {
+      "type": "boolean"
+    },
+    "__schema9": {
+      "type": "number"
+    },
+    "__schema10": {
+      "type": "number"
+    },
+    "__schema11": {
+      "type": "number"
+    },
+    "__schema12": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    }
+  }
 }

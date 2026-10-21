@@ -151,6 +151,10 @@ before fixing.
 - G11 Small ones: `projectMetadata.ts`' two missing `?.`; `checkVersions`' bump rules untested and
   tangled with git; `getBasePath` dead branch and separators; `p112` cited in a user-facing
   warning (`:259`).
+- G13 **(bug, latent; found in Phase 3)** A mesh save entry's `geo` or `mat` is a partial (the
+  schema's `PartialGeoProps` / `PartialMatProps`), but pass 2 spreads the entry over the props, so
+  it replaces the whole field: `{ "geo": { "params": { "radius": 2 } } }` ships a geometry without
+  its `type`. No repo save entry gives either. Phase 3 typed the result with a cast that names it.
 
 **The asset pipeline (`devTools/assetPipeline/`)**
 

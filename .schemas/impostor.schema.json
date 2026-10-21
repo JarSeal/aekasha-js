@@ -5,123 +5,31 @@
       "type": "object",
       "properties": {
         "$schema": {
-          "description": "The JSON Schema the editor validates the file with.",
-          "type": "string"
+          "$ref": "#/definitions/__schema0"
         },
         "id": {
-          "description": "Default: the file name. The generator's `id` option.",
-          "type": "string"
+          "$ref": "#/definitions/__schema2"
         },
         "atlas": {
-          "type": "string",
-          "minLength": 1,
-          "description": "The `*.textureAtlas.json`'s id: its slots are the impostor's textures."
+          "$ref": "#/definitions/__schema4"
         },
         "formatVersion": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 9007199254740991,
-          "description": "The export format (IMPOSTOR_EXPORT_FORMAT_VERSION, now 1): another one is refused at runtime, which bakes instead. Re-export it."
+          "$ref": "#/definitions/__schema5"
         },
         "sourceHash": {
-          "type": "string",
-          "minLength": 1,
-          "description": "The fingerprint of the source geometry, its materials' bake inputs, the resolved shading and the options it was baked with (getImpostorSourceHash): the debug env warns when the source it's used with differs (re-export)."
+          "$ref": "#/definitions/__schema7"
         },
         "alphaTest": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1,
-          "description": "The material's alpha cut the impostor was baked and exported with."
+          "$ref": "#/definitions/__schema8"
         },
         "shading": {
-          "type": "object",
-          "properties": {
-            "type": {
-              "type": "string",
-              "enum": [
-                "PHONGNODEMATERIAL",
-                "LAMBERTNODEMATERIAL",
-                "BASICNODEMATERIAL",
-                "STANDARDNODEMATERIAL"
-              ]
-            },
-            "params": {
-              "type": "object",
-              "properties": {
-                "shininess": {
-                  "type": "number"
-                },
-                "specular": {
-                  "description": "Hex, eg. \"#111111\".",
-                  "type": "string"
-                },
-                "roughness": {
-                  "type": "number"
-                },
-                "metalness": {
-                  "type": "number"
-                }
-              },
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "type",
-            "params"
-          ],
-          "additionalProperties": false,
-          "description": "The material's shading as baked: the model and its parameters, never `AUTO`."
+          "$ref": "#/definitions/__schema9"
         },
         "debugData": {
-          "description": "Notes for the debug tools: a name, a description.",
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string"
-            },
-            "description": {
-              "type": "string"
-            },
-            "comments": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "timestamp": {
-                    "type": "number"
-                  },
-                  "comment": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "timestamp",
-                  "comment"
-                ],
-                "additionalProperties": false
-              }
-            },
-            "todo": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
-            },
-            "debugObj": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
-            }
-          },
-          "additionalProperties": false
+          "$ref": "#/definitions/__schema13"
         },
         "__sourcePath": {
-          "description": "Written by the gatherer: the file it was read from, relative to the repo root.",
-          "type": "string"
+          "$ref": "#/definitions/__schema15"
         },
         "kind": {
           "type": "string",
@@ -131,60 +39,28 @@
           "type": "object",
           "properties": {
             "frames": {
-              "type": "integer",
-              "minimum": 2,
-              "maximum": 32,
-              "description": "Frames along each side of the grid."
+              "$ref": "#/definitions/__schema17"
             },
             "hemi": {
-              "type": "boolean",
-              "description": "The upper hemisphere only."
+              "$ref": "#/definitions/__schema18"
             },
             "frameSize": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9007199254740991,
-              "description": "A frame's side, in texels."
+              "$ref": "#/definitions/__schema19"
             },
             "gutter": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 9007199254740991,
-              "description": "Texels between a frame and its cell's edge."
+              "$ref": "#/definitions/__schema20"
             },
             "atlasSize": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9007199254740991,
-              "description": "Texels per side of the (square) atlas: frames × (frameSize + 2 × gutter), the atlas's size."
+              "$ref": "#/definitions/__schema21"
             },
             "center": {
-              "type": "array",
-              "items": [
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
-                }
-              ],
-              "description": "The object's bounding sphere centre (local space).",
-              "minItems": 3,
-              "maxItems": 3,
-              "additionalItems": false
+              "$ref": "#/definitions/__schema22"
             },
             "radius": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "The bounding sphere's radius."
+              "$ref": "#/definitions/__schema27"
             },
             "extent": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "Half a frame's side, in local units."
+              "$ref": "#/definitions/__schema28"
             }
           },
           "required": [
@@ -219,123 +95,31 @@
       "type": "object",
       "properties": {
         "$schema": {
-          "description": "The JSON Schema the editor validates the file with.",
-          "type": "string"
+          "$ref": "#/definitions/__schema0"
         },
         "id": {
-          "description": "Default: the file name. The generator's `id` option.",
-          "type": "string"
+          "$ref": "#/definitions/__schema2"
         },
         "atlas": {
-          "type": "string",
-          "minLength": 1,
-          "description": "The `*.textureAtlas.json`'s id: its slots are the impostor's textures."
+          "$ref": "#/definitions/__schema4"
         },
         "formatVersion": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 9007199254740991,
-          "description": "The export format (IMPOSTOR_EXPORT_FORMAT_VERSION, now 1): another one is refused at runtime, which bakes instead. Re-export it."
+          "$ref": "#/definitions/__schema5"
         },
         "sourceHash": {
-          "type": "string",
-          "minLength": 1,
-          "description": "The fingerprint of the source geometry, its materials' bake inputs, the resolved shading and the options it was baked with (getImpostorSourceHash): the debug env warns when the source it's used with differs (re-export)."
+          "$ref": "#/definitions/__schema7"
         },
         "alphaTest": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1,
-          "description": "The material's alpha cut the impostor was baked and exported with."
+          "$ref": "#/definitions/__schema8"
         },
         "shading": {
-          "type": "object",
-          "properties": {
-            "type": {
-              "type": "string",
-              "enum": [
-                "PHONGNODEMATERIAL",
-                "LAMBERTNODEMATERIAL",
-                "BASICNODEMATERIAL",
-                "STANDARDNODEMATERIAL"
-              ]
-            },
-            "params": {
-              "type": "object",
-              "properties": {
-                "shininess": {
-                  "type": "number"
-                },
-                "specular": {
-                  "description": "Hex, eg. \"#111111\".",
-                  "type": "string"
-                },
-                "roughness": {
-                  "type": "number"
-                },
-                "metalness": {
-                  "type": "number"
-                }
-              },
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "type",
-            "params"
-          ],
-          "additionalProperties": false,
-          "description": "The material's shading as baked: the model and its parameters, never `AUTO`."
+          "$ref": "#/definitions/__schema9"
         },
         "debugData": {
-          "description": "Notes for the debug tools: a name, a description.",
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string"
-            },
-            "description": {
-              "type": "string"
-            },
-            "comments": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "timestamp": {
-                    "type": "number"
-                  },
-                  "comment": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "timestamp",
-                  "comment"
-                ],
-                "additionalProperties": false
-              }
-            },
-            "todo": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
-            },
-            "debugObj": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
-            }
-          },
-          "additionalProperties": false
+          "$ref": "#/definitions/__schema13"
         },
         "__sourcePath": {
-          "description": "Written by the gatherer: the file it was read from, relative to the repo root.",
-          "type": "string"
+          "$ref": "#/definitions/__schema15"
         },
         "kind": {
           "type": "string",
@@ -345,82 +129,28 @@
           "type": "object",
           "properties": {
             "planes": {
-              "anyOf": [
-                {
-                  "type": "number",
-                  "const": 2
-                },
-                {
-                  "type": "number",
-                  "const": 3
-                }
-              ],
-              "description": "Vertical planes, 180° / planes apart."
+              "$ref": "#/definitions/__schema29"
             },
             "frameWidth": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9007199254740991,
-              "description": "A frame's width, in texels."
+              "$ref": "#/definitions/__schema32"
             },
             "frameHeight": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9007199254740991,
-              "description": "A frame's height, in texels."
+              "$ref": "#/definitions/__schema33"
             },
             "gutter": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 9007199254740991,
-              "description": "Texels between a frame and its cell's edge."
+              "$ref": "#/definitions/__schema34"
             },
             "atlasSize": {
-              "type": "array",
-              "items": [
-                {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 9007199254740991
-                },
-                {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 9007199254740991
-                }
-              ],
-              "description": "The atlas's width and height: [planes × (frameWidth + 2 × gutter), frameHeight + 2 × gutter], the frames side by side.",
-              "minItems": 2,
-              "maxItems": 2,
-              "additionalItems": false
+              "$ref": "#/definitions/__schema35"
             },
             "center": {
-              "type": "array",
-              "items": [
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
-                }
-              ],
-              "description": "Where the planes cross (local space): the object's vertical axis, at its bounds' middle height.",
-              "minItems": 3,
-              "maxItems": 3,
-              "additionalItems": false
+              "$ref": "#/definitions/__schema38"
             },
             "halfWidth": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "Half a plane's width, in local units."
+              "$ref": "#/definitions/__schema39"
             },
             "halfHeight": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "Half a plane's height, in local units."
+              "$ref": "#/definitions/__schema40"
             }
           },
           "required": [
@@ -452,5 +182,376 @@
       ],
       "additionalProperties": false
     }
-  ]
+  ],
+  "definitions": {
+    "__schema0": {
+      "description": "The JSON Schema the editor validates the file with.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema1"
+        }
+      ]
+    },
+    "__schema1": {
+      "type": "string"
+    },
+    "__schema2": {
+      "description": "Default: the file name. The generator's `id` option.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema3": {
+      "type": "string"
+    },
+    "__schema4": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The `*.textureAtlas.json`'s id: its slots are the impostor's textures."
+    },
+    "__schema5": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991,
+      "description": "The export format (IMPOSTOR_EXPORT_FORMAT_VERSION, now 1): another one is refused at runtime, which bakes instead. Re-export it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema6": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "__schema7": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The fingerprint of the source geometry, its materials' bake inputs, the resolved shading and the options it was baked with (getImpostorSourceHash): the debug env warns when the source it's used with differs (re-export)."
+    },
+    "__schema8": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "The material's alpha cut the impostor was baked and exported with."
+    },
+    "__schema9": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/__schema10"
+        },
+        "params": {
+          "$ref": "#/definitions/__schema11"
+        }
+      },
+      "required": [
+        "type",
+        "params"
+      ],
+      "additionalProperties": false,
+      "description": "The material's shading as baked: the model and its parameters, never `AUTO`."
+    },
+    "__schema10": {
+      "type": "string",
+      "enum": [
+        "PHONGNODEMATERIAL",
+        "LAMBERTNODEMATERIAL",
+        "BASICNODEMATERIAL",
+        "STANDARDNODEMATERIAL"
+      ]
+    },
+    "__schema11": {
+      "type": "object",
+      "properties": {
+        "shininess": {
+          "type": "number"
+        },
+        "specular": {
+          "description": "Hex, eg. \"#111111\".",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema12"
+            }
+          ]
+        },
+        "roughness": {
+          "type": "number"
+        },
+        "metalness": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema12": {
+      "type": "string"
+    },
+    "__schema13": {
+      "description": "Notes for the debug tools: a name, a description.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema14"
+        }
+      ]
+    },
+    "__schema14": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "comments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "timestamp": {
+                "type": "number"
+              },
+              "comment": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "timestamp",
+              "comment"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "todo": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "debugObj": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema15": {
+      "description": "Written by the gatherer: the file it was read from, relative to the repo root.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema16"
+        }
+      ]
+    },
+    "__schema16": {
+      "type": "string"
+    },
+    "__schema17": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 32,
+      "description": "Frames along each side of the grid.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema18": {
+      "type": "boolean",
+      "description": "The upper hemisphere only."
+    },
+    "__schema19": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991,
+      "description": "A frame's side, in texels.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema20": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991,
+      "description": "Texels between a frame and its cell's edge.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema21": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991,
+      "description": "Texels per side of the (square) atlas: frames × (frameSize + 2 × gutter), the atlas's size.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema22": {
+      "description": "The object's bounding sphere centre (local space).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema26"
+        }
+      ],
+      "minItems": 3,
+      "maxItems": 3,
+      "additionalItems": false
+    },
+    "__schema23": {
+      "type": "number"
+    },
+    "__schema24": {
+      "type": "number"
+    },
+    "__schema25": {
+      "type": "number"
+    },
+    "__schema26": {
+      "type": "array",
+      "items": [
+        {
+          "$ref": "#/definitions/__schema23"
+        },
+        {
+          "$ref": "#/definitions/__schema24"
+        },
+        {
+          "$ref": "#/definitions/__schema25"
+        }
+      ],
+      "minItems": 3,
+      "maxItems": 3,
+      "additionalItems": false
+    },
+    "__schema27": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "The bounding sphere's radius."
+    },
+    "__schema28": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Half a frame's side, in local units."
+    },
+    "__schema29": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/__schema30"
+        },
+        {
+          "$ref": "#/definitions/__schema31"
+        }
+      ],
+      "description": "Vertical planes, 180° / planes apart."
+    },
+    "__schema30": {
+      "type": "number",
+      "const": 2
+    },
+    "__schema31": {
+      "type": "number",
+      "const": 3
+    },
+    "__schema32": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991,
+      "description": "A frame's width, in texels.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema33": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991,
+      "description": "A frame's height, in texels.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema34": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991,
+      "description": "Texels between a frame and its cell's edge.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema35": {
+      "type": "array",
+      "items": [
+        {
+          "$ref": "#/definitions/__schema36"
+        },
+        {
+          "$ref": "#/definitions/__schema37"
+        }
+      ],
+      "description": "The atlas's width and height: [planes × (frameWidth + 2 × gutter), frameHeight + 2 × gutter], the frames side by side.",
+      "minItems": 2,
+      "maxItems": 2,
+      "additionalItems": false
+    },
+    "__schema36": {
+      "minimum": 1,
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema37": {
+      "minimum": 1,
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema38": {
+      "description": "Where the planes cross (local space): the object's vertical axis, at its bounds' middle height.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema26"
+        }
+      ],
+      "minItems": 3,
+      "maxItems": 3,
+      "additionalItems": false
+    },
+    "__schema39": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Half a plane's width, in local units."
+    },
+    "__schema40": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Half a plane's height, in local units."
+    }
+  }
 }

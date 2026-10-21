@@ -6,19 +6,175 @@
       "type": "string"
     },
     "id": {
-      "type": "string"
+      "$ref": "#/definitions/__schema0"
     },
     "fileName": {
+      "$ref": "#/definitions/__schema1"
+    },
+    "path": {
+      "$ref": "#/definitions/__schema2"
+    },
+    "useHDRLoader": {
+      "$ref": "#/definitions/__schema3"
+    },
+    "texOpts": {
+      "$ref": "#/definitions/__schema4"
+    },
+    "throwOnError": {
+      "$ref": "#/definitions/__schema5"
+    },
+    "userData": {
+      "$ref": "#/definitions/__schema6"
+    },
+    "debugData": {
+      "$ref": "#/definitions/__schema7"
+    },
+    "optimize": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/__schema8"
+        },
+        {
+          "$ref": "#/definitions/__schema9"
+        }
+      ],
+      "description": "Asset optimization (p300): a profile, the slot, per-slot overrides and the alphaCoverage, or false to keep the file as it is."
+    },
+    "pack": {
+      "type": "object",
+      "properties": {
+        "size": {
+          "$ref": "#/definitions/__schema31"
+        },
+        "channels": {
+          "$ref": "#/definitions/__schema33"
+        }
+      },
+      "required": [
+        "channels"
+      ],
+      "additionalProperties": false,
+      "description": "Build time only (p300 DD5): the texture packed from source images, in place of `fileName`."
+    },
+    "__saveData": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "__meta": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "number"
+                },
+                "engineVersion": {
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema52"
+                    }
+                  ]
+                },
+                "toolkitVersion": {
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema52"
+                    }
+                  ]
+                },
+                "appVersion": {
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema52"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false
+            },
+            "id": {
+              "$ref": "#/definitions/__schema0"
+            },
+            "fileName": {
+              "$ref": "#/definitions/__schema1"
+            },
+            "path": {
+              "$ref": "#/definitions/__schema2"
+            },
+            "useHDRLoader": {
+              "$ref": "#/definitions/__schema3"
+            },
+            "texOpts": {
+              "$ref": "#/definitions/__schema4"
+            },
+            "throwOnError": {
+              "$ref": "#/definitions/__schema5"
+            },
+            "userData": {
+              "$ref": "#/definitions/__schema6"
+            },
+            "debugData": {
+              "$ref": "#/definitions/__schema7"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "__sourcePath": {
+      "type": "string"
+    },
+    "__fileSize": {
+      "type": "number"
+    },
+    "__url": {
+      "type": "string"
+    },
+    "__sourceUrl": {
+      "type": "string"
+    },
+    "__bytes": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema53"
+        }
+      ]
+    },
+    "__vramBytes": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema53"
+        }
+      ]
+    },
+    "__codec": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema17"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "__schema0": {
+      "type": "string"
+    },
+    "__schema1": {
       "type": "string",
       "description": "Relative to this JSON file (\"./source/rock.png\", optimized into src/public/aek-assets/), or a URL path served from src/public (\"/textures/rock.png\", optionally after `path`)."
     },
-    "path": {
+    "__schema2": {
       "type": "string"
     },
-    "useHDRLoader": {
+    "__schema3": {
       "type": "boolean"
     },
-    "texOpts": {
+    "__schema4": {
       "type": "object",
       "properties": {
         "mapping": {
@@ -61,17 +217,17 @@
       },
       "additionalProperties": false
     },
-    "throwOnError": {
+    "__schema5": {
       "type": "boolean"
     },
-    "userData": {
+    "__schema6": {
       "type": "object",
       "propertyNames": {
         "type": "string"
       },
       "additionalProperties": {}
     },
-    "debugData": {
+    "__schema7": {
       "type": "object",
       "properties": {
         "name": {
@@ -116,7 +272,73 @@
       },
       "additionalProperties": false
     },
-    "optimize": {
+    "__schema8": {
+      "type": "boolean",
+      "const": false
+    },
+    "__schema9": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "$ref": "#/definitions/__schema10"
+        },
+        "slot": {
+          "$ref": "#/definitions/__schema12"
+        },
+        "textures": {
+          "$ref": "#/definitions/__schema14"
+        },
+        "budget": {
+          "$ref": "#/definitions/__schema25"
+        },
+        "alphaCoverage": {
+          "$ref": "#/definitions/__schema30"
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema10": {
+      "description": "A profile of assets.config.json.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema11"
+        }
+      ]
+    },
+    "__schema11": {
+      "type": "string"
+    },
+    "__schema12": {
+      "description": "A standalone texture's slot (default: default). A GLB's textures are classified by their material slot.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema13"
+        }
+      ]
+    },
+    "__schema13": {
+      "type": "string",
+      "enum": [
+        "default",
+        "baseColor",
+        "normal",
+        "metallicRoughness",
+        "occlusion",
+        "emissive",
+        "orm",
+        "data"
+      ],
+      "description": "glTF slots, orm (packed occlusion / roughness / metalness), data (splat maps, masks, LUTs, height) or default."
+    },
+    "__schema14": {
+      "description": "Per-slot overrides, or false to keep the textures as they are.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema15"
+        }
+      ]
+    },
+    "__schema15": {
       "anyOf": [
         {
           "type": "boolean",
@@ -125,1496 +347,137 @@
         {
           "type": "object",
           "properties": {
-            "profile": {
-              "description": "A profile of assets.config.json.",
-              "type": "string"
-            },
-            "slot": {
-              "description": "A standalone texture's slot (default: default). A GLB's textures are classified by their material slot.",
-              "type": "string",
-              "enum": [
-                "default",
-                "baseColor",
-                "normal",
-                "metallicRoughness",
-                "occlusion",
-                "emissive",
-                "orm",
-                "data"
-              ]
-            },
-            "textures": {
-              "description": "Per-slot overrides, or false to keep the textures as they are.",
-              "anyOf": [
+            "default": {
+              "allOf": [
                 {
-                  "type": "boolean",
-                  "const": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "default": {
-                      "type": "object",
-                      "properties": {
-                        "codec": {
-                          "type": "string",
-                          "enum": [
-                            "uastc",
-                            "etc1s",
-                            "none"
-                          ],
-                          "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                        },
-                        "maxSize": {
-                          "description": "Largest side in px, downscaled to fit (null: the source size).",
-                          "anyOf": [
-                            {
-                              "type": "integer",
-                              "minimum": 4,
-                              "maximum": 9007199254740991
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "mipmaps": {
-                          "description": "Write the full mip chain (default true).",
-                          "type": "boolean"
-                        },
-                        "level": {
-                          "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 4
-                        },
-                        "rdo": {
-                          "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                          "type": "number",
-                          "minimum": 0
-                        },
-                        "zstd": {
-                          "description": "UASTC only: Zstandard supercompression level (0: off).",
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 22
-                        },
-                        "quality": {
-                          "description": "ETC1S only: --qlevel, 1 to 255.",
-                          "type": "integer",
-                          "minimum": 1,
-                          "maximum": 255
-                        },
-                        "normalMode": {
-                          "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                          "type": "boolean"
-                        }
-                      },
-                      "additionalProperties": false
-                    },
-                    "baseColor": {
-                      "type": "object",
-                      "properties": {
-                        "codec": {
-                          "type": "string",
-                          "enum": [
-                            "uastc",
-                            "etc1s",
-                            "none"
-                          ],
-                          "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                        },
-                        "maxSize": {
-                          "description": "Largest side in px, downscaled to fit (null: the source size).",
-                          "anyOf": [
-                            {
-                              "type": "integer",
-                              "minimum": 4,
-                              "maximum": 9007199254740991
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "mipmaps": {
-                          "description": "Write the full mip chain (default true).",
-                          "type": "boolean"
-                        },
-                        "level": {
-                          "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 4
-                        },
-                        "rdo": {
-                          "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                          "type": "number",
-                          "minimum": 0
-                        },
-                        "zstd": {
-                          "description": "UASTC only: Zstandard supercompression level (0: off).",
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 22
-                        },
-                        "quality": {
-                          "description": "ETC1S only: --qlevel, 1 to 255.",
-                          "type": "integer",
-                          "minimum": 1,
-                          "maximum": 255
-                        },
-                        "normalMode": {
-                          "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                          "type": "boolean"
-                        }
-                      },
-                      "additionalProperties": false
-                    },
-                    "normal": {
-                      "type": "object",
-                      "properties": {
-                        "codec": {
-                          "type": "string",
-                          "enum": [
-                            "uastc",
-                            "etc1s",
-                            "none"
-                          ],
-                          "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                        },
-                        "maxSize": {
-                          "description": "Largest side in px, downscaled to fit (null: the source size).",
-                          "anyOf": [
-                            {
-                              "type": "integer",
-                              "minimum": 4,
-                              "maximum": 9007199254740991
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "mipmaps": {
-                          "description": "Write the full mip chain (default true).",
-                          "type": "boolean"
-                        },
-                        "level": {
-                          "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 4
-                        },
-                        "rdo": {
-                          "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                          "type": "number",
-                          "minimum": 0
-                        },
-                        "zstd": {
-                          "description": "UASTC only: Zstandard supercompression level (0: off).",
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 22
-                        },
-                        "quality": {
-                          "description": "ETC1S only: --qlevel, 1 to 255.",
-                          "type": "integer",
-                          "minimum": 1,
-                          "maximum": 255
-                        },
-                        "normalMode": {
-                          "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                          "type": "boolean"
-                        }
-                      },
-                      "additionalProperties": false
-                    },
-                    "metallicRoughness": {
-                      "type": "object",
-                      "properties": {
-                        "codec": {
-                          "type": "string",
-                          "enum": [
-                            "uastc",
-                            "etc1s",
-                            "none"
-                          ],
-                          "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                        },
-                        "maxSize": {
-                          "description": "Largest side in px, downscaled to fit (null: the source size).",
-                          "anyOf": [
-                            {
-                              "type": "integer",
-                              "minimum": 4,
-                              "maximum": 9007199254740991
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "mipmaps": {
-                          "description": "Write the full mip chain (default true).",
-                          "type": "boolean"
-                        },
-                        "level": {
-                          "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 4
-                        },
-                        "rdo": {
-                          "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                          "type": "number",
-                          "minimum": 0
-                        },
-                        "zstd": {
-                          "description": "UASTC only: Zstandard supercompression level (0: off).",
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 22
-                        },
-                        "quality": {
-                          "description": "ETC1S only: --qlevel, 1 to 255.",
-                          "type": "integer",
-                          "minimum": 1,
-                          "maximum": 255
-                        },
-                        "normalMode": {
-                          "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                          "type": "boolean"
-                        }
-                      },
-                      "additionalProperties": false
-                    },
-                    "occlusion": {
-                      "type": "object",
-                      "properties": {
-                        "codec": {
-                          "type": "string",
-                          "enum": [
-                            "uastc",
-                            "etc1s",
-                            "none"
-                          ],
-                          "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                        },
-                        "maxSize": {
-                          "description": "Largest side in px, downscaled to fit (null: the source size).",
-                          "anyOf": [
-                            {
-                              "type": "integer",
-                              "minimum": 4,
-                              "maximum": 9007199254740991
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "mipmaps": {
-                          "description": "Write the full mip chain (default true).",
-                          "type": "boolean"
-                        },
-                        "level": {
-                          "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 4
-                        },
-                        "rdo": {
-                          "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                          "type": "number",
-                          "minimum": 0
-                        },
-                        "zstd": {
-                          "description": "UASTC only: Zstandard supercompression level (0: off).",
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 22
-                        },
-                        "quality": {
-                          "description": "ETC1S only: --qlevel, 1 to 255.",
-                          "type": "integer",
-                          "minimum": 1,
-                          "maximum": 255
-                        },
-                        "normalMode": {
-                          "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                          "type": "boolean"
-                        }
-                      },
-                      "additionalProperties": false
-                    },
-                    "emissive": {
-                      "type": "object",
-                      "properties": {
-                        "codec": {
-                          "type": "string",
-                          "enum": [
-                            "uastc",
-                            "etc1s",
-                            "none"
-                          ],
-                          "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                        },
-                        "maxSize": {
-                          "description": "Largest side in px, downscaled to fit (null: the source size).",
-                          "anyOf": [
-                            {
-                              "type": "integer",
-                              "minimum": 4,
-                              "maximum": 9007199254740991
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "mipmaps": {
-                          "description": "Write the full mip chain (default true).",
-                          "type": "boolean"
-                        },
-                        "level": {
-                          "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 4
-                        },
-                        "rdo": {
-                          "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                          "type": "number",
-                          "minimum": 0
-                        },
-                        "zstd": {
-                          "description": "UASTC only: Zstandard supercompression level (0: off).",
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 22
-                        },
-                        "quality": {
-                          "description": "ETC1S only: --qlevel, 1 to 255.",
-                          "type": "integer",
-                          "minimum": 1,
-                          "maximum": 255
-                        },
-                        "normalMode": {
-                          "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                          "type": "boolean"
-                        }
-                      },
-                      "additionalProperties": false
-                    },
-                    "orm": {
-                      "type": "object",
-                      "properties": {
-                        "codec": {
-                          "type": "string",
-                          "enum": [
-                            "uastc",
-                            "etc1s",
-                            "none"
-                          ],
-                          "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                        },
-                        "maxSize": {
-                          "description": "Largest side in px, downscaled to fit (null: the source size).",
-                          "anyOf": [
-                            {
-                              "type": "integer",
-                              "minimum": 4,
-                              "maximum": 9007199254740991
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "mipmaps": {
-                          "description": "Write the full mip chain (default true).",
-                          "type": "boolean"
-                        },
-                        "level": {
-                          "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 4
-                        },
-                        "rdo": {
-                          "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                          "type": "number",
-                          "minimum": 0
-                        },
-                        "zstd": {
-                          "description": "UASTC only: Zstandard supercompression level (0: off).",
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 22
-                        },
-                        "quality": {
-                          "description": "ETC1S only: --qlevel, 1 to 255.",
-                          "type": "integer",
-                          "minimum": 1,
-                          "maximum": 255
-                        },
-                        "normalMode": {
-                          "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                          "type": "boolean"
-                        }
-                      },
-                      "additionalProperties": false
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "codec": {
-                          "type": "string",
-                          "enum": [
-                            "uastc",
-                            "etc1s",
-                            "none"
-                          ],
-                          "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                        },
-                        "maxSize": {
-                          "description": "Largest side in px, downscaled to fit (null: the source size).",
-                          "anyOf": [
-                            {
-                              "type": "integer",
-                              "minimum": 4,
-                              "maximum": 9007199254740991
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "mipmaps": {
-                          "description": "Write the full mip chain (default true).",
-                          "type": "boolean"
-                        },
-                        "level": {
-                          "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 4
-                        },
-                        "rdo": {
-                          "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                          "type": "number",
-                          "minimum": 0
-                        },
-                        "zstd": {
-                          "description": "UASTC only: Zstandard supercompression level (0: off).",
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 22
-                        },
-                        "quality": {
-                          "description": "ETC1S only: --qlevel, 1 to 255.",
-                          "type": "integer",
-                          "minimum": 1,
-                          "maximum": 255
-                        },
-                        "normalMode": {
-                          "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                          "type": "boolean"
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
+                  "$ref": "#/definitions/__schema16"
                 }
               ]
             },
-            "budget": {
-              "type": "object",
-              "properties": {
-                "vramMB": {
-                  "description": "Estimated GPU memory of the whole asset in MB: its textures (KTX2 at 1 B/px, the most it takes on any device) plus a GLB's geometry (null: no limit).",
-                  "anyOf": [
-                    {
-                      "type": "number",
-                      "exclusiveMinimum": 0
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "downloadMB": {
-                  "description": "The output file's size in MB (null: no limit).",
-                  "anyOf": [
-                    {
-                      "type": "number",
-                      "exclusiveMinimum": 0
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
+            "baseColor": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema16"
                 }
-              },
-              "additionalProperties": false,
-              "description": "Per-asset limits. Set in an asset JSON's own optimize, it also replaces the per-texture ceiling (each texture's VRAM must fit its slot's maxSize and codec as set without the asset JSON's overrides)."
+              ]
             },
-            "alphaCoverage": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "maximum": 1,
-              "description": "The material's alphaTest (0-1, eg. 0.5): each mip level's alpha is scaled so the share of it passing this cut stays level 0's, so thin alpha-cut features (leaves, trunks, an impostor's edges) don't thin out with distance. Needs an alpha channel and mipmaps; not for a normal or data slot, or normalMode (their alpha isn't coverage). Default: off."
+            "normal": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema16"
+                }
+              ]
+            },
+            "metallicRoughness": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema16"
+                }
+              ]
+            },
+            "occlusion": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema16"
+                }
+              ]
+            },
+            "emissive": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema16"
+                }
+              ]
+            },
+            "orm": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema16"
+                }
+              ]
+            },
+            "data": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema16"
+                }
+              ]
             }
           },
           "additionalProperties": false
         }
-      ],
-      "description": "Asset optimization (p300): a profile, the slot, per-slot overrides and the alphaCoverage, or false to keep the file as it is."
+      ]
     },
-    "pack": {
+    "__schema16": {
       "type": "object",
       "properties": {
-        "size": {
-          "description": "Width and height the channels are combined at (default: the sources' size, which must then agree). The optimize step resizes the result to its maxSize.",
-          "type": "array",
-          "items": [
+        "codec": {
+          "allOf": [
             {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9007199254740991
-            },
+              "$ref": "#/definitions/__schema17"
+            }
+          ]
+        },
+        "maxSize": {
+          "description": "Largest side in px, downscaled to fit (null: the source size).",
+          "allOf": [
             {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9007199254740991
+              "$ref": "#/definitions/__schema18"
             }
-          ],
-          "minItems": 2,
-          "maxItems": 2,
-          "additionalItems": false
+          ]
         },
-        "channels": {
-          "type": "object",
-          "properties": {
-            "r": {
-              "anyOf": [
-                {
-                  "type": "number",
-                  "description": "A constant (0..1, linear) in every channel of the target."
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "src": {
-                      "type": "string",
-                      "description": "A source image relative to this JSON (\"./source/ao.png\"), or a URL path served from src/public. 8 or 16 bits."
-                    },
-                    "channel": {
-                      "description": "The channels of `src`, one per target channel (default: the target's own, eg. \"rgb\"). A greyscale image has its grey in r, g and b.",
-                      "type": "string",
-                      "pattern": "^[rgba]{1,4}$"
-                    },
-                    "colorSpace": {
-                      "description": "How `src` is encoded (alpha is always linear). Default: srgb for the colour channels of an sRGB texture (texOpts.colorSpace), else linear.",
-                      "type": "string",
-                      "enum": [
-                        "srgb",
-                        "linear"
-                      ]
-                    },
-                    "normal": {
-                      "description": "`src` is a normal map: it is resized as unit vectors, before its channels are taken. Only `invert` applies.",
-                      "type": "boolean"
-                    },
-                    "remap": {
-                      "description": "Maps [min, max] to 0..1; auto: the full range of the channels taken.",
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "auto"
-                        },
-                        {
-                          "type": "array",
-                          "items": [
-                            {
-                              "type": "number"
-                            },
-                            {
-                              "type": "number"
-                            }
-                          ],
-                          "minItems": 2,
-                          "maxItems": 2,
-                          "additionalItems": false
-                        }
-                      ]
-                    },
-                    "invert": {
-                      "description": "1 − value, after remap (eg. a DirectX normal's G).",
-                      "type": "boolean"
-                    },
-                    "multiply": {
-                      "anyOf": [
-                        {
-                          "type": "number",
-                          "description": "A constant factor."
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "src": {
-                              "type": "string",
-                              "description": "A source image relative to this JSON (\"./source/ao.png\"), or a URL path served from src/public. 8 or 16 bits."
-                            },
-                            "channel": {
-                              "description": "The channel of `src` (default r).",
-                              "type": "string",
-                              "enum": [
-                                "r",
-                                "g",
-                                "b",
-                                "a"
-                              ]
-                            },
-                            "strength": {
-                              "description": "value × (1 + (factor − 1) × strength), eg. 0.8 for AO into albedo (default 1).",
-                              "type": "number",
-                              "minimum": 0
-                            }
-                          },
-                          "required": [
-                            "src"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ],
-                      "description": "Multiplied in after remap and invert (linear values), eg. AO into the albedo."
-                    }
-                  },
-                  "required": [
-                    "src"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
-            },
-            "g": {
-              "anyOf": [
-                {
-                  "type": "number",
-                  "description": "A constant (0..1, linear) in every channel of the target."
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "src": {
-                      "type": "string",
-                      "description": "A source image relative to this JSON (\"./source/ao.png\"), or a URL path served from src/public. 8 or 16 bits."
-                    },
-                    "channel": {
-                      "description": "The channels of `src`, one per target channel (default: the target's own, eg. \"rgb\"). A greyscale image has its grey in r, g and b.",
-                      "type": "string",
-                      "pattern": "^[rgba]{1,4}$"
-                    },
-                    "colorSpace": {
-                      "description": "How `src` is encoded (alpha is always linear). Default: srgb for the colour channels of an sRGB texture (texOpts.colorSpace), else linear.",
-                      "type": "string",
-                      "enum": [
-                        "srgb",
-                        "linear"
-                      ]
-                    },
-                    "normal": {
-                      "description": "`src` is a normal map: it is resized as unit vectors, before its channels are taken. Only `invert` applies.",
-                      "type": "boolean"
-                    },
-                    "remap": {
-                      "description": "Maps [min, max] to 0..1; auto: the full range of the channels taken.",
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "auto"
-                        },
-                        {
-                          "type": "array",
-                          "items": [
-                            {
-                              "type": "number"
-                            },
-                            {
-                              "type": "number"
-                            }
-                          ],
-                          "minItems": 2,
-                          "maxItems": 2,
-                          "additionalItems": false
-                        }
-                      ]
-                    },
-                    "invert": {
-                      "description": "1 − value, after remap (eg. a DirectX normal's G).",
-                      "type": "boolean"
-                    },
-                    "multiply": {
-                      "anyOf": [
-                        {
-                          "type": "number",
-                          "description": "A constant factor."
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "src": {
-                              "type": "string",
-                              "description": "A source image relative to this JSON (\"./source/ao.png\"), or a URL path served from src/public. 8 or 16 bits."
-                            },
-                            "channel": {
-                              "description": "The channel of `src` (default r).",
-                              "type": "string",
-                              "enum": [
-                                "r",
-                                "g",
-                                "b",
-                                "a"
-                              ]
-                            },
-                            "strength": {
-                              "description": "value × (1 + (factor − 1) × strength), eg. 0.8 for AO into albedo (default 1).",
-                              "type": "number",
-                              "minimum": 0
-                            }
-                          },
-                          "required": [
-                            "src"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ],
-                      "description": "Multiplied in after remap and invert (linear values), eg. AO into the albedo."
-                    }
-                  },
-                  "required": [
-                    "src"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
-            },
-            "b": {
-              "anyOf": [
-                {
-                  "type": "number",
-                  "description": "A constant (0..1, linear) in every channel of the target."
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "src": {
-                      "type": "string",
-                      "description": "A source image relative to this JSON (\"./source/ao.png\"), or a URL path served from src/public. 8 or 16 bits."
-                    },
-                    "channel": {
-                      "description": "The channels of `src`, one per target channel (default: the target's own, eg. \"rgb\"). A greyscale image has its grey in r, g and b.",
-                      "type": "string",
-                      "pattern": "^[rgba]{1,4}$"
-                    },
-                    "colorSpace": {
-                      "description": "How `src` is encoded (alpha is always linear). Default: srgb for the colour channels of an sRGB texture (texOpts.colorSpace), else linear.",
-                      "type": "string",
-                      "enum": [
-                        "srgb",
-                        "linear"
-                      ]
-                    },
-                    "normal": {
-                      "description": "`src` is a normal map: it is resized as unit vectors, before its channels are taken. Only `invert` applies.",
-                      "type": "boolean"
-                    },
-                    "remap": {
-                      "description": "Maps [min, max] to 0..1; auto: the full range of the channels taken.",
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "auto"
-                        },
-                        {
-                          "type": "array",
-                          "items": [
-                            {
-                              "type": "number"
-                            },
-                            {
-                              "type": "number"
-                            }
-                          ],
-                          "minItems": 2,
-                          "maxItems": 2,
-                          "additionalItems": false
-                        }
-                      ]
-                    },
-                    "invert": {
-                      "description": "1 − value, after remap (eg. a DirectX normal's G).",
-                      "type": "boolean"
-                    },
-                    "multiply": {
-                      "anyOf": [
-                        {
-                          "type": "number",
-                          "description": "A constant factor."
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "src": {
-                              "type": "string",
-                              "description": "A source image relative to this JSON (\"./source/ao.png\"), or a URL path served from src/public. 8 or 16 bits."
-                            },
-                            "channel": {
-                              "description": "The channel of `src` (default r).",
-                              "type": "string",
-                              "enum": [
-                                "r",
-                                "g",
-                                "b",
-                                "a"
-                              ]
-                            },
-                            "strength": {
-                              "description": "value × (1 + (factor − 1) × strength), eg. 0.8 for AO into albedo (default 1).",
-                              "type": "number",
-                              "minimum": 0
-                            }
-                          },
-                          "required": [
-                            "src"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ],
-                      "description": "Multiplied in after remap and invert (linear values), eg. AO into the albedo."
-                    }
-                  },
-                  "required": [
-                    "src"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
-            },
-            "a": {
-              "anyOf": [
-                {
-                  "type": "number",
-                  "description": "A constant (0..1, linear) in every channel of the target."
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "src": {
-                      "type": "string",
-                      "description": "A source image relative to this JSON (\"./source/ao.png\"), or a URL path served from src/public. 8 or 16 bits."
-                    },
-                    "channel": {
-                      "description": "The channels of `src`, one per target channel (default: the target's own, eg. \"rgb\"). A greyscale image has its grey in r, g and b.",
-                      "type": "string",
-                      "pattern": "^[rgba]{1,4}$"
-                    },
-                    "colorSpace": {
-                      "description": "How `src` is encoded (alpha is always linear). Default: srgb for the colour channels of an sRGB texture (texOpts.colorSpace), else linear.",
-                      "type": "string",
-                      "enum": [
-                        "srgb",
-                        "linear"
-                      ]
-                    },
-                    "normal": {
-                      "description": "`src` is a normal map: it is resized as unit vectors, before its channels are taken. Only `invert` applies.",
-                      "type": "boolean"
-                    },
-                    "remap": {
-                      "description": "Maps [min, max] to 0..1; auto: the full range of the channels taken.",
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "auto"
-                        },
-                        {
-                          "type": "array",
-                          "items": [
-                            {
-                              "type": "number"
-                            },
-                            {
-                              "type": "number"
-                            }
-                          ],
-                          "minItems": 2,
-                          "maxItems": 2,
-                          "additionalItems": false
-                        }
-                      ]
-                    },
-                    "invert": {
-                      "description": "1 − value, after remap (eg. a DirectX normal's G).",
-                      "type": "boolean"
-                    },
-                    "multiply": {
-                      "anyOf": [
-                        {
-                          "type": "number",
-                          "description": "A constant factor."
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "src": {
-                              "type": "string",
-                              "description": "A source image relative to this JSON (\"./source/ao.png\"), or a URL path served from src/public. 8 or 16 bits."
-                            },
-                            "channel": {
-                              "description": "The channel of `src` (default r).",
-                              "type": "string",
-                              "enum": [
-                                "r",
-                                "g",
-                                "b",
-                                "a"
-                              ]
-                            },
-                            "strength": {
-                              "description": "value × (1 + (factor − 1) × strength), eg. 0.8 for AO into albedo (default 1).",
-                              "type": "number",
-                              "minimum": 0
-                            }
-                          },
-                          "required": [
-                            "src"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ],
-                      "description": "Multiplied in after remap and invert (linear values), eg. AO into the albedo."
-                    }
-                  },
-                  "required": [
-                    "src"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
-            },
-            "rg": {
-              "anyOf": [
-                {
-                  "type": "number",
-                  "description": "A constant (0..1, linear) in every channel of the target."
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "src": {
-                      "type": "string",
-                      "description": "A source image relative to this JSON (\"./source/ao.png\"), or a URL path served from src/public. 8 or 16 bits."
-                    },
-                    "channel": {
-                      "description": "The channels of `src`, one per target channel (default: the target's own, eg. \"rgb\"). A greyscale image has its grey in r, g and b.",
-                      "type": "string",
-                      "pattern": "^[rgba]{1,4}$"
-                    },
-                    "colorSpace": {
-                      "description": "How `src` is encoded (alpha is always linear). Default: srgb for the colour channels of an sRGB texture (texOpts.colorSpace), else linear.",
-                      "type": "string",
-                      "enum": [
-                        "srgb",
-                        "linear"
-                      ]
-                    },
-                    "normal": {
-                      "description": "`src` is a normal map: it is resized as unit vectors, before its channels are taken. Only `invert` applies.",
-                      "type": "boolean"
-                    },
-                    "remap": {
-                      "description": "Maps [min, max] to 0..1; auto: the full range of the channels taken.",
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "auto"
-                        },
-                        {
-                          "type": "array",
-                          "items": [
-                            {
-                              "type": "number"
-                            },
-                            {
-                              "type": "number"
-                            }
-                          ],
-                          "minItems": 2,
-                          "maxItems": 2,
-                          "additionalItems": false
-                        }
-                      ]
-                    },
-                    "invert": {
-                      "description": "1 − value, after remap (eg. a DirectX normal's G).",
-                      "type": "boolean"
-                    },
-                    "multiply": {
-                      "anyOf": [
-                        {
-                          "type": "number",
-                          "description": "A constant factor."
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "src": {
-                              "type": "string",
-                              "description": "A source image relative to this JSON (\"./source/ao.png\"), or a URL path served from src/public. 8 or 16 bits."
-                            },
-                            "channel": {
-                              "description": "The channel of `src` (default r).",
-                              "type": "string",
-                              "enum": [
-                                "r",
-                                "g",
-                                "b",
-                                "a"
-                              ]
-                            },
-                            "strength": {
-                              "description": "value × (1 + (factor − 1) × strength), eg. 0.8 for AO into albedo (default 1).",
-                              "type": "number",
-                              "minimum": 0
-                            }
-                          },
-                          "required": [
-                            "src"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ],
-                      "description": "Multiplied in after remap and invert (linear values), eg. AO into the albedo."
-                    }
-                  },
-                  "required": [
-                    "src"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
-            },
-            "rgb": {
-              "anyOf": [
-                {
-                  "type": "number",
-                  "description": "A constant (0..1, linear) in every channel of the target."
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "src": {
-                      "type": "string",
-                      "description": "A source image relative to this JSON (\"./source/ao.png\"), or a URL path served from src/public. 8 or 16 bits."
-                    },
-                    "channel": {
-                      "description": "The channels of `src`, one per target channel (default: the target's own, eg. \"rgb\"). A greyscale image has its grey in r, g and b.",
-                      "type": "string",
-                      "pattern": "^[rgba]{1,4}$"
-                    },
-                    "colorSpace": {
-                      "description": "How `src` is encoded (alpha is always linear). Default: srgb for the colour channels of an sRGB texture (texOpts.colorSpace), else linear.",
-                      "type": "string",
-                      "enum": [
-                        "srgb",
-                        "linear"
-                      ]
-                    },
-                    "normal": {
-                      "description": "`src` is a normal map: it is resized as unit vectors, before its channels are taken. Only `invert` applies.",
-                      "type": "boolean"
-                    },
-                    "remap": {
-                      "description": "Maps [min, max] to 0..1; auto: the full range of the channels taken.",
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "auto"
-                        },
-                        {
-                          "type": "array",
-                          "items": [
-                            {
-                              "type": "number"
-                            },
-                            {
-                              "type": "number"
-                            }
-                          ],
-                          "minItems": 2,
-                          "maxItems": 2,
-                          "additionalItems": false
-                        }
-                      ]
-                    },
-                    "invert": {
-                      "description": "1 − value, after remap (eg. a DirectX normal's G).",
-                      "type": "boolean"
-                    },
-                    "multiply": {
-                      "anyOf": [
-                        {
-                          "type": "number",
-                          "description": "A constant factor."
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "src": {
-                              "type": "string",
-                              "description": "A source image relative to this JSON (\"./source/ao.png\"), or a URL path served from src/public. 8 or 16 bits."
-                            },
-                            "channel": {
-                              "description": "The channel of `src` (default r).",
-                              "type": "string",
-                              "enum": [
-                                "r",
-                                "g",
-                                "b",
-                                "a"
-                              ]
-                            },
-                            "strength": {
-                              "description": "value × (1 + (factor − 1) × strength), eg. 0.8 for AO into albedo (default 1).",
-                              "type": "number",
-                              "minimum": 0
-                            }
-                          },
-                          "required": [
-                            "src"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ],
-                      "description": "Multiplied in after remap and invert (linear values), eg. AO into the albedo."
-                    }
-                  },
-                  "required": [
-                    "src"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
-            },
-            "rgba": {
-              "anyOf": [
-                {
-                  "type": "number",
-                  "description": "A constant (0..1, linear) in every channel of the target."
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "src": {
-                      "type": "string",
-                      "description": "A source image relative to this JSON (\"./source/ao.png\"), or a URL path served from src/public. 8 or 16 bits."
-                    },
-                    "channel": {
-                      "description": "The channels of `src`, one per target channel (default: the target's own, eg. \"rgb\"). A greyscale image has its grey in r, g and b.",
-                      "type": "string",
-                      "pattern": "^[rgba]{1,4}$"
-                    },
-                    "colorSpace": {
-                      "description": "How `src` is encoded (alpha is always linear). Default: srgb for the colour channels of an sRGB texture (texOpts.colorSpace), else linear.",
-                      "type": "string",
-                      "enum": [
-                        "srgb",
-                        "linear"
-                      ]
-                    },
-                    "normal": {
-                      "description": "`src` is a normal map: it is resized as unit vectors, before its channels are taken. Only `invert` applies.",
-                      "type": "boolean"
-                    },
-                    "remap": {
-                      "description": "Maps [min, max] to 0..1; auto: the full range of the channels taken.",
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "auto"
-                        },
-                        {
-                          "type": "array",
-                          "items": [
-                            {
-                              "type": "number"
-                            },
-                            {
-                              "type": "number"
-                            }
-                          ],
-                          "minItems": 2,
-                          "maxItems": 2,
-                          "additionalItems": false
-                        }
-                      ]
-                    },
-                    "invert": {
-                      "description": "1 − value, after remap (eg. a DirectX normal's G).",
-                      "type": "boolean"
-                    },
-                    "multiply": {
-                      "anyOf": [
-                        {
-                          "type": "number",
-                          "description": "A constant factor."
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "src": {
-                              "type": "string",
-                              "description": "A source image relative to this JSON (\"./source/ao.png\"), or a URL path served from src/public. 8 or 16 bits."
-                            },
-                            "channel": {
-                              "description": "The channel of `src` (default r).",
-                              "type": "string",
-                              "enum": [
-                                "r",
-                                "g",
-                                "b",
-                                "a"
-                              ]
-                            },
-                            "strength": {
-                              "description": "value × (1 + (factor − 1) × strength), eg. 0.8 for AO into albedo (default 1).",
-                              "type": "number",
-                              "minimum": 0
-                            }
-                          },
-                          "required": [
-                            "src"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ],
-                      "description": "Multiplied in after remap and invert (linear values), eg. AO into the albedo."
-                    }
-                  },
-                  "required": [
-                    "src"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
+        "mipmaps": {
+          "description": "Write the full mip chain (default true).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema19"
             }
-          },
-          "additionalProperties": false,
-          "description": "Per output channel or channel group: a source channel, or a constant."
-        }
-      },
-      "required": [
-        "channels"
-      ],
-      "additionalProperties": false,
-      "description": "Build time only (p300 DD5): the texture packed from source images, in place of `fileName`."
-    },
-    "__saveData": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "__meta": {
-              "type": "object",
-              "properties": {
-                "date": {
-                  "type": "number"
-                },
-                "engineVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                },
-                "toolkitVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                },
-                "appVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                }
-              },
-              "additionalProperties": false
-            },
-            "id": {
-              "type": "string"
-            },
-            "fileName": {
-              "type": "string",
-              "description": "Relative to this JSON file (\"./source/rock.png\", optimized into src/public/aek-assets/), or a URL path served from src/public (\"/textures/rock.png\", optionally after `path`)."
-            },
-            "path": {
-              "type": "string"
-            },
-            "useHDRLoader": {
-              "type": "boolean"
-            },
-            "texOpts": {
-              "type": "object",
-              "properties": {
-                "mapping": {
-                  "type": "number"
-                },
-                "wrapS": {
-                  "type": "number"
-                },
-                "wrapT": {
-                  "type": "number"
-                },
-                "magFilter": {
-                  "type": "number"
-                },
-                "minFilter": {
-                  "type": "number"
-                },
-                "type": {
-                  "type": "number"
-                },
-                "anisotropy": {
-                  "type": "number"
-                },
-                "colorSpace": {
-                  "anyOf": [
-                    {
-                      "type": "string",
-                      "const": ""
-                    },
-                    {
-                      "type": "string",
-                      "const": "srgb"
-                    },
-                    {
-                      "type": "string",
-                      "const": "srgb-linear"
-                    }
-                  ]
-                }
-              },
-              "additionalProperties": false
-            },
-            "throwOnError": {
-              "type": "boolean"
-            },
-            "userData": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
-            },
-            "debugData": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string"
-                },
-                "comments": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "timestamp": {
-                        "type": "number"
-                      },
-                      "comment": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "timestamp",
-                      "comment"
-                    ],
-                    "additionalProperties": false
-                  }
-                },
-                "todo": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "debugObj": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                }
-              },
-              "additionalProperties": false
-            }
-          },
-          "additionalProperties": false
-        }
-      }
-    },
-    "__sourcePath": {
-      "type": "string"
-    },
-    "__fileSize": {
-      "type": "number"
-    },
-    "__url": {
-      "type": "string"
-    },
-    "__sourceUrl": {
-      "type": "string"
-    },
-    "__bytes": {
-      "type": "object",
-      "properties": {
-        "in": {
-          "type": "number"
+          ]
         },
-        "out": {
-          "type": "number"
+        "level": {
+          "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema20"
+            }
+          ]
+        },
+        "rdo": {
+          "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema21"
+            }
+          ]
+        },
+        "zstd": {
+          "description": "UASTC only: Zstandard supercompression level (0: off).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema22"
+            }
+          ]
+        },
+        "quality": {
+          "description": "ETC1S only: --qlevel, 1 to 255.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema23"
+            }
+          ]
+        },
+        "normalMode": {
+          "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema24"
+            }
+          ]
         }
       },
-      "required": [
-        "in",
-        "out"
-      ],
       "additionalProperties": false
     },
-    "__vramBytes": {
-      "type": "object",
-      "properties": {
-        "in": {
-          "type": "number"
-        },
-        "out": {
-          "type": "number"
-        }
-      },
-      "required": [
-        "in",
-        "out"
-      ],
-      "additionalProperties": false
-    },
-    "__codec": {
+    "__schema17": {
       "type": "string",
       "enum": [
         "uastc",
@@ -1622,7 +485,380 @@
         "none"
       ],
       "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
+    },
+    "__schema18": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 4,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "__schema19": {
+      "type": "boolean"
+    },
+    "__schema20": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4
+    },
+    "__schema21": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema22": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 22
+    },
+    "__schema23": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 255
+    },
+    "__schema24": {
+      "type": "boolean"
+    },
+    "__schema25": {
+      "type": "object",
+      "properties": {
+        "vramMB": {
+          "$ref": "#/definitions/__schema26"
+        },
+        "downloadMB": {
+          "$ref": "#/definitions/__schema29"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Per-asset limits. Set in an asset JSON's own optimize, it also replaces the per-texture ceiling (each texture's VRAM must fit its slot's maxSize and codec as set without the asset JSON's overrides)."
+    },
+    "__schema26": {
+      "description": "Estimated GPU memory of the whole asset in MB: its textures (KTX2 at 1 B/px, the most it takes on any device) plus a GLB's geometry (null: no limit).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema27"
+        }
+      ],
+      "$ref": "#/definitions/__schema28"
+    },
+    "__schema27": {
+      "anyOf": [
+        {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "__schema28": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema27"
+        }
+      ]
+    },
+    "__schema29": {
+      "description": "The output file's size in MB (null: no limit).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema27"
+        }
+      ],
+      "$ref": "#/definitions/__schema28"
+    },
+    "__schema30": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 1,
+      "description": "The material's alphaTest (0-1, eg. 0.5): each mip level's alpha is scaled so the share of it passing this cut stays level 0's, so thin alpha-cut features (leaves, trunks, an impostor's edges) don't thin out with distance. Needs an alpha channel and mipmaps; not for a normal or data slot, or normalMode (their alpha isn't coverage). Default: off."
+    },
+    "__schema31": {
+      "description": "Width and height the channels are combined at (default: the sources' size, which must then agree). The optimize step resizes the result to its maxSize.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema32"
+        }
+      ]
+    },
+    "__schema32": {
+      "type": "array",
+      "items": [
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      ],
+      "minItems": 2,
+      "maxItems": 2,
+      "additionalItems": false
+    },
+    "__schema33": {
+      "type": "object",
+      "properties": {
+        "r": {
+          "$ref": "#/definitions/__schema34"
+        },
+        "g": {
+          "$ref": "#/definitions/__schema46"
+        },
+        "b": {
+          "$ref": "#/definitions/__schema47"
+        },
+        "a": {
+          "$ref": "#/definitions/__schema48"
+        },
+        "rg": {
+          "$ref": "#/definitions/__schema49"
+        },
+        "rgb": {
+          "$ref": "#/definitions/__schema50"
+        },
+        "rgba": {
+          "$ref": "#/definitions/__schema51"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Per output channel or channel group: a source channel, or a constant."
+    },
+    "__schema34": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema35"
+        }
+      ]
+    },
+    "__schema35": {
+      "anyOf": [
+        {
+          "type": "number",
+          "description": "A constant (0..1, linear) in every channel of the target."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "src": {
+              "$ref": "#/definitions/__schema36"
+            },
+            "channel": {
+              "description": "The channels of `src`, one per target channel (default: the target's own, eg. \"rgb\"). A greyscale image has its grey in r, g and b.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema37"
+                }
+              ]
+            },
+            "colorSpace": {
+              "description": "How `src` is encoded (alpha is always linear). Default: srgb for the colour channels of an sRGB texture (texOpts.colorSpace), else linear.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema38"
+                }
+              ]
+            },
+            "normal": {
+              "description": "`src` is a normal map: it is resized as unit vectors, before its channels are taken. Only `invert` applies.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema39"
+                }
+              ]
+            },
+            "remap": {
+              "description": "Maps [min, max] to 0..1; auto: the full range of the channels taken.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema40"
+                }
+              ]
+            },
+            "invert": {
+              "description": "1 − value, after remap (eg. a DirectX normal's G).",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema41"
+                }
+              ]
+            },
+            "multiply": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/__schema42"
+                },
+                {
+                  "$ref": "#/definitions/__schema43"
+                }
+              ],
+              "description": "Multiplied in after remap and invert (linear values), eg. AO into the albedo."
+            }
+          },
+          "required": [
+            "src"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "__schema36": {
+      "type": "string",
+      "description": "A source image relative to this JSON (\"./source/ao.png\"), or a URL path served from src/public. 8 or 16 bits."
+    },
+    "__schema37": {
+      "type": "string",
+      "pattern": "^[rgba]{1,4}$"
+    },
+    "__schema38": {
+      "type": "string",
+      "enum": [
+        "srgb",
+        "linear"
+      ]
+    },
+    "__schema39": {
+      "type": "boolean"
+    },
+    "__schema40": {
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "auto"
+        },
+        {
+          "type": "array",
+          "items": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2,
+          "additionalItems": false
+        }
+      ]
+    },
+    "__schema41": {
+      "type": "boolean"
+    },
+    "__schema42": {
+      "type": "number",
+      "description": "A constant factor."
+    },
+    "__schema43": {
+      "type": "object",
+      "properties": {
+        "src": {
+          "$ref": "#/definitions/__schema36"
+        },
+        "channel": {
+          "description": "The channel of `src` (default r).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema44"
+            }
+          ]
+        },
+        "strength": {
+          "description": "value × (1 + (factor − 1) × strength), eg. 0.8 for AO into albedo (default 1).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema45"
+            }
+          ]
+        }
+      },
+      "required": [
+        "src"
+      ],
+      "additionalProperties": false
+    },
+    "__schema44": {
+      "type": "string",
+      "enum": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
+    },
+    "__schema45": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema46": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema35"
+        }
+      ]
+    },
+    "__schema47": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema35"
+        }
+      ]
+    },
+    "__schema48": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema35"
+        }
+      ]
+    },
+    "__schema49": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema35"
+        }
+      ]
+    },
+    "__schema50": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema35"
+        }
+      ]
+    },
+    "__schema51": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema35"
+        }
+      ]
+    },
+    "__schema52": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "__schema53": {
+      "type": "object",
+      "properties": {
+        "in": {
+          "type": "number"
+        },
+        "out": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "in",
+        "out"
+      ],
+      "additionalProperties": false
     }
-  },
-  "additionalProperties": false
+  }
 }

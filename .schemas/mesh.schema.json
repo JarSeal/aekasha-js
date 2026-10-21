@@ -16,80 +16,16 @@
                   "type": "object",
                   "properties": {
                     "id": {
-                      "type": "string"
+                      "$ref": "#/definitions/__schema0"
                     },
                     "debugData": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string"
-                        },
-                        "description": {
-                          "type": "string"
-                        },
-                        "comments": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "timestamp": {
-                                "type": "number"
-                              },
-                              "comment": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "timestamp",
-                              "comment"
-                            ],
-                            "additionalProperties": false
-                          }
-                        },
-                        "todo": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
-                        },
-                        "debugObj": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
-                        }
-                      },
-                      "additionalProperties": false
+                      "$ref": "#/definitions/__schema1"
                     },
                     "type": {
-                      "type": "string",
-                      "const": "BOX"
+                      "$ref": "#/definitions/__schema3"
                     },
                     "params": {
-                      "type": "object",
-                      "properties": {
-                        "width": {
-                          "type": "number"
-                        },
-                        "height": {
-                          "type": "number"
-                        },
-                        "depth": {
-                          "type": "number"
-                        },
-                        "widthSegments": {
-                          "type": "number"
-                        },
-                        "heightSegments": {
-                          "type": "number"
-                        },
-                        "depthSegments": {
-                          "type": "number"
-                        }
-                      },
-                      "additionalProperties": false
+                      "$ref": "#/definitions/__schema4"
                     }
                   },
                   "required": [
@@ -101,83 +37,16 @@
                   "type": "object",
                   "properties": {
                     "id": {
-                      "type": "string"
+                      "$ref": "#/definitions/__schema0"
                     },
                     "debugData": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string"
-                        },
-                        "description": {
-                          "type": "string"
-                        },
-                        "comments": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "timestamp": {
-                                "type": "number"
-                              },
-                              "comment": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "timestamp",
-                              "comment"
-                            ],
-                            "additionalProperties": false
-                          }
-                        },
-                        "todo": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
-                        },
-                        "debugObj": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
-                        }
-                      },
-                      "additionalProperties": false
+                      "$ref": "#/definitions/__schema1"
                     },
                     "type": {
-                      "type": "string",
-                      "const": "SPHERE"
+                      "$ref": "#/definitions/__schema5"
                     },
                     "params": {
-                      "type": "object",
-                      "properties": {
-                        "radius": {
-                          "type": "number"
-                        },
-                        "widthSegments": {
-                          "type": "number"
-                        },
-                        "heightSegments": {
-                          "type": "number"
-                        },
-                        "phiStart": {
-                          "type": "number"
-                        },
-                        "phiLength": {
-                          "type": "number"
-                        },
-                        "thetaStart": {
-                          "type": "number"
-                        },
-                        "thetaLength": {
-                          "type": "number"
-                        }
-                      },
-                      "additionalProperties": false
+                      "$ref": "#/definitions/__schema6"
                     }
                   },
                   "required": [
@@ -189,86 +58,16 @@
                   "type": "object",
                   "properties": {
                     "id": {
-                      "type": "string"
+                      "$ref": "#/definitions/__schema0"
                     },
                     "debugData": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string"
-                        },
-                        "description": {
-                          "type": "string"
-                        },
-                        "comments": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "timestamp": {
-                                "type": "number"
-                              },
-                              "comment": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "timestamp",
-                              "comment"
-                            ],
-                            "additionalProperties": false
-                          }
-                        },
-                        "todo": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
-                        },
-                        "debugObj": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
-                        }
-                      },
-                      "additionalProperties": false
+                      "$ref": "#/definitions/__schema1"
                     },
                     "type": {
-                      "type": "string",
-                      "const": "CYLINDER"
+                      "$ref": "#/definitions/__schema7"
                     },
                     "params": {
-                      "type": "object",
-                      "properties": {
-                        "radiusTop": {
-                          "type": "number"
-                        },
-                        "radiusBottom": {
-                          "type": "number"
-                        },
-                        "height": {
-                          "type": "number"
-                        },
-                        "radialSegments": {
-                          "type": "number"
-                        },
-                        "heightSegments": {
-                          "type": "number"
-                        },
-                        "openEnded": {
-                          "type": "boolean"
-                        },
-                        "thetaStart": {
-                          "type": "number"
-                        },
-                        "thetaLength": {
-                          "type": "number"
-                        }
-                      },
-                      "additionalProperties": false
+                      "$ref": "#/definitions/__schema8"
                     }
                   },
                   "required": [
@@ -280,77 +79,16 @@
                   "type": "object",
                   "properties": {
                     "id": {
-                      "type": "string"
+                      "$ref": "#/definitions/__schema0"
                     },
                     "debugData": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string"
-                        },
-                        "description": {
-                          "type": "string"
-                        },
-                        "comments": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "timestamp": {
-                                "type": "number"
-                              },
-                              "comment": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "timestamp",
-                              "comment"
-                            ],
-                            "additionalProperties": false
-                          }
-                        },
-                        "todo": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
-                        },
-                        "debugObj": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
-                        }
-                      },
-                      "additionalProperties": false
+                      "$ref": "#/definitions/__schema1"
                     },
                     "type": {
-                      "type": "string",
-                      "const": "CAPSULE"
+                      "$ref": "#/definitions/__schema9"
                     },
                     "params": {
-                      "type": "object",
-                      "properties": {
-                        "radius": {
-                          "type": "number"
-                        },
-                        "height": {
-                          "type": "number"
-                        },
-                        "capSegments": {
-                          "type": "number"
-                        },
-                        "radialSegments": {
-                          "type": "number"
-                        },
-                        "heightSegments": {
-                          "type": "number"
-                        }
-                      },
-                      "additionalProperties": false
+                      "$ref": "#/definitions/__schema10"
                     }
                   },
                   "required": [
@@ -362,83 +100,16 @@
                   "type": "object",
                   "properties": {
                     "id": {
-                      "type": "string"
+                      "$ref": "#/definitions/__schema0"
                     },
                     "debugData": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string"
-                        },
-                        "description": {
-                          "type": "string"
-                        },
-                        "comments": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "timestamp": {
-                                "type": "number"
-                              },
-                              "comment": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "timestamp",
-                              "comment"
-                            ],
-                            "additionalProperties": false
-                          }
-                        },
-                        "todo": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
-                        },
-                        "debugObj": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
-                        }
-                      },
-                      "additionalProperties": false
+                      "$ref": "#/definitions/__schema1"
                     },
                     "type": {
-                      "type": "string",
-                      "const": "CONE"
+                      "$ref": "#/definitions/__schema11"
                     },
                     "params": {
-                      "type": "object",
-                      "properties": {
-                        "radius": {
-                          "type": "number"
-                        },
-                        "height": {
-                          "type": "number"
-                        },
-                        "radialSegments": {
-                          "type": "number"
-                        },
-                        "heightSegments": {
-                          "type": "number"
-                        },
-                        "openEnded": {
-                          "type": "boolean"
-                        },
-                        "thetaStart": {
-                          "type": "number"
-                        },
-                        "thetaLength": {
-                          "type": "number"
-                        }
-                      },
-                      "additionalProperties": false
+                      "$ref": "#/definitions/__schema12"
                     }
                   },
                   "required": [
@@ -456,234 +127,45 @@
         "mat": {
           "anyOf": [
             {
-              "anyOf": [
+              "oneOf": [
                 {
                   "type": "object",
                   "properties": {
                     "id": {
-                      "type": "string"
+                      "$ref": "#/definitions/__schema13"
                     },
                     "isPersistent": {
-                      "type": "boolean"
+                      "$ref": "#/definitions/__schema14"
                     },
                     "debugData": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string"
-                        },
-                        "description": {
-                          "type": "string"
-                        },
-                        "comments": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "timestamp": {
-                                "type": "number"
-                              },
-                              "comment": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "timestamp",
-                              "comment"
-                            ],
-                            "additionalProperties": false
-                          }
-                        },
-                        "todo": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
-                        },
-                        "debugObj": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
-                        }
-                      },
-                      "additionalProperties": false
+                      "$ref": "#/definitions/__schema15"
                     },
                     "userData": {
-                      "type": "object",
-                      "propertyNames": {
-                        "type": "string"
-                      },
-                      "additionalProperties": {}
+                      "$ref": "#/definitions/__schema16"
                     },
                     "params": {
-                      "type": "object",
-                      "propertyNames": {
-                        "type": "string"
-                      },
-                      "additionalProperties": {}
+                      "$ref": "#/definitions/__schema18"
                     },
                     "$schema": {
-                      "type": "string"
+                      "$ref": "#/definitions/__schema20"
                     },
                     "__sourcePath": {
-                      "type": "string"
+                      "$ref": "#/definitions/__schema21"
                     },
                     "__saveData": {
-                      "type": "object",
-                      "propertyNames": {
-                        "type": "string"
-                      },
-                      "additionalProperties": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "__meta": {
-                              "type": "object",
-                              "properties": {
-                                "date": {
-                                  "type": "number"
-                                },
-                                "engineVersion": {
-                                  "type": "string",
-                                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                                },
-                                "toolkitVersion": {
-                                  "type": "string",
-                                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                                },
-                                "appVersion": {
-                                  "type": "string",
-                                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                                }
-                              },
-                              "additionalProperties": false
-                            },
-                            "params": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "staticDefines": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "nodes": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {
-                                "type": "object",
-                                "propertyNames": {
-                                  "type": "string"
-                                },
-                                "additionalProperties": {}
-                              }
-                            },
-                            "debugData": {
-                              "type": "object",
-                              "properties": {
-                                "name": {
-                                  "type": "string"
-                                },
-                                "description": {
-                                  "type": "string"
-                                },
-                                "comments": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "object",
-                                    "properties": {
-                                      "timestamp": {
-                                        "type": "number"
-                                      },
-                                      "comment": {
-                                        "type": "string"
-                                      }
-                                    },
-                                    "required": [
-                                      "timestamp",
-                                      "comment"
-                                    ],
-                                    "additionalProperties": false
-                                  }
-                                },
-                                "todo": {
-                                  "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
-                                  },
-                                  "additionalProperties": {}
-                                },
-                                "debugObj": {
-                                  "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
-                                  },
-                                  "additionalProperties": {}
-                                }
-                              },
-                              "additionalProperties": false
-                            },
-                            "userData": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "isPersistent": {
-                              "type": "boolean"
-                            }
-                          },
-                          "additionalProperties": false
-                        }
-                      }
+                      "$ref": "#/definitions/__schema22"
                     },
                     "tslFile": {
-                      "type": "string"
+                      "$ref": "#/definitions/__schema26"
                     },
                     "staticDefines": {
-                      "type": "object",
-                      "propertyNames": {
-                        "type": "string"
-                      },
-                      "additionalProperties": {}
+                      "$ref": "#/definitions/__schema27"
                     },
                     "nodes": {
-                      "type": "object",
-                      "propertyNames": {
-                        "type": "string"
-                      },
-                      "additionalProperties": {
-                        "type": "object",
-                        "propertyNames": {
-                          "type": "string"
-                        },
-                        "additionalProperties": {}
-                      }
+                      "$ref": "#/definitions/__schema28"
                     },
                     "type": {
-                      "type": "string",
-                      "enum": [
-                        "BASICNODEMATERIAL",
-                        "LAMBERTNODEMATERIAL",
-                        "PHONGNODEMATERIAL",
-                        "PHYSICALNODEMATERIAL",
-                        "STANDARDNODEMATERIAL",
-                        "MATCAPNODEMATERIAL",
-                        "NORMALNODEMATERIAL",
-                        "TOONNODEMATERIAL"
-                      ]
+                      "$ref": "#/definitions/__schema29"
                     }
                   },
                   "required": [
@@ -697,215 +179,31 @@
                   "type": "object",
                   "properties": {
                     "id": {
-                      "type": "string"
+                      "$ref": "#/definitions/__schema13"
                     },
                     "isPersistent": {
-                      "type": "boolean"
+                      "$ref": "#/definitions/__schema14"
                     },
                     "debugData": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string"
-                        },
-                        "description": {
-                          "type": "string"
-                        },
-                        "comments": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "timestamp": {
-                                "type": "number"
-                              },
-                              "comment": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "timestamp",
-                              "comment"
-                            ],
-                            "additionalProperties": false
-                          }
-                        },
-                        "todo": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
-                        },
-                        "debugObj": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
-                        }
-                      },
-                      "additionalProperties": false
+                      "$ref": "#/definitions/__schema15"
                     },
                     "userData": {
-                      "type": "object",
-                      "propertyNames": {
-                        "type": "string"
-                      },
-                      "additionalProperties": {}
+                      "$ref": "#/definitions/__schema16"
                     },
                     "params": {
-                      "type": "object",
-                      "propertyNames": {
-                        "type": "string"
-                      },
-                      "additionalProperties": {}
+                      "$ref": "#/definitions/__schema18"
                     },
                     "$schema": {
-                      "type": "string"
+                      "$ref": "#/definitions/__schema20"
                     },
                     "__sourcePath": {
-                      "type": "string"
+                      "$ref": "#/definitions/__schema21"
                     },
                     "__saveData": {
-                      "type": "object",
-                      "propertyNames": {
-                        "type": "string"
-                      },
-                      "additionalProperties": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "__meta": {
-                              "type": "object",
-                              "properties": {
-                                "date": {
-                                  "type": "number"
-                                },
-                                "engineVersion": {
-                                  "type": "string",
-                                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                                },
-                                "toolkitVersion": {
-                                  "type": "string",
-                                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                                },
-                                "appVersion": {
-                                  "type": "string",
-                                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                                }
-                              },
-                              "additionalProperties": false
-                            },
-                            "params": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "staticDefines": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "nodes": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {
-                                "type": "object",
-                                "propertyNames": {
-                                  "type": "string"
-                                },
-                                "additionalProperties": {}
-                              }
-                            },
-                            "debugData": {
-                              "type": "object",
-                              "properties": {
-                                "name": {
-                                  "type": "string"
-                                },
-                                "description": {
-                                  "type": "string"
-                                },
-                                "comments": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "object",
-                                    "properties": {
-                                      "timestamp": {
-                                        "type": "number"
-                                      },
-                                      "comment": {
-                                        "type": "string"
-                                      }
-                                    },
-                                    "required": [
-                                      "timestamp",
-                                      "comment"
-                                    ],
-                                    "additionalProperties": false
-                                  }
-                                },
-                                "todo": {
-                                  "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
-                                  },
-                                  "additionalProperties": {}
-                                },
-                                "debugObj": {
-                                  "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
-                                  },
-                                  "additionalProperties": {}
-                                }
-                              },
-                              "additionalProperties": false
-                            },
-                            "userData": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "isPersistent": {
-                              "type": "boolean"
-                            }
-                          },
-                          "additionalProperties": false
-                        }
-                      }
+                      "$ref": "#/definitions/__schema22"
                     },
                     "type": {
-                      "type": "string",
-                      "enum": [
-                        "LINEBASIC",
-                        "LINEDASHED",
-                        "BASIC",
-                        "DEPTH",
-                        "DISTANCE",
-                        "LAMBERT",
-                        "MATCAP",
-                        "NORMAL",
-                        "PHONG",
-                        "PHYSICAL",
-                        "STANDARD",
-                        "TOON",
-                        "POINTS",
-                        "SHADERRAW",
-                        "SHADER",
-                        "SHADOW",
-                        "SPRITE"
-                      ]
+                      "$ref": "#/definitions/__schema30"
                     }
                   },
                   "required": [
@@ -922,37 +220,11 @@
           ]
         },
         "matOverrides": {
-          "type": "object",
-          "properties": {
-            "params": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
-            },
-            "staticDefines": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
-            },
-            "nodes": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {
-                "type": "object",
-                "propertyNames": {
-                  "type": "string"
-                },
-                "additionalProperties": {}
-              }
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema31"
             }
-          },
-          "additionalProperties": false
+          ]
         },
         "castShadow": {
           "type": "boolean"
@@ -964,68 +236,25 @@
           "type": "boolean"
         },
         "position": {
-          "type": "object",
-          "properties": {
-            "x": {
-              "type": "number"
-            },
-            "y": {
-              "type": "number"
-            },
-            "z": {
-              "type": "number"
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema32"
             }
-          },
-          "required": [
-            "x",
-            "y",
-            "z"
-          ],
-          "additionalProperties": false
+          ]
         },
         "rotation": {
-          "type": "object",
-          "properties": {
-            "x": {
-              "type": "number"
-            },
-            "y": {
-              "type": "number"
-            },
-            "z": {
-              "type": "number"
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema32"
             }
-          },
-          "required": [
-            "x",
-            "y",
-            "z"
-          ],
-          "additionalProperties": false
+          ]
         },
         "quaternion": {
-          "type": "object",
-          "properties": {
-            "x": {
-              "type": "number"
-            },
-            "y": {
-              "type": "number"
-            },
-            "z": {
-              "type": "number"
-            },
-            "w": {
-              "type": "number"
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema33"
             }
-          },
-          "required": [
-            "x",
-            "y",
-            "z",
-            "w"
-          ],
-          "additionalProperties": false
+          ]
         },
         "appId": {
           "type": "string"
@@ -1034,118 +263,7 @@
           "type": "boolean"
         },
         "lod": {
-          "anyOf": [
-            {
-              "type": "object",
-              "properties": {
-                "levels": {
-                  "minItems": 1,
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "screenSize": {
-                        "type": "number",
-                        "minimum": 0,
-                        "description": "Smallest screen size (bounding-sphere diameter / viewport height) this level is used at. Coarser levels need smaller values. Moving to a coarser level waits for `hysteresis` below it."
-                      },
-                      "geo": {
-                        "description": "Registered geometry id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
-                        "type": "string",
-                        "minLength": 1
-                      },
-                      "mat": {
-                        "description": "Registered material id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
-                        "type": "string",
-                        "minLength": 1
-                      },
-                      "castShadow": {
-                        "description": "Omitted = the previous level's (level 0: the mesh's own).",
-                        "type": "boolean"
-                      }
-                    },
-                    "required": [
-                      "screenSize"
-                    ],
-                    "additionalProperties": false,
-                    "description": "A level of detail."
-                  },
-                  "description": "Level 0 (the finest) first, screenSize descending."
-                },
-                "cullScreenSize": {
-                  "description": "Below this screen size the mesh is hidden (with hysteresis, like the levels). 0 = never hidden. Default 0.",
-                  "type": "number",
-                  "minimum": 0
-                },
-                "hysteresis": {
-                  "description": "Moving to a coarser level (or hiding) waits until the screen size is this fraction below the threshold, so a mesh on a boundary does not flip every frame. Default 0.1.",
-                  "type": "number",
-                  "minimum": 0,
-                  "exclusiveMaximum": 1
-                },
-                "bias": {
-                  "description": "Multiplies the screen size: >1 keeps detail longer. Default 1. The global bias (AppConfig.lod.bias, setLodBias) applies on top.",
-                  "type": "number",
-                  "exclusiveMinimum": 0
-                },
-                "fadeSeconds": {
-                  "description": "How long a level change (or hiding and showing) cross-fades with a dither, in seconds; 0 switches at once and leaves the level materials undithered. Default AppConfig.lod.fadeSeconds (0.25, setLodFadeSeconds).",
-                  "type": "number",
-                  "minimum": 0
-                }
-              },
-              "required": [
-                "levels"
-              ],
-              "additionalProperties": false,
-              "description": "Levels of detail (p348): each frame the mesh shows the level its screen size reaches, swapping its geometry, material and castShadow, cross-faded over fadeSeconds."
-            },
-            {
-              "type": "object",
-              "properties": {
-                "auto": {
-                  "type": "boolean",
-                  "const": true
-                },
-                "maxPixelError": {
-                  "description": "The largest simplification error, in pixels at a viewport height of 1080, a level may show. Smaller keeps detail longer. Default 1.",
-                  "type": "number",
-                  "exclusiveMinimum": 0
-                },
-                "cullScreenSize": {
-                  "description": "Below this screen size the mesh is hidden (with hysteresis, like the levels). 0 = never hidden. Default 0.",
-                  "type": "number",
-                  "minimum": 0
-                },
-                "hysteresis": {
-                  "description": "Moving to a coarser level (or hiding) waits until the screen size is this fraction below the threshold, so a mesh on a boundary does not flip every frame. Default 0.1.",
-                  "type": "number",
-                  "minimum": 0,
-                  "exclusiveMaximum": 1
-                },
-                "bias": {
-                  "description": "Multiplies the screen size: >1 keeps detail longer. Default 1. The global bias (AppConfig.lod.bias, setLodBias) applies on top.",
-                  "type": "number",
-                  "exclusiveMinimum": 0
-                },
-                "fadeSeconds": {
-                  "description": "How long a level change (or hiding and showing) cross-fades with a dither, in seconds; 0 switches at once and leaves the level materials undithered. Default AppConfig.lod.fadeSeconds (0.25, setLodFadeSeconds).",
-                  "type": "number",
-                  "minimum": 0
-                }
-              },
-              "required": [
-                "auto"
-              ],
-              "additionalProperties": false,
-              "description": "Levels of detail (p348) from the geometry's LOD chain (p347: `lodChain` in its *.importedAsset.json): each level is used while its simplification error stays within maxPixelError pixels. Without a chain the mesh stays on level 0 (warned)."
-            },
-            {
-              "type": "string",
-              "const": "AUTO",
-              "description": "Levels of detail (p348) from the geometry's LOD chain, with the defaults: `{ auto: true }`."
-            }
-          ]
+          "$ref": "#/definitions/__schema34"
         }
       },
       "required": [
@@ -1170,56 +288,18 @@
           "type": "boolean"
         },
         "userData": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {}
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema17"
+            }
+          ]
         },
         "debugData": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string"
-            },
-            "description": {
-              "type": "string"
-            },
-            "comments": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "timestamp": {
-                    "type": "number"
-                  },
-                  "comment": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "timestamp",
-                  "comment"
-                ],
-                "additionalProperties": false
-              }
-            },
-            "todo": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
-            },
-            "debugObj": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema2"
             }
-          },
-          "additionalProperties": false
+          ]
         },
         "spatialIndex": {
           "type": "boolean"
@@ -1251,80 +331,32 @@
                       "type": "object",
                       "properties": {
                         "id": {
-                          "type": "string"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema0"
+                            }
+                          ]
                         },
                         "debugData": {
-                          "type": "object",
-                          "properties": {
-                            "name": {
-                              "type": "string"
-                            },
-                            "description": {
-                              "type": "string"
-                            },
-                            "comments": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "timestamp": {
-                                    "type": "number"
-                                  },
-                                  "comment": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "timestamp",
-                                  "comment"
-                                ],
-                                "additionalProperties": false
-                              }
-                            },
-                            "todo": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "debugObj": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema1"
                             }
-                          },
-                          "additionalProperties": false
+                          ]
                         },
                         "type": {
-                          "type": "string",
-                          "const": "BOX"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema3"
+                            }
+                          ]
                         },
                         "params": {
-                          "type": "object",
-                          "properties": {
-                            "width": {
-                              "type": "number"
-                            },
-                            "height": {
-                              "type": "number"
-                            },
-                            "depth": {
-                              "type": "number"
-                            },
-                            "widthSegments": {
-                              "type": "number"
-                            },
-                            "heightSegments": {
-                              "type": "number"
-                            },
-                            "depthSegments": {
-                              "type": "number"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema4"
                             }
-                          },
-                          "additionalProperties": false
+                          ]
                         }
                       },
                       "additionalProperties": false
@@ -1333,83 +365,32 @@
                       "type": "object",
                       "properties": {
                         "id": {
-                          "type": "string"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema0"
+                            }
+                          ]
                         },
                         "debugData": {
-                          "type": "object",
-                          "properties": {
-                            "name": {
-                              "type": "string"
-                            },
-                            "description": {
-                              "type": "string"
-                            },
-                            "comments": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "timestamp": {
-                                    "type": "number"
-                                  },
-                                  "comment": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "timestamp",
-                                  "comment"
-                                ],
-                                "additionalProperties": false
-                              }
-                            },
-                            "todo": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "debugObj": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema1"
                             }
-                          },
-                          "additionalProperties": false
+                          ]
                         },
                         "type": {
-                          "type": "string",
-                          "const": "SPHERE"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema5"
+                            }
+                          ]
                         },
                         "params": {
-                          "type": "object",
-                          "properties": {
-                            "radius": {
-                              "type": "number"
-                            },
-                            "widthSegments": {
-                              "type": "number"
-                            },
-                            "heightSegments": {
-                              "type": "number"
-                            },
-                            "phiStart": {
-                              "type": "number"
-                            },
-                            "phiLength": {
-                              "type": "number"
-                            },
-                            "thetaStart": {
-                              "type": "number"
-                            },
-                            "thetaLength": {
-                              "type": "number"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema6"
                             }
-                          },
-                          "additionalProperties": false
+                          ]
                         }
                       },
                       "additionalProperties": false
@@ -1418,86 +399,32 @@
                       "type": "object",
                       "properties": {
                         "id": {
-                          "type": "string"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema0"
+                            }
+                          ]
                         },
                         "debugData": {
-                          "type": "object",
-                          "properties": {
-                            "name": {
-                              "type": "string"
-                            },
-                            "description": {
-                              "type": "string"
-                            },
-                            "comments": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "timestamp": {
-                                    "type": "number"
-                                  },
-                                  "comment": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "timestamp",
-                                  "comment"
-                                ],
-                                "additionalProperties": false
-                              }
-                            },
-                            "todo": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "debugObj": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema1"
                             }
-                          },
-                          "additionalProperties": false
+                          ]
                         },
                         "type": {
-                          "type": "string",
-                          "const": "CYLINDER"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema7"
+                            }
+                          ]
                         },
                         "params": {
-                          "type": "object",
-                          "properties": {
-                            "radiusTop": {
-                              "type": "number"
-                            },
-                            "radiusBottom": {
-                              "type": "number"
-                            },
-                            "height": {
-                              "type": "number"
-                            },
-                            "radialSegments": {
-                              "type": "number"
-                            },
-                            "heightSegments": {
-                              "type": "number"
-                            },
-                            "openEnded": {
-                              "type": "boolean"
-                            },
-                            "thetaStart": {
-                              "type": "number"
-                            },
-                            "thetaLength": {
-                              "type": "number"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema8"
                             }
-                          },
-                          "additionalProperties": false
+                          ]
                         }
                       },
                       "additionalProperties": false
@@ -1506,77 +433,32 @@
                       "type": "object",
                       "properties": {
                         "id": {
-                          "type": "string"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema0"
+                            }
+                          ]
                         },
                         "debugData": {
-                          "type": "object",
-                          "properties": {
-                            "name": {
-                              "type": "string"
-                            },
-                            "description": {
-                              "type": "string"
-                            },
-                            "comments": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "timestamp": {
-                                    "type": "number"
-                                  },
-                                  "comment": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "timestamp",
-                                  "comment"
-                                ],
-                                "additionalProperties": false
-                              }
-                            },
-                            "todo": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "debugObj": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema1"
                             }
-                          },
-                          "additionalProperties": false
+                          ]
                         },
                         "type": {
-                          "type": "string",
-                          "const": "CAPSULE"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema9"
+                            }
+                          ]
                         },
                         "params": {
-                          "type": "object",
-                          "properties": {
-                            "radius": {
-                              "type": "number"
-                            },
-                            "height": {
-                              "type": "number"
-                            },
-                            "capSegments": {
-                              "type": "number"
-                            },
-                            "radialSegments": {
-                              "type": "number"
-                            },
-                            "heightSegments": {
-                              "type": "number"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema10"
                             }
-                          },
-                          "additionalProperties": false
+                          ]
                         }
                       },
                       "additionalProperties": false
@@ -1585,83 +467,32 @@
                       "type": "object",
                       "properties": {
                         "id": {
-                          "type": "string"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema0"
+                            }
+                          ]
                         },
                         "debugData": {
-                          "type": "object",
-                          "properties": {
-                            "name": {
-                              "type": "string"
-                            },
-                            "description": {
-                              "type": "string"
-                            },
-                            "comments": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "timestamp": {
-                                    "type": "number"
-                                  },
-                                  "comment": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "timestamp",
-                                  "comment"
-                                ],
-                                "additionalProperties": false
-                              }
-                            },
-                            "todo": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "debugObj": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema1"
                             }
-                          },
-                          "additionalProperties": false
+                          ]
                         },
                         "type": {
-                          "type": "string",
-                          "const": "CONE"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema11"
+                            }
+                          ]
                         },
                         "params": {
-                          "type": "object",
-                          "properties": {
-                            "radius": {
-                              "type": "number"
-                            },
-                            "height": {
-                              "type": "number"
-                            },
-                            "radialSegments": {
-                              "type": "number"
-                            },
-                            "heightSegments": {
-                              "type": "number"
-                            },
-                            "openEnded": {
-                              "type": "boolean"
-                            },
-                            "thetaStart": {
-                              "type": "number"
-                            },
-                            "thetaLength": {
-                              "type": "number"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema12"
                             }
-                          },
-                          "additionalProperties": false
+                          ]
                         }
                       },
                       "additionalProperties": false
@@ -1681,228 +512,87 @@
                       "type": "object",
                       "properties": {
                         "id": {
-                          "type": "string"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema13"
+                            }
+                          ]
                         },
                         "isPersistent": {
-                          "type": "boolean"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema14"
+                            }
+                          ]
                         },
                         "debugData": {
-                          "type": "object",
-                          "properties": {
-                            "name": {
-                              "type": "string"
-                            },
-                            "description": {
-                              "type": "string"
-                            },
-                            "comments": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "timestamp": {
-                                    "type": "number"
-                                  },
-                                  "comment": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "timestamp",
-                                  "comment"
-                                ],
-                                "additionalProperties": false
-                              }
-                            },
-                            "todo": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "debugObj": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema15"
                             }
-                          },
-                          "additionalProperties": false
+                          ]
                         },
                         "userData": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema16"
+                            }
+                          ]
                         },
                         "params": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema18"
+                            }
+                          ]
                         },
                         "$schema": {
-                          "type": "string"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema20"
+                            }
+                          ]
                         },
                         "__sourcePath": {
-                          "type": "string"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema21"
+                            }
+                          ]
                         },
                         "__saveData": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "__meta": {
-                                  "type": "object",
-                                  "properties": {
-                                    "date": {
-                                      "type": "number"
-                                    },
-                                    "engineVersion": {
-                                      "type": "string",
-                                      "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                                    },
-                                    "toolkitVersion": {
-                                      "type": "string",
-                                      "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                                    },
-                                    "appVersion": {
-                                      "type": "string",
-                                      "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                                    }
-                                  },
-                                  "additionalProperties": false
-                                },
-                                "params": {
-                                  "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
-                                  },
-                                  "additionalProperties": {}
-                                },
-                                "staticDefines": {
-                                  "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
-                                  },
-                                  "additionalProperties": {}
-                                },
-                                "nodes": {
-                                  "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
-                                  },
-                                  "additionalProperties": {
-                                    "type": "object",
-                                    "propertyNames": {
-                                      "type": "string"
-                                    },
-                                    "additionalProperties": {}
-                                  }
-                                },
-                                "debugData": {
-                                  "type": "object",
-                                  "properties": {
-                                    "name": {
-                                      "type": "string"
-                                    },
-                                    "description": {
-                                      "type": "string"
-                                    },
-                                    "comments": {
-                                      "type": "array",
-                                      "items": {
-                                        "type": "object",
-                                        "properties": {
-                                          "timestamp": {
-                                            "type": "number"
-                                          },
-                                          "comment": {
-                                            "type": "string"
-                                          }
-                                        },
-                                        "required": [
-                                          "timestamp",
-                                          "comment"
-                                        ],
-                                        "additionalProperties": false
-                                      }
-                                    },
-                                    "todo": {
-                                      "type": "object",
-                                      "propertyNames": {
-                                        "type": "string"
-                                      },
-                                      "additionalProperties": {}
-                                    },
-                                    "debugObj": {
-                                      "type": "object",
-                                      "propertyNames": {
-                                        "type": "string"
-                                      },
-                                      "additionalProperties": {}
-                                    }
-                                  },
-                                  "additionalProperties": false
-                                },
-                                "userData": {
-                                  "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
-                                  },
-                                  "additionalProperties": {}
-                                },
-                                "isPersistent": {
-                                  "type": "boolean"
-                                }
-                              },
-                              "additionalProperties": false
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema22"
                             }
-                          }
+                          ]
                         },
                         "tslFile": {
-                          "type": "string"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema26"
+                            }
+                          ]
                         },
                         "staticDefines": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema27"
+                            }
+                          ]
                         },
                         "nodes": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {
-                            "type": "object",
-                            "propertyNames": {
-                              "type": "string"
-                            },
-                            "additionalProperties": {}
-                          }
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema28"
+                            }
+                          ]
                         },
                         "type": {
-                          "type": "string",
-                          "enum": [
-                            "BASICNODEMATERIAL",
-                            "LAMBERTNODEMATERIAL",
-                            "PHONGNODEMATERIAL",
-                            "PHYSICALNODEMATERIAL",
-                            "STANDARDNODEMATERIAL",
-                            "MATCAPNODEMATERIAL",
-                            "NORMALNODEMATERIAL",
-                            "TOONNODEMATERIAL"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema29"
+                            }
                           ]
                         }
                       },
@@ -1912,214 +602,66 @@
                       "type": "object",
                       "properties": {
                         "id": {
-                          "type": "string"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema13"
+                            }
+                          ]
                         },
                         "isPersistent": {
-                          "type": "boolean"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema14"
+                            }
+                          ]
                         },
                         "debugData": {
-                          "type": "object",
-                          "properties": {
-                            "name": {
-                              "type": "string"
-                            },
-                            "description": {
-                              "type": "string"
-                            },
-                            "comments": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "timestamp": {
-                                    "type": "number"
-                                  },
-                                  "comment": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "timestamp",
-                                  "comment"
-                                ],
-                                "additionalProperties": false
-                              }
-                            },
-                            "todo": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            },
-                            "debugObj": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema15"
                             }
-                          },
-                          "additionalProperties": false
+                          ]
                         },
                         "userData": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema16"
+                            }
+                          ]
                         },
                         "params": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema18"
+                            }
+                          ]
                         },
                         "$schema": {
-                          "type": "string"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema20"
+                            }
+                          ]
                         },
                         "__sourcePath": {
-                          "type": "string"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema21"
+                            }
+                          ]
                         },
                         "__saveData": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "__meta": {
-                                  "type": "object",
-                                  "properties": {
-                                    "date": {
-                                      "type": "number"
-                                    },
-                                    "engineVersion": {
-                                      "type": "string",
-                                      "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                                    },
-                                    "toolkitVersion": {
-                                      "type": "string",
-                                      "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                                    },
-                                    "appVersion": {
-                                      "type": "string",
-                                      "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                                    }
-                                  },
-                                  "additionalProperties": false
-                                },
-                                "params": {
-                                  "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
-                                  },
-                                  "additionalProperties": {}
-                                },
-                                "staticDefines": {
-                                  "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
-                                  },
-                                  "additionalProperties": {}
-                                },
-                                "nodes": {
-                                  "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
-                                  },
-                                  "additionalProperties": {
-                                    "type": "object",
-                                    "propertyNames": {
-                                      "type": "string"
-                                    },
-                                    "additionalProperties": {}
-                                  }
-                                },
-                                "debugData": {
-                                  "type": "object",
-                                  "properties": {
-                                    "name": {
-                                      "type": "string"
-                                    },
-                                    "description": {
-                                      "type": "string"
-                                    },
-                                    "comments": {
-                                      "type": "array",
-                                      "items": {
-                                        "type": "object",
-                                        "properties": {
-                                          "timestamp": {
-                                            "type": "number"
-                                          },
-                                          "comment": {
-                                            "type": "string"
-                                          }
-                                        },
-                                        "required": [
-                                          "timestamp",
-                                          "comment"
-                                        ],
-                                        "additionalProperties": false
-                                      }
-                                    },
-                                    "todo": {
-                                      "type": "object",
-                                      "propertyNames": {
-                                        "type": "string"
-                                      },
-                                      "additionalProperties": {}
-                                    },
-                                    "debugObj": {
-                                      "type": "object",
-                                      "propertyNames": {
-                                        "type": "string"
-                                      },
-                                      "additionalProperties": {}
-                                    }
-                                  },
-                                  "additionalProperties": false
-                                },
-                                "userData": {
-                                  "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
-                                  },
-                                  "additionalProperties": {}
-                                },
-                                "isPersistent": {
-                                  "type": "boolean"
-                                }
-                              },
-                              "additionalProperties": false
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema22"
                             }
-                          }
+                          ]
                         },
                         "type": {
-                          "type": "string",
-                          "enum": [
-                            "LINEBASIC",
-                            "LINEDASHED",
-                            "BASIC",
-                            "DEPTH",
-                            "DISTANCE",
-                            "LAMBERT",
-                            "MATCAP",
-                            "NORMAL",
-                            "PHONG",
-                            "PHYSICAL",
-                            "STANDARD",
-                            "TOON",
-                            "POINTS",
-                            "SHADERRAW",
-                            "SHADER",
-                            "SHADOW",
-                            "SPRITE"
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema30"
+                            }
                           ]
                         }
                       },
@@ -2133,37 +675,11 @@
               ]
             },
             "matOverrides": {
-              "type": "object",
-              "properties": {
-                "params": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "staticDefines": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "nodes": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {
-                    "type": "object",
-                    "propertyNames": {
-                      "type": "string"
-                    },
-                    "additionalProperties": {}
-                  }
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema31"
                 }
-              },
-              "additionalProperties": false
+              ]
             },
             "castShadow": {
               "type": "boolean"
@@ -2175,206 +691,38 @@
               "type": "boolean"
             },
             "position": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema32"
                 }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
+              ]
             },
             "rotation": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema32"
                 }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
+              ]
             },
             "quaternion": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
-                },
-                "w": {
-                  "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema33"
                 }
-              },
-              "required": [
-                "x",
-                "y",
-                "z",
-                "w"
-              ],
-              "additionalProperties": false
+              ]
             },
             "frustumCullingEnabled": {
               "type": "boolean"
             },
             "lod": {
-              "anyOf": [
-                {
-                  "type": "object",
-                  "properties": {
-                    "levels": {
-                      "minItems": 1,
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "screenSize": {
-                            "type": "number",
-                            "minimum": 0,
-                            "description": "Smallest screen size (bounding-sphere diameter / viewport height) this level is used at. Coarser levels need smaller values. Moving to a coarser level waits for `hysteresis` below it."
-                          },
-                          "geo": {
-                            "description": "Registered geometry id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "mat": {
-                            "description": "Registered material id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "castShadow": {
-                            "description": "Omitted = the previous level's (level 0: the mesh's own).",
-                            "type": "boolean"
-                          }
-                        },
-                        "required": [
-                          "screenSize"
-                        ],
-                        "additionalProperties": false,
-                        "description": "A level of detail."
-                      },
-                      "description": "Level 0 (the finest) first, screenSize descending."
-                    },
-                    "cullScreenSize": {
-                      "description": "Below this screen size the mesh is hidden (with hysteresis, like the levels). 0 = never hidden. Default 0.",
-                      "type": "number",
-                      "minimum": 0
-                    },
-                    "hysteresis": {
-                      "description": "Moving to a coarser level (or hiding) waits until the screen size is this fraction below the threshold, so a mesh on a boundary does not flip every frame. Default 0.1.",
-                      "type": "number",
-                      "minimum": 0,
-                      "exclusiveMaximum": 1
-                    },
-                    "bias": {
-                      "description": "Multiplies the screen size: >1 keeps detail longer. Default 1. The global bias (AppConfig.lod.bias, setLodBias) applies on top.",
-                      "type": "number",
-                      "exclusiveMinimum": 0
-                    },
-                    "fadeSeconds": {
-                      "description": "How long a level change (or hiding and showing) cross-fades with a dither, in seconds; 0 switches at once and leaves the level materials undithered. Default AppConfig.lod.fadeSeconds (0.25, setLodFadeSeconds).",
-                      "type": "number",
-                      "minimum": 0
-                    }
-                  },
-                  "required": [
-                    "levels"
-                  ],
-                  "additionalProperties": false,
-                  "description": "Levels of detail (p348): each frame the mesh shows the level its screen size reaches, swapping its geometry, material and castShadow, cross-faded over fadeSeconds."
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "auto": {
-                      "type": "boolean",
-                      "const": true
-                    },
-                    "maxPixelError": {
-                      "description": "The largest simplification error, in pixels at a viewport height of 1080, a level may show. Smaller keeps detail longer. Default 1.",
-                      "type": "number",
-                      "exclusiveMinimum": 0
-                    },
-                    "cullScreenSize": {
-                      "description": "Below this screen size the mesh is hidden (with hysteresis, like the levels). 0 = never hidden. Default 0.",
-                      "type": "number",
-                      "minimum": 0
-                    },
-                    "hysteresis": {
-                      "description": "Moving to a coarser level (or hiding) waits until the screen size is this fraction below the threshold, so a mesh on a boundary does not flip every frame. Default 0.1.",
-                      "type": "number",
-                      "minimum": 0,
-                      "exclusiveMaximum": 1
-                    },
-                    "bias": {
-                      "description": "Multiplies the screen size: >1 keeps detail longer. Default 1. The global bias (AppConfig.lod.bias, setLodBias) applies on top.",
-                      "type": "number",
-                      "exclusiveMinimum": 0
-                    },
-                    "fadeSeconds": {
-                      "description": "How long a level change (or hiding and showing) cross-fades with a dither, in seconds; 0 switches at once and leaves the level materials undithered. Default AppConfig.lod.fadeSeconds (0.25, setLodFadeSeconds).",
-                      "type": "number",
-                      "minimum": 0
-                    }
-                  },
-                  "required": [
-                    "auto"
-                  ],
-                  "additionalProperties": false,
-                  "description": "Levels of detail (p348) from the geometry's LOD chain (p347: `lodChain` in its *.importedAsset.json): each level is used while its simplification error stays within maxPixelError pixels. Without a chain the mesh stays on level 0 (warned)."
-                },
-                {
-                  "type": "string",
-                  "const": "AUTO",
-                  "description": "Levels of detail (p348) from the geometry's LOD chain, with the defaults: `{ auto: true }`."
-                }
-              ]
+              "$ref": "#/definitions/__schema34"
             },
             "__meta": {
-              "type": "object",
-              "properties": {
-                "date": {
-                  "type": "number"
-                },
-                "engineVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                },
-                "toolkitVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                },
-                "appVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema23"
                 }
-              },
-              "additionalProperties": false
+              ]
             }
           },
           "additionalProperties": false
@@ -2385,5 +733,685 @@
   "required": [
     "props"
   ],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "definitions": {
+    "__schema0": {
+      "type": "string"
+    },
+    "__schema1": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema2"
+        }
+      ]
+    },
+    "__schema2": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "comments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "timestamp": {
+                "type": "number"
+              },
+              "comment": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "timestamp",
+              "comment"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "todo": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "debugObj": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema3": {
+      "type": "string",
+      "const": "BOX"
+    },
+    "__schema4": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        },
+        "depth": {
+          "type": "number"
+        },
+        "widthSegments": {
+          "type": "number"
+        },
+        "heightSegments": {
+          "type": "number"
+        },
+        "depthSegments": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema5": {
+      "type": "string",
+      "const": "SPHERE"
+    },
+    "__schema6": {
+      "type": "object",
+      "properties": {
+        "radius": {
+          "type": "number"
+        },
+        "widthSegments": {
+          "type": "number"
+        },
+        "heightSegments": {
+          "type": "number"
+        },
+        "phiStart": {
+          "type": "number"
+        },
+        "phiLength": {
+          "type": "number"
+        },
+        "thetaStart": {
+          "type": "number"
+        },
+        "thetaLength": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema7": {
+      "type": "string",
+      "const": "CYLINDER"
+    },
+    "__schema8": {
+      "type": "object",
+      "properties": {
+        "radiusTop": {
+          "type": "number"
+        },
+        "radiusBottom": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        },
+        "radialSegments": {
+          "type": "number"
+        },
+        "heightSegments": {
+          "type": "number"
+        },
+        "openEnded": {
+          "type": "boolean"
+        },
+        "thetaStart": {
+          "type": "number"
+        },
+        "thetaLength": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema9": {
+      "type": "string",
+      "const": "CAPSULE"
+    },
+    "__schema10": {
+      "type": "object",
+      "properties": {
+        "radius": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        },
+        "capSegments": {
+          "type": "number"
+        },
+        "radialSegments": {
+          "type": "number"
+        },
+        "heightSegments": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema11": {
+      "type": "string",
+      "const": "CONE"
+    },
+    "__schema12": {
+      "type": "object",
+      "properties": {
+        "radius": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        },
+        "radialSegments": {
+          "type": "number"
+        },
+        "heightSegments": {
+          "type": "number"
+        },
+        "openEnded": {
+          "type": "boolean"
+        },
+        "thetaStart": {
+          "type": "number"
+        },
+        "thetaLength": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema13": {
+      "type": "string"
+    },
+    "__schema14": {
+      "type": "boolean"
+    },
+    "__schema15": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema2"
+        }
+      ]
+    },
+    "__schema16": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema17"
+        }
+      ]
+    },
+    "__schema17": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema18": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema19"
+        }
+      ]
+    },
+    "__schema19": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema20": {
+      "type": "string"
+    },
+    "__schema21": {
+      "type": "string"
+    },
+    "__schema22": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "__meta": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema23"
+                }
+              ]
+            },
+            "params": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema19"
+                }
+              ]
+            },
+            "staticDefines": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "nodes": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "$ref": "#/definitions/__schema25"
+              }
+            },
+            "debugData": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema2"
+                }
+              ]
+            },
+            "userData": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema17"
+                }
+              ]
+            },
+            "isPersistent": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "__schema23": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "number"
+        },
+        "engineVersion": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema24"
+            }
+          ]
+        },
+        "toolkitVersion": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema24"
+            }
+          ]
+        },
+        "appVersion": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema24"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema24": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "__schema25": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema26": {
+      "type": "string"
+    },
+    "__schema27": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema28": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema25"
+      }
+    },
+    "__schema29": {
+      "type": "string",
+      "enum": [
+        "BASICNODEMATERIAL",
+        "LAMBERTNODEMATERIAL",
+        "PHONGNODEMATERIAL",
+        "PHYSICALNODEMATERIAL",
+        "STANDARDNODEMATERIAL",
+        "MATCAPNODEMATERIAL",
+        "NORMALNODEMATERIAL",
+        "TOONNODEMATERIAL"
+      ]
+    },
+    "__schema30": {
+      "type": "string",
+      "enum": [
+        "LINEBASIC",
+        "LINEDASHED",
+        "BASIC",
+        "DEPTH",
+        "DISTANCE",
+        "LAMBERT",
+        "MATCAP",
+        "NORMAL",
+        "PHONG",
+        "PHYSICAL",
+        "STANDARD",
+        "TOON",
+        "POINTS",
+        "SHADERRAW",
+        "SHADER",
+        "SHADOW",
+        "SPRITE"
+      ]
+    },
+    "__schema31": {
+      "type": "object",
+      "properties": {
+        "params": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema19"
+            }
+          ]
+        },
+        "staticDefines": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "nodes": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "$ref": "#/definitions/__schema25"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema32": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
+      "additionalProperties": false
+    },
+    "__schema33": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number"
+        },
+        "w": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z",
+        "w"
+      ],
+      "additionalProperties": false
+    },
+    "__schema34": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "levels": {
+              "$ref": "#/definitions/__schema35"
+            },
+            "cullScreenSize": {
+              "$ref": "#/definitions/__schema44"
+            },
+            "hysteresis": {
+              "$ref": "#/definitions/__schema46"
+            },
+            "bias": {
+              "$ref": "#/definitions/__schema48"
+            },
+            "fadeSeconds": {
+              "$ref": "#/definitions/__schema50"
+            }
+          },
+          "required": [
+            "levels"
+          ],
+          "additionalProperties": false,
+          "description": "Levels of detail (p348): each frame the mesh shows the level its screen size reaches, swapping its geometry, material and castShadow, cross-faded over fadeSeconds."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "auto": {
+              "$ref": "#/definitions/__schema52"
+            },
+            "maxPixelError": {
+              "$ref": "#/definitions/__schema53"
+            },
+            "cullScreenSize": {
+              "$ref": "#/definitions/__schema44"
+            },
+            "hysteresis": {
+              "$ref": "#/definitions/__schema46"
+            },
+            "bias": {
+              "$ref": "#/definitions/__schema48"
+            },
+            "fadeSeconds": {
+              "$ref": "#/definitions/__schema50"
+            }
+          },
+          "required": [
+            "auto"
+          ],
+          "additionalProperties": false,
+          "description": "Levels of detail (p348) from the geometry's LOD chain (p347: `lodChain` in its *.importedAsset.json): each level is used while its simplification error stays within maxPixelError pixels. Without a chain the mesh stays on level 0 (warned)."
+        },
+        {
+          "type": "string",
+          "const": "AUTO",
+          "description": "Levels of detail (p348) from the geometry's LOD chain, with the defaults: `{ auto: true }`."
+        }
+      ]
+    },
+    "__schema35": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/__schema36"
+      },
+      "description": "Level 0 (the finest) first, screenSize descending."
+    },
+    "__schema36": {
+      "type": "object",
+      "properties": {
+        "screenSize": {
+          "$ref": "#/definitions/__schema37"
+        },
+        "geo": {
+          "$ref": "#/definitions/__schema38"
+        },
+        "mat": {
+          "$ref": "#/definitions/__schema40"
+        },
+        "castShadow": {
+          "$ref": "#/definitions/__schema42"
+        }
+      },
+      "required": [
+        "screenSize"
+      ],
+      "additionalProperties": false,
+      "description": "A level of detail."
+    },
+    "__schema37": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Smallest screen size (bounding-sphere diameter / viewport height) this level is used at. Coarser levels need smaller values. Moving to a coarser level waits for `hysteresis` below it."
+    },
+    "__schema38": {
+      "description": "Registered geometry id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema39"
+        }
+      ]
+    },
+    "__schema39": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema40": {
+      "description": "Registered material id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema41"
+        }
+      ]
+    },
+    "__schema41": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema42": {
+      "description": "Omitted = the previous level's (level 0: the mesh's own).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema43"
+        }
+      ]
+    },
+    "__schema43": {
+      "type": "boolean"
+    },
+    "__schema44": {
+      "description": "Below this screen size the mesh is hidden (with hysteresis, like the levels). 0 = never hidden. Default 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema45"
+        }
+      ]
+    },
+    "__schema45": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema46": {
+      "description": "Moving to a coarser level (or hiding) waits until the screen size is this fraction below the threshold, so a mesh on a boundary does not flip every frame. Default 0.1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema47"
+        }
+      ]
+    },
+    "__schema47": {
+      "type": "number",
+      "minimum": 0,
+      "exclusiveMaximum": 1
+    },
+    "__schema48": {
+      "description": "Multiplies the screen size: >1 keeps detail longer. Default 1. The global bias (AppConfig.lod.bias, setLodBias) applies on top.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema49"
+        }
+      ]
+    },
+    "__schema49": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "__schema50": {
+      "description": "How long a level change (or hiding and showing) cross-fades with a dither, in seconds; 0 switches at once and leaves the level materials undithered. Default AppConfig.lod.fadeSeconds (0.25, setLodFadeSeconds).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema51"
+        }
+      ]
+    },
+    "__schema51": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema52": {
+      "type": "boolean",
+      "const": true
+    },
+    "__schema53": {
+      "description": "The largest simplification error, in pixels at a viewport height of 1080, a level may show. Smaller keeps detail longer. Default 1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema54"
+        }
+      ]
+    },
+    "__schema54": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    }
+  }
 }

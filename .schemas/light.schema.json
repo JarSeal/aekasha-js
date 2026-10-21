@@ -11,39 +11,19 @@
           "type": "object",
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "$ref": "#/definitions/__schema0"
             },
             "appId": {
-              "type": "string"
+              "$ref": "#/definitions/__schema1"
             },
             "type": {
               "type": "string",
               "const": "AMBIENT"
             },
             "color": {
-              "anyOf": [
+              "allOf": [
                 {
-                  "type": "string"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "r": {
-                      "type": "number"
-                    },
-                    "g": {
-                      "type": "number"
-                    },
-                    "b": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "r",
-                    "g",
-                    "b"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/definitions/__schema2"
                 }
               ]
             },
@@ -60,68 +40,24 @@
           "type": "object",
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "$ref": "#/definitions/__schema0"
             },
             "appId": {
-              "type": "string"
+              "$ref": "#/definitions/__schema1"
             },
             "type": {
               "type": "string",
               "const": "HEMISPHERE"
             },
             "color": {
-              "anyOf": [
+              "allOf": [
                 {
-                  "type": "string"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "r": {
-                      "type": "number"
-                    },
-                    "g": {
-                      "type": "number"
-                    },
-                    "b": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "r",
-                    "g",
-                    "b"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/definitions/__schema2"
                 }
               ]
             },
             "groundColor": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "r": {
-                      "type": "number"
-                    },
-                    "g": {
-                      "type": "number"
-                    },
-                    "b": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "r",
-                    "g",
-                    "b"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
+              "$ref": "#/definitions/__schema3"
             },
             "intensity": {
               "type": "number"
@@ -136,39 +72,19 @@
           "type": "object",
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "$ref": "#/definitions/__schema0"
             },
             "appId": {
-              "type": "string"
+              "$ref": "#/definitions/__schema1"
             },
             "type": {
               "type": "string",
               "const": "POINT"
             },
             "color": {
-              "anyOf": [
+              "allOf": [
                 {
-                  "type": "string"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "r": {
-                      "type": "number"
-                    },
-                    "g": {
-                      "type": "number"
-                    },
-                    "b": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "r",
-                    "g",
-                    "b"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/definitions/__schema2"
                 }
               ]
             },
@@ -182,24 +98,11 @@
               "type": "number"
             },
             "position": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema4"
                 }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
+              ]
             },
             "castShadow": {
               "type": "boolean"
@@ -211,12 +114,10 @@
               "type": "boolean"
             },
             "shadowPreset": {
-              "type": "string",
-              "enum": [
-                "LOW",
-                "MEDIUM",
-                "HIGH",
-                "ULTRA"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema5"
+                }
               ]
             },
             "shadowBias": {
@@ -226,32 +127,18 @@
               "type": "number"
             },
             "shadowMapSize": {
-              "type": "array",
-              "items": [
+              "allOf": [
                 {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema6"
                 }
-              ],
-              "minItems": 2,
-              "maxItems": 2,
-              "additionalItems": false
+              ]
             },
             "shadowCameraNearFar": {
-              "type": "array",
-              "items": [
+              "allOf": [
                 {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema6"
                 }
-              ],
-              "minItems": 2,
-              "maxItems": 2,
-              "additionalItems": false
+              ]
             },
             "shadowBlurSamples": {
               "type": "number"
@@ -272,39 +159,19 @@
           "type": "object",
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "$ref": "#/definitions/__schema0"
             },
             "appId": {
-              "type": "string"
+              "$ref": "#/definitions/__schema1"
             },
             "type": {
               "type": "string",
               "const": "DIRECTIONAL"
             },
             "color": {
-              "anyOf": [
+              "allOf": [
                 {
-                  "type": "string"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "r": {
-                      "type": "number"
-                    },
-                    "g": {
-                      "type": "number"
-                    },
-                    "b": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "r",
-                    "g",
-                    "b"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/definitions/__schema2"
                 }
               ]
             },
@@ -312,55 +179,27 @@
               "type": "number"
             },
             "position": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema4"
                 }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
+              ]
             },
             "targetPos": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema4"
                 }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
+              ]
             },
             "castShadow": {
               "type": "boolean"
             },
             "shadowPreset": {
-              "type": "string",
-              "enum": [
-                "LOW",
-                "MEDIUM",
-                "HIGH",
-                "ULTRA"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema5"
+                }
               ]
             },
             "shadowBias": {
@@ -370,52 +209,21 @@
               "type": "number"
             },
             "shadowMapSize": {
-              "type": "array",
-              "items": [
+              "allOf": [
                 {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema6"
                 }
-              ],
-              "minItems": 2,
-              "maxItems": 2,
-              "additionalItems": false
+              ]
             },
             "shadowCameraNearFar": {
-              "type": "array",
-              "items": [
+              "allOf": [
                 {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema6"
                 }
-              ],
-              "minItems": 2,
-              "maxItems": 2,
-              "additionalItems": false
+              ]
             },
             "shadowCameraFrustum": {
-              "type": "array",
-              "items": [
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
-                }
-              ],
-              "minItems": 4,
-              "maxItems": 4,
-              "additionalItems": false
+              "$ref": "#/definitions/__schema7"
             },
             "shadowBlurSamples": {
               "type": "number"
@@ -436,160 +244,74 @@
           "type": "object",
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "$ref": "#/definitions/__schema0"
             },
             "appId": {
-              "type": "string"
+              "$ref": "#/definitions/__schema1"
             },
             "type": {
               "type": "string",
               "const": "SPOT"
             },
             "color": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "r": {
-                      "type": "number"
-                    },
-                    "g": {
-                      "type": "number"
-                    },
-                    "b": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "r",
-                    "g",
-                    "b"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
+              "$ref": "#/definitions/__schema8"
             },
             "intensity": {
-              "type": "number"
+              "$ref": "#/definitions/__schema9"
             },
             "distance": {
-              "type": "number"
+              "$ref": "#/definitions/__schema10"
             },
             "angle": {
-              "type": "number"
+              "$ref": "#/definitions/__schema11"
             },
             "penumbra": {
-              "type": "number"
+              "$ref": "#/definitions/__schema12"
             },
             "decay": {
-              "type": "number"
+              "$ref": "#/definitions/__schema13"
             },
             "position": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
-                }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
+              "$ref": "#/definitions/__schema14"
             },
             "targetPos": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
-                }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
+              "$ref": "#/definitions/__schema15"
             },
             "castShadow": {
-              "type": "boolean"
+              "$ref": "#/definitions/__schema16"
             },
             "frustumCullingEnabled": {
-              "type": "boolean"
+              "$ref": "#/definitions/__schema17"
             },
             "objectCullingEnabled": {
-              "type": "boolean"
+              "$ref": "#/definitions/__schema18"
             },
             "shadowPreset": {
-              "type": "string",
-              "enum": [
-                "LOW",
-                "MEDIUM",
-                "HIGH",
-                "ULTRA"
-              ]
+              "$ref": "#/definitions/__schema19"
             },
             "shadowBias": {
-              "type": "number"
+              "$ref": "#/definitions/__schema20"
             },
             "shadowNormalBias": {
-              "type": "number"
+              "$ref": "#/definitions/__schema21"
             },
             "shadowMapSize": {
-              "type": "array",
-              "items": [
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
-                }
-              ],
-              "minItems": 2,
-              "maxItems": 2,
-              "additionalItems": false
+              "$ref": "#/definitions/__schema22"
             },
             "shadowCameraNearFar": {
-              "type": "array",
-              "items": [
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
-                }
-              ],
-              "minItems": 2,
-              "maxItems": 2,
-              "additionalItems": false
+              "$ref": "#/definitions/__schema23"
             },
             "shadowBlurSamples": {
-              "type": "number"
+              "$ref": "#/definitions/__schema24"
             },
             "shadowRadius": {
-              "type": "number"
+              "$ref": "#/definitions/__schema25"
             },
             "shadowIntensity": {
-              "type": "number"
+              "$ref": "#/definitions/__schema26"
             },
             "map": {
-              "type": "string"
+              "$ref": "#/definitions/__schema27"
             }
           },
           "required": [
@@ -695,25 +417,42 @@
                   "type": "number"
                 },
                 "engineVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema28"
+                    }
+                  ]
                 },
                 "toolkitVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema28"
+                    }
+                  ]
                 },
                 "appVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema28"
+                    }
+                  ]
                 }
               },
               "additionalProperties": false
             },
             "enabled": {
-              "type": "boolean"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema0"
+                }
+              ]
             },
             "appId": {
-              "type": "string"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema1"
+                }
+              ]
             },
             "type": {
               "type": "string",
@@ -726,197 +465,158 @@
               ]
             },
             "color": {
-              "anyOf": [
+              "allOf": [
                 {
-                  "type": "string"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "r": {
-                      "type": "number"
-                    },
-                    "g": {
-                      "type": "number"
-                    },
-                    "b": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "r",
-                    "g",
-                    "b"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/definitions/__schema8"
                 }
               ]
             },
             "intensity": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema9"
+                }
+              ]
             },
             "groundColor": {
-              "anyOf": [
+              "allOf": [
                 {
-                  "type": "string"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "r": {
-                      "type": "number"
-                    },
-                    "g": {
-                      "type": "number"
-                    },
-                    "b": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "r",
-                    "g",
-                    "b"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/definitions/__schema3"
                 }
               ]
             },
             "distance": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema10"
+                }
+              ]
             },
             "decay": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema13"
+                }
+              ]
             },
             "position": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema14"
                 }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
+              ]
             },
             "castShadow": {
-              "type": "boolean"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema16"
+                }
+              ]
             },
             "frustumCullingEnabled": {
-              "type": "boolean"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema17"
+                }
+              ]
             },
             "objectCullingEnabled": {
-              "type": "boolean"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema18"
+                }
+              ]
             },
             "shadowPreset": {
-              "type": "string",
-              "enum": [
-                "LOW",
-                "MEDIUM",
-                "HIGH",
-                "ULTRA"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema19"
+                }
               ]
             },
             "shadowBias": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema20"
+                }
+              ]
             },
             "shadowNormalBias": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema21"
+                }
+              ]
             },
             "shadowMapSize": {
-              "type": "array",
-              "items": [
+              "allOf": [
                 {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema22"
                 }
-              ],
-              "minItems": 2,
-              "maxItems": 2,
-              "additionalItems": false
+              ]
             },
             "shadowCameraNearFar": {
-              "type": "array",
-              "items": [
+              "allOf": [
                 {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema23"
                 }
-              ],
-              "minItems": 2,
-              "maxItems": 2,
-              "additionalItems": false
+              ]
             },
             "shadowBlurSamples": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema24"
+                }
+              ]
             },
             "shadowRadius": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema25"
+                }
+              ]
             },
             "shadowIntensity": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema26"
+                }
+              ]
             },
             "targetPos": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema15"
                 }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
+              ]
             },
             "shadowCameraFrustum": {
-              "type": "array",
-              "items": [
+              "allOf": [
                 {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema7"
                 }
-              ],
-              "minItems": 4,
-              "maxItems": 4,
-              "additionalItems": false
+              ]
             },
             "angle": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema11"
+                }
+              ]
             },
             "penumbra": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema12"
+                }
+              ]
             },
             "map": {
-              "type": "string"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema27"
+                }
+              ]
             }
           },
           "additionalProperties": false
@@ -927,5 +627,198 @@
   "required": [
     "lightProps"
   ],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "definitions": {
+    "__schema0": {
+      "type": "boolean"
+    },
+    "__schema1": {
+      "type": "string"
+    },
+    "__schema2": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "r": {
+              "type": "number"
+            },
+            "g": {
+              "type": "number"
+            },
+            "b": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "r",
+            "g",
+            "b"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "__schema3": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema2"
+        }
+      ]
+    },
+    "__schema4": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
+      "additionalProperties": false
+    },
+    "__schema5": {
+      "type": "string",
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "ULTRA"
+      ]
+    },
+    "__schema6": {
+      "type": "array",
+      "items": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "minItems": 2,
+      "maxItems": 2,
+      "additionalItems": false
+    },
+    "__schema7": {
+      "type": "array",
+      "items": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "minItems": 4,
+      "maxItems": 4,
+      "additionalItems": false
+    },
+    "__schema8": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema2"
+        }
+      ]
+    },
+    "__schema9": {
+      "type": "number"
+    },
+    "__schema10": {
+      "type": "number"
+    },
+    "__schema11": {
+      "type": "number"
+    },
+    "__schema12": {
+      "type": "number"
+    },
+    "__schema13": {
+      "type": "number"
+    },
+    "__schema14": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema4"
+        }
+      ]
+    },
+    "__schema15": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema4"
+        }
+      ]
+    },
+    "__schema16": {
+      "type": "boolean"
+    },
+    "__schema17": {
+      "type": "boolean"
+    },
+    "__schema18": {
+      "type": "boolean"
+    },
+    "__schema19": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema5"
+        }
+      ]
+    },
+    "__schema20": {
+      "type": "number"
+    },
+    "__schema21": {
+      "type": "number"
+    },
+    "__schema22": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema23": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema24": {
+      "type": "number"
+    },
+    "__schema25": {
+      "type": "number"
+    },
+    "__schema26": {
+      "type": "number"
+    },
+    "__schema27": {
+      "type": "string"
+    },
+    "__schema28": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    }
+  }
 }

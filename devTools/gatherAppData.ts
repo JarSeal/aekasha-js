@@ -443,7 +443,13 @@ export const writeJsonSchemas = () => {
 
   const written: string[] = [];
   for (const target of targets) {
-    const nativeSchema = z.toJSONSchema(target.schema, { target: 'draft-07', override: sizeTuple });
+    // `reused: 'ref'`: a sub-schema used twice is written once, under `definitions` (the scene's
+    // inline assets repeat whole asset schemas: 653 KB inline, 137 KB with refs)
+    const nativeSchema = z.toJSONSchema(target.schema, {
+      target: 'draft-07',
+      override: sizeTuple,
+      reused: 'ref',
+    });
     const finalSchema = {
       $schema: 'http://json-schema.org/draft-07/schema#',
       ...nativeSchema,
@@ -1593,7 +1599,8 @@ export const gatherSceneData = (
             if ('__meta' in meshData.props) delete meshData.props.__meta;
             delete meshData.__sourcePath;
             delete meshData.__saveData;
-            return meshData;
+            // A save entry's partial `geo` or `mat` replaces the whole field (p619 G13, Phase 4)
+            return meshData as Omit<MeshAsset, '$schema' | '__sourcePath' | '__saveData'>;
           }
           return reportUnknownId(sceneId, 'mesh', meshId);
         });

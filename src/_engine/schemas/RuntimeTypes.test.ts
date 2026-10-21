@@ -8,8 +8,10 @@ import type { MeshProps } from '../kernel/mesh/Mesh';
 import type { SceneData } from '../kernel/scene/Scene';
 import type { EntityDebugData } from '../kernel/ecs/ECSRegistry';
 import type { DebugData } from './_HelperSchemas';
+import type { ImportAssetParams } from '../kernel/assets/import/ImportTypes';
 import type { CameraAsset } from './CameraSchema';
 import type { GeoProps as GeoPropsJson } from './GeometrySchema';
+import type { ImportedAsset } from './ImportedAssetSchema';
 import type { LightAsset } from './LightSchema';
 import type { MaterialAsset } from './MaterialSchema';
 import type { MeshAsset } from './MeshSchema';
@@ -27,10 +29,9 @@ import type { TextureAsset } from './TextureSchema';
 // comparison:
 // - `texOpts`: three's constants (wrapS, minFilter, …) are plain numbers in a JSON. p302 D1 gives
 //   the JSON named constants ("wrapS": "REPEAT"), which this swap then maps.
-// - Materials: zod's object with a `type` enum is one runtime member per type, which TypeScript
-//   doesn't split on its own (`PerType`).
-// - A scene's `meshes` and `importedAssets`: the scene schema doesn't validate an inline entry
-//   (`record<string, unknown>`); the mesh JSON's pair is checked here, the import's is p619's.
+// - A scene's or a mesh's inline material: zod infers the schema's two branches (TSL or not), each
+//   with a `type` enum, where the runtime has one member per type, which TypeScript doesn't split
+//   on its own (`PerType`, as `MaterialAsset` itself does).
 
 /** Every key of every member of a union (`keyof` alone gives the shared ones). */
 type AllKeys<T> = T extends unknown ? keyof T : never;
@@ -57,9 +58,25 @@ type WithTexOpts<T> = Omit<T, 'texOpts'> & {
 
 type LightPropsJson = LightAsset['lightProps'];
 
+type ImportTexturesJson = Extract<NonNullable<ImportedAsset['importTextures']>, object>;
+/** An import with its `importTextures.texOpts` swapped as a texture's */
+type WithImportTexOpts<T extends { importTextures?: unknown }> = Omit<T, 'importTextures'> & {
+  importTextures?:
+    | boolean
+    | (Omit<ImportTexturesJson, 'texOpts'> & {
+        texOpts?: Swap<TexOptsJson, TexOptsRuntime, TexOptsSwapped>;
+      });
+};
+
 type SceneLightJson = Exclude<NonNullable<SceneAsset['lights']>[number], string>;
 type SceneTextureJson = Exclude<NonNullable<SceneAsset['textures']>[number], string>;
 type SceneMaterialJson = Exclude<NonNullable<SceneAsset['materials']>[number], string>;
+type SceneMeshJson = Exclude<NonNullable<SceneAsset['meshes']>[number], string>;
+type SceneImportJson = Exclude<NonNullable<SceneAsset['importedAssets']>[number], string>;
+/** A mesh's props with its inline material split per type */
+type WithMatPerType<Props extends { mat: unknown }> = Omit<Props, 'mat'> & {
+  mat: string | PerType<Exclude<Props['mat'], string>>;
+};
 type SceneJson = Omit<
   SceneAsset,
   'lights' | 'textures' | 'materials' | 'meshes' | 'importedAssets'
@@ -67,6 +84,11 @@ type SceneJson = Omit<
   lights?: (string | (Omit<SceneLightJson, 'lightProps'> & { lightProps: LightPropsJson }))[];
   textures?: (string | WithTexOpts<SceneTextureJson>)[];
   materials?: (string | PerType<SceneMaterialJson>)[];
+  meshes?: (
+    | string
+    | (Omit<SceneMeshJson, 'props'> & { props: WithMatPerType<SceneMeshJson['props']> })
+  )[];
+  importedAssets?: (string | WithImportTexOpts<SceneImportJson>)[];
 };
 
 describe('the asset JSONs fit their runtime types', () => {
@@ -76,7 +98,7 @@ describe('the asset JSONs fit their runtime types', () => {
   });
 
   test('material (*.material.json) → MatProps', () => {
-    expectTypeOf<PerType<MaterialAsset>>().toExtend<MatProps>();
+    expectTypeOf<MaterialAsset>().toExtend<MatProps>();
     expectTypeOf<ExtraKeys<MaterialAsset, MatProps>>().toEqualTypeOf<ToolingKeys>();
   });
 
@@ -102,11 +124,16 @@ describe('the asset JSONs fit their runtime types', () => {
 
   test('mesh (*.mesh.json props) → MeshProps', () => {
     type MeshPropsJson = MeshAsset['props'];
-    type MeshMatJson = Exclude<MeshPropsJson['mat'], string>;
-    expectTypeOf<
-      Omit<MeshPropsJson, 'mat'> & { mat: string | PerType<MeshMatJson> }
-    >().toExtend<MeshProps>();
+    expectTypeOf<WithMatPerType<MeshPropsJson>>().toExtend<MeshProps>();
     expectTypeOf<ExtraKeys<MeshPropsJson, MeshProps>>().toEqualTypeOf<never>();
+  });
+
+  test('imported asset (*.importedAsset.json) → ImportAssetParams', () => {
+    expectTypeOf<WithImportTexOpts<ImportedAsset>>().toExtend<ImportAssetParams>();
+    expectTypeOf<ExtraKeys<ImportedAsset, ImportAssetParams>>().toEqualTypeOf<
+      // Build time and the Assets tab only: the gatherer drops `optimize`
+      ToolingKeys | 'optimize' | '__fileSize' | '__bytes' | '__vramBytes' | '__lodChain'
+    >();
   });
 
   test('debugData (an entity’s or an asset’s) → EntityDebugData', () => {

@@ -12,11 +12,11 @@
       "type": "boolean"
     },
     "params": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {}
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema0"
+        }
+      ]
     },
     "paramsMeta": {
       "type": "object",
@@ -72,6 +72,116 @@
       "additionalProperties": {}
     },
     "debugData": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema1"
+        }
+      ]
+    },
+    "userData": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema2"
+        }
+      ]
+    },
+    "$schema": {
+      "type": "string"
+    },
+    "__sourcePath": {
+      "type": "string"
+    },
+    "__saveData": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "__meta": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "number"
+                },
+                "engineVersion": {
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema3"
+                    }
+                  ]
+                },
+                "toolkitVersion": {
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema3"
+                    }
+                  ]
+                },
+                "appVersion": {
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema3"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "params": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema0"
+                }
+              ]
+            },
+            "staticDefines": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "debugData": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema1"
+                }
+              ]
+            },
+            "userData": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema2"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "required": [
+    "id",
+    "tslFile"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "__schema0": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema1": {
       "type": "object",
       "properties": {
         "name": {
@@ -116,128 +226,16 @@
       },
       "additionalProperties": false
     },
-    "userData": {
+    "__schema2": {
       "type": "object",
       "propertyNames": {
         "type": "string"
       },
       "additionalProperties": {}
     },
-    "$schema": {
-      "type": "string"
-    },
-    "__sourcePath": {
-      "type": "string"
-    },
-    "__saveData": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "__meta": {
-              "type": "object",
-              "properties": {
-                "date": {
-                  "type": "number"
-                },
-                "engineVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                },
-                "toolkitVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                },
-                "appVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
-                }
-              },
-              "additionalProperties": false
-            },
-            "enabled": {
-              "type": "boolean"
-            },
-            "params": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
-            },
-            "staticDefines": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
-            },
-            "debugData": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string"
-                },
-                "comments": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "timestamp": {
-                        "type": "number"
-                      },
-                      "comment": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "timestamp",
-                      "comment"
-                    ],
-                    "additionalProperties": false
-                  }
-                },
-                "todo": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "debugObj": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                }
-              },
-              "additionalProperties": false
-            },
-            "userData": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
-            }
-          },
-          "additionalProperties": false
-        }
-      }
+    "__schema3": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
     }
-  },
-  "required": [
-    "id",
-    "tslFile"
-  ],
-  "additionalProperties": false
+  }
 }

@@ -5,6 +5,8 @@ import { LightAssetSchema } from './LightSchema';
 import { GeoPropsSchema } from './GeometrySchema';
 import { InlineTextureSchema } from './TextureSchema';
 import { MaterialAssetSchema } from './MaterialSchema';
+import { createMeshAssetSchema } from './MeshSchema';
+import { InlineImportedAssetSchema } from './ImportedAssetSchema';
 import { ColorJSONSchema, DebugDataSchema } from './_HelperSchemas';
 import {
   type FeatureSchemaPart,
@@ -12,10 +14,9 @@ import {
   mergeFeatureSchemaShapes,
 } from './FeatureSchemas';
 
-const AssetReferenceOrInline = z.union([z.string(), z.record(z.string(), z.unknown())]);
-
-// The kernel's scene fields; the features' follow them (createSceneAssetSchema)
-const KERNEL_SCENE_SHAPE = {
+// The kernel's scene fields, with the inline mesh composed from the scene's parts; the features'
+// fields follow them (createSceneAssetSchema)
+const createKernelSceneShape = <M extends z.ZodType>(InlineMeshSchema: M) => ({
   $schema: z.string().optional(),
   __meta: MetaSchema.optional(),
 
@@ -37,9 +38,9 @@ const KERNEL_SCENE_SHAPE = {
   geometries: z.array(z.union([z.string(), GeoPropsSchema])).optional(),
   textures: z.array(z.union([z.string(), InlineTextureSchema])).optional(),
   materials: z.array(z.union([z.string(), MaterialAssetSchema])).optional(),
-  meshes: z.array(AssetReferenceOrInline).optional(),
-  importedAssets: z.array(AssetReferenceOrInline).optional(),
-};
+  meshes: z.array(z.union([z.string(), InlineMeshSchema])).optional(),
+  importedAssets: z.array(z.union([z.string(), InlineImportedAssetSchema])).optional(),
+});
 
 /**
  * The scene schema (`*.scene.json`) with the features' fields (p607 D10): the kernel's fields,
@@ -55,8 +56,12 @@ const KERNEL_SCENE_SHAPE = {
  * ```
  */
 export const createSceneAssetSchema = <const P extends readonly FeatureSchemaPart[]>(parts: P) => {
+  // An inline mesh is a mesh JSON's props and entity options, with the same parts' mesh fields
+  const kernelShape = createKernelSceneShape(
+    createMeshAssetSchema(parts).pick({ props: true, entityOpts: true })
+  );
   const SceneOverridesSchema = z.object(
-    mergeFeatureSchemaShapes(KERNEL_SCENE_SHAPE, parts, 'scene') as typeof KERNEL_SCENE_SHAPE &
+    mergeFeatureSchemaShapes(kernelShape, parts, 'scene') as typeof kernelShape &
       FeatureSchemaShape<P, 'scene'>
   );
   return SceneOverridesSchema.omit({ __meta: true }).extend({
