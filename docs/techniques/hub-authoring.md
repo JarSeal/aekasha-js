@@ -125,7 +125,7 @@ Back to the [Hub](hub:).
 
 ### API links
 
-Link to an engine or toolkit export's entry in the Documentation section with `api:` and its name:
+Link to a public name's entry in the Documentation section with `api:` and its name (the pages hold what the entries export: `documentation/aekasha/physics/`, and `aekasha`'s names by source folder):
 
 ```md
 Start a scene with [`loadScene`](api:loadScene).
@@ -133,11 +133,12 @@ Systems run in stages: see [`addSystem`](api:ECSWorld.addSystem).
 Bodies are made through [the facade](api:PhysicsBodies.createRigidBody).
 ```
 
-- **A bare name is an export:** `api:loadScene`. A class's or an interface's member needs its owner: `api:ECSWorld.addSystem`.
-- **A name two modules export needs its module:** `api:PhysicsBodies.createRigidBody`, or more of the path when the file name isn't enough (`api:physics/PhysicsBodies.createRigidBody`, `api:toolkit/…`). Re-exports don't count: they point at the original.
+- **A bare name is a public name:** `api:loadScene`. A class's or an interface's member needs its owner: `api:ECSWorld.addSystem`.
+- **A name two declarations share needs its module:** `api:PhysicsBodies.createRigidBody`, or more of the path when the file name isn't enough (`api:physics/PhysicsBodies.createRigidBody`, `api:toolkit/…`). Re-exports don't count: they point at the original.
+- **An internal export has no page.** `api:` to a name no entry exports fails the build, saying it's internal: link the public API, or put the name on its entry.
 - **Every `api:` link is checked as it's rendered.** An unknown name fails the build and suggests close ones (`Unknown api:createPhysicEntity (did you mean api:createPhysicsEntity?)`), and an ambiguous one lists each candidate as a link you can copy.
 - `api:` works in a page's markup too: `<a href="api:loadScene">`.
-- In the engine's and the toolkit's JSDoc, `{@link loadScene}` links the same way. TypeDoc resolves it from the file's imports. One that resolves to nothing documented is shown as text, with a warning at its file and line. A link to three's own classes is shown as text, without a warning.
+- In the engine's and the toolkit's JSDoc, `{@link loadScene}` links the same way. TypeDoc resolves it from the file's imports. In a public name's comment, one to an internal export or to nothing is shown as code, with a warning at its file and line: write an internal name in backticks. A link to three's own classes is shown as code, without a warning.
 
 ### Repo links
 
@@ -320,7 +321,7 @@ The search box (⌘K, Ctrl+K or `/`) searches every page except the homepage. `y
 - **A heading with an id is a search result.** Each section from a heading to the next is one result, with the headings above it as the breadcrumb. The text before a page's first heading is the page's own result, along with its `<title>`, `aek:tags` and `aek:description`. Headings make a long page easier to search as well as to read.
 - **The title, headings and tags weigh the most.** Put the words a reader would search for in `aek:tags`, especially those the page doesn't spell out (`rapier` on the physics page).
 - **Code blocks add their identifiers, not their keywords.** Identifiers are split at camelCase too, so `mesh` finds `createMeshEntity`.
-- **The API is searched by name.** Every engine and toolkit module, export and class or interface member is a result of its own, weighted like a title and split at camelCase, with its kind and its summary's first sentence (clipped to 120 characters). Only the name is searched: the summary is shown, not indexed, which keeps the index under 1 MB.
+- **The API is searched by name.** Every entry, public name and class or interface member is a result of its own, weighted like a title and split at camelCase, with its kind and its summary's first sentence (clipped to 120 characters). Only the name is searched: the summary is shown, not indexed, which keeps the index under 1 MB.
 - **Content with the class `hubSearchSkip` is left out**, headings included: the cards, the API lists (indexed their own way) and the Version page's changelog, which the browser's own find searches on that page.
 - **`yarn hub:build` prints the index's size.** Over 1 MB it warns. The index is loaded whole on first use, so keep it lean.
 
@@ -520,6 +521,7 @@ The same checks run in dev and in `yarn hub:build`. In dev, an error shows the e
 | `#L…: … has lines 1-N`                                 | The file got shorter. Fix the range, or use a region. |
 | `Unknown api:x (did you mean …)`                       | A misspelt or renamed export. Use a suggested name.   |
 | `Ambiguous api:x: api:A.x, api:B.x`                    | Two modules export it. Use one of the listed names.   |
+| `api:x is internal (…)`                                | No entry exports it. Link a public name instead.      |
 | `Unknown scene "x": …generatedAppData.json has …`      | A misspelt or renamed scene id. Use a listed one.     |
 | `The app's scenes can't be read from …`                | Run `yarn gatherAppData`.                             |
 | `::: cards: no page at hub/pages/…`                    | Fix the page path after `cards`.                      |
@@ -537,6 +539,7 @@ The same checks run in dev and in `yarn hub:build`. In dev, an error shows the e
 | Warning: `::: cards takes no content`                  | Move the text out of the directive.                   |
 | Warning: `The search index is …, over 1 MB`            | Index less: fewer or shorter pages, fewer fields.     |
 | Warning: `{@link X} links nowhere (…)`                 | In the JSDoc: fix the name, export it, or use code.   |
+| Warning: `X … is on no entry, but Y … names it`        | Put `X` on its entry, or change `Y`'s signature.      |
 
 ## Publishing
 

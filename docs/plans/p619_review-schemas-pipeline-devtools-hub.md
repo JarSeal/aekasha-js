@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: in progress | Phases 0-5 implemented
 Category: Refactoring, Documentation, Dev tooling
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -1103,7 +1103,7 @@ As built (2026-10-21; sections 1-4 committed after `2c9bdc6`, 5 after them):
   with Phase 0's warnings; `docs.json` recorded (`engine/utils` 44 / 44, `features/skybox`
   178 / 178); the Vite config loads. `api.json` not recorded (Phase 8's full run).
 
-### Phase 5: the API reference per entry (D6)
+### Phase 5: the API reference per entry (D6) — done
 
 The renderer on the entries, R2's check and the 64 decisions (each added type documented), R3's
 pass, `render.ts`' split, the `hub:documentation/` links. `yarn hub:build` with no `notExported`,
@@ -1236,6 +1236,35 @@ As built (2026-10-21, on `aece8b0`):
     `target` set to its own page, not its home's (fixed).
   - Checks: `yarn test` 1080 passed, lint, both `tsc`; `yarn hub:build`: 84 pages (436 before), no
     dead link, the toolkit's 4 and `{@link getRandomStream}` only.
+- **Section 5, the checks and the docs.**
+  - `yarn verify:baselines` (a build): the API changes are Phases 3-5's (the removed and added
+    schema exports, `GLTF_LOD_EXTRAS_KEY`'s move, `stableStringify`, the 79 entry names plus
+    `ColorJSON` and `applySkyBoxSaveEntry`); `docs.json` unchanged; no debug code. **`api.json`
+    recorded alone** (919 names on 16 entries): `bundle.json` and `bundle.banner.json` were put
+    back, for Phase 7's B2 re-record. Their diff besides B2's key swaps (`EngineRapier.js`, the
+    banner's `AssetsWorker.js`): `_engine/utils` +1 module, +0.4 kB gzip (app) and +0.3 (banner),
+    Phase 4's `StableStringify.ts` (the impostor hash), for Phase 7 to record.
+  - The dev Hub (`vite serve`): the entry, folder and group pages serve with editor source links;
+    an engine save gives the API page a 503, then the page after the child process's 8 s; other
+    pages serve meanwhile.
+  - A search round trip on `dist-hub/`' index: `createPhysicsEntity` and `WorldAPI` find their
+    entry page anchors, `aekasha physics` the entry, the internal `createRigidBodyWithColliders`
+    nothing.
+  - Docs: `devTools/hub/CLAUDE.md` (Documentation: the entry list in the model, R3's pass, the
+    pages, the links, the search, R2's checks replacing TypeDoc's validation, the upgrade check);
+    `docs/techniques/hub-authoring.md` (`api:` to an internal name, `{@link}` in backticks, the
+    search, two error rows); the root `CLAUDE.md`'s `yarn docs` line and JSDoc rule (`{@link}`
+    only to public names), and the Hub's JSDoc standard the same.
+  - Checks: `yarn test` 1080 passed, lint, both `tsc`; `yarn hub:build`: the toolkit's 4 and
+    `{@link getRandomStream}` only.
+- **For later phases.** Phase 6: the search index is 1,009,470 B raw, 259,575 B `gzip -9` (D7's
+  gzip warning at 450 kB); its cuts 1, 7 and 9 still apply (Q2's module documents are gone:
+  cut 7 now means the entry documents, which store no summary). Phase 8 (D2): engine minor items:
+  the 79 entry names, the API URLs per entry (D3's changelog item), `FeatureContext`'s
+  `registerImportExtension` and `LodChain.report` now `@internal`; p620's Inputs get the
+  toolkit's **4** leaked types (`MovingPlatformControls`, `AsteroidNoiseOptions`,
+  `AsteroidCraterOptions`, `TerrainNoiseOctave`), not 3. D15's "`intro.md` per entry" is done
+  (the text and the entry table's links).
 
 ### Phase 6: the rest of the Hub generator and the search (D7, D10, D11, D16)
 
