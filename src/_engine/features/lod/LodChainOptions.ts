@@ -1,5 +1,6 @@
-// LOD chain options (docs/plans/_DONE_p347_lod-chain-generation.md §2.2). Import-free: the asset pipeline
-// resolves them in Node without loading three.
+// LOD chain options (docs/plans/_DONE_p347_lod-chain-generation.md §2.2) and the description of
+// a GLB's prebuilt chains. Import-free: the asset pipeline resolves the options and writes the
+// description in Node without loading three (devTools/engineImports.test.ts keeps it so).
 
 /** How {@link _engine/features/lod/LodChains!generateLodChain} (and an import's or an asset JSON's
  * `lodChain`) simplifies a geometry; every field is optional, {@link resolveLodChainOptions} fills
@@ -43,10 +44,32 @@ export type LodLevelVertices = 'BASE' | 'WELDED' | 'OWN';
  * again (the pipeline's own writer, devTools/assetPipeline/lodChains.ts, bumps PIPELINE_VERSION). */
 export const LOD_SIMPLIFY_VERSION = 1;
 
-/** Bump on a change to the chains' description in a GLB (`GLTFLodChainsExtras` in
- * LodChainGLTF.ts): a file with another version loads without its levels (and gets them at
+/** Bump on a change to the chains' description in a GLB ({@link GLTFLodChainsExtras}): a file with another version loads without its levels (and gets them at
  * runtime, when its import asks). In the asset pipeline's cache key, so the GLBs are built again. */
 export const GLTF_LOD_FORMAT_VERSION = 1;
+
+/** The key of the chains' description in the glTF root's extras. */
+export const GLTF_LOD_EXTRAS_KEY = 'aekLodChains';
+
+/** The chains' description in the root's extras, written by the asset pipeline and read by
+ * `LodChainGLTF.ts`. Mesh indices are the file's (`meshes[]`). */
+export type GLTFLodChainsExtras = {
+  version: number;
+  options: ResolvedLodChainOptions;
+  /** One per base primitive the build simplified, also when it got no level (so the runtime
+   * doesn't try again). */
+  chains: {
+    /** The base: a mesh index and its primitive index */
+    mesh: number;
+    primitive: number;
+    /** The base's largest bounding box side, in its own (possibly quantized) units */
+    extent: number;
+    baseTriangles: number;
+    vertices: LodLevelVertices;
+    /** LOD1 onwards: each a mesh with one primitive */
+    levels: { mesh: number; triangles: number; error: number }[];
+  }[];
+};
 
 /**
  * The defaults `resolveLodChainOptions` fills in (its test reads them).

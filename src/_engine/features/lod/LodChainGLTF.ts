@@ -14,32 +14,12 @@ import {
 } from '../../kernel/assets/import/GeometryTransfer';
 import { getGLTFPrimitiveKey } from '../../kernel/assets/import/GLTFExtract';
 import {
+  GLTF_LOD_EXTRAS_KEY,
   GLTF_LOD_FORMAT_VERSION,
+  type GLTFLodChainsExtras,
   type LodLevelVertices,
   type ResolvedLodChainOptions,
 } from './LodChainOptions';
-
-/** The key of the chains' description in the glTF root's extras. */
-export const GLTF_LOD_EXTRAS_KEY = 'aekLodChains';
-
-/** The chains' description in the root's extras. Mesh indices are the file's (`meshes[]`). */
-export type GLTFLodChainsExtras = {
-  version: number;
-  options: ResolvedLodChainOptions;
-  /** One per base primitive the build simplified, also when it got no level (so the runtime
-   * doesn't try again). */
-  chains: {
-    /** The base: a mesh index and its primitive index */
-    mesh: number;
-    primitive: number;
-    /** The base's largest bounding box side, in its own (possibly quantized) units */
-    extent: number;
-    baseTriangles: number;
-    vertices: LodLevelVertices;
-    /** LOD1 onwards: each a mesh with one primitive */
-    levels: { mesh: number; triangles: number; error: number }[];
-  }[];
-};
 
 /**
  * A base primitive's prebuilt chain, as loaded.

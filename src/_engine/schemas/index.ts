@@ -40,7 +40,11 @@ export { postFxSchemaPart } from '../features/postfx/PostFXSchema';
 export { createSceneAssetSchema } from './SceneSchema';
 export type { SceneAsset } from './SceneSchema';
 export { spatialSchemaPart } from '../features/spatial/SpatialSchema';
-export { SkyBoxAssetSchema, skyBoxSchemaPart } from '../features/skybox/SkyBoxSchema';
+export {
+  SkyBoxAssetSchema,
+  applySkyBoxSaveEntry,
+  skyBoxSchemaPart,
+} from '../features/skybox/SkyBoxSchema';
 export type { SkyBoxAsset } from '../features/skybox/SkyBoxSchema';
 export { TextureArrayAssetSchema, isTextureArrayLayerFile } from './TextureArraySchema';
 export type { TextureArrayAsset } from './TextureArraySchema';

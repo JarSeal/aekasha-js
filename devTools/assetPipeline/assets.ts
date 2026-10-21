@@ -1,19 +1,16 @@
 import fs from 'fs';
 import path from 'path';
-import { TextureAssetSchema, type TextureAsset } from '../../src/_engine/schemas/TextureSchema';
-import {
-  ImportedAssetSchema,
-  type ImportedAsset,
-} from '../../src/_engine/schemas/ImportedAssetSchema';
-import {
-  TextureArrayAssetSchema,
-  type TextureArrayAsset,
-} from '../../src/_engine/schemas/TextureArraySchema';
 import {
   getAtlasSlotTextureId,
+  ImportedAssetSchema,
+  TextureArrayAssetSchema,
+  TextureAssetSchema,
   TextureAtlasAssetSchema,
+  type ImportedAsset,
+  type TextureArrayAsset,
+  type TextureAsset,
   type TextureAtlasAsset,
-} from '../../src/_engine/schemas/TextureAtlasSchema';
+} from '../../src/_engine/schemas';
 import {
   resolveLodChainOptions,
   type ResolvedLodChainOptions,

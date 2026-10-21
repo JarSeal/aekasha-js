@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import type { TextureSlot } from '../../src/_engine/schemas/AssetsConfigSchema';
 import {
   DEFAULT_ATLAS_PADDING,
   getFullMipLevelCount,
@@ -8,7 +7,8 @@ import {
   type TextureAtlasAsset,
   type TextureAtlasCellInfo,
   type TextureAtlasSlot,
-} from '../../src/_engine/schemas/TextureAtlasSchema';
+  type TextureSlot,
+} from '../../src/_engine/schemas';
 import {
   ALPHA_COVERAGE_VERSION,
   measureAlphaCoverage,

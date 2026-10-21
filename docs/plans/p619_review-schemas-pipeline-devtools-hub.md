@@ -955,6 +955,32 @@ The gather's split and its options, the imports rule and its test, the generated
 when changed, the asset pipeline's splits, fixtures folder and memo, D14's tests for both, the
 hygiene in both.
 
+Sections: 1. D8's rule and test; 2. the gather's split (D10) with D16's gather items and G13;
+3. the generated files written when changed (G7) and the plugin's queue (G9); 4. the asset
+pipeline's splits, fixtures, memo and tests; 5. the hygiene (D11) in both, the docs.
+
+As built (2026-10-21, in progress; uncommitted):
+
+- **Section 1, D8.** `devTools/engineImports.test.ts` keeps the rule: a devTools import into
+  `src/` names a listed module (each with its reason), and an `aekasha*` entry only with
+  `import type` (`import { type X }` and `export { type X } from` count as value imports: under
+  `verbatimModuleSyntax` they stay as `import {}`, which loads the module). Each module listed for
+  its values may load, through its value imports, no package but zod and its own (`LodSimplify.ts`:
+  three and meshoptimizer); the list can't hold a module nothing imports. The schemas entry's graph
+  is 27 modules, zod alone. The asset pipeline and the gatherer import the schemas from the entry
+  file; `AppConfig` and `TransferableAttribute` are `import type … from 'aekasha'`.
+  - **I2, differs from D8 (to confirm in review):** the five gatherer helpers are already on
+    `aekasha/skybox` and `aekasha/lod`, so putting them on `aekasha/schemas` too would give each name
+    two entries (D6 counts on unique names). Instead their three import-free modules are on the list
+    by path: `LegacySkyBox.ts`, `Presets.ts`, `ImpostorFormat.ts`. No entry changed for them.
+  - `deepMerge` → `applySkyBoxSaveEntry(def, entry?)` (`SkyBoxSchema.ts`, on `aekasha/schemas`:
+    the deep merge, without the entry's `__meta`).
+  - I3: `GLTF_LOD_EXTRAS_KEY` and `GLTFLodChainsExtras` moved into `LodChainOptions.ts` (still on
+    `aekasha/lod`), so `lodChains.ts` no longer imports `LodChainGLTF.ts` (three/webgpu).
+  - `LodSimplify.ts` is listed with its packages: a GLB's prebuilt chain is the runtime's
+    simplifier's output, by design (I3 didn't name it).
+  - The generated data, dev and production, is the same as before (compared).
+
 ### Phase 5: the API reference per entry (D6)
 
 The renderer on the entries, R2's check and the 64 decisions (each added type documented), R3's

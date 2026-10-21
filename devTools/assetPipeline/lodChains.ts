@@ -6,13 +6,11 @@ import {
   type Node,
   type TypedArray,
 } from '@gltf-transform/core';
-import type { TransferableAttribute } from '../../src/_engine/kernel/assets/import/GeometryTransfer';
+import type { TransferableAttribute } from 'aekasha';
 import {
   GLTF_LOD_EXTRAS_KEY,
-  type GLTFLodChainsExtras,
-} from '../../src/_engine/features/lod/LodChainGLTF';
-import {
   GLTF_LOD_FORMAT_VERSION,
+  type GLTFLodChainsExtras,
   type LodLevelVertices,
   type ResolvedLodChainOptions,
 } from '../../src/_engine/features/lod/LodChainOptions';

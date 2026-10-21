@@ -10,36 +10,46 @@ import {
   type MeshAsset,
   type SceneAsset,
 } from './engineSchemas';
-import type { CameraAsset } from '../src/_engine/schemas/CameraSchema';
-import { CameraAssetSchema } from '../src/_engine/schemas/CameraSchema';
-import type { LightAsset } from '../src/_engine/schemas/LightSchema';
-import { LightAssetSchema } from '../src/_engine/schemas/LightSchema';
-import type { GeoAsset } from '../src/_engine/schemas/GeometrySchema';
-import { GeoAssetSchema } from '../src/_engine/schemas/GeometrySchema';
-import type { TextureAsset } from '../src/_engine/schemas/TextureSchema';
-import { TextureAssetSchema } from '../src/_engine/schemas/TextureSchema';
-import type { TextureArrayAsset } from '../src/_engine/schemas/TextureArraySchema';
-import { TextureArrayAssetSchema } from '../src/_engine/schemas/TextureArraySchema';
-import type { MaterialAsset } from '../src/_engine/schemas/MaterialSchema';
-import { MaterialAssetSchema } from '../src/_engine/schemas/MaterialSchema';
-import type { ImportedAsset } from '../src/_engine/schemas/ImportedAssetSchema';
-import { ImportedAssetSchema } from '../src/_engine/schemas/ImportedAssetSchema';
-import type { SkyBoxAsset } from '../src/_engine/features/skybox/SkyBoxSchema';
-import { SkyBoxAssetSchema } from '../src/_engine/features/skybox/SkyBoxSchema';
-import type { PostFxAsset } from '../src/_engine/schemas/PostFxSchema';
-import { PostFxAssetSchema } from '../src/_engine/schemas/PostFxSchema';
 import {
+  applySkyBoxSaveEntry,
   AssetsConfigSchema,
+  CameraAssetSchema,
+  GeoAssetSchema,
+  getAtlasSlotTextureId,
+  ImportedAssetSchema,
+  ImpostorAssetSchema,
+  LightAssetSchema,
+  MaterialAssetSchema,
+  PostFxAssetSchema,
+  SkyBoxAssetSchema,
+  TextureArrayAssetSchema,
+  TextureAssetSchema,
+  TextureAtlasAssetSchema,
   type AssetOptimize,
+  type CameraAsset,
+  type GeoAsset,
+  type ImportedAsset,
+  type ImpostorAsset,
+  type ImpostorDef,
+  type LightAsset,
+  type MaterialAsset,
+  type MetaSchema,
+  type PostFxAsset,
+  type SkyBoxAsset,
+  type TextureArrayAsset,
+  type TextureAsset,
+  type TextureAtlasSlotTexture,
   type TexturePack,
-} from '../src/_engine/schemas/AssetsConfigSchema';
-import type { MetaSchema } from '../src/_engine/schemas/_SaveDataSchema';
+} from '../src/_engine/schemas';
 import {
   isLegacySkyBoxProps,
   LEGACY_SKYBOX_WARNING,
 } from '../src/_engine/features/skybox/LegacySkyBox';
-import { deepMerge } from '../src/_engine/utils/DeepMerge';
 import { mergeSkyBoxPreset } from '../src/_engine/features/skybox/Presets';
+import {
+  getImpostorDefSlots,
+  IMPOSTOR_EXPORT_FORMAT_VERSION,
+} from '../src/_engine/features/lod/impostors/ImpostorFormat';
 import pkg from '../package.json';
 import { createSettingsResolver } from './assetPipeline/settings';
 import { listPackFiles } from './assetPipeline/pack';
@@ -73,21 +83,7 @@ import {
   resolveTextureArrayLayers,
   type TextureLookup,
 } from './assetPipeline/textureArrays';
-import {
-  getAtlasSlotTextureId,
-  TextureAtlasAssetSchema,
-  type TextureAtlasSlotTexture,
-} from '../src/_engine/schemas/TextureAtlasSchema';
 import { getAtlasCellTable, resolveTextureAtlas } from './assetPipeline/textureAtlases';
-import {
-  ImpostorAssetSchema,
-  type ImpostorAsset,
-  type ImpostorDef,
-} from '../src/_engine/features/lod/impostors/ImpostorSchema';
-import {
-  getImpostorDefSlots,
-  IMPOSTOR_EXPORT_FORMAT_VERSION,
-} from '../src/_engine/features/lod/impostors/ImpostorFormat';
 import sbpProfiles from '../sbp.config';
 import { checkSbpProfiles, type SbpProfile } from './sbp/config';
 import {
@@ -1652,9 +1648,7 @@ export const gatherSceneData = (
           if (!sky) return reportUnknownId(sceneId, 'sky box', skyIdOrInline as string);
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { $schema, __sourcePath, __saveData, ...def } = sky;
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { __meta, ...overrides } = __saveData?.[sceneId]?.[0] || {};
-          const skyData = deepMerge(def, overrides);
+          const skyData = applySkyBoxSaveEntry(def, __saveData?.[sceneId]?.[0]);
           if (isProduction) delete skyData.debugData;
           return skyData;
         });

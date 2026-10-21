@@ -1,6 +1,6 @@
 import path from 'path';
 import { pathToFileURL } from 'url';
-import type { AppConfig } from '../../src/_engine/kernel/config/Config';
+import type { AppConfig } from 'aekasha';
 import { SRC_DIR } from './sources';
 
 /**

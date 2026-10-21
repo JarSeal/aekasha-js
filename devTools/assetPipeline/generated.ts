@@ -1,8 +1,5 @@
 import path from 'path';
-import type {
-  GeneratedAssetFields,
-  TextureCodec,
-} from '../../src/_engine/schemas/AssetsConfigSchema';
+import type { GeneratedAssetFields, TextureCodec } from '../../src/_engine/schemas';
 import {
   getPipelineAssetKey,
   getTextureArrayAssetKey,

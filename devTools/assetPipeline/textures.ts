@@ -1,6 +1,9 @@
 import fs from 'fs';
-import type { TextureCodec, TextureSlot } from '../../src/_engine/schemas/AssetsConfigSchema';
-import { getFullMipLevelCount } from '../../src/_engine/schemas/TextureAtlasSchema';
+import {
+  getFullMipLevelCount,
+  type TextureCodec,
+  type TextureSlot,
+} from '../../src/_engine/schemas';
 import { measureAlphaCoverage, resolveCoverageCut, scaleAlphaForCoverage } from './alphaCoverage';
 import {
   encodePng,

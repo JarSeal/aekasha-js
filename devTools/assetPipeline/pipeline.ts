@@ -5,7 +5,7 @@ import {
   LOD_SIMPLIFY_VERSION,
   type ResolvedLodChainOptions,
 } from '../../src/_engine/features/lod/LodChainOptions';
-import type { AssetOptimize } from '../../src/_engine/schemas/AssetsConfigSchema';
+import type { AssetOptimize } from '../../src/_engine/schemas';
 import { ALPHA_COVERAGE_VERSION } from './alphaCoverage';
 import { encodePng } from './images';
 import {

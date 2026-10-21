@@ -1,10 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import {
-  isJsonRelativeFileName,
-  type TexturePack,
-} from '../../src/_engine/schemas/AssetsConfigSchema';
+import { isJsonRelativeFileName, type TexturePack } from '../../src/_engine/schemas';
 
 /**
  * Where an asset JSON's `fileName` points (p300 DD3):

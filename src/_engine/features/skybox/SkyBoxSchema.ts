@@ -13,6 +13,7 @@ import {
 } from './LegacySkyBox';
 import { mergeSkyBoxPreset, SKYBOX_PRESET_NAMES } from './Presets';
 import type { FeatureSchemaPart } from '../../schemas/FeatureSchemas';
+import { deepMerge } from '../../utils/DeepMerge';
 
 // A sky box definition is a set of layers. p111 has the base and env layers, p112 the atmosphere
 // and suns, p113 the day-night cycle and p114 the nebulae; later plans add their own layers as
@@ -605,6 +606,19 @@ export const SkyBoxAssetSchema = z.preprocess(
 /** A sky box asset as the data pipeline outputs it: a {@link SkyBoxAssetSchema} after its
  * conversion and validation, its preset still unresolved (the gatherer resolves it). */
 export type SkyBoxAsset = z.infer<typeof SkyBoxAssetSchema>;
+
+/**
+ * A sky box definition with a scene's save entry over it, as the data pipeline applies it: deep
+ * merged, since an entry names only what it changes (`{ "suns": { "0": { "elevation": 30 } } }`
+ * changes one sun's elevation), and without the entry's `__meta` stamp. Changes neither argument.
+ * @param def the definition, its preset merged in (`mergeSkyBoxPreset`)
+ * @param entry the scene's latest save entry (`__saveData[sceneId][0]`), if there is one
+ */
+export const applySkyBoxSaveEntry = <T extends object>(def: T, entry?: SkyBoxOverrides): T => {
+  const overrides: Partial<SkyBoxOverrides> = { ...entry };
+  delete overrides.__meta;
+  return deepMerge(def, overrides);
+};
 
 /** The sky box feature's scene field (p607 D10): `skyboxes`, ids of `*.skybox.json` files or
  * inline definitions. */

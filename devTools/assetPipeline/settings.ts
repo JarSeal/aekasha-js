@@ -9,7 +9,7 @@ import {
   type OptimizeLevel,
   type TextureSettings,
   type TextureSlot,
-} from '../../src/_engine/schemas/AssetsConfigSchema';
+} from '../../src/_engine/schemas';
 import { globToRegExp } from './glob';
 import { ROOT } from './sources';
 import type { ProjectOptOut } from './switches';

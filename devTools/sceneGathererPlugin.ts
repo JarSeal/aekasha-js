@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import path from 'path';
 import type { Plugin, ViteDevServer } from 'vite';
-import type { AppConfig } from '../src/_engine/kernel/config/Config';
+import type { AppConfig } from 'aekasha';
 import { AEK_GATHER_EVENT, type DevDataGatheredEvent } from '../src/_engine/debug/DevFilesProtocol';
 import { runAssetsCommand } from './assetPipeline/command';
 import { AEK_ASSETS_DIR } from './assetPipeline/outputs';

@@ -1,8 +1,10 @@
 import path from 'path';
 import fs from 'fs';
-import type { TextureSlot } from '../../src/_engine/schemas/AssetsConfigSchema';
-import type { TextureAsset } from '../../src/_engine/schemas/TextureSchema';
-import { isTextureArrayLayerFile } from '../../src/_engine/schemas/TextureArraySchema';
+import {
+  isTextureArrayLayerFile,
+  type TextureAsset,
+  type TextureSlot,
+} from '../../src/_engine/schemas';
 import {
   flipY,
   readImageFile,
