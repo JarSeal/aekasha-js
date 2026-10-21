@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: Refactoring, Documentation, Debug
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -707,14 +707,13 @@ As built, section 2 (2026-10-21, uncommitted on top of `4b7e32c`; the renames st
   `sceneTestECS` the keys are bound again and the count starts over; all 15 drawer tabs build, none
   of S4's buttons is left, no console errors.
 
-### Phase 3: the API (D6, D9) and the deferrals (D3)
+### Phase 3: the API (D6, D9) and the deferrals (D3) — done
 
 1. The entry's additions, the `@internal`s, the removals, P5's moves; `saveTexture` with its
    warning and a test.
 2. p622's list; `api.json` (`yarn verify:baselines --update`) with the additions and removals.
 
-As built, section 1 (2026-10-21, uncommitted on top of `36f9e5b`; the two new files `git add -N`ed,
-since `moveMap.ts` reads the tracked tree):
+As built, section 1 (2026-10-21, committed as `cf071c3`):
 
 - **The entry (D6):** P1's list and P9's (`removeProfilerTab`, `GPU_MEMORY_TAB_ID`,
   `GPUMemoryResource`) on `aekasha/debug`, 26 names. Three more, each named by a public signature
@@ -752,6 +751,34 @@ since `moveMap.ts` reads the tracked tree):
   `saveTexture`, the removals, P5's moves). `docs.json` recorded: `debug` 166 / 183,
   `debug/symbols` 5 / 5, `features/physics` 204 / 204, `kernel/config` 23 / 23. `moveMap.ts`
   regenerated (813 files).
+- **Found in section 2:** `PercentagePieOpts.size` was still there (the removal's replace didn't
+  match and nothing checked it); removed in section 2, the other removals checked by `grep`.
+
+As built, section 2 (2026-10-21, uncommitted on top of `cf071c3`):
+
+- **D3's deprecations:** each name with a summary and a `@deprecated` saying who uses it, that it
+  leaves `aekasha/debug` in engine 6.0.0 (`@internal` then) and that there is no replacement: the
+  dev files protocol's eight (`DevFilesProtocol.ts`; only the client and the dev server use them,
+  the server by path), and the three test bridge result types (`TestBridge.ts`; only the bridge and
+  the scene runner). On the declarations, as `CoreComponentType` did: no lint rule flags a
+  deprecated use, so `devTools/`' path imports are unaffected. `DebugGUIOpts` documented and
+  `@deprecated` (removed with `createDebuggerTab`'s second parameter, the button stays in the
+  middle, CSS moves it), the parameter's `@param` saying so. The protocol file's text names the
+  client functions in code spans, not `{@link}`s (it imports nothing, so TypeDoc couldn't resolve
+  them).
+- **p622:** a "From p618 (its D3)" block: the eleven names, `DebugGUIOpts` with the parameter, and
+  P7's Tweakpane fields as p800's break (not deprecated; p800's own minor deprecates them if it
+  lands first). The 6.0.0 list names the three files; "The deprecations without a version" now
+  says none is left. p618 is in its Related line.
+- **Baselines recorded:** `api.json` (2,512 exports in 322 modules, 838 on 16 entries: Phases 1-3's
+  additions, moves and removals) and `docs.json` (`debug` 171 / 183). `bundle.json` and
+  `bundle.banner.json` not recorded by `--update` (gzip shifts of a few bytes with new content
+  hashes); only `assets/EngineRapier.js` and `#2`, which traded names in two builds in a row (the
+  same two chunks, 36,634 and 35,913 bytes), swapped by hand. `yarn verify:baselines --no-build`
+  exits 0: no debug code in the production build or the banner, the main chunk 186 modules at
+  832.0 kB gzip, the banner's 670.3 kB. `moveMap.ts` regenerated (the documented counts changed),
+  `--check` clean.
+- **Checks:** `tsc` (both), `yarn lint`, `yarn test` (109 files, 867 passed, 1 skipped).
 
 ### Phase 4: docs and hygiene (D8, D10)
 

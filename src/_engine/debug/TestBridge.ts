@@ -43,11 +43,21 @@ export type TestBridgeCharacterPaths =
   /** No probe armed, or no character */
   | { status: 'NONE' };
 
+/**
+ * `whenSceneReady`'s result: the first scene is ready, or the wait timed out.
+ * @deprecated Only the test bridge and the scene runner (by path, in `devTools/verify/`) use it.
+ * It leaves `aekasha/debug` in engine 6.0.0 (`@internal` then). No replacement.
+ */
 export type TestBridgeSceneReady =
   /** `backend`: what the renderer runs on (WebGPU falls back to WebGL2 without `navigator.gpu`) */
   | { status: 'READY'; sceneId: string; backend: 'WEBGPU' | 'WEBGL' }
   | { status: 'TIMEOUT'; sceneId: string | null };
 
+/**
+ * `whenProbeDone`'s result: the determinism probe's report, or why there is none.
+ * @deprecated Only the test bridge and the scene runner (by path, in `devTools/verify/`) use it.
+ * It leaves `aekasha/debug` in engine 6.0.0 (`@internal` then). No replacement.
+ */
 export type TestBridgeProbeResult =
   | ({ status: 'DONE' } & PhysicsProbeReport)
   /** The probe isn't armed (no `?physicsProbe=N`, or prod test mode, where it doesn't load) */
@@ -55,6 +65,11 @@ export type TestBridgeProbeResult =
   /** No report for the current scene in time (eg. a scene whose physics doesn't step) */
   | { status: 'TIMEOUT'; sceneId: string | null };
 
+/**
+ * `snapshot`'s result: what the canvas shows, as a PNG.
+ * @deprecated Only the test bridge and the scene runner (by path, in `devTools/verify/`) use it.
+ * It leaves `aekasha/debug` in engine 6.0.0 (`@internal` then). No replacement.
+ */
 export type TestBridgeSnapshot = {
   width: number;
   height: number;

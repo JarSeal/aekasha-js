@@ -2,7 +2,7 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2302,
+      "documented": 2307,
       "total": 2416
     },
     "members": {
@@ -13,7 +13,7 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2258,
+        "documented": 2263,
         "total": 2353
       },
       "members": {
@@ -35,7 +35,7 @@
   "folders": {
     "engine/debug": {
       "exports": {
-        "documented": 166,
+        "documented": 171,
         "total": 183
       },
       "members": {
@@ -44,7 +44,6 @@
       },
       "undocumented": {
         "exports": [
-          "DebuggerGUI#DebugGUIOpts",
           "DebuggerGUI#DebuggerListItem",
           "DebuggerGUI#DebuggerPaneButton",
           "DebuggerGUI#DebuggerPaneItem",
@@ -54,13 +53,9 @@
           "DevFiles#DevFilesUnavailableReason",
           "DevFiles#EncodePNGOpts",
           "DevFilesProtocol#DevDataGatheredEvent",
-          "DevFilesProtocol#DevFilesErrorBody",
           "DevFilesProtocol#DevFilesErrorCode",
           "DevFilesProtocol#DevFilesWriteStatus",
-          "GPUMemory#GPUMemorySource",
-          "TestBridge#TestBridgeProbeResult",
-          "TestBridge#TestBridgeSceneReady",
-          "TestBridge#TestBridgeSnapshot"
+          "GPUMemory#GPUMemorySource"
         ],
         "members": [
           "DevFiles#DevFilesError.code",

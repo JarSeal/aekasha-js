@@ -4,12 +4,37 @@
  * No imports: the dev server (Node) imports this too.
  */
 
+/**
+ * The base path of the dev file server's routes.
+ * @deprecated Only the protocol's two sides use it: the dev files client and the dev server (by
+ * path, in `devTools/`). It leaves `aekasha/debug` in engine 6.0.0 (`@internal` then). No
+ * replacement: an app reaches the dev server through `writeDevFiles`, `readDevFile` and
+ * `onDevDataGathered`.
+ */
 export const DEV_FILES_ROUTE_BASE = '/__aek/files/';
-/** The request header every route but `status` needs */
+/**
+ * The request header every route but `status` needs.
+ * @deprecated Only the protocol's two sides use it: the dev files client and the dev server (by
+ * path, in `devTools/`). It leaves `aekasha/debug` in engine 6.0.0 (`@internal` then). No
+ * replacement: an app reaches the dev server through `writeDevFiles`, `readDevFile` and
+ * `onDevDataGathered`.
+ */
 export const DEV_FILES_TOKEN_HEADER = 'x-aek-dev-token';
-/** The `<meta name>` the token is injected into `index.html` with */
+/**
+ * The `<meta name>` the token is injected into `index.html` with.
+ * @deprecated Only the protocol's two sides use it: the dev files client and the dev server (by
+ * path, in `devTools/`). It leaves `aekasha/debug` in engine 6.0.0 (`@internal` then). No
+ * replacement: an app reaches the dev server through `writeDevFiles`, `readDevFile` and
+ * `onDevDataGathered`.
+ */
 export const DEV_FILES_TOKEN_META = 'aek-dev-files';
-/** The `read` route's response header with the file's hash */
+/**
+ * The `read` route's response header with the file's hash.
+ * @deprecated Only the protocol's two sides use it: the dev files client and the dev server (by
+ * path, in `devTools/`). It leaves `aekasha/debug` in engine 6.0.0 (`@internal` then). No
+ * replacement: an app reaches the dev server through `writeDevFiles`, `readDevFile` and
+ * `onDevDataGathered`.
+ */
 export const DEV_FILES_HASH_HEADER = 'x-aek-sha256';
 
 export type DevFilesErrorCode =
@@ -29,6 +54,13 @@ export type DevFilesErrorCode =
   | 'SAVE_DATA_DISABLED'
   | 'WRITE_FAILED';
 
+/**
+ * A refused request's body (the client throws it as a `DevFilesError`).
+ * @deprecated Only the protocol's two sides use it: the dev files client and the dev server (by
+ * path, in `devTools/`). It leaves `aekasha/debug` in engine 6.0.0 (`@internal` then). No
+ * replacement: an app reaches the dev server through `writeDevFiles`, `readDevFile` and
+ * `onDevDataGathered`.
+ */
 export type DevFilesErrorBody = {
   error: { code: DevFilesErrorCode; message: string; details?: unknown };
 };
@@ -49,16 +81,28 @@ export type DevFilesStatusBody = {
   maxBatchBytes: number;
 };
 
-/** `PUT stage` */
+/**
+ * `PUT stage`'s response.
+ * @deprecated Only the protocol's two sides use it: the dev files client and the dev server (by
+ * path, in `devTools/`). It leaves `aekasha/debug` in engine 6.0.0 (`@internal` then). No
+ * replacement: an app reaches the dev server through `writeDevFiles`, `readDevFile` and
+ * `onDevDataGathered`.
+ */
 export type DevFilesStageBody = { stageId: string; bytes: number; sha256: string };
 
 /** A save entry (p342 §2.6): `entry` goes first in the file's `__saveData[sceneId]`, the older
  * entries after it, and the server stamps its `__meta` */
 export type DevFilesSaveData = { sceneId: string; entry: Record<string, unknown> };
 
-/** A save entry as a commit sends it: `historySize` is how many entries the scene keeps, the new
+/**
+ * A save entry as a commit sends it: `historySize` is how many entries the scene keeps, the new
  * one included (-1: all; 0 is refused with `SAVE_DATA_DISABLED`). The client fills it in from
- * the "File server" setting. */
+ * the "File server" setting.
+ * @deprecated Only the protocol's two sides use it: the dev files client and the dev server (by
+ * path, in `devTools/`). It leaves `aekasha/debug` in engine 6.0.0 (`@internal` then). No
+ * replacement: an app reaches the dev server through `writeDevFiles`, `readDevFile` and
+ * `onDevDataGathered`.
+ */
 export type DevFilesSaveDataWrite = DevFilesSaveData & { historySize: number };
 
 /**
@@ -91,8 +135,14 @@ export type DevFilesSchemaIssues = { path: string; issues: { path: string; messa
 /** `CONFLICT`'s details: the hashes on disk now (null: no file) */
 export type DevFilesConflicts = { path: string; currentHash: string | null }[];
 
-/** The scene gatherer's custom HMR event (`devTools/sceneGathererPlugin.ts`), sent after each
- * gather the dev server runs, before its `full-reload` */
+/**
+ * The scene gatherer's custom HMR event (`devTools/sceneGathererPlugin.ts`), sent after each
+ * gather the dev server runs, before its `full-reload`.
+ * @deprecated Only the protocol's two sides use it: the dev files client and the dev server (by
+ * path, in `devTools/`). It leaves `aekasha/debug` in engine 6.0.0 (`@internal` then). No
+ * replacement: an app reaches the dev server through `writeDevFiles`, `readDevFile` and
+ * `onDevDataGathered`.
+ */
 export const AEK_GATHER_EVENT = 'aek:gather';
 
 export type DevDataGatheredEvent = {

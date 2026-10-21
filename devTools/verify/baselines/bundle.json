@@ -38,12 +38,12 @@
       "gzip": 7546
     },
     "assets/EngineRapier.js": {
-      "bytes": 35913,
-      "gzip": 9501
-    },
-    "assets/EngineRapier.js#2": {
       "bytes": 36634,
       "gzip": 9721
+    },
+    "assets/EngineRapier.js#2": {
+      "bytes": 35913,
+      "gzip": 9501
     },
     "assets/Foliage.js": {
       "bytes": 5643,

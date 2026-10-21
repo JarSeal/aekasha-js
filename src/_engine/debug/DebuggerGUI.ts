@@ -60,6 +60,12 @@ export const flushQueuedDebugToasts = () => {
 type DebuggerGUIModule = typeof import('./_dbg__DebuggerGUI');
 let debugGUI: DebugModuleRef<DebuggerGUIModule> | null = null;
 
+/**
+ * Where the drawer's open button sits on its edge. It applies to the whole drawer, whichever tab
+ * passes it.
+ * @deprecated Removed with {@link createDebuggerTab}'s second parameter in engine 6.0.0: the
+ * button stays in the middle (move it with CSS).
+ */
 export type DebugGUIOpts = { drawerBtnPlace?: 'TOP' | 'MIDDLE' | 'BOTTOM' };
 
 /** A key of a tab's state, or a one level deep path into a nested object of it
@@ -315,7 +321,8 @@ export const setDrawerSuspendedByView = (suspended: boolean) => {
  * (CMP sections, declarative Tweakpane panes and lists). Persisted `state` values are hydrated
  * right away (also in prod test mode, where the drawer itself doesn't exist).
  * @param def (object) tab definition {@link DebuggerTabDef}
- * @param opts (object: DebugGUIOpts) optional debug GUI options {@link DebugGUIOpts}
+ * @param opts deprecated, removed in engine 6.0.0 ({@link DebugGUIOpts}): moves the drawer button
+ * for the whole drawer
  */
 export const createDebuggerTab = <S extends object>(
   def: DebuggerTabDef<S>,
