@@ -1,7 +1,7 @@
 Status: implemented (Phases 1-8)
 Category: Documentation, Dev tooling, Standards
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage A)
-Blocks: \_DONE_p612_review-ecs-loop-config-init.md, \_DONE_p613_review-rendering-scene-assets.md, \_DONE_p614_review-physics.md, \_DONE_p615_review-sky-box.md, \_DONE_p616_review-lod-spatial-instancing-lines.md, \_DONE_p617_review-input-ui-hud.md, p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p620_review-toolkit-and-app-code.md (the standard they apply)
+Blocks: \_DONE_p612_review-ecs-loop-config-init.md, \_DONE_p613_review-rendering-scene-assets.md, \_DONE_p614_review-physics.md, \_DONE_p615_review-sky-box.md, \_DONE_p616_review-lod-spatial-instancing-lines.md, \_DONE_p617_review-input-ui-hud.md, \_DONE_p618_review-debug-public-api.md, p619_review-schemas-pipeline-devtools-hub.md, p620_review-toolkit-and-app-code.md (the standard they apply)
 Related: \_DONE_p602_architecture-and-target-structure.md (the decisions the standard states), \_DONE_p604_multiplayer-viability-study.md (§4: the simulation rules), \_DONE_p601_refactoring-safety-net-tests-and-baselines.md (`docs.json`, the scene runner)
 
 # Coding Standards and Documentation Tooling

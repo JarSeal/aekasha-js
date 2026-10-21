@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented
+Status: implemented (Phases 0-6)
 Category: Refactoring, Documentation, Debug
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md, p800_debugger-ui-overhaul.md (only its p806, the debugger migration)
@@ -946,7 +946,7 @@ As built, section 3 (2026-10-21, uncommitted on top of `5901201`):
   `⚠` lines, not a word filter.
 - **Checks:** `tsc`, the lint on `Profiler.ts`.
 
-### Phase 6: versions and done
+### Phase 6: versions and done — done
 
 1. `yarn verify:scenes` (Phases 1-5; `--update --only exampleDebugTab` first if D12 changes the
    example's snapshot), `yarn verify:baselines`, `yarn build`, `yarn hub:build`.
@@ -989,6 +989,21 @@ As built, section 2 (2026-10-21, uncommitted on top of `9364ebf`):
   App and a Project section. The Project section also carries `208b177` (p800's epic plan and its
   references), which merges with this branch.
 - **`yarn checkVersions --against main`:** passes.
+
+As built, section 3 (2026-10-21, uncommitted on top of `f445bfe`):
+
+- **Marked done:** the status line, this heading, and `git mv` to
+  `_DONE_p618_review-debug-public-api.md`.
+- **The references:** p621's `Blocked by` drops p618 (p619 and p620 are left). p800's
+  `Blocked by` pointed only at p618 and is gone (p618 stays in its Related line), and its §7 says
+  p618 is done and blocked only p806. p600's `Blocks` line and its Stage C row, p622's and p800's
+  Related lines, and the `Blocks` / Related lines of `_DONE_p605`, `_DONE_p608`, `_DONE_p613`,
+  `_DONE_p614` and `_DONE_p617` name `_DONE_p618_…`.
+- **`CLAUDE.md` and `readme.md`:** unchanged here. Phase 5 updated `debug/CLAUDE.md` and the
+  readme's debug line. The root `CLAUDE.md` names none of the moved or renamed files, and none of
+  its text changed meaning.
+- **Time for a PR:** `review-debug-public-api` into `main` (p600's Stage C plans each get their own
+  branch, as p617's did).
 
 ## 4. Risks
 
