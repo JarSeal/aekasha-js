@@ -28,6 +28,7 @@ export const diffComputedStyles = (before: StyleSnapshot, after: StyleSnapshot):
   return lines;
 };
 
+/** An element's or a drawing buffer's size, in CSS pixels or in pixels */
 export type Box = { width: number; height: number };
 
 /** Off by more than a pixel (a rounded percentage) */

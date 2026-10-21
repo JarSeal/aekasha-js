@@ -1562,13 +1562,13 @@ Sections:
    the record), `yarn sbp --profile all` (within every budget), `yarn verify:embed`,
    `yarn hub:build`, `yarn test`.
 
-As built (2026-10-22, uncommitted):
+As built (2026-10-22; section 1 committed as `b1083be`, 2 after it):
 
 - **Section 1, `refactor/` → `layout/` (D9).**
   - Deleted: the codemod (`applyMoveMap.ts`, `moveApply.ts`, `moveSplit.ts`, `moveText.ts`,
     `moveEdits.ts`, `moveJson.ts`, `moveTree.ts`), `compareBaselines.ts`, their seven tests, and
     `moveMap.json`, `layoutReport.md`, `entryExports.json`. **For Phase 8's changelog:** the last
-    commit that has them is `057cbae` (Phase 6 section 4), if this section is committed next.
+    commit that has them is `057cbae` (Phase 6 section 4).
   - `devTools/layout/`: `importGraph.ts` (+ test, its rules block moved out), `layoutRules.ts`
     (was `moveRules.ts`: a rule is `{ from, note? }` and `findLayoutRule` the longest match; the
     `to`, `action`, `plan` and `split` fields and `applyMoveRules` went, since every rule was a
@@ -1606,6 +1606,36 @@ As built (2026-10-22, uncommitted):
   - Checks: `yarn test` 1091 passed (132 files), lint, both `tsc`; the report written (0 errors,
     37 boundary imports, no feature cycle); `yarn hub:build --no-embed` with Phase 5's warnings
     only (the toolkit's 4, `{@link getRandomStream}`).
+- **Section 2, the scene runner's split (V1) and `verify/`'s tests and hygiene.**
+  - `scenes.ts` 918 → 289 lines: the CLI (the server, the browser, the loop, the printing, the
+    Firefox baseline check, the summary), `main()` only when run as a script. `sceneRun.ts`
+    (439): `runOne` (75 lines) over `openPage`, `loadScene`, `runProbe` (the probe, both hashes,
+    the snapshot) and the system order; `compareHash` and `comparePathHash` are one
+    `compareRunHash`, the same messages. `sceneBaseline.ts` (211): the result and baseline types,
+    the paths (`getResultPaths(dir, cacheDir?)`), `readBaseline` (returns the `--update` problem
+    instead of printing it; the context's `onProblem` prints), `getBaseline`, the Firefox lookups,
+    `recordBaseline({ paths, baseline, results, commit, now })`. `sceneSelect.ts` (141):
+    `parseSceneRunArgs` and `selectScenes` return their error instead of exiting, `appliesTo`,
+    `buildSceneUrl`, `checkCrossTargetHashes`.
+  - `getCommit` through `devTools/git.ts`' `readGit`; the `fail`s of `scenes.ts`, `embed.ts` and
+    `baselines.ts` are `function … never` (no cast depended on them).
+  - **Not in the plan:** `baselines.ts` runs `main()` at load too, so its types, `formatShare`,
+    `diffApi` and `diffDocs` moved into `baselinesDiff.ts` (as `sbp/bundleDiff.ts` holds the
+    bundle's), which the test imports; `baselines.ts` 541 → 395 lines.
+  - Tests (+29): `sceneSelect.test.ts` (the defaults, options, a set with configurations, each
+    error, Firefox's limits, globs in the data order, a literal `.`, `appliesTo` with and without a
+    configuration, both URL modes, the cross-target check), `sceneBaseline.test.ts` (a missing,
+    good, cut-off and other-format baseline, `--update` over a bad one; a backend read once;
+    Firefox's webgl-then-webgpu lookup; the backend mismatches at the same steps; the record's
+    merge, snapshot copy and statuses, in a temp folder), `baselinesDiff.test.ts` (a move, a
+    removal, an addition, a kind change, the entries; the ratchet's growth with its line, a new
+    folder, better coverage, a lower share, a swap, a gone folder, a name counted twice).
+  - Summaries on `verify/`'s 13 undocumented exports (`scenes.config.ts`' 7, the snapshot, embed
+    and example types); no `eslint-disable` without a reason was left in `verify/`.
+  - Checks: `yarn test` 1120 passed (135 files), lint, both `tsc`; the argument errors exit 2 with
+    their messages; `--only scene01 --config quick` before and after: the same output and the
+    same `last-run.json` results (hash `7788c6ec`), the timings aside.
+
 
 ### Phase 8: the Hub, CLAUDE.md, versions and done (D15, D2)
 

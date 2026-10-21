@@ -25,53 +25,37 @@
  * (the `webgl` file's entry, else the `webgpu` one's: the hash doesn't depend on the backend). No
  * snapshots (another rasterizer), no baseline of its own, so no `--update`. Its last run is in
  * `.cache/verify/scenes/firefox/`.
+ *
+ * This file is the CLI (the server, the browser, the loop, the printing); a page load is
+ * `sceneRun.ts`', the baseline files `sceneBaseline.ts`' and the arguments and selection
+ * `sceneSelect.ts`' (p619 V1).
  */
-import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
-import { firefox, type Browser, type BrowserContext, type Page } from 'playwright-core';
+import { fileURLToPath } from 'url';
+import { firefox } from 'playwright-core';
 import { isWSL, launchChromium } from './browser';
 import { ROOT } from '../paths';
-import type {
-  TestBridgeCharacterPaths,
-  TestBridgeInputScript,
-  TestBridgeProbeResult,
-  TestBridgeSceneReady,
-  TestBridgeSnapshot,
-  TestBridgeSystemOrder,
-} from '../../src/_engine/debug/TestBridge';
-import {
-  DEFAULT_CONFIG_SET,
-  DEFAULT_PROBE_STEPS,
-  DEFAULT_SNAPSHOT_TOLERANCE,
-  GLOBAL_ALLOWED_ERRORS,
-  PROBE_TIMEOUT_MS,
-  PROD_TEST_SETTLE_MS,
-  READY_TIMEOUT_MS,
-  SCENE_VERIFY_CONFIG,
-  SNAPSHOT_SIZE,
-  VERIFY_BROWSERS,
-  VERIFY_CONFIG_SETS,
-  VERIFY_CONFIGS,
-  type VerifyBrowser,
-  type VerifyConfigDef,
-  type VerifyConfigName,
-} from './scenes.config';
+import { readGit } from '../git';
+import { SCENE_VERIFY_CONFIG, type VerifyBrowser } from './scenes.config';
 import { out, PROGRESS_LOG_WATCH } from '../progressLog';
-import { compareSnapshots } from './snapshotDiff';
-import { diffSystemOrders } from './systemOrder';
 import { writeFileAtomic } from '../files';
+import {
+  type Backend,
+  type BaselineContext,
+  type BaselineFile,
+  findBackendHashMismatches,
+  getBaseline,
+  getResultPaths,
+  readJSON,
+  recordBaseline,
+  RunAbort,
+  type RunResult,
+  type RunStatus,
+} from './sceneBaseline';
+import { isAllowed, type LoadContext, runOne } from './sceneRun';
+import { checkCrossTargetHashes, parseSceneRunArgs, selectScenes } from './sceneSelect';
 
-/** Bump when the baseline file's shape changes: an old one is then ignored */
-const BASELINE_FORMAT_VERSION = 1;
-const CACHE_DIR = path.join(ROOT, '.cache/verify/scenes');
-/** The scenes' input scripts (`SceneVerifyConfig.inputScript`), by name */
-const INPUTS_DIR = path.join(ROOT, 'devTools/verify/inputs');
 const GENERATED_DATA = path.join(ROOT, 'src/generated/generatedAppData.json');
-/** `DEBUG_PHYSICS_API_BOOT_LS_KEY` (kernel/config/Config.ts, which reads `window` at load: not importable here) */
-const PHYSICS_BOOT_LS_KEY = 'AEK_debugPhysicsApiBoot';
-const VIEWPORT = { width: 1024, height: 576 };
-const BRIDGE_INSTALL_TIMEOUT_MS = 120_000;
 
 const RED = '\x1b[31m';
 const GREEN = '\x1b[32m';
@@ -79,154 +63,19 @@ const YELLOW = '\x1b[33m';
 const DIM = '\x1b[2m';
 const RESET = '\x1b[0m';
 
-type Backend = 'webgpu' | 'webgl';
-/** A folder under `.cache/verify/scenes/`: Chromium's per backend, Firefox's for its last run */
-type ResultDir = Backend | 'firefox';
-
-type Args = {
-  only: string[];
-  configs: VerifyConfigName[];
-  update: boolean;
-  url: string | null;
-  webgl: boolean;
-  headed: boolean;
-  browser: VerifyBrowser;
-};
-
-type BaselineEntry = {
-  hash?: string;
-  steps?: number;
-  /** The characters' path hash over the probe's steps (p610 D6) */
-  pathHash?: string;
-  pathSteps?: number;
-  probeConfig?: string;
-  /** File name in the baseline folder */
-  snapshot?: string;
-  /** Every world's systems per stage once the scene ran (p607) */
-  systemOrder?: TestBridgeSystemOrder;
-  recordedAt: string;
-  commit: string;
-};
-
-type BaselineFile = {
-  formatVersion: number;
-  entries: Record<string, BaselineEntry>;
-};
-
-type RunStatus = 'PASS' | 'FAIL' | 'NEW' | 'UPDATED' | 'SKIPPED';
-
-type RunResult = {
-  sceneId: string;
-  config: VerifyConfigName;
-  status: RunStatus;
-  failures: string[];
-  warnings: string[];
-  notes: string[];
-  errors: string[];
-  hash?: string;
-  steps?: number;
-  pathHash?: string;
-  pathSteps?: number;
-  probeConfig?: string;
-  snapshotFile?: string;
-  systemOrder?: TestBridgeSystemOrder;
-  durationMs: number;
-};
-
-// --- Arguments ---
-
-const fail = (msg: string): never => {
+/** Prints the message and exits 2 */
+function fail(msg: string): never {
   out(`${RED}${msg}${RESET}`, true);
   process.exit(2);
-};
-
-const parseArgs = (argv: string[]): Args => {
-  const args: Args = {
-    only: [],
-    configs: [],
-    update: false,
-    url: null,
-    webgl: false,
-    headed: false,
-    browser: 'chromium',
-  };
-  let configArg = DEFAULT_CONFIG_SET;
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    const value = () => argv[++i] ?? fail(`${arg} needs a value`);
-    if (arg === '--only') args.only.push(...value().split(','));
-    else if (arg === '--config') configArg = value();
-    else if (arg === '--url') args.url = value();
-    else if (arg === '--update') args.update = true;
-    else if (arg === '--webgl') args.webgl = true;
-    else if (arg === '--headed') args.headed = true;
-    else if (arg === '--browser') {
-      const browser = value();
-      if (!VERIFY_BROWSERS.includes(browser as VerifyBrowser)) {
-        fail(`Unknown browser "${browser}" (${VERIFY_BROWSERS.join(', ')})`);
-      }
-      args.browser = browser as VerifyBrowser;
-    } else fail(`Unknown argument: ${arg}`);
-  }
-  const names = new Set<VerifyConfigName>();
-  for (const name of configArg.split(',')) {
-    if (VERIFY_CONFIG_SETS[name]) VERIFY_CONFIG_SETS[name].forEach((n) => names.add(n));
-    else if (name in VERIFY_CONFIGS) names.add(name as VerifyConfigName);
-    else {
-      const known = [...Object.keys(VERIFY_CONFIG_SETS), ...Object.keys(VERIFY_CONFIGS)];
-      fail(`Unknown configuration or set "${name}" (${known.join(', ')})`);
-    }
-  }
-  args.configs = [...names];
-  if (args.browser === 'firefox') {
-    if (args.update) {
-      fail(
-        "--browser firefox has no baseline of its own: it compares with Chromium's (no --update)"
-      );
-    }
-    const skipped = args.configs.filter((name) => VERIFY_CONFIGS[name].mode !== 'DEBUG');
-    args.configs = args.configs.filter((name) => VERIFY_CONFIGS[name].mode === 'DEBUG');
-    if (!args.configs.length) {
-      fail(`--browser firefox runs the debug configurations only (not ${skipped.join(', ')})`);
-    }
-  }
-  return args;
-};
-
-/** Whether a config entry (`skip`, `unstableHash`, an allowed error) applies to this run */
-const appliesTo = (
-  filter: { configs?: VerifyConfigName[]; browsers?: VerifyBrowser[] },
-  config: VerifyConfigName | null,
-  browser: VerifyBrowser
-) =>
-  (!filter.configs || (config !== null && filter.configs.includes(config))) &&
-  (!filter.browsers || filter.browsers.includes(browser));
-
-const globToRegExp = (glob: string) =>
-  new RegExp(`^${glob.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`);
-
-const selectScenes = (allIds: string[], only: string[]) => {
-  if (!only.length) return allIds;
-  const selected = new Set<string>();
-  for (const pattern of only) {
-    const re = globToRegExp(pattern);
-    const matches = allIds.filter((id) => re.test(id));
-    if (!matches.length) fail(`--only "${pattern}" matches no scene (${allIds.join(', ')})`);
-    matches.forEach((id) => selected.add(id));
-  }
-  return allIds.filter((id) => selected.has(id));
-};
+}
 
 // --- Environment ---
 
+/** The commit the run is on, `+dirty` with local changes; `unknown` without git */
 const getCommit = () => {
-  try {
-    const sha = execSync('git rev-parse --short HEAD', { cwd: ROOT }).toString().trim();
-    const dirty = execSync('git status --porcelain', { cwd: ROOT }).toString().trim();
-    return dirty ? `${sha}+dirty` : sha;
-  } catch {
-    return 'unknown';
-  }
+  const sha = readGit(['rev-parse', '--short', 'HEAD']);
+  if (!sha) return 'unknown';
+  return readGit(['status', '--porcelain']) ? `${sha}+dirty` : sha;
 };
 
 const launchBrowser = async (browser: VerifyBrowser, useWebGL: boolean, headed: boolean) => {
@@ -269,464 +118,6 @@ const startOwnServer = async () => {
   return { server, url: `http://localhost:${address.port}` };
 };
 
-// --- Baselines ---
-
-const readJSON = <T>(file: string): T | null => {
-  try {
-    return JSON.parse(fs.readFileSync(file, 'utf-8')) as T;
-  } catch {
-    return null;
-  }
-};
-
-const getPaths = (resultDir: ResultDir) => {
-  const dir = path.join(CACHE_DIR, resultDir);
-  return {
-    baselineFile: path.join(dir, 'baseline.json'),
-    baselineDir: path.join(dir, 'baseline'),
-    lastRunFile: path.join(dir, 'last-run.json'),
-    lastRunDir: path.join(dir, 'last-run'),
-  };
-};
-
-/**
- * Stops the whole run, not one page (a baseline it can't compare with): the run so far is written
- * and the browser and server closed before the exit (2)
- */
-class RunAbort extends Error {}
-
-/**
- * The backend's baseline; empty when there's none (every run is NEW). One that's there but
- * unreadable or of another format stops the run (p619 §1.4 V2: it read as none, so every run was
- * NEW and passed), unless `--update` records a new one over it.
- */
-const readBaseline = (backend: Backend, isRecording: boolean): BaselineFile => {
-  const empty = { formatVersion: BASELINE_FORMAT_VERSION, entries: {} };
-  const baselineFile = getPaths(backend).baselineFile;
-  if (!fs.existsSync(baselineFile)) return empty;
-  const file = readJSON<BaselineFile>(baselineFile);
-  const problem = !file
-    ? "isn't readable JSON"
-    : file.formatVersion !== BASELINE_FORMAT_VERSION
-      ? `is format ${String(file.formatVersion)}, this runner reads ${BASELINE_FORMAT_VERSION}`
-      : null;
-  if (!problem) return file!;
-  const where = path.relative(ROOT, baselineFile);
-  if (isRecording) {
-    out(`${YELLOW}${where} ${problem}: --update records a new one${RESET}`);
-    return empty;
-  }
-  throw new RunAbort(
-    `${where} ${problem}. Record a new one: yarn verify:scenes --update (on main)`
-  );
-};
-
-/** A page call that can hang (a stuck GPU readback): rejected after `ms`, so the run goes on */
-const withTimeout = <T>(promise: Promise<T>, ms: number, what: string): Promise<T> => {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`${what}: no answer in ${ms / 1000} s`)), ms);
-  });
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
-};
-
-/** A page call's limit beyond the bridge's own (its `timeoutMs`), and for the calls without one */
-const EVALUATE_MARGIN_MS = 60_000;
-
-const runKey = (sceneId: string, config: VerifyConfigName) => `${sceneId}|${config}`;
-const snapshotFileName = (sceneId: string, config: VerifyConfigName) => `${sceneId}.${config}.png`;
-
-// --- One page load ---
-
-const isAllowed = (sceneId: string, message: string, browser: VerifyBrowser) =>
-  [...GLOBAL_ALLOWED_ERRORS, ...(SCENE_VERIFY_CONFIG[sceneId]?.allowedErrors ?? [])].some(
-    (a) => appliesTo(a, null, browser) && a.pattern.test(message)
-  );
-
-const buildUrl = (baseUrl: string, sceneId: string, def: VerifyConfigDef, steps: number) => {
-  const params = new URLSearchParams();
-  params.set(def.mode === 'DEBUG' ? 'isDebug' : 'isProdTest', 'true');
-  params.set('aekTest', 'true');
-  params.set('startScene', sceneId);
-  if (def.mode === 'DEBUG') params.set('physicsProbe', String(steps));
-  return `${baseUrl.replace(/\/$/, '')}/?${params}`;
-};
-
-type LoadContext = {
-  browser: Browser;
-  browserName: VerifyBrowser;
-  baseUrl: string;
-  useWebGL: boolean;
-  /** `--update`: nothing is compared with the baseline, so a run that passes the other checks
-   * (errors, timeouts, the probe config) is recorded even where the baseline differs */
-  isRecording: boolean;
-  /** Read on first use, per backend (`readBaseline`) */
-  baselines: Map<Backend, BaselineFile>;
-  /** What the first page rendered on (WebGPU falls back to WebGL2 where it isn't available) */
-  backend: Backend | null;
-};
-
-type BaselineContext = Pick<LoadContext, 'baselines' | 'isRecording'>;
-
-const getBaseline = (ctx: BaselineContext, backend: Backend) => {
-  let baseline = ctx.baselines.get(backend);
-  if (!baseline) {
-    baseline = readBaseline(backend, ctx.isRecording);
-    ctx.baselines.set(backend, baseline);
-  }
-  return baseline;
-};
-
-/** What Firefox compares with: Chromium's entry with a hash, the `webgl` file's first */
-const getChromiumEntry = (ctx: BaselineContext, key: string) => {
-  for (const backend of ['webgl', 'webgpu'] as const) {
-    const entry = getBaseline(ctx, backend).entries[key];
-    if (entry?.hash) return { entry, backend };
-  }
-  return null;
-};
-
-/** The runs both Chromium baselines hashed, at the same steps, with different hashes. Any means
- * the hash depends on the render backend, and Firefox (WebGL2) should compare with `webgl` only */
-const findBackendHashMismatches = (ctx: BaselineContext) => {
-  const webgpu = getBaseline(ctx, 'webgpu').entries;
-  const mismatches: string[] = [];
-  let shared = 0;
-  for (const [key, gl] of Object.entries(getBaseline(ctx, 'webgl').entries)) {
-    const gpu = webgpu[key];
-    if (!gl.hash || !gpu?.hash || gl.steps !== gpu.steps) continue;
-    shared++;
-    if (gl.hash !== gpu.hash) mismatches.push(`${key} webgl ${gl.hash}, webgpu ${gpu.hash}`);
-  }
-  return { shared, mismatches };
-};
-
-const runOne = async (
-  ctx: LoadContext,
-  sceneId: string,
-  config: VerifyConfigName
-): Promise<RunResult> => {
-  const started = Date.now();
-  const def: VerifyConfigDef = VERIFY_CONFIGS[config];
-  const sceneConfig = SCENE_VERIFY_CONFIG[sceneId] ?? {};
-  const steps = sceneConfig.probeSteps ?? DEFAULT_PROBE_STEPS;
-  const result: RunResult = {
-    sceneId,
-    config,
-    status: 'PASS',
-    failures: [],
-    warnings: [],
-    notes: [],
-    errors: [],
-    durationMs: 0,
-  };
-  const finish = () => {
-    result.durationMs = Date.now() - started;
-    if (result.failures.length) result.status = 'FAIL';
-    else if (result.notes.some((n) => n.startsWith('no baseline'))) result.status = 'NEW';
-    return result;
-  };
-
-  if (sceneConfig.skip && appliesTo(sceneConfig.skip, config, ctx.browserName)) {
-    result.status = 'SKIPPED';
-    result.notes.push(sceneConfig.skip.reason);
-    return finish();
-  }
-
-  let context: BrowserContext | null = null;
-  try {
-    const input = sceneConfig.inputScript ? readInputScript(sceneConfig.inputScript) : null;
-    context = await ctx.browser.newContext({ viewport: VIEWPORT });
-    await context.addInitScript(
-      ({ hideGPU, bootKey, boot, input }) => {
-        if (hideGPU) delete (Object.getPrototypeOf(navigator) as { gpu?: unknown }).gpu;
-        if (boot) localStorage.setItem(bootKey, JSON.stringify(boot));
-        if (input) window.__AEK_TEST_INPUT__ = input;
-      },
-      {
-        hideGPU: ctx.useWebGL,
-        bootKey: PHYSICS_BOOT_LS_KEY,
-        boot: def.physicsBoot ?? null,
-        input,
-      }
-    );
-    const page: Page = await context.newPage();
-    const warnings = new Set<string>();
-    page.on('console', (msg) => {
-      const text = msg.text();
-      if (msg.type() === 'error') result.errors.push(`[console.error] ${text}`);
-      else if (msg.type() === 'warning') warnings.add(text.slice(0, 300));
-    });
-    page.on('pageerror', (err) => result.errors.push(`[pageerror] ${err.message}`));
-
-    await page.goto(buildUrl(ctx.baseUrl, sceneId, def, steps), { waitUntil: 'domcontentloaded' });
-    const hasBridge = await page
-      .waitForFunction(() => Boolean(window.__AEK_TEST__), null, {
-        timeout: BRIDGE_INSTALL_TIMEOUT_MS,
-      })
-      .then(() => true)
-      .catch(() => false);
-    if (!hasBridge) {
-      result.failures.push(
-        "the test bridge never installed (the engine didn't boot, or the server isn't a development or test build)"
-      );
-      return finish();
-    }
-
-    const ready: TestBridgeSceneReady = await withTimeout(
-      page.evaluate(
-        (timeoutMs) => window.__AEK_TEST__!.whenSceneReady({ timeoutMs }),
-        READY_TIMEOUT_MS
-      ),
-      READY_TIMEOUT_MS + EVALUATE_MARGIN_MS,
-      'whenSceneReady'
-    );
-    if (ready.status !== 'READY') {
-      result.failures.push(`the scene didn't finish loading in ${READY_TIMEOUT_MS / 1000} s`);
-      return finish();
-    }
-    if (ready.sceneId !== sceneId) {
-      result.failures.push(`loaded "${ready.sceneId}" instead (startScene fell back)`);
-      return finish();
-    }
-    const backend: Backend = ready.backend === 'WEBGPU' ? 'webgpu' : 'webgl';
-    ctx.backend ??= backend;
-    if (backend !== ctx.backend) {
-      result.failures.push(`rendered on ${backend}, the run's other pages on ${ctx.backend}`);
-      return finish();
-    }
-    const baseline = getBaseline(ctx, backend);
-
-    if (def.mode === 'PROD_TEST') {
-      await page.waitForTimeout(PROD_TEST_SETTLE_MS);
-    } else {
-      const probe: TestBridgeProbeResult = await withTimeout(
-        page.evaluate(
-          (timeoutMs) => window.__AEK_TEST__!.whenProbeDone({ timeoutMs, freeze: true }),
-          PROBE_TIMEOUT_MS
-        ),
-        PROBE_TIMEOUT_MS + EVALUATE_MARGIN_MS,
-        'whenProbeDone'
-      );
-      if (probe.status !== 'DONE') {
-        result.failures.push(
-          probe.status === 'NOT_ARMED'
-            ? 'the physics probe is not armed'
-            : `the physics probe didn't reach step ${steps} in ${PROBE_TIMEOUT_MS / 1000} s`
-        );
-      } else {
-        result.hash = probe.hash;
-        result.steps = probe.steps;
-        result.probeConfig = probe.config;
-        if (def.expectProbeConfig && !probe.config.startsWith(def.expectProbeConfig)) {
-          result.failures.push(
-            `ran as "${probe.config}", expected "${def.expectProbeConfig}…" (the configuration didn't apply)`
-          );
-        }
-        if (ctx.browserName === 'firefox') {
-          const chromium = getChromiumEntry(ctx, runKey(sceneId, config));
-          compareHash(
-            chromium?.entry,
-            result,
-            ctx.browserName,
-            `Chromium ${chromium?.backend ?? ''}`
-          );
-        } else if (!ctx.isRecording) {
-          compareHash(baseline.entries[runKey(sceneId, config)], result, ctx.browserName);
-        }
-        const paths: TestBridgeCharacterPaths = await withTimeout(
-          page.evaluate(() => window.__AEK_TEST__!.getCharacterPaths()),
-          EVALUATE_MARGIN_MS,
-          'getCharacterPaths'
-        );
-        // MAIN_THREAD only: in the worker targets the recorder reads the latched snapshot, whose
-        // step depends on the frame timing (p610 D1, p428)
-        if (paths.status === 'DONE' && probe.config.startsWith('MAIN_THREAD')) {
-          result.pathHash = paths.hash;
-          result.pathSteps = paths.steps;
-          if (sceneConfig.inputScript) {
-            const states = Object.entries(paths.states).map(([id, s]) => `${id} ${s.join('/')}`);
-            result.notes.push(`character paths ${paths.hash}: ${states.join(', ')}`);
-          }
-          if (ctx.browserName === 'firefox') {
-            const chromium = getChromiumEntry(ctx, runKey(sceneId, config));
-            comparePathHash(
-              chromium?.entry,
-              result,
-              ctx.browserName,
-              `Chromium ${chromium?.backend ?? ''}`
-            );
-          } else if (!ctx.isRecording) {
-            comparePathHash(baseline.entries[runKey(sceneId, config)], result, ctx.browserName);
-          }
-        }
-        if (probe.characterCount && !result.pathHash && !sceneConfig.unstableHash) {
-          result.notes.push(`${probe.characterCount} character(s), not in the probe hash`);
-        }
-
-        if (ctx.browserName === 'firefox') {
-          // Hashes only: Firefox rasterizes differently, and has no baseline of its own
-        } else if (sceneConfig.snapshot && 'skip' in sceneConfig.snapshot) {
-          result.notes.push(`snapshot skipped: ${sceneConfig.snapshot.reason}`);
-        } else {
-          const shot: TestBridgeSnapshot = await withTimeout(
-            page.evaluate((size) => window.__AEK_TEST__!.snapshot(size), SNAPSHOT_SIZE),
-            EVALUATE_MARGIN_MS,
-            'snapshot'
-          );
-          await handleSnapshot(
-            backend,
-            ctx.isRecording ? null : baseline,
-            result,
-            Buffer.from(shot.pngBase64, 'base64')
-          );
-        }
-      }
-    }
-
-    // Last: after the probe's steps (or the prod test settle), so the debug modules that register
-    // systems from a lazy chunk have loaded
-    if (ctx.browserName === 'chromium') {
-      result.systemOrder = await withTimeout(
-        page.evaluate(() => window.__AEK_TEST__!.getSystemOrder()),
-        EVALUATE_MARGIN_MS,
-        'getSystemOrder'
-      );
-      if (!ctx.isRecording) compareSystemOrder(baseline.entries[runKey(sceneId, config)], result);
-    }
-
-    result.warnings.push(...[...warnings].map((w) => `[console.warn] ${w}`));
-    const unallowed = result.errors.filter((e) => !isAllowed(sceneId, e, ctx.browserName));
-    if (unallowed.length) {
-      result.failures.push(`${unallowed.length} error(s) not allowed in scenes.config.ts`);
-    }
-  } catch (err) {
-    if (err instanceof RunAbort) throw err;
-    result.failures.push(`the runner stopped: ${(err as Error).message.split('\n')[0]}`);
-  } finally {
-    await context?.close().catch(() => undefined);
-  }
-  return finish();
-};
-
-/** `source` names whose baseline it is in the messages (Firefox compares with Chromium's) */
-const compareHash = (
-  entry: BaselineEntry | undefined,
-  result: RunResult,
-  browser: VerifyBrowser,
-  source?: string
-) => {
-  const sceneConfig = SCENE_VERIFY_CONFIG[result.sceneId] ?? {};
-  const of = source ? ` (${source.trim()})` : '';
-  if (!entry?.hash) {
-    result.notes.push(`no baseline hash${of}`);
-    return;
-  }
-  if (entry.steps !== result.steps) {
-    result.notes.push(`no baseline hash at ${result.steps} steps${of} (baseline: ${entry.steps})`);
-    return;
-  }
-  if (entry.hash === result.hash) return;
-  const msg = `probe hash ${result.hash}, baseline ${entry.hash} (${source ? `${source}, ` : ''}${entry.commit})`;
-  const unstable = sceneConfig.unstableHash;
-  if (unstable && appliesTo(unstable, result.config, browser)) {
-    result.warnings.push(`${msg}: ${unstable.reason}`);
-  } else {
-    result.failures.push(msg);
-  }
-};
-
-/** The characters' path hash, like the probe hash (`unstableHash` applies to both) */
-const comparePathHash = (
-  entry: BaselineEntry | undefined,
-  result: RunResult,
-  browser: VerifyBrowser,
-  source?: string
-) => {
-  const sceneConfig = SCENE_VERIFY_CONFIG[result.sceneId] ?? {};
-  const of = source ? ` (${source.trim()})` : '';
-  if (!entry?.pathHash) {
-    result.notes.push(`no baseline path hash${of}`);
-    return;
-  }
-  if (entry.pathSteps !== result.pathSteps) {
-    result.notes.push(
-      `no baseline path hash at ${result.pathSteps} steps${of} (baseline: ${entry.pathSteps})`
-    );
-    return;
-  }
-  if (entry.pathHash === result.pathHash) return;
-  const msg = `character path hash ${result.pathHash}, baseline ${entry.pathHash} (${source ? `${source}, ` : ''}${entry.commit})`;
-  const unstable = sceneConfig.unstableHash;
-  if (unstable && appliesTo(unstable, result.config, browser)) {
-    result.warnings.push(`${msg}: ${unstable.reason}`);
-  } else {
-    result.failures.push(msg);
-  }
-};
-
-/**
- * A scene's input script, `devTools/verify/inputs/<name>.json`. A missing or invalid one throws:
- * that scene's failure, not an exit mid-run (V2: the run wasn't written, the browser not closed)
- */
-const readInputScript = (name: string): TestBridgeInputScript => {
-  const file = path.join(INPUTS_DIR, `${name}.json`);
-  const script = readJSON<TestBridgeInputScript>(file);
-  if (!script)
-    throw new Error(`the input script ${path.relative(ROOT, file)} is missing or not JSON`);
-  return script;
-};
-
-const compareSystemOrder = (entry: BaselineEntry | undefined, result: RunResult) => {
-  if (!entry?.systemOrder || !result.systemOrder) {
-    result.notes.push('no baseline system order');
-    return;
-  }
-  for (const diff of diffSystemOrders(entry.systemOrder, result.systemOrder)) {
-    result.failures.push(`system order ${diff} (baseline ${entry.commit})`);
-  }
-};
-
-const handleSnapshot = async (
-  backend: Backend,
-  baseline: BaselineFile | null,
-  result: RunResult,
-  png: Buffer
-) => {
-  const paths = getPaths(backend);
-  const fileName = snapshotFileName(result.sceneId, result.config);
-  fs.mkdirSync(paths.lastRunDir, { recursive: true });
-  const currentFile = path.join(paths.lastRunDir, fileName);
-  const diffFile = currentFile.replace(/\.png$/, '.diff.png');
-  fs.writeFileSync(currentFile, png);
-  fs.rmSync(diffFile, { force: true });
-  result.snapshotFile = fileName;
-  if (!baseline) return; // Recording: the image only
-
-  const entry = baseline.entries[runKey(result.sceneId, result.config)];
-  const baselineFile = entry?.snapshot ? path.join(paths.baselineDir, entry.snapshot) : null;
-  if (!baselineFile || !fs.existsSync(baselineFile)) {
-    result.notes.push('no baseline snapshot');
-    return;
-  }
-  const sceneSnapshot = SCENE_VERIFY_CONFIG[result.sceneId]?.snapshot;
-  const tolerance = {
-    ...DEFAULT_SNAPSHOT_TOLERANCE,
-    ...(sceneSnapshot && 'tolerance' in sceneSnapshot ? sceneSnapshot.tolerance : {}),
-  };
-  const diff = await compareSnapshots(png, baselineFile, tolerance, diffFile);
-  if ('sizeMismatch' in diff) {
-    result.failures.push(`snapshot size ${diff.sizeMismatch}`);
-    return;
-  }
-  const summary = `mean ${diff.meanDelta.toFixed(3)}, changed ${(diff.changedRatio * 100).toFixed(2)} %, max ${diff.maxDelta}`;
-  if (diff.meanDelta > tolerance.maxMeanDelta || diff.changedRatio > tolerance.maxChangedRatio) {
-    result.failures.push(`snapshot differs (${summary}): ${path.relative(ROOT, diffFile)}`);
-  } else if (diff.maxDelta > 0) {
-    result.notes.push(`snapshot within tolerance (${summary})`);
-  }
-};
-
 // --- Report ---
 
 const formatDuration = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
@@ -748,42 +139,6 @@ const printResult = (r: RunResult, browser: VerifyBrowser) => {
     out(`        ${YELLOW}! ${w}${RESET}`);
   }
   for (const n of r.notes) out(`        ${DIM}${n}${RESET}`);
-};
-
-/** Debug configurations of one scene should hash alike (p101: deterministic in every target) */
-const checkCrossTargetHashes = (results: RunResult[]) => {
-  const hashes = new Map<string, string>();
-  for (const r of results) if (r.hash) hashes.set(r.config, r.hash);
-  if (new Set(hashes.values()).size <= 1) return null;
-  return [...hashes].map(([config, hash]) => `${config} ${hash}`).join(', ');
-};
-
-const recordBaseline = (
-  backend: Backend,
-  baseline: BaselineFile,
-  results: RunResult[],
-  commit: string
-) => {
-  const paths = getPaths(backend);
-  fs.mkdirSync(paths.baselineDir, { recursive: true });
-  const now = new Date().toISOString();
-  for (const r of results) {
-    if (r.status !== 'PASS' && r.status !== 'NEW') continue;
-    const entry: BaselineEntry = { recordedAt: now, commit };
-    if (r.hash) Object.assign(entry, { hash: r.hash, steps: r.steps, probeConfig: r.probeConfig });
-    if (r.pathHash) Object.assign(entry, { pathHash: r.pathHash, pathSteps: r.pathSteps });
-    if (r.systemOrder) entry.systemOrder = r.systemOrder;
-    if (r.snapshotFile) {
-      fs.copyFileSync(
-        path.join(paths.lastRunDir, r.snapshotFile),
-        path.join(paths.baselineDir, r.snapshotFile)
-      );
-      entry.snapshot = r.snapshotFile;
-    }
-    baseline.entries[runKey(r.sceneId, r.config)] = entry;
-    r.status = 'UPDATED';
-  }
-  writeFileAtomic(paths.baselineFile, `${JSON.stringify(baseline, null, 2)}\n`);
 };
 
 /** Firefox: fails without a Chromium baseline to compare with, and warns when the two Chromium
@@ -815,12 +170,16 @@ const checkChromiumBaselines = (ctx: BaselineContext) => {
 // --- Main ---
 
 const main = async () => {
-  const args = parseArgs(process.argv.slice(2));
+  const parsed = parseSceneRunArgs(process.argv.slice(2));
+  if ('error' in parsed) fail(parsed.error);
+  const { args } = parsed;
   const generated = readJSON<{ scenes: Record<string, unknown> }>(GENERATED_DATA);
   if (!generated) fail(`Can't read ${path.relative(ROOT, GENERATED_DATA)}: run yarn gatherAppData`);
-  const sceneIds = selectScenes(Object.keys(generated!.scenes), args.only);
+  const selected = selectScenes(Object.keys(generated.scenes), args.only);
+  if ('error' in selected) fail(selected.error);
+  const sceneIds = selected.ids;
   // A scene renamed in the data would lose its settings (allowed errors, skips) without a word
-  const unknown = Object.keys(SCENE_VERIFY_CONFIG).filter((id) => !(id in generated!.scenes));
+  const unknown = Object.keys(SCENE_VERIFY_CONFIG).filter((id) => !(id in generated.scenes));
   if (unknown.length) {
     fail(
       `scenes.config.ts names scene(s) the data doesn't have: ${unknown.join(', ')} (renamed or removed?)`
@@ -831,7 +190,8 @@ const main = async () => {
   const useWebGL = isFirefox || args.webgl || (isWSL() && !args.headed);
   const requested: Backend = useWebGL ? 'webgl' : 'webgpu';
   const baselines = new Map<Backend, BaselineFile>();
-  if (isFirefox) checkChromiumBaselines({ baselines, isRecording: false });
+  const onProblem = (problem: string) => out(`${YELLOW}${problem}${RESET}`);
+  if (isFirefox) checkChromiumBaselines({ baselines, isRecording: false, onProblem });
   const own = args.url ? null : await startOwnServer();
   const baseUrl = own ? own.url : args.url!;
   const browser = await launchBrowser(args.browser, useWebGL, args.headed);
@@ -863,6 +223,7 @@ const main = async () => {
     useWebGL,
     isRecording: args.update,
     baselines,
+    onProblem,
     backend: null,
   };
   const results: RunResult[] = [];
@@ -895,8 +256,16 @@ const main = async () => {
   }
 
   const backend = ctx.backend ?? requested;
-  if (args.update && !aborted) recordBaseline(backend, getBaseline(ctx, backend), results, commit);
-  const paths = getPaths(isFirefox ? 'firefox' : backend);
+  if (args.update && !aborted) {
+    recordBaseline({
+      paths: getResultPaths(backend),
+      baseline: getBaseline(ctx, backend),
+      results,
+      commit,
+      now: new Date().toISOString(),
+    });
+  }
+  const paths = getResultPaths(isFirefox ? 'firefox' : backend);
   writeFileAtomic(
     paths.lastRunFile,
     `${JSON.stringify({ commit, at: new Date().toISOString(), baseUrl, browser: args.browser, backend, results }, null, 2)}\n`
@@ -913,6 +282,8 @@ const main = async () => {
   process.exit(failed ? 1 : 0);
 };
 
-main().catch((err: Error) =>
-  fail(err instanceof RunAbort ? err.message : err.stack ?? err.message)
-);
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((err: Error) =>
+    fail(err instanceof RunAbort ? err.message : err.stack ?? err.message)
+  );
+}

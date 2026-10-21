@@ -77,10 +77,11 @@ const RESET = color('0');
 
 const USAGE = 'yarn verify:embed [--profile <id>] [--no-build] [--headed] [--webgl]';
 
-const fail = (msg: string): never => {
+/** Prints the message and exits 2 */
+function fail(msg: string): never {
   out(`${RED}${msg}${RESET}`, true);
   process.exit(2);
-};
+}
 
 const parseArgs = (argv: string[]) => {
   const args = { profile: '', build: true, headed: false, webgl: false };
