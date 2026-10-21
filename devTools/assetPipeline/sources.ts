@@ -35,7 +35,8 @@ const isRemoteUrl = (fileName: string) => /^([a-z][a-z\d+.-]*:|\/\/)/i.test(file
 
 /**
  * Resolves an asset JSON's `fileName` (and a texture's `path`). Returns `{ error }` for a relative
- * file name that is combined with `path`, leaves `src/` or doesn't exist.
+ * file name that is combined with `path`, leaves `src/` or doesn't exist, and for a public one
+ * that leaves `src/public` or doesn't decode.
  * @param params.jsonFile The asset JSON, absolute or relative to the repo root
  */
 export const resolveAssetSource = (params: {
@@ -66,7 +67,17 @@ export const resolveAssetSource = (params: {
 
   // Like `new URL((path || './') + fileName, document.baseURI)` at the site root (Texture.ts)
   const { pathname } = new URL((urlPath || './') + fileName, 'http://aek.local/');
-  const file = path.join(PUBLIC_DIR, decodeURIComponent(pathname));
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    return { error: `"${fileName}" isn't a valid URL path (a "%" not followed by two hex digits)` };
+  }
+  // `new URL()` removed the `..` segments before decoding, so an encoded one ("..%2F") is left
+  const file = path.join(PUBLIC_DIR, decoded);
+  if (!file.startsWith(PUBLIC_DIR + path.sep)) {
+    return { error: `"${fileName}" resolves outside src/public (${toRepoPath(file)})` };
+  }
   return { kind: 'public', file, repoPath: toRepoPath(file) };
 };
 

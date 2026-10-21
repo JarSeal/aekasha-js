@@ -14,18 +14,22 @@ describe('resolveAssetSource', () => {
     });
   });
 
-  // p619 Phase 0 (§1.4 A4): `new URL()` normalises `..` before `decodeURIComponent` decodes `%2F`
-  it.fails('keeps an encoded "../" inside src/public', () => {
+  // p619 §1.4 A4: `new URL()` normalises `..` before `decodeURIComponent` decodes `%2F`, so an
+  // encoded "../" would reach the output's logical path, which writeOutput joins to aek-assets/
+  it('refuses an encoded "../" that leaves src/public', () => {
     const source = resolveAssetSource({ jsonFile: JSON_FILE, fileName: '/..%2F..%2Fx.png' });
-    if ('error' in source) return;
-    expect(source.kind).toBe('public');
-    if (source.kind !== 'public') return;
-    expect(source.file.startsWith(PUBLIC_DIR + path.sep)).toBe(true);
-    // The output's logical path: writeOutput joins it to aek-assets/
-    expect(getLogicalPath(source)).not.toMatch(/(^|\/)\.\.(\/|$)/);
+    expect(source).toEqual({ error: expect.stringContaining('resolves outside src/public') });
   });
 
-  it.fails('returns an error for a stray "%", not a URIError', () => {
-    expect(() => resolveAssetSource({ jsonFile: JSON_FILE, fileName: '/100%.png' })).not.toThrow();
+  it('keeps an encoded "../" that stays inside src/public', () => {
+    const source = resolveAssetSource({ jsonFile: JSON_FILE, fileName: '/a/..%2Fx.png' });
+    if ('error' in source || source.kind !== 'public') throw new Error('not a public source');
+    expect(source.file).toBe(path.join(PUBLIC_DIR, 'x.png'));
+    expect(getLogicalPath(source)).toBe('x');
+  });
+
+  it('returns an error for a stray "%", not a URIError', () => {
+    const source = resolveAssetSource({ jsonFile: JSON_FILE, fileName: '/100%.png' });
+    expect(source).toEqual({ error: expect.stringContaining("isn't a valid URL path") });
   });
 });

@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { createHash } from 'crypto';
 import { listExternalGLTFUris, readGLTFJson } from './gltfJson';
+import { isProcessAlive } from './runLock';
 import { PUBLIC_DIR, ROOT, SRC_DIR, type AssetSource, type PackSource } from './sources';
 
 /**
@@ -80,24 +81,44 @@ export const writeOutput = (
 export const getOutputFile = (url: string, publicDir = PUBLIC_DIR) =>
   path.join(publicDir, ...url.split('/'));
 
+/** A temp file `writeOutput` or the cache writes (`<file>.<pid>.tmp`): the pid that writes it */
+const getTempFileOwner = (fileName: string) => {
+  const match = /\.(\d+)\.tmp$/.exec(fileName);
+  return match ? Number(match[1]) : null;
+};
+
 /**
- * Deletes every file in `aek-assets/` that no URL in `usedUrls` points to, leftover temp files
- * included, and the folders that leaves empty (§7). Only for the end of a full, successful run:
- * an asset that wasn't processed in it would lose its output. Returns the deleted files, relative
- * to the repo root.
+ * Deletes every file in `aek-assets/` that no URL in `usedUrls` points to, and the folders that
+ * leaves empty (§7). Only for the end of a full, successful run: an asset that wasn't processed in
+ * it would lose its output. Returns the deleted files, relative to the repo root.
+ *
+ * Leaves alone what another process may be writing (p619 §1.4 A3): a temp file whose writer is
+ * still running (a leftover one is deleted), and with `opts.since`, a file changed since then (an
+ * output another run encoded under a key this one never saw).
  * @param publicDir Default: `src/public`. The build's `dist/` for its copy (Phase 3 step 4).
+ * @param opts.since When this run started (ms since the epoch)
  */
-export const removeStaleOutputs = (usedUrls: Iterable<string>, publicDir = PUBLIC_DIR) => {
+export const removeStaleOutputs = (
+  usedUrls: Iterable<string>,
+  publicDir = PUBLIC_DIR,
+  opts: { since?: number } = {}
+) => {
   const aekAssetsDir = path.join(publicDir, 'aek-assets');
   const used = new Set([...usedUrls].map((url) => getOutputFile(url, publicDir)));
   const removed: string[] = [];
+  const isInUse = (file: string, name: string) => {
+    if (used.has(file)) return true;
+    const writer = getTempFileOwner(name);
+    if (writer !== null) return isProcessAlive(writer);
+    return opts.since !== undefined && fs.statSync(file).mtimeMs >= opts.since;
+  };
   const sweep = (dir: string) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const file = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         sweep(file);
         if (!fs.readdirSync(file).length) fs.rmdirSync(file);
-      } else if (!used.has(file)) {
+      } else if (!isInUse(file, entry.name)) {
         fs.rmSync(file);
         removed.push(toPosix(path.relative(ROOT, file)));
       }
