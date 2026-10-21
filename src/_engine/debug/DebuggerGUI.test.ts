@@ -27,13 +27,24 @@ vi.mock(import('../ui/Toaster'), async (importOriginal) => ({
   addToast: vi.fn(() => ({}) as never),
 }));
 
+// The drawer's implementation builds DOM: only its entry points, recorded
+const drawer = vi.hoisted(() => ({
+  _ensureDebuggerSceneLoader: vi.fn(),
+  _createDebuggerTab: vi.fn(),
+  _removeDebuggerTab: vi.fn(),
+}));
+vi.mock(import('./_dbg__DebuggerGUI'), () => drawer as never);
+
 import { initEnvironment } from '../kernel/config/Config';
 import { addToast } from '../ui/Toaster';
 import {
   addDebugToastWhenReady,
+  createDebuggerTab,
   DEBUG_TOASTER_ID,
   flushQueuedDebugToasts,
   hydrateDebuggerTabState,
+  registerDebuggerGUI,
+  removeDebuggerTab,
 } from './DebuggerGUI';
 
 const DEBUG = { search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } };
@@ -106,5 +117,39 @@ describe('hydrateDebuggerTabState (p618 D11)', () => {
     const state = createState();
     hydrateDebuggerTabState({ lsKey: 'AEK_test', state, persistKeys: ['speed'] });
     expect(state.speed).toBe(1);
+  });
+});
+
+describe('createDebuggerTab before the drawer loads (p618 Phase 5)', () => {
+  const tabDef = (id: string) => ({ id, title: id, icon: 'gear', content: () => [] });
+
+  // A tab created in a feature's install (before the boot's debug step) was dropped. Last in the
+  // file: nothing else loads the drawer.
+  it('keeps a tab created before the drawer loads, and drops a removed one', async () => {
+    initEnvironment(DEBUG);
+    const early = tabDef('early');
+    const replacement = { ...tabDef('replaced'), title: 'Replacement' };
+    createDebuggerTab(early);
+    createDebuggerTab(tabDef('replaced'));
+    createDebuggerTab(tabDef('removed'));
+    createDebuggerTab(replacement, { drawerBtnPlace: 'TOP' });
+    removeDebuggerTab('removed');
+    expect(drawer._createDebuggerTab).not.toHaveBeenCalled();
+
+    await registerDebuggerGUI();
+
+    expect(drawer._createDebuggerTab.mock.calls).toEqual([
+      [early, undefined],
+      [replacement, { drawerBtnPlace: 'TOP' }],
+    ]);
+    expect(drawer._removeDebuggerTab).not.toHaveBeenCalled();
+  });
+
+  it('hands tabs to the drawer once it has loaded', () => {
+    const late = tabDef('late');
+    createDebuggerTab(late);
+    expect(drawer._createDebuggerTab).toHaveBeenLastCalledWith(late, undefined);
+    removeDebuggerTab('late');
+    expect(drawer._removeDebuggerTab).toHaveBeenCalledWith('late');
   });
 });

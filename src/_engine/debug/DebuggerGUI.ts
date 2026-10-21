@@ -367,9 +367,18 @@ export type UpdateDebuggerTabOpts = {
  */
 export const registerDebuggerGUI = async () => {
   debugGUI = await loadDebugModuleAsync(() => import('./_dbg__DebuggerGUI'), true);
+  const module = useDebug(debugGUI);
   // Debug env only: the first loadScene may target this loader ("Use debugger scene loader for start scene")
-  useDebug(debugGUI)?._ensureDebuggerSceneLoader();
+  module?._ensureDebuggerSceneLoader();
+  if (!module) return;
+  // The tabs created before it loaded, in their creation order
+  for (const [def, opts] of pendingTabs.values()) module._createDebuggerTab(def, opts);
+  pendingTabs.clear();
 };
+
+// Tabs created before the drawer has loaded (eg. in a feature's `install`, which runs before the
+// boot's debug step): it creates them when it loads
+const pendingTabs = new Map<string, [AnyDebuggerTabDef, DebugGUIOpts | undefined]>();
 
 /**
  * Toggles the drawer open or closed. The views' (`toggleActiveViewDrawer`) and the material
@@ -395,13 +404,13 @@ export const setDrawerSuspendedByView = (suspended: boolean) => {
 /**
  * Creates (or replaces, by id) a debugger tab: the menu button, the heading row and the content
  * (CMP sections, declarative panes and lists). Persisted `state` values are hydrated right away
- * (also in prod test mode, where the drawer itself doesn't exist). A no-op outside the debug env.
+ * (also in prod test mode, where the drawer itself doesn't exist). Works at any time: a tab
+ * created before the drawer has loaded (eg. in a feature's `install`) is added when it loads. Only
+ * the debug env shows the drawer.
  * @param opts deprecated, removed in engine 6.0.0 ({@link DebugGUIOpts}): moves the drawer button
  * for the whole drawer
- * @remarks The drawer loads in the boot's debug step, after the features' installs: a tab created
- * in a feature's `install` (or before `InitEngine`) is dropped. Create it in the feature's
- * `onDebug` hook, the app's `start` or scene code. A scene tab (`sceneId`) belongs in its scene's
- * code, behind `IS_DEBUG_ENV` and an `import()` of a `_dbg__` module, so it never ships.
+ * @remarks A scene tab (`sceneId`) belongs in its scene's code, behind `IS_DEBUG_ENV` and an
+ * `import()` of a `_dbg__` module, so it never ships.
  * @example
  * ```ts
  * import { createDebuggerTab } from 'aekasha/debug';
@@ -431,9 +440,18 @@ export const createDebuggerTab = <S extends object>(
   def: DebuggerTabDef<S>,
   opts?: DebugGUIOpts
 ) => {
+  // Folds the pending tabs out of a production build
+  if (!__AEK_DEBUG__) return;
   hydrateDebuggerTabState(def);
   // The builder only works with string keys, S only types the call site
-  useDebug(debugGUI)?._createDebuggerTab(def as unknown as AnyDebuggerTabDef, opts);
+  const anyDef = def as unknown as AnyDebuggerTabDef;
+  const module = useDebug(debugGUI);
+  if (module) {
+    module._createDebuggerTab(anyDef, opts);
+    return;
+  }
+  // A replaced pending tab keeps its creation position, as a replaced tab does in the drawer
+  pendingTabs.set(def.id, [anyDef, opts]);
 };
 
 /**
@@ -504,10 +522,12 @@ export const openDebuggerTab = (id: string) => {
 };
 
 /**
- * Removes a debugger tab. A scene tab (`DebuggerTabDef.sceneId`) is removed on its scene's exit
- * without it.
+ * Removes a debugger tab, also one waiting for the drawer to load. A scene tab
+ * (`DebuggerTabDef.sceneId`) is removed on its scene's exit without it.
  */
 export const removeDebuggerTab = (id: string) => {
+  if (!__AEK_DEBUG__) return;
+  if (pendingTabs.delete(id)) return;
   useDebug(debugGUI)?._removeDebuggerTab(id);
 };
 

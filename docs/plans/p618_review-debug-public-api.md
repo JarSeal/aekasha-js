@@ -828,8 +828,9 @@ As built, section 1 (2026-10-21, uncommitted on top of `6390367`):
   examples among them). `yarn hub:build`: 434 pages, no warning in scope (Phase 0's five
   `notExported` ones are gone; the search index size warning is p619's). `moveMap.ts --check`
   clean.
-- **Open (asked 2026-10-21, not yet answered):** `createDebuggerTab`'s drop before the drawer
-  loads: a Phase 5 fix (pending tabs, as `createProfilerTab` keeps them) or an issue file.
+- **Open (asked 2026-10-21):** `createDebuggerTab`'s drop before the drawer loads: a Phase 5 fix
+  (pending tabs, as `createProfilerTab` keeps them) or an issue file. **Answered 2026-10-21: fixed
+  in Phase 5** (its section 1).
 
 As built, section 2 (2026-10-21, uncommitted on top of section 1):
 
@@ -872,6 +873,46 @@ As built, section 2 (2026-10-21, uncommitted on top of section 1):
 1. D12's page (and the example, if chosen), `debug/CLAUDE.md`, the root's references.
 2. The issue files (H2), p800's prompt (P7), `readme.md` if its debug line changes.
 3. `yarn hub:build`.
+
+As built, section 1 (2026-10-21, uncommitted on top of `d45ed4c`):
+
+- **`createDebuggerTab` before the drawer loads (Phase 4's open item, fixed):** `DebuggerGUI.ts`
+  keeps the tabs created before `registerDebuggerGUI` (pending, in creation order, a replaced one
+  keeping its place, with its deprecated `opts`) and hands them over when the drawer loads, as
+  `createProfilerTab` does; `removeDebuggerTab` drops a pending one. Both gated on `__AEK_DEBUG__`
+  (folded in production). The JSDoc says it works at any time (the `install` remark gone).
+  `DebuggerGUI.test.ts`: the early, replaced and removed tabs, and the hand-over after the load
+  (fails on the code before the fix).
+- **The example (D12, as recommended):** `_dbg__exampleDebugTab.ts` gets two more Hub regions.
+  `debug-tab-undo`: one action type (`exampleBoxes.setting`, `'perScene'`) for both settings,
+  recorded with `recordOrCoalesceUndoRedoAction` from each binding's `onChange` (key `count` or
+  `color`), its handler applying the value, `persistDebuggerTabValue` and `updateDebuggerTab`.
+  `debug-tab-profiler`: a stats source (`exampleBoxes.count`, `format` "N boxes"), removed on the
+  scene's exit by a self-removing `registerOnAllSceneExits` hook (the scene's own
+  `registerOnSceneExit` slot is left to the scene file). Both registered in `createBoxesTab`, so
+  on every visit. The scene file is unchanged, and so is the scene's look (no new Hub image). An
+  app patch (D2). Checked in the dev server (debug env, WebGL2 on SwiftShader, a Playwright
+  script): typed changes to both fields record one entry each; two undos put back the colour and
+  the count (the scene, the saved LS value and the tab's field), a redo reapplies; the Overview
+  shows "Example boxes · 30 boxes" under App; the source is gone in `physicsTest` and back on the
+  return; no console errors.
+- **The Debug suite page (D12):** "Write your own tab" as a how-to (loading in debug builds: the
+  plain `import()` or `loadDebugModuleAsync` for prod test mode (L2); a tab; state and
+  persistence; refresh, with F1 as built; lists; scene tabs; toasts; P7's Tweakpane note), the
+  profiler with its mode gate, your own figures (D14), profiler tabs, GPU memory sources and
+  `markDebugHelper`; undo / redo with coalescing, scopes, the handler's save and refresh, and F5's
+  stop; the dev file server with `readDevFile`'s hash, `DevFilesError`, `saveData` and
+  `onDevDataGathered`. Key APIs regrouped with Phase 3's names. The intro's scene caption, the
+  example page's intro, metas and walkthrough (two new sections, Undo and A figure in the
+  profiler) follow the example.
+- **`debug/CLAUDE.md`:** four new bullets (the entry's shape and deprecations, the "registrations
+  work at any time" rule (B1, B4, this section's fix), the loader and which one an app uses,
+  placement: the merged wrappers, the `_dbg__` renames, the stress test, the size headers) and one
+  for undo / redo (buckets, coalescing, F5, the settings, the direct imports); the stats source
+  bullet says an app's get "App" rows (D14), the drawer tab bullet "at any time". The root
+  `CLAUDE.md` names none of the moved files: unchanged.
+- **Checks:** `tsc` (both), the lint, `yarn test` (109 files, 869 passed, 1 skipped),
+  `yarn hub:build` (435 pages, no warning in scope; the search index's is p619's).
 
 ### Phase 6: versions and done
 
