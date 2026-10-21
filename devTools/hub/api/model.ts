@@ -3,21 +3,25 @@ import type { JSONOutput, ReflectionKind } from 'typedoc';
 import { ROOT } from '../paths';
 
 /**
- * The API model indexed (p553 §2.2): every module (a source file) of the two subtrees, the engine
+ * The API model indexed: every module (a source file) of the two subtrees, the engine
  * (`src/_engine/`) and the toolkit (`src/toolkit/`), with its exports, and every export and member
  * by reflection id. The model stays per module (the docs ratchet counts every export); the pages
  * are the public entries' (`publicApi.ts`, p619 D6).
  */
 
+/** An export or a member as TypeDoc's JSON writes it */
 export type DeclarationReflection = JSONOutput.DeclarationReflection;
+/** A function's or method's signature */
 export type SignatureReflection = JSONOutput.SignatureReflection;
+/** A type as TypeDoc's JSON writes it */
 export type SomeType = JSONOutput.SomeType;
+/** A JSDoc comment as TypeDoc's JSON writes it */
 export type Comment = JSONOutput.Comment;
 
 /**
  * TypeDoc 0.28's reflection kinds (`ReflectionKind`), as numbers: importing the enum would load
  * TypeDoc wherever the Hub builds. `satisfies` checks them against it, so an upgrade that renumbers
- * a kind fails `tsc` (p550 §7.1).
+ * a kind fails `tsc`.
  */
 export const Kind = {
   Module: 2,
@@ -44,17 +48,20 @@ export const Kind = {
   Reference: 4194304,
 } as const satisfies { [K in keyof typeof ReflectionKind]?: (typeof ReflectionKind)[K] };
 
+/** The Documentation section's site path: the API pages are under it */
 export const API_SECTION_PATH = 'documentation/';
 
+/** The documented source trees: the engine's and the toolkit's */
 export type ApiSubtree = 'engine' | 'toolkit';
 
+/** Each subtree's source folder and the landing page's heading for it */
 export const API_SUBTREES: { id: ApiSubtree; sourceDir: string; title: string }[] = [
   { id: 'engine', sourceDir: 'src/_engine', title: 'Engine' },
   { id: 'toolkit', sourceDir: 'src/toolkit', title: 'Toolkit' },
 ];
 
 /** The entries' pages are under this one: `documentation/aekasha/physics/` (`publicApi.ts`) */
-export const API_ENTRIES_PATH = `${API_SECTION_PATH}aekasha/`;
+const API_ENTRIES_PATH = `${API_SECTION_PATH}aekasha/`;
 
 /**
  * Whether a site path (`documentation/aekasha/physics/`) is one of the pages the API model
@@ -66,6 +73,7 @@ export const isApiPagePath = (sitePath: string) =>
 /** Documented or not: a comment on it, or on one of its signatures */
 export type Coverage = { documented: number; total: number };
 
+/** A source module of the model, with its subtree and paths */
 export type ApiModule = {
   reflection: DeclarationReflection;
   subtree: ApiSubtree;
@@ -82,6 +90,7 @@ export type ApiModule = {
 /** Where a reflection is shown: its page and its anchor there */
 export type ApiTarget = { pagePath: string; anchor: string };
 
+/** The model indexed (`indexApiModel`): its modules and every reflection by id */
 export type ApiIndex = {
   project: JSONOutput.ProjectReflection;
   /** Sorted by source path */
@@ -93,6 +102,9 @@ export type ApiIndex = {
 const hasComment = (comment: Comment | undefined) =>
   !!comment && (comment.summary.length > 0 || (comment.blockTags?.length ?? 0) > 0);
 
+/**
+ * Whether an export has a comment: its own, a signature's or an accessor's (the coverage counts)
+ */
 export const isDocumented = (reflection: DeclarationReflection) =>
   hasComment(reflection.comment) ||
   !!reflection.signatures?.some((signature) => hasComment(signature.comment)) ||
@@ -133,6 +145,9 @@ export const getApiPagePath = (sourcePath: string): string | null => {
   return getPagePath(location.subtree, relPath);
 };
 
+/**
+ * Indexes TypeDoc's project: its modules sorted by source path, and every export and member by id
+ */
 export const indexApiModel = (project: JSONOutput.ProjectReflection): ApiIndex => {
   const modules: ApiModule[] = [];
   const reflections = new Map<number, DeclarationReflection>();

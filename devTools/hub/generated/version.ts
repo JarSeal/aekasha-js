@@ -8,12 +8,12 @@ import { CHANGELOG_FILE, PACKAGE_JSON_FILE } from '../paths';
 import type { HubGeneratedSection } from './section';
 
 /**
- * The Version section (p551 §2.5): the engine's, toolkit's, app's and project's versions with
+ * The Version section: the engine's, toolkit's, app's and project's versions with
  * their codenames and the build's commit and time, then `CHANGELOG.md`. The changelog's headings
  * move one level down (`# Changelog` is the page's h2, an entry an h3), so the TOC lists the
  * entries and each one has its anchor: `#2026-10-07-dev-server-implementation`. The latest
  * entry is `latestChange`, for the homepage's "What's new". The changelog
- * is out of the search (`hubSearchSkip`, p555): it was a large share of the index, and the
+ * is out of the search (`hubSearchSkip`): it was a large share of the index, and the
  * browser's own find searches it on this page.
  */
 
@@ -30,6 +30,7 @@ const FENCE_REGEX = /^\s*(```|~~~)/;
 const CHANGE_LABEL_REGEX =
   /<p><strong>(Added|Changed|Deprecated|Fixed|Removed|Security)<\/strong><\/p>/g;
 
+/** A part a changelog entry bumped (its `### Engine` … section), as "What's new" shows it */
 export type HubChangePart = {
   part: 'engine' | 'toolkit' | 'app' | 'project';
   /** '' for the project, whose version is the engine's */
@@ -37,6 +38,7 @@ export type HubChangePart = {
   codename: string;
 };
 
+/** The changelog's newest entry, for the homepage's "What's new" */
 export type HubLatestChange = {
   date: string;
   branch: string;
@@ -133,6 +135,7 @@ const renderChangelog = (
   return `<div class="hubChangelog hubSearchSkip">\n${html}</div>\n`;
 };
 
+/** The Version section and the changelog's newest entry; a missing `CHANGELOG.md` warns */
 export const createVersionSection = (meta: ProjectMetadata, diag: HubDiagnostics) => {
   const source = fs.existsSync(CHANGELOG_FILE) ? fs.readFileSync(CHANGELOG_FILE, 'utf-8') : null;
   const latestChange = source === null ? null : parseLatestChange(source);

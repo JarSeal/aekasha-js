@@ -1,5 +1,8 @@
 import { toRepoPath } from './paths';
 
+/**
+ * An error or warning with its file and line: `yarn hub:build` prints it, a dev error page lists it
+ */
 export type HubDiagnostic = {
   level: 'error' | 'warning';
   /** Absolute */

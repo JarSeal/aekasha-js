@@ -62,6 +62,7 @@ export type HubSearchStored = Pick<
  * URL in the `<meta name="aek-hub-search">` (`HUB_SEARCH_META`), relative to the page.
  */
 export const HUB_SEARCH_FILE = 'hub-search.js';
+/** The `<meta>` name every page carries the payload's URL in */
 export const HUB_SEARCH_META = 'aek-hub-search';
 
 /**

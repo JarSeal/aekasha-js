@@ -7,7 +7,7 @@ import path from 'node:path';
  * Shared by `yarn hub:preview` and the dev plugin.
  */
 
-export const HUB_CONTENT_TYPES: Record<string, string> = {
+const HUB_CONTENT_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -23,9 +23,14 @@ export const HUB_CONTENT_TYPES: Record<string, string> = {
   '.txt': 'text/plain; charset=utf-8',
 };
 
+/** A file's `Content-Type` by its extension */
 export const getHubContentType = (file: string) =>
   HUB_CONTENT_TYPES[path.extname(file)] ?? 'application/octet-stream';
 
+/**
+ * What a request path resolves to (`resolveHubRoute`): a file, a redirect to its folder's slash, or
+ * the 404 page
+ */
 export type HubRoute =
   | { kind: 'file'; file: string }
   | { kind: 'redirect'; location: string }

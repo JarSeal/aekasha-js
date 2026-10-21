@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- a command's own output */
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -15,18 +15,18 @@ import { APP_DIST_DIR, HUB_DIST_DIR, ROOT, toRepoPath } from './hub/paths';
 
 /**
  * `yarn hub:build [--out <dir>] [--no-api] [--no-embed]`: builds the Ækasha Hub's public site
- * (p551) into `dist-hub/`, and exits 1 on an error, leaving the last output as it was: it builds
+ * into `dist-hub/`, and exits 1 on an error, leaving the last output as it was: it builds
  * into a staging folder next to it and replaces the folder only when nothing failed. `--out`
  * refuses a folder the build may not replace (`devTools/hub/outDir.ts`: the repo root or above,
  * a source folder, a non-empty folder that isn't a Hub output). `yarn build` runs it last.
- * - `--no-api`: no API docs (p553 §2.5), for fast content work: no TypeDoc conversion, the
+ * - `--no-api`: no API docs, for fast content work: no TypeDoc conversion, the
  *   Documentation page says they aren't built, and `api:` links aren't checked (one warning).
  * - `--no-embed`: `::: embed` shows its poster only (p611 D9). Without it, an embed profile with
  *   no build (`dist-embed/<id>/`) or no `yarn sbp` report is built and measured first
  *   (`yarn sbp --profile <ids>`), and the pages' embeds are copied into `_assets/embed/`.
  * - `AEK_HUB=false`: does nothing (`yarn build` without the Hub).
  * - `AEK_HUB_IN_DIST=true`: also copies the site into the app's `dist/hub/`, so the app's own
- *   site serves it at `/hub/` (p550 §3.1). Off by default: the Hub isn't in production unless
+ *   site serves it at `/hub/`. Off by default: the Hub isn't in production unless
  *   the developer asks for it.
  */
 
@@ -35,10 +35,10 @@ const YELLOW = '\x1b[33m';
 const GREEN = '\x1b[32m';
 const RESET = '\x1b[0m';
 
-const fail = (message: string) => {
+function fail(message: string): never {
   console.error(`${RED}✗ [Hub] ${message}${RESET}`);
   process.exit(1);
-};
+}
 
 const parseArgs = (args: string[]) => {
   let outDir = HUB_DIST_DIR;

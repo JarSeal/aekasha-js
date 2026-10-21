@@ -9,7 +9,7 @@ import { ISSUES_DIR, toRepoPath } from '../paths';
 import type { HubGeneratedPage, HubGeneratedSection } from './section';
 
 /**
- * The Issues section (p551 §2.5): every `docs/issues/*.md` gets a page at `/issues/<file name>/`,
+ * The Issues section: every `docs/issues/*.md` gets a page at `/issues/<file name>/`,
  * and the section's page lists them grouped by status, each with its summary.
  *
  * An issue file's header (the convention in CLAUDE.md): `**Title:** …` on line 1, then a block of
@@ -20,7 +20,7 @@ import type { HubGeneratedPage, HubGeneratedSection } from './section';
  * name; without a `Status:` line the issue counts as open, shown as "Status not stated".
  */
 
-export const ISSUES_SECTION_PATH = 'issues/';
+const ISSUES_SECTION_PATH = 'issues/';
 /** The section page's slot for the list, and each issue page's for its content */
 const LIST_SLOT = 'generated-issues';
 const ISSUE_SLOT = 'generated-issue';
@@ -232,6 +232,9 @@ const toPage = (issue: Issue): HubGeneratedPage => ({
   slots: { [ISSUE_SLOT]: (md, env) => renderIssue(issue, md, env) },
 });
 
+/**
+ * The Issues section: a page per `docs/issues/*.md` and the list on `issues/`, read once per build
+ */
 export const createIssuesSection = (diag: HubDiagnostics): HubGeneratedSection => {
   const files = fs.existsSync(ISSUES_DIR)
     ? fs

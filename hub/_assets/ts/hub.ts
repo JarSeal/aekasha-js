@@ -1,5 +1,5 @@
 /**
- * The Hub's page script, loaded on every page (p551). The menu is in the page already (rendered
+ * The Hub's page script, loaded on every page. The menu is in the page already (rendered
  * at build time), so this only adds behaviour on top of it: the theme toggle, the mobile menu,
  * the nav's dropdowns, the code blocks' copy, collapse and tabs, the API pages' source links in
  * dev, and opening the search.
@@ -102,7 +102,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// --- Code blocks (p552) ---
+// --- Code blocks ---
 
 /** How long the copy button says "Copied" */
 const COPIED_MS = 1500;
@@ -204,7 +204,7 @@ document.addEventListener('keydown', (e) => {
   next.focus();
 });
 
-// --- API source links (p553, dev) ---
+// --- API source links (dev) ---
 
 // A source link opens the file in the editor through Vite's `/__open-in-editor`, which answers
 // with an empty page: fetched, not followed
@@ -219,7 +219,7 @@ document.addEventListener('click', (e) => {
   });
 });
 
-// --- Search (p552) ---
+// --- Search ---
 
 /**
  * The dialog and its payload load on first use (`_search.ts`, a chunk of its own): the first focus
@@ -243,7 +243,7 @@ const openSearch = () => {
   setMenuOpen(false);
   loadSearch()
     .then((search) => search.openSearch(hubJsUrl))
-    // eslint-disable-next-line no-console
+    // eslint-disable-next-line no-console -- a failed chunk load's error: the page has nowhere to show it
     .catch((err: unknown) => console.error('[Hub] The search failed to load:', err));
 };
 
@@ -280,6 +280,6 @@ document.addEventListener('keydown', (e) => {
 if (document.querySelector('[data-hub-embed]')) {
   import('./_embed')
     .then((embed) => embed.initEmbeds())
-    // eslint-disable-next-line no-console
+    // eslint-disable-next-line no-console -- a failed chunk load's error: the page has nowhere to show it
     .catch((err: unknown) => console.error('[Hub] The embed script failed to load:', err));
 }

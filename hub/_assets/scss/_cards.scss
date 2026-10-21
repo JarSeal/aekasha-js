@@ -1,4 +1,4 @@
-// `::: cards <page path>` (p554 Phase 5, p555 §2.2): a grid of links to child pages, each with
+// `::: cards <page path>`: a grid of links to child pages, each with
 // its image (or icon), label and description
 .hubCards {
   display: grid;
@@ -78,7 +78,7 @@
   line-height: 1.5;
 }
 
-// `::: cards <path> featured` (p555 Phase 2), on the homepage. The columns follow the grid's own
+// `::: cards <path> featured`, on the homepage. The columns follow the grid's own
 // width (its parent is the container), since the homepage's main column narrows beside the side
 // column.
 :has(> .hubCards_featured) {

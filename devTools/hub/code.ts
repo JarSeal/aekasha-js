@@ -15,11 +15,11 @@ import { createHighlighter, type Highlighter, type ShikiTransformer } from 'shik
 import { HUB_CODE_THEME_DARK, HUB_CODE_THEME_LIGHT } from './codeThemes';
 import { escapeHtml } from './html';
 import type { HubIcons } from './icons';
-import { registerHubDirective, uniqueId, type HubMarkdownEnv } from './markdown';
+import { uniqueId, type HubDirective, type HubMarkdownEnv } from './markdown';
 import { parseSnippetSpec, readSnippet } from './snippets';
 
 /**
- * The Hub's code blocks (p552 §2.1, §2.2): fences highlighted by shiki at build time, so a page
+ * The Hub's code blocks: fences highlighted by shiki at build time, so a page
  * carries highlighted HTML and no highlighter. Both themes go into the HTML as CSS variables
  * (`_code.scss` picks one). The fence's meta (` ```ts title="space.ts" {3,5-7} wrap `) and
  * shiki's notation comments (`// [!code ++]`) add the rest, and `hub.ts` adds copy, collapse
@@ -72,6 +72,7 @@ export const HUB_CODE_THEMES = {
   light: HUB_CODE_THEME_LIGHT.name!,
 };
 
+/** A fence's meta, parsed (`parseFenceMeta`) */
 export type HubFenceOptions = {
   title: string;
   /** The raw meta, for shiki's `{3,5-7}` (`transformerMetaHighlight`) */
@@ -81,7 +82,7 @@ export type HubFenceOptions = {
 };
 
 /** `title="space.ts" {3,5-7} startLine=40 wrap`; anything else warns */
-export const parseFenceMeta = (meta: string, warn: (message: string) => void): HubFenceOptions => {
+const parseFenceMeta = (meta: string, warn: (message: string) => void): HubFenceOptions => {
   const options: HubFenceOptions = { title: '', meta, startLine: 1, flags: new Set() };
   const regex = /(\w+)=(?:"([^"]*)"|'([^']*)'|(\S+))|\{([^}]*)\}|(\S+)/g;
   for (const match of meta.matchAll(regex)) {
@@ -247,7 +248,7 @@ ${expand}</div>
  * `::: code-group` around fences: a tab per fence, labelled by its title (else its language).
  * The tabs are rendered here; without JS they're hidden and every block shows with its title.
  */
-registerHubDirective('code-group', {
+export const codeGroupDirective: HubDirective = {
   open: (_args, { env, line, tokens, idx }) => {
     const fences: Token[] = [];
     // The group's direct children are at depth 0; the first closing token there is its own
@@ -276,7 +277,7 @@ registerHubDirective('code-group', {
     return `<div class="hubCodeGroup">\n<div class="hubCodeTabs" role="tablist" aria-label="Code">${tabs.join('')}</div>\n`;
   },
   close: () => '</div>\n',
-});
+};
 
 // --- Inline code ---
 

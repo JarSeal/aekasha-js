@@ -32,6 +32,7 @@ export const SBP_PLACEHOLDER_REGEX = /\{\{sbp:([^}]*)\}\}/g;
 /** Gzip bytes as the page shows them: `300.6 KiB` (a no-break space) */
 export const formatHubKiB = (bytes: number) => `${(bytes / 1024).toFixed(1)} KiB`;
 
+/** A `{{sbp:…}}` value: its text, an error, or a report that lacks it */
 export type SbpValue = { value: string } | { error: string } | { missing: string };
 
 type Measure = (report: ProfileReport, arg: string) => SbpValue;

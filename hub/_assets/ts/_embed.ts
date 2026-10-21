@@ -81,7 +81,7 @@ const startEmbed = async (panel: HTMLElement, isMotionAsked: boolean) => {
     panel.classList.add('hubEmbed_live');
     initPauseButton(panel, handle);
   } catch (err) {
-    // eslint-disable-next-line no-console
+    // eslint-disable-next-line no-console -- a failed load's error, for the console (the page says it failed)
     console.error('[Hub] The live scene failed to load:', err);
     setStatus(panel, 'The live scene didn’t load: the picture is a still of it.');
   } finally {

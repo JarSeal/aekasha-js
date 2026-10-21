@@ -5,7 +5,7 @@ import { escapeHtml } from '../html';
 import { Kind, type DeclarationReflection, type SignatureReflection, type SomeType } from './model';
 
 /**
- * Signatures and types as TypeScript (p553 §2.2), printed from TypeDoc's model and highlighted
+ * Signatures and types as TypeScript, printed from TypeDoc's model and highlighted
  * with the Hub's shiki themes. The printer writes segments: a named type remembers the reflection
  * it refers to, so the highlighted code can link it.
  */
@@ -13,6 +13,10 @@ import { Kind, type DeclarationReflection, type SignatureReflection, type SomeTy
 /** A piece of printed code; `target` is the reflection id a named type refers to */
 export type CodeSegment = { text: string; target?: number };
 
+/**
+ * A signature's text as segments, each optionally linked to a reflection id (the highlighter links
+ * them)
+ */
 export class CodeWriter {
   readonly segments: CodeSegment[] = [];
   length = 0;
@@ -43,7 +47,7 @@ const SIGNATURE_LINE_MAX = 90;
 /** A type alias's union or conditional type longer than this gets a line per member or branch */
 const TYPE_LINE_MAX = 90;
 
-export const COLLAPSED_OBJECT = '{ … }';
+const COLLAPSED_OBJECT = '{ … }';
 
 /** Where a type sits: what it needs parentheses around */
 const Prec = {
@@ -58,6 +62,7 @@ const Prec = {
 } as const;
 type Prec = (typeof Prec)[keyof typeof Prec];
 
+/** How `printTypeOnly` and the signature printers lay out a type */
 export type PrintOptions = {
   /** Object literal types with members print as `{ … }` (a table shows them) */
   collapseObjects?: boolean;
@@ -81,7 +86,7 @@ export const getObjectMembers = (type: SomeType | undefined) =>
 const isCollapsible = (type: SomeType | undefined) =>
   type?.type === 'reflection' && getObjectMembers(type).length > 0;
 
-export const printType = (
+const printType = (
   w: CodeWriter,
   type: SomeType | undefined,
   options: PrintOptions = {},

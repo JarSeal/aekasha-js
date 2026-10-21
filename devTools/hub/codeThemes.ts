@@ -1,7 +1,7 @@
 import type { ThemeRegistration } from 'shiki';
 
 /**
- * The Hub's two syntax themes (p552 §2.1), built from its tokens (`hub/_assets/scss/_tokens.scss`):
+ * The Hub's two syntax themes, built from its tokens (`hub/_assets/scss/_tokens.scss`):
  * the cyan accent for keywords, and a few restrained hues for the rest. Rendered together as CSS
  * variables (`--shiki-dark`, `--shiki-light`) and switched by the Hub's theme (`_code.scss`). The
  * background is the stylesheet's `--hub-code-bg`, not the theme's.
@@ -159,8 +159,13 @@ const createTheme = (name: string, type: 'dark' | 'light', p: Palette): ThemeReg
   ],
 });
 
+/** The dark syntax theme (the Hub's default) */
 export const HUB_CODE_THEME_DARK = createTheme('aekasha-dark', 'dark', DARK);
+/** The light syntax theme (the Hub's light mode) */
 export const HUB_CODE_THEME_LIGHT = createTheme('aekasha-light', 'light', LIGHT);
 
-/** For the contrast check (`_code.scss`'s line tints are drawn over `bg`) */
+/**
+ * The palettes, for `codeThemes.test.ts`' contrast check (`_code.scss`' line tints are drawn
+ * over `bg`)
+ */
 export const HUB_CODE_PALETTES = { dark: DARK, light: LIGHT };

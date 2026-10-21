@@ -8,7 +8,7 @@ import { HUB_API_CACHE_FILE, PACKAGE_JSON_FILE, ROOT, toRepoPath, TSCONFIG_FILE 
 import { Kind } from './model';
 
 /**
- * The API model (p553 §2.1): TypeDoc's JSON for the engine and the toolkit, from the
+ * The API model: TypeDoc's JSON for the engine and the toolkit, from the
  * `typedocOptions` in `tsconfig.json` (the entry points and the `_dbg__*` / `*.test.ts` /
  * `index.ts` excludes `yarn docs` uses too). It's cached in `.cache/hub/typedoc.json` with a hash of its
  * inputs (the source files' paths, mtimes and sizes, the configs, the TypeDoc version), and kept
@@ -51,6 +51,7 @@ const ENTRY_PATHS = Object.values(ENTRY_FILES).map((file) => path.join(ROOT, fil
 /** The child process's entry, run through tsx */
 const CHILD_PROCESS_ENTRY = path.join(ROOT, 'devTools', 'hub', 'api', 'extractProcess.ts');
 
+/** One of the conversion's errors or warnings, with its file and line when TypeDoc gave one */
 export type ApiExtractMessage = {
   level: 'error' | 'warning';
   message: string;
@@ -76,6 +77,7 @@ export type ApiEntry = {
   exports: ApiEntryExport[];
 };
 
+/** The API model: TypeDoc's JSON project and the entries' names, under its inputs' hash */
 export type ApiModel = {
   /** The inputs' hash: an unchanged one is the same model */
   hash: string;
@@ -86,6 +88,7 @@ export type ApiModel = {
   messages: ApiExtractMessage[];
 };
 
+/** A conversion's outcome: the model (or null), its messages, and whether the cache served it */
 export type ApiExtractResult = {
   /** Null when the conversion failed (`messages` says why) */
   model: ApiModel | null;
@@ -128,7 +131,7 @@ const getTypedocVersion = () =>
   ).version;
 
 /** The hash of everything the model is built from */
-export const hashApiInputs = () => {
+const hashApiInputs = () => {
   const files = [
     ...SOURCE_DIRS.flatMap((dir) => (fs.existsSync(dir) ? listSourceFiles(dir) : [])),
     ...fs

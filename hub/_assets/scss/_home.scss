@@ -1,4 +1,4 @@
-// The homepage (p551 Phase 3's skeleton; p555 fills it): the hero, then the featured sections
+// The homepage: the hero, then the featured sections
 // beside a side column of panels
 @use 'tokens' as *;
 
@@ -243,7 +243,7 @@
   }
 }
 
-// "What's new" (p555 Phase 2): the changelog's latest entry, a row per part it bumped
+// "What's new": the changelog's latest entry, a row per part it bumped
 .hubWhatsNewMeta {
   display: flex;
   flex-wrap: wrap;

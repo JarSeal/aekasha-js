@@ -228,6 +228,7 @@ export const splitSections = (body: string) => {
   }));
 };
 
+/** The search payload's file, with its document counts */
 export type HubSearchIndexFile = HubAssetFile & {
   docCount: number;
   pageDocCount: number;
@@ -366,6 +367,7 @@ export const buildSearchIndex = (
  */
 const SEARCH_INDEX_WARN_GZIP_BYTES = 450 * 1024;
 
+/** A size in KiB, or MiB from 1 MiB */
 export const formatBytes = (bytes: number) =>
   bytes < 1024 * 1024
     ? `${Math.round(bytes / 1024)} KiB`

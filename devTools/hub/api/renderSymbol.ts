@@ -61,8 +61,13 @@ const MAX_ROW_DEPTH = 3;
 
 // --- Render context ---
 
+/** A source position's link: GitHub at the build's commit in `public`, the editor in `dev` */
 export type SourceLink = (source: JSONOutput.SourceReference) => string;
 
+/**
+ * What rendering a page's symbols needs: the model, the public API, the links, the highlighter and
+ * the page's Markdown env
+ */
 export type Ctx = {
   index: ApiIndex;
   api: PublicApi;
@@ -129,6 +134,10 @@ export const resolveCommentLink = (index: ApiIndex, links: ApiLinks, part: Inlin
   return result.isOk ? result.target : undefined;
 };
 
+/**
+ * Resolves a comment's `{@link}`s from the page being rendered; one to an internal or unknown name
+ * is code with a warning
+ */
 export const commentLinks =
   (ctx: Ctx): CommentLinkResolver =>
   (part) => {
@@ -164,12 +173,14 @@ const renderBlock = (ctx: Ctx, markdown: string, line = 1) => {
   );
 };
 
+/** Inline Markdown from a comment, with HTML off (a comment's `<T>` is text) */
 export const renderInline = (ctx: Ctx, markdown: string) => {
   if (!markdown.trim()) return '';
   ctx.env.file = ctx.file;
   return withoutHtml(ctx.md, () => ctx.md.renderInline(markdown, ctx.env));
 };
 
+/** A heading with its anchor link, added to the page's headings (its TOC) */
 export const heading = (
   ctx: Ctx,
   level: number,
@@ -187,6 +198,7 @@ const anchorHeading = (ctx: Ctx, level: number, anchor: string, text: string, in
   return heading(ctx, level, anchor, text, inner);
 };
 
+/** An h2 with an id unique on the page */
 export const sectionHeading = (ctx: Ctx, title: string, id: string) =>
   heading(ctx, 2, uniqueId(ctx.env, id), title);
 
@@ -201,12 +213,14 @@ const codeBlock = (ctx: Ctx, w: CodeWriter, prefix?: string) =>
 const percent = ({ documented, total }: Coverage) =>
   total ? Math.round((documented / total) * 100) : 100;
 
+/** A coverage bar: the documented share of the exports, with the counts for screen readers */
 export const renderCoverage = (coverage: Coverage) => {
   const value = percent(coverage);
   const label = `${value}% documented: ${coverage.documented} of ${coverage.total} exports`;
   return `<span class="hubApiCoverage" title="${label}"><span class="hubApiCoverageBar" style="--hub-api-coverage: ${value}%" aria-hidden="true"></span><span class="hubApiCoverageText">${coverage.documented}/${coverage.total}</span><span class="hubVisuallyHidden"> exports documented</span></span>`;
 };
 
+/** A symbol's summary: its comment's, else its first signature's that has one */
 export const symbolSummary = (symbol: DeclarationReflection) =>
   symbol.comment?.summary.length
     ? symbol.comment.summary
@@ -452,6 +466,7 @@ const KIND_LABELS: Record<number, string> = {
   [Kind.Module]: 'module',
 };
 
+/** A class or interface member's kind badge by reflection kind */
 export const MEMBER_KIND_LABELS: Record<number, string> = {
   [Kind.Constructor]: 'constructor',
   [Kind.Method]: 'method',
@@ -459,6 +474,7 @@ export const MEMBER_KIND_LABELS: Record<number, string> = {
   [Kind.Property]: 'property',
 };
 
+/** An export's kind badge (`function`, `type`, `let` for a non-const variable, …) */
 export const kindLabel = (symbol: DeclarationReflection) =>
   symbol.kind === Kind.Variable && !symbol.flags.isConst
     ? 'let'

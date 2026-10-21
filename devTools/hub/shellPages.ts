@@ -34,6 +34,7 @@ import type { HubPage } from './types';
  */
 const notFoundBaseTag = (basePath: string) => `<base href="${escapeHtml(basePath)}" />`;
 
+/** A built 404 page with its `<base>` moved to `basePath` */
 export const rebaseNotFoundPage = (html: string, basePath: string) =>
   html.replace(/<base href="[^"]*" \/>/, notFoundBaseTag(basePath));
 
@@ -63,6 +64,7 @@ export type HubShellPages = {
   errorPage: (item: RenderedPage | null, errors: HubDiagnostic[]) => string;
 };
 
+/** A build's shell pages, sharing its site values (see `HubShellPages`) */
 export const createShellPages = (opts: {
   shell: string;
   notFoundBody: string;

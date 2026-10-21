@@ -4,29 +4,35 @@ import { ROOT } from '../paths';
 /** The repo root (`devTools/paths.ts`') */
 export { ROOT };
 
-/** The Hub's sources (p550 §3.2) */
+/** The Hub's sources */
 export const HUB_DIR = path.join(ROOT, 'hub');
+/** The site settings (a Vite config dependency: a change restarts the dev server) */
 export const HUB_CONFIG_FILE = path.join(HUB_DIR, 'hub.config.ts');
+/** The pages: one folder per URL */
 export const HUB_PAGES_DIR = path.join(HUB_DIR, 'pages');
-export const HUB_LAYOUT_DIR = path.join(HUB_DIR, '_layout');
+const HUB_LAYOUT_DIR = path.join(HUB_DIR, '_layout');
+/** The frame every page goes into */
 export const HUB_SHELL_FILE = path.join(HUB_LAYOUT_DIR, 'shell.html');
 /** The 404 page's body, put into the shell like a page's */
 export const HUB_NOT_FOUND_FILE = path.join(HUB_LAYOUT_DIR, '404.html');
+/** The SCSS, the TS, and the static folders */
 export const HUB_ASSETS_DIR = path.join(HUB_DIR, '_assets');
+/** The stylesheet's entry: `_assets/hub.css` */
 export const HUB_SCSS_ENTRY = path.join(HUB_ASSETS_DIR, 'scss', 'hub.scss');
 /** Every `.ts` file directly in it (not `_*.ts`) is an entry, built to `_assets/<name>.js` */
 export const HUB_TS_DIR = path.join(HUB_ASSETS_DIR, 'ts');
-/** Dev builds only: the dev plugin's client (p551 Phase 2), built to `_assets/hub-dev.js` */
+/** Dev builds only: the dev plugin's client, built to `_assets/hub-dev.js` */
 export const HUB_DEV_CLIENT_FILE = path.join(HUB_TS_DIR, '_devClient.ts');
 /** Copied as they are into `_assets/<name>/` */
 export const HUB_STATIC_ASSET_DIRS = ['icons', 'fonts', 'images'];
 /** The icons, also inlined into the pages (`devTools/hub/icons.ts`) */
 export const HUB_ICONS_DIR = path.join(HUB_ASSETS_DIR, 'icons');
 
-/** The outputs (p550 §3.5) */
+/** The outputs */
 export const HUB_DEV_OUT_DIR = path.join(ROOT, '.cache', 'hub', 'dev');
 /** Where the dev plugin serves `HUB_DEV_OUT_DIR` */
 export const HUB_DEV_URL_BASE = '/hub/';
+/** `yarn hub:build`'s default output */
 export const HUB_DIST_DIR = path.join(ROOT, 'dist-hub');
 /** The app's build: `AEK_HUB_IN_DIST=true` copies the Hub into its `hub/` */
 export const APP_DIST_DIR = path.join(ROOT, 'dist');
@@ -34,13 +40,14 @@ export const APP_DIST_DIR = path.join(ROOT, 'dist');
 /** The versions and packages (`getProjectMetadata`) */
 export const PACKAGE_JSON_FILE = path.join(ROOT, 'package.json');
 
-/** The TypeScript config: its `typedocOptions` are the API docs' entry points (p553) */
+/** The TypeScript config: its `typedocOptions` are the API docs' entry points */
 export const TSCONFIG_FILE = path.join(ROOT, 'tsconfig.json');
-/** The API model's cache: TypeDoc's JSON and the hash of its inputs (p553 §2.1) */
+/** The API model's cache: TypeDoc's JSON and the hash of its inputs */
 export const HUB_API_CACHE_FILE = path.join(ROOT, '.cache', 'hub', 'typedoc.json');
 
-/** The generated sections' sources (p551 §2.5) */
+/** The generated sections' sources */
 export const ISSUES_DIR = path.join(ROOT, 'docs', 'issues');
+/** The Version section's changelog */
 export const CHANGELOG_FILE = path.join(ROOT, 'CHANGELOG.md');
 
 /** The Hub's own favicons (the app's glyph in the Hub's accent), copied to the Hub's root */
@@ -51,8 +58,9 @@ export const FAVICON_FILES = ['favicon.ico', 'favicon.svg', 'apple-touch-icon.pn
 /** The output folder for a page's Markdown images: `_assets/images/pages/<page path>` */
 export const PAGE_IMAGES_URL_DIR = '_assets/images/pages/';
 
-/** The app's scenes (p554): the generated data lists them, a scene file's path is from `src/app/` */
+/** The app's scenes: the generated data lists them, a scene file's path is from `src/app/` */
 export const APP_DATA_FILE = path.join(ROOT, 'src', 'generated', 'generatedAppData.json');
+/** The app's sources: a scene's `sceneFile` is relative to it */
 export const APP_SRC_DIR = path.join(ROOT, 'src', 'app');
 /** The output folder for the scenes' Hub images: `_assets/images/scenes/<sceneId>-<width>.webp` */
 export const SCENE_IMAGES_URL_DIR = '_assets/images/scenes/';

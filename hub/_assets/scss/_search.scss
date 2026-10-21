@@ -1,4 +1,4 @@
-// The search dialog (p552 §2.4, `_search.ts`): a native modal <dialog>, centred near the top on
+// The search dialog (`_search.ts`): a native modal <dialog>, centred near the top on
 // wide screens and the whole screen on a phone
 
 // The page stays put behind the dialog
@@ -167,7 +167,7 @@ html:has(.hubSearch[open]) {
   line-height: 1.35;
 }
 
-// An API result (p553): its kind, coloured like the API pages' (`.hubApiKind`), and its name
+// An API result: its kind, coloured like the API pages' (`.hubApiKind`), and its name
 .hubSearchKind {
   margin-right: 0.5rem;
   padding-block: 0;

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { ROOT } from './paths';
 
 /**
- * Snippet includes (p552 §2.3): `<<< path/from/repo/root.ts#region {meta}` shows a file's region
+ * Snippet includes: `<<< path/from/repo/root.ts#region {meta}` shows a file's region
  * (or the whole file, or `#L10-L24`) as a code block, so a page shows the real code and can't
  * drift from it. A region is marked in the source with `#region name` / `#endregion name` in a
  * comment of any style (`//`, `/* *\/`, `<!-- -->`, `#`). The marker lines are dropped (nested
@@ -47,6 +47,7 @@ const MARKER_REGEX =
 
 const LINE_RANGE_REGEX = /^L(\d+)(?:-L?(\d+))?$/;
 
+/** A `<<<` line, parsed (`parseSnippetSpec`) */
 export type HubSnippetSpec = {
   /** As written, from the repo root */
   path: string;
@@ -56,6 +57,7 @@ export type HubSnippetSpec = {
   meta: string;
 };
 
+/** An included snippet's code and language */
 export type HubSnippet = {
   code: string;
   lang: string;
@@ -63,6 +65,7 @@ export type HubSnippet = {
   startLine: number | null;
 };
 
+/** A snippet read (`readSnippet`), or why it couldn't be */
 export type HubSnippetResult =
   | ({ isOk: true; file: string } & HubSnippet)
   /** `file`: the resolved file when it's inside the repo (watched even when it's missing) */
@@ -82,7 +85,7 @@ export const parseSnippetSpec = (text: string): HubSnippetSpec => {
 const isInside = (dir: string, file: string) => file.startsWith(dir + path.sep);
 
 /** Removes the lines' shared indentation, and the blank lines around them */
-export const dedent = (lines: string[]) => {
+const dedent = (lines: string[]) => {
   let start = 0;
   let end = lines.length;
   while (start < end && !lines[start].trim()) start++;

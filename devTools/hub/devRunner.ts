@@ -55,14 +55,17 @@ export type HubDevRunnerDeps = {
   debounceMs?: number;
 };
 
+/** An API conversion's end: whether it succeeded, and how long TypeDoc took */
 export type HubApiExtract = { isOk: boolean; durationMs: number };
 
+/** The runner's terminal: the plugin's `console`, a test's spies */
 export type HubDevLog = {
   info: (message: string) => void;
   warn: (message: string) => void;
   error: (message: string, err?: unknown) => void;
 };
 
+/** The dev Hub's runs, as the plugin drives them (`createHubDevRunner`) */
 export type HubDevRunner = {
   /** A file under `hub/` changed (`fs.watch`) */
   onHubFileEvent: (file: string) => void;

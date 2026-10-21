@@ -189,7 +189,7 @@ The build checks the coverage both ways (when it runs in the repo, where CLAUDE.
 - Use it for what only people working on the repo need: its test and verify commands, the test bridge.
 - The text after the name is the box's title (inline Markdown, default "Working on the repo").
 - `yarn hub:build` doesn't check the links inside it. The dev server does, and shows their errors on the page.
-- Another directive gets the same behaviour with `devOnly: true` in its `registerHubDirective` definition.
+- Another directive gets the same behaviour with `devOnly: true` in its `HubDirective`.
 
 ## Callouts
 
@@ -214,7 +214,7 @@ Nested.
 ::::
 ```
 
-The other directives are `code-group` ([Code groups](#code-groups)), `scene` ([Scene panels](#scene-panels)), `cards` ([Cards](#cards)), `claude-md` ([CLAUDE.md sections](#claudemd-sections)) and `dev-only` ([Local-only content](#local-only-content)). A new one is added through `registerHubDirective(name, { open, close })` in `devTools/hub/markdown.ts`, without touching the parser.
+The other directives are `code-group` ([Code groups](#code-groups)), `scene` ([Scene panels](#scene-panels)), `cards` ([Cards](#cards)), `claude-md` ([CLAUDE.md sections](#claudemd-sections)) and `dev-only` ([Local-only content](#local-only-content)). A new one is a `HubDirective` (`{ open, close }`) exported by its module and added to `HUB_DIRECTIVES` in `devTools/hub/build.ts`, without touching the parser.
 
 ## Code blocks
 

@@ -47,8 +47,7 @@
   "type": "module",
   "sideEffects": [
     "**/*.scss",
-    "**/*.css",
-    "./devTools/**"
+    "**/*.css"
   ],
   "scripts": {
     "gatherAppData": "tsx ./devTools/gatherAppData.ts",

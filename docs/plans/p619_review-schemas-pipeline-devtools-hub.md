@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented
+Status: in progress | Phases 0-6 implemented
 Category: Refactoring, Documentation, Dev tooling
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -1266,7 +1266,7 @@ As built (2026-10-21, on `aece8b0`):
   `AsteroidCraterOptions`, `TerrainNoiseOctave`), not 3. D15's "`intro.md` per entry" is done
   (the text and the entry table's links).
 
-### Phase 6: the rest of the Hub generator and the search (D7, D10, D11, D16)
+### Phase 6: the rest of the Hub generator and the search (D7, D10, D11, D16) — done
 
 The search cuts and `hub-data.js`, `buildHub`'s and the plugin's splits, the dev rebuild costs
 (measured against Phase 0), the citations and the dead exports, the generator's tests.
@@ -1429,6 +1429,53 @@ As built (2026-10-21, uncommitted):
     first build and an SCSS save, true for a page save).
   - Docs: `devTools/hub/CLAUDE.md` (the times, what a rebuild reuses, the gzip in `public` only).
   - Checks: `yarn test` 1113 passed (136 files), lint, both `tsc`.
+- **Section 4, the hygiene (D11) and the docs.**
+  - Citations: the 81 of the deleted p550-p555 in the generator, the plugin, `hubBuild.ts`, the
+    Hub's TS, SCSS and `hub.config.ts` (most were bare `(p553 §2.5)`s; the few that said
+    something, like "p552's 1 MB", now say it), and the four in `hub/CLAUDE.md` and
+    `devTools/hub/CLAUDE.md`. The other plans the generator cites still exist (p601, p605, p606,
+    p608, p611, p612, p618, p619) and stay. Stale text they sat in was fixed: `render.ts`'
+    header and `_api.scss` still described module pages. **For Phase 8:** the root `CLAUDE.md`
+    still cites p550, p551 and p554 (five places, the start scene, the Æ symbol, the Hub tab).
+  - Exports: 18 runtime exports nothing else imports are module-private (`hashApiInputs`,
+    `printType`, `parseFenceMeta`, `isHubLink`, `isRepoLink`, `parseHubLink`, `sortPages`,
+    `dedent`, `HUB_LAYOUT_DIR`, `HUB_CONTENT_TYPES`, …). **Not in the plan:** the 19th,
+    `HUB_CODE_PALETTES`, was exported "for the contrast check" that was never written:
+    `codeThemes.test.ts` is it (every colour of both themes at WCAG AA on `--hub-code-bg` and on
+    the four line tints, read from `_tokens.scss`, and the palettes' `bg` equal to it). It passes.
+  - Summaries on the scope's 112 undocumented exports (p600 §5's bar for the devTools; not
+    listed in the section, Phase 4 did the same for its scope).
+  - K1: the three file-wide `no-console` disables (`hubBuild.ts`, `hubPreview.ts`,
+    `hubPlugin.ts`) and the browser side's four `no-console` lines have their reasons. K2:
+    `hubBuild.ts`' `fail` is `function fail(…): never` (no cast depended on it; `embed.ts`' and
+    `extract.ts`' `fail`s return values, so they stay). K3: `repoFiles.ts` lists the nested
+    CLAUDE.md files through `devTools/git.ts`' `readGit`.
+  - `buildPublicApi` 163 → 132 lines: `addGroupPages` and `addCoverage`.
+  - **H6, the directive registry:** each directive is a `HubDirective` its module exports
+    (`codeGroupDirective`, `sceneDirective`, `embedDirective`, `cardsDirective`,
+    `claudeMdDirective`); `build.ts`' `HUB_DIRECTIVES` lists them, and `createHubMarkdown` takes
+    them over its own (the callouts and `dev-only`, now a table). `registerHubDirective` and
+    `import './cards'` are gone, so nothing in the Hub registers at load, and **`package.json`'s
+    `sideEffects` lost `./devTools/**`** (the root `CLAUDE.md`'s line says why it's not needed).
+    Checked without it: every directive renders on the dev server (cards, scene, embed,
+    code-group, claude-md, the callouts), a save gathers, `yarn verify:devFiles` 61 / 61, and
+    `vite build` of the app is the same bytes with and without the entry.
+  - D14: `snippets.test.ts` (18: the spec's parse; a region with nested markers, any comment
+    style, lines numbered as in the file and not when a dropped marker shifts them, a whole file,
+    JSON whole and by lines; each error: no such region (with the names), twice, unclosed, a
+    line range out of the file, a JSON region, empty, missing, not text, a symlink out of the
+    repo, absolute, outside, none given; a missing file's path kept for the watcher), in a folder
+    under `.cache/`.
+  - `dist-hub/` the same as section 3's, file for file (the build time, status and commit aside).
+  - Docs: `hub/CLAUDE.md` (the directives, the contrast test), `hub-authoring.md` (a new
+    directive), the root `CLAUDE.md` (`sideEffects`).
+  - Checks: `yarn test` 1134 passed (138 files), lint, both `tsc`; `yarn hub:build` with Phase
+    5's warnings only (the toolkit's 4, `{@link getRandomStream}`).
+- **For Phase 8 (D2, D3):** Project items: the search payload (`hub-data.js` removed, the
+  `<meta>`, the gzip warning), the generator's split and the dev runner, the dev rebuild times,
+  the shared work queue, the directives as a list and `sideEffects` without `./devTools/**`, the
+  contrast test. No engine, toolkit or app file changed in Phase 6 (the `eslint-disable` reasons
+  in `hub/_assets/ts` are the Hub's).
 
 ### Phase 7: verify, sbp and refactor (D9, D12, D13)
 

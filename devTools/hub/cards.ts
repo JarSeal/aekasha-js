@@ -1,17 +1,17 @@
 import { escapeHtml } from './html';
-import { registerHubDirective, type HubMarkdownEnv } from './markdown';
+import type { HubDirective, HubMarkdownEnv } from './markdown';
 import { getPageImageSources } from './scenes';
 import { pageHref } from './shell';
 import type { HubPage } from './types';
 
 /**
- * `::: cards <page path> [featured] [group=<name>]` … `:::` (p554 Phase 5, p555 §2.2): a card per
+ * `::: cards <page path> [featured] [group=<name>]` … `:::`: a card per
  * child page of the page at `<page path>` (`examples`), in menu order (`aek:order`, then label),
  * each a link with the child's `aek:image` (else its `aek:icon`), menu label and
  * `aek:description`. `featured` keeps the children with `aek:featured`, `group=<name>` those
  * with that `aek:group` (the Features page's groups). The list gets `hubCards_featured` with
  * `featured`, and `hubCards_icons` when no card has an image: the homepage's featured features
- * are icon columns, its featured examples image cards (p555 Phase 2). Every page's image is resolved before any
+ * are icon columns, its featured examples image cards. Every page's image is resolved before any
  * page renders (`build.ts`), so a card can show it. The directive takes no content. Out of the
  * search: each card's page has its own results.
  */
@@ -69,7 +69,11 @@ const renderCardMedia = (page: HubPage, env: HubMarkdownEnv, line: number) => {
 const renderCard = (page: HubPage, media: string, env: HubMarkdownEnv) =>
   `<li class="hubCard"><a class="hubCardLink" href="${pageHref(env.root, page)}">${media}<span class="hubCardBody"><span class="hubCardTitle">${escapeHtml(page.menu)}</span>${page.description ? `<span class="hubCardText">${escapeHtml(page.description)}</span>` : ''}</span></a></li>`;
 
-registerHubDirective('cards', {
+/**
+ * `::: cards <page path> [featured] [group=<name>]`: the page's children as cards (see the module's
+ * comment)
+ */
+export const cardsDirective: HubDirective = {
   open: (args, { env, line, tokens, idx }) => {
     if (tokens[idx + 1]?.type !== 'hub_directive_close') {
       env.diag.warn(env.file, line, '::: cards takes no content: it renders after the cards');
@@ -114,4 +118,4 @@ registerHubDirective('cards', {
     return `<ul class="${['hubCards', ...modifiers, 'hubSearchSkip'].join(' ')}">\n${cards.join('\n')}\n</ul>\n`;
   },
   close: () => '',
-});
+};

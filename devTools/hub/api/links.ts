@@ -3,7 +3,7 @@ import { getOwnMembers, Kind, type ApiIndex, type ApiTarget } from './model';
 import type { PublicApi } from './publicApi';
 
 /**
- * Links into the API pages (p553 §2.3), which hold the public entries' names only (p619 D6):
+ * Links into the API pages, which hold the public entries' names only (p619 D6):
  * - by reflection id: a `{@link}` TypeDoc resolved, a type in a signature. A reflection without
  *   an anchor of its own (a type alias's property, a parameter, a signature) links to its nearest
  *   owner that has one; an internal export's has none;
@@ -31,6 +31,7 @@ export type CommentApiLink = {
   line?: number;
 };
 
+/** The links into the API pages: by reflection id (signatures, `{@link}`) and by name (`api:`) */
 export type ApiLinks = {
   /** A reflection's page and anchor: its own, else its nearest owner's */
   resolveId: (id: number) => ApiTarget | undefined;

@@ -466,7 +466,7 @@ export const openSearch = (url: string) => {
       if (dialog.open) runSearch();
     })
     .catch((err: unknown) => {
-      // eslint-disable-next-line no-console
+      // eslint-disable-next-line no-console -- a failed load's error, for the console (the page says it failed)
       console.error('[Hub] The search index failed to load:', err);
       showStatus('The search could not load. Check the connection and try again.');
     });

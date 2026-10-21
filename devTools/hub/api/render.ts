@@ -45,12 +45,12 @@ import {
 } from './renderSymbol';
 
 /**
- * The Documentation section (p553 §2.2): the engine's and the toolkit's API as Hub pages, from
- * the API model (`extract.ts`). A generated section on `documentation/`: its landing slot lists
- * the modules by folder with their coverage, then an A-Z index; each folder and each module gets
- * a page. A module page has a section per kind (functions, classes, interfaces, type aliases,
- * enums, variables), and each symbol its anchor (`#loadScene`), its signature, its comment, its
- * parameters, and a link to its source (GitHub at the build's commit, or the editor in dev).
+ * The Documentation section: the engine's and the toolkit's public API as Hub pages, from the API
+ * model (`extract.ts`). A generated section on `documentation/`: its landing slot lists each
+ * subtree's entries with their folders and coverage, then an A-Z index; each entry gets a page
+ * (`publicApi.ts`; `aekasha` one per source folder too) with a section per source module, and each
+ * name its anchor (`#loadScene`), its signature, its comment, its parameters, and a link to its
+ * source (GitHub at the build's commit, or the editor in dev).
  * This module makes the pages and the section; a symbol's rendering is `renderSymbol.ts`, the
  * search's documents `apiSearch.ts`.
  *
@@ -73,6 +73,10 @@ const shorten = (text: string, max: number) =>
  */
 export type ApiModelSource = 'current' | 'last' | 'none';
 
+/**
+ * The API docs' numbers for `yarn hub:build`'s line: the model's reuse and time, the entries, names
+ * and coverage
+ */
 export type ApiBuildStats = {
   isCached: boolean;
   extractMs: number;
@@ -83,6 +87,10 @@ export type ApiBuildStats = {
   coverage: Coverage;
 };
 
+/**
+ * The Documentation section for a build, with its stats, its links for `api:` and whether the model
+ * is stale
+ */
 export type ApiSectionResult = {
   section: HubGeneratedSection;
   /** Null when the model didn't build or there's none (`none`, or `last` before any) */
@@ -434,6 +442,9 @@ const getEntries = (index: ApiIndex, apiEntries: ApiEntry[]) => {
   return result;
 };
 
+/**
+ * What `createApiSection` takes: the build's mode, diagnostics and metadata, and which model to use
+ */
 export type ApiSectionOptions = {
   mode: HubBuildMode;
   diag: HubDiagnostics;

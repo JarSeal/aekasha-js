@@ -28,8 +28,10 @@ export type EntrySymbol = {
   module: ApiModule;
 };
 
+/** An entry the index couldn't map (a name the model lacks): an error at the entry file */
 export type EntryProblem = { file: string; message: string };
 
+/** The public entries' names mapped to their declarations (`indexEntries`) */
 export type ApiEntryIndex = {
   /** In `ENTRY_FILES`' order, each with its names in its file's order */
   entries: { entry: EntryName; file: string; symbols: EntrySymbol[] }[];
@@ -112,6 +114,7 @@ export type LeakNamer = {
   line?: number;
 };
 
+/** A type a public name names that no entry exports (`findLeakedTypes`, R2's check) */
 export type LeakedType = {
   /** Its reflection id, or `<file>#<name>` for a type the model has no reflection for */
   key: string;

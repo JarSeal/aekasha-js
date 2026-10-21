@@ -5,7 +5,7 @@ import { hashContent } from './hash';
 import { escapeHtml } from './html';
 import {
   addImageJob,
-  registerHubDirective,
+  type HubDirective,
   resolveHubLink,
   type HubMarkdownEnv,
   type HubRenderContext,
@@ -21,7 +21,7 @@ import {
 import type { HubPage } from './types';
 
 /**
- * The app's scenes on Hub pages (p554 §2.4-2.5):
+ * The app's scenes on Hub pages:
  * - `::: scene <sceneId>` … `:::`: the scene's Hub image, the directive's content, and in `dev`
  *   "Open in debug" / "Open in prod test" buttons (`?startScene=<sceneId>`), in `public` a note
  *   on running it locally;
@@ -43,11 +43,12 @@ export type HubAppScene = {
   imageFile: string;
 };
 
+/** The app's scenes by id, or why they couldn't be read (no generated data) */
 export type HubAppScenes =
   | { byId: Map<string, HubAppScene>; error: null }
   | { byId: null; error: string };
 
-export const HUB_IMAGE_SUFFIX = '.hub.png';
+const HUB_IMAGE_SUFFIX = '.hub.png';
 
 /** The widths a scene's image is converted to: the content column (46rem) at 1x and 2x */
 const SCENE_IMAGE_WIDTHS = [800, 1600];
@@ -205,7 +206,8 @@ export const resolveSceneImageTag = (
     : resolved.replace(/^<img\b/, '<img class="hubSceneRender"');
 };
 
-registerHubDirective('scene', {
+/** `::: scene <sceneId>`: a panel with the scene's Hub image (see the module's comment) */
+export const sceneDirective: HubDirective = {
   open: (args, { env, line }) => {
     const id = args.trim();
     if (!SCENE_ID_REGEX.test(id)) {
@@ -228,7 +230,7 @@ registerHubDirective('scene', {
         `<a class="hubButton" href="/?${param}=true&amp;startScene=${id}" target="_blank" rel="noopener">${env.icons.render(icon, env.file, line)}${label}${env.icons.render('arrow-right', env.file, line)}</a>`;
       return `<p class="hubSceneLinks">${link('isDebug', 'bug', 'Open in debug')}${link('isProdTest', 'play', 'Open in prod test')}</p>\n</div>\n</div>\n`;
     }
-    // The public Hub runs no engine (p550 §1): how to run it, the same for every scene
+    // The public Hub runs no engine: how to run it, the same for every scene
     const quickStart = resolveHubLink(
       'hub:examples/quick-start#install-and-run',
       env,
@@ -237,7 +239,7 @@ registerHubDirective('scene', {
     );
     return `<p class="hubSceneNote">Run it locally: start the dev server (<code>yarn dev</code>, see the <a href="${quickStart}">quick start</a>), then open <code>http://localhost:8080/?isDebug=true&amp;startScene=${id}</code>, or <code>?isProdTest=true&amp;startScene=${id}</code> to run it as in production.</p>\n</div>\n</div>\n`;
   },
-});
+};
 
 /**
  * Checks a page's `aek:image`: a scene's Hub image (`scene:<sceneId>`, a warning while it isn't
@@ -275,6 +277,7 @@ export const resolvePageImage = (
   return { file, dependencies: [file] };
 };
 
+/** A scene image's `src` and `srcset`, and its size for the layout */
 export type HubImageSources = {
   src: string;
   srcset: string;

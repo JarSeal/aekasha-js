@@ -1,4 +1,4 @@
-// The Hub's tokens (p550 §3.7): dark by default, light from the toggle (`data-theme` on <html>,
+// The Hub's tokens: dark by default, light from the toggle (`data-theme` on <html>,
 // saved by hub.ts) or, with nothing saved, from `prefers-color-scheme`. Colours are custom
 // properties; breakpoints are SCSS variables (a media query can't read a custom property).
 

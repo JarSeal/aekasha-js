@@ -5,7 +5,7 @@ import { parseAttributes } from './html';
 import { HUB_ICONS_DIR } from './paths';
 
 /**
- * The Hub's icons (p551 Phase 3): `hub/_assets/icons/<name>.svg`, inlined into the HTML at build
+ * The Hub's icons: `hub/_assets/icons/<name>.svg`, inlined into the HTML at build
  * time so they take the text colour (`currentColor`) and cost no request. Lucide's (ISC,
  * `LICENSE-lucide.txt`) plus the brand marks (`aekasha.svg`, `github.svg`, `three-js.svg`), copies of
  * the engine's 16 × 16 icons (`github.svg` is Bootstrap Icons', MIT, `LICENSE-bootstrap-icons.txt`).
@@ -38,6 +38,7 @@ const toInlineSvg = (name: string, svg: string) => {
   return `<svg class="hubIcon hubIcon_${name}" ${kept.join(' ')} aria-hidden="true" focusable="false">${inner}</svg>`;
 };
 
+/** A build's icons, from `hub/_assets/icons/` (`loadHubIcons`) */
 export type HubIcons = {
   /** The icon's inline `<svg>`, or '' with an error at `file`:`line` when there's none */
   render: (name: string, file: string, line?: number) => string;

@@ -9,10 +9,10 @@ import {
   type HubAssetFile,
 } from './assets';
 import { createApiSection, type ApiBuildStats, type ApiModelSource } from './api/render';
-import './cards'; // Registers the `cards` directive
-import { createHubEmbedState } from './embed'; // Also registers the `embed` directive
-import { checkClaudeMdCoverage } from './claudeMd'; // Also registers the `claude-md` directive
-import { hubCodePlugin, loadHubHighlighter } from './code';
+import { cardsDirective } from './cards';
+import { createHubEmbedState, embedDirective } from './embed';
+import { checkClaudeMdCoverage, claudeMdDirective } from './claudeMd';
+import { codeGroupDirective, hubCodePlugin, loadHubHighlighter } from './code';
 import { applyErrorPages } from './errorPages';
 import { buildSearchIndex, checkSearchIndexSize } from './search';
 import { readSbpReport } from './sbp';
@@ -23,10 +23,10 @@ import type { HubGeneratedSection } from './generated/section';
 import { createVersionSection } from './generated/version';
 import { HubDiagnostics } from './diagnostics';
 import { loadHubIcons } from './icons';
-import { createHubMarkdown, type HubRenderContext } from './markdown';
+import { createHubMarkdown, type HubDirectives, type HubRenderContext } from './markdown';
 import { getHubOutDirError } from './outDir';
 import { discoverPages } from './pages';
-import { loadAppScenes } from './scenes';
+import { loadAppScenes, sceneDirective } from './scenes';
 import { FAVICON_FILES, HUB_NOT_FOUND_FILE, HUB_SHELL_FILE, PACKAGE_JSON_FILE } from './paths';
 import { checkLinks, createMarkupHelpers, renderHubPages, type RenderedPage } from './renderPages';
 import { createShellPages } from './shellPages';
@@ -53,6 +53,7 @@ export type HubBuildAssets = {
   isClean: boolean;
 };
 
+/** What `buildHub` takes */
 export type HubBuildOptions = {
   mode: HubBuildMode;
   outDir: string;
@@ -72,7 +73,7 @@ export type HubBuildOptions = {
    * by itself: an edit and its undo flipped "local changes" and reloaded it (p619 §1.4 H3).
    */
   build?: ProjectMetadata['build'];
-  /** The API docs' model (p553 §2.5): `current` by default, `last` in the dev plugin */
+  /** The API docs' model: `current` by default, `last` in the dev plugin */
   api?: ApiModelSource;
   /**
    * `public`: `::: embed` runs its profile live (copied into `_assets/embed/`), the default, or
@@ -81,6 +82,7 @@ export type HubBuildOptions = {
   isEmbedLive?: boolean;
 };
 
+/** A page as the build wrote it (the dev plugin compares them between runs) */
 export type HubBuiltPage = {
   /** The page's site path ('' the homepage), '404' for the 404 page */
   path: string;
@@ -91,6 +93,9 @@ export type HubBuiltPage = {
   isErrorPage: boolean;
 };
 
+/**
+ * A build's outcome: its diagnostics, pages, assets, sources (the dev plugin's watcher) and numbers
+ */
 export type HubBuildResult = {
   isOk: boolean;
   diag: HubDiagnostics;
@@ -119,15 +124,24 @@ export type HubBuildResult = {
     docCount: number;
     pageDocCount: number;
   } | null;
-  /** The API docs (p553): whether the model was reused, its size, null when it didn't build */
+  /** The API docs: whether the model was reused, its size, null when it didn't build */
   api: ApiBuildStats | null;
   /** `api: 'last'`: the model is older than its inputs, or there's none yet */
   isApiStale: boolean;
   /**
-   * `dev`: the page served for an API page while the API docs rebuild (p553 §2.5), at any depth
+   * `dev`: the page served for an API page while the API docs rebuild, at any depth
    * like the 404 page; not written
    */
   apiRebuildingHtml: string | null;
+};
+
+/** The directives besides the Markdown's own (the callouts, `dev-only`), each its module's */
+const HUB_DIRECTIVES: HubDirectives = {
+  'code-group': codeGroupDirective,
+  scene: sceneDirective,
+  embed: embedDirective,
+  cards: cardsDirective,
+  'claude-md': claudeMdDirective,
 };
 
 /** Reads on the first call only: a build reads the SBP report and the scenes if a page shows them */
@@ -179,6 +193,10 @@ const createSectionsAsync = async (
   return { sections, api };
 };
 
+/**
+ * Builds the Hub into `outDir` (see the module's comment); never throws for a page's error, only
+ * for an `outDir` it may not replace or a failed write
+ */
 export const buildHub = async ({
   mode,
   outDir,
@@ -268,7 +286,7 @@ export const buildHub = async ({
   };
   let pageImageFiles: string[] = [];
   if (tree) {
-    const md = createHubMarkdown().use(hubCodePlugin, {
+    const md = createHubMarkdown(HUB_DIRECTIVES).use(hubCodePlugin, {
       highlighter: await loadHubHighlighter(),
       icons,
     });

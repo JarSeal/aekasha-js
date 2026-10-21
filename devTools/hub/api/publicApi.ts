@@ -25,7 +25,7 @@ import {
  */
 
 /** Over this many names, an entry's page lists its folders, each a page of its own */
-export const MAX_ENTRY_PAGE_NAMES = 150;
+const MAX_ENTRY_PAGE_NAMES = 150;
 
 /** A name an entry exports, where it's listed */
 export type PublicSymbol = {
@@ -42,6 +42,7 @@ export type PublicSymbol = {
   isReexport: boolean;
 };
 
+/** A page's section: one source module and its public names on that page */
 export type ApiPageSection = { module: ApiModule; symbols: PublicSymbol[] };
 
 /**
@@ -50,6 +51,7 @@ export type ApiPageSection = { module: ApiModule; symbols: PublicSymbol[] };
  */
 export type ApiPageKind = 'entry' | 'folder' | 'group';
 
+/** One page of the API reference: an entry's, a large entry's source folder's, or a group's */
 export type ApiPage = {
   kind: ApiPageKind;
   pagePath: string;
@@ -72,6 +74,9 @@ export type ApiPage = {
   coverage: Coverage;
 };
 
+/**
+ * The API reference's layout (`buildPublicApi`): its pages, every name's target, and the problems
+ */
 export type PublicApi = {
   /** Every page, each before its children */
   pages: ApiPage[];
@@ -104,7 +109,7 @@ const kindRank = (kind: number) => {
 };
 
 /** `aekasha/physics` → `documentation/aekasha/physics/` */
-export const getEntryPagePath = (entry: string) => `${API_SECTION_PATH}${entry}/`;
+const getEntryPagePath = (entry: string) => `${API_SECTION_PATH}${entry}/`;
 
 /** A module's folder page under a large entry: a kernel area (`kernel/scene` → `scene`), else
  * its top folder (`utils`) */
@@ -120,6 +125,46 @@ const getFolderSourcePath = (module: ApiModule, key: string) => {
 
 const emptyCoverage = (): Coverage => ({ documented: 0, total: 0 });
 
+const addCoverage = (to: Coverage, from: Coverage) => {
+  to.documented += from.documented;
+  to.total += from.total;
+};
+
+/**
+ * A group page for entries whose specifier's parent isn't a page (`aekasha/toolkit`), listing
+ * them: added to `byPath`, and each such entry to its children
+ */
+const addGroupPages = (entryPages: ApiPage[], byPath: Map<string, ApiPage>) => {
+  for (const page of entryPages) {
+    const parentPath = page.pagePath.replace(/[^/]+\/$/, '');
+    if (parentPath === API_SECTION_PATH || byPath.has(parentPath)) continue;
+    const title = parentPath.slice(API_SECTION_PATH.length, -1);
+    byPath.set(parentPath, {
+      kind: 'group',
+      pagePath: parentPath,
+      title,
+      menu: title,
+      sourcePath: page.sourcePath.replace(/\/[^/]+\/index\.ts$/, ''),
+      subtree: page.subtree,
+      order: page.order,
+      sections: [],
+      children: [],
+      coverage: emptyCoverage(),
+    });
+  }
+  for (const page of entryPages) {
+    const parent = byPath.get(page.pagePath.replace(/[^/]+\/$/, ''));
+    if (parent?.kind !== 'group') continue;
+    parent.children.push(page);
+    addCoverage(parent.coverage, page.coverage);
+  }
+};
+
+/**
+ * Lays out the pages from the entries: a page per entry (a page per source folder over
+ * `maxEntryPageNames`), a group page where a specifier's parent is none, and every public name's
+ * and member's anchor
+ */
 export const buildPublicApi = (
   entries: ApiEntryIndex,
   maxEntryPageNames = MAX_ENTRY_PAGE_NAMES
@@ -241,45 +286,14 @@ export const buildPublicApi = (
       if (!addPage(folder, file)) continue;
       fillSections(folder, folderNames);
       page.children.push(folder);
-      page.coverage.documented += folder.coverage.documented;
-      page.coverage.total += folder.coverage.total;
+      addCoverage(page.coverage, folder.coverage);
     }
   });
 
-  // A group page for entries whose specifier's parent isn't a page (`aekasha/toolkit`)
-  const groups: ApiPage[] = [];
-  for (const page of entryPages) {
-    const parentPath = page.pagePath.replace(/[^/]+\/$/, '');
-    if (parentPath === API_SECTION_PATH || byPath.has(parentPath)) continue;
-    const title = parentPath.slice(API_SECTION_PATH.length, -1);
-    const group: ApiPage = {
-      kind: 'group',
-      pagePath: parentPath,
-      title,
-      menu: title,
-      sourcePath: page.sourcePath.replace(/\/[^/]+\/index\.ts$/, ''),
-      subtree: page.subtree,
-      order: page.order,
-      sections: [],
-      children: [],
-      coverage: emptyCoverage(),
-    };
-    byPath.set(parentPath, group);
-    groups.push(group);
-  }
-  for (const page of entryPages) {
-    const parent = byPath.get(page.pagePath.replace(/[^/]+\/$/, ''));
-    if (parent?.kind !== 'group') continue;
-    parent.children.push(page);
-    parent.coverage.documented += page.coverage.documented;
-    parent.coverage.total += page.coverage.total;
-  }
+  addGroupPages(entryPages, byPath);
 
   const pages = [...byPath.values()].sort((a, b) => a.pagePath.localeCompare(b.pagePath));
   const coverage = emptyCoverage();
-  for (const page of entryPages) {
-    coverage.documented += page.coverage.documented;
-    coverage.total += page.coverage.total;
-  }
+  for (const page of entryPages) addCoverage(coverage, page.coverage);
   return { pages, roots, targets, symbols, coverage, problems };
 };

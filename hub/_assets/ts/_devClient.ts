@@ -7,7 +7,7 @@ import {
 } from '../../../devTools/hub/devProtocol';
 
 /**
- * The Hub's dev client (p551 Phase 2): in dev builds only, as `_assets/hub-dev.js`. It refreshes
+ * The Hub's dev client: in dev builds only, as `_assets/hub-dev.js`. It refreshes
  * the page when the dev plugin (`devTools/hubPlugin.ts`) rebuilt something it shows.
  *
  * It opens its own socket to the dev server's HMR WebSocket and reads only `aek:hub`, instead of
@@ -20,7 +20,7 @@ const POLL_MS = 1000;
 const socketPath = document.querySelector<HTMLMetaElement>(`meta[name="${HUB_DEV_META}"]`)?.content;
 const socketUrl = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${socketPath}`;
 const pagePath = document.body.dataset.hubPage ?? '';
-/** Served for an API page while the API docs rebuild (p553 §2.5), at that page's URL */
+/** Served for an API page while the API docs rebuild, at that page's URL */
 const isApiRebuildingPage = pagePath === HUB_API_REBUILDING_PAGE;
 
 /** The stylesheet at its new version, the old one removed once the new one has loaded */

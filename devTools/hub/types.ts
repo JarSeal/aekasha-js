@@ -1,6 +1,7 @@
 // No imports: `hub/hub.config.ts` imports `HubConfig` from here, and `hub/tsconfig.json` checks it
 // without Node's types.
 
+/** `public` (`yarn hub:build`) or `dev` (the dev plugin) */
 export type HubBuildMode = 'dev' | 'public';
 
 /** `hub/hub.config.ts`'s default export */
@@ -10,13 +11,14 @@ export type HubConfig = {
   /** The homepage's `<meta name="description">` when its page sets none */
   description: string;
   /**
-   * CLAUDE.md sections that aren't features (p555 §2.5, the root's Architecture sections and the
+   * CLAUDE.md sections that aren't features (the root's Architecture sections and the
    * nested files' `## ` ones), by heading without its parenthetical: the coverage check doesn't ask
    * a page's `aek:covers` for them
    */
   coverageIgnore: string[];
 };
 
+/** A heading of a page: the TOC's, the search's */
 export type HubHeading = {
   /** 1-6 */
   level: number;
@@ -25,7 +27,7 @@ export type HubHeading = {
   text: string;
 };
 
-/** An empty element with an `id` in a page's body, filled by `<id>.md` (p550 §3.3) */
+/** An empty element with an `id` in a page's body, filled by `<id>.md` */
 export type HubSlot = {
   id: string;
   /** The element's opening and closing tags, as written */
@@ -37,10 +39,11 @@ export type HubSlot = {
   line: number;
   /** `<id>.md` in the page's folder, or null when there is none */
   mdFile: string | null;
-  /** A generated section's generator fills it (p551 §2.5), never an `.md` */
+  /** A generated section's generator fills it, never an `.md` */
   isGenerated: boolean;
 };
 
+/** A page of the tree: a hand-written one under `hub/pages/`, or a generated section's */
 export type HubPage = {
   /** The URL path from the site root, with a trailing slash: '' (the homepage), 'examples/physics/' */
   path: string;
@@ -63,7 +66,7 @@ export type HubPage = {
   isFeatured: boolean;
   /**
    * `aek:image` as written: `scene:<sceneId>` (the scene's Hub image) or a path from the repo
-   * root. The build checks it and sets `imageFile` (p555's cards show it).
+   * root. The build checks it and sets `imageFile` (`::: cards` shows it).
    */
   image: string;
   /** The image `aek:image` points to, null without one (or when it isn't there) */
@@ -71,7 +74,7 @@ export type HubPage = {
   /** `aek:group`: the group a `::: cards <path> group=<name>` shows it in (the Features page's) */
   group: string;
   /**
-   * `aek:covers`: the CLAUDE.md sections the page covers (p555 §2.5; the root's Architecture
+   * `aek:covers`: the CLAUDE.md sections the page covers (the root's Architecture
    * sections and the nested files' `## ` ones), by heading without its parenthetical (`Debug
    * system`). `::: claude-md` links them in dev.
    */

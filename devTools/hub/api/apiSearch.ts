@@ -25,7 +25,7 @@ const clipSearchSummary = (text: string) => {
 /**
  * The search's API documents (§2.4): each entry, public name and class or interface member, found
  * by its name, with its kind and its summary's first sentence for the result (stored, not indexed,
- * and clipped: the index stays under p552's 1 MB). Empty values are left out, not stored. A second
+ * and clipped: they were the index's largest stored field). Empty values are left out, not stored. A second
  * entry's re-export has none: the name finds its first entry's.
  */
 const createSearchDocs = (api: PublicApi): HubSearchExtraDoc[] => {
@@ -83,6 +83,7 @@ const createSearchDocs = (api: PublicApi): HubSearchExtraDoc[] => {
 
 const searchDocs = new WeakMap<PublicApi, HubSearchExtraDoc[]>();
 
+/** The API's search documents, built once per public API (the model's) */
 export const getSearchDocs = (api: PublicApi) => {
   let docs = searchDocs.get(api);
   if (!docs) searchDocs.set(api, (docs = createSearchDocs(api)));

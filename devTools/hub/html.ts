@@ -6,6 +6,7 @@ const ESCAPES: Record<string, string> = {
   "'": '&#39;',
 };
 
+/** Escapes text for HTML content and quoted attributes */
 export const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (char) => ESCAPES[char]);
 
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };

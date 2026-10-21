@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- the plugin's own log */
 import fs from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import path from 'node:path';
@@ -56,6 +56,7 @@ const sendText = (res: ServerResponse, status: number, text: string) => {
   res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8' }).end(text);
 };
 
+/** The dev server's Hub at `/hub/` (see the module's comment) */
 export const hubPlugin = (): Plugin => {
   /** Stops the watching and the pending run: on the HTTP server's close, or in middleware mode
    * (no HTTP server) on Vite's `closeBundle` when the dev server closes (H3) */

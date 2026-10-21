@@ -6,7 +6,7 @@ import { getEmbedEntryFileName, getEmbedOutDir } from '../sbp/embedPaths';
 import type { SbpProfile } from '../sbp/config';
 import { hashContent } from './hash';
 import { escapeHtml } from './html';
-import { registerHubDirective, type HubMarkdownEnv } from './markdown';
+import type { HubDirective, HubMarkdownEnv } from './markdown';
 import { APP_DATA_FILE, ROOT, toRepoPath } from './paths';
 import { findScene, getSceneImageSources } from './scenes';
 
@@ -37,6 +37,7 @@ export type HubEmbedState = {
   pages: Set<string>;
 };
 
+/** A build's embed state: whether `::: embed` runs live, and the profiles and pages that use one */
 export const createHubEmbedState = (isLive: boolean): HubEmbedState => ({
   isLive,
   used: new Set(),
@@ -44,7 +45,7 @@ export const createHubEmbedState = (isLive: boolean): HubEmbedState => ({
 });
 
 /** From the site root: `_assets/embed/<profile>/` */
-export const EMBED_URL_DIR = '_assets/embed/';
+const EMBED_URL_DIR = '_assets/embed/';
 
 /** The poster in the panel's width (the content column, 46rem) at 1x and 2x */
 const POSTER_WIDTHS = [800, 1600];
@@ -80,7 +81,8 @@ const renderControls = (env: HubMarkdownEnv, line: number) =>
   `<button type="button" class="hubButton hubEmbedPlay" data-hub-embed-play hidden>${env.icons.render('play', env.file, line)}Play the live scene</button>` +
   `<button type="button" class="hubEmbedPause" data-hub-embed-pause aria-label="Pause the scene" hidden><span class="hubEmbedPauseIcon">${env.icons.render('pause', env.file, line)}</span><span class="hubEmbedPlayIcon">${env.icons.render('play', env.file, line)}</span></button>`;
 
-registerHubDirective('embed', {
+/** `::: embed <profile> [height]`: an embed profile's scene, live (see the module's comment) */
+export const embedDirective: HubDirective = {
   open: (args, { env, line }) => {
     const [id = '', height, ...rest] = args.trim().split(/\s+/);
     const fail = (message: string) => {
@@ -129,7 +131,7 @@ registerHubDirective('embed', {
     return `<figure class="hubEmbed"${attrs}>\n<div class="hubEmbedStage" style="${stageSize}">${posterHtml}<div class="hubEmbedTarget" data-hub-embed-target></div>${attrs ? renderControls(env, line) : ''}</div>\n<figcaption class="hubEmbedBody">\n${note}<p class="hubEmbedStatus" data-hub-embed-status hidden></p>\n`;
   },
   close: () => '</figcaption>\n</figure>\n',
-});
+};
 
 /**
  * `public`: copies each embed the pages show (its `dist-embed/<profile>/`, without the build's
