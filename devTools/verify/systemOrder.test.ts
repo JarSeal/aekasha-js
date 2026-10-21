@@ -27,4 +27,10 @@ describe('diffSystemOrders', () => {
       'world "other" is new',
     ]);
   });
+
+  // p619 Phase 0 (§1.4 V6): `includes` and a walk of the old list miss a system registered twice
+  it.fails('names a system registered twice', () => {
+    const current = { default: { MAIN: ['a@0', 'b@0', 'a@0'], APP_LOGIC: ['c@1', 'd@0'] } };
+    expect(diffSystemOrders(baseline, current)).not.toEqual([]);
+  });
 });

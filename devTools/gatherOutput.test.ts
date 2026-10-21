@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 import {
   formatGeneratedAppFns,
@@ -89,6 +90,33 @@ describe('formatGeneratedAppFns', () => {
     expect(text).toContain("import type { SceneData, ScenePrimitiveAssets } from 'aekasha';\n");
     expect(text).toContain("    const module = await import('../../../app/./s.ts');\n");
     expect(text).toContain("  '1mat': () => import('../../../app/m.tsl.ts'),\n");
+  });
+
+  // p619 Phase 0 (§1.4 G4): an id is quoted only when it starts with a digit, a scene id never,
+  // and a path isn't escaped. The schemas allow each of these ids and paths.
+  const syntaxErrors = (text: string) =>
+    (
+      ts.transpileModule(text, { reportDiagnostics: true, fileName: 'generatedAppFns.ts' })
+        .diagnostics ?? []
+    ).map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'));
+
+  it('writes valid TS for the repo’s kind of ids (the check itself)', () => {
+    const text = formatGeneratedAppFns(
+      { scenes: { s: 'app/./s.ts' }, tslMaterials: { '1mat': 'app/m.tsl.ts' }, postFx: {} },
+      '../'
+    );
+    expect(syntaxErrors(text)).toEqual([]);
+  });
+
+  it.fails.each([
+    ['a scene id with a dash', { scenes: { 'my-scene': 'app/./s.ts' } }],
+    ['a scene id starting with a digit', { scenes: { '1scene': 'app/./s.ts' } }],
+    ['a material id with a dot', { tslMaterials: { 'mat.v2': 'app/m.tsl.ts' } }],
+    ['a PostFX id with a space', { postFx: { 'my fx': 'app/fx.ts' } }],
+    ['a path with a quote', { tslMaterials: { mat: "app/o'neil/m.tsl.ts" } }],
+  ])('writes valid TS for %s', (_name, loaders) => {
+    const text = formatGeneratedAppFns({ ...EMPTY, ...loaders }, '../');
+    expect(syntaxErrors(text)).toEqual([]);
   });
 });
 
