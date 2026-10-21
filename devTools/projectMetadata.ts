@@ -38,7 +38,7 @@ const createVersionChecksumString = (m?: ProjectMetadata) => {
   return `${appVersion}-${appCodename}_${engVersion}-${engCodename}_${tkVersion}-${tkCodename}_${pkgVersion}`;
 };
 
-const buildProjectMetadata = (pkg: PackageJson) => {
+const buildProjectMetadata = (pkg: PackageJson, build?: BuildInfo) => {
   const appVersion = pkg.app_metadata?.version || (pkg.version ? `${pkg.version}-pkg` : '');
   const engineVersion = pkg.engine_metadata?.version || (pkg.version ? `${pkg.version}-pkg` : '');
   return {
@@ -82,7 +82,7 @@ const buildProjectMetadata = (pkg: PackageJson) => {
       typescript: pkg.devDependencies?.typescript,
     } as Record<string, string>,
     // The commit and time of this build (the dev server's start in dev)
-    build: {
+    build: build ?? {
       commit: readGit(['rev-parse', '--short', 'HEAD']),
       hasLocalChanges: readGit(['status', '--porcelain', '--untracked-files=no']) !== '',
       time: new Date().toISOString(),
@@ -92,16 +92,20 @@ const buildProjectMetadata = (pkg: PackageJson) => {
   };
 };
 
+/** A build's commit, whether the tree had local changes, and its time */
+type BuildInfo = { commit: string; hasLocalChanges: boolean; time: string };
+
 /** The project's versions, names, packages and build (`getProjectMetadata`) */
 export type ProjectMetadata = ReturnType<typeof buildProjectMetadata>;
 
 /**
  * The metadata from `package.json` as it is on disk now (read on every call, so a long-running
- * process like the dev server sees a version bump), with the git state at the time of the call.
+ * process like the dev server sees a version bump), with the git state at the time of the call, or
+ * `build` (then git doesn't run: the dev Hub's rebuilds keep their first build's).
  */
-export const getProjectMetadata = (): ProjectMetadata => {
+export const getProjectMetadata = (build?: BuildInfo): ProjectMetadata => {
   const pkg = JSON.parse(fs.readFileSync(PACKAGE_JSON_FILE, 'utf-8')) as PackageJson;
-  const meta = buildProjectMetadata(pkg);
+  const meta = buildProjectMetadata(pkg, build && { ...build });
   const checksumString = createVersionChecksumString(meta);
   meta.versionChecksumString = checksumString;
   meta.versionChecksum = createVersionHash(checksumString);

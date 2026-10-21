@@ -24,10 +24,11 @@ const createResult = (html: string, fields: Partial<HubBuildResult> = {}): HubBu
   diag: new HubDiagnostics(),
   pageCount: 1,
   durationMs: 1,
+  steps: {},
   files: [PAGE_FILE, OUTSIDE_FILE],
   dirs: [],
   pages: [{ path: 'examples/', outPath: 'examples/index.html', html, isErrorPage: false }],
-  assets: { styles: null, scripts: null },
+  assets: { styles: null, scripts: null, isClean: true },
   search: null,
   api: null,
   isApiStale: false,
@@ -38,7 +39,7 @@ const createResult = (html: string, fields: Partial<HubBuildResult> = {}): HubBu
 /** A build per call, each finished by the test (`finish`) with its page's HTML, or failed */
 const createFakeBuilds = () => {
   const pending: { resolve: (result: HubBuildResult) => void; reject: (err: Error) => void }[] = [];
-  const buildAsync = vi.fn(
+  const buildAsync = vi.fn<HubDevRunnerDeps['buildAsync']>(
     () => new Promise<HubBuildResult>((resolve, reject) => pending.push({ resolve, reject }))
   );
   const take = () => {
@@ -212,6 +213,19 @@ describe('createHubDevRunner', () => {
     expect(deps.start).toHaveBeenCalledTimes(1);
   });
 
+  it('asks to reuse the assets unless a file under hub/_assets/ changed (D16)', async () => {
+    const runner = await startRunnerAsync();
+    runner.onHubFileEvent(PAGE_FILE);
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
+    builds.finish('<p>2</p>');
+    runner.onHubFileEvent(path.join(HUB_DIR, '_assets', 'scss', '_prose.scss'));
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
+    builds.finish('<p>3</p>');
+    await vi.advanceTimersByTimeAsync(0);
+    const asked = builds.buildAsync.mock.calls.map(([opts]) => opts.reuseAssets);
+    expect(asked).toEqual([false, true, false]); // The first build has nothing to reuse
+  });
+
   it('runs nothing after close', async () => {
     const runner = await startRunnerAsync();
     runner.onHubFileEvent(PAGE_FILE);
@@ -249,8 +263,12 @@ describe('diffBuilds', () => {
 
   it('sends `css` for a new stylesheet and `all` for a static asset', () => {
     const styles = (hash: string) => ({ outPath: '_assets/hub.css', content: '', hash });
-    const prev = createResult('', { assets: { styles: styles('a'), scripts: null } });
-    const next = createResult('', { assets: { styles: styles('b'), scripts: null } });
+    const prev = createResult('', {
+      assets: { styles: styles('a'), scripts: null, isClean: true },
+    });
+    const next = createResult('', {
+      assets: { styles: styles('b'), scripts: null, isClean: true },
+    });
     expect(diffBuilds(prev, next, new Set())).toEqual([{ kind: 'css', version: 'b' }]);
     const icon = path.join(HUB_DIR, '_assets', 'icons', 'search.svg');
     expect(diffBuilds(prev, next, new Set([icon]))).toEqual([{ kind: 'all' }]);

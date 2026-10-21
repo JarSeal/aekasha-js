@@ -49,6 +49,8 @@ import { writeHubOutputAsync } from './writeOutput';
 export type HubBuildAssets = {
   styles: HubAssetFile | null;
   scripts: HubAssetFile[] | null;
+  /** Both built without an error (not a fallback): `reuseAssets` takes only such ones */
+  isClean: boolean;
 };
 
 export type HubBuildOptions = {
@@ -58,6 +60,12 @@ export type HubBuildOptions = {
   basePath?: string;
   /** `dev`: the last build's assets, kept when this build's fail, so error pages keep styles */
   fallback?: HubBuildAssets;
+  /**
+   * `dev`: `fallback`'s styles and scripts stand, when they built clean (p619 D16: sass and Vite's
+   * `build()` were a rebuild's next largest steps). The dev runner asks for it when no file under
+   * `hub/_assets/` changed.
+   */
+  reuseAssets?: boolean;
   /**
    * The build's commit, local changes and time the Version page shows (default:
    * now's). The dev plugin passes its first build's, so a rebuild doesn't change the Version page
@@ -88,6 +96,11 @@ export type HubBuildResult = {
   diag: HubDiagnostics;
   pageCount: number;
   durationMs: number;
+  /**
+   * Each step's time in ms, in order (`meta`, `sections`, `discover`, `styles`, `scripts`,
+   * `render`, `search`, `shell`, `write`): the dev plugin's log, and D16's measurements
+   */
+  steps: Record<string, number>;
   /** Every source file the build read, for the dev plugin's watcher */
   files: string[];
   /** Folders whose added and removed files change the build (`docs/issues/`) */
@@ -96,10 +109,16 @@ export type HubBuildResult = {
   pages: HubBuiltPage[];
   assets: HubBuildAssets;
   /**
-   * The search payload's size and `gzip -9` size (`hub:build` reports them), its documents and how
-   * many of them are page sections (the rest are the API's), null when not built
+   * The search payload's size and `gzip -9` size (`hub:build` reports them; `dev` doesn't measure
+   * gzip), its documents and how many of them are page sections (the rest are the API's), null
+   * when not built
    */
-  search: { bytes: number; gzipBytes: number; docCount: number; pageDocCount: number } | null;
+  search: {
+    bytes: number;
+    gzipBytes: number | null;
+    docCount: number;
+    pageDocCount: number;
+  } | null;
   /** The API docs (p553): whether the model was reused, its size, null when it didn't build */
   api: ApiBuildStats | null;
   /** `api: 'last'`: the model is older than its inputs, or there's none yet */
@@ -165,11 +184,20 @@ export const buildHub = async ({
   outDir,
   basePath = '/',
   fallback,
+  reuseAssets = false,
   build,
   api: apiModel = 'current',
   isEmbedLive = true,
 }: HubBuildOptions): Promise<HubBuildResult> => {
   const startTime = performance.now();
+  const steps: Record<string, number> = {};
+  let lapTime = startTime;
+  /** Ends a step: its time since the last one's end */
+  const lap = (step: string) => {
+    const now = performance.now();
+    steps[step] = (steps[step] ?? 0) + now - lapTime;
+    lapTime = now;
+  };
   // Before the build's work: a folder the build may not replace throws (p619 §1.4 H1)
   if (mode === 'public') {
     const outDirError = getHubOutDirError(outDir);
@@ -178,10 +206,11 @@ export const buildHub = async ({
   const diag = new HubDiagnostics();
   let rendered: RenderedPage[] = [];
   const builtPages: HubBuiltPage[] = [];
-  const assets: HubBuildAssets = { styles: null, scripts: null };
-  const meta = getProjectMetadata();
-  if (build) meta.build = { ...build };
+  let assets: HubBuildAssets = { styles: null, scripts: null, isClean: false };
+  const meta = getProjectMetadata(build);
+  lap('meta');
   const { sections, api } = await createSectionsAsync(meta, mode, apiModel, diag);
+  lap('sections');
   let searchStats: HubBuildResult['search'] = null;
   let apiRebuildingHtml: string | null = null;
   const result = (files: string[]): HubBuildResult => ({
@@ -189,6 +218,7 @@ export const buildHub = async ({
     diag,
     pageCount: rendered.length,
     durationMs: performance.now() - startTime,
+    steps,
     files,
     dirs: sections.flatMap((section) => section.dirs),
     pages: builtPages,
@@ -207,8 +237,20 @@ export const buildHub = async ({
   const hashStaticAsset = createStaticAssetHasher();
   const getSbpReport = memoize(readSbpReport);
   const helpers = createMarkupHelpers({ mode, diag, icons, tree, hashStaticAsset, getSbpReport });
-  assets.styles = buildStyles(mode, diag, hashStaticAsset) ?? fallback?.styles ?? null;
-  assets.scripts = (await buildScripts(mode, diag)) ?? fallback?.scripts ?? null;
+  lap('discover');
+  if (reuseAssets && fallback?.isClean) {
+    assets = fallback;
+  } else {
+    const styles = buildStyles(mode, diag, hashStaticAsset);
+    lap('styles');
+    const scripts = await buildScripts(mode, diag);
+    assets = {
+      styles: styles ?? fallback?.styles ?? null,
+      scripts: scripts ?? fallback?.scripts ?? null,
+      isClean: !!styles && !!scripts,
+    };
+  }
+  lap('scripts');
   // `dev` still writes the 404 page, as the error page every URL gets
   const sectionFiles = sections.flatMap((section) => section.files);
   if (!tree && mode === 'public') return result(sectionFiles);
@@ -233,13 +275,16 @@ export const buildHub = async ({
     ({ rendered, pageImageFiles } = renderHubPages({ tree, sections, md, helpers, context, diag }));
     checkLinks(rendered, tree, api.areApiPagesUnchecked, diag);
   }
+  lap('render');
 
   // The search, then the shell around every page
   const search = tree
     ? buildSearchIndex(
         tree.root,
         rendered.map(({ page, body, env }) => ({ page, body, headings: env.headings })),
-        sections.flatMap((section) => section.searchDocs ?? [])
+        sections.flatMap((section) => section.searchDocs ?? []),
+        // The dev server's rebuilds skip it: the warning is `yarn hub:build`'s
+        { isGzipMeasured: mode === 'public' }
       )
     : null;
   if (search) {
@@ -247,6 +292,7 @@ export const buildHub = async ({
     searchStats = { bytes: content.length, gzipBytes, docCount, pageDocCount };
     checkSearchIndexSize(search, diag);
   }
+  lap('search');
   const shellPages = createShellPages({
     shell: fs.readFileSync(HUB_SHELL_FILE, 'utf-8'),
     notFoundBody: fs.readFileSync(HUB_NOT_FOUND_FILE, 'utf-8'),
@@ -286,6 +332,7 @@ export const buildHub = async ({
       applyErrorPages({ rendered, builtPages, sections, tree, diag, shellPages });
   }
 
+  lap('shell');
   const sourceFiles = collectSourceFiles({
     treeFiles: tree?.files ?? [],
     sectionFiles,
@@ -305,7 +352,9 @@ export const buildHub = async ({
     images: rendered.flatMap(({ env }) => env.images),
     embeds: context.embeds,
     diag,
+    isStaticCurrent: mode === 'dev' && reuseAssets && !!fallback,
   });
   if (!isWritten) builtPages.length = 0;
+  lap('write');
   return result(sourceFiles);
 };

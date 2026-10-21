@@ -1391,6 +1391,44 @@ As built (2026-10-21, uncommitted):
   - Docs: `devTools/hub/CLAUDE.md` (the build's steps, the dev plugin and its runner), the root
     `CLAUDE.md`'s queue path.
   - Checks: `yarn test` 1110 passed (136 files), lint, both `tsc`.
+- **Section 3, the dev rebuild (D16).**
+  - `HubBuildResult.steps`: each step's time (`meta`, `sections`, `discover`, `styles`,
+    `scripts`, `render`, `search`, `shell`, `write`). Measured with `buildHub` in `dev` as the
+    plugin calls it, in one process (a line appended to `documentation/intro.md` per run,
+    restored after). **Before**, a page edit's median 815 ms: render 372 (shiki: highlighting
+    every fence again, the issues' included), search 229 (the page sections 55, the index 40, its
+    JSON 40, `gzip -9` 96), scripts 66, styles 39, write 38, meta 23 (two git processes the dev
+    build's info made useless), shell 27, discover 18.
+  - What a rebuild reuses now:
+    - shiki's output per fence (`code.ts`' `highlightFence`, keyed by language, meta and code;
+      cleared past 4,000 entries): render 372 → 60;
+    - the search: each body's sections, and the serialized payload while its documents' hash
+      holds (a text edit rebuilds the index, a style or script edit doesn't); `gzip -9` only in
+      `public` (`isGzipMeasured`; the size warning is `yarn hub:build`'s): 229 → 91;
+    - the styles and scripts (`reuseAssets`, which the runner asks for when no changed file is
+      under `hub/_assets/`; only assets that built clean, `HubBuildAssets.isClean`, so an SCSS
+      or TS error stays listed until fixed), and with them the static assets' and favicons' copy
+      (`isStaticCurrent`): 105 → 0, and about 10 ms of the writes;
+    - the static asset hashes per file stamp (size, mtime, ctime) across builds (`assets.ts`);
+    - `getProjectMetadata(build)` runs no git when given the build info: 23 → 0.
+  - **After:** a page edit's median 233 ms (search 92, render 60, write 32, shell 30, discover
+    15), a rebuild with nothing changed 156. On a dev server: six Markdown edits and the undo
+    211-274 ms, against Phase 0's 837-983; an SCSS edit and its undo 334 / 274 ("Updated:
+    styles"); a TS edit and its undo 370 / 291 ("every page reloads"); a trailing comment in a TS
+    file gives the same bundle, so no event. The first build stays about 3.7 s.
+  - Not done (an option, not in D16): the dev search built on its request instead of in every
+    run (the dev server ignores `?v=` and sends `no-cache`), which would take the 90 ms off a page
+    edit.
+  - Not in the plan: a process's first import of rollup spends 3.6 s in
+    `process.report.getReport()` (rollup's `isMingw32`, slow under WSL); once per process, before
+    the dev server's first request.
+  - `dist-hub/` (`--no-embed`) the same as section 2's, file for file, but the build time, status
+    and commit (section 2 committed in between).
+  - Tests: `search.test.ts` (+2: the payload reused for the same documents and rebuilt for a
+    changed page; no gzip when not asked), `devRunner.test.ts` (+1: `reuseAssets` false for the
+    first build and an SCSS save, true for a page save).
+  - Docs: `devTools/hub/CLAUDE.md` (the times, what a rebuild reuses, the gzip in `public` only).
+  - Checks: `yarn test` 1113 passed (136 files), lint, both `tsc`.
 
 ### Phase 7: verify, sbp and refactor (D9, D12, D13)
 

@@ -231,8 +231,11 @@ export const splitSections = (body: string) => {
 export type HubSearchIndexFile = HubAssetFile & {
   docCount: number;
   pageDocCount: number;
-  /** Its `gzip -9` size: what a reader downloads (the build warns over a limit) */
-  gzipBytes: number;
+  /**
+   * Its `gzip -9` size: what a reader downloads (the build warns over a limit). Measured only
+   * when asked (`yarn hub:build`): about 100 ms, a dev rebuild's largest step.
+   */
+  gzipBytes: number | null;
 };
 
 /** A document a generated section adds by itself (the API's names) */
@@ -256,6 +259,14 @@ const toNavItem = (page: HubPage): HubNavItem => ({
 });
 
 /**
+ * Kept from the last build, for the dev server's rebuilds (p619 D16): each body's sections (an edit
+ * changes one page), and the serialized payload by its documents' hash (a style or script edit
+ * changes none)
+ */
+let lastSections = new Map<string, ReturnType<typeof splitSections>>();
+let lastPayload: { key: string; content: string; hash: string } | null = null;
+
+/**
  * Builds `_assets/hub-search.js` (`HubSearchPayload`) from the pages' rendered bodies, the
  * documents the generated sections add (`extraDocs`), the menu from `homepage` and the searchable
  * pages with their headings. A document's `path` and `anchor` go into its id, and its heading is
@@ -264,12 +275,16 @@ const toNavItem = (page: HubPage): HubNavItem => ({
 export const buildSearchIndex = (
   homepage: HubPage,
   pages: HubSearchPage[],
-  extraDocs: HubSearchExtraDoc[] = []
+  extraDocs: HubSearchExtraDoc[] = [],
+  { isGzipMeasured = true }: { isGzipMeasured?: boolean } = {}
 ): HubSearchIndexFile => {
   const docs: HubSearchDoc[] = [];
+  const sectionsByBody = new Map<string, ReturnType<typeof splitSections>>();
   for (const { page, body } of pages) {
     if (!page.path || !page.isSearchable) continue; // The homepage
-    splitSections(body).forEach((section, i) => {
+    const sections = lastSections.get(body) ?? splitSections(body);
+    sectionsByBody.set(body, sections);
+    sections.forEach((section, i) => {
       const isPageSection = i === 0;
       // The description summarises the page: its own section's snippet starts with it
       const description = collapse([page.description]);
@@ -288,6 +303,7 @@ export const buildSearchIndex = (
       });
     });
   }
+  lastSections = sectionsByBody;
   const pageDocCount = docs.length;
   docs.push(...extraDocs);
 
@@ -324,22 +340,23 @@ export const buildSearchIndex = (
       };
     }
   );
-  const index = new MiniSearch(HUB_SEARCH_OPTIONS);
-  index.addAll(indexed);
-  const payload: HubSearchPayload = {
-    index: index.toJSON(),
-    paths,
-    nav: [toNavItem(homepage)],
-    pages: searchablePages,
-  };
-  const content = toModuleSource(JSON.stringify(payload));
+  const nav = [toNavItem(homepage)];
+  const key = hashContent(JSON.stringify([indexed, paths, nav, searchablePages]));
+  if (lastPayload?.key !== key) {
+    const index = new MiniSearch(HUB_SEARCH_OPTIONS);
+    index.addAll(indexed);
+    const payload: HubSearchPayload = { index: index.toJSON(), paths, nav, pages: searchablePages };
+    const content = toModuleSource(JSON.stringify(payload));
+    lastPayload = { key, content, hash: hashContent(content) };
+  }
+  const { content, hash } = lastPayload;
   return {
     outPath: `${ASSETS_URL_DIR}${HUB_SEARCH_FILE}`,
     content,
-    hash: hashContent(content),
+    hash,
     docCount: docs.length,
     pageDocCount,
-    gzipBytes: zlib.gzipSync(content, { level: 9 }).length,
+    gzipBytes: isGzipMeasured ? zlib.gzipSync(content, { level: 9 }).length : null,
   };
 };
 
@@ -354,9 +371,9 @@ export const formatBytes = (bytes: number) =>
     ? `${Math.round(bytes / 1024)} KiB`
     : `${(bytes / (1024 * 1024)).toFixed(2)} MiB`;
 
-/** Warns when the payload is over `SEARCH_INDEX_WARN_GZIP_BYTES` gzipped */
+/** Warns when the payload is over `SEARCH_INDEX_WARN_GZIP_BYTES` gzipped (when it was measured) */
 export const checkSearchIndexSize = ({ gzipBytes }: HubSearchIndexFile, diag: HubDiagnostics) => {
-  if (gzipBytes <= SEARCH_INDEX_WARN_GZIP_BYTES) return;
+  if (gzipBytes === null || gzipBytes <= SEARCH_INDEX_WARN_GZIP_BYTES) return;
   diag.warn(
     HUB_PAGES_DIR,
     undefined,

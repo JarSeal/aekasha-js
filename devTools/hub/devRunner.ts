@@ -32,8 +32,14 @@ import {
 
 /** What the runner needs from the server and the generator: injected, so tests fake them */
 export type HubDevRunnerDeps = {
-  /** A dev build of the whole Hub into `outDir`; `last` is the last build (its assets the fallback) */
-  buildAsync: (last: HubBuildResult | null) => Promise<HubBuildResult>;
+  /**
+   * A dev build of the whole Hub into `outDir`: `last` is the last build (its assets the
+   * fallback), `reuseAssets` true when no file under `hub/_assets/` changed since it
+   */
+  buildAsync: (opts: {
+    last: HubBuildResult | null;
+    reuseAssets: boolean;
+  }) => Promise<HubBuildResult>;
   /** The API model's conversion in a child process */
   extractApiAsync: () => Promise<HubApiExtract>;
   /** Before the first build: empties the output, starts watching `hub/` (`onHubFileEvent`) */
@@ -261,7 +267,9 @@ export const createHubDevRunner = (deps: HubDevRunnerDeps): HubDevRunner => {
 
   /** A run after the first build; `extracted`: it renders an API rebuild's model */
   const runAsync = async ({ files, extracted }: HubDevWork) => {
-    const result = await deps.buildAsync(lastBuild);
+    const reuseAssets =
+      !!lastBuild && ![...files].some((file) => file.startsWith(HUB_ASSETS_DIR + path.sep));
+    const result = await deps.buildAsync({ last: lastBuild, reuseAssets });
     const prev = lastBuild;
     lastBuild = result;
     if (isClosed || !prev) return; // A run is queued only once there's a first build
@@ -309,7 +317,7 @@ export const createHubDevRunner = (deps: HubDevRunnerDeps): HubDevRunner => {
     if (!isStarted) deps.start();
     isStarted = true;
     firstBuild = deps
-      .buildAsync(null)
+      .buildAsync({ last: null, reuseAssets: false })
       .then((result) => {
         lastBuild = result;
         if (isClosed) return;

@@ -70,6 +70,8 @@ export const writeHubOutputAsync = async (opts: {
   images: HubImageJob[];
   embeds: HubEmbedState;
   diag: HubDiagnostics;
+  /** `dev` with nothing under `hub/_assets/` changed: the static assets and favicons are there */
+  isStaticCurrent?: boolean;
 }) => {
   const { mode, outDir, diag } = opts;
   const writeDir = mode === 'public' ? createHubStagingDir(outDir) : outDir;
@@ -78,12 +80,14 @@ export const writeHubOutputAsync = async (opts: {
     for (const file of opts.files) {
       if (file) writeFile(path.join(writeDir, file.outPath), file.content);
     }
-    copyStaticAssets(writeDir);
+    if (!opts.isStaticCurrent) {
+      copyStaticAssets(writeDir);
+      for (const file of FAVICON_FILES) {
+        fs.copyFileSync(file, path.join(writeDir, path.basename(file)));
+      }
+    }
     if (mode === 'public') copyHubEmbeds(opts.embeds, writeDir);
     await writeImagesAsync(opts.images, writeDir, mode, diag);
-    for (const file of FAVICON_FILES) {
-      fs.copyFileSync(file, path.join(writeDir, path.basename(file)));
-    }
     if (mode === 'dev') return true;
     writeFile(path.join(writeDir, '_headers'), NETLIFY_HEADERS);
     if (diag.errors.length) return false;

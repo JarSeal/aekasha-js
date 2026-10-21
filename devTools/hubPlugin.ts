@@ -78,13 +78,14 @@ export const hubPlugin = (): Plugin => {
       let buildInfo: ProjectMetadata['build'] | undefined;
 
       const runner = createHubDevRunner({
-        buildAsync: (last) => {
+        buildAsync: ({ last, reuseAssets }) => {
           buildInfo ??= getProjectMetadata().build;
           return buildHub({
             mode: 'dev',
             outDir: HUB_DEV_OUT_DIR,
             basePath: HUB_DEV_URL_BASE,
             fallback: last?.assets,
+            reuseAssets,
             build: buildInfo,
             api: 'last',
           });

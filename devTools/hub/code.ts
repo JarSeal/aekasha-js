@@ -132,16 +132,25 @@ const resolveLanguage = (
 const renderCopyButton = (icons: HubIcons, env: HubMarkdownEnv, line: number) =>
   `<button type="button" class="hubCodeCopy" data-hub-code-copy aria-label="Copy the code">${icons.render('copy', env.file, line)}${icons.render('check', env.file, line)}<span class="hubCodeCopyLabel" aria-live="polite">Copy</span></button>`;
 
-const renderFence = ({ highlighter, icons }: HubCodeOptions, token: Token, env: HubMarkdownEnv) => {
-  const line = lineOf(token);
-  const [rawLang = '', ...rest] = token.info.trim().split(/\s+/);
-  const langLabel = rawLang.toLowerCase();
-  const lang = resolveLanguage(highlighter, langLabel, env, line);
-  const options = parseFenceMeta(rest.join(' '), (message) =>
-    env.diag.warn(env.file, line, message)
-  );
-  const group = token.meta?.group as GroupPanel | undefined;
+type HighlightedFence = { pre: string; lineCount: number; isCollapsed: boolean };
 
+/**
+ * shiki's output per fence (its language, meta and code), kept across builds: the dev server's
+ * rebuilds highlight only the fences that changed (p619 D16: highlighting was most of a rebuild).
+ * Dropped whole when it grows past `MAX_HIGHLIGHTED_FENCES`, so a long session's edits don't pile up.
+ */
+const highlightedFences = new Map<string, HighlightedFence>();
+const MAX_HIGHLIGHTED_FENCES = 4000;
+
+const highlightFence = (
+  highlighter: Highlighter,
+  code: string,
+  lang: string,
+  options: HubFenceOptions
+): HighlightedFence => {
+  const key = `${lang}\0${options.meta}\0${code}`;
+  const known = highlightedFences.get(key);
+  if (known) return known;
   let lineCount = 0;
   let isCollapsed = false;
   // Runs after the notation transformers, which remove their comment-only lines
@@ -161,8 +170,7 @@ const renderFence = ({ highlighter, icons }: HubCodeOptions, token: Token, env: 
       }
     },
   };
-
-  const pre = highlighter.codeToHtml(token.content.replace(/\n$/, ''), {
+  const pre = highlighter.codeToHtml(code, {
     lang,
     themes: HUB_CODE_THEMES,
     defaultColor: false,
@@ -178,6 +186,28 @@ const renderFence = ({ highlighter, icons }: HubCodeOptions, token: Token, env: 
       hubTransformer,
     ],
   });
+  if (highlightedFences.size >= MAX_HIGHLIGHTED_FENCES) highlightedFences.clear();
+  const fence = { pre, lineCount, isCollapsed };
+  highlightedFences.set(key, fence);
+  return fence;
+};
+
+const renderFence = ({ highlighter, icons }: HubCodeOptions, token: Token, env: HubMarkdownEnv) => {
+  const line = lineOf(token);
+  const [rawLang = '', ...rest] = token.info.trim().split(/\s+/);
+  const langLabel = rawLang.toLowerCase();
+  const lang = resolveLanguage(highlighter, langLabel, env, line);
+  const options = parseFenceMeta(rest.join(' '), (message) =>
+    env.diag.warn(env.file, line, message)
+  );
+  const group = token.meta?.group as GroupPanel | undefined;
+
+  const { pre, lineCount, isCollapsed } = highlightFence(
+    highlighter,
+    token.content.replace(/\n$/, ''),
+    lang,
+    options
+  );
 
   const hasLineNumbers = options.flags.has('noLineNumbers')
     ? false

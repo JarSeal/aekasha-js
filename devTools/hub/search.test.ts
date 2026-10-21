@@ -103,6 +103,23 @@ describe('the search payload', () => {
   });
 });
 
+describe('the dev rebuilds (D16)', () => {
+  it('reuse the payload for the same documents, and rebuild it for a changed page', () => {
+    const first = buildSearchIndex(home, PAGES, API_DOCS);
+    expect(buildSearchIndex(home, PAGES, API_DOCS).content).toBe(first.content);
+    const edited = PAGES.map((entry) =>
+      entry.page === guides ? { ...entry, body: '<p>Every guide, edited.</p>' } : entry
+    );
+    const next = buildSearchIndex(home, edited, API_DOCS);
+    expect(next.content).not.toBe(first.content);
+    expect(String(next.content)).toContain('Every guide, edited.');
+  });
+
+  it('skip the gzip measurement when not asked', () => {
+    expect(buildSearchIndex(home, PAGES, API_DOCS, { isGzipMeasured: false }).gzipBytes).toBe(null);
+  });
+});
+
 describe('a search round trip', () => {
   it('finds a page section by its title, with the description first', async () => {
     const [first] = await searchAsync('physics guide');

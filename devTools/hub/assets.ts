@@ -38,17 +38,29 @@ export const ASSETS_URL_DIR = '_assets/';
  */
 export type HubStaticAssetHasher = (assetPath: string) => string | null;
 
+/**
+ * The static assets' hashes across builds, by the file's size, mtime and ctime: the dev server's
+ * rebuilds read a font or an image again only when it changed (p619 D16)
+ */
+const knownHashes = new Map<string, { stamp: string; hash: string }>();
+
 export const createStaticAssetHasher = (): HubStaticAssetHasher => {
   const hashes = new Map<string, string | null>();
   return (assetPath) => {
     if (hashes.has(assetPath)) return hashes.get(assetPath) ?? null;
     const [dir] = assetPath.split('/');
     const file = path.join(HUB_ASSETS_DIR, assetPath);
-    const isInside =
-      HUB_STATIC_ASSET_DIRS.includes(dir) &&
-      !assetPath.split('/').includes('..') &&
-      fs.statSync(file, { throwIfNoEntry: false })?.isFile();
-    const hash = isInside ? hashContent(fs.readFileSync(file)) : null;
+    const stat =
+      HUB_STATIC_ASSET_DIRS.includes(dir) && !assetPath.split('/').includes('..')
+        ? fs.statSync(file, { throwIfNoEntry: false })
+        : undefined;
+    let hash: string | null = null;
+    if (stat?.isFile()) {
+      const stamp = `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
+      const known = knownHashes.get(file);
+      hash = known?.stamp === stamp ? known.hash : hashContent(fs.readFileSync(file));
+      knownHashes.set(file, { stamp, hash });
+    }
     hashes.set(assetPath, hash);
     return hash;
   };
