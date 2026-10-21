@@ -51,7 +51,7 @@ import { diffBundle, formatKB } from '../sbp/bundleDiff';
 import { buildBundles } from '../sbp/appBuild';
 import { getBundleBaselineFile } from '../sbp/bundleDiff';
 import { getEmbedBuildLocation } from '../sbp/embedBuild';
-import { getEmbedProfiles } from '../gatherOutput';
+import { getEmbedProfiles } from '../gather/output';
 import sbpProfiles from '../../sbp.config';
 import { writeFileAtomic } from '../files';
 

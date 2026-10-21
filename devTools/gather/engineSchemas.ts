@@ -12,9 +12,10 @@ import {
   postFxSchemaPart,
   skyBoxSchemaPart,
   spatialSchemaPart,
-} from '../src/_engine/schemas';
+} from '../../src/_engine/schemas';
 
-/** Every engine feature's schema part. The order is the JSON Schemas' property order in
+/** Every engine feature's schema part (`engineSchemas.test.ts` fails on a part missing here: zod
+ * strips the fields of a part it doesn't know). The order is the JSON Schemas' property order in
  * `.schemas/` (the fields' order before p607), not the install order. */
 export const ENGINE_SCHEMA_PARTS = [
   skyBoxSchemaPart,
@@ -23,11 +24,15 @@ export const ENGINE_SCHEMA_PARTS = [
   lodSchemaPart,
 ] as const;
 
-export const SceneAssetSchema = createSceneAssetSchema(ENGINE_SCHEMA_PARTS);
-export type SceneAsset = z.infer<typeof SceneAssetSchema>;
+/** The scene schema with every engine feature's fields */
+export const EngineSceneAssetSchema = createSceneAssetSchema(ENGINE_SCHEMA_PARTS);
+/** A scene JSON with every engine feature's fields (the engine's `SceneAsset` has the kernel's) */
+export type EngineSceneAsset = z.infer<typeof EngineSceneAssetSchema>;
 
-export const MeshAssetSchema = createMeshAssetSchema(ENGINE_SCHEMA_PARTS);
-export type MeshAsset = z.infer<typeof MeshAssetSchema>;
+/** The mesh schema with every engine feature's fields */
+export const EngineMeshAssetSchema = createMeshAssetSchema(ENGINE_SCHEMA_PARTS);
+/** A mesh JSON with every engine feature's fields (the engine's `MeshAsset` has the kernel's) */
+export type EngineMeshAsset = z.infer<typeof EngineMeshAssetSchema>;
 
 /** Whether a field counts as used: given, and not an empty list */
 const isFieldUsed = (value: unknown) =>

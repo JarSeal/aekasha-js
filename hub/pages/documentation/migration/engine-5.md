@@ -175,7 +175,7 @@ if (await loadTslMaterialFileAsync('triplanarGrid')) {
 
 A feature's scene and mesh JSON fields are its own now, so `aekasha/schemas` builds the scene and
 mesh schemas from the features' parts. This matters only to a tool of yours that validates scene
-or mesh JSON itself; the gatherer composes them in `devTools/engineSchemas.ts`.
+or mesh JSON itself; the gatherer composes them in `devTools/gather/engineSchemas.ts`.
 
 | Was                       | Now                                                                                                                                                  |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |

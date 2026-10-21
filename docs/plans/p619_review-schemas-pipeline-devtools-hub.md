@@ -969,7 +969,7 @@ As built (2026-10-21, in progress; uncommitted):
   three and meshoptimizer); the list can't hold a module nothing imports. The schemas entry's graph
   is 27 modules, zod alone. The asset pipeline and the gatherer import the schemas from the entry
   file; `AppConfig` and `TransferableAttribute` are `import type … from 'aekasha'`.
-  - **I2, differs from D8 (to confirm in review):** the five gatherer helpers are already on
+  - **I2, differs from D8 (confirmed in review):** the five gatherer helpers are already on
     `aekasha/skybox` and `aekasha/lod`, so putting them on `aekasha/schemas` too would give each name
     two entries (D6 counts on unique names). Instead their three import-free modules are on the list
     by path: `LegacySkyBox.ts`, `Presets.ts`, `ImpostorFormat.ts`. No entry changed for them.
@@ -980,6 +980,34 @@ As built (2026-10-21, in progress; uncommitted):
   - `LodSimplify.ts` is listed with its packages: a GLB's prebuilt chain is the runtime's
     simplifier's output, by design (I3 didn't name it).
   - The generated data, dev and production, is the same as before (compared).
+- **Section 2, D10 (the gather) with D16's gather items and G13.** `gatherAppData.ts` is the
+  orchestration and the CLI (194 lines): `gatherSceneData({ pipeline?, profiles?, isProduction?,
+  srcDir?, outDir? })`, each defaulting to the repo's. Its steps are in `devTools/gather/`:
+  `gatheredJson.ts` (`GATHERED_SUFFIXES`, the schemas, `validateGatheredJson`,
+  `isGatheredJsonFile`, which replaces `isFilePathValid`), `log.ts` (`GatherLog`: an error fails
+  the gather), `context.ts` (`GatherContext`, the registries and id spaces, `claimIds`, and
+  `readAssetJsons`, the one pass-1 reader for every type), `registries.ts` and `textures.ts`
+  (pass 1), `scenePass.ts` and `sceneAssets.ts` (the scenes, one resolver per list),
+  `shipChecks.ts`, `saveEntries.ts` (`getSaveEntry`, the stale entry warning), `sources.ts`,
+  `jsonSchemas.ts`. `gatherOutput.ts` and `engineSchemas.ts` moved in as `output.ts` and
+  `engineSchemas.ts`, and the tests with them (`gatheredJson.test.ts`, `gather.test.ts`).
+  `devTools/paths.ts` (`ROOT`, `SRC_DIR`, `PUBLIC_DIR`, `GENERATED_DIR`) is K3's start.
+  - The log text and the pass order are kept, apart from the legacy sky box warning's "(p112)".
+    `getBasePath` (split on `/src/`) is `getTopFolder(srcDir, file)`.
+  - D16: the walk is bucketed by suffix once, the ids are `Set`s, the scenes are parsed once
+    (pass 1 keeps them for the scene pass), and the shipped scenes' material and PostFX ids are
+    `Set`s. The gather itself was already fast: median 20.5 → 19.3 ms (12 runs, the repo's data).
+  - G8: `engineSchemas.ts`' types are `EngineSceneAsset` / `EngineMeshAsset` (no clash with the
+    engine's), and its test fails on an engine `*SchemaPart` missing from `ENGINE_SCHEMA_PARTS`.
+  - G13: a mesh save entry's `geo` or `mat` props of the mesh's own type merge over them (`params`
+    key by key, a material's `nodes` too); an id, or another type, replaces them. The merged props
+    are validated with the mesh schema, so partial props over an id fail the gather. The schema's
+    JSDoc and the Hub's per-scene overrides section say how every entry merges.
+  - `gather.test.ts` gathers small trees in a temp folder (and the repo's data into a temp output,
+    both modes): G1-G3, G5, G6, G12, G13 and "a failed gather writes nothing". The G13 cases fail
+    on the old replace-whole behaviour (checked).
+  - The generated data, dev and production, is byte for byte the same (production compared with
+    `HEAD`'s, gathered in a worktree).
 
 ### Phase 5: the API reference per entry (D6)
 

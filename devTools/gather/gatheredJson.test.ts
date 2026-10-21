@@ -2,14 +2,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
-import { isFilePathValid, validateGatheredJson } from './gatherAppData';
+import { isGatheredJsonFile, validateGatheredJson } from './gatheredJson';
 
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SRC = path.join(REPO_ROOT, 'src');
 
 // Every gathered asset JSON in src/, as the gatherer walks it
 const assetFiles = (fs.readdirSync(SRC, { recursive: true }) as string[])
-  .filter((file) => isFilePathValid(file))
+  .filter((file) => isGatheredJsonFile(file))
   .map((file) => path.relative(REPO_ROOT, path.join(SRC, file)))
   .sort();
 

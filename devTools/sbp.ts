@@ -35,14 +35,14 @@ import fs from 'fs';
 import path from 'path';
 import sbpProfiles from '../sbp.config';
 import { ROOT } from './assetPipeline/sources';
-import { ENGINE_SCHEMA_PARTS } from './engineSchemas';
+import { ENGINE_SCHEMA_PARTS } from './gather/engineSchemas';
 import { buildBundles } from './sbp/appBuild';
 import { isBudgetFailure } from './sbp/budgets';
 import { readSceneFeatures } from './sbp/bundleFeatures';
 import { APP_BUILD, collectBundle } from './sbp/bundleModel';
 import { getEmbedBuildLocation } from './sbp/embedBuild';
 import { APP_ENTRY, checkSbpProfiles, type SbpProfile } from './sbp/config';
-import { getEmbedProfiles } from './gatherOutput';
+import { getEmbedProfiles } from './gather/output';
 import {
   type Colors,
   type ProfileReport,

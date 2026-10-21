@@ -26,7 +26,7 @@ import type { Plugin, UserConfig } from 'vite';
 import sbpProfiles from '../../sbp.config';
 import { ROOT } from '../assetPipeline/sources';
 import { collectUrls } from '../assetOutputsBuildPlugin';
-import { getEmbedProfiles } from '../gatherOutput';
+import { getEmbedProfiles } from '../gather/output';
 import type { BuildLocation } from './bundleModel';
 import type { SbpProfile } from './config';
 import { getEmbedEntryFileName, getEmbedOutDir } from './embedPaths';
@@ -46,7 +46,7 @@ export const getEmbedBuildLocation = (id: string): BuildLocation => ({
   statsFile: getEmbedStatsFile(id),
   isAssetsOnly: false,
 });
-/** The profile's generated data (`devTools/gatherOutput.ts`) */
+/** The profile's generated data (`devTools/gather/output.ts`) */
 export const getEmbedDataFile = (id: string) =>
   path.join(ROOT, 'src/generated/profiles', id, 'generatedAppData.json');
 

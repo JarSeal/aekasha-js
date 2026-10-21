@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import sbpProfiles from '../../sbp.config';
-import { getEmbedProfiles } from '../gatherOutput';
+import { getEmbedProfiles } from '../gather/output';
 import { getEmbedEntryFileName, getEmbedOutDir } from '../sbp/embedPaths';
 import type { SbpProfile } from '../sbp/config';
 import { hashContent } from './hash';

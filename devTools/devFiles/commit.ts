@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { randomBytes } from 'crypto';
-import { validateGatheredJson } from '../gatherAppData';
+import { validateGatheredJson } from '../gather/gatheredJson';
 import { formatDevFileJson } from './format';
 import { DevFilesError } from './http';
 import { checkImageBytes } from './imageCheck';

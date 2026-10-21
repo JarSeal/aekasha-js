@@ -10,7 +10,7 @@ import {
   removeStaleProfileOutputs,
   selectProfileOutput,
   writeGeneratedOutput,
-} from './gatherOutput';
+} from './output';
 
 const EMPTY = { scenes: {}, tslMaterials: {}, postFx: {} };
 

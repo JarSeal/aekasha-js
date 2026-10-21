@@ -30,7 +30,7 @@ import path from 'path';
 import type { Page } from 'playwright-core';
 import sbpProfiles from '../../sbp.config';
 import { ROOT } from '../assetPipeline/sources';
-import { getEmbedProfiles } from '../gatherOutput';
+import { getEmbedProfiles } from '../gather/output';
 import { buildBundles } from '../sbp/appBuild';
 import { getEmbedEntryFileName, getEmbedOutDir } from '../sbp/embedPaths';
 import { isWSL, launchChromium } from './browser';

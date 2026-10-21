@@ -1,6 +1,32 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
+import * as schemasEntry from '../../src/_engine/schemas';
 import { ENGINE_SCHEMA_PARTS, getSceneFeatureIds } from './engineSchemas';
+
+const ENGINE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../src/_engine');
+
+describe('ENGINE_SCHEMA_PARTS (p619 G8: zod strips the fields of a part missing from it)', () => {
+  it('holds every schema part the engine declares', () => {
+    const declared = (fs.readdirSync(ENGINE_DIR, { recursive: true }) as string[])
+      .filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts'))
+      .flatMap((file) => [
+        ...fs
+          .readFileSync(path.join(ENGINE_DIR, file), 'utf8')
+          .matchAll(/^export const (\w+SchemaPart)\b/gm),
+      ])
+      .map((match) => match[1])
+      .sort();
+    const listed = Object.entries(schemasEntry)
+      .filter(([, value]) => (ENGINE_SCHEMA_PARTS as readonly unknown[]).includes(value))
+      .map(([name]) => name)
+      .sort();
+    expect(declared.length).toBeGreaterThan(0);
+    expect(listed).toEqual(declared);
+  });
+});
 
 const mesh = (props: Record<string, unknown>) => ({ props: { geo: 'box', mat: 'grey', ...props } });
 

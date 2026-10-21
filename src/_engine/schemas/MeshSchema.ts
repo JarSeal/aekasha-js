@@ -75,9 +75,12 @@ const PartialMatProps = z.union(MaterialAssetSchema.options.map((variant) => var
 
 // The kernel's fields of a mesh's save entry (`__meta` last, after the features')
 const KERNEL_MESH_OVERRIDES_SHAPE = {
-  /** Replaces the mesh's geometry: props, or a geometry's id. */
+  /** The mesh's geometry in this scene: a geometry's id, or props. Props over the mesh's own of
+   * the same type are merged (`params` key by key), so they may name only what changes; any other
+   * props replace them and must be complete. */
   geo: z.union([PartialGeoProps, z.string()]).optional(),
-  /** Replaces the mesh's material: props, or a material's id. */
+  /** The mesh's material in this scene: a material's id, or props, merged as `geo`'s (a TSL
+   * material's `nodes` key by key too). */
   mat: z.union([PartialMatProps, z.string()]).optional(),
   ...pick('matOverrides', 'castShadow', 'receiveShadow', 'preWarm', ...TRANSFORM_FIELDS),
   ...pick('frustumCullingEnabled'),
@@ -119,8 +122,8 @@ export const createMeshAssetSchema = <const P extends readonly FeatureSchemaPart
     entityOpts: CoreEntityOptsSchema.optional(),
     /** Set by the gatherer: the file it came from. */
     __sourcePath: SourcePathSchema.optional(),
-    /** Per scene id, its save entries over `props` (the first applies; each field replaced
-     * whole). */
+    /** Per scene id, its save entries over `props` (the first applies; `geo` and `mat` merge,
+     * every other field is replaced whole). */
     __saveData: createSaveDataSchema(MeshOverridesSchema),
   });
 };

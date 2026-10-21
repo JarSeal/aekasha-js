@@ -120,8 +120,12 @@ per scene id, a list of overrides, newest first, and the scene uses the newest:
 }
 ```
 
-An entry's `__meta` records the versions it was saved with, and the gatherer warns when the
-entry in use comes from another major version. Debug tools write these entries through the
+An entry names only what it changes, and most fields replace the asset's whole. A few merge key
+by key: `params` (a geometry's, a material's, a PostFX pass's), a TSL material's `nodes`, a sky
+box's whole definition, and a mesh's `geo` and `mat` props when they keep the type (props over a
+geometry or material id, or of another type, must be complete). An entry's `__meta` records the
+versions it was saved with, and the gatherer warns when the entry in use comes from another major
+version. Debug tools write these entries through the
 [dev file server](hub:features/debug-suite#dev-file-server).
 
 ## Loading scenes

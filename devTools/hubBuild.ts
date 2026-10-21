@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import sbpProfiles from '../sbp.config';
-import { getEmbedProfiles } from './gatherOutput';
+import { getEmbedProfiles } from './gather/output';
 import { buildHub, formatBytes, rebaseNotFoundPage } from './hub/build';
 import { readSbpReport } from './hub/sbp';
 import { getEmbedEntryFileName, getEmbedOutDir } from './sbp/embedPaths';

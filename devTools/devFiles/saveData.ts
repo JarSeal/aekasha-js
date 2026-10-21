@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { ROOT } from '../assetPipeline/sources';
-import { hasGatheredSaveData } from '../gatherAppData';
+import { hasGatheredSaveData } from '../gather/gatheredJson';
 import { DevFilesError } from './http';
 import type { DevFilePath } from './paths';
 import { sha256 } from './stage';

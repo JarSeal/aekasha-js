@@ -1,15 +1,18 @@
 /**
- * The gatherer's output (`devTools/gatherAppData.ts`): the generated data's three files, written
+ * The gather's output (`devTools/gatherAppData.ts`): the generated data's three files, written
  * for the app into `src/generated/` and for each embed profile (p611 D7, `sbp.config.ts`) into
  * `src/generated/profiles/<id>/`, holding only that profile's scenes and their loaders.
  */
 import fs from 'fs';
 import path from 'path';
-import { APP_ENTRY, type SbpProfile } from './sbp/config';
+import { GENERATED_DIR } from '../paths';
+import { APP_ENTRY, type SbpProfile } from '../sbp/config';
 
 export const GENERATED_APP_DATA_FILENAME = 'generatedAppData.json';
 export const GENERATED_APP_FNS_FILENAME = 'generatedAppFns.ts';
 export const GENERATED_INDEX_FILENAME = 'index.ts';
+/** The app's generated data (`devTools/assetOutputsBuildPlugin.ts` reads its `__url`s) */
+export const GENERATED_APP_DATA_FILE = path.join(GENERATED_DIR, GENERATED_APP_DATA_FILENAME);
 
 const INDEX_FILE_CONTENT = `// THIS IS AN AUTO-GENERATED FILE, DO NOT MODIFY!
 import type { AppData } from 'aekasha';

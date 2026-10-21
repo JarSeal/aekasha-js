@@ -4,7 +4,7 @@ import path from 'path';
 import type { Plugin } from 'vite';
 import { removeStaleOutputs } from './assetPipeline/outputs';
 import { ROOT } from './assetPipeline/sources';
-import { OUTPUT_FILE_DATA } from './gatherAppData';
+import { GENERATED_APP_DATA_FILE } from './gather/output';
 
 /**
  * The production build's asset outputs (p300 Phase 3 step 4): Vite copies all of
@@ -61,7 +61,7 @@ export const assetOutputsBuildPlugin = (): Plugin => {
     closeBundle() {
       if (hasFailed) return;
       const urls = new Set<string>();
-      collectUrls(JSON.parse(fs.readFileSync(OUTPUT_FILE_DATA, 'utf-8')), urls);
+      collectUrls(JSON.parse(fs.readFileSync(GENERATED_APP_DATA_FILE, 'utf-8')), urls);
       const sizes = getFileSizes(path.join(outDir, 'aek-assets'));
       const removed = removeStaleOutputs(urls, outDir);
       let removedBytes = 0;

@@ -15,7 +15,10 @@ import { ASSETS_CONFIG_FILE } from './assetPipeline/settings';
 import { ROOT } from './assetPipeline/sources';
 import { CONFIG_FILE, resolveProjectOptOut, type ProjectOptOut } from './assetPipeline/switches';
 import { DEV_FILES_TEMP_SUFFIX } from './devFiles/commit';
-import { gatherSceneData, isFilePathValid, OUTPUT_DIR, writeJsonSchemas } from './gatherAppData';
+import { gatherSceneData } from './gatherAppData';
+import { isGatheredJsonFile } from './gather/gatheredJson';
+import { writeJsonSchemas } from './gather/jsonSchemas';
+import { GENERATED_DIR } from './paths';
 
 /**
  * The dev server's gatherer (`yarn dev`): re-gathers the generated data when an asset JSON is
@@ -270,7 +273,7 @@ export const sceneGathererPlugin = (): Plugin => ({
 
     const handleFileEvent = (event: 'add' | 'change' | 'unlink') => (filePath: string) => {
       const file = path.resolve(filePath);
-      if (file.startsWith(OUTPUT_DIR + path.sep)) return; // Its own outputs, the profiles' too
+      if (file.startsWith(GENERATED_DIR + path.sep)) return; // Its own outputs, the profiles' too
       if (file.startsWith(AEK_ASSETS_DIR + path.sep)) return; // The pipeline's own outputs
       if (file.endsWith(DEV_FILES_TEMP_SUFFIX)) return; // A dev files commit renames it into place
 
@@ -283,7 +286,7 @@ export const sceneGathererPlugin = (): Plugin => ({
           work.files.add(file);
           work.needsRun = work.needsGather = true;
         }, file);
-      } else if (isFilePathValid(file)) {
+      } else if (isGatheredJsonFile(file)) {
         schedule((work) => (work.needsGather = true), file);
       } else if (sourceFiles.has(file) || (event !== 'change' && isLastGatherFailed)) {
         // A source changed, or a file came or went that the failed gather may have missed
