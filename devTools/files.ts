@@ -17,3 +17,15 @@ export const writeFileAtomic = (file: string, content: string | Uint8Array) => {
     throw err;
   }
 };
+
+/**
+ * Writes a text file atomically (`writeFileAtomic`) only when its content differs from what's
+ * there, so an unchanged output doesn't wake a watcher (p619 §1.4 G7: every gather rewrote the
+ * generated data, which reloaded every open page).
+ * @returns whether it was written
+ */
+export const writeFileIfChanged = (file: string, content: string) => {
+  if (fs.existsSync(file) && fs.readFileSync(file, 'utf8') === content) return false;
+  writeFileAtomic(file, content);
+  return true;
+};

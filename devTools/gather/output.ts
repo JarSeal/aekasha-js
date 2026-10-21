@@ -5,6 +5,7 @@
  */
 import fs from 'fs';
 import path from 'path';
+import { writeFileIfChanged } from '../files';
 import { GENERATED_DIR } from '../paths';
 import { APP_ENTRY, type SbpProfile } from '../sbp/config';
 
@@ -99,21 +100,22 @@ export const formatGeneratedAppFns = (loaders: GeneratedLoaders, prefix: string)
   return `${header}\n${sceneObject}\n${formatLoaderObject('tslMaterialFileObjects', loaders.tslMaterials, prefix)}\n${formatLoaderObject('postFxFileObjects', loaders.postFx, prefix)}`;
 };
 
-/** Writes an output folder's three files */
+/**
+ * Writes an output folder's three files, each only when its content changed (atomically: Vite
+ * never reads one half written).
+ * @returns the files written
+ */
 export const writeGeneratedOutput = (dir: string, output: GeneratedOutput, srcDir: string) => {
-  fs.mkdirSync(dir, { recursive: true });
   const prefix = `${path.relative(dir, srcDir).split(path.sep).join('/')}/`;
-  fs.writeFileSync(
-    path.join(dir, GENERATED_APP_DATA_FILENAME),
-    JSON.stringify(output.json, null, 2),
-    'utf-8'
-  );
-  fs.writeFileSync(
-    path.join(dir, GENERATED_APP_FNS_FILENAME),
-    formatGeneratedAppFns(output.loaders, prefix),
-    'utf-8'
-  );
-  fs.writeFileSync(path.join(dir, GENERATED_INDEX_FILENAME), INDEX_FILE_CONTENT, 'utf-8');
+  const files: [string, string][] = [
+    [GENERATED_APP_DATA_FILENAME, JSON.stringify(output.json, null, 2)],
+    [GENERATED_APP_FNS_FILENAME, formatGeneratedAppFns(output.loaders, prefix)],
+    [GENERATED_INDEX_FILENAME, INDEX_FILE_CONTENT],
+  ];
+  return files
+    .map(([name, content]) => [path.join(dir, name), content])
+    .filter(([file, content]) => writeFileIfChanged(file, content))
+    .map(([file]) => file);
 };
 
 /** The profiles that get their own data: every one but the template app's full-page build */

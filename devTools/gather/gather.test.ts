@@ -34,7 +34,11 @@ type Output = { json: { scenes: Record<string, OutputScene> }; fns: string };
 /** Gathers a tree (no profiles, no pipeline) */
 const gather = (files: Record<string, unknown>, opts: { isProduction?: boolean } = {}) => {
   const tree = makeTree(files);
-  const isGathered = gatherSceneData({ ...tree, profiles: [], isProduction: !!opts.isProduction });
+  const { isGathered } = gatherSceneData({
+    ...tree,
+    profiles: [],
+    isProduction: !!opts.isProduction,
+  });
   const dataFile = path.join(tree.outDir, GENERATED_APP_DATA_FILENAME);
   const output: Output | null = fs.existsSync(dataFile)
     ? {
@@ -81,7 +85,7 @@ describe('the repo’s data', () => {
   it.each([false, true])('gathers (production: %s)', (isProduction) => {
     const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aek-gather-repo-'));
     tempRoots.push(outDir);
-    expect(gatherSceneData({ outDir, isProduction })).toBe(true);
+    expect(gatherSceneData({ outDir, isProduction }).isGathered).toBe(true);
     const json = JSON.parse(
       fs.readFileSync(path.join(outDir, GENERATED_APP_DATA_FILENAME), 'utf8')
     );
@@ -94,6 +98,17 @@ describe('the repo’s data', () => {
     await import('../gatherAppData');
     expect(writes.mock.calls.filter(([file]) => String(file).startsWith(ROOT))).toEqual([]);
     writes.mockRestore();
+  });
+});
+
+describe('the writes', () => {
+  it('a second gather of the same data writes nothing (G7)', () => {
+    const tree = makeTree(scene('a'));
+    expect(gatherSceneData({ ...tree, profiles: [] }).changedFiles).toHaveLength(3);
+    expect(gatherSceneData({ ...tree, profiles: [] })).toEqual({
+      isGathered: true,
+      changedFiles: [],
+    });
   });
 });
 

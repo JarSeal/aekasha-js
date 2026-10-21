@@ -1008,6 +1008,23 @@ As built (2026-10-21, in progress; uncommitted):
     on the old replace-whole behaviour (checked).
   - The generated data, dev and production, is byte for byte the same (production compared with
     `HEAD`'s, gathered in a worktree).
+- **Section 3, G7 and G9.** `writeGeneratedOutput` writes a file only when its content changed
+  (`devTools/files.ts`' `writeFileIfChanged`, atomic: Vite never reads one half written), and
+  `gatherSceneData` returns `{ isGathered, changedFiles }`; its log line says ", the generated
+  data unchanged" when nothing was written. V3's third cause goes with it.
+  - The plugin reloads the page when the gather changed the generated data, when a source file
+    changed (one served as it is changes no `__url`), or when its error overlay is up (a fix that
+    gives the data as it was still closes it). `willReload` says so (`DevFilesProtocol.ts`' doc).
+  - G9: the queue is `devTools/gather/devQueue.ts` (`createWorkQueue`, tested on fake timers): a
+    burst straddling the end of a run becomes one more run (the run in progress takes no pending
+    work while the debounce timer is set; the test fails on the old loop), and the queue closes
+    with the server. A pipeline that can't start marks the gather failed, so the next file that
+    comes or goes runs again. The plugin's `configureServer` is 50 lines: `getWorkUpdate` (an
+    event → its work), `createWorkRunner` (the switches, the pipeline, the gather and its events).
+  - Checked on a dev server (a WebSocket on Vite's HMR socket): a save of the same bytes gathers
+    with `willReload: false` and no reload; a changed `fov` reloads; a burst of three saves is one
+    gather; a save cut off mid-write fails with the overlay, and its fix reloads.
+    `yarn verify:devFiles` 61 / 61.
 
 ### Phase 5: the API reference per entry (D6)
 

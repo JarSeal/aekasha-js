@@ -157,4 +157,21 @@ describe('writeGeneratedOutput and removeStaleProfileOutputs', () => {
       fs.rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it('writes only the files whose content changed (G7)', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aek-gather-'));
+    try {
+      const src = path.join(root, 'src');
+      const dir = path.join(src, 'generated');
+      const output = { json: { scenes: {} }, loaders: EMPTY };
+      expect(writeGeneratedOutput(dir, output, src)).toHaveLength(3);
+      expect(writeGeneratedOutput(dir, output, src)).toEqual([]);
+      const changed = { ...output, json: { scenes: { a: { id: 'a' } } } };
+      expect(writeGeneratedOutput(dir, changed, src)).toEqual([
+        path.join(dir, 'generatedAppData.json'),
+      ]);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

@@ -46,6 +46,17 @@ export type GatherOptions = {
   outDir?: string;
 };
 
+/** How a gather went */
+export type GatherResult = {
+  /** False when a problem was logged: nothing was written */
+  isGathered: boolean;
+  /** The generated files written (one whose content didn't change isn't, p619 §1.4 G7) and the
+   * profile folders removed */
+  changedFiles: string[];
+};
+
+const FAILED: GatherResult = { isGathered: false, changedFiles: [] };
+
 /**
  * Each embed profile's output (p611 D7), selected from the app's; null when `sbp.config.ts` is
  * invalid or a profile names a scene the data doesn't ship (the problems are logged), which fails
@@ -73,13 +84,13 @@ const getProfileOutputs = (
 };
 
 /** The gather after its context: the passes, the checks, and the writes when nothing failed */
-const runGather = (ctx: GatherContext, opts: GatherOptions, outDir: string) => {
+const runGather = (ctx: GatherContext, opts: GatherOptions, outDir: string): GatherResult => {
   const { log, isProduction } = ctx;
   const reg = readRegistries(ctx);
   const ship = createShipChecks(ctx);
   const { scenes, debugSceneIds } = resolveScenes(ctx, reg, ship);
   ship.report();
-  if (log.hasError) return false;
+  if (log.hasError) return FAILED;
 
   // The app's output (a production build's only the scenes), then each embed profile's
   const appOutput: GeneratedOutput = {
@@ -106,11 +117,11 @@ const runGather = (ctx: GatherContext, opts: GatherOptions, outDir: string) => {
     appOutput,
     debugSceneIds
   );
-  if (!profileOutputs) return false;
+  if (!profileOutputs) return FAILED;
   const profilesDir = path.join(outDir, PROFILES_DIR_NAME);
-  writeGeneratedOutput(outDir, appOutput, ctx.srcDir);
+  const written = writeGeneratedOutput(outDir, appOutput, ctx.srcDir);
   for (const [id, output] of profileOutputs) {
-    writeGeneratedOutput(path.join(profilesDir, id), output, ctx.srcDir);
+    written.push(...writeGeneratedOutput(path.join(profilesDir, id), output, ctx.srcDir));
   }
   const removed = removeStaleProfileOutputs(
     profilesDir,
@@ -118,7 +129,7 @@ const runGather = (ctx: GatherContext, opts: GatherOptions, outDir: string) => {
   );
 
   log.done(
-    `Consolidated ${ctx.files.scene.length} scene configurations (${isProduction ? 'prod' : 'dev'}).`
+    `Consolidated ${ctx.files.scene.length} scene configurations (${isProduction ? 'prod' : 'dev'})${written.length || removed.length ? '' : ', the generated data unchanged'}.`
   );
   for (const [id, output] of profileOutputs) {
     const sceneIds = Object.keys(output.json.scenes);
@@ -131,15 +142,18 @@ const runGather = (ctx: GatherContext, opts: GatherOptions, outDir: string) => {
       `Removed the data of the profile(s) sbp.config.ts no longer lists: ${removed.join(', ')}`
     );
   }
-  return true;
+  return {
+    isGathered: true,
+    changedFiles: [...written, ...removed.map((id) => path.join(profilesDir, id))],
+  };
 };
 
 /**
  * Gathers the asset JSONs into the generated data. Writes nothing when anything failed (every
- * problem is logged), so the dev server keeps the page as it was.
- * @returns whether it succeeded
+ * problem is logged), so the dev server keeps the page as it was, and only the files whose
+ * content changed otherwise.
  */
-export const gatherSceneData = (opts: GatherOptions = {}) => {
+export const gatherSceneData = (opts: GatherOptions = {}): GatherResult => {
   const isProduction = opts.isProduction ?? process.env.NODE_ENV === 'production';
   const srcDir = opts.srcDir ?? SRC_DIR;
   const log = createGatherLog();
@@ -149,7 +163,7 @@ export const gatherSceneData = (opts: GatherOptions = {}) => {
     resolveSettings = createSettingsResolver();
   } catch (err) {
     log.error((err as Error).message);
-    return false;
+    return FAILED;
   }
   try {
     const ctx: GatherContext = {
@@ -165,7 +179,7 @@ export const gatherSceneData = (opts: GatherOptions = {}) => {
   } catch (err) {
     log.error(`Error gathering scene data (${isProduction ? 'production' : 'development'}):`);
     log.details(String((err as Error).stack ?? err));
-    return false;
+    return FAILED;
   }
 };
 
@@ -196,7 +210,7 @@ const gatherWithAssetPipeline = async () => {
     process.exitCode = 1;
     return;
   }
-  if (!gatherSceneData({ pipeline }) && isProduction) process.exitCode = 1;
+  if (!gatherSceneData({ pipeline }).isGathered && isProduction) process.exitCode = 1;
 };
 
 // Run as a script (`yarn gatherAppData`), not when imported

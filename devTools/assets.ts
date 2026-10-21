@@ -69,7 +69,7 @@ const run = async () => {
   const { gatherSceneData } = await import('./gatherAppData');
   const { writeJsonSchemas } = await import('./gather/jsonSchemas');
   writeJsonSchemas();
-  const isGathered = gatherSceneData({ pipeline: pipelineRun });
+  const { isGathered } = gatherSceneData({ pipeline: pipelineRun });
   if (hasErrors || overBudget.length || !isGathered) process.exitCode = 1;
 };
 
