@@ -21,16 +21,25 @@ export type DebugKeyShortcutsTab = 'APP' | 'AEKASHA';
  * @internal
  */
 export type DebugToolsState = {
+  /** The "Scenes" folder */
   scenesListing: {
+    /** The folder is open */
     scenesFolderExpanded: boolean;
+    /** The first load picks `debugStartScene` over the app's start scene (also in prodTest) */
     useDebugStartScene: boolean;
+    /** The scene id `useDebugStartScene` picks */
     debugStartScene: string;
+    /** The first load goes through the debugger's scene loader */
     useDebuggerSceneLoader: boolean;
   };
+  /** The "Logging" folder */
   loggingActions: {
+    /** The folder is open */
     loggingFolderExpanded: boolean;
   };
+  /** The "Undo / redo" folder */
   undoRedo: {
+    /** The folder is open */
     undoRedoFolderExpanded: boolean;
   };
   /** Replaces the old `prodTestMode` key (migrated on LS load, see _dbg__DebugTools.ts). */
@@ -39,19 +48,26 @@ export type DebugToolsState = {
     /** Makes the on-screen tools, the drawer handle, the stats panel and the axes gizmo
      * click-through and dims them (debug env only). */
     disableOnScreenTools: boolean;
+    /** Their opacity while disabled, 0-1 */
     disabledOnScreenToolsOpacity: number;
   };
+  /** The "Debug camera" folder is open */
   debugCameraFolderExpanded: boolean;
   /** Top-level (not in helpers): hydration replaces a persisted key whole, so a new field
    * inside an existing key would be undefined for anyone with saved state. */
   axesGizmo: {
+    /** Shown while the debug camera is active (F10) */
     show: boolean;
+    /** Shown while the main camera is active too */
     showInMainCamera: boolean;
   };
   /** Top-level, as axesGizmo. */
   envBall: {
+    /** Shown while the debug camera is active (F9) */
     show: boolean;
+    /** Shown while the main camera is active too */
     showInMainCamera: boolean;
+    /** The roughness it samples the environment at, 0-1 */
     roughness: number;
   };
   /** The "File server" folder (p342). Top-level, as axesGizmo. Its default is
@@ -60,19 +76,33 @@ export type DebugToolsState = {
     /** See `AppConfig.devFiles.saveHistorySize` (-1 = all, 0 = saving off) */
     saveHistorySize: number;
   };
+  /** The "Helpers" folder: three's axes, grid and polar grid helpers in the root scene */
   helpers: {
+    /** The folder is open */
     helpersFolderExpanded: boolean;
+    /** The axes helper is shown */
     showAxesHelper: boolean;
+    /** Its axes' length */
     axesHelperSize: number;
+    /** The grid helper is shown */
     showGridHelper: boolean;
+    /** Its width and depth */
     gridSize: number;
+    /** Its divisions per side */
     gridDivisionsSize: number;
+    /** Its centre lines' colour */
     gridColorCenterLine: number;
+    /** Its other lines' colour */
     gridColorGrid: number;
+    /** The polar grid helper is shown */
     showPolarGridHelper: boolean;
+    /** Its radius */
     polarGridRadius: number;
+    /** Its radial lines */
     polarGridSectors: number;
+    /** Its circles */
     polarGridRings: number;
+    /** Each circle's line segments */
     polarGridDivisions: number;
   };
 };
@@ -159,7 +189,7 @@ export const initDebugTools = () => {
  * Getter for the debugToolsState object. Read by the boot, the scene loader, the dev files and the
  * debug modules.
  * @internal
- * @param loadFromLS (boolean) optional flag to get the debugToolsState from the LS
+ * @param loadFromLS read the state from LocalStorage first
  * @returns the Debug tools tab's state, or its defaults while the debug module isn't loaded
  */
 export const getDebugToolsState = (loadFromLS?: boolean) =>
@@ -188,7 +218,7 @@ export const toggleEnvBall = () => {
  * Toggles the "Disable on-screen tools" option (the § shortcut): applied, persisted, the Debug
  * Tools tab is refreshed if open, and a toast is shown. Debug env only. The debug keys'.
  * @internal
- * @param keyHint (string) optional readable chord that was pressed, for the toast
+ * @param keyHint the pressed chord as text, for the toast
  */
 export const toggleOnScreenToolsDisabled = (keyHint?: string) => {
   useDebug(debugGUI)?._toggleOnScreenToolsDisabled(keyHint);
@@ -199,7 +229,6 @@ export const toggleOnScreenToolsDisabled = (keyHint?: string) => {
  * shortcuts, and the Debug Tools tab's buttons). Debug env only. The debug keys' and the Debug
  * tools tab's.
  * @internal
- * @param tab ('APP' | 'AEKASHA') the tab to show
  */
 export const openDebugKeyShortcutsDialog = (tab: DebugKeyShortcutsTab) => {
   useDebug(debugGUI)?._openDebugKeyShortcutsDialog(tab);

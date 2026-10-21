@@ -157,7 +157,8 @@ export const _releaseGpuTimer = () => {
   if (holders > 0) return;
   // Leave an inspector installed after ours alone (it forwards to ours, which keeps forwarding)
   if (renderer && prevInspector && renderer.inspector === tap) renderer.inspector = prevInspector;
-  // Keep timestamps on if something else (eg. the stats-gl GPU panel) switched them on meanwhile
+  // Back to the state before the first hold: on if it was on then. Something that switched it on
+  // while held (eg. the stats-gl GPU panel) isn't seen, so it goes off with the last hold
   if (backend && !prevTrackTimestamp) backend.trackTimestamp = false;
   prevInspector = null;
   tap = null;

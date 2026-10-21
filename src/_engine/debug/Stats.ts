@@ -61,7 +61,6 @@ export const registerStatsModule = async () => {
 /**
  * Initializes statistics for debugging. The main loop's.
  * @internal
- * @param config ({@link StatsOptions}) optional configurations for stats
  * @returns the stats-gl `Stats` instance, or nothing while the debug module isn't loaded
  */
 export const initStats = (config?: StatsOptions) => useDebug(debugGUI)?._initStats(config);

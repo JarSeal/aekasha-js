@@ -787,6 +787,48 @@ As built, section 2 (2026-10-21, uncommitted on top of `cf071c3`):
    their next mount.
 2. H1, H2, Z1's headers.
 
+As built, section 1 (2026-10-21, uncommitted on top of `6390367`):
+
+- **Coverage:** `debug` 183 / 183 exports and 3 / 3 members (`DevFilesError`'s `code`, `details`
+  and constructor), recorded in `docs.json`. The type aliases' fields D10 names documented:
+  `DebuggerListItem`, `DebuggerListToggle`, `DebuggerListDef`, every pane item
+  (`DebuggerPaneBinding`, `…Folder`, `…Button`, `…Separator`, `…Custom`, `…Section`),
+  `DebugToolsState`, `StatsSource`, `GPUMemorySource`, `UndoRedoEntry`, `UndoRedoActionHandler`,
+  `DevFilesStatus`, `DevFileRead`, `DevFilesStatusBody`, `DevFilesSaveData`, `DevFilesCommitBody`
+  (`ProfilerSettings` and `DebuggerTabDef` already were). `@template` on every generic type.
+- **Tag style:** every old `@param name (type) text` and `@returns (type)` in the thin modules and
+  `DebugModules.ts` rewritten or dropped (a tag that only repeated its name went, as the lint's
+  `informative-docs` asks).
+- **`@example`s** (each type-checked by `yarn test`): `createDebuggerTab`, `debuggerListCMP`,
+  `addDebugToast`, `createProfilerTab`, `registerStatsSource`, `markDebugHelper`,
+  `registerGPUMemorySource`, `registerUndoRedoActionHandler` (with
+  `recordOrCoalesceUndoRedoAction` and `updateDebuggerTab`; `recordOrCoalesceUndoRedoAction`
+  points at it), `writeDevFiles` (with `onDevDataGathered` and `DevFilesError`),
+  `loadDebugModuleAsync`.
+- **`@remarks`:** when each registration works. `createDebuggerTab` (found here, not fixed: B1's
+  pattern) drops a tab created before the drawer loads, i.e. in a feature's `install`; the
+  remark says to create it in `onDebug`, `start` or scene code. `registerUndoRedoActionHandler`
+  works at any time, and undo stops at an entry without a handler (F5). `createProfilerTab`,
+  `registerStatsSource` and `registerGPUMemorySource` are gated on `isProfilerLoadedInThisMode`.
+  P7's Tweakpane fields on `DebuggerPaneBinding` and `DebuggerPaneCustom`. `updateDebuggerTab`
+  is a no-op on a hidden tab. `loadDebugModuleAsync` says when a plain
+  `if (IS_DEBUG_ENV) await import()` does the same (L2).
+- **F1 as built:** `DebuggerTabDef.content` says the open tab is rebuilt on every scene change and
+  a closed one is built fresh on its next mount; `content` and `onRefresh` say a throw shows an
+  error line (B3). `debug/CLAUDE.md` says the same (the drawer's title updated in place, the drawer
+  rebuilt only when a tab comes or goes) and `isDebuggerTabOpen`'s editor view case.
+- **P6:** the stale text was already gone (`registerUndoRedoActionHandler`'s "at module load time"
+  went with B1, `Config.ts`' `postFx` doc with Phase 2); `PostFXTypes.ts`' two "see
+  getPostFxPassStats()" now say who reads them. Phase 0's doc drift: `debug/CLAUDE.md`'s "all three
+  loops" (one `runFrame`); `_dbg__GPUTimer.ts`' release comment, which claimed a check the code
+  doesn't make, now says what it does (the state before the first hold comes back, so a GPU panel
+  switched on while held goes off with it). `Object3DHelpers.ts`' "`markDebugHelper` is on
+  `aekasha/debug`" became true in Phase 3.
+- **Checks:** `tsc` (both), `yarn lint`, `yarn test` (109 files, 867 passed, 1 skipped; the new
+  examples among them). `yarn hub:build`: 434 pages, no warning in scope (Phase 0's five
+  `notExported` ones are gone; the search index size warning is p619's). `moveMap.ts --check`
+  clean.
+
 ### Phase 5: the Hub, `CLAUDE.md`, readme, and what's filed
 
 1. D12's page (and the example, if chosen), `debug/CLAUDE.md`, the root's references.

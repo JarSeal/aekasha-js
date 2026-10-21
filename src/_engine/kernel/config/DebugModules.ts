@@ -44,8 +44,23 @@ export function loadDebugModule<T>(
 /**
  * Loads a debug module (debug env; prod test mode too with `includeInProdTestMode`) and resolves
  * with its ref once it's loaded, or with null in production and other modes, where the importer and
- * its chunk fold away.
+ * its chunk fold away. A failed import is logged and rejects.
  * @template T the module's shape, inferred from the importer
+ * @param importer `() => import('./_dbg__myModule')`: a `_dbg__` module, so nothing else imports it
+ * @param includeInProdTestMode load it in prod test mode too (a module whose UI shows there)
+ * @param debugId a name for the failure's log
+ * @returns the module's ref, its `current` set, or null where it doesn't load
+ * @remarks For a module that loads in the debug env only, `if (IS_DEBUG_ENV) await
+ * import('./_dbg__myModule')` folds out of a production build the same way; this loader adds the
+ * prod test mode opt-in and the log. Either way the `import()` must sit in the call (or the `if`):
+ * one outside it ships the chunk.
+ * @example
+ * ```ts
+ * import { loadDebugModuleAsync } from 'aekasha/debug';
+ *
+ * const debugTools = await loadDebugModuleAsync(() => import('./_dbg__myTools'), true, 'My tools');
+ * debugTools?.current?.createMyToolsTab();
+ * ```
  */
 export async function loadDebugModuleAsync<T>(
   importer: () => Promise<T>,

@@ -18,7 +18,7 @@ export const registerAxesGizmoModule = async () => {
  * Creates the axes gizmo: a Blender-style orientation gizmo in the top-right corner that
  * follows the active camera (debug environments only). The Debug tools tab's.
  * @internal
- * @param opts (object) { show: boolean; showInMainCamera: boolean }
+ * @param opts the Debug tools tab's `axesGizmo` settings
  */
 export const initAxesGizmo = (opts: { show: boolean; showInMainCamera: boolean }) => {
   useDebug(debugGizmo)?._initAxesGizmo(opts);
@@ -28,7 +28,6 @@ export const initAxesGizmo = (opts: { show: boolean; showInMainCamera: boolean }
  * Shows or hides the axes gizmo (it is only shown while the debug camera is active, unless
  * showInMainCamera is on). The Debug tools tab's.
  * @internal
- * @param show (boolean)
  */
 export const setAxesGizmoVisible = (show: boolean) => {
   useDebug(debugGizmo)?._setAxesGizmoVisible(show);
@@ -38,7 +37,6 @@ export const setAxesGizmoVisible = (show: boolean) => {
  * Sets whether the axes gizmo is also shown while the main (gameplay) camera is active. The Debug
  * tools tab's.
  * @internal
- * @param show (boolean)
  */
 export const setAxesGizmoInMainCamera = (show: boolean) => {
   useDebug(debugGizmo)?._setAxesGizmoInMainCamera(show);

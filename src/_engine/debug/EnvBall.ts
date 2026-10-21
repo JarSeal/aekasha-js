@@ -32,7 +32,6 @@ export const registerEnvBallModule = async () => {
  * environment map PBR materials sample and following the active camera (debug environments
  * only). The Debug tools tab's.
  * @internal
- * @param opts (object) {@link EnvBallOpts}
  */
 export const initEnvBall = (opts: EnvBallOpts) => {
   useDebug(debugEnvBall)?._initEnvBall(opts);
@@ -42,7 +41,6 @@ export const initEnvBall = (opts: EnvBallOpts) => {
  * Shows or hides the environment ball (it is only shown while the debug camera is active,
  * unless showInMainCamera is on, and only while there is an environment). The Debug tools tab's.
  * @internal
- * @param show (boolean)
  */
 export const setEnvBallVisible = (show: boolean) => {
   useDebug(debugEnvBall)?._setEnvBallVisible(show);
@@ -52,7 +50,6 @@ export const setEnvBallVisible = (show: boolean) => {
  * Sets whether the environment ball is also shown while the main (gameplay) camera is active. The
  * Debug tools tab's.
  * @internal
- * @param show (boolean)
  */
 export const setEnvBallInMainCamera = (show: boolean) => {
   useDebug(debugEnvBall)?._setEnvBallInMainCamera(show);
@@ -62,7 +59,7 @@ export const setEnvBallInMainCamera = (show: boolean) => {
  * Sets the roughness the environment ball samples the environment at (0 = mirror, 1 = fully
  * diffuse). The Debug tools tab's.
  * @internal
- * @param roughness (number) 0-1
+ * @param roughness 0-1
  */
 export const setEnvBallRoughness = (roughness: number) => {
   useDebug(debugEnvBall)?._setEnvBallRoughness(roughness);

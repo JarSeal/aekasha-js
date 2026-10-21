@@ -2,22 +2,22 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2307,
+      "documented": 2319,
       "total": 2416
     },
     "members": {
-      "documented": 935,
+      "documented": 938,
       "total": 970
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2263,
+        "documented": 2275,
         "total": 2353
       },
       "members": {
-        "documented": 885,
+        "documented": 888,
         "total": 890
       }
     },
@@ -35,33 +35,16 @@
   "folders": {
     "engine/debug": {
       "exports": {
-        "documented": 171,
+        "documented": 183,
         "total": 183
       },
       "members": {
-        "documented": 0,
+        "documented": 3,
         "total": 3
       },
       "undocumented": {
-        "exports": [
-          "DebuggerGUI#DebuggerListItem",
-          "DebuggerGUI#DebuggerPaneButton",
-          "DebuggerGUI#DebuggerPaneItem",
-          "DebuggerGUI#DebuggerPaneSeparator",
-          "DevFiles#DevFileRead",
-          "DevFiles#DevFilesStatus",
-          "DevFiles#DevFilesUnavailableReason",
-          "DevFiles#EncodePNGOpts",
-          "DevFilesProtocol#DevDataGatheredEvent",
-          "DevFilesProtocol#DevFilesErrorCode",
-          "DevFilesProtocol#DevFilesWriteStatus",
-          "GPUMemory#GPUMemorySource"
-        ],
-        "members": [
-          "DevFiles#DevFilesError.code",
-          "DevFiles#DevFilesError.constructor",
-          "DevFiles#DevFilesError.details"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "engine/debug/symbols": {

@@ -37,6 +37,7 @@ export const DEV_FILES_TOKEN_META = 'aek-dev-files';
  */
 export const DEV_FILES_HASH_HEADER = 'x-aek-sha256';
 
+/** Why the dev server refused or failed a request (`DevFilesError`'s `code` carries it). */
 export type DevFilesErrorCode =
   | 'NOT_ENABLED'
   | 'BAD_TOKEN'
@@ -65,8 +66,9 @@ export type DevFilesErrorBody = {
   error: { code: DevFilesErrorCode; message: string; details?: unknown };
 };
 
-/** `GET status` */
+/** The dev server's settings (`GET status`): `DevFilesStatus`'s `server`. */
 export type DevFilesStatusBody = {
+  /** False with `AEK_DEV_FILES=false` */
   enabled: boolean;
   /** `AEK_DEV_FILES_LAN=true`: the other routes take requests from the LAN too */
   writesFromLAN: boolean;
@@ -76,8 +78,11 @@ export type DevFilesStatusBody = {
   roots: string[];
   /** The folders inside them a path must not be in */
   deniedRoots: string[];
+  /** The extensions a path may have (`.json`, `.png`, …) */
   extensions: string[];
+  /** The largest file a write may send */
   maxFileBytes: number;
+  /** The largest batch a commit may send, its files together */
   maxBatchBytes: number;
 };
 
@@ -92,7 +97,12 @@ export type DevFilesStageBody = { stageId: string; bytes: number; sha256: string
 
 /** A save entry (p342 §2.6): `entry` goes first in the file's `__saveData[sceneId]`, the older
  * entries after it, and the server stamps its `__meta` */
-export type DevFilesSaveData = { sceneId: string; entry: Record<string, unknown> };
+export type DevFilesSaveData = {
+  /** The scene the entry applies in */
+  sceneId: string;
+  /** The overrides, in the asset's overrides schema */
+  entry: Record<string, unknown>;
+};
 
 /**
  * A save entry as a commit sends it: `historySize` is how many entries the scene keeps, the new
@@ -122,10 +132,12 @@ export type DevFilesWrite = {
  */
 export type DevFilesCommitRequest = { writes: DevFilesWrite[] };
 
+/** What a write did: an `unchanged` file isn't written (and sets off no gather). */
 export type DevFilesWriteStatus = 'created' | 'updated' | 'unchanged';
 
-/** `POST commit` */
+/** A committed batch's result (`POST commit`): `writeDevFiles`' answer. */
 export type DevFilesCommitBody = {
+  /** Per write, in the batch's order: its path, the file's hash now and what the write did */
   results: { path: string; sha256: string; status: DevFilesWriteStatus }[];
 };
 
@@ -145,6 +157,7 @@ export type DevFilesConflicts = { path: string; currentHash: string | null }[];
  */
 export const AEK_GATHER_EVENT = 'aek:gather';
 
+/** How a gather the dev server ran went: what `onDevDataGathered`'s listener gets. */
 export type DevDataGatheredEvent = {
   /** `failed`: the pipeline couldn't start or the gather failed, the generated data is as it was */
   status: 'done' | 'failed';
