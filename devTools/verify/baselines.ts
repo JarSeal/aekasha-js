@@ -1,7 +1,8 @@
 /**
  * The baselines (`yarn verify:baselines`, p601 Phase 3): what a refactor must not change by
- * accident, as three committed JSON files in `devTools/verify/baselines/`, none of them machine
- * dependent, diffed against the current state.
+ * accident, as committed JSON files in `devTools/verify/baselines/` (the bundle's, one per embed
+ * profile, the API's and the docs'), none of them machine dependent, diffed against the current
+ * state.
  *
  *   yarn verify:baselines [--update [--allow-docs-drop]] [--no-build] [--docs]
  *

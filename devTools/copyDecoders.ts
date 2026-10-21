@@ -2,6 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { PUBLIC_DIR, ROOT } from './paths';
 
 /**
  * Copies the runtime decoders from the installed three.js version into `src/public/` (Vite
@@ -16,9 +17,7 @@ import { fileURLToPath } from 'url';
  * Idempotent: a file whose size and mtime already match the source is skipped.
  */
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const THREE_LIBS_DIR = path.resolve(__dirname, '../node_modules/three/examples/jsm/libs');
-const PUBLIC_DIR = path.resolve(__dirname, '../src/public');
+const THREE_LIBS_DIR = path.join(ROOT, 'node_modules/three/examples/jsm/libs');
 
 const DECODER_SETS = [
   {

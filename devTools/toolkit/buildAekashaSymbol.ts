@@ -1,7 +1,6 @@
 /* eslint-disable no-console */
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { Document, Logger, NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { draco, weld } from '@gltf-transform/functions';
@@ -9,6 +8,7 @@ import { DOMParser } from 'linkedom';
 import { ExtrudeGeometry, MathUtils, Path, Shape, Vector2 } from 'three';
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js';
 import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { ROOT as REPO_ROOT } from '../paths';
 
 /**
  * Builds the toolkit's Ækasha symbol model (p554 §2.3) from the Æ glyph in `src/public/favicon.svg`: the glyph's path extruded with a
@@ -19,8 +19,6 @@ import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.j
  *   source .claude/hooks/use-node.sh && npx tsx devTools/toolkit/buildAekashaSymbol.ts
  */
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = path.resolve(__dirname, '../..');
 const SVG_FILE = path.join(REPO_ROOT, 'src/public/favicon.svg');
 const OUT_FILE = path.join(REPO_ROOT, 'src/toolkit/models/brand/aekashaSymbol/aekashaSymbol.glb');
 const NAME = 'aekashaSymbol';

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { readGit } from './git';
+import { ROOT } from './paths';
 
 /**
  * The project's metadata: the engine, toolkit and app versions and codenames, the packages, and
@@ -12,10 +12,7 @@ import { readGit } from './git';
 
 type PackageJson = typeof import('../package.json');
 
-const PACKAGE_JSON_FILE = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../package.json'
-);
+const PACKAGE_JSON_FILE = path.join(ROOT, 'package.json');
 
 const createVersionHash = (inputString: string) => {
   let hash = 5381; // Starting seed

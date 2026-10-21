@@ -1,7 +1,7 @@
 /**
- * Where an embed profile's build goes (p611 D7), apart from `embedBuild.ts`, whose plugin imports
- * the gatherer (which compiles the JSON schemas when it loads): the Hub and the verify commands
- * read the build without it.
+ * Where an embed profile's build goes (p611 D7), apart from `embedBuild.ts`, whose plugin loads
+ * `sbp.config.ts` and the gather's output module: the Hub and the verify commands read the build
+ * without it.
  */
 import path from 'path';
 import { ROOT } from '../paths';
