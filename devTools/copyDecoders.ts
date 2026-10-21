@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- a command's own output */
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -77,6 +77,8 @@ const copyDecoderSet = ({ label, sourceDir, targetDir, files }: (typeof DECODER_
   return true;
 };
 
+/** Copies the Draco and Basis decoders into `src/public/` when they changed (`yarn dev`,
+ * `yarn build`) */
 export const copyDecoders = () => {
   for (const decoderSet of DECODER_SETS) {
     if (!copyDecoderSet(decoderSet)) return;

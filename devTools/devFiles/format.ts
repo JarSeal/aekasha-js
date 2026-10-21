@@ -1,6 +1,6 @@
 import path from 'path';
 import { format, resolveConfig, resolveConfigFile } from 'prettier';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 
 /**
  * How a dev files JSON write is formatted: Prettier with the repo root's config only (p619 §1.4

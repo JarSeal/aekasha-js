@@ -139,7 +139,8 @@ export default [
       'plugin:prettier/recommended',
     ],
     rules: {
-      '@typescript-eslint/no-unused-vars': 1,
+      // A rest-omit (`const { a, ...rest } = x`) leaves `a` unused on purpose
+      '@typescript-eslint/no-unused-vars': [1, { ignoreRestSiblings: true }],
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
       // Type-only imports as a top-level `import type`, which is erased, so a type can't pull its
       // module (and three) into the physics worker. The inline `import { type X }` alone compiles

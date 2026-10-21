@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // p619 §1.4 F5, F6: the commit's races and limits, the stage's folders, and the path and save
-// entry edge cases. Run in a temp repo root: `sources.ts`' ROOT (every path the dev files resolve
+// entry edge cases. Run in a temp repo root: `devTools/paths.ts`' ROOT (every path the dev files resolve
 // and write, the backups and the stage) is redirected there, so the repo is never written.
 
 const { TMP, REPO_ROOT, formatHook } = await vi.hoisted(async () => {
@@ -25,8 +25,8 @@ vi.mock('url', async (importOriginal) => {
   const actual = await importOriginal<typeof import('url')>();
   const fileURLToPath = (url: string | URL) => {
     const file = actual.fileURLToPath(url);
-    return file === path.join(REPO_ROOT, 'devTools/assetPipeline/sources.ts')
-      ? path.join(TMP, 'devTools/assetPipeline/sources.ts')
+    return file === path.join(REPO_ROOT, 'devTools/paths.ts')
+      ? path.join(TMP, 'devTools/paths.ts')
       : file;
   };
   return { ...actual, default: { ...actual, fileURLToPath }, fileURLToPath };

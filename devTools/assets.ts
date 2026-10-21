@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- a command's own output */
 import { runAssetsCommand } from './assetPipeline/command';
 import { globToRegExp } from './assetPipeline/glob';
 import type { PipelineAsset } from './assetPipeline/pipeline';

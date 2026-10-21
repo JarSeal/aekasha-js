@@ -23,7 +23,7 @@
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 import { ENTRY_FILES } from '../aliases';
 import { buildImportGraph, type ImportKind } from './importGraph';
 import { applyMoveRules, getMoveRules, isPascalModuleName, type MoveEntry } from './moveRules';

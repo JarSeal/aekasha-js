@@ -34,7 +34,7 @@
 import fs from 'fs';
 import path from 'path';
 import sbpProfiles from '../sbp.config';
-import { ROOT } from './assetPipeline/sources';
+import { ROOT } from './paths';
 import { ENGINE_SCHEMA_PARTS } from './gather/engineSchemas';
 import { buildBundles } from './sbp/appBuild';
 import { isBudgetFailure } from './sbp/budgets';

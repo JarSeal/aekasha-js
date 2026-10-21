@@ -5,7 +5,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 import { isGrowthToFlag } from './bundleGrowth';
 import { BUNDLE_FORMAT_VERSION, type BundleBaseline } from './bundleModel';
 

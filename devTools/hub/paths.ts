@@ -1,8 +1,8 @@
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { ROOT } from '../paths';
 
-/** The repo root */
-export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+/** The repo root (`devTools/paths.ts`') */
+export { ROOT };
 
 /** The Hub's sources (p550 §3.2) */
 export const HUB_DIR = path.join(ROOT, 'hub');

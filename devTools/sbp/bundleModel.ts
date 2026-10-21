@@ -10,7 +10,7 @@
 import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 
 /** Bump when `bundle.json`'s shape changes: an old one is then read as missing */
 export const BUNDLE_FORMAT_VERSION = 1;

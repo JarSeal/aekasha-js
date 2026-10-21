@@ -36,7 +36,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import prettier from 'prettier';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 import { buildPathMap, type PathMap } from './moveApply';
 import { MOVE_EDITS } from './moveEdits';
 import type { MoveEntry, MovePlan } from './moveRules';

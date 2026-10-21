@@ -23,7 +23,7 @@ import {
   indexModuleGraph,
 } from './bundleWhy';
 import path from 'path';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 import { KIB, type SbpProfile } from './config';
 
 /** Bump when the report's shape changes: Hub pages read it (p611 D9, `devTools/hub/sbp.ts`) */

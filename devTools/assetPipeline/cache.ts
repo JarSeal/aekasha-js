@@ -1,10 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import { createHash } from 'crypto';
+import { stableStringify } from '../../src/_engine/utils/StableStringify';
 import { writeFileAtomic } from '../files';
 import { KTX_VERSION } from './ktxTool';
 import { AEK_ASSETS_DIR, getOutputFile } from './outputs';
-import { ROOT } from './sources';
+import { ROOT } from '../paths';
 import type { BuiltLodChain } from './lodChains';
 import type { EncodedTexture } from './textures';
 
@@ -27,8 +28,8 @@ import type { EncodedTexture } from './textures';
  */
 export const PIPELINE_VERSION = 1;
 
-export const ASSETS_LOCK_FILE = path.join(ROOT, 'assets.lock.json');
-export const CACHE_STORE_DIR = path.join(ROOT, '.cache', 'asset-pipeline', 'store');
+const ASSETS_LOCK_FILE = path.join(ROOT, 'assets.lock.json');
+const CACHE_STORE_DIR = path.join(ROOT, '.cache', 'asset-pipeline', 'store');
 /** The keys computed by earlier runs ({@link saveKeyMemo}) */
 export const KEY_MEMO_FILE = path.join(ROOT, '.cache', 'asset-pipeline', 'key-memo.json');
 
@@ -53,16 +54,6 @@ export type CacheEntry = {
 };
 
 type LockFile = { '//': string; entries: Record<string, CacheEntry> };
-
-/** JSON with sorted object keys and without undefined values: equal values, equal strings */
-export const stableStringify = (value: unknown): string =>
-  JSON.stringify(value, (_key, v: unknown) =>
-    v && typeof v === 'object' && !Array.isArray(v)
-      ? Object.fromEntries(
-          Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : 1))
-        )
-      : v
-  );
 
 const packageVersions = new Map<string, string>();
 
@@ -196,8 +187,10 @@ const isOutputPresent = (entry: CacheEntry) => {
 /** Only outputs in aek-assets/ are stored: a public source used as it is isn't an output. */
 const isAekAsset = (file: string) => file.startsWith(AEK_ASSETS_DIR + path.sep);
 
+/** A cache hit: the entry, and whether its output was in place or copied back from the store */
 export type CacheHit = { entry: CacheEntry; from: 'output' | 'store' };
 
+/** One run's cache ({@link createPipelineCache}) */
 export type PipelineCache = ReturnType<typeof createPipelineCache>;
 
 /**

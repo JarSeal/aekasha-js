@@ -39,7 +39,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 import { ENTRY_FILES } from '../aliases';
 import { loadApiModel } from '../hub/api/extract';
 import { parseModuleSource } from '../refactor/importGraph';

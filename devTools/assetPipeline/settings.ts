@@ -11,7 +11,7 @@ import {
   type TextureSlot,
 } from '../../src/_engine/schemas';
 import { globToRegExp } from './glob';
-import { ROOT } from './sources';
+import { ROOT } from '../paths';
 import type { ProjectOptOut } from './switches';
 
 /**
@@ -76,6 +76,7 @@ export type ResolvedTextureSettings =
     }
   | { codec: 'none'; maxSize: number | null };
 
+/** A GLB's geometry settings with every default filled in */
 export type ResolvedMeshSettings = Required<MeshSettings>;
 
 /** A budget limit and the level that set it (eg. `the profile "prop"`) */
@@ -94,6 +95,8 @@ export type ResolvedBudget = {
   profileTextures: Record<TextureSlot, ResolvedTextureSettings>;
 };
 
+/** An asset's settings after every level (`createSettingsResolver`): per side, or why it's kept
+ * as it is */
 export type ResolvedAssetSettings = {
   /** The profile applied, if any */
   profile: string | null;
@@ -110,6 +113,7 @@ export type ResolvedAssetSettings = {
   passThrough: { textures?: string; mesh?: string };
 };
 
+/** What the resolver resolves an asset's settings from */
 export type AssetSettingsInput = {
   /** The source file's path relative to the repo root, '/'-separated */
   sourcePath: string;

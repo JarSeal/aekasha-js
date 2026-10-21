@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { getResultFigures } from './generated';
 import type { PipelineRun, PipelineRunResult } from './run';
-import { ROOT } from './sources';
+import { ROOT } from '../paths';
 
 /**
  * A run's stats (p300 §5): what each asset became, the download and VRAM totals before and
@@ -24,6 +24,7 @@ const SLOWEST_COUNT = 5;
 
 type InOut = { in: number; out: number };
 
+/** One asset in the run's stats (`last-run.json`) */
 export type RunSummaryAsset = {
   key: string;
   id: string;
@@ -46,6 +47,7 @@ export type RunSummaryAsset = {
   durationMs: number;
 };
 
+/** The run's stats (`summarizeRun`), written to `last-run.json` */
 export type RunSummary = ReturnType<typeof summarizeRun>;
 
 const getSourceLabel = (result: PipelineRunResult) => {
@@ -126,6 +128,7 @@ export const summarizeRun = (
   };
 };
 
+/** Writes the run's stats (`.cache/asset-pipeline/last-run.json` by default) */
 export const writeRunSummary = (summary: RunSummary, file = LAST_RUN_FILE) => {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, `${JSON.stringify(summary, null, 2)}\n`);

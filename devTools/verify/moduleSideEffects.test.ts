@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 
 // No module-level side effects (p607 D8): a module registers nothing when it's imported, only when
 // its feature is installed, so importing it costs a build nothing it doesn't use and its

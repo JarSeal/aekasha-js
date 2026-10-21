@@ -4,7 +4,7 @@
  * read the build without it.
  */
 import path from 'path';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 import type { SbpProfile } from './config';
 
 export const EMBED_ROOT_DIR = path.join(ROOT, 'dist-embed');

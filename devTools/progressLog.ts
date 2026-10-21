@@ -1,7 +1,7 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- the progress log writes to the console too */
 import fs from 'fs';
 import path from 'path';
-import { ROOT } from './assetPipeline/sources';
+import { ROOT } from './paths';
 
 /**
  * The verify commands' shared progress log (p601): every line they print also goes to

@@ -1,9 +1,9 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- the build plugin's own log */
 import fs from 'fs';
 import path from 'path';
 import type { Plugin } from 'vite';
 import { removeStaleOutputs } from './assetPipeline/outputs';
-import { ROOT } from './assetPipeline/sources';
+import { ROOT } from './paths';
 import { GENERATED_APP_DATA_FILE } from './gather/output';
 
 /**
@@ -42,6 +42,8 @@ const getFileSizes = (dir: string, sizes = new Map<string, number>()) => {
 const formatBytes = (bytes: number) =>
   bytes < 1e6 ? `${(bytes / 1e3).toFixed(1)} KB` : `${(bytes / 1e6).toFixed(2)} MB`;
 
+/** The build's plugin that copies into `dist/aek-assets/` only the outputs the production data
+ * loads (its `__url`s), and logs their size */
 export const assetOutputsBuildPlugin = (): Plugin => {
   let outDir = '';
   /** `closeBundle` runs after a failed build too: its own throw would hide the build's (B4) */

@@ -1,10 +1,10 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 import { hasGatheredSaveData } from '../gather/gatheredJson';
 import { DevFilesError } from './http';
 import type { DevFilePath } from './paths';
-import { sha256 } from './stage';
+import { sha256 } from '../files';
 import type {
   DevFilesSaveDataWrite,
   DevFilesSchemaIssues,
@@ -84,17 +84,18 @@ const canonicalJson = (value: unknown) =>
 
 const withoutMeta = (entry: unknown) => {
   if (!isPlainObject(entry)) return entry;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   const { __meta, ...rest } = entry;
   return rest;
 };
 
-const invalidFile = (repoPath: string, issuePath: string, message: string): never => {
+// A declaration, not an arrow: a call of a `never` function narrows only then (p619 K2)
+function invalidFile(repoPath: string, issuePath: string, message: string): never {
   const details: DevFilesSchemaIssues = [
     { path: repoPath, issues: [{ path: issuePath, message }] },
   ];
   throw new DevFilesError('INVALID_SCHEMA', `Invalid ${repoPath}`, details);
-};
+}
 
 export type SaveDataWriteResult =
   /** The file's new JSON value */
@@ -129,7 +130,7 @@ export const applySaveDataWrite = async (
   } catch (err) {
     throw new DevFilesError('INVALID_JSON', `${repoPath} isn't JSON: ${(err as Error).message}`);
   }
-  if (!isPlainObject(file)) return invalidFile(repoPath, '', 'The file must be an object');
+  if (!isPlainObject(file)) invalidFile(repoPath, '', 'The file must be an object');
   const { sceneId, entry, historySize } = saveData;
   const keep = (list: unknown[]) => (historySize === -1 ? list : list.slice(0, historySize));
   if (file.__saveData !== undefined && !isPlainObject(file.__saveData)) {
@@ -140,9 +141,7 @@ export const applySaveDataWrite = async (
   const entries = Object.prototype.hasOwnProperty.call(allSaveData, sceneId)
     ? allSaveData[sceneId]
     : [];
-  if (!Array.isArray(entries)) {
-    return invalidFile(repoPath, `__saveData.${sceneId}`, 'Must be a list');
-  }
+  if (!Array.isArray(entries)) invalidFile(repoPath, `__saveData.${sceneId}`, 'Must be a list');
 
   if (
     entries.length &&

@@ -1,8 +1,9 @@
 import fs from 'fs';
 import path from 'path';
-import { createHash, randomBytes } from 'crypto';
+import { randomBytes } from 'crypto';
+import { sha256 } from '../files';
 import { isProcessAlive } from '../assetPipeline/runLock';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 import { DevFilesError } from './http';
 import type { DevFilesStageBody } from '../../src/_engine/debug/DevFilesProtocol';
 
@@ -20,8 +21,6 @@ const STAGE_ROOT = path.join(DEV_FILES_CACHE_DIR, 'stage');
 const STAGE_TTL_MS = 10 * 60 * 1000;
 
 export type StagedFile = { file: string; bytes: number; sha256: string; expiresAt: number };
-
-export const sha256 = (data: Buffer | string) => createHash('sha256').update(data).digest('hex');
 
 /** Removes the stage folders of servers that are gone (and files of the old shared layout) */
 const removeAbandonedStages = () => {

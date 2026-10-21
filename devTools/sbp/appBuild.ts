@@ -5,7 +5,7 @@
  * `vite build` with `AEK_EMBED_PROFILE` (`embedBuild.ts`), on the same production gather.
  */
 import { spawn } from 'child_process';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 import { out } from '../progressLog';
 import { EMBED_PROFILE_ENV } from './embedBuild';
 

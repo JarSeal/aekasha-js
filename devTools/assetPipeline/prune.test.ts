@@ -4,7 +4,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import sharp from 'sharp';
 
 // p619 §1.4 A1-A3: `yarn assets`' prune keeps what it can't rebuild, and what another run is
-// writing; A5: an output of the wrong size is written again. Run in a temp repo root: `sources.ts`' ROOT (every path the pipeline writes) is
+// writing; A5: an output of the wrong size is written again. Run in a temp repo root: `devTools/paths.ts`' ROOT (every path the pipeline writes) is
 // redirected there, so the repo's own outputs are never touched. `ktx` is missing, as on a clone
 // without `yarn setupAssetTools`.
 
@@ -20,13 +20,13 @@ const { TMP, REPO_ROOT } = await vi.hoisted(async () => {
   };
 });
 
-// sources.ts computes ROOT from its own URL: that one URL resolves into the temp root
+// devTools/paths.ts computes ROOT from its own URL: that one URL resolves into the temp root
 vi.mock('url', async (importOriginal) => {
   const actual = await importOriginal<typeof import('url')>();
   const fileURLToPath = (url: string | URL) => {
     const file = actual.fileURLToPath(url);
-    return file === path.join(REPO_ROOT, 'devTools/assetPipeline/sources.ts')
-      ? path.join(TMP, 'devTools/assetPipeline/sources.ts')
+    return file === path.join(REPO_ROOT, 'devTools/paths.ts')
+      ? path.join(TMP, 'devTools/paths.ts')
       : file;
   };
   return { ...actual, default: { ...actual, fileURLToPath }, fileURLToPath };
@@ -43,7 +43,7 @@ vi.mock('./ktxEncode', async (importOriginal) => {
 });
 
 const { runAssetsCommand } = await import('./command');
-const { ROOT } = await import('./sources');
+const { ROOT } = await import('../paths');
 const { RUN_LOCK_FILE } = await import('./runLock');
 const { getContentHash, writeOutput } = await import('./outputs');
 

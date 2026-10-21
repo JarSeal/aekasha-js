@@ -1,9 +1,10 @@
 import fs from 'fs';
 import path from 'path';
-import { createHash } from 'crypto';
 import { listExternalGLTFUris, readGLTFJson } from './gltfJson';
 import { isProcessAlive } from './runLock';
-import { PUBLIC_DIR, ROOT, SRC_DIR, type AssetSource, type PackSource } from './sources';
+import type { AssetSource, PackSource } from './sources';
+import { sha256 } from '../files';
+import { PUBLIC_DIR, ROOT, SRC_DIR } from '../paths';
 
 /**
  * The pipeline's outputs (p300 DD3): `src/public/aek-assets/<logical path>.<content hash>.<ext>`,
@@ -16,8 +17,7 @@ export const AEK_ASSETS_DIR = path.join(PUBLIC_DIR, 'aek-assets');
 const toPosix = (filePath: string) => filePath.split(path.sep).join('/');
 
 /** The first 8 hex digits of the SHA-256: unique enough within one logical path */
-export const getContentHash = (bytes: Uint8Array) =>
-  createHash('sha256').update(bytes).digest('hex').slice(0, 8);
+export const getContentHash = (bytes: Uint8Array) => sha256(bytes).slice(0, 8);
 
 /**
  * Where a source's outputs go inside `aek-assets/`, without the hash and extension: its path
@@ -52,6 +52,7 @@ export const getArrayLogicalPath = (jsonFile: string) => getJsonLogicalPath(json
 export const getAtlasLogicalPath = (jsonFile: string, slot: string) =>
   getJsonLogicalPath(jsonFile, `.atlas.${slot}`);
 
+/** An output written into `aek-assets/` (or a public source used where it is) */
 export type PipelineOutput = {
   /** Absolute path on disk */
   file: string;

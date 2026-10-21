@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { ROOT } from '../paths';
 /**
  * `yarn sbp`'s profiles (p611 D2), listed in `sbp.config.ts` at the repo root: what a build holds,
  * which scenes it serves and the budgets it must stay within: the template app's full-page build,
@@ -60,7 +60,6 @@ export const WELL_UNDER_MIN_BYTES = 2 * KIB;
 export const isWellUnderBudget = (size: number, budget: number) =>
   budget - size > Math.max(budget * WELL_UNDER_RATIO, WELL_UNDER_MIN_BYTES);
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const isDir = (file: string) => !!fs.statSync(file, { throwIfNoEntry: false })?.isDirectory();
 
 /**

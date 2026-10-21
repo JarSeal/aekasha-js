@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- a command's own output */
 import path from 'path';
 import { ensureKtx, KTX_VERSION } from './assetPipeline/ktxTool';
 

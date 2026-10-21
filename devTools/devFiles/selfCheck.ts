@@ -2,8 +2,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import http from 'http';
-import { createHash } from 'crypto';
-import { ROOT } from '../assetPipeline/sources';
+import { sha256 } from '../files';
+import { ROOT } from '../paths';
 import { out, PROGRESS_LOG_WATCH } from '../progressLog';
 import { formatDevFileJson } from './format';
 import {
@@ -59,8 +59,6 @@ let baseUrl: URL;
 let token = '';
 let failures = 0;
 let passes = 0;
-
-const sha256 = (data: Buffer | string) => createHash('sha256').update(data).digest('hex');
 
 const request = (opts: {
   method: string;

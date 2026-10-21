@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- a script's own output */
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';

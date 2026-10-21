@@ -13,6 +13,7 @@ import type { Node } from 'three/tsl';
 import { color, texture, uniform } from 'three/tsl';
 import { textureMapKeys } from '../../utils/Constants';
 import { hashStringFNV1a } from '../../utils/Hash';
+import { stableStringify } from '../../utils/StableStringify';
 import { IS_DEBUG_ENV } from '../config/Config';
 import { recordAssetOwner, retagAssetOwner } from './AssetOwners';
 import { getSceneRetainedTextures } from '../scene/SceneHooks';
@@ -553,20 +554,6 @@ export type MaterialVariantOverrides = {
   staticDefines?: Record<string, unknown>;
   /** Merged over the base's `nodes`, per socket. */
   nodes?: Record<string, Record<string, unknown>>;
-};
-
-// Deterministic JSON (sorted object keys), so equal overrides give the same variant
-const stableStringify = (value: unknown): string => {
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
-  if (value && typeof value === 'object') {
-    const obj = value as Record<string, unknown>;
-    return `{${Object.keys(obj)
-      .filter((key) => obj[key] !== undefined)
-      .sort()
-      .map((key) => `${JSON.stringify(key)}:${stableStringify(obj[key])}`)
-      .join(',')}}`;
-  }
-  return JSON.stringify(value);
 };
 
 // Only to keep variant ids short (collisions are resolved in getMaterialVariant)

@@ -108,7 +108,7 @@ const resolveImpostors = ({ ctx, reg, sceneId, scene }: SceneRun) => {
     }
     // The runtime would refuse it and bake: its slots would load for nothing (warned in pass 1)
     if (impostor.formatVersion !== IMPOSTOR_EXPORT_FORMAT_VERSION) continue;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- build time only
+
     const { $schema, __sourcePath, ...def } = impostor;
     if (ctx.isProduction) delete def.debugData;
     impostorDefs.push({ ...def, id: impostorId });
@@ -159,7 +159,7 @@ const resolveTextures = (run: SceneRun) => {
     if (reg.textureArrays[texId]) {
       // Build time only: the runtime loads the encoded array (its generated fields, from the
       // registry entry: an array has no scene entries)
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- build time only
+
       const { layers, size, optimize, __sourcePath, ...arrayData } = reg.textureArrays[texId];
       ship.checkArray(__sourcePath || '', sceneId);
       if (ctx.isProduction) delete arrayData.debugData;
@@ -240,7 +240,7 @@ const resolveMeshes = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneRun) 
     if (!mesh) return reportUnknownId('mesh', meshId);
     const entry = getSaveEntry(mesh, sceneId);
     if (ctx.isProduction && mesh.entityOpts?.debugData) delete mesh.entityOpts.debugData;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- build time only
+
     const { __sourcePath, __saveData, ...meshData } = {
       ...mesh,
       props: {
@@ -292,7 +292,7 @@ const resolveSkyBoxes = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneRun
         ? reg.skyboxes[skyIdOrInline]
         : mergeSkyBoxPreset(skyIdOrInline);
     if (!sky) return reportUnknownId('sky box', skyIdOrInline as string);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- build time only
+
     const { $schema, __sourcePath, __saveData, ...def } = sky;
     const skyData = applySkyBoxSaveEntry(def, __saveData?.[sceneId]?.[0]);
     if (ctx.isProduction) delete skyData.debugData;

@@ -38,7 +38,8 @@ import type {
   ResolvedAssetSettings,
   ResolvedTextureSettings,
 } from './settings';
-import { resolvePackFile, ROOT, type AssetSource, type PackSource } from './sources';
+import { resolvePackFile, type AssetSource, type PackSource } from './sources';
+import { ROOT } from '../paths';
 import {
   encodeTextureArray,
   getTextureArrayKeyParams,
@@ -101,6 +102,7 @@ export type PipelineAsset = {
 /** How the cache (§7) answered: the output was there, was copied back from the store, or was encoded */
 export type PipelineCacheStatus = 'hit' | 'restored' | 'miss';
 
+/** What `processAsset` did with an asset: optimized, passed through, needing `ktx`, or skipped */
 export type PipelineOutcome =
   | {
       status: 'optimized';
@@ -135,6 +137,7 @@ export type PipelineOutcome =
   | { status: 'encoderMissing'; reason: string; settings: ResolvedAssetSettings }
   | { status: 'skipped'; reason: string };
 
+/** A {@link PipelineOutcome} with its time */
 export type PipelineResult = PipelineOutcome & {
   /** Wall time, cache lookup included (the run's slowest assets, §5) */
   durationMs: number;
@@ -174,6 +177,7 @@ const passThroughPack = async (source: PackSource, isSrgb: boolean) => {
   return writeOutput(getPackLogicalPath(source), '.png', await encodePng(image, isSrgb));
 };
 
+/** `processAsset`'s options: the run's `ktx` and cache, and a look-up-only mode */
 export type ProcessAssetOpts = {
   /** The run's `ktx` (one setup per run); default: one for this asset */
   getKtx?: KtxProvider;

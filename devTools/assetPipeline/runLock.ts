@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { ROOT } from './sources';
+import { ROOT } from '../paths';
 
 /**
  * The asset pipeline's run lock (p619 §1.4 A3): one process at a time writes `assets.lock.json`

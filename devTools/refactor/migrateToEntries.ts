@@ -16,7 +16,7 @@
 import fs from 'fs';
 import path from 'path';
 import prettier from 'prettier';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 import { ENTRY_FILES } from '../aliases';
 import { migrateToEntryImports } from './entryImports';
 

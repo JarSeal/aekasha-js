@@ -3,7 +3,7 @@ import path from 'node:path';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // p619 D14 and D16: the cache key (every input that decides an output's bytes, and nothing else)
-// and its memo, kept across processes. Run in a temp repo root: `sources.ts`' ROOT is redirected
+// and its memo, kept across processes. Run in a temp repo root: `devTools/paths.ts`' ROOT is redirected
 // there (as in prune.test.ts), so the memo file is the test's own.
 
 const { TMP, REPO_ROOT } = await vi.hoisted(async () => {
@@ -22,8 +22,8 @@ vi.mock('url', async (importOriginal) => {
   const actual = await importOriginal<typeof import('url')>();
   const fileURLToPath = (url: string | URL) => {
     const file = actual.fileURLToPath(url);
-    return file === path.join(REPO_ROOT, 'devTools/assetPipeline/sources.ts')
-      ? path.join(TMP, 'devTools/assetPipeline/sources.ts')
+    return file === path.join(REPO_ROOT, 'devTools/paths.ts')
+      ? path.join(TMP, 'devTools/paths.ts')
       : file;
   };
   return { ...actual, default: { ...actual, fileURLToPath }, fileURLToPath };

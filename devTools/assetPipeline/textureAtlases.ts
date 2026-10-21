@@ -54,6 +54,7 @@ import { describeEncodedTexture, type EncodedTexture } from './textures';
 /** x, y, width, height in px, top-left origin */
 export type AtlasRect = [number, number, number, number];
 
+/** A cell as the layout placed it: its padded rect, its content and each slot's source */
 export type AtlasCellLayout = {
   id: string;
   /** The padded rect */
@@ -65,6 +66,7 @@ export type AtlasCellLayout = {
   data?: Record<string, unknown>;
 };
 
+/** An atlas's resolved layout: its size, padding and levels, the cells, the slots' images */
 export type TextureAtlasLayout = {
   size: [number, number];
   padding: number;
@@ -91,6 +93,7 @@ const overlaps = (a: AtlasRect, b: AtlasRect) =>
 
 const formatRect = (rect: AtlasRect) => `[${rect.join(', ')}]`;
 
+/** A cell as {@link layoutAtlasCells} takes it */
 export type AtlasCellInput = {
   /** Names the cell in messages, eg. 'cells[2] ("crackA")' */
   label: string;
@@ -408,6 +411,7 @@ export type AtlasSlotSource = {
   cells: { id: string; rect: AtlasRect; content: AtlasRect; source?: TextureArrayLayer }[];
 };
 
+/** One slot of a layout as the pipeline's source ({@link AtlasSlotSource}) */
 export const createAtlasSlotSource = (
   jsonFile: string,
   atlasId: string,

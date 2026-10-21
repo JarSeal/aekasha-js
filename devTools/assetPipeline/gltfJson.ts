@@ -12,6 +12,7 @@ const GLB_CHUNK_JSON = 0x4e4f534a; // 'JSON'
 
 type ColliderExtras = { extras?: { colliderType?: unknown } };
 
+/** The parts of a glTF's JSON the pipeline reads: the collider extras and the external files */
 export type GLTFJson = {
   nodes?: ({ mesh?: number } & ColliderExtras)[];
   meshes?: ColliderExtras[];

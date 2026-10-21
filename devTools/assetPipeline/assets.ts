@@ -22,12 +22,11 @@ import { createAtlasSlotSource, resolveTextureAtlas } from './textureAtlases';
 import {
   createPackSource,
   resolveAssetSource,
-  ROOT,
-  SRC_DIR,
   toRepoPath,
   type AssetSource,
   type PackSource,
 } from './sources';
+import { ROOT, SRC_DIR } from '../paths';
 
 /**
  * The pipeline's asset list (p300 Phase 2 step 7): every source file a `*.texture.json` or
@@ -125,6 +124,7 @@ type AssetJsonBase = {
   jsonFile: string;
 };
 
+/** An asset JSON the pipeline reads, validated, with its id (the JSON's, else its file name) */
 export type AssetJson =
   | (AssetJsonBase & { type: 'texture'; data: TextureAsset })
   | (AssetJsonBase & { type: 'importedAsset'; data: ImportedAsset })

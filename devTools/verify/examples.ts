@@ -16,7 +16,7 @@ import fs from 'fs';
 import path from 'path';
 import ts from 'typescript';
 import { ENTRY_FILES } from '../aliases';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 
 /** One example's code, located by the source line of its first code line */
 export type ExampleBlock = {

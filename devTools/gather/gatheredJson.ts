@@ -42,7 +42,7 @@ export type GatheredJsonType = keyof typeof GATHERED_SUFFIXES;
 const GATHERED_TYPES = Object.keys(GATHERED_SUFFIXES) as GatheredJsonType[];
 
 /** The schema each gathered type is validated with */
-export const GATHERED_SCHEMAS: Record<GatheredJsonType, z.ZodType> = {
+const GATHERED_SCHEMAS: Record<GatheredJsonType, z.ZodType> = {
   scene: EngineSceneAssetSchema,
   camera: CameraAssetSchema,
   light: LightAssetSchema,
@@ -66,7 +66,7 @@ const TYPES_WITHOUT_SAVE_DATA = new Set<GatheredJsonType>([
 ]);
 
 /** A file's gathered type by its name, or undefined when it isn't one */
-export const getGatheredJsonType = (filePath: string) =>
+const getGatheredJsonType = (filePath: string) =>
   GATHERED_TYPES.find((type) => filePath.endsWith(GATHERED_SUFFIXES[type]));
 
 /** Whether the file name is a gathered asset JSON's */

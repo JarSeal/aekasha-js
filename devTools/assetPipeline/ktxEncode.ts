@@ -5,7 +5,7 @@ import { promisify } from 'util';
 import { encodePng, toChannels, type Img } from './images';
 import { ensureKtx, getKtxEnv, type KtxTool } from './ktxTool';
 import type { ResolvedTextureSettings } from './settings';
-import { ROOT } from './sources';
+import { ROOT } from '../paths';
 
 /**
  * KTX2 encoding with the `ktx` CLI (p300 DD4): an image is written as an 8-bit PNG and encoded
@@ -21,11 +21,13 @@ const TMP_DIR = path.join(ROOT, '.cache', 'asset-pipeline', 'tmp');
  */
 const KTX_CREATE_TIMEOUT_MS = 15 * 60_000;
 
+/** A texture's settings when `ktx` encodes it (any codec but `none`) */
 export type KtxSettings = Exclude<ResolvedTextureSettings, { codec: 'none' }>;
 
 /** Thrown when there is no working `ktx` and none could be set up (§8: "encoder missing"). */
 export class EncoderMissingError extends Error {}
 
+/** The run's `ktx`, set up on the first call (throws {@link EncoderMissingError} without one) */
 export type KtxProvider = () => Promise<KtxTool>;
 
 /**

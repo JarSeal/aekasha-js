@@ -24,7 +24,7 @@ import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 import { API_SUBTREES } from '../hub/api/model';
 import type { ApiBaseline, DocsBaseline, DocsPart, FolderCoverage } from '../verify/baselines';
 import { type BundleBaseline, type Size, readVisualizerData, stripHash } from '../sbp/bundleModel';

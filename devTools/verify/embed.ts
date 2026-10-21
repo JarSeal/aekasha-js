@@ -29,7 +29,7 @@ import http from 'http';
 import path from 'path';
 import type { Page } from 'playwright-core';
 import sbpProfiles from '../../sbp.config';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 import { getEmbedProfiles } from '../gather/output';
 import { buildBundles } from '../sbp/appBuild';
 import { getEmbedEntryFileName, getEmbedOutDir } from '../sbp/embedPaths';

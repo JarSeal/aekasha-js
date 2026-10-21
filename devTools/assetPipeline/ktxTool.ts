@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import crypto from 'crypto';
 import { spawnSync } from 'child_process';
-import { fileURLToPath } from 'url';
+import { sha256 } from '../files';
+import { ROOT } from '../paths';
 import { readAr, readCpio, readTar, readXar, type ArchiveEntry } from './archives';
 
 /**
@@ -22,7 +22,7 @@ export const KTX_VERSION = '4.4.2';
  * `ktx create` arrived in 4.3, but `--assign-tf` and `--normalize` (`ktxEncode.ts`) in 4.4.0:
  * 4.3.x rejects every encode
  */
-export const MIN_KTX_VERSION = '4.4.0';
+const MIN_KTX_VERSION = '4.4.0';
 /** What fixes a missing `ktx`, for messages */
 export const KTX_FIX = `yarn setupAssetTools, or put KTX-Software ≥ ${MIN_KTX_VERSION} on PATH, or set AEK_KTX to a ktx binary`;
 /** The release download: a stalled network fails the setup instead of hanging the run */
@@ -77,10 +77,10 @@ const RELEASES: Record<string, Release> = {
   },
 };
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-export const KTX_TOOL_DIR = path.join(ROOT, '.tools', `ktx-${KTX_VERSION}`);
+const KTX_TOOL_DIR = path.join(ROOT, '.tools', `ktx-${KTX_VERSION}`);
 const LOCAL_KTX_PATH = path.join(KTX_TOOL_DIR, 'bin', 'ktx');
 
+/** A working `ktx` binary: where, which version, and how it was found */
 export type KtxTool = {
   /** Absolute path of the `ktx` binary (or `ktx` when it was found on PATH) */
   path: string;
@@ -157,6 +157,7 @@ const getRelease = (): Release | { error: string } => {
   return release;
 };
 
+/** A `ktx` lookup's result: the tool it chose, if any, and the ones it skipped */
 export type KtxLookup = {
   tool: KtxTool | null;
   /** The `ktx` binaries found but skipped, and why (eg. `ktx 4.3.2 on PATH (older than 4.4.0)`) */
@@ -167,7 +168,7 @@ export type KtxLookup = {
  * Finds a working `ktx` ≥ {@link MIN_KTX_VERSION} without downloading anything. Throws when
  * `AEK_KTX` is set but doesn't point to one.
  */
-export const findKtx = (): KtxLookup => {
+const findKtx = (): KtxLookup => {
   const envPath = process.env.AEK_KTX;
   if (envPath) {
     const probe = probeKtx(envPath);
@@ -249,7 +250,7 @@ const resolveEntry = (entries: ArchiveEntry[], entryPath: string, hops = 0): Arc
  * that the binary runs. A working copy another process installed meanwhile is kept and returned,
  * unless `opts.isReplacing` (`yarn setupAssetTools --force`).
  */
-export const installLocalKtx = async (
+const installLocalKtx = async (
   log: Log = () => {},
   opts: { isReplacing?: boolean } = {}
 ): Promise<KtxTool> => {
@@ -261,10 +262,10 @@ export const installLocalKtx = async (
   const archive = await download(url).catch((error: Error) => {
     throw new Error(`Can't set up KTX-Software: ${error.message}`);
   });
-  const sha256 = crypto.createHash('sha256').update(archive).digest('hex');
-  if (sha256 !== release.sha256) {
+  const archiveHash = sha256(archive);
+  if (archiveHash !== release.sha256) {
     throw new Error(
-      `${release.file}: SHA-256 mismatch (expected ${release.sha256}, got ${sha256}). Nothing was installed.`
+      `${release.file}: SHA-256 mismatch (expected ${release.sha256}, got ${archiveHash}). Nothing was installed.`
     );
   }
 

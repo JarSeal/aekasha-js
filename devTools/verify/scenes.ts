@@ -31,7 +31,7 @@ import path from 'path';
 import { execSync } from 'child_process';
 import { firefox, type Browser, type BrowserContext, type Page } from 'playwright-core';
 import { isWSL, launchChromium } from './browser';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 import type {
   TestBridgeCharacterPaths,
   TestBridgeInputScript,

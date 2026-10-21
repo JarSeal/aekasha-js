@@ -1,7 +1,8 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { getLogicalPath } from './outputs';
-import { PUBLIC_DIR, resolveAssetSource } from './sources';
+import { resolveAssetSource } from './sources';
+import { PUBLIC_DIR } from '../paths';
 
 const JSON_FILE = 'src/app/textures/rock.texture.json';
 

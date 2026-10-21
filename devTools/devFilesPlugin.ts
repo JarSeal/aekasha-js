@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- the plugin's own log */
 import type { IncomingMessage, ServerResponse } from 'http';
 import type { Plugin } from 'vite';
 import { commitDevFiles, MAX_BATCH_BYTES, MAX_FILE_BYTES, readDevFile } from './devFiles/commit';

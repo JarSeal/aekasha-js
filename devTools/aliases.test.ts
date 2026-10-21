@@ -3,7 +3,7 @@ import path from 'path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 import { ENTRY_FILES, getTsconfigPaths } from './aliases';
-import { ROOT } from './assetPipeline/sources';
+import { ROOT } from './paths';
 
 describe('aliases', () => {
   it("tsconfig.json's paths are the entry list", () => {

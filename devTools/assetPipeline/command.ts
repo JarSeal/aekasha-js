@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- a command's own output */
 import fs from 'fs';
 import path from 'path';
 import { collectPipelineAssets, readAssetJsons, type DroppedAsset } from './assets';
@@ -19,7 +19,7 @@ import {
 import { runPipeline, type PipelineRun, type PipelineRunResult } from './run';
 import { withRunLockAsync } from './runLock';
 import { createSettingsResolver, loadAssetsConfig } from './settings';
-import { ROOT } from './sources';
+import { ROOT } from '../paths';
 import { ALLOW_UNOPTIMIZED_ENV_KEY, ENV_KEY, type ProjectOptOut } from './switches';
 
 /**
@@ -128,7 +128,7 @@ const formatResult = (
  * gone), or an asset JSON or one of its uses was left out of the run. Each line names the assets.
  * A remote source and an array or atlas slot whose textures side is off have no output by design.
  */
-export const getPruneBlockers = (results: PipelineRunResult[], dropped: DroppedAsset[]) => {
+const getPruneBlockers = (results: PipelineRunResult[], dropped: DroppedAsset[]) => {
   const list = (ids: string[]) =>
     `${ids.slice(0, 5).join(', ')}${ids.length > 5 ? ` and ${ids.length - 5} more` : ''}`;
   const ids = (
@@ -271,6 +271,7 @@ const printBriefSummary = (
   );
 };
 
+/** `runAssetsCommand`'s options: the project switches, the selection and the run's mode */
 export type AssetsCommandOpts = {
   projectOptOut: ProjectOptOut;
   /**
@@ -303,6 +304,7 @@ export type AssetsCommandOpts = {
   isUnoptimizedFallback?: boolean;
 };
 
+/** `runAssetsCommand`'s run, with its errors and budget failures among the selected assets */
 export type AssetsCommandResult = {
   run: PipelineRun;
   /** An asset failed (`error`); `encoderMissing` is a warning (§8) */

@@ -9,9 +9,11 @@ import { writeFileIfChanged } from '../files';
 import { GENERATED_DIR } from '../paths';
 import { APP_ENTRY, type SbpProfile } from '../sbp/config';
 
+/** The generated JSON's file name, in every output folder */
 export const GENERATED_APP_DATA_FILENAME = 'generatedAppData.json';
+/** The generated loaders' file name, in every output folder */
 export const GENERATED_APP_FNS_FILENAME = 'generatedAppFns.ts';
-export const GENERATED_INDEX_FILENAME = 'index.ts';
+const GENERATED_INDEX_FILENAME = 'index.ts';
 /** The app's generated data (`devTools/assetOutputsBuildPlugin.ts` reads its `__url`s) */
 export const GENERATED_APP_DATA_FILE = path.join(GENERATED_DIR, GENERATED_APP_DATA_FILENAME);
 

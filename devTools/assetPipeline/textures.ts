@@ -58,6 +58,7 @@ export type EncodedTexture = {
   levels?: number;
 };
 
+/** How a texture image is encoded: its colour space, normal map handling and flip */
 export type TextureImageOpts = {
   isSrgb: boolean;
   /** A normal map: resized as unit vectors, and `ktx --normalize` */
@@ -99,6 +100,7 @@ export const encodeTextureImage = async (
   return { bytes, ext: '.ktx2' };
 };
 
+/** A texture's entry in the run's report: its size, settings and estimated VRAM */
 export const describeEncodedTexture = (
   img: Pick<Img, 'width' | 'height' | 'channels'>,
   settings: ResolvedTextureSettings,

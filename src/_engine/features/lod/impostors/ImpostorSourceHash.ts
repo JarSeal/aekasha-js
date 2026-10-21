@@ -4,6 +4,7 @@
 // "stale, re-export" instead of keeping its old impostor. Synchronous (a generator is) and not
 // cryptographic: it only has to notice a change.
 import type * as THREE from 'three/webgpu';
+import { stableStringify } from '../../../utils/StableStringify';
 
 // MurmurHash3 (x86, 32-bit) over 32-bit words, in two lanes with their own seeds: 64 bits
 const C1 = 0xcc9e2d51;
@@ -87,17 +88,11 @@ const asUploaded = (
   return widened;
 };
 
-/** JSON with sorted keys and colours as hex, so equal settings always stringify alike. */
-const stableStringify = (value: unknown): string => {
-  if (value === undefined) return 'null';
-  if (value === null || typeof value !== 'object') return JSON.stringify(value);
-  if ((value as THREE.Color).isColor) return JSON.stringify((value as THREE.Color).getHex());
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
-  const entries = Object.entries(value as Record<string, unknown>)
-    .filter(([, v]) => v !== undefined)
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-  return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`).join(',')}}`;
-};
+/** Colours as hex in `stableStringify`, so equal settings always stringify alike */
+const colorAsHex = (value: unknown) =>
+  value && typeof value === 'object' && (value as THREE.Color).isColor
+    ? (value as THREE.Color).getHex()
+    : value;
 
 /** A texture as the bake sees it: by its registered id (its uuid changes every session). */
 const getTextureKey = (texture: THREE.Texture | null | undefined) =>
@@ -178,12 +173,15 @@ export const getImpostorSourceHash = (
   }
   const materials = Array.isArray(material) ? material : [material];
   hasher.string(
-    stableStringify({
-      groups: geometry.groups,
-      drawRange: geometry.drawRange,
-      materials: materials.map(getMaterialBakeInputs),
-      settings,
-    })
+    stableStringify(
+      {
+        groups: geometry.groups,
+        drawRange: geometry.drawRange,
+        materials: materials.map(getMaterialBakeInputs),
+        settings,
+      },
+      colorAsHex
+    )
   );
   return hasher.digest();
 };

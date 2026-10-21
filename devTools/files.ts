@@ -1,5 +1,10 @@
+import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
+
+/** A SHA-256 as hex: every dev tool's content hash (one definition, p619 K3) */
+export const sha256 = (data: string | Uint8Array) =>
+  createHash('sha256').update(data).digest('hex');
 
 /**
  * Writes a file atomically: into `<file>.<pid>.tmp` next to it, then renamed over it, so a reader

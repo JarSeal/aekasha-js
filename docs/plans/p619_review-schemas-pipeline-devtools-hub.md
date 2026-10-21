@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-4 implemented
 Category: Refactoring, Documentation, Dev tooling
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -956,7 +956,7 @@ As built (2026-10-21; sections 1-2 committed as `5254323` and `104682b`, 3-4 aft
   also record `bundle.json` from a stale build): Phase 8's full run records it. Not done: the
   hand check in VS Code (an asset JSON's hovers and a bad tuple).
 
-### Phase 4: the data pipeline and the asset pipeline (D8, D10, D11, D16)
+### Phase 4: the data pipeline and the asset pipeline (D8, D10, D11, D16) — done
 
 The gather's split and its options, the imports rule and its test, the generated files written
 when changed, the asset pipeline's splits, fixtures folder and memo, D14's tests for both, the
@@ -966,7 +966,7 @@ Sections: 1. D8's rule and test; 2. the gather's split (D10) with D16's gather i
 3. the generated files written when changed (G7) and the plugin's queue (G9); 4. the asset
 pipeline's splits, fixtures, memo and tests; 5. the hygiene (D11) in both, the docs.
 
-As built (2026-10-21, in progress; uncommitted):
+As built (2026-10-21; sections 1-4 committed after `2c9bdc6`, 5 after them):
 
 - **Section 1, D8.** `devTools/engineImports.test.ts` keeps the rule: a devTools import into
   `src/` names a listed module (each with its reason), and an `aekasha*` entry only with
@@ -1060,6 +1060,48 @@ As built (2026-10-21, in progress; uncommitted):
     resize, mip chain and coverage floats with `PIPELINE_VERSION`), `ktxEncode.test.ts`
     (`getKtxCreateArgs` for three settings), `archives.test.ts` (ar, tar plain and gzipped,
     cpio, xar, built byte by byte). `yarn assets`: 18 cache hits, the lock unchanged.
+- **Section 5, the hygiene (D11) in both, and the dev files' (no later phase has them).**
+  - K3: `devTools/paths.ts` is the one `ROOT` (`SRC_DIR`, `PUBLIC_DIR`, `GENERATED_DIR`):
+    `assetPipeline/sources.ts` no longer exports it, its 36 importers, `ktxTool.ts`,
+    `checkVersions.ts`, `sbp/config.ts` and `engineImports.test.ts` import it, and `hub/paths.ts`
+    re-exports it. The tests that move `ROOT` into a temp root (`prune.test.ts`, `cache.test.ts`,
+    `devFiles/commit.test.ts`) redirect `devTools/paths.ts`' URL now. One `sha256`
+    (`devTools/files.ts`: the dev files, the self-check, `ktxTool.ts`, `getContentHash`,
+    `hub/hash.ts`). One `stableStringify`, `src/_engine/utils/StableStringify.ts` (`@internal`,
+    tested, on `engineImports.test.ts`' list): the impostor source hash's semantics, its colours
+    through a `replace` hook; the material variants and the asset cache keys use it too
+    (`yarn assets`: 18 cache hits, so no key changed). One git helper, `devTools/git.ts` (`git`,
+    `readGit`): `checkVersions.ts`, `tagRelease.ts`, `projectMetadata.ts` (which ran git in the
+    process's folder).
+  - K1: `ignoreRestSiblings: true` on `no-unused-vars` (the whole repo); the six rest-omit
+    disables it made unused are gone (no other in the repo was one). Every file-wide
+    `no-console` disable in the scope, `devFilesPlugin.ts` and `progressLog.ts` has its reason.
+  - K2: the dev files' four `never` helpers are `function` declarations, so their calls narrow
+    (`paths.ts`' `root as string` and `commit.ts`' `w.path as string` went).
+  - G11: `projectMetadata.ts`' missing `?.` (and `devDependencies?.`); `checkVersions`' bump rules
+    are `checkBumps` (pure: the package, the ref's, each part's changed files), tested in
+    `checkVersions.test.ts` with `checkAlwaysRules`.
+  - Summaries on the scope's 47 undocumented exports; ten runtime exports nothing else uses are
+    module-private (`GATHERED_SCHEMAS`, `getGatheredJsonType`, `GENERATED_INDEX_FILENAME`,
+    `getPruneBlockers`, `ASSETS_LOCK_FILE`, `CACHE_STORE_DIR`, `MIN_KTX_VERSION`, `KTX_TOOL_DIR`,
+    `findKtx`, `installLocalKtx`). Every plan the scope's comments cite still exists.
+  - The root `CLAUDE.md`'s coding standards have the devTools' line (D8's rule, K3's helpers,
+    K2).
+- **For D2:** engine minor items: `applySkyBoxSaveEntry` on `aekasha/schemas`; `GLTF_LOD_EXTRAS_KEY`
+  and `GLTFLodChainsExtras` moved within `aekasha/lod` (no entry change). App patch items: the
+  two scenes naming the fixture generators. Project: the gather's split and its options, the
+  plugin's reload rule, the key memo, the fixtures folder, the helpers.
+- **For D3's changelog list:** a mesh save entry's `geo` / `mat` props merge (G13), and partial
+  props over an id fail the gather; the dev server reloads only when the generated data or a
+  source changed (G7).
+- **Left for Phase 6:** the Hub's file-wide `no-console` disables without a reason
+  (`hubBuild.ts`, `hubPlugin.ts`, `hubPreview.ts`) and its `fail` helpers (`hubBuild.ts`,
+  `hub/embed.ts`, `hub/api/extract.ts`), `hub/repoFiles.ts`' git call (→ `devTools/git.ts`).
+  **For Phase 7:** `verify/scenes.ts`' git calls (→ `devTools/git.ts`); `refactor/`'s `ROOT`
+  copies go with D9.
+- **Checks:** `yarn test` 1066 passed (131 files); lint and both `tsc` clean; `yarn hub:build`
+  with Phase 0's warnings; `docs.json` recorded (`engine/utils` 44 / 44, `features/skybox`
+  178 / 178); the Vite config loads. `api.json` not recorded (Phase 8's full run).
 
 ### Phase 5: the API reference per entry (D6)
 

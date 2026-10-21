@@ -14,7 +14,8 @@ import type {
   DevFilesSchemaIssues,
   DevFilesWriteStatus,
 } from '../../src/_engine/debug/DevFilesProtocol';
-import { DEV_FILES_CACHE_DIR, sha256, type DevFilesStage } from './stage';
+import { sha256 } from '../files';
+import { DEV_FILES_CACHE_DIR, type DevFilesStage } from './stage';
 
 /**
  * `POST commit` (p342 §2.3): a batch of writes that all land or none does.
@@ -59,9 +60,10 @@ type RequestedWrite = {
   saveData?: DevFilesSaveDataWrite;
 };
 
-const badRequest = (message: string): never => {
+// A declaration, not an arrow: a call of a `never` function narrows only then (p619 K2)
+function badRequest(message: string): never {
   throw new DevFilesError('BAD_REQUEST', message);
-};
+}
 
 const parseRequest = (body: unknown): RequestedWrite[] => {
   if (!body || typeof body !== 'object' || !Array.isArray((body as { writes?: unknown }).writes)) {
@@ -74,7 +76,7 @@ const parseRequest = (body: unknown): RequestedWrite[] => {
     if (!write || typeof write !== 'object') badRequest(`Write ${index} isn't an object`);
     const w = write as Record<string, unknown>;
     if (typeof w.path !== 'string') badRequest(`Write ${index} has no path`);
-    const writePath = w.path as string;
+    const writePath = w.path;
     if (paths.has(writePath)) badRequest(`${writePath} is in the batch twice`);
     paths.add(writePath);
     const hasJson = 'json' in w;
@@ -222,9 +224,9 @@ const pruneBackups = async () => {
   }
 };
 
-const writeFailed = (message: string, err: unknown, details?: unknown): never => {
+function writeFailed(message: string, err: unknown, details?: unknown): never {
   throw new DevFilesError('WRITE_FAILED', `${message}: ${(err as Error).message}`, details);
-};
+}
 
 /**
  * Writes the batch's changed files, all or none.

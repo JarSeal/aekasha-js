@@ -23,11 +23,14 @@ export type SourceImage = {
   max: number;
 };
 
+/** The sRGB transfer function decoded: an 0-1 sRGB value to linear */
 export const srgbToLinear = (v: number) =>
   v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+/** The sRGB transfer function encoded: an 0-1 linear value to sRGB */
 export const linearToSrgb = (v: number) =>
   v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055;
 
+/** A black image of linear float channels */
 export const createImage = (width: number, height: number, channels: number): Img => ({
   width,
   height,
@@ -343,6 +346,8 @@ export const toChannels = (img: Img, channels: 3 | 4): Img => {
   return out;
 };
 
+/** A copy of the image upside down: KTX2 stores standalone textures flipped (no `flipY` on
+ * compressed textures) */
 export const flipY = (img: Img): Img => {
   const out = createImage(img.width, img.height, img.channels);
   const row = img.width * img.channels;

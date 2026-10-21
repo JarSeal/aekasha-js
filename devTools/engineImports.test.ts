@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 import { ENTRY_FILES } from './aliases';
+import { ROOT } from './paths';
 
 // p619 D8: how the devTools import the engine. They're tools, not app code, so they import it by
 // path (the `aekasha*` aliases don't resolve in Vite's bundle of vite.config.ts, which loads the
@@ -12,7 +12,6 @@ import { ENTRY_FILES } from './aliases';
 // import-free but for zod: a feature entry would load three/webgpu and TSL into the config's
 // process. Add a module here only with its reason.
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEV_TOOLS_DIR = path.join(ROOT, 'devTools');
 const SRC_DIR = path.join(ROOT, 'src');
 
@@ -47,6 +46,9 @@ const ALLOWED_MODULES: Record<string, AllowedModule> = {
   },
   'src/_engine/features/skybox/Presets.ts': {
     reason: 'the sky box presets the gather merges into a definition',
+  },
+  'src/_engine/utils/StableStringify.ts': {
+    reason: 'the asset cache keys’ JSON, the engine’s own (material variants, impostor hashes)',
   },
   'src/_engine/debug/TestBridge.ts': {
     isTypeOnly: true,

@@ -24,7 +24,7 @@ import fs from 'fs';
 import path from 'path';
 import type { Plugin, UserConfig } from 'vite';
 import sbpProfiles from '../../sbp.config';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 import { collectUrls } from '../assetOutputsBuildPlugin';
 import { getEmbedProfiles } from '../gather/output';
 import type { BuildLocation } from './bundleModel';

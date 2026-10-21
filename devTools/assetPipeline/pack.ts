@@ -31,6 +31,7 @@ type PackChannel = Exclude<
   number
 >;
 
+/** `buildPackedImage`'s options: how a `src` resolves, the colour space and the output size */
 export type PackBuildOpts = {
   resolveFile: PackFileResolver;
   /** The texture is sRGB (texOpts.colorSpace): its colour channels' sources default to sRGB */

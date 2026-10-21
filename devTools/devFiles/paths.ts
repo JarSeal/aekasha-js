@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 import { DevFilesError } from './http';
 
 /**
@@ -34,9 +34,10 @@ export type DevFilePath = {
   isJson: boolean;
 };
 
-const forbid = (repoPath: string, reason: string): never => {
+// A declaration, not an arrow: a call of a `never` function narrows only then (p619 K2)
+function forbid(repoPath: string, reason: string): never {
   throw new DevFilesError('FORBIDDEN_PATH', `${repoPath}: ${reason}`, { path: repoPath });
-};
+}
 
 const isInside = (dir: string, file: string) => file === dir || file.startsWith(dir + path.sep);
 
@@ -82,7 +83,7 @@ const checkPathString = (input: unknown) => {
   if (DEV_FILES_DENIED_NAMES.some((pattern) => pattern.test(name))) {
     forbid(input, `"${name}" is a tool's config file, which a tool would load`);
   }
-  return { repoPath: input, root: root as string, isJson: ext === '.json' };
+  return { repoPath: input, root, isJson: ext === '.json' };
 };
 
 /** Resolves a path a route got, or throws FORBIDDEN_PATH (BAD_REQUEST when it isn't a string) */
@@ -95,7 +96,7 @@ export const resolveDevFilePath = async (input: unknown): Promise<DevFilePath> =
   const ancestor = await findExistingAncestor(path.dirname(absPath));
   // A dangling symlink exists for lstat but has no real path: refused, not a 500 (F6)
   const ancestorReal = await fs.realpath(ancestor).catch(() => null);
-  if (ancestorReal === null) return forbid(repoPath, 'its folder is a broken symlink');
+  if (ancestorReal === null) forbid(repoPath, 'its folder is a broken symlink');
   if (!isInside(rootReal, ancestorReal)) forbid(repoPath, `its folder leads out of ${root}`);
   for (const denied of DEV_FILES_DENIED_ROOTS) {
     const deniedReal = await fs.realpath(toAbs(denied)).catch(() => null);

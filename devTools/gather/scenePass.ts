@@ -34,7 +34,6 @@ const resolveScene = (
   { id: sceneId, data, file }: GatheredScene,
   debugSceneIds: Set<string>
 ): ResolvedScene | null => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- build time only
   const { $schema, __saveData, ...sceneJSON } = data;
   // The scene's own latest save entry (G5); the output has no __saveData
   const scene: SceneJSON = { ...sceneJSON, ...getSaveEntry(data, sceneId) };
