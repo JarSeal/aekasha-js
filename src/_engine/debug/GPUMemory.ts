@@ -8,10 +8,13 @@ export const GPU_MEMORY_TAB_ID = 'gpuMemory';
 
 let debugGUI: DebugModuleRef<typeof import('./gpuMemory/_dbg__GPUMemory')> | null = null;
 
-/** Creates the profiler's GPU memory tab (three's GPU memory bookkeeping, draw calls) and its
+/**
+ * Creates the profiler's GPU memory tab (three's GPU memory bookkeeping, draw calls) and its
  * per-frame sampler. The implementation is only loaded where the profiler is: the debug env, and
  * prodTest mode when the profiler is enabled there. Call after `registerProfiler` (the tab needs
- * the profiler) and before the renderer is created (the allocation tracker). */
+ * the profiler) and before the renderer is created (the allocation tracker). The boot calls it.
+ * @internal
+ */
 export const registerGPUMemoryDebugGUI = async () => {
   if (!isProfilerLoadedInThisMode()) return;
   debugGUI = await loadDebugModuleAsync(

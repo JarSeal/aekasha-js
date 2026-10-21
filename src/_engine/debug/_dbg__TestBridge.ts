@@ -17,8 +17,8 @@ import { takeSnapshotAsync } from '../kernel/render/Snapshot';
 import {
   getPhysicsDeterminismProbeSteps,
   onPhysicsProbeReport,
-  type PhysicsProbeReport,
 } from '../features/physics/debug/_dbg__PhysicsDeterminism';
+import type { PhysicsProbeReport } from '../features/physics/PhysicsProbeTypes';
 import { encodeRGBA8PNG } from './_dbg__PNGEncoder';
 import { getCharacterPaths, installTestInput } from './_dbg__TestBridgeInput';
 import { TEST_BRIDGE_VERSION, type AekTestBridge, type TestBridgeSystemOrder } from './TestBridge';

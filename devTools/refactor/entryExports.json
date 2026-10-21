@@ -16,9 +16,9 @@
     },
     "aekasha/debug": {
       "public": 40,
-      "crossEntry": 73,
-      "internal": 73,
-      "unreferenced": 18
+      "crossEntry": 69,
+      "internal": 72,
+      "unreferenced": 23
     },
     "aekasha/instancing": {
       "public": 3,
@@ -5705,10 +5705,7 @@
         },
         "createDebugGui": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "unreferenced"
         },
         "DEBUG_TOASTER_ID": {
           "kind": "Variable",
@@ -5865,10 +5862,7 @@
         },
         "getDrawerState": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "unreferenced"
         },
         "hydrateDebuggerTabState": {
           "kind": "Function",
@@ -5880,10 +5874,7 @@
         },
         "isDebuggerDisabled": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "unreferenced"
         },
         "isDebuggerTabOpen": {
           "kind": "Function",
@@ -5993,10 +5984,7 @@
         },
         "handleDebugCameraSwitch": {
           "kind": "Function",
-          "usage": "crossEntry",
-          "by": [
-            "aekasha"
-          ]
+          "usage": "unreferenced"
         },
         "initDebugTools": {
           "kind": "Function",
@@ -6501,7 +6489,7 @@
         },
         "isProfilerEnabledInProdTest": {
           "kind": "Function",
-          "usage": "internal"
+          "usage": "unreferenced"
         },
         "isProfilerLoadedInThisMode": {
           "kind": "Function",

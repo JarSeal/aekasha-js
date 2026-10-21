@@ -22,7 +22,6 @@ import {
   toggleGridHelperVisibility,
   togglePolarGridHelperVisibility,
 } from './_dbg__SceneHelpers';
-import { updateOnScreenTools } from './OnScreenTools';
 import type { SceneAsset } from '../schemas/SceneSchema';
 import type { DebugToolsState } from './DebugTools';
 import { DEBUG_CAMERA_ID } from './DebugTools';
@@ -334,18 +333,6 @@ const getSceneStarterDropDownOptions = () => {
     { value: '', text: '---NOT-SET---' },
     ...scenes.map((s) => ({ value: s.id, text: s.name || `[${s.id}]` })),
   ];
-};
-
-/**
- * Handles debug camera switching
- */
-export const _handleDebugCameraSwitch = () => {
-  const currentSceneId = getCurrentSceneId();
-  if (!currentSceneId) return;
-  // @CHORE: set the new camera here
-  setTimeout(() => {
-    updateOnScreenTools('SWITCH');
-  }, 0);
 };
 
 const getDebugCamera = () => {

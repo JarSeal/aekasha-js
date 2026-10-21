@@ -22,9 +22,8 @@ import {
   type DebugKeyCategory,
   type DefaultDebugKeyBinding,
 } from './DefaultDebugKeyBindings';
+import type { DebugKeyShortcutsTab } from './DebugTools';
 import styles from './DebugKeyShortcuts.module.scss';
-
-export type DebugKeyShortcutsTab = 'APP' | 'AEKASHA';
 
 const DIALOG_ID = 'debugKeyShortcutsDialog';
 

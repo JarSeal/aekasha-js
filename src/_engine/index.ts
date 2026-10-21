@@ -247,6 +247,7 @@ export {
   getAllTextures,
   getTexture,
   loadTextureAsync,
+  saveTexture,
 } from './kernel/assets/Texture';
 export type { TexOpts, TextureProps } from './kernel/assets/Texture';
 export { loadTexture, loadTextures } from './kernel/assets/TextureSync';

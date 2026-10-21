@@ -36,20 +36,6 @@ const getPieClasses = (opts?: PercentagePieOpts) => {
 };
 
 /**
- * Percentage pie as an HTML string (one span, styled by `.percentagePie` in PercentagePie.scss), for
- * one-off markup. Use {@link createPercentagePie} for a pie that updates.
- * @param percentage (number) filled percentage, 0..100
- * @param opts ({@link PercentagePieOpts}) optional pie options
- * @returns (string) the pie html
- */
-export const PercentagePieHtml = (percentage: number = 0, opts?: PercentagePieOpts) => {
-  let style = `--p: ${clampPercentage(percentage)};`;
-  if (opts?.height) style += ` width: ${opts.height}; height: ${opts.height};`;
-  if (opts?.fillColor) style += ` --pie-fill: ${opts.fillColor};`;
-  return `<span class="${getPieClasses(opts).join(' ')}" style="${style}"></span>`;
-};
-
-/**
  * Creates a percentage pie CMP (one span, styled by `.percentagePie` in PercentagePie.scss) that is
  * updated with `set`, without touching its html.
  * @param opts ({@link PercentagePieOpts}) optional pie options

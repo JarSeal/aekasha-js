@@ -415,8 +415,6 @@ export const _updateDebuggerTab = (id: string, opts?: UpdateDebuggerTabOpts) => 
   host.refresh(opts?.rebuild);
 };
 
-export const _getDrawerState = () => drawerState;
-
 /** Builds the drawer on the first call (the first `setCurrentScene`). Later calls change the title
  * in place and rebuild only the open tab: tabs built from the current scene's data (lists, the
  * Ray cast tab's physics section) were always rebuilt on a scene change, and still are. */
@@ -441,5 +439,3 @@ export const _disableDebugger = (disable: boolean) => {
 
   // @TODO: disable also the on screen tools
 };
-
-export const _isDebuggerDisabled = () => debuggerDisabled;

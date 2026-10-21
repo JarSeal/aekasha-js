@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2272,
-      "total": 2420
+      "documented": 2302,
+      "total": 2416
     },
     "members": {
       "documented": 935,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2228,
-        "total": 2357
+        "documented": 2258,
+        "total": 2353
       },
       "members": {
         "documented": 885,
@@ -35,8 +35,8 @@
   "folders": {
     "engine/debug": {
       "exports": {
-        "documented": 141,
-        "total": 187
+        "documented": 166,
+        "total": 183
       },
       "members": {
         "documented": 0,
@@ -44,52 +44,23 @@
       },
       "undocumented": {
         "exports": [
-          "DebugTools#DEBUG_CAMERA_ID",
-          "DebugTools#DebugToolsState",
-          "DebugTools#registerDebugToolsModule",
-          "DebuggerGUI#DEBUGGER_SCENE_LOADER_ID",
-          "DebuggerGUI#DEBUG_TOASTER_ID",
           "DebuggerGUI#DebugGUIOpts",
           "DebuggerGUI#DebuggerListItem",
           "DebuggerGUI#DebuggerPaneButton",
           "DebuggerGUI#DebuggerPaneItem",
           "DebuggerGUI#DebuggerPaneSeparator",
-          "DebuggerGUI#disableDebugger",
-          "DebuggerGUI#isDebuggerDisabled",
-          "DebuggerGUI#registerDebuggerGUI",
-          "DebuggerGUI#updateDebuggerSceneTitle",
           "DevFiles#DevFileRead",
           "DevFiles#DevFilesStatus",
           "DevFiles#DevFilesUnavailableReason",
           "DevFiles#EncodePNGOpts",
           "DevFilesProtocol#DevDataGatheredEvent",
-          "DevFilesProtocol#DevFilesCommitRequest",
           "DevFilesProtocol#DevFilesErrorBody",
           "DevFilesProtocol#DevFilesErrorCode",
           "DevFilesProtocol#DevFilesWriteStatus",
           "GPUMemory#GPUMemorySource",
-          "OnScreenTools#InitOnScreenTools",
-          "OnScreenTools#ToolTypes",
-          "OnScreenTools#registerOnScreenTools",
-          "OnScreenTools#updateOnScreenTools",
-          "Profiler#DEFAULT_PROFILER_SETTINGS",
-          "Profiler#ProfilerBarMeasure",
-          "Profiler#ProfilerSettings",
-          "Stats#StatsOptions",
-          "Stats#defaultStatsOptions",
-          "Stats#getStatsCmp",
-          "Stats#registerStatsModule",
-          "Stats#startCustomMeasurements",
-          "Stats#updatePhysicsPanel",
-          "Stats#updateRestOfStats",
           "TestBridge#TestBridgeProbeResult",
           "TestBridge#TestBridgeSceneReady",
-          "TestBridge#TestBridgeSnapshot",
-          "UndoRedo#UndoRedoClearScope",
-          "UndoRedo#UndoRedoHistoryState",
-          "UndoRedo#canRedo",
-          "UndoRedo#canUndo",
-          "UndoRedo#registerUndoRedoModule"
+          "TestBridge#TestBridgeSnapshot"
         ],
         "members": [
           "DevFiles#DevFilesError.code",
@@ -100,7 +71,7 @@
     },
     "engine/debug/symbols": {
       "exports": {
-        "documented": 0,
+        "documented": 5,
         "total": 5
       },
       "members": {
@@ -108,13 +79,7 @@
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "3DSymbols#createNewCameraSymbol",
-          "3DSymbols#createNewDirectionalLightSymbol",
-          "3DSymbols#createNewPointLightSymbol",
-          "3DSymbols#createNewSpotLightSymbol",
-          "3DSymbols#load3DSymbols"
-        ],
+        "exports": [],
         "members": []
       }
     },
@@ -232,8 +197,8 @@
     },
     "engine/features/physics": {
       "exports": {
-        "documented": 203,
-        "total": 203
+        "documented": 204,
+        "total": 204
       },
       "members": {
         "documented": 34,
@@ -498,8 +463,8 @@
     },
     "engine/kernel/config": {
       "exports": {
-        "documented": 24,
-        "total": 24
+        "documented": 23,
+        "total": 23
       },
       "members": {
         "documented": 1,

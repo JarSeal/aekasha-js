@@ -11,20 +11,39 @@ import {
   type UpdateDebuggerTabOpts,
 } from './DebuggerGUI';
 
-/** Draggable window id of the profiler. */
+/**
+ * Draggable window id of the profiler. The profiler's.
+ * @internal
+ */
 export const PROFILER_WINDOW_ID = 'aekProfiler';
-/** LocalStorage key of the profiler settings (the Settings tab). */
+/**
+ * LocalStorage key of the profiler settings (the Settings tab). The profiler's.
+ * @internal
+ */
 export const PROFILER_LS_KEY = 'AEK_debugProfiler';
-/** LocalStorage key of the profiler UI state: the open tab and the folder states. */
+/**
+ * LocalStorage key of the profiler UI state: the open tab and the folder states. The profiler's.
+ * @internal
+ */
 export const PROFILER_UI_LS_KEY = 'AEK_debugProfilerUI';
 
-/** The Overview and Objects refresh rates offered in the Settings tab. */
+/**
+ * The Overview and Objects refresh rates offered in the Settings tab. The profiler's.
+ * @internal
+ */
 export const PROFILER_UPDATE_RATES_HZ = [1, 2, 4, 10] as const;
 
-/** One Overview row: its metric id (an app stats source's is `app:` and the source id) and whether
- * it is shown. */
+/**
+ * One Overview row: its metric id (an app stats source's is `app:` and the source id) and whether
+ * it is shown. The profiler's Overview and Settings tabs'.
+ * @internal
+ */
 export type ProfilerOverviewMetricEntry = { id: string; visible: boolean };
 
+/**
+ * The profiler's settings, persisted by its Settings tab; the Statistics tab reads them too.
+ * @internal
+ */
 export type ProfilerSettings = {
   /** Overview and Objects refresh rate, one of {@link PROFILER_UPDATE_RATES_HZ}. */
   updateRateHz: number;
@@ -49,10 +68,21 @@ export type ProfilerSettings = {
   objectsBarMeasure: ProfilerBarMeasure;
 };
 
-/** The Objects tab's bar measures. */
+/**
+ * The Objects tab's bar measures. The profiler's.
+ * @internal
+ */
 export const PROFILER_BAR_MEASURES = ['TRIANGLES', 'VERTICES', 'OBJECTS'] as const;
+/**
+ * The Objects tab's bar measure (`PROFILER_BAR_MEASURES`).
+ * @internal
+ */
 export type ProfilerBarMeasure = (typeof PROFILER_BAR_MEASURES)[number];
 
+/**
+ * The profiler settings' defaults: the profiler's and the Statistics tab's.
+ * @internal
+ */
 export const DEFAULT_PROFILER_SETTINGS: Readonly<ProfilerSettings> = {
   updateRateHz: 4,
   overviewMetrics: [],
@@ -73,7 +103,7 @@ const useProfiler = () => useDebug(profiler, true);
  * because it decides whether the profiler module loads there at all.
  * @returns boolean
  */
-export const isProfilerEnabledInProdTest = () => {
+const isProfilerEnabledInProdTest = () => {
   const saved = lsGetItem(PROFILER_LS_KEY, {}) as Partial<ProfilerSettings> | null;
   return Boolean(saved?.enabledInProdTest);
 };
@@ -96,7 +126,8 @@ export const isProfilerLoadedInThisMode = () => {
 /**
  * Loads the profiler: in the debug environment, and in prodTest mode when it is enabled there
  * ({@link ProfilerSettings.enabledInProdTest}). Call before the draggable windows are restored
- * from LS, so an open profiler window gets its content.
+ * from LS, so an open profiler window gets its content. The boot's debug step calls it.
+ * @internal
  */
 export const registerProfiler = async () => {
   if (!isProfilerLoadedInThisMode()) return;
@@ -191,7 +222,8 @@ export const isProfilerTabOpen = (id: string) => useProfiler()?._isProfilerTabOp
 
 /**
  * The profiler settings (the live object the Settings tab binds to). Undefined while the profiler
- * isn't loaded.
+ * isn't loaded. The Statistics tab's.
+ * @internal
  * @returns ({@link ProfilerSettings} | undefined)
  */
 export const getProfilerSettings = (): Readonly<ProfilerSettings> | undefined =>
@@ -199,7 +231,8 @@ export const getProfilerSettings = (): Readonly<ProfilerSettings> | undefined =>
 
 /**
  * Changes profiler settings: persists them and applies them right away (the stats panels'
- * pointer, the on-screen button, an open Settings tab).
+ * pointer, the on-screen button, an open Settings tab). The Statistics tab's and the profiler's.
+ * @internal
  * @param partial (object) the settings to change {@link ProfilerSettings}
  */
 export const setProfilerSettings = (partial: Partial<ProfilerSettings>) => {
@@ -247,7 +280,11 @@ export type StatsSource<T = unknown> = {
   format?: (value: T) => string;
 };
 
-type AnyStatsSource = StatsSource<unknown>;
+/**
+ * A stats source with its value type erased: the profiler's view of any source.
+ * @internal
+ */
+export type AnyStatsSource = StatsSource<unknown>;
 
 const statsSources = new Map<string, AnyStatsSource>();
 

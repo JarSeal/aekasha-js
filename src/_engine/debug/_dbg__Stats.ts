@@ -66,7 +66,6 @@ const statsConfig: StatsOptions = {
   samplesLog: undefined,
   samplesGraph: undefined,
   precision: undefined,
-  outlookFolderExpanded: false,
   horizontal: false,
   mode: undefined,
   enabled: true,
@@ -303,11 +302,6 @@ const updateTFPSPanel = (duration: number) => {
  * @returns ({@link Stats} | null)
  */
 export const _getStats = () => stats;
-
-/**
- * Returns the stats configurations
- */
-export const _getStatsConfig = () => statsConfig;
 
 const setDebuggerUI = () => {
   const reloadApp = () => location.reload();

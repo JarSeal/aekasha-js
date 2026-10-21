@@ -39,9 +39,8 @@ import {
   isRuntimeViewActive,
 } from '../kernel/render/Views';
 import { getViewSourceCamera, isCameraRigActive } from '../kernel/camera/debug/_dbg__CameraRig';
+import type { EnvBallOpts } from './EnvBall';
 import styles from './EnvBall.module.scss';
-
-export type EnvBallOpts = { show: boolean; showInMainCamera: boolean; roughness: number };
 
 const VIEWPORT_ID = 'aekEnvBall';
 

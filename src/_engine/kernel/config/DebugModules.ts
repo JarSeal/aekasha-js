@@ -14,8 +14,11 @@ export interface DebugModuleRef<T> {
 /**
  * Starts loading a debug module (debug env only) and returns its ref at once; `current` is set
  * when the import resolves. Returns null in production and outside the debug env, where the
- * importer and its chunk fold away.
+ * importer and its chunk fold away. For the engine's callers that can't await (the debug camera's
+ * import, the physics ray helpers, the on-screen tools' physics draw); an app awaits
+ * {@link loadDebugModuleAsync}.
  * @template T the module's shape, inferred from the importer
+ * @internal
  */
 export function loadDebugModule<T>(
   importer: () => Promise<T>,
@@ -68,21 +71,12 @@ export async function loadDebugModuleAsync<T>(
 }
 
 /**
- * Whether the debug env is on and the module has loaded (narrows `ref.current` to the module).
- * @template T the module's shape
- * @example
- * ```ts
- * if (isDebugReady(debugHelpers)) debugHelpers.current.update();
- * ```
- */
-export const isDebugReady = <T>(ref: DebugModuleRef<T>): ref is { current: T } =>
-  // `__AEK_DEBUG__` first: a production build folds the check to false, and its callers' code out
-  __AEK_DEBUG__ && !!(IS_DEBUG_ENV && ref?.current);
-
-/**
  * The module when it's loaded and its mode is on (the debug env, or prod test mode with
- * `includeInProdTestMode`), else undefined: call through it as `useDebug(ref)?.fn()`.
+ * `includeInProdTestMode`), else undefined: call through it as `useDebug(ref)?.fn()`. The engine's
+ * thin debug wrappers read their refs through it; an app reads the `current` of the ref
+ * {@link loadDebugModuleAsync} resolved with.
  * @template T the module's shape
+ * @internal
  */
 export const useDebug = <T>(
   ref: DebugModuleRef<T> | null,

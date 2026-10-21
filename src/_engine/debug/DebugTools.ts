@@ -1,12 +1,25 @@
 import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
 import type { DebugModuleRef } from '../kernel/config/DebugModules';
 import { loadDebugModuleAsync, useDebug } from '../kernel/config/DebugModules';
-import type { DebugKeyShortcutsTab } from './_dbg__DebugKeyShortcuts';
 
 type LightGUIModule = typeof import('./_dbg__DebugTools');
 let debugGUI: DebugModuleRef<LightGUIModule> | null = null;
+/**
+ * The debug camera's app id: the camera module's, the camera rig's and the Debug tools tab's.
+ * @internal
+ */
 export const DEBUG_CAMERA_ID = '_debugCamera';
 
+/**
+ * A tab of the Debug key shortcuts dialog: the app's keys, or the engine's.
+ * @internal
+ */
+export type DebugKeyShortcutsTab = 'APP' | 'AEKASHA';
+
+/**
+ * The Debug tools tab's state: the tab's, the dev files' and the scene loader's.
+ * @internal
+ */
 export type DebugToolsState = {
   scenesListing: {
     scenesFolderExpanded: boolean;
@@ -113,6 +126,11 @@ const defaultDebugToolsState: DebugToolsState = {
   },
 };
 
+/**
+ * Loads the Debug tools tab's module (debug env and prod test mode, for the start scene setting):
+ * the boot's.
+ * @internal
+ */
 export const registerDebugToolsModule = async () => {
   if (!IS_DEBUG_ENV && !IS_PROD_TEST_MODE) return;
   // includeInProdTestMode: true — so isProdTest mode can still read the persisted
@@ -129,7 +147,8 @@ export const registerDebugToolsModule = async () => {
 };
 
 /**
- * Initializes the debug tools (only for debug environments).
+ * Initializes the debug tools (only for debug environments). The boot's and the main loop's.
+ * @internal
  */
 export const initDebugTools = () => {
   if (!IS_DEBUG_ENV) return;
@@ -137,7 +156,9 @@ export const initDebugTools = () => {
 };
 
 /**
- * Getter for the debugToolsState object
+ * Getter for the debugToolsState object. Read by the boot, the scene loader, the dev files and the
+ * debug modules.
+ * @internal
  * @param loadFromLS (boolean) optional flag to get the debugToolsState from the LS
  * @returns the Debug tools tab's state, or its defaults while the debug module isn't loaded
  */
@@ -146,7 +167,8 @@ export const getDebugToolsState = (loadFromLS?: boolean) =>
 
 /**
  * The axes gizmo shortcut (F10): hides it, or shows it (also in the main camera, when that is
- * active), with a toast. Persisted, and the Debug Tools tab is refreshed if open.
+ * active), with a toast. Persisted, and the Debug Tools tab is refreshed if open. The debug keys'.
+ * @internal
  */
 export const toggleAxesGizmo = () => {
   useDebug(debugGUI)?._toggleAxesGizmo();
@@ -154,7 +176,9 @@ export const toggleAxesGizmo = () => {
 
 /**
  * The environment ball shortcut (F9): hides it, or shows it (also in the main camera, when that
- * is active), with a toast. Persisted, and the Debug Tools tab is refreshed if open.
+ * is active), with a toast. Persisted, and the Debug Tools tab is refreshed if open. The debug
+ * keys'.
+ * @internal
  */
 export const toggleEnvBall = () => {
   useDebug(debugGUI)?._toggleEnvBall();
@@ -162,7 +186,8 @@ export const toggleEnvBall = () => {
 
 /**
  * Toggles the "Disable on-screen tools" option (the § shortcut): applied, persisted, the Debug
- * Tools tab is refreshed if open, and a toast is shown. Debug env only.
+ * Tools tab is refreshed if open, and a toast is shown. Debug env only. The debug keys'.
+ * @internal
  * @param keyHint (string) optional readable chord that was pressed, for the toast
  */
 export const toggleOnScreenToolsDisabled = (keyHint?: string) => {
@@ -171,16 +196,11 @@ export const toggleOnScreenToolsDisabled = (keyHint?: string) => {
 
 /**
  * Opens the Debug key shortcuts dialog on a tab, or switches the open dialog to it (the u and i
- * shortcuts, and the Debug Tools tab's buttons). Debug env only.
+ * shortcuts, and the Debug Tools tab's buttons). Debug env only. The debug keys' and the Debug
+ * tools tab's.
+ * @internal
  * @param tab ('APP' | 'AEKASHA') the tab to show
  */
 export const openDebugKeyShortcutsDialog = (tab: DebugKeyShortcutsTab) => {
   useDebug(debugGUI)?._openDebugKeyShortcutsDialog(tab);
-};
-
-/**
- * Handles debug camera switching
- */
-export const handleDebugCameraSwitch = () => {
-  useDebug(debugGUI)?._handleDebugCameraSwitch();
 };

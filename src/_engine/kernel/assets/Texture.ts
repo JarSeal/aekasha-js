@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { lerror, lwarn } from '../../utils/Logger';
+import { IS_DEBUG_ENV } from '../config/Config';
 import { isHDR, isKTX2 } from './AssetFiles';
 import {
   loadHDRTextureInWorker,
@@ -145,7 +146,7 @@ export const saveLoadedTexture = <T extends THREE.Texture>(
   id: string | undefined,
   isPersistent?: boolean
 ): T => {
-  const saved = saveTexture(texture, id || texture.uuid, isPersistent);
+  const saved = registerTexture(texture, id || texture.uuid, isPersistent);
   if (saved !== texture) disposeTextureResource(texture);
   return saved;
 };
@@ -629,18 +630,13 @@ export const deleteTexture = (id: string | string[]) => {
   }
 };
 
-/**
- * Registers a texture under `givenId` (default: its uuid), owned by the scene loading (or
- * current). An id already registered keeps its texture, which is returned, re-tagged to the
- * scene getting it; the texture passed in isn't registered.
- * @internal
- */
-export const saveTexture = <T extends THREE.Texture = THREE.Texture>(
+// Registers a texture, or returns the one registered under its id (re-tagged to the scene getting
+// it). saveTexture and saveLoadedTexture's (a parallel load of the same id is no mistake there)
+const registerTexture = <T extends THREE.Texture>(
   texture: T,
-  givenId?: string,
-  isPersistent?: boolean
+  id: string,
+  isPersistent: boolean | undefined
 ): T => {
-  const id = givenId || texture.uuid;
   if (textures[id]) {
     retagAssetOwner(textures[id].resource);
     return textures[id].resource as T;
@@ -653,4 +649,40 @@ export const saveTexture = <T extends THREE.Texture = THREE.Texture>(
   };
   recordAssetOwner(texture);
   return texture;
+};
+
+/**
+ * Registers a texture you built (a `DataTexture`, a `CanvasTexture`): owned by the scene
+ * loading (or current), like {@link loadTextureAsync}'s, and released with it. An id already
+ * registered keeps its texture and leaves the one passed in unregistered (the debug env warns when
+ * they differ): dispose it, or check {@link getTexture} before creating one.
+ * @param texture the texture to register
+ * @param givenId its registry id. Default: its uuid
+ * @param isPersistent never released by its scene
+ * @returns the registered texture
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ * import { getTexture, saveTexture } from 'aekasha';
+ *
+ * const createWhite = () => {
+ *   const texture = new THREE.DataTexture(new Uint8Array(4 * 4 * 4).fill(255), 4, 4);
+ *   texture.needsUpdate = true;
+ *   return texture;
+ * };
+ * const white = getTexture('white4x4') ?? saveTexture(createWhite(), 'white4x4');
+ * ```
+ */
+export const saveTexture = <T extends THREE.Texture = THREE.Texture>(
+  texture: T,
+  givenId?: string,
+  isPersistent?: boolean
+): T => {
+  const id = givenId || texture.uuid;
+  if (IS_DEBUG_ENV && textures[id] && textures[id].resource !== texture) {
+    lwarn(
+      `saveTexture: "${id}" is registered already, so the registered texture is returned and the one passed in isn't registered (dispose it, or check getTexture("${id}") before creating one).`
+    );
+  }
+  return registerTexture(texture, id, isPersistent);
 };

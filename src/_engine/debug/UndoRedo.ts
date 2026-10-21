@@ -5,7 +5,8 @@ import { loadDebugModuleAsync, useDebug } from '../kernel/config/DebugModules';
 /**
  * One recorded debugger action. Entries are persisted to LocalStorage, so everything in
  * here (payload included) must be plain JSON-serializable data: ids, field names,
- * prev/next values. No object references, no functions.
+ * prev/next values. No object references, no functions. The undo / redo implementation's.
+ * @internal
  */
 export type UndoRedoEntry<TPayload = unknown> = {
   id: string;
@@ -33,22 +34,39 @@ export type UndoRedoActionHandler<TPayload = unknown> = {
   redo: (payload: TPayload) => void;
 };
 
+/**
+ * One bucket's history (a scene's or the global one): the undo / redo implementation's.
+ * @internal
+ */
 export type UndoRedoHistoryState = {
   entries: UndoRedoEntry[];
   /** Index of the last applied entry, -1 = nothing applied. */
   pointer: number;
 };
 
-/** One entry of the merged history returned by {@link getUndoRedoHistory}. */
+/**
+ * One entry of the merged history returned by {@link getUndoRedoHistory}. The Debug tools tab's
+ * history list reads it.
+ * @internal
+ */
 export type UndoRedoHistoryEntry = UndoRedoEntry & {
   scope: UndoRedoScope;
   /** False when the entry has been undone (redo would reapply it). */
   applied: boolean;
 };
 
+/**
+ * Which history {@link clearUndoRedoHistory} clears: the current scene's, or every scene's and the
+ * global one.
+ * @internal
+ */
 export type UndoRedoClearScope = 'currentScene' | 'all';
 
-/** Debugger undo/redo settings, persisted to LocalStorage once changed in the debugger. */
+/**
+ * Debugger undo/redo settings, persisted to LocalStorage once changed in the debugger. The Debug
+ * tools tab's.
+ * @internal
+ */
 export type UndoRedoSettings = {
   /** Max number of history entries kept per bucket (each scene's and the global one). Min 1,
    * defaults to `AppConfig.undoRedo.historySize`. */
@@ -60,12 +78,19 @@ export type UndoRedoSettings = {
 type UndoRedoModule = typeof import('./_dbg__UndoRedo');
 let debugGUI: DebugModuleRef<UndoRedoModule> | null = null;
 
+/**
+ * Loads the undo / redo implementation (debug env): the boot's debug step.
+ * @internal
+ */
 export const registerUndoRedoModule = async () => {
   if (!IS_DEBUG_ENV) return;
   debugGUI = await loadDebugModuleAsync(() => import('./_dbg__UndoRedo'));
 };
 
-/** Loads the persisted history from LocalStorage. */
+/**
+ * Loads the persisted history from LocalStorage. The boot calls it.
+ * @internal
+ */
 export const initUndoRedo = () => {
   useDebug(debugGUI)?._initUndoRedo();
 };
@@ -148,36 +173,55 @@ export const recordOrCoalesceUndoRedoAction = <TPayload extends { prev: unknown;
 };
 
 /**
- * Undoes the newest applied action of the current scene + global timeline.
+ * Undoes the newest applied action of the current scene + global timeline. The undo key and the
+ * on-screen undo button.
+ * @internal
  * @returns (boolean) whether an action was undone
  */
 export const undoLastAction = () => useDebug(debugGUI)?._undoLastAction() ?? false;
 
 /**
- * Redoes the oldest undone action of the current scene + global timeline.
+ * Redoes the oldest undone action of the current scene + global timeline. The redo key and the
+ * on-screen redo button.
+ * @internal
  * @returns (boolean) whether an action was redone
  */
 export const redoLastAction = () => useDebug(debugGUI)?._redoLastAction() ?? false;
 
+/**
+ * Whether there is an applied action to undo in the current scene + global timeline: the on-screen
+ * undo button's state.
+ * @internal
+ */
 export const canUndo = () => useDebug(debugGUI)?._canUndo() ?? false;
 
+/**
+ * Whether there is an undone action to redo in the current scene + global timeline: the on-screen
+ * redo button's state.
+ * @internal
+ */
 export const canRedo = () => useDebug(debugGUI)?._canRedo() ?? false;
 
 /**
- * Returns a copy of the current scene's and the global history, merged and ordered by timestamp
+ * Returns a copy of the current scene's and the global history, merged and ordered by timestamp. The
+ * Debug tools tab's.
+ * @internal
  * @returns ({@link UndoRedoHistoryEntry}[] | undefined)
  */
 export const getUndoRedoHistory = () => useDebug(debugGUI)?._getUndoRedoHistory();
 
 /**
- * Returns a copy of the current undo/redo settings
+ * Returns a copy of the current undo/redo settings. The Debug tools tab's.
+ * @internal
  * @returns ({@link UndoRedoSettings} | undefined) undefined outside the debug environment
  */
 export const getUndoRedoSettings = () => useDebug(debugGUI)?._getUndoRedoSettings();
 
 /**
  * Sets and persists undo/redo settings (only the given fields). Takes effect immediately: a
- * smaller `historySize` trims every scene's and the global history from the oldest end.
+ * smaller `historySize` trims every scene's and the global history from the oldest end. The Debug
+ * tools tab's.
+ * @internal
  * @param settings (Partial<{@link UndoRedoSettings}>) the settings to change
  */
 export const setUndoRedoSettings = (settings: Partial<UndoRedoSettings>) => {
@@ -185,7 +229,8 @@ export const setUndoRedoSettings = (settings: Partial<UndoRedoSettings>) => {
 };
 
 /**
- * Clears the history of the current scene or of all scenes
+ * Clears the history of the current scene or of all scenes. The Debug tools tab's.
+ * @internal
  * @param scope ({@link UndoRedoClearScope})
  */
 export const clearUndoRedoHistory = (scope: UndoRedoClearScope) => {

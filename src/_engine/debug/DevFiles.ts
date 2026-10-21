@@ -158,7 +158,10 @@ export type EncodePNGOpts = {
   flipY?: boolean;
 };
 
-/** `AppConfig.devFiles.saveHistorySize`'s default */
+/**
+ * `AppConfig.devFiles.saveHistorySize`'s default. The Debug tools tab's.
+ * @internal
+ */
 export const DEFAULT_SAVE_HISTORY_SIZE = 20;
 
 const toValidSaveHistorySize = (size: unknown) =>

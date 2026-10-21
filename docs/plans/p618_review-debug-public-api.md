@@ -713,6 +713,46 @@ As built, section 2 (2026-10-21, uncommitted on top of `4b7e32c`; the renames st
    warning and a test.
 2. p622's list; `api.json` (`yarn verify:baselines --update`) with the additions and removals.
 
+As built, section 1 (2026-10-21, uncommitted on top of `36f9e5b`; the two new files `git add -N`ed,
+since `moveMap.ts` reads the tracked tree):
+
+- **The entry (D6):** P1's list and P9's (`removeProfilerTab`, `GPU_MEMORY_TAB_ID`,
+  `GPUMemoryResource`) on `aekasha/debug`, 26 names. Three more, each named by a public signature
+  and on no entry: `DebugKeyBindingConfig` (`AppConfig.debugKeys`), `DevFilesSaveData`
+  (`DevFileWrite`) and `DevFilesUnavailableReason` (`DevFilesStatus`).
+- **`@internal`:** every other export of the thin modules, `debug/symbols/3DSymbols.ts` and
+  `DebugModules.ts`' `loadDebugModule` and `useDebug` (an app reads the `current` of the ref
+  `loadDebugModuleAsync` resolved with), 101 names (P5's four besides), each summary naming its user (a script added
+  the tag and the sentence; the run-on sentences it made fixed by hand).
+- **Removed:** D6's list (`isDebugReady`; `PercentagePieHtml` and `PercentagePieOpts.size` from
+  `_dbg__PercentagePie.ts`; `getStatsConfig` with `_getStatsConfig`; the two deprecated
+  `StatsOptions` flags, from `defaultStatsOptions` and `_dbg__Stats.ts` too;
+  `TEST_BRIDGE_QUERY_PARAM`'s export). By the same rule (on no entry, no caller), four wrappers
+  the P4 list missed, with their unused `_dbg__` sides: `createDebugGui`, `getDrawerState` (and
+  `_getDrawerState`), `isDebuggerDisabled` (and `_isDebuggerDisabled`), `handleDebugCameraSwitch`
+  (and `_handleDebugCameraSwitch`, a `@CHORE` stub). `isProfilerEnabledInProdTest` is no longer
+  exported (only `Profiler.ts` reads it).
+- **P5:** `PhysicsProbeReport` in `features/physics/PhysicsProbeTypes.ts` (`@internal`, its fields
+  documented); `_dbg__PhysicsDeterminism.ts`, `_dbg__TestBridge.ts` and `TestBridge.ts` import it
+  from there. `DebugKeyShortcutsTab` in `DebugTools.ts`, `EnvBallOpts` in `EnvBall.ts` (fields
+  documented), both `@internal`, their `_dbg__` modules importing them back. `AnyStatsSource`
+  exported `@internal`. `DrawerState` stays module-private: with `getDrawerState` gone nothing
+  public names it.
+- **`saveTexture` (D9):** on `aekasha`, documented like `saveMaterial`, with an `@example` (a
+  `DataTexture`). It warns in the debug env when the id holds another texture. The registration is
+  a module-private `registerTexture`, which `saveLoadedTexture` calls directly: two parallel loads of
+  one id are expected there (the second is disposed), so they don't warn. The other engine callers
+  can't hit a taken id (the impostor bakes delete first, `loadTexture` returns the cached one, the
+  glTF import picks a free id). `kernel/assets/Texture.test.ts`: the registration, the warning (not
+  for the same texture), and the quiet parallel load.
+- **Checks:** `tsc` (both), `yarn lint`, `yarn test` (109 files, 867 passed, 1 skipped).
+  `yarn verify:baselines`: no debug code in the production build or the banner, both bundles
+  unchanged (`assets/EngineRapier.js` and `#2` swap 0.2 kB, their names' order, not this change).
+  `api.json` (not recorded, section 2): Phase 2's 22 and this section's (the 29 entry names,
+  `saveTexture`, the removals, P5's moves). `docs.json` recorded: `debug` 166 / 183,
+  `debug/symbols` 5 / 5, `features/physics` 204 / 204, `kernel/config` 23 / 23. `moveMap.ts`
+  regenerated (813 files).
+
 ### Phase 4: docs and hygiene (D8, D10)
 
 1. D10's docs, P6's stale text. `DebuggerTabDef` (`content`, `onRefresh`) and `debug/CLAUDE.md` say

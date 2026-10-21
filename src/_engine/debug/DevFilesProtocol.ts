@@ -61,7 +61,10 @@ export type DevFilesSaveData = { sceneId: string; entry: Record<string, unknown>
  * the "File server" setting. */
 export type DevFilesSaveDataWrite = DevFilesSaveData & { historySize: number };
 
-/** One write of a `POST commit` batch */
+/**
+ * One write of a `POST commit` batch. The client's and the server's.
+ * @internal
+ */
 export type DevFilesWrite = {
   /** Repo-relative, `/`-separated */
   path: string;
@@ -69,6 +72,10 @@ export type DevFilesWrite = {
   expectedHash?: string | null;
 } & ({ json: unknown } | { stageId: string } | { saveData: DevFilesSaveDataWrite });
 
+/**
+ * The `POST commit` body: the client's and the server's.
+ * @internal
+ */
 export type DevFilesCommitRequest = { writes: DevFilesWrite[] };
 
 export type DevFilesWriteStatus = 'created' | 'updated' | 'unchanged';

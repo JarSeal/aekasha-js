@@ -24,6 +24,7 @@ import {
 import { getCharacters } from '../../character/Character';
 import { lsGetItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
 import { llog, lwarn } from '../../../utils/Logger';
+import type { PhysicsProbeReport } from '../PhysicsProbeTypes';
 
 const LS_KEY = 'AEK_debugPhysicsProbeRuns';
 const URL_PARAM = 'physicsProbe';
@@ -51,18 +52,6 @@ type ActiveRun = {
   startStep: number;
   targetStep: number;
   rafId: number;
-};
-
-/** A finished probe run, as the `[PhysicsProbe] <sceneId> | <config> | <steps> | <hash>` line logs it */
-export type PhysicsProbeReport = {
-  sceneId: string;
-  /** `<workerTarget>/<transport> | <interpolation>` */
-  config: string;
-  steps: number;
-  hash: string;
-  bodyCount: number;
-  /** Characters aren't hashed */
-  characterCount: number;
 };
 
 /** Steps to probe on every scene enter; null = disarmed. */

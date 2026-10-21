@@ -1072,6 +1072,11 @@
       "action": "keep",
       "plan": "p608"
     },
+    "src/_engine/features/physics/PhysicsProbeTypes.ts": {
+      "to": "src/_engine/features/physics/PhysicsProbeTypes.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
     "src/_engine/features/physics/PhysicsQueryStats.ts": {
       "to": "src/_engine/features/physics/PhysicsQueryStats.ts",
       "action": "keep",
@@ -1825,6 +1830,11 @@
     },
     "src/_engine/kernel/assets/SceneAssetRelease.ts": {
       "to": "src/_engine/kernel/assets/SceneAssetRelease.ts",
+      "action": "keep",
+      "plan": "p608"
+    },
+    "src/_engine/kernel/assets/Texture.test.ts": {
+      "to": "src/_engine/kernel/assets/Texture.test.ts",
       "action": "keep",
       "plan": "p608"
     },

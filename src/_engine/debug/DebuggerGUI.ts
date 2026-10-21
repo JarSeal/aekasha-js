@@ -8,7 +8,15 @@ import { loadDebugModuleAsync, useDebug, type DebugModuleRef } from '../kernel/c
 import { lerror } from '../utils/Logger';
 import { addToast, hasToaster, type ToastProps } from '../ui/Toaster';
 
+/**
+ * The debugger scene loader's id: `loadScene`, the Debug tools tab and the on-screen tools use it.
+ * @internal
+ */
 export const DEBUGGER_SCENE_LOADER_ID = '__debugger-scene-loader';
+/**
+ * The debug toaster's id: the boot creates it, the engine's debug modules add to it.
+ * @internal
+ */
 export const DEBUG_TOASTER_ID = 'debugToaster';
 
 /**
@@ -26,7 +34,9 @@ const queuedDebugToasts: Omit<ToastProps, 'toasterId'>[] = [];
 /**
  * Like {@link addDebugToast}, but a toast added before the debug toaster exists waits for it:
  * for messages from the boot itself (the app start function and the first scene load run before
- * InitEngine creates the toaster). A no-op outside the debug environment.
+ * InitEngine creates the toaster). A no-op outside the debug environment. Used by `loadScene` and
+ * the sky box layers.
+ * @internal
  * @param props (object) the toast's props, without `toasterId`
  */
 export const addDebugToastWhenReady = (props: Omit<ToastProps, 'toasterId'>) => {
@@ -38,8 +48,11 @@ export const addDebugToastWhenReady = (props: Omit<ToastProps, 'toasterId'>) => 
   queuedDebugToasts.push(props);
 };
 
-/** Shows the toasts {@link addDebugToastWhenReady} queued. InitEngine calls it right after it
- * creates the debug toaster. */
+/**
+ * Shows the toasts {@link addDebugToastWhenReady} queued. InitEngine calls it right after it
+ * creates the debug toaster.
+ * @internal
+ */
 export const flushQueuedDebugToasts = () => {
   for (const props of queuedDebugToasts.splice(0)) addDebugToast(props);
 };
@@ -252,7 +265,11 @@ export type DebuggerListDef = {
   data: DebuggerListItem[] | (() => DebuggerListItem[]);
 };
 
-/** A tab definition with its state type erased (the builder's view of any tab). */
+/**
+ * A tab definition with its state type erased (the builder's view of any tab). The tab host's, the
+ * drawer's and the profiler's.
+ * @internal
+ */
 export type AnyDebuggerTabDef = DebuggerTabDef<Record<string, unknown>>;
 
 /** Options for {@link updateDebuggerTab}. */
@@ -262,6 +279,10 @@ export type UpdateDebuggerTabOpts = {
   rebuild?: boolean;
 };
 
+/**
+ * Loads the debugger (the drawer and its tabs) and its scene loader: the boot's debug step.
+ * @internal
+ */
 export const registerDebuggerGUI = async () => {
   debugGUI = await loadDebugModuleAsync(() => import('./_dbg__DebuggerGUI'), true);
   // Debug env only: the first loadScene may target this loader ("Use debugger scene loader for start scene")
@@ -269,14 +290,9 @@ export const registerDebuggerGUI = async () => {
 };
 
 /**
- * Creates the debug GUI (the root functionality)
- * @param opts (object) optional debug GUI options {@link DebugGUIOpts}
- * @returns TCMP or undefined
- */
-export const createDebugGui = (opts?: DebugGUIOpts) => useDebug(debugGUI)?._createDebugGui(opts);
-
-/**
- * Toggles the drawer open or closed
+ * Toggles the drawer open or closed. The views' (`toggleActiveViewDrawer`) and the material
+ * editor's.
+ * @internal
  * @param openOrClose ('OPEN' | 'CLOSE') optional next state of the drawer, if not provided then the opposite of the current state is the next state
  */
 export const toggleDrawer = (openOrClose?: 'OPEN' | 'CLOSE') => {
@@ -287,6 +303,7 @@ export const toggleDrawer = (openOrClose?: 'OPEN' | 'CLOSE') => {
  * Hides the drawer while an editor view is active (Views.ts), or shows it again. Its open
  * state is kept; while hidden, its tab isn't refreshed and the `debugDrawerOpen` body class is
  * the editor view's. Debug environment only.
+ * @internal
  * @param suspended (boolean) whether an editor view is active
  */
 export const setDrawerSuspendedByView = (suspended: boolean) => {
@@ -313,7 +330,9 @@ export const createDebuggerTab = <S extends object>(
  * Restores a tab's persisted values into its state. Runs at registration (not on the first tab
  * open, and also in prod test mode), so the module can use the values at boot. A module can also
  * call it earlier than its tab's registration, for values something reads before that (the tab
- * then hydrates the same values again).
+ * then hydrates the same values again). Used by `createDebuggerTab`, `createProfilerTab` and the
+ * Physics API tab.
+ * @internal
  * @param def (object) the tab's `lsKey`, `state` and `persistKeys` (see {@link DebuggerTabDef})
  */
 export const hydrateDebuggerTabState = <S extends object>(
@@ -402,17 +421,17 @@ export const debuggerListCMP = (def: DebuggerListDef) => {
 };
 
 /**
- * Returns the debug drawer's current state
- * @returns its `DrawerState`, or undefined while the debug module isn't loaded
+ * Sets the drawer's scene title: `setCurrentScene`'s.
+ * @internal
  */
-export const getDrawerState = () => useDebug(debugGUI)?._getDrawerState();
-
 export const updateDebuggerSceneTitle = (title: string) => {
   useDebug(debugGUI)?._updateDebuggerSceneTitle(title);
 };
 
+/**
+ * Disables the drawer during a scene load, or enables it again: `loadScene`'s.
+ * @internal
+ */
 export const disableDebugger = (disable: boolean) => {
   useDebug(debugGUI)?._disableDebugger(disable);
 };
-
-export const isDebuggerDisabled = () => useDebug(debugGUI)?._isDebuggerDisabled();
