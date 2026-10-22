@@ -5,7 +5,6 @@ import {
   getMaterialVariant,
   createMeshEntity,
   getMeshByAppId,
-  setMeshMaterial,
   getLoaderStatusUpdater,
   importAssetAsync,
   spawnImportedAsset,
@@ -13,27 +12,40 @@ import {
   getQuatFromAngle,
   getECSWorld,
   getEntityIdByAppId,
-  getScene,
   registerOnSceneExit,
   getCameraByAppId,
   getLightByAppId,
   getLightTargetId,
   ECSSystemStage,
+  existsOrThrow,
 } from 'aekasha';
-import type { ImportedAssetManifest, Transform, ECSWorld } from 'aekasha';
+import type {
+  ImportedAssetManifest,
+  SpawnImportedParams,
+  Transform,
+  ECSWorld,
+  Vector3Like,
+} from 'aekasha';
 import { createSkyBox } from 'aekasha/skybox';
 import { createDynamicCharacter } from 'aekasha/character';
-import { characterTestObstacles } from './characterTestObjects';
 import {
   createMovingPlatform,
   createFollowObjectCameraRig,
   deleteFollowObjectCameraRig,
 } from 'aekasha/toolkit/ecs';
-import { initPhysicsStressTest } from './PhysicsStressTest';
-import { getTestObstacle } from './characterTestObstacles';
+import type { MovingPlatformPoint } from 'aekasha/toolkit/ecs';
 import { createPhysicsEntity } from 'aekasha/physics';
-import { createCharacterVisualAsync } from './characterVisual';
+import { createCharacterVisualAsync } from '../../shared/characterVisual';
+import { createGymStairsAndWallAsync } from './gymStairsAndWall';
+import { initPhysicsStressTest } from './PhysicsStressTest';
 
+/**
+ * The third-person gym: an obstacle course for the dynamic character controller. Built in this
+ * order (the order the bodies are created in, which the scene runner's hashes depend on): the sky
+ * boxes, the ground, the built stairs and wall, a spinning box, the characters, the props, six
+ * moving platforms, then the imported course models (stairs of every collider kind, terrains,
+ * obstacles). The camera and the lights come from thirdPersonGymScene.scene.json.
+ */
 export const SCENE_THIRD_PERSON_GYM_META = {
   id: 'thirdPersonGymScene',
 };
@@ -48,29 +60,265 @@ const TEST_MODELS = '/debugger/assets/testModels';
  * deterministic on MAIN_THREAD only (p428), and the dummy walks into the test props. */
 const ARE_CHARACTERS_ENABLED = true;
 
+/** The ground: a 200 m box whose top (y = -1.9) everything else in the gym stands on. */
+const GROUND = { size: 200, height: 0.2, position: { x: 0, y: -2, z: 0 } };
+
+/** The gym's materials: the toolkit's triplanar grid and checkerboard (listed in the scene JSON)
+ * and their variants. */
+interface GymMaterials {
+  /** Static meshes. */
+  grid: THREE.Material;
+  /** Flat slopes (ramps, stair flights): one projection only, or two blended ones show doubled
+   * lines there (the grid's `dominantAxis` define). */
+  gridFlatSlopes: THREE.Material;
+  /** Dynamic bodies. */
+  checkerboard: THREE.Material;
+  /** The moving platforms: fitted amber cells, so the moving pieces stand out. */
+  platform: THREE.Material;
+}
+
+/** A model imported from TEST_MODELS and spawned with its physics (the GLB's custom props, or
+ * `physicsParams`). */
+interface GymModel {
+  /** The GLB's name in TEST_MODELS. */
+  file: string;
+  /** The spawned entities' app id prefix (the GLB's import id without one). The
+   * `customPropTest*` ids are the gym's first ones, kept: the saved debug state keys them. */
+  appId?: string;
+  pos: Vector3Like;
+  /** `FIRST_MESH`: `pos` is where the first visible node goes (rootPlacing); `ROOT`: the glTF
+   * root's position. */
+  placeBy: 'FIRST_MESH' | 'ROOT';
+  material: keyof GymMaterials;
+  physicsParams?: SpawnImportedParams['physicsParams'];
+}
+
+/** The props, spawned before the platforms: a cube, Suzanne with a TRIMESH and with a CONVEXHULL
+ * collider, and the slide angles test (ramps from gentle to too steep to climb). */
+const PROP_MODELS: GymModel[] = [
+  {
+    file: 'customPropTestCube',
+    appId: 'customPropTest',
+    pos: { x: 2, y: 2, z: 2 },
+    placeBy: 'FIRST_MESH',
+    material: 'checkerboard',
+  },
+  {
+    file: 'customPropTestMonkey',
+    appId: 'customPropTest2',
+    pos: { x: 4, y: 2, z: 3 },
+    placeBy: 'FIRST_MESH',
+    material: 'checkerboard',
+    physicsParams: {
+      isPhysObj: true,
+      keepMesh: true,
+      rigidBody: { rigidType: 'DYNAMIC' },
+      collider: { type: 'TRIMESH', density: 2 },
+    },
+  },
+  {
+    file: 'customPropTestMonkey',
+    appId: 'customPropTest2_2',
+    pos: { x: 4, y: 6, z: 3 },
+    placeBy: 'FIRST_MESH',
+    material: 'checkerboard',
+    physicsParams: {
+      isPhysObj: true,
+      keepMesh: true,
+      rigidBody: { rigidType: 'DYNAMIC' },
+      collider: { type: 'CONVEXHULL', density: 2 },
+    },
+  },
+  {
+    file: 'characterSlideAngles',
+    pos: { x: 30, y: -1.9, z: -30 },
+    placeBy: 'ROOT',
+    material: 'gridFlatSlopes',
+    physicsParams: { collider: { type: 'TRIMESH', friction: 1 } },
+  },
+];
+
+/** The course, spawned after the platforms: a stack of boxes, then the stairs (straight ones in
+ * three step sizes, each with a TRIMESH and a COMPOUND collider, cornered and spiral ones), two
+ * terrains and the obstacles. */
+const COURSE_MODELS: GymModel[] = [
+  {
+    file: 'test_multi_box',
+    appId: 'customPropTest3',
+    pos: { x: 2, y: 2, z: 2 },
+    placeBy: 'FIRST_MESH',
+    material: 'checkerboard',
+  },
+  ...(
+    [
+      ['stairsStraightTrimesh', 'customPropTest4', 37],
+      ['stairsStraightCompound', 'customPropTest5', 45],
+      ['stairsStraight2Trimesh', 'customPropTest6', 53],
+      ['stairsStraight2Compound', 'customPropTest7', 61],
+      ['stairsStraight3Trimesh', 'customPropTest8', 69],
+      ['stairsStraight3Compound', 'customPropTest9', 77],
+    ] as const
+  ).map(
+    ([file, appId, x]): GymModel => ({
+      file,
+      appId,
+      pos: { x, y: -0.4, z: 5 },
+      placeBy: 'FIRST_MESH',
+      material: 'grid',
+    })
+  ),
+  {
+    file: 'stairsCorneredWithThickRailingsCompound',
+    appId: 'customPropTest10',
+    pos: { x: 45, y: -0.4, z: 35 },
+    placeBy: 'FIRST_MESH',
+    material: 'gridFlatSlopes',
+  },
+  {
+    file: 'stairsCorneredWithThickRailingsTrimesh',
+    appId: 'customPropTest11',
+    pos: { x: 60, y: -0.4, z: 35 },
+    placeBy: 'FIRST_MESH',
+    material: 'gridFlatSlopes',
+  },
+  {
+    file: 'stairsSpiralTrimesh',
+    appId: 'customPropTest12',
+    pos: { x: 20, y: 1.8, z: 33 },
+    placeBy: 'FIRST_MESH',
+    material: 'grid',
+  },
+  {
+    file: 'terrainSpiked',
+    appId: 'customPropTest13',
+    pos: { x: -25, y: -1.8, z: 126.336 },
+    placeBy: 'ROOT',
+    material: 'grid',
+  },
+  {
+    file: 'terrainSmooth',
+    appId: 'customPropTest14',
+    pos: { x: 52.635, y: -1.8, z: 150.833 },
+    placeBy: 'ROOT',
+    material: 'grid',
+  },
+  {
+    file: 'obstacles',
+    appId: 'customPropTest15',
+    pos: { x: -30, y: -1, z: 30 },
+    placeBy: 'ROOT',
+    material: 'grid',
+  },
+];
+
+/** A moving platform: a 0.2 m thick box or disc with a matching POS_BASED collider. */
+interface GymPlatform {
+  id: string;
+  meshAppId: string;
+  geoId: string;
+  shape: { type: 'BOX'; width: number; depth: number } | { type: 'CYLINDER'; radius: number };
+  /** The path; `angle` is the yaw in degrees (none: the platform doesn't turn). */
+  points: { pos: Vector3Like; dur: number; angle?: number }[];
+}
+
+const PLATFORM_THICKNESS = 0.2;
+
+/** The ferris wheel's path: a diamond in the x-y plane at z = 15, 16 points 2.5 m apart sideways
+ * and 1 m apart in height, the platform turning 45° per point (twice around per lap). Its lowest
+ * point rests on the ground (y = -1.9) instead of the diamond's corner (-2). */
+const getFerrisWheelPoints = (): GymPlatform['points'] =>
+  Array.from({ length: 16 }, (_, i) => {
+    const side = i <= 4 ? i : i <= 12 ? 8 - i : i - 16;
+    const up = i <= 8 ? i : 16 - i;
+    return {
+      pos: { x: 5 + 2.5 * side, y: i === 0 ? -1.9 : -2 + up, z: 15 },
+      dur: 1500,
+      angle: (i * 45) % 360,
+    };
+  });
+
+/** The six moving platforms, created in this order. */
+const PLATFORMS: GymPlatform[] = [
+  {
+    // Slides back and forth: 10 s out, 5 s back
+    id: 'sideWaysPlatform',
+    meshAppId: 'sideWaysPlatformMesh',
+    geoId: 'movingPlatform1-geo',
+    shape: { type: 'BOX', width: 2, depth: 4 },
+    points: [
+      { pos: { x: -15, y: -1, z: -7 }, dur: 10000 },
+      { pos: { x: 5, y: -1, z: -7 }, dur: 5000 },
+    ],
+  },
+  {
+    // Waits at the bottom, rises 10 m, waits, stops halfway down on its way back
+    id: 'elevatorPlatform',
+    meshAppId: 'elevatorPlatformMesh',
+    geoId: 'movingPlatform2-geo',
+    shape: { type: 'BOX', width: 4, depth: 4 },
+    points: [
+      { pos: { x: -12, y: -1.8, z: -12 }, dur: 2000 },
+      { pos: { x: -12, y: -1.8, z: -12 }, dur: 3000 },
+      { pos: { x: -12, y: 8, z: -12 }, dur: 2000 },
+      { pos: { x: -12, y: 8, z: -12 }, dur: 2000 },
+      { pos: { x: -12, y: 2, z: -12 }, dur: 2000 },
+    ],
+  },
+  {
+    // A disc turning in place, a lap in 4 s
+    id: 'carouselPlatform',
+    meshAppId: 'carouselPlatformMesh1',
+    geoId: 'movingPlatform3-geo',
+    shape: { type: 'CYLINDER', radius: 4 },
+    points: [0, 90, 180, 270].map((angle) => ({
+      pos: { x: 14, y: -1.9, z: -4 },
+      dur: 1000,
+      angle,
+    })),
+  },
+  {
+    // A box turning the other way while it moves 8 m along z and back, a lap in 8 s
+    id: 'carouselPlatform2',
+    meshAppId: 'carouselPlatformMesh2',
+    geoId: 'movingPlatform4-geo',
+    shape: { type: 'BOX', width: 4, depth: 4 },
+    points: [
+      { pos: { x: 25, y: -1.9, z: -4 }, dur: 2000, angle: 0 },
+      { pos: { x: 25, y: -1.9, z: 0 }, dur: 2000, angle: -90 },
+      { pos: { x: 25, y: -1.9, z: 4 }, dur: 2000, angle: -180 },
+      { pos: { x: 25, y: -1.9, z: 0 }, dur: 2000, angle: -270 },
+    ],
+  },
+  {
+    // A disc turning while it moves 8 m along x and back, a lap in 8 s
+    id: 'carouselPlatform3',
+    meshAppId: 'carouselPlatformMesh3',
+    geoId: 'movingPlatform5-geo',
+    shape: { type: 'CYLINDER', radius: 4 },
+    points: [
+      { pos: { x: 25, y: -1.9, z: 12 }, dur: 2000, angle: 0 },
+      { pos: { x: 21, y: -1.9, z: 12 }, dur: 2000, angle: 90 },
+      { pos: { x: 17, y: -1.9, z: 12 }, dur: 2000, angle: 180 },
+      { pos: { x: 21, y: -1.9, z: 12 }, dur: 2000, angle: 270 },
+    ],
+  },
+  {
+    id: 'ferrisWheelPlatform',
+    meshAppId: 'ferrisWheelPlatformMesh',
+    geoId: 'movingPlatform6-geo',
+    shape: { type: 'BOX', width: 2, depth: 4 },
+    points: getFerrisWheelPoints(),
+  },
+];
+
 /** Root transform that puts an import's first visible node (its first mesh, which is also its
  * physics anchor) at `pos`: these models were positioned by that node, not by their glTF root. */
-const rootPlacing = (manifest: ImportedAssetManifest, pos: { x: number; y: number; z: number }) => {
+const rootPlacing = (manifest: ImportedAssetManifest, pos: Vector3Like) => {
   const anchor = manifest.geometries.find(
     ({ customProps }) => !customProps.isPhysObj || customProps.keepMesh
   );
   const offset = anchor?.transform.position || { x: 0, y: 0, z: 0 };
   return { position: { x: pos.x - offset.x, y: pos.y - offset.y, z: pos.z - offset.z } };
-};
-
-/** Same as setImportedRigidBodyTranslation, but for a partial {x?, y?, z?} update (matching the
- * legacy PhysicsObject.setTranslation's partial-update signature) — reads the body's current
- * position for any axis not provided. */
-const setImportedRigidBodyTranslationPartial = (
-  entityId: number,
-  pos: { x?: number; y?: number; z?: number }
-) => {
-  const body = getECSWorld().getRigidBody(entityId);
-  if (!body) return;
-  body.setTranslation(
-    { x: pos.x ?? body.pos.x, y: pos.y ?? body.pos.y, z: pos.z ?? body.pos.z },
-    true
-  );
 };
 
 const snapToStep = (value: number, step: number) => Math.round(value / step) * step;
@@ -140,11 +388,113 @@ const followWithSun = (
   };
 };
 
+/** Two equirectangular sky boxes, the sunset and the same sky without its clouds and sun, to
+ * switch between in the Sky box debug tab. */
+const createGymSkyBoxesAsync = async () => {
+  await createSkyBox({
+    id: 'stylizedSunsetEquiRect',
+    base: {
+      type: 'EQUIRECTANGULAR',
+      file: '/debugger/assets/testTextures/skyboxes/sunset_stylized/sky_41_4k.png',
+      textureId: 'equiRectSunsetStylizedId',
+      colorSpace: THREE.SRGBColorSpace,
+      rotate: Math.PI,
+    },
+    env: { environmentIntensity: GYM_ENVIRONMENT_INTENSITY },
+  });
+
+  await createSkyBox({
+    id: 'emptyBlueSkyEquiRect',
+    base: {
+      type: 'EQUIRECTANGULAR',
+      file: '/debugger/assets/testTextures/skyboxes/sunset_stylized/sky_empty_2k.png',
+      textureId: 'equiRectEmptyId',
+      colorSpace: THREE.SRGBColorSpace,
+      rotate: Math.PI,
+    },
+    env: { environmentIntensity: GYM_ENVIRONMENT_INTENSITY },
+  });
+};
+
+/** The gym's materials (see GymMaterials). */
+const getGymMaterials = (): GymMaterials => ({
+  grid: existsOrThrow(
+    getMaterial('triplanarGrid'),
+    'Could not find the triplanarGrid material for the gym scene.'
+  ),
+  gridFlatSlopes: getMaterialVariant('triplanarGrid', { staticDefines: { dominantAxis: true } }),
+  checkerboard: existsOrThrow(
+    getMaterial('triplanarCheckerboard'),
+    'Could not find the triplanarCheckerboard material for the gym scene.'
+  ),
+  platform: getMaterialVariant('triplanarCheckerboard', {
+    staticDefines: { fitToBounds: true },
+    nodes: {
+      colorNode: { checkerSize: 0.5, checkerColorA: '#a18862', checkerColorB: '#7b6b54' },
+    },
+  }),
+});
+
+/** The ground (a FIXED box), in a lighter grid than the other static meshes. */
+const createGroundAsync = async (materials: GymMaterials) => {
+  const groundEntityId = createMeshEntity(
+    {
+      geo: createGeometry({
+        id: 'largeGroundGeo',
+        type: 'BOX',
+        params: { width: GROUND.size, height: GROUND.height, depth: GROUND.size },
+      }),
+      mat: materials.grid,
+      receiveShadow: true,
+      position: GROUND.position,
+      // A material variant, same shader
+      matOverrides: {
+        staticDefines: { minorLines: false },
+        nodes: { colorNode: { backgroundColor: '#9c9c9c', lineColor: '#a5a5a5' } },
+      },
+    },
+    { appId: 'largeGroundMesh' }
+  );
+  await createPhysicsEntity(
+    { type: 'BOX', friction: 2 },
+    { rigidType: 'FIXED', translation: GROUND.position },
+    groundEntityId
+  );
+};
+
+/** A frictionless, bouncy box dropped spinning next to the start. */
+const createSpinningBoxAsync = async (materials: GymMaterials) => {
+  const boxEntityId = createMeshEntity(
+    {
+      geo: createGeometry({
+        id: 'testBox1',
+        type: 'BOX',
+        params: { width: 1, height: 1, depth: 1 },
+      }),
+      mat: materials.checkerboard,
+      castShadow: true,
+      receiveShadow: true,
+    },
+    { appId: 'testBox1Mesh' }
+  );
+  await createPhysicsEntity(
+    { type: 'BOX', restitution: 0.5, friction: 0 },
+    {
+      rigidType: 'DYNAMIC',
+      translation: { x: 2, y: 0, z: 0 },
+      angvel: { x: 1, y: -2, z: 20 },
+    },
+    boxEntityId
+  );
+};
+
 /** The player character (a TANK brain on the keyboard and a gamepad, with its follow camera), a
  * second player character on the arrow keys (CAMERA_RELATIVE) and a dummy whose brain walks and
  * jumps around (GYM_DUMMY, GymDummyBrain.ts). They're deterministic on MAIN_THREAD only (async
- * shape casts in WORKER_THREAD mode, p428), so ARE_CHARACTERS_ENABLED can leave them out. */
-const createGymCharacters = async () => {
+ * shape casts in WORKER_THREAD mode, p428), so ARE_CHARACTERS_ENABLED can leave them out. The
+ * player's id, `topDownChar`, is the gym's first one, kept: the saved debug state and the scene
+ * runner's character paths key it. */
+const createGymCharactersAsync = async () => {
   const characterConfig = {
     height: 1.6,
     radius: 0.5,
@@ -195,9 +545,12 @@ const createGymCharacters = async () => {
   // Follow camera tracking the player-controlled character from above.
   createFollowObjectCameraRig({
     id: 'thirdPersonGymFollowCam',
-    camera: getCameraByAppId('thirdPersonGymCamera')!,
+    camera: existsOrThrow(
+      getCameraByAppId('thirdPersonGymCamera'),
+      'Could not find the gym camera "thirdPersonGymCamera".'
+    ),
     targetMesh: characterMesh,
-    // Legacy gym's rig values (world-space offset, aimed at the character's center)
+    // A world-space offset, aimed at the character's center
     offset: { x: 7, y: 20, z: 7 },
     smoothingTime: 0.2,
   });
@@ -253,544 +606,117 @@ const createGymCharacters = async () => {
   getECSWorld().getRigidBody(dummyCharacter.entityId)?.setTranslation({ x: -2, y: 5, z: -2 }, true);
 };
 
+/** Imports every model of the tables at once (each GLB once), keyed by file. */
+const importGymModelsAsync = async () => {
+  const files = [...new Set([...PROP_MODELS, ...COURSE_MODELS].map(({ file }) => file))];
+  const manifests = await Promise.all(
+    files.map((file) =>
+      importAssetAsync({ fileName: `${TEST_MODELS}/${file}.glb`, throwOnError: true })
+    )
+  );
+  return new Map(files.map((file, i) => [file, manifests[i]]));
+};
+
+/** Spawns the models in table order (the order their bodies are created in). */
+const spawnGymModelsAsync = async (
+  models: GymModel[],
+  manifests: Map<string, ImportedAssetManifest | null>,
+  materials: GymMaterials
+) => {
+  for (const { file, appId, pos, placeBy, material, physicsParams } of models) {
+    const manifest = existsOrThrow(
+      manifests.get(file),
+      `Could not import the gym model "${file}".`
+    );
+    await spawnImportedAsset(manifest, {
+      transform: placeBy === 'ROOT' ? { position: pos } : rootPlacing(manifest, pos),
+      material: materials[material],
+      castShadow: true,
+      receiveShadow: true,
+      physicsParams,
+      entityOpts: appId ? { appId } : undefined,
+    });
+  }
+};
+
+/** A moving platform of the table: its mesh, then the platform (a POS_BASED body, no friction:
+ * the dynamic character rides it by the platform's velocities, not by friction). */
+const createPlatformAsync = async (platform: GymPlatform, materials: GymMaterials) => {
+  const { id, meshAppId, geoId, shape, points } = platform;
+  createMeshEntity(
+    {
+      geo: createGeometry(
+        shape.type === 'BOX'
+          ? {
+              id: geoId,
+              type: 'BOX',
+              params: { width: shape.width, height: PLATFORM_THICKNESS, depth: shape.depth },
+            }
+          : {
+              id: geoId,
+              type: 'CYLINDER',
+              params: {
+                radiusTop: shape.radius,
+                radiusBottom: shape.radius,
+                height: PLATFORM_THICKNESS,
+              },
+            }
+      ),
+      mat: materials.platform,
+      castShadow: true,
+      receiveShadow: true,
+    },
+    { appId: meshAppId }
+  );
+  const pathPoints: MovingPlatformPoint[] = points.map(({ pos, dur, angle }) =>
+    angle === undefined ? { pos, dur } : { pos, dur, rot: getQuatFromAngle(angle) }
+  );
+  await createMovingPlatform({
+    id,
+    shape: {
+      mesh: existsOrThrow(getMeshByAppId(meshAppId), `Could not find the platform "${meshAppId}".`),
+    },
+    physicsParams: [
+      { collider: { type: shape.type, friction: 0 }, rigidBody: { rigidType: 'POS_BASED' } },
+    ],
+    points: pathPoints,
+  });
+};
+
 export const scene = async () => {
   const updateLoaderFn = getLoaderStatusUpdater();
-  updateLoaderFn({ loadedCount: 0, totalCount: 2 });
+  const totalCount = 4;
+  updateLoaderFn({ loadedCount: 0, totalCount });
 
-  // Scene itself is already created by registerScenesFromGeneratedData() from this scene's
-  // *.scene.json before this function ever runs (matches scene01.ts/physicsTest.ts) —
-  // createMovingPlatform still needs the THREE.Group to add a platform mesh to if one isn't
-  // already parented (it normally is, via createMeshEntity's own scene-add default).
-  const scene = getScene(SCENE_THIRD_PERSON_GYM_META.id, false, true)!;
-
-  updateLoaderFn({ loadedCount: 1, totalCount: 2 });
-
-  // Clean up on leaving: the sun follow system and the follow camera rig would otherwise keep
-  // running against their deleted entities/meshes (all no-ops when ARE_CHARACTERS_ENABLED is off).
-  // (One exit callback per scene — registerOnSceneExit replaces any earlier one.)
+  // The follow camera rig and the sun follow system would otherwise keep running against their
+  // deleted entities and meshes (no-ops when ARE_CHARACTERS_ENABLED is off)
   registerOnSceneExit(SCENE_THIRD_PERSON_GYM_META.id, () => {
     getECSWorld().removeSystem('gymSunFollow');
     deleteFollowObjectCameraRig('thirdPersonGymFollowCam');
   });
 
-  await createSkyBox({
-    id: 'stylizedSunsetEquiRect',
-    base: {
-      type: 'EQUIRECTANGULAR',
-      file: '/debugger/assets/testTextures/skyboxes/sunset_stylized/sky_41_4k.png',
-      textureId: 'equiRectSunsetStylizedId',
-      colorSpace: THREE.SRGBColorSpace,
-      rotate: Math.PI,
-    },
-    env: { environmentIntensity: GYM_ENVIRONMENT_INTENSITY },
+  const [manifests] = await Promise.all([importGymModelsAsync(), createGymSkyBoxesAsync()]);
+  updateLoaderFn({ loadedCount: 1, totalCount });
+
+  const materials = getGymMaterials();
+  await createGroundAsync(materials);
+  await createGymStairsAndWallAsync({
+    material: materials.grid,
+    stairsPosition: { x: 5, y: -1.8, z: 0 },
+    // A 10 m box sunk to stand 2 m out of the ground
+    wallPosition: { x: -2, y: -5 + GROUND.height / 2, z: 0 },
   });
+  await createSpinningBoxAsync(materials);
+  if (ARE_CHARACTERS_ENABLED) await createGymCharactersAsync();
+  updateLoaderFn({ loadedCount: 2, totalCount });
 
-  await createSkyBox({
-    id: 'emptyBlueSkyEquiRect',
-    base: {
-      type: 'EQUIRECTANGULAR',
-      file: '/debugger/assets/testTextures/skyboxes/sunset_stylized/sky_empty_2k.png',
-      textureId: 'equiRectEmptyId',
-      colorSpace: THREE.SRGBColorSpace,
-      rotate: Math.PI,
-    },
-    env: { environmentIntensity: GYM_ENVIRONMENT_INTENSITY },
-  });
+  await spawnGymModelsAsync(PROP_MODELS, manifests, materials);
+  for (const platform of PLATFORMS) await createPlatformAsync(platform, materials);
+  updateLoaderFn({ loadedCount: 3, totalCount });
 
-  // Static physics meshes use the toolkit's triplanar grid material (listed in the scene JSON)
-  const gridMat = getMaterial('triplanarGrid');
-  if (!gridMat) throw new Error('Could not find the triplanarGrid material for the gym scene.');
-  // Flat slopes (ramps, stair flights): one projection only, or two blended ones show doubled
-  // lines there (see the grid's dominantAxis define)
-  const gridFlatSlopesMat = getMaterialVariant('triplanarGrid', {
-    staticDefines: { dominantAxis: true },
-  });
-  // Dynamic physics objects and moving platforms use the toolkit's triplanar checkerboard (listed
-  // in the scene JSON); the platforms get fitted amber cells so the moving pieces stand out (a
-  // cached material variant, see getMaterialVariant)
-  const dynamicMat = getMaterial('triplanarCheckerboard');
-  if (!dynamicMat) {
-    throw new Error('Could not find the triplanarCheckerboard material for the gym scene.');
-  }
-  const platformMat = getMaterialVariant('triplanarCheckerboard', {
-    staticDefines: { fitToBounds: true },
-    nodes: {
-      colorNode: { checkerSize: 0.5, checkerColorA: '#a18862', checkerColorB: '#7b6b54' },
-    },
-  });
-
-  // Ground
-  const groundWidthAndDepth = 200;
-  const groundHeight = 0.2;
-  const groundPos = { x: 0, y: -2, z: 0 };
-  const groundGeo = createGeometry({
-    id: 'largeGroundGeo',
-    type: 'BOX',
-    params: { width: groundWidthAndDepth, height: groundHeight, depth: groundWidthAndDepth },
-  });
-  const groundEntityId = createMeshEntity(
-    {
-      geo: groundGeo,
-      mat: gridMat,
-      receiveShadow: true,
-      position: groundPos,
-      // A slightly lighter tint than the other static meshes (a material variant, same shader)
-      matOverrides: {
-        staticDefines: {
-          minorLines: false,
-        },
-        nodes: {
-          colorNode: {
-            backgroundColor: '#9c9c9c',
-            lineColor: '#a5a5a5',
-          },
-        },
-      },
-    },
-    { appId: 'largeGroundMesh' }
-  );
-  await createPhysicsEntity(
-    { type: 'BOX', friction: 2 },
-    { rigidType: 'FIXED', translation: groundPos },
-    groundEntityId
-  );
-  // OBSTACLES
-  const { stairsMesh, stairsEntityId, bigBoxWallMesh, bigBoxWallEntityId } =
-    await characterTestObstacles();
-  // setMeshMaterial moves the ref counts (the obstacles' own materials are then disposed)
-  setMeshMaterial(stairsMesh, gridMat);
-  setImportedRigidBodyTranslationPartial(stairsEntityId, { x: 5, y: -1.8 });
-
-  setMeshMaterial(bigBoxWallMesh, gridMat);
-  setImportedRigidBodyTranslationPartial(bigBoxWallEntityId, {
-    x: -2,
-    y: -5 + groundHeight / 2,
-  });
-
-  // BOX
-  const geometry2 = createGeometry({
-    id: 'testBox1',
-    type: 'BOX',
-    params: { width: 1, height: 1, depth: 1 },
-  });
-  const boxEntityId = createMeshEntity(
-    { geo: geometry2, mat: dynamicMat, castShadow: true, receiveShadow: true },
-    { appId: 'testBox1Mesh' }
-  );
-  await createPhysicsEntity(
-    { type: 'BOX', restitution: 0.5, friction: 0 },
-    {
-      rigidType: 'DYNAMIC',
-      translation: { x: 2, y: 0, z: 0 },
-      angvel: { x: 1, y: -2, z: 20 },
-    },
-    boxEntityId
-  );
-
-  if (ARE_CHARACTERS_ENABLED) await createGymCharacters();
-
-  const cube = await importAssetAsync({ fileName: `${TEST_MODELS}/customPropTestCube.glb` });
-  const monkey = await importAssetAsync({ fileName: `${TEST_MODELS}/customPropTestMonkey.glb` });
-  const multiBox = await importAssetAsync({ fileName: `${TEST_MODELS}/test_multi_box.glb` });
-  if (!cube || !monkey || !multiBox) throw new Error('Could not import the gym test models.');
-
-  await spawnImportedAsset(cube, {
-    transform: rootPlacing(cube, { x: 2, y: 2, z: 2 }),
-    material: dynamicMat,
-    castShadow: true,
-    receiveShadow: true,
-    entityOpts: { appId: 'customPropTest' },
-  });
-
-  // Suzanne (monkey TRIMESH)
-  await spawnImportedAsset(monkey, {
-    transform: rootPlacing(monkey, { x: 4, y: 2, z: 3 }),
-    material: dynamicMat,
-    castShadow: true,
-    receiveShadow: true,
-    physicsParams: {
-      isPhysObj: true,
-      keepMesh: true,
-      rigidBody: { rigidType: 'DYNAMIC' },
-      collider: { type: 'TRIMESH', density: 2 },
-    },
-    entityOpts: { appId: 'customPropTest2' },
-  });
-
-  // Suzanne (monkey CONVEXHULL)
-  await spawnImportedAsset(monkey, {
-    transform: rootPlacing(monkey, { x: 4, y: 6, z: 3 }),
-    material: dynamicMat,
-    castShadow: true,
-    receiveShadow: true,
-    physicsParams: {
-      isPhysObj: true,
-      keepMesh: true,
-      rigidBody: { rigidType: 'DYNAMIC' },
-      collider: { type: 'CONVEXHULL', density: 2 },
-    },
-    entityOpts: { appId: 'customPropTest2_2' },
-  });
-
-  await getTestObstacle('slideAngles', {
-    transform: { position: { x: 30, y: -1.9, z: -30 } },
-    material: gridFlatSlopesMat,
-    castShadow: true,
-    receiveShadow: true,
-    physicsParams: { collider: { type: 'TRIMESH', friction: 1 } },
-  });
-
-  createMeshEntity(
-    {
-      geo: createGeometry({
-        id: 'movingPlatform1-geo',
-        type: 'BOX',
-        params: { width: 2, height: 0.2, depth: 4 },
-      }),
-      mat: platformMat,
-      castShadow: true,
-      receiveShadow: true,
-    },
-    { appId: 'sideWaysPlatformMesh' }
-  );
-  const sideWaysPlatformMesh = getMeshByAppId('sideWaysPlatformMesh')!;
-
-  await createMovingPlatform({
-    id: 'sideWaysPlatform',
-    scene,
-    shape: {
-      mesh: sideWaysPlatformMesh,
-    },
-    physicsParams: [
-      {
-        collider: { type: 'BOX', friction: 0 },
-        rigidBody: { rigidType: 'POS_BASED' },
-      },
-    ],
-    points: [
-      { pos: { x: -15, y: -1, z: -7 }, dur: 10000 },
-      { pos: { x: 5, y: -1, z: -7 }, dur: 5000 },
-    ],
-  });
-
-  createMeshEntity(
-    {
-      geo: createGeometry({
-        id: 'movingPlatform2-geo',
-        type: 'BOX',
-        params: { width: 4, height: 0.2, depth: 4 },
-      }),
-      mat: platformMat,
-      castShadow: true,
-      receiveShadow: true,
-    },
-    { appId: 'elevatorPlatformMesh' }
-  );
-  const elevatorPlatformMesh = getMeshByAppId('elevatorPlatformMesh')!;
-
-  await createMovingPlatform({
-    id: 'elevatorPlatform',
-    scene,
-    shape: {
-      mesh: elevatorPlatformMesh,
-    },
-    physicsParams: [
-      {
-        collider: { type: 'BOX', friction: 0 },
-        rigidBody: { rigidType: 'POS_BASED' },
-      },
-    ],
-    points: [
-      { pos: { x: -12, y: -1.8, z: -12 }, dur: 2000 },
-      { pos: { x: -12, y: -1.8, z: -12 }, dur: 3000 },
-      { pos: { x: -12, y: 8, z: -12 }, dur: 2000 },
-      { pos: { x: -12, y: 8, z: -12 }, dur: 2000 },
-      { pos: { x: -12, y: 2, z: -12 }, dur: 2000 },
-    ],
-  });
-
-  const carouselPos = { x: 14, y: -1.9, z: -4 };
-  const oneLapDuration = 4000;
-  const segmentDur = oneLapDuration / 4;
-
-  createMeshEntity(
-    {
-      geo: createGeometry({
-        id: 'movingPlatform3-geo',
-        type: 'CYLINDER',
-        params: { radiusTop: 4, radiusBottom: 4, height: 0.2 },
-      }),
-      mat: platformMat,
-      castShadow: true,
-      receiveShadow: true,
-    },
-    { appId: 'carouselPlatformMesh1' }
-  );
-  const carouselPlatformMesh1 = getMeshByAppId('carouselPlatformMesh1')!;
-
-  await createMovingPlatform({
-    id: 'carouselPlatform',
-    scene,
-    shape: {
-      mesh: carouselPlatformMesh1,
-    },
-    physicsParams: [
-      {
-        collider: { type: 'CYLINDER', friction: 0 },
-        rigidBody: { rigidType: 'POS_BASED' },
-      },
-    ],
-    points: [
-      { pos: carouselPos, dur: segmentDur, rot: getQuatFromAngle(0) },
-      { pos: carouselPos, dur: segmentDur, rot: getQuatFromAngle(90) },
-      { pos: carouselPos, dur: segmentDur, rot: getQuatFromAngle(180) },
-      { pos: carouselPos, dur: segmentDur, rot: getQuatFromAngle(270) },
-    ],
-  });
-
-  const carouselPos2 = { x: 25, y: -1.9, z: -4 };
-  const oneLapDuration2 = 8000;
-  const segmentDur2 = oneLapDuration2 / 4;
-
-  createMeshEntity(
-    {
-      geo: createGeometry({
-        id: 'movingPlatform4-geo',
-        type: 'BOX',
-        params: { width: 4, height: 0.2, depth: 4 },
-      }),
-      mat: platformMat,
-      castShadow: true,
-      receiveShadow: true,
-    },
-    { appId: 'carouselPlatformMesh2' }
-  );
-  const carouselPlatformMesh2 = getMeshByAppId('carouselPlatformMesh2')!;
-
-  await createMovingPlatform({
-    id: 'carouselPlatform2',
-    scene,
-    shape: {
-      mesh: carouselPlatformMesh2,
-    },
-    physicsParams: [
-      {
-        collider: { type: 'BOX', friction: 0 },
-        rigidBody: { rigidType: 'POS_BASED' },
-      },
-    ],
-    points: [
-      { pos: carouselPos2, dur: segmentDur2, rot: getQuatFromAngle(0) },
-      { pos: { ...carouselPos2, z: 0 }, dur: segmentDur2, rot: getQuatFromAngle(-90) },
-      { pos: { ...carouselPos2, z: 4 }, dur: segmentDur2, rot: getQuatFromAngle(-180) },
-      { pos: { ...carouselPos2, z: 0 }, dur: segmentDur2, rot: getQuatFromAngle(-270) },
-    ],
-  });
-
-  const carouselPos3 = { x: 25, y: -1.9, z: 12 };
-  const oneLapDuration3 = 8000;
-  const segmentDur3 = oneLapDuration3 / 4;
-
-  createMeshEntity(
-    {
-      geo: createGeometry({
-        id: 'movingPlatform5-geo',
-        type: 'CYLINDER',
-        params: { radiusTop: 4, radiusBottom: 4, height: 0.2 },
-      }),
-      mat: platformMat,
-      castShadow: true,
-      receiveShadow: true,
-    },
-    { appId: 'carouselPlatformMesh3' }
-  );
-  const carouselPlatformMesh3 = getMeshByAppId('carouselPlatformMesh3')!;
-
-  await createMovingPlatform({
-    id: 'carouselPlatform3',
-    scene,
-    shape: {
-      mesh: carouselPlatformMesh3,
-    },
-    physicsParams: [
-      {
-        collider: { type: 'CYLINDER', friction: 0 },
-        rigidBody: { rigidType: 'POS_BASED' },
-      },
-    ],
-    points: [
-      { pos: carouselPos3, dur: segmentDur3, rot: getQuatFromAngle(0) },
-      { pos: { ...carouselPos3, x: 21 }, dur: segmentDur3, rot: getQuatFromAngle(90) },
-      { pos: { ...carouselPos3, x: 17 }, dur: segmentDur3, rot: getQuatFromAngle(180) },
-      { pos: { ...carouselPos3, x: 21 }, dur: segmentDur3, rot: getQuatFromAngle(270) },
-    ],
-  });
-
-  const carouselOneSegDur = 1500;
-  createMeshEntity(
-    {
-      geo: createGeometry({
-        id: 'movingPlatform6-geo',
-        type: 'BOX',
-        params: { width: 2, height: 0.2, depth: 4 },
-      }),
-      mat: platformMat,
-      castShadow: true,
-      receiveShadow: true,
-    },
-    { appId: 'ferrisWheelPlatformMesh' }
-  );
-  const ferrisWheelPlatformMesh = getMeshByAppId('ferrisWheelPlatformMesh')!;
-
-  await createMovingPlatform({
-    id: 'ferrisWheelPlatform',
-    scene,
-    shape: {
-      mesh: ferrisWheelPlatformMesh,
-    },
-    physicsParams: [
-      {
-        collider: { type: 'BOX', friction: 0 },
-        rigidBody: { rigidType: 'POS_BASED' },
-      },
-    ],
-    points: [
-      { pos: { x: 5, y: -1.9, z: 15 }, dur: carouselOneSegDur, rot: getQuatFromAngle(0) },
-      { pos: { x: 7.5, y: -1, z: 15 }, dur: carouselOneSegDur, rot: getQuatFromAngle(45) },
-      { pos: { x: 10, y: 0, z: 15 }, dur: carouselOneSegDur, rot: getQuatFromAngle(90) },
-      { pos: { x: 12.5, y: 1, z: 15 }, dur: carouselOneSegDur, rot: getQuatFromAngle(135) },
-      { pos: { x: 15, y: 2, z: 15 }, dur: carouselOneSegDur, rot: getQuatFromAngle(180) },
-      { pos: { x: 12.5, y: 3, z: 15 }, dur: carouselOneSegDur, rot: getQuatFromAngle(225) },
-      { pos: { x: 10, y: 4, z: 15 }, dur: carouselOneSegDur, rot: getQuatFromAngle(270) },
-      { pos: { x: 7.5, y: 5, z: 15 }, dur: carouselOneSegDur, rot: getQuatFromAngle(315) },
-      { pos: { x: 5, y: 6, z: 15 }, dur: carouselOneSegDur, rot: getQuatFromAngle(0) },
-      { pos: { x: 2.5, y: 5, z: 15 }, dur: carouselOneSegDur, rot: getQuatFromAngle(45) },
-      { pos: { x: 0, y: 4, z: 15 }, dur: carouselOneSegDur, rot: getQuatFromAngle(90) },
-      { pos: { x: -2.5, y: 3, z: 15 }, dur: carouselOneSegDur, rot: getQuatFromAngle(135) },
-      { pos: { x: -5, y: 2, z: 15 }, dur: carouselOneSegDur, rot: getQuatFromAngle(180) },
-      { pos: { x: -2.5, y: 1, z: 15 }, dur: carouselOneSegDur, rot: getQuatFromAngle(225) },
-      { pos: { x: 0, y: 0, z: 15 }, dur: carouselOneSegDur, rot: getQuatFromAngle(270) },
-      { pos: { x: 2.5, y: -1, z: 15 }, dur: carouselOneSegDur, rot: getQuatFromAngle(315) },
-    ],
-  });
-
-  await spawnImportedAsset(multiBox, {
-    transform: rootPlacing(multiBox, { x: 2, y: 2, z: 2 }),
-    material: dynamicMat,
-    castShadow: true,
-    receiveShadow: true,
-    entityOpts: { appId: 'customPropTest3' },
-  });
-
-  // Stairs are positioned by their first visible node, terrains and obstacles by their glTF root
-  const staticModels: {
-    file: string;
-    appId: string;
-    pos: { x: number; y: number; z: number };
-    placeBy: 'FIRST_MESH' | 'ROOT';
-    /** Flat slopes: use gridFlatSlopesMat */
-    flatSlopes?: boolean;
-  }[] = [
-    // Straight stairs (TRIMESH)
-    {
-      file: 'stairsStraightTrimesh',
-      appId: 'customPropTest4',
-      pos: { x: 37, y: -0.4, z: 5 },
-      placeBy: 'FIRST_MESH',
-    },
-    // Straight stairs (COMPOUND)
-    {
-      file: 'stairsStraightCompound',
-      appId: 'customPropTest5',
-      pos: { x: 45, y: -0.4, z: 5 },
-      placeBy: 'FIRST_MESH',
-    },
-    // Straight stairs 2 (TRIMESH)
-    {
-      file: 'stairsStraight2Trimesh',
-      appId: 'customPropTest6',
-      pos: { x: 53, y: -0.4, z: 5 },
-      placeBy: 'FIRST_MESH',
-    },
-    // Straight stairs 2 (COMPOUND)
-    {
-      file: 'stairsStraight2Compound',
-      appId: 'customPropTest7',
-      pos: { x: 61, y: -0.4, z: 5 },
-      placeBy: 'FIRST_MESH',
-    },
-    // Straight stairs 3 (TRIMESH)
-    {
-      file: 'stairsStraight3Trimesh',
-      appId: 'customPropTest8',
-      pos: { x: 69, y: -0.4, z: 5 },
-      placeBy: 'FIRST_MESH',
-    },
-    // Straight stairs 3 (COMPOUND)
-    {
-      file: 'stairsStraight3Compound',
-      appId: 'customPropTest9',
-      pos: { x: 77, y: -0.4, z: 5 },
-      placeBy: 'FIRST_MESH',
-    },
-    // Cornered stairs with thick railings (COMPOUND)
-    {
-      file: 'stairsCorneredWithThickRailingsCompound',
-      appId: 'customPropTest10',
-      flatSlopes: true,
-      pos: { x: 45, y: -0.4, z: 35 },
-      placeBy: 'FIRST_MESH',
-    },
-    // Cornered stairs with thick railings (TRIMESH)
-    {
-      file: 'stairsCorneredWithThickRailingsTrimesh',
-      appId: 'customPropTest11',
-      flatSlopes: true,
-      pos: { x: 60, y: -0.4, z: 35 },
-      placeBy: 'FIRST_MESH',
-    },
-    // Spiral stairs (TRIMESH)
-    {
-      file: 'stairsSpiralTrimesh',
-      appId: 'customPropTest12',
-      pos: { x: 20, y: 1.8, z: 33 },
-      placeBy: 'FIRST_MESH',
-    },
-    // Spiked terrain
-    {
-      file: 'terrainSpiked',
-      appId: 'customPropTest13',
-      pos: { x: -25, y: -1.8, z: 126.336 },
-      placeBy: 'ROOT',
-    },
-    // Smooth terrain
-    {
-      file: 'terrainSmooth',
-      appId: 'customPropTest14',
-      pos: { x: 52.635, y: -1.8, z: 150.833 },
-      placeBy: 'ROOT',
-    },
-    // Obstacles
-    {
-      file: 'obstacles',
-      appId: 'customPropTest15',
-      pos: { x: -30, y: -1, z: 30 },
-      placeBy: 'ROOT',
-    },
-  ];
-  for (const { file, appId, pos, placeBy, flatSlopes } of staticModels) {
-    const manifest = await importAssetAsync({ fileName: `${TEST_MODELS}/${file}.glb` });
-    if (!manifest) continue;
-    await spawnImportedAsset(manifest, {
-      transform: placeBy === 'ROOT' ? { position: pos } : rootPlacing(manifest, pos),
-      material: flatSlopes ? gridFlatSlopesMat : gridMat,
-      castShadow: true,
-      receiveShadow: true,
-      entityOpts: { appId },
-    });
-  }
+  await spawnGymModelsAsync(COURSE_MODELS, manifests, materials);
 
   initPhysicsStressTest({ sceneId: SCENE_THIRD_PERSON_GYM_META.id });
 
-  updateLoaderFn({ loadedCount: 2, totalCount: 2 });
+  updateLoaderFn({ loadedCount: 4, totalCount });
 };

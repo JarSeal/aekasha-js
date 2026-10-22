@@ -432,8 +432,8 @@ export const scene = async () => {
     );
   }
 
-  // Two compound-shape objects (multiple merged primitives, à la
-  // `characterTestObjects.ts`'s stairs/wall use of `mergeGeometries`) — a body-shape variety
+  // Two compound-shape objects (multiple merged primitives, as the gym's stairs in
+  // `gymStairsAndWall.ts` are) — a body-shape variety
   // beyond single primitives, for whichever compound/convex-hull collider the eventual physics
   // wiring uses.
 

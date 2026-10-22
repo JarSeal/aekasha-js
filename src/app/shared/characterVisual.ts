@@ -3,15 +3,16 @@ import {
   createGeometry,
   createMaterial,
   createMeshEntity,
+  existsOrThrow,
   getMeshByAppId,
   loadTextureAsync,
 } from 'aekasha';
 
 /**
- * The test characters' visual: a capsule sized like the character's collider, with a beak
- * pointing along its facing (+X at yaw 0). Creates the mesh entities (`meshDynamicChar-<key>` and
- * its beak) and returns the capsule mesh, ready for createDynamicCharacter's `visual`, once its
- * texture has loaded.
+ * The test characters' visual (the gym and the top-down scene): a capsule sized like the
+ * character's collider, with a beak pointing along its facing (+X at yaw 0). Creates the mesh
+ * entities (`meshDynamicChar-<key>` and its beak) and returns the capsule mesh, ready for
+ * createDynamicCharacter's `visual`, once its texture has loaded.
  */
 export const createCharacterVisualAsync = async ({
   key,
@@ -62,7 +63,15 @@ export const createCharacterVisualAsync = async ({
     { geo: capsule, mat: material, receiveShadow: true, castShadow: true },
     { appId: `meshDynamicChar-${key}` }
   );
-  const mesh = getMeshByAppId(`meshDynamicChar-${key}`)!;
-  mesh.add(getMeshByAppId(`directionBeakMeshDynamicChar-${key}`)!);
+  const mesh = existsOrThrow(
+    getMeshByAppId(`meshDynamicChar-${key}`),
+    `Could not find the character visual "meshDynamicChar-${key}".`
+  );
+  mesh.add(
+    existsOrThrow(
+      getMeshByAppId(`directionBeakMeshDynamicChar-${key}`),
+      `Could not find the character visual's beak "directionBeakMeshDynamicChar-${key}".`
+    )
+  );
   return mesh;
 };

@@ -23,7 +23,7 @@ import {
 } from 'aekasha/toolkit/ecs';
 import { createPhysicsEntity } from 'aekasha/physics';
 import { generateTerrain } from 'aekasha/toolkit/geometry';
-import { createCharacterVisualAsync } from '../thirdPersonGymScene/characterVisual';
+import { createCharacterVisualAsync } from '../../shared/characterVisual';
 
 /**
  * Top-down character test scene (docs/plans/_DONE_p066_character-definitions-and-refactoring.md
