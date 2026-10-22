@@ -302,7 +302,7 @@ export const scene = async () => {
 
   asteroids = [];
   spawnCount = 0;
-  // Every scene load gets a fresh physics world (p101), so this doesn't reach other scenes
+  // Every scene load gets a fresh physics world, so this doesn't reach other scenes
   getPhysicsWorld().setGravity({ x: 0, y: 0, z: 0 });
   // The mutual gravity's config is global: set the demo's on every load
   setMutualGravityConfig(SPACE_GRAVITY);
