@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-7 implemented
+Status: implemented (Phases 0-8)
 Category: Refactoring, Documentation, Dev tooling
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -1762,7 +1762,7 @@ As built (2026-10-22; sections 1-4 committed as `b1083be`, `07e486a`, `85dab64` 
     reads physics 23.5 KiB, sky box 17.6 KiB.
 
 
-### Phase 8: the Hub, CLAUDE.md, versions and done (D15, D2)
+### Phase 8: the Hub, CLAUDE.md, versions and done (D15, D2) — done
 
 1. D15's pages and files; `readme.md` where it names a command or the refactor tools.
 2. `yarn verify:scenes` (Phases 1-7), `yarn verify:baselines`, `yarn verify:embed`, `yarn build`,
@@ -1771,6 +1771,63 @@ As built (2026-10-22; sections 1-4 committed as `b1083be`, `07e486a`, `85dab64` 
    removed refactor files' last commit), `yarn checkVersions --against main`.
 4. Mark the plan done; p621's `Blocked by`, p620's Inputs (R2's toolkit types), p302's "From
    p619" note (D5).
+
+As built (2026-10-22; step 1 committed as `633005f`, steps 2-3 as `fe84504`, 4 after them):
+
+- **Step 1, D15.** Most of D15's pages were done in their phases (the asset optimization guide in
+  Phase 1, `intro.md` per entry in Phase 5, the SBP guide in Phase 7). Left for here:
+  - The Hub's coding standards: "No internals in public types" named TypeDoc's `notExported`
+    check, which Phase 5 replaced (now: the warning at the reference, with the types it names, and
+    the three fixes), and a new **Dev tools** section (D8's imports, K3's helpers, nothing run at
+    load, K2's `function … never`, K4's `*Async` for new code). The root `CLAUDE.md`'s Dev tools
+    line says the same.
+  - `readme.md`: the `yarn test` row (the tooling and the structural checks), the `yarn assets`
+    row (the prune rule), the content pipeline row (the stricter gather), the `devTools/` tree
+    line, the API reference line (a page per entry).
+  - **The five devTools `CLAUDE.md` files and the root's tooling sections checked claim by claim
+    against the code** (three agents, each finding confirmed before the fix). Not in the plan,
+    found that way: the dev Hub rebuilds on more sources than listed (`repo:` targets, the
+    `CLAUDE.md` files, `generatedAppData.json`, the scenes' `.hub.png`, page images), TypeScript
+    loads in `yarn hub:build` on a cache miss, `yarn docs` still runs TypeDoc's validation,
+    `verify:baselines` diffs four files and builds the embeds, the ports fall back to the next
+    free one, `sbp`'s group list and its 3 % (not 2 %), the banner's renderer options,
+    `embedPaths.ts`' stale reason (its header too, and `baselines.ts`' "three files"),
+    `commit.test.ts` missing from the dev files' tests, the `yarn assets` suffixes, `yarn sbp`'s
+    own progress log, the gather's module list. The root lost Phase 6's five p550 / p551 / p554
+    citations, and gained `yarn copyDecoders` and the build config's other plugins.
+  - **K3 leftovers (code):** `copyDecoders.ts`, `projectMetadata.ts` and
+    `toolkit/buildAekashaSymbol.ts` worked out the repo root themselves; they import
+    `devTools/paths.ts` now.
+- **Step 2.** All on the branch at `633005f`, one after another (`yarn build` regathers
+  `src/generated/`, so it ran before the scene run):
+  - `yarn verify:baselines` (a fresh build): the four baselines unchanged, no debug code in either
+    build. `yarn verify:embed --no-build` 3 / 3.
+  - `yarn build` (33 s): `yarn sbp --profile all` within every budget (`assets/index.css` well
+    under, as kept), `yarn hub:build` 84 pages with Phase 5's warnings only (the toolkit's 4,
+    `{@link getRandomStream}`), the search 256 KiB gzip (957 KiB), 373 page sections.
+  - `yarn verify:scenes` (64.5 min, WebGL2 on SwiftShader, against Phase 0's baseline): 105 passed,
+    3 failed, 0 new. The failures are `thirdPersonGymScene`'s three debug configurations ("the
+    physics probe didn't reach step 600 in 300 s"), as in Phase 0 and Phase 7 on this machine;
+    they have no baseline system order for the same reason. Every other hash and system order
+    matches, the 15 changed snapshots are within the tolerance, `space`'s `mainThread` hash apart
+    from the workers as in Phase 0, no rerun, no reload, the generated data unchanged.
+  - Not in the plan: the Stop hook's `yarn test` ran during the chain's `yarn build`, and
+    `buildGuard.test.ts`' full Hub build failed early (that build swaps `src/generated/` to the
+    production data and rewrites the `yarn sbp` report, both the Hub's sources). Alone after it:
+    9 / 9. Don't run `yarn test` beside a `yarn build`.
+- **Step 3, D2.** Engine and project 5.9.0 → 5.10.0 (Golden Hour), app 1.13.1 → 1.13.2 (the two
+  scenes naming the fixture generators), the toolkit unchanged (no toolkit file changed).
+  `api.json` against `main`'s: no name left an entry; 79 added, plus `ColorJSON` and
+  `applySkyBoxSaveEntry`. The `CHANGELOG.md` entry has D3's behaviour changes (the API URLs under
+  Engine; the gather's failures, G13's merge, the prune, `yarn sbp`'s numbers and keys and G7's
+  reloads under Project, which the Engine intro points to), `057cbae` as the removed refactor
+  files' last commit, and the engine's JSDoc at 100 % (2,321 / 2,321 exports, 890 / 890 members).
+  `yarn checkVersions --against main` passes; `yarn hub:build` renders the entry on the homepage
+  and the Version page.
+- **Step 4.** p621's `Blocked by` is p620 alone; p620's Inputs list the toolkit's four leaked
+  types (not three, Phase 5); p302 has a "From p619" section (the numeric constants and the test's
+  swap for D1, the two documentation layers, the tuples, the material union, the gather's checks);
+  the references to this file follow its rename (p600, p605, p608).
 
 ## 4. Risks
 

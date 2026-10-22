@@ -1,7 +1,7 @@
 Status: stub — not-implemented
 Category: Documentation, Hub
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage D)
-Blocked by: p619_review-schemas-pipeline-devtools-hub.md, p620_review-toolkit-and-app-code.md
+Blocked by: p620_review-toolkit-and-app-code.md
 
 # Hub Docs, Readme and CLAUDE.md: the Final Pass — Stub
 
