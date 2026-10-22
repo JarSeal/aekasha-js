@@ -1,37 +1,33 @@
-import MiniSearch, { type SearchResult } from 'minisearch';
+import MiniSearch from 'minisearch';
 import {
   apiSearchName,
+  createHubSearchReader,
+  HUB_SEARCH_META,
   HUB_SEARCH_OPTIONS,
-  type HubSearchDoc,
+  type HubSearchIndexedDoc,
+  type HubSearchPayload,
   type HubSearchStored,
 } from '../../../devTools/hub/searchProtocol';
 import type { HubDataPage, HubNavItem } from '../../../devTools/hub/types';
 
 /**
- * The Hub's search dialog (p552 §2.4): a chunk `hub.ts` imports on first use (the first focus of
- * the search button, ⌘K / Ctrl+K or `/`), which then loads the index (`hub-search.js`, its URL in
- * `hub-data.js`). Both are cached by the browser from then on: the chunk's name has its hash, and
- * the index's URL its `?v=`.
+ * The Hub's search dialog: a chunk `hub.ts` imports on first use (the first focus of the search
+ * button, ⌘K / Ctrl+K or `/`), which then loads the payload (`hub-search.js`, its URL in the page's
+ * `<meta name="aek-hub-search">`): the index, and the menu and pages for the results' groups and
+ * breadcrumbs. Both are cached by the browser from then on: the chunk's name has its hash, and the
+ * payload's URL its `?v=`.
  *
  * Results are grouped by top-level section (Examples, Features, …) in the order of each group's
  * best result, each with its breadcrumb (pages, then the headings above it) and a snippet with
- * the match marked. An API module, symbol or member (p553) shows its kind and name instead of a
- * heading; its pages aren't in `hub-data.js`'s `pages`, so its breadcrumb comes from its path. The input is a combobox over the results' listbox: the arrow keys move,
- * Enter opens, Escape closes (the native `<dialog>`).
+ * the match marked. An API entry, name or member shows its kind and name instead of a heading; the
+ * API pages aren't in the payload's `pages`, so its breadcrumb comes from its path. The input is a
+ * combobox over the results' listbox: the arrow keys move, Enter opens, Escape closes (the native
+ * `<dialog>`).
  */
 
-type HubSearchData = { nav: HubNavItem[]; pages: HubDataPage[]; searchIndex: string };
+type HubSearchResult = HubSearchStored & { terms: string[] };
 
-declare global {
-  interface Window {
-    /** `hub-data.js` */
-    AEK_HUB?: HubSearchData;
-  }
-}
-
-type HubSearchResult = SearchResult & HubSearchStored;
-
-/** The last query, kept for the session (p552 §2.4) */
+/** The last query, kept for the session */
 const QUERY_STORAGE_KEY = 'aekHubSearch';
 const MAX_RESULTS = 50;
 const MAX_SUGGESTIONS = 3;
@@ -55,23 +51,36 @@ const storeQuery = (query: string) => {
   }
 };
 
-// --- The index and the page data ---
+// --- The payload ---
 
-let indexPromise: Promise<MiniSearch<HubSearchDoc>> | null = null;
+type LoadedSearch = {
+  index: MiniSearch<HubSearchIndexedDoc>;
+  nav: HubNavItem[];
+  pages: HubDataPage[];
+  read: ReturnType<typeof createHubSearchReader>;
+};
 
-/** Loads the index once; a failed load is tried again on the next open */
-const loadIndex = (hubJsUrl: string) =>
-  (indexPromise ??= (async () => {
-    const data = window.AEK_HUB;
-    if (!data) throw new Error('hub-data.js has not loaded');
-    const url = new URL(data.searchIndex, hubJsUrl).href;
-    const module = (await import(/* @vite-ignore */ url)) as { default: object };
-    return MiniSearch.loadJS<HubSearchDoc>(
-      module.default as Parameters<typeof MiniSearch.loadJS>[0],
-      HUB_SEARCH_OPTIONS
-    );
+let searchPromise: Promise<LoadedSearch> | null = null;
+
+/** Loads the payload once; a failed load is tried again on the next open */
+const loadPayload = () =>
+  (searchPromise ??= (async () => {
+    const href = document.querySelector<HTMLMetaElement>(
+      `meta[name="${HUB_SEARCH_META}"]`
+    )?.content;
+    if (!href) throw new Error(`The page has no <meta name="${HUB_SEARCH_META}">`);
+    // The 404 page's links resolve against its `<base>`, the others against the page
+    const url = new URL(href, document.baseURI).href;
+    const module = (await import(/* @vite-ignore */ url)) as { default: HubSearchPayload };
+    const payload = module.default;
+    return {
+      index: MiniSearch.loadJS<HubSearchIndexedDoc>(payload.index, HUB_SEARCH_OPTIONS),
+      nav: payload.nav,
+      pages: payload.pages,
+      read: createHubSearchReader(payload),
+    };
   })().catch((err: unknown) => {
-    indexPromise = null;
+    searchPromise = null;
     throw err;
   }));
 
@@ -90,17 +99,16 @@ const getMenuLabels = () => {
       walk(item.children);
     }
   };
-  walk(window.AEK_HUB?.nav ?? []);
+  walk(loaded?.nav ?? []);
   return (menuLabels = labels);
 };
 
 /** Every page by path, labelled by its menu entry where it has one (else its title) */
 const getPageInfos = () => {
   if (pageInfos) return pageInfos;
-  const data = window.AEK_HUB;
   const menuLabels = getMenuLabels();
   pageInfos = new Map(
-    (data?.pages ?? []).map((page) => [
+    (loaded?.pages ?? []).map((page) => [
       page.path,
       { page, label: menuLabels.get(page.path) ?? page.title },
     ])
@@ -115,8 +123,8 @@ const pagePathTrail = (pagePath: string) => {
 };
 
 /**
- * A page's breadcrumb label: its menu entry or title, else its folder's name (an API module's
- * page: `documentation/engine/kernel/scene/SceneLoader/` → `SceneLoader`)
+ * A page's breadcrumb label: its menu entry or title, else its folder's name (an API page:
+ * `documentation/aekasha/physics/` → `physics`)
  */
 const pathLabel = (pagePath: string) => {
   const parts = pagePath.split('/').filter(Boolean);
@@ -203,8 +211,18 @@ let ui: SearchUi | null = null;
 let hubJsUrl = '';
 let options: HTMLAnchorElement[] = [];
 let activeIndex = -1;
-/** The index once loaded, for synchronous searches while typing */
-let index: MiniSearch<HubSearchDoc> | null = null;
+/** The payload once loaded, for synchronous searches while typing */
+let loaded: LoadedSearch | null = null;
+
+/** The best results, decoded */
+const search = (query: string, opts?: Parameters<MiniSearch['search']>[1]): HubSearchResult[] => {
+  if (!loaded) return [];
+  const { index, read } = loaded;
+  return index
+    .search(query, opts)
+    .slice(0, MAX_RESULTS)
+    .map((result) => ({ ...read(result as unknown as HubSearchIndexedDoc), terms: result.terms }));
+};
 
 const rootUrl = () => new URL('../', hubJsUrl);
 
@@ -234,7 +252,7 @@ const renderResult = (result: HubSearchResult, info: PageInfo | undefined, n: nu
   option.setAttribute('role', 'option');
   option.setAttribute('aria-selected', 'false');
 
-  // An API symbol's page is its module, in the breadcrumb; a module's is itself
+  // An API name's page is in the breadcrumb; an entry's is itself
   const crumbs = [
     // The section is the group's label
     ...pagePathTrail(result.path)
@@ -274,14 +292,11 @@ const renderResult = (result: HubSearchResult, info: PageInfo | undefined, n: nu
 };
 
 /** The closest page titles, for a query without results */
-const suggestPages = (query: string) => {
-  if (!index) return [];
-  return index
-    .search(query, { fields: ['title'], fuzzy: 0.4, prefix: true, combineWith: 'OR' })
-    .map((result) => getPageInfos().get((result as HubSearchResult).path))
+const suggestPages = (query: string) =>
+  search(query, { fields: ['title'], fuzzy: 0.4, prefix: true, combineWith: 'OR' })
+    .map((result) => getPageInfos().get(result.path))
     .filter((info): info is PageInfo => !!info)
     .slice(0, MAX_SUGGESTIONS);
-};
 
 const showStatus = (text: string, suggestions: PageInfo[] = []) => {
   if (!ui) return;
@@ -309,9 +324,9 @@ const runSearch = () => {
   ui.input.removeAttribute('aria-activedescendant');
   ui.input.setAttribute('aria-expanded', 'false');
   if (!query) return showStatus('Search the pages, their sections and code.');
-  if (!index) return showStatus('Loading the search…');
+  if (!loaded) return showStatus('Loading the search…');
 
-  const results = index.search(query).slice(0, MAX_RESULTS) as HubSearchResult[];
+  const results = search(query);
   if (!results.length) {
     return showStatus(`No results for “${query}”.`, suggestPages(query));
   }
@@ -422,11 +437,11 @@ const createUi = (): SearchUi => {
   return { dialog, input, results, status };
 };
 
-/** Starts loading the index (the first focus of the search button) */
+/** Starts loading the payload (the first focus of the search button) */
 export const preloadSearch = (url: string) => {
   hubJsUrl = url;
-  loadIndex(url)
-    .then((loaded) => (index = loaded))
+  loadPayload()
+    .then((result) => (loaded = result))
     .catch(() => {
       // Tried again, and reported, when the search opens
     });
@@ -444,14 +459,14 @@ export const openSearch = (url: string) => {
   input.focus();
   input.select();
   runSearch();
-  if (index) return;
-  loadIndex(url)
-    .then((loaded) => {
-      index = loaded;
+  if (loaded) return;
+  loadPayload()
+    .then((result) => {
+      loaded = result;
       if (dialog.open) runSearch();
     })
     .catch((err: unknown) => {
-      // eslint-disable-next-line no-console
+      // eslint-disable-next-line no-console -- a failed load's error, for the console (the page says it failed)
       console.error('[Hub] The search index failed to load:', err);
       showStatus('The search could not load. Check the connection and try again.');
     });

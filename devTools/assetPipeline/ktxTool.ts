@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import crypto from 'crypto';
 import { spawnSync } from 'child_process';
-import { fileURLToPath } from 'url';
+import { sha256 } from '../files';
+import { ROOT } from '../paths';
 import { readAr, readCpio, readTar, readXar, type ArchiveEntry } from './archives';
 
 /**
@@ -22,7 +22,7 @@ export const KTX_VERSION = '4.4.2';
  * `ktx create` arrived in 4.3, but `--assign-tf` and `--normalize` (`ktxEncode.ts`) in 4.4.0:
  * 4.3.x rejects every encode
  */
-export const MIN_KTX_VERSION = '4.4.0';
+const MIN_KTX_VERSION = '4.4.0';
 /** What fixes a missing `ktx`, for messages */
 export const KTX_FIX = `yarn setupAssetTools, or put KTX-Software ≥ ${MIN_KTX_VERSION} on PATH, or set AEK_KTX to a ktx binary`;
 /** The release download: a stalled network fails the setup instead of hanging the run */
@@ -33,6 +33,8 @@ const DOWNLOAD_TIMEOUT_MS = 120_000;
  * `yarn setupAssetTools` in another terminal) is found at once: only the download waits.
  */
 const INSTALL_RETRY_MS = 5 * 60_000;
+/** `ktx --version`: a binary that hangs is skipped like one that doesn't run */
+const PROBE_TIMEOUT_MS = 15_000;
 /** The prebuilt Linux binaries need this glibc (Ubuntu 22.04+, Debian 12+, Fedora 35+) */
 const MIN_GLIBC_VERSION = '2.34';
 
@@ -75,10 +77,10 @@ const RELEASES: Record<string, Release> = {
   },
 };
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-export const KTX_TOOL_DIR = path.join(ROOT, '.tools', `ktx-${KTX_VERSION}`);
+const KTX_TOOL_DIR = path.join(ROOT, '.tools', `ktx-${KTX_VERSION}`);
 const LOCAL_KTX_PATH = path.join(KTX_TOOL_DIR, 'bin', 'ktx');
 
+/** A working `ktx` binary: where, which version, and how it was found */
 export type KtxTool = {
   /** Absolute path of the `ktx` binary (or `ktx` when it was found on PATH) */
   path: string;
@@ -103,10 +105,16 @@ const compareVersions = (a: string, b: string) => {
  * the output: a missing library's loader error is several lines). `isMissing`: no such file.
  */
 const probeKtx = (binary: string): { version: string } | { error: string; isMissing: boolean } => {
-  const result = spawnSync(binary, ['--version'], { encoding: 'utf-8' });
+  const result = spawnSync(binary, ['--version'], {
+    encoding: 'utf-8',
+    timeout: PROBE_TIMEOUT_MS,
+    killSignal: 'SIGKILL',
+  });
   if (result.error) {
-    const isMissing = (result.error as NodeJS.ErrnoException).code === 'ENOENT';
-    return { error: result.error.message, isMissing };
+    const code = (result.error as NodeJS.ErrnoException).code;
+    const error =
+      code === 'ETIMEDOUT' ? `no answer in ${PROBE_TIMEOUT_MS / 1000} s` : result.error.message;
+    return { error, isMissing: code === 'ENOENT' };
   }
   const output = `${result.stdout}${result.stderr}`;
   const version = output.match(/v?(\d+\.\d+\.\d+)/)?.[1];
@@ -149,6 +157,7 @@ const getRelease = (): Release | { error: string } => {
   return release;
 };
 
+/** A `ktx` lookup's result: the tool it chose, if any, and the ones it skipped */
 export type KtxLookup = {
   tool: KtxTool | null;
   /** The `ktx` binaries found but skipped, and why (eg. `ktx 4.3.2 on PATH (older than 4.4.0)`) */
@@ -159,7 +168,7 @@ export type KtxLookup = {
  * Finds a working `ktx` ≥ {@link MIN_KTX_VERSION} without downloading anything. Throws when
  * `AEK_KTX` is set but doesn't point to one.
  */
-export const findKtx = (): KtxLookup => {
+const findKtx = (): KtxLookup => {
   const envPath = process.env.AEK_KTX;
   if (envPath) {
     const probe = probeKtx(envPath);
@@ -237,10 +246,14 @@ const resolveEntry = (entries: ArchiveEntry[], entryPath: string, hops = 0): Arc
 };
 
 /**
- * Downloads, verifies and unpacks the pinned KTX-Software into {@link KTX_TOOL_DIR} (replacing
- * what is there), then checks that the binary runs.
+ * Downloads, verifies and unpacks the pinned KTX-Software into {@link KTX_TOOL_DIR}, then checks
+ * that the binary runs. A working copy another process installed meanwhile is kept and returned,
+ * unless `opts.isReplacing` (`yarn setupAssetTools --force`).
  */
-export const installLocalKtx = async (log: Log = () => {}): Promise<KtxTool> => {
+const installLocalKtx = async (
+  log: Log = () => {},
+  opts: { isReplacing?: boolean } = {}
+): Promise<KtxTool> => {
   const release = getRelease();
   if ('error' in release) throw new Error(`Can't set up KTX-Software: ${release.error}`);
 
@@ -249,10 +262,10 @@ export const installLocalKtx = async (log: Log = () => {}): Promise<KtxTool> => 
   const archive = await download(url).catch((error: Error) => {
     throw new Error(`Can't set up KTX-Software: ${error.message}`);
   });
-  const sha256 = crypto.createHash('sha256').update(archive).digest('hex');
-  if (sha256 !== release.sha256) {
+  const archiveHash = sha256(archive);
+  if (archiveHash !== release.sha256) {
     throw new Error(
-      `${release.file}: SHA-256 mismatch (expected ${release.sha256}, got ${sha256}). Nothing was installed.`
+      `${release.file}: SHA-256 mismatch (expected ${release.sha256}, got ${archiveHash}). Nothing was installed.`
     );
   }
 
@@ -263,35 +276,63 @@ export const installLocalKtx = async (log: Log = () => {}): Promise<KtxTool> => 
     throw new Error(`${release.file}: bin/ktx or lib/${release.libName} not found in the archive`);
   }
 
-  // Unpacked next to the final folder, then swapped in, so a failed run leaves no half install.
-  // The library is written as a real file under the name the binary loads (no symlinks, which
-  // a Windows-mounted WSL2 drive may not support).
+  // Unpacked next to the final folder, then swapped in, so a failed run leaves no half install
+  // (the staging folder goes on any throw, p619 §1.4 A5). The library is written as a real file
+  // under the name the binary loads (no symlinks, which a Windows-mounted WSL2 drive may not
+  // support).
   const tempDir = `${KTX_TOOL_DIR}.tmp-${process.pid}`;
-  fs.rmSync(tempDir, { recursive: true, force: true });
-  fs.mkdirSync(path.join(tempDir, 'bin'), { recursive: true });
-  fs.mkdirSync(path.join(tempDir, 'lib'), { recursive: true });
-  fs.writeFileSync(path.join(tempDir, 'bin', 'ktx'), resolveEntry(entries, binary.path).data, {
-    mode: 0o755,
-  });
-  fs.writeFileSync(
-    path.join(tempDir, 'lib', release.libName),
-    resolveEntry(entries, library.path).data,
-    { mode: 0o644 }
-  );
-  fs.writeFileSync(
-    path.join(tempDir, 'SOURCE.txt'),
-    `KTX-Software ${KTX_VERSION} (Apache-2.0), from ${url}\nSHA-256 ${sha256}\nSet up by devTools/setupAssetTools.ts. Delete this folder to remove it.\n`
-  );
-
-  const probe = probeKtx(path.join(tempDir, 'bin', 'ktx'));
-  if ('error' in probe) {
+  let version: string;
+  try {
     fs.rmSync(tempDir, { recursive: true, force: true });
-    throw new Error(`The downloaded ktx doesn't run on this system: ${probe.error}`);
+    fs.mkdirSync(path.join(tempDir, 'bin'), { recursive: true });
+    fs.mkdirSync(path.join(tempDir, 'lib'), { recursive: true });
+    fs.writeFileSync(path.join(tempDir, 'bin', 'ktx'), resolveEntry(entries, binary.path).data, {
+      mode: 0o755,
+    });
+    fs.writeFileSync(
+      path.join(tempDir, 'lib', release.libName),
+      resolveEntry(entries, library.path).data,
+      { mode: 0o644 }
+    );
+    fs.writeFileSync(
+      path.join(tempDir, 'SOURCE.txt'),
+      `KTX-Software ${KTX_VERSION} (Apache-2.0), from ${url}\nSHA-256 ${sha256}\nSet up by devTools/setupAssetTools.ts. Delete this folder to remove it.\n`
+    );
+    const probe = probeKtx(path.join(tempDir, 'bin', 'ktx'));
+    if ('error' in probe) {
+      throw new Error(`The downloaded ktx doesn't run on this system: ${probe.error}`);
+    }
+    version = probe.version;
+    // Another process (the dev server and `yarn assets`, two terminals) may have installed the
+    // same release meanwhile: its copy is kept, not deleted under it
+    const installed = opts.isReplacing ? null : getWorkingLocalKtx();
+    if (installed) {
+      log(`ktx ${installed.version} was set up meanwhile in ${path.relative(ROOT, KTX_TOOL_DIR)}/`);
+      return installed;
+    }
+    fs.rmSync(KTX_TOOL_DIR, { recursive: true, force: true });
+    try {
+      fs.renameSync(tempDir, KTX_TOOL_DIR);
+    } catch (error) {
+      // The other installer renamed its copy in between: use it
+      const raced = getWorkingLocalKtx();
+      if (raced) return raced;
+      throw error;
+    }
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
   }
-  fs.rmSync(KTX_TOOL_DIR, { recursive: true, force: true });
-  fs.renameSync(tempDir, KTX_TOOL_DIR);
-  log(`Installed ktx ${probe.version} into ${path.relative(ROOT, KTX_TOOL_DIR)}/`);
-  return { path: LOCAL_KTX_PATH, version: probe.version, source: 'local' };
+  log(`Installed ktx ${version} into ${path.relative(ROOT, KTX_TOOL_DIR)}/`);
+  return { path: LOCAL_KTX_PATH, version, source: 'local' };
+};
+
+/** The local copy, when it's there and runs at the pinned version */
+const getWorkingLocalKtx = (): KtxTool | null => {
+  if (!fs.existsSync(LOCAL_KTX_PATH)) return null;
+  const probe = probeKtx(LOCAL_KTX_PATH);
+  return 'error' in probe || probe.version !== KTX_VERSION
+    ? null
+    : { path: LOCAL_KTX_PATH, version: probe.version, source: 'local' };
 };
 
 /** The last failed setup in this process, for {@link INSTALL_RETRY_MS} */
@@ -319,7 +360,7 @@ export const ensureKtx = async (opts: { force?: boolean; log?: Log } = {}) => {
   }
   for (const reason of rejected) log(`Skipped ${reason}`);
   try {
-    const tool = await installLocalKtx(log);
+    const tool = await installLocalKtx(log, { isReplacing: opts.force });
     lastInstallFailure = null;
     return tool;
   } catch (error) {

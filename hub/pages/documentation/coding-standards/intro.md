@@ -24,8 +24,8 @@ follows them; a file you touch is a good time to fix what it breaks.
   mesh's definition, import params, an assets worker message. It names those types with
   `import type` from the feature's folder, which costs no bytes and loads nothing; the types stay
   next to the code that owns them. The lint makes any other kernel import of a feature an error,
-  and the layout report (`devTools/refactor/layoutReport.md`, written by `moveMap.ts`) lists each
-  type import.
+  the layout test (`devTools/layout/layout.test.ts`, in `yarn test`) checks it through the entries
+  too, and the layout report (`npx tsx devTools/layout/layoutReport.ts`) lists each type import.
 - **A feature owns its folder** (`src/_engine/features/<name>/`): its public entry, its
   implementation, its ECS registrations, its worker if it has one, and its debug modules. Removing
   the folder and its install line removes the feature.
@@ -45,8 +45,8 @@ follows them; a file you touch is a good time to fix what it breaks.
   `createViewport({ id, scene, camera, anchor })`, not positional flags.
 - **No internals in public types:** a public signature names only public types. An internal type
   leaking into a parameter or a result is an internal that can't change anymore. `yarn hub:build`
-  warns about each one (TypeDoc's `notExported` check), with the signature's file and line: export
-  the type with a summary, or change the signature.
+  warns about each one at the reference that names it, with the types it names in turn: export the
+  type from the entry with a summary, mark the member `@internal`, or change the signature.
 
 ## Naming
 
@@ -163,6 +163,25 @@ shows up there.
 - **An `eslint-disable` says why:** `// eslint-disable-next-line no-console -- the logger itself`.
 - **No orphan TODOs:** a TODO becomes an issue file (`docs/issues/`) or an item in a plan, and the
   comment names it.
+
+## Dev tools
+
+The tooling in `devTools/` (the data gatherer, the asset pipeline, the dev file server, the Hub's
+generator, the verify commands) runs in Node, much of it inside the dev server's process. The
+rules above apply where they fit, and these besides:
+
+- **The engine by path, from a short list.** The `aekasha*` aliases don't resolve where Vite
+  bundles `vite.config.ts`, so a tool imports the schemas entry file
+  (`src/_engine/schemas/index.ts`), the few modules `devTools/engineImports.test.ts` lists with
+  their reasons, and types from any entry with `import type`. The test fails on any other
+  import from `src/`: a feature's entry would load three and TSL into the dev server.
+- **One helper each:** the repo's folders come from `devTools/paths.ts`; hashing, atomic and
+  changed-only writes and the source walk from `devTools/files.ts`; git from `devTools/git.ts`.
+- **Nothing runs at load.** `package.json`'s `sideEffects` covers the tools too, and a test or the
+  Vite config imports them: a command's `main()` runs only when its file is the script being run.
+- **A `never` helper is a `function` declaration** (`function fail(message: string): never`): a
+  call to an arrow typed `never` doesn't narrow, so its callers would need casts.
+- **`*Async` names** are the rule for new tool code too; older tool functions aren't renamed.
 
 ## Tests
 

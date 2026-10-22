@@ -16,7 +16,7 @@ import fs from 'fs';
 import path from 'path';
 import ts from 'typescript';
 import { ENTRY_FILES } from '../aliases';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 
 /** One example's code, located by the source line of its first code line */
 export type ExampleBlock = {
@@ -28,6 +28,7 @@ export type ExampleBlock = {
   code: string;
 };
 
+/** An example that doesn't type-check: its source line, the export it documents, the diagnostic */
 export type ExampleFinding = { file: string; line: number; owner: string; message: string };
 
 /** TypeDoc's scope (`typedocOptions` in `tsconfig.json`, the Hub extract's excludes) */
@@ -277,5 +278,6 @@ export const checkExamples = (blocks: ExampleBlock[]): ExampleFinding[] => {
   return findings;
 };
 
+/** A finding as one line: `file:line (owner's example) message` */
 export const formatFinding = (f: ExampleFinding) =>
   `${f.file}:${f.line} (${f.owner}'s example) ${f.message}`;

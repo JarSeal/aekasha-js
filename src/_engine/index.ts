@@ -10,7 +10,11 @@ export {
   setMainCamera,
 } from './kernel/camera/Camera';
 export { IS_DEBUG_ENV } from './kernel/config/Config';
-export type { AppConfig } from './kernel/config/Config';
+export type {
+  AppConfig,
+  DebugPhysicsWireframeConfig,
+  PhysicsWireframeColors,
+} from './kernel/config/Config';
 export { ECSWorld, getECSWorld, getEntityIdByAppId } from './kernel/ecs/ECS';
 export type {
   ComponentHook,
@@ -19,18 +23,26 @@ export type {
   TransformResetListener,
   WorldPlugin,
 } from './kernel/ecs/ECS';
-export type { IComponentStorage } from './kernel/ecs/ECSComponentStorage';
+export type { ECSStorageMode, IComponentStorage } from './kernel/ecs/ECSComponentStorage';
 export { ComponentType, Transform } from './kernel/ecs/ECSCoreComponents';
 export type {
   ComponentData,
   ComponentDataMap,
+  CoreComponentData,
   ECSPosition,
   ECSRotation,
   ECSTransformProp,
+  LifetimeData,
 } from './kernel/ecs/ECSCoreComponents';
 export { CoreComponentType } from './kernel/ecs/ECSRegistry';
+export type { EntityDebugData, ManagedByData } from './kernel/ecs/ECSRegistry';
 export { APP_RENDER_SYNC_ORDER, ECSSystemStage } from './kernel/loop/SystemStages';
-export type { EngineFeature, FeatureContext, FeatureDebugHook } from './kernel/init/Features';
+export type {
+  EngineFeature,
+  FeatureContext,
+  FeatureDebugHook,
+  FeatureUnmountHook,
+} from './kernel/init/Features';
 export {
   createGeometry,
   decGeometryRef,
@@ -40,7 +52,7 @@ export {
   incGeometryRef,
   saveBufferGeometry,
 } from './kernel/assets/Geometry';
-export type { GeoBaseProps, GeoProps, GeoTypes } from './kernel/assets/Geometry';
+export type { GeoBaseProps, GeoDebugData, GeoProps, GeoTypes } from './kernel/assets/Geometry';
 export {
   addToGroupEntity,
   createGroupEntity,
@@ -59,8 +71,12 @@ export type {
   ImportAssetParams,
   ImportedAssetManifest,
   ImportedGeometryInfo,
+  ImportPhysicsParams,
+  ParsedCustomProps,
+  QuatLike,
   SpawnImportedParams,
   SpawnImportedResult,
+  Vector3Like,
 } from './kernel/assets/import/ImportTypes';
 export { disposeKTX2Loader } from './kernel/assets/import/KTX2';
 export { spawnImportedAsset } from './kernel/assets/import/SpawnImported';
@@ -191,7 +207,13 @@ export {
   loadTslMaterialFileAsync,
   saveMaterial,
 } from './kernel/assets/Material';
-export type { MatProps, MaterialVariantOverrides, Materials } from './kernel/assets/Material';
+export type {
+  AllowTextureStrings,
+  Materials,
+  MaterialVariantOverrides,
+  MatProps,
+  TextureMapKeys,
+} from './kernel/assets/Material';
 export {
   createMeshEntity,
   getMeshByAppId,
@@ -277,6 +299,7 @@ export type {
   SampleAtlasCellOpts,
   TextureAtlasInfo,
 } from './kernel/assets/TextureAtlas';
+export type { AssetsWorkerTarget } from './kernel/assets/AssetsAPITypes';
 export {
   addViewChangeListener,
   addViewFrameListener,
@@ -286,6 +309,7 @@ export {
   unregisterView,
 } from './kernel/render/Views';
 export type {
+  ViewCameraRig,
   ViewChangeListener,
   ViewDef,
   ViewFrameListener,
@@ -313,8 +337,10 @@ export {
   teleport,
 } from './kernel/ecs/ECSHelpers';
 export { initECSStressTest } from './kernel/ecs/ECSStressTest';
+export type { TypedArrayTransformStore } from './kernel/ecs/TypedArrayTransformStore';
 export { getQuatFromAngle, smoothDampVec3 } from './kernel/render/ThreeMath';
 export { toUniqueJsIdentifier } from './utils/JsIdentifier';
 export { getLogger, lerror, llog, lwarn } from './utils/Logger';
 export { getRandomSeed, getRandomStream, setRandomSeed } from './utils/RandomStreams';
 export { createSeededRandom } from './utils/SeededRandom';
+export { textureMapKeys } from './utils/Constants';

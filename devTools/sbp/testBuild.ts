@@ -1,22 +1,31 @@
 /**
- * A synthetic build for the `yarn sbp` tests (no build in a test): a main chunk and a lazy one,
- * its manifest and the visualizer's graph.
+ * A synthetic build for the `yarn sbp` tests: a main chunk and a lazy one, its manifest, the
+ * visualizer's graph and the module sizes (a module's minified size is its rendered length, its
+ * gzip half that, and a group's gzip its modules' summed).
  */
 import {
   BUNDLE_FORMAT_VERSION,
   type CollectedBundle,
+  MAIN_BUILD,
   type Manifest,
+  type ModuleSizesFile,
   type VisualizerData,
+  addGroupSize,
+  getModuleGroup,
   listBuildModules,
   listEmittedAssets,
   measureMainChunk,
 } from './bundleModel';
 
+/** The fixture's entry chunk */
 export const MAIN = 'assets/index-AAAAAAAA.js';
+/** The fixture's `import()`ed chunk */
 export const LAZY = 'assets/GLTFLoader-BBBBBBBB.js';
+/** The fixture's manifest: the entry alone */
 export const MANIFEST: Manifest = {
   'index.html': { file: MAIN, src: 'index.html', isEntry: true },
 };
+/** The fixture's files by key */
 export const FILE_KEYS = { [MAIN]: 'assets/index.js', [LAZY]: 'assets/GLTFLoader.js' };
 
 /**
@@ -71,6 +80,7 @@ const MODULES: [
   ['/node_modules/three/GLTFLoader.js', [], { [LAZY]: 50 }],
 ];
 
+/** The fixture's visualizer data (the graph above) */
 export const DATA: VisualizerData = (() => {
   const uid = new Map(MODULES.map(([id], i) => [id, `m${i}`]));
   const data: VisualizerData = { nodeParts: {}, nodeMetas: {} };
@@ -94,6 +104,31 @@ export const DATA: VisualizerData = (() => {
   return data;
 })();
 
+/** The fixture's module sizes */
+export const SIZES: ModuleSizesFile = (() => {
+  const sizes: ModuleSizesFile = { formatVersion: 1, chunks: {}, modules: [] };
+  for (const [id, , parts] of MODULES) {
+    const chunks = Object.entries(parts).filter(([, length]) => length > 0);
+    if (!chunks.length) continue;
+    sizes.modules.push({
+      id,
+      build: MAIN_BUILD,
+      chunks: Object.fromEntries(
+        chunks.map(([file, length]) => [
+          file,
+          { rendered: length, minified: length, gzip: length / 2 },
+        ])
+      ),
+    });
+    for (const [file, length] of chunks) {
+      const chunk = (sizes.chunks[file] ??= { build: MAIN_BUILD, groups: {} });
+      const group = (chunk.groups[getModuleGroup(id)] ??= { modules: 0, minified: 0, gzip: 0 });
+      addGroupSize(group, { modules: 1, minified: length, gzip: length / 2 });
+    }
+  }
+  return sizes;
+})();
+
 /** The fixture as `collectBundle` returns a build: each file's gzip is its key's length */
 export const createTestBundle = (): CollectedBundle => ({
   bundle: {
@@ -101,11 +136,12 @@ export const createTestBundle = (): CollectedBundle => ({
     chunks: Object.fromEntries(
       Object.values(FILE_KEYS).map((key) => [key, { bytes: key.length * 3, gzip: key.length }])
     ),
-    ...measureMainChunk(MAIN, DATA),
+    ...measureMainChunk(SIZES, MAIN, FILE_KEYS[MAIN]),
   },
-  modules: listBuildModules(DATA),
+  modules: listBuildModules(SIZES, FILE_KEYS),
   assets: listEmittedAssets(MANIFEST, DATA, FILE_KEYS),
   fileKeys: FILE_KEYS,
   manifest: MANIFEST,
   data: DATA,
+  sizes: SIZES,
 });

@@ -19,7 +19,7 @@ export type TransferableAttribute = {
 };
 
 /** Everything of a BufferGeometry that GLTFLoader sets, as structured-clone-safe data (see
- * {@link serializeGeometry} and {@link deserializeGeometry}). */
+ * `serializeGeometry` and `deserializeGeometry`). */
 export type TransferableGeometry = {
   name: string;
   attributes: Record<string, TransferableAttribute>;
@@ -126,7 +126,7 @@ export const deserializeAttribute = ({
 };
 
 /**
- * Rebuilds a geometry described by {@link serializeGeometry}. Wraps the (transferred) arrays
+ * Rebuilds a geometry described by `serializeGeometry`. Wraps the (transferred) arrays
  * as they are: nothing is copied or computed.
  * @internal
  * @param data the description, its arrays transferred

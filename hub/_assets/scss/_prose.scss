@@ -128,7 +128,7 @@
   border-left-color: var(--hub-danger);
 }
 
-// The dev plugin's error page (p551 Phase 2)
+// The dev plugin's error page
 .hubBuildErrors {
   padding: 0;
   list-style: none;
@@ -175,7 +175,7 @@
   font-weight: 500;
 }
 
-// `::: claude-md` (p555): a feature page's dev-only line to its CLAUDE.md sections
+// `::: claude-md`: a feature page's dev-only line to its CLAUDE.md sections
 .hubDevNote {
   display: flex;
   gap: 0.5rem;

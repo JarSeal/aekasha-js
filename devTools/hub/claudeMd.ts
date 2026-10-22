@@ -1,13 +1,13 @@
 import path from 'node:path';
 import type { HubDiagnostics } from './diagnostics';
 import { escapeHtml } from './html';
-import { openInEditorHref, registerHubDirective } from './markdown';
+import { openInEditorHref, type HubDirective } from './markdown';
 import { ROOT } from './paths';
 import { CLAUDE_MD_FILE, readClaudeMdSections, type ClaudeMdSection } from './repoFiles';
 import type { HubPage } from './types';
 
 /**
- * The CLAUDE.md sections on the Hub (p555, p605 S9): the root's Architecture sections and the nested
+ * The CLAUDE.md sections on the Hub (p605 S9): the root's Architecture sections and the nested
  * files' sections. The coverage check, and `::: claude-md`, a feature page's dev-only "Read more"
  * line to the sections its `aek:covers` names.
  */
@@ -19,7 +19,7 @@ import type { HubPage } from './types';
 let buildSections: ClaudeMdSection[] | null | undefined;
 
 /**
- * The coverage check (p555 §2.5): every page's `aek:covers` names a CLAUDE.md section, and every
+ * The coverage check: every page's `aek:covers` names a CLAUDE.md section, and every
  * section outside `ignore` (`hub.config.ts`'s `coverageIgnore`) is covered by a page, so a new
  * subsystem section without a feature page is a warning. An unknown name is an error. A build
  * outside the repo (no root CLAUDE.md) skips it. Runs before any page renders. Returns the files
@@ -79,7 +79,7 @@ const toLinkText = (section: ClaudeMdSection) =>
  * contributors' (and their agents') notes, so a `public` build renders nothing. An unknown name is
  * the coverage check's error, and is left out here. The directive takes no content.
  */
-registerHubDirective('claude-md', {
+export const claudeMdDirective: HubDirective = {
   open: (_args, { env, line, tokens, idx }) => {
     if (tokens[idx + 1]?.type !== 'hub_directive_close') {
       env.diag.warn(env.file, line, '::: claude-md takes no content: it renders after the line');
@@ -106,4 +106,4 @@ registerHubDirective('claude-md', {
     return `<p class="hubDevNote">${env.icons.render('book-open', env.file, line)}<span>In CLAUDE.md (dev only): ${links.join(', ')}</span></p>\n`;
   },
   close: () => '',
-});
+};

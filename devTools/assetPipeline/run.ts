@@ -19,6 +19,7 @@ export type PipelineRunResult = (
   sourceBytes?: number;
 };
 
+/** A run's results by asset key, every asset's (built, or looked up) */
 export type PipelineRun = {
   /** By `getPipelineAssetKey` */
   results: Map<string, PipelineRunResult>;

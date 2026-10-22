@@ -5,11 +5,11 @@ import type Token from 'markdown-it/lib/token.mjs';
 import type { HubDiagnostics } from '../diagnostics';
 import { decodeEntities, escapeHtml } from '../html';
 import { renderMarkdownText, slugify, type HubMarkdownEnv } from '../markdown';
-import { ISSUES_DIR } from '../paths';
+import { ISSUES_DIR, toRepoPath } from '../paths';
 import type { HubGeneratedPage, HubGeneratedSection } from './section';
 
 /**
- * The Issues section (p551 §2.5): every `docs/issues/*.md` gets a page at `/issues/<file name>/`,
+ * The Issues section: every `docs/issues/*.md` gets a page at `/issues/<file name>/`,
  * and the section's page lists them grouped by status, each with its summary.
  *
  * An issue file's header (the convention in CLAUDE.md): `**Title:** …` on line 1, then a block of
@@ -20,7 +20,7 @@ import type { HubGeneratedPage, HubGeneratedSection } from './section';
  * name; without a `Status:` line the issue counts as open, shown as "Status not stated".
  */
 
-export const ISSUES_SECTION_PATH = 'issues/';
+const ISSUES_SECTION_PATH = 'issues/';
 /** The section page's slot for the list, and each issue page's for its content */
 const LIST_SLOT = 'generated-issues';
 const ISSUE_SLOT = 'generated-issue';
@@ -232,6 +232,9 @@ const toPage = (issue: Issue): HubGeneratedPage => ({
   slots: { [ISSUE_SLOT]: (md, env) => renderIssue(issue, md, env) },
 });
 
+/**
+ * The Issues section: a page per `docs/issues/*.md` and the list on `issues/`, read once per build
+ */
 export const createIssuesSection = (diag: HubDiagnostics): HubGeneratedSection => {
   const files = fs.existsSync(ISSUES_DIR)
     ? fs
@@ -240,7 +243,23 @@ export const createIssuesSection = (diag: HubDiagnostics): HubGeneratedSection =
         .sort()
         .map((name) => path.join(ISSUES_DIR, name))
     : [];
-  const issues = files.map((file) => parseIssue(file, diag));
+  // Two files whose names slug alike (`a b.md`, `a-b.md`) would write one page: the second is an
+  // error and gets none (p619 §1.4 H2)
+  const byPath = new Map<string, Issue>();
+  const issues = files.flatMap((file) => {
+    const issue = parseIssue(file, diag);
+    const taken = byPath.get(issue.path);
+    if (taken) {
+      diag.error(
+        file,
+        1,
+        `Its page ${issue.path} is ${toRepoPath(taken.file)}'s too: rename one of the two files`
+      );
+      return [];
+    }
+    byPath.set(issue.path, issue);
+    return [issue];
+  });
   return {
     path: ISSUES_SECTION_PATH,
     slots: { [LIST_SLOT]: (md, env) => renderList(issues, md, env) },

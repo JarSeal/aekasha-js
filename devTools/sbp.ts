@@ -34,15 +34,15 @@
 import fs from 'fs';
 import path from 'path';
 import sbpProfiles from '../sbp.config';
-import { ROOT } from './assetPipeline/sources';
-import { ENGINE_SCHEMA_PARTS } from './engineSchemas';
+import { ROOT } from './paths';
+import { ENGINE_SCHEMA_PARTS } from './gather/engineSchemas';
 import { buildBundles } from './sbp/appBuild';
 import { isBudgetFailure } from './sbp/budgets';
 import { readSceneFeatures } from './sbp/bundleFeatures';
 import { APP_BUILD, collectBundle } from './sbp/bundleModel';
 import { getEmbedBuildLocation } from './sbp/embedBuild';
 import { APP_ENTRY, checkSbpProfiles, type SbpProfile } from './sbp/config';
-import { getEmbedProfiles } from './gatherOutput';
+import { getEmbedProfiles } from './gather/output';
 import {
   type Colors,
   type ProfileReport,
@@ -54,7 +54,7 @@ import {
   mergeReport,
   SBP_REPORT_FILE,
 } from './sbp/report';
-import { out, setProgressLogConsole, setProgressLogFile } from './verify/progressLog';
+import { out, setProgressLogConsole, setProgressLogFile } from './progressLog';
 
 const LOG_FILE = path.join(ROOT, '.cache/sbp/progress.log');
 const APP_DATA_FILE = path.join(ROOT, 'src/generated/generatedAppData.json');
@@ -71,10 +71,11 @@ const COLORS: Colors = {
 const USAGE =
   'yarn sbp [--profile <id>[,<id>…] | all] [--no-build | --no-app-build] [--why <group | module path>] [--json] [--brief]';
 
-const fail = (msg: string): never => {
+/** Prints the message and exits 2 */
+function fail(msg: string): never {
   out(`${COLORS.red}${msg}${COLORS.reset}`, true);
   process.exit(2);
-};
+}
 
 const parseArgs = (argv: string[]) => {
   const args = {

@@ -33,7 +33,7 @@ let options: RendererOptions = {
 
 /**
  * The renderer's options: what {@link createRenderer} takes (every field optional there), and the
- * state it resolves, which {@link getRendererOptions} returns. In the debug env the Renderer
+ * state it resolves, which `getRendererOptions` returns. In the debug env the Renderer
  * controls tab's saved values (`AEK_debugRenderer`) are merged over the given ones.
  */
 export type RendererOptions = {

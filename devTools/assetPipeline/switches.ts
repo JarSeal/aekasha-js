@@ -1,7 +1,7 @@
 import path from 'path';
 import { pathToFileURL } from 'url';
-import type { AppConfig } from '../../src/_engine/kernel/config/Config';
-import { SRC_DIR } from './sources';
+import type { AppConfig } from 'aekasha';
+import { SRC_DIR } from '../paths';
 
 /**
  * The project switches (p300 DD8 level 1): `AppConfig.assets.optimization` in src/CONFIG.ts,
@@ -14,7 +14,10 @@ export type OptimizationConfig = NonNullable<NonNullable<AppConfig['assets']>['o
 /** Why each side is off for the whole project; an absent key means it's on. */
 export type ProjectOptOut = { textures?: string; mesh?: string };
 
+/** `src/CONFIG.ts`: its `assets.optimization` holds the project switches */
 export const CONFIG_FILE = path.join(SRC_DIR, 'CONFIG.ts');
+/** Turns the whole pipeline off (`false` / `0`) or on (`true` / `1`) for one run, over
+ * `assets.optimization.enabled` (not its per-side switches) */
 export const ENV_KEY = 'AEK_ASSETS_OPTIMIZE';
 /**
  * A production build fails when an asset a shipped scene uses has no output (Phase 3 step 4).

@@ -1,21 +1,18 @@
-import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readGit } from './git';
+import { ROOT } from './paths';
 
 /**
  * The project's metadata: the engine, toolkit and app versions and codenames, the packages, and
  * the build's commit and time. `vite.config.ts` defines it as `__PROJECT_METADATA__` (the About
  * dialog) and fills `index.html`'s placeholders with it; the Hub generator puts its versions and
- * build into `hub-data.js` and the Version page.
+ * build on the Version page.
  */
 
 type PackageJson = typeof import('../package.json');
 
-const PACKAGE_JSON_FILE = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../package.json'
-);
+const PACKAGE_JSON_FILE = path.join(ROOT, 'package.json');
 
 const createVersionHash = (inputString: string) => {
   let hash = 5381; // Starting seed
@@ -38,27 +35,16 @@ const createVersionChecksumString = (m?: ProjectMetadata) => {
   return `${appVersion}-${appCodename}_${engVersion}-${engCodename}_${tkVersion}-${tkCodename}_${pkgVersion}`;
 };
 
-/** A git command's output, or '' when git or the repo isn't there. */
-export const readGit = (args: string) => {
-  try {
-    return execSync(`git ${args}`, { stdio: ['ignore', 'pipe', 'ignore'] })
-      .toString()
-      .trim();
-  } catch {
-    return '';
-  }
-};
-
-const buildProjectMetadata = (pkg: PackageJson) => {
+const buildProjectMetadata = (pkg: PackageJson, build?: BuildInfo) => {
   const appVersion = pkg.app_metadata?.version || (pkg.version ? `${pkg.version}-pkg` : '');
   const engineVersion = pkg.engine_metadata?.version || (pkg.version ? `${pkg.version}-pkg` : '');
   return {
     app: {
       version: appVersion,
-      codename: pkg?.app_metadata?.codename || '',
-      name: pkg?.app_metadata?.name || pkg?.name || '',
-      fullName: pkg?.app_metadata.fullName || '',
-      description: pkg?.app_metadata?.description || pkg?.description || '',
+      codename: pkg.app_metadata?.codename || '',
+      name: pkg.app_metadata?.name || pkg?.name || '',
+      fullName: pkg.app_metadata?.fullName || '',
+      description: pkg.app_metadata?.description || pkg?.description || '',
       url: pkg.app_metadata?.url || '',
       repoUrl: pkg.repository || '',
       author: pkg.author || '',
@@ -67,8 +53,8 @@ const buildProjectMetadata = (pkg: PackageJson) => {
       version: engineVersion,
       codename: pkg.engine_metadata?.codename || '',
       name: pkg.engine_metadata?.name || pkg.name || '',
-      fullName: pkg?.engine_metadata.fullName || '',
-      description: pkg?.engine_metadata?.description || pkg?.description || '',
+      fullName: pkg.engine_metadata?.fullName || '',
+      description: pkg.engine_metadata?.description || pkg?.description || '',
       url: pkg.engine_metadata?.url || '',
       repoUrl: pkg.engine_metadata?.repository || pkg.repository || '',
       author: pkg.engine_metadata?.author || '',
@@ -89,13 +75,13 @@ const buildProjectMetadata = (pkg: PackageJson) => {
     // The About dialog's package list: the runtime dependencies and the main build tools
     packages: { ...pkg.dependencies } as Record<string, string>,
     buildTools: {
-      vite: pkg.devDependencies.vite,
-      typescript: pkg.devDependencies.typescript,
+      vite: pkg.devDependencies?.vite,
+      typescript: pkg.devDependencies?.typescript,
     } as Record<string, string>,
     // The commit and time of this build (the dev server's start in dev)
-    build: {
-      commit: readGit('rev-parse --short HEAD'),
-      hasLocalChanges: readGit('status --porcelain --untracked-files=no') !== '',
+    build: build ?? {
+      commit: readGit(['rev-parse', '--short', 'HEAD']),
+      hasLocalChanges: readGit(['status', '--porcelain', '--untracked-files=no']) !== '',
       time: new Date().toISOString(),
     },
     versionChecksum: '',
@@ -103,15 +89,20 @@ const buildProjectMetadata = (pkg: PackageJson) => {
   };
 };
 
+/** A build's commit, whether the tree had local changes, and its time */
+type BuildInfo = { commit: string; hasLocalChanges: boolean; time: string };
+
+/** The project's versions, names, packages and build (`getProjectMetadata`) */
 export type ProjectMetadata = ReturnType<typeof buildProjectMetadata>;
 
 /**
  * The metadata from `package.json` as it is on disk now (read on every call, so a long-running
- * process like the dev server sees a version bump), with the git state at the time of the call.
+ * process like the dev server sees a version bump), with the git state at the time of the call, or
+ * `build` (then git doesn't run: the dev Hub's rebuilds keep their first build's).
  */
-export const getProjectMetadata = (): ProjectMetadata => {
+export const getProjectMetadata = (build?: BuildInfo): ProjectMetadata => {
   const pkg = JSON.parse(fs.readFileSync(PACKAGE_JSON_FILE, 'utf-8')) as PackageJson;
-  const meta = buildProjectMetadata(pkg);
+  const meta = buildProjectMetadata(pkg, build && { ...build });
   const checksumString = createVersionChecksumString(meta);
   meta.versionChecksumString = checksumString;
   meta.versionChecksum = createVersionHash(checksumString);

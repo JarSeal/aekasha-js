@@ -3,7 +3,7 @@ import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from './Config';
 
 /**
  * A debug module that loads asynchronously: `current` is null until it has loaded (and stays null
- * outside the debug env). Read it through {@link useDebug}.
+ * outside the debug env). Read it through `useDebug`.
  * @template T the module's shape (`typeof import('./debug/_dbg__X')`)
  */
 export interface DebugModuleRef<T> {

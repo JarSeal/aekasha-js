@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { type BuildModule, type EmittedAsset, findDebugCodeInBuild } from './debugInProduction';
+import { type BuildModule, type EmittedAsset, MAIN_BUILD } from '../sbp/bundleModel';
+import { findDebugCodeInBuild } from './debugInProduction';
 
 const MAIN = 'assets/index.js';
+
+/** A module of the main build */
+const main = (id: string, chunks: Record<string, number>): BuildModule => ({
+  id,
+  build: MAIN_BUILD,
+  chunks,
+});
 
 const find = (files: string[], modules: BuildModule[], assets: EmittedAsset[] = []) =>
   findDebugCodeInBuild({ files, modules, assets });
@@ -12,12 +20,12 @@ describe('findDebugCodeInBuild', () => {
       find(
         [MAIN, 'assets/rapier.js'],
         [
-          { id: '/src/_engine/core/MainLoop.ts', chunks: { [MAIN]: 900 } },
-          { id: '/src/_engine/kernel/config/DebugModules.ts', chunks: { [MAIN]: 300 } },
-          { id: '/src/_engine/features/debugDraw/Lines.ts', chunks: { [MAIN]: 20 } },
-          { id: '/src/app/debug/Tools.ts', chunks: { [MAIN]: 30 } },
-          { id: '/node_modules/debug/src/browser.js', chunks: { [MAIN]: 40 } },
-          { id: '/node_modules/three/build/three.core.js', chunks: { [MAIN]: 9000 } },
+          main('/src/_engine/kernel/loop/MainLoop.ts', { [MAIN]: 900 }),
+          main('/src/_engine/kernel/config/DebugModules.ts', { [MAIN]: 300 }),
+          main('/src/_engine/features/debugDraw/Lines.ts', { [MAIN]: 20 }),
+          main('/src/app/debug/Tools.ts', { [MAIN]: 30 }),
+          main('/node_modules/debug/src/browser.js', { [MAIN]: 40 }),
+          main('/node_modules/three/build/three.core.js', { [MAIN]: 9000 }),
         ]
       )
     ).toEqual([]);
@@ -28,9 +36,9 @@ describe('findDebugCodeInBuild', () => {
       find(
         [MAIN],
         [
-          { id: '/src/_engine/core/Debug/_dbg__Stats.ts', chunks: {} },
-          { id: '/src/_engine/debug/Profiler.ts', chunks: { [MAIN]: 0 } },
-          { id: '/src/_engine/debug/index.ts', chunks: { [MAIN]: 12 } },
+          main('/src/_engine/debug/_dbg__Stats.ts', {}),
+          main('/src/_engine/debug/Profiler.ts', { [MAIN]: 0 }),
+          main('/src/_engine/debug/index.ts', { [MAIN]: 12 }),
         ]
       )
     ).toEqual([]);
@@ -41,15 +49,32 @@ describe('findDebugCodeInBuild', () => {
       find(
         [MAIN, 'assets/_dbg__Profiler.js', 'assets/_dbg__Profiler.css'],
         [
-          { id: '/src/_engine/core/Debug/_dbg__Profiler.ts', chunks: { 'assets/x.js': 40 } },
-          { id: '/src/app/_dbg__demo.ts', chunks: { [MAIN]: 5, 'assets/space.js': 7 } },
+          main('/src/_engine/debug/profiler/_dbg__Profiler.ts', { 'assets/x.js': 40 }),
+          main('/src/app/_dbg__demo.ts', { [MAIN]: 5, 'assets/space.js': 7 }),
         ]
       )
     ).toEqual([
       'debug chunk assets/_dbg__Profiler.css',
       'debug chunk assets/_dbg__Profiler.js',
-      'debug module src/_engine/core/Debug/_dbg__Profiler.ts in assets/x.js',
+      'debug module src/_engine/debug/profiler/_dbg__Profiler.ts in assets/x.js',
       'debug module src/app/_dbg__demo.ts in assets/index.js, assets/space.js',
+    ]);
+  });
+
+  it('reports a debug module in a worker build (p619 V7), naming the worker', () => {
+    expect(
+      find(
+        [MAIN, 'assets/PhysicsWorker.js@PhysicsWorker'],
+        [
+          {
+            id: '/src/_engine/features/physics/debug/_dbg__WorkerStats.ts',
+            build: 'PhysicsWorker',
+            chunks: { 'assets/PhysicsWorker.js@PhysicsWorker': 120 },
+          },
+        ]
+      )
+    ).toEqual([
+      'debug module src/_engine/features/physics/debug/_dbg__WorkerStats.ts in assets/PhysicsWorker.js@PhysicsWorker (the PhysicsWorker worker)',
     ]);
   });
 
@@ -58,24 +83,24 @@ describe('findDebugCodeInBuild', () => {
       find(
         [MAIN],
         [
-          { id: '/src/_engine/core/Debug/Panel.module.scss', chunks: { [MAIN]: 10 } },
-          { id: '/src/_engine/debug/Profiler.ts', chunks: { [MAIN]: 459 } },
-          { id: '/src/_engine/debug/symbols/3DSymbols.ts', chunks: { [MAIN]: 8 } },
-          { id: '/src/_engine/kernel/ecs/debug/ECSStressTest.ts', chunks: { [MAIN]: 6 } },
-          { id: '/src/_engine/features/lod/debug/LodHelpers.ts', chunks: { [MAIN]: 4 } },
+          main('/src/_engine/kernel/render/Debug/Panel.module.scss', { [MAIN]: 10 }),
+          main('/src/_engine/debug/Profiler.ts', { [MAIN]: 459 }),
+          main('/src/_engine/debug/symbols/3DSymbols.ts', { [MAIN]: 8 }),
+          main('/src/_engine/kernel/ecs/debug/ECSStressTest.ts', { [MAIN]: 6 }),
+          main('/src/_engine/features/lod/debug/LodHelpers.ts', { [MAIN]: 4 }),
         ]
       )
     ).toEqual([
-      'debug module src/_engine/core/Debug/Panel.module.scss in assets/index.js',
       'debug module src/_engine/debug/Profiler.ts in assets/index.js',
       'debug module src/_engine/debug/symbols/3DSymbols.ts in assets/index.js',
       'debug module src/_engine/features/lod/debug/LodHelpers.ts in assets/index.js',
       'debug module src/_engine/kernel/ecs/debug/ECSStressTest.ts in assets/index.js',
+      'debug module src/_engine/kernel/render/Debug/Panel.module.scss in assets/index.js',
     ]);
   });
 
   it('reports a file emitted for a debug module', () => {
-    const shipped = { id: '/src/_engine/kernel/assets/Basis.ts', chunks: { [MAIN]: 50 } };
+    const shipped = main('/src/_engine/kernel/assets/Basis.ts', { [MAIN]: 50 });
     expect(
       find(
         [MAIN, 'assets/3DSymbols.glb', 'assets/logo.png', 'assets/basis_transcoder.wasm'],

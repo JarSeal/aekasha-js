@@ -7,7 +7,8 @@
   it with the outputs: a clone then gets cache hits and never encodes.
 - It runs by itself: in `yarn dev` on every save (only what the save touched), and before
   `yarn build`. `yarn assets` runs it whole, and is the only command that deletes stale outputs:
-  run it before you commit asset changes.
+  run it before you commit asset changes. It deletes only after a run that rebuilt every asset
+  (without `ktx`, or with an asset JSON that fails, it keeps them and says why).
 - At runtime, the engine loads each asset's output instead of its source. The KTX2 transcoder
   turns it into whatever the device reads (BC7 on desktop, ASTC or ETC2 on mobile), in its own
   workers.

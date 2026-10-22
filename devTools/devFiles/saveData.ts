@@ -1,10 +1,10 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { ROOT } from '../assetPipeline/sources';
-import { hasGatheredSaveData } from '../gatherAppData';
+import { ROOT } from '../paths';
+import { hasGatheredSaveData } from '../gather/gatheredJson';
 import { DevFilesError } from './http';
 import type { DevFilePath } from './paths';
-import { sha256 } from './stage';
+import { sha256 } from '../files';
 import type {
   DevFilesSaveDataWrite,
   DevFilesSchemaIssues,
@@ -26,13 +26,20 @@ type JsonObject = Record<string, unknown>;
 const isPlainObject = (value: unknown): value is JsonObject =>
   !!value && typeof value === 'object' && !Array.isArray(value);
 
-/** Throws BAD_REQUEST unless the write's `saveData` is `{ sceneId, entry }` */
+/** Throws BAD_REQUEST unless the write's `saveData` is `{ sceneId, entry, historySize }` */
 export const checkSaveDataRequest = (writePath: string, saveData: unknown) => {
   if (!isPlainObject(saveData)) {
-    throw new DevFilesError('BAD_REQUEST', `${writePath}: saveData must be { sceneId, entry }`);
+    throw new DevFilesError(
+      'BAD_REQUEST',
+      `${writePath}: saveData must be { sceneId, entry, historySize }`
+    );
   }
   if (typeof saveData.sceneId !== 'string' || !saveData.sceneId) {
     throw new DevFilesError('BAD_REQUEST', `${writePath}: saveData.sceneId must be a string`);
+  }
+  // Assigning `__proto__` sets the object's prototype: the entry would be lost (F6)
+  if (saveData.sceneId === '__proto__') {
+    throw new DevFilesError('BAD_REQUEST', `${writePath}: "__proto__" isn't a scene id`);
   }
   if (!isPlainObject(saveData.entry)) {
     throw new DevFilesError('BAD_REQUEST', `${writePath}: saveData.entry must be an object`);
@@ -77,17 +84,18 @@ const canonicalJson = (value: unknown) =>
 
 const withoutMeta = (entry: unknown) => {
   if (!isPlainObject(entry)) return entry;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   const { __meta, ...rest } = entry;
   return rest;
 };
 
-const invalidFile = (repoPath: string, issuePath: string, message: string): never => {
+// A declaration, not an arrow: a call of a `never` function narrows only then (p619 K2)
+function invalidFile(repoPath: string, issuePath: string, message: string): never {
   const details: DevFilesSchemaIssues = [
     { path: repoPath, issues: [{ path: issuePath, message }] },
   ];
   throw new DevFilesError('INVALID_SCHEMA', `Invalid ${repoPath}`, details);
-};
+}
 
 export type SaveDataWriteResult =
   /** The file's new JSON value */
@@ -122,17 +130,18 @@ export const applySaveDataWrite = async (
   } catch (err) {
     throw new DevFilesError('INVALID_JSON', `${repoPath} isn't JSON: ${(err as Error).message}`);
   }
-  if (!isPlainObject(file)) return invalidFile(repoPath, '', 'The file must be an object');
+  if (!isPlainObject(file)) invalidFile(repoPath, '', 'The file must be an object');
   const { sceneId, entry, historySize } = saveData;
   const keep = (list: unknown[]) => (historySize === -1 ? list : list.slice(0, historySize));
   if (file.__saveData !== undefined && !isPlainObject(file.__saveData)) {
     invalidFile(repoPath, '__saveData', 'Must be an object');
   }
   const allSaveData = (file.__saveData ?? {}) as JsonObject;
-  const entries = allSaveData[sceneId] ?? [];
-  if (!Array.isArray(entries)) {
-    return invalidFile(repoPath, `__saveData.${sceneId}`, 'Must be a list');
-  }
+  // Own keys only: `toString` is a scene id like any other (F6)
+  const entries = Object.prototype.hasOwnProperty.call(allSaveData, sceneId)
+    ? allSaveData[sceneId]
+    : [];
+  if (!Array.isArray(entries)) invalidFile(repoPath, `__saveData.${sceneId}`, 'Must be a list');
 
   if (
     entries.length &&

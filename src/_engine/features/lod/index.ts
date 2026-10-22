@@ -7,7 +7,11 @@ export {
 export { generateCrossQuads } from './impostors/CrossQuads';
 export type { CrossQuads, CrossQuadsOptions } from './impostors/CrossQuads';
 export type { ImpostorShading } from './impostors/ImpostorBake';
-export { IMPOSTOR_EXPORT_FORMAT_VERSION, getImpostorDefSlots } from './impostors/ImpostorFormat';
+export {
+  getImpostorDefSlots,
+  IMPOSTOR_EXPORT_FORMAT_VERSION,
+  IMPOSTOR_KINDS,
+} from './impostors/ImpostorFormat';
 export type { ImpostorKind } from './impostors/ImpostorFormat';
 export { generateOctahedralImpostor } from './impostors/OctahedralImpostor';
 export type {
@@ -16,14 +20,18 @@ export type {
   OctahedralImpostorOptions,
 } from './impostors/OctahedralImpostor';
 export { resolveAutoLod } from './LodAuto';
-export { GLTF_LOD_EXTRAS_KEY } from './LodChainGLTF';
-export type { GLTFLodChainsExtras } from './LodChainGLTF';
 export {
+  GLTF_LOD_EXTRAS_KEY,
   GLTF_LOD_FORMAT_VERSION,
   LOD_SIMPLIFY_VERSION,
   resolveLodChainOptions,
 } from './LodChainOptions';
-export type { LodChainOptions, LodLevelVertices, ResolvedLodChainOptions } from './LodChainOptions';
+export type {
+  GLTFLodChainsExtras,
+  LodChainOptions,
+  LodLevelVertices,
+  ResolvedLodChainOptions,
+} from './LodChainOptions';
 export { generateLodChain, getLodChain } from './LodChains';
 export type { LodChain, LodChainLevel } from './LodChains';
 export { lod } from './LodFeature';

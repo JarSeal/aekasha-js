@@ -8,9 +8,9 @@ import type { HubPage, HubSlot } from './types';
 
 /**
  * Finds the Hub's pages: every folder under `hub/pages/` with an `index.html` is one, at the URL
- * path of its folder (p550 §3.3). Reads each one's head metadata and body slots, and builds the
+ * path of its folder. Reads each one's head metadata and body slots, and builds the
  * page tree (children by `aek:order`, then title). A generated section's pages join the tree
- * here, and the slots its generator fills are marked (p551 §2.5).
+ * here, and the slots its generator fills are marked.
  */
 
 const PAGE_FILE = 'index.html';
@@ -31,6 +31,7 @@ const META_NAMES = [
 /** An empty element with an `id`: `<div id="setup"></div>` (whitespace inside is fine) */
 const SLOT_REGEX = /<([a-zA-Z][\w-]*)(\s[^>]*?)?>\s*<\/\1\s*>/g;
 
+/** The discovered pages (`discoverPages`): the homepage, every page, by path, and the files read */
 export type HubPageTree = {
   /** The homepage */
   root: HubPage;
@@ -225,7 +226,7 @@ const attachSection = (
       file: generated.file,
       title: generated.title,
       menu: generated.menu,
-      order: 0,
+      order: generated.order ?? 0,
       tags: generated.tags,
       description: generated.description,
       icon: '',
@@ -246,9 +247,13 @@ const attachSection = (
   }
 };
 
-export const sortPages = (pages: HubPage[]) =>
+const sortPages = (pages: HubPage[]) =>
   pages.sort((a, b) => a.order - b.order || a.menu.localeCompare(b.menu));
 
+/**
+ * Finds the pages under `hub/pages/` and the generated sections' pages; null, with an error,
+ * without a homepage
+ */
 export const discoverPages = (
   diag: HubDiagnostics,
   sections: HubGeneratedSection[] = []
@@ -314,3 +319,10 @@ export const getPageTrail = (page: HubPage) => {
 /** A link from one page (or the root, '') to another site path: `../../features/`, `./` */
 export const relativeRoot = (fromPath: string) =>
   fromPath ? '../'.repeat(fromPath.split('/').length - 1) : './';
+
+/** The page's top-level section's path ('' for the homepage): its search group and its styles */
+export const getPageSection = (page: HubPage) => {
+  let top = page;
+  while (top.parent?.parent) top = top.parent;
+  return top.parent ? top.path : '';
+};

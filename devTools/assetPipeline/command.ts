@@ -1,8 +1,9 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- a command's own output */
+import fs from 'fs';
 import path from 'path';
-import { collectPipelineAssets, readAssetJsons } from './assets';
+import { collectPipelineAssets, readAssetJsons, type DroppedAsset } from './assets';
 import { BUDGET_FIX, getBudgetViolations } from './budgets';
-import { createPipelineCache } from './cache';
+import { createPipelineCache, saveKeyMemo } from './cache';
 import { getResultFigures, isKtxOnlyAsset } from './generated';
 import { createKtxProvider } from './ktxEncode';
 import { KTX_FIX } from './ktxTool';
@@ -16,8 +17,9 @@ import {
   type RunSummary,
 } from './report';
 import { runPipeline, type PipelineRun, type PipelineRunResult } from './run';
+import { withRunLockAsync } from './runLock';
 import { createSettingsResolver, loadAssetsConfig } from './settings';
-import { ROOT } from './sources';
+import { ROOT } from '../paths';
 import { ALLOW_UNOPTIMIZED_ENV_KEY, ENV_KEY, type ProjectOptOut } from './switches';
 
 /**
@@ -120,6 +122,43 @@ const formatResult = (
   return lines.join('\n');
 };
 
+/**
+ * Why a full run's prune would delete what this machine can't rebuild (p619 §1.4 A1, A2): an
+ * asset that should have an output got none (it failed, `ktx` is missing, its public source is
+ * gone), or an asset JSON or one of its uses was left out of the run. Each line names the assets.
+ * A remote source and an array or atlas slot whose textures side is off have no output by design.
+ */
+const getPruneBlockers = (results: PipelineRunResult[], dropped: DroppedAsset[]) => {
+  const list = (ids: string[]) =>
+    `${ids.slice(0, 5).join(', ')}${ids.length > 5 ? ` and ${ids.length - 5} more` : ''}`;
+  const ids = (
+    status: PipelineRunResult['status'],
+    isIncluded?: (r: PipelineRunResult) => boolean
+  ) =>
+    results
+      .filter((r) => r.status === status && (!isIncluded || isIncluded(r)))
+      .map((r) => r.asset.id);
+  const failed = ids('error');
+  const encoderMissing = ids('encoderMissing');
+  const sourceMissing = ids(
+    'skipped',
+    ({ asset }) => asset.source.kind === 'public' && !fs.existsSync(asset.source.file)
+  );
+  const droppedFiles = [...new Set(dropped.map((drop) => drop.jsonFile))];
+  return [
+    ...(failed.length ? [`${failed.length} failed: ${list(failed)}`] : []),
+    ...(encoderMissing.length
+      ? [`${encoderMissing.length} got no output, ktx is missing: ${list(encoderMissing)}`]
+      : []),
+    ...(sourceMissing.length
+      ? [`${sourceMissing.length} with a missing source: ${list(sourceMissing)}`]
+      : []),
+    ...(droppedFiles.length
+      ? [`${droppedFiles.length} asset JSON(s) left out of the run: ${list(droppedFiles)}`]
+      : []),
+  ];
+};
+
 /** Did the run do something with it, or does it need a look: not a plain lookup or copy */
 const isNotable = (result: PipelineRunResult) =>
   result.status === 'error' ||
@@ -157,6 +196,7 @@ const printSummary = (
     selectedCount: number;
     isPartial: boolean;
     staleNote: string;
+    dropped: DroppedAsset[];
     selectedOverBudget: number;
   }
 ) => {
@@ -195,7 +235,13 @@ const printSummary = (
     console.log(`  Removed ${summary.staleOutputsRemoved.length} stale output(s):`);
     for (const file of summary.staleOutputsRemoved) console.log(`    ${DIM}${file}${RESET}`);
   }
-  if (opts.staleNote) console.log(`  ${DIM}${opts.staleNote}${RESET}`);
+  for (const { jsonFile, reason } of opts.dropped) {
+    console.log(`  ${YELLOW}! Left out: ${jsonFile}: ${reason}${RESET}`);
+  }
+  if (opts.staleNote) {
+    const color = opts.staleNote.includes('\n') ? YELLOW : DIM;
+    console.log(`  ${color}${opts.staleNote.split('\n').join('\n    ')}${RESET}`);
+  }
 };
 
 /** The short form: one line, and only when the run did something worth a line */
@@ -225,6 +271,7 @@ const printBriefSummary = (
   );
 };
 
+/** `runAssetsCommand`'s options: the project switches, the selection and the run's mode */
 export type AssetsCommandOpts = {
   projectOptOut: ProjectOptOut;
   /**
@@ -257,6 +304,7 @@ export type AssetsCommandOpts = {
   isUnoptimizedFallback?: boolean;
 };
 
+/** `runAssetsCommand`'s run, with its errors and budget failures among the selected assets */
 export type AssetsCommandResult = {
   run: PipelineRun;
   /** An asset failed (`error`); `encoderMissing` is a warning (§8) */
@@ -276,12 +324,17 @@ export type AssetsCommandResult = {
  */
 export const runAssetsCommand = async (opts: AssetsCommandOpts): Promise<AssetsCommandResult> => {
   const start = performance.now();
+  // For the prune: an output changed after this is another run's (A3)
+  const startedAt = Date.now();
   const { projectOptOut, isSelected, verbosity } = opts;
   const isFull = verbosity === 'full';
   const assetsConfig = loadAssetsConfig();
   const resolveSettings = createSettingsResolver(assetsConfig, projectOptOut);
   const projectReasons = new Set(Object.values(projectOptOut));
-  const assets = collectPipelineAssets(readAssetJsons());
+  const read = readAssetJsons();
+  const collected = collectPipelineAssets(read.assetJsons);
+  const { assets } = collected;
+  const dropped = [...read.dropped, ...collected.dropped];
 
   const selectedKeys = new Set(
     [...assets].filter(([key, asset]) => !isSelected || isSelected(key, asset)).map(([key]) => key)
@@ -359,22 +412,34 @@ export const runAssetsCommand = async (opts: AssetsCommandOpts): Promise<AssetsC
   const hasErrors = results.some((result) => result.status === 'error');
   let staleOutputsRemoved: string[] = [];
   let staleNote = '';
+  const pruneBlockers = opts.prune ? getPruneBlockers(results, dropped) : [];
   if (opts.prune) {
     if (isSelected) {
       staleNote = 'Stale outputs are kept: --only is a partial run.';
     } else if (process.env[ENV_KEY]) {
       // A one-run override: the committed outputs and lock stay those of src/CONFIG.ts's settings
       staleNote = `Stale outputs are kept: ${ENV_KEY} overrides src/CONFIG.ts for this run only.`;
-    } else if (hasErrors) {
-      staleNote = 'Stale outputs are kept: an asset failed.';
-    } else {
-      cache.prune();
-      staleOutputsRemoved = removeStaleOutputs(
-        results.flatMap((result) => ('output' in result ? [result.output.url] : []))
-      );
+    } else if (pruneBlockers.length) {
+      staleNote = [
+        "Stale outputs and lock entries are kept: this run couldn't rebuild every asset, so it can't tell which are stale.",
+        ...pruneBlockers,
+      ].join('\n');
     }
   }
-  cache.save();
+  // One process at a time prunes and writes the lock (A3): a dev server's save waits for this
+  await withRunLockAsync(() => {
+    if (opts.prune && !staleNote) {
+      cache.prune();
+      staleOutputsRemoved = removeStaleOutputs(
+        results.flatMap((result) => ('output' in result ? [result.output.url] : [])),
+        undefined,
+        { since: startedAt }
+      );
+    }
+    cache.save();
+  });
+  // Outside the lock: a cache of this process's keys, for the next one
+  saveKeyMemo();
 
   const overBudget = new Map(
     [...pipelineRun.results].flatMap(([key, result]) => {
@@ -397,6 +462,7 @@ export const runAssetsCommand = async (opts: AssetsCommandOpts): Promise<AssetsC
       selectedCount: selectedKeys.size,
       isPartial: !!isSelected,
       staleNote,
+      dropped,
       selectedOverBudget: selectedOverBudget.length,
     });
   } else if (!opts.isQuietWhenUpToDate || isNotableRun) {

@@ -15,7 +15,7 @@ import {
 } from '@gltf-transform/functions';
 import { MeshoptDecoder, MeshoptEncoder, MeshoptSimplifier } from 'meshoptimizer';
 import type { ResolvedLodChainOptions } from '../../src/_engine/features/lod/LodChainOptions';
-import type { TextureSlot } from '../../src/_engine/schemas/AssetsConfigSchema';
+import type { TextureSlot } from '../../src/_engine/schemas';
 import { readImageFile, resizeImage } from './images';
 import type { KtxProvider } from './ktxEncode';
 import { buildLodChains, type BuiltLodChain } from './lodChains';
@@ -33,7 +33,7 @@ import {
  * The GLB / glTF step (p300 Phase 2 step 5, §8): gltf-transform reads the source, compresses
  * the geometry (DD6) and encodes each texture with the settings of the material slot that uses
  * it, then writes a .glb. The order (geometry, then textures, then KHR_texture_basisu) is Phase
- * 1's (`phase1Variants.ts`), so the same settings reproduce its files.
+ * 1's (`fixtures/assetCompareVariants.ts`), so the same settings reproduce its files.
  */
 
 let ioPromise: Promise<NodeIO> | null = null;

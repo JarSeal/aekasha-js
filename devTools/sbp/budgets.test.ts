@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { isBudgetFailure, measureModulesUnder, suggestBudget } from './budgets';
 import { KIB } from './config';
 import { type Colors, formatReport, measureProfile } from './report';
-import { DATA, MAIN, createTestBundle } from './testBuild';
+import { MAIN, SIZES, createTestBundle } from './testBuild';
 
 const NO_COLORS: Colors = { red: '', green: '', yellow: '', dim: '', reset: '' };
 
@@ -74,11 +74,11 @@ describe('checkBudgets', () => {
 describe('measureModulesUnder', () => {
   it('sums a file or a folder, initial chunks only', () => {
     const initial = new Set([MAIN]);
-    expect(measureModulesUnder(DATA, initial, '_engine/features/physics/PhysicsAPI.ts')).toBe(15);
+    expect(measureModulesUnder(SIZES, initial, '_engine/features/physics/PhysicsAPI.ts')).toBe(15);
     // Not a prefix of another file's name
-    expect(measureModulesUnder(DATA, initial, '_engine/features/physics/Physics')).toBe(0);
-    expect(measureModulesUnder(DATA, initial, '_engine/kernel/')).toBe(25);
-    expect(measureModulesUnder(DATA, new Set(), '_engine/kernel/')).toBe(0);
+    expect(measureModulesUnder(SIZES, initial, '_engine/features/physics/Physics')).toBe(0);
+    expect(measureModulesUnder(SIZES, initial, '_engine/kernel/')).toBe(25);
+    expect(measureModulesUnder(SIZES, new Set(), '_engine/kernel/')).toBe(0);
   });
 });
 

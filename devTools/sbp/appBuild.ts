@@ -5,8 +5,8 @@
  * `vite build` with `AEK_EMBED_PROFILE` (`embedBuild.ts`), on the same production gather.
  */
 import { spawn } from 'child_process';
-import { ROOT } from '../assetPipeline/sources';
-import { out } from '../verify/progressLog';
+import { ROOT } from '../paths';
+import { out } from '../progressLog';
 import { EMBED_PROFILE_ENV } from './embedBuild';
 
 const DIM = process.env.NO_COLOR ? '' : '\x1b[2m';
@@ -41,7 +41,8 @@ export const runYarn = (args: string[], env: Record<string, string> = {}) =>
 /**
  * Builds the app (`yarn build`'s bundle steps into `dist/` and `dist-stats/`) and the embed
  * profiles (into `dist-embed/<id>/`), on one production gather; the dev data is gathered again
- * whatever happens.
+ * whatever happens. A build's error is the one thrown: a failed dev gather after it is only
+ * reported (p619 §1.4 B4: it replaced the build's).
  * @param opts.isApp whether the app is built
  * @param opts.embedIds the embed profiles built, in order
  */
@@ -54,10 +55,11 @@ export const buildBundles = async (opts: { isApp: boolean; embedIds: readonly st
     for (const id of opts.embedIds) {
       await runYarn(['vite', 'build'], { VITE_APP_ENV: 'production', [EMBED_PROFILE_ENV]: id });
     }
-  } finally {
-    await runYarn(['gatherAppData']);
+  } catch (buildError) {
+    await runYarn(['gatherAppData']).catch((gatherError: Error) =>
+      out(`The dev gather after the failed build failed too: ${gatherError.message}`, true)
+    );
+    throw buildError;
   }
+  await runYarn(['gatherAppData']);
 };
-
-/** The app's bundle alone ({@link buildBundles}) */
-export const buildAppBundle = () => buildBundles({ isApp: true, embedIds: [] });

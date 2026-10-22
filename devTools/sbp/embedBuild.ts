@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- the build's one line on what the embed holds and pruned */
 /**
  * An embed profile's build (p611 D7): `vite build` with `AEK_EMBED_PROFILE=<id>` builds the
  * profile's entry module (`sbp.config.ts`) into `dist-embed/<id>/` instead of the app:
@@ -24,10 +24,11 @@ import fs from 'fs';
 import path from 'path';
 import type { Plugin, UserConfig } from 'vite';
 import sbpProfiles from '../../sbp.config';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 import { collectUrls } from '../assetOutputsBuildPlugin';
-import { getEmbedProfiles } from '../gatherOutput';
-import type { BuildLocation } from './bundleModel';
+import { getEmbedProfiles } from '../gather/output';
+import { findReachableFiles } from './bundleKeys';
+import { type BuildLocation, MODULE_SIZES_FILE_NAME } from './bundleModel';
 import type { SbpProfile } from './config';
 import { getEmbedEntryFileName, getEmbedOutDir } from './embedPaths';
 
@@ -40,13 +41,17 @@ export const PRUNED_FILE_NAME = 'aek-pruned.json';
 /** The visualizer's report of an embed build */
 export const getEmbedStatsFile = (id: string) =>
   path.join(ROOT, 'dist-stats', `embed-${id}`, 'bundle-stats.html');
+/** The module sizes of an embed build (`moduleSizesPlugin.ts`), next to its visualizer report */
+export const getEmbedSizesFile = (id: string) =>
+  path.join(ROOT, 'dist-stats', `embed-${id}`, MODULE_SIZES_FILE_NAME);
 /** Where `collectBundle` measures an embed's build: every file of its folder */
 export const getEmbedBuildLocation = (id: string): BuildLocation => ({
   outDir: getEmbedOutDir(id),
   statsFile: getEmbedStatsFile(id),
+  sizesFile: getEmbedSizesFile(id),
   isAssetsOnly: false,
 });
-/** The profile's generated data (`devTools/gatherOutput.ts`) */
+/** The profile's generated data (`devTools/gather/output.ts`) */
 export const getEmbedDataFile = (id: string) =>
   path.join(ROOT, 'src/generated/profiles', id, 'generatedAppData.json');
 
@@ -92,36 +97,6 @@ const listFiles = (dir: string, prefix = ''): string[] =>
     return [rel];
   });
 
-const TEXT_FILE = /\.(js|mjs|css)$/;
-
-/**
- * The files reachable from the roots: a text file (JS, CSS) reaches every file whose name it
- * contains. A name is only in code that ships (a tree-shaken importer leaves none), so what isn't
- * reached is never loaded.
- * @param files every file of the build (relative paths)
- * @param read a text file's content
- */
-export const findReachableFiles = (
-  roots: string[],
-  files: string[],
-  read: (file: string) => string
-) => {
-  const byName = new Map(files.map((file) => [path.posix.basename(file), file]));
-  const reached = new Set<string>();
-  const queue = [...roots];
-  while (queue.length) {
-    const file = queue.pop()!;
-    if (reached.has(file)) continue;
-    reached.add(file);
-    if (!TEXT_FILE.test(file)) continue;
-    const text = read(file);
-    for (const [name, other] of byName) {
-      if (!reached.has(other) && text.includes(name)) queue.push(other);
-    }
-  }
-  return reached;
-};
-
 /** Copies a file or folder from `src/public/` into the build, when it's there */
 const copyFromPublic = (rel: string, outDir: string) => {
   const from = path.join(PUBLIC_DIR, rel);
@@ -138,9 +113,17 @@ const formatCssLinks = (hrefs: string[]) =>
 export const embedOutputsPlugin = (profile: SbpProfile): Plugin => {
   const outDir = getEmbedOutDir(profile.id);
   const entryFile = getEmbedEntryFileName(profile);
+  /** `closeBundle` runs after a failed build too: its own throw would hide the build's (B4) */
+  let hasFailed = false;
   return {
     name: 'vite-plugin-aek-embed-outputs',
     apply: 'build',
+    buildEnd(error) {
+      if (error) hasFailed = true;
+    },
+    renderError() {
+      hasFailed = true;
+    },
     generateBundle(_, bundle) {
       const entry = bundle[entryFile];
       if (!entry || entry.type !== 'chunk') {
@@ -162,6 +145,7 @@ export const embedOutputsPlugin = (profile: SbpProfile): Plugin => {
       if (css.size) entry.code = formatCssLinks([...css].map((file) => `./${file}`)) + entry.code;
     },
     closeBundle() {
+      if (hasFailed) return;
       // The data's files, and the decoders it can need
       const data: unknown = JSON.parse(fs.readFileSync(getEmbedDataFile(profile.id), 'utf-8'));
       const urls = new Set<string>();

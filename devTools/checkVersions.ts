@@ -1,8 +1,9 @@
-/* eslint-disable no-console */
-import { execFileSync } from 'child_process';
+/* eslint-disable no-console -- a command's own output */
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { git } from './git';
+import { ROOT } from './paths';
 
 /**
  * Checks package.json's versions against the versioning rules in `.claude/CLAUDE.md`.
@@ -21,11 +22,9 @@ import { fileURLToPath } from 'url';
  * Exits with code 1 on a violation.
  */
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
-
 export type PartKey = 'engine_metadata' | 'toolkit_metadata' | 'app_metadata';
 type PartMeta = { version?: string; codename?: string; fullName?: string; name?: string };
+/** `package.json`'s version fields */
 export type Pkg = { version?: string } & Partial<Record<PartKey, PartMeta>>;
 
 // `src/generated/` is in no part: the gatherer rebuilds it from the app's JSON files
@@ -51,9 +50,7 @@ const parseSemver = (v?: string) => {
   return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
 };
 
-export const git = (args: string[]) =>
-  execFileSync('git', args, { cwd: ROOT, encoding: 'utf-8' }).trim();
-
+/** The repo's `package.json` as it is on disk */
 export const readPkg = (): Pkg =>
   JSON.parse(fs.readFileSync(path.resolve(ROOT, 'package.json'), 'utf-8'));
 
@@ -75,16 +72,23 @@ export const checkAlwaysRules = (pkg: Pkg): string[] => {
   return errors;
 };
 
-/** Per-part bump rules against `ref`. Returns the violations and the notes (non-fatal). */
-const checkAgainstRef = (pkg: Pkg, ref: string) => {
+/**
+ * The per-part bump rules: each part's version against the ref's, given the part's files changed
+ * since the merge base. Pure (`checkAgainstRef` reads git).
+ * @returns the violations and the notes (non-fatal)
+ */
+export const checkBumps = (opts: {
+  pkg: Pkg;
+  refPkg: Pkg;
+  /** Each part's changed files since the merge base, untracked ones included */
+  changedFiles: Partial<Record<PartKey, string[]>>;
+  /** The ref's name, for the messages */
+  ref: string;
+}) => {
+  const { pkg, refPkg, ref } = opts;
   const errors: string[] = [];
   const notes: string[] = [];
-  const mergeBase = git(['merge-base', ref, 'HEAD']);
-  // Versions compare against the ref's tip (a version must not fall behind what is already
-  // there), changed files against the merge base (only this branch's own changes count)
-  const refPkg = JSON.parse(git(['show', `${ref}:package.json`])) as Pkg;
-
-  for (const { key, label, paths } of PARTS) {
+  for (const { key, label } of PARTS) {
     const cur = pkg[key];
     const prev = refPkg[key];
     const curV = parseSemver(cur?.version);
@@ -94,11 +98,7 @@ const checkAgainstRef = (pkg: Pkg, ref: string) => {
       notes.push(`${label}: new on this branch, starts at ${cur?.version}.`);
       continue;
     }
-
-    const changed = [
-      ...git(['diff', '--name-only', mergeBase, '--', ...paths]).split('\n'),
-      ...git(['ls-files', '--others', '--exclude-standard', '--', ...paths]).split('\n'),
-    ].filter(Boolean);
+    const changed = opts.changedFiles[key] ?? [];
 
     const diffIndex = curV.findIndex((n, i) => n !== prevV[i]);
     if (diffIndex === -1) {
@@ -136,6 +136,24 @@ const checkAgainstRef = (pkg: Pkg, ref: string) => {
     }
   }
   return { errors, notes };
+};
+
+/** The bump rules against `ref`, with the changed files and the ref's package.json from git */
+const checkAgainstRef = (pkg: Pkg, ref: string) => {
+  const mergeBase = git(['merge-base', ref, 'HEAD']);
+  // Versions compare against the ref's tip (a version must not fall behind what is already
+  // there), changed files against the merge base (only this branch's own changes count)
+  const refPkg = JSON.parse(git(['show', `${ref}:package.json`])) as Pkg;
+  const changedFiles = Object.fromEntries(
+    PARTS.map(({ key, paths }) => [
+      key,
+      [
+        ...git(['diff', '--name-only', mergeBase, '--', ...paths]).split('\n'),
+        ...git(['ls-files', '--others', '--exclude-standard', '--', ...paths]).split('\n'),
+      ].filter(Boolean),
+    ])
+  );
+  return checkBumps({ pkg, refPkg, changedFiles, ref });
 };
 
 const main = () => {

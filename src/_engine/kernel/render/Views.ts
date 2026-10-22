@@ -67,7 +67,7 @@ export type ViewCameraRig = {
 
 /** An editor view (the Runtime view is built in, not a ViewDef). */
 export type ViewDef = {
-  /** Unique view id, never {@link RUNTIME_VIEW_ID}. */
+  /** Unique view id, never `RUNTIME_VIEW_ID`. */
   id: string;
   /** The view's name: its view tools button's tooltip and its switch toast (eg. "Material
    * editor"). */
@@ -91,7 +91,7 @@ export type ViewDef = {
   onExit?: () => void;
   /** Every frame the master loop runs (camera controls, UI). */
   mainUpdate?: (delta: number) => void;
-  /** Every frame while the view is playing ({@link isViewPlaying}), eg. an auto-rotation. */
+  /** Every frame while the view is playing (`isViewPlaying`), eg. an auto-rotation. */
   update?: (delta: number) => void;
   /** What the debug drawer key (h) does in this view. */
   toggleDrawer?: () => void;
@@ -160,7 +160,7 @@ export const getViews = () => {
   return list.sort((a, b) => order(a) - order(b));
 };
 
-/** The id of the active view ({@link RUNTIME_VIEW_ID} for the Runtime view). */
+/** The id of the active view (`RUNTIME_VIEW_ID` for the Runtime view). */
 export const getActiveViewId = () => activeView?.id ?? RUNTIME_VIEW_ID;
 
 /** The active editor view, or null while the Runtime view is active. */
@@ -354,7 +354,7 @@ const switchView = async (id: string) => {
 /**
  * Switches the active view. Calls run one after another: a switch still running its `onEnter`
  * makes the next call wait. Switching to the active view is a no-op.
- * @param id (string) view id ({@link RUNTIME_VIEW_ID} for the Runtime view)
+ * @param id (string) view id (`RUNTIME_VIEW_ID` for the Runtime view)
  * @returns (Promise<boolean>) whether the view is now active
  */
 export const setActiveView = (id: string): Promise<boolean> => {

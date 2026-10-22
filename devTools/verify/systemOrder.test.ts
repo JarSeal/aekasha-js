@@ -27,4 +27,11 @@ describe('diffSystemOrders', () => {
       'world "other" is new',
     ]);
   });
+
+  // p619 §1.4 V6: `includes` and a walk of the old list missed a system registered twice
+  it('names a system registered twice, and one no longer registered twice', () => {
+    const twice = { default: { MAIN: ['a@0', 'b@0', 'a@0'], APP_LOGIC: ['c@1', 'd@0'] } };
+    expect(diffSystemOrders(baseline, twice)).toEqual(['default MAIN: added a@0']);
+    expect(diffSystemOrders(twice, baseline)).toEqual(['default MAIN: removed a@0']);
+  });
 });

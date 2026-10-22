@@ -19,7 +19,7 @@ import type { HubBuildMode } from './types';
  * The Hub's own assets: `hub.scss` through sass, the TS entries in `hub/_assets/ts/` through
  * Vite's `build()` (ES modules, fixed entry names, hashed shared chunks), and the static folders
  * copied as they are. Entries keep fixed names (`_assets/hub.css`) and get `?v=<hash>` where
- * they're referenced (p550 §3.6).
+ * they're referenced.
  */
 
 export type HubAssetFile = {
@@ -29,6 +29,7 @@ export type HubAssetFile = {
   hash: string;
 };
 
+/** The built and static assets' folder from the site root */
 export const ASSETS_URL_DIR = '_assets/';
 
 /**
@@ -38,17 +39,33 @@ export const ASSETS_URL_DIR = '_assets/';
  */
 export type HubStaticAssetHasher = (assetPath: string) => string | null;
 
+/**
+ * The static assets' hashes across builds, by the file's size, mtime and ctime: the dev server's
+ * rebuilds read a font or an image again only when it changed (p619 D16)
+ */
+const knownHashes = new Map<string, { stamp: string; hash: string }>();
+
+/**
+ * A build's static asset hasher: each path read once per build, its hash kept across builds while
+ * its file stamp holds
+ */
 export const createStaticAssetHasher = (): HubStaticAssetHasher => {
   const hashes = new Map<string, string | null>();
   return (assetPath) => {
     if (hashes.has(assetPath)) return hashes.get(assetPath) ?? null;
     const [dir] = assetPath.split('/');
     const file = path.join(HUB_ASSETS_DIR, assetPath);
-    const isInside =
-      HUB_STATIC_ASSET_DIRS.includes(dir) &&
-      !assetPath.split('/').includes('..') &&
-      fs.statSync(file, { throwIfNoEntry: false })?.isFile();
-    const hash = isInside ? hashContent(fs.readFileSync(file)) : null;
+    const stat =
+      HUB_STATIC_ASSET_DIRS.includes(dir) && !assetPath.split('/').includes('..')
+        ? fs.statSync(file, { throwIfNoEntry: false })
+        : undefined;
+    let hash: string | null = null;
+    if (stat?.isFile()) {
+      const stamp = `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
+      const known = knownHashes.get(file);
+      hash = known?.stamp === stamp ? known.hash : hashContent(fs.readFileSync(file));
+      knownHashes.set(file, { stamp, hash });
+    }
     hashes.set(assetPath, hash);
     return hash;
   };
@@ -57,6 +74,10 @@ export const createStaticAssetHasher = (): HubStaticAssetHasher => {
 /** `url(fonts/…)` in the CSS: relative to `_assets/hub.css`, so a static asset's path as is */
 const CSS_URL_REGEX = /url\(\s*(['"]?)([^'")?#]+)\1\s*\)/g;
 
+/**
+ * Compiles `hub.scss` (compressed in `public`), giving each `url()` to a static asset its `?v=`;
+ * null with an error at its line when sass fails
+ */
 export const buildStyles = (
   mode: HubBuildMode,
   diag: HubDiagnostics,
@@ -87,7 +108,7 @@ export const buildStyles = (
 };
 
 /** The TS entries: every `.ts` directly in `hub/_assets/ts/`, except `_*.ts` and `.d.ts` */
-export const listScriptEntries = () =>
+const listScriptEntries = () =>
   fs.existsSync(HUB_TS_DIR)
     ? fs
         .readdirSync(HUB_TS_DIR)
@@ -97,9 +118,13 @@ export const listScriptEntries = () =>
 
 type RollupErrorLike = Error & { loc?: { file?: string; line?: number }; id?: string };
 
-/** The dev client's output: `dev` builds load it on every page (p551 Phase 2) */
+/** The dev client's output: `dev` builds load it on every page */
 export const HUB_DEV_CLIENT_OUT_PATH = `${ASSETS_URL_DIR}hub-dev.js`;
 
+/**
+ * Bundles the TS entries (and the dev client in `dev`) with Vite's `build()`, unwritten; null with
+ * an error when it fails
+ */
 export const buildScripts = async (
   mode: HubBuildMode,
   diag: HubDiagnostics

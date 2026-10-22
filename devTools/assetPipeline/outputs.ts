@@ -1,8 +1,10 @@
 import fs from 'fs';
 import path from 'path';
-import { createHash } from 'crypto';
 import { listExternalGLTFUris, readGLTFJson } from './gltfJson';
-import { PUBLIC_DIR, ROOT, SRC_DIR, type AssetSource, type PackSource } from './sources';
+import { isProcessAlive } from './runLock';
+import type { AssetSource, PackSource } from './sources';
+import { sha256 } from '../files';
+import { PUBLIC_DIR, ROOT, SRC_DIR } from '../paths';
 
 /**
  * The pipeline's outputs (p300 DD3): `src/public/aek-assets/<logical path>.<content hash>.<ext>`,
@@ -15,8 +17,7 @@ export const AEK_ASSETS_DIR = path.join(PUBLIC_DIR, 'aek-assets');
 const toPosix = (filePath: string) => filePath.split(path.sep).join('/');
 
 /** The first 8 hex digits of the SHA-256: unique enough within one logical path */
-export const getContentHash = (bytes: Uint8Array) =>
-  createHash('sha256').update(bytes).digest('hex').slice(0, 8);
+export const getContentHash = (bytes: Uint8Array) => sha256(bytes).slice(0, 8);
 
 /**
  * Where a source's outputs go inside `aek-assets/`, without the hash and extension: its path
@@ -51,6 +52,7 @@ export const getArrayLogicalPath = (jsonFile: string) => getJsonLogicalPath(json
 export const getAtlasLogicalPath = (jsonFile: string, slot: string) =>
   getJsonLogicalPath(jsonFile, `.atlas.${slot}`);
 
+/** An output written into `aek-assets/` (or a public source used where it is) */
 export type PipelineOutput = {
   /** Absolute path on disk */
   file: string;
@@ -59,7 +61,10 @@ export type PipelineOutput = {
   bytes: number;
 };
 
-/** Writes an output unless it exists (same name, same content). Atomic: temp file + rename. */
+/**
+ * Writes an output unless it exists (same name, same content): one of another size (a truncated
+ * copy, an interrupted checkout) is written again (p619 §1.4 A5). Atomic: temp file + rename.
+ */
 export const writeOutput = (
   logicalPath: string,
   ext: string,
@@ -67,7 +72,7 @@ export const writeOutput = (
 ): PipelineOutput => {
   const fileName = `${logicalPath}.${getContentHash(bytes)}${ext}`;
   const file = path.join(AEK_ASSETS_DIR, fileName);
-  if (!fs.existsSync(file)) {
+  if (fs.statSync(file, { throwIfNoEntry: false })?.size !== bytes.byteLength) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     const tempFile = `${file}.${process.pid}.tmp`;
     fs.writeFileSync(tempFile, bytes);
@@ -80,24 +85,44 @@ export const writeOutput = (
 export const getOutputFile = (url: string, publicDir = PUBLIC_DIR) =>
   path.join(publicDir, ...url.split('/'));
 
+/** A temp file `writeOutput` or the cache writes (`<file>.<pid>.tmp`): the pid that writes it */
+const getTempFileOwner = (fileName: string) => {
+  const match = /\.(\d+)\.tmp$/.exec(fileName);
+  return match ? Number(match[1]) : null;
+};
+
 /**
- * Deletes every file in `aek-assets/` that no URL in `usedUrls` points to, leftover temp files
- * included, and the folders that leaves empty (§7). Only for the end of a full, successful run:
- * an asset that wasn't processed in it would lose its output. Returns the deleted files, relative
- * to the repo root.
+ * Deletes every file in `aek-assets/` that no URL in `usedUrls` points to, and the folders that
+ * leaves empty (§7). Only for the end of a full, successful run: an asset that wasn't processed in
+ * it would lose its output. Returns the deleted files, relative to the repo root.
+ *
+ * Leaves alone what another process may be writing (p619 §1.4 A3): a temp file whose writer is
+ * still running (a leftover one is deleted), and with `opts.since`, a file changed since then (an
+ * output another run encoded under a key this one never saw).
  * @param publicDir Default: `src/public`. The build's `dist/` for its copy (Phase 3 step 4).
+ * @param opts.since When this run started (ms since the epoch)
  */
-export const removeStaleOutputs = (usedUrls: Iterable<string>, publicDir = PUBLIC_DIR) => {
+export const removeStaleOutputs = (
+  usedUrls: Iterable<string>,
+  publicDir = PUBLIC_DIR,
+  opts: { since?: number } = {}
+) => {
   const aekAssetsDir = path.join(publicDir, 'aek-assets');
   const used = new Set([...usedUrls].map((url) => getOutputFile(url, publicDir)));
   const removed: string[] = [];
+  const isInUse = (file: string, name: string) => {
+    if (used.has(file)) return true;
+    const writer = getTempFileOwner(name);
+    if (writer !== null) return isProcessAlive(writer);
+    return opts.since !== undefined && fs.statSync(file).mtimeMs >= opts.since;
+  };
   const sweep = (dir: string) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const file = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         sweep(file);
         if (!fs.readdirSync(file).length) fs.rmdirSync(file);
-      } else if (!used.has(file)) {
+      } else if (!isInUse(file, entry.name)) {
         fs.rmSync(file);
         removed.push(toPosix(path.relative(ROOT, file)));
       }

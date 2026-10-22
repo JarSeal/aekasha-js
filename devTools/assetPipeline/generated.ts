@@ -1,8 +1,5 @@
 import path from 'path';
-import type {
-  GeneratedAssetFields,
-  TextureCodec,
-} from '../../src/_engine/schemas/AssetsConfigSchema';
+import type { GeneratedAssetFields, TextureCodec } from '../../src/_engine/schemas';
 import {
   getPipelineAssetKey,
   getTextureArrayAssetKey,
@@ -11,7 +8,8 @@ import {
   type PipelineAssetType,
 } from './assets';
 import type { PipelineRun, PipelineRunResult } from './run';
-import { PUBLIC_DIR, SRC_DIR, type AssetSource, type PackSource } from './sources';
+import type { AssetSource, PackSource } from './sources';
+import { PUBLIC_DIR, SRC_DIR } from '../paths';
 import type { EncodedTexture } from './textures';
 
 /**

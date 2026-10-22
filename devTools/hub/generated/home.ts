@@ -8,7 +8,7 @@ import type { HubGeneratedSection } from './section';
 import { VERSION_SECTION_PATH, type HubChangePart, type HubLatestChange } from './version';
 
 /**
- * The homepage's generated slots (p555 Phase 2):
+ * The homepage's generated slots:
  * - the hero's side text: the engine's description from `package.json`
  *   (`engine_metadata.description`), so the Hub and the package say the same thing;
  * - "What's new": `CHANGELOG.md`'s latest entry (its date, branch and the parts it bumped), linked
@@ -108,6 +108,10 @@ const renderQuickLinks = (repoUrl: string, env: HubMarkdownEnv) => {
 /** The repo's web URL, from `package.json`: the Hub's GitHub links and its source links */
 export const getRepoWebUrl = (meta: ProjectMetadata) => toRepoWebUrl(meta.engine.repoUrl);
 
+/**
+ * The homepage's generated slots: the hero's side, "What's new" from `latestChange`, the quick
+ * links
+ */
 export const createHomeSection = (
   meta: ProjectMetadata,
   latestChange: HubLatestChange | null

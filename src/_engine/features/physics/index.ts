@@ -1,14 +1,41 @@
 export { deriveColliderFromGeometry } from './import/MeshColliderGeometry';
 export type { ColliderSource } from './import/MeshColliderGeometry';
-export type { RigidBodyAPI, RigidBodyParams } from './types/PhysicsBodyTypes';
-export type { ColliderParams } from './types/PhysicsColliderTypes';
-export type { PhysVector } from './types/PhysicsCommonTypes';
-export { JointAxesMask } from './types/PhysicsJointTypes';
-export type { JointParams } from './types/PhysicsJointTypes';
+export type { PoseArray, RigidBodyAPI, RigidBodyParams } from './types/PhysicsBodyTypes';
+export { RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 export type {
+  ColliderAPI,
+  ColliderParams,
+  HeightFieldData,
+  ShapeParams,
+} from './types/PhysicsColliderTypes';
+export { ShapeType } from './types/PhysicsColliderTypes';
+export type { PhysRotation, PhysVector } from './types/PhysicsCommonTypes';
+export { JointAxesMask } from './types/PhysicsJointTypes';
+export type { JointAPI, JointMotorModel, JointParams } from './types/PhysicsJointTypes';
+export type { EventQueue, PhysicsHooks, TempContactForceEvent } from './types/PhysicsEventTypes';
+export { SolverFlags } from './types/PhysicsEventTypes';
+export type {
+  PhysRay,
+  RayColliderHitAPI,
+  RayColliderIntersectionAPI,
+  ShapeCastHitAPI,
+} from './types/PhysicsQueryTypes';
+export { FeatureType, QueryFilterFlags } from './types/PhysicsQueryTypes';
+export type {
+  PhysicsBackgroundBehavior,
+  PhysicsEngine,
+  PhysicsInterpolationMode,
+  PhysicsState,
+  PhysicsWorkerTarget,
+} from './types/PhysicsConfigTypes';
+export type { WorldAPI } from './types/PhysicsWorldTypes';
+export type {
+  PhysicsSimTierData,
   PhysicsTier,
+  PhysicsTierBucket,
   PhysicsTierPolicy,
   PhysicsTierPolicyCadence,
+  PhysicsTierPolicyMemberData,
   PhysicsTierRing,
 } from './PhysicsTierTypes';
 export {

@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- a command's own output */
 import { runAssetsCommand } from './assetPipeline/command';
 import { globToRegExp } from './assetPipeline/glob';
 import type { PipelineAsset } from './assetPipeline/pipeline';
@@ -65,9 +65,11 @@ const run = async () => {
     verbosity: 'full',
   });
 
-  // Imported here: it compiles the JSON schemas on load
+  // Imported here: the schemas and the gather are only needed after the run
   const { gatherSceneData } = await import('./gatherAppData');
-  const isGathered = gatherSceneData({ pipeline: pipelineRun });
+  const { writeJsonSchemas } = await import('./gather/jsonSchemas');
+  writeJsonSchemas();
+  const { isGathered } = gatherSceneData({ pipeline: pipelineRun });
   if (hasErrors || overBudget.length || !isGathered) process.exitCode = 1;
 };
 

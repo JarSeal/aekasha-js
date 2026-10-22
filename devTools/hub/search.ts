@@ -1,13 +1,24 @@
+import zlib from 'node:zlib';
 import MiniSearch from 'minisearch';
 import type { HubAssetFile } from './assets';
 import { ASSETS_URL_DIR } from './assets';
+import type { HubDiagnostics } from './diagnostics';
 import { hashContent } from './hash';
 import { decodeEntities, parseAttributes } from './html';
-import { HUB_SEARCH_FILE, HUB_SEARCH_OPTIONS, type HubSearchDoc } from './searchProtocol';
-import type { HubPage } from './types';
+import { getPageSection } from './pages';
+import { HUB_PAGES_DIR } from './paths';
+import {
+  HUB_SEARCH_FILE,
+  HUB_SEARCH_OPTIONS,
+  toHubSearchId,
+  type HubSearchDoc,
+  type HubSearchIndexedDoc,
+  type HubSearchPayload,
+} from './searchProtocol';
+import type { HubDataPage, HubHeading, HubNavItem, HubPage } from './types';
 
 /**
- * The search index (p552 §2.4): `_assets/hub-search.js`, loaded by the search dialog on first
+ * The search index: `_assets/hub-search.js` (`HubSearchPayload`), loaded by the search dialog on first
  * use. One document per section of every page but the homepage (whose sections are its layout),
  * read from the page's rendered body, so the page's own markup, its Markdown and the generated
  * sections are all in it. Code blocks give their identifiers only. The index is serialized here
@@ -217,30 +228,64 @@ export const splitSections = (body: string) => {
   }));
 };
 
-export type HubSearchIndexFile = HubAssetFile & { docCount: number; pageDocCount: number };
+/** The search payload's file, with its document counts */
+export type HubSearchIndexFile = HubAssetFile & {
+  docCount: number;
+  pageDocCount: number;
+  /**
+   * Its `gzip -9` size: what a reader downloads (the build warns over a limit). Measured only
+   * when asked (`yarn hub:build`): about 100 ms, a dev rebuild's largest step.
+   */
+  gzipBytes: number | null;
+};
 
-/** A document a generated section adds by itself (p553's API symbols), without its id */
-export type HubSearchExtraDoc = Omit<HubSearchDoc, 'id'>;
+/** A document a generated section adds by itself (the API's names) */
+export type HubSearchExtraDoc = HubSearchDoc;
+
+/** A page as the search reads it: its rendered body and its headings (the TOC's) */
+export type HubSearchPage = { page: HubPage; body: string; headings: HubHeading[] };
 
 /**
- * The index as `JSON.parse('…')`: parsed faster than the same object as a JS literal, and in
+ * The payload as `JSON.parse('…')`: parsed faster than the same object as a JS literal, and in
  * single quotes, so the JSON's own double quotes (most of its punctuation) aren't escaped
  */
 const toModuleSource = (json: string) =>
   `export default JSON.parse('${json.replace(/[\\']/g, '\\$&')}');\n`;
 
+const toNavItem = (page: HubPage): HubNavItem => ({
+  path: page.path,
+  title: page.menu,
+  icon: page.icon,
+  children: page.children.filter((child) => child.isInMenu).map(toNavItem),
+});
+
 /**
- * Builds `_assets/hub-search.js` from the pages' rendered bodies, and the documents the
- * generated sections add (`extraDocs`)
+ * Kept from the last build, for the dev server's rebuilds (p619 D16): each body's sections (an edit
+ * changes one page), and the serialized payload by its documents' hash (a style or script edit
+ * changes none)
+ */
+let lastSections = new Map<string, ReturnType<typeof splitSections>>();
+let lastPayload: { key: string; content: string; hash: string } | null = null;
+
+/**
+ * Builds `_assets/hub-search.js` (`HubSearchPayload`) from the pages' rendered bodies, the
+ * documents the generated sections add (`extraDocs`), the menu from `homepage` and the searchable
+ * pages with their headings. A document's `path` and `anchor` go into its id, and its heading is
+ * stored only when its page's headings don't give it (`HubSearchIndexedDoc`).
  */
 export const buildSearchIndex = (
-  pages: { page: HubPage; body: string }[],
-  extraDocs: HubSearchExtraDoc[] = []
+  homepage: HubPage,
+  pages: HubSearchPage[],
+  extraDocs: HubSearchExtraDoc[] = [],
+  { isGzipMeasured = true }: { isGzipMeasured?: boolean } = {}
 ): HubSearchIndexFile => {
   const docs: HubSearchDoc[] = [];
+  const sectionsByBody = new Map<string, ReturnType<typeof splitSections>>();
   for (const { page, body } of pages) {
     if (!page.path || !page.isSearchable) continue; // The homepage
-    splitSections(body).forEach((section, i) => {
+    const sections = lastSections.get(body) ?? splitSections(body);
+    sectionsByBody.set(body, sections);
+    sections.forEach((section, i) => {
       const isPageSection = i === 0;
       // The description summarises the page: its own section's snippet starts with it
       const description = collapse([page.description]);
@@ -249,7 +294,6 @@ export const buildSearchIndex = (
           ? `${description} ${section.text}`.trim()
           : section.text;
       docs.push({
-        id: docs.length,
         path: page.path,
         anchor: section.anchor,
         title: isPageSection ? page.title : '',
@@ -260,16 +304,81 @@ export const buildSearchIndex = (
       });
     });
   }
+  lastSections = sectionsByBody;
   const pageDocCount = docs.length;
-  for (const doc of extraDocs) docs.push({ ...doc, id: docs.length });
-  const index = new MiniSearch(HUB_SEARCH_OPTIONS);
-  index.addAll(docs);
-  const content = toModuleSource(JSON.stringify(index));
+  docs.push(...extraDocs);
+
+  const searchablePages: HubDataPage[] = pages
+    .filter(({ page }) => page.isSearchable)
+    .map(({ page, headings }) => ({
+      path: page.path,
+      title: page.title,
+      tags: page.tags,
+      description: page.description,
+      section: getPageSection(page),
+      headings,
+    }));
+  const headingTexts = new Map(
+    searchablePages.map((page) => [page.path, new Map(page.headings.map((h) => [h.id, h.text]))])
+  );
+  const paths: string[] = [];
+  const pathIndexes = new Map<string, number>();
+  const indexed = docs.map(
+    ({ path, anchor = '', heading, text, ...fields }): HubSearchIndexedDoc => {
+      let pathIndex = pathIndexes.get(path);
+      if (pathIndex === undefined) {
+        pathIndex = paths.push(path) - 1;
+        pathIndexes.set(path, pathIndex);
+      }
+      const isHeadingKnown = !anchor || headingTexts.get(path)?.get(anchor) === heading;
+      return {
+        id: toHubSearchId(pathIndex, anchor),
+        ...fields,
+        // Indexed always; stored only when the page's headings can't give it back
+        ...(heading && { heading }),
+        ...(heading && !isHeadingKnown && { storedHeading: heading }),
+        ...(text && { text }),
+      };
+    }
+  );
+  const nav = [toNavItem(homepage)];
+  const key = hashContent(JSON.stringify([indexed, paths, nav, searchablePages]));
+  if (lastPayload?.key !== key) {
+    const index = new MiniSearch(HUB_SEARCH_OPTIONS);
+    index.addAll(indexed);
+    const payload: HubSearchPayload = { index: index.toJSON(), paths, nav, pages: searchablePages };
+    const content = toModuleSource(JSON.stringify(payload));
+    lastPayload = { key, content, hash: hashContent(content) };
+  }
+  const { content, hash } = lastPayload;
   return {
     outPath: `${ASSETS_URL_DIR}${HUB_SEARCH_FILE}`,
     content,
-    hash: hashContent(content),
+    hash,
     docCount: docs.length,
     pageDocCount,
+    gzipBytes: isGzipMeasured ? zlib.gzipSync(content, { level: 9 }).length : null,
   };
+};
+
+/**
+ * Over it, the build warns: the search payload's `gzip -9` size, what a reader downloads on the
+ * first search (p619 D7; 256 KiB after its cuts)
+ */
+const SEARCH_INDEX_WARN_GZIP_BYTES = 450 * 1024;
+
+/** A size in KiB, or MiB from 1 MiB */
+export const formatBytes = (bytes: number) =>
+  bytes < 1024 * 1024
+    ? `${Math.round(bytes / 1024)} KiB`
+    : `${(bytes / (1024 * 1024)).toFixed(2)} MiB`;
+
+/** Warns when the payload is over `SEARCH_INDEX_WARN_GZIP_BYTES` gzipped (when it was measured) */
+export const checkSearchIndexSize = ({ gzipBytes }: HubSearchIndexFile, diag: HubDiagnostics) => {
+  if (gzipBytes === null || gzipBytes <= SEARCH_INDEX_WARN_GZIP_BYTES) return;
+  diag.warn(
+    HUB_PAGES_DIR,
+    undefined,
+    `The search index is ${formatBytes(gzipBytes)} gzipped, over ${formatBytes(SEARCH_INDEX_WARN_GZIP_BYTES)}: index fewer fields or store less (searchProtocol.ts)`
+  );
 };

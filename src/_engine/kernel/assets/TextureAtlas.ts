@@ -228,7 +228,7 @@ const checkInPlaceAttribute = (attr: THREE.BufferAttribute | THREE.InterleavedBu
  * @param cellId the cell's id in the atlas JSON
  * @param opts {@link RemapUVsToAtlasCellOpts}
  * @returns the registered clone, or the given geometry with `inPlace`. Either has a
- * {@link GeometryAtlasCell} on its `userData.atlasCell`.
+ * `GeometryAtlasCell` on its `userData.atlasCell`.
  * @example
  * ```ts
  * import * as THREE from 'three/webgpu';

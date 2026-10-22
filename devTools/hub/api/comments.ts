@@ -2,13 +2,14 @@ import type { JSONOutput } from 'typedoc';
 import type { Comment } from './model';
 
 /**
- * JSDoc comments as the Hub's Markdown (p553 §2.2). TypeDoc's comment model is display parts:
+ * JSDoc comments as the Hub's Markdown. TypeDoc's comment model is display parts:
  * text, code (with its backticks) and inline tags. A `{@link}` is a Markdown link when the
  * caller resolves it (§2.3), else its text as code.
  */
 
 export type CommentParts = JSONOutput.CommentDisplayPart[] | undefined;
 
+/** A comment's inline tag (`{@link}`, `{@inheritDoc}`) as TypeDoc's JSON has it */
 export type InlineTagPart = JSONOutput.InlineTagDisplayPart;
 
 /** A `{@link}`'s href, or undefined to print it unlinked */
@@ -43,6 +44,10 @@ const linkLabel = (part: InlineTagPart) => {
 /** The name a `{@link}` refers to: `X` of `{@link X | text}` */
 export const linkName = (part: InlineTagPart) => part.text.split('|')[0].trim();
 
+/**
+ * A comment's display parts as Markdown, each `{@link}` through `resolveLink` (unlinked code
+ * without one)
+ */
 export const partsToMarkdown = (parts: CommentParts, resolveLink?: CommentLinkResolver) =>
   (parts ?? [])
     .map((part) => {
@@ -55,12 +60,15 @@ export const partsToMarkdown = (parts: CommentParts, resolveLink?: CommentLinkRe
     })
     .join('');
 
+/** The comment's block tags named `tag` (`@remarks`, `@example`), in order */
 export const getBlockTags = (comment: Comment | undefined, tag: string) =>
   (comment?.blockTags ?? []).filter((block) => block.tag === tag);
 
+/** Whether the comment has a block tag named `tag` */
 export const hasBlockTag = (comment: Comment | undefined, tag: string) =>
   getBlockTags(comment, tag).length > 0;
 
+/** Whether the comment has a modifier tag (`@internal`, `@deprecated` without text) */
 export const hasModifierTag = (comment: Comment | undefined, tag: string) =>
   !!comment?.modifierTags?.includes(tag as never);
 

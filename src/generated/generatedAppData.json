@@ -1149,7 +1149,7 @@
     "assetCompare": {
       "isDebugScene": true,
       "name": "Asset compare (p300 codec variants)",
-      "description": "p300 Phase 1d: the codec variants of phase1Variants.ts against their uncompressed baselines. A tiled rock ground at grazing angles, a MetalRust sphere and the metal toolbox prop, built twice (slots A and B); V switches between them. Debug env: the scene's own \"Asset compare\" tab picks the variants, shows each texture's file size and VRAM, and runs the collider check.",
+      "description": "p300 Phase 1d: the codec variants of devTools/assetPipeline/fixtures/assetCompareVariants.ts against their uncompressed baselines. A tiled rock ground at grazing angles, a MetalRust sphere and the metal toolbox prop, built twice (slots A and B); V switches between them. Debug env: the scene's own \"Asset compare\" tab picks the variants, shows each texture's file size and VRAM, and runs the collider check.",
       "skyboxes": [
         {
           "base": {
@@ -5236,8 +5236,7 @@
             "roughness": 0.45,
             "metalness": 0.1
           },
-          "type": "STANDARD",
-          "nodes": {}
+          "type": "STANDARD"
         }
       ],
       "meshes": [
@@ -13114,8 +13113,7 @@
             "color": "#ff00ff",
             "wireframe": false
           },
-          "type": "PHONG",
-          "nodes": {}
+          "type": "PHONG"
         },
         {
           "id": "testTslMat",
@@ -13556,7 +13554,7 @@
     "textureArrays": {
       "isDebugScene": true,
       "name": "Texture arrays (p299)",
-      "description": "p299's verification scene: runtime texture arrays (buildTextureArray) next to the textures they were built from. A 4-layer KTX2 array drawn by one quad and one material, the uncompressed PNG path, a one-member array of a texture asset, layer swaps after the first upload, `ktx create --layers` files, and texture array assets (*.textureArray.json) loaded by the scene loader. Files from devTools/assetPipeline/p299ArraySpike.ts.",
+      "description": "p299's verification scene: runtime texture arrays (buildTextureArray) next to the textures they were built from. A 4-layer KTX2 array drawn by one quad and one material, the uncompressed PNG path, a one-member array of a texture asset, layer swaps after the first upload, `ktx create --layers` files, and texture array assets (*.textureArray.json) loaded by the scene loader. Files from devTools/assetPipeline/fixtures/textureArraysFiles.ts.",
       "textures": [
         {
           "id": "p299TestArray",

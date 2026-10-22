@@ -14,8 +14,8 @@ const banner: ProfileReport = {
   lazy: { total: size(770944), files: { 'assets/GLTFLoader.js': size(13851), 'a.wasm': size(1) } },
   groups: {
     three: {
-      initial: { modules: 4, rendered: 1, gzip: 623025 },
-      lazy: { modules: 0, rendered: 0, gzip: 0 },
+      initial: { modules: 4, minified: 1, gzip: 623025 },
+      lazy: { modules: 0, minified: 0, gzip: 0 },
     },
   },
   features: [],

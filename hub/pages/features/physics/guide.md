@@ -45,7 +45,7 @@ properties (Blender's custom properties, the glTF `extras`):
   ([the issue](hub:issues/import-physics-second-body-without-index)).
 - A collider's sizes come from its node's geometry and scale, unless the properties give them
   (`hx`, `radius`, `halfHeight`, …). A capsule, cone or cylinder stands on Y, and `spineAxis:
-  'x'` or `'z'` lays it along that axis. Each shape is centred on its node's origin.
+'x'` or `'z'` lays it along that axis. Each shape is centred on its node's origin.
 - `density`, `friction` and `restitution` default to 0.2.
 - `spawnImportedAsset`'s `physicsParams` override the properties per node from code, or give
   physics to a node without any.
@@ -173,14 +173,7 @@ The app's `physicsTiers` scene is its demo: open it with `?isDebug=true&startSce
 
 - The [physics example](hub:examples/physics), with the code of the scene above.
 - [Characters](hub:features/characters): the character controller, built on physics.
-- The API reference: [PhysicsState](hub:documentation/engine/features/physics/PhysicsState),
-  [PhysicsBodies](hub:documentation/engine/features/physics/PhysicsBodies),
-  [PhysicsColliders](hub:documentation/engine/features/physics/PhysicsColliders),
-  [PhysicsJoints](hub:documentation/engine/features/physics/PhysicsJoints),
-  [PhysicsStepping](hub:documentation/engine/features/physics/PhysicsStepping),
-  [PhysicsEntity](hub:documentation/engine/features/physics/PhysicsEntity),
-  [PhysicsTiers](hub:documentation/engine/features/physics/PhysicsTiers) and
-  [PhysicsTierPolicy](hub:documentation/engine/features/physics/PhysicsTierPolicy).
+- The API reference: [`aekasha/physics`](hub:documentation/aekasha/physics).
 
 ::: claude-md
 :::

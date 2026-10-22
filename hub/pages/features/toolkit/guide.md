@@ -94,4 +94,4 @@ scene's `importedAssets`.
 
 ## Read more
 
-- The API reference: [toolkit](hub:documentation/toolkit).
+- The API reference: [`aekasha/toolkit`](hub:documentation/aekasha/toolkit), an entry per category.

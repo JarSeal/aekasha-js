@@ -20,6 +20,13 @@ Applies p600 §5 (the per-file review standard) and p605's JSDoc style to every 
 ## Inputs
 
 - p609, p600 §2.
+- p619 Phase 5 (R2): four toolkit types that public names use but no entry exports, each a
+  `yarn hub:build` warning at its reference: `MovingPlatformControls` (named by
+  `MovingPlatformReturn`, `aekasha/toolkit/ecs`), `AsteroidNoiseOptions` and
+  `AsteroidCraterOptions` (named by `AsteroidOptions`) and `TerrainNoiseOctave` (named by
+  `TerrainOptions`, both `aekasha/toolkit/geometry`). Export each from its entry with a summary,
+  or change the signature (the Hub's coding standards, Public API). The Hub's build should have
+  none left: p621 checks for no warnings.
 
 ## Done when
 

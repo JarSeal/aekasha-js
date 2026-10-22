@@ -160,7 +160,10 @@ export type DevFileWrite = {
 export type DevFileRead = {
   /** The path as it was asked for */
   path: string;
-  /** The file's hash: a later write's `expectedHash` */
+  /**
+   * The file's hash: a later write's `expectedHash`. All zeros when the server sent none: that
+   * write then fails with `CONFLICT`, whose details carry the file's hash.
+   */
   sha256: string;
   /** The file's bytes */
   bytes: Uint8Array;

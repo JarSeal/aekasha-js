@@ -13,7 +13,7 @@ hub/_assets/ (SCSS, TS, icons, fonts) ──┘
                                         ▼
             .cache/hub/dev/ or dist-hub/
               examples/physics/index.html
-              _assets/hub.css?v=…, hub.js?v=…, hub-data.js?v=…, hub-search.js?v=…
+              _assets/hub.css?v=…, hub.js?v=…, hub-search.js?v=…
 ```
 
 - **Sources** are in `hub/` at the repo root, outside Vite's root. The app's dev server never serves them raw, and nothing can import them into the app's bundle.
@@ -125,7 +125,7 @@ Back to the [Hub](hub:).
 
 ### API links
 
-Link to an engine or toolkit export's entry in the Documentation section with `api:` and its name:
+Link to a public name's entry in the Documentation section with `api:` and its name (the pages hold what the entries export: `documentation/aekasha/physics/`, and `aekasha`'s names by source folder):
 
 ```md
 Start a scene with [`loadScene`](api:loadScene).
@@ -133,11 +133,12 @@ Systems run in stages: see [`addSystem`](api:ECSWorld.addSystem).
 Bodies are made through [the facade](api:PhysicsBodies.createRigidBody).
 ```
 
-- **A bare name is an export:** `api:loadScene`. A class's or an interface's member needs its owner: `api:ECSWorld.addSystem`.
-- **A name two modules export needs its module:** `api:PhysicsBodies.createRigidBody`, or more of the path when the file name isn't enough (`api:physics/PhysicsBodies.createRigidBody`, `api:toolkit/…`). Re-exports don't count: they point at the original.
+- **A bare name is a public name:** `api:loadScene`. A class's or an interface's member needs its owner: `api:ECSWorld.addSystem`.
+- **A name two declarations share needs its module:** `api:PhysicsBodies.createRigidBody`, or more of the path when the file name isn't enough (`api:physics/PhysicsBodies.createRigidBody`, `api:toolkit/…`). Re-exports don't count: they point at the original.
+- **An internal export has no page.** `api:` to a name no entry exports fails the build, saying it's internal: link the public API, or put the name on its entry.
 - **Every `api:` link is checked as it's rendered.** An unknown name fails the build and suggests close ones (`Unknown api:createPhysicEntity (did you mean api:createPhysicsEntity?)`), and an ambiguous one lists each candidate as a link you can copy.
 - `api:` works in a page's markup too: `<a href="api:loadScene">`.
-- In the engine's and the toolkit's JSDoc, `{@link loadScene}` links the same way. TypeDoc resolves it from the file's imports. One that resolves to nothing documented is shown as text, with a warning at its file and line. A link to three's own classes is shown as text, without a warning.
+- In the engine's and the toolkit's JSDoc, `{@link loadScene}` links the same way. TypeDoc resolves it from the file's imports. In a public name's comment, one to an internal export or to nothing is shown as code, with a warning at its file and line: write an internal name in backticks. A link to three's own classes is shown as code, without a warning.
 
 ### Repo links
 
@@ -188,7 +189,7 @@ The build checks the coverage both ways (when it runs in the repo, where CLAUDE.
 - Use it for what only people working on the repo need: its test and verify commands, the test bridge.
 - The text after the name is the box's title (inline Markdown, default "Working on the repo").
 - `yarn hub:build` doesn't check the links inside it. The dev server does, and shows their errors on the page.
-- Another directive gets the same behaviour with `devOnly: true` in its `registerHubDirective` definition.
+- Another directive gets the same behaviour with `devOnly: true` in its `HubDirective`.
 
 ## Callouts
 
@@ -213,7 +214,7 @@ Nested.
 ::::
 ```
 
-The other directives are `code-group` ([Code groups](#code-groups)), `scene` ([Scene panels](#scene-panels)), `cards` ([Cards](#cards)), `claude-md` ([CLAUDE.md sections](#claudemd-sections)) and `dev-only` ([Local-only content](#local-only-content)). A new one is added through `registerHubDirective(name, { open, close })` in `devTools/hub/markdown.ts`, without touching the parser.
+The other directives are `code-group` ([Code groups](#code-groups)), `scene` ([Scene panels](#scene-panels)), `cards` ([Cards](#cards)), `claude-md` ([CLAUDE.md sections](#claudemd-sections)) and `dev-only` ([Local-only content](#local-only-content)). A new one is a `HubDirective` (`{ open, close }`) exported by its module and added to `HUB_DIRECTIVES` in `devTools/hub/build.ts`, without touching the parser.
 
 ## Code blocks
 
@@ -315,12 +316,12 @@ Renaming or removing a region that a page includes fails `yarn hub:build`, and s
 
 ## Search
 
-The search box (⌘K, Ctrl+K or `/`) searches every page except the homepage. `yarn hub:build` builds the index (`devTools/hub/search.ts`) from each page's rendered body: its markup, its Markdown and the generated sections. The browser loads the search code and the index only when someone first uses the search.
+The search box (⌘K, Ctrl+K or `/`) searches every page except the homepage. `yarn hub:build` builds the index (`devTools/hub/search.ts`) from each page's rendered body: its markup, its Markdown and the generated sections. The browser loads the search code and the index (with the menu and page list its results need) only when someone first uses the search: a page itself loads neither.
 
 - **A heading with an id is a search result.** Each section from a heading to the next is one result, with the headings above it as the breadcrumb. The text before a page's first heading is the page's own result, along with its `<title>`, `aek:tags` and `aek:description`. Headings make a long page easier to search as well as to read.
 - **The title, headings and tags weigh the most.** Put the words a reader would search for in `aek:tags`, especially those the page doesn't spell out (`rapier` on the physics page).
 - **Code blocks add their identifiers, not their keywords.** Identifiers are split at camelCase too, so `mesh` finds `createMeshEntity`.
-- **The API is searched by name.** Every engine and toolkit module, export and class or interface member is a result of its own, weighted like a title and split at camelCase, with its kind and its summary's first sentence (clipped to 120 characters). Only the name is searched: the summary is shown, not indexed, which keeps the index under 1 MB.
+- **The API is searched by name.** Every entry, public name and class or interface member is a result of its own, weighted like a title and split at camelCase, with its kind and its summary's first sentence (clipped to 120 characters). Only the name is searched: the summary is shown, not indexed, which keeps the index small.
 - **Content with the class `hubSearchSkip` is left out**, headings included: the cards, the API lists (indexed their own way) and the Version page's changelog, which the browser's own find searches on that page.
 - **`yarn hub:build` prints the index's size.** Over 1 MB it warns. The index is loaded whole on first use, so keep it lean.
 
@@ -477,7 +478,7 @@ What happens, and how to reproduce it …
 
 ### Version
 
-`/hub/version/` shows the engine, toolkit, app and project versions with their codenames, and the build's commit (marked when there were local changes) and time. Below that comes the whole `CHANGELOG.md`, with each entry's heading as an anchor (`/hub/version/#2026-10-07-impostor-billboard-lod`). The newest entry is also the homepage's "What's new" data (`latestChange` in `hub-data.js`). Nothing to write here: keep `package.json` and `CHANGELOG.md` current, as the versioning rules ask.
+`/hub/version/` shows the engine, toolkit, app and project versions with their codenames, and the build's commit (marked when there were local changes) and time. Below that comes the whole `CHANGELOG.md`, with each entry's heading as an anchor (`/hub/version/#2026-10-07-impostor-billboard-lod`). The newest entry is also the homepage's "What's new". Nothing to write here: keep `package.json` and `CHANGELOG.md` current, as the versioning rules ask.
 
 ## Refreshing in dev
 
@@ -520,6 +521,7 @@ The same checks run in dev and in `yarn hub:build`. In dev, an error shows the e
 | `#L…: … has lines 1-N`                                 | The file got shorter. Fix the range, or use a region. |
 | `Unknown api:x (did you mean …)`                       | A misspelt or renamed export. Use a suggested name.   |
 | `Ambiguous api:x: api:A.x, api:B.x`                    | Two modules export it. Use one of the listed names.   |
+| `api:x is internal (…)`                                | No entry exports it. Link a public name instead.      |
 | `Unknown scene "x": …generatedAppData.json has …`      | A misspelt or renamed scene id. Use a listed one.     |
 | `The app's scenes can't be read from …`                | Run `yarn gatherAppData`.                             |
 | `::: cards: no page at hub/pages/…`                    | Fix the page path after `cards`.                      |
@@ -535,8 +537,9 @@ The same checks run in dev and in `yarn hub:build`. In dev, an error shows the e
 | Warning: `Unknown "…" in the code block's meta`        | A misspelt fence option.                              |
 | Warning: `The scene "x" has no Hub image yet (…)`      | Save it from the scene's Hub tab.                     |
 | Warning: `::: cards takes no content`                  | Move the text out of the directive.                   |
-| Warning: `The search index is …, over 1 MB`            | Index less: fewer or shorter pages, fewer fields.     |
+| Warning: `The search index is … gzipped, over 450 KiB` | Index less: fewer or shorter pages, fewer fields.     |
 | Warning: `{@link X} links nowhere (…)`                 | In the JSDoc: fix the name, export it, or use code.   |
+| Warning: `X … is on no entry, but Y … names it`        | Put `X` on its entry, or change `Y`'s signature.      |
 
 ## Publishing
 

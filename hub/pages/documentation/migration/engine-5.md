@@ -175,7 +175,7 @@ if (await loadTslMaterialFileAsync('triplanarGrid')) {
 
 A feature's scene and mesh JSON fields are its own now, so `aekasha/schemas` builds the scene and
 mesh schemas from the features' parts. This matters only to a tool of yours that validates scene
-or mesh JSON itself; the gatherer composes them in `devTools/engineSchemas.ts`.
+or mesh JSON itself; the gatherer composes them in `devTools/gather/engineSchemas.ts`.
 
 | Was                       | Now                                                                                                                                                  |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -244,8 +244,8 @@ its [entries](hub:documentation#importing-the-engine), and the app imports the t
 `aekasha/toolkit/*`. A codemod rewrites the imports:
 
 ```bash
-npx tsx devTools/refactor/migrateToEntries.ts --check src/app src/*.ts  # lists what would change
-npx tsx devTools/refactor/migrateToEntries.ts src/app src/*.ts
+npx tsx devTools/layout/migrateToEntries.ts --check src/app src/*.ts  # lists what would change
+npx tsx devTools/layout/migrateToEntries.ts src/app src/*.ts
 ```
 
 It takes folders and files (add your own toolkit modules' folders), and needs the repo's Node

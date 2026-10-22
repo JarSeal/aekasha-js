@@ -1,3 +1,6 @@
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { describe, expect, it } from 'vitest';
 import { BUNDLE_FORMAT_VERSION, type BundleBaseline } from './bundleModel';
 import { diffBundle, getBundleBaselineFile, readBundleBaseline } from './bundleDiff';
@@ -10,9 +13,9 @@ const bundle = (
   chunks: Object.fromEntries(
     Object.entries(chunks).map(([name, gzip]) => [name, { bytes: gzip * 3, gzip }])
   ),
-  main: { chunk: 'assets/index.js', modules: 1, rendered: 0, gzip: 0 },
+  main: { chunk: 'assets/index.js', modules: 1, minified: 0, gzip: 0 },
   mainGroups: Object.fromEntries(
-    Object.entries(mainGroups).map(([name, gzip]) => [name, { modules: 1, rendered: 0, gzip }])
+    Object.entries(mainGroups).map(([name, gzip]) => [name, { modules: 1, minified: 0, gzip }])
   ),
 });
 
@@ -46,12 +49,23 @@ describe('diffBundle', () => {
 });
 
 describe('readBundleBaseline', () => {
-  it('reads the committed baseline', () => {
-    expect(readBundleBaseline()?.main.chunk).toBe('assets/index.js');
+  // A temp file, not the committed one: a format bump is recorded in a later commit than its code
+  const write = (data: unknown) => {
+    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'aek-bundle-')), 'bundle.json');
+    fs.writeFileSync(file, JSON.stringify(data));
+    return file;
+  };
+
+  it('reads a baseline of the current format', () => {
+    expect(readBundleBaseline(write(bundle({ 'assets/index.js': 1 })))?.main.chunk).toBe(
+      'assets/index.js'
+    );
   });
 
-  it('reads a missing file as none', () => {
+  it('reads a missing file, or one of another format, as none', () => {
     expect(readBundleBaseline('/nonexistent/bundle.json')).toBeNull();
+    const old = { ...bundle({}), formatVersion: BUNDLE_FORMAT_VERSION - 1 };
+    expect(readBundleBaseline(write(old))).toBeNull();
   });
 });
 

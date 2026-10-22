@@ -1,10 +1,10 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- the build plugin's own log */
 import fs from 'fs';
 import path from 'path';
 import type { Plugin } from 'vite';
 import { removeStaleOutputs } from './assetPipeline/outputs';
-import { ROOT } from './assetPipeline/sources';
-import { OUTPUT_FILE_DATA } from './gatherAppData';
+import { ROOT } from './paths';
+import { GENERATED_APP_DATA_FILE } from './gather/output';
 
 /**
  * The production build's asset outputs (p300 Phase 3 step 4): Vite copies all of
@@ -42,17 +42,28 @@ const getFileSizes = (dir: string, sizes = new Map<string, number>()) => {
 const formatBytes = (bytes: number) =>
   bytes < 1e6 ? `${(bytes / 1e3).toFixed(1)} KB` : `${(bytes / 1e6).toFixed(2)} MB`;
 
+/** The build's plugin that copies into `dist/aek-assets/` only the outputs the production data
+ * loads (its `__url`s), and logs their size */
 export const assetOutputsBuildPlugin = (): Plugin => {
   let outDir = '';
+  /** `closeBundle` runs after a failed build too: its own throw would hide the build's (B4) */
+  let hasFailed = false;
   return {
     name: 'vite-plugin-aek-asset-outputs',
     apply: 'build',
     configResolved(config) {
       outDir = path.resolve(config.root, config.build.outDir);
     },
+    buildEnd(error) {
+      if (error) hasFailed = true;
+    },
+    renderError() {
+      hasFailed = true;
+    },
     closeBundle() {
+      if (hasFailed) return;
       const urls = new Set<string>();
-      collectUrls(JSON.parse(fs.readFileSync(OUTPUT_FILE_DATA, 'utf-8')), urls);
+      collectUrls(JSON.parse(fs.readFileSync(GENERATED_APP_DATA_FILE, 'utf-8')), urls);
       const sizes = getFileSizes(path.join(outDir, 'aek-assets'));
       const removed = removeStaleOutputs(urls, outDir);
       let removedBytes = 0;

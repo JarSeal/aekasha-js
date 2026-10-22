@@ -2,7 +2,7 @@ Status: draft | not-implemented
 Category: Materials, Assets, Refactoring
 Blocks: p303_texture-sets-and-terrain-texture-library.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
-Related: \_DONE_p613_review-rendering-scene-assets.md (fixed bugs A and B, moved the scene's asset loading: "From p613" below)
+Related: \_DONE_p613_review-rendering-scene-assets.md (fixed bugs A and B, moved the scene's asset loading: "From p613" below), \_DONE_p619_review-schemas-pipeline-devtools-hub.md (the schemas' review: "From p619" below)
 
 # Material & Texture System Refactor (terrain prerequisites)
 
@@ -141,6 +141,32 @@ rewrites to it. The Context's line numbers are from before it: re-ground them.
   in engine 6.0.0): D1's texture options need only follow `loadTextureAsync`'s path.
 - `createMaterial` is still over 150 lines: its file header says it waits for D4's resolver
   registry, which rewrites the TSL path.
+
+## From p619 (2026-10-22)
+
+p619 (the review of the asset JSON schemas and the data pipeline, D5) tightened the schemas this
+plan extends and left D1's named constants to it:
+
+- **`TexOptsSchema`'s constants stay numbers** (`wrapS`, `minFilter`, …), for D1's named enums to
+  map. `schemas/RuntimeTypes.test.ts` still swaps `texOpts` for the runtime's type before comparing
+  the two, with a comment naming D1: D1 replaces that swap with the mapping table's types.
+- **`TexOptsSchema` has no `image`** (a JSON can't hold one); the runtime's `TexOpts` is its own
+  type and adds it.
+- **Every field is documented twice:** a JSDoc comment on the shape key (the Hub's API field
+  tables) and a `.describe()` (the editor's tooltips in an asset JSON), each with three's default
+  read from the code. D1's new fields need both. The fields the texture, texture array and atlas
+  schemas share are `TEXTURE_FIELDS` (`TextureSchema.ts`), documented once.
+- **Tuples are `z.tuple`,** and `writeJsonSchemas` (`devTools/gather/jsonSchemas.ts`) adds
+  `minItems`, `maxItems` and `additionalItems: false` to every tuple in the JSON Schemas: D1's
+  `repeat`, `offset` and `center` get them by being tuples.
+- **Materials are a discriminated union on `type`** (TSL with `tslFile`, plain without), and
+  `MaterialAsset` is one member per material type (`PerType`): D2's `setup` entry and D4's
+  resolvers keep both, or the gather reports errors above the field again.
+- **The gather fails on bad data** (an invalid file, an id given twice, an id a scene lists that
+  no asset JSON has): D1's "every existing `*.texture.json` still validates" is checked by
+  `devTools/gather/gatheredJson.test.ts` in `yarn test`, which gathers every repo JSON.
+- A spot light's `map` is a texture id in the schema now, which D6's closure and the light cookie
+  gap above can rely on.
 
 ---
 

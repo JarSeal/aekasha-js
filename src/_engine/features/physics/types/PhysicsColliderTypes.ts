@@ -222,7 +222,7 @@ export type ColliderAPI = {
   borderRadiusSync(): number;
 
   // --- Collision Filtering ---
-  /** The groups and mask contacts and queries are filtered by ({@link InteractionGroupsAPI}). */
+  /** The groups and mask contacts and queries are filtered by (`InteractionGroupsAPI`). */
   collisionGroups(): Promise<InteractionGroupsAPI>;
   /** `collisionGroups()` without the wait: MAIN_THREAD only. */
   collisionGroupsSync(): InteractionGroupsAPI;

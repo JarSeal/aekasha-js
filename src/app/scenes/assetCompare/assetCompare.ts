@@ -28,7 +28,7 @@ import {
 import type { ImportedAssetManifest } from 'aekasha';
 
 /**
- * The p300 Phase 1d comparison scene: the codec variants that `phase1Variants.ts` built, side by
+ * The p300 Phase 1d comparison scene: the codec variants that `assetCompareVariants.ts` built, side by
  * side with their uncompressed baselines. Two slots (A and B) each build the whole set at the same
  * spots, one variant per slot, and the V key (or the scene's debug tab) shows one or the other:
  * - a tiled ground (rocks01, p303's LITE packing: albedo × AO + roughness, normal XY + height) at
@@ -41,7 +41,7 @@ import type { ImportedAssetManifest } from 'aekasha';
 
 export const ASSET_COMPARE_SCENE_ID = 'assetCompare';
 
-/** Where phase1Variants.ts writes its outputs (and report.json). */
+/** Where assetCompareVariants.ts writes its outputs (and report.json). */
 export const PHASE1_URL = '/debugger/assets/testOptimized/phase1';
 const BASE_COLOR_URL = '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg';
 
@@ -318,10 +318,10 @@ const buildSlot = async (slot: CompareSlot) => {
     )
   );
 
-  // Prop: the gitignored GLBs are rebuilt by phase1Variants.ts, so one may be missing
+  // Prop: the gitignored GLBs are rebuilt by assetCompareVariants.ts, so one may be missing
   const propFile = getPropFile(variant);
   if (!(await isServed(`${PHASE1_URL}/${propFile}`))) {
-    const message = `${propFile} is not built: run \`npx tsx devTools/assetPipeline/phase1Variants.ts --only metalToolbox\``;
+    const message = `${propFile} is not built: run \`npx tsx devTools/assetPipeline/fixtures/assetCompareVariants.ts --only metalToolbox\``;
     lwarn(`[assetCompare] ${message}`);
     slot.messages.push(message);
   } else {

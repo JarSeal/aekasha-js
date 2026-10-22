@@ -19,7 +19,7 @@ import type { HubBuildMode } from './types';
  * - `initial`, `lazy`: what loads before the first frame, and the rest of the build's files;
  * - `lazyFiles`: how many lazy files (a count, no unit);
  * - `chunk:<key>`: a file (`assets/index.js`, an embed's `banner.embed.js`);
- * - `group:<group>`: a group's code in the initial chunks, before minification (`three`,
+ * - `group:<group>`: a group's code in the initial chunks, minified (`three`,
  *   `_engine/features/physics`);
  * - `budget:<key>`: the profile's budget (`initial`, a chunk's key, a group).
  *
@@ -32,6 +32,7 @@ export const SBP_PLACEHOLDER_REGEX = /\{\{sbp:([^}]*)\}\}/g;
 /** Gzip bytes as the page shows them: `300.6 KiB` (a no-break space) */
 export const formatHubKiB = (bytes: number) => `${(bytes / 1024).toFixed(1)} KiB`;
 
+/** A `{{sbp:…}}` value: its text, an error, or a report that lacks it */
 export type SbpValue = { value: string } | { error: string } | { missing: string };
 
 type Measure = (report: ProfileReport, arg: string) => SbpValue;

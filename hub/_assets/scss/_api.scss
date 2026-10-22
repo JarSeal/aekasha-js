@@ -1,4 +1,4 @@
-// The Documentation section (p553): module, folder and landing pages from the API model
+// The Documentation section: the entry, folder and landing pages from the API model
 // (`devTools/hub/api/render.ts`)
 @use 'tokens' as *;
 
@@ -154,6 +154,7 @@
 .hubApiKind_let,
 .hubApiKind_namespace,
 .hubApiKind_module,
+.hubApiKind_entry,
 .hubApiKind_property,
 .hubApiKind_reexport {
   --hub-api-kind: var(--hub-text-muted);
@@ -280,7 +281,7 @@
   }
 
   // The public build's links go to GitHub: its mark from the icon file, not inlined per link
-  // (a module page has hundreds)
+  // (an entry page has hundreds)
   .hubApiSourceGitHub::before {
     content: '';
     display: inline-block;
@@ -351,7 +352,7 @@
   font-size: 0.75rem;
 }
 
-// A type in a signature or a table that links its symbol (p553 §2.3): the token keeps its colour,
+// A type in a signature or a table that links its symbol: the token keeps its colour,
 // with a faint dotted underline that turns solid on hover
 .hubApiTypeLink {
   color: inherit;

@@ -1,19 +1,17 @@
 import fs from 'fs';
+import { listSourceFiles } from '../files';
 import path from 'path';
-import { TextureAssetSchema, type TextureAsset } from '../../src/_engine/schemas/TextureSchema';
-import {
-  ImportedAssetSchema,
-  type ImportedAsset,
-} from '../../src/_engine/schemas/ImportedAssetSchema';
-import {
-  TextureArrayAssetSchema,
-  type TextureArrayAsset,
-} from '../../src/_engine/schemas/TextureArraySchema';
 import {
   getAtlasSlotTextureId,
+  ImportedAssetSchema,
+  TextureArrayAssetSchema,
+  TextureAssetSchema,
   TextureAtlasAssetSchema,
+  type ImportedAsset,
+  type TextureArrayAsset,
+  type TextureAsset,
   type TextureAtlasAsset,
-} from '../../src/_engine/schemas/TextureAtlasSchema';
+} from '../../src/_engine/schemas';
 import {
   resolveLodChainOptions,
   type ResolvedLodChainOptions,
@@ -24,12 +22,11 @@ import { createAtlasSlotSource, resolveTextureAtlas } from './textureAtlases';
 import {
   createPackSource,
   resolveAssetSource,
-  ROOT,
-  SRC_DIR,
   toRepoPath,
   type AssetSource,
   type PackSource,
 } from './sources';
+import { ROOT, SRC_DIR } from '../paths';
 
 /**
  * The pipeline's asset list (p300 Phase 2 step 7): every source file a `*.texture.json` or
@@ -127,6 +124,7 @@ type AssetJsonBase = {
   jsonFile: string;
 };
 
+/** An asset JSON the pipeline reads, validated, with its id (the JSON's, else its file name) */
 export type AssetJson =
   | (AssetJsonBase & { type: 'texture'; data: TextureAsset })
   | (AssetJsonBase & { type: 'importedAsset'; data: ImportedAsset })
@@ -141,15 +139,26 @@ const ASSET_SCHEMAS = {
 } as const;
 
 /**
- * Reads every `*.texture.json`, `*.importedAsset.json`, `*.textureArray.json` and
- * `*.textureAtlas.json` under `src/`. An invalid one is skipped: the gatherer reports it.
+ * An asset JSON, or one of its uses, left out of the run: the run can't tell which outputs are
+ * still its, so it must not prune (p619 §1.4 A2). The gatherer reports the same problems.
  */
-export const readAssetJsons = (srcDir = SRC_DIR): AssetJson[] => {
-  const files = fs
-    .readdirSync(srcDir, { recursive: true })
-    .filter((file): file is string => typeof file === 'string')
-    .sort();
+export type DroppedAsset = {
+  /** '/'-separated, relative to the repo root */
+  jsonFile: string;
+  reason: string;
+};
+
+/**
+ * Reads every `*.texture.json`, `*.importedAsset.json`, `*.textureArray.json` and
+ * `*.textureAtlas.json` under `src/` (not in the outputs' folders). An invalid one (not JSON, or failing its schema) is left
+ * out and listed in `dropped`: the gatherer reports it.
+ */
+export const readAssetJsons = (
+  srcDir = SRC_DIR
+): { assetJsons: AssetJson[]; dropped: DroppedAsset[] } => {
+  const files = listSourceFiles(srcDir).sort();
   const assets: AssetJson[] = [];
+  const dropped: DroppedAsset[] = [];
   for (const type of ['texture', 'importedAsset', 'textureArray', 'textureAtlas'] as const) {
     const { suffix, schema } = ASSET_SCHEMAS[type];
     for (const file of files.filter((f) => f.endsWith(suffix))) {
@@ -157,29 +166,35 @@ export const readAssetJsons = (srcDir = SRC_DIR): AssetJson[] => {
       let json: unknown;
       try {
         json = JSON.parse(fs.readFileSync(jsonFile, 'utf-8'));
-      } catch {
+      } catch (error) {
+        dropped.push({ jsonFile: toRepoPath(jsonFile), reason: (error as Error).message });
         continue;
       }
       const validation = schema.safeParse(json);
-      if (!validation.success) continue;
+      if (!validation.success) {
+        const [issue] = validation.error.issues;
+        const at = issue.path.length ? ` at ${issue.path.join('.')}` : '';
+        dropped.push({ jsonFile: toRepoPath(jsonFile), reason: `${issue.message}${at}` });
+        continue;
+      }
       const data = validation.data;
       const id = data.id || path.basename(file, suffix);
       assets.push({ type, id, jsonFile, data } as AssetJson);
     }
   }
-  return assets;
+  return { assetJsons: assets, dropped };
 };
 
-/** An array's encode, or null when its layers don't resolve (the gatherer reports it) */
+/** An array's encode, or why its layers don't resolve (the gatherer reports it) */
 const collectTextureArray = (
   { id, jsonFile, data }: Extract<AssetJson, { type: 'textureArray' }>,
   findTexture: TextureLookup
-): PipelineAsset | null => {
+): PipelineAsset | { error: string } => {
   const isSrgb = data.texOpts?.colorSpace === 'srgb';
   const { layers, errors } = resolveTextureArrayLayers(jsonFile, data.layers, findTexture, {
     isSrgb,
   });
-  if (errors.length) return null;
+  if (errors.length) return { error: errors.join('; ') };
   return {
     type: 'textureArray',
     id,
@@ -191,15 +206,15 @@ const collectTextureArray = (
 };
 
 /**
- * An atlas's slots, one encode each by its key, or none when its cells don't resolve or don't fit
- * (the gatherer reports it)
+ * An atlas's slots, one encode each by its key, or why its cells don't resolve or don't fit (the
+ * gatherer reports it)
  */
 const collectTextureAtlas = (
   { id, jsonFile, data }: Extract<AssetJson, { type: 'textureAtlas' }>,
   findTexture: TextureLookup
-): [string, PipelineAsset][] => {
-  const { layout } = resolveTextureAtlas(jsonFile, data, findTexture);
-  if (!layout) return [];
+): [string, PipelineAsset][] | { error: string } => {
+  const { layout, errors } = resolveTextureAtlas(jsonFile, data, findTexture);
+  if (!layout) return { error: errors.join('; ') || 'its layout failed' };
   return Object.entries(data.slots).map(([slot, { texOpts, fill, optimize }]) => [
     getTextureAtlasSlotAssetKey(jsonFile, slot),
     {
@@ -219,10 +234,14 @@ const collectTextureAtlas = (
 /**
  * Every encode the asset JSONs need, one per key ({@link getPipelineAssetKey},
  * {@link getTextureArrayAssetKey}, {@link getTextureAtlasSlotAssetKey}). A use whose source
- * doesn't resolve is left out (the gatherer reports it).
+ * doesn't resolve, an array whose layers don't and an atlas whose layout fails are left out and
+ * listed in `dropped` (the gatherer reports them).
  */
 export const collectPipelineAssets = (assetJsons: AssetJson[]) => {
   const assets = new Map<string, PipelineAsset>();
+  const dropped: DroppedAsset[] = [];
+  const drop = (jsonFile: string, reason: string) =>
+    dropped.push({ jsonFile: toRepoPath(jsonFile), reason });
   const textures = new Map(
     assetJsons.flatMap((asset) => (asset.type === 'texture' ? [[asset.id, asset] as const] : []))
   );
@@ -230,13 +249,14 @@ export const collectPipelineAssets = (assetJsons: AssetJson[]) => {
   for (const assetJson of assetJsons) {
     if (assetJson.type === 'textureArray') {
       const asset = collectTextureArray(assetJson, findTexture);
-      if (asset) assets.set(getTextureArrayAssetKey(assetJson.jsonFile), asset);
+      if ('error' in asset) drop(assetJson.jsonFile, asset.error);
+      else assets.set(getTextureArrayAssetKey(assetJson.jsonFile), asset);
       continue;
     }
     if (assetJson.type === 'textureAtlas') {
-      for (const [key, asset] of collectTextureAtlas(assetJson, findTexture)) {
-        assets.set(key, asset);
-      }
+      const slots = collectTextureAtlas(assetJson, findTexture);
+      if ('error' in slots) drop(assetJson.jsonFile, slots.error);
+      else for (const [key, asset] of slots) assets.set(key, asset);
       continue;
     }
     const { type, id, jsonFile, data } = assetJson;
@@ -247,7 +267,11 @@ export const collectPipelineAssets = (assetJsons: AssetJson[]) => {
         : undefined;
     for (const useData of listAssetUses(data)) {
       const use = resolveAssetUse(jsonFile, useData);
-      if (!use || 'error' in use) continue;
+      if (!use) continue;
+      if ('error' in use) {
+        drop(jsonFile, use.error);
+        continue;
+      }
       const key = getPipelineAssetKey(type, jsonFile, use);
       const existing = assets.get(key);
       if (existing) {
@@ -277,5 +301,5 @@ export const collectPipelineAssets = (assetJsons: AssetJson[]) => {
       });
     }
   }
-  return assets;
+  return { assets, dropped };
 };

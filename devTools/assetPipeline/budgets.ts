@@ -18,6 +18,7 @@ import type { BudgetLimit } from './settings';
 
 const MB = 1e6;
 
+/** How to fix an asset over its budget: the line every budget message ends with */
 export const BUDGET_FIX =
   'Lower its maxSize or codec, pick a profile that allows it, or set its own "optimize": { "budget": { … } } in its JSON.';
 

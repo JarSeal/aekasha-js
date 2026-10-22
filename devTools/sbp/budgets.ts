@@ -3,12 +3,14 @@
  * chunk the build doesn't have, fails `yarn sbp` (and so `yarn build`, as the asset pipeline's
  * budgets fail its production gather); well under one is reported with a tighter value.
  */
-import type { Size, VisualizerData } from './bundleModel';
+import type { ModuleSizesFile, Size } from './bundleModel';
 import type { SplitGroupSize } from './bundleSplit';
 import { KIB, type SbpBudgets, isWellUnderBudget } from './config';
 
+/** Which of `SbpBudgets`' lists a budget is from */
 export type BudgetKind = 'initial' | 'chunk' | 'group' | 'module';
 
+/** One budget checked against the build */
 export type BudgetCheck = {
   kind: BudgetKind;
   /** The chunk's key, the group, the module path; `initial` for the initial budget */
@@ -27,7 +29,7 @@ export type BudgetInput = {
   /** Every file of `dist/assets/` by its key, initial and lazy */
   chunks: Record<string, Size>;
   groups: Record<string, SplitGroupSize>;
-  data: VisualizerData;
+  sizes: ModuleSizesFile;
   /** The hashed names of the initial files (`BundleSplit.initialFiles`) */
   initialFiles: Set<string>;
 };
@@ -42,9 +44,10 @@ export const suggestBudget = (size: number) =>
   Math.max(Math.ceil((size * 1.04) / KIB), Math.ceil((size + KIB) / KIB)) * KIB;
 
 /** The gzip of the modules under a path from `src/` (a file, or a folder ending in `/`) in the
- * initial chunks */
+ * initial chunks: each module's minified code gzipped alone, summed (a little over a group's,
+ * which gzips its modules' code together) */
 export const measureModulesUnder = (
-  data: VisualizerData,
+  sizes: ModuleSizesFile,
   initialFiles: Set<string>,
   srcPath: string
 ) => {
@@ -53,10 +56,10 @@ export const measureModulesUnder = (
     ? (moduleId: string) => moduleId.startsWith(id)
     : (moduleId: string) => moduleId === id || moduleId.startsWith(`${id}?`);
   let gzip = 0;
-  for (const meta of Object.values(data.nodeMetas)) {
-    if (!isUnder(meta.id)) continue;
-    for (const [file, partId] of Object.entries(meta.moduleParts)) {
-      if (initialFiles.has(file)) gzip += data.nodeParts[partId].gzipLength;
+  for (const module of sizes.modules) {
+    if (!isUnder(module.id)) continue;
+    for (const [file, size] of Object.entries(module.chunks)) {
+      if (initialFiles.has(file)) gzip += size.gzip;
     }
   }
   return gzip;
@@ -95,6 +98,6 @@ export const checkBudgets = (budgets: SbpBudgets, input: BudgetInput): BudgetChe
     check('group', key, budget, input.groups[key]?.initial.gzip ?? 0)
   ),
   ...Object.entries(budgets.modules ?? {}).map(([key, budget]) =>
-    check('module', key, budget, measureModulesUnder(input.data, input.initialFiles, key))
+    check('module', key, budget, measureModulesUnder(input.sizes, input.initialFiles, key))
   ),
 ];

@@ -16,6 +16,7 @@ export type VerifyConfigDef = {
   expectProbeConfig?: string;
 };
 
+/** The configurations a scene runs in: the three physics targets in the debug env, and prod test */
 export const VERIFY_CONFIGS = {
   workerSab: {
     mode: 'DEBUG',
@@ -35,6 +36,7 @@ export const VERIFY_CONFIGS = {
   prodTest: { mode: 'PROD_TEST' },
 } satisfies Record<string, VerifyConfigDef>;
 
+/** A configuration's name (`--config workerSab`) */
 export type VerifyConfigName = keyof typeof VERIFY_CONFIGS;
 
 /** Named sets for `--config`; a single configuration's name works too */
@@ -44,6 +46,7 @@ export const VERIFY_CONFIG_SETS: Record<string, VerifyConfigName[]> = {
   quick: ['workerSab'],
 };
 
+/** The set a run without `--config` takes */
 export const DEFAULT_CONFIG_SET = 'all';
 
 /**
@@ -53,6 +56,7 @@ export const DEFAULT_CONFIG_SET = 'all';
  */
 export type VerifyBrowser = 'chromium' | 'firefox';
 
+/** `--browser`'s values */
 export const VERIFY_BROWSERS: VerifyBrowser[] = ['chromium', 'firefox'];
 
 /** The snapshot's size (16:9) */
@@ -70,6 +74,7 @@ export type SnapshotTolerance = {
   pixelThreshold: number;
 };
 
+/** A snapshot's tolerance unless the scene's `snapshot.tolerance` sets its own */
 export const DEFAULT_SNAPSHOT_TOLERANCE: SnapshotTolerance = {
   maxMeanDelta: 0.5,
   maxChangedRatio: 0.002,
@@ -86,6 +91,7 @@ export const PROD_TEST_SETTLE_MS = 3000;
  * rendered frame, so the probe takes its steps in frames: a heavy scene on SwiftShader (about 1 s a
  * frame) needs minutes. The limit only catches a page that never gets there. */
 export const READY_TIMEOUT_MS = 180_000;
+/** How long the probe may take to reach its steps (see {@link READY_TIMEOUT_MS}) */
 export const PROBE_TIMEOUT_MS = 300_000;
 
 /** An error that doesn't fail a run, matched against the console line or page error message, in
@@ -95,6 +101,7 @@ export type AllowedError = { pattern: RegExp; reason: string; browsers?: VerifyB
 /** Allowed in every scene and configuration */
 export const GLOBAL_ALLOWED_ERRORS: AllowedError[] = [];
 
+/** A scene's own settings, `SCENE_VERIFY_CONFIG[sceneId]` */
 export type SceneVerifyConfig = {
   /** Fixed steps before the probe freezes physics (default {@link DEFAULT_PROBE_STEPS}) */
   probeSteps?: number;

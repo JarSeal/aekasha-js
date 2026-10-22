@@ -10,17 +10,20 @@ import path from 'path';
 const GLB_MAGIC = 0x46546c67; // 'glTF'
 const GLB_CHUNK_JSON = 0x4e4f534a; // 'JSON'
 
+type ColliderExtras = { extras?: { colliderType?: unknown } };
+
+/** The parts of a glTF's JSON the pipeline reads: the collider extras and the external files */
 export type GLTFJson = {
-  nodes?: { mesh?: number; extras?: { colliderType?: unknown } }[];
+  nodes?: ({ mesh?: number } & ColliderExtras)[];
+  meshes?: ColliderExtras[];
   buffers?: { uri?: string }[];
   images?: { uri?: string }[];
 };
 
-/**
- * Throws for a file that isn't a .glb or a .gltf's JSON. A .glb's binary chunk isn't read: the
- * dev server reads every GLB's JSON on each asset change (Phase 3).
- */
-export const readGLTFJson = (file: string): GLTFJson => {
+/** Parsed JSONs by file and stats: a run reads each GLB's for its key and its source files */
+const jsonMemo = new Map<string, { stamp: string; json: GLTFJson }>();
+
+const parseGLTFJson = (file: string): GLTFJson => {
   const fd = fs.openSync(file, 'r');
   try {
     const header = Buffer.alloc(20);
@@ -42,6 +45,21 @@ export const readGLTFJson = (file: string): GLTFJson => {
   }
 };
 
+/**
+ * A .glb's or a .gltf's JSON, read once while the file doesn't change (the result is shared:
+ * don't change it). Throws for a file that isn't a .glb or a .gltf's JSON. A .glb's binary chunk
+ * isn't read: the dev server reads every GLB's JSON on each asset change.
+ */
+export const readGLTFJson = (file: string): GLTFJson => {
+  const stat = fs.statSync(file);
+  const stamp = `${stat.size}\0${stat.mtimeMs}\0${stat.ctimeMs}\0${stat.ino}`;
+  const memoized = jsonMemo.get(file);
+  if (memoized?.stamp === stamp) return memoized.json;
+  const json = parseGLTFJson(file);
+  jsonMemo.set(file, { stamp, json });
+  return json;
+};
+
 /** A .gltf's buffers and images that are separate files (not data URIs), as written in it. */
 export const listExternalGLTFUris = (json: GLTFJson) =>
   [...(json.buffers ?? []), ...(json.images ?? [])]
@@ -54,6 +72,18 @@ export const listExternalGLTFFiles = (file: string, json: GLTFJson) =>
     path.resolve(path.dirname(file), decodeURIComponent(uri))
   );
 
-/** A node with a mesh and a `colliderType` custom property (CustomProps.ts reads the same). */
+/**
+ * A node with a mesh and a `colliderType` custom property, as CustomProps.ts reads it: three's
+ * GLTFLoader puts the mesh's extras on the object's `userData`, then the node's over them, so a
+ * `colliderType` authored on the mesh counts too, and a node's own one wins (p619 §1.4 A6).
+ */
 export const hasColliderNodes = (json: GLTFJson) =>
-  (json.nodes ?? []).some((node) => node.mesh !== undefined && !!node.extras?.colliderType);
+  (json.nodes ?? []).some((node) => {
+    if (node.mesh === undefined) return false;
+    const nodeExtras = node.extras ?? {};
+    const colliderType =
+      'colliderType' in nodeExtras
+        ? nodeExtras.colliderType
+        : json.meshes?.[node.mesh]?.extras?.colliderType;
+    return !!colliderType;
+  });

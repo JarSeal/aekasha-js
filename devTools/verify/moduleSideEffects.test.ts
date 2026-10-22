@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 
 // No module-level side effects (p607 D8): a module registers nothing when it's imported, only when
 // its feature is installed, so importing it costs a build nothing it doesn't use and its
@@ -17,12 +17,6 @@ const EXEMPT = [
   /^src\/_engine\/(features\/physics\/worker\/PhysicsWorker|kernel\/assets\/worker\/AssetsWorker)\.ts$/,
   /^src\/index\.ts$/,
 ];
-
-/**
- * The statements p607 hasn't moved into an install yet, by file: the phases remove them, and a
- * count that drops must drop here too (so the list only shrinks). Empty when p607 is done.
- */
-const NOT_YET_INSTALLED: Record<string, number> = {};
 
 const SCANNED = ['src/_engine', 'src/toolkit', 'src/app'];
 
@@ -69,23 +63,9 @@ const findTopLevelStatements = (file: string) => {
 };
 
 describe('module-level side effects', () => {
-  it('no module runs a statement at load, beyond the ones not yet installed', () => {
-    const found = new Map<string, string[]>();
-    for (const file of listModules()) {
-      const statements = findTopLevelStatements(file);
-      if (statements.length) found.set(file, statements);
-    }
-    const problems: string[] = [];
-    for (const [file, statements] of found) {
-      const allowed = NOT_YET_INSTALLED[file] ?? 0;
-      if (statements.length > allowed) problems.push(...statements);
-    }
-    for (const [file, allowed] of Object.entries(NOT_YET_INSTALLED)) {
-      const count = found.get(file)?.length ?? 0;
-      if (count < allowed) {
-        problems.push(`${file}: ${count} left, NOT_YET_INSTALLED says ${allowed} (lower it)`);
-      }
-    }
-    expect(problems).toEqual([]);
+  // No allow-list: p607 moved every registration into an install (its `NOT_YET_INSTALLED` went
+  // empty, then away with p619 §1.4 V6), so a registration goes in an install, never on a list
+  it('no module runs a statement at load', () => {
+    expect(listModules().flatMap(findTopLevelStatements)).toEqual([]);
   });
 });

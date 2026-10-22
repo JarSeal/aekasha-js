@@ -51,6 +51,8 @@ export type DevFilesErrorCode =
   | 'CONFLICT'
   | 'INVALID_JSON'
   | 'INVALID_SCHEMA'
+  /** A staged file that doesn't start like the image its path's extension names */
+  | 'INVALID_IMAGE'
   | 'STAGE_EXPIRED'
   | 'SAVE_DATA_DISABLED'
   | 'WRITE_FAILED';
@@ -166,9 +168,10 @@ export type DevDataGatheredEvent = {
   files: string[];
   /** The assets the pipeline failed to build: the gather used their sources */
   assetErrors: { id: string; reason: string }[];
-  /** A full reload follows: after every gather that wrote the generated data (`done`, asset
-   * errors too: Vite reloads on its change). False after a failure: the error overlay shows, and
-   * the page keeps the data it has. */
+  /** A full reload follows: after a gather that changed the generated data (`done`, asset errors
+   * too: Vite reloads on its change), or whose run reacted to a changed source file. False when
+   * nothing changed, and after a failure: the error overlay shows, and the page keeps the data it
+   * has. */
   willReload: boolean;
   /** What failed (`failed` only) */
   message?: string;

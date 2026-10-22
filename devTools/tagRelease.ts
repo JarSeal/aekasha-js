@@ -1,7 +1,8 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- a command's own output */
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { checkAlwaysRules, git, PARTS, readPkg } from './checkVersions';
+import { checkAlwaysRules, PARTS, readPkg } from './checkVersions';
+import { git } from './git';
 
 /**
  * Tags the current commit with each part's version from package.json: `engine-v2.1.0`,

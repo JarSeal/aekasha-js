@@ -134,7 +134,7 @@ export const getPhysicsBodyCapacity = () => {
 };
 
 /**
- * Creates a rigid body (without colliders: {@link createRigidBodyWithColliders} or the
+ * Creates a rigid body (without colliders: `createRigidBodyWithColliders` or the
  * collider creates add them). Rejects without a world, and with a
  * {@link PhysicsCapacityError} when a `WORKER_THREAD` world's transform buffer is full.
  */
@@ -365,7 +365,7 @@ export const readBodyPositionsSync = (ids: ArrayLike<number>, out: Float32Array)
 };
 
 /**
- * What {@link createRigidBodyWithColliders} creates.
+ * What `createRigidBodyWithColliders` creates.
  * @internal
  */
 export type RigidBodyWithColliders = {
@@ -406,7 +406,7 @@ export const createRigidBodyWithColliders = async (
 };
 
 /**
- * {@link createRigidBodyWithColliders}, synchronous: MAIN_THREAD only (it throws in
+ * `createRigidBodyWithColliders`, synchronous: MAIN_THREAD only (it throws in
  * WORKER_THREAD mode).
  * @internal
  */

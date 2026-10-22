@@ -15,11 +15,11 @@ import { createHighlighter, type Highlighter, type ShikiTransformer } from 'shik
 import { HUB_CODE_THEME_DARK, HUB_CODE_THEME_LIGHT } from './codeThemes';
 import { escapeHtml } from './html';
 import type { HubIcons } from './icons';
-import { registerHubDirective, uniqueId, type HubMarkdownEnv } from './markdown';
+import { uniqueId, type HubDirective, type HubMarkdownEnv } from './markdown';
 import { parseSnippetSpec, readSnippet } from './snippets';
 
 /**
- * The Hub's code blocks (p552 §2.1, §2.2): fences highlighted by shiki at build time, so a page
+ * The Hub's code blocks: fences highlighted by shiki at build time, so a page
  * carries highlighted HTML and no highlighter. Both themes go into the HTML as CSS variables
  * (`_code.scss` picks one). The fence's meta (` ```ts title="space.ts" {3,5-7} wrap `) and
  * shiki's notation comments (`// [!code ++]`) add the rest, and `hub.ts` adds copy, collapse
@@ -72,6 +72,7 @@ export const HUB_CODE_THEMES = {
   light: HUB_CODE_THEME_LIGHT.name!,
 };
 
+/** A fence's meta, parsed (`parseFenceMeta`) */
 export type HubFenceOptions = {
   title: string;
   /** The raw meta, for shiki's `{3,5-7}` (`transformerMetaHighlight`) */
@@ -81,7 +82,7 @@ export type HubFenceOptions = {
 };
 
 /** `title="space.ts" {3,5-7} startLine=40 wrap`; anything else warns */
-export const parseFenceMeta = (meta: string, warn: (message: string) => void): HubFenceOptions => {
+const parseFenceMeta = (meta: string, warn: (message: string) => void): HubFenceOptions => {
   const options: HubFenceOptions = { title: '', meta, startLine: 1, flags: new Set() };
   const regex = /(\w+)=(?:"([^"]*)"|'([^']*)'|(\S+))|\{([^}]*)\}|(\S+)/g;
   for (const match of meta.matchAll(regex)) {
@@ -132,16 +133,25 @@ const resolveLanguage = (
 const renderCopyButton = (icons: HubIcons, env: HubMarkdownEnv, line: number) =>
   `<button type="button" class="hubCodeCopy" data-hub-code-copy aria-label="Copy the code">${icons.render('copy', env.file, line)}${icons.render('check', env.file, line)}<span class="hubCodeCopyLabel" aria-live="polite">Copy</span></button>`;
 
-const renderFence = ({ highlighter, icons }: HubCodeOptions, token: Token, env: HubMarkdownEnv) => {
-  const line = lineOf(token);
-  const [rawLang = '', ...rest] = token.info.trim().split(/\s+/);
-  const langLabel = rawLang.toLowerCase();
-  const lang = resolveLanguage(highlighter, langLabel, env, line);
-  const options = parseFenceMeta(rest.join(' '), (message) =>
-    env.diag.warn(env.file, line, message)
-  );
-  const group = token.meta?.group as GroupPanel | undefined;
+type HighlightedFence = { pre: string; lineCount: number; isCollapsed: boolean };
 
+/**
+ * shiki's output per fence (its language, meta and code), kept across builds: the dev server's
+ * rebuilds highlight only the fences that changed (p619 D16: highlighting was most of a rebuild).
+ * Dropped whole when it grows past `MAX_HIGHLIGHTED_FENCES`, so a long session's edits don't pile up.
+ */
+const highlightedFences = new Map<string, HighlightedFence>();
+const MAX_HIGHLIGHTED_FENCES = 4000;
+
+const highlightFence = (
+  highlighter: Highlighter,
+  code: string,
+  lang: string,
+  options: HubFenceOptions
+): HighlightedFence => {
+  const key = `${lang}\0${options.meta}\0${code}`;
+  const known = highlightedFences.get(key);
+  if (known) return known;
   let lineCount = 0;
   let isCollapsed = false;
   // Runs after the notation transformers, which remove their comment-only lines
@@ -161,8 +171,7 @@ const renderFence = ({ highlighter, icons }: HubCodeOptions, token: Token, env: 
       }
     },
   };
-
-  const pre = highlighter.codeToHtml(token.content.replace(/\n$/, ''), {
+  const pre = highlighter.codeToHtml(code, {
     lang,
     themes: HUB_CODE_THEMES,
     defaultColor: false,
@@ -178,6 +187,28 @@ const renderFence = ({ highlighter, icons }: HubCodeOptions, token: Token, env: 
       hubTransformer,
     ],
   });
+  if (highlightedFences.size >= MAX_HIGHLIGHTED_FENCES) highlightedFences.clear();
+  const fence = { pre, lineCount, isCollapsed };
+  highlightedFences.set(key, fence);
+  return fence;
+};
+
+const renderFence = ({ highlighter, icons }: HubCodeOptions, token: Token, env: HubMarkdownEnv) => {
+  const line = lineOf(token);
+  const [rawLang = '', ...rest] = token.info.trim().split(/\s+/);
+  const langLabel = rawLang.toLowerCase();
+  const lang = resolveLanguage(highlighter, langLabel, env, line);
+  const options = parseFenceMeta(rest.join(' '), (message) =>
+    env.diag.warn(env.file, line, message)
+  );
+  const group = token.meta?.group as GroupPanel | undefined;
+
+  const { pre, lineCount, isCollapsed } = highlightFence(
+    highlighter,
+    token.content.replace(/\n$/, ''),
+    lang,
+    options
+  );
 
   const hasLineNumbers = options.flags.has('noLineNumbers')
     ? false
@@ -217,7 +248,7 @@ ${expand}</div>
  * `::: code-group` around fences: a tab per fence, labelled by its title (else its language).
  * The tabs are rendered here; without JS they're hidden and every block shows with its title.
  */
-registerHubDirective('code-group', {
+export const codeGroupDirective: HubDirective = {
   open: (_args, { env, line, tokens, idx }) => {
     const fences: Token[] = [];
     // The group's direct children are at depth 0; the first closing token there is its own
@@ -246,7 +277,7 @@ registerHubDirective('code-group', {
     return `<div class="hubCodeGroup">\n<div class="hubCodeTabs" role="tablist" aria-label="Code">${tabs.join('')}</div>\n`;
   },
   close: () => '</div>\n',
-});
+};
 
 // --- Inline code ---
 

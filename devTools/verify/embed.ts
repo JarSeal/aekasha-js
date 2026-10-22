@@ -19,7 +19,7 @@
  *   button pauses and resumes it, without an error.
  *
  * It builds the profiles first (`yarn sbp`'s build, `dist-embed/<id>/`) unless `--no-build`,
- * serves the page and the build from its own static server (port 8093: the page at `/`, the build
+ * serves the page and the build from its own static server (a free port on localhost: the page at `/`, the build
  * at `/aekasha/`), and runs headless on WebGPU (WebGL2 through SwiftShader with `--webgl`, and on
  * WSL2 without `--headed`). Every line also goes to `.cache/verify/progress.log`. Exits 1 on a
  * failed check, 2 on an error.
@@ -29,8 +29,8 @@ import http from 'http';
 import path from 'path';
 import type { Page } from 'playwright-core';
 import sbpProfiles from '../../sbp.config';
-import { ROOT } from '../assetPipeline/sources';
-import { getEmbedProfiles } from '../gatherOutput';
+import { ROOT } from '../paths';
+import { getEmbedProfiles } from '../gather/output';
 import { buildBundles } from '../sbp/appBuild';
 import { getEmbedEntryFileName, getEmbedOutDir } from '../sbp/embedPaths';
 import { isWSL, launchChromium } from './browser';
@@ -41,17 +41,33 @@ import {
   diffComputedStyles,
   HOST_STYLE_SELECTORS,
 } from './embedChecks';
-import { out, PROGRESS_LOG_WATCH } from './progressLog';
+import { out, PROGRESS_LOG_WATCH } from '../progressLog';
 
-const PORT = 8093;
 const HOST_PAGE = path.join(ROOT, 'devTools/verify/embedHost.html');
 /** The Hub's embed example (its regions), which imports the banner's entry by name */
 const EXAMPLE_PAGE = path.join(ROOT, 'devTools/verify/embedExample.html');
 const EXAMPLE_PROFILE = 'banner';
 const PAGES: Record<string, string> = { '/': HOST_PAGE, '/example.html': EXAMPLE_PAGE };
 const VIEWPORT = { width: 1000, height: 700 };
-/** Long enough for a resize to reach the canvas (a ResizeObserver, then a frame) */
-const SETTLE_MS = 400;
+/**
+ * How long a check waits for the page to reach a state (a mount drawn, a resize reaching the
+ * canvas): it polls, so a fast machine doesn't wait and a slow one isn't failed by a fixed delay
+ * (p619 §1.4 V5)
+ */
+const SETTLE_TIMEOUT_MS = 10_000;
+const SETTLE_POLL_MS = 50;
+/** The page load and its `__embedTestReady` */
+const READY_TIMEOUT_MS = 60_000;
+/** How long the paused scene must not change: a window measured, not a settle */
+const PAUSED_WINDOW_MS = 400;
+
+/** Polls `isDone` until it's true or {@link SETTLE_TIMEOUT_MS} passed; the checks after it report */
+const waitFor = async (isDone: () => Promise<boolean>) => {
+  const end = Date.now() + SETTLE_TIMEOUT_MS;
+  while (!(await isDone()) && Date.now() < end) {
+    await new Promise((resolve) => setTimeout(resolve, SETTLE_POLL_MS));
+  }
+};
 
 const color = (code: string) => (process.env.NO_COLOR ? '' : `\x1b[${code}m`);
 const RED = color('31');
@@ -61,10 +77,11 @@ const RESET = color('0');
 
 const USAGE = 'yarn verify:embed [--profile <id>] [--no-build] [--headed] [--webgl]';
 
-const fail = (msg: string): never => {
+/** Prints the message and exits 2 */
+function fail(msg: string): never {
   out(`${RED}${msg}${RESET}`, true);
   process.exit(2);
-};
+}
 
 const parseArgs = (argv: string[]) => {
   const args = { profile: '', build: true, headed: false, webgl: false };
@@ -114,8 +131,11 @@ const startServer = (buildDir: string) =>
       fs.createReadStream(file).pipe(res);
     });
     server.once('error', reject);
-    server.listen(PORT, () => resolve(server));
+    // A free port, on this machine only (a fixed one failed when taken, V5)
+    server.listen(0, 'localhost', () => resolve(server));
   });
+
+const getPort = (server: http.Server) => (server.address() as { port: number }).port;
 
 /** A box on the page: its position too */
 type PageBox = Box & { x: number; y: number };
@@ -139,14 +159,19 @@ const runScenario = async (
   page.removeAllListeners('pageerror');
   page.on('console', (msg) => msg.type() === 'error' && errors.push(`console: ${msg.text()}`));
   page.on('pageerror', (err) => errors.push(`page error: ${err.message}`));
-  await page.goto(url);
-  await page.waitForFunction(() => (window as { __embedTestReady?: boolean }).__embedTestReady);
   const styles = () =>
     page.evaluate(
       (s) => window.__embedTest.styles(s),
       HOST_STYLE_SELECTORS
     ) as Promise<StyleSnapshot>;
   try {
+    // In the try: a page that never gets ready is this scenario's failure (V5)
+    await page.goto(url, { timeout: READY_TIMEOUT_MS });
+    await page.waitForFunction(
+      () => (window as { __embedTestReady?: boolean }).__embedTestReady,
+      null,
+      { timeout: READY_TIMEOUT_MS }
+    );
     await steps({ problems, styles });
   } catch (err) {
     problems.push(`stopped: ${(err as Error).message.split('\n')[0]}`);
@@ -172,8 +197,8 @@ const expectNoStyleChange = (
 
 const pushIf = (problems: string[], problem: string | null) => problem && problems.push(problem);
 
-const checkProfile = async (page: Page, profileId: string, entry: string) => {
-  const url = `http://localhost:${PORT}/?entry=${encodeURIComponent(entry)}`;
+const checkProfile = async (page: Page, port: number, profileId: string, entry: string) => {
+  const url = `http://localhost:${port}/?entry=${encodeURIComponent(entry)}`;
   const boxes = () => page.evaluate(() => window.__embedTest.boxes()) as Promise<Boxes>;
   out(`\nprofile ${profileId} ${DIM}(${entry})${RESET}`);
   let failed = 0;
@@ -190,9 +215,16 @@ const checkProfile = async (page: Page, profileId: string, entry: string) => {
       );
       if (mounted.isFallback)
         problems.push('mounted as the fallback (no WebGPU / WebGL2, or the boot failed)');
-      await page.waitForTimeout(SETTLE_MS);
-      let b = await boxes();
       const at = { width: 320, height: 288 };
+      await waitFor(async () => {
+        const settled = await boxes();
+        return (
+          !checkBox('canvas', settled.canvas, at) &&
+          !checkBox('buffer', settled.buffer, at) &&
+          !empty.equals(await page.locator('#inline').screenshot())
+        );
+      });
+      let b = await boxes();
       pushIf(problems, checkBox('container', b.container, at));
       pushIf(problems, checkBox('canvas', b.canvas, at));
       pushIf(problems, checkBox("canvas's drawing buffer", b.buffer, at));
@@ -200,9 +232,12 @@ const checkProfile = async (page: Page, profileId: string, entry: string) => {
       expectNoStyleChange(problems, 'while mounted', before, await styles());
 
       await page.evaluate(() => window.__embedTest.resizeTarget('#inline', '800px', '400px'));
-      await page.waitForTimeout(SETTLE_MS);
-      b = await boxes();
       const grown = { width: 400, height: 320 };
+      await waitFor(async () => {
+        const settled = await boxes();
+        return !checkBox('canvas', settled.canvas, grown) && !checkBox('b', settled.buffer, grown);
+      });
+      b = await boxes();
       pushIf(problems, checkBox('canvas after the target grew', b.canvas, grown));
       pushIf(problems, checkBox('drawing buffer after the target grew', b.buffer, grown));
       await page.evaluate(() => window.__embedTest.resizeTarget('#inline', '', ''));
@@ -230,7 +265,7 @@ const checkProfile = async (page: Page, profileId: string, entry: string) => {
         window.__embedTest.mount({ target: '#background', layout: 'BACKGROUND' })
       );
       if (mounted.isFallback) problems.push('mounted as the fallback');
-      await page.waitForTimeout(SETTLE_MS);
+      await waitFor(async () => !empty.equals(await page.screenshot()));
       // Behind the page's content, not under its background
       if (empty.equals(await page.screenshot())) problems.push('nothing drawn behind the page');
       const b = await boxes();
@@ -256,24 +291,28 @@ const checkProfile = async (page: Page, profileId: string, entry: string) => {
   if (profileId === EXAMPLE_PROFILE) {
     failed += await runScenario(
       page,
-      `http://localhost:${PORT}/example.html`,
+      `http://localhost:${port}/example.html`,
       'the Hub’s example page: mounts in its hero, turns, pauses',
       async ({ problems }) => {
         const isFallback = await page.evaluate(() => window.__embedExample.isFallback);
         if (isFallback) problems.push('mounted as the fallback');
-        await page.waitForTimeout(SETTLE_MS);
         // No named function in the page: tsx wraps those in a helper the page doesn't have
-        const sizes = await page.evaluate(() =>
-          ['#heroScene', '#heroScene canvas'].map((selector) => {
-            const rect = document.querySelector(selector)?.getBoundingClientRect();
-            return rect ? { width: rect.width, height: rect.height } : null;
-          })
-        );
-        const [target, canvas] = sizes;
+        const readSizes = () =>
+          page.evaluate(() =>
+            ['#heroScene', '#heroScene canvas'].map((selector) => {
+              const rect = document.querySelector(selector)?.getBoundingClientRect();
+              return rect ? { width: rect.width, height: rect.height } : null;
+            })
+          );
+        await waitFor(async () => {
+          const [hero, heroCanvas] = await readSizes();
+          return !!hero && !checkBox('canvas', heroCanvas, hero);
+        });
+        const [target, canvas] = await readSizes();
         if (target) pushIf(problems, checkBox('canvas', canvas, target));
         const scene = page.locator('#heroScene');
         const first = await scene.screenshot();
-        await page.waitForTimeout(SETTLE_MS);
+        await waitFor(async () => !first.equals(await scene.screenshot()));
         if (first.equals(await scene.screenshot())) problems.push('the scene doesn’t turn');
         await page.click('#heroPause');
         if (!(await page.evaluate(() => window.__embedExample.isPaused()))) {
@@ -281,7 +320,7 @@ const checkProfile = async (page: Page, profileId: string, entry: string) => {
         }
         await page.waitForTimeout(100); // The frame in flight
         const paused = await scene.screenshot();
-        await page.waitForTimeout(SETTLE_MS);
+        await page.waitForTimeout(PAUSED_WINDOW_MS);
         if (!paused.equals(await scene.screenshot())) problems.push('it turns while paused');
         await page.click('#heroPause');
         if (await page.evaluate(() => window.__embedExample.isPaused())) {
@@ -347,7 +386,7 @@ const main = async () => {
       const server = await startServer(buildDir);
       const page = await browser.newPage({ viewport: VIEWPORT });
       try {
-        failed += await checkProfile(page, profile.id, entry);
+        failed += await checkProfile(page, getPort(server), profile.id, entry);
       } finally {
         await page.close();
         await new Promise((resolve) => server.close(resolve));

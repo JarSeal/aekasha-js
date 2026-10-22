@@ -65,7 +65,7 @@ const ENTRY_IMPORT = {
     'Engine code imports engine code by relative path: an entry imported inside the engine makes barrel cycles.',
 };
 // The kernel runs without any feature: it names a feature's types for the data it holds or carries
-// for it, and imports none of its code (p612 D2; devTools/refactor/layoutReport.md lists each)
+// for it, and imports none of its code (p612 D2; `npx tsx devTools/layout/layoutReport.ts` lists each)
 const KERNEL_FEATURE_IMPORT = {
   regex: '^(\\.\\./)+features/',
   allowTypeImports: true,
@@ -139,7 +139,8 @@ export default [
       'plugin:prettier/recommended',
     ],
     rules: {
-      '@typescript-eslint/no-unused-vars': 1,
+      // A rest-omit (`const { a, ...rest } = x`) leaves `a` unused on purpose
+      '@typescript-eslint/no-unused-vars': [1, { ignoreRestSiblings: true }],
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
       // Type-only imports as a top-level `import type`, which is erased, so a type can't pull its
       // module (and three) into the physics worker. The inline `import { type X }` alone compiles

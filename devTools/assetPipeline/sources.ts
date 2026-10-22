@@ -1,10 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import {
-  isJsonRelativeFileName,
-  type TexturePack,
-} from '../../src/_engine/schemas/AssetsConfigSchema';
+import { isJsonRelativeFileName, type TexturePack } from '../../src/_engine/schemas';
+import { PUBLIC_DIR, ROOT, SRC_DIR } from '../paths';
 
 /**
  * Where an asset JSON's `fileName` points (p300 DD3):
@@ -14,11 +11,6 @@ import {
  *   the runtime's loaders resolve it. The file may be missing (legacy: no error).
  * - `remote`: a URL with a scheme (or `//host`). Never optimized.
  */
-
-export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-export const SRC_DIR = path.join(ROOT, 'src');
-export const PUBLIC_DIR = path.join(SRC_DIR, 'public');
-
 export type AssetSource =
   | {
       kind: 'relative' | 'public';
@@ -29,13 +21,15 @@ export type AssetSource =
     }
   | { kind: 'remote'; url: string };
 
+/** A path as the repo root sees it, '/'-separated (the lock's, the logs') */
 export const toRepoPath = (file: string) => path.relative(ROOT, file).split(path.sep).join('/');
 
 const isRemoteUrl = (fileName: string) => /^([a-z][a-z\d+.-]*:|\/\/)/i.test(fileName);
 
 /**
  * Resolves an asset JSON's `fileName` (and a texture's `path`). Returns `{ error }` for a relative
- * file name that is combined with `path`, leaves `src/` or doesn't exist.
+ * file name that is combined with `path`, leaves `src/` or doesn't exist, and for a public one
+ * that leaves `src/public` or doesn't decode.
  * @param params.jsonFile The asset JSON, absolute or relative to the repo root
  */
 export const resolveAssetSource = (params: {
@@ -66,7 +60,17 @@ export const resolveAssetSource = (params: {
 
   // Like `new URL((path || './') + fileName, document.baseURI)` at the site root (Texture.ts)
   const { pathname } = new URL((urlPath || './') + fileName, 'http://aek.local/');
-  const file = path.join(PUBLIC_DIR, decodeURIComponent(pathname));
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    return { error: `"${fileName}" isn't a valid URL path (a "%" not followed by two hex digits)` };
+  }
+  // `new URL()` removed the `..` segments before decoding, so an encoded one ("..%2F") is left
+  const file = path.join(PUBLIC_DIR, decoded);
+  if (!file.startsWith(PUBLIC_DIR + path.sep)) {
+    return { error: `"${fileName}" resolves outside src/public (${toRepoPath(file)})` };
+  }
   return { kind: 'public', file, repoPath: toRepoPath(file) };
 };
 
@@ -83,6 +87,7 @@ export type PackSource = {
   repoPath: string;
 };
 
+/** A packed texture's source: its pack, with its JSON as the file the rules match */
 export const createPackSource = (jsonFile: string, pack: TexturePack): PackSource => {
   const file = path.resolve(ROOT, jsonFile);
   return { kind: 'pack', pack, jsonFile: file, repoPath: toRepoPath(file) };

@@ -1,8 +1,8 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- a command's own output */
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { rebaseNotFoundPage } from './hub/build';
+import { rebaseNotFoundPage } from './hub/shellPages';
 import { HUB_DIST_DIR, ROOT } from './hub/paths';
 import { getHubContentType, resolveHubRoute } from './hub/serve';
 
@@ -10,7 +10,8 @@ import { getHubContentType, resolveHubRoute } from './hub/serve';
  * `yarn hub:preview [--base /hub/] [--port 8090] [--dir dist-hub]`: serves the built Hub as a
  * static host would: a directory URL serves its `index.html`, anything missing gets `404.html`
  * with a 404, and `_assets/` is cached as `_headers` has it. `--base` serves it under a path, as
- * `AEK_HUB_IN_DIST` does (`/hub/`).
+ * `AEK_HUB_IN_DIST` does (`/hub/`). It listens on `localhost` only, as it logs (p619 §1.4 H2), and
+ * a bad request (a malformed escape) is a 400, never the end of the server.
  */
 
 const parseArgs = (args: string[]) => {
@@ -42,23 +43,50 @@ const send = (res: http.ServerResponse, status: number, file: string) => {
       'Cache-Control': 'public, max-age=31536000, immutable',
     }),
   });
-  fs.createReadStream(file).pipe(res);
+  fs.createReadStream(file)
+    .on('error', (err) => {
+      // Gone or unreadable since the route was resolved: the headers are out, so end it
+      console.error(`[Hub] ${path.relative(ROOT, file)}: ${err.message}`);
+      res.destroy(err);
+    })
+    .pipe(res);
+};
+
+const sendText = (res: http.ServerResponse, status: number, text: string) => {
+  res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8' }).end(text);
+};
+
+const handle = (req: http.IncomingMessage, res: http.ServerResponse) => {
+  let pathname: string;
+  try {
+    pathname = decodeURIComponent(new URL(req.url ?? '/', 'http://localhost').pathname);
+  } catch {
+    sendText(res, 400, 'Bad request: the URL has a malformed escape');
+    return;
+  }
+  const route = resolveHubRoute(dir, base, pathname);
+  if (route.kind === 'redirect') {
+    res.writeHead(301, { Location: route.location }).end();
+  } else if (route.kind === 'file') {
+    send(res, 200, route.file);
+  } else {
+    const html = fs.readFileSync(path.join(dir, '404.html'), 'utf-8');
+    res.writeHead(404, { 'Content-Type': getHubContentType('404.html') });
+    res.end(rebaseNotFoundPage(html, base));
+  }
 };
 
 http
   .createServer((req, res) => {
-    const pathname = decodeURIComponent(new URL(req.url ?? '/', 'http://localhost').pathname);
-    const route = resolveHubRoute(dir, base, pathname);
-    if (route.kind === 'redirect') {
-      res.writeHead(301, { Location: route.location }).end();
-    } else if (route.kind === 'file') {
-      send(res, 200, route.file);
-    } else {
-      const html = fs.readFileSync(path.join(dir, '404.html'), 'utf-8');
-      res.writeHead(404, { 'Content-Type': getHubContentType('404.html') });
-      res.end(rebaseNotFoundPage(html, base));
+    try {
+      handle(req, res);
+    } catch (err) {
+      console.error(`[Hub] ${req.url}: ${(err as Error).stack ?? String(err)}`);
+      if (!res.headersSent)
+        sendText(res, 500, 'The preview failed on this request: see the terminal');
+      else res.destroy();
     }
   })
-  .listen(port, () =>
+  .listen(port, 'localhost', () =>
     console.log(`[Hub] ${path.relative(ROOT, dir)}/ at http://localhost:${port}${base}`)
   );

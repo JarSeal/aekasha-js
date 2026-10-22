@@ -17,18 +17,18 @@ import { SBP_REPORT_FILE, type SbpReportFile } from '../sbp/report';
 import type { HubBuildMode, HubHeading, HubPage } from './types';
 
 /**
- * The Hub's Markdown: markdown-it with its plugins (p551 §2.2):
+ * The Hub's Markdown: markdown-it with its plugins:
  * - heading anchors: slugged ids (unique per page, slot ids included), a `#` link, and the
- *   page's heading list (the TOC and `hub-data.js`);
- * - directives `::: name args` … `:::`, from a registry other plans add to
- *   (`registerHubDirective`); the callouts `tip`, `note`, `warning` and `danger` are the first,
- *   and `dev-only` (content the `public` build leaves out unparsed: `HubDirective.devOnly`).
- *   Nest one in another with a longer marker on the outer one (`::::`);
+ *   page's heading list (the TOC and the search's `pages`);
+ * - directives `::: name args` … `:::`: the callouts `tip`, `note`, `warning` and `danger`,
+ *   `dev-only` (content the `public` build leaves out unparsed: `HubDirective.devOnly`),
+ *   and the build's (`createHubMarkdown`'s `extraDirectives`). Nest one in another with a
+ *   longer marker on the outer one (`::::`);
  * - `hub:` links (`[physics](hub:examples/physics#setup)`), resolved relative to the page and
  *   checked after every page is rendered (`HubMarkdownEnv.links`);
- * - `api:` links (`[loadScene](api:loadScene)`, p553 §2.3), resolved against the API model as
+ * - `api:` links (`[loadScene](api:loadScene)`), resolved against the API model as
  *   they're rendered: an unknown or ambiguous name is an error listing the candidates;
- * - `repo:` links (`[budgets](repo:docs/techniques/asset-optimization.md#budgets)`, p555): a file
+ * - `repo:` links (`[budgets](repo:docs/techniques/asset-optimization.md#budgets)`): a file
  *   from the repo root, checked with its `#heading` (a Markdown file's, GitHub's anchor) or
  *   `#L<line>`; GitHub at the build's commit in `public`, the editor in `dev`;
  * - relative images, copied (PNG and JPEG to WebP) to `_assets/images/pages/<page path>`.
@@ -45,6 +45,7 @@ export type HubLinkRef = {
   raw: string;
 };
 
+/** A page image the build writes: copied, or converted to WebP at a width */
 export type HubImageJob = {
   source: string;
   /** From the site root */
@@ -67,9 +68,9 @@ export type HubApiLinkResolver = (ref: string) => HubApiLinkResult;
 export type HubRenderContext = {
   mode: HubBuildMode;
   icons: HubIcons;
-  /** The API section's (p553), null when the API docs didn't build */
+  /** The API section's, null when the API docs didn't build */
   apiLinks: HubApiLinkResolver | null;
-  /** The app's scenes (p554, `scenes.ts`), read on the build's first use */
+  /** The app's scenes (`scenes.ts`), read on the build's first use */
   getAppScenes: () => HubAppScenes;
   /** The last `yarn sbp` report (p611 D9, `sbp.ts`), read on the build's first use */
   getSbpReport: () => SbpReportFile | null;
@@ -106,6 +107,9 @@ export type HubMarkdownEnv = HubRenderContext & {
   includes: string[];
 };
 
+/**
+ * A page's Markdown env: where its diagnostics, headings, ids, links, images and includes collect
+ */
 export const createMarkdownEnv = (
   page: HubPage,
   root: string,
@@ -133,6 +137,9 @@ export const addImageJob = (env: HubMarkdownEnv, job: HubImageJob) => {
 
 // --- Directives ---
 
+/**
+ * What a directive's `open` and `close` get: the page's env, the line, the Markdown and the tokens
+ */
 export type HubDirectiveContext = {
   env: HubMarkdownEnv;
   /** The directive's 1-based line */
@@ -143,6 +150,7 @@ export type HubDirectiveContext = {
   idx: number;
 };
 
+/** A `::: name args` directive: the HTML around its content */
 export type HubDirective = {
   /** The HTML before the directive's content; `args` is the text after its name */
   open: (args: string, ctx: HubDirectiveContext) => string;
@@ -156,12 +164,8 @@ export type HubDirective = {
   devOnly?: boolean;
 };
 
-const directives = new Map<string, HubDirective>();
-
-/** Adds a `::: name args` directive (p552's `code-group`, p554's `scene` and `cards`) */
-export const registerHubDirective = (name: string, directive: HubDirective) => {
-  directives.set(name, directive);
-};
+/** The directives by name: a build's (`createHubMarkdown`) */
+export type HubDirectives = Record<string, HubDirective>;
 
 const CALLOUT_TITLES: Record<string, string> = {
   tip: 'Tip',
@@ -170,96 +174,104 @@ const CALLOUT_TITLES: Record<string, string> = {
   danger: 'Danger',
 };
 
-for (const [kind, defaultTitle] of Object.entries(CALLOUT_TITLES)) {
-  registerHubDirective(kind, {
-    open: (args, { md, env }) =>
-      `<aside class="hubCallout hubCallout_${kind}">\n<p class="hubCalloutTitle">${md.renderInline(args || defaultTitle, env)}</p>\n`,
-    close: () => '</aside>\n',
-  });
-}
+const createCallout = (kind: string, defaultTitle: string): HubDirective => ({
+  open: (args, { md, env }) =>
+    `<aside class="hubCallout hubCallout_${kind}">\n<p class="hubCalloutTitle">${md.renderInline(args || defaultTitle, env)}</p>\n`,
+  close: () => '</aside>\n',
+});
 
 /**
  * `::: dev-only [title]` … `:::`: content for the people working on the repo (its test and verify
  * commands), shown by the dev server's Hub only. The title is inline Markdown.
  */
-registerHubDirective('dev-only', {
+const devOnlyDirective: HubDirective = {
   devOnly: true,
   open: (args, { md, env, line }) =>
     `<aside class="hubDevOnly">\n<p class="hubDevOnlyTitle">${env.icons.render('wrench', env.file, line)}<span>${md.renderInline(args || 'Working on the repo', env)}</span><span class="hubDevOnlyBadge">Local only</span></p>\n`,
   close: () => '</aside>\n',
-});
+};
+
+/** The Markdown's own directives: the callouts and `dev-only` */
+const BUILT_IN_DIRECTIVES: HubDirectives = {
+  ...Object.fromEntries(
+    Object.entries(CALLOUT_TITLES).map(([kind, title]) => [kind, createCallout(kind, title)])
+  ),
+  'dev-only': devOnlyDirective,
+};
 
 const MARKER = 0x3a; // ':'
 const MIN_MARKERS = 3;
 
 /** `::: name args` … `:::`: the content is parsed as blocks; the closing marker is as long or longer */
-const directiveRule = (state: StateBlock, startLine: number, endLine: number, silent: boolean) => {
-  let pos = state.bMarks[startLine] + state.tShift[startLine];
-  const max = state.eMarks[startLine];
-  if (state.src.charCodeAt(pos) !== MARKER) return false;
-  const markerStart = pos;
-  while (pos < max && state.src.charCodeAt(pos) === MARKER) pos++;
-  const markerCount = pos - markerStart;
-  if (markerCount < MIN_MARKERS) return false;
-  const info = state.src.slice(pos, max).trim();
-  const nameMatch = /^([\w-]+)\s*(.*)$/.exec(info);
-  if (!nameMatch) return false; // A bare marker closes a directive; it opens none
-  if (silent) return true;
+const createDirectiveRule =
+  (directives: Map<string, HubDirective>) =>
+  (state: StateBlock, startLine: number, endLine: number, silent: boolean) => {
+    let pos = state.bMarks[startLine] + state.tShift[startLine];
+    const max = state.eMarks[startLine];
+    if (state.src.charCodeAt(pos) !== MARKER) return false;
+    const markerStart = pos;
+    while (pos < max && state.src.charCodeAt(pos) === MARKER) pos++;
+    const markerCount = pos - markerStart;
+    if (markerCount < MIN_MARKERS) return false;
+    const info = state.src.slice(pos, max).trim();
+    const nameMatch = /^([\w-]+)\s*(.*)$/.exec(info);
+    if (!nameMatch) return false; // A bare marker closes a directive; it opens none
+    if (silent) return true;
 
-  let nextLine = startLine;
-  let isClosed = false;
-  while (++nextLine < endLine) {
-    const start = state.bMarks[nextLine] + state.tShift[nextLine];
-    const end = state.eMarks[nextLine];
-    if (state.sCount[nextLine] < state.blkIndent && start < end) break; // Its list item ended
-    if (state.sCount[nextLine] - state.blkIndent >= 4) continue; // Indented code
-    let p = start;
-    while (p < end && state.src.charCodeAt(p) === MARKER) p++;
-    if (p - start >= markerCount && state.src.slice(p, end).trim() === '') {
-      isClosed = true;
-      break;
+    let nextLine = startLine;
+    let isClosed = false;
+    while (++nextLine < endLine) {
+      const start = state.bMarks[nextLine] + state.tShift[nextLine];
+      const end = state.eMarks[nextLine];
+      if (state.sCount[nextLine] < state.blkIndent && start < end) break; // Its list item ended
+      if (state.sCount[nextLine] - state.blkIndent >= 4) continue; // Indented code
+      let p = start;
+      while (p < end && state.src.charCodeAt(p) === MARKER) p++;
+      if (p - start >= markerCount && state.src.slice(p, end).trim() === '') {
+        isClosed = true;
+        break;
+      }
     }
-  }
 
-  const [, name, args] = nameMatch;
-  const env = state.env as HubMarkdownEnv;
-  if (!isClosed) {
-    env.diag.error(env.file, startLine + 1, `":::${name}" has no closing ":::"`);
-  }
-  if (!directives.has(name)) {
-    env.diag.error(
-      env.file,
-      startLine + 1,
-      `Unknown directive "${name}" (known: ${[...directives.keys()].join(', ')})`
-    );
-  }
+    const [, name, args] = nameMatch;
+    const env = state.env as HubMarkdownEnv;
+    if (!isClosed) {
+      env.diag.error(env.file, startLine + 1, `":::${name}" has no closing ":::"`);
+    }
+    if (!directives.has(name)) {
+      env.diag.error(
+        env.file,
+        startLine + 1,
+        `Unknown directive "${name}" (known: ${[...directives.keys()].join(', ')})`
+      );
+    }
 
-  if (directives.get(name)?.devOnly && env.mode !== 'dev') {
+    if (directives.get(name)?.devOnly && env.mode !== 'dev') {
+      state.line = nextLine + (isClosed ? 1 : 0);
+      return true;
+    }
+
+    const oldParent = state.parentType;
+    const oldLineMax = state.lineMax;
+    state.parentType = 'container' as typeof state.parentType;
+    state.lineMax = nextLine;
+
+    const open = state.push('hub_directive_open', 'div', 1);
+    open.block = true;
+    open.info = name;
+    open.meta = { args };
+    open.map = [startLine, nextLine];
+    state.md.block.tokenize(state, startLine + 1, nextLine);
+    const close = state.push('hub_directive_close', 'div', -1);
+    close.block = true;
+    close.info = name;
+    close.meta = { args };
+
+    state.parentType = oldParent;
+    state.lineMax = oldLineMax;
     state.line = nextLine + (isClosed ? 1 : 0);
     return true;
-  }
-
-  const oldParent = state.parentType;
-  const oldLineMax = state.lineMax;
-  state.parentType = 'container' as typeof state.parentType;
-  state.lineMax = nextLine;
-
-  const open = state.push('hub_directive_open', 'div', 1);
-  open.block = true;
-  open.info = name;
-  open.meta = { args };
-  open.map = [startLine, nextLine];
-  state.md.block.tokenize(state, startLine + 1, nextLine);
-  const close = state.push('hub_directive_close', 'div', -1);
-  close.block = true;
-  close.info = name;
-  close.meta = { args };
-
-  state.parentType = oldParent;
-  state.lineMax = oldLineMax;
-  state.line = nextLine + (isClosed ? 1 : 0);
-  return true;
-};
+  };
 
 // --- Headings ---
 
@@ -311,7 +323,7 @@ const headingsRule = (state: StateCore) => {
 const HUB_LINK_PREFIX = 'hub:';
 
 /** `hub:examples/physics#setup` → its site path and hash */
-export const parseHubLink = (href: string) => {
+const parseHubLink = (href: string) => {
   const [target, hash = ''] = href.slice(HUB_LINK_PREFIX.length).split('#');
   const clean = target.replace(/^\/+|\/+$/g, '');
   return { targetPath: clean ? `${clean}/` : '', hash };
@@ -324,10 +336,23 @@ export const resolveHubLink = (href: string, env: HubMarkdownEnv, file: string, 
   return `${targetPath ? env.root + targetPath : env.root}${hash ? `#${hash}` : ''}`;
 };
 
-export const isHubLink = (href: string) => href.startsWith(HUB_LINK_PREFIX);
+const isHubLink = (href: string) => href.startsWith(HUB_LINK_PREFIX);
+
+/** `decodeURI`, or null for a malformed escape (a stray `%`), which threw out of the whole build */
+const tryDecodeURI = (text: string) => {
+  try {
+    return decodeURI(text);
+  } catch {
+    return null;
+  }
+};
+
+const reportBadEscape = (env: HubMarkdownEnv, file: string, line: number, url: string) =>
+  env.diag.error(file, line, `${url}: a "%" not followed by two hex digits (write %25 for a "%")`);
 
 const API_LINK_PREFIX = 'api:';
 
+/** Whether an href is an `api:` link */
 export const isApiLink = (href: string) => href.startsWith(API_LINK_PREFIX);
 
 /**
@@ -335,7 +360,12 @@ export const isApiLink = (href: string) => href.startsWith(API_LINK_PREFIX);
  * error (with its candidates), and the link points nowhere (`#`)
  */
 export const resolveApiLink = (href: string, env: HubMarkdownEnv, file: string, line: number) => {
-  const ref = decodeURI(href.slice(API_LINK_PREFIX.length)).trim();
+  const decoded = tryDecodeURI(href.slice(API_LINK_PREFIX.length));
+  if (decoded === null) {
+    reportBadEscape(env, file, line, href);
+    return '#';
+  }
+  const ref = decoded.trim();
   if (!env.apiLinks) {
     env.diag.warn(file, undefined, `api: links are unchecked here: the API docs didn't build`);
     return '#';
@@ -350,7 +380,7 @@ export const resolveApiLink = (href: string, env: HubMarkdownEnv, file: string, 
 
 const REPO_LINK_PREFIX = 'repo:';
 
-export const isRepoLink = (href: string) => href.startsWith(REPO_LINK_PREFIX);
+const isRepoLink = (href: string) => href.startsWith(REPO_LINK_PREFIX);
 
 /**
  * The editor link `hub.ts` fetches instead of following (Vite's `/__open-in-editor`), as the API
@@ -366,7 +396,12 @@ export const openInEditorHref = (file: string, line: number) =>
  * @returns the href, and whether it opens the editor
  */
 export const resolveRepoLink = (href: string, env: HubMarkdownEnv, file: string, line: number) => {
-  const [target, hash = ''] = decodeURI(href.slice(REPO_LINK_PREFIX.length)).split('#');
+  const decoded = tryDecodeURI(href.slice(REPO_LINK_PREFIX.length));
+  if (decoded === null) {
+    reportBadEscape(env, file, line, href);
+    return { href: '#', isEditor: false };
+  }
+  const [target, hash = ''] = decoded.split('#');
   const source = path.resolve(ROOT, target.replace(/^\/+/, ''));
   if (
     !source.startsWith(ROOT + path.sep) ||
@@ -413,7 +448,12 @@ const CONVERTED_IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg'];
 
 const resolveImage = (src: string, env: HubMarkdownEnv, line: number) => {
   const [file] = src.split(/[?#]/);
-  const source = path.resolve(path.dirname(env.file), decodeURI(file));
+  const decoded = tryDecodeURI(file);
+  if (decoded === null) {
+    reportBadEscape(env, env.file, line, src);
+    return src;
+  }
+  const source = path.resolve(path.dirname(env.file), decoded);
   if (!fs.existsSync(source)) {
     env.diag.error(env.file, line, `Image not found: ${src}`);
     return src;
@@ -460,14 +500,20 @@ const linksRule = (state: StateCore) => {
 
 // --- The instance ---
 
-export const createHubMarkdown = () => {
+/**
+ * The Hub's markdown-it: its link, heading and image rules, and its directives (the callouts and
+ * `dev-only`, plus `directives`: the build's, each a named export of its module, so nothing
+ * registers at load)
+ */
+export const createHubMarkdown = (extraDirectives: HubDirectives = {}) => {
+  const directives = new Map(Object.entries({ ...BUILT_IN_DIRECTIVES, ...extraDirectives }));
   const md = new MarkdownIt({ html: true, linkify: true, typographer: false });
   // markdown-it drops `hub:`, `api:` and `repo:` hrefs as unknown schemes; linksRule resolves them
   const defaultValidateLink = md.validateLink.bind(md);
   md.validateLink = (url) =>
     isHubLink(url) || isApiLink(url) || isRepoLink(url) || defaultValidateLink(url);
 
-  md.block.ruler.before('fence', 'hub_directive', directiveRule, {
+  md.block.ruler.before('fence', 'hub_directive', createDirectiveRule(directives), {
     alt: ['paragraph', 'reference', 'blockquote', 'list'],
   });
   md.core.ruler.push('hub_headings', headingsRule);

@@ -1,14 +1,16 @@
 /**
  * The baselines (`yarn verify:baselines`, p601 Phase 3): what a refactor must not change by
- * accident, as three committed JSON files in `devTools/verify/baselines/`, none of them machine
- * dependent, diffed against the current state.
+ * accident, as committed JSON files in `devTools/verify/baselines/` (the bundle's, one per embed
+ * profile, the API's and the docs'), none of them machine dependent, diffed against the current
+ * state.
  *
  *   yarn verify:baselines [--update [--allow-docs-drop]] [--no-build] [--docs]
  *
- * - `bundle.json`: every file in `dist/assets/` (name without its content hash, bytes and gzip),
- *   and the main chunk's modules summed per group (three, Rapier, each engine folder, toolkit,
- *   app; the visualizer's rendered and gzip sizes, before minification, as p600 §2.4 counts).
- *   The measuring is `devTools/sbp/bundleModel.ts`', which `yarn sbp` shares (p611 D1).
+ * - `bundle.json`: every file in `dist/assets/` by its key (its name without the content hash,
+ *   `@<worker>` or `@<folder>` where two share one, `sbp/bundleKeys.ts`; bytes and gzip), and the
+ *   main chunk's modules per group (three, Rapier, each engine folder, toolkit, app; minified, and
+ *   the gzip of each group's minified code, `sbp/moduleSizesPlugin.ts`). The measuring is
+ *   `devTools/sbp/bundleModel.ts`', which `yarn sbp` shares (p611 D1).
  * - `bundle.<id>.json`: the same for each embed profile (`sbp.config.ts`, p611 D7), every file of
  *   its `dist-embed/<id>/`, built after the app on the same production gather.
  * - `api.json`: every export of the documented API (the Hub's TypeDoc model: `src/_engine` and
@@ -28,7 +30,8 @@
  * count unless it's given `--allow-docs-drop` as well, so a drop is recorded only on purpose.
  *
  * The same builds are checked for debug code (p607 D7, `debugInProduction.ts`): a `_dbg__` chunk or
- * module, or a `debug/*.ts` wrapper, fails the run and `--update` records nothing.
+ * module, or a `debug/*.ts` wrapper, in the main build or a worker's, fails the run and `--update`
+ * records nothing.
  *
  * It runs the production build's steps first (decoders, the production gather, `vite build`, then
  * the dev gather again, as `yarn build` does, without `tsc` and the Hub); `--no-build` reuses
@@ -39,20 +42,32 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { ROOT } from '../assetPipeline/sources';
-import { ENTRY_FILES } from '../aliases';
-import { loadApiModel } from '../hub/api/extract';
-import { parseModuleSource } from '../refactor/importGraph';
+import { ROOT } from '../paths';
+import { loadApiModel, type ApiEntry } from '../hub/api/extract';
 import { getOwnMembers, indexApiModel, isDocumented, Kind } from '../hub/api/model';
-import { out, PROGRESS_LOG_WATCH, setProgressLogEnabled } from './progressLog';
+import { out, PROGRESS_LOG_WATCH, setProgressLogEnabled } from '../progressLog';
 import { type BuildScript, findDebugCodeInBuild } from './debugInProduction';
 import { APP_BUILD, type CollectedBundle, collectBundle, sortKeys } from '../sbp/bundleModel';
 import { diffBundle, formatKB } from '../sbp/bundleDiff';
 import { buildBundles } from '../sbp/appBuild';
 import { getBundleBaselineFile } from '../sbp/bundleDiff';
 import { getEmbedBuildLocation } from '../sbp/embedBuild';
-import { getEmbedProfiles } from '../gatherOutput';
+import { getEmbedProfiles } from '../gather/output';
 import sbpProfiles from '../../sbp.config';
+import { writeFileAtomic } from '../files';
+import {
+  type ApiBaseline,
+  type Coverage,
+  diffApi,
+  diffDocs,
+  type DocsBaseline,
+  type DocsLocations,
+  type DocsPart,
+  type Finding,
+  type FolderCoverage,
+  type FolderDocs,
+  formatShare,
+} from './baselinesDiff';
 
 /** Bump when that file's shape changes: an old one is then read as missing (`bundle.json`'s is
  * `bundleModel.ts`') */
@@ -67,41 +82,11 @@ const YELLOW = color('33');
 const DIM = color('2');
 const RESET = color('0');
 
-export type ApiBaseline = {
-  formatVersion: number;
-  /** Source path → export name → kind (`Function`, `Class`, … several joined by `, `) */
-  modules: Record<string, Record<string, string>>;
-  /** Entry (`aekasha/physics`) → the names it exports; missing in a baseline from before p606 */
-  entries?: Record<string, string[]>;
-};
-export type Coverage = { documented: number; total: number };
-export type FolderCoverage = { exports: Coverage; members: Coverage };
-export type DocsPart = 'exports' | 'members';
-export type FolderDocs = FolderCoverage & {
-  /**
-   * By the module's file name in the folder: `SceneLoader#LoadSceneProps`, a class or interface
-   * member after its owner (`ECS#ECSWorld.addSystem`). A name a module exports twice (a value and
-   * a type) is listed twice.
-   */
-  undocumented: Record<DocsPart, string[]>;
-};
-export type DocsBaseline = {
-  formatVersion: number;
-  total: FolderCoverage;
-  subtrees: Record<string, FolderCoverage>;
-  /** `engine/features/physics`, `toolkit` (the subtree's own folder): its own modules, not below */
-  folders: Record<string, FolderDocs>;
-};
-/** `engine/kernel/scene/SceneLoader#LoadSceneProps` (folder, then the undocumented name) → `file:line` */
-type DocsLocations = Map<string, string>;
-
-/** A finding: `attention` ones make the run exit 1 */
-type Finding = { line: string; attention: boolean };
-
-const fail = (msg: string): never => {
+/** Prints the message and exits 2 */
+function fail(msg: string): never {
   out(`${RED}${msg}${RESET}`, true);
   process.exit(2);
-};
+}
 
 const USAGE = 'yarn verify:baselines [--update [--allow-docs-drop]] [--no-build] [--docs]';
 
@@ -125,9 +110,6 @@ const readJSON = <T>(file: string): T | null => {
     return null;
   }
 };
-
-const formatShare = (c: Coverage) =>
-  `${c.documented} / ${c.total}${c.total ? ` (${Math.round((c.documented / c.total) * 100)} %)` : ''}`;
 
 // --- bundle.json ---
 
@@ -179,16 +161,11 @@ const getSourceLocation = (reflection: { sources?: { fileName: string; line: num
   return source ? `${source.fileName}:${source.line}` : '?';
 };
 
-/** Each entry's export names, from its file's AST (an entry re-exports by name) */
-const collectEntries = (): Record<string, string[]> =>
+/** Each entry's export names, read from its file with the model (`ApiModel.entries`) */
+const collectEntries = (entries: ApiEntry[]): Record<string, string[]> =>
   sortKeys(
     Object.fromEntries(
-      Object.entries(ENTRY_FILES).map(([entry, file]) => {
-        const text = fs.readFileSync(path.join(ROOT, file), 'utf-8');
-        const { exports } = parseModuleSource(file, text);
-        if (exports.star.length) fail(`${file}: an entry re-exports by name, not \`export *\``);
-        return [entry, [...exports.local, ...Object.keys(exports.named)].sort()];
-      })
+      entries.map(({ entry, exports }) => [entry, exports.map(({ name }) => name).sort()])
     )
   );
 
@@ -198,6 +175,12 @@ const collectApiAndDocs = async () => {
   if (!result.model) {
     for (const m of result.messages) out(`  ${m.message}`, true);
     return fail('The TypeDoc conversion failed');
+  }
+  // An entry the model couldn't read (an `export *`, a missing module) would record its names short
+  const errors = result.messages.filter((m) => m.level === 'error');
+  if (errors.length) {
+    for (const m of errors) out(`  ${m.message}`, true);
+    return fail('The API model has errors');
   }
   out(
     `${DIM}  ${result.isCached ? 'cached' : 'converted'} in ${(result.durationMs / 1000).toFixed(1)} s${RESET}`
@@ -257,144 +240,18 @@ const collectApiAndDocs = async () => {
     api: {
       formatVersion: API_FORMAT_VERSION,
       modules: sortKeys(modules),
-      entries: collectEntries(),
+      entries: collectEntries(result.model.entries),
     } as ApiBaseline,
     docs,
     locations,
   };
 };
 
-const diffApi = (before: ApiBaseline, after: ApiBaseline): Finding[] => {
-  type Entry = { module: string; name: string; kind: string };
-  const flatten = (api: ApiBaseline) =>
-    Object.entries(api.modules).flatMap(([module, exports]) =>
-      Object.entries(exports).map(([name, kind]): Entry => ({ module, name, kind }))
-    );
-  const key = (e: Entry) => `${e.module}#${e.name}`;
-  const beforeMap = new Map(flatten(before).map((e) => [key(e), e]));
-  const afterMap = new Map(flatten(after).map((e) => [key(e), e]));
-  const removed = [...beforeMap.values()].filter((e) => !afterMap.has(key(e)));
-  const added = [...afterMap.values()].filter((e) => !beforeMap.has(key(e)));
-
-  const findings: Finding[] = [];
-  // The same name and kind gone from one module and new in another is a move
-  for (const gone of [...removed]) {
-    const moved = added.find((e) => e.name === gone.name && e.kind === gone.kind);
-    if (!moved) continue;
-    removed.splice(removed.indexOf(gone), 1);
-    added.splice(added.indexOf(moved), 1);
-    findings.push({
-      line: `moved ${gone.name} (${gone.kind}): ${gone.module} → ${moved.module}`,
-      attention: true,
-    });
-  }
-  for (const e of removed) {
-    findings.push({ line: `removed ${e.name} (${e.kind}) from ${e.module}`, attention: true });
-  }
-  for (const e of added) {
-    findings.push({ line: `added ${e.name} (${e.kind}) in ${e.module}`, attention: true });
-  }
-  for (const [k, e] of afterMap) {
-    const old = beforeMap.get(k);
-    if (old && old.kind !== e.kind) {
-      findings.push({
-        line: `${e.name} in ${e.module}: ${old.kind} → ${e.kind}`,
-        attention: true,
-      });
-    }
-  }
-  // The public surface: what each entry exports
-  const beforeEntries = before.entries ?? {};
-  for (const [entry, names] of Object.entries(after.entries ?? {})) {
-    const old = beforeEntries[entry];
-    if (!old) {
-      findings.push({ line: `new entry ${entry}: ${names.length} exports`, attention: true });
-      continue;
-    }
-    const added = names.filter((n) => !old.includes(n));
-    const removed = old.filter((n) => !names.includes(n));
-    if (added.length) {
-      findings.push({ line: `${entry} exports ${added.join(', ')}`, attention: true });
-    }
-    if (removed.length) {
-      findings.push({ line: `${entry} no longer exports ${removed.join(', ')}`, attention: true });
-    }
-  }
-  for (const entry of Object.keys(beforeEntries)) {
-    if (!after.entries?.[entry]) findings.push({ line: `gone: entry ${entry}`, attention: true });
-  }
-  return findings;
-};
-
-const share = (c: Coverage) => (c.total ? c.documented / c.total : 1);
-
-/** What `after` lists more often than `before` (both sorted lists, duplicates counted) */
-const listAdded = (before: string[], after: string[]) => {
-  const left = new Map<string, number>();
-  for (const name of before) left.set(name, (left.get(name) ?? 0) + 1);
-  return after.filter((name) => {
-    const n = left.get(name) ?? 0;
-    left.set(name, n - 1);
-    return n <= 0;
-  });
-};
-
-/**
- * The ratchet (S4): a folder whose undocumented exports or members grew in number is a finding to
- * look at, naming each new one with its file and line. A share change (deleted documented code,
- * better coverage) and a same-count swap are only reported.
- */
-const diffDocs =
-  (locations: DocsLocations) =>
-  (before: DocsBaseline, after: DocsBaseline): Finding[] => {
-    const findings: Finding[] = [];
-    for (const [folder, now] of Object.entries(after.folders)) {
-      const old = before.folders[folder];
-      for (const part of ['exports', 'members'] as const) {
-        const oldNames = old?.undocumented[part] ?? [];
-        const names = now.undocumented[part];
-        const added = listAdded(oldNames, names).map(
-          (name) => `      ${locations.get(`${folder}/${name}`) ?? '?'} ${name}`
-        );
-        if (names.length > oldNames.length) {
-          findings.push({
-            line: [
-              `${folder}: ${oldNames.length} → ${names.length} undocumented ${part}${old ? '' : ' (a new folder starts at none)'}`,
-              ...added,
-            ].join('\n'),
-            attention: true,
-          });
-          continue;
-        }
-        const a = old?.[part] ?? { documented: 0, total: 0 };
-        const b = now[part];
-        if (a.documented !== b.documented || a.total !== b.total) {
-          findings.push({
-            line: `${folder} ${part}: ${formatShare(a)} → ${formatShare(b)} documented${share(b) < share(a) - 1e-9 ? ' (a lower share, no more undocumented)' : ''}`,
-            attention: false,
-          });
-        }
-        if (added.length) {
-          findings.push({
-            line: [`${folder}: newly undocumented ${part}, as many fewer elsewhere`, ...added].join(
-              '\n'
-            ),
-            attention: false,
-          });
-        }
-      }
-    }
-    for (const folder of Object.keys(before.folders)) {
-      if (!after.folders[folder]) findings.push({ line: `${folder}: gone`, attention: false });
-    }
-    return findings;
-  };
-
 // --- Main ---
 
 const writeBaseline = (name: string, data: unknown) => {
   fs.mkdirSync(BASELINES_DIR, { recursive: true });
-  fs.writeFileSync(path.join(BASELINES_DIR, name), `${JSON.stringify(data, null, 2)}\n`);
+  writeFileAtomic(path.join(BASELINES_DIR, name), `${JSON.stringify(data, null, 2)}\n`);
 };
 
 const readBaseline = <T extends { formatVersion: number }>(name: string, formatVersion: number) => {
@@ -454,7 +311,7 @@ const main = async () => {
       ? [
           report(
             'bundle.json',
-            `${Object.keys(bundle.chunks).length} files; main ${bundle.main.chunk} ${bundle.main.modules} modules, ${formatKB(bundle.main.rendered)} rendered, ${formatKB(bundle.main.gzip)} gzip`,
+            `${Object.keys(bundle.chunks).length} files; main ${bundle.main.chunk} ${bundle.main.modules} modules, ${formatKB(bundle.main.minified)} minified, ${formatKB(bundle.main.gzip)} gzip`,
             bundle,
             diffBundle,
             args.update

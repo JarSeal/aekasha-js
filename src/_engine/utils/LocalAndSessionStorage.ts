@@ -1,3 +1,5 @@
+/** A value the local and session storage helpers store: a JSON value, kept as text (an object or
+ * array as JSON). A read's default value also says how the text is converted back. */
 export type StorageValue =
   | boolean
   | number

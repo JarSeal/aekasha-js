@@ -12,7 +12,6 @@ export const IMPOSTOR_EXPORT_FORMAT_VERSION = 1;
 
 /**
  * Every impostor kind, what {@link ImpostorKind} is made of.
- * @internal
  */
 export const IMPOSTOR_KINDS = ['OCTAHEDRAL', 'CROSS_QUADS'] as const;
 /** An impostor's kind: an octahedral impostor or cross-quads, the `kind` of an `*.impostor.json`. */

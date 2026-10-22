@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+import { ROOT } from '../paths';
 /**
  * `yarn sbp`'s profiles (p611 D2), listed in `sbp.config.ts` at the repo root: what a build holds,
  * which scenes it serves and the budgets it must stay within: the template app's full-page build,
@@ -21,11 +24,12 @@ export type SbpBudgets = {
    * too */
   chunks?: Record<string, number>;
   /** A group's modules in the initial chunks (`three`, `_engine/features/physics`, `app`: the
-   * report's groups, the modules' gzip before minification); a group with no code there is 0 */
+   * report's groups: their modules minified, gzipped together per chunk); a group with no code
+   * there is 0 */
   groups?: Record<string, number>;
   /** The modules under a path from `src/` in the initial chunks, a file
    * (`_engine/ui/icons/BuiltInIcons.ts`) or a folder ending in `/`, measured as the groups are:
-   * for what a group is too coarse for */
+   * (each module's minified code gzipped alone): for what a group is too coarse for */
   modules?: Record<string, number>;
 };
 
@@ -57,6 +61,30 @@ export const WELL_UNDER_MIN_BYTES = 2 * KIB;
 export const isWellUnderBudget = (size: number, budget: number) =>
   budget - size > Math.max(budget * WELL_UNDER_RATIO, WELL_UNDER_MIN_BYTES);
 
+const isDir = (file: string) => !!fs.statSync(file, { throwIfNoEntry: false })?.isDirectory();
+
+/**
+ * Whether a `groups` key names a group the report can have (`getModuleGroup`): its fixed groups,
+ * an installed package, or an engine folder (a kernel or features subfolder). A typo measured 0
+ * and always passed (p619 §1.4 B3).
+ */
+const isPossibleGroup = (key: string) => {
+  if (['vite', 'other', 'app', 'toolkit', '_engine'].includes(key)) return true;
+  const parts = key.split('/');
+  if (parts[0] === '_engine') {
+    const isNested = parts[1] === 'kernel' || parts[1] === 'features';
+    if (parts.length > (isNested ? 3 : 2)) return false;
+    return isDir(path.join(ROOT, 'src', ...parts));
+  }
+  return fs.existsSync(path.join(ROOT, 'node_modules', key, 'package.json'));
+};
+
+/** Whether a `modules` key is a file, or a folder written with its `/`, under `src/` */
+const isExistingModulePath = (key: string) => {
+  const file = path.join(ROOT, 'src', ...key.split('/'));
+  return key.endsWith('/') ? isDir(file) : !!fs.statSync(file, { throwIfNoEntry: false })?.isFile();
+};
+
 const isBudget = (value: unknown) =>
   typeof value === 'number' && Number.isInteger(value) && value >= 0;
 
@@ -73,7 +101,17 @@ const checkBudgets = (id: string, budgets: SbpBudgets): string[] => {
   };
   for (const [kind, [pattern, text]] of Object.entries(keyRules)) {
     for (const [key, value] of Object.entries(budgets[kind as keyof typeof keyRules] ?? {})) {
-      if (!pattern.test(key)) problems.push(`${at}.${kind} ${JSON.stringify(key)}: ${text}`);
+      if (!pattern.test(key)) {
+        problems.push(`${at}.${kind} ${JSON.stringify(key)}: ${text}`);
+      } else if (kind === 'groups' && !isPossibleGroup(key)) {
+        problems.push(
+          `${at}.groups ${JSON.stringify(key)}: no such group (a package in node_modules/, an engine folder, app, toolkit, vite, other)`
+        );
+      } else if (kind === 'modules' && !isExistingModulePath(key)) {
+        problems.push(
+          `${at}.modules ${JSON.stringify(key)}: no such file or folder under src/ (a folder ends in /)`
+        );
+      }
       if (!isBudget(value)) {
         problems.push(`${at}.${kind} ${key}: a whole number of bytes, 0 or more`);
       }

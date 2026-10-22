@@ -8,7 +8,7 @@ import type { HubHeading, HubPage } from './types';
  * Puts a page into `hub/_layout/shell.html`. The shell's `{{name}}` placeholders are filled in
  * one pass, so a page's own text is never read as one. `{{name:arg}}` ones are the markup
  * helpers (`HubMarkupHelpers`), which a page's own markup has too. The menu is rendered here per
- * page, with the active item and its ancestors marked (p550 §3.5): no flash, and it works without
+ * page, with the active item and its ancestors marked: no flash, and it works without
  * JS.
  */
 
@@ -31,17 +31,18 @@ export type ShellSiteValues = {
   /** The relative path to the site root (`../../`), or '' when a `<base>` sets it (404) */
   root: string;
   siteTitle: string;
-  /** Extra `<head>` markup (the 404 page's `<base>` script, p551 Phase 2's dev client) */
+  /** Extra `<head>` markup (the 404 page's `<base>`, the dev client in `dev`) */
   head: string;
   nav: string;
-  /** The asset URLs with their `?v=` */
+  /** The asset URLs with their `?v=` (the search payload's in a `<meta>`: loaded on first use) */
   css: string;
   js: string;
-  dataJs: string;
+  searchJs: string;
   engineVersion: string;
   githubUrl: string;
 };
 
+/** The values each page fills into the shell */
 export type ShellPageValues = {
   /** The `<title>`: the page's, then the site's */
   title: string;
@@ -56,12 +57,20 @@ export type ShellPageValues = {
   body: string;
 };
 
+/** Every value a shell fill takes */
 export type ShellValues = ShellSiteValues & ShellPageValues;
 
 /** The headings the TOC lists, and how many it needs to show at all */
 const TOC_LEVELS = [2, 3];
 const TOC_MIN_HEADINGS = 3;
 
+/** Own keys only: `key in` would find `constructor` and `toString` on Object.prototype (H2) */
+const hasOwn = (object: object, key: string) => Object.prototype.hasOwnProperty.call(object, key);
+
+/**
+ * Fills the shell's `{{name}}` and `{{name:arg}}` placeholders in one pass (a page's text is never
+ * read as one); an unknown one is an error at its line
+ */
 export const fillShell = (
   shell: string,
   shellFile: string,
@@ -72,7 +81,7 @@ export const fillShell = (
   shell.replace(
     PLACEHOLDER_REGEX,
     (match, key: string, arg: string | undefined, offset: number) => {
-      if (arg !== undefined && key in helpers) {
+      if (arg !== undefined && hasOwn(helpers, key)) {
         return helpers[key as keyof HubMarkupHelpers](
           arg,
           values.root,
@@ -80,12 +89,13 @@ export const fillShell = (
           lineAt(shell, offset)
         );
       }
-      if (arg === undefined && key in values) return values[key as keyof ShellValues];
+      if (arg === undefined && hasOwn(values, key)) return values[key as keyof ShellValues];
       diag.error(shellFile, lineAt(shell, offset), `Unknown placeholder ${match}`);
       return '';
     }
   );
 
+/** A page's relative URL from `root` */
 export const pageHref = (root: string, page: HubPage) =>
   page.path ? root + page.path : root || './';
 
@@ -124,6 +134,7 @@ export const renderNav = (
   return `<ul class="hubNavList">${[homepage, ...homepage.children].map((page) => item(page, true)).join('')}</ul>`;
 };
 
+/** The breadcrumbs from the homepage to the page; none on the homepage */
 export const renderBreadcrumbs = (page: HubPage, root: string) => {
   if (!page.parent) return '';
   const items = getPageTrail(page).map((p) =>
@@ -134,6 +145,7 @@ export const renderBreadcrumbs = (page: HubPage, root: string) => {
   return `<nav class="hubBreadcrumbs" aria-label="Breadcrumbs"><ol>${items.join('')}</ol></nav>`;
 };
 
+/** The "On this page" list: the h2 and h3, from three of them */
 export const renderToc = (headings: HubHeading[]) => {
   const listed = headings.filter((h) => TOC_LEVELS.includes(h.level));
   if (listed.length < TOC_MIN_HEADINGS) return '';

@@ -5,10 +5,7 @@ import { lwarn } from '../../utils/Logger';
 import { IS_DEBUG_ENV } from '../config/Config';
 import { recordAssetOwner, retagAssetOwner } from './AssetOwners';
 
-/**
- * A geometry's name and description for the debug tooling.
- * @internal
- */
+/** A geometry's name and description for the debug tooling: a registry entry's `debugData`. */
 export type GeoDebugData = { name?: string; description?: string };
 
 const geometries: {

@@ -1,127 +1,206 @@
 import { z } from 'zod';
-import { createSaveDataSchema, MetaSchema } from './_SaveDataSchema';
+import {
+  createSaveDataSchema,
+  JsonSchemaRefSchema,
+  MetaSchema,
+  SourcePathSchema,
+} from './_SaveDataSchema';
 import { DebugDataSchema } from './_HelperSchemas';
 
 const GeoBaseProps = z.object({
-  id: z.string().optional(),
+  /** The registry id. Default: the JSON's file name (a scene's inline geometry: the geometry's
+   * uuid). */
+  id: z.string().optional().describe("The registry id. Default: the file's name."),
+  /** What the debug tools show for the geometry. */
   debugData: DebugDataSchema.optional(),
 });
 
 const BoxVariant = GeoBaseProps.extend({
-  type: z.literal('BOX'),
+  /** A box (three's `BoxGeometry`). */
+  type: z.literal('BOX').describe('A box.'),
+  /** The constructor's arguments by name; three's defaults for those left out. */
   params: z
     .object({
-      width: z.number().optional(),
-      height: z.number().optional(),
-      depth: z.number().optional(),
-      widthSegments: z.number().optional(),
-      heightSegments: z.number().optional(),
-      depthSegments: z.number().optional(),
+      /** The width (x). Default 1. */
+      width: z.number().optional().describe('The width (x). Default 1.'),
+      /** The height (y). Default 1. */
+      height: z.number().optional().describe('The height (y). Default 1.'),
+      /** The depth (z). Default 1. */
+      depth: z.number().optional().describe('The depth (z). Default 1.'),
+      /** Segments along the width. Default 1. */
+      widthSegments: z.number().optional().describe('Segments along the width. Default 1.'),
+      /** Segments along the height. Default 1. */
+      heightSegments: z.number().optional().describe('Segments along the height. Default 1.'),
+      /** Segments along the depth. Default 1. */
+      depthSegments: z.number().optional().describe('Segments along the depth. Default 1.'),
     })
-    .optional(),
+    .optional()
+    .describe("The constructor's arguments by name; three's defaults for those left out."),
 });
 
 const SphereVariant = GeoBaseProps.extend({
-  type: z.literal('SPHERE'),
+  /** A sphere (three's `SphereGeometry`). */
+  type: z.literal('SPHERE').describe('A sphere.'),
+  /** The constructor's arguments by name; three's defaults for those left out. */
   params: z
     .object({
-      radius: z.number().optional(),
-      widthSegments: z.number().optional(),
-      heightSegments: z.number().optional(),
-      phiStart: z.number().optional(),
-      phiLength: z.number().optional(),
-      thetaStart: z.number().optional(),
-      thetaLength: z.number().optional(),
+      /** The radius. Default 1. */
+      radius: z.number().optional().describe('The radius. Default 1.'),
+      /** Segments along the width. Default 32. */
+      widthSegments: z.number().optional().describe('Segments along the width. Default 32.'),
+      /** Segments along the height. Default 16. */
+      heightSegments: z.number().optional().describe('Segments along the height. Default 16.'),
+      /** The horizontal start angle in radians. Default 0. */
+      phiStart: z.number().optional().describe('The horizontal start angle in radians. Default 0.'),
+      /** The horizontal sweep in radians. Default 2π. */
+      phiLength: z.number().optional().describe('The horizontal sweep in radians. Default 2π.'),
+      /** The vertical start angle in radians. Default 0. */
+      thetaStart: z.number().optional().describe('The vertical start angle in radians. Default 0.'),
+      /** The vertical sweep in radians. Default π. */
+      thetaLength: z.number().optional().describe('The vertical sweep in radians. Default π.'),
     })
-    .optional(),
+    .optional()
+    .describe("The constructor's arguments by name; three's defaults for those left out."),
 });
 
 const CylinderVariant = GeoBaseProps.extend({
-  type: z.literal('CYLINDER'),
+  /** A cylinder (three's `CylinderGeometry`). */
+  type: z.literal('CYLINDER').describe('A cylinder.'),
+  /** The constructor's arguments by name; three's defaults for those left out. */
   params: z
     .object({
-      radiusTop: z.number().optional(),
-      radiusBottom: z.number().optional(),
-      height: z.number().optional(),
-      radialSegments: z.number().optional(),
-      heightSegments: z.number().optional(),
-      openEnded: z.boolean().optional(),
-      thetaStart: z.number().optional(),
-      thetaLength: z.number().optional(),
+      /** The top radius. Default 1. */
+      radiusTop: z.number().optional().describe('The top radius. Default 1.'),
+      /** The bottom radius. Default 1. */
+      radiusBottom: z.number().optional().describe('The bottom radius. Default 1.'),
+      /** The height (y). Default 1. */
+      height: z.number().optional().describe('The height (y). Default 1.'),
+      /** Segments around the circumference. Default 32. */
+      radialSegments: z
+        .number()
+        .optional()
+        .describe('Segments around the circumference. Default 32.'),
+      /** Segments along the height. Default 1. */
+      heightSegments: z.number().optional().describe('Segments along the height. Default 1.'),
+      /** Leaves the ends open. Default false. */
+      openEnded: z.boolean().optional().describe('Leaves the ends open. Default false.'),
+      /** The start angle in radians. Default 0. */
+      thetaStart: z.number().optional().describe('The start angle in radians. Default 0.'),
+      /** The sweep in radians. Default 2π. */
+      thetaLength: z.number().optional().describe('The sweep in radians. Default 2π.'),
     })
-    .optional(),
+    .optional()
+    .describe("The constructor's arguments by name; three's defaults for those left out."),
 });
 
 const CapsuleVariant = GeoBaseProps.extend({
-  type: z.literal('CAPSULE'),
+  /** A capsule (three's `CapsuleGeometry`): `height` is the middle section's. */
+  type: z.literal('CAPSULE').describe("A capsule (height is the middle section's)."),
+  /** The constructor's arguments by name; three's defaults for those left out. */
   params: z
     .object({
-      radius: z.number().optional(),
-      height: z.number().optional(),
-      capSegments: z.number().optional(),
-      radialSegments: z.number().optional(),
-      heightSegments: z.number().optional(),
+      /** The radius. Default 1. */
+      radius: z.number().optional().describe('The radius. Default 1.'),
+      /** The middle section's height. Default 1. */
+      height: z.number().optional().describe("The middle section's height. Default 1."),
+      /** Segments of each end cap's curve. Default 4. */
+      capSegments: z.number().optional().describe("Segments of each end cap's curve. Default 4."),
+      /** Segments around the circumference. Default 8. */
+      radialSegments: z
+        .number()
+        .optional()
+        .describe('Segments around the circumference. Default 8.'),
+      /** Segments along the height. Default 1. */
+      heightSegments: z.number().optional().describe('Segments along the height. Default 1.'),
     })
-    .optional(),
+    .optional()
+    .describe("The constructor's arguments by name; three's defaults for those left out."),
 });
 
 const ConeVariant = GeoBaseProps.extend({
-  type: z.literal('CONE'),
+  /** A cone (three's `ConeGeometry`). */
+  type: z.literal('CONE').describe('A cone.'),
+  /** The constructor's arguments by name; three's defaults for those left out. */
   params: z
     .object({
-      radius: z.number().optional(),
-      height: z.number().optional(),
-      radialSegments: z.number().optional(),
-      heightSegments: z.number().optional(),
-      openEnded: z.boolean().optional(),
-      thetaStart: z.number().optional(),
-      thetaLength: z.number().optional(),
+      /** The base radius. Default 1. */
+      radius: z.number().optional().describe('The base radius. Default 1.'),
+      /** The height (y). Default 1. */
+      height: z.number().optional().describe('The height (y). Default 1.'),
+      /** Segments around the circumference. Default 32. */
+      radialSegments: z
+        .number()
+        .optional()
+        .describe('Segments around the circumference. Default 32.'),
+      /** Segments along the height. Default 1. */
+      heightSegments: z.number().optional().describe('Segments along the height. Default 1.'),
+      /** Leaves the ends open. Default false. */
+      openEnded: z.boolean().optional().describe('Leaves the ends open. Default false.'),
+      /** The start angle in radians. Default 0. */
+      thetaStart: z.number().optional().describe('The start angle in radians. Default 0.'),
+      /** The sweep in radians. Default 2π. */
+      thetaLength: z.number().optional().describe('The sweep in radians. Default 2π.'),
     })
-    .optional(),
+    .optional()
+    .describe("The constructor's arguments by name; three's defaults for those left out."),
 });
 
-export const GeoPropsSchema = z.union([
+const GEO_VARIANTS = [
   BoxVariant,
   SphereVariant,
   CylinderVariant,
   CapsuleVariant,
   ConeVariant,
-]);
+] as const;
 
+/**
+ * A geometry's props (`*.geometry.json`'s `geoProps`): one variant per `type`, each with its three
+ * params. The scene's inline `geometries` and a mesh's `geo` use it.
+ * @internal
+ */
+export const GeoPropsSchema = z
+  .discriminatedUnion('type', GEO_VARIANTS)
+  .describe('The geometry: BOX, SPHERE, CYLINDER, CAPSULE or CONE, and its params.');
+
+/**
+ * A geometry JSON's props, as {@link GeoAssetSchema} validates them. `RuntimeTypes.test.ts` checks
+ * it against the runtime's `GeoProps`.
+ * @internal
+ */
 export type GeoProps = z.infer<typeof GeoPropsSchema>;
 
+// Every type's params, each optional: a save entry's params go over the geometry's
 const GeoOverridesSchema = z.object({
+  /** When the entry was saved, and the versions then. */
   __meta: MetaSchema.optional(),
+  /** Over the geometry's `debugData`. */
   debugData: DebugDataSchema.optional(),
+  /** Over the geometry's params. */
   params: z
     .object({
-      width: z.number().optional(),
-      height: z.number().optional(),
-      depth: z.number().optional(),
-      widthSegments: z.number().optional(),
-      heightSegments: z.number().optional(),
-      depthSegments: z.number().optional(),
-      radius: z.number().optional(),
-      phiStart: z.number().optional(),
-      phiLength: z.number().optional(),
-      thetaStart: z.number().optional(),
-      thetaLength: z.number().optional(),
-      radiusTop: z.number().optional(),
-      radiusBottom: z.number().optional(),
-      radialSegments: z.number().optional(),
-      openEnded: z.boolean().optional(),
-      capSegments: z.number().optional(),
+      ...BoxVariant.shape.params.unwrap().shape,
+      ...SphereVariant.shape.params.unwrap().shape,
+      ...CylinderVariant.shape.params.unwrap().shape,
+      ...CapsuleVariant.shape.params.unwrap().shape,
+      ...ConeVariant.shape.params.unwrap().shape,
     })
     .optional(),
 });
 
-export type GeoOverrides = z.infer<typeof GeoOverridesSchema>;
-
+/**
+ * A geometry JSON (`*.geometry.json`): its props (the runtime's `GeoProps` for
+ * `createGeometry`) and its per-scene save entries.
+ */
 export const GeoAssetSchema = z.object({
-  $schema: z.string().optional(),
+  /** The JSON Schema an editor validates the file with. */
+  $schema: JsonSchemaRefSchema.optional(),
+  /** The geometry's type and params. */
   geoProps: GeoPropsSchema,
-  __sourcePath: z.string().optional(),
+  /** Set by the gatherer: the file it came from. */
+  __sourcePath: SourcePathSchema.optional(),
+  /** Per scene id, its save entries over the params and `debugData` (the first applies). */
   __saveData: createSaveDataSchema(GeoOverridesSchema),
 });
 
+/** A geometry JSON (`*.geometry.json`), as {@link GeoAssetSchema} validates it. */
 export type GeoAsset = z.infer<typeof GeoAssetSchema>;

@@ -32,12 +32,21 @@ export type {
   KindSpec,
 } from './ActorTypes';
 export type {
+  CharacterBodyCollider,
+  CharacterBodyData,
+  CharacterBodyKindField,
+  CharacterBodyPlan,
+  CharacterCastRecord,
   CharacterConfigValues,
-  CharacterControlMode,
   CharacterController,
   CharacterControllerConfig,
+  CharacterControlMode,
+  CharacterDimensions,
   CharacterIntent,
   CharacterObject,
+  CharacterProbeDimensions,
+  CharacterProbes,
+  LocomotionState,
   LocomotionStateListener,
 } from './CharacterTypes';
 export type {
@@ -64,3 +73,12 @@ export type {
   DynamicCharacterState,
 } from './controllers/dynamic/DynamicCharacterData';
 export { character } from './CharacterFeature';
+export type {
+  CameraRelativeInputMappings,
+  CharacterActionMappings,
+  CharacterInputCommonOpts,
+  CharacterInputHoldMode,
+  CharacterInputOpts,
+  TankInputMappings,
+  WorldFixedInputMappings,
+} from './CharacterInputSchemes';

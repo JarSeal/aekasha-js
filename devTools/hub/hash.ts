@@ -1,5 +1,4 @@
-import crypto from 'node:crypto';
+import { sha256 } from '../files';
 
 /** A short content hash: the `?v=` on asset URLs */
-export const hashContent = (content: string | Buffer) =>
-  crypto.createHash('sha256').update(content).digest('hex').slice(0, 10);
+export const hashContent = (content: string | Buffer) => sha256(content).slice(0, 10);

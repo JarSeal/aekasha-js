@@ -224,7 +224,7 @@ own; a gameplay binding on a debug key's chord logs a warning in debug mode.
 - [Characters](hub:features/characters): the player brains read action maps.
 - [Physics](hub:features/physics#stepping): the fixed steps the actions are sampled for.
 - [UI kit](hub:features/ui-kit#dialogs): a pause menu that switches the contexts.
-- The API reference: [Actions](hub:documentation/engine/kernel/input/Actions).
+- The API reference: [`input/`](hub:documentation/aekasha/input) of `aekasha`.
 
 ::: claude-md
 :::

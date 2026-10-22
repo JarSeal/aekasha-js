@@ -3,639 +3,861 @@
   "type": "object",
   "properties": {
     "$schema": {
-      "type": "string"
+      "type": "string",
+      "description": "The JSON Schema in .schemas/ an editor validates this file with. The gatherer ignores it."
     },
     "lightProps": {
-      "anyOf": [
+      "oneOf": [
         {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
-            "appId": {
-              "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "const": "AMBIENT"
-            },
-            "color": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "r": {
-                      "type": "number"
-                    },
-                    "g": {
-                      "type": "number"
-                    },
-                    "b": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "r",
-                    "g",
-                    "b"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
-            },
-            "intensity": {
-              "type": "number"
-            }
-          },
-          "required": [
-            "type"
-          ],
-          "additionalProperties": false
+          "$ref": "#/definitions/__schema0"
         },
         {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
-            "appId": {
-              "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "const": "HEMISPHERE"
-            },
-            "color": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "r": {
-                      "type": "number"
-                    },
-                    "g": {
-                      "type": "number"
-                    },
-                    "b": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "r",
-                    "g",
-                    "b"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
-            },
-            "groundColor": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "r": {
-                      "type": "number"
-                    },
-                    "g": {
-                      "type": "number"
-                    },
-                    "b": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "r",
-                    "g",
-                    "b"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
-            },
-            "intensity": {
-              "type": "number"
-            }
-          },
-          "required": [
-            "type"
-          ],
-          "additionalProperties": false
+          "$ref": "#/definitions/__schema11"
         },
         {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
-            "appId": {
-              "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "const": "POINT"
-            },
-            "color": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "r": {
-                      "type": "number"
-                    },
-                    "g": {
-                      "type": "number"
-                    },
-                    "b": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "r",
-                    "g",
-                    "b"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
-            },
-            "intensity": {
-              "type": "number"
-            },
-            "distance": {
-              "type": "number"
-            },
-            "decay": {
-              "type": "number"
-            },
-            "position": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
-                }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
-            },
-            "castShadow": {
-              "type": "boolean"
-            },
-            "frustumCullingEnabled": {
-              "type": "boolean"
-            },
-            "objectCullingEnabled": {
-              "type": "boolean"
-            },
-            "shadowPreset": {
-              "type": "string",
-              "enum": [
-                "LOW",
-                "MEDIUM",
-                "HIGH",
-                "ULTRA"
-              ]
-            },
-            "shadowBias": {
-              "type": "number"
-            },
-            "shadowNormalBias": {
-              "type": "number"
-            },
-            "shadowMapSize": {
-              "minItems": 2,
-              "maxItems": 2,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            },
-            "shadowCameraNearFar": {
-              "minItems": 2,
-              "maxItems": 2,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            },
-            "shadowBlurSamples": {
-              "type": "number"
-            },
-            "shadowRadius": {
-              "type": "number"
-            },
-            "shadowIntensity": {
-              "type": "number"
-            }
-          },
-          "required": [
-            "type"
-          ],
-          "additionalProperties": false
+          "$ref": "#/definitions/__schema13"
         },
         {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
-            "appId": {
-              "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "const": "DIRECTIONAL"
-            },
-            "color": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "r": {
-                      "type": "number"
-                    },
-                    "g": {
-                      "type": "number"
-                    },
-                    "b": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "r",
-                    "g",
-                    "b"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
-            },
-            "intensity": {
-              "type": "number"
-            },
-            "position": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
-                }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
-            },
-            "targetPos": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
-                }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
-            },
-            "castShadow": {
-              "type": "boolean"
-            },
-            "shadowPreset": {
-              "type": "string",
-              "enum": [
-                "LOW",
-                "MEDIUM",
-                "HIGH",
-                "ULTRA"
-              ]
-            },
-            "shadowBias": {
-              "type": "number"
-            },
-            "shadowNormalBias": {
-              "type": "number"
-            },
-            "shadowMapSize": {
-              "minItems": 2,
-              "maxItems": 2,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            },
-            "shadowCameraNearFar": {
-              "minItems": 2,
-              "maxItems": 2,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            },
-            "shadowCameraFrustum": {
-              "minItems": 4,
-              "maxItems": 4,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            },
-            "shadowBlurSamples": {
-              "type": "number"
-            },
-            "shadowRadius": {
-              "type": "number"
-            },
-            "shadowIntensity": {
-              "type": "number"
-            }
-          },
-          "required": [
-            "type"
-          ],
-          "additionalProperties": false
+          "$ref": "#/definitions/__schema40"
         },
         {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
-            "appId": {
-              "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "const": "SPOT"
-            },
-            "color": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "r": {
-                      "type": "number"
-                    },
-                    "g": {
-                      "type": "number"
-                    },
-                    "b": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "r",
-                    "g",
-                    "b"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
-            },
-            "intensity": {
-              "type": "number"
-            },
-            "distance": {
-              "type": "number"
-            },
-            "angle": {
-              "type": "number"
-            },
-            "penumbra": {
-              "type": "number"
-            },
-            "decay": {
-              "type": "number"
-            },
-            "position": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
-                }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
-            },
-            "targetPos": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
-                }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
-            },
-            "castShadow": {
-              "type": "boolean"
-            },
-            "frustumCullingEnabled": {
-              "type": "boolean"
-            },
-            "objectCullingEnabled": {
-              "type": "boolean"
-            },
-            "shadowPreset": {
-              "type": "string",
-              "enum": [
-                "LOW",
-                "MEDIUM",
-                "HIGH",
-                "ULTRA"
-              ]
-            },
-            "shadowBias": {
-              "type": "number"
-            },
-            "shadowNormalBias": {
-              "type": "number"
-            },
-            "shadowMapSize": {
-              "minItems": 2,
-              "maxItems": 2,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            },
-            "shadowCameraNearFar": {
-              "minItems": 2,
-              "maxItems": 2,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            },
-            "shadowBlurSamples": {
-              "type": "number"
-            },
-            "shadowRadius": {
-              "type": "number"
-            },
-            "shadowIntensity": {
-              "type": "number"
-            },
-            "map": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {}
-              ]
-            }
-          },
-          "required": [
-            "type"
-          ],
-          "additionalProperties": false
+          "$ref": "#/definitions/__schema44"
         }
-      ]
+      ],
+      "description": "The light: AMBIENT, HEMISPHERE, POINT, DIRECTIONAL or SPOT, and its settings."
     },
     "entityOpts": {
       "type": "object",
       "properties": {
         "appId": {
-          "type": "string"
+          "$ref": "#/definitions/__schema51"
         },
         "disabled": {
-          "type": "boolean"
+          "$ref": "#/definitions/__schema53"
         },
         "persistent": {
-          "type": "boolean"
+          "$ref": "#/definitions/__schema55"
         },
         "doNotAddToScene": {
-          "type": "boolean"
+          "$ref": "#/definitions/__schema57"
         },
         "userData": {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {}
+          "$ref": "#/definitions/__schema59"
         },
         "debugData": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string"
-            },
-            "description": {
-              "type": "string"
-            },
-            "comments": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "timestamp": {
-                    "type": "number"
-                  },
-                  "comment": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "timestamp",
-                  "comment"
-                ],
-                "additionalProperties": false
-              }
-            },
-            "todo": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
-            },
-            "debugObj": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {}
-            }
-          },
-          "additionalProperties": false
+          "$ref": "#/definitions/__schema62"
         },
         "spatialIndex": {
-          "type": "boolean"
+          "$ref": "#/definitions/__schema73"
         },
         "ecsFrustumCullingEnabled": {
-          "type": "boolean"
+          "$ref": "#/definitions/__schema75"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "The entity options: its app id, state, user data and culling."
     },
     "__sourcePath": {
-      "type": "string"
+      "type": "string",
+      "description": "Set by the gatherer: the JSON file the asset came from. Not written by hand."
     },
     "__saveData": {
+      "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema77"
+        }
+      ]
+    }
+  },
+  "required": [
+    "lightProps"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "__schema0": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "$ref": "#/definitions/__schema1"
+        },
+        "appId": {
+          "$ref": "#/definitions/__schema3"
+        },
+        "type": {
+          "type": "string",
+          "const": "AMBIENT",
+          "description": "An ambient light: lights everything evenly."
+        },
+        "color": {
+          "$ref": "#/definitions/__schema5"
+        },
+        "intensity": {
+          "$ref": "#/definitions/__schema9"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "__schema1": {
+      "description": "false creates the light disabled. Default true.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema2"
+        }
+      ]
+    },
+    "__schema2": {
+      "type": "boolean"
+    },
+    "__schema3": {
+      "description": "The id scenes list it by (default: the file's name), and the entity's app id (default: a UUID).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema4"
+        }
+      ]
+    },
+    "__schema4": {
+      "type": "string"
+    },
+    "__schema5": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema6": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/__schema7"
+        },
+        {
+          "$ref": "#/definitions/__schema8"
+        }
+      ],
+      "description": "A CSS colour string (\"#ff8800\", \"orange\") or { r, g, b } in 0-255, both sRGB."
+    },
+    "__schema7": {
+      "type": "string"
+    },
+    "__schema8": {
+      "type": "object",
+      "properties": {
+        "r": {
+          "type": "number",
+          "description": "Red, 0-255."
+        },
+        "g": {
+          "type": "number",
+          "description": "Green, 0-255."
+        },
+        "b": {
+          "type": "number",
+          "description": "Blue, 0-255."
+        }
+      },
+      "required": [
+        "r",
+        "g",
+        "b"
+      ],
+      "additionalProperties": false
+    },
+    "__schema9": {
+      "description": "three's intensity: candela for a point or spot light, lux for the others. Default 1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema10"
+        }
+      ]
+    },
+    "__schema10": {
+      "type": "number"
+    },
+    "__schema11": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "$ref": "#/definitions/__schema1"
+        },
+        "appId": {
+          "$ref": "#/definitions/__schema3"
+        },
+        "type": {
+          "type": "string",
+          "const": "HEMISPHERE",
+          "description": "A sky colour from above fading to a ground colour."
+        },
+        "color": {
+          "$ref": "#/definitions/__schema5"
+        },
+        "groundColor": {
+          "$ref": "#/definitions/__schema12"
+        },
+        "intensity": {
+          "$ref": "#/definitions/__schema9"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "__schema12": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema13": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "$ref": "#/definitions/__schema1"
+        },
+        "appId": {
+          "$ref": "#/definitions/__schema3"
+        },
+        "type": {
+          "type": "string",
+          "const": "POINT",
+          "description": "A point light: shines every way from its position."
+        },
+        "color": {
+          "$ref": "#/definitions/__schema5"
+        },
+        "intensity": {
+          "$ref": "#/definitions/__schema9"
+        },
+        "distance": {
+          "$ref": "#/definitions/__schema14"
+        },
+        "decay": {
+          "$ref": "#/definitions/__schema16"
+        },
+        "position": {
+          "$ref": "#/definitions/__schema18"
+        },
+        "castShadow": {
+          "$ref": "#/definitions/__schema20"
+        },
+        "frustumCullingEnabled": {
+          "$ref": "#/definitions/__schema22"
+        },
+        "objectCullingEnabled": {
+          "$ref": "#/definitions/__schema24"
+        },
+        "shadowPreset": {
+          "$ref": "#/definitions/__schema26"
+        },
+        "shadowBias": {
+          "$ref": "#/definitions/__schema27"
+        },
+        "shadowNormalBias": {
+          "$ref": "#/definitions/__schema29"
+        },
+        "shadowMapSize": {
+          "$ref": "#/definitions/__schema31"
+        },
+        "shadowCameraNearFar": {
+          "$ref": "#/definitions/__schema33"
+        },
+        "shadowBlurSamples": {
+          "$ref": "#/definitions/__schema34"
+        },
+        "shadowRadius": {
+          "$ref": "#/definitions/__schema36"
+        },
+        "shadowIntensity": {
+          "$ref": "#/definitions/__schema38"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "__schema14": {
+      "description": "The range in world units past which it adds nothing (0: no limit). Default 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema15"
+        }
+      ]
+    },
+    "__schema15": {
+      "type": "number"
+    },
+    "__schema16": {
+      "description": "How fast it dims with distance (2: physically correct). Default 2.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema17"
+        }
+      ]
+    },
+    "__schema17": {
+      "type": "number"
+    },
+    "__schema18": {
+      "description": "Where the light is. A directional light shines from here to targetPos.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema19"
+        }
+      ]
+    },
+    "__schema19": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "The x component."
+        },
+        "y": {
+          "type": "number",
+          "description": "The y component (up)."
+        },
+        "z": {
+          "type": "number",
+          "description": "The z component."
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
+      "additionalProperties": false
+    },
+    "__schema20": {
+      "description": "Casts shadows. Default false.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema21"
+        }
+      ]
+    },
+    "__schema21": {
+      "type": "boolean"
+    },
+    "__schema22": {
+      "description": "Opts into the ECS frustum culling: off while outside the camera's view.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema23"
+        }
+      ]
+    },
+    "__schema23": {
+      "type": "boolean"
+    },
+    "__schema24": {
+      "description": "Opts into the spatial index's object culling.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema25"
+        }
+      ]
+    },
+    "__schema25": {
+      "type": "boolean"
+    },
+    "__schema26": {
+      "type": "string",
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "ULTRA"
+      ],
+      "description": "The shadow quality preset (default MEDIUM), which the shadow* fields fine-tune."
+    },
+    "__schema27": {
+      "description": "Over the preset: the depth bias against self-shadowing (acne).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema28"
+        }
+      ]
+    },
+    "__schema28": {
+      "type": "number"
+    },
+    "__schema29": {
+      "description": "Over the preset: the bias along the normal.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema30"
+        }
+      ]
+    },
+    "__schema30": {
+      "type": "number"
+    },
+    "__schema31": {
+      "description": "Over the preset: the shadow map's [width, height] in px.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema32"
+        }
+      ]
+    },
+    "__schema32": {
+      "type": "array",
+      "items": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "minItems": 2,
+      "maxItems": 2,
+      "additionalItems": false
+    },
+    "__schema33": {
+      "description": "The shadow camera's [near, far].",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema32"
+        }
+      ]
+    },
+    "__schema34": {
+      "description": "Over the preset: the soft shadow's samples.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema35"
+        }
+      ]
+    },
+    "__schema35": {
+      "type": "number"
+    },
+    "__schema36": {
+      "description": "Over the preset: the soft shadow's blur radius.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema37"
+        }
+      ]
+    },
+    "__schema37": {
+      "type": "number"
+    },
+    "__schema38": {
+      "description": "How dark the shadow is, 0-1. Default 1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema39"
+        }
+      ]
+    },
+    "__schema39": {
+      "type": "number"
+    },
+    "__schema40": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "$ref": "#/definitions/__schema1"
+        },
+        "appId": {
+          "$ref": "#/definitions/__schema3"
+        },
+        "type": {
+          "type": "string",
+          "const": "DIRECTIONAL",
+          "description": "Parallel rays, like the sun's."
+        },
+        "color": {
+          "$ref": "#/definitions/__schema5"
+        },
+        "intensity": {
+          "$ref": "#/definitions/__schema9"
+        },
+        "position": {
+          "$ref": "#/definitions/__schema18"
+        },
+        "targetPos": {
+          "$ref": "#/definitions/__schema41"
+        },
+        "castShadow": {
+          "$ref": "#/definitions/__schema20"
+        },
+        "shadowPreset": {
+          "$ref": "#/definitions/__schema26"
+        },
+        "shadowBias": {
+          "$ref": "#/definitions/__schema27"
+        },
+        "shadowNormalBias": {
+          "$ref": "#/definitions/__schema29"
+        },
+        "shadowMapSize": {
+          "$ref": "#/definitions/__schema31"
+        },
+        "shadowCameraNearFar": {
+          "$ref": "#/definitions/__schema33"
+        },
+        "shadowCameraFrustum": {
+          "$ref": "#/definitions/__schema42"
+        },
+        "shadowBlurSamples": {
+          "$ref": "#/definitions/__schema34"
+        },
+        "shadowRadius": {
+          "$ref": "#/definitions/__schema36"
+        },
+        "shadowIntensity": {
+          "$ref": "#/definitions/__schema38"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "__schema41": {
+      "description": "Where it points: its target entity's position. Default the origin.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema19"
+        }
+      ]
+    },
+    "__schema42": {
+      "description": "The shadow camera's [left, right, top, bottom] in world units.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema43"
+        }
+      ]
+    },
+    "__schema43": {
+      "type": "array",
+      "items": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "minItems": 4,
+      "maxItems": 4,
+      "additionalItems": false
+    },
+    "__schema44": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "$ref": "#/definitions/__schema1"
+        },
+        "appId": {
+          "$ref": "#/definitions/__schema3"
+        },
+        "type": {
+          "type": "string",
+          "const": "SPOT",
+          "description": "A cone from its position towards its target."
+        },
+        "color": {
+          "$ref": "#/definitions/__schema5"
+        },
+        "intensity": {
+          "$ref": "#/definitions/__schema9"
+        },
+        "distance": {
+          "$ref": "#/definitions/__schema14"
+        },
+        "angle": {
+          "$ref": "#/definitions/__schema45"
+        },
+        "penumbra": {
+          "$ref": "#/definitions/__schema47"
+        },
+        "decay": {
+          "$ref": "#/definitions/__schema16"
+        },
+        "position": {
+          "$ref": "#/definitions/__schema18"
+        },
+        "targetPos": {
+          "$ref": "#/definitions/__schema41"
+        },
+        "castShadow": {
+          "$ref": "#/definitions/__schema20"
+        },
+        "frustumCullingEnabled": {
+          "$ref": "#/definitions/__schema22"
+        },
+        "objectCullingEnabled": {
+          "$ref": "#/definitions/__schema24"
+        },
+        "shadowPreset": {
+          "$ref": "#/definitions/__schema26"
+        },
+        "shadowBias": {
+          "$ref": "#/definitions/__schema27"
+        },
+        "shadowNormalBias": {
+          "$ref": "#/definitions/__schema29"
+        },
+        "shadowMapSize": {
+          "$ref": "#/definitions/__schema31"
+        },
+        "shadowCameraNearFar": {
+          "$ref": "#/definitions/__schema33"
+        },
+        "shadowBlurSamples": {
+          "$ref": "#/definitions/__schema34"
+        },
+        "shadowRadius": {
+          "$ref": "#/definitions/__schema36"
+        },
+        "shadowIntensity": {
+          "$ref": "#/definitions/__schema38"
+        },
+        "map": {
+          "$ref": "#/definitions/__schema49"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "__schema45": {
+      "description": "The cone's half-angle in radians, at most π/2. Default π/3.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema46"
+        }
+      ]
+    },
+    "__schema46": {
+      "type": "number"
+    },
+    "__schema47": {
+      "description": "The share of the cone that fades at its edge, 0-1. Default 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema48"
+        }
+      ]
+    },
+    "__schema48": {
+      "type": "number"
+    },
+    "__schema49": {
+      "description": "The cookie: the id of a texture the scene loads.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema50"
+        }
+      ]
+    },
+    "__schema50": {
+      "type": "string"
+    },
+    "__schema51": {
+      "description": "The entity's app id, for getEntityIdByAppId. Default: a generated UUID.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema52"
+        }
+      ]
+    },
+    "__schema52": {
+      "type": "string"
+    },
+    "__schema53": {
+      "description": "Creates the entity disabled.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema54"
+        }
+      ]
+    },
+    "__schema54": {
+      "type": "boolean"
+    },
+    "__schema55": {
+      "description": "Keeps the entity on a scene switch. Read only by lines and a light's target entity so far.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema56"
+        }
+      ]
+    },
+    "__schema56": {
+      "type": "boolean"
+    },
+    "__schema57": {
+      "description": "Leaves the entity's object out of the root scene.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema58"
+        }
+      ]
+    },
+    "__schema58": {
+      "type": "boolean"
+    },
+    "__schema59": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema60"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema61"
+      },
+      "description": "Free-form data for the app: the entity's USER_DATA, or the asset's userData."
+    },
+    "__schema60": {
+      "type": "string"
+    },
+    "__schema61": {},
+    "__schema62": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/__schema63"
+        },
+        "description": {
+          "$ref": "#/definitions/__schema65"
+        },
+        "comments": {
+          "$ref": "#/definitions/__schema67"
+        },
+        "todo": {
+          "$ref": "#/definitions/__schema69"
+        },
+        "debugObj": {
+          "$ref": "#/definitions/__schema71"
+        }
+      },
+      "additionalProperties": false,
+      "description": "What the debug tools show for it. Production data has none."
+    },
+    "__schema63": {
+      "description": "The name the debug tools show.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema64"
+        }
+      ]
+    },
+    "__schema64": {
+      "type": "string"
+    },
+    "__schema65": {
+      "description": "A longer description for the debug tools.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema66"
+        }
+      ]
+    },
+    "__schema66": {
+      "type": "string"
+    },
+    "__schema67": {
+      "description": "Notes with their times.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema68"
+        }
+      ]
+    },
+    "__schema68": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "number",
+            "description": "Milliseconds since the UNIX epoch."
+          },
+          "comment": {
+            "type": "string",
+            "description": "The note."
+          }
+        },
+        "required": [
+          "timestamp",
+          "comment"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "__schema69": {
+      "description": "Open items, by key.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema70"
+        }
+      ]
+    },
+    "__schema70": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema71": {
+      "description": "Anything else a debug tool keeps for it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema72"
+        }
+      ]
+    },
+    "__schema72": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema73": {
+      "description": "false keeps a mesh or a point or spot light out of the spatial index.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema74"
+        }
+      ]
+    },
+    "__schema74": {
+      "type": "boolean"
+    },
+    "__schema75": {
+      "description": "A mesh's TAG_FRUSTUM_CULLED follows the camera's frustum, for gameplay systems to read (not three's render culling).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema76"
+        }
+      ]
+    },
+    "__schema76": {
+      "type": "boolean"
+    },
+    "__schema77": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -649,28 +871,34 @@
               "type": "object",
               "properties": {
                 "date": {
-                  "type": "number"
+                  "$ref": "#/definitions/__schema78"
                 },
                 "engineVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                  "$ref": "#/definitions/__schema80"
                 },
                 "toolkitVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                  "$ref": "#/definitions/__schema82"
                 },
                 "appVersion": {
-                  "type": "string",
-                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                  "$ref": "#/definitions/__schema83"
                 }
               },
-              "additionalProperties": false
+              "additionalProperties": false,
+              "description": "When the entry was saved, and the versions of each part then."
             },
             "enabled": {
-              "type": "boolean"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema1"
+                }
+              ]
             },
             "appId": {
-              "type": "string"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema3"
+                }
+              ]
             },
             "type": {
               "type": "string",
@@ -683,187 +911,202 @@
               ]
             },
             "color": {
-              "anyOf": [
+              "allOf": [
                 {
-                  "type": "string"
-                },
+                  "$ref": "#/definitions/__schema5"
+                }
+              ]
+            },
+            "groundColor": {
+              "allOf": [
                 {
-                  "type": "object",
-                  "properties": {
-                    "r": {
-                      "type": "number"
-                    },
-                    "g": {
-                      "type": "number"
-                    },
-                    "b": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "r",
-                    "g",
-                    "b"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/definitions/__schema12"
                 }
               ]
             },
             "intensity": {
-              "type": "number"
-            },
-            "groundColor": {
-              "anyOf": [
+              "allOf": [
                 {
-                  "type": "string"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "r": {
-                      "type": "number"
-                    },
-                    "g": {
-                      "type": "number"
-                    },
-                    "b": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "r",
-                    "g",
-                    "b"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/definitions/__schema9"
                 }
               ]
             },
             "distance": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema14"
+                }
+              ]
             },
             "decay": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema16"
+                }
+              ]
+            },
+            "angle": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema45"
+                }
+              ]
+            },
+            "penumbra": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema47"
+                }
+              ]
             },
             "position": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema18"
                 }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
+              ]
+            },
+            "targetPos": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema41"
+                }
+              ]
             },
             "castShadow": {
-              "type": "boolean"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema20"
+                }
+              ]
             },
             "frustumCullingEnabled": {
-              "type": "boolean"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema22"
+                }
+              ]
             },
             "objectCullingEnabled": {
-              "type": "boolean"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema24"
+                }
+              ]
             },
             "shadowPreset": {
-              "type": "string",
-              "enum": [
-                "LOW",
-                "MEDIUM",
-                "HIGH",
-                "ULTRA"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema26"
+                }
               ]
             },
             "shadowBias": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema27"
+                }
+              ]
             },
             "shadowNormalBias": {
-              "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema29"
+                }
+              ]
             },
             "shadowMapSize": {
-              "minItems": 2,
-              "maxItems": 2,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema31"
+                }
+              ]
             },
             "shadowCameraNearFar": {
-              "minItems": 2,
-              "maxItems": 2,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            },
-            "shadowBlurSamples": {
-              "type": "number"
-            },
-            "shadowRadius": {
-              "type": "number"
-            },
-            "shadowIntensity": {
-              "type": "number"
-            },
-            "targetPos": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema33"
                 }
-              },
-              "required": [
-                "x",
-                "y",
-                "z"
-              ],
-              "additionalProperties": false
+              ]
             },
             "shadowCameraFrustum": {
-              "minItems": 4,
-              "maxItems": 4,
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema42"
+                }
+              ]
             },
-            "angle": {
-              "type": "number"
+            "shadowBlurSamples": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema34"
+                }
+              ]
             },
-            "penumbra": {
-              "type": "number"
+            "shadowRadius": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema36"
+                }
+              ]
+            },
+            "shadowIntensity": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema38"
+                }
+              ]
             },
             "map": {
-              "anyOf": [
+              "allOf": [
                 {
-                  "type": "string"
-                },
-                {}
+                  "$ref": "#/definitions/__schema49"
+                }
               ]
             }
           },
           "additionalProperties": false
         }
       }
+    },
+    "__schema78": {
+      "description": "When the entry was saved: milliseconds since the UNIX epoch.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema79"
+        }
+      ]
+    },
+    "__schema79": {
+      "type": "number"
+    },
+    "__schema80": {
+      "description": "The engine's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema81"
+        }
+      ]
+    },
+    "__schema81": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "__schema82": {
+      "description": "The toolkit's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema81"
+        }
+      ]
+    },
+    "__schema83": {
+      "description": "The app's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema81"
+        }
+      ]
     }
-  },
-  "required": [
-    "lightProps"
-  ],
-  "additionalProperties": false
+  }
 }

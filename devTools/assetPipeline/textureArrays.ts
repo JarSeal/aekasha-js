@@ -1,8 +1,10 @@
 import path from 'path';
 import fs from 'fs';
-import type { TextureSlot } from '../../src/_engine/schemas/AssetsConfigSchema';
-import type { TextureAsset } from '../../src/_engine/schemas/TextureSchema';
-import { isTextureArrayLayerFile } from '../../src/_engine/schemas/TextureArraySchema';
+import {
+  isTextureArrayLayerFile,
+  type TextureAsset,
+  type TextureSlot,
+} from '../../src/_engine/schemas';
 import {
   flipY,
   readImageFile,
@@ -35,6 +37,7 @@ import { describeEncodedTexture, fitTextureSize, type EncodedTexture } from './t
 /** An array is read as 8-bit images: these can't be */
 const UNREADABLE_LAYER_EXTENSIONS = ['.hdr', '.exr', '.ktx2', '.basis'];
 
+/** One layer of an array (or a cell of an atlas): a file, a pack, or a texture asset's source */
 export type TextureArrayLayer = {
   /** Its name in `__layers`: the texture's id, or the file's name without its extension */
   key: string;
@@ -193,6 +196,7 @@ export type ArraySource = {
   size?: [number, number];
 };
 
+/** A texture array's source: its layers, named after the array's JSON */
 export const createArraySource = (
   jsonFile: string,
   layers: TextureArrayLayer[],

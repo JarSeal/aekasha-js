@@ -1,27 +1,32 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- a command's own output */
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import sbpProfiles from '../sbp.config';
-import { getEmbedProfiles } from './gatherOutput';
-import { buildHub, formatBytes, rebaseNotFoundPage } from './hub/build';
+import { getEmbedProfiles } from './gather/output';
+import { buildHub } from './hub/build';
+import { formatBytes } from './hub/search';
+import { rebaseNotFoundPage } from './hub/shellPages';
 import { readSbpReport } from './hub/sbp';
 import { getEmbedEntryFileName, getEmbedOutDir } from './sbp/embedPaths';
 import { formatDiagnostic } from './hub/diagnostics';
+import { getHubOutDirError } from './hub/outDir';
 import { APP_DIST_DIR, HUB_DIST_DIR, ROOT, toRepoPath } from './hub/paths';
 
 /**
  * `yarn hub:build [--out <dir>] [--no-api] [--no-embed]`: builds the Ækasha Hub's public site
- * (p551) into `dist-hub/` (emptied first), and exits 1 on an error, without writing anything.
- * `yarn build` runs it last.
- * - `--no-api`: no API docs (p553 §2.5), for fast content work: no TypeDoc conversion, the
+ * into `dist-hub/`, and exits 1 on an error, leaving the last output as it was: it builds
+ * into a staging folder next to it and replaces the folder only when nothing failed. `--out`
+ * refuses a folder the build may not replace (`devTools/hub/outDir.ts`: the repo root or above,
+ * a source folder, a non-empty folder that isn't a Hub output). `yarn build` runs it last.
+ * - `--no-api`: no API docs, for fast content work: no TypeDoc conversion, the
  *   Documentation page says they aren't built, and `api:` links aren't checked (one warning).
  * - `--no-embed`: `::: embed` shows its poster only (p611 D9). Without it, an embed profile with
  *   no build (`dist-embed/<id>/`) or no `yarn sbp` report is built and measured first
  *   (`yarn sbp --profile <ids>`), and the pages' embeds are copied into `_assets/embed/`.
  * - `AEK_HUB=false`: does nothing (`yarn build` without the Hub).
  * - `AEK_HUB_IN_DIST=true`: also copies the site into the app's `dist/hub/`, so the app's own
- *   site serves it at `/hub/` (p550 §3.1). Off by default: the Hub isn't in production unless
+ *   site serves it at `/hub/`. Off by default: the Hub isn't in production unless
  *   the developer asks for it.
  */
 
@@ -30,10 +35,10 @@ const YELLOW = '\x1b[33m';
 const GREEN = '\x1b[32m';
 const RESET = '\x1b[0m';
 
-const fail = (message: string) => {
+function fail(message: string): never {
   console.error(`${RED}✗ [Hub] ${message}${RESET}`);
   process.exit(1);
-};
+}
 
 const parseArgs = (args: string[]) => {
   let outDir = HUB_DIST_DIR;
@@ -105,6 +110,8 @@ const main = async () => {
     return;
   }
   const { outDir, isApiSkipped, isEmbedSkipped } = parseArgs(process.argv.slice(2));
+  const outDirError = getHubOutDirError(outDir);
+  if (outDirError) fail(outDirError);
   if (!isEmbedSkipped) buildMissingEmbeds();
   const result = await buildHub({
     mode: 'public',
@@ -121,23 +128,23 @@ const main = async () => {
   }
   if (!result.isOk) {
     const count = result.diag.errors.length;
-    fail(`${count} error${count === 1 ? '' : 's'}: ${toRepoPath(outDir)}/ not written`);
+    fail(`${count} error${count === 1 ? '' : 's'}: ${toRepoPath(outDir)}/ left as it was`);
   }
   console.log(
     `${GREEN}✓ [Hub] ${result.pageCount} pages → ${toRepoPath(outDir)}/ (${Math.round(result.durationMs)} ms)${RESET}`
   );
   if (result.api) {
-    const { isCached, extractMs, moduleCount, symbolCount, coverage } = result.api;
+    const { isCached, extractMs, entryCount, symbolCount, coverage } = result.api;
     const share = coverage.total ? Math.round((coverage.documented / coverage.total) * 100) : 100;
     console.log(
-      `  API: ${moduleCount} modules, ${symbolCount} symbols, ${share}% documented; model ${isCached ? 'reused' : 'extracted'} (${(extractMs / 1000).toFixed(1)} s)`
+      `  API: ${entryCount} entries, ${symbolCount} names, ${share}% documented; model ${isCached ? 'reused' : 'extracted'} (${(extractMs / 1000).toFixed(1)} s)`
     );
   } else if (isApiSkipped) {
     console.log('  API: not built (--no-api)');
   }
   if (result.search) {
     console.log(
-      `  Search index: ${formatBytes(result.search.bytes)}, ${result.search.pageDocCount} page sections and ${result.search.docCount - result.search.pageDocCount} API docs`
+      `  Search index: ${formatBytes(result.search.gzipBytes ?? 0)} gzipped (${formatBytes(result.search.bytes)}), ${result.search.pageDocCount} page sections and ${result.search.docCount - result.search.pageDocCount} API docs`
     );
   }
 

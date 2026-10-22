@@ -117,7 +117,7 @@ day-night folder plays and scrubs the running time.
 - The [sky box example](hub:examples/sky-box).
 - The app's `skyShowcase` scene has every layer on a five-minute day, and `space` the `SPACE`
   preset with asteroids: open them with `?isDebug=true&startScene=skyShowcase` or `space`.
-- The API reference: [SkyBox](hub:documentation/engine/features/skybox).
+- The API reference: [`aekasha/skybox`](hub:documentation/aekasha/skybox).
 
 ::: claude-md
 :::

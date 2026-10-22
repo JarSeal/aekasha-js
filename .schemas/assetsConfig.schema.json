@@ -3,1111 +3,379 @@
   "type": "object",
   "properties": {
     "$schema": {
-      "type": "string"
+      "type": "string",
+      "description": "The JSON Schema in .schemas/ an editor validates this file with. The gatherer ignores it."
     },
     "defaults": {
       "description": "Merged over the engine's built-in defaults (devTools/assetPipeline/settings.ts).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema0"
+        }
+      ]
+    },
+    "profiles": {
+      "description": "Named settings an asset's or a rule's profile picks.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema27"
+        }
+      ]
+    },
+    "rules": {
+      "description": "Applied in order (later wins) to every asset whose source path matches.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema28"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "__schema0": {
       "type": "object",
       "properties": {
         "textures": {
-          "type": "object",
-          "properties": {
-            "default": {
-              "type": "object",
-              "properties": {
-                "codec": {
-                  "type": "string",
-                  "enum": [
-                    "uastc",
-                    "etc1s",
-                    "none"
-                  ],
-                  "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                },
-                "maxSize": {
-                  "description": "Largest side in px, downscaled to fit (null: the source size).",
-                  "anyOf": [
-                    {
-                      "type": "integer",
-                      "minimum": 4,
-                      "maximum": 9007199254740991
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "mipmaps": {
-                  "description": "Write the full mip chain (default true).",
-                  "type": "boolean"
-                },
-                "level": {
-                  "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 4
-                },
-                "rdo": {
-                  "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                  "type": "number",
-                  "minimum": 0
-                },
-                "zstd": {
-                  "description": "UASTC only: Zstandard supercompression level (0: off).",
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 22
-                },
-                "quality": {
-                  "description": "ETC1S only: --qlevel, 1 to 255.",
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 255
-                },
-                "normalMode": {
-                  "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                  "type": "boolean"
-                }
-              },
-              "additionalProperties": false
-            },
-            "baseColor": {
-              "type": "object",
-              "properties": {
-                "codec": {
-                  "type": "string",
-                  "enum": [
-                    "uastc",
-                    "etc1s",
-                    "none"
-                  ],
-                  "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                },
-                "maxSize": {
-                  "description": "Largest side in px, downscaled to fit (null: the source size).",
-                  "anyOf": [
-                    {
-                      "type": "integer",
-                      "minimum": 4,
-                      "maximum": 9007199254740991
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "mipmaps": {
-                  "description": "Write the full mip chain (default true).",
-                  "type": "boolean"
-                },
-                "level": {
-                  "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 4
-                },
-                "rdo": {
-                  "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                  "type": "number",
-                  "minimum": 0
-                },
-                "zstd": {
-                  "description": "UASTC only: Zstandard supercompression level (0: off).",
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 22
-                },
-                "quality": {
-                  "description": "ETC1S only: --qlevel, 1 to 255.",
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 255
-                },
-                "normalMode": {
-                  "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                  "type": "boolean"
-                }
-              },
-              "additionalProperties": false
-            },
-            "normal": {
-              "type": "object",
-              "properties": {
-                "codec": {
-                  "type": "string",
-                  "enum": [
-                    "uastc",
-                    "etc1s",
-                    "none"
-                  ],
-                  "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                },
-                "maxSize": {
-                  "description": "Largest side in px, downscaled to fit (null: the source size).",
-                  "anyOf": [
-                    {
-                      "type": "integer",
-                      "minimum": 4,
-                      "maximum": 9007199254740991
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "mipmaps": {
-                  "description": "Write the full mip chain (default true).",
-                  "type": "boolean"
-                },
-                "level": {
-                  "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 4
-                },
-                "rdo": {
-                  "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                  "type": "number",
-                  "minimum": 0
-                },
-                "zstd": {
-                  "description": "UASTC only: Zstandard supercompression level (0: off).",
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 22
-                },
-                "quality": {
-                  "description": "ETC1S only: --qlevel, 1 to 255.",
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 255
-                },
-                "normalMode": {
-                  "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                  "type": "boolean"
-                }
-              },
-              "additionalProperties": false
-            },
-            "metallicRoughness": {
-              "type": "object",
-              "properties": {
-                "codec": {
-                  "type": "string",
-                  "enum": [
-                    "uastc",
-                    "etc1s",
-                    "none"
-                  ],
-                  "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                },
-                "maxSize": {
-                  "description": "Largest side in px, downscaled to fit (null: the source size).",
-                  "anyOf": [
-                    {
-                      "type": "integer",
-                      "minimum": 4,
-                      "maximum": 9007199254740991
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "mipmaps": {
-                  "description": "Write the full mip chain (default true).",
-                  "type": "boolean"
-                },
-                "level": {
-                  "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 4
-                },
-                "rdo": {
-                  "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                  "type": "number",
-                  "minimum": 0
-                },
-                "zstd": {
-                  "description": "UASTC only: Zstandard supercompression level (0: off).",
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 22
-                },
-                "quality": {
-                  "description": "ETC1S only: --qlevel, 1 to 255.",
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 255
-                },
-                "normalMode": {
-                  "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                  "type": "boolean"
-                }
-              },
-              "additionalProperties": false
-            },
-            "occlusion": {
-              "type": "object",
-              "properties": {
-                "codec": {
-                  "type": "string",
-                  "enum": [
-                    "uastc",
-                    "etc1s",
-                    "none"
-                  ],
-                  "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                },
-                "maxSize": {
-                  "description": "Largest side in px, downscaled to fit (null: the source size).",
-                  "anyOf": [
-                    {
-                      "type": "integer",
-                      "minimum": 4,
-                      "maximum": 9007199254740991
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "mipmaps": {
-                  "description": "Write the full mip chain (default true).",
-                  "type": "boolean"
-                },
-                "level": {
-                  "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 4
-                },
-                "rdo": {
-                  "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                  "type": "number",
-                  "minimum": 0
-                },
-                "zstd": {
-                  "description": "UASTC only: Zstandard supercompression level (0: off).",
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 22
-                },
-                "quality": {
-                  "description": "ETC1S only: --qlevel, 1 to 255.",
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 255
-                },
-                "normalMode": {
-                  "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                  "type": "boolean"
-                }
-              },
-              "additionalProperties": false
-            },
-            "emissive": {
-              "type": "object",
-              "properties": {
-                "codec": {
-                  "type": "string",
-                  "enum": [
-                    "uastc",
-                    "etc1s",
-                    "none"
-                  ],
-                  "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                },
-                "maxSize": {
-                  "description": "Largest side in px, downscaled to fit (null: the source size).",
-                  "anyOf": [
-                    {
-                      "type": "integer",
-                      "minimum": 4,
-                      "maximum": 9007199254740991
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "mipmaps": {
-                  "description": "Write the full mip chain (default true).",
-                  "type": "boolean"
-                },
-                "level": {
-                  "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 4
-                },
-                "rdo": {
-                  "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                  "type": "number",
-                  "minimum": 0
-                },
-                "zstd": {
-                  "description": "UASTC only: Zstandard supercompression level (0: off).",
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 22
-                },
-                "quality": {
-                  "description": "ETC1S only: --qlevel, 1 to 255.",
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 255
-                },
-                "normalMode": {
-                  "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                  "type": "boolean"
-                }
-              },
-              "additionalProperties": false
-            },
-            "orm": {
-              "type": "object",
-              "properties": {
-                "codec": {
-                  "type": "string",
-                  "enum": [
-                    "uastc",
-                    "etc1s",
-                    "none"
-                  ],
-                  "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                },
-                "maxSize": {
-                  "description": "Largest side in px, downscaled to fit (null: the source size).",
-                  "anyOf": [
-                    {
-                      "type": "integer",
-                      "minimum": 4,
-                      "maximum": 9007199254740991
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "mipmaps": {
-                  "description": "Write the full mip chain (default true).",
-                  "type": "boolean"
-                },
-                "level": {
-                  "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 4
-                },
-                "rdo": {
-                  "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                  "type": "number",
-                  "minimum": 0
-                },
-                "zstd": {
-                  "description": "UASTC only: Zstandard supercompression level (0: off).",
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 22
-                },
-                "quality": {
-                  "description": "ETC1S only: --qlevel, 1 to 255.",
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 255
-                },
-                "normalMode": {
-                  "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                  "type": "boolean"
-                }
-              },
-              "additionalProperties": false
-            },
-            "data": {
-              "type": "object",
-              "properties": {
-                "codec": {
-                  "type": "string",
-                  "enum": [
-                    "uastc",
-                    "etc1s",
-                    "none"
-                  ],
-                  "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                },
-                "maxSize": {
-                  "description": "Largest side in px, downscaled to fit (null: the source size).",
-                  "anyOf": [
-                    {
-                      "type": "integer",
-                      "minimum": 4,
-                      "maximum": 9007199254740991
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "mipmaps": {
-                  "description": "Write the full mip chain (default true).",
-                  "type": "boolean"
-                },
-                "level": {
-                  "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 4
-                },
-                "rdo": {
-                  "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                  "type": "number",
-                  "minimum": 0
-                },
-                "zstd": {
-                  "description": "UASTC only: Zstandard supercompression level (0: off).",
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 22
-                },
-                "quality": {
-                  "description": "ETC1S only: --qlevel, 1 to 255.",
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 255
-                },
-                "normalMode": {
-                  "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                  "type": "boolean"
-                }
-              },
-              "additionalProperties": false
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema1"
             }
-          },
-          "additionalProperties": false
+          ]
         },
         "mesh": {
-          "type": "object",
-          "properties": {
-            "codec": {
-              "description": "Geometry compression. meshopt (default) also shrinks VRAM when quantized.",
-              "type": "string",
-              "enum": [
-                "meshopt",
-                "draco",
-                "none"
-              ]
-            },
-            "quantize": {
-              "description": "Quantize, reorder and filter the vertices. false: lossless (EXT_meshopt_compression alone), the collider default.",
-              "type": "boolean"
-            },
-            "simplify": {
-              "description": "Target triangle ratio (null: off).",
-              "anyOf": [
-                {
-                  "type": "number",
-                  "exclusiveMinimum": 0,
-                  "maximum": 1
-                },
-                {
-                  "type": "null"
-                }
-              ]
+          "description": "A GLB's geometry: compression, quantization, simplification.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema18"
             }
-          },
-          "additionalProperties": false
+          ]
         },
         "budget": {
-          "type": "object",
-          "properties": {
-            "vramMB": {
-              "description": "Estimated GPU memory of the whole asset in MB: its textures (KTX2 at 1 B/px, the most it takes on any device) plus a GLB's geometry (null: no limit).",
-              "anyOf": [
-                {
-                  "type": "number",
-                  "exclusiveMinimum": 0
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "downloadMB": {
-              "description": "The output file's size in MB (null: no limit).",
-              "anyOf": [
-                {
-                  "type": "number",
-                  "exclusiveMinimum": 0
-                },
-                {
-                  "type": "null"
-                }
-              ]
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema22"
             }
-          },
-          "additionalProperties": false,
-          "description": "Per-asset limits. Set in an asset JSON's own optimize, it also replaces the per-texture ceiling (each texture's VRAM must fit its slot's maxSize and codec as set without the asset JSON's overrides)."
+          ]
         }
       },
       "additionalProperties": false
     },
-    "profiles": {
+    "__schema1": {
+      "type": "object",
+      "properties": {
+        "default": {
+          "$ref": "#/definitions/__schema2"
+        },
+        "baseColor": {
+          "$ref": "#/definitions/__schema11"
+        },
+        "normal": {
+          "$ref": "#/definitions/__schema12"
+        },
+        "metallicRoughness": {
+          "$ref": "#/definitions/__schema13"
+        },
+        "occlusion": {
+          "$ref": "#/definitions/__schema14"
+        },
+        "emissive": {
+          "$ref": "#/definitions/__schema15"
+        },
+        "orm": {
+          "$ref": "#/definitions/__schema16"
+        },
+        "data": {
+          "$ref": "#/definitions/__schema17"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Per slot; each slot's entry merges over default."
+    },
+    "__schema2": {
+      "description": "Every slot's, under the slot's own.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema3": {
+      "type": "object",
+      "properties": {
+        "codec": {
+          "type": "string",
+          "enum": [
+            "uastc",
+            "etc1s",
+            "none"
+          ],
+          "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
+        },
+        "maxSize": {
+          "description": "Largest side in px, downscaled to fit (null: the source size). Default 1024.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema4"
+            }
+          ]
+        },
+        "mipmaps": {
+          "description": "Writes the full mip chain. Default true.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema5"
+            }
+          ]
+        },
+        "level": {
+          "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest). Default 2.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema6"
+            }
+          ]
+        },
+        "rdo": {
+          "description": "UASTC only: the RDO lambda (0: off). Default 2; 1 for normal, orm, metallicRoughness and occlusion.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema7"
+            }
+          ]
+        },
+        "zstd": {
+          "description": "UASTC only: Zstandard supercompression level (0: off). Default 18.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema8"
+            }
+          ]
+        },
+        "quality": {
+          "description": "ETC1S only: --qlevel, 1 to 255. Default 128.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema9"
+            }
+          ]
+        },
+        "normalMode": {
+          "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema10"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema4": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 4,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "__schema5": {
+      "type": "boolean"
+    },
+    "__schema6": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4
+    },
+    "__schema7": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema8": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 22
+    },
+    "__schema9": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 255
+    },
+    "__schema10": {
+      "type": "boolean"
+    },
+    "__schema11": {
+      "description": "The base colour (albedo).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema12": {
+      "description": "The normal map.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema13": {
+      "description": "glTF's metallic-roughness map.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema14": {
+      "description": "The ambient occlusion map.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema15": {
+      "description": "The emissive map.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema16": {
+      "description": "Packed occlusion, roughness and metalness.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema17": {
+      "description": "Splat maps, masks, LUTs, height.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema18": {
+      "type": "object",
+      "properties": {
+        "codec": {
+          "description": "Geometry compression. meshopt (default) also shrinks VRAM when quantized.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema19"
+            }
+          ]
+        },
+        "quantize": {
+          "description": "Quantize, reorder and filter the vertices. false: lossless (EXT_meshopt_compression alone), the collider default.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema20"
+            }
+          ]
+        },
+        "simplify": {
+          "description": "Target triangle ratio (null: off).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema21"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema19": {
+      "type": "string",
+      "enum": [
+        "meshopt",
+        "draco",
+        "none"
+      ]
+    },
+    "__schema20": {
+      "type": "boolean"
+    },
+    "__schema21": {
+      "anyOf": [
+        {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "__schema22": {
+      "type": "object",
+      "properties": {
+        "vramMB": {
+          "$ref": "#/definitions/__schema23"
+        },
+        "downloadMB": {
+          "$ref": "#/definitions/__schema26"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Per-asset limits. Set in an asset JSON's own optimize, it also replaces the per-texture ceiling (each texture's VRAM must fit its slot's maxSize and codec as set without the asset JSON's overrides)."
+    },
+    "__schema23": {
+      "description": "Estimated GPU memory of the whole asset in MB: its textures (KTX2 at 1 B/px, the most it takes on any device) plus a GLB's geometry (null: no limit).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema24"
+        }
+      ],
+      "$ref": "#/definitions/__schema25"
+    },
+    "__schema24": {
+      "anyOf": [
+        {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "__schema25": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema24"
+        }
+      ]
+    },
+    "__schema26": {
+      "description": "The output file's size in MB (null: no limit).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema24"
+        }
+      ],
+      "$ref": "#/definitions/__schema25"
+    },
+    "__schema27": {
       "type": "object",
       "propertyNames": {
         "type": "string"
       },
       "additionalProperties": {
-        "type": "object",
-        "properties": {
-          "textures": {
-            "type": "object",
-            "properties": {
-              "default": {
-                "type": "object",
-                "properties": {
-                  "codec": {
-                    "type": "string",
-                    "enum": [
-                      "uastc",
-                      "etc1s",
-                      "none"
-                    ],
-                    "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                  },
-                  "maxSize": {
-                    "description": "Largest side in px, downscaled to fit (null: the source size).",
-                    "anyOf": [
-                      {
-                        "type": "integer",
-                        "minimum": 4,
-                        "maximum": 9007199254740991
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "mipmaps": {
-                    "description": "Write the full mip chain (default true).",
-                    "type": "boolean"
-                  },
-                  "level": {
-                    "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 4
-                  },
-                  "rdo": {
-                    "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                    "type": "number",
-                    "minimum": 0
-                  },
-                  "zstd": {
-                    "description": "UASTC only: Zstandard supercompression level (0: off).",
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 22
-                  },
-                  "quality": {
-                    "description": "ETC1S only: --qlevel, 1 to 255.",
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 255
-                  },
-                  "normalMode": {
-                    "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
-              },
-              "baseColor": {
-                "type": "object",
-                "properties": {
-                  "codec": {
-                    "type": "string",
-                    "enum": [
-                      "uastc",
-                      "etc1s",
-                      "none"
-                    ],
-                    "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                  },
-                  "maxSize": {
-                    "description": "Largest side in px, downscaled to fit (null: the source size).",
-                    "anyOf": [
-                      {
-                        "type": "integer",
-                        "minimum": 4,
-                        "maximum": 9007199254740991
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "mipmaps": {
-                    "description": "Write the full mip chain (default true).",
-                    "type": "boolean"
-                  },
-                  "level": {
-                    "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 4
-                  },
-                  "rdo": {
-                    "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                    "type": "number",
-                    "minimum": 0
-                  },
-                  "zstd": {
-                    "description": "UASTC only: Zstandard supercompression level (0: off).",
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 22
-                  },
-                  "quality": {
-                    "description": "ETC1S only: --qlevel, 1 to 255.",
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 255
-                  },
-                  "normalMode": {
-                    "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
-              },
-              "normal": {
-                "type": "object",
-                "properties": {
-                  "codec": {
-                    "type": "string",
-                    "enum": [
-                      "uastc",
-                      "etc1s",
-                      "none"
-                    ],
-                    "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                  },
-                  "maxSize": {
-                    "description": "Largest side in px, downscaled to fit (null: the source size).",
-                    "anyOf": [
-                      {
-                        "type": "integer",
-                        "minimum": 4,
-                        "maximum": 9007199254740991
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "mipmaps": {
-                    "description": "Write the full mip chain (default true).",
-                    "type": "boolean"
-                  },
-                  "level": {
-                    "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 4
-                  },
-                  "rdo": {
-                    "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                    "type": "number",
-                    "minimum": 0
-                  },
-                  "zstd": {
-                    "description": "UASTC only: Zstandard supercompression level (0: off).",
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 22
-                  },
-                  "quality": {
-                    "description": "ETC1S only: --qlevel, 1 to 255.",
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 255
-                  },
-                  "normalMode": {
-                    "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
-              },
-              "metallicRoughness": {
-                "type": "object",
-                "properties": {
-                  "codec": {
-                    "type": "string",
-                    "enum": [
-                      "uastc",
-                      "etc1s",
-                      "none"
-                    ],
-                    "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                  },
-                  "maxSize": {
-                    "description": "Largest side in px, downscaled to fit (null: the source size).",
-                    "anyOf": [
-                      {
-                        "type": "integer",
-                        "minimum": 4,
-                        "maximum": 9007199254740991
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "mipmaps": {
-                    "description": "Write the full mip chain (default true).",
-                    "type": "boolean"
-                  },
-                  "level": {
-                    "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 4
-                  },
-                  "rdo": {
-                    "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                    "type": "number",
-                    "minimum": 0
-                  },
-                  "zstd": {
-                    "description": "UASTC only: Zstandard supercompression level (0: off).",
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 22
-                  },
-                  "quality": {
-                    "description": "ETC1S only: --qlevel, 1 to 255.",
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 255
-                  },
-                  "normalMode": {
-                    "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
-              },
-              "occlusion": {
-                "type": "object",
-                "properties": {
-                  "codec": {
-                    "type": "string",
-                    "enum": [
-                      "uastc",
-                      "etc1s",
-                      "none"
-                    ],
-                    "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                  },
-                  "maxSize": {
-                    "description": "Largest side in px, downscaled to fit (null: the source size).",
-                    "anyOf": [
-                      {
-                        "type": "integer",
-                        "minimum": 4,
-                        "maximum": 9007199254740991
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "mipmaps": {
-                    "description": "Write the full mip chain (default true).",
-                    "type": "boolean"
-                  },
-                  "level": {
-                    "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 4
-                  },
-                  "rdo": {
-                    "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                    "type": "number",
-                    "minimum": 0
-                  },
-                  "zstd": {
-                    "description": "UASTC only: Zstandard supercompression level (0: off).",
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 22
-                  },
-                  "quality": {
-                    "description": "ETC1S only: --qlevel, 1 to 255.",
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 255
-                  },
-                  "normalMode": {
-                    "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
-              },
-              "emissive": {
-                "type": "object",
-                "properties": {
-                  "codec": {
-                    "type": "string",
-                    "enum": [
-                      "uastc",
-                      "etc1s",
-                      "none"
-                    ],
-                    "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                  },
-                  "maxSize": {
-                    "description": "Largest side in px, downscaled to fit (null: the source size).",
-                    "anyOf": [
-                      {
-                        "type": "integer",
-                        "minimum": 4,
-                        "maximum": 9007199254740991
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "mipmaps": {
-                    "description": "Write the full mip chain (default true).",
-                    "type": "boolean"
-                  },
-                  "level": {
-                    "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 4
-                  },
-                  "rdo": {
-                    "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                    "type": "number",
-                    "minimum": 0
-                  },
-                  "zstd": {
-                    "description": "UASTC only: Zstandard supercompression level (0: off).",
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 22
-                  },
-                  "quality": {
-                    "description": "ETC1S only: --qlevel, 1 to 255.",
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 255
-                  },
-                  "normalMode": {
-                    "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
-              },
-              "orm": {
-                "type": "object",
-                "properties": {
-                  "codec": {
-                    "type": "string",
-                    "enum": [
-                      "uastc",
-                      "etc1s",
-                      "none"
-                    ],
-                    "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                  },
-                  "maxSize": {
-                    "description": "Largest side in px, downscaled to fit (null: the source size).",
-                    "anyOf": [
-                      {
-                        "type": "integer",
-                        "minimum": 4,
-                        "maximum": 9007199254740991
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "mipmaps": {
-                    "description": "Write the full mip chain (default true).",
-                    "type": "boolean"
-                  },
-                  "level": {
-                    "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 4
-                  },
-                  "rdo": {
-                    "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                    "type": "number",
-                    "minimum": 0
-                  },
-                  "zstd": {
-                    "description": "UASTC only: Zstandard supercompression level (0: off).",
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 22
-                  },
-                  "quality": {
-                    "description": "ETC1S only: --qlevel, 1 to 255.",
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 255
-                  },
-                  "normalMode": {
-                    "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
-              },
-              "data": {
-                "type": "object",
-                "properties": {
-                  "codec": {
-                    "type": "string",
-                    "enum": [
-                      "uastc",
-                      "etc1s",
-                      "none"
-                    ],
-                    "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                  },
-                  "maxSize": {
-                    "description": "Largest side in px, downscaled to fit (null: the source size).",
-                    "anyOf": [
-                      {
-                        "type": "integer",
-                        "minimum": 4,
-                        "maximum": 9007199254740991
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "mipmaps": {
-                    "description": "Write the full mip chain (default true).",
-                    "type": "boolean"
-                  },
-                  "level": {
-                    "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 4
-                  },
-                  "rdo": {
-                    "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                    "type": "number",
-                    "minimum": 0
-                  },
-                  "zstd": {
-                    "description": "UASTC only: Zstandard supercompression level (0: off).",
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 22
-                  },
-                  "quality": {
-                    "description": "ETC1S only: --qlevel, 1 to 255.",
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 255
-                  },
-                  "normalMode": {
-                    "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          "mesh": {
-            "type": "object",
-            "properties": {
-              "codec": {
-                "description": "Geometry compression. meshopt (default) also shrinks VRAM when quantized.",
-                "type": "string",
-                "enum": [
-                  "meshopt",
-                  "draco",
-                  "none"
-                ]
-              },
-              "quantize": {
-                "description": "Quantize, reorder and filter the vertices. false: lossless (EXT_meshopt_compression alone), the collider default.",
-                "type": "boolean"
-              },
-              "simplify": {
-                "description": "Target triangle ratio (null: off).",
-                "anyOf": [
-                  {
-                    "type": "number",
-                    "exclusiveMinimum": 0,
-                    "maximum": 1
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              }
-            },
-            "additionalProperties": false
-          },
-          "budget": {
-            "type": "object",
-            "properties": {
-              "vramMB": {
-                "description": "Estimated GPU memory of the whole asset in MB: its textures (KTX2 at 1 B/px, the most it takes on any device) plus a GLB's geometry (null: no limit).",
-                "anyOf": [
-                  {
-                    "type": "number",
-                    "exclusiveMinimum": 0
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "downloadMB": {
-                "description": "The output file's size in MB (null: no limit).",
-                "anyOf": [
-                  {
-                    "type": "number",
-                    "exclusiveMinimum": 0
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              }
-            },
-            "additionalProperties": false,
-            "description": "Per-asset limits. Set in an asset JSON's own optimize, it also replaces the per-texture ceiling (each texture's VRAM must fit its slot's maxSize and codec as set without the asset JSON's overrides)."
-          }
-        },
-        "additionalProperties": false
+        "$ref": "#/definitions/__schema0"
       }
     },
-    "rules": {
-      "description": "Applied in order (later wins) to every asset whose source path matches.",
+    "__schema28": {
       "type": "array",
       "items": {
         "type": "object",
@@ -1118,585 +386,50 @@
           },
           "optimize": {
             "description": "Pass the matched assets through as they are. Wins over everything else.",
-            "type": "boolean",
-            "const": false
+            "allOf": [
+              {
+                "$ref": "#/definitions/__schema29"
+              }
+            ]
           },
           "profile": {
             "description": "A profile of assets.config.json.",
-            "type": "string"
+            "allOf": [
+              {
+                "$ref": "#/definitions/__schema30"
+              }
+            ]
           },
           "slot": {
             "description": "A standalone texture's slot (default: default). A GLB's textures are classified by their material slot.",
-            "type": "string",
-            "enum": [
-              "default",
-              "baseColor",
-              "normal",
-              "metallicRoughness",
-              "occlusion",
-              "emissive",
-              "orm",
-              "data"
+            "allOf": [
+              {
+                "$ref": "#/definitions/__schema31"
+              }
             ]
           },
           "textures": {
             "description": "Per-slot overrides, or false to keep the textures as they are.",
-            "anyOf": [
+            "allOf": [
               {
-                "type": "boolean",
-                "const": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "default": {
-                    "type": "object",
-                    "properties": {
-                      "codec": {
-                        "type": "string",
-                        "enum": [
-                          "uastc",
-                          "etc1s",
-                          "none"
-                        ],
-                        "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                      },
-                      "maxSize": {
-                        "description": "Largest side in px, downscaled to fit (null: the source size).",
-                        "anyOf": [
-                          {
-                            "type": "integer",
-                            "minimum": 4,
-                            "maximum": 9007199254740991
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "mipmaps": {
-                        "description": "Write the full mip chain (default true).",
-                        "type": "boolean"
-                      },
-                      "level": {
-                        "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 4
-                      },
-                      "rdo": {
-                        "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                        "type": "number",
-                        "minimum": 0
-                      },
-                      "zstd": {
-                        "description": "UASTC only: Zstandard supercompression level (0: off).",
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 22
-                      },
-                      "quality": {
-                        "description": "ETC1S only: --qlevel, 1 to 255.",
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 255
-                      },
-                      "normalMode": {
-                        "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                        "type": "boolean"
-                      }
-                    },
-                    "additionalProperties": false
-                  },
-                  "baseColor": {
-                    "type": "object",
-                    "properties": {
-                      "codec": {
-                        "type": "string",
-                        "enum": [
-                          "uastc",
-                          "etc1s",
-                          "none"
-                        ],
-                        "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                      },
-                      "maxSize": {
-                        "description": "Largest side in px, downscaled to fit (null: the source size).",
-                        "anyOf": [
-                          {
-                            "type": "integer",
-                            "minimum": 4,
-                            "maximum": 9007199254740991
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "mipmaps": {
-                        "description": "Write the full mip chain (default true).",
-                        "type": "boolean"
-                      },
-                      "level": {
-                        "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 4
-                      },
-                      "rdo": {
-                        "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                        "type": "number",
-                        "minimum": 0
-                      },
-                      "zstd": {
-                        "description": "UASTC only: Zstandard supercompression level (0: off).",
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 22
-                      },
-                      "quality": {
-                        "description": "ETC1S only: --qlevel, 1 to 255.",
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 255
-                      },
-                      "normalMode": {
-                        "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                        "type": "boolean"
-                      }
-                    },
-                    "additionalProperties": false
-                  },
-                  "normal": {
-                    "type": "object",
-                    "properties": {
-                      "codec": {
-                        "type": "string",
-                        "enum": [
-                          "uastc",
-                          "etc1s",
-                          "none"
-                        ],
-                        "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                      },
-                      "maxSize": {
-                        "description": "Largest side in px, downscaled to fit (null: the source size).",
-                        "anyOf": [
-                          {
-                            "type": "integer",
-                            "minimum": 4,
-                            "maximum": 9007199254740991
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "mipmaps": {
-                        "description": "Write the full mip chain (default true).",
-                        "type": "boolean"
-                      },
-                      "level": {
-                        "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 4
-                      },
-                      "rdo": {
-                        "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                        "type": "number",
-                        "minimum": 0
-                      },
-                      "zstd": {
-                        "description": "UASTC only: Zstandard supercompression level (0: off).",
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 22
-                      },
-                      "quality": {
-                        "description": "ETC1S only: --qlevel, 1 to 255.",
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 255
-                      },
-                      "normalMode": {
-                        "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                        "type": "boolean"
-                      }
-                    },
-                    "additionalProperties": false
-                  },
-                  "metallicRoughness": {
-                    "type": "object",
-                    "properties": {
-                      "codec": {
-                        "type": "string",
-                        "enum": [
-                          "uastc",
-                          "etc1s",
-                          "none"
-                        ],
-                        "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                      },
-                      "maxSize": {
-                        "description": "Largest side in px, downscaled to fit (null: the source size).",
-                        "anyOf": [
-                          {
-                            "type": "integer",
-                            "minimum": 4,
-                            "maximum": 9007199254740991
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "mipmaps": {
-                        "description": "Write the full mip chain (default true).",
-                        "type": "boolean"
-                      },
-                      "level": {
-                        "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 4
-                      },
-                      "rdo": {
-                        "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                        "type": "number",
-                        "minimum": 0
-                      },
-                      "zstd": {
-                        "description": "UASTC only: Zstandard supercompression level (0: off).",
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 22
-                      },
-                      "quality": {
-                        "description": "ETC1S only: --qlevel, 1 to 255.",
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 255
-                      },
-                      "normalMode": {
-                        "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                        "type": "boolean"
-                      }
-                    },
-                    "additionalProperties": false
-                  },
-                  "occlusion": {
-                    "type": "object",
-                    "properties": {
-                      "codec": {
-                        "type": "string",
-                        "enum": [
-                          "uastc",
-                          "etc1s",
-                          "none"
-                        ],
-                        "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                      },
-                      "maxSize": {
-                        "description": "Largest side in px, downscaled to fit (null: the source size).",
-                        "anyOf": [
-                          {
-                            "type": "integer",
-                            "minimum": 4,
-                            "maximum": 9007199254740991
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "mipmaps": {
-                        "description": "Write the full mip chain (default true).",
-                        "type": "boolean"
-                      },
-                      "level": {
-                        "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 4
-                      },
-                      "rdo": {
-                        "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                        "type": "number",
-                        "minimum": 0
-                      },
-                      "zstd": {
-                        "description": "UASTC only: Zstandard supercompression level (0: off).",
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 22
-                      },
-                      "quality": {
-                        "description": "ETC1S only: --qlevel, 1 to 255.",
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 255
-                      },
-                      "normalMode": {
-                        "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                        "type": "boolean"
-                      }
-                    },
-                    "additionalProperties": false
-                  },
-                  "emissive": {
-                    "type": "object",
-                    "properties": {
-                      "codec": {
-                        "type": "string",
-                        "enum": [
-                          "uastc",
-                          "etc1s",
-                          "none"
-                        ],
-                        "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                      },
-                      "maxSize": {
-                        "description": "Largest side in px, downscaled to fit (null: the source size).",
-                        "anyOf": [
-                          {
-                            "type": "integer",
-                            "minimum": 4,
-                            "maximum": 9007199254740991
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "mipmaps": {
-                        "description": "Write the full mip chain (default true).",
-                        "type": "boolean"
-                      },
-                      "level": {
-                        "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 4
-                      },
-                      "rdo": {
-                        "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                        "type": "number",
-                        "minimum": 0
-                      },
-                      "zstd": {
-                        "description": "UASTC only: Zstandard supercompression level (0: off).",
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 22
-                      },
-                      "quality": {
-                        "description": "ETC1S only: --qlevel, 1 to 255.",
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 255
-                      },
-                      "normalMode": {
-                        "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                        "type": "boolean"
-                      }
-                    },
-                    "additionalProperties": false
-                  },
-                  "orm": {
-                    "type": "object",
-                    "properties": {
-                      "codec": {
-                        "type": "string",
-                        "enum": [
-                          "uastc",
-                          "etc1s",
-                          "none"
-                        ],
-                        "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                      },
-                      "maxSize": {
-                        "description": "Largest side in px, downscaled to fit (null: the source size).",
-                        "anyOf": [
-                          {
-                            "type": "integer",
-                            "minimum": 4,
-                            "maximum": 9007199254740991
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "mipmaps": {
-                        "description": "Write the full mip chain (default true).",
-                        "type": "boolean"
-                      },
-                      "level": {
-                        "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 4
-                      },
-                      "rdo": {
-                        "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                        "type": "number",
-                        "minimum": 0
-                      },
-                      "zstd": {
-                        "description": "UASTC only: Zstandard supercompression level (0: off).",
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 22
-                      },
-                      "quality": {
-                        "description": "ETC1S only: --qlevel, 1 to 255.",
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 255
-                      },
-                      "normalMode": {
-                        "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                        "type": "boolean"
-                      }
-                    },
-                    "additionalProperties": false
-                  },
-                  "data": {
-                    "type": "object",
-                    "properties": {
-                      "codec": {
-                        "type": "string",
-                        "enum": [
-                          "uastc",
-                          "etc1s",
-                          "none"
-                        ],
-                        "description": "uastc: 1 B/px on every device (BC7 / ASTC 4×4), the default. etc1s: smallest download, colour slots only. none: not encoded (exact data, CPU readback)."
-                      },
-                      "maxSize": {
-                        "description": "Largest side in px, downscaled to fit (null: the source size).",
-                        "anyOf": [
-                          {
-                            "type": "integer",
-                            "minimum": 4,
-                            "maximum": 9007199254740991
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "mipmaps": {
-                        "description": "Write the full mip chain (default true).",
-                        "type": "boolean"
-                      },
-                      "level": {
-                        "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest).",
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 4
-                      },
-                      "rdo": {
-                        "description": "UASTC only: RDO lambda (0: off). 2 for colour, 1 for normal / ORM / data.",
-                        "type": "number",
-                        "minimum": 0
-                      },
-                      "zstd": {
-                        "description": "UASTC only: Zstandard supercompression level (0: off).",
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 22
-                      },
-                      "quality": {
-                        "description": "ETC1S only: --qlevel, 1 to 255.",
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 255
-                      },
-                      "normalMode": {
-                        "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
-                        "type": "boolean"
-                      }
-                    },
-                    "additionalProperties": false
-                  }
-                },
-                "additionalProperties": false
+                "$ref": "#/definitions/__schema32"
               }
             ]
           },
           "mesh": {
             "description": "Overrides, or false to keep the geometry as it is.",
-            "anyOf": [
+            "allOf": [
               {
-                "type": "boolean",
-                "const": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "codec": {
-                    "description": "Geometry compression. meshopt (default) also shrinks VRAM when quantized.",
-                    "type": "string",
-                    "enum": [
-                      "meshopt",
-                      "draco",
-                      "none"
-                    ]
-                  },
-                  "quantize": {
-                    "description": "Quantize, reorder and filter the vertices. false: lossless (EXT_meshopt_compression alone), the collider default.",
-                    "type": "boolean"
-                  },
-                  "simplify": {
-                    "description": "Target triangle ratio (null: off).",
-                    "anyOf": [
-                      {
-                        "type": "number",
-                        "exclusiveMinimum": 0,
-                        "maximum": 1
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  }
-                },
-                "additionalProperties": false
+                "$ref": "#/definitions/__schema33"
               }
             ]
           },
           "budget": {
-            "type": "object",
-            "properties": {
-              "vramMB": {
-                "description": "Estimated GPU memory of the whole asset in MB: its textures (KTX2 at 1 B/px, the most it takes on any device) plus a GLB's geometry (null: no limit).",
-                "anyOf": [
-                  {
-                    "type": "number",
-                    "exclusiveMinimum": 0
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "downloadMB": {
-                "description": "The output file's size in MB (null: no limit).",
-                "anyOf": [
-                  {
-                    "type": "number",
-                    "exclusiveMinimum": 0
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+            "allOf": [
+              {
+                "$ref": "#/definitions/__schema22"
               }
-            },
-            "additionalProperties": false,
-            "description": "Per-asset limits. Set in an asset JSON's own optimize, it also replaces the per-texture ceiling (each texture's VRAM must fit its slot's maxSize and codec as set without the asset JSON's overrides)."
+            ]
           }
         },
         "required": [
@@ -1704,7 +437,49 @@
         ],
         "additionalProperties": false
       }
+    },
+    "__schema29": {
+      "type": "boolean",
+      "const": false
+    },
+    "__schema30": {
+      "type": "string"
+    },
+    "__schema31": {
+      "type": "string",
+      "enum": [
+        "default",
+        "baseColor",
+        "normal",
+        "metallicRoughness",
+        "occlusion",
+        "emissive",
+        "orm",
+        "data"
+      ],
+      "description": "glTF slots, orm (packed occlusion / roughness / metalness), data (splat maps, masks, LUTs, height) or default."
+    },
+    "__schema32": {
+      "anyOf": [
+        {
+          "type": "boolean",
+          "const": false
+        },
+        {
+          "$ref": "#/definitions/__schema1"
+        }
+      ]
+    },
+    "__schema33": {
+      "anyOf": [
+        {
+          "type": "boolean",
+          "const": false
+        },
+        {
+          "$ref": "#/definitions/__schema18"
+        }
+      ]
     }
-  },
-  "additionalProperties": false
+  }
 }

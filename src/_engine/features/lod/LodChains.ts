@@ -68,8 +68,12 @@ export type LodChain = {
   /** `BUILD`: the asset pipeline built it into the GLB (p347 Phase 3), the import registered it.
    * `RUNTIME`: generateLodChain() simplified it on the client. */
   origin: 'BUILD' | 'RUNTIME';
-  /** Where it was generated and how long it took (`RUNTIME` only). `mainThreadMs` is the main
-   * thread's own work (copying the input, registering the levels), not the simplifier's. */
+  /**
+   * Where it was generated and how long it took (`RUNTIME` only), for the debug tooling.
+   * `mainThreadMs` is the main thread's own work (copying the input, registering the levels), not
+   * the simplifier's.
+   * @internal
+   */
   report?: AssetLoadReport & { mainThreadMs: number };
 };
 

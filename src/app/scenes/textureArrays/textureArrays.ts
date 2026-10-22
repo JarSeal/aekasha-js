@@ -29,7 +29,7 @@ import {
 
 /**
  * The p299 verification scene: texture arrays next to the textures they were built from. Unlit
- * quads in a grid of 1 × 1 cells, 1.2 apart. Files from `devTools/assetPipeline/p299ArraySpike.ts`
+ * quads in a grid of 1 × 1 cells, 1.2 apart. Files from `devTools/assetPipeline/fixtures/textureArraysFiles.ts`
  * (layer `i`: white, `i + 1` coloured stripes, a black bar at the top).
  * - row 0: `buildTextureArray` of four registered UASTC textures (s0-s3), drawn by ONE quad with
  *   one material (the cell picks the layer); right of it a one-member array of the `testTexture`

@@ -10,6 +10,7 @@ const readRGBA = async (png: Buffer | string) => {
   return { data, width: info.width, height: info.height };
 };
 
+/** Two snapshots' difference: the mean channel delta (0-255), the share of changed pixels, the largest delta */
 export type SnapshotDiff = { meanDelta: number; changedRatio: number; maxDelta: number };
 
 /** Compares two RGBA8 images over RGB; when they differ beyond the tolerance, writes `diffFile`

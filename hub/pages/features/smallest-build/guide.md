@@ -23,9 +23,9 @@ loader names, sit in three's core chunk
 
 ### Each feature's share
 
-What each feature adds to the template app's first download. These are the features' modules
-measured one by one before minification, as `yarn sbp` groups them, so they add up to more than
-their share of the minified chunk.
+What each feature adds to the template app's first download: its modules minified, and their
+code gzipped together, as `yarn sbp` groups them. Each group compresses apart from the rest, so the
+groups add up to a little more than the chunk (about 2 % for the template app).
 
 | Feature                                     | Before the first frame                        | Loaded later                               |
 | ------------------------------------------- | --------------------------------------------- | ------------------------------------------ |

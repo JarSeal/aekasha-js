@@ -102,9 +102,7 @@ with: open it with `?isDebug=true&startScene=physicsTiers`.
 
 ## Read more
 
-- The API reference: [Lines](hub:documentation/engine/features/lines/Lines),
-  [LineObject](hub:documentation/engine/features/lines/LineObject) and
-  [LineBuilders](hub:documentation/engine/features/lines/LineBuilders).
+- The API reference: [`aekasha/lines`](hub:documentation/aekasha/lines).
 
 ::: claude-md
 :::

@@ -8,32 +8,34 @@
 import {
   type GroupSize,
   type Manifest,
+  type ModuleSizesFile,
   type Size,
-  type VisualizerData,
-  getModuleGroup,
+  addGroupSize,
   sortKeys,
 } from './bundleModel';
 
+/** When a file loads: before the first frame, or on demand */
 export type ChunkLoad = 'initial' | 'lazy';
 
+/** A build's files split by when they load */
 export type BundleSplit = {
   /** Keys (`assets/index.js`) of what loads before the first frame, sorted */
   initial: string[];
   /** Keys of the rest, sorted */
   lazy: string[];
-  /** The hashed names of the initial files (`assets/index-Bd_fo_yS.js`): the visualizer's
-   * `moduleParts` name chunks so */
+  /** The hashed names of the initial files (`assets/index-Bd_fo_yS.js`): the module sizes and
+   * the visualizer's `moduleParts` name chunks so */
   initialFiles: Set<string>;
 };
 
-/** A group's modules in the initial chunks and in the lazy ones (a module in both counts twice:
- * a worker's copy is bytes loaded again) */
+/** A group's modules in the initial chunks and in the lazy ones, each chunk's gzip summed (a
+ * module in both counts twice: a worker's copy is bytes loaded again) */
 export type SplitGroupSize = Record<ChunkLoad, GroupSize>;
 
 /**
  * Splits a build's files into initial and lazy.
  * @param manifest Vite's manifest
- * @param fileKeys every file in `dist/assets/`: hashed name → key (`keyFiles`)
+ * @param fileKeys every file in `dist/assets/`: hashed name → key (`keyBuildFiles`)
  * @throws when the manifest names no entry, or an entry's file isn't in `fileKeys`
  */
 export const splitBundle = (manifest: Manifest, fileKeys: Record<string, string>): BundleSplit => {
@@ -72,24 +74,20 @@ export const sumSizes = (keys: string[], sizes: Record<string, Size>): Size =>
     { bytes: 0, gzip: 0 }
   );
 
-/** Every group's modules summed in the initial chunks and in the lazy ones (the visualizer's
- * rendered and gzip sizes per chunk) */
+/** Every group's modules summed in the initial chunks and in the lazy ones (the workers' chunks
+ * are lazy), from the module sizes */
 export const measureSplitGroups = (
-  data: VisualizerData,
+  sizes: ModuleSizesFile,
   split: Pick<BundleSplit, 'initialFiles'>
 ): Record<string, SplitGroupSize> => {
   const groups: Record<string, SplitGroupSize> = {};
-  for (const meta of Object.values(data.nodeMetas)) {
-    for (const [file, partId] of Object.entries(meta.moduleParts)) {
-      const part = data.nodeParts[partId];
-      const group = (groups[getModuleGroup(meta.id)] ??= {
-        initial: { modules: 0, rendered: 0, gzip: 0 },
-        lazy: { modules: 0, rendered: 0, gzip: 0 },
+  for (const [file, chunk] of Object.entries(sizes.chunks)) {
+    for (const [name, size] of Object.entries(chunk.groups)) {
+      const group = (groups[name] ??= {
+        initial: { modules: 0, minified: 0, gzip: 0 },
+        lazy: { modules: 0, minified: 0, gzip: 0 },
       });
-      const into = group[split.initialFiles.has(file) ? 'initial' : 'lazy'];
-      into.modules++;
-      into.rendered += part.renderedLength;
-      into.gzip += part.gzipLength;
+      addGroupSize(group[split.initialFiles.has(file) ? 'initial' : 'lazy'], size);
     }
   }
   return sortKeys(groups);

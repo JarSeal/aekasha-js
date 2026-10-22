@@ -7,7 +7,7 @@ import path from 'node:path';
  * Shared by `yarn hub:preview` and the dev plugin.
  */
 
-export const HUB_CONTENT_TYPES: Record<string, string> = {
+const HUB_CONTENT_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -23,9 +23,14 @@ export const HUB_CONTENT_TYPES: Record<string, string> = {
   '.txt': 'text/plain; charset=utf-8',
 };
 
+/** A file's `Content-Type` by its extension */
 export const getHubContentType = (file: string) =>
   HUB_CONTENT_TYPES[path.extname(file)] ?? 'application/octet-stream';
 
+/**
+ * What a request path resolves to (`resolveHubRoute`): a file, a redirect to its folder's slash, or
+ * the 404 page
+ */
 export type HubRoute =
   | { kind: 'file'; file: string }
   | { kind: 'redirect'; location: string }
@@ -33,9 +38,11 @@ export type HubRoute =
 
 /**
  * The response for a URL path under `base` (`/`, `/hub/`), served from `dir`. `pathname` is
- * decoded; the base without its slash (`/hub`) redirects to it.
+ * decoded; the base without its slash (`/hub`) redirects to it. A NUL byte (`%00`) is not found,
+ * not a throw from `fs` (p619 §1.4 H2).
  */
 export const resolveHubRoute = (dir: string, base: string, pathname: string): HubRoute => {
+  if (pathname.includes('\0')) return { kind: 'notFound' };
   if (base !== '/' && pathname === base.slice(0, -1)) return { kind: 'redirect', location: base };
   if (!pathname.startsWith(base)) return { kind: 'notFound' };
   const file = path.join(dir, pathname.slice(base.length));

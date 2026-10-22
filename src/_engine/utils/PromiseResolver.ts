@@ -8,6 +8,7 @@ type PendingRequest = {
 
 /** Rejection reason of a request that was not resolved within its `timeoutMs`. */
 export class RequestTimeoutError extends Error {
+  /** The error for request `requestId`, which waited `timeoutMs` without being resolved. */
   constructor(requestId: number, timeoutMs: number) {
     super(`Request ${requestId} timed out after ${timeoutMs}ms.`);
     this.name = 'RequestTimeoutError';

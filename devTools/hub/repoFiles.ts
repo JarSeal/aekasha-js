@@ -1,10 +1,10 @@
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { readGit } from '../git';
 import { ROOT } from './paths';
 
 /**
- * The repo's own files on Hub pages (p555): `repo:` links (`markdown.ts`) and the CLAUDE.md
+ * The repo's own files on Hub pages: `repo:` links (`markdown.ts`) and the CLAUDE.md
  * sections (`claudeMd.ts`, the feature pages' `aek:covers`). No Hub imports, so both can use it.
  */
 
@@ -18,6 +18,7 @@ export const toRepoWebUrl = (url: string) =>
     .replace(/\.git$/, '')
     .replace(/\/+$/, '');
 
+/** A heading of a repo Markdown file, with the anchor GitHub gives it (`repo:` links' `#…`) */
 export type MarkdownFileHeading = {
   level: number;
   /** As written, inline Markdown included */
@@ -71,6 +72,7 @@ export const readMarkdownHeadings = (source: string): MarkdownFileHeading[] => {
   return headings;
 };
 
+/** A CLAUDE.md section a feature page can cover (`aek:covers`) */
 export type ClaudeMdSection = {
   /** The heading without a trailing parenthetical: `Debug system`, what `aek:covers` names */
   name: string;
@@ -85,24 +87,13 @@ export type ClaudeMdSection = {
  * Every `CLAUDE.md` below the repo root that git lists (tracked, or untracked and not ignored, so a
  * new one counts before it's added), absolute and sorted; none outside a git checkout
  */
-const listNestedClaudeMdFiles = (): string[] => {
-  let listed: string;
-  try {
-    listed = execFileSync(
-      'git',
-      ['ls-files', '--cached', '--others', '--exclude-standard', '--', '*CLAUDE.md'],
-      { cwd: ROOT, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }
-    );
-  } catch {
-    return [];
-  }
-  return listed
+const listNestedClaudeMdFiles = (): string[] =>
+  readGit(['ls-files', '--cached', '--others', '--exclude-standard', '--', '*CLAUDE.md'])
     .split('\n')
     .filter((file) => path.posix.basename(file) === 'CLAUDE.md')
     .map((file) => path.join(ROOT, file))
     .filter((file) => file !== CLAUDE_MD_FILE && fs.existsSync(file))
     .sort();
-};
 
 /**
  * The CLAUDE.md sections (p605 S9): the `### ` sections under the root file's `## Architecture`,

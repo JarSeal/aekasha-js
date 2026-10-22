@@ -1,7 +1,8 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- a command's own output */
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { PUBLIC_DIR, ROOT } from './paths';
 
 /**
  * Copies the runtime decoders from the installed three.js version into `src/public/` (Vite
@@ -16,9 +17,7 @@ import { fileURLToPath } from 'url';
  * Idempotent: a file whose size and mtime already match the source is skipped.
  */
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const THREE_LIBS_DIR = path.resolve(__dirname, '../node_modules/three/examples/jsm/libs');
-const PUBLIC_DIR = path.resolve(__dirname, '../src/public');
+const THREE_LIBS_DIR = path.join(ROOT, 'node_modules/three/examples/jsm/libs');
 
 const DECODER_SETS = [
   {
@@ -77,10 +76,13 @@ const copyDecoderSet = ({ label, sourceDir, targetDir, files }: (typeof DECODER_
   return true;
 };
 
+/** Copies the Draco and Basis decoders into `src/public/` when they changed (`yarn dev`,
+ * `yarn build`) */
 export const copyDecoders = () => {
   for (const decoderSet of DECODER_SETS) {
     if (!copyDecoderSet(decoderSet)) return;
   }
 };
 
-copyDecoders();
+// Only as a script (`yarn copyDecoders`): an import copies nothing (p619 §1.4 G3)
+if (process.argv[1] === fileURLToPath(import.meta.url)) copyDecoders();

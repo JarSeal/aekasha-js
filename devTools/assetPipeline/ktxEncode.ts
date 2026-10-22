@@ -5,22 +5,29 @@ import { promisify } from 'util';
 import { encodePng, toChannels, type Img } from './images';
 import { ensureKtx, getKtxEnv, type KtxTool } from './ktxTool';
 import type { ResolvedTextureSettings } from './settings';
-import { ROOT } from './sources';
+import { ROOT } from '../paths';
 
 /**
  * KTX2 encoding with the `ktx` CLI (p300 DD4): an image is written as an 8-bit PNG and encoded
  * by `ktx create`. The output depends only on the pixels and the options (not on the file
  * names), and `ktx` records the options in the order given (`KTXwriterScParams`), so the
- * argument order is Phase 1's (`phase1Variants.ts`), to reproduce its files byte for byte.
+ * argument order is Phase 1's (`fixtures/assetCompareVariants.ts`), to reproduce its files byte for byte.
  */
 
 const TMP_DIR = path.join(ROOT, '.cache', 'asset-pipeline', 'tmp');
+/**
+ * One `ktx create`: a large UASTC encode with RDO takes minutes, a hung one would block the dev
+ * server's queue for good (p619 §1.4 A5)
+ */
+const KTX_CREATE_TIMEOUT_MS = 15 * 60_000;
 
+/** A texture's settings when `ktx` encodes it (any codec but `none`) */
 export type KtxSettings = Exclude<ResolvedTextureSettings, { codec: 'none' }>;
 
 /** Thrown when there is no working `ktx` and none could be set up (§8: "encoder missing"). */
 export class EncoderMissingError extends Error {}
 
+/** The run's `ktx`, set up on the first call (throws {@link EncoderMissingError} without one) */
 export type KtxProvider = () => Promise<KtxTool>;
 
 /**
@@ -101,10 +108,19 @@ const runKtxCreate = async (
       await promisify(execFile)(tool.path, ['create', ...args, ...inputFiles, outputFile], {
         env: getKtxEnv(tool),
         maxBuffer: 16 * 1024 * 1024,
+        timeout: KTX_CREATE_TIMEOUT_MS,
+        killSignal: 'SIGKILL',
       });
     } catch (error) {
-      const { stderr, stdout, message } = error as { stderr?: string; stdout?: string } & Error;
-      throw new Error(`ktx create ${args.join(' ')} failed: ${stderr || stdout || message}`);
+      const { stderr, stdout, message, killed } = error as {
+        stderr?: string;
+        stdout?: string;
+        killed?: boolean;
+      } & Error;
+      const reason = killed
+        ? `no result in ${KTX_CREATE_TIMEOUT_MS / 60_000} min, stopped`
+        : stderr || stdout || message;
+      throw new Error(`ktx create ${args.join(' ')} failed: ${reason}`);
     }
     return new Uint8Array(fs.readFileSync(outputFile));
   } finally {

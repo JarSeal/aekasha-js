@@ -23,17 +23,19 @@ import {
   indexModuleGraph,
 } from './bundleWhy';
 import path from 'path';
-import { ROOT } from '../assetPipeline/sources';
+import { ROOT } from '../paths';
 import { KIB, type SbpProfile } from './config';
 
 /** Bump when the report's shape changes: Hub pages read it (p611 D9, `devTools/hub/sbp.ts`) */
-export const REPORT_FORMAT_VERSION = 2;
+export const REPORT_FORMAT_VERSION = 3;
 
 /** The last run's report, a key per profile (`yarn sbp` keeps the profiles it didn't measure) */
 export const SBP_REPORT_FILE = path.join(ROOT, '.cache/sbp/report.json');
 
+/** The files of one load (initial or lazy) by key, and their total */
 export type LoadReport = { total: Size; files: Record<string, Size> };
 
+/** A feature view row as the report file holds it (its chain as one line) */
 export type FeatureReport = {
   feature: string;
   initialGzip: number;
@@ -45,6 +47,7 @@ export type FeatureReport = {
   isUnneededByData: boolean;
 };
 
+/** One profile's measured build: a key of `.cache/sbp/report.json` */
 export type ProfileReport = {
   profile: { id: string; entry: string; scenes: string[] };
   /** What loads before the first frame: the entry chunk, its static imports, their CSS */
@@ -60,6 +63,7 @@ export type ProfileReport = {
   budgets: BudgetCheck[] | null;
 };
 
+/** `.cache/sbp/report.json`: the last report of each profile */
 export type SbpReportFile = { formatVersion: number; profiles: Record<string, ProfileReport> };
 
 const pick = (keys: string[], sizes: Record<string, Size>): LoadReport => ({
@@ -81,11 +85,11 @@ export const measureProfile = (opts: {
   scenes: Record<string, string[]>;
   dataFeatures: readonly string[];
 }): MeasuredProfile => {
-  const { bundle, manifest, data, fileKeys } = opts.collected;
+  const { bundle, manifest, data, sizes, fileKeys } = opts.collected;
   const split = splitBundle(manifest, fileKeys);
   const graph = indexModuleGraph(data, split.initialFiles);
   const from = getEntryModuleId(manifest);
-  const groups = measureSplitGroups(data, split);
+  const groups = measureSplitGroups(sizes, split);
   const features = buildFeatureView({
     graph,
     from,
@@ -100,7 +104,7 @@ export const measureProfile = (opts: {
         initialGzip: initial.total.gzip,
         chunks: bundle.chunks,
         groups,
-        data,
+        sizes,
         initialFiles: split.initialFiles,
       })
     : null;
@@ -134,6 +138,7 @@ export const mergeReport = (file: SbpReportFile | null, report: ProfileReport): 
 
 // --- Text ---
 
+/** The ANSI colour codes the text uses (empty strings without colour) */
 export type Colors = { red: string; green: string; yellow: string; dim: string; reset: string };
 
 /** Files listed per load in the text; the rest are summed in one line */
@@ -160,14 +165,14 @@ const formatLoad = (title: string, load: LoadReport, c: Colors) => {
   return lines;
 };
 
-/** The groups with code in the initial chunks, largest first (gzip, before minification) */
+/** The groups with code in the initial chunks, largest first (gzip of their minified code) */
 const formatGroups = (groups: Record<string, SplitGroupSize>, c: Colors) => {
   const rows = Object.entries(groups)
     .filter(([, size]) => size.initial.gzip)
     .sort(([, a], [, b]) => b.initial.gzip - a.initial.gzip);
   const width = Math.max(...rows.map(([name]) => name.length), 5);
   return [
-    `groups ${c.dim}(the modules' gzip before minification, as bundle.json counts them)${c.reset}`,
+    `groups ${c.dim}(their modules minified, gzipped together per chunk, as bundle.json counts them)${c.reset}`,
     `  ${''.padEnd(width)} ${'initial'.padStart(KB_WIDTH)} ${'lazy'.padStart(KB_WIDTH)}`,
     ...rows.map(
       ([name, size]) =>
@@ -189,7 +194,9 @@ const formatFeatures = (features: FeatureReport[], c: Colors) => {
         ? `${c.dim}code only (no scene data names it)${c.reset}`
         : f.isUnneededByData
           ? `${c.yellow}no scene's data needs it${c.reset} ${c.dim}(code may)${c.reset}`
-          : `scenes: ${formatScenes(f.scenes)}`;
+          : f.scenes.length
+            ? `scenes: ${formatScenes(f.scenes)}`
+            : `${c.dim}no scene's data needs it (lazy only: a worker's or an import()ed chunk)${c.reset}`;
       return [
         `  ${f.feature.padEnd(width)} ${kbOrDash(f.initialGzip, c)} ${kbOrDash(f.lazyGzip, c)}  ${data}`,
         ...(f.why ? [`  ${''.padEnd(width)} ${c.dim}${f.why}${c.reset}`] : []),
