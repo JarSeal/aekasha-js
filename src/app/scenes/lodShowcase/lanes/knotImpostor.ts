@@ -7,7 +7,7 @@ import { getConservativeGeometryRadius } from 'aekasha/spatial';
 import type { ShowcaseLane } from '../layout';
 import { getShowcaseKnot, getShowcaseKnotMaterial } from './showcaseKnot';
 
-/** The impostor's export (src/app/impostors/), listed in lodShowcase.scene.json's `impostors`. */
+/** The impostor's export (next to the scene's JSON), listed in its `impostors`. */
 export const KNOT_IMPOSTOR_ID = 'lodShowcaseKnotImpostor';
 
 /** The chain's levels' screen sizes, then the impostor's (0). From the start camera (fov 50) a
@@ -19,24 +19,24 @@ const SCREEN_SIZES = [0.2, 0.12, 0.065, 0.04, 0];
 const PER_BAND = [1, 1, 1, 1, 4];
 
 /**
- * Lane 4: an instanced LOD pool and an octahedral impostor (p351 Phases 3-4): lane 2's torus knot
+ * The pool and octahedral impostor lane: the generated chain lane's torus knot
  * (16,384 triangles) through its generated chain's levels (8,192, 3,276, 982), then a hemi
  * octahedral impostor loaded from its export: one quad instead of 982 triangles. The heavy mesh is
- * where an impostor pays off (largeWorld's 80-triangle rock doesn't, Phase 3 section 5), and the
+ * where an impostor pays off (largeWorld's 80-triangle rock doesn't), and the
  * flat one pays off against the chain's last level too.
  */
 export const knotImpostorLane: ShowcaseLane = {
   id: 'knotImpostor',
   title: 'Pool and octahedral impostor',
   description:
-    "An instanced LOD pool of lane 2's torus knot: its chain's levels, then an exported octahedral impostor.",
+    "An instanced LOD pool of the generated chain lane's torus knot: its chain's levels, then an exported octahedral impostor.",
   create: async (ctx) => {
     const { geometry, chain: chainPromise } = getShowcaseKnot();
     const material = getShowcaseKnotMaterial();
     const chain = existsOrThrow(await chainPromise, 'The torus knot has no LOD chain.');
     const chainGeometries = chain.levels.map((level) =>
       existsOrThrow(
-        getGeometry(level.geometryId) as THREE.BufferGeometry | undefined,
+        getGeometry(level.geometryId),
         `The torus knot's LOD level "${level.geometryId}" isn't registered.`
       )
     );
@@ -44,7 +44,8 @@ export const knotImpostorLane: ShowcaseLane = {
     // Flat (no surface depth): writing depth from the shader turns off a tile GPU's hidden-surface
     // removal, and with it the impostor costs more than the 982-triangle level it replaces (400
     // knots at the impostor's distances, Apple GPU: +0.44 ms against +0.13; flat +0.08). The flat
-    // quad suits objects standing on the ground; lane 5's rocks show the surface depth.
+    // quad suits objects standing on the ground; the baked against exported lane's rocks show the
+    // surface depth.
     // Built from its export, so nothing is baked at load; re-export it from the LOD tab's
     // Impostors after changing the knot or its material
     const impostor = generateOctahedralImpostor(geometry, material, {
@@ -69,7 +70,7 @@ export const knotImpostorLane: ShowcaseLane = {
     const radius = getConservativeGeometryRadius(geometry);
     // Standing on the ground (the knot lies in its xy plane)
     geometry.computeBoundingBox();
-    const y = -geometry.boundingBox!.min.y;
+    const y = -existsOrThrow(geometry.boundingBox, 'The knot has no bounding box.').min.y;
 
     const random = createSeededRandom(13);
     const up = new THREE.Vector3(0, 1, 0);

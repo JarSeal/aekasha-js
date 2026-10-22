@@ -35,9 +35,9 @@ const LANE_SPACING = 8;
 /** Slots side by side, centred on the camera: lane `slot` stands at x = (slot - 2.5) × spacing. */
 const LANE_SLOT_COUNT = 6;
 /**
- * The lanes and their slots: a later plan adds a lane with a module and an entry here. A lane
- * whose finest level needs the camera close (lane 2's, within 21 m) takes a centre slot: an outer
- * lane only comes into view farther down (lodShowcase/layout.ts).
+ * The lanes and their slots, left to right: a new lane is a module and an entry here. A lane
+ * whose finest level needs the camera close (the generated chain's, within 21 m) takes a centre
+ * slot: an outer lane only comes into view farther down (lodShowcase/layout.ts).
  */
 const LANES: { lane: ShowcaseLane; slot: number }[] = [
   { lane: treeGroveLane, slot: 0 },
@@ -65,8 +65,7 @@ export const getShowcaseStartCamera = () => startCamera;
 export const addShowcaseEnterListener = (fn: () => void) => enterListeners.push(fn);
 
 /**
- * The LOD showcase (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 5): the LOD system lane by lane,
- * side by side along x, each lane running away from the start camera along -z with an object in
+ * The LOD showcase: the LOD system lane by lane, side by side along x, each lane running away from the start camera along -z with an object in
  * every level band (lodShowcase/layout.ts), so every level of every lane is on screen at once. The
  * camera and the `dayNight` sky box (which owns the lights) come from `lodShowcase.scene.json`. In
  * the debug env the scene creates its own "LOD demo" tab (removed on exit).

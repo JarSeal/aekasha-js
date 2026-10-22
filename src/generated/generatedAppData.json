@@ -1206,8 +1206,8 @@
       ]
     },
     "largeWorld": {
-      "name": "Large ECS test world",
-      "description": "Stress/soak test scene for large-world patterns (docs/plans/p090_large-ecs-test-world-scene.md). Phase 4: terrain + static overview camera + sun, no dynamics yet.",
+      "name": "Large world",
+      "description": "A large procedural world without physics: a generated 200 m terrain, 1,500 trees, 2,000 bushes and 300 rocks in instanced LOD pools (down to cross-quads and an octahedral impostor) in a spatial domain, static props, lanterns with light culling, and a bobbing crate stack a second camera follows (C switches to it). The day-night sky box's lights take over from the scene's sun and ambient.",
       "cameras": [
         {
           "camProps": {
@@ -1232,7 +1232,7 @@
             "appId": "largeWorldOverview",
             "debugData": {
               "name": "Large world overview camera",
-              "description": "Static wide overview of the terrain (docs/plans/p090_large-ecs-test-world-scene.md §2)."
+              "description": "Static wide overview of the terrain. C switches to the camera following the crate stack."
             }
           }
         }
@@ -1287,7 +1287,7 @@
             "appId": "largeWorldSun",
             "debugData": {
               "name": "Large world sun",
-              "description": "Directional shadow-casting sun. Its shadow frustum is intentionally scoped to a bounded play area around the origin, not the whole terrain — sizing it to the full terrain would blur shadow resolution everywhere instead (docs/plans/p090_large-ecs-test-world-scene.md §1.4)."
+              "description": "Directional shadow-casting sun. Its shadow frustum is intentionally scoped to a bounded play area around the origin, not the whole terrain — sizing it to the full terrain would blur shadow resolution everywhere instead."
             }
           }
         }
@@ -1341,7 +1341,7 @@
           "id": "dayNight",
           "debugData": {
             "name": "Day-night (showcase)",
-            "description": "The DAY_NIGHT preset (every p113 layer: atmosphere, sun and light, moon and light, stars and Milky Way, clouds and ground) on a 5-minute day."
+            "description": "The DAY_NIGHT preset (every layer: atmosphere, sun and light, moon and light, stars and Milky Way, clouds and ground) on a 5-minute day."
           }
         }
       ],
@@ -5164,7 +5164,7 @@
     },
     "lodShowcase": {
       "name": "LOD showcase",
-      "description": "The LOD system lane by lane (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 5): each lane runs away from the start camera along -z, with an object in every level band. Left to right: an instanced tree pool ending in exported cross-quads and a cull fade; hand-made levels in JSON; a generated chain (AUTO); a pool ending in an exported octahedral impostor; a rock impostor baked and exported side by side; a static instance cell. Debug env: the scene's own \"LOD demo\" tab.",
+      "description": "The LOD system lane by lane: each lane runs away from the start camera along -z, with an object in every level band. Left to right: an instanced tree pool ending in exported cross-quads and a cull fade; hand-made levels in JSON; a generated chain (AUTO); a pool ending in an exported octahedral impostor; a rock impostor baked and exported side by side; a static instance cell. Debug env: the scene's own \"LOD demo\" tab.",
       "cameras": [
         {
           "camProps": {
@@ -5205,7 +5205,7 @@
           },
           "debugData": {
             "name": "LOD showcase sphere, level 0",
-            "description": "Lane 1's hand-made level 0 (64 × 32 segments), see lodShowcaseHandMade.mesh.json."
+            "description": "The hand-made levels lane's level 0 (64 × 32 segments), see lodShowcaseHandMade.mesh.json."
           }
         },
         {
@@ -5218,7 +5218,7 @@
           },
           "debugData": {
             "name": "LOD showcase sphere, level 1",
-            "description": "Lane 1's hand-made level 1 (20 × 12 segments), see lodShowcaseHandMade.mesh.json."
+            "description": "The hand-made levels lane's level 1 (20 × 12 segments), see lodShowcaseHandMade.mesh.json."
           }
         },
         {
@@ -5231,7 +5231,7 @@
           },
           "debugData": {
             "name": "LOD showcase sphere, level 2",
-            "description": "Lane 1's hand-made level 2 (8 × 6 segments), see lodShowcaseHandMade.mesh.json."
+            "description": "The hand-made levels lane's level 2 (8 × 6 segments), see lodShowcaseHandMade.mesh.json."
           }
         }
       ],
@@ -5281,7 +5281,7 @@
           "entityOpts": {
             "debugData": {
               "name": "LOD showcase: hand-made levels",
-              "description": "Lane 1 of the lodShowcase scene (p351 Phase 5): levels authored in JSON, the same sphere at fewer segments. This is the lane's first object (level 0's band); the lane places copies of this definition in the farther bands (lodShowcase/lanes/handMadeLevels.ts), so keep it at the lane's x (-12)."
+              "description": "The lodShowcase scene's hand-made levels lane: levels authored in JSON, the same sphere at fewer segments. This is the lane's first object (level 0's band); the lane places copies of this definition in the farther bands (lodShowcase/lanes/handMadeLevels.ts), so keep it at the lane's x (-12)."
             }
           }
         }
@@ -5325,7 +5325,7 @@
           "id": "dayNight",
           "debugData": {
             "name": "Day-night (showcase)",
-            "description": "The DAY_NIGHT preset (every p113 layer: atmosphere, sun and light, moon and light, stars and Milky Way, clouds and ground) on a 5-minute day."
+            "description": "The DAY_NIGHT preset (every layer: atmosphere, sun and light, moon and light, stars and Milky Way, clouds and ground) on a 5-minute day."
           }
         }
       ],
@@ -13122,7 +13122,7 @@
     },
     "skyShowcase": {
       "name": "Sky showcase (day-night)",
-      "description": "The verification scene for the sky box plans (p113-p115): a day-night sky box with every layer, rows of metal and dielectric PBR spheres (roughness 0 to 1) and shadow casters. It also lists the space sky box (p114), for the nebula reflection check.",
+      "description": "The sky box verification scene: a day-night sky box with every layer, rows of metal and dielectric PBR spheres (roughness 0 to 1) and shadow casters. It also lists the space sky box, for the nebula reflection check.",
       "cameras": [
         {
           "camProps": {
@@ -13191,7 +13191,7 @@
           "id": "dayNight",
           "debugData": {
             "name": "Day-night (showcase)",
-            "description": "The DAY_NIGHT preset (every p113 layer: atmosphere, sun and light, moon and light, stars and Milky Way, clouds and ground) on a 5-minute day."
+            "description": "The DAY_NIGHT preset (every layer: atmosphere, sun and light, moon and light, stars and Milky Way, clouds and ground) on a 5-minute day."
           }
         },
         {
@@ -14906,7 +14906,7 @@
         "appId": "largeWorldOverview",
         "debugData": {
           "name": "Large world overview camera",
-          "description": "Static wide overview of the terrain (docs/plans/p090_large-ecs-test-world-scene.md §2)."
+          "description": "Static wide overview of the terrain. C switches to the camera following the crate stack."
         }
       },
       "__sourcePath": "src/app/scenes/largeWorld/largeWorldOverview.camera.json"
@@ -15621,7 +15621,7 @@
         "appId": "largeWorldSun",
         "debugData": {
           "name": "Large world sun",
-          "description": "Directional shadow-casting sun. Its shadow frustum is intentionally scoped to a bounded play area around the origin, not the whole terrain — sizing it to the full terrain would blur shadow resolution everywhere instead (docs/plans/p090_large-ecs-test-world-scene.md §1.4)."
+          "description": "Directional shadow-casting sun. Its shadow frustum is intentionally scoped to a bounded play area around the origin, not the whole terrain — sizing it to the full terrain would blur shadow resolution everywhere instead."
         }
       },
       "__sourcePath": "src/app/scenes/largeWorld/largeWorldSun.light.json"
@@ -16002,7 +16002,7 @@
       "geoProps": {
         "debugData": {
           "name": "LOD showcase sphere, level 0",
-          "description": "Lane 1's hand-made level 0 (64 × 32 segments), see lodShowcaseHandMade.mesh.json."
+          "description": "The hand-made levels lane's level 0 (64 × 32 segments), see lodShowcaseHandMade.mesh.json."
         },
         "type": "SPHERE",
         "params": {
@@ -16018,7 +16018,7 @@
       "geoProps": {
         "debugData": {
           "name": "LOD showcase sphere, level 1",
-          "description": "Lane 1's hand-made level 1 (20 × 12 segments), see lodShowcaseHandMade.mesh.json."
+          "description": "The hand-made levels lane's level 1 (20 × 12 segments), see lodShowcaseHandMade.mesh.json."
         },
         "type": "SPHERE",
         "params": {
@@ -16034,7 +16034,7 @@
       "geoProps": {
         "debugData": {
           "name": "LOD showcase sphere, level 2",
-          "description": "Lane 1's hand-made level 2 (8 × 6 segments), see lodShowcaseHandMade.mesh.json."
+          "description": "The hand-made levels lane's level 2 (8 × 6 segments), see lodShowcaseHandMade.mesh.json."
         },
         "type": "SPHERE",
         "params": {
@@ -24175,7 +24175,7 @@
       "entityOpts": {
         "debugData": {
           "name": "LOD showcase: hand-made levels",
-          "description": "Lane 1 of the lodShowcase scene (p351 Phase 5): levels authored in JSON, the same sphere at fewer segments. This is the lane's first object (level 0's band); the lane places copies of this definition in the farther bands (lodShowcase/lanes/handMadeLevels.ts), so keep it at the lane's x (-12)."
+          "description": "The lodShowcase scene's hand-made levels lane: levels authored in JSON, the same sphere at fewer segments. This is the lane's first object (level 0's band); the lane places copies of this definition in the farther bands (lodShowcase/lanes/handMadeLevels.ts), so keep it at the lane's x (-12)."
         }
       },
       "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseHandMade.mesh.json"
@@ -24310,7 +24310,7 @@
       "id": "dayNight",
       "debugData": {
         "name": "Day-night (showcase)",
-        "description": "The DAY_NIGHT preset (every p113 layer: atmosphere, sun and light, moon and light, stars and Milky Way, clouds and ground) on a 5-minute day."
+        "description": "The DAY_NIGHT preset (every layer: atmosphere, sun and light, moon and light, stars and Milky Way, clouds and ground) on a 5-minute day."
       },
       "__sourcePath": "src/app/skyboxes/dayNight.skybox.json"
     },

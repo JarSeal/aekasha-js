@@ -10,8 +10,7 @@ import { getShowcaseKnot, getShowcaseKnotMaterial, SHOWCASE_KNOT_GEO_ID } from '
 const KNOT_LOD: LodAutoDef = { auto: true, maxPixelError: 0.25 };
 
 /**
- * Lane 2: a generated chain (docs/plans/_DONE_p347_lod-chain-generation.md) on plain meshes: a heavy
- * procedural torus knot with an AUTO `lod`, its chain simplified at load (in the assets worker).
+ * The generated chain lane: a chain on plain meshes, a heavy procedural torus knot with an AUTO `lod`, its chain simplified at load (in the assets worker).
  * Each level is used while its simplification error stays within a quarter pixel at 1080p, so the
  * thresholds come from the chain: the lane resolves them first to place the meshes.
  */

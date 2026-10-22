@@ -228,9 +228,7 @@ const getLaneRow = (entry: ShowcaseLaneEntry) => {
     }
     const obj = world.getComponent(id, ComponentType.OBJECT3D)?.value;
     if (obj instanceof THREE.Mesh) {
-      const count = (obj as THREE.InstancedMesh).isInstancedMesh
-        ? (obj as THREE.InstancedMesh).count
-        : 1;
+      const count = obj instanceof THREE.InstancedMesh ? obj.count : 1;
       triangles += getTriangles(obj.geometry) * count;
     }
   }
