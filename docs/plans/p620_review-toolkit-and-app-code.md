@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: Refactoring, Documentation, Toolkit, App
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -918,7 +918,7 @@ As built (2026-10-22, sections 1-4 committed as `5bfd44d`, `36e638f`, `cefa2b1`,
   differ as before); the gym's `prodTest` passed, its three debug configurations failed the
   probe's 600-step wait (308-312 s), this machine's (D3). `yarn test`: 1,223 passed.
 
-### Phase 3: the app's bugs and leaks (D4's app part)
+### Phase 3: the app's bugs and leaks (D4's app part) — done
 
 Sections: 1. the hangs (P1, W1: the three scenes become plain `async` functions; scene01 and V2
 merge in Phase 5, from working code); 2. the leaks (P2's and
@@ -931,6 +931,63 @@ and `physicsTiers`' cleanup order, W4's flag, P2's rejections caught); 4. checks
   topDownTestScene,assetCompare,textureArrays,textureAtlases,sceneTestECS`: unchanged but for
   what's named (`physicsTest`'s hash shouldn't change; a changed one is explained or the fix
   revisited).
+
+As built (2026-10-22, sections 1-3 committed as `2f2d49a`, `5008e7a`, `2dfe051`):
+
+- **The hangs (section 1):** the gym, `scene01` and `scene01V2` are plain `async` functions (the
+  bodies only dedented); the loader ignores a scene function's value (`Promise<void>`), so the
+  `resolve(…)`s went without a return, and with them `scene01V2.ts`' `SCENE01_ID` (D12's, early:
+  it was only the resolved value). Checked by Phase 0's `P1W1` repro with a temporary throw after
+  each scene's first `await` (`?p620Throw`, reverted): each load now resolves `false` with the
+  loader's "Could not load scene … (phase 'LOAD')", and the next `loadScene` runs (`physicsTiers`
+  current), where Phase 0 left both pending.
+- **The keys (section 2):** the gym's `J` is a scene action map (`physicsStressTest`, the gym's
+  `sceneId`, `enabledInDebugCam: 'ENABLED_IN_DEBUG'` as the binding had);
+  `initPhysicsStressTest({ sceneId, batchSize? })`. **Unlike the plan,** `scene01`'s `d` stays a
+  key binding with `sceneId: 'scene01'` (D4's other option): it's the input `CLAUDE.md`'s example
+  of a binding that reads the event's `time`, and Phase 5's merge removes it (that line with it).
+- **`assetCompare` (V1):** the scene's exit marks both slots `isLeft` and clears the change
+  listener. A build re-checks after each `await` (`throwIfLeft`, a `SceneLeftError` the queue
+  doesn't log) and a stopped build clears its slot, the textures, import and entities it
+  registered into the next scene included, and the shared base colour. A new visit's slots queue
+  after both of the last visit's (the ids are the same), so the clearing never hits the new
+  visit's assets. The measure stops at its next `await` (no final rebuild, slot B's settings and
+  `shown` restored, `null` returned).
+- **The texture scenes (V2):** a per-visit `{ isLeft }` set by the scene's exit: `runSwaps` and
+  the atlas readout stop at their next `await`, and a swap the exit interrupts logs nothing.
+- **`physicsTest` (P3):** **unlike the plan,** the trigger is a scene app looper, not
+  `registerOnSceneEnter` (it runs while physics is still held): it waits for
+  `getPhysicsSimClock() >= 1` (a step issued to this visit's world; the worker runs it before the
+  casts), deletes itself and runs `runShapeCasts` (now module level), which stops after an
+  `await` once the scene is left; its errors are caught. The 17-line comment is rewritten.
+- **The small ones (section 3):** A1: `updateLoaderStatusFn` is a `void` callback updating the
+  text (no `loaded`, no `return true`). P4: the top-down loader ends at 3 / 3; `physicsTiers`
+  takes its tint refs (`tint.retain()`) and registers its exit right before adding its systems,
+  after everything that can throw (a load that fails never exits, so an earlier registration
+  wouldn't help), and the `removeSystem`s before each `addSystem` are gone; the systems keep
+  their place after `setPhysicsTierPolicy`. W4: `mainCamera.camera.json` loses `persistent`. P2:
+  a stress body that isn't created deletes its mesh, and the batch warns once (not once its scene
+  is left).
+- **Hand repros** (Playwright on `yarn dev`, `.cache/runs/p620-repros.ts`; logs
+  `.cache/runs/p620-p3-*.log`): W3 (`d` after `scene01` logs nothing in `physicsTiers`), P2 (`J`
+  after the gym spawns nothing in `physicsTiers`; in the gym it still spawns 50), V1 (no slot of
+  a mid-measure switch in `exampleQuickStart` 30 s later), V1b (new: leave mid-measure and come
+  back: the measure resolves `null`, both slots build, the settings restored), V2 (only the
+  scenes' allowed errors after a switch right after the load), P3 (a hit at TOI 4.25 with normal
+  (0, 1, 0) and no hit up, as the start scene (logged: no toaster yet) and after a switch-in
+  (toasts); a switch right after the load logs nothing). W2 wasn't rerun (Phase 0: not
+  reproduced). Seen, not this phase's: `saveBufferGeometry: "assetCompareGround" is registered
+  already` on every slot B build (A5 / P11's pattern, Phase 6).
+- **The scene runner** (`--only` the ten scenes, 41 min): 37 passed, every hash, snapshot and
+  system order as recorded (`physicsTest` `d5c1562a`, `physicsTiers` `49157b8f` in all three
+  targets); the gym's `prodTest` passed, its three debug configurations failed the probe's
+  600-step wait (297-308 s), this machine's (D3). No baseline re-recorded. `yarn test`: 1,223
+  passed.
+- **For the next phases:** Phase 4 moves `PhysicsStressTest.ts` (now taking `{ sceneId }`, its
+  rejections caught) to `_dbg__`, and keeps `physicsTest`'s `runShapeCasts` and its visit guard
+  through the joint split; Phase 5's merge drops `scene01`'s `d` binding and the input
+  `CLAUDE.md`'s line citing it; Phase 6's harness work (V3) keeps the visit guards of
+  `assetCompare` and the texture scenes.
 
 ### Phase 4: the physics and character scenes (D7, D8, D11, D12 for them)
 
