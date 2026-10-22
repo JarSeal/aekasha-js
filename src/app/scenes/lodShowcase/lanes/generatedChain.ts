@@ -1,46 +1,13 @@
-import * as THREE from 'three/webgpu';
-import { saveBufferGeometry, createMaterial, createMeshEntity, setMeshLod } from 'aekasha';
-import { resolveAutoLod, generateLodChain, getLodChain, type LodChainOptions } from 'aekasha/lod';
+import { createMeshEntity, existsOrThrow, setMeshLod } from 'aekasha';
+import { resolveAutoLod } from 'aekasha/lod';
 import type { LodAutoDef } from 'aekasha/lod';
 import { getConservativeGeometryRadius } from 'aekasha/spatial';
 import type { ShowcaseLane } from '../layout';
-
-/** The heavy procedural mesh lanes 2 and 4 share: 256 × 32 segments, 16,384 triangles. */
-export const SHOWCASE_KNOT_GEO_ID = 'lodShowcaseKnot';
-
-/** Its chain: down to 6 % of the triangles (982). Each level's error is about three times the
- * last one's, so their switch distances spread the same way: four levels fit in a lane (18-290 m
- * from the start camera), a fifth at 2 % (error 0.039) would not. */
-export const SHOWCASE_KNOT_CHAIN: LodChainOptions = { ratios: [0.5, 0.2, 0.06] };
+import { getShowcaseKnot, getShowcaseKnotMaterial, SHOWCASE_KNOT_GEO_ID } from './showcaseKnot';
 
 /** A quarter of AUTO's default pixel: at 1 px the knot keeps level 0 only within 5 m of the camera
  * and level 1 within 14 m, nearer than the lane starts. */
 const KNOT_LOD: LodAutoDef = { auto: true, maxPixelError: 0.25 };
-
-/** The knot's material, which lanes 2 and 4 share. */
-export const getShowcaseKnotMaterial = () =>
-  createMaterial({
-    id: 'lodShowcaseKnotMat',
-    type: 'STANDARD',
-    params: { color: '#5f8fb4', roughness: 0.35, metalness: 0.3 },
-  });
-
-/** Registers the torus knot (or returns the registered one) and starts its LOD chain. */
-export const getShowcaseKnot = () => {
-  const knot = new THREE.TorusKnotGeometry(1.2, 0.38, 256, 32);
-  const geometry = saveBufferGeometry(knot, {
-    id: SHOWCASE_KNOT_GEO_ID,
-    debugData: { name: 'LOD showcase torus knot', description: '256 × 32 segments.' },
-  });
-  // A cached one (the scene loaded again before its assets were released) is the same knot
-  if (geometry !== knot) knot.dispose();
-  geometry.computeBoundingBox();
-  // generateLodChain replaces an existing chain (a pending one it returns)
-  const chain = getLodChain(SHOWCASE_KNOT_GEO_ID)
-    ? Promise.resolve(getLodChain(SHOWCASE_KNOT_GEO_ID)!)
-    : generateLodChain(SHOWCASE_KNOT_GEO_ID, SHOWCASE_KNOT_CHAIN);
-  return { geometry, chain };
-};
 
 /**
  * Lane 2: a generated chain (docs/plans/_DONE_p347_lod-chain-generation.md) on plain meshes: a heavy
@@ -58,7 +25,7 @@ export const generatedChainLane: ShowcaseLane = {
     const material = getShowcaseKnotMaterial();
     const radius = getConservativeGeometryRadius(geometry);
     // Standing on the ground (the knot lies in its xy plane, facing the camera)
-    const y = -geometry.boundingBox!.min.y;
+    const y = -existsOrThrow(geometry.boundingBox, 'The knot has no bounding box.').min.y;
 
     const create = (index: number, distance: number) =>
       createMeshEntity(

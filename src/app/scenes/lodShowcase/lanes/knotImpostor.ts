@@ -5,7 +5,7 @@ import { generateOctahedralImpostor } from 'aekasha/lod';
 import type { LodDef } from 'aekasha/lod';
 import { getConservativeGeometryRadius } from 'aekasha/spatial';
 import type { ShowcaseLane } from '../layout';
-import { getShowcaseKnot, getShowcaseKnotMaterial } from './generatedChain';
+import { getShowcaseKnot, getShowcaseKnotMaterial } from './showcaseKnot';
 
 /** The impostor's export (src/app/impostors/), listed in lodShowcase.scene.json's `impostors`. */
 export const KNOT_IMPOSTOR_ID = 'lodShowcaseKnotImpostor';

@@ -18,7 +18,6 @@ import {
   createDebuggerTab,
   debuggerListCMP,
   openDebuggerTab,
-  persistDebuggerTabValue,
   updateDebuggerTab,
   isProfilerAvailable,
   isProfilerWindowOpen,
@@ -65,14 +64,22 @@ const dolly = { running: false, travelled: 0 };
 const _sphere = new THREE.Sphere();
 const _forward = new THREE.Vector3();
 
-const getStartPose = (): Pose | null => {
+/** The dolly's pose, written every frame it runs. */
+const _dollyPose: Pose = { position: new THREE.Vector3(), target: new THREE.Vector3() };
+
+/** Writes the start camera's pose (looking 50 m ahead) into `out`; false without the camera. */
+const readStartPose = (out: Pose) => {
   const start = getShowcaseStartCamera();
-  if (!start) return null;
+  if (!start) return false;
   start.getWorldDirection(_forward);
-  return {
-    position: start.position.clone(),
-    target: start.position.clone().addScaledVector(_forward, 50),
-  };
+  out.position.copy(start.position);
+  out.target.copy(start.position).addScaledVector(_forward, 50);
+  return true;
+};
+
+const getStartPose = (): Pose | null => {
+  const pose = { position: new THREE.Vector3(), target: new THREE.Vector3() };
+  return readStartPose(pose) ? pose : null;
 };
 
 /** Moves the scene's camera (its Transform) to `pose`. */
@@ -158,50 +165,32 @@ const applyStop = () => {
   if (pose) setCameraPose(pose);
 };
 
-/** The camera stops' ids and labels (switch stops are `${laneId}:${switch index}`). */
-export const getShowcaseCameraStops = () => getStops().map(({ id, label }) => ({ id, label }));
-
-/** Moves the camera to a stop (and side), as the tab's Stop does, and saves it. */
-export const setShowcaseCameraStop = (id: string, side: StopSide = state.side) => {
-  stopShowcaseDolly();
-  state.stop = id;
-  state.side = side;
-  applyStop();
-  persistDebuggerTabValue(TAB_ID, 'stop');
-  persistDebuggerTabValue(TAB_ID, 'side');
-  updateDebuggerTab(TAB_ID);
-};
-
 /** Runs the dolly from the start view down the lanes and back (the same path every run), at the
  * tab's speed. */
-export const startShowcaseDolly = () => {
+const startShowcaseDolly = () => {
   dolly.running = true;
   dolly.travelled = 0;
 };
 
 /** Stops the dolly where it is. */
-export const stopShowcaseDolly = () => {
+const stopShowcaseDolly = () => {
   dolly.running = false;
 };
 
-export const isShowcaseDollyRunning = () => dolly.running;
-
 const dollyLooper = (delta: number) => {
-  if (!dolly.running) return;
-  const startPose = getStartPose();
-  if (!startPose) return;
+  if (!dolly.running || !readStartPose(_dollyPose)) return;
   dolly.travelled += state.dollySpeed * delta;
   if (dolly.travelled >= DOLLY_LENGTH * 2) {
     dolly.running = false;
     dolly.travelled = 0;
-    setCameraPose(startPose);
+    setCameraPose(_dollyPose);
     return;
   }
   const offset =
     dolly.travelled <= DOLLY_LENGTH ? dolly.travelled : DOLLY_LENGTH * 2 - dolly.travelled;
-  startPose.position.z -= offset;
-  startPose.target.z -= offset;
-  setCameraPose(startPose);
+  _dollyPose.position.z -= offset;
+  _dollyPose.target.z -= offset;
+  setCameraPose(_dollyPose);
 };
 
 const getDollyStatus = () => {
@@ -265,8 +254,8 @@ const getLaneRow = (entry: ShowcaseLaneEntry) => {
  * The lodShowcase scene's "LOD demo" tab (a scene tab: removed on the scene's exit, created again
  * on every visit): camera stops (the start view, overhead, and both sides of every lane's switch),
  * a dolly down the lanes and back, the time of day, each lane's entities per level and triangles,
- * and shortcuts to the LOD tab and the profiler. Only the camera stop is persisted, and applied
- * again on the scene's enter.
+ * and shortcuts to the LOD tab and the profiler. The camera stop and its side are persisted, and
+ * applied again on the scene's enter.
  */
 export const createLodShowcaseTab = () => {
   dolly.running = false;
