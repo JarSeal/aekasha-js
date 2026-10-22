@@ -34,6 +34,7 @@ export interface AsteroidCraterOptions {
   rim?: number;
 }
 
+/** {@link generateAsteroid}'s options; every one has a default. */
 export interface AsteroidOptions {
   /** Radius of the sphere before displacement and `shape` (default 1). */
   radius?: number;
@@ -41,22 +42,35 @@ export interface AsteroidOptions {
    * `detail + 1` segments, giving 10·(detail + 1)² + 2 vertices (42 at 1, 162 at 3, 252 at 4, 492
    * at 6). Higher = rounder, with finer lumps and craters. The hull collider takes every vertex. */
   detail?: number;
-  /** Deterministic seed: the same seed and options always give the same rock (default 1). */
+  /**
+   * Deterministic seed, an integer (default 1): the same seed and options always give the same
+   * rock.
+   */
   seed?: number;
-  /** Per-axis scale applied after displacement, for elongated or flattened rocks (default [1, 1, 1]). */
+  /**
+   * Per-axis scale applied after displacement, for elongated or flattened rocks (default
+   * [1, 1, 1]).
+   */
   shape?: [x: number, y: number, z: number];
+  /** The lumps (each field defaulted on its own). */
   noise?: AsteroidNoiseOptions;
+  /** The craters (each field defaulted on its own). */
   craters?: AsteroidCraterOptions;
   /** Faceted, semi-low-poly look: a non-indexed geometry with one normal per face (default true).
    * false keeps it indexed with smooth vertex normals. */
   flatShading?: boolean;
 }
 
+/** {@link generateAsteroid}'s result: the rock's geometry and what physics needs from it. */
 export interface GeneratedAsteroid {
+  /**
+   * The rock's geometry: positions and normals, no UVs, not registered (save it with
+   * `saveBufferGeometry` to have it disposed with its scene).
+   */
   geometry: THREE.BufferGeometry;
   /** The displaced unique vertex positions (x, y, z, ...), for a `CONVEXHULL` collider. */
   hullVertices: Float32Array;
-  /** Volume of the closed mesh (craters included). */
+  /** Volume of the closed mesh (craters included), at most `hullVolume`. */
   volume: number;
   /** Volume of the convex hull of `hullVertices`: what a physics engine derives a `CONVEXHULL`
    * collider's mass from (mass = density × hullVolume), so use this to match a gravity mass or a

@@ -3,31 +3,35 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { createGeometry, deleteGeometry } from 'aekasha';
 import { createSeededRandom } from 'aekasha';
 
+/** {@link generateTreeGeometry}'s options, in world units; every one has a default. */
 export interface TreeGeometryOptions {
+  /** The trunk's radius at the top (default 0.15); the bottom is 1.3 times as wide. */
   trunkRadius?: number;
+  /** The trunk's height (default 1.5), from y = 0 up. */
   trunkHeight?: number;
+  /** The cone canopy's radius at its base (default 0.9). */
   foliageRadius?: number;
+  /** The canopy's height (default 2); it overlaps the trunk's top by 0.15. */
   foliageHeight?: number;
-  /** Kept low for a "very low poly" look (see docs/plans/p090_large-ecs-test-world-scene.md). */
+  /** The trunk's and the canopy's sides (default 5): kept low for a very low-poly look. */
   radialSegments?: number;
 }
 
+/** {@link generateTreeGeometry}'s result: the tree's geometry and its two material groups. */
 export interface GeneratedTreeGeometry {
+  /** The merged trunk and canopy, standing on y = 0, not registered. */
   geometry: THREE.BufferGeometry;
   /**
-   * Material group indices set by `mergeGeometries(..., true)` — pass a 2-element material
-   * array (trunk, foliage) to whatever consumes this geometry (`Mesh`/`InstancedMesh` both
-   * support per-group materials the same way).
+   * The geometry's material group indices: give its mesh (or `InstancedMesh`) a two-material
+   * array, the trunk's material at `trunk` and the canopy's at `foliage`.
    */
   materialGroups: { trunk: number; foliage: number };
 }
 
 /**
- * Very-low-poly procedural tree: a cylinder trunk topped with a cone canopy, merged into one
- * geometry with two material groups. No GLTF — follows
- * `src/app/scenes/thirdPersonGymScene/characterTestObjects.ts`'s `mergeGeometries` use (merge, then
- * delete the intermediate registered sub-geometries so they don't linger in the geometry
- * registry after being folded into the merged result).
+ * Builds a very low-poly tree: a cylinder trunk topped with a cone canopy, merged into one
+ * geometry with two material groups (trunk, canopy). The geometry isn't registered: save it with
+ * `saveBufferGeometry`, or hand it to an instanced pool, which owns it.
  */
 export const generateTreeGeometry = (opts: TreeGeometryOptions = {}): GeneratedTreeGeometry => {
   const {
@@ -64,20 +68,24 @@ export const generateTreeGeometry = (opts: TreeGeometryOptions = {}): GeneratedT
   return { geometry, materialGroups: { trunk: 0, foliage: 1 } };
 };
 
+/** {@link generateBushGeometry}'s options, in world units; every one has a default. */
 export interface BushGeometryOptions {
-  /** Number of merged low-poly blobs making up the shrub. */
+  /** How many low-poly spheres make the bush (default 3); 0 gives an empty geometry. */
   clusterCount?: number;
+  /** The spheres' radius (default 0.5), and how far they spread around the origin. */
   baseRadius?: number;
+  /** How much a sphere's radius varies, in total around `baseRadius` (default 0.2). */
   radiusVariance?: number;
-  /** Kept low for a "very low poly" look. */
+  /** Each sphere's width and height segments (default 5): kept low for a very low-poly look. */
   segments?: number;
+  /** Deterministic seed, an integer (default 1): the same seed gives the same bush. */
   seed?: number;
 }
 
 /**
- * Very-low-poly procedural bush/shrub: a handful of small merged spheres clustered around the
- * origin, single material (no groups needed — unlike `generateTreeGeometry`, there's no
- * separate trunk).
+ * Builds a very low-poly bush: a few seeded spheres merged into one geometry around the origin,
+ * each raised by about 0.6 of its radius (sunk a little into the ground), for one material. The geometry isn't registered: save it with
+ * `saveBufferGeometry`, or hand it to an instanced pool, which owns it.
  */
 export const generateBushGeometry = (opts: BushGeometryOptions = {}): THREE.BufferGeometry => {
   const { clusterCount = 3, baseRadius = 0.5, radiusVariance = 0.2, segments = 5, seed = 1 } = opts;

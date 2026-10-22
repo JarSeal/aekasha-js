@@ -1,17 +1,25 @@
 import { ComponentType, ECSSystemStage } from 'aekasha';
 import type { ECSWorld } from 'aekasha';
 
-// --- src/toolkit/ecs/systems/HoverEffect.ts ---
-
-/** Internal Key (Values) */
+/**
+ * The hover effect's component key: add {@link HoverToolData} under
+ * `HoverToolComponentType.HOVER` to an entity to make it bob up and down.
+ */
 export enum HoverToolComponentType {
+  /** An entity that bobs up and down ({@link HoverToolData}). */
   HOVER = 'TOOL_HOVER',
 }
 
-/** Internal Data Shape (Types) */
+/**
+ * A hovering entity's motion: its `TRANSFORM` height follows a sine around `baseY`, written every
+ * frame (its x and z are left alone).
+ */
 export interface HoverToolData {
+  /** The sine's angular speed in radians per second (2π: one bob a second). */
   speed: number;
+  /** The height the entity rises and sinks by around `baseY`, in world units. */
   amplitude: number;
+  /** The height the entity bobs around, in world units: it replaces the entity's own y. */
   baseY: number;
   /**
    * The phase in seconds (default 0), which the effect advances by each frame's time: different
@@ -51,7 +59,12 @@ const hoverToolSystem = (world: ECSWorld, dt: number) => {
   }
 };
 
-/** The Registration Helper */
+/**
+ * Registers the hover effect's system on `world`, at `APP_LOGIC` (default order 0): from then on
+ * every entity with a {@link HoverToolComponentType} `HOVER` component bobs. A second call on the
+ * same world is a no-op.
+ * @returns `world`
+ */
 export const registerHoverToolEffect = (world: ECSWorld) => {
   world.addSystem(ECSSystemStage.APP_LOGIC, 'hoverToolSystem', hoverToolSystem);
   return world;

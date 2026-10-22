@@ -2,8 +2,12 @@ import * as THREE from 'three/webgpu';
 import { ComponentType, lwarn, APP_RENDER_SYNC_ORDER, ECSSystemStage } from 'aekasha';
 import type { ECSWorld } from 'aekasha';
 
-/** Internal Key (Values) */
+/**
+ * The sun shadow fit's component key: add {@link SunShadowFitData} under
+ * `SunShadowFitComponentType.SUN_SHADOW_FIT` to a directional light's entity.
+ */
 export enum SunShadowFitComponentType {
+  /** A directional light whose shadow follows the view ({@link SunShadowFitData}). */
   SUN_SHADOW_FIT = 'TOOL_SUN_SHADOW_FIT',
 }
 
@@ -309,9 +313,15 @@ const sunShadowFitSystem = (world: ECSWorld) => {
   }
 };
 
-/** The Registration Helper */
+/**
+ * Registers the sun shadow fit's system on `world`, at `APP_RENDER_SYNC` with
+ * `APP_RENDER_SYNC_ORDER.SHADOW_FIT`: after the follow camera rig has placed this frame's camera,
+ * before frustum culling. From then on every light with a {@link SunShadowFitComponentType}
+ * `SUN_SHADOW_FIT` component fits its shadow to the view. A second call on the same world is a
+ * no-op.
+ * @returns `world`
+ */
 export const registerSunShadowFitEffect = (world: ECSWorld) => {
-  // After the follow camera rig has placed this frame's camera, before frustum culling
   world.addSystem(
     ECSSystemStage.APP_RENDER_SYNC,
     'sunShadowFitSystem',

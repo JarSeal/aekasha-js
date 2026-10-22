@@ -71,14 +71,15 @@ const movingPlatformSystemFn = (world: ECSWorld, dt: number) => {
   }
 };
 
-/** Registers the single shared moving-platform system on `world`, driving every active
- * createMovingPlatform() instance's path at APP_PHYSICS_STEP: once per fixed physics sub-step
- * with dt = the fixed timestep, writing that step's kinematic target pose right before it (a
- * once-per-frame tick would move the platform unevenly whenever a frame runs 0 or 2+ sub-steps).
- * Order -100: after the same stage's default-order (0) systems and the character brains (-5) and
- * controllers (-10). Call this once per world before creating any moving platforms on it, as
- * toolkit/ecs/effects/HoverEffect.ts's registerHoverToolEffect(world) does: the caller registers
- * the system once, individual instances just add themselves to it. */
+/**
+ * Registers the system that moves every {@link createMovingPlatform} platform of `world`, at
+ * `APP_PHYSICS_STEP` (once per fixed physics sub-step, with dt the fixed timestep) with order
+ * -100: after the stage's default-order systems, the character brains (-5) and the controllers
+ * (-10). A second call on the same world is a no-op.
+ * @returns `world`
+ * @remarks Per sub-step, not per frame: a frame that runs 0 or 2+ sub-steps would move a platform
+ * unevenly, and a character riding it reads the step's velocities.
+ */
 export const registerMovingPlatformSystem = (world: ECSWorld) => {
   world.addSystem(
     ECSSystemStage.APP_PHYSICS_STEP,
@@ -179,7 +180,10 @@ export interface MovingPlatformOptions extends MovingPlatformPathOptions {
   deleteMeshOptions?: DeleteMeshOptions;
 }
 
-/** {@link createMovingPlatform}'s props: the platform's mesh, its physics, its path and its playback. */
+/**
+ * {@link createMovingPlatform}'s props: the platform's mesh, its physics, its path and its
+ * playback.
+ */
 export interface MovingPlatformParams {
   /**
    * The platform's id, unique among the live platforms: it names the mesh and the entity the
@@ -241,10 +245,22 @@ const createPlatformMesh = (
 };
 
 /**
- * Creates a kinematic platform that moves along `points` (each `dur` in ms, 3000 by default to
- * reach the next point) and plays from the start unless `opts.isPlayingFromStart` is false.
- * `loopTimes` -1 (the default) loops forever.
- * @remarks Moves only once {@link registerMovingPlatformSystem} has run on the world.
+ * Creates a kinematic platform that moves along a closed path of `points` (each `dur` in ms, 3000
+ * by default, to the next point; the last one's back to the first), playing from the first
+ * physics step unless `opts.isPlayingFromStart` is false. By default it runs forward forever
+ * ({@link MovingPlatformOptions}: `loopTimes`, `direction`, `speedMultiplier`). The body's user
+ * data carries the current segment's velocities, so a dynamic character standing on it rides
+ * along.
+ *
+ * The platform's entity is the mesh's (from `shape`), or a new physics-only one: deleting it,
+ * with its scene or by `controls.delete()`, deletes the platform. Its `id` keys its path: a second
+ * live platform with the same id takes over the first's place in the system, which then stops.
+ * @throws when the props can't make a platform (no `physicsParams` or points, a first rigid body
+ * that isn't `POS_BASED`, a bad `dur`, `loopTimes` or `speedMultiplier`, a shape with neither a
+ * mesh nor a geo and a mat; logged too), or when the entity is deleted while the body is created
+ * (its scene exited)
+ * @remarks Moves only once {@link registerMovingPlatformSystem} has run on the world. The
+ * controls write the body when called, outside the physics step ({@link MovingPlatformControls}).
  */
 export const createMovingPlatform = async (
   props: MovingPlatformParams

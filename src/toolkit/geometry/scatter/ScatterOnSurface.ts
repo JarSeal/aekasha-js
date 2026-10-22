@@ -4,51 +4,57 @@ import { createMeshEntity, type MeshProps, getECSWorld, lwarn } from 'aekasha';
 import type { CoreEntityOpts } from 'aekasha/schemas';
 import { createSeededRandom } from 'aekasha';
 
-/**
- * `MeshSurfaceSampler.setRandomGenerator` exists at runtime (three@0.183.2's
- * examples/jsm) but is missing from the `@types/three` declarations bundled here —
- * this narrows the cast to just the one extra method instead of reaching for `any`.
- */
+// three's MeshSurfaceSampler has setRandomGenerator, which @types/three (0.186) doesn't declare:
+// the cast adds that one method
 interface SeedableMeshSurfaceSampler extends MeshSurfaceSampler {
   setRandomGenerator(randomFunction: () => number): this;
 }
 
+/**
+ * One placement {@link scatterOnSurface} found: where a thing goes, and how it's turned and
+ * sized.
+ */
 export interface ScatterPlacement {
+  /** The point on the surface, in world space. */
   position: THREE.Vector3;
-  /** World-space surface normal at the sampled point (mesh-local normal transformed by the surface's world matrix). */
+  /** The surface's unit normal at the point, in world space. */
   normal: THREE.Vector3;
+  /**
+   * The world rotation: up along the normal with `alignToNormal`, else world up, then a turn
+   * about it with `randomYRotation`.
+   */
   quaternion: THREE.Quaternion;
+  /** The uniform scale, from `scaleRange`. */
   scale: number;
 }
 
+/** {@link scatterOnSurface}'s options: the surface, how many points, and how they're spread. */
 export interface ScatterOptions {
   /**
-   * The mesh whose surface to scatter across. This is the same primitive for "scatter
-   * across a terrain" and "scatter on the surface of another object" (a rock, a roof, a
-   * wall) — both are just a `THREE.Mesh` surface to sample, so one function covers both
-   * cases the request asked for.
+   * The mesh whose surface to scatter across, a terrain or any other object (a rock, a roof),
+   * read with its world matrix.
    */
   surface: THREE.Mesh;
+  /** How many points to place; fewer come back when `minSpacing` can't fit them all. */
   count: number;
+  /** Deterministic seed, an integer (default 1): the same seed and surface give the same points. */
   seed?: number;
   /**
-   * Minimum spacing between accepted points, in world units. Enforced by rejection-sampling
-   * against the accepted points nearby (a grid of `minSpacing` cells; up to `maxAttemptsPerPoint`
-   * samples per point) — a cheap approximation of blue-noise/Poisson-disc spacing, not exact.
-   * 0 (default) disables spacing entirely (pure random, may cluster/overlap).
+   * The least distance between two points, in world units (default 0: none, so points may
+   * cluster). A point that lands too close is drawn again, up to `maxAttemptsPerPoint` times,
+   * then skipped: a cheap approximation of Poisson-disc spacing.
    */
   minSpacing?: number;
-  /** Max resample attempts per point when `minSpacing` is set, before giving up on that slot. */
+  /** The draws per point with `minSpacing`, before the point is skipped (default 30). */
   maxAttemptsPerPoint?: number;
-  /** Uniform scale range; one random value is picked per placement. Defaults to no scale variance. */
-  scaleRange?: [number, number];
+  /** The uniform scale's range, one value drawn per placement (default [1, 1]). */
+  scaleRange?: [min: number, max: number];
   /**
-   * Align the placement's up axis to the sampled surface normal (e.g. moss/debris on a
-   * sloped rock) instead of always facing world-up (the common case for trees/foliage that
-   * should stand upright even on sloped terrain). Defaults to false (world-up).
+   * Turn each placement's up axis to the surface normal (moss or debris on a sloped rock) instead
+   * of world up (default false: trees standing upright on a slope).
    */
   alignToNormal?: boolean;
-  /** Randomize rotation around the up axis. Defaults to true. */
+  /** Turn each placement by a random angle about its up axis (default true). */
   randomYRotation?: boolean;
 }
 
@@ -107,16 +113,15 @@ const createSpacingGrid = (minSpacing: number) => {
 };
 
 /**
- * Scatters `count` points across a mesh's surface using area-weighted random sampling
- * (`MeshSurfaceSampler`, shipped with three's examples/jsm — no new dependency, same import
- * style already used for `mergeGeometries` elsewhere in this repo). Returns placement data
- * only; use `bakeScatterToInstancedMesh` (bulk, e.g. foliage) or `spawnScatterAsMeshEntities`
- * (individual ECS entities, e.g. a handful of static props) to actually place something.
- *
- * Physics is intentionally out of scope here (see docs/plans/p090_large-ecs-test-world-scene.md
- * §1.3) — this only computes where things go, not what collides with them. A caller can use
- * each placement's `position`/`normal` to add a collider (`createPhysicsEntity`) without this
- * function needing to change.
+ * Scatters up to `count` seeded points across a mesh's surface, area-weighted (three's
+ * `MeshSurfaceSampler`), and returns them as placements in world space: data only. Place things
+ * with them: an instanced pool (`createInstancedMeshPool`, `aekasha/instancing`) for many,
+ * {@link bakeScatterToInstancedMesh} into a plain `InstancedMesh`, or
+ * {@link spawnScatterAsMeshEntities} for a handful of entities. Colliders are the caller's
+ * (`createPhysicsEntity` at a placement's `position`).
+ * @remarks With `minSpacing` it may return fewer than `count` placements: a point that finds no
+ * free spot in its draws is skipped. Each placement allocates its vectors and quaternion: meant
+ * for a scene's load, not per frame.
  */
 export const scatterOnSurface = (opts: ScatterOptions): ScatterPlacement[] => {
   const {
@@ -163,9 +168,7 @@ export const scatterOnSurface = (opts: ScatterOptions): ScatterPlacement[] => {
       placements.push({ position, normal: _worldNormal.clone(), quaternion, scale });
       spacingGrid?.add(position);
       break;
-      // If every attempt fails, this slot is simply skipped — a first-pass scatterer may
-      // return fewer than `count` placements under tight `minSpacing`, which is an
-      // acceptable outcome to refine later rather than a bug to fix now.
+      // When every draw lands too close, the point is skipped (see the doc's remark)
     }
   }
 
@@ -176,10 +179,12 @@ export const scatterOnSurface = (opts: ScatterOptions): ScatterPlacement[] => {
  * Bakes placements into an existing `InstancedMesh`'s matrices, starting at `startIndex`: the
  * world-space placements become instance matrices in the mesh's own space (its world matrix
  * undone), as many as its capacity holds (the rest are dropped with a warning). Sets the mesh's
- * `count` to the returned index, so instances past the baked ones aren't drawn. Does not create
- * any ECS entities: for per-instance ECS state, use the instancing feature's
- * `createInstancedMeshPool` (`aekasha/instancing`) instead.
- * Returns the next free index.
+ * `count` to the returned index, so instances past the baked ones aren't drawn. Creates no
+ * entities: for per-instance ECS state, use the instancing feature's `createInstancedMeshPool`
+ * (`aekasha/instancing`) instead.
+ * @returns the next free index (`startIndex` plus the placements baked)
+ * @remarks The mesh's world matrix is read once, now: a mesh moved later moves its instances
+ * with it.
  */
 export const bakeScatterToInstancedMesh = (
   mesh: THREE.InstancedMesh,
@@ -213,19 +218,25 @@ export const bakeScatterToInstancedMesh = (
   return index;
 };
 
+/** {@link spawnScatterAsMeshEntities}' options: each entity's mesh props and entity options. */
 export interface SpawnScatterMeshOptions {
+  /** Each mesh's geometry: a geometry, a registered geometry's id, or props. */
   geo: MeshProps['geo'];
+  /** Each mesh's material: a material, a registered material's id, or props. */
   mat: MeshProps['mat'];
+  /** Whether the meshes cast shadows. */
   castShadow?: boolean;
+  /** Whether the meshes receive shadows. */
   receiveShadow?: boolean;
+  /** Each entity's options, the same for all of them (so no fixed `appId`). */
   entityOpts?: CoreEntityOpts;
 }
 
 /**
- * Spawns one individual mesh entity per placement via `createMeshEntity`, at its position,
- * rotation and scale — simple and individually ECS-addressable, but does not scale to thousands
- * of instances; prefer `bakeScatterToInstancedMesh` for large foliage/tree counts. Good fit for a
- * handful of scattered static props.
+ * Creates one mesh entity per placement in the default world (`createMeshEntity`), at its
+ * position, rotation and scale: each an entity of its own, for a handful of static props. For
+ * hundreds or thousands, use an instanced pool or {@link bakeScatterToInstancedMesh}.
+ * @returns the entities' ids, in the placements' order
  */
 export const spawnScatterAsMeshEntities = (
   placements: ScatterPlacement[],

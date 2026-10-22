@@ -30,8 +30,8 @@ export interface MovingPlatformPoint {
 /**
  * How a moving platform plays its path: its loops, its direction and its speed. Given at creation
  * ({@link toolkit/ecs/gameplay/movingPlatform/MovingPlatform!MovingPlatformOptions}) or
- * changed later with {@link toolkit/ecs/gameplay/movingPlatform/MovingPlatform!MovingPlatformControls}'
- * `setOptions`.
+ * changed later with the controls' `setOptions`
+ * ({@link toolkit/ecs/gameplay/movingPlatform/MovingPlatform!MovingPlatformControls}).
  */
 export interface MovingPlatformPathOptions {
   /**

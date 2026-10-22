@@ -25,14 +25,16 @@ const MIN_TRAVEL_SPEED = 0.5;
 const MAX_TRAVEL_SPEED = 100;
 
 /**
- * {@link createFollowObjectCameraRig}'s options: the camera, the mesh it follows, and how it
+ * {@link createFollowObjectCameraRig}'s options: the camera, the object it follows, and how it
  * follows it.
  */
 export interface FollowObjectCameraParams {
   /** The rig's id: creating a rig with an id in use replaces that rig. */
   id: string;
-  /** The scene whose exit deletes the rig; without one it stays until
-   * {@link deleteFollowObjectCameraRig} */
+  /**
+   * The scene whose exit deletes the rig; without one it stays until
+   * {@link deleteFollowObjectCameraRig}.
+   */
   sceneId?: string;
   /** The camera the rig moves and turns. */
   camera: THREE.Camera;
@@ -42,14 +44,27 @@ export interface FollowObjectCameraParams {
    * parent is the scene's untransformed group), not for a child of a moved object.
    */
   targetMesh: THREE.Object3D;
-  /** What is the offset of the camera from the target */
+  /**
+   * Where the camera sits relative to the followed point, in world units (default
+   * `{ x: 0, y: 5, z: 10 }`). With `getMouseMoveInput` only its length counts: the camera orbits
+   * the point at that distance.
+   */
   offset?: { x: number; y: number; z: number };
-  /** Smoothing function type (default is 'SMOOTH_DAMP') */
+  /**
+   * How the camera catches up with where it should be (default `'SMOOTH_DAMP'`): `'SMOOTH_DAMP'`
+   * eases in and out like a spring (capped at 100 m/s without `getMouseMoveInput`), `'LERP'`
+   * closes a share of the gap each frame.
+   */
   smoothingType?: 'SMOOTH_DAMP' | 'LERP';
-  /** Smoothing time used for SMOOTH_DAMP or LERP */
+  /**
+   * About how long the camera takes to catch up, in seconds (default 0.2 for `'SMOOTH_DAMP'`, 0.1
+   * for `'LERP'`); the same at any frame rate.
+   */
   smoothingTime?: number;
-  /** The height above the target the camera points at (for example the character's head), with
-   * `getMouseMoveInput` only */
+  /**
+   * The height above the target the camera points at (eg. the character's head), in world units
+   * (default 0), with `getMouseMoveInput` only.
+   */
   targetHeight?: number;
   /**
    * How the camera turns without `getMouseMoveInput` (with it, the orbit decides).
@@ -64,30 +79,46 @@ export interface FollowObjectCameraParams {
    * not given.
    */
   lookAhead?: {
-    /** How far ahead the followed point leads a moving target (m) */
+    /** How far ahead the followed point leads a moving target, in meters. */
     distance: number;
-    /** About how long the lead takes to reach `distance`, or to swing round when the target
-     * turns (s, default 0.6) */
+    /**
+     * About how long the lead takes to reach `distance`, or to swing round when the target turns,
+     * in seconds (default 0.6).
+     */
     smoothingTime?: number;
-    /** How fast the lead moves back to the target once it stands still (m/s, default 1); 0 keeps
-     * the lead where it is */
+    /**
+     * How fast the lead moves back to the target once it stands still, in m/s (default 1); 0
+     * keeps the lead where it is.
+     */
     returnSpeed?: number;
   };
-  /** Function to run after the camera.lookAt (at the very end) */
+  /**
+   * Runs every frame after the rig has moved and turned the camera: a hook to adjust it further.
+   * @remarks The params object and its vectors are the rig's own, reused every frame: copy what
+   * you keep, and don't write them.
+   */
   afterLookAtFn?: (params: {
+    /** The rig's id. */
     id: string;
-    /** The followed point (the target, plus the look-ahead's lead and `targetHeight`) */
+    /** The followed point (the target, plus the look-ahead's lead and `targetHeight`). */
     targetPos: THREE.Vector3;
+    /** The rig's camera. */
     camera: THREE.Camera;
+    /** The followed object. */
     targetMesh: THREE.Object3D;
+    /** The offset, defaulted. */
     offset: THREE.Vector3;
+    /** The smoothing type, defaulted. */
     smoothingType: 'SMOOTH_DAMP' | 'LERP';
+    /** The smoothing time, defaulted. */
     smoothingTime: number;
+    /** The mouse orbit's angles and distance (unused without `getMouseMoveInput`). */
     spherical: THREE.Spherical;
   }) => void;
   /**
    * The mouse's movement since the last frame, in pixels: with it, the camera orbits the target
-   * at `offset`'s distance instead of keeping `offset`.
+   * at `offset`'s distance instead of keeping `offset` (0.002 radians per pixel, the pitch kept
+   * between almost straight down and almost level).
    */
   getMouseMoveInput?: () => { x: number; y: number };
 }
@@ -112,17 +143,17 @@ const deleteExitingSceneRigs = () => {
   for (const [id, rig] of activeRigs) if (rig.sceneId === sceneId) activeRigs.delete(id);
 };
 
-/** Registers the single shared camera-follow system on `world`, driving every active
- * createFollowObjectCameraRig() instance's smoothing. It reads `targetMesh.position`, i.e. the
- * rendered pose, so it runs at APP_RENDER_SYNC with APP_RENDER_SYNC_ORDER.POSE_CONSUMERS: after
- * physicsInterpolationSystem has written this frame's final (possibly interpolated) pose into
- * the Object3D, and before frustum culling reads the main camera. At APP_LOGIC the mesh would
- * still hold the previous frame's discrete pose, so the camera would chase a pose that differs
- * from the one being drawn. An explicit order is required: at the default order 0 it would tie
- * with physicsInterpolationSystem, and a tie runs in registration order (the app's install
- * comes after the physics feature's, but nothing else keeps it so).
- * Call this once per world before creating any camera rigs on it — mirrors
- * toolkit/ecs/effects/FollowTool.ts's registerFollowToolEffect(world) convention. */
+/**
+ * Registers the system that drives every {@link createFollowObjectCameraRig} rig created for
+ * `world`, and the scene exit listener that deletes the rigs given a `sceneId`. A second call on
+ * the same world is a no-op. It runs at `APP_RENDER_SYNC` with
+ * `APP_RENDER_SYNC_ORDER.POSE_CONSUMERS`: after the physics interpolation has written this frame's
+ * drawn pose into the target's object, and before frustum culling reads the camera.
+ * @returns `world`
+ * @remarks The explicit order matters: at `APP_LOGIC` the target would still hold the previous
+ * frame's pose, so the camera would chase a pose other than the one drawn, and at the default
+ * order 0 it would tie with the interpolation, running in registration order.
+ */
 export const registerFollowObjectCameraRigSystem = (world: ECSWorld) => {
   world.addSystem(
     ECSSystemStage.APP_RENDER_SYNC,
@@ -187,8 +218,9 @@ const createLookAhead = (
 };
 
 /**
- * Makes `camera` follow `targetMesh` at `offset`, smoothed, from the next frame on. The rig is
- * keyed by `id`: creating one with an id in use replaces it.
+ * Makes `camera` follow `targetMesh` at `offset`, smoothed, from the next frame on, in the world
+ * that's the default world now. The rig is keyed by `id`: creating one with an id in use replaces
+ * it. It runs until {@link deleteFollowObjectCameraRig}, or its `sceneId`'s exit.
  * @remarks Moves the camera only once {@link registerFollowObjectCameraRigSystem} has run on the
  * world.
  * @example
@@ -246,8 +278,8 @@ export const createFollowObjectCameraRig = (params: FollowObjectCameraParams) =>
   const spherical = new THREE.Spherical(dist, Math.PI / 3, 0);
 
   // Limits for looking up/down (Don't clip through floor or flip over)
-  const minPolarAngle = 0.1; // Look almost straight up
-  const maxPolarAngle = Math.PI / 2 - 0.1; // Don't go below ground level
+  const minPolarAngle = 0.1; // The camera almost straight above the target
+  const maxPolarAngle = Math.PI / 2 - 0.1; // Almost level with it, never below
 
   const sensitivity = 0.002; // Mouse sensitivity
 
@@ -332,7 +364,7 @@ export const createFollowObjectCameraRig = (params: FollowObjectCameraParams) =>
   activeRigs.set(id, { world: getECSWorld(), sceneId, tick });
 };
 
-/** Stops the rig `id`; the camera stays where it is. An unknown id is a no-op. */
+/** Deletes the rig `id`; the camera stays where it is. An unknown id is a no-op. */
 export const deleteFollowObjectCameraRig = (id: string) => {
   activeRigs.delete(id);
 };

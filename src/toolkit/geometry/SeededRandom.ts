@@ -1,6 +1,6 @@
 import { createSeededRandom as createEngineSeededRandom } from 'aekasha';
 
-// The toolkit's own name for createSeededRandom, which moved to the engine (p610): a declaration
+// The toolkit's old name for createSeededRandom, which moved to the engine: a declaration
 // of its own, so the deprecation shows in the editor and on the Hub (a comment on an
 // `export … from` line attaches to nothing).
 
