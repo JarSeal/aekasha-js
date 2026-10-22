@@ -3,7 +3,7 @@
   "id": "assetCompare",
   "sceneFile": "./scenes/assetCompare/assetCompare.ts",
   "isDebugScene": true,
-  "name": "Asset compare (p300 codec variants)",
-  "description": "p300 Phase 1d: the codec variants of devTools/assetPipeline/fixtures/assetCompareVariants.ts against their uncompressed baselines. A tiled rock ground at grazing angles, a MetalRust sphere and the metal toolbox prop, built twice (slots A and B); V switches between them. Debug env: the scene's own \"Asset compare\" tab picks the variants, shows each texture's file size and VRAM, and runs the collider check.",
+  "name": "Asset compare (texture codecs)",
+  "description": "The KTX2 codec variants of devTools/assetPipeline/fixtures/assetCompareVariants.ts (run it first) against their uncompressed baselines. A tiled rock ground at grazing angles, a MetalRust sphere and the metal toolbox prop, built twice (slots A and B); V switches between them. Debug env: the scene's own \"Asset compare\" tab picks the variants, shows each texture's file size and VRAM, and measures every variant on this device and checks the fixture's collider copies against their sources.",
   "skyboxes": ["assetCompare"]
 }

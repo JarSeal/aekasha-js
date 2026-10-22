@@ -1,19 +1,17 @@
 import * as THREE from 'three/webgpu';
-import { dFdx, dFdy, int, texture, uv, vec2 } from 'three/tsl';
+import { dFdx, dFdy, int, vec2 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
-import type { Node, TextureNode } from 'three/webgpu';
+import type { Node } from 'three/webgpu';
 import {
   createCameraEntity,
-  getActiveCamera,
+  existsOrThrow,
+  getGeometry,
   saveBufferGeometry,
   createLightEntity,
   saveMaterial,
   createMeshEntity,
   getRenderer,
-  getGeneratedAppData,
-  loadScene,
   type ScenePrimitiveAssets,
-  getAllTextures,
   getTexture,
   loadTextureAsync,
   type TextureProps,
@@ -27,6 +25,19 @@ import {
   llog,
   registerOnSceneExit,
 } from 'aekasha';
+import {
+  expectError,
+  expectSyncError,
+  getBackendName,
+  getCountedGpuBytes,
+  getErrorMessage,
+  getGeneratedTextureProps,
+  getHarnessHandles,
+  meshUv,
+  nextFrames,
+  projectToScreen,
+  sampleTexture,
+} from '../../shared/verifyHarness';
 
 /**
  * The p299 verification scene: texture arrays next to the textures they were built from. Unlit
@@ -46,8 +57,11 @@ import {
  * - column 5, rows 0-1: the one-layer `p299TestArray1` asset, then its file.
  * - column 6, rows 2-4, lit spheres: the asset's `testTexture` layer (`sampleArrayLayer` as the
  *   material's `colorNode`), its source file as a plain `map`, and layer s2 of row 0's array.
- * Every array quad samples through `sampleArrayLayer` (Phase 4). `window.__textureArrays` holds the
- * checks' results and `project()` for the harness.
+ * Every array quad samples through `sampleArrayLayer` (Phase 4).
+ *
+ * `window.__textureArrays` holds the checks' results (`results.done` once the swaps ran) and
+ * handles to drive the scene from the console. They're read by hand: nothing asserts them yet (the
+ * scene runner checks the snapshot and that nothing but the expected errors is logged).
  */
 
 const TEXTURE_ARRAYS_SCENE_ID = 'textureArrays';
@@ -60,33 +74,14 @@ const Y0 = CELL * 2;
 /** In front of the debug helpers at the world origin */
 const Z = 2;
 
-const sampleTexture = texture as unknown as (tex: THREE.Texture, uvNode: Node) => TextureNode;
-const meshUv = uv as unknown as () => Node<'vec2'>;
-
-const state: {
-  results: Record<string, unknown>;
-  arrays: Record<string, TextureArray>;
-  project: (x: number, y: number) => { x: number; y: number };
-  cellCenter: (row: number, col: number) => { x: number; y: number };
-  /** The registered textures' ids (the harness checks what a scene exit released) */
-  getTextureIds: () => string[];
-  leaveTo: (sceneId: string) => Promise<unknown>;
-} = {
-  getTextureIds: () => Object.keys(getAllTextures()),
-  leaveTo: (sceneId) => loadScene({ sceneId }),
-  results: {},
-  arrays: {},
-  project: (x, y) => {
-    const camera = getActiveCamera()!;
-    const canvas = getRenderer()!.domElement;
-    const v = new THREE.Vector3(x, y, Z).project(camera);
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: rect.left + ((v.x + 1) / 2) * rect.width,
-      y: rect.top + ((1 - v.y) / 2) * rect.height,
-    };
-  },
-  cellCenter: (row, col) => ({ x: X0 + col * CELL, y: Y0 - row * CELL }),
+/** What `window.__textureArrays` holds: the checks' results and the console's handles */
+const state = {
+  ...getHarnessHandles(),
+  results: {} as Record<string, unknown>,
+  arrays: {} as Record<string, TextureArray>,
+  /** A point on the quads' plane in CSS px */
+  project: (x: number, y: number) => projectToScreen(x, y, Z),
+  cellCenter: (row: number, col: number) => ({ x: X0 + col * CELL, y: Y0 - row * CELL }),
 };
 
 let quadGeo: THREE.BufferGeometry;
@@ -154,30 +149,16 @@ const buildLitSpheres = (memberIds: string[]) => {
   addLitSphere('lit_assetLayer', 2, {
     node: sampleArrayLayer(arrays.asset, meshUv(), 'testTexture') as unknown as Node<'vec4'>,
   });
-  addLitSphere('lit_assetSource', 3, { map: getTexture('textureArrays/assetSource0')! });
+  addLitSphere('lit_assetSource', 3, {
+    map: existsOrThrow(getTexture('textureArrays/assetSource0'), 'No assetSource0 texture.'),
+  });
   addLitSphere('lit_runtimeLayer', 4, {
     node: sampleArrayLayer(arrays.registered, meshUv(), memberIds[2]) as unknown as Node<'vec4'>,
   });
 };
 
-const nextFrames = (count: number) =>
-  new Promise<void>((resolve) => {
-    const step = () => (--count <= 0 ? resolve() : requestAnimationFrame(step));
-    requestAnimationFrame(step);
-  });
-
-/** Runs `fn`, expecting it to throw: the message, or a failure note when it didn't. */
-const expectError = async (fn: () => unknown) => {
-  try {
-    await fn();
-    return 'FAILED: did not throw';
-  } catch (error) {
-    return (error as Error).message;
-  }
-};
-
 const describeArray = (array: TextureArray) => {
-  const info = getTextureArrayInfo(array)!;
+  const info = existsOrThrow(getTextureArrayInfo(array), `${array.userData.id} is no array.`);
   return {
     id: array.userData.id,
     type: array.constructor.name,
@@ -193,10 +174,7 @@ const describeArray = (array: TextureArray) => {
             0
           )
         : (array.image as { data: Uint8Array }).data.byteLength,
-    gpuCountedBytes:
-      (getRenderer()!.info as unknown as { memoryMap: WeakMap<object, number> }).memoryMap.get(
-        array
-      ) ?? null,
+    gpuCountedBytes: getCountedGpuBytes(array) ?? null,
   };
 };
 
@@ -220,7 +198,7 @@ const buildAssetColumns = async (assets: ScenePrimitiveAssets) => {
     `${URL_BASE}/l1.png`,
     '/debugger/assets/testTextures/cubemap01_positive_y.png',
   ];
-  const layerNames = getTextureArrayInfo(arrays.asset)!.members;
+  const layerNames = existsOrThrow(getTextureArrayInfo(arrays.asset), 'No p299TestArray.').members;
   for (const [layer, fileName] of sources.entries()) {
     addLayerQuad(`asset_L${layer}`, arrays.asset, layerNames[layer], 2 + layer, 4);
     const source = await loadSourceFile(`assetSource${layer}`, fileName);
@@ -243,8 +221,7 @@ const buildAssetColumns = async (assets: ScenePrimitiveAssets) => {
     depth: (fallback.image as { depth?: number }).depth,
     isRegistered: getTexture('textureArrays/noOutputFallback') !== undefined,
   };
-  const assetUrl = (getGeneratedAppData() as unknown as { textures: Record<string, TextureProps> })
-    .textures.p299TestArray.__url;
+  const assetUrl = getGeneratedTextureProps('p299TestArray').__url;
   results.assetErrors = {
     noOutput: await expectError(() =>
       loadTextureAsync({ id: 'textureArrays/noOutput', __layers: ['a'], throwOnError: true })
@@ -276,19 +253,11 @@ const checkHelpers = (memberIds: string[], plainTexture: THREE.Texture) => {
     unknownArray: getArrayLayerIndex('noSuchArray', 'l1') ?? null,
     notAnArray: getArrayLayerIndex(plainTexture, 'l1') ?? null,
   };
-  const expectSampleError = (fn: () => unknown) => {
-    try {
-      fn();
-      return 'FAILED: did not throw';
-    } catch (error) {
-      return (error as Error).message;
-    }
-  };
   results.sampleErrors = {
-    unknownName: expectSampleError(() => sampleArrayLayer(arrays.asset, meshUv(), 'noSuchLayer')),
-    outOfRange: expectSampleError(() => sampleArrayLayer(arrays.asset, meshUv(), 3)),
-    notInteger: expectSampleError(() => sampleArrayLayer(arrays.asset, meshUv(), 1.5)),
-    notAnArray: expectSampleError(() => sampleArrayLayer(plainTexture, meshUv(), 0)),
+    unknownName: expectSyncError(() => sampleArrayLayer(arrays.asset, meshUv(), 'noSuchLayer')),
+    outOfRange: expectSyncError(() => sampleArrayLayer(arrays.asset, meshUv(), 3)),
+    notInteger: expectSyncError(() => sampleArrayLayer(arrays.asset, meshUv(), 1.5)),
+    notAnArray: expectSyncError(() => sampleArrayLayer(plainTexture, meshUv(), 0)),
   };
 };
 
@@ -320,10 +289,10 @@ const build = async (assets: ScenePrimitiveAssets) => {
     members: ['testTexture'],
   });
   addLayerQuad('oneMember', arrays.oneMember, 0, 0, 4);
-  const testTextureProps = (
-    getGeneratedAppData() as unknown as { textures: Record<string, TextureProps> }
-  ).textures.testTexture;
-  const testTexture = await loadTextureAsync({ ...testTextureProps, throwOnError: true });
+  const testTexture = await loadTextureAsync({
+    ...getGeneratedTextureProps('testTexture'),
+    throwOnError: true,
+  });
   addQuad('testTexture', sampleTexture(testTexture, meshUv()), 1, 4);
 
   // Row 2: the uncompressed path
@@ -386,12 +355,13 @@ const build = async (assets: ScenePrimitiveAssets) => {
   };
 };
 
+// Not in three's types: the backend's per-object data, which holds a texture once it's uploaded
 type BackendData = { texture?: unknown; textureGPU?: unknown };
-type Backend = { isWebGPUBackend?: boolean; get: (object: object) => BackendData };
-const getBackend = () => (getRenderer() as unknown as { backend: Backend }).backend;
+type Backend = { get: (object: object) => BackendData };
 const isOnGPU = (tex: THREE.Texture) => {
-  const data = getBackend().get(tex);
-  return Boolean(data.texture ?? data.textureGPU);
+  const backend = (getRenderer() as unknown as { backend: Backend } | undefined)?.backend;
+  const data = backend?.get(tex);
+  return Boolean(data?.texture ?? data?.textureGPU);
 };
 
 /** After the scene has loaded (nothing is drawn while it loads): the layer swaps, then the
@@ -399,7 +369,7 @@ const isOnGPU = (tex: THREE.Texture) => {
  * gone then. */
 const runSwaps = async (visit: { isLeft: boolean }) => {
   const { results, arrays } = state;
-  results.backend = getBackend().isWebGPUBackend ? 'WebGPU' : 'WebGL2';
+  results.backend = getBackendName();
   // Swap once the arrays are on the GPU, so the swap goes through the layer update path
   await nextFrames(10);
   if (visit.isLeft) return;
@@ -458,15 +428,15 @@ export const scene = async ({ assets }: { assets: ScenePrimitiveAssets }) => {
     { appId: 'textureArraysSun' }
   );
 
-  const quad = new THREE.PlaneGeometry(1, 1);
-  quadGeo = saveBufferGeometry(quad, { id: 'textureArraysQuad' });
-  if (quadGeo !== quad) quad.dispose();
-  const row = new THREE.PlaneGeometry(ROW_WIDTH, 1);
-  rowGeo = saveBufferGeometry(row, { id: 'textureArraysRow' });
-  if (rowGeo !== row) row.dispose();
-  const sphere = new THREE.SphereGeometry(0.45, 48, 24);
-  sphereGeo = saveBufferGeometry(sphere, { id: 'textureArraysSphere' });
-  if (sphereGeo !== sphere) sphere.dispose();
+  quadGeo =
+    getGeometry('textureArraysQuad') ??
+    saveBufferGeometry(new THREE.PlaneGeometry(1, 1), { id: 'textureArraysQuad' });
+  rowGeo =
+    getGeometry('textureArraysRow') ??
+    saveBufferGeometry(new THREE.PlaneGeometry(ROW_WIDTH, 1), { id: 'textureArraysRow' });
+  sphereGeo =
+    getGeometry('textureArraysSphere') ??
+    saveBufferGeometry(new THREE.SphereGeometry(0.45, 48, 24), { id: 'textureArraysSphere' });
 
   // The swaps run after the load: the scene's exit stops them (a swap it interrupts fails)
   const visit = { isLeft: false };
@@ -478,10 +448,10 @@ export const scene = async ({ assets }: { assets: ScenePrimitiveAssets }) => {
     void runSwaps(visit).catch((error) => {
       if (visit.isLeft) return;
       lerror('[textureArrays] Swaps failed', error);
-      state.results.buildError = (error as Error).message;
+      state.results.buildError = getErrorMessage(error);
     });
   } catch (error) {
     lerror('[textureArrays] Build failed', error);
-    state.results.buildError = (error as Error).message;
+    state.results.buildError = getErrorMessage(error);
   }
 };

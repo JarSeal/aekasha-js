@@ -1,13 +1,13 @@
 import * as THREE from 'three/webgpu';
-import { float, normalMap, texture, uv, vec2 } from 'three/tsl';
-// The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
-import type { Node } from 'three/webgpu';
+import { float, normalMap, vec2 } from 'three/tsl';
 import {
   createCameraEntity,
   IS_DEBUG_ENV,
   getECSWorld,
   ComponentType,
   createGeometry,
+  existsOrThrow,
+  getGeometry,
   saveBufferGeometry,
   importAssetAsync,
   releaseImportedAsset,
@@ -27,23 +27,29 @@ import {
   registerOnSceneExit,
 } from 'aekasha';
 import type { ImportedAssetManifest } from 'aekasha';
+import { getErrorMessage, meshUv, sampleTexture } from '../../shared/verifyHarness';
 
 /**
- * The p300 Phase 1d comparison scene: the codec variants that `assetCompareVariants.ts` built, side by
- * side with their uncompressed baselines. Two slots (A and B) each build the whole set at the same
- * spots, one variant per slot, and the V key (or the scene's debug tab) shows one or the other:
- * - a tiled ground (rocks01, p303's LITE packing: albedo × AO + roughness, normal XY + height) at
- *   grazing angles, REPEAT and the renderer's max anisotropy;
- * - a sphere with the MetalRust ORM and normal map (the problem case), on its committed base colour;
+ * The texture codecs side by side: the KTX2 variants that
+ * `devTools/assetPipeline/fixtures/assetCompareVariants.ts` builds, against their uncompressed
+ * baselines, to pick an asset's codec by eye and by its numbers. Two slots (A and B) each build the
+ * whole set at the same spots, one variant per slot, and the V key (or the scene's debug tab) shows
+ * one or the other:
+ * - a tiled ground (rocks01 in the LITE texture-set packing, p303: albedo × AO + roughness, normal
+ *   XY + height) at grazing angles, REPEAT and the renderer's max anisotropy;
+ * - a sphere with the MetalRust ORM and normal map (a normal map is where a codec shows most), on
+ *   its committed base colour;
  * - the metal toolbox prop GLB (meshopt geometry, all three maps in the variant's codec).
- * The "png" variant is each one's uncompressed baseline (the toolbox's JPG source GLB).
- * Throwaway: it goes with `testOptimized/phase1/` once Phase 1f has picked the profiles.
+ * The "png" variant is each one's uncompressed baseline (the toolbox's JPG source GLB). The files
+ * are the fixture script's gitignored outputs: run it first (a missing prop GLB is reported in the
+ * tab). The debug tab (`_dbg__assetCompare.ts`) also measures every variant on the device and
+ * checks the collider copies the fixture builds.
  */
 
 export const ASSET_COMPARE_SCENE_ID = 'assetCompare';
 
 /** Where assetCompareVariants.ts writes its outputs (and report.json). */
-export const PHASE1_URL = '/debugger/assets/testOptimized/phase1';
+export const VARIANTS_URL = '/debugger/assets/testOptimized/phase1';
 const BASE_COLOR_URL = '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg';
 /** The base colour both slots share (the same JPG in every variant). */
 const BASE_COLOR_ID = 'assetCompare/metalRustBaseColor';
@@ -71,7 +77,7 @@ export const compareConfig = {
   shown: 'A' as CompareSlotId,
 };
 
-/** A texture a slot shows: what it is, its file (relative to PHASE1_URL; `<glb>#<name>` for the
+/** A texture a slot shows: what it is, its file (relative to VARIANTS_URL; `<glb>#<name>` for the
  * prop's embedded ones) and the loaded texture. */
 export type CompareTexture = {
   subject: CompareSubject;
@@ -134,10 +140,6 @@ const SPHERE_NORMAL: TextureSpec = {
   name: 'normal',
   hasNormalMode: true,
 };
-
-// The shim types `texture` and `uv` too: these take the real types
-const sampleTexture = texture as unknown as (tex: THREE.Texture, uvNode: Node) => Node<'vec4'>;
-const meshUv = uv as unknown as () => Node<'vec2'>;
 
 const getTextureFile = (spec: TextureSpec, variant: CompareVariant, normalMode: boolean) =>
   variant === 'png'
@@ -235,89 +237,88 @@ const throwIfLeft = (slot: CompareSlot) => {
   if (slot.isLeft) throw new SceneLeftError();
 };
 
-const buildSlot = async (slot: CompareSlot) => {
-  clearSlot(slot);
-  const variant = compareConfig[`variant${slot.id}`];
-  const normalMode = compareConfig[`normalMode${slot.id}`];
-  const prefix = `assetCompare/${slot.id}`;
-  const anisotropy = getMaxAnisotropy();
+/** The slot's settings as its build reads them */
+type SlotBuild = {
+  slot: CompareSlot;
+  variant: CompareVariant;
+  normalMode: boolean;
+  /** The ids' prefix: `assetCompare/<slot id>` */
+  prefix: string;
+  anisotropy: number;
+};
 
-  const loadSlotTexture = async (spec: TextureSpec) => {
-    const file = getTextureFile(spec, variant, normalMode);
-    const id = `${prefix}/${file}`;
-    slot.textureIds.push(id);
-    const loaded = await loadTextureAsync({
-      id,
-      fileName: `${PHASE1_URL}/${file}`,
-      // A KTX2 file carries its own colour space; the PNG baselines get theirs here
-      texOpts: {
-        wrapS: THREE.RepeatWrapping,
-        wrapT: THREE.RepeatWrapping,
-        anisotropy,
-        ...(variant === 'png' && spec.srgb ? { colorSpace: THREE.SRGBColorSpace } : {}),
-      },
-      throwOnError: true,
-    });
-    slot.textures.push({ subject: spec.subject, name: spec.name, file, texture: loaded });
-    return loaded;
-  };
+const tiledTexOpts = (anisotropy: number) => ({
+  wrapS: THREE.RepeatWrapping,
+  wrapT: THREE.RepeatWrapping,
+  anisotropy,
+});
 
-  const [albedoRough, normalHeight, orm, normal, baseColor] = await Promise.all([
-    loadSlotTexture(GROUND_ALBEDO_ROUGH),
-    loadSlotTexture(GROUND_NORMAL_HEIGHT),
-    loadSlotTexture(SPHERE_ORM),
-    loadSlotTexture(SPHERE_NORMAL),
-    // Shared by both slots (the same JPG in every variant), released with the scene
-    loadTextureAsync({
-      id: BASE_COLOR_ID,
-      fileName: BASE_COLOR_URL,
-      texOpts: {
-        wrapS: THREE.RepeatWrapping,
-        wrapT: THREE.RepeatWrapping,
-        anisotropy,
-        colorSpace: THREE.SRGBColorSpace,
-      },
-      throwOnError: true,
-    }),
-  ]);
-  throwIfLeft(slot);
+/** One of the slot's standalone textures, in the slot's variant */
+const loadSlotTextureAsync = async (build: SlotBuild, spec: TextureSpec) => {
+  const { slot, variant, normalMode, prefix, anisotropy } = build;
+  const file = getTextureFile(spec, variant, normalMode);
+  const id = `${prefix}/${file}`;
+  slot.textureIds.push(id);
+  const loaded = await loadTextureAsync({
+    id,
+    fileName: `${VARIANTS_URL}/${file}`,
+    // A KTX2 file carries its own colour space; the PNG baselines get theirs here
+    texOpts: {
+      ...tiledTexOpts(anisotropy),
+      ...(variant === 'png' && spec.srgb ? { colorSpace: THREE.SRGBColorSpace } : {}),
+    },
+    throwOnError: true,
+  });
+  slot.textures.push({ subject: spec.subject, name: spec.name, file, texture: loaded });
+  return loaded;
+};
 
-  // Ground: p303's LITE packing (albedo × AO in RGB, roughness in A; normal XY, height in B)
+/** The ground: the LITE packing (albedo × AO in RGB, roughness in A; normal XY, height in B) */
+const buildGround = (build: SlotBuild, albedoRough: THREE.Texture, normalHeight: THREE.Texture) => {
+  const { slot, prefix } = build;
   const tiledUv = meshUv().mul(GROUND_TILES);
   const groundAr = sampleTexture(albedoRough, tiledUv);
   const groundNormal = normalMap(sampleTexture(normalHeight, tiledUv));
   groundNormal.unpackNormalMode = THREE.NormalRGPacking;
-  const groundMat = new THREE.MeshStandardNodeMaterial();
-  groundMat.colorNode = groundAr.rgb;
-  groundMat.roughnessNode = groundAr.a;
-  groundMat.metalnessNode = float(0);
-  groundMat.normalNode = groundNormal;
-  saveMaterial(groundMat, `${prefix}/groundMaterial`);
+  const material = new THREE.MeshStandardNodeMaterial();
+  material.colorNode = groundAr.rgb;
+  material.roughnessNode = groundAr.a;
+  material.metalnessNode = float(0);
+  material.normalNode = groundNormal;
+  saveMaterial(material, `${prefix}/groundMaterial`);
   slot.materialIds.push(`${prefix}/groundMaterial`);
 
-  const planeGeo = new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE).rotateX(-Math.PI / 2);
-  const groundGeo = saveBufferGeometry(planeGeo, { id: 'assetCompareGround' });
-  if (groundGeo !== planeGeo) planeGeo.dispose();
+  const geo =
+    getGeometry('assetCompareGround') ??
+    saveBufferGeometry(new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE).rotateX(-Math.PI / 2), {
+      id: 'assetCompareGround',
+    });
   slot.entityIds.push(
     createMeshEntity(
-      { geo: groundGeo, mat: groundMat, receiveShadow: true },
+      { geo, mat: material, receiveShadow: true },
       { appId: `assetCompare${slot.id}Ground` }
     )
   );
+};
 
-  // Sphere: MetalRust, its UVs wrap twice round the equator
+/** The sphere: MetalRust, its UVs wrapping twice round the equator */
+const buildSphere = (
+  build: SlotBuild,
+  maps: { orm: THREE.Texture; normal: THREE.Texture; baseColor: THREE.Texture }
+) => {
+  const { slot, variant, normalMode, prefix } = build;
   const sphereUv = meshUv().mul(vec2(2, 1));
-  const sphereOrm = sampleTexture(orm, sphereUv);
-  const sphereNormal = normalMap(sampleTexture(normal, sphereUv));
+  const sphereOrm = sampleTexture(maps.orm, sphereUv);
+  const sphereNormal = normalMap(sampleTexture(maps.normal, sphereUv));
   // `--normal-mode` files have X in RGB and Y in A, and three only unpacks RG formats by itself
   if (normalMode && variant !== 'png') sphereNormal.unpackNormalMode = THREE.NormalGAPacking;
-  const sphereMat = new THREE.MeshStandardNodeMaterial();
-  sphereMat.colorNode = sampleTexture(baseColor, sphereUv).rgb;
-  sphereMat.aoNode = sphereOrm.r;
-  sphereMat.roughnessNode = sphereOrm.g;
-  sphereMat.metalnessNode = sphereOrm.b;
-  sphereMat.normalNode = sphereNormal;
-  saveMaterial(sphereMat, `${prefix}/sphereMaterial`);
+  const material = new THREE.MeshStandardNodeMaterial();
+  material.colorNode = sampleTexture(maps.baseColor, sphereUv).rgb;
+  material.aoNode = sphereOrm.r;
+  material.roughnessNode = sphereOrm.g;
+  material.metalnessNode = sphereOrm.b;
+  material.normalNode = sphereNormal;
+  saveMaterial(material, `${prefix}/sphereMaterial`);
   slot.materialIds.push(`${prefix}/sphereMaterial`);
   slot.entityIds.push(
     createMeshEntity(
@@ -327,7 +328,7 @@ const buildSlot = async (slot: CompareSlot) => {
           type: 'SPHERE',
           params: { radius: SPHERE_RADIUS, widthSegments: 128, heightSegments: 64 },
         }),
-        mat: sphereMat,
+        mat: material,
         position: SPHERE_POS,
         castShadow: true,
         receiveShadow: true,
@@ -335,56 +336,102 @@ const buildSlot = async (slot: CompareSlot) => {
       { appId: `assetCompare${slot.id}Sphere` }
     )
   );
+};
 
-  // Prop: the gitignored GLBs are rebuilt by assetCompareVariants.ts, so one may be missing
+/** The prop's textures as the tab lists them: one row per texture (the ARM map fills more than
+ * one material slot) */
+const addPropTextures = (
+  slot: CompareSlot,
+  manifest: ImportedAssetManifest,
+  importId: string,
+  propFile: string
+) => {
+  const slotsByTexture = new Map<string, string[]>();
+  for (const [key, textureId] of Object.entries(manifest.geometries[0]?.textureSlots || {})) {
+    slotsByTexture.set(textureId, [...(slotsByTexture.get(textureId) || []), key]);
+  }
+  for (const [textureId, keys] of slotsByTexture) {
+    const loaded = getTexture(textureId);
+    if (!loaded) continue;
+    slot.textures.push({
+      subject: 'prop',
+      name: keys.join(' + '),
+      file: `${propFile}#${textureId.slice(importId.length + 1)}`,
+      texture: loaded,
+      reportKind: keys.includes('normalMap') ? 'normal' : keys.includes('map') ? 'color' : 'data',
+    });
+  }
+};
+
+/** The prop: the gitignored GLBs are built by assetCompareVariants.ts, so one may be missing */
+const buildPropAsync = async (build: SlotBuild) => {
+  const { slot, variant, prefix, anisotropy } = build;
   const propFile = getPropFile(variant);
-  const isPropServed = await isServed(`${PHASE1_URL}/${propFile}`);
+  const isPropServed = await isServed(`${VARIANTS_URL}/${propFile}`);
   throwIfLeft(slot);
   if (!isPropServed) {
     const message = `${propFile} is not built: run \`npx tsx devTools/assetPipeline/fixtures/assetCompareVariants.ts --only metalToolbox\``;
     lwarn(`[assetCompare] ${message}`);
     slot.messages.push(message);
-  } else {
-    const importId = `${prefix}/prop/${variant}`;
-    slot.propImportId = importId;
-    const manifest = await importAssetAsync({
+    return;
+  }
+  const importId = `${prefix}/prop/${variant}`;
+  slot.propImportId = importId;
+  const manifest = existsOrThrow(
+    await importAssetAsync({
       id: importId,
-      fileName: `${PHASE1_URL}/${propFile}`,
+      fileName: `${VARIANTS_URL}/${propFile}`,
       importTextures: { texOpts: { anisotropy } },
       throwOnError: true,
-    });
-    throwIfLeft(slot);
-    const material = createPropMaterial(manifest!, `${prefix}/propMaterial`);
-    slot.materialIds.push(`${prefix}/propMaterial`);
-    const { meshEntityIds } = await spawnImportedAsset(manifest!, {
-      transform: { position: PROP_POS, rotation: { x: 0, y: -0.5, z: 0 } },
-      material,
-      castShadow: true,
-      receiveShadow: true,
-      entityOpts: { appId: `assetCompare${slot.id}Prop` },
-    });
-    slot.entityIds.push(...meshEntityIds);
-    throwIfLeft(slot);
-    slot.propFile = propFile;
-    // One row per texture (the ARM map fills more than one slot)
-    const slotsByTexture = new Map<string, string[]>();
-    for (const [key, textureId] of Object.entries(manifest!.geometries[0]?.textureSlots || {})) {
-      slotsByTexture.set(textureId, [...(slotsByTexture.get(textureId) || []), key]);
-    }
-    for (const [textureId, keys] of slotsByTexture) {
-      const loaded = getTexture(textureId);
-      if (!loaded) continue;
-      slot.textures.push({
-        subject: 'prop',
-        name: keys.join(' + '),
-        file: `${propFile}#${textureId.slice(importId.length + 1)}`,
-        texture: loaded,
-        reportKind: keys.includes('normalMap') ? 'normal' : keys.includes('map') ? 'color' : 'data',
-      });
-    }
-  }
+    }),
+    `No manifest for ${propFile}.`
+  );
+  throwIfLeft(slot);
+  const material = createPropMaterial(manifest, `${prefix}/propMaterial`);
+  slot.materialIds.push(`${prefix}/propMaterial`);
+  const { meshEntityIds } = await spawnImportedAsset(manifest, {
+    transform: { position: PROP_POS, rotation: { x: 0, y: -0.5, z: 0 } },
+    material,
+    castShadow: true,
+    receiveShadow: true,
+    entityOpts: { appId: `assetCompare${slot.id}Prop` },
+  });
+  slot.entityIds.push(...meshEntityIds);
+  throwIfLeft(slot);
+  slot.propFile = propFile;
+  addPropTextures(slot, manifest, importId, propFile);
+};
 
-  slot.built = { variant, normalMode };
+/** Builds the slot from compareConfig: the textures, then the ground, the sphere and the prop */
+const buildSlotAsync = async (slot: CompareSlot) => {
+  clearSlot(slot);
+  const build: SlotBuild = {
+    slot,
+    variant: compareConfig[`variant${slot.id}`],
+    normalMode: compareConfig[`normalMode${slot.id}`],
+    prefix: `assetCompare/${slot.id}`,
+    anisotropy: getMaxAnisotropy(),
+  };
+
+  const [albedoRough, normalHeight, orm, normal, baseColor] = await Promise.all([
+    loadSlotTextureAsync(build, GROUND_ALBEDO_ROUGH),
+    loadSlotTextureAsync(build, GROUND_NORMAL_HEIGHT),
+    loadSlotTextureAsync(build, SPHERE_ORM),
+    loadSlotTextureAsync(build, SPHERE_NORMAL),
+    // Shared by both slots (the same JPG in every variant), released with the scene
+    loadTextureAsync({
+      id: BASE_COLOR_ID,
+      fileName: BASE_COLOR_URL,
+      texOpts: { ...tiledTexOpts(build.anisotropy), colorSpace: THREE.SRGBColorSpace },
+      throwOnError: true,
+    }),
+  ]);
+  throwIfLeft(slot);
+
+  buildGround(build, albedoRough, normalHeight);
+  buildSphere(build, { orm, normal, baseColor });
+  await buildPropAsync(build);
+  slot.built = { variant: build.variant, normalMode: build.normalMode };
 };
 
 /** Rebuilds a slot from compareConfig (queued after a build that is still running). A build the
@@ -396,11 +443,11 @@ export const rebuildCompareSlot = (slotId: CompareSlotId) => {
     slot.isBuilding = true;
     onChange?.();
     try {
-      await buildSlot(slot);
+      await buildSlotAsync(slot);
     } catch (error) {
       if (!(error instanceof SceneLeftError)) {
         lerror(`[assetCompare] Slot ${slot.id} failed to build`, error);
-        slot.messages.push(`Build failed: ${(error as Error).message}`);
+        slot.messages.push(`Build failed: ${getErrorMessage(error)}`);
       }
     }
     if (slot.isLeft) {

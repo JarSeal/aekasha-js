@@ -1,20 +1,18 @@
 import * as THREE from 'three/webgpu';
-import { float, fwidth, max, mix, step, texture, uv, vec3, vec4 } from 'three/tsl';
+import { float, fwidth, max, mix, step, vec3, vec4 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
-import type { Node, TextureNode } from 'three/webgpu';
+import type { Node } from 'three/webgpu';
 import {
   createCameraEntity,
-  getActiveCamera,
+  existsOrThrow,
+  getGeometry,
   getGeometryRegistry,
   saveBufferGeometry,
   createLightEntity,
   saveMaterial,
   createMeshEntity,
-  getRenderer,
   getGeneratedSceneData,
-  loadScene,
   type ScenePrimitiveAssets,
-  getAllTextures,
   getTexture,
   loadTextureAsync,
   type TextureProps,
@@ -27,6 +25,18 @@ import {
   llog,
   registerOnSceneExit,
 } from 'aekasha';
+import {
+  expectError,
+  expectSyncError,
+  getBackendName,
+  getCountedGpuBytes,
+  getErrorMessage,
+  getHarnessHandles,
+  meshUv,
+  nextFrames,
+  projectToScreen,
+  sampleTexture,
+} from '../../shared/verifyHarness';
 
 /**
  * The p299 atlas verification scene: the `p299TestAtlas` asset (`*.textureAtlas.json`, listed by
@@ -45,15 +55,17 @@ import {
  *   cell's source file, and a box remapped in place into the metal cell.
  * A cell's quads have its content's aspect.
  *
- * p351 Phase 4 section 1, off to the side with its own camera ("Ready-made image atlas"): the
- * `p299TestAtlasImage` asset, two slots from ready-made images of the layout (`slots.<name>.image`,
- * an impostor-like bake of 3 × 3 frames) with the full mip chain (`mipChain: "FULL"`, 192² to 1²).
+ * Off to the side, with its own camera ("Ready-made image atlas"): the `p299TestAtlasImage` asset,
+ * two slots from ready-made images of the layout (`slots.<name>.image`, as an octahedral impostor's
+ * bake: 3 × 3 frames) with the full mip chain (`mipChain: "FULL"`, 192² to 1²).
  * The albedo slot in columns 0-8, the normalDepth slot in columns 10-18, quad names prefixed
  * `image_`: row 0 the slot at each level and its source image after them, rows 1…levels each cell
  * through its UV rect at that level (below the 3 levels the layout keeps apart, the cells mix).
  *
- * `window.__textureAtlases` holds the checks' results and `screenRect(name)` for the harness (in
- * the active camera).
+ * `window.__textureAtlases` holds the checks' results (`results.done` once the slots are on the
+ * GPU) and handles to drive the scene from the console, `screenRect(name)` among them (in the
+ * active camera). They're read by hand: nothing asserts them yet (the scene runner checks the
+ * snapshot and that nothing but the expected errors is logged).
  */
 
 const TEXTURE_ATLASES_SCENE_ID = 'textureAtlases';
@@ -68,7 +80,7 @@ const Y0 = CELL * 3.5;
 /** In front of the debug helpers at the world origin */
 const Z = 2;
 
-/** p351 Phase 4 section 1's atlas: slots from ready-made images, the full chain */
+/** The ready-made image atlas: slots from images of the layout, the full chain */
 const IMAGE_ATLAS_ID = 'p299TestAtlasImage';
 const IMAGE_SLOTS = ['albedo', 'normalDepth'] as const;
 const IMAGE_SLOT_COLUMNS = 10;
@@ -104,37 +116,18 @@ const IMAGE_SOURCES: Record<(typeof IMAGE_SLOTS)[number], string> = {
   normalDepth: local(new URL('./source/p299Atlas/imageAtlasNormalDepth.png', import.meta.url)),
 };
 
-const sampleTexture = texture as unknown as (tex: THREE.Texture, uvNode: Node) => TextureNode;
-const meshUv = uv as unknown as () => Node<'vec2'>;
-
 type Quad = { x: number; y: number; halfW: number; halfH: number };
 
-const state: {
-  results: Record<string, unknown>;
-  quads: Record<string, Quad>;
-  project: (x: number, y: number) => { x: number; y: number };
+/** What `window.__textureAtlases` holds: the checks' results and the console's handles */
+const state = {
+  ...getHarnessHandles(),
+  results: {} as Record<string, unknown>,
+  quads: {} as Record<string, Quad>,
+  /** A point on the quads' plane in CSS px */
+  project: (x: number, y: number) => projectToScreen(x, y, Z),
   /** A quad's screen rect in CSS px, by its name (`<slot>_atlas_L<n>`, `<slot>_<cell>_L<n>`,
    * `<slot>_<cell>_source`) */
-  screenRect: (name: string) => { left: number; top: number; w: number; h: number };
-  /** The registered textures' ids (the harness checks what a scene exit released) */
-  getTextureIds: () => string[];
-  leaveTo: (sceneId: string) => Promise<unknown>;
-} = {
-  getTextureIds: () => Object.keys(getAllTextures()),
-  leaveTo: (sceneId) => loadScene({ sceneId }),
-  results: {},
-  quads: {},
-  project: (x, y) => {
-    const camera = getActiveCamera()!;
-    const canvas = getRenderer()!.domElement;
-    const v = new THREE.Vector3(x, y, Z).project(camera);
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: rect.left + ((v.x + 1) / 2) * rect.width,
-      y: rect.top + ((1 - v.y) / 2) * rect.height,
-    };
-  },
-  screenRect: (name) => {
+  screenRect: (name: string) => {
     const { x, y, halfW, halfH } = state.quads[name];
     const a = state.project(x - halfW, y + halfH);
     const b = state.project(x + halfW, y - halfH);
@@ -213,24 +206,12 @@ const cellLevelNode = (
   ) as unknown as Node<'vec4'>;
 };
 
-const nextFrames = (count: number) =>
-  new Promise<void>((resolve) => {
-    const step = () => (--count <= 0 ? resolve() : requestAnimationFrame(step));
-    requestAnimationFrame(step);
-  });
-
-/** Runs `fn`, expecting it to throw: the message, or a failure note when it didn't. */
-const expectError = async (fn: () => unknown) => {
-  try {
-    await fn();
-    return 'FAILED: did not throw';
-  } catch (error) {
-    return (error as Error).message;
-  }
-};
+/** An atlas slot's info: what the scene loader registered it with */
+const getSlotInfo = (tex: THREE.Texture) =>
+  existsOrThrow(getTextureAtlasInfo(tex), `${tex.userData.id} is no atlas slot.`);
 
 const describeSlot = (tex: THREE.Texture) => {
-  const info = getTextureAtlasInfo(tex)!;
+  const info = getSlotInfo(tex);
   const mipmaps = (tex as THREE.CompressedTexture).mipmaps as unknown as {
     data: Uint8Array;
     width: number;
@@ -248,10 +229,7 @@ const describeSlot = (tex: THREE.Texture) => {
     cellIds: Object.keys(cells),
     mipSizes: mipmaps.map(({ width, height }) => `${width}×${height}`),
     cpuBytes: mipmaps.reduce((sum, m) => sum + m.data.byteLength, 0),
-    gpuCountedBytes:
-      (getRenderer()!.info as unknown as { memoryMap: WeakMap<object, number> }).memoryMap.get(
-        tex
-      ) ?? null,
+    gpuCountedBytes: getCountedGpuBytes(tex) ?? null,
   };
 };
 
@@ -264,7 +242,7 @@ const loadSource = (name: string, fileName: string, colorSpace: THREE.ColorSpace
   });
 
 const buildSlot = async (tex: THREE.Texture, slotIndex: number) => {
-  const info = getTextureAtlasInfo(tex)!;
+  const info = getSlotInfo(tex);
   const slot = info.slot as (typeof SLOTS)[number];
   const col0 = slotIndex * SLOT_COLUMNS;
   const atlasAspect = info.size[0] / info.size[1];
@@ -314,10 +292,10 @@ const buildSlot = async (tex: THREE.Texture, slotIndex: number) => {
   }
 };
 
-/** The image atlas's slot (p351 Phase 4 section 1): row 0 the slot at each level, then its
- * source image; rows 1…levels each cell through its UV rect at that level. */
+/** The image atlas's slot: row 0 the slot at each level, then its source image; rows 1…levels
+ * each cell through its UV rect at that level. */
 const buildImageSlot = async (tex: THREE.Texture, slotIndex: number) => {
-  const info = getTextureAtlasInfo(tex)!;
+  const info = getSlotInfo(tex);
   const slot = info.slot as (typeof IMAGE_SLOTS)[number];
   const origin = { x0: IMAGE_X0 + slotIndex * IMAGE_SLOT_COLUMNS * CELL, y0: IMAGE_Y0 };
   for (let level = 0; level < info.storedLevels; level++) {
@@ -379,16 +357,20 @@ const addLitMesh = (name: string, geo: THREE.BufferGeometry, map: THREE.Texture,
  * drawn with the slot as a plain `map`, next to the cell's source file on the same geometry. */
 const buildRemappedMeshes = (albedo: THREE.Texture) => {
   const { results } = state;
-  const sphere = saveBufferGeometry(new THREE.SphereGeometry(0.45, 48, 24), {
-    id: 'textureAtlasesSphere',
-  });
+  const sphere =
+    getGeometry('textureAtlasesSphere') ??
+    saveBufferGeometry(new THREE.SphereGeometry(0.45, 48, 24), { id: 'textureAtlasesSphere' });
   const remapped = remapUVsToAtlasCell(sphere, ATLAS_ID, 'checker');
   addLitMesh('lit_checker_remapped', remapped, albedo, 1);
-  addLitMesh('lit_checker_source', sphere, getTexture('textureAtlases/albedo_checker')!, 2);
+  const checkerSource = existsOrThrow(
+    getTexture('textureAtlases/albedo_checker'),
+    'No checker source texture.'
+  );
+  addLitMesh('lit_checker_source', sphere, checkerSource, 2);
 
-  const box = saveBufferGeometry(new THREE.BoxGeometry(0.6, 0.6, 0.6), {
-    id: 'textureAtlasesBox',
-  });
+  const box =
+    getGeometry('textureAtlasesBox') ??
+    saveBufferGeometry(new THREE.BoxGeometry(0.6, 0.6, 0.6), { id: 'textureAtlasesBox' });
   const inPlace = remapUVsToAtlasCell(box, `${ATLAS_ID}.albedo`, 'metal', { inPlace: true });
   addLitMesh('lit_metal_inPlace', box, albedo, 3);
 
@@ -413,18 +395,10 @@ const buildRemappedMeshes = (albedo: THREE.Texture) => {
       return sourceAttr === attr || sourceAttr?.array === (attr as THREE.BufferAttribute).array;
     })
     .map(([key]) => key);
-  const expectSync = (fn: () => unknown) => {
-    try {
-      fn();
-      return 'FAILED: did not throw';
-    } catch (error) {
-      return (error as Error).message;
-    }
-  };
   results.remap = {
     cellUv: {
-      checker: getAtlasCell(ATLAS_ID, 'checker')!.uv,
-      metal: getAtlasCell(albedo, 'metal')!.uv,
+      checker: getAtlasCell(ATLAS_ID, 'checker')?.uv ?? null,
+      metal: getAtlasCell(albedo, 'metal')?.uv ?? null,
     },
     clone: {
       id: remapped.userData.id,
@@ -451,11 +425,13 @@ const buildRemappedMeshes = (albedo: THREE.Texture) => {
     },
     tiled: { id: tiledRemapped.userData.id, uvRange: uvRange(tiledRemapped) },
     errors: {
-      alreadyRemapped: expectSync(() => remapUVsToAtlasCell(remapped, ATLAS_ID, 'red')),
-      unknownCell: expectSync(() => remapUVsToAtlasCell(sphere, ATLAS_ID, 'noSuchCell')),
-      unknownAtlas: expectSync(() => remapUVsToAtlasCell(sphere, 'noSuchAtlas', 'red')),
-      unknownGeometry: expectSync(() => remapUVsToAtlasCell('noSuchGeometry', ATLAS_ID, 'red')),
-      noAttribute: expectSync(() =>
+      alreadyRemapped: expectSyncError(() => remapUVsToAtlasCell(remapped, ATLAS_ID, 'red')),
+      unknownCell: expectSyncError(() => remapUVsToAtlasCell(sphere, ATLAS_ID, 'noSuchCell')),
+      unknownAtlas: expectSyncError(() => remapUVsToAtlasCell(sphere, 'noSuchAtlas', 'red')),
+      unknownGeometry: expectSyncError(() =>
+        remapUVsToAtlasCell('noSuchGeometry', ATLAS_ID, 'red')
+      ),
+      noAttribute: expectSyncError(() =>
         remapUVsToAtlasCell(sphere, ATLAS_ID, 'red', { attribute: 'uv1' })
       ),
     },
@@ -468,7 +444,8 @@ const checkErrors = async () => {
   const albedo = (getGeneratedSceneData('textureAtlases')?.textures ?? []).find(
     (tex): tex is TextureProps => typeof tex !== 'string' && tex.id === `${ATLAS_ID}.albedo`
   );
-  if (!albedo?.__atlas) throw new Error('No albedo slot entry in the scene data');
+  const albedoAtlas = albedo?.__atlas;
+  if (!albedoAtlas) throw new Error('No albedo slot entry in the scene data');
   llog(
     '[textureAtlases] Expected: the next 6 errors (noOutputFallback, noOutput, tooManyLevels, droppedPlusStored, sizeMismatch, fullChainAsProtected) test how loadTextureAsync fails for an atlas slot.'
   );
@@ -486,7 +463,7 @@ const checkErrors = async () => {
       loadTextureAsync({
         id: `textureAtlases/${name}`,
         __url: albedo.__url,
-        __atlas: { ...albedo.__atlas!, ...atlas },
+        __atlas: { ...albedoAtlas, ...atlas },
         throwOnError: true,
       })
     );
@@ -509,12 +486,13 @@ const checkErrors = async () => {
         (tex): tex is TextureProps =>
           typeof tex !== 'string' && tex.id === `${IMAGE_ATLAS_ID}.albedo`
       );
-      if (!imageAlbedo?.__atlas) return 'FAILED: no image atlas albedo slot entry';
+      const imageAtlas = imageAlbedo?.__atlas;
+      if (!imageAtlas) return 'FAILED: no image atlas albedo slot entry';
       return expectError(() =>
         loadTextureAsync({
           id: 'textureAtlases/fullChainAsProtected',
           __url: imageAlbedo.__url,
-          __atlas: { ...imageAlbedo.__atlas!, mipChain: undefined },
+          __atlas: { ...imageAtlas, mipChain: undefined },
           throwOnError: true,
         })
       );
@@ -525,7 +503,7 @@ const checkErrors = async () => {
 /** Phase 4's lookups and sampleAtlasCell's errors. */
 const checkHelpers = (albedo: THREE.Texture) => {
   const { results } = state;
-  const plain = getTexture('textureAtlases/albedo_red')!;
+  const plain = existsOrThrow(getTexture('textureAtlases/albedo_red'), 'No red source texture.');
   results.cellLookups = {
     byAtlasId: getAtlasCell(ATLAS_ID, 'metal') ?? null,
     bySlotId: getAtlasCell(`${ATLAS_ID}.mask`, 'metal') ?? null,
@@ -534,24 +512,16 @@ const checkHelpers = (albedo: THREE.Texture) => {
     unknownAtlas: getAtlasCell('noSuchAtlas', 'metal') ?? null,
     notAnAtlas: getAtlasCell(plain, 'metal') ?? null,
   };
-  const expectSampleError = (fn: () => unknown) => {
-    try {
-      fn();
-      return 'FAILED: did not throw';
-    } catch (error) {
-      return (error as Error).message;
-    }
-  };
   results.sampleErrors = {
-    unknownCell: expectSampleError(() => sampleAtlasCell(albedo, meshUv(), 'noSuchCell')),
-    notAnAtlas: expectSampleError(() => sampleAtlasCell(plain, meshUv(), 'metal')),
+    unknownCell: expectSyncError(() => sampleAtlasCell(albedo, meshUv(), 'noSuchCell')),
+    notAnAtlas: expectSyncError(() => sampleAtlasCell(plain, meshUv(), 'metal')),
   };
   // A rect works on any texture
   try {
     sampleAtlasCell(plain, meshUv(), [0, 0, 0.5, 0.5]);
     results.rectOnPlainTexture = 'ok';
   } catch (error) {
-    results.rectOnPlainTexture = (error as Error).message;
+    results.rectOnPlainTexture = getErrorMessage(error);
   }
 };
 
@@ -577,8 +547,6 @@ const build = async (assets: ScenePrimitiveAssets) => {
   buildRemappedMeshes(slotTextures[0]);
   return { slotTextures, imageSlotTextures };
 };
-
-type Backend = { isWebGPUBackend?: boolean };
 
 export const scene = async ({ assets }: { assets: ScenePrimitiveAssets }) => {
   (window as unknown as { __textureAtlases: typeof state }).__textureAtlases = state;
@@ -625,9 +593,9 @@ export const scene = async ({ assets }: { assets: ScenePrimitiveAssets }) => {
     { appId: 'textureAtlasesSun' }
   );
 
-  const quad = new THREE.PlaneGeometry(1, 1);
-  quadGeo = saveBufferGeometry(quad, { id: 'textureAtlasesQuad' });
-  if (quadGeo !== quad) quad.dispose();
+  quadGeo =
+    getGeometry('textureAtlasesQuad') ??
+    saveBufferGeometry(new THREE.PlaneGeometry(1, 1), { id: 'textureAtlasesQuad' });
 
   // The slots are read after the load: not once the scene's exit has released them
   const visit = { isLeft: false };
@@ -640,8 +608,7 @@ export const scene = async ({ assets }: { assets: ScenePrimitiveAssets }) => {
     void nextFrames(10).then(() => {
       if (visit.isLeft) return;
       const { results } = state;
-      const backend = (getRenderer() as unknown as { backend: Backend }).backend;
-      results.backend = backend.isWebGPUBackend ? 'WebGPU' : 'WebGL2';
+      results.backend = getBackendName();
       results.slots = Object.fromEntries(
         slotTextures.map((tex, i) => [SLOTS[i], describeSlot(tex)])
       );
@@ -652,6 +619,6 @@ export const scene = async ({ assets }: { assets: ScenePrimitiveAssets }) => {
     });
   } catch (error) {
     lerror('[textureAtlases] Build failed', error);
-    state.results.buildError = (error as Error).message;
+    state.results.buildError = getErrorMessage(error);
   }
 };
