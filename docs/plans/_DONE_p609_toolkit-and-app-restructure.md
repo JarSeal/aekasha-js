@@ -1,7 +1,7 @@
 Status: implemented (Phases 1-4)
 Category: Refactoring, Toolkit, App
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
-Blocks: p620_review-toolkit-and-app-code.md
+Blocks: \_DONE_p620_review-toolkit-and-app-code.md
 Related: \_DONE_p602_architecture-and-target-structure.md (D2, D7, D8), \_DONE_p608_engine-folder-restructure.md (the codemod, `moveRules.ts`, its D9 after-move rules), \_DONE_p300_asset-optimization-pipeline-plan.md (the asset pipeline's output paths), the "Toolkit and asset housekeeping" (p450) prompt in `docs/templates/todo-plan-prompts.txt` (its folder structure is absorbed here; its new assets, LOD test scene and the debugger test assets stay in p450)
 
 # Toolkit and App Restructure

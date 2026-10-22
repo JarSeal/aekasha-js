@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-7 implemented
+Status: implemented (Phases 0-8)
 Category: Refactoring, Documentation, Toolkit, App
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -1287,7 +1287,7 @@ As built (2026-10-22, sections 1-2 committed as `2eac899`, `1bd9e6e`; section 3 
 - **Checks (section 4):** `yarn hub:build` on `1bd9e6e`: 90 pages (the six issue pages added), 935
   names, only p621's `getRandomStream` warning.
 
-### Phase 8: verify, versions and done (D2)
+### Phase 8: verify, versions and done (D2) — done
 
 1. `yarn verify:scenes` (every scene, against Phase 0's baselines and the phases' re-records),
    `yarn verify:baselines`, `yarn verify:embed`, `yarn build`, `yarn hub:build`.
@@ -1314,6 +1314,13 @@ As built (2026-10-23, on `ae32894`):
   no codename changes. The `CHANGELOG.md` entry (2026-10-23) has Engine, Toolkit, App and Project
   sections: the behaviour changes (D3), the deprecations, the removed scenes, the fixes.
   `yarn checkVersions --against main` passes; `yarn hub:build` shows the entry on the homepage.
+- **Done (section 3):** the plan renamed `_DONE_p620_…`; p621's `Blocked by` (this plan alone)
+  removed; the references in p600 (its `Blocks` and Stage C table), p605's and p609's `Blocks`
+  and p619's `Related` renamed. p622's toolkit list was Phase 7's. The root `CLAUDE.md`,
+  `features/lod/CLAUDE.md` and `readme.md` were Phases 5-7's.
+- **The PR:** `review-toolkit-and-app-code` into `main` (p600: a Stage C plan, its own branch).
+  It says the gym's hash, paths and snapshot were last compared in Phase 4 at 120 steps (D3,
+  Risk 1).
 
 ## 4. Risks
 
