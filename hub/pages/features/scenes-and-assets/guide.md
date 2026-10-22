@@ -51,14 +51,14 @@ src/app/
                       image, its own modules, and the assets only this scene uses
   examples/<name>/    the Hub's examples, one scene each
   shared/             code several scenes use
-  cameras/ lights/ textures/ skyboxes/ impostors/ postFx/ …
+  textures/ skyboxes/ impostors/ postFx/ …
                       the assets several scenes use, each in its type's folder
 ```
 
 - **One scene uses it: its folder.** An asset (and its images or model) that no other scene names
   in its scene JSON, its scene file or one of its assets goes in that scene's folder. When a
-  second scene starts using it, move it to its type's folder; `materials/`, `meshes/`,
-  `geometries/` and `importedAssets/` appear with the first shared one.
+  second scene starts using it, move it to its type's folder; `cameras/`, `lights/`,
+  `materials/`, `meshes/`, `geometries/` and `importedAssets/` appear with the first shared one.
 - **Name a scene's folder and files after its id.** The id is what everything else keys on: the
   `__saveData` entries, `?startScene=`, the debugger's saved state.
 - **Moving a file changes no id**, so the scenes that name it don't change. What does is in the

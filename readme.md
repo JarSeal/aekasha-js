@@ -63,7 +63,7 @@ These are ready-made modules you can import as they are, or copy into your app a
 - **ECS effects** (`ecs/effects/`): `HoverEffect` (bobbing), `FollowTool` (follow a target), `SunShadowFit` (fits a directional light's shadow to the camera's view) and `MutualGravity` (gravity between bodies, for zero-g scenes).
 - **Gameplay** (`ecs/gameplay/`): a camera rig that follows an object (looking at it, or keeping a fixed view direction, with an optional look-ahead in the direction of travel), and kinematic moving platforms that characters ride.
 - **TSL materials** (`materials/<id>/`): triplanar checkerboard, triplanar grid and asteroid materials, each a material JSON with its TSL file.
-- **Procedural geometry** (`geometry/`): seeded noise terrain, foliage, asteroids and scattering on surfaces, all from one seeded random generator.
+- **Procedural geometry** (`geometry/`): seeded noise terrain, foliage, asteroids and scattering on surfaces: the same seed gives the same world.
 - **Models** (`models/<category>/<id>/`): the Ækasha symbol, the Æ glyph extruded with a soft bevel, as a Draco-compressed GLB with its asset JSON, ready for `importAssetAsync`.
 
 ### Debug suite (debug builds only)
@@ -182,7 +182,7 @@ Open `http://localhost:8080/?isDebug=true` to get the full debug suite, then pre
 │   │   └── types/          # Global type declarations
 │   ├── toolkit/            # Reusable modules by kind, each code kind an entry
 │   │   ├── ecs/            # (aekasha/toolkit/ecs) effects/ and gameplay/
-│   │   ├── geometry/       # (aekasha/toolkit/geometry) generate/, scatter/, a seeded random
+│   │   ├── geometry/       # (aekasha/toolkit/geometry) generate/, scatter/
 │   │   ├── materials/      # (aekasha/toolkit/materials) a TSL material per folder
 │   │   └── models/         # Models by category: brand/aekashaSymbol/
 │   ├── app/                # Your game
@@ -190,7 +190,7 @@ Open `http://localhost:8080/?isDebug=true` to get the full debug suite, then pre
 │   │   ├── examples/       # The Hub's example scenes
 │   │   ├── shared/         # Code several scenes use
 │   │   ├── profiles/       # An embed profile per folder: its entry and scene (banner/)
-│   │   └── cameras/, lights/, textures/, …  # The assets several scenes use, by type
+│   │   └── textures/, skyboxes/, …  # The assets several scenes use, by type
 │   ├── generated/          # The gathered scene and asset data, handed to InitEngine
 │   │                       # (written by yarn gatherAppData, committed); profiles/<id>/
 │   │                       # holds each embed profile's
@@ -273,7 +273,7 @@ Each file is validated against its schema, and the `$schema` line gives you auto
 ```
 
 ```jsonc
-// src/app/scenes/sceneTestECS/testMesh.mesh.json
+// src/app/scenes/myScene/testMesh.mesh.json
 {
   "$schema": "../../../../.schemas/mesh.schema.json",
   "props": {
@@ -406,7 +406,7 @@ const config: AppConfig = {
     useSAB: true,
     interpolationMode: 'RENDERER',
   },
-  debugKeys: [{ id: 'sc-toggle-debug-drawer', chord: { key: 'h' } }],
+  debugKeys: [{ id: 'sc-toggle-debug-drawer', chord: { key: 'j' } }], // the drawer on j, not h
 };
 ```
 

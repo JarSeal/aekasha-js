@@ -44,7 +44,10 @@ and accept the certificate.
   and the toolkit's (see the [ECS example](hub:examples/ecs#4-registering-it)). The template lists
   all nine engine features.
 - `start` runs once the engine is ready: it creates the renderer and the scene loader and loads
-  the first scene.
+  the first scene. In the debug env it also gives the example scenes their Hub tab, from a
+  `_dbg__` module it `import()`s behind `IS_DEBUG_ENV`, so a production build leaves it out (see
+  the [debug tab example](hub:examples/debug-tab)). An app without the example scenes drops those
+  lines.
 - Everything comes from the engine's public entries: `aekasha`, `aekasha/ui`, and for a feature
   its own (`aekasha/physics`, `aekasha/skybox`, …). A path into `src/_engine/` is a lint error
   outside the engine.
