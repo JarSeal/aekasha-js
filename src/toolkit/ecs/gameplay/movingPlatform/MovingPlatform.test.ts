@@ -8,9 +8,6 @@ import {
   type MovingPlatformControls,
 } from './MovingPlatform';
 
-// The `it.fails` cases are known bugs, each failing on its assertion: p620 Phase 1 fixes them
-// and turns them into `it`s (docs/plans/p620_review-toolkit-and-app-code.md, C1-C7).
-
 // The platform's rigid body: what the system and the controls write to it
 type Vec = { x: number; y: number; z: number };
 type Quat = Vec & { w: number };
@@ -130,13 +127,13 @@ const createPlatform = async (props: Partial<PlatformProps> = {}) => {
 const ZERO = { x: 0, y: 0, z: 0 };
 
 describe('createMovingPlatform', () => {
-  it.fails('builds its mesh from geo + mat', async () => {
+  it('builds its mesh from geo + mat', async () => {
     await expect(
       createPlatform({ shape: { geo: { type: 'BOX' }, mat: { type: 'BASIC' } } })
     ).resolves.toHaveProperty('mesh');
   });
 
-  it.fails('moves the character again on play() after pause()', async () => {
+  it('moves the character again on play() after pause()', async () => {
     const { controls, body } = await createPlatform();
     tick(0.1, 2);
     controls.pause();
@@ -146,33 +143,41 @@ describe('createMovingPlatform', () => {
     expect(body.userData.velo).toEqual({ x: 10, y: 0, z: 0 });
   });
 
-  it.fails('zeroes its velocity when its loops end', async () => {
+  it('zeroes its velocity when its loops end', async () => {
     const { controls, body } = await createPlatform({ opts: { loopTimes: 0 } });
     runUntilStopped(controls);
     expect(body.userData.velo).toEqual(ZERO);
   });
 
-  it.fails('zeroes its velocity on stop()', async () => {
+  it('zeroes its velocity on stop()', async () => {
     const { controls, body } = await createPlatform();
     tick(0.1, 2);
     controls.stop();
     expect(body.userData.velo).toEqual(ZERO);
   });
 
-  it.fails('keeps its velocity zero on setOptions() while paused', async () => {
+  it('keeps its velocity zero on setOptions() while paused', async () => {
     const { controls, body } = await createPlatform();
     controls.pause();
     controls.setOptions({ speedMultiplier: 2 });
     expect(body.userData.velo).toEqual(ZERO);
   });
 
-  it.fails("runs BACKWARD's loop over the whole path, as FORWARD's does", async () => {
+  it("runs BACKWARD's loop over the whole path, as FORWARD's does", async () => {
     const forward = await createPlatform({ opts: { loopTimes: 0 } });
     const backward = await createPlatform({ opts: { loopTimes: 0, direction: 'BACKWARD' } });
-    expect(runUntilStopped(backward.controls)).toBe(runUntilStopped(forward.controls));
+    // Both tick in the one shared system: the tick each stopped on
+    const stoppedOn = { forward: 0, backward: 0 };
+    for (let i = 1; i <= 1000 && !(stoppedOn.forward && stoppedOn.backward); i++) {
+      tick(0.1);
+      if (!stoppedOn.forward && !forward.controls.getState().isPlaying) stoppedOn.forward = i;
+      if (!stoppedOn.backward && !backward.controls.getState().isPlaying) stoppedOn.backward = i;
+    }
+    expect(stoppedOn.forward).toBeGreaterThan(0);
+    expect(stoppedOn.backward).toBe(stoppedOn.forward);
   });
 
-  it.fails("times a BACKWARD segment by the edge's dur", async () => {
+  it("times a BACKWARD segment by the edge's dur", async () => {
     // Backward from point 0, the first segment is the edge 2 → 0, which takes point 2's dur
     const { controls } = await createPlatform({
       points: [
@@ -185,21 +190,21 @@ describe('createMovingPlatform', () => {
     expect(controls.getState().segmentDuration).toBe(3);
   });
 
-  it.fails('stop() resets the loop count', async () => {
+  it('stop() resets the loop count', async () => {
     const { controls } = await createPlatform({ opts: { loopTimes: 1 } });
     runUntilStopped(controls);
     controls.stop();
     expect(controls.getState().currentLoopCount).toBe(0);
   });
 
-  it.fails("stop() drops playSegment()'s target", async () => {
+  it("stop() drops playSegment()'s target", async () => {
     const { controls } = await createPlatform();
     controls.playSegment(1);
     controls.stop();
     expect(controls.getState().targetSegmentIndex).toBeNull();
   });
 
-  it.fails('play() after a finished run moves the platform again', async () => {
+  it('play() after a finished run moves the platform again', async () => {
     const { controls } = await createPlatform({ opts: { loopTimes: 0 } });
     runUntilStopped(controls);
     controls.play();
@@ -207,7 +212,7 @@ describe('createMovingPlatform', () => {
     expect(controls.getState().isPlaying).toBe(true);
   });
 
-  it.fails('keeps the rotation of the last point that gave one', async () => {
+  it('keeps the rotation of the last point that gave one', async () => {
     const quarterTurn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 1);
     const { body } = await createPlatform({
       points: [
@@ -223,11 +228,11 @@ describe('createMovingPlatform', () => {
     expect(angle).toBeLessThan(1e-6);
   });
 
-  it.fails('an empty physicsParams array throws its own message', async () => {
+  it('an empty physicsParams array throws its own message', async () => {
     await expect(createPlatform({ physicsParams: [] })).rejects.toThrow(/moving platform/);
   });
 
-  it.fails('a point with dur 0 writes finite velocities', async () => {
+  it('a point with dur 0 writes finite velocities', async () => {
     const { body } = await createPlatform({
       points: [
         { pos: { x: 0, y: 0, z: 0 }, dur: 0 },
@@ -238,7 +243,7 @@ describe('createMovingPlatform', () => {
     expect([velo.x, velo.y, velo.z].every(Number.isFinite)).toBe(true);
   });
 
-  it.fails("leaves the caller's rigid body params as they were", async () => {
+  it("leaves the caller's rigid body params as they were", async () => {
     const rigidBody: RigidBodyParams = { rigidType: 'POS_BASED', userData: { tag: 'mine' } };
     await createPlatform({ physicsParams: { collider: { type: 'BOX' }, rigidBody } });
     expect(rigidBody.userData).toEqual({ tag: 'mine' });

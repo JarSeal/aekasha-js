@@ -84,7 +84,7 @@ const DEBUG_FILES = ['src/**/_dbg__*.ts'];
 const SIMULATION_FILES = [
   'src/_engine/features/physics/**/*.ts',
   'src/_engine/features/character/**/*.ts',
-  'src/toolkit/ecs/gameplay/MovingPlatform.ts',
+  'src/toolkit/ecs/gameplay/movingPlatform/*.ts',
   'src/toolkit/ecs/effects/MutualGravity.ts',
   'src/app/scenes/thirdPersonGymScene/GymDummyBrain.ts',
 ];
