@@ -3069,13 +3069,34 @@
       "FollowObjectCameraParams": "TypeAlias",
       "registerFollowObjectCameraRigSystem": "Function"
     },
-    "src/toolkit/ecs/gameplay/MovingPlatform.ts": {
+    "src/toolkit/ecs/gameplay/movingPlatform/MovingPlatform.ts": {
       "createMovingPlatform": "Function",
       "DeleteMeshOptions": "TypeAlias",
       "MovingPlatformControls": "TypeAlias",
       "MovingPlatformReturn": "TypeAlias",
       "PhysicsParams": "TypeAlias",
       "registerMovingPlatformSystem": "Function"
+    },
+    "src/toolkit/ecs/gameplay/movingPlatform/PlatformPath.ts": {
+      "createPlatformPath": "Function",
+      "hasMoveAndTurn": "Function",
+      "MovingPlatformPoint": "Interface",
+      "PlatformDirection": "TypeAlias",
+      "PlatformPath": "Interface",
+      "PlatformPathOptions": "Interface",
+      "PlatformStepResult": "TypeAlias",
+      "playPlatformPath": "Function",
+      "playPlatformPathSegment": "Function",
+      "setPlatformPathOptions": "Function",
+      "stepPlatformPath": "Function",
+      "stopPlatformPath": "Function",
+      "validateMovingPlatform": "Function"
+    },
+    "src/toolkit/ecs/gameplay/movingPlatform/PlatformVelocity.ts": {
+      "computePlatformVelocities": "Function",
+      "PlatformVec3": "Interface",
+      "PlatformVelocities": "TypeAlias",
+      "zeroPlatformVelocities": "Function"
     },
     "src/toolkit/geometry/generate/Asteroid.ts": {
       "AsteroidCraterOptions": "Interface",

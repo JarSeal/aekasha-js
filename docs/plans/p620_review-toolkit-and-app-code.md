@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented
+Status: in progress | Phases 0-1 implemented
 Category: Refactoring, Documentation, Toolkit, App
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -742,7 +742,7 @@ As built (2026-10-22, steps 1-2 committed as `899dd57`):
   (300) `1add797c4c9e4930`, lanterns (10) `ae1afc5258d7b5dd`
   (`.cache/runs/scatterHash.scratch.test.ts`); Phase 1's scatter test pins them.
 
-### Phase 1: the toolkit's bugs and `MovingPlatform`'s split (D4, D7, D13)
+### Phase 1: the toolkit's bugs and `MovingPlatform`'s split (D4, D7, D13) — done
 
 Sections: 1. `MovingPlatform` into `ecs/gameplay/movingPlatform/` (`PlatformPath.ts`,
 `PlatformVelocity.ts`, the factory), C1-C8's fixes, its tests, C16's scratch objects; 2.
@@ -758,6 +758,89 @@ checks.
 - `yarn verify:scenes --only thirdPersonGymScene,topDownTestScene,space,largeWorld`: `space`'s
   hashes unchanged, the gym's errors and system order unchanged (D3), `topDownTestScene`
   re-recorded (T2 moves its obstacles: the diff is its obstacle heights), `largeWorld` unchanged.
+
+As built (2026-10-22, sections 1-3 committed as `8dcf7f7`, `3349f4e`, `a265514`):
+
+- **`MovingPlatform` (section 1):** `ecs/gameplay/movingPlatform/` holds `MovingPlatform.ts` (the
+  factory, the controls, the shared system; the closure about 150 lines), `PlatformPath.ts` (the
+  path as a pure state machine: `createPlatformPath`, `stepPlatformPath` returning `IDLE` /
+  `MOVED` / `SEGMENT` / `END`, the controls' operations, `validateMovingPlatform` with one
+  `function fail(): never`, `hasMoveAndTurn`) and `PlatformVelocity.ts` (the segment velocities,
+  scratch quaternions). The entry's names and the parameter literal are unchanged; the mesh helper
+  types its `shape` as `Parameters<typeof createMovingPlatform>[0]['shape']` until Phase 2 names
+  `MovingPlatformParams`. `MovingPlatformPoint`, `PlatformPathOptions`, `PlatformDirection` and
+  `PlatformVec3` are exported by the modules (documented, on no entry): Phase 2 puts them on the
+  entry or folds them into its names. `SIMULATION_FILES` and the root `CLAUDE.md` name
+  `movingPlatform/`.
+- **Its behaviour:** a loop ends on each arrival at point 0, in either direction (C4); a backward
+  segment takes the `dur` of the point it runs to (its forward edge); the user data velocity is
+  zero whenever the platform doesn't play (pause, stop, the end, `setOptions` while paused, created
+  paused) and recomputed on `play()` (C2, C3); `stop()` resets the loops and `playSegment`'s target,
+  a play after the end starts the loops over (C5); a point without `rot` keeps the one before it,
+  point 0 without one none (C6), and `hasMoveAndTurn` counts the segment back to point 0 too; a
+  direction flip mid-segment swaps the ends with `t → 1 - t` (C8: no jump, the same speed);
+  `dur: 0` jumps in one step with zero velocities, a speed of 0 holds (no `NaN` either way); the
+  validation throws on an empty `physicsParams`, no points, a negative or non-finite `dur`, a
+  `loopTimes` that isn't -1 or a whole number, a negative speed (C7); the caller's rigid body
+  params are copied, not written (C7); after the `createPhysicsEntity` await a deleted entity
+  throws with its own message (C8); `stop()` and `playSegment()` also set the next kinematic pose.
+  The per-platform user data objects are reused (C16): worker commands are cloned when sent and the
+  character reads the user data fresh each step. The comments the move touched were rewritten
+  (part of C11: the legacy looper, the system order -100 after the brains' -5 and the controllers'
+  -10); the rest of C11 is Phase 2's.
+- **The gym, checked in Node (D3's stand-in):** the gym's six paths ticked at 1/60 for 10 min
+  through the old module and the new one (`.cache/runs/platformGym.scratch.test.ts`, the old module
+  in `MovingPlatformOld.ts`): every body write identical, 433,974 writes, hash `ab3c98e989a411b8`
+  both, friction and the initial user data included.
+- **`MutualGravity` and the rig (section 2):** the scratch growth keeps the collected masses
+  (C12); `setMutualGravityConfig` skips `undefined` keys; the bodies are kept per world
+  (`Map<ECSWorld, Map<entityId, mass>>`) and the "forces applied" flag is a set of worlds (C13).
+  `removeGravityBody(entityId)` removes the id from every world that has it (signature unchanged).
+  The rig skips a `NaN` dt (`!(dt > 0.0001)`), ticks only in the world it was created for (the
+  default world, read at creation), and takes an optional `sceneId`: one `registerOnAllSceneExits`
+  listener, registered by `registerFollowObjectCameraRigSystem`, deletes the exiting scene's rigs
+  (the exiting scene is still current then; `registerOnSceneExit` is one per scene and would
+  replace the scene's own). The app's scenes still delete their rigs themselves (Phases 4 and 6
+  may switch them to `sceneId`).
+- **Geometry (section 3):** `getHeightAt` is the height of the mesh's triangle under the point
+  (the b–c diagonal, the far edges in the last cell) (T2); the segment counts are rounded and at
+  least 1, and returned as used (T3); a bush of 0 clusters is an empty geometry (T3); spawn passes
+  `scale` in the mesh props (T1); bake bakes what fits after `startIndex` (a warning for the rest),
+  sets `mesh.count` to the returned index and undoes the mesh's world matrix (T4); `triplanarGrid`'s
+  `normalNode` throws on a missing `seamNormalStrength` (T4). The doc lines the fixes touched were
+  rewritten (`widthSegments`, `getHeightAt`, `minSpacing`, bake, spawn); the rest of T9 is Phase 2's.
+- **The scatter grid (T11, D15):** done (about 40 lines): accepted positions in cells a hair wider
+  than `minSpacing`, the 27 around a candidate checked. It finds every position the scan did, so
+  the placements are the same: Phase 0's four hashes, now pinned by `ScatterOnSurface.test.ts`.
+  The four calls: about 40 → 21 ms in Node. `largeWorld`'s `loadScene` in `yarn dev` (headless,
+  `.cache/runs/p620-largeWorldTime.ts`): 2,954-3,532 ms against Phase 0's 3,253-3,890: the gain
+  is below the runs' spread.
+- **Tests:** the 25 `it.fails` are `it`s, each failing on the old code. Added: `PlatformPath.test.ts`
+  (17), `PlatformVelocity.test.ts` (6), `MutualGravity` (5 more), the rig (5 more),
+  `HoverEffect.test.ts`, `FollowTool.test.ts`, `SunShadowFit.test.ts` (on a real `ECSWorld` in
+  both storage modes, each system captured through its register helper, so they survive Phase 2's
+  C16 and D5 changes), `Asteroid.test.ts`, more in `Terrain`, `Foliage` and `ScatterOnSurface`,
+  and `materials/triplanarGrid/TriplanarGrid.test.ts` (PascalCase: the layout's naming rule exempts
+  only `<id>.tsl.ts`). One Phase 0 repro was wrong: the backward-loop test ran both platforms in
+  the one shared system, so it now records each one's stop while they tick together. `yarn test`:
+  1,223 passed, no expected fails.
+- **D3, corrected:** T2 also moves `largeWorld`'s placements (it places props, dynamic objects, the
+  crate stack and the barbell with `getHeightAt`): of its 15 points 11 lie on grid lines
+  (unchanged), four move by 1 mm, 1.5 mm, 3 mm and 4.2 cm. Its probe hashes nothing (no physics
+  bodies, `scenes.config.ts`) and its snapshot is within tolerance, so the runner sees no change.
+  `topDownTestScene`'s four hill obstacles move by at most 0.20 m (mean 1 cm over their area; they
+  sink 0.3 m anyway): they're `FIXED` bodies the probe doesn't hash, the character's path doesn't
+  reach them in the probe steps, and the snapshots are within tolerance, so it wasn't re-recorded.
+- **The scene runner** (`--only thirdPersonGymScene,topDownTestScene,space,largeWorld`, 25 min): 13
+  passed, every hash, character path, snapshot and system order as Phase 0 recorded; the gym's
+  `prodTest` passed (its errors and system order), its three debug configurations failed the
+  probe's 600-step wait (310 s each), this machine's (D3).
+- **`yarn verify:baselines --update`:** `api.json` (the six names moved to
+  `movingPlatform/MovingPlatform.ts`, the split modules' 17 exports added, on no entry: still 919
+  names in 16 entries), `bundle.json` (the main chunk's toolkit group 5.5 → 6.2 kB gzip, 6 → 8
+  modules; `assets/largeWorld.js` 3.9 → 4.1 kB: the scatter grid and bake's changes), `docs.json`
+  (`toolkit/ecs/gameplay/movingPlatform` 23 / 23 exports, 27 / 27 members). `bundle.banner.json`'s
+  1-2 byte gzip drift not committed. No debug code in either build.
 
 ### Phase 2: the toolkit's surface and its JSDoc (D5, D6, D15's toolkit part)
 

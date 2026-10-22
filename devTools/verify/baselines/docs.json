@@ -2,12 +2,12 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2365,
-      "total": 2384
+      "documented": 2382,
+      "total": 2401
     },
     "members": {
-      "documented": 940,
-      "total": 970
+      "documented": 967,
+      "total": 997
     }
   },
   "subtrees": {
@@ -23,12 +23,12 @@
     },
     "toolkit": {
       "exports": {
-        "documented": 44,
-        "total": 63
+        "documented": 61,
+        "total": 80
       },
       "members": {
-        "documented": 50,
-        "total": 80
+        "documented": 77,
+        "total": 107
       }
     }
   },
@@ -658,12 +658,26 @@
     },
     "toolkit/ecs/gameplay": {
       "exports": {
-        "documented": 10,
-        "total": 10
+        "documented": 4,
+        "total": 4
       },
       "members": {
         "documented": 0,
         "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/ecs/gameplay/movingPlatform": {
+      "exports": {
+        "documented": 23,
+        "total": 23
+      },
+      "members": {
+        "documented": 27,
+        "total": 27
       },
       "undocumented": {
         "exports": [],
