@@ -114,4 +114,14 @@ describe('createFollowObjectCameraRig', () => {
     runFrames(600);
     expect(camera.position.x).toBeCloseTo(50, 3);
   });
+
+  // A known bug, failing on its assertion: p620 Phase 1 fixes it and turns it into an `it`
+  // (docs/plans/p620_review-toolkit-and-app-code.md, C14)
+  it.fails('skips a frame whose dt is NaN', () => {
+    const { camera } = createRig();
+    runFrames(1);
+    systemFn!(stubWorld, NaN);
+    runFrames(1);
+    expect(camera.position.toArray().every(Number.isFinite)).toBe(true);
+  });
 });
