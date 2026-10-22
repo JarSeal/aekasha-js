@@ -138,7 +138,7 @@ export const SCENE_VERIFY_CONFIG: Record<string, SceneVerifyConfig> = {
   },
   thirdPersonGymScene: {
     // 10 s of the input script: the two players walk, turn, run, crouch and jump, the dummy loops
-    probeSteps: 120, // p620 TEMP
+    probeSteps: 600,
     inputScript: 'thirdPersonGymScene',
     unstableHash: {
       reason:

@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-4 implemented
 Category: Refactoring, Documentation, Toolkit, App
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -989,7 +989,7 @@ As built (2026-10-22, sections 1-3 committed as `2f2d49a`, `5008e7a`, `2dfe051`)
   `CLAUDE.md`'s line citing it; Phase 6's harness work (V3) keeps the visit guards of
   `assetCompare` and the texture scenes.
 
-### Phase 4: the physics and character scenes (D7, D8, D11, D12 for them)
+### Phase 4: the physics and character scenes (D7, D8, D11, D12 for them) — done
 
 Sections: 1. `src/app/shared/` and `characterVisual.ts`; the gym's split (named steps, the
 platform table and `createPlatform`, the models table and imports, `gymStairsAndWall.ts`), the ids
@@ -1004,6 +1004,73 @@ kept; 2. `SunShadowFit` on the gym's sun (P8), `_dbg__PhysicsStressTest.ts` (P6,
   `SunShadowFit` changes the gym's system order (re-recorded, the diff described); its snapshot
   change is left to a faster machine's run.
 - `physicsTest`, `physicsTiers`, `space`: hashes and system orders unchanged.
+
+As built (2026-10-22, sections 1-4 committed as `532910a`, `d9665e9`, `d1b88cd`, `582d535`):
+
+- **The gym's hash, checked here (unlike D3):** for this phase the gym's `probeSteps` was 120
+  (`scenes.config.ts`, temporary, reverted in section 5: 600 steps never finish here, 120 take
+  ~87 s). Before section 1, a `mainThread` baseline recorded on `1ea399c`: hash `a098ff98`,
+  character paths `492487c1`. Every section after it ran against that: the hash and the paths
+  never changed. The gym's four entries are now 120-step ones (section 2's re-record), so a
+  600-step run compares against no hash of its own until a faster machine records one.
+- **`src/app/shared/` and the gym's split (section 1):** `shared/characterVisual.ts` (the gym and
+  the top-down scene; its `!`s `existsOrThrow`). `gymStairsAndWall.ts` replaces
+  `characterTestObjects.ts` and `characterTestObstacles.ts`: `createGymStairsAndWallAsync({
+  material, stairsPosition, wallPosition })` places the meshes and bodies where they go (no
+  throwaway PHONG materials, no `setImportedRigidBodyTranslationPartial`), the step a plain
+  `BoxGeometry`, `stairsGeo` by `getGeometry(id) ?? saveBufferGeometry(…)`; the mesh user data
+  flags nothing read are gone (the body's `isStairs` / `stairsColliderIndex` stay). The stair
+  colliders' numbers are explained, not derived (-π / 6.8 is 26.5°, the steps' slope 26.6°: a
+  derived angle changes the character paths). The gym (796 → ~720 lines, `scene` ~30): named
+  steps, the `PLATFORMS` table (yaw in degrees; the ferris wheel's 16 points from
+  `getFerrisWheelPoints`, exact values), the models in two tables, `PROP_MODELS` (with
+  `slideAngles`) before the platforms and `COURSE_MODELS` after (the body order), every GLB
+  imported at once with `throwOnError` beside the sky boxes (imports create no entities; a
+  missing model now fails the load instead of being skipped). Every id and appId kept, `scene`
+  no longer passed to `createMovingPlatform`. The loader steps 0 → 4.
+- **The sun and the stress test (section 2):** `followWithSun` and its `gymSunFollow` system are
+  gone; the sun gets `SUN_SHADOW_FIT` on enter (`maxDistance: 36`, `casterExtension: 15`, both
+  derived in the comment): the whole view is shadowed, in a ~±42 m box at 16:9 against the old
+  fixed ±25 m (texels ~1.7× coarser). The rig takes `sceneId`, so the gym has no exit callback.
+  `_dbg__PhysicsStressTest.ts`, `import()`ed behind `IS_DEBUG_ENV`: `getRandomStream('gym:stress')`,
+  a uniform unit quaternion (Shoemake), its appId count restarted per visit. Re-recorded: the
+  gym's system order (`APP_LOGIC` lost `gymSunFollow@0`) in all four configurations; the
+  `mainThread` hash and paths unchanged and its snapshot within tolerance at step 120. Phase 3's
+  P2 repros rerun and pass (`J` spawns nothing in `physicsTiers` after the gym, 50 in the gym).
+- **`physicsTest`, `physicsTiers`, `topDownTestScene`, `space` (section 3):** `physicsTest`'s
+  helpers at module level with an options object, the falling ball and box through them (ids,
+  appIds, names and spins kept), a function per joint run from `JOINT_DEMOS`; the Hub's
+  `dynamic-box` highlight `{20-24}` → `{16-20}` (still the `createPhysicsEntity` call).
+  `physicsTiers`: named steps, the tint over parallel arrays, no casts, the id unexported, in
+  `SIMULATION_FILES` (and the root `CLAUDE.md`'s list). `topDownTestScene`: one `between`, the
+  rig's `sceneId` (no exit callback), the hills geometry by the `getGeometry` pattern,
+  `existsOrThrow` for `getIndex()`. `space`: the spawn's seed from `getRandomStream('space:spawn')`,
+  `spawnCount` reset per load, `SPACE_GRAVITY` unexported; `_dbg__spaceDemo.ts`' energy sum over
+  the bodies it read only, its buttons' errors logged. The scene descriptions (P11's floating
+  JSDoc) sit on `scene`. Every hash, snapshot and system order unchanged.
+- **Comments and JSONs (section 4):** the citations gone but p428's (open, kept like p299's);
+  the gym camera's and scene's descriptions rewritten ("legacy", "ported"), `physicsTest`'s
+  "MVP" name and descriptions, the top-down and tiers scene descriptions' plan paths. Left: the
+  top-down scene's `as StaticObstacleKind[]` (literal arrays, still checked) and `as Float32Array`
+  (three's `TypedArray` narrowed).
+- **Checks (section 5):** `yarn verify:scenes --only thirdPersonGymScene,topDownTestScene,
+  physicsTest,physicsTiers,space` (the gym at 120 steps, 19 min): 20 passed, every hash, path,
+  snapshot and system order as recorded (`physicsTest` `d5c1562a`, `physicsTiers` `49157b8f`,
+  `topDownTestScene` `c7786d74`, the gym `a098ff98` / `492487c1`; `space`'s worker and main thread
+  hashes differ as before). Then `probeSteps` back to 600. `yarn verify:baselines --update`:
+  `bundle.json` only (`assets/thirdPersonGymScene.js` 4.0 → 3.6 kB gzip, the stress test folded
+  out; `assets/physicsTest.js` 1.7 → 1.8 kB; the main chunk's `kernel/light` -0.1 kB, its
+  `getLightTargetId` used by the gym's `followWithSun` only); `api.json` and `docs.json`
+  unchanged, no debug code; `bundle.banner.json`'s 1-2 byte gzip drift not committed.
+  `yarn hub:build`: 84 pages, 935 names, no warning; the `dynamic-box` include highlights the
+  `createPhysicsEntity` call. `yarn test`: 1,223 passed.
+- **For the next phases:** `largeWorld.ts`' compound-object comment now names
+  `gymStairsAndWall.ts` (Phase 5 rewrites its comments). Phase 8's full run compares the gym
+  against 120-step entries at 600 steps (the probe wait fails here anyway, D3); a faster machine
+  records 600-step ones. `src/app/shared/` is used: Phase 7's root `CLAUDE.md` line. The
+  engine-5 migration page's row for `characterTestObjects.ts` / `characterTestObstacles.ts`
+  (`hub/pages/documentation/migration/engine-5.md:272`) still points at the gym's folder, where
+  `gymStairsAndWall.ts` replaced both: Phase 7 rewords it.
 
 ### Phase 5: the world, LOD and test scenes, and D9
 
