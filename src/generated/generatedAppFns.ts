@@ -120,14 +120,6 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
-  oneMoreScene: async ({ sceneData, assets }) => {
-    const module = await import('../app/./scenes/oneMoreScene/oneMoreScene');
-    await (
-      module as {
-        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
-      }
-    ).scene({ sceneData, assets });
-  },
   physicsTest: async ({ sceneData, assets }) => {
     const module = await import('../app/./scenes/physicsTest/physicsTest.ts');
     await (
@@ -146,14 +138,6 @@ export const sceneFileObjects: {
   },
   scene01: async ({ sceneData, assets }) => {
     const module = await import('../app/./scenes/scene01/scene01.ts');
-    await (
-      module as {
-        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
-      }
-    ).scene({ sceneData, assets });
-  },
-  scene01V2: async ({ sceneData, assets }) => {
-    const module = await import('../app/./scenes/scene01V2/scene01V2.ts');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;

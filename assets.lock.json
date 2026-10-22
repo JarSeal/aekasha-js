@@ -314,29 +314,6 @@
       ],
       "ktxVersion": "4.4.2"
     },
-    "e1f647946295c32304bfb5c6f022eb40c9afa2fc094c58c76a306d61dd684aec": {
-      "source": "src/app/textures/source/p341AlphaCut.png",
-      "url": "/aek-assets/app/textures/source/p341AlphaCut.55dda072.ktx2",
-      "bytes": 17011,
-      "textures": [
-        {
-          "slot": "baseColor",
-          "bytes": 17011,
-          "source": {
-            "width": 256,
-            "height": 256,
-            "bytes": 8347
-          },
-          "codec": "uastc",
-          "width": 256,
-          "height": 256,
-          "hasAlpha": true,
-          "mipmaps": true,
-          "normalMode": false
-        }
-      ],
-      "ktxVersion": "4.4.2"
-    },
     "e6f629cfaf73c322796334f2c700e726872605d87f19bb739850f11d7134171c": {
       "source": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.textureAtlas.json",
       "url": "/aek-assets/app/scenes/lodShowcase/lodShowcaseTreeCross.atlas.normal.f8c4ac09.ktx2",

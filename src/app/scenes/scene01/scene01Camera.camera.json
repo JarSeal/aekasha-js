@@ -1,5 +1,5 @@
 {
-  "$schema": "../../../.schemas/camera.schema.json",
+  "$schema": "../../../../.schemas/camera.schema.json",
   "camProps": {
     "type": "PERSPECTIVE",
     "fov": 60,
@@ -13,7 +13,7 @@
     "appId": "scene01Camera",
     "debugData": {
       "name": "Scene01 camera",
-      "description": "Static camera framing the ground plane and falling-object cluster shared by scene01.ts and scene01V2.ts."
+      "description": "Static camera framing the ground plane and falling-object cluster."
     }
   }
 }

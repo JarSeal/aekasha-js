@@ -3,7 +3,7 @@
   "id": "scene01",
   "sceneFile": "./scenes/scene01/scene01.ts",
   "name": "Scene 01 (basic physics demo)",
-  "description": "Basic FIXED/DYNAMIC physics demo: a ground box, a bouncing box, a falling ball and cylinder, a TRIMESH-collider imported GLB, and a decorative rotating wireframe sphere.",
+  "description": "Basic FIXED/DYNAMIC physics demo: a ground box, a bouncing box, a falling metal ball and cylinder, an imported GLB with a TRIMESH collider and CCD, a sensor collider without a mesh (it turns the wireframe sphere green while a body is in it), a group, shadows, four sky boxes and metal spheres reflecting the sky.",
   "cameras": ["scene01Camera"],
   "lights": ["scene01Ambient", "scene01Sun"]
 }

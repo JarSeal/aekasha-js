@@ -12624,27 +12624,6 @@
         "lod"
       ]
     },
-    "oneMoreScene": {
-      "name": "One More Scene",
-      "id": "oneMoreScene",
-      "sceneFile": "./scenes/oneMoreScene/oneMoreScene",
-      "cameras": [
-        {
-          "camProps": {
-            "type": "PERSPECTIVE",
-            "fov": 90,
-            "active": true
-          },
-          "entityOpts": {
-            "debugData": {
-              "name": "_camera",
-              "description": "Auto-generated camera for the scene"
-            }
-          }
-        }
-      ],
-      "__features": []
-    },
     "physicsTest": {
       "name": "Physics API test",
       "description": "The Physics API's test scene: a static ground box, a falling ball and box over a sensor that toasts them, one worked example per impulse joint type, and two shape casts against the ground.",
@@ -12843,7 +12822,7 @@
     },
     "scene01": {
       "name": "Scene 01 (basic physics demo)",
-      "description": "Basic FIXED/DYNAMIC physics demo: a ground box, a bouncing box, a falling ball and cylinder, a TRIMESH-collider imported GLB, and a decorative rotating wireframe sphere.",
+      "description": "Basic FIXED/DYNAMIC physics demo: a ground box, a bouncing box, a falling metal ball and cylinder, an imported GLB with a TRIMESH collider and CCD, a sensor collider without a mesh (it turns the wireframe sphere green while a body is in it), a group, shadows, four sky boxes and metal spheres reflecting the sky.",
       "cameras": [
         {
           "camProps": {
@@ -12868,7 +12847,7 @@
             "appId": "scene01Camera",
             "debugData": {
               "name": "Scene01 camera",
-              "description": "Static camera framing the ground plane and falling-object cluster shared by scene01.ts and scene01V2.ts."
+              "description": "Static camera framing the ground plane and falling-object cluster."
             }
           }
         }
@@ -12885,7 +12864,7 @@
             "appId": "scene01Ambient",
             "debugData": {
               "name": "Scene01 ambient light",
-              "description": "Ambient light shared by scene01.ts and scene01V2.ts."
+              "description": "Ambient light."
             }
           }
         },
@@ -12923,104 +12902,13 @@
             "appId": "scene01Sun",
             "debugData": {
               "name": "Scene01 sun",
-              "description": "Directional shadow-casting sun shared by scene01.ts and scene01V2.ts. Its shadow frustum is sized to the 10x10 ground plane, not larger — oversizing it would degrade shadow resolution everywhere (see largeWorldSun.light.json for the same pattern)."
+              "description": "Directional shadow-casting sun. Its shadow frustum is sized to the 10x10 ground plane, not larger — oversizing it would degrade shadow resolution everywhere (see largeWorldSun.light.json for the same pattern)."
             }
           }
         }
       ],
       "id": "scene01",
       "sceneFile": "./scenes/scene01/scene01.ts",
-      "__features": []
-    },
-    "scene01V2": {
-      "name": "Scene 01 v2 (physics demo with shadows + sensor)",
-      "description": "Same basic physics demo as scene01.ts (FIXED/DYNAMIC ground, box, ball, cylinder, TRIMESH-collider imported GLB) plus shadow-casting meshes, a CCD-enabled dynamic body, and a mesh-less sensor collider.",
-      "cameras": [
-        {
-          "camProps": {
-            "active": true,
-            "near": 0.1,
-            "far": 100,
-            "position": {
-              "x": 6,
-              "y": 5,
-              "z": 10
-            },
-            "lookAtPoint": {
-              "x": 0,
-              "y": -1,
-              "z": 0
-            },
-            "type": "PERSPECTIVE",
-            "fov": 60,
-            "appId": "scene01Camera"
-          },
-          "entityOpts": {
-            "appId": "scene01Camera",
-            "debugData": {
-              "name": "Scene01 camera",
-              "description": "Static camera framing the ground plane and falling-object cluster shared by scene01.ts and scene01V2.ts."
-            }
-          }
-        }
-      ],
-      "lights": [
-        {
-          "lightProps": {
-            "type": "AMBIENT",
-            "color": "#ffffff",
-            "intensity": 0.4,
-            "appId": "scene01Ambient"
-          },
-          "entityOpts": {
-            "appId": "scene01Ambient",
-            "debugData": {
-              "name": "Scene01 ambient light",
-              "description": "Ambient light shared by scene01.ts and scene01V2.ts."
-            }
-          }
-        },
-        {
-          "lightProps": {
-            "type": "DIRECTIONAL",
-            "color": "#fff2d9",
-            "intensity": 3,
-            "position": {
-              "x": 6,
-              "y": 8,
-              "z": 5
-            },
-            "targetPos": {
-              "x": 0,
-              "y": -2,
-              "z": 0
-            },
-            "castShadow": true,
-            "shadowPreset": "HIGH",
-            "shadowCameraNearFar": [
-              1,
-              30
-            ],
-            "shadowCameraFrustum": [
-              -8,
-              8,
-              8,
-              -8
-            ],
-            "shadowIntensity": 0.8,
-            "appId": "scene01Sun"
-          },
-          "entityOpts": {
-            "appId": "scene01Sun",
-            "debugData": {
-              "name": "Scene01 sun",
-              "description": "Directional shadow-casting sun shared by scene01.ts and scene01V2.ts. Its shadow frustum is sized to the 10x10 ground plane, not larger — oversizing it would degrade shadow resolution everywhere (see largeWorldSun.light.json for the same pattern)."
-            }
-          }
-        }
-      ],
-      "id": "scene01V2",
-      "sceneFile": "./scenes/scene01V2/scene01V2.ts",
       "__features": []
     },
     "sceneTestECS": {
@@ -14617,34 +14505,6 @@
     }
   },
   "cameras": {
-    "scene01Camera": {
-      "camProps": {
-        "active": true,
-        "near": 0.1,
-        "far": 100,
-        "position": {
-          "x": 6,
-          "y": 5,
-          "z": 10
-        },
-        "lookAtPoint": {
-          "x": 0,
-          "y": -1,
-          "z": 0
-        },
-        "type": "PERSPECTIVE",
-        "fov": 60,
-        "appId": "scene01Camera"
-      },
-      "entityOpts": {
-        "appId": "scene01Camera",
-        "debugData": {
-          "name": "Scene01 camera",
-          "description": "Static camera framing the ground plane and falling-object cluster shared by scene01.ts and scene01V2.ts."
-        }
-      },
-      "__sourcePath": "src/app/cameras/scene01Camera.camera.json"
-    },
     "exampleCharacterCamera": {
       "camProps": {
         "active": true,
@@ -15055,6 +14915,34 @@
       },
       "__sourcePath": "src/app/scenes/physicsTiers/physicsTiersOverview.camera.json"
     },
+    "scene01Camera": {
+      "camProps": {
+        "active": true,
+        "near": 0.1,
+        "far": 100,
+        "position": {
+          "x": 6,
+          "y": 5,
+          "z": 10
+        },
+        "lookAtPoint": {
+          "x": 0,
+          "y": -1,
+          "z": 0
+        },
+        "type": "PERSPECTIVE",
+        "fov": 60,
+        "appId": "scene01Camera"
+      },
+      "entityOpts": {
+        "appId": "scene01Camera",
+        "debugData": {
+          "name": "Scene01 camera",
+          "description": "Static camera framing the ground plane and falling-object cluster."
+        }
+      },
+      "__sourcePath": "src/app/scenes/scene01/scene01Camera.camera.json"
+    },
     "mainCamera": {
       "camProps": {
         "active": true,
@@ -15204,61 +15092,6 @@
     }
   },
   "lights": {
-    "scene01Ambient": {
-      "lightProps": {
-        "type": "AMBIENT",
-        "color": "#ffffff",
-        "intensity": 0.4,
-        "appId": "scene01Ambient"
-      },
-      "entityOpts": {
-        "appId": "scene01Ambient",
-        "debugData": {
-          "name": "Scene01 ambient light",
-          "description": "Ambient light shared by scene01.ts and scene01V2.ts."
-        }
-      },
-      "__sourcePath": "src/app/lights/scene01Ambient.light.json"
-    },
-    "scene01Sun": {
-      "lightProps": {
-        "type": "DIRECTIONAL",
-        "color": "#fff2d9",
-        "intensity": 3,
-        "position": {
-          "x": 6,
-          "y": 8,
-          "z": 5
-        },
-        "targetPos": {
-          "x": 0,
-          "y": -2,
-          "z": 0
-        },
-        "castShadow": true,
-        "shadowPreset": "HIGH",
-        "shadowCameraNearFar": [
-          1,
-          30
-        ],
-        "shadowCameraFrustum": [
-          -8,
-          8,
-          8,
-          -8
-        ],
-        "shadowIntensity": 0.8,
-        "appId": "scene01Sun"
-      },
-      "entityOpts": {
-        "appId": "scene01Sun",
-        "debugData": {
-          "name": "Scene01 sun",
-          "description": "Directional shadow-casting sun shared by scene01.ts and scene01V2.ts. Its shadow frustum is sized to the 10x10 ground plane, not larger — oversizing it would degrade shadow resolution everywhere (see largeWorldSun.light.json for the same pattern)."
-        }
-      },
-      "__sourcePath": "src/app/lights/scene01Sun.light.json"
-    },
     "exampleCharacterAmbient": {
       "lightProps": {
         "type": "AMBIENT",
@@ -15806,6 +15639,61 @@
       },
       "__sourcePath": "src/app/scenes/physicsTiers/physicsTiersSun.light.json"
     },
+    "scene01Ambient": {
+      "lightProps": {
+        "type": "AMBIENT",
+        "color": "#ffffff",
+        "intensity": 0.4,
+        "appId": "scene01Ambient"
+      },
+      "entityOpts": {
+        "appId": "scene01Ambient",
+        "debugData": {
+          "name": "Scene01 ambient light",
+          "description": "Ambient light."
+        }
+      },
+      "__sourcePath": "src/app/scenes/scene01/scene01Ambient.light.json"
+    },
+    "scene01Sun": {
+      "lightProps": {
+        "type": "DIRECTIONAL",
+        "color": "#fff2d9",
+        "intensity": 3,
+        "position": {
+          "x": 6,
+          "y": 8,
+          "z": 5
+        },
+        "targetPos": {
+          "x": 0,
+          "y": -2,
+          "z": 0
+        },
+        "castShadow": true,
+        "shadowPreset": "HIGH",
+        "shadowCameraNearFar": [
+          1,
+          30
+        ],
+        "shadowCameraFrustum": [
+          -8,
+          8,
+          8,
+          -8
+        ],
+        "shadowIntensity": 0.8,
+        "appId": "scene01Sun"
+      },
+      "entityOpts": {
+        "appId": "scene01Sun",
+        "debugData": {
+          "name": "Scene01 sun",
+          "description": "Directional shadow-casting sun. Its shadow frustum is sized to the 10x10 ground plane, not larger — oversizing it would degrade shadow resolution everywhere (see largeWorldSun.light.json for the same pattern)."
+        }
+      },
+      "__sourcePath": "src/app/scenes/scene01/scene01Sun.light.json"
+    },
     "ambientLight": {
       "lightProps": {
         "type": "AMBIENT",
@@ -16023,34 +15911,6 @@
     }
   },
   "textures": {
-    "p341AlphaCutTest": {
-      "id": "p341AlphaCutTest",
-      "fileName": "./source/p341AlphaCut.png",
-      "texOpts": {
-        "colorSpace": "srgb"
-      },
-      "debugData": {
-        "name": "p341 alpha-cut test texture",
-        "description": "p341 Phase 3: a plain texture with alphaCoverage, thin alpha-cut features (twigs thinning to 1 px, a fence of 1-4 px posts and 1 px rails, grass blades tapering to 0.5 px). Its mip levels are built by the pipeline and keep level 0's coverage at the cut 0.5."
-      },
-      "optimize": {
-        "slot": "baseColor",
-        "alphaCoverage": 0.5
-      },
-      "__sourcePath": "src/app/textures/p341AlphaCutTest.texture.json",
-      "__fileSize": 8347,
-      "__sourceUrl": "/app/textures/source/p341AlphaCut.png",
-      "__url": "/aek-assets/app/textures/source/p341AlphaCut.55dda072.ktx2",
-      "__bytes": {
-        "in": 8347,
-        "out": 17011
-      },
-      "__vramBytes": {
-        "in": 349524,
-        "out": 87408
-      },
-      "__codec": "uastc"
-    },
     "testTexture": {
       "id": "testTexture",
       "fileName": "/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg",
