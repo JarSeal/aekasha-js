@@ -14231,7 +14231,7 @@
             "appId": "thirdPersonGymSun",
             "debugData": {
               "name": "Third-person gym sun",
-              "description": "Directional shadow-casting sun. thirdPersonGymScene.ts moves it (and its target) with the player every frame, keeping this position - targetPos offset as the light direction, so the shadow frustum (sized for the play area around the player, not the whole scene, which would blur shadow resolution everywhere) follows the player instead of covering a fixed area around the origin."
+              "description": "Directional shadow-casting sun, about 52° above the horizon. Only its direction (position → targetPos) is kept: thirdPersonGymScene.ts adds a SUN_SHADOW_FIT component on scene enter, which moves it with the camera view and owns its shadow frustum (the values here only apply until then)."
             }
           }
         }
@@ -15883,7 +15883,7 @@
         "appId": "thirdPersonGymSun",
         "debugData": {
           "name": "Third-person gym sun",
-          "description": "Directional shadow-casting sun. thirdPersonGymScene.ts moves it (and its target) with the player every frame, keeping this position - targetPos offset as the light direction, so the shadow frustum (sized for the play area around the player, not the whole scene, which would blur shadow resolution everywhere) follows the player instead of covering a fixed area around the origin."
+          "description": "Directional shadow-casting sun, about 52° above the horizon. Only its direction (position → targetPos) is kept: thirdPersonGymScene.ts adds a SUN_SHADOW_FIT component on scene enter, which moves it with the camera view and owns its shadow frustum (the values here only apply until then)."
         }
       },
       "__sourcePath": "src/app/scenes/thirdPersonGymScene/thirdPersonGymSun.light.json"

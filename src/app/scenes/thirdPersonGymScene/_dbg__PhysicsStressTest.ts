@@ -3,19 +3,26 @@ import {
   getCurrentSceneId,
   getECSWorld,
   getLogger,
+  getRandomStream,
   lwarn,
   createGeometry,
   createMaterial,
   createMeshEntity,
-  IS_DEBUG_ENV,
 } from 'aekasha';
 import { createPhysicsEntity } from 'aekasha/physics';
 
-let stressTestCount = 0;
+/**
+ * The gym's physics stress test (debug env only: the scene `import()`s it behind
+ * `IS_DEBUG_ENV`): J spawns a batch of dynamic boxes and balls above the start, to load the
+ * physics world.
+ */
 
 // Shared by each shape's mesh geometry and its collider, so the two always match
 const BOX_SIZE = 0.5;
 const SPHERE_RADIUS = 0.3;
+
+/** The spawned bodies this visit (their app ids); the scene's exit deletes them. */
+let spawnedCount = 0;
 
 // Shared by every spawned mesh, by id
 const getAssets = () => ({
@@ -36,7 +43,21 @@ const getAssets = () => ({
   }),
 });
 
-/** Binds J, in `sceneId` only, to spawn `batchSize` (default 50) dynamic boxes and balls. */
+/** A uniformly random rotation (Shoemake's method), from three draws of `random`. */
+const getRandomRotation = (random: () => number) => {
+  const u1 = random();
+  const a = 2 * Math.PI * random();
+  const b = 2 * Math.PI * random();
+  const s1 = Math.sqrt(1 - u1);
+  const s2 = Math.sqrt(u1);
+  return { x: s1 * Math.sin(a), y: s1 * Math.cos(a), z: s2 * Math.sin(b), w: s2 * Math.cos(b) };
+};
+
+/**
+ * Binds J, in `sceneId` only, to spawn `batchSize` (default 50) dynamic boxes and balls. They're
+ * placed from the `gym:stress` random stream, which every scene load restarts, so the Nth batch
+ * of a visit is the same on every visit.
+ */
 export const initPhysicsStressTest = ({
   sceneId,
   batchSize = 50,
@@ -44,26 +65,24 @@ export const initPhysicsStressTest = ({
   sceneId: string;
   batchSize?: number;
 }) => {
-  if (!IS_DEBUG_ENV) return;
-
-  // 1. Pre-create assets to minimize GC during the test
+  spawnedCount = 0;
+  // Created now, so the first batch doesn't create them
   getAssets();
 
-  // 2. The Spawner Function
   const spawnBatch = () => {
     // Resolved per batch (cache hits by id), so a batch never holds a released asset
     const { geoBox, geoSphere, mat } = getAssets();
+    const random = getRandomStream('gym:stress');
     const creates: Promise<unknown>[] = [];
     for (let i = 0; i < batchSize; i++) {
-      stressTestCount++;
-      const isBox = Math.random() > 0.5;
-
-      // Random position above the map
-      const x = (Math.random() - 0.5) * 20;
-      const y = 10 + Math.random() * 20; // Height 10 to 30
-      const z = (Math.random() - 0.5) * 20;
-
-      const appId = `stress-mesh-${stressTestCount}`;
+      spawnedCount++;
+      const isBox = random() > 0.5;
+      // 20 × 20 m around the origin, 10 to 30 m up
+      const position = {
+        x: (random() - 0.5) * 20,
+        y: 10 + random() * 20,
+        z: (random() - 0.5) * 20,
+      };
 
       const entityId = createMeshEntity(
         {
@@ -71,9 +90,9 @@ export const initPhysicsStressTest = ({
           mat: mat,
           castShadow: true,
           receiveShadow: true,
-          position: { x, y, z },
+          position,
         },
-        { appId }
+        { appId: `stress-mesh-${spawnedCount}` }
       );
 
       // Created in parallel, not awaited one by one (WORKER_THREAD round-trips to the worker). A
@@ -90,14 +109,9 @@ export const initPhysicsStressTest = ({
         },
         {
           rigidType: 'DYNAMIC',
-          translation: { x, y, z },
-          // Random rotation to make collisions complex
-          rotation: {
-            x: Math.random(),
-            y: Math.random(),
-            z: Math.random(),
-            w: 1,
-          },
+          translation: position,
+          // Tumbling boxes make the collisions complex
+          rotation: getRandomRotation(random),
         },
         entityId
       ).catch((error: unknown) => {
@@ -108,7 +122,7 @@ export const initPhysicsStressTest = ({
       creates.push(create);
     }
 
-    getLogger().log(`Stress Test: Spawned ${batchSize} objects. Total: ${stressTestCount}`);
+    getLogger().log(`Stress Test: Spawned ${batchSize} objects. Total: ${spawnedCount}`);
     // One warning per batch; none once the scene is left (its exit deleted the meshes)
     void Promise.allSettled(creates).then((results) => {
       const failed = results.filter(
@@ -122,8 +136,8 @@ export const initPhysicsStressTest = ({
     });
   };
 
-  // 3. Bind to Key 'J' (for "Junk"): a scene map (replaced on the next visit, by its id), also
-  // with the debug camera on
+  // J for "junk": a scene map (replaced on the next visit, by its id), also with the debug camera
+  // on
   createActionMap({
     id: 'physicsStressTest',
     sceneId,

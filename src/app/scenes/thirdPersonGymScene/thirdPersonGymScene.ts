@@ -8,43 +8,35 @@ import {
   getLoaderStatusUpdater,
   importAssetAsync,
   spawnImportedAsset,
-  ComponentType,
   getQuatFromAngle,
   getECSWorld,
   getEntityIdByAppId,
-  registerOnSceneExit,
+  registerOnSceneEnter,
   getCameraByAppId,
-  getLightByAppId,
-  getLightTargetId,
-  ECSSystemStage,
   existsOrThrow,
+  lwarn,
+  IS_DEBUG_ENV,
 } from 'aekasha';
-import type {
-  ImportedAssetManifest,
-  SpawnImportedParams,
-  Transform,
-  ECSWorld,
-  Vector3Like,
-} from 'aekasha';
+import type { ImportedAssetManifest, SpawnImportedParams, Vector3Like } from 'aekasha';
 import { createSkyBox } from 'aekasha/skybox';
 import { createDynamicCharacter } from 'aekasha/character';
 import {
+  SunShadowFitComponentType,
   createMovingPlatform,
   createFollowObjectCameraRig,
-  deleteFollowObjectCameraRig,
 } from 'aekasha/toolkit/ecs';
 import type { MovingPlatformPoint } from 'aekasha/toolkit/ecs';
 import { createPhysicsEntity } from 'aekasha/physics';
 import { createCharacterVisualAsync } from '../../shared/characterVisual';
 import { createGymStairsAndWallAsync } from './gymStairsAndWall';
-import { initPhysicsStressTest } from './PhysicsStressTest';
 
 /**
  * The third-person gym: an obstacle course for the dynamic character controller. Built in this
  * order (the order the bodies are created in, which the scene runner's hashes depend on): the sky
  * boxes, the ground, the built stairs and wall, a spinning box, the characters, the props, six
  * moving platforms, then the imported course models (stairs of every collider kind, terrains,
- * obstacles). The camera and the lights come from thirdPersonGymScene.scene.json.
+ * obstacles). The camera and the lights come from thirdPersonGymScene.scene.json; the toolkit's
+ * SunShadowFit effect fits the sun's shadow to the camera's view.
  */
 export const SCENE_THIRD_PERSON_GYM_META = {
   id: 'thirdPersonGymScene',
@@ -55,6 +47,8 @@ export const SCENE_THIRD_PERSON_GYM_META = {
 const GYM_ENVIRONMENT_INTENSITY = 0.3;
 
 const TEST_MODELS = '/debugger/assets/testModels';
+
+const SUN_APP_ID = 'thirdPersonGymSun';
 
 /** Off to probe the props alone in the worker targets (`?physicsProbe=N`): the characters are
  * deterministic on MAIN_THREAD only (p428), and the dummy walks into the test props. */
@@ -321,73 +315,6 @@ const rootPlacing = (manifest: ImportedAssetManifest, pos: Vector3Like) => {
   return { position: { x: pos.x - offset.x, y: pos.y - offset.y, z: pos.z - offset.z } };
 };
 
-const snapToStep = (value: number, step: number) => Math.round(value / step) * step;
-
-/**
- * An ECS system moving a directional light (and its target) with an entity, so its shadow frustum
- * covers the area around it wherever it goes. The light's direction and distance stay as authored
- * (its position - target offset). The frustum moves in whole shadow map texels in light space, or
- * shadow edges would shimmer as it slides. The light is looked up lazily: a scene's JSON lights are
- * created after its scene function runs. `centerOffset` shifts the frustum center from the
- * followed entity (eg. toward where the camera sees more ground).
- */
-const followWithSun = (
-  sunAppId: string,
-  followEntityId: number,
-  centerOffset: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 }
-) => {
-  const center = new THREE.Vector3();
-  let sun: {
-    id: number;
-    targetId: number;
-    transform: Transform;
-    targetTransform: Transform;
-    offset: THREE.Vector3;
-    axisX: THREE.Vector3;
-    axisY: THREE.Vector3;
-    axisZ: THREE.Vector3;
-    texelSize: number;
-  } | null = null;
-
-  const resolveSun = (world: ECSWorld) => {
-    const light = getLightByAppId(sunAppId, world) as THREE.DirectionalLight | undefined;
-    const id = getEntityIdByAppId(sunAppId, world);
-    const targetId = id !== undefined ? getLightTargetId(id, world) : undefined;
-    if (!light?.isDirectionalLight || id === undefined || targetId === undefined) return null;
-    const transform = world.getComponent(id, ComponentType.TRANSFORM);
-    const targetTransform = world.getComponent(targetId, ComponentType.TRANSFORM);
-    if (!transform || !targetTransform) return null;
-
-    const offset = transform.position.clone().sub(targetTransform.position);
-    // Light-space axes (as the shadow camera's lookAt builds them)
-    const axisZ = offset.clone().normalize();
-    const axisX = new THREE.Vector3(0, 1, 0).cross(axisZ).normalize();
-    const axisY = axisZ.clone().cross(axisX);
-    const shadowCam = light.shadow.camera;
-    const texelSize = (shadowCam.right - shadowCam.left) / light.shadow.mapSize.width;
-    return { id, targetId, transform, targetTransform, offset, axisX, axisY, axisZ, texelSize };
-  };
-
-  return (world: ECSWorld) => {
-    sun ??= resolveSun(world);
-    const followed = world.getComponent(followEntityId, ComponentType.TRANSFORM);
-    if (!sun || !followed) return;
-
-    const { axisX, axisY, axisZ, texelSize } = sun;
-    const p = center.copy(followed.position).add(centerOffset);
-    sun.targetTransform.position
-      .copy(axisX)
-      .multiplyScalar(snapToStep(p.dot(axisX), texelSize))
-      .addScaledVector(axisY, snapToStep(p.dot(axisY), texelSize))
-      .addScaledVector(axisZ, p.dot(axisZ));
-    sun.transform.position.copy(sun.targetTransform.position).add(sun.offset);
-    sun.targetTransform.setDirty();
-    world.commitTransform(sun.targetId, sun.targetTransform);
-    sun.transform.setDirty();
-    world.commitTransform(sun.id, sun.transform);
-  };
-};
-
 /** Two equirectangular sky boxes, the sunset and the same sky without its clouds and sun, to
  * switch between in the Sky box debug tab. */
 const createGymSkyBoxesAsync = async () => {
@@ -493,7 +420,7 @@ const createSpinningBoxAsync = async (materials: GymMaterials) => {
  * jumps around (GYM_DUMMY, GymDummyBrain.ts). They're deterministic on MAIN_THREAD only (async
  * shape casts in WORKER_THREAD mode, p428), so ARE_CHARACTERS_ENABLED can leave them out. The
  * player's id, `topDownChar`, is the gym's first one, kept: the saved debug state and the scene
- * runner's character paths key it. */
+ * runner's character paths key it. The follow camera rig goes with the scene (its `sceneId`). */
 const createGymCharactersAsync = async () => {
   const characterConfig = {
     height: 1.6,
@@ -545,6 +472,7 @@ const createGymCharactersAsync = async () => {
   // Follow camera tracking the player-controlled character from above.
   createFollowObjectCameraRig({
     id: 'thirdPersonGymFollowCam',
+    sceneId: SCENE_THIRD_PERSON_GYM_META.id,
     camera: existsOrThrow(
       getCameraByAppId('thirdPersonGymCamera'),
       'Could not find the gym camera "thirdPersonGymCamera".'
@@ -554,19 +482,6 @@ const createGymCharactersAsync = async () => {
     offset: { x: 7, y: 20, z: 7 },
     smoothingTime: 0.2,
   });
-
-  // Sun follows the player (the follow camera's focus), see followWithSun. The camera looks down
-  // at the player from its (7, 20, 7) offset, so it sees more ground ahead (~20m) than behind
-  // (~11m): center the shadow frustum ~4m ahead, along the camera's ground-forward (-x, -z).
-  // The frustum size (thirdPersonGymSun.light.json) covers the ~±23m screen width at the player.
-  const world = getECSWorld();
-  world.removeSystem('gymSunFollow');
-  const followSun = followWithSun('thirdPersonGymSun', characterMesh.userData.entityId as number, {
-    x: -3,
-    y: 0,
-    z: -3,
-  });
-  world.addSystem(ECSSystemStage.APP_LOGIC, 'gymSunFollow', followSun);
 
   // A second player character on other keys (the arrow keys, Enter to jump, no run or crouch),
   // moving relative to the follow camera's view and turning toward where it goes
@@ -688,11 +603,22 @@ export const scene = async () => {
   const totalCount = 4;
   updateLoaderFn({ loadedCount: 0, totalCount });
 
-  // The follow camera rig and the sun follow system would otherwise keep running against their
-  // deleted entities and meshes (no-ops when ARE_CHARACTERS_ENABLED is off)
-  registerOnSceneExit(SCENE_THIRD_PERSON_GYM_META.id, () => {
-    getECSWorld().removeSystem('gymSunFollow');
-    deleteFollowObjectCameraRig('thirdPersonGymFollowCam');
+  // The JSON lights are created after this function runs, so the sun gets its shadow fit on
+  // enter. The camera looks down from 20 m above and ~10 m behind the player (a ~64° pitch, a 60°
+  // field of view), so the view's farthest ground, at its top edge, is ~32 m deep: a 36 m slice
+  // covers the screen (a ~±42 m shadow box at 16:9). The sun stands ~52° high, so a 10 m caster
+  // (the elevator at its top) reaches ~13 m toward it: the caster extension.
+  registerOnSceneEnter(SCENE_THIRD_PERSON_GYM_META.id, () => {
+    const world = getECSWorld();
+    const sunId = getEntityIdByAppId(SUN_APP_ID, world);
+    if (sunId === undefined) {
+      lwarn(`Third-person gym: could not find the sun light '${SUN_APP_ID}'.`);
+      return;
+    }
+    world.addComponent(sunId, SunShadowFitComponentType.SUN_SHADOW_FIT, {
+      maxDistance: 36,
+      casterExtension: 15,
+    });
   });
 
   const [manifests] = await Promise.all([importGymModelsAsync(), createGymSkyBoxesAsync()]);
@@ -716,7 +642,10 @@ export const scene = async () => {
 
   await spawnGymModelsAsync(COURSE_MODELS, manifests, materials);
 
-  initPhysicsStressTest({ sceneId: SCENE_THIRD_PERSON_GYM_META.id });
+  if (IS_DEBUG_ENV) {
+    const { initPhysicsStressTest } = await import('./_dbg__PhysicsStressTest');
+    initPhysicsStressTest({ sceneId: SCENE_THIRD_PERSON_GYM_META.id });
+  }
 
   updateLoaderFn({ loadedCount: 4, totalCount });
 };
