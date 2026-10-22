@@ -1,5 +1,5 @@
 import {
-  createKeyBinding,
+  createActionMap,
   getLogger,
   createGeometry,
   createMaterial,
@@ -33,7 +33,14 @@ const getAssets = () => ({
   }),
 });
 
-export const initPhysicsStressTest = (batchSize: number = 50) => {
+/** Binds J, in `sceneId` only, to spawn `batchSize` (default 50) dynamic boxes and balls. */
+export const initPhysicsStressTest = ({
+  sceneId,
+  batchSize = 50,
+}: {
+  sceneId: string;
+  batchSize?: number;
+}) => {
   if (!IS_DEBUG_ENV) return;
 
   // 1. Pre-create assets to minimize GC during the test
@@ -41,9 +48,7 @@ export const initPhysicsStressTest = (batchSize: number = 50) => {
 
   // 2. The Spawner Function
   const spawnBatch = () => {
-    // Resolved per batch, not captured at init: the key binding works in every scene, and the
-    // assets belong to the scene that created them (released when it's left), so a batch in
-    // another scene gets them from the cache, or creates them again, for the current scene
+    // Resolved per batch (cache hits by id), so a batch never holds a released asset
     const { geoBox, geoSphere, mat } = getAssets();
     for (let i = 0; i < batchSize; i++) {
       stressTestCount++;
@@ -99,13 +104,15 @@ export const initPhysicsStressTest = (batchSize: number = 50) => {
     getLogger().log(`Stress Test: Spawned ${batchSize} objects. Total: ${stressTestCount}`);
   };
 
-  // 3. Bind to Key 'J' (for "Junk")
-  createKeyBinding({
-    id: 'spawn_stress_objects',
-    chord: { key: 'j' },
-    type: 'KEY_DOWN',
-    fn: () => spawnBatch(),
-  });
+  // 3. Bind to Key 'J' (for "Junk"): a scene map (replaced on the next visit, by its id), also
+  // with the debug camera on
+  createActionMap({
+    id: 'physicsStressTest',
+    sceneId,
+    enabledInDebugCam: 'ENABLED_IN_DEBUG',
+    actions: { spawn: { type: 'BUTTON', name: 'Spawn a stress test batch' } },
+    bindings: { spawn: [{ device: 'KEYBOARD', keys: ['j'] }] },
+  }).onPressed('spawn', spawnBatch);
 
   getLogger().log(`Physics Stress Test Initialized. Press 'J' to spawn ${batchSize} objects.`);
 };

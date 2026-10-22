@@ -24,6 +24,7 @@ import {
   loadTextureAsync,
   lerror,
   lwarn,
+  registerOnSceneExit,
 } from 'aekasha';
 import type { ImportedAssetManifest } from 'aekasha';
 
@@ -44,6 +45,8 @@ export const ASSET_COMPARE_SCENE_ID = 'assetCompare';
 /** Where assetCompareVariants.ts writes its outputs (and report.json). */
 export const PHASE1_URL = '/debugger/assets/testOptimized/phase1';
 const BASE_COLOR_URL = '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg';
+/** The base colour both slots share (the same JPG in every variant). */
+const BASE_COLOR_ID = 'assetCompare/metalRustBaseColor';
 
 export const COMPARE_VARIANTS = [
   'png',
@@ -94,6 +97,8 @@ export type CompareSlot = {
   materialIds: string[];
   propImportId: string | null;
   queue: Promise<void>;
+  /** Set when the scene is left: a build still running stops at its next await. */
+  isLeft: boolean;
 };
 
 const GROUND_SIZE = 120;
@@ -142,7 +147,9 @@ const getTextureFile = (spec: TextureSpec, variant: CompareVariant, normalMode: 
 const getPropFile = (variant: CompareVariant) =>
   `metalToolbox/${variant === 'png' ? 'source' : variant}.glb`;
 
-const createSlot = (id: CompareSlotId): CompareSlot => ({
+/** A slot whose builds queue after `after`: a new visit's wait for the last visit's builds, so a
+ * build the exit stopped has cleared what it registered before this visit registers the ids. */
+const createSlot = (id: CompareSlotId, after = Promise.resolve()): CompareSlot => ({
   id,
   built: null,
   isBuilding: false,
@@ -153,7 +160,8 @@ const createSlot = (id: CompareSlotId): CompareSlot => ({
   textureIds: [],
   materialIds: [],
   propImportId: null,
-  queue: Promise.resolve(),
+  queue: after,
+  isLeft: false,
 });
 
 let slots: Record<CompareSlotId, CompareSlot> = { A: createSlot('A'), B: createSlot('B') };
@@ -218,6 +226,15 @@ const createPropMaterial = (manifest: ImportedAssetManifest, id: string) => {
   return createMaterial({ id, type: 'STANDARD', params });
 };
 
+/** Thrown after an await in a build when the scene was left meanwhile. */
+class SceneLeftError extends Error {}
+
+/** Stops a build whose scene was left during its last await: what it registers from now on would
+ * belong to the next scene. */
+const throwIfLeft = (slot: CompareSlot) => {
+  if (slot.isLeft) throw new SceneLeftError();
+};
+
 const buildSlot = async (slot: CompareSlot) => {
   clearSlot(slot);
   const variant = compareConfig[`variant${slot.id}`];
@@ -252,7 +269,7 @@ const buildSlot = async (slot: CompareSlot) => {
     loadSlotTexture(SPHERE_NORMAL),
     // Shared by both slots (the same JPG in every variant), released with the scene
     loadTextureAsync({
-      id: 'assetCompare/metalRustBaseColor',
+      id: BASE_COLOR_ID,
       fileName: BASE_COLOR_URL,
       texOpts: {
         wrapS: THREE.RepeatWrapping,
@@ -263,6 +280,7 @@ const buildSlot = async (slot: CompareSlot) => {
       throwOnError: true,
     }),
   ]);
+  throwIfLeft(slot);
 
   // Ground: p303's LITE packing (albedo × AO in RGB, roughness in A; normal XY, height in B)
   const tiledUv = meshUv().mul(GROUND_TILES);
@@ -320,7 +338,9 @@ const buildSlot = async (slot: CompareSlot) => {
 
   // Prop: the gitignored GLBs are rebuilt by assetCompareVariants.ts, so one may be missing
   const propFile = getPropFile(variant);
-  if (!(await isServed(`${PHASE1_URL}/${propFile}`))) {
+  const isPropServed = await isServed(`${PHASE1_URL}/${propFile}`);
+  throwIfLeft(slot);
+  if (!isPropServed) {
     const message = `${propFile} is not built: run \`npx tsx devTools/assetPipeline/fixtures/assetCompareVariants.ts --only metalToolbox\``;
     lwarn(`[assetCompare] ${message}`);
     slot.messages.push(message);
@@ -333,6 +353,7 @@ const buildSlot = async (slot: CompareSlot) => {
       importTextures: { texOpts: { anisotropy } },
       throwOnError: true,
     });
+    throwIfLeft(slot);
     const material = createPropMaterial(manifest!, `${prefix}/propMaterial`);
     slot.materialIds.push(`${prefix}/propMaterial`);
     const { meshEntityIds } = await spawnImportedAsset(manifest!, {
@@ -343,6 +364,7 @@ const buildSlot = async (slot: CompareSlot) => {
       entityOpts: { appId: `assetCompare${slot.id}Prop` },
     });
     slot.entityIds.push(...meshEntityIds);
+    throwIfLeft(slot);
     slot.propFile = propFile;
     // One row per texture (the ARM map fills more than one slot)
     const slotsByTexture = new Map<string, string[]>();
@@ -365,17 +387,26 @@ const buildSlot = async (slot: CompareSlot) => {
   slot.built = { variant, normalMode };
 };
 
-/** Rebuilds a slot from compareConfig (queued after a build that is still running). */
+/** Rebuilds a slot from compareConfig (queued after a build that is still running). A build the
+ * scene's exit stops clears what it built, the assets it registered in the next scene included. */
 export const rebuildCompareSlot = (slotId: CompareSlotId) => {
   const slot = slots[slotId];
   slot.queue = slot.queue.then(async () => {
+    if (slot.isLeft) return;
     slot.isBuilding = true;
     onChange?.();
     try {
       await buildSlot(slot);
     } catch (error) {
-      lerror(`[assetCompare] Slot ${slot.id} failed to build`, error);
-      slot.messages.push(`Build failed: ${(error as Error).message}`);
+      if (!(error instanceof SceneLeftError)) {
+        lerror(`[assetCompare] Slot ${slot.id} failed to build`, error);
+        slot.messages.push(`Build failed: ${(error as Error).message}`);
+      }
+    }
+    if (slot.isLeft) {
+      clearSlot(slot);
+      if (getTexture(BASE_COLOR_ID)) deleteTexture(BASE_COLOR_ID);
+      return;
     }
     slot.isBuilding = false;
     applyVisibility();
@@ -395,7 +426,14 @@ export const toggleCompareSlot = () => showCompareSlot(compareConfig.shown === '
 export const scene = async () => {
   const updateLoaderFn = getLoaderStatusUpdater();
   updateLoaderFn({ loadedCount: 0, totalCount: 2 });
-  slots = { A: createSlot('A'), B: createSlot('B') };
+  const prevBuilds = Promise.all([slots.A.queue, slots.B.queue]).then(() => undefined);
+  slots = { A: createSlot('A', prevBuilds), B: createSlot('B', prevBuilds) };
+  // A build or a measure still running stops at its next await, and the debug tab is gone
+  registerOnSceneExit(ASSET_COMPARE_SCENE_ID, () => {
+    slots.A.isLeft = true;
+    slots.B.isLeft = true;
+    onChange = null;
+  });
 
   // Low over the ground, looking along it (grazing angles), the sphere and the prop in front.
   // One camera only: another camera's debug symbol would stand in this view (close-ups: F1)

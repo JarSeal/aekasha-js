@@ -518,10 +518,13 @@ const measureSlot = (slot: CompareSlot): MeasuredTexture[] =>
   });
 
 /** Every variant in slot B, one after another; slot B's settings and the shown slot are restored
- * at the end. Returns the results (also kept for the tab and "Copy results"). */
+ * at the end. Returns the results (also kept for the tab and "Copy results"), or null when the
+ * scene was left during the run, which stops it. */
 export const measureAllVariants = async () => {
   if (measureProgress) return measureResults;
+  const slot = getCompareSlots().B;
   await loadReport();
+  if (slot.isLeft) return null;
   const saved = {
     variantB: compareConfig.variantB,
     normalModeB: compareConfig.normalModeB,
@@ -540,7 +543,6 @@ export const measureAllVariants = async () => {
     devicePixelRatio: window.devicePixelRatio,
     variants: [],
   };
-  const slot = getCompareSlots().B;
   try {
     for (const [i, run] of runs.entries()) {
       measureProgress = `${i + 1} / ${runs.length}: ${run.variant}${run.normalMode ? ' (normal mode)' : ''}`;
@@ -548,16 +550,19 @@ export const measureAllVariants = async () => {
       compareConfig.normalModeB = run.normalMode;
       const start = performance.now();
       await rebuildCompareSlot('B');
+      if (slot.isLeft) break;
       const buildMs = performance.now() - start;
       showCompareSlot('B');
       let firstDrawMs: number | null = null;
       while (performance.now() - start < MEASURE_DRAW_TIMEOUT_MS) {
         await nextFrame();
+        if (slot.isLeft) break;
         if (slot.textures.every((t) => getMeasuredVram(t.texture) !== undefined)) {
           firstDrawMs = performance.now() - start;
           break;
         }
       }
+      if (slot.isLeft) break;
       const textures = measureSlot(slot);
       results.variants.push({
         variant: run.variant,
@@ -576,9 +581,14 @@ export const measureAllVariants = async () => {
   } finally {
     measureProgress = null;
     Object.assign(compareConfig, { variantB: saved.variantB, normalModeB: saved.normalModeB });
-    await rebuildCompareSlot('B');
-    showCompareSlot(saved.shown);
+    if (slot.isLeft) {
+      compareConfig.shown = saved.shown;
+    } else {
+      await rebuildCompareSlot('B');
+      showCompareSlot(saved.shown);
+    }
   }
+  if (slot.isLeft) return null;
   measureResults = results;
   llog('[assetCompare] Measured all variants', results);
   updateDebuggerTab(TAB_ID, { rebuild: true });

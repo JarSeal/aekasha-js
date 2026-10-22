@@ -25,6 +25,7 @@ import {
   type TextureArray,
   lerror,
   llog,
+  registerOnSceneExit,
 } from 'aekasha';
 
 /**
@@ -49,6 +50,7 @@ import {
  * checks' results and `project()` for the harness.
  */
 
+const TEXTURE_ARRAYS_SCENE_ID = 'textureArrays';
 const URL_BASE = '/debugger/assets/testOptimized/p299';
 const CELL = 1.2;
 const COLS = 4;
@@ -393,21 +395,25 @@ const isOnGPU = (tex: THREE.Texture) => {
 };
 
 /** After the scene has loaded (nothing is drawn while it loads): the layer swaps, then the
- * arrays' state. */
-const runSwaps = async () => {
+ * arrays' state. Stops at its next await once the scene was left (`visit.isLeft`): its arrays are
+ * gone then. */
+const runSwaps = async (visit: { isLeft: boolean }) => {
   const { results, arrays } = state;
   results.backend = getBackend().isWebGPUBackend ? 'WebGPU' : 'WebGL2';
   // Swap once the arrays are on the GPU, so the swap goes through the layer update path
   await nextFrames(10);
+  if (visit.isLeft) return;
   results.uploadedBeforeSwap = isOnGPU(arrays.swapKtx) && isOnGPU(arrays.swapPng);
   await Promise.all([
     setTextureArrayLayer('textureArrays/swapKtx', 1, file('s2_etc1s.ktx2')),
     setTextureArrayLayer('textureArrays/swapPng', 0, file('l3.png')),
   ]);
+  if (visit.isLeft) return;
   // The upload consumes the layer updates (on the next frame that draws the array)
   let frames = 0;
   while (frames < 120 && (arrays.swapKtx.layerUpdates.size || arrays.swapPng.layerUpdates.size)) {
     await nextFrames(1);
+    if (visit.isLeft) return;
     frames++;
   }
   results.framesUntilLayerUpload = frames;
@@ -462,9 +468,15 @@ export const scene = async ({ assets }: { assets: ScenePrimitiveAssets }) => {
   sphereGeo = saveBufferGeometry(sphere, { id: 'textureArraysSphere' });
   if (sphereGeo !== sphere) sphere.dispose();
 
+  // The swaps run after the load: the scene's exit stops them (a swap it interrupts fails)
+  const visit = { isLeft: false };
+  registerOnSceneExit(TEXTURE_ARRAYS_SCENE_ID, () => {
+    visit.isLeft = true;
+  });
   try {
     await build(assets);
-    void runSwaps().catch((error) => {
+    void runSwaps(visit).catch((error) => {
+      if (visit.isLeft) return;
       lerror('[textureArrays] Swaps failed', error);
       state.results.buildError = (error as Error).message;
     });

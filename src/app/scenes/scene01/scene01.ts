@@ -234,9 +234,11 @@ export const scene = async () => {
     sphere.rotation.y += transformMainSpeedValue(0.1);
   });
 
-  // Input (replaced by id on the next visit; it stays bound after the scene, as before)
+  // A raw key binding, reading the event's time (replaced by id on the next visit), in this scene
+  // only
   createKeyBinding({
     id: 'scene01-log-d-press',
+    sceneId: 'scene01',
     type: 'KEY_DOWN',
     chord: { key: 'd' },
     fn: (_, time) => {

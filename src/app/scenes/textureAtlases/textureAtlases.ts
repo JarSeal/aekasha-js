@@ -25,6 +25,7 @@ import {
   type TextureAtlasInfo,
   lerror,
   llog,
+  registerOnSceneExit,
 } from 'aekasha';
 
 /**
@@ -55,6 +56,7 @@ import {
  * the active camera).
  */
 
+const TEXTURE_ATLASES_SCENE_ID = 'textureAtlases';
 const ATLAS_ID = 'p299TestAtlas';
 const SLOTS = ['albedo', 'mask'] as const;
 const CELL = 1.2;
@@ -627,10 +629,16 @@ export const scene = async ({ assets }: { assets: ScenePrimitiveAssets }) => {
   quadGeo = saveBufferGeometry(quad, { id: 'textureAtlasesQuad' });
   if (quadGeo !== quad) quad.dispose();
 
+  // The slots are read after the load: not once the scene's exit has released them
+  const visit = { isLeft: false };
+  registerOnSceneExit(TEXTURE_ATLASES_SCENE_ID, () => {
+    visit.isLeft = true;
+  });
   try {
     const { slotTextures, imageSlotTextures } = await build(assets);
     // The slots' state once they are on the GPU (nothing is drawn while the scene loads)
     void nextFrames(10).then(() => {
+      if (visit.isLeft) return;
       const { results } = state;
       const backend = (getRenderer() as unknown as { backend: Backend }).backend;
       results.backend = backend.isWebGPUBackend ? 'WebGPU' : 'WebGL2';

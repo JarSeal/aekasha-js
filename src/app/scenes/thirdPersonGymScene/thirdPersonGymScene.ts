@@ -790,7 +790,7 @@ export const scene = async () => {
     });
   }
 
-  initPhysicsStressTest();
+  initPhysicsStressTest({ sceneId: SCENE_THIRD_PERSON_GYM_META.id });
 
   updateLoaderFn({ loadedCount: 2, totalCount: 2 });
 };
