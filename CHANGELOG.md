@@ -4,6 +4,110 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-22 — review-schemas-pipeline-devtools-hub
+
+### Engine 5.10.0 (Golden Hour)
+
+The asset JSON schemas and the dev tooling around them are reviewed (p619): the data pipeline, the asset pipeline, the dev file server, the Hub's generator and the verify commands. Every type a public name uses is now exported from an entry, the Hub's API reference has a page per public entry, and every engine export and member is documented. Nothing is removed from an entry. The gather's stricter checks are listed under Project.
+
+**Added**
+
+- On `aekasha/schemas`: `ColorJSON` (a hex string or `{ r, g, b }`, 0-255: lights' colours, `backgroundColor`, the sky box), and `applySkyBoxSaveEntry(def, entry?)`, which merges a sky box's save entry into its definition as the gather does.
+- The 79 types and constants that public names already used but no entry exported, each with a summary:
+  - `aekasha` (19): `AllowTextureStrings`, `AssetsWorkerTarget`, `CoreComponentData`, `DebugPhysicsWireframeConfig`, `ECSStorageMode`, `EntityDebugData`, `FeatureUnmountHook`, `GeoDebugData`, `ImportPhysicsParams`, `LifetimeData`, `ManagedByData`, `ParsedCustomProps`, `PhysicsWireframeColors`, `QuatLike`, `TextureMapKeys` and the value `textureMapKeys`, `TypedArrayTransformStore`, `Vector3Like`, `ViewCameraRig`.
+  - `aekasha/physics` (28): `WorldAPI`, `ColliderAPI`, `JointAPI` and the types they name (the queries' hits, `EventQueue`, `PhysicsHooks`, `TempContactForceEvent`, `ShapeParams`, `HeightFieldData`, `JointMotorModel`, …), the config and state types (`PhysicsState`, `PhysicsEngine`, `PhysicsWorkerTarget`, `PhysicsBackgroundBehavior`, `PhysicsInterpolationMode`), the tier component data, `PoseArray`, `PhysRotation`, and the enums `RigidBodyTypeAPI`, `ShapeType`, `SolverFlags`, `FeatureType`, `QueryFilterFlags` as values.
+  - `aekasha/character` (16): the input scheme types (`CharacterInputOpts`, its mappings, `CharacterInputHoldMode`) and the body and probe types (`CharacterBodyPlan`, `CharacterProbes`, `LocomotionState`, …).
+  - `aekasha/schemas` (11): `ATLAS_MIP_CHAINS`, `CoreEntityOptsSchema`, `OptimizeObjectSchema`, `SkyBoxDefSchema`, `DebugData`, `ShadowQuality`, `SceneSpatialDomainEntry`, `TextureAtlasSlotInfo`, `FeatureSchemaShape`, `UnionToIntersection`, `PerType`.
+  - `aekasha/skybox` (4): `SkyBoxBaseDef`, `SkyBoxBaseInput`, `SkyBoxEnvDef`, `SkyBoxOverrides`. `aekasha/lod` (1): `IMPOSTOR_KINDS`.
+- `DevFilesErrorCode.INVALID_IMAGE` (`aekasha/debug`): a staged image that doesn't start with its format's signature (PNG, JPEG, WebP).
+- JSDoc on every engine export and member (exports 2,275 / 2,353 → 2,321 / 2,321, members 888 / 890 → 890 / 890). Every shape key of the kernel's schemas has a comment and a `describe`, so an asset JSON's hovers in the editor and the API pages explain each field, its default included.
+
+**Changed**
+
+- **Behaviour change:** the Hub's API reference is a page per public entry (`/hub/documentation/aekasha/physics/`; `aekasha` has a page per kernel area, `/hub/documentation/aekasha/scene/`), listing only what the entry exports. The pages per source module (`/hub/documentation/engine/<module path>/`) are gone, so bookmarks to them break; internal exports have no page.
+- The schemas report an error at the field that's wrong. Lights, cameras, geometries and materials are unions on `type`: a bad field is reported at its path (`lightProps.intensity`, not `lightProps`), an unknown type at `type`. The generated JSON Schemas use `oneOf` and write a sub-schema used twice once, under `definitions`.
+- Stricter types and data:
+  - A light's shadow tuples are tuples, also in the JSON Schemas (`minItems`, `maxItems`), and a spot light's `map` is a texture id.
+  - A scene's inline `meshes` and `importedAssets` are validated like their asset JSONs (an inline import without `optimize` or generated fields, its file in `src/public`). They were `unknown`.
+  - Camera and light save entries take every variant's fields, and a geometry's `params` every variant's.
+  - `MaterialAsset` is one member per material type. `TexOptsSchema` has no `image`. A scene's `comments` and `todo` have `DebugData`'s shapes instead of `any`.
+- `FeatureContext.registerImportExtension` and `LodChain.report` are `@internal`: still there, off the documented surface (each import extension member has one provider, physics' or LOD's; `report` is debug information).
+- `GLTF_LOD_EXTRAS_KEY` and `GLTFLodChainsExtras` live in `features/lod/LodChainOptions.ts` (still on `aekasha/lod`), so the asset pipeline reads them without loading three.
+- `{@link}`s to internal names in public comments are code spans (24 links, 18 names): they now link only to names that have a page.
+- Internal: one `stableStringify` (`utils/StableStringify.ts`, tested) for the impostor source hash, the material variants and the asset cache keys. The app's `assets/index.js` is 75 B gzip larger, the banner's entry 80 B.
+
+**Removed**
+
+- Internal (on no entry): 19 schema constants are module-private and 18 schema type aliases are deleted (the save entry types, `Vector3`, `UserData`, the schema-side `LightProps` and `TexOpts`, …), `EntityDebugDataSchema`, and `HALF_PI` and `QUARTER_PI`, which nothing used.
+
+**Fixed**
+
+- The JSON Schemas accepted a light's shadow tuple of any length (zod writes a draft-07 tuple as `items` alone).
+- The dev files client sent a write without its hash check when a read had no hash header. Such a write is a `CONFLICT` now.
+
+### App 1.13.2 (Preschooler)
+
+**Changed**
+
+- `assetCompare` and `textureArrays` name their fixture generators at their new paths, `devTools/assetPipeline/fixtures/assetCompareVariants.ts` and `textureArraysFiles.ts`: the scene descriptions, the comments and `assetCompare`'s "not built" message.
+
+### Project
+
+**Added**
+
+- `yarn verify:devFiles`, the dev file server's self-check (61 checks: every route's refusals and writes, the save entries through a real gather). Run it after a change to the dev files: no hook runs it.
+- The layout check is a test, `devTools/layout/layout.test.ts` in `yarn test`: every engine, toolkit and app file under a rule of `layoutRules.ts`, the module names, the boundaries and no feature cycle. `npx tsx devTools/layout/layoutReport.ts` writes the report on demand to `.cache/layout/layoutReport.md`.
+- `devTools/engineImports.test.ts`: the devTools import the engine only from the schemas entry file, a short list of import-free modules with their reasons, and types with `import type`.
+- `devTools/sbp/moduleSizesPlugin.ts`: each module's size after minification, in the main build and the worker builds (`dist-stats/module-sizes.json`), which `yarn sbp`'s groups and the production debug check read.
+- Shared helpers: `devTools/paths.ts` (the repo's folders), `devTools/files.ts` (`sha256`, atomic and changed-only writes, the source walk), `devTools/git.ts`, `devTools/workQueue.ts` (the gatherer's and the dev Hub's queue), `devTools/hostCheck.ts` (the Host and Origin check of the dev files and the dev Hub).
+- Tests, in Node, for most of the tooling (the gather's moved tests, `systemOrder.test.ts` and `sbp/config.test.ts` gained cases too):
+  - The gather: `gather.test.ts` (small trees gathered in a temp folder, both modes).
+  - The asset pipeline: `prune.test.ts`, `sources.test.ts`, `settings.test.ts`, `cache.test.ts`, `textureAtlases.test.ts`, `images.test.ts` (a golden hash of the image maths), `ktxEncode.test.ts`, `archives.test.ts`, `gltfJson.test.ts`.
+  - The dev files: `security.test.ts`, `config.test.ts`, `commit.test.ts`.
+  - The Hub: `buildGuard.test.ts`, `shell.test.ts`, `preview.test.ts`, `search.test.ts`, `devRunner.test.ts`, `snippets.test.ts`, `links.test.ts`, `entries.test.ts`, `publicApi.test.ts`, `extract.test.ts`, `codeThemes.test.ts` (every code colour at WCAG AA on its background).
+  - Verify and sbp: `sceneSelect.test.ts`, `sceneBaseline.test.ts`, `baselinesDiff.test.ts`, `bundleKeys.test.ts`, `moduleSizesPlugin.test.ts` (a real `vite build` with a worker), `appBuild.test.ts`.
+  - `checkVersions.test.ts`, `workQueue.test.ts`, `StableStringify.test.ts`.
+
+**Changed**
+
+- **Behaviour change:** the gather fails on an asset JSON that doesn't parse or validate, on an id two files of a type give (the first file keeps it), on an id a scene lists that no asset JSON has, and on an invalid inline mesh or import. Each was a log line, and the data was generated anyway. In `yarn dev` the error overlay shows it; `yarn build` stops. No repo data tripped them.
+- **Behaviour change:** a mesh save entry's `geo` or `mat` props of the mesh's own type merge over the mesh's key by key (`params`, a TSL material's `nodes`), and the merged props are validated. An id or another type replaces them, so partial props over an id fail the gather. They replaced the whole field before.
+- **Behaviour change:** `yarn assets` deletes stale outputs and lock entries only after a run that has an output for every asset: a failed encode, a missing `ktx`, a missing public source or an asset JSON it couldn't read keeps them, and the run lists why.
+- **Behaviour change:** `yarn sbp`'s group sizes are minified, the workers' code included. They summed to 832 kB for the app's 379 kB first download (rendered, unminified code) and now to about 388 kB. Every `groups` budget in `sbp.config.ts` is re-set (`three` 642 → 265 KiB, physics 44 → 25, …). A file's key is its name without the hash, with `@<worker>` or `@<source folder>` where two files share one: the old `#2` keys swapped between builds. `'assets/PhysicsWorker.js'` is `'assets/PhysicsWorker.js@PhysicsWorker'` (the plain key is the 0.1 kB `?worker` wrapper). `bundle.json` is format 2, the report format 3.
+- **Behaviour change:** a gather writes a generated file only when its content changed, and the dev server reloads the page only when the generated data or a source file changed, so a save that changes nothing reloads nothing.
+- The gather: `gatherAppData.ts` is the orchestration (194 lines, from 1,774), its steps in `devTools/gather/`; `gatherSceneData` takes `isProduction`, `srcDir` and `outDir`. The JSON Schemas are written by the commands and the dev server's start, only when changed, never at import. A gather of the repo's data takes about 19 ms.
+- The asset pipeline: `runAsset` and the atlas encode split into their steps, the two scenes' fixture generators in `devTools/assetPipeline/fixtures/`, the cache keys memoized across processes (`.cache/asset-pipeline/key-memo.json`), the source walk skipping `src/generated/` and `src/public/aek-assets/`. Every output's key is unchanged.
+- The Hub:
+  - The search's payload is one file, `hub-search.js`, loaded on the first search: `hub-data.js`, which every page loaded, is gone. 1.70 MiB raw and 394 KiB gzip with `hub-data.js` beside it, now 957 KiB and 256 KiB. The size warning is on gzip, over 450 KiB.
+  - The API reference per entry (see Engine): R2's check of the public names' types replaces TypeDoc's validation in the Hub, and an `api:` link to an internal name fails the build with that reason. 84 pages, from 436.
+  - A dev rebuild after a page edit takes about 230 ms (840-980 ms before): shiki's output, the search and the styles and scripts are reused when unchanged.
+  - `buildHub`, the dev plugin (`createHubDevRunner`) and the API renderer are split into their steps. The Markdown directives are a list `createHubMarkdown` takes, so nothing in the Hub registers at load and `package.json`'s `sideEffects` no longer lists `./devTools/**`.
+- The scene runner: split into its CLI, run, baseline and selection modules. Its dev server has its own dependency cache (`node_modules/.vite-verify`) and logs Vite's optimize and reload lines; a page that reloads mid-run runs once more in a fresh context, with a note; a change to the generated data during the run warns. `vite.config.ts` has no `optimizeDeps` (Vite's scan finds the workers' dependencies).
+- The production debug check (`yarn verify:baselines`) reads the worker builds' modules too.
+- `eslint.config.js`: `no-unused-vars` has `ignoreRestSiblings`, which replaces six disables. Every `eslint-disable` in the tooling has its reason, the `never` helpers are `function` declarations, and the citations of deleted plans are replaced by what they said.
+- Docs: the nested `CLAUDE.md` files of the devTools, checked claim by claim against the code, and the root's commands, data pipeline and build notes; the Hub's coding standards (a Dev tools section; the public types check), asset optimization and Smallest build pages; `docs/techniques/hub-authoring.md` and `asset-optimization.md`; `readme.md`.
+- `yarn verify:baselines`: `api.json` (2,512 → 2,480 exports, 838 → 919 names on the 16 entries), `docs.json` (exports 2,319 / 2,416 → 2,365 / 2,384 documented, members 938 → 940 / 970), `bundle.json` and `bundle.banner.json` in format 2 with the new keys and sizes.
+
+**Removed**
+
+- `devTools/refactor/`: the dormant move codemod (`applyMoveMap.ts`, `moveApply.ts`, `moveSplit.ts`, `moveText.ts`, `moveEdits.ts`, `moveJson.ts`, `moveTree.ts`), `compareBaselines.ts`, their tests, and the generated `moveMap.json`, `layoutReport.md` and `entryExports.json`. The last commit that has them is `057cbae`. The rest moved to `devTools/layout/`, `migrateToEntries.ts` with it.
+- `hub-data.js` (see the Hub, above) and `sbp/`'s unused `buildAppBundle`.
+
+**Fixed**
+
+- Loss:
+  - `yarn assets` deleted committed outputs and their lock entries after a run that left assets out (a schema error, a missing `ktx`). A `yarn assets` prune could also delete an output a dev server had just written; both now hold a lock (`.cache/asset-pipeline/run.lock`).
+  - A public asset path that decoded outside `src/public` was read.
+  - `yarn hub:build --out .` deleted the repo, and a failed build left a half-written `dist-hub/`. `--out` refuses the repo, its parents, the source folders and a non-empty folder that isn't a Hub output, and a build is swapped in only when nothing failed.
+- Security (the dev file server):
+  - A write of a `package.json` naming a staged image as its Prettier config ran that image as JavaScript in the dev server on the next JSON write. Tool config names are refused, Prettier reads only the root's `.prettierrc`, and a staged image must have its format's signature.
+  - A host name like `127.x.example` passed as loopback, and a request through a local proxy (ngrok, a forwarded port) passed as local.
+  - A save between the plan and the renames was overwritten (it's a `CONFLICT` now), two dev servers emptied each other's stage folder, a broken symlink folder and the scene id `__proto__` weren't refused.
+- The gather: a scene's own latest save entry wasn't applied, and production data kept `__saveData` and `debugData`; `cameras: []` got no auto camera; generated code broke on an id that isn't an identifier; a material without nodes shipped `nodes: {}`.
+- The asset pipeline: a GLB's `colliderType` set on its mesh (not its node) was missed; three's version is in a LOD chain's key; `ktx` gets timeouts (15 s, 15 min), and a failed install leaves no staging folder.
+- The Hub: `yarn hub:preview` died on a malformed escape or a NUL byte and listened on every interface; the shell's placeholders reached `Object.prototype`; a `%` in a link threw the whole build; two issue files that slugged alike overwrote each other. The dev Hub lost edits made during its first build, reloaded every tab on an editor's temp file and reloaded the Version page on every edit.
+- Verify and sbp: an unreadable or old-format baseline read as none, so every run passed as new; a hung page call hung the run; `verify:embed` used a fixed port and fixed waits; a system registered twice didn't show in the system order; a `groups` or `modules` budget key with a typo measured 0 and passed; a failed build's error was masked by the plugins' `closeBundle` or the dev gather.
+
 ## 2026-10-21 — review-debug-public-api
 
 ### Engine 5.9.0 (Golden Hour)
