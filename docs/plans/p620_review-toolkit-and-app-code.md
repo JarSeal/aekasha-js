@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-6 implemented
+Status: in progress | Phases 0-7 implemented
 Category: Refactoring, Documentation, Toolkit, App
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -1231,7 +1231,7 @@ As built (2026-10-22, sections 1-4 committed as `0094ea4`, `6dc5c8e`, `5349b99`,
   warning. `yarn test`: 1,227 passed (the Stop hook's run beside `hub:build` failed
   `buildGuard.test.ts`, the clash §3 warns of; alone it passes).
 
-### Phase 7: the Hub, `CLAUDE.md` and the filed findings (D14)
+### Phase 7: the Hub, `CLAUDE.md` and the filed findings (D14) — done
 
 1. The toolkit page (U1, a section per piece, "Writing a TSL material"), the example pages (U2,
    U3), the debug suite guide (Phase 5's path), the root `CLAUDE.md`'s toolkit and app lines,
@@ -1241,6 +1241,51 @@ As built (2026-10-22, sections 1-4 committed as `0094ea4`, `6dc5c8e`, `5349b99`,
    `world`, the component key enums, `createSeededRandom`'s re-export already there).
 3. `perf-auditor` over the changed toolkit and app files; anything it finds fixed or listed.
 4. `yarn hub:build` (no dead link, the one p621 warning).
+
+As built (2026-10-22, sections 1-2 committed as `2eac899`, `1bd9e6e`; section 3 changed no code):
+
+- **The toolkit page (section 1):** U1's errors fixed (`SeededRandom.ts` out of the tree and
+  `createSeededRandom` the engine's, the effects as systems registered once per world with
+  `MutualGravity`'s body list, scatter results into an instanced pool's `spawn` first); a short
+  section per piece with its `api:` links and what U1 found missing (the triplanar defines, the
+  asteroid's per-mesh `seed`, `hullVertices` / `hullVolume`, the rig's `sceneId`, the platform's
+  controls writing outside the step, `getHeightAt`, `heights` against the `HEIGHTFIELD` collider);
+  a "Writing a TSL material" section (the checkerboard's JSON and TSL file included whole, so no
+  region; the socket call, the input wrapping, the `<socket>_<input>` uniforms and the socket
+  order, defines against `matOverrides` variants, `loadTslMaterialFileAsync`, the `Node` types,
+  copying one into the app). **Beyond the plan:** "See it" names `largeWorld` and the gym.
+- **The other pages (section 1):** U2: the embed walkthrough's rewrap, the LOD walkthrough's "move
+  the four files next to the scene", the quick start's line on the debug-only `_dbg__exampleHub`
+  import (the banner's "every frame" was Phase 6's). The engine-5 migration row names
+  `_dbg__PhysicsStressTest.ts` and `gymStairsAndWall.ts` (Prettier re-padded its table). The
+  scenes-and-assets page's layout: `cameras/` and `lights/` among the folders that appear with
+  the first shared asset. The debug suite guide's path and `features/lod/CLAUDE.md` were Phase 5's.
+- **`CLAUDE.md` and `readme.md` (section 1):** the root's effects line (three components,
+  `MutualGravity`'s body list), the `createSeededRandom` line (the toolkit's deprecated copy),
+  `shared/`'s contents and why the spin files stay in `examples/ecs/`, the shared asset folders,
+  and the `h` key as the engine's default rebound in `debugKeys` (Phase 6's note). The readme:
+  the geometry line, the folder tree (no "a seeded random", no `cameras/, lights/`), the mesh JSON
+  example under `myScene/` (the start scene's mesh has another material), `debugKeys` as a rebind
+  to `j`.
+- **Issue files (section 2):** N1 `create-with-a-taken-id-ignores-props.md`, N2
+  `no-public-instanced-mesh-entity.md`, N3 `entity-persistent-flag-not-applied.md` (p619 had none:
+  its S8 remark now names the file; it also says why the one-line fix leaks a camera per visit),
+  N4 `heightfield-grid-layout.md` (also: the type's "`nrows` × `ncols`" against the import's
+  (`nrows` + 1) × (`ncols` + 1), and the import's indexing met only square grids; the toolkit
+  page's terrain line links it), and Phase 5's two: `scene-runner-waits-on-a-failed-load.md` and
+  `impostor-export-plan-citation.md` (eight files: four impostor JSONs and their atlases).
+- **p622 (section 2):** the toolkit 3.0.0 list: `createSeededRandom`'s copy, `PhysicsParams`,
+  `DeleteMeshOptions` / `deleteMeshOptions` removed; `addGravityBody`'s positional `world` to an
+  options object; the component key `enum`s against `as const` objects left to decide with the
+  engine's `ComponentType` (also an enum).
+- **`perf-auditor` (section 3)** over the 66 toolkit and app `.ts` files the branch changed: every
+  shipping per-frame and per-step path clean (the earlier phases' fixes confirmed). Two low,
+  debug-only remarks, left as they are: `_dbg__lodShowcase.ts`' dolly resolves the camera by appId
+  each frame it plays (one map lookup and one storage read, no allocation; caching it would add a
+  stale-id case on a reload), and `_dbg__spaceDemo.ts`' energy sum is O(n²) every 250 ms over the
+  scene's 8-17 bodies.
+- **Checks (section 4):** `yarn hub:build` on `1bd9e6e`: 90 pages (the six issue pages added), 935
+  names, only p621's `getRandomStream` warning.
 
 ### Phase 8: verify, versions and done (D2)
 
