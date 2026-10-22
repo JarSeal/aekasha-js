@@ -12912,31 +12912,31 @@
       "__features": []
     },
     "sceneTestECS": {
-      "name": "ECS test scene",
-      "description": "This is a ECS test scene.",
+      "name": "Start scene",
+      "description": "The scene src/index.ts starts with: its camera, lights, sky box and two meshes (one with the app's own TSL material, one from a GLB) come from this JSON; its code adds a ground and a ball that hovers with the toolkit's HoverEffect.",
       "cameras": [
         {
           "camProps": {
             "active": true,
+            "position": {
+              "x": 5,
+              "y": 3.5,
+              "z": 8
+            },
             "lookAtPoint": {
               "x": 0,
-              "y": 0,
+              "y": 0.8,
               "z": 0
             },
             "type": "PERSPECTIVE",
-            "fov": 90,
-            "appId": "mainCamera",
-            "position": {
-              "x": 10,
-              "y": 5,
-              "z": 20
-            }
+            "fov": 50,
+            "appId": "mainCamera"
           },
           "entityOpts": {
             "appId": "mainCamera",
             "debugData": {
               "name": "Main camera",
-              "description": "Main application camera"
+              "description": "The start scene's camera."
             }
           }
         }
@@ -12953,7 +12953,45 @@
             "appId": "ambientLight",
             "debugData": {
               "name": "Ambient light",
-              "description": "The ambient light for the scene. It colors everything in the scene (except skyboxes and basic materials) whether you like it or not. This is what next gen games is all about."
+              "description": "Lights every lit material evenly, from no direction (sky boxes and BASIC materials ignore it)."
+            }
+          }
+        },
+        {
+          "lightProps": {
+            "type": "DIRECTIONAL",
+            "color": "#ffe5c7",
+            "intensity": 3,
+            "position": {
+              "x": 5,
+              "y": 10,
+              "z": 6
+            },
+            "targetPos": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "castShadow": true,
+            "shadowPreset": "HIGH",
+            "shadowCameraNearFar": [
+              1,
+              30
+            ],
+            "shadowCameraFrustum": [
+              -8,
+              8,
+              8,
+              -8
+            ],
+            "shadowIntensity": 0.75,
+            "appId": "directionalLight"
+          },
+          "entityOpts": {
+            "appId": "directionalLight",
+            "debugData": {
+              "name": "Sun",
+              "description": "The shadow-casting sun. Its shadow frustum covers the meshes, not the whole ground: a larger one spreads the same shadow map over more ground."
             }
           }
         }
@@ -12963,18 +13001,14 @@
           "id": "testSphere",
           "type": "SPHERE",
           "params": {
-            "radius": 2.6,
+            "radius": 1,
             "widthSegments": 32,
             "heightSegments": 32
           },
           "debugData": {
-            "name": "Test Sphere",
-            "description": "This is a test sphere"
+            "name": "Test sphere",
+            "description": "The start scene's sphere (testMesh)."
           }
-        },
-        {
-          "id": "otherTestBox",
-          "type": "BOX"
         }
       ],
       "textures": [
@@ -13002,14 +13036,6 @@
       ],
       "materials": [
         {
-          "id": "testMaterial",
-          "params": {
-            "color": "#ff00ff",
-            "wireframe": false
-          },
-          "type": "PHONG"
-        },
-        {
           "id": "testTslMat",
           "tslFile": "scenes/sceneTestECS/testTslMat.tsl.ts",
           "nodes": {
@@ -13028,7 +13054,7 @@
           "props": {
             "geo": "testSphere",
             "mat": "testTslMat",
-            "castShadow": false,
+            "castShadow": true,
             "receiveShadow": true,
             "position": {
               "x": 4,
@@ -13051,9 +13077,9 @@
             "castShadow": true,
             "receiveShadow": true,
             "position": {
-              "x": -4,
-              "y": 1,
-              "z": -1
+              "x": -3,
+              "y": 0.5,
+              "z": 1
             },
             "appId": "testImportedMesh"
           }
@@ -13424,23 +13450,77 @@
     },
     "testDebugScene": {
       "isDebugScene": true,
-      "id": "testDebugScene",
-      "sceneFile": "scenes/testDebugScene/testDebugScene.ts",
+      "name": "Optimized assets orientation check",
+      "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies.",
       "cameras": [
         {
           "camProps": {
+            "active": true,
+            "position": {
+              "x": 0,
+              "y": 1,
+              "z": 7
+            },
+            "lookAtPoint": {
+              "x": 0,
+              "y": 0.7,
+              "z": 0
+            },
             "type": "PERSPECTIVE",
-            "fov": 90,
-            "active": true
+            "fov": 50,
+            "appId": "p300Camera"
           },
           "entityOpts": {
+            "appId": "p300Camera",
             "debugData": {
-              "name": "_camera",
-              "description": "Auto-generated camera for the scene"
+              "name": "Camera",
+              "description": "Faces both rows of the orientation check."
             }
           }
         }
       ],
+      "lights": [
+        {
+          "lightProps": {
+            "type": "AMBIENT",
+            "color": "#ffffff",
+            "intensity": 0.6,
+            "appId": "p300Ambient"
+          },
+          "entityOpts": {
+            "appId": "p300Ambient",
+            "debugData": {
+              "name": "Ambient light"
+            }
+          }
+        },
+        {
+          "lightProps": {
+            "type": "DIRECTIONAL",
+            "color": "#ffffff",
+            "intensity": 2.5,
+            "position": {
+              "x": 3,
+              "y": 5,
+              "z": 6
+            },
+            "targetPos": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "appId": "p300Sun"
+          },
+          "entityOpts": {
+            "appId": "p300Sun",
+            "debugData": {
+              "name": "Sun"
+            }
+          }
+        }
+      ],
+      "id": "testDebugScene",
+      "sceneFile": "scenes/testDebugScene/testDebugScene.ts",
       "__features": []
     },
     "textureArrays": {
@@ -14946,35 +15026,26 @@
     "mainCamera": {
       "camProps": {
         "active": true,
+        "position": {
+          "x": 5,
+          "y": 3.5,
+          "z": 8
+        },
         "lookAtPoint": {
           "x": 0,
-          "y": 0,
+          "y": 0.8,
           "z": 0
         },
         "type": "PERSPECTIVE",
-        "fov": 90,
+        "fov": 50,
         "appId": "mainCamera"
       },
       "entityOpts": {
         "appId": "mainCamera",
         "debugData": {
           "name": "Main camera",
-          "description": "Main application camera"
+          "description": "The start scene's camera."
         }
-      },
-      "__saveData": {
-        "sceneTestECS": [
-          {
-            "__meta": {
-              "date": 1779449688109
-            },
-            "position": {
-              "x": 10,
-              "y": 5,
-              "z": 20
-            }
-          }
-        ]
       },
       "__sourcePath": "src/app/scenes/sceneTestECS/mainCamera.camera.json"
     },
@@ -15033,6 +15104,32 @@
         }
       },
       "__sourcePath": "src/app/scenes/space/spaceCamera.camera.json"
+    },
+    "p300Camera": {
+      "camProps": {
+        "active": true,
+        "position": {
+          "x": 0,
+          "y": 1,
+          "z": 7
+        },
+        "lookAtPoint": {
+          "x": 0,
+          "y": 0.7,
+          "z": 0
+        },
+        "type": "PERSPECTIVE",
+        "fov": 50,
+        "appId": "p300Camera"
+      },
+      "entityOpts": {
+        "appId": "p300Camera",
+        "debugData": {
+          "name": "Camera",
+          "description": "Faces both rows of the orientation check."
+        }
+      },
+      "__sourcePath": "src/app/scenes/testDebugScene/p300Camera.camera.json"
     },
     "thirdPersonGymCamera": {
       "camProps": {
@@ -15698,28 +15795,96 @@
       "lightProps": {
         "type": "AMBIENT",
         "color": "#ffffff",
-        "intensity": 0.8,
+        "intensity": 0.5,
         "appId": "ambientLight"
       },
       "entityOpts": {
         "appId": "ambientLight",
         "debugData": {
           "name": "Ambient light",
-          "description": "The ambient light for the scene. It colors everything in the scene (except skyboxes and basic materials) whether you like it or not. This is what next gen games is all about."
+          "description": "Lights every lit material evenly, from no direction (sky boxes and BASIC materials ignore it)."
         }
       },
-      "__saveData": {
-        "sceneTestECS": [
-          {
-            "__meta": {
-              "date": 1779449688109
-            },
-            "type": "AMBIENT",
-            "intensity": 0.5
-          }
-        ]
-      },
       "__sourcePath": "src/app/scenes/sceneTestECS/ambientLight.light.json"
+    },
+    "directionalLight": {
+      "lightProps": {
+        "type": "DIRECTIONAL",
+        "color": "#ffe5c7",
+        "intensity": 3,
+        "position": {
+          "x": 5,
+          "y": 10,
+          "z": 6
+        },
+        "targetPos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "castShadow": true,
+        "shadowPreset": "HIGH",
+        "shadowCameraNearFar": [
+          1,
+          30
+        ],
+        "shadowCameraFrustum": [
+          -8,
+          8,
+          8,
+          -8
+        ],
+        "shadowIntensity": 0.75,
+        "appId": "directionalLight"
+      },
+      "entityOpts": {
+        "appId": "directionalLight",
+        "debugData": {
+          "name": "Sun",
+          "description": "The shadow-casting sun. Its shadow frustum covers the meshes, not the whole ground: a larger one spreads the same shadow map over more ground."
+        }
+      },
+      "__sourcePath": "src/app/scenes/sceneTestECS/directionalLight.light.json"
+    },
+    "p300Ambient": {
+      "lightProps": {
+        "type": "AMBIENT",
+        "color": "#ffffff",
+        "intensity": 0.6,
+        "appId": "p300Ambient"
+      },
+      "entityOpts": {
+        "appId": "p300Ambient",
+        "debugData": {
+          "name": "Ambient light"
+        }
+      },
+      "__sourcePath": "src/app/scenes/testDebugScene/p300Ambient.light.json"
+    },
+    "p300Sun": {
+      "lightProps": {
+        "type": "DIRECTIONAL",
+        "color": "#ffffff",
+        "intensity": 2.5,
+        "position": {
+          "x": 3,
+          "y": 5,
+          "z": 6
+        },
+        "targetPos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "appId": "p300Sun"
+      },
+      "entityOpts": {
+        "appId": "p300Sun",
+        "debugData": {
+          "name": "Sun"
+        }
+      },
+      "__sourcePath": "src/app/scenes/testDebugScene/p300Sun.light.json"
     },
     "thirdPersonGymAmbient": {
       "lightProps": {
@@ -15884,28 +16049,16 @@
     "testSphere": {
       "geoProps": {
         "debugData": {
-          "name": "Test Sphere",
-          "description": "This is a test sphere"
+          "name": "Test sphere",
+          "description": "The start scene's sphere (testMesh)."
         },
         "type": "SPHERE",
         "params": {
-          "radius": 0.5,
+          "radius": 1,
           "widthSegments": 32,
           "heightSegments": 32
         },
         "id": "testSphere"
-      },
-      "__saveData": {
-        "sceneTestECS": [
-          {
-            "__meta": {
-              "date": 1779449688109
-            },
-            "params": {
-              "radius": 2.6
-            }
-          }
-        ]
       },
       "__sourcePath": "src/app/scenes/sceneTestECS/testSphere.geometry.json"
     }
@@ -23875,46 +24028,12 @@
       "type": "STANDARD",
       "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseSphere.material.json"
     },
-    "testMaterial": {
-      "id": "testMaterial",
-      "params": {
-        "color": "#ff00ff"
-      },
-      "__saveData": {
-        "sceneTestECS": [
-          {
-            "__meta": {
-              "date": 1779449688109
-            },
-            "params": {
-              "wireframe": false
-            }
-          }
-        ]
-      },
-      "type": "PHONG",
-      "__sourcePath": "src/app/scenes/sceneTestECS/testMaterial.material.json"
-    },
     "testTslMat": {
       "id": "testTslMat",
-      "__saveData": {
-        "sceneTestECS": [
-          {
-            "__meta": {
-              "date": 1779449688109
-            },
-            "nodes": {
-              "colorNode": {
-                "baseColor": "#1c233a"
-              }
-            }
-          }
-        ]
-      },
       "tslFile": "scenes/sceneTestECS/testTslMat.tsl.ts",
       "nodes": {
         "colorNode": {
-          "baseColor": "#1a233a",
+          "baseColor": "#1c233a",
           "panelColor": "#ffaa00",
           "gridScale": 1,
           "texture": "testTexture"
@@ -24074,9 +24193,9 @@
         "castShadow": true,
         "receiveShadow": true,
         "position": {
-          "x": -4,
-          "y": 1,
-          "z": -1
+          "x": -3,
+          "y": 0.5,
+          "z": 1
         },
         "appId": "testImportedMesh"
       },
@@ -24094,16 +24213,6 @@
           "z": 2
         },
         "appId": "testMesh"
-      },
-      "__saveData": {
-        "sceneTestECS": [
-          {
-            "castShadow": false,
-            "__meta": {
-              "date": 1779449688109
-            }
-          }
-        ]
       },
       "__sourcePath": "src/app/scenes/sceneTestECS/testMesh.mesh.json"
     }

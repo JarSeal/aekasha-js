@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../../.schemas/light.schema.json",
+  "lightProps": {
+    "type": "DIRECTIONAL",
+    "color": "#ffe5c7",
+    "intensity": 3,
+    "position": { "x": 5, "y": 10, "z": 6 },
+    "targetPos": { "x": 0, "y": 0, "z": 0 },
+    "castShadow": true,
+    "shadowPreset": "HIGH",
+    "shadowCameraNearFar": [1, 30],
+    "shadowCameraFrustum": [-8, 8, 8, -8],
+    "shadowIntensity": 0.75
+  },
+  "entityOpts": {
+    "appId": "directionalLight",
+    "debugData": {
+      "name": "Sun",
+      "description": "The shadow-casting sun. Its shadow frustum covers the meshes, not the whole ground: a larger one spreads the same shadow map over more ground."
+    }
+  }
+}

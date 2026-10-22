@@ -3,20 +3,10 @@
   "geoProps": {
     "type": "SPHERE",
     "params": {
-      "radius": 0.5,
+      "radius": 1,
       "widthSegments": 32,
       "heightSegments": 32
     },
-    "debugData": { "name": "Test Sphere", "description": "This is a test sphere" }
-  },
-  "__saveData": {
-    "sceneTestECS": [
-      {
-        "__meta": { "date": 1779449688109 },
-        "params": {
-          "radius": 2.6
-        }
-      }
-    ]
+    "debugData": { "name": "Test sphere", "description": "The start scene's sphere (testMesh)." }
   }
 }

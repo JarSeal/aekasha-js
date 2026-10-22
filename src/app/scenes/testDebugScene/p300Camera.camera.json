@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../.schemas/camera.schema.json",
+  "camProps": {
+    "type": "PERSPECTIVE",
+    "fov": 50,
+    "position": { "x": 0, "y": 1, "z": 7 },
+    "lookAtPoint": { "x": 0, "y": 0.7, "z": 0 },
+    "active": true
+  },
+  "entityOpts": {
+    "appId": "p300Camera",
+    "debugData": { "name": "Camera", "description": "Faces both rows of the orientation check." }
+  }
+}

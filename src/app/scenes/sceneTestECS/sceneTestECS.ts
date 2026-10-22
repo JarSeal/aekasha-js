@@ -1,195 +1,38 @@
-import {
-  getLoaderStatusUpdater,
-  createMeshEntity,
-  ECSWorld,
-  getECSWorld,
-  initECSStressTest,
-  createLightEntity,
-  createCameraEntity,
-} from 'aekasha';
-import type { MeshProps } from 'aekasha';
-import { HoverToolComponentType, registerHoverToolEffect } from 'aekasha/toolkit/ecs';
+import { createMeshEntity, getECSWorld } from 'aekasha';
+import { HoverToolComponentType } from 'aekasha/toolkit/ecs';
 
+/**
+ * The start scene (`src/index.ts` loads it first). Its camera, lights, sky box and two meshes come
+ * from `sceneTestECS.scene.json`: the sphere with the app's own TSL material (`testTslMat`) and a
+ * box imported from a GLB. The code adds what the JSON doesn't: a ground and a ball that hovers
+ * with the toolkit's HoverEffect, a component on its entity (the effect's system is registered in
+ * `src/AppECSPlugins.ts`).
+ */
 export const scene = async () => {
-  const updateLoaderFn = getLoaderStatusUpdater();
-  updateLoaderFn({ loadedCount: 0, totalCount: 2 });
-
-  const ecsWorld = getECSWorld();
-
-  updateLoaderFn({ loadedCount: 1, totalCount: 2 });
-
-  // --- ECS CAMERA ---
-
-  // Orthographic Camera
-  createCameraEntity(
+  // Its top at y = 0, where the meshes of the JSON stand
+  createMeshEntity(
     {
-      type: 'ORTHOGRAPHIC',
-      frustumSize: 20,
-      near: 0.1,
-      far: 2000,
-      position: { x: 10, y: 10, z: 10 },
-      lookAtPoint: { x: 0, y: 0, z: 0 },
+      geo: { type: 'BOX', params: { width: 20, height: 0.1, depth: 20 } },
+      mat: { type: 'LAMBERT', params: { color: 0x429925 } },
+      position: { y: -0.05 },
+      receiveShadow: true,
     },
-    { appId: 'orthoCamera', debugData: { name: 'Ortho camera' } }
+    { appId: 'ground', debugData: { name: 'Ground' } }
   );
 
-  // --- ECS LIGHTS ---
-
-  // Ambient Light
-  // createLightEntity(
-  //   {
-  //     type: 'AMBIENT',
-  //     color: '#ffffff',
-  //     intensity: 0.5,
-  //   },
-  //   {
-  //     appId: 'ambientLight',
-  //     debugData: {
-  //       name: 'Ambient light',
-  //       description:
-  //         'The ambient light for the scene. It colors everything in the scene (except skyboxes and basic materials) whether you like it or not. This is what next gen games is all about.',
-  //     },
-  //   }
-  // );
-  // createLightEntity({ type: 'AMBIENT', appId: 'ambientLight' });
-
-  // Hemisphere Light
-  createLightEntity(
+  const ballId = createMeshEntity(
     {
-      type: 'HEMISPHERE',
-      color: 0x220000,
-      groundColor: 0x225599,
-      intensity: 1.5,
-    },
-    { appId: 'hemisphereLight' }
-  );
-
-  // Point Light
-  const pointLightId = createLightEntity(
-    {
-      type: 'POINT',
-      color: 0xffffff,
-      intensity: 7,
-      distance: 10,
-    },
-    { appId: 'pointLight' }
-  );
-  ecsWorld.setTransform(pointLightId, { pos: { x: 4, y: 5, z: 4 } });
-
-  // Directional Light
-  const dirLightId = createLightEntity(
-    {
-      type: 'DIRECTIONAL',
-      color: 0xffe5c7,
-      intensity: 5,
+      geo: { type: 'SPHERE', params: { radius: 0.5, widthSegments: 32, heightSegments: 32 } },
+      mat: { type: 'LAMBERT', params: { color: 0xff0000 } },
+      position: { x: 0, y: 1, z: 0 },
       castShadow: true,
-      shadowMapSize: [512, 512],
-      shadowCameraNearFar: [1, 15],
-      shadowCameraFrustum: [-10, 10, 10, -10], // Left, Right, Top, Bottom
-      shadowBias: -0.01,
-      shadowNormalBias: -0.01,
-      shadowRadius: 5,
-      shadowBlurSamples: 10,
-      shadowIntensity: 0.75,
     },
-    { appId: 'directionalLight' }
+    { appId: 'hoverBall', debugData: { name: 'Hover ball' } }
   );
-  ecsWorld.setTransform(dirLightId, { pos: { x: -5, y: 2.5, z: 2.5 } });
-
-  // Spot Light (From the top)
-  createLightEntity(
-    {
-      type: 'SPOT',
-      color: '#ffffff',
-      intensity: 10, // Higher intensity for dramatic effect
-      distance: 50, // Range of the light
-      angle: Math.PI / 6, // The cone angle (30 degrees)
-      penumbra: 0.5, // Softness of the cone edges
-      decay: 0.5, // Light falloff
-      castShadow: true,
-      shadowMapSize: [1024, 1024],
-      shadowCameraNearFar: [1, 48],
-      position: { x: 0, y: 15, z: 0 },
-      targetPos: { x: 0, y: 0, z: 0 }, // Point at the center/ball
-    },
-    {
-      appId: 'topSpotLight',
-      debugData: { name: 'Top Spot Light' },
-    }
-  );
-
-  const redBallProps: MeshProps = {
-    geo: {
-      type: 'SPHERE',
-      params: {
-        radius: 0.5,
-        widthSegments: 32,
-        heightSegments: 32,
-      },
-    },
-    mat: {
-      type: 'LAMBERT',
-      params: {
-        color: 0xff0000,
-        // roughness: 0.4,
-        // metalness: 0.2,
-      },
-    },
-    castShadow: true,
-    receiveShadow: true,
-    preWarm: false,
-  };
-
-  // To spawn it:
-  const ballId = createMeshEntity(redBallProps);
-
-  // Add the Hover behavior
-  ecsWorld.addComponent(ballId, HoverToolComponentType.HOVER, {
-    speed: 2.0, // How fast it bobs
-    amplitude: 0.5, // How high it bobs
-    baseY: 1.0, // The center point of the hover
-    time: 0, // Start at 0
+  // Bobs 0.4 m around y = 1, at 2 rad/s
+  getECSWorld().addComponent(ballId, HoverToolComponentType.HOVER, {
+    speed: 2,
+    amplitude: 0.4,
+    baseY: 1,
   });
-
-  // 3. (Optional) Set the initial position
-  ecsWorld.setTransform(ballId, { pos: { x: 0, y: 1, z: 0 } });
-
-  // Ground
-  const groundProps: MeshProps = {
-    geo: {
-      type: 'BOX',
-      params: {
-        width: 30,
-        height: 30,
-        depth: 0.1,
-      },
-    },
-    mat: {
-      type: 'LAMBERT',
-      params: { color: 0x429925 },
-    },
-    castShadow: true,
-    receiveShadow: true,
-    preWarm: false,
-    position: { y: -1 },
-    rotation: { x: Math.PI / 2 },
-  };
-  createMeshEntity(groundProps, { appId: 'ground', debugData: { name: 'Ground' } }, ecsWorld);
-
-  // Second world
-  const uiWorld = new ECSWorld({ id: 'ui', applyGlobalPlugins: false });
-  registerHoverToolEffect(uiWorld);
-  const ball2Id = createMeshEntity(redBallProps, undefined, uiWorld);
-  uiWorld.setTransform(ball2Id, { pos: { x: 4, y: 6, z: -5 } });
-  uiWorld.addComponent(ball2Id, HoverToolComponentType.HOVER, {
-    speed: 3.14, // How fast it bobs
-    amplitude: 0.85, // How high it bobs
-    baseY: 6.0, // The center point of the hover
-    time: 0, // Start at 0
-  });
-
-  // Stress test ECS
-  initECSStressTest(undefined, ballId);
-
-  updateLoaderFn({ loadedCount: 2, totalCount: 2 });
 };
