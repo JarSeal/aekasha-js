@@ -601,5 +601,5 @@ export const scene = async () => {
     deleteFollowObjectCameraRig(CAMERA_RIG_ID);
   });
 
-  updateLoaderFn({ loadedCount: 2, totalCount: 2 });
+  updateLoaderFn({ loadedCount: 3, totalCount: 3 });
 };

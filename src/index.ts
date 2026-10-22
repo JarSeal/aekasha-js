@@ -84,13 +84,12 @@ InitEngine({
             setTimeout(() => resolve(true), 500);
           }, 0);
         }),
-      updateLoaderStatusFn: async (loader, params) => {
-        if (!params) return true;
-        if ('loadedCount' in params && 'totalCount' in params) {
+      // Scene code reports its progress through getLoaderStatusUpdater()
+      updateLoaderStatusFn: (loader, params) => {
+        if (params && 'loadedCount' in params && 'totalCount' in params) {
           loader.loaderContainer?.update({
             text: `Loading, ${params.loadedCount} / ${params.totalCount}`,
           });
-          if (params.loaded === params.totalCount) return true;
         }
       },
     });

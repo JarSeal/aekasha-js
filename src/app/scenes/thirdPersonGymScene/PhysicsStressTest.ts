@@ -1,6 +1,9 @@
 import {
   createActionMap,
+  getCurrentSceneId,
+  getECSWorld,
   getLogger,
+  lwarn,
   createGeometry,
   createMaterial,
   createMeshEntity,
@@ -50,6 +53,7 @@ export const initPhysicsStressTest = ({
   const spawnBatch = () => {
     // Resolved per batch (cache hits by id), so a batch never holds a released asset
     const { geoBox, geoSphere, mat } = getAssets();
+    const creates: Promise<unknown>[] = [];
     for (let i = 0; i < batchSize; i++) {
       stressTestCount++;
       const isBox = Math.random() > 0.5;
@@ -72,11 +76,9 @@ export const initPhysicsStressTest = ({
         { appId }
       );
 
-      // Fire-and-forget: createPhysicsEntity is async (WORKER_THREAD round-trips to the
-      // physics worker), and this spawns up to `batchSize` per keypress — awaiting each one
-      // in sequence would serialize the whole batch instead of letting them settle in
-      // parallel, same as the legacy synchronous spawner effectively did.
-      void createPhysicsEntity(
+      // Created in parallel, not awaited one by one (WORKER_THREAD round-trips to the worker). A
+      // body that isn't created (eg. the world's maxBodies) takes its mesh with it
+      const create = createPhysicsEntity(
         {
           type: isBox ? 'BOX' : 'BALL',
           ...(isBox
@@ -98,10 +100,26 @@ export const initPhysicsStressTest = ({
           },
         },
         entityId
-      );
+      ).catch((error: unknown) => {
+        const world = getECSWorld();
+        if (world.isAlive(entityId)) world.deleteEntity(entityId);
+        throw error;
+      });
+      creates.push(create);
     }
 
     getLogger().log(`Stress Test: Spawned ${batchSize} objects. Total: ${stressTestCount}`);
+    // One warning per batch; none once the scene is left (its exit deleted the meshes)
+    void Promise.allSettled(creates).then((results) => {
+      const failed = results.filter(
+        (result): result is PromiseRejectedResult => result.status === 'rejected'
+      );
+      if (!failed.length || getCurrentSceneId() !== sceneId) return;
+      lwarn(
+        `Stress Test: ${failed.length} of ${batchSize} bodies weren't created (their meshes were deleted).`,
+        failed[0].reason
+      );
+    });
   };
 
   // 3. Bind to Key 'J' (for "Junk"): a scene map (replaced on the next visit, by its id), also

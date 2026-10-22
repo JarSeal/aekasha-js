@@ -13046,7 +13046,6 @@
           },
           "entityOpts": {
             "appId": "mainCamera",
-            "persistent": true,
             "debugData": {
               "name": "Main camera",
               "description": "Main application camera"
@@ -15070,7 +15069,6 @@
       },
       "entityOpts": {
         "appId": "mainCamera",
-        "persistent": true,
         "debugData": {
           "name": "Main camera",
           "description": "Main application camera"

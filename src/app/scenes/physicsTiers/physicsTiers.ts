@@ -105,7 +105,8 @@ const circleSegments = (radius: number, y: number) => {
 };
 
 /** Tints each crate by its tier: one shared material per tier, swapped only on a change. The
- * scene holds a ref on each until `release`: a material no crate shows would be disposed. */
+ * scene holds a ref on each from `retain` to `release`: a material no crate shows would be
+ * disposed. */
 const createTintSystem = (crateMeshes: Map<number, THREE.Mesh>) => {
   const materials = {} as Record<PhysicsTier, THREE.Material>;
   const materialIds = (Object.keys(TIER_COLORS) as PhysicsTier[]).map(
@@ -123,7 +124,9 @@ const createTintSystem = (crateMeshes: Map<number, THREE.Mesh>) => {
       },
     });
   }
-  for (const id of materialIds) incMaterialRef(id);
+  const retain = () => {
+    for (const id of materialIds) incMaterialRef(id);
+  };
   const release = () => {
     for (const id of materialIds) decMaterialRef(id);
   };
@@ -139,7 +142,7 @@ const createTintSystem = (crateMeshes: Map<number, THREE.Mesh>) => {
       mesh.castShadow = tier !== 'REMOVED';
     }
   };
-  return { material: materials.FULL, system, release };
+  return { material: materials.FULL, system, retain, release };
 };
 
 export const scene = async () => {
@@ -274,12 +277,17 @@ export const scene = async () => {
   // Moved on fixed steps (scene time, not frame time), so the plough runs the same every visit
   let travelled = 0;
   const target = new THREE.Vector3();
-  world.removeSystem(STEP_SYSTEM_ID);
+  // What the exit undoes is taken after everything that can throw: a load that fails never exits
+  tint.retain();
+  registerOnSceneExit(PHYSICS_TIERS_SCENE_ID, () => {
+    world.removeSystem(STEP_SYSTEM_ID);
+    world.removeSystem(TINT_SYSTEM_ID);
+    tint.release();
+  });
   world.addSystem(ECSSystemStage.APP_PHYSICS_STEP, STEP_SYSTEM_ID, (_world, dt) => {
     travelled += PLOUGH_SPEED * dt;
     ploughBody.setNextKinematicTranslation(path.pointAt(travelled, target));
   });
-  world.removeSystem(TINT_SYSTEM_ID);
   world.addSystem(ECSSystemStage.APP_RENDER_SYNC, TINT_SYSTEM_ID, tint.system);
 
   // --- Chase camera, C switches between it and the overview
@@ -336,12 +344,5 @@ export const scene = async () => {
       casterExtension: 10,
     });
   });
-  // (One exit callback per scene: registerOnSceneExit replaces any earlier one.)
-  registerOnSceneExit(PHYSICS_TIERS_SCENE_ID, () => {
-    world.removeSystem(STEP_SYSTEM_ID);
-    world.removeSystem(TINT_SYSTEM_ID);
-    tint.release();
-  });
-
   updateLoaderFn({ loadedCount: pileCount + 1, totalCount: pileCount + 1 });
 };
