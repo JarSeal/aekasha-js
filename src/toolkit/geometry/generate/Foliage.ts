@@ -32,6 +32,33 @@ export interface GeneratedTreeGeometry {
  * Builds a very low-poly tree: a cylinder trunk topped with a cone canopy, merged into one
  * geometry with two material groups (trunk, canopy). The geometry isn't registered: save it with
  * `saveBufferGeometry`, or hand it to an instanced pool, which owns it.
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ *
+ * // A forest: one instanced mesh (aekasha/instancing) with a tree at each placement
+ * const tree = generateTreeGeometry({ trunkHeight: 2, radialSegments: 6 });
+ * const material: THREE.Material[] = [];
+ * material[tree.materialGroups.trunk] = createMaterial({
+ *   id: 'trunkMat',
+ *   type: 'LAMBERT',
+ *   params: { color: '#6b4a2b' },
+ * });
+ * material[tree.materialGroups.foliage] = createMaterial({
+ *   id: 'leafMat',
+ *   type: 'LAMBERT',
+ *   params: { color: '#3f7a3a' },
+ * });
+ * const world = getECSWorld();
+ * const pool = createInstancedMeshPool({
+ *   world,
+ *   geometry: saveBufferGeometry(tree.geometry, { id: 'treeGeo' }),
+ *   material,
+ *   maxInstances: placements.length,
+ * });
+ * getRootScene()?.add(pool.mesh);
+ * pool.spawn(world, placements);
+ * ```
  */
 export const generateTreeGeometry = (opts: TreeGeometryOptions = {}): GeneratedTreeGeometry => {
   const {
@@ -86,6 +113,16 @@ export interface BushGeometryOptions {
  * Builds a very low-poly bush: a few seeded spheres merged into one geometry around the origin,
  * each raised by about 0.6 of its radius (sunk a little into the ground), for one material. The geometry isn't registered: save it with
  * `saveBufferGeometry`, or hand it to an instanced pool, which owns it.
+ * @example
+ * ```ts
+ * // Three bushes of the same shape
+ * const bushGeo = saveBufferGeometry(generateBushGeometry({ clusterCount: 4, seed: 2 }), {
+ *   id: 'bushGeo',
+ * });
+ * for (const x of [-3, 0, 3]) {
+ *   createMeshEntity({ geo: bushGeo, mat: 'leafMat', position: { x, y: 0, z: 0 } });
+ * }
+ * ```
  */
 export const generateBushGeometry = (opts: BushGeometryOptions = {}): THREE.BufferGeometry => {
   const { clusterCount = 3, baseRadius = 0.5, radiusVariance = 0.2, segments = 5, seed = 1 } = opts;

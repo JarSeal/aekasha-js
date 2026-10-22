@@ -320,6 +320,21 @@ const sunShadowFitSystem = (world: ECSWorld) => {
  * `SUN_SHADOW_FIT` component fits its shadow to the view. A second call on the same world is a
  * no-op.
  * @returns `world`
+ * @example
+ * ```ts
+ * // Registered for every world, in the app's feature (src/AppECSPlugins.ts)
+ * export const appFeature: EngineFeature = {
+ *   id: 'app',
+ *   install: (ctx) => ctx.registerPlugin(registerSunShadowFitEffect),
+ * };
+ *
+ * // In scene code: the sun's shadow covers the main camera's view out to 50 m, and casters up
+ * // to 25 m beyond it toward the sun
+ * getECSWorld().addComponent(sunEntityId, SunShadowFitComponentType.SUN_SHADOW_FIT, {
+ *   maxDistance: 50,
+ *   casterExtension: 25,
+ * });
+ * ```
  */
 export const registerSunShadowFitEffect = (world: ECSWorld) => {
   world.addSystem(

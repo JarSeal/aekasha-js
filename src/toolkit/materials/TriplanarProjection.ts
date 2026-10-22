@@ -95,6 +95,28 @@ export interface TriplanarProjectionOptions {
  * blend weights of the three projections (components sum to 1), or with `dominantAxis` which
  * single projection to use. Both use the geometry normal, never `normalWorld`, which outside the
  * normal sub-build is the perturbed normal.
+ * @example
+ * ```ts
+ * import { fract, step, vec3 } from 'three/tsl';
+ * import type { Node, NodeMaterial } from 'three/webgpu';
+ *
+ * // A TSL material's colorNode socket (`<id>.tsl.ts`): world-space stripes on every face,
+ * // `stripeWidth` meters wide, from the material JSON's `nodes.colorNode`
+ * export const colorNode = (inputs: { stripeWidth: Node<'float'> }, material: NodeMaterial) => {
+ *   const projection = triplanarProjection(
+ *     {
+ *       cellSize: inputs.stripeWidth,
+ *       alignToObject: false,
+ *       fitToBounds: false,
+ *       dominantAxis: true,
+ *     },
+ *     material
+ *   );
+ *   return blendProjections(projection, (coord, cellSize) =>
+ *     vec3(step(0.5, fract(coord.x.div(cellSize.x))))
+ *   );
+ * };
+ * ```
  */
 export const triplanarProjection = (
   { cellSize, alignToObject, fitToBounds, dominantAxis }: TriplanarProjectionOptions,

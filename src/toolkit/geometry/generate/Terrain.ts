@@ -74,6 +74,28 @@ export interface GeneratedTerrain {
  * (and `heightModifier`), with `getHeightAt` to place things on it (scattering, spawn points) and
  * the heights as an array. The geometry isn't registered: save it with `saveBufferGeometry` to
  * have it disposed with its scene.
+ * @example
+ * ```ts
+ * const terrain = generateTerrain({
+ *   width: 200,
+ *   depth: 200,
+ *   widthSegments: 50,
+ *   depthSegments: 50,
+ *   maxHeight: 6,
+ *   seed: 4,
+ * });
+ * createMeshEntity({
+ *   geo: saveBufferGeometry(terrain.geometry, { id: 'terrainGeo' }),
+ *   mat: 'grassMat',
+ *   receiveShadow: true,
+ * });
+ * // A 1 m crate standing on the ground at x = 10, z = 20
+ * createMeshEntity({
+ *   geo: 'crateGeo',
+ *   mat: 'crateMat',
+ *   position: { x: 10, y: terrain.getHeightAt(10, 20) + 0.5, z: 20 },
+ * });
+ * ```
  */
 export const generateTerrain = (opts: TerrainOptions): GeneratedTerrain => {
   // The vertices are built here, not by a rotated PlaneGeometry, so the grid's (row, col) → world

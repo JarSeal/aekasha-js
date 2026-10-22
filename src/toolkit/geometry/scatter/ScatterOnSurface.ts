@@ -122,6 +122,23 @@ const createSpacingGrid = (minSpacing: number) => {
  * @remarks With `minSpacing` it may return fewer than `count` placements: a point that finds no
  * free spot in its draws is skipped. Each placement allocates its vectors and quaternion: meant
  * for a scene's load, not per frame.
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ *
+ * // 500 bushes on a terrain mesh, at least 2 m apart, baked into a plain InstancedMesh (yours to
+ * // dispose; an instanced pool makes each one an entity and goes with its scene)
+ * const placements = scatterOnSurface({
+ *   surface: terrainMesh,
+ *   count: 500,
+ *   seed: 9,
+ *   minSpacing: 2,
+ *   scaleRange: [0.7, 1.3],
+ * });
+ * const bushes = new THREE.InstancedMesh(generateBushGeometry(), bushMaterial, 500);
+ * bakeScatterToInstancedMesh(bushes, placements);
+ * getRootScene()?.add(bushes);
+ * ```
  */
 export const scatterOnSurface = (opts: ScatterOptions): ScatterPlacement[] => {
   const {

@@ -261,6 +261,28 @@ const createPlatformMesh = (
  * (its scene exited)
  * @remarks Moves only once {@link registerMovingPlatformSystem} has run on the world. The
  * controls write the body when called, outside the physics step ({@link MovingPlatformControls}).
+ * @example
+ * ```ts
+ * // An elevator that goes up and back down twice, 4 s each way, then stops at the bottom
+ * const { controls } = await createMovingPlatform({
+ *   id: 'elevator',
+ *   shape: {
+ *     mesh: { geo: { type: 'BOX', params: { width: 4, height: 0.2, depth: 4 } }, mat: 'liftMat' },
+ *   },
+ *   physicsParams: {
+ *     collider: { type: 'BOX', friction: 0 },
+ *     rigidBody: { rigidType: 'POS_BASED' },
+ *   },
+ *   points: [
+ *     { pos: { x: 0, y: 0, z: 0 }, dur: 4000 },
+ *     { pos: { x: 0, y: 6, z: 0 }, dur: 4000 },
+ *   ],
+ *   opts: { loopTimes: 1 },
+ * });
+ * // Later, eg. from a button: again from the bottom
+ * controls.stop();
+ * controls.play();
+ * ```
  */
 export const createMovingPlatform = async (
   props: MovingPlatformParams

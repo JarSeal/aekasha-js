@@ -64,6 +64,21 @@ const hoverToolSystem = (world: ECSWorld, dt: number) => {
  * every entity with a {@link HoverToolComponentType} `HOVER` component bobs. A second call on the
  * same world is a no-op.
  * @returns `world`
+ * @example
+ * ```ts
+ * // Registered for every world, in the app's feature (src/AppECSPlugins.ts)
+ * export const appFeature: EngineFeature = {
+ *   id: 'app',
+ *   install: (ctx) => ctx.registerPlugin(registerHoverToolEffect),
+ * };
+ *
+ * // In scene code: the entity bobs 0.2 above and below y = 1, once every 2 s
+ * getECSWorld().addComponent(entityId, HoverToolComponentType.HOVER, {
+ *   speed: Math.PI,
+ *   amplitude: 0.2,
+ *   baseY: 1,
+ * });
+ * ```
  */
 export const registerHoverToolEffect = (world: ECSWorld) => {
   world.addSystem(ECSSystemStage.APP_LOGIC, 'hoverToolSystem', hoverToolSystem);

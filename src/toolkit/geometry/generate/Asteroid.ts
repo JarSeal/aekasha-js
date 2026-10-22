@@ -146,6 +146,21 @@ const computeHullVolume = (points: THREE.Vector3[]) => {
  * positions and normals only, no UVs: pair it with an object-space material such as the toolkit's
  * `asteroid` material. The geometry isn't registered: pass it through `saveBufferGeometry` (with an
  * id) before `createMeshEntity`, so it's disposed with its scene.
+ * @example
+ * ```ts
+ * // A long, heavily cratered rock with the toolkit's asteroid material
+ * const rock = generateAsteroid({
+ *   radius: 1.5,
+ *   seed: 3,
+ *   shape: [1.6, 1, 0.8],
+ *   craters: { count: 9 },
+ * });
+ * createMeshEntity({
+ *   geo: saveBufferGeometry(rock.geometry, { id: 'rock3' }),
+ *   mat: 'asteroid',
+ *   position: { x: 0, y: 2, z: 0 },
+ * });
+ * ```
  */
 export const generateAsteroid = (opts: AsteroidOptions = {}): GeneratedAsteroid => {
   const {

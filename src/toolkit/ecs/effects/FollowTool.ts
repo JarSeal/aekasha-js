@@ -155,6 +155,25 @@ const followToolSystem = (world: ECSWorld, dt: number) => {
  * {@link FollowToolComponentType} `FOLLOW` component follows its leader. A second call on the same
  * world is a no-op.
  * @returns `world`
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ *
+ * // Registered for every world, in the app's feature (src/AppECSPlugins.ts)
+ * export const appFeature: EngineFeature = {
+ *   id: 'app',
+ *   install: (ctx) => ctx.registerPlugin(registerFollowToolEffect),
+ * };
+ *
+ * // In scene code: a sun (a directional light's entity) that keeps shining on the player from
+ * // the same angle, its target on the player
+ * getECSWorld().addComponent(sunEntityId, FollowToolComponentType.FOLLOW, {
+ *   leaderId: playerEntityId,
+ *   offset: new THREE.Vector3(20, 40, 10),
+ *   targetOffset: new THREE.Vector3(0, 0, 0),
+ *   speed: 0,
+ * });
+ * ```
  */
 export const registerFollowToolEffect = (world: ECSWorld) => {
   world.addSystem(ECSSystemStage.APP_LOGIC, 'followToolSystem', followToolSystem);

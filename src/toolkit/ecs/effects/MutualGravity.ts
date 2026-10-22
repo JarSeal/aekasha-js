@@ -213,6 +213,30 @@ export const getMutualGravityDefaults = (): MutualGravityConfig => ({ ...DEFAULT
  * @remarks The positions come from each body's pose at the sub-step: exact in `MAIN_THREAD` mode;
  * in `WORKER_THREAD` mode the last pose the worker synced back, so the forces can be a frame stale
  * and the simulation isn't deterministic there (like the characters).
+ * @example
+ * ```ts
+ * // Registered for every world, in the app's feature (src/AppECSPlugins.ts)
+ * export const appFeature: EngineFeature = {
+ *   id: 'app',
+ *   install: (ctx) => ctx.registerPlugin(registerMutualGravityEffect),
+ * };
+ *
+ * // In scene code (a world without gravity): a rock that pulls, and is pulled by, the others,
+ * // with the mass its collider gets from its density
+ * const DENSITY = 2;
+ * const rock = generateAsteroid({ radius: 2, seed: 7 });
+ * const entityId = createMeshEntity({
+ *   geo: saveBufferGeometry(rock.geometry, { id: 'rock7' }),
+ *   mat: 'asteroid',
+ * });
+ * await createPhysicsEntity(
+ *   { type: 'CONVEXHULL', vertices: rock.hullVertices, density: DENSITY },
+ *   { rigidType: 'DYNAMIC', translation: { x: 10, y: 0, z: 0 } },
+ *   entityId
+ * );
+ * addGravityBody(entityId, DENSITY * rock.hullVolume);
+ * setMutualGravityConfig({ G: 0.5 });
+ * ```
  */
 export const registerMutualGravityEffect = (world: ECSWorld) => {
   world.addSystem(ECSSystemStage.APP_PHYSICS_STEP, 'mutualGravitySystem', mutualGravitySystem);
