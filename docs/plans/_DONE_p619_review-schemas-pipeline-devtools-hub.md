@@ -119,7 +119,7 @@ before fixing.
   `PERSISTENT`, so a camera, light or mesh entity whose JSON (or code) says `persistent: true`
   isn't kept on a scene switch (the debug camera adds the component itself). Documented on the
   field (`@remarks`); the fix (`createEntity` adds it) is a kernel behaviour change for the ECS's
-  owner, not done here.
+  owner, not done here. Filed as `docs/issues/entity-persistent-flag-not-applied.md` (p620 N3).
 
 **The data pipeline (`gatherAppData.ts` and its neighbours)**
 

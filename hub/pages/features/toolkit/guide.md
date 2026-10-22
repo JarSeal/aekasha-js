@@ -94,7 +94,8 @@ instanced pool, which owns it.
 - [`generateTerrain`](api:generateTerrain): a noise terrain grid, with its `heights` and a
   `getHeightAt(x, z)` that gives the height of the mesh's own triangle under the point, so what you
   place with it sits on the mesh. `heights` is row-major, and a `HEIGHTFIELD` collider reads
-  column-major: transpose them, or give the body a `TRIMESH` of the geometry.
+  column-major ([an open issue](hub:issues/heightfield-grid-layout)): give the body a `TRIMESH` of
+  the geometry, which matches the mesh exactly.
 - [`generateTreeGeometry`](api:generateTreeGeometry) and
   [`generateBushGeometry`](api:generateBushGeometry): low-poly foliage. A tree is one geometry
   with two material groups (`materialGroups`: the trunk's and the canopy's).
