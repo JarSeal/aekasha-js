@@ -5,7 +5,9 @@ Plain blocks, each a mesh with a `FIXED` box body of the same size, plus a ramp 
 <<< src/app/examples/character/exampleCharacter.ts#character-level
 
 - [`createPhysicsEntity`](api:createPhysicsEntity) attaches each body to its mesh's entity, as in
-  the [physics example](hub:examples/physics). Blocks of one size share a geometry, and blocks of
+  the [physics example](hub:examples/physics). The level starts every create, then awaits them
+  together: each sends its body before it awaits anything, so the bodies are still made in the
+  order the code asks for them, and a scene simulates the same on every visit. Blocks of one size share a geometry, and blocks of
   one colour a material: their ids carry the size and the colour.
 - The ramp is a tilted block. The controller walks up slopes to `maxWalkableAngle` (45° by
   default) and slides down steeper ones.
@@ -57,7 +59,9 @@ registered once for every world, in the app's `AppECSPlugins.ts`.
 - `lookAhead` leads the followed point up to `distance` metres in the character's direction of
   travel, eased in over `smoothingTime` (0.6 s by default). Once the character stands still, the
   lead moves back to it at `returnSpeed` (1 m/s by default).
-- The rig isn't an entity, so the scene deletes it on exit; the character goes with the scene.
+- The rig isn't an entity: its `sceneId` deletes it when the scene exits, as the character goes
+  with the scene. Without one, [`deleteFollowObjectCameraRig`](api:deleteFollowObjectCameraRig)
+  deletes it.
 
 The scene's `scene` function makes the level, the character and the camera, then the HUD line
 (`createExampleHud`, the examples' own).

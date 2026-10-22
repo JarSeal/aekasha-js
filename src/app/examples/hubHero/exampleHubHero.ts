@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import {
   getECSWorld,
+  getGeometry,
   saveBufferGeometry,
   getMaterial,
   createMeshEntity,
@@ -33,9 +34,9 @@ export const scene = async () => {
     position: { x: number; y: number; z: number };
     spin: number;
   }) => {
-    const rock = generateAsteroid(opts);
-    const geo = saveBufferGeometry(rock.geometry, { id: `heroAsteroid${opts.seed}` });
-    if (geo !== rock.geometry) rock.geometry.dispose();
+    // Generated only when its id isn't registered (a later visit may still have it)
+    const id = `heroAsteroid${opts.seed}`;
+    const geo = getGeometry(id) ?? saveBufferGeometry(generateAsteroid(opts).geometry, { id });
     const entityId = createMeshEntity({
       geo,
       mat: material,
@@ -59,9 +60,9 @@ export const scene = async () => {
     position: { x: 0, y: 0, z: 0 },
     spin: 0.05,
   });
-  const torus = new THREE.TorusGeometry(3.7, 0.035, 12, 256);
-  const ringGeo = saveBufferGeometry(torus, { id: 'heroRing' });
-  if (ringGeo !== torus) torus.dispose();
+  const ringGeo =
+    getGeometry('heroRing') ??
+    saveBufferGeometry(new THREE.TorusGeometry(3.7, 0.035, 12, 256), { id: 'heroRing' });
   const ringId = createMeshEntity({
     geo: ringGeo,
     mat: {

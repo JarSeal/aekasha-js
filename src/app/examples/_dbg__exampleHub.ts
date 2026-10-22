@@ -103,7 +103,9 @@ export const saveHubImageAsync = async (
     const message =
       err instanceof DevFilesError && err.code === 'CONFLICT'
         ? 'The file changed on disk while saving: save again.'
-        : (err as Error).message;
+        : err instanceof Error
+          ? err.message
+          : String(err);
     lerror(`Saving the Hub image failed: ${message}`, err);
     addDebugToast({ type: 'alert', title: 'Saving the Hub image failed', message });
   } finally {
@@ -115,8 +117,8 @@ export const saveHubImageAsync = async (
  * The example scene's "Hub" tab (a scene tab: removed on the scene's exit, created again on every
  * visit). `registerExampleHubTabs` creates it for the scenes the Hub shows; for another scene,
  * create it on its enter, in the debug env only, through a dynamic import.
- * @param sceneId (string) the example scene's id
- * @param size ({@link HubImageSize}) the image's size, default `CARD`
+ * @param sceneId the example the tab saves the image of (its PNG is named after it)
+ * @param size `CARD` (default) for an example page, `HERO` for the homepage
  * @param isTransparent see {@link saveHubImageAsync}
  */
 export const createExampleHubTab = (

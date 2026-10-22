@@ -31,10 +31,10 @@ export const scene = async () => {
     receiveShadow: true,
   });
 
-  // 1. A heavy mesh: a torus knot of 16,384 triangles
-  const geometry = saveBufferGeometry(new THREE.TorusKnotGeometry(1.2, 0.38, 256, 32), {
-    id: KNOT_ID,
-  });
+  // 1. A heavy mesh: a torus knot of 16,384 triangles, built on the first visit only
+  const geometry =
+    getGeometry(KNOT_ID) ??
+    saveBufferGeometry(new THREE.TorusKnotGeometry(1.2, 0.38, 256, 32), { id: KNOT_ID });
   const material = createMaterial({
     id: 'lodExampleKnot',
     type: 'STANDARD',
@@ -62,7 +62,7 @@ export const scene = async () => {
   const screenSizes = [0.2, 0.12, 0.065, 0.04];
   const levels = [
     ...chain.levels.map((level, i) => ({
-      geometry: getGeometry(level.geometryId) as THREE.BufferGeometry,
+      geometry: existsOrThrow(getGeometry(level.geometryId), `No LOD level ${level.geometryId}.`),
       material,
       screenSize: screenSizes[i],
     })),
@@ -71,7 +71,7 @@ export const scene = async () => {
 
   // 5. Where they stand: a grid, each knot turned a little, standing on the ground
   geometry.computeBoundingBox();
-  const y = -geometry.boundingBox!.min.y;
+  const y = -existsOrThrow(geometry.boundingBox, 'The knot has no bounding box.').min.y;
   const random = createSeededRandom(7);
   const placements = Array.from({ length: ROWS * COLUMNS }, (_, i) => ({
     position: new THREE.Vector3(

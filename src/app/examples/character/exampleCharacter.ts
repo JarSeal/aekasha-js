@@ -5,11 +5,10 @@ import {
   getCameraByAppId,
   getECSWorld,
   getMeshByAppId,
-  registerOnSceneExit,
 } from 'aekasha';
 import { createDynamicCharacter } from 'aekasha/character';
 import { createPhysicsEntity } from 'aekasha/physics';
-import { createFollowObjectCameraRig, deleteFollowObjectCameraRig } from 'aekasha/toolkit/ecs';
+import { createFollowObjectCameraRig } from 'aekasha/toolkit/ecs';
 import { createExampleHud } from '../exampleHud';
 
 const SCENE_ID = 'exampleCharacter';
@@ -87,20 +86,20 @@ const getSlope = (from: [y: number, z: number], to: [y: number, z: number], thic
   return { length: Math.hypot(run, rise), angle, y, z };
 };
 
-const createLevel = async () => {
-  for (const block of BLOCKS) await createBlock(block);
-
-  // A ramp up to the 1.5 m platform: 17°, the controller walks up to 45° (maxWalkableAngle)
+/** A ramp up to the 1.5 m platform: 17°, the controller walks up to 45° (maxWalkableAngle) */
+const createRamp = () => {
   const ramp = getSlope([0, -2], [1.5, -7], 0.2);
-  await createBlock({
+  return createBlock({
     size: [3, 0.2, ramp.length],
     at: [6, ramp.y, ramp.z],
     color: PURPLE,
     tiltX: ramp.angle,
   });
+};
 
-  // Stairs up to the 1 m platform: four 0.2 m steps, drawn only. A capsule catches on a step's
-  // edge, so the body walks up one smooth slope under them, through the middle of each step.
+/** Stairs up to the 1 m platform: four 0.2 m steps, drawn only. A capsule catches on a step's
+ * edge, so the body walks up one smooth slope under them, through the middle of each step. */
+const createStairs = () => {
   for (let i = 0; i < 4; i++) {
     const height = 0.2 * (i + 1);
     createMeshEntity({
@@ -116,7 +115,7 @@ const createLevel = async () => {
     });
   }
   const stairs = getSlope([0, -1.75], [1, -4.25], 0.2);
-  await createPhysicsEntity(
+  return createPhysicsEntity(
     { type: 'BOX', hx: 1.5, hy: 0.1, hz: stairs.length / 2 },
     {
       rigidType: 'FIXED',
@@ -125,6 +124,10 @@ const createLevel = async () => {
     }
   );
 };
+
+/** Every body requested at once, then awaited together: a create sends its body before its first
+ * await, so the bodies are made in this order, as one by one */
+const createLevel = () => Promise.all([...BLOCKS.map(createBlock), createRamp(), createStairs()]);
 // #endregion character-level
 
 // #region character-visual (shown in the Hub: hub/pages/examples/character/)
@@ -206,17 +209,17 @@ export const scene = async () => {
 
   // #region follow-camera (shown in the Hub: hub/pages/examples/character/)
   // South of and above the character, looking North-down without ever turning, and a little
-  // ahead of where it's heading
+  // ahead of where it's heading. The rig isn't an entity: its sceneId deletes it on the scene's
+  // exit, as the character goes with the scene.
   createFollowObjectCameraRig({
     id: CAMERA_RIG_ID,
+    sceneId: SCENE_ID,
     camera: existsOrThrow(getCameraByAppId('exampleCharacterCamera'), 'No example camera'),
     targetMesh: visual,
     offset: { x: 0, y: 10, z: 8 },
     orientation: 'FIXED',
     lookAhead: { distance: 1.5 },
   });
-  // The character goes with the scene; the rig isn't an entity, so it's deleted by hand
-  registerOnSceneExit(SCENE_ID, () => deleteFollowObjectCameraRig(CAMERA_RIG_ID));
   // #endregion follow-camera
 
   createExampleHud('W A S D or the arrows: move · Space: jump · Shift (hold): run · C: crouch');

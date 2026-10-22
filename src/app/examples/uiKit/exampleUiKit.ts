@@ -59,8 +59,10 @@ let groundColor = GROUND_COLORS[0].value;
 const getShapeName = (shapeId: ShapeId) => SHAPES.find((s) => s.id === shapeId)?.name ?? shapeId;
 const getColorLabel = (color: string) => COLORS.find((c) => c.value === color)?.label ?? color;
 
-const setMaterialColor = (materialId: string, color: string) =>
-  (getMaterial(materialId) as THREE.MeshStandardMaterial | undefined)?.color.set(color);
+const setMaterialColor = (materialId: string, color: string) => {
+  const material = getMaterial(materialId);
+  if (material instanceof THREE.MeshStandardMaterial) material.color.set(color);
+};
 
 export const scene = async () => {
   createMeshEntity({
@@ -106,6 +108,9 @@ export const scene = async () => {
 
   const panel = createHudPanel();
   createToasts();
+  // Registered on every visit, which replaces the kind's options: its windows close with the
+  // scene and aren't saved (saveToLS), so none is restored before a visit registers it. A kind
+  // whose windows are restored after a reload is registered once, in the app's `start`.
   registerShapeWindows();
   createActions();
 
@@ -332,9 +337,14 @@ const resetColors = () => {
 
 // An eighth of a turn around y
 const turnStep = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 4);
+const nextRotation = new THREE.Quaternion();
 
 const turnShape = (shapeId: ShapeId) => {
   const world = getECSWorld();
+  // getRotation's quaternion is to read: the turned one goes through setTransform
   const rotation = world.getRotation(shapeEntityIds[shapeId]);
-  if (rotation) world.setTransform(shapeEntityIds[shapeId], { rot: rotation.multiply(turnStep) });
+  if (!rotation) return;
+  world.setTransform(shapeEntityIds[shapeId], {
+    rot: nextRotation.copy(rotation).multiply(turnStep),
+  });
 };

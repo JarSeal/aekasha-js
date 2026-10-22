@@ -3,7 +3,9 @@
 <<< src/app/examples/lod/exampleLod.ts#lod-scene
 
 1. The knot is a registered geometry ([`saveBufferGeometry`](api:saveBufferGeometry)): a chain
-   is generated for a geometry id.
+   is generated for a geometry id. [`getGeometry`](api:getGeometry) first, so a knot still
+   registered isn't built again (`saveBufferGeometry` would return the registered one and leave
+   the new one to dispose).
 2. [`generateLodChain`](api:generateLodChain) simplifies it with meshoptimizer in the assets
    worker, into levels registered as `lodExampleKnot#lod1` and so on. Each level shares the knot's
    vertices and has its own, smaller index. A chain can come out shorter than asked for: a mesh
