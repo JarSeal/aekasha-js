@@ -64,7 +64,7 @@ In `geometry/`:
   instanced mesh ([`bakeScatterToInstancedMesh`](api:bakeScatterToInstancedMesh)) or spawned as
   entities ([`spawnScatterAsMeshEntities`](api:spawnScatterAsMeshEntities)).
 - [`generateAsteroid`](api:generateAsteroid): a rocky body from a seed.
-- [`createSeededRandom`](api:createSeededRandom): the seeded random numbers they all use, so the
+- [`createSeededRandom`](api:utils/SeededRandom.createSeededRandom): the seeded random numbers they all use, so the
   same seed gives the same world.
 
 ### Models

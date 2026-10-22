@@ -10,9 +10,17 @@ export {
 } from './gameplay/movingPlatform/MovingPlatform';
 export type {
   DeleteMeshOptions,
+  MovingPlatformControls,
+  MovingPlatformOptions,
+  MovingPlatformParams,
+  MovingPlatformPhysicsParams,
   MovingPlatformReturn,
   PhysicsParams,
 } from './gameplay/movingPlatform/MovingPlatform';
+export type {
+  MovingPlatformPathOptions,
+  MovingPlatformPoint,
+} from './gameplay/movingPlatform/PlatformPath';
 export { FollowToolComponentType, registerFollowToolEffect } from './effects/FollowTool';
 export type { FollowToolData } from './effects/FollowTool';
 export { HoverToolComponentType, registerHoverToolEffect } from './effects/HoverEffect';

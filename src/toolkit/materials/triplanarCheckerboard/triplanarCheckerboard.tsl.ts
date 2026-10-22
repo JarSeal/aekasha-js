@@ -57,8 +57,18 @@ const plusSignMask = (p: Node<'vec2'>, w: Node<'vec2'>) => {
   return max(horizontal, vertical).mul(fade);
 };
 
-// Inputs arrive pre-wrapped by createMaterial: numbers as float uniforms, hex strings as color
-// uniforms. `plusSignColor` is only needed with the plusSigns define.
+/**
+ * A triplanar checkerboard (`triplanarProjection`), box-filtered so it fades to the two colours'
+ * average in the distance, with an optional "+" in every cell.
+ *
+ * Inputs arrive pre-wrapped by createMaterial (numbers as float uniforms, hex strings as colour
+ * uniforms): `checkerSize` (a cell's size in meters), `checkerColorA`, `checkerColorB`, and
+ * `plusSignColor`, needed only with the `plusSigns` define. The static defines (booleans):
+ * `alignToObject` (default true), `fitToBounds` (false), `dominantAxis` (false), `plusSigns`
+ * (false). Asset code: the material's generated loader imports it, and `createMaterial` calls it
+ * by its socket name.
+ * @internal
+ */
 export const colorNode = (
   inputs: {
     checkerSize: Node<'float'>;

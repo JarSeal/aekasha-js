@@ -2,10 +2,14 @@ import * as THREE from 'three/webgpu';
 import { SimplexNoise } from 'three/examples/jsm/math/SimplexNoise.js';
 import { createSeededRandom } from 'aekasha';
 
+/** One octave of a terrain's height noise ({@link TerrainOptions}' `noiseOctaves`). */
 export interface TerrainNoiseOctave {
-  /** Noise cycles per world unit — larger frequency values = smaller/more frequent bumps. */
+  /** Noise cycles per world unit: a higher frequency gives smaller, closer bumps. */
   frequency: number;
-  /** Contribution weight of this octave relative to the others (weights are normalized). */
+  /**
+   * The octave's weight against the others: the weights are normalized, so the summed height
+   * stays within ±`maxHeight`.
+   */
   amplitude: number;
 }
 

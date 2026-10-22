@@ -174,8 +174,19 @@ const gridPattern = (
 
 // ─── Sockets ───
 
-// Inputs arrive pre-wrapped by createMaterial: numbers as float uniforms, hex strings as color
-// uniforms. The minorLine* inputs are only needed with the minorLines define.
+/**
+ * A triplanar grid (`triplanarProjection`): major lines, minor lines between them, over a
+ * background colour.
+ *
+ * Inputs arrive pre-wrapped by createMaterial (numbers as float uniforms, hex strings as colour
+ * uniforms): `lineThickness` and `lineFrequency` (the line spacing) in meters, `lineColor`,
+ * `backgroundColor`, and `minorLineDivisions` and `minorLineColor`, needed only with the
+ * `minorLines` define. The static defines (booleans): `alignToObject` (default true),
+ * `fitToBounds` (false), `dominantAxis` (false), `minorLines` (true), `seamNormals` (true, read by
+ * `normalNode`). Asset code: the material's generated loader imports it, and `createMaterial`
+ * calls it by its socket name.
+ * @internal
+ */
 export const colorNode = (
   inputs: {
     lineThickness: Node<'float'>;
@@ -205,9 +216,16 @@ export const colorNode = (
   });
 };
 
-// Seam grooves derived from the same line data as colorNode. The pattern inputs are read from the
-// colorNode block's uniforms, so the `colorNode` block must be declared before `normalNode` in the
-// material JSON. Without the seamNormals define the material keeps its default normal.
+/**
+ * Grooves along the grid's lines, from the same line data as `colorNode`: the inputs
+ * `seamNormalStrength` (the major lines') and `minorSeamNormalStrength` (the minor lines', default
+ * 0). Without the `seamNormals` define it returns null and the material keeps its normal.
+ *
+ * The pattern's inputs are read from the `colorNode` block's uniforms (`colorNode_lineThickness`
+ * and the rest), so the material JSON declares the `colorNode` block before `normalNode`. Asset
+ * code, called by `createMaterial` by its socket name.
+ * @internal
+ */
 export const normalNode = (
   inputs: { seamNormalStrength: Node<'float'>; minorSeamNormalStrength?: Node<'float'> },
   material: NodeMaterial,

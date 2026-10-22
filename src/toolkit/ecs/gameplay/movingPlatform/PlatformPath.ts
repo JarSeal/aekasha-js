@@ -1,6 +1,5 @@
 import * as THREE from 'three/webgpu';
 import { getLogger } from 'aekasha';
-import type { PlatformVec3 } from './PlatformVelocity';
 
 // A moving platform's path as a pure state machine: the points resolved once, the segment the
 // platform is on, and its playback state. No physics: the factory (MovingPlatform.ts) writes what
@@ -9,31 +8,42 @@ import type { PlatformVec3 } from './PlatformVelocity';
 /** The time to the next point when a point gives no `dur`, in ms. */
 const DEFAULT_SEGMENT_DURATION = 3000;
 
-/** Which way a platform runs its path: in the points' order, or against it. */
-export type PlatformDirection = 'FORWARD' | 'BACKWARD';
-
-/** One point of a moving platform's path. */
+/**
+ * One point of a moving platform's path
+ * ({@link toolkit/ecs/gameplay/movingPlatform/MovingPlatform!MovingPlatformParams}' `points`).
+ */
 export interface MovingPlatformPoint {
-  /** The platform's position at the point. */
-  pos: PlatformVec3;
+  /** The platform's position at the point, in world space. */
+  pos: { x: number; y: number; z: number };
   /**
-   * The platform's rotation at the point, normalized when read. A point without one keeps the
-   * rotation of the point before it (point 0 without one: no rotation).
+   * The platform's rotation at the point, a quaternion, normalized when read. A point without one
+   * keeps the rotation of the point before it (point 0 without one: no rotation).
    */
-  rot?: PlatformVec3 & { w: number };
+  rot?: { x: number; y: number; z: number; w: number };
   /**
-   * The time from this point to the next one in ms, 3000 when left
-   * out; the last point's is the time back to the first. 0 jumps.
+   * The time from this point to the next one in ms (default 3000); the last point's is the time
+   * back to the first. 0 jumps there in one step.
    */
   dur?: number;
 }
 
-/** How a path plays: its loops, its direction and its speed. */
-export interface PlatformPathOptions {
-  /** How many times the path repeats after its first run: -1 (the default) forever, 0 once. */
+/**
+ * How a moving platform plays its path: its loops, its direction and its speed. Given at creation
+ * ({@link toolkit/ecs/gameplay/movingPlatform/MovingPlatform!MovingPlatformOptions}) or
+ * changed later with {@link toolkit/ecs/gameplay/movingPlatform/MovingPlatform!MovingPlatformControls}'
+ * `setOptions`.
+ */
+export interface MovingPlatformPathOptions {
+  /**
+   * How many times the path repeats after its first run: -1 (the default) forever, 0 once. A loop
+   * ends each time the platform arrives at point 0, in either direction.
+   */
   loopTimes?: number;
-  /** Which way the path runs, `'FORWARD'` by default. */
-  direction?: PlatformDirection;
+  /**
+   * Which way the path runs (default `'FORWARD'`): in the points' order, or against it. A backward
+   * segment takes the `dur` of the point it runs to (the time of the same edge forward).
+   */
+  direction?: 'FORWARD' | 'BACKWARD';
   /** Scales the speed of every segment, 1 by default; 0 holds the platform where it is. */
   speedMultiplier?: number;
 }
@@ -112,7 +122,7 @@ export const validateMovingPlatform = (props: {
   shape?: { geo?: unknown; mat?: unknown; mesh?: unknown };
   physicsParams: { rigidBody?: { rigidType?: string } } | { rigidBody?: { rigidType?: string } }[];
   points: MovingPlatformPoint[];
-  opts?: PlatformPathOptions;
+  opts?: MovingPlatformPathOptions;
 }) => {
   const { id, shape, physicsParams, points, opts } = props;
   if (shape && !shape.mesh && !shape.geo) fail(id, 'a shape needs a mesh, or a geo and a mat');
@@ -165,7 +175,7 @@ const updateSegment = (path: PlatformPath) => {
  */
 export const createPlatformPath = (
   points: MovingPlatformPoint[],
-  opts: PlatformPathOptions = {},
+  opts: MovingPlatformPathOptions = {},
   isPlaying = true
 ): PlatformPath => {
   const rotations: THREE.Quaternion[] = [];
@@ -327,7 +337,7 @@ export const stopPlatformPath = (path: PlatformPath) => {
  * platform round where it is: the segment runs back to the point it came from, at the same speed.
  * @internal
  */
-export const setPlatformPathOptions = (path: PlatformPath, opts: PlatformPathOptions) => {
+export const setPlatformPathOptions = (path: PlatformPath, opts: MovingPlatformPathOptions) => {
   if (opts.loopTimes !== undefined) path.loopTimes = opts.loopTimes;
   if (opts.speedMultiplier !== undefined) path.speedMultiplier = opts.speedMultiplier;
   if (!opts.direction) return;

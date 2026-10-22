@@ -13,7 +13,11 @@ export interface HoverToolData {
   speed: number;
   amplitude: number;
   baseY: number;
-  time: number;
+  /**
+   * The phase in seconds (default 0), which the effect advances by each frame's time: different
+   * values keep entities with the same `speed` from bobbing in step.
+   */
+  time?: number;
 }
 
 declare module 'aekasha' {
@@ -22,15 +26,16 @@ declare module 'aekasha' {
   }
 }
 
-/** ECS System */
-export const hoverToolSystem = (world: ECSWorld, dt: number) => {
+// Moves each hovering entity to its height for this frame
+const hoverToolSystem = (world: ECSWorld, dt: number) => {
   const storage = world.getStorage(HoverToolComponentType.HOVER);
   if (!storage) return;
   const transformStore = world.getTypedTransformStore();
 
   for (const [entityId, data] of storage) {
-    data.time += dt;
-    const y = data.baseY + Math.sin(data.time * data.speed) * data.amplitude;
+    const time = (data.time ?? 0) + dt;
+    data.time = time;
+    const y = data.baseY + Math.sin(time * data.speed) * data.amplitude;
 
     if (transformStore) {
       const slot = transformStore.getSlot(entityId);

@@ -31,8 +31,8 @@ declare module 'aekasha' {
 // Scratchpad vector to prevent garbage collection stutters
 const _targetPos = new THREE.Vector3();
 
-/** ECS System */
-export const followToolSystem = (world: ECSWorld, dt: number) => {
+// Moves each follower (and its target link's entity) toward its leader's position plus offset
+const followToolSystem = (world: ECSWorld, dt: number) => {
   const storage = world.getStorage(FollowToolComponentType.FOLLOW);
   if (!storage) return;
   const transformStore = world.getTypedTransformStore();

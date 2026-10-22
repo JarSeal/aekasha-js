@@ -11,7 +11,7 @@ import {
   validateMovingPlatform,
   type MovingPlatformPoint,
   type PlatformPath,
-  type PlatformPathOptions,
+  type MovingPlatformPathOptions,
   type PlatformStepResult,
 } from './PlatformPath';
 
@@ -241,7 +241,7 @@ describe('validateMovingPlatform', () => {
     expectFail({ points: [] }, /points is empty/);
     expectFail({ points: [{ ...POINTS[0], dur: -1 }] }, /point 0's dur \(-1\)/);
     expectFail({ points: [{ ...POINTS[0], dur: Number.NaN }] }, /point 0's dur/);
-    const opts = (o: PlatformPathOptions) => ({ opts: o });
+    const opts = (o: MovingPlatformPathOptions) => ({ opts: o });
     expectFail(opts({ loopTimes: 1.5 }), /loopTimes \(1.5\)/);
     expectFail(opts({ loopTimes: -2 }), /loopTimes/);
     expectFail(opts({ speedMultiplier: -1 }), /speedMultiplier \(-1\)/);

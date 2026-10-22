@@ -28,13 +28,20 @@ const MAX_TRAVEL_SPEED = 100;
  * {@link createFollowObjectCameraRig}'s options: the camera, the mesh it follows, and how it
  * follows it.
  */
-export type FollowObjectCameraParams = {
+export interface FollowObjectCameraParams {
+  /** The rig's id: creating a rig with an id in use replaces that rig. */
   id: string;
   /** The scene whose exit deletes the rig; without one it stays until
    * {@link deleteFollowObjectCameraRig} */
   sceneId?: string;
+  /** The camera the rig moves and turns. */
   camera: THREE.Camera;
-  targetMesh: THREE.Mesh;
+  /**
+   * The object the camera follows, by its `position` after this frame's physics interpolation.
+   * @remarks The rig reads the local `position`: the world position for an entity's mesh (its
+   * parent is the scene's untransformed group), not for a child of a moved object.
+   */
+  targetMesh: THREE.Object3D;
   /** What is the offset of the camera from the target */
   offset?: { x: number; y: number; z: number };
   /** Smoothing function type (default is 'SMOOTH_DAMP') */
@@ -72,14 +79,18 @@ export type FollowObjectCameraParams = {
     /** The followed point (the target, plus the look-ahead's lead and `targetHeight`) */
     targetPos: THREE.Vector3;
     camera: THREE.Camera;
-    targetMesh: THREE.Mesh;
+    targetMesh: THREE.Object3D;
     offset: THREE.Vector3;
     smoothingType: 'SMOOTH_DAMP' | 'LERP';
     smoothingTime: number;
     spherical: THREE.Spherical;
   }) => void;
+  /**
+   * The mouse's movement since the last frame, in pixels: with it, the camera orbits the target
+   * at `offset`'s distance instead of keeping `offset`.
+   */
   getMouseMoveInput?: () => { x: number; y: number };
-};
+}
 
 type FollowRigState = {
   world: ECSWorld;

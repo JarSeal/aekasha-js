@@ -4,23 +4,33 @@ import { ConvexHull } from 'three/examples/jsm/math/ConvexHull.js';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { createSeededRandom } from 'aekasha';
 
+/** An asteroid's lumps ({@link AsteroidOptions}' `noise`): seeded simplex fbm along the normals. */
 export interface AsteroidNoiseOptions {
-  /** Lumps per unit of the undisplaced sphere's radius (the noise runs on the unit direction). */
+  /**
+   * Lumps per unit of the undisplaced sphere's radius (the noise runs on the unit direction;
+   * default 1.6).
+   */
   frequency?: number;
-  /** Peak lump height as a fraction of `radius`. */
+  /** Peak lump height as a fraction of `radius` (default 0.22). */
   amplitude?: number;
-  /** fbm octaves, each at twice the frequency and half the amplitude of the one before. */
+  /**
+   * fbm octaves, each at twice the frequency and half the amplitude of the one before (default 4).
+   */
   octaves?: number;
 }
 
+/**
+ * An asteroid's craters ({@link AsteroidOptions}' `craters`): spherical-cap bowls with raised rims,
+ * placed by the seed.
+ */
 export interface AsteroidCraterOptions {
-  /** Number of craters (0 = none). */
+  /** Number of craters (default 5; 0 = none). */
   count?: number;
-  /** Crater angular radius range in degrees, as seen from the rock's centre. */
+  /** Crater angular radius range in degrees, as seen from the rock's centre (default [10, 28]). */
   sizeDeg?: [min: number, max: number];
-  /** Bowl depth at the crater's centre, as a fraction of `radius`. */
+  /** Bowl depth at the crater's centre, as a fraction of `radius` (default 0.12). */
   depth?: number;
-  /** Rim height, as a fraction of the crater's depth. */
+  /** Rim height, as a fraction of the crater's depth (default 0.35). */
   rim?: number;
 }
 

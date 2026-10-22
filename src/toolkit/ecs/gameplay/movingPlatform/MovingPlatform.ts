@@ -5,15 +5,17 @@ import {
   createMeshEntity,
   getMeshByAppId,
   getECSWorld,
-  type ECSWorld,
+  getRootScene,
   ECSSystemStage,
   existsOrThrow,
 } from 'aekasha';
-import type { GeoProps, GeoTypes, Materials, MatProps, MeshProps } from 'aekasha';
+import type { ECSWorld, GeoProps, GeoTypes, Materials, MatProps, MeshProps } from 'aekasha';
 import { createPhysicsEntity } from 'aekasha/physics';
 import type { ColliderParams, RigidBodyParams } from 'aekasha/physics';
 import {
   createPlatformPath,
+  type MovingPlatformPathOptions,
+  type MovingPlatformPoint,
   hasMoveAndTurn,
   playPlatformPath,
   playPlatformPathSegment,
@@ -31,11 +33,27 @@ import {
 // The factory and the controls. The path's state machine is PlatformPath.ts, the velocities the
 // dynamic character reads from the body's user data PlatformVelocity.ts.
 
-/** One collider of a moving platform, the first one with the platform's rigid body. */
-export type PhysicsParams = {
+/**
+ * One collider of a moving platform ({@link MovingPlatformParams}' `physicsParams`); the first one
+ * also carries the platform's rigid body.
+ */
+export interface MovingPlatformPhysicsParams {
+  /** The collider; a primitive shape without its sizes takes them from the platform's mesh. */
   collider: ColliderParams;
+  /**
+   * The platform's rigid body, read from the first entry only, where it's required and must be
+   * `rigidType: 'POS_BASED'` (kinematic, moved by position). Its `userData` is copied, with the
+   * moving platform's fields added (`isMovingPlatform`, the segment's `velo` and `angVelo`, and
+   * `friction`), which the dynamic character reads to ride the platform.
+   */
   rigidBody?: RigidBodyParams;
-};
+}
+
+/**
+ * The old name of {@link MovingPlatformPhysicsParams}.
+ * @deprecated Use {@link MovingPlatformPhysicsParams} (removed in toolkit 3.0.0).
+ */
+export type PhysicsParams = MovingPlatformPhysicsParams;
 
 // One shared system drives every platform, each tick owned by its platform's entity: it runs only
 // for that entity's world, and is dropped once the entity is gone (eg. deleted with its scene).
@@ -71,49 +89,139 @@ export const registerMovingPlatformSystem = (world: ECSWorld) => {
   return world;
 };
 
-/** What to delete with a platform's mesh. Not read yet: `controls.delete()` deletes the platform's entity only. */
-export type DeleteMeshOptions = {
+/**
+ * What to delete with a platform's mesh.
+ * @deprecated Never read: {@link MovingPlatformControls}' `delete` deletes the platform's entity
+ * (its mesh and its body) and nothing else. Removed in toolkit 3.0.0.
+ */
+export interface DeleteMeshOptions {
+  /** Delete the mesh's geometries. */
   deleteGeometries?: boolean;
+  /** Delete the mesh's materials. */
   deleteMaterials?: boolean;
+  /** Delete the materials' textures. */
   deleteTextures?: boolean;
+  /** Delete all of the above. */
   deleteAll?: boolean;
-};
+}
 
-/** Playback controls of a platform made by {@link createMovingPlatform}. */
-export type MovingPlatformControls = {
+/**
+ * Playback controls of a platform made by {@link createMovingPlatform}.
+ * @remarks The controls write the rigid body (its pose, its next kinematic pose and its user data
+ * velocities) when they're called, not at a physics step: call them from scene code or UI, and
+ * expect a call between two steps to take effect at the next one.
+ */
+export interface MovingPlatformControls {
+  /**
+   * Plays the path on from where it is, or from the start of the segment at point
+   * `fromSegmentIndex` (which also drops {@link MovingPlatformControls.playSegment}'s stop). After
+   * the last loop ended, the loops start over.
+   */
   play: (fromSegmentIndex?: number) => void;
+  /** Stops the platform where it is; its user data velocities go to zero. */
   pause: () => void;
+  /**
+   * Plays the segment from point `segmentIndex` alone, from its start, then stops. A bad index is
+   * a no-op.
+   */
   playSegment: (segmentIndex: number) => void;
-  stop: () => void; // Resets to start
+  /** Stops the platform and puts it back at point 0, its loop count reset. */
+  stop: () => void;
+  /** Deletes the platform's entity (its mesh, when it has one, and its rigid body). */
   delete: () => void;
-  setOptions: (options: {
-    loopTimes?: number;
-    direction?: 'FORWARD' | 'BACKWARD';
-    speedMultiplier?: number;
-  }) => void;
+  /**
+   * Changes the loops, the direction or the speed; the options left out keep their values. A
+   * direction change mid-segment turns the platform round where it is, at the same speed.
+   */
+  setOptions: (options: MovingPlatformPathOptions) => void;
+  /** The platform's playback state, a new object per call. */
   getState: () => {
+    /** Whether it moves on the next step. */
     isPlaying: boolean;
+    /** The loops ended since the start, the last stop or the last end. */
     currentLoopCount: number;
+    /** The segment `playSegment` plays before it stops, or null. */
     targetSegmentIndex: number | null;
+    /** Scales every segment's speed. */
     speedMultiplier: number;
+    /** The point the current segment starts from. */
     curIndex: number;
+    /** The point the current segment runs to. */
     nextIndex: number;
+    /** How far along the current segment, 0 to 1. */
     t: number;
+    /** The current segment's time at speed 1, in seconds. */
     segmentDuration: number;
   };
-};
+}
 
 /** {@link createMovingPlatform}'s result: the platform's entity, its mesh and its controls. */
-export type MovingPlatformReturn = {
+export interface MovingPlatformReturn {
+  /** The platform's entity: the mesh's entity when it has one, else a physics-only entity. */
   entityId: number;
+  /** The platform's mesh, when `shape` gave or made one. */
   mesh?: THREE.Mesh;
+  /** Plays, pauses, stops and deletes the platform. */
   controls: MovingPlatformControls;
-};
+}
 
-type PlatformShape = NonNullable<Parameters<typeof createMovingPlatform>[0]['shape']>;
+/**
+ * How a moving platform plays ({@link MovingPlatformParams}' `opts`): the path's options, and
+ * whether it starts at once.
+ */
+export interface MovingPlatformOptions extends MovingPlatformPathOptions {
+  /** Whether it moves from the first physics step (default true); false waits for `play()`. */
+  isPlayingFromStart?: boolean;
+  /**
+   * What to delete with the mesh.
+   * @deprecated Never read (see {@link DeleteMeshOptions}); removed in toolkit 3.0.0.
+   */
+  deleteMeshOptions?: DeleteMeshOptions;
+}
+
+/** {@link createMovingPlatform}'s props: the platform's mesh, its physics, its path and its playback. */
+export interface MovingPlatformParams {
+  /**
+   * The platform's id, unique among the live platforms: it names the mesh and the entity the
+   * platform makes (`movingPlatformMesh-<id>`, `movingPlatform-<id>`).
+   */
+  id: string;
+  /** The physics-only platform's debug name (without a mesh). */
+  name?: string;
+  /**
+   * Where a mesh given as a three `Mesh` without a parent goes (default: the root scene). A mesh
+   * made from props, or by `createMeshEntity`, already has one.
+   */
+  scene?: THREE.Scene | THREE.Group;
+  /** The platform's mesh; without one the platform is physics only (invisible). */
+  shape?: {
+    /** A geometry or its props, with `mat`, when `mesh` isn't given. */
+    geo?: GeoProps | GeoTypes;
+    /** A material or its props, with `geo`. */
+    mat?: MatProps | Materials;
+    /**
+     * A mesh (eg. one made with `createMeshEntity`, whose entity then gets the physics), or the
+     * props to make one. Wins over `geo` and `mat`.
+     */
+    mesh?: MeshProps | THREE.Mesh;
+    /** Whether a mesh made from `geo` and `mat` casts shadows (default false). */
+    castShadow?: boolean;
+    /** Whether a mesh made from `geo` and `mat` receives shadows (default false). */
+    receiveShadow?: boolean;
+  };
+  /** The colliders, the first with the platform's rigid body. */
+  physicsParams: MovingPlatformPhysicsParams | MovingPlatformPhysicsParams[];
+  /** The path: one or more points, closed (after the last point it runs back to the first). */
+  points: MovingPlatformPoint[];
+  /** How it plays (default: forward, forever, at speed 1, from the start). */
+  opts?: MovingPlatformOptions;
+}
 
 /** The platform's mesh: the one given, or a mesh entity made from mesh props or a geo and a mat. */
-const createPlatformMesh = (id: string, shape: PlatformShape): THREE.Mesh | undefined => {
+const createPlatformMesh = (
+  id: string,
+  shape: NonNullable<MovingPlatformParams['shape']>
+): THREE.Mesh | undefined => {
   if (shape.mesh && 'isMesh' in shape.mesh) return shape.mesh;
   if (shape.mesh) {
     const meshAppId = shape.mesh.appId || `movingPlatformMesh-${id}`;
@@ -138,31 +246,9 @@ const createPlatformMesh = (id: string, shape: PlatformShape): THREE.Mesh | unde
  * `loopTimes` -1 (the default) loops forever.
  * @remarks Moves only once {@link registerMovingPlatformSystem} has run on the world.
  */
-export const createMovingPlatform = async (props: {
-  id: string;
-  name?: string;
-  scene: THREE.Scene | THREE.Group;
-  shape?: {
-    geo?: GeoProps | GeoTypes;
-    mat?: MatProps | Materials;
-    mesh?: MeshProps | THREE.Mesh;
-    castShadow?: boolean;
-    receiveShadow?: boolean;
-  };
-  physicsParams: PhysicsParams | PhysicsParams[];
-  points: {
-    pos: { x: number; y: number; z: number };
-    rot?: { x: number; y: number; z: number; w: number };
-    dur?: number;
-  }[];
-  opts?: {
-    deleteMeshOptions?: DeleteMeshOptions;
-    isPlayingFromStart?: boolean; // Default true
-    loopTimes?: number;
-    direction?: 'FORWARD' | 'BACKWARD';
-    speedMultiplier?: number;
-  };
-}): Promise<MovingPlatformReturn> => {
+export const createMovingPlatform = async (
+  props: MovingPlatformParams
+): Promise<MovingPlatformReturn> => {
   const { id, name, scene, shape, physicsParams, points, opts } = props;
   validateMovingPlatform(props);
 
@@ -305,7 +391,7 @@ export const createMovingPlatform = async (props: {
     },
   });
 
-  if (mesh && !mesh.parent) scene.add(mesh);
+  if (mesh && !mesh.parent) (scene ?? getRootScene())?.add(mesh);
 
   return { entityId, mesh, controls };
 };

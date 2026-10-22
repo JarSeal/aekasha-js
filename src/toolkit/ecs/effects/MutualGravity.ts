@@ -21,16 +21,25 @@ import type { PhysVector, RigidBodyAPI } from 'aekasha/physics';
  * changes it should set it on enter.
  */
 
-export type MutualGravityConfig = {
+export interface MutualGravityConfig {
   /** Gravitational constant in scene units (default 1: m/s² per kg of the attractor at 1 m). */
   G: number;
   /** Softening length ε in metres (default 0.5): about the size of the bodies. */
   softening: number;
   /** Whether the forces are applied (default true). Turning it off resets the forces once. */
   enabled: boolean;
-};
+}
 
-export type GravityBody = { entityId: number; mass: number };
+/**
+ * A gravity body as `getGravityBodies` lists it.
+ * @internal
+ */
+export interface GravityBody {
+  /** The body's entity. */
+  entityId: number;
+  /** Its gravitational mass. */
+  mass: number;
+}
 
 const DEFAULT_CONFIG: MutualGravityConfig = { G: 1, softening: 0.5, enabled: true };
 const config: MutualGravityConfig = { ...DEFAULT_CONFIG };
@@ -154,14 +163,20 @@ export const removeGravityBody = (entityId: number) => {
   }
 };
 
-/** Removes every gravity body (their forces are left as they are: this runs on scene exit, when
- * the bodies are deleted anyway). */
+/**
+ * Removes every gravity body (their forces are left as they are: this runs on scene exit, when
+ * the bodies are deleted anyway). Exported for the tests.
+ * @internal
+ */
 export const clearGravityBodies = () => {
   bodiesByWorld.clear();
   worldsWithForces.clear();
 };
 
-/** The registered gravity bodies (entity id and mass), eg. for a debug list or an energy readout. */
+/**
+ * The registered gravity bodies (entity id and mass), in every world. Exported for the tests.
+ * @internal
+ */
 export const getGravityBodies = (): GravityBody[] => {
   const list: GravityBody[] = [];
   for (const bodies of bodiesByWorld.values()) {
@@ -181,7 +196,10 @@ export const setMutualGravityConfig = (partial: Partial<MutualGravityConfig>) =>
 /** A copy of the current mutual gravity settings. */
 export const getMutualGravityConfig = (): MutualGravityConfig => ({ ...config });
 
-/** The mutual gravity's default settings. */
+/**
+ * The mutual gravity's default settings. Exported for the tests.
+ * @internal
+ */
 export const getMutualGravityDefaults = (): MutualGravityConfig => ({ ...DEFAULT_CONFIG });
 
 /** The Registration Helper: registers the mutual gravity system on `world` at APP_PHYSICS_STEP

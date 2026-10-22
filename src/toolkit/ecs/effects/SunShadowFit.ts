@@ -210,8 +210,8 @@ const warnOnce = (data: SunShadowFitData, entityId: number, reason: string) => {
   lwarn(`[SunShadowFit] Skipping entity ${entityId}: ${reason}`);
 };
 
-/** ECS System */
-export const sunShadowFitSystem = (world: ECSWorld) => {
+// Fits each light's shadow camera to its camera's view (see SunShadowFitData)
+const sunShadowFitSystem = (world: ECSWorld) => {
   const storage = world.getStorage(SunShadowFitComponentType.SUN_SHADOW_FIT);
   if (!storage) return;
 

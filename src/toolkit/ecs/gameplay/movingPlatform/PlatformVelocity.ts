@@ -1,6 +1,9 @@
 import * as THREE from 'three/webgpu';
 
-/** A plain `{ x, y, z }`: the platform's user data carries these, never three's classes. */
+/**
+ * A plain `{ x, y, z }`: the platform's user data carries these, never three's classes.
+ * @internal
+ */
 export interface PlatformVec3 {
   /** The x component. */
   x: number;
