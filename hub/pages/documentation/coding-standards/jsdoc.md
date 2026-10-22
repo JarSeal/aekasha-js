@@ -109,7 +109,7 @@ Hub page's prose, not in `@example`.
 `yarn test` checks it (`devTools/verify/examples.ts`). Every `@example` in the engine and the
 toolkit becomes a module of its own, with an import of each entry name it uses and doesn't import
 itself, and the lot is type-checked against the real `tsconfig.json`; an error fails the test with
-the file and line. Each fenced `ts` or `js` block is one example (an unfenced tag is all code).
+the file and line. The readme's `ts` blocks are checked the same way. Each fenced `ts` or `js` block is one example (an unfenced tag is all code).
 What the reader has is allowed:
 
 - **Free names:** a variable the example doesn't declare (`box`, `world`) is the reader's own.

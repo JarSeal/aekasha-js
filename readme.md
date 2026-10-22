@@ -448,7 +448,6 @@ Planned work is specified in [`docs/plans/`](docs/plans/), where a lower number 
 
 - Saving the material editor's edits to the material JSON, and editing textures and more material properties there
 - Physics objects in the scene JSON schema, physics world bounds, multibody joints and physics snapshot restore
-- Component query caching
 - A client device capability sniffer and GPU-driven culling
 
 ---

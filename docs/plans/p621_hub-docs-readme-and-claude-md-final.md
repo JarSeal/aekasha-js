@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 implemented
 Category: Documentation, Hub
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage D)
 
@@ -166,7 +166,7 @@ Each phase is one reviewable commit; none changes runtime code, so the verificat
 `yarn build` with the full `yarn verify:baselines` in Phase 5. No `yarn verify:scenes` (no
 runtime change; the scene runner checks nothing a document changes).
 
-### Phase 1: the fixes and the readme check
+### Phase 1: the fixes and the readme check — done
 
 1. `utils/SeededRandom.ts`: a `{@link}` resolves in the file's scope (TypeDoc), and the file
    can't import `getRandomStream` without importing `RandomStreams.ts` into a module that
@@ -177,6 +177,29 @@ runtime change; the scene runner checks nothing a document changes).
 3. The readme's Roadmap: "Component query caching" out; each other item checked against an open
    plan.
 4. `yarn hub:build`: no warnings.
+
+**As built:**
+
+- `SeededRandom.ts`: the module-qualified form the coding standards give for a name the file
+  doesn't import (`{@link _engine/utils/RandomStreams!getRandomStream}`), as `LodSystem.ts` and
+  `DraggableWindowTypes.ts` write theirs. `yarn hub:build`: 90 pages, 935 names, no warning.
+- `examples.ts`: `extractMarkdownExamples(file, text)` (the tag's fence reader on the file's
+  lines, each block owned by the heading above it) and `collectReadmeExamples()`; the test checks
+  the readme's blocks in the same program as the engine's, with a unit test of the extraction. The
+  readme's six `ts` blocks type-check as they are (no fix needed); a broken option and a misspelled
+  method were caught at their readme lines in a trial. Named in `devTools/verify/CLAUDE.md`, the
+  root's `yarn test` line and the coding standards' "Examples compile".
+- The Roadmap: "Component query caching" out. The rest have open plans (p355 the material editor's
+  saves, p102, p250, p500, p240, p354), but scene-JSON physics, which has none and isn't built
+  (kept: a wish, not a claim).
+- **Found and fixed (outside the plan's scope; the Stop hook blocks on it):**
+  `ScatterOnSurface.test.ts`' three `scaleRange` cases (p620's hashes) failed on an arm64 Mac with
+  Node 22.13.0, also at the commit that recorded them (`b3fdf1f`), with the same three: the hash
+  read raw Float64 bits, which differ in the last place between machines (V8's sin / cos can, by
+  build; the quaternions' `setFromAxisAngle`). It now hashes the values rounded to 1e-9; a probe
+  with sin and cos one ulp off gave the same hash. All four hashes re-recorded (toolkit test only,
+  no bump). **To check on the machine that recorded the old ones:** `yarn test` passes there too.
+  `yarn test`: 1,228 passed.
 
 ### Phase 2: the Architecture page
 

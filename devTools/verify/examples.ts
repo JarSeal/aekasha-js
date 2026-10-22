@@ -129,6 +129,27 @@ export const collectRepoExamples = (): ExampleBlock[] =>
       })
   );
 
+/**
+ * Every ts / js code block of a Markdown file (the readme's examples), each owned by the heading
+ * above it. Other languages (`bash`, `jsonc`, `html`) are skipped, as in a tag.
+ */
+export const extractMarkdownExamples = (file: string, text: string): ExampleBlock[] => {
+  const lines = text.split('\n');
+  if (!lines.some((line) => line.trimStart().startsWith('```'))) return [];
+  return getTagBlocks(lines, 1).map((block) => {
+    const heading = lines
+      .slice(0, block.line - 1)
+      .reverse()
+      .find((line) => /^#{1,6} /.test(line))
+      ?.replace(/^#+ /, '');
+    return { file, owner: heading ?? file, ...block };
+  });
+};
+
+/** The readme's examples (p621 D3): they're the first code a reader copies */
+export const collectReadmeExamples = (): ExampleBlock[] =>
+  extractMarkdownExamples('readme.md', fs.readFileSync(path.join(ROOT, 'readme.md'), 'utf-8'));
+
 type EntryName = { entry: string; isType: boolean };
 
 /** Each entry's names, and whether each is a type (an `export type { … } from`) */
