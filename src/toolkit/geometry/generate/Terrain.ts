@@ -14,9 +14,10 @@ export interface TerrainOptions {
   width: number;
   /** World-space size along Z. */
   depth: number;
-  /** Vertex grid resolution along X. Keep low for a "very low poly" look (see docs/plans/p090_large-ecs-test-world-scene.md). */
+  /** Grid cells along X, a whole number of 1 or more (rounded, at least 1). Keep low for a "very
+   * low poly" look. */
   widthSegments: number;
-  /** Vertex grid resolution along Z. */
+  /** Grid cells along Z, a whole number of 1 or more (rounded, at least 1). */
   depthSegments: number;
   /** Peak height displacement in world units. */
   maxHeight: number;
@@ -40,7 +41,9 @@ export interface GeneratedTerrain {
   widthSegments: number;
   depthSegments: number;
   /**
-   * Bilinear-sampled terrain height at world-space (x, z), clamped to the terrain's extent.
+   * The mesh's height at world-space (x, z), clamped to the terrain's extent: inside a grid cell,
+   * the height of the cell's triangle under the point (the cells split along the diagonal from
+   * (col + 1, row) to (col, row + 1)), so a body placed with it sits on the mesh.
    * Deliberately physics-engine-agnostic (no Rapier or physics import here) — feed this into
    * a `HEIGHTFIELD` collider (`createPhysicsEntity`) when physics is wired up for this scene
    * (see docs/plans/p090_large-ecs-test-world-scene.md §1.1: this generator intentionally
@@ -65,8 +68,8 @@ export const generateTerrain = (opts: TerrainOptions): GeneratedTerrain => {
   const {
     width,
     depth,
-    widthSegments,
-    depthSegments,
+    widthSegments: rawWidthSegments,
+    depthSegments: rawDepthSegments,
     maxHeight,
     noiseOctaves = [
       { frequency: 1 / 50, amplitude: 1 },
@@ -75,6 +78,10 @@ export const generateTerrain = (opts: TerrainOptions): GeneratedTerrain => {
     seed = 1,
     heightModifier,
   } = opts;
+
+  // The grid's cell counts: whole numbers of 1 or more, which the arrays below are sized by
+  const widthSegments = Math.max(1, Math.round(rawWidthSegments));
+  const depthSegments = Math.max(1, Math.round(rawDepthSegments));
 
   const random = createSeededRandom(seed);
   const simplex = new SimplexNoise({ random });
@@ -116,7 +123,8 @@ export const generateTerrain = (opts: TerrainOptions): GeneratedTerrain => {
       const c = a + cols;
       const d = c + 1;
       // Winding chosen so the computed normal faces +Y before computeVertexNormals()
-      // re-derives the real (slope-aware) normals.
+      // re-derives the real (slope-aware) normals. The two triangles share the b–c diagonal,
+      // which getHeightAt follows.
       indices.push(a, c, b, b, c, d);
     }
   }
@@ -132,21 +140,20 @@ export const generateTerrain = (opts: TerrainOptions): GeneratedTerrain => {
   const getHeightAt = (x: number, z: number): number => {
     const u = THREE.MathUtils.clamp((x + width / 2) / width, 0, 1) * widthSegments;
     const v = THREE.MathUtils.clamp((z + depth / 2) / depth, 0, 1) * depthSegments;
-    const col0 = Math.floor(u);
-    const row0 = Math.floor(v);
-    const col1 = Math.min(col0 + 1, widthSegments);
-    const row1 = Math.min(row0 + 1, depthSegments);
+    // The cell (the far edge belongs to the last one) and the point's place in it
+    const col0 = Math.min(Math.floor(u), widthSegments - 1);
+    const row0 = Math.min(Math.floor(v), depthSegments - 1);
     const tx = u - col0;
     const tz = v - row0;
 
     const h00 = heights[row0 * cols + col0];
-    const h10 = heights[row0 * cols + col1];
-    const h01 = heights[row1 * cols + col0];
-    const h11 = heights[row1 * cols + col1];
+    const h10 = heights[row0 * cols + col0 + 1];
+    const h01 = heights[(row0 + 1) * cols + col0];
+    const h11 = heights[(row0 + 1) * cols + col0 + 1];
 
-    const h0 = THREE.MathUtils.lerp(h00, h10, tx);
-    const h1 = THREE.MathUtils.lerp(h01, h11, tx);
-    return THREE.MathUtils.lerp(h0, h1, tz);
+    // The plane of the triangle under the point: (a, b, c) up to the b–c diagonal, (b, c, d) past it
+    if (tx + tz <= 1) return h00 + (h10 - h00) * tx + (h01 - h00) * tz;
+    return h11 + (h01 - h11) * (1 - tx) + (h10 - h11) * (1 - tz);
   };
 
   return { geometry, width, depth, widthSegments, depthSegments, getHeightAt, heights };

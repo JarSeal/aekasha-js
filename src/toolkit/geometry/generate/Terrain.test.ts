@@ -2,11 +2,50 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three/webgpu';
 import { generateTerrain } from './Terrain';
 
-// The `it.fails` cases are known bugs, each failing on its assertion: p620 Phase 1 fixes them
-// and turns them into `it`s (docs/plans/p620_review-toolkit-and-app-code.md, T2, T3).
+const OPTIONS = { width: 20, depth: 12, widthSegments: 5, depthSegments: 3, maxHeight: 4, seed: 7 };
 
 describe('generateTerrain', () => {
-  it.fails("getHeightAt is the mesh's height inside a cell", () => {
+  it('is the same terrain for the same seed, another for another', () => {
+    const heights = generateTerrain(OPTIONS).heights;
+    expect(generateTerrain(OPTIONS).heights).toEqual(heights);
+    expect(generateTerrain({ ...OPTIONS, seed: 8 }).heights).not.toEqual(heights);
+  });
+
+  it('getHeightAt is heights[] at the vertices, row-major, and the mesh agrees', () => {
+    const terrain = generateTerrain(OPTIONS);
+    const position = terrain.geometry.getAttribute('position');
+    const cols = OPTIONS.widthSegments + 1;
+    expect(position.count).toBe(cols * (OPTIONS.depthSegments + 1));
+    for (let i = 0; i < position.count; i++) {
+      const [x, y, z] = [position.getX(i), position.getY(i), position.getZ(i)];
+      expect(y).toBe(terrain.heights[i]);
+      // Row i / cols runs along z, column i % cols along x
+      expect(x).toBeCloseTo((i % cols) * 4 - 10, 5);
+      expect(z).toBeCloseTo(Math.floor(i / cols) * 4 - 6, 5);
+      expect(terrain.getHeightAt(x, z)).toBeCloseTo(y, 5);
+    }
+  });
+
+  it('clamps getHeightAt to the edge outside the terrain', () => {
+    const terrain = generateTerrain(OPTIONS);
+    expect(terrain.getHeightAt(50, -50)).toBe(terrain.getHeightAt(10, -6));
+    expect(terrain.getHeightAt(-50, 2.3)).toBe(terrain.getHeightAt(-10, 2.3));
+  });
+
+  it('reshapes the heights with heightModifier before the mesh is built', () => {
+    const terrain = generateTerrain({ ...OPTIONS, heightModifier: (x) => (x < 0 ? 0 : 1) });
+    expect(terrain.getHeightAt(-10, 0)).toBe(0);
+    expect(terrain.getHeightAt(10, 0)).toBe(1);
+    expect(terrain.geometry.getAttribute('position').getY(0)).toBe(0);
+  });
+
+  it('builds with whole segment counts of 1 or more, and returns them', () => {
+    const terrain = generateTerrain({ ...OPTIONS, widthSegments: 2.6, depthSegments: 0 });
+    expect([terrain.widthSegments, terrain.depthSegments]).toEqual([3, 1]);
+    expect(terrain.heights.length).toBe(4 * 2);
+  });
+
+  it("getHeightAt is the mesh's height inside a cell", () => {
     const terrain = generateTerrain({
       width: 20,
       depth: 20,
@@ -33,7 +72,7 @@ describe('generateTerrain', () => {
     expect(maxDiff).toBeLessThan(1e-4);
   });
 
-  it.fails('0 segments gives finite heights', () => {
+  it('0 segments gives finite heights', () => {
     const terrain = generateTerrain({
       width: 20,
       depth: 20,
@@ -45,7 +84,7 @@ describe('generateTerrain', () => {
     expect(Array.from(position.array).every(Number.isFinite)).toBe(true);
   });
 
-  it.fails('fractional segments index only vertices the mesh has', () => {
+  it('fractional segments index only vertices the mesh has', () => {
     const terrain = generateTerrain({
       width: 20,
       depth: 20,

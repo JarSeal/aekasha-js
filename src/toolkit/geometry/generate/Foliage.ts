@@ -1,4 +1,4 @@
-import type * as THREE from 'three/webgpu';
+import * as THREE from 'three/webgpu';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { createGeometry, deleteGeometry } from 'aekasha';
 import { createSeededRandom } from 'aekasha';
@@ -96,6 +96,16 @@ export const generateBushGeometry = (opts: BushGeometryOptions = {}): THREE.Buff
       (random() - 0.5) * baseRadius
     );
     blobGeos.push(blobGeo);
+  }
+  // No clusters: an empty geometry (mergeGeometries needs one to merge)
+  if (!blobGeos.length) {
+    const empty = new THREE.BufferGeometry();
+    empty.setAttribute('position', new THREE.Float32BufferAttribute([], 3));
+    empty.setAttribute('normal', new THREE.Float32BufferAttribute([], 3));
+    empty.setAttribute('uv', new THREE.Float32BufferAttribute([], 2));
+    empty.computeBoundingSphere();
+    empty.computeBoundingBox();
+    return empty;
   }
 
   const geometry = mergeGeometries(blobGeos, false)!;

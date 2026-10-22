@@ -215,6 +215,11 @@ export const normalNode = (
 ) => {
   const defines = getDefines(staticDefines);
   if (!defines.seamNormals) return null;
+  if (!inputs.seamNormalStrength) {
+    throw new Error(
+      '[triplanarGrid] Missing normalNode input "seamNormalStrength" (seamNormals is on).'
+    );
+  }
 
   const uniforms = (material.userData.uniforms || {}) as Record<string, Node | undefined>;
   const params = getPatternParams(uniforms, 'colorNode_', defines);

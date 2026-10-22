@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js';
-import { createMeshEntity, type MeshProps, ComponentType, getECSWorld } from 'aekasha';
+import { createMeshEntity, type MeshProps, getECSWorld, lwarn } from 'aekasha';
 import type { CoreEntityOpts } from 'aekasha/schemas';
 import { createSeededRandom } from 'aekasha';
 
@@ -33,12 +33,9 @@ export interface ScatterOptions {
   seed?: number;
   /**
    * Minimum spacing between accepted points, in world units. Enforced by rejection-sampling
-   * against previously accepted points (bounded by `maxAttemptsPerPoint`) — a cheap
-   * approximation of blue-noise/Poisson-disc spacing, not exact, and O(n^2) in the number of
-   * accepted points. Fine for a first pass at scene-build-time entity counts; if scatter
-   * counts grow large enough for this to matter, bucket accepted points into a grid (the
-   * same idea as `docs/plans/_DONE_p050_spatial-index.md`'s `SpatialGrid`) instead of scanning all
-   * of them. 0 (default) disables spacing entirely (pure random, may cluster/overlap).
+   * against the accepted points nearby (a grid of `minSpacing` cells; up to `maxAttemptsPerPoint`
+   * samples per point) — a cheap approximation of blue-noise/Poisson-disc spacing, not exact.
+   * 0 (default) disables spacing entirely (pure random, may cluster/overlap).
    */
   minSpacing?: number;
   /** Max resample attempts per point when `minSpacing` is set, before giving up on that slot. */
@@ -60,6 +57,54 @@ const _worldNormal = new THREE.Vector3();
 const _up = new THREE.Vector3(0, 1, 0);
 const _yRotation = new THREE.Quaternion();
 const _normalMatrix = new THREE.Matrix3();
+
+/**
+ * The accepted positions in grid cells about `minSpacing` wide, so a candidate is checked against
+ * the 27 cells around its own only. Each position closer than `minSpacing` is in one of them, so
+ * the answer is the scan of every position's.
+ */
+const createSpacingGrid = (minSpacing: number) => {
+  // A hair wider than minSpacing: two cell indices of positions closer than it then never differ
+  // by 2, whatever the division rounds
+  const cellSize = minSpacing * (1 + 1e-6);
+  const minSpacingSq = minSpacing * minSpacing;
+  // Keyed by a hash of the cell's indices: cells that share a key share a list, which only costs
+  // a few distance checks more
+  const cells = new Map<number, THREE.Vector3[]>();
+  const cellKey = (ix: number, iy: number, iz: number) =>
+    Math.imul(ix, 73856093) ^ Math.imul(iy, 19349663) ^ Math.imul(iz, 83492791);
+
+  const isTooClose = (position: THREE.Vector3) => {
+    const ix = Math.floor(position.x / cellSize);
+    const iy = Math.floor(position.y / cellSize);
+    const iz = Math.floor(position.z / cellSize);
+    for (let x = ix - 1; x <= ix + 1; x++) {
+      for (let y = iy - 1; y <= iy + 1; y++) {
+        for (let z = iz - 1; z <= iz + 1; z++) {
+          const cell = cells.get(cellKey(x, y, z));
+          if (!cell) continue;
+          for (let i = 0; i < cell.length; i++) {
+            if (cell[i].distanceToSquared(position) < minSpacingSq) return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+
+  const add = (position: THREE.Vector3) => {
+    const key = cellKey(
+      Math.floor(position.x / cellSize),
+      Math.floor(position.y / cellSize),
+      Math.floor(position.z / cellSize)
+    );
+    const cell = cells.get(key);
+    if (cell) cell.push(position);
+    else cells.set(key, [position]);
+  };
+
+  return { isTooClose, add };
+};
 
 /**
  * Scatters `count` points across a mesh's surface using area-weighted random sampling
@@ -94,7 +139,7 @@ export const scatterOnSurface = (opts: ScatterOptions): ScatterPlacement[] => {
   _normalMatrix.getNormalMatrix(surface.matrixWorld);
 
   const placements: ScatterPlacement[] = [];
-  const minSpacingSq = minSpacing * minSpacing;
+  const spacingGrid = minSpacing > 0 ? createSpacingGrid(minSpacing) : null;
   const attemptsPerPoint = minSpacing > 0 ? maxAttemptsPerPoint : 1;
 
   for (let i = 0; i < count; i++) {
@@ -103,16 +148,7 @@ export const scatterOnSurface = (opts: ScatterOptions): ScatterPlacement[] => {
       _worldPosition.applyMatrix4(surface.matrixWorld);
       _worldNormal.applyMatrix3(_normalMatrix).normalize();
 
-      if (minSpacing > 0) {
-        let tooClose = false;
-        for (const existing of placements) {
-          if (existing.position.distanceToSquared(_worldPosition) < minSpacingSq) {
-            tooClose = true;
-            break;
-          }
-        }
-        if (tooClose) continue;
-      }
+      if (spacingGrid?.isTooClose(_worldPosition)) continue;
 
       const upAxis = alignToNormal ? _worldNormal : _up;
       const quaternion = new THREE.Quaternion().setFromUnitVectors(_up, upAxis);
@@ -123,12 +159,9 @@ export const scatterOnSurface = (opts: ScatterOptions): ScatterPlacement[] => {
 
       const scale = THREE.MathUtils.lerp(scaleRange[0], scaleRange[1], random());
 
-      placements.push({
-        position: _worldPosition.clone(),
-        normal: _worldNormal.clone(),
-        quaternion,
-        scale,
-      });
+      const position = _worldPosition.clone();
+      placements.push({ position, normal: _worldNormal.clone(), quaternion, scale });
+      spacingGrid?.add(position);
       break;
       // If every attempt fails, this slot is simply skipped — a first-pass scatterer may
       // return fewer than `count` placements under tight `minSpacing`, which is an
@@ -140,11 +173,11 @@ export const scatterOnSurface = (opts: ScatterOptions): ScatterPlacement[] => {
 };
 
 /**
- * Bakes placements into an existing `InstancedMesh`'s matrices, starting at `startIndex`.
- * The bulk/foliage path: an instance matrix already encodes position + rotation + scale, so
- * this sidesteps the fact that neither `MeshProps`/mesh JSON nor the ECS `Transform` helpers
- * expose a per-entity scale today (see docs/plans/p090_large-ecs-test-world-scene.md §1.1).
- * Does not create any ECS entities: for per-instance ECS state, use the instancing feature's
+ * Bakes placements into an existing `InstancedMesh`'s matrices, starting at `startIndex`: the
+ * world-space placements become instance matrices in the mesh's own space (its world matrix
+ * undone), as many as its capacity holds (the rest are dropped with a warning). Sets the mesh's
+ * `count` to the returned index, so instances past the baked ones aren't drawn. Does not create
+ * any ECS entities: for per-instance ECS state, use the instancing feature's
  * `createInstancedMeshPool` (`aekasha/instancing`) instead.
  * Returns the next free index.
  */
@@ -155,15 +188,26 @@ export const bakeScatterToInstancedMesh = (
 ): number => {
   const matrix = new THREE.Matrix4();
   const scaleVector = new THREE.Vector3();
-  let index = startIndex;
+  mesh.updateWorldMatrix(true, false);
+  const worldToMesh = new THREE.Matrix4().copy(mesh.matrixWorld).invert();
+  const capacity = mesh.instanceMatrix.count;
+  const bakedCount = Math.max(0, Math.min(placements.length, capacity - startIndex));
+  if (bakedCount < placements.length) {
+    lwarn(
+      `[bakeScatterToInstancedMesh] ${placements.length - bakedCount} of ${placements.length} placements dropped: the mesh holds ${capacity} instances, from index ${startIndex}.`
+    );
+  }
 
-  for (const placement of placements) {
+  let index = startIndex;
+  for (let i = 0; i < bakedCount; i++) {
+    const placement = placements[i];
     scaleVector.setScalar(placement.scale);
-    matrix.compose(placement.position, placement.quaternion, scaleVector);
+    matrix.compose(placement.position, placement.quaternion, scaleVector).premultiply(worldToMesh);
     mesh.setMatrixAt(index, matrix);
     index++;
   }
 
+  mesh.count = index;
   mesh.instanceMatrix.needsUpdate = true;
   mesh.computeBoundingSphere();
   return index;
@@ -178,11 +222,10 @@ export interface SpawnScatterMeshOptions {
 }
 
 /**
- * Spawns one individual mesh entity per placement via `createMeshEntity` — simple and
- * individually ECS-addressable, but does not scale to thousands of instances; prefer
- * `bakeScatterToInstancedMesh` for large foliage/tree counts. Good fit for a handful of
- * scattered static props. Scale is applied directly to the created `Object3D` after
- * creation (see `bakeScatterToInstancedMesh`'s doc comment for why).
+ * Spawns one individual mesh entity per placement via `createMeshEntity`, at its position,
+ * rotation and scale — simple and individually ECS-addressable, but does not scale to thousands
+ * of instances; prefer `bakeScatterToInstancedMesh` for large foliage/tree counts. Good fit for a
+ * handful of scattered static props.
  */
 export const spawnScatterAsMeshEntities = (
   placements: ScatterPlacement[],
@@ -200,16 +243,11 @@ export const spawnScatterAsMeshEntities = (
         receiveShadow: opts.receiveShadow,
         position: { x: placement.position.x, y: placement.position.y, z: placement.position.z },
         quaternion: placement.quaternion,
+        scale: { x: placement.scale, y: placement.scale, z: placement.scale },
       },
       opts.entityOpts,
       world
     );
-
-    if (placement.scale !== 1) {
-      const object3D = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
-      object3D?.scale.setScalar(placement.scale);
-    }
-
     entityIds.push(entityId);
   }
 
