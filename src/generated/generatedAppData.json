@@ -1065,7 +1065,7 @@
     },
     "banner": {
       "name": "Banner (the SBP floor)",
-      "description": "The banner embed's scene (p611 D8): a dodecahedron, Plato's solid of the aether, made in code with a TSL material, one light and the camera, slowly turning on a transparent background. No loader, no feature: the smallest build an embed can be.",
+      "description": "The banner embed's scene: a dodecahedron, Plato's solid of the aether, made in code with a TSL material, one light and the camera, slowly turning on a transparent background. No loader, no feature: the smallest build an embed can be.",
       "cameras": [
         {
           "camProps": {
@@ -1155,8 +1155,8 @@
     },
     "assetCompare": {
       "isDebugScene": true,
-      "name": "Asset compare (p300 codec variants)",
-      "description": "p300 Phase 1d: the codec variants of devTools/assetPipeline/fixtures/assetCompareVariants.ts against their uncompressed baselines. A tiled rock ground at grazing angles, a MetalRust sphere and the metal toolbox prop, built twice (slots A and B); V switches between them. Debug env: the scene's own \"Asset compare\" tab picks the variants, shows each texture's file size and VRAM, and runs the collider check.",
+      "name": "Asset compare (texture codecs)",
+      "description": "The KTX2 codec variants of devTools/assetPipeline/fixtures/assetCompareVariants.ts (run it first) against their uncompressed baselines. A tiled rock ground at grazing angles, a MetalRust sphere and the metal toolbox prop, built twice (slots A and B); V switches between them. Debug env: the scene's own \"Asset compare\" tab picks the variants, shows each texture's file size and VRAM, and measures every variant on this device and checks the fixture's collider copies against their sources.",
       "skyboxes": [
         {
           "base": {
@@ -13015,7 +13015,6 @@
         {
           "id": "testTexture",
           "fileName": "/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg",
-          "useHDRLoader": false,
           "texOpts": {
             "wrapS": 1000,
             "wrapT": 1000
@@ -13603,7 +13602,7 @@
     "textureAtlases": {
       "isDebugScene": true,
       "name": "Texture atlases (p299)",
-      "description": "p299's atlas verification scene: each slot of the p299TestAtlas asset (*.textureAtlas.json, listed by its atlas id) whole at each mip level the file has, with the cell rects outlined, and each cell sampled through its UV rect at every level, next to its source file. Off to the side (camera \"Ready-made image atlas\"): p299TestAtlasImage, slots from ready-made images with the full mip chain (p351 Phase 4).",
+      "description": "p299's atlas verification scene: each slot of the p299TestAtlas asset (*.textureAtlas.json, listed by its atlas id) whole at each mip level the file has, with the cell rects outlined, and each cell sampled through its UV rect at every level, next to its source file. Off to the side (camera \"Ready-made image atlas\"): p299TestAtlasImage, slots from ready-made images (as an octahedral impostor's bake) with the full mip chain.",
       "textures": [
         {
           "id": "p299TestAtlas.albedo",
@@ -13823,7 +13822,7 @@
           },
           "debugData": {
             "name": "p299 test atlas (ready-made images)",
-            "description": "p351 Phase 4 section 1: a 2-slot atlas from ready-made images of its layout (slots.<name>.image, an impostor-like bake: 3 × 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192² down to 1², through an odd 3²)."
+            "description": "A 2-slot atlas from ready-made images of its layout (slots.<name>.image, laid out as an octahedral impostor's bake: 3 × 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192² down to 1², through an odd 3²)."
           },
           "__atlas": {
             "id": "p299TestAtlasImage",
@@ -13962,7 +13961,7 @@
           "id": "p299TestAtlasImage.normalDepth",
           "debugData": {
             "name": "p299 test atlas (ready-made images)",
-            "description": "p351 Phase 4 section 1: a 2-slot atlas from ready-made images of its layout (slots.<name>.image, an impostor-like bake: 3 × 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192² down to 1², through an odd 3²)."
+            "description": "A 2-slot atlas from ready-made images of its layout (slots.<name>.image, laid out as an octahedral impostor's bake: 3 × 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192² down to 1², through an odd 3²)."
           },
           "__atlas": {
             "id": "p299TestAtlasImage",
@@ -16067,20 +16066,9 @@
     "testTexture": {
       "id": "testTexture",
       "fileName": "/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg",
-      "useHDRLoader": true,
       "texOpts": {
         "wrapS": 1000,
         "wrapT": 1000
-      },
-      "__saveData": {
-        "sceneTestECS": [
-          {
-            "__meta": {
-              "date": 1779449688109
-            },
-            "useHDRLoader": false
-          }
-        ]
       },
       "__sourcePath": "src/app/textures/testTexture.texture.json",
       "__fileSize": 967035,
@@ -23712,7 +23700,7 @@
       },
       "debugData": {
         "name": "p299 test atlas (ready-made images)",
-        "description": "p351 Phase 4 section 1: a 2-slot atlas from ready-made images of its layout (slots.<name>.image, an impostor-like bake: 3 × 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192² down to 1², through an odd 3²)."
+        "description": "A 2-slot atlas from ready-made images of its layout (slots.<name>.image, laid out as an octahedral impostor's bake: 3 × 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192² down to 1², through an odd 3²)."
       },
       "__sourcePath": "src/app/scenes/textureAtlases/p299TestAtlasImage.textureAtlas.json",
       "__atlas": {
@@ -23852,7 +23840,7 @@
       "id": "p299TestAtlasImage.normalDepth",
       "debugData": {
         "name": "p299 test atlas (ready-made images)",
-        "description": "p351 Phase 4 section 1: a 2-slot atlas from ready-made images of its layout (slots.<name>.image, an impostor-like bake: 3 × 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192² down to 1², through an odd 3²)."
+        "description": "A 2-slot atlas from ready-made images of its layout (slots.<name>.image, laid out as an octahedral impostor's bake: 3 × 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192² down to 1², through an odd 3²)."
       },
       "__sourcePath": "src/app/scenes/textureAtlases/p299TestAtlasImage.textureAtlas.json",
       "__atlas": {

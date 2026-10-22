@@ -68,6 +68,6 @@
   ],
   "debugData": {
     "name": "p299 test atlas (ready-made images)",
-    "description": "p351 Phase 4 section 1: a 2-slot atlas from ready-made images of its layout (slots.<name>.image, an impostor-like bake: 3 \u00d7 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192\u00b2 down to 1\u00b2, through an odd 3\u00b2)."
+    "description": "A 2-slot atlas from ready-made images of its layout (slots.<name>.image, laid out as an octahedral impostor's bake: 3 \u00d7 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192\u00b2 down to 1\u00b2, through an odd 3\u00b2)."
   }
 }

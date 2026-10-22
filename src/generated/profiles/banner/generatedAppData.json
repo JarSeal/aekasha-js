@@ -2,7 +2,7 @@
   "scenes": {
     "banner": {
       "name": "Banner (the SBP floor)",
-      "description": "The banner embed's scene (p611 D8): a dodecahedron, Plato's solid of the aether, made in code with a TSL material, one light and the camera, slowly turning on a transparent background. No loader, no feature: the smallest build an embed can be.",
+      "description": "The banner embed's scene: a dodecahedron, Plato's solid of the aether, made in code with a TSL material, one light and the camera, slowly turning on a transparent background. No loader, no feature: the smallest build an embed can be.",
       "cameras": [
         {
           "camProps": {
