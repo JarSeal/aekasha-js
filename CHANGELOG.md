@@ -4,6 +4,118 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-23 — review-toolkit-and-app-code
+
+### Engine 5.10.1 (Golden Hour)
+
+No code change: the toolkit and app review (p620) moved and removed app files that engine docs named.
+
+**Changed**
+
+- Docs: `DevFiles.ts`' `@example` writes `scene01Camera` at its new path (`src/app/scenes/scene01/`), the input `CLAUDE.md` no longer cites `scene01`'s `d` key (gone), and `features/lod/CLAUDE.md` says the LOD showcase tab persists the stop and its side.
+
+### Toolkit 2.2.0 (Half Moon)
+
+The toolkit is reviewed (p620): its bugs fixed with a test each, its public surface completed and documented, and `MovingPlatform` split. Nothing is removed from an entry; three names are deprecated until toolkit 3.0.0.
+
+**Added**
+
+- On the entries, the types public names already used or that a copy needs (14):
+  - `aekasha/toolkit/ecs`: `MovingPlatformParams` (`createMovingPlatform`'s parameter, an anonymous literal before), `MovingPlatformPoint`, `MovingPlatformOptions`, `MovingPlatformPathOptions` (what `setOptions` takes), `MovingPlatformControls`, `MovingPlatformPhysicsParams`.
+  - `aekasha/toolkit/geometry`: `AsteroidNoiseOptions`, `AsteroidCraterOptions`, `TerrainNoiseOctave`.
+  - `aekasha/toolkit/materials`: the triplanar helpers `blendProjections`, `blendProjectionGradients`, `readBooleanDefines` and the types `ProjectionPattern`, `TriplanarProjection`, so a triplanar material copied into an app compiles.
+- `createFollowObjectCameraRig`'s `sceneId`: the rig is deleted on that scene's exit.
+- JSDoc on every toolkit export and member (exports 44 / 63 → 100 %, members 50 / 80 → 100 %), the defaults and traps included, and an `@example` on every entry-point API (ten added).
+- Tests in Node for every piece: the platform's path, velocities and validation (`movingPlatform/*.test.ts`), `MutualGravity`, `HoverEffect`, `FollowTool`, `SunShadowFit`, the rig's new cases, `Asteroid`, `Terrain`, `Foliage`, `ScatterOnSurface` (the placements pinned by hash) and `TriplanarGrid`.
+
+**Changed**
+
+- **Behaviour change:** `MovingPlatform`:
+  - The user data velocity is zero whenever the platform doesn't play (paused, stopped, at the end of its loops, created paused, `setOptions` while paused) and recomputed on `play()`: a character no longer slides off a resumed platform or gets pushed by a stopped one.
+  - `stop()` resets the loops and `playSegment`'s target, and a `play()` after the end starts the loops over (it ran one loop, or nothing).
+  - `BACKWARD` counts a loop on each arrival at point 0, as `FORWARD` does, and a backward segment takes the `dur` of the point it runs to (the edge's forward duration).
+  - A point without `rot` keeps the rotation before it (it reset to identity as the current point).
+  - Flipping `direction` mid-segment turns around where the platform is, at the same speed (it jumped).
+  - `dur: 0` jumps in one step and a `speedMultiplier` of 0 holds, both with zero velocities (no `Infinity` or `NaN`); the validation throws on an empty `physicsParams`, no points, a negative or non-finite `dur`, a `loopTimes` that isn't -1 or a whole number, and a negative speed.
+  - The caller's rigid body params are copied, not written into; an entity deleted while its body is created throws with its own message.
+- **Behaviour change:** `generateTerrain`'s `getHeightAt` is the height of the mesh's own triangle under the point (it interpolated bilinearly, up to 0.12 off at `maxHeight` 5), and the segment counts are rounded, at least 1, and returned as used.
+- **Behaviour change:** `MutualGravity` keeps its bodies per world, and `setMutualGravityConfig` skips a key given as `undefined`.
+- **Behaviour change:** the rig ticks only in the world it was created for.
+- `createMovingPlatform`'s `scene` is optional (a parentless mesh goes into the root scene), `HoverToolData.time` is optional (the phase, default 0), and the rig's `targetMesh` is any `Object3D`.
+- `FollowObjectCameraParams`, `MutualGravityConfig`, `MovingPlatformControls`, `MovingPlatformReturn`, `TriplanarProjectionOptions` and `DeleteMeshOptions` are interfaces (they were type aliases), so their members are documented and counted.
+- `MovingPlatform` is a folder, `ecs/gameplay/movingPlatform/`: the factory, a pure path state machine (`PlatformPath.ts`) and the velocities (`PlatformVelocity.ts`). The entry's names don't change.
+- `scatterOnSurface`'s `minSpacing` check uses a grid: the same placements for a seed, about twice as fast.
+- Per-frame reads: `HoverEffect`, `FollowTool` and `SunShadowFit` read their storages once per run and `SunShadowFit` the main camera once per run; the platform reuses its scratch objects.
+- The material JSONs lose the params their nodes replace (`color` on both triplanar materials, `color` and `roughness` on `asteroid`), which the material editor showed; the triplanar ones have a name and description.
+- `generateTreeGeometry` and `generateBushGeometry` build their parts with three's geometries, never registered (the output is the same).
+
+**Deprecated** (removed in toolkit 3.0.0)
+
+- `PhysicsParams`: `MovingPlatformPhysicsParams`.
+- `DeleteMeshOptions` and `MovingPlatformOptions.deleteMeshOptions`: never read.
+- `createSeededRandom` on `aekasha/toolkit/geometry`: import it from `aekasha`. It's a declaration of its own now, so the editor and the Hub show the deprecation (a comment on the re-export line attached to nothing).
+
+**Removed**
+
+- Internal (on no entry): the three effect systems are module-private, and `MutualGravity`'s test helpers and the TSL socket functions are `@internal`.
+
+**Fixed**
+
+- `createMovingPlatform` with a `shape.geo` and `shape.mat` threw "must have either a geo or mesh".
+- `MutualGravity`: when the 17th, 33rd, … body joined, the bodies already collected pulled with mass 0 for that sub-step.
+- The rig let a `NaN` frame time through.
+- `spawnScatterAsMeshEntities` lost each placement's scale (the first sync put back the transform's 1).
+- `bakeScatterToInstancedMesh` wrote past the mesh's capacity, left `mesh.count` alone (the rest drew at the origin) and wrote world-space placements into a moved mesh's local space.
+- `generateBushGeometry({ clusterCount: 0 })` threw; a terrain with 0 or fractional segments was `NaN` or truncated.
+- `triplanarGrid`'s `normalNode` didn't check its input.
+
+### App 1.14.0 (Preschooler)
+
+The example app is reviewed (p620): its scene loads can't hang, nothing a scene binds outlives it, the long scene functions are named steps, and the scenes nobody needed are gone.
+
+**Added**
+
+- `src/app/shared/`: `characterVisual.ts` (the gym and the top-down scene), `largeWorldRock.ts` (`largeWorld` and the LOD showcase's rock lane, which must match for its impostor) and `verifyHarness.ts` (the verification scenes' helpers, with a test).
+
+**Changed**
+
+- **Behaviour change:** the start scene, `sceneTestECS`, is a short first scene: its camera, lights, sky box and two meshes from its JSON, a ground and a hovering ball from its code. The second world, the stress keys `K` / `L`, the orthographic camera, three lights and two unused assets are gone.
+- **Behaviour change:** `scene01` is `scene01V2` merged in (the sky boxes, the model, a ball with the batch-loaded metal rust maps, a sensor that turns green while bodies are in it). Its camera and lights moved into its folder.
+- **Behaviour change:** the gym's sun gets the toolkit's `SunShadowFit` (its own follow system is gone): the whole view is shadowed, at a coarser texel. Its stress test (`J`) is a debug module bound to the gym only, with seeded spawns.
+- **Behaviour change:** `physicsTest`'s shape casts run once the scene's first physics step has run (a 200 ms timer before).
+- `testDebugScene` keeps its KTX2 / meshopt row only, its camera and lights in its JSON.
+- The long scene functions are named steps with their data in tables: the gym, `largeWorld`, `physicsTest` (a function per joint), `scene01`, `physicsTiers`, `assetCompare`'s slot build. Every id, appId and creation order is kept, so the determinism hashes are the same.
+- `assetCompare`'s debug tab is four modules; its saved state moved to `AEK_debugAssetCompare` (the old key moved once), and a failed `report.json` load is fetched again.
+- The examples: the spin system, the banner and the UI kit example copy the rotation into a scratch quaternion instead of writing into the one `getRotation` returns; the sky box example builds its HUD text only on a change; the character example creates its level together; the geometry ids use `getGeometry(id) ?? saveBufferGeometry(…)`.
+- `src/index.ts`, `CONFIG.ts` and `AppECSRegistry.ts`: comments saying what each step does; `CONFIG.ts`' `debugKeys` is empty with a rebind example (its entry was the engine's default).
+- Scene and asset descriptions say what the scene does, without plan citations; `physicsTiers.ts` is under the simulation lint.
+
+**Removed**
+
+- The scenes `scene01V2` (merged into `scene01`) and `oneMoreScene` (an empty view), and the unused `p341AlphaCutTest` texture.
+
+**Fixed**
+
+- A scene whose code threw (the gym, `scene01`, `scene01V2`) left its load pending forever, and every later `loadScene` waited behind it.
+- The gym's `J` and `scene01`'s `d` stayed bound after their scene: `J` spawned 50 bodies into any later scene, `d` logged on every press.
+- Leaving `assetCompare` during "Measure all variants" built its slots into the next scene, and its change listener stayed; the texture array and atlas scenes' checks ran after the scene was left.
+- The loader's progress text (`src/index.ts`) checked a field no caller sends; the top-down scene's loader went from 0 / 3 to 2 / 2; `physicsTiers` could fail with its cleanup unregistered.
+- `testTexture` had `useHDRLoader` on a JPG, and the start scene's camera `persistent` (which does nothing yet: `docs/issues/entity-persistent-flag-not-applied.md`).
+
+### Project
+
+**Added**
+
+- Six issue files: `create-with-a-taken-id-ignores-props.md`, `no-public-instanced-mesh-entity.md`, `entity-persistent-flag-not-applied.md`, `heightfield-grid-layout.md`, `scene-runner-waits-on-a-failed-load.md`, `impostor-export-plan-citation.md`.
+
+**Changed**
+
+- The Hub: the toolkit page has a section per piece and "Writing a TSL material" (the socket contract, which no page documented); the quick start, embed, LOD, character and sky box walkthroughs follow their code; the engine-5 migration page names the gym's new files.
+- `SIMULATION_FILES` (`eslint.config.js`) adds `movingPlatform/` and `physicsTiers.ts`. A layout rule for the toolkit's deprecated `geometry/SeededRandom.ts`.
+- `devTools/toolkit/buildAekashaSymbol.ts` builds only when run as the script.
+- `readme.md` and the root `CLAUDE.md`: the toolkit and app lines.
+- `yarn verify:baselines`: `api.json` (14 names on the toolkit entries, none removed), `docs.json` (the toolkit at 100 %: 2,401 / 2,401 exports and 1,043 / 1,043 members in all), `bundle.json` and `bundle.banner.json`.
+
 ## 2026-10-22 — review-schemas-pipeline-devtools-hub
 
 ### Engine 5.10.0 (Golden Hour)

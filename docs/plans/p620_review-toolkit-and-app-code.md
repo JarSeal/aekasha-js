@@ -1309,6 +1309,11 @@ As built (2026-10-23, on `ae32894`):
   either build. `yarn verify:embed`: all passed. `yarn build` (both `tsc`, the build, `yarn sbp
   --profile all`: the app 379.8 kB initial, the banner 285.5 kB, every budget within; the Hub):
   passed. `yarn hub:build`: 90 pages, 935 names, only p621's warning. `yarn test`: 1,227 passed.
+- **Versions and changelog (section 2):** engine 5.10.0 → 5.10.1 (D2's correction: the docs in
+  `src/_engine/`), toolkit 2.1.3 → 2.2.0, app 1.13.2 → 1.14.0, the project version the engine's;
+  no codename changes. The `CHANGELOG.md` entry (2026-10-23) has Engine, Toolkit, App and Project
+  sections: the behaviour changes (D3), the deprecations, the removed scenes, the fixes.
+  `yarn checkVersions --against main` passes; `yarn hub:build` shows the entry on the homepage.
 
 ## 4. Risks
 
