@@ -7,7 +7,7 @@ import { getConservativeGeometryRadius } from 'aekasha/spatial';
 import { generateTreeGeometry } from 'aekasha/toolkit/geometry';
 import type { ShowcaseLane } from '../layout';
 
-/** The cross-quads' export (src/app/impostors/), listed in lodShowcase.scene.json's `impostors`. */
+/** The cross-quads' export (next to the scene's JSON), listed in its `impostors`. */
 const CROSS_ID = 'lodShowcaseTreeCross';
 const TREE = { trunkHeight: 1.4, foliageRadius: 1.2, foliageHeight: 3 };
 /** Trees per level band. */
@@ -16,8 +16,7 @@ const PER_BAND = 3;
 const JITTER_X = 1.5;
 
 /**
- * Lane 3: an instanced LOD pool and cross-quads (docs/plans/_DONE_p348_ecs-lod-selection.md, and
- * p351 Phases 1-2 and 4): a grove of largeWorld's trees (its generators, larger and with more
+ * The pool and cross-quads lane: an instanced LOD pool and cross-quads, a grove of largeWorld's trees (its generators, larger and with more
  * segments) at 8 and 4 radial segments, then three alpha-cut planes with the tree baked on them,
  * loaded from their export. Past the last band the trees fade out.
  */

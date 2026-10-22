@@ -78,15 +78,22 @@ const createDayNightControls = () => {
     setDayNightSpeed(Math.max((getDayNightSpeed() ?? 1) / 2, 1 / 16))
   );
 
-  // The time, read every frame, written to the HUD when it changes
+  // The time, read every frame; the HUD text is built and written only when a value changes
   const hud = createExampleHud('');
-  let shown = '';
+  let shownMinutes = -1;
+  let shownIsPlaying = false;
+  let shownSpeed = 0;
   createSceneMainLooper(() => {
     const minutes = Math.floor((getTimeOfDay() ?? 0) * 60);
+    const isPlaying = isDayNightPlaying();
+    const speed = getDayNightSpeed() ?? 1;
+    if (minutes === shownMinutes && isPlaying === shownIsPlaying && speed === shownSpeed) return;
+    shownMinutes = minutes;
+    shownIsPlaying = isPlaying;
+    shownSpeed = speed;
     const time = `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`;
-    const state = isDayNightPlaying() ? `playing ×${getDayNightSpeed()}` : 'paused';
-    const text = `${time} (${state})\nSpace: play / pause · ← →: an hour · ↑ ↓: speed`;
-    if (text !== shown) hud.updateText((shown = text));
+    const state = isPlaying ? `playing ×${speed}` : 'paused';
+    hud.updateText(`${time} (${state})\nSpace: play / pause · ← →: an hour · ↑ ↓: speed`);
   }, SCENE_ID);
 };
 // #endregion sky-controls

@@ -3,7 +3,9 @@
 <<< src/app/examples/lod/exampleLod.ts#lod-scene
 
 1. The knot is a registered geometry ([`saveBufferGeometry`](api:saveBufferGeometry)): a chain
-   is generated for a geometry id.
+   is generated for a geometry id. [`getGeometry`](api:getGeometry) first, so a knot still
+   registered isn't built again (`saveBufferGeometry` would return the registered one and leave
+   the new one to dispose).
 2. [`generateLodChain`](api:generateLodChain) simplifies it with meshoptimizer in the assets
    worker, into levels registered as `lodExampleKnot#lod1` and so on. Each level shares the knot's
    vertices and has its own, smaller index. A chain can come out shorter than asked for: a mesh
@@ -29,10 +31,11 @@ can freeze the levels or force one, and slows the fades down to look at them.
 
 Here the impostor is baked when the scene loads, in about 40-115 ms. To load it instead, export
 it from the LOD tab's Impostors folder while the scene runs in `yarn dev`: the export writes
-`lodExampleKnotImpostor.impostor.json`, an atlas JSON and two PNGs into `src/app/impostors/`
-(a later export writes wherever its files are then). List the id in the scene JSON's
-`impostors`, and the same call then builds the impostor from those files. The debug build
-warns when the knot or its material no longer matches the export.
+`lodExampleKnotImpostor.impostor.json`, an atlas JSON and two PNGs into `src/app/impostors/`.
+Only this scene uses them, so move the four files next to it (a later export writes wherever
+they are then), and list the id in the scene JSON's `impostors`: the same call then builds the
+impostor from those files. The debug build warns when the knot or its material no longer matches
+the export.
 
 ## Other ways in
 

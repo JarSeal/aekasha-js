@@ -1,3 +1,7 @@
+// Shared by two scenes (exampleEcs, exampleHubHero) and AppECSPlugins.ts. Shared app code goes in
+// src/app/shared/, but this stays here: the Hub's ECS example (hub/pages/examples/ecs/) shows it
+// from this folder.
+
 // #region spin-component (shown in the Hub: hub/pages/examples/ecs/)
 // The SPIN component: its key and its data's type.
 

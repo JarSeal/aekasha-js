@@ -166,9 +166,9 @@ A missing file, region or line fails `yarn hub:build` with the page and line, so
 removing a region that a page includes breaks the page. Say so in the marker's note.
 :::
 
-`<<< src/app/scenes/physicsTest/physicsTest.ts#dynamic-box {20-24}` shows:
+`<<< src/app/scenes/physicsTest/physicsTest.ts#dynamic-box {16-20}` shows:
 
-<<< src/app/scenes/physicsTest/physicsTest.ts#dynamic-box {20-24}
+<<< src/app/scenes/physicsTest/physicsTest.ts#dynamic-box {16-20}
 
 ## All together
 

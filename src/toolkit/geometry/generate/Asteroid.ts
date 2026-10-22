@@ -2,28 +2,39 @@ import * as THREE from 'three/webgpu';
 import { SimplexNoise } from 'three/examples/jsm/math/SimplexNoise.js';
 import { ConvexHull } from 'three/examples/jsm/math/ConvexHull.js';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { createSeededRandom } from 'aekasha';
+import { createSeededRandom, existsOrThrow } from 'aekasha';
 
+/** An asteroid's lumps ({@link AsteroidOptions}' `noise`): seeded simplex fbm along the normals. */
 export interface AsteroidNoiseOptions {
-  /** Lumps per unit of the undisplaced sphere's radius (the noise runs on the unit direction). */
+  /**
+   * Lumps per unit of the undisplaced sphere's radius (the noise runs on the unit direction;
+   * default 1.6).
+   */
   frequency?: number;
-  /** Peak lump height as a fraction of `radius`. */
+  /** Peak lump height as a fraction of `radius` (default 0.22). */
   amplitude?: number;
-  /** fbm octaves, each at twice the frequency and half the amplitude of the one before. */
+  /**
+   * fbm octaves, each at twice the frequency and half the amplitude of the one before (default 4).
+   */
   octaves?: number;
 }
 
+/**
+ * An asteroid's craters ({@link AsteroidOptions}' `craters`): spherical-cap bowls with raised rims,
+ * placed by the seed.
+ */
 export interface AsteroidCraterOptions {
-  /** Number of craters (0 = none). */
+  /** Number of craters (default 5; 0 = none). */
   count?: number;
-  /** Crater angular radius range in degrees, as seen from the rock's centre. */
+  /** Crater angular radius range in degrees, as seen from the rock's centre (default [10, 28]). */
   sizeDeg?: [min: number, max: number];
-  /** Bowl depth at the crater's centre, as a fraction of `radius`. */
+  /** Bowl depth at the crater's centre, as a fraction of `radius` (default 0.12). */
   depth?: number;
-  /** Rim height, as a fraction of the crater's depth. */
+  /** Rim height, as a fraction of the crater's depth (default 0.35). */
   rim?: number;
 }
 
+/** {@link generateAsteroid}'s options; every one has a default. */
 export interface AsteroidOptions {
   /** Radius of the sphere before displacement and `shape` (default 1). */
   radius?: number;
@@ -31,22 +42,35 @@ export interface AsteroidOptions {
    * `detail + 1` segments, giving 10·(detail + 1)² + 2 vertices (42 at 1, 162 at 3, 252 at 4, 492
    * at 6). Higher = rounder, with finer lumps and craters. The hull collider takes every vertex. */
   detail?: number;
-  /** Deterministic seed: the same seed and options always give the same rock (default 1). */
+  /**
+   * Deterministic seed, an integer (default 1): the same seed and options always give the same
+   * rock.
+   */
   seed?: number;
-  /** Per-axis scale applied after displacement, for elongated or flattened rocks (default [1, 1, 1]). */
+  /**
+   * Per-axis scale applied after displacement, for elongated or flattened rocks (default
+   * [1, 1, 1]).
+   */
   shape?: [x: number, y: number, z: number];
+  /** The lumps (each field defaulted on its own). */
   noise?: AsteroidNoiseOptions;
+  /** The craters (each field defaulted on its own). */
   craters?: AsteroidCraterOptions;
   /** Faceted, semi-low-poly look: a non-indexed geometry with one normal per face (default true).
    * false keeps it indexed with smooth vertex normals. */
   flatShading?: boolean;
 }
 
+/** {@link generateAsteroid}'s result: the rock's geometry and what physics needs from it. */
 export interface GeneratedAsteroid {
+  /**
+   * The rock's geometry: positions and normals, no UVs, not registered (save it with
+   * `saveBufferGeometry` to have it disposed with its scene).
+   */
   geometry: THREE.BufferGeometry;
   /** The displaced unique vertex positions (x, y, z, ...), for a `CONVEXHULL` collider. */
   hullVertices: Float32Array;
-  /** Volume of the closed mesh (craters included). */
+  /** Volume of the closed mesh (craters included), at most `hullVolume`. */
   volume: number;
   /** Volume of the convex hull of `hullVertices`: what a physics engine derives a `CONVEXHULL`
    * collider's mass from (mass = density × hullVolume), so use this to match a gravity mass or a
@@ -122,6 +146,21 @@ const computeHullVolume = (points: THREE.Vector3[]) => {
  * positions and normals only, no UVs: pair it with an object-space material such as the toolkit's
  * `asteroid` material. The geometry isn't registered: pass it through `saveBufferGeometry` (with an
  * id) before `createMeshEntity`, so it's disposed with its scene.
+ * @example
+ * ```ts
+ * // A long, heavily cratered rock with the toolkit's asteroid material
+ * const rock = generateAsteroid({
+ *   radius: 1.5,
+ *   seed: 3,
+ *   shape: [1.6, 1, 0.8],
+ *   craters: { count: 9 },
+ * });
+ * createMeshEntity({
+ *   geo: saveBufferGeometry(rock.geometry, { id: 'rock3' }),
+ *   mat: 'asteroid',
+ *   position: { x: 0, y: 2, z: 0 },
+ * });
+ * ```
  */
 export const generateAsteroid = (opts: AsteroidOptions = {}): GeneratedAsteroid => {
   const {
@@ -202,7 +241,10 @@ export const generateAsteroid = (opts: AsteroidOptions = {}): GeneratedAsteroid 
   position.needsUpdate = true;
 
   // Mesh volume from the indexed (closed) triangles
-  const index = indexed.getIndex()!;
+  const index = existsOrThrow(
+    indexed.getIndex(),
+    "[generateAsteroid] The merged icosphere isn't indexed."
+  );
   const a = new THREE.Vector3();
   const b = new THREE.Vector3();
   const c = new THREE.Vector3();

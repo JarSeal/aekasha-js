@@ -3,7 +3,7 @@
   "id": "triplanarCheckerboard",
   "tslFile": "materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts",
   "type": "STANDARDNODEMATERIAL",
-  "params": { "color": "#ff0000", "roughness": 0.85, "metalness": 0.0 },
+  "params": { "roughness": 0.85, "metalness": 0.0 },
   "staticDefines": {
     "alignToObject": true,
     "fitToBounds": false,
@@ -17,5 +17,9 @@
       "checkerColorB": "#787878",
       "plusSignColor": "#555555"
     }
+  },
+  "debugData": {
+    "name": "Triplanar checkerboard",
+    "description": "Procedural checkerboard in meters on any mesh (no UVs), anti-aliased into the distance, with an optional plus sign in every cell. Static defines: alignToObject, fitToBounds, dominantAxis, plusSigns."
   }
 }

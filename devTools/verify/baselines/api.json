@@ -3036,13 +3036,11 @@
     "src/toolkit/ecs/effects/FollowTool.ts": {
       "FollowToolComponentType": "Enum",
       "FollowToolData": "Interface",
-      "followToolSystem": "Function",
       "registerFollowToolEffect": "Function"
     },
     "src/toolkit/ecs/effects/HoverEffect.ts": {
       "HoverToolComponentType": "Enum",
       "HoverToolData": "Interface",
-      "hoverToolSystem": "Function",
       "registerHoverToolEffect": "Function"
     },
     "src/toolkit/ecs/effects/MutualGravity.ts": {
@@ -3051,8 +3049,8 @@
       "getGravityBodies": "Function",
       "getMutualGravityConfig": "Function",
       "getMutualGravityDefaults": "Function",
-      "GravityBody": "TypeAlias",
-      "MutualGravityConfig": "TypeAlias",
+      "GravityBody": "Interface",
+      "MutualGravityConfig": "Interface",
       "registerMutualGravityEffect": "Function",
       "removeGravityBody": "Function",
       "setMutualGravityConfig": "Function"
@@ -3060,22 +3058,44 @@
     "src/toolkit/ecs/effects/SunShadowFit.ts": {
       "registerSunShadowFitEffect": "Function",
       "SunShadowFitComponentType": "Enum",
-      "SunShadowFitData": "Interface",
-      "sunShadowFitSystem": "Function"
+      "SunShadowFitData": "Interface"
     },
     "src/toolkit/ecs/gameplay/FollowObjectCameraRig.ts": {
       "createFollowObjectCameraRig": "Function",
       "deleteFollowObjectCameraRig": "Function",
-      "FollowObjectCameraParams": "TypeAlias",
+      "FollowObjectCameraParams": "Interface",
       "registerFollowObjectCameraRigSystem": "Function"
     },
-    "src/toolkit/ecs/gameplay/MovingPlatform.ts": {
+    "src/toolkit/ecs/gameplay/movingPlatform/MovingPlatform.ts": {
       "createMovingPlatform": "Function",
-      "DeleteMeshOptions": "TypeAlias",
-      "MovingPlatformControls": "TypeAlias",
-      "MovingPlatformReturn": "TypeAlias",
+      "DeleteMeshOptions": "Interface",
+      "MovingPlatformControls": "Interface",
+      "MovingPlatformOptions": "Interface",
+      "MovingPlatformParams": "Interface",
+      "MovingPlatformPhysicsParams": "Interface",
+      "MovingPlatformReturn": "Interface",
       "PhysicsParams": "TypeAlias",
       "registerMovingPlatformSystem": "Function"
+    },
+    "src/toolkit/ecs/gameplay/movingPlatform/PlatformPath.ts": {
+      "createPlatformPath": "Function",
+      "hasMoveAndTurn": "Function",
+      "MovingPlatformPathOptions": "Interface",
+      "MovingPlatformPoint": "Interface",
+      "PlatformPath": "Interface",
+      "PlatformStepResult": "TypeAlias",
+      "playPlatformPath": "Function",
+      "playPlatformPathSegment": "Function",
+      "setPlatformPathOptions": "Function",
+      "stepPlatformPath": "Function",
+      "stopPlatformPath": "Function",
+      "validateMovingPlatform": "Function"
+    },
+    "src/toolkit/ecs/gameplay/movingPlatform/PlatformVelocity.ts": {
+      "computePlatformVelocities": "Function",
+      "PlatformVec3": "Interface",
+      "PlatformVelocities": "TypeAlias",
+      "zeroPlatformVelocities": "Function"
     },
     "src/toolkit/geometry/generate/Asteroid.ts": {
       "AsteroidCraterOptions": "Interface",
@@ -3105,6 +3125,9 @@
       "spawnScatterAsMeshEntities": "Function",
       "SpawnScatterMeshOptions": "Interface"
     },
+    "src/toolkit/geometry/SeededRandom.ts": {
+      "createSeededRandom": "Function"
+    },
     "src/toolkit/materials/asteroid/asteroid.tsl.ts": {
       "colorNode": "Function"
     },
@@ -3122,7 +3145,7 @@
       "readBooleanDefines": "Function",
       "triplanarProjection": "Function",
       "TriplanarProjection": "TypeAlias",
-      "TriplanarProjectionOptions": "TypeAlias"
+      "TriplanarProjectionOptions": "Interface"
     }
   },
   "entries": {
@@ -3907,6 +3930,12 @@
       "FollowToolData",
       "HoverToolComponentType",
       "HoverToolData",
+      "MovingPlatformControls",
+      "MovingPlatformOptions",
+      "MovingPlatformParams",
+      "MovingPlatformPathOptions",
+      "MovingPlatformPhysicsParams",
+      "MovingPlatformPoint",
       "MovingPlatformReturn",
       "MutualGravityConfig",
       "PhysicsParams",
@@ -3927,6 +3956,8 @@
       "setMutualGravityConfig"
     ],
     "aekasha/toolkit/geometry": [
+      "AsteroidCraterOptions",
+      "AsteroidNoiseOptions",
       "AsteroidOptions",
       "BushGeometryOptions",
       "GeneratedAsteroid",
@@ -3935,6 +3966,7 @@
       "ScatterOptions",
       "ScatterPlacement",
       "SpawnScatterMeshOptions",
+      "TerrainNoiseOctave",
       "TerrainOptions",
       "TreeGeometryOptions",
       "bakeScatterToInstancedMesh",
@@ -3947,7 +3979,12 @@
       "spawnScatterAsMeshEntities"
     ],
     "aekasha/toolkit/materials": [
+      "ProjectionPattern",
+      "TriplanarProjection",
       "TriplanarProjectionOptions",
+      "blendProjectionGradients",
+      "blendProjections",
+      "readBooleanDefines",
       "triplanarProjection"
     ],
     "aekasha/ui": [

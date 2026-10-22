@@ -68,6 +68,10 @@ const bumpNormal = (height: Node<'float'>) => {
  * - `speckleColor`, `speckleScale` (per mottling feature), `speckleAmount` (0-1 coverage);
  * - `roughnessMin`, `roughnessMax`: the range the mottling maps to (speckles go below it, pits to max);
  * - `bumpStrength`: bump height in object units.
+ *
+ * The static define `octaves` (default 4) sets the mottling's fbm octaves. Asset code: the
+ * material's generated loader imports it, and `createMaterial` calls it by its socket name.
+ * @internal
  */
 export const colorNode = (
   inputs: {

@@ -1,6 +1,7 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- a command-line script, its output is the log */
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { Document, Logger, NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { draco, weld } from '@gltf-transform/functions';
@@ -11,10 +12,10 @@ import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.j
 import { ROOT as REPO_ROOT } from '../paths';
 
 /**
- * Builds the toolkit's Ækasha symbol model (p554 §2.3) from the Æ glyph in `src/public/favicon.svg`: the glyph's path extruded with a
- * small bevel, 1 unit high, centred on the origin and facing +z, written as a Draco-compressed
- * GLB next to its `aekashaSymbol.importedAsset.json`. The asset pipeline keeps it Draco (the
- * JSON's `optimize.mesh.codec`). Run it when the glyph changes and commit the GLB:
+ * Builds the toolkit's Ækasha symbol model from the Æ glyph in `src/public/favicon.svg`: the
+ * glyph's path extruded with a small bevel, 1 unit high, centred on the origin and facing +z,
+ * written as a Draco-compressed GLB next to its `aekashaSymbol.importedAsset.json`. The asset
+ * pipeline keeps it Draco (the JSON's `optimize.mesh.codec`). Run it when the glyph changes and commit the GLB:
  *
  *   source .claude/hooks/use-node.sh && npx tsx devTools/toolkit/buildAekashaSymbol.ts
  */
@@ -154,7 +155,10 @@ const build = async () => {
   geometry.dispose();
 };
 
-build().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// Only when this file is the script run (not when a test or the Vite config imports it)
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  build().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

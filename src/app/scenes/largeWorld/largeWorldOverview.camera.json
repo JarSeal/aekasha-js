@@ -13,7 +13,7 @@
     "appId": "largeWorldOverview",
     "debugData": {
       "name": "Large world overview camera",
-      "description": "Static wide overview of the terrain (docs/plans/p090_large-ecs-test-world-scene.md §2)."
+      "description": "Static wide overview of the terrain. C switches to the camera following the crate stack."
     }
   }
 }

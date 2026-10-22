@@ -1,4 +1,4 @@
-import type * as THREE from 'three/webgpu';
+import * as THREE from 'three/webgpu';
 import { IS_DEBUG_ENV, getECSWorld, getMaterial, createMeshEntity } from 'aekasha';
 
 export const DEBUG_TAB_SCENE_ID = 'exampleDebugTab';
@@ -28,7 +28,8 @@ export const buildBoxes = () => {
 /** Every box shares one material: changing its colour changes them all */
 export const setBoxColor = (color: string) => {
   boxSettings.color = color;
-  (getMaterial('debugTabBox') as THREE.MeshStandardMaterial | undefined)?.color.set(color);
+  const material = getMaterial('debugTabBox');
+  if (material instanceof THREE.MeshStandardMaterial) material.color.set(color);
 };
 
 /** Moves every box to a random place on the ground */

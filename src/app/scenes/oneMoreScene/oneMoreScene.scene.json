@@ -1,6 +1,0 @@
-{
-  "$schema": "../../../../.schemas/scene.schema.json",
-  "id": "oneMoreScene",
-  "sceneFile": "./scenes/oneMoreScene/oneMoreScene",
-  "name": "One More Scene"
-}

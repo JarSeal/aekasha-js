@@ -4,12 +4,10 @@ import {
   getLoaderStatusUpdater,
   createMeshEntity,
   getMeshByAppId,
-  type MeshProps,
   createMaterial,
   createLightEntity,
   setLightEnabled,
-  createGeometry,
-  deleteGeometry,
+  getGeometry,
   saveBufferGeometry,
   createCameraEntity,
   getActiveCameraId,
@@ -23,35 +21,207 @@ import {
   registerOnSceneExit,
   existsOrThrow,
 } from 'aekasha';
+import type { ECSWorld, MeshProps } from 'aekasha';
 import { FollowToolComponentType, HoverToolComponentType } from 'aekasha/toolkit/ecs';
 import { onSkyBoxChange, getSkyLightIds } from 'aekasha/skybox';
-import { generateOctahedralImpostor, generateCrossQuads } from 'aekasha/lod';
+import { generateCrossQuads } from 'aekasha/lod';
 import {
-  generateAsteroid,
-  generateTerrain,
   generateBushGeometry,
+  generateTerrain,
   generateTreeGeometry,
   scatterOnSurface,
 } from 'aekasha/toolkit/geometry';
+import type { GeneratedTerrain } from 'aekasha/toolkit/geometry';
 import { createInstancedLodPool } from 'aekasha/instancing';
 import { registerSpatialDomain } from 'aekasha/spatial';
+import {
+  createLargeWorldRockMaterial,
+  generateLargeWorldRockImpostor,
+  saveLargeWorldRockGeometry,
+} from '../../shared/largeWorldRock';
+
+const LARGE_WORLD_SCENE_ID = 'largeWorld';
+
+/** What every step builds on: the world, the root scene and the terrain's surface. */
+interface WorldContext {
+  world: ECSWorld;
+  rootScene: THREE.Scene;
+  terrain: GeneratedTerrain;
+  terrainMesh: THREE.Mesh;
+}
+
+/** A mesh placed on the terrain by its x and z (y: its height there plus `lift`, or `y`). */
+interface Placed {
+  appId: string;
+  geo: MeshProps['geo'];
+  x: number;
+  z: number;
+}
+
+/** The static props' materials, by name. */
+type PropMaterial = 'rock' | 'platform' | 'wall';
 
 /**
- * Phase 4/5 (docs/plans/p090_large-ecs-test-world-scene.md §3): terrain + static overview
- * camera + sun (Phase 4), then foliage scatter + static props + point-light accents (Phase 5).
- * The camera/lights/skybox are declared in `largeWorld.scene.json` and created automatically by
- * the scene loader (the camera before this runs, the lights and the sky box after it) — terrain
- * has no JSON authoring support (§1.1), so it's built here imperatively instead. Render-only for
- * now: real colliders (a terrain `HEIGHTFIELD`, static props) aren't added yet; `createPhysicsEntity`
- * (`aekasha/physics`) is how they would be.
+ * The static props. The `offFrustum` ones stand behind the overview camera (`largeWorldOverview`,
+ * at z = 120 looking at the origin), out of its view, at a fixed `y`: they opt into the ECS
+ * frustum culling (`ecsFrustumCullingEnabled`), whose result the ECS can query.
+ */
+const STATIC_PROPS: (Placed & { mat: PropMaterial; y?: number; offFrustum?: boolean })[] = [
+  {
+    appId: 'largeWorldRock1',
+    geo: { type: 'SPHERE', params: { radius: 1.6, widthSegments: 6, heightSegments: 5 } },
+    mat: 'rock',
+    x: -30,
+    z: -20,
+  },
+  {
+    appId: 'largeWorldRock2',
+    geo: { type: 'SPHERE', params: { radius: 2.2, widthSegments: 6, heightSegments: 5 } },
+    mat: 'rock',
+    x: 25,
+    z: 15,
+  },
+  {
+    appId: 'largeWorldPlatform1',
+    geo: { type: 'BOX', params: { width: 6, height: 0.6, depth: 6 } },
+    mat: 'platform',
+    x: 12,
+    z: 30,
+  },
+  {
+    appId: 'largeWorldPlatform2',
+    geo: { type: 'BOX', params: { width: 5, height: 0.6, depth: 5 } },
+    mat: 'platform',
+    x: -40,
+    z: 35,
+  },
+  {
+    appId: 'largeWorldWall1',
+    geo: { type: 'BOX', params: { width: 8, height: 3, depth: 0.6 } },
+    mat: 'wall',
+    x: 0,
+    z: -55,
+  },
+  {
+    appId: 'largeWorldRockOffFrustum1',
+    geo: { type: 'SPHERE', params: { radius: 1.8, widthSegments: 6, heightSegments: 5 } },
+    mat: 'rock',
+    x: 0,
+    z: 150,
+    y: 1.8,
+    offFrustum: true,
+  },
+  {
+    appId: 'largeWorldPlatformOffFrustum1',
+    geo: { type: 'BOX', params: { width: 5, height: 0.6, depth: 5 } },
+    mat: 'platform',
+    x: 20,
+    z: 160,
+    y: 0.3,
+    offFrustum: true,
+  },
+  {
+    appId: 'largeWorldWallOffFrustum1',
+    geo: { type: 'BOX', params: { width: 8, height: 3, depth: 0.6 } },
+    mat: 'wall',
+    x: -20,
+    z: 145,
+    y: 1.5,
+    offFrustum: true,
+  },
+];
+
+/** The red objects resting on the terrain ("dynamic" in their ids, but without bodies). */
+const RESTING_OBJECTS: Placed[] = [
+  {
+    appId: 'largeWorldDynamicBox1',
+    geo: { type: 'BOX', params: { width: 1, height: 1, depth: 1 } },
+    x: 8,
+    z: -10,
+  },
+  {
+    appId: 'largeWorldDynamicBox2',
+    geo: { type: 'BOX', params: { width: 1.2, height: 1.2, depth: 1.2 } },
+    x: -15,
+    z: 5,
+  },
+  {
+    appId: 'largeWorldDynamicSphere1',
+    geo: { type: 'SPHERE', params: { radius: 0.6, widthSegments: 12, heightSegments: 10 } },
+    x: 18,
+    z: -30,
+  },
+  {
+    appId: 'largeWorldDynamicSphere2',
+    geo: { type: 'SPHERE', params: { radius: 0.8, widthSegments: 12, heightSegments: 10 } },
+    x: -8,
+    z: 20,
+  },
+  {
+    appId: 'largeWorldDynamicBox3',
+    geo: { type: 'BOX', params: { width: 1, height: 1, depth: 1 } },
+    x: 30,
+    z: -5,
+  },
+];
+
+const CRATE_STACK_POSITION = { x: 5, z: 8 };
+const BARBELL_POSITION = { x: -20, z: -35 };
+/** The follow camera's offset from the crate stack. */
+const FOLLOW_OFFSET = new THREE.Vector3(4, 3, 6);
+
+/**
+ * A large procedural world without physics: a generated terrain, instanced trees, bushes and rocks
+ * scattered on it with LOD levels down to impostors, static props, point-light lanterns, a few
+ * resting objects, a bobbing crate stack with a camera following it (C switches to it), and the
+ * day-night sky box's lights taking over from the scene's own. The overview camera, the sun, the
+ * ambient light and the sky boxes come from `largeWorld.scene.json` (the camera before this file
+ * runs, the lights and the sky box after it); the terrain has no JSON form, so it's built here.
  */
 export const scene = async () => {
   const updateLoaderFn = getLoaderStatusUpdater();
   updateLoaderFn({ loadedCount: 0, totalCount: 1 });
 
-  const ecsWorld = getECSWorld();
-  const rootScene = existsOrThrow(getRootScene(), 'Could not find root scene in largeWorld scene.');
+  const ctx = createTerrain();
+  createTreePool(ctx);
+  createBushPool(ctx);
+  createRockPool(ctx);
+  createStaticProps(ctx);
+  createLanterns(ctx);
+  const restingMaterial = createRestingObjects(ctx);
+  const crateStackId = createCrateStack(ctx, restingMaterial);
+  createBarbell(ctx, restingMaterial);
+  createFollowCamera(ctx, crateStackId);
+  createCameraToggle(ctx.world);
+  syncSceneLightsWithSky(ctx.world);
 
+  updateLoaderFn({ loadedCount: 1, totalCount: 1 });
+};
+
+/** A geometry registered under `id`, built only when the id isn't registered already. */
+const saveGeometryOnce = (id: string, build: () => THREE.BufferGeometry) =>
+  getGeometry(id) ?? saveBufferGeometry(build(), { id });
+
+/**
+ * Merges `parts` (three's geometries, never registered) into one geometry registered under `id`,
+ * and disposes the parts.
+ */
+const saveMergedGeometry = (id: string, parts: THREE.BufferGeometry[]) => {
+  const geometry = saveGeometryOnce(id, () => {
+    const merged = existsOrThrow(mergeGeometries(parts, false), `Could not merge "${id}".`);
+    merged.computeVertexNormals();
+    merged.computeBoundingSphere();
+    merged.computeBoundingBox();
+    return merged;
+  });
+  for (const part of parts) part.dispose();
+  return geometry;
+};
+
+/** The terrain: 200 × 200 m, its geometry registered so the scene's asset release disposes it. */
+const createTerrain = (): WorldContext => {
+  const world = getECSWorld();
+  const rootScene = existsOrThrow(getRootScene(), 'The largeWorld scene needs the root scene.');
   const terrain = generateTerrain({
     width: 200,
     depth: 200,
@@ -60,279 +230,179 @@ export const scene = async () => {
     maxHeight: 7,
     seed: 5,
   });
-
-  // Generated geometries are registered so the scene asset release disposes them on scene exit
-  const terrainGeo = saveBufferGeometry(terrain.geometry, { id: 'largeWorldTerrainGeo' });
-
-  const terrainMat = createMaterial({
-    id: 'largeWorldTerrainMat',
-    type: 'PHONG',
-    params: { color: '#4a7c3f', flatShading: false },
-  });
-
   createMeshEntity(
-    { geo: terrainGeo, mat: terrainMat, castShadow: true, receiveShadow: true },
+    {
+      geo: saveBufferGeometry(terrain.geometry, { id: 'largeWorldTerrainGeo' }),
+      mat: createMaterial({
+        id: 'largeWorldTerrainMat',
+        type: 'PHONG',
+        params: { color: '#4a7c3f', flatShading: false },
+      }),
+      castShadow: true,
+      receiveShadow: true,
+    },
     { appId: 'largeWorldTerrain', debugData: { name: 'Large world terrain' } }
   );
   const terrainMesh = existsOrThrow(
     getMeshByAppId('largeWorldTerrain'),
-    'Could not find the just-created terrain mesh by appId in largeWorld scene.'
+    'The large world terrain has no mesh.'
   );
+  return { world, rootScene, terrain, terrainMesh };
+};
 
-  // --- Foliage (Phase 5) — scattered directly off the terrain mesh's surface, no
-  // `getHeightAt` needed (§3 Phase 5), baked into two ECS-addressable instanced pools.
-
-  const treePlacements = scatterOnSurface({
+/**
+ * 1,500 trees scattered off the terrain mesh's surface into an instanced LOD pool: the tree, the
+ * same generator at fewer segments, and cross-quads (three alpha-cut planes with the tree baked on
+ * them, lit at runtime like the mesh). The cross-quads are built from their export
+ * (`largeWorldTreeCross.impostor.json` next to this file, listed in the scene JSON), so nothing is
+ * baked at load; re-export it from the LOD tab's Impostors after changing the tree.
+ */
+const createTreePool = ({ world, rootScene, terrainMesh }: WorldContext) => {
+  const placements = scatterOnSurface({
     surface: terrainMesh,
     count: 1500,
     seed: 2,
     minSpacing: 2,
     scaleRange: [0.7, 1.3],
   });
-  // Hand-made levels from the same generators at lower segment counts: the default tree (30
-  // triangles) and bush (120) are too low-poly for a p347 chain to simplify
-  // (docs/plans/_DONE_p347_lod-chain-generation.md, Phase 0), but fewer segments keep their
-  // silhouette (the bush's blobs are placed by its seed, not its segment count).
-  const treeGeometry = saveBufferGeometry(generateTreeGeometry().geometry, {
-    id: 'largeWorldTreeGeo',
-  });
-  const treeLod1Geometry = saveBufferGeometry(
-    generateTreeGeometry({ radialSegments: 3 }).geometry,
-    { id: 'largeWorldTreeLod1Geo' }
+  // Hand-made levels: the default tree (30 triangles) is too low-poly for a generated LOD chain to
+  // simplify, but fewer segments keep its silhouette
+  const geometry = saveGeometryOnce('largeWorldTreeGeo', () => generateTreeGeometry().geometry);
+  const lod1Geometry = saveGeometryOnce(
+    'largeWorldTreeLod1Geo',
+    () => generateTreeGeometry({ radialSegments: 3 }).geometry
   );
-  const treeTrunkMat = createMaterial({
-    id: 'largeWorldTreeTrunkMat',
-    type: 'PHONG',
-    params: { color: '#5b3a29' },
-  });
-  const treeFoliageMat = createMaterial({
-    id: 'largeWorldTreeFoliageMat',
-    type: 'PHONG',
-    params: { color: '#2f5d34', flatShading: true },
-  });
-  // The trees get their own spatial domain (docs/plans/_DONE_p346_spatial-domains.md), apart from
-  // DEFAULT's light culling members. The trees never move, so it's rebuilt only when they're
-  // spawned or deleted. It belongs to this scene, so leaving it unregisters the domain
-  // (docs/plans/_DONE_p349_scene-scoped-spatial-domains.md).
-  registerSpatialDomain(ecsWorld, {
+  const material = [
+    createMaterial({ id: 'largeWorldTreeTrunkMat', type: 'PHONG', params: { color: '#5b3a29' } }),
+    createMaterial({
+      id: 'largeWorldTreeFoliageMat',
+      type: 'PHONG',
+      params: { color: '#2f5d34', flatShading: true },
+    }),
+  ];
+  // The trees have a spatial domain of their own, apart from DEFAULT's light culling members.
+  // They never move, so it's rebuilt only when they're spawned or deleted, and it's this scene's:
+  // leaving the scene unregisters it
+  registerSpatialDomain(world, {
     id: 'FOLIAGE',
     cellSize: 16,
-    maxMembers: treePlacements.length,
+    maxMembers: placements.length,
     update: 'STATIC',
-    sceneId: 'largeWorld',
+    sceneId: LARGE_WORLD_SCENE_ID,
   });
-  // The farthest level: three alpha-cut planes with the tree baked on them
-  // (docs/plans/_DONE_p351_impostor-billboard-lod.md §2.1), lit at runtime like the mesh. Built from its
-  // export (src/app/impostors/, listed in largeWorld.scene.json's `impostors`), so nothing is
-  // baked at load; re-export it from the LOD tab's Impostors after changing the tree
-  const treeCross = generateCrossQuads(treeGeometry, [treeTrunkMat, treeFoliageMat], {
-    id: 'largeWorldTreeCross',
-  });
-  // One InstancedMesh per level, each instance in the one its LOD selects
-  // (docs/plans/_DONE_p348_ecs-lod-selection.md §4.2). The thresholds are screen sizes (bounding-sphere
-  // diameter / viewport height): from the overview camera a tree at scale 1 crosses 0.04 at about
-  // 145 m and 0.032 at about 180 m.
-  const treePool = createInstancedLodPool({
-    world: ecsWorld,
+  const cross = generateCrossQuads(geometry, material, { id: 'largeWorldTreeCross' });
+  // One InstancedMesh per level, each instance in the one its LOD selects. The thresholds are
+  // screen sizes (bounding-sphere diameter / viewport height): from the overview camera a tree at
+  // scale 1 crosses 0.04 at about 145 m and 0.032 at about 180 m
+  const pool = createInstancedLodPool({
+    world,
     levels: [
-      { geometry: treeGeometry, material: [treeTrunkMat, treeFoliageMat], screenSize: 0.04 },
-      {
-        geometry: treeLod1Geometry,
-        material: [treeTrunkMat, treeFoliageMat],
-        screenSize: 0.032,
-      },
-      { geometry: treeCross.geometry, material: treeCross.material, screenSize: 0 },
+      { geometry, material, screenSize: 0.04 },
+      { geometry: lod1Geometry, material, screenSize: 0.032 },
+      { geometry: cross.geometry, material: cross.material, screenSize: 0 },
     ],
-    maxInstances: treePlacements.length,
+    maxInstances: placements.length,
     receiveShadow: true,
     spatialDomain: 'FOLIAGE',
   });
-  rootScene.add(...treePool.meshes);
-  treePool.spawn(ecsWorld, treePlacements);
+  rootScene.add(...pool.meshes);
+  pool.spawn(world, placements);
+};
 
-  const bushPlacements = scatterOnSurface({
+/** 2,000 bushes in two levels (the second at fewer segments), hidden when a few pixels tall. */
+const createBushPool = ({ world, rootScene, terrainMesh }: WorldContext) => {
+  const placements = scatterOnSurface({
     surface: terrainMesh,
     count: 2000,
     seed: 3,
     minSpacing: 1,
     scaleRange: [0.6, 1.2],
   });
-  const bushGeo = saveBufferGeometry(generateBushGeometry(), { id: 'largeWorldBushGeo' });
-  const bushLod1Geo = saveBufferGeometry(generateBushGeometry({ segments: 3 }), {
-    id: 'largeWorldBushLod1Geo',
-  });
-  const bushMat = createMaterial({
+  // The bush's blobs are placed by its seed, not its segment count, so the levels match
+  const geometry = saveGeometryOnce('largeWorldBushGeo', () => generateBushGeometry());
+  const lod1Geometry = saveGeometryOnce('largeWorldBushLod1Geo', () =>
+    generateBushGeometry({ segments: 3 })
+  );
+  const material = createMaterial({
     id: 'largeWorldBushMat',
     type: 'PHONG',
     params: { color: '#3c6e35', flatShading: true },
   });
   // From the overview camera a bush at scale 1 crosses 0.03 at about 75 m, and is hidden below
-  // 0.012 (with the hysteresis, past about 200 m), where it's a few pixels tall.
-  const bushPool = createInstancedLodPool({
-    world: ecsWorld,
+  // 0.012 (with the hysteresis, past about 200 m)
+  const pool = createInstancedLodPool({
+    world,
     levels: [
-      { geometry: bushGeo, material: bushMat, screenSize: 0.03 },
-      { geometry: bushLod1Geo, material: bushMat, screenSize: 0 },
+      { geometry, material, screenSize: 0.03 },
+      { geometry: lod1Geometry, material, screenSize: 0 },
     ],
     lod: { cullScreenSize: 0.012 },
-    maxInstances: bushPlacements.length,
+    maxInstances: placements.length,
     receiveShadow: true,
   });
-  rootScene.add(...bushPool.meshes);
-  bushPool.spawn(ecsWorld, bushPlacements);
+  rootScene.add(...pool.meshes);
+  pool.spawn(world, placements);
+};
 
-  // Rocks: a toolkit asteroid, the same rock at a lower icosphere detail, and an octahedral
-  // impostor last (docs/plans/_DONE_p351_impostor-billboard-lod.md §2.2). Hemi: they turn about y only
-  // and sit in the ground, so nothing sees them from below, and the frames cover the upper
-  // hemisphere at twice the density.
-  const rockPlacements = scatterOnSurface({
+/**
+ * 300 rocks: the shared large world rock (`src/app/shared/largeWorldRock.ts`), the same rock at a
+ * lower icosphere detail, and its octahedral impostor, built from its export.
+ */
+const createRockPool = ({ world, rootScene, terrainMesh }: WorldContext) => {
+  const placements = scatterOnSurface({
     surface: terrainMesh,
     count: 300,
     seed: 6,
     minSpacing: 4,
     scaleRange: [0.6, 1.6],
   });
-  const rockShape = { seed: 11, shape: [1.25, 0.75, 1] as [number, number, number] };
-  const rockGeo = saveBufferGeometry(generateAsteroid(rockShape).geometry, {
-    id: 'largeWorldRockGeo',
-  });
-  // A third of its height in the ground, so the impostor's surface depth meets the terrain like
-  // the mesh does
-  rockGeo.computeBoundingBox();
-  const { min: rockMin, max: rockMax } = rockGeo.boundingBox!;
-  // The rock's bottom (min.y below its centre) a third of its height under the surface
-  const rockLift = -rockMin.y - (rockMax.y - rockMin.y) / 3;
-  for (const placement of rockPlacements) placement.position.y += rockLift * placement.scale;
-  const rockLod1Geo = saveBufferGeometry(generateAsteroid({ ...rockShape, detail: 1 }).geometry, {
-    id: 'largeWorldRockLod1Geo',
-  });
-  const rockPoolMat = createMaterial({
-    id: 'largeWorldRockPoolMat',
-    type: 'PHONG',
-    params: { color: '#8f8a80', flatShading: true },
-  });
-  // Built from its export (src/app/impostors/, listed in largeWorld.scene.json's `impostors`), so
-  // nothing is baked at load; re-export it from the LOD tab's Impostors after changing the rock
-  const rockImpostor = generateOctahedralImpostor(rockGeo, rockPoolMat, {
-    id: 'largeWorldRockImpostor',
-    hemi: true,
-  });
+  const geometry = saveLargeWorldRockGeometry('largeWorldRockGeo');
+  // A third of its height in the ground (its bottom, min.y below its centre, that deep), so the
+  // impostor's surface depth meets the terrain like the mesh does
+  geometry.computeBoundingBox();
+  const { min, max } = existsOrThrow(geometry.boundingBox, 'The rock has no bounding box.');
+  const lift = -min.y - (max.y - min.y) / 3;
+  for (const placement of placements) placement.position.y += lift * placement.scale;
+  const lod1Geometry = saveLargeWorldRockGeometry('largeWorldRockLod1Geo', 1);
+  const material = createLargeWorldRockMaterial('largeWorldRockPoolMat');
+  const impostor = generateLargeWorldRockImpostor(geometry, material);
   // From the overview camera a rock at scale 1 (radius about 1.4) crosses 0.05 at about 50 m and
   // 0.025 at about 100 m
-  const rockPool = createInstancedLodPool({
-    world: ecsWorld,
+  const pool = createInstancedLodPool({
+    world,
     levels: [
-      { geometry: rockGeo, material: rockPoolMat, screenSize: 0.05 },
-      { geometry: rockLod1Geo, material: rockPoolMat, screenSize: 0.025 },
-      { geometry: rockImpostor.geometry, material: rockImpostor.material, screenSize: 0 },
+      { geometry, material, screenSize: 0.05 },
+      { geometry: lod1Geometry, material, screenSize: 0.025 },
+      { geometry: impostor.geometry, material: impostor.material, screenSize: 0 },
     ],
-    maxInstances: rockPlacements.length,
+    maxInstances: placements.length,
     receiveShadow: true,
   });
-  rootScene.add(...rockPool.meshes);
-  rockPool.spawn(ecsWorld, rockPlacements);
+  rootScene.add(...pool.meshes);
+  pool.spawn(world, placements);
+};
 
-  // --- Static props (Phase 5) — physics-less for now (§1.3). A few are placed behind the
-  // static overview camera on purpose and opt into `ecsFrustumCullingEnabled`, exercising
-  // docs/plans/_DONE_p080_object3d-frustum-culling.md's ECS-queryable culling for the first
-  // time anywhere in the engine (§1.7/§2).
-
-  const rockMat = createMaterial({
-    id: 'largeWorldRockMat',
-    type: 'PHONG',
-    params: { color: '#8a8a86', flatShading: true },
-  });
-  const platformMat = createMaterial({
-    id: 'largeWorldPlatformMat',
-    type: 'PHONG',
-    params: { color: '#a89f91' },
-  });
-  const wallMat = createMaterial({
-    id: 'largeWorldWallMat',
-    type: 'PHONG',
-    params: { color: '#7d7364' },
-  });
-
-  const staticProps: {
-    appId: string;
-    geo: MeshProps['geo'];
-    mat: MeshProps['mat'];
-    x: number;
-    z: number;
-    y?: number;
-    /** Placed behind the static overview camera (`largeWorldOverview`, at z=120 looking at the origin) so it's reliably off that camera's frustum. */
-    offFrustum?: boolean;
-  }[] = [
-    {
-      appId: 'largeWorldRock1',
-      geo: { type: 'SPHERE', params: { radius: 1.6, widthSegments: 6, heightSegments: 5 } },
-      mat: rockMat,
-      x: -30,
-      z: -20,
-    },
-    {
-      appId: 'largeWorldRock2',
-      geo: { type: 'SPHERE', params: { radius: 2.2, widthSegments: 6, heightSegments: 5 } },
-      mat: rockMat,
-      x: 25,
-      z: 15,
-    },
-    {
-      appId: 'largeWorldPlatform1',
-      geo: { type: 'BOX', params: { width: 6, height: 0.6, depth: 6 } },
-      mat: platformMat,
-      x: 12,
-      z: 30,
-    },
-    {
-      appId: 'largeWorldPlatform2',
-      geo: { type: 'BOX', params: { width: 5, height: 0.6, depth: 5 } },
-      mat: platformMat,
-      x: -40,
-      z: 35,
-    },
-    {
-      appId: 'largeWorldWall1',
-      geo: { type: 'BOX', params: { width: 8, height: 3, depth: 0.6 } },
-      mat: wallMat,
-      x: 0,
-      z: -55,
-    },
-    {
-      appId: 'largeWorldRockOffFrustum1',
-      geo: { type: 'SPHERE', params: { radius: 1.8, widthSegments: 6, heightSegments: 5 } },
-      mat: rockMat,
-      x: 0,
-      z: 150,
-      y: 1.8,
-      offFrustum: true,
-    },
-    {
-      appId: 'largeWorldPlatformOffFrustum1',
-      geo: { type: 'BOX', params: { width: 5, height: 0.6, depth: 5 } },
-      mat: platformMat,
-      x: 20,
-      z: 160,
-      y: 0.3,
-      offFrustum: true,
-    },
-    {
-      appId: 'largeWorldWallOffFrustum1',
-      geo: { type: 'BOX', params: { width: 8, height: 3, depth: 0.6 } },
-      mat: wallMat,
-      x: -20,
-      z: 145,
-      y: 1.5,
-      offFrustum: true,
-    },
-  ];
-
-  for (const prop of staticProps) {
+/** The static props of `STATIC_PROPS`, 0.3 m above the terrain unless they have a `y`. */
+const createStaticProps = ({ world, terrain }: WorldContext) => {
+  const materials: Record<PropMaterial, THREE.Material> = {
+    rock: createMaterial({
+      id: 'largeWorldRockMat',
+      type: 'PHONG',
+      params: { color: '#8a8a86', flatShading: true },
+    }),
+    platform: createMaterial({
+      id: 'largeWorldPlatformMat',
+      type: 'PHONG',
+      params: { color: '#a89f91' },
+    }),
+    wall: createMaterial({ id: 'largeWorldWallMat', type: 'PHONG', params: { color: '#7d7364' } }),
+  };
+  for (const prop of STATIC_PROPS) {
     const y = prop.y ?? terrain.getHeightAt(prop.x, prop.z) + 0.3;
     createMeshEntity(
       {
         geo: prop.geo,
-        mat: prop.mat,
+        mat: materials[prop.mat],
         castShadow: true,
         receiveShadow: true,
         position: { x: prop.x, y, z: prop.z },
@@ -342,22 +412,18 @@ export const scene = async () => {
         debugData: { name: prop.appId },
         ecsFrustumCullingEnabled: prop.offFrustum,
       },
-      ecsWorld
+      world
     );
   }
+};
 
-  // --- Point lights (Phase 5) — a handful of lantern/firefly accents among the foliage,
-  // exercising per-light contribution culling (`objectCullingEnabled`, LightObjectCullingSystem.ts),
-  // which no other example scene in this repo uses yet (§1.5).
-
-  const lanternPlacements = scatterOnSurface({
-    surface: terrainMesh,
-    count: 10,
-    seed: 4,
-    minSpacing: 12,
-  });
-  for (let i = 0; i < lanternPlacements.length; i++) {
-    const placement = lanternPlacements[i];
+/**
+ * Ten lantern point lights among the foliage, each culled when its light reaches nothing in view
+ * (`objectCullingEnabled`).
+ */
+const createLanterns = ({ world, terrainMesh }: WorldContext) => {
+  const placements = scatterOnSurface({ surface: terrainMesh, count: 10, seed: 4, minSpacing: 12 });
+  placements.forEach(({ position }, i) => {
     createLightEntity(
       {
         type: 'POINT',
@@ -365,169 +431,104 @@ export const scene = async () => {
         intensity: 4,
         distance: 8,
         objectCullingEnabled: true,
-        position: {
-          x: placement.position.x,
-          y: placement.position.y + 1.2,
-          z: placement.position.z,
-        },
+        position: { x: position.x, y: position.y + 1.2, z: position.z },
       },
       { appId: `largeWorldLantern${i}`, debugData: { name: `Large world lantern ${i}` } },
-      ecsWorld
+      world
     );
-  }
+  });
+};
 
-  // --- Dynamic objects (Phase 6) — physics-less for now (§1.3/§5): placed at rest on the
-  // terrain, not simulated. Real rigid bodies/colliders (`createPhysicsEntity`) aren't added
-  // yet; this is the render-only version.
-
-  const dynamicMat = createMaterial({
+/** `RESTING_OBJECTS` on the terrain. Returns their material, which the crates and barbell share. */
+const createRestingObjects = ({ world, terrain }: WorldContext) => {
+  const material = createMaterial({
     id: 'largeWorldDynamicMat',
     type: 'PHONG',
     params: { color: '#c94f4f' },
   });
-
-  const simpleDynamicObjects: { appId: string; geo: MeshProps['geo']; x: number; z: number }[] = [
-    {
-      appId: 'largeWorldDynamicBox1',
-      geo: { type: 'BOX', params: { width: 1, height: 1, depth: 1 } },
-      x: 8,
-      z: -10,
-    },
-    {
-      appId: 'largeWorldDynamicBox2',
-      geo: { type: 'BOX', params: { width: 1.2, height: 1.2, depth: 1.2 } },
-      x: -15,
-      z: 5,
-    },
-    {
-      appId: 'largeWorldDynamicSphere1',
-      geo: { type: 'SPHERE', params: { radius: 0.6, widthSegments: 12, heightSegments: 10 } },
-      x: 18,
-      z: -30,
-    },
-    {
-      appId: 'largeWorldDynamicSphere2',
-      geo: { type: 'SPHERE', params: { radius: 0.8, widthSegments: 12, heightSegments: 10 } },
-      x: -8,
-      z: 20,
-    },
-    {
-      appId: 'largeWorldDynamicBox3',
-      geo: { type: 'BOX', params: { width: 1, height: 1, depth: 1 } },
-      x: 30,
-      z: -5,
-    },
-  ];
-  for (const obj of simpleDynamicObjects) {
+  for (const obj of RESTING_OBJECTS) {
     createMeshEntity(
       {
         geo: obj.geo,
-        mat: dynamicMat,
+        mat: material,
         castShadow: true,
         receiveShadow: true,
         position: { x: obj.x, y: terrain.getHeightAt(obj.x, obj.z) + 0.6, z: obj.z },
       },
       { appId: obj.appId, debugData: { name: obj.appId } },
-      ecsWorld
+      world
     );
   }
+  return material;
+};
 
-  // Two compound-shape objects (multiple merged primitives, à la
-  // `characterTestObjects.ts`'s stairs/wall use of `mergeGeometries`) — a body-shape variety
-  // beyond single primitives, for whichever compound/convex-hull collider the eventual physics
-  // wiring uses.
-
-  const crateBaseGeo = createGeometry({
-    type: 'BOX',
-    params: { width: 1.4, height: 1.4, depth: 1.4 },
-  });
-  const crateTopGeo = crateBaseGeo.clone();
-  crateTopGeo.translate(0.7, 1.4, 0);
-  const mergedCrateStackGeo = mergeGeometries([crateBaseGeo, crateTopGeo], false)!;
-  mergedCrateStackGeo.computeVertexNormals();
-  mergedCrateStackGeo.computeBoundingSphere();
-  mergedCrateStackGeo.computeBoundingBox();
-  const crateStackGeo = saveBufferGeometry(mergedCrateStackGeo, { id: 'largeWorldCrateStackGeo' });
-  deleteGeometry(crateBaseGeo.userData.id);
-  // The clone carries the source's userData.id, so deleteGeometry never reaches it
-  crateTopGeo.dispose();
-
-  const crateX = 5;
-  const crateZ = 8;
-  const crateBaseY = terrain.getHeightAt(crateX, crateZ) + 0.7;
-  const crateStackId = createMeshEntity(
+/**
+ * Two crates, one on the other's edge, merged into one geometry, bobbing with the toolkit's
+ * HoverEffect so the follow camera has something to follow. Returns its entity.
+ */
+const createCrateStack = ({ world, terrain }: WorldContext, material: THREE.Material) => {
+  const top = new THREE.BoxGeometry(1.4, 1.4, 1.4);
+  top.translate(0.7, 1.4, 0);
+  const geometry = saveMergedGeometry('largeWorldCrateStackGeo', [
+    new THREE.BoxGeometry(1.4, 1.4, 1.4),
+    top,
+  ]);
+  const { x, z } = CRATE_STACK_POSITION;
+  const baseY = terrain.getHeightAt(x, z) + 0.7;
+  const entityId = createMeshEntity(
     {
-      geo: crateStackGeo,
-      mat: dynamicMat,
+      geo: geometry,
+      mat: material,
       castShadow: true,
       receiveShadow: true,
-      position: { x: crateX, y: crateBaseY, z: crateZ },
+      position: { x, y: baseY, z },
     },
     {
       appId: 'largeWorldDynamicCrateStack',
       debugData: { name: 'Large world dynamic crate stack' },
     },
-    ecsWorld
+    world
   );
-  // Temporary stand-in motion so the FollowTool/camera-toggle below is visibly demonstrable
-  // before real physics exists (§1.3) — not a substitute for the eventual rigid body, just a
-  // sine-wave bob via the existing HoverEffect toolkit component (already used elsewhere, e.g.
-  // the bobbing ball in sceneTestECS.ts).
-  ecsWorld.addComponent(crateStackId, HoverToolComponentType.HOVER, {
+  world.addComponent(entityId, HoverToolComponentType.HOVER, {
     speed: 1.2,
     amplitude: 0.4,
-    baseY: crateBaseY,
-    time: 0,
+    baseY,
   });
+  return entityId;
+};
 
-  const barbellSphereGeo = createGeometry({
-    type: 'SPHERE',
-    params: { radius: 0.5, widthSegments: 10, heightSegments: 8 },
-  });
-  const barbellSphereGeoA = barbellSphereGeo.clone();
-  barbellSphereGeoA.translate(-0.9, 0, 0);
-  const barbellSphereGeoB = barbellSphereGeo.clone();
-  barbellSphereGeoB.translate(0.9, 0, 0);
-  const barbellHandleGeo = createGeometry({
-    type: 'CYLINDER',
-    params: { radiusTop: 0.15, radiusBottom: 0.15, height: 1.8, radialSegments: 8 },
-  });
-  barbellHandleGeo.rotateZ(Math.PI / 2);
-  const mergedBarbellGeo = mergeGeometries(
-    [barbellSphereGeoA, barbellSphereGeoB, barbellHandleGeo],
-    false
-  )!;
-  mergedBarbellGeo.computeVertexNormals();
-  mergedBarbellGeo.computeBoundingSphere();
-  mergedBarbellGeo.computeBoundingBox();
-  const barbellGeo = saveBufferGeometry(mergedBarbellGeo, { id: 'largeWorldBarbellGeo' });
-  deleteGeometry([barbellSphereGeo.userData.id, barbellHandleGeo.userData.id]);
-  // The clones carry the source's userData.id, so deleteGeometry never reaches them
-  barbellSphereGeoA.dispose();
-  barbellSphereGeoB.dispose();
-
-  const barbellX = -20;
-  const barbellZ = -35;
+/** Two spheres on a handle, merged into one geometry. */
+const createBarbell = ({ world, terrain }: WorldContext, material: THREE.Material) => {
+  const sphereA = new THREE.SphereGeometry(0.5, 10, 8);
+  sphereA.translate(-0.9, 0, 0);
+  const sphereB = new THREE.SphereGeometry(0.5, 10, 8);
+  sphereB.translate(0.9, 0, 0);
+  const handle = new THREE.CylinderGeometry(0.15, 0.15, 1.8, 8);
+  handle.rotateZ(Math.PI / 2);
+  const { x, z } = BARBELL_POSITION;
   createMeshEntity(
     {
-      geo: barbellGeo,
-      mat: dynamicMat,
+      geo: saveMergedGeometry('largeWorldBarbellGeo', [sphereA, sphereB, handle]),
+      mat: material,
       castShadow: true,
       receiveShadow: true,
-      position: { x: barbellX, y: terrain.getHeightAt(barbellX, barbellZ) + 0.5, z: barbellZ },
+      position: { x, y: terrain.getHeightAt(x, z) + 0.5, z },
     },
     { appId: 'largeWorldDynamicBarbell', debugData: { name: 'Large world dynamic barbell' } },
-    ecsWorld
+    world
   );
+};
 
-  // --- Dynamic camera (Phase 6) — follows the crate stack via `FollowTool.ts`'s existing
-  // leader-relative lerped following (position-only; it isn't light-specific despite living
-  // under "effects", and isn't extended here beyond what it already does, per §2/§3 Phase 6).
-  // Static until the crates get rigid bodies and the leader actually moves.
-
-  const followOffset = new THREE.Vector3(4, 3, 6);
-  const leaderTransform = ecsWorld.getComponent(crateStackId, ComponentType.TRANSFORM)!;
-  const dynamicCamId = createCameraEntity(
+/**
+ * A second camera, inactive, that follows the crate stack with the toolkit's FollowTool (its
+ * position, lerped, at `FOLLOW_OFFSET`).
+ */
+const createFollowCamera = ({ world }: WorldContext, crateStackId: number) => {
+  const leader = existsOrThrow(
+    world.getComponent(crateStackId, ComponentType.TRANSFORM),
+    'The crate stack has no transform.'
+  ).position;
+  const cameraId = createCameraEntity(
     {
       type: 'PERSPECTIVE',
       fov: 60,
@@ -535,11 +536,11 @@ export const scene = async () => {
       far: 500,
       active: false,
       position: {
-        x: leaderTransform.position.x + followOffset.x,
-        y: leaderTransform.position.y + followOffset.y,
-        z: leaderTransform.position.z + followOffset.z,
+        x: leader.x + FOLLOW_OFFSET.x,
+        y: leader.y + FOLLOW_OFFSET.y,
+        z: leader.z + FOLLOW_OFFSET.z,
       },
-      lookAtPoint: { x: crateX, y: leaderTransform.position.y, z: crateZ },
+      lookAtPoint: { x: CRATE_STACK_POSITION.x, y: leader.y, z: CRATE_STACK_POSITION.z },
     },
     {
       appId: 'largeWorldDynamicCamera',
@@ -548,50 +549,52 @@ export const scene = async () => {
         description: 'Follows largeWorldDynamicCrateStack via FollowTool. Toggle with the C key.',
       },
     },
-    ecsWorld
+    world
   );
-  ecsWorld.addComponent(dynamicCamId, FollowToolComponentType.FOLLOW, {
+  world.addComponent(cameraId, FollowToolComponentType.FOLLOW, {
     leaderId: crateStackId,
-    offset: followOffset,
+    offset: FOLLOW_OFFSET,
     targetOffset: new THREE.Vector3(0, 0, 0),
     speed: 3,
   });
+};
 
-  // --- Camera toggle (Phase 6, §2): a scene action map, replaced on the next visit by its id;
-  // exact modifiers, so Ctrl+C isn't a switch ---
-
+/**
+ * C switches between the overview and the follow camera: a scene action map (replaced on the next
+ * visit by its id), with exact modifiers, so Ctrl+C isn't a switch.
+ */
+const createCameraToggle = (world: ECSWorld) => {
   const actions = createActionMap({
     id: 'largeWorld',
-    sceneId: 'largeWorld',
+    sceneId: LARGE_WORLD_SCENE_ID,
     ignoreModifiers: false,
     actions: { toggleCamera: { type: 'BUTTON', name: 'Switch the overview and dynamic cameras' } },
     bindings: { toggleCamera: [{ device: 'KEYBOARD', keys: ['c'] }] },
   });
   actions.onPressed('toggleCamera', () => {
-    const overviewId = getEntityIdByAppId('largeWorldOverview', ecsWorld);
-    const dynamicId = getEntityIdByAppId('largeWorldDynamicCamera', ecsWorld);
-    if (overviewId === undefined || dynamicId === undefined) return;
-    const world = getECSWorld();
-    setMainCamera(world, getActiveCameraId() === overviewId ? dynamicId : overviewId);
+    const overviewId = getEntityIdByAppId('largeWorldOverview', world);
+    const followId = getEntityIdByAppId('largeWorldDynamicCamera', world);
+    if (overviewId === undefined || followId === undefined) return;
+    setMainCamera(world, getActiveCameraId() === overviewId ? followId : overviewId);
   });
+};
 
-  // --- Sky lights: the scene also lists the day-night sky box (docs/plans/_DONE_p351_impostor-billboard-lod.md
-  // Phase 3), which brings its own sun light, and its environment (and its ambient light, when it
-  // has one) lights the shade. While a sky box with a sun light is active, the scene's sun and
-  // ambient are off, so its night falls on everything.
-
-  // The scene's JSON lights are created after this file runs (and after the default sky box is
-  // activated), so they're looked up on every sync and the first one runs on enter.
+/**
+ * The scene also lists the day-night sky box, which brings its own sun light, and whose
+ * environment (and ambient light, when it has one) lights the shade. While a sky box with a sun
+ * light is active, the scene's sun and ambient are off, so its night falls on everything. The
+ * JSON lights are created after this file runs (and after the default sky box is activated), so
+ * each sync looks them up, and the first runs on enter.
+ */
+const syncSceneLightsWithSky = (world: ECSWorld) => {
   const syncSceneLights = () => {
     const hasSkySun = getSkyLightIds().suns.some((id) => id !== null);
     for (const appId of ['largeWorldSun', 'largeWorldAmbient']) {
-      const lightId = getEntityIdByAppId(appId, ecsWorld);
-      if (lightId !== undefined) setLightEnabled(lightId, !hasSkySun, ecsWorld);
+      const lightId = getEntityIdByAppId(appId, world);
+      if (lightId !== undefined) setLightEnabled(lightId, !hasSkySun, world);
     }
   };
-  registerOnSceneEnter('largeWorld', syncSceneLights);
-  // (One exit callback per scene: registerOnSceneExit replaces any earlier one.)
-  registerOnSceneExit('largeWorld', onSkyBoxChange(syncSceneLights));
-
-  updateLoaderFn({ loadedCount: 1, totalCount: 1 });
+  registerOnSceneEnter(LARGE_WORLD_SCENE_ID, syncSceneLights);
+  // The scene's one exit callback (a second registerOnSceneExit would replace it)
+  registerOnSceneExit(LARGE_WORLD_SCENE_ID, onSkyBoxChange(syncSceneLights));
 };

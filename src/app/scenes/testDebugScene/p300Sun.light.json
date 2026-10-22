@@ -1,0 +1,11 @@
+{
+  "$schema": "../../../../.schemas/light.schema.json",
+  "lightProps": {
+    "type": "DIRECTIONAL",
+    "color": "#ffffff",
+    "intensity": 2.5,
+    "position": { "x": 3, "y": 5, "z": 6 },
+    "targetPos": { "x": 0, "y": 0, "z": 0 }
+  },
+  "entityOpts": { "appId": "p300Sun", "debugData": { "name": "Sun" } }
+}

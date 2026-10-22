@@ -14,7 +14,7 @@ const removePanel = () => {
 
 /**
  * Shows the example's HUD panel (one per scene)
- * @param text (string) its text, lines separated by `\n`
+ * @param text its text, lines separated by `\n`
  * @returns the panel, to update with `panel.updateText(text)`
  */
 export const createExampleHud = (text: string) => {

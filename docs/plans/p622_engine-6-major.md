@@ -112,8 +112,21 @@ migration page, so an app made from the template upgrades in one step.
 - **The deprecations without a version:** none left. (`ui/DraggableWindow.ts`' six were removed in
   p617, `debug/Stats.ts`' two and `debug/_dbg__PercentagePie.ts`' one in p618: on no entry, no
   caller.)
-- **The toolkit** keeps its own scale: its `createSeededRandom` re-export goes in toolkit 3.0.0,
-  which ships with this major only if an engine change requires it (Versioning).
+- **The toolkit** keeps its own scale: toolkit 3.0.0 ships with this major only if an engine change
+  requires it (Versioning). Its list (p620 D5; each `@deprecated` names 3.0.0):
+  - `createSeededRandom` on `aekasha/toolkit/geometry` (`geometry/SeededRandom.ts`, a deprecated
+    copy since p620): removed, import it from `aekasha`. The layout rule for the file goes with it.
+  - `PhysicsParams` (`ecs/gameplay/movingPlatform/MovingPlatform.ts`): removed, its name is
+    `MovingPlatformPhysicsParams`.
+  - `DeleteMeshOptions` and `MovingPlatformOptions.deleteMeshOptions`: removed, never read
+    (`controls.delete()` deletes the platform's entity and its mesh).
+  - Not deprecated, breaking to change: `addGravityBody(entityId, mass, world?)`'s optional
+    positional `world` becomes an options object (`{ world }`), the coding standards' shape.
+  - Not deprecated, to decide: the component keys (`HoverToolComponentType`,
+    `FollowToolComponentType`, `SunShadowFitComponentType`) are TS `enum`s, where the app's keys
+    are `as const` objects (`src/AppECSRegistry.ts`, the ECS page's pattern). An enum member is a
+    type of its own, so the change breaks a caller that names one as a type; decide it with the
+    engine's `ComponentType`, also an enum.
 
 ## The tiers as a feature (from p611, 2026-10-14)
 

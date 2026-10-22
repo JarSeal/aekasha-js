@@ -13,7 +13,7 @@
     "appId": "physicsTestCamera",
     "debugData": {
       "name": "Physics test camera",
-      "description": "Static camera framing the ground plane and drop zone for the physics API MVP test scene."
+      "description": "Static camera framing the ground plane and drop zone for the Physics API test scene."
     }
   }
 }

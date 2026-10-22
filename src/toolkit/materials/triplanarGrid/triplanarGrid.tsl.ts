@@ -32,7 +32,9 @@ const MINOR_LINE_MIN_HALF_PIXELS = 0.75;
 // ─── Static defines ───
 // Structural switches, resolved at shader build time (only the used paths end up in the shader).
 // Set them in the material JSON `staticDefines`, or per mesh with `matOverrides.staticDefines`
-// (which gives the mesh a cached material variant, see getMaterialVariant).
+// (which gives the mesh a cached material variant, see getMaterialVariant). DEFAULT_DEFINES are
+// the defaults for a define the JSON leaves out: triplanarGrid.material.json sets each one (its
+// fitToBounds is on and its seamNormals off).
 type GridDefines = {
   /** Lines follow the object's rotation (world scale kept, so units stay meters), else world-aligned */
   alignToObject: boolean;
@@ -174,8 +176,19 @@ const gridPattern = (
 
 // ─── Sockets ───
 
-// Inputs arrive pre-wrapped by createMaterial: numbers as float uniforms, hex strings as color
-// uniforms. The minorLine* inputs are only needed with the minorLines define.
+/**
+ * A triplanar grid (`triplanarProjection`): major lines, minor lines between them, over a
+ * background colour.
+ *
+ * Inputs arrive pre-wrapped by createMaterial (numbers as float uniforms, hex strings as colour
+ * uniforms): `lineThickness` and `lineFrequency` (the line spacing) in meters, `lineColor`,
+ * `backgroundColor`, and `minorLineDivisions` and `minorLineColor`, needed only with the
+ * `minorLines` define. The static defines (booleans): `alignToObject` (default true),
+ * `fitToBounds` (false), `dominantAxis` (false), `minorLines` (true), `seamNormals` (true, read by
+ * `normalNode`). Asset code: the material's generated loader imports it, and `createMaterial`
+ * calls it by its socket name.
+ * @internal
+ */
 export const colorNode = (
   inputs: {
     lineThickness: Node<'float'>;
@@ -205,9 +218,16 @@ export const colorNode = (
   });
 };
 
-// Seam grooves derived from the same line data as colorNode. The pattern inputs are read from the
-// colorNode block's uniforms, so the `colorNode` block must be declared before `normalNode` in the
-// material JSON. Without the seamNormals define the material keeps its default normal.
+/**
+ * Grooves along the grid's lines, from the same line data as `colorNode`: the inputs
+ * `seamNormalStrength` (the major lines') and `minorSeamNormalStrength` (the minor lines', default
+ * 0). Without the `seamNormals` define it returns null and the material keeps its normal.
+ *
+ * The pattern's inputs are read from the `colorNode` block's uniforms (`colorNode_lineThickness`
+ * and the rest), so the material JSON declares the `colorNode` block before `normalNode`. Asset
+ * code, called by `createMaterial` by its socket name.
+ * @internal
+ */
 export const normalNode = (
   inputs: { seamNormalStrength: Node<'float'>; minorSeamNormalStrength?: Node<'float'> },
   material: NodeMaterial,
@@ -215,6 +235,11 @@ export const normalNode = (
 ) => {
   const defines = getDefines(staticDefines);
   if (!defines.seamNormals) return null;
+  if (!inputs.seamNormalStrength) {
+    throw new Error(
+      '[triplanarGrid] Missing normalNode input "seamNormalStrength" (seamNormals is on).'
+    );
+  }
 
   const uniforms = (material.userData.uniforms || {}) as Record<string, Node | undefined>;
   const params = getPatternParams(uniforms, 'colorNode_', defines);

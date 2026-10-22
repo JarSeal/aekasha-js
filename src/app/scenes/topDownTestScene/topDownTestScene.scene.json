@@ -3,7 +3,7 @@
   "id": "topDownTestScene",
   "sceneFile": "./scenes/topDownTestScene/topDownTestScene.ts",
   "name": "Top-down test",
-  "description": "Top-down character test scene (docs/plans/_DONE_p066_character-definitions-and-refactoring.md Phase 6): a WORLD_FIXED player (W = North = screen-up) on a large flat ground with a hills patch on the East side, scattered static obstacles and dynamic props, and a sun whose shadow is fitted to the camera view (SunShadowFit).",
+  "description": "Top-down character test scene: a WORLD_FIXED player (W = North = screen-up) on a large flat ground with a hills patch on the East side, scattered static obstacles and dynamic props, and a sun whose shadow is fitted to the camera view (SunShadowFit).",
   "cameras": ["topDownTestCamera"],
   "lights": ["topDownTestAmbient", "topDownTestSun"],
   "materials": ["triplanarGrid", "triplanarCheckerboard"],

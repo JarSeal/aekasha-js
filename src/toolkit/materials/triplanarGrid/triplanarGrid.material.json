@@ -3,7 +3,7 @@
   "id": "triplanarGrid",
   "tslFile": "materials/triplanarGrid/triplanarGrid.tsl.ts",
   "type": "STANDARDNODEMATERIAL",
-  "params": { "color": "#808080", "roughness": 0.85, "metalness": 0.0 },
+  "params": { "roughness": 0.85, "metalness": 0.0 },
   "staticDefines": {
     "alignToObject": true,
     "fitToBounds": true,
@@ -24,5 +24,9 @@
       "seamNormalStrength": 0.5,
       "minorSeamNormalStrength": 0.25
     }
+  },
+  "debugData": {
+    "name": "Triplanar grid",
+    "description": "Procedural grid in meters on any mesh (no UVs): major and minor lines over a background, with optional grooves along them (normalNode). Static defines: alignToObject, fitToBounds, dominantAxis, minorLines, seamNormals."
   }
 }

@@ -5,7 +5,7 @@
     "params": { "radius": 1, "widthSegments": 64, "heightSegments": 32 },
     "debugData": {
       "name": "LOD showcase sphere, level 0",
-      "description": "Lane 1's hand-made level 0 (64 × 32 segments), see lodShowcaseHandMade.mesh.json."
+      "description": "The hand-made levels lane's level 0 (64 × 32 segments), see lodShowcaseHandMade.mesh.json."
     }
   }
 }

@@ -40,7 +40,9 @@ colour from it, blurred. Both change with the time of day.
 - The day runs with the app loop, so pausing the app pauses it too. The clouds drift on the
   engine's clock: they stop with the master pause and in an editor view, not with the app.
 - [`createSceneMainLooper`](api:createSceneMainLooper) runs a function every frame while the
-  scene is loaded. The HUD line is only rewritten when its text changes.
+  scene is loaded. It compares the minute, the state and the speed with the ones shown, and
+  builds and writes the HUD line only when one changed: a looper runs every frame, so it
+  shouldn't build strings it throws away.
 
 ::: tip Try the layers
 In debug mode, the drawer's Sky box tab (`h`) has every layer's settings. A change shows at once

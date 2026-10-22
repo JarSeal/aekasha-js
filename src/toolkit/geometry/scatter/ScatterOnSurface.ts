@@ -1,57 +1,59 @@
 import * as THREE from 'three/webgpu';
 import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js';
-import { createMeshEntity, type MeshProps, ComponentType, getECSWorld } from 'aekasha';
+import { createMeshEntity, createSeededRandom, getECSWorld, lwarn, type MeshProps } from 'aekasha';
 import type { CoreEntityOpts } from 'aekasha/schemas';
-import { createSeededRandom } from 'aekasha';
 
-/**
- * `MeshSurfaceSampler.setRandomGenerator` exists at runtime (three@0.183.2's
- * examples/jsm) but is missing from the `@types/three` declarations bundled here —
- * this narrows the cast to just the one extra method instead of reaching for `any`.
- */
+// three's MeshSurfaceSampler has setRandomGenerator, which @types/three (0.186) doesn't declare:
+// the cast adds that one method
 interface SeedableMeshSurfaceSampler extends MeshSurfaceSampler {
   setRandomGenerator(randomFunction: () => number): this;
 }
 
+/**
+ * One placement {@link scatterOnSurface} found: where a thing goes, and how it's turned and
+ * sized.
+ */
 export interface ScatterPlacement {
+  /** The point on the surface, in world space. */
   position: THREE.Vector3;
-  /** World-space surface normal at the sampled point (mesh-local normal transformed by the surface's world matrix). */
+  /** The surface's unit normal at the point, in world space. */
   normal: THREE.Vector3;
+  /**
+   * The world rotation: up along the normal with `alignToNormal`, else world up, then a turn
+   * about it with `randomYRotation`.
+   */
   quaternion: THREE.Quaternion;
+  /** The uniform scale, from `scaleRange`. */
   scale: number;
 }
 
+/** {@link scatterOnSurface}'s options: the surface, how many points, and how they're spread. */
 export interface ScatterOptions {
   /**
-   * The mesh whose surface to scatter across. This is the same primitive for "scatter
-   * across a terrain" and "scatter on the surface of another object" (a rock, a roof, a
-   * wall) — both are just a `THREE.Mesh` surface to sample, so one function covers both
-   * cases the request asked for.
+   * The mesh whose surface to scatter across, a terrain or any other object (a rock, a roof),
+   * read with its world matrix.
    */
   surface: THREE.Mesh;
+  /** How many points to place; fewer come back when `minSpacing` can't fit them all. */
   count: number;
+  /** Deterministic seed, an integer (default 1): the same seed and surface give the same points. */
   seed?: number;
   /**
-   * Minimum spacing between accepted points, in world units. Enforced by rejection-sampling
-   * against previously accepted points (bounded by `maxAttemptsPerPoint`) — a cheap
-   * approximation of blue-noise/Poisson-disc spacing, not exact, and O(n^2) in the number of
-   * accepted points. Fine for a first pass at scene-build-time entity counts; if scatter
-   * counts grow large enough for this to matter, bucket accepted points into a grid (the
-   * same idea as `docs/plans/_DONE_p050_spatial-index.md`'s `SpatialGrid`) instead of scanning all
-   * of them. 0 (default) disables spacing entirely (pure random, may cluster/overlap).
+   * The least distance between two points, in world units (default 0: none, so points may
+   * cluster). A point that lands too close is drawn again, up to `maxAttemptsPerPoint` times,
+   * then skipped: a cheap approximation of Poisson-disc spacing.
    */
   minSpacing?: number;
-  /** Max resample attempts per point when `minSpacing` is set, before giving up on that slot. */
+  /** The draws per point with `minSpacing`, before the point is skipped (default 30). */
   maxAttemptsPerPoint?: number;
-  /** Uniform scale range; one random value is picked per placement. Defaults to no scale variance. */
-  scaleRange?: [number, number];
+  /** The uniform scale's range, one value drawn per placement (default [1, 1]). */
+  scaleRange?: [min: number, max: number];
   /**
-   * Align the placement's up axis to the sampled surface normal (e.g. moss/debris on a
-   * sloped rock) instead of always facing world-up (the common case for trees/foliage that
-   * should stand upright even on sloped terrain). Defaults to false (world-up).
+   * Turn each placement's up axis to the surface normal (moss or debris on a sloped rock) instead
+   * of world up (default false: trees standing upright on a slope).
    */
   alignToNormal?: boolean;
-  /** Randomize rotation around the up axis. Defaults to true. */
+  /** Turn each placement by a random angle about its up axis (default true). */
   randomYRotation?: boolean;
 }
 
@@ -62,16 +64,80 @@ const _yRotation = new THREE.Quaternion();
 const _normalMatrix = new THREE.Matrix3();
 
 /**
- * Scatters `count` points across a mesh's surface using area-weighted random sampling
- * (`MeshSurfaceSampler`, shipped with three's examples/jsm — no new dependency, same import
- * style already used for `mergeGeometries` elsewhere in this repo). Returns placement data
- * only; use `bakeScatterToInstancedMesh` (bulk, e.g. foliage) or `spawnScatterAsMeshEntities`
- * (individual ECS entities, e.g. a handful of static props) to actually place something.
+ * The accepted positions in grid cells about `minSpacing` wide, so a candidate is checked against
+ * the 27 cells around its own only. Each position closer than `minSpacing` is in one of them, so
+ * the answer is the scan of every position's.
+ */
+const createSpacingGrid = (minSpacing: number) => {
+  // A hair wider than minSpacing: two cell indices of positions closer than it then never differ
+  // by 2, whatever the division rounds
+  const cellSize = minSpacing * (1 + 1e-6);
+  const minSpacingSq = minSpacing * minSpacing;
+  // Keyed by a hash of the cell's indices: cells that share a key share a list, which only costs
+  // a few distance checks more
+  const cells = new Map<number, THREE.Vector3[]>();
+  const cellKey = (ix: number, iy: number, iz: number) =>
+    Math.imul(ix, 73856093) ^ Math.imul(iy, 19349663) ^ Math.imul(iz, 83492791);
+
+  const isTooClose = (position: THREE.Vector3) => {
+    const ix = Math.floor(position.x / cellSize);
+    const iy = Math.floor(position.y / cellSize);
+    const iz = Math.floor(position.z / cellSize);
+    for (let x = ix - 1; x <= ix + 1; x++) {
+      for (let y = iy - 1; y <= iy + 1; y++) {
+        for (let z = iz - 1; z <= iz + 1; z++) {
+          const cell = cells.get(cellKey(x, y, z));
+          if (!cell) continue;
+          for (let i = 0; i < cell.length; i++) {
+            if (cell[i].distanceToSquared(position) < minSpacingSq) return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+
+  const add = (position: THREE.Vector3) => {
+    const key = cellKey(
+      Math.floor(position.x / cellSize),
+      Math.floor(position.y / cellSize),
+      Math.floor(position.z / cellSize)
+    );
+    const cell = cells.get(key);
+    if (cell) cell.push(position);
+    else cells.set(key, [position]);
+  };
+
+  return { isTooClose, add };
+};
+
+/**
+ * Scatters up to `count` seeded points across a mesh's surface, area-weighted (three's
+ * `MeshSurfaceSampler`), and returns them as placements in world space: data only. Place things
+ * with them: an instanced pool (`createInstancedMeshPool`, `aekasha/instancing`) for many,
+ * {@link bakeScatterToInstancedMesh} into a plain `InstancedMesh`, or
+ * {@link spawnScatterAsMeshEntities} for a handful of entities. Colliders are the caller's
+ * (`createPhysicsEntity` at a placement's `position`).
+ * @remarks With `minSpacing` it may return fewer than `count` placements: a point that finds no
+ * free spot in its draws is skipped. Each placement allocates its vectors and quaternion: meant
+ * for a scene's load, not per frame.
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
  *
- * Physics is intentionally out of scope here (see docs/plans/p090_large-ecs-test-world-scene.md
- * §1.3) — this only computes where things go, not what collides with them. A caller can use
- * each placement's `position`/`normal` to add a collider (`createPhysicsEntity`) without this
- * function needing to change.
+ * // 500 bushes on a terrain mesh, at least 2 m apart, baked into a plain InstancedMesh (yours to
+ * // dispose; an instanced pool makes each one an entity and goes with its scene)
+ * const placements = scatterOnSurface({
+ *   surface: terrainMesh,
+ *   count: 500,
+ *   seed: 9,
+ *   minSpacing: 2,
+ *   scaleRange: [0.7, 1.3],
+ * });
+ * const bushes = new THREE.InstancedMesh(generateBushGeometry(), bushMaterial, 500);
+ * bakeScatterToInstancedMesh(bushes, placements);
+ * getRootScene()?.add(bushes);
+ * ```
  */
 export const scatterOnSurface = (opts: ScatterOptions): ScatterPlacement[] => {
   const {
@@ -94,7 +160,7 @@ export const scatterOnSurface = (opts: ScatterOptions): ScatterPlacement[] => {
   _normalMatrix.getNormalMatrix(surface.matrixWorld);
 
   const placements: ScatterPlacement[] = [];
-  const minSpacingSq = minSpacing * minSpacing;
+  const spacingGrid = minSpacing > 0 ? createSpacingGrid(minSpacing) : null;
   const attemptsPerPoint = minSpacing > 0 ? maxAttemptsPerPoint : 1;
 
   for (let i = 0; i < count; i++) {
@@ -103,16 +169,7 @@ export const scatterOnSurface = (opts: ScatterOptions): ScatterPlacement[] => {
       _worldPosition.applyMatrix4(surface.matrixWorld);
       _worldNormal.applyMatrix3(_normalMatrix).normalize();
 
-      if (minSpacing > 0) {
-        let tooClose = false;
-        for (const existing of placements) {
-          if (existing.position.distanceToSquared(_worldPosition) < minSpacingSq) {
-            tooClose = true;
-            break;
-          }
-        }
-        if (tooClose) continue;
-      }
+      if (spacingGrid?.isTooClose(_worldPosition)) continue;
 
       const upAxis = alignToNormal ? _worldNormal : _up;
       const quaternion = new THREE.Quaternion().setFromUnitVectors(_up, upAxis);
@@ -123,16 +180,11 @@ export const scatterOnSurface = (opts: ScatterOptions): ScatterPlacement[] => {
 
       const scale = THREE.MathUtils.lerp(scaleRange[0], scaleRange[1], random());
 
-      placements.push({
-        position: _worldPosition.clone(),
-        normal: _worldNormal.clone(),
-        quaternion,
-        scale,
-      });
+      const position = _worldPosition.clone();
+      placements.push({ position, normal: _worldNormal.clone(), quaternion, scale });
+      spacingGrid?.add(position);
       break;
-      // If every attempt fails, this slot is simply skipped — a first-pass scatterer may
-      // return fewer than `count` placements under tight `minSpacing`, which is an
-      // acceptable outcome to refine later rather than a bug to fix now.
+      // When every draw lands too close, the point is skipped (see the doc's remark)
     }
   }
 
@@ -140,13 +192,15 @@ export const scatterOnSurface = (opts: ScatterOptions): ScatterPlacement[] => {
 };
 
 /**
- * Bakes placements into an existing `InstancedMesh`'s matrices, starting at `startIndex`.
- * The bulk/foliage path: an instance matrix already encodes position + rotation + scale, so
- * this sidesteps the fact that neither `MeshProps`/mesh JSON nor the ECS `Transform` helpers
- * expose a per-entity scale today (see docs/plans/p090_large-ecs-test-world-scene.md §1.1).
- * Does not create any ECS entities: for per-instance ECS state, use the instancing feature's
- * `createInstancedMeshPool` (`aekasha/instancing`) instead.
- * Returns the next free index.
+ * Bakes placements into an existing `InstancedMesh`'s matrices, starting at `startIndex`: the
+ * world-space placements become instance matrices in the mesh's own space (its world matrix
+ * undone), as many as its capacity holds (the rest are dropped with a warning). Sets the mesh's
+ * `count` to the returned index, so instances past the baked ones aren't drawn. Creates no
+ * entities: for per-instance ECS state, use the instancing feature's `createInstancedMeshPool`
+ * (`aekasha/instancing`) instead.
+ * @returns the next free index (`startIndex` plus the placements baked)
+ * @remarks The mesh's world matrix is read once, now: a mesh moved later moves its instances
+ * with it.
  */
 export const bakeScatterToInstancedMesh = (
   mesh: THREE.InstancedMesh,
@@ -155,34 +209,50 @@ export const bakeScatterToInstancedMesh = (
 ): number => {
   const matrix = new THREE.Matrix4();
   const scaleVector = new THREE.Vector3();
-  let index = startIndex;
+  mesh.updateWorldMatrix(true, false);
+  const worldToMesh = new THREE.Matrix4().copy(mesh.matrixWorld).invert();
+  const capacity = mesh.instanceMatrix.count;
+  const bakedCount = Math.max(0, Math.min(placements.length, capacity - startIndex));
+  if (bakedCount < placements.length) {
+    lwarn(
+      `[bakeScatterToInstancedMesh] ${placements.length - bakedCount} of ${placements.length} placements dropped: the mesh holds ${capacity} instances, from index ${startIndex}.`
+    );
+  }
 
-  for (const placement of placements) {
+  let index = startIndex;
+  for (let i = 0; i < bakedCount; i++) {
+    const placement = placements[i];
     scaleVector.setScalar(placement.scale);
-    matrix.compose(placement.position, placement.quaternion, scaleVector);
+    matrix.compose(placement.position, placement.quaternion, scaleVector).premultiply(worldToMesh);
     mesh.setMatrixAt(index, matrix);
     index++;
   }
 
+  mesh.count = index;
   mesh.instanceMatrix.needsUpdate = true;
   mesh.computeBoundingSphere();
   return index;
 };
 
+/** {@link spawnScatterAsMeshEntities}' options: each entity's mesh props and entity options. */
 export interface SpawnScatterMeshOptions {
+  /** Each mesh's geometry: a geometry, a registered geometry's id, or props. */
   geo: MeshProps['geo'];
+  /** Each mesh's material: a material, a registered material's id, or props. */
   mat: MeshProps['mat'];
+  /** Whether the meshes cast shadows. */
   castShadow?: boolean;
+  /** Whether the meshes receive shadows. */
   receiveShadow?: boolean;
+  /** Each entity's options, the same for all of them (so no fixed `appId`). */
   entityOpts?: CoreEntityOpts;
 }
 
 /**
- * Spawns one individual mesh entity per placement via `createMeshEntity` — simple and
- * individually ECS-addressable, but does not scale to thousands of instances; prefer
- * `bakeScatterToInstancedMesh` for large foliage/tree counts. Good fit for a handful of
- * scattered static props. Scale is applied directly to the created `Object3D` after
- * creation (see `bakeScatterToInstancedMesh`'s doc comment for why).
+ * Creates one mesh entity per placement in the default world (`createMeshEntity`), at its
+ * position, rotation and scale: each an entity of its own, for a handful of static props. For
+ * hundreds or thousands, use an instanced pool or {@link bakeScatterToInstancedMesh}.
+ * @returns the entities' ids, in the placements' order
  */
 export const spawnScatterAsMeshEntities = (
   placements: ScatterPlacement[],
@@ -200,16 +270,11 @@ export const spawnScatterAsMeshEntities = (
         receiveShadow: opts.receiveShadow,
         position: { x: placement.position.x, y: placement.position.y, z: placement.position.z },
         quaternion: placement.quaternion,
+        scale: { x: placement.scale, y: placement.scale, z: placement.scale },
       },
       opts.entityOpts,
       world
     );
-
-    if (placement.scale !== 1) {
-      const object3D = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
-      object3D?.scale.setScalar(placement.scale);
-    }
-
     entityIds.push(entityId);
   }
 

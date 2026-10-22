@@ -3,7 +3,7 @@
   "id": "asteroid",
   "tslFile": "materials/asteroid/asteroid.tsl.ts",
   "type": "STANDARDNODEMATERIAL",
-  "params": { "color": "#6b6158", "roughness": 0.9, "metalness": 0.0 },
+  "params": { "metalness": 0.0 },
   "staticDefines": { "octaves": 4 },
   "nodes": {
     "colorNode": {
@@ -25,6 +25,6 @@
   },
   "debugData": {
     "name": "Asteroid",
-    "description": "Procedural object-space rock (no UVs): mottled colours, Worley pits, mineral speckles, bump. Every input is on colorNode, which also sets roughnessNode and normalNode; override `seed` per mesh for a different rock."
+    "description": "Procedural object-space rock (no UVs): mottled colours, Worley pits, mineral speckles, bump. Every input is on colorNode, which also sets roughnessNode and normalNode; override `seed` per mesh for a different rock. Static define: octaves."
   }
 }

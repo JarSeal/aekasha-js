@@ -298,11 +298,9 @@
           "id": "asteroid",
           "debugData": {
             "name": "Asteroid",
-            "description": "Procedural object-space rock (no UVs): mottled colours, Worley pits, mineral speckles, bump. Every input is on colorNode, which also sets roughnessNode and normalNode; override `seed` per mesh for a different rock."
+            "description": "Procedural object-space rock (no UVs): mottled colours, Worley pits, mineral speckles, bump. Every input is on colorNode, which also sets roughnessNode and normalNode; override `seed` per mesh for a different rock. Static define: octaves."
           },
           "params": {
-            "color": "#6b6158",
-            "roughness": 0.9,
             "metalness": 0
           },
           "tslFile": "materials/asteroid/asteroid.tsl.ts",
@@ -698,8 +696,11 @@
       "materials": [
         {
           "id": "triplanarCheckerboard",
+          "debugData": {
+            "name": "Triplanar checkerboard",
+            "description": "Procedural checkerboard in meters on any mesh (no UVs), anti-aliased into the distance, with an optional plus sign in every cell. Static defines: alignToObject, fitToBounds, dominantAxis, plusSigns."
+          },
           "params": {
-            "color": "#ff0000",
             "roughness": 0.85,
             "metalness": 0
           },
@@ -890,8 +891,11 @@
       "materials": [
         {
           "id": "triplanarCheckerboard",
+          "debugData": {
+            "name": "Triplanar checkerboard",
+            "description": "Procedural checkerboard in meters on any mesh (no UVs), anti-aliased into the distance, with an optional plus sign in every cell. Static defines: alignToObject, fitToBounds, dominantAxis, plusSigns."
+          },
           "params": {
-            "color": "#ff0000",
             "roughness": 0.85,
             "metalness": 0
           },
@@ -914,8 +918,11 @@
         },
         {
           "id": "triplanarGrid",
+          "debugData": {
+            "name": "Triplanar grid",
+            "description": "Procedural grid in meters on any mesh (no UVs): major and minor lines over a background, with optional grooves along them (normalNode). Static defines: alignToObject, fitToBounds, dominantAxis, minorLines, seamNormals."
+          },
           "params": {
-            "color": "#808080",
             "roughness": 0.85,
             "metalness": 0
           },
@@ -1058,7 +1065,7 @@
     },
     "banner": {
       "name": "Banner (the SBP floor)",
-      "description": "The banner embed's scene (p611 D8): a dodecahedron, Plato's solid of the aether, made in code with a TSL material, one light and the camera, slowly turning on a transparent background. No loader, no feature: the smallest build an embed can be.",
+      "description": "The banner embed's scene: a dodecahedron, Plato's solid of the aether, made in code with a TSL material, one light and the camera, slowly turning on a transparent background. No loader, no feature: the smallest build an embed can be.",
       "cameras": [
         {
           "camProps": {
@@ -1148,8 +1155,8 @@
     },
     "assetCompare": {
       "isDebugScene": true,
-      "name": "Asset compare (p300 codec variants)",
-      "description": "p300 Phase 1d: the codec variants of devTools/assetPipeline/fixtures/assetCompareVariants.ts against their uncompressed baselines. A tiled rock ground at grazing angles, a MetalRust sphere and the metal toolbox prop, built twice (slots A and B); V switches between them. Debug env: the scene's own \"Asset compare\" tab picks the variants, shows each texture's file size and VRAM, and runs the collider check.",
+      "name": "Asset compare (texture codecs)",
+      "description": "The KTX2 codec variants of devTools/assetPipeline/fixtures/assetCompareVariants.ts (run it first) against their uncompressed baselines. A tiled rock ground at grazing angles, a MetalRust sphere and the metal toolbox prop, built twice (slots A and B); V switches between them. Debug env: the scene's own \"Asset compare\" tab picks the variants, shows each texture's file size and VRAM, and measures every variant on this device and checks the fixture's collider copies against their sources.",
       "skyboxes": [
         {
           "base": {
@@ -1199,8 +1206,8 @@
       ]
     },
     "largeWorld": {
-      "name": "Large ECS test world",
-      "description": "Stress/soak test scene for large-world patterns (docs/plans/p090_large-ecs-test-world-scene.md). Phase 4: terrain + static overview camera + sun, no dynamics yet.",
+      "name": "Large world",
+      "description": "A large procedural world without physics: a generated 200 m terrain, 1,500 trees, 2,000 bushes and 300 rocks in instanced LOD pools (down to cross-quads and an octahedral impostor) in a spatial domain, static props, lanterns with light culling, and a bobbing crate stack a second camera follows (C switches to it). The day-night sky box's lights take over from the scene's sun and ambient.",
       "cameras": [
         {
           "camProps": {
@@ -1225,7 +1232,7 @@
             "appId": "largeWorldOverview",
             "debugData": {
               "name": "Large world overview camera",
-              "description": "Static wide overview of the terrain (docs/plans/p090_large-ecs-test-world-scene.md §2)."
+              "description": "Static wide overview of the terrain. C switches to the camera following the crate stack."
             }
           }
         }
@@ -1280,7 +1287,7 @@
             "appId": "largeWorldSun",
             "debugData": {
               "name": "Large world sun",
-              "description": "Directional shadow-casting sun. Its shadow frustum is intentionally scoped to a bounded play area around the origin, not the whole terrain — sizing it to the full terrain would blur shadow resolution everywhere instead (docs/plans/p090_large-ecs-test-world-scene.md §1.4)."
+              "description": "Directional shadow-casting sun. Its shadow frustum is intentionally scoped to a bounded play area around the origin, not the whole terrain — sizing it to the full terrain would blur shadow resolution everywhere instead."
             }
           }
         }
@@ -1334,7 +1341,7 @@
           "id": "dayNight",
           "debugData": {
             "name": "Day-night (showcase)",
-            "description": "The DAY_NIGHT preset (every p113 layer: atmosphere, sun and light, moon and light, stars and Milky Way, clouds and ground) on a 5-minute day."
+            "description": "The DAY_NIGHT preset (every layer: atmosphere, sun and light, moon and light, stars and Milky Way, clouds and ground) on a 5-minute day."
           }
         }
       ],
@@ -5157,7 +5164,7 @@
     },
     "lodShowcase": {
       "name": "LOD showcase",
-      "description": "The LOD system lane by lane (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 5): each lane runs away from the start camera along -z, with an object in every level band. Left to right: an instanced tree pool ending in exported cross-quads and a cull fade; hand-made levels in JSON; a generated chain (AUTO); a pool ending in an exported octahedral impostor; a rock impostor baked and exported side by side; a static instance cell. Debug env: the scene's own \"LOD demo\" tab.",
+      "description": "The LOD system lane by lane: each lane runs away from the start camera along -z, with an object in every level band. Left to right: an instanced tree pool ending in exported cross-quads and a cull fade; hand-made levels in JSON; a generated chain (AUTO); a pool ending in an exported octahedral impostor; a rock impostor baked and exported side by side; a static instance cell. Debug env: the scene's own \"LOD demo\" tab.",
       "cameras": [
         {
           "camProps": {
@@ -5198,7 +5205,7 @@
           },
           "debugData": {
             "name": "LOD showcase sphere, level 0",
-            "description": "Lane 1's hand-made level 0 (64 × 32 segments), see lodShowcaseHandMade.mesh.json."
+            "description": "The hand-made levels lane's level 0 (64 × 32 segments), see lodShowcaseHandMade.mesh.json."
           }
         },
         {
@@ -5211,7 +5218,7 @@
           },
           "debugData": {
             "name": "LOD showcase sphere, level 1",
-            "description": "Lane 1's hand-made level 1 (20 × 12 segments), see lodShowcaseHandMade.mesh.json."
+            "description": "The hand-made levels lane's level 1 (20 × 12 segments), see lodShowcaseHandMade.mesh.json."
           }
         },
         {
@@ -5224,7 +5231,7 @@
           },
           "debugData": {
             "name": "LOD showcase sphere, level 2",
-            "description": "Lane 1's hand-made level 2 (8 × 6 segments), see lodShowcaseHandMade.mesh.json."
+            "description": "The hand-made levels lane's level 2 (8 × 6 segments), see lodShowcaseHandMade.mesh.json."
           }
         }
       ],
@@ -5274,7 +5281,7 @@
           "entityOpts": {
             "debugData": {
               "name": "LOD showcase: hand-made levels",
-              "description": "Lane 1 of the lodShowcase scene (p351 Phase 5): levels authored in JSON, the same sphere at fewer segments. This is the lane's first object (level 0's band); the lane places copies of this definition in the farther bands (lodShowcase/lanes/handMadeLevels.ts), so keep it at the lane's x (-12)."
+              "description": "The lodShowcase scene's hand-made levels lane: levels authored in JSON, the same sphere at fewer segments. This is the lane's first object (level 0's band); the lane places copies of this definition in the farther bands (lodShowcase/lanes/handMadeLevels.ts), so keep it at the lane's x (-12)."
             }
           }
         }
@@ -5318,7 +5325,7 @@
           "id": "dayNight",
           "debugData": {
             "name": "Day-night (showcase)",
-            "description": "The DAY_NIGHT preset (every p113 layer: atmosphere, sun and light, moon and light, stars and Milky Way, clouds and ground) on a 5-minute day."
+            "description": "The DAY_NIGHT preset (every layer: atmosphere, sun and light, moon and light, stars and Milky Way, clouds and ground) on a 5-minute day."
           }
         }
       ],
@@ -12617,30 +12624,9 @@
         "lod"
       ]
     },
-    "oneMoreScene": {
-      "name": "One More Scene",
-      "id": "oneMoreScene",
-      "sceneFile": "./scenes/oneMoreScene/oneMoreScene",
-      "cameras": [
-        {
-          "camProps": {
-            "type": "PERSPECTIVE",
-            "fov": 90,
-            "active": true
-          },
-          "entityOpts": {
-            "debugData": {
-              "name": "_camera",
-              "description": "Auto-generated camera for the scene"
-            }
-          }
-        }
-      ],
-      "__features": []
-    },
     "physicsTest": {
-      "name": "Physics API MVP test scene",
-      "description": "Physics API verification scene: a static ground box, a falling ball, and a falling box, plus impulse-joint and shape-cast worked examples.",
+      "name": "Physics API test",
+      "description": "The Physics API's test scene: a static ground box, a falling ball and box over a sensor that toasts them, one worked example per impulse joint type, and two shape casts against the ground.",
       "cameras": [
         {
           "camProps": {
@@ -12665,7 +12651,7 @@
             "appId": "physicsTestCamera",
             "debugData": {
               "name": "Physics test camera",
-              "description": "Static camera framing the ground plane and drop zone for the physics API MVP test scene."
+              "description": "Static camera framing the ground plane and drop zone for the Physics API test scene."
             }
           }
         }
@@ -12682,7 +12668,7 @@
             "appId": "physicsTestAmbient",
             "debugData": {
               "name": "Physics test ambient light",
-              "description": "Ambient light for the physics API MVP test scene."
+              "description": "Ambient light for the Physics API test scene."
             }
           }
         },
@@ -12720,7 +12706,7 @@
             "appId": "physicsTestSun",
             "debugData": {
               "name": "Physics test sun",
-              "description": "Directional shadow-casting sun for the physics API test scene. Its shadow frustum is sized to the 50x50 ground plane, not larger — oversizing it would degrade shadow resolution everywhere (see largeWorldSun.light.json for the same pattern)."
+              "description": "Directional shadow-casting sun for the Physics API test scene. Its shadow frustum is sized to the 50x50 ground plane, not larger — oversizing it would degrade shadow resolution everywhere (see largeWorldSun.light.json for the same pattern)."
             }
           }
         }
@@ -12731,7 +12717,7 @@
     },
     "physicsTiers": {
       "name": "Physics simulation tiers demo",
-      "description": "686 crates in 49 piles, with their simulation tiers following a distance policy around a kinematic plough ball (docs/plans/_DONE_p352_physics-simulation-tiers.md §5). Crates are tinted by tier: orange FULL, blue STATIC, grey DISABLED, ghosted REMOVED. C switches between the overview and chase cameras.",
+      "description": "686 crates in 49 piles, with their simulation tiers following a distance policy around a kinematic plough ball. Crates are tinted by tier: orange FULL, blue STATIC, grey DISABLED, ghosted REMOVED. C switches between the overview and chase cameras.",
       "cameras": [
         {
           "camProps": {
@@ -12836,7 +12822,7 @@
     },
     "scene01": {
       "name": "Scene 01 (basic physics demo)",
-      "description": "Basic FIXED/DYNAMIC physics demo: a ground box, a bouncing box, a falling ball and cylinder, a TRIMESH-collider imported GLB, and a decorative rotating wireframe sphere.",
+      "description": "Basic FIXED/DYNAMIC physics demo: a ground box, a bouncing box, a falling metal ball and cylinder, an imported GLB with a TRIMESH collider and CCD, a sensor collider without a mesh (it turns the wireframe sphere green while a body is in it), a group, shadows, four sky boxes and metal spheres reflecting the sky.",
       "cameras": [
         {
           "camProps": {
@@ -12861,7 +12847,7 @@
             "appId": "scene01Camera",
             "debugData": {
               "name": "Scene01 camera",
-              "description": "Static camera framing the ground plane and falling-object cluster shared by scene01.ts and scene01V2.ts."
+              "description": "Static camera framing the ground plane and falling-object cluster."
             }
           }
         }
@@ -12878,7 +12864,7 @@
             "appId": "scene01Ambient",
             "debugData": {
               "name": "Scene01 ambient light",
-              "description": "Ambient light shared by scene01.ts and scene01V2.ts."
+              "description": "Ambient light."
             }
           }
         },
@@ -12916,7 +12902,7 @@
             "appId": "scene01Sun",
             "debugData": {
               "name": "Scene01 sun",
-              "description": "Directional shadow-casting sun shared by scene01.ts and scene01V2.ts. Its shadow frustum is sized to the 10x10 ground plane, not larger — oversizing it would degrade shadow resolution everywhere (see largeWorldSun.light.json for the same pattern)."
+              "description": "Directional shadow-casting sun. Its shadow frustum is sized to the 10x10 ground plane, not larger — oversizing it would degrade shadow resolution everywhere (see largeWorldSun.light.json for the same pattern)."
             }
           }
         }
@@ -12925,124 +12911,32 @@
       "sceneFile": "./scenes/scene01/scene01.ts",
       "__features": []
     },
-    "scene01V2": {
-      "name": "Scene 01 v2 (physics demo with shadows + sensor)",
-      "description": "Same basic physics demo as scene01.ts (FIXED/DYNAMIC ground, box, ball, cylinder, TRIMESH-collider imported GLB) plus shadow-casting meshes, a CCD-enabled dynamic body, and a mesh-less sensor collider.",
-      "cameras": [
-        {
-          "camProps": {
-            "active": true,
-            "near": 0.1,
-            "far": 100,
-            "position": {
-              "x": 6,
-              "y": 5,
-              "z": 10
-            },
-            "lookAtPoint": {
-              "x": 0,
-              "y": -1,
-              "z": 0
-            },
-            "type": "PERSPECTIVE",
-            "fov": 60,
-            "appId": "scene01Camera"
-          },
-          "entityOpts": {
-            "appId": "scene01Camera",
-            "debugData": {
-              "name": "Scene01 camera",
-              "description": "Static camera framing the ground plane and falling-object cluster shared by scene01.ts and scene01V2.ts."
-            }
-          }
-        }
-      ],
-      "lights": [
-        {
-          "lightProps": {
-            "type": "AMBIENT",
-            "color": "#ffffff",
-            "intensity": 0.4,
-            "appId": "scene01Ambient"
-          },
-          "entityOpts": {
-            "appId": "scene01Ambient",
-            "debugData": {
-              "name": "Scene01 ambient light",
-              "description": "Ambient light shared by scene01.ts and scene01V2.ts."
-            }
-          }
-        },
-        {
-          "lightProps": {
-            "type": "DIRECTIONAL",
-            "color": "#fff2d9",
-            "intensity": 3,
-            "position": {
-              "x": 6,
-              "y": 8,
-              "z": 5
-            },
-            "targetPos": {
-              "x": 0,
-              "y": -2,
-              "z": 0
-            },
-            "castShadow": true,
-            "shadowPreset": "HIGH",
-            "shadowCameraNearFar": [
-              1,
-              30
-            ],
-            "shadowCameraFrustum": [
-              -8,
-              8,
-              8,
-              -8
-            ],
-            "shadowIntensity": 0.8,
-            "appId": "scene01Sun"
-          },
-          "entityOpts": {
-            "appId": "scene01Sun",
-            "debugData": {
-              "name": "Scene01 sun",
-              "description": "Directional shadow-casting sun shared by scene01.ts and scene01V2.ts. Its shadow frustum is sized to the 10x10 ground plane, not larger — oversizing it would degrade shadow resolution everywhere (see largeWorldSun.light.json for the same pattern)."
-            }
-          }
-        }
-      ],
-      "id": "scene01V2",
-      "sceneFile": "./scenes/scene01V2/scene01V2.ts",
-      "__features": []
-    },
     "sceneTestECS": {
-      "name": "ECS test scene",
-      "description": "This is a ECS test scene.",
+      "name": "Start scene",
+      "description": "The scene src/index.ts starts with: its camera, lights, sky box and two meshes (one with the app's own TSL material, one from a GLB) come from this JSON; its code adds a ground and a ball that hovers with the toolkit's HoverEffect.",
       "cameras": [
         {
           "camProps": {
             "active": true,
+            "position": {
+              "x": 5,
+              "y": 3.5,
+              "z": 8
+            },
             "lookAtPoint": {
               "x": 0,
-              "y": 0,
+              "y": 0.8,
               "z": 0
             },
             "type": "PERSPECTIVE",
-            "fov": 90,
-            "appId": "mainCamera",
-            "position": {
-              "x": 10,
-              "y": 5,
-              "z": 20
-            }
+            "fov": 50,
+            "appId": "mainCamera"
           },
           "entityOpts": {
             "appId": "mainCamera",
-            "persistent": true,
             "debugData": {
               "name": "Main camera",
-              "description": "Main application camera"
+              "description": "The start scene's camera."
             }
           }
         }
@@ -13059,7 +12953,45 @@
             "appId": "ambientLight",
             "debugData": {
               "name": "Ambient light",
-              "description": "The ambient light for the scene. It colors everything in the scene (except skyboxes and basic materials) whether you like it or not. This is what next gen games is all about."
+              "description": "Lights every lit material evenly, from no direction (sky boxes and BASIC materials ignore it)."
+            }
+          }
+        },
+        {
+          "lightProps": {
+            "type": "DIRECTIONAL",
+            "color": "#ffe5c7",
+            "intensity": 3,
+            "position": {
+              "x": 5,
+              "y": 10,
+              "z": 6
+            },
+            "targetPos": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "castShadow": true,
+            "shadowPreset": "HIGH",
+            "shadowCameraNearFar": [
+              1,
+              30
+            ],
+            "shadowCameraFrustum": [
+              -8,
+              8,
+              8,
+              -8
+            ],
+            "shadowIntensity": 0.75,
+            "appId": "directionalLight"
+          },
+          "entityOpts": {
+            "appId": "directionalLight",
+            "debugData": {
+              "name": "Sun",
+              "description": "The shadow-casting sun. Its shadow frustum covers the meshes, not the whole ground: a larger one spreads the same shadow map over more ground."
             }
           }
         }
@@ -13069,25 +13001,20 @@
           "id": "testSphere",
           "type": "SPHERE",
           "params": {
-            "radius": 2.6,
+            "radius": 1,
             "widthSegments": 32,
             "heightSegments": 32
           },
           "debugData": {
-            "name": "Test Sphere",
-            "description": "This is a test sphere"
+            "name": "Test sphere",
+            "description": "The start scene's sphere (testMesh)."
           }
-        },
-        {
-          "id": "otherTestBox",
-          "type": "BOX"
         }
       ],
       "textures": [
         {
           "id": "testTexture",
           "fileName": "/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg",
-          "useHDRLoader": false,
           "texOpts": {
             "wrapS": 1000,
             "wrapT": 1000
@@ -13108,14 +13035,6 @@
       ],
       "materials": [
         {
-          "id": "testMaterial",
-          "params": {
-            "color": "#ff00ff",
-            "wireframe": false
-          },
-          "type": "PHONG"
-        },
-        {
           "id": "testTslMat",
           "tslFile": "scenes/sceneTestECS/testTslMat.tsl.ts",
           "nodes": {
@@ -13134,7 +13053,7 @@
           "props": {
             "geo": "testSphere",
             "mat": "testTslMat",
-            "castShadow": false,
+            "castShadow": true,
             "receiveShadow": true,
             "position": {
               "x": 4,
@@ -13157,9 +13076,9 @@
             "castShadow": true,
             "receiveShadow": true,
             "position": {
-              "x": -4,
-              "y": 1,
-              "z": -1
+              "x": -3,
+              "y": 0.5,
+              "z": 1
             },
             "appId": "testImportedMesh"
           }
@@ -13202,7 +13121,7 @@
     },
     "skyShowcase": {
       "name": "Sky showcase (day-night)",
-      "description": "The verification scene for the sky box plans (p113-p115): a day-night sky box with every layer, rows of metal and dielectric PBR spheres (roughness 0 to 1) and shadow casters. It also lists the space sky box (p114), for the nebula reflection check.",
+      "description": "The sky box verification scene: a day-night sky box with every layer, rows of metal and dielectric PBR spheres (roughness 0 to 1) and shadow casters. It also lists the space sky box, for the nebula reflection check.",
       "cameras": [
         {
           "camProps": {
@@ -13271,7 +13190,7 @@
           "id": "dayNight",
           "debugData": {
             "name": "Day-night (showcase)",
-            "description": "The DAY_NIGHT preset (every p113 layer: atmosphere, sun and light, moon and light, stars and Milky Way, clouds and ground) on a 5-minute day."
+            "description": "The DAY_NIGHT preset (every layer: atmosphere, sun and light, moon and light, stars and Milky Way, clouds and ground) on a 5-minute day."
           }
         },
         {
@@ -13404,11 +13323,9 @@
           "id": "asteroid",
           "debugData": {
             "name": "Asteroid",
-            "description": "Procedural object-space rock (no UVs): mottled colours, Worley pits, mineral speckles, bump. Every input is on colorNode, which also sets roughnessNode and normalNode; override `seed` per mesh for a different rock."
+            "description": "Procedural object-space rock (no UVs): mottled colours, Worley pits, mineral speckles, bump. Every input is on colorNode, which also sets roughnessNode and normalNode; override `seed` per mesh for a different rock. Static define: octaves."
           },
           "params": {
-            "color": "#6b6158",
-            "roughness": 0.9,
             "metalness": 0
           },
           "tslFile": "materials/asteroid/asteroid.tsl.ts",
@@ -13532,23 +13449,77 @@
     },
     "testDebugScene": {
       "isDebugScene": true,
-      "id": "testDebugScene",
-      "sceneFile": "scenes/testDebugScene/testDebugScene.ts",
+      "name": "Optimized assets orientation check",
+      "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies.",
       "cameras": [
         {
           "camProps": {
+            "active": true,
+            "position": {
+              "x": 0,
+              "y": 1,
+              "z": 7
+            },
+            "lookAtPoint": {
+              "x": 0,
+              "y": 0.7,
+              "z": 0
+            },
             "type": "PERSPECTIVE",
-            "fov": 90,
-            "active": true
+            "fov": 50,
+            "appId": "p300Camera"
           },
           "entityOpts": {
+            "appId": "p300Camera",
             "debugData": {
-              "name": "_camera",
-              "description": "Auto-generated camera for the scene"
+              "name": "Camera",
+              "description": "Faces both rows of the orientation check."
             }
           }
         }
       ],
+      "lights": [
+        {
+          "lightProps": {
+            "type": "AMBIENT",
+            "color": "#ffffff",
+            "intensity": 0.6,
+            "appId": "p300Ambient"
+          },
+          "entityOpts": {
+            "appId": "p300Ambient",
+            "debugData": {
+              "name": "Ambient light"
+            }
+          }
+        },
+        {
+          "lightProps": {
+            "type": "DIRECTIONAL",
+            "color": "#ffffff",
+            "intensity": 2.5,
+            "position": {
+              "x": 3,
+              "y": 5,
+              "z": 6
+            },
+            "targetPos": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "appId": "p300Sun"
+          },
+          "entityOpts": {
+            "appId": "p300Sun",
+            "debugData": {
+              "name": "Sun"
+            }
+          }
+        }
+      ],
+      "id": "testDebugScene",
+      "sceneFile": "scenes/testDebugScene/testDebugScene.ts",
       "__features": []
     },
     "textureArrays": {
@@ -13631,7 +13602,7 @@
     "textureAtlases": {
       "isDebugScene": true,
       "name": "Texture atlases (p299)",
-      "description": "p299's atlas verification scene: each slot of the p299TestAtlas asset (*.textureAtlas.json, listed by its atlas id) whole at each mip level the file has, with the cell rects outlined, and each cell sampled through its UV rect at every level, next to its source file. Off to the side (camera \"Ready-made image atlas\"): p299TestAtlasImage, slots from ready-made images with the full mip chain (p351 Phase 4).",
+      "description": "p299's atlas verification scene: each slot of the p299TestAtlas asset (*.textureAtlas.json, listed by its atlas id) whole at each mip level the file has, with the cell rects outlined, and each cell sampled through its UV rect at every level, next to its source file. Off to the side (camera \"Ready-made image atlas\"): p299TestAtlasImage, slots from ready-made images (as an octahedral impostor's bake) with the full mip chain.",
       "textures": [
         {
           "id": "p299TestAtlas.albedo",
@@ -13851,7 +13822,7 @@
           },
           "debugData": {
             "name": "p299 test atlas (ready-made images)",
-            "description": "p351 Phase 4 section 1: a 2-slot atlas from ready-made images of its layout (slots.<name>.image, an impostor-like bake: 3 × 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192² down to 1², through an odd 3²)."
+            "description": "A 2-slot atlas from ready-made images of its layout (slots.<name>.image, laid out as an octahedral impostor's bake: 3 × 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192² down to 1², through an odd 3²)."
           },
           "__atlas": {
             "id": "p299TestAtlasImage",
@@ -13990,7 +13961,7 @@
           "id": "p299TestAtlasImage.normalDepth",
           "debugData": {
             "name": "p299 test atlas (ready-made images)",
-            "description": "p351 Phase 4 section 1: a 2-slot atlas from ready-made images of its layout (slots.<name>.image, an impostor-like bake: 3 × 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192² down to 1², through an odd 3²)."
+            "description": "A 2-slot atlas from ready-made images of its layout (slots.<name>.image, laid out as an octahedral impostor's bake: 3 × 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192² down to 1², through an odd 3²)."
           },
           "__atlas": {
             "id": "p299TestAtlasImage",
@@ -14147,7 +14118,7 @@
     },
     "thirdPersonGymScene": {
       "name": "GYM (3rd person)",
-      "description": "Third-person obstacle-course/gym scene assembling every ported physics feature: ~15 imported GLBs, 6 moving platform variants, a player-controlled and a scripted dynamic character, and the physics stress-test spawner.",
+      "description": "Third-person obstacle course for the dynamic character controller: built stairs and a wall, imported stairs (TRIMESH and COMPOUND colliders), terrains and obstacles, six moving platforms, two player characters (WASD, the arrow keys) and a scripted dummy. Debug env: J spawns a physics stress test batch.",
       "cameras": [
         {
           "camProps": {
@@ -14172,7 +14143,7 @@
             "appId": "thirdPersonGymCamera",
             "debugData": {
               "name": "Third-person gym camera",
-              "description": "Follow camera driven by createFollowObjectCameraRig (legacy gym's offset/lens settings), tracking the player-controlled character. This initial position/lookAt only matters for the first instant before the follow rig (APP_LOGIC) takes over each frame."
+              "description": "Follow camera driven by createFollowObjectCameraRig at a world-space (7, 20, 7) offset, tracking the player character. This initial position and lookAt only matter until the rig (APP_LOGIC) takes over."
             }
           }
         }
@@ -14227,7 +14198,7 @@
             "appId": "thirdPersonGymSun",
             "debugData": {
               "name": "Third-person gym sun",
-              "description": "Directional shadow-casting sun. thirdPersonGymScene.ts moves it (and its target) with the player every frame, keeping this position - targetPos offset as the light direction, so the shadow frustum (sized for the play area around the player, not the whole scene, which would blur shadow resolution everywhere) follows the player instead of covering a fixed area around the origin."
+              "description": "Directional shadow-casting sun, about 52° above the horizon. Only its direction (position → targetPos) is kept: thirdPersonGymScene.ts adds a SUN_SHADOW_FIT component on scene enter, which moves it with the camera view and owns its shadow frustum (the values here only apply until then)."
             }
           }
         }
@@ -14235,8 +14206,11 @@
       "materials": [
         {
           "id": "triplanarGrid",
+          "debugData": {
+            "name": "Triplanar grid",
+            "description": "Procedural grid in meters on any mesh (no UVs): major and minor lines over a background, with optional grooves along them (normalNode). Static defines: alignToObject, fitToBounds, dominantAxis, minorLines, seamNormals."
+          },
           "params": {
-            "color": "#808080",
             "roughness": 0.85,
             "metalness": 0
           },
@@ -14266,8 +14240,11 @@
         },
         {
           "id": "triplanarCheckerboard",
+          "debugData": {
+            "name": "Triplanar checkerboard",
+            "description": "Procedural checkerboard in meters on any mesh (no UVs), anti-aliased into the distance, with an optional plus sign in every cell. Static defines: alignToObject, fitToBounds, dominantAxis, plusSigns."
+          },
           "params": {
-            "color": "#ff0000",
             "roughness": 0.85,
             "metalness": 0
           },
@@ -14366,7 +14343,7 @@
     },
     "topDownTestScene": {
       "name": "Top-down test",
-      "description": "Top-down character test scene (docs/plans/_DONE_p066_character-definitions-and-refactoring.md Phase 6): a WORLD_FIXED player (W = North = screen-up) on a large flat ground with a hills patch on the East side, scattered static obstacles and dynamic props, and a sun whose shadow is fitted to the camera view (SunShadowFit).",
+      "description": "Top-down character test scene: a WORLD_FIXED player (W = North = screen-up) on a large flat ground with a hills patch on the East side, scattered static obstacles and dynamic props, and a sun whose shadow is fitted to the camera view (SunShadowFit).",
       "cameras": [
         {
           "camProps": {
@@ -14454,8 +14431,11 @@
       "materials": [
         {
           "id": "triplanarGrid",
+          "debugData": {
+            "name": "Triplanar grid",
+            "description": "Procedural grid in meters on any mesh (no UVs): major and minor lines over a background, with optional grooves along them (normalNode). Static defines: alignToObject, fitToBounds, dominantAxis, minorLines, seamNormals."
+          },
           "params": {
-            "color": "#808080",
             "roughness": 0.85,
             "metalness": 0
           },
@@ -14485,8 +14465,11 @@
         },
         {
           "id": "triplanarCheckerboard",
+          "debugData": {
+            "name": "Triplanar checkerboard",
+            "description": "Procedural checkerboard in meters on any mesh (no UVs), anti-aliased into the distance, with an optional plus sign in every cell. Static defines: alignToObject, fitToBounds, dominantAxis, plusSigns."
+          },
           "params": {
-            "color": "#ff0000",
             "roughness": 0.85,
             "metalness": 0
           },
@@ -14601,34 +14584,6 @@
     }
   },
   "cameras": {
-    "scene01Camera": {
-      "camProps": {
-        "active": true,
-        "near": 0.1,
-        "far": 100,
-        "position": {
-          "x": 6,
-          "y": 5,
-          "z": 10
-        },
-        "lookAtPoint": {
-          "x": 0,
-          "y": -1,
-          "z": 0
-        },
-        "type": "PERSPECTIVE",
-        "fov": 60,
-        "appId": "scene01Camera"
-      },
-      "entityOpts": {
-        "appId": "scene01Camera",
-        "debugData": {
-          "name": "Scene01 camera",
-          "description": "Static camera framing the ground plane and falling-object cluster shared by scene01.ts and scene01V2.ts."
-        }
-      },
-      "__sourcePath": "src/app/cameras/scene01Camera.camera.json"
-    },
     "exampleCharacterCamera": {
       "camProps": {
         "active": true,
@@ -14950,7 +14905,7 @@
         "appId": "largeWorldOverview",
         "debugData": {
           "name": "Large world overview camera",
-          "description": "Static wide overview of the terrain (docs/plans/p090_large-ecs-test-world-scene.md §2)."
+          "description": "Static wide overview of the terrain. C switches to the camera following the crate stack."
         }
       },
       "__sourcePath": "src/app/scenes/largeWorld/largeWorldOverview.camera.json"
@@ -15006,7 +14961,7 @@
         "appId": "physicsTestCamera",
         "debugData": {
           "name": "Physics test camera",
-          "description": "Static camera framing the ground plane and drop zone for the physics API MVP test scene."
+          "description": "Static camera framing the ground plane and drop zone for the Physics API test scene."
         }
       },
       "__sourcePath": "src/app/scenes/physicsTest/physicsTestCamera.camera.json"
@@ -15039,39 +14994,57 @@
       },
       "__sourcePath": "src/app/scenes/physicsTiers/physicsTiersOverview.camera.json"
     },
-    "mainCamera": {
+    "scene01Camera": {
       "camProps": {
         "active": true,
+        "near": 0.1,
+        "far": 100,
+        "position": {
+          "x": 6,
+          "y": 5,
+          "z": 10
+        },
         "lookAtPoint": {
           "x": 0,
-          "y": 0,
+          "y": -1,
           "z": 0
         },
         "type": "PERSPECTIVE",
-        "fov": 90,
+        "fov": 60,
+        "appId": "scene01Camera"
+      },
+      "entityOpts": {
+        "appId": "scene01Camera",
+        "debugData": {
+          "name": "Scene01 camera",
+          "description": "Static camera framing the ground plane and falling-object cluster."
+        }
+      },
+      "__sourcePath": "src/app/scenes/scene01/scene01Camera.camera.json"
+    },
+    "mainCamera": {
+      "camProps": {
+        "active": true,
+        "position": {
+          "x": 5,
+          "y": 3.5,
+          "z": 8
+        },
+        "lookAtPoint": {
+          "x": 0,
+          "y": 0.8,
+          "z": 0
+        },
+        "type": "PERSPECTIVE",
+        "fov": 50,
         "appId": "mainCamera"
       },
       "entityOpts": {
         "appId": "mainCamera",
-        "persistent": true,
         "debugData": {
           "name": "Main camera",
-          "description": "Main application camera"
+          "description": "The start scene's camera."
         }
-      },
-      "__saveData": {
-        "sceneTestECS": [
-          {
-            "__meta": {
-              "date": 1779449688109
-            },
-            "position": {
-              "x": 10,
-              "y": 5,
-              "z": 20
-            }
-          }
-        ]
       },
       "__sourcePath": "src/app/scenes/sceneTestECS/mainCamera.camera.json"
     },
@@ -15131,6 +15104,32 @@
       },
       "__sourcePath": "src/app/scenes/space/spaceCamera.camera.json"
     },
+    "p300Camera": {
+      "camProps": {
+        "active": true,
+        "position": {
+          "x": 0,
+          "y": 1,
+          "z": 7
+        },
+        "lookAtPoint": {
+          "x": 0,
+          "y": 0.7,
+          "z": 0
+        },
+        "type": "PERSPECTIVE",
+        "fov": 50,
+        "appId": "p300Camera"
+      },
+      "entityOpts": {
+        "appId": "p300Camera",
+        "debugData": {
+          "name": "Camera",
+          "description": "Faces both rows of the orientation check."
+        }
+      },
+      "__sourcePath": "src/app/scenes/testDebugScene/p300Camera.camera.json"
+    },
     "thirdPersonGymCamera": {
       "camProps": {
         "active": true,
@@ -15154,7 +15153,7 @@
         "appId": "thirdPersonGymCamera",
         "debugData": {
           "name": "Third-person gym camera",
-          "description": "Follow camera driven by createFollowObjectCameraRig (legacy gym's offset/lens settings), tracking the player-controlled character. This initial position/lookAt only matters for the first instant before the follow rig (APP_LOGIC) takes over each frame."
+          "description": "Follow camera driven by createFollowObjectCameraRig at a world-space (7, 20, 7) offset, tracking the player character. This initial position and lookAt only matter until the rig (APP_LOGIC) takes over."
         }
       },
       "__sourcePath": "src/app/scenes/thirdPersonGymScene/thirdPersonGymCamera.camera.json"
@@ -15189,61 +15188,6 @@
     }
   },
   "lights": {
-    "scene01Ambient": {
-      "lightProps": {
-        "type": "AMBIENT",
-        "color": "#ffffff",
-        "intensity": 0.4,
-        "appId": "scene01Ambient"
-      },
-      "entityOpts": {
-        "appId": "scene01Ambient",
-        "debugData": {
-          "name": "Scene01 ambient light",
-          "description": "Ambient light shared by scene01.ts and scene01V2.ts."
-        }
-      },
-      "__sourcePath": "src/app/lights/scene01Ambient.light.json"
-    },
-    "scene01Sun": {
-      "lightProps": {
-        "type": "DIRECTIONAL",
-        "color": "#fff2d9",
-        "intensity": 3,
-        "position": {
-          "x": 6,
-          "y": 8,
-          "z": 5
-        },
-        "targetPos": {
-          "x": 0,
-          "y": -2,
-          "z": 0
-        },
-        "castShadow": true,
-        "shadowPreset": "HIGH",
-        "shadowCameraNearFar": [
-          1,
-          30
-        ],
-        "shadowCameraFrustum": [
-          -8,
-          8,
-          8,
-          -8
-        ],
-        "shadowIntensity": 0.8,
-        "appId": "scene01Sun"
-      },
-      "entityOpts": {
-        "appId": "scene01Sun",
-        "debugData": {
-          "name": "Scene01 sun",
-          "description": "Directional shadow-casting sun shared by scene01.ts and scene01V2.ts. Its shadow frustum is sized to the 10x10 ground plane, not larger — oversizing it would degrade shadow resolution everywhere (see largeWorldSun.light.json for the same pattern)."
-        }
-      },
-      "__sourcePath": "src/app/lights/scene01Sun.light.json"
-    },
     "exampleCharacterAmbient": {
       "lightProps": {
         "type": "AMBIENT",
@@ -15676,7 +15620,7 @@
         "appId": "largeWorldSun",
         "debugData": {
           "name": "Large world sun",
-          "description": "Directional shadow-casting sun. Its shadow frustum is intentionally scoped to a bounded play area around the origin, not the whole terrain — sizing it to the full terrain would blur shadow resolution everywhere instead (docs/plans/p090_large-ecs-test-world-scene.md §1.4)."
+          "description": "Directional shadow-casting sun. Its shadow frustum is intentionally scoped to a bounded play area around the origin, not the whole terrain — sizing it to the full terrain would blur shadow resolution everywhere instead."
         }
       },
       "__sourcePath": "src/app/scenes/largeWorld/largeWorldSun.light.json"
@@ -15692,7 +15636,7 @@
         "appId": "physicsTestAmbient",
         "debugData": {
           "name": "Physics test ambient light",
-          "description": "Ambient light for the physics API MVP test scene."
+          "description": "Ambient light for the Physics API test scene."
         }
       },
       "__sourcePath": "src/app/scenes/physicsTest/physicsTestAmbient.light.json"
@@ -15731,7 +15675,7 @@
         "appId": "physicsTestSun",
         "debugData": {
           "name": "Physics test sun",
-          "description": "Directional shadow-casting sun for the physics API test scene. Its shadow frustum is sized to the 50x50 ground plane, not larger — oversizing it would degrade shadow resolution everywhere (see largeWorldSun.light.json for the same pattern)."
+          "description": "Directional shadow-casting sun for the Physics API test scene. Its shadow frustum is sized to the 50x50 ground plane, not larger — oversizing it would degrade shadow resolution everywhere (see largeWorldSun.light.json for the same pattern)."
         }
       },
       "__sourcePath": "src/app/scenes/physicsTest/physicsTestSun.light.json"
@@ -15791,32 +15735,155 @@
       },
       "__sourcePath": "src/app/scenes/physicsTiers/physicsTiersSun.light.json"
     },
+    "scene01Ambient": {
+      "lightProps": {
+        "type": "AMBIENT",
+        "color": "#ffffff",
+        "intensity": 0.4,
+        "appId": "scene01Ambient"
+      },
+      "entityOpts": {
+        "appId": "scene01Ambient",
+        "debugData": {
+          "name": "Scene01 ambient light",
+          "description": "Ambient light."
+        }
+      },
+      "__sourcePath": "src/app/scenes/scene01/scene01Ambient.light.json"
+    },
+    "scene01Sun": {
+      "lightProps": {
+        "type": "DIRECTIONAL",
+        "color": "#fff2d9",
+        "intensity": 3,
+        "position": {
+          "x": 6,
+          "y": 8,
+          "z": 5
+        },
+        "targetPos": {
+          "x": 0,
+          "y": -2,
+          "z": 0
+        },
+        "castShadow": true,
+        "shadowPreset": "HIGH",
+        "shadowCameraNearFar": [
+          1,
+          30
+        ],
+        "shadowCameraFrustum": [
+          -8,
+          8,
+          8,
+          -8
+        ],
+        "shadowIntensity": 0.8,
+        "appId": "scene01Sun"
+      },
+      "entityOpts": {
+        "appId": "scene01Sun",
+        "debugData": {
+          "name": "Scene01 sun",
+          "description": "Directional shadow-casting sun. Its shadow frustum is sized to the 10x10 ground plane, not larger — oversizing it would degrade shadow resolution everywhere (see largeWorldSun.light.json for the same pattern)."
+        }
+      },
+      "__sourcePath": "src/app/scenes/scene01/scene01Sun.light.json"
+    },
     "ambientLight": {
       "lightProps": {
         "type": "AMBIENT",
         "color": "#ffffff",
-        "intensity": 0.8,
+        "intensity": 0.5,
         "appId": "ambientLight"
       },
       "entityOpts": {
         "appId": "ambientLight",
         "debugData": {
           "name": "Ambient light",
-          "description": "The ambient light for the scene. It colors everything in the scene (except skyboxes and basic materials) whether you like it or not. This is what next gen games is all about."
+          "description": "Lights every lit material evenly, from no direction (sky boxes and BASIC materials ignore it)."
         }
       },
-      "__saveData": {
-        "sceneTestECS": [
-          {
-            "__meta": {
-              "date": 1779449688109
-            },
-            "type": "AMBIENT",
-            "intensity": 0.5
-          }
-        ]
-      },
       "__sourcePath": "src/app/scenes/sceneTestECS/ambientLight.light.json"
+    },
+    "directionalLight": {
+      "lightProps": {
+        "type": "DIRECTIONAL",
+        "color": "#ffe5c7",
+        "intensity": 3,
+        "position": {
+          "x": 5,
+          "y": 10,
+          "z": 6
+        },
+        "targetPos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "castShadow": true,
+        "shadowPreset": "HIGH",
+        "shadowCameraNearFar": [
+          1,
+          30
+        ],
+        "shadowCameraFrustum": [
+          -8,
+          8,
+          8,
+          -8
+        ],
+        "shadowIntensity": 0.75,
+        "appId": "directionalLight"
+      },
+      "entityOpts": {
+        "appId": "directionalLight",
+        "debugData": {
+          "name": "Sun",
+          "description": "The shadow-casting sun. Its shadow frustum covers the meshes, not the whole ground: a larger one spreads the same shadow map over more ground."
+        }
+      },
+      "__sourcePath": "src/app/scenes/sceneTestECS/directionalLight.light.json"
+    },
+    "p300Ambient": {
+      "lightProps": {
+        "type": "AMBIENT",
+        "color": "#ffffff",
+        "intensity": 0.6,
+        "appId": "p300Ambient"
+      },
+      "entityOpts": {
+        "appId": "p300Ambient",
+        "debugData": {
+          "name": "Ambient light"
+        }
+      },
+      "__sourcePath": "src/app/scenes/testDebugScene/p300Ambient.light.json"
+    },
+    "p300Sun": {
+      "lightProps": {
+        "type": "DIRECTIONAL",
+        "color": "#ffffff",
+        "intensity": 2.5,
+        "position": {
+          "x": 3,
+          "y": 5,
+          "z": 6
+        },
+        "targetPos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "appId": "p300Sun"
+      },
+      "entityOpts": {
+        "appId": "p300Sun",
+        "debugData": {
+          "name": "Sun"
+        }
+      },
+      "__sourcePath": "src/app/scenes/testDebugScene/p300Sun.light.json"
     },
     "thirdPersonGymAmbient": {
       "lightProps": {
@@ -15868,7 +15935,7 @@
         "appId": "thirdPersonGymSun",
         "debugData": {
           "name": "Third-person gym sun",
-          "description": "Directional shadow-casting sun. thirdPersonGymScene.ts moves it (and its target) with the player every frame, keeping this position - targetPos offset as the light direction, so the shadow frustum (sized for the play area around the player, not the whole scene, which would blur shadow resolution everywhere) follows the player instead of covering a fixed area around the origin."
+          "description": "Directional shadow-casting sun, about 52° above the horizon. Only its direction (position → targetPos) is kept: thirdPersonGymScene.ts adds a SUN_SHADOW_FIT component on scene enter, which moves it with the camera view and owns its shadow frustum (the values here only apply until then)."
         }
       },
       "__sourcePath": "src/app/scenes/thirdPersonGymScene/thirdPersonGymSun.light.json"
@@ -15934,7 +16001,7 @@
       "geoProps": {
         "debugData": {
           "name": "LOD showcase sphere, level 0",
-          "description": "Lane 1's hand-made level 0 (64 × 32 segments), see lodShowcaseHandMade.mesh.json."
+          "description": "The hand-made levels lane's level 0 (64 × 32 segments), see lodShowcaseHandMade.mesh.json."
         },
         "type": "SPHERE",
         "params": {
@@ -15950,7 +16017,7 @@
       "geoProps": {
         "debugData": {
           "name": "LOD showcase sphere, level 1",
-          "description": "Lane 1's hand-made level 1 (20 × 12 segments), see lodShowcaseHandMade.mesh.json."
+          "description": "The hand-made levels lane's level 1 (20 × 12 segments), see lodShowcaseHandMade.mesh.json."
         },
         "type": "SPHERE",
         "params": {
@@ -15966,7 +16033,7 @@
       "geoProps": {
         "debugData": {
           "name": "LOD showcase sphere, level 2",
-          "description": "Lane 1's hand-made level 2 (8 × 6 segments), see lodShowcaseHandMade.mesh.json."
+          "description": "The hand-made levels lane's level 2 (8 × 6 segments), see lodShowcaseHandMade.mesh.json."
         },
         "type": "SPHERE",
         "params": {
@@ -15981,78 +16048,27 @@
     "testSphere": {
       "geoProps": {
         "debugData": {
-          "name": "Test Sphere",
-          "description": "This is a test sphere"
+          "name": "Test sphere",
+          "description": "The start scene's sphere (testMesh)."
         },
         "type": "SPHERE",
         "params": {
-          "radius": 0.5,
+          "radius": 1,
           "widthSegments": 32,
           "heightSegments": 32
         },
         "id": "testSphere"
       },
-      "__saveData": {
-        "sceneTestECS": [
-          {
-            "__meta": {
-              "date": 1779449688109
-            },
-            "params": {
-              "radius": 2.6
-            }
-          }
-        ]
-      },
       "__sourcePath": "src/app/scenes/sceneTestECS/testSphere.geometry.json"
     }
   },
   "textures": {
-    "p341AlphaCutTest": {
-      "id": "p341AlphaCutTest",
-      "fileName": "./source/p341AlphaCut.png",
-      "texOpts": {
-        "colorSpace": "srgb"
-      },
-      "debugData": {
-        "name": "p341 alpha-cut test texture",
-        "description": "p341 Phase 3: a plain texture with alphaCoverage, thin alpha-cut features (twigs thinning to 1 px, a fence of 1-4 px posts and 1 px rails, grass blades tapering to 0.5 px). Its mip levels are built by the pipeline and keep level 0's coverage at the cut 0.5."
-      },
-      "optimize": {
-        "slot": "baseColor",
-        "alphaCoverage": 0.5
-      },
-      "__sourcePath": "src/app/textures/p341AlphaCutTest.texture.json",
-      "__fileSize": 8347,
-      "__sourceUrl": "/app/textures/source/p341AlphaCut.png",
-      "__url": "/aek-assets/app/textures/source/p341AlphaCut.55dda072.ktx2",
-      "__bytes": {
-        "in": 8347,
-        "out": 17011
-      },
-      "__vramBytes": {
-        "in": 349524,
-        "out": 87408
-      },
-      "__codec": "uastc"
-    },
     "testTexture": {
       "id": "testTexture",
       "fileName": "/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg",
-      "useHDRLoader": true,
       "texOpts": {
         "wrapS": 1000,
         "wrapT": 1000
-      },
-      "__saveData": {
-        "sceneTestECS": [
-          {
-            "__meta": {
-              "date": 1779449688109
-            },
-            "useHDRLoader": false
-          }
-        ]
       },
       "__sourcePath": "src/app/textures/testTexture.texture.json",
       "__fileSize": 967035,
@@ -23684,7 +23700,7 @@
       },
       "debugData": {
         "name": "p299 test atlas (ready-made images)",
-        "description": "p351 Phase 4 section 1: a 2-slot atlas from ready-made images of its layout (slots.<name>.image, an impostor-like bake: 3 × 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192² down to 1², through an odd 3²)."
+        "description": "A 2-slot atlas from ready-made images of its layout (slots.<name>.image, laid out as an octahedral impostor's bake: 3 × 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192² down to 1², through an odd 3²)."
       },
       "__sourcePath": "src/app/scenes/textureAtlases/p299TestAtlasImage.textureAtlas.json",
       "__atlas": {
@@ -23824,7 +23840,7 @@
       "id": "p299TestAtlasImage.normalDepth",
       "debugData": {
         "name": "p299 test atlas (ready-made images)",
-        "description": "p351 Phase 4 section 1: a 2-slot atlas from ready-made images of its layout (slots.<name>.image, an impostor-like bake: 3 × 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192² down to 1², through an odd 3²)."
+        "description": "A 2-slot atlas from ready-made images of its layout (slots.<name>.image, laid out as an octahedral impostor's bake: 3 × 3 frames of 56 px with a 4 px gutter), every cell placed by its rect, with the full mip chain (mipChain FULL: 192² down to 1², through an odd 3²)."
       },
       "__sourcePath": "src/app/scenes/textureAtlases/p299TestAtlasImage.textureAtlas.json",
       "__atlas": {
@@ -24000,46 +24016,12 @@
       "type": "STANDARD",
       "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseSphere.material.json"
     },
-    "testMaterial": {
-      "id": "testMaterial",
-      "params": {
-        "color": "#ff00ff"
-      },
-      "__saveData": {
-        "sceneTestECS": [
-          {
-            "__meta": {
-              "date": 1779449688109
-            },
-            "params": {
-              "wireframe": false
-            }
-          }
-        ]
-      },
-      "type": "PHONG",
-      "__sourcePath": "src/app/scenes/sceneTestECS/testMaterial.material.json"
-    },
     "testTslMat": {
       "id": "testTslMat",
-      "__saveData": {
-        "sceneTestECS": [
-          {
-            "__meta": {
-              "date": 1779449688109
-            },
-            "nodes": {
-              "colorNode": {
-                "baseColor": "#1c233a"
-              }
-            }
-          }
-        ]
-      },
       "tslFile": "scenes/sceneTestECS/testTslMat.tsl.ts",
       "nodes": {
         "colorNode": {
-          "baseColor": "#1a233a",
+          "baseColor": "#1c233a",
           "panelColor": "#ffaa00",
           "gridScale": 1,
           "texture": "testTexture"
@@ -24052,11 +24034,9 @@
       "id": "asteroid",
       "debugData": {
         "name": "Asteroid",
-        "description": "Procedural object-space rock (no UVs): mottled colours, Worley pits, mineral speckles, bump. Every input is on colorNode, which also sets roughnessNode and normalNode; override `seed` per mesh for a different rock."
+        "description": "Procedural object-space rock (no UVs): mottled colours, Worley pits, mineral speckles, bump. Every input is on colorNode, which also sets roughnessNode and normalNode; override `seed` per mesh for a different rock. Static define: octaves."
       },
       "params": {
-        "color": "#6b6158",
-        "roughness": 0.9,
         "metalness": 0
       },
       "tslFile": "materials/asteroid/asteroid.tsl.ts",
@@ -24086,8 +24066,11 @@
     },
     "triplanarCheckerboard": {
       "id": "triplanarCheckerboard",
+      "debugData": {
+        "name": "Triplanar checkerboard",
+        "description": "Procedural checkerboard in meters on any mesh (no UVs), anti-aliased into the distance, with an optional plus sign in every cell. Static defines: alignToObject, fitToBounds, dominantAxis, plusSigns."
+      },
       "params": {
-        "color": "#ff0000",
         "roughness": 0.85,
         "metalness": 0
       },
@@ -24111,8 +24094,11 @@
     },
     "triplanarGrid": {
       "id": "triplanarGrid",
+      "debugData": {
+        "name": "Triplanar grid",
+        "description": "Procedural grid in meters on any mesh (no UVs): major and minor lines over a background, with optional grooves along them (normalNode). Static defines: alignToObject, fitToBounds, dominantAxis, minorLines, seamNormals."
+      },
       "params": {
-        "color": "#808080",
         "roughness": 0.85,
         "metalness": 0
       },
@@ -24177,7 +24163,7 @@
       "entityOpts": {
         "debugData": {
           "name": "LOD showcase: hand-made levels",
-          "description": "Lane 1 of the lodShowcase scene (p351 Phase 5): levels authored in JSON, the same sphere at fewer segments. This is the lane's first object (level 0's band); the lane places copies of this definition in the farther bands (lodShowcase/lanes/handMadeLevels.ts), so keep it at the lane's x (-12)."
+          "description": "The lodShowcase scene's hand-made levels lane: levels authored in JSON, the same sphere at fewer segments. This is the lane's first object (level 0's band); the lane places copies of this definition in the farther bands (lodShowcase/lanes/handMadeLevels.ts), so keep it at the lane's x (-12)."
         }
       },
       "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseHandMade.mesh.json"
@@ -24195,9 +24181,9 @@
         "castShadow": true,
         "receiveShadow": true,
         "position": {
-          "x": -4,
-          "y": 1,
-          "z": -1
+          "x": -3,
+          "y": 0.5,
+          "z": 1
         },
         "appId": "testImportedMesh"
       },
@@ -24215,16 +24201,6 @@
           "z": 2
         },
         "appId": "testMesh"
-      },
-      "__saveData": {
-        "sceneTestECS": [
-          {
-            "castShadow": false,
-            "__meta": {
-              "date": 1779449688109
-            }
-          }
-        ]
       },
       "__sourcePath": "src/app/scenes/sceneTestECS/testMesh.mesh.json"
     }
@@ -24322,7 +24298,7 @@
       "id": "dayNight",
       "debugData": {
         "name": "Day-night (showcase)",
-        "description": "The DAY_NIGHT preset (every p113 layer: atmosphere, sun and light, moon and light, stars and Milky Way, clouds and ground) on a 5-minute day."
+        "description": "The DAY_NIGHT preset (every layer: atmosphere, sun and light, moon and light, stars and Milky Way, clouds and ground) on a 5-minute day."
       },
       "__sourcePath": "src/app/skyboxes/dayNight.skybox.json"
     },

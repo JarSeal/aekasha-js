@@ -4,12 +4,23 @@ export {
   registerFollowObjectCameraRigSystem,
 } from './gameplay/FollowObjectCameraRig';
 export type { FollowObjectCameraParams } from './gameplay/FollowObjectCameraRig';
-export { createMovingPlatform, registerMovingPlatformSystem } from './gameplay/MovingPlatform';
+export {
+  createMovingPlatform,
+  registerMovingPlatformSystem,
+} from './gameplay/movingPlatform/MovingPlatform';
 export type {
   DeleteMeshOptions,
+  MovingPlatformControls,
+  MovingPlatformOptions,
+  MovingPlatformParams,
+  MovingPlatformPhysicsParams,
   MovingPlatformReturn,
   PhysicsParams,
-} from './gameplay/MovingPlatform';
+} from './gameplay/movingPlatform/MovingPlatform';
+export type {
+  MovingPlatformPathOptions,
+  MovingPlatformPoint,
+} from './gameplay/movingPlatform/PlatformPath';
 export { FollowToolComponentType, registerFollowToolEffect } from './effects/FollowTool';
 export type { FollowToolData } from './effects/FollowTool';
 export { HoverToolComponentType, registerHoverToolEffect } from './effects/HoverEffect';

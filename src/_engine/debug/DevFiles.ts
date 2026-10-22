@@ -233,7 +233,7 @@ export const getDevFilesStatus = async (): Promise<DevFilesStatus> => {
  * ```ts
  * import { DevFilesError, onDevDataGathered, writeDevFiles } from 'aekasha/debug';
  *
- * const path = 'src/app/cameras/scene01Camera.camera.json';
+ * const path = 'src/app/scenes/scene01/scene01Camera.camera.json';
  * const removeListener = onDevDataGathered((event) => {
  *   if (!event.files.includes(path)) return;
  *   removeListener();

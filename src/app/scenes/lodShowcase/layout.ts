@@ -4,8 +4,8 @@ import type { ECSWorld, SceneData } from 'aekasha';
 import { DEFAULT_LOD_HYSTERESIS, getLodBias } from 'aekasha/lod';
 import type { LodDef } from 'aekasha/lod';
 
-// The LOD showcase's layout (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 5): lanes side by side
-// along x, each running away from the start camera along -z. A level is used while the screen size
+// The LOD showcase's layout: lanes side by side along x, each running away from the start camera
+// along -z. A level is used while the screen size
 // r × k / d is at least its screenSize (LodSystem.ts), so a lane's levels are distance bands from
 // the camera, and the layout puts objects in each.
 

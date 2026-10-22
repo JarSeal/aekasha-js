@@ -327,7 +327,7 @@ in your editor: the scene data is gathered again and the page reloads.
   reloads next. A failed gather keeps the page and shows Vite's error overlay.
 
 ```ts
-const path = 'src/app/cameras/scene01Camera.camera.json';
+const path = 'src/app/scenes/scene01/scene01Camera.camera.json';
 const removeListener = onDevDataGathered((event) => {
   if (!event.files.includes(path)) return;
   removeListener();

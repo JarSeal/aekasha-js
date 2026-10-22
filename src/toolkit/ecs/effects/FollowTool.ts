@@ -2,22 +2,39 @@ import * as THREE from 'three/webgpu';
 import { ECSSystemStage, ComponentType } from 'aekasha';
 import type { ECSWorld } from 'aekasha';
 
-/** Internal Key (Values) */
+/**
+ * The follow effect's component key: add {@link FollowToolData} under
+ * `FollowToolComponentType.FOLLOW` to an entity to make it follow another one.
+ */
 export enum FollowToolComponentType {
+  /** An entity that follows a leader entity ({@link FollowToolData}). */
   FOLLOW = 'TOOL_FOLLOW',
 }
 
-/** Internal Data Shape (Types) */
+/**
+ * A follower's leader and how it follows: every frame the follower's `TRANSFORM` position moves
+ * toward the leader's plus `offset`. A follower with a `TARGET_LINK` (a directional or spot
+ * light's target) moves its target toward the leader's plus `targetOffset` too, so a light keeps
+ * shining on the leader from the same angle. Any entity can follow: a light, a camera, a mesh.
+ * @remarks It reads the leader's `TRANSFORM` as this frame's `APP_LOGIC` sees it, so a leader
+ * moved later in the frame is followed a frame late.
+ */
 export interface FollowToolData {
-  /** The entityId of the leader (usually the Player) */
+  /**
+   * The entity to follow; a leader without a `TRANSFORM` (eg. deleted) leaves the follower where
+   * it is.
+   */
   leaderId: number;
-  /** Fixed offset for the Light Source relative to the leader */
+  /** The follower's position relative to the leader, in world units. */
   offset: THREE.Vector3;
-  /** Fixed offset for the Light Target relative to the leader (ignored for Point Lights) */
+  /**
+   * The follower's target link's position relative to the leader (read only with a
+   * `TARGET_LINK`).
+   */
   targetOffset: THREE.Vector3;
-  /** Follow speed.
-   * Higher = snappier, Lower = lazier.
-   * Use 0 for instant snapping.
+  /**
+   * How fast the follower closes the gap, per second: each frame it moves `1 - e^(-speed·dt)` of
+   * the way, the same at any frame rate. Higher is snappier; 0 (or less) snaps at once.
    */
   speed: number;
 }
@@ -31,11 +48,12 @@ declare module 'aekasha' {
 // Scratchpad vector to prevent garbage collection stutters
 const _targetPos = new THREE.Vector3();
 
-/** ECS System */
-export const followToolSystem = (world: ECSWorld, dt: number) => {
+// Moves each follower (and its target link's entity) toward its leader's position plus offset
+const followToolSystem = (world: ECSWorld, dt: number) => {
   const storage = world.getStorage(FollowToolComponentType.FOLLOW);
-  if (!storage) return;
+  const targetLinks = world.getStorage(ComponentType.TARGET_LINK);
   const transformStore = world.getTypedTransformStore();
+  const transforms = transformStore ? null : world.getStorage(ComponentType.TRANSFORM);
 
   for (const [entityId, data] of storage) {
     // Framerate independent alpha calculation
@@ -70,7 +88,7 @@ export const followToolSystem = (world: ECSWorld, dt: number) => {
       }
 
       // 3. Update the Light Target Entity (Only if it exists)
-      const targetLink = world.getComponent(entityId, ComponentType.TARGET_LINK);
+      const targetLink = targetLinks.get(entityId);
       if (targetLink) {
         const targetSlot = transformStore.getSlot(targetLink.targetId);
         if (targetSlot !== -1) {
@@ -96,11 +114,11 @@ export const followToolSystem = (world: ECSWorld, dt: number) => {
     // --- MAP mode: live Map references, existing behavior unchanged ---
 
     // 1. Get the Leader's position
-    const leaderTransform = world.getComponent(data.leaderId, ComponentType.TRANSFORM);
+    const leaderTransform = transforms?.get(data.leaderId);
     if (!leaderTransform) continue;
 
     // 2. Update the Light Source Entity
-    const lightTransform = world.getComponent(entityId, ComponentType.TRANSFORM);
+    const lightTransform = transforms?.get(entityId);
     if (lightTransform) {
       _targetPos.copy(leaderTransform.position).add(data.offset);
 
@@ -114,9 +132,9 @@ export const followToolSystem = (world: ECSWorld, dt: number) => {
     }
 
     // 3. Update the Light Target Entity (Only if it exists)
-    const targetLink = world.getComponent(entityId, ComponentType.TARGET_LINK);
+    const targetLink = targetLinks.get(entityId);
     if (targetLink) {
-      const targetTransform = world.getComponent(targetLink.targetId, ComponentType.TRANSFORM);
+      const targetTransform = transforms?.get(targetLink.targetId);
       if (targetTransform) {
         _targetPos.copy(leaderTransform.position).add(data.targetOffset);
 
@@ -132,9 +150,33 @@ export const followToolSystem = (world: ECSWorld, dt: number) => {
   }
 };
 
-/** The Registration Helper */
+/**
+ * Registers the follow effect's system on `world`, at `APP_LOGIC` (default order 0, before the
+ * render sync copies the positions to the objects): from then on every entity with a
+ * {@link FollowToolComponentType} `FOLLOW` component follows its leader. A second call on the same
+ * world is a no-op.
+ * @returns `world`
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ *
+ * // Registered for every world, in the app's feature (src/AppECSPlugins.ts)
+ * export const appFeature: EngineFeature = {
+ *   id: 'app',
+ *   install: (ctx) => ctx.registerPlugin(registerFollowToolEffect),
+ * };
+ *
+ * // In scene code: a sun (a directional light's entity) that keeps shining on the player from
+ * // the same angle, its target on the player
+ * getECSWorld().addComponent(sunEntityId, FollowToolComponentType.FOLLOW, {
+ *   leaderId: playerEntityId,
+ *   offset: new THREE.Vector3(20, 40, 10),
+ *   targetOffset: new THREE.Vector3(0, 0, 0),
+ *   speed: 0,
+ * });
+ * ```
+ */
 export const registerFollowToolEffect = (world: ECSWorld) => {
-  // We use APP_LOGIC to ensure the follow happens before the Render Sync stage
   world.addSystem(ECSSystemStage.APP_LOGIC, 'followToolSystem', followToolSystem);
   return world;
 };

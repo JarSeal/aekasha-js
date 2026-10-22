@@ -1,45 +1,40 @@
 import { getECSWorld, type ECSWorld, registerOnAllSceneExits, ECSSystemStage } from 'aekasha';
 import type { PhysVector, RigidBodyAPI } from 'aekasha/physics';
 
-/**
- * Mutual (N-body) Newtonian gravity between registered dynamic bodies, for zero-g scenes: every
- * fixed physics sub-step, each registered body's user force is reset and set to the sum of the
- * pulls of all the others.
- *
- * The pull uses Plummer softening, F = G·m₁·m₂·r / (r² + ε²)^(3/2), which is G·m₁·m₂ / r² for
- * r ≫ ε but stays finite as two bodies meet, so touching rocks don't fling apart. Each pair is
- * computed once and applied equal and opposite, so momentum is conserved to float error.
- *
- * Positions come from each rigid body's pose (`readPoseInto`): exact per sub-step in `MAIN_THREAD`
- * mode; in `WORKER_THREAD` mode it's the last pose the worker synced back, so the forces can be up
- * to a frame stale and the simulation isn't deterministic there (like the characters). The cost is
- * O(n²) per sub-step, fine for tens of bodies.
- *
- * Register the system once per world (`registerMutualGravityEffect(world)` in AppECSPlugins.ts),
- * then add bodies with `addGravityBody`. Bodies are dropped once their entity or rigid body is gone,
- * and all of them on every scene exit. The config is global (not per scene), so a scene that
- * changes it should set it on enter.
- */
+// Mutual (N-body) gravity between the registered dynamic bodies, one APP_PHYSICS_STEP system per
+// world; the doc for app code is on registerMutualGravityEffect.
 
-export type MutualGravityConfig = {
+/**
+ * The mutual gravity's settings, global (every world, every scene): read them with
+ * {@link getMutualGravityConfig}, change them with {@link setMutualGravityConfig}.
+ */
+export interface MutualGravityConfig {
   /** Gravitational constant in scene units (default 1: m/s² per kg of the attractor at 1 m). */
   G: number;
   /** Softening length ε in metres (default 0.5): about the size of the bodies. */
   softening: number;
   /** Whether the forces are applied (default true). Turning it off resets the forces once. */
   enabled: boolean;
-};
+}
 
-export type GravityBody = { entityId: number; mass: number };
-
-type GravityBodyEntry = GravityBody & { world: ECSWorld };
+/**
+ * A gravity body as `getGravityBodies` lists it.
+ * @internal
+ */
+export interface GravityBody {
+  /** The body's entity. */
+  entityId: number;
+  /** Its gravitational mass. */
+  mass: number;
+}
 
 const DEFAULT_CONFIG: MutualGravityConfig = { G: 1, softening: 0.5, enabled: true };
 const config: MutualGravityConfig = { ...DEFAULT_CONFIG };
 
-const bodies = new Map<number, GravityBodyEntry>();
-// Whether the forces on the registered bodies may be non-zero (so turning gravity off resets them once)
-let hasAppliedForces = false;
+// Each world's bodies, entity id → mass (an entity id is unique only within its world)
+const bodiesByWorld = new Map<ECSWorld, Map<number, number>>();
+// The worlds whose bodies' forces may be non-zero (so turning gravity off resets them once)
+const worldsWithForces = new Set<ECSWorld>();
 
 // Per-sub-step scratch, grown on demand: poses (7 per body), forces (3 per body), the bodies
 let poses = new Float64Array(7 * 16);
@@ -48,22 +43,26 @@ const stepBodies: RigidBodyAPI[] = [];
 let stepMasses = new Float64Array(16);
 const force: PhysVector = { x: 0, y: 0, z: 0 };
 
+// Grows the scratch for n bodies, keeping the masses already collected this sub-step (the poses
+// and forces are written after the collection)
 const ensureCapacity = (n: number) => {
   if (stepMasses.length >= n) return;
   const size = Math.max(n, stepMasses.length * 2);
   poses = new Float64Array(7 * size);
   forces = new Float64Array(3 * size);
-  stepMasses = new Float64Array(size);
+  const masses = new Float64Array(size);
+  masses.set(stepMasses);
+  stepMasses = masses;
 };
 
 const mutualGravitySystem = (world: ECSWorld) => {
-  if (!bodies.size) return;
+  const bodies = bodiesByWorld.get(world);
+  if (!bodies?.size) return;
 
   // Collect this world's live bodies, dropping the ones that are gone
   let n = 0;
   stepBodies.length = 0;
-  for (const [entityId, entry] of bodies) {
-    if (entry.world !== world) continue;
+  for (const [entityId, mass] of bodies) {
     const rb = world.isAlive(entityId) ? world.getRigidBody(entityId) : undefined;
     if (!rb || rb.isBeingDeleted) {
       bodies.delete(entityId);
@@ -71,15 +70,14 @@ const mutualGravitySystem = (world: ECSWorld) => {
     }
     ensureCapacity(n + 1);
     stepBodies.push(rb);
-    stepMasses[n] = entry.mass;
+    stepMasses[n] = mass;
     n++;
   }
   if (!n) return;
 
   if (!config.enabled) {
-    if (hasAppliedForces) {
+    if (worldsWithForces.delete(world)) {
       for (let i = 0; i < n; i++) stepBodies[i].resetForces(true);
-      hasAppliedForces = false;
     }
     return;
   }
@@ -122,57 +120,124 @@ const mutualGravitySystem = (world: ECSWorld) => {
     force.z = forces[i * 3 + 2];
     rb.addForce(force, true);
   }
-  hasAppliedForces = true;
+  worldsWithForces.add(world);
 };
 
 /**
- * Adds a dynamic physics entity to the mutual gravity (or updates its mass). Use the body's real
- * mass, so it falls as it's pulled: with a density-based collider that's density × collider volume
- * (eg. `generateAsteroid`'s `hullVolume` for a `CONVEXHULL` collider).
- * @param entityId entity with a dynamic rigid body (see `createPhysicsEntity`)
- * @param mass gravitational mass
- * @param world ECS world the entity lives in (default: the default world)
+ * Adds a dynamic physics entity to the mutual gravity of `world`, or updates its mass. Use the
+ * body's real mass, so it falls as it's pulled: with a density-based collider that's density ×
+ * collider volume (eg. `generateAsteroid`'s `hullVolume` for a `CONVEXHULL` collider). The body is
+ * pulled from the next physics sub-step on, by the system {@link registerMutualGravityEffect}
+ * registered on that world.
+ * @param entityId an entity with a dynamic rigid body (`createPhysicsEntity`)
+ * @param mass its gravitational mass
+ * @param world the ECS world the entity lives in (default: the default world)
  */
 export const addGravityBody = (entityId: number, mass: number, world?: ECSWorld) => {
   const w = world || getECSWorld();
   if (!w) return;
-  bodies.set(entityId, { entityId, mass, world: w });
+  let bodies = bodiesByWorld.get(w);
+  if (!bodies) bodiesByWorld.set(w, (bodies = new Map()));
+  bodies.set(entityId, mass);
 };
 
-/** Removes an entity from the mutual gravity and resets its user forces (if its body still exists).
- * @param entityId entity added with addGravityBody */
+/**
+ * Removes an entity from the mutual gravity, in every world it was added in, and resets its user
+ * forces (when its body still exists). An entity that isn't a gravity body is a no-op.
+ * @param entityId an entity added with {@link addGravityBody}
+ */
 export const removeGravityBody = (entityId: number) => {
-  const entry = bodies.get(entityId);
-  if (!entry) return;
-  bodies.delete(entityId);
-  const rb = entry.world.isAlive(entityId) ? entry.world.getRigidBody(entityId) : undefined;
-  if (rb && !rb.isBeingDeleted) rb.resetForces(true);
+  for (const [world, bodies] of bodiesByWorld) {
+    if (!bodies.delete(entityId)) continue;
+    const rb = world.isAlive(entityId) ? world.getRigidBody(entityId) : undefined;
+    if (rb && !rb.isBeingDeleted) rb.resetForces(true);
+  }
 };
 
-/** Removes every gravity body (their forces are left as they are: this runs on scene exit, when
- * the bodies are deleted anyway). */
+/**
+ * Removes every gravity body (their forces are left as they are: this runs on scene exit, when
+ * the bodies are deleted anyway). Exported for the tests.
+ * @internal
+ */
 export const clearGravityBodies = () => {
-  bodies.clear();
-  hasAppliedForces = false;
+  bodiesByWorld.clear();
+  worldsWithForces.clear();
 };
 
-/** The registered gravity bodies (entity id and mass), eg. for a debug list or an energy readout. */
-export const getGravityBodies = (): GravityBody[] =>
-  [...bodies.values()].map(({ entityId, mass }) => ({ entityId, mass }));
+/**
+ * The registered gravity bodies (entity id and mass), in every world. Exported for the tests.
+ * @internal
+ */
+export const getGravityBodies = (): GravityBody[] => {
+  const list: GravityBody[] = [];
+  for (const bodies of bodiesByWorld.values()) {
+    for (const [entityId, mass] of bodies) list.push({ entityId, mass });
+  }
+  return list;
+};
 
-/** Sets any of the mutual gravity's settings (the rest keep their values). */
+/**
+ * Sets any of the mutual gravity's settings, from the next physics sub-step on: the rest keep
+ * their values, as does a key given as `undefined`.
+ */
 export const setMutualGravityConfig = (partial: Partial<MutualGravityConfig>) => {
-  Object.assign(config, partial);
+  if (partial.G !== undefined) config.G = partial.G;
+  if (partial.softening !== undefined) config.softening = partial.softening;
+  if (partial.enabled !== undefined) config.enabled = partial.enabled;
 };
 
-/** A copy of the current mutual gravity settings. */
+/** A copy of the mutual gravity's current settings (changing it changes nothing). */
 export const getMutualGravityConfig = (): MutualGravityConfig => ({ ...config });
 
-/** The mutual gravity's default settings. */
+/**
+ * The mutual gravity's default settings. Exported for the tests.
+ * @internal
+ */
 export const getMutualGravityDefaults = (): MutualGravityConfig => ({ ...DEFAULT_CONFIG });
 
-/** The Registration Helper: registers the mutual gravity system on `world` at APP_PHYSICS_STEP
- * (once per fixed physics sub-step). */
+/**
+ * Registers the mutual (N-body) Newtonian gravity on `world`, for zero-g scenes: a system at
+ * `APP_PHYSICS_STEP` (default order 0) that, every fixed physics sub-step, sets each gravity
+ * body's user force (reset first) to the sum of the pulls of all the others. Add the bodies with
+ * {@link addGravityBody}. A second call on the same world is a no-op.
+ *
+ * The pull uses Plummer softening, F = G·m₁·m₂·r / (r² + ε²)^(3/2), which is G·m₁·m₂ / r² for
+ * r ≫ ε but stays finite as two bodies meet, so touching rocks don't fling apart. Each pair is
+ * computed once and applied equal and opposite, so momentum is conserved to float error. The cost
+ * is O(n²) per sub-step, fine for tens of bodies.
+ *
+ * Bodies are dropped once their entity or rigid body is gone, and all of them on every scene exit.
+ * The settings ({@link MutualGravityConfig}) are global, not per scene: a scene that changes them
+ * sets them on enter.
+ * @returns `world`
+ * @remarks The positions come from each body's pose at the sub-step: exact in `MAIN_THREAD` mode;
+ * in `WORKER_THREAD` mode the last pose the worker synced back, so the forces can be a frame stale
+ * and the simulation isn't deterministic there (like the characters).
+ * @example
+ * ```ts
+ * // Registered for every world, in the app's feature (src/AppECSPlugins.ts)
+ * export const appFeature: EngineFeature = {
+ *   id: 'app',
+ *   install: (ctx) => ctx.registerPlugin(registerMutualGravityEffect),
+ * };
+ *
+ * // In scene code (a world without gravity): a rock that pulls, and is pulled by, the others,
+ * // with the mass its collider gets from its density
+ * const DENSITY = 2;
+ * const rock = generateAsteroid({ radius: 2, seed: 7 });
+ * const entityId = createMeshEntity({
+ *   geo: saveBufferGeometry(rock.geometry, { id: 'rock7' }),
+ *   mat: 'asteroid',
+ * });
+ * await createPhysicsEntity(
+ *   { type: 'CONVEXHULL', vertices: rock.hullVertices, density: DENSITY },
+ *   { rigidType: 'DYNAMIC', translation: { x: 10, y: 0, z: 0 } },
+ *   entityId
+ * );
+ * addGravityBody(entityId, DENSITY * rock.hullVolume);
+ * setMutualGravityConfig({ G: 0.5 });
+ * ```
+ */
 export const registerMutualGravityEffect = (world: ECSWorld) => {
   world.addSystem(ECSSystemStage.APP_PHYSICS_STEP, 'mutualGravitySystem', mutualGravitySystem);
   registerOnAllSceneExits('mutualGravity', clearGravityBodies);

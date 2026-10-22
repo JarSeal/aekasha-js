@@ -69,7 +69,11 @@ const getBoundsUniforms = (material: NodeMaterial) => {
   return bounds;
 };
 
-export type TriplanarProjectionOptions = {
+/**
+ * {@link triplanarProjection}'s options: the cell size and the three switches, each usually a
+ * material's static define.
+ */
+export interface TriplanarProjectionOptions {
   /** Base cell size in meters (grid line spacing, checker size) */
   cellSize: Node<'float'>;
   /** Project in object space (rotation follows the mesh, world scale multiplied back in so units
@@ -84,13 +88,35 @@ export type TriplanarProjectionOptions = {
    * pattern is evaluated once instead of three times. Hard seams on curved surfaces where the
    * facing axis switches, where blending gives terrain its contour-line look instead. */
   dominantAxis: boolean;
-};
+}
 
 /**
  * Triplanar projection: the position to evaluate a pattern at, the (per axis) cell size, and the
  * blend weights of the three projections (components sum to 1), or with `dominantAxis` which
  * single projection to use. Both use the geometry normal, never `normalWorld`, which outside the
  * normal sub-build is the perturbed normal.
+ * @example
+ * ```ts
+ * import { fract, step, vec3 } from 'three/tsl';
+ * import type { Node, NodeMaterial } from 'three/webgpu';
+ *
+ * // A TSL material's colorNode socket (`<id>.tsl.ts`): world-space stripes on every face,
+ * // `stripeWidth` meters wide, from the material JSON's `nodes.colorNode`
+ * export const colorNode = (inputs: { stripeWidth: Node<'float'> }, material: NodeMaterial) => {
+ *   const projection = triplanarProjection(
+ *     {
+ *       cellSize: inputs.stripeWidth,
+ *       alignToObject: false,
+ *       fitToBounds: false,
+ *       dominantAxis: true,
+ *     },
+ *     material
+ *   );
+ *   return blendProjections(projection, (coord, cellSize) =>
+ *     vec3(step(0.5, fract(coord.x.div(cellSize.x))))
+ *   );
+ * };
+ * ```
  */
 export const triplanarProjection = (
   { cellSize, alignToObject, fitToBounds, dominantAxis }: TriplanarProjectionOptions,
@@ -129,6 +155,12 @@ export const triplanarProjection = (
   return { pos, size, blend, dominant };
 };
 
+/**
+ * {@link triplanarProjection}'s result, which {@link blendProjections} and
+ * {@link blendProjectionGradients} take: `pos` (the position to evaluate a pattern at), `size`
+ * (the cell size per axis), `blend` (the three projections' weights, summing to 1) and `dominant`
+ * (with `dominantAxis`, the conditions picking the one projection; null without).
+ */
 export type TriplanarProjection = ReturnType<typeof triplanarProjection>;
 
 /**
@@ -159,7 +191,7 @@ export const blendProjections = (
 };
 
 /**
- * Like blendProjections, for a 2D gradient in projection coordinates (eg. a height slope for
+ * Like {@link blendProjections}, for a 2D gradient in projection coordinates (eg. a height slope for
  * normals): each projection's gradient is lifted back to 3D (in the projection's coordinate space)
  * before blending.
  */

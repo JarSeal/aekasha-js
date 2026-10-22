@@ -1,12 +1,15 @@
 import { createMaterial, createMeshEntity, getLoaderStatusUpdater } from 'aekasha';
 
-/** Roughness along each sphere row, front (south) to back (north). */
+/**
+ * Roughness along each sphere row, north (-z) to south: right to left in the start view, which
+ * looks west.
+ */
 const ROUGHNESS = [0, 0.2, 0.4, 0.6, 0.8, 1];
 const SPHERE_RADIUS = 0.45;
 const SPHERE_SPACING = 1.5;
 
 /**
- * The sky box verification scene (p113-p115). The camera and the `dayNight` sky box come from
+ * The sky box verification scene. The camera and the `dayNight` sky box come from
  * `skyShowcase.scene.json`; the sky box owns every light. Built here: a ground, a row of metal
  * and a row of dielectric spheres (PBR, so they show the environment bake: sharp to blurred
  * reflections of the sky), and a stone gate that casts long shadows at sunset.

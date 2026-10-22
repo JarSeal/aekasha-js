@@ -2,5 +2,9 @@
   "$schema": "../../../../.schemas/scene.schema.json",
   "id": "testDebugScene",
   "isDebugScene": true,
-  "sceneFile": "scenes/testDebugScene/testDebugScene.ts"
+  "sceneFile": "scenes/testDebugScene/testDebugScene.ts",
+  "name": "Optimized assets orientation check",
+  "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies.",
+  "cameras": ["p300Camera"],
+  "lights": ["p300Ambient", "p300Sun"]
 }

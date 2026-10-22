@@ -7,6 +7,7 @@ import {
   getLoaderStatusUpdater,
   existsOrThrow,
   createSeededRandom,
+  getRandomStream,
 } from 'aekasha';
 import { getPhysicsWorld, createPhysicsEntity } from 'aekasha/physics';
 import type { PhysVector } from 'aekasha/physics';
@@ -21,7 +22,7 @@ import { generateAsteroid, type GeneratedAsteroid } from 'aekasha/toolkit/geomet
 export const SPACE_SCENE_ID = 'space';
 
 /** The demo's mutual gravity, set on every scene load (the debug tab changes it until then). */
-export const SPACE_GRAVITY: MutualGravityConfig = { G: 1, softening: 0.5, enabled: true };
+const SPACE_GRAVITY: MutualGravityConfig = { G: 1, softening: 0.5, enabled: true };
 const DENSITY = 1;
 const RESTITUTION = 0.3;
 
@@ -245,9 +246,11 @@ export const resetSpaceAsteroids = async () => {
 };
 
 /** Adds a random asteroid (random seed, size and shape) 6-11 m from the origin, on a slower than
- * circular orbit round the whole group, so it falls inward. */
+ * circular orbit round the whole group, so it falls inward. Its seed comes from the `space:spawn`
+ * stream, which every scene load restarts: the Nth spawn of a visit is the same rock on every
+ * visit. */
 export const spawnSpaceAsteroid = async () => {
-  const seed = Math.floor(Math.random() * 1e6);
+  const seed = Math.floor(getRandomStream('space:spawn')() * 1e6);
   const random = createSeededRandom(seed);
   const built = buildAsteroid({
     name: `Rock ${seed}`,
@@ -288,7 +291,7 @@ export const spawnSpaceAsteroid = async () => {
 };
 
 /**
- * The space demo (p114): the SPACE sky box (`space.skybox.json`, which owns the lights) around a
+ * The space demo: the SPACE sky box (`space.skybox.json`, which owns the lights) around a
  * few procedural asteroids near the origin. World gravity is zero, and the toolkit's mutual
  * gravity pulls the rocks together; the demo set starts on loose orbits round the biggest one.
  * In the debug env the scene creates its own "Space demo" tab (removed on exit).
@@ -298,7 +301,8 @@ export const scene = async () => {
   updateLoaderFn({ loadedCount: 0, totalCount: 1 });
 
   asteroids = [];
-  // Every scene load gets a fresh physics world (p101), so this doesn't reach other scenes
+  spawnCount = 0;
+  // Every scene load gets a fresh physics world, so this doesn't reach other scenes
   getPhysicsWorld().setGravity({ x: 0, y: 0, z: 0 });
   // The mutual gravity's config is global: set the demo's on every load
   setMutualGravityConfig(SPACE_GRAVITY);

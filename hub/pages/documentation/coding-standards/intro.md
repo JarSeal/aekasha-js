@@ -129,7 +129,7 @@ and commands.
   `performance.now()`, `Date` or the frame delta. Measuring how long something took (profiling)
   isn't simulation input, and the engine's simulation code reads it through one measurement-only
   clock, so every wall-clock read there says what it's for.
-- **Randomness is seeded:** [createSeededRandom](api:createSeededRandom), never `Math.random`.
+- **Randomness is seeded:** [createSeededRandom](api:utils/SeededRandom.createSeededRandom), never `Math.random`.
 - **The lint enforces both** in the engine's and the toolkit's simulation files (a list in
   `eslint.config.js`): `Math.random`, `performance.now()`, `Date.now()` and `new Date` are errors
   there. A known exception is listed in the config with the change that removes it, never disabled

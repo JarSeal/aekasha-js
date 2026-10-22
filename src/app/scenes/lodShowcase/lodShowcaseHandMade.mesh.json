@@ -20,7 +20,7 @@
   "entityOpts": {
     "debugData": {
       "name": "LOD showcase: hand-made levels",
-      "description": "Lane 1 of the lodShowcase scene (p351 Phase 5): levels authored in JSON, the same sphere at fewer segments. This is the lane's first object (level 0's band); the lane places copies of this definition in the farther bands (lodShowcase/lanes/handMadeLevels.ts), so keep it at the lane's x (-12)."
+      "description": "The lodShowcase scene's hand-made levels lane: levels authored in JSON, the same sphere at fewer segments. This is the lane's first object (level 0's band); the lane places copies of this definition in the farther bands (lodShowcase/lanes/handMadeLevels.ts), so keep it at the lane's x (-12)."
     }
   }
 }

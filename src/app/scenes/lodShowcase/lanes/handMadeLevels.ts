@@ -1,4 +1,3 @@
-import type * as THREE from 'three/webgpu';
 import {
   getEntityIdByAppId,
   getGeometry,
@@ -15,8 +14,7 @@ import type { ShowcaseLane } from '../layout';
 const MESH_APP_ID = 'lodShowcaseHandMade';
 
 /**
- * Lane 1: hand-made levels on plain meshes (docs/plans/_DONE_p348_ecs-lod-selection.md), authored in
- * JSON: three sphere geometries at fewer segments, the mesh's `lod` with a cull distance and its
+ * The hand-made levels lane: levels on plain meshes, authored in JSON: three sphere geometries at fewer segments, the mesh's `lod` with a cull distance and its
  * own `fadeSeconds`. The JSON mesh is the lane's first object, in level 0's band; the lane puts
  * copies of its definition in the other bands.
  */
@@ -29,20 +27,21 @@ export const handMadeLevelsLane: ShowcaseLane = {
     const entry = ctx.sceneData.meshes?.find(
       (mesh) => typeof mesh !== 'string' && mesh.props.appId === MESH_APP_ID
     );
-    if (!entry || typeof entry === 'string' || !entry.props.lod) {
+    const lod = entry && typeof entry !== 'string' ? entry.props.lod : undefined;
+    if (!entry || typeof entry === 'string' || typeof lod !== 'object' || !('levels' in lod)) {
       throw new Error(
-        `The lodShowcase scene needs the mesh "${MESH_APP_ID}" with a lod (lodShowcaseHandMade.mesh.json).`
+        `The lodShowcase scene needs the mesh "${MESH_APP_ID}" with lod levels (lodShowcaseHandMade.mesh.json).`
       );
     }
     const { props } = entry;
-    const def = props.lod as LodDef;
+    const def: LodDef = lod;
     const geometry = existsOrThrow(
-      getGeometry(props.geo as string) as THREE.BufferGeometry | undefined,
-      `The lodShowcase scene needs the geometry "${String(props.geo)}".`
+      typeof props.geo === 'string' ? getGeometry(props.geo) : undefined,
+      `The lodShowcase scene needs the geometry of "${MESH_APP_ID}" by id.`
     );
     const material = existsOrThrow(
-      getMaterial(props.mat as unknown as string),
-      `The lodShowcase scene needs the material "${String(props.mat)}".`
+      typeof props.mat === 'string' ? getMaterial(props.mat) : undefined,
+      `The lodShowcase scene needs the material of "${MESH_APP_ID}" by id.`
     );
     const radius = getConservativeGeometryRadius(geometry);
     const y = props.position?.y ?? radius;

@@ -37,7 +37,7 @@ const DEF: LodDef = {
 };
 
 /** One cell: a 4 × 4 block of bollards drawn by one InstancedMesh entity, its instances around
- * the mesh's origin (the way p308 builds a static cell). It stands at the origin until placed. */
+ * the mesh's origin. It stands at the origin until placed. */
 const createCell = (ctx: ShowcaseLaneContext, index: number) => {
   const geometry = createGeometry({
     id: levelGeoId(0),
@@ -76,8 +76,7 @@ const createCell = (ctx: ShowcaseLaneContext, index: number) => {
 };
 
 /**
- * Lane 6: a static instance cell (docs/plans/_DONE_p348_ecs-lod-selection.md §4.3): an
- * `InstancedMesh` entity (no per-instance entities) whose whole cell swaps levels and cross-fades,
+ * The static instance cell lane: an `InstancedMesh` entity (no per-instance entities) whose whole cell swaps levels and cross-fades,
  * measured from its bounds over every instance. One cell per level band, hand-made levels by
  * segment count, hidden past the last band.
  */

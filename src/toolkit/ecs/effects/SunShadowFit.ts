@@ -1,9 +1,13 @@
 import * as THREE from 'three/webgpu';
 import { ComponentType, lwarn, APP_RENDER_SYNC_ORDER, ECSSystemStage } from 'aekasha';
-import type { ECSWorld } from 'aekasha';
+import type { ComponentDataMap, ECSWorld, IComponentStorage } from 'aekasha';
 
-/** Internal Key (Values) */
+/**
+ * The sun shadow fit's component key: add {@link SunShadowFitData} under
+ * `SunShadowFitComponentType.SUN_SHADOW_FIT` to a directional light's entity.
+ */
 export enum SunShadowFitComponentType {
+  /** A directional light whose shadow follows the view ({@link SunShadowFitData}). */
   SUN_SHADOW_FIT = 'TOOL_SUN_SHADOW_FIT',
 }
 
@@ -137,45 +141,42 @@ const getViewSliceSphere = (
   return -1;
 };
 
-/** `cameraEntityId`'s camera, else the main camera (TAG_IS_MAIN_CAMERA, which the debug camera
- * never takes). */
-const resolveCamera = (world: ECSWorld, data: SunShadowFitData): THREE.Camera | undefined => {
-  let cameraId = data.cameraEntityId;
-  if (cameraId === undefined) {
-    for (const [id] of world.getStorage(ComponentType.TAG_IS_MAIN_CAMERA)) {
-      cameraId = id;
-      break;
-    }
-  }
-  if (cameraId === undefined) return undefined;
-  const value = world.getComponent(cameraId, ComponentType.OBJECT3D)?.value;
-  return (value as THREE.Camera | undefined)?.isCamera ? (value as THREE.Camera) : undefined;
-};
+type TransformStore = ReturnType<ECSWorld['getTypedTransformStore']>;
+type TransformStorage = IComponentStorage<ComponentDataMap[typeof ComponentType.TRANSFORM]>;
 
 /** Writes the followed entity's position into `out`; false without one. */
-const getFollowPosition = (world: ECSWorld, entityId: number, out: THREE.Vector3) => {
-  const transformStore = world.getTypedTransformStore();
+const getFollowPosition = (
+  transformStore: TransformStore,
+  transforms: TransformStorage | null,
+  entityId: number,
+  out: THREE.Vector3
+) => {
   if (transformStore) {
     const slot = transformStore.getSlot(entityId);
     if (slot === -1) return false;
     out.set(transformStore.posX[slot], transformStore.posY[slot], transformStore.posZ[slot]);
     return true;
   }
-  const transform = world.getComponent(entityId, ComponentType.TRANSFORM);
+  const transform = transforms?.get(entityId);
   if (!transform) return false;
   out.copy(transform.position);
   return true;
 };
 
 /** Writes an entity's TRANSFORM position, so the ECS state matches the Object3D written here. */
-const writeTransformPosition = (world: ECSWorld, entityId: number, p: THREE.Vector3) => {
-  const transformStore = world.getTypedTransformStore();
+const writeTransformPosition = (
+  world: ECSWorld,
+  transformStore: TransformStore,
+  transforms: TransformStorage | null,
+  entityId: number,
+  p: THREE.Vector3
+) => {
   if (transformStore) {
     const slot = transformStore.getSlot(entityId);
     if (slot !== -1) transformStore.setPosition(slot, p.x, p.y, p.z);
     return;
   }
-  const transform = world.getComponent(entityId, ComponentType.TRANSFORM);
+  const transform = transforms?.get(entityId);
   if (!transform) return;
   transform.position.copy(p);
   transform.setDirty();
@@ -210,25 +211,34 @@ const warnOnce = (data: SunShadowFitData, entityId: number, reason: string) => {
   lwarn(`[SunShadowFit] Skipping entity ${entityId}: ${reason}`);
 };
 
-/** ECS System */
-export const sunShadowFitSystem = (world: ECSWorld) => {
+// Fits each light's shadow camera to its camera's view (see SunShadowFitData)
+const sunShadowFitSystem = (world: ECSWorld) => {
   const storage = world.getStorage(SunShadowFitComponentType.SUN_SHADOW_FIT);
-  if (!storage) return;
+  if (!storage.size) return;
+  const managed = world.getStorage(ComponentType.MANAGED_BY);
+  const targetLinks = world.getStorage(ComponentType.TARGET_LINK);
+  const objects = world.getStorage(ComponentType.OBJECT3D);
+  const transformStore = world.getTypedTransformStore();
+  const transforms = transformStore ? null : world.getStorage(ComponentType.TRANSFORM);
+  // The main camera (TAG_IS_MAIN_CAMERA, which the debug camera never takes), once per run
+  let mainCameraId: number | undefined;
+  for (const id of world.getStorage(ComponentType.TAG_IS_MAIN_CAMERA).keys()) {
+    mainCameraId = id;
+    break;
+  }
 
-  for (const [entityId, data] of storage as Iterable<[number, SunShadowFitData]>) {
+  for (const [entityId, data] of storage) {
     if (world.isDisabled(entityId)) continue;
-    const light = world.getComponent(entityId, ComponentType.OBJECT3D)?.value as
-      | THREE.DirectionalLight
-      | undefined;
+    const light = objects.get(entityId)?.value as THREE.DirectionalLight | undefined;
     if (!light?.isDirectionalLight) {
       warnOnce(data, entityId, 'not a directional light.');
       continue;
     }
-    if (world.hasComponent(entityId, ComponentType.MANAGED_BY)) {
+    if (managed.has(entityId)) {
       warnOnce(data, entityId, 'the light is managed by another system, which places it itself.');
       continue;
     }
-    const targetId = world.getComponent(entityId, ComponentType.TARGET_LINK)?.targetId;
+    const targetId = targetLinks.get(entityId)?.targetId;
     if (targetId === undefined) continue;
 
     const state = getState(data, light);
@@ -240,14 +250,18 @@ export const sunShadowFitSystem = (world: ECSWorld) => {
     // The covered sphere (or, without a camera, the followed entity and the current extents)
     const shadowCam = light.shadow.camera;
     let radius = -1;
-    const camera = resolveCamera(world, data);
+    // `cameraEntityId`'s camera, else the main camera
+    const cameraValue = objects.get(data.cameraEntityId ?? mainCameraId ?? -1)?.value;
+    const camera = (cameraValue as THREE.Camera | undefined)?.isCamera
+      ? (cameraValue as THREE.Camera)
+      : undefined;
     if (camera) {
       camera.updateMatrixWorld();
       radius = getViewSliceSphere(camera, data.maxDistance, _center);
     }
     if (radius < 0) {
       if (data.followEntityId === undefined) continue;
-      if (!getFollowPosition(world, data.followEntityId, _center)) continue;
+      if (!getFollowPosition(transformStore, transforms, data.followEntityId, _center)) continue;
       radius = (shadowCam.right - shadowCam.left) / 2;
     }
 
@@ -304,14 +318,35 @@ export const sunShadowFitSystem = (world: ECSWorld) => {
     light.updateMatrixWorld();
     light.target.position.copy(_snapped);
     light.target.updateMatrixWorld();
-    writeTransformPosition(world, entityId, _lightPos);
-    writeTransformPosition(world, targetId, _snapped);
+    writeTransformPosition(world, transformStore, transforms, entityId, _lightPos);
+    writeTransformPosition(world, transformStore, transforms, targetId, _snapped);
   }
 };
 
-/** The Registration Helper */
+/**
+ * Registers the sun shadow fit's system on `world`, at `APP_RENDER_SYNC` with
+ * `APP_RENDER_SYNC_ORDER.SHADOW_FIT`: after the follow camera rig has placed this frame's camera,
+ * before frustum culling. From then on every light with a {@link SunShadowFitComponentType}
+ * `SUN_SHADOW_FIT` component fits its shadow to the view. A second call on the same world is a
+ * no-op.
+ * @returns `world`
+ * @example
+ * ```ts
+ * // Registered for every world, in the app's feature (src/AppECSPlugins.ts)
+ * export const appFeature: EngineFeature = {
+ *   id: 'app',
+ *   install: (ctx) => ctx.registerPlugin(registerSunShadowFitEffect),
+ * };
+ *
+ * // In scene code: the sun's shadow covers the main camera's view out to 50 m, and casters up
+ * // to 25 m beyond it toward the sun
+ * getECSWorld().addComponent(sunEntityId, SunShadowFitComponentType.SUN_SHADOW_FIT, {
+ *   maxDistance: 50,
+ *   casterExtension: 25,
+ * });
+ * ```
+ */
 export const registerSunShadowFitEffect = (world: ECSWorld) => {
-  // After the follow camera rig has placed this frame's camera, before frustum culling
   world.addSystem(
     ECSSystemStage.APP_RENDER_SYNC,
     'sunShadowFitSystem',
