@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented
+Status: in progress | Phases 0-6 implemented
 Category: Refactoring, Documentation, Toolkit, App
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -1166,7 +1166,7 @@ correction as `7e07d37`):
   and its toolkit line's "the bobbing ball" and `largeWorld.ts`' comment still hold. The LOD
   example page's "the export writes into `src/app/impostors/`" (U2) stands for the rock only.
 
-### Phase 6: the examples, the root files and the verification scenes
+### Phase 6: the examples, the root files and the verification scenes — done
 
 Sections: 1. the examples (A2 in the `spin-system`, `banner-scene` regions and `exampleUiKit`, A3's
 reason kept in a comment, A4, A5, A7's headers), the region line ranges the Hub includes checked;
@@ -1177,6 +1177,59 @@ splits, V4's headers and labels, `assetCompare`'s LS key and report cache, D10);
 - `yarn verify:scenes --only` the examples, `banner`'s embed (`yarn verify:embed`) and the three
   verification scenes: unchanged.
 - `yarn hub:build`: every include resolves, the Hub's example images unchanged (no visual change).
+
+As built (2026-10-22, sections 1-4 committed as `0094ea4`, `6dc5c8e`, `5349b99`, `b9f2b21`):
+
+- **The examples (section 1):** A2: `SpinSystem.ts`, `banner.ts` and `exampleUiKit.ts` copy the
+  `getRotation` quaternion into a scratch one (the spin system and the banner pass one hoisted
+  `{ rot }` patch; `setTransform` copies it). `banner-scene` now starts above the constants, so the
+  Hub shows the scratch objects its looper uses. A4: `exampleSkyBox`'s looper compares the minute,
+  state and speed and builds the HUD text only on a change; `exampleCharacter`'s level starts
+  every create and awaits them together (`createRamp`, `createStairs`; each create sends its body
+  before its first await, so the body order and the hash stay). **Beyond the plan:** the
+  character's rig takes the scene's `sceneId` (no exit callback, as the gym's since Phase 4). A3:
+  `exampleUiKit` says in a comment why registering the kind per visit is safe. A5 / D8:
+  `exampleLod`, `banner` and `exampleHubHero` use `getGeometry(id) ?? saveBufferGeometry(…)`;
+  `existsOrThrow` for the LOD levels and the knot's bounds; the colour set behind an
+  `instanceof THREE.MeshStandardMaterial` check (`exampleUiKit`, `exampleDebugTab`). A7: the spin
+  files' headers say why they stay in `examples/ecs/` (two scenes use them, not three). The
+  `(string)` param notes and a cast in `_dbg__exampleHub.ts` and `exampleHud.ts` gone. The Hub's
+  character, sky box and LOD walkthroughs follow the changed regions (no highlighted range in any
+  example include). Left: `examplePhysics.ts`' `dropped.shift()!` (behind its length check), the
+  UI kit's `data?.shapeId as ShapeId` (untyped window data).
+- **The root files (section 2):** `index.ts`: the shadow map types as a comment, the loader's
+  "Loading…" on `#101218` (no `text: ''`, no `'blue'`), comments saying what each step does.
+  `CONFIG.ts`: `debugKeys: []` with a rebind example in the comment (the `h` entry was the
+  default), no `debugDrawer` block, no citation. `AppECSRegistry.ts`: `HEALTH` commented as the
+  template's example key. **For Phase 7:** `readme.md:409` shows the old `debugKeys` entry, and the
+  root `CLAUDE.md`'s Debug system line says `h` is "bound in `src/CONFIG.ts`" (it's the engine's
+  default).
+- **The verification scenes (section 3):** `src/app/shared/verifyHarness.ts` (the TSL shim's
+  `sampleTexture` / `meshUv`, `nextFrames`, `expectError` / `expectSyncError`, `getErrorMessage`,
+  `getBackendName` on `isWebGPURenderer`, `getCountedGpuBytes`, `getGeneratedTextureProps`,
+  `projectToScreen`, the console handles), with `verifyHarness.test.ts` (D13). `assetCompare`'s
+  `buildSlot` is `buildSlotAsync` over `loadSlotTextureAsync`, `buildGround`, `buildSphere` and
+  `buildPropAsync` (ids, appIds and order kept; the ground by the `getGeometry` pattern, so no
+  "registered already" warning); `PHASE1_URL` is `VARIANTS_URL` (the path stays). Its debug
+  module is four: `_dbg__assetCompare.ts` (the tab and slot rows, 246 lines),
+  `_dbg__assetCompareReport.ts` (report.json, refetched after a failed load), `…Colliders.ts`
+  (the check, its loop split; **beyond the plan:** it stops and releases its import when the scene
+  is left) and `…Measure.ts`. The LS key is `AEK_debugAssetCompare` (the old key and its `UI` key
+  moved once). The header, the scene JSON and the "DD6" label (now "Copies vs source") say what
+  they do; p303's citation stays (open). The texture scenes' headers say `window.__…` is read by
+  hand and what the runner checks; p351's citations (done) rewritten, p299's stay.
+- **The asset JSONs (section 4):** `testTexture` without `useHDRLoader` and its save entry (a
+  no-op that warned in every other scene); the banner's and `p299TestAtlasImage`'s citations gone.
+  The impostor exports' p351 text stays (the engine's exporter writes it: Phase 7's issue file).
+- **Checks (section 5):** `yarn verify:scenes --only 'example*,banner,assetCompare,textureArrays,
+  textureAtlases'` (18 min, WebGL2): 56 passed, every hash, snapshot and system order as recorded
+  (`exampleCharacter` included). `yarn verify:embed`: all passed (INLINE, BACKGROUND, the Hub's
+  example page). `yarn verify:baselines --update`: within tolerance, no debug code; `bundle.json`
+  and `bundle.banner.json` recorded for this phase's byte changes (the examples' chunks:
+  `banner` +28 B, `exampleLod` +76, `exampleSkyBox` +55, `exampleHubHero` -44; the main chunk -39);
+  `api.json` and `docs.json` unchanged. `yarn hub:build`: 84 pages, 935 names, only p621's
+  warning. `yarn test`: 1,227 passed (the Stop hook's run beside `hub:build` failed
+  `buildGuard.test.ts`, the clash §3 warns of; alone it passes).
 
 ### Phase 7: the Hub, `CLAUDE.md` and the filed findings (D14)
 
