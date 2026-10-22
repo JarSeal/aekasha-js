@@ -14,3 +14,4 @@ Four principles run through every feature:
   light enough to embed in any page.
 
 Each feature has a page here: how it works, its key APIs, and its example scene where it has one.
+[Architecture](hub:documentation/architecture) shows how they fit together.

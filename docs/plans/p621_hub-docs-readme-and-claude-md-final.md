@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Documentation, Hub
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage D)
 
@@ -201,12 +201,31 @@ runtime change; the scene runner checks nothing a document changes).
   no bump). **To check on the machine that recorded the old ones:** `yarn test` passes there too.
   `yarn test`: 1,228 passed.
 
-### Phase 2: the Architecture page
+### Phase 2: the Architecture page — done
 
 1. D1's page, its diagram, its `aek:covers`, `coverageIgnore` without the three names.
 2. Links to it: the Documentation intro, the quick start's "How the app starts", the Features
    intro, the coding standards' Layering.
 3. `yarn hub:build` and a look at it in `yarn dev` (both themes, phone width).
+
+**As built:**
+
+- `hub/pages/documentation/architecture/` (`aek:order` 60, before the migration guide): `intro`
+  and `guide` slots, D1's eight sections plus "The build" (what Build config notes holds that an
+  app developer needs: the aliases, `sideEffects`, the lazy parts, `yarn sbp`), and "Actors,
+  controllers, brains and intents" under "Where your feature goes". The diagrams are three
+  `text noLineNumbers` blocks (the Hub's existing diagram form, `scenes-and-assets`), kept at or
+  under 72 characters so they fit the content column; no SVG.
+- Written against the code, not only the CLAUDE.md text: the frame order from `runFrame` and
+  `ECSWorld.update*Loop` (a scene's app loopers run after the worlds' `APP_RENDER_SYNC`, before
+  the render), the assets worker's defaults from `AppConfig.assets`, the actor record from
+  `CharacterObject` (`controller`, `brain`; there is no `ACTOR` component, p603 C1's name).
+- `aek:covers`: "Three-folder split, Bootstrap flow, Build config notes", out of `coverageIgnore`
+  (left: the plans, the Hub, the verify commands).
+- Linked from the Documentation intro, the Features intro, the quick start's "How the app starts"
+  and the coding standards' Layering.
+- `yarn hub:build`: 91 pages, no warning; light, dark and 390 px wide checked in Chrome on
+  `yarn hub:preview` (no page overflow).
 
 ### Phase 3: CLAUDE.md
 
