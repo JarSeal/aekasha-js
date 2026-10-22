@@ -298,11 +298,9 @@
           "id": "asteroid",
           "debugData": {
             "name": "Asteroid",
-            "description": "Procedural object-space rock (no UVs): mottled colours, Worley pits, mineral speckles, bump. Every input is on colorNode, which also sets roughnessNode and normalNode; override `seed` per mesh for a different rock."
+            "description": "Procedural object-space rock (no UVs): mottled colours, Worley pits, mineral speckles, bump. Every input is on colorNode, which also sets roughnessNode and normalNode; override `seed` per mesh for a different rock. Static define: octaves."
           },
           "params": {
-            "color": "#6b6158",
-            "roughness": 0.9,
             "metalness": 0
           },
           "tslFile": "materials/asteroid/asteroid.tsl.ts",
@@ -698,8 +696,11 @@
       "materials": [
         {
           "id": "triplanarCheckerboard",
+          "debugData": {
+            "name": "Triplanar checkerboard",
+            "description": "Procedural checkerboard in meters on any mesh (no UVs), anti-aliased into the distance, with an optional plus sign in every cell. Static defines: alignToObject, fitToBounds, dominantAxis, plusSigns."
+          },
           "params": {
-            "color": "#ff0000",
             "roughness": 0.85,
             "metalness": 0
           },
@@ -890,8 +891,11 @@
       "materials": [
         {
           "id": "triplanarCheckerboard",
+          "debugData": {
+            "name": "Triplanar checkerboard",
+            "description": "Procedural checkerboard in meters on any mesh (no UVs), anti-aliased into the distance, with an optional plus sign in every cell. Static defines: alignToObject, fitToBounds, dominantAxis, plusSigns."
+          },
           "params": {
-            "color": "#ff0000",
             "roughness": 0.85,
             "metalness": 0
           },
@@ -914,8 +918,11 @@
         },
         {
           "id": "triplanarGrid",
+          "debugData": {
+            "name": "Triplanar grid",
+            "description": "Procedural grid in meters on any mesh (no UVs): major and minor lines over a background, with optional grooves along them (normalNode). Static defines: alignToObject, fitToBounds, dominantAxis, minorLines, seamNormals."
+          },
           "params": {
-            "color": "#808080",
             "roughness": 0.85,
             "metalness": 0
           },
@@ -13404,11 +13411,9 @@
           "id": "asteroid",
           "debugData": {
             "name": "Asteroid",
-            "description": "Procedural object-space rock (no UVs): mottled colours, Worley pits, mineral speckles, bump. Every input is on colorNode, which also sets roughnessNode and normalNode; override `seed` per mesh for a different rock."
+            "description": "Procedural object-space rock (no UVs): mottled colours, Worley pits, mineral speckles, bump. Every input is on colorNode, which also sets roughnessNode and normalNode; override `seed` per mesh for a different rock. Static define: octaves."
           },
           "params": {
-            "color": "#6b6158",
-            "roughness": 0.9,
             "metalness": 0
           },
           "tslFile": "materials/asteroid/asteroid.tsl.ts",
@@ -14235,8 +14240,11 @@
       "materials": [
         {
           "id": "triplanarGrid",
+          "debugData": {
+            "name": "Triplanar grid",
+            "description": "Procedural grid in meters on any mesh (no UVs): major and minor lines over a background, with optional grooves along them (normalNode). Static defines: alignToObject, fitToBounds, dominantAxis, minorLines, seamNormals."
+          },
           "params": {
-            "color": "#808080",
             "roughness": 0.85,
             "metalness": 0
           },
@@ -14266,8 +14274,11 @@
         },
         {
           "id": "triplanarCheckerboard",
+          "debugData": {
+            "name": "Triplanar checkerboard",
+            "description": "Procedural checkerboard in meters on any mesh (no UVs), anti-aliased into the distance, with an optional plus sign in every cell. Static defines: alignToObject, fitToBounds, dominantAxis, plusSigns."
+          },
           "params": {
-            "color": "#ff0000",
             "roughness": 0.85,
             "metalness": 0
           },
@@ -14454,8 +14465,11 @@
       "materials": [
         {
           "id": "triplanarGrid",
+          "debugData": {
+            "name": "Triplanar grid",
+            "description": "Procedural grid in meters on any mesh (no UVs): major and minor lines over a background, with optional grooves along them (normalNode). Static defines: alignToObject, fitToBounds, dominantAxis, minorLines, seamNormals."
+          },
           "params": {
-            "color": "#808080",
             "roughness": 0.85,
             "metalness": 0
           },
@@ -14485,8 +14499,11 @@
         },
         {
           "id": "triplanarCheckerboard",
+          "debugData": {
+            "name": "Triplanar checkerboard",
+            "description": "Procedural checkerboard in meters on any mesh (no UVs), anti-aliased into the distance, with an optional plus sign in every cell. Static defines: alignToObject, fitToBounds, dominantAxis, plusSigns."
+          },
           "params": {
-            "color": "#ff0000",
             "roughness": 0.85,
             "metalness": 0
           },
@@ -24052,11 +24069,9 @@
       "id": "asteroid",
       "debugData": {
         "name": "Asteroid",
-        "description": "Procedural object-space rock (no UVs): mottled colours, Worley pits, mineral speckles, bump. Every input is on colorNode, which also sets roughnessNode and normalNode; override `seed` per mesh for a different rock."
+        "description": "Procedural object-space rock (no UVs): mottled colours, Worley pits, mineral speckles, bump. Every input is on colorNode, which also sets roughnessNode and normalNode; override `seed` per mesh for a different rock. Static define: octaves."
       },
       "params": {
-        "color": "#6b6158",
-        "roughness": 0.9,
         "metalness": 0
       },
       "tslFile": "materials/asteroid/asteroid.tsl.ts",
@@ -24086,8 +24101,11 @@
     },
     "triplanarCheckerboard": {
       "id": "triplanarCheckerboard",
+      "debugData": {
+        "name": "Triplanar checkerboard",
+        "description": "Procedural checkerboard in meters on any mesh (no UVs), anti-aliased into the distance, with an optional plus sign in every cell. Static defines: alignToObject, fitToBounds, dominantAxis, plusSigns."
+      },
       "params": {
-        "color": "#ff0000",
         "roughness": 0.85,
         "metalness": 0
       },
@@ -24111,8 +24129,11 @@
     },
     "triplanarGrid": {
       "id": "triplanarGrid",
+      "debugData": {
+        "name": "Triplanar grid",
+        "description": "Procedural grid in meters on any mesh (no UVs): major and minor lines over a background, with optional grooves along them (normalNode). Static defines: alignToObject, fitToBounds, dominantAxis, minorLines, seamNormals."
+      },
       "params": {
-        "color": "#808080",
         "roughness": 0.85,
         "metalness": 0
       },

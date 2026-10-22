@@ -14,7 +14,9 @@ const PLUS_FADE_PIXEL_END = 0.075;
 // ─── Static defines ───
 // Structural switches, resolved at shader build time (only the used paths end up in the shader).
 // Set them in the material JSON `staticDefines`, or per mesh with `matOverrides.staticDefines`
-// (which gives the mesh a cached material variant, see getMaterialVariant).
+// (which gives the mesh a cached material variant, see getMaterialVariant). These are the
+// defaults for a define the JSON leaves out: triplanarCheckerboard.material.json sets each one
+// (its plusSigns is on).
 const DEFAULT_DEFINES = {
   /** Cells follow the object's rotation (world scale kept, so units stay meters), else world-aligned */
   alignToObject: true,

@@ -1,8 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js';
-import { createMeshEntity, type MeshProps, getECSWorld, lwarn } from 'aekasha';
+import { createMeshEntity, createSeededRandom, getECSWorld, lwarn, type MeshProps } from 'aekasha';
 import type { CoreEntityOpts } from 'aekasha/schemas';
-import { createSeededRandom } from 'aekasha';
 
 // three's MeshSurfaceSampler has setRandomGenerator, which @types/three (0.186) doesn't declare:
 // the cast adds that one method

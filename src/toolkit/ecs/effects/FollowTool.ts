@@ -51,8 +51,9 @@ const _targetPos = new THREE.Vector3();
 // Moves each follower (and its target link's entity) toward its leader's position plus offset
 const followToolSystem = (world: ECSWorld, dt: number) => {
   const storage = world.getStorage(FollowToolComponentType.FOLLOW);
-  if (!storage) return;
+  const targetLinks = world.getStorage(ComponentType.TARGET_LINK);
   const transformStore = world.getTypedTransformStore();
+  const transforms = transformStore ? null : world.getStorage(ComponentType.TRANSFORM);
 
   for (const [entityId, data] of storage) {
     // Framerate independent alpha calculation
@@ -87,7 +88,7 @@ const followToolSystem = (world: ECSWorld, dt: number) => {
       }
 
       // 3. Update the Light Target Entity (Only if it exists)
-      const targetLink = world.getComponent(entityId, ComponentType.TARGET_LINK);
+      const targetLink = targetLinks.get(entityId);
       if (targetLink) {
         const targetSlot = transformStore.getSlot(targetLink.targetId);
         if (targetSlot !== -1) {
@@ -113,11 +114,11 @@ const followToolSystem = (world: ECSWorld, dt: number) => {
     // --- MAP mode: live Map references, existing behavior unchanged ---
 
     // 1. Get the Leader's position
-    const leaderTransform = world.getComponent(data.leaderId, ComponentType.TRANSFORM);
+    const leaderTransform = transforms?.get(data.leaderId);
     if (!leaderTransform) continue;
 
     // 2. Update the Light Source Entity
-    const lightTransform = world.getComponent(entityId, ComponentType.TRANSFORM);
+    const lightTransform = transforms?.get(entityId);
     if (lightTransform) {
       _targetPos.copy(leaderTransform.position).add(data.offset);
 
@@ -131,9 +132,9 @@ const followToolSystem = (world: ECSWorld, dt: number) => {
     }
 
     // 3. Update the Light Target Entity (Only if it exists)
-    const targetLink = world.getComponent(entityId, ComponentType.TARGET_LINK);
+    const targetLink = targetLinks.get(entityId);
     if (targetLink) {
-      const targetTransform = world.getComponent(targetLink.targetId, ComponentType.TRANSFORM);
+      const targetTransform = transforms?.get(targetLink.targetId);
       if (targetTransform) {
         _targetPos.copy(leaderTransform.position).add(data.targetOffset);
 

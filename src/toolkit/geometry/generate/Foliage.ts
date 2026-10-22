@@ -1,7 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { createGeometry, deleteGeometry } from 'aekasha';
-import { createSeededRandom } from 'aekasha';
+import { createSeededRandom, existsOrThrow } from 'aekasha';
 
 /** {@link generateTreeGeometry}'s options, in world units; every one has a default. */
 export interface TreeGeometryOptions {
@@ -69,28 +68,27 @@ export const generateTreeGeometry = (opts: TreeGeometryOptions = {}): GeneratedT
     radialSegments = 5,
   } = opts;
 
-  const trunkGeo = createGeometry({
-    type: 'CYLINDER',
-    params: {
-      radiusTop: trunkRadius,
-      radiusBottom: trunkRadius * 1.3,
-      height: trunkHeight,
-      radialSegments,
-    },
-  });
+  // The parts are three's own geometries, never registered: only the merged one is kept
+  const trunkGeo = new THREE.CylinderGeometry(
+    trunkRadius,
+    trunkRadius * 1.3,
+    trunkHeight,
+    radialSegments
+  );
   trunkGeo.translate(0, trunkHeight / 2, 0);
 
-  const foliageGeo = createGeometry({
-    type: 'CONE',
-    params: { radius: foliageRadius, height: foliageHeight, radialSegments },
-  });
+  const foliageGeo = new THREE.ConeGeometry(foliageRadius, foliageHeight, radialSegments);
   // Overlap the cone slightly into the trunk so there's no visible gap at the seam.
   foliageGeo.translate(0, trunkHeight + foliageHeight / 2 - 0.15, 0);
 
-  const geometry = mergeGeometries([trunkGeo, foliageGeo], true)!;
+  const geometry = existsOrThrow(
+    mergeGeometries([trunkGeo, foliageGeo], true),
+    "[generateTreeGeometry] The trunk and the canopy couldn't be merged."
+  );
   geometry.computeBoundingSphere();
   geometry.computeBoundingBox();
-  deleteGeometry([trunkGeo.userData.id, foliageGeo.userData.id]);
+  trunkGeo.dispose();
+  foliageGeo.dispose();
 
   return { geometry, materialGroups: { trunk: 0, foliage: 1 } };
 };
@@ -131,10 +129,7 @@ export const generateBushGeometry = (opts: BushGeometryOptions = {}): THREE.Buff
   const blobGeos: THREE.BufferGeometry[] = [];
   for (let i = 0; i < clusterCount; i++) {
     const radius = baseRadius + (random() - 0.5) * radiusVariance;
-    const blobGeo = createGeometry({
-      type: 'SPHERE',
-      params: { radius, widthSegments: segments, heightSegments: segments },
-    });
+    const blobGeo = new THREE.SphereGeometry(radius, segments, segments);
     blobGeo.translate(
       (random() - 0.5) * baseRadius,
       radius * 0.6 + (random() - 0.5) * 0.1,
@@ -153,10 +148,13 @@ export const generateBushGeometry = (opts: BushGeometryOptions = {}): THREE.Buff
     return empty;
   }
 
-  const geometry = mergeGeometries(blobGeos, false)!;
+  const geometry = existsOrThrow(
+    mergeGeometries(blobGeos, false),
+    "[generateBushGeometry] The bush's spheres couldn't be merged."
+  );
   geometry.computeBoundingSphere();
   geometry.computeBoundingBox();
-  deleteGeometry(blobGeos.map((geo) => geo.userData.id));
+  for (const blobGeo of blobGeos) blobGeo.dispose();
 
   return geometry;
 };

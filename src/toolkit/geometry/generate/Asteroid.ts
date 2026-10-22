@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import { SimplexNoise } from 'three/examples/jsm/math/SimplexNoise.js';
 import { ConvexHull } from 'three/examples/jsm/math/ConvexHull.js';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { createSeededRandom } from 'aekasha';
+import { createSeededRandom, existsOrThrow } from 'aekasha';
 
 /** An asteroid's lumps ({@link AsteroidOptions}' `noise`): seeded simplex fbm along the normals. */
 export interface AsteroidNoiseOptions {
@@ -241,7 +241,10 @@ export const generateAsteroid = (opts: AsteroidOptions = {}): GeneratedAsteroid 
   position.needsUpdate = true;
 
   // Mesh volume from the indexed (closed) triangles
-  const index = indexed.getIndex()!;
+  const index = existsOrThrow(
+    indexed.getIndex(),
+    "[generateAsteroid] The merged icosphere isn't indexed."
+  );
   const a = new THREE.Vector3();
   const b = new THREE.Vector3();
   const c = new THREE.Vector3();

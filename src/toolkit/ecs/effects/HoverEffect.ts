@@ -37,8 +37,8 @@ declare module 'aekasha' {
 // Moves each hovering entity to its height for this frame
 const hoverToolSystem = (world: ECSWorld, dt: number) => {
   const storage = world.getStorage(HoverToolComponentType.HOVER);
-  if (!storage) return;
   const transformStore = world.getTypedTransformStore();
+  const transforms = transformStore ? null : world.getStorage(ComponentType.TRANSFORM);
 
   for (const [entityId, data] of storage) {
     const time = (data.time ?? 0) + dt;
@@ -52,7 +52,7 @@ const hoverToolSystem = (world: ECSWorld, dt: number) => {
       continue;
     }
 
-    const transform = world.getComponent(entityId, ComponentType.TRANSFORM);
+    const transform = transforms?.get(entityId);
     if (!transform) continue;
     transform.position.y = y;
     transform.setDirty();
