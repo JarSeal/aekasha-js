@@ -1,5 +1,12 @@
 import * as THREE from 'three/webgpu';
-import { APP_RENDER_SYNC_ORDER, ECSSystemStage, smoothDampVec3 } from 'aekasha';
+import {
+  APP_RENDER_SYNC_ORDER,
+  ECSSystemStage,
+  getCurrentSceneId,
+  getECSWorld,
+  registerOnAllSceneExits,
+  smoothDampVec3,
+} from 'aekasha';
 import type { ECSWorld } from 'aekasha';
 
 const DEFAULT_OFFSET = { x: 0, y: 5, z: 10 };
@@ -23,6 +30,9 @@ const MAX_TRAVEL_SPEED = 100;
  */
 export type FollowObjectCameraParams = {
   id: string;
+  /** The scene whose exit deletes the rig; without one it stays until
+   * {@link deleteFollowObjectCameraRig} */
+  sceneId?: string;
   camera: THREE.Camera;
   targetMesh: THREE.Mesh;
   /** What is the offset of the camera from the target */
@@ -72,15 +82,23 @@ export type FollowObjectCameraParams = {
 };
 
 type FollowRigState = {
+  world: ECSWorld;
+  sceneId?: string;
   tick: (dt: number) => void;
 };
 
-// --- Shared ECS system (design decision: camera-follow smoothing is one system, registered
-// once, not one addScenePhysicsLooper registration per rig instance) --------------------------
+// One shared system drives every rig, each in the world it was created for (the default world)
 const activeRigs = new Map<string, FollowRigState>();
 
-const followObjectCameraRigSystemFn = (_world: ECSWorld, dt: number) => {
-  for (const rig of activeRigs.values()) rig.tick(dt);
+const followObjectCameraRigSystemFn = (world: ECSWorld, dt: number) => {
+  for (const rig of activeRigs.values()) if (rig.world === world) rig.tick(dt);
+};
+
+// Deletes the exiting scene's rigs: while the exit listeners run, it's still the current scene
+const deleteExitingSceneRigs = () => {
+  const sceneId = getCurrentSceneId();
+  if (!sceneId) return;
+  for (const [id, rig] of activeRigs) if (rig.sceneId === sceneId) activeRigs.delete(id);
 };
 
 /** Registers the single shared camera-follow system on `world`, driving every active
@@ -101,6 +119,7 @@ export const registerFollowObjectCameraRigSystem = (world: ECSWorld) => {
     followObjectCameraRigSystemFn,
     APP_RENDER_SYNC_ORDER.POSE_CONSUMERS
   );
+  registerOnAllSceneExits('followObjectCameraRig', deleteExitingSceneRigs);
   return world;
 };
 
@@ -177,6 +196,7 @@ const createLookAhead = (
 export const createFollowObjectCameraRig = (params: FollowObjectCameraParams) => {
   const {
     id,
+    sceneId,
     camera,
     targetMesh,
     offset: offsetParam,
@@ -264,8 +284,8 @@ export const createFollowObjectCameraRig = (params: FollowObjectCameraParams) =>
   };
 
   const tick = (dt: number) => {
-    // Safety check for NaN DT (on first frame or pause)
-    if (dt <= 0.0001) return;
+    // Skips a frame without time (the first frame, a pause) or with a NaN dt
+    if (!(dt > 0.0001)) return;
 
     // The followed point: the drawn pose (the mesh, not the rigid body, for visual smoothness
     // when the visuals are interpolated), led ahead of it when lookAhead is on
@@ -298,7 +318,7 @@ export const createFollowObjectCameraRig = (params: FollowObjectCameraParams) =>
     }
   };
 
-  activeRigs.set(id, { tick });
+  activeRigs.set(id, { world: getECSWorld(), sceneId, tick });
 };
 
 /** Stops the rig `id`; the camera stays where it is. An unknown id is a no-op. */

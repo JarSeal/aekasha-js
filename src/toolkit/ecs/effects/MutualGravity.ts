@@ -32,14 +32,13 @@ export type MutualGravityConfig = {
 
 export type GravityBody = { entityId: number; mass: number };
 
-type GravityBodyEntry = GravityBody & { world: ECSWorld };
-
 const DEFAULT_CONFIG: MutualGravityConfig = { G: 1, softening: 0.5, enabled: true };
 const config: MutualGravityConfig = { ...DEFAULT_CONFIG };
 
-const bodies = new Map<number, GravityBodyEntry>();
-// Whether the forces on the registered bodies may be non-zero (so turning gravity off resets them once)
-let hasAppliedForces = false;
+// Each world's bodies, entity id → mass (an entity id is unique only within its world)
+const bodiesByWorld = new Map<ECSWorld, Map<number, number>>();
+// The worlds whose bodies' forces may be non-zero (so turning gravity off resets them once)
+const worldsWithForces = new Set<ECSWorld>();
 
 // Per-sub-step scratch, grown on demand: poses (7 per body), forces (3 per body), the bodies
 let poses = new Float64Array(7 * 16);
@@ -48,22 +47,26 @@ const stepBodies: RigidBodyAPI[] = [];
 let stepMasses = new Float64Array(16);
 const force: PhysVector = { x: 0, y: 0, z: 0 };
 
+// Grows the scratch for n bodies, keeping the masses already collected this sub-step (the poses
+// and forces are written after the collection)
 const ensureCapacity = (n: number) => {
   if (stepMasses.length >= n) return;
   const size = Math.max(n, stepMasses.length * 2);
   poses = new Float64Array(7 * size);
   forces = new Float64Array(3 * size);
-  stepMasses = new Float64Array(size);
+  const masses = new Float64Array(size);
+  masses.set(stepMasses);
+  stepMasses = masses;
 };
 
 const mutualGravitySystem = (world: ECSWorld) => {
-  if (!bodies.size) return;
+  const bodies = bodiesByWorld.get(world);
+  if (!bodies?.size) return;
 
   // Collect this world's live bodies, dropping the ones that are gone
   let n = 0;
   stepBodies.length = 0;
-  for (const [entityId, entry] of bodies) {
-    if (entry.world !== world) continue;
+  for (const [entityId, mass] of bodies) {
     const rb = world.isAlive(entityId) ? world.getRigidBody(entityId) : undefined;
     if (!rb || rb.isBeingDeleted) {
       bodies.delete(entityId);
@@ -71,15 +74,14 @@ const mutualGravitySystem = (world: ECSWorld) => {
     }
     ensureCapacity(n + 1);
     stepBodies.push(rb);
-    stepMasses[n] = entry.mass;
+    stepMasses[n] = mass;
     n++;
   }
   if (!n) return;
 
   if (!config.enabled) {
-    if (hasAppliedForces) {
+    if (worldsWithForces.delete(world)) {
       for (let i = 0; i < n; i++) stepBodies[i].resetForces(true);
-      hasAppliedForces = false;
     }
     return;
   }
@@ -122,7 +124,7 @@ const mutualGravitySystem = (world: ECSWorld) => {
     force.z = forces[i * 3 + 2];
     rb.addForce(force, true);
   }
-  hasAppliedForces = true;
+  worldsWithForces.add(world);
 };
 
 /**
@@ -136,33 +138,44 @@ const mutualGravitySystem = (world: ECSWorld) => {
 export const addGravityBody = (entityId: number, mass: number, world?: ECSWorld) => {
   const w = world || getECSWorld();
   if (!w) return;
-  bodies.set(entityId, { entityId, mass, world: w });
+  let bodies = bodiesByWorld.get(w);
+  if (!bodies) bodiesByWorld.set(w, (bodies = new Map()));
+  bodies.set(entityId, mass);
 };
 
-/** Removes an entity from the mutual gravity and resets its user forces (if its body still exists).
+/** Removes an entity from the mutual gravity, in every world it was added in, and resets its user
+ * forces (if its body still exists).
  * @param entityId entity added with addGravityBody */
 export const removeGravityBody = (entityId: number) => {
-  const entry = bodies.get(entityId);
-  if (!entry) return;
-  bodies.delete(entityId);
-  const rb = entry.world.isAlive(entityId) ? entry.world.getRigidBody(entityId) : undefined;
-  if (rb && !rb.isBeingDeleted) rb.resetForces(true);
+  for (const [world, bodies] of bodiesByWorld) {
+    if (!bodies.delete(entityId)) continue;
+    const rb = world.isAlive(entityId) ? world.getRigidBody(entityId) : undefined;
+    if (rb && !rb.isBeingDeleted) rb.resetForces(true);
+  }
 };
 
 /** Removes every gravity body (their forces are left as they are: this runs on scene exit, when
  * the bodies are deleted anyway). */
 export const clearGravityBodies = () => {
-  bodies.clear();
-  hasAppliedForces = false;
+  bodiesByWorld.clear();
+  worldsWithForces.clear();
 };
 
 /** The registered gravity bodies (entity id and mass), eg. for a debug list or an energy readout. */
-export const getGravityBodies = (): GravityBody[] =>
-  [...bodies.values()].map(({ entityId, mass }) => ({ entityId, mass }));
+export const getGravityBodies = (): GravityBody[] => {
+  const list: GravityBody[] = [];
+  for (const bodies of bodiesByWorld.values()) {
+    for (const [entityId, mass] of bodies) list.push({ entityId, mass });
+  }
+  return list;
+};
 
-/** Sets any of the mutual gravity's settings (the rest keep their values). */
+/** Sets any of the mutual gravity's settings (the rest keep their values, as does a key given as
+ * `undefined`). */
 export const setMutualGravityConfig = (partial: Partial<MutualGravityConfig>) => {
-  Object.assign(config, partial);
+  if (partial.G !== undefined) config.G = partial.G;
+  if (partial.softening !== undefined) config.softening = partial.softening;
+  if (partial.enabled !== undefined) config.enabled = partial.enabled;
 };
 
 /** A copy of the current mutual gravity settings. */
