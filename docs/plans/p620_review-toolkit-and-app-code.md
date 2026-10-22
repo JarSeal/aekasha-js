@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: in progress | Phases 0-5 implemented
 Category: Refactoring, Documentation, Toolkit, App
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -1076,7 +1076,7 @@ As built (2026-10-22, sections 1-4 committed as `532910a`, `d9665e9`, `d1b88cd`,
   (`hub/pages/documentation/migration/engine-5.md:272`) still points at the gym's folder, where
   `gymStairsAndWall.ts` replaced both: Phase 7 rewords it.
 
-### Phase 5: the world, LOD and test scenes, and D9
+### Phase 5: the world, LOD and test scenes, and D9 — done
 
 Sections: 1. `scene01` (V2 merged in, the camera and lights moved into its folder, the debug suite
 guide's path), `oneMoreScene` removed, `p341AlphaCutTest` removed (`yarn assets` prunes it); 2.
@@ -1092,6 +1092,79 @@ checks.
   `scene01V2`'s and `oneMoreScene`'s baselines removed.
 - `yarn verify:baselines --update`: the bundle loses `assets/scene01V2.js` and
   `assets/oneMoreScene.js`; nothing else moves.
+
+As built (2026-10-22, sections 1-4 committed as `656ae9f`, `ca93a16`, `0523ca3`, `e54c2fc`; D2's
+correction as `7e07d37`):
+
+- **`scene01` (section 1):** V2 merged in, in named steps with module-level tables (every id,
+  appId and the body order kept): the batch load now loads the three metal rust maps (the box's
+  `box1Texture` among them) and counts each on the scene loader, with the sky boxes and the
+  model (8 steps; the `llog`s and V2's 0 → 1 jump gone); the desert dunes are the scene's sky
+  box, the other three created with `isDefault: false` (W11). **Beyond the plan:** the ball is a
+  STANDARD `metalRustMaterial` with the batch's colour, AO and metalness maps (the batch's
+  textures were only logged), and the sensor counts the bodies in it and turns the wireframe
+  sphere green while there are any, instead of a `'SENSOR ALERT'` per contact. No `d` key; the
+  input `CLAUDE.md`'s line no longer cites it. Its camera and lights moved into its folder
+  (`src/app/cameras/` and `src/app/lights/` are gone), the debug suite guide's and
+  `debug/DevFiles.ts`' `@example` path with them. The probe hash is `803f291b` in all three debug
+  configurations: `scene01V2`'s (p614), so the merged scene simulates as V2 did; the snapshot is
+  V2's but for the sphere's colour and the ball's material. `oneMoreScene`, `p341AlphaCutTest` and
+  its PNG removed; `yarn assets` pruned the lock entry and the KTX2 output.
+- **D2, corrected:** an engine patch in Phase 8 (`checkVersions` counts the `src/_engine/`
+  `CLAUDE.md` files and the `DevFiles.ts` example).
+- **The start scene (section 2):** the data-first counterpart of the quick-start example (which
+  already makes a ground and a hovering cube in code): its JSON gives the camera, the lights
+  (ambient and a new shadow-casting `directionalLight.light.json`), the sky box, the sphere with
+  the app's TSL material and the imported box; `sceneTestECS.ts` (35 lines) adds the ground (a
+  flat box) and the hover ball (appId `hoverBall`). Gone: the orthographic camera, the
+  hemisphere, point and spot lights, the `'ui'` world, the K / L stress test, the commented-out
+  code, `otherTestBox`, `testMaterial` (its JSON deleted). The scene's unstamped save entries are
+  folded into the base values, the layout reset so everything stands on the ground (the sphere's
+  radius 1, not the saved 2.6). `testTslMat.tsl.ts`: a summary, no `!`; its texture input keeps
+  `.sample()` (the shim's typed `TextureNode.uv()` isn't there at runtime: the load failed).
+  `testTexture`'s save entry stays Phase 6's (J2).
+- **`testDebugScene` (section 2):** the LOD sphere and the hand-built cell gone (so W5's cell
+  copy, and `shared/` needs no cell helper); its camera and lights in JSON (`p300Camera`,
+  `p300Ambient`, `p300Sun` kept), a name and a description; the header on `scene`.
+- **`largeWorld` (section 3):** `scene` is twelve named steps on a `WorldContext`, the props and
+  resting objects module-level tables; `saveMergedGeometry` (the plan's `mergeIntoGeometry`,
+  named like `saveBufferGeometry`) merges three's own geometries, never registered;
+  `saveGeometryOnce` is D8's `getGeometry(id) ?? saveBufferGeometry(…)`. The comments and the
+  scene's JSON say what the scene does (no "render-only for now", no "static until the crates get
+  rigid bodies", the exports where they are, no citations); its name is "Large world".
+- **The shared rock (W5):** `src/app/shared/largeWorldRock.ts` (geometry, material, hemi
+  impostor), used by `largeWorld` and the rock lane. No stale-export warning in either scene.
+- **The LOD showcase (sections 3-4):** the knot helpers in `lanes/showcaseKnot.ts`, the knot
+  built only when not registered (W6); the dolly writes a scratch pose (W6); the harness exports
+  gone, the dolly functions unexported; the tab's JSDoc and `features/lod/CLAUDE.md` say the stop
+  and its side are persisted (and drop the "no-pop recorder" citation: no such code). The lanes
+  are named by title (the numbers followed plan order), every plan citation gone, the casts in
+  `handMadeLevels.ts` (narrowed by a check), `knotImpostor.ts` and `_dbg__lodShowcase.ts` gone.
+- **`skyShowcase`:** the rows run north (-z) to south, right to left in the start view.
+- **JSONs (section 4, J4):** the descriptions of `largeWorld`, its camera and sun, `lodShowcase`,
+  its hand-made mesh and level geometries, `skyShowcase` and the shared `dayNight` sky box (its
+  users are this phase's scenes and the sky box example). Left: the five impostor exports'
+  "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351… Phase 4)", which the engine's
+  exporter writes (`features/lod/debug/_dbg__ImpostorExport.ts:143`).
+- **Checks (section 5):** `yarn verify:scenes --only scene01,sceneTestECS,testDebugScene,
+  largeWorld,lodShowcase,skyShowcase` (17 min): `largeWorld`, `lodShowcase` and `skyShowcase`
+  passed in all four configurations; the others failed on exactly the expected diffs (`scene01`'s
+  hash `7788c6ec` → `803f291b` and its snapshot, `sceneTestECS`' snapshot and system order (the
+  `ui` world gone), `testDebugScene`'s snapshot), then `--update` recorded their 12 runs.
+  `scene01V2`'s and `oneMoreScene`'s 8 entries and 6 snapshots removed from the local baseline by
+  hand (the runner never prunes). `yarn verify:baselines --update`: `bundle.json` only
+  (`assets/Foliage.js` → `assets/largeWorldRock.js`, the chunk `largeWorld` and `lodShowcase`
+  share, +302 B for the shared module; `assets/scene01.js` 3.5 → 4.8 kB, `assets/sceneTestECS.js`
+  1.9 → 0.6 kB, `scene01V2.js` and `oneMoreScene.js` gone; the main chunk −0.8 kB, the generated
+  data's two scenes; `features/skybox` +214 B minified with no source change, Rollup's renaming);
+  `api.json` and `docs.json` unchanged, no debug code; `bundle.banner.json`'s drift not committed.
+  `yarn hub:build`: 84 pages, 935 names, no warning. `yarn test`: 1,223 passed.
+- **For the next phases:** Phase 7 adds two issue files: the scene runner waits its 180 s
+  timeout on a scene whose load failed (`loadScene` had resolved `false`: seen with the start
+  scene's first try in section 2), and the impostor exporter's plan citation (an engine file).
+  The root `CLAUDE.md`'s list of shared type folders loses `cameras/` and `lights/` (none left),
+  and its toolkit line's "the bobbing ball" and `largeWorld.ts`' comment still hold. The LOD
+  example page's "the export writes into `src/app/impostors/`" (U2) stands for the rock only.
 
 ### Phase 6: the examples, the root files and the verification scenes
 

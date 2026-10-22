@@ -27,19 +27,19 @@
     },
     "assets/Asteroid.js": {
       "bytes": 10096,
-      "gzip": 3776
+      "gzip": 3775
     },
     "assets/asteroid.tsl.js": {
       "bytes": 1350,
-      "gzip": 784
+      "gzip": 786
     },
     "assets/banner.js": {
       "bytes": 448,
-      "gzip": 335
+      "gzip": 334
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
-      "gzip": 288
+      "gzip": 292
     },
     "assets/basis_transcoder.js": {
       "bytes": 57529,
@@ -51,11 +51,11 @@
     },
     "assets/BufferGeometryUtils.js": {
       "bytes": 6905,
-      "gzip": 2248
+      "gzip": 2245
     },
     "assets/characterVisual.js": {
       "bytes": 1006,
-      "gzip": 536
+      "gzip": 535
     },
     "assets/draco_decoder.js": {
       "bytes": 719410,
@@ -95,11 +95,11 @@
     },
     "assets/exampleCharacter.js": {
       "bytes": 3466,
-      "gzip": 1538
+      "gzip": 1537
     },
     "assets/exampleDebugTab.js": {
       "bytes": 987,
-      "gzip": 582
+      "gzip": 581
     },
     "assets/exampleEcs.js": {
       "bytes": 836,
@@ -107,15 +107,15 @@
     },
     "assets/exampleHubHero.js": {
       "bytes": 1366,
-      "gzip": 815
+      "gzip": 817
     },
     "assets/exampleHud.js": {
       "bytes": 428,
-      "gzip": 324
+      "gzip": 325
     },
     "assets/exampleLod.js": {
       "bytes": 1329,
-      "gzip": 823
+      "gzip": 821
     },
     "assets/examplePhysics.js": {
       "bytes": 1915,
@@ -127,7 +127,7 @@
     },
     "assets/exampleSkyBox.js": {
       "bytes": 1955,
-      "gzip": 931
+      "gzip": 932
     },
     "assets/exampleToolkit.js": {
       "bytes": 755,
@@ -141,29 +141,25 @@
       "bytes": 34605,
       "gzip": 12546
     },
-    "assets/Foliage.js": {
-      "bytes": 5832,
-      "gzip": 2775
-    },
     "assets/GeometryTransfer.js": {
       "bytes": 4297,
       "gzip": 1793
     },
     "assets/GLTFLoader.js": {
       "bytes": 44931,
-      "gzip": 13560
+      "gzip": 13556
     },
     "assets/HDRLoader.js": {
       "bytes": 3400,
-      "gzip": 1628
+      "gzip": 1626
     },
     "assets/heroBloom.tsl.js": {
       "bytes": 6316,
-      "gzip": 2037
+      "gzip": 2036
     },
     "assets/ImportPhysics.js": {
       "bytes": 5942,
-      "gzip": 2655
+      "gzip": 2657
     },
     "assets/ImportRegistry.js": {
       "bytes": 11236,
@@ -174,24 +170,28 @@
       "gzip": 963
     },
     "assets/index.js": {
-      "bytes": 1422959,
-      "gzip": 388046
+      "bytes": 1422120,
+      "gzip": 388014
     },
     "assets/KTX2Loader.js": {
       "bytes": 59839,
-      "gzip": 24355
+      "gzip": 24358
     },
     "assets/largeWorld.js": {
-      "bytes": 11861,
-      "gzip": 4241
+      "bytes": 11879,
+      "gzip": 4249
+    },
+    "assets/largeWorldRock.js": {
+      "bytes": 6134,
+      "gzip": 2948
     },
     "assets/LineBackendFat.js": {
       "bytes": 4765,
-      "gzip": 1924
+      "gzip": 1925
     },
     "assets/LodAuto.js": {
       "bytes": 1711,
-      "gzip": 916
+      "gzip": 913
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2168,
@@ -199,11 +199,11 @@
     },
     "assets/LodChains.js": {
       "bytes": 8077,
-      "gzip": 3552
+      "gzip": 3555
     },
     "assets/lodShowcase.js": {
-      "bytes": 11646,
-      "gzip": 4930
+      "bytes": 11747,
+      "gzip": 4954
     },
     "assets/meshopt_decoder.module.js": {
       "bytes": 26491,
@@ -219,19 +219,15 @@
     },
     "assets/OctahedralImpostor.js": {
       "bytes": 14378,
-      "gzip": 6211
-    },
-    "assets/oneMoreScene.js": {
-      "bytes": 99,
-      "gzip": 111
+      "gzip": 6210
     },
     "assets/physicsTest.js": {
       "bytes": 5267,
-      "gzip": 1877
+      "gzip": 1878
     },
     "assets/physicsTiers.js": {
       "bytes": 5213,
-      "gzip": 2570
+      "gzip": 2569
     },
     "assets/PhysicsWorker.js": {
       "bytes": 134,
@@ -246,16 +242,12 @@
       "gzip": 829610
     },
     "assets/scene01.js": {
-      "bytes": 3528,
-      "gzip": 1462
-    },
-    "assets/scene01V2.js": {
-      "bytes": 4398,
-      "gzip": 1717
+      "bytes": 4811,
+      "gzip": 2043
     },
     "assets/sceneTestECS.js": {
-      "bytes": 1927,
-      "gzip": 939
+      "bytes": 552,
+      "gzip": 364
     },
     "assets/SimplexNoise.js": {
       "bytes": 4365,
@@ -267,23 +259,23 @@
     },
     "assets/space.js": {
       "bytes": 3776,
-      "gzip": 1887
+      "gzip": 1890
     },
     "assets/SpawnImported.js": {
-      "bytes": 3050,
-      "gzip": 1407
+      "bytes": 3045,
+      "gzip": 1409
     },
     "assets/Terrain.js": {
       "bytes": 1397,
-      "gzip": 783
+      "gzip": 785
     },
     "assets/testTslMat.tsl.js": {
-      "bytes": 235,
-      "gzip": 198
+      "bytes": 211,
+      "gzip": 182
     },
     "assets/thirdPersonGymScene.js": {
       "bytes": 10182,
-      "gzip": 3727
+      "gzip": 3725
     },
     "assets/three.core.js": {
       "bytes": 195908,
@@ -291,7 +283,7 @@
     },
     "assets/three.module.js": {
       "bytes": 213,
-      "gzip": 178
+      "gzip": 177
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -303,22 +295,22 @@
     },
     "assets/triplanarCheckerboard.tsl.js": {
       "bytes": 1185,
-      "gzip": 663
+      "gzip": 666
     },
     "assets/triplanarGrid.tsl.js": {
       "bytes": 2399,
-      "gzip": 1136
+      "gzip": 1135
     },
     "assets/TriplanarProjection.js": {
       "bytes": 1618,
-      "gzip": 794
+      "gzip": 795
     }
   },
   "main": {
     "chunk": "assets/index.js",
     "modules": 186,
-    "minified": 1460189,
-    "gzip": 398701
+    "minified": 1459351,
+    "gzip": 398705
   },
   "mainGroups": {
     "_engine/features/character": {
@@ -353,8 +345,8 @@
     },
     "_engine/features/skybox": {
       "modules": 18,
-      "minified": 50303,
-      "gzip": 17996
+      "minified": 50517,
+      "gzip": 18110
     },
     "_engine/features/spatial": {
       "modules": 7,
@@ -403,8 +395,8 @@
     },
     "_engine/kernel/loop": {
       "modules": 3,
-      "minified": 4790,
-      "gzip": 2120
+      "minified": 4781,
+      "gzip": 2112
     },
     "_engine/kernel/mesh": {
       "modules": 1,
@@ -433,8 +425,8 @@
     },
     "app": {
       "modules": 9,
-      "minified": 138024,
-      "gzip": 12427
+      "minified": 136981,
+      "gzip": 12325
     },
     "three": {
       "modules": 4,
