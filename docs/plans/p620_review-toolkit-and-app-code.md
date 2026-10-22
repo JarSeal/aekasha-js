@@ -1296,6 +1296,20 @@ As built (2026-10-22, sections 1-2 committed as `2eac899`, `1bd9e6e`; section 3 
 3. Mark the plan done; p621's `Blocked by` (this plan only, so it goes), p622's toolkit list, p600's
    references.
 
+As built (2026-10-23, on `ae32894`):
+
+- **Checks (section 1):** `yarn verify:scenes`, every scene (64 min, WebGL2 on SwiftShader): 97
+  passed, 3 failed; every hash, character path, snapshot and system order as Phase 0 and the
+  phases' re-records left them (`space`'s worker targets differ as before, its `unstableHash`).
+  The three failures are the gym's debug configurations, the probe's 600-step wait (303-310 s),
+  this machine's (D3); its `prodTest` passed (errors, system order). So the gym's hash, paths and
+  snapshot were last compared in Phase 4, at 120 steps (`a098ff98` / `492487c1`): the PR says so.
+  `yarn verify:baselines`: all unchanged (`api.json` 2,497 exports, 933 on the 16 entries;
+  `docs.json` 2,401 / 2,401 and 1,043 / 1,043; the main chunk 389.4 kB gzip), no debug code in
+  either build. `yarn verify:embed`: all passed. `yarn build` (both `tsc`, the build, `yarn sbp
+  --profile all`: the app 379.8 kB initial, the banner 285.5 kB, every budget within; the Hub):
+  passed. `yarn hub:build`: 90 pages, 935 names, only p621's warning. `yarn test`: 1,227 passed.
+
 ## 4. Risks
 
 1. **The gym on this machine** (D3): none of its debug configurations reaches the probe's step in
