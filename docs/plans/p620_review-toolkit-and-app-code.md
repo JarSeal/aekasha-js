@@ -1,4 +1,4 @@
-Status: draft | decisions to confirm — not-implemented
+Status: not-implemented
 Category: Refactoring, Documentation, Toolkit, App
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -22,7 +22,7 @@ with p619's leftover: the four toolkit types that public names use but no entry 
 | "`materials` 5 of 13, 0 of 14 internal functions commented" | `materials` **5 / 7** (`TriplanarProjection` and `TriplanarProjectionOptions` undocumented), the `*.tsl.ts` socket exports **1 / 4** (only `asteroid`'s `colorNode`). 11 of the 14 internal functions have a `//` comment; the other three are covered by a section comment or their name. |
 | (not in the stub) `ecs` | `ecs/effects` 21 / 22, 11 / 15 members; `ecs/gameplay` 10 / 10, 0 / 0 members (the ratchet doesn't count the members of a type-literal alias: `FollowObjectCameraParams` is `type … = { … }`). |
 | "every piece with an example in its JSDoc and a Hub entry" | One `@example` in the toolkit (`createFollowObjectCameraRig`). Each piece has a line on the toolkit feature page (`hub/pages/features/toolkit/guide.md`), not a section. |
-| "`scene_thirdPersonGym.ts`'s ~544-line `scene` function split" | `scenes/thirdPersonGymScene/thirdPersonGymScene.ts` (799 lines): `scene` is 544 lines at `:256`. Seven more functions are over 150 lines (§1.4 Z). |
+| "`scene_thirdPersonGym.ts`'s ~544-line `scene` function split" | `scenes/thirdPersonGymScene/thirdPersonGymScene.ts` (799 lines): `scene` is 544 lines at `:256`. Seven more are over 150 lines: `largeWorld` 550, `physicsTest` 421, `createMovingPlatform` 397 (toolkit), `scene01V2` 301, `scene01` 227, `physicsTiers` 203, `sceneTestECS` 183 (§1.4 C9, W7; D7). |
 | "the app's own `_dbg__` modules on the engine's pattern" | Five: `space/_dbg__spaceDemo.ts`, `lodShowcase/_dbg__lodShowcase.ts`, `assetCompare/_dbg__assetCompare.ts`, `examples/debugTab/_dbg__exampleDebugTab.ts`, `examples/_dbg__exampleHub.ts`. Each is loaded by `if (IS_DEBUG_ENV) { await import('./_dbg__…') }`, which folds in production (`verify:baselines` checks it). That's the app's pattern, which the Hub's debug tab example teaches; the engine's thin wrapper with `loadDebugModuleAsync` is for public entry points. One debug module isn't one: `PhysicsStressTest.ts` (P7). |
 
 Sizes: the toolkit is 22 files, 3,167 lines (TypeScript and JSON); the app is 52 `.ts` files,
@@ -402,7 +402,9 @@ rest before fixing.
 - N3 S8 (p619): `persistent` isn't applied by `createEntity` (W4).
 - N4 The HEIGHTFIELD collider is column-major; `generateTerrain`'s `heights` is row-major (T9).
 
-## 2. Decisions (to confirm)
+## 2. Decisions
+
+Confirmed 2026-10-22: every recommendation as written; the alternatives under them aren't taken.
 
 ### D1. Scope
 
@@ -641,8 +643,171 @@ check where it doesn't:
 
 ## 3. Phases
 
-Written after the decisions above are confirmed. Branch `review-toolkit-and-app-code` from `main`
-(`1964613`).
+Each phase leaves the tree green: `yarn test`, the lint and both `tsc` (the Stop hook), and the
+phase's own checks. Each is split into sections, stopped after for review, and ends with its "As
+built" list, `docs.json` updated where the toolkit changed (`yarn verify:baselines --docs` never
+grows a folder's undocumented count), and a line on whether the next phase starts in a new session.
+Branch `review-toolkit-and-app-code` from `main` (`1964613`).
+
+The scene runner: Phase 0 records the baselines on `main`'s code; Phases 1-6 run
+`yarn verify:scenes --only <their scenes>` after their code changes (the hashes and system orders
+unchanged, or re-recorded with `--update` for the scenes D3 names, with the diff described in "As
+built"); Phase 8 runs every scene against Phase 0's baselines (and those re-records). Nothing is
+edited while a run is going, and `yarn test` doesn't run beside a `yarn build` (p619 Phase 8).
+
+### Phase 0: baselines, repros and the open checks
+
+1. `yarn verify:scenes --update`, then `yarn verify:baselines`, `yarn sbp --profile all`,
+   `yarn hub:build` (the five warnings of §1.2).
+2. Repros as `it.fails` tests, each checked to fail on its own assertion:
+   - `MovingPlatform` (C1-C7) through `createMovingPlatform` with `createPhysicsEntity` and the
+     world stubbed (`vi.mock('aekasha')`, as `FollowObjectCameraRig.test.ts` stubs its inputs): the
+     geo + mat path, `play` after `pause`, the loop end's and `stop`'s velocity, `BACKWARD`'s loop
+     count and duration, `stop` + `play`, a missing `rot`, an empty `physicsParams`,
+     `speedMultiplier: 0`, the caller's `userData`.
+   - `MutualGravity` (C12, C13): the 17th body, `{ G: undefined }`.
+   - The rig (C14): `NaN` dt.
+   - Geometry (T1-T4): spawn's scale, `getHeightAt` against the mesh's triangle, 0 clusters, 0 and
+     fractional segments, bake's capacity and `count`.
+3. By hand in `yarn dev`, recorded in "As built" (not committed):
+   - P1 / W1: a temporary `throw` in each of the three scenes leaves the load pending (the scene
+     loader stays, a later `loadScene` never runs).
+   - W2: `scene01` → `scene01V2` renders V2's ground with scene01's BASIC material.
+   - P2 / W3: after the gym, `J` spawns into `physicsTiers`; after `scene01`, `d` logs in the gym.
+   - V1 / V2: a switch during `assetCompare`'s measure, and right after `textureArrays` loads.
+4. The checks the decisions depend on:
+   - the gym's six platforms against C2-C6 (no `BACKWARD`, `loopTimes`, controls, partial `rot`),
+     so Phase 1 leaves its hash (D3);
+   - which baselines record `scene01V2`, `oneMoreScene` and the start scene (the bundle's chunks,
+     the scene runner's, `api.json`), for Phase 5's removals;
+   - `largeWorld`'s load time and `scatterOnSurface`'s share of it in `yarn dev` (D15's before);
+   - the placements `scatterOnSurface` returns for `largeWorld`'s three calls, hashed (the grid
+     hash must give the same ones, T11).
+
+### Phase 1: the toolkit's bugs and `MovingPlatform`'s split (D4, D7, D13)
+
+Sections: 1. `MovingPlatform` into `ecs/gameplay/movingPlatform/` (`PlatformPath.ts`,
+`PlatformVelocity.ts`, the factory), C1-C8's fixes, its tests, C16's scratch objects; 2.
+`MutualGravity` (C12, C13) and the rig (C14: `NaN` dt, the world it ticks in, `sceneId`), with
+their tests; 3. geometry (T1-T4), `getHeightAt` per triangle, the generator tests (D13), the
+scatter grid hash (T11; the placements' hash from Phase 0 unchanged, the load time measured); 4.
+checks.
+
+- Each Phase 0 `it.fails` becomes an `it`. The controls keep writing physics when called (C8),
+  documented in Phase 2; `setOptions` flipping `direction` restarts the segment from the current
+  pose instead of jumping.
+- `yarn verify:scenes --only thirdPersonGymScene,topDownTestScene,space,largeWorld`: the gym's and
+  `space`'s hashes unchanged, `topDownTestScene` re-recorded (T2 moves its obstacles: the diff is
+  its obstacle heights), `largeWorld` unchanged.
+
+### Phase 2: the toolkit's surface and its JSDoc (D5, D6, D15's toolkit part)
+
+Sections: 1. the entries (the four leaked types, `MovingPlatformParams` / `Point`, the renames and
+deprecations, the triplanar helpers, the unexported module names, `createSeededRandom`'s module,
+the `*.tsl.ts` sockets `@internal`), the additions (`HoverToolData.time`, `targetMesh`), the
+`type` → `interface` changes; 2. JSDoc on every export and member (T9, C11, C15, C17), the
+`@remarks`; 3. an `@example` per entry-point API (D6's list, `examples.test.ts`); 4. the rest of
+the toolkit's hygiene and per-frame reads (C16's storages and main camera, T10's JSON params and
+`debugData`, T12, the import lines); 5. checks.
+
+- `yarn hub:build`: no leaked type (p621's `getRandomStream` link the only warning), the toolkit
+  entry pages showing the deprecations.
+- `docs.json`: the toolkit at 100 %, recorded. `api.json`: the added names, nothing removed from an
+  entry.
+- The material JSON changes keep the rendering: `yarn verify:scenes --only
+  exampleToolkit,exampleQuickStart,space,exampleHubHero,thirdPersonGymScene,topDownTestScene`
+  unchanged.
+
+### Phase 3: the app's bugs and leaks (D4's app part)
+
+Sections: 1. the hangs (P1, W1: the three scenes become plain `async` functions; scene01 and V2
+merge in Phase 5, from working code); 2. the leaks (P2's and
+W3's keys as scene action maps, V1's exit and listener, V2's scene checks, P3's shape cast from
+`registerOnSceneEnter` after the first step); 3. the small ones (A1's loader status, P4's loader
+and `physicsTiers`' cleanup order, W4's flag, P2's rejections caught); 4. checks.
+
+- Phase 0's hand repros rerun and pass (recorded).
+- `yarn verify:scenes --only thirdPersonGymScene,scene01,scene01V2,physicsTest,physicsTiers,
+  topDownTestScene,assetCompare,textureArrays,textureAtlases,sceneTestECS`: unchanged but for
+  what's named (`physicsTest`'s hash shouldn't change; a changed one is explained or the fix
+  revisited).
+
+### Phase 4: the physics and character scenes (D7, D8, D11, D12 for them)
+
+Sections: 1. `src/app/shared/` and `characterVisual.ts`; the gym's split (named steps, the
+platform table and `createPlatform`, the models table and imports, `gymStairsAndWall.ts`), the ids
+kept; 2. `SunShadowFit` on the gym's sun (P8), `_dbg__PhysicsStressTest.ts` (P6, P7); 3.
+`physicsTest` (one function per joint, its own helpers), `physicsTiers` (steps, the tint arrays,
+`SIMULATION_FILES`), `topDownTestScene` (`between`, the loader), `space` (P11, the seeded spawn);
+4. comments, casts and citations in these scenes and their JSONs (P9, P11, J4); 5. checks.
+
+- Section 1 alone first: `yarn verify:scenes --only thirdPersonGymScene,topDownTestScene` with
+  the hashes, paths and system order unchanged (the split moved code, nothing else). Then section
+  2 re-records the gym's snapshot (the sun's shadow fit), the diff described.
+- `physicsTest`, `physicsTiers`, `space`: hashes and system orders unchanged.
+
+### Phase 5: the world, LOD and test scenes, and D9
+
+Sections: 1. `scene01` (V2 merged in, the camera and lights moved into its folder, the debug suite
+guide's path), `oneMoreScene` removed, `p341AlphaCutTest` removed (`yarn assets` prunes it); 2.
+`sceneTestECS` rewritten as the first scene, `testDebugScene` trimmed (its camera and lights in its
+JSON); 3. `largeWorld`'s split (`mergeIntoGeometry`, the tables), the shared rock (W5), the LOD
+showcase (lane helpers, W6, W8's harness exports and `features/lod/CLAUDE.md`), `skyShowcase`'s
+comment; 4. comments, logs, dead code and casts in these scenes and their JSONs (W8-W11, J4); 5.
+checks.
+
+- `yarn verify:scenes --only scene01,sceneTestECS,testDebugScene,largeWorld,lodShowcase,
+  skyShowcase`: `scene01`, `sceneTestECS` and `testDebugScene` re-recorded (D9), the others
+  unchanged (`lodShowcase` and `largeWorld`'s rock impostor fingerprint unchanged: no re-export).
+  `scene01V2`'s and `oneMoreScene`'s baselines removed.
+- `yarn verify:baselines --update`: the bundle loses `assets/scene01V2.js` and
+  `assets/oneMoreScene.js`; nothing else moves.
+
+### Phase 6: the examples, the root files and the verification scenes
+
+Sections: 1. the examples (A2 in the `spin-system`, `banner-scene` regions and `exampleUiKit`, A3's
+reason kept in a comment, A4, A5, A7's headers), the region line ranges the Hub includes checked;
+2. the root files (A1 done, A6); 3. the verification scenes (`verifyHarness.ts` in `shared/`, V3's
+splits, V4's headers and labels, `assetCompare`'s LS key and report cache, D10); 4. the asset JSONs
+(J2, J4); 5. checks.
+
+- `yarn verify:scenes --only` the examples, `banner`'s embed (`yarn verify:embed`) and the three
+  verification scenes: unchanged.
+- `yarn hub:build`: every include resolves, the Hub's example images unchanged (no visual change).
+
+### Phase 7: the Hub, `CLAUDE.md` and the filed findings (D14)
+
+1. The toolkit page (U1, a section per piece, "Writing a TSL material"), the example pages (U2,
+   U3), the debug suite guide (Phase 5's path), the root `CLAUDE.md`'s toolkit and app lines,
+   `features/lod/CLAUDE.md`; `readme.md` where it lists the toolkit or the app's scenes.
+2. The issue files N1, N2, N4 (N3 linked from p619's remark, an issue file if it has none); p622's
+   toolkit 3.0.0 list (`PhysicsParams`, `DeleteMeshOptions`, `addGravityBody`'s positional
+   `world`, the component key enums, `createSeededRandom`'s re-export already there).
+3. `perf-auditor` over the changed toolkit and app files; anything it finds fixed or listed.
+4. `yarn hub:build` (no dead link, the one p621 warning).
+
+### Phase 8: verify, versions and done (D2)
+
+1. `yarn verify:scenes` (every scene, against Phase 0's baselines and the phases' re-records),
+   `yarn verify:baselines`, `yarn verify:embed`, `yarn build`, `yarn hub:build`.
+2. `package.json` (D2), the `CHANGELOG.md` entry (D3's behaviour changes, the deprecations, the
+   removed scenes), `yarn checkVersions --against main`.
+3. Mark the plan done; p621's `Blocked by` (this plan only, so it goes), p622's toolkit list, p600's
+   references.
+
+## 4. Risks
+
+1. **The gym on this machine** (D3): its debug configurations don't reach the probe's step in time,
+   so its worker hashes are never compared here. The `MAIN_THREAD` run and the snapshot are the
+   checks; a gym change that only a worker hash would catch goes unseen until a faster run.
+2. **Splits that move creation order.** A body created earlier changes the hashes. Each split runs
+   its scene alone before anything else changes in it (Phases 4, 5).
+3. **Removing scenes** (D9) drops their baselines and bundle chunks: the diffs are named in the
+   phase, and the changelog lists the scenes.
+4. **The toolkit's renames** keep the old names deprecated, so an app on Toolkit 2.x compiles; the
+   removals are p622's.
+5. **Hub regions** (U3): a moved line inside a region shifts a highlighted range (`{20-24}`), which
+   `hub:build` doesn't catch. Each changed region's rendering is checked in the phase.
 
 ## Done when
 
