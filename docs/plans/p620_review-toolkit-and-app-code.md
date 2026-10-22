@@ -435,6 +435,10 @@ Confirmed 2026-10-22: every recommendation as written; the alternatives under th
   `src/app/shared/`); a patch otherwise.
 - **Engine:** none expected (no engine file changes; N1-N4 filed). `features/lod/CLAUDE.md` and the
   root `CLAUDE.md` change with no engine bump, as in p619.
+  - **Corrected (Phase 5):** **engine patch** (5.10.0 → 5.10.1). `checkVersions --against main`
+    counts every file under `src/_engine/`, the `CLAUDE.md` files included, and Phase 5 changes
+    the input `CLAUDE.md`, `features/lod/CLAUDE.md` and `debug/DevFiles.ts`' `@example` (the moved
+    `scene01Camera` path). Decided 2026-10-22: a patch, not a `checkVersions` exception.
 
 ### D3. Behaviour changes, and the scene baselines
 
