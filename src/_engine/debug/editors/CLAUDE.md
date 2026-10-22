@@ -1,4 +1,4 @@
-Notes for the editor views' own code (`src/_engine/debug/editors/`: the view camera, the editor drawer, the material editor); the views themselves are the root's Views section, and the root `.claude/CLAUDE.md` keeps the project-wide rules, commands and workflow.
+Notes for the editor views' own code (`src/_engine/debug/editors/`: the view camera, the editor drawer, the material editor); the views themselves are `src/_engine/kernel/render/CLAUDE.md`'s Views section, and the root `.claude/CLAUDE.md` keeps the project-wide rules, commands and workflow.
 
 ## Views
 
