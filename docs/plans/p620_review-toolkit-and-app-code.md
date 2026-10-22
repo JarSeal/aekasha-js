@@ -1,4 +1,4 @@
-Status: not-implemented
+Status: in progress | Phase 0 implemented
 Category: Refactoring, Documentation, Toolkit, App
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -46,9 +46,10 @@ in the app's debug tools and examples (§1.4 P6, W5).
   `AppECSRegistry` imports and `as any` storage reads went with p606.
 - **Not in the stub:**
   - The scene runner on this machine: `thirdPersonGymScene`'s three debug configurations fail
-    ("the physics probe didn't reach step 600 in 300 s") in p619's Phases 0, 7 and 8, with no
-    system order baseline. Every change to the gym is checked by its `MAIN_THREAD` hash and
-    snapshot only where that run passes, or on a faster machine (D3).
+    ("the physics probe didn't reach step 600 in 300 s") in p619's Phases 0, 7 and 8, and in this
+    plan's Phase 0 (`MAIN_THREAD` included, 292 s). Its `prodTest` run passes and records its
+    system order. So on this machine the gym is checked by its errors and system order; its
+    hashes, paths and snapshot only on a faster machine (D3).
   - Toolkit names on no entry, and not `@internal`: the three effect systems (`hoverToolSystem`,
     `followToolSystem`, `sunShadowFitSystem`), `MutualGravity.ts`' `GravityBody`,
     `clearGravityBodies`, `getGravityBodies`, `getMutualGravityDefaults`, and
@@ -99,8 +100,9 @@ rest before fixing.
   after a finished run, `stop()` + `play()` runs one loop, and a plain `play()` does nothing.
 - C6 **(bug)** A point without `rot` is read two ways: as the next point, the current rotation is
   kept; as the current point, it resets to identity. A path with `rot` on point 0 only snaps.
-- C7 **(bug, small)** An empty `physicsParams` array throws a `TypeError`; `speedMultiplier: 0`
-  writes `Infinity` / `NaN` velocities; the input `rigidBody.userData` is overwritten in the
+- C7 **(bug, small)** An empty `physicsParams` array throws a `TypeError`; a point with `dur: 0`
+  writes `Infinity` / `NaN` velocities (Phase 0: `speedMultiplier: 0` doesn't, it freezes the
+  platform with zero velocities); the input `rigidBody.userData` is overwritten in the
   caller's own params object (`:234`); `:321` hard-codes `3000` next to
   `DEFAULT_SEGMENT_DURATION`; eight `!` on `points[i].rot`.
 - C8 **(race)** The controls (`play(i)`, `playSegment`, `stop`, `setOptions`) write physics
@@ -199,7 +201,8 @@ rest before fixing.
   `asteroid`, all replaced by their nodes) that the material editor shows; the triplanar ones have
   no `debugData`; each TSL file's `DEFAULT_DEFINES` differs from its JSON's (legal, confusing).
 - T11 **(perf, build time)** `scatterOnSurface`'s `minSpacing` check is O(n² × attempts)
-  (`largeWorld` scatters 1,500, 2,000 and 300 points), with two vector clones, a quaternion and an
+  (`largeWorld` scatters 1,500, 2,000, 300 and 10 points; Phase 0 measured about 50 ms for the
+  four, about 1.5 % of the scene's load), with two vector clones, a quaternion and an
   object per placement. `Terrain`'s `indices` is a `number[]`.
 - T12 `devTools/toolkit/buildAekashaSymbol.ts`: `build().catch(…)` runs at import (the devTools'
   rule: only when its file is the script run), and cites the deleted p554.
@@ -282,11 +285,14 @@ rest before fixing.
 **World, LOD and test scenes (`largeWorld`, `lodShowcase`, `skyShowcase`, `scene01`, `scene01V2`, `sceneTestECS`, `testDebugScene`, `oneMoreScene`)**
 
 - W1 **(hang)** `scene01.ts:23` and `scene01V2.ts:24`: the same async executor as P1.
-- W2 **(bug)** `scene01` and `scene01V2` create assets with the same ids and other props (`ground`
-  BASIC vs LAMBERT, `sphere1Material`, `box1`, `box1Texture`, `cylinder01Material`,
-  `importedBox01Material`). `createMaterial` returns a registered id and ignores the props, and the
-  previous scene's assets are released after the next one loads, so a switch between them renders
-  the second with the first's materials.
+- W2 **(not reproduced, Phase 0)** `scene01` and `scene01V2` create assets with the same ids and
+  other props (`ground` BASIC vs LAMBERT, `sphere1Material`, `box1`, `box1Texture`,
+  `cylinder01Material`, `importedBox01Material`). `createMaterial` returns a registered id and
+  ignores the props, and the previous scene's assets are released after the next one loads, so a
+  switch between them renders the second with the first's materials. Phase 0's run: after a
+  switch in either direction, `ground` and `sphere1Material` are the target scene's own (BASIC /
+  LAMBERT), the previous scene's released before the next one creates its own. The other listed
+  ids have the same props in both. D9's merge removes the duplicate ids anyway.
 - W3 **(bug)** `scene01` binds `d` globally (`scene01-log-d-press`, no `sceneId`; its comment says
   so), logging `'PRESSED'` with a `performance.now()` delta on every `d` in every later scene, the
   gym's WASD included. Its spin looper is frame-timed (`transformMainSpeedValue`), where V2's was
@@ -345,7 +351,9 @@ rest before fixing.
   it; `setCompareChangeListener` is never cleared on exit.
 - V2 **(race)** `textureArrays.ts`' `runSwaps()` and `textureAtlases.ts`' `nextFrames(10).then(…)`
   run after the load, unawaited: an exit first (the scene runner, a switch) makes them log an error
-  the runner's `allowedErrors` don't cover.
+  the runner's `allowedErrors` don't cover. Phase 0: `textureArrays` logs `[textureArrays] Swaps
+  failed … No texture array "textureArrays/swapKtx" is registered`; `textureAtlases`' callback runs
+  after the exit (reading the released slots) but logs nothing.
 - V3 **(size)** `assetCompare.ts`' `buildSlot` 146 lines; `_dbg__assetCompare.ts` 741 lines with
   four concerns (report, slot rows, the collider check ~260 lines, measure). The three scenes
   duplicate their harness helpers (the TSL shim casts, `nextFrames`, `expectError`, `leaveTo`, the
@@ -445,8 +453,11 @@ that scene in the same commit and names it.
   (D9's merge), `physicsTest` (P3: the shape cast after a step; the hash shouldn't change),
   `sceneTestECS` (D9's rewrite), the removed `oneMoreScene`, `testDebugScene` (D9).
 - **The gym on this machine:** its three debug configurations fail the probe's 600-step wait in
-  300 s (§1.2). The gym's checks are its `MAIN_THREAD` run where it passes, and the snapshot. A
-  failure of the probe wait alone is this machine's, as in p619.
+  300 s (§1.2), `MAIN_THREAD` included (Phase 0). Decided 2026-10-22: the gym's checks here are its
+  errors and its system order (the `prodTest` run); its hashes, character paths and snapshot are
+  checked only on a faster machine. A failure of the probe wait alone is this machine's, as in
+  p619. Phase 0's reading of the platforms (C2-C6 can't reach the gym's six) stands in for the
+  hash check in Phase 1.
 
 ### D4. The bugs first, with tests
 
@@ -462,7 +473,8 @@ check where it doesn't:
   `registerOnSceneEnter` after the first step, re-checking the scene.
 - **The toolkit's (C1-C7, C12-C14, T1-T4):** tested in Node (D13). `MovingPlatform`'s path logic
   is tested through D7's pure module.
-- **Small app bugs:** A1, P4, W2 (the merge or prefixed ids, D9), W4 (the flag goes).
+- **Small app bugs:** A1, P4, W4 (the flag goes). W2 didn't reproduce (Phase 0); D9's merge
+  removes its duplicate ids.
 
 ### D5. The toolkit's public surface (T5-T8, C10, C15)
 
@@ -551,7 +563,8 @@ check where it doesn't:
 
 - **`scene01` and `scene01V2` merge** into `scene01` (V2's content, scene01's batch texture load,
   no `d` key), keeping the id the Hub's debug suite guide names. `scene01Camera`, `scene01Ambient`,
-  `scene01Sun` move into its folder (one scene left). Fixes W1-W3 and W2's ids.
+  `scene01Sun` move into its folder (one scene left). Fixes W1 and W3, and removes W2's duplicate
+  ids.
 - **`oneMoreScene` goes** (an empty view that ships; nothing references it).
 - **`testDebugScene`** drops its LOD checks (`lodShowcase`'s lanes cover them) and keeps the KTX2
   / meshopt orientation row, with its camera and lights in its JSON. The id stays.
@@ -638,7 +651,8 @@ check where it doesn't:
   `Map` per frame.
 - Build time (`largeWorld`'s load): a grid hash for `scatterOnSurface`'s `minSpacing` (T11),
   measured before and after (the scene's load time in `yarn dev`), the placements unchanged for a
-  seed (the test pins them).
+  seed (the test pins them). **Optional** (Phase 0): the four calls take about 50 ms of a 3.3–3.9 s
+  load. Phase 1 does it only if it stays small; otherwise T11 is a remark in the JSDoc.
 - `perf-auditor` reran on the changed files in the last code phase.
 
 ## 3. Phases
@@ -655,7 +669,7 @@ unchanged, or re-recorded with `--update` for the scenes D3 names, with the diff
 built"); Phase 8 runs every scene against Phase 0's baselines (and those re-records). Nothing is
 edited while a run is going, and `yarn test` doesn't run beside a `yarn build` (p619 Phase 8).
 
-### Phase 0: baselines, repros and the open checks
+### Phase 0: baselines, repros and the open checks — done
 
 1. `yarn verify:scenes --update`, then `yarn verify:baselines`, `yarn sbp --profile all`,
    `yarn hub:build` (the five warnings of §1.2).
@@ -684,21 +698,66 @@ edited while a run is going, and `yarn test` doesn't run beside a `yarn build` (
    - the placements `scatterOnSurface` returns for `largeWorld`'s three calls, hashed (the grid
      hash must give the same ones, T11).
 
+As built (2026-10-22, steps 1-2 committed as `899dd57`):
+
+- **Baselines (step 1):** `yarn verify:scenes --update` recorded 105 runs in 65 min (WebGL2 on
+  SwiftShader, `.cache/verify/scenes/webgl/`); the gym's `workerSab`, `workerMsg` and `mainThread`
+  failed the probe's 600-step wait (285-293 s each), so their entries are still the stale ones of
+  2026-10-09 (`ee5a641+dirty`, 120 steps); its `prodTest` recorded the system order (D3).
+  `yarn verify:baselines` unchanged (bundle 388.7 kB gzip; `api.json` 2,480 exports, 919 on
+  entries; `docs.json` 2,365 / 2,384 exports, 940 / 970 members; no debug code). `yarn sbp
+  --profile all` unchanged against both baselines, every budget within (`index.css` 0.9 of 3 kB:
+  "lower it to 2 * KIB", not this plan's). `yarn hub:build`: 84 pages, 16 entries, 920 names, 99 %,
+  and exactly §1.2's five warnings.
+- **Repros (step 2):** 25 `it.fails`, each checked to fail on its own assertion when run as an
+  `it`: `ecs/gameplay/MovingPlatform.test.ts` (14: C1-C7), `ecs/effects/MutualGravity.test.ts` (2:
+  C12 first in its file, since the scratch arrays grow once per module; C13),
+  `FollowObjectCameraRig.test.ts` (1: C14's `NaN` dt), `geometry/scatter/ScatterOnSurface.test.ts`
+  (4: T1, T4's capacity, `count`, and a world-space placement under a moved mesh),
+  `geometry/generate/Terrain.test.ts` (3: T2 by a ray cast down on the mesh, max 0.117 off at
+  `maxHeight` 5; T3's 0 and fractional segments), `geometry/generate/Foliage.test.ts` (1: T3's 0
+  clusters, as `not.toThrow()`). The platform test mocks `aekasha` (spread from the real module)
+  and `aekasha/physics` with a stub world and a body recording its user data and kinematic targets;
+  ticks go through the system `registerMovingPlatformSystem` registers. T1's test checks that
+  `createMeshEntity` gets `scale` in its props (the real one needs the root scene, on no entry).
+  Each file's header names this plan's Phase 1 as the fix. `yarn test`: 1,126 passed, 25 expected
+  fails.
+- **Hand repros (step 3),** driven by Playwright on `yarn dev` (WebGL2 on SwiftShader, scenes
+  switched through the page's own `SceneLoader` module; `.cache/runs/p620-repros.ts`, gitignored,
+  for Phase 3 to rerun): P1 / W1 reproduced in all three scenes (a temporary throw behind a URL
+  flag, reverted: the page gets the uncaught error, the load and a following `loadScene` stay
+  pending, the old scene stays current); P2 (`J` after the gym spawned 50 bodies into
+  `physicsTiers`), W3 (`d` after `scene01` logs `PRESSED` in `physicsTiers`) and V1 (slot B's ground
+  and sphere built into `exampleQuickStart` 30 s after a switch mid-measure) reproduced; V2 only for
+  `textureArrays`, W2 not at all (§1.4).
+- **Checks (step 4):** the gym's six platforms pass no `opts`, discard the controls and give `rot`
+  on every point (the carousels, the ferris wheel) or none (sideways, elevator): C2-C6 can't reach
+  them, so Phase 1 leaves the gym's simulation as it is. `scene01V2`, `oneMoreScene` and
+  `sceneTestECS` are named only by `bundle.json` (`assets/<id>.js`) and the local scene runner
+  entries: no `api.json` entry, no `scenes.config.ts` entry, no SBP config. `largeWorld`'s
+  `loadScene` takes 3,253-3,890 ms (three runs, headless); its four `scatterOnSurface` calls about
+  50 ms (D15's grid hash optional). The placements, hashed in Node (sha256 over each placement's
+  position, normal, quaternion and scale as `Float64Array`, first 16 hex; the terrain on a plain
+  mesh at the origin): trees (1,500) `0c342af0072c8b03`, bushes (2,000) `8f083de1fbe93bd0`, rocks
+  (300) `1add797c4c9e4930`, lanterns (10) `ae1afc5258d7b5dd`
+  (`.cache/runs/scatterHash.scratch.test.ts`); Phase 1's scatter test pins them.
+
 ### Phase 1: the toolkit's bugs and `MovingPlatform`'s split (D4, D7, D13)
 
 Sections: 1. `MovingPlatform` into `ecs/gameplay/movingPlatform/` (`PlatformPath.ts`,
 `PlatformVelocity.ts`, the factory), C1-C8's fixes, its tests, C16's scratch objects; 2.
 `MutualGravity` (C12, C13) and the rig (C14: `NaN` dt, the world it ticks in, `sceneId`), with
 their tests; 3. geometry (T1-T4), `getHeightAt` per triangle, the generator tests (D13), the
-scatter grid hash (T11; the placements' hash from Phase 0 unchanged, the load time measured); 4.
+scatter grid hash if it stays small (T11, D15; the placements' hashes from Phase 0 unchanged, the
+load time measured); 4.
 checks.
 
 - Each Phase 0 `it.fails` becomes an `it`. The controls keep writing physics when called (C8),
   documented in Phase 2; `setOptions` flipping `direction` restarts the segment from the current
   pose instead of jumping.
-- `yarn verify:scenes --only thirdPersonGymScene,topDownTestScene,space,largeWorld`: the gym's and
-  `space`'s hashes unchanged, `topDownTestScene` re-recorded (T2 moves its obstacles: the diff is
-  its obstacle heights), `largeWorld` unchanged.
+- `yarn verify:scenes --only thirdPersonGymScene,topDownTestScene,space,largeWorld`: `space`'s
+  hashes unchanged, the gym's errors and system order unchanged (D3), `topDownTestScene`
+  re-recorded (T2 moves its obstacles: the diff is its obstacle heights), `largeWorld` unchanged.
 
 ### Phase 2: the toolkit's surface and its JSDoc (D5, D6, D15's toolkit part)
 
@@ -742,8 +801,10 @@ kept; 2. `SunShadowFit` on the gym's sun (P8), `_dbg__PhysicsStressTest.ts` (P6,
 4. comments, casts and citations in these scenes and their JSONs (P9, P11, J4); 5. checks.
 
 - Section 1 alone first: `yarn verify:scenes --only thirdPersonGymScene,topDownTestScene` with
-  the hashes, paths and system order unchanged (the split moved code, nothing else). Then section
-  2 re-records the gym's snapshot (the sun's shadow fit), the diff described.
+  `topDownTestScene`'s hashes and paths, and both scenes' system orders, unchanged (the split moved
+  code, nothing else; the gym's hashes and snapshot only on a faster machine, D3). Then section 2's
+  `SunShadowFit` changes the gym's system order (re-recorded, the diff described); its snapshot
+  change is left to a faster machine's run.
 - `physicsTest`, `physicsTiers`, `space`: hashes and system orders unchanged.
 
 ### Phase 5: the world, LOD and test scenes, and D9
@@ -797,9 +858,11 @@ splits, V4's headers and labels, `assetCompare`'s LS key and report cache, D10);
 
 ## 4. Risks
 
-1. **The gym on this machine** (D3): its debug configurations don't reach the probe's step in time,
-   so its worker hashes are never compared here. The `MAIN_THREAD` run and the snapshot are the
-   checks; a gym change that only a worker hash would catch goes unseen until a faster run.
+1. **The gym on this machine** (D3): none of its debug configurations reaches the probe's step in
+   time (`MAIN_THREAD` included), so its hashes, paths and snapshot are never compared here. Its
+   errors and system order are the checks; a gym change that only a hash or the snapshot would
+   catch goes unseen until a faster run. Phases 1 and 4 keep the gym's simulation code paths as
+   they are (read, D3), and the PR says the gym's hash wasn't compared.
 2. **Splits that move creation order.** A body created earlier changes the hashes. Each split runs
    its scene alone before anything else changes in it (Phases 4, 5).
 3. **Removing scenes** (D9) drops their baselines and bundle chunks: the diffs are named in the
