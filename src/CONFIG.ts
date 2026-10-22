@@ -1,11 +1,11 @@
-// Type imports only: the asset pipeline imports this file in Node (p300)
+// Type imports only: the asset pipeline imports this file in Node
 import type { AppConfig } from 'aekasha';
 
 const config: AppConfig = {
-  // Debug-only key bindings. The engine's defaults ('h' = debug drawer, 'F1' = debug camera)
-  // are overridden by reusing their id (only the given fields change, `enabled: false` turns
-  // one off); any other id adds a new debug key binding (needs `chord` + `fn`).
-  debugKeys: [{ id: 'sc-toggle-debug-drawer', chord: { key: 'h' } }],
+  // Debug-only key bindings. An engine default is changed by its id (only the given fields
+  // change, `enabled: false` turns one off): { id: 'sc-toggle-debug-drawer', chord: { key: 'j' } }
+  // moves the debug drawer from h to j. Any other id adds a debug key (needs `chord` and `fn`).
+  debugKeys: [],
   physics: {
     enabled: true,
     worldStepEnabled: true,
@@ -33,12 +33,6 @@ const config: AppConfig = {
     },
     lineThickness: 1,
   },
-  // Debug drawer tab order (tab ids). Replaces the engine default order whole; tabs not
-  // listed go last. A tab's own `orderNr` overrides its place (0-based, eg. 1.5 = between
-  // the 2nd and the 3rd tab).
-  // debugDrawer: {
-  //   tabOrder: ['statsControls', 'loopControls', 'rendererControls', 'physicsApiControls'],
-  // },
   // Build-time asset optimization (KTX2 textures, meshopt geometry). Off passes the source
   // files through as they are, and needs no `ktx` encoder. Profiles are in assets.config.json.
   assets: {

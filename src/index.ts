@@ -31,7 +31,7 @@ InitEngine({
     appECSPlugins,
   ],
   start: async () => {
-    // Init renderer
+    // The renderer first: everything drawn needs it
     // #region create-renderer (shown in the Hub: hub/pages/features/rendering/)
     await createRenderer({
       antialias: true,
@@ -41,24 +41,25 @@ InitEngine({
       outputColorSpace: THREE.SRGBColorSpace,
       alpha: true,
       enableShadows: true,
-      // shadowMapType: THREE.PCFSoftShadowMap,
-      // shadowMapType: THREE.PCFShadowMap,
-      // shadowMapType: THREE.BasicShadowMap,
+      // Soft, blurred shadow edges. three's others: PCFSoftShadowMap, PCFShadowMap (its default)
+      // and BasicShadowMap, the cheapest
       shadowMapType: THREE.VSMShadowMap,
     });
     // #endregion create-renderer
 
-    // Create sceneLoader
+    // The scene loader: a full-screen cover that fades in before a scene loads, shows its
+    // progress, and fades out once the next scene is in
     createSceneLoader({
       id: 'main-scene-loader',
       loaderContainerFn: () =>
         CMP({
           id: 'main-scene-loader-cmp',
-          text: '',
+          text: 'Loading…',
           style: {
             width: '100vw',
             height: '100vh',
-            background: 'blue',
+            background: '#101218',
+            color: '#e6e8ee',
             position: 'fixed',
             top: 0,
             left: 0,
@@ -70,6 +71,7 @@ InitEngine({
             opacity: 0,
           },
         }),
+      // Each fade starts a task later, so the transition runs from the opacity the cover has
       loadStartFn: (loader) =>
         new Promise((resolve) => {
           setTimeout(() => {
@@ -100,7 +102,7 @@ InitEngine({
       registerExampleHubTabs();
     }
 
-    // Load scene
+    // The first scene (with ?isDebug=true or ?isProdTest=true, ?startScene=<sceneId> picks another)
     await loadScene({ sceneId: 'sceneTestECS' });
   },
 });

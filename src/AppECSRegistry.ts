@@ -3,6 +3,7 @@
 // this file to the app-wide ones, with keys and types only.
 
 export const AppComponentType = {
+  // The template's example key: no scene uses it. Replace it with your app's own.
   HEALTH: 'APP_HEALTH',
 } as const;
 
