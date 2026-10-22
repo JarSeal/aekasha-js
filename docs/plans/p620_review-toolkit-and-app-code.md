@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: Refactoring, Documentation, Toolkit, App
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
 Blocks: p621_hub-docs-readme-and-claude-md-final.md
@@ -842,7 +842,7 @@ As built (2026-10-22, sections 1-3 committed as `8dcf7f7`, `3349f4e`, `a265514`)
   (`toolkit/ecs/gameplay/movingPlatform` 23 / 23 exports, 27 / 27 members). `bundle.banner.json`'s
   1-2 byte gzip drift not committed. No debug code in either build.
 
-### Phase 2: the toolkit's surface and its JSDoc (D5, D6, D15's toolkit part)
+### Phase 2: the toolkit's surface and its JSDoc (D5, D6, D15's toolkit part) — done
 
 Sections: 1. the entries (the four leaked types, `MovingPlatformParams` / `Point`, the renames and
 deprecations, the triplanar helpers, the unexported module names, `createSeededRandom`'s module,
@@ -859,6 +859,64 @@ the toolkit's hygiene and per-frame reads (C16's storages and main camera, T10's
 - The material JSON changes keep the rendering: `yarn verify:scenes --only
   exampleToolkit,exampleQuickStart,space,exampleHubHero,thirdPersonGymScene,topDownTestScene`
   unchanged.
+
+As built (2026-10-22, sections 1-4 committed as `5bfd44d`, `36e638f`, `cefa2b1`, `b3fdf1f`):
+
+- **The entries (section 1):** `aekasha/toolkit/ecs` adds `MovingPlatformControls`,
+  `MovingPlatformParams`, `MovingPlatformPoint`, `MovingPlatformOptions` (the path options plus
+  `isPlayingFromStart` and the deprecated `deleteMeshOptions`), `MovingPlatformPathOptions` (Phase
+  1's `PlatformPathOptions`, renamed for the entry; `setOptions` takes it) and
+  `MovingPlatformPhysicsParams` (`PhysicsParams` its `@deprecated` alias). `PlatformDirection` is
+  gone (the union inline) and `PlatformVec3` is `@internal`, the point's `pos` and `rot` inline
+  literals, so no entry name leaks a type. `createMovingPlatform(props: MovingPlatformParams)`;
+  `scene` optional (a parentless raw mesh goes into the root scene). `aekasha/toolkit/geometry`
+  adds the three leaked types; `createSeededRandom` is a declaration of its own in
+  `geometry/SeededRandom.ts` (a layout rule for it), `@deprecated`. `aekasha/toolkit/materials`
+  adds `blendProjections`, `blendProjectionGradients`, `readBooleanDefines`, `ProjectionPattern`,
+  `TriplanarProjection`. The `*.tsl.ts` sockets are `@internal` with summaries (inputs, defines).
+  `yarn hub:build`: 935 names, no leaked type, p621's `getRandomStream` the only warning; the
+  pages show the four deprecations.
+- **Unlike D5:** `MutualGravity`'s `clearGravityBodies`, `getGravityBodies`,
+  `getMutualGravityDefaults` and `GravityBody` stay exported, `@internal` (Phase 1's
+  `MutualGravity.test.ts` imports them); the three effect systems are unexported. The toolkit's own
+  `createSeededRandom` made `api:createSeededRandom` ambiguous, so the toolkit guide and the coding
+  standards page link `api:utils/SeededRandom.createSeededRandom` (the guide's U1 fixes stay
+  Phase 7's).
+- **`type` → `interface`:** `FollowObjectCameraParams`, `MutualGravityConfig`, `GravityBody`,
+  `DeleteMeshOptions`, `MovingPlatformControls`, `MovingPlatformReturn`,
+  `TriplanarProjectionOptions` (`TriplanarProjection` stays a `ReturnType` alias).
+  `HoverToolData.time` is optional (the phase, default 0); the rig's `targetMesh` is an
+  `Object3D` (in `afterLookAtFn` too).
+- **JSDoc (section 2):** every toolkit export and member documented (C11, C15, C17, T9): the
+  component key enums' "Internal" labels replaced, the register helpers' stage, order and
+  "a second call is a no-op", `MutualGravity`'s overview moved onto `registerMutualGravityEffect`,
+  the rig's defaults and `afterLookAtFn`'s reuse, `createMovingPlatform`'s `@throws`, the
+  controls' physics writes as `@remarks`, the geometry types' defaults, `heights` row-major against
+  the `HEIGHTFIELD` collider's column-major (`@remarks`), the stale citations and claims gone.
+- **Examples (section 3):** 10 added (the rig's kept): the four register helpers (an
+  `EngineFeature` install, then the component), `createMovingPlatform`, `generateAsteroid`,
+  `generateTerrain`, `generateTreeGeometry` (an instanced pool) and `generateBushGeometry`,
+  `scatterOnSurface` with `bakeScatterToInstancedMesh`, `triplanarProjection` (a `colorNode`
+  socket). `examples.test.ts` was checked to fail on a wrong type in one; every name they use is
+  on an entry (a misspelled name would pass as the reader's own).
+- **Hygiene (section 4):** C16: `HoverEffect` and `FollowTool` read their storages once per run,
+  `SunShadowFit` its storages and the main camera once per run (not per light), the dead
+  `if (!storage)` checks gone. T10: `Foliage` builds its parts with three's geometries, never
+  registered (the output hashed identical before and after); `existsOrThrow` for the `!`s; one
+  value import from `aekasha` per file (a value line plus an `import type` line kept, the
+  codemod's convention); the material JSONs lose `color` (both triplanar) and `color` /
+  `roughness` (`asteroid`), the triplanar ones get `debugData`, their TSL files say the JSON sets
+  each define. T12: `buildAekashaSymbol.ts` builds only when run as the script, without p554.
+- **Checks (section 5):** `yarn verify:baselines --update`: `api.json` (14 names added to the
+  three toolkit entries, none removed from an entry; the module exports above added, moved or
+  removed, seven `TypeAlias → Interface`), `docs.json` (the toolkit at 100 %, exports and members:
+  2,401 / 2,401 and 1,043 / 1,043 in all), `bundle.json` (`assets/Asteroid.js` +69 B,
+  `assets/Foliage.js` -7 B, the main chunk -175 B); `bundle.banner.json`'s 1-2 byte gzip drift not
+  committed. No debug code in either build. `yarn verify:scenes --only
+  exampleToolkit,exampleQuickStart,space,exampleHubHero,thirdPersonGymScene,topDownTestScene` (27
+  min): 21 passed, every hash and snapshot as recorded (`space`'s worker / main thread hashes
+  differ as before); the gym's `prodTest` passed, its three debug configurations failed the
+  probe's 600-step wait (308-312 s), this machine's (D3). `yarn test`: 1,223 passed.
 
 ### Phase 3: the app's bugs and leaks (D4's app part)
 

@@ -2,12 +2,12 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2382,
+      "documented": 2401,
       "total": 2401
     },
     "members": {
-      "documented": 967,
-      "total": 997
+      "documented": 1043,
+      "total": 1043
     }
   },
   "subtrees": {
@@ -23,12 +23,12 @@
     },
     "toolkit": {
       "exports": {
-        "documented": 61,
+        "documented": 80,
         "total": 80
       },
       "members": {
-        "documented": 77,
-        "total": 107
+        "documented": 153,
+        "total": 153
       }
     }
   },
@@ -637,23 +637,16 @@
     },
     "toolkit/ecs/effects": {
       "exports": {
-        "documented": 21,
-        "total": 22
+        "documented": 19,
+        "total": 19
       },
       "members": {
-        "documented": 11,
-        "total": 15
+        "documented": 20,
+        "total": 20
       },
       "undocumented": {
-        "exports": [
-          "MutualGravity#GravityBody"
-        ],
-        "members": [
-          "HoverEffect#HoverToolData.amplitude",
-          "HoverEffect#HoverToolData.baseY",
-          "HoverEffect#HoverToolData.speed",
-          "HoverEffect#HoverToolData.time"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "toolkit/ecs/gameplay": {
@@ -662,8 +655,8 @@
         "total": 4
       },
       "members": {
-        "documented": 0,
-        "total": 0
+        "documented": 12,
+        "total": 12
       },
       "undocumented": {
         "exports": [],
@@ -672,12 +665,26 @@
     },
     "toolkit/ecs/gameplay/movingPlatform": {
       "exports": {
-        "documented": 23,
-        "total": 23
+        "documented": 25,
+        "total": 25
       },
       "members": {
-        "documented": 27,
-        "total": 27
+        "documented": 52,
+        "total": 52
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/geometry": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
       },
       "undocumented": {
         "exports": [],
@@ -686,89 +693,43 @@
     },
     "toolkit/geometry/generate": {
       "exports": {
-        "documented": 4,
+        "documented": 14,
         "total": 14
       },
       "members": {
-        "documented": 32,
+        "documented": 48,
         "total": 48
       },
       "undocumented": {
-        "exports": [
-          "Asteroid#AsteroidCraterOptions",
-          "Asteroid#AsteroidNoiseOptions",
-          "Asteroid#AsteroidOptions",
-          "Asteroid#GeneratedAsteroid",
-          "Foliage#BushGeometryOptions",
-          "Foliage#GeneratedTreeGeometry",
-          "Foliage#TreeGeometryOptions",
-          "Terrain#GeneratedTerrain",
-          "Terrain#TerrainNoiseOctave",
-          "Terrain#TerrainOptions"
-        ],
-        "members": [
-          "Asteroid#AsteroidOptions.craters",
-          "Asteroid#AsteroidOptions.noise",
-          "Asteroid#GeneratedAsteroid.geometry",
-          "Foliage#BushGeometryOptions.baseRadius",
-          "Foliage#BushGeometryOptions.radiusVariance",
-          "Foliage#BushGeometryOptions.seed",
-          "Foliage#GeneratedTreeGeometry.geometry",
-          "Foliage#TreeGeometryOptions.foliageHeight",
-          "Foliage#TreeGeometryOptions.foliageRadius",
-          "Foliage#TreeGeometryOptions.trunkHeight",
-          "Foliage#TreeGeometryOptions.trunkRadius",
-          "Terrain#GeneratedTerrain.depth",
-          "Terrain#GeneratedTerrain.depthSegments",
-          "Terrain#GeneratedTerrain.geometry",
-          "Terrain#GeneratedTerrain.width",
-          "Terrain#GeneratedTerrain.widthSegments"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "toolkit/geometry/scatter": {
       "exports": {
-        "documented": 3,
+        "documented": 6,
         "total": 6
       },
       "members": {
-        "documented": 7,
+        "documented": 17,
         "total": 17
       },
       "undocumented": {
-        "exports": [
-          "ScatterOnSurface#ScatterOptions",
-          "ScatterOnSurface#ScatterPlacement",
-          "ScatterOnSurface#SpawnScatterMeshOptions"
-        ],
-        "members": [
-          "ScatterOnSurface#ScatterOptions.count",
-          "ScatterOnSurface#ScatterOptions.seed",
-          "ScatterOnSurface#ScatterPlacement.position",
-          "ScatterOnSurface#ScatterPlacement.quaternion",
-          "ScatterOnSurface#ScatterPlacement.scale",
-          "ScatterOnSurface#SpawnScatterMeshOptions.castShadow",
-          "ScatterOnSurface#SpawnScatterMeshOptions.entityOpts",
-          "ScatterOnSurface#SpawnScatterMeshOptions.geo",
-          "ScatterOnSurface#SpawnScatterMeshOptions.mat",
-          "ScatterOnSurface#SpawnScatterMeshOptions.receiveShadow"
-        ]
+        "exports": [],
+        "members": []
       }
     },
     "toolkit/materials": {
       "exports": {
-        "documented": 5,
+        "documented": 7,
         "total": 7
       },
       "members": {
-        "documented": 0,
-        "total": 0
+        "documented": 4,
+        "total": 4
       },
       "undocumented": {
-        "exports": [
-          "TriplanarProjection#TriplanarProjection",
-          "TriplanarProjection#TriplanarProjectionOptions"
-        ],
+        "exports": [],
         "members": []
       }
     },
@@ -788,7 +749,7 @@
     },
     "toolkit/materials/triplanarCheckerboard": {
       "exports": {
-        "documented": 0,
+        "documented": 1,
         "total": 1
       },
       "members": {
@@ -796,15 +757,13 @@
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "triplanarCheckerboard.tsl#colorNode"
-        ],
+        "exports": [],
         "members": []
       }
     },
     "toolkit/materials/triplanarGrid": {
       "exports": {
-        "documented": 0,
+        "documented": 2,
         "total": 2
       },
       "members": {
@@ -812,10 +771,7 @@
         "total": 0
       },
       "undocumented": {
-        "exports": [
-          "triplanarGrid.tsl#colorNode",
-          "triplanarGrid.tsl#normalNode"
-        ],
+        "exports": [],
         "members": []
       }
     }
