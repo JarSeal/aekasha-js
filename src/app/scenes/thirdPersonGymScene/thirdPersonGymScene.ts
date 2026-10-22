@@ -30,14 +30,6 @@ import { createPhysicsEntity } from 'aekasha/physics';
 import { createCharacterVisualAsync } from '../../shared/characterVisual';
 import { createGymStairsAndWallAsync } from './gymStairsAndWall';
 
-/**
- * The third-person gym: an obstacle course for the dynamic character controller. Built in this
- * order (the order the bodies are created in, which the scene runner's hashes depend on): the sky
- * boxes, the ground, the built stairs and wall, a spinning box, the characters, the props, six
- * moving platforms, then the imported course models (stairs of every collider kind, terrains,
- * obstacles). The camera and the lights come from thirdPersonGymScene.scene.json; the toolkit's
- * SunShadowFit effect fits the sun's shadow to the camera's view.
- */
 export const SCENE_THIRD_PERSON_GYM_META = {
   id: 'thirdPersonGymScene',
 };
@@ -598,6 +590,14 @@ const createPlatformAsync = async (platform: GymPlatform, materials: GymMaterial
   });
 };
 
+/**
+ * The third-person gym: an obstacle course for the dynamic character controller. Built in this
+ * order (the order the bodies are created in, which the scene runner's hashes depend on): the sky
+ * boxes, the ground, the built stairs and wall, a spinning box, the characters, the props, six
+ * moving platforms, then the imported course models (stairs of every collider kind, terrains,
+ * obstacles). The camera and the lights come from thirdPersonGymScene.scene.json; the toolkit's
+ * SunShadowFit effect fits the sun's shadow to the camera's view.
+ */
 export const scene = async () => {
   const updateLoaderFn = getLoaderStatusUpdater();
   const totalCount = 4;

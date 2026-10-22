@@ -1,4 +1,4 @@
-import { getECSWorld } from 'aekasha';
+import { getECSWorld, lerror } from 'aekasha';
 import { createDebuggerTab, debuggerListCMP } from 'aekasha/debug';
 import { getMutualGravityConfig, setMutualGravityConfig } from 'aekasha/toolkit/ecs';
 import {
@@ -10,8 +10,9 @@ import {
 
 const TAB_ID = 'spaceDemo';
 
-// Positions (7 per body) for the energy sums, grown on demand
+// Poses (7 per body) and masses of the bodies read for the energy sums, grown on demand
 let poses = new Float64Array(7 * 16);
+let masses = new Float64Array(16);
 
 /** The group's energy: kinetic (translational) and the softened (Plummer) potential that the
  * mutual gravity's force comes from, -G·m₁·m₂ / √(r² + ε²) per pair. Without collisions their
@@ -20,24 +21,29 @@ const computeEnergy = () => {
   const world = getECSWorld();
   const { G, softening } = getMutualGravityConfig();
   const list = getSpaceAsteroids();
-  if (poses.length < list.length * 7) poses = new Float64Array(list.length * 14);
+  if (masses.length < list.length) {
+    poses = new Float64Array(list.length * 14);
+    masses = new Float64Array(list.length * 2);
+  }
   let kinetic = 0;
   let potential = 0;
-  list.forEach((a, i) => {
+  // Only the bodies that exist (one being created has none yet), packed
+  let count = 0;
+  for (const a of list) {
     const rb = world.getRigidBody(a.entityId);
-    if (!rb) return;
-    rb.readPoseInto(poses, i * 7);
+    if (!rb) continue;
+    rb.readPoseInto(poses, count * 7);
+    masses[count++] = a.mass;
     const v = rb.linvel();
     kinetic += 0.5 * a.mass * (v.x * v.x + v.y * v.y + v.z * v.z);
-  });
+  }
   const eps2 = softening * softening;
-  for (let i = 0; i < list.length; i++) {
-    for (let j = i + 1; j < list.length; j++) {
+  for (let i = 0; i < count; i++) {
+    for (let j = i + 1; j < count; j++) {
       const dx = poses[j * 7] - poses[i * 7];
       const dy = poses[j * 7 + 1] - poses[i * 7 + 1];
       const dz = poses[j * 7 + 2] - poses[i * 7 + 2];
-      potential -=
-        (G * list[i].mass * list[j].mass) / Math.sqrt(dx * dx + dy * dy + dz * dz + eps2);
+      potential -= (G * masses[i] * masses[j]) / Math.sqrt(dx * dx + dy * dy + dz * dz + eps2);
     }
   }
   return { kinetic, potential };
@@ -99,13 +105,21 @@ export const createSpaceDemoTab = () => {
             type: 'button',
             title: 'Reset asteroids',
             label: 'Demo set, orbits for this G',
-            onClick: () => void resetSpaceAsteroids(),
+            onClick: () => {
+              resetSpaceAsteroids().catch((error) =>
+                lerror('[space] Resetting the asteroids failed', error)
+              );
+            },
           },
           {
             type: 'button',
             title: 'Spawn asteroid',
             label: 'Random, near the origin',
-            onClick: () => void spawnSpaceAsteroid(),
+            onClick: () => {
+              spawnSpaceAsteroid().catch((error) =>
+                lerror('[space] Spawning an asteroid failed', error)
+              );
+            },
           },
           {
             type: 'folder',

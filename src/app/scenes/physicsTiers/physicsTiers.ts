@@ -7,6 +7,7 @@ import {
   setMainCamera,
   getECSWorld,
   getEntityIdByAppId,
+  getMeshByAppId,
   ComponentType,
   createActionMap,
   createGeometry,
@@ -25,19 +26,9 @@ import type { ECSWorld } from 'aekasha';
 import { SunShadowFitComponentType, FollowToolComponentType } from 'aekasha/toolkit/ecs';
 import { createLines, polylineToSegments } from 'aekasha/lines';
 import { createPhysicsEntity, setPhysicsTierPolicy } from 'aekasha/physics';
-import type { PhysicsTier, PhysicsTierRing } from 'aekasha/physics';
+import type { PhysicsTier, PhysicsTierRing, RigidBodyAPI } from 'aekasha/physics';
 
-/**
- * Physics simulation tiers demo (docs/plans/_DONE_p352_physics-simulation-tiers.md §5): crate piles
- * whose tiers follow a distance policy around a kinematic plough ball. The plough mows a
- * serpentine through the piles, so the crates it scatters freeze (STATIC), drop out of the
- * simulation (DISABLED) and out of the physics world (REMOVED) as it moves on, and come back where
- * they were left when it returns. Each crate is tinted by its tier. The policy runs on fixed
- * steps (the default STEPS cadence, p343) and the plough moves on them, so a visit plays out the
- * same way every time, in both worker targets.
- */
-
-export const PHYSICS_TIERS_SCENE_ID = 'physicsTiers';
+const PHYSICS_TIERS_SCENE_ID = 'physicsTiers';
 
 const GRID = 7;
 const PILE_SPACING = 70;
@@ -64,6 +55,12 @@ const TIER_COLORS: Record<PhysicsTier, number> = {
 
 const STEP_SYSTEM_ID = 'physicsTiersPloughSystem';
 const TINT_SYSTEM_ID = 'physicsTiersTintSystem';
+
+/** The crates' mesh entities and meshes, index for index. */
+interface Crates {
+  entityIds: number[];
+  meshes: THREE.Mesh[];
+}
 
 /** The plough's path: along each pile row, alternating direction, then back to the start. */
 const createPloughPath = () => {
@@ -93,6 +90,8 @@ const createPloughPath = () => {
   return { start: points[0], pointAt };
 };
 
+type PloughPath = ReturnType<typeof createPloughPath>;
+
 /** Flat `xyz` segments of a circle on the XZ plane. */
 const circleSegments = (radius: number, y: number) => {
   const points: THREE.Vector3[] = [];
@@ -104,54 +103,57 @@ const circleSegments = (radius: number, y: number) => {
   return polylineToSegments(points, true);
 };
 
+const TIERS: PhysicsTier[] = ['FULL', 'STATIC', 'DISABLED', 'REMOVED'];
+const getTierMaterialId = (tier: PhysicsTier) => `physicsTiersCrate_${tier}`;
+
+/** A tier's crate material (the REMOVED one a ghost). */
+const createTierMaterial = (tier: PhysicsTier) =>
+  createMaterial({
+    id: getTierMaterialId(tier),
+    type: 'STANDARD',
+    params: {
+      color: TIER_COLORS[tier],
+      roughness: 0.7,
+      ...(tier === 'REMOVED' ? { transparent: true, opacity: 0.25, depthWrite: false } : {}),
+    },
+  });
+
 /** Tints each crate by its tier: one shared material per tier, swapped only on a change. The
  * scene holds a ref on each from `retain` to `release`: a material no crate shows would be
  * disposed. */
-const createTintSystem = (crateMeshes: Map<number, THREE.Mesh>) => {
-  const materials = {} as Record<PhysicsTier, THREE.Material>;
-  const materialIds = (Object.keys(TIER_COLORS) as PhysicsTier[]).map(
-    (tier) => `physicsTiersCrate_${tier}`
-  );
-  for (const tier of Object.keys(TIER_COLORS) as PhysicsTier[]) {
-    const removed = tier === 'REMOVED';
-    materials[tier] = createMaterial({
-      id: `physicsTiersCrate_${tier}`,
-      type: 'STANDARD',
-      params: {
-        color: TIER_COLORS[tier],
-        roughness: 0.7,
-        ...(removed ? { transparent: true, opacity: 0.25, depthWrite: false } : {}),
-      },
-    });
-  }
+const createTint = (crates: Crates) => {
+  const materials: Record<PhysicsTier, THREE.Material> = {
+    FULL: createTierMaterial('FULL'),
+    STATIC: createTierMaterial('STATIC'),
+    DISABLED: createTierMaterial('DISABLED'),
+    REMOVED: createTierMaterial('REMOVED'),
+  };
+  const materialIds = TIERS.map(getTierMaterialId);
   const retain = () => {
     for (const id of materialIds) incMaterialRef(id);
   };
   const release = () => {
     for (const id of materialIds) decMaterialRef(id);
   };
-  const shown = new Map<number, PhysicsTier>();
+  /** Each crate's shown tier, index for index with `crates` (none before its first frame). */
+  const shown: (PhysicsTier | undefined)[] = [];
   const system = (world: ECSWorld) => {
     const tiers = world.getStorage(ComponentType.PHYSICS_SIM_TIER);
-    for (const [entityId, mesh] of crateMeshes) {
-      const tier = tiers.get(entityId)?.tier ?? 'FULL';
-      if (shown.get(entityId) === tier) continue;
-      shown.set(entityId, tier);
-      setMeshMaterial(mesh, materials[tier]);
+    const { entityIds, meshes } = crates;
+    for (let i = 0; i < entityIds.length; i++) {
+      const tier = tiers.get(entityIds[i])?.tier ?? 'FULL';
+      if (shown[i] === tier) continue;
+      shown[i] = tier;
+      setMeshMaterial(meshes[i], materials[tier]);
       // A ghost casts no shadow
-      mesh.castShadow = tier !== 'REMOVED';
+      meshes[i].castShadow = tier !== 'REMOVED';
     }
   };
   return { material: materials.FULL, system, retain, release };
 };
 
-export const scene = async () => {
-  const updateLoaderFn = getLoaderStatusUpdater();
-  const world = getECSWorld();
-  const pileCount = GRID * GRID;
-  updateLoaderFn({ loadedCount: 0, totalCount: pileCount + 1 });
-
-  // --- Ground
+/** The ground: a FIXED box, its top at y = 0. */
+const createGroundAsync = async () => {
   const groundId = createMeshEntity(
     {
       geo: createGeometry({
@@ -170,10 +172,15 @@ export const scene = async () => {
     { appId: 'physicsTiersGround', debugData: { name: 'Physics tiers ground' } }
   );
   await createPhysicsEntity({ type: 'BOX' }, { rigidType: 'FIXED' }, groundId);
+};
 
-  // --- Crate piles, every crate in the tier policy
-  const crateMeshes = new Map<number, THREE.Mesh>();
-  const tint = createTintSystem(crateMeshes);
+/** The GRID × GRID crate piles, every crate in the tier policy; a pile's bodies created
+ * together, the piles one after another (each a loader step). */
+const createCratePilesAsync = async (
+  crates: Crates,
+  material: THREE.Material,
+  onPileCreated: (pileIndex: number) => void
+) => {
   const crateGeo = createGeometry({
     id: 'physicsTiersCrate',
     type: 'BOX',
@@ -197,17 +204,13 @@ export const scene = async () => {
             };
             const appId = `physicsTiersCrate_${px}_${pz}_${layer}_${ix}_${iz}`;
             const meshId = createMeshEntity(
-              {
-                geo: crateGeo,
-                mat: tint.material,
-                position,
-                castShadow: true,
-                receiveShadow: true,
-              },
+              { geo: crateGeo, mat: material, position, castShadow: true, receiveShadow: true },
               { appId }
             );
-            const mesh = world.getComponent(meshId, ComponentType.OBJECT3D)?.value as THREE.Mesh;
-            crateMeshes.set(meshId, mesh);
+            crates.entityIds.push(meshId);
+            crates.meshes.push(
+              existsOrThrow(getMeshByAppId(appId), `Could not find the crate "${appId}".`)
+            );
             creates.push(
               createPhysicsEntity(
                 { type: 'BOX', hx: CRATE_HALF, hy: CRATE_HALF, hz: CRATE_HALF, friction: 0.8 },
@@ -220,12 +223,14 @@ export const scene = async () => {
         }
       });
       await Promise.all(creates);
-      updateLoaderFn({ loadedCount: pz * GRID + px + 1, totalCount: pileCount + 1 });
+      onPileCreated(pz * GRID + px);
     }
   }
+};
 
-  // --- The plough: a kinematic ball the policy is centred on, with its rings drawn around it
-  const path = createPloughPath();
+/** The plough: a kinematic ball at the path's start, with the tier rings drawn around it. */
+const createPloughAsync = async (path: PloughPath) => {
+  const world = getECSWorld();
   const ploughId = createMeshEntity(
     {
       geo: createGeometry({
@@ -262,22 +267,23 @@ export const scene = async () => {
       attach: { to: 'ENTITY', entityId: ploughId, world },
     });
   });
+  return { ploughId, ploughBody };
+};
 
-  setPhysicsTierPolicy(
-    {
-      focus: () => ploughId,
-      rings: RINGS,
-      interval: 10,
-      cadence: 'STEPS', // Optional (default is 'STEPS')
-      sceneId: PHYSICS_TIERS_SCENE_ID,
-    },
-    world
-  );
-
-  // Moved on fixed steps (scene time, not frame time), so the plough runs the same every visit
+/**
+ * The plough's step system and the tint system, and the exit that removes them. The plough moves
+ * on fixed steps (scene time, not frame time), so it runs the same every visit. Called last in the
+ * load: what the exit undoes is taken after everything that can throw (a load that fails never
+ * exits).
+ */
+const startPloughAndTint = (
+  path: PloughPath,
+  ploughBody: RigidBodyAPI,
+  tint: ReturnType<typeof createTint>
+) => {
+  const world = getECSWorld();
   let travelled = 0;
   const target = new THREE.Vector3();
-  // What the exit undoes is taken after everything that can throw: a load that fails never exits
   tint.retain();
   registerOnSceneExit(PHYSICS_TIERS_SCENE_ID, () => {
     world.removeSystem(STEP_SYSTEM_ID);
@@ -289,8 +295,11 @@ export const scene = async () => {
     ploughBody.setNextKinematicTranslation(path.pointAt(travelled, target));
   });
   world.addSystem(ECSSystemStage.APP_RENDER_SYNC, TINT_SYSTEM_ID, tint.system);
+};
 
-  // --- Chase camera, C switches between it and the overview
+/** A chase camera following the plough, and C to switch between it and the overview. */
+const createChaseCamera = (path: PloughPath, ploughId: number) => {
+  const world = getECSWorld();
   const chaseOffset = new THREE.Vector3(0, 55, 80);
   const chaseId = createCameraEntity(
     {
@@ -331,6 +340,44 @@ export const scene = async () => {
     if (overviewId === undefined) return;
     setMainCamera(world, getActiveCameraId() === overviewId ? chaseId : overviewId);
   });
+};
+
+/**
+ * The physics simulation tiers demo: crate piles whose tiers follow a distance policy around a
+ * kinematic plough ball. The plough mows a serpentine through the piles, so the crates it scatters
+ * freeze (STATIC), drop out of the simulation (DISABLED) and out of the physics world (REMOVED) as
+ * it moves on, and come back where they were left when it returns. Each crate is tinted by its
+ * tier. The policy runs on fixed steps (its default STEPS cadence) and the plough moves on them,
+ * so a visit plays out the same way every time, in both worker targets.
+ */
+export const scene = async () => {
+  const updateLoaderFn = getLoaderStatusUpdater();
+  const world = getECSWorld();
+  const totalCount = GRID * GRID + 1;
+  updateLoaderFn({ loadedCount: 0, totalCount });
+
+  await createGroundAsync();
+
+  const crates: Crates = { entityIds: [], meshes: [] };
+  const tint = createTint(crates);
+  await createCratePilesAsync(crates, tint.material, (pileIndex) =>
+    updateLoaderFn({ loadedCount: pileIndex + 1, totalCount })
+  );
+
+  const path = createPloughPath();
+  const { ploughId, ploughBody } = await createPloughAsync(path);
+  setPhysicsTierPolicy(
+    {
+      focus: () => ploughId,
+      rings: RINGS,
+      interval: 10,
+      cadence: 'STEPS', // Optional (default is 'STEPS')
+      sceneId: PHYSICS_TIERS_SCENE_ID,
+    },
+    world
+  );
+  startPloughAndTint(path, ploughBody, tint);
+  createChaseCamera(path, ploughId);
 
   // The JSON lights are created after this function runs: the sun gets its shadow fit on enter
   registerOnSceneEnter(PHYSICS_TIERS_SCENE_ID, () => {
@@ -344,5 +391,5 @@ export const scene = async () => {
       casterExtension: 10,
     });
   });
-  updateLoaderFn({ loadedCount: pileCount + 1, totalCount: pileCount + 1 });
+  updateLoaderFn({ loadedCount: totalCount, totalCount });
 };

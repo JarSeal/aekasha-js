@@ -87,6 +87,7 @@ const SIMULATION_FILES = [
   'src/toolkit/ecs/gameplay/movingPlatform/*.ts',
   'src/toolkit/ecs/effects/MutualGravity.ts',
   'src/app/scenes/thirdPersonGymScene/GymDummyBrain.ts',
+  'src/app/scenes/physicsTiers/physicsTiers.ts',
 ];
 // What the two feature folders hold besides the simulation: the installs and entries, the
 // physics import extension and worker test, the debug modules

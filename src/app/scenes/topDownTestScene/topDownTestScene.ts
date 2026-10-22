@@ -9,32 +9,18 @@ import {
   getECSWorld,
   getEntityIdByAppId,
   registerOnSceneEnter,
-  registerOnSceneExit,
   getCameraByAppId,
+  getGeometry,
   existsOrThrow,
   lwarn,
   createSeededRandom,
 } from 'aekasha';
 import { createDynamicCharacter } from 'aekasha/character';
-import {
-  SunShadowFitComponentType,
-  createFollowObjectCameraRig,
-  deleteFollowObjectCameraRig,
-} from 'aekasha/toolkit/ecs';
+import { SunShadowFitComponentType, createFollowObjectCameraRig } from 'aekasha/toolkit/ecs';
 import { createPhysicsEntity } from 'aekasha/physics';
 import { generateTerrain } from 'aekasha/toolkit/geometry';
 import { createCharacterVisualAsync } from '../../shared/characterVisual';
 
-/**
- * Top-down character test scene (docs/plans/_DONE_p066_character-definitions-and-refactoring.md
- * Phase 6). A WORLD_FIXED player on a large flat ground, seen from straight South of and above
- * it, so W (North, -Z) is screen-up. The sun's shadow is fitted to the camera view by the
- * toolkit's SunShadowFit effect.
- *
- * The camera, the lights and the sky box come from topDownTestScene.scene.json. The character, its
- * bindings and the sun's SUN_SHADOW_FIT component go with their entities on scene exit (the
- * CHARACTER and component hooks); only the follow camera rig is deleted by hand.
- */
 export const SCENE_TOP_DOWN_TEST_META = {
   id: 'topDownTestScene',
 };
@@ -97,6 +83,9 @@ const HILLS = {
   edgeFalloff: 12,
 };
 
+/** A number from `random` between `min` and `max`. */
+const between = (random: () => number, min: number, max: number) => min + random() * (max - min);
+
 const smoothstep = (edge0: number, edge1: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
   return t * t * (3 - 2 * t);
@@ -131,7 +120,11 @@ const createHills = async () => {
   });
 
   const position = { x: HILLS.centerX, y: 0, z: 0 };
-  const geometry = saveBufferGeometry(terrain.geometry, { id: 'topDownTestHillsGeo' });
+  // The same terrain on every visit: a later one's generated geometry is only read for its heights
+  const geometry =
+    getGeometry('topDownTestHillsGeo') ??
+    saveBufferGeometry(terrain.geometry, { id: 'topDownTestHillsGeo' });
+  if (geometry !== terrain.geometry) terrain.geometry.dispose();
   const hillsEntityId = createMeshEntity(
     {
       geo: geometry,
@@ -155,7 +148,9 @@ const createHills = async () => {
     {
       type: 'TRIMESH',
       vertices: geometry.getAttribute('position').array as Float32Array,
-      indices: Uint32Array.from(geometry.getIndex()!.array),
+      indices: Uint32Array.from(
+        existsOrThrow(geometry.getIndex(), 'The top-down hills geometry has no index.').array
+      ),
       friction: 1,
     },
     { rigidType: 'FIXED', translation: position },
@@ -221,10 +216,9 @@ const getStaticObstacleShape = (
   index: number
 ): StaticObstacleShape => {
   const id = `topDownTestObstacleGeo${index}`;
-  const between = (min: number, max: number) => min + random() * (max - min);
   switch (kind) {
     case 'WALL': {
-      const length = between(6, 12);
+      const length = between(random, 6, 12);
       const height = 2.5;
       return {
         geo: { id, type: 'BOX', params: { width: length, height, depth: 0.6 } },
@@ -234,8 +228,8 @@ const getStaticObstacleShape = (
       };
     }
     case 'PILLAR': {
-      const radius = between(0.5, 1.1);
-      const height = between(3, 5);
+      const radius = between(random, 0.5, 1.1);
+      const height = between(random, 3, 5);
       return {
         geo: {
           id,
@@ -271,7 +265,7 @@ const getStaticObstacleShape = (
       };
     }
     case 'BLOCK': {
-      const size = between(2, 3);
+      const size = between(random, 2, 3);
       return {
         geo: { id, type: 'BOX', params: { width: size, height: size, depth: size } },
         collider: 'BOX',
@@ -417,12 +411,11 @@ const getDynamicPropShape = (
   index: number
 ): DynamicPropShape => {
   const id = `topDownTestPropGeo${index}`;
-  const between = (min: number, max: number) => min + random() * (max - min);
   switch (kind) {
     case 'BOX': {
-      const width = between(0.4, 1.6);
-      const height = between(0.4, 1.6);
-      const depth = between(0.4, 1.6);
+      const width = between(random, 0.4, 1.6);
+      const height = between(random, 0.4, 1.6);
+      const depth = between(random, 0.4, 1.6);
       return {
         geo: { id, type: 'BOX', params: { width, height, depth } },
         collider: 'BOX',
@@ -432,7 +425,7 @@ const getDynamicPropShape = (
       };
     }
     case 'BALL': {
-      const radius = between(0.3, 0.9);
+      const radius = between(random, 0.3, 0.9);
       return {
         geo: { id, type: 'SPHERE', params: { radius, widthSegments: 24, heightSegments: 16 } },
         collider: 'BALL',
@@ -442,8 +435,8 @@ const getDynamicPropShape = (
       };
     }
     case 'CYLINDER': {
-      const radius = between(0.3, 0.6);
-      const height = between(0.6, 1.8);
+      const radius = between(random, 0.3, 0.6);
+      const height = between(random, 0.6, 1.8);
       const onItsSide = random() < 0.5;
       return {
         geo: {
@@ -458,9 +451,9 @@ const getDynamicPropShape = (
       };
     }
     case 'CAPSULE': {
-      const radius = between(0.25, 0.5);
+      const radius = between(random, 0.25, 0.5);
       // The straight middle part (the collider's halfHeight is half of it)
-      const length = between(0.4, 1.4);
+      const length = between(random, 0.4, 1.4);
       const onItsSide = random() < 0.5;
       return {
         geo: { id, type: 'CAPSULE', params: { radius, height: length } },
@@ -522,7 +515,7 @@ const createDynamicProps = async (obstacles: Footprint[]) => {
 };
 
 /** The WORLD_FIXED player (WASD: North / West / South / East; Space, Shift, Control) and the
- * follow camera rig. Returns the player's entity id. */
+ * follow camera rig, which goes with the scene (its `sceneId`). Returns the player's entity id. */
 const createPlayer = async () => {
   const config = { height: 1.6, radius: 0.5 };
   const visual = await createCharacterVisualAsync({
@@ -553,6 +546,7 @@ const createPlayer = async () => {
   // Straight South of and above the player: North (-Z) is screen-up
   createFollowObjectCameraRig({
     id: CAMERA_RIG_ID,
+    sceneId: SCENE_TOP_DOWN_TEST_META.id,
     camera: existsOrThrow(
       getCameraByAppId('topDownTestCamera'),
       'Could not find the topDownTestCamera for the top-down test scene.'
@@ -565,6 +559,16 @@ const createPlayer = async () => {
   return character.entityId;
 };
 
+/**
+ * The top-down character test scene: a WORLD_FIXED player on a large flat ground with hills to
+ * the East, seen from straight South of and above it, so W (North, -Z) is screen-up. Seeded
+ * static obstacles and dynamic props lie around the spawn. The sun's shadow is fitted to the
+ * camera view by the toolkit's SunShadowFit effect.
+ *
+ * The camera, the lights and the sky box come from topDownTestScene.scene.json. Everything else
+ * goes with the scene: the character, its bindings and the sun's SUN_SHADOW_FIT component with
+ * their entities (the CHARACTER and component hooks), the follow camera rig by its `sceneId`.
+ */
 export const scene = async () => {
   const updateLoaderFn = getLoaderStatusUpdater();
   updateLoaderFn({ loadedCount: 0, totalCount: 3 });
@@ -595,10 +599,6 @@ export const scene = async () => {
       casterExtension: 25,
       followEntityId: playerEntityId,
     });
-  });
-  // (One exit callback per scene: registerOnSceneExit replaces any earlier one.)
-  registerOnSceneExit(SCENE_TOP_DOWN_TEST_META.id, () => {
-    deleteFollowObjectCameraRig(CAMERA_RIG_ID);
   });
 
   updateLoaderFn({ loadedCount: 3, totalCount: 3 });
