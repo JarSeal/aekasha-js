@@ -34,6 +34,8 @@ export type ShellSiteValues = {
   /** Extra `<head>` markup (the 404 page's `<base>`, the dev client in `dev`) */
   head: string;
   nav: string;
+  /** `dev`: the top-level dev pages as the header's filled buttons (Project); '' in `public` */
+  devNav: string;
   /** The asset URLs with their `?v=` (the search payload's in a `<meta>`: loaded on first use) */
   css: string;
   js: string;
@@ -102,7 +104,8 @@ export const pageHref = (root: string, page: HubPage) =>
 /**
  * The top nav: the homepage, then its children, each with its own children as a dropdown that a
  * chevron button opens (`hub.ts`; hover opens it too). `active` is the page on screen (null on
- * the 404 page): its top-level item is marked active, and the page itself `aria-current`.
+ * the 404 page): its top-level item is marked active, and the page itself `aria-current`. The
+ * top-level dev pages aren't in it: `renderDevNav` makes them the header's buttons.
  */
 export const renderNav = (
   homepage: HubPage,
@@ -131,10 +134,40 @@ export const renderNav = (
     const menu = `<ul class="hubNavDropdown" id="${menuId}">${menuPages.map((child) => item(child, false)).join('')}</ul>`;
     return `<li class="${classes}">${link}${toggle}${menu}</li>`;
   };
-  return `<ul class="hubNavList">${[homepage, ...homepage.children].map((page) => item(page, true)).join('')}</ul>`;
+  const topPages = [homepage, ...homepage.children.filter((page) => !page.isDev)];
+  return `<ul class="hubNavList">${topPages.map((page) => item(page, true)).join('')}</ul>`;
 };
 
-/** The breadcrumbs from the homepage to the page; none on the homepage */
+/**
+ * The top-level dev pages (`aek:dev`, p802 D3: the Project section) as filled buttons between the
+ * nav and the tools; '' without one, so a `public` build's header is as before. The one on screen,
+ * or holding the page on screen, is marked active, and the page itself `aria-current`.
+ */
+export const renderDevNav = (
+  homepage: HubPage,
+  active: HubPage | null,
+  root: string,
+  icons: HubIcons
+) => {
+  const trail = new Set(active ? getPageTrail(active) : []);
+  return homepage.children
+    .filter((page) => page.isDev)
+    .map((page) => {
+      const classes = ['hubDevNavLink', trail.has(page) ? 'hubDevNavLink_active' : '']
+        .filter(Boolean)
+        .join(' ');
+      const icon = page.icon ? icons.render(page.icon, page.file) : '';
+      const label = escapeHtml(page.menu);
+      // `title`: the tooltip where a narrow header shows the icon only
+      return `<a class="${classes}" href="${pageHref(root, page)}" title="${label}"${page === active ? ' aria-current="page"' : ''}>${icon}<span>${label}</span></a>`;
+    })
+    .join('');
+};
+
+/**
+ * The breadcrumbs from the homepage to the page; none on the homepage. A dev page's end with the
+ * "Local only" badge (p802 D1), so nobody takes it for public documentation.
+ */
 export const renderBreadcrumbs = (page: HubPage, root: string) => {
   if (!page.parent) return '';
   const items = getPageTrail(page).map((p) =>
@@ -142,7 +175,10 @@ export const renderBreadcrumbs = (page: HubPage, root: string) => {
       ? `<li aria-current="page">${escapeHtml(p.menu)}</li>`
       : `<li><a href="${pageHref(root, p)}">${escapeHtml(p.menu)}</a></li>`
   );
-  return `<nav class="hubBreadcrumbs" aria-label="Breadcrumbs"><ol>${items.join('')}</ol></nav>`;
+  if (!page.isDev) {
+    return `<nav class="hubBreadcrumbs" aria-label="Breadcrumbs"><ol>${items.join('')}</ol></nav>`;
+  }
+  return `<nav class="hubBreadcrumbs hubBreadcrumbs_dev" aria-label="Breadcrumbs"><ol>${items.join('')}</ol><span class="hubDevOnlyBadge" title="Shown by the dev server's Hub only: the public Hub doesn't build this page">Local only</span></nav>`;
 };
 
 /** The "On this page" list: the h2 and h3, from three of them */

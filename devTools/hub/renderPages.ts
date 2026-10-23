@@ -23,7 +23,8 @@ import type { HubBuildMode, HubPage } from './types';
 /**
  * A build's page bodies (`buildHub`'s render step): each page's markup with its `hub:` and `api:`
  * links resolved and its placeholders filled, its slots filled by their Markdown or by their
- * generated section's generator, then every `hub:` link checked against the pages and their ids.
+ * generated section's generator, then every `hub:` link checked against the pages and their ids,
+ * and a public page's links against the dev pages (p802 D2).
  */
 
 /** A page's rendered body, with the Markdown env it rendered in (its headings, links, images) */
@@ -190,11 +191,19 @@ export const checkLinks = (
   diag: HubDiagnostics
 ) => {
   const envs = new Map(rendered.map(({ page, env }) => [page.path, env]));
-  for (const { env } of rendered) {
+  for (const { page, env } of rendered) {
     for (const link of env.links) {
       const target = tree.byPath.get(link.targetPath);
       if (!target && areApiPagesUnchecked && isApiPagePath(link.targetPath)) continue;
-      if (!target) {
+      // In `dev` the target is there; in `public` it was removed: the same error in both modes
+      const isToDevPage = target ? target.isDev : tree.removedDevPaths.has(link.targetPath);
+      if (isToDevPage && !page.isDev && !link.isInDevOnly) {
+        diag.error(
+          link.file,
+          link.line,
+          `${link.raw} is a dev-only page (aek:dev): a public page links it only inside ::: dev-only`
+        );
+      } else if (!target) {
         diag.error(
           link.file,
           link.line,

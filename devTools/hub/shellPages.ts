@@ -12,6 +12,7 @@ import type { RenderedPage } from './renderPages';
 import {
   fillShell,
   renderBreadcrumbs,
+  renderDevNav,
   renderNav,
   renderToc,
   type HubMarkupHelpers,
@@ -94,6 +95,7 @@ export const createShellPages = (opts: {
     <script type="module" src="${assetUrl(root, devClient)}"></script>`
       : '',
     nav: tree ? renderNav(tree.root, page, root, opts.icons) : '',
+    devNav: tree ? renderDevNav(tree.root, page, root, opts.icons) : '',
     css: assetUrl(root, opts.styles),
     js: assetUrl(root, hubJs),
     searchJs: assetUrl(root, opts.search),

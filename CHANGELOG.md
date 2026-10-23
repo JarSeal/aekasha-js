@@ -4,6 +4,27 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-23 — p802-dev-pages
+
+The Hub's dev-only pages and the Project section's first page (p802 Phase 1, of the debugger UI overhaul epic p800): pages the dev server's Hub shows and `yarn hub:build` never builds, so p801's font study and the design documents have somewhere to live.
+
+### Project
+
+**Added**
+
+- The Hub: `<meta name="aek:dev" content="true">` makes a page and every page under it dev only (`HubPage.isDev`). The dev server's Hub shows them with "Local only" in their breadcrumbs; a public build removes them after the CLAUDE.md coverage check (which counts them), so they have no page, nav item, card or search entry there. A dev homepage, a generated page under a dev page and an `aek:dev` value other than `true` are reported.
+- A public page's `hub:` link to a dev page is an error in the dev server and in `yarn hub:build` alike, unless it's inside `::: dev-only`, and so is a `::: cards` of a dev page on a public page.
+- The **Project** button: a top-level dev page is a filled accent button between the nav and the search (the shell's `{{devNav}}`), not a nav item; below 1600 px it shows its icon only, and the version pill gives way to it on desktop. The public header has no button.
+- The first dev page, `hub/pages/project/`: the brand, the core principles, "user first", and how Ækasha is developed (plans, issues, versions, checks). The Lucide `compass` icon is its icon.
+- `devTools/hub/devPages.test.ts` (the pages, the removal and the link rule in both modes) and the dev nav and breadcrumbs in `shell.test.ts`.
+  **Fixed**
+
+- The Hub's header no longer pushes the theme toggle (and the GitHub link) off-screen just past its breakpoints (960-1035, 1100-1220 and 1360-1470 px, by up to 113 px): the version pill gives way up to 1099 px (the nav has Version), the nav's icons come back from 1250 px (was 1100) and the full search box from 1500 (was 1360). Measured at every 5 px from 960 to 1800, the nav keeps at least 16 px to spare.
+
+**Changed**
+
+- The plans: p800's first two children, `p801_design-foundation.md` and `p802_hub-project-section.md`, and p800 brought in line with them (the kit root's class, the units, the shared tokens and fonts, the branches).
+
 ## 2026-10-23 — hub-docs-readme-and-claude-md-final
 
 The documentation's final pass (p621), which closes the whole-codebase refactoring epic (p600): an Architecture page on the Hub, the readme and the CLAUDE.md files checked against the code, the readme's examples type-checked, and the root CLAUDE.md back to a map.

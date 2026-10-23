@@ -80,6 +80,11 @@ export type HubPage = {
    */
   covers: string[];
   /**
+   * `aek:dev`, or under a page with it (p802 D1): shown by the dev server's Hub only; a `public`
+   * build leaves it out (`removeDevPages`), and a public page links it only inside `::: dev-only`
+   */
+  isDev: boolean;
+  /**
    * A generated section's child page (an issue): it has no `index.html`, `dir` and `file` are its
    * source's (`docs/issues/<name>.md`)
    */

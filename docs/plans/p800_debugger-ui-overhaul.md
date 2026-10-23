@@ -1,7 +1,7 @@
 Status: draft | epic — not-implemented
 Category: Refactoring, Documentation, UI, Debug
-Blocks: p801_design-foundation.md, p802_hub-project-section.md, p803_ui-kit-structure-and-core.md, p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (none written yet: §5)
-Related: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (§9: this epic follows its p608 move and p617's kit), \_DONE_p602_architecture-and-target-structure.md (D5: "the debugger is the kit's first consumer, not its owner"), \_DONE_p617_review-input-ui-hud.md (the kit on `aekasha/ui`; D8: the embed issue), \_DONE_p618_review-debug-public-api.md (D3, P7: Tweakpane in the tab types; the "Write your own tab" guide), p622_engine-6-major.md (the major p806 ships with: D12), p150_current-entity-data-source-info-on-edit-windows.md and p373_merge-debug-and-member-editing.md (debug UI built on p806's components), p355_save-menu-and-file-server-settings.md (its menu on p803 / p804), p426_sequencer-splines-and-cutscenes.md (p804's curve editor), `docs/issues/ui-kit-in-an-embed.md` (p801), `docs/issues/on-screen-tools-during-scene-load.md` (p806), `docs/templates/todo-plan-prompts.txt` (the original prompt)
+Blocks: p801_design-foundation.md, p802_hub-project-section.md, p803_ui-kit-structure-and-core.md, p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801 and p802 written; the rest not yet: §5)
+Related: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (§9: this epic follows its p608 move and p617's kit), \_DONE_p602_architecture-and-target-structure.md (D5: "the debugger is the kit's first consumer, not its owner"), \_DONE_p617_review-input-ui-hud.md (the kit on `aekasha/ui`; D8: the embed issue), \_DONE_p618_review-debug-public-api.md (D3, P7: Tweakpane in the tab types; the "Write your own tab" guide), p622_engine-6-major.md (the major p806 ships with: D12), p150_current-entity-data-source-info-on-edit-windows.md and p373_merge-debug-and-member-editing.md (debug UI built on p806's components), p355_save-menu-and-file-server-settings.md (its menu on p803 / p804), p426_sequencer-splines-and-cutscenes.md (p804's curve editor), `docs/issues/ui-kit-in-an-embed.md` (p801), `docs/issues/on-screen-tools-during-scene-load.md` (p806) (the original prompt was in `docs/templates/todo-plan-prompts.txt` until this plan's commit, `208b177`, removed it: this plan is its record)
 
 # Debugger UI Overhaul — Epic
 
@@ -56,7 +56,7 @@ gamepad, a small screen, an embed, and does it make someone want to come back to
 
 ---
 
-## 2. Grounding (checked against the code, 2026-10-21)
+## 2. Grounding (checked against the code, 2026-10-21; p801 §1 rechecked it on 2026-10-23)
 
 ### 2.1 Tweakpane
 
@@ -167,7 +167,7 @@ gamepad, a small screen, an embed, and does it make someone want to come back to
 
 ### 2.7 Size and the debug files
 
-- 105 `_dbg__` files, about 36,100 lines. The largest are the edit windows and panels: the
+- 105 `_dbg__` files, about 36,100 lines (109 and 36,765 at p801's check). The largest are the edit windows and panels: the
   character state window 1492, light 1489, ray tester 1266, physics 1186, assets 1121, physics
   debug draw 1104, material editor 1071. Eleven engine files carry a header line deferring their
   split or restyle to p800 (`grep -rln p800 src`).
@@ -202,13 +202,16 @@ updates this section.
   `success`, `info` each with a `-soft` background), type (families, sizes, weights, line heights,
   tabular numbers), a space scale, radii, shadows, motion (D7), focus ring, z-layers.
 - Dark and light the Hub's way: dark by default, `prefers-color-scheme: light` unless forced, a
-  forced theme by `data-aek-theme="dark" | "light"` on the HUD root (an app's setting), a subtree
-  forced with a class (the Hub's `.hubThemeDark` pattern).
-- Scoped to the HUD root (`:where(.aekHudRoot)`), never `:root`, so an embed leaves the host page
-  alone (`verify:embed` already checks host styles). The Hub sets the same tokens on its own root.
-- The Hub and the kit share the values from one source: p801 decides whether the Hub's `--hub-*`
-  become aliases of `--aek-*` or the Hub's SCSS moves onto `--aek-*` (§8), and a test checks the
-  shared values match either way.
+  forced theme by `data-aek-theme="dark" | "light"` on the kit root (an app's setting) or on any
+  element for its subtree (p801 D3: one attribute instead of the Hub's extra `.hubThemeDark`
+  class). The Hub's toggle sets it next to its own `data-theme`.
+- Scoped to a kit root, the class `aekUi` (`:where(.aekUi)`), never `:root`, so an embed leaves
+  the host page alone (`verify:embed` already checks host styles). The HUD root carries it, the
+  Hub puts it on its `<html>`, and an app or a Hub demo box on any container outside the HUD
+  (p801 D2; this was `:where(.aekHudRoot)`, a class the HUD root never had).
+- The Hub and the kit share the values from one source: the Hub's `--hub-*` colour roles become
+  aliases of `--aek-*` (p801 D2, Phase 5: one file changes; the Hub-only tokens stay `--hub-*`),
+  and a test checks every alias resolves.
 - The debugger's density is a token set, not other colours: `data-aek-density="compact"` (the
   debugger, tight panels) next to the default (app UI).
 - `styles/variables.scss` is retired when the last user moves (p806).
@@ -227,16 +230,21 @@ updates this section.
 
 ### D4. Units: one em base on the HUD root (closes `ui-kit-in-an-embed.md`)
 
-- The HUD root sets `font-size: calc(var(--aek-ui-font-size, 0.875rem) * var(--aek-ui-scale, 1))`.
-  Every kit size is a token in `em` resolved against that base; component roots reset to it
-  (`font-size: var(--aek-font-size-base)`), so nested `em`s never compound.
+- The kit root sets `font-size: medium` (the user's browser default, which a host page's root
+  can't change) and computes `--aek-base: calc(var(--aek-ui-font-size, 0.875em) * var(--aek-ui-scale, 1))`,
+  registered with `@property` as a `<length>` so it inherits as pixels (p801 D4; this was a
+  `0.875rem` default on the font size, which a host's root would still have scaled). Every kit
+  size is a token in `em`; component roots reset to `font-size: var(--aek-base)`, so nested `em`s
+  never compound.
 - `page.scss` drops `html { font-size: 62.5% }`: the full page and an embed both follow the user's
   browser font size (an accessibility gain), and a host page's own root size no longer scales the
-  kit by accident (a host that wants that sets `--aek-ui-font-size`).
+  kit by accident (a host that wants that sets `--aek-ui-font-size`). The existing styles' `rem`s
+  (524 in the kit and the debugger) become `calc(N * var(--aek-rem))`, an `@internal` unit that is
+  10 px at the defaults, until p803 and p806 restyle them onto `em` tokens (p801 D4).
 - `--aek-ui-scale` is the game's "UI scale" setting (p808's settings menu sets it).
 - `getWindowSize` (`ui/Window.ts`) measures the HUD root's container (the page in the full-page
   boot, the mount's container in an embed); the windows' default max size is `100%` of it, not
-  `100vw` / `100vh`. `_dbg__DebuggerGUI.ts`' two callers follow.
+  `100vw` / `100vh`, and the dialog backdrop with them. `_dbg__DebuggerGUI.ts`' caller follows.
 - p801's check: a `uiKit` SBP embed profile opens a window, a dialog and a toast, and
   `yarn verify:embed` compares their boxes with the container's, at a host root of 16 px and of
   10 px. The issue file is closed then.
@@ -250,7 +258,8 @@ updates this section.
   figures, distinct `0O`, `1lI`, width (how many characters a 280 px label column holds), weight
   range, the "subtle" feel, and the woff2 size of a Latin variable subset.
 - The pick is self-hosted (variable woff2, Latin subset, licence file next to it), in one place
-  both the Hub and the engine read (p801 decides where; `hub/_assets/fonts/` today). If one sans
+  both the Hub and the engine read: `src/_engine/ui/fonts/` (p801 D8; the engine can't read
+  `hub/`, so the Hub's build reads them there). If one sans
   doesn't serve both, the Hub keeps its own and the decision is written down.
 - Smallest build: the kit's default font token is the system UI stack, so an app pays nothing for
   fonts it didn't choose. The debugger loads the Ækasha fonts (debug-only chunk), the full-page
@@ -499,7 +508,7 @@ DOM doesn't:
 
 ```
 p801 design foundation (tokens, themes, fonts, units, motion, a11y baseline)
-  ├─ p802 Hub Project section (its dev-only page mechanism can start before p801 ends)
+  ├─ p802 Hub Project section (its Phase 1, dev-only pages, lands before p801: p801 D11)
   │    └─ p809 roadmaps and docs/ vs docsApp/
   └─ p803 UI kit structure and core components
        ├─ p804 forms and bindings ──┐
@@ -514,6 +523,8 @@ two phases are the Hub update and the versioning / changelog / done marking
 
 ### p801 — Design foundation
 
+Written: `p801_design-foundation.md` (its D11: p802's Phase 1 lands first).
+
 - Phase 0: the font study (D5) on a dev-only specimen page; the token inventory (every colour,
   size and duration in the kit's and the debugger's styles, mapped to a role).
 - `tokens.css` (D2), the layers (D3), the em base and UI scale (D4), motion (D7), the focus ring
@@ -522,15 +533,17 @@ two phases are the Hub update and the versioning / changelog / done marking
   existing styles converted (about 150 values in four files; the debugger's styles get the
   conversion only, their restyle is p806's), the `uiKit` profile and the `verify:embed` check;
   `docs/issues/ui-kit-in-an-embed.md` closed.
-- The Hub on the shared tokens (aliases or a move, §8).
+- The Hub on the shared tokens (aliases, p801 D2).
 - No new component; the look of the existing ones changes only through the tokens.
 
 ### p802 — Hub Project section
 
+Written: `p802_hub-project-section.md` (its Phase 1 is its own PR, before p801).
+
 - Dev-only pages: an `aek:dev` meta (in `META_NAMES`) that a page's children inherit;
-  `discoverPages` drops them in `public`, so they're absent from `dist-hub/`, the nav, the search
-  index and the sitemap; a public page linking to one fails the build with a message naming the
-  page (a link inside `::: dev-only` is fine).
+  `discoverPages` drops them in `public`, so they're absent from `dist-hub/`, the nav and the
+  search index (the Hub has no sitemap); a public page linking to one fails the build with a
+  message naming the page (a link inside `::: dev-only` is fine).
 - The **Project** button: on the right of the nav (next to `.hubTools`), filled with the accent
   (D6: the one primary action in the header), with an icon; a shell placeholder that's empty in
   `public`; in the mobile panel too.
@@ -547,9 +560,9 @@ two phases are the Hub update and the versioning / changelog / done marking
   the internal notes (which debugger panels use it, its budget line), linking the public page.
 - The hero's right column, dev only: quick links into the Project section (the app's design
   document first, as the prompt asks), under "Build / Explore / Create".
-- Moving `code-blocks/`: its region comment in `physicsTest.ts`, `hub/CLAUDE.md`,
-  `devTools/hub/CLAUDE.md`, `docs/techniques/hub-authoring.md`, `_search.ts` and
-  `moveText.test.ts` updated in the same change. It becomes dev only, so the public Hub loses it:
+- Moving `code-blocks/`: its region comment in `physicsTest.ts` and its page's copy of it,
+  `hub/CLAUDE.md`, `devTools/hub/CLAUDE.md`, `docs/techniques/hub-authoring.md` and `_search.ts`
+  updated in the same change (`moveText.test.ts` went with `devTools/refactor/` in p619). It becomes dev only, so the public Hub loses it:
   p802 checks no public page links it.
 
 ### p803 — UI kit structure and core components
@@ -649,6 +662,10 @@ parallel branches.
 | p806                                     | its own, from `engine-6`  | `engine-6` (cut from `main` when p622 is scheduled) | into `engine-6` after its last phase; `engine-6` → `main` is engine 6.0.0 with p622's removals, codemod and migration page (a new codename) |
 | p807                                     | its own                   | `main`, or `engine-6` if it changes a public type   | one when its last phase is done                                                                                                             |
 
+One exception to "one PR per plan": p802's Phase 1 (the dev-only pages) is its own PR into `main`
+(`p802-dev-pages`), merged before p801 starts, since p801's font study needs a dev-only page
+(p801 D11, p802 D10). p802's other phases follow on `p802-hub-project-section`.
+
 If p806 is ready long before p622 is scheduled, `engine-6` is cut then and kept rebased on `main`;
 p622 is expanded into a full plan at that point (its stub says so).
 
@@ -696,8 +713,6 @@ p622 is expanded into a full plan at that point (its stub says so).
 
 **Open questions (decided in the children):**
 
-- The Hub's styles: `--hub-*` as aliases of `--aek-*`, or the Hub's SCSS moved onto `--aek-*`
-  (p801).
 - One `aekasha/ui` entry or sub-entries per group (p803, D10).
 - The native `<dialog>` element for modal dialogs vs the current window code with a focus trap
   (p803).

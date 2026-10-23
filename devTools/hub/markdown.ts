@@ -43,6 +43,11 @@ export type HubLinkRef = {
   hash: string;
   /** The link as written, for messages */
   raw: string;
+  /**
+   * Written inside a `::: dev-only` block (or by a generator for the dev server only): it may
+   * point to a dev page from a public one (p802 D2)
+   */
+  isInDevOnly: boolean;
 };
 
 /** A page image the build writes: copied, or converted to WebP at a width */
@@ -261,11 +266,13 @@ const createDirectiveRule =
     open.info = name;
     open.meta = { args };
     open.map = [startLine, nextLine];
+    // linksRule counts the dev-only blocks a link is in (p802 D2)
+    open.meta.isDevOnly = !!directives.get(name)?.devOnly;
     state.md.block.tokenize(state, startLine + 1, nextLine);
     const close = state.push('hub_directive_close', 'div', -1);
     close.block = true;
     close.info = name;
-    close.meta = { args };
+    close.meta = { args, isDevOnly: open.meta.isDevOnly };
 
     state.parentType = oldParent;
     state.lineMax = oldLineMax;
@@ -329,10 +336,20 @@ const parseHubLink = (href: string) => {
   return { targetPath: clean ? `${clean}/` : '', hash };
 };
 
-/** Resolves a `hub:` href and records it for the dead-link check */
-export const resolveHubLink = (href: string, env: HubMarkdownEnv, file: string, line: number) => {
+/**
+ * Resolves a `hub:` href and records it for the link check (`checkLinks`)
+ * @param isInDevOnly the link is in a `::: dev-only` block, or a generator writes it in `dev`
+ * only: it may point to a dev page from a public one
+ */
+export const resolveHubLink = (
+  href: string,
+  env: HubMarkdownEnv,
+  file: string,
+  line: number,
+  isInDevOnly = false
+) => {
   const { targetPath, hash } = parseHubLink(href);
-  env.links.push({ file, line, targetPath, hash, raw: href });
+  env.links.push({ file, line, targetPath, hash, raw: href, isInDevOnly });
   return `${targetPath ? env.root + targetPath : env.root}${hash ? `#${hash}` : ''}`;
 };
 
@@ -473,14 +490,22 @@ const resolveImage = (src: string, env: HubMarkdownEnv, line: number) => {
 
 const linksRule = (state: StateCore) => {
   const env = state.env as HubMarkdownEnv;
+  /** The `::: dev-only` blocks around the token (p802 D2) */
+  let devOnlyDepth = 0;
   for (const block of state.tokens) {
+    if (block.meta?.isDevOnly) {
+      if (block.type === 'hub_directive_open') devOnlyDepth++;
+      else if (block.type === 'hub_directive_close') devOnlyDepth--;
+    }
     if (block.type !== 'inline' || !block.children) continue;
     const line = (block.map?.[0] ?? 0) + 1;
     for (const token of block.children) {
       if (token.type === 'link_open') {
         const href = token.attrGet('href') ?? '';
-        if (isHubLink(href)) token.attrSet('href', resolveHubLink(href, env, env.file, line));
-        else if (isApiLink(href)) token.attrSet('href', resolveApiLink(href, env, env.file, line));
+        if (isHubLink(href)) {
+          token.attrSet('href', resolveHubLink(href, env, env.file, line, devOnlyDepth > 0));
+        } else if (isApiLink(href))
+          token.attrSet('href', resolveApiLink(href, env, env.file, line));
         else if (isRepoLink(href)) {
           const repo = resolveRepoLink(href, env, env.file, line);
           token.attrSet('href', repo.href);

@@ -92,6 +92,15 @@ export const cardsDirective: HubDirective = {
       if (env.tree) env.diag.error(env.file, line, `::: cards: no page at hub/pages/${source}/`);
       return '';
     }
+    if (parent.isDev && !env.page.isDev) {
+      // Its cards would link dev pages from a public one (p802 D2), and fail only in `public`
+      env.diag.error(
+        env.file,
+        line,
+        `::: cards: hub/pages/${source}/ is a dev-only page (aek:dev)`
+      );
+      return '';
+    }
     const filters = parseFilters(rest, env, line);
     if (!filters) return '';
     const children = parent.children.filter(
