@@ -29,8 +29,9 @@ const profiles: SbpProfile[] = [
       initial: 404 * KIB,
       chunks: {
         'assets/index.js': 401 * KIB,
-        // p613 D5: the draggable windows' styles left with the windows
-        'assets/index.css': 3 * KIB,
+        // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
+        // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB
+        'assets/index.css': 4 * KIB,
         'assets/rapier.js': 843 * KIB,
         // The physics worker's own file (`assets/PhysicsWorker.js` is its 0.1 kB `?worker` wrapper)
         'assets/PhysicsWorker.js@PhysicsWorker': 11 * KIB,
@@ -79,8 +80,9 @@ const profiles: SbpProfile[] = [
         // The entry only re-exports `mount` from the shared chunk
         'banner.embed.js': 2 * KIB,
         'assets/banner.embed.js': 311 * KIB,
-        // p613 D5: the draggable windows' styles left with the windows
-        'assets/banner.css': 2 * KIB,
+        // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
+        // tokens took it from 0.1 to 1.5 KiB
+        'assets/banner.css': 3 * KIB,
       },
       // Set from p619's report (the modules minified, as the app's)
       groups: {
