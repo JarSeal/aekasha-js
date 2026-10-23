@@ -1,6 +1,6 @@
 /*
  * The UI kit's design tokens (p801): the one stylesheet the kit, the debugger and the Hub share.
- * Plain CSS, so the Hub's Sass @uses it as is and tokens.test.ts parses it.
+ * Plain CSS, so the Hub's Sass @uses it as is and Tokens.test.ts parses it.
  *
  * Every token is on a kit root, the class `aekUi` (the HUD root has it; an app puts it on any
  * container its own UI goes in outside the HUD), never on :root: an embed leaves the host page
@@ -147,7 +147,7 @@
    * block: a var() resolves where it's declared, so a subtree forced to the other theme would keep
    * the root's value. A kit root inside a forced subtree (a Hub demo box under the Hub's
    * <html data-aek-theme>) declares no colours and inherits that theme. Each theme's values are
-   * written twice (the default or the media query, and the attribute); tokens.test.ts checks the
+   * written twice (the default or the media query, and the attribute); Tokens.test.ts checks the
    * copies match.
    */
   :where(.aekUi:not([data-aek-theme], [data-aek-theme] *)),
