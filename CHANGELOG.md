@@ -4,6 +4,43 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-23 — hub-docs-readme-and-claude-md-final
+
+The documentation's final pass (p621), which closes the whole-codebase refactoring epic (p600): an Architecture page on the Hub, the readme and the CLAUDE.md files checked against the code, the readme's examples type-checked, and the root CLAUDE.md back to a map.
+
+### Engine 5.10.2 (Golden Hour)
+
+No code change.
+
+**Changed**
+
+- Docs: `createSeededRandom`'s JSDoc links `getRandomStream` by its module (`{@link _engine/utils/RandomStreams!getRandomStream}`; the plain link resolved nowhere and was `yarn hub:build`'s only warning).
+- Five new `CLAUDE.md` files next to their code, with the sections that left the root moved verbatim and then checked against the code: `kernel/ecs/` (ECS core), `kernel/init/` (Bootstrap flow, Engine features), `kernel/scene/` (Scene loads), `kernel/render/` (Snapshots, Views) and `features/viewports/` (Viewports). Fixed on the way: `FeatureContext`'s `config` and `isInstalled` were missing, `?startScene`'s scene code comes from `getAppData().sceneFiles`, and the loop starts once the root scene has children.
+- The older engine `CLAUDE.md` files: their references to root sections that moved point at the new files, and `kernel/input/`'s test bridge plays the runner's input through `installTestInput` (it named a `playInput` that doesn't exist).
+
+### Toolkit 2.2.1 (Half Moon)
+
+No code change.
+
+**Fixed**
+
+- `ScatterOnSurface.test.ts`' placement hashes round each value to 1e-9: the raw Float64 bits differed in the last place between machines on the same Node (an arm64 Mac failed the `scaleRange` cases), as V8's sin / cos can by build. The four hashes are re-recorded; the placements are unchanged.
+
+### Project
+
+**Added**
+
+- The Hub: an Architecture page (`hub/pages/documentation/architecture/`): the three layers, the kernel and the features, a frame, a scene load, the threads, simulation and presentation, the debug layer, the build, and where a feature of your own goes (with the actor, controller, brain and intent contracts). Its `aek:covers` take "Three-folder split", "Bootstrap flow", "Build config notes", "Layout check" and "Scene loads" (the first three out of `coverageIgnore`). The Documentation and Features intros, the homepage, the quick start's "How the app starts" and the coding standards' Layering link it.
+- `yarn test` type-checks the readme's `ts` / `js` blocks with the engine's `@example`s (`collectReadmeExamples` and `extractMarkdownExamples` in `devTools/verify/examples.ts`, a block owned by the heading above it).
+- `CLAUDE.md` files for `devTools/gather/` (the data pipeline) and `devTools/layout/` (the layout check and the entry-imports codemod).
+
+**Changed**
+
+- The root `CLAUDE.md`: 75.2 kB → 43.2 kB. The sections with a folder of their own moved into nested files (seven new, see Engine), Commands keeps a line per command (the detail went to the nested file each points at), and the map lists every nested file. Every backticked path and name in the root and the 26 nested files resolves.
+- `readme.md`, checked against the code: the Examples (ten Hub examples in nine scenes, and the other scenes as they are), the debug drawer's tabs, the stress tests' places, the ECS item (registered from an install), the frame row (the physics step and the render in their places), the project tree (the nested `CLAUDE.md` files, `.claude/`), Documentation (the Architecture page, the nested files' map), and the Roadmap without "Component query caching" (done in p200 and p612).
+- The Hub: the Features intro's Modular infinity and Threaded reality, and the physics card, say what the features and the worker are now; the migration guide's intro names engine 6.0.0 (p622) as the next section, and "Engine 4 → 5" lost its "Not released yet" note (5.0.0 shipped on 2026-10-11).
+- The plans: p600 and its last child p621 are `_DONE_`, and the plans naming them follow. p990's "More examples" item says which features have an example scene now.
+
 ## 2026-10-23 — review-toolkit-and-app-code
 
 ### Engine 5.10.1 (Golden Hour)
