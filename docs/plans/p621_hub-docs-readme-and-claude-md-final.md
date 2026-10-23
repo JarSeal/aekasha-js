@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: in progress | Phases 1-4 implemented
 Category: Documentation, Hub
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage D)
 
@@ -277,7 +277,7 @@ runtime change; the scene runner checks nothing a document changes).
 - `yarn test` 1,228 passed, `yarn lint` clean, `yarn verify:baselines --docs` unchanged,
   `yarn hub:build` 91 pages with no warning.
 
-### Phase 4: the readme and the Hub's remaining pages
+### Phase 4: the readme and the Hub's remaining pages — done
 
 1. The readme against the code: Features (D2), Technical highlights, Project structure (the new
    nested files aren't in it; `devTools/` line), Documentation (the Architecture page), the
@@ -285,6 +285,37 @@ runtime change; the scene runner checks nothing a document changes).
 2. The Hub homepage and Features intro (the four principles, the featured features), and the
    migration guide's intro (a line naming p622's major as the next section).
 3. p990: the p555 item deleted (D2).
+
+**As built:**
+
+- **The readme** (D2 followed: the Features list kept, each item checked against the code). Fixed:
+  the Examples prose (ten Hub examples, nine scenes: the UI kit's was missing); the other scenes
+  (`sceneTestECS` is the start scene, not "an ECS stress test"; the LOD and sky showcases, `space`
+  and the texture scenes added); the stress tests' places (the ECS tab, the gym scene); the
+  drawer's tabs (cameras, lights and debug tools were missing); the ECS item (plugins and hooks
+  register from an install, not "at runtime"); the frame row (the physics step after each
+  `APP_PHYSICS_STEP`, and the render before `LATE_MAIN`, as `runFrame` runs them). Added: the
+  nested `CLAUDE.md` files in Project structure (one note on the `_engine/` and `devTools/` lines,
+  not a list), a `.claude/` line, `utils/`' hashes and seeded random, the Architecture page and
+  the nested files' map in Documentation. Checked and unchanged: the 16 entries, the physics
+  claims (the `MESSAGE_BATCH` fallback, the single STEP message, heightfields, joints, shape
+  casts), the input loop hook, the editor views' suspension, the save data's major-version
+  warning, the debug keys. The six `ts` blocks still type-check (`yarn test`).
+- **The Hub:** the homepage's four featured features already are one per principle (rendering,
+  ECS, physics, smallest build), and the three featured examples match their scenes. Changed: the
+  Features intro's Modular infinity (the features listed at boot, not "opt-in plugins and
+  systems") and Threaded reality (a worker "by default"), the physics card's description likewise,
+  the homepage's Features tagline (all four principles) and its intro (a link to Architecture).
+- **The migration guide:** the intro names engine 6.0.0 (p622) as the next section, with the
+  `@deprecated` names in the API reference as the way over before it. Found outside the plan:
+  "Engine 4 → 5" still had a "Not released yet" note, though 5.0.0 and toolkit 2.0.0 shipped
+  together on 2026-10-11 (`engine-v5.0.0`); replaced by a line saying the minors since don't
+  break, so it is the only section to follow from engine 4.
+- **p990:** no p555 item to delete: `22e859c` ("Plan cleanup", 2026-10-09) had already moved the
+  readme question into this plan, two hours after its stub (§1.2 still placed it in p990), and
+  p990's line 6 records the move. Its "More examples" item was stale instead (Characters has
+  `exampleCharacter`; the Spatial index page points at `largeWorld`, the others at none): fixed.
+- `yarn test` 1,228 passed; `yarn hub:build` 91 pages, no warning.
 
 ### Phase 5: close the epic
 
