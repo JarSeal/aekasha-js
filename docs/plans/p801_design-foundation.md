@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 0 implemented
 Category: UI, Refactoring
 Epic: p800_debugger-ui-overhaul.md
 Blocked by: p802_hub-project-section.md (only its Phase 1, the dev-only pages, merged on its own, for Phase 0's font specimen page: D11)
@@ -191,6 +191,41 @@ are layered yet.
 - If one sans doesn't serve both the Hub and dense panels, the Hub keeps Inter and this decision
   says why.
 
+**Outcome (Phase 0, 2026-10-24): IBM Plex Sans and IBM Plex Mono**, the developer's pick after
+the specimen page (`hub/pages/project/font-study/`) on their devices. What the study measured
+for them (Phase 0 step 3's table):
+
+- One family: the sans and the mono are drawn together (the same 51.6 % x-height), so labels and
+  figures in a panel match.
+- The narrowest sans of the three: 53 characters of a label in the 280 px column at 11 px (Inter
+  50, Geist 52, the debugger's Lucida stack today 49).
+- Its x-height is the smallest of the candidates (51.6 %, Inter 54.6 %): the same pixel size reads
+  a little smaller. p806 sets the compact density's sizes looking at the 11 px panels.
+- Weights 100-700 (variable): the Hub's styles use 100-700 and the engine's 400-700, so nothing
+  is synthesised.
+- Sizes: the sans' Latin `wght` file is 44.6 KiB (its italic 49.0); the mono has no variable
+  build, so it ships static faces, 14.4-15.3 KiB each.
+
+What Phase 4 ships, in `src/_engine/ui/fonts/` with both OFL licence files:
+
+- `ibm-plex-sans-latin-wght-normal.woff2` and `-italic.woff2` (from
+  `@fontsource-variable/ibm-plex-sans` 5.3.0, the `wght` axis only, not the larger `wdth` one).
+- `ibm-plex-mono-latin-400-normal.woff2`, `-500-normal`, `-600-normal` and `-400-italic` (from
+  `@fontsource/ibm-plex-mono` 5.3.0; the code themes' comments are italic, and bold resolves to
+  600 without synthesis).
+- A browser fetches a face only when text uses it, so the unused weights and italics cost a page
+  nothing; `yarn sbp` lists them as lazy files.
+
+The tokens: `--aek-font-sans: 'IBM Plex Sans', <the system UI stack>` and
+`--aek-font-mono: 'IBM Plex Mono', <the system mono stack>` where the fonts are opted in. The
+system UI stack stays the default without them, as above.
+
+The Hub shares them (the default above: nothing in the study said otherwise): Phase 4 points its
+`@font-face` at the new files, `hub/_assets/fonts/`' Inter goes, and its mono moves from the
+system stack to IBM Plex Mono. The changelog's restyle note (D12) names all three changes: the
+debugger and the full page from the Lucida stack, the Hub from Inter, the Hub's code from the
+system mono.
+
 ### D9. The `uiKit` embed profile and the check
 
 - `src/app/profiles/uiKit/` (`uiKit.embed.ts`, a code-made scene, no feature), in
@@ -236,7 +271,7 @@ Branch `p801-design-foundation` from `main` after p802's Phase 1 merged (D11). V
 each phase: `yarn test`, `yarn verify:scenes` (baselines recorded on `main` before the first
 run), `yarn verify:baselines`, plus the phase's own.
 
-### Phase 0: baselines, inventory, font study
+### Phase 0: baselines, inventory, font study — done
 
 1. `yarn verify:scenes --update` on `main`; `yarn sbp --profile all` numbers noted here.
 
@@ -331,6 +366,10 @@ run), `yarn verify:baselines`, plus the phase's own.
 
 4. Screenshots on macOS, Windows and Android (the developer's own devices, through `yarn dev:https` for the
    phone), the pick, written into D8.
+
+   As built (section 4): the developer reviewed the page on their own devices and picked IBM Plex
+   Sans and IBM Plex Mono (2026-10-24); D8's outcome records it with what Phase 4 ships. The
+   screenshots stayed on the devices (none committed).
 
 ### Phase 1: tokens, themes, contrast (no visual change)
 
