@@ -1,0 +1,253 @@
+/*
+ * The UI kit's design tokens (p801): the one stylesheet the kit, the debugger and the Hub share.
+ * Plain CSS, so the Hub's Sass @uses it as is and tokens.test.ts parses it.
+ *
+ * Every token is on a kit root, the class `aekUi` (the HUD root has it; an app puts it on any
+ * container its own UI goes in outside the HUD), never on :root: an embed leaves the host page
+ * alone. All selectors are :where() (zero specificity) and in @layer aek.tokens, so an app's rule
+ * on a token always wins.
+ *
+ * Public settings, on the kit root only (they're read where --aek-base is computed):
+ * - --aek-ui-font-size: the UI's font size (default 0.875em of the browser's default size, 14 px
+ *   at the browsers' 16 px).
+ * - --aek-ui-scale: a factor on every size (the game's "UI scale" setting; default 1).
+ * - --aek-motion: 0 turns transitions off (prefers-reduced-motion does too); default 1.
+ * - data-aek-theme="dark" | "light" on any element forces its subtree's theme; without it a kit
+ *   root is dark, or light under prefers-color-scheme: light.
+ * - data-aek-density="compact" on any element: smaller type and space scales for its subtree.
+ *
+ * No color-scheme and no font-family on the kit root yet: the kit's and the debugger's styles keep
+ * their own look until p803 / p806 restyle them (p801 D1), and the fonts are Phase 4's.
+ */
+
+@layer aek.tokens, aek.base, aek.components, aek.utilities;
+
+/*
+ * Registered, so they're computed on the kit root and inherit as pixels: an em in them resolves
+ * there, never again in a descendant (p801 D4).
+ */
+@property --aek-base {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 14px;
+}
+
+@property --aek-rem {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 10px;
+}
+
+@layer aek.tokens {
+  /* The kit root: what doesn't depend on the theme */
+  :where(.aekUi) {
+    /* The browser's default size, which the user sets and a host page's root can't change */
+    font-size: medium;
+
+    /*
+     * The UI's font size, and the old 62.5 % root's rem (@internal: the existing styles' unit
+     * until p803 / p806 restyle them). Fixed here for a browser without @property, where an
+     * unregistered em would resolve again in every descendant and compound; computed below.
+     */
+    --aek-base: calc(14px * var(--aek-ui-scale, 1));
+    --aek-rem: calc(10px * var(--aek-ui-scale, 1));
+
+    /* Type: the sizes are lengths from --aek-base, so they inherit fixed and never compound */
+    --aek-font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+      sans-serif;
+    --aek-font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Code', Menlo, Consolas, monospace;
+    --aek-font-size-xs: calc(var(--aek-base) * 11 / 14);
+    --aek-font-size-sm: calc(var(--aek-base) * 12 / 14);
+    --aek-font-size-md: var(--aek-base);
+    --aek-font-size-lg: calc(var(--aek-base) * 16 / 14);
+    --aek-font-size-xl: calc(var(--aek-base) * 20 / 14);
+    --aek-font-size-2xl: calc(var(--aek-base) * 24 / 14);
+    --aek-font-weight-regular: 400;
+    --aek-font-weight-medium: 500;
+    --aek-font-weight-semibold: 600;
+    --aek-font-weight-bold: 700;
+    --aek-line-height-tight: 1.2;
+    --aek-line-height-base: 1.45;
+    --aek-line-height-relaxed: 1.65;
+    /* Numbers in fields, tables and monitors, so they don't jitter while they change */
+    --aek-numeric-tabular: tabular-nums;
+
+    /* Space: 2, 4, 8, 12, 16, 24 and 32 px at the defaults */
+    --aek-space-1: calc(var(--aek-base) * 2 / 14);
+    --aek-space-2: calc(var(--aek-base) * 4 / 14);
+    --aek-space-3: calc(var(--aek-base) * 8 / 14);
+    --aek-space-4: calc(var(--aek-base) * 12 / 14);
+    --aek-space-5: calc(var(--aek-base) * 16 / 14);
+    --aek-space-6: calc(var(--aek-base) * 24 / 14);
+    --aek-space-7: calc(var(--aek-base) * 32 / 14);
+
+    --aek-radius-sm: 4px;
+    --aek-radius-md: 6px;
+    --aek-radius-lg: 8px;
+    --aek-radius-full: 9999px;
+
+    /* Motion: 0 under --aek-motion: 0 or prefers-reduced-motion */
+    --aek-motion-fast: calc(120ms * var(--aek-motion, 1));
+    --aek-motion-base: calc(200ms * var(--aek-motion, 1));
+    --aek-motion-slow: calc(320ms * var(--aek-motion, 1));
+    --aek-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --aek-ease-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
+
+    /* The focus ring's colour is the theme's accent (in the theme blocks below) */
+    --aek-focus-ring-width: 2px;
+    --aek-focus-ring-offset: 2px;
+
+    /* Z-layers: the windows' two stacks (each window 2 above the last, its backdrop 1 below) */
+    --aek-z-window: 100;
+    --aek-z-debug-window: 20000;
+    --aek-z-dialog: 30000;
+    --aek-z-toast: 31000;
+    --aek-z-tooltip: 32000;
+  }
+
+  /*
+   * Where @property is there: the browser's default size and the app's settings. A browser passing
+   * this test has @property (Chrome 117, Safari 17.4, Firefox 129; @property is in Chrome 85,
+   * Safari 16.4, Firefox 128): @supports can't test an at-rule, and an unregistered fallback
+   * declared first would always lose to this one.
+   */
+  @supports (transition-behavior: allow-discrete) {
+    :where(.aekUi) {
+      --aek-base: calc(var(--aek-ui-font-size, 0.875em) * var(--aek-ui-scale, 1));
+      --aek-rem: calc(var(--aek-base) / 1.4);
+    }
+  }
+
+  /* The compact density (the debugger's): the type and space scales only */
+  :where([data-aek-density='compact']) {
+    --aek-font-size-xs: calc(var(--aek-base) * 10 / 14);
+    --aek-font-size-sm: calc(var(--aek-base) * 11 / 14);
+    --aek-font-size-md: calc(var(--aek-base) * 12 / 14);
+    --aek-font-size-lg: calc(var(--aek-base) * 13 / 14);
+    --aek-font-size-xl: calc(var(--aek-base) * 16 / 14);
+    --aek-font-size-2xl: calc(var(--aek-base) * 20 / 14);
+
+    --aek-space-1: calc(var(--aek-base) * 2 / 14);
+    --aek-space-2: calc(var(--aek-base) * 3 / 14);
+    --aek-space-3: calc(var(--aek-base) * 6 / 14);
+    --aek-space-4: calc(var(--aek-base) * 8 / 14);
+    --aek-space-5: calc(var(--aek-base) * 12 / 14);
+    --aek-space-6: calc(var(--aek-base) * 16 / 14);
+    --aek-space-7: calc(var(--aek-base) * 24 / 14);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where(.aekUi) {
+      --aek-motion: 0;
+    }
+  }
+
+  /*
+   * The themes. A token that reads another (the ring's colour, a shadow) is declared in each theme
+   * block: a var() resolves where it's declared, so a subtree forced to the other theme would keep
+   * the root's value. A kit root inside a forced subtree (a Hub demo box under the Hub's
+   * <html data-aek-theme>) declares no colours and inherits that theme. Each theme's values are
+   * written twice (the default or the media query, and the attribute); tokens.test.ts checks the
+   * copies match.
+   */
+  :where(.aekUi:not([data-aek-theme], [data-aek-theme] *)),
+  :where([data-aek-theme='dark']) {
+    --aek-bg: #070b14;
+    --aek-surface: #0c1321;
+    --aek-surface-raised: #141e31;
+    --aek-surface-hover: #111b2d;
+    --aek-border: #1b2638;
+    --aek-border-strong: #2b3a52;
+    --aek-border-control: #617089;
+    --aek-text: #e6ebf2;
+    --aek-text-muted: #9aa6b8;
+    --aek-text-disabled: #5d6878;
+    --aek-accent: #3fd8f2;
+    --aek-accent-hover: #8be9f8;
+    --aek-accent-soft: rgb(63 216 242 / 12%);
+    --aek-on-accent: #04121a;
+    --aek-danger: #ff7a6b;
+    --aek-danger-soft: rgb(255 122 107 / 12%);
+    --aek-warning: #f2c13f;
+    --aek-warning-soft: rgb(242 193 63 / 12%);
+    --aek-success: #5fd89a;
+    --aek-success-soft: rgb(95 216 154 / 12%);
+    --aek-info: #7cb4ff;
+    --aek-info-soft: rgb(124 180 255 / 12%);
+    --aek-backdrop: rgb(3 6 12 / 60%);
+    --aek-shadow-sm: 0 1px 3px rgb(0 0 0 / 40%);
+    --aek-shadow-lg: 0 12px 32px rgb(0 0 0 / 45%);
+    --aek-focus-ring-color: var(--aek-accent);
+  }
+
+  @media (prefers-color-scheme: light) {
+    :where(.aekUi:not([data-aek-theme], [data-aek-theme] *)) {
+      --aek-bg: #f5f7fa;
+      --aek-surface: #ffffff;
+      --aek-surface-raised: #ffffff;
+      --aek-surface-hover: #edf1f6;
+      --aek-border: #dce3ec;
+      --aek-border-strong: #b9c4d3;
+      --aek-border-control: #7d899b;
+      --aek-text: #0f1726;
+      --aek-text-muted: #4b5668;
+      --aek-text-disabled: #9aa3b1;
+      --aek-accent: #0a7590;
+      --aek-accent-hover: #075a6f;
+      --aek-accent-soft: rgb(10 117 144 / 10%);
+      --aek-on-accent: #ffffff;
+      --aek-danger: #c2361f;
+      --aek-danger-soft: rgb(194 54 31 / 10%);
+      --aek-warning: #8f6300;
+      --aek-warning-soft: rgb(143 99 0 / 10%);
+      --aek-success: #1c7a46;
+      --aek-success-soft: rgb(28 122 70 / 10%);
+      --aek-info: #2459c4;
+      --aek-info-soft: rgb(36 89 196 / 10%);
+      --aek-backdrop: rgb(15 23 38 / 40%);
+      --aek-shadow-sm: 0 1px 3px rgb(15 23 38 / 10%);
+      --aek-shadow-lg: 0 12px 32px rgb(15 23 38 / 12%);
+      --aek-focus-ring-color: var(--aek-accent);
+    }
+  }
+
+  :where([data-aek-theme='light']) {
+    --aek-bg: #f5f7fa;
+    --aek-surface: #ffffff;
+    --aek-surface-raised: #ffffff;
+    --aek-surface-hover: #edf1f6;
+    --aek-border: #dce3ec;
+    --aek-border-strong: #b9c4d3;
+    --aek-border-control: #7d899b;
+    --aek-text: #0f1726;
+    --aek-text-muted: #4b5668;
+    --aek-text-disabled: #9aa3b1;
+    --aek-accent: #0a7590;
+    --aek-accent-hover: #075a6f;
+    --aek-accent-soft: rgb(10 117 144 / 10%);
+    --aek-on-accent: #ffffff;
+    --aek-danger: #c2361f;
+    --aek-danger-soft: rgb(194 54 31 / 10%);
+    --aek-warning: #8f6300;
+    --aek-warning-soft: rgb(143 99 0 / 10%);
+    --aek-success: #1c7a46;
+    --aek-success-soft: rgb(28 122 70 / 10%);
+    --aek-info: #2459c4;
+    --aek-info-soft: rgb(36 89 196 / 10%);
+    --aek-backdrop: rgb(15 23 38 / 40%);
+    --aek-shadow-sm: 0 1px 3px rgb(15 23 38 / 10%);
+    --aek-shadow-lg: 0 12px 32px rgb(15 23 38 / 12%);
+    --aek-focus-ring-color: var(--aek-accent);
+  }
+}
+
+/*
+ * The focus ring (p800 D8, p801 D6): the one global rule p801 adds. Any unlayered style beats it,
+ * so a style that removes `outline` hides it there (p801's inventory, 4.5, lists them; Phase 2 removes them).
+ */
+@layer aek.base {
+  :where(.aekUi :focus-visible) {
+    outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
+    outline-offset: var(--aek-focus-ring-offset);
+  }
+}

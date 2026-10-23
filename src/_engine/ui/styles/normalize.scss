@@ -204,16 +204,10 @@ button::-moz-focus-inner,
   padding: 0;
 }
 
-/**
-   * Restore the focus styles unset by the previous rule.
-   */
-
-button:-moz-focusring,
-[type='button']:-moz-focusring,
-[type='reset']:-moz-focusring,
-[type='submit']:-moz-focusring {
-  outline: 1px dotted ButtonText;
-}
+/*
+ * normalize's `button:-moz-focusring { outline: 1px dotted ButtonText }` is removed (p801 D6):
+ * unlayered, it would beat the kit's focus ring (tokens.css) on every button in Firefox.
+ */
 
 /**
    * Correct the padding in Firefox.
