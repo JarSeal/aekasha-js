@@ -31,7 +31,8 @@ const getGUIContainerElem = () => {
 
 /**
  * Creates the HUD container and sets it to DOM, in place of `slot` (the UI kit's root component
- * replaces the element it attaches to): the boot's.
+ * replaces the element it attaches to): the boot's. It's a kit root (the class `aekUi`), so the
+ * design tokens (`ui/styles/tokens.css`) apply to everything under it.
  * @internal
  * @param slot the element the HUD root takes the place of. Default: the page's `#hudRoot` or
  * `#guiContainer` element. A mounted engine's is an element in its container (`mountAekasha`),
@@ -42,7 +43,7 @@ export const createHudContainer = (slot?: HTMLElement) => {
     id: HUD_ROOT_ID,
     idAttr: true,
     attach: slot ?? getGUIContainerElem(),
-    class: 'hudRoot',
+    class: 'hudRoot aekUi',
     style: { position: 'fixed', top: 0, left: 0, width: 0, height: 0 },
   });
 };
