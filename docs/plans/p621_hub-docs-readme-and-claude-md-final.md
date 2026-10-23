@@ -98,7 +98,7 @@ The page takes `aek:covers` for the root sections it now describes, "Three-folde
 `devTools/hub/claudeMd.ts`), which leave `hub.config.ts`' `coverageIgnore`. The Documentation
 intro and the quick start link it.
 
-### D2. The readme keeps its Features list *(to confirm)*
+### D2. The readme keeps its Features list
 
 Without a hosted Hub, a reader on GitHub sees only the readme, and links to `hub/pages/*/intro.md`
 show raw HTML and Markdown slots. So the Features list stays, checked against the code, and
@@ -144,7 +144,7 @@ The readme's "Examples compile" sentence in the coding standards (`jsdoc.md`) an
 By §1.3: each is cited. The epic file becomes `_DONE_p600_…` and is kept too (p622, p800 and the
 p42x / p51x plans cite its sections). Nothing is removed by this plan.
 
-### D6. No example scene *(to confirm)*
+### D6. No example scene
 
 The plan changes documents and one dev tool, no engine behaviour. The Architecture page shows no
 scene; its diagram is the picture.
