@@ -1,7 +1,7 @@
 Status: implemented (Phases 0-9)
 Category: Refactoring, Documentation, Physics
-Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
-Blocks: p621_hub-docs-readme-and-claude-md-final.md, p511_network-transport-and-replication.md (the transport interface)
+Epic: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (Stage C)
+Blocks: \_DONE_p621_hub-docs-readme-and-claude-md-final.md, p511_network-transport-and-replication.md (the transport interface)
 Related: \_DONE_p613_review-rendering-scene-assets.md (D13: `MeshUserData.ts` and its bug; owns nothing here now), \_DONE_p612_review-ecs-loop-config-init.md (D2's type-only seams, D7's main-camera id), \_DONE_p611_sbp-tooling-profiles-and-marketing.md ("From p611" below), p500_restore-physics-snapshot.md (the snapshot code: moved as is, D12), p428_character-determinism-in-worker-targets.md (the protocol side of its choice: D5), p622_engine-6-major.md (what this plan can't remove in a minor: D3), \_DONE_p618_review-debug-public-api.md (owns the physics `_dbg__` modules)
 
 # Review: Physics

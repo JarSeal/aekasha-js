@@ -1,6 +1,6 @@
-Status: in progress | Phases 1-4 implemented
+Status: implemented (Phases 1-5)
 Category: Documentation, Hub
-Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage D)
+Epic: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (Stage D)
 
 # Hub Docs, Readme and CLAUDE.md: the Final Pass
 
@@ -317,7 +317,7 @@ runtime change; the scene runner checks nothing a document changes).
   `exampleCharacter`; the Spatial index page points at `largeWorld`, the others at none): fixed.
 - `yarn test` 1,228 passed; `yarn hub:build` 91 pages, no warning.
 
-### Phase 5: close the epic
+### Phase 5: close the epic — done
 
 1. Verification: `yarn test`, `yarn lint`, `yarn build` (with `yarn sbp`), `yarn hub:build` with no
    warnings, `yarn verify:baselines`.
@@ -326,6 +326,28 @@ runtime change; the scene runner checks nothing a document changes).
    `git mv` to `_DONE_p600_…`, its roadmap row and `Blocks` line, and the 23 files that name it
    (the plans' `Epic:` / `Related:` lines, CLAUDE.md, the Hub if any).
 4. Time for the PR (p600's table): `hub-docs-readme-and-claude-md-final` into `main`.
+
+**As built:**
+
+- **Verification:** `yarn test` 1,228 passed, `yarn lint` clean, `yarn build` exit 0 (`yarn sbp`:
+  the app 379.8 kB gzip before the first frame, the banner 285.5 kB, every budget within),
+  `yarn hub:build` 91 pages with no warning, `yarn verify:baselines` all unchanged (docs 2,401 /
+  2,401 exports, 1,043 / 1,043 members; no debug code in either build). The root CLAUDE.md is
+  43.2 kB. Two notes in the build's log aren't this branch's and were left: Vite's
+  `new URL(".", import.meta.url)` notice in the banner embed's build, and `yarn sbp`'s "well
+  under" on `assets/index.css` (0.9 kB of 3 kB: lower it to 2 KiB).
+- **Versions (D7 differs):** Engine 5.10.2 and the project with it; **Toolkit 2.2.1**, though D7
+  and Phase 1's "As built" said no toolkit bump: `checkVersions --against main` fails on any
+  changed file under `src/toolkit/`, a test included, and Phase 1 changed
+  `ScatterOnSurface.test.ts` (D7's "then a patch each", from Phase 1 instead of Phase 3). App
+  1.14.0 unchanged. The `CHANGELOG.md` entry has Engine, Toolkit and Project sections;
+  `yarn checkVersions --against main` passes.
+- **The epic:** `_DONE_p600_…`, status `implemented (Stages A-D)`; its `Blocks` line and roadmap
+  row name `_DONE_p621_…`, and its Branches and PRs table's Stage D row names the branch. The 23
+  files naming its file are all plans (the twenty children's and this plan's `Epic:` lines,
+  p622's and p800's `Related:` lines); no CLAUDE.md or Hub file names it
+  (`devTools/verify/baselines.ts` and `devTools/layout/layoutRules.ts` cite "p600" by number
+  only). The ten plans whose `Blocks` named this plan follow its rename.
 
 ## Done when
 

@@ -1,7 +1,7 @@
 Status: implemented (Phases 0-6)
 Category: Refactoring, Documentation, LOD, Rendering
-Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
-Blocks: p621_hub-docs-readme-and-claude-md-final.md
+Epic: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (Stage C)
+Blocks: \_DONE_p621_hub-docs-readme-and-claude-md-final.md
 Related: \_DONE_p612_review-ecs-loop-config-init.md (Phase 7's `LodSystem.ts` link, §1.2), \_DONE_p605_coding-standards-and-documentation-tooling.md (Phase 5's `Vec2Node` / `Vec3Node`, §1.2), \_DONE_p613_review-rendering-scene-assets.md (`kernel/render/LodFade.ts`, reviewed there; §1.4 L7), \_DONE_p615_review-sky-box.md (the plan this one follows), p622_engine-6-major.md (what waits for the major: D3), \_DONE_p050_spatial-index.md (the grid's design and its deferred optimizations), `docs/issues/three-instanced-node-attribute-leak.md` (three's, not ours: out of scope)
 
 # Review: LOD, Spatial Index, Instancing and Lines

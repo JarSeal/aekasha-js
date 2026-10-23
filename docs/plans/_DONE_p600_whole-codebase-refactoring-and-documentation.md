@@ -1,6 +1,6 @@
-Status: draft | epic — not-implemented
+Status: implemented (Stages A-D)
 Category: Refactoring, Documentation, Architecture, Build
-Blocks: \_DONE_p601_refactoring-safety-net-tests-and-baselines.md, \_DONE_p602_architecture-and-target-structure.md, \_DONE_p603_gameplay-architecture-contracts.md, \_DONE_p604_multiplayer-viability-study.md, \_DONE_p605_coding-standards-and-documentation-tooling.md, \_DONE_p606_layering-inversion-and-public-entry.md, \_DONE_p607_sbp-foundation-feature-modules.md, \_DONE_p608_engine-folder-restructure.md, \_DONE_p609_toolkit-and-app-restructure.md, \_DONE_p610_character-and-input-action-architecture.md, \_DONE_p611_sbp-tooling-profiles-and-marketing.md, \_DONE_p612_review-ecs-loop-config-init.md, \_DONE_p613_review-rendering-scene-assets.md, \_DONE_p614_review-physics.md, \_DONE_p615_review-sky-box.md, \_DONE_p616_review-lod-spatial-instancing-lines.md, \_DONE_p617_review-input-ui-hud.md, \_DONE_p618_review-debug-public-api.md, \_DONE_p619_review-schemas-pipeline-devtools-hub.md, \_DONE_p620_review-toolkit-and-app-code.md, p621_hub-docs-readme-and-claude-md-final.md
+Blocks: \_DONE_p601_refactoring-safety-net-tests-and-baselines.md, \_DONE_p602_architecture-and-target-structure.md, \_DONE_p603_gameplay-architecture-contracts.md, \_DONE_p604_multiplayer-viability-study.md, \_DONE_p605_coding-standards-and-documentation-tooling.md, \_DONE_p606_layering-inversion-and-public-entry.md, \_DONE_p607_sbp-foundation-feature-modules.md, \_DONE_p608_engine-folder-restructure.md, \_DONE_p609_toolkit-and-app-restructure.md, \_DONE_p610_character-and-input-action-architecture.md, \_DONE_p611_sbp-tooling-profiles-and-marketing.md, \_DONE_p612_review-ecs-loop-config-init.md, \_DONE_p613_review-rendering-scene-assets.md, \_DONE_p614_review-physics.md, \_DONE_p615_review-sky-box.md, \_DONE_p616_review-lod-spatial-instancing-lines.md, \_DONE_p617_review-input-ui-hud.md, \_DONE_p618_review-debug-public-api.md, \_DONE_p619_review-schemas-pipeline-devtools-hub.md, \_DONE_p620_review-toolkit-and-app-code.md, \_DONE_p621_hub-docs-readme-and-claude-md-final.md
 Related: p990_follow-ups-from-done-plans.md (its bundle size items move to p607), \_DONE_p200_component-query-caching.md (its main-camera cache, implemented in p612), p420_npc-simulation-tiers.md (fits p603's actor model), p500_restore-physics-snapshot.md (p604's rollback prerequisite), p302_material-and-texture-system-refactor.md (p613 leaves what it rewrites), p240_client-device-capability-sniffer.md (SBP-aware: its benchmark is a lazy chunk), `docs/templates/todo-plan-prompts.txt` (the original prompt, and the p800, p450, p070 and p770 prompts this epic sequences), p800_debugger-ui-overhaul.md (the p800 prompt's epic)
 
 # Whole Codebase Refactoring and Documentation — Epic
@@ -467,8 +467,8 @@ standards, the structure and the SBP strategy to it would make every session pay
 | C     | \_DONE_p617_review-input-ui-hud.md                        | Input devices, the UI kit (usable by apps), HUD, icons                                                                 | p608, p610 |
 | C     | \_DONE_p618_review-debug-public-api.md                    | The debug entry points and their docs, debug structure (no panel polish: p800)                                         | p608       |
 | C     | \_DONE_p619_review-schemas-pipeline-devtools-hub.md       | Schemas, the data pipeline, the asset pipeline, devTools, the Hub generator                                            | p608       |
-| C     | \_DONE_p620_review-toolkit-and-app-code.md                       | Toolkit and app code                                                                                                   | p609       |
-| D     | p621_hub-docs-readme-and-claude-md-final.md               | Architecture, SBP and migration pages, readme, CLAUDE.md final, the epic closed                                        | Stage C    |
+| C     | \_DONE_p620_review-toolkit-and-app-code.md                | Toolkit and app code                                                                                                   | p609       |
+| D     | \_DONE_p621_hub-docs-readme-and-claude-md-final.md        | Architecture, SBP and migration pages, readme, CLAUDE.md final, the epic closed                                        | Stage C    |
 
 **Order:** p601 and p602 first (in either order), then p603-p605. Stage B is one engine major and
 must land in order (p606 → p607 → p608, then p609-p611). Stage C plans are independent of each
@@ -504,7 +504,7 @@ per merge).
 | `stage-b` | — | `main` | right after p607's PR merges: the engine and toolkit majors (codenames chosen in p606; renaming them is still possible) and the app minor; the changelog entry's date becomes the merge's |
 | p608, then p609; p610 and p611 after p608 | each its own, from `main` (p608's: `engine-folder-restructured`) | `main` | one per plan when its last phase is done; p608 opens with no other branch open (its codemod reruns on a fresh `main`) |
 | Stage C (p612-p620) | each its own, from `main` | `main` | one per plan; they can run in parallel once their blockers land |
-| Stage D (p621) | its own | `main` | closes the epic |
+| Stage D (p621) | `hub-docs-readme-and-claude-md-final` | `main` | one, after p621's last phase: closes the epic |
 
 ## 12. Risks and open questions
 

@@ -1,6 +1,6 @@
 Status: implemented (Phases 1-4)
 Category: Testing, Dev tooling
-Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage A)
+Epic: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (Stage A)
 Blocks: \_DONE_p606_layering-inversion-and-public-entry.md (no Stage B or C plan starts without it)
 Related: `.claude/skills/run-aekasha-js/driver.mjs` (the Playwright driver the scene runner grows from), `core/Snapshot.ts` (`takeSnapshotAsync`), `core/Debug/_dbg__PhysicsDeterminism.ts` (the probe), `devTools/devFiles/selfCheck.ts` (the precedent for a self-starting dev server check)
 

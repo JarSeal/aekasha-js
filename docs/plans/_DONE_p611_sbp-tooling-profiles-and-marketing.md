@@ -1,7 +1,7 @@
 Status: implemented (Phases 1-7)
 Category: Build, Dev tooling, Engine API, Marketing
-Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage B)
-Blocks: p621_hub-docs-readme-and-claude-md-final.md
+Epic: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (Stage B)
+Blocks: \_DONE_p621_hub-docs-readme-and-claude-md-final.md
 Related: \_DONE_p607_sbp-foundation-feature-modules.md (the feature modules, the manifest, `sideEffects`), \_DONE_p601_refactoring-safety-net-tests-and-baselines.md (`bundle.json`), p612 (init / config), p613 (renderer), p617 (input): see §6
 
 # SBP Tooling, Profiles and Marketing

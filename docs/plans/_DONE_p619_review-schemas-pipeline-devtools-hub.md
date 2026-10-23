@@ -1,7 +1,7 @@
 Status: implemented (Phases 0-8)
 Category: Refactoring, Documentation, Dev tooling
-Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
-Blocks: p621_hub-docs-readme-and-claude-md-final.md
+Epic: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (Stage C)
+Blocks: \_DONE_p621_hub-docs-readme-and-claude-md-final.md
 Related: \_DONE_p601_refactoring-safety-net-tests-and-baselines.md (the runner, the baselines, the light issue path), \_DONE_p602_architecture-and-target-structure.md (D3: the API reference on the entries), \_DONE_p605_coding-standards-and-documentation-tooling.md (the Zod JSDoc rule, the search index cut), \_DONE_p606_layering-inversion-and-public-entry.md (D3: TypeDoc on the entries left here), \_DONE_p608_engine-folder-restructure.md (D6: the devTools' deep imports; D7: the API URLs), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (`yarn sbp`), \_DONE_p612_review-ecs-loop-config-init.md (`ComponentDataMap`, the runner's reloads, the group sizes, the chunk keys), \_DONE_p613_review-rendering-scene-assets.md (D11: the schema / runtime type pairs, `ColorJSON`, `PostFxSchema.ts`), \_DONE_p614_review-physics.md (`CharacterBrainKinds`; D8: the proxy types), \_DONE_p618_review-debug-public-api.md (the plan this one follows; D3: devTools-only names off the entries), p302_material-and-texture-system-refactor.md (D1: named texture constants, D5 below), \_DONE_p620_review-toolkit-and-app-code.md (the toolkit's three leaked types, D6), p622_engine-6-major.md
 
 # Review: Schemas, Data Pipeline, Dev Tools and Hub Generator
