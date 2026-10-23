@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-3 implemented
 Category: Documentation, Hub
 Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage D)
 
@@ -227,7 +227,7 @@ runtime change; the scene runner checks nothing a document changes).
 - `yarn hub:build`: 91 pages, no warning; light, dark and 390 px wide checked in Chrome on
   `yarn hub:preview` (no page overflow).
 
-### Phase 3: CLAUDE.md
+### Phase 3: CLAUDE.md — done
 
 1. **Moves (verbatim):** D4's sections into their nested files, the root's map updated. A script
    diff shows every moved line in exactly one file (p605 Phase 6's check).
@@ -237,6 +237,45 @@ runtime change; the scene runner checks nothing a document changes).
    against its code. Findings are fixed in the text; a finding that is a code bug goes to
    `docs/issues/`.
 3. The root at or under 45 kB; `yarn hub:build` (the coverage check sees every section).
+
+**As built:**
+
+- **Moves:** 7 new nested files, each with its one-line scope and a line in the root's map:
+  `kernel/ecs/` (`## ECS core`), `kernel/init/` (`## Bootstrap flow`, `## Engine features`),
+  `kernel/scene/` (`## Scene loads`: the data pipeline's scene load paragraph and Commands'
+  `?startScene` sentences), `kernel/render/` (`## Snapshots`, `## Views`), `features/viewports/`
+  (`## Viewports`), `devTools/gather/` (`## Scene/asset data pipeline (JSON → generated code)`)
+  and `devTools/layout/` (`## Layout check`: the layout check and the codemod). Commands' long
+  lines went to the nested files they pointed at: `yarn docs` → `devTools/hub/`, `yarn assets` →
+  `devTools/assetPipeline/`, `yarn test` → `devTools/verify/` (a bullet under "Verify commands";
+  the root keeps the test-writing rules in one line, since they apply anywhere in `src/`).
+  `yarn hub:build`'s dropped parenthetical was already in `devTools/hub/CLAUDE.md`. The check
+  script (against a copy of the old root): 49 lines moved, each in exactly one nested file; the
+  rest were edited in place.
+- **The root keeps** short outlines under `ECS core` (the stage order), `Scene/asset data
+  pipeline` and `Bootstrap flow` (the boot order, the nine features). Engine features, Viewports,
+  Snapshots and Views are gone from it. 75.2 kB → 43.2 kB.
+- **Two new section names** ("Layout check", "Scene loads": no root `###` to keep) went into the
+  Architecture page's `aek:covers`, not `coverageIgnore`. The stages and the main loop stay in
+  `kernel/ecs/CLAUDE.md` as D4 said, though their code is in `kernel/loop/` (a session reading
+  `MainLoop.ts` doesn't load that file).
+- **Checks:** a resolve script (every backticked path exists, every name occurs in the code, every
+  `_DONE_pXXX` named is in `docs/plans/`) and a pairing script (a name sits in the file its
+  sentence names) over the root and all 26 nested files. The root and the 7 new files were read
+  against the code (the boot, the frame, the feature list, `FeatureContext`, `SceneHooks`,
+  `FixedStepDriver`, `ViewDef`, the snapshot and viewport options, the scene load steps, the
+  gatherer, the feature → feature imports, the scripts, the Build config, the toolkit layout, the
+  simulation lint). The 19 older nested files got the two scripts and their quoted constants
+  (ports, versions, timeouts, sizes; all right), not a claim-by-claim read.
+- **Fixed in the text (no code bug, no issue file):** the moved text's references to root
+  sections that left (and the older files' "the root's Views" / "Engine features"); `kernel/input`
+  named a test bridge `playInput` that doesn't exist (the bridge's `installTestInput` plays the
+  runner's `window.__AEK_TEST_INPUT__`); `FeatureContext`'s `config` and `isInstalled` were
+  missing; `?startScene`'s scene code comes from `getAppData().sceneFiles`; the drawer key is
+  rebindable in `src/CONFIG.ts`, not rebound; p450 is still a prompt
+  (`docs/templates/todo-plan-prompts.txt`); the loop starts once the root scene has children.
+- `yarn test` 1,228 passed, `yarn lint` clean, `yarn verify:baselines --docs` unchanged,
+  `yarn hub:build` 91 pages with no warning.
 
 ### Phase 4: the readme and the Hub's remaining pages
 
