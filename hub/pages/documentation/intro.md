@@ -6,7 +6,8 @@ description", and each page shows how much of it is documented. What no entry ex
 and has no page.
 
 The debug implementations (the `_dbg__*` files in the `debug/` folders) and the generated app data
-aren't part of the API, so they aren't listed.
+aren't part of the API, so they aren't listed. For how the parts fit together, start with
+[Architecture](hub:documentation/architecture).
 
 ## Importing the engine
 

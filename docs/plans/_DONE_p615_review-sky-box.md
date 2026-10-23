@@ -1,7 +1,7 @@
 Status: implemented (Phases 0-7)
 Category: Refactoring, Documentation, Sky box
-Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
-Blocks: p621_hub-docs-readme-and-claude-md-final.md
+Epic: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (Stage C)
+Blocks: \_DONE_p621_hub-docs-readme-and-claude-md-final.md
 Related: \_DONE_p613_review-rendering-scene-assets.md (Phase 5's `toSkyColor` input, §1.2), \_DONE_p614_review-physics.md (D6's `onUnmount`, which the sky box gets too: F1), p622_engine-6-major.md (what waits for the major: D3), `docs/issues/lodshowcase-sky-snapshot-drift.md` (the clouds' clock: D5), p990_follow-ups-from-done-plans.md (its "Sky box" items stay there: out of scope)
 
 # Review: Sky Box

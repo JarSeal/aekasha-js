@@ -1,11 +1,11 @@
 {
   "name": "aekasha-js",
-  "version": "5.10.1",
+  "version": "5.10.2",
   "description": "High-performance WebGPU application powered by the Ækasha framework.",
   "repository": "https://github.com/JarSeal/aekasha-js.git",
   "author": "JarSeal",
   "engine_metadata": {
-    "version": "5.10.1",
+    "version": "5.10.2",
     "codename": "Golden Hour",
     "name": "Ækasha",
     "fullName": "Ækasha Framework",
@@ -15,7 +15,7 @@
     "author": "JarSeal"
   },
   "toolkit_metadata": {
-    "version": "2.2.0",
+    "version": "2.2.1",
     "codename": "Half Moon",
     "name": "Ækasha Toolkit",
     "fullName": "Ækasha Toolkit — Modules & Assets",

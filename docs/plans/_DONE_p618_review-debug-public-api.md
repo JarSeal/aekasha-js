@@ -1,7 +1,7 @@
 Status: implemented (Phases 0-6)
 Category: Refactoring, Documentation, Debug
-Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
-Blocks: p621_hub-docs-readme-and-claude-md-final.md, p800_debugger-ui-overhaul.md (only its p806, the debugger migration)
+Epic: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (Stage C)
+Blocks: \_DONE_p621_hub-docs-readme-and-claude-md-final.md, p800_debugger-ui-overhaul.md (only its p806, the debugger migration)
 Related: \_DONE_p602_architecture-and-target-structure.md (D4: the debug placement), \_DONE_p605_coding-standards-and-documentation-tooling.md (the five `notExported` types), \_DONE_p607_sbp-foundation-feature-modules.md (D7: the foldability rules), \_DONE_p608_engine-folder-restructure.md (D3: the two wrappers left to this plan), \_DONE_p613_review-rendering-scene-assets.md (`saveTexture`, the PostFX source), \_DONE_p614_review-physics.md (`PhysicsProbeReport`), \_DONE_p617_review-input-ui-hud.md (the plan this one follows; the UI kit the panels use), p622_engine-6-major.md (what waits for the major: D3), p800_debugger-ui-overhaul.md (the epic that replaces the Tweakpane panels: D1; its p806 rewrites the "Write your own tab" guide)
 
 # Review: Debug Public API

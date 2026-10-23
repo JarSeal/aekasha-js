@@ -38,45 +38,48 @@ const terrain = generateTerrain({
 });
 const surface = new THREE.Mesh(terrain.geometry);
 
-// sha256 over each placement's position, normal, quaternion and scale (as Float64s), 16 hex
+// sha256 over each placement's position, normal, quaternion and scale, 16 hex. Rounded to 1e-9
+// (`+ 0` drops a -0): the raw bits differed in the last place between machines on the same Node
+// (an arm64 Mac against the machine that recorded them, p621 Phase 1), as V8's sin / cos can by
+// build, and "where they are" doesn't need the last bit
 const hashPlacements = (placements: ScatterPlacement[]) => {
   const hash = createHash('sha256');
+  const round = (v: number) => Math.round(v * 1e9) + 0;
   for (const p of placements) {
     hash.update(
-      new Float64Array([
-        ...p.position.toArray(),
-        ...p.normal.toArray(),
-        ...p.quaternion.toArray(),
-        p.scale,
-      ])
+      new Float64Array(
+        [...p.position.toArray(), ...p.normal.toArray(), ...p.quaternion.toArray(), p.scale].map(
+          round
+        )
+      )
     );
   }
   return hash.digest('hex').slice(0, 16);
 };
 
 describe('scatterOnSurface', () => {
-  // largeWorld's four calls (p620 Phase 0's hashes): its trees, bushes, rocks and lanterns stay
+  // largeWorld's four calls (p620 Phase 0's placements; p621 Phase 1's rounded hashes): its trees, bushes, rocks and lanterns stay
   // where they are
   it.each([
     [
       'trees',
       { count: 1500, seed: 2, minSpacing: 2, scaleRange: [0.7, 1.3] },
       1500,
-      '0c342af0072c8b03',
+      'c33d602af1d18c78',
     ],
     [
       'bushes',
       { count: 2000, seed: 3, minSpacing: 1, scaleRange: [0.6, 1.2] },
       2000,
-      '8f083de1fbe93bd0',
+      'd8efcdd5618412ee',
     ],
     [
       'rocks',
       { count: 300, seed: 6, minSpacing: 4, scaleRange: [0.6, 1.6] },
       300,
-      '1add797c4c9e4930',
+      'cecc8dbb10264d66',
     ],
-    ['lanterns', { count: 10, seed: 4, minSpacing: 12 }, 10, 'ae1afc5258d7b5dd'],
+    ['lanterns', { count: 10, seed: 4, minSpacing: 12 }, 10, '02802b3175749609'],
   ] as const)("places largeWorld's %s as before", (_, opts, length, hash) => {
     const placements = scatterOnSurface({
       surface,

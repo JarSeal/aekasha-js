@@ -9,6 +9,8 @@ follows them; a file you touch is a good time to fix what it breaks.
 
 ## Layering
 
+The layers and the boot they come together in are on [Architecture](hub:documentation/architecture).
+
 - **Engine ← toolkit ← app.** The engine imports neither the toolkit nor the app, and the toolkit
   doesn't import the app. Configuration and generated data are handed to the engine (through
   [InitEngine](api:InitEngine)), never imported from an app path.
@@ -50,14 +52,14 @@ follows them; a file you touch is a good time to fix what it breaks.
 
 ## Naming
 
-| Kind | Verb | Example |
-| --- | --- | --- |
-| Entities and objects the caller owns | `create*` / `delete*` | [createPhysicsEntity](api:createPhysicsEntity) |
-| Definitions kept by id | `register*` / `unregister*` | [registerSpatialDomain](api:registerSpatialDomain) |
-| Plain reads and writes | `get*` / `set*` | [getPhysicsSubStepIndex](api:getPhysicsSubStepIndex) |
-| Promises | `load*Async` / `*Async` | [loadDebugModuleAsync](api:loadDebugModuleAsync) |
-| Listeners | `on*`, returning the remover | `const off = onSkyBoxChange(fn)` |
-| Predicates | `is*` / `has*` | `isDayNightPlaying()` |
+| Kind                                 | Verb                         | Example                                              |
+| ------------------------------------ | ---------------------------- | ---------------------------------------------------- |
+| Entities and objects the caller owns | `create*` / `delete*`        | [createPhysicsEntity](api:createPhysicsEntity)       |
+| Definitions kept by id               | `register*` / `unregister*`  | [registerSpatialDomain](api:registerSpatialDomain)   |
+| Plain reads and writes               | `get*` / `set*`              | [getPhysicsSubStepIndex](api:getPhysicsSubStepIndex) |
+| Promises                             | `load*Async` / `*Async`      | [loadDebugModuleAsync](api:loadDebugModuleAsync)     |
+| Listeners                            | `on*`, returning the remover | `const off = onSkyBoxChange(fn)`                     |
+| Predicates                           | `is*` / `has*`               | `isDayNightPlaying()`                                |
 
 - **Files are PascalCase** (`SkyTime.ts`), with one exception: a file named after an asset id
   keeps the id (`asteroid.tsl.ts` next to `asteroid.material.json`). Entries are `index.ts`, debug

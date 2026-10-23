@@ -1,7 +1,7 @@
 ## Powerful and flexible.
 
-The core is small and modular: bring in only what your app needs, and let the heavy work run off
-the main thread.
+Built for the GPU, small and modular: bring in only what your app needs, let the heavy work run
+off the main thread, and ship nothing it doesn't use.
 
 ::: cards features featured
 :::

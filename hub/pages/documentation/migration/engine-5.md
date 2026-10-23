@@ -1,9 +1,7 @@
 ## Engine 4 → 5
 
-::: note Not released yet
-Engine 5.0 and toolkit 2.0 are in development. This section lists their breaking changes so far,
-and grows until they're released.
-:::
+Engine 5.0.0 and toolkit 2.0.0, released together. The minors since (engine 5.x, toolkit 2.x)
+add and deprecate but don't break, so from engine 4 this is the only section to follow.
 
 In short: the engine stops importing your app, and installs only what you list. Your
 configuration, your gathered data and your features (the engine's and your app's own) are handed

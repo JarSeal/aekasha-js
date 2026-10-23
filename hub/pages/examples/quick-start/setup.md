@@ -59,7 +59,8 @@ no Rapier is loaded. Drop the ones your game doesn't use. If a scene's JSON uses
 
 `InitEngine` reads the environment first (the build's env vars, `?isDebug` and `?isProdTest`), so
 `IS_DEBUG_ENV` reads as a production build until it runs: check it in `start` or later, never at
-a module's top level.
+a module's top level. [Architecture](hub:documentation/architecture#the-kernel-and-the-features)
+has the whole boot order.
 
 ::: dev-only
 

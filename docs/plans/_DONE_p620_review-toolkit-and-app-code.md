@@ -1,7 +1,7 @@
 Status: implemented (Phases 0-8)
 Category: Refactoring, Documentation, Toolkit, App
-Epic: p600_whole-codebase-refactoring-and-documentation.md (Stage C)
-Blocks: p621_hub-docs-readme-and-claude-md-final.md
+Epic: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (Stage C)
+Blocks: \_DONE_p621_hub-docs-readme-and-claude-md-final.md
 Related: \_DONE_p609_toolkit-and-app-restructure.md (the layout; `characterVisual.ts` and `p341AlphaCutTest` left here), \_DONE_p619_review-schemas-pipeline-devtools-hub.md (the plan this one follows; R2's four toolkit types, S8's `persistent`), \_DONE_p605_coding-standards-and-documentation-tooling.md (the JSDoc style and the ratchet), \_DONE_p610_character-and-input-action-architecture.md (`createSeededRandom` moved to the engine), \_DONE_p618_review-debug-public-api.md (the app's `_dbg__` modules left here), p622_engine-6-major.md (toolkit 3.0.0's removals), p299 (the texture array and atlas scenes)
 
 # Review: Toolkit and App Code

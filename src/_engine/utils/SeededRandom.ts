@@ -1,7 +1,8 @@
 /**
  * A seeded pseudo-random number generator (mulberry32): the same seed gives the same sequence on
  * every run and machine, which `Math.random()` can't. Simulation code draws from a named stream
- * ({@link getRandomStream}) instead, so a scene draws the same numbers on every visit.
+ * ({@link _engine/utils/RandomStreams!getRandomStream}) instead, so a scene draws the same numbers
+ * on every visit.
  * @param seed any number, used as an unsigned 32-bit integer
  * @returns a function returning the next number of the sequence, in [0, 1)
  * @example

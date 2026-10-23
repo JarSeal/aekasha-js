@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   checkExamples,
+  collectReadmeExamples,
   collectRepoExamples,
   extractExamples,
+  extractMarkdownExamples,
   formatFinding,
   type ExampleBlock,
 } from './examples';
@@ -64,8 +66,35 @@ describe('@example', () => {
     ]);
   });
 
-  it('every documented API example type-checks against the entries, and a bad one fails at its line', () => {
-    const findings = checkExamples([...collectRepoExamples(), ...FIXTURES]);
+  it("extracts a Markdown file's ts / js blocks, each owned by the heading above it", () => {
+    const text = [
+      '# Title', //                                      1
+      '```bash',
+      'yarn dev',
+      '```',
+      '## 1. Boot', //                                   5
+      '```ts',
+      'boot();',
+      '```',
+      '```jsonc',
+      '{}', //                                           10
+      '```',
+      '### 2. Spin',
+      '```js',
+      'spin();',
+      '```', //                                          15
+    ].join('\n');
+    expect(extractMarkdownExamples('readme.md', text)).toEqual([
+      { file: 'readme.md', owner: '1. Boot', line: 7, code: 'boot();' },
+      { file: 'readme.md', owner: '2. Spin', line: 14, code: 'spin();' },
+    ]);
+    expect(extractMarkdownExamples('readme.md', 'no code')).toEqual([]);
+  });
+
+  it('every documented API and readme example type-checks against the entries, and a bad one fails at its line', () => {
+    const readme = collectReadmeExamples();
+    expect(readme.length).toBeGreaterThan(0);
+    const findings = checkExamples([...collectRepoExamples(), ...readme, ...FIXTURES]);
     expect(findings.filter((f) => f.file !== FIXTURE).map(formatFinding)).toEqual([]);
 
     const fixtureFindings = findings.filter((f) => f.file === FIXTURE);

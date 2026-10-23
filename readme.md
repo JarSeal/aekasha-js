@@ -32,7 +32,7 @@ Each feature has a page in the Ækasha Hub's Features section (`/hub/features/`:
 - **Smallest build possible**: `yarn sbp` reports each build's first download and what loads later, each feature's size and the import chain that put it there, and checks the budgets in `sbp.config.ts` (`yarn build` fails over one). A profile is a build to measure: the template app, and embeds like the banner, one scene made in code with no engine feature, the measured floor.
 - **Embedding**: `mountAekasha({ target, width, height, layout })` mounts the engine into an element of a page it doesn't own (a hero, a product view, a background behind the content), without touching the page's styles or input. The canvas follows its container, the scene pauses out of view and respects reduced motion, and the handle loads scenes, pauses and unmounts (which stops the workers, physics' with its world). An embed profile builds as an ES module a site imports.
 - **Rendering**: Three.js `WebGPURenderer` with automatic WebGL fallback, configurable tone mapping, color space and shadow maps.
-- **ECS**: entity ids pack an index and a generation. Plugins and component hooks can be registered at runtime, systems run in fixed stages, and transform storage is either a `Map` or a typed-array (SoA) store.
+- **ECS**: entity ids pack an index and a generation. Plugins and component hooks register from a feature's install and apply to every world, systems run in fixed stages, and transform storage is either a `Map` or a typed-array (SoA) store.
 - **Physics API**: an engine-agnostic facade with Rapier as the backend. It covers rigid bodies, colliders (including heightfields, and the bodies and colliders an imported glTF node's custom properties describe), impulse joints, ray casts and shape casts, contact and collision events, and fixed-timestep stepping with render interpolation.
 - **Threaded physics**: `WORKER_THREAD` or `MAIN_THREAD` mode. The worker syncs every body's transform through one shared buffer per frame, never one message per body. The buffer is a lock-free triple buffer, so every system in a frame reads the same complete physics step. Every message between the threads goes through one transport, as plain data and in order: the seam a network channel will plug into.
 - **Deterministic scene loads**: physics is held during a scene load, the world is recreated fresh, and stepping resumes only after every body exists. Simulation code draws its random numbers from named, seeded streams (`getRandomStream`) that every load restarts, so a scene draws the same numbers on every visit.
@@ -68,7 +68,7 @@ These are ready-made modules you can import as they are, or copy into your app a
 
 ### Debug suite (debug builds only)
 
-- A tabbed **debug drawer** (`h`) built on Tweakpane, with tabs for stats, main loop, renderer, physics, ECS, assets, PostFX (with a GPU profiler), skybox, spatial index, LOD, ray casting and characters. Its state is saved to localStorage. An app adds its own tabs, profiler figures and tabs, GPU memory sources and undoable actions through `aekasha/debug` (the Hub's Debug suite page has the guide, and an example scene does each).
+- A tabbed **debug drawer** (`h`) built on Tweakpane, with tabs for stats, main loop, renderer, cameras, lights, physics, ECS, assets, PostFX (with a per-pass CPU and GPU profiler), sky box, spatial index, LOD, ray casting, characters and the debug tools. Its state is saved to localStorage. An app adds its own tabs, profiler figures and tabs, GPU memory sources and undoable actions through `aekasha/debug` (the Hub's Debug suite page has the guide, and an example scene does each).
 - A **profiler window**, opened from the on-screen stats panels, the stats tab, the top on-screen tools or `F8`. Its tabs: an overview of frame, GPU, physics and memory figures; an objects breakdown (in view and total, with bars and short history); GPU memory (memory by category and owner, draw calls, a budget and leak-hunting snapshots); and settings. It measures only while it is open, and it can be enabled in production test mode.
 - A **debug fly camera** (`F1`), an axes gizmo (`F10`), an environment ball (`F9`) and a debug scene loader.
 - **Editor views**, switched from the top on-screen tools: an editor takes over the whole canvas with its own scene, orbit camera and drawers, while the game scene is suspended and resumes exactly where it was. The first is the **material editor**: every project material on a preview ball in a studio stage, picked from a filterable list. Its params and TSL inputs are edited live with undo/redo, and each material's edits, stage settings and camera pose, and the editor's layout, are kept over reloads.
@@ -80,7 +80,7 @@ These are ready-made modules you can import as they are, or copy into your app a
 - A **character state window** per character, showing its live data grouped and formatted, with freeze and copy. Its configuration values can be **edited live** (with undo, reset, copy-out as code and saving across reloads). It also toggles in-world **character gizmos** for the vectors and probes its controller decides from (velocity, facing, ground normal, floor ray and sensor, wall cast, trail), which can be pinned to stay after the window closes.
 - A **determinism probe** (`?physicsProbe=N`) that hashes and diffs the physics state after N fixed steps.
 - **Production test mode** (`?isProdTest=true`), which runs a production build with a subset of the debug tools.
-- **Stress tests** for the ECS and physics.
+- **Stress tests** for the ECS (in its tab) and physics (in the character gym scene).
 
 ---
 
@@ -88,7 +88,7 @@ These are ready-made modules you can import as they are, or copy into your app a
 
 | Area                   | How it works                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Frame pipeline         | Fixed stage order every frame: `MAIN → APP_PRE_PHYSICS → [APP_PHYSICS_STEP × N] → APP_POST_PHYSICS → APP_LOGIC → APP_RENDER_SYNC → LATE_MAIN`. `APP_PHYSICS_STEP` runs once per fixed sub-step, in lockstep with the simulation.                                                                                                                                                                                                                                                                                                      |
+| Frame pipeline         | Fixed stage order every frame: `MAIN → APP_PRE_PHYSICS → [APP_PHYSICS_STEP → physics step] × N → APP_POST_PHYSICS → APP_LOGIC → APP_RENDER_SYNC → render → LATE_MAIN`. `APP_PHYSICS_STEP` runs right before each fixed sub-step, in lockstep with the simulation.                                                                                                                                                                                                                                                                     |
 | Physics ↔ render sync | A physics-owned transform buffer, which is a real `SharedArrayBuffer` when the page is cross-origin isolated (the dev server sends COOP/COEP headers) and falls back to one batched message per frame otherwise.                                                                                                                                                                                                                                                                                                                      |
 | Worker commands        | The commands issued in `APP_PHYSICS_STEP` are captured per sub-step, carried in that frame's single STEP message, and replayed in order in the worker.                                                                                                                                                                                                                                                                                                                                                                                |
 | Input at the step      | Action maps are sampled right before each fixed physics sub-step, with the presses and releases since the last sample counted, so brains and `APP_PHYSICS_STEP` systems read the same input whatever the frame rate, and a recording replays step for step. The layer installs its loop hook on the first map, so an app without one bundles none of it.                                                                                                                                                                              |
@@ -166,7 +166,8 @@ Open `http://localhost:8080/?isDebug=true` to get the full debug suite, then pre
 ```text
 .
 ├── src/
-│   ├── _engine/            # The engine: stable library code
+│   ├── _engine/            # The engine: stable library code, with a CLAUDE.md next to
+│   │   │                   # each subsystem (kernel/ecs/, features/physics/, …)
 │   │   ├── index.ts        # The aekasha entry: the kernel's public API
 │   │   ├── kernel/         # What every app runs, a folder per area: ECS, loop, config,
 │   │   │                   # init, scenes, assets (and their worker), rendering, cameras,
@@ -178,7 +179,7 @@ Open `http://localhost:8080/?isDebug=true` to get the full debug suite, then pre
 │   │   ├── debug/          # The debugger framework (aekasha/debug); the kernel's and the
 │   │   │                   # features' own _dbg__* modules sit in their debug/ folders
 │   │   ├── schemas/        # Zod schemas for every asset JSON type
-│   │   ├── utils/          # Pure helpers: logging, storage, asserts
+│   │   ├── utils/          # Pure helpers: logging, storage, asserts, hashes, seeded random
 │   │   └── types/          # Global type declarations
 │   ├── toolkit/            # Reusable modules by kind, each code kind an entry
 │   │   ├── ecs/            # (aekasha/toolkit/ecs) effects/ and gameplay/
@@ -203,11 +204,13 @@ Open `http://localhost:8080/?isDebug=true` to get the full debug suite, then pre
 ├── hub/                    # The Ækasha Hub's sources: pages (HTML + Markdown), shell, styles
 ├── devTools/               # Data gatherer, asset pipeline, dev file server, Hub generator,
 │                           # yarn sbp, the verify commands, the layout check, version checks,
-│                           # release tagging
+│                           # release tagging, the toolkit's model builds; a tool's folder
+│                           # holds its CLAUDE.md (gather/, verify/, …)
 ├── docs/
 │   ├── issues/             # Known issues and their workarounds (also on the Hub)
 │   ├── plans/              # Feature plans and specs (priority-ordered)
 │   └── techniques/         # How-to guides (eg. asset optimization, writing Hub pages)
+├── .claude/                # CLAUDE.md (the contributor and agent guide), hooks, agents
 ├── .schemas/               # Generated JSON Schemas for editor autocomplete
 ├── assets.config.json      # Asset optimization defaults, profiles and rules
 ├── assets.lock.json        # Asset pipeline cache index (generated, committed)
@@ -436,9 +439,9 @@ export const mount = (opts: BannerMountOptions) =>
 
 The page keeps its own styles and input; the scene pauses out of view, and `scene.pause()`, `resume()`, `loadScene()` and `unmount()` drive it.
 
-The Ækasha Hub's Examples section (`/hub/examples/`) walks through nine examples: eight scenes, each in [`src/app/examples/`](src/app/examples/) and named "Example: …" in the scene dropdowns (the quick start, physics, a keyboard-driven character with a look-ahead follow camera, the toolkit's model and materials, the sky box and day-night, a component and system of your own, LOD and instancing, and a debug tab of your own; each page opens its scene with `?startScene`), and embedding the banner in a site, which runs live on its page.
+The Ækasha Hub's Examples section (`/hub/examples/`) walks through ten examples: nine scenes, each in [`src/app/examples/`](src/app/examples/) and named "Example: …" in the scene dropdowns (the quick start, physics, a keyboard-driven character with a look-ahead follow camera, the toolkit's model and materials, the sky box and day-night, a component and system of your own, LOD and instancing, a debug tab of your own, and an app HUD from the UI kit; each page opens its scene with `?startScene`), and embedding the banner in a site, which runs live on its page.
 
-The other example scenes, a folder each in [`src/app/scenes/`](src/app/scenes/), cover more: a physics and joints test, a physics simulation tiers demo (686 crates and a plough), a large procedural world with instancing and culling, a third-person character gym, a top-down character scene (world-fixed controls, hills, and sun shadows fitted to the view), and an ECS stress test.
+The other scenes, a folder each in [`src/app/scenes/`](src/app/scenes/), cover more: the start scene (`sceneTestECS`: JSON meshes, a TSL material, an imported GLB and the toolkit's hover effect), a physics and joints test, a physics simulation tiers demo (686 crates and a plough), a large procedural world with instancing and culling, a third-person character gym, a top-down character scene (world-fixed controls, hills, and sun shadows fitted to the view), the LOD showcase, a sky showcase with day-night, a zero-g space scene with asteroids under mutual gravity, the KTX2 codecs next to their uncompressed sources, and runtime texture arrays and atlases.
 
 ---
 
@@ -448,7 +451,6 @@ Planned work is specified in [`docs/plans/`](docs/plans/), where a lower number 
 
 - Saving the material editor's edits to the material JSON, and editing textures and more material properties there
 - Physics objects in the scene JSON schema, physics world bounds, multibody joints and physics snapshot restore
-- Component query caching
 - A client device capability sniffer and GPU-driven culling
 
 ---
@@ -461,10 +463,11 @@ The engine, toolkit and example app each have their own semantic version and cod
 
 - **Ækasha Hub**: run `yarn dev` and open `http://localhost:8080/hub/` for the getting-started guide, a page per feature, examples, known issues and the changelog, all searchable (⌘K / Ctrl+K), or build it as a static site with `yarn hub:build`. To add or edit its pages, see [writing Hub pages](docs/techniques/hub-authoring.md).
 - **API reference**: the Hub's Documentation section (`/hub/documentation/`): a page per public entry (`aekasha`, `aekasha/physics`, …, at `/hub/documentation/aekasha/physics/`) with every name it exports, its signature, JSDoc and source link, searchable and linked from the other Hub pages. `yarn docs` still writes TypeDoc's own HTML to `docs-api/`.
+- **Architecture**: the Hub's `/hub/documentation/architecture/`: how the engine fits together (the layers, the kernel and the features, a frame, a scene load, the threads, simulation and presentation, debug code, the build) and where a feature of your own goes.
 - **Migration guide**: the Hub's `/hub/documentation/migration/`: what changes for an app in each major version, with the `migrateToEntries.ts` codemod for the entry imports.
 - **Guides**: [`docs/techniques/`](docs/techniques/), eg. [asset optimization](docs/techniques/asset-optimization.md).
 - **Design docs**: [`docs/plans/`](docs/plans/). Files prefixed `_DONE_` describe features that are already implemented.
-- **Contributor and agent guide**: [`.claude/CLAUDE.md`](.claude/CLAUDE.md).
+- **Contributor and agent guide**: [`.claude/CLAUDE.md`](.claude/CLAUDE.md), with a map of the `CLAUDE.md` next to each subsystem.
 
 ## Built with
 
