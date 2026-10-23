@@ -3,4 +3,5 @@ own ECS: examples that run in the engine, a page for each feature, and the API r
 from the engine's own code.
 
 New here? The [quick start](hub:examples/quick-start) gets the dev environment running and walks
-through the smallest complete scene.
+through the smallest complete scene, and [Architecture](hub:documentation/architecture) shows how
+the engine fits together.
