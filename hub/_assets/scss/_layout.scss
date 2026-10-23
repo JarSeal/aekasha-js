@@ -82,6 +82,18 @@
   }
 }
 
+// A dev page's (p802 D1): the "Local only" badge at the line's end
+.hubBreadcrumbs_dev {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+
+  .hubDevOnlyBadge {
+    color: var(--hub-text-muted);
+  }
+}
+
 .hubToc {
   position: sticky;
   top: calc(var(--hub-header-height) + 2.5rem);

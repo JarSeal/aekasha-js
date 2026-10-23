@@ -25,7 +25,7 @@ import { HubDiagnostics } from './diagnostics';
 import { loadHubIcons } from './icons';
 import { createHubMarkdown, type HubDirectives, type HubRenderContext } from './markdown';
 import { getHubOutDirError } from './outDir';
-import { discoverPages } from './pages';
+import { discoverPages, removeDevPages } from './pages';
 import { loadAppScenes, sceneDirective } from './scenes';
 import { FAVICON_FILES, HUB_NOT_FOUND_FILE, HUB_SHELL_FILE, PACKAGE_JSON_FILE } from './paths';
 import { checkLinks, createMarkupHelpers, renderHubPages, type RenderedPage } from './renderPages';
@@ -248,9 +248,11 @@ export const buildHub = async ({
   });
 
   const tree = discoverPages(diag, sections);
+  // The coverage counts the dev pages, in both modes (p802 D4); a public build then drops them
   const coverageFiles = tree
     ? checkClaudeMdCoverage(tree.pages, hubConfig.coverageIgnore, diag)
     : [];
+  if (tree && mode === 'public') removeDevPages(tree);
   const icons = loadHubIcons(diag);
   const hashStaticAsset = createStaticAssetHasher();
   const getSbpReport = memoize(readSbpReport);

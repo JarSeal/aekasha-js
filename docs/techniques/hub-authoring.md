@@ -77,6 +77,7 @@ The `<head>` is for metadata only. Nothing else in it reaches the built page, be
 | `aek:image`       | The page's picture on its card ([Cards](#cards)): `scene:<sceneId>` for a scene's Hub image, or an image path from the repo root. |
 | `aek:group`       | The group a `::: cards <path> group=<name>` shows the page in: the Features page's `Core`, `World`, `Performance` and `Tools`.    |
 | `aek:covers`      | A feature page's CLAUDE.md sections, comma-separated, by heading without its parenthetical (`Debug system`).                      |
+| `aek:dev`         | `true`: the page and every page under it are in the dev server's Hub only ([Dev pages](#dev-pages)).                              |
 
 The nav is built from these tags alone, so there's no separate menu list to keep in sync. A misspelt `aek:` name gives a warning.
 
@@ -190,6 +191,29 @@ The build checks the coverage both ways (when it runs in the repo, where CLAUDE.
 - The text after the name is the box's title (inline Markdown, default "Working on the repo").
 - `yarn hub:build` doesn't check the links inside it. The dev server does, and shows their errors on the page.
 - Another directive gets the same behaviour with `devOnly: true` in its `HubDirective`.
+
+## Dev pages
+
+```html
+<head>
+  <title>Project</title>
+  <meta name="aek:dev" content="true" />
+  <meta name="aek:icon" content="compass" />
+</head>
+```
+
+- A page with `aek:dev` and every page under it are dev pages: the dev server's Hub shows them,
+  with "Local only" at the end of their breadcrumbs, and `yarn hub:build` leaves them out (no
+  page, nav item, card or search result). Use them for whole pages only people working on the
+  repo need: the Project section (`hub/pages/project/`) is one. For a part of a public page, use
+  [`::: dev-only`](#local-only-content).
+- A page under a dev page can't be public: it would lose its parent in the built Hub.
+- A top-level dev page isn't in the nav: it's a filled button between the nav and the search, with
+  its `aek:icon`.
+- A public page links a dev page only inside `::: dev-only`; anywhere else the link is an error, in
+  the dev server too, so it shows before `yarn hub:build`. So is a `::: cards` of a dev page's
+  children on a public page. A dev page links anything.
+- The CLAUDE.md coverage check counts a dev page's `aek:covers` in both builds.
 
 ## Callouts
 
@@ -529,6 +553,10 @@ The same checks run in dev and in `yarn hub:build`. In dev, an error shows the e
 | `Dead link repo:…: no such file from the repo root`    | The file moved. Fix the path after `repo:`.           |
 | `Dead link repo:…: no heading #x in …`                 | The heading was renamed. Use one listed.              |
 | `aek:covers: no CLAUDE.md has a section …`             | The section was renamed. Use one listed.              |
+| `hub:… is a dev-only page (aek:dev): …`                | Wrap the link in `::: dev-only`, or drop it.          |
+| `::: cards: hub/pages/…/ is a dev-only page (aek:dev)` | Show it from a dev page, or list public pages.        |
+| `The generated page /… is under a dev-only page`       | A generated section's pages are public: move it.      |
+| Warning: `aek:dev is "true" or left out, not "…"`      | Write `content="true"`, or remove the meta.           |
 | `aek:image: no such file from the repo root: …`        | Fix the path, or use `scene:<sceneId>`.               |
 | `aek:image: not a PNG, JPEG or WebP: …`                | Convert the image to one of those.                    |
 | Warning: `Slot "…" has no ….md: it stays empty`        | Add the `.md`, or remove the slot.                    |

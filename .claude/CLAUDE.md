@@ -155,6 +155,7 @@ Scene loads are deterministic (p101): physics is held for the whole load, the wo
 
 - **A `#region` marker in engine, toolkit or app code is a Hub include: renaming, removing or moving it fails `yarn hub:build` with the page and line**, so say which page shows it in the marker's note (`// #region dynamic-box (shown in the Hub: …)`) and fix the include in the same change.
 - **A new Architecture section here, or a new `##` section in a nested `CLAUDE.md`, needs a feature page's `aek:covers` (or a `coverageIgnore` entry when it isn't a feature), and renaming a section means updating the `aek:covers` that names it.**
+- **Dev pages** (`aek:dev`, p802): whole pages only the dev server's Hub shows, the Project section (`hub/pages/project/`, its button in the header) among them; a public page links one only inside `::: dev-only`.
 - The rest: `hub/CLAUDE.md` (authoring) and `devTools/hub/CLAUDE.md` (the generator).
 
 ### Build config notes (`vite.config.ts`)

@@ -189,6 +189,44 @@ html:not(.hubJs) .hubNavItem_hasMenu:focus-within > .hubNavDropdown {
   display: block;
 }
 
+// The dev server's top-level dev pages (p802 D3: Project): the header's one filled control, in the
+// accent (p800 D6: the one primary action in the header)
+.hubDevNavLink {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  height: 2.25rem;
+  padding: 0 0.9rem;
+  background: var(--hub-accent);
+  border-radius: var(--hub-radius);
+  color: var(--hub-bg);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: var(--hub-accent-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--hub-accent);
+    outline-offset: 2px;
+  }
+
+  .hubIcon {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+// On a page of its section: an inset ring in the page's background marks it
+.hubDevNavLink_active {
+  box-shadow: inset 0 0 0 2px var(--hub-bg);
+}
+
 .hubTools {
   display: flex;
   align-items: center;
@@ -290,8 +328,61 @@ html:not(.hubJs) {
   }
 }
 
+// The desktop header's breakpoints are where its contents fit (measured at every 5 px from 960 to
+// 1800, p802 Phase 1: at least 16 px left for the nav, the dev server's header included). Up to
+// 1099 px the version pill goes (the nav has Version); up to 1249 the nav has no icons; up to 1499
+// the search box is its icon.
+@media (max-width: 1099px) and (min-width: $nav-collapse) {
+  .hubVersionPill {
+    display: none;
+  }
+
+  .hubTools {
+    gap: 0.5rem;
+  }
+}
+
+// The dev server's header (with the Project button) fits where the public one does: the version
+// pill goes, the button is its icon until the header has its full width (96rem plus gutters), the
+// search box is narrower beside its label, and the narrowest one drops the GitHub link (the repo
+// is open locally)
+@media (min-width: $nav-collapse) {
+  .hubNavPanel:has(.hubDevNavLink) .hubVersionPill {
+    display: none;
+  }
+}
+
+@media (min-width: 1600px) {
+  .hubNavPanel:has(.hubDevNavLink) .hubSearchButton {
+    width: 13rem;
+  }
+}
+
+@media (max-width: 1099px) and (min-width: $nav-collapse) {
+  .hubNavPanel:has(.hubDevNavLink) .hubIconLink {
+    display: none;
+  }
+}
+
+@media (max-width: 1599px) and (min-width: $nav-collapse) {
+  .hubDevNavLink {
+    width: 2.25rem;
+    padding: 0;
+
+    // Its label stays for screen readers (the link's name) and as the tooltip (`title`)
+    span {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
+}
+
 // Narrower desktops: the search box becomes its icon, then the nav loses its icons
-@media (max-width: 1359px) and (min-width: $nav-collapse) {
+@media (max-width: 1499px) and (min-width: $nav-collapse) {
   .hubSearchButton {
     justify-content: center;
     width: 2.25rem;
@@ -312,7 +403,7 @@ html:not(.hubJs) {
   }
 }
 
-@media (max-width: 1099px) and (min-width: $nav-collapse) {
+@media (max-width: 1249px) and (min-width: $nav-collapse) {
   .hubNavList > .hubNavItem > .hubNavLink {
     padding: 0 0.5rem;
 
@@ -421,6 +512,10 @@ html:not(.hubJs) {
     background: none;
     border: 0;
     box-shadow: none;
+  }
+
+  .hubDevNavLink {
+    height: 2.75rem;
   }
 
   .hubTools {

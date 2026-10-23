@@ -10,7 +10,8 @@ import type { HubPage, HubSlot } from './types';
  * Finds the Hub's pages: every folder under `hub/pages/` with an `index.html` is one, at the URL
  * path of its folder. Reads each one's head metadata and body slots, and builds the
  * page tree (children by `aek:order`, then title). A generated section's pages join the tree
- * here, and the slots its generator fills are marked.
+ * here, and the slots its generator fills are marked. A page with `aek:dev` and every page under
+ * it are dev only (p802 D1): `removeDevPages` takes them out of a `public` build's tree.
  */
 
 const PAGE_FILE = 'index.html';
@@ -26,6 +27,7 @@ const META_NAMES = [
   'aek:image',
   'aek:group',
   'aek:covers',
+  'aek:dev',
 ];
 
 /** An empty element with an `id`: `<div id="setup"></div>` (whitespace inside is fine) */
@@ -40,6 +42,11 @@ export type HubPageTree = {
   byPath: Map<string, HubPage>;
   /** Every source file the pages read (their `index.html`s and `.md`s) */
   files: string[];
+  /**
+   * The dev pages `removeDevPages` took out (a `public` build's), by path: a link to one is told
+   * apart from a dead one
+   */
+  removedDevPaths: Set<string>;
 };
 
 const toUrlPath = (dir: string) => {
@@ -96,6 +103,11 @@ const parsePage = (dir: string, diag: HubDiagnostics): HubPage | null => {
     meta[name] = (content ?? '').trim();
   }
 
+  const dev = meta['aek:dev'];
+  if (dev !== undefined && dev !== 'true') {
+    diag.warn(file, undefined, `aek:dev is "true" or left out, not "${dev}": the page is public`);
+  }
+
   const order = meta['aek:order'] ? Number(meta['aek:order']) : 0;
   if (!Number.isFinite(order)) {
     diag.error(file, undefined, `aek:order must be a number, not "${meta['aek:order']}"`);
@@ -126,6 +138,7 @@ const parsePage = (dir: string, diag: HubDiagnostics): HubPage | null => {
       .split(',')
       .map((name) => name.trim())
       .filter(Boolean),
+    isDev: dev === 'true',
     isGenerated: false,
     isInMenu: true,
     isSearchable: true,
@@ -235,6 +248,7 @@ const attachSection = (
       imageFile: null,
       group: '',
       covers: [],
+      isDev: false,
       isGenerated: true,
       isInMenu: generated.isInMenu,
       isSearchable: generated.isSearchable ?? true,
@@ -300,13 +314,39 @@ export const discoverPages = (
 
   const pages: HubPage[] = [];
   const walk = (page: HubPage) => {
+    // A dev page's children are dev too: in `public`, a public one would have lost its parent
+    if (page.parent?.isDev) page.isDev = true;
+    if (page.isGenerated && page.isDev) {
+      diag.error(
+        page.file,
+        undefined,
+        `The generated page /${page.path} is under a dev-only page (aek:dev): a generated section's pages are public`
+      );
+    }
     pages.push(page);
     checkSlots(page, diag);
     sortPages(page.children).forEach(walk);
   };
+  if (root.isDev) diag.error(root.file, undefined, 'The homepage can’t be dev only (aek:dev)');
+  root.isDev = false;
   walk(root);
 
-  return { root, pages, byPath, files };
+  return { root, pages, byPath, files, removedDevPaths: new Set() };
+};
+
+/**
+ * Takes the dev pages (`aek:dev` and every page under one) out of the tree, its page list and
+ * their parents' children, for a `public` build (p802 D1): run after the CLAUDE.md coverage check,
+ * which counts them (D4). Records their paths in `removedDevPaths`.
+ */
+export const removeDevPages = (tree: HubPageTree) => {
+  for (const page of tree.pages) {
+    if (!page.isDev) continue;
+    tree.byPath.delete(page.path);
+    tree.removedDevPaths.add(page.path);
+  }
+  tree.pages = tree.pages.filter((page) => !page.isDev);
+  for (const page of tree.pages) page.children = page.children.filter((child) => !child.isDev);
 };
 
 /** The page and its ancestors, from the homepage down */
