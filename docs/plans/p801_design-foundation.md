@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented
+Status: in progress | Phases 0-6 implemented
 Category: UI, Refactoring
 Epic: p800_debugger-ui-overhaul.md
 Blocked by: p802_hub-project-section.md (only its Phase 1, the dev-only pages, merged on its own, for Phase 0's font specimen page: D11)
@@ -810,12 +810,47 @@ attribute, the kit's backdrop, the transitions here, the search field's focus ma
   warning), `yarn verify:baselines` (all unchanged, no debug code). `yarn verify:scenes` not run:
   nothing under `src/` changed.
 
-### Phase 6: the Hub's UI kit page, `CLAUDE.md`, readme
+### Phase 6: the Hub's UI kit page, `CLAUDE.md`, readme — done
 
 D10. `src/_engine/ui/CLAUDE.md`, the root `CLAUDE.md` (Three-folder split: `ui/fonts/`; the
 `aekasha/ui/fonts` entry under Build config notes), `devTools/sbp/CLAUDE.md` (the `uiKit` profile),
 `devTools/verify/CLAUDE.md` (the scenario), `readme.md` if it lists the UI kit's features.
 `yarn hub:build`.
+
+As built (2026-10-24; three sections: `ui/CLAUDE.md`, the Hub, the root `CLAUDE.md` and readme;
+confirmed at the phase's start: no `::: embed uiKit`, the stale comments the plan didn't list
+fixed here):
+
+- `devTools/sbp/CLAUDE.md` and `devTools/verify/CLAUDE.md` needed nothing: Phases 3 and 4 updated
+  them (Phase 2's "For Phase 6" note on `sbp/CLAUDE.md` line 20 was stale by then).
+- Section 1, `src/_engine/ui/CLAUDE.md`: the Styles bullet (`index.scss` brings the tokens,
+  `page.scss` has no root size or font), the Tests bullet (`DraggableWindowGeometry`, `Motion`,
+  `Tokens`), and the "In an embed" bullet replaced by a `## Tokens and units` section (the kit
+  root, the units and the `@property` fallback, `--aek-rem` internal with "don't write a new
+  one", themes, density, motion with `getMotionFactor`, focus, layers, what `Tokens.test.ts`
+  checks, the fonts and their entry, the bounds with the `uiKit` check and Phase 3's four issues
+  for p803). The UI kit page's `aek:covers` is `UI kit, Tokens and units`.
+- Section 2, the Hub: the UI kit page's "Styles" became **Styling** (the kit root and a table of
+  the tokens by group with their default sizes, themes and density, the UI scale and font size,
+  the fonts' opt-in and a font of one's own, reduced motion, focus, layers) with a note that the
+  kit's windows, dialogs, drop-downs and toasts keep their own colours until p803 (the scale, the
+  font size, the fonts, motion and the ring apply to them already); the embed warning became an
+  "In an embed" tip; `aekasha/ui/fonts` in Key APIs; tags. Beyond the plan: the Documentation
+  page's entries table gets an `aekasha/ui/fonts` row, and the coding standards page's entry rule
+  names the stylesheet exception.
+- **No `::: embed uiKit`** on the UI kit page: the `uiKitEmbed` scene is the check's fixture (a
+  dialog with its list forced open), has no `.hub.png` poster, and its dialog takes keyboard focus
+  when it opens (`preventScroll`, but a reader's focus would jump into it as the panel loads). A
+  showcase embed fits p803's restyle.
+- Section 3: the root `CLAUDE.md` (the map line, `ui/` with `tokens.css` and `ui/fonts/`, the
+  `uiKit` profile, the `sideEffects` list and the stylesheet entry next to its paragraph, the
+  Public API rule's exception) and `readme.md` (the UI kit bullet: the tokens for the app's own UI,
+  the browser font size and UI scale, reduced motion, the embed, the fonts; the tree's `ui/` and
+  `profiles/` lines). Stale comments the plan didn't list: `devTools/hub/CLAUDE.md`'s dev
+  `::: embed` note and `hub/_assets/ts/_embed.ts` (no root font size or `html` font in
+  `page.scss`), `exampleUiKit.scss`' header (it named the 62.5 % root).
+- Verified: `yarn hub:build` (92 pages, the API 100 % documented, no warning; the new links
+  resolve), lint and Prettier on the changed files.
 
 ### Phase 7: versions and done
 

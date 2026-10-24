@@ -24,10 +24,9 @@ const START_MARGIN = '200px';
  * - Vite's `define`s (`__PROJECT_METADATA__`, `__AEK_DEBUG__`) are globals its `/@vite/env` module
  *   sets, which the app's page loads through Vite's client: imported first here.
  * - The dev server doesn't tree-shake: the entry's source evaluates the whole `aekasha` entry, so the
- *   full-page boot's `page.scss` (normalize, the `html` font and the body's `overflow: hidden`,
- *   which would stop this page scrolling) would restyle this page. Its `<style>` is removed (a
- *   build never has it). Since p801 it sets no root font size, so the kit's sizes don't depend on
- *   it either way.
+ *   full-page boot's `page.scss` (normalize and the body's `overflow: hidden`, which would stop
+ *   this page scrolling) would restyle this page. Its `<style>` is removed (a build never has it).
+ *   Since p801 it sets no root font size and no font, so the kit doesn't depend on it either way.
  */
 const DEV_ENV_URL = '/@vite/env';
 const DEV_PAGE_STYLES_SELECTOR = 'style[data-vite-dev-id$="/ui/styles/page.scss"]';

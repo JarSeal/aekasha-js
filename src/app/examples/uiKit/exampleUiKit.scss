@@ -1,5 +1,5 @@
-// The UI kit example's HUD and window contents (exampleUiKit.ts). Plain px: the kit's own sizes
-// are rems on the full-page boot's 62.5 % root.
+// The UI kit example's HUD and window contents (exampleUiKit.ts). Plain px, written before the
+// kit's design tokens (ui/styles/tokens.css, p801): its sizes don't follow the UI scale.
 
 .exampleUiKitHud {
   position: fixed;
