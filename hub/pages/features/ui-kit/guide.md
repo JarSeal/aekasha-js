@@ -196,24 +196,133 @@ Register the ones your app shows with `registerIcon` (or all of them with
 shows `??` and logs a warning.
 :::
 
-## Styles
+## Styling
 
 The kit's components bring their own styles with their modules (a window's, a drop-down's, a
-toaster's), and the engine adds two global rules: the editor views' hiding of the HUD and the
-icons' size. Nothing styles your page's `html` or `body` except the full-page template's own
-page styles. Give your components classes of their own and style them as usual: the drop-down's
-default styles have zero specificity, so any class overrides them.
+toaster's), and the engine adds the design tokens, a focus ring and two rules: the editor views'
+hiding of the HUD and the icons' size. Nothing styles your page's `html` or `body` except the
+full-page template's own page styles. Give your components classes of their own and style them
+as usual: the drop-down's default styles have zero specificity, so any class overrides them.
 
 In debug mode, the editor views (the material editor) hide the HUD root's children, except one
 with [`KEEP_IN_VIEWS_CLASS`](api:KEEP_IN_VIEWS_CLASS).
 
-::: warning The kit in an embed
-The kit's sizes are `rem`s on the full-page template's root font size (62.5 %, so 1 rem is
-10 px). An engine [mounted into a host page](hub:features/smallest-build#embedding) doesn't
-load the page styles, so there the kit renders at the host's root size (1.6 × larger at the
-browser's default), and windows measure the browser window, not the mount's container. No embed
-profile shows kit UI yet; a later version picks units that work in both
-([the issue](repo:docs/issues/ui-kit-in-an-embed.md)).
+### The kit root and its tokens
+
+The design tokens are CSS custom properties (`--aek-*`) on a kit root, an element with the class
+`aekUi`. The HUD root is one, so everything under it can read them. For UI of your own outside
+the HUD (a title screen in the page's own markup), put the class on its container. The tokens are
+never on `:root`, so an engine embedded in a page leaves the page's own styles alone.
+
+```ts
+const scorePanel = getHUDRootCMP().add({ class: 'scorePanel' });
+```
+
+```css
+.scorePanel {
+  position: fixed;
+  top: var(--aek-space-5);
+  right: var(--aek-space-5);
+  padding: var(--aek-space-3) var(--aek-space-4);
+  border: 1px solid var(--aek-border);
+  border-radius: var(--aek-radius-lg);
+  background: var(--aek-surface);
+  color: var(--aek-text);
+  font-size: var(--aek-font-size-md);
+  font-variant-numeric: var(--aek-numeric-tabular);
+  box-shadow: var(--aek-shadow-sm);
+  transition: border-color var(--aek-motion-base) var(--aek-ease-standard);
+}
+```
+
+| Group   | Tokens                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Colours | `--aek-bg`, `--aek-surface`, `-surface-raised`, `-surface-hover`; `--aek-border`, `-border-strong` (emphasis), `-border-control` (a control's edge); `--aek-text`, `-text-muted`, `-text-disabled`; `--aek-accent`, `-accent-hover`, `-accent-soft`, `--aek-on-accent` (text on the accent); `--aek-danger`, `-warning`, `-success`, `-info`, each with a `-soft` tint; `--aek-backdrop` |
+| Type    | `--aek-font-sans`, `--aek-font-mono`; `--aek-font-size-xs`, `-sm`, `-md`, `-lg`, `-xl`, `-2xl` (11, 12, 14, 16, 20, 24 px); `--aek-font-weight-regular`, `-medium`, `-semibold`, `-bold`; `--aek-line-height-tight`, `-base`, `-relaxed`; `--aek-numeric-tabular` (figures that don't jitter as they change)                                                                             |
+| Space   | `--aek-space-1` to `--aek-space-7` (2, 4, 8, 12, 16, 24, 32 px)                                                                                                                                                                                                                                                                                                                          |
+| Radii   | `--aek-radius-sm`, `-md`, `-lg`, `-full` (4, 6, 8 px, a pill)                                                                                                                                                                                                                                                                                                                            |
+| Shadows | `--aek-shadow-sm`, `--aek-shadow-lg`                                                                                                                                                                                                                                                                                                                                                     |
+| Motion  | `--aek-motion-fast`, `-base`, `-slow` (120, 200, 320 ms); `--aek-ease-standard`, `--aek-ease-emphasized`                                                                                                                                                                                                                                                                                 |
+| Focus   | `--aek-focus-ring-width`, `-offset`, `-color`                                                                                                                                                                                                                                                                                                                                            |
+| Layers  | `--aek-z-window`, `-debug-window`, `-dialog`, `-toast`, `-tooltip` (z-index values: 100, 20000, 30000, 31000, 32000)                                                                                                                                                                                                                                                                     |
+
+The sizes are at the defaults: a 16 px browser font size and a UI scale of 1 (see below). In both
+themes the text, the accent and the status colours have a contrast of at least 4.5:1 on every
+surface, and `--aek-border-control` and the focus ring 3:1 (WCAG AA).
+
+### Themes and density
+
+The colours have a dark and a light theme. A kit root is dark, or light when the player's system
+prefers light; `data-aek-theme="dark"` or `"light"` on any element forces its subtree's theme:
+
+```ts
+getHUDRootCMP().updateAttr({ 'data-aek-theme': 'light' }); // The whole HUD
+settingsPanel.updateAttr({ 'data-aek-theme': 'dark' }); // One panel in it
+```
+
+`data-aek-density="compact"` on any element makes the type and space scales smaller in its
+subtree (12 px text and tighter spacing at the defaults), for dense panels.
+
+::: note The kit's own colours come later
+The kit's windows, dialogs, drop-downs and toasts keep their own colours for now: the themes and
+the colour tokens are for your own UI, and a later version moves the kit onto them. The UI scale,
+the font size, the fonts, reduced motion and the focus ring below apply to the kit already.
+:::
+
+### UI scale and font size
+
+Every kit size follows two settings on the kit root: `--aek-ui-font-size`, the UI's text size
+(default `0.875em`, 14 px at the browser's default 16 px), and `--aek-ui-scale`, a factor on all of
+it, for a game's "UI scale" setting. The kit starts from the browser's default font size, which
+the player sets, never from the page's root size, so it looks the same on any page.
+
+```ts
+// 1.25 makes the kit's text and spacing, and every token size, 25 % larger
+getHUDRootCMP().updateStyle({ '--aek-ui-scale': uiScale });
+```
+
+Set them on the kit root only: the sizes are computed there, and the elements under it inherit
+the results. A window's `size` and `position` are what you give it (px by default) and don't
+scale; its header and contents do.
+
+### Fonts
+
+The kit's text is in the system's UI font unless you opt into the kit's own, IBM Plex Sans and
+IBM Plex Mono:
+
+```ts
+import 'aekasha/ui/fonts';
+```
+
+- The full-page template and the debug tools import it; an embed or an app of your own chooses.
+- The entry exports nothing: it's a stylesheet. The font files load later: a browser fetches a
+  face only when text uses it, and the sans is one variable file for every weight.
+- To use a font of your own, set the family tokens on the kit root in your stylesheet. A plain rule
+  of yours beats both the default and the opt-in:
+
+```css
+.aekUi {
+  --aek-font-sans: 'Your Font', system-ui, sans-serif;
+}
+```
+
+### Motion, focus and layers
+
+- **Reduced motion:** the kit's transitions and the toaster's animations take their durations from
+  the motion tokens, which are 0 when the player's system asks for reduced motion. Set
+  `--aek-motion: 0` on the kit root to turn them off from a setting of your own. Your own
+  transitions follow too when they use the tokens.
+- **Focus:** keyboard focus under a kit root shows a ring in the accent colour (`:focus-visible`,
+  so a click shows none). Don't remove `outline` in your styles; change the ring with its tokens.
+- **Cascade layers:** the tokens are in the layer `aek.tokens` and the focus ring in `aek.base`, so
+  any rule of yours beats them, whatever its specificity. The components' own styles aren't in a
+  layer yet: override them with a class.
+
+::: tip In an embed
+An engine [mounted into a host page](hub:features/smallest-build#embedding) shows the kit as the
+full page does: its sizes come from the browser's font size, not the host's root, and windows,
+dialogs and toasts stay inside the mount's container. A window's `%` position and size are of the
+container; `vw` and `vh` are the browser window's, as in CSS.
 :::
 
 ## Key APIs
@@ -230,6 +339,7 @@ profile shows kit UI yet; a later version picks units that work in both
 - [`createToaster`](api:createToaster), [`addToast`](api:addToast) and
   [`removeToast`](api:removeToast).
 - [`registerIcon`](api:registerIcon) and [`getSvgIcon`](api:getSvgIcon).
+- [`aekasha/ui/fonts`](hub:documentation/aekasha/ui/fonts): the kit's fonts, a stylesheet entry.
 
 ## Read more
 
