@@ -109,10 +109,11 @@ a {
   }
 }
 
+// The UI kit's focus ring (p801 D6), unlayered: the Hub's own rules decide where it's inset
 :focus-visible {
-  outline: 2px solid var(--hub-accent);
-  outline-offset: 2px;
-  border-radius: 4px;
+  outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
+  outline-offset: var(--aek-focus-ring-offset);
+  border-radius: var(--aek-radius-sm);
 }
 
 button {
@@ -197,14 +198,14 @@ button {
   line-height: 1.2;
   text-decoration: none;
   transition:
-    border-color 0.15s,
-    background-color 0.15s;
+    border-color var(--aek-motion-base),
+    background-color var(--aek-motion-base);
 
   .hubIcon_arrow-right {
     width: 0.95em;
     height: 0.95em;
     color: var(--hub-text-muted);
-    transition: transform 0.15s;
+    transition: transform var(--aek-motion-base);
   }
 
   &:hover,
@@ -232,7 +233,7 @@ button {
   .hubIcon_arrow-right {
     width: 0.95em;
     height: 0.95em;
-    transition: transform 0.15s;
+    transition: transform var(--aek-motion-base);
   }
 
   &:hover,

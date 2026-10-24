@@ -53,7 +53,7 @@
   border-radius: 50%;
   color: var(--hub-text);
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color var(--aek-motion-base);
 
   &:hover,
   &:focus-visible {

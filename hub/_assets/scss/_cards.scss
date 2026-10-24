@@ -24,8 +24,8 @@
   color: var(--hub-text);
   text-decoration: none;
   transition:
-    border-color 0.15s,
-    background-color 0.15s;
+    border-color var(--aek-motion-base),
+    background-color var(--aek-motion-base);
 
   &:hover {
     background: var(--hub-panel-hover);
@@ -69,7 +69,7 @@
 .hubCardTitle {
   font-weight: 600;
   line-height: 1.35;
-  transition: color 0.15s;
+  transition: color var(--aek-motion-base);
 }
 
 .hubCardText {
@@ -118,7 +118,7 @@
     border: 0;
     border-left: 1px solid var(--hub-border);
     border-radius: 0;
-    transition: border-color 0.15s;
+    transition: border-color var(--aek-motion-base);
 
     &:hover,
     &:focus-visible {

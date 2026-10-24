@@ -30,8 +30,8 @@
     tab-size: 2;
 
     &:focus-visible {
-      outline: 2px solid var(--hub-accent);
-      outline-offset: -2px;
+      outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
+      outline-offset: calc(var(--aek-focus-ring-width) * -1);
     }
   }
 
@@ -130,7 +130,8 @@ html:not(.hubJs) .hubCodeHeader:not(:has(.hubCodeTitle, .hubCodeLang)) {
   }
 
   &:focus-visible {
-    outline: 2px solid var(--hub-accent);
+    outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
+    // Closer than the ring's offset: the button sits in the block's corner
     outline-offset: 1px;
   }
 
@@ -221,21 +222,16 @@ html:not(.hubJs) .hubCodeHeader:not(:has(.hubCodeTitle, .hubCodeLang)) {
 .hubCode pre.has-focused .line:not(.focused) {
   filter: blur(0.5px);
   opacity: 0.4;
+  // The kit's duration: 0 under prefers-reduced-motion (tokens.css)
   transition:
-    opacity 0.2s,
-    filter 0.2s;
+    opacity var(--aek-motion-base),
+    filter var(--aek-motion-base);
 }
 
 .hubCode:hover pre.has-focused .line,
 .hubCode pre.has-focused:focus-visible .line {
   filter: none;
   opacity: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hubCode pre.has-focused .line {
-    transition: none;
-  }
 }
 
 // --- Wrap ---
@@ -287,8 +283,8 @@ html:not(.hubJs) .hubCodeHeader:not(:has(.hubCodeTitle, .hubCodeLang)) {
     }
 
     &:focus-visible {
-      outline: 2px solid var(--hub-accent);
-      outline-offset: -2px;
+      outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
+      outline-offset: calc(var(--aek-focus-ring-width) * -1);
     }
   }
 }
@@ -361,8 +357,8 @@ html:not(.hubJs) .hubCodeHeader:not(:has(.hubCodeTitle, .hubCodeLang)) {
   }
 
   &:focus-visible {
-    outline: 2px solid var(--hub-accent);
-    outline-offset: -2px;
+    outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
+    outline-offset: calc(var(--aek-focus-ring-width) * -1);
   }
 }
 

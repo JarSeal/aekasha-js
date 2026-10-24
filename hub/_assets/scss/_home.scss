@@ -307,7 +307,7 @@
     height: 0.95em;
     margin-left: auto;
     color: var(--hub-text-muted);
-    transition: transform 0.15s;
+    transition: transform var(--aek-motion-base);
   }
 
   &:hover,
@@ -330,7 +330,7 @@
 
 .hubQuickLinkLabel {
   color: var(--hub-text);
-  transition: color 0.15s;
+  transition: color var(--aek-motion-base);
 }
 
 .hubQuickLinkText {
