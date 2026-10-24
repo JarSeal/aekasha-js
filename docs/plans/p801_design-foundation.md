@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-4 implemented
 Category: UI, Refactoring
 Epic: p800_debugger-ui-overhaul.md
 Blocked by: p802_hub-project-section.md (only its Phase 1, the dev-only pages, merged on its own, for Phase 0's font specimen page: D11)
@@ -444,7 +444,7 @@ run), `yarn verify:baselines`, plus the phase's own.
 
    - After the study (Phase 4): the dev dependencies removed, and the page moved into p802's
      `design/` as the fonts' record or removed (p802 D5); it can't stay as is once the packages
-     are gone.
+     are gone. Done in Phase 4: both removed (the record is D8's outcome and the table above).
 
 4. Screenshots on macOS, Windows and Android (the developer's own devices, through `yarn dev:https` for the
    phone), the pick, written into D8.
@@ -636,7 +636,7 @@ As built (2026-10-24; three sections: the profile, the scenario, the close-out):
   UI kit page's `guide.md` (line 216) still call the issue open; the Hub could show the profile
   (`::: embed uiKit`) on the UI kit page.
 
-### Phase 4: fonts
+### Phase 4: fonts — done
 
 D8 with the study's pick: the files in `src/_engine/ui/fonts/`, the entry, the opt-ins (the
 full-page template, the debugger), the Hub on the same files. The scene runner's baselines with
@@ -710,13 +710,33 @@ their names):
   licences only.
 - `hub/CLAUDE.md` (Sources), `devTools/hub/CLAUDE.md` (Output) and `hub-authoring.md`'s
   `{{asset:…}}` row updated.
+- Section 4: `hub/pages/project/font-study/` and the six `@fontsource*` dev dependencies removed
+  (`yarn.lock` −30 lines); nothing linked the page (the dev Hub: 93 pages, `/hub/project/` 200,
+  the study 404). p802 D5's row and its Phase 3 say p801 removed it. The changelog's p802 entry
+  and p800's mentions are history and stay.
+- For the later phases:
+  - Phase 5: the sans is shared, so `--hub-font` aliases `--aek-font-sans` and
+    `--hub-font-mono` `--aek-font-mono` (the Hub's `<html>` is a kit root then, so `fonts.css`'
+    `.aekUi` rule applies there if the Hub loads it, or the Hub keeps its own faces);
+    `fonts.test.ts`' stack check reads the written-out values and changes with them.
+  - Phase 6: the root `CLAUDE.md` (Three-folder split: `ui/fonts/`; the `aekasha/ui/fonts` entry
+    and its `sideEffects` line under Build config notes, next to the `sideEffects` paragraph),
+    `ui/CLAUDE.md`'s Styles bullet (`page.scss` has no font now; the fonts' opt-in), the UI kit
+    page's Styling section (the opt-in, `import 'aekasha/ui/fonts'`, the lazy files).
+  - Phase 7, the changelog's restyle note (D12): the full page's and the debugger's text from the
+    Lucida stack to IBM Plex Sans, the debugger's mono (five places, §4.1's files) from the
+    system mono to IBM Plex Mono, an embed's kit from the host page's font to the system UI stack
+    (IBM Plex with the opt-in), the Hub from Inter to IBM Plex Sans and its code from the system
+    mono to IBM Plex Mono; to keep the old look, set `--aek-font-sans` / `--aek-font-mono` on the
+    kit root (unlayered, so it beats both the default and the opt-in).
 
 ### Phase 5: the Hub on the shared tokens
 
 - `--hub-*` become aliases of `--aek-*` for each role (`--hub-panel: var(--aek-surface)`); the
   Hub-only ones (`gradient`, `header-bg`, `code-*`, the layout widths) stay `--hub-*`. The Hub's
   `<html>` gets `aekUi`; `hub.ts`' toggle sets `data-aek-theme` (D3); `--hub-font` reads
-  `--aek-font-sans` if Phase 4 shared the sans. The Hub's own focus styles use the ring tokens.
+  `--aek-font-sans` and `--hub-font-mono` `--aek-font-mono` (Phase 4 shared both). The Hub's own
+  focus styles use the ring tokens.
 - A test (`devTools/hub/`) checks every aliased `--hub-*` resolves to a `--aek-*` and that the
   Hub's computed colours are unchanged from Phase 0 (a value list taken then). Three changes are
   expected, from Phase 1 (D2's outcome), and the test lists them: `--hub-error` aliases
