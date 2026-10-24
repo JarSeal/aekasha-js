@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: in progress | Phases 0-5 implemented
 Category: UI, Refactoring
 Epic: p800_debugger-ui-overhaul.md
 Blocked by: p802_hub-project-section.md (only its Phase 1, the dev-only pages, merged on its own, for Phase 0's font specimen page: D11)
@@ -148,7 +148,8 @@ debugger) restyle, from Phase 0's inventory. One exception, on purpose: Phase 4'
   `data-aek-theme="dark"`; `data-aek-theme="dark" | "light"` on any element forces its subtree
   (one attribute for the root and a subtree, instead of the Hub's extra `.hubThemeDark` class).
 - The Hub's toggle sets `data-aek-theme` on `<html>` next to its `data-theme` (`hub.ts`), so the
-  kit inside a Hub page follows the Hub's theme, not only the system's.
+  kit inside a Hub page follows the Hub's theme, not only the system's. As built (Phase 5): in
+  place of `data-theme`, which the Hub's own styles read now too.
 - An app sets its theme on the HUD root; `AppConfig` gets nothing in p801 (p808's settings menu
   writes the attribute).
 - As built: the default (dark) and system-light blocks are on
@@ -730,7 +731,7 @@ their names):
     mono to IBM Plex Mono; to keep the old look, set `--aek-font-sans` / `--aek-font-mono` on the
     kit root (unlayered, so it beats both the default and the opt-in).
 
-### Phase 5: the Hub on the shared tokens
+### Phase 5: the Hub on the shared tokens — done
 
 - `--hub-*` become aliases of `--aek-*` for each role (`--hub-panel: var(--aek-surface)`); the
   Hub-only ones (`gradient`, `header-bg`, `code-*`, the layout widths) stay `--hub-*`. The Hub's
@@ -745,6 +746,69 @@ their names):
   unchanged; the Hub's control edges (the search field) can move to `--aek-border-control` here.
 - Aliases rather than moving the Hub's ~300 references to `--aek-*` (p800 §8's question): one
   file changes, the Hub's SCSS reads the same, and a later rename can be a codemod.
+
+As built (2026-10-24; four sections: the aliases and the theme attribute, the dev Hub's watch, the
+focus ring, motion and backdrop, the close-out; confirmed at the phase's start: one theme
+attribute, the kit's backdrop, the transitions here, the search field's focus mark kept):
+
+- **One theme attribute** (changes D3's "next to its `data-theme`"): `data-aek-theme` replaces
+  `data-theme` in the shell's inline script (it sets the saved theme before the first paint, which
+  the step didn't name), `hub.ts` and `_tokens.scss`' `when-light` mixin; `localStorage.aekHubTheme`
+  stays, so a saved choice carries over. The homepage hero is `data-aek-theme="dark"`, not
+  `.hubThemeDark` (gone; its background and text colour moved to `.hubHero`). The shell's `<html>`
+  is `class="aekUi"`.
+- `_tokens.scss` `@use`s `tokens.css` by its relative path (`../../../src/_engine/ui/styles/tokens`;
+  Sass emits it first, so the `@layer` order statement leads `hub.css`). The aliases are on
+  `:root, [data-aek-theme]`, not `:root` alone: a `var()` resolves where it's declared, so the
+  forced-dark hero in the light theme would have kept the light values. Aliased: `bg`, `panel` →
+  `surface`, `panel-hover` → `surface-hover`, `border`, `border-strong`, `text`, `text-muted`, the
+  accent trio, `shadow` → `shadow-lg`, the three statuses, `error` → `danger`, and on `:root`
+  (theme-free) `radius` → `radius-lg`, `font` → `font-sans`, `font-mono` → `font-mono`. The Hub's
+  own, in its two theme mixins (dark first, as `codeThemes.test.ts` reads them): `gradient`,
+  `header-bg`, `code-bg` and the four `code-*` tints (their light alphas and the light
+  `code-warning-bg`'s old warning colour differ from the kit's `-soft`s, so they stay); on `:root`
+  the layout sizes. `color-scheme` stays in the Hub's mixins (the kit root sets none, D2).
+- **The Hub can't load `fonts.css`** (its `url('./…')`s would resolve against `_assets/hub.css`):
+  `_base.scss` repeats its opt-in rule (`.aekUi` in `@layer aek.tokens`), so a kit demo box gets
+  Plex too; `fonts.test.ts` checks both stacks equal `fonts.css`' and that `--hub-font` /
+  `--hub-font-mono` are the aliases.
+- `devTools/hub/tokens.test.ts`: every `--hub-*` is an alias of a token `tokens.css` defines (in
+  both themes, or on the kit root) or on its `HUB_ONLY` list; no themed alias on `:root` alone;
+  both themes resolve to `f962bb3`'s values (written into the test) but for `EXPECTED_CHANGES`
+  (`error` dark and light, the light `warning`); the search dialog's backdrop is
+  `var(--aek-backdrop, rgb(3 6 12 / 60%))`, the kit's dark value Phase 0's, its light one the fourth
+  change (`rgb(15 23 38 / 40%)`). Each check seen failing on a broken copy.
+- **A gap the plan didn't name: the dev Hub didn't see a `tokens.css` save** (only `hub/` and the
+  build's listed files are watched, and the styles were reused unless `hub/_assets/` changed).
+  `buildStyles` returns the files sass loaded (`HubBuiltStyles.sources`, from `loadedUrls`), the
+  build keeps them as `HubBuildAssets.styleSources` (a failed compile keeps the last good list) and
+  adds them to its `files`, and the runner reuses no assets when one changed. `devRunner.test.ts`
+  covers it (seen failing without the runner change); on a dev server a `tokens.css` edit logged
+  "Updated: styles" and the served stylesheet had it. `devTools/hub/CLAUDE.md` says so.
+- Focus: the global `:focus-visible` and the header's ring read the ring's width, offset and
+  colour tokens (and `--aek-radius-sm`), `_code.scss`' inset rings
+  `calc(var(--aek-focus-ring-width) * -1)`; the copy button keeps its 1 px offset (the block's
+  corner). The search input keeps `outline: none`: its focus is the field's accent bottom edge
+  (`--aek-focus-ring-color`, ≥ 3:1 on the panel), not moved to `border-control` (a divider, not a
+  control's edge; the field has its icon and placeholder).
+- Motion: the 13 `0.15s` (§4.8) and `_code.scss`' two `0.2s` (§4.8 missed them) →
+  `var(--aek-motion-base)`; `_code.scss`' own `prefers-reduced-motion` block went, the token is 0
+  there.
+- `hub.css`: 46.5 → 51.9 kB raw, 8.6 → 9.6 KiB gzip (`tokens.css`).
+- The check (scratchpad Playwright scripts, `hub:preview` of a `--no-api --no-embed` build of
+  `96b3b96` in a worktree against the working tree's): 7 pages and the open search dialog in four
+  theme setups (system dark and light, each toggled the other way), every element's computed
+  colours, borders, shadows, outline, fonts and durations (824,132 values). Differences: the
+  expected `error` / `warning` ones (callout and code-line edges, the issue badges' warning tint),
+  the light backdrop (so `::backdrop` reads the token in Chrome), the durations 0.15 → 0.2 s, and
+  `<html>` / `<head>`'s font-family (the kit root's; `body` sets its own). The hero unchanged in the
+  light theme. Tab through 45 stops on 3 pages in both themes: no ring changed (style, width,
+  colour, offset, radius; the hero's still the dark accent). Under reduced motion no transition
+  over 0 s. Not checked: Firefox and Safari.
+- `hub/CLAUDE.md` (Sources: the tokens, the theme attribute, the fonts' opt-in copy) updated.
+- Verified: `yarn test` (1278 passed), `yarn hub:build` (92 pages, the API 100 % documented, no
+  warning), `yarn verify:baselines` (all unchanged, no debug code). `yarn verify:scenes` not run:
+  nothing under `src/` changed.
 
 ### Phase 6: the Hub's UI kit page, `CLAUDE.md`, readme
 
