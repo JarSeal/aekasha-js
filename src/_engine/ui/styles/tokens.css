@@ -243,7 +243,8 @@
 
 /*
  * The focus ring (p800 D8, p801 D6): the one global rule p801 adds. Any unlayered style beats it,
- * so a style that removes `outline` hides it there (p801's inventory, 4.5, lists them; Phase 2 removes them).
+ * so a style that sets `outline` hides it there: p801 Phase 2 removed the kit's and the debugger's
+ * `outline: 0` (its inventory, 4.5). Don't add one back.
  */
 @layer aek.base {
   :where(.aekUi :focus-visible) {

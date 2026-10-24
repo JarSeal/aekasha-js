@@ -3,7 +3,7 @@ import type { TCMP } from '../ui/CMPTypes';
 import './PercentagePie.scss';
 
 export type PercentagePieOpts = {
-  /** Width and height of the pie (CSS length), default 1rem (from the .percentagePie style) */
+  /** Width and height of the pie (CSS length), default 10 px at the default UI size (from the .percentagePie style) */
   height?: string;
   /** Extra class for the pie element */
   mainClass?: string;

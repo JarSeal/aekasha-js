@@ -25,13 +25,13 @@
   transition-timing-function: ease-in;
 
   &__spinner {
-    width: 7rem;
-    height: 7rem;
+    width: calc(7 * var(--aek-rem));
+    height: calc(7 * var(--aek-rem));
     border-radius: 50%;
     border: 5px solid white;
     border-top-color: transparent;
     animation-name: loadingSpinner;
-    animation-duration: 700ms;
+    animation-duration: calc(700ms * var(--aek-motion, 1));
     animation-iteration-count: infinite;
     animation-timing-function: linear;
   }

@@ -1,8 +1,8 @@
 @use 'sass:color';
 @use './styles/variables.scss';
 
-$headerHeight: 3rem;
-$collapseAnimLength: 150ms;
+$headerHeight: calc(3 * var(--aek-rem));
+$collapseAnimLength: var(--aek-motion-base);
 
 .popupWindow {
   position: fixed;
@@ -17,7 +17,7 @@ $collapseAnimLength: 150ms;
     min-height $collapseAnimLength ease-in-out,
     max-height $collapseAnimLength ease-in-out;
   color: variables.$debugTextColor;
-  font-size: 1.2rem;
+  font-size: calc(1.2 * var(--aek-rem));
 }
 
 .resizing {
@@ -25,51 +25,51 @@ $collapseAnimLength: 150ms;
 }
 
 .vertResizable {
-  padding-bottom: 1rem;
+  padding-bottom: calc(1 * var(--aek-rem));
 }
 
 .horiResizable {
   .contentWrapper {
-    margin-right: 1rem;
+    margin-right: calc(1 * var(--aek-rem));
   }
 }
 
 .vertHandle {
   position: absolute;
-  bottom: 0.3rem;
+  bottom: calc(0.3 * var(--aek-rem));
   left: 50%;
   transform: translateX(-50%);
-  width: 3rem;
-  height: 0.4rem;
+  width: calc(3 * var(--aek-rem));
+  height: calc(0.4 * var(--aek-rem));
   max-width: 50%;
   background: rgba(255, 255, 255, 0.05);
   cursor: ns-resize;
   user-select: none;
   touch-action: none;
-  border-radius: 0.2rem;
+  border-radius: calc(0.2 * var(--aek-rem));
 }
 
 .horiHandle {
   position: absolute;
   top: calc(50% + ($headerHeight / 2));
-  right: 0.3rem;
+  right: calc(0.3 * var(--aek-rem));
   transform: translateY(-50%);
-  width: 0.4rem;
-  height: 3rem;
+  width: calc(0.4 * var(--aek-rem));
+  height: calc(3 * var(--aek-rem));
   max-height: calc(50% - ($headerHeight / 2));
   background: rgba(255, 255, 255, 0.05);
   cursor: ew-resize;
   user-select: none;
   touch-action: none;
-  border-radius: 0.2rem;
+  border-radius: calc(0.2 * var(--aek-rem));
 }
 
 .vertAndHoriHandle {
   position: absolute;
-  bottom: 0.3rem;
-  right: 0.3rem;
-  width: 1rem;
-  height: 1rem;
+  bottom: calc(0.3 * var(--aek-rem));
+  right: calc(0.3 * var(--aek-rem));
+  width: calc(1 * var(--aek-rem));
+  height: calc(1 * var(--aek-rem));
   max-width: 50%;
   cursor: nwse-resize;
   user-select: none;
@@ -84,19 +84,20 @@ $collapseAnimLength: 150ms;
   }
 
   &:before {
-    width: 0.6rem;
-    height: 0.4rem;
+    width: calc(0.6 * var(--aek-rem));
+    height: calc(0.4 * var(--aek-rem));
     bottom: 0;
     left: 0;
-    border-radius: 0.2rem 0 0 0.2rem;
+    border-radius: calc(0.2 * var(--aek-rem)) 0 0 calc(0.2 * var(--aek-rem));
   }
 
   &:after {
-    width: 0.4rem;
-    height: 1rem;
+    width: calc(0.4 * var(--aek-rem));
+    height: calc(1 * var(--aek-rem));
     bottom: 0;
     right: 0;
-    border-radius: 0.2rem 0.2rem 0.2rem 0;
+    border-radius: calc(0.2 * var(--aek-rem)) calc(0.2 * var(--aek-rem)) calc(0.2 * var(--aek-rem))
+      0;
   }
 }
 
@@ -119,9 +120,9 @@ $collapseAnimLength: 150ms;
   justify-content: space-between;
   height: $headerHeight;
   background: variables.$debugTabButton;
-  border-top: 0.1rem solid variables.$debugGuiBackgroundLighter2;
-  border-left: 0.1rem solid variables.$debugGuiBackgroundLighter2;
-  border-right: 0.1rem solid variables.$debugGuiBackgroundLighter2;
+  border-top: calc(0.1 * var(--aek-rem)) solid variables.$debugGuiBackgroundLighter2;
+  border-left: calc(0.1 * var(--aek-rem)) solid variables.$debugGuiBackgroundLighter2;
+  border-right: calc(0.1 * var(--aek-rem)) solid variables.$debugGuiBackgroundLighter2;
   overflow: hidden;
   border-bottom-width: 0;
   user-select: none;
@@ -141,10 +142,10 @@ $collapseAnimLength: 150ms;
   color: variables.$white;
   display: block;
   width: calc(100% - $headerHeight);
-  height: 2.2rem;
+  height: calc(2.2 * var(--aek-rem));
   margin: 0;
-  padding: 0.8rem 0 0 variables.$dragWinContentPadding;
-  font-size: 1.2rem;
+  padding: calc(0.8 * var(--aek-rem)) 0 0 variables.$dragWinContentPadding;
+  font-size: calc(1.2 * var(--aek-rem));
   font-weight: 600;
   color: variables.$debugTextColor;
   user-select: none;
@@ -152,9 +153,9 @@ $collapseAnimLength: 150ms;
 
   :global(.uiIcon) {
     display: inline-block;
-    width: 1.2rem;
-    margin-right: 0.5rem;
-    vertical-align: -0.1rem;
+    width: calc(1.2 * var(--aek-rem));
+    margin-right: calc(0.5 * var(--aek-rem));
+    vertical-align: calc(-0.1 * var(--aek-rem));
   }
 }
 
@@ -162,21 +163,21 @@ $collapseAnimLength: 150ms;
   @include variables.nakedButton;
   position: relative;
   width: $headerHeight;
-  height: calc($headerHeight - 0.1rem);
+  height: calc($headerHeight - 0.1 * var(--aek-rem));
   background: rgba(255, 255, 255, 0.08);
-  transition: background 0.15s ease-in-out;
+  transition: background var(--aek-motion-base) ease-in-out;
 
   &:before,
   &:after {
     display: block;
     position: absolute;
     content: '';
-    top: 1.4rem;
-    left: 0.6rem;
-    width: 0.9rem;
-    height: 0.3rem;
+    top: calc(1.4 * var(--aek-rem));
+    left: calc(0.6 * var(--aek-rem));
+    width: calc(0.9 * var(--aek-rem));
+    height: calc(0.3 * var(--aek-rem));
     background: variables.$debugTextColor;
-    border-radius: 0.1rem;
+    border-radius: calc(0.1 * var(--aek-rem));
     transition: transform $collapseAnimLength ease-in-out;
   }
 
@@ -189,7 +190,7 @@ $collapseAnimLength: 150ms;
   }
   &:after {
     transform: rotate(45deg);
-    left: 1.1rem;
+    left: calc(1.1 * var(--aek-rem));
 
     .collapsed & {
       transform: rotate(-45deg);
@@ -206,11 +207,11 @@ $collapseAnimLength: 150ms;
   }
 
   + button {
-    border-left: 0.1rem solid variables.$debugTabButton;
+    border-left: calc(0.1 * var(--aek-rem)) solid variables.$debugTabButton;
 
     &:before,
     &:after {
-      left: 0.5rem;
+      left: calc(0.5 * var(--aek-rem));
     }
   }
 }
@@ -219,22 +220,22 @@ $collapseAnimLength: 150ms;
   @include variables.nakedButton;
   position: relative;
   width: $headerHeight;
-  height: calc($headerHeight - 0.1rem);
-  margin-right: -0.1rem;
+  height: calc($headerHeight - 0.1 * var(--aek-rem));
+  margin-right: calc(-0.1 * var(--aek-rem));
   background: rgba(255, 255, 255, 0.08);
-  transition: background 0.15s ease-in-out;
+  transition: background var(--aek-motion-base) ease-in-out;
 
   &:before,
   &:after {
     display: block;
     position: absolute;
     content: '';
-    top: 1.3rem;
-    left: 0.6rem;
-    width: 1.8rem;
-    height: 0.3rem;
+    top: calc(1.3 * var(--aek-rem));
+    left: calc(0.6 * var(--aek-rem));
+    width: calc(1.8 * var(--aek-rem));
+    height: calc(0.3 * var(--aek-rem));
     background: variables.$debugTextColor;
-    border-radius: 0.1rem;
+    border-radius: calc(0.1 * var(--aek-rem));
   }
 
   &:before {
@@ -271,22 +272,22 @@ $collapseAnimLength: 150ms;
 }
 
 :global(.winPaddedContent) {
-  padding: 0.8rem 1rem;
+  padding: calc(0.8 * var(--aek-rem)) calc(1 * var(--aek-rem));
 }
 
 :global(.winNotRightPaddedContent) {
-  padding: 0.8rem 0 0.8rem 1rem;
+  padding: calc(0.8 * var(--aek-rem)) 0 calc(0.8 * var(--aek-rem)) calc(1 * var(--aek-rem));
 }
 
 :global(.winFlexContent) {
   display: flex;
-  gap: 0.8rem;
+  gap: calc(0.8 * var(--aek-rem));
   justify-content: space-between;
 }
 
 :global(.winSmallLabel) {
   display: inline-block;
-  font-size: 1rem;
+  font-size: calc(1 * var(--aek-rem));
   line-height: 1.6;
   color: color.adjust(variables.$debugTextColor, $lightness: -20%);
 }
@@ -296,14 +297,14 @@ $collapseAnimLength: 150ms;
   position: relative;
   vertical-align: top;
   overflow: hidden;
-  border-radius: 0.2rem;
-  padding: 0.5rem;
-  margin-left: 0.4rem;
-  margin-bottom: 0.4rem;
+  border-radius: calc(0.2 * var(--aek-rem));
+  padding: calc(0.5 * var(--aek-rem));
+  margin-left: calc(0.4 * var(--aek-rem));
+  margin-bottom: calc(0.4 * var(--aek-rem));
   background-color: variables.$debugTextColor;
-  transition: background-color 0.17s ease-in-out;
-  width: 2.6rem;
-  height: 2.6rem;
+  transition: background-color var(--aek-motion-base) ease-in-out;
+  width: calc(2.6 * var(--aek-rem));
+  height: calc(2.6 * var(--aek-rem));
 
   &:hover {
     background-color: variables.$white;
@@ -324,11 +325,11 @@ $collapseAnimLength: 150ms;
       display: block;
       content: '';
       position: absolute;
-      left: -0.6rem;
-      top: -0.6rem;
+      left: calc(-0.6 * var(--aek-rem));
+      top: calc(-0.6 * var(--aek-rem));
       background-color: variables.$debugGuiBackgroundLighter2;
-      width: 1rem;
-      height: 1.2rem;
+      width: calc(1 * var(--aek-rem));
+      height: calc(1.2 * var(--aek-rem));
       transform: rotate(45deg);
     }
   }

@@ -4,34 +4,34 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 1rem 1.2rem 1.2rem;
+  padding: calc(1 * var(--aek-rem)) calc(1.2 * var(--aek-rem)) calc(1.2 * var(--aek-rem));
 }
 
 .panel {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 0.4rem 0.8rem 0 0;
+  padding: calc(0.4 * var(--aek-rem)) calc(0.8 * var(--aek-rem)) 0 0;
   scrollbar-color: variables.$debugTextColor variables.$debugGuiBackgroundLighter2;
   scrollbar-width: thin;
 }
 
 .header {
   display: flex;
-  gap: 1.6rem;
+  gap: calc(1.6 * var(--aek-rem));
   align-items: flex-start;
-  padding: 0.6rem 0 1.4rem;
+  padding: calc(0.6 * var(--aek-rem)) 0 calc(1.4 * var(--aek-rem));
 }
 
 .symbol {
   flex-shrink: 0;
   color: variables.$white;
-  margin-top: -0.8rem;
+  margin-top: calc(-0.8 * var(--aek-rem));
 
   :global(.uiIcon) {
     display: block;
-    width: 6.4rem;
-    height: 6.4rem;
+    width: calc(6.4 * var(--aek-rem));
+    height: calc(6.4 * var(--aek-rem));
 
     svg {
       width: 100%;
@@ -42,35 +42,35 @@
 
 .name {
   margin: 0;
-  font-size: 1.8rem;
+  font-size: calc(1.8 * var(--aek-rem));
   color: variables.$white;
 }
 
 .version {
-  margin-top: 0.2rem;
-  font-size: 1.2rem;
+  margin-top: calc(0.2 * var(--aek-rem));
+  font-size: calc(1.2 * var(--aek-rem));
   color: variables.$debugTextColor;
 }
 
 .description {
-  margin: 0.8rem 0 0;
-  font-size: 1.2rem;
+  margin: calc(0.8 * var(--aek-rem)) 0 0;
+  font-size: calc(1.2 * var(--aek-rem));
   line-height: 1.4;
   color: variables.$debugTextColor;
 }
 
 .credits {
-  margin-top: 0.6rem;
-  font-size: 1.1rem;
+  margin-top: calc(0.6 * var(--aek-rem));
+  font-size: calc(1.1 * var(--aek-rem));
   color: variables.$debugTextColorDark;
 }
 
 .links {
   display: flex;
   flex-wrap: wrap;
-  gap: 1.2rem;
-  margin-top: 0.8rem;
-  font-size: 1.2rem;
+  gap: calc(1.2 * var(--aek-rem));
+  margin-top: calc(0.8 * var(--aek-rem));
+  font-size: calc(1.2 * var(--aek-rem));
 
   a {
     color: variables.$debugTextColor;
@@ -82,30 +82,30 @@
 }
 
 .section {
-  margin-top: 1.6rem;
+  margin-top: calc(1.6 * var(--aek-rem));
 
   h4 {
-    margin: 0 0 0.4rem;
-    font-size: 1.3rem;
+    margin: 0 0 calc(0.4 * var(--aek-rem));
+    font-size: calc(1.3 * var(--aek-rem));
     color: variables.$white;
   }
 }
 
 .rows {
   display: grid;
-  grid-template-columns: 16rem 1fr;
+  grid-template-columns: calc(16 * var(--aek-rem)) 1fr;
   margin: 0;
 
   dt,
   dd {
     margin: 0;
-    padding: 0.5rem 0;
-    border-top: 0.1rem solid rgba(variables.$debugTextColor, 0.12);
-    font-size: 1.2rem;
+    padding: calc(0.5 * var(--aek-rem)) 0;
+    border-top: calc(0.1 * var(--aek-rem)) solid rgba(variables.$debugTextColor, 0.12);
+    font-size: calc(1.2 * var(--aek-rem));
   }
 
   dt {
-    padding-right: 1rem;
+    padding-right: calc(1 * var(--aek-rem));
     color: variables.$debugTextColorDark;
   }
 
@@ -130,9 +130,9 @@
   display: flex;
   flex-shrink: 0;
   justify-content: flex-end;
-  gap: 0.8rem;
-  padding-top: 1rem;
-  border-top: 0.1rem solid variables.$debugTextColorDark;
+  gap: calc(0.8 * var(--aek-rem));
+  padding-top: calc(1 * var(--aek-rem));
+  border-top: calc(0.1 * var(--aek-rem)) solid variables.$debugTextColorDark;
 
   :global(.debuggerClearLSDialogButton) {
     margin: 0;

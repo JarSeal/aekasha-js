@@ -5,13 +5,13 @@
 .debuggerGUI {
   position: fixed;
   top: 0;
-  right: variables.$drawerWidth * -1;
+  right: calc(-1 * variables.$drawerWidth);
   z-index: 10200;
   background-color: variables.$debugGuiBackground;
   width: variables.$drawerWidth;
   height: 100%;
-  padding: 1.2rem;
-  transition: right 0.2s ease-in-out;
+  padding: calc(1.2 * var(--aek-rem));
+  transition: right var(--aek-motion-base) ease-in-out;
 
   @media screen and (max-width: variables.$breakpointSmall) {
     width: variables.$drawerWidthSmall;
@@ -26,10 +26,10 @@
 }
 
 .debuggerGUI_closed {
-  right: variables.$drawerWidth * -1;
+  right: calc(-1 * variables.$drawerWidth);
 
   @media screen and (max-width: variables.$breakpointSmall) {
-    right: variables.$drawerWidthSmall * -1;
+    right: calc(-1 * variables.$drawerWidthSmall);
   }
   @media screen and (max-width: variables.$breakpointXSmall) {
     right: -100%;
@@ -42,16 +42,16 @@
   position: absolute;
   right: 100%;
   top: 50%;
-  transform: translate3d(3.6rem, -50%, 0) rotate(-90deg);
-  height: 3rem;
-  padding: 0 2rem;
-  border-radius: 0.4rem 0.4rem 0 0;
+  transform: translate3d(calc(3.6 * var(--aek-rem)), -50%, 0) rotate(-90deg);
+  height: calc(3 * var(--aek-rem));
+  padding: 0 calc(2 * var(--aek-rem));
+  border-radius: calc(0.4 * var(--aek-rem)) calc(0.4 * var(--aek-rem)) 0 0;
   background: variables.$debugGuiBackground;
   color: variables.$debugTextColor;
   user-select: none;
   transition:
-    background 0.2s ease-in-out,
-    opacity 0.2s ease-in-out;
+    background var(--aek-motion-base) ease-in-out,
+    opacity var(--aek-motion-base) ease-in-out;
 
   &:hover {
     background: variables.$debugGuiBackgroundLighter;
@@ -67,7 +67,7 @@
 
 .debugDrawerTabsMenu {
   position: relative;
-  margin-bottom: 1.2rem;
+  margin-bottom: calc(1.2 * var(--aek-rem));
 }
 
 .debugDrawerTabButton {
@@ -88,10 +88,10 @@
   &:after {
     content: '';
     position: absolute;
-    top: 0.2rem;
-    right: 0.2rem;
-    width: 0.5rem;
-    height: 0.5rem;
+    top: calc(0.2 * var(--aek-rem));
+    right: calc(0.2 * var(--aek-rem));
+    width: calc(0.5 * var(--aek-rem));
+    height: calc(0.5 * var(--aek-rem));
     border-radius: 50%;
     background-color: color.adjust(variables.$info, $lightness: 30%);
   }
@@ -116,19 +116,19 @@
   :global(.debuggerTabHeadingRow) {
     display: flex;
     align-items: center;
-    gap: 0.8rem;
-    margin-top: 1rem;
-    margin-bottom: 1rem;
+    gap: calc(0.8 * var(--aek-rem));
+    margin-top: calc(1 * var(--aek-rem));
+    margin-bottom: calc(1 * var(--aek-rem));
   }
 
   :global(.debuggerTabHeading) {
     margin: 0;
-    font-size: 1.8rem;
+    font-size: calc(1.8 * var(--aek-rem));
 
     :global(.uiIcon) {
       display: inline-block;
-      width: 1.4rem;
-      margin-right: 0.2rem;
+      width: calc(1.4 * var(--aek-rem));
+      margin-right: calc(0.2 * var(--aek-rem));
     }
   }
 
@@ -150,15 +150,15 @@
   vertical-align: top;
   overflow: hidden;
   flex-shrink: 0;
-  border-radius: 0.4rem;
-  padding: 0.4rem;
+  border-radius: calc(0.4 * var(--aek-rem));
+  padding: calc(0.4 * var(--aek-rem));
   background-color: transparent;
-  border: 0.1rem solid variables.$debugTextColorDark;
+  border: calc(0.1 * var(--aek-rem)) solid variables.$debugTextColorDark;
   transition:
-    background-color 0.17s ease-in-out,
-    border-color 0.17s ease-in-out;
-  width: 2.2rem;
-  height: 2.2rem;
+    background-color var(--aek-motion-base) ease-in-out,
+    border-color var(--aek-motion-base) ease-in-out;
+  width: calc(2.2 * var(--aek-rem));
+  height: calc(2.2 * var(--aek-rem));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -190,13 +190,13 @@
 
 :global(.debuggerSkyTransportRow) {
   display: flex;
-  gap: 0.2rem;
-  padding: 0.2rem 0;
+  gap: calc(0.2 * var(--aek-rem));
+  padding: calc(0.2 * var(--aek-rem)) 0;
 
   :global(.tp-btnv_b) {
     flex: 1;
     min-width: 0;
-    padding: 0 0.2rem;
+    padding: 0 calc(0.2 * var(--aek-rem));
     white-space: nowrap;
   }
 
@@ -209,18 +209,18 @@
 :global(.debuggerClearLSDialogButtonRow) {
   display: flex;
   justify-content: center;
-  margin-top: 1.6rem;
+  margin-top: calc(1.6 * var(--aek-rem));
 }
 
 :global(.debuggerClearLSDialogButton) {
   @include variables.nakedButton;
-  padding: 0.8rem 1.6rem;
-  margin: 0 0.4rem;
-  border-radius: 0.4rem;
+  padding: calc(0.8 * var(--aek-rem)) calc(1.6 * var(--aek-rem));
+  margin: 0 calc(0.4 * var(--aek-rem));
+  border-radius: calc(0.4 * var(--aek-rem));
   background-color: variables.$debugTabButton;
-  border: 0.1rem solid variables.$debugTextColor;
+  border: calc(0.1 * var(--aek-rem)) solid variables.$debugTextColor;
   color: variables.$debugTextColor;
-  transition: background-color 0.2s ease-in-out;
+  transition: background-color var(--aek-motion-base) ease-in-out;
 
   &:hover {
     background-color: rgba(255, 255, 255, 0.25);
@@ -234,13 +234,13 @@
 
 :global(.debuggerSmallButton) {
   @include variables.nakedButton;
-  padding: 0.3rem 0.8rem;
-  border-radius: 0.3rem;
+  padding: calc(0.3 * var(--aek-rem)) calc(0.8 * var(--aek-rem));
+  border-radius: calc(0.3 * var(--aek-rem));
   background-color: variables.$debugTabButton;
-  border: 0.1rem solid variables.$debugTextColor;
+  border: calc(0.1 * var(--aek-rem)) solid variables.$debugTextColor;
   color: variables.$debugTextColor;
-  font-size: 1.1rem;
-  transition: background-color 0.2s ease-in-out;
+  font-size: calc(1.1 * var(--aek-rem));
+  transition: background-color var(--aek-motion-base) ease-in-out;
 
   &:hover {
     background-color: rgba(255, 255, 255, 0.25);
@@ -253,23 +253,23 @@
 
 .debugCurrentSceneTitle {
   width: 100%;
-  height: 3rem;
-  padding: 0.4rem 0 0.8rem;
-  padding-right: 3rem;
+  height: calc(3 * var(--aek-rem));
+  padding: calc(0.4 * var(--aek-rem)) 0 calc(0.8 * var(--aek-rem));
+  padding-right: calc(3 * var(--aek-rem));
   position: relative;
   color: variables.$debugTextColor;
 
   .closeBtn {
     @include variables.nakedButton;
     background-color: transparent;
-    width: 2.4rem;
-    height: 2.4rem;
+    width: calc(2.4 * var(--aek-rem));
+    height: calc(2.4 * var(--aek-rem));
     margin: 0;
     position: absolute;
     top: 0;
     right: 0;
-    border-radius: 0.4rem;
-    transition: background-color 0.2s ease-in-out;
+    border-radius: calc(0.4 * var(--aek-rem));
+    transition: background-color var(--aek-motion-base) ease-in-out;
 
     &:hover {
       background-color: rgba(variables.$debugTextColor, 0.2);
@@ -279,12 +279,12 @@
     &:after {
       display: block;
       content: '';
-      width: 2rem;
-      height: 0.1rem;
+      width: calc(2 * var(--aek-rem));
+      height: calc(0.1 * var(--aek-rem));
       background: variables.$white;
       position: absolute;
       top: 50%;
-      left: 0.2rem;
+      left: calc(0.2 * var(--aek-rem));
     }
     &:before {
       transform: rotate(45deg);
@@ -297,13 +297,13 @@
 
 .debugCurrentSceneTitleHeading {
   position: absolute;
-  top: -0.8rem;
+  top: calc(-0.8 * var(--aek-rem));
   left: 0;
-  font-size: 0.8rem;
+  font-size: calc(0.8 * var(--aek-rem));
 }
 
 .debugCurrentSceneTitleText {
-  font-size: 1.4rem;
+  font-size: calc(1.4 * var(--aek-rem));
 }
 
 .debuggerDisabled {
@@ -312,7 +312,7 @@
   &:after {
     display: block;
     content: '';
-    transition: background 0.2s ease-in-out;
+    transition: background var(--aek-motion-base) ease-in-out;
     background: repeat url('/debugger/assets/images/stripe-pattern-24x24.png') rgba(75, 59, 59, 0.2);
     background-size: 8px 8px;
     width: 100%;
@@ -324,14 +324,14 @@
 }
 
 :global(.listItemCount) {
-  margin: 2.4rem 0 1.6rem;
-  font-size: 1.4rem;
+  margin: calc(2.4 * var(--aek-rem)) 0 calc(1.6 * var(--aek-rem));
+  font-size: calc(1.4 * var(--aek-rem));
 }
 
 :global(ul li.emptyState) {
-  padding: 2.4rem;
+  padding: calc(2.4 * var(--aek-rem));
   color: color.adjust(variables.$debugTextColorDark, $lightness: -20%);
-  font-size: 1.2rem;
+  font-size: calc(1.2 * var(--aek-rem));
   font-weight: 700;
 }
 
@@ -340,7 +340,7 @@
   padding: 0;
   margin: 0;
   background-color: color.adjust(#28292e, $lightness: -2%);
-  border-radius: 0.4rem;
+  border-radius: calc(0.4 * var(--aek-rem));
   overflow: hidden;
 
   li {
@@ -348,7 +348,7 @@
     position: relative;
     width: 100%;
     color: variables.$debugTextColor;
-    font-size: 1.2rem;
+    font-size: calc(1.2 * var(--aek-rem));
 
     &:nth-child(odd) {
       background-color: #28292e;
@@ -361,7 +361,7 @@
       width: 100%;
       text-align: left;
       color: variables.$debugTextColor;
-      transition: background-color 0.075s ease-in-out;
+      transition: background-color var(--aek-motion-fast) ease-in-out;
 
       &:hover {
         background-color: rgba(255, 255, 255, 0.1);
@@ -371,7 +371,7 @@
         &:before {
           display: block;
           content: '';
-          width: 0.2rem;
+          width: calc(0.2 * var(--aek-rem));
           height: 100%;
           position: absolute;
           left: 0;
@@ -389,7 +389,7 @@
       &:before {
         display: block;
         content: '';
-        width: 0.4rem;
+        width: calc(0.4 * var(--aek-rem));
         height: 100%;
         position: absolute;
         left: 0;
@@ -402,29 +402,29 @@
 
 ul li :global(.listItemWithId) {
   display: flex;
-  gap: 0.8rem;
-  padding: 2rem 0.8rem 0.8rem;
+  gap: calc(0.8 * var(--aek-rem));
+  padding: calc(2 * var(--aek-rem)) calc(0.8 * var(--aek-rem)) calc(0.8 * var(--aek-rem));
   position: relative;
 
   :global(.itemId) {
     position: absolute;
     top: 0;
-    font-size: 1rem;
-    padding-top: 0.5rem;
+    font-size: calc(1 * var(--aek-rem));
+    padding-top: calc(0.5 * var(--aek-rem));
     color: variables.$debugTextColorDark;
   }
 
   :global(.additionalInfo) {
     display: inline-block;
-    font-size: 0.8rem;
+    font-size: calc(0.8 * var(--aek-rem));
     color: variables.$debugGuiBackgroundLighter;
     background-color: variables.$debugTextColorDark;
     position: absolute;
-    top: 0.4rem;
+    top: calc(0.4 * var(--aek-rem));
     left: 100%;
-    margin-left: 0.8rem;
-    padding: 0.2rem 0.2rem 0 0.2rem;
-    border-radius: 0.2rem;
+    margin-left: calc(0.8 * var(--aek-rem));
+    padding: calc(0.2 * var(--aek-rem)) calc(0.2 * var(--aek-rem)) 0 calc(0.2 * var(--aek-rem));
+    border-radius: calc(0.2 * var(--aek-rem));
   }
 
   span,
@@ -436,8 +436,8 @@ ul li :global(.listItemWithId) {
 
 // Shared debugger list (_dbg__DebuggerList.ts)
 :global(.debuggerListHeading) {
-  margin: 1.2rem 0 0.6rem;
-  font-size: 1.3rem;
+  margin: calc(1.2 * var(--aek-rem)) 0 calc(0.6 * var(--aek-rem));
+  font-size: calc(1.3 * var(--aek-rem));
   color: variables.$debugTextColor;
 
   :global(.debuggerListCount) {
@@ -459,33 +459,33 @@ ul li :global(.listItemWithId) {
 ul li :global(.listItemWithId) > :global(.uiIcon) {
   display: inline-block;
   flex-shrink: 0;
-  width: 1.4rem;
+  width: calc(1.4 * var(--aek-rem));
 }
 
 :global(.debuggerListToggles) {
   display: flex;
   flex-shrink: 0;
-  gap: 0.4rem;
-  padding: 0 0.8rem;
+  gap: calc(0.4 * var(--aek-rem));
+  padding: 0 calc(0.8 * var(--aek-rem));
 }
 
 :global(.debuggerListToggle),
 :global(.debuggerListToggleSpacer) {
-  width: 2.2rem;
-  height: 2.2rem;
+  width: calc(2.2 * var(--aek-rem));
+  height: calc(2.2 * var(--aek-rem));
 }
 
 :global(.debuggerListToggle) {
   @include variables.nakedButton;
   display: block;
-  border-radius: 0.4rem;
-  padding: 0.4rem;
+  border-radius: calc(0.4 * var(--aek-rem));
+  padding: calc(0.4 * var(--aek-rem));
   background-color: transparent;
-  border: 0.1rem solid transparent;
+  border: calc(0.1 * var(--aek-rem)) solid transparent;
   opacity: 0.4;
   transition:
-    background-color 0.17s ease-in-out,
-    opacity 0.17s ease-in-out;
+    background-color var(--aek-motion-base) ease-in-out,
+    opacity var(--aek-motion-base) ease-in-out;
 
   &:global(.isOn) {
     opacity: 1;

@@ -3,39 +3,34 @@
 // overrides it, whatever the stylesheet order.
 @use './styles/variables.scss';
 
-$listGap: 0.4rem;
+$listGap: calc(0.4 * var(--aek-rem));
 
 // The font size is set here, not on the trigger: normalize.scss's `button { font-size: 100% }`
 // beats a :where() rule, and 100% inherits this one (the list inherits it too)
 :where(.aekDropDown) {
   position: relative;
   display: inline-flex;
-  font-size: 1.2rem;
+  font-size: calc(1.2 * var(--aek-rem));
 }
 
 :where(.aekDropDownTrigger) {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  min-width: 12rem;
+  gap: calc(0.6 * var(--aek-rem));
+  min-width: calc(12 * var(--aek-rem));
   margin: 0;
-  padding: 0.5rem 0.8rem;
+  padding: calc(0.5 * var(--aek-rem)) calc(0.8 * var(--aek-rem));
   border: 0;
-  border-radius: 0.2rem;
-  outline: 0;
+  border-radius: calc(0.2 * var(--aek-rem));
   background-color: variables.$debugGuiBackgroundLighter2;
   color: variables.$debugTextColor;
   text-align: left;
   cursor: pointer;
-  transition: background-color 0.17s ease-in-out;
+  transition: background-color var(--aek-motion-base) ease-in-out;
 }
 
 :where(.aekDropDownTrigger:hover:not(:disabled)) {
   background-color: variables.$debugGuiBackgroundLighter;
-}
-
-:where(.aekDropDownTrigger:focus-visible) {
-  box-shadow: 0 0 0 0.1rem variables.$debugTextColor;
 }
 
 :where(.aekDropDownTrigger:disabled) {
@@ -46,7 +41,7 @@ $listGap: 0.4rem;
 :where(.aekDropDownTrigger svg) {
   display: block;
   flex-shrink: 0;
-  width: 1.7rem;
+  width: calc(1.7 * var(--aek-rem));
 }
 
 :where(.aekDropDownTrigger svg path) {
@@ -66,15 +61,15 @@ $listGap: 0.4rem;
   flex-shrink: 0;
   width: 0;
   height: 0;
-  margin-right: 0.2rem;
-  border-left: 0.4rem solid transparent;
-  border-right: 0.4rem solid transparent;
-  border-top: 0.5rem solid currentColor;
+  margin-right: calc(0.2 * var(--aek-rem));
+  border-left: calc(0.4 * var(--aek-rem)) solid transparent;
+  border-right: calc(0.4 * var(--aek-rem)) solid transparent;
+  border-top: calc(0.5 * var(--aek-rem)) solid currentColor;
 }
 
 :where(.aekDropDown_top .aekDropDownCaret) {
   border-top: 0;
-  border-bottom: 0.5rem solid currentColor;
+  border-bottom: calc(0.5 * var(--aek-rem)) solid currentColor;
 }
 
 :where(.aekDropDownList) {
@@ -85,15 +80,14 @@ $listGap: 0.4rem;
   max-height: 40vh;
   overflow-y: auto;
   margin: 0;
-  padding: 0.4rem;
+  padding: calc(0.4 * var(--aek-rem));
   list-style: none;
   background-color: variables.$debugGuiBackgroundLighter2;
-  border-radius: 0.2rem;
+  border-radius: calc(0.2 * var(--aek-rem));
   box-shadow:
     rgba(0, 0, 0, 0.19) 0px 10px 20px,
     rgba(0, 0, 0, 0.23) 0px 6px 6px;
   color: variables.$debugTextColor;
-  outline: 0;
   scrollbar-color: variables.$debugTextColor variables.$debugGuiBackgroundLighter2;
   scrollbar-width: thin;
 }
@@ -108,8 +102,9 @@ $listGap: 0.4rem;
 
 :where(.aekDropDownItem) {
   position: relative;
-  padding: 0.5rem 0.8rem 0.5rem 1.6rem;
-  border-radius: 0.2rem;
+  padding: calc(0.5 * var(--aek-rem)) calc(0.8 * var(--aek-rem)) calc(0.5 * var(--aek-rem))
+    calc(1.6 * var(--aek-rem));
+  border-radius: calc(0.2 * var(--aek-rem));
   white-space: nowrap;
   cursor: pointer;
 }
@@ -124,10 +119,10 @@ $listGap: 0.4rem;
   content: '';
   position: absolute;
   top: 50%;
-  left: 0.6rem;
-  width: 0.5rem;
-  height: 0.5rem;
-  margin-top: -0.25rem;
+  left: calc(0.6 * var(--aek-rem));
+  width: calc(0.5 * var(--aek-rem));
+  height: calc(0.5 * var(--aek-rem));
+  margin-top: calc(-0.25 * var(--aek-rem));
   border-radius: 50%;
   background-color: currentColor;
 }

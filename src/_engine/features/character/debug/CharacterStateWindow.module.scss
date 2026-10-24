@@ -9,8 +9,9 @@ $savedColor: #58a6ff;
 $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
 .root {
-  padding: 0.6rem 0.4rem 0.8rem 1rem;
-  font-size: 1.1rem;
+  padding: calc(0.6 * var(--aek-rem)) calc(0.4 * var(--aek-rem)) calc(0.8 * var(--aek-rem))
+    calc(1 * var(--aek-rem));
+  font-size: calc(1.1 * var(--aek-rem));
   line-height: 1.6;
   color: variables.$debugTextColor;
 }
@@ -18,43 +19,43 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 .headerRows {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  padding-bottom: 0.6rem;
-  margin-bottom: 0.4rem;
-  border-bottom: 0.1rem solid variables.$debugGuiBackgroundLighter2;
+  gap: calc(0.4 * var(--aek-rem));
+  padding-bottom: calc(0.6 * var(--aek-rem));
+  margin-bottom: calc(0.4 * var(--aek-rem));
+  border-bottom: calc(0.1 * var(--aek-rem)) solid variables.$debugGuiBackgroundLighter2;
 }
 
 .header {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: calc(0.6 * var(--aek-rem));
 }
 
 @mixin numberInput {
-  padding: 0.1rem 0.4rem;
-  border: 0.1rem solid variables.$debugGuiBackgroundLighter2;
-  border-radius: 0.2rem;
+  padding: calc(0.1 * var(--aek-rem)) calc(0.4 * var(--aek-rem));
+  border: calc(0.1 * var(--aek-rem)) solid variables.$debugGuiBackgroundLighter2;
+  border-radius: calc(0.2 * var(--aek-rem));
   background: variables.$debugGuiBackgroundDarker;
   color: variables.$debugTextColor;
   font-family: $monoStack;
-  font-size: 1.1rem;
+  font-size: calc(1.1 * var(--aek-rem));
   text-align: right;
 }
 
 .intervalInput {
   @include numberInput;
-  width: 6.4rem;
+  width: calc(6.4 * var(--aek-rem));
 }
 
 .scaleInput {
   @include numberInput;
-  width: 5.6rem;
+  width: calc(5.6 * var(--aek-rem));
 }
 
 .toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: calc(0.3 * var(--aek-rem));
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
@@ -70,19 +71,19 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 }
 
 .flashToggle {
-  margin-left: 0.6rem;
+  margin-left: calc(0.6 * var(--aek-rem));
 }
 
 .gizmoRow {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.2rem 0.8rem;
+  gap: calc(0.2 * var(--aek-rem)) calc(0.8 * var(--aek-rem));
 }
 
 .rowSeparator {
   align-self: stretch;
-  width: 0.1rem;
+  width: calc(0.1 * var(--aek-rem));
   background-color: variables.$debugGuiBackgroundLighter2;
 }
 
@@ -94,11 +95,11 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 }
 
 .frozenBadge {
-  padding: 0 0.4rem;
-  border-radius: 0.2rem;
+  padding: 0 calc(0.4 * var(--aek-rem));
+  border-radius: calc(0.2 * var(--aek-rem));
   background-color: variables.$debugValueFlash;
   color: variables.$white;
-  font-size: 1rem;
+  font-size: calc(1 * var(--aek-rem));
   font-weight: bold;
   letter-spacing: 0.05em;
 }
@@ -112,12 +113,12 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 }
 
 .group {
-  margin-top: 0.4rem;
+  margin-top: calc(0.4 * var(--aek-rem));
 
   > summary {
     position: relative;
     cursor: pointer;
-    padding: 0.2rem 0;
+    padding: calc(0.2 * var(--aek-rem)) 0;
     font-weight: bold;
     user-select: none;
   }
@@ -135,10 +136,10 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.8rem;
-  min-height: 1.8rem;
-  padding: 0 0.4rem;
-  border-radius: 0.2rem;
+  gap: calc(0.8 * var(--aek-rem));
+  min-height: calc(1.8 * var(--aek-rem));
+  padding: 0 calc(0.4 * var(--aek-rem));
+  border-radius: calc(0.2 * var(--aek-rem));
 
   &:hover {
     background-color: rgba(variables.$debugTextColor, 0.06);
@@ -170,7 +171,7 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: calc(0.6 * var(--aek-rem));
   overflow: hidden;
   font-family: $monoStack;
   font-variant-numeric: tabular-nums;
@@ -207,7 +208,7 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
 .vecComp {
   display: inline-flex;
-  gap: 0.2rem;
+  gap: calc(0.2 * var(--aek-rem));
 }
 
 .vecLabel {
@@ -217,8 +218,8 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 .boolIcon {
   display: inline-flex;
   flex-shrink: 0;
-  width: 1.4rem;
-  height: 1.4rem;
+  width: calc(1.4 * var(--aek-rem));
+  height: calc(1.4 * var(--aek-rem));
   color: variables.$debugBoolFalse;
 
   :global(.uiIcon) {
@@ -248,16 +249,16 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 // Configuration editors (Properties rows)
 
 .row.isChanged {
-  box-shadow: inset 0.2rem 0 0 $changedColor;
+  box-shadow: inset calc(0.2 * var(--aek-rem)) 0 0 $changedColor;
 }
 
 // A fixed slot, so the values line up whether a row is changed or not
 .resetButton {
   display: inline-flex;
   flex-shrink: 0;
-  width: 1.4rem;
-  height: 1.4rem;
-  padding: 0.1rem;
+  width: calc(1.4 * var(--aek-rem));
+  height: calc(1.4 * var(--aek-rem));
+  padding: calc(0.1 * var(--aek-rem));
   border: 0;
   background: none;
   color: $changedColor;
@@ -283,8 +284,8 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 // A fixed slot too: the row's value is saved (applied again on the character's next creation)
 .savedDot {
   flex-shrink: 0;
-  width: 0.6rem;
-  height: 0.6rem;
+  width: calc(0.6 * var(--aek-rem));
+  height: calc(0.6 * var(--aek-rem));
   border-radius: 50%;
   background-color: $savedColor;
   cursor: help;
@@ -298,7 +299,7 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 .savedActions {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: calc(0.4 * var(--aek-rem));
 
   &[hidden] {
     display: none;
@@ -307,7 +308,7 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
 .savedCount {
   color: $savedColor;
-  font-size: 1rem;
+  font-size: calc(1 * var(--aek-rem));
   white-space: nowrap;
   cursor: help;
 }
@@ -316,11 +317,11 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 .groupActions {
   position: absolute;
   top: 50%;
-  right: 0.4rem;
+  right: calc(0.4 * var(--aek-rem));
   transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: calc(0.6 * var(--aek-rem));
   font-weight: normal;
 }
 
@@ -331,21 +332,21 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
 .changedCount {
   color: $changedColor;
-  font-size: 1rem;
+  font-size: calc(1 * var(--aek-rem));
 }
 
 // Beats the global class's size and margins (both are one class)
 .groupActions .groupActionButton {
-  width: 1.8rem;
-  height: 1.8rem;
-  padding: 0.3rem;
+  width: calc(1.8 * var(--aek-rem));
+  height: calc(1.8 * var(--aek-rem));
+  padding: calc(0.3 * var(--aek-rem));
   margin: 0;
 }
 
 .configInput {
   @include numberInput;
   width: 9ch;
-  padding: 0 0.4rem;
+  padding: 0 calc(0.4 * var(--aek-rem));
   line-height: 1.4;
   font-variant-numeric: tabular-nums;
 
@@ -354,7 +355,6 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   }
 
   &:focus {
-    outline: none;
     border-color: variables.$debugTextColor;
   }
 }
@@ -387,8 +387,8 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 .lockIcon {
   display: inline-flex;
   align-self: center;
-  width: 1.1rem;
-  height: 1.1rem;
+  width: calc(1.1 * var(--aek-rem));
+  height: calc(1.1 * var(--aek-rem));
   color: $dimText;
   cursor: help;
 
@@ -401,7 +401,7 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 }
 
 .emptyState {
-  padding: 1rem 0;
+  padding: calc(1 * var(--aek-rem)) 0;
   color: $dimText;
   font-style: italic;
 }

@@ -5,28 +5,28 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 1rem 1.2rem 1.2rem;
+  padding: calc(1 * var(--aek-rem)) calc(1.2 * var(--aek-rem)) calc(1.2 * var(--aek-rem));
 }
 
 .tabBar {
   display: flex;
   flex-shrink: 0;
-  border-bottom: 0.1rem solid variables.$debugTextColorDark;
+  border-bottom: calc(0.1 * var(--aek-rem)) solid variables.$debugTextColorDark;
 }
 
 .tabButton {
   @include variables.nakedButton;
-  margin-bottom: -0.1rem;
-  margin-right: 0.4rem;
-  padding: 0.6rem 1.2rem;
+  margin-bottom: calc(-0.1 * var(--aek-rem));
+  margin-right: calc(0.4 * var(--aek-rem));
+  padding: calc(0.6 * var(--aek-rem)) calc(1.2 * var(--aek-rem));
   background-color: rgba(0, 0, 0, 0.25);
-  border: 0.1rem solid transparent;
+  border: calc(0.1 * var(--aek-rem)) solid transparent;
   border-radius: variables.$borderRadiusSmall variables.$borderRadiusSmall 0 0;
   color: variables.$debugTextColorDark;
-  font-size: 1.2rem;
+  font-size: calc(1.2 * var(--aek-rem));
   transition:
-    background-color 0.2s ease-in-out,
-    color 0.2s ease-in-out;
+    background-color var(--aek-motion-base) ease-in-out,
+    color var(--aek-motion-base) ease-in-out;
 
   &:hover:not(.tabButtonSelected) {
     background-color: rgba(0, 0, 0, 0.1);
@@ -47,25 +47,25 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 0.4rem 0.8rem 0 0;
+  padding: calc(0.4 * var(--aek-rem)) calc(0.8 * var(--aek-rem)) 0 0;
   scrollbar-color: variables.$debugTextColor variables.$debugGuiBackgroundLighter2;
   scrollbar-width: thin;
 }
 
 .section {
-  margin-top: 1.6rem;
+  margin-top: calc(1.6 * var(--aek-rem));
 
   h4 {
-    margin: 0 0 0.2rem;
-    font-size: 1.3rem;
+    margin: 0 0 calc(0.2 * var(--aek-rem));
+    font-size: calc(1.3 * var(--aek-rem));
     color: variables.$white;
   }
 }
 
 .sectionDescription,
 .empty {
-  margin: 0 0 0.6rem;
-  font-size: 1.1rem;
+  margin: 0 0 calc(0.6 * var(--aek-rem));
+  font-size: calc(1.1 * var(--aek-rem));
   color: variables.$debugTextColorDark;
 }
 
@@ -81,14 +81,14 @@
 
 .row {
   display: grid;
-  grid-template-columns: 12rem 1fr;
-  gap: 1rem;
-  padding: 0.6rem 0;
-  border-top: 0.1rem solid rgba(variables.$debugTextColor, 0.12);
+  grid-template-columns: calc(12 * var(--aek-rem)) 1fr;
+  gap: calc(1 * var(--aek-rem));
+  padding: calc(0.6 * var(--aek-rem)) 0;
+  border-top: calc(0.1 * var(--aek-rem)) solid rgba(variables.$debugTextColor, 0.12);
 
   @media screen and (max-width: variables.$breakpointSmall) {
     grid-template-columns: 1fr;
-    gap: 0.4rem;
+    gap: calc(0.4 * var(--aek-rem));
   }
 }
 
@@ -107,20 +107,20 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.2rem;
+  gap: calc(0.2 * var(--aek-rem));
   align-self: start;
 
   kbd {
     display: inline-block;
-    min-width: 2rem;
-    padding: 0.2rem 0.5rem;
-    border: 0.1rem solid variables.$debugTextColorDark;
-    border-bottom-width: 0.2rem;
-    border-radius: 0.3rem;
+    min-width: calc(2 * var(--aek-rem));
+    padding: calc(0.2 * var(--aek-rem)) calc(0.5 * var(--aek-rem));
+    border: calc(0.1 * var(--aek-rem)) solid variables.$debugTextColorDark;
+    border-bottom-width: calc(0.2 * var(--aek-rem));
+    border-radius: calc(0.3 * var(--aek-rem));
     background-color: variables.$debugGuiBackground;
     color: variables.$white;
     font-family: inherit;
-    font-size: 1.1rem;
+    font-size: calc(1.1 * var(--aek-rem));
     text-align: center;
     white-space: nowrap;
   }
@@ -128,12 +128,12 @@
 
 .keyJoin,
 .keyOr {
-  font-size: 1rem;
+  font-size: calc(1 * var(--aek-rem));
   color: variables.$debugTextColorDark;
 }
 
 .keyOr {
-  margin: 0 0.2rem;
+  margin: 0 calc(0.2 * var(--aek-rem));
 }
 
 .info {
@@ -145,21 +145,21 @@
 }
 
 .id {
-  margin-left: 0.4rem;
+  margin-left: calc(0.4 * var(--aek-rem));
   font-family: monospace;
-  font-size: 1rem;
+  font-size: calc(1 * var(--aek-rem));
   color: variables.$debugTextColorDark;
 }
 
 .description {
-  margin-top: 0.2rem;
-  font-size: 1.1rem;
+  margin-top: calc(0.2 * var(--aek-rem));
+  font-size: calc(1.1 * var(--aek-rem));
   color: variables.$debugTextColorDark;
 }
 
 .note {
-  margin-top: 0.2rem;
-  font-size: 1.1rem;
+  margin-top: calc(0.2 * var(--aek-rem));
+  font-size: calc(1.1 * var(--aek-rem));
 
   &.info {
     color: color.adjust(variables.$info, $lightness: 30%);
@@ -177,15 +177,15 @@
 .badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 0.4rem;
+  gap: calc(0.4 * var(--aek-rem));
+  margin-top: calc(0.4 * var(--aek-rem));
 }
 
 .badge {
-  padding: 0.1rem 0.6rem;
-  border: 0.1rem solid transparent;
-  border-radius: 1rem;
-  font-size: 1rem;
+  padding: calc(0.1 * var(--aek-rem)) calc(0.6 * var(--aek-rem));
+  border: calc(0.1 * var(--aek-rem)) solid transparent;
+  border-radius: calc(1 * var(--aek-rem));
+  font-size: calc(1 * var(--aek-rem));
   white-space: nowrap;
 
   &.muted {
@@ -210,8 +210,8 @@
   display: flex;
   flex-shrink: 0;
   justify-content: flex-end;
-  padding-top: 1rem;
-  border-top: 0.1rem solid variables.$debugTextColorDark;
+  padding-top: calc(1 * var(--aek-rem));
+  border-top: calc(0.1 * var(--aek-rem)) solid variables.$debugTextColorDark;
 
   :global(.debuggerClearLSDialogButton) {
     margin: 0;

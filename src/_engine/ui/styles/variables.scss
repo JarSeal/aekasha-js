@@ -26,8 +26,8 @@ $debugValueFlash: rgba(#e3b341, 0.35);
 $debugValueWarn: #e3b341;
 
 // Drawer
-$drawerWidth: 40rem;
-$drawerWidthSmall: 30rem;
+$drawerWidth: calc(40 * var(--aek-rem));
+$drawerWidthSmall: calc(30 * var(--aek-rem));
 
 // Breakpoints
 $breakpointXLarge: 1199px;
@@ -39,16 +39,15 @@ $breakpointXSmall: 379px;
 $errorDark: #701515;
 
 // Border radius
-$borderRadiusSmall: 0.4rem;
+$borderRadiusSmall: calc(0.4 * var(--aek-rem));
 
 // Draggable window
-$dragWinContentPadding: 1rem;
+$dragWinContentPadding: calc(1 * var(--aek-rem));
 
 // Naked styles
 @mixin nakedButton {
   border-radius: 0;
   border: 0;
-  outline: 0;
   padding: 0;
   margin: 0;
   background: $white;

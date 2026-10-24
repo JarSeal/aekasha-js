@@ -6,15 +6,15 @@
 /// selected button doesn't light up on hover).
 @mixin tabButton($selectedClass) {
   @include variables.nakedButton;
-  margin-right: -0.1rem;
-  margin-bottom: -0.1rem;
-  padding: 0.6rem 1.2rem 0.4rem;
+  margin-right: calc(-0.1 * var(--aek-rem));
+  margin-bottom: calc(-0.1 * var(--aek-rem));
+  padding: calc(0.6 * var(--aek-rem)) calc(1.2 * var(--aek-rem)) calc(0.4 * var(--aek-rem));
   background-color: variables.$debugTabButton;
-  border: 0.1rem solid variables.$debugTextColor;
+  border: calc(0.1 * var(--aek-rem)) solid variables.$debugTextColor;
   color: variables.$debugTextColor;
   user-select: none;
-  font-size: 1rem;
-  transition: background-color 0.2s ease-in-out;
+  font-size: calc(1 * var(--aek-rem));
+  transition: background-color var(--aek-motion-base) ease-in-out;
 
   &:hover:not(.#{$selectedClass}) {
     background-color: rgba(255, 255, 255, 0.25);
@@ -24,6 +24,6 @@
 /// The selected tab menu button.
 @mixin tabButtonSelected {
   background-color: variables.$debugTextColor;
-  border: 0.1rem solid transparent;
+  border: calc(0.1 * var(--aek-rem)) solid transparent;
   color: variables.$black;
 }

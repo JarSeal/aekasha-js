@@ -1,24 +1,24 @@
 @use '../../ui/styles/variables.scss';
 
 .gpuMemorySummary {
-  padding: 0.4rem 0.4rem 1.2rem;
+  padding: calc(0.4 * var(--aek-rem)) calc(0.4 * var(--aek-rem)) calc(1.2 * var(--aek-rem));
   color: variables.$debugTextColor;
-  font-size: 1.1rem;
+  font-size: calc(1.1 * var(--aek-rem));
 }
 
 .gpuMemoryTotalRow {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 0.6rem;
+  margin-bottom: calc(0.6 * var(--aek-rem));
 
   strong {
-    font-size: 1.6rem;
+    font-size: calc(1.6 * var(--aek-rem));
   }
 }
 
 .gpuMemoryBar {
-  height: 0.8rem;
+  height: calc(0.8 * var(--aek-rem));
   border-radius: variables.$borderRadiusSmall;
   background-color: variables.$debugGuiBackgroundLighter2;
   overflow: hidden;
@@ -27,7 +27,7 @@
 .gpuMemoryBarFill {
   height: 100%;
   background-color: variables.$debugBoolTrue;
-  transition: width 0.2s ease-in-out;
+  transition: width var(--aek-motion-base) ease-in-out;
 
   .gpuMemoryOverBudget & {
     background-color: variables.$debugAlertLight;
@@ -35,7 +35,7 @@
 }
 
 .gpuMemoryBarLabel {
-  margin-top: 0.4rem;
+  margin-top: calc(0.4 * var(--aek-rem));
 
   .gpuMemoryOverBudget & {
     color: variables.$debugAlertLight;
@@ -43,19 +43,19 @@
 }
 
 .gpuMemoryNote {
-  margin-top: 0.6rem;
+  margin-top: calc(0.6 * var(--aek-rem));
   color: variables.$debugTextColorDark;
 }
 
 .gpuMemoryHeading {
-  margin: 0 0 0.6rem;
-  font-size: 1.2rem;
+  margin: 0 0 calc(0.6 * var(--aek-rem));
+  font-size: calc(1.2 * var(--aek-rem));
   font-weight: bold;
 }
 
 .gpuMemoryTable {
   width: 100%;
-  margin-top: 1rem;
+  margin-top: calc(1 * var(--aek-rem));
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 
@@ -66,7 +66,7 @@
   }
 
   td {
-    padding: 0.15rem 0;
+    padding: calc(0.15 * var(--aek-rem)) 0;
     text-align: right;
     white-space: nowrap;
   }
@@ -78,7 +78,7 @@
 
   th + th,
   td + td {
-    padding-left: 0.8rem;
+    padding-left: calc(0.8 * var(--aek-rem));
   }
 
   th {
@@ -100,7 +100,7 @@
 }
 
 .gpuMemoryCell td:first-child {
-  padding-left: 1.2rem;
+  padding-left: calc(1.2 * var(--aek-rem));
 }
 
 .gpuMemoryUntracked td {
