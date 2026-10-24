@@ -13,10 +13,18 @@
  *   (a click on its heading reaches the heading) and without pointer events (a click in the middle
  *   reaches the page); `unmount()` leaves nothing.
  * - In both, no computed style of the host's elements (`HOST_STYLE_SELECTORS`) changes while
- *   mounted or after the unmount, and no console error or page error.
+ *   mounted or after the unmount (but the custom properties `tokens.css` registers, which CSS
+ *   puts on every element: `readRegisteredProperties`), and no console error or page error.
  * - The banner only: the Hub's embed example (`embedExample.html`, its regions on
  *   `hub/pages/examples/embed/`) mounts into its hero at the target's size, turns, and its pause
  *   button pauses and resumes it, without an error.
+ * - The uiKit profile only (p801 D9), `INLINE` in the 640 × 360 target on a host with a 16 px
+ *   root and again with `html { font-size: 62.5% }`: the window, the dialog, its backdrop, the
+ *   toast and the open drop-down list inside the container; the window at its px position from
+ *   the container's corner, the dialog centred in it, the backdrop covering it and not the page;
+ *   the window's, the toast's and the list's font sizes the same at both roots; with the dialog
+ *   closed, a drag of the window's title moving it by the pointer's distance, and the window
+ *   inside the container after the target shrinks.
  *
  * It builds the profiles first (`yarn sbp`'s build, `dist-embed/<id>/`) unless `--no-build`,
  * serves the page and the build from its own static server (a free port on localhost: the page at `/`, the build
@@ -36,18 +44,57 @@ import { getEmbedEntryFileName, getEmbedOutDir } from '../sbp/embedPaths';
 import { isWSL, launchChromium } from './browser';
 import {
   type Box,
+  type Rect,
   type StyleSnapshot,
   checkBox,
+  checkInside,
+  checkPosition,
   diffComputedStyles,
   HOST_STYLE_SELECTORS,
+  readRegisteredProperties,
 } from './embedChecks';
 import { out, PROGRESS_LOG_WATCH } from '../progressLog';
 
 const HOST_PAGE = path.join(ROOT, 'devTools/verify/embedHost.html');
+/** The UI kit's tokens, whose `@property` registrations are in every element's computed style */
+const TOKENS_CSS = path.join(ROOT, 'src/_engine/ui/styles/tokens.css');
 /** The Hub's embed example (its regions), which imports the banner's entry by name */
 const EXAMPLE_PAGE = path.join(ROOT, 'devTools/verify/embedExample.html');
 const EXAMPLE_PROFILE = 'banner';
 const PAGES: Record<string, string> = { '/': HOST_PAGE, '/example.html': EXAMPLE_PAGE };
+/** The profile whose scene opens one of each of the UI kit's pieces (p801 D9) */
+const UI_KIT_PROFILE = 'uiKit';
+/**
+ * Its elements, by the ids and classes its scene gives them
+ * (`src/app/profiles/uiKit/uiKitEmbed.ts`: change them there too), and the mount's container
+ */
+const UI_KIT = {
+  container: '.aekMount',
+  window: '#uiKitEmbedWindow',
+  windowTitle: '#uiKitEmbedWindow header h3',
+  dialog: '#uiKitEmbedDialog',
+  // A dialog has no collapse button: its header's one button closes it
+  dialogClose: '#uiKitEmbedDialog header button',
+  backdrop: '.uiKitEmbedBackdrop',
+  toast: '#uiKitEmbedToasts .toast',
+  list: '.uiKitEmbedList',
+  listItem: '.uiKitEmbedList li',
+} as const;
+/** The elements that must stay inside the container */
+const UI_KIT_INSIDE = ['window', 'dialog', 'backdrop', 'toast', 'list'] as const;
+/** The elements whose font size must not follow the host's root */
+const UI_KIT_FONTS = ['window', 'toast', 'listItem'] as const;
+/** The window's px position in the scene, from the container's top left corner */
+const UI_KIT_WINDOW_AT = { x: 16, y: 16 };
+/** The drag, which keeps the 220 × 150 window inside the 640 × 360 container */
+const UI_KIT_DRAG = { x: 120, y: 60 };
+/** The shrunk target, which the dragged window no longer fits at its place */
+const UI_KIT_SHRUNK = { width: 320, height: 200 };
+/** The host roots: the browsers' default, and a site's 62.5 % (the template's before p801) */
+const UI_KIT_ROOTS = [
+  { label: '16 px root', root: '' },
+  { label: 'html { font-size: 62.5% }', root: '62.5%' },
+];
 const VIEWPORT = { width: 1000, height: 700 };
 /**
  * How long a check waits for the page to reach a state (a mount drawn, a resize reaching the
@@ -137,11 +184,9 @@ const startServer = (buildDir: string) =>
 
 const getPort = (server: http.Server) => (server.address() as { port: number }).port;
 
-/** A box on the page: its position too */
-type PageBox = Box & { x: number; y: number };
 type Boxes = {
-  container: PageBox | null;
-  canvas: PageBox | null;
+  container: Rect | null;
+  canvas: Rect | null;
   buffer: Box | null;
   viewport: Box;
 };
@@ -182,13 +227,17 @@ const runScenario = async (
   return problems.length ? 1 : 0;
 };
 
+/** The custom properties `tokens.css` registers, read on the first style check */
+let registeredProperties: string[] | null = null;
+
 const expectNoStyleChange = (
   problems: string[],
   when: string,
   before: StyleSnapshot,
   after: StyleSnapshot
 ) => {
-  const lines = diffComputedStyles(before, after);
+  registeredProperties ??= readRegisteredProperties(fs.readFileSync(TOKENS_CSS, 'utf8'));
+  const lines = diffComputedStyles(before, after, registeredProperties);
   if (lines.length) {
     problems.push(`host styles changed ${when}:`, ...lines.slice(0, 10).map((l) => `  ${l}`));
     if (lines.length > 10) problems.push(`  … ${lines.length - 10} more`);
@@ -196,6 +245,143 @@ const expectNoStyleChange = (
 };
 
 const pushIf = (problems: string[], problem: string | null) => problem && problems.push(problem);
+
+type UiKitRects = Record<keyof typeof UI_KIT, (Rect & { fontSize: string }) | null>;
+
+/**
+ * The uiKit profile's scenario at one host root (p801 D9; see the file's header), on its own page
+ * load. `fonts` is the first root's font sizes, which this one's must match; null the first time.
+ * @returns 1 when it failed, and this root's font sizes
+ */
+const checkUiKitAtRoot = async (
+  page: Page,
+  url: string,
+  label: string,
+  fonts: Record<string, string> | null
+) => {
+  const rects = () =>
+    page.evaluate(
+      (selectors) => window.__embedTest.rects(selectors),
+      Object.values(UI_KIT)
+    ) as Promise<Record<string, UiKitRects[keyof UiKitRects]>>;
+  const read = async () => {
+    const bySelector = await rects();
+    return Object.fromEntries(
+      Object.entries(UI_KIT).map(([name, selector]) => [name, bySelector[selector]])
+    ) as UiKitRects;
+  };
+  const measured: Record<string, string> = {};
+
+  const failed = await runScenario(
+    page,
+    url,
+    `the UI kit, INLINE, ${label}`,
+    async ({ problems, styles }) => {
+      const before = await styles();
+      const mounted = await page.evaluate(() => window.__embedTest.mount({ target: '#inline' }));
+      if (mounted.isFallback) problems.push('mounted as the fallback');
+      // Every piece open, and the toast done sliding in (its box the same on two polls)
+      let lastToast = '';
+      await waitFor(async () => {
+        const r = await read();
+        const toast = JSON.stringify(r.toast);
+        const isSettled = toast === lastToast;
+        lastToast = toast;
+        return isSettled && UI_KIT_INSIDE.every((name) => r[name]) && !!r.container;
+      });
+      let r = await read();
+      const container = r.container;
+      if (!container) {
+        problems.push('no container');
+        return;
+      }
+      for (const name of UI_KIT_INSIDE) pushIf(problems, checkInside(name, r[name], container));
+      pushIf(
+        problems,
+        checkPosition('window', r.window, {
+          x: container.x + UI_KIT_WINDOW_AT.x,
+          y: container.y + UI_KIT_WINDOW_AT.y,
+        })
+      );
+      if (r.dialog) {
+        pushIf(
+          problems,
+          checkPosition('dialog (centred)', r.dialog, {
+            x: container.x + (container.width - r.dialog.width) / 2,
+            y: container.y + (container.height - r.dialog.height) / 2,
+          })
+        );
+      }
+      // The container's box, not the page's
+      pushIf(problems, checkPosition('backdrop', r.backdrop, container));
+      pushIf(problems, checkBox('backdrop', r.backdrop, container));
+      for (const name of UI_KIT_FONTS) {
+        const size = r[name]?.fontSize ?? '(missing)';
+        measured[name] = size;
+        if (fonts && fonts[name] !== size) {
+          problems.push(`${name}'s font size: ${size}, ${fonts[name]} at the first host root`);
+        }
+      }
+      expectNoStyleChange(problems, 'while mounted', before, await styles());
+
+      // The dialog closed by its button, so the window is no longer under its backdrop
+      await page.click(UI_KIT.dialogClose);
+      await waitFor(async () => {
+        const closed = await read();
+        return !closed.dialog && !closed.backdrop;
+      });
+      r = await read();
+      if (r.dialog || r.backdrop) problems.push('the dialog’s close button didn’t close it');
+
+      // A drag by the title moves the window by the pointer's distance (no jump by the
+      // container's offset: Phase 2's fix of a drag's start)
+      const start = r.window;
+      const title = r.windowTitle;
+      if (start && title) {
+        const from = { x: title.x + 16, y: title.y + title.height / 2 };
+        await page.mouse.move(from.x, from.y);
+        await page.mouse.down();
+        await page.mouse.move(from.x + UI_KIT_DRAG.x, from.y + UI_KIT_DRAG.y, { steps: 6 });
+        await page.mouse.up();
+        const to = { x: start.x + UI_KIT_DRAG.x, y: start.y + UI_KIT_DRAG.y };
+        await waitFor(async () => !checkPosition('window', (await read()).window, to));
+        pushIf(problems, checkPosition('window after the drag', (await read()).window, to));
+      } else {
+        problems.push('no window title to drag');
+      }
+
+      // The windows clamp on the container's resize (the main loop's resizers, from its
+      // ResizeObserver), and the toast follows the container's right edge
+      await page.evaluate(
+        (size) => window.__embedTest.resizeTarget('#inline', size.width, size.height),
+        { width: `${UI_KIT_SHRUNK.width}px`, height: `${UI_KIT_SHRUNK.height}px` }
+      );
+      await waitFor(async () => {
+        const s = await read();
+        return (
+          !!s.container &&
+          !checkBox('container', s.container, UI_KIT_SHRUNK) &&
+          !checkInside('window', s.window, s.container)
+        );
+      });
+      r = await read();
+      pushIf(problems, checkBox('container after the target shrank', r.container, UI_KIT_SHRUNK));
+      if (r.container) {
+        pushIf(problems, checkInside('window after the target shrank', r.window, r.container));
+        pushIf(problems, checkInside('toast after the target shrank', r.toast, r.container));
+      }
+      await page.evaluate(() => window.__embedTest.resizeTarget('#inline', '', ''));
+
+      await page.evaluate(() => window.__embedTest.unmount());
+      const left = await page.evaluate(() => window.__embedTest.leftovers());
+      if (left.containers || left.canvases || left.inlineChildren) {
+        problems.push(`left after unmount: ${JSON.stringify(left)}`);
+      }
+      expectNoStyleChange(problems, 'after unmount', before, await styles());
+    }
+  );
+  return { failed, fonts: measured };
+};
 
 const checkProfile = async (page: Page, port: number, profileId: string, entry: string) => {
   const url = `http://localhost:${port}/?entry=${encodeURIComponent(entry)}`;
@@ -288,6 +474,16 @@ const checkProfile = async (page: Page, port: number, profileId: string, entry: 
     }
   );
 
+  if (profileId === UI_KIT_PROFILE) {
+    let fonts: Record<string, string> | null = null;
+    for (const { label, root } of UI_KIT_ROOTS) {
+      const rootParam = root ? `&root=${encodeURIComponent(root)}` : '';
+      const result = await checkUiKitAtRoot(page, `${url}${rootParam}`, label, fonts);
+      failed += result.failed;
+      fonts ??= result.fonts;
+    }
+  }
+
   if (profileId === EXAMPLE_PROFILE) {
     failed += await runScenario(
       page,
@@ -339,6 +535,7 @@ declare global {
       mount: (opts: Record<string, unknown>) => Promise<{ isFallback: boolean }>;
       resizeTarget: (selector: string, width: string, height: string) => void;
       boxes: () => Boxes;
+      rects: (selectors: string[]) => Record<string, (Rect & { fontSize: string }) | null>;
       hits: () => { h1: string; center: string };
       unmount: () => void;
       mountAgain: () => Promise<string | null>;
