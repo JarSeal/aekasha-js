@@ -94,15 +94,24 @@
             viewport: { width: innerWidth, height: innerHeight },
           };
         },
-        /** Each selector's first element: its box and font size, or null */
+        /** Each selector's first element: its box, font size and font family, or null */
         rects: (selectors) =>
           Object.fromEntries(
             selectors.map((selector) => {
               const elem = document.querySelector(selector);
               const rect = elem && box(elem);
-              return [selector, rect && { ...rect, fontSize: getComputedStyle(elem).fontSize }];
+              const style = elem && getComputedStyle(elem);
+              return [
+                selector,
+                rect && { ...rect, fontSize: style.fontSize, fontFamily: style.fontFamily },
+              ];
             })
           ),
+        /** The page's loaded font faces, as `family style weight` */
+        loadedFonts: () =>
+          [...document.fonts]
+            .filter((face) => face.status === 'loaded')
+            .map((face) => `${face.family.replace(/["']/g, '')} ${face.style} ${face.weight}`),
         /** What a click at the h1's centre and at the viewport's centre would hit */
         hits: () => {
           const h1 = box(document.querySelector('h1'));

@@ -228,7 +228,7 @@ const createLodEntityWindowContent = (data?: { [key: string]: unknown }) => {
     tag: 'pre',
     style: {
       margin: '0',
-      fontFamily: 'monospace',
+      fontFamily: 'var(--aek-font-mono)',
       fontSize: '11px',
       lineHeight: '1.45',
       whiteSpace: 'pre-wrap',

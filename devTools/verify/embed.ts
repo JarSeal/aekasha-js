@@ -22,8 +22,8 @@
  *   root and again with `html { font-size: 62.5% }`: the window, the dialog, its backdrop, the
  *   toast and the open drop-down list inside the container; the window at its px position from
  *   the container's corner, the dialog centred in it, the backdrop covering it and not the page;
- *   the window's, the toast's and the list's font sizes the same at both roots; with the dialog
- *   closed, a drag of the window's title moving it by the pointer's distance, and the window
+ *   the window's, the toast's and the list's font sizes the same at both roots, their font IBM
+ *   Plex Sans (the scene opts in, p801 D8) and its face loaded; with the dialog closed, a drag of the window's title moving it by the pointer's distance, and the window
  *   inside the container after the target shrinks.
  *
  * It builds the profiles first (`yarn sbp`'s build, `dist-embed/<id>/`) unless `--no-build`,
@@ -84,6 +84,8 @@ const UI_KIT = {
 const UI_KIT_INSIDE = ['window', 'dialog', 'backdrop', 'toast', 'list'] as const;
 /** The elements whose font size must not follow the host's root */
 const UI_KIT_FONTS = ['window', 'toast', 'listItem'] as const;
+/** The kit's font, which the profile's scene opts into (`aekasha/ui/fonts`, p801 D8) */
+const UI_KIT_FONT_FAMILY = 'IBM Plex Sans';
 /** The window's px position in the scene, from the container's top left corner */
 const UI_KIT_WINDOW_AT = { x: 16, y: 16 };
 /** The drag, which keeps the 220 × 150 window inside the 640 × 360 container */
@@ -246,7 +248,10 @@ const expectNoStyleChange = (
 
 const pushIf = (problems: string[], problem: string | null) => problem && problems.push(problem);
 
-type UiKitRects = Record<keyof typeof UI_KIT, (Rect & { fontSize: string }) | null>;
+type UiKitRects = Record<
+  keyof typeof UI_KIT,
+  (Rect & { fontSize: string; fontFamily: string }) | null
+>;
 
 /**
  * The uiKit profile's scenario at one host root (p801 D9; see the file's header), on its own page
@@ -321,7 +326,19 @@ const checkUiKitAtRoot = async (
         if (fonts && fonts[name] !== size) {
           problems.push(`${name}'s font size: ${size}, ${fonts[name]} at the first host root`);
         }
+        // The kit's font, not the host's (its Georgia): the opt-in's family first
+        const family = r[name]?.fontFamily ?? '(missing)';
+        if (!family.replace(/["']/g, '').startsWith(`${UI_KIT_FONT_FAMILY},`)) {
+          problems.push(`${name}'s font family: ${family}, not ${UI_KIT_FONT_FAMILY} first`);
+        }
       }
+      // ... and its face downloaded and used (font-display: swap loads it after the first paint)
+      const loadedPlex = async () =>
+        (await page.evaluate(() => window.__embedTest.loadedFonts())).filter((face) =>
+          face.startsWith(`${UI_KIT_FONT_FAMILY} normal`)
+        );
+      await waitFor(async () => (await loadedPlex()).length > 0);
+      if (!(await loadedPlex()).length) problems.push(`${UI_KIT_FONT_FAMILY} never loaded`);
       expectNoStyleChange(problems, 'while mounted', before, await styles());
 
       // The dialog closed by its button, so the window is no longer under its backdrop
@@ -535,7 +552,10 @@ declare global {
       mount: (opts: Record<string, unknown>) => Promise<{ isFallback: boolean }>;
       resizeTarget: (selector: string, width: string, height: string) => void;
       boxes: () => Boxes;
-      rects: (selectors: string[]) => Record<string, (Rect & { fontSize: string }) | null>;
+      rects: (
+        selectors: string[]
+      ) => Record<string, (Rect & { fontSize: string; fontFamily: string }) | null>;
+      loadedFonts: () => string[];
       hits: () => { h1: string; center: string };
       unmount: () => void;
       mountAgain: () => Promise<string | null>;

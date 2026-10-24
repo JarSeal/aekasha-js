@@ -1024,7 +1024,7 @@ ${
           p.warnings.length
             ? `<div class="debuggerWarningText"><span class="winSmallLabel">Warnings:</span> ${esc(p.warnings.join(' '))}</div>`
             : field('Warnings', 'none'),
-          `<pre style="white-space:pre-wrap;font-size:calc(1 * var(--aek-rem));opacity:0.8">${esc(JSON.stringify(p.raw, null, 1))}</pre>`,
+          `<pre style="white-space:pre-wrap;font-family:var(--aek-font-mono);font-size:calc(1 * var(--aek-rem));opacity:0.8">${esc(JSON.stringify(p.raw, null, 1))}</pre>`,
         ].join('')
       )
     : ''

@@ -642,6 +642,57 @@ D8 with the study's pick: the files in `src/_engine/ui/fonts/`, the entry, the o
 full-page template, the debugger), the Hub on the same files. The scene runner's baselines with
 debugger UI change here on purpose: `yarn verify:scenes --update`, the diffs looked at first.
 
+As built (2026-10-24; four sections: the files and the entry, the opt-ins, the Hub, the close-out;
+confirmed at the phase's start: the study page and its dev dependencies removed, the `uiKit`
+profile opts in, every mono declaration of the debugger moves to the token, the families keep
+their names):
+
+- **The scene runner's baselines don't change** (Phase 2's As built: it never sees the DOM). The
+  proof is Phase 2's UI check, against `686081b`.
+- Section 1: the six woff2 files and both OFL licences (`LICENSE-ibm-plex-sans.txt`,
+  `-mono.txt`) from the 5.3.0 packages. `fonts.css`: the six faces (`font-display: swap`,
+  Fontsource's Latin `unicode-range`), and the font tokens on `.aekUi` in `@layer aek.tokens`:
+  `.aekUi`, not `:where()`, beats `tokens.css`' kit root in the same layer whichever file loads
+  first, and an app's unlayered `--aek-font-sans` still wins. `tokens.css`' kit root gets
+  `font-family: var(--aek-font-sans)` (an embed's kit is in the system UI stack now, not the
+  host's font). `Tokens.test.ts` checks the opt-in sets only the two tokens, each a declared
+  face's family in front of `tokens.css`' default stack.
+- **The entry**: `src/_engine/ui/fonts/index.ts` is `import './fonts.css'` alone. A build drops a
+  side-effect-free module with its imports, stylesheet included (seen in a scratchpad build: the
+  woff2 emitted, no CSS), so `package.json`'s `sideEffects` lists the entry, and
+  `aliases.test.ts` allows an entry of `.css` imports only when `sideEffects` lists it. The Hub's
+  API page for an entry with no names says it's a stylesheet entry and how to import it
+  (`render.ts`); `api.json` records `"aekasha/ui/fonts": []`.
+- Section 2: `InitEngine.ts` imports `fonts.css` after `page.scss`, which loses its `html`
+  Lucida stack (the page's text is all under the HUD root). `_dbg__DebuggerGUI.ts` imports it too
+  (a debug embed). Five mono declarations move to `var(--aek-font-mono)`: `CharacterStateWindow`'s
+  `$monoStack` (3 uses, the variable gone), `DebugKeyShortcuts`' `.id`, `MaterialEditor`'s
+  `.cardId` and `.mono`, the LOD entity window's `<pre>` and the Assets tab's raw JSON `<pre>`.
+  normalize's `code, kbd, samp, pre` rule stays (the full page only; the key shortcuts' `kbd`
+  inherits the sans).
+- The `uiKit` scene (`uiKitEmbed.ts`) imports `aekasha/ui/fonts`, so the fonts follow the kit
+  into the scene's lazy chunk. `yarn verify:embed`'s kit scenario also checks the window's, the
+  toast's and a list item's font family starts with IBM Plex Sans and that its face loaded
+  (`embedHost.html`'s `rects` returns `fontFamily`, `loadedFonts()` the loaded faces); seen
+  failing without the import (the system stack, "never loaded").
+- SBP (`yarn sbp --profile all`, every budget within): the app's `index.css` 2.3 → 2.6 kB gzip,
+  `uiKitEmbed.css` 1.8 → 2.3 kB; the six woff2 lazy in both (44.5, 48.9, 14.4, 14.6, 15.3 and
+  16.1 kB gzip); the banner unchanged (Vite emits the woff2 for the debugger's import, the prune
+  removes them). `bundle.json` and `bundle.uiKit.json` recorded; no debug code in any build.
+- The UI check (Phase 2's capture with `font-family`, `font-weight`, `letter-spacing` and the
+  loaded faces added, `686081b` in a worktree against the working tree, the five states): every
+  HUD element's family Lucida → IBM Plex Sans, boxes narrower where text sizes them (the drawer
+  toggle 90.9 → 86.3 px, the profiler's columns, a key shortcuts paragraph two lines → one), no
+  other property changed, no errors. A probe under the HUD root: `--aek-font-mono` is Plex Mono,
+  and a 700 weight loads the 600 face.
+- `devTools/verify/CLAUDE.md` (the scenario's font check) and `devTools/sbp/CLAUDE.md` (the
+  `uiKit` profile, the Limits line: the kit's font is no longer the host's) updated here.
+- Verified (section 2): `yarn test` (1269 passed), `yarn verify:baselines` (the fonts and the two
+  CSS files, recorded), `yarn verify:embed` (7 scenarios), `yarn verify:scenes` (99 passed;
+  `sceneTestECS` `mainThread` hung once in its probe, 360 s without an answer, and passed alone
+  with its hash; `uiKitEmbed` new, no local baseline since Phase 3). Not checked: Firefox and
+  Safari.
+
 ### Phase 5: the Hub on the shared tokens
 
 - `--hub-*` become aliases of `--aek-*` for each role (`--hub-panel: var(--aek-surface)`); the

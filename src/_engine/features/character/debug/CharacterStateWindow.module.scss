@@ -6,7 +6,6 @@ $dimText: variables.$debugTextColorDark;
 $changedColor: #e3b341;
 // A configuration value saved for the character's next creation (AEK_debugCharConfig)
 $savedColor: #58a6ff;
-$monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
 .root {
   padding: calc(0.6 * var(--aek-rem)) calc(0.4 * var(--aek-rem)) calc(0.8 * var(--aek-rem))
@@ -37,7 +36,7 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   border-radius: calc(0.2 * var(--aek-rem));
   background: variables.$debugGuiBackgroundDarker;
   color: variables.$debugTextColor;
-  font-family: $monoStack;
+  font-family: var(--aek-font-mono);
   font-size: calc(1.1 * var(--aek-rem));
   text-align: right;
 }
@@ -107,7 +106,7 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 .costReadout {
   margin-left: auto;
   color: $dimText;
-  font-family: $monoStack;
+  font-family: var(--aek-font-mono);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -173,7 +172,7 @@ $monoStack: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   align-items: center;
   gap: calc(0.6 * var(--aek-rem));
   overflow: hidden;
-  font-family: $monoStack;
+  font-family: var(--aek-font-mono);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   text-align: right;

@@ -9,6 +9,9 @@ import {
   openDraggableWindow,
   removeToaster,
 } from 'aekasha/ui';
+// The kit's fonts (p801 D8), with the kit in this scene's lazy chunk: `yarn verify:embed` checks
+// the window's and the toast's font is IBM Plex Sans
+import 'aekasha/ui/fonts';
 
 // The ids and classes `yarn verify:embed` finds the kit's elements by (devTools/verify/embed.ts'
 // UI_KIT_ELEMENTS): change them there too

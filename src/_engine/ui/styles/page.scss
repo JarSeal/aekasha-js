@@ -1,13 +1,9 @@
 // The full-page boot's page styles (InitEngine, the template's index.html): normalize and the rules
-// on html, body, * and the page's #mainCanvas and #guiContainer. A mounted engine (mountAekasha)
+// on body, * and the page's #mainCanvas and #guiContainer. A mounted engine (mountAekasha)
 // doesn't load them, so a host page keeps its own (p611 D6); the components' styles are in
-// index.scss.
+// index.scss. No font here: the page's text is all under the HUD root, whose font is the kit's
+// (--aek-font-sans; InitEngine opts into IBM Plex, p801 D8).
 @forward './normalize.scss';
-
-html {
-  font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva,
-    Verdana, sans-serif;
-}
 
 *,
 *:before,

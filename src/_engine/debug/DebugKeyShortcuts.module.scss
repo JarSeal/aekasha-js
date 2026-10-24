@@ -146,7 +146,7 @@
 
 .id {
   margin-left: calc(0.4 * var(--aek-rem));
-  font-family: monospace;
+  font-family: var(--aek-font-mono);
   font-size: calc(1 * var(--aek-rem));
   color: variables.$debugTextColorDark;
 }
