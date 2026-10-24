@@ -2944,6 +2944,9 @@
       "registerIcon": "Function",
       "SvgIconKey": "TypeAlias"
     },
+    "src/_engine/ui/Motion.ts": {
+      "getMotionFactor": "Function"
+    },
     "src/_engine/ui/Toaster.ts": {
       "addToast": "Function",
       "AddToastResponse": "TypeAlias",
@@ -2959,7 +2962,8 @@
       "ToastType": "TypeAlias"
     },
     "src/_engine/ui/Window.ts": {
-      "getWindowSize": "Function"
+      "getWindowSize": "Function",
+      "setWindowBoundsElement": "Function"
     },
     "src/_engine/utils/Assert.ts": {
       "existsOrThrow": "Function",

@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: UI, Refactoring
 Epic: p800_debugger-ui-overhaul.md
 Blocked by: p802_hub-project-section.md (only its Phase 1, the dev-only pages, merged on its own, for Phase 0's font specimen page: D11)
@@ -483,7 +483,7 @@ As built (2026-10-24; the decisions' own "As built" and outcome notes: D2, D3, D
   gets the 2 px accent ring at 2 px offset. Not checked: Firefox and Safari, and a browser without
   `@property` (the fallback path).
 
-### Phase 2: units and bounds (the embed fix; no visual change at 16 px)
+### Phase 2: units and bounds (the embed fix; no visual change at 16 px) — done
 
 1. `page.scss` (D4). Every `Nrem` in the kit's and the debugger's styles and the five `.ts`
    strings → `calc(N * var(--aek-rem))`, by a one-off script (`npx tsx`, from the scratchpad,
@@ -498,7 +498,7 @@ As built (2026-10-24; the decisions' own "As built" and outcome notes: D2, D3, D
    kit and the debugger scale by 1.25 and nothing overlaps (the drawer's width is `rem`-based, so it
    grows too: noted for p806 if it's too wide on a small screen).
 
-As built (sections 1-2, 2026-10-24):
+As built (2026-10-24):
 
 - **The scene runner can't prove "no visual change" for the UI**: `takeSnapshotAsync` renders the
   3D scene only, never the DOM (Phase 1's "no snapshot change" and Phase 4's "the baselines with
@@ -544,6 +544,19 @@ As built (sections 1-2, 2026-10-24):
   canvas size source it installs (`CanvasSize.ts`' `createElementSizeSource`) has one, and the
   main loop runs every resizer from it, the windows' `draggableWindows` among them.
 - Step 3's code is `hub/_assets/ts/_embed.ts` (`DEV_PAGE_STYLES_SELECTOR`), not `devTools/hub/`.
+  The removal stays (normalize, the `html` font and the body's `overflow: hidden`, which would
+  stop the Hub page scrolling); only its comment changed.
+- Step 4, at a 20 px browser font size (the same UI check, Chrome's `default_font_size` set in a
+  fresh profile's `Preferences`): `--aek-base` 17.5 px, the kit's and the debugger's own sizes ×
+  1.25, nothing overlapping or clipped in the five states. The base commit at 20 px matches the
+  working tree box for box: the full page followed the browser's font size before too (62.5 % of
+  it), so Phase 2 changes the embed only. What stays put is px by design: Tweakpane's panes and
+  stats-gl (p806 / p807 replace them) and the full-size layers. The drawer is 500 px wide there
+  (of a 1280 px window): p806's to judge on a small screen, as the step says.
+- Verified: `yarn test` (1260 passed), `yarn verify:scenes` (100 passed, no change),
+  `yarn verify:baselines` recorded with `--update`: the UI kit example's lazy chunks (CSS +36 B,
+  JS +145 B gzip), `index.css` −8 B, hash noise, and the API baseline's two new `@internal`
+  functions; docs 100 %, no debug code in either build. Not checked: Firefox and Safari.
 - For Phase 6: `ui/CLAUDE.md`'s Styles bullet, the UI kit page's `guide.md` (line 211) and
   `devTools/sbp/CLAUDE.md` (line 20) still describe the 62.5 % root.
 
