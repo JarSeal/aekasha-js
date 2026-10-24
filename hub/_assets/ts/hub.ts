@@ -8,6 +8,8 @@
 document.documentElement.classList.add('hubJs');
 
 // --- Theme ---
+// `data-aek-theme` on <html>: the UI kit's theme attribute (tokens.css), which the Hub's tokens
+// follow, so a kit demo in a page does too
 
 type HubTheme = 'light' | 'dark';
 
@@ -16,7 +18,7 @@ const THEME_STORAGE_KEY = 'aekHubTheme';
 const lightQuery = window.matchMedia('(prefers-color-scheme: light)');
 
 const getTheme = (): HubTheme => {
-  const theme = document.documentElement.dataset.theme;
+  const theme = document.documentElement.dataset.aekTheme;
   if (theme === 'light' || theme === 'dark') return theme;
   return lightQuery.matches ? 'light' : 'dark';
 };
@@ -33,7 +35,7 @@ const updateThemeToggle = () => {
 
 themeToggle?.addEventListener('click', () => {
   const theme: HubTheme = getTheme() === 'dark' ? 'light' : 'dark';
-  document.documentElement.dataset.theme = theme;
+  document.documentElement.dataset.aekTheme = theme;
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   } catch {

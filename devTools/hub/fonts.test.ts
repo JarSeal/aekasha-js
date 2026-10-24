@@ -5,7 +5,9 @@ import { ENGINE_FONTS_DIR, HUB_ASSETS_DIR } from './paths';
 
 // The Hub uses the UI kit's fonts (p801 D8): its `@font-face` rules (`_base.scss`) name the
 // engine's files, which the build copies into `_assets/fonts/`, with the same descriptors as the
-// engine's `fonts.css`, and its font tokens are the kit's opted-in stacks.
+// engine's `fonts.css`, and `_base.scss` repeats `fonts.css`' opt-in of the kit's font tokens (the
+// Hub can't load `fonts.css`: its `url()`s are relative to the engine's folder), which the Hub's
+// font tokens alias.
 
 const read = (file: string) => fs.readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const fontsCss = read(path.join(ENGINE_FONTS_DIR, 'fonts.css'));
@@ -44,10 +46,14 @@ describe("the Hub's fonts", () => {
     expect(named).toEqual(files.sort());
   });
 
-  it("uses the kit's opted-in stacks", () => {
-    expect(readProperty(hubTokens, '--hub-font')).toBe(readProperty(fontsCss, '--aek-font-sans'));
-    expect(readProperty(hubTokens, '--hub-font-mono')).toBe(
+  it("opts its kit roots into the kit's stacks, which its font tokens read", () => {
+    expect(readProperty(hubBase, '--aek-font-sans')).toBe(
+      readProperty(fontsCss, '--aek-font-sans')
+    );
+    expect(readProperty(hubBase, '--aek-font-mono')).toBe(
       readProperty(fontsCss, '--aek-font-mono')
     );
+    expect(readProperty(hubTokens, '--hub-font')).toBe('var(--aek-font-sans)');
+    expect(readProperty(hubTokens, '--hub-font-mono')).toBe('var(--aek-font-mono)');
   });
 });
