@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: UI, Refactoring
 Epic: p800_debugger-ui-overhaul.md
 Blocked by: p802_hub-project-section.md (only its Phase 1, the dev-only pages, merged on its own, for Phase 0's font specimen page: D11)
@@ -313,6 +313,12 @@ system mono.
   same at both host roots, the dialog's backdrop covers the container and not the page, and no
   host style changed (the existing check).
 - The issue file is closed (`Status: closed`, the fix and the plan named) when this passes.
+- As built (Phase 3): the profile's **scene** opens the pieces, not its `mount` (confirmed at the
+  phase's review, 2026-10-24): the kit stays in the scene's lazy chunk instead of the entry's
+  initial one, the scene runs on the full page too (`?startScene=uiKitEmbed`), and the container
+  is in place and sized before the boot, so nothing waits for the first frame. The scene is
+  `uiKitEmbed`, not `uiKit` (a scene file named like the entry breaks `yarn sbp`, Phase 3's As
+  built). The issue file says `Status: fixed`, the issue files' word.
 
 ### D10. Documentation
 
@@ -560,9 +566,75 @@ As built (2026-10-24):
 - For Phase 6: `ui/CLAUDE.md`'s Styles bullet, the UI kit page's `guide.md` (line 211) and
   `devTools/sbp/CLAUDE.md` (line 20) still describe the 62.5 % root.
 
-### Phase 3: the `uiKit` profile and the embed check
+### Phase 3: the `uiKit` profile and the embed check — done
 
 D9: the profile, its budgets, the `verify:embed` scenario, the issue file closed.
+
+As built (2026-10-24; three sections: the profile, the scenario, the close-out):
+
+- `src/app/profiles/uiKit/`: `uiKit.embed.ts` (the banner's wrapper, `features: []`),
+  `uiKitEmbed.ts` / `uiKitEmbed.scene.json` (a box made in code; a window at 16, 16 px, a toaster
+  top right with a toast until closed, a dialog of 300 × 230 with a drop-down whose list it opens)
+  and its own camera and light (`uiKitEmbed*`: the banner's are in its folder). Each piece has a
+  fixed id or class the check finds it by. The drop-down is in the dialog: opening a window
+  focuses its first element, whose focus would close a list open elsewhere (its `focusout`); the
+  dialog is tall enough for the open list, since a window clips what overflows it.
+- **The scene is `uiKitEmbed`, not `uiKit`**: with the scene file named like the entry, Vite emits
+  two `assets/uiKit.css` (the entry's, the scene chunk's styles), which `bundleKeys.ts` can't tell
+  apart (the scene's CSS has no source in the manifest), and `yarn sbp` stopped. The layout rules
+  don't tie a profile's scene to its id; the trap is in `devTools/sbp/CLAUDE.md` (The entry) and
+  at the profile in `sbp.config.ts`. `keyBuildFiles` keying a chunk's CSS by its chunk would fix
+  it for good: not done here.
+- SBP: initial 285.8 KiB gzip (the banner's floor, 3 files), the kit lazy: the scene's chunk
+  11.2 KiB (`_engine/ui` 10.2 of it) and its CSS 1.8 KiB. Budgets by `suggestBudget` (initial 298,
+  the entry chunk 296, `assets/uiKit.css` 3, the scene's chunk 12 and CSS 3 KiB; the groups as the
+  banner's, every feature at 0): 21, all within. `bundle.uiKit.json` recorded. In the app's build
+  the kit's window and drop-down code moved from `exampleUiKit`'s chunk into a shared lazy chunk
+  (`assets/DropDown.js` 10.7 / `.css` 1.8 KiB, what `exampleUiKit.js` / `.css` lost) now that two
+  scenes use it: `bundle.json` recorded with it.
+- First look (a scratchpad Playwright script, the build in a plain page, both host roots): the
+  window at exactly 16, 16 from the container's corner (Phase 2's origin fix, seen in a browser),
+  the dialog centred, the backdrop the container's box, the toast 16 px in from its top right
+  corner, window 12 px / toast 14 px / `--aek-base` 14 px at both roots.
+- `yarn verify:embed` (`embed.ts`, `embedChecks.ts`, `embedHost.html`): `embedHost.html`'s
+  `?root=` sets the page's root size before the mount, and `rects(selectors)` returns boxes and
+  font sizes; `checkInside` and `checkPosition` (within a pixel) are tested. The `uiKit` scenario
+  runs at a 16 px root and at `html { font-size: 62.5% }`: every piece inside the container, the
+  window at its position, the dialog centred, the backdrop the container's box, the window's, the
+  toast's and a list item's font sizes the same at both roots; then the dialog closed by its
+  button, a drag of the window's title moving it by the pointer's distance (Phase 2's drag start),
+  and the window and the toast inside after the target shrinks to 320 × 200 (the resize clamp,
+  through the canvas size source's `ResizeObserver`). Each check was seen failing on a broken
+  copy: the origin fix reverted (the drag), `--aek-rem` on the host's root (7.5 / 8.75 / 7.5 px
+  against 12 / 14 / 12), the backdrop at `100vw` × `100vh`, no bounds element (the drag, the
+  shrink). A px start position passes even without the origin fix: only the drag reads the
+  bounds' position.
+- **Phase 1 broke the existing host style check, for both profiles**: `tokens.css`' `@property`
+  registrations with an `initial-value` put `--aek-base` and `--aek-rem` in every element's
+  computed style, the host's too (CSS has no scoped registration). Phases 1 and 2 didn't run
+  `yarn verify:embed`. The check now leaves out exactly the names `tokens.css` registers
+  (`readRegisteredProperties`, read from the file at run time), so a token declared on the
+  host's elements still fails it. p611 D6's "an embed leaves the host page alone" holds but for
+  those two namespaced names, which a host sees only if it reads them.
+- The issue file: `Status: fixed`, with a Fix section (both changes, the evidence, and what's left
+  for p803).
+- `devTools/sbp/CLAUDE.md` (the profiles, the scene-name trap, the Limits line) and
+  `devTools/verify/CLAUDE.md` (the scenario, the registered properties) updated here rather than
+  in Phase 6 (confirmed at the review).
+- For p803 (the kit's restyle), seen in the embed and not fixed here: the drop-down list's
+  `max-height: 40vh` is the browser window's; a `closeOnEscape` dialog takes Escape from the whole
+  host page while open (a capture listener on `window`, also with `input: 'NONE'`); the toast's
+  text colour, the kit's font and the buttons' font come from the host (no normalize in an
+  embed: Phase 4 sets the font token, the buttons' `font: inherit` is p803's); a window clips a
+  drop-down list that overflows it.
+- Verified: `yarn test` (1268 passed), `yarn verify:scenes` (100 passed, 0 failed; `uiKitEmbed`
+  new in the 4 configurations, no error), `yarn verify:baselines` (all unchanged after section 1's
+  recording; no debug code in the app or either embed), `yarn verify:embed` (7 scenarios, both
+  profiles), `yarn sbp --profile all` (25 + 19 + 21 budgets within). Not checked: Firefox and
+  Safari (the scenario runs in Chromium only).
+- For Phase 6: `ui/CLAUDE.md`'s "In an embed" bullet (D10's "Tokens and units" section) and the
+  UI kit page's `guide.md` (line 216) still call the issue open; the Hub could show the profile
+  (`::: embed uiKit`) on the UI kit page.
 
 ### Phase 4: fonts
 
