@@ -498,6 +498,55 @@ As built (2026-10-24; the decisions' own "As built" and outcome notes: D2, D3, D
    kit and the debugger scale by 1.25 and nothing overlaps (the drawer's width is `rem`-based, so it
    grows too: noted for p806 if it's too wide on a small screen).
 
+As built (sections 1-2, 2026-10-24):
+
+- **The scene runner can't prove "no visual change" for the UI**: `takeSnapshotAsync` renders the
+  3D scene only, never the DOM (Phase 1's "no snapshot change" and Phase 4's "the baselines with
+  debugger UI change" assumed it did). The UI's proof is a scratchpad Playwright check instead
+  (not committed): the base commit in a git worktree and the working tree, each on its own dev
+  server (`?isDebug=true&aekTest=true&startScene=testDebugScene`, frozen through the test bridge,
+  canvases hidden), five states (ready, the drawer, the profiler window, the key shortcuts dialog,
+  the camera drop-down), every HUD element's box and computed sizes compared, and the
+  screenshots' pixels. Against `1e2c119`, after sections 1 and 2: 0 boxes moved in ~440 elements;
+  the only differences are the transitions (0.15 / 0.17 s → 0.2 s), the windows' default
+  `max-width` / `max-height` (`100%`), and the focus ring on the one keyboard-focused element
+  (the pixels that differ, besides the profiler's live figures). Phase 4 uses the same check
+  (its diffs are then the fonts').
+- Section 1: 521 SCSS values in 20 files, 14 in `Toaster.ts`' CSS and 6 in `_dbg__Assets.ts`'
+  inline styles converted (inside `calc()` / `min()` / `max()` / `clamp()` the bare product
+  `N * var(--aek-rem)`); by hand: the five Sass operations on a `rem` variable outside a `calc()`
+  (`$drawerWidth * -1` ×3, the axes gizmo's two sums, now `calc()`), two `minmax()`s and three
+  comments. Checked by compiling every engine SCSS file before and after with each `rem` term at
+  10 px: identical but for 12 lines of the same arithmetic left to the browser. Every converted
+  element is under the HUD root. The media queries are px already (a media query can't read
+  `--aek-rem`, so they don't follow the UI scale: noted for p806). Left: `page.scss`' `body`
+  (`1rem`) and JSDoc (`Mount.ts`' container sizes, the host's; `Viewports.ts`' `'12rem'` slot
+  examples, now 192 px on the full page).
+- Durations: 18 SCSS values and the toaster's → `--aek-motion-base` (the plan's 19), `0.075s` →
+  `-fast`, the spinner and the material editor's pulse `calc(… * var(--aek-motion, 1))`. The
+  JS-timed ones (the toaster, the debug scene loader's fades) multiply by `ui/Motion.ts`'
+  `getMotionFactor(elem)` (`@internal`, tested): the element's own `--aek-motion`, not D7's
+  `matchMedia`, so an app's `--aek-motion` stops them too, as it does the CSS. The toaster's CSS
+  transitions (`animationTimeMs`, baked into its CSS) take the same factor in CSS.
+- §4.5's six outline removals and the drop-down trigger's `box-shadow` ring (no step named them;
+  Phase 0 assigned them here). `tokens.css`' ring comment says not to add one back.
+- Section 2: `ui/Window.ts` gets `setWindowBoundsElement` (`@internal`); `mountAekasha` sets its
+  container next to the canvas size source and clears it in its teardown, and `getWindowSize`
+  returns the container's padding box with its viewport position (`left`, `top`; 0 for the
+  window). A bug D4 didn't name, fixed with it: `convertPositionToPx` and a drag's start took a
+  viewport rect's `left` / `top` as the window's CSS `left` / `top`, so in an embed a window
+  jumped by the container's offset; both subtract the bounds' position now. The default max size
+  and the backdrop are `100%`; `DraggableWindowUnit`'s JSDoc says `'%'` is of the bounds and
+  `'vw'` / `'vh'` the browser window's. `DraggableWindowGeometry.test.ts` (new) covers the
+  container case; `DraggableWindow.test.ts` and `DialogWindow.test.ts` need no change (no bounds
+  element: the window, as before). The drag's start is checked in a browser by Phase 3.
+- The container resize needs no new call: `Mount.ts` has no `ResizeObserver` itself, but the
+  canvas size source it installs (`CanvasSize.ts`' `createElementSizeSource`) has one, and the
+  main loop runs every resizer from it, the windows' `draggableWindows` among them.
+- Step 3's code is `hub/_assets/ts/_embed.ts` (`DEV_PAGE_STYLES_SELECTOR`), not `devTools/hub/`.
+- For Phase 6: `ui/CLAUDE.md`'s Styles bullet, the UI kit page's `guide.md` (line 211) and
+  `devTools/sbp/CLAUDE.md` (line 20) still describe the 62.5 % root.
+
 ### Phase 3: the `uiKit` profile and the embed check
 
 D9: the profile, its budgets, the `verify:embed` scenario, the issue file closed.

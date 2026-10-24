@@ -3,7 +3,11 @@
 import type { TCMP } from './CMPTypes';
 import type { SvgIconKey } from './icons/SvgIcon';
 
-/** The CSS unit of a window's position or size value. */
+/**
+ * The CSS unit of a window's position or size value. `'%'` is of the HUD's bounds: the viewport, or
+ * a mounted engine's container (`mountAekasha`). `'vw'` and `'vh'` are always the browser window's,
+ * as in CSS: in an embed, use `'%'`.
+ */
 export type DraggableWindowUnit = 'px' | '%' | 'vw' | 'vh';
 
 /** What a window is for (eg. `{ entityId }`): serializable, since a `saveToLS` window keeps it,
@@ -45,7 +49,8 @@ export type DraggableWindowConfig = {
   geometry: { x: number; y: number; w: number; h: number };
   /** The smallest size a resize leaves (default 100 × 120 px) */
   minSize: { w: number; h: number };
-  /** Without one, the window is at most the viewport's size (100vw × 100vh) */
+  /** Without one, the window is at most its bounds' size (100 % × 100 %: the viewport, or a
+   * mounted engine's container) */
   maxSize?: { w: number; h: number };
   /** The units of `geometry`, `minSize` and `maxSize` */
   units?: DraggableWindowUnits;

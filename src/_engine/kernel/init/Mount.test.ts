@@ -77,6 +77,7 @@ const fns = vi.hoisted(() => ({
   removeAllInputListeners: vi.fn(),
   setCanvasSizeSource: vi.fn(),
   createElementSizeSource: vi.fn(),
+  setWindowBoundsElement: vi.fn(),
   setAssetBaseUrl: vi.fn(),
   stopAssetsWorker: vi.fn(),
 }));
@@ -117,6 +118,9 @@ vi.mock(import('../input/InputState'), () => ({
 vi.mock(import('../render/CanvasSize'), () => ({
   setCanvasSizeSource: fns.setCanvasSizeSource,
   createElementSizeSource: fns.createElementSizeSource,
+}));
+vi.mock(import('../../ui/Window'), () => ({
+  setWindowBoundsElement: fns.setWindowBoundsElement,
 }));
 vi.mock(import('../assets/AssetUrl'), () => ({ setAssetBaseUrl: fns.setAssetBaseUrl }));
 vi.mock(import('../assets/AssetsAPI'), () => ({ stopAssetsWorker: fns.stopAssetsWorker }));
@@ -175,6 +179,8 @@ describe('mountAekasha: the defaults', () => {
     });
     expect(fns.createElementSizeSource).toHaveBeenCalledWith(container);
     expect(fns.setCanvasSizeSource).toHaveBeenCalledWith(m.sizeSource);
+    // The HUD's bounds: the windows measure the container, not the browser window
+    expect(fns.setWindowBoundsElement).toHaveBeenCalledWith(container);
     expect(fns.setInputScope).toHaveBeenCalledWith('NONE');
     expect(fns.setAssetBaseUrl).not.toHaveBeenCalled();
     // The canvas in its own element, the HUD's slot next to it
@@ -281,6 +287,7 @@ describe('mountAekasha: once per page', () => {
     expect(fns.stopAssetsWorker).toHaveBeenCalledTimes(1);
     expect(fns.deleteRenderer).toHaveBeenCalledTimes(1);
     expect(fns.setCanvasSizeSource).toHaveBeenLastCalledWith(null);
+    expect(fns.setWindowBoundsElement).toHaveBeenLastCalledWith(null);
     expect(fns.setInputScope).toHaveBeenLastCalledWith('WINDOW');
     expect(fns.setAssetBaseUrl).toHaveBeenLastCalledWith(null);
     expect(m.state.host.children).toHaveLength(0);

@@ -262,9 +262,10 @@ $collapseAnimLength: var(--aek-motion-base);
   scrollbar-width: thin;
 }
 
+// 100 % of its containing block: the viewport, or a mounted engine's container (not the page)
 .backDrop {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   position: fixed;
   left: 0;
   top: 0;
