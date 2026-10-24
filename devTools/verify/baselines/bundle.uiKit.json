@@ -1,0 +1,213 @@
+{
+  "formatVersion": 2,
+  "chunks": {
+    "assets/AssetsSwitchGLTF.js": {
+      "bytes": 148112,
+      "gzip": 51864
+    },
+    "assets/AssetsSwitchSimplify.js": {
+      "bytes": 3889,
+      "gzip": 1871
+    },
+    "assets/AssetsSwitchTexture.js": {
+      "bytes": 4039,
+      "gzip": 1942
+    },
+    "assets/AssetsWorker.js": {
+      "bytes": 158,
+      "gzip": 156
+    },
+    "assets/AssetsWorker.js@AssetsWorker": {
+      "bytes": 2027,
+      "gzip": 1046
+    },
+    "assets/basis_transcoder.js": {
+      "bytes": 57529,
+      "gzip": 15143
+    },
+    "assets/basis_transcoder.wasm": {
+      "bytes": 527333,
+      "gzip": 247535
+    },
+    "assets/draco_decoder.js": {
+      "bytes": 719410,
+      "gzip": 147373
+    },
+    "assets/draco_decoder.wasm@draco": {
+      "bytes": 285747,
+      "gzip": 88507
+    },
+    "assets/draco_decoder.wasm@gltf": {
+      "bytes": 192420,
+      "gzip": 63395
+    },
+    "assets/draco_wasm_wrapper.js@draco": {
+      "bytes": 58763,
+      "gzip": 11823
+    },
+    "assets/draco_wasm_wrapper.js@gltf": {
+      "bytes": 58456,
+      "gzip": 11667
+    },
+    "assets/DRACOLoader.js": {
+      "bytes": 7543,
+      "gzip": 3073
+    },
+    "assets/GeometryTransfer.js": {
+      "bytes": 4297,
+      "gzip": 1793
+    },
+    "assets/GLTFLoader.js": {
+      "bytes": 45868,
+      "gzip": 13861
+    },
+    "assets/HDRLoader.js": {
+      "bytes": 3403,
+      "gzip": 1629
+    },
+    "assets/ImportRegistry.js": {
+      "bytes": 16534,
+      "gzip": 6651
+    },
+    "assets/KTX2Loader.js": {
+      "bytes": 59893,
+      "gzip": 24362
+    },
+    "assets/LodChainGLTF.js": {
+      "bytes": 2168,
+      "gzip": 947
+    },
+    "assets/meshopt_decoder.module.js": {
+      "bytes": 26491,
+      "gzip": 7257
+    },
+    "assets/meshopt_encoder.js": {
+      "bytes": 20481,
+      "gzip": 8135
+    },
+    "assets/meshopt_simplifier.js": {
+      "bytes": 42313,
+      "gzip": 14544
+    },
+    "assets/three.core.js": {
+      "bytes": 195908,
+      "gzip": 52038
+    },
+    "assets/three.module.js": {
+      "bytes": 219,
+      "gzip": 181
+    },
+    "assets/three.module.js@AssetsWorker": {
+      "bytes": 218,
+      "gzip": 179
+    },
+    "assets/uiKit.css": {
+      "bytes": 5725,
+      "gzip": 1534
+    },
+    "assets/uiKit.embed.js": {
+      "bytes": 1038238,
+      "gzip": 290884
+    },
+    "assets/uiKitEmbed.css": {
+      "bytes": 9413,
+      "gzip": 1836
+    },
+    "assets/uiKitEmbed.js": {
+      "bytes": 30887,
+      "gzip": 11200
+    },
+    "uiKit.embed.js": {
+      "bytes": 249,
+      "gzip": 212
+    }
+  },
+  "main": {
+    "chunk": "assets/uiKit.embed.js",
+    "modules": 66,
+    "minified": 1057364,
+    "gzip": 296335
+  },
+  "mainGroups": {
+    "_engine/kernel/assets": {
+      "modules": 12,
+      "minified": 27616,
+      "gzip": 9608
+    },
+    "_engine/kernel/camera": {
+      "modules": 1,
+      "minified": 3251,
+      "gzip": 1378
+    },
+    "_engine/kernel/config": {
+      "modules": 1,
+      "minified": 2384,
+      "gzip": 1077
+    },
+    "_engine/kernel/ecs": {
+      "modules": 7,
+      "minified": 24712,
+      "gzip": 7023
+    },
+    "_engine/kernel/init": {
+      "modules": 5,
+      "minified": 7282,
+      "gzip": 3141
+    },
+    "_engine/kernel/input": {
+      "modules": 1,
+      "minified": 71,
+      "gzip": 83
+    },
+    "_engine/kernel/light": {
+      "modules": 2,
+      "minified": 5525,
+      "gzip": 2011
+    },
+    "_engine/kernel/loop": {
+      "modules": 3,
+      "minified": 4526,
+      "gzip": 1978
+    },
+    "_engine/kernel/mesh": {
+      "modules": 1,
+      "minified": 3550,
+      "gzip": 1524
+    },
+    "_engine/kernel/render": {
+      "modules": 6,
+      "minified": 3301,
+      "gzip": 1564
+    },
+    "_engine/kernel/scene": {
+      "modules": 7,
+      "minified": 10415,
+      "gzip": 3863
+    },
+    "_engine/ui": {
+      "modules": 4,
+      "minified": 11630,
+      "gzip": 4216
+    },
+    "_engine/utils": {
+      "modules": 7,
+      "minified": 1756,
+      "gzip": 876
+    },
+    "app": {
+      "modules": 4,
+      "minified": 913,
+      "gzip": 523
+    },
+    "three": {
+      "modules": 4,
+      "minified": 949161,
+      "gzip": 256730
+    },
+    "vite": {
+      "modules": 1,
+      "minified": 1271,
+      "gzip": 740
+    }
+  }
+}

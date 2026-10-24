@@ -96,6 +96,14 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  uiKitEmbed: async ({ sceneData, assets }) => {
+    const module = await import('../app/./profiles/uiKit/uiKitEmbed.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   assetCompare: async ({ sceneData, assets }) => {
     const module = await import('../app/./scenes/assetCompare/assetCompare.ts');
     await (

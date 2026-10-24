@@ -1,0 +1,66 @@
+{
+  "scenes": {
+    "uiKitEmbed": {
+      "name": "UI kit embed",
+      "description": "The uiKit embed's scene: a box made in code, a draggable window, a toast and a dialog with an open drop-down, all from the UI kit. Mounted into a page it doesn't own, they size from the browser's font size and stay inside the mount's container.",
+      "backgroundColor": "#1c212b",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.1,
+            "far": 50,
+            "position": {
+              "x": 0,
+              "y": 1.5,
+              "z": 6
+            },
+            "lookAtPoint": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "type": "PERSPECTIVE",
+            "fov": 40,
+            "appId": "uiKitEmbedCamera"
+          },
+          "entityOpts": {
+            "appId": "uiKitEmbedCamera",
+            "debugData": {
+              "name": "UI kit embed camera"
+            }
+          }
+        }
+      ],
+      "lights": [
+        {
+          "lightProps": {
+            "type": "DIRECTIONAL",
+            "color": "#eef4ff",
+            "intensity": 3,
+            "position": {
+              "x": 4,
+              "y": 5,
+              "z": 6
+            },
+            "targetPos": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "appId": "uiKitEmbedLight"
+          },
+          "entityOpts": {
+            "appId": "uiKitEmbedLight",
+            "debugData": {
+              "name": "UI kit embed light"
+            }
+          }
+        }
+      ],
+      "id": "uiKitEmbed",
+      "sceneFile": "./profiles/uiKit/uiKitEmbed.ts",
+      "__features": []
+    }
+  }
+}

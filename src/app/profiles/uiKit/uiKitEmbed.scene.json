@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../.schemas/scene.schema.json",
+  "id": "uiKitEmbed",
+  "sceneFile": "./profiles/uiKit/uiKitEmbed.ts",
+  "name": "UI kit embed",
+  "description": "The uiKit embed's scene: a box made in code, a draggable window, a toast and a dialog with an open drop-down, all from the UI kit. Mounted into a page it doesn't own, they size from the browser's font size and stay inside the mount's container.",
+  "backgroundColor": "#1c212b",
+  "cameras": ["uiKitEmbedCamera"],
+  "lights": ["uiKitEmbedLight"]
+}

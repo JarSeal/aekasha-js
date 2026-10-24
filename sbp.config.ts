@@ -100,6 +100,41 @@ const profiles: SbpProfile[] = [
     },
   },
   // #endregion banner-profile
+  {
+    // The UI kit in an embed (p801 D9): one code-made scene that opens a window, a toast and a
+    // dialog with a drop-down, no feature, built into dist-embed/uiKit/; `yarn verify:embed` checks
+    // the kit's sizes and bounds in it
+    id: 'uiKit',
+    entry: 'src/app/profiles/uiKit/uiKit.embed.ts',
+    // Not `uiKit`: a scene file named like the entry would emit a second `assets/uiKit.css` (its
+    // chunk's styles), which no file key tells apart from the entry's
+    scenes: ['uiKitEmbed'],
+    // Set from p801 Phase 3's report (initial 285.8 KiB gzip): the banner's floor, the kit lazy
+    budgets: {
+      initial: 298 * KIB,
+      chunks: {
+        // The entry only re-exports `mount` from the shared chunk
+        'uiKit.embed.js': 2 * KIB,
+        'assets/uiKit.embed.js': 296 * KIB,
+        'assets/uiKit.css': 3 * KIB,
+        // The scene's chunk: the kit's window, dialog, drop-down and toaster (10.2 KiB of it) and
+        // their styles, loaded with the scene
+        'assets/uiKitEmbed.js': 12 * KIB,
+        'assets/uiKitEmbed.css': 3 * KIB,
+      },
+      groups: {
+        three: 261 * KIB,
+        '_engine/kernel/assets': 11 * KIB,
+        '_engine/kernel/ecs': 8 * KIB,
+        '_engine/kernel/scene': 5 * KIB,
+        // The HUD root and CMP only: the components load with the scene
+        '_engine/ui': 6 * KIB,
+        app: 2 * KIB,
+        // No feature reaches the initial chunks, as for the banner
+        ...Object.fromEntries(FEATURE_GROUPS.map((group) => [group, 0])),
+      },
+    },
+  },
 ];
 
 export default profiles;
