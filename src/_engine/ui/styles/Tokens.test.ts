@@ -64,7 +64,12 @@ const parseCss = (css: string, context: string[] = [], sheet?: CssSheet): CssShe
   return out;
 };
 
-const sheet = parseCss(tokensCss.replace(/\/\*[\s\S]*?\*\//g, ''));
+const stripComments = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '');
+const sheet = parseCss(stripComments(tokensCss));
+// The fonts' opt-in (p801 D8) re-declares the font tokens
+const fontsSheet = parseCss(
+  stripComments(fs.readFileSync(new URL('../fonts/fonts.css', import.meta.url), 'utf8'))
+);
 
 const TOKENS_LAYER = '@layer aek.tokens';
 const LIGHT_MEDIA = '@media (prefers-color-scheme: light)';
@@ -233,6 +238,22 @@ describe('tokens.css', () => {
     ['light', themes.lightSystem],
   ])('meets WCAG AA in the %s theme', (_theme, rule) => {
     expect(findContrastFailures(rule.decls)).toEqual([]);
+  });
+
+  it("the fonts' opt-in puts its family in front of each default stack, and sets nothing else", () => {
+    const optIn = fontsSheet.rules.filter((r) => !r.selector.startsWith('@font-face'));
+    expect(optIn.map((r) => [r.selector, r.context.join()])).toEqual([['.aekUi', TOKENS_LAYER]]);
+    const decls = optIn[0].decls;
+    expect([...decls.keys()].sort()).toEqual(['--aek-font-mono', '--aek-font-sans']);
+    const families = fontsSheet.rules
+      .filter((r) => r.selector === '@font-face')
+      .map((r) => r.decls.get('font-family'));
+    for (const [name, value] of decls) {
+      const [family, ...rest] = value.split(', ');
+      expect(families, name).toContain(family);
+      expect(rest.join(', '), name).toBe(kitRoot.decls.get(name));
+    }
+    expect(kitRoot.decls.get('font-family')).toBe('var(--aek-font-sans)');
   });
 
   it('the compact density sets the type and space scales only, all of them', () => {

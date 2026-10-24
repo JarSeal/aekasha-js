@@ -16,8 +16,10 @@
  *   root is dark, or light under prefers-color-scheme: light.
  * - data-aek-density="compact" on any element: smaller type and space scales for its subtree.
  *
- * No color-scheme and no font-family on the kit root yet: the kit's and the debugger's styles keep
- * their own look until p803 / p806 restyle them (p801 D1), and the fonts are Phase 4's.
+ * The kit root's font is --aek-font-sans: the system UI stack, or IBM Plex Sans where the app opts
+ * into the fonts (`import 'aekasha/ui/fonts'`, ui/fonts/fonts.css, p801 D8). No color-scheme yet:
+ * the kit's and the debugger's styles keep their own colours until p803 / p806 restyle them
+ * (p801 D1).
  */
 
 @layer aek.tokens, aek.base, aek.components, aek.utilities;
@@ -43,6 +45,7 @@
   :where(.aekUi) {
     /* The browser's default size, which the user sets and a host page's root can't change */
     font-size: medium;
+    font-family: var(--aek-font-sans);
 
     /*
      * The UI's font size, and the old 62.5 % root's rem (@internal: the existing styles' unit
@@ -52,7 +55,10 @@
     --aek-base: calc(14px * var(--aek-ui-scale, 1));
     --aek-rem: calc(10px * var(--aek-ui-scale, 1));
 
-    /* Type: the sizes are lengths from --aek-base, so they inherit fixed and never compound */
+    /*
+     * Type: the families are the system stacks (ui/fonts/fonts.css puts IBM Plex in front of them),
+     * the sizes are lengths from --aek-base, so they inherit fixed and never compound
+     */
     --aek-font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
       sans-serif;
     --aek-font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Code', Menlo, Consolas, monospace;

@@ -4104,6 +4104,7 @@
       "xBoldIcon",
       "xIcon"
     ],
+    "aekasha/ui/fonts": [],
     "aekasha/viewports": [
       "Viewport",
       "ViewportAnchor",

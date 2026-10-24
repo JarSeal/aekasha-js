@@ -47,7 +47,8 @@
   "type": "module",
   "sideEffects": [
     "**/*.scss",
-    "**/*.css"
+    "**/*.css",
+    "./src/_engine/ui/fonts/index.ts"
   ],
   "scripts": {
     "gatherAppData": "tsx ./devTools/gatherAppData.ts",
