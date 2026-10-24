@@ -78,6 +78,16 @@ export const createStaticAssetHasher = (): HubStaticAssetHasher => {
 /** `url(fonts/…)` in the CSS: relative to `_assets/hub.css`, so a static asset's path as is */
 const CSS_URL_REGEX = /url\(\s*(['"]?)([^'")?#]+)\1\s*\)/g;
 
+/** The stylesheet and the files sass read for it */
+export type HubBuiltStyles = {
+  file: HubAssetFile;
+  /**
+   * Every file sass loaded, the engine's `tokens.css` among them (p801 Phase 5): the dev plugin
+   * watches the ones outside `hub/`, which `hub/`'s own watch doesn't see
+   */
+  sources: string[];
+};
+
 /**
  * Compiles `hub.scss` (compressed in `public`), giving each `url()` to a static asset its `?v=`;
  * null with an error at its line when sass fails
@@ -86,7 +96,7 @@ export const buildStyles = (
   mode: HubBuildMode,
   diag: HubDiagnostics,
   hashStaticAsset: HubStaticAssetHasher
-): HubAssetFile | null => {
+): HubBuiltStyles | null => {
   try {
     const compiled = sass.compile(HUB_SCSS_ENTRY, {
       style: mode === 'public' ? 'compressed' : 'expanded',
@@ -98,7 +108,12 @@ export const buildStyles = (
       diag.error(HUB_SCSS_ENTRY, undefined, `${match}: no such file in hub/_assets/`);
       return match;
     });
-    return { outPath: `${ASSETS_URL_DIR}hub.css`, content: css, hash: hashContent(css) };
+    return {
+      file: { outPath: `${ASSETS_URL_DIR}hub.css`, content: css, hash: hashContent(css) },
+      sources: compiled.loadedUrls
+        .filter((url) => url.protocol === 'file:')
+        .map((url) => fileURLToPath(url)),
+    };
   } catch (err) {
     if (err instanceof sass.Exception) {
       const url = err.span.url;

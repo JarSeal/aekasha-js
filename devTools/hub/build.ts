@@ -54,6 +54,8 @@ import { writeHubOutputAsync } from './writeOutput';
 
 export type HubBuildAssets = {
   styles: HubAssetFile | null;
+  /** The files sass read for `styles` (`HubBuiltStyles.sources`), in the build's `files` */
+  styleSources: string[];
   scripts: HubAssetFile[] | null;
   /** Both built without an error (not a fallback): `reuseAssets` takes only such ones */
   isClean: boolean;
@@ -230,7 +232,7 @@ export const buildHub = async ({
   const diag = new HubDiagnostics();
   let rendered: RenderedPage[] = [];
   const builtPages: HubBuiltPage[] = [];
-  let assets: HubBuildAssets = { styles: null, scripts: null, isClean: false };
+  let assets: HubBuildAssets = { styles: null, styleSources: [], scripts: null, isClean: false };
   const meta = getProjectMetadata(build);
   lap('meta');
   const { sections, api } = await createSectionsAsync(meta, mode, apiModel, diag);
@@ -243,7 +245,7 @@ export const buildHub = async ({
     pageCount: rendered.length,
     durationMs: performance.now() - startTime,
     steps,
-    files,
+    files: [...new Set([...files, ...assets.styleSources])],
     // The static folders outside hub/ (the engine's fonts), which hub/'s own watch doesn't see
     dirs: [...sections.flatMap((section) => section.dirs), ...Object.values(HUB_STATIC_ASSET_DIRS)],
     pages: builtPages,
@@ -272,7 +274,9 @@ export const buildHub = async ({
     lap('styles');
     const scripts = await buildScripts(mode, diag);
     assets = {
-      styles: styles ?? fallback?.styles ?? null,
+      styles: styles?.file ?? fallback?.styles ?? null,
+      // A failed compile has none: the last good one's, so a fix in an engine file is still seen
+      styleSources: styles?.sources ?? fallback?.styleSources ?? [],
       scripts: scripts ?? fallback?.scripts ?? null,
       isClean: !!styles && !!scripts,
     };

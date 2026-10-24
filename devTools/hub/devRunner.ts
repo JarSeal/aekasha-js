@@ -36,8 +36,8 @@ import {
 export type HubDevRunnerDeps = {
   /**
    * A dev build of the whole Hub into `outDir`: `last` is the last build (its assets the
-   * fallback), `reuseAssets` true when no file under `hub/_assets/` and no static asset (the
-   * engine's fonts) changed since it
+   * fallback), `reuseAssets` true when no file under `hub/_assets/`, no static asset (the
+   * engine's fonts) and no other file the styles read (the engine's `tokens.css`) changed since it
    */
   buildAsync: (opts: {
     last: HubBuildResult | null;
@@ -276,9 +276,15 @@ export const createHubDevRunner = (deps: HubDevRunnerDeps): HubDevRunner => {
 
   /** A run after the first build; `extracted`: it renders an API rebuild's model */
   const runAsync = async ({ files, extracted }: HubDevWork) => {
+    const styleSources = new Set(lastBuild?.assets.styleSources);
     const reuseAssets =
       !!lastBuild &&
-      ![...files].some((file) => file.startsWith(HUB_ASSETS_DIR + path.sep) || isStaticAsset(file));
+      ![...files].some(
+        (file) =>
+          file.startsWith(HUB_ASSETS_DIR + path.sep) ||
+          isStaticAsset(file) ||
+          styleSources.has(file)
+      );
     const result = await deps.buildAsync({ last: lastBuild, reuseAssets });
     const prev = lastBuild;
     lastBuild = result;
