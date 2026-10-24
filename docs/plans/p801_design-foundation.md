@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented
+Status: in progress | Phases 0-1 implemented
 Category: UI, Refactoring
 Epic: p800_debugger-ui-overhaul.md
 Blocked by: p802_hub-project-section.md (only its Phase 1, the dev-only pages, merged on its own, for Phase 0's font specimen page: D11)
@@ -94,11 +94,53 @@ debugger) restyle, from Phase 0's inventory. One exception, on purpose: Phase 4'
   test (`surface-raised`, `text-disabled`, `on-accent`, `info`, the `-soft`s). The Hub's `error`
   (`#ff7a85`, next to `danger` `#ff7a6b`) has no role: Phase 1 checks where the Hub uses each, and
   folds `error` into `danger` if nothing tells them apart.
+
+  **Phase 1's outcome (2026-10-24, confirmed):**
+
+  - `error` folds into `danger`: the Hub uses `error` for a code block's error line and the dev
+    plugin's build errors, `danger` for the danger callout and a diff's `−`; never side by side.
+  - **`border-control`**, a role p800 D2 didn't have: the Hub's `border-strong` is 1.71 (dark) and
+    1.64 (light) on `bg`, under D6's 3:1, and the Hub uses it for decorative edges only (a card's
+    hover, dashed dividers, `kbd`, the search dialog). So `border-strong` keeps the Hub's values
+    (emphasis, no contrast rule) and `border-control` (`#617089` / `#7d899b`, ≥ 3.13 on every
+    surface) is the edge that identifies a control (WCAG 1.4.11): §4.2's button, field and
+    scrollbar-thumb borders map to it in p803 / p806, not to `border-strong`.
+  - Light `warning` is `#8f6300`, not the Hub's `#9a6a00` (4.41 on `bg`, 4.17 on `surface-hover`):
+    the status colours are text in the debugger (§4.2), so D6's test holds them at 4.5.
+  - The new values (dark / light): `surface-raised` `#141e31` / `#ffffff` (light raises with the
+    shadow), `text-disabled` `#5d6878` / `#9aa3b1`, `on-accent` `#04121a` / `#ffffff`, `info`
+    `#7cb4ff` / `#2459c4` (a blue, apart from the cyan accent), each status' `-soft` at 12 % / 10 %
+    (`accent-soft`'s), `backdrop` `rgb(3 6 12 / 60%)` (the Hub search's) / `rgb(15 23 38 / 40%)`.
+  - No `color-scheme` on the kit root: it would change the debugger's native scrollbars and inputs
+    for a dark system theme (a restyle, D1). p803 / p806 set it when the kit follows the theme.
+
 - Also tokens: font families (sans, mono; D8), a type scale with weights and line heights, a space
   scale, radii (the Hub's 8 px plus 4, 6 and full), two shadows, motion (D7), the focus ring (D6),
   z-layers (the windows' two layers, dialogs, toasts, tooltips).
+
+  As built: `--aek-font-sans` / `-mono` (the system stacks), `--aek-font-size-xs … -2xl` (11, 12,
+  14, 16, 20, 24 px at the defaults), `--aek-font-weight-regular / -medium / -semibold / -bold`,
+  `--aek-line-height-tight / -base / -relaxed` (1.2, 1.45, 1.65), `--aek-numeric-tabular`,
+  `--aek-space-1 … -7` (2, 4, 8, 12, 16, 24, 32 px), `--aek-radius-sm / -md / -lg / -full`,
+  `--aek-shadow-sm / -lg` (`-lg` the Hub's `--hub-shadow`), `--aek-z-window` 100 and
+  `--aek-z-debug-window` 20000 (today's `Z_INDEX_BASES`), `--aek-z-dialog` 30000, `--aek-z-toast`
+  31000, `--aek-z-tooltip` 32000. Nothing reads the z tokens until p803: the JS constants stay, and
+  p803 decides whether a modal dialog leaves the window stacks.
+
+- **The type and space scales are lengths from `--aek-base`, not `em`s** (changes p800 D4's "every
+  kit size is a token in em"): `--aek-font-size-sm: calc(var(--aek-base) * 12 / 14)`. Under the
+  `em` model a component's root is `font-size: var(--aek-base)`, which the compact density can't
+  shrink. Declared on the kit root, they inherit as fixed lengths (never compound), and
+  `[data-aek-density]` re-declares them for its subtree. A component sets
+  `font-size: var(--aek-font-size-md)` and keeps `em` for sizes relative to its own text (an icon at
+  `1em`).
 - The compact density (`data-aek-density="compact"`, p800 D2) changes the space and type scales
-  only. Its values are set here; the debugger opts in in p806.
+  only. Its values are set here; the debugger opts in in p806. As built: type 10, 11, 12, 13, 16,
+  20 px and space 2, 3, 6, 8, 12, 16, 24 px at the defaults (p806 may retune them at the 11 px
+  panels, D8).
+- **Tokens that read another** (the ring's colour `var(--aek-accent)`, the shadows, the backdrop)
+  are declared in each theme block: a `var()` resolves where it's declared, so a subtree forced to
+  the other theme would inherit the root's value otherwise.
 
 ### D3. Themes
 
@@ -109,6 +151,12 @@ debugger) restyle, from Phase 0's inventory. One exception, on purpose: Phase 4'
   kit inside a Hub page follows the Hub's theme, not only the system's.
 - An app sets its theme on the HUD root; `AppConfig` gets nothing in p801 (p808's settings menu
   writes the attribute).
+- As built: the default (dark) and system-light blocks are on
+  `:where(.aekUi:not([data-aek-theme], [data-aek-theme] *))`, the forced ones on
+  `:where([data-aek-theme='dark' | 'light'])`. A kit root inside a forced element (a Hub demo box
+  under `<html data-aek-theme>` on a light system) declares no colours and inherits the forced
+  theme; the nearest forced ancestor wins. Plain CSS has no mixin, so the light values are written
+  twice (the media query, the attribute) and `Tokens.test.ts` checks the copies match.
 
 ### D4. Units (closes `ui-kit-in-an-embed.md`; changes p800 D4)
 
@@ -117,8 +165,8 @@ debugger) restyle, from Phase 0's inventory. One exception, on purpose: Phase 4'
   `inherits: true`, top-level in `tokens.css`) are computed on the kit root, so they inherit as
   pixels and never compound:
   - `--aek-base: calc(var(--aek-ui-font-size, 0.875em) * var(--aek-ui-scale, 1))`: the UI's
-    font size, 14 px at the defaults. The new components (p803 on) set `font-size: var(--aek-base)`
-    on their root and size in `em` inside it (p800 D4's model, unchanged).
+    font size, 14 px at the defaults. The new components (p803 on) size with the type and space
+    tokens computed from it (D2's As built: lengths, not p800 D4's `em`s as first written).
   - `--aek-rem: calc(var(--aek-base) / 1.4)`: 10 px at the defaults, the old `rem`. **The
     existing styles convert `Nrem` → `calc(N * var(--aek-rem))`**, so they look the same at the
     defaults, follow the browser's font size and the UI scale, and ignore the host's root. p803
@@ -126,6 +174,18 @@ debugger) restyle, from Phase 0's inventory. One exception, on purpose: Phase 4'
     (not documented in the styling guide) and goes when its last user does.
 - `--aek-ui-font-size` and `--aek-ui-scale` are set on the kit root only (they're read where
   `--aek-base` is computed). Both are public and documented.
+- **Without `@property`** (§5: the readme sets no browser floor) an unregistered `em` in
+  `--aek-base` would resolve again in every descendant and compound. As built, the kit root
+  declares fixed pixels first (`--aek-base: calc(14px * var(--aek-ui-scale, 1))`,
+  `--aek-rem: calc(10px * …)`), and the computed values only inside
+  `@supports (transition-behavior: allow-discrete)`: `@supports` can't test an at-rule, and every
+  browser passing this test has `@property` (Chrome 117, Safari 17.4, Firefox 129 against 85,
+  16.4, 128). Chrome 85-116 and Safari 16.4-17.3 get the fixed sizes too: they follow the UI scale
+  but not the browser's font size. (§5's "a `10px` declaration before the computed one" can't work:
+  an unregistered custom property takes any value, so the later declaration always wins.)
+- As built in Phase 1, ahead of Phase 2: the kit root's `font-size: medium`. The full page
+  doesn't change at any browser font size (`body`'s `1.6rem` on the 62.5 % root is `medium`); no
+  embed shows kit UI yet.
 - `page.scss`: no `html { font-size: 62.5% }`; `body`'s `1.6rem` becomes `1rem` (16 px, as
   before). The Hub's dev `::: embed` code that removes `page.scss`' `<style>` is checked against
   the new file.
@@ -154,6 +214,17 @@ are layered yet.
   `surface-hover` ≥ 4.5; `accent` on those and `on-accent` on `accent` ≥ 4.5; `border-strong` and
   the focus ring on `bg` / `surface` ≥ 3. `text-disabled` is exempt (WCAG exempts disabled
   controls) and the test says so. A failing pair names both tokens and the ratio.
+
+  As built (`src/_engine/ui/styles/Tokens.test.ts`: the layout check wants a PascalCase name; it
+  reads the file with `fs`, since Vitest turns a CSS import into an empty string, `?raw`
+  included): at 4.5 on `bg`, `surface`, `surface-raised` and `surface-hover`, `text`,
+  `text-muted`, `accent`, `accent-hover` and the four status colours (text in the debugger, D2);
+  `on-accent` on `accent`; `text` and each of `accent` and the status colours on its own `-soft`
+  over `surface` (a badge); at 3 on the four surfaces, `border-control` (D2) and the ring. Every
+  theme token has a pair or a reason (`text-disabled` exempt, `border` and `border-strong`
+  decorative, the backdrop and shadows not a pair), so a new role can't go unchecked. The tightest
+  pair is light `accent` on `surface-hover`, 4.68.
+
 - The focus ring tokens: `--aek-focus-ring-width: 2px`, `--aek-focus-ring-offset: 2px`, colour
   `accent`; `.aekUi :focus-visible` gets it in `aek.base` (zero specificity), the one global rule
   p801 adds. Where an existing style removes `outline` (Phase 0 lists them), that rule is
@@ -171,6 +242,11 @@ are layered yet.
   Phase 0's table. Animations on a per-frame path keep none (p800 D7).
 - The toaster's `animationTimeMs` is JS: it reads `matchMedia('(prefers-reduced-motion: reduce)')`
   when a toast starts and uses 0 then.
+- As built: the durations are `calc(120ms | 200ms | 320ms * var(--aek-motion, 1))`, and
+  `prefers-reduced-motion: reduce` sets `--aek-motion: 0` on the kit root (layered, so an app's own
+  `--aek-motion` there wins), which also stops Phase 2's `calc(700ms * var(--aek-motion, 1))`
+  spinner. Easings: standard `cubic-bezier(0.2, 0, 0, 1)`, emphasised
+  `cubic-bezier(0.05, 0.7, 0.1, 1)`.
 
 ### D8. Fonts
 
@@ -371,7 +447,7 @@ run), `yarn verify:baselines`, plus the phase's own.
    Sans and IBM Plex Mono (2026-10-24); D8's outcome records it with what Phase 4 ships. The
    screenshots stayed on the devices (none committed).
 
-### Phase 1: tokens, themes, contrast (no visual change)
+### Phase 1: tokens, themes, contrast (no visual change) — done
 
 1. `tokens.css` (D2, D3, D5, D6, D7), the `@property` registrations (D4), the `.aekUi :focus-visible`
    rule; imported by `ui/styles/index.scss`.
@@ -379,6 +455,33 @@ run), `yarn verify:baselines`, plus the phase's own.
 3. `tokens.test.ts`: the contrast pairs (D6), every role defined in both themes, the compact
    density defining only space and type tokens, `@property` names registered once.
 4. The SBP budget line for `tokens.css` in the `app` and `banner` profiles.
+
+As built (2026-10-24; the decisions' own "As built" and outcome notes: D2, D3, D4, D6, D7, §5):
+
+- `src/_engine/ui/styles/tokens.css`, plain CSS, ASCII only (a non-ASCII character makes Sass
+  write `@charset`): the `@layer` order, the two `@property` rules, the tokens in `aek.tokens`, and
+  `:where(.aekUi :focus-visible)` in `aek.base`. `index.scss` `@use`s it (Sass passes `@layer`,
+  `@property` and `@supports` through, and so does the build's minifier). In the app's CSS chunk
+  normalize comes before the `@layer` statement: it's unlayered, so the order holds.
+- `normalize.scss`' `button:-moz-focusring` rule removed (§4.5), with a comment.
+- `HUD.ts`: `class: 'hudRoot aekUi'` (CMP splits the class string); no public constant for the
+  class name, which an app writes itself (D2) and Phase 6 documents.
+- `Tokens.test.ts` (D6's As built), 7 tests; each check was seen failing on a broken copy.
+- SBP (`yarn sbp --profile all`): `assets/index.css` 0.9 → 2.3 kB gzip (2319 B), `assets/banner.css`
+  0.1 → 1.5 kB (1534 B), both within the old budgets; set by the file's rule to 4 and 3 KiB.
+  About 1.4 kB gzip of tokens in every first download, the banner's too, that nothing reads before
+  p803: kept as the design system's floor (proposed at the section's review, 2026-10-24; moving the
+  themes and scales to a lazy file would cost the one-stylesheet model).
+- Verified: `yarn test` (1253 passed), `yarn verify:scenes` (100 passed, no snapshot or hash
+  change against Phase 0's baselines), `yarn verify:baselines` (only the two CSS files; recorded
+  with `--update`, plus a few bytes of hash noise; API and docs unchanged, no debug code). In
+  Chrome (a scratchpad Playwright script on `yarn dev`, `?isDebug=true`): the HUD root's
+  `font-size` 16 px, `--aek-base` 14 px, `--aek-rem` 10 px (10 px under a 30 px descendant too),
+  `--aek-font-size-sm` 12 px, `--aek-space-3` 8 px; the accent per system theme, a forced dark
+  root with a forced light subtree and a kit root nested in it (light); `--aek-ui-scale: 1.5` →
+  21 / 15 px; reduced motion → `calc(200ms * 0)`; a keyboard-focused button under the HUD root
+  gets the 2 px accent ring at 2 px offset. Not checked: Firefox and Safari, and a browser without
+  `@property` (the fallback path).
 
 ### Phase 2: units and bounds (the embed fix; no visual change at 16 px)
 
@@ -412,7 +515,11 @@ debugger UI change here on purpose: `yarn verify:scenes --update`, the diffs loo
   `<html>` gets `aekUi`; `hub.ts`' toggle sets `data-aek-theme` (D3); `--hub-font` reads
   `--aek-font-sans` if Phase 4 shared the sans. The Hub's own focus styles use the ring tokens.
 - A test (`devTools/hub/`) checks every aliased `--hub-*` resolves to a `--aek-*` and that the
-  Hub's computed colours are unchanged from Phase 0 (a value list taken then).
+  Hub's computed colours are unchanged from Phase 0 (a value list taken then). Three changes are
+  expected, from Phase 1 (D2's outcome), and the test lists them: `--hub-error` aliases
+  `--aek-danger` (`#ff7a85` → `#ff7a6b` dark, `#c0283a` → `#c2361f` light), and the light
+  `--hub-warning` is `#8f6300` (was `#9a6a00`). `--hub-border-strong` aliases `--aek-border-strong`
+  unchanged; the Hub's control edges (the search field) can move to `--aek-border-control` here.
 - Aliases rather than moving the Hub's ~300 references to `--aek-*` (p800 §8's question): one
   file changes, the Hub's SCSS reads the same, and a later rename can be a codemod.
 
@@ -634,7 +741,9 @@ Toasts and tooltips have no z-index today (the toaster sits in the HUD root's or
   the WebGL2 fallback's older browsers would compute `--aek-rem` as unregistered (it would then
   inherit as an unresolved `em` and compound). Phase 1 checks the floor in `readme.md`'s browser
   list and, if it's lower, adds a fallback (`--aek-rem: 10px`-style declaration before the
-  computed one).
+  computed one). Done: the readme names no floor ("recent Chrome, Edge or Safari… other browsers
+  fall back to WebGL 2"), and the fallback is fixed pixels outside an `@supports` the computed
+  values are in (D4's As built: a declaration before the computed one can't work).
 - **524 conversions**: the codemod and unchanged baselines are the check; a `calc()` inside a Sass
   expression (`$x * 2` with a `rem` variable) can't be multiplied by Sass. Phase 2's script
   flags each such use for a hand fix.

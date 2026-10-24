@@ -197,7 +197,8 @@ updates this section.
 ### D2. Tokens are CSS custom properties, shared with the Hub
 
 - `--aek-*` tokens in `src/_engine/ui/styles/tokens.css`: colour roles (`bg`, `surface`,
-  `surface-raised`, `surface-hover`, `border`, `border-strong`, `text`, `text-muted`,
+  `surface-raised`, `surface-hover`, `border`, `border-strong`, `border-control` (p801 D2: a
+  control's edge at 3:1; `border-strong` is decorative), `text`, `text-muted`,
   `text-disabled`, `accent`, `accent-hover`, `accent-soft`, `on-accent`, and `danger`, `warning`,
   `success`, `info` each with a `-soft` background), type (families, sizes, weights, line heights,
   tabular numbers), a space scale, radii, shadows, motion (D7), focus ring, z-layers.
@@ -233,9 +234,12 @@ updates this section.
 - The kit root sets `font-size: medium` (the user's browser default, which a host page's root
   can't change) and computes `--aek-base: calc(var(--aek-ui-font-size, 0.875em) * var(--aek-ui-scale, 1))`,
   registered with `@property` as a `<length>` so it inherits as pixels (p801 D4; this was a
-  `0.875rem` default on the font size, which a host's root would still have scaled). Every kit
-  size is a token in `em`; component roots reset to `font-size: var(--aek-base)`, so nested `em`s
-  never compound.
+  `0.875rem` default on the font size, which a host's root would still have scaled). The type and
+  space scales are tokens computed from `--aek-base` on the kit root (`calc(var(--aek-base) * 12 / 14)`),
+  so they inherit as fixed lengths and never compound, and the compact density re-declares them
+  for its subtree; a component sets `font-size: var(--aek-font-size-md)` on its root and uses
+  `em` only for sizes relative to its own text (p801 D2: this was "every kit size is a token in
+  `em`", which the compact density couldn't shrink).
 - `page.scss` drops `html { font-size: 62.5% }`: the full page and an embed both follow the user's
   browser font size (an accessibility gain), and a host page's own root size no longer scales the
   kit by accident (a host that wants that sets `--aek-ui-font-size`). The existing styles' `rem`s

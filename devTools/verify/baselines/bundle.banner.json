@@ -22,16 +22,16 @@
       "gzip": 1046
     },
     "assets/banner.css": {
-      "bytes": 120,
-      "gzip": 128
+      "bytes": 5725,
+      "gzip": 1534
     },
     "assets/banner.embed.js": {
-      "bytes": 1041139,
+      "bytes": 1041146,
       "gzip": 292054
     },
     "assets/banner.js": {
       "bytes": 483,
-      "gzip": 341
+      "gzip": 338
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
@@ -75,11 +75,11 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 45869,
-      "gzip": 13863
+      "gzip": 13862
     },
     "assets/HDRLoader.js": {
       "bytes": 3405,
-      "gzip": 1627
+      "gzip": 1628
     },
     "assets/ImportRegistry.js": {
       "bytes": 16551,
@@ -87,7 +87,7 @@
     },
     "assets/KTX2Loader.js": {
       "bytes": 59895,
-      "gzip": 24364
+      "gzip": 24363
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2168,
@@ -125,8 +125,8 @@
   "main": {
     "chunk": "assets/banner.embed.js",
     "modules": 65,
-    "minified": 1060370,
-    "gzip": 297462
+    "minified": 1060377,
+    "gzip": 297465
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -141,8 +141,8 @@
     },
     "_engine/kernel/config": {
       "modules": 1,
-      "minified": 2378,
-      "gzip": 1074
+      "minified": 2379,
+      "gzip": 1073
     },
     "_engine/kernel/ecs": {
       "modules": 7,
@@ -186,8 +186,8 @@
     },
     "_engine/ui": {
       "modules": 3,
-      "minified": 11182,
-      "gzip": 4033
+      "minified": 11188,
+      "gzip": 4037
     },
     "_engine/utils": {
       "modules": 7,
