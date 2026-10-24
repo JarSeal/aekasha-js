@@ -27,7 +27,13 @@ import { createHubMarkdown, type HubDirectives, type HubRenderContext } from './
 import { getHubOutDirError } from './outDir';
 import { discoverPages, removeDevPages } from './pages';
 import { loadAppScenes, sceneDirective } from './scenes';
-import { FAVICON_FILES, HUB_NOT_FOUND_FILE, HUB_SHELL_FILE, PACKAGE_JSON_FILE } from './paths';
+import {
+  FAVICON_FILES,
+  HUB_NOT_FOUND_FILE,
+  HUB_SHELL_FILE,
+  HUB_STATIC_ASSET_DIRS,
+  PACKAGE_JSON_FILE,
+} from './paths';
 import { checkLinks, createMarkupHelpers, renderHubPages, type RenderedPage } from './renderPages';
 import { createShellPages } from './shellPages';
 import type { HubBuildMode } from './types';
@@ -238,7 +244,8 @@ export const buildHub = async ({
     durationMs: performance.now() - startTime,
     steps,
     files,
-    dirs: sections.flatMap((section) => section.dirs),
+    // The static folders outside hub/ (the engine's fonts), which hub/'s own watch doesn't see
+    dirs: [...sections.flatMap((section) => section.dirs), ...Object.values(HUB_STATIC_ASSET_DIRS)],
     pages: builtPages,
     assets,
     search: searchStats,

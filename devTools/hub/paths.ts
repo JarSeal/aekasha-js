@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { ROOT } from '../paths';
+import { ROOT, SRC_DIR } from '../paths';
 
 /** The repo root (`devTools/paths.ts`') */
 export { ROOT };
@@ -23,10 +23,28 @@ export const HUB_SCSS_ENTRY = path.join(HUB_ASSETS_DIR, 'scss', 'hub.scss');
 export const HUB_TS_DIR = path.join(HUB_ASSETS_DIR, 'ts');
 /** Dev builds only: the dev plugin's client, built to `_assets/hub-dev.js` */
 export const HUB_DEV_CLIENT_FILE = path.join(HUB_TS_DIR, '_devClient.ts');
-/** Copied as they are into `_assets/<name>/` */
-export const HUB_STATIC_ASSET_DIRS = ['icons', 'fonts', 'images'];
 /** The icons, also inlined into the pages (`devTools/hub/icons.ts`) */
 export const HUB_ICONS_DIR = path.join(HUB_ASSETS_DIR, 'icons');
+/**
+ * The UI kit's fonts (p801 D8): the Hub's `_assets/fonts/` are the engine's files, which
+ * `_base.scss`' `@font-face` rules name (`fonts.test.ts` checks they match `fonts.css`')
+ */
+export const ENGINE_FONTS_DIR = path.join(SRC_DIR, '_engine', 'ui', 'fonts');
+/**
+ * Copied as they are into `_assets/<name>/`, each from its folder: `hub/_assets/<name>/`, the
+ * fonts from the engine (`isHubStaticAssetFile` leaves its stylesheet and entry out)
+ */
+export const HUB_STATIC_ASSET_DIRS: Record<string, string> = {
+  icons: HUB_ICONS_DIR,
+  fonts: ENGINE_FONTS_DIR,
+  images: path.join(HUB_ASSETS_DIR, 'images'),
+};
+/** A static folder's file the Hub copies and serves: not the engine fonts folder's CSS and TS */
+export const isHubStaticAssetFile = (file: string) => !/\.(css|ts)$/.test(file);
+/** The static folder a file is in, by its name, or null */
+export const getHubStaticAssetDir = (file: string) =>
+  Object.entries(HUB_STATIC_ASSET_DIRS).find(([, dir]) => file.startsWith(dir + path.sep))?.[0] ??
+  null;
 
 /** The outputs */
 export const HUB_DEV_OUT_DIR = path.join(ROOT, '.cache', 'hub', 'dev');

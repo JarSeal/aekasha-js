@@ -460,11 +460,11 @@ The page's card on the Examples page comes from its head.
 
 A page's markup (its `index.html` body, not its Markdown) has these placeholders:
 
-| Helper           | Gives                                                                                                         |
-| ---------------- | ------------------------------------------------------------------------------------------------------------- |
-| `{{icon:name}}`  | The SVG from `hub/_assets/icons/<name>.svg`, inlined. It takes `currentColor`, so it follows the text colour. |
-| `{{asset:path}}` | A static asset's URL under `hub/_assets/` (`images/…`, `fonts/…`, `icons/…`) with its `?v=` hash.             |
-| `{{root}}`       | The relative path from the page to the site root (`../../`).                                                  |
+| Helper           | Gives                                                                                                               |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `{{icon:name}}`  | The SVG from `hub/_assets/icons/<name>.svg`, inlined. It takes `currentColor`, so it follows the text colour.       |
+| `{{asset:path}}` | A static asset's URL under `_assets/` (`images/…`, `icons/…`; `fonts/…` is the engine's fonts) with its `?v=` hash. |
+| `{{root}}`       | The relative path from the page to the site root (`../../`).                                                        |
 
 The shell (`hub/_layout/shell.html`) also has `{{link:path}}`, a checked URL to a page. Pages use `hub:` instead.
 

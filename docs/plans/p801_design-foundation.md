@@ -692,6 +692,24 @@ their names):
   `sceneTestECS` `mainThread` hung once in its probe, 360 s without an answer, and passed alone
   with its hash; `uiKitEmbed` new, no local baseline since Phase 3). Not checked: Firefox and
   Safari.
+- Section 3, the Hub: `devTools/hub/paths.ts`' `HUB_STATIC_ASSET_DIRS` maps each `_assets/`
+  folder to its source, `fonts` to `ENGINE_FONTS_DIR` (`src/_engine/ui/fonts/`);
+  `isHubStaticAssetFile` leaves its `fonts.css` and `index.ts` out of the copy, the `?v=` hasher
+  and the dev runner's static checks. The build reports the static folders in its `dirs`, so the
+  dev plugin watches the engine's fonts through Vite's watcher (`hub/`'s own `fs.watch` doesn't
+  see them), and a font's change doesn't reuse the assets: the copy again and an `all` reload
+  (`devRunner.test.ts`, seen failing without the `reuseAssets` change; on a dev server: a touched
+  woff2 → "every page reloads", `fonts.css` 404 under `/hub/_assets/fonts/`).
+- `_base.scss` declares the six faces of `fonts.css` on `url('fonts/…')`; `--hub-font` and
+  `--hub-font-mono` are the opted-in stacks, written out (Phase 5 aliases `--hub-font` to
+  `--aek-font-sans` with the rest). `devTools/hub/fonts.test.ts` checks the faces (descriptors and
+  files, every woff2 named) and the two stacks against `fonts.css`. The preload names Plex Sans'
+  normal file; `hub/_assets/fonts/` (Inter and its licence) removed. The Hub's weights (100-700
+  and two 650s) are all in Plex Sans' range. In `hub:preview`: body Plex Sans, code Plex Mono,
+  both loaded, no failed request; `dist-hub/_assets/fonts/` holds the six woff2 and the two
+  licences only.
+- `hub/CLAUDE.md` (Sources), `devTools/hub/CLAUDE.md` (Output) and `hub-authoring.md`'s
+  `{{asset:…}}` row updated.
 
 ### Phase 5: the Hub on the shared tokens
 

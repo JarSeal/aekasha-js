@@ -6,12 +6,12 @@ import { build as viteBuild, type Rollup } from 'vite';
 import type { HubDiagnostics } from './diagnostics';
 import { hashContent } from './hash';
 import {
-  HUB_ASSETS_DIR,
   HUB_DEV_CLIENT_FILE,
   HUB_DIR,
   HUB_SCSS_ENTRY,
   HUB_STATIC_ASSET_DIRS,
   HUB_TS_DIR,
+  isHubStaticAssetFile,
 } from './paths';
 import type { HubBuildMode } from './types';
 
@@ -33,8 +33,9 @@ export type HubAssetFile = {
 export const ASSETS_URL_DIR = '_assets/';
 
 /**
- * A static asset's `?v=` hash, from its path in `_assets/` (`fonts/inter-latin-wght-normal.woff2`),
- * or null when it isn't a file in one of the static folders. `_headers` caches `_assets/*` as
+ * A static asset's `?v=` hash, from its path in `_assets/`
+ * (`fonts/ibm-plex-sans-latin-wght-normal.woff2`), or null when it isn't a file in one of the
+ * static folders. `_headers` caches `_assets/*` as
  * immutable, so every reference to one carries its hash, like the built assets'.
  */
 export type HubStaticAssetHasher = (assetPath: string) => string | null;
@@ -53,14 +54,17 @@ export const createStaticAssetHasher = (): HubStaticAssetHasher => {
   const hashes = new Map<string, string | null>();
   return (assetPath) => {
     if (hashes.has(assetPath)) return hashes.get(assetPath) ?? null;
-    const [dir] = assetPath.split('/');
-    const file = path.join(HUB_ASSETS_DIR, assetPath);
+    const [dir, ...rest] = assetPath.split('/');
+    const sourceDir = Object.prototype.hasOwnProperty.call(HUB_STATIC_ASSET_DIRS, dir)
+      ? HUB_STATIC_ASSET_DIRS[dir]
+      : null;
+    const file = sourceDir && path.join(sourceDir, ...rest);
     const stat =
-      HUB_STATIC_ASSET_DIRS.includes(dir) && !assetPath.split('/').includes('..')
+      file && !rest.includes('..') && isHubStaticAssetFile(file)
         ? fs.statSync(file, { throwIfNoEntry: false })
         : undefined;
     let hash: string | null = null;
-    if (stat?.isFile()) {
+    if (file && stat?.isFile()) {
       const stamp = `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
       const known = knownHashes.get(file);
       hash = known?.stamp === stamp ? known.hash : hashContent(fs.readFileSync(file));
@@ -173,12 +177,14 @@ export const buildScripts = async (
   }
 };
 
-/** Copies `hub/_assets/{icons,fonts,images}/` into `<outDir>/_assets/` */
+/** Copies the static folders (`HUB_STATIC_ASSET_DIRS`) into `<outDir>/_assets/<name>/` */
 export const copyStaticAssets = (outDir: string) => {
-  for (const name of HUB_STATIC_ASSET_DIRS) {
-    const source = path.join(HUB_ASSETS_DIR, name);
+  for (const [name, source] of Object.entries(HUB_STATIC_ASSET_DIRS)) {
     if (!fs.existsSync(source)) continue;
     // Licence files go too: the icons' and fonts' licences ask to ship with them
-    fs.cpSync(source, path.join(outDir, ASSETS_URL_DIR, name), { recursive: true });
+    fs.cpSync(source, path.join(outDir, ASSETS_URL_DIR, name), {
+      recursive: true,
+      filter: isHubStaticAssetFile,
+    });
   }
 };

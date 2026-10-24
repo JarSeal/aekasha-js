@@ -65,8 +65,11 @@ $toc-column: 1200px;
 :root {
   @include dark-tokens;
 
-  --hub-font: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --hub-font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Code', Menlo, Consolas, monospace;
+  // The kit's fonts (p801 D8) in front of tokens.css' system stacks
+  --hub-font: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  --hub-font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', 'Cascadia Code', Menlo, Consolas,
+    monospace;
   --hub-page-width: 96rem;
   --hub-docs-width: 76rem;
   --hub-content-width: 46rem;

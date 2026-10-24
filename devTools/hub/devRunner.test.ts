@@ -12,12 +12,14 @@ import {
   type HubDevRunnerDeps,
 } from './devRunner';
 import { HubDiagnostics } from './diagnostics';
-import { HUB_DIR } from './paths';
+import { ENGINE_FONTS_DIR, HUB_DIR } from './paths';
 
 const DEBOUNCE_MS = 100;
 const PAGE_FILE = path.join(HUB_DIR, 'pages', 'examples', 'intro.md');
 const OUTSIDE_FILE = path.resolve(HUB_DIR, '..', 'CHANGELOG.md');
 const API_INPUT = path.resolve(HUB_DIR, '..', 'src', '_engine', 'index.ts');
+/** A static asset outside hub/: the engine's fonts are the Hub's `_assets/fonts/` (p801 D8) */
+const ENGINE_FONT = path.join(ENGINE_FONTS_DIR, 'ibm-plex-sans-latin-wght-normal.woff2');
 
 const createResult = (html: string, fields: Partial<HubBuildResult> = {}): HubBuildResult => ({
   isOk: true,
@@ -226,6 +228,20 @@ describe('createHubDevRunner', () => {
     expect(asked).toEqual([false, true, false]); // The first build has nothing to reuse
   });
 
+  it("runs on an engine font's change, without reusing the assets (p801 D8)", async () => {
+    const runner = createHubDevRunner(deps);
+    const first = runner.getBuildAsync();
+    builds.finish('<p>1</p>', { dirs: [ENGINE_FONTS_DIR] });
+    await first;
+    expect(deps.watch).toHaveBeenCalledWith(expect.arrayContaining([ENGINE_FONTS_DIR]));
+    runner.onWatcherEvent(ENGINE_FONT);
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
+    builds.finish('<p>1</p>', { dirs: [ENGINE_FONTS_DIR] });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(builds.buildAsync.mock.calls.map(([opts]) => opts.reuseAssets)).toEqual([false, false]);
+    expect(events).toEqual([{ kind: 'all' }]);
+  });
+
   it('runs nothing after close', async () => {
     const runner = await startRunnerAsync();
     runner.onHubFileEvent(PAGE_FILE);
@@ -272,6 +288,10 @@ describe('diffBuilds', () => {
     expect(diffBuilds(prev, next, new Set())).toEqual([{ kind: 'css', version: 'b' }]);
     const icon = path.join(HUB_DIR, '_assets', 'icons', 'search.svg');
     expect(diffBuilds(prev, next, new Set([icon]))).toEqual([{ kind: 'all' }]);
+    expect(diffBuilds(prev, next, new Set([ENGINE_FONT]))).toEqual([{ kind: 'all' }]);
+    // The engine fonts folder's stylesheet isn't one of the Hub's files
+    const fontsCss = path.join(ENGINE_FONTS_DIR, 'fonts.css');
+    expect(diffBuilds(prev, next, new Set([fontsCss]))).toEqual([{ kind: 'css', version: 'b' }]);
   });
 });
 
