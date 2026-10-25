@@ -1876,6 +1876,59 @@ As built (section 1, 2026-10-25):
   by a byte or two). `verify:ui --only spinner,progressBar`: both scripts pass, no violation; the
   boxes' shots (the box, "Add 10 %") are new, to record with `--update` after review.
 
+As built (section 2, 2026-10-25):
+
+- `components/Skeleton.ts` + `Skeleton.scss`: `createSkeleton({ shape?, lines?, width?, height?,
+  class?, attr?, id? })` returns `{ cmp }`. `shape` is `'lines'` (the default, D10's "lines": three,
+  at least one, the last 60 % wide, each `0.75em` tall with `0.6em` between), `'block'` (the
+  container's width, `--aek-space-7` × 3 tall) or `'circle'` (`2.5em`, `aspect-ratio: 1`);
+  `width` / `height` are CSS lengths written inline. Always `aria-hidden`; **the loading
+  container's `aria-busy` is the app's** (the guide and the `@example` set and take it off): the
+  skeleton can't know which container is loading. The shimmer is a gradient band
+  (`--aek-skeleton-shine`, default the fill mixed 12 % toward the text) moved by
+  `background-position` on `aekSkeletonShine` (its own keyframes), none under reduced motion.
+- `components/Divider.ts` + `Divider.scss`: `createDivider({ orientation?, decorative?, class?,
+  attr?, id? })` returns `{ cmp }`: an `<hr>` across (its own separator role), a `<div>`
+  `role="separator"` `aria-orientation="vertical"` down a row, stretched to the row's height (at
+  least `1em`). **`decorative` is new** (D10 doesn't name it): `aria-hidden` and no role, for a line
+  between things nothing separates. The line is a border in `--aek-border` (decorative: a separator
+  isn't a control, so it needs no 3:1), so normalize's unlayered `hr { height: 0 }` agrees with it.
+- `components/EmptyState.ts` + `EmptyState.scss`: `createEmptyState({ title, text?, icon?,
+  headingLevel?, action?, class?, attr?, id? })` returns `{ cmp, action, setTitle, setText }`. The
+  action is `createButton(action)` (the handle's `action`, with `aekEmptyState__action`) added as a
+  child CMP, so `cmp.remove()` removes it. **`headingLevel` is new**: the title is a `p` by default
+  (a heading would add to the page's outline wherever an empty list shows), `h2`-`h6` where it
+  starts a section. The text is `hidden` (as an attribute: linkedom) while empty.
+- The component library: a "Skeleton" box (the lines, a block and a circle, a card with
+  `aria-busy` whose "Load the content" puts its content in), a "Divider" box (a pause menu's
+  column split before Quit, a toolbar's two groups) and an "Empty state" box (one with an icon and
+  an action, its click in a status line; one with a title and a text). Scripts: the skeletons
+  hidden and the card busy, then loaded; the hr and the vertical separator's role and orientation;
+  the empty state's action by Enter.
+- Tests: `Skeleton.test.ts` (3), `Divider.test.ts` (2), `EmptyState.test.ts` (2).
+- Docs: the kit's `CLAUDE.md` (Skeletons, dividers and empty states, the importers, the tests),
+  the UI kit guide ("Skeletons, dividers and empty states", the table, the key APIs), the
+  component library's three texts and `COMPONENT_USES`.
+- The `@example` check found the divider's `toolbar` variable: a browser global
+  (`window.toolbar`), renamed.
+- Found in the shots: **the Hub's prose rules beat the kit in the page**, as `button` and `a` did
+  in Phase 6: `.hubContent :where(hr)` (a 2.5rem margin around the divider) and `:where(p, ul,
+  ol)` (a 1.1rem margin under the empty state's title and text). Every element rule of
+  `_prose.scss` now skips the kit's pieces (`:not(:where(…))` with `_base.scss`' `$kit-pieces`,
+  which `_prose.scss` `@use`s), so they keep their specificity. And two kit fixes: **a horizontal
+  divider stretches itself** (`align-self: stretch`: an empty `hr` in a flex column that doesn't
+  stretch shrank to nothing), and **the empty state's icon takes its size as its font size**
+  (`getSvgIcon`'s `.aekIcon` is `1em`, which a width on the SVG didn't change; a bare SVG is `1em`
+  too).
+- The section's checks: `yarn test` (182 files, 1449 tests), `tsc` (both), ESLint, `yarn hub:build`
+  (1011 names, 100 % documented), `yarn sbp --profile all` (every budget within; every bundle
+  unchanged), `verify:baselines` recorded (the nine `aekasha/ui` names). `yarn verify:ui`, every
+  piece (the prose change reaches every kit root in the page): every keyboard script passes and no
+  violation; the 11 failed states are all screenshot differences Phase 6 left to record (the
+  window's three, the drop-down's three and the toaster's three from Phase 6 section 2's scoped
+  rules, the icons box's two from Phase 5); the three new boxes' shots (and "Load the content")
+  are new. To record with `--update` after review.
+
 ### Phase 8: the Hub, the example, `CLAUDE.md`, readme
 
 D13: the UI kit section and its child pages, the styling guide, the public component library page

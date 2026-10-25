@@ -19,7 +19,9 @@ import {
   createBadge,
   createButton,
   createButtonGroup,
+  createDivider,
   createDropDown,
+  createEmptyState,
   createHudRoot,
   createInputGlyph,
   createKbd,
@@ -27,6 +29,7 @@ import {
   createMenu,
   createPopover,
   createProgressBar,
+  createSkeleton,
   createSpinner,
   createSplitButton,
   createTag,
@@ -1010,6 +1013,94 @@ const initProgressBarDemo: Demo = (box) => {
   );
 };
 
+// --- Skeleton ---
+
+const SKELETON_ID = (name: string) => `${ID_PREFIX}Skeleton${name}`;
+
+/** In the page: the shapes, and a card loading (`aria-busy`) whose Hub button puts its content in */
+const initSkeletonDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  addGroup(root, 'Text lines: three, the last shorter').append(
+    createSkeleton({ class: 'hubDemoSkeleton' }).cmp.elem
+  );
+  addGroup(root, 'A block (an image) and a circle (an avatar)').append(
+    createSkeleton({ shape: 'block', width: '10rem', height: '6rem' }).cmp.elem,
+    createSkeleton({ shape: 'circle' }).cmp.elem
+  );
+
+  const card = document.createElement('div');
+  card.id = SKELETON_ID('Card');
+  card.className = 'hubDemoSkeletonCard';
+  card.setAttribute('aria-busy', 'true');
+  const avatar = createSkeleton({ shape: 'circle' });
+  const text = createSkeleton({ lines: 2, class: 'hubDemoSkeleton' });
+  card.append(avatar.cmp.elem, text.cmp.elem);
+  const loading = addGroup(root, 'A card loading: aria-busy on it until its content is there');
+  loading.append(card);
+  addButton(loading, 'Load the content', () => {
+    avatar.cmp.remove();
+    text.cmp.remove();
+    card.removeAttribute('aria-busy');
+    const line = document.createElement('p');
+    line.className = 'hubDemoLine';
+    line.textContent = 'Best lap: 1:42.3, by Ada';
+    card.append(line);
+  });
+};
+
+// --- Divider ---
+
+/** In the page: a divider across a column, and down a row between a toolbar's groups */
+const initDividerDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const column = document.createElement('div');
+  column.className = 'hubDemoDividerColumn';
+  const resume = createButton({ label: 'Resume', variant: 'primary' });
+  const settings = createButton({ label: 'Settings' });
+  const quit = createButton({ label: 'Quit', variant: 'danger' });
+  column.append(resume.cmp.elem, settings.cmp.elem, createDivider().cmp.elem, quit.cmp.elem);
+  addGroup(root, 'Across a column: an hr between two groups').append(column);
+
+  const row = addGroup(root, 'Down a row: role="separator", aria-orientation="vertical"');
+  row.classList.add('hubDemoDividerRow');
+  row.append(
+    createButton({ label: 'Undo', icon: getSvgIcon('undo'), iconOnly: true }).cmp.elem,
+    createButton({ label: 'Redo', icon: getSvgIcon('redo'), iconOnly: true }).cmp.elem,
+    createDivider({ orientation: 'vertical' }).cmp.elem,
+    createButton({ label: 'Settings', icon: getSvgIcon('gear'), iconOnly: true }).cmp.elem
+  );
+};
+
+// --- Empty state ---
+
+const EMPTY_ID = (name: string) => `${ID_PREFIX}Empty${name}`;
+
+/** In the page: one with an icon and an action (its click in the status line), one with text only */
+const initEmptyStateDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = EMPTY_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const saves = createEmptyState({
+    id: EMPTY_ID('Saves'),
+    icon: getSvgIcon('databaseX'),
+    title: 'No saved games',
+    text: 'Your saves show here after your first checkpoint.',
+    action: {
+      label: 'New game',
+      variant: 'primary',
+      onClick: () => (status.textContent = 'New game started'),
+    },
+  });
+  addGroup(root, 'An icon, a title, a text and an action').append(saves.cmp.elem);
+  addGroup(root, 'A title and a text: a search with no matches').append(
+    createEmptyState({ title: 'No matches', text: 'Try a shorter word, or clear the filters.' }).cmp
+      .elem
+  );
+  root.append(status);
+};
+
 // --- Kbd ---
 
 const KBD_ROWS: { label: string; keys: string[]; platform?: 'mac' | 'other' }[] = [
@@ -1092,6 +1183,9 @@ const DEMOS: Record<string, Demo> = {
   tag: initTagDemo,
   spinner: initSpinnerDemo,
   progressBar: initProgressBarDemo,
+  skeleton: initSkeletonDemo,
+  divider: initDividerDemo,
+  emptyState: initEmptyStateDemo,
   kbd: initKbdDemo,
   inputGlyph: initInputGlyphDemo,
 };

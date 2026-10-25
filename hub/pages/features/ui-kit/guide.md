@@ -20,6 +20,9 @@
 | Badge, tag     | [`createBadge`](api:createBadge), [`createTag`](api:createTag)     | A count or a status word; a kind, a filter chip, a picked item |
 | Spinner        | [`createSpinner`](api:createSpinner)                               | A wait of unknown length, in text or alone                     |
 | Progress bar   | [`createProgressBar`](api:createProgressBar)                       | How far a task is, or that it's going on; a segmented gauge    |
+| Skeleton       | [`createSkeleton`](api:createSkeleton)                             | A placeholder shaped like content that's still loading         |
+| Divider        | [`createDivider`](api:createDivider)                               | A line between two groups, across a column or down a row       |
+| Empty state    | [`createEmptyState`](api:createEmptyState)                         | What an empty list or search shows, and what to do             |
 | Key hint       | [`createKbd`](api:createKbd)                                       | A shortcut's keys, with each platform's names                  |
 | Input glyph    | [`createInputGlyph`](api:createInputGlyph)                         | One key or mouse input in a prompt: "Press E"                  |
 
@@ -495,6 +498,37 @@ health.setValue(player.health); // every frame is fine
 Both follow reduced motion: the spinner pulses slowly instead of turning, and an indeterminate bar
 is a still striped one instead of a sliding bar.
 
+## Skeletons, dividers and empty states
+
+[`createSkeleton`](api:createSkeleton) holds the place of content that's still loading, shaped
+like it (text `lines`, a `block`, a `circle`), so nothing jumps when it comes. Assistive tech
+doesn't hear it: mark the container that's loading with `aria-busy="true"` and take it off with
+the skeleton. [`createDivider`](api:createDivider) draws a line between two groups, across a
+column or (`orientation: 'vertical'`) down a row. [`createEmptyState`](api:createEmptyState) is
+what a list or a search shows with nothing in it: an icon, a title, what to do about it, and an
+action button.
+
+```ts
+const scores = panel.add({ attr: { 'aria-busy': 'true' } });
+const placeholder = createSkeleton({ lines: 4 });
+scores.add(placeholder.cmp);
+
+const rows = await loadScoresAsync();
+placeholder.cmp.remove();
+scores.removeAttr('aria-busy');
+if (!rows.length) {
+  scores.add(
+    createEmptyState({
+      title: 'No scores yet',
+      text: 'Finish a race to set the first one.',
+      action: { label: 'Race', variant: 'primary', onClick: () => startRace() },
+    }).cmp
+  );
+}
+
+pauseMenu.add(createDivider().cmp); // before Quit
+```
+
 ## Key hints and input glyphs
 
 [`createKbd`](api:createKbd) draws a shortcut's keys, a `<kbd>` each with `+` between them, from
@@ -702,6 +736,8 @@ container; `vw` and `vh` are the browser window's, as in CSS.
 - [`createBadge`](api:createBadge) ([`BadgeTone`](api:BadgeTone)) and [`createTag`](api:createTag).
 - [`createSpinner`](api:createSpinner) and [`createProgressBar`](api:createProgressBar)
   ([`ProgressBar`](api:ProgressBar)).
+- [`createSkeleton`](api:createSkeleton), [`createDivider`](api:createDivider) and
+  [`createEmptyState`](api:createEmptyState) ([`EmptyState`](api:EmptyState)).
 - [`createKbd`](api:createKbd) ([`Kbd`](api:Kbd)) and [`createInputGlyph`](api:createInputGlyph)
   ([`InputGlyphInput`](api:InputGlyphInput)).
 - [`aekasha/ui/fonts`](hub:documentation/aekasha/ui/fonts): the kit's fonts, a stylesheet entry.

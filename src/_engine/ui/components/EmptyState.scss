@@ -1,0 +1,50 @@
+// The empty state's default styles (EmptyState.ts), on the design tokens and layered (p803 D5): an
+// app's unlayered rule wins, and every selector is in :where(). A centred column: a large muted
+// icon, the title in the text colour, the text muted (both 4.5 on the surfaces, Tokens.test.ts),
+// then the action.
+@layer aek.components {
+  :where(.aekEmptyState) {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--aek-space-2);
+    padding: var(--aek-empty-state-padding, var(--aek-space-6));
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-md);
+    line-height: var(--aek-line-height-base);
+    text-align: center;
+  }
+
+  // The size is its font size: getSvgIcon's icon is 1em, and so is a bare SVG
+  :where(.aekEmptyState__icon) {
+    display: block;
+    margin-block-end: var(--aek-space-2);
+    color: var(--aek-text-muted);
+    font-size: var(--aek-empty-state-icon-size, calc(var(--aek-space-7) * 1.25));
+    line-height: 1;
+  }
+
+  :where(.aekEmptyState__icon > svg) {
+    display: block;
+    width: 1em;
+    height: auto;
+  }
+
+  :where(.aekEmptyState__title) {
+    margin: 0;
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-lg);
+    font-weight: var(--aek-font-weight-semibold);
+    line-height: var(--aek-line-height-tight);
+  }
+
+  :where(.aekEmptyState__text) {
+    max-width: 40ch;
+    margin: 0;
+  }
+
+  :where(.aekEmptyState__action) {
+    margin-block-start: var(--aek-space-3);
+  }
+}

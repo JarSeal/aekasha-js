@@ -108,6 +108,9 @@ const SPINNER = '#hubDemoSpinnerDefault';
 const SPINNER_DECORATIVE = '[data-hub-demo="spinner"] .hubDemoLine .aekSpinner';
 const PROGRESS = (name: string) => `#hubDemoProgress${name}`;
 const PROGRESS_TRACK = (name: string) => `${PROGRESS(name)} .aekProgress__track`;
+const SKELETON_CARD = '#hubDemoSkeletonCard';
+const DIVIDER_BOX = '[data-hub-demo="divider"]';
+const EMPTY_SAVES = '#hubDemoEmptySaves';
 
 export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
   window: {
@@ -644,6 +647,54 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { expectAttr: PROGRESS_TRACK('Connecting'), name: 'aria-valuenow', value: null },
           { expectAttr: PROGRESS_TRACK('Health'), name: 'aria-valuemax', value: '5' },
           { expectAttr: PROGRESS_TRACK('Health'), name: 'aria-valuenow', value: '2.5' },
+        ],
+      },
+    ],
+  },
+  skeleton: {
+    keyboard: [
+      {
+        name: 'no keys; the skeletons are hidden, the card busy until its content is in',
+        steps: [
+          { expectAttr: `${SKELETON_CARD} .aekSkeleton`, name: 'aria-hidden', value: 'true' },
+          { expectAttr: SKELETON_CARD, name: 'aria-busy', value: 'true' },
+          { click: 'Load the content' },
+          { expectCount: `${SKELETON_CARD} .aekSkeleton`, count: 0 },
+          { expectAttr: SKELETON_CARD, name: 'aria-busy', value: null },
+          { expectText: `${SKELETON_CARD} .hubDemoLine`, text: 'Best lap: 1:42.3, by Ada' },
+        ],
+      },
+    ],
+  },
+  divider: {
+    keyboard: [
+      {
+        name: 'no keys; an hr across, a vertical separator down the toolbar',
+        steps: [
+          { expectCount: `${DIVIDER_BOX} hr.aekDivider`, count: 1 },
+          {
+            expectAttr: `${DIVIDER_BOX} [data-orientation="vertical"]`,
+            name: 'role',
+            value: 'separator',
+          },
+          {
+            expectAttr: `${DIVIDER_BOX} [data-orientation="vertical"]`,
+            name: 'aria-orientation',
+            value: 'vertical',
+          },
+        ],
+      },
+    ],
+  },
+  emptyState: {
+    keyboard: [
+      {
+        name: 'its action is a button: Enter runs it',
+        steps: [
+          { expectText: `${EMPTY_SAVES} .aekEmptyState__title`, text: 'No saved games' },
+          { focusInBox: `${EMPTY_SAVES} .aekEmptyState__action` },
+          { press: 'Enter' },
+          { expectText: '#hubDemoEmptyStatus', text: 'New game started' },
         ],
       },
     ],

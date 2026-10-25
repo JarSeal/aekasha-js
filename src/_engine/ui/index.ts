@@ -29,6 +29,8 @@ export type {
   TSettings,
   TStyle,
 } from './core/CMPTypes';
+export { createDivider } from './components/Divider';
+export type { Divider, DividerProps } from './components/Divider';
 export { openDialog } from './overlays/windows/DialogWindow';
 export type { DialogProps } from './overlays/windows/DialogWindow';
 export {
@@ -61,6 +63,8 @@ export type {
 } from './overlays/windows/DraggableWindowTypes';
 export { setWindowCycleKeys } from './overlays/windows/DraggableWindowKeys';
 export type { WindowCycleKeys } from './overlays/windows/DraggableWindowKeys';
+export { createEmptyState } from './components/EmptyState';
+export type { EmptyState, EmptyStateProps } from './components/EmptyState';
 export { createDropDown } from './forms/DropDown';
 export type { DropDown, DropDownOption, DropDownProps, TDropDown } from './forms/DropDown';
 export {
@@ -93,6 +97,8 @@ export { createPopover } from './overlays/Popover';
 export type { Popover, PopoverProps } from './overlays/Popover';
 export { createProgressBar } from './components/ProgressBar';
 export type { ProgressBar, ProgressBarProps } from './components/ProgressBar';
+export { createSkeleton } from './components/Skeleton';
+export type { Skeleton, SkeletonProps } from './components/Skeleton';
 export { createSpinner } from './components/Spinner';
 export type { Spinner, SpinnerProps } from './components/Spinner';
 export { createSplitButton } from './components/SplitButton';
