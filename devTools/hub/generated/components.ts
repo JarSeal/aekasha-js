@@ -45,6 +45,8 @@ export const COMPONENT_USES = [
   { slot: 'generated-components-menu', calls: ['createMenu', 'createSplitButton'] },
   { slot: 'generated-components-badge', calls: ['createBadge'] },
   { slot: 'generated-components-tag', calls: ['createTag'] },
+  { slot: 'generated-components-spinner', calls: ['createSpinner'] },
+  { slot: 'generated-components-progress-bar', calls: ['createProgressBar'] },
   { slot: 'generated-components-kbd', calls: ['createKbd'] },
   { slot: 'generated-components-input-glyph', calls: ['createInputGlyph'] },
 ] as const;

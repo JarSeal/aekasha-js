@@ -2828,6 +2828,16 @@
       "Link": "TypeAlias",
       "LinkProps": "TypeAlias"
     },
+    "src/_engine/ui/components/ProgressBar.ts": {
+      "createProgressBar": "Function",
+      "ProgressBar": "TypeAlias",
+      "ProgressBarProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/Spinner.ts": {
+      "createSpinner": "Function",
+      "Spinner": "TypeAlias",
+      "SpinnerProps": "TypeAlias"
+    },
     "src/_engine/ui/components/SplitButton.ts": {
       "createSplitButton": "Function",
       "SplitButton": "TypeAlias",
@@ -4204,7 +4214,11 @@
       "OpenDraggableWindowProps",
       "Popover",
       "PopoverProps",
+      "ProgressBar",
+      "ProgressBarProps",
       "SceneTargetResolver",
+      "Spinner",
+      "SpinnerProps",
       "SplitButton",
       "SplitButtonProps",
       "SvgIconKey",
@@ -4255,6 +4269,8 @@
       "createLink",
       "createMenu",
       "createPopover",
+      "createProgressBar",
+      "createSpinner",
       "createSplitButton",
       "createTag",
       "createToaster",

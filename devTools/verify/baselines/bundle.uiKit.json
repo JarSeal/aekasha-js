@@ -59,7 +59,7 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 45868,
-      "gzip": 13862
+      "gzip": 13861
     },
     "assets/HDRLoader.js": {
       "bytes": 3405,
@@ -91,7 +91,7 @@
     },
     "assets/ImportRegistry.js": {
       "bytes": 16534,
-      "gzip": 6649
+      "gzip": 6651
     },
     "assets/KTX2Loader.js": {
       "bytes": 59895,
@@ -119,19 +119,19 @@
     },
     "assets/three.module.js": {
       "bytes": 219,
-      "gzip": 183
+      "gzip": 181
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
       "gzip": 179
     },
     "assets/uiKit.css": {
-      "bytes": 6982,
-      "gzip": 1861
+      "bytes": 7067,
+      "gzip": 1915
     },
     "assets/uiKit.embed.js": {
       "bytes": 1038854,
-      "gzip": 291084
+      "gzip": 291080
     },
     "assets/uiKitEmbed.css": {
       "bytes": 17762,
@@ -139,11 +139,11 @@
     },
     "assets/uiKitEmbed.js": {
       "bytes": 45184,
-      "gzip": 16448
+      "gzip": 16449
     },
     "uiKit.embed.js": {
       "bytes": 249,
-      "gzip": 211
+      "gzip": 210
     }
   },
   "main": {

@@ -104,6 +104,10 @@ const MENU_STATUS = '#hubDemoMenuStatus';
 const BADGE_INBOX = '#hubDemoBadgeInbox';
 const TAG = (name: string) => `#hubDemoTag${name}`;
 const TAG_STATUS = '#hubDemoTagStatus';
+const SPINNER = '#hubDemoSpinnerDefault';
+const SPINNER_DECORATIVE = '[data-hub-demo="spinner"] .hubDemoLine .aekSpinner';
+const PROGRESS = (name: string) => `#hubDemoProgress${name}`;
+const PROGRESS_TRACK = (name: string) => `${PROGRESS(name)} .aekProgress__track`;
 
 export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
   window: {
@@ -609,6 +613,37 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { expectFocus: `${TAG('Level1')} .aekTag__remove` },
           { press: 'Enter' },
           { expectCount: TAG('Level1'), count: 0 },
+        ],
+      },
+    ],
+  },
+  spinner: {
+    keyboard: [
+      {
+        name: 'no keys; alone it’s a status with its label, in text it’s hidden',
+        steps: [
+          { expectAttr: SPINNER, name: 'role', value: 'status' },
+          { expectText: `${SPINNER} .aekVisuallyHidden`, text: 'Loading' },
+          { expectAttr: SPINNER_DECORATIVE, name: 'aria-hidden', value: 'true' },
+          { expectAttr: SPINNER_DECORATIVE, name: 'role', value: null },
+        ],
+      },
+    ],
+  },
+  progressBar: {
+    keyboard: [
+      {
+        name: 'no keys; the track is a progressbar with its value, none while indeterminate',
+        steps: [
+          { expectAttr: PROGRESS_TRACK('Download'), name: 'role', value: 'progressbar' },
+          { expectAttr: PROGRESS_TRACK('Download'), name: 'aria-valuenow', value: '40' },
+          { expectText: `${PROGRESS('Download')} .aekProgress__value`, text: '40 %' },
+          { click: 'Add 10 %' },
+          { expectAttr: PROGRESS_TRACK('Download'), name: 'aria-valuenow', value: '50' },
+          { expectText: `${PROGRESS('Download')} .aekProgress__value`, text: '50 %' },
+          { expectAttr: PROGRESS_TRACK('Connecting'), name: 'aria-valuenow', value: null },
+          { expectAttr: PROGRESS_TRACK('Health'), name: 'aria-valuemax', value: '5' },
+          { expectAttr: PROGRESS_TRACK('Health'), name: 'aria-valuenow', value: '2.5' },
         ],
       },
     ],

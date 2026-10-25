@@ -1782,6 +1782,100 @@ loader onto the loading overlay (`_dbg__DebuggerSceneLoader.ts`: its spinner, it
 from `suggestBudget`. The SBP report's "what does a HUD cost" lines (p800 D10: a window, a dialog,
 a toast, a button) are noted here for the Hub.
 
+Each section as Phase 6's: the modules with their stylesheet and test on `KitDom`, on `aekasha/ui`
+with their types and JSDoc (parts, custom properties, keys, ARIA, an `@example`), the component
+library's box (`<piece>-text.md`, `DEMOS`, `COMPONENT_USES`, the checks table), the kit's
+`CLAUDE.md` and the UI kit guide; then `yarn test`, `tsc`, ESLint, `yarn hub:build`,
+`verify:ui --only <pieces>`, `yarn sbp --profile all` and `verify:baselines` (the new names
+recorded).
+
+1. Section 1, the spinner and the progress bar (`components/Spinner.ts`,
+   `components/ProgressBar.ts`): first, since the loading overlay draws with both.
+2. Section 2, the skeleton, the divider and the empty state (`components/Skeleton.ts`,
+   `components/Divider.ts`, `components/EmptyState.ts`; the empty state's action is a
+   `createButton`).
+3. Section 3, the loading overlay (`components/LoadingOverlay.ts`) and the debug scene loader on
+   it (`_dbg__DebuggerSceneLoader.ts`: its module stylesheet goes), with the guide's
+   `createSceneLoader` wiring.
+4. Section 4, the `uiKit` profile's scene grows (D11's embed checks: a tooltip; D13: the new
+   pieces), its budgets from `suggestBudget`, the "what does a HUD cost" lines noted for the Hub;
+   then the phase's verification (`verify:scenes` and `verify:embed` too).
+
+Defaults chosen at the phase's start (2026-10-25, for review):
+
+- **Drawn in the page**, as Phase 6's pieces: each box in a kit root of its own (`addKitRoot`), its
+  text lines `hubDemoLine`; the loading overlay's box opens one over the HUD's bounds with a Hub
+  button, and one over a panel in the box.
+- **The spinner** (`createSpinner({ size?, label?, decorative? })` → `{ cmp, setLabel }`): `1em`
+  by default (it follows its text, as an icon), `size: 'sm' | 'md' | 'lg'` the icon tokens, and
+  `--aek-spinner-size` for any other (the loading overlay's is larger). The ring is the element's
+  `::before`, turning on `kit.scss`' `aekSpin` and pulsing on `aekPulse` under reduced motion, as
+  the button's mark. Standing alone it's `role="status"` with its label (default 'Loading') in a
+  visually hidden copy, so a `setLabel` is read; `decorative: true` makes it `aria-hidden` with no
+  role, for a spinner inside something that already says it (the loading overlay's text).
+- **The progress bar** (`createProgressBar({ label, value?, min?, max?, segments?, showValue? })`
+  → `{ cmp, setValue, getValue, setLabel }`): a `role="progressbar"` element named by its visible
+  label (`aria-labelledby`), `aria-valuemin` / `-max` / `-now`; `value: null` (the default) is
+  indeterminate (`aria-valuenow` absent). The fill is a `scaleX` (no layout per update, a HUD
+  value set every frame). `segments: n` draws n parts, each filled in turn (a health bar at 2.5 of
+  5 shows half a part), each part's fill written in place. `showValue` shows the rounded percent
+  next to the label. Indeterminate, a bar slides along the track; under reduced motion it's a
+  still striped bar. Its colour is `--aek-progress-color` (default the accent), its height
+  `--aek-progress-height`.
+- **The loading overlay** (section 3): `createLoadingOverlay({ text, progress?, cover? })` →
+  `{ cmp, showAsync, hideAsync, setText, setProgress }`. The app adds its `cmp` (the scene loader
+  adds `loaderContainerFn`'s). `cover: 'bounds'` (default: `position: fixed`, the HUD's bounds:
+  the browser window or a mount's container) or `'parent'` (`position: absolute` in a positioned
+  element of the app's). A spinner, or a progress bar when `progress` is given (`null`:
+  indeterminate; `setProgress` on a spinner overlay swaps in a bar). `showAsync` / `hideAsync`
+  fade it (150 / 250 ms, the debug loader's, times `getMotionFactor`) and resolve `true` after the
+  fade, `false` when another call or the removal cut it short, so they're `loadStartFn` and
+  `loadEndFn` as they are. Its text is a `role="status"` (a `setText` is read), the spinner
+  decorative. Its background is `--aek-loading-overlay-bg` (default `--aek-bg`, opaque: a scene
+  swap stays hidden). It stacks at a new `--aek-z-loading` (1000, the debug loader's: above the
+  app's windows, below the dialogs). No `inert` and no `aria-busy`: it covers the pointer only (a
+  scene load turns the inputs off itself), and `aria-busy` on its parent would mute its own
+  status.
+
+As built (section 1, 2026-10-25):
+
+- `components/Spinner.ts` + `Spinner.scss`: `createSpinner({ size?, label?, decorative?, class?,
+  attr?, id? })` returns `{ cmp, setLabel }`, as the defaults say. The ring's width is an eighth of
+  its size, never under 2 px. `--aek-spinner-color` (new) colours it (default the text colour).
+- `components/ProgressBar.ts` + `ProgressBar.scss`: `createProgressBar({ label, hideLabel?, value?,
+  min?, max?, segments?, showValue?, class?, attr?, id? })` returns `{ cmp, setValue, getValue,
+  setLabel }`. **`hideLabel` is new** (a health bar whose place says what it is): the label stays
+  for `aria-labelledby` as an `aekVisuallyHidden` span, and `data-label-hidden` drops the header's
+  gap. **The `role="progressbar"` is the track, not the whole piece**: a progressbar's children
+  are presentational, so the visible label and the shown percent sit beside it, the percent
+  `aria-hidden`. The value is clamped; a non-finite one is indeterminate. The fill's `scaleX` is
+  written as an inline `transform` (no layout, testable in linkedom). Segments are the track's own
+  parts, each with the control border, joined by `--aek-space-1` gaps; **a segmented bar's
+  indeterminate state is always the still stripes** (a sliding bar would cross the gaps).
+  `aekProgressSlide` is the progress bar's own keyframes (in its stylesheet: nothing else uses
+  them). Custom properties: `--aek-progress-color`, `-track-color`, `-height`, `-radius`.
+- The component library: a "Spinner" box (the sizes, one in text marked decorative, the two
+  custom properties) and a "Progress bar" box (a download at 40 % with "Add 10 %", an
+  indeterminate one, a segmented health bar at 2.5 of 5 in the danger colour with its label
+  hidden, a segmented indeterminate one; `.hubDemoProgress` gives a bar its width in a row).
+  Scripts (no keys): the spinner's status and label, the decorative one hidden; the track's
+  role and values, "Add 10 %" moving it to 50, none while indeterminate, the health bar's range.
+  **The indeterminate bar's shot shows an empty track**: the runner pauses an infinite animation
+  at its start, where the sliding bar is still off the track's left edge.
+- Tests: `Spinner.test.ts` (2), `ProgressBar.test.ts` (3).
+- Docs: the kit's `CLAUDE.md` (Spinners and progress bars, the importers, the keyframes, the
+  tests), the UI kit guide ("Spinners and progress bars", the table, the key APIs), the component
+  library's two texts and `COMPONENT_USES`.
+- The section's checks: `yarn test` (179 files, 1442 tests; the `@example` check wanted the
+  example's callback typed), `tsc` (both), ESLint, `yarn hub:build` (1002 names, 100 %
+  documented), `yarn sbp --profile all` (every budget within; no profile ships the two),
+  `verify:baselines` recorded (the six `aekasha/ui` names). **The entry stylesheets' baselines
+  grew 85 bytes** in all three builds (`index.css`, `banner.css`, `uiKit.css`): Phase 6 section
+  2's `aekSpin` / `aekPulse` keyframes in `kit.scss`, which Phase 6 never recorded ("every bundle
+  unchanged" missed the CSS); recorded now. The JS files' bytes are unchanged (their gzip moved
+  by a byte or two). `verify:ui --only spinner,progressBar`: both scripts pass, no violation; the
+  boxes' shots (the box, "Add 10 %") are new, to record with `--update` after review.
+
 ### Phase 8: the Hub, the example, `CLAUDE.md`, readme
 
 D13: the UI kit section and its child pages, the styling guide, the public component library page

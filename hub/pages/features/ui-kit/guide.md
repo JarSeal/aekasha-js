@@ -18,6 +18,8 @@
 | Menu           | [`createMenu`](api:createMenu)                                     | A button's list of actions, on / off items and choices         |
 | Split button   | [`createSplitButton`](api:createSplitButton)                       | An action, with its variants in a menu                         |
 | Badge, tag     | [`createBadge`](api:createBadge), [`createTag`](api:createTag)     | A count or a status word; a kind, a filter chip, a picked item |
+| Spinner        | [`createSpinner`](api:createSpinner)                               | A wait of unknown length, in text or alone                     |
+| Progress bar   | [`createProgressBar`](api:createProgressBar)                       | How far a task is, or that it's going on; a segmented gauge    |
 | Key hint       | [`createKbd`](api:createKbd)                                       | A shortcut's keys, with each platform's names                  |
 | Input glyph    | [`createInputGlyph`](api:createInputGlyph)                         | One key or mouse input in a prompt: "Press E"                  |
 
@@ -465,6 +467,34 @@ picked.add(createTag({ label: 'Sword', removable: true, onRemove: () => unequip(
 A count alone ("3") says little to assistive tech: give it a `spokenLabel`. A badge isn't live; if
 a change should be announced, say it in a live region of your own.
 
+## Spinners and progress bars
+
+[`createSpinner`](api:createSpinner) turns a ring for a wait of unknown length. It's `1em` by
+default, so it follows its text, or an icon size (`sm`, `md`, `lg`); `--aek-spinner-size` sets
+any other. Alone it's a status that says its label ("Loading" by default); inside something that
+already says it's loading, make it `decorative`. [`createProgressBar`](api:createProgressBar)
+shows how far a task is, or with no `value` that it's going on with no known end. Its setter
+writes the bar in place, so a value set every frame (a health bar, a charge) changes no layout,
+and `segments` draws the track in parts filled in turn.
+
+```ts
+const saving = panel.add({ tag: 'p' });
+saving.add(createSpinner({ decorative: true }).cmp); // the text says it
+saving.add({ tag: 'span', text: ' Saving…' });
+
+const download = createProgressBar({ label: 'Downloading the level', showValue: true });
+panel.add(download.cmp);
+onDownloadProgress((loaded: number, total: number) => download.setValue((loaded / total) * 100));
+
+const health = createProgressBar({ label: 'Health', hideLabel: true, max: 5, segments: 5 });
+health.cmp.elem.style.setProperty('--aek-progress-color', 'var(--aek-danger)');
+hudCorner.add(health.cmp);
+health.setValue(player.health); // every frame is fine
+```
+
+Both follow reduced motion: the spinner pulses slowly instead of turning, and an indeterminate bar
+is a still striped one instead of a sliding bar.
+
 ## Key hints and input glyphs
 
 [`createKbd`](api:createKbd) draws a shortcut's keys, a `<kbd>` each with `+` between them, from
@@ -670,6 +700,8 @@ container; `vw` and `vh` are the browser window's, as in CSS.
   [`createLink`](api:createLink).
 - [`createMenu`](api:createMenu) ([`MenuItem`](api:MenuItem)).
 - [`createBadge`](api:createBadge) ([`BadgeTone`](api:BadgeTone)) and [`createTag`](api:createTag).
+- [`createSpinner`](api:createSpinner) and [`createProgressBar`](api:createProgressBar)
+  ([`ProgressBar`](api:ProgressBar)).
 - [`createKbd`](api:createKbd) ([`Kbd`](api:Kbd)) and [`createInputGlyph`](api:createInputGlyph)
   ([`InputGlyphInput`](api:InputGlyphInput)).
 - [`aekasha/ui/fonts`](hub:documentation/aekasha/ui/fonts): the kit's fonts, a stylesheet entry.

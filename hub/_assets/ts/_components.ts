@@ -7,7 +7,7 @@
  *
  * The root sits over the viewport, as in an app: each `[data-hub-demo]` box gets buttons that
  * open its piece's states there, and the page's theme and density switches set its attributes. A
- * piece drawn in the page (a key hint, an input glyph) draws in a kit root of its own in its box
+ * piece drawn in the page (a key hint, an input glyph, a spinner) draws in a kit root of its own in its box
  * (`addKitRoot`, as an app's UI outside the HUD), which the switches set too.
  * The buttons and the windows' content are the page's (`.hubButton`, `.hubDemoPanel`), as an
  * app's content is the app's; everything else is the kit's.
@@ -26,6 +26,8 @@ import {
   createLink,
   createMenu,
   createPopover,
+  createProgressBar,
+  createSpinner,
   createSplitButton,
   createTag,
   createToaster,
@@ -50,6 +52,7 @@ import type {
   DropDownProps,
   InputGlyphInput,
   OpenDraggableWindowProps,
+  ProgressBarProps,
   CMPHandle,
   Tooltip,
   TooltipProps,
@@ -944,6 +947,69 @@ const initTagDemo: Demo = (box) => {
   root.append(status);
 };
 
+// --- Spinner ---
+
+const SPINNER_ID = (name: string) => `${ID_PREFIX}Spinner${name}`;
+
+/** In the page: the sizes, one in text, and its two custom properties */
+const initSpinnerDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  addGroup(root, 'At 1em, and the icon sizes: sm, md and lg').append(
+    createSpinner({ id: SPINNER_ID('Default') }).cmp.elem,
+    ...(['sm', 'md', 'lg'] as const).map((size) => createSpinner({ size }).cmp.elem)
+  );
+  const line = document.createElement('p');
+  line.className = 'hubDemoLine';
+  line.append(createSpinner({ decorative: true }).cmp.elem, ' Saving the scene…');
+  addGroup(root, 'In text, decorative: the text says it').append(line);
+  const accent = createSpinner({ label: 'Connecting' });
+  accent.cmp.elem.style.setProperty('--aek-spinner-color', 'var(--aek-accent)');
+  const large = createSpinner({ label: 'Loading the level' });
+  large.cmp.elem.style.setProperty('--aek-spinner-size', 'calc(var(--aek-space-7) * 1.5)');
+  addGroup(root, 'Its colour and size (--aek-spinner-color, --aek-spinner-size)').append(
+    accent.cmp.elem,
+    large.cmp.elem
+  );
+};
+
+// --- Progress bar ---
+
+const PROGRESS_ID = (name: string) => `${ID_PREFIX}Progress${name}`;
+
+/** In the page: determinate, indeterminate and segmented bars; a Hub button adds to the first */
+const initProgressBarDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const make = (props: ProgressBarProps) =>
+    createProgressBar({ class: 'hubDemoProgress', ...props });
+  const download = make({
+    id: PROGRESS_ID('Download'),
+    label: 'Downloading the level',
+    value: 40,
+    showValue: true,
+  });
+  const determinate = addGroup(root, 'Determinate, its value shown');
+  determinate.append(download.cmp.elem);
+  addButton(determinate, 'Add 10 %', () => download.setValue((download.getValue() ?? 0) + 10));
+  addGroup(root, 'Indeterminate: no known end').append(
+    make({ id: PROGRESS_ID('Connecting'), label: 'Connecting' }).cmp.elem
+  );
+  const health = make({
+    id: PROGRESS_ID('Health'),
+    label: 'Health',
+    hideLabel: true,
+    max: 5,
+    segments: 5,
+    value: 2.5,
+  });
+  health.cmp.elem.style.setProperty('--aek-progress-color', 'var(--aek-danger)');
+  addGroup(root, 'Segmented: health at 2.5 of 5, its label hidden, in the danger colour').append(
+    health.cmp.elem
+  );
+  addGroup(root, 'Segmented and indeterminate: still stripes').append(
+    make({ label: 'Waiting for players', segments: 4 }).cmp.elem
+  );
+};
+
 // --- Kbd ---
 
 const KBD_ROWS: { label: string; keys: string[]; platform?: 'mac' | 'other' }[] = [
@@ -1024,6 +1090,8 @@ const DEMOS: Record<string, Demo> = {
   menu: initMenuDemo,
   badge: initBadgeDemo,
   tag: initTagDemo,
+  spinner: initSpinnerDemo,
+  progressBar: initProgressBarDemo,
   kbd: initKbdDemo,
   inputGlyph: initInputGlyphDemo,
 };

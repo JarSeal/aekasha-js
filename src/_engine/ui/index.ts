@@ -91,6 +91,10 @@ export type {
 export { getMotionFactor } from './core/Motion';
 export { createPopover } from './overlays/Popover';
 export type { Popover, PopoverProps } from './overlays/Popover';
+export { createProgressBar } from './components/ProgressBar';
+export type { ProgressBar, ProgressBarProps } from './components/ProgressBar';
+export { createSpinner } from './components/Spinner';
+export type { Spinner, SpinnerProps } from './components/Spinner';
 export { createSplitButton } from './components/SplitButton';
 export type { SplitButton, SplitButtonProps } from './components/SplitButton';
 export { createTag } from './components/Tag';

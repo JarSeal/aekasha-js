@@ -188,3 +188,8 @@
   font-weight: inherit;
   line-height: var(--aek-line-height-base);
 }
+
+// A progress bar in a row: the row is a wrapping flex box, so the bar gets a width of its own
+.hubDemoProgress {
+  width: min(100%, 20rem);
+}
