@@ -105,10 +105,16 @@
     --aek-focus-ring-width: 2px;
     --aek-focus-ring-offset: 2px;
 
-    /* Z-layers: the windows' two stacks (each window 2 above the last, its backdrop 1 below) */
+    /*
+     * Z-layers: the windows' stacks (each window 2 above the last, its backdrop 1 below). An app's
+     * modal dialogs stack above its windows and the scene loader (1000) but below the debugger
+     * (10000 and up), whose roots an app's modal leaves live; a debug modal above the debug
+     * windows (p803 D7)
+     */
     --aek-z-window: 100;
+    --aek-z-dialog: 5000;
     --aek-z-debug-window: 20000;
-    --aek-z-dialog: 30000;
+    --aek-z-debug-dialog: 30000;
     --aek-z-toast: 31000;
     --aek-z-tooltip: 32000;
   }

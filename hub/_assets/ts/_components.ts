@@ -33,6 +33,7 @@ import {
 } from 'aekasha/ui';
 import type {
   BuiltInIconName,
+  DialogProps,
   DropDownProps,
   OpenDraggableWindowProps,
   CMPHandle,
@@ -46,6 +47,8 @@ type Demo = (box: HTMLElement) => void;
 /** Every id the demos give starts with it, so a demo never takes an id the kit uses */
 const ID_PREFIX = 'hubDemo';
 const DEFAULT_WINDOW_ID = `${ID_PREFIX}Window`;
+/** The window the "Over a window" dialog opens over */
+const BEHIND_DIALOG_ID = `${ID_PREFIX}BehindDialog`;
 const KIND = `${ID_PREFIX}Kind`;
 const TOASTER_ID = `${ID_PREFIX}Toaster`;
 const TOP_TOASTER_ID = `${ID_PREFIX}TopToaster`;
@@ -207,9 +210,16 @@ const initWindowDemo: Demo = (box) => {
 
 type DialogState = {
   label: string;
-  props: { closeOnEscape?: boolean; backDropClickClosesWindow?: boolean };
+  props: Pick<
+    DialogProps,
+    'closeOnEscape' | 'backDropClickClosesWindow' | 'alert' | 'initialFocus'
+  >;
   text: string;
   hasDropDown?: boolean;
+  /** Its buttons (default one: OK), each closing it */
+  buttons?: string[];
+  /** Opens a window first, which the dialog makes inert */
+  overWindow?: boolean;
 };
 
 const DIALOG_STATES: DialogState[] = [
@@ -234,12 +244,36 @@ const DIALOG_STATES: DialogState[] = [
     text: 'A drop-down in a dialog, as the uiKit embed opens it. Open its list and press Escape: the first press closes the list, the next the dialog.',
     hasDropDown: true,
   },
+  {
+    label: 'Alert',
+    props: { alert: true, initialFocus: '.hubDemoCancel' },
+    text: 'alert: a question that needs an answer (role="alertdialog"). initialFocus puts the focus on Cancel, the safe choice; Tab and Shift+Tab stay inside the dialog.',
+    buttons: ['Cancel', 'Delete'],
+  },
+  {
+    label: 'Over a window',
+    props: { closeOnEscape: true },
+    text: 'While a dialog is open the rest of the HUD is inert: the window behind it takes no click or focus until it closes.',
+    overWindow: true,
+  },
 ];
 
 const openDialogState = (index: number) => {
-  const { label, props, text, hasDropDown } = DIALOG_STATES[index];
+  const { label, props, text, hasDropDown, buttons = ['OK'], overWindow } = DIALOG_STATES[index];
   const id = `${ID_PREFIX}Dialog${index}`;
   openedIds.add(id);
+  if (overWindow) {
+    openedIds.add(BEHIND_DIALOG_ID);
+    openDraggableWindow({
+      id: BEHIND_DIALOG_ID,
+      title: 'Behind the dialog',
+      position: { x: 48, y: 48 },
+      size: { w: 280, h: 160 },
+      removeOnClose: true,
+      focusFirstElement: false,
+      content: () => createPanel('Inert while the dialog is open: try a click or Tab.'),
+    });
+  }
   openDialog({
     id,
     title: label === 'Default' ? 'A dialog' : label,
@@ -248,7 +282,12 @@ const openDialogState = (index: number) => {
     content: () => {
       const panel = createPanel(text);
       if (hasDropDown) panel.add(createDemoDropDown({ title: 'Colour' }).cmp);
-      addPanelButton(panel, 'OK', () => closeDraggableWindow(id));
+      for (const text of buttons) {
+        addPanelButton(panel, text, () => closeDraggableWindow(id)).updateClass(
+          `hubDemo${text}`,
+          'add'
+        );
+      }
       return panel;
     },
   });

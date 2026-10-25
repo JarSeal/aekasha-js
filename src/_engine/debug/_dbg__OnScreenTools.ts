@@ -18,6 +18,7 @@ import { getSvgIcon, type SvgIconKey } from '../ui/core/icons/SvgIcon';
 import { createDropDown, type DropDownProps, type DropDown } from '../ui/forms/DropDown';
 import type { CMPHandle } from '../ui/core/CMPTypes';
 import { CMP } from '../ui/core/CMP';
+import { DEBUGGER_ROOT_ATTR } from '../ui/overlays/OverlayStack';
 import styles from './OnScreenTools.module.scss';
 import { getECSWorld } from '../kernel/ecs/ECS';
 import type { SceneAsset } from '../schemas/SceneSchema';
@@ -148,8 +149,8 @@ const createOnScreenDropDown = (
 };
 
 /** On each of the tools' roots: the debugger is dark until p806 gives it a theme setting (p803
- * D6). CMP copies it. */
-const DEBUGGER_THEME_ATTR = { 'data-aek-theme': 'dark' };
+ * D6), and an app's modal dialog leaves it live (p803 D7). CMP copies it. */
+const DEBUGGER_THEME_ATTR = { 'data-aek-theme': 'dark', [DEBUGGER_ROOT_ATTR]: '' };
 
 /** The top row (created on first use). Kept in editor views, like its groups. */
 const getTopRow = () => {

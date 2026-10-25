@@ -5,6 +5,7 @@
 import type { CMPHandle } from '../../core/CMPTypes';
 import { getSvgIcon } from '../../core/icons/SvgIcon';
 import { getFirstFocusable } from '../FocusTrap';
+import { DEBUGGER_ROOT_ATTR } from '../OverlayStack';
 import { createTooltip } from '../Tooltip';
 import { addDragHandle } from './DraggableWindowDrag';
 import { STATE_ATTR } from './DraggableWindowGeometry';
@@ -26,8 +27,9 @@ const EXPAND_TEXT = 'Expand';
 const CLOSE_TEXT = 'Close';
 
 /** A debug window and its backdrop force the dark theme (p803 D6): the debugger's own panels are
- * dark whatever the system's theme until p806 gives it a theme setting. CMP copies it. */
-const DEBUG_THEME_ATTR = { 'data-aek-theme': 'dark' };
+ * dark whatever the system's theme until p806 gives it a theme setting. And they're a debugger
+ * root, which an app's modal dialog leaves live (p803 D7). CMP copies it. */
+const DEBUG_THEME_ATTR = { 'data-aek-theme': 'dark', [DEBUGGER_ROOT_ATTR]: '' };
 
 /**
  * A debug window's backdrop's CMP props for the forced dark theme (p803 D6), else none.

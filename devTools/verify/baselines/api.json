@@ -2968,9 +2968,11 @@
       "registerDraggableWindow": "Function",
       "registerDraggableWindowKind": "Function",
       "removeDraggableWindow": "Function",
+      "setDraggableWindowModal": "Function",
       "toggleDraggableWindow": "Function",
       "updateDraggableWindow": "Function",
-      "updateDraggableWindowsOfKind": "Function"
+      "updateDraggableWindowsOfKind": "Function",
+      "Z_INDEX_BASES": "Variable"
     },
     "src/_engine/ui/overlays/windows/DraggableWindowDom.ts": {
       "buildHeader": "Function",

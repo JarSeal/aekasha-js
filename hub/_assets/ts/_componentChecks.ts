@@ -62,6 +62,7 @@ export type UiDemoChecks = { states?: UiCheckState[]; keyboard?: UiKeyScript[] }
 const WINDOW = '#hudRoot #hubDemoWindow';
 const WINDOW_HEADER = `${WINDOW} .aekWindow__header`;
 const KIND_WINDOW = (n: number) => `#hudRoot #hubDemoKind_${n}`;
+const BEHIND_DIALOG = '#hudRoot #hubDemoBehindDialog';
 const LIST = '#hudRoot .aekDropDownList';
 const TRIGGER = '#hudRoot .aekDropDownTrigger';
 const DIALOG = (index: number) => `#hudRoot #hubDemoDialog${index}`;
@@ -177,6 +178,34 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { press: 'Escape' },
           { expectCount: DIALOG(3), count: 0 },
           { expectFocusBox: 'With a drop-down' },
+        ],
+      },
+      {
+        name: 'an alert: modal, the focus on Cancel, Tab and Shift+Tab wrap inside it',
+        steps: [
+          { click: 'Alert' },
+          { expectAttr: DIALOG(4), name: 'role', value: 'alertdialog' },
+          { expectAttr: DIALOG(4), name: 'aria-modal', value: 'true' },
+          { expectFocus: `${DIALOG(4)} .hubDemoCancel` },
+          { press: 'Tab' },
+          { expectFocus: `${DIALOG(4)} .hubDemoDelete` },
+          { press: 'Tab' },
+          { expectFocus: `${DIALOG(4)} .aekWindow__close` },
+          { press: 'Shift+Tab' },
+          { expectFocus: `${DIALOG(4)} .hubDemoDelete` },
+          { press: 'Enter' },
+          { expectCount: DIALOG(4), count: 0 },
+          { expectFocusBox: 'Alert' },
+        ],
+      },
+      {
+        name: 'the window behind a dialog is inert until the dialog closes',
+        steps: [
+          { click: 'Over a window' },
+          { expectAttr: BEHIND_DIALOG, name: 'inert', value: '' },
+          { press: 'Escape' },
+          { expectCount: DIALOG(5), count: 0 },
+          { expectAttr: BEHIND_DIALOG, name: 'inert', value: null },
         ],
       },
     ],

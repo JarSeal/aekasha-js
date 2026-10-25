@@ -27,6 +27,7 @@ import { llog, lwarn } from '../../utils/Logger';
 import { createRendererDebugGUI } from '../render/Renderer';
 import { runBootAfterStartHooks } from './BootHooks';
 import { createToaster } from '../../ui/overlays/Toaster';
+import { DEBUGGER_ROOT_ATTR } from '../../ui/overlays/OverlayStack';
 import { getStatsCmp, registerStatsModule } from '../../debug/Stats';
 import { getSvgIcon, registerBuiltInIcons } from '../../ui/core/icons/SvgIcon';
 import { restoreSavedView } from '../render/Views';
@@ -262,7 +263,7 @@ const bootDebugAfterStartAsync = async (debugAfterStartHooks: FeatureDebugHook[]
           alert: getSvgIcon('alert'),
         },
       },
-    })
+    }).updateAttr({ [DEBUGGER_ROOT_ATTR]: '' }) // An app's modal dialog leaves it live (p803 D7)
   );
   // Toasts from the boot, eg. an unknown ?startScene
   flushQueuedDebugToasts();

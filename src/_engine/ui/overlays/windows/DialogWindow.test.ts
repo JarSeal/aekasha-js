@@ -1,9 +1,19 @@
+import fs from 'node:fs';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { initEnvironment } from '../../../kernel/config/Config';
 import { countListeners, dispatchKey, stubKitDomAsync } from '../../testing/KitDom';
+import { CMP } from '../../core/CMP';
 import { createHudRoot, getHUDRootCMP } from '../../core/HUD';
 import { createDropDown } from '../../forms/DropDown';
+import { DEBUGGER_ROOT_ATTR } from '../OverlayStack';
 import { openDialog } from './DialogWindow';
-import { closeDraggableWindow, getDraggableWindow } from './DraggableWindow';
+import {
+  closeDraggableWindow,
+  getDraggableWindow,
+  openDraggableWindow,
+  removeDraggableWindow,
+  Z_INDEX_BASES,
+} from './DraggableWindow';
 
 vi.mock(import('../../../kernel/scene/SceneHooks'), () => ({ addSceneHooks: () => () => {} }));
 vi.mock(import('../../../kernel/init/BootHooks'), () => ({ addBootAfterStartHook: () => true }));
@@ -120,5 +130,97 @@ describe('dialogs: Escape and focus on the overlay stack (p803 D7)', () => {
     expect(isOpen('upper')).toBe(false);
     expect(isOpen('lower')).toBe(true);
     closeDraggableWindow('lower');
+  });
+});
+
+/** A content of two buttons, so the trap has a first and a last */
+const twoButtons = () => {
+  const panel = CMP();
+  panel.add({ tag: 'button', text: 'Cancel', class: 'cancel' });
+  panel.add({ tag: 'button', text: 'Delete', class: 'delete' });
+  return panel;
+};
+
+describe('dialogs: modal (p803 D7)', () => {
+  it('is a modal dialog, an alertdialog with alert, focused at initialFocus', () => {
+    openDialog({ id: 'modal', title: 'Modal' });
+    expect(getElem('modal').getAttribute('role')).toBe('dialog');
+    expect(getElem('modal').getAttribute('aria-modal')).toBe('true');
+    closeDraggableWindow('modal');
+
+    openDialog({
+      id: 'confirm',
+      title: 'Delete the save?',
+      alert: true,
+      initialFocus: '.delete',
+      content: twoButtons,
+    });
+    expect(getElem('confirm').getAttribute('role')).toBe('alertdialog');
+    expect(document.activeElement?.className).toBe('delete');
+    closeDraggableWindow('confirm');
+  });
+
+  it('keeps Tab and Shift+Tab inside it, and leaves no trap after its close', () => {
+    openDialog({ id: 'trap', title: 'Trap', content: twoButtons });
+    const elem = getElem('trap');
+    const close = elem.querySelector('.aekWindow__close') as HTMLElement;
+    const last = elem.querySelector('.delete') as HTMLElement;
+    last.focus();
+    expect(dispatchKey(last, 'keydown', 'Tab').defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(close);
+    dispatchKey(close, 'keydown', 'Tab', { shiftKey: true });
+    expect(document.activeElement).toBe(last);
+    closeDraggableWindow('trap');
+    expect(countListeners(elem, 'keydown')).toBe(0);
+  });
+
+  it('makes the rest of the HUD inert while open, the backdrop and the debugger’s roots aside', () => {
+    openDraggableWindow({ id: 'behind', title: 'Behind', focusFirstElement: false });
+    const behind = getElem('behind');
+    const debuggerRoot = getHUDRootCMP().add({ attr: { [DEBUGGER_ROOT_ATTR]: '' } }).elem;
+    openDialog({ id: 'pause', title: 'Paused' });
+    const backdrop = getDraggableWindow('pause')!.backDropCMP!.elem;
+    expect(behind.hasAttribute('inert')).toBe(true);
+    expect(getElem('pause').hasAttribute('inert')).toBe(false);
+    expect(backdrop.hasAttribute('inert')).toBe(false);
+    expect(debuggerRoot.hasAttribute('inert')).toBe(false);
+    closeDraggableWindow('pause');
+    expect(behind.hasAttribute('inert')).toBe(false);
+    removeDraggableWindow('behind');
+    debuggerRoot.remove();
+  });
+
+  it('stacks an app’s dialog above its windows and below the debugger, a debug one above all', () => {
+    openDraggableWindow({ id: 'win', title: 'Window', focusFirstElement: false });
+    openDialog({ id: 'appDialog', title: 'App' });
+    expect(Number(getElem('win').style.zIndex)).toBeLessThan(Z_INDEX_BASES.DIALOG);
+    expect(Number(getElem('appDialog').style.zIndex)).toBe(Z_INDEX_BASES.DIALOG);
+    expect(Number(getDraggableWindow('appDialog')!.backDropCMP!.elem.style.zIndex)).toBe(
+      Z_INDEX_BASES.DIALOG - 1
+    );
+
+    // A debug dialog (the debug env's) inerts the debugger's roots too
+    initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
+    const debuggerRoot = getHUDRootCMP().add({ attr: { [DEBUGGER_ROOT_ATTR]: '' } }).elem;
+    openDialog({ id: 'debugDialog', title: 'Keys', isDebugWindow: true });
+    expect(Number(getElem('debugDialog').style.zIndex)).toBe(Z_INDEX_BASES.DEBUG_DIALOG);
+    expect(debuggerRoot.hasAttribute('inert')).toBe(true);
+    expect(getElem('appDialog').hasAttribute('inert')).toBe(true);
+    closeDraggableWindow('debugDialog');
+    expect(debuggerRoot.hasAttribute('inert')).toBe(false);
+    closeDraggableWindow('appDialog');
+    removeDraggableWindow('win');
+    debuggerRoot.remove();
+  });
+
+  it('has the z bases of the tokens', () => {
+    const css = fs.readFileSync(new URL('../../styles/tokens.css', import.meta.url), 'utf8');
+    const token = (name: string) => Number(css.match(new RegExp(`--aek-z-${name}: (\\d+);`))?.[1]);
+    expect(Z_INDEX_BASES).toEqual({
+      APP: token('window'),
+      DIALOG: token('dialog'),
+      DEBUG: token('debug-window'),
+      DEBUG_DIALOG: token('debug-dialog'),
+    });
   });
 });

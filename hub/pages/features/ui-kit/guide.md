@@ -174,6 +174,25 @@ in the dialog closes first. A key pressed outside the HUD (a page that embeds th
 page's. A menu that turns gameplay input off while it's open does it
 with [action contexts](hub:features/input#contexts-and-scenes).
 
+A dialog is modal: assistive tech reads it as a modal dialog named by its title, Tab and Shift+Tab
+stay inside it, and the rest of the HUD is `inert` until it closes (nothing outside the HUD: an
+embed's host page stays live). `alert: true` makes it an alert dialog, for a question that needs an
+answer, and `initialFocus` names the element that takes the focus, its safe choice:
+
+```ts
+openDialog({
+  id: 'deleteSave',
+  title: 'Delete the save?',
+  alert: true,
+  initialFocus: '.cancelButton',
+  content: () => createConfirmPanel(),
+  size: { w: 360, h: 200 },
+});
+```
+
+An app's dialogs stack above its windows and below the debug tools, which stay usable over a pause
+menu in debug mode; a debug tool's dialog stacks above everything but the toasts and tooltips.
+
 ## Drop-downs
 
 [`createDropDown`](api:createDropDown) makes a trigger button and an in-page list (not a native
@@ -344,7 +363,7 @@ const scorePanel = getHUDRootCMP().add({ class: 'scorePanel' });
 | Shadows | `--aek-shadow-sm`, `--aek-shadow-lg`                                                                                                                                                                                                                                                                                                                                                     |
 | Motion  | `--aek-motion-fast`, `-base`, `-slow` (120, 200, 320 ms); `--aek-ease-standard`, `--aek-ease-emphasized`                                                                                                                                                                                                                                                                                 |
 | Focus   | `--aek-focus-ring-width`, `-offset`, `-color`                                                                                                                                                                                                                                                                                                                                            |
-| Layers  | `--aek-z-window`, `-debug-window`, `-dialog`, `-toast`, `-tooltip` (z-index values: 100, 20000, 30000, 31000, 32000)                                                                                                                                                                                                                                                                     |
+| Layers  | `--aek-z-window`, `-dialog`, `-debug-window`, `-debug-dialog`, `-toast`, `-tooltip` (z-index values: 100, 5000, 20000, 30000, 31000, 32000)                                                                                                                                                                                                                                                                     |
 
 The sizes are at the defaults: a 16 px browser font size and a UI scale of 1 (see below). In both
 themes the text, the accent and the status colours have a contrast of at least 4.5:1 on every

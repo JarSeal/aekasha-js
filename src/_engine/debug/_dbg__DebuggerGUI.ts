@@ -4,6 +4,7 @@ import styles from './DebuggerGUI.module.scss';
 import { lsGetItem, lsSetItem } from '../utils/LocalAndSessionStorage';
 import { getWindowSize } from '../ui/core/Window';
 import { getHUDRootCMP } from '../ui/core/HUD';
+import { DEBUGGER_ROOT_ATTR } from '../ui/overlays/OverlayStack';
 import { DEFAULT_DEBUG_DRAWER_TAB_ORDER, getConfig, IS_DEBUG_ENV } from '../kernel/config/Config';
 import { lwarn } from '../utils/Logger';
 import type { DebugGUIOpts, AnyDebuggerTabDef, UpdateDebuggerTabOpts } from './DebuggerGUI';
@@ -179,8 +180,9 @@ export const _createDebugGui = (opts?: DebugGUIOpts) => {
       drawerState.isOpen ? styles.debuggerGUI_open : styles.debuggerGUI_closed,
       debuggerDisabled ? styles.debuggerDisabled : '',
     ],
-    // The debugger is dark until p806 gives it a theme setting (p803 D6)
-    attr: { 'data-aek-theme': 'dark' },
+    // The debugger is dark until p806 gives it a theme setting (p803 D6); an app's modal dialog
+    // leaves it live (p803 D7)
+    attr: { 'data-aek-theme': 'dark', [DEBUGGER_ROOT_ATTR]: '' },
     settings: { replaceRootDom: false },
   });
 

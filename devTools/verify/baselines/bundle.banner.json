@@ -22,20 +22,20 @@
       "gzip": 1046
     },
     "assets/banner.css": {
-      "bytes": 5996,
-      "gzip": 1623
+      "bytes": 6023,
+      "gzip": 1627
     },
     "assets/banner.embed.js": {
       "bytes": 1041345,
-      "gzip": 292103
+      "gzip": 292104
     },
     "assets/banner.js": {
       "bytes": 483,
-      "gzip": 337
+      "gzip": 344
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
-      "gzip": 285
+      "gzip": 287
     },
     "assets/basis_transcoder.js": {
       "bytes": 57529,
@@ -75,15 +75,15 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 45869,
-      "gzip": 13863
+      "gzip": 13862
     },
     "assets/HDRLoader.js": {
       "bytes": 3405,
-      "gzip": 1629
+      "gzip": 1628
     },
     "assets/ImportRegistry.js": {
       "bytes": 16551,
-      "gzip": 6659
+      "gzip": 6658
     },
     "assets/KTX2Loader.js": {
       "bytes": 59895,
@@ -111,7 +111,7 @@
     },
     "assets/three.module.js": {
       "bytes": 220,
-      "gzip": 183
+      "gzip": 184
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,

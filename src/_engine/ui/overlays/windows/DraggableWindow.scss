@@ -36,7 +36,7 @@ $collapseTime: var(--aek-motion-base);
     flex-direction: column;
     overflow: hidden;
     border: $borderWidth solid var(--aek-window-border-color, var(--aek-border-strong));
-    border-radius: var(--aek-window-radius, var(--aek-radius-md));
+    border-radius: var(--aek-window-radius, var(--aek-radius-lg));
     background: var(--aek-window-bg, var(--aek-surface-raised));
     box-shadow: var(--aek-window-shadow, var(--aek-shadow-lg));
     color: var(--aek-text);
@@ -212,7 +212,7 @@ $collapseTime: var(--aek-motion-base);
     max-width: 50%;
     height: var(--aek-space-2);
     border-radius: var(--aek-radius-full);
-    background: var(--aek-border-strong);
+    background: var(--aek-border);
     cursor: ns-resize;
     transform: translateX(-50%);
   }
@@ -224,12 +224,13 @@ $collapseTime: var(--aek-motion-base);
     height: var(--aek-space-7);
     max-height: calc(50% - $headerHeight / 2);
     border-radius: var(--aek-radius-full);
-    background: var(--aek-border-strong);
+    background: var(--aek-border);
     cursor: ew-resize;
     transform: translateY(-50%);
   }
 
-  // The corner: an L of two bars
+  // The corner: an L of two bars. The handles are `border` (p801 §4.3): `border-strong` read as a
+  // scrollbar's thumb
   :where(.aekWindow__resizeHV) {
     right: var(--aek-space-1);
     bottom: var(--aek-space-1);
@@ -243,7 +244,7 @@ $collapseTime: var(--aek-motion-base);
       right: 0;
       bottom: 0;
       border-radius: var(--aek-radius-full);
-      background: var(--aek-border-strong);
+      background: var(--aek-border);
       content: '';
     }
 

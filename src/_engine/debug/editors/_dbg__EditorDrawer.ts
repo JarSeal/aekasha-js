@@ -15,6 +15,7 @@ import { CMP } from '../../ui/core/CMP';
 import type { CMPHandle } from '../../ui/core/CMPTypes';
 import type { AnyDebuggerTabDef } from '../DebuggerGUI';
 import { getSvgIcon } from '../../ui/core/icons/SvgIcon';
+import { DEBUGGER_ROOT_ATTR } from '../../ui/overlays/OverlayStack';
 import { createTabHost } from '../_dbg__TabHost';
 import debuggerStyles from '../DebuggerGUI.module.scss';
 import styles from './EditorDrawer.module.scss';
@@ -81,8 +82,9 @@ const createDrawerElements = (
       styles.editorDrawer,
       isOpen ? debuggerStyles.debuggerGUI_open : debuggerStyles.debuggerGUI_closed,
     ],
-    // The debugger is dark until p806 gives it a theme setting (p803 D6)
-    attr: { 'data-aek-theme': 'dark' },
+    // The debugger is dark until p806 gives it a theme setting (p803 D6); an app's modal dialog
+    // leaves it live (p803 D7)
+    attr: { 'data-aek-theme': 'dark', [DEBUGGER_ROOT_ATTR]: '' },
   });
 
   // The global classes let other debug SCSS find it (eg. aekOnScreenToolsDisabled)

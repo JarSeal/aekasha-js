@@ -56,17 +56,32 @@ import type {
   WindowEntry,
 } from './DraggableWindowTypes';
 
-type Layer = 'APP' | 'DEBUG';
-/** Each window takes two z levels (its backdrop sits right below it). App windows stay below the
- * engine's loaders (1000), so there is room for about 450 of them. */
-const Z_INDEX_BASES: Record<Layer, number> = { APP: 100, DEBUG: 20000 };
+/** The window stacks: the app's windows, the app's modal dialogs, the debug windows and the debug
+ * modal dialogs (p803 D7) */
+type Layer = 'APP' | 'DIALOG' | 'DEBUG' | 'DEBUG_DIALOG';
+/**
+ * Each stack's z-index base: its token's value (`tokens.css`' `--aek-z-window`, `-dialog`,
+ * `-debug-window`, `-debug-dialog`; `DraggableWindow.test.ts` keeps them equal). Each window takes
+ * two z levels (its backdrop right below it). The app's windows stay below the scene loader
+ * (1000), room for about 450; the app's dialogs below the debugger (10000 and up), so an app's
+ * modal dialog leaves it usable (p803 D7).
+ * @internal
+ */
+export const Z_INDEX_BASES: Record<Layer, number> = {
+  APP: 100,
+  DIALOG: 5000,
+  DEBUG: 20000,
+  DEBUG_DIALOG: 30000,
+};
 const DEBUG_ADDITION_TO_CUSTOM_Z_INDEX = 100;
 const RESIZE_DEBOUNCE_MS = 150;
 
 /** Every known window, open or not. Hydrated from LS on the first access (see getWindows). */
 let windows: Map<string, WindowEntry> | null = null;
 /** Each layer's open windows, bottom to top. */
-const stacks: Record<Layer, string[]> = { APP: [], DEBUG: [] };
+const stacks: Record<Layer, string[]> = { APP: [], DIALOG: [], DEBUG: [], DEBUG_DIALOG: [] };
+/** The modal dialogs' ids (`openDialog`'s), which stack in the dialog layers */
+const modalIds = new Set<string>();
 /** Keyed by kind (a window's kind, or its id when it has none) */
 const contentFns: { [kind: string]: (data?: DraggableWindowData) => CMPHandle } = {};
 const sceneTargetResolvers: { [kind: string]: SceneTargetResolver } = {};
@@ -149,7 +164,17 @@ const toPublicWindow = ({ config, runtime }: WindowEntry): DraggableWindow => ({
 
 // Stacking
 
-const getLayer = (config: DraggableWindowConfig): Layer => (config.isDebugWindow ? 'DEBUG' : 'APP');
+const getLayer = ({ id, isDebugWindow }: DraggableWindowConfig): Layer =>
+  modalIds.has(id) ? (isDebugWindow ? 'DEBUG_DIALOG' : 'DIALOG') : isDebugWindow ? 'DEBUG' : 'APP';
+
+/**
+ * Makes a window a modal dialog (`openDialog`, before it opens it): it stacks with the dialogs,
+ * above the windows of its layer (p803 D7). Kept until the window is removed.
+ * @internal
+ */
+export const setDraggableWindowModal = (id: string) => {
+  modalIds.add(id);
+};
 
 const getWindowZIndex = (config: DraggableWindowConfig, index: number) => {
   if (config.customZIndex !== undefined) {
@@ -203,16 +228,16 @@ const moveToTop = (id: string) => {
 };
 
 /**
- * Brings an open window to the front of its layer (app or debug windows); a no-op for one
- * that's closed or on top already.
+ * Brings an open window to the front of its layer (the app's windows, the app's dialogs, the debug
+ * windows or the debug dialogs); a no-op for one that's closed or on top already.
  */
 export const bringDraggableWindowToFront = (id: string) => {
   if (moveToTop(id)) saveDraggableWindowStatesToLS();
 };
 
 /**
- * Whether the window is on top of its layer (app or debug windows): false for an unknown or a
- * closed one.
+ * Whether the window is on top of its layer (the app's windows, the app's dialogs, the debug
+ * windows or the debug dialogs): false for an unknown or a closed one.
  */
 export const isDraggableWindowOnTop = (id: string) => {
   const entry = getWindows().get(id);
@@ -636,6 +661,7 @@ export const removeDraggableWindow = (id: string, doNotSaveToLS?: boolean) => {
   if (entry.config.isOpen) recordKindGeometry(entry);
   unmountWindow(entry);
   map.delete(id);
+  modalIds.delete(id);
   if (!doNotSaveToLS) saveDraggableWindowStatesToLS();
   runOnClose(entry);
 };

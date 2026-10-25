@@ -1212,7 +1212,63 @@ As built (section 1, 2026-10-25):
   sizes above). `yarn verify:ui`: every keyboard script passes and no violation outside the allow
   list; the window's, the dialog's and the drop-down's screenshots differ (the restyle, and the
   drop-down's window 3 px taller): re-recorded with `--update` after review, and the run after
-  passed every check. `verify:scenes`
+  passed every check.
+
+As built (section 2, 2026-10-25):
+
+- **Decided in this section** (asked, 2026-10-25): **an app's modal dialogs stack below the
+  debugger**, not above the debug windows as D7 said. D7's other rule spares the debugger's roots
+  from an app's `inert` so a pause menu can be debugged, but at 30000 the dialog's backdrop would
+  cover the drawer (10200), the on-screen tools (10000) and the debug windows (20000+), and no
+  click would reach them. So `--aek-z-dialog` is **5000** (above the app's windows and the scene
+  loader at 1000) and a new `--aek-z-debug-dialog` is **30000** (a debug modal: the key shortcuts
+  dialog). The design document's layers paragraph and the guide's layers row follow; the toasts
+  (31000) and the tooltips (32000) don't change.
+- The stacks: `DraggableWindow.ts`' `Layer` is `APP | DIALOG | DEBUG | DEBUG_DIALOG` and
+  `Z_INDEX_BASES` (`@internal` now) is 100 / 5000 / 20000 / 30000; `DialogWindow.test.ts` reads
+  `tokens.css` and checks they're equal. A modal is marked by `setDraggableWindowModal(id)`
+  (`@internal`, a set of ids `openDialog` adds to before the open, dropped with the window), not a
+  config key: the modal behaviour is `openDialog`'s, so a public flag on `openDraggableWindow`
+  would make a modal-looking window without its trap.
+- `openDialog`: `role="dialog"` or `"alertdialog"` (new `alert` prop) and `aria-modal="true"`
+  written on every open; a new `initialFocus` prop (a selector in the dialog, focused after the
+  windows' first focus); `trapFocus(elem)`, removed in the unmount hook and on a reopen (a reopen
+  without a remount kept the old trap's listener before); its stack entry `inert: true` with the
+  backdrop in `keep` and `isDebug` for a debug dialog. Its JSDoc lists the ARIA, focus, inert,
+  keys and layers.
+- `DEBUGGER_ROOT_ATTR` (`data-aek-debugger`) on the drawer, the editor drawer, the on-screen
+  tools' rows and switch tools (with their forced theme), a debug window and its backdrop
+  (`DraggableWindowDom.ts`), and also the stats panels (`_dbg__Stats.ts`: their click opens the
+  profiler) and the debug toaster (`Boot.ts`, its closable alerts), which D7 didn't list. An
+  app's modal leaves them live; a debug modal inerts them with the rest.
+- **A child added while a modal is open stays live, no observer** (Phase 4's open question): what
+  code adds then is on purpose (a window or a toast the dialog opened, a tooltip, a fallback list
+  above it), and the next push or remove recomputes.
+- `radius-lg` for the windows and dialogs (the design document's rule; section 1 had `md`), and
+  the resize handles `--aek-border` (p801's row; section 1's `border-strong` read as a scrollbar's
+  thumb in the light theme).
+- The component library: two dialog states, "Alert" (`alert`, `initialFocus` on Cancel, Cancel and
+  Delete) and "Over a window" (a window at the top left, inert while the dialog is open), and two
+  keyboard scripts: the alert's role, `aria-modal`, the focus on Cancel, Tab wrapping to the close
+  button and Shift+Tab back, Enter closing it with the focus on its Hub button; the window's
+  `inert` set and then removed after Escape. The demo's dialog buttons get a class from their text
+  (`hubDemoCancel`).
+- Tests: `DialogWindow.test.ts` (+5: the roles and `initialFocus`, the trap and no listener after
+  the close, `inert` with the backdrop and a debugger root spared, the layers' z with a debug
+  dialog inerting a debugger root and an app dialog, the bases equal the tokens).
+- Docs: the kit's `CLAUDE.md` (the dialogs' modality and layers; the stack's spared roots and the
+  no-observer decision), the debug `CLAUDE.md` (the marker), the UI kit guide (modal, `alert`,
+  `initialFocus`, the layers), the component library's dialog text.
+- The section's checks: `yarn test` (1376 tests; `buildGuard.test.ts` failed once in the Stop
+  hook's run while `verify:embed` rebuilt `dist-embed/` next to it, and passes alone), `tsc`
+  (both), ESLint, `yarn hub:build`, `verify:embed` (all seven), `yarn sbp --profile all` (every
+  budget within), `verify:baselines` recorded (`Z_INDEX_BASES` and `setDraggableWindowModal`;
+  `DropDown.js` and the embed's `uiKitEmbed.js` +0.3 kB gzip each). `verify:ui --only
+  window,dialog`: every keyboard script passes, no violation outside the allow list; the
+  screenshots that differ (the corners' `radius-lg` and the handles' `border` on every window and
+  dialog state, the dialog box's two new buttons; the two new states have none yet) to re-record
+  after review.
+ `verify:scenes`
   wasn't run: its snapshots are the canvas alone, which no kit style reaches (Phase 0); it runs at
   the phase's end.
 - Tests: `DraggableWindowKeys.test.ts` (11: the chords, the roles and names, a fixed window's
