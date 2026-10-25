@@ -2,6 +2,7 @@
 // window modules share (DraggableWindow.ts, its store, geometry and drag modules).
 import type { CMPHandle } from '../../core/CMPTypes';
 import type { SvgIconKey } from '../../core/icons/SvgIcon';
+import type { Tooltip } from '../Tooltip';
 
 /**
  * The CSS unit of a window's position or size value. `'%'` is of the HUD's bounds: the viewport, or
@@ -40,6 +41,8 @@ export type DraggableWindowConfig = {
   kind?: string;
   /** The header's title */
   title: string;
+  /** See {@link OpenDraggableWindowProps.ariaLabel} */
+  ariaLabel?: string;
   /** An icon before the title in the header */
   icon?: SvgIconKey;
   /** What the window is for (see {@link DraggableWindowData}) */
@@ -154,8 +157,11 @@ export type OpenDraggableWindowProps = {
   /** Keeps the window's state in LS (`AEK_popupWindows`): open after a reload, with its layout
    * (default false). Its content then comes from its kind's registered content function. */
   saveToLS?: boolean;
-  /** The header's title */
+  /** The header's title, which also names the window for assistive tech */
   title?: string;
+  /** The window's name for assistive tech when it has no `title` (its `aria-label`; default
+   * 'Window'). With a title, the title names it. */
+  ariaLabel?: string;
   /** An icon before the title in the header */
   icon?: SvgIconKey;
   /** A debug tool's window: above the app's windows, and shown only in the debug env (default
@@ -272,6 +278,13 @@ export type DraggableWindowRuntime = {
   headerCMP?: CMPHandle;
   titleCMP?: CMPHandle;
   contentWrapperCMP?: CMPHandle;
+  collapseBtnCMP?: CMPHandle;
+  /** The collapse button's tooltip ("Collapse" / "Expand"), set on a toggle */
+  collapseTooltip?: Tooltip;
+  /** The cut title's tooltip (its whole text) */
+  titleTooltip?: Tooltip;
+  /** The header's tooltips (its buttons', the title's), disposed with the window's DOM */
+  tooltips?: Tooltip[];
   session: DragSession | null;
   /** The z-index last written, so a restack only writes the windows whose index changed */
   zIndex: number;

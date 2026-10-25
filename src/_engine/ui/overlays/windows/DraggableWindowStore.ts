@@ -44,6 +44,7 @@ const createConfig = (
   id,
   ...(v.kind ? { kind: v.kind } : {}),
   title: v.title || '',
+  ...(v.ariaLabel ? { ariaLabel: v.ariaLabel } : {}),
   ...(v.icon ? { icon: v.icon } : {}),
   ...(v.data !== undefined ? { data: v.data } : {}),
   geometry: v.geometry,
@@ -81,7 +82,7 @@ const createConfig = (
  *   A new window of a kind takes the kind's geometry as its stored geometry.
  * - Units go with their value: a stored position or size keeps its stored units, a passed one
  *   takes the passed units.
- * - Title and `data`: the passed value wins.
+ * - Title, `ariaLabel` and `data`: the passed value wins.
  * @internal
  */
 export const resolveWindowConfig = (
@@ -132,6 +133,7 @@ export const resolveWindowConfig = (
   return createConfig(props.id, {
     kind: props.kind ?? stored?.kind,
     title: props.title ?? stored?.title,
+    ariaLabel: props.ariaLabel ?? stored?.ariaLabel,
     icon: props.icon ?? stored?.icon,
     data: props.data ?? stored?.data,
     geometry: { ...position, ...size },

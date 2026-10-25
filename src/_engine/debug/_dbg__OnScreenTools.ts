@@ -273,7 +273,7 @@ const playTools = () => {
     ],
     html: () => `<button>${getSvgIcon('infinity')}</button>`,
     attr: {
-      title: `Play main loop (F6, currently ${loopState.masterPlay ? 'playing' : 'not playing'})`,
+      title: `Play main loop (Shift+F7, currently ${loopState.masterPlay ? 'playing' : 'not playing'})`,
     },
     onClick: (e) => {
       e.stopPropagation();

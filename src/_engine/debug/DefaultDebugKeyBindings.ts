@@ -156,8 +156,9 @@ const DEFAULT_DEBUG_KEY_BINDINGS: DefaultDebugKeyBinding[] = [
     },
   },
   // The F keys are keydown, so preventDefault can stop the browser's own action (F5 reload,
-  // F6 address bar, F7 caret browsing, F10 menu bar). With a modifier they don't match, so eg.
-  // Ctrl+F5 and Shift+F5 still reload.
+  // F7 caret browsing, F10 menu bar). A chord's modifiers match exactly, so eg. Ctrl+F5 and
+  // Shift+F5 still reload. F6 / Shift+F6 are the UI kit's window cycle keys (p803 D8), so the main
+  // loop is Shift+F7.
   {
     id: 'sc-play-prod-test',
     category: 'LOOPS_AND_MODES',
@@ -175,7 +176,7 @@ const DEFAULT_DEBUG_KEY_BINDINGS: DefaultDebugKeyBinding[] = [
     id: 'sc-toggle-main-loop',
     category: 'LOOPS_AND_MODES',
     type: 'KEY_DOWN',
-    chord: { key: 'F6' },
+    chord: { key: 'F7', shift: true },
     name: 'Toggle main loop',
     fn: (e) => {
       e.preventDefault();
@@ -430,7 +431,7 @@ const DEFAULT_PROD_TEST_KEY_BINDINGS: DefaultDebugKeyBinding[] = [
     id: 'sc-prod-test-toggle-main-loop',
     category: 'PROD_TEST',
     type: 'KEY_DOWN',
-    chord: { key: 'F6' },
+    chord: { key: 'F7', shift: true },
     name: 'Toggle main loop',
     yieldToOtherBindings: true,
     fn: (e) => {
@@ -471,7 +472,7 @@ const DEFAULT_PROD_TEST_KEY_BINDINGS: DefaultDebugKeyBinding[] = [
 
 /**
  * Creates the production test mode keys' action map ({@link PROD_TEST_KEYS_ACTION_MAP_ID}: F5
- * stop, F6 main loop, F7 app loop pause, F8 profiler window, no toasts). An app key binding or
+ * stop, Shift+F7 main loop, F7 app loop pause, F8 profiler window, no toasts). An app key binding or
  * action map of the same key takes over. Production test mode only. The boot's.
  * @internal
  */

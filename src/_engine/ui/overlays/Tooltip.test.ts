@@ -109,4 +109,31 @@ describe('tooltip (p803 D10)', () => {
     expect(tooltip.cmp.elem.textContent).toBe('Two');
     tooltip.cmp.remove();
   });
+
+  it('describes nothing its anchor’s aria-label already says, until its text differs', () => {
+    anchor.removeAttribute('aria-describedby');
+    anchor.setAttribute('aria-label', 'Close');
+    const tooltip = createTooltip({ anchor, text: 'Close' });
+    expect(anchor.getAttribute('aria-describedby')).toBeNull();
+    tooltip.setText('Closes the window');
+    expect(anchor.getAttribute('aria-describedby')).toBe(tooltip.cmp.id);
+    tooltip.setText('Close');
+    expect(anchor.getAttribute('aria-describedby')).toBeNull();
+    tooltip.cmp.remove();
+  });
+
+  it('onlyWhenTruncated: shows only while the anchor’s text is cut, and describes nothing', () => {
+    const tooltip = createTooltip({ anchor, text: 'A long title', onlyWhenTruncated: true });
+    expect(anchor.getAttribute('aria-describedby')).toBe('hint');
+    Object.defineProperties(anchor, {
+      scrollWidth: { value: 100, configurable: true },
+      clientWidth: { value: 100, configurable: true },
+    });
+    tooltip.show();
+    expect(tooltip.isShown()).toBe(false);
+    Object.defineProperty(anchor, 'scrollWidth', { value: 180, configurable: true });
+    tooltip.show();
+    expect(tooltip.isShown()).toBe(true);
+    tooltip.cmp.remove();
+  });
 });

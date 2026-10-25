@@ -19,15 +19,10 @@ export const UI_AXE_TAGS = [
 export type UiAllowedViolation = { rule: string; piece: string; until: string };
 
 export const UI_ALLOWED_VIOLATIONS: UiAllowedViolation[] = [
-  // The window's `<header>` is a banner landmark (the page has its own): every piece that opens
-  // a window (the drop-downs, the tooltips and the popover open in one)
-  { rule: 'landmark-no-duplicate-banner', piece: 'window', until: 'p803 Phase 5 section 1' },
-  { rule: 'landmark-no-duplicate-banner', piece: 'dialog', until: 'p803 Phase 5 section 1' },
-  { rule: 'landmark-no-duplicate-banner', piece: 'dropDown', until: 'p803 Phase 5 section 1' },
-  { rule: 'landmark-no-duplicate-banner', piece: 'tooltip', until: 'p803 Phase 5 section 1' },
-  { rule: 'landmark-no-duplicate-banner', piece: 'popover', until: 'p803 Phase 5 section 1' },
-  // A window's scrolling content (collapsed, or longer than the window) can't take focus
-  { rule: 'scrollable-region-focusable', piece: 'window', until: 'p803 Phase 5 section 1' },
+  // The drop-down keeps its old dark greys inside a window that follows the light theme now: its
+  // labels, and its open list over the panel's text
+  { rule: 'color-contrast', piece: 'dialog', until: 'p803 Phase 5 section 3' },
+  { rule: 'color-contrast', piece: 'dropDown', until: 'p803 Phase 5 section 3' },
   // The toast's close button is an icon with no label
   { rule: 'button-name', piece: 'toaster', until: 'p803 Phase 5 section 4' },
 ];

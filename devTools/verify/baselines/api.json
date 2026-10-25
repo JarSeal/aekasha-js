@@ -2972,6 +2972,18 @@
       "updateDraggableWindow": "Function",
       "updateDraggableWindowsOfKind": "Function"
     },
+    "src/_engine/ui/overlays/windows/DraggableWindowDom.ts": {
+      "buildHeader": "Function",
+      "getPartId": "Function",
+      "getThemeAttr": "Function",
+      "getWindowAttr": "Function",
+      "HeaderActions": "TypeAlias",
+      "renderTitle": "Function",
+      "syncContentTabStop": "Function",
+      "WINDOW_CLASS": "Variable",
+      "writeCollapsedState": "Function",
+      "writeWindowName": "Function"
+    },
     "src/_engine/ui/overlays/windows/DraggableWindowDrag.ts": {
       "addDragHandle": "Function",
       "cancelDragSession": "Function",
@@ -2986,7 +2998,17 @@
       "isFittable": "Function",
       "keepOnScreen": "Function",
       "placeWindow": "Function",
+      "RESIZING_ATTR": "Variable",
+      "STATE_ATTR": "Variable",
       "writePosition": "Function"
+    },
+    "src/_engine/ui/overlays/windows/DraggableWindowKeys.ts": {
+      "addHeaderKeys": "Function",
+      "addWindowCycleListener": "Function",
+      "parseKeyChord": "Function",
+      "setWindowCycleKeys": "Function",
+      "WindowCycle": "TypeAlias",
+      "WindowCycleKeys": "TypeAlias"
     },
     "src/_engine/ui/overlays/windows/DraggableWindowStore.ts": {
       "createRuntime": "Function",
@@ -4117,6 +4139,7 @@
       "ToasterSettings",
       "Tooltip",
       "TooltipProps",
+      "WindowCycleKeys",
       "addToast",
       "aekashaIcon",
       "alertIcon",
@@ -4185,6 +4208,7 @@
       "rocketIcon",
       "rocketTakeoffIcon",
       "runtimeIcon",
+      "setWindowCycleKeys",
       "spatialGridIcon",
       "speedometerIcon",
       "stopIcon",

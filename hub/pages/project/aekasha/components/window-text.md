@@ -12,13 +12,16 @@ debug env.
 - **Behaviour:** the toggle, a kind's windows (each starts where the kind's last one was,
   cascaded, and closing one removes it), fitting every window to the screen (a header's
   double-click fits one), and closing them all.
+- **Keys:** the header is a tab stop (the arrows move the window, Alt+arrows resize it, Shift
+  takes four steps, Enter collapses it), and F6 / Shift+F6 move the focus from window to window,
+  from a button of this page too. The keyboard scripts check each in a browser.
 - **Not shown here,** since they need the boot: a debug window, the restore from storage after a
   reload, and the scene-load rules (`closeOnSceneChange`, `removeOnSceneChange`, a kind's
   `sceneTargetResolver`). The [UI kit example](hub:examples/ui-kit) runs them in the app.
 
 ::: note For p803
-The header clips its title's descenders, the content has no padding of its own (an app's panel
-brings it: here the page's), and the module imports three kernel hooks and the env flags
+The content has no padding of its own (an app's panel brings it: here the page's), and the module
+imports three kernel hooks and the env flags
 ([`src/_engine/ui/CLAUDE.md`](repo:src/_engine/ui/CLAUDE.md#ui-kit)), which this page stands in
 for or leaves unrun.
 :::

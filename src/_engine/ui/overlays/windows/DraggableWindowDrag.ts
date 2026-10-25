@@ -1,8 +1,12 @@
 // The draggable windows' pointer drags: a move by the header, a resize by an edge or the corner.
 // One session per window, applied at most once per animation frame, committed at its end through
 // the caller's `onCommit` (DraggableWindow.ts records and saves the geometry).
-import styles from './DraggableWindow.module.scss';
-import { clampToGrabbable, getGrabArea, writePosition } from './DraggableWindowGeometry';
+import {
+  clampToGrabbable,
+  getGrabArea,
+  RESIZING_ATTR,
+  writePosition,
+} from './DraggableWindowGeometry';
 import type { DragMode, WindowEntry } from './DraggableWindowTypes';
 import { getWindowSize } from '../../core/Window';
 
@@ -44,7 +48,7 @@ const startDragSession = (entry: WindowEntry, mode: DragMode, e: PointerEvent) =
     rafId: null,
     apply: () => applyDragSession(entry),
   };
-  if (mode !== 'MOVE') runtime.windowCMP?.updateClass(styles.resizing, 'add');
+  if (mode !== 'MOVE') windowElem.setAttribute(RESIZING_ATTR, '');
 };
 
 const applyDragSession = ({ runtime }: WindowEntry) => {
@@ -101,7 +105,7 @@ const onDragPointerEnd = (entry: WindowEntry, e: PointerEvent, onCommit: DragCom
     g.x = Math.round(s.geometry.x);
     g.y = Math.round(s.geometry.y);
   } else {
-    runtime.windowCMP?.updateClass(styles.resizing, 'remove');
+    runtime.windowCMP?.elem.removeAttribute(RESIZING_ATTR);
     const elem = runtime.windowCMP?.elem;
     if (elem) {
       // A resized axis is stored in px from now on, whatever unit it had

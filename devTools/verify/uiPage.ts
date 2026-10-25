@@ -87,6 +87,14 @@ const readExpectation = (page: Page, piece: string, step: UiKeyStep) =>
         const text = (el?.textContent ?? '').trim();
         return { ok: !!el && text === s.text, actual: el ? `"${text}"` : 'no element' };
       }
+      if ('expectStyle' in s) {
+        const el = document.querySelector(s.expectStyle);
+        const value = el ? getComputedStyle(el).getPropertyValue(s.name).trim() : undefined;
+        return {
+          ok: !!el && value === s.value,
+          actual: el ? `${s.name}: "${value}"` : 'no element',
+        };
+      }
       if ('expectActiveOption' in s) {
         const id = active?.getAttribute('aria-activedescendant');
         const option = id ? document.getElementById(id) : null;

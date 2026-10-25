@@ -26,7 +26,7 @@ export type UiCheckStep =
 export type UiKeyStep =
   | UiCheckStep
   /** Focuses the first element in the HUD root matching this selector, as a script would (a
-   * piece no key reaches yet: F6 does from p803 Phase 5) */
+   * window's part F6 doesn't land on) */
   | { focusHud: string }
   /** Focuses the demo box's button whose text is this, exactly, without a click (the focus
    * outside the HUD root: an embed's host page) */
@@ -44,6 +44,9 @@ export type UiKeyStep =
   | { expectCount: string; count: number }
   /** The first element matching `expectText` has this text, trimmed */
   | { expectText: string; text: string }
+  /** The first element matching `expectStyle` has the computed style property `name` (CSS's name:
+   * `left`, `border-top-width`) at `value` (a used length in px: `576px`) */
+  | { expectStyle: string; name: string; value: string }
   /** The option the focused element's `aria-activedescendant` names has this text, trimmed */
   | { expectActiveOption: string };
 
@@ -57,6 +60,8 @@ export type UiKeyScript = { name: string; steps: UiKeyStep[] };
 export type UiDemoChecks = { states?: UiCheckState[]; keyboard?: UiKeyScript[] };
 
 const WINDOW = '#hudRoot #hubDemoWindow';
+const WINDOW_HEADER = `${WINDOW} .aekWindow__header`;
+const KIND_WINDOW = (n: number) => `#hudRoot #hubDemoKind_${n}`;
 const LIST = '#hudRoot .aekDropDownList';
 const TRIGGER = '#hudRoot .aekDropDownTrigger';
 const DIALOG = (index: number) => `#hudRoot #hubDemoDialog${index}`;
@@ -71,15 +76,49 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
         name: 'collapse, expand and close by the header’s buttons',
         steps: [
           { click: 'Default' },
-          { focusHud: '#hubDemoWindow button[title="Collapse / Expand"]' },
+          { focusHud: '#hubDemoWindow .aekWindow__collapse' },
           { press: 'Enter' },
-          { expectCount: `${WINDOW}[class*="collapsed"]`, count: 1 },
+          { expectAttr: WINDOW, name: 'data-state', value: 'collapsed' },
+          { expectAttr: `${WINDOW} .aekWindow__collapse`, name: 'aria-expanded', value: 'false' },
           { press: 'Space' },
-          { expectCount: `${WINDOW}[class*="collapsed"]`, count: 0 },
+          { expectAttr: WINDOW, name: 'data-state', value: 'expanded' },
           { press: 'Tab' },
-          { expectFocus: `${WINDOW} button[title="Close"]` },
+          { expectFocus: `${WINDOW} .aekWindow__close` },
           { press: 'Enter' },
           { expectCount: WINDOW, count: 0 },
+        ],
+      },
+      {
+        name: 'the header: the arrows move it, Alt+arrows resize it, Enter collapses it',
+        steps: [
+          // Opened at the viewport's centre (320 × 320 px), the focus on its header
+          { click: 'Default' },
+          { expectFocus: WINDOW_HEADER },
+          { expectStyle: WINDOW, name: 'left', value: '560px' },
+          { press: 'ArrowRight' },
+          { expectStyle: WINDOW, name: 'left', value: '576px' },
+          { press: 'Shift+ArrowDown' },
+          { expectStyle: WINDOW, name: 'top', value: '354px' },
+          { press: 'Alt+ArrowRight' },
+          { expectStyle: WINDOW, name: 'width', value: '336px' },
+          { press: 'Enter' },
+          { expectAttr: WINDOW, name: 'data-state', value: 'collapsed' },
+          { press: 'Enter' },
+          { expectAttr: WINDOW, name: 'data-state', value: 'expanded' },
+        ],
+      },
+      {
+        name: 'F6 and Shift+F6 move the focus from window to window, from the page too',
+        steps: [
+          { click: 'Default' },
+          { click: 'Open a window of a kind' },
+          { focusBox: 'Default' },
+          { press: 'F6' },
+          { expectFocus: WINDOW_HEADER },
+          { press: 'F6' },
+          { expectFocus: `${KIND_WINDOW(1)} .aekWindow__header` },
+          { press: 'Shift+F6' },
+          { expectFocus: WINDOW_HEADER },
         ],
       },
     ],

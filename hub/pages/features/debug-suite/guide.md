@@ -5,7 +5,7 @@ production build:
 
 - `?isDebug=true`: every tool.
 - `?isProdTest=true`: the app as it runs in production, plus a few tools: play and stop (`F5`),
-  the loop switches (`F6`, `F7`), and the profiler (`F8`) when you enable it there.
+  the loop switches (`Shift+F7`, `F7`), and the profiler (`F8`) when you enable it there.
 
 Next to either, `?startScene=<scene id>` picks the first scene.
 
@@ -156,17 +156,17 @@ registerIcon('gear', gearIcon); // A built-in your production UI shows
 
 ## Keys
 
-| Key          | Does                                                     |
-| ------------ | -------------------------------------------------------- |
-| `h`          | Opens and closes the drawer.                             |
-| `u` / `i`    | The key shortcuts dialog: the app's keys / the engine's. |
-| `o` / `p`    | Opens the camera list / the scene list.                  |
-| `F1`         | Switches to the debug fly camera and back.               |
-| `F5`         | Plays the scene in production test mode.                 |
-| `F6` / `F7`  | Stops and starts the main loop / pauses the app.         |
-| `F8`         | Opens the profiler.                                      |
-| `F9` / `F10` | Shows the environment ball / the axes gizmo.             |
-| `Ctrl/⌘ + Z` | Undo (with `Shift`: redo).                               |
+| Key               | Does                                                     |
+| ----------------- | -------------------------------------------------------- |
+| `h`               | Opens and closes the drawer.                             |
+| `u` / `i`         | The key shortcuts dialog: the app's keys / the engine's. |
+| `o` / `p`         | Opens the camera list / the scene list.                  |
+| `F1`              | Switches to the debug fly camera and back.               |
+| `F5`              | Plays the scene in production test mode.                 |
+| `Shift+F7` / `F7` | Stops and starts the main loop / pauses the app.         |
+| `F8`              | Opens the profiler.                                      |
+| `F9` / `F10`      | Shows the environment ball / the axes gizmo.             |
+| `Ctrl/⌘ + Z`      | Undo (with `Shift`: redo).                               |
 
 `AppConfig.debugKeys` in `src/CONFIG.ts` rebinds them and adds your own. They're
 [action maps](hub:features/input#debug-keys) in the `DEBUG` context, so they work while the app

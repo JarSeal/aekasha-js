@@ -1,6 +1,7 @@
-// The draggable windows: their registries, the stacks, the DOM build, the scene load and boot
+// The draggable windows: their registries, the stacks, the window's DOM, the scene load and boot
 // hooks, and the public API (types: DraggableWindowTypes.ts; configs and LS:
-// DraggableWindowStore.ts; geometry: DraggableWindowGeometry.ts; drags: DraggableWindowDrag.ts).
+// DraggableWindowStore.ts; geometry: DraggableWindowGeometry.ts; drags: DraggableWindowDrag.ts;
+// the header and the parts without state: DraggableWindowDom.ts; keys: DraggableWindowKeys.ts).
 // Over the 800-line limit (p617 D10), with docs: what is left shares the module's state (the
 // windows map, the stacks, the kind registries, the suspended windows), so a further split
 // would make the modules import each other.
@@ -12,11 +13,21 @@ import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../core/HUD';
 import { onBoundsResize } from '../../core/Window';
 import { addSceneHooks } from '../../../kernel/scene/SceneHooks';
 import { addBootAfterStartHook } from '../../../kernel/init/BootHooks';
-import styles from './DraggableWindow.module.scss';
+import './DraggableWindow.scss';
 import '../../styles/kit.scss';
-import { getSvgIcon } from '../../core/icons/SvgIcon';
 import { getFirstFocusable } from '../FocusTrap';
 import { addDragHandle, cancelDragSession } from './DraggableWindowDrag';
+import {
+  buildHeader,
+  getThemeAttr,
+  getWindowAttr,
+  getPartId,
+  renderTitle,
+  syncContentTabStop,
+  WINDOW_CLASS,
+  writeCollapsedState,
+  writeWindowName,
+} from './DraggableWindowDom';
 import {
   fitWindow,
   getGeometryStyle,
@@ -24,6 +35,7 @@ import {
   keepOnScreen,
   placeWindow,
 } from './DraggableWindowGeometry';
+import { addWindowCycleListener } from './DraggableWindowKeys';
 import {
   createRuntime,
   hydrateFromLS,
@@ -38,6 +50,7 @@ import type {
   DraggableWindowData,
   DraggableWindowKindOpts,
   DraggableWindowRuntime,
+  DragMode,
   OpenDraggableWindowProps,
   SceneTargetResolver,
   WindowEntry,
@@ -64,6 +77,7 @@ const keepInViewsKinds = new Set<string>();
  * decides whether their target exists in the next scene. */
 const suspendedWindowIds = new Set<string>();
 let isViewportResizerAdded = false;
+let isCycleListenerAdded = false;
 let viewportResizeTimer: ReturnType<typeof setTimeout> | null = null;
 
 /** Non-debug (app) windows are always allowed. Debug windows are allowed in debug mode, and in
@@ -249,6 +263,23 @@ const onViewportResized = () => {
   if (isChanged) saveDraggableWindowStatesToLS();
 };
 
+/** The cycle keys' listener on the HUD root's parent (`DraggableWindowKeys.ts`): added at the
+ * first mount and kept */
+const ensureCycleListener = () => {
+  const hudRoot = getHUDRootCMP().elem;
+  const parent = hudRoot.parentElement;
+  if (isCycleListenerAdded || !parent) return;
+  isCycleListenerAdded = true;
+  addWindowCycleListener(parent, {
+    hudRoot,
+    getEntries: () => getWindows().values(),
+    focusWindow: (entry) => {
+      bringDraggableWindowToFront(entry.config.id);
+      focusFirstFocusableElement(entry);
+    },
+  });
+};
+
 /** Added at the first mount and kept: a no-op while no window is open. */
 const ensureViewportResizer = () => {
   if (isViewportResizerAdded) return;
@@ -264,23 +295,13 @@ const ensureViewportResizer = () => {
 const toClassList = (classes?: string | string[]) =>
   !classes ? [] : typeof classes === 'string' ? [classes] : classes;
 
-/** A debug window and its backdrop force the dark theme (p803 D6): the debugger's own panels are
- * dark whatever the system's theme until p806 gives it a theme setting. CMP copies it. */
-const DEBUG_THEME_ATTR = { 'data-aek-theme': 'dark' };
-const getThemeAttr = (config: DraggableWindowConfig) =>
-  config.isDebugWindow ? { attr: DEBUG_THEME_ATTR } : {};
-
 /** Whether the window (and its backdrop) stays visible in editor views: a debug dialog, or a
  * window of a kind registered with `keepInViews`. */
 const isKeptInViews = (config: DraggableWindowConfig) =>
   (config.isDebugWindow && config.hasBackDrop) || keepInViewsKinds.has(getWindowKind(config));
 
 const getWindowClasses = (config: DraggableWindowConfig) => {
-  const classList = [styles.popupWindow];
-  if (!config.disableVertResize) classList.push(styles.vertResizable);
-  if (!config.disableHoriResize) classList.push(styles.horiResizable);
-  if (!config.disableDragging) classList.push(styles.draggable);
-  if (config.isCollapsed) classList.push(styles.collapsed);
+  const classList = [WINDOW_CLASS];
   if (isKeptInViews(config)) classList.push(KEEP_IN_VIEWS_CLASS);
   return classList.concat(toClassList(config.windowClass));
 };
@@ -288,6 +309,7 @@ const getWindowClasses = (config: DraggableWindowConfig) => {
 /** The config keys that change the window's DOM structure: a change remounts the window. */
 const STRUCTURAL_KEYS = [
   'isDebugWindow',
+  'disableDragging',
   'disableVertResize',
   'disableHoriResize',
   'disableCollapseBtn',
@@ -324,13 +346,14 @@ const rebuildContent = (entry: WindowEntry) => {
   wrapper.removeChildren();
   const content = buildContent(entry);
   if (content) wrapper.add(content);
+  syncContentTabStop(entry.runtime);
 };
 
 const createBackDropCMP = (entry: WindowEntry) => {
   const { id, backDropClass, backDropClickClosesWindow } = entry.config;
   return CMP({
     class: [
-      styles.backDrop,
+      'aekWindowBackdrop',
       ...(isKeptInViews(entry.config) ? [KEEP_IN_VIEWS_CLASS] : []),
       ...toClassList(backDropClass),
     ],
@@ -346,6 +369,7 @@ const mountWindow = (entry: WindowEntry) => {
   const { id } = config;
   const hudRoot = getHUDRootCMP();
   ensureViewportResizer();
+  ensureCycleListener();
 
   if (config.hasBackDrop) runtime.backDropCMP = hudRoot.add(createBackDropCMP(entry));
 
@@ -354,63 +378,41 @@ const mountWindow = (entry: WindowEntry) => {
     idAttr: true,
     class: getWindowClasses(config),
     style: getGeometryStyle(config),
-    ...getThemeAttr(config),
+    attr: getWindowAttr(config),
   });
-  // Capture phase: any press in the window, also one its content stops, brings it to the front
+  runtime.windowCMP = windowCMP;
+  // Capture phase: any press in the window, also one its content stops, brings it to the front;
+  // so does the focus moving into it (Tab, the cycle keys)
   windowCMP.elem.addEventListener('pointerdown', () => bringDraggableWindowToFront(id), true);
+  windowCMP.elem.addEventListener('focusin', () => bringDraggableWindowToFront(id));
 
-  const headerCMP = windowCMP.add({ tag: 'header', class: styles.headerBar });
-  runtime.headerCMP = headerCMP;
-  runtime.titleCMP = headerCMP.add({ tag: 'h3', class: styles.title, text: config.title });
-  renderTitle(runtime.titleCMP, config);
-  if (!config.disableCollapseBtn) {
-    headerCMP.add({
-      tag: 'button',
-      class: styles.collapseBtn,
-      onClick: (e) => {
-        e.preventDefault();
-        toggleCollapse(id);
-      },
-      attr: { title: 'Collapse / Expand' },
-    });
-  }
-  if (!config.disableCloseBtn) {
-    headerCMP.add({
-      tag: 'button',
-      class: styles.closeBtn,
-      onClick: (e) => {
-        e.preventDefault();
-        closeDraggableWindow(id);
-      },
-      attr: { title: 'Close' },
-    });
-  }
-  addDragHandle(entry, headerCMP.elem, 'MOVE', commitDrag);
-  headerCMP.elem.addEventListener('dblclick', (e) => {
-    if (!(e.target as Element).closest('button')) fitDraggableWindowToScreen(id);
+  buildHeader(entry, {
+    onCommit: commitDrag,
+    onToggleCollapse: () => toggleCollapse(id),
+    onClose: () => closeDraggableWindow(id),
+    onFit: () => fitDraggableWindowToScreen(id),
+  });
+  runtime.contentWrapperCMP = windowCMP.add({
+    class: 'aekWindow__content',
+    attr: { id: getPartId(id, 'content') },
   });
 
-  runtime.contentWrapperCMP = windowCMP.add({ class: styles.contentWrapper });
-
-  if (!config.disableVertResize) {
-    addDragHandle(entry, windowCMP.add({ class: styles.vertHandle }).elem, 'RESIZE_V', commitDrag);
-  }
-  if (!config.disableHoriResize) {
-    addDragHandle(entry, windowCMP.add({ class: styles.horiHandle }).elem, 'RESIZE_H', commitDrag);
-  }
-  if (!config.disableVertResize && !config.disableHoriResize) {
-    addDragHandle(
-      entry,
-      windowCMP.add({ class: styles.vertAndHoriHandle }).elem,
-      'RESIZE_HV',
-      commitDrag
-    );
+  const resizeHandles: [string, DragMode, boolean][] = [
+    ['aekWindow__resizeV', 'RESIZE_V', !config.disableVertResize],
+    ['aekWindow__resizeH', 'RESIZE_H', !config.disableHoriResize],
+    ['aekWindow__resizeHV', 'RESIZE_HV', !config.disableVertResize && !config.disableHoriResize],
+  ];
+  for (const [className, mode, isOn] of resizeHandles) {
+    if (isOn) addDragHandle(entry, windowCMP.add({ class: className }).elem, mode, commitDrag);
   }
 
   const content = buildContent(entry);
   if (content) runtime.contentWrapperCMP.add(content);
 
-  runtime.windowCMP = hudRoot.add(windowCMP);
+  hudRoot.add(windowCMP);
+  writeWindowName(entry);
+  writeCollapsedState(entry);
+  syncContentTabStop(runtime);
   runtime.zIndex = -1;
   const stack = stacks[getLayer(config)];
   if (!stack.includes(id)) {
@@ -420,20 +422,17 @@ const mountWindow = (entry: WindowEntry) => {
   restack(stack);
 };
 
-/** The header title: the icon (if any) and the title text. */
-const renderTitle = (titleCMP: CMPHandle, config: DraggableWindowConfig) => {
-  titleCMP.updateText(config.title);
-  if (config.icon) titleCMP.elem.insertAdjacentHTML('afterbegin', getSvgIcon(config.icon, 'small'));
-};
-
 /** Applies a reopen's changes to a mounted window. The content is rebuilt when `data` changed. */
 const updateMountedWindow = (entry: WindowEntry, prev: DraggableWindowConfig) => {
   const { config, runtime } = entry;
   runtime.windowCMP?.updateClass(getWindowClasses(config), 'replace');
   runtime.windowCMP?.updateStyle(getGeometryStyle(config));
+  writeCollapsedState(entry);
   if ((config.title !== prev.title || config.icon !== prev.icon) && runtime.titleCMP) {
     renderTitle(runtime.titleCMP, config);
+    runtime.titleTooltip?.setText(config.title);
   }
+  if (config.title !== prev.title || config.ariaLabel !== prev.ariaLabel) writeWindowName(entry);
   if (JSON.stringify(config.data) !== JSON.stringify(prev.data)) rebuildContent(entry);
 };
 
@@ -446,6 +445,11 @@ const unmountWindow = (entry: WindowEntry, keepInStack?: boolean) => {
   runtime.onUnmount = undefined;
   onUnmount?.();
   cancelDragSession(entry);
+  for (const tooltip of runtime.tooltips ?? []) tooltip.cmp.remove();
+  runtime.tooltips = undefined;
+  runtime.collapseTooltip = undefined;
+  runtime.titleTooltip = undefined;
+  runtime.collapseBtnCMP = undefined;
   detachStaticContent(runtime);
   runtime.backDropCMP?.remove();
   runtime.windowCMP?.remove();
@@ -571,10 +575,7 @@ const toggleCollapse = (id: string) => {
   const entry = getWindows().get(id);
   if (!entry?.runtime.windowCMP) return;
   entry.config.isCollapsed = !entry.config.isCollapsed;
-  entry.runtime.windowCMP.updateClass(
-    styles.collapsed,
-    entry.config.isCollapsed ? 'add' : 'remove'
-  );
+  writeCollapsedState(entry);
   saveDraggableWindowStatesToLS();
 };
 

@@ -74,10 +74,11 @@ const UI_KIT_PROFILE = 'uiKit';
 const UI_KIT = {
   container: '.aekMount',
   window: '#uiKitEmbedWindow',
-  windowTitle: '#uiKitEmbedWindow header h3',
+  windowTitle: '#uiKitEmbedWindow .aekWindow__title',
   dialog: '#uiKitEmbedDialog',
-  // A dialog has no collapse button: its header's one button closes it
-  dialogClose: '#uiKitEmbedDialog header button',
+  // Escape is pressed with the focus on its drop-down's trigger: on its close button, the button's
+  // tooltip would show and take the first Escape (the innermost overlay, p803 D7)
+  dialogFocus: '#uiKitEmbedDialog .aekDropDownTrigger',
   backdrop: '.uiKitEmbedBackdrop',
   // The host page's own button (embedHost.html), outside the HUD root
   hostButton: 'body > p > button',
@@ -365,7 +366,7 @@ const checkUiKitAtRoot = async (
       if (!(await read()).dialog) problems.push('Escape on the host page closed the dialog');
 
       // Escape inside the dialog closes it, so the window is no longer under its backdrop
-      await page.focus(UI_KIT.dialogClose);
+      await page.focus(UI_KIT.dialogFocus);
       await page.keyboard.press('Escape');
       await waitFor(async () => {
         const closed = await read();

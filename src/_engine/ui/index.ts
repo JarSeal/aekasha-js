@@ -53,6 +53,8 @@ export type {
   OpenDraggableWindowProps,
   SceneTargetResolver,
 } from './overlays/windows/DraggableWindowTypes';
+export { setWindowCycleKeys } from './overlays/windows/DraggableWindowKeys';
+export type { WindowCycleKeys } from './overlays/windows/DraggableWindowKeys';
 export { createDropDown } from './forms/DropDown';
 export type { DropDown, DropDownOption, DropDownProps, TDropDown } from './forms/DropDown';
 export {

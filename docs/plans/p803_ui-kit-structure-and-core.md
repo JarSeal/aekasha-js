@@ -1123,6 +1123,106 @@ One section per piece, each with its demo boxes' screenshots in both themes for 
 The scene runner's baselines change here on purpose (`--update` after review, recorded in As
 built with the scenes that changed).
 
+As built (section 1, 2026-10-25):
+
+- **Decided in this section** (asked, 2026-10-25): the cycle keys' listener is on the HUD root's
+  **parent** (the page's body, or a mount's container with the canvas), not on the HUD root as
+  D8 said: on the HUD root F6 only acts with the focus already in the HUD, so from the canvas (a
+  game's usual focus) it couldn't reach a window. An embed's host page outside the container
+  keeps its F6. The main loop's debug key is **Shift+F7** as proposed, in the debug env and
+  prodTest. Not checked: Firefox may open its Style Editor on Shift+F7 (a devtools shortcut a
+  page probably can't prevent; Playwright can't press browser-level shortcuts), and F6 / Shift+F6
+  on Windows and in Edge (Phase 0 ran macOS only). Both are left for a check by hand.
+- `DraggableWindow.module.scss` became `DraggableWindow.scss`: global classes in
+  `@layer aek.components` with `:where()` (`aekWindow`, `aekWindow__header`, `__title`,
+  `__button` / `__collapse` / `__close`, `__content`, `__resizeV` / `__resizeH` / `__resizeHV`,
+  `aekWindowBackdrop`), the states as attributes (`data-state="collapsed" | "expanded"`,
+  `data-draggable`, `data-resizable="both" | "vertical" | "horizontal"`, `data-resizing`), every
+  colour from p801's rows and every size a token, no `--aek-rem`. Its custom properties
+  (`--aek-window-header-height` (default `--aek-space-7`, 32 px / 24 px compact), `-radius`,
+  `-bg`, `-header-bg`, `-border-color`, `-shadow`) are read with the token as the fallback and
+  never declared, so an app sets them on any ancestor. The window is `box-sizing: border-box`
+  (an embed has no page `*` rule) with a 1 px `border-strong` border. The header's buttons, the
+  header and the content draw the ring inside (the window's `overflow` clips an outside one). The
+  collapse chevron and the close cross are CSS marks in `currentColor` (no icon: a production app
+  may not register the built-ins). The debugger's content helpers (`winPaddedContent`,
+  `winSmallIconButton`, …) moved with it, on the tokens, until p806.
+- **The split** (D8's "keys in `DraggableWindowKeys.ts`"): the DOM build grew about 210 lines, so
+  `DraggableWindowDom.ts` (new, no state: the attributes, the names, the header with its buttons,
+  tooltips and keys, the collapsed state, the content's tab stop) and `DraggableWindowKeys.ts`
+  (the header's keys, the cycle keys and their window list) take it. `DraggableWindow.ts` is 833
+  lines, as before the section; neither new module imports it.
+- ARIA (D8): the window `role="dialog"` named by `aria-labelledby` its title, else
+  `aria-label` from the new `ariaLabel` prop (`OpenDraggableWindowProps` and the stored config;
+  default 'Window'; an empty title's `h3` is `aria-hidden`, or axe's `empty-heading` would fire).
+  The header is a `<div>` (closes the `landmark-no-duplicate-banner` entries); with a key to act on
+  it's `tabindex="0"`, `role="group"` (an `aria-roledescription` needs a role),
+  `aria-roledescription="movable window"` when it moves, and its keys in a `hidden` span named by
+  `aria-describedby`. The collapse button: `aria-expanded`, `aria-controls` the content, named by
+  the title (the disclosure pattern: "Settings, expanded"), its tooltip "Collapse" / "Expand". The
+  close button: `aria-label="Close"` and a tooltip. Their `title` attributes went.
+- **`createTooltip` grew two rules** for this: no `aria-describedby` while the text is the
+  anchor's `aria-label` (the close button's tooltip would read "Close, Close"), and the prop
+  `onlyWhenTruncated` (shows only while the anchor's text is cut: the title's tooltip; no
+  `aria-describedby` either). `disableDragging` joined the structural keys (a change remounts:
+  the header's role and keys depend on it).
+- The header's keys: the arrows move by `--aek-base` × 16 / 14 (16 px at the defaults, in both
+  densities: `--aek-space-5` is unregistered, so its computed value is an unresolved `calc()`),
+  Alt+arrows resize (left / up shrink, in px from then on, a collapsed window's height left
+  alone), Shift × 4, Enter toggles the collapse; only for a key on the header itself (its buttons
+  keep theirs), and a used key is stopped (no key binding moves the player meanwhile). The commit
+  (kind geometry, LS) is on the arrow's keyup or the header's focusout.
+- The cycle: the HUD root's children in DOM order (the mount order, which a bring-to-front
+  doesn't change: in z-order, Shift+F6 would only flip between the top two windows), the app's
+  windows and then the debug windows, skipping an inert or unrendered one (a modal's inert, an
+  editor view's hidden HUD); from outside every window F6 takes the first, Shift+F6 the last. The
+  focus target is the windows' first-focus rule (the content's first focusable, else the header).
+  With no window open the key is left alone (the browser's F6). `setWindowCycleKeys` takes chord
+  strings (`'Ctrl+Shift+F6'`) and `null`; it and `WindowCycleKeys` are on `aekasha/ui`. A window
+  also comes to the front on `focusin` (Tab into it), as on a press.
+- `scrollable-region-focusable`: a content with no focusable element gets `tabindex="0"` (read at
+  the mount and a rebuild), and a collapsed window's content is `visibility: hidden` once the
+  collapse's transition ends (Tab skipped it before, too: it was only clipped).
+- The title's descenders (1.2's item 4): the title's `line-height` is `--aek-line-height-base`,
+  centred in the header, one line with an ellipsis.
+- The debug key: `sc-toggle-main-loop` and `sc-prod-test-toggle-main-loop` are `Shift+F7` (a
+  chord's modifiers match exactly, so F7 alone stays the pause); the on-screen tools' title, the
+  debug `CLAUDE.md`, the debug suite's Hub page and `DefaultDebugKeyBindings.test.ts` follow.
+- `verify:ui`: a new step `expectStyle` (a computed style property: the key move's `left` /
+  `top`, the resize's `width`), and three window scripts: the header's buttons
+  (`data-state`, `aria-expanded`), the header's keys (560 → 576 px, Shift+ArrowDown 290 → 354 px,
+  Alt+ArrowRight 320 → 336 px wide, Enter twice), and F6 / Shift+F6 from a Hub button through the
+  default window and a kind window. `UI_ALLOWED_VIOLATIONS` lost the five
+  `landmark-no-duplicate-banner` entries and `scrollable-region-focusable`, and got
+  `color-contrast` on `dialog` and `dropDown` until section 3: the drop-down keeps its old dark
+  greys inside a window that follows the light theme now (its labels, its open list over the
+  panel's text).
+- `verify:embed`: the `uiKit` scenario's selectors follow (`.aekWindow__title`), and Escape inside
+  the dialog is pressed on its drop-down's trigger, not its close button: focused, the close
+  button shows its tooltip, which takes the first Escape (the innermost overlay, D7, as in the
+  component library's tooltip script).
+- Size: the windows now bring the tooltip, the anchor and the keys. `DropDown.js` (the app's chunk
+  with the windows) 12.4 → 14.7 kB gzip, `DropDown.css` 1.9 → 2.1 kB; the `uiKit` embed's
+  `uiKitEmbed.js` 13.3 → 15.0 kB, over its 14 KiB budget, so it's 16 KiB (`sbp.config.ts`' comment
+  names this section; Phase 7 resets it from `suggestBudget`).
+- The section's checks: `yarn test` (167 files, 1371 tests), `tsc` (both), ESLint,
+  `yarn hub:build` (960 names, 100 % documented), `verify:embed` (all seven scenarios),
+  `yarn sbp --profile all` (every budget within after the raise), `verify:baselines` recorded
+  (the 18 new `@internal` exports, `setWindowCycleKeys` and `WindowCycleKeys` on `aekasha/ui`, the
+  sizes above). `yarn verify:ui`: every keyboard script passes and no violation outside the allow
+  list; the window's, the dialog's and the drop-down's screenshots differ (the restyle, and the
+  drop-down's window 3 px taller), to re-record with `--update` after review. `verify:scenes`
+  wasn't run: its snapshots are the canvas alone, which no kit style reaches (Phase 0); it runs at
+  the phase's end.
+- Tests: `DraggableWindowKeys.test.ts` (11: the chords, the roles and names, a fixed window's
+  header, the content's tab stop, the move and its stop, the resize, Enter, the cycle's order, an
+  inert window, `null` and other keys, no window open), two in `Tooltip.test.ts`.
+- Docs: the kit's `CLAUDE.md` (the windows' files, ARIA, keys and cycle; the styles; the tests;
+  the tooltip's rules; the "Left for p803" title item gone), the debug `CLAUDE.md`, the UI kit
+  guide ("Keys and assistive tech", the window's parts and custom properties in Styling, the
+  colours note, `setWindowCycleKeys` in the key APIs, the tooltip's rules), the component
+  library's window text and `_components.scss`' comment.
+
 ### Phase 6: core components I — actions
 
 D10: Button (variants, sizes, icon, loading, toggle, hold to confirm), the button group, Menu, the

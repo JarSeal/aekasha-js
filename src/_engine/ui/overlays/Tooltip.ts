@@ -14,6 +14,10 @@ export type TooltipProps = {
   text: string;
   /** The side of the anchor it shows on when it fits there, else the opposite one. Default 'top'. */
   side?: 'top' | 'bottom' | 'left' | 'right';
+  /** Shows only while the anchor's own text is cut off (an ellipsis: its `scrollWidth` over its
+   * `clientWidth`), as the whole text of a cut label; the anchor's `aria-describedby` isn't set,
+   * since its own text says it. Default false. */
+  onlyWhenTruncated?: boolean;
   /** Extra classes for the tooltip's element. */
   class?: string | string[];
   /** Extra attributes for the tooltip's element. */
@@ -33,7 +37,7 @@ export type Tooltip = {
   hide: () => void;
   /** Whether it shows */
   isShown: () => boolean;
-  /** Changes its text in place. */
+  /** Changes its text in place (and whether it describes the anchor: see {@link createTooltip}). */
   setText: (text: string) => void;
 };
 
@@ -52,6 +56,9 @@ const readDelayMs = (anchor: HTMLElement) => {
   return Number(match[1]) * (match[2] === 's' ? 1000 : 1);
 };
 
+/** Whether the element's text overflows its box (cut with an ellipsis) */
+const isTruncated = (elem: HTMLElement) => elem.scrollWidth > elem.clientWidth;
+
 /** Whether the anchor's focus came from the keyboard (a click's focus shows no tooltip) */
 const isFocusVisible = (elem: HTMLElement) => {
   try {
@@ -68,7 +75,9 @@ const isFocusVisible = (elem: HTMLElement) => {
  * Never interactive: content with a control in it is a popover.
  * - Parts: the `.aekTooltip` element (`role="tooltip"`), in the HUD root while it shows, in the
  *   browser's top layer (else at `--aek-z-tooltip`), placed by the anchor and kept inside the HUD.
- * - ARIA: the anchor's `aria-describedby` names it (added to any ids there).
+ * - ARIA: the anchor's `aria-describedby` names it (added to any ids there), unless the text is
+ *   the anchor's `aria-label` (an icon button's tooltip: the name already says it) or the tooltip
+ *   is `onlyWhenTruncated`.
  * - Keys: Escape hides it (the kit's overlay stack: the press goes no further), wherever the focus
  *   is in the HUD.
  * - Custom properties: `--aek-tooltip-delay` (on the anchor or any ancestor).
@@ -81,7 +90,7 @@ const isFocusVisible = (elem: HTMLElement) => {
  * ```
  */
 export const createTooltip = (props: TooltipProps): Tooltip => {
-  const { anchor, side = 'top' } = props;
+  const { anchor, side = 'top', onlyWhenTruncated = false } = props;
   let isShown = false;
   let showTimer: ReturnType<typeof setTimeout> | null = null;
   let hideTimer: ReturnType<typeof setTimeout> | null = null;
@@ -98,6 +107,7 @@ export const createTooltip = (props: TooltipProps): Tooltip => {
   const show = () => {
     clearTimers();
     if (isShown || !anchor.isConnected) return;
+    if (onlyWhenTruncated && !isTruncated(anchor)) return;
     isShown = true;
     // In the HUD root, never in the anchor (its text would join the anchor's name)
     const parent = hasHudRoot()
@@ -169,23 +179,36 @@ export const createTooltip = (props: TooltipProps): Tooltip => {
     onRemoveCmp: () => {
       hide();
       for (const [type, fn] of anchorListeners) anchor.removeEventListener(type, fn);
-      const ids = (anchor.getAttribute('aria-describedby') ?? '')
-        .split(/\s+/)
-        .filter((id) => id && id !== cmp.id);
-      if (ids.length) anchor.setAttribute('aria-describedby', ids.join(' '));
-      else anchor.removeAttribute('aria-describedby');
+      setDescribing(false);
     },
   });
 
+  /** Adds the tooltip's id to the anchor's `aria-describedby`, or takes it off (the other ids
+   * there stay) */
+  function setDescribing(isOn: boolean) {
+    const ids = (anchor.getAttribute('aria-describedby') ?? '')
+      .split(/\s+/)
+      .filter((id) => id && id !== cmp.id);
+    if (isOn) ids.push(cmp.id);
+    if (ids.length) anchor.setAttribute('aria-describedby', ids.join(' '));
+    else anchor.removeAttribute('aria-describedby');
+  }
+
+  /** A text the anchor's name already says describes nothing */
+  const updateDescribing = (text: string) =>
+    setDescribing(!onlyWhenTruncated && text !== anchor.getAttribute('aria-label'));
+
   for (const [type, fn] of anchorListeners) anchor.addEventListener(type, fn);
-  const describedBy = anchor.getAttribute('aria-describedby');
-  anchor.setAttribute('aria-describedby', describedBy ? `${describedBy} ${cmp.id}` : cmp.id);
+  updateDescribing(props.text);
 
   return {
     cmp,
     show,
     hide,
     isShown: () => isShown,
-    setText: (text) => cmp.updateText(text),
+    setText: (text) => {
+      cmp.updateText(text);
+      updateDescribing(text);
+    },
   };
 };

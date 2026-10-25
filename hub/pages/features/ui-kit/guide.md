@@ -83,6 +83,34 @@ openDraggableWindow({
 - The debug tools' windows (`isDebugWindow`) are a layer above the app's, and open only in debug
   mode.
 
+### Keys and assistive tech
+
+Every pointer action on a window has a key. A window is a `dialog` named by its title (or by
+`ariaLabel` when it has none), and its header is a tab stop with its keys described:
+
+| Key           | Where                | Does                                                                     |
+| ------------- | -------------------- | ------------------------------------------------------------------------ |
+| Arrows        | the header           | Moves the window a step (16 px at the defaults)                          |
+| Alt+arrows    | the header           | Resizes it (left and up shrink)                                          |
+| Shift         | with either          | Four steps at once                                                       |
+| Enter         | the header           | Collapses or expands it                                                  |
+| F6 / Shift+F6 | anywhere on the page | Moves the focus to the next / previous window and brings it to the front |
+
+F6 goes through the open windows in the order they were opened, the app's first and then the
+debug tools', from the canvas as well as from inside a window. In an embed it works inside the
+mount's container only, so the host page keeps its own F6. If your game binds F6, move the cycle
+keys or turn them off:
+
+```ts
+import { setWindowCycleKeys } from 'aekasha/ui';
+
+setWindowCycleKeys({ next: 'Ctrl+F6', previous: 'Ctrl+Shift+F6' }); // or null: none
+```
+
+The collapse and close buttons have their labels and tooltips, a title cut by the window's width
+shows whole in a tooltip, and a content with no control in it is a tab stop itself, so it scrolls
+with the keys too.
+
 ### One window per thing: kinds
 
 An edit window per entity, an info window per item: a window kind. Register the kind once with
@@ -184,6 +212,10 @@ const saveTip = createTooltip({ anchor: save.elem, text: 'Saves the scene (Ctrl+
 saveTip.cmp.remove();
 ```
 
+An icon button's tooltip that only repeats its `aria-label` describes nothing more, so it isn't
+named in `aria-describedby`. `onlyWhenTruncated: true` shows a label's whole text only while an
+ellipsis cuts it (the windows' titles use it).
+
 A [popover](api:createPopover) holds interactive content next to its trigger, which opens and
 closes it. The focus moves in when it opens. Escape closes it and gives the focus back to the
 trigger, and a press outside it, or the focus leaving it, closes it. `content` can be a function,
@@ -245,6 +277,15 @@ as usual: the drop-down's default styles have zero specificity, so any class ove
 
 In debug mode, the editor views (the material editor) hide the HUD root's children, except one
 with [`KEEP_IN_VIEWS_CLASS`](api:KEEP_IN_VIEWS_CLASS).
+
+A window is the class `aekWindow` with its parts `aekWindow__header`, `aekWindow__title`,
+`aekWindow__button` (`aekWindow__collapse`, `aekWindow__close`) and `aekWindow__content`, its state
+in `data-state="collapsed"` / `"expanded"`, and a dialog's backdrop `aekWindowBackdrop`. Its custom
+properties, read on the window or any ancestor (the HUD root for every window):
+`--aek-window-header-height`, `--aek-window-radius`, `--aek-window-bg`, `--aek-window-header-bg`,
+`--aek-window-border-color` and `--aek-window-shadow`. The kit's styles are in the CSS layer
+`aek.components` with zero specificity, so any rule of yours wins, a broad one too: scope a
+`button { … }` of your own page to your own UI.
 
 ### Without the engine
 
@@ -324,9 +365,10 @@ settingsPanel.updateAttr({ 'data-aek-theme': 'dark' }); // One panel in it
 subtree (12 px text and tighter spacing at the defaults), for dense panels.
 
 ::: note The kit's own colours come later
-The kit's windows, dialogs, drop-downs and toasts keep their own colours for now: the themes and
-the colour tokens are for your own UI, and a later version moves the kit onto them. The UI scale,
-the font size, the fonts, reduced motion and the focus ring below apply to the kit already.
+The windows and dialogs, the tooltips and the popovers follow the themes and densities. The
+drop-downs and the toasts keep their own colours for now: a later version moves them onto the
+tokens. The UI scale, the font size, the fonts, reduced motion and the focus ring below apply to
+the whole kit already.
 :::
 
 ### UI scale and font size
@@ -396,8 +438,8 @@ container; `vw` and `vh` are the browser window's, as in CSS.
   [`closeDraggableWindow`](api:closeDraggableWindow),
   [`toggleDraggableWindow`](api:toggleDraggableWindow),
   [`updateDraggableWindow`](api:updateDraggableWindow),
-  [`registerDraggableWindowKind`](api:registerDraggableWindowKind) and
-  [`getKindWindowId`](api:getKindWindowId).
+  [`registerDraggableWindowKind`](api:registerDraggableWindowKind),
+  [`getKindWindowId`](api:getKindWindowId) and [`setWindowCycleKeys`](api:setWindowCycleKeys).
 - [`openDialog`](api:openDialog) and [`createDropDown`](api:createDropDown).
 - [`createTooltip`](api:createTooltip) ([`Tooltip`](api:Tooltip)) and
   [`createPopover`](api:createPopover) ([`Popover`](api:Popover)).

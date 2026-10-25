@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2461,
-      "total": 2461
+      "documented": 2479,
+      "total": 2479
     },
     "members": {
       "documented": 1043,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2381,
-        "total": 2381
+        "documented": 2399,
+        "total": 2399
       },
       "members": {
         "documented": 890,
@@ -651,8 +651,8 @@
     },
     "engine/ui/overlays/windows": {
       "exports": {
-        "documented": 52,
-        "total": 52
+        "documented": 70,
+        "total": 70
       },
       "members": {
         "documented": 0,

@@ -3,7 +3,6 @@
 // a freshly mounted window. Reads the DOM and the HUD's bounds (`getWindowSize`: the viewport, or a
 // mounted engine's container), holds no state.
 import { getWindowSize } from '../../core/Window';
-import styles from './DraggableWindow.module.scss';
 import type {
   DraggableWindowConfig,
   DraggableWindowRuntime,
@@ -11,6 +10,18 @@ import type {
   GrabArea,
   WindowEntry,
 } from './DraggableWindowTypes';
+
+/**
+ * The window element's attribute while a resize or a fit measures it: no height transition
+ * (`DraggableWindow.scss`).
+ * @internal
+ */
+export const RESIZING_ATTR = 'data-resizing';
+/**
+ * The window element's state attribute: `collapsed` or `expanded` (p803 D5).
+ * @internal
+ */
+export const STATE_ATTR = 'data-state';
 
 /** How much of a window's title area a drag keeps horizontally on screen */
 const MIN_GRAB_VISIBLE_PX = 80;
@@ -163,8 +174,8 @@ export const fitWindow = (entry: WindowEntry, cascadeIndex: number) => {
   const prev = JSON.stringify([g, config.units?.size]);
 
   // Measured expanded and without the height transition, so the reads are the final size
-  elem.classList.add(styles.resizing);
-  if (config.isCollapsed) elem.classList.remove(styles.collapsed);
+  elem.setAttribute(RESIZING_ATTR, '');
+  if (config.isCollapsed) elem.setAttribute(STATE_ATTR, 'expanded');
 
   let rect = elem.getBoundingClientRect();
   const sizeUnits = { ...config.units?.size };
@@ -198,11 +209,11 @@ export const fitWindow = (entry: WindowEntry, cascadeIndex: number) => {
   keepOnScreen(entry);
 
   if (config.isCollapsed) {
-    elem.classList.add(styles.collapsed);
+    elem.setAttribute(STATE_ATTR, 'collapsed');
     // Flushes the collapsed height before the transition comes back, so it doesn't animate
     void elem.offsetHeight;
   }
-  elem.classList.remove(styles.resizing);
+  elem.removeAttribute(RESIZING_ATTR);
   return JSON.stringify([g, config.units?.size]) !== prev;
 };
 
