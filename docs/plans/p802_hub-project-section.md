@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Documentation, Hub, Tooling
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p809_project-roadmaps-and-docs-split.md
@@ -255,7 +255,7 @@ plus the phase's own. No engine code changes, so `yarn verify:scenes` isn't need
      committed check would need a browser in `yarn test`; a `verify:` mode is the place if one
      is wanted.
 
-### Phase 2: the Project pages, `code-blocks/`, the hero links
+### Phase 2: the Project pages, `code-blocks/`, the hero links — done
 
 D5's `project/aekasha/` and `project/app/` pages with their prose, D7's move with its references,
 D6's hero slot. `aek:covers` on each page for the CLAUDE.md sections it explains.
@@ -297,6 +297,22 @@ As built (section 2):
 - Checked: `yarn hub:build --no-embed` (API included: 91 pages, no warnings, no
   `documentation/code-blocks/` in the output) and a `dev` build (95 pages, no diagnostics: the
   region include, the breadcrumbs' "Local only", the dev-only link).
+
+As built (section 3):
+
+- `generated-hero-project` (`generated/home.ts`' `renderHeroProject`), under `generated-hero-side`
+  in `.hubHeroSide`: `''` in `public` (the slot's `<div>` stays, holding only a newline, so
+  nothing shows), in `dev` a `.hubHeroProject` block: a "Project" eyebrow with the `compass` icon
+  and the "Local only" badge, then the links (`PROJECT_LINKS`), each through `resolveHubLink`
+  with `isInDevOnly`. Today: The app, Developing Ækasha, Plan workflow
+  (`project/aekasha#from-a-plan-to-a-merge`), Code blocks. **Phase 3 puts the app's design
+  document first and Ækasha's after the app's page; Phase 4 adds the component library** (D6's
+  order).
+- Styles in `_home.scss`: a list with right-aligned arrows in the side column; where the side
+  column becomes a full-width row (below `$toc-column`) the links wrap side by side and the badge
+  sits by its label. Checked in screenshots at 1400, 1100 and 390 px.
+- Test: `devPages.test.ts` (the slot is empty with no links in `public`, and every link is a
+  dev-only one to `project/` in `dev`). `hub/CLAUDE.md`'s homepage line names the slot.
 
 ### Phase 3: the design document (after p801)
 

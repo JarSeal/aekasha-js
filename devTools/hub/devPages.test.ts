@@ -5,6 +5,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HubDiagnostics } from './diagnostics';
 import type { HubMarkdownEnv } from './markdown';
 import type { RenderedPage } from './renderPages';
+import type { ProjectMetadata } from '../projectMetadata';
 import type { HubBuildMode, HubPage } from './types';
 
 // p802 D1, D2, D4: `aek:dev` pages are in the dev server's Hub only, and a public page links one
@@ -24,6 +25,7 @@ vi.mock('./paths', async (importOriginal) => {
 const { discoverPages, removeDevPages } = await import('./pages');
 const { createHubMarkdown, createMarkdownEnv } = await import('./markdown');
 const { checkLinks } = await import('./renderPages');
+const { createHomeSection } = await import('./generated/home');
 
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'aek-p802-dev-pages-'));
 afterAll(() => fs.rmSync(TMP, { recursive: true, force: true }));
@@ -195,5 +197,35 @@ describe('the dev-only depth', () => {
     const { tree } = discover();
     const guides = tree.byPath.get('guides/')!;
     expect(renderAndCheck(`${DEV_ONLY_LINK}\n${PLAIN_LINK}`, guides, tree, 'dev')).toHaveLength(1);
+  });
+});
+
+describe("the homepage hero's Project links (D6)", () => {
+  beforeEach(writeFixture);
+
+  const renderSlot = (mode: HubBuildMode) => {
+    const { tree } = discover();
+    const env: HubMarkdownEnv = createMarkdownEnv(tree.root, '', new HubDiagnostics(), {
+      mode,
+      icons: { render: () => '' },
+      tree,
+    } as unknown as Parameters<typeof createMarkdownEnv>[3]);
+    const slot = createHomeSection({} as ProjectMetadata, null).slots['generated-hero-project'];
+    return { html: slot(createHubMarkdown(), env), env };
+  };
+
+  it('are empty in a public build', () => {
+    const { html, env } = renderSlot('public');
+    expect(html).toBe('');
+    expect(env.links).toEqual([]);
+  });
+
+  it('are dev-only links in dev', () => {
+    const { html, env } = renderSlot('dev');
+    expect(html).toContain('hubHeroProject');
+    expect(env.links.length).toBeGreaterThan(0);
+    expect(
+      env.links.every((link) => link.isInDevOnly && link.targetPath.startsWith('project/'))
+    ).toBe(true);
   });
 });

@@ -11,6 +11,8 @@ import { VERSION_SECTION_PATH, type HubChangePart, type HubLatestChange } from '
  * The homepage's generated slots:
  * - the hero's side text: the engine's description from `package.json`
  *   (`engine_metadata.description`), so the Hub and the package say the same thing;
+ * - under it, in `dev` only, the Project section's quick links (p802 D6: a generated slot, so the
+ *   homepage's markup links no dev page; empty in `public`);
  * - "What's new": `CHANGELOG.md`'s latest entry (its date, branch and the parts it bumped), linked
  *   to its anchor on the Version page. The anchor is the heading's slug, built here (the homepage
  *   renders before the changelog), and checked like any `hub:` link after the render;
@@ -19,6 +21,7 @@ import { VERSION_SECTION_PATH, type HubChangePart, type HubLatestChange } from '
 
 const HOME_PATH = '';
 const HERO_SIDE_SLOT = 'generated-hero-side';
+const HERO_PROJECT_SLOT = 'generated-hero-project';
 const WHATS_NEW_SLOT = 'generated-whats-new';
 const QUICK_LINKS_SLOT = 'generated-quick-links';
 
@@ -33,6 +36,14 @@ const QUICK_LINKS = [
   },
   { href: 'hub:examples', icon: 'box', label: 'Examples', text: 'Scenes to run and read' },
   { href: 'hub:issues', icon: 'bug', label: 'Issues', text: 'Known issues and workarounds' },
+] as const;
+
+/** The hero's Project links (dev pages): Phases 3 and 4 add the design document and components */
+const PROJECT_LINKS = [
+  { href: 'hub:project/app', label: 'The app' },
+  { href: 'hub:project/aekasha', label: 'Developing Ækasha' },
+  { href: 'hub:project/aekasha#from-a-plan-to-a-merge', label: 'Plan workflow' },
+  { href: 'hub:project/aekasha/code-blocks', label: 'Code blocks' },
 ] as const;
 
 const MONTHS = [
@@ -105,12 +116,28 @@ const renderQuickLinks = (repoUrl: string, env: HubMarkdownEnv) => {
   return `<ul class="hubQuickLinks">${links.join('')}</ul>\n`;
 };
 
+/** The Project section's quick links, `dev` only: every link is to a dev page */
+const renderHeroProject = (env: HubMarkdownEnv) => {
+  if (env.mode !== 'dev') return '';
+  env.file = HOME_FILE;
+  const arrow = env.icons.render('arrow-right', HOME_FILE);
+  const links = PROJECT_LINKS.map(
+    ({ href, label }) =>
+      `<li><a href="${resolveHubLink(href, env, HOME_FILE, 1, true)}">${label}${arrow}</a></li>`
+  );
+  return `<div class="hubHeroProject">
+<p class="hubEyebrow">${env.icons.render('compass', HOME_FILE)}Project<span class="hubDevOnlyBadge" title="Shown by the dev server's Hub only">Local only</span></p>
+<ul>${links.join('')}</ul>
+</div>
+`;
+};
+
 /** The repo's web URL, from `package.json`: the Hub's GitHub links and its source links */
 export const getRepoWebUrl = (meta: ProjectMetadata) => toRepoWebUrl(meta.engine.repoUrl);
 
 /**
- * The homepage's generated slots: the hero's side, "What's new" from `latestChange`, the quick
- * links
+ * The homepage's generated slots: the hero's side and its Project links, "What's new" from
+ * `latestChange`, the quick links
  */
 export const createHomeSection = (
   meta: ProjectMetadata,
@@ -122,6 +149,7 @@ export const createHomeSection = (
       env.file = PACKAGE_JSON_FILE;
       return `<p>${escapeHtml(meta.engine.description)}</p>\n`;
     },
+    [HERO_PROJECT_SLOT]: (_md, env) => renderHeroProject(env),
     [WHATS_NEW_SLOT]: (_md, env) => renderWhatsNew(latestChange, env),
     [QUICK_LINKS_SLOT]: (_md, env) => renderQuickLinks(getRepoWebUrl(meta), env),
   },

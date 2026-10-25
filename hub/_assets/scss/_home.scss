@@ -87,6 +87,69 @@
   }
 }
 
+// The Project section's links under the description, the dev server's Hub only (p802 D6)
+.hubHeroProject {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--hub-border);
+
+  .hubEyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+
+    > .hubIcon {
+      width: 1rem;
+      height: 1rem;
+    }
+  }
+
+  .hubDevOnlyBadge {
+    color: var(--hub-text-muted);
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  // The prose's `li + li` spacing would push every link but the first down
+  li {
+    margin: 0;
+  }
+
+  a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.35rem 0;
+    color: var(--hub-text);
+    text-decoration: none;
+    transition: color var(--aek-motion-base);
+
+    > .hubIcon {
+      flex: none;
+      width: 1rem;
+      height: 1rem;
+      color: var(--hub-accent);
+      transition: transform var(--aek-motion-base);
+    }
+
+    &:hover {
+      color: var(--hub-accent);
+
+      > .hubIcon {
+        transform: translateX(2px);
+      }
+    }
+  }
+}
+
 @media (max-width: ($toc-column - 1px)) {
   .hubHeroInner {
     grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
@@ -97,6 +160,24 @@
     padding: 1.5rem 0 2.5rem;
     border-top: 1px solid var(--hub-border);
     border-left: 0;
+  }
+
+  // A full-width row here: the links wrap side by side, the badge stays by its label
+  .hubHeroProject {
+    .hubDevOnlyBadge {
+      margin-left: 0.25rem;
+    }
+
+    ul {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0 2rem;
+    }
+
+    a {
+      justify-content: flex-start;
+      gap: 0.4rem;
+    }
   }
 }
 
