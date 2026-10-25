@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   BOX_STATE_NAME,
+  describeStep,
   findAllowance,
   findStaleAllowances,
   getDemoStates,
+  groupProblems,
   groupViolations,
   parseUiArgs,
 } from './uiChecks';
@@ -73,5 +75,31 @@ describe('the allow list', () => {
     const found = new Set(['aria-dialog-name@window']);
     expect(findStaleAllowances(list, ['window'], found)).toEqual([]);
     expect(findStaleAllowances(list, ['window', 'toaster'], found)).toEqual([list[1]]);
+  });
+});
+
+describe('describeStep', () => {
+  it('names each kind of step in a line', () => {
+    expect(describeStep({ button: 0 })).toBe('button 1');
+    expect(describeStep({ press: 'Shift+Tab' })).toBe('press Shift+Tab');
+    expect(describeStep({ expectAttr: '#t', name: 'aria-expanded', value: null })).toBe(
+      'expectAttr #t aria-expanded=absent'
+    );
+    expect(describeStep({ expectCount: '.toast', count: 0 })).toBe('expectCount .toast = 0');
+    expect(describeStep({ expectActiveOption: 'Teal' })).toBe('expectActiveOption "Teal"');
+  });
+});
+
+describe('groupProblems', () => {
+  it('lists each problem once with its settings', () => {
+    expect(
+      groupProblems([
+        { setting: 'dark', problems: ['a', 'b'] },
+        { setting: 'light', problems: ['a'] },
+      ])
+    ).toEqual([
+      { problem: 'a', settings: ['dark', 'light'] },
+      { problem: 'b', settings: ['dark'] },
+    ]);
   });
 });

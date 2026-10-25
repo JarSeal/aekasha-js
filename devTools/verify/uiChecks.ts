@@ -3,7 +3,7 @@
  * the settings each runs in, and the violations' grouping and allow list. Tested in Node
  * (`uiChecks.test.ts`).
  */
-import type { UiCheckStep, UiDemoChecks } from '../../hub/_assets/ts/_componentChecks';
+import type { UiCheckStep, UiDemoChecks, UiKeyStep } from '../../hub/_assets/ts/_componentChecks';
 import type { UiAllowedViolation } from './ui.config';
 
 export const UI_USAGE = 'yarn verify:ui [--url <hub url>] [--only <piece>[,<piece>…]] [--headed]';
@@ -72,6 +72,35 @@ export const getDemoStates = (buttonTexts: string[], checks: UiDemoChecks | unde
     states.push(state);
   }
   return states;
+};
+
+/** A step in a line of output: `press Escape`, `expectCount #hudRoot .toast = 0` */
+export const describeStep = (step: UiRunStep | UiKeyStep) => {
+  if ('button' in step) return `button ${step.button + 1}`;
+  if ('click' in step) return `click "${step.click}"`;
+  if ('clickHud' in step) return `clickHud ${step.clickHud}`;
+  if ('focusHud' in step) return `focusHud ${step.focusHud}`;
+  if ('press' in step) return `press ${step.press}`;
+  if ('expectFocus' in step) return `expectFocus ${step.expectFocus}`;
+  if ('expectAttr' in step) {
+    return `expectAttr ${step.expectAttr} ${step.name}=${step.value === null ? 'absent' : `"${step.value}"`}`;
+  }
+  if ('expectCount' in step) return `expectCount ${step.expectCount} = ${step.count}`;
+  if ('expectText' in step) return `expectText ${step.expectText} "${step.text}"`;
+  return `expectActiveOption "${step.expectActiveOption}"`;
+};
+
+/** A problem and the settings it came up in, in the order first seen */
+export const groupProblems = (bySetting: { setting: string; problems: string[] }[]) => {
+  const byProblem = new Map<string, string[]>();
+  for (const { setting, problems } of bySetting) {
+    for (const problem of problems) {
+      const settings = byProblem.get(problem) ?? [];
+      if (!settings.includes(setting)) settings.push(setting);
+      byProblem.set(problem, settings);
+    }
+  }
+  return [...byProblem].map(([problem, settings]) => ({ problem, settings }));
 };
 
 /** An axe-core violation as the page returns it: the rule and the nodes' selectors */

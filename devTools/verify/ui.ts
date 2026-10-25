@@ -14,6 +14,10 @@
  * - After the steps, it waits for the page to settle (no animation running, the HUD root's boxes
  *   the same on two polls), then runs axe-core (`UI_AXE_TAGS`) over the box and the HUD root,
  *   where the demos' overlays open. A console or page error fails the state too.
+ * - Then each keyboard script of the table, on its own page load per setting (`uiPage.ts`'
+ *   `runKeyStepsAsync`): its clicks, focus moves and keys, each expectation polled for up to 3 s
+ *   (the script stops at the first one that doesn't come), and after every key the focused
+ *   element showing an outline (its computed `outline-style` not `none`).
  * - `--only` runs the named pieces (the boxes' `data-hub-demo` keys). An allowance for a piece
  *   that ran and matched nothing is listed at the end: it can go.
  *
@@ -27,15 +31,17 @@ import path from 'path';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import type { Browser, BrowserContext, Page } from 'playwright-core';
-import { UI_DEMO_CHECKS } from '../../hub/_assets/ts/_componentChecks';
+import { UI_DEMO_CHECKS, type UiKeyScript } from '../../hub/_assets/ts/_componentChecks';
 import { launchChromium } from './browser';
 import { startVerifyServerAsync } from './devServer';
+import { boxSelector, runKeyStepsAsync, takeStepsAsync } from './uiPage';
 import { UI_ALLOWED_VIOLATIONS, UI_AXE_TAGS } from './ui.config';
 import {
   findAllowance,
   findStaleAllowances,
   formatSetting,
   getDemoStates,
+  groupProblems,
   groupViolations,
   parseUiArgs,
   UI_PAGE_PATH,
@@ -79,8 +85,6 @@ const getAxeSource = () =>
     createRequire(import.meta.url).resolve('axe-core/axe.min.js'),
     'utf8'
   ));
-
-const boxSelector = (piece: string) => `[data-hub-demo="${piece}"]`;
 
 /** The page's demos mounted: the HUD root made and the boxes filled */
 const waitForDemosAsync = (page: Page, timeout: number) =>
@@ -138,27 +142,38 @@ const settleAsync = async (page: Page) => {
   return false;
 };
 
-const takeStepAsync = async (page: Page, piece: string, step: UiState['steps'][number]) => {
-  if ('button' in step) {
-    await page
-      .locator(`${boxSelector(piece)} button`)
-      .nth(step.button)
-      .click();
-  } else if ('click' in step) {
-    const escaped = step.click.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    await page
-      .locator(`${boxSelector(piece)} button`)
-      .filter({ hasText: new RegExp(`^\\s*${escaped}\\s*$`) })
-      .first()
-      .click();
-  } else {
-    await page.locator(`#hudRoot ${step.clickHud}`).first().click();
-  }
-};
-
 type SettingRun = { setting: string; violations: UiViolation[]; problems: string[] };
 
-/** One state in one setting, on its own page load */
+/**
+ * A fresh page load of the demos in a setting, running `steps` on it; the console's and the
+ * page's errors and a throw are the run's problems
+ */
+const withDemoPageAsync = async (
+  context: BrowserContext,
+  url: string,
+  setting: UiSetting,
+  steps: (page: Page, problems: string[]) => Promise<void>
+) => {
+  const problems: string[] = [];
+  const page = await context.newPage();
+  page.setDefaultTimeout(LOAD_TIMEOUT_MS);
+  page.on('console', (msg) => msg.type() === 'error' && problems.push(`console: ${msg.text()}`));
+  page.on('pageerror', (err) => problems.push(`page error: ${err.message}`));
+  try {
+    await page.goto(url);
+    await waitForDemosAsync(page, LOAD_TIMEOUT_MS);
+    await page.check(`input[name="theme"][value="${setting.theme}"]`);
+    await page.check(`input[name="density"][value="${setting.density}"]`);
+    await steps(page, problems);
+  } catch (err) {
+    problems.push(`stopped: ${(err as Error).message.split('\n')[0]}`);
+  } finally {
+    await page.close();
+  }
+  return problems;
+};
+
+/** One state in one setting: its steps, the settle, then axe over the box and the HUD root */
 const runStateAsync = async (
   context: BrowserContext,
   url: string,
@@ -166,19 +181,9 @@ const runStateAsync = async (
   state: UiState,
   setting: UiSetting
 ): Promise<SettingRun> => {
-  const label = formatSetting(setting);
-  const problems: string[] = [];
-  const page = await context.newPage();
-  page.setDefaultTimeout(LOAD_TIMEOUT_MS);
-  page.on('console', (msg) => msg.type() === 'error' && problems.push(`console: ${msg.text()}`));
-  page.on('pageerror', (err) => problems.push(`page error: ${err.message}`));
   let violations: UiViolation[] = [];
-  try {
-    await page.goto(url);
-    await waitForDemosAsync(page, LOAD_TIMEOUT_MS);
-    await page.check(`input[name="theme"][value="${setting.theme}"]`);
-    await page.check(`input[name="density"][value="${setting.density}"]`);
-    for (const step of state.steps) await takeStepAsync(page, piece, step);
+  const problems = await withDemoPageAsync(context, url, setting, async (page, problems) => {
+    await takeStepsAsync(page, piece, state.steps);
     if (!(await settleAsync(page))) problems.push(`not settled after ${SETTLE_TIMEOUT_MS} ms`);
     await page.addScriptTag({ content: getAxeSource() });
     violations = await page.evaluate(
@@ -196,56 +201,74 @@ const runStateAsync = async (
       },
       { box: boxSelector(piece), tags: [...UI_AXE_TAGS] }
     );
-  } catch (err) {
-    problems.push(`stopped: ${(err as Error).message.split('\n')[0]}`);
-  } finally {
-    await page.close();
-  }
-  return { setting: label, violations, problems };
+  });
+  return { setting: formatSetting(setting), violations, problems };
 };
 
-/** Runs a piece's states and prints them; the rule@piece keys found, and how many states failed */
+/** Where a problem or a violation came up: every setting, or the ones named */
+const formatSettings = (settings: string[]) =>
+  settings.length === UI_SETTINGS.length ? 'all settings' : settings.join(', ');
+
+/** Prints a state's or a script's line and its problems; true when it failed */
+const printRun = (name: string, runs: SettingRun[], piece: string, found: Set<string>) => {
+  const lines: string[] = [];
+  let isFailed = false;
+  for (const { problem, settings } of groupProblems(runs)) {
+    isFailed = true;
+    lines.push(`${RED}${problem} (${formatSettings(settings)})${RESET}`);
+  }
+  for (const v of groupViolations(runs)) {
+    found.add(`${v.rule}@${piece}`);
+    const allowance = findAllowance(UI_ALLOWED_VIOLATIONS, v.rule, piece);
+    if (!allowance) isFailed = true;
+    const head = `${v.rule} (${v.impact}, ${formatSettings(v.settings)}): ${v.help}`;
+    lines.push(
+      allowance
+        ? `${DIM}${head} (allowed until ${allowance.until})${RESET}`
+        : `${RED}${head}${RESET}`
+    );
+    for (const target of v.targets.slice(0, MAX_TARGETS)) lines.push(`  ${DIM}${target}${RESET}`);
+    if (v.targets.length > MAX_TARGETS) {
+      lines.push(`  ${DIM}… ${v.targets.length - MAX_TARGETS} more${RESET}`);
+    }
+  }
+  out(`  ${isFailed ? `${RED}✗` : `${GREEN}✓`} ${name}${RESET}`);
+  for (const line of lines) out(`      ${line}`);
+  return isFailed;
+};
+
+/**
+ * Runs a piece's states and keyboard scripts, each in every setting at once, and prints them
+ * @returns the rule@piece keys found, and how many states and scripts failed
+ */
 const checkPieceAsync = async (
   contexts: BrowserContext[],
   url: string,
   piece: string,
-  states: UiState[]
+  states: UiState[],
+  scripts: UiKeyScript[]
 ) => {
-  out(`\n${piece} ${DIM}(${states.length} states × ${UI_SETTINGS.length} settings)${RESET}`);
+  const counts = `${states.length} states, ${scripts.length} keyboard scripts`;
+  out(`\n${piece} ${DIM}(${counts}, × ${UI_SETTINGS.length} settings)${RESET}`);
   const found = new Set<string>();
   let failed = 0;
   for (const state of states) {
     const runs = await Promise.all(
       UI_SETTINGS.map((setting, i) => runStateAsync(contexts[i], url, piece, state, setting))
     );
-    const lines: string[] = [];
-    let isFailed = false;
-    for (const run of runs) {
-      for (const problem of run.problems) {
-        isFailed = true;
-        lines.push(`${RED}${run.setting}: ${problem}${RESET}`);
-      }
-    }
-    for (const v of groupViolations(runs)) {
-      found.add(`${v.rule}@${piece}`);
-      const allowance = findAllowance(UI_ALLOWED_VIOLATIONS, v.rule, piece);
-      if (!allowance) isFailed = true;
-      const where =
-        v.settings.length === UI_SETTINGS.length ? 'all settings' : v.settings.join(', ');
-      const head = `${v.rule} (${v.impact}, ${where}): ${v.help}`;
-      lines.push(
-        allowance
-          ? `${DIM}${head} (allowed until ${allowance.until})${RESET}`
-          : `${RED}${head}${RESET}`
-      );
-      for (const target of v.targets.slice(0, MAX_TARGETS)) lines.push(`  ${DIM}${target}${RESET}`);
-      if (v.targets.length > MAX_TARGETS) {
-        lines.push(`  ${DIM}… ${v.targets.length - MAX_TARGETS} more${RESET}`);
-      }
-    }
-    if (isFailed) failed++;
-    out(`  ${isFailed ? `${RED}✗` : `${GREEN}✓`} ${state.name}${RESET}`);
-    for (const line of lines) out(`      ${line}`);
+    if (printRun(state.name, runs, piece, found)) failed++;
+  }
+  for (const script of scripts) {
+    const runs = await Promise.all(
+      UI_SETTINGS.map(async (setting, i) => ({
+        setting: formatSetting(setting),
+        violations: [],
+        problems: await withDemoPageAsync(contexts[i], url, setting, async (page, problems) => {
+          problems.push(...(await runKeyStepsAsync(page, piece, script.steps)));
+        }),
+      }))
+    );
+    if (printRun(`keys: ${script.name}`, runs, piece, found)) failed++;
   }
   return { found, failed };
 };
@@ -267,8 +290,9 @@ const runAsync = async (args: UiArgs, browser: Browser, url: string) => {
   const found = new Set<string>();
   let failed = 0;
   for (const { piece, buttons } of selected) {
-    const states = getDemoStates(buttons, UI_DEMO_CHECKS[piece]);
-    const result = await checkPieceAsync(contexts, url, piece, states);
+    const checks = UI_DEMO_CHECKS[piece];
+    const states = getDemoStates(buttons, checks);
+    const result = await checkPieceAsync(contexts, url, piece, states, checks?.keyboard ?? []);
     for (const key of result.found) found.add(key);
     failed += result.failed;
   }

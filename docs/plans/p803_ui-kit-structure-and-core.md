@@ -795,6 +795,40 @@ As built (section 1, 2026-10-25):
   for their name, modal state or focus. Those are the keyboard scripts' (section 2) and D8's.
   No colour contrast violation either, in either theme.
 
+As built (section 2, 2026-10-25):
+
+- The step format is `_componentChecks.ts`' `UiKeyStep`: the states' `click` (a box button by its
+  text) and `clickHud`, plus `focusHud` (a HUD root selector, focused as a script would: no key
+  reaches a window yet, F6 does from Phase 5), `press` (Playwright's key names), and five
+  expectations: `expectFocus`, `expectAttr` (null: absent), `expectCount`, `expectText` and
+  `expectActiveOption` (the text of the option the focused element's `aria-activedescendant`
+  names: the drop-down's list now, the menu's and the searchable drop-down's later). Selectors
+  are the page's (`#hudRoot …` for the kit's), so a script can expect focus back on the opener
+  in the box (Phase 4).
+- The runner (`uiPage.ts`, the page side; `ui.ts` runs each script on its own page load in each
+  setting after the piece's states): each expectation polls for up to 3 s (a close may animate)
+  and the script stops at the first that doesn't come, naming the step and what the page had
+  (`step 8 (expectActiveOption "Gold"): "Teal"`). After every `press`, the focused element (not
+  the body) must show an outline within 500 ms. A problem in all four settings prints once.
+- **The scripts say what's true today**, so each passes now; a phase that fixes a key changes
+  its steps (Phase 4: Escape in the dialog's list closing the list only, focus back on the
+  opener). Six:
+  - window: the collapse button by Enter and Space (the class `*collapsed*` until Phase 5's
+    `data-state`), Tab to the close button, Enter closes it;
+  - dialog: Escape closes a `closeOnEscape` one (focus still on the Hub button: the window
+    listener takes Escape from anywhere, which Phase 4 confines to the HUD root, where Phase 5
+    moves the focus); a default dialog stays open on Escape and its OK button closes it;
+  - drop-down: Enter opens the list (`aria-expanded`, focus on the list, the active option the
+    value), ArrowDown, End, Home move, Enter picks (the list gone, the label the pick); Space
+    opens it, Escape closes it without a change;
+  - toaster: Enter on a closable toast's close button removes it.
+  - icons: none (nothing to press).
+- Checked that they can fail: two expectations broken on purpose failed with their step and the
+  page's value, and a probe found the outline check reads `:focus-visible` (a script's focus
+  after a click shows none, the next key turns it on, and an injected `outline: none` reads as
+  `none`).
+- The run: 30 states and 6 scripts × 4 settings, about 50 s, passing with section 1's allow list.
+
 ### Phase 4: the overlay layer
 
 D7: `OverlayStack.ts`, `FocusTrap.ts`, `Anchor.ts`, the top layer with its fallback; the dialog's
