@@ -123,6 +123,8 @@ The folders p800 §5 sketched, with the files they take now:
 | `ui/styles/`, `ui/fonts/` | as they are, plus D4's `kit.scss`                                                                                                                                                                     |
 | `ui/data/`, `ui/game/`    | not created here: p805 and p808 create them                                                                                                                                                           |
 
+- `ui/testing/` holds D11's shared linkedom helper (`KitDom.ts`, Phase 0), which only tests
+  import.
 - The engine root's `ui/index.ts` and `CLAUDE.md` stay the only files directly in `ui/`.
   `layoutRules.ts` gets a rule per folder in place of the one `ui/` rule, so a module dropped
   directly into `ui/` fails `layout.test.ts`. The `ui/` boundary of `layout.ts` doesn't change.
@@ -219,10 +221,11 @@ The folders p800 §5 sketched, with the files they take now:
 - **`color-scheme`** in each theme block of `tokens.css` (`dark` / `light`; p801 left it here), so
   native scrollbars and inputs follow the kit's theme.
 - `aek.base` resets the controls inside the kit root:
-  `:where(.aekUi) :where(button, input, select, textarea) { font: inherit; color: inherit; }`. That
-  fixes the buttons' font and the toast's colour coming from the host (1.2's item 6). The debugger
-  sits under the HUD root and gets it too. Its stylesheets set their own sizes, and Phase 0
-  confirms that on the scene runner's screenshots.
+  `:where(.aekUi) :where(button, input, select, textarea) { font: inherit; color: inherit; }`, and
+  the kit root gets `color: var(--aek-text)` (it sets none, so `inherit` would give the host's).
+  That fixes the buttons' font and the toast's colour coming from the host (1.2's item 6). The
+  debugger sits under the HUD root and gets both: Phase 0 found no visible change on it (As
+  built).
 - Icons: `getSvgIcon` writes `aekIcon` (plus `uiIcon`, kept for the debugger until p806).
   `aekIcon` is `1em` square by default, so an icon follows its text, and
   `size: 'sm' | 'md' | 'lg'` maps to `--aek-icon-size-*` tokens (new, in the type scale's group).
@@ -259,7 +262,9 @@ The folders p800 §5 sketched, with the files they take now:
   list, the tooltip, the popover and the menu. A window's `overflow` no longer clips them (1.2's
   item 6). Inheritance follows the DOM, so the tokens still reach them. Where `showPopover` is
   missing (older WebGL 2 browsers), they stay in the HUD root at `--aek-z-tooltip`, and the
-  anchor helper subtracts the bounds' position as the windows do.
+  anchor helper subtracts the bounds' position as the windows do. In the top layer it doesn't:
+  there the mount's `contain: layout` doesn't apply, and the viewport rect is the position
+  (Phase 0).
 - **Modal dialogs don't use `<dialog>.showModal()`** (p800 D8 and §8's open question). It makes
   the whole document inert (a host page in an embed) and puts the dialog and its backdrop in the
   top layer, which ignores the mount's `contain: layout`, so the backdrop would cover the host
@@ -277,8 +282,9 @@ The folders p800 §5 sketched, with the files they take now:
   gzip for more than we need): place an element at a side of an anchor rect, flip to the other
   side when it doesn't fit, shift along the side to stay inside the bounds (`getWindowSize`: the
   container in an embed), and give it `max-height` / `max-width` from the space left. That
-  replaces the drop-down list's `40vh` (1.2's item 6). It repositions on scroll and resize while
-  open, read in one `requestAnimationFrame`.
+  replaces the drop-down list's `40vh` (1.2's item 6). It repositions on scroll (a capture
+  listener on the document: a host page's scroll moves the anchor, not a top-layer overlay) and
+  resize while open, read in one `requestAnimationFrame`.
 - The drop-down list's highlighted option shows the ring (`[data-active]` styled as
   `:focus-visible`), not the list: the list keeps DOM focus for `aria-activedescendant` (p801 §4.5,
   1.2's item 8).
@@ -390,9 +396,9 @@ Here are the decisions that aren't obvious from p800 §4.2:
 - **Unit tests** (Node, linkedom, next to each module) check a component's keyboard map (each key
   of its JSDoc), its ARIA states after each action, its disposal (no listener or timer left after
   `cmp.remove()`: a test helper counts them), and that nothing happens at load. The kit's linkedom
-  setup becomes one shared helper, if the structural tests allow a non-test module that imports
-  `vitest` (Phase 0 checks `ModuleLoad.test.ts` and the layout rules). Otherwise each test keeps
-  its copy.
+  setup becomes one shared helper, `ui/testing/KitDom.ts` (`@internal`, called in `beforeAll`),
+  with Phase 0's focus shim (As built: the structural tests pass with it). The kit writes `inert`,
+  ARIA and `popover` as attributes, which linkedom doesn't reflect from properties.
 - **`yarn verify:ui [--url <url>] [--only <piece>] [--update] [--headed]`**: a new command, not a
   mode of `verify:embed`, whose job is the embed (p800 §8's open question).
   `devTools/verify/ui.ts` serves the built Hub (`hubPreview`'s server) or `--url`. It opens the
@@ -515,6 +521,67 @@ As built (section 1, 2026-10-25, at `69086431`: `main` with this plan, macOS, Ch
   per theme the whole page and each demo button's state on its own page load (1440 × 900, the
   Hub's theme and the HUD root's `data-aek-theme` both set). A one-off script in the scratchpad,
   not committed.
+
+As built (section 2, 2026-10-25; one-off probes in the scratchpad, not committed):
+
+- **The top layer in an embed** (D7), a host page with a `contain: layout` container holding a
+  HUD root, a fixed window (`overflow: hidden`) and a `popover="manual"` list, in Chromium 155 and
+  Firefox 155 (Playwright's WebKit didn't download, twice: Safari is in the manual probe below):
+  - a fixed element in the container is relative to it, but the open popover sits at the
+    viewport coordinates it's given: the top layer ignores the mount's `contain: layout`. So the
+    anchor uses viewport rects as they are on the top layer path, and subtracts the bounds'
+    position only on the fallback path (in the HUD root);
+  - neither the window's `overflow` nor the container's clips it, and it inherits the HUD root's
+    custom properties (the tokens reach it);
+  - the browser doesn't close a manual popover on Escape. A capture `keydown` listener on the HUD
+    root gets a key pressed inside the popover (the event path follows the DOM), and its
+    `stopPropagation()` keeps the key from a bubble listener on the window;
+  - a host page scroll moves the container but not the popover, so the anchor repositions on
+    `scroll` in the capture phase on the document (any ancestor of the anchor may scroll), not
+    only on the window's;
+  - `inert` on a HUD root's child refuses focus and clicks there, and the host page's button keeps
+    both. A top-layer popover whose DOM parent is inert is inert too (a window's list under a
+    modal dialog), and a list inside the dialog isn't.
+- **linkedom 0.18.13** (D11): `document.activeElement` is always `undefined`; `focus()` fires
+  `focus` but not `focusin`; `.inert = true` neither reflects to the attribute nor blocks focus;
+  no `showPopover` (`:popover-open` throws); `:focus`, `:focus-visible` and `:focus-within`
+  throw; no `KeyboardEvent` constructor, `ResizeObserver`, `requestAnimationFrame` or
+  `getComputedStyle`; no ARIA property reflection (`ariaExpanded`); a `<button>`'s `tabIndex` is
+  -1. So:
+  - the shared helper (below) shims focus in about 20 lines: `activeElement` from `focus()` /
+    `blur()` (the body when none or removed), the four focus events, and an `[inert]` ancestor
+    blocking `focus()`;
+  - the kit writes `inert`, ARIA and `popover` as attributes (`toggleAttribute`, `setAttribute`),
+    never through reflected properties, finds focusables by selector (not `tabIndex`), and
+    feature-detects the Popover API, so linkedom runs the fallback path (Risks);
+  - key events stay `Event` with `key` assigned (today's `DropDown.test.ts`); `:focus-visible`
+    and the outline are `verify:ui`'s; the anchor's maths are pure functions, its rAF
+    repositioning `verify:ui`'s.
+- **A shared test helper** (D11): tried as `src/_engine/ui/testing/KitDom.ts`
+  (`stubKitDomAsync()`: linkedom, the `scrollIntoView` shim, `vi.stubGlobal`; `@internal`), called
+  as `beforeAll(stubKitDomAsync)` from `DropDown.test.ts`. `ModuleLoad.test.ts` (it imports the
+  helper, and `vitest` loads fine under a test run), the layout, side effects, engine imports and
+  `@example` tests, ESLint, `tsc` and `verify:baselines --docs` pass. It's in TypeDoc's model
+  (only `_dbg__*`, `*.test.ts` and `index.ts` are left out): a new folder in `docs.json` and its
+  export in `api.json`, which lists `@internal` exports too, so its change records them
+  (`--update`). It runs in `beforeAll`, not `vi.hoisted` (an import isn't there yet), as today's
+  tests do. Reverted after the trial; Phase 1's per-folder layout rules give `ui/testing/` one.
+- **The control reset and the debugger** (D5), 1,300 controls under the kit roots in the 15
+  drawer tabs, the profiler window and the About dialog, read with and without the layered
+  reset (canvas hidden for the screenshots): no font changes (every one sets its own: IBM Plex
+  for the debugger's, Roboto Mono for Tweakpane's). The colour changes on 12 kinds (the
+  on-screen tools, the windows' close and collapse buttons, the clear-LS buttons, Tweakpane's
+  checkboxes and swatches, the list toggles), and none shows: 0 pixels differ in the 17 pairs.
+  Adding `color: var(--aek-text)` on the kit root too changes no pixel either.
+  - The scene runner's snapshots are the canvas alone (`takeSnapshotAsync`), so no kit style can
+    change them: the drawer screenshots are the check.
+  - **The kit root sets no `color`**, so `color: inherit` gives a control the host's colour (the
+    on-screen tools read the body's black). The reset alone doesn't fix the toast's colour from
+    the host (1.2's item 6): D5 adds `color: var(--aek-text)` on the kit root.
+- **The window-cycle key** (D8) and Safari's top layer: a manual probe page
+  (`keyProbe/server.mjs` in the scratchpad: each candidate's keydown, whether focus left the page
+  after `preventDefault()`, and the top layer probe above) waits for runs in Chrome, Firefox,
+  Safari and Edge on macOS, and on Windows.
 
 ### Phase 1: the move and the names (no behaviour change)
 
