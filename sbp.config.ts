@@ -101,15 +101,17 @@ const profiles: SbpProfile[] = [
   },
   // #endregion banner-profile
   {
-    // The UI kit in an embed (p801 D9): one code-made scene that opens a window, a toast and a
-    // dialog with a drop-down, no feature, built into dist-embed/uiKit/; `yarn verify:embed` checks
-    // the kit's sizes and bounds in it
+    // The UI kit in an embed (p801 D9): one code-made scene that opens a window with a button and
+    // its tooltip, a toast and a dialog with a drop-down, no feature, built into dist-embed/uiKit/;
+    // `yarn verify:embed` checks the kit's sizes and bounds in it
     id: 'uiKit',
     entry: 'src/app/profiles/uiKit/uiKit.embed.ts',
     // Not `uiKit`: a scene file named like the entry would emit a second `assets/uiKit.css` (its
     // chunk's styles), which no file key tells apart from the entry's
     scenes: ['uiKitEmbed'],
-    // Set from p801 Phase 3's report (initial 285.8 KiB gzip): the banner's floor, the kit lazy
+    // Set from p801 Phase 3's report (initial 285.8 KiB gzip): the banner's floor, the kit lazy;
+    // p803 Phase 7 checked each against `suggestBudget` (initial 286.3 KiB): only the scene's two
+    // chunks changed
     budgets: {
       initial: 298 * KIB,
       chunks: {
@@ -117,14 +119,14 @@ const profiles: SbpProfile[] = [
         'uiKit.embed.js': 2 * KIB,
         'assets/uiKit.embed.js': 296 * KIB,
         'assets/uiKit.css': 3 * KIB,
-        // The scene's chunk: the kit's window, dialog, drop-down and toaster (10.2 KiB of it) and
-        // their styles, loaded with the scene. 17: p803 Phase 4 added the overlay stack, the focus
-        // trap, the anchor and the scene's tooltip (13.0 KiB), Phase 5 section 1 the windows' keys,
-        // ARIA and header tooltips (15.0 KiB), sections 3 and 4 the searchable drop-down and the
-        // toaster's live regions and pauses (16.1 kB); p803 Phase 7 resets it from `suggestBudget`
-        'assets/uiKitEmbed.js': 17 * KIB,
-        // 4: p803 Phase 5 section 4 moved the toaster's CSS out of its JS string (3.2 kB)
-        'assets/uiKitEmbed.css': 4 * KIB,
+        // The scene's chunk: the kit's window, dialog, drop-down, toaster, tooltip and button and
+        // their styles, loaded with the scene: what a HUD of those costs an app (p800 D10). Set by
+        // p803 Phase 7 from `suggestBudget` (17.9 KiB: the overlay layer, the windows' keys and
+        // ARIA, the searchable drop-down and the toaster's live regions from Phases 4-5; the
+        // button's 1.8 KiB with its Kbd and key names from Phase 7)
+        'assets/uiKitEmbed.js': 19 * KIB,
+        // The same pieces' styles, from `suggestBudget` (4.2 KiB: the button's 1.0 of it)
+        'assets/uiKitEmbed.css': 6 * KIB,
       },
       groups: {
         three: 261 * KIB,

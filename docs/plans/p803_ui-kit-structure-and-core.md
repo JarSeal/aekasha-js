@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-6 implemented
+Status: in progress | Phases 0-7 implemented
 Category: UI, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
@@ -1774,7 +1774,7 @@ For Phase 7:
 - A tinted background needs its text checked in the light theme (the badge's finding): the
   progress bar's and the empty state's colours by axe in all four settings.
 
-### Phase 7: core components II — feedback
+### Phase 7: core components II — feedback — done
 
 D10: Spinner, Progress bar, Skeleton, Divider, Empty state, Loading overlay; the debug scene
 loader onto the loading overlay (`_dbg__DebuggerSceneLoader.ts`: its spinner, its fades through
@@ -1973,6 +1973,59 @@ As built (section 3, 2026-10-25):
   within), `verify:baselines` recorded (the three `aekasha/ui` names, the 22 bytes).
   `verify:ui --only loadingOverlay`: four states and two scripts pass, no violation; the shots are
   new, to record with `--update` after review.
+
+As built (section 4, 2026-10-25):
+
+- **D11's embed checks were already in place**: the tooltip inside the container
+  (`UI_KIT_ELEMENTS.tooltip`, Phase 4), the drop-down's list in the top layer, Escape on the host
+  page and inside the dialog (Phase 4), and the host head's `<style>` count (Phase 5 section 4).
+  So the scene grows by p800 D10's missing piece: **the window's "Hint" is a kit button**
+  (`createButton({ label: 'Hint', size: 'sm' })`, its `createTooltip` kept for the check's class).
+  The scene's chunk (`assets/uiKitEmbed.js` and `.css`) is now p800 D10's "what does a HUD cost":
+  a window, a dialog, a toast and a button, with the drop-down and a tooltip.
+- **The budgets from `suggestBudget`** (`sbp.config.ts`): the scene's JS 17 → 19 KiB (17.9 KiB:
+  the button's +1.8), its CSS 4 → 6 KiB (4.2 KiB: the button's +1.0). Every other budget of the
+  profile already equals `suggestBudget` of today's size (initial 298, the entries 2 / 296 / 3,
+  three 261, assets 11, ECS 8, scene 5, `_engine/ui` 6, app 2), so they stay; the comments say so.
+  `devTools/sbp/CLAUDE.md` and the kit's `CLAUDE.md` describe the scene's button.
+- **Found, open for review: a button brings Kbd.** `Button.ts` (1.3 kB gzip alone) imports
+  `Kbd.ts` and `KeyNames.ts` statically for its `kbd` hint (1.2 kB gzip measured alone, about
+  0.7 kB of the button's 1.8 in the chunk), which a button without `kbd` doesn't use. Proposed for
+  p804 or later, not here: a `kbd` that takes a `createKbd` handle the app makes (the button stays
+  free of the key names), or the hint loaded on first use. The `aria-keyshortcuts` names
+  (`getAriaKeyShortcuts`) would stay a small import.
+- In the app build the `uiKitEmbed` scene's chunk carries the button too (+2.1 kB JS gzip and a new
+  1.5 kB stylesheet in `bundle.json`): the app builds every scene, and no other scene uses a kit
+  button yet.
+- **The poster** (D13: `uiKitEmbed.hub.png`) is Phase 8's, with the `::: embed uiKit` that shows it:
+  it's saved from the debug drawer's Hub tab, which needs `OTHER_HUB_SCENES` to list `uiKitEmbed`.
+
+The phase's verification (2026-10-25, at its end): `yarn test` (183 files, 1453 tests;
+`buildGuard.test.ts` failed in the Stop hook's runs beside a background build, a `hub:build` or
+`verify:embed`'s rebuild of `dist-embed/`, and passes alone: it builds the Hub, which reads the
+embed builds), `tsc` (both), `yarn lint`, `yarn hub:build` (1014 names, 100 % documented),
+`yarn verify:scenes` (104 passed against Phase 0's baselines), `verify:embed` (every scenario,
+both profiles, both host roots), `yarn sbp --profile all` (every budget within), `verify:baselines`
+recorded (the bundles: the button in the `uiKit` scene's chunk and the app's). `yarn verify:ui`,
+every piece: every keyboard script passes and no violation with the allow list empty; 11 states
+fail on screenshots only, all left to record since Phase 6 (the window's, drop-down's and
+toaster's three each, the icons box's two). Still to record with `--update` after review: those
+11 and every new box's shots of Phases 6 and 7.
+
+For Phase 8:
+
+- The Hub's "what does a HUD cost" line: `{{sbp:uiKit.chunk:assets/uiKitEmbed.js}}` and
+  `{{sbp:uiKit.chunk:assets/uiKitEmbed.css}}` (gzip, from the last `yarn sbp` report: 17.9 and
+  4.2 KiB today), the window, dialog, toast, button, drop-down and tooltip loaded with the scene,
+  over the kit's `{{sbp:uiKit.group:_engine/ui}}` in the initial chunks (the HUD root and CMP).
+- `uiKitEmbed.hub.png`, the `uiKit` embed's poster: add `uiKitEmbed` to `OTHER_HUB_SCENES`
+  (`app/examples/_dbg__exampleHub.ts`) and save it from the Hub tab, for `::: embed uiKit`.
+- The example's scene loader is the loading overlay (D13), as the guide's "Loading overlays" shows.
+- Open for review from Phase 7: the button bringing Kbd (above); the indeterminate progress bar's
+  shot showing an empty track (the runner pauses its slide at the start); the Hub's prose rules now
+  skip the kit's pieces (`_prose.scss`, section 2).
+- Still open from Phase 6: the hold to confirm ignoring a click with no press, and `normalize.scss`
+  in a layer below the kit's.
 
 ### Phase 8: the Hub, the example, `CLAUDE.md`, readme
 

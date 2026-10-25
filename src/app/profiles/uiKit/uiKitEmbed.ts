@@ -2,6 +2,7 @@ import { createMeshEntity, registerOnSceneExit } from 'aekasha';
 import {
   addToast,
   CMP,
+  createButton,
   createDropDown,
   createToaster,
   createTooltip,
@@ -41,8 +42,8 @@ const PANEL_STYLE = {
 
 /**
  * The uiKit embed's scene (p801 D9): a box made in code, and one of each of the UI kit's pieces
- * open over it: a window with a tooltip shown, a toast, and a dialog with its drop-down's list
- * open. Mounted into a
+ * open over it: a window with a button and its tooltip shown, a toast, and a dialog with its
+ * drop-down's list open. Mounted into a
  * page it doesn't own (`uiKit.embed.ts`), they size from the browser's font size, not the host's
  * root, and stay inside the mount's container; `yarn verify:embed` checks both.
  */
@@ -62,9 +63,12 @@ export const scene = async () => {
     content: () => {
       const panel = CMP({ style: PANEL_STYLE, onRemoveCmp: () => hint.tooltip?.cmp.remove() });
       panel.add({ text: 'Drag me by the header: I stay inside the container.' });
-      const button = panel.add({ tag: 'button', text: 'Hint', attr: { type: 'button' } });
+      // The kit's button (p803 D10): with the window, the dialog and the toast, what the SBP
+      // report's "what does a HUD cost" is of (p800 D10)
+      const button = createButton({ label: 'Hint', size: 'sm' });
+      panel.add(button.cmp);
       hint.tooltip = createTooltip({
-        anchor: button.elem,
+        anchor: button.cmp.elem,
         text: 'A tooltip',
         class: TOOLTIP_CLASS,
       });
