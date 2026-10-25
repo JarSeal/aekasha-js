@@ -260,6 +260,26 @@ plus the phase's own. No engine code changes, so `yarn verify:scenes` isn't need
 D5's `project/aekasha/` and `project/app/` pages with their prose, D7's move with its references,
 D6's hero slot. `aek:covers` on each page for the CLAUDE.md sections it explains.
 
+Checked against `main` at `a888abf` (2026-10-25): `project/font-study/` is gone (p801 Phase 4), so
+D5's row for it no longer applies; `docs/techniques/hub-authoring.md` names `code-blocks/` twice
+(lines 245 and 324, not 300 alone); `getPageSection` already returns `project` for every page
+under it (D3's section style needs no code). The sections, in the order the pages need (a page
+needs its parent page): 1. the pages, 2. the move, 3. the hero slot.
+
+As built (section 1):
+
+- `project/aekasha/` ("Developing Ækasha": `intro`, `conventions`, `workflow` slots) and
+  `project/app/` ("The app": `intro`, `conventions`). `project/`'s page lists them with
+  `::: cards project`.
+- Coverage: only the root's Architecture `###` sections and the nested files' `##` ones count, so
+  the root's Coding standards, Versioning and Workflow (`##`) can't be named in `aek:covers`;
+  the pages name those files as their source in prose instead. `project/aekasha/` covers
+  `Plans logic and structure`, `Verify commands` and `Ækasha Hub` (the three names
+  `hub.config.ts`'s `coverageIgnore` held), which leaves `coverageIgnore` empty. `project/app/`
+  covers nothing: the folder split is the Architecture page's.
+- The app's design document template (`project/app/design/`) is Phase 3's (D8); this phase's
+  app page doesn't link it yet.
+
 ### Phase 3: the design document (after p801)
 
 D8: `generated/design.ts`, the contrast module shared with p801's test, the prose, the app's

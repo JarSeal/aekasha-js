@@ -66,3 +66,8 @@ undocumented exports from growing. Before a merge: `yarn test`, the scene runner
 (`yarn verify:scenes`) against its baselines, `yarn verify:baselines` for the bundle, API and docs,
 and `yarn sbp` for the build's budgets. The [coding standards](hub:documentation/coding-standards)
 are the rules the code follows.
+
+## In this section
+
+::: cards project
+:::

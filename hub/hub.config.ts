@@ -9,7 +9,7 @@ const hubConfig: HubConfig = {
   title: 'Ækasha Hub',
   description:
     'Instructions, examples and API documentation for Ækasha, the WebGPU framework built on Three.js, Rapier and its own ECS.',
-  coverageIgnore: ['Plans logic and structure', 'Ækasha Hub', 'Verify commands'],
+  coverageIgnore: [],
 };
 
 export default hubConfig;
