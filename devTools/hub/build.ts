@@ -17,6 +17,8 @@ import { applyErrorPages } from './errorPages';
 import { buildSearchIndex, checkSearchIndexSize } from './search';
 import { readSbpReport } from './sbp';
 import { SBP_REPORT_FILE } from '../sbp/report';
+import { createComponentsSection } from './generated/components';
+import { createDesignSection } from './generated/design';
 import { createHomeSection, getRepoWebUrl } from './generated/home';
 import { createIssuesSection } from './generated/issues';
 import type { HubGeneratedSection } from './generated/section';
@@ -57,6 +59,11 @@ export type HubBuildAssets = {
   /** The files sass read for `styles` (`HubBuiltStyles.sources`), in the build's `files` */
   styleSources: string[];
   scripts: HubAssetFile[] | null;
+  /**
+   * The files outside `hub/` the scripts were built from (`HubBuiltScripts.sources`: the UI
+   * kit's, p802 Phase 4), in the build's `files`
+   */
+  scriptSources: string[];
   /** Both built without an error (not a fallback): `reuseAssets` takes only such ones */
   isClean: boolean;
 };
@@ -197,6 +204,8 @@ const createSectionsAsync = async (
     createIssuesSection(diag),
     version.section,
     api.section,
+    createDesignSection(diag),
+    createComponentsSection(),
   ];
   return { sections, api };
 };
@@ -232,7 +241,13 @@ export const buildHub = async ({
   const diag = new HubDiagnostics();
   let rendered: RenderedPage[] = [];
   const builtPages: HubBuiltPage[] = [];
-  let assets: HubBuildAssets = { styles: null, styleSources: [], scripts: null, isClean: false };
+  let assets: HubBuildAssets = {
+    styles: null,
+    styleSources: [],
+    scripts: null,
+    scriptSources: [],
+    isClean: false,
+  };
   const meta = getProjectMetadata(build);
   lap('meta');
   const { sections, api } = await createSectionsAsync(meta, mode, apiModel, diag);
@@ -245,7 +260,7 @@ export const buildHub = async ({
     pageCount: rendered.length,
     durationMs: performance.now() - startTime,
     steps,
-    files: [...new Set([...files, ...assets.styleSources])],
+    files: [...new Set([...files, ...assets.styleSources, ...assets.scriptSources])],
     // The static folders outside hub/ (the engine's fonts), which hub/'s own watch doesn't see
     dirs: [...sections.flatMap((section) => section.dirs), ...Object.values(HUB_STATIC_ASSET_DIRS)],
     pages: builtPages,
@@ -272,12 +287,13 @@ export const buildHub = async ({
   } else {
     const styles = buildStyles(mode, diag, hashStaticAsset);
     lap('styles');
-    const scripts = await buildScripts(mode, diag);
+    const scripts = await buildScripts(mode, diag, meta);
     assets = {
       styles: styles?.file ?? fallback?.styles ?? null,
       // A failed compile has none: the last good one's, so a fix in an engine file is still seen
       styleSources: styles?.sources ?? fallback?.styleSources ?? [],
-      scripts: scripts ?? fallback?.scripts ?? null,
+      scripts: scripts?.files ?? fallback?.scripts ?? null,
+      scriptSources: scripts?.sources ?? fallback?.scriptSources ?? [],
       isClean: !!styles && !!scripts,
     };
   }

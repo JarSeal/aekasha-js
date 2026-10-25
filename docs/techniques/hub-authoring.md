@@ -156,7 +156,7 @@ The renderer is created in [src/index.ts](repo:src/index.ts#L10).
 
 ### CLAUDE.md sections
 
-A feature page names the CLAUDE.md sections it covers in its head, and `::: claude-md` links them. The sections are the root file's (`.claude/CLAUDE.md`) `###` headings under `## Architecture`, and the `##` headings of every nested `CLAUDE.md` (a subsystem's notes next to its code, `src/_engine/features/skybox/CLAUDE.md`). A name can be in both: the root keeps a section's rules that apply everywhere, its nested file the detail.
+A feature page (or a [Project page](#the-project-section)) names the CLAUDE.md sections it covers in its head, and `::: claude-md` links them. The sections are the root file's (`.claude/CLAUDE.md`) `###` headings under `## Architecture`, and the `##` headings of every nested `CLAUDE.md` (a subsystem's notes next to its code, `src/_engine/features/skybox/CLAUDE.md`). A name can be in both: the root keeps a section's rules that apply everywhere, its nested file the detail.
 
 ```html
 <meta name="aek:covers" content="Physics" />
@@ -173,7 +173,8 @@ A feature page names the CLAUDE.md sections it covers in its head, and `::: clau
 The build checks the coverage both ways (when it runs in the repo, where CLAUDE.md is):
 
 - A name in `aek:covers` that CLAUDE.md doesn't have fails the build, so a renamed section fails it until `aek:covers` follows.
-- A section that no page covers is a warning at its line in its CLAUDE.md. Sections that aren't features (the folder split, plans, the bootstrap flow, the Hub itself, the build config notes) are listed in `hub.config.ts`'s `coverageIgnore`. A new subsystem section goes into a feature page's `aek:covers`, or into `coverageIgnore` when it isn't a feature.
+- A section that no page covers is a warning at its line in its CLAUDE.md. Every section has a page today: the ones that aren't features (the plans, the verify commands, the Hub itself) are covered by `project/aekasha/`, a dev page (the check counts dev pages in both builds), so `hub.config.ts`'s `coverageIgnore` is empty. A new subsystem section goes into a feature page's `aek:covers`, a section about how the repo is worked on into a Project page's, and one that's neither into `coverageIgnore`.
+- Only those sections count. The root file's other `##` sections (Coding standards, Versioning, Workflow) can't be named: a page that explains one says which file it comes from instead.
 
 ## Local-only content
 
@@ -215,6 +216,23 @@ The build checks the coverage both ways (when it runs in the repo, where CLAUDE.
   children on a public page. A dev page links anything.
 - The CLAUDE.md coverage check counts a dev page's `aek:covers` in both builds.
 
+### The Project section
+
+The **Project** button opens `hub/pages/project/`: the pages for working on Ækasha and on the app, which the public Hub doesn't build.
+
+| Page                           | What it holds                                                                                                                                          |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `project/`                     | The philosophy: the brand and the core principles, how Ækasha is developed, what the section holds.                                                    |
+| `project/aekasha/`             | Developing Ækasha: the code conventions that are only the repo's (the hooks, the ratchets, the baselines) and the plan and issue workflow.             |
+| `project/aekasha/design/`      | Ækasha's design document: written rules with their do / don't pairs, and token tables generated from the UI kit ([Design document](#design-document)). |
+| `project/aekasha/components/`  | The component library: the UI kit's pieces live, every state, and the files that use each ([Component library](#component-library)).                   |
+| `project/aekasha/code-blocks/` | Every code block feature rendered ([Code blocks](#code-blocks)).                                                                                       |
+| `project/app/`                 | The app's conventions: what goes in `src/app/`, the scene folder rule, its version.                                                                    |
+| `project/app/design/`          | The app's design document: Ækasha's headings, each with a "To decide" note. A fork replaces the notes with its own decisions, in place.                |
+
+- **The prose is rewritten, not copied.** It comes from the root `CLAUDE.md`, `docs/plans/CLAUDE.md` and the coding standards page, which stay the source. Each page says which file it explains, and `aek:covers` ties the sections it can, so a change to one of those files is a reason to read its page.
+- In dev, the homepage hero lists the section's main pages under "Project", the app's design document first.
+
 ## Callouts
 
 ```md
@@ -223,7 +241,7 @@ Open `http://localhost:8080/?isDebug=true`, then press `h` to open the drawer.
 :::
 ```
 
-- The kinds are `tip`, `note`, `warning` and `danger`. The text after the kind is the title, written as inline Markdown. Without it, the title is the kind ("Tip").
+- The kinds are `tip`, `note`, `warning` and `danger`, and `do` and `dont` for a rule's example pair (the design document's). The text after the kind is the title, written as inline Markdown. Without it, the title is the kind ("Tip").
 - The content is ordinary Markdown: lists, code blocks and links all work.
 - A callout without its closing `:::` fails the build, and so does an unknown name.
 - To put a directive inside another, give the outer one a longer marker:
@@ -242,7 +260,7 @@ The other directives are `code-group` ([Code groups](#code-groups)), `scene` ([S
 
 ## Code blocks
 
-Code is highlighted by [shiki](https://shiki.style/) when the Hub is built (`devTools/hub/code.ts`), so a page carries highlighted HTML and no highlighter. The two themes (`devTools/hub/codeThemes.ts`) follow the Hub's dark and light theme. The Hub's own [Code blocks page](../../hub/pages/documentation/code-blocks/intro.md) (`/hub/documentation/code-blocks/`) shows every feature rendered, and its "All together" block uses them all at once.
+Code is highlighted by [shiki](https://shiki.style/) when the Hub is built (`devTools/hub/code.ts`), so a page carries highlighted HTML and no highlighter. The two themes (`devTools/hub/codeThemes.ts`) follow the Hub's dark and light theme. The Hub's own [Code blocks page](../../hub/pages/project/aekasha/code-blocks/intro.md) (`/hub/project/aekasha/code-blocks/`, a dev page: the dev server's Hub only) shows every feature rendered, and its "All together" block uses them all at once.
 
 Write a fence with a language, and put options after the language (the fence's _meta_):
 
@@ -321,7 +339,7 @@ Show the real code instead of a copy of it. `<<<` on a line of its own includes 
 Mark a region in the source with `#region` and `#endregion` in a comment:
 
 ```ts
-// #region dynamic-box (shown in the Hub: hub/pages/documentation/code-blocks/)
+// #region dynamic-box (shown in the Hub: hub/pages/project/aekasha/code-blocks/)
 const createDynamicBox = async (id: string, position: PhysVector, color: number) => {
   // …
 };
@@ -474,7 +492,7 @@ The icons are [Lucide](https://lucide.dev/) line icons (ISC, `hub/_assets/icons/
 
 ## Generated sections
 
-Two sections are built from files outside `hub/`. Their pages are ordinary hand-written pages, and a generator fills their `generated-*` slots and adds their child pages. An `.md` for a `generated-*` slot is an error.
+Some pages are filled from files outside `hub/`. They're ordinary hand-written pages, and a generator (`devTools/hub/generated/`) fills their `generated-*` slots: Issues and Version add child pages too, and the design document and the component library are dev pages whose generated slots sit between their Markdown ones. An `.md` for a `generated-*` slot is an error. (The homepage's hero and "What's new" and the API Documentation are generated the same way.)
 
 ### Issues
 
@@ -504,6 +522,40 @@ What happens, and how to reproduce it …
 
 `/hub/version/` shows the engine, toolkit, app and project versions with their codenames, and the build's commit (marked when there were local changes) and time. Below that comes the whole `CHANGELOG.md`, with each entry's heading as an anchor (`/hub/version/#2026-10-07-impostor-billboard-lod`). The newest entry is also the homepage's "What's new". Nothing to write here: keep `package.json` and `CHANGELOG.md` current, as the versioning rules ask.
 
+### Design document
+
+`/hub/project/aekasha/design/` (a dev page) is Ækasha's design document. You write the rules, and the generator (`devTools/hub/generated/design.ts`) writes what the UI kit ships:
+
+- **The prose** is in `<topic>-text.md` slots (`colours-text.md`, `motion-text.md`, …: the `-text` keeps a slot's id apart from its heading's). Give each rule a pair of examples with `::: do` and `::: dont` ([Callouts](#callouts)). From 720 px wide, a "do" followed by a "don't" sits beside it.
+- **The tables** are seven `generated-design-*` slots (colours, type, space, elevation, motion, focus, icons), read from `src/_engine/ui/styles/tokens.css`, `fonts.css` and `BuiltInIcons.ts` on every build. Each colour shows in both themes with its value and its contrast on each surface, worked out as `Tokens.test.ts` does. Never write a token's value, a ratio or an icon's name in the prose: change `tokens.css`, and the page follows.
+- **A new token** that no table shows is a warning at its line in `tokens.css`. Give its prefix a group in `design.ts`.
+
+The app's design document (`/hub/project/app/design/`) has the same headings, each with a "To decide" note and a link to the same section of Ækasha's. It's a page to fill in, not a template to copy.
+
+### Component library
+
+`/hub/project/aekasha/components/` (a dev page) shows the UI kit's pieces working, without the engine: a window, a dialog, a drop-down, toasts and icons, each with buttons that open its states. The page's script is `hub/_assets/ts/_components.ts`. The dev Hub loads it on that page only, and `yarn hub:build` never builds it.
+
+Each piece has three elements in the page's `index.html`, inside the `data-hub-components` element:
+
+```html
+<div id="dialog-text"></div>
+<div class="hubComponentDemo" data-hub-demo="dialog"></div>
+<div id="generated-components-dialog"></div>
+```
+
+- **`dialog-text.md`**: what the piece is, its states, what the page can't show (what needs the engine's boot), and notes for the plan that restyles it.
+- **The demo box**: `_components.ts`' `DEMOS` maps `dialog` to the function that fills it with the buttons.
+- **"Used by"**: the generator (`devTools/hub/generated/components.ts`) lists the files outside the kit that call the piece's functions, grouped by where they are, each linked. List a new piece's functions in `COMPONENT_USES`.
+
+To add a component, add the three elements, its `.md`, a demo in `DEMOS` and its entry in `COMPONENT_USES`.
+
+The settings at the top switch the theme and density of the kit's pieces. Until p803 maps the kit's styles to the design tokens, both look the same. The page's "In a build" section gives the kit's size with `{{sbp:…}}` numbers.
+
+::: warning The kit isn't fully standalone yet
+The page's script makes the kit's HUD root and loads its global styles through two engine paths (the boot makes them in an app), and the Hub's script build replaces the engine's main loop and storage modules with its own (`hub/_assets/ts/_kit/`). When the kit starts using another engine function, the Hub's script build fails until the stand-in exports it. `devTools/hub/CLAUDE.md` (Scripts) has the detail.
+:::
+
 ## Refreshing in dev
 
 While `yarn dev` runs, every save under `hub/` rebuilds the whole Hub (tens of milliseconds) and compares it with the last build. Only the tabs that need it refresh:
@@ -515,6 +567,9 @@ While `yarn dev` runs, every save under `hub/` rebuilds the whole Hub (tens of m
 | The Hub's TS, an icon, a font or an image in `hub/_assets/`  | Every Hub tab reloads.                                                                                                                                                                                                                                                                                                                             |
 | `CHANGELOG.md`, `package.json`, a `docs/issues/*.md`         | The Version or Issues pages reload (a new engine version also reaches every page's footer).                                                                                                                                                                                                                                                        |
 | A file a page includes with `<<<`                            | The pages that include it reload.                                                                                                                                                                                                                                                                                                                  |
+| The UI kit's `tokens.css`                                    | The stylesheet is swapped in place, and the design document reloads with its tables.                                                                                                                                                                                                                                                               |
+| `fonts.css`, `BuiltInIcons.ts` or a built-in icon's SVG      | The design document reloads.                                                                                                                                                                                                                                                                                                                       |
+| A UI kit module the component library bundles                | Every Hub tab reloads (the scripts changed).                                                                                                                                                                                                                                                                                                       |
 | A scene's Hub image, or a gather that changes the scene list | The pages that show the scene (its panel, card or `data-aek-scene` image) reload.                                                                                                                                                                                                                                                                  |
 | `hub/hub.config.ts` or the generator (`devTools/hub/`)       | Vite restarts the dev server, and open Hub tabs reload once it's back.                                                                                                                                                                                                                                                                             |
 | An engine or toolkit `.ts`, `tsconfig.json`                  | Nothing is rebuilt: the API docs are only marked out of date. The next API page you open (the Documentation page and the Engine and Toolkit pages under it) shows "Rebuilding the API documentation…" while TypeDoc reads the sources in a child process (about 6 s), then reloads into the updated page. Other Hub pages load as usual meanwhile. |
@@ -528,46 +583,50 @@ App tabs are never reloaded by a Hub save, and Hub tabs aren't reloaded by a sce
 
 The same checks run in dev and in `yarn hub:build`. In dev, an error shows the error page. In `yarn hub:build`, an error fails the build, and so `yarn build` fails too.
 
-| Message (shortened)                                    | Fix                                                   |
-| ------------------------------------------------------ | ----------------------------------------------------- |
-| `Dead link hub:…: no page at hub/pages/…`              | Fix the path, or add the page.                        |
-| `Dead link hub:…#x: "<page>" has no #x`                | The heading was renamed, or the id is misspelt.       |
-| `No slot for it: add an empty element with id="…"`     | An `.md` has no matching slot in its `index.html`.    |
-| `Its folder has no index.html, so it's no page's`      | An `.md` is in a folder that isn't a page.            |
-| `No parent page: hub/pages/…/index.html is missing`    | Add the parent page, so the nav can reach this one.   |
-| `No <title>`                                           | Every page needs one.                                 |
-| `Image not found` / `Image outside its page's folder`  | Move the image into the page's folder.                |
-| `":::name" has no closing ":::"` / `Unknown directive` | Close the directive, or fix its name.                 |
-| `Unknown icon` / `{{asset:…}}: no such file`           | Check the name against `hub/_assets/`.                |
-| `No such file: …` (an include)                         | The included file moved. Fix the path after `<<<`.    |
-| `No "#region x" in it (it has: …)`                     | The region was renamed or removed. Use one listed.    |
-| `"#region x" … has no "#endregion x"`                  | Close the region in the source.                       |
-| `#L…: … has lines 1-N`                                 | The file got shorter. Fix the range, or use a region. |
-| `Unknown api:x (did you mean …)`                       | A misspelt or renamed export. Use a suggested name.   |
-| `Ambiguous api:x: api:A.x, api:B.x`                    | Two modules export it. Use one of the listed names.   |
-| `api:x is internal (…)`                                | No entry exports it. Link a public name instead.      |
-| `Unknown scene "x": …generatedAppData.json has …`      | A misspelt or renamed scene id. Use a listed one.     |
-| `The app's scenes can't be read from …`                | Run `yarn gatherAppData`.                             |
-| `::: cards: no page at hub/pages/…`                    | Fix the page path after `cards`.                      |
-| `::: cards: unknown argument "…"`                      | Use `featured` or `group=<name>`.                     |
-| `Dead link repo:…: no such file from the repo root`    | The file moved. Fix the path after `repo:`.           |
-| `Dead link repo:…: no heading #x in …`                 | The heading was renamed. Use one listed.              |
-| `aek:covers: no CLAUDE.md has a section …`             | The section was renamed. Use one listed.              |
-| `hub:… is a dev-only page (aek:dev): …`                | Wrap the link in `::: dev-only`, or drop it.          |
-| `::: cards: hub/pages/…/ is a dev-only page (aek:dev)` | Show it from a dev page, or list public pages.        |
-| `The generated page /… is under a dev-only page`       | A generated section's pages are public: move it.      |
-| Warning: `aek:dev is "true" or left out, not "…"`      | Write `content="true"`, or remove the meta.           |
-| `aek:image: no such file from the repo root: …`        | Fix the path, or use `scene:<sceneId>`.               |
-| `aek:image: not a PNG, JPEG or WebP: …`                | Convert the image to one of those.                    |
-| Warning: `Slot "…" has no ….md: it stays empty`        | Add the `.md`, or remove the slot.                    |
-| Warning: `Unknown <meta name="aek:…">`                 | A misspelt metadata name.                             |
-| Warning: `Unknown code language "…"`                   | Use a listed language, or `text`.                     |
-| Warning: `Unknown "…" in the code block's meta`        | A misspelt fence option.                              |
-| Warning: `The scene "x" has no Hub image yet (…)`      | Save it from the scene's Hub tab.                     |
-| Warning: `::: cards takes no content`                  | Move the text out of the directive.                   |
-| Warning: `The search index is … gzipped, over 450 KiB` | Index less: fewer or shorter pages, fewer fields.     |
-| Warning: `{@link X} links nowhere (…)`                 | In the JSDoc: fix the name, export it, or use code.   |
-| Warning: `X … is on no entry, but Y … names it`        | Put `X` on its entry, or change `Y`'s signature.      |
+| Message (shortened)                                      | Fix                                                    |
+| -------------------------------------------------------- | ------------------------------------------------------ |
+| `Dead link hub:…: no page at hub/pages/…`                | Fix the path, or add the page.                         |
+| `Dead link hub:…#x: "<page>" has no #x`                  | The heading was renamed, or the id is misspelt.        |
+| `No slot for it: add an empty element with id="…"`       | An `.md` has no matching slot in its `index.html`.     |
+| `Its folder has no index.html, so it's no page's`        | An `.md` is in a folder that isn't a page.             |
+| `No parent page: hub/pages/…/index.html is missing`      | Add the parent page, so the nav can reach this one.    |
+| `No <title>`                                             | Every page needs one.                                  |
+| `Image not found` / `Image outside its page's folder`    | Move the image into the page's folder.                 |
+| `":::name" has no closing ":::"` / `Unknown directive`   | Close the directive, or fix its name.                  |
+| `Unknown icon` / `{{asset:…}}: no such file`             | Check the name against `hub/_assets/`.                 |
+| `No such file: …` (an include)                           | The included file moved. Fix the path after `<<<`.     |
+| `No "#region x" in it (it has: …)`                       | The region was renamed or removed. Use one listed.     |
+| `"#region x" … has no "#endregion x"`                    | Close the region in the source.                        |
+| `#L…: … has lines 1-N`                                   | The file got shorter. Fix the range, or use a region.  |
+| `Unknown api:x (did you mean …)`                         | A misspelt or renamed export. Use a suggested name.    |
+| `Ambiguous api:x: api:A.x, api:B.x`                      | Two modules export it. Use one of the listed names.    |
+| `api:x is internal (…)`                                  | No entry exports it. Link a public name instead.       |
+| `Unknown scene "x": …generatedAppData.json has …`        | A misspelt or renamed scene id. Use a listed one.      |
+| `The app's scenes can't be read from …`                  | Run `yarn gatherAppData`.                              |
+| `::: cards: no page at hub/pages/…`                      | Fix the page path after `cards`.                       |
+| `::: cards: unknown argument "…"`                        | Use `featured` or `group=<name>`.                      |
+| `Dead link repo:…: no such file from the repo root`      | The file moved. Fix the path after `repo:`.            |
+| `Dead link repo:…: no heading #x in …`                   | The heading was renamed. Use one listed.               |
+| `aek:covers: no CLAUDE.md has a section …`               | The section was renamed. Use one listed.               |
+| `hub:… is a dev-only page (aek:dev): …`                  | Wrap the link in `::: dev-only`, or drop it.           |
+| `::: cards: hub/pages/…/ is a dev-only page (aek:dev)`   | Show it from a dev page, or list public pages.         |
+| `The generated page /… is under a dev-only page`         | A generated section's pages are public: move it.       |
+| Warning: `aek:dev is "true" or left out, not "…"`        | Write `content="true"`, or remove the meta.            |
+| `A dev-only script module is in the public build`        | Import it only behind `if (__HUB_DEV__)`.              |
+| `"x" is not exported by "…/_kit/…"`                      | The UI kit imports a new name: add it to the stand-in. |
+| `The design document can't read it: …` (`tokens.css`)    | Fix `tokens.css`: it doesn't parse.                    |
+| Warning: `--aek-… is in no table of the design document` | Give its prefix a group in `generated/design.ts`.      |
+| `aek:image: no such file from the repo root: …`          | Fix the path, or use `scene:<sceneId>`.                |
+| `aek:image: not a PNG, JPEG or WebP: …`                  | Convert the image to one of those.                     |
+| Warning: `Slot "…" has no ….md: it stays empty`          | Add the `.md`, or remove the slot.                     |
+| Warning: `Unknown <meta name="aek:…">`                   | A misspelt metadata name.                              |
+| Warning: `Unknown code language "…"`                     | Use a listed language, or `text`.                      |
+| Warning: `Unknown "…" in the code block's meta`          | A misspelt fence option.                               |
+| Warning: `The scene "x" has no Hub image yet (…)`        | Save it from the scene's Hub tab.                      |
+| Warning: `::: cards takes no content`                    | Move the text out of the directive.                    |
+| Warning: `The search index is … gzipped, over 450 KiB`   | Index less: fewer or shorter pages, fewer fields.      |
+| Warning: `{@link X} links nowhere (…)`                   | In the JSDoc: fix the name, export it, or use code.    |
+| Warning: `X … is on no entry, but Y … names it`          | Put `X` on its entry, or change `Y`'s signature.       |
 
 ## Publishing
 

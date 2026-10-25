@@ -150,7 +150,7 @@ Mark a region in the source with a comment. Text after the name is a note, and t
 (those of regions nested in it too) are left out of the page:
 
 ```ts
-// #region dynamic-box (shown in the Hub: hub/pages/documentation/code-blocks/)
+// #region dynamic-box (shown in the Hub: hub/pages/project/aekasha/code-blocks/)
 const createDynamicBox = async (id: string, position: PhysVector, color: number) => {
   // …
 };

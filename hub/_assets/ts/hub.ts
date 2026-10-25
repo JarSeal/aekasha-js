@@ -285,3 +285,19 @@ if (document.querySelector('[data-hub-embed]')) {
     // eslint-disable-next-line no-console -- a failed chunk load's error: the page has nowhere to show it
     .catch((err: unknown) => console.error('[Hub] The embed script failed to load:', err));
 }
+
+// --- Component library (p802 D9, dev) ---
+
+/**
+ * The component library's page (`[data-hub-components]`): a chunk of its own with the UI kit,
+ * which only the dev Hub builds (`__HUB_DEV__` is false in `public`, so the import is dropped)
+ */
+if (__HUB_DEV__) {
+  const componentsRoot = document.querySelector<HTMLElement>('[data-hub-components]');
+  if (componentsRoot) {
+    import('./_components')
+      .then((components) => components.initComponents(componentsRoot))
+      // eslint-disable-next-line no-console -- a failed chunk load's error: the page has nowhere to show it
+      .catch((err: unknown) => console.error('[Hub] The component library failed to load:', err));
+  }
+}

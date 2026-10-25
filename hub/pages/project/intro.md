@@ -33,36 +33,19 @@ does it make someone want to come back.
 
 ## How Ækasha is developed
 
-### Plans
+- **Plans first.** Work starts as a plan in `docs/plans/`, grounded in the code as it is and
+  split into phases that each leave the tree working. A phase is built in sections, and each one
+  is reviewed before the next starts.
+- **Checks hold the line.** Hooks lint, type-check and test every change as it's made, and
+  committed baselines and budgets make a regression in the bundle, the API, the docs or a scene
+  deliberate.
+- **Versions per part.** The engine, the toolkit and the app each have a version, bumped once
+  per merge into `main`, with a `CHANGELOG.md` entry per PR.
 
-Work starts as a plan in `docs/plans/`: `p<number>_<name>.md`, where a lower number is a higher
-priority. A plan is grounded in the code as it is (its "As found"), states its decisions, and
-splits the work into phases that each leave the tree working. Large work is an **epic** whose
-child plans continue its number (p800 → p801, p802, …), with one section for which branch each
-child goes on and when its PR opens.
+[Developing Ækasha](hub:project/aekasha) has the details: the repo's conventions and checks, the
+plan and issue workflow, and the versioning rules.
 
-A phase is implemented in sections, each reviewed before the next starts; where the code turns out
-different from the plan, the phase gets an "As built" list so later phases don't build on stale
-assumptions. A finished plan is renamed `_DONE_<name>.md` and kept while its epic still needs it.
-A plan is a spec for unstarted work: never a description of the current state.
+## In this section
 
-### Issues
-
-Known problems, upstream bugs and deferred fixes are files in `docs/issues/`, with a status, a
-category and the workaround in use. The Hub's [Issues](hub:issues) section lists them.
-
-### Versions
-
-`package.json` holds four versions: the engine's (and the package's, always the same), the
-toolkit's and the app's. Each part is bumped once per merge to `main`, by the size of its biggest
-change, and a major gets a new codename: the sun's path for the engine, the moon's phases for the
-toolkit, life stages for the app. Every PR adds a `CHANGELOG.md` entry, shown on the
-[Version](hub:version) page, and `yarn checkVersions --against main` checks the bump.
-
-### Checks
-
-Hooks lint, type-check and test every change as it's made, and the docs ratchet keeps the
-undocumented exports from growing. Before a merge: `yarn test`, the scene runner
-(`yarn verify:scenes`) against its baselines, `yarn verify:baselines` for the bundle, API and docs,
-and `yarn sbp` for the build's budgets. The [coding standards](hub:documentation/coding-standards)
-are the rules the code follows.
+::: cards project
+:::

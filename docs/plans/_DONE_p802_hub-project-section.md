@@ -1,0 +1,596 @@
+Status: implemented (Phases 1-6)
+Category: Documentation, Hub, Tooling
+Epic: p800_debugger-ui-overhaul.md
+Blocks: p809_project-roadmaps-and-docs-split.md
+Related: \_DONE_p801_design-foundation.md (its Phase 0's font specimen page needed Phase 1's dev-only pages; Phase 3, the design document, reads its `tokens.css`), \_DONE_p601_refactoring-safety-net-tests-and-baselines.md (`::: dev-only`), \_DONE_p619_review-schemas-pipeline-devtools-hub.md (the Hub's generator as it is)
+
+# Hub Project Section
+
+p800's second child: pages the dev server's Hub shows and the public Hub never builds, a
+**Project** button that opens them, and the first of them: the project's philosophy, how Ækasha
+is developed (conventions, the plan and issue workflow, the code block reference), the app's own
+page with a design document template, Ækasha's design document, and the component library for
+developing Ækasha. Phase 1 lands on its own first, so p801's font study has a dev-only page to
+live on (p801 D11).
+
+---
+
+## 1. As found (2026-10-23, `main` at `192292a`)
+
+### 1.1 p800's p802 sketch, checked
+
+- **No sitemap.** The Hub writes none (no `sitemap` anywhere in `devTools/hub/` or `hub/`): a
+  dev page has to stay out of the output, the nav, the search and the link targets only.
+- **`devTools/refactor/moveText.test.ts` is gone**, with `devTools/refactor/` (commit `b1083be`,
+  p619 Phase 7). Moving `code-blocks/` touches `physicsTest.ts`' region note,
+  `hub/pages/documentation/code-blocks/intro.md` (its own copy of the note, line 153),
+  `hub/CLAUDE.md`, `devTools/hub/CLAUDE.md` (the API section's "not `documentation/code-blocks/`"),
+  `docs/techniques/hub-authoring.md` (line 300) and `hub/_assets/ts/_search.ts` (a JSDoc
+  example only).
+- **No page links `code-blocks/`** (`git grep` finds no `hub:documentation/code-blocks`): making it
+  dev-only breaks no public link. The Documentation page reaches it through the nav only.
+- The Hub's scripts (`hub/_assets/ts/`, Vite's `build()` in `devTools/hub/assets.ts`) have no
+  `aekasha*` aliases, no `__AEK_DEBUG__` define and no CSS module handling set up: the component
+  library page (Phase 4) adds them.
+
+### 1.2 How the Hub decides what a page is (`devTools/hub/`)
+
+- `pages.ts`: `discoverPages` takes every folder under `hub/pages/` with an `index.html`
+  (`listDirs` skips `_`- and `.`-prefixed folders); `parsePage` reads the `aek:` metas
+  (`META_NAMES`; an unknown one warns) into a `HubPage` with `isInMenu: true`, `isSearchable: true`.
+  A page without its parent page is an error.
+- `build.ts`: the coverage check (`checkClaudeMdCoverage`) runs on `tree.pages` right after
+  discovery; the search is built from the rendered pages (`buildSearchIndex`); `checkLinks`
+  (`renderPages.ts`) makes a `hub:` link to a path not in `tree.byPath` an error ("Dead link …: no
+  page at …").
+- `markdown.ts`: `::: dev-only` content is skipped before parsing in `public`, so its links are
+  never collected there; in `dev` it is parsed like any other, and nothing records that a link
+  was inside one.
+- `shell.ts`' `renderNav`: the homepage and its children, each top-level child with a dropdown of
+  its `isInMenu` children. `hub/_layout/shell.html`: `.hubNavPanel` holds `.hubNav` and
+  `.hubTools` (search, version pill, GitHub, theme toggle); on a narrow screen the panel is the
+  menu button's.
+- The homepage hero's right column: `.hubHeroSide` with the "Build / Explore / Create" eyebrow
+  and the `generated-hero-side` slot (`generated/home.ts`: the engine's description).
+
+---
+
+## 2. Decisions (confirmed 2026-10-23, as recommended)
+
+### D1. A dev page: `aek:dev`
+
+- `<meta name="aek:dev" content="true" />` (in `META_NAMES`) marks a page and every page under it
+  as dev only (`HubPage.isDev`, inherited in `discoverPages` once the tree is linked). A child
+  can't opt back out: a public page under a dev one would lose its parent in `public`.
+- `public`: dev pages are dropped from the tree after the coverage check (D4) and before
+  rendering, so they're absent from `dist-hub/`, the nav, the search, `::: cards` lists and the
+  link targets. `dev`: they're ordinary pages, in the nav and the search, with a "Local only"
+  badge in their breadcrumbs (the `::: dev-only` block's `.hubDevOnlyBadge`) so nobody takes one
+  for public documentation.
+- A generated section's page can't be dev (none needs it); `attachSection` errors if its parent is.
+
+### D2. Links to a dev page
+
+- A `hub:` link from a public page to a dev page is an error **in both modes**, outside a
+  `::: dev-only` block: "`hub:project/…` is a dev-only page: a public page can link it only inside
+  `::: dev-only`". In `dev` the author sees it on save instead of at `hub:build`.
+- Each link records whether it is inside a `::: dev-only` block (`HubLinkRef.isInDevOnly`):
+  links are resolved in a core rule (`linksRule`), not while rendering, so the directive's tokens
+  carry `meta.isDevOnly` and the rule counts the open blocks. A generator that writes a link for
+  the dev server only passes `isInDevOnly` to `resolveHubLink`. `checkLinks` reads it with the
+  source page's `isDev`, and in `public` tells a link to a removed dev page
+  (`HubPageTree.removedDevPaths`) from a dead one. A page's markup (its `index.html` body)
+  has no `::: dev-only`, so a markup link from a public page to a dev page is always the error.
+- Links from a dev page anywhere are checked as today.
+
+### D3. The Project button
+
+- `project/` is a top-level dev page. `renderNav` leaves top-level dev pages out of the nav list;
+  the shell gets a `{{projectLink}}` placeholder before `.hubTools`, filled in `dev` with
+  `<a class="hubProjectButton" href="…project/">{{icon}}<span>Project</span></a>` and with `''` in
+  `public` (so the public header is unchanged byte for byte).
+- Filled with the accent (`--hub-accent` background, `--hub-bg` text: the one filled control in
+  the header, p800 D6), the `compass` icon (Phase 1 adds it to `hub/_assets/icons/` if the set
+  has none), `aria-current="page"` on a Project page. In the mobile panel it's the first item
+  under the nav, full width.
+- Its pages get the section style `project` (`getPageSection`), so `_sections.scss` can mark them.
+
+### D4. Coverage counts dev pages
+
+The CLAUDE.md coverage check is about the repo's documentation, not the output: it runs on every
+discovered page, dev ones included, in both modes. A section only a dev page covers (the plan
+workflow, the Hub's own sections) doesn't warn in `public`. `::: claude-md` already renders
+nothing in `public`.
+
+### D5. The pages
+
+```
+project/                      Philosophy: the brand and core principles (root CLAUDE.md's), how
+                              the project is developed (plans, phases, review stops, versions),
+                              and what this section is
+project/aekasha/              Developing Ækasha: code conventions (links the public coding
+                              standards, then the rules that are only for the repo: the hooks,
+                              the ratchets, the baselines), the plan and issue workflow
+                              (docs/plans/CLAUDE.md's rules in reader form), and the children:
+project/aekasha/code-blocks/  moved from documentation/code-blocks/ (D7)
+project/aekasha/design/       the design document (Phase 3, D8)
+project/aekasha/components/   the component library for developing Ækasha (Phase 4, D9)
+project/app/                  The app's own: its conventions (what goes in src/app/, the scene
+                              folder rule, its version), and the children:
+project/app/design/           a design document template to copy and fill (D8's headings, empty)
+project/font-study/           p801 Phase 0's specimen: removed by p801 Phase 4 with its font
+                              packages (the record is p801 D8's outcome and table)
+```
+
+The content comes from the root `CLAUDE.md`, `docs/plans/CLAUDE.md` and the coding standards
+page, rewritten for a reader (not copied: those files stay the agents' source, and each page's
+`aek:covers` names the sections it explains, so the coverage check keeps them in step).
+
+### D6. The hero's dev links
+
+In `dev`, `.hubHeroSide` gets a second block under the description: "Project" quick links, the
+app's design document first (`project/app/design/`), then Ækasha's design document, the
+component library and the plan workflow. A new generated slot (`generated-hero-project`, empty in
+`public`), so the homepage's markup has no `::: dev-only` problem (D2).
+
+### D7. Moving `code-blocks/`
+
+`git mv hub/pages/documentation/code-blocks hub/pages/project/aekasha/code-blocks`, then the
+references in §1.1 in the same commit, with `yarn hub:build` (the region include is checked) and
+both modes looked at. Its `aek:order` and tags stay. The public Hub loses the page: the
+Documentation page's intro says the syntax reference is in the repo's dev Hub, as one line inside
+`::: dev-only` (a link there is fine, D2).
+
+### D8. The design document
+
+- Sections as p800 §5 lists them: colours, type, spacing and layout, radii and elevation, motion,
+  icons, patterns, accessibility, voice.
+- The token tables are generated, not written: a generated section (`generated/design.ts`) reads
+  `src/_engine/ui/styles/tokens.css` and renders each role's swatch in both themes with its value
+  and, for text roles, its contrast on each surface (the same computation as p801's
+  `tokens.test.ts`, moved to a module both import). The icons section lists the registered
+  built-ins (`BuiltInIcons.ts`) with their names.
+- The rules (D6's colour discipline, D7's motion, D8's accessibility of p800) are written
+  prose, each with a do / don't pair.
+- The app's template (`project/app/design/`) has the same headings with a sentence on what each
+  should decide, and says to start from Ækasha's tokens.
+
+### D9. The component library for developing Ækasha
+
+- A Hub script entry (`hub/_assets/ts/components.ts`, loaded only by that page: the page's markup
+  names it, as `_embed.ts` is loaded only where used) imports `aekasha/ui` and mounts a demo per
+  component into the page's demo boxes (each a `.aekUi` container, p801 D2), with no engine (p800
+  D1).
+- `devTools/hub/assets.ts`' `build()` gets the `aekasha*` aliases (`devTools/aliases.ts`), the
+  `__AEK_DEBUG__` and `__PROJECT_METADATA__` defines it needs (`false` / the metadata), and Vite's
+  CSS handling for the kit's stylesheets; the entry's CSS goes into its own file next to it.
+- Phase 4 shows what exists: the draggable window, the dialog, the drop-down, the toaster and the
+  icons, each in both themes (and both densities once p801's tokens have them), every state the
+  piece has, and its internal notes (which debug panels use it, its SBP budget line). p803-p808
+  each add their components to it in their Hub phase; p803 adds the public component library page,
+  rendered by the same entry.
+
+### D10. Branches and versions
+
+- Phase 1 is its own PR into `main` (`p802-dev-pages`), so p801 can start from `main`: p800 §6
+  records the exception. Phases 2-6 continue on `p802-hub-project-section`, from `main` after
+  that merge, Phase 3 after p801 merged.
+- Versions: none (the Hub and `devTools/` are repo tooling): a Project entry in `CHANGELOG.md`
+  per PR. Phase 4's change to the Hub's script build is tooling too.
+- As built (Phase 6): `yarn checkVersions --against main` counts every file under `src/_engine/`
+  and `src/app/`, with no exemption for one that ships in nothing, so the second PR has patch
+  bumps: engine (and project) 5.11.1 for `TokenSheet.ts`, `Tokens.test.ts` and
+  `src/_engine/ui/CLAUDE.md`, app 1.15.1 for `physicsTest.ts`' region note.
+
+---
+
+## 3. Phases
+
+Verification of each phase: `yarn test`, `yarn hub:build` (public) and the dev Hub looked at,
+plus the phase's own. No engine code changes, so `yarn verify:scenes` isn't needed.
+
+### Phase 1: dev-only pages and the Project button (its own PR, D10) — done
+
+1. `aek:dev`, `isDev` and its inheritance, the drop in `public` after the coverage check (D1, D4);
+   a dev page and its children marked, dropped in `public`, kept in `dev`; a generated page under
+   a dev parent an error.
+2. The link rule (D2) in `markdown.ts` and `renderPages.ts`: a public page's Markdown link to a
+   dev page is an error in both modes, inside `::: dev-only` it isn't, a dev page's link isn't.
+
+   As built (section 1):
+
+   - One test file for both, `devTools/hub/devPages.test.ts` (fixture pages in a temp
+     `hub/pages/`), instead of a new `pages.test.ts` and additions to `links.test.ts`.
+   - Also: `aek:dev` with a value other than `true` warns and leaves the page public; a dev
+     homepage is an error; `::: cards` naming a dev page from a public page is an error in both
+     modes (its cards would link dev pages, and fail only in `public`).
+   - `removeDevPages(tree)` (`pages.ts`) mutates the build's tree (pages, `byPath`, the parents'
+     `children`); `build.ts` calls it in `public` right after `checkClaudeMdCoverage`.
+   - Not covered: a `hub:` link in a `::: dev-only` block's title (rendered with `renderInline`
+     outside the block's tokens) counts as public. No title has a link today.
+
+3. The Project button (D3): `renderNav`, the shell placeholder, `_header.scss`; `shell.test.ts`:
+   the public header unchanged, the dev one with the button and `aria-current`.
+4. `hub/pages/project/index.html` with the philosophy content (D5's first row), `aek:dev`.
+
+   As built (section 2):
+
+   - The placeholder is `{{devNav}}` (`renderDevNav`, `shell.ts`), not `{{projectLink}}`: every
+     top-level dev page becomes such a button (Project is the only one), so a second one later
+     needs no shell change. It sits on the `</nav>` line, so a `public` page is byte for byte as
+     before (checked: every page of a `--no-api --no-embed` build matches the previous one but
+     for the `?v=` hashes and the Version page's build time). The button has a `title` (its
+     tooltip where it shows the icon only); the active one also gets an inset ring.
+   - The Lucide `compass` icon is in `hub/_assets/icons/` (the page's `aek:icon`).
+   - Fitting the header: up to 1549 px the button shows its icon only, and the version pill is
+     hidden while it's there (`.hubNavPanel:has(.hubDevNavLink)`; Version is in the nav), so the
+     dev header overflows at no width the public one doesn't. The public header already pushes the
+     theme toggle off-screen just past each breakpoint (960-990, 1100-1170, 1360-1400 px, measured
+     with the toggle's box against the layout width): found here, not fixed (not this plan's).
+   - "Local only" in a dev page's breadcrumbs (`hubBreadcrumbs_dev`), with a `title` saying the
+     public Hub doesn't build the page.
+   - Tests: the nav without the dev pages, the button and its `aria-current`, the empty dev nav,
+     the badge (`shell.test.ts`). The look was checked in screenshots at 390, 1000, 1400 and
+     1450 px, both themes.
+
+5. `hub/CLAUDE.md` and `devTools/hub/CLAUDE.md` (the meta, the link rule, the button);
+   `docs/techniques/hub-authoring.md`'s metas list. A Project entry in `CHANGELOG.md`.
+6. (Added in review, 2026-10-23.) The public header's overflow found in section 2: past each
+   breakpoint (960-990, 1100-1170, 1360-1400 px) the theme toggle is off-screen. Fixed in this
+   branch, checked by measuring the toggle's box against the layout width at every 10 px from 960
+   to 1800, in the public and the dev header; the public header changes here, so the "byte for
+   byte" check of section 2 no longer holds after this step.
+
+   As built (section 4):
+
+   - Measured in pixels against the header's content box (not the viewport, which hid the
+     overflow into the side margin), the public header overflowed at 960-1035, 1100-1220 and
+     1360-1470 px, by up to 113 px; the dev header, with section 2's 1549 px rule, also by
+     about 69 px at every width from 1550 (the header stops growing at its 96rem page width).
+   - `$nav-collapse` stays (the homepage hero's layout uses it too). Instead, the desktop
+     breakpoints moved to where the contents fit with 16 px to spare, measured as the nav's width
+     minus its items' extent: the version pill hidden up to 1099 px, the nav's icons from 1250
+     (was 1100), the full search box from 1500 (was 1360).
+   - The dev header: the version pill hidden on every desktop width, the Project button its icon
+     only below 1600 px, the search box 13rem beside its label (from 1600), and the GitHub link
+     hidden up to 1099 px. The same 16 px hold there.
+   - The measuring script isn't committed (a Playwright loop over a built page, in the session's
+     scratchpad): `hub/CLAUDE.md` says to re-measure when the header's contents change. A
+     committed check would need a browser in `yarn test`; a `verify:` mode is the place if one
+     is wanted.
+
+### Phase 2: the Project pages, `code-blocks/`, the hero links — done
+
+D5's `project/aekasha/` and `project/app/` pages with their prose, D7's move with its references,
+D6's hero slot. `aek:covers` on each page for the CLAUDE.md sections it explains.
+
+Checked against `main` at `a888abf` (2026-10-25): `project/font-study/` is gone (p801 Phase 4), so
+D5's row for it no longer applies; `docs/techniques/hub-authoring.md` names `code-blocks/` twice
+(lines 245 and 324, not 300 alone); `getPageSection` already returns `project` for every page
+under it (D3's section style needs no code). The sections, in the order the pages need (a page
+needs its parent page): 1. the pages, 2. the move, 3. the hero slot.
+
+As built (section 1):
+
+- `project/aekasha/` ("Developing Ækasha": `intro`, `conventions`, `workflow` slots) and
+  `project/app/` ("The app": `intro`, `conventions`). `project/`'s page lists them with
+  `::: cards project`.
+- Coverage: only the root's Architecture `###` sections and the nested files' `##` ones count, so
+  the root's Coding standards, Versioning and Workflow (`##`) can't be named in `aek:covers`;
+  the pages name those files as their source in prose instead. `project/aekasha/` covers
+  `Plans logic and structure`, `Verify commands` and `Ækasha Hub` (the three names
+  `hub.config.ts`'s `coverageIgnore` held), which leaves `coverageIgnore` empty. `project/app/`
+  covers nothing: the folder split is the Architecture page's.
+- The app's design document template (`project/app/design/`) is Phase 3's (D8); this phase's
+  app page doesn't link it yet.
+- In review: `project/`'s "How Ækasha is developed" (Phase 1's Plans, Issues, Versions and Checks
+  subsections) became three bullets and a link to `project/aekasha/`, which has the details. The
+  coverage check stays as it is (widening it to the root's `##` sections would also flag Project
+  and Commands); the prose names its sources instead (§4's drift risk).
+
+As built (section 2):
+
+- `git mv` to `project/aekasha/code-blocks/`, its `aek:order` (90) and tags kept. The references:
+  the `dynamic-box` region note in `physicsTest.ts` and its copies in the page and in
+  `hub-authoring.md` (line 324), `hub-authoring.md`'s link to the page (line 245, now saying
+  it's a dev page), `hub/CLAUDE.md`'s Code blocks line, `devTools/hub/CLAUDE.md`'s API line (its
+  example of a non-API page under `documentation/` is now `architecture/`), and `_search.ts`'
+  JSDoc example (now `examples/physics/`).
+- The Documentation page's `::: dev-only` line links it; `project/aekasha/` lists it with
+  `::: cards project/aekasha` and links it from its Hub subsection.
+- Checked: `yarn hub:build --no-embed` (API included: 91 pages, no warnings, no
+  `documentation/code-blocks/` in the output) and a `dev` build (95 pages, no diagnostics: the
+  region include, the breadcrumbs' "Local only", the dev-only link).
+
+As built (section 3):
+
+- `generated-hero-project` (`generated/home.ts`' `renderHeroProject`), under `generated-hero-side`
+  in `.hubHeroSide`: `''` in `public` (the slot's `<div>` stays, holding only a newline, so
+  nothing shows), in `dev` a `.hubHeroProject` block: a "Project" eyebrow with the `compass` icon
+  and the "Local only" badge, then the links (`PROJECT_LINKS`), each through `resolveHubLink`
+  with `isInDevOnly`. Today: The app, Developing Ækasha, Plan workflow
+  (`project/aekasha#from-a-plan-to-a-merge`), Code blocks. **Phase 3 puts the app's design
+  document first and Ækasha's after the app's page; Phase 4 adds the component library** (D6's
+  order).
+- Styles in `_home.scss`: a list with right-aligned arrows in the side column; where the side
+  column becomes a full-width row (below `$toc-column`) the links wrap side by side and the badge
+  sits by its label. Checked in screenshots at 1400, 1100 and 390 px.
+- Test: `devPages.test.ts` (the slot is empty with no links in `public`, and every link is a
+  dev-only one to `project/` in `dev`). `hub/CLAUDE.md`'s homepage line names the slot.
+
+### Phase 3: the design document (after p801) — done
+
+D8: `generated/design.ts`, the contrast module shared with p801's test, the prose, the app's
+template (p801 Phase 4 removed `font-study/`: the design document's fonts come from p801 D8).
+
+Checked against `main` after p801 (2026-10-25): p801's test is `Tokens.test.ts`; D1's "a
+generated section's page can't be dev" holds only for the pages a section adds (`pages.ts`), so a
+hand-written dev page's slots can be generated; a devTools import of an engine module must be on
+`devTools/engineImports.test.ts`' list (p619 D8); `BuiltInIcons.ts`' `?raw` imports don't load in
+Node, so the icons are read from its export lines. Sections: 1. the shared module, 2. the
+generated tables, 3. the prose, 4. the app's template.
+
+As built (section 1):
+
+- `src/_engine/ui/styles/TokenSheet.ts` (`@internal`, imports nothing, ships in nothing): the
+  parser, `findTokenRules` (the kit root, dark, the two light copies, compact), `parseTokenColor`,
+  `getContrastRatio`, the pair lists (`CONTRAST_SURFACES`, `_TEXTS`, `_CONTROLS`, `_SOFTS`,
+  `_UNCHECKED`, `_CHECKED`) and `listContrastPairs` (every pair with its ratio and minimum: 51 per
+  theme). In the engine, not `devTools/`: the rule belongs with `tokens.css`, as `StableStringify`
+  or `LodSimplify` do. `Tokens.test.ts` imports it. `api.json` and `docs.json` record its 15
+  exports (no engine version: nothing that ships changed).
+
+As built (section 2):
+
+- `devTools/hub/generated/design.ts` (`createDesignSection`, after the API's in `build.ts`) fills
+  seven slots of the hand-written dev page `project/aekasha/design/`: `generated-design-colours`
+  (each role's swatch and value in both themes, over its theme's `surface` so a tint shows as
+  used, and its contrast rule; a contrast table per theme, an "Aa" sample per pair in its real
+  colours; the accent and tint pairs), `-type` (families with `fonts.css`' opt-in, sizes in both
+  densities with samples, weights, line heights, figures), `-space` (the units, `--aek-rem` marked
+  internal; the space scale in both densities), `-elevation` (radii, shadows on each theme's `bg`,
+  layers), `-motion` (durations and easings, a dot that moves on hover or focus with the token
+  itself), `-focus` (the ring's tokens, drawn in each theme) and `-icons` (every built-in by its
+  name, its SVG inlined with `icons.ts`' now exported `toInlineSvg`, and its file).
+- Its colours are literal values from the parse, not `var()`s, so a sample shows its theme on
+  either page theme; the focus samples are the exception (live tokens under `data-aek-theme`).
+- A kit root token in no table (`findUnshownTokens`) warns at its line in `tokens.css`; an
+  unreadable `tokens.css` is an error and the slots say so. Watched: `tokens.css`, `fonts.css`,
+  `BuiltInIcons.ts`, the SVGs and their folder.
+- `hub/_assets/scss/_design.scss`. Long values wrap in their cell and the minimum ratio sits
+  under the role's name, so the tables fit the content column at 1400 px; on a phone they scroll
+  inside their frame (no page overflow).
+- `devTools/hub/design.test.ts`: no diagnostics, every token shown, each theme's colour values,
+  every pair's ratio, every icon, the headings in the TOC, an unshown token found.
+
+As built (section 3):
+
+- The prose in the page's Markdown slots (`<topic>-text.md`, so a slot's id never takes its
+  heading's): D6, D7 and D8 of p800 in reader form; type, spacing, elevation and icons from p801
+  and `src/_engine/ui/CLAUDE.md`. The voice (nothing in the repo specified one), the patterns'
+  details (focus on the safe action, checks on commit, a spinner after a delay, undo over a
+  confirmation where the debugger has undo) and the space steps' uses are this phase's proposals,
+  flagged at its review (no changes asked).
+- Two callout kinds for the pairs, `::: do` and `::: dont` (`markdown.ts`' `CALLOUT_TITLES`;
+  the title says which, the border repeats it). A "do" followed by a "don't" sits beside it from
+  720 px (`_prose.scss`, CSS only: the asides are siblings). `hub/CLAUDE.md` and
+  `hub-authoring.md` list the kinds.
+- `project/aekasha/`' conventions slot has "The UI's design", linking the page; the hero has
+  "Ækasha's design" after "The app" (the full title wrapped in the side column).
+
+As built (section 4):
+
+- `project/app/design/` is the app's design document itself, not a copy: in the template each
+  section holds a `::: note To decide` and a link to the same section of Ækasha's, and a fork
+  replaces the notes with its decisions in place. Its intro says to start from Ækasha's tokens
+  (set them on the kit root, an app's own tokens under a prefix of its own). The app page's
+  conventions slot has "The app's design", and the hero's first link is "The app's design".
+- The hero's links now: The app's design, The app, Ækasha's design, Developing Ækasha, Plan
+  workflow, Code blocks. **Phase 4 adds the component library after Ækasha's design.**
+- For Phase 5: `devTools/hub/CLAUDE.md`'s generated sections (the design section, its warning,
+  the `TokenSheet.ts` import), `hub/CLAUDE.md`'s pages (the two design documents) and the root
+  `CLAUDE.md` line; the callout kinds are already listed.
+
+### Phase 4: the component library (dev) — done
+
+D9: the script build's aliases and CSS, `components.ts`, the page with the existing pieces.
+`yarn hub:build` in `public` checks that the page and its script are absent from `dist-hub/`
+(a test on the output list: no file under `project/` and no `components.js`).
+
+Checked against the branch after Phase 3 (2026-10-25), with a probe build of D9's setup:
+
+- §4's risk holds, and is worse than the plan expected: `DraggableWindow.ts` imports `addResizer`
+  from `kernel/loop/MainLoop.ts`, which imports three, the renderer and, through them, both
+  workers. With Vite's default IIFE workers the build fails; with ES workers it writes a 103 kB
+  entry (`three.core.js` in it) and about 4.7 MB of workers, Rapier, Draco and Basis next to it
+  (Vite bundles a worker when it transforms the file, before tree-shaking). `SceneHooks.ts`,
+  `BootHooks.ts` and `Config.ts` are harmless.
+- The windows, dialogs and toasts mount under the HUD root, which only the boot makes
+  (`createHudContainer`, `@internal`, not on `aekasha/ui`): `getHUDRootCMP()` throws without it,
+  and a page has one root (a second `attach` throws). "A demo per component in its own box"
+  can't be built with the public API.
+- Both themes and both densities look the same on the kit today: its colours are still
+  `variables.scss`', its sizes `--aek-rem` (p803 / p806 map them).
+- Every `hub/_assets/ts/*.ts` not starting with `_` is built in both modes, so `components.ts`
+  would be in `dist-hub/`.
+
+Decided at the review (all as recommended): a Hub-side stand-in for `MainLoop.ts`, no engine
+change (p803 still cuts the import); one HUD root over the viewport as in an app, each section's
+box opening its piece's states, the drop-down shown in a window; the theme and density switches
+kept, saying they take effect with p803. Sections: 1. the script build, 2. the HUD root and the
+page skeleton, 3. the pieces (with the hero link and `project/aekasha/`' card).
+
+As built (section 1):
+
+- `buildScripts` (`assets.ts`) takes the project metadata and builds with the `aekasha*` aliases,
+  the defines `__AEK_DEBUG__` (`false`), `__PROJECT_METADATA__` and the Hub's own `__HUB_DEV__`
+  (`hub/_assets/ts/hub-env.d.ts`), `base: './'` (a lazy chunk's CSS loads from
+  `import.meta.url`; the default `/` would load it from the domain root) and each asset in
+  `chunks/` next to its chunk. The kit's `.module.scss` needed nothing more.
+- The component library is `hub/_assets/ts/_components.ts` (`HUB_COMPONENTS_FILE`), not
+  `components.ts`: `hub.ts` imports it behind `__HUB_DEV__` on a page with
+  `[data-hub-components]`, so `public` drops the import and emits no chunk. A `public` build
+  bundling it or the dev client is an error (`DEV_ONLY_SCRIPT_MODULES`). The public `hub.js`
+  changed only in Vite's preload helper (it now resolves against `import.meta.url`; no public
+  chunk has a dependency); the chunks are byte for byte as before.
+- `devTools/hub/kitKernel.ts`: `hubKitKernelPlugin` resolves an import of a
+  `HUB_KIT_KERNEL_STAND_INS` module (`MainLoop.ts` only) to `hub/_assets/ts/_kitKernel.ts`, whose
+  `addResizer` runs on the browser window's `resize`. A new kernel name in the kit fails the
+  build (a missing export). The dev chunk: 53 kB unminified and 8 kB of CSS, no three, no worker.
+- `HubBuiltScripts.sources` / `HubBuildAssets.scriptSources`: the bundled files outside `hub/`
+  (the kit's), in the build's `files`, so the dev plugin watches them and a save rebuilds the
+  scripts (`devRunner.ts`' `reuseAssets` counts them with the style sources).
+- `hub/tsconfig.json`: `tsc` doesn't see the stand-in, so `tsc -p hub` checks the engine files the
+  kit reaches: it includes the engine's global declarations and `vite-env.d.ts`, keeps the root's
+  `typeRoots` (three's addons' types), and `hub-env.d.ts` declares V8's
+  `Error.stackTraceLimit` (a debug module's; the Hub's check stays without node's globals).
+- `eslint.config.js`: `hub/_assets/ts/**` is an engine consumer (no `_engine/` path) and gets the
+  layering rules.
+- `devTools/hub/scripts.test.ts`: a `public` build has no component chunk and no kit source; a
+  `dev` one has the chunk and its CSS, no other asset, and no three; each stand-in replaces its
+  module and exports every name the bundled modules import from it.
+
+As built (section 2):
+
+- A second stand-in, found here: the dev Hub is served by the app's dev server, so it shares the
+  app's `localStorage`, and the windows write their whole saved state (`AEK_popupWindows`) on
+  every finished change, even with no `saveToLS` window (an empty object): a demo window moved in
+  the Hub replaced the app's saved windows. `devTools/hub/kitKernel.ts` became `kitStandIns.ts`
+  (`HUB_KIT_STAND_INS`, `hubKitStandInsPlugin`), with both stand-ins in `hub/_assets/ts/_kit/`
+  under their modules' names: `MainLoop.ts` and `LocalAndSessionStorage.ts` (in memory,
+  `lsGetItem` / `lsSetItem` as the engine's convert them). The test now reads the names each
+  stand-in needs from the files the dev build bundled (`Config.ts`' `lsGetItem` among them).
+  Checked in Chrome: the app's `AEK_popupWindows` is unchanged after a demo window's drag.
+- `_components.ts` makes the HUD root over the viewport with `createHudContainer` (a slot appended
+  to `body`), the one deep engine import of the Hub's scripts (an `eslint-disable-next-line` with
+  its reason: p803 adds a public way to make a kit root), and registers the built-in icons (the
+  windows' buttons). The env flags stay false, so a debug window (`isDebugWindow`) doesn't open
+  here; the windows are above the Hub's header (z-index 100+ against 50).
+- The page `project/aekasha/components/` (`aek:order` 30, between the design document and the
+  code blocks): an `intro` slot (what the page is, the HUD root and the two stand-ins and what
+  they leave out), then in one `[data-hub-components]` element the settings form and a
+  `<piece>-text` slot with a `[data-hub-demo="<key>"]` box each for the window, dialog, drop-down,
+  toaster and icons. The switches are radio groups (`theme`: the page's / dark / light; `density`:
+  default / compact) setting `data-aek-theme` / `data-aek-density` on the HUD root, saying they
+  look the same until p803. `_components.ts`' `DEMOS` maps a box's key to the function filling
+  it; the boxes hold Hub buttons (`.hubButton`) that open the kit's pieces. Styles in
+  `hub/_assets/scss/_components.scss` (in the public `hub.css` too, as `_design.scss` is).
+- Section 3 replaces the text slots' placeholder line and the one demo (a plain window).
+
+As built (section 3):
+
+- `_components.ts`' demos (the HUD root's pieces open over the page; the controls are Hub
+  buttons in labelled groups, `addGroup`):
+  - Window: the defaults (kept on close, so a reopen shows the user's layout), and as new windows
+    (`removeOnClose`) an icon, opening collapsed, fixed, long content and a backdrop whose click
+    closes it; the toggle, a demo kind (`registerDraggableWindowKind` at init: the cascade, closing
+    removes), fit all, close all.
+  - Dialog: the defaults, `closeOnEscape`, `backDropClickClosesWindow`, and a drop-down inside one.
+  - Drop-down: one window with a value, the placeholder, an icon, `placement: 'top'`, disabled,
+    and a value changed elsewhere with `refresh()`; each pick adds a toast.
+  - Toaster: two toasters at init (the default bottom left, a second top right); the three kinds,
+    a title, `showingTime: 0`, a long message.
+  - Icons: into the page itself (no HUD root): in boxes the page sizes, in a button sized `1em`,
+    an unregistered name (`??` and the warning, the page's one console line).
+- The kit's global styles: `_components.ts` imports `src/_engine/ui/styles/index.scss` by path
+  (`.uiIcon`), the boot's stylesheet, with an `eslint-disable-next-line` and its reason like the
+  HUD root's. The demo windows' content (`.hubDemoPanel`) inherits the window's colours: the
+  window is still the debugger's dark in both themes, and the page's text was dark on dark in
+  the light theme.
+- "Used by" is generated, not written: `devTools/hub/generated/components.ts`
+  (`createComponentsSection`, after the design section in `build.ts`) fills
+  `generated-components-<piece>` under each demo with the files outside the kit (no test, no
+  `src/generated/`) calling the piece's functions (`COMPONENT_USES`), grouped Debug tools /
+  Engine / Toolkit / App (`getUserGroup`), each a checked `repo:` link. It watches the files
+  found only: a new user in another file shows on the next rebuild (watching `src/` would rebuild
+  the Hub on every engine save). `devTools/hub/components.test.ts`.
+- "In a build" (`build-text.md`): the SBP report measures the kit as a whole, so the page has one
+  section with `{{sbp:…}}` numbers (the app's `_engine/ui` group and budget; the `uiKit`
+  profile's group, its scene chunk with the four pieces and their CSS) and
+  `yarn sbp --profile uiKit --why _engine/ui` for the modules, not a line per piece.
+- Each piece's Markdown: what it is, its states, what isn't shown (what needs the boot), and a
+  "For p803" note of what the demos showed. Found here, for p803 (Phase 5 adds them to
+  `src/_engine/ui/CLAUDE.md`'s "Left for p803"): with a drop-down's list open in a
+  `closeOnEscape` dialog, one Escape closes both (the dialog's capture listener on the window
+  runs first); the kit sizes no icon (`.uiIcon`'s SVG fills its box; `'small'` adds a class only
+  the on-screen tools style); the kit's global styles come with the boot, not `aekasha/ui`; the
+  window header clips its title's descenders; a long toast runs past its 100 px maximum height
+  under its close button.
+- `project/aekasha/`' conventions ("The UI's design") link the page, `::: cards project/aekasha`
+  lists it, and the hero's links have "Component library" after "Ækasha's design".
+- Checked in Chrome (1400 px both themes, 390 px: no page overflow): every button, the window
+  drag, the backdrop click, Escape, the toggle, the kind's cascade, fit all and close all. The
+  dev build: 98 pages, no diagnostics; `public` (`--no-api --no-embed`): no `project/`, no
+  component chunk, no "Component library" on the homepage.
+
+For Phase 5 (beyond its list above): `hub/CLAUDE.md` (the page, `_components.ts` and its
+`[data-hub-components]` / `[data-hub-demo]` markup, adding a component's demo), `devTools/hub/CLAUDE.md`
+(the script build's aliases, defines, `base`, the stand-ins and `scriptSources`; the generated
+components section and what it watches), `src/_engine/ui/CLAUDE.md` (the findings above, and that
+the Hub stands in for `MainLoop.ts` and the storage), and the root `CLAUDE.md`'s Ækasha Hub line.
+
+### Phase 5: `CLAUDE.md`, the authoring doc, the root `CLAUDE.md` — done
+
+The root `CLAUDE.md`'s Ækasha Hub section: the Project section and the dev-only pages in one
+line; `hub/CLAUDE.md` (the pages, the design document's generated tables, the component
+library's entry), `devTools/hub/CLAUDE.md` (the generated design section, the script build's
+aliases), `docs/techniques/hub-authoring.md`.
+
+Checked against the branch after Phase 4 (2026-10-25): the code is as Phase 4's "As built" says
+(`kitStandIns.ts`, `hub/_assets/ts/_kit/`, `_components.ts`, `generated/design.ts` and
+`generated/components.ts`). `hub/CLAUDE.md` and `devTools/hub/CLAUDE.md` have one `##` section
+each (`Ækasha Hub`), and a new `##` would need a page's `aek:covers`: the additions are bullets
+in it. Sections, in the order the prompt gives (the CLAUDE.md files, the authoring doc, the
+root): 1. `hub/CLAUDE.md`, 2. `devTools/hub/CLAUDE.md`, 3. `src/_engine/ui/CLAUDE.md` (Phase 4's
+findings for p803 and the Hub's stand-ins), 4. `docs/techniques/hub-authoring.md`, 5. the root
+`CLAUDE.md`.
+
+As built:
+
+- `hub/CLAUDE.md`: the `_`-prefixed scripts and `_kit/` in Sources; a Project section bullet (the
+  pages, the two design documents, the component library and adding a component's demo); the
+  hero's link order.
+- `devTools/hub/CLAUDE.md`: a Scripts bullet (`buildScripts`' aliases, defines and `base`,
+  `DEV_ONLY_SCRIPT_MODULES`, the stand-ins, `scriptSources`, `hub/tsconfig.json` and the lint);
+  the Design and Components generated sections; the dev plugin's watch list.
+- `src/_engine/ui/CLAUDE.md`: an "Outside the engine" bullet (the Hub's HUD root, global styles
+  and stand-ins) and a "Left for p803" bullet with Phase 4's five findings; the embed's list
+  stays under Bounds in an embed.
+- `hub-authoring.md`: the coverage text (it still named `coverageIgnore`'s old entries), a
+  Project section table, Design document and Component library subsections, rows in the dev
+  refresh and errors tables. Not added (p611's, not this plan's): `::: embed`, `--no-embed` and
+  `{{sbp:…}}` are still missing from it.
+- The root `CLAUDE.md`: the Dev pages bullet names the Project section's pages, and the map's
+  lines for the three nested files name what they now hold.
+- Checked: `yarn test`, and `yarn hub:build --no-api --no-embed` (61 pages, no coverage or link
+  warnings, no `project/` in the output).
+
+### Phase 6: the versions, the changelog, the plan done — done
+
+The changelog entry, `yarn checkVersions --against main`, mark the plan done; p800 §5's p802
+entry points here. Time for the PR: `p802-hub-project-section` → `main`.
+
+As built: the versions as D10's As built says; the `CHANGELOG.md` entry `2026-10-25 —
+p802-hub-project-section` (Engine, App, Project); the file renamed to `_DONE_`, with p800's
+`Blocks:` line and §5 entry and p801's `Blocked by` following.
+
+---
+
+## 4. Risks
+
+- **The Hub's script build importing the engine**: the kit's modules import kernel hooks
+  (`addSceneHooks`, `addResizer`; `src/_engine/ui/CLAUDE.md`), added on a window's first use.
+  In the Hub there's no main loop: Phase 4 checks that opening a window there needs none (the
+  hooks are added, never run) and records what it finds; a kernel import the bundle can't take
+  is p803's to cut (p800 D1: every component works without the engine).
+- **Prose drifting from the CLAUDE.md files**: `aek:covers` and the coverage check tie each page
+  to its sections, but not the content. Each page says which file is the source, and a change to
+  a covered section is a reason to read the page (the root `CLAUDE.md`'s "Keep the Ækasha Hub
+  current").
+
+## Done when
+
+`aek:dev` pages exist only in the dev Hub and a public page can't link one outside
+`::: dev-only`; the Project button opens the section; the philosophy, Ækasha development, the
+code block reference, the design document with generated token tables, the component library
+and the app's page with its design document template are there; the hero links them in dev.

@@ -9,6 +9,11 @@ The debug implementations (the `_dbg__*` files in the `debug/` folders) and the 
 aren't part of the API, so they aren't listed. For how the parts fit together, start with
 [Architecture](hub:documentation/architecture).
 
+::: dev-only
+The Hub's code block syntax (fences, highlights, snippet includes) is on the
+[Code blocks](hub:project/aekasha/code-blocks) page, under Project.
+:::
+
 ## Importing the engine
 
 Apps and the toolkit import the engine through its public entries, never by a path into

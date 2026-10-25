@@ -1,0 +1,135 @@
+// The component library page (project/aekasha/components/, p802 D9): its theme and density
+// switches and the demo boxes. The boxes hold the page's own buttons; what they open is the UI
+// kit's, over the viewport in the HUD root `_components.ts` makes.
+
+.hubComponentSettings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2rem;
+  align-items: flex-start;
+  margin: 1.5rem 0 2rem;
+  padding: 1rem 1.25rem;
+  background: var(--hub-panel);
+  border: 1px solid var(--hub-border);
+  border-radius: var(--hub-radius);
+
+  fieldset {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  legend {
+    width: 100%;
+    margin-bottom: 0.25rem;
+    padding: 0;
+    color: var(--hub-text-muted);
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  label {
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  input {
+    margin: 0;
+    accent-color: var(--hub-accent);
+  }
+
+  p {
+    flex: 1 1 16rem;
+    margin: 0;
+    color: var(--hub-text-muted);
+    font-size: 0.875rem;
+  }
+}
+
+.hubComponentDemo {
+  display: grid;
+  gap: 1rem;
+  margin: 1rem 0 2.5rem;
+  padding: 1.25rem;
+  border: 1px dashed var(--hub-border-strong);
+  border-radius: var(--hub-radius);
+
+  &:empty {
+    display: none;
+  }
+}
+
+// A labelled row of buttons
+.hubComponentDemoGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+
+  > p {
+    width: 100%;
+    margin: 0;
+    color: var(--hub-text-muted);
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  .hubButton {
+    padding: 0.45rem 0.8rem;
+    font-size: 0.875rem;
+  }
+}
+
+// The kit sizes no icon (`.uiIcon svg` fills its box's width): its user does, as here
+.hubDemoIcon {
+  display: inline-flex;
+  width: 1.5rem;
+  justify-content: center;
+}
+
+.hubDemoIconButton .uiIcon {
+  width: 1em;
+}
+
+// A demo window's content: the page's, as an app's content is the app's (the HUD root is outside
+// the article, so these don't inherit its prose styles). Its colours are the window's (inherited):
+// the window is still the debugger's dark in both themes (variables.scss, until p803), so the page's
+// text and button colours would be dark on dark in the light theme.
+.hubDemoPanel {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+  padding: 0.75rem 1rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+
+  p {
+    margin: 0;
+  }
+
+  .hubButton {
+    justify-self: start;
+    padding: 0.4rem 0.8rem;
+    border-color: color-mix(in srgb, currentColor 45%, transparent);
+    color: inherit;
+    font-size: 0.875rem;
+
+    &:hover,
+    &:focus-visible {
+      border-color: currentColor;
+      background: color-mix(in srgb, currentColor 10%, transparent);
+      color: inherit;
+    }
+  }
+}
+
+.hubDemoDropDowns > p {
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  opacity: 0.75;
+}

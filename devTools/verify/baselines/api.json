@@ -2947,6 +2947,23 @@
     "src/_engine/ui/Motion.ts": {
       "getMotionFactor": "Function"
     },
+    "src/_engine/ui/styles/TokenSheet.ts": {
+      "CONTRAST_CHECKED": "Variable",
+      "CONTRAST_CONTROLS": "Variable",
+      "CONTRAST_SOFTS": "Variable",
+      "CONTRAST_SURFACES": "Variable",
+      "CONTRAST_TEXTS": "Variable",
+      "CONTRAST_UNCHECKED": "Variable",
+      "ContrastPair": "TypeAlias",
+      "findTokenRules": "Function",
+      "getContrastRatio": "Function",
+      "listContrastPairs": "Function",
+      "parseTokenColor": "Function",
+      "parseTokenSheet": "Function",
+      "TokenColor": "TypeAlias",
+      "TokenRule": "TypeAlias",
+      "TokenSheet": "TypeAlias"
+    },
     "src/_engine/ui/Toaster.ts": {
       "addToast": "Function",
       "AddToastResponse": "TypeAlias",

@@ -116,7 +116,7 @@ const getPageInfos = () => {
   return pageInfos;
 };
 
-/** `documentation/code-blocks/` → `documentation/`, `documentation/code-blocks/` */
+/** `examples/physics/` → `examples/`, `examples/physics/` */
 const pagePathTrail = (pagePath: string) => {
   const parts = pagePath.split('/').filter(Boolean);
   return parts.map((_part, i) => `${parts.slice(0, i + 1).join('/')}/`);

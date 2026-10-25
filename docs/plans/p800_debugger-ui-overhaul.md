@@ -1,6 +1,6 @@
 Status: draft | epic — not-implemented
 Category: Refactoring, Documentation, UI, Debug
-Blocks: \_DONE_p801_design-foundation.md, p802_hub-project-section.md, p803_ui-kit-structure-and-core.md, p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801 done, p802 written; the rest not yet: §5)
+Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, p803_ui-kit-structure-and-core.md, p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801 and p802 done; the rest not yet: §5)
 Related: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (§9: this epic follows its p608 move and p617's kit), \_DONE_p602_architecture-and-target-structure.md (D5: "the debugger is the kit's first consumer, not its owner"), \_DONE_p617_review-input-ui-hud.md (the kit on `aekasha/ui`; D8: the embed issue), \_DONE_p618_review-debug-public-api.md (D3, P7: Tweakpane in the tab types; the "Write your own tab" guide), p622_engine-6-major.md (the major p806 ships with: D12), p150_current-entity-data-source-info-on-edit-windows.md and p373_merge-debug-and-member-editing.md (debug UI built on p806's components), p355_save-menu-and-file-server-settings.md (its menu on p803 / p804), p426_sequencer-splines-and-cutscenes.md (p804's curve editor), `docs/issues/ui-kit-in-an-embed.md` (p801), `docs/issues/on-screen-tools-during-scene-load.md` (p806) (the original prompt was in `docs/templates/todo-plan-prompts.txt` until this plan's commit, `208b177`, removed it: this plan is its record)
 
 # Debugger UI Overhaul — Epic
@@ -548,7 +548,19 @@ left for p803 (Phase 3's As built). What follows is the plan as written.
 
 ### p802 — Hub Project section
 
-Written: `p802_hub-project-section.md` (its Phase 1 is its own PR, before p801).
+Done: `_DONE_p802_hub-project-section.md` (2026-10-25: Phase 1 as `p802-dev-pages`, the rest
+with engine 5.11.1, app 1.15.1). What the later plans build on, each written there: `aek:dev`
+pages, which a public page links only inside `::: dev-only` (D1, D2), and the Project section
+under the header's button; Ækasha's design document, whose token tables are generated from
+`tokens.css` (a new token's prefix needs a group in `devTools/hub/generated/design.ts`), and the
+app's to fill in; the component library (`project/aekasha/components/`,
+`hub/_assets/ts/_components.ts`), where p803-p808 add their components' demos in their Hub phase
+(the page's three elements per piece, `DEMOS`, `COMPONENT_USES`: `hub/CLAUDE.md`) and from which
+p803's public component library page is to render. For p803: the Hub's script build stands in
+for `MainLoop.ts` and the storage module, and the library imports `createHudContainer` and the
+kit's global styles by path, all until p803 cuts the kit's kernel imports and gives it a public
+root; the findings it left are `src/_engine/ui/CLAUDE.md`'s "Left for p803". What follows is the
+plan as written.
 
 - Dev-only pages: an `aek:dev` meta (in `META_NAMES`) that a page's children inherit;
   `discoverPages` drops them in `public`, so they're absent from `dist-hub/`, the nav and the

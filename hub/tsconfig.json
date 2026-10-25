@@ -1,11 +1,12 @@
 {
   // The Hub's browser TS (hub/_assets/ts/): `tsc -p hub`. The generator in devTools/ is checked by
-  // the root tsconfig.
+  // the root tsconfig. The component library's `aekasha/ui` import reaches the engine (tsc doesn't
+  // see the build's stand-in for the kit's kernel import, devTools/hub/kitKernel.ts): its global
+  // declarations are included, and the root's typeRoots kept for three's addons' types.
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "lib": ["ES2021", "DOM", "DOM.Iterable"],
-    "typeRoots": [],
     "types": []
   },
-  "include": ["**/*.ts"]
+  "include": ["**/*.ts", "../src/_engine/types/*.d.ts", "../vite-env.d.ts"]
 }

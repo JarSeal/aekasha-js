@@ -23,6 +23,11 @@ export const HUB_SCSS_ENTRY = path.join(HUB_ASSETS_DIR, 'scss', 'hub.scss');
 export const HUB_TS_DIR = path.join(HUB_ASSETS_DIR, 'ts');
 /** Dev builds only: the dev plugin's client, built to `_assets/hub-dev.js` */
 export const HUB_DEV_CLIENT_FILE = path.join(HUB_TS_DIR, '_devClient.ts');
+/**
+ * Dev builds only: the component library (p802 D9), a chunk `hub.ts` imports behind `__HUB_DEV__`
+ * on a page with `[data-hub-components]`
+ */
+export const HUB_COMPONENTS_FILE = path.join(HUB_TS_DIR, '_components.ts');
 /** The icons, also inlined into the pages (`devTools/hub/icons.ts`) */
 export const HUB_ICONS_DIR = path.join(HUB_ASSETS_DIR, 'icons');
 /**
