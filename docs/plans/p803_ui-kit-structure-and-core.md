@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 0 implemented
 Category: UI, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
@@ -300,12 +300,18 @@ The folders p800 §5 sketched, with the files they take now:
   `aria-describedby`). Arrows move the window by `--aek-space-5` (16 px), Alt+arrows resize it,
   and Shift multiplies either by 4. It clamps as a drag does and saves to LS on keyup. Enter on
   the header toggles collapse, as a double-click on the title fits it today.
-- **A key to cycle windows** (p800 D8): it focuses the next open window's first focusable element
-  and brings that window to the front, in z-order, app windows and then debug windows. Phase 0
-  checks which keys the browsers deliver to a page. The candidates are F6 (the platform's "next
-  pane", but Chrome and Firefox may keep it for their address bar) and Alt+\` (no browser or OS
-  binding we know of on Windows and macOS). The key is a kit setting (`setWindowCycleKey`),
-  `null` turns it off, and the listener is on the HUD root like D7's.
+- **Keys to cycle windows** (p800 D8): **F6** focuses the next open window's first focusable
+  element and brings that window to the front, in z-order, app windows and then debug windows;
+  **Shift+F6** goes the other way. That's the platform's "next pane" pair, and Phase 0 found them
+  the only candidates every browser delivers (Ctrl+F6 and Alt+F6 never reach a page in Firefox,
+  and Alt+\` names no single physical key: As built). The keys are a kit setting
+  (`setWindowCycleKeys`), `null` turns them off, the listener is on the HUD root like D7's, and
+  it calls `preventDefault()` (which keeps Firefox's and Chrome's own F6 from the address bar).
+  - **The debug key `sc-toggle-main-loop` moves off F6** (debug env and prodTest), so F6 means
+    one thing wherever focus is. Proposed: Shift+F7, next to F7's app loop pause (confirmed in
+    Phase 5). It stays rebindable through `AppConfig.debugKeys`; the debug key docs
+    (`src/_engine/debug/CLAUDE.md`, the debug suite's Hub page, the shortcuts dialog's data) and
+    the changelog follow.
 - Title clipping (1.2's item 4): the header's `line-height` from `--aek-line-height-base`, and the
   title truncates with an ellipsis and a tooltip when it overflows.
 - `DraggableWindow.ts` is over 800 lines already. The keyboard paths go into
@@ -468,7 +474,8 @@ registers at load. p808 revisits this if the entry passes about 150 names.
   (p800 D12) says the kit's windows, dialogs, drop-downs and toasts take the tokens' colours,
   spacing and both themes. To keep the old look on an app's windows, force
   `data-aek-theme="dark"` on the HUD root (the old greys aren't tokens, so there's no exact
-  restore). It also warns that the kit is now layered, so an app's broad unlayered rules beat it.
+  restore). It also warns that the kit is now layered, so an app's broad unlayered rules beat it,
+  and that the debug key toggling the main loop moved off F6 (D8), which now cycles windows.
 - **App minor**: the `uiKit` example rebuilt and the profile's scene grown. Its type renames alone
   would be a patch.
 - **Toolkit**: none (the toolkit uses no kit piece).
@@ -485,7 +492,7 @@ Phase 5), `yarn verify:baselines`, `yarn verify:embed`, `yarn sbp --profile all`
 Phase 3 on `yarn verify:ui`, plus the phase's own checks. Each phase stops after each section for
 review.
 
-### Phase 0: baselines and checks
+### Phase 0: baselines and checks — done
 
 1. On `main`: `yarn verify:scenes --update`, `yarn verify:embed`, `yarn sbp --profile all` (the
    numbers noted here: the app's and the `uiKit` profile's `_engine/ui` group, the scene chunk).
@@ -580,8 +587,25 @@ As built (section 2, 2026-10-25; one-off probes in the scratchpad, not committed
     the host (1.2's item 6): D5 adds `color: var(--aek-text)` on the kit root.
 - **The window-cycle key** (D8) and Safari's top layer: a manual probe page
   (`keyProbe/server.mjs` in the scratchpad: each candidate's keydown, whether focus left the page
-  after `preventDefault()`, and the top layer probe above) waits for runs in Chrome, Firefox,
-  Safari and Edge on macOS, and on Windows.
+  after `preventDefault()`, and the top layer probe above), run on macOS with a Finnish ISO
+  keyboard in Chrome 139, Safari 26.5 and Firefox 133 (and the top layer in VS Code's Electron,
+  Chrome 150). The top layer probe passes in all of them, Safari included: the same results as
+  the Playwright runs.
+  - F6 and Shift+F6 reach the page in all three as `key: 'F6'`, and with `preventDefault()`
+    focus stays in the page (Firefox's address bar included).
+  - **Ctrl+F6 and Alt+F6 never reach a page in Firefox** (no keydown); Chrome and Safari deliver
+    them.
+  - **Alt+\` is out:** on a Mac ISO keyboard the key left of 1 reports `code: 'IntlBackslash'`
+    in Chrome and Safari, and the `<` key `Backquote` there but `IntlBackslash` in Firefox (the
+    swap differs per browser), and Option changes `key` (`'¶'`, `'≤'`), so neither `code` nor
+    `key` names one physical key. Alt+letter keys type a character on macOS (Alt+W is `'Ω'`),
+    which a text field in a window would get.
+  - **F6 alone is taken in the debug env:** the engine's debug key `sc-toggle-main-loop`
+    (`DefaultDebugKeyBindings.ts`; prodTest too). With focus inside the HUD, D7's capture
+    listener would take F6 from it, and outside the HUD F6 would pause the loop: one key with
+    two meanings by focus. The debug keys don't match a modified F key. Decided (2026-10-25):
+    F6 / Shift+F6 cycle the windows and the debug key moves (D8).
+  - Not run: Edge (Chromium) and Windows.
 
 ### Phase 1: the move and the names (no behaviour change)
 
@@ -625,8 +649,8 @@ One section per piece, each with its demo boxes' screenshots in both themes for 
 `verify:ui` clean for it:
 
 1. The windows (D5, D8): global classes and parts, the tokens, layered; `role="dialog"`, labels,
-   the keyboard move and resize, the cycle key, the header's line height and the title's
-   truncation; `DraggableWindowKeys.ts`.
+   the keyboard move and resize, the cycle keys (F6 / Shift+F6) and the main loop's debug key
+   moved off F6, the header's line height and the title's truncation; `DraggableWindowKeys.ts`.
 2. The dialogs (D7): modal ARIA, the trap, `inert`, the z-order from `--aek-z-dialog`, `alert`.
 3. The drop-down (D9): the restyle and the searchable variant; the two debugger stylesheets that
    restyle it checked.
@@ -681,8 +705,9 @@ aliases to remove. Time for the PR: `p803-ui-kit-structure-and-core` → `main` 
 - **The top layer** (D7): ordering between several top-layer overlays follows open order, which is
   what we want. The fallback without the Popover API is the HUD-root path that's tested in
   linkedom (it has no top layer), so both paths get tests.
-- **Keyboard move and the cycle key** may collide with an app's key bindings: they only act with
-  focus inside the HUD (D7's listener), and the cycle key can be set to `null`.
+- **Keyboard move and the cycle keys** may collide with an app's key bindings: they only act with
+  focus inside the HUD (D7's listener), and the cycle keys can be set to `null`. F6 / Shift+F6
+  weren't checked on Windows (Phase 0 ran macOS only): Phase 5 checks them there, or says so.
 - **The move** (Phase 1) touches about 60 files. One mechanical commit with no other change, and
   `tsc`, the layout check and the bundle baseline catch a miss.
 - **axe-core's rules vs. the debugger**: `verify:ui` checks the kit's demos only, not the debugger
