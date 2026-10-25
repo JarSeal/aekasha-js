@@ -143,3 +143,65 @@ export const runKeyStepsAsync = async (page: Page, piece: string, steps: UiKeySt
   }
   return problems;
 };
+
+/** Hides the page around the HUD root for its screenshot (removed right after: axe skips hidden
+ * elements) */
+const HIDE_PAGE_CSS = 'body > :not(#hudRoot) { visibility: hidden !important; }';
+
+/**
+ * Pins the box at the viewport's top left, its width rounded, with the rest of the page hidden:
+ * where the page lays it out (a text above it grown by a line) moves it by a fraction of a pixel,
+ * which antialiases its edges differently
+ */
+const getPinBoxCss = (box: string, width: number) => `
+body :not(${box}, ${box} *) { visibility: hidden !important; }
+${box} {
+  visibility: visible !important;
+  position: fixed !important;
+  inset: 0 auto auto 0 !important;
+  width: ${width}px !important;
+  margin: 0 !important;
+  z-index: 2147483647 !important;
+}`;
+
+/** The box's screenshot, pinned (`getPinBoxCss`) */
+const captureBoxAsync = async (page: Page, piece: string) => {
+  const box = page.locator(boxSelector(piece));
+  const width = await box.evaluate((el) => Math.ceil(el.getBoundingClientRect().width));
+  const style = await page.addStyleTag({ content: getPinBoxCss(boxSelector(piece), width) });
+  try {
+    const height = await box.evaluate((el) => Math.ceil(el.getBoundingClientRect().height));
+    return await page.screenshot({ clip: { x: 0, y: 0, width, height }, caret: 'hide' });
+  } finally {
+    await style.evaluate((el) => (el as Element).remove());
+  }
+};
+
+/**
+ * A state's screenshot: the HUD root's overlays alone (the page around them hidden, so a Hub text
+ * change doesn't change it), clipped to their boxes' union in the viewport (a backdrop's is the
+ * viewport), or the demo box, pinned, when nothing is open in the HUD root (the icons, a closed
+ * state)
+ */
+export const captureStateAsync = async (page: Page, piece: string) => {
+  const clip = await page.evaluate(() => {
+    const rects = [...document.querySelectorAll('#hudRoot *')]
+      .map((el) => el.getBoundingClientRect())
+      .filter((r) => r.width > 0 && r.height > 0);
+    if (!rects.length) return null;
+    const left = Math.max(0, Math.floor(Math.min(...rects.map((r) => r.left))));
+    const top = Math.max(0, Math.floor(Math.min(...rects.map((r) => r.top))));
+    const right = Math.min(innerWidth, Math.ceil(Math.max(...rects.map((r) => r.right))));
+    const bottom = Math.min(innerHeight, Math.ceil(Math.max(...rects.map((r) => r.bottom))));
+    return right > left && bottom > top
+      ? { x: left, y: top, width: right - left, height: bottom - top }
+      : null;
+  });
+  if (!clip) return captureBoxAsync(page, piece);
+  const style = await page.addStyleTag({ content: HIDE_PAGE_CSS });
+  try {
+    return await page.screenshot({ clip, caret: 'hide' });
+  } finally {
+    await style.evaluate((el) => (el as Element).remove());
+  }
+};

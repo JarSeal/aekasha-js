@@ -45,6 +45,7 @@ Maintain the brand, feeling, and core principles in creating the best UX for bot
 - `yarn verify:baselines [--update [--allow-docs-drop]] [--no-build] [--docs]` — diffs the committed bundle, API and docs baselines in `devTools/verify/baselines/` (the docs ratchet: a folder's undocumented exports may not grow; `--docs` alone is the Stop hook's check), and fails on debug code in the production build it measures (p607 D7). Detail: `devTools/verify/CLAUDE.md`.
 
 - `yarn sbp [--profile <id>[,<id>…] | all] [--no-build | --no-app-build] [--why <group | module path>] [--json] [--brief]` — the Smallest Build Possible report (p611): builds the profiles of `sbp.config.ts` (`app` by default; an embed into `dist-embed/<id>/`), reports what loads before the first frame and what later, each group's and feature's size (minified, the workers' code included), why each feature is in the first download, the diff against the committed baseline, and fails (exit 1) on a budget over. `AEK_SBP=false` skips it. Detail: `devTools/sbp/CLAUDE.md`.
+- `yarn verify:ui [--url <hub url>] [--only <piece>[,…]] [--update] [--headed]` — the UI kit's demos on the Hub's component library page in Chromium (p803 D11): each demo's states in both themes and densities through axe-core (the allowed violations in `devTools/verify/ui.config.ts`) and against local screenshots (`.cache/verify/ui/`), and its keyboard scripts (`hub/_assets/ts/_componentChecks.ts`). Detail: `devTools/verify/CLAUDE.md`.
 - `yarn verify:devFiles [--url <url>]` — the dev file server's self-check (`devTools/devFiles/selfCheck.ts`): its own dev server on 8091 (or the next free port), every route's refusals and writes, the save entries through the gather. Detail: `devTools/devFiles/CLAUDE.md`.
 - `yarn verify:embed [--profile <id>] [--no-build] [--headed] [--webgl]` — mounts each SBP embed profile's build into a plain host page in Chromium (p611 Phase 4): its sizes in `INLINE` and `BACKGROUND` layouts, unmount, and no host style changed; for the banner also the Hub's embed example page. Detail: `devTools/verify/CLAUDE.md`.
 
@@ -82,7 +83,7 @@ Subsystem detail lives in nested `CLAUDE.md` files next to its code. A session l
 - `devTools/devFiles/CLAUDE.md`: the dev file server (API, security, paths, save entries, its self-check).
 - `devTools/gather/CLAUDE.md`: the scene/asset data pipeline (the gatherer's steps, the generated files, the feature manifest, `__saveData`, the dev plugin).
 - `devTools/layout/CLAUDE.md`: the layout check and the entry-imports codemod.
-- `devTools/verify/CLAUDE.md`: `yarn test` (writing a test, the structural tests), `yarn verify:scenes`, `yarn verify:baselines` and `yarn verify:embed` in detail, and the `@example` check.
+- `devTools/verify/CLAUDE.md`: `yarn test` (writing a test, the structural tests), `yarn verify:scenes`, `yarn verify:baselines`, `yarn verify:embed` and `yarn verify:ui` in detail, and the `@example` check.
 - `devTools/sbp/CLAUDE.md`: the Smallest Build Possible (`yarn sbp`, the module sizes and the file keys, the profiles and budgets, the embed profiles: their data, build and prune).
 - `docs/plans/CLAUDE.md`: the plans (naming, header lines, phases, marking a phase or a plan done).
 

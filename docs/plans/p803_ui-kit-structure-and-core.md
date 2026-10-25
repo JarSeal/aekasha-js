@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: UI, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
@@ -743,7 +743,7 @@ As built (section 3, 2026-10-25):
   (the shrink check on `onBoundsResize`), `yarn sbp --profile all` (every budget within) and
   `yarn verify:scenes` (104 passed against Phase 0's baselines) pass.
 
-### Phase 3: `yarn verify:ui`
+### Phase 3: `yarn verify:ui` — done
 
 D11's command over the component library page as it is (still dev-only until Phase 8: it runs
 against the dev Hub's URL, or a `dev`-mode `hub:build`): axe-core, the keyboard script format, the
@@ -829,6 +829,43 @@ As built (section 2, 2026-10-25):
   `none`).
 - The run: 30 states and 6 scripts × 4 settings, about 50 s, passing with section 1's allow list.
 
+As built (section 3, 2026-10-25):
+
+- `uiSnapshots.ts`: each state's shot in each setting against
+  `.cache/verify/ui/baseline/<piece>/<state>.<setting>.png` (`getSnapshotFile`: slugs,
+  `toaster/info-2.light-compact.png`; two states whose names make one slug throw), this run's in
+  `last-run/` (emptied at the start) with a `*.diff.png` over the tolerance (`ui.config.ts`'
+  `UI_SNAPSHOT_TOLERANCE`: mean delta 0.2, 0.1 % of the pixels, the scene runner's
+  `compareSnapshots`). No baseline is a note; `--update` records the shots of the runs without
+  problems. A changed size or a shot over the tolerance fails the state.
+- What a shot holds (`uiPage.ts`' `captureStateAsync`), taken after the settle and before axe:
+  the HUD root's overlays alone, the page around them hidden (`visibility: hidden` on the body's
+  other children, removed before axe, which skips hidden elements), clipped to their boxes' union
+  in the viewport (a backdrop's is the whole viewport, the Hub's background behind it), so a Hub
+  text change doesn't change it; the demo box when nothing is open in the HUD root (the box, the
+  icons, "Close all"), pinned at the viewport's top left with its width rounded and the rest of
+  the page hidden.
+- Pinned because of a run: the box shots first were the box where the page laid it out, and the
+  intro's new paragraph moved the boxes by a fraction of a pixel, so their edges antialiased
+  differently (1.8 % of the pixels, mean delta 0.9) and the window box failed. Pinning moved the
+  box out from under the pointer, so a clicked button's hover transition was caught mid-way
+  (0.1-0.2 %): after a state's steps the pointer moves to the viewport's bottom right corner,
+  before the settle that waits out the transitions. Then a run with a temporary paragraph above
+  the boxes, one without it and one more matched the baselines.
+- Recorded on this branch (120 shots); the runs after matched every one: the shots are stable on
+  one machine. They show the kit as it is, the known items included (the
+  window title's clipped descender, the old greys in the light setting): Phase 5 updates them
+  after its review.
+- Docs: `devTools/verify/CLAUDE.md` (the command, and the shared dev server on the scene
+  runner's line), the root `CLAUDE.md` (the command, the nested file's map line), `hub/CLAUDE.md`
+  (`_componentChecks.ts` among the scripts; a new component's checks), the kit's `CLAUDE.md` (its
+  tests line), the readme's commands table, the Hub's conventions table (`project/aekasha/`) and
+  the component library's intro.
+- The phase's verification: `yarn test`, `tsc` (both), ESLint, `yarn hub:build` and
+  `yarn verify:ui` pass, and `verify:scenes` on one scene (the moved dev server). The phase
+  changed nothing under `src/`, so the full `verify:scenes`, `verify:baselines`, `verify:embed`
+  and `yarn sbp` weren't run again (Phase 2's results stand; a dev dependency isn't in a bundle).
+
 ### Phase 4: the overlay layer
 
 D7: `OverlayStack.ts`, `FocusTrap.ts`, `Anchor.ts`, the top layer with its fallback; the dialog's
@@ -836,7 +873,11 @@ Escape moved onto the stack (its window listeners go); the drop-down list moved 
 and the anchor (no `40vh`, no clipping in a window, the ring on the active option); then
 `Tooltip.ts` and `Popover.ts`. Tests: Escape closing only the innermost overlay, focus returning,
 `inert` set and restored, the anchor's flip and shift (pure functions, in Node). Verify: the
-embed scenario's new checks (D11).
+embed scenario's new checks (D11). `verify:ui` (Phase 3's As built): the keyboard scripts in
+`_componentChecks.ts` follow the new behaviour (Escape in the dialog's open list closing the list
+only, focus back on the opener, a `closeOnEscape` dialog's Escape only from inside the HUD root),
+and the screenshots of the states that change (a list on the top layer) are re-recorded with
+`--update` after review.
 
 ### Phase 5: the existing pieces restyled and accessible
 

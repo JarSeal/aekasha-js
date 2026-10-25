@@ -34,13 +34,16 @@ import type { Browser, BrowserContext, Page } from 'playwright-core';
 import { UI_DEMO_CHECKS, type UiKeyScript } from '../../hub/_assets/ts/_componentChecks';
 import { launchChromium } from './browser';
 import { startVerifyServerAsync } from './devServer';
-import { boxSelector, runKeyStepsAsync, takeStepsAsync } from './uiPage';
+import { boxSelector, captureStateAsync, runKeyStepsAsync, takeStepsAsync } from './uiPage';
+import { checkSnapshotAsync, startSnapshotRun, UI_LAST_RUN_DIR } from './uiSnapshots';
+import { ROOT } from '../paths';
 import { UI_ALLOWED_VIOLATIONS, UI_AXE_TAGS } from './ui.config';
 import {
   findAllowance,
   findStaleAllowances,
   formatSetting,
   getDemoStates,
+  getSnapshotFile,
   groupProblems,
   groupViolations,
   parseUiArgs,
@@ -142,7 +145,15 @@ const settleAsync = async (page: Page) => {
   return false;
 };
 
-type SettingRun = { setting: string; violations: UiViolation[]; problems: string[] };
+type SettingRun = {
+  setting: string;
+  violations: UiViolation[];
+  problems: string[];
+  notes: string[];
+};
+
+/** What every state and script of a run shares: a browser context per setting, the page, `--update` */
+type RunEnv = { contexts: BrowserContext[]; url: string; isUpdate: boolean };
 
 /**
  * A fresh page load of the demos in a setting, running `steps` on it; the console's and the
@@ -173,36 +184,55 @@ const withDemoPageAsync = async (
   return problems;
 };
 
-/** One state in one setting: its steps, the settle, then axe over the box and the HUD root */
+/**
+ * One state in one setting: its steps, the settle, its screenshot against the baseline (or
+ * recorded), then axe over the box and the HUD root
+ */
 const runStateAsync = async (
-  context: BrowserContext,
-  url: string,
+  env: RunEnv,
+  index: number,
   piece: string,
-  state: UiState,
-  setting: UiSetting
+  state: UiState
 ): Promise<SettingRun> => {
+  const setting = UI_SETTINGS[index];
   let violations: UiViolation[] = [];
-  const problems = await withDemoPageAsync(context, url, setting, async (page, problems) => {
-    await takeStepsAsync(page, piece, state.steps);
-    if (!(await settleAsync(page))) problems.push(`not settled after ${SETTLE_TIMEOUT_MS} ms`);
-    await page.addScriptTag({ content: getAxeSource() });
-    violations = await page.evaluate(
-      async ({ box, tags }) => {
-        const result = await window.axe.run(
-          { include: [[box], ['#hudRoot']] },
-          { runOnly: { type: 'tag', values: tags }, resultTypes: ['violations'] }
-        );
-        return result.violations.map((v) => ({
-          rule: v.id,
-          impact: v.impact ?? '',
-          help: v.help,
-          targets: v.nodes.map((n) => n.target.map(String).join(' ')),
-        }));
-      },
-      { box: boxSelector(piece), tags: [...UI_AXE_TAGS] }
-    );
-  });
-  return { setting: formatSetting(setting), violations, problems };
+  const notes: string[] = [];
+  const problems = await withDemoPageAsync(
+    env.contexts[index],
+    env.url,
+    setting,
+    async (page, problems) => {
+      await takeStepsAsync(page, piece, state.steps);
+      // The pointer off the clicked button (its hover would change when the box is pinned for its
+      // shot) to a corner no demo opens anything in, before the settle waits out the transitions
+      await page.mouse.move(VIEWPORT.width - 1, VIEWPORT.height - 1);
+      if (!(await settleAsync(page))) problems.push(`not settled after ${SETTLE_TIMEOUT_MS} ms`);
+      const shot = await checkSnapshotAsync(
+        getSnapshotFile(piece, state.name, setting),
+        await captureStateAsync(page, piece),
+        env.isUpdate && !problems.length
+      );
+      if (shot.problem) problems.push(shot.problem);
+      if (shot.note) notes.push(shot.note);
+      await page.addScriptTag({ content: getAxeSource() });
+      violations = await page.evaluate(
+        async ({ box, tags }) => {
+          const result = await window.axe.run(
+            { include: [[box], ['#hudRoot']] },
+            { runOnly: { type: 'tag', values: tags }, resultTypes: ['violations'] }
+          );
+          return result.violations.map((v) => ({
+            rule: v.id,
+            impact: v.impact ?? '',
+            help: v.help,
+            targets: v.nodes.map((n) => n.target.map(String).join(' ')),
+          }));
+        },
+        { box: boxSelector(piece), tags: [...UI_AXE_TAGS] }
+      );
+    }
+  );
+  return { setting: formatSetting(setting), violations, problems, notes };
 };
 
 /** Where a problem or a violation came up: every setting, or the ones named */
@@ -216,6 +246,10 @@ const printRun = (name: string, runs: SettingRun[], piece: string, found: Set<st
   for (const { problem, settings } of groupProblems(runs)) {
     isFailed = true;
     lines.push(`${RED}${problem} (${formatSettings(settings)})${RESET}`);
+  }
+  const notes = groupProblems(runs.map((r) => ({ setting: r.setting, problems: r.notes })));
+  for (const { problem, settings } of notes) {
+    lines.push(`${DIM}${problem} (${formatSettings(settings)})${RESET}`);
   }
   for (const v of groupViolations(runs)) {
     found.add(`${v.rule}@${piece}`);
@@ -242,8 +276,7 @@ const printRun = (name: string, runs: SettingRun[], piece: string, found: Set<st
  * @returns the rule@piece keys found, and how many states and scripts failed
  */
 const checkPieceAsync = async (
-  contexts: BrowserContext[],
-  url: string,
+  env: RunEnv,
   piece: string,
   states: UiState[],
   scripts: UiKeyScript[]
@@ -253,9 +286,7 @@ const checkPieceAsync = async (
   const found = new Set<string>();
   let failed = 0;
   for (const state of states) {
-    const runs = await Promise.all(
-      UI_SETTINGS.map((setting, i) => runStateAsync(contexts[i], url, piece, state, setting))
-    );
+    const runs = await Promise.all(UI_SETTINGS.map((_, i) => runStateAsync(env, i, piece, state)));
     if (printRun(state.name, runs, piece, found)) failed++;
   }
   for (const script of scripts) {
@@ -263,9 +294,15 @@ const checkPieceAsync = async (
       UI_SETTINGS.map(async (setting, i) => ({
         setting: formatSetting(setting),
         violations: [],
-        problems: await withDemoPageAsync(contexts[i], url, setting, async (page, problems) => {
-          problems.push(...(await runKeyStepsAsync(page, piece, script.steps)));
-        }),
+        notes: [],
+        problems: await withDemoPageAsync(
+          env.contexts[i],
+          env.url,
+          setting,
+          async (page, problems) => {
+            problems.push(...(await runKeyStepsAsync(page, piece, script.steps)));
+          }
+        ),
       }))
     );
     if (printRun(`keys: ${script.name}`, runs, piece, found)) failed++;
@@ -287,12 +324,14 @@ const runAsync = async (args: UiArgs, browser: Browser, url: string) => {
   const contexts = await Promise.all(
     UI_SETTINGS.map((setting) => createSettingContextAsync(browser, setting))
   );
+  const env: RunEnv = { contexts, url, isUpdate: args.update };
+  startSnapshotRun();
   const found = new Set<string>();
   let failed = 0;
   for (const { piece, buttons } of selected) {
     const checks = UI_DEMO_CHECKS[piece];
     const states = getDemoStates(buttons, checks);
-    const result = await checkPieceAsync(contexts, url, piece, states, checks?.keyboard ?? []);
+    const result = await checkPieceAsync(env, piece, states, checks?.keyboard ?? []);
     for (const key of result.found) found.add(key);
     failed += result.failed;
   }
@@ -340,8 +379,9 @@ const main = async () => {
     await close();
   }
   const took = `${((Date.now() - started) / 1000).toFixed(1)} s`;
+  out(`${DIM}This run's screenshots: ${path.relative(ROOT, UI_LAST_RUN_DIR)}/${RESET}`);
   if (failed) {
-    out(`\n${RED}${failed} state(s) failed${RESET} in ${took}`);
+    out(`\n${RED}${failed} state(s) or script(s) failed${RESET} in ${took}`);
     process.exit(1);
   }
   out(`\n${GREEN}All UI checks passed${RESET} in ${took}`);

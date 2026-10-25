@@ -6,13 +6,14 @@
 import type { UiCheckStep, UiDemoChecks, UiKeyStep } from '../../hub/_assets/ts/_componentChecks';
 import type { UiAllowedViolation } from './ui.config';
 
-export const UI_USAGE = 'yarn verify:ui [--url <hub url>] [--only <piece>[,<piece>…]] [--headed]';
+export const UI_USAGE =
+  'yarn verify:ui [--url <hub url>] [--only <piece>[,<piece>…]] [--update] [--headed]';
 
-export type UiArgs = { url: string; only: string[]; headed: boolean };
+export type UiArgs = { url: string; only: string[]; update: boolean; headed: boolean };
 
 /** @throws on an unknown argument or one without its value */
 export const parseUiArgs = (argv: string[]): UiArgs => {
-  const args: UiArgs = { url: '', only: [], headed: false };
+  const args: UiArgs = { url: '', only: [], update: false, headed: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const value = argv[i + 1];
@@ -22,7 +23,8 @@ export const parseUiArgs = (argv: string[]): UiArgs => {
     } else if (arg === '--only' && value) {
       args.only = value.split(',').filter(Boolean);
       i++;
-    } else if (arg === '--headed') args.headed = true;
+    } else if (arg === '--update') args.update = true;
+    else if (arg === '--headed') args.headed = true;
     else throw new Error(`Unknown argument: ${arg} (usage: ${UI_USAGE})`);
   }
   return args;
@@ -43,6 +45,18 @@ export const UI_SETTINGS: UiSetting[] = [
 
 export const formatSetting = (s: UiSetting) => (s.density ? `${s.theme} ${s.density}` : s.theme);
 
+/** A name in a file name: lower case, a run of anything else than a letter or digit a `-` */
+export const slugify = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+
+/** A state's screenshot in a setting, relative to the baseline and last-run folders:
+ * `toaster/info-2.light-compact.png` */
+export const getSnapshotFile = (piece: string, stateName: string, setting: UiSetting) =>
+  `${piece}/${slugify(stateName)}.${slugify(formatSetting(setting))}.png`;
+
 /** A step the runner takes: the table's, or the box's button at this index */
 export type UiRunStep = UiCheckStep | { button: number };
 
@@ -55,7 +69,7 @@ export const BOX_STATE_NAME = 'the box';
 /**
  * A box's states: the box itself, a state per button (named by its text, a repeated text
  * numbered: `Info`, `Info 2`), then the checks table's
- * @throws when a table state's name is taken
+ * @throws when two states' names make the same file name (a table state's name taken)
  */
 export const getDemoStates = (buttonTexts: string[], checks: UiDemoChecks | undefined) => {
   const states: UiState[] = [{ name: BOX_STATE_NAME, steps: [] }];
@@ -65,11 +79,12 @@ export const getDemoStates = (buttonTexts: string[], checks: UiDemoChecks | unde
     seen.set(text, n);
     states.push({ name: n > 1 ? `${text} ${n}` : text, steps: [{ button }] });
   });
-  for (const state of checks?.states ?? []) {
-    if (states.some((s) => s.name === state.name)) {
-      throw new Error(`Two states named "${state.name}"`);
-    }
-    states.push(state);
+  states.push(...(checks?.states ?? []));
+  const names = new Map<string, string>();
+  for (const { name } of states) {
+    const taken = names.get(slugify(name));
+    if (taken !== undefined) throw new Error(`Two states named "${taken}" and "${name}"`);
+    names.set(slugify(name), name);
   }
   return states;
 };

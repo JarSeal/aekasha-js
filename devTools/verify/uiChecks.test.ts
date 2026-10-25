@@ -1,27 +1,33 @@
 import { describe, expect, it } from 'vitest';
+import type { UiSetting } from './uiChecks';
 import {
   BOX_STATE_NAME,
   describeStep,
   findAllowance,
   findStaleAllowances,
   getDemoStates,
+  getSnapshotFile,
   groupProblems,
   groupViolations,
   parseUiArgs,
 } from './uiChecks';
+
+const UI_DARK: UiSetting = { theme: 'dark', density: '' };
 
 describe('parseUiArgs', () => {
   it('reads the URL (with its slash), the pieces and --headed', () => {
     expect(parseUiArgs(['--url', 'http://localhost:8080/hub', '--only', 'window,dialog'])).toEqual({
       url: 'http://localhost:8080/hub/',
       only: ['window', 'dialog'],
+      update: false,
       headed: false,
     });
     expect(parseUiArgs(['--headed']).headed).toBe(true);
+    expect(parseUiArgs(['--update']).update).toBe(true);
   });
 
   it('throws on an unknown argument or a missing value', () => {
-    expect(() => parseUiArgs(['--update'])).toThrow('Unknown argument: --update');
+    expect(() => parseUiArgs(['--webgl'])).toThrow('Unknown argument: --webgl');
     expect(() => parseUiArgs(['--only'])).toThrow('Unknown argument: --only');
   });
 });
@@ -40,9 +46,18 @@ describe('getDemoStates', () => {
     ]);
   });
 
-  it('throws when a table state takes a button’s name', () => {
-    expect(() => getDemoStates(['Default'], { states: [{ name: 'Default', steps: [] }] })).toThrow(
-      'Two states named "Default"'
+  it('throws when two states make the same file name', () => {
+    expect(() => getDemoStates(['Default'], { states: [{ name: 'default!', steps: [] }] })).toThrow(
+      'Two states named "Default" and "default!"'
+    );
+  });
+
+  it('names a screenshot by the piece, the state and the setting', () => {
+    expect(getSnapshotFile('toaster', 'Info 2', { theme: 'light', density: 'compact' })).toBe(
+      'toaster/info-2.light-compact.png'
+    );
+    expect(getSnapshotFile('dialog', 'with a drop-down, its list open', UI_DARK)).toBe(
+      'dialog/with-a-drop-down-its-list-open.dark.png'
     );
   });
 });

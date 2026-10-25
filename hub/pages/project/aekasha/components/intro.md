@@ -14,4 +14,10 @@ The page runs no engine (p800 D1: every component works without it):
   touch the app's saved windows. A window follows the browser window's resizes, but nothing
   restores it from storage on a reload, and a debug window doesn't open: those need the boot.
 
+`yarn verify:ui` checks this page: each demo's states in both themes and both densities with
+axe-core and against its last good screenshot, and each piece's keyboard script
+([`_componentChecks.ts`](repo:hub/_assets/ts/_componentChecks.ts), next to the demos). A
+violation the kit still has is on its allow list
+([`ui.config.ts`](repo:devTools/verify/ui.config.ts)) with the p803 phase that fixes it.
+
 The design these follow is the [design document](hub:project/aekasha/design)'s.
