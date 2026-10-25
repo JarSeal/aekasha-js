@@ -1211,7 +1211,8 @@ As built (section 1, 2026-10-25):
   (the 18 new `@internal` exports, `setWindowCycleKeys` and `WindowCycleKeys` on `aekasha/ui`, the
   sizes above). `yarn verify:ui`: every keyboard script passes and no violation outside the allow
   list; the window's, the dialog's and the drop-down's screenshots differ (the restyle, and the
-  drop-down's window 3 px taller), to re-record with `--update` after review. `verify:scenes`
+  drop-down's window 3 px taller): re-recorded with `--update` after review, and the run after
+  passed every check. `verify:scenes`
   wasn't run: its snapshots are the canvas alone, which no kit style reaches (Phase 0); it runs at
   the phase's end.
 - Tests: `DraggableWindowKeys.test.ts` (11: the chords, the roles and names, a fixed window's
