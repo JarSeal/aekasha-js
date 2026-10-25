@@ -279,6 +279,24 @@ As built (section 1):
   covers nothing: the folder split is the Architecture page's.
 - The app's design document template (`project/app/design/`) is Phase 3's (D8); this phase's
   app page doesn't link it yet.
+- In review: `project/`'s "How Ækasha is developed" (Phase 1's Plans, Issues, Versions and Checks
+  subsections) became three bullets and a link to `project/aekasha/`, which has the details. The
+  coverage check stays as it is (widening it to the root's `##` sections would also flag Project
+  and Commands); the prose names its sources instead (§4's drift risk).
+
+As built (section 2):
+
+- `git mv` to `project/aekasha/code-blocks/`, its `aek:order` (90) and tags kept. The references:
+  the `dynamic-box` region note in `physicsTest.ts` and its copies in the page and in
+  `hub-authoring.md` (line 324), `hub-authoring.md`'s link to the page (line 245, now saying
+  it's a dev page), `hub/CLAUDE.md`'s Code blocks line, `devTools/hub/CLAUDE.md`'s API line (its
+  example of a non-API page under `documentation/` is now `architecture/`), and `_search.ts`'
+  JSDoc example (now `examples/physics/`).
+- The Documentation page's `::: dev-only` line links it; `project/aekasha/` lists it with
+  `::: cards project/aekasha` and links it from its Hub subsection.
+- Checked: `yarn hub:build --no-embed` (API included: 91 pages, no warnings, no
+  `documentation/code-blocks/` in the output) and a `dev` build (95 pages, no diagnostics: the
+  region include, the breadcrumbs' "Local only", the dev-only link).
 
 ### Phase 3: the design document (after p801)
 

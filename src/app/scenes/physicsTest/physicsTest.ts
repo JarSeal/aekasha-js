@@ -67,7 +67,7 @@ const createAnchorBodyAsync = async (id: string, position: PhysVector) => {
 };
 
 /** A dynamic coloured box, half-extents (`hx`, `hy`, `hz`) 0.4 by default. */
-// #region dynamic-box (shown in the Hub: hub/pages/documentation/code-blocks/)
+// #region dynamic-box (shown in the Hub: hub/pages/project/aekasha/code-blocks/)
 const createDynamicBoxAsync = async (
   params: DynamicBodyParams & { hx?: number; hy?: number; hz?: number; restitution?: number }
 ) => {

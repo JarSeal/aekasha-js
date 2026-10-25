@@ -73,8 +73,9 @@ A change updates what describes it, in the same branch:
 The Hub's pages are in `hub/pages/` and its generator is in `devTools/hub/`.
 [`docs/techniques/hub-authoring.md`](repo:docs/techniques/hub-authoring.md) is the authoring
 guide, and [`hub/CLAUDE.md`](repo:hub/CLAUDE.md) and
-[`devTools/hub/CLAUDE.md`](repo:devTools/hub/CLAUDE.md) are the reference. Two rules catch people
-out:
+[`devTools/hub/CLAUDE.md`](repo:devTools/hub/CLAUDE.md) are the reference.
+[Code blocks](hub:project/aekasha/code-blocks) shows the code block syntax rendered. Two rules
+catch people out:
 
 - **A `#region` marker in the code is part of a page.** Renaming, removing or moving one fails
   `yarn hub:build` with the page and line, so the marker's note names its page

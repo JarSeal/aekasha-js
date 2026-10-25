@@ -9,3 +9,6 @@ person. When one of them changes, check this page too.
 
 ::: claude-md
 :::
+
+::: cards project/aekasha
+:::

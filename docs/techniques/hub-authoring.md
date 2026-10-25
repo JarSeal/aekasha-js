@@ -242,7 +242,7 @@ The other directives are `code-group` ([Code groups](#code-groups)), `scene` ([S
 
 ## Code blocks
 
-Code is highlighted by [shiki](https://shiki.style/) when the Hub is built (`devTools/hub/code.ts`), so a page carries highlighted HTML and no highlighter. The two themes (`devTools/hub/codeThemes.ts`) follow the Hub's dark and light theme. The Hub's own [Code blocks page](../../hub/pages/documentation/code-blocks/intro.md) (`/hub/documentation/code-blocks/`) shows every feature rendered, and its "All together" block uses them all at once.
+Code is highlighted by [shiki](https://shiki.style/) when the Hub is built (`devTools/hub/code.ts`), so a page carries highlighted HTML and no highlighter. The two themes (`devTools/hub/codeThemes.ts`) follow the Hub's dark and light theme. The Hub's own [Code blocks page](../../hub/pages/project/aekasha/code-blocks/intro.md) (`/hub/project/aekasha/code-blocks/`, a dev page: the dev server's Hub only) shows every feature rendered, and its "All together" block uses them all at once.
 
 Write a fence with a language, and put options after the language (the fence's _meta_):
 
@@ -321,7 +321,7 @@ Show the real code instead of a copy of it. `<<<` on a line of its own includes 
 Mark a region in the source with `#region` and `#endregion` in a comment:
 
 ```ts
-// #region dynamic-box (shown in the Hub: hub/pages/documentation/code-blocks/)
+// #region dynamic-box (shown in the Hub: hub/pages/project/aekasha/code-blocks/)
 const createDynamicBox = async (id: string, position: PhysVector, color: number) => {
   // …
 };
