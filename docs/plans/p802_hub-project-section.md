@@ -532,6 +532,15 @@ line; `hub/CLAUDE.md` (the pages, the design document's generated tables, the co
 library's entry), `devTools/hub/CLAUDE.md` (the generated design section, the script build's
 aliases), `docs/techniques/hub-authoring.md`.
 
+Checked against the branch after Phase 4 (2026-10-25): the code is as Phase 4's "As built" says
+(`kitStandIns.ts`, `hub/_assets/ts/_kit/`, `_components.ts`, `generated/design.ts` and
+`generated/components.ts`). `hub/CLAUDE.md` and `devTools/hub/CLAUDE.md` have one `##` section
+each (`Ækasha Hub`), and a new `##` would need a page's `aek:covers`: the additions are bullets
+in it. Sections, in the order the prompt gives (the CLAUDE.md files, the authoring doc, the
+root): 1. `hub/CLAUDE.md`, 2. `devTools/hub/CLAUDE.md`, 3. `src/_engine/ui/CLAUDE.md` (Phase 4's
+findings for p803 and the Hub's stand-ins), 4. `docs/techniques/hub-authoring.md`, 5. the root
+`CLAUDE.md`.
+
 ### Phase 6: done
 
 The changelog entry, `yarn checkVersions --against main`, mark the plan done; p800 §5's p802
