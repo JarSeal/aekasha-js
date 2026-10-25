@@ -206,3 +206,43 @@
     opacity: 0.35;
   }
 }
+
+// A button group (ButtonGroup.ts): its buttons joined, the inner corners square and the borders
+// overlapping by their width. Here, after the button's own rules, so the order between the two
+// stylesheets can't decide it. A hovered, pressed or focused button is on top (its border, its ring).
+@layer aek.components {
+  :where(.aekButtonGroup) {
+    display: inline-flex;
+    align-items: stretch;
+  }
+
+  :where(.aekButtonGroup[data-orientation='vertical']) {
+    flex-direction: column;
+  }
+
+  :where(.aekButtonGroup > .aekButton):where(:hover, :focus-visible, [aria-pressed='true']) {
+    z-index: 1;
+  }
+
+  :where(.aekButtonGroup:not([data-orientation='vertical']) > .aekButton:not(:first-child)) {
+    margin-inline-start: -1px;
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+  }
+
+  :where(.aekButtonGroup:not([data-orientation='vertical']) > .aekButton:not(:last-child)) {
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+  }
+
+  :where(.aekButtonGroup[data-orientation='vertical'] > .aekButton:not(:first-child)) {
+    margin-block-start: -1px;
+    border-start-start-radius: 0;
+    border-start-end-radius: 0;
+  }
+
+  :where(.aekButtonGroup[data-orientation='vertical'] > .aekButton:not(:last-child)) {
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+  }
+}

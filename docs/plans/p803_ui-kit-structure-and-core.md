@@ -1616,6 +1616,49 @@ As built (section 2, 2026-10-25):
   `hub/CLAUDE.md` (Hub buttons and kit roots), the UI kit guide (Buttons, the table, the key APIs),
   the component library's text and `COMPONENT_USES`.
 
+As built (section 3, 2026-10-25):
+
+- `components/ButtonGroup.ts`: `createButtonGroup({ label, buttons, exclusive?, orientation?,
+  onChange?, class?, attr?, id? })` returns `{ cmp, buttons, getPressedIndex, setPressedIndex }`;
+  it takes `createButton` handles and adds them. **An exclusive group always keeps one pressed**
+  (a segmented control): a capture `click` on the group stops a press of the pressed button
+  before the button flips it, so nothing changes and its `onPressedChange` isn't called; a
+  bubble `click` after another button pressed itself releases the rest and calls
+  `onChange(index)`. The roving tab stop follows `focusin`, so Tab comes back to the last button
+  focused in the toolbar (the APG toolbar), not the pressed one. Disabled buttons are skipped by
+  the arrows. A used key is stopped, its keyup swallowed. `orientation` (new: D10 doesn't name it)
+  picks the arrows and `aria-orientation`.
+- **The joined styles live in `Button.scss`**, after the button's own: both are `:where()` in one
+  layer, so between two stylesheets the load order would decide the corners. `ButtonGroup.ts`
+  imports `Button.scss` only (it makes no button).
+- `components/Link.ts` + `Link.scss`: `createLink({ href, label, external?, appearance?, variant?,
+  size?, icon?, tooltip?, onClick?, class?, attr?, id? })` returns `{ cmp, setLabel, setHref }`.
+  External by default for an http(s) `href` on another origin than `location`'s (`mailto:` isn't);
+  the mark is the kit's own SVG and the hidden text " (opens in a new tab)", both made on the first
+  external `href` and moved in and out by `setHref`. As a button it's `aekLink aekButton` with
+  `data-variant` / `data-size` (Button.scss styles it; the variants without `link`).
+- The Hub's unlayered `a { color }` beat a kit link like `button` did (section 2): it skips the kit
+  pieces now too.
+- The component library: a "Button group" box (a clipboard group, a view mode toolbar, a vertical
+  tool toolbar, a status line) and a "Link" box (a link whose click a handler takes, an external
+  one, a link in text, two links as buttons). Scripts: the group's Tab stops; the toolbar's
+  arrows, Space, End, wrapping, Tab out and Shift+Tab back to the last focused; the vertical
+  one's Up / Down and Enter; a link's Enter; the external link's `target`, `rel` and hidden text.
+- Tests: `ButtonGroup.test.ts` (6), `Link.test.ts` (5).
+- Docs: the kit's `CLAUDE.md` (Button groups, Links, the importers, the tests), the UI kit guide
+  ("Groups and toolbars", "Links", the table, the key APIs), the component library's two texts and
+  `COMPONENT_USES`.
+- Found in the shots: a line of text inside a demo row (section 1's "Save with" and "Press E", this
+  section's link in text) took the row label's style (`.hubComponentDemoGroup > p`: muted, 600,
+  smaller). The line class (renamed `hubDemoLine`: the status lines use it too) now overrides it.
+  Kbd's and the glyph's new shots change with it (not recorded yet either).
+- The section's checks: `yarn test` (173 files, 1416 tests; `buildGuard.test.ts` failed in the Stop
+  hook's run beside the background `hub:build` and passes alone, as Phase 5 found), `tsc` (both),
+  ESLint, `yarn hub:build` (977 names, 100 % documented), `yarn sbp --profile all` (every budget
+  within), `verify:baselines` recorded (the six `aekasha/ui` names; every bundle unchanged).
+  `verify:ui --only kbd,inputGlyph,button,buttonGroup,link`: every keyboard script passes, no
+  violation; the five boxes' shots are new, to record with `--update` after review.
+
 ### Phase 7: core components II — feedback
 
 D10: Spinner, Progress bar, Skeleton, Divider, Empty state, Loading overlay; the debug scene

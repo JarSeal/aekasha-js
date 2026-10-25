@@ -2793,6 +2793,11 @@
       "ButtonProps": "TypeAlias",
       "createButton": "Function"
     },
+    "src/_engine/ui/components/ButtonGroup.ts": {
+      "ButtonGroup": "TypeAlias",
+      "ButtonGroupProps": "TypeAlias",
+      "createButtonGroup": "Function"
+    },
     "src/_engine/ui/components/InputGlyph.ts": {
       "createInputGlyph": "Function",
       "InputGlyph": "TypeAlias",
@@ -2811,6 +2816,11 @@
       "KeyName": "TypeAlias",
       "KeyPlatform": "TypeAlias",
       "splitKeyChord": "Function"
+    },
+    "src/_engine/ui/components/Link.ts": {
+      "createLink": "Function",
+      "Link": "TypeAlias",
+      "LinkProps": "TypeAlias"
     },
     "src/_engine/ui/core/CMP.ts": {
       "classes": "Function",
@@ -4116,6 +4126,8 @@
       "AddToastResponse",
       "BuiltInIconName",
       "Button",
+      "ButtonGroup",
+      "ButtonGroupProps",
       "ButtonProps",
       "CMP",
       "CMPAnimChain",
@@ -4149,6 +4161,8 @@
       "KIT_ROOT_CLASS",
       "Kbd",
       "KbdProps",
+      "Link",
+      "LinkProps",
       "OpenDraggableWindowProps",
       "Popover",
       "PopoverProps",
@@ -4190,10 +4204,12 @@
       "closeDraggableWindow",
       "cloudSunIcon",
       "createButton",
+      "createButtonGroup",
       "createDropDown",
       "createHudRoot",
       "createInputGlyph",
       "createKbd",
+      "createLink",
       "createPopover",
       "createToaster",
       "createTooltip",

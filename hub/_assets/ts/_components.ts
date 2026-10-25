@@ -17,10 +17,12 @@ import {
   closeDraggableWindow,
   CMP,
   createButton,
+  createButtonGroup,
   createDropDown,
   createHudRoot,
   createInputGlyph,
   createKbd,
+  createLink,
   createPopover,
   createToaster,
   createTooltip,
@@ -583,7 +585,7 @@ const initButtonDemo: Demo = (box) => {
   const root = addKitRoot(box);
   const status = document.createElement('p');
   status.id = BUTTON_ID('Status');
-  status.className = 'hubDemoKbdLine';
+  status.className = 'hubDemoLine';
   status.setAttribute('role', 'status');
   const report = (text: string) => (status.textContent = text);
   const counts = new Map<string, number>();
@@ -667,6 +669,117 @@ const initButtonDemo: Demo = (box) => {
   root.append(status);
 };
 
+// --- Button group ---
+
+const GROUP_ID = (name: string) => `${ID_PREFIX}Group${name}`;
+
+/** In the page: a group of each kind, and what an exclusive one picks in the status line */
+const initButtonGroupDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = GROUP_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  /** Buttons with ids from their labels; toggles with `pressed`, the first one pressed */
+  const makeButtons = (labels: string[], isToggle = false) =>
+    labels.map((label, i) =>
+      createButton({
+        id: GROUP_ID(`Button${label}`),
+        label,
+        ...(isToggle ? { pressed: i === 0 } : {}),
+      })
+    );
+  const row = (label: string, group: { cmp: CMPHandle }) =>
+    addGroup(root, label).append(group.cmp.elem);
+
+  row(
+    'A group (role="group"): joined, each button a tab stop',
+    createButtonGroup({
+      id: GROUP_ID('Clipboard'),
+      label: 'Clipboard',
+      buttons: makeButtons(['Cut', 'Copy', 'Paste']),
+    })
+  );
+  const views = ['Lit', 'Wireframe', 'Normals'];
+  row(
+    'Exclusive: a toolbar of toggles, one pressed; one tab stop, the arrows move, Space presses',
+    createButtonGroup({
+      id: GROUP_ID('View'),
+      label: 'View mode',
+      buttons: makeButtons(views, true),
+      exclusive: true,
+      onChange: (index) => (status.textContent = `View: ${views[index]}`),
+    })
+  );
+  const tools = ['Move', 'Rotate', 'Scale'];
+  row(
+    'Exclusive and vertical: Up and Down move',
+    createButtonGroup({
+      id: GROUP_ID('Tools'),
+      label: 'Tool',
+      buttons: makeButtons(tools, true),
+      exclusive: true,
+      orientation: 'vertical',
+      onChange: (index) => (status.textContent = `Tool: ${tools[index]}`),
+    })
+  );
+  root.append(status);
+};
+
+// --- Link ---
+
+const LINK_ID = (name: string) => `${ID_PREFIX}Link${name}`;
+/** The UI kit's feature page, from this page (project/aekasha/components/) */
+const GUIDE_HREF = '../../../features/ui-kit/';
+
+/** In the page: links in text and as buttons; the first one's click is an app's (its status line) */
+const initLinkDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = LINK_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const row = (label: string, ...links: { cmp: CMPHandle }[]) => {
+    const group = addGroup(root, label);
+    for (const link of links) group.append(link.cmp.elem);
+  };
+
+  row(
+    'A link, and one to another origin (a new tab, marked)',
+    createLink({
+      id: LINK_ID('Credits'),
+      href: '#credits',
+      label: 'Credits',
+      // A router's: the page doesn't follow it
+      onClick: (e) => {
+        e.preventDefault();
+        status.textContent = 'Credits: followed by the app’s handler';
+      },
+    }),
+    createLink({ id: LINK_ID('Manual'), href: 'https://example.com/', label: 'The manual' })
+  );
+  const inText = addGroup(root, 'In text');
+  const line = document.createElement('p');
+  line.className = 'hubDemoLine';
+  line.append(
+    'Read the ',
+    createLink({ href: GUIDE_HREF, label: 'UI kit guide' }).cmp.elem,
+    ' before you start.'
+  );
+  inText.append(line);
+  row(
+    'As buttons: navigations that look like buttons',
+    createLink({
+      href: GUIDE_HREF,
+      label: 'Open the guide',
+      appearance: 'button',
+      variant: 'primary',
+    }),
+    createLink({ href: 'https://example.com/', label: 'Example', appearance: 'button' })
+  );
+  root.append(status);
+};
+
 // --- Kbd ---
 
 const KBD_ROWS: { label: string; keys: string[]; platform?: 'mac' | 'other' }[] = [
@@ -689,7 +802,7 @@ const initKbdDemo: Demo = (box) => {
   }
   const inText = addGroup(root, 'In text, following its size');
   const line = document.createElement('p');
-  line.className = 'hubDemoKbdLine';
+  line.className = 'hubDemoLine';
   line.append('Save with ', createKbd({ keys: 'Ctrl+S', platform: 'other' }).cmp.elem, '.');
   inText.append(line);
 };
@@ -722,7 +835,7 @@ const initInputGlyphDemo: Demo = (box) => {
   }
   const prompt = addGroup(root, 'In a prompt, following its text');
   const line = document.createElement('p');
-  line.className = 'hubDemoKbdLine';
+  line.className = 'hubDemoLine';
   line.append(
     'Press ',
     createInputGlyph({ input: { device: 'KEYBOARD', key: 'e' } }).cmp.elem,
@@ -742,6 +855,8 @@ const DEMOS: Record<string, Demo> = {
   toaster: initToasterDemo,
   icons: initIconsDemo,
   button: initButtonDemo,
+  buttonGroup: initButtonGroupDemo,
+  link: initLinkDemo,
   kbd: initKbdDemo,
   inputGlyph: initInputGlyphDemo,
 };

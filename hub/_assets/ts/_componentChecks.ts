@@ -90,6 +90,10 @@ const GLYPH = '[data-hub-demo="inputGlyph"] .aekInputGlyph';
 /** A button of the button box by its name (`_components.ts`' `BUTTON_ID`), and its status line */
 const BUTTON = (name: string) => `#hubDemoButton${name}`;
 const BUTTON_STATUS = BUTTON('Status');
+/** A button group box's button by its label, and its status line (`_components.ts`' `GROUP_ID`) */
+const GROUP_BUTTON = (label: string) => `#hubDemoGroupButton${label}`;
+const GROUP_STATUS = '#hubDemoGroupStatus';
+const LINK = (name: string) => `#hubDemoLink${name}`;
 
 export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
   window: {
@@ -402,6 +406,75 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { expectText: BUTTON_STATUS, text: 'Deleted (held)' },
           { keyUp: 'Enter' },
           { expectAttr: BUTTON('Delete'), name: 'data-holding', value: null },
+        ],
+      },
+    ],
+  },
+  buttonGroup: {
+    keyboard: [
+      {
+        name: 'a group: each button is a tab stop',
+        steps: [
+          { focusInBox: GROUP_BUTTON('Cut') },
+          { press: 'Tab' },
+          { expectFocus: GROUP_BUTTON('Copy') },
+          { press: 'ArrowRight' },
+          { expectFocus: GROUP_BUTTON('Copy') },
+        ],
+      },
+      {
+        name: 'a toolbar: the arrows, Home and End move the focus, Space presses, Tab leaves and comes back',
+        steps: [
+          { focusInBox: GROUP_BUTTON('Lit') },
+          { expectAttr: '#hubDemoGroupView', name: 'role', value: 'toolbar' },
+          { press: 'ArrowRight' },
+          { expectFocus: GROUP_BUTTON('Wireframe') },
+          { expectAttr: GROUP_BUTTON('Lit'), name: 'aria-pressed', value: 'true' },
+          { press: 'Space' },
+          { expectAttr: GROUP_BUTTON('Wireframe'), name: 'aria-pressed', value: 'true' },
+          { expectAttr: GROUP_BUTTON('Lit'), name: 'aria-pressed', value: 'false' },
+          { expectText: GROUP_STATUS, text: 'View: Wireframe' },
+          { press: 'End' },
+          { expectFocus: GROUP_BUTTON('Normals') },
+          { press: 'ArrowRight' },
+          { expectFocus: GROUP_BUTTON('Lit') },
+          { press: 'Tab' },
+          { expectFocus: GROUP_BUTTON('Move') },
+          // Back in at the last button focused there, as the APG toolbar
+          { press: 'Shift+Tab' },
+          { expectFocus: GROUP_BUTTON('Lit') },
+        ],
+      },
+      {
+        name: 'a vertical toolbar: Up and Down move, Left and Right don’t',
+        steps: [
+          { focusInBox: GROUP_BUTTON('Move') },
+          { press: 'ArrowDown' },
+          { expectFocus: GROUP_BUTTON('Rotate') },
+          { press: 'ArrowRight' },
+          { expectFocus: GROUP_BUTTON('Rotate') },
+          { press: 'Enter' },
+          { expectText: GROUP_STATUS, text: 'Tool: Rotate' },
+        ],
+      },
+    ],
+  },
+  link: {
+    keyboard: [
+      {
+        name: 'Enter follows a link (here an app’s handler takes it)',
+        steps: [
+          { focusInBox: LINK('Credits') },
+          { press: 'Enter' },
+          { expectText: '#hubDemoLinkStatus', text: 'Credits: followed by the app’s handler' },
+        ],
+      },
+      {
+        name: 'no keys; an external link opens in a new tab and says so',
+        steps: [
+          { expectAttr: LINK('Manual'), name: 'target', value: '_blank' },
+          { expectAttr: LINK('Manual'), name: 'rel', value: 'noopener noreferrer' },
+          { expectText: `${LINK('Manual')} .aekVisuallyHidden`, text: '(opens in a new tab)' },
         ],
       },
     ],

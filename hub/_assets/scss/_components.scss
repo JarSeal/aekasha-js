@@ -177,8 +177,14 @@
   }
 }
 
-// A line of text with a key hint or a glyph in it
-.hubDemoKbdLine {
+// A line of text in a kit root: one with a piece in it (a key hint, a link), or a status line. In a
+// row it isn't the row's label (`.hubComponentDemoGroup > p`): the kit root's text
+.hubDemoLine,
+.hubComponentDemoGroup > .hubDemoLine {
+  width: auto;
   margin: 0;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
   line-height: var(--aek-line-height-base);
 }

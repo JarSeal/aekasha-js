@@ -13,6 +13,8 @@
 | Toaster, toast | [`createToaster`](api:createToaster), [`addToast`](api:addToast)   | Short messages that come and go                               |
 | Icon           | [`registerIcon`](api:registerIcon), [`getSvgIcon`](api:getSvgIcon) | SVG icons by name, in the text colour                         |
 | Button         | [`createButton`](api:createButton)                                 | An action: a toggle, a loading save, a hold to confirm        |
+| Button group   | [`createButtonGroup`](api:createButtonGroup)                       | Buttons joined; a toolbar of toggles with one pressed         |
+| Link           | [`createLink`](api:createLink)                                     | A navigation: in text, to another site, or as a button        |
 | Key hint       | [`createKbd`](api:createKbd)                                       | A shortcut's keys, with each platform's names                 |
 | Input glyph    | [`createInputGlyph`](api:createInputGlyph)                         | One key or mouse input in a prompt: "Press E"                 |
 
@@ -362,6 +364,37 @@ createButton({
   (`disabled`, `aria-pressed`, `aria-busy`, `data-holding`). `--aek-button-radius` and
   `--aek-button-hold-color` restyle it from any ancestor.
 
+### Groups and toolbars
+
+[`createButtonGroup`](api:createButtonGroup) joins buttons into a named group. With `exclusive`
+its toggles are a toolbar with one pressed at a time and one tab stop: the arrows move between
+the buttons, Space or Enter presses one.
+
+```ts
+const modes = ['Lit', 'Wireframe', 'Normals'];
+const viewMode = createButtonGroup({
+  label: 'View mode',
+  buttons: modes.map((label, i) => createButton({ label, pressed: i === 0 })),
+  exclusive: true,
+  onChange: (index) => setViewMode(modes[index]),
+});
+toolbarPanel.add(viewMode.cmp);
+```
+
+## Links
+
+[`createLink`](api:createLink) is an `<a>`. A link to another site opens in a new tab with the
+external mark, and assistive tech hears "(opens in a new tab)". `appearance: 'button'` draws a
+link as a button: use it for a navigation ("Open the manual"), and a `link` variant button for an
+action that looks like a link, so each keeps the right element.
+
+```ts
+aboutPanel.add(createLink({ href: 'https://example.com/manual', label: 'The manual' }).cmp);
+menuPanel.add(
+  createLink({ href: '/play', label: 'Play', appearance: 'button', variant: 'primary' }).cmp
+);
+```
+
 ## Key hints and input glyphs
 
 [`createKbd`](api:createKbd) draws a shortcut's keys, a `<kbd>` each with `+` between them, from
@@ -562,7 +595,8 @@ container; `vw` and `vh` are the browser window's, as in CSS.
 - [`createToaster`](api:createToaster), [`addToast`](api:addToast) and
   [`removeToast`](api:removeToast).
 - [`registerIcon`](api:registerIcon) and [`getSvgIcon`](api:getSvgIcon).
-- [`createButton`](api:createButton) ([`Button`](api:Button), [`ButtonProps`](api:ButtonProps)).
+- [`createButton`](api:createButton) ([`Button`](api:Button), [`ButtonProps`](api:ButtonProps)),
+  [`createButtonGroup`](api:createButtonGroup) and [`createLink`](api:createLink).
 - [`createKbd`](api:createKbd) ([`Kbd`](api:Kbd)) and [`createInputGlyph`](api:createInputGlyph)
   ([`InputGlyphInput`](api:InputGlyphInput)).
 - [`aekasha/ui/fonts`](hub:documentation/aekasha/ui/fonts): the kit's fonts, a stylesheet entry.

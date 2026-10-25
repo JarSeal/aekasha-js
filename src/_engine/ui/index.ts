@@ -1,5 +1,7 @@
 export { createButton } from './components/Button';
 export type { Button, ButtonProps } from './components/Button';
+export { createButtonGroup } from './components/ButtonGroup';
+export type { ButtonGroup, ButtonGroupProps } from './components/ButtonGroup';
 export { CMP, classes } from './core/CMP';
 export type {
   CMPAnimChain,
@@ -71,6 +73,8 @@ export { createInputGlyph } from './components/InputGlyph';
 export type { InputGlyph, InputGlyphInput, InputGlyphProps } from './components/InputGlyph';
 export { createKbd } from './components/Kbd';
 export type { Kbd, KbdProps } from './components/Kbd';
+export { createLink } from './components/Link';
+export type { Link, LinkProps } from './components/Link';
 export { getMotionFactor } from './core/Motion';
 export { createPopover } from './overlays/Popover';
 export type { Popover, PopoverProps } from './overlays/Popover';
