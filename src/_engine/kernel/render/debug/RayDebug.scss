@@ -13,12 +13,12 @@
   li {
     display: block;
     border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    font-size: 1.4rem;
-    padding: 0.2rem 0 0.1rem;
+    font-size: calc(1.4 * var(--aek-rem));
+    padding: calc(0.2 * var(--aek-rem)) 0 calc(0.1 * var(--aek-rem));
   }
 
   .rayStatHeading {
-    margin-top: 0.8rem;
+    margin-top: calc(0.8 * var(--aek-rem));
     font-weight: bold;
   }
 
@@ -32,7 +32,7 @@
   }
 
   .rayStatNote {
-    font-size: 1.4rem;
+    font-size: calc(1.4 * var(--aek-rem));
     opacity: 0.6;
   }
 }
@@ -42,15 +42,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.8rem;
+  gap: calc(0.8 * var(--aek-rem));
 }
 
 .rayTesterNotice {
   display: flex;
-  gap: 0.8rem;
+  gap: calc(0.8 * var(--aek-rem));
   align-items: center;
   justify-content: space-between;
-  font-size: 1.2rem;
+  font-size: calc(1.2 * var(--aek-rem));
   color: color.adjust(variables.$warning, $lightness: 35%);
 
   button {
@@ -59,16 +59,16 @@
 }
 
 .rayTesterPickStatus {
-  font-size: 1.2rem;
+  font-size: calc(1.2 * var(--aek-rem));
   font-weight: bold;
   color: color.adjust(variables.$info, $lightness: 30%);
 }
 
 .rayTesterResults {
-  font-size: 1.2rem;
+  font-size: calc(1.2 * var(--aek-rem));
 
   h4 {
-    margin: 0.8rem 0 0.4rem;
+    margin: calc(0.8 * var(--aek-rem)) 0 calc(0.4 * var(--aek-rem));
   }
 
   ol {
@@ -79,7 +79,7 @@
 
   li {
     border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 0.4rem 0;
+    padding: calc(0.4 * var(--aek-rem)) 0;
   }
 
   .rayTesterHitHead {
@@ -91,16 +91,16 @@
 
   .rayTesterField {
     display: flex;
-    gap: 0.8rem;
+    gap: calc(0.8 * var(--aek-rem));
 
     .winSmallLabel {
       flex-shrink: 0;
-      width: 5rem;
+      width: calc(5 * var(--aek-rem));
     }
   }
 
   .rayTesterSummary {
-    margin: 0.4rem 0;
+    margin: calc(0.4 * var(--aek-rem)) 0;
     font-weight: bold;
   }
 
@@ -110,7 +110,7 @@
   }
 
   .rayTesterError {
-    margin: 0.4rem 0;
+    margin: calc(0.4 * var(--aek-rem)) 0;
     color: color.adjust(variables.$alert, $lightness: 45%);
   }
 }

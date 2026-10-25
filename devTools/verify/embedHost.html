@@ -4,6 +4,8 @@
   styles, as a site would be, that imports an embed profile's built entry (served at ./aekasha/,
   its file name in ?entry=) and mounts it. The runner drives it through window.__embedTest, and
   hands styles() embedChecks.ts' HOST_STYLE_SELECTORS, the elements whose styles it compares.
+  ?root= sets the page's root font size (the UI kit scenario's `62.5%`, p801 D9), as a site's
+  own stylesheet would.
 -->
 <html lang="en">
   <head>
@@ -38,6 +40,15 @@
         border: 1px solid #8a7d6b;
       }
     </style>
+    <script>
+      // Before the body: the root size is the page's own, there before any mount
+      const root = new URLSearchParams(location.search).get('root');
+      if (root) {
+        const style = document.createElement('style');
+        style.textContent = `html { font-size: ${root}; }`;
+        document.head.appendChild(style);
+      }
+    </script>
   </head>
   <body>
     <h1>An embed host</h1>
@@ -83,6 +94,24 @@
             viewport: { width: innerWidth, height: innerHeight },
           };
         },
+        /** Each selector's first element: its box, font size and font family, or null */
+        rects: (selectors) =>
+          Object.fromEntries(
+            selectors.map((selector) => {
+              const elem = document.querySelector(selector);
+              const rect = elem && box(elem);
+              const style = elem && getComputedStyle(elem);
+              return [
+                selector,
+                rect && { ...rect, fontSize: style.fontSize, fontFamily: style.fontFamily },
+              ];
+            })
+          ),
+        /** The page's loaded font faces, as `family style weight` */
+        loadedFonts: () =>
+          [...document.fonts]
+            .filter((face) => face.status === 'loaded')
+            .map((face) => `${face.family.replace(/["']/g, '')} ${face.style} ${face.weight}`),
         /** What a click at the h1's centre and at the viewport's centre would hit */
         hits: () => {
           const h1 = box(document.querySelector('h1'));

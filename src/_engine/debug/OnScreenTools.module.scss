@@ -2,21 +2,21 @@
 
 .onScreenToolGroup {
   display: flex;
-  gap: 0.1rem;
+  gap: calc(0.1 * var(--aek-rem));
   position: fixed;
   z-index: 10000;
-  padding: 0.4rem;
+  padding: calc(0.4 * var(--aek-rem));
   background-color: variables.$debugOnScreenAlphaBack;
-  border-radius: 0.2rem;
-  transition: opacity 0.2s ease-in-out;
+  border-radius: calc(0.2 * var(--aek-rem));
+  transition: opacity var(--aek-motion-base) ease-in-out;
 
   // The tool button centres it (an inline-block svg would leave a baseline gap under it)
   :global(.uiIcon) {
     display: block;
-    width: 2.2rem;
+    width: calc(2.2 * var(--aek-rem));
 
     &:global(.smallIcon) {
-      width: 1.7rem;
+      width: calc(1.7 * var(--aek-rem));
     }
 
     svg {
@@ -26,16 +26,16 @@
 }
 
 :global(.switchTools) {
-  bottom: 1.6rem;
+  bottom: calc(1.6 * var(--aek-rem));
   left: 50%;
   transform: translateX(-50%);
   transition:
-    transform 0.2s ease-in-out,
-    opacity 0.2s ease-in-out;
+    transform var(--aek-motion-base) ease-in-out,
+    opacity var(--aek-motion-base) ease-in-out;
 
   @media screen and (max-width: variables.$breakpointMedium) {
     left: 100%;
-    transform: translateX(calc(-100% - 1.6rem));
+    transform: translateX(calc(-100% - 1.6 * var(--aek-rem)));
   }
   @media screen and (max-width: variables.$breakpointSmall) {
     display: none;
@@ -52,7 +52,7 @@
     }
     @media screen and (max-width: variables.$breakpointMedium) {
       left: 100%;
-      transform: translateX(calc(-100% - 1.6rem));
+      transform: translateX(calc(-100% - 1.6 * var(--aek-rem)));
     }
   }
 }
@@ -62,13 +62,13 @@
 // view's own one.
 .onScreenTopRow {
   display: flex;
-  gap: 0.6rem;
+  gap: calc(0.6 * var(--aek-rem));
   position: fixed;
   z-index: 10000;
-  top: 1.6rem;
+  top: calc(1.6 * var(--aek-rem));
   left: 50%;
   transform: translateX(-50%);
-  transition: transform 0.2s ease-in-out;
+  transition: transform var(--aek-motion-base) ease-in-out;
   pointer-events: none;
 
   .onScreenToolGroup {
@@ -90,11 +90,11 @@
 // bottom-left, so this corner stays free. Only its groups take clicks, not the gap between them.
 .onScreenTopLeftRow {
   display: flex;
-  gap: 0.6rem;
+  gap: calc(0.6 * var(--aek-rem));
   position: fixed;
   z-index: 10000;
-  top: 1.6rem;
-  left: 1.6rem;
+  top: calc(1.6 * var(--aek-rem));
+  left: calc(1.6 * var(--aek-rem));
   pointer-events: none;
 
   .onScreenToolGroup {
@@ -132,12 +132,12 @@
   position: relative;
   vertical-align: top;
   overflow: hidden;
-  border-radius: 0.2rem;
-  padding: 0.5rem;
+  border-radius: calc(0.2 * var(--aek-rem));
+  padding: calc(0.5 * var(--aek-rem));
   background-color: variables.$debugGuiBackgroundLighter2;
-  transition: background-color 0.17s ease-in-out;
-  width: 3.2rem;
-  height: 3.2rem;
+  transition: background-color var(--aek-motion-base) ease-in-out;
+  width: calc(3.2 * var(--aek-rem));
+  height: calc(3.2 * var(--aek-rem));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -147,11 +147,11 @@
       display: block;
       content: '';
       position: absolute;
-      left: -0.6rem;
-      top: -0.6rem;
+      left: calc(-0.6 * var(--aek-rem));
+      top: calc(-0.6 * var(--aek-rem));
       background-color: variables.$debugTextColor;
-      width: 1rem;
-      height: 1.2rem;
+      width: calc(1 * var(--aek-rem));
+      height: calc(1.2 * var(--aek-rem));
       transform: rotate(45deg);
     }
   }
@@ -178,11 +178,11 @@
 // the on-screen tool look, wider
 .onScreenToolDropDown {
   justify-content: flex-start;
-  width: 16rem;
+  width: calc(16 * var(--aek-rem));
 
   :global(.uiIcon):global(.smallIcon) {
     flex-shrink: 0;
-    margin-left: 0.3rem;
+    margin-left: calc(0.3 * var(--aek-rem));
   }
 }
 
@@ -193,5 +193,5 @@
 
 // The About Ækasha button: a gap sets it apart from the undo / redo buttons after it
 .aboutTool {
-  margin-right: 0.4rem;
+  margin-right: calc(0.4 * var(--aek-rem));
 }

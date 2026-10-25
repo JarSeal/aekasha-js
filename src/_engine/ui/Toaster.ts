@@ -1,5 +1,6 @@
 import type { TCMP, TStyle } from './CMPTypes';
 import { CMP } from './CMP';
+import { getMotionFactor } from './Motion';
 
 /**
  * A toast's kind: the settings that can differ per kind (showing time, closable, icon) are keyed by
@@ -46,7 +47,8 @@ export type ToasterSettings = {
 
   /** Animation time of the toast appearing and disappearing.
    * This is also the animation time for the queue to move to create
-   * the space for the new appearing toast.
+   * the space for the new appearing toast. Multiplied by the kit root's
+   * `--aek-motion` when a toast starts: 0 under `prefers-reduced-motion: reduce`.
    */
   animationTimeMs: number;
 
@@ -123,7 +125,8 @@ export type AddToastResponse = {
   dimensions: { x: number; y: number };
   /** `performance.now()` when it was added */
   startedTime: number;
-  /** How long it slides in and fades out, in ms */
+  /** How long it slides in and fades out, in ms, after the kit root's `--aek-motion` (0 under
+   * `prefers-reduced-motion: reduce`) */
   animationTime: number;
   /** How long it shows, in ms (0: until it's closed) */
   showingTime: number;
@@ -289,11 +292,11 @@ const getToasterCss = (id: string, config: ToasterSettings) => {
   return `
   #${id}.toaster {
     transition: none;
-    font-size: 1.4rem;
+    font-size: calc(1.4 * var(--aek-rem));
   }
   #${id}.toaster.${TOASTER_UPDATE_CLASS} {
     padding: 0;
-    transition: padding ${anim}ms ease-out;
+    transition: padding calc(${anim}ms * var(--aek-motion, 1)) ease-out;
   }
   #${id} .toast {
     min-width: ${config.toastMinWidth};
@@ -304,14 +307,14 @@ const getToasterCss = (id: string, config: ToasterSettings) => {
     top: -9999px;
     left: -9999px;
     opacity: 0;
-    padding: 0.8rem;
+    padding: calc(0.8 * var(--aek-rem));
     background: rgba(255, 255, 255, 0.25);
-    margin-bottom: 0.2rem;
-    border-radius: 0.4rem;
+    margin-bottom: calc(0.2 * var(--aek-rem));
+    border-radius: calc(0.4 * var(--aek-rem));
   }
   #${id} .toast .toastIcon {
-    width: 1.6rem;
-    height: 1.6rem;
+    width: calc(1.6 * var(--aek-rem));
+    height: calc(1.6 * var(--aek-rem));
     display: inline-block;
     vertical-align: top;
   }
@@ -321,23 +324,22 @@ const getToasterCss = (id: string, config: ToasterSettings) => {
     vertical-align: top;
   }
   #${id} .toast .toastIcon + .toastContent {
-    width: calc(100% - 2.4rem);
-    margin-left: 0.8rem;
+    width: calc(100% - 2.4 * var(--aek-rem));
+    margin-left: calc(0.8 * var(--aek-rem));
   }
   #${id} .toast .toastCloseBtn {
     position: absolute;
     top: 0;
     right: 0;
     cursor: pointer;
-    width: 2rem;
-    height: 2rem;
+    width: calc(2 * var(--aek-rem));
+    height: calc(2 * var(--aek-rem));
     border-radius: 0;
     border: 0;
-    outline: 0;
     background: transparent;
     padding: 0;
     opacity: 0.65;
-    transition: opacity 0.2s ease-in-out;
+    transition: opacity var(--aek-motion-base) ease-in-out;
   }
   #${id} .toast .toastCloseBtn:hover {
     opacity: 1;
@@ -346,23 +348,24 @@ const getToasterCss = (id: string, config: ToasterSettings) => {
     display: block;
     content: "+";
     transform: rotate(45deg);
-    font-size: 2rem;
+    font-size: calc(2 * var(--aek-rem));
     line-height: 0;
   }
   #${id} .toast .toastTitle {
     font-weight: 700;
-    padding-right: 1.6rem;
+    padding-right: calc(1.6 * var(--aek-rem));
   }
   #${id} .toast .toastMessage {
-    font-size: 1.2rem;
+    font-size: calc(1.2 * var(--aek-rem));
   }
   #${id} .toast .toastTitle + .toastMessage {
-    margin-top: 0.4rem;
+    margin-top: calc(0.4 * var(--aek-rem));
   }
   #${id} .toast.${START_PHASE_CLASS} {
     transform: translate(0,0) !important;
     opacity: 1;
-    transition: transform ${anim}ms ease-in-out, opacity ${anim}ms ease-in-out;
+    transition: transform calc(${anim}ms * var(--aek-motion, 1)) ease-in-out,
+      opacity calc(${anim}ms * var(--aek-motion, 1)) ease-in-out;
   }
   #${id} .toast.${END_PHASE_CLASS} {
     opacity: 0;
@@ -518,7 +521,10 @@ export const addToast = (props: ToastProps): AddToastResponse => {
 
   const startedTime = performance.now();
   const id = `toast-${++toastCount}`;
-  const animTime = animationTime ?? (settings.animationTimeMs || DEFAULT_ANIM_TIME);
+  // The CSS transitions run at the same factor (--aek-motion, 0 under reduced motion)
+  const animTime =
+    (animationTime ?? (settings.animationTimeMs || DEFAULT_ANIM_TIME)) *
+    getMotionFactor(toaster.cmp.elem);
   const showTime =
     showingTime ?? resolvePerType(settings.showingTimeMs, type, DEFAULT_SHOW_TIMES[type]);
   const hasCloseButton = isClosable ?? resolvePerType(settings.isClosable, type, false);

@@ -10,6 +10,8 @@ import {
   HUB_DEV_URL_BASE,
   HUB_DIR,
   HUB_STATIC_ASSET_DIRS,
+  getHubStaticAssetDir,
+  isHubStaticAssetFile,
 } from './paths';
 
 /**
@@ -34,7 +36,8 @@ import {
 export type HubDevRunnerDeps = {
   /**
    * A dev build of the whole Hub into `outDir`: `last` is the last build (its assets the
-   * fallback), `reuseAssets` true when no file under `hub/_assets/` changed since it
+   * fallback), `reuseAssets` true when no file under `hub/_assets/`, no static asset (the
+   * engine's fonts) and no other file the styles read (the engine's `tokens.css`) changed since it
    */
   buildAsync: (opts: {
     last: HubBuildResult | null;
@@ -98,16 +101,19 @@ const RESET = '\x1b[0m';
 /** The `?v=` of these changes with any page's text or with the SCSS: not a page change */
 const VOLATILE_ASSET_REF_REGEX = /(_assets\/(?:hub\.css|hub-search\.js))\?v=[\w-]+/g;
 
-/** Static files copied as they are: no `?v=` changes when they do, so open pages reload */
-const STATIC_DIRS = HUB_STATIC_ASSET_DIRS.map((name) => path.join(HUB_ASSETS_DIR, name));
+/**
+ * Static files copied as they are (the engine's fonts too, `HUB_STATIC_ASSET_DIRS`): no `?v=`
+ * changes when they do, so open pages reload
+ */
 const isStaticAsset = (file: string) =>
-  FAVICON_FILES.includes(file) || STATIC_DIRS.some((dir) => file.startsWith(dir + path.sep));
+  FAVICON_FILES.includes(file) || (!!getHubStaticAssetDir(file) && isHubStaticAssetFile(file));
 
 /** A static asset's copy in the dev output: the favicons at its root, the rest in `_assets/` */
-const getStaticAssetCopy = (outDir: string, file: string) =>
-  FAVICON_FILES.includes(file)
-    ? path.join(outDir, path.basename(file))
-    : path.join(outDir, '_assets', path.relative(HUB_ASSETS_DIR, file));
+const getStaticAssetCopy = (outDir: string, file: string) => {
+  if (FAVICON_FILES.includes(file)) return path.join(outDir, path.basename(file));
+  const name = getHubStaticAssetDir(file)!;
+  return path.join(outDir, '_assets', name, path.relative(HUB_STATIC_ASSET_DIRS[name], file));
+};
 
 /**
  * An editor's temporary or backup file (vim's `.swp` and `4913`, `~` backups, emacs' `.#` locks,
@@ -270,8 +276,15 @@ export const createHubDevRunner = (deps: HubDevRunnerDeps): HubDevRunner => {
 
   /** A run after the first build; `extracted`: it renders an API rebuild's model */
   const runAsync = async ({ files, extracted }: HubDevWork) => {
+    const styleSources = new Set(lastBuild?.assets.styleSources);
     const reuseAssets =
-      !!lastBuild && ![...files].some((file) => file.startsWith(HUB_ASSETS_DIR + path.sep));
+      !!lastBuild &&
+      ![...files].some(
+        (file) =>
+          file.startsWith(HUB_ASSETS_DIR + path.sep) ||
+          isStaticAsset(file) ||
+          styleSources.has(file)
+      );
     const result = await deps.buildAsync({ last: lastBuild, reuseAssets });
     const prev = lastBuild;
     lastBuild = result;

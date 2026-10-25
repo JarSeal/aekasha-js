@@ -247,7 +247,7 @@ const getListHeadingHtml = () => {
         }</button>`
       : '';
   return `<div><h3 class="listItemCount">${rows.length} ${isAll ? 'loaded assets' : 'assets in this scene'}:</h3>
-<div style="margin: -0.8rem 0 1.2rem">${scopeButton}</div></div>`;
+<div style="margin: calc(-0.8 * var(--aek-rem)) 0 calc(1.2 * var(--aek-rem))">${scopeButton}</div></div>`;
 };
 
 const getAssetsListData = (): DebuggerListItem[] =>
@@ -441,7 +441,7 @@ const field = (label: string, value: unknown) =>
   `<div><span class="winSmallLabel">${esc(label)}:</span> ${esc(value)}</div>`;
 
 const section = (title: string, body: string) =>
-  `<h4 style="margin: 1.6rem 0 0.4rem">${esc(title)}</h4>${body}`;
+  `<h4 style="margin: calc(1.6 * var(--aek-rem)) 0 calc(0.4 * var(--aek-rem))">${esc(title)}</h4>${body}`;
 
 const vec = (v: { x: number; y: number; z: number; w?: number }) =>
   [v.x, v.y, v.z, ...(v.w !== undefined ? [v.w] : [])].map((n) => +n.toFixed(3)).join(', ');
@@ -896,7 +896,7 @@ const createLodChainCmp = (id: string) => {
   ].join(' ');
   const cmp: TCMP = CMP({
     html: () =>
-      `<div>${isLodChainPending(id) ? '<div>Generating…</div>' : chain ? describeLodChain(chain) : field('Chain', 'none')}<div style="margin-top: 0.6rem">${buttons}</div></div>`,
+      `<div>${isLodChainPending(id) ? '<div>Generating…</div>' : chain ? describeLodChain(chain) : field('Chain', 'none')}<div style="margin-top: calc(0.6 * var(--aek-rem))">${buttons}</div></div>`,
     onClick: async (e) => {
       const action = (e.target as HTMLElement).closest('button')?.dataset.action;
       if (!action || isLodChainPending(id)) return;
@@ -1024,7 +1024,7 @@ ${
           p.warnings.length
             ? `<div class="debuggerWarningText"><span class="winSmallLabel">Warnings:</span> ${esc(p.warnings.join(' '))}</div>`
             : field('Warnings', 'none'),
-          `<pre style="white-space:pre-wrap;font-size:1rem;opacity:0.8">${esc(JSON.stringify(p.raw, null, 1))}</pre>`,
+          `<pre style="white-space:pre-wrap;font-family:var(--aek-font-mono);font-size:calc(1 * var(--aek-rem));opacity:0.8">${esc(JSON.stringify(p.raw, null, 1))}</pre>`,
         ].join('')
       )
     : ''

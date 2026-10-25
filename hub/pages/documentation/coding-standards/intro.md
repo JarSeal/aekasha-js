@@ -42,7 +42,9 @@ The layers and the boot they come together in are on [Architecture](hub:document
 - **Only entry points are public.** Everything a feature exports for its own files and not from
   its entry is `@internal`. An entry file (`index.ts`) holds only named `export … from` lines, no
   `export *` and no code: the build treats it as free of side effects, so anything else in it
-  wouldn't run (`yarn test` checks it).
+  wouldn't run (`yarn test` checks it). The one exception is a stylesheet entry
+  (`aekasha/ui/fonts`): it only imports `.css` files, and `package.json`'s `sideEffects` lists it,
+  so the build keeps its import.
 - **Options objects** for a function with more than two parameters or any optional one:
   `createViewport({ id, scene, camera, anchor })`, not positional flags.
 - **No internals in public types:** a public signature names only public types. An internal type

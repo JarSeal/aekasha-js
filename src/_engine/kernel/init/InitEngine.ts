@@ -2,8 +2,10 @@ import type { AppConfig } from '../config/Config';
 import type { AppData } from '../scene/AppData';
 import type { EngineFeature } from './Features';
 // The page's styles (normalize, html, body) first, then the boot's, which imports the components'
-// styles: a mounted engine (mountAekasha) imports the boot alone (p611 D6)
+// styles: a mounted engine (mountAekasha) imports the boot alone (p611 D6). The full page opts into
+// the kit's fonts (p801 D8); an embed imports `aekasha/ui/fonts` itself.
 import '../../ui/styles/page.scss';
+import '../../ui/fonts/fonts.css';
 import { bootEngineAsync } from './Boot';
 import { lerror } from '../../utils/Logger';
 

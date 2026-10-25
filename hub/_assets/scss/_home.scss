@@ -2,7 +2,10 @@
 // beside a side column of panels
 @use 'tokens' as *;
 
+// Dark in either theme (`data-aek-theme="dark"`): its own background and text colour
 .hubHero {
+  background: var(--hub-bg);
+  color: var(--hub-text);
   border-bottom: 1px solid var(--hub-border);
 }
 
@@ -304,7 +307,7 @@
     height: 0.95em;
     margin-left: auto;
     color: var(--hub-text-muted);
-    transition: transform 0.15s;
+    transition: transform var(--aek-motion-base);
   }
 
   &:hover,
@@ -327,7 +330,7 @@
 
 .hubQuickLinkLabel {
   color: var(--hub-text);
-  transition: color 0.15s;
+  transition: color var(--aek-motion-base);
 }
 
 .hubQuickLinkText {

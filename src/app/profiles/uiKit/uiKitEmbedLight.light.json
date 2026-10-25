@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../.schemas/light.schema.json",
+  "lightProps": {
+    "type": "DIRECTIONAL",
+    "color": "#eef4ff",
+    "intensity": 3,
+    "position": { "x": 4, "y": 5, "z": 6 },
+    "targetPos": { "x": 0, "y": 0, "z": 0 }
+  },
+  "entityOpts": {
+    "appId": "uiKitEmbedLight",
+    "debugData": { "name": "UI kit embed light" }
+  }
+}

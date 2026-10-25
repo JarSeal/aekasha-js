@@ -4,6 +4,7 @@
 import styles from './DraggableWindow.module.scss';
 import { clampToGrabbable, getGrabArea, writePosition } from './DraggableWindowGeometry';
 import type { DragMode, WindowEntry } from './DraggableWindowTypes';
+import { getWindowSize } from './Window';
 
 /**
  * Runs at the end of a drag that changed the window's geometry: DraggableWindow.ts' record and
@@ -23,7 +24,14 @@ const startDragSession = (entry: WindowEntry, mode: DragMode, e: PointerEvent) =
   const target = e.currentTarget as HTMLElement;
   target.setPointerCapture(e.pointerId);
   const rect = windowElem.getBoundingClientRect();
-  const startGeometry = { x: rect.left, y: rect.top, w: rect.width, h: rect.height };
+  // left / top in the HUD's bounds (a mount's container is offset in the viewport)
+  const bounds = getWindowSize();
+  const startGeometry = {
+    x: rect.left - bounds.left,
+    y: rect.top - bounds.top,
+    w: rect.width,
+    h: rect.height,
+  };
   runtime.session = {
     mode,
     pointerId: e.pointerId,

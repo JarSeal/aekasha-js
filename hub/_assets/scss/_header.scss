@@ -129,7 +129,7 @@
   .hubIcon {
     width: 0.95rem;
     height: 0.95rem;
-    transition: transform 0.15s;
+    transition: transform var(--aek-motion-base);
   }
 
   &:hover {
@@ -205,15 +205,15 @@ html:not(.hubJs) .hubNavItem_hasMenu:focus-within > .hubNavDropdown {
   font-size: 0.875rem;
   font-weight: 600;
   text-decoration: none;
-  transition: background-color 0.15s;
+  transition: background-color var(--aek-motion-base);
 
   &:hover {
     background: var(--hub-accent-hover);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--hub-accent);
-    outline-offset: 2px;
+    outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
+    outline-offset: var(--aek-focus-ring-offset);
   }
 
   .hubIcon {

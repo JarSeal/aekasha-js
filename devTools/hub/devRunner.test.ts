@@ -12,12 +12,16 @@ import {
   type HubDevRunnerDeps,
 } from './devRunner';
 import { HubDiagnostics } from './diagnostics';
-import { HUB_DIR } from './paths';
+import { ENGINE_FONTS_DIR, HUB_DIR } from './paths';
 
 const DEBOUNCE_MS = 100;
 const PAGE_FILE = path.join(HUB_DIR, 'pages', 'examples', 'intro.md');
 const OUTSIDE_FILE = path.resolve(HUB_DIR, '..', 'CHANGELOG.md');
 const API_INPUT = path.resolve(HUB_DIR, '..', 'src', '_engine', 'index.ts');
+/** A static asset outside hub/: the engine's fonts are the Hub's `_assets/fonts/` (p801 D8) */
+const ENGINE_FONT = path.join(ENGINE_FONTS_DIR, 'ibm-plex-sans-latin-wght-normal.woff2');
+/** A stylesheet outside hub/ that the Hub's SCSS loads: the UI kit's tokens (p801 Phase 5) */
+const ENGINE_TOKENS = path.resolve(HUB_DIR, '..', 'src', '_engine', 'ui', 'styles', 'tokens.css');
 
 const createResult = (html: string, fields: Partial<HubBuildResult> = {}): HubBuildResult => ({
   isOk: true,
@@ -28,7 +32,7 @@ const createResult = (html: string, fields: Partial<HubBuildResult> = {}): HubBu
   files: [PAGE_FILE, OUTSIDE_FILE],
   dirs: [],
   pages: [{ path: 'examples/', outPath: 'examples/index.html', html, isErrorPage: false }],
-  assets: { styles: null, scripts: null, isClean: true },
+  assets: { styles: null, styleSources: [], scripts: null, isClean: true },
   search: null,
   api: null,
   isApiStale: false,
@@ -226,6 +230,39 @@ describe('createHubDevRunner', () => {
     expect(asked).toEqual([false, true, false]); // The first build has nothing to reuse
   });
 
+  it("runs on an engine font's change, without reusing the assets (p801 D8)", async () => {
+    const runner = createHubDevRunner(deps);
+    const first = runner.getBuildAsync();
+    builds.finish('<p>1</p>', { dirs: [ENGINE_FONTS_DIR] });
+    await first;
+    expect(deps.watch).toHaveBeenCalledWith(expect.arrayContaining([ENGINE_FONTS_DIR]));
+    runner.onWatcherEvent(ENGINE_FONT);
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
+    builds.finish('<p>1</p>', { dirs: [ENGINE_FONTS_DIR] });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(builds.buildAsync.mock.calls.map(([opts]) => opts.reuseAssets)).toEqual([false, false]);
+    expect(events).toEqual([{ kind: 'all' }]);
+  });
+
+  it('runs on a change to a stylesheet the styles read outside hub/, without reusing the assets (p801 Phase 5)', async () => {
+    const styles = (hash: string) => ({ outPath: '_assets/hub.css', content: '', hash });
+    const withTokens = (hash: string): Partial<HubBuildResult> => ({
+      files: [PAGE_FILE, ENGINE_TOKENS],
+      assets: { styles: styles(hash), styleSources: [ENGINE_TOKENS], scripts: null, isClean: true },
+    });
+    const runner = createHubDevRunner(deps);
+    const first = runner.getBuildAsync();
+    builds.finish('<p>1</p>', withTokens('a'));
+    await first;
+    expect(deps.watch).toHaveBeenCalledWith([ENGINE_TOKENS]);
+    runner.onWatcherEvent(ENGINE_TOKENS);
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
+    builds.finish('<p>1</p>', withTokens('b'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(builds.buildAsync.mock.calls.map(([opts]) => opts.reuseAssets)).toEqual([false, false]);
+    expect(events).toEqual([{ kind: 'css', version: 'b' }]);
+  });
+
   it('runs nothing after close', async () => {
     const runner = await startRunnerAsync();
     runner.onHubFileEvent(PAGE_FILE);
@@ -264,14 +301,18 @@ describe('diffBuilds', () => {
   it('sends `css` for a new stylesheet and `all` for a static asset', () => {
     const styles = (hash: string) => ({ outPath: '_assets/hub.css', content: '', hash });
     const prev = createResult('', {
-      assets: { styles: styles('a'), scripts: null, isClean: true },
+      assets: { styles: styles('a'), styleSources: [], scripts: null, isClean: true },
     });
     const next = createResult('', {
-      assets: { styles: styles('b'), scripts: null, isClean: true },
+      assets: { styles: styles('b'), styleSources: [], scripts: null, isClean: true },
     });
     expect(diffBuilds(prev, next, new Set())).toEqual([{ kind: 'css', version: 'b' }]);
     const icon = path.join(HUB_DIR, '_assets', 'icons', 'search.svg');
     expect(diffBuilds(prev, next, new Set([icon]))).toEqual([{ kind: 'all' }]);
+    expect(diffBuilds(prev, next, new Set([ENGINE_FONT]))).toEqual([{ kind: 'all' }]);
+    // The engine fonts folder's stylesheet isn't one of the Hub's files
+    const fontsCss = path.join(ENGINE_FONTS_DIR, 'fonts.css');
+    expect(diffBuilds(prev, next, new Set([fontsCss]))).toEqual([{ kind: 'css', version: 'b' }]);
   });
 });
 

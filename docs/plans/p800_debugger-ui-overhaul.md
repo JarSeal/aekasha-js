@@ -1,6 +1,6 @@
 Status: draft | epic — not-implemented
 Category: Refactoring, Documentation, UI, Debug
-Blocks: p801_design-foundation.md, p802_hub-project-section.md, p803_ui-kit-structure-and-core.md, p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801 and p802 written; the rest not yet: §5)
+Blocks: \_DONE_p801_design-foundation.md, p802_hub-project-section.md, p803_ui-kit-structure-and-core.md, p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801 done, p802 written; the rest not yet: §5)
 Related: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (§9: this epic follows its p608 move and p617's kit), \_DONE_p602_architecture-and-target-structure.md (D5: "the debugger is the kit's first consumer, not its owner"), \_DONE_p617_review-input-ui-hud.md (the kit on `aekasha/ui`; D8: the embed issue), \_DONE_p618_review-debug-public-api.md (D3, P7: Tweakpane in the tab types; the "Write your own tab" guide), p622_engine-6-major.md (the major p806 ships with: D12), p150_current-entity-data-source-info-on-edit-windows.md and p373_merge-debug-and-member-editing.md (debug UI built on p806's components), p355_save-menu-and-file-server-settings.md (its menu on p803 / p804), p426_sequencer-splines-and-cutscenes.md (p804's curve editor), `docs/issues/ui-kit-in-an-embed.md` (p801), `docs/issues/on-screen-tools-during-scene-load.md` (p806) (the original prompt was in `docs/templates/todo-plan-prompts.txt` until this plan's commit, `208b177`, removed it: this plan is its record)
 
 # Debugger UI Overhaul — Epic
@@ -197,7 +197,8 @@ updates this section.
 ### D2. Tokens are CSS custom properties, shared with the Hub
 
 - `--aek-*` tokens in `src/_engine/ui/styles/tokens.css`: colour roles (`bg`, `surface`,
-  `surface-raised`, `surface-hover`, `border`, `border-strong`, `text`, `text-muted`,
+  `surface-raised`, `surface-hover`, `border`, `border-strong`, `border-control` (p801 D2: a
+  control's edge at 3:1; `border-strong` is decorative), `text`, `text-muted`,
   `text-disabled`, `accent`, `accent-hover`, `accent-soft`, `on-accent`, and `danger`, `warning`,
   `success`, `info` each with a `-soft` background), type (families, sizes, weights, line heights,
   tabular numbers), a space scale, radii, shadows, motion (D7), focus ring, z-layers.
@@ -233,9 +234,12 @@ updates this section.
 - The kit root sets `font-size: medium` (the user's browser default, which a host page's root
   can't change) and computes `--aek-base: calc(var(--aek-ui-font-size, 0.875em) * var(--aek-ui-scale, 1))`,
   registered with `@property` as a `<length>` so it inherits as pixels (p801 D4; this was a
-  `0.875rem` default on the font size, which a host's root would still have scaled). Every kit
-  size is a token in `em`; component roots reset to `font-size: var(--aek-base)`, so nested `em`s
-  never compound.
+  `0.875rem` default on the font size, which a host's root would still have scaled). The type and
+  space scales are tokens computed from `--aek-base` on the kit root (`calc(var(--aek-base) * 12 / 14)`),
+  so they inherit as fixed lengths and never compound, and the compact density re-declares them
+  for its subtree; a component sets `font-size: var(--aek-font-size-md)` on its root and uses
+  `em` only for sizes relative to its own text (p801 D2: this was "every kit size is a token in
+  `em`", which the compact density couldn't shrink).
 - `page.scss` drops `html { font-size: 62.5% }`: the full page and an embed both follow the user's
   browser font size (an accessibility gain), and a host page's own root size no longer scales the
   kit by accident (a host that wants that sets `--aek-ui-font-size`). The existing styles' `rem`s
@@ -523,7 +527,13 @@ two phases are the Hub update and the versioning / changelog / done marking
 
 ### p801 — Design foundation
 
-Written: `p801_design-foundation.md` (its D11: p802's Phase 1 lands first).
+Done: `_DONE_p801_design-foundation.md` (2026-10-25, engine 5.11.0, app 1.15.0). What the later
+plans build on, each written there: the kit root `.aekUi` and the tokens in `tokens.css` (D2, with
+`border-control`, a role this plan didn't have), the type and space scales as lengths from
+`--aek-base` (not `em`s), `--aek-rem` the existing styles' internal unit for p803 / p806 to remove
+as they restyle, every colour, duration and outline mapped to a role (its §4, p803's and p806's
+restyle table), IBM Plex Sans and Mono behind `aekasha/ui/fonts` (D8), and the embed issues it
+left for p803 (Phase 3's As built). What follows is the plan as written.
 
 - Phase 0: the font study (D5) on a dev-only specimen page; the token inventory (every colour,
   size and duration in the kit's and the debugger's styles, mapped to a role).

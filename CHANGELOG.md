@@ -4,6 +4,59 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-24 — p801-design-foundation
+
+The design foundation (p801, the debugger UI overhaul epic p800's first child): the design tokens the UI kit, the debugger and the Hub share, with their themes, units that make the kit work in an embed, motion, a focus ring and a contrast rule, and the kit's own fonts. No new component and no restyle of the kit's or the debugger's colours (p803 and p806 do that); the one visible change on purpose is the font.
+
+### Engine 5.11.0 (Golden Hour)
+
+**Added**
+
+- Design tokens (`src/_engine/ui/styles/tokens.css`, in every build): CSS custom properties on a **kit root**, the class `aekUi`, never on `:root`. The HUD root is one; an app puts the class on a container of its own UI outside the HUD. Colour roles (`--aek-bg`, `--aek-surface`, `--aek-text`, `--aek-accent`, `--aek-border-control`, the status colours and their `-soft` tints, `--aek-backdrop`, …), a type scale with weights and line heights, a space scale, radii, shadows, motion durations and easings, the focus ring and z-layers. All in `:where()` and the cascade layer `aek.tokens`, so any rule of an app's beats them.
+- Themes: dark by default, light under `prefers-color-scheme: light`, and `data-aek-theme="dark" | "light"` on any element forces its subtree. `data-aek-density="compact"` gives a subtree smaller type and space scales.
+- `--aek-ui-font-size` (default `0.875em`, 14 px at the browser's 16 px) and `--aek-ui-scale` (a factor on every size, for a game's "UI scale" setting) on the kit root. The kit sizes from the browser's default font size, which the player sets, never from the page's root size.
+- Motion: `--aek-motion-fast / -base / -slow` are 0 under `prefers-reduced-motion: reduce` or an app's `--aek-motion: 0` on the kit root; the kit's transitions, the toaster's animations and the debug scene loader's fades follow them.
+- A focus ring: keyboard focus (`:focus-visible`) under a kit root shows a 2 px accent outline (layer `aek.base`).
+- The `aekasha/ui/fonts` entry: `import 'aekasha/ui/fonts'` opts the kit into IBM Plex Sans (variable, weights 100-700) and IBM Plex Mono (400, 500, 600, 400 italic), Latin woff2 with their OFL licences in `src/_engine/ui/fonts/`. It exports nothing (a stylesheet entry; `package.json`'s `sideEffects` lists it). The files are lazy: a browser fetches a face only when text uses it. Without the import the kit uses the system UI stack and downloads nothing.
+- `Tokens.test.ts`: every colour pair's WCAG contrast in both themes (4.5:1 for text, the accent and the status colours on every surface, 3:1 for control edges and the ring), every theme token with a pair or a reason, the theme copies matching, the fonts' opt-in and the compact density.
+
+**Changed**
+
+- **Restyle:** the full page's and the debugger's text moves from the Lucida Sans stack to IBM Plex Sans (`InitEngine` and the debugger import the fonts), the debugger's monospace text (the character state window, the key shortcuts' ids, the material editor's ids and values, the LOD entity window's and the Assets tab's JSON) from the system monospace to IBM Plex Mono, and an embed's kit from the host page's font to the system UI stack (IBM Plex with the opt-in). To keep the old look, set the family tokens on the kit root in an unlayered rule, which beats the default and the opt-in: `.aekUi { --aek-font-sans: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif; --aek-font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }`.
+- `page.scss` (the full-page boot only) no longer sets `html { font-size: 62.5% }` or a font; `body` is `1rem` (16 px, as before). The kit's and the debugger's `rem` sizes (541 values) are now relative to the kit root, so they look the same at the defaults, follow the browser's font size and the UI scale, and ignore the host page's root.
+- The kit's and the debugger's transitions take the motion tokens: 0.15 s and 0.17 s become 0.2 s, 0.075 s becomes 0.12 s.
+- The kit's and the debugger's styles no longer remove `outline` on focus (six rules, and normalize's `button:-moz-focusring`), so the focus ring shows; the drop-down trigger's own focus shadow gave way to it.
+- A draggable window's default max size and the dialog's backdrop are `100%` of the HUD's bounds, not `100vw` × `100vh`. `DraggableWindowUnit`'s JSDoc says `'%'` is of the bounds and `'vw'` / `'vh'` the browser window's.
+- Every build's first download carries the tokens: about 1.4 kB gzip (the template's `index.css` 0.9 → 2.6 kB with the fonts' rule, the banner embed's CSS 0.1 → 1.5 kB).
+
+**Fixed**
+
+- The UI kit in an embed (`docs/issues/ui-kit-in-an-embed.md`): a mounted engine's kit rendered at the host page's root size (1.6 × larger at the browser's default), and windows measured and clamped to the browser window. Now the kit's sizes don't depend on the host's root, and the windows, the dialog's backdrop and the drawer are bounded by the mount's container, following it when it resizes.
+- In an embed, a window opened at a px position or dragged jumped by the container's offset in the page.
+
+### App 1.15.0 (Preschooler)
+
+**Added**
+
+- The `uiKit` embed profile (`src/app/profiles/uiKit/`, in `sbp.config.ts` with its budgets): one code-made scene, `uiKitEmbed`, no engine feature, that opens a window, a toast and a dialog with an open drop-down over a box, with the kit's fonts. It runs on the full page too (`?startScene=uiKitEmbed`).
+
+### Project
+
+**Added**
+
+- `yarn verify:embed` mounts the `uiKit` profile at a 16 px and at a 62.5 % host root: every piece inside the container, the window at its position, the dialog centred, the backdrop the container's box, the same font sizes at both roots, IBM Plex Sans loaded, a drag of the window, and everything still inside after the container shrinks. The host style check leaves out the two custom properties `tokens.css` registers (`--aek-base`, `--aek-rem`: CSS puts a registered property on every element, and has no scoped registration).
+- `devTools/hub/tokens.test.ts` (every `--hub-*` an alias of a kit token or on the Hub-only list, the Hub's colours unchanged but for the listed changes) and `devTools/hub/fonts.test.ts` (the Hub's faces and stacks the same as the engine's).
+- The Hub's UI kit page: a Styling section (the kit root, the tokens by group, themes and density, the UI scale and font size, the fonts, reduced motion, focus and layers); the embed warning is gone. The Documentation page lists `aekasha/ui/fonts`, and an entry with no names has an API page saying it's a stylesheet entry.
+
+**Changed**
+
+- The Hub runs on the kit's tokens: its `<html>` is a kit root, each `--hub-*` colour, radius and font is an alias of a `--aek-*` token, and the theme toggle sets `data-aek-theme` in place of `data-theme` (`localStorage.aekHubTheme` stays, so a saved theme carries over). The changes that come with it: the error colour is the kit's danger (`#ff7a85` → `#ff7a6b` dark, `#c0283a` → `#c2361f` light), the light warning is `#8f6300` (4.5:1, was `#9a6a00`), the light search backdrop is `rgb(15 23 38 / 40%)`, and the transitions are 0.2 s (were 0.15 s) and stop under reduced motion. The focus ring reads the ring tokens. `hub.css` 8.6 → 9.6 KiB gzip.
+- **Restyle:** the Hub's text from Inter to IBM Plex Sans and its code from the system monospace to IBM Plex Mono, from the engine's font files (`hub/_assets/fonts/`' Inter is gone).
+- The dev Hub rebuilds its stylesheet when a file sass loaded changes (the UI kit's `tokens.css`), and copies the engine's fonts again when one changes.
+- `aliases.test.ts` allows an entry of `.css` imports only when `package.json`'s `sideEffects` lists it.
+- The root `CLAUDE.md`, `src/_engine/ui/CLAUDE.md` (a Tokens and units section), `devTools/sbp/`, `devTools/verify/` and `devTools/hub/CLAUDE.md`, `hub/CLAUDE.md`, the Hub authoring guide and the readme describe the tokens, the fonts and the embed fix.
+- The plans: p801 is `_DONE_`; p800, p802 and the issue file follow.
+
 ## 2026-10-23 — p802-dev-pages
 
 The Hub's dev-only pages and the Project section's first page (p802 Phase 1, of the debugger UI overhaul epic p800): pages the dev server's Hub shows and `yarn hub:build` never builds, so p801's font study and the design documents have somewhere to live.

@@ -54,7 +54,7 @@ Each feature has a page in the Ækasha Hub's Features section (`/hub/features/`:
 - **Input**: action maps bind named actions (buttons, 1D and 2D axes, mouse and drag deltas) to the keyboard, mouse, touch and gamepad, as plain data a settings screen can rebind. The simulation reads them once per fixed physics step, so a tap shorter than a step still lands on exactly one, while UI and debug keys get a callback at the press itself, also while the game is paused. Contexts switch whole sets of maps on and off (gameplay, debug, a menu), and a map's input can be recorded and replayed step by step (a ghost, a demo, a test). Gamepads use the standard mapping, with buttons named by position and radial stick deadzones. Under the action layer, the device bindings stay: key chords, picking on mouse clicks and hovers, touch gestures.
 - **Characters**: a dynamic, physics-driven character controller that handles slopes and moving platforms, with swappable body plans (a humanoid capsule built in). Characters are driven through an intent object, which a brain writes once per physics step: the player brains (tank, world-fixed in 8 directions, camera-relative) read an action map, your own kinds (an AI, a script, a network peer) register by name, and code can write it too. Controllers are registered kinds as well, so a character can be rebuilt from data. On the main thread a character simulates the same way on every run: step-index time, a seeded random stream and synchronous probes. A locomotion state (idle, walk, run, jump, fall, slide, tumble, …) reports what each one is doing, and a physics-only control mode hands the body to physics, eg. for a ragdoll.
 - **Sky box**: a layered sky that is both the background and the scene's environment lighting, so reflections match what you see. The base is a colour, an equirectangular (including HDR) or a cube map, and procedural layers go on top: a physically based atmosphere, up to four suns and two phased moons (each can drive a shadow-casting light), stars with a Milky Way, baked nebulae, clouds, a ground and ambient light. A day/night cycle moves the suns, moons and stars from a time of day you can play, pause, speed up or set from code. Presets (`DAY_SKY`, `NIGHT_SKY`, `DAY_NIGHT`, `SPACE`) give a starting point for a definition.
-- **UI kit** (`aekasha/ui`): the DOM UI the debug tools are built from, for the app's own HUD: a lightweight component helper (`CMP`) that updates in place, a HUD layer over the canvas, draggable windows (one per entity or item as a window kind, kept over reloads and scene changes), modal dialogs that close on Escape before any key binding sees it, keyboard-driven drop-downs, toasts and an icon registry (a build keeps only the icons something registers). The Hub has a page and an example scene for it.
+- **UI kit** (`aekasha/ui`): the DOM UI the debug tools are built from, for the app's own HUD: a lightweight component helper (`CMP`) that updates in place, a HUD layer over the canvas, draggable windows (one per entity or item as a window kind, kept over reloads and scene changes), modal dialogs that close on Escape before any key binding sees it, keyboard-driven drop-downs, toasts and an icon registry (a build keeps only the icons something registers). Design tokens shared with the Hub (CSS custom properties: colour roles in a dark and a light theme, type, space, motion and a focus ring) style the app's own UI; the kit sizes itself from the player's browser font size and a UI scale setting, follows reduced motion, keeps its size and stays inside the mount's container in an embed whatever the host page's root size, and has its own fonts, IBM Plex Sans and Mono, behind `import 'aekasha/ui/fonts'`. The Hub has a page and an example scene for it.
 
 ### Toolkit (`src/toolkit/`)
 
@@ -175,7 +175,8 @@ Open `http://localhost:8080/?isDebug=true` to get the full debug suite, then pre
 │   │   ├── features/       # A folder per opt-in feature, with its entry (aekasha/physics,
 │   │   │                   # …), worker and debug/: physics, character, skybox, lod,
 │   │   │                   # spatial, instancing, lines, postfx, viewports
-│   │   ├── ui/             # The UI kit (aekasha/ui): CMP, HUD, windows, dialogs, toasts, icons
+│   │   ├── ui/             # The UI kit (aekasha/ui): CMP, HUD, windows, dialogs, toasts, icons,
+│   │   │                   # the design tokens (styles/) and fonts (aekasha/ui/fonts)
 │   │   ├── debug/          # The debugger framework (aekasha/debug); the kernel's and the
 │   │   │                   # features' own _dbg__* modules sit in their debug/ folders
 │   │   ├── schemas/        # Zod schemas for every asset JSON type
@@ -190,7 +191,7 @@ Open `http://localhost:8080/?isDebug=true` to get the full debug suite, then pre
 │   │   ├── scenes/         # A folder per scene: its JSON, code and the assets only it uses
 │   │   ├── examples/       # The Hub's example scenes
 │   │   ├── shared/         # Code several scenes use
-│   │   ├── profiles/       # An embed profile per folder: its entry and scene (banner/)
+│   │   ├── profiles/       # An embed profile per folder: its entry and scene (banner/, uiKit/)
 │   │   └── textures/, skyboxes/, …  # The assets several scenes use, by type
 │   ├── generated/          # The gathered scene and asset data, handed to InitEngine
 │   │                       # (written by yarn gatherAppData, committed); profiles/<id>/

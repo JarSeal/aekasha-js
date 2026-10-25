@@ -1,6 +1,7 @@
 // The draggable windows' geometry: their inline styles, the px conversion of a centred position,
 // the clamps that keep a window grabbable or on screen, the fits, the cascade and the placement of
-// a freshly mounted window. Reads the DOM and the viewport, holds no state.
+// a freshly mounted window. Reads the DOM and the HUD's bounds (`getWindowSize`: the viewport, or a
+// mounted engine's container), holds no state.
 import { getWindowSize } from './Window';
 import styles from './DraggableWindow.module.scss';
 import type {
@@ -45,8 +46,9 @@ export const getGeometryStyle = ({
     height: `${g.h}${units?.size?.h || 'px'}`,
     minWidth: `${minSize.w}${units?.minSize?.w || 'px'}`,
     minHeight: `${minSize.h}${units?.minSize?.h || 'px'}`,
-    maxWidth: maxSize ? `${maxSize.w}${units?.maxSize?.w || 'px'}` : '100vw',
-    maxHeight: maxSize ? `${maxSize.h}${units?.maxSize?.h || 'px'}` : '100vh',
+    // A fixed element's % is its containing block's: the viewport, or a mount's container
+    maxWidth: maxSize ? `${maxSize.w}${units?.maxSize?.w || 'px'}` : '100%',
+    maxHeight: maxSize ? `${maxSize.h}${units?.maxSize?.h || 'px'}` : '100%',
     transform:
       isCentredX || isCentredY
         ? `translate3d(${isCentredX ? '-50%' : '0'}, ${isCentredY ? '-50%' : '0'}, 0)`
@@ -69,8 +71,9 @@ const convertPositionToPx = ({ config, runtime }: WindowEntry) => {
   const elem = runtime.windowCMP?.elem;
   if (!elem || config.disableDragging || !isCssCentred(config)) return;
   const rect = elem.getBoundingClientRect();
-  config.geometry.x = Math.round(rect.left);
-  config.geometry.y = Math.round(rect.top);
+  const bounds = getWindowSize();
+  config.geometry.x = Math.round(rect.left - bounds.left);
+  config.geometry.y = Math.round(rect.top - bounds.top);
   if (config.units) delete config.units.position;
   elem.style.transform = '';
   writePosition(elem, config.geometry);

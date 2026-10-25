@@ -20,12 +20,25 @@ describe('aliases', () => {
 
   // An entry only names modules: the build keeps what's used of them (package.json's
   // `sideEffects`), and anything else in an entry would run wherever the entry is imported. Named,
-  // so an entry lists its API (no `export *`).
+  // so an entry lists its API (no `export *`). One exception: a stylesheet entry
+  // (`aekasha/ui/fonts`, p801 D8) imports `.css` files and nothing else, and `sideEffects` lists
+  // it, or the build drops it with its stylesheet.
   it('an entry file holds only named `export … from` statements', () => {
+    const { sideEffects } = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf-8'));
     const offending: string[] = [];
     for (const file of Object.values(ENTRY_FILES)) {
       const text = fs.readFileSync(path.join(ROOT, file), 'utf-8');
       const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+      const isStylesheetImport = (statement: ts.Statement) =>
+        ts.isImportDeclaration(statement) &&
+        !statement.importClause &&
+        ts.isStringLiteral(statement.moduleSpecifier) &&
+        statement.moduleSpecifier.text.endsWith('.css');
+      const isStylesheetEntry = sf.statements.length > 0 && sf.statements.every(isStylesheetImport);
+      if (isStylesheetEntry) {
+        expect(sideEffects, `${file}: package.json's sideEffects`).toContain(`./${file}`);
+        continue;
+      }
       for (const statement of sf.statements) {
         const isNamedReexport =
           ts.isExportDeclaration(statement) &&

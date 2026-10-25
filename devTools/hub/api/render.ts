@@ -240,6 +240,9 @@ const renderApiPage = (ctx: Ctx, page: ApiPage) => {
     html += sectionHeading(ctx, 'Folders', 'folders') + renderPageList(ctx, page.children);
   } else if (page.kind === 'folder') {
     html += `<p>The names <code>${escapeHtml(page.entry!)}</code> exports from <code>${escapeHtml(page.sourcePath)}/</code>.</p>\n`;
+  } else if (!page.sections.length) {
+    // A stylesheet entry (`aekasha/ui/fonts`): imported for its styles, no names
+    html += `<p>A stylesheet entry: it exports no names. Import it for its styles: <code>import '${escapeHtml(page.entry!)}'</code>.</p>\n`;
   }
   for (const section of page.sections) html += renderSection(ctx, section);
   return `<div class="hubApi">\n${html}</div>\n`;

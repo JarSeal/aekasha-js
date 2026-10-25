@@ -1,9 +1,9 @@
 **Title:** The UI kit sizes itself for the full page: `rem`s on the template's root and the browser window's box
 
-Status: open | for p801 (p800's design foundation, its D4)
+Status: fixed | 2026-10-24, p801 (D4, Phases 1-3; checked by D9's `uiKit` embed)
 Category: UI, Embed
 Found: 2026-10-20, p617 §1.4 (S2, W5); filed in p617 D8
-Our workaround: none needed yet: no embed profile shows kit UI (the banner has none). An app that does sets its own sizes on the components it makes
+Our workaround (until p801): none needed: no embed profile showed kit UI (the banner has none)
 
 ## What happens
 
@@ -40,3 +40,37 @@ to rewrite, would be work done twice, and no embed shows kit UI yet.
    `vh`).
 3. A check: `yarn verify:embed` mounting a profile that opens a window, a dialog and a toast, and
    comparing their boxes with the container's.
+
+## Fix
+
+p801 (the design foundation, D4) changed both, and its Phase 3 checks them in a page:
+
+- **Sizes.** The kit root (`.aekUi`, the HUD root's class) sets `font-size: medium`, the user's
+  browser default, which a host page's root can't change, and computes `--aek-base` (14 px at
+  the defaults) and `--aek-rem` (10 px, the old `rem`) from it, registered with `@property` so
+  they inherit as pixels (`ui/styles/tokens.css`). Every `rem` in the kit's and the debugger's
+  styles became `calc(N * var(--aek-rem))` (p801 Phase 2), and `page.scss` lost its 62.5 % root:
+  the full page looks the same, and an embed sizes like it at any host root. They follow the
+  browser's font size and `--aek-ui-scale` too.
+- **Bounds.** `mountAekasha` makes its container the HUD's bounds (`ui/Window.ts`'
+  `setWindowBoundsElement`): `getWindowSize` measures it, with its viewport position, so the
+  clamps, the fits, the cascade and a drag's start work in the container's box (a drag used to
+  jump by the container's offset, a bug this issue didn't name). The windows' default max size
+  and the dialog backdrop are `100%` of their containing block, the container in an embed. The
+  container's `ResizeObserver` (the canvas size source) runs the windows' resizer, so they clamp
+  when only the container changes. `'vw'` / `'vh'` window units stay the browser window's, as CSS
+  says (their JSDoc points to `'%'`).
+
+The evidence: `yarn verify:embed`'s scenario for the `uiKit` profile (`src/app/profiles/uiKit/`,
+a window, a toast and a dialog with an open drop-down) mounts it in a 640 × 360 target on a host
+with a 16 px root and again with `html { font-size: 62.5% }`: every element inside the container,
+the window at its px position from the container's corner, the dialog centred in it, the backdrop
+covering it and not the page, the font sizes the same at both roots (window 12 px, toast 14 px),
+a drag moving the window by the pointer's distance, and the window inside after the target
+shrinks. Each check was seen failing on a broken copy (the origin fix reverted, `--aek-rem` on the
+host's root, the backdrop at `100vw` × `100vh`, no bounds element). Chromium only.
+
+Left for p803 (the kit's restyle), seen in the same embed: a drop-down list's `max-height: 40vh`
+is the browser window's; a `closeOnEscape` dialog takes Escape from the whole host page while
+it's open; the toast's text colour, the kit's font and the buttons' font come from the host page
+(no normalize in an embed); a window clips a drop-down list that overflows it.

@@ -1,20 +1,20 @@
 @use '../ui/styles/variables.scss';
 
-// The drawer toggler tab hangs 3rem off the drawer's left edge
-$drawerTogglerWidth: 3rem;
-$stackInset: 1.6rem;
+// The drawer toggler tab hangs 30 px (at the default UI size) off the drawer's left edge
+$drawerTogglerWidth: calc(3 * var(--aek-rem));
+$stackInset: calc(1.6 * var(--aek-rem));
 // Narrowest window where the gizmo fits left of the open drawer without covering the top-left
-// on-screen tools (drawer + toggler + insets + gizmo + undo/redo tools). Media queries don't use
-// the html font-size (rem = 10px here), so this is in px.
+// on-screen tools (drawer + toggler + insets + gizmo + undo/redo tools) at the default UI size.
+// A media query can't read --aek-rem, so this is in px.
 $fitsNextToOpenDrawer: 650px;
 
 .axesGizmoSlot {
-  width: 10rem;
-  height: 10rem;
+  width: calc(10 * var(--aek-rem));
+  height: calc(10 * var(--aek-rem));
 
   @media screen and (max-width: variables.$breakpointSmall) {
-    width: 8rem;
-    height: 8rem;
+    width: calc(8 * var(--aek-rem));
+    height: calc(8 * var(--aek-rem));
   }
 
   // Interactive only while the debug camera is active (see _dbg__AxesGizmo.ts)
@@ -37,15 +37,15 @@ $fitsNextToOpenDrawer: 650px;
 // The whole top-right viewport stack slides left with the drawer (viewports follow the
 // transition frame by frame, see Viewports.ts)
 :global(.aekViewportStack_TOP_RIGHT) {
-  transition: right 0.2s ease-in-out;
+  transition: right var(--aek-motion-base) ease-in-out;
 
   // Clear the drawer toggler when it is in the TOP position (it covers the right edge there).
   // Not while the drawer is open: `:has()` would out-specify the open rule below.
   :global(body:not(.debugDrawerOpen):has(.debugDrawerToggler.TOP)) & {
-    right: $drawerTogglerWidth + $stackInset;
+    right: calc($drawerTogglerWidth + $stackInset);
   }
 
   :global(.debugDrawerOpen) & {
-    right: variables.$drawerWidth + $drawerTogglerWidth + $stackInset;
+    right: calc(variables.$drawerWidth + $drawerTogglerWidth + $stackInset);
   }
 }

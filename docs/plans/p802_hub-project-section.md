@@ -1,9 +1,8 @@
 Status: in progress | Phase 1 implemented
 Category: Documentation, Hub, Tooling
 Epic: p800_debugger-ui-overhaul.md
-Blocks: p801_design-foundation.md (only its Phase 0: the font specimen page needs Phase 1's dev-only pages), p809_project-roadmaps-and-docs-split.md
-Blocked by: p801_design-foundation.md (only Phase 3, the design document, reads p801's `tokens.css`)
-Related: \_DONE_p601_refactoring-safety-net-tests-and-baselines.md (`::: dev-only`), \_DONE_p619_review-schemas-pipeline-devtools-hub.md (the Hub's generator as it is)
+Blocks: p809_project-roadmaps-and-docs-split.md
+Related: \_DONE_p801_design-foundation.md (its Phase 0's font specimen page needed Phase 1's dev-only pages; Phase 3, the design document, reads its `tokens.css`), \_DONE_p601_refactoring-safety-net-tests-and-baselines.md (`::: dev-only`), \_DONE_p619_review-schemas-pipeline-devtools-hub.md (the Hub's generator as it is)
 
 # Hub Project Section
 
@@ -119,8 +118,8 @@ project/aekasha/components/   the component library for developing Ækasha (Phas
 project/app/                  The app's own: its conventions (what goes in src/app/, the scene
                               folder rule, its version), and the children:
 project/app/design/           a design document template to copy and fill (D8's headings, empty)
-project/font-study/           p801 Phase 0's specimen; after p801 it moves into design/ as the
-                              fonts' record, or is removed (p801 decides)
+project/font-study/           p801 Phase 0's specimen: removed by p801 Phase 4 with its font
+                              packages (the record is p801 D8's outcome and table)
 ```
 
 The content comes from the root `CLAUDE.md`, `docs/plans/CLAUDE.md` and the coding standards
@@ -264,7 +263,7 @@ D6's hero slot. `aek:covers` on each page for the CLAUDE.md sections it explains
 ### Phase 3: the design document (after p801)
 
 D8: `generated/design.ts`, the contrast module shared with p801's test, the prose, the app's
-template; p801's `font-study/` moved or removed as p801 decided.
+template (p801 Phase 4 removed `font-study/`: the design document's fonts come from p801 D8).
 
 ### Phase 4: the component library (dev)
 

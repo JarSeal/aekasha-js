@@ -12,7 +12,7 @@
   display: flex;
   flex-wrap: wrap;
   flex-shrink: 0;
-  padding: 0.8rem 1rem 0;
+  padding: calc(0.8 * var(--aek-rem)) calc(1 * var(--aek-rem)) 0;
 }
 
 .tabButton {
@@ -27,7 +27,7 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  padding: 0 1rem 0.8rem;
+  padding: 0 calc(1 * var(--aek-rem)) calc(0.8 * var(--aek-rem));
   color: variables.$debugTextColor;
   scrollbar-color: variables.$debugTextColor variables.$debugGuiBackgroundLighter2;
   scrollbar-width: thin;
@@ -35,7 +35,7 @@
   :global(.profilerTable) {
     width: 100%;
     border-collapse: collapse;
-    font-size: 1.2rem;
+    font-size: calc(1.2 * var(--aek-rem));
     font-variant-numeric: tabular-nums;
 
     tr:nth-child(odd) {
@@ -44,7 +44,7 @@
 
     th,
     td {
-      padding: 0.4rem 0.6rem;
+      padding: calc(0.4 * var(--aek-rem)) calc(0.6 * var(--aek-rem));
       vertical-align: baseline;
     }
 
@@ -63,7 +63,7 @@
 
     :global(.profilerSub) {
       width: 100%;
-      font-size: 1rem;
+      font-size: calc(1 * var(--aek-rem));
       color: color.adjust(variables.$debugTextColor, $lightness: -20%);
     }
 
@@ -72,8 +72,8 @@
     }
 
     :global(.profilerGroupHead) {
-      padding-top: 1rem;
-      font-size: 1rem;
+      padding-top: calc(1 * var(--aek-rem));
+      font-size: calc(1 * var(--aek-rem));
       font-weight: 700;
       color: color.adjust(variables.$debugTextColor, $lightness: -20%);
     }
@@ -94,12 +94,12 @@
   :global(.profilerAction),
   :global(.profilerMetricList) button {
     @include variables.nakedButton;
-    padding: 0.1rem 0.6rem;
+    padding: calc(0.1 * var(--aek-rem)) calc(0.6 * var(--aek-rem));
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: variables.$borderRadiusSmall;
     background-color: variables.$debugGuiBackgroundLighter2;
     color: variables.$debugTextColor;
-    font-size: 1rem;
+    font-size: calc(1 * var(--aek-rem));
     cursor: pointer;
 
     &:hover:not(:disabled) {
@@ -113,22 +113,22 @@
   }
 
   :global(.profilerAction) {
-    margin-left: 0.4rem;
+    margin-left: calc(0.4 * var(--aek-rem));
   }
 
   :global(.profilerMetricList) {
-    margin: 0.8rem 0;
-    font-size: 1.2rem;
+    margin: calc(0.8 * var(--aek-rem)) 0;
+    font-size: calc(1.2 * var(--aek-rem));
 
     :global(.profilerMetricListHead) {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 0.4rem;
+      margin-bottom: calc(0.4 * var(--aek-rem));
 
       h4 {
         margin: 0;
-        font-size: 1.2rem;
+        font-size: calc(1.2 * var(--aek-rem));
         font-weight: 700;
       }
     }
@@ -140,16 +140,16 @@
     }
 
     :global(.profilerMetricGroupHead) {
-      margin: 0.8rem 0 0.4rem;
-      font-size: 1rem;
+      margin: calc(0.8 * var(--aek-rem)) 0 calc(0.4 * var(--aek-rem));
+      font-size: calc(1 * var(--aek-rem));
       color: color.adjust(variables.$debugTextColor, $lightness: -20%);
     }
 
     li {
       display: flex;
       align-items: center;
-      gap: 0.4rem;
-      padding: 0.2rem 0.6rem;
+      gap: calc(0.4 * var(--aek-rem));
+      padding: calc(0.2 * var(--aek-rem)) calc(0.6 * var(--aek-rem));
 
       &:nth-child(odd) {
         background-color: rgba(255, 255, 255, 0.04);
@@ -164,14 +164,14 @@
       display: flex;
       flex: 1 1 auto;
       align-items: center;
-      gap: 0.6rem;
+      gap: calc(0.6 * var(--aek-rem));
       cursor: pointer;
     }
   }
 
   :global(.profilerNote) {
-    margin: 0.8rem 0;
-    font-size: 1rem;
+    margin: calc(0.8 * var(--aek-rem)) 0;
+    font-size: calc(1 * var(--aek-rem));
     line-height: 1.5;
     color: color.adjust(variables.$debugTextColor, $lightness: -20%);
   }
@@ -179,17 +179,17 @@
   // OBJECTS TAB
 
   :global(.profilerSection) {
-    margin: 1.2rem 0;
+    margin: calc(1.2 * var(--aek-rem)) 0;
 
     h4 {
-      margin: 0 0 0.4rem;
-      font-size: 1.2rem;
+      margin: 0 0 calc(0.4 * var(--aek-rem));
+      font-size: calc(1.2 * var(--aek-rem));
       font-weight: 700;
     }
 
     h5 {
-      margin: 0.8rem 0 0.4rem;
-      font-size: 1.1rem;
+      margin: calc(0.8 * var(--aek-rem)) 0 calc(0.4 * var(--aek-rem));
+      font-size: calc(1.1 * var(--aek-rem));
       font-weight: 400;
       color: color.adjust(variables.$debugTextColor, $lightness: -20%);
     }
@@ -197,29 +197,29 @@
 
   :global(.profilerObjectsHead) {
     :global(.profilerNote) {
-      margin: 0.4rem 0 0;
+      margin: calc(0.4 * var(--aek-rem)) 0 0;
     }
   }
 
   :global(.profilerSegmented) {
     display: flex;
     align-items: center;
-    gap: 0.2rem;
-    margin-top: 0.4rem;
-    font-size: 1rem;
+    gap: calc(0.2 * var(--aek-rem));
+    margin-top: calc(0.4 * var(--aek-rem));
+    font-size: calc(1 * var(--aek-rem));
 
     span {
-      margin-right: 0.4rem;
+      margin-right: calc(0.4 * var(--aek-rem));
     }
 
     button {
       @include variables.nakedButton;
-      padding: 0.2rem 0.8rem;
+      padding: calc(0.2 * var(--aek-rem)) calc(0.8 * var(--aek-rem));
       border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: variables.$borderRadiusSmall;
       background-color: variables.$debugGuiBackgroundLighter2;
       color: variables.$debugTextColor;
-      font-size: 1rem;
+      font-size: calc(1 * var(--aek-rem));
       cursor: pointer;
 
       &:hover {
@@ -237,14 +237,14 @@
   :global(.profilerTable) {
     thead th {
       padding-top: 0;
-      font-size: 1rem;
+      font-size: calc(1 * var(--aek-rem));
       color: color.adjust(variables.$debugTextColor, $lightness: -20%);
       white-space: nowrap;
     }
 
     th :global(.profilerSub) {
       display: block;
-      font-size: 1rem;
+      font-size: calc(1 * var(--aek-rem));
       white-space: normal;
       color: color.adjust(variables.$debugTextColor, $lightness: -20%);
     }
@@ -258,7 +258,7 @@
       }
 
       span {
-        font-size: 1rem;
+        font-size: calc(1 * var(--aek-rem));
         color: color.adjust(variables.$debugTextColor, $lightness: -20%);
       }
     }
@@ -283,15 +283,15 @@
 
     :global(.profilerBarCell) {
       width: 35%;
-      min-width: 6rem;
+      min-width: calc(6 * var(--aek-rem));
       vertical-align: middle;
     }
   }
 
   :global(.profilerBar) {
     display: flex;
-    height: 0.8rem;
-    border-radius: 0.2rem;
+    height: calc(0.8 * var(--aek-rem));
+    border-radius: calc(0.2 * var(--aek-rem));
     background-color: rgba(255, 255, 255, 0.05);
     overflow: hidden;
 
@@ -331,16 +331,16 @@
 
   :global(.profilerComponentGrid) {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
-    column-gap: 1.2rem;
-    font-size: 1.1rem;
+    grid-template-columns: repeat(auto-fill, minmax(calc(17 * var(--aek-rem)), 1fr));
+    column-gap: calc(1.2 * var(--aek-rem));
+    font-size: calc(1.1 * var(--aek-rem));
     font-variant-numeric: tabular-nums;
 
     div {
       display: flex;
       justify-content: space-between;
-      gap: 0.6rem;
-      padding: 0.1rem 0.6rem;
+      gap: calc(0.6 * var(--aek-rem));
+      padding: calc(0.1 * var(--aek-rem)) calc(0.6 * var(--aek-rem));
       border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     }
 
@@ -356,13 +356,13 @@
   }
 
   :global(.profilerSpark) {
-    margin: 0.6rem 0;
+    margin: calc(0.6 * var(--aek-rem)) 0;
 
     :global(.profilerSparkHead) {
       display: flex;
       align-items: baseline;
-      gap: 0.8rem;
-      font-size: 1.2rem;
+      gap: calc(0.8 * var(--aek-rem));
+      font-size: calc(1.2 * var(--aek-rem));
 
       b {
         color: variables.$white;
@@ -371,7 +371,7 @@
 
       :global(.profilerSub) {
         margin-left: auto;
-        font-size: 1rem;
+        font-size: calc(1 * var(--aek-rem));
         color: color.adjust(variables.$debugTextColor, $lightness: -20%);
       }
     }
@@ -380,8 +380,8 @@
   :global(.profilerSparkline) {
     display: block;
     width: 100%;
-    height: 3.6rem;
-    margin-top: 0.2rem;
+    height: calc(3.6 * var(--aek-rem));
+    margin-top: calc(0.2 * var(--aek-rem));
     background-color: rgba(255, 255, 255, 0.04);
     color: variables.$debugTextColor;
 

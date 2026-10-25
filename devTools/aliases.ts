@@ -23,6 +23,7 @@ export const ENTRY_FILES = {
   'aekasha/spatial': 'src/_engine/features/spatial/index.ts',
   'aekasha/viewports': 'src/_engine/features/viewports/index.ts',
   'aekasha/ui': 'src/_engine/ui/index.ts',
+  'aekasha/ui/fonts': 'src/_engine/ui/fonts/index.ts',
   'aekasha/debug': 'src/_engine/debug/index.ts',
   'aekasha/schemas': 'src/_engine/schemas/index.ts',
   'aekasha/toolkit/ecs': 'src/toolkit/ecs/index.ts',

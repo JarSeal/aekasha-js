@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../../.schemas/camera.schema.json",
+  "camProps": {
+    "type": "PERSPECTIVE",
+    "fov": 40,
+    "near": 0.1,
+    "far": 50,
+    "position": { "x": 0, "y": 1.5, "z": 6 },
+    "lookAtPoint": { "x": 0, "y": 0, "z": 0 },
+    "active": true
+  },
+  "entityOpts": {
+    "appId": "uiKitEmbedCamera",
+    "debugData": { "name": "UI kit embed camera" }
+  }
+}
