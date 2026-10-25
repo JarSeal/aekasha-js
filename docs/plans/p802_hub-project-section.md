@@ -442,9 +442,36 @@ As built (section 1):
   `Error.stackTraceLimit` (a debug module's; the Hub's check stays without node's globals).
 - `eslint.config.js`: `hub/_assets/ts/**` is an engine consumer (no `_engine/` path) and gets the
   layering rules.
-- `devTools/hub/scripts.test.ts`: each stand-in is a `UI_KERNEL_HOOKS` module and exports every
-  name the kit imports from it; a `public` build has no component chunk and no kit source; a
-  `dev` one has the chunk and its CSS, no other asset, and no three or kernel loop source.
+- `devTools/hub/scripts.test.ts`: a `public` build has no component chunk and no kit source; a
+  `dev` one has the chunk and its CSS, no other asset, and no three; each stand-in replaces its
+  module and exports every name the bundled modules import from it.
+
+As built (section 2):
+
+- A second stand-in, found here: the dev Hub is served by the app's dev server, so it shares the
+  app's `localStorage`, and the windows write their whole saved state (`AEK_popupWindows`) on
+  every finished change, even with no `saveToLS` window (an empty object): a demo window moved in
+  the Hub replaced the app's saved windows. `devTools/hub/kitKernel.ts` became `kitStandIns.ts`
+  (`HUB_KIT_STAND_INS`, `hubKitStandInsPlugin`), with both stand-ins in `hub/_assets/ts/_kit/`
+  under their modules' names: `MainLoop.ts` and `LocalAndSessionStorage.ts` (in memory,
+  `lsGetItem` / `lsSetItem` as the engine's convert them). The test now reads the names each
+  stand-in needs from the files the dev build bundled (`Config.ts`' `lsGetItem` among them).
+  Checked in Chrome: the app's `AEK_popupWindows` is unchanged after a demo window's drag.
+- `_components.ts` makes the HUD root over the viewport with `createHudContainer` (a slot appended
+  to `body`), the one deep engine import of the Hub's scripts (an `eslint-disable-next-line` with
+  its reason: p803 adds a public way to make a kit root), and registers the built-in icons (the
+  windows' buttons). The env flags stay false, so a debug window (`isDebugWindow`) doesn't open
+  here; the windows are above the Hub's header (z-index 100+ against 50).
+- The page `project/aekasha/components/` (`aek:order` 30, between the design document and the
+  code blocks): an `intro` slot (what the page is, the HUD root and the two stand-ins and what
+  they leave out), then in one `[data-hub-components]` element the settings form and a
+  `<piece>-text` slot with a `[data-hub-demo="<key>"]` box each for the window, dialog, drop-down,
+  toaster and icons. The switches are radio groups (`theme`: the page's / dark / light; `density`:
+  default / compact) setting `data-aek-theme` / `data-aek-density` on the HUD root, saying they
+  look the same until p803. `_components.ts`' `DEMOS` maps a box's key to the function filling
+  it; the boxes hold Hub buttons (`.hubButton`) that open the kit's pieces. Styles in
+  `hub/_assets/scss/_components.scss` (in the public `hub.css` too, as `_design.scss` is).
+- Section 3 replaces the text slots' placeholder line and the one demo (a plain window).
 
 ### Phase 5: `CLAUDE.md`, the authoring doc, the root `CLAUDE.md`
 

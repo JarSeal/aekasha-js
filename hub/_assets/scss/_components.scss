@@ -1,0 +1,66 @@
+// The component library page (project/aekasha/components/, p802 D9): its theme and density
+// switches and the demo boxes. The boxes hold the page's own buttons; what they open is the UI
+// kit's, over the viewport in the HUD root `_components.ts` makes.
+
+.hubComponentSettings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2rem;
+  align-items: flex-start;
+  margin: 1.5rem 0 2rem;
+  padding: 1rem 1.25rem;
+  background: var(--hub-panel);
+  border: 1px solid var(--hub-border);
+  border-radius: var(--hub-radius);
+
+  fieldset {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  legend {
+    width: 100%;
+    margin-bottom: 0.25rem;
+    padding: 0;
+    color: var(--hub-text-muted);
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  label {
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  input {
+    margin: 0;
+    accent-color: var(--hub-accent);
+  }
+
+  p {
+    flex: 1 1 16rem;
+    margin: 0;
+    color: var(--hub-text-muted);
+    font-size: 0.875rem;
+  }
+}
+
+.hubComponentDemo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1rem 0 2.5rem;
+  padding: 1.25rem;
+  border: 1px dashed var(--hub-border-strong);
+  border-radius: var(--hub-radius);
+
+  &:empty {
+    display: none;
+  }
+}

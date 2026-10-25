@@ -7,7 +7,7 @@ import { getViteAliases } from '../aliases';
 import type { ProjectMetadata } from '../projectMetadata';
 import type { HubDiagnostics } from './diagnostics';
 import { hashContent } from './hash';
-import { hubKitKernelPlugin } from './kitKernel';
+import { hubKitStandInsPlugin } from './kitStandIns';
 import {
   HUB_COMPONENTS_FILE,
   HUB_DEV_CLIENT_FILE,
@@ -170,8 +170,8 @@ const toModuleFile = (id: string) => (id.startsWith('\0') ? null : id.replace(/\
  * an error when it fails. The entries can import the `aekasha*` entries (the component library's
  * `aekasha/ui`): the aliases, the engine's `define`s (`__AEK_DEBUG__` false, as in a production
  * build), the kit's scss modules through Vite's CSS handling (a chunk's CSS next to it), and the
- * kit's kernel import resolved to the Hub's stand-in (`kitKernel.ts`). `__HUB_DEV__` is the Hub's
- * own: true in `dev`, so a `public` build drops what it guards.
+ * kit's kernel loop and storage resolved to the Hub's stand-ins (`kitStandIns.ts`).
+ * `__HUB_DEV__` is the Hub's own: true in `dev`, so a `public` build drops what it guards.
  */
 export const buildScripts = async (
   mode: HubBuildMode,
@@ -199,7 +199,7 @@ export const buildScripts = async (
         __PROJECT_METADATA__: JSON.stringify(meta),
         __HUB_DEV__: JSON.stringify(mode === 'dev'),
       },
-      plugins: [hubKitKernelPlugin()],
+      plugins: [hubKitStandInsPlugin()],
       build: {
         write: false,
         minify: mode === 'public',

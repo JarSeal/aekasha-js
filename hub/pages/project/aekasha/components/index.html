@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Component library</title>
+    <meta name="aek:menu" content="Component library" />
+    <meta name="aek:order" content="30" />
+    <meta
+      name="aek:tags"
+      content="components, component library, UI kit, draggable window, dialog, drop-down, toaster, toast, icons, HUD root, states, themes, density"
+    />
+    <meta
+      name="aek:description"
+      content="The UI kit's pieces running in the page, without the engine: each piece's states to open and try, which debug tools use it, and what it adds to a build."
+    />
+  </head>
+  <body>
+    <h1>Component library</h1>
+    <div id="intro"></div>
+    <div class="hubComponents" data-hub-components>
+      <form class="hubComponentSettings" data-hub-component-settings>
+        <fieldset>
+          <legend>Theme</legend>
+          <label><input type="radio" name="theme" value="" checked />The page's</label>
+          <label><input type="radio" name="theme" value="dark" />Dark</label>
+          <label><input type="radio" name="theme" value="light" />Light</label>
+        </fieldset>
+        <fieldset>
+          <legend>Density</legend>
+          <label><input type="radio" name="density" value="" checked />Default</label>
+          <label><input type="radio" name="density" value="compact" />Compact</label>
+        </fieldset>
+        <p>
+          Set on the HUD root the demos open in. The kit's pieces follow them once p803 maps their
+          styles to the tokens; until then every setting looks the same.
+        </p>
+      </form>
+      <div id="window-text"></div>
+      <div class="hubComponentDemo" data-hub-demo="window"></div>
+      <div id="dialog-text"></div>
+      <div class="hubComponentDemo" data-hub-demo="dialog"></div>
+      <div id="drop-down-text"></div>
+      <div class="hubComponentDemo" data-hub-demo="dropDown"></div>
+      <div id="toaster-text"></div>
+      <div class="hubComponentDemo" data-hub-demo="toaster"></div>
+      <div id="icons-text"></div>
+      <div class="hubComponentDemo" data-hub-demo="icons"></div>
+    </div>
+  </body>
+</html>

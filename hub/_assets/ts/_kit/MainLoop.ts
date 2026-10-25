@@ -1,8 +1,7 @@
 /**
- * The Hub's stand-in for the engine's `kernel/loop/MainLoop.ts` (p802 Phase 4): the Hub's script
- * build resolves the UI kit's import of it here (`devTools/hub/kitKernel.ts`), so a page can use
- * `aekasha/ui` without the engine. The real module imports three, the renderer and, through them,
- * both workers, all for the one name the kit takes from it.
+ * The Hub's stand-in for the engine's `kernel/loop/MainLoop.ts` (p802 Phase 4,
+ * `devTools/hub/kitStandIns.ts`): the real module imports three, the renderer and, through them,
+ * both workers, all for the one name the UI kit takes from it.
  *
  * It exports only the names the kit imports: a new one fails the Hub's script build (a missing
  * export) until it's added here, or p803 cuts the kit's kernel imports (p800 D1) and this goes.
