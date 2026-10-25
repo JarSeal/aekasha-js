@@ -223,7 +223,7 @@ Open `http://localhost:8080/?isDebug=true`, then press `h` to open the drawer.
 :::
 ```
 
-- The kinds are `tip`, `note`, `warning` and `danger`. The text after the kind is the title, written as inline Markdown. Without it, the title is the kind ("Tip").
+- The kinds are `tip`, `note`, `warning` and `danger`, and `do` and `dont` for a rule's example pair (the design document's). The text after the kind is the title, written as inline Markdown. Without it, the title is the kind ("Tip").
 - The content is ordinary Markdown: lists, code blocks and links all work.
 - A callout without its closing `:::` fails the build, and so does an unknown name.
 - To put a directive inside another, give the outer one a longer marker:

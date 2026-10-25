@@ -128,6 +128,44 @@
   border-left-color: var(--hub-danger);
 }
 
+// A rule's example pair: the title says which, the border only repeats it. A "do" right before
+// a "don't" sits beside it where there's room (the asides are siblings: no wrapper to grid)
+.hubCallout_do {
+  border-left-color: var(--hub-success);
+}
+
+.hubCallout_dont {
+  border-left-color: var(--hub-danger);
+}
+
+.hubCallout_do,
+.hubCallout_dont {
+  .hubCalloutTitle {
+    margin-bottom: 0.35rem;
+    font-size: 0.8125rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  > :nth-child(2) {
+    margin-top: 0;
+  }
+}
+
+@media (min-width: 720px) {
+  .hubCallout_do:has(+ .hubCallout_dont),
+  .hubCallout_do + .hubCallout_dont {
+    display: inline-block;
+    width: calc(50% - 0.5rem);
+    margin-top: 0.5rem;
+    vertical-align: top;
+  }
+
+  .hubCallout_do + .hubCallout_dont {
+    margin-left: 0.75rem;
+  }
+}
+
 // The dev plugin's error page
 .hubBuildErrors {
   padding: 0;

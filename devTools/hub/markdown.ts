@@ -177,6 +177,9 @@ const CALLOUT_TITLES: Record<string, string> = {
   note: 'Note',
   warning: 'Warning',
   danger: 'Danger',
+  // A rule's example pair (the design document, p802 D8)
+  do: 'Do',
+  dont: 'Don’t',
 };
 
 const createCallout = (kind: string, defaultTitle: string): HubDirective => ({

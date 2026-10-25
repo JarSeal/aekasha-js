@@ -68,6 +68,13 @@ A change updates what describes it, in the same branch:
   type, a command or URL flag, a requirement, an API its examples use, or a Roadmap item that
   lands.
 
+### The UI's design
+
+The [design document](hub:project/aekasha/design) is how every piece of UI looks and behaves: the
+kit's components, the debugger and the Hub. Its token tables come from the kit's `tokens.css` when
+the Hub builds; its rules (colour, type, space, motion, icons, patterns, accessibility, voice) are
+written there, and a new component follows them from its first version.
+
 ### The Hub
 
 The Hub's pages are in `hub/pages/` and its generator is in `devTools/hub/`.
