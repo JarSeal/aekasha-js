@@ -4,7 +4,7 @@
 import styles from './DraggableWindow.module.scss';
 import { clampToGrabbable, getGrabArea, writePosition } from './DraggableWindowGeometry';
 import type { DragMode, WindowEntry } from './DraggableWindowTypes';
-import { getWindowSize } from './Window';
+import { getWindowSize } from '../../core/Window';
 
 /**
  * Runs at the end of a drag that changed the window's geometry: DraggableWindow.ts' record and

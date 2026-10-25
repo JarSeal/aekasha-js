@@ -24,7 +24,7 @@ import {
 } from '../../../kernel/assets/Material';
 import { getTexture, loadTextureAsync, type TextureProps } from '../../../kernel/assets/Texture';
 import { retagAssetOwner } from '../../../kernel/assets/AssetOwners';
-import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../../ui/HUD';
+import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../../ui/core/HUD';
 import { getAppData } from '../../../kernel/scene/AppData';
 import type { MaterialAsset } from '../../../schemas/MaterialSchema';
 import { textureMapKeys } from '../../../utils/Constants';

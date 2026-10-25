@@ -57,7 +57,7 @@ describe('checkSbpProfiles', () => {
             initial: 1.5,
             chunks: { 'assets/sub/a.js': 1, 'assets/a.js': -1 },
             groups: { '/three': 1, three: 0 },
-            modules: { '/src/_engine/ui/': 0, '_engine/ui/icons/': 0 },
+            modules: { '/src/_engine/ui/': 0, '_engine/ui/core/icons/': 0 },
           },
         },
       ])
@@ -66,7 +66,7 @@ describe('checkSbpProfiles', () => {
       'profile app: budgets.chunks "assets/sub/a.js": a file of assets/, or an embed\'s entry (assets/index.js)',
       'profile app: budgets.chunks assets/a.js: a whole number of bytes, 0 or more',
       'profile app: budgets.groups "/three": a group (three, _engine/features/physics)',
-      'profile app: budgets.modules "/src/_engine/ui/": a path from src/ (_engine/ui/icons/ or …/BuiltInIcons.ts)',
+      'profile app: budgets.modules "/src/_engine/ui/": a path from src/ (_engine/ui/core/icons/ or …/BuiltInIcons.ts)',
     ]);
   });
   // p619 §1.4 B3: a key that matched nothing measured 0, so its budget always passed

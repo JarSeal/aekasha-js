@@ -11,16 +11,16 @@ import {
 import { lsGetItem, lsRemoveItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
 import { lerror, llog } from '../../../utils/Logger';
 import { textureMapKeys } from '../../../utils/Constants';
-import { CMP } from '../../../ui/CMP';
-import type { TCMP } from '../../../ui/CMPTypes';
-import { getSvgIcon } from '../../../ui/icons/SvgIcon';
+import { CMP } from '../../../ui/core/CMP';
+import type { TCMP } from '../../../ui/core/CMPTypes';
+import { getSvgIcon } from '../../../ui/core/icons/SvgIcon';
 import {
   getDraggableWindowsOfKind,
   getKindWindowId,
   registerDraggableWindowKind,
   toggleDraggableWindow,
   updateDraggableWindow,
-} from '../../../ui/DraggableWindow';
+} from '../../../ui/overlays/windows/DraggableWindow';
 import { createClearTabLSButton, lsKeyHasData } from '../../../debug/_dbg__ClearLSButtons';
 import { getGeometryRegistry } from '../Geometry';
 import { getTextureRegistry } from '../Texture';

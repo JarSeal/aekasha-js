@@ -4,16 +4,16 @@
 // Over the 800-line limit (p617 D10), with docs: what is left shares the module's state (the
 // windows map, the stacks, the kind registries, the suspended windows), so a further split
 // would make the modules import each other.
-import type { TCMP } from './CMPTypes';
-import { CMP } from './CMP';
-import { lerror } from '../utils/Logger';
-import { getConfig, IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
-import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from './HUD';
-import { addResizer } from '../kernel/loop/MainLoop';
-import { addSceneHooks } from '../kernel/scene/SceneHooks';
-import { addBootAfterStartHook } from '../kernel/init/BootHooks';
+import type { TCMP } from '../../core/CMPTypes';
+import { CMP } from '../../core/CMP';
+import { lerror } from '../../../utils/Logger';
+import { getConfig, IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../../../kernel/config/Config';
+import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../core/HUD';
+import { addResizer } from '../../../kernel/loop/MainLoop';
+import { addSceneHooks } from '../../../kernel/scene/SceneHooks';
+import { addBootAfterStartHook } from '../../../kernel/init/BootHooks';
 import styles from './DraggableWindow.module.scss';
-import { getSvgIcon } from './icons/SvgIcon';
+import { getSvgIcon } from '../../core/icons/SvgIcon';
 import { addDragHandle, cancelDragSession } from './DraggableWindowDrag';
 import {
   fitWindow,

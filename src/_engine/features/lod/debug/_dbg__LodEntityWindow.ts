@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { registerEntityWindowOpener } from '../../../debug/Profiler';
-import { CMP } from '../../../ui/CMP';
+import { CMP } from '../../../ui/core/CMP';
 import type { ECSWorld } from '../../../kernel/ecs/ECS';
 import { getECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
@@ -18,7 +18,7 @@ import {
   getDraggableWindowsOfKind,
   registerDraggableWindowKind,
   toggleDraggableWindow,
-} from '../../../ui/DraggableWindow';
+} from '../../../ui/overlays/windows/DraggableWindow';
 
 // The LOD window (docs/plans/_DONE_p348_ecs-lod-selection.md §6, per mesh): one `LOD` entity's live
 // screen size, what it shows and why, and each level's threshold as the distance it switches at

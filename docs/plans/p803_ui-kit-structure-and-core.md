@@ -616,6 +616,33 @@ As built (section 2, 2026-10-25; one-off probes in the scratchpad, not committed
 2. Section 2, the names (D3): the new types, the deprecated aliases, the engine's, app's and Hub's
    imports switched; the API baseline updated; p622's and p800 D12's lists updated.
 
+As built (section 1, 2026-10-25):
+
+- 78 files moved (`git mv`): `core/` (`CMP`, `CMPTypes`, `CMPAnim`, `HUD`, `Window`, `Motion`,
+  their tests, `icons/` whole), `overlays/windows/` (the six `DraggableWindow*` files, their two
+  tests, `DialogWindow.ts` and its test), `overlays/` (`Toaster.ts` and its test), `forms/`
+  (`DropDown.ts`, `.scss`, `.test.ts`). `components/` and `testing/` have a rule but no file yet
+  (the first component in Phase 6; `KitDom.ts` with the first test that needs it).
+- The scratchpad script (`moveKit.mjs`, not committed) rewrote every quoted relative path in the
+  repo's `.ts`, `.scss` and `.css` files that resolves to a moved file, or sits in one (imports,
+  `import()`, `vi.mock` paths, `@use`, `?raw` / `?url` suffixes kept): 67 files, then Prettier.
+- `layoutRules.ts`: `UI_KIT_FOLDERS` (`core`, `components`, `overlays`, `forms`, `styles`,
+  `fonts`, `testing`) as a rule each, plus file rules for `ui/index.ts` and `ui/CLAUDE.md` (every
+  file under `src/` counts, the Markdown too). `layout.test.ts` checks a module directly in `ui/`
+  has no rule, and its `ui → kernel` fixture moved into `ui/core/`.
+- Paths by name, not import: `DraggableWindowTypes.ts`' `{@link _engine/ui/…/DraggableWindow!…}`
+  (a TypeDoc module path), the Hub's design section (`ICONS_DIR`) and its test, `scripts.test.ts`,
+  `sbp.config.ts`' icon module budgets and `devTools/sbp/config.ts`' example path (its test uses
+  `_engine/ui/core/icons/` as an existing folder), code comments, the `CLAUDE.md` files (the kit's
+  gets a layout paragraph and each piece its folder; the root's `ui/` line its groups), p622,
+  p800 and `docs/issues/ui-kit-in-an-embed.md`. The `_DONE_` plans and `CHANGELOG.md` keep the
+  old paths (records). The Hub's stand-ins needed nothing: neither replaced module moved.
+- `yarn test`, `tsc` (both), ESLint and `yarn hub:build` pass. `verify:baselines`: 145 API
+  changes, every one a moved export; `docs.json` five new folders at 100 % and two gone; the bundle
+  baselines only shift gzip sizes by 1-6 bytes (no raw size or file key changes); no debug code in
+  production. Recorded with `--update`. `yarn verify:scenes`: 104 passed against Phase 0's
+  baselines.
+
 ### Phase 2: the kit without the boot
 
 D4: `createHudRoot`, `hasHudRoot`, `KIT_ROOT_CLASS`, `kit.scss` imported by the kit,

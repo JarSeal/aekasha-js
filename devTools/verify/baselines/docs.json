@@ -593,10 +593,10 @@
         "members": []
       }
     },
-    "engine/ui": {
+    "engine/ui/core": {
       "exports": {
-        "documented": 91,
-        "total": 91
+        "documented": 24,
+        "total": 24
       },
       "members": {
         "documented": 0,
@@ -607,10 +607,52 @@
         "members": []
       }
     },
-    "engine/ui/icons": {
+    "engine/ui/core/icons": {
       "exports": {
         "documented": 6,
         "total": 6
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/ui/forms": {
+      "exports": {
+        "documented": 4,
+        "total": 4
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/ui/overlays": {
+      "exports": {
+        "documented": 12,
+        "total": 12
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/ui/overlays/windows": {
+      "exports": {
+        "documented": 51,
+        "total": 51
       },
       "members": {
         "documented": 0,

@@ -30,7 +30,7 @@ const ls = vi.hoisted(() => {
 
 // The drawer goes in the HUD root; the debugger's scene loader isn't this test's
 const hud = vi.hoisted(() => ({ root: null as TCMP | null }));
-vi.mock(import('../ui/HUD'), async (importOriginal) => ({
+vi.mock(import('../ui/core/HUD'), async (importOriginal) => ({
   ...(await importOriginal()),
   getHUDRootCMP: () => hud.root as TCMP,
 }));
@@ -43,8 +43,8 @@ vi.mock(import('../utils/Logger'), async (importOriginal) => ({
   lwarn: vi.fn(),
 }));
 
-import type { TCMP } from '../ui/CMPTypes';
-import { CMP } from '../ui/CMP';
+import type { TCMP } from '../ui/core/CMPTypes';
+import { CMP } from '../ui/core/CMP';
 import { initEnvironment } from '../kernel/config/Config';
 import type { AnyDebuggerTabDef } from './DebuggerGUI';
 import {

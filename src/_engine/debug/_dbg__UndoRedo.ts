@@ -6,7 +6,7 @@ import { lsGetItem, lsRemoveItem, lsSetItem } from '../utils/LocalAndSessionStor
 import { lerror, lwarn } from '../utils/Logger';
 import { updateOnScreenTools } from './OnScreenTools';
 import { addDebugToast } from './DebuggerGUI';
-import { getSvgIcon } from '../ui/icons/SvgIcon';
+import { getSvgIcon } from '../ui/core/icons/SvgIcon';
 import { _getUndoRedoActionHandler, registerUndoRedoActionHandler } from './UndoRedo';
 import type {
   UndoRedoClearScope,

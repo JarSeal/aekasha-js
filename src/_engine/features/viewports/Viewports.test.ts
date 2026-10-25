@@ -55,7 +55,7 @@ const m = vi.hoisted(() => {
   return { state, rect };
 });
 
-vi.mock('../../ui/HUD', () => ({
+vi.mock('../../ui/core/HUD', () => ({
   getHUDRootCMP: () => m.state.hudRoot,
   KEEP_IN_VIEWS_CLASS: 'aekKeepInViews',
 }));

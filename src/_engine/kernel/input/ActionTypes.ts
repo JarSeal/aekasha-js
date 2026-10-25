@@ -20,7 +20,7 @@ export type ActionDef = {
   /** A readable name ("Jump"). */
   name?: string;
   description?: string;
-  /** Raw SVG strings, the same convention as `ui/icons/SvgIcon.ts`. */
+  /** Raw SVG strings, the same convention as `ui/core/icons/SvgIcon.ts`. */
   icons?: readonly string[];
 };
 

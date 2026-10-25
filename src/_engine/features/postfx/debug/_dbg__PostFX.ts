@@ -35,9 +35,9 @@ import {
   toggleDraggableWindow,
   updateDraggableWindow,
   updateDraggableWindowsOfKind,
-} from '../../../ui/DraggableWindow';
+} from '../../../ui/overlays/windows/DraggableWindow';
 import { lsGetItem, lsRemoveItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
-import { CMP } from '../../../ui/CMP';
+import { CMP } from '../../../ui/core/CMP';
 import {
   confirmClearScope,
   createClearListLSButton,

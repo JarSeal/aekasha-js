@@ -15,7 +15,7 @@ import { getCurrentSceneId, getGeneratedAppData, getRootScene } from '../kernel/
 import { getConfig, getCurrentEnvironment, getEnvs, IS_DEBUG_ENV } from '../kernel/config/Config';
 import { isCurrentlyLoading, loadScene } from '../kernel/scene/SceneLoader';
 import { lerror, llog } from '../utils/Logger';
-import { fitAllDraggableWindowsToScreen } from '../ui/DraggableWindow';
+import { fitAllDraggableWindowsToScreen } from '../ui/overlays/windows/DraggableWindow';
 import {
   createAxesHelper,
   createGridHelper,

@@ -1,9 +1,9 @@
-import { CMP } from '../ui/CMP';
-import type { TCMP } from '../ui/CMPTypes';
+import { CMP } from '../ui/core/CMP';
+import type { TCMP } from '../ui/core/CMPTypes';
 import { getConfig } from '../kernel/config/Config';
 import { getCurrentSceneId } from '../kernel/scene/Scene';
-import { openDialog } from '../ui/DialogWindow';
-import { closeDraggableWindow } from '../ui/DraggableWindow';
+import { openDialog } from '../ui/overlays/windows/DialogWindow';
+import { closeDraggableWindow } from '../ui/overlays/windows/DraggableWindow';
 import { getActionMap, getActionMaps } from '../kernel/input/Actions';
 import type { ActionBinding, ActionKeys, ActionMap, ActionType } from '../kernel/input/ActionTypes';
 import type { EnabledInDebugCam } from '../kernel/input/InputSharedTypes';

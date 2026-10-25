@@ -1,10 +1,10 @@
-import { CMP } from '../ui/CMP';
-import type { TCMP } from '../ui/CMPTypes';
+import { CMP } from '../ui/core/CMP';
+import type { TCMP } from '../ui/core/CMPTypes';
 import styles from './DebuggerGUI.module.scss';
 import { lsRemoveItem } from '../utils/LocalAndSessionStorage';
 import { lerror } from '../utils/Logger';
 import type { AnyDebuggerTabDef } from './DebuggerGUI';
-import { getSvgIcon } from '../ui/icons/SvgIcon';
+import { getSvgIcon } from '../ui/core/icons/SvgIcon';
 import { createClearTabLSButton, lsKeyHasData } from './_dbg__ClearLSButtons';
 import { _buildDebuggerPane } from './_dbg__DebuggerPaneBuilder';
 import { _refreshDebuggerLists } from './_dbg__DebuggerList';

@@ -1,4 +1,4 @@
-import { lwarn } from '../../utils/Logger';
+import { lwarn } from '../../../utils/Logger';
 import * as builtIn from './BuiltInIcons';
 
 /**

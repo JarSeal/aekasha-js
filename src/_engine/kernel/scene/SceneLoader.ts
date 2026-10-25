@@ -16,8 +16,8 @@ import {
   setCurrentScene,
   setLoadingSceneId,
 } from './Scene';
-import type { TCMP } from '../../ui/CMPTypes';
-import { getHUDRootCMP } from '../../ui/HUD';
+import type { TCMP } from '../../ui/core/CMPTypes';
+import { getHUDRootCMP } from '../../ui/core/HUD';
 import {
   addDebugToastWhenReady,
   DEBUGGER_SCENE_LOADER_ID,

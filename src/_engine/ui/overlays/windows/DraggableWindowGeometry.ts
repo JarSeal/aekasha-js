@@ -2,7 +2,7 @@
 // the clamps that keep a window grabbable or on screen, the fits, the cascade and the placement of
 // a freshly mounted window. Reads the DOM and the HUD's bounds (`getWindowSize`: the viewport, or a
 // mounted engine's container), holds no state.
-import { getWindowSize } from './Window';
+import { getWindowSize } from '../../core/Window';
 import styles from './DraggableWindow.module.scss';
 import type {
   DraggableWindowConfig,

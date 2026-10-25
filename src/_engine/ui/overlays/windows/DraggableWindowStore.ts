@@ -1,8 +1,8 @@
 // The draggable windows' configs: their resolution from the open props and the stored config,
 // the LS format (`AEK_popupWindows`, read once and written on finished changes) and the kinds'
 // geometries. No DOM: DraggableWindow.ts mounts what it resolves.
-import type { StorageValue } from '../utils/LocalAndSessionStorage';
-import { lsGetItem, lsSetItem } from '../utils/LocalAndSessionStorage';
+import type { StorageValue } from '../../../utils/LocalAndSessionStorage';
+import { lsGetItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
 import type {
   DraggableWindowConfig,
   DraggableWindowRuntime,

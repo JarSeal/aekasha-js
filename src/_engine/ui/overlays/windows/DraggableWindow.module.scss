@@ -1,5 +1,5 @@
 @use 'sass:color';
-@use './styles/variables.scss';
+@use '../../styles/variables.scss';
 
 $headerHeight: calc(3 * var(--aek-rem));
 $collapseAnimLength: var(--aek-motion-base);

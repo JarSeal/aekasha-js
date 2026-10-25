@@ -28,7 +28,7 @@ export type SbpBudgets = {
    * there is 0 */
   groups?: Record<string, number>;
   /** The modules under a path from `src/` in the initial chunks, a file
-   * (`_engine/ui/icons/BuiltInIcons.ts`) or a folder ending in `/`, measured as the groups are:
+   * (`_engine/ui/core/icons/BuiltInIcons.ts`) or a folder ending in `/`, measured as the groups are:
    * (each module's minified code gzipped alone): for what a group is too coarse for */
   modules?: Record<string, number>;
 };
@@ -97,7 +97,7 @@ const checkBudgets = (id: string, budgets: SbpBudgets): string[] => {
   const keyRules: Record<'chunks' | 'groups' | 'modules', [RegExp, string]> = {
     chunks: [/^(?:assets\/)?[^/\s]+$/, "a file of assets/, or an embed's entry (assets/index.js)"],
     groups: [/^[^/\s](?:\S*[^/\s])?$/, 'a group (three, _engine/features/physics)'],
-    modules: [/^[^/\s.][^\s]*$/, 'a path from src/ (_engine/ui/icons/ or …/BuiltInIcons.ts)'],
+    modules: [/^[^/\s.][^\s]*$/, 'a path from src/ (_engine/ui/core/icons/ or …/BuiltInIcons.ts)'],
   };
   for (const [kind, [pattern, text]] of Object.entries(keyRules)) {
     for (const [key, value] of Object.entries(budgets[kind as keyof typeof keyRules] ?? {})) {

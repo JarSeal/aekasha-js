@@ -1,4 +1,4 @@
-import { CMP } from '../../ui/CMP';
+import { CMP } from '../../ui/core/CMP';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { getAllECSWorlds } from '../../kernel/ecs/ECS';
 import type { AnyDebuggerTabDef } from '../DebuggerGUI';

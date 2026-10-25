@@ -1,16 +1,16 @@
-import { CMP } from '../../ui/CMP';
-import type { TCMP } from '../../ui/CMPTypes';
+import { CMP } from '../../ui/core/CMP';
+import type { TCMP } from '../../ui/core/CMPTypes';
 import styles from './Profiler.module.scss';
 import { lsGetItem, lsSetItem } from '../../utils/LocalAndSessionStorage';
 import { lwarn } from '../../utils/Logger';
-import { getSvgIcon } from '../../ui/icons/SvgIcon';
+import { getSvgIcon } from '../../ui/core/icons/SvgIcon';
 import {
   openDraggableWindow,
   registerDraggableWindow,
   toggleDraggableWindow,
   updateDraggableWindow,
-} from '../../ui/DraggableWindow';
-import type { OpenDraggableWindowProps } from '../../ui/DraggableWindowTypes';
+} from '../../ui/overlays/windows/DraggableWindow';
+import type { OpenDraggableWindowProps } from '../../ui/overlays/windows/DraggableWindowTypes';
 import {
   hydrateDebuggerTabState,
   type AnyDebuggerTabDef,

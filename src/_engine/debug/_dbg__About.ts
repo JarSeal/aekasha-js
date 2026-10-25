@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
-import { CMP } from '../ui/CMP';
-import type { TCMP } from '../ui/CMPTypes';
+import { CMP } from '../ui/core/CMP';
+import type { TCMP } from '../ui/core/CMPTypes';
 import {
   getCurrentEnvironment,
   IS_PROD_TEST_MODE,
@@ -12,9 +12,9 @@ import { getECSWorld } from '../kernel/ecs/ECS';
 import { getPhysicsState, isPhysicsWorldEnabled } from '../features/physics/PhysicsState';
 import { getResolvedTransportMode } from '../features/physics/PhysicsWorld';
 import { ENGINES } from '../features/physics/backends/Engines';
-import { openDialog } from '../ui/DialogWindow';
-import { closeDraggableWindow } from '../ui/DraggableWindow';
-import { getSvgIcon } from '../ui/icons/SvgIcon';
+import { openDialog } from '../ui/overlays/windows/DialogWindow';
+import { closeDraggableWindow } from '../ui/overlays/windows/DraggableWindow';
+import { getSvgIcon } from '../ui/core/icons/SvgIcon';
 import styles from './About.module.scss';
 
 const DIALOG_ID = 'aekAboutDialog';

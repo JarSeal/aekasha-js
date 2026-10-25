@@ -15,7 +15,7 @@ vi.hoisted(() => {
   });
 });
 
-import type { TCMP } from '../../ui/CMPTypes';
+import type { TCMP } from '../../ui/core/CMPTypes';
 import { initEnvironment } from '../../kernel/config/Config';
 import { DEFAULT_PROFILER_SETTINGS, registerStatsSource, type ProfilerSettings } from '../Profiler';
 import {

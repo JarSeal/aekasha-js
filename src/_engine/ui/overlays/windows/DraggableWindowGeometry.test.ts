@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { getGeometryStyle, keepOnScreen, placeWindow } from './DraggableWindowGeometry';
 import type { DraggableWindowConfig, WindowEntry } from './DraggableWindowTypes';
-import { getWindowSize, setWindowBoundsElement } from './Window';
+import { getWindowSize, setWindowBoundsElement } from '../../core/Window';
 
 type Rect = { left: number; top: number; width: number; height: number };
 

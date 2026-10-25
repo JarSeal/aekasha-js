@@ -23,7 +23,7 @@ import { lwarn } from '../utils/Logger';
 import { getConfig } from '../kernel/config/Config';
 import { getReadOnlyLoopState, toggleAppPlay, toggleMainPlay } from '../kernel/loop/MainLoop';
 import { getCurrentSceneId } from '../kernel/scene/Scene';
-import { getSvgIcon } from '../ui/icons/SvgIcon';
+import { getSvgIcon } from '../ui/core/icons/SvgIcon';
 import {
   getActiveView,
   isRuntimeViewActive,

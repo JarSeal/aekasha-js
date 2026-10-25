@@ -1,4 +1,4 @@
-export { CMP, classes } from './CMP';
+export { CMP, classes } from './core/CMP';
 export type {
   TAnimChain,
   TAnimState,
@@ -11,9 +11,9 @@ export type {
   TProps,
   TSettings,
   TStyle,
-} from './CMPTypes';
-export { openDialog } from './DialogWindow';
-export type { DialogProps } from './DialogWindow';
+} from './core/CMPTypes';
+export { openDialog } from './overlays/windows/DialogWindow';
+export type { DialogProps } from './overlays/windows/DialogWindow';
 export {
   bringDraggableWindowToFront,
   closeDraggableWindow,
@@ -30,7 +30,7 @@ export {
   toggleDraggableWindow,
   updateDraggableWindow,
   updateDraggableWindowsOfKind,
-} from './DraggableWindow';
+} from './overlays/windows/DraggableWindow';
 export type {
   DraggableWindow,
   DraggableWindowConfig,
@@ -41,10 +41,10 @@ export type {
   DraggableWindowUnits,
   OpenDraggableWindowProps,
   SceneTargetResolver,
-} from './DraggableWindowTypes';
-export { createDropDown } from './DropDown';
-export type { DropDownOption, DropDownProps, TDropDown } from './DropDown';
-export { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from './HUD';
+} from './overlays/windows/DraggableWindowTypes';
+export { createDropDown } from './forms/DropDown';
+export type { DropDownOption, DropDownProps, TDropDown } from './forms/DropDown';
+export { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from './core/HUD';
 export {
   addToast,
   createToaster,
@@ -52,7 +52,7 @@ export {
   hasToaster,
   removeToast,
   removeToaster,
-} from './Toaster';
+} from './overlays/Toaster';
 export type {
   AddToastResponse,
   ToastDirection,
@@ -60,7 +60,7 @@ export type {
   ToasterSettings,
   ToastProps,
   ToastType,
-} from './Toaster';
+} from './overlays/Toaster';
 export {
   aekashaIcon,
   alertIcon,
@@ -111,6 +111,6 @@ export {
   warningIcon,
   xIcon,
   xBoldIcon,
-} from './icons/BuiltInIcons';
-export { getSvgIcon, registerBuiltInIcons, registerIcon } from './icons/SvgIcon';
-export type { BuiltInIconName, SvgIconKey } from './icons/SvgIcon';
+} from './core/icons/BuiltInIcons';
+export { getSvgIcon, registerBuiltInIcons, registerIcon } from './core/icons/SvgIcon';
+export type { BuiltInIconName, SvgIconKey } from './core/icons/SvgIcon';

@@ -1,8 +1,8 @@
 import { createSceneLoader } from '../SceneLoader';
 import { DEBUGGER_SCENE_LOADER_ID } from '../../../debug/DebuggerGUI';
-import { CMP } from '../../../ui/CMP';
-import { getMotionFactor } from '../../../ui/Motion';
-import type { TCMP } from '../../../ui/CMPTypes';
+import { CMP } from '../../../ui/core/CMP';
+import { getMotionFactor } from '../../../ui/core/Motion';
+import type { TCMP } from '../../../ui/core/CMPTypes';
 import styles from './DebuggerSceneLoader.module.scss';
 
 const START_ANIM_LENGTH_IN_MS = 150;

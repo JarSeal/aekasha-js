@@ -1,4 +1,4 @@
-import { CMP } from '../../ui/CMP';
+import { CMP } from '../../ui/core/CMP';
 import type { DebuggerTabDef } from '../DebuggerGUI';
 import {
   PROFILER_LS_KEY,

@@ -25,6 +25,14 @@ const T = 'src/toolkit/';
 const A = 'src/app/';
 
 /**
+ * The UI kit's groups (p803 D2): `core/` (CMP, the HUD root, the bounds, motion, icons),
+ * `components/` (one module per component), `overlays/` (the windows, the toaster, the overlay
+ * layer), `forms/` (the drop-down, p804's fields), `styles/`, `fonts/` and `testing/` (the tests'
+ * shared helpers). p805 adds `data/`, p808 `game/`.
+ */
+const UI_KIT_FOLDERS = ['core', 'components', 'overlays', 'forms', 'styles', 'fonts', 'testing'];
+
+/**
  * The engine's layout since p608's move (D9): a file outside these folders (a new top-level
  * folder or file) has no rule.
  */
@@ -38,8 +46,11 @@ const ENGINE_RULES: LayoutRule[] = [
   { from: K },
   // The features: one folder each, its entry, install, worker jobs and debug modules in it
   { from: F },
-  // The UI kit, the debugger framework, pure utilities, the schemas, the declarations (p602 D4-D6)
-  { from: `${E}ui/` },
+  // The UI kit by group (p803 D2): a module directly in `ui/` has no rule
+  { from: `${E}ui/index.ts`, note: 'the `aekasha/ui` entry (p606)' },
+  { from: `${E}ui/CLAUDE.md`, note: "the kit's notes" },
+  ...UI_KIT_FOLDERS.map((folder): LayoutRule => ({ from: `${E}ui/${folder}/` })),
+  // The debugger framework, pure utilities, the schemas, the declarations (p602 D4-D6)
   { from: `${E}debug/` },
   { from: `${E}utils/` },
   { from: `${E}schemas/` },

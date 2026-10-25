@@ -1,6 +1,6 @@
-import { CMP } from '../ui/CMP';
-import type { TCMP } from '../ui/CMPTypes';
-import { getSvgIcon } from '../ui/icons/SvgIcon';
+import { CMP } from '../ui/core/CMP';
+import type { TCMP } from '../ui/core/CMPTypes';
+import { getSvgIcon } from '../ui/core/icons/SvgIcon';
 import type { DebuggerListDef, DebuggerListItem } from './DebuggerGUI';
 
 type MountedList = { cmp: TCMP; refresh: () => void };

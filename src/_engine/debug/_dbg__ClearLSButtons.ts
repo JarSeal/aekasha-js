@@ -1,8 +1,8 @@
-import type { TCMP } from '../ui/CMPTypes';
-import { CMP } from '../ui/CMP';
-import { getSvgIcon, type SvgIconKey } from '../ui/icons/SvgIcon';
-import { openDialog } from '../ui/DialogWindow';
-import { closeDraggableWindow } from '../ui/DraggableWindow';
+import type { TCMP } from '../ui/core/CMPTypes';
+import { CMP } from '../ui/core/CMP';
+import { getSvgIcon, type SvgIconKey } from '../ui/core/icons/SvgIcon';
+import { openDialog } from '../ui/overlays/windows/DialogWindow';
+import { closeDraggableWindow } from '../ui/overlays/windows/DraggableWindow';
 import { lsGetItem, lsSubscribe } from '../utils/LocalAndSessionStorage';
 
 const CONFIRM_CLEAR_SCOPE_DIALOG_ID = 'clearLSScopeConfirmDialog';

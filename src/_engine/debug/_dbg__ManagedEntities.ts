@@ -1,4 +1,4 @@
-import type { SvgIconKey } from '../ui/icons/SvgIcon';
+import type { SvgIconKey } from '../ui/core/icons/SvgIcon';
 import type { ECSWorld } from '../kernel/ecs/ECS';
 import { ComponentType } from '../kernel/ecs/ECSCoreComponents';
 

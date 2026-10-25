@@ -30,7 +30,7 @@ import {
 } from 'aekasha/ui';
 import type { BuiltInIconName, DropDownProps, OpenDraggableWindowProps, TCMP } from 'aekasha/ui';
 // eslint-disable-next-line import/no-restricted-paths -- the kit has no public way to make its root without the boot: p803 adds one (p800 D1), and this import goes
-import { createHudContainer } from '../../../src/_engine/ui/HUD';
+import { createHudContainer } from '../../../src/_engine/ui/core/HUD';
 // The kit's global styles (`.uiIcon`), which the boot loads in every build
 // eslint-disable-next-line import/no-restricted-paths -- the kit's entry doesn't bring its global styles: p803 makes it (p800 D1), and this import goes
 import '../../../src/_engine/ui/styles/index.scss';

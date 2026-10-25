@@ -12,7 +12,7 @@ import {
 } from '../config/Config';
 import { createAssetsDebugGUI, initAssets } from '../assets/AssetsAPI';
 import { setAppData } from '../scene/AppData';
-import { createHudContainer, getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../ui/HUD';
+import { createHudContainer, getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../ui/core/HUD';
 import {
   registerDefaultDebugKeyBindings,
   registerDefaultProdTestKeyBindings,
@@ -26,9 +26,9 @@ import '../../ui/styles/index.scss';
 import { llog, lwarn } from '../../utils/Logger';
 import { createRendererDebugGUI } from '../render/Renderer';
 import { runBootAfterStartHooks } from './BootHooks';
-import { createToaster } from '../../ui/Toaster';
+import { createToaster } from '../../ui/overlays/Toaster';
 import { getStatsCmp, registerStatsModule } from '../../debug/Stats';
-import { getSvgIcon, registerBuiltInIcons } from '../../ui/icons/SvgIcon';
+import { getSvgIcon, registerBuiltInIcons } from '../../ui/core/icons/SvgIcon';
 import { restoreSavedView } from '../render/Views';
 
 // The kernel's systems and hooks, installed by the boot (here, where their modules were

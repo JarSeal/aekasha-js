@@ -1,7 +1,7 @@
 // The dropdown's default styles (DropDown.ts). Every rule is in :where(), so it has zero
 // specificity: any class (the className/triggerClass/... props, or a consumer's own selector)
 // overrides it, whatever the stylesheet order.
-@use './styles/variables.scss';
+@use '../styles/variables.scss';
 
 $listGap: calc(0.4 * var(--aek-rem));
 

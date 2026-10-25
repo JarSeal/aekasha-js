@@ -1,7 +1,7 @@
 // The draggable windows' types: the public ones (on `aekasha/ui`) and the internal ones the
 // window modules share (DraggableWindow.ts, its store, geometry and drag modules).
-import type { TCMP } from './CMPTypes';
-import type { SvgIconKey } from './icons/SvgIcon';
+import type { TCMP } from '../../core/CMPTypes';
+import type { SvgIconKey } from '../../core/icons/SvgIcon';
 
 /**
  * The CSS unit of a window's position or size value. `'%'` is of the HUD's bounds: the viewport, or
@@ -112,7 +112,7 @@ export type DraggableWindow = DraggableWindowConfig & {
 };
 
 /**
- * What {@link _engine/ui/DraggableWindow!openDraggableWindow} opens a window with. A reopen keeps
+ * What {@link _engine/ui/overlays/windows/DraggableWindow!openDraggableWindow} opens a window with. A reopen keeps
  * the user's layout (position, size, collapsed) unless `resetPosition` / `resetSize`; for the other
  * flags, a passed value wins over the stored one, and a default comes last.
  */

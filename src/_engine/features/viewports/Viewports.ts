@@ -33,10 +33,10 @@
 import * as THREE from 'three/webgpu';
 import { texture, uniform, uv } from 'three/tsl';
 import { registerGPUMemorySource } from '../../debug/GPUMemory';
-import type { TCMP } from '../../ui/CMPTypes';
+import type { TCMP } from '../../ui/core/CMPTypes';
 import { llog, lwarn } from '../../utils/Logger';
 import type { FeatureContext } from '../../kernel/init/Features';
-import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../ui/HUD';
+import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../ui/core/HUD';
 import styles from './Viewports.module.scss';
 
 /** A rectangle relative to the canvas's top-left corner (y down): a viewport's `rect` placement

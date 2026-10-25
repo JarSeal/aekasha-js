@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { TCMP } from '../../ui/CMPTypes';
+import type { TCMP } from '../../ui/core/CMPTypes';
 import type { AppData } from './AppData';
 import type { SceneData } from './Scene';
 
@@ -95,7 +95,7 @@ vi.mock(import('../render/Raycast'), () => ({
   resetRayCastStats: vi.fn(),
 }));
 vi.mock(import('./Group'), () => ({ deleteAllGroupEntities: vi.fn() }));
-vi.mock(import('../../ui/HUD'), () => ({ getHUDRootCMP: (() => m.hudRoot) as never }));
+vi.mock(import('../../ui/core/HUD'), () => ({ getHUDRootCMP: (() => m.hudRoot) as never }));
 vi.mock(import('../../debug/DebuggerGUI'), () => ({
   addDebugToastWhenReady: vi.fn(),
   DEBUGGER_SCENE_LOADER_ID: '__debugger-scene-loader' as const,

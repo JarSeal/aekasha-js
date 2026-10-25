@@ -12,7 +12,7 @@
  * in the editor module).
  */
 import type * as THREE from 'three/webgpu';
-import { CMP } from '../../../ui/CMP';
+import { CMP } from '../../../ui/core/CMP';
 import type { AnyDebuggerTabDef, DebuggerPaneItem, DebuggerTabSection } from '../../DebuggerGUI';
 import type { MaterialAsset } from '../../../schemas/MaterialSchema';
 import type { ViewCamera, ViewCameraPose } from '../_dbg__ViewCamera';

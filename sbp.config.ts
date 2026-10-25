@@ -62,8 +62,8 @@ const profiles: SbpProfile[] = [
       },
       modules: {
         // The built-in icons register only in the debug env (p611 D10)
-        '_engine/ui/icons/BuiltInIcons.ts': 0,
-        '_engine/ui/icons/svg/': 0,
+        '_engine/ui/core/icons/BuiltInIcons.ts': 0,
+        '_engine/ui/core/icons/svg/': 0,
       },
     },
   },

@@ -1,5 +1,5 @@
-import { CMP } from '../ui/CMP';
-import type { TCMP } from '../ui/CMPTypes';
+import { CMP } from '../ui/core/CMP';
+import type { TCMP } from '../ui/core/CMPTypes';
 import './PercentagePie.scss';
 
 export type PercentagePieOpts = {

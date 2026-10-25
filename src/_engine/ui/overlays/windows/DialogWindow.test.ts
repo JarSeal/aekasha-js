@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
-vi.mock(import('../kernel/scene/SceneHooks'), () => ({ addSceneHooks: () => () => {} }));
-vi.mock(import('../kernel/init/BootHooks'), () => ({ addBootAfterStartHook: () => true }));
+vi.mock(import('../../../kernel/scene/SceneHooks'), () => ({ addSceneHooks: () => () => {} }));
+vi.mock(import('../../../kernel/init/BootHooks'), () => ({ addBootAfterStartHook: () => true }));
 
 type Modules = {
   dialogs: typeof import('./DialogWindow');
@@ -48,7 +48,7 @@ describe('dialogs: Escape', () => {
         addEventListener(...args);
       },
     });
-    const hud = await import('./HUD');
+    const hud = await import('../../core/HUD');
     hud.createHudContainer(document.getElementById('hudSlot') as HTMLElement);
     m = { dialogs: await import('./DialogWindow'), windows: await import('./DraggableWindow') };
   });

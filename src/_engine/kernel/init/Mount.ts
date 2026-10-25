@@ -13,7 +13,7 @@ import { createRenderer, deleteRenderer, getRenderer } from '../render/Renderer'
 import type { RendererCanvasOptions, RendererOptions } from '../render/Renderer';
 import { addAfterRender } from '../render/RenderHooks';
 import { createSceneLoader, loadScene } from '../scene/SceneLoader';
-import { setWindowBoundsElement } from '../../ui/Window';
+import { setWindowBoundsElement } from '../../ui/core/Window';
 import { lerror, lwarn } from '../../utils/Logger';
 import { bootEngineAsync, isEngineBooted, stopEngineFeatures } from './Boot';
 import type { InitEngineOptions } from './InitEngine';

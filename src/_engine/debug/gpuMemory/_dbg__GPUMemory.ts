@@ -2,7 +2,7 @@ import type { Renderer } from 'three/webgpu';
 import { addDebugToast, openDebuggerTab } from '../DebuggerGUI';
 import { GPU_MEMORY_TAB_ID } from '../GPUMemory';
 import { createProfilerTab, updateProfilerTab } from '../Profiler';
-import { CMP } from '../../ui/CMP';
+import { CMP } from '../../ui/core/CMP';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { llog } from '../../utils/Logger';
 import { ECSSystemStage } from '../../kernel/loop/SystemStages';

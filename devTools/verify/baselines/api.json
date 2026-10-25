@@ -2788,16 +2788,16 @@
       "TextureAssetSchema": "Variable"
     },
     "src/_engine/types/three-node-material-helpers.d.ts": {},
-    "src/_engine/ui/CMP.ts": {
+    "src/_engine/ui/core/CMP.ts": {
       "classes": "Function",
       "CMP": "Function"
     },
-    "src/_engine/ui/CMPAnim.ts": {
+    "src/_engine/ui/core/CMPAnim.ts": {
       "removeAnims": "Function",
       "runAnims": "Function",
       "updateCmpAnim": "Function"
     },
-    "src/_engine/ui/CMPTypes.ts": {
+    "src/_engine/ui/core/CMPTypes.ts": {
       "TAnimChain": "TypeAlias",
       "TAnimState": "TypeAlias",
       "TAttr": "TypeAlias",
@@ -2810,83 +2810,14 @@
       "TSettings": "TypeAlias",
       "TStyle": "TypeAlias"
     },
-    "src/_engine/ui/DialogWindow.ts": {
-      "DialogProps": "TypeAlias",
-      "openDialog": "Function"
-    },
-    "src/_engine/ui/DraggableWindow.ts": {
-      "bringDraggableWindowToFront": "Function",
-      "closeDraggableWindow": "Function",
-      "fitAllDraggableWindowsToScreen": "Function",
-      "fitDraggableWindowToScreen": "Function",
-      "getDraggableWindow": "Function",
-      "getDraggableWindowsOfKind": "Function",
-      "getKindWindowId": "Function",
-      "isDraggableWindowOnTop": "Function",
-      "openDraggableWindow": "Function",
-      "registerDraggableWindow": "Function",
-      "registerDraggableWindowKind": "Function",
-      "removeDraggableWindow": "Function",
-      "toggleDraggableWindow": "Function",
-      "updateDraggableWindow": "Function",
-      "updateDraggableWindowsOfKind": "Function"
-    },
-    "src/_engine/ui/DraggableWindowDrag.ts": {
-      "addDragHandle": "Function",
-      "cancelDragSession": "Function",
-      "DragCommit": "TypeAlias"
-    },
-    "src/_engine/ui/DraggableWindowGeometry.ts": {
-      "clampToGrabbable": "Function",
-      "fitWindow": "Function",
-      "getGeometryStyle": "Function",
-      "getGrabArea": "Function",
-      "isCssCentred": "Function",
-      "isFittable": "Function",
-      "keepOnScreen": "Function",
-      "placeWindow": "Function",
-      "writePosition": "Function"
-    },
-    "src/_engine/ui/DraggableWindowStore.ts": {
-      "createRuntime": "Function",
-      "hydrateFromLS": "Function",
-      "kindGeometry": "Variable",
-      "recordKindGeometry": "Function",
-      "resolveWindowConfig": "Function",
-      "writeWindowStatesToLS": "Function"
-    },
-    "src/_engine/ui/DraggableWindowTypes.ts": {
-      "DraggableWindow": "TypeAlias",
-      "DraggableWindowConfig": "TypeAlias",
-      "DraggableWindowContent": "TypeAlias",
-      "DraggableWindowData": "TypeAlias",
-      "DraggableWindowKindOpts": "TypeAlias",
-      "DraggableWindowRuntime": "TypeAlias",
-      "DraggableWindowUnit": "TypeAlias",
-      "DraggableWindowUnits": "TypeAlias",
-      "DragMode": "TypeAlias",
-      "DragSession": "TypeAlias",
-      "GrabArea": "TypeAlias",
-      "KindGeometry": "TypeAlias",
-      "OpenDraggableWindowProps": "TypeAlias",
-      "SceneTargetResolver": "TypeAlias",
-      "StoredWindow": "TypeAlias",
-      "WindowEntry": "TypeAlias"
-    },
-    "src/_engine/ui/DropDown.ts": {
-      "createDropDown": "Function",
-      "DropDownOption": "TypeAlias",
-      "DropDownProps": "TypeAlias",
-      "TDropDown": "TypeAlias"
-    },
-    "src/_engine/ui/HUD.ts": {
+    "src/_engine/ui/core/HUD.ts": {
       "createHudContainer": "Function",
       "getHUDRootCMP": "Function",
       "GUI_CONTAINER_ID": "Variable",
       "HUD_ROOT_ID": "Variable",
       "KEEP_IN_VIEWS_CLASS": "Variable"
     },
-    "src/_engine/ui/icons/BuiltInIcons.ts": {
+    "src/_engine/ui/core/icons/BuiltInIcons.ts": {
       "aekashaIcon": "Variable",
       "alertIcon": "Reference",
       "arrowClockwiseIcon": "Reference",
@@ -2937,15 +2868,102 @@
       "xBoldIcon": "Reference",
       "xIcon": "Reference"
     },
-    "src/_engine/ui/icons/SvgIcon.ts": {
+    "src/_engine/ui/core/icons/SvgIcon.ts": {
       "BuiltInIconName": "TypeAlias",
       "getSvgIcon": "Function",
       "registerBuiltInIcons": "Function",
       "registerIcon": "Function",
       "SvgIconKey": "TypeAlias"
     },
-    "src/_engine/ui/Motion.ts": {
+    "src/_engine/ui/core/Motion.ts": {
       "getMotionFactor": "Function"
+    },
+    "src/_engine/ui/core/Window.ts": {
+      "getWindowSize": "Function",
+      "setWindowBoundsElement": "Function"
+    },
+    "src/_engine/ui/forms/DropDown.ts": {
+      "createDropDown": "Function",
+      "DropDownOption": "TypeAlias",
+      "DropDownProps": "TypeAlias",
+      "TDropDown": "TypeAlias"
+    },
+    "src/_engine/ui/overlays/Toaster.ts": {
+      "addToast": "Function",
+      "AddToastResponse": "TypeAlias",
+      "createToaster": "Function",
+      "DEFAULT_TOASTER_SETTINGS": "Variable",
+      "hasToaster": "Function",
+      "removeToast": "Function",
+      "removeToaster": "Function",
+      "ToastDirection": "TypeAlias",
+      "ToasterProps": "TypeAlias",
+      "ToasterSettings": "TypeAlias",
+      "ToastProps": "TypeAlias",
+      "ToastType": "TypeAlias"
+    },
+    "src/_engine/ui/overlays/windows/DialogWindow.ts": {
+      "DialogProps": "TypeAlias",
+      "openDialog": "Function"
+    },
+    "src/_engine/ui/overlays/windows/DraggableWindow.ts": {
+      "bringDraggableWindowToFront": "Function",
+      "closeDraggableWindow": "Function",
+      "fitAllDraggableWindowsToScreen": "Function",
+      "fitDraggableWindowToScreen": "Function",
+      "getDraggableWindow": "Function",
+      "getDraggableWindowsOfKind": "Function",
+      "getKindWindowId": "Function",
+      "isDraggableWindowOnTop": "Function",
+      "openDraggableWindow": "Function",
+      "registerDraggableWindow": "Function",
+      "registerDraggableWindowKind": "Function",
+      "removeDraggableWindow": "Function",
+      "toggleDraggableWindow": "Function",
+      "updateDraggableWindow": "Function",
+      "updateDraggableWindowsOfKind": "Function"
+    },
+    "src/_engine/ui/overlays/windows/DraggableWindowDrag.ts": {
+      "addDragHandle": "Function",
+      "cancelDragSession": "Function",
+      "DragCommit": "TypeAlias"
+    },
+    "src/_engine/ui/overlays/windows/DraggableWindowGeometry.ts": {
+      "clampToGrabbable": "Function",
+      "fitWindow": "Function",
+      "getGeometryStyle": "Function",
+      "getGrabArea": "Function",
+      "isCssCentred": "Function",
+      "isFittable": "Function",
+      "keepOnScreen": "Function",
+      "placeWindow": "Function",
+      "writePosition": "Function"
+    },
+    "src/_engine/ui/overlays/windows/DraggableWindowStore.ts": {
+      "createRuntime": "Function",
+      "hydrateFromLS": "Function",
+      "kindGeometry": "Variable",
+      "recordKindGeometry": "Function",
+      "resolveWindowConfig": "Function",
+      "writeWindowStatesToLS": "Function"
+    },
+    "src/_engine/ui/overlays/windows/DraggableWindowTypes.ts": {
+      "DraggableWindow": "TypeAlias",
+      "DraggableWindowConfig": "TypeAlias",
+      "DraggableWindowContent": "TypeAlias",
+      "DraggableWindowData": "TypeAlias",
+      "DraggableWindowKindOpts": "TypeAlias",
+      "DraggableWindowRuntime": "TypeAlias",
+      "DraggableWindowUnit": "TypeAlias",
+      "DraggableWindowUnits": "TypeAlias",
+      "DragMode": "TypeAlias",
+      "DragSession": "TypeAlias",
+      "GrabArea": "TypeAlias",
+      "KindGeometry": "TypeAlias",
+      "OpenDraggableWindowProps": "TypeAlias",
+      "SceneTargetResolver": "TypeAlias",
+      "StoredWindow": "TypeAlias",
+      "WindowEntry": "TypeAlias"
     },
     "src/_engine/ui/styles/TokenSheet.ts": {
       "CONTRAST_CHECKED": "Variable",
@@ -2963,24 +2981,6 @@
       "TokenColor": "TypeAlias",
       "TokenRule": "TypeAlias",
       "TokenSheet": "TypeAlias"
-    },
-    "src/_engine/ui/Toaster.ts": {
-      "addToast": "Function",
-      "AddToastResponse": "TypeAlias",
-      "createToaster": "Function",
-      "DEFAULT_TOASTER_SETTINGS": "Variable",
-      "hasToaster": "Function",
-      "removeToast": "Function",
-      "removeToaster": "Function",
-      "ToastDirection": "TypeAlias",
-      "ToasterProps": "TypeAlias",
-      "ToasterSettings": "TypeAlias",
-      "ToastProps": "TypeAlias",
-      "ToastType": "TypeAlias"
-    },
-    "src/_engine/ui/Window.ts": {
-      "getWindowSize": "Function",
-      "setWindowBoundsElement": "Function"
     },
     "src/_engine/utils/Assert.ts": {
       "existsOrThrow": "Function",

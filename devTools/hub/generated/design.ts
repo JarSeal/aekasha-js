@@ -36,7 +36,7 @@ export const DESIGN_SECTION_PATH = 'project/aekasha/design/';
 const STYLES_DIR = path.join(SRC_DIR, '_engine', 'ui', 'styles');
 const TOKENS_FILE = path.join(STYLES_DIR, 'tokens.css');
 const FONTS_FILE = path.join(SRC_DIR, '_engine', 'ui', 'fonts', 'fonts.css');
-const ICONS_DIR = path.join(SRC_DIR, '_engine', 'ui', 'icons');
+const ICONS_DIR = path.join(SRC_DIR, '_engine', 'ui', 'core', 'icons');
 const BUILT_IN_ICONS_FILE = path.join(ICONS_DIR, 'BuiltInIcons.ts');
 
 /** The page's generated slots, by the table group they show */
@@ -483,7 +483,7 @@ const renderIcons = (icons: BuiltInIcon[], md: MarkdownIt, env: HubMarkdownEnv) 
     ({ name, file, svg }) =>
       `<li>${svg}<code>${escapeHtml(name)}</code><span class="hubIconFile">${escapeHtml(file)}</span></li>`
   );
-  return `${renderMarkdownText(md, `### Built-in icons\n\n${icons.length} icons, by the name \`getSvgIcon\` takes, each with its file in \`src/_engine/ui/icons/svg/\`.\n`, BUILT_IN_ICONS_FILE, env)}<ul class="hubIconGrid">${items.join('')}</ul>\n`;
+  return `${renderMarkdownText(md, `### Built-in icons\n\n${icons.length} icons, by the name \`getSvgIcon\` takes, each with its file in \`src/_engine/ui/core/icons/svg/\`.\n`, BUILT_IN_ICONS_FILE, env)}<ul class="hubIconGrid">${items.join('')}</ul>\n`;
 };
 
 /** The design document's section: its tables from `tokens.css`, `fonts.css` and the icons */

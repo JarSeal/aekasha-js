@@ -123,7 +123,7 @@ gamepad, a small screen, an embed, and does it make someone want to come back to
   only by `InitEngine`): the debugger's styles have the most (`DebuggerGUI.module.scss` 82,
   `DraggableWindow.module.scss` 67, `Profiler.module.scss` 59, `CharacterStateWindow` 53, …).
   An embed doesn't load `page.scss`, so they follow the host's root size, and the windows measure
-  the browser window (`ui/Window.ts`' `getWindowSize`, the `100vw` / `100vh` max size):
+  the browser window (`ui/core/Window.ts`' `getWindowSize`, the `100vw` / `100vh` max size):
   `docs/issues/ui-kit-in-an-embed.md`.
 - Accessibility: the drop-down is the one complete piece (listbox, `aria-activedescendant`, full
   keys). Windows focus their first focusable element but have no `role="dialog"`, `aria-modal`,
@@ -246,7 +246,7 @@ updates this section.
   (524 in the kit and the debugger) become `calc(N * var(--aek-rem))`, an `@internal` unit that is
   10 px at the defaults, until p803 and p806 restyle them onto `em` tokens (p801 D4).
 - `--aek-ui-scale` is the game's "UI scale" setting (p808's settings menu sets it).
-- `getWindowSize` (`ui/Window.ts`) measures the HUD root's container (the page in the full-page
+- `getWindowSize` (`ui/core/Window.ts`) measures the HUD root's container (the page in the full-page
   boot, the mount's container in an embed); the windows' default max size is `100%` of it, not
   `100vw` / `100vh`, and the dialog backdrop with them. `_dbg__DebuggerGUI.ts`' caller follows.
 - p801's check: a `uiKit` SBP embed profile opens a window, a dialog and a toast, and

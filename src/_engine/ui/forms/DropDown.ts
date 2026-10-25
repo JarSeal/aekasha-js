@@ -1,5 +1,5 @@
-import type { TCMP } from './CMPTypes';
-import { CMP, classes } from './CMP';
+import type { TCMP } from '../core/CMPTypes';
+import { CMP, classes } from '../core/CMP';
 import './DropDown.scss';
 
 /** One of a drop-down's options. */

@@ -1,5 +1,5 @@
 import { DEBUG_TOASTER_ID, updateDebuggerTab } from '../../../debug/DebuggerGUI';
-import { addToast } from '../../../ui/Toaster';
+import { addToast } from '../../../ui/overlays/Toaster';
 import { getActiveSkyBox, setActiveSkyBox, updateSkyBox } from '../SkyBox';
 import type { SkyBoxDef, SkyBoxOverrides } from '../SkyBoxTypes';
 import { resolveSkyBoxPreset, type SkyBoxPresetName } from '../Presets';

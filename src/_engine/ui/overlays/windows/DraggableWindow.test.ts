@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import type { SceneHooks } from '../kernel/scene/SceneHooks';
+import type { SceneHooks } from '../../../kernel/scene/SceneHooks';
 
 // The hooks the windows add, kept (the mocks' calls are cleared between tests)
 const added = vi.hoisted(() => ({
@@ -36,13 +36,13 @@ const storage = vi.hoisted(() => {
   return ls;
 });
 
-vi.mock(import('../kernel/scene/SceneHooks'), () => ({ addSceneHooks: fns.addSceneHooks }));
-vi.mock(import('../kernel/init/BootHooks'), () => ({
+vi.mock(import('../../../kernel/scene/SceneHooks'), () => ({ addSceneHooks: fns.addSceneHooks }));
+vi.mock(import('../../../kernel/init/BootHooks'), () => ({
   addBootAfterStartHook: fns.addBootAfterStartHook,
 }));
 
-import { getConfig, loadConfig } from '../kernel/config/Config';
-import { CMP } from './CMP';
+import { getConfig, loadConfig } from '../../../kernel/config/Config';
+import { CMP } from '../../core/CMP';
 import {
   closeDraggableWindow,
   getDraggableWindow,
@@ -51,7 +51,7 @@ import {
   registerDraggableWindow,
   registerDraggableWindowKind,
 } from './DraggableWindow';
-import { createHudContainer } from './HUD';
+import { createHudContainer } from '../../core/HUD';
 
 describe('draggable windows: the scene and boot hooks (p613 D5)', () => {
   it('adds them on the first use, once, never at module load', () => {
@@ -191,8 +191,8 @@ describe('draggable windows: open, reopen, kinds, scene changes, LS', () => {
     // A reload: the modules start over, LS stays
     vi.resetModules();
     const document = await stubDom();
-    const hud = await import('./HUD');
-    const cmp = await import('./CMP');
+    const hud = await import('../../core/HUD');
+    const cmp = await import('../../core/CMP');
     const windows = await import('./DraggableWindow');
     hud.createHudContainer(document.getElementById('hudSlot') as HTMLElement);
     windows.registerDraggableWindow('savedWin', { content: () => cmp.CMP({ text: 'restored' }) });

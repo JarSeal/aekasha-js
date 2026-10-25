@@ -70,7 +70,7 @@ describe('the design document (p802 D8)', () => {
 
   it('lists every built-in icon by its name', () => {
     const source = fs.readFileSync(
-      path.join(SRC_DIR, '_engine', 'ui', 'icons', 'BuiltInIcons.ts'),
+      path.join(SRC_DIR, '_engine', 'ui', 'core', 'icons', 'BuiltInIcons.ts'),
       'utf8'
     );
     const names = [...source.matchAll(/default as (\w+)Icon\b/g)].map((match) => match[1]);

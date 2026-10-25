@@ -53,7 +53,7 @@ describe('the script build', () => {
     // Nothing but the scripts and the kit's CSS: no worker, wasm or decoder came along
     expect(outs.filter((out) => !/\.(js|css)$/.test(out))).toEqual([]);
     const sources = dev.sources.map(fromRoot);
-    expect(sources).toContain('src/_engine/ui/DraggableWindow.ts');
+    expect(sources).toContain('src/_engine/ui/overlays/windows/DraggableWindow.ts');
     expect(sources.filter((file) => file.startsWith('node_modules/three/'))).toEqual([]);
     expect(dev.sources).not.toContain(HUB_COMPONENTS_FILE); // in hub/: watched already
   });

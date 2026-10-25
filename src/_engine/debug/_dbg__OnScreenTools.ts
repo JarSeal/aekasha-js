@@ -8,16 +8,16 @@ import {
   toggleDebugCamera,
 } from '../kernel/camera/Camera';
 import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
-import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../ui/HUD';
+import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../ui/core/HUD';
 import { isAnyLightHelperVisible, toggleAllLightHelpers } from '../kernel/light/Light';
 import { getReadOnlyLoopState, toggleMainPlay } from '../kernel/loop/MainLoop';
 import { getPhysicsState } from '../features/physics/PhysicsState';
 import { getCurrentSceneId, getGeneratedAppData } from '../kernel/scene/Scene';
 import { isCurrentlyLoading, loadScene } from '../kernel/scene/SceneLoader';
-import { getSvgIcon, type SvgIconKey } from '../ui/icons/SvgIcon';
-import { createDropDown, type DropDownProps, type TDropDown } from '../ui/DropDown';
-import type { TCMP } from '../ui/CMPTypes';
-import { CMP } from '../ui/CMP';
+import { getSvgIcon, type SvgIconKey } from '../ui/core/icons/SvgIcon';
+import { createDropDown, type DropDownProps, type TDropDown } from '../ui/forms/DropDown';
+import type { TCMP } from '../ui/core/CMPTypes';
+import { CMP } from '../ui/core/CMP';
 import styles from './OnScreenTools.module.scss';
 import { getECSWorld } from '../kernel/ecs/ECS';
 import type { SceneAsset } from '../schemas/SceneSchema';

@@ -55,7 +55,7 @@ migration page, so an app made from the template upgrades in one step.
     `debug/_dbg__SkyBoxShared.ts`). Nothing in the template uses the shape (no JSON, no
     `createSkyBox` call; checked 2026-10-18);
   - candidates, decided here: the optional positional parameters of `setActiveSkyBox(id,
-    sceneId?)`, `getSunDirection(out, i = 0)`, `getMoonDirection(out, i = 0)`,
+sceneId?)`, `getSunDirection(out, i = 0)`, `getMoonDirection(out, i = 0)`,
     `getSunElevation(i = 0)` and `getMoonPhase(i = 0)` (the coding standard asks for an options
     object; a trailing index is common enough that keeping them is an option).
     `registerSkyBox(def, sceneId?)` is `@internal` since p615, so it can change in any release.
@@ -71,21 +71,21 @@ migration page, so an app made from the template upgrades in one step.
     into another world outlive the mesh's scene there and keep slots in a disposed mesh (6 calls
     in the app and the Hub's LOD example, all passing the pool's world);
   - `createLineEntity(props, entityOpts?, ecsWorld?)` and `bindLineToEntity(line, entityId,
-    ecsWorld?)`: optional positional parameters, where the coding standard asks for an options
+ecsWorld?)`: optional positional parameters, where the coding standard asks for an options
     object (no call outside the engine).
 - **From p617 (its D3):**
   - `AppConfig.draggableWindows` (`kernel/config/Config.ts`, deprecated in engine 5.8.0): the
     windows' content functions are a module map since p617 (`registerDraggableWindow`,
     `registerDraggableWindowKind`), and the key is only read as a fallback (`buildContent`,
-    `ui/DraggableWindow.ts`). Removed with its `TCMP` and `DraggableWindow` type imports, the last
+    `ui/overlays/windows/DraggableWindow.ts`). Removed with its `TCMP` and `DraggableWindow` type imports, the last
     kernel → ui imports of `Config.ts`;
-  - `AddToastResponse.timeout` (`ui/Toaster.ts`, deprecated in engine 5.8.0): the toast's first
+  - `AddToastResponse.timeout` (`ui/overlays/Toaster.ts`, deprecated in engine 5.8.0): the toast's first
     timer, which its later phases replace;
-  - `TSettings.doCheckIsInDom` (`ui/CMPTypes.ts`, deprecated in engine 5.8.0): stored, never read;
+  - `TSettings.doCheckIsInDom` (`ui/core/CMPTypes.ts`, deprecated in engine 5.8.0): stored, never read;
   - a candidate, decided here: the UI kit's `T`-prefixed type names, the only ones in the engine
     (`TCMP` → `Cmp`, `TProps` → `CmpProps`, `TListener`, `TListenerCache`, `TListenerCreator`,
-    `TStyle`, `TAttr`, `TClassAction`, `TAnimChain`, `TAnimState`, `TSettings` in `ui/CMPTypes.ts`, and
-    `ui/DropDown.ts`' `TDropDown`), all on `aekasha/ui`, renamed together (the old names
+    `TStyle`, `TAttr`, `TClassAction`, `TAnimChain`, `TAnimState`, `TSettings` in `ui/core/CMPTypes.ts`, and
+    `ui/forms/DropDown.ts`' `TDropDown`), all on `aekasha/ui`, renamed together (the old names
     deprecated aliases in a minor first, or removed here: the codemod's job). p800 (D12) decides
     it: p803 adds the new names with the old ones as deprecated aliases, and this major removes
     the aliases.
@@ -109,7 +109,7 @@ migration page, so an app made from the template upgrades in one step.
     debugger migration, p806, replaces them on the `engine-6` integration branch and ships with
     this major (p800 §6); this major's migration page lists p806's tab type changes (p800 §5,
     p806);
-- **The deprecations without a version:** none left. (`ui/DraggableWindow.ts`' six were removed in
+- **The deprecations without a version:** none left. (`ui/overlays/windows/DraggableWindow.ts`' six were removed in
   p617, `debug/Stats.ts`' two and `debug/_dbg__PercentagePie.ts`' one in p618: on no entry, no
   caller.)
 - **The toolkit** keeps its own scale: toolkit 3.0.0 ships with this major only if an engine change

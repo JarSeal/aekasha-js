@@ -68,7 +68,7 @@ vi.mock(import('./DebugTools'), () => ({
 }));
 vi.mock(import('./Profiler'), () => ({ toggleProfilerWindow: vi.fn() }));
 vi.mock(import('./UndoRedo'), () => ({ undoLastAction: vi.fn(), redoLastAction: vi.fn() }));
-vi.mock(import('../ui/icons/SvgIcon'), () => ({ getSvgIcon: () => '' }));
+vi.mock(import('../ui/core/icons/SvgIcon'), () => ({ getSvgIcon: () => '' }));
 
 const held = new Set<string>();
 

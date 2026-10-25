@@ -1,6 +1,6 @@
-import type { TCMP, TStyle } from './CMPTypes';
-import { CMP } from './CMP';
-import { getMotionFactor } from './Motion';
+import type { TCMP, TStyle } from '../core/CMPTypes';
+import { CMP } from '../core/CMP';
+import { getMotionFactor } from '../core/Motion';
 
 /**
  * A toast's kind: the settings that can differ per kind (showing time, closable, icon) are keyed by

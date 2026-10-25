@@ -1,6 +1,6 @@
 import type * as THREE from 'three/webgpu';
-import { CMP } from '../../../ui/CMP';
-import type { TCMP } from '../../../ui/CMPTypes';
+import { CMP } from '../../../ui/core/CMP';
+import type { TCMP } from '../../../ui/core/CMPTypes';
 import { getTextureArrayInfo } from '../TextureArray';
 import { getTextureAtlasInfo, type TextureAtlasInfo } from '../TextureAtlas';
 import { getTextureDepth } from './_dbg__AssetStats';

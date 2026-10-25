@@ -1,8 +1,8 @@
 // The ray tester windows (three's and physics' rays). Over 800 lines: a Tweakpane panel, which p800
 // replaces, so it isn't split (p618 D8).
 import * as THREE from 'three/webgpu';
-import { CMP } from '../../../ui/CMP';
-import type { TCMP } from '../../../ui/CMPTypes';
+import { CMP } from '../../../ui/core/CMP';
+import type { TCMP } from '../../../ui/core/CMPTypes';
 import {
   DEBUG_TOASTER_ID,
   type DebuggerPaneItem,
@@ -16,9 +16,9 @@ import {
   registerDraggableWindow,
   toggleDraggableWindow,
   updateDraggableWindow,
-} from '../../../ui/DraggableWindow';
-import { getSvgIcon } from '../../../ui/icons/SvgIcon';
-import { addToast } from '../../../ui/Toaster';
+} from '../../../ui/overlays/windows/DraggableWindow';
+import { getSvgIcon } from '../../../ui/core/icons/SvgIcon';
+import { addToast } from '../../../ui/overlays/Toaster';
 import {
   getCurrentScene,
   getCurrentSceneId,

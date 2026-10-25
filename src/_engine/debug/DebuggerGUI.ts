@@ -1,12 +1,12 @@
-import type { TCMP } from '../ui/CMPTypes';
+import type { TCMP } from '../ui/core/CMPTypes';
 import type { FolderApi, Pane } from 'tweakpane';
 import type { BindingApi } from '@tweakpane/core';
-import type { SvgIconKey } from '../ui/icons/SvgIcon';
+import type { SvgIconKey } from '../ui/core/icons/SvgIcon';
 import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
 import { lsGetItem } from '../utils/LocalAndSessionStorage';
 import { loadDebugModuleAsync, useDebug, type DebugModuleRef } from '../kernel/config/DebugModules';
 import { lerror } from '../utils/Logger';
-import { addToast, hasToaster, type ToastProps } from '../ui/Toaster';
+import { addToast, hasToaster, type ToastProps } from '../ui/overlays/Toaster';
 
 /**
  * The debugger scene loader's id: `loadScene`, the Debug tools tab and the on-screen tools use it.

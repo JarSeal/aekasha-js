@@ -1,5 +1,5 @@
-import { CMP } from '../../../ui/CMP';
-import type { TCMP } from '../../../ui/CMPTypes';
+import { CMP } from '../../../ui/core/CMP';
+import type { TCMP } from '../../../ui/core/CMPTypes';
 import { IS_DEBUG_ENV } from '../../config/Config';
 import {
   createDebuggerTab,
