@@ -1,7 +1,8 @@
-The UI kit's pieces (`aekasha/ui`) running in this page, for the people building Ækasha: open
-each piece's states, see which debug tools use it, and what it adds to a build. It shows what
-exists today; p803-p808 add their components here as they build them, and p803 adds the public
-library page.
+The UI kit's pieces (`aekasha/ui`) running in this page, for the people building Ækasha: the same
+demos as the public [component library](hub:features/ui-kit/library), with what only developing
+the kit needs: which debug tools use each piece, the notes for the plans that change it, and what
+the kit adds to a build. Each piece's text links its public one, which says what it is and what
+its states show. p804-p808 add their components to both pages as they build them.
 
 The page runs no engine (p800 D1: every component works without it):
 
@@ -14,10 +15,10 @@ The page runs no engine (p800 D1: every component works without it):
   touch the app's saved windows. A window follows the browser window's resizes, but nothing
   restores it from storage on a reload, and a debug window doesn't open: those need the boot.
 
-`yarn verify:ui` checks this page: each demo's states in both themes and both densities with
-axe-core and against its last good screenshot, and each piece's keyboard script
-([`_componentChecks.ts`](repo:hub/_assets/ts/_componentChecks.ts), next to the demos). A
-violation the kit still has is on its allow list
-([`ui.config.ts`](repo:devTools/verify/ui.config.ts)) with the p803 phase that fixes it.
+`yarn verify:ui` checks the public page, as the public Hub builds it: each demo's states in both
+themes and both densities with axe-core and against its last good screenshot, and each piece's
+keyboard script ([`_componentChecks.ts`](repo:hub/_assets/ts/_componentChecks.ts), next to the
+demos). A violation the kit still has goes on its allow list
+([`ui.config.ts`](repo:devTools/verify/ui.config.ts)) with the plan that fixes it; it's empty.
 
 The design these follow is the [design document](hub:project/aekasha/design)'s.

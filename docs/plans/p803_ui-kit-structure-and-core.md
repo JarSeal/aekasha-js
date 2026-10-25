@@ -2035,6 +2035,96 @@ walkthrough, `::: embed uiKit`, the `CLAUDE.md` files, `readme.md`, the coding s
 `yarn hub:build` in both modes (no dead link, the API 100 % documented), and `verify:ui` against
 the public build.
 
+1. Section 1, the public component library: `_components.ts` in both modes (out of
+   `DEV_ONLY_SCRIPT_MODULES`, `scripts.test.ts`' public assertions flipped), the public page
+   `features/ui-kit/library/` (the boxes, the settings form and a public text per piece), the dev
+   page `project/aekasha/components/` on the same `DEMOS` with only its internal notes, "Used by"
+   and the build text, linking each piece's public text; `yarn verify:ui` on the public page,
+   served from a public build (D11's `hubPreview` server).
+2. Section 2, the UI kit section: `guide.md` split into the overview (`features/ui-kit/`), `core/`
+   and `overlays/`, each component with its live demo (`::: demo <key>`, new), its parts, custom
+   properties and keyboard map, a link to its props on the API page; the `aek:covers` moved.
+3. Section 3, the styling guide (`features/ui-kit/styling/`): p800 D11's, with the worked "make it
+   look like my game" example; the overview's "what a HUD costs".
+4. Section 4, the example and the embed: `examples/uiKit/` rebuilt on the components and its
+   walkthrough, the app's scene loader on the loading overlay, `::: embed uiKit` with its poster.
+5. Section 5, the `CLAUDE.md` files (D13's list), `readme.md`, the coding standards line, then the
+   phase's verification.
+
+Defaults chosen at the phase's start (2026-10-26, for review):
+
+- **The public library page** is `features/ui-kit/library/` (D13): the settings form and every box
+  as on the dev page, each with a public `<piece>-text.md` (what it is, its states, what the page
+  can't show, a link to its section) instead of the dev notes. The dev page keeps its boxes, its
+  "Used by" lists, `build-text.md` and the notes for later plans (the `::: note For p80x` blocks
+  and the parts the public text doesn't need), and links the public page's piece. Two pages, one
+  `DEMOS`: a box's states are the same on both. `yarn verify:ui` checks the public page.
+- **The script on any page with a demo**: `hub.ts` imports `_components.ts` on a page with a
+  `[data-hub-demo]` box, in both modes, and `initComponents()` fills every box of the page and
+  wires the settings form when the page has one (the library pages). Outside the library the demos
+  follow the Hub's theme toggle (the HUD root inherits the page's `data-aek-theme`): no form.
+- **`verify:ui`'s server** (D11, Phase 3's "Phase 8 moves it"): without `--url` it builds the public
+  Hub into `.cache/verify/ui/hub/` (`buildHub`, `api: false` and no embeds: the library page needs
+  neither; `dist-hub/` stays the user's) and serves it with `hubPreview`'s server (`serve.ts`), so
+  the check is of what ships. `--url` still takes a dev server's Hub. The dev server it started
+  goes (the scene runner keeps `devServer.ts`).
+- **Live demos in the section pages** (section 2): `::: demo <key>` (a new directive,
+  `devTools/hub/demo.ts`) renders the `[data-hub-demo]` box. An unknown key fails the build: a key
+  must be a box of the library page, so every demo a page shows is one `verify:ui` checks.
+- **Props** (section 2): each component section links its props type on the API page
+  (`api:ButtonProps`), which renders every prop from the JSDoc; the Hub writes no props table by
+  hand (it would drift). Its parts, custom properties and keys are tables on the page: the API
+  doesn't structure them.
+- **The app's scene loader** (section 4, D13's "the loading overlay as its scene loader"): the
+  example can't own the app's loader, so `src/index.ts`' hand-made cover becomes
+  `createLoadingOverlay` with a progress bar (a `#region` the walkthrough includes), and the
+  example's HUD gets a "Reload the scene" button that shows it. `yarn sbp` says what it adds to the
+  app's first download (the overlay, the spinner and the progress bar in `_engine/ui`).
+- **The embed showcase's focus** (section 4; p801 Phase 6 deferred the showcase for it): the
+  `uiKitEmbed` scene opens its dialog at load, which takes the focus, so a reader's focus would
+  jump into the panel as it mounts. The scene opens the window (its button and tooltip) and the
+  toast at load, and the dialog from a window button ("Open the dialog"); `yarn verify:embed`
+  clicks it and opens the list before its dialog and list checks.
+
+As built (section 1, 2026-10-26):
+
+- **The script** (`hub/_assets/ts/_components.ts`): `hub.ts` imports it on any page with a
+  `[data-hub-demo]` box, in both modes (no `__HUB_DEV__` guard: the define stays, unused);
+  `initComponents()` takes no root, fills every box of the page and wires a
+  `[data-hub-component-settings]` form when there's one. The link demo's guide link resolves from
+  the chunk's URL (`new URL('../../features/ui-kit/', import.meta.url)`, `@vite-ignore`): the demo
+  is on pages at several depths now. `DEV_ONLY_SCRIPT_MODULES` holds the dev client alone.
+  `scripts.test.ts`: the chunk, its CSS and no engine, in both builds; the dev client in `dev`
+  only.
+- **The public page** `features/ui-kit/library/` (`aek:order` 40, the section's last child): its
+  intro (the HUD root made with `createHudRoot`, the kit roots of the pieces drawn in the page,
+  what needs the boot), the settings form and the 21 boxes, each with a `<piece>-text.md`: the dev
+  texts moved (`git mv`) with the plan references, the screenshot notes and the dev notes taken
+  out, and the icons' link to the design document (a dev page) replaced by `BuiltInIconName`.
+- **The dev page** keeps the boxes, "Used by" and `build-text.md`; each `<piece>-text.md` is its
+  heading, a link to the public piece and the notes for later plans (the window's kernel hooks,
+  the drop-down's p804, the icons' `uiIcon` until p806, **the button bringing Kbd** (Phase 7's
+  open item, written down there), the menu's submenus, Kbd's p806, the glyph's p808, and the
+  spinner's, skeleton's and progress bar's screenshot notes). Its intro says what it adds.
+- **`yarn verify:ui`** opens `features/ui-kit/library/` (`UI_PAGE_PATH`). Without `--url` it runs
+  `yarn hub:build --no-api --no-embed --out .cache/verify/ui/hub` (its lines in the progress log)
+  and serves that folder with `devTools/hub/previewServer.ts`' `createHubPreviewServer` (the
+  request handler moved out of `hubPreview.ts`, which now only parses its arguments and listens)
+  on port 0. **`--no-build`** (new) serves the last run's build. Like any public build it needs the
+  `yarn sbp` report. `devServer.ts` is the scene runner's alone.
+- Docs: `hub/CLAUDE.md` (the sources' chunk list, the component library bullet: two pages, one
+  `DEMOS`, a new component in both), `devTools/hub/CLAUDE.md` (Scripts, `hub:preview`'s server),
+  `devTools/verify/CLAUDE.md` and the root's command line (`verify:ui`'s build and server,
+  `--no-build`), the kit's `CLAUDE.md` (Outside the engine), `docs/techniques/hub-authoring.md`
+  (its Component library section, stale since before p803: rewritten for the two pages).
+- The section's checks: `yarn test` (183 files), `tsc` (both), ESLint on the changed files,
+  `yarn hub:build` (93 pages, 1014 names, 100 % documented; the search payload 310 KiB gzip with
+  the second page's texts, under the 450 KiB warning). `yarn verify:ui` against the public page
+  (its own build: 62 pages in about 3 s; the run 134 s): every keyboard script passes and no
+  violation; 11 states fail on screenshots only, the same 11 Phase 7 left to record (the window's,
+  drop-down's and toaster's three each, the icons box's two). Still to record with `--update`
+  after review: those 11 and the new boxes' shots of Phases 6 and 7.
+
 ### Phase 9: versions and done
 
 D14; the changelog entry with the restyle note; `yarn checkVersions --against main`; mark the plan

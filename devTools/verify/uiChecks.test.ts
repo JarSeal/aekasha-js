@@ -15,14 +15,16 @@ import {
 const UI_DARK: UiSetting = { theme: 'dark', density: '' };
 
 describe('parseUiArgs', () => {
-  it('reads the URL (with its slash), the pieces and --headed', () => {
+  it('reads the URL (with its slash), the pieces and the flags', () => {
     expect(parseUiArgs(['--url', 'http://localhost:8080/hub', '--only', 'window,dialog'])).toEqual({
       url: 'http://localhost:8080/hub/',
+      noBuild: false,
       only: ['window', 'dialog'],
       update: false,
       headed: false,
     });
     expect(parseUiArgs(['--headed']).headed).toBe(true);
+    expect(parseUiArgs(['--no-build']).noBuild).toBe(true);
     expect(parseUiArgs(['--update']).update).toBe(true);
   });
 

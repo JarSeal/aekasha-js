@@ -1,12 +1,15 @@
 /**
- * The component library (p802 D9, the dev page `project/aekasha/components/`): a chunk `hub.ts`
- * imports on a page with `[data-hub-components]`, only in the dev Hub. It uses `aekasha/ui`
- * without the engine: the Hub's script build resolves the kit's main loop and storage to its own
- * stand-ins (`_kit/`, `devTools/hub/kitStandIns.ts`), and this makes the HUD root (`createHudRoot`,
- * which brings the kit's global styles), as the boot would.
+ * The component library's demos (p802 D9; public since p803 Phase 8): a chunk `hub.ts` imports on
+ * a page with a `[data-hub-demo]` box, in both modes: the public library page
+ * (`features/ui-kit/library/`), the dev one (`project/aekasha/components/`, the same boxes with
+ * the notes for developing Ækasha) and the UI kit section's `::: demo` boxes. It uses
+ * `aekasha/ui` without the engine: the Hub's script build resolves the kit's storage to its own
+ * stand-in (`_kit/`, `devTools/hub/kitStandIns.ts`), and this makes the HUD root
+ * (`createHudRoot`, which brings the kit's global styles), as the boot would.
  *
  * The root sits over the viewport, as in an app: each `[data-hub-demo]` box gets buttons that
- * open its piece's states there, and the page's theme and density switches set its attributes. A
+ * open its piece's states there, and a library page's theme and density switches set its
+ * attributes (elsewhere it follows the Hub's theme toggle, the page's `data-aek-theme`). A
  * piece drawn in the page (a key hint, an input glyph, a spinner) draws in a kit root of its own in its box
  * (`addKitRoot`, as an app's UI outside the HUD), which the switches set too.
  * The buttons and the windows' content are the page's (`.hubButton`, `.hubDemoPanel`), as an
@@ -816,8 +819,9 @@ const initMenuDemo: Demo = (box) => {
 // --- Link ---
 
 const LINK_ID = (name: string) => `${ID_PREFIX}Link${name}`;
-/** The UI kit's feature page, from this page (project/aekasha/components/) */
-const GUIDE_HREF = '../../../features/ui-kit/';
+/** The UI kit's feature page, from this chunk (`_assets/chunks/`): the demo is on pages at
+ * several depths */
+const GUIDE_HREF = new URL(/* @vite-ignore */ '../../features/ui-kit/', import.meta.url).href;
 
 /** In the page: links in text and as buttons; the first one's click is an app's (its status line) */
 const initLinkDemo: Demo = (box) => {
@@ -1240,8 +1244,8 @@ const SETTING_ATTRIBUTES: Record<string, string> = {
   density: 'data-aek-density',
 };
 
-const initSettings = (root: HTMLElement, hud: HTMLElement) => {
-  root.querySelector('[data-hub-component-settings]')?.addEventListener('change', (e) => {
+const initSettings = (hud: HTMLElement) => {
+  document.querySelector('[data-hub-component-settings]')?.addEventListener('change', (e) => {
     const input = e.target as HTMLInputElement;
     const attribute = SETTING_ATTRIBUTES[input.name];
     if (!attribute) return;
@@ -1252,18 +1256,15 @@ const initSettings = (root: HTMLElement, hud: HTMLElement) => {
   });
 };
 
-/**
- * Makes the HUD root and mounts each demo into its box
- * @param root the page's `[data-hub-components]` element
- */
-export const initComponents = (root: HTMLElement) => {
+/** Makes the HUD root and mounts each demo into its box (every `[data-hub-demo]` of the page) */
+export const initComponents = () => {
   // The windows' buttons and the toasts are icons; the boot registers them in the debug env
   registerBuiltInIcons();
   // The root takes the place of its slot (as of the page's `#hudRoot` in an app)
   const slot = document.createElement('div');
   document.body.append(slot);
-  initSettings(root, createHudRoot({ slot }).elem);
-  for (const box of root.querySelectorAll<HTMLElement>('[data-hub-demo]')) {
+  initSettings(createHudRoot({ slot }).elem);
+  for (const box of document.querySelectorAll<HTMLElement>('[data-hub-demo]')) {
     DEMOS[box.dataset.hubDemo ?? '']?.(box);
   }
 };

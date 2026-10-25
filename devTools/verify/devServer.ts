@@ -1,7 +1,7 @@
 /**
- * The verify commands' own dev server (`yarn verify:scenes`, `yarn verify:ui`): `vite.config.ts`
- * on `localhost`, port 8092 or the next free one, with its own dependency cache, so a run never
- * shares one with a `yarn dev*` (p619 V3).
+ * The scene runner's own dev server (`yarn verify:scenes`; `yarn verify:ui` serves a public Hub
+ * build since p803 Phase 8): `vite.config.ts` on `localhost`, port 8092 or the next free one,
+ * with its own dependency cache, so a run never shares one with a `yarn dev*` (p619 V3).
  */
 import path from 'path';
 import type { Logger } from 'vite';

@@ -3,7 +3,7 @@
  * and runs axe-core over each demo box's states, in both themes and both densities, failing on a
  * violation `ui.config.ts` doesn't allow:
  *
- *   yarn verify:ui [--url <hub url>] [--only <piece>[,<piece>…]] [--headed]
+ *   yarn verify:ui [--url <hub url>] [--no-build] [--only <piece>[,<piece>…]] [--update] [--headed]
  *
  * - The states of a box (`uiChecks.ts`' `getDemoStates`): the box as the page shows it, each of
  *   its Hub buttons, and the states the checks table (`hub/_assets/ts/_componentChecks.ts`, next
@@ -21,19 +21,23 @@
  * - `--only` runs the named pieces (the boxes' `data-hub-demo` keys). An allowance for a piece
  *   that ran and matched nothing is listed at the end: it can go.
  *
- * It starts its own dev server (`devServer.ts`, the scene runner's) and opens the dev Hub's page,
- * which is dev-only until p803 Phase 8, unless `--url` names a Hub's root (a running dev server's
- * `http://localhost:8080/hub/`). Every line also goes to `.cache/verify/progress.log`. Exits 1 on
- * a failed state, 2 on an error.
+ * It checks the public component library page (`features/ui-kit/library/`) as the public Hub
+ * ships it (p803 Phase 8): it builds the Hub into `.cache/verify/ui/hub/` (`yarn hub:build
+ * --no-api --no-embed`: the page needs neither; `dist-hub/` stays as it is) and serves it with
+ * `hub:preview`'s server on a free port. `--no-build` serves the last run's build as it is, and
+ * `--url` names another Hub's root instead (a running dev server's `http://localhost:8080/hub/`).
+ * Every line also goes to `.cache/verify/progress.log`. Exits 1 on a failed state, 2 on an error.
  */
+import { spawn } from 'child_process';
 import fs from 'fs';
+import type { AddressInfo } from 'net';
 import path from 'path';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import type { Browser, BrowserContext, Page } from 'playwright-core';
 import { UI_DEMO_CHECKS, type UiKeyScript } from '../../hub/_assets/ts/_componentChecks';
 import { launchChromium } from './browser';
-import { startVerifyServerAsync } from './devServer';
+import { createHubPreviewServer } from '../hub/previewServer';
 import {
   BOX_BUTTON,
   boxSelector,
@@ -366,6 +370,50 @@ const runAsync = async (args: UiArgs, browser: Browser, url: string) => {
   return failed;
 };
 
+/** The public Hub this run builds and serves (gitignored, next to the screenshots) */
+const UI_HUB_DIR = path.join(ROOT, '.cache/verify/ui/hub');
+
+/** `yarn hub:build --no-api --no-embed --out <UI_HUB_DIR>`, its lines in the progress log
+ * @throws when it fails (its lines say why) */
+const buildHubAsync = () =>
+  new Promise<void>((resolve, reject) => {
+    const tsx = path.join(ROOT, 'node_modules/.bin/tsx');
+    const outDir = path.relative(ROOT, UI_HUB_DIR);
+    out(`${DIM}Building the public Hub into ${outDir}/ (--no-api --no-embed)${RESET}`);
+    const child = spawn(tsx, ['devTools/hubBuild.ts', '--no-api', '--no-embed', '--out', outDir], {
+      cwd: ROOT,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let rest = '';
+    const onData = (chunk: Buffer) => {
+      const lines = (rest + chunk.toString()).split('\n');
+      rest = lines.pop() ?? '';
+      for (const line of lines) if (line.trim()) out(`${DIM}  ${line}${RESET}`);
+    };
+    child.stdout.on('data', onData);
+    child.stderr.on('data', onData);
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (rest.trim()) out(`${DIM}  ${rest}${RESET}`);
+      if (code === 0) resolve();
+      else reject(new Error(`yarn hub:build failed (exit ${code}): its lines are above`));
+    });
+  });
+
+/**
+ * Builds the public Hub (unless `noBuild`) and serves it on a free `localhost` port
+ * @throws when the build fails, or there's no build to serve
+ */
+const startHubAsync = async (noBuild: boolean) => {
+  if (!noBuild) await buildHubAsync();
+  else if (!fs.existsSync(path.join(UI_HUB_DIR, 'index.html'))) {
+    throw new Error(`--no-build: no Hub build in ${path.relative(ROOT, UI_HUB_DIR)}/ yet`);
+  }
+  const server = createHubPreviewServer(UI_HUB_DIR, '/');
+  await new Promise<void>((resolve) => server.listen(0, 'localhost', resolve));
+  return { server, url: `http://localhost:${(server.address() as AddressInfo).port}/` };
+};
+
 const main = async () => {
   let args: UiArgs;
   try {
@@ -378,14 +426,16 @@ const main = async () => {
   const started = Date.now();
   const own = args.url
     ? null
-    : await startVerifyServerAsync().catch((err: Error) => fail(err.message));
-  const hubUrl = args.url || `${own!.url}/hub/`;
+    : await startHubAsync(args.noBuild).catch((err: Error) => fail(err.message));
+  const hubUrl = args.url || own!.url;
   const url = `${hubUrl}${UI_PAGE_PATH}`;
   out(`${DIM}${url}, Chromium, ${VIEWPORT.width} × ${VIEWPORT.height}${RESET}`);
   const browser = await launchChromium({ useWebGL: false, headed: args.headed });
   const close = async () => {
     await browser.close().catch(() => undefined);
-    await own?.server.close();
+    if (!own) return;
+    own.server.closeAllConnections();
+    await new Promise((resolve) => own.server.close(resolve));
   };
   process.once('SIGINT', () => {
     void close().then(() => process.exit(130));

@@ -7,13 +7,20 @@ import type { UiCheckStep, UiDemoChecks, UiKeyStep } from '../../hub/_assets/ts/
 import type { UiAllowedViolation } from './ui.config';
 
 export const UI_USAGE =
-  'yarn verify:ui [--url <hub url>] [--only <piece>[,<piece>…]] [--update] [--headed]';
+  'yarn verify:ui [--url <hub url>] [--no-build] [--only <piece>[,<piece>…]] [--update] [--headed]';
 
-export type UiArgs = { url: string; only: string[]; update: boolean; headed: boolean };
+/** `noBuild`: serve the last run's Hub build as it is (without `--url`) */
+export type UiArgs = {
+  url: string;
+  noBuild: boolean;
+  only: string[];
+  update: boolean;
+  headed: boolean;
+};
 
 /** @throws on an unknown argument or one without its value */
 export const parseUiArgs = (argv: string[]): UiArgs => {
-  const args: UiArgs = { url: '', only: [], update: false, headed: false };
+  const args: UiArgs = { url: '', noBuild: false, only: [], update: false, headed: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const value = argv[i + 1];
@@ -23,15 +30,16 @@ export const parseUiArgs = (argv: string[]): UiArgs => {
     } else if (arg === '--only' && value) {
       args.only = value.split(',').filter(Boolean);
       i++;
-    } else if (arg === '--update') args.update = true;
+    } else if (arg === '--no-build') args.noBuild = true;
+    else if (arg === '--update') args.update = true;
     else if (arg === '--headed') args.headed = true;
     else throw new Error(`Unknown argument: ${arg} (usage: ${UI_USAGE})`);
   }
   return args;
 };
 
-/** The page the run opens, from the Hub's root URL (dev-only until p803 Phase 8 makes it public) */
-export const UI_PAGE_PATH = 'project/aekasha/components/';
+/** The page the run opens, from the Hub's root URL: the public component library (p803 Phase 8) */
+export const UI_PAGE_PATH = 'features/ui-kit/library/';
 
 /** A theme and a density each state runs in (p803 D11: both themes, both densities) */
 export type UiSetting = { theme: 'dark' | 'light'; density: '' | 'compact' };
