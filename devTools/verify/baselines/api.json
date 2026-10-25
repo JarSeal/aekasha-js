@@ -2788,6 +2788,12 @@
       "TextureAssetSchema": "Variable"
     },
     "src/_engine/types/three-node-material-helpers.d.ts": {},
+    "src/_engine/ui/components/Badge.ts": {
+      "Badge": "TypeAlias",
+      "BadgeProps": "TypeAlias",
+      "BadgeTone": "TypeAlias",
+      "createBadge": "Function"
+    },
     "src/_engine/ui/components/Button.ts": {
       "Button": "TypeAlias",
       "ButtonProps": "TypeAlias",
@@ -2826,6 +2832,11 @@
       "createSplitButton": "Function",
       "SplitButton": "TypeAlias",
       "SplitButtonProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/Tag.ts": {
+      "createTag": "Function",
+      "Tag": "TypeAlias",
+      "TagProps": "TypeAlias"
     },
     "src/_engine/ui/core/CMP.ts": {
       "classes": "Function",
@@ -4140,6 +4151,9 @@
     ],
     "aekasha/ui": [
       "AddToastResponse",
+      "Badge",
+      "BadgeProps",
+      "BadgeTone",
       "BuiltInIconName",
       "Button",
       "ButtonGroup",
@@ -4207,6 +4221,8 @@
       "TProps",
       "TSettings",
       "TStyle",
+      "Tag",
+      "TagProps",
       "ToastDirection",
       "ToastProps",
       "ToastType",
@@ -4229,6 +4245,7 @@
       "classes",
       "closeDraggableWindow",
       "cloudSunIcon",
+      "createBadge",
       "createButton",
       "createButtonGroup",
       "createDropDown",
@@ -4239,6 +4256,7 @@
       "createMenu",
       "createPopover",
       "createSplitButton",
+      "createTag",
       "createToaster",
       "createTooltip",
       "databaseXIcon",

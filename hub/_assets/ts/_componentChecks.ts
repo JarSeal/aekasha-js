@@ -101,6 +101,9 @@ const SPLIT_MENU_BUTTON = '#hubDemoMenuSplit > [aria-haspopup="menu"]';
 const MENU = '#hudRoot .aekMenu';
 const MENU_FOCUSED = `${MENU} .aekMenu__item:focus .aekMenu__label`;
 const MENU_STATUS = '#hubDemoMenuStatus';
+const BADGE_INBOX = '#hubDemoBadgeInbox';
+const TAG = (name: string) => `#hubDemoTag${name}`;
+const TAG_STATUS = '#hubDemoTagStatus';
 
 export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
   window: {
@@ -555,6 +558,57 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { press: 'Tab' },
           { expectCount: MENU, count: 0 },
           { expectFocus: SPLIT_MENU_BUTTON },
+        ],
+      },
+    ],
+  },
+  badge: {
+    keyboard: [
+      {
+        name: 'no keys; a count says its spoken label, and a change updates both',
+        steps: [
+          { expectText: `${BADGE_INBOX} .aekBadge__label`, text: '3' },
+          { expectAttr: `${BADGE_INBOX} .aekBadge__label`, name: 'aria-hidden', value: 'true' },
+          { expectText: `${BADGE_INBOX} .aekVisuallyHidden`, text: '3 unread' },
+          { click: 'Add a message' },
+          { expectText: `${BADGE_INBOX} .aekBadge__label`, text: '4' },
+          { expectText: `${BADGE_INBOX} .aekVisuallyHidden`, text: '4 unread' },
+        ],
+      },
+    ],
+  },
+  tag: {
+    keyboard: [
+      {
+        name: 'a filter chip: Space flips aria-pressed',
+        steps: [
+          { focusInBox: `${TAG('Trees')} button` },
+          { expectAttr: `${TAG('Trees')} button`, name: 'aria-pressed', value: 'false' },
+          { press: 'Space' },
+          { expectAttr: `${TAG('Trees')} button`, name: 'aria-pressed', value: 'true' },
+          { expectText: TAG_STATUS, text: 'Filters: Rocks, Trees' },
+          { press: 'Enter' },
+          { expectAttr: `${TAG('Trees')} button`, name: 'aria-pressed', value: 'false' },
+        ],
+      },
+      {
+        name: 'a removable tag: Delete and Backspace remove it, the focus to the next, else the previous',
+        steps: [
+          { focusInBox: `${TAG('Level2')} .aekTag__remove` },
+          {
+            expectAttr: `${TAG('Level2')} .aekTag__remove`,
+            name: 'aria-label',
+            value: 'Remove level2.scene',
+          },
+          { press: 'Delete' },
+          { expectCount: TAG('Level2'), count: 0 },
+          { expectFocus: `${TAG('Level3')} .aekTag__remove` },
+          { expectText: TAG_STATUS, text: 'Removed: level2.scene' },
+          { press: 'Backspace' },
+          { expectCount: TAG('Level3'), count: 0 },
+          { expectFocus: `${TAG('Level1')} .aekTag__remove` },
+          { press: 'Enter' },
+          { expectCount: TAG('Level1'), count: 0 },
         ],
       },
     ],

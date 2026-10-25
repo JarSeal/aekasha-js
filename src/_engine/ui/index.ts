@@ -1,3 +1,5 @@
+export { createBadge } from './components/Badge';
+export type { Badge, BadgeProps, BadgeTone } from './components/Badge';
 export { createButton } from './components/Button';
 export type { Button, ButtonProps } from './components/Button';
 export { createButtonGroup } from './components/ButtonGroup';
@@ -91,6 +93,8 @@ export { createPopover } from './overlays/Popover';
 export type { Popover, PopoverProps } from './overlays/Popover';
 export { createSplitButton } from './components/SplitButton';
 export type { SplitButton, SplitButtonProps } from './components/SplitButton';
+export { createTag } from './components/Tag';
+export type { Tag, TagProps } from './components/Tag';
 export {
   addToast,
   createToaster,

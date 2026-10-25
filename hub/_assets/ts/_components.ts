@@ -16,6 +16,7 @@ import {
   addToast,
   closeDraggableWindow,
   CMP,
+  createBadge,
   createButton,
   createButtonGroup,
   createDropDown,
@@ -26,6 +27,7 @@ import {
   createMenu,
   createPopover,
   createSplitButton,
+  createTag,
   createToaster,
   createTooltip,
   fitAllDraggableWindowsToScreen,
@@ -858,6 +860,90 @@ const initLinkDemo: Demo = (box) => {
   root.append(status);
 };
 
+// --- Badge ---
+
+const BADGE_ID = (name: string) => `${ID_PREFIX}Badge${name}`;
+const TONES = ['neutral', 'accent', 'info', 'success', 'warning', 'danger'] as const;
+
+/** In the page: the tones, a count with its spoken label (a Hub button adds one), a badge in a
+ * button */
+const initBadgeDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const tones = addGroup(root, 'The tones: a status colour on its soft background');
+  for (const tone of TONES) tones.append(createBadge({ label: tone, tone }).cmp.elem);
+
+  let unread = 3;
+  const count = createBadge({ label: unread, tone: 'accent', spokenLabel: `${unread} unread` });
+  const inbox = document.createElement('p');
+  inbox.id = BADGE_ID('Inbox');
+  inbox.className = 'hubDemoLine';
+  inbox.append('Inbox ', count.cmp.elem);
+  const counts = addGroup(root, 'A count, with what assistive tech hears: "3 unread"');
+  counts.append(inbox);
+  addButton(counts, 'Add a message', () => {
+    unread++;
+    count.setLabel(unread, `${unread} unread`);
+  });
+
+  const messages = createButton({ id: BADGE_ID('Button'), label: 'Messages' });
+  messages.cmp.elem.append(
+    createBadge({ label: 2, tone: 'danger', spokenLabel: '2 new' }).cmp.elem
+  );
+  addGroup(root, 'In a button: part of its name ("Messages, 2 new")').append(messages.cmp.elem);
+};
+
+// --- Tag ---
+
+const TAG_ID = (name: string) => `${ID_PREFIX}Tag${name}`;
+
+/** In the page: the tones, filter chips, removable tags and one with an icon */
+const initTagDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = TAG_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+
+  const tones = addGroup(root, 'The tones');
+  for (const tone of TONES) tones.append(createTag({ label: tone, tone }).cmp.elem);
+
+  const filters = new Set(['Rocks']);
+  const chips = addGroup(root, 'Selectable: filter chips (aria-pressed)');
+  for (const kind of ['Rocks', 'Trees', 'Water']) {
+    const chip = createTag({
+      id: TAG_ID(kind),
+      label: kind,
+      selectable: true,
+      selected: filters.has(kind),
+      onSelectedChange: (on) => {
+        if (on) filters.add(kind);
+        else filters.delete(kind);
+        status.textContent = `Filters: ${[...filters].join(', ') || 'none'}`;
+      },
+    });
+    chips.append(chip.cmp.elem);
+  }
+
+  const removable = addGroup(root, 'Removable: its button, or Backspace or Delete');
+  for (const n of [1, 2, 3]) {
+    const label = `level${n}.scene`;
+    removable.append(
+      createTag({
+        id: TAG_ID(`Level${n}`),
+        label,
+        removable: true,
+        onRemove: () => (status.textContent = `Removed: ${label}`),
+      }).cmp.elem
+    );
+  }
+
+  addGroup(root, 'With an icon, and disabled').append(
+    createTag({ label: 'Pinned', tone: 'accent', icon: getSvgIcon('pin') }).cmp.elem,
+    createTag({ label: 'Locked', removable: true, disabled: true }).cmp.elem
+  );
+  root.append(status);
+};
+
 // --- Kbd ---
 
 const KBD_ROWS: { label: string; keys: string[]; platform?: 'mac' | 'other' }[] = [
@@ -936,6 +1022,8 @@ const DEMOS: Record<string, Demo> = {
   buttonGroup: initButtonGroupDemo,
   link: initLinkDemo,
   menu: initMenuDemo,
+  badge: initBadgeDemo,
+  tag: initTagDemo,
   kbd: initKbdDemo,
   inputGlyph: initInputGlyphDemo,
 };

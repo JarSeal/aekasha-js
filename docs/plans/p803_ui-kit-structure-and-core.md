@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented
+Status: in progress | Phases 0-6 implemented
 Category: UI, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
@@ -1444,7 +1444,7 @@ layered styles, the window and dialog z-order and `--aek-z-dialog`'s new value, 
   colours note, `setWindowCycleKeys` in the key APIs, the tooltip's rules), the component
   library's window text and `_components.scss`' comment.
 
-### Phase 6: core components I — actions
+### Phase 6: core components I — actions — done
 
 D10: Button (variants, sizes, icon, loading, toggle, hold to confirm), the button group, Menu, the
 split button, Link, Kbd, the input glyph, Badge, Tag. Each with its tests, its demo and keyboard
@@ -1708,6 +1708,71 @@ As built (section 4, 2026-10-25):
   `verify:baselines` recorded (the twelve `aekasha/ui` names; every bundle unchanged).
   `verify:ui --only menu,button,buttonGroup` (and `menu,buttonGroup` after the two fixes): every
   keyboard script passes, no violation; the menu's three shots are new, to record after review.
+
+As built (section 5, 2026-10-25):
+
+- `components/Badge.ts` + `Badge.scss`: `createBadge({ label, tone?, spokenLabel?, class?, attr?,
+  id? })` returns `{ cmp, setLabel(label, spokenLabel?), setTone }`. **`spokenLabel` is new** (D10
+  doesn't name it): a count alone ("3") says little, so the label is `aria-hidden` and a visually
+  hidden copy says "3 unread" (an `aria-label` on a `span` is prohibited). Not live: an app
+  announces a change in its own live region if it should. Sized in `em`, like Kbd. **The tones
+  (`BadgeTone`, on `aekasha/ui`) are in `Badge.scss`**, shared with the tag, as `--aek-tone` /
+  `--aek-tone-soft` (neutral: `text-muted` on `surface-hover`), which an app may set for a tone of
+  its own.
+- `components/Tag.ts` + `Tag.scss`: `createTag({ label, tone?, icon?, removable?, onRemove?,
+  selectable?, selected?, onSelectedChange?, disabled?, class?, attr?, id? })` returns `{ cmp,
+  setLabel, setSelected, isSelected }`. Always a `span.aekTag` (`data-selectable`, `data-selected`,
+  `data-removable`); a selectable tag's label is a toggle `button` filling the chip (the whole chip
+  is the target) with a CSS check mark when on (not the colour alone); a removable one has a 24 px
+  remove `button` named "Remove {label}" with a CSS cross. **The tag removes itself** on its button,
+  Backspace or Delete (on either button): the focus goes to the next tag's first focusable (else
+  the previous), then the tag is removed and `onRemove` runs (where the app drops it from its
+  list). `cmp.remove()` from code doesn't call `onRemove`.
+- **The module size check** (D8): only `DraggableWindow.ts` is over 800 lines (860, its header says
+  why; next `CMP.ts` 731, `Toaster.ts` 705, `Menu.ts` 482). **Two functions were over the coding
+  standards' 150 lines and are split**: `createButton` (181 → 99: `createHoldToConfirm` and
+  `appendParts` at module level) and `createMenu` (187 → 144: `createTypeahead`,
+  `findTypedEntry`, `getMoveTarget` and `wireTrigger`, and `buildItems` sets the leading column's
+  flag); the tests pass unchanged. The next longest: `createTooltip` 123, `createButtonGroup` 100.
+- The component library: a "Badge" box (the tones, the Inbox count with "Add a message", a badge in
+  a button) and a "Tag" box (the tones, three filter chips, three removable tags, a pinned and a
+  disabled one, a status line). Scripts: the count's spoken label and its update; a chip's Space
+  and Enter; Delete and Backspace with the focus to the next, then the previous, and Enter on the
+  last remove button.
+- Tests: `Badge.test.ts` (2), `Tag.test.ts` (5).
+- Docs: the kit's `CLAUDE.md` (Badges and tags, the importers, the tests), the UI kit guide ("Badges
+  and tags", the table, the key APIs), the component library's two texts and `COMPONENT_USES`.
+- **Found by axe: a status colour on its own tint fell short in the light theme** (accent, success,
+  warning and danger text on its `-soft` background: under 4.5). `Tokens.test.ts` checks the status
+  colours on the four plain surfaces, not on their tints. The badge's and the tag's text is
+  `--aek-tone-text`, the tone mixed 30 % toward `--aek-text` (`color-mix`): darker in the light
+  theme, lighter in the dark, the hue kept; axe passes in all four settings.
+
+The phase's verification (2026-10-25, at its end): `yarn test` (177 files, 1437 tests), `tsc`
+(both), ESLint, `yarn hub:build` (996 names, 100 % documented), `yarn verify:scenes` (104 passed
+against Phase 0's baselines), `verify:embed` (all scenarios, both host roots), `yarn sbp --profile
+all` (every budget within: no profile ships the new components yet, so every bundle is
+unchanged), `verify:baselines` recorded (Phase 6's names on `aekasha/ui`: `createButton`,
+`createButtonGroup`, `createLink`, `createMenu`, `createSplitButton`, `createBadge`, `createTag`,
+`createKbd`, `createInputGlyph` and their types). `yarn verify:ui`, every piece: every keyboard
+script passes (the new pieces' 17 included) and no violation with the allow list empty. Still to
+record with `--update` after review: every new box's shots (Kbd, the glyph, the button, the group,
+the link, the menu's three, the badge's two, the tag), the window, drop-down and toaster shots that
+changed with the Hub's scoped rules (section 2), and the icons box's two (stale since Phase 5
+section 5).
+
+For Phase 7:
+
+- The spinner's keyframes are `kit.scss`' `aekSpin` and `aekPulse` (the button's loading mark):
+  the spinner turns on them, and its reduced motion pulse is the same rule.
+- Open for review from this phase: the hold to confirm ignoring a click with no press (section 2),
+  and `normalize.scss` in a layer below the kit's (section 2's finding; the drop-down's trigger
+  takes `line-height: 1.15` in an app until then).
+- A component drawn in the page goes in a kit root of its own in its box (`addKitRoot`), its text
+  lines `hubDemoLine`; the runner's `clickInBox` / `focusInBox` reach it, and an infinite animation
+  is paused for the shot (the spinner and the progress bar's indeterminate state need nothing more).
+- A tinted background needs its text checked in the light theme (the badge's finding): the
+  progress bar's and the empty state's colours by axe in all four settings.
 
 ### Phase 7: core components II — feedback
 

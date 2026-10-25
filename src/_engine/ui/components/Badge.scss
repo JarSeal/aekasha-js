@@ -1,0 +1,57 @@
+// The badge's default styles (Badge.ts), and the tones it shares with the tag (Tag.ts, which
+// imports this file), on the design tokens and layered (p803 D5): an app's unlayered rule wins, and
+// every selector is in :where(). A tone is a status colour on its `-soft` background (p801's roles;
+// neutral: the muted text on `surface-hover`), set as --aek-tone and --aek-tone-soft, which an app
+// may set on an element of its own for a tone the kit doesn't have. The text is the tone pulled 30 %
+// toward --aek-text (darker in the light theme, lighter in the dark): a status colour has its 4.5
+// on the plain surfaces (Tokens.test.ts), not on its own tint, where the light theme's fell short.
+@layer aek.components {
+  :where(.aekBadge, .aekTag) {
+    --aek-tone: var(--aek-text-muted);
+    --aek-tone-soft: var(--aek-surface-hover);
+    --aek-tone-text: color-mix(in srgb, var(--aek-tone) 70%, var(--aek-text));
+  }
+
+  :where(.aekBadge, .aekTag):where([data-tone='accent']) {
+    --aek-tone: var(--aek-accent);
+    --aek-tone-soft: var(--aek-accent-soft);
+  }
+
+  :where(.aekBadge, .aekTag):where([data-tone='info']) {
+    --aek-tone: var(--aek-info);
+    --aek-tone-soft: var(--aek-info-soft);
+  }
+
+  :where(.aekBadge, .aekTag):where([data-tone='success']) {
+    --aek-tone: var(--aek-success);
+    --aek-tone-soft: var(--aek-success-soft);
+  }
+
+  :where(.aekBadge, .aekTag):where([data-tone='warning']) {
+    --aek-tone: var(--aek-warning);
+    --aek-tone-soft: var(--aek-warning-soft);
+  }
+
+  :where(.aekBadge, .aekTag):where([data-tone='danger']) {
+    --aek-tone: var(--aek-danger);
+    --aek-tone-soft: var(--aek-danger-soft);
+  }
+
+  :where(.aekBadge) {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.6em;
+    padding: 0.15em 0.55em;
+    border-radius: var(--aek-badge-radius, var(--aek-radius-full));
+    background-color: var(--aek-tone-soft);
+    color: var(--aek-tone-text);
+    font-size: 0.8em;
+    font-weight: var(--aek-font-weight-semibold);
+    font-variant-numeric: var(--aek-numeric-tabular);
+    line-height: var(--aek-line-height-tight);
+    white-space: nowrap;
+    vertical-align: 0.1em;
+  }
+}

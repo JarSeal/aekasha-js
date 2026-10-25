@@ -82,6 +82,115 @@ const createPart = (className: string) => {
 };
 
 /**
+ * A hold to confirm's timer and listeners (the button's `holdToConfirmMs`): a primary pointer press
+ * (captured), Space or Enter starts it unless `canStart` says no, it calls `onConfirm` after
+ * `holdMs` and stays full until the release, and a release, a cancel or a blur before ends it.
+ */
+const createHoldToConfirm = (
+  getElem: () => HTMLElement,
+  holdMs: number,
+  canStart: () => boolean,
+  onConfirm: (e: Event) => void
+) => {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let isHolding = false;
+
+  const clear = () => {
+    if (timer) clearTimeout(timer);
+    timer = null;
+    if (!isHolding) return;
+    isHolding = false;
+    getElem().removeAttribute('data-holding');
+  };
+
+  const start = (e: Event) => {
+    const elem = getElem();
+    if (isHolding || !canStart()) return;
+    isHolding = true;
+    // Information, not motion: under reduced motion the fill steps
+    if (getMotionFactor(elem) === 0) elem.setAttribute('data-hold-steps', '');
+    else elem.removeAttribute('data-hold-steps');
+    elem.setAttribute('data-holding', 'filling');
+    timer = setTimeout(() => {
+      timer = null;
+      // Full until it's released
+      elem.setAttribute('data-holding', 'confirmed');
+      onConfirm(e);
+    }, holdMs);
+  };
+
+  const listeners = [
+    {
+      type: 'pointerdown',
+      fn: (e: Event) => {
+        const pointer = e as PointerEvent;
+        if (pointer.button !== 0) return;
+        const elem = getElem();
+        if (typeof elem.setPointerCapture === 'function') elem.setPointerCapture(pointer.pointerId);
+        start(e);
+      },
+    },
+    { type: 'pointerup', fn: clear },
+    { type: 'pointercancel', fn: clear },
+    { type: 'lostpointercapture', fn: clear },
+    {
+      type: 'keydown',
+      fn: (e: Event) => {
+        const key = e as KeyboardEvent;
+        if (!HOLD_KEYS.has(key.key)) return;
+        // No click from the key: the timer acts
+        e.preventDefault();
+        if (!key.repeat) start(e);
+      },
+    },
+    {
+      type: 'keyup',
+      fn: (e: Event) => {
+        if (!HOLD_KEYS.has((e as KeyboardEvent).key)) return;
+        e.preventDefault();
+        clear();
+      },
+    },
+    { type: 'blur', fn: clear },
+  ];
+  return { listeners, clear };
+};
+
+/** Appends the button's parts, in order: the icon, the label (not with `iconOnly`), the
+ * shortcut's hint, and a hold to confirm's fill and description */
+const appendParts = (elem: HTMLElement, props: ButtonProps, labelElem: HTMLElement, id: string) => {
+  const parts: HTMLElement[] = [];
+  if (props.icon) {
+    const icon = createPart('aekButton__icon');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = props.icon;
+    parts.push(icon);
+  }
+  if (!props.iconOnly) {
+    if (props.iconPosition === 'end') parts.unshift(labelElem);
+    else parts.push(labelElem);
+  }
+  if (props.kbd) {
+    const kbd = createKbd({ keys: props.kbd, class: 'aekButton__kbd' }).cmp.elem;
+    kbd.setAttribute('aria-hidden', 'true');
+    parts.push(kbd);
+  }
+  if (props.holdToConfirmMs) {
+    const fill = createPart('aekButton__hold');
+    fill.setAttribute('aria-hidden', 'true');
+    // Hidden, so it isn't part of the name; aria-describedby reads it all the same
+    const description = createPart('aekButton__holdText');
+    description.id = `${id}__hold`;
+    description.setAttribute('hidden', '');
+    description.textContent = HOLD_TEXT;
+    parts.push(fill, description);
+    elem.setAttribute('aria-describedby', description.id);
+    elem.style.setProperty('--aek-button-hold-time', `${props.holdToConfirmMs}ms`);
+  }
+  elem.append(...parts);
+};
+
+/**
  * Creates a button (p803 D10): a native `<button>` (`type="button"`) with a label, and optionally
  * an icon, a shortcut's hint, a tooltip, a toggle state, a loading state or a hold to confirm.
  * - Parts: `.aekButton` (`data-variant`, `data-size`, `data-icon-only`; the states `disabled`,
@@ -114,31 +223,6 @@ export const createButton = (props: ButtonProps): Button => {
   let isLoading = false;
   let label = props.label;
   let tooltip: Tooltip | null = null;
-  let holdTimer: ReturnType<typeof setTimeout> | null = null;
-  let isHolding = false;
-
-  const clearHold = () => {
-    if (holdTimer) clearTimeout(holdTimer);
-    holdTimer = null;
-    if (!isHolding) return;
-    isHolding = false;
-    elem.removeAttribute('data-holding');
-  };
-
-  const startHold = (e: Event) => {
-    if (isHolding || isLoading || elem.hasAttribute('disabled')) return;
-    isHolding = true;
-    // Information, not motion: under reduced motion the fill steps
-    if (getMotionFactor(elem) === 0) elem.setAttribute('data-hold-steps', '');
-    else elem.removeAttribute('data-hold-steps');
-    elem.setAttribute('data-holding', 'filling');
-    holdTimer = setTimeout(() => {
-      holdTimer = null;
-      // Full until it's released
-      elem.setAttribute('data-holding', 'confirmed');
-      act(e);
-    }, holdMs);
-  };
 
   const act = (e: Event) => {
     if (isToggle) {
@@ -149,49 +233,21 @@ export const createButton = (props: ButtonProps): Button => {
     props.onClick?.(e);
   };
 
+  const hold = holdMs
+    ? createHoldToConfirm(
+        () => elem,
+        holdMs,
+        () => !isLoading && !elem.hasAttribute('disabled'),
+        act
+      )
+    : null;
+  const clearHold = () => hold?.clear();
+
   const onClick = (e: Event) => {
     // A hold acts from its timer; the click after the release (or assistive tech's) does nothing
-    if (isLoading || holdMs) return;
+    if (isLoading || hold) return;
     act(e);
   };
-
-  const holdListeners = holdMs
-    ? [
-        {
-          type: 'pointerdown',
-          fn: (e: Event) => {
-            const pointer = e as PointerEvent;
-            if (pointer.button !== 0) return;
-            if (typeof elem.setPointerCapture === 'function') {
-              elem.setPointerCapture(pointer.pointerId);
-            }
-            startHold(e);
-          },
-        },
-        { type: 'pointerup', fn: clearHold },
-        { type: 'pointercancel', fn: clearHold },
-        { type: 'lostpointercapture', fn: clearHold },
-        {
-          type: 'keydown',
-          fn: (e: Event) => {
-            const key = e as KeyboardEvent;
-            if (!HOLD_KEYS.has(key.key)) return;
-            // No click from the key: the timer acts
-            e.preventDefault();
-            if (!key.repeat) startHold(e);
-          },
-        },
-        {
-          type: 'keyup',
-          fn: (e: Event) => {
-            if (!HOLD_KEYS.has((e as KeyboardEvent).key)) return;
-            e.preventDefault();
-            clearHold();
-          },
-        },
-        { type: 'blur', fn: clearHold },
-      ]
-    : [];
 
   const cmp = CMP({
     id: props.id,
@@ -208,7 +264,7 @@ export const createButton = (props: ButtonProps): Button => {
       ...(props.kbd ? { 'aria-keyshortcuts': getAriaKeyShortcuts(props.kbd) } : {}),
       ...(props.disabled ? { disabled: '' } : {}),
     },
-    listeners: [{ type: 'click', fn: onClick }, ...holdListeners],
+    listeners: [{ type: 'click', fn: onClick }, ...(hold?.listeners ?? [])],
     onRemoveCmp: () => {
       clearHold();
       tooltip?.cmp.remove();
@@ -217,38 +273,9 @@ export const createButton = (props: ButtonProps): Button => {
   });
   const elem = cmp.elem as HTMLButtonElement;
 
-  // The parts, in order: the icon, the label (not with iconOnly), the shortcut's hint, the fill
   const labelElem = createPart('aekButton__label');
   labelElem.textContent = label;
-  const parts: HTMLElement[] = [];
-  if (props.icon) {
-    const icon = createPart('aekButton__icon');
-    icon.setAttribute('aria-hidden', 'true');
-    icon.innerHTML = props.icon;
-    parts.push(icon);
-  }
-  if (!iconOnly) {
-    if (props.iconPosition === 'end') parts.unshift(labelElem);
-    else parts.push(labelElem);
-  }
-  if (props.kbd) {
-    const kbd = createKbd({ keys: props.kbd, class: 'aekButton__kbd' }).cmp.elem;
-    kbd.setAttribute('aria-hidden', 'true');
-    parts.push(kbd);
-  }
-  if (holdMs) {
-    const fill = createPart('aekButton__hold');
-    fill.setAttribute('aria-hidden', 'true');
-    // Hidden, so it isn't part of the name; aria-describedby reads it all the same
-    const description = createPart('aekButton__holdText');
-    description.id = `${cmp.id}__hold`;
-    description.setAttribute('hidden', '');
-    description.textContent = HOLD_TEXT;
-    parts.push(fill, description);
-    elem.setAttribute('aria-describedby', description.id);
-    elem.style.setProperty('--aek-button-hold-time', `${holdMs}ms`);
-  }
-  elem.append(...parts);
+  appendParts(elem, props, labelElem, cmp.id);
 
   const tooltipText = props.tooltip ?? (iconOnly ? label : undefined);
   if (tooltipText !== undefined) tooltip = createTooltip({ anchor: elem, text: tooltipText });

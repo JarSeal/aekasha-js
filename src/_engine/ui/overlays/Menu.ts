@@ -246,7 +246,76 @@ const buildItems = (parent: HTMLElement, items: MenuItem[]) => {
       addEntry(parent, item);
     }
   }
+  // A check mark or an icon makes a column the other items line their labels up with
+  if (entries.some((entry) => entry.elem.hasAttribute('data-leading'))) {
+    parent.setAttribute('data-has-leading', '');
+  } else {
+    parent.removeAttribute('data-has-leading');
+  }
   return entries;
+};
+
+/** The next entry from `from` whose label starts with the typed letters (-1: none) */
+const findTypedEntry = (entries: Entry[], typed: string, from: number) => {
+  const count = entries.length;
+  // One letter, or one typed again ('ss'), looks past the focused item, so pressing it again goes
+  // on to the next; more letters include it
+  const needle = /^(.)\1*$/.test(typed) ? typed[0] : typed;
+  const start = needle.length === 1 ? 1 : 0;
+  for (let k = start; k < count + start; k++) {
+    const index = (from + k) % count;
+    if (entries[index].text.startsWith(needle)) return index;
+  }
+  return -1;
+};
+
+/** Where the arrows, Home and End move the focus from `index`, wrapping (null: another key) */
+const getMoveTarget = (key: string, index: number, count: number) => {
+  if (key === 'ArrowDown') return (index + 1) % count;
+  if (key === 'ArrowUp') return index <= 0 ? count - 1 : index - 1;
+  if (key === 'Home') return 0;
+  if (key === 'End') return count - 1;
+  return null;
+};
+
+/** Makes `anchor` the menu's trigger (its listeners and ARIA); returns what undoes it */
+const wireTrigger = (
+  anchor: HTMLElement,
+  menuId: string,
+  onClick: () => void,
+  onKeyDown: (e: KeyboardEvent) => void
+) => {
+  anchor.addEventListener('click', onClick);
+  anchor.addEventListener('keydown', onKeyDown);
+  anchor.setAttribute('aria-haspopup', 'menu');
+  anchor.setAttribute('aria-expanded', 'false');
+  anchor.setAttribute('aria-controls', menuId);
+  return () => {
+    anchor.removeEventListener('click', onClick);
+    anchor.removeEventListener('keydown', onKeyDown);
+    anchor.removeAttribute('aria-haspopup');
+    anchor.removeAttribute('aria-expanded');
+    anchor.removeAttribute('aria-controls');
+  };
+};
+
+/** The APG menu's typeahead: letters typed within `TYPEAHEAD_MS` make one search */
+const createTypeahead = () => {
+  let typed = '';
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const clear = () => {
+    if (timer) clearTimeout(timer);
+    timer = null;
+    typed = '';
+  };
+  /** Adds a letter; the entry to focus (-1: none) */
+  const type = (letter: string, entries: Entry[], from: number) => {
+    if (timer) clearTimeout(timer);
+    typed += letter.toLowerCase();
+    timer = setTimeout(clear, TYPEAHEAD_MS);
+    return findTypedEntry(entries, typed, from);
+  };
+  return { type, clear };
 };
 
 /**
@@ -289,20 +358,13 @@ export const createMenu = (props: MenuProps): Menu => {
   let entries: Entry[] = [];
   let hideAnchored: (() => void) | null = null;
   let removeOverlay: ((returnFocus?: boolean) => void) | null = null;
-  let typed = '';
-  let typedTimer: ReturnType<typeof setTimeout> | null = null;
-
-  const clearTyped = () => {
-    if (typedTimer) clearTimeout(typedTimer);
-    typedTimer = null;
-    typed = '';
-  };
+  const typeahead = createTypeahead();
 
   /** Closes it; `returnFocus` false when the focus went elsewhere (an outside press) */
   const close = (returnFocus = true) => {
     if (!isOpen) return;
     isOpen = false;
-    clearTyped();
+    typeahead.clear();
     document.removeEventListener('pointerdown', onOutsidePress, true);
     removeOverlay?.(returnFocus);
     removeOverlay = null;
@@ -332,11 +394,6 @@ export const createMenu = (props: MenuProps): Menu => {
     isOpen = true;
     const items = typeof props.items === 'function' ? props.items() : props.items;
     entries = buildItems(cmp.elem, items);
-    if (entries.some((entry) => entry.elem.hasAttribute('data-leading'))) {
-      cmp.elem.setAttribute('data-has-leading', '');
-    } else {
-      cmp.elem.removeAttribute('data-has-leading');
-    }
     cmp.elem.setAttribute(
       'aria-label',
       props.label ?? anchor.getAttribute('aria-label') ?? (anchor.textContent ?? '').trim()
@@ -370,36 +427,16 @@ export const createMenu = (props: MenuProps): Menu => {
     entry.run();
   };
 
-  /** The next entry whose label starts with the typed letters, from the focused one */
-  const findTyped = (from: number) => {
-    const count = entries.length;
-    // One letter, or one typed again ('ss'), looks past the focused item, so pressing it again goes
-    // on to the next; more letters include it
-    const needle = /^(.)\1*$/.test(typed) ? typed[0] : typed;
-    const start = needle.length === 1 ? 1 : 0;
-    for (let k = start; k < count + start; k++) {
-      const index = (from + k) % count;
-      if (entries[index].text.startsWith(needle)) return index;
-    }
-    return -1;
-  };
-
   const onMenuKeyDown = (e: Event) => {
     const key = e as KeyboardEvent;
     const index = entries.findIndex((entry) => entry.elem === document.activeElement);
-    const count = entries.length;
-    if (key.key === 'ArrowDown') focusEntry((index + 1) % count);
-    else if (key.key === 'ArrowUp') focusEntry(index <= 0 ? count - 1 : index - 1);
-    else if (key.key === 'Home') focusEntry(0);
-    else if (key.key === 'End') focusEntry(count - 1);
+    const moveTo = getMoveTarget(key.key, index, entries.length);
+    if (moveTo !== null) focusEntry(moveTo);
     else if (key.key === 'Enter' && index !== -1) pick(entries[index], false);
     else if (key.key === ' ' && index !== -1) pick(entries[index], entries[index].isCheckable);
     else if (key.key === 'Tab') close();
     else if (key.key.length === 1 && !key.ctrlKey && !key.metaKey && !key.altKey) {
-      if (typedTimer) clearTimeout(typedTimer);
-      typed += key.key.toLowerCase();
-      typedTimer = setTimeout(clearTyped, TYPEAHEAD_MS);
-      const found = findTyped(Math.max(index, 0));
+      const found = typeahead.type(key.key, entries, Math.max(index, 0));
       if (found !== -1) focusEntry(found);
     } else return;
     e.preventDefault();
@@ -409,8 +446,6 @@ export const createMenu = (props: MenuProps): Menu => {
 
   const getEntryOf = (target: EventTarget | null) =>
     target ? entries.find((entry) => entry.elem.contains(target as Node)) : undefined;
-
-  const onAnchorClick = () => toggle();
 
   const onAnchorKeyDown = (e: KeyboardEvent) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
@@ -454,19 +489,10 @@ export const createMenu = (props: MenuProps): Menu => {
     ],
     onRemoveCmp: () => {
       close(false);
-      anchor.removeEventListener('click', onAnchorClick);
-      anchor.removeEventListener('keydown', onAnchorKeyDown);
-      anchor.removeAttribute('aria-haspopup');
-      anchor.removeAttribute('aria-expanded');
-      anchor.removeAttribute('aria-controls');
+      unwireTrigger();
     },
   });
-
-  anchor.addEventListener('click', onAnchorClick);
-  anchor.addEventListener('keydown', onAnchorKeyDown);
-  anchor.setAttribute('aria-haspopup', 'menu');
-  anchor.setAttribute('aria-expanded', 'false');
-  anchor.setAttribute('aria-controls', cmp.id);
+  const unwireTrigger = wireTrigger(anchor, cmp.id, toggle, onAnchorKeyDown);
 
   return { cmp, open, close: () => close(), toggle, isOpen: () => isOpen };
 };

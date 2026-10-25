@@ -1,24 +1,25 @@
 ## The pieces
 
-| Piece          | Made with                                                          | For                                                           |
-| -------------- | ------------------------------------------------------------------ | ------------------------------------------------------------- |
-| Component      | [`CMP`](api:CMP)                                                   | Any element: a panel, a button, a readout                     |
-| HUD root       | [`getHUDRootCMP`](api:getHUDRootCMP)                               | Where the app's UI goes, over the canvas                      |
-| Window         | [`openDraggableWindow`](api:openDraggableWindow)                   | A panel the player moves, resizes, collapses and closes       |
-| Window kind    | [`registerDraggableWindowKind`](api:registerDraggableWindowKind)   | One window per thing (an entity, an item), each with its data |
-| Dialog         | [`openDialog`](api:openDialog)                                     | A modal window over a backdrop: a pause menu, a confirmation  |
-| Drop-down      | [`createDropDown`](api:createDropDown)                             | A choice from a list, with the keyboard                       |
-| Tooltip        | [`createTooltip`](api:createTooltip)                               | A short text describing a control, on hover or focus          |
-| Popover        | [`createPopover`](api:createPopover)                               | Interactive content next to its trigger: filters, a detail    |
-| Toaster, toast | [`createToaster`](api:createToaster), [`addToast`](api:addToast)   | Short messages that come and go                               |
-| Icon           | [`registerIcon`](api:registerIcon), [`getSvgIcon`](api:getSvgIcon) | SVG icons by name, in the text colour                         |
-| Button         | [`createButton`](api:createButton)                                 | An action: a toggle, a loading save, a hold to confirm        |
-| Button group   | [`createButtonGroup`](api:createButtonGroup)                       | Buttons joined; a toolbar of toggles with one pressed         |
-| Link           | [`createLink`](api:createLink)                                     | A navigation: in text, to another site, or as a button        |
-| Menu           | [`createMenu`](api:createMenu)                                     | A button's list of actions, on / off items and choices        |
-| Split button   | [`createSplitButton`](api:createSplitButton)                       | An action, with its variants in a menu                        |
-| Key hint       | [`createKbd`](api:createKbd)                                       | A shortcut's keys, with each platform's names                 |
-| Input glyph    | [`createInputGlyph`](api:createInputGlyph)                         | One key or mouse input in a prompt: "Press E"                 |
+| Piece          | Made with                                                          | For                                                            |
+| -------------- | ------------------------------------------------------------------ | -------------------------------------------------------------- |
+| Component      | [`CMP`](api:CMP)                                                   | Any element: a panel, a button, a readout                      |
+| HUD root       | [`getHUDRootCMP`](api:getHUDRootCMP)                               | Where the app's UI goes, over the canvas                       |
+| Window         | [`openDraggableWindow`](api:openDraggableWindow)                   | A panel the player moves, resizes, collapses and closes        |
+| Window kind    | [`registerDraggableWindowKind`](api:registerDraggableWindowKind)   | One window per thing (an entity, an item), each with its data  |
+| Dialog         | [`openDialog`](api:openDialog)                                     | A modal window over a backdrop: a pause menu, a confirmation   |
+| Drop-down      | [`createDropDown`](api:createDropDown)                             | A choice from a list, with the keyboard                        |
+| Tooltip        | [`createTooltip`](api:createTooltip)                               | A short text describing a control, on hover or focus           |
+| Popover        | [`createPopover`](api:createPopover)                               | Interactive content next to its trigger: filters, a detail     |
+| Toaster, toast | [`createToaster`](api:createToaster), [`addToast`](api:addToast)   | Short messages that come and go                                |
+| Icon           | [`registerIcon`](api:registerIcon), [`getSvgIcon`](api:getSvgIcon) | SVG icons by name, in the text colour                          |
+| Button         | [`createButton`](api:createButton)                                 | An action: a toggle, a loading save, a hold to confirm         |
+| Button group   | [`createButtonGroup`](api:createButtonGroup)                       | Buttons joined; a toolbar of toggles with one pressed          |
+| Link           | [`createLink`](api:createLink)                                     | A navigation: in text, to another site, or as a button         |
+| Menu           | [`createMenu`](api:createMenu)                                     | A button's list of actions, on / off items and choices         |
+| Split button   | [`createSplitButton`](api:createSplitButton)                       | An action, with its variants in a menu                         |
+| Badge, tag     | [`createBadge`](api:createBadge), [`createTag`](api:createTag)     | A count or a status word; a kind, a filter chip, a picked item |
+| Key hint       | [`createKbd`](api:createKbd)                                       | A shortcut's keys, with each platform's names                  |
+| Input glyph    | [`createInputGlyph`](api:createInputGlyph)                         | One key or mouse input in a prompt: "Press E"                  |
 
 ## Components
 
@@ -441,6 +442,29 @@ menuPanel.add(
 );
 ```
 
+## Badges and tags
+
+[`createBadge`](api:createBadge) puts a count or a status word next to what it's about, and
+[`createTag`](api:createTag) labels a thing's kind: both in a tone (`neutral`, `accent`, `info`,
+`success`, `warning`, `danger`), a status colour on its soft background. A tag can be a filter's
+chip (`selectable`, a toggle button) or a picked item the player removes (`removable`: its remove
+button, or Backspace or Delete, with the focus moved to the next tag).
+
+```ts
+const unread = createBadge({ label: 3, tone: 'accent', spokenLabel: '3 unread' });
+inboxTitle.add(unread.cmp);
+unread.setLabel(4, '4 unread'); // in place
+
+filters.add(
+  createTag({ label: 'Trees', selectable: true, onSelectedChange: (on) => setFilter('trees', on) })
+    .cmp
+);
+picked.add(createTag({ label: 'Sword', removable: true, onRemove: () => unequip('sword') }).cmp);
+```
+
+A count alone ("3") says little to assistive tech: give it a `spokenLabel`. A badge isn't live; if
+a change should be announced, say it in a live region of your own.
+
 ## Key hints and input glyphs
 
 [`createKbd`](api:createKbd) draws a shortcut's keys, a `<kbd>` each with `+` between them, from
@@ -645,6 +669,7 @@ container; `vw` and `vh` are the browser window's, as in CSS.
   [`createButtonGroup`](api:createButtonGroup), [`createSplitButton`](api:createSplitButton) and
   [`createLink`](api:createLink).
 - [`createMenu`](api:createMenu) ([`MenuItem`](api:MenuItem)).
+- [`createBadge`](api:createBadge) ([`BadgeTone`](api:BadgeTone)) and [`createTag`](api:createTag).
 - [`createKbd`](api:createKbd) ([`Kbd`](api:Kbd)) and [`createInputGlyph`](api:createInputGlyph)
   ([`InputGlyphInput`](api:InputGlyphInput)).
 - [`aekasha/ui/fonts`](hub:documentation/aekasha/ui/fonts): the kit's fonts, a stylesheet entry.
