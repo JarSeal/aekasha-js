@@ -256,7 +256,7 @@ Nested.
 ::::
 ```
 
-The other directives are `code-group` ([Code groups](#code-groups)), `scene` ([Scene panels](#scene-panels)), `cards` ([Cards](#cards)), `claude-md` ([CLAUDE.md sections](#claudemd-sections)) and `dev-only` ([Local-only content](#local-only-content)). A new one is a `HubDirective` (`{ open, close }`) exported by its module and added to `HUB_DIRECTIVES` in `devTools/hub/build.ts`, without touching the parser.
+The other directives are `code-group` ([Code groups](#code-groups)), `scene` ([Scene panels](#scene-panels)), `cards` ([Cards](#cards)), `claude-md` ([CLAUDE.md sections](#claudemd-sections)), `demo` ([Component library](#component-library)) and `dev-only` ([Local-only content](#local-only-content)). A new one is a `HubDirective` (`{ open, close }`) exported by its module and added to `HUB_DIRECTIVES` in `devTools/hub/build.ts`, without touching the parser.
 
 ## Code blocks
 
@@ -553,6 +553,8 @@ The script is `hub/_assets/ts/_components.ts`. `hub.ts` loads it on any page wit
 - **Its checks**: the states its buttons don't open and its keyboard scripts, in `hub/_assets/ts/_componentChecks.ts` (`devTools/verify/CLAUDE.md`).
 
 To add a component, add the elements to both pages, its two `.md` files, a demo in `DEMOS`, its entry in `COMPONENT_USES` and its checks.
+
+Any other page shows a piece's live demo with `::: demo <key>` (no content), the box of that key: the UI kit section's pages do, next to each component's text. The key must be a box of the public library page, so the build fails on one `yarn verify:ui` doesn't check.
 
 The settings at the top switch the theme and density of everything the demos open or draw. The dev page's "In a build" section gives the kit's size with `{{sbp:…}}` numbers.
 

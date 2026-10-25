@@ -161,7 +161,7 @@ if (!isLoaded) showMenu(); // It failed, or a later call took its place
 
 [`createSceneLoader`](api:createSceneLoader) gives the load its screen: your functions for its
 start and end and its progress, with a HUD element of its own. The UI kit's
-[loading overlay](hub:features/ui-kit#loading-overlays) is one ready made, with its fades and a
+[loading overlay](hub:features/ui-kit/core#loading-overlays) is one ready made, with its fades and a
 progress bar.
 
 In a scene file, [`registerOnSceneEnter`](api:registerOnSceneEnter) and

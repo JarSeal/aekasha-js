@@ -1,31 +1,37 @@
 ## The pieces
 
-| Piece           | Made with                                                          | For                                                            |
-| --------------- | ------------------------------------------------------------------ | -------------------------------------------------------------- |
-| Component       | [`CMP`](api:CMP)                                                   | Any element: a panel, a button, a readout                      |
-| HUD root        | [`getHUDRootCMP`](api:getHUDRootCMP)                               | Where the app's UI goes, over the canvas                       |
-| Window          | [`openDraggableWindow`](api:openDraggableWindow)                   | A panel the player moves, resizes, collapses and closes        |
-| Window kind     | [`registerDraggableWindowKind`](api:registerDraggableWindowKind)   | One window per thing (an entity, an item), each with its data  |
-| Dialog          | [`openDialog`](api:openDialog)                                     | A modal window over a backdrop: a pause menu, a confirmation   |
-| Drop-down       | [`createDropDown`](api:createDropDown)                             | A choice from a list, with the keyboard                        |
-| Tooltip         | [`createTooltip`](api:createTooltip)                               | A short text describing a control, on hover or focus           |
-| Popover         | [`createPopover`](api:createPopover)                               | Interactive content next to its trigger: filters, a detail     |
-| Toaster, toast  | [`createToaster`](api:createToaster), [`addToast`](api:addToast)   | Short messages that come and go                                |
-| Icon            | [`registerIcon`](api:registerIcon), [`getSvgIcon`](api:getSvgIcon) | SVG icons by name, in the text colour                          |
-| Button          | [`createButton`](api:createButton)                                 | An action: a toggle, a loading save, a hold to confirm         |
-| Button group    | [`createButtonGroup`](api:createButtonGroup)                       | Buttons joined; a toolbar of toggles with one pressed          |
-| Link            | [`createLink`](api:createLink)                                     | A navigation: in text, to another site, or as a button         |
-| Menu            | [`createMenu`](api:createMenu)                                     | A button's list of actions, on / off items and choices         |
-| Split button    | [`createSplitButton`](api:createSplitButton)                       | An action, with its variants in a menu                         |
-| Badge, tag      | [`createBadge`](api:createBadge), [`createTag`](api:createTag)     | A count or a status word; a kind, a filter chip, a picked item |
-| Spinner         | [`createSpinner`](api:createSpinner)                               | A wait of unknown length, in text or alone                     |
-| Progress bar    | [`createProgressBar`](api:createProgressBar)                       | How far a task is, or that it's going on; a segmented gauge    |
-| Skeleton        | [`createSkeleton`](api:createSkeleton)                             | A placeholder shaped like content that's still loading         |
-| Divider         | [`createDivider`](api:createDivider)                               | A line between two groups, across a column or down a row       |
-| Empty state     | [`createEmptyState`](api:createEmptyState)                         | What an empty list or search shows, and what to do             |
-| Loading overlay | [`createLoadingOverlay`](api:createLoadingOverlay)                 | A scene loader's screen, or a panel's while it loads           |
-| Key hint        | [`createKbd`](api:createKbd)                                       | A shortcut's keys, with each platform's names                  |
-| Input glyph     | [`createInputGlyph`](api:createInputGlyph)                         | One key or mouse input in a prompt: "Press E"                  |
+| Piece                                                                       | Made with                                                          | For                                                            |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------- |
+| [Component](#components)                                                    | [`CMP`](api:CMP)                                                   | Any element: a panel, a button, a readout                      |
+| [HUD root](#the-hud-root)                                                   | [`getHUDRootCMP`](api:getHUDRootCMP)                               | Where the app's UI goes, over the canvas                       |
+| [Drop-down](#drop-downs)                                                    | [`createDropDown`](api:createDropDown)                             | A choice from a list, with the keyboard                        |
+| [Button](hub:features/ui-kit/core#buttons)                                  | [`createButton`](api:createButton)                                 | An action: a toggle, a loading save, a hold to confirm         |
+| [Button group](hub:features/ui-kit/core#groups-and-toolbars)                | [`createButtonGroup`](api:createButtonGroup)                       | Buttons joined; a toolbar of toggles with one pressed          |
+| [Link](hub:features/ui-kit/core#links)                                      | [`createLink`](api:createLink)                                     | A navigation: in text, to another site, or as a button         |
+| [Badge, tag](hub:features/ui-kit/core#badges-and-tags)                      | [`createBadge`](api:createBadge), [`createTag`](api:createTag)     | A count or a status word; a kind, a filter chip, a picked item |
+| [Key hint](hub:features/ui-kit/core#key-hints-and-input-glyphs)             | [`createKbd`](api:createKbd)                                       | A shortcut's keys, with each platform's names                  |
+| [Input glyph](hub:features/ui-kit/core#key-hints-and-input-glyphs)          | [`createInputGlyph`](api:createInputGlyph)                         | One key or mouse input in a prompt: "Press E"                  |
+| [Icon](hub:features/ui-kit/core#icons)                                      | [`registerIcon`](api:registerIcon), [`getSvgIcon`](api:getSvgIcon) | SVG icons by name, in the text colour                          |
+| [Spinner](hub:features/ui-kit/core#spinners-and-progress-bars)              | [`createSpinner`](api:createSpinner)                               | A wait of unknown length, in text or alone                     |
+| [Progress bar](hub:features/ui-kit/core#spinners-and-progress-bars)         | [`createProgressBar`](api:createProgressBar)                       | How far a task is, or that it's going on; a segmented gauge    |
+| [Skeleton](hub:features/ui-kit/core#skeletons-dividers-and-empty-states)    | [`createSkeleton`](api:createSkeleton)                             | A placeholder shaped like content that's still loading         |
+| [Divider](hub:features/ui-kit/core#skeletons-dividers-and-empty-states)     | [`createDivider`](api:createDivider)                               | A line between two groups, across a column or down a row       |
+| [Empty state](hub:features/ui-kit/core#skeletons-dividers-and-empty-states) | [`createEmptyState`](api:createEmptyState)                         | What an empty list or search shows, and what to do             |
+| [Loading overlay](hub:features/ui-kit/core#loading-overlays)                | [`createLoadingOverlay`](api:createLoadingOverlay)                 | A scene loader's screen, or a panel's while it loads           |
+| [Window](hub:features/ui-kit/overlays#windows)                              | [`openDraggableWindow`](api:openDraggableWindow)                   | A panel the player moves, resizes, collapses and closes        |
+| [Window kind](hub:features/ui-kit/overlays#one-window-per-thing-kinds)      | [`registerDraggableWindowKind`](api:registerDraggableWindowKind)   | One window per thing (an entity, an item), each with its data  |
+| [Dialog](hub:features/ui-kit/overlays#dialogs)                              | [`openDialog`](api:openDialog)                                     | A modal window over a backdrop: a pause menu, a confirmation   |
+| [Toaster, toast](hub:features/ui-kit/overlays#toasts)                       | [`createToaster`](api:createToaster), [`addToast`](api:addToast)   | Short messages that come and go                                |
+| [Tooltip](hub:features/ui-kit/overlays#tooltips)                            | [`createTooltip`](api:createTooltip)                               | A short text describing a control, on hover or focus           |
+| [Popover](hub:features/ui-kit/overlays#popovers)                            | [`createPopover`](api:createPopover)                               | Interactive content next to its trigger: filters, a detail     |
+| [Menu](hub:features/ui-kit/overlays#menus-and-split-buttons)                | [`createMenu`](api:createMenu)                                     | A button's list of actions, on / off items and choices         |
+| [Split button](hub:features/ui-kit/overlays#menus-and-split-buttons)        | [`createSplitButton`](api:createSplitButton)                       | An action, with its variants in a menu                         |
+
+The kit is in three pages, with a [component library](hub:features/ui-kit/library) that shows
+every piece in every state:
+
+::: cards features/ui-kit
+:::
 
 ## Components
 
@@ -66,146 +72,30 @@ Every listener prop (`onClick`, `onInput`, …) is added in the capture phase, a
 child's, and a child's `stopPropagation()` doesn't stop it.
 :::
 
-## Windows
+## The HUD root
 
-A draggable window has a header to drag, collapse and close it, and resize handles. Opening an id
-again reopens or updates that window, and a reopen keeps where the player left it.
+The HUD root is where the app's UI goes: a fixed, zero-size element over the canvas, a kit root
+(see [Styling](#styling)), which the engine's boot makes. [`getHUDRootCMP`](api:getHUDRootCMP)
+returns it, and each panel added under it places itself. The windows, dialogs, toasts and the
+overlays open in it too.
 
-```ts
-import { openDraggableWindow } from 'aekasha/ui';
+### Without the engine
 
-openDraggableWindow({
-  id: 'inventory',
-  title: 'Inventory',
-  content: () => createInventoryPanel(), // Built on every mount
-  position: { x: 200, y: 72 }, // px: the top left corner; a % position is its centre
-  size: { w: 360, h: 480 },
-  closeOnSceneChange: true,
-});
-```
-
-- [`closeDraggableWindow`](api:closeDraggableWindow) keeps its state, so a reopen restores the
-  layout; [`removeDraggableWindow`](api:removeDraggableWindow) drops it.
-- `saveToLS` keeps a window in the browser's storage: open after a reload, where it was. Its
-  content then comes from a registered content function, since a function can't be stored.
-- On a scene load, `removeOnSceneChange` removes a window and `closeOnSceneChange` closes it,
-  unless its kind's `sceneTargetResolver` finds what it shows in the next scene.
-- [`toggleDraggableWindow`](api:toggleDraggableWindow) is a list row's click: it opens the
-  window, brings it to the front when it's under another one, and closes it when it's on top.
-- Double-clicking a header fits the window to the screen
-  ([`fitDraggableWindowToScreen`](api:fitDraggableWindowToScreen)).
-- The debug tools' windows (`isDebugWindow`) are a layer above the app's, and open only in debug
-  mode.
-
-### Keys and assistive tech
-
-Every pointer action on a window has a key. A window is a `dialog` named by its title (or by
-`ariaLabel` when it has none), and its header is a tab stop with its keys described:
-
-| Key           | Where                | Does                                                                     |
-| ------------- | -------------------- | ------------------------------------------------------------------------ |
-| Arrows        | the header           | Moves the window a step (16 px at the defaults)                          |
-| Alt+arrows    | the header           | Resizes it (left and up shrink)                                          |
-| Shift         | with either          | Four steps at once                                                       |
-| Enter         | the header           | Collapses or expands it                                                  |
-| F6 / Shift+F6 | anywhere on the page | Moves the focus to the next / previous window and brings it to the front |
-
-F6 goes through the open windows in the order they were opened, the app's first and then the
-debug tools', from the canvas as well as from inside a window. In an embed it works inside the
-mount's container only, so the host page keeps its own F6. If your game binds F6, move the cycle
-keys or turn them off:
+The kit works on a page that doesn't run the engine: a menu shown before the engine starts, or a
+page of your site. Make the HUD root there yourself with [`createHudRoot`](api:createHudRoot),
+once per page (the engine's boot makes it in an app, and a second one throws). Each kit module
+brings the kit's global styles, so there's no stylesheet to import. Register the icons the pieces
+show (the windows' buttons, the toasts' kinds): [`registerBuiltInIcons`](api:registerBuiltInIcons)
+registers every built-in, as the boot does in debug mode.
 
 ```ts
-import { setWindowCycleKeys } from 'aekasha/ui';
+import { addToast, createHudRoot, createToaster, registerBuiltInIcons } from 'aekasha/ui';
 
-setWindowCycleKeys({ next: 'Ctrl+F6', previous: 'Ctrl+Shift+F6' }); // or null: none
+registerBuiltInIcons();
+const hud = createHudRoot({ slot: document.querySelector<HTMLElement>('#menuHud') ?? undefined });
+hud.add(createToaster({ id: 'menuToasts' }));
+addToast({ message: 'Settings saved' });
 ```
-
-The collapse and close buttons have their labels and tooltips, a title cut by the window's width
-shows whole in a tooltip, and a content with no control in it is a tab stop itself, so it scrolls
-with the keys too.
-
-### One window per thing: kinds
-
-An edit window per entity, an info window per item: a window kind. Register the kind once with
-what its windows share, then open each window with the kind's id for its key and the data its
-content is built from.
-
-```ts
-import { getKindWindowId, registerDraggableWindowKind, toggleDraggableWindow } from 'aekasha/ui';
-
-registerDraggableWindowKind('enemyInfo', {
-  content: (data) => createEnemyPanel(data?.entityId as number),
-  sceneTargetResolver: (data) => isEntityAlive(data?.entityId as number),
-});
-
-toggleDraggableWindow({
-  id: getKindWindowId('enemyInfo', entityId), // 'enemyInfo_<entityId>'
-  kind: 'enemyInfo',
-  data: { entityId },
-  title: 'Enemy',
-  closeOnSceneChange: true,
-});
-```
-
-- A new window of a kind opens where the kind's last one was, cascaded by the kind's open
-  windows, and closing one removes it.
-- [`getDraggableWindowsOfKind`](api:getDraggableWindowsOfKind) lists them (eg. to mark a list's
-  open rows), and [`updateDraggableWindowsOfKind`](api:updateDraggableWindowsOfKind) rebuilds
-  their content.
-- A single window registers its content function with
-  [`registerDraggableWindow`](api:registerDraggableWindow), by its id.
-
-::: tip Where to register
-A registration has to be in place before the engine restores the saved windows, which it does
-right after your `start` function: register in `start` or in your own feature's `install`, not
-at a module's top level (a module with side effects at load can't be left out of a build). A
-kind whose windows aren't `saveToLS` can also be registered by the scene that opens them, as the
-example does.
-:::
-
-## Dialogs
-
-[`openDialog`](api:openDialog) is a window centred over a backdrop that dims the page and takes
-its clicks. It doesn't move or resize, and every open resets it.
-
-```ts
-openDialog({
-  id: 'pauseMenu',
-  title: 'Paused',
-  content: () => createPauseMenu(),
-  size: { w: 320, h: 220 },
-  closeOnEscape: true,
-  onClose: () => resumeGame(),
-});
-```
-
-A dialog takes the focus when it opens and gives it back when it closes. With `closeOnEscape`,
-Escape pressed inside the HUD closes the top dialog, and nothing else gets that press or its
-release: no key binding or action map sees it. So Escape can open the menu through an action map
-and close it through the dialog. Escape goes to the topmost overlay only: a drop-down's list open
-in the dialog closes first. A key pressed outside the HUD (a page that embeds the engine) is the
-page's. A menu that turns gameplay input off while it's open does it
-with [action contexts](hub:features/input#contexts-and-scenes).
-
-A dialog is modal: assistive tech reads it as a modal dialog named by its title, Tab and Shift+Tab
-stay inside it, and the rest of the HUD is `inert` until it closes (nothing outside the HUD: an
-embed's host page stays live). `alert: true` makes it an alert dialog, for a question that needs an
-answer, and `initialFocus` names the element that takes the focus, its safe choice:
-
-```ts
-openDialog({
-  id: 'deleteSave',
-  title: 'Delete the save?',
-  alert: true,
-  initialFocus: '.cancelButton',
-  content: () => createConfirmPanel(),
-  size: { w: 360, h: 200 },
-});
-```
-
-An app's dialogs stack above its windows and below the debug tools, which stay usable over a pause
-menu in debug mode; a debug tool's dialog stacks above everything but the toasts and tooltips.
 
 ## Drop-downs
 
@@ -244,346 +134,18 @@ const level = createDropDown({
 });
 ```
 
-## Tooltips and popovers
-
-A [tooltip](api:createTooltip) is a short text that describes a control. It shows after
-`--aek-tooltip-delay` (500 ms) of hover and at once when the control gets the focus from the
-keyboard, and it hides when the pointer leaves (it can move onto the tooltip), on blur, on a press
-and on Escape. It's never interactive. Its anchor's `aria-describedby` names it, so a screen reader
-reads it as the control's description.
-
-```ts
-const save = toolbarPanel.add({ tag: 'button', text: 'Save' });
-const saveTip = createTooltip({ anchor: save.elem, text: 'Saves the scene (Ctrl+S)' });
-// When the button goes: its listeners and ARIA go with the tooltip
-saveTip.cmp.remove();
-```
-
-An icon button's tooltip that only repeats its `aria-label` describes nothing more, so it isn't
-named in `aria-describedby`. `onlyWhenTruncated: true` shows a label's whole text only while an
-ellipsis cuts it (the windows' titles use it).
-
-A [popover](api:createPopover) holds interactive content next to its trigger, which opens and
-closes it. The focus moves in when it opens. Escape closes it and gives the focus back to the
-trigger, and a press outside it, or the focus leaving it, closes it. `content` can be a function,
-built again on every open.
-
-```ts
-const filters = toolbarPanel.add({ tag: 'button', text: 'Filters' });
-createPopover({ anchor: filters.elem, label: 'Filters', content: () => createFiltersPanel() });
-```
-
-Both open over everything (the browser's top layer, or the HUD root's top where that's missing),
-on their `side` when they fit there, else the opposite one, and inside the page or an embed's
-container. Escape goes to the topmost overlay only: a tooltip, a popover, a drop-down's list or a
-dialog, in the order they opened, and only when it's pressed inside the HUD. Neither is added
-anywhere: dispose of one with `cmp.remove()` when its anchor goes.
-
-## Toasts
-
-A toaster is a fixed spot that lines toasts up. The engine makes one only in debug mode (for its
-own messages), so an app that shows toasts makes its own and adds it under the HUD root.
-
-```ts
-import { addToast, createToaster, getHUDRootCMP } from 'aekasha/ui';
-
-getHUDRootCMP().add(
-  createToaster({
-    id: 'gameToasts',
-    settings: { verticalPosition: 'top', horizontalPosition: 'right', toastDirection: 'down' },
-  })
-);
-addToast({ title: 'Checkpoint', message: 'Progress saved', toasterId: 'gameToasts' });
-addToast({ type: 'warning', message: 'Low fuel', toasterId: 'gameToasts' });
-```
-
-The first toaster made is the default one for a toast without a `toasterId`; in debug mode that's
-the engine's, so name yours on each toast (or make it the default with `setAsDefaultToaster`).
-[`removeToaster`](api:removeToaster) takes it away with its toasts.
-
-A toast's `type` (`info`, `success`, `warning`, `alert`) gives it its status colour and icon, and
-a screen reader reads its title and message once (an alert at once, the others when it's idle).
-Its showing time pauses while the player hovers it or its close button holds the focus, and while
-the page is hidden; Escape with the focus in it closes it. Under reduced motion toasts fade in
-place instead of sliding. A toaster's sizes are its settings, written as custom properties on its
-element (`--aek-toast-max-width`, …), so a stylesheet can change them too.
-
-## Icons
-
-[`registerIcon`](api:registerIcon) names an SVG and [`getSvgIcon`](api:getSvgIcon) returns it as
-HTML, in the text colour: `1em` square, so it follows the text around it, or at a size from the
-type scale (`'sm'`, `'md'`, `'lg'`: `--aek-icon-size-*`). A window's `icon` takes a registered
-name, a drop-down's `icon` the HTML. The kit has about 50 built-in icons (`gearIcon`, `infoIcon`,
-… on `aekasha/ui`).
-
-```ts
-const save = CMP({ tag: 'button', html: `${getSvgIcon('fileCode')} Save` }); // 1em, with its text
-const badge = CMP({ html: getSvgIcon('shield', 'lg') }); // 20 px at the defaults
-```
-
-::: note A production build registers no icons
-The engine registers the built-in icons for its debug tools only (debug and prod test mode).
-Register the ones your app shows with `registerIcon` (or all of them with
-[`registerBuiltInIcons`](api:registerBuiltInIcons), about 10 kB gzip): an unregistered name
-shows `??` and logs a warning.
+::: demo dropDown
 :::
 
-## Buttons
+| Drop-down      |                                                                                                                                                                                        |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props          | [`DropDownProps`](api:DropDownProps)                                                                                                                                                   |
+| Parts          | `.aekDropDown` (`_top` when it opens upward) with `.aekDropDownTrigger`; the list `.aekDropDownList` of `.aekDropDownItem`s; searchable, `.aekDropDownPopup` with `.aekDropDownSearch` |
+| States         | The highlighted option `data-active`; a match `<mark class="aekDropDownMatch">`                                                                                                        |
+| Keys           | The arrows, Home and End move; Enter or Space picks; Escape, Tab or a click outside closes it without a change; searchable: typing filters, Enter picks                                |
+| Assistive tech | A listbox with `aria-activedescendant`; searchable, a `combobox` filter field                                                                                                          |
 
-[`createButton`](api:createButton) makes a native `<button>` and returns its handle, whose setters
-write it in place (no rebuild), so a HUD can change it every frame. Its `variant` says what kind of
-action it is: `primary` for a group's one main action, `secondary` (the default), `ghost` for a
-quiet one, `danger` for a destructive one, and `link` for an action that looks like a link (a
-navigation is a real link). `size` is `sm`, `md` or `lg`.
-
-```ts
-const save: Button = createButton({
-  label: 'Save',
-  variant: 'primary',
-  kbd: 'Ctrl+S', // a hint and aria-keyshortcuts; binding the key is yours
-  onClick: () => {
-    save.setLoading(true); // the width kept, a spinner, aria-busy, clicks ignored
-    saveGameAsync().finally(() => save.setLoading(false));
-  },
-});
-toolbarPanel.add(save.cmp);
-
-// An icon button: the label is its accessible name and its tooltip
-toolbarPanel.add(createButton({ label: 'Settings', icon: getSvgIcon('gear'), iconOnly: true }).cmp);
-
-// A toggle (aria-pressed)
-const mute = createButton({ label: 'Mute', pressed: false, onPressedChange: (on) => setMuted(on) });
-
-// A destructive action: it acts only after the pointer, Space or Enter is held for 800 ms
-createButton({
-  label: 'Delete save',
-  variant: 'danger',
-  holdToConfirmMs: 800,
-  onClick: deleteSave,
-});
-```
-
-- A hold to confirm fills across the button while it's held, and an early release cancels. Under
-  reduced motion the fill steps instead of sliding: it's information, so it still shows. It
-  ignores a click without a press, which is how some screen readers activate a button in their
-  browse mode, so give such an action another way too (a confirmation [dialog](#dialogs)).
-- `tooltip` adds a tooltip; an `iconOnly` button gets its label as one.
-- Its parts are `.aekButton__icon`, `.aekButton__label`, `.aekButton__kbd` and `.aekButton__hold`,
-  its variant and size are `data-variant` and `data-size`, and its states are attributes
-  (`disabled`, `aria-pressed`, `aria-busy`, `data-holding`). `--aek-button-radius` and
-  `--aek-button-hold-color` restyle it from any ancestor.
-
-### Groups and toolbars
-
-[`createButtonGroup`](api:createButtonGroup) joins buttons into a named group. With `exclusive`
-its toggles are a toolbar with one pressed at a time and one tab stop: the arrows move between
-the buttons, Space or Enter presses one.
-
-```ts
-const modes = ['Lit', 'Wireframe', 'Normals'];
-const viewMode = createButtonGroup({
-  label: 'View mode',
-  buttons: modes.map((label, i) => createButton({ label, pressed: i === 0 })),
-  exclusive: true,
-  onChange: (index) => setViewMode(modes[index]),
-});
-toolbarPanel.add(viewMode.cmp);
-```
-
-### Menus and split buttons
-
-[`createMenu`](api:createMenu) gives a button a menu: actions, on / off items, one-of choices,
-named groups and separators. It works from the keyboard as menus do everywhere: Enter, Space or
-ArrowDown opens it, the arrows move, a typed letter jumps, Enter picks, Escape closes, and the
-focus goes back to the button. Pass the items as a function to read your state on every open.
-
-```ts
-const view = createButton({ label: 'View' });
-toolbarPanel.add(view.cmp);
-createMenu({
-  anchor: view.cmp.elem,
-  items: () => [
-    { label: 'Reset camera', kbd: 'Home', onSelect: () => resetCamera() },
-    {
-      type: 'checkbox',
-      label: 'Grid',
-      checked: settings.grid,
-      onCheckedChange: (on) => (settings.grid = on),
-    },
-    {
-      type: 'radio',
-      label: 'Shading',
-      value: settings.shading,
-      options: [
-        { value: 'lit', label: 'Lit' },
-        { value: 'wire', label: 'Wireframe' },
-      ],
-      onValueChange: (value) => (settings.shading = value),
-    },
-  ],
-});
-
-// An action and its variants
-const save = createSplitButton({
-  label: 'Save',
-  onClick: () => saveGame(),
-  items: [{ label: 'Save as…', onSelect: () => openSaveAsDialog() }],
-});
-```
-
-An action's `onSelect` runs after the menu closed, so a dialog it opens gives the focus back to
-the menu's button when it closes.
-
-## Links
-
-[`createLink`](api:createLink) is an `<a>`. A link to another site opens in a new tab with the
-external mark, and assistive tech hears "(opens in a new tab)". `appearance: 'button'` draws a
-link as a button: use it for a navigation ("Open the manual"), and a `link` variant button for an
-action that looks like a link, so each keeps the right element.
-
-```ts
-aboutPanel.add(createLink({ href: 'https://example.com/manual', label: 'The manual' }).cmp);
-menuPanel.add(
-  createLink({ href: '/play', label: 'Play', appearance: 'button', variant: 'primary' }).cmp
-);
-```
-
-## Badges and tags
-
-[`createBadge`](api:createBadge) puts a count or a status word next to what it's about, and
-[`createTag`](api:createTag) labels a thing's kind: both in a tone (`neutral`, `accent`, `info`,
-`success`, `warning`, `danger`), a status colour on its soft background. A tag can be a filter's
-chip (`selectable`, a toggle button) or a picked item the player removes (`removable`: its remove
-button, or Backspace or Delete, with the focus moved to the next tag).
-
-```ts
-const unread = createBadge({ label: 3, tone: 'accent', spokenLabel: '3 unread' });
-inboxTitle.add(unread.cmp);
-unread.setLabel(4, '4 unread'); // in place
-
-filters.add(
-  createTag({ label: 'Trees', selectable: true, onSelectedChange: (on) => setFilter('trees', on) })
-    .cmp
-);
-picked.add(createTag({ label: 'Sword', removable: true, onRemove: () => unequip('sword') }).cmp);
-```
-
-A count alone ("3") says little to assistive tech: give it a `spokenLabel`. A badge isn't live; if
-a change should be announced, say it in a live region of your own.
-
-## Spinners and progress bars
-
-[`createSpinner`](api:createSpinner) turns a ring for a wait of unknown length. It's `1em` by
-default, so it follows its text, or an icon size (`sm`, `md`, `lg`); `--aek-spinner-size` sets
-any other. Alone it's a status that says its label ("Loading" by default); inside something that
-already says it's loading, make it `decorative`. [`createProgressBar`](api:createProgressBar)
-shows how far a task is, or with no `value` that it's going on with no known end. Its setter
-writes the bar in place, so a value set every frame (a health bar, a charge) changes no layout,
-and `segments` draws the track in parts filled in turn.
-
-```ts
-const saving = panel.add({ tag: 'p' });
-saving.add(createSpinner({ decorative: true }).cmp); // the text says it
-saving.add({ tag: 'span', text: ' Saving…' });
-
-const download = createProgressBar({ label: 'Downloading the level', showValue: true });
-panel.add(download.cmp);
-onDownloadProgress((loaded: number, total: number) => download.setValue((loaded / total) * 100));
-
-const health = createProgressBar({ label: 'Health', hideLabel: true, max: 5, segments: 5 });
-health.cmp.elem.style.setProperty('--aek-progress-color', 'var(--aek-danger)');
-hudCorner.add(health.cmp);
-health.setValue(player.health); // every frame is fine
-```
-
-Both follow reduced motion: the spinner pulses slowly instead of turning, and an indeterminate bar
-is a still striped one instead of a sliding bar.
-
-## Skeletons, dividers and empty states
-
-[`createSkeleton`](api:createSkeleton) holds the place of content that's still loading, shaped
-like it (text `lines`, a `block`, a `circle`), so nothing jumps when it comes. Assistive tech
-doesn't hear it: mark the container that's loading with `aria-busy="true"` and take it off with
-the skeleton. [`createDivider`](api:createDivider) draws a line between two groups, across a
-column or (`orientation: 'vertical'`) down a row. [`createEmptyState`](api:createEmptyState) is
-what a list or a search shows with nothing in it: an icon, a title, what to do about it, and an
-action button.
-
-```ts
-const scores = panel.add({ attr: { 'aria-busy': 'true' } });
-const placeholder = createSkeleton({ lines: 4 });
-scores.add(placeholder.cmp);
-
-const rows = await loadScoresAsync();
-placeholder.cmp.remove();
-scores.removeAttr('aria-busy');
-if (!rows.length) {
-  scores.add(
-    createEmptyState({
-      title: 'No scores yet',
-      text: 'Finish a race to set the first one.',
-      action: { label: 'Race', variant: 'primary', onClick: () => startRace() },
-    }).cmp
-  );
-}
-
-pauseMenu.add(createDivider().cmp); // before Quit
-```
-
-## Loading overlays
-
-[`createLoadingOverlay`](api:createLoadingOverlay) covers the HUD's bounds (a scene load; a
-mounted engine's container in an embed) or, with `cover: 'parent'`, a positioned panel of yours,
-while something loads: a spinner, or a progress bar when you give it `progress`, and a text that
-assistive tech reads as a status. Add its `cmp` where it goes; it's hidden until
-`showAsync()`. `showAsync()` and `hideAsync()` fade it (instantly under reduced motion) and
-resolve `true` once done, or `false` when a later call or its removal cut them short, so they
-plug into a scene loader as they are. It blocks the pointer while shown, above the app's windows
-and below its dialogs (`--aek-z-loading`).
-
-```ts
-import { createSceneLoader, getLoaderStatusUpdater } from 'aekasha';
-import { createLoadingOverlay, type LoadingOverlay } from 'aekasha/ui';
-
-let overlay: LoadingOverlay | null = null;
-await createSceneLoader({
-  id: 'main',
-  // A new overlay per load: the load removes its container at its end
-  loaderContainerFn: () => {
-    overlay = createLoadingOverlay({ text: 'Loading the level', progress: 0 });
-    return overlay.cmp;
-  },
-  loadStartFn: () => overlay?.showAsync() ?? Promise.resolve(true),
-  loadEndFn: () => overlay?.hideAsync() ?? Promise.resolve(true),
-  updateLoaderStatusFn: (_loader, params) => overlay?.setProgress(Number(params?.percent ?? 0)),
-});
-
-// In a scene file, as its assets come in:
-getLoaderStatusUpdater()({ percent: 40 });
-```
-
-The debug scene loader (the Debug tools' start scene) is the same overlay with a spinner.
-
-## Key hints and input glyphs
-
-[`createKbd`](api:createKbd) draws a shortcut's keys, a `<kbd>` each with `+` between them, from
-the text [`getKeyChordLabel`](api:getKeyChordLabel) writes; several chords joined with `' / '`
-are shown with "or". On macOS the modifiers are symbols (⌘ ⇧ ⌥ ⌃), and assistive tech hears the
-words ("Command+Shift+P"). [`createInputGlyph`](api:createInputGlyph) draws one input for a
-prompt: a key cap, or a mouse with the button, the wheel or its movement in the accent. It takes
-an action map binding's shape, so a binding goes in as it is. Both are sized in `em`, so they
-follow their text, and both are display only: binding the key is the app's.
-
-```ts
-const hint = panel.add({ tag: 'p', text: 'Command palette: ' });
-hint.add(createKbd({ keys: getKeyChordLabel({ key: 'p', ctrl: true, shift: true }) }).cmp);
-
-const prompt = panel.add({ tag: 'p', text: 'Press ' });
-const glyph = createInputGlyph({ input: { device: 'KEYBOARD', key: 'e' } });
-prompt.add(glyph.cmp);
-prompt.add({ tag: 'span', text: ' to open the door' });
-glyph.setInput({ device: 'MOUSE', button: 'LEFT' }); // the player rebound it
-```
+A later version makes it the forms' select field, with the other fields.
 
 ## Styling
 
@@ -604,24 +166,6 @@ properties, read on the window or any ancestor (the HUD root for every window):
 `--aek-window-border-color` and `--aek-window-shadow`. The kit's styles are in the CSS layer
 `aek.components` with zero specificity, so any rule of yours wins, a broad one too: scope a
 `button { … }` of your own page to your own UI.
-
-### Without the engine
-
-The kit works on a page that doesn't run the engine: a menu shown before the engine starts, or a
-page of your site. Make the HUD root there yourself with [`createHudRoot`](api:createHudRoot),
-once per page (the engine's boot makes it in an app, and a second one throws). Each kit module
-brings the kit's global styles, so there's no stylesheet to import. Register the icons the pieces
-show (the windows' buttons, the toasts' kinds): [`registerBuiltInIcons`](api:registerBuiltInIcons)
-registers every built-in, as the boot does in debug mode.
-
-```ts
-import { addToast, createHudRoot, createToaster, registerBuiltInIcons } from 'aekasha/ui';
-
-registerBuiltInIcons();
-const hud = createHudRoot({ slot: document.querySelector<HTMLElement>('#menuHud') ?? undefined });
-hud.add(createToaster({ id: 'menuToasts' }));
-addToast({ message: 'Settings saved' });
-```
 
 ### The kit root and its tokens
 
@@ -752,37 +296,16 @@ container; `vw` and `vh` are the browser window's, as in CSS.
 - [`CMP`](api:CMP), [`CMPHandle`](api:CMPHandle), [`CMPProps`](api:CMPProps),
   [`getHUDRootCMP`](api:getHUDRootCMP), [`createHudRoot`](api:createHudRoot) and
   [`hasHudRoot`](api:hasHudRoot).
-- [`openDraggableWindow`](api:openDraggableWindow) ([`OpenDraggableWindowProps`](api:OpenDraggableWindowProps)),
-  [`closeDraggableWindow`](api:closeDraggableWindow),
-  [`toggleDraggableWindow`](api:toggleDraggableWindow),
-  [`updateDraggableWindow`](api:updateDraggableWindow),
-  [`registerDraggableWindowKind`](api:registerDraggableWindowKind),
-  [`getKindWindowId`](api:getKindWindowId) and [`setWindowCycleKeys`](api:setWindowCycleKeys).
-- [`openDialog`](api:openDialog) and [`createDropDown`](api:createDropDown).
-- [`createTooltip`](api:createTooltip) ([`Tooltip`](api:Tooltip)) and
-  [`createPopover`](api:createPopover) ([`Popover`](api:Popover)).
-- [`createToaster`](api:createToaster), [`addToast`](api:addToast) and
-  [`removeToast`](api:removeToast).
-- [`registerIcon`](api:registerIcon) and [`getSvgIcon`](api:getSvgIcon).
-- [`createButton`](api:createButton) ([`Button`](api:Button), [`ButtonProps`](api:ButtonProps)),
-  [`createButtonGroup`](api:createButtonGroup), [`createSplitButton`](api:createSplitButton) and
-  [`createLink`](api:createLink).
-- [`createMenu`](api:createMenu) ([`MenuItem`](api:MenuItem)).
-- [`createBadge`](api:createBadge) ([`BadgeTone`](api:BadgeTone)) and [`createTag`](api:createTag).
-- [`createSpinner`](api:createSpinner) and [`createProgressBar`](api:createProgressBar)
-  ([`ProgressBar`](api:ProgressBar)).
-- [`createSkeleton`](api:createSkeleton), [`createDivider`](api:createDivider) and
-  [`createEmptyState`](api:createEmptyState) ([`EmptyState`](api:EmptyState)).
-- [`createLoadingOverlay`](api:createLoadingOverlay) ([`LoadingOverlay`](api:LoadingOverlay)), with
-  [`createSceneLoader`](api:createSceneLoader).
-- [`createKbd`](api:createKbd) ([`Kbd`](api:Kbd)) and [`createInputGlyph`](api:createInputGlyph)
-  ([`InputGlyphInput`](api:InputGlyphInput)).
+- [`createDropDown`](api:createDropDown) ([`DropDownProps`](api:DropDownProps)).
+- The components: [Core components](hub:features/ui-kit/core#key-apis) and
+  [Windows and overlays](hub:features/ui-kit/overlays#key-apis).
 - [`aekasha/ui/fonts`](hub:documentation/aekasha/ui/fonts): the kit's fonts, a stylesheet entry.
 
 ## Read more
 
 - [The UI kit example](hub:examples/ui-kit): every piece in one scene.
-- [Input](hub:features/input#contexts-and-scenes): the action contexts a menu switches.
+- [The component library](hub:features/ui-kit/library): every piece in every state, in both
+  themes and densities.
 - The API reference: [`aekasha/ui`](hub:documentation/aekasha/ui).
 
 ::: claude-md

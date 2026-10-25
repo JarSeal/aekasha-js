@@ -2125,6 +2125,42 @@ As built (section 1, 2026-10-26):
   drop-down's and toaster's three each, the icons box's two). Still to record with `--update`
   after review: those 11 and the new boxes' shots of Phases 6 and 7.
 
+As built (section 2, 2026-10-26):
+
+- **`::: demo <key>`** (`devTools/hub/demo.ts`, in `HUB_DIRECTIVES`; `demo.test.ts`, 3 tests):
+  renders `<div class="hubComponentDemo" data-hub-demo="<key>">`. The key must be a box of the
+  library page's `index.html` (read per use, added to the page's `includes`, so the dev Hub
+  rebuilds when a box is added); an unknown key, a second argument or content is an error.
+- **The section's pages**: the overview (`features/ui-kit/`: the pieces table, each row linking its
+  section on its page, `::: cards features/ui-kit`, Components, **The HUD root** (new, with
+  "Without the engine" moved up from Styling), Drop-downs with its demo and table, Styling as it
+  was (section 3's), Key APIs, Read more; `aek:covers` "UI kit, Tokens and units"), `core/`
+  ("Core components", order 10, `aek:icon` blocks: buttons with groups, links, badges and tags,
+  key hints and input glyphs, icons, spinners and progress bars, skeletons, dividers and empty
+  states, loading overlays; 14 demos) and `overlays/` ("Windows and overlays", order 20, layers,
+  `aek:covers` "The overlay layer": windows with their keys and kinds, dialogs, toasts, tooltips,
+  popovers, menus and split buttons, and a new **Escape, focus and stacking** section of the
+  overlay stack's rules; 6 demos). The library is `grid-3x3`. The text is the old guide's,
+  moved; the menu and the split button went from Buttons to the overlays page (the menu demo
+  holds both).
+- **Each component's reference** is a two-column table under its demo: Props (the API's props
+  type: `ButtonProps`, …, `ToasterSettings`), Parts, States, Custom properties, Keys, Assistive
+  tech, the rows that apply. The custom properties are the ones each module's JSDoc documents
+  (not the internal `--aek-button-font-size`, `--aek-progress-fill-color`, `--aek-skeleton-band`
+  or `--aek-toast-status`). A long property name breaks mid-word in a table cell (the Hub's inline
+  code wrapping): left as it is.
+- Inbound links moved: the input guide's to `overlays#dialogs`, the scenes guide's to
+  `core#loading-overlays`. The design documents' `#styling` links stay for section 3.
+- Checked in Chromium on the public build (dark and light): every box on the three pages filled,
+  no console or page error; the demos open over the page as on the library page, and outside it
+  follow the Hub's theme toggle.
+- Docs: `hub/CLAUDE.md` (the directive list, the component library bullet's `::: demo`, the UI kit
+  section among the feature pages), the kit's `CLAUDE.md` (the user guide is the section; the
+  overlay layer's guide is the overlays page), `docs/techniques/hub-authoring.md` (the directive).
+- The section's checks: `yarn test` (184 files, 1455 tests), `tsc`, ESLint on the changed files,
+  `yarn hub:build` (95 pages, no dead link, 100 % documented, search 314 KiB gzip) and a dev build
+  (102 pages, no error or warning: the dev page's links to the public texts).
+
 ### Phase 9: versions and done
 
 D14; the changelog entry with the restyle note; `yarn checkVersions --against main`; mark the plan
