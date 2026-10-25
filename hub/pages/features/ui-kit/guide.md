@@ -273,7 +273,8 @@ surface, and `--aek-border-control` and the focus ring 3:1 (WCAG AA).
 ### Themes and density
 
 The colours have a dark and a light theme. A kit root is dark, or light when the player's system
-prefers light; `data-aek-theme="dark"` or `"light"` on any element forces its subtree's theme:
+prefers light; `data-aek-theme="dark"` or `"light"` on any element forces its subtree's theme.
+The theme sets `color-scheme` too, so the browser's own scrollbars and form controls follow it:
 
 ```ts
 getHUDRootCMP().updateAttr({ 'data-aek-theme': 'light' }); // The whole HUD

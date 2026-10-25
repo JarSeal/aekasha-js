@@ -147,11 +147,16 @@ const createOnScreenDropDown = (
   return dropDown.cmp;
 };
 
+/** On each of the tools' roots: the debugger is dark until p806 gives it a theme setting (p803
+ * D6). CMP copies it. */
+const DEBUGGER_THEME_ATTR = { 'data-aek-theme': 'dark' };
+
 /** The top row (created on first use). Kept in editor views, like its groups. */
 const getTopRow = () => {
   if (!topRowCMP) {
     topRowCMP = getHUDRootCMP().add({
       class: [styles.onScreenTopRow, 'onScreenTopRow', KEEP_IN_VIEWS_CLASS],
+      attr: DEBUGGER_THEME_ATTR,
     });
   }
   return topRowCMP;
@@ -162,6 +167,7 @@ const getTopLeftRow = () => {
   if (!topLeftRowCMP) {
     topLeftRowCMP = getHUDRootCMP().add({
       class: [styles.onScreenTopLeftRow, 'onScreenTopLeftRow', KEEP_IN_VIEWS_CLASS],
+      attr: DEBUGGER_THEME_ATTR,
     });
   }
   return topLeftRowCMP;
@@ -328,7 +334,10 @@ const switchTools = () => {
   // dropdown shortcuts do nothing there)
   if (!isRuntimeViewActive()) return;
 
-  switchToolsCMP = CMP({ class: [styles.onScreenToolGroup, 'onScreenToolGroup', 'switchTools'] });
+  switchToolsCMP = CMP({
+    class: [styles.onScreenToolGroup, 'onScreenToolGroup', 'switchTools'],
+    attr: DEBUGGER_THEME_ATTR,
+  });
 
   const isDebugActive = isDebugCameraActive();
 

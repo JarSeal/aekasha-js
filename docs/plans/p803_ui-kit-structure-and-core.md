@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: UI, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
@@ -658,7 +658,7 @@ As built (section 2, 2026-10-25):
   warning) pass. `verify:baselines`: the 12 new names added to `aekasha/ui`, the bundle baselines
   unchanged (types only, so `verify:scenes` wasn't run again); recorded with `--update`.
 
-### Phase 2: the kit without the boot
+### Phase 2: the kit without the boot — done
 
 D4: `createHudRoot`, `hasHudRoot`, `KIT_ROOT_CLASS`, `kit.scss` imported by the kit,
 `onBoundsResize` in place of `addResizer` (`UI_KERNEL_HOOKS` and the layout docs follow),
@@ -712,6 +712,36 @@ As built (section 2, 2026-10-25):
   `UI_KERNEL_HOOKS`, and none is `MainLoop.ts`.
 - The comments (`Mount.ts`, `embed.ts`' shrink check) and docs (the kit's and the Hub
   generator's `CLAUDE.md`, the component library's intro) follow.
+
+As built (section 3, 2026-10-25):
+
+- `tokens.css`: `color-scheme: dark` / `light` last in each of the three theme blocks (inside
+  `aek.tokens`, so an app's own wins). `Tokens.test.ts` checks each block's value, and its
+  contrast list counts only `--aek-*` names as roles. The Hub's design page and its
+  `tokens.test.ts` read custom properties only, so neither changed. The Hub's own `_tokens.scss`
+  already sets the same `color-scheme`, unlayered.
+- D6's roots: `data-aek-theme="dark"` on the drawer (`_dbg__DebuggerGUI.ts`), the editor drawer
+  (`_dbg__EditorDrawer.ts`), the on-screen tools' two rows and the switch tools
+  (`_dbg__OnScreenTools.ts`: the switch tools mount on the HUD root directly), and a debug window
+  with its backdrop (`DraggableWindow.ts`' `getThemeAttr`; `isDebugWindow` is a structural key,
+  so a change remounts). The profiler is a debug window. Not forced: the debug toaster and the
+  debug scene loader (the kit's, restyled in Phases 5 and 7) and stats-gl's panels (their own
+  styles).
+- Found by the screenshots: from section 1's kit root `color` until this section, the
+  debugger's roots inherited the light theme's text colour on a light system (no pixel showed:
+  the debugger sets its own colours). D6 makes them dark again.
+- By eye (a scratchpad Playwright script, Chrome on WebGPU, 1440 × 900, the system theme emulated;
+  shots in `.cache/p803/phase2/`, local): the app in the debug env (the drawer, the engine keys
+  window, the profiler, an on-screen drop-down) and the component library (a window, a toast),
+  before and after this section, in both system themes. The debugger looks the same on a light
+  and a dark system. Against section 2, the only differing pixels are the live numbers and the
+  profiler tab's focus ring on a light system (now the dark theme's accent). `color-scheme: dark`
+  changed no visible pixel in those views, and the component library didn't change in either
+  theme.
+- The phase's verification at its end: `yarn test`, `tsc` (both), ESLint, `yarn hub:build`
+  (91 pages, no warning), `verify:baselines` (unchanged since section 2's record), `verify:embed`
+  (the shrink check on `onBoundsResize`), `yarn sbp --profile all` (every budget within) and
+  `yarn verify:scenes` (104 passed against Phase 0's baselines) pass.
 
 ### Phase 3: `yarn verify:ui`
 

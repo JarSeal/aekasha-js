@@ -81,6 +81,8 @@ const createDrawerElements = (
       styles.editorDrawer,
       isOpen ? debuggerStyles.debuggerGUI_open : debuggerStyles.debuggerGUI_closed,
     ],
+    // The debugger is dark until p806 gives it a theme setting (p803 D6)
+    attr: { 'data-aek-theme': 'dark' },
   });
 
   // The global classes let other debug SCSS find it (eg. aekOnScreenToolsDisabled)

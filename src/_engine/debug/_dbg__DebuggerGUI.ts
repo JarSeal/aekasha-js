@@ -179,6 +179,8 @@ export const _createDebugGui = (opts?: DebugGUIOpts) => {
       drawerState.isOpen ? styles.debuggerGUI_open : styles.debuggerGUI_closed,
       debuggerDisabled ? styles.debuggerDisabled : '',
     ],
+    // The debugger is dark until p806 gives it a theme setting (p803 D6)
+    attr: { 'data-aek-theme': 'dark' },
     settings: { replaceRootDom: false },
   });
 

@@ -263,6 +263,12 @@ const ensureViewportResizer = () => {
 const toClassList = (classes?: string | string[]) =>
   !classes ? [] : typeof classes === 'string' ? [classes] : classes;
 
+/** A debug window and its backdrop force the dark theme (p803 D6): the debugger's own panels are
+ * dark whatever the system's theme until p806 gives it a theme setting. CMP copies it. */
+const DEBUG_THEME_ATTR = { 'data-aek-theme': 'dark' };
+const getThemeAttr = (config: DraggableWindowConfig) =>
+  config.isDebugWindow ? { attr: DEBUG_THEME_ATTR } : {};
+
 /** Whether the window (and its backdrop) stays visible in editor views: a debug dialog, or a
  * window of a kind registered with `keepInViews`. */
 const isKeptInViews = (config: DraggableWindowConfig) =>
@@ -327,6 +333,7 @@ const createBackDropCMP = (entry: WindowEntry) => {
       ...(isKeptInViews(entry.config) ? [KEEP_IN_VIEWS_CLASS] : []),
       ...toClassList(backDropClass),
     ],
+    ...getThemeAttr(entry.config),
     ...(backDropClickClosesWindow ? { onClick: () => closeDraggableWindow(id) } : {}),
   });
 };
@@ -346,6 +353,7 @@ const mountWindow = (entry: WindowEntry) => {
     idAttr: true,
     class: getWindowClasses(config),
     style: getGeometryStyle(config),
+    ...getThemeAttr(config),
   });
   // Capture phase: any press in the window, also one its content stops, brings it to the front
   windowCMP.elem.addEventListener('pointerdown', () => bringDraggableWindowToFront(id), true);
