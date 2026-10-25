@@ -1,0 +1,229 @@
+// The design document's generated tables (devTools/hub/generated/design.ts, p802 D8). Their
+// colours are the token values written inline, so a sample shows its theme on either page theme;
+// the frames around them are the page's, and neutral (the accent is for actions, p800 D6).
+
+.hubDesignTable {
+  caption {
+    padding: 0.5rem 0;
+    caption-side: top;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  th,
+  td {
+    padding: 0.4rem 0.5rem;
+  }
+
+  th[scope='row'] {
+    font-weight: 400;
+    white-space: nowrap;
+  }
+
+  code {
+    white-space: nowrap;
+  }
+}
+
+// A long value (`rgb(… / 12%)`) wraps beside its swatch, so the rule column keeps its width
+.hubColourTable {
+  .hubSwatchCell code {
+    white-space: normal;
+  }
+
+  td:last-child {
+    min-width: 11rem;
+  }
+}
+
+// Long values (font stacks, calc()s) wrap in their cell
+.hubWrapTable td code {
+  white-space: normal;
+}
+
+.hubDesignNote {
+  display: block;
+  margin: 0.4rem 0 0.15rem;
+  color: var(--hub-text-muted);
+  font-size: 0.8125rem;
+}
+
+.hubContrastMin {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--hub-text-muted);
+  font-size: 0.75rem;
+}
+
+.hubSwatchCell,
+.hubContrast,
+.hubShadowCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+// A colour over its theme's surface, so a tint shows as it's used
+.hubSwatch {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  background: linear-gradient(var(--hub-swatch), var(--hub-swatch)), var(--hub-swatch-bg);
+  border: 1px solid var(--hub-border);
+  border-radius: 4px;
+}
+
+.hubContrast {
+  font-variant-numeric: tabular-nums;
+}
+
+.hubContrastSample {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2rem;
+  height: 1.625rem;
+  padding: 0 0.35rem;
+  border: 1px solid var(--hub-border);
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+// A control's edge: the colour is the border, on the surface
+.hubContrastSample_control {
+  border-width: 2px;
+}
+
+.hubTypeSample {
+  white-space: nowrap;
+}
+
+.hubSpaceBar {
+  display: block;
+  height: 0.375rem;
+  margin: 0.125rem 0;
+  background: var(--hub-text-muted);
+  border-radius: 2px;
+
+  & + & {
+    background: var(--hub-border-strong);
+  }
+}
+
+.hubRadiusSample {
+  display: block;
+  width: 3rem;
+  height: 2rem;
+  background: var(--hub-panel);
+  border: 2px solid var(--hub-text-muted);
+}
+
+// The value under the sample, wrapping: a shadow's value is long
+.hubShadowCell {
+  flex-direction: column;
+  align-items: flex-start;
+  white-space: normal;
+
+  code {
+    white-space: normal;
+  }
+}
+
+.hubShadowStage {
+  display: inline-grid;
+  place-items: center;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+}
+
+.hubShadowSample {
+  display: block;
+  width: 2.5rem;
+  height: 1.75rem;
+  border-radius: 6px;
+}
+
+// Plays on hover or focus, with the token's own duration: reduced motion makes it 0
+.hubMotionDemo {
+  position: relative;
+  display: block;
+  width: 8rem;
+  height: 0.75rem;
+  background: var(--hub-panel-hover);
+  border-radius: 999px;
+
+  span {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0.75rem;
+    height: 0.75rem;
+    background: var(--hub-text-muted);
+    border-radius: 50%;
+    transition: transform var(--hub-motion-duration) var(--hub-motion-ease);
+  }
+
+  tr:hover &,
+  &:focus-visible {
+    span {
+      transform: translateX(7.25rem);
+    }
+  }
+}
+
+.hubFocusSamples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin: 1.5rem 0.75rem;
+}
+
+// The ring as it's drawn on focus, in the sample's theme (its data-aek-theme), on that theme's bg
+.hubFocusSample {
+  padding: 0.4rem 0.9rem;
+  background: var(--aek-surface);
+  border: 1px solid var(--aek-border-control);
+  border-radius: var(--aek-radius-md);
+  box-shadow: 0 0 0 0.75rem var(--aek-bg);
+  color: var(--aek-text);
+  outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
+  outline-offset: var(--aek-focus-ring-offset);
+}
+
+.hubIconGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.5rem;
+  margin: 1rem 0 1.5rem;
+  padding: 0;
+  list-style: none;
+
+  // Not the prose's list item spacing: a grid cell
+  li {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.75rem 0.5rem;
+    border: 1px solid var(--hub-border);
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .hubIcon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  code {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+}
+
+.hubIconFile {
+  color: var(--hub-text-muted);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}

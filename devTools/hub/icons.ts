@@ -24,7 +24,12 @@ const KEPT_ATTRIBUTES = [
 /** The case SVG needs in HTML (attribute names are read lower-cased) */
 const ATTRIBUTE_NAMES: Record<string, string> = { viewbox: 'viewBox' };
 
-const toInlineSvg = (name: string, svg: string) => {
+/**
+ * An SVG file's markup as an inline `<svg class="hubIcon hubIcon_<name>">` with only the drawing
+ * attributes (`KEPT_ATTRIBUTES`), or null when it has no `<svg>`: the Hub's icons, and the
+ * engine's built-ins on the design document (`generated/design.ts`)
+ */
+export const toInlineSvg = (name: string, svg: string) => {
   const match = /<svg\b([^>]*)>([\s\S]*?)<\/svg>/i.exec(svg);
   if (!match) return null;
   const attributes = parseAttributes(match[1]);

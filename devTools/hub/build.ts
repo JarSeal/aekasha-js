@@ -17,6 +17,7 @@ import { applyErrorPages } from './errorPages';
 import { buildSearchIndex, checkSearchIndexSize } from './search';
 import { readSbpReport } from './sbp';
 import { SBP_REPORT_FILE } from '../sbp/report';
+import { createDesignSection } from './generated/design';
 import { createHomeSection, getRepoWebUrl } from './generated/home';
 import { createIssuesSection } from './generated/issues';
 import type { HubGeneratedSection } from './generated/section';
@@ -197,6 +198,7 @@ const createSectionsAsync = async (
     createIssuesSection(diag),
     version.section,
     api.section,
+    createDesignSection(diag),
   ];
   return { sections, api };
 };
