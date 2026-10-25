@@ -73,7 +73,10 @@ A change updates what describes it, in the same branch:
 The [design document](hub:project/aekasha/design) is how every piece of UI looks and behaves: the
 kit's components, the debugger and the Hub. Its token tables come from the kit's `tokens.css` when
 the Hub builds; its rules (colour, type, space, motion, icons, patterns, accessibility, voice) are
-written there, and a new component follows them from its first version.
+written there, and a new component follows them from its first version. The
+[component library](hub:project/aekasha/components) runs the kit's pieces in the page, each with
+its states, the code that uses it and what it adds to a build; a new component gets its demo
+there (p803-p808, in their Hub phases).
 
 ### The Hub
 

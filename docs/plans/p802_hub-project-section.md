@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: in progress | Phases 1-4 implemented
 Category: Documentation, Hub, Tooling
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p809_project-roadmaps-and-docs-split.md
@@ -387,7 +387,7 @@ As built (section 4):
   the `TokenSheet.ts` import), `hub/CLAUDE.md`'s pages (the two design documents) and the root
   `CLAUDE.md` line; the callout kinds are already listed.
 
-### Phase 4: the component library (dev)
+### Phase 4: the component library (dev) — done
 
 D9: the script build's aliases and CSS, `components.ts`, the page with the existing pieces.
 `yarn hub:build` in `public` checks that the page and its script are absent from `dist-hub/`
@@ -472,6 +472,58 @@ As built (section 2):
   it; the boxes hold Hub buttons (`.hubButton`) that open the kit's pieces. Styles in
   `hub/_assets/scss/_components.scss` (in the public `hub.css` too, as `_design.scss` is).
 - Section 3 replaces the text slots' placeholder line and the one demo (a plain window).
+
+As built (section 3):
+
+- `_components.ts`' demos (the HUD root's pieces open over the page; the controls are Hub
+  buttons in labelled groups, `addGroup`):
+  - Window: the defaults (kept on close, so a reopen shows the user's layout), and as new windows
+    (`removeOnClose`) an icon, opening collapsed, fixed, long content and a backdrop whose click
+    closes it; the toggle, a demo kind (`registerDraggableWindowKind` at init: the cascade, closing
+    removes), fit all, close all.
+  - Dialog: the defaults, `closeOnEscape`, `backDropClickClosesWindow`, and a drop-down inside one.
+  - Drop-down: one window with a value, the placeholder, an icon, `placement: 'top'`, disabled,
+    and a value changed elsewhere with `refresh()`; each pick adds a toast.
+  - Toaster: two toasters at init (the default bottom left, a second top right); the three kinds,
+    a title, `showingTime: 0`, a long message.
+  - Icons: into the page itself (no HUD root): in boxes the page sizes, in a button sized `1em`,
+    an unregistered name (`??` and the warning, the page's one console line).
+- The kit's global styles: `_components.ts` imports `src/_engine/ui/styles/index.scss` by path
+  (`.uiIcon`), the boot's stylesheet, with an `eslint-disable-next-line` and its reason like the
+  HUD root's. The demo windows' content (`.hubDemoPanel`) inherits the window's colours: the
+  window is still the debugger's dark in both themes, and the page's text was dark on dark in
+  the light theme.
+- "Used by" is generated, not written: `devTools/hub/generated/components.ts`
+  (`createComponentsSection`, after the design section in `build.ts`) fills
+  `generated-components-<piece>` under each demo with the files outside the kit (no test, no
+  `src/generated/`) calling the piece's functions (`COMPONENT_USES`), grouped Debug tools /
+  Engine / Toolkit / App (`getUserGroup`), each a checked `repo:` link. It watches the files
+  found only: a new user in another file shows on the next rebuild (watching `src/` would rebuild
+  the Hub on every engine save). `devTools/hub/components.test.ts`.
+- "In a build" (`build-text.md`): the SBP report measures the kit as a whole, so the page has one
+  section with `{{sbp:…}}` numbers (the app's `_engine/ui` group and budget; the `uiKit`
+  profile's group, its scene chunk with the four pieces and their CSS) and `yarn sbp --profile
+  uiKit --why _engine/ui` for the modules, not a line per piece.
+- Each piece's Markdown: what it is, its states, what isn't shown (what needs the boot), and a
+  "For p803" note of what the demos showed. Found here, for p803 (Phase 5 adds them to
+  `src/_engine/ui/CLAUDE.md`'s "Left for p803"): with a drop-down's list open in a
+  `closeOnEscape` dialog, one Escape closes both (the dialog's capture listener on the window
+  runs first); the kit sizes no icon (`.uiIcon`'s SVG fills its box; `'small'` adds a class only
+  the on-screen tools style); the kit's global styles come with the boot, not `aekasha/ui`; the
+  window header clips its title's descenders; a long toast runs past its 100 px maximum height
+  under its close button.
+- `project/aekasha/`' conventions ("The UI's design") link the page, `::: cards project/aekasha`
+  lists it, and the hero's links have "Component library" after "Ækasha's design".
+- Checked in Chrome (1400 px both themes, 390 px: no page overflow): every button, the window
+  drag, the backdrop click, Escape, the toggle, the kind's cascade, fit all and close all. The
+  dev build: 98 pages, no diagnostics; `public` (`--no-api --no-embed`): no `project/`, no
+  component chunk, no "Component library" on the homepage.
+
+For Phase 5 (beyond its list above): `hub/CLAUDE.md` (the page, `_components.ts` and its
+`[data-hub-components]` / `[data-hub-demo]` markup, adding a component's demo), `devTools/hub/CLAUDE.md`
+(the script build's aliases, defines, `base`, the stand-ins and `scriptSources`; the generated
+components section and what it watches), `src/_engine/ui/CLAUDE.md` (the findings above, and that
+the Hub stands in for `MainLoop.ts` and the storage), and the root `CLAUDE.md`'s Ækasha Hub line.
 
 ### Phase 5: `CLAUDE.md`, the authoring doc, the root `CLAUDE.md`
 

@@ -17,6 +17,7 @@ import { applyErrorPages } from './errorPages';
 import { buildSearchIndex, checkSearchIndexSize } from './search';
 import { readSbpReport } from './sbp';
 import { SBP_REPORT_FILE } from '../sbp/report';
+import { createComponentsSection } from './generated/components';
 import { createDesignSection } from './generated/design';
 import { createHomeSection, getRepoWebUrl } from './generated/home';
 import { createIssuesSection } from './generated/issues';
@@ -204,6 +205,7 @@ const createSectionsAsync = async (
     version.section,
     api.section,
     createDesignSection(diag),
+    createComponentsSection(),
   ];
   return { sections, api };
 };

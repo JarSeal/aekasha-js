@@ -46,6 +46,7 @@ const PROJECT_LINKS = [
   { href: 'hub:project/app/design', label: 'The app’s design' },
   { href: 'hub:project/app', label: 'The app' },
   { href: 'hub:project/aekasha/design', label: 'Ækasha’s design' },
+  { href: 'hub:project/aekasha/components', label: 'Component library' },
   { href: 'hub:project/aekasha', label: 'Developing Ækasha' },
   { href: 'hub:project/aekasha#from-a-plan-to-a-merge', label: 'Plan workflow' },
   { href: 'hub:project/aekasha/code-blocks', label: 'Code blocks' },
