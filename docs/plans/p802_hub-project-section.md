@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-4 implemented
+Status: in progress | Phases 1-5 implemented
 Category: Documentation, Hub, Tooling
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p809_project-roadmaps-and-docs-split.md
@@ -525,7 +525,7 @@ For Phase 5 (beyond its list above): `hub/CLAUDE.md` (the page, `_components.ts`
 components section and what it watches), `src/_engine/ui/CLAUDE.md` (the findings above, and that
 the Hub stands in for `MainLoop.ts` and the storage), and the root `CLAUDE.md`'s Ækasha Hub line.
 
-### Phase 5: `CLAUDE.md`, the authoring doc, the root `CLAUDE.md`
+### Phase 5: `CLAUDE.md`, the authoring doc, the root `CLAUDE.md` — done
 
 The root `CLAUDE.md`'s Ækasha Hub section: the Project section and the dev-only pages in one
 line; `hub/CLAUDE.md` (the pages, the design document's generated tables, the component
@@ -540,6 +540,26 @@ in it. Sections, in the order the prompt gives (the CLAUDE.md files, the authori
 root): 1. `hub/CLAUDE.md`, 2. `devTools/hub/CLAUDE.md`, 3. `src/_engine/ui/CLAUDE.md` (Phase 4's
 findings for p803 and the Hub's stand-ins), 4. `docs/techniques/hub-authoring.md`, 5. the root
 `CLAUDE.md`.
+
+As built:
+
+- `hub/CLAUDE.md`: the `_`-prefixed scripts and `_kit/` in Sources; a Project section bullet (the
+  pages, the two design documents, the component library and adding a component's demo); the
+  hero's link order.
+- `devTools/hub/CLAUDE.md`: a Scripts bullet (`buildScripts`' aliases, defines and `base`,
+  `DEV_ONLY_SCRIPT_MODULES`, the stand-ins, `scriptSources`, `hub/tsconfig.json` and the lint);
+  the Design and Components generated sections; the dev plugin's watch list.
+- `src/_engine/ui/CLAUDE.md`: an "Outside the engine" bullet (the Hub's HUD root, global styles
+  and stand-ins) and a "Left for p803" bullet with Phase 4's five findings; the embed's list
+  stays under Bounds in an embed.
+- `hub-authoring.md`: the coverage text (it still named `coverageIgnore`'s old entries), a
+  Project section table, Design document and Component library subsections, rows in the dev
+  refresh and errors tables. Not added (p611's, not this plan's): `::: embed`, `--no-embed` and
+  `{{sbp:…}}` are still missing from it.
+- The root `CLAUDE.md`: the Dev pages bullet names the Project section's pages, and the map's
+  lines for the three nested files name what they now hold.
+- Checked: `yarn test`, and `yarn hub:build --no-api --no-embed` (61 pages, no coverage or link
+  warnings, no `project/` in the output).
 
 ### Phase 6: done
 

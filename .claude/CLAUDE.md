@@ -65,7 +65,7 @@ Subsystem detail lives in nested `CLAUDE.md` files next to its code. A session l
 - `src/_engine/kernel/init/CLAUDE.md`: the boot step by step (`InitEngine`, the embed boot) and the engine features' install contract (the `FeatureContext`, install order, the production-build traps, a missing feature, the assets worker's jobs).
 - `src/_engine/kernel/scene/CLAUDE.md`: scene loads (the queue, the steps, a failed load, what a load builds, the import path, `?startScene`).
 - `src/_engine/kernel/render/CLAUDE.md`: snapshots (the direct and PostFX paths) and views (suspension, input, the HUD, the on-screen tools, the camera rig, undo, the refresh).
-- `src/_engine/ui/CLAUDE.md`: the UI kit (CMP, the HUD root, the draggable windows, dialogs, the drop-down, toasters, icons, the styles; tokens and units: the kit root, the UI scale, themes, motion, focus, layers, the fonts, the kit in an embed).
+- `src/_engine/ui/CLAUDE.md`: the UI kit (CMP, the HUD root, the draggable windows, dialogs, the drop-down, toasters, icons, the styles; tokens and units: the kit root, the UI scale, themes, motion, focus, layers, the fonts, the kit in an embed; the kit outside the engine, in the Hub, and what's left for p803).
 - `src/_engine/features/physics/CLAUDE.md`: physics (the facade, backend and worker layout and their tests, the worker targets: the transport, requests, the stop, the transform buffer; deterministic loads and the probe, simulation tiers and the policy, imported physics).
 - `src/_engine/features/character/CLAUDE.md`: characters (actors, the kind registries, the step order, the player brains, the dynamic controller, character debugging).
 - `src/_engine/debug/editors/CLAUDE.md`: the editor views' code (`createViewCamera`, the material editor).
@@ -76,8 +76,8 @@ Subsystem detail lives in nested `CLAUDE.md` files next to its code. A session l
 - `src/_engine/features/instancing/CLAUDE.md`: instanced mesh pools.
 - `src/_engine/features/lines/CLAUDE.md`: lines (the backends, the refill, the entity binding, the scene exit).
 - `src/_engine/features/viewports/CLAUDE.md`: viewports (the placement, interactive slots, the renderer state, the axes gizmo and the environment ball).
-- `hub/CLAUDE.md`: authoring the Hub (pages, Markdown, code blocks, snippets, scenes and examples, feature pages, issue files).
-- `devTools/hub/CLAUDE.md`: the Hub's generator (search, output, modes, dev plugin, generated sections, the API Documentation) and `yarn hub:build`'s detail.
+- `hub/CLAUDE.md`: authoring the Hub (pages, Markdown, code blocks, snippets, scenes and examples, feature pages, dev pages and the Project section: the design documents, the component library; issue files).
+- `devTools/hub/CLAUDE.md`: the Hub's generator (search, output, the script build and its UI kit stand-ins, modes, dev plugin, generated sections, the API Documentation) and `yarn hub:build`'s detail.
 - `devTools/assetPipeline/CLAUDE.md`: the asset pipeline's commands in detail (`yarn assets`, `yarn setupAssetTools`, the build's budgets).
 - `devTools/devFiles/CLAUDE.md`: the dev file server (API, security, paths, save entries, its self-check).
 - `devTools/gather/CLAUDE.md`: the scene/asset data pipeline (the gatherer's steps, the generated files, the feature manifest, `__saveData`, the dev plugin).
@@ -155,7 +155,7 @@ Scene loads are deterministic (p101): physics is held for the whole load, the wo
 
 - **A `#region` marker in engine, toolkit or app code is a Hub include: renaming, removing or moving it fails `yarn hub:build` with the page and line**, so say which page shows it in the marker's note (`// #region dynamic-box (shown in the Hub: …)`) and fix the include in the same change.
 - **A new Architecture section here, or a new `##` section in a nested `CLAUDE.md`, needs a feature page's `aek:covers` (or a `coverageIgnore` entry when it isn't a feature), and renaming a section means updating the `aek:covers` that names it.**
-- **Dev pages** (`aek:dev`, p802): whole pages only the dev server's Hub shows, the Project section (`hub/pages/project/`, its button in the header) among them; a public page links one only inside `::: dev-only`.
+- **Dev pages** (`aek:dev`, p802): whole pages only the dev server's Hub shows; a public page links one only inside `::: dev-only`. The Project section (`hub/pages/project/`, its button in the header) is the repo's own: the philosophy, developing Ækasha and the app (conventions, the plan workflow, the code blocks reference), the two design documents (Ækasha's token tables generated from the UI kit's `tokens.css`) and the component library (the UI kit live without the engine, `hub/_assets/ts/_components.ts`): a new token or UI kit piece shows there in the same branch.
 - The rest: `hub/CLAUDE.md` (authoring) and `devTools/hub/CLAUDE.md` (the generator).
 
 ### Build config notes (`vite.config.ts`)
