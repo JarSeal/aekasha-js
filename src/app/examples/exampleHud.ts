@@ -1,11 +1,11 @@
 import { getHUDRootCMP } from 'aekasha/ui';
-import type { TCMP } from 'aekasha/ui';
+import type { CMPHandle } from 'aekasha/ui';
 import { registerOnAllSceneExits } from 'aekasha';
 
 // The example scenes' HUD panel: one box of text at the bottom of the screen, removed when its
 // scene exits (the exit hooks run before the next scene's file, so a new panel is never removed)
 
-let panel: TCMP | null = null;
+let panel: CMPHandle | null = null;
 
 const removePanel = () => {
   panel?.remove();

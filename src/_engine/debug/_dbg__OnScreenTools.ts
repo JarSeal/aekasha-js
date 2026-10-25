@@ -15,8 +15,8 @@ import { getPhysicsState } from '../features/physics/PhysicsState';
 import { getCurrentSceneId, getGeneratedAppData } from '../kernel/scene/Scene';
 import { isCurrentlyLoading, loadScene } from '../kernel/scene/SceneLoader';
 import { getSvgIcon, type SvgIconKey } from '../ui/core/icons/SvgIcon';
-import { createDropDown, type DropDownProps, type TDropDown } from '../ui/forms/DropDown';
-import type { TCMP } from '../ui/core/CMPTypes';
+import { createDropDown, type DropDownProps, type DropDown } from '../ui/forms/DropDown';
+import type { CMPHandle } from '../ui/core/CMPTypes';
 import { CMP } from '../ui/core/CMP';
 import styles from './OnScreenTools.module.scss';
 import { getECSWorld } from '../kernel/ecs/ECS';
@@ -42,13 +42,13 @@ import {
 } from '../kernel/render/Views';
 
 /** The fixed, centred row at the top: the play tools. */
-let topRowCMP: TCMP | null = null;
+let topRowCMP: CMPHandle | null = null;
 /** The fixed row in the top left corner: the About and undo / redo tools, then the view tools. */
-let topLeftRowCMP: TCMP | null = null;
-let viewToolsCMP: TCMP | null = null;
-let playToolsCMP: TCMP | null = null;
-let switchToolsCMP: TCMP | null = null;
-let undoRedoToolsCMP: TCMP | null = null;
+let topLeftRowCMP: CMPHandle | null = null;
+let viewToolsCMP: CMPHandle | null = null;
+let playToolsCMP: CMPHandle | null = null;
+let switchToolsCMP: CMPHandle | null = null;
+let undoRedoToolsCMP: CMPHandle | null = null;
 
 // This file (a lazily-loaded _dbg__ module) also loads in IS_PROD_TEST_MODE (see
 // debug/OnScreenTools.ts's registerOnScreenTools), but the physics wireframe system is
@@ -114,7 +114,7 @@ const loadSceneFromTools = (sceneId: string) => {
 // DROPDOWNS (the camera and scene selectors, the o and p shortcuts)
 
 /** The dropdowns of the current switch tools group (rebuilt with it). */
-const dropDowns = new Map<OnScreenDropDownKey, TDropDown>();
+const dropDowns = new Map<OnScreenDropDownKey, DropDown>();
 
 /**
  * Opens an on-screen dropdown's list on its current option (the o and p shortcuts), or closes it

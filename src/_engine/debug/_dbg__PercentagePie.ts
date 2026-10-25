@@ -1,5 +1,5 @@
 import { CMP } from '../ui/core/CMP';
-import type { TCMP } from '../ui/core/CMPTypes';
+import type { CMPHandle } from '../ui/core/CMPTypes';
 import './PercentagePie.scss';
 
 export type PercentagePieOpts = {
@@ -15,7 +15,7 @@ export type PercentagePieOpts = {
 
 /** A live pie from {@link createPercentagePie}. */
 export type PercentagePie = {
-  cmp: TCMP;
+  cmp: CMPHandle;
   /**
    * Sets the filled percentage (clamped to 0..100 and rounded). Writes only the `--p` custom
    * property, and only when the rounded value changed.

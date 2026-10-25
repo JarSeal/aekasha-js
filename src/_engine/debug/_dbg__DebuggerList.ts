@@ -1,9 +1,9 @@
 import { CMP } from '../ui/core/CMP';
-import type { TCMP } from '../ui/core/CMPTypes';
+import type { CMPHandle } from '../ui/core/CMPTypes';
 import { getSvgIcon } from '../ui/core/icons/SvgIcon';
 import type { DebuggerListDef, DebuggerListItem } from './DebuggerGUI';
 
-type MountedList = { cmp: TCMP; refresh: () => void };
+type MountedList = { cmp: CMPHandle; refresh: () => void };
 
 /** Lists that exist (created and not yet removed), for the tab refresh. */
 const mountedLists = new Set<MountedList>();
@@ -26,7 +26,7 @@ const toIdSet = (selected: string | string[] | null | undefined) =>
  * title, plus optional per-row icon toggles (siblings of the row button, so a toggle click
  * never triggers the row click).
  */
-export const _debuggerListCMP = (def: DebuggerListDef): TCMP => {
+export const _debuggerListCMP = (def: DebuggerListDef): CMPHandle => {
   const id = def.id ?? `auto${++autoIdCounter}`;
   const toggles = def.perItemConfig?.toggles || [];
   // A static array is copied, its toggle values are flipped locally
@@ -39,7 +39,7 @@ export const _debuggerListCMP = (def: DebuggerListDef): TCMP => {
   let lastDataSignature = '';
   let lastSelectedSignature = '';
   let itemCount = 0;
-  let rows = new Map<string, TCMP>();
+  let rows = new Map<string, CMPHandle>();
 
   const wrapper = CMP({
     id: `debuggerList-${id}`,

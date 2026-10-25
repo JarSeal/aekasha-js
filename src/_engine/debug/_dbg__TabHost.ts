@@ -1,5 +1,5 @@
 import { CMP } from '../ui/core/CMP';
-import type { TCMP } from '../ui/core/CMPTypes';
+import type { CMPHandle } from '../ui/core/CMPTypes';
 import styles from './DebuggerGUI.module.scss';
 import { lsRemoveItem } from '../utils/LocalAndSessionStorage';
 import { lerror } from '../utils/Logger';
@@ -12,7 +12,7 @@ import { _refreshDebuggerLists } from './_dbg__DebuggerList';
 export type TabHostOpts = {
   /** The element the mounted tab's content goes in, which is also its scroller. Re-read on every
    * use, because the owner may rebuild it (the drawer, a window's content). */
-  getContainer: () => TCMP | null;
+  getContainer: () => CMPHandle | null;
   /** Whether the host can be seen (eg. the drawer is open). A tab's `refreshIntervalMs` runs only
    * while it can. */
   isVisible: () => boolean;
@@ -61,12 +61,12 @@ const runOnRefresh = (def: AnyDebuggerTabDef, label: string) => {
  * static CMP is left alone), and it is only re-rendered when its html changed (a re-render
  * replaces the element: hover, focus). The html is computed once per refresh: the update
  * renders the string the comparison computed. */
-const addCmpSectionRefresher = (section: TCMP, sectionRefreshers: (() => void)[]) => {
+const addCmpSectionRefresher = (section: CMPHandle, sectionRefreshers: (() => void)[]) => {
   const html = section.props?.html;
   if (typeof html !== 'function') return;
   let lastHtml = html(section);
   let renderedHtml: string | null = null;
-  const cachedHtml = (cmp: TCMP) => renderedHtml ?? html(cmp);
+  const cachedHtml = (cmp: CMPHandle) => renderedHtml ?? html(cmp);
   sectionRefreshers.push(() => {
     const nextHtml = html(section);
     if (nextHtml === lastHtml) return;
@@ -83,7 +83,7 @@ const addCmpSectionRefresher = (section: TCMP, sectionRefreshers: (() => void)[]
 /** Builds the content sections into the container. Throws what the tab's code throws. */
 const buildSections = (
   def: AnyDebuggerTabDef,
-  container: TCMP,
+  container: CMPHandle,
   sectionRefreshers: (() => void)[],
   label: string
 ) => {

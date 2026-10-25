@@ -1,4 +1,4 @@
-import type { TCMP } from '../ui/core/CMPTypes';
+import type { CMPHandle } from '../ui/core/CMPTypes';
 import { CMP } from '../ui/core/CMP';
 import styles from './DebuggerGUI.module.scss';
 import { lsGetItem, lsSetItem } from '../utils/LocalAndSessionStorage';
@@ -18,11 +18,11 @@ import '../ui/fonts/fonts.css';
 
 export { _debuggerListCMP } from './_dbg__DebuggerList';
 
-let drawerCMP: TCMP | null = null;
-let currentSceneTitleCMP: TCMP | null = null;
-let currentSceneTitleTextCMP: TCMP | null = null;
+let drawerCMP: CMPHandle | null = null;
+let currentSceneTitleCMP: CMPHandle | null = null;
+let currentSceneTitleTextCMP: CMPHandle | null = null;
 let currentSceneTitleText: string = '';
-let tabsContainerWrapper: null | TCMP = null;
+let tabsContainerWrapper: null | CMPHandle = null;
 let debugSceneLoaderCreated = false;
 let debuggerDisabled = false;
 /** An editor view is active (see _setDrawerSuspendedByView). */
@@ -93,7 +93,7 @@ const initDrawerState = () => {
   return drawerState;
 };
 
-type TabEntry = { def: AnyDebuggerTabDef; button: TCMP | null };
+type TabEntry = { def: AnyDebuggerTabDef; button: CMPHandle | null };
 
 // Keyed by tab id. A Map keeps insertion order, so a re-registered (replaced) tab keeps its
 // registration position for the ordering tie-break.

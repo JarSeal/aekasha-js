@@ -1,4 +1,4 @@
-import type { TCMP } from '../core/CMPTypes';
+import type { CMPHandle } from '../core/CMPTypes';
 import { CMP, classes } from '../core/CMP';
 import './DropDown.scss';
 
@@ -50,9 +50,9 @@ export type DropDownProps = {
 };
 
 /** A drop-down {@link createDropDown} made: its CMP, to add where it goes, and its controls. */
-export type TDropDown = {
+export type DropDown = {
   /** The dropdown's root (the trigger, and the list while it is open). */
-  cmp: TCMP;
+  cmp: CMPHandle;
   /** Opens the list on the current value and focuses it. */
   open: () => void;
   /** Closes the list without a change. */
@@ -65,6 +65,12 @@ export type TDropDown = {
    * pick refreshes it itself). */
   refresh: () => void;
 };
+
+/**
+ * The old name of {@link DropDown}.
+ * @deprecated Use {@link DropDown}. Removed in engine 6.0.0.
+ */
+export type TDropDown = DropDown;
 
 const ROOT_CLASS = 'aekDropDown';
 const TRIGGER_CLASS = 'aekDropDownTrigger';
@@ -111,9 +117,9 @@ const swallowNextKeyUp = (key: string) => {
  * settingsPanel.add(quality.cmp);
  * ```
  */
-export const createDropDown = (props: DropDownProps): TDropDown => {
+export const createDropDown = (props: DropDownProps): DropDown => {
   const placement = props.placement || 'bottom';
-  let list: TCMP | null = null;
+  let list: CMPHandle | null = null;
 
   const getOptions = () => resolve(props.options);
   const getValue = () => resolve(props.value ?? null);
@@ -175,7 +181,7 @@ export const createDropDown = (props: DropDownProps): TDropDown => {
       options.findIndex((option) => option.value === currentValue)
     );
 
-    const newList: TCMP = CMP({
+    const newList: CMPHandle = CMP({
       tag: 'ul',
       class: classes(LIST_CLASS, props.listClass),
       attr: {

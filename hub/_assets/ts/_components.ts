@@ -28,7 +28,12 @@ import {
   removeDraggableWindow,
   toggleDraggableWindow,
 } from 'aekasha/ui';
-import type { BuiltInIconName, DropDownProps, OpenDraggableWindowProps, TCMP } from 'aekasha/ui';
+import type {
+  BuiltInIconName,
+  DropDownProps,
+  OpenDraggableWindowProps,
+  CMPHandle,
+} from 'aekasha/ui';
 // eslint-disable-next-line import/no-restricted-paths -- the kit has no public way to make its root without the boot: p803 adds one (p800 D1), and this import goes
 import { createHudContainer } from '../../../src/_engine/ui/core/HUD';
 // The kit's global styles (`.uiIcon`), which the boot loads in every build
@@ -80,7 +85,7 @@ const createPanel = (...texts: string[]) => {
 };
 
 /** A button inside a window's content (a CMP: it goes under the window) */
-const addPanelButton = (panel: TCMP, text: string, onClick: () => void) =>
+const addPanelButton = (panel: CMPHandle, text: string, onClick: () => void) =>
   panel.add({ tag: 'button', class: 'hubButton', text, attr: { type: 'button' }, onClick });
 
 // --- Draggable window ---
@@ -280,7 +285,7 @@ const createDemoDropDown = (
 
 const createDropDownPanel = () => {
   const panel = CMP({ class: 'hubDemoPanel hubDemoDropDowns' });
-  const row = (label: string, dropDown: { cmp: TCMP }) => {
+  const row = (label: string, dropDown: { cmp: CMPHandle }) => {
     panel.add({ tag: 'p', text: label });
     panel.add(dropDown.cmp);
   };

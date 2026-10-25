@@ -2,7 +2,7 @@
 // replaces, so it isn't split (p618 D8).
 import * as THREE from 'three/webgpu';
 import { CMP } from '../../../ui/core/CMP';
-import type { TCMP } from '../../../ui/core/CMPTypes';
+import type { CMPHandle } from '../../../ui/core/CMPTypes';
 import {
   DEBUG_TOASTER_ID,
   type DebuggerPaneItem,
@@ -290,9 +290,9 @@ let physicsFireSerial = 0;
 
 /** The mounted windows' views, cleared when a window's content is removed (a closed window's
  * removed CMPs can't be written to) */
-const resultsViews: Partial<Record<RayTesterKind, TCMP>> = {};
-const helperNotices: Partial<Record<RayTesterKind, TCMP>> = {};
-const pickStatusViews: Partial<Record<RayTesterKind, TCMP>> = {};
+const resultsViews: Partial<Record<RayTesterKind, CMPHandle>> = {};
+const helperNotices: Partial<Record<RayTesterKind, CMPHandle>> = {};
+const pickStatusViews: Partial<Record<RayTesterKind, CMPHandle>> = {};
 const paneRefreshers: Partial<Record<RayTesterKind, () => void>> = {};
 
 // ----------------------------------------------------------------------------
@@ -675,7 +675,7 @@ const getWorldFaceNormal = (hit: THREE.Intersection): Vec3 | null => {
   return toVec3(scratchNormal.copy(hit.face.normal).applyMatrix3(scratchNormalMatrix).normalize());
 };
 
-const addThreeHitRow = (list: TCMP, hit: ThreeHitRow, index: number) => {
+const addThreeHitRow = (list: CMPHandle, hit: ThreeHitRow, index: number) => {
   const row = addHitRowHead(list, `#${index + 1} · distance ${fmt(hit.distance)}`, hit);
   addField(row, 'Point', fmtVec(hit.point));
   addField(row, 'Normal', hit.normal ? fmtVec(hit.normal) : '—');
@@ -901,7 +901,7 @@ const toPhysicsHitRow = (
   ...getHitEntityInfo(colliderEntities.get(hit.collider.id) ?? null),
 });
 
-const addPhysicsHitRow = (list: TCMP, hit: PhysicsHitRow, index: number) => {
+const addPhysicsHitRow = (list: CMPHandle, hit: PhysicsHitRow, index: number) => {
   const row = addHitRowHead(list, `#${index + 1} · toi ${fmt(hit.toi)}`, hit);
   addField(row, 'Point', fmtVec(hit.point));
   addField(row, 'Normal', hit.normal ? fmtVec(hit.normal) : '—');
@@ -1117,7 +1117,7 @@ const clearTesterLS = (kinds: RayTesterKind[], scope: 'ALL' | 'THIS_SCENE') => {
 /**
  * The Ray cast controls tab's clear button for both testers' saved params (the scope is asked
  * when more than one scene has some).
- * @returns (TCMP) the button
+ * @returns (CMPHandle) the button
  */
 export const _createClearRayTestersLSButton = () =>
   createClearLSButton({
@@ -1144,7 +1144,7 @@ const onSceneEnter = () => {
 // Shared helpers
 // ----------------------------------------------------------------------------
 
-const CONTENT_FNS: Record<RayTesterKind, () => TCMP> = {
+const CONTENT_FNS: Record<RayTesterKind, () => CMPHandle> = {
   THREE: createThreeTesterContent,
   PHYSICS: createPhysicsTesterContent,
 };
@@ -1174,7 +1174,7 @@ const renderResults = <H>(
   kind: RayTesterKind,
   results: RayTesterResult<H>[] | null,
   isPending: boolean,
-  addHitRow: (list: TCMP, hit: H, index: number) => void
+  addHitRow: (list: CMPHandle, hit: H, index: number) => void
 ) => {
   const root = resultsViews[kind];
   if (!root) return;
@@ -1212,7 +1212,7 @@ const renderResults = <H>(
 };
 
 /** A hit's list row with its heading and a copy-as-JSON button. Returns the row. */
-const addHitRowHead = (list: TCMP, title: string, hit: unknown) => {
+const addHitRowHead = (list: CMPHandle, title: string, hit: unknown) => {
   const row = list.add({ tag: 'li' });
   const head = row.add({ class: 'rayTesterHitHead' });
   head.add({ tag: 'span', text: title });
@@ -1224,7 +1224,7 @@ const addHitRowHead = (list: TCMP, title: string, hit: unknown) => {
   return row;
 };
 
-const addEntityFields = (row: TCMP, info: HitEntityInfo) => {
+const addEntityFields = (row: CMPHandle, info: HitEntityInfo) => {
   addField(row, 'Entity', info.entityId === null ? '—' : String(info.entityId));
   const appId =
     info.appId === null ? '—' : `${info.appId}${info.appIdIsFixed ? '' : ' (generated)'}`;
@@ -1232,7 +1232,7 @@ const addEntityFields = (row: TCMP, info: HitEntityInfo) => {
 };
 
 /** A label + value row. The value is set as text (object names are not html). */
-const addField = (parent: TCMP, label: string, value: string) => {
+const addField = (parent: CMPHandle, label: string, value: string) => {
   const field = parent.add({ class: 'rayTesterField' });
   field.add({ tag: 'span', class: 'winSmallLabel', text: label });
   field.add({ tag: 'span', text: value });

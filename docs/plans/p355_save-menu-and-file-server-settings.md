@@ -180,7 +180,7 @@ The Æ button opens a menu (title "Ækasha menu") instead of the About dialog:
     is one save.
   - The spinner is a new `spinner` icon (`core/UI/icons/`), turned by CSS; with
     `prefers-reduced-motion` it doesn't turn but pulses its opacity.
-  - `createDropDown` gets `setDisabled(disabled)` on `TDropDown` (today `disabled` is fixed at
+  - `createDropDown` gets `setDisabled(disabled)` on `DropDown` (today `disabled` is fixed at
     creation): it updates the trigger's `disabled` and closes an open list.
 - **Keys:** `sc-save-scene` (Ctrl+S, ⌘S) and `sc-save-specific` (Ctrl+Shift+S, ⌘⇧S),
   `KEY_DOWN`, category `DEBUGGER`, rebindable through `debugKeys`. They always

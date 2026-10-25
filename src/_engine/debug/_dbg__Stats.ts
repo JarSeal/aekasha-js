@@ -5,7 +5,7 @@ import { createDebuggerTab, updateDebuggerTab } from './DebuggerGUI';
 import { GPU_MEMORY_TAB_ID } from './GPUMemory';
 import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../ui/core/HUD';
 import { CMP } from '../ui/core/CMP';
-import type { TCMP } from '../ui/core/CMPTypes';
+import type { CMPHandle } from '../ui/core/CMPTypes';
 import { defaultStatsOptions, type StatsOptions } from './Stats';
 import { setBootOverride } from '../features/physics/debug/_dbg__PhysicsBootOverrides';
 import { getConfig } from '../kernel/config/Config';
@@ -48,7 +48,7 @@ type StatsInternals = {
 const PANEL_ORDER = ['TFPS', 'FPS', 'CPU', 'PHY', 'GPU', 'CPT'];
 
 let stats: Stats | null = null;
-let statsCmp: TCMP | null = null;
+let statsCmp: CMPHandle | null = null;
 let physicsPanel: StatsPanel | null = null;
 let tFpsPanel: StatsPanel | null = null;
 const LS_KEY = 'AEK_debugStats';

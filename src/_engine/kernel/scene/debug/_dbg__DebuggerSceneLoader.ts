@@ -2,14 +2,14 @@ import { createSceneLoader } from '../SceneLoader';
 import { DEBUGGER_SCENE_LOADER_ID } from '../../../debug/DebuggerGUI';
 import { CMP } from '../../../ui/core/CMP';
 import { getMotionFactor } from '../../../ui/core/Motion';
-import type { TCMP } from '../../../ui/core/CMPTypes';
+import type { CMPHandle } from '../../../ui/core/CMPTypes';
 import styles from './DebuggerSceneLoader.module.scss';
 
 const START_ANIM_LENGTH_IN_MS = 150;
 const END_ANIM_LENGTH_IN_MS = 250;
 
 /** A fade's length at the loader's motion factor (0 under reduced motion), read when it starts */
-const getFadeMs = (container: TCMP | undefined, ms: number) =>
+const getFadeMs = (container: CMPHandle | undefined, ms: number) =>
   container ? ms * getMotionFactor(container.elem) : ms;
 
 export const createDebuggerSceneLoader = () =>

@@ -4,7 +4,7 @@
 // Over the 800-line limit (p617 D10), with docs: what is left shares the module's state (the
 // windows map, the stacks, the kind registries, the suspended windows), so a further split
 // would make the modules import each other.
-import type { TCMP } from '../../core/CMPTypes';
+import type { CMPHandle } from '../../core/CMPTypes';
 import { CMP } from '../../core/CMP';
 import { lerror } from '../../../utils/Logger';
 import { getConfig, IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../../../kernel/config/Config';
@@ -53,7 +53,7 @@ let windows: Map<string, WindowEntry> | null = null;
 /** Each layer's open windows, bottom to top. */
 const stacks: Record<Layer, string[]> = { APP: [], DEBUG: [] };
 /** Keyed by kind (a window's kind, or its id when it has none) */
-const contentFns: { [kind: string]: (data?: DraggableWindowData) => TCMP } = {};
+const contentFns: { [kind: string]: (data?: DraggableWindowData) => CMPHandle } = {};
 const sceneTargetResolvers: { [kind: string]: SceneTargetResolver } = {};
 const registeredKinds = new Set<string>();
 const kindOnCloses: { [kind: string]: (id: string) => void } = {};
@@ -411,7 +411,7 @@ const mountWindow = (entry: WindowEntry) => {
 };
 
 /** The header title: the icon (if any) and the title text. */
-const renderTitle = (titleCMP: TCMP, config: DraggableWindowConfig) => {
+const renderTitle = (titleCMP: CMPHandle, config: DraggableWindowConfig) => {
   titleCMP.updateText(config.title);
   if (config.icon) titleCMP.elem.insertAdjacentHTML('afterbegin', getSvgIcon(config.icon, 'small'));
 };

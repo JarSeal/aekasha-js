@@ -1,4 +1,4 @@
-import type { TCMP, TStyle } from '../core/CMPTypes';
+import type { CMPHandle, CMPStyle } from '../core/CMPTypes';
 import { CMP } from '../core/CMP';
 import { getMotionFactor } from '../core/Motion';
 
@@ -66,10 +66,10 @@ export type ToasterSettings = {
   /** Icons to be used for a toast. This can either be a single string
    * and then all the icons will have the same icon or an object
    * defininig each toast type icon. An empty string ("") will omit
-   * the icon (it will not be shown then). A TCMP icon is moved into
+   * the icon (it will not be shown then). A CMPHandle icon is moved into
    * the toast, so it can only be used by one toast.
    */
-  icons?: string | { [key in ToastType]?: string | TCMP };
+  icons?: string | { [key in ToastType]?: string | CMPHandle };
 
   /** Determines a special close button icon. If not defined,
    * a rotated CSS "+" (:before { content: "+" }) is used.
@@ -98,11 +98,11 @@ export type ToastProps = {
   /** Its kind, which picks the toaster's per-kind settings (default 'info') */
   type?: ToastType;
   /** Its title: text, or a CMP (moved into the toast) */
-  title?: string | TCMP;
+  title?: string | CMPHandle;
   /** Its message: text, or a CMP (moved into the toast) */
-  message?: string | TCMP;
+  message?: string | CMPHandle;
   /** Overrides the toaster's icon for this toast. An empty string ("") omits the icon. */
-  icon?: string | TCMP;
+  icon?: string | CMPHandle;
   /** How long it shows, in ms, over the toaster's (0: until it's closed) */
   showingTime?: number;
   /** How long it slides in and fades out, in ms, over the toaster's */
@@ -133,7 +133,7 @@ export type AddToastResponse = {
   /** Its whole life in ms: the showing time and both animations */
   totalTime: number;
   /** The toast's CMP */
-  toastCmp: TCMP;
+  toastCmp: CMPHandle;
   /** Whether it has a close button */
   hasCloseButton: boolean;
   /**
@@ -145,18 +145,18 @@ export type AddToastResponse = {
   /** Its kind */
   type: ToastType;
   /** Its title, as given */
-  title: TCMP | string | undefined;
+  title: CMPHandle | string | undefined;
   /** Its message, as given */
-  message: TCMP | string | undefined;
+  message: CMPHandle | string | undefined;
   /** Its own icon, as given */
-  icon: TCMP | string | undefined;
+  icon: CMPHandle | string | undefined;
   /** Fades it out and disposes it (as {@link removeToast}) */
   removeToast: () => void;
 };
 
 type Toaster = {
   id: string;
-  cmp: TCMP;
+  cmp: CMPHandle;
   styleElem: HTMLStyleElement;
   settings: ToasterSettings;
 };
@@ -168,7 +168,7 @@ type ToastPhase = 'ENTERING' | 'APPEARING' | 'SHOWING' | 'REMOVING';
 type Toast = {
   id: string;
   toaster: Toaster;
-  cmp: TCMP;
+  cmp: CMPHandle;
   animationTime: number;
   phase: ToastPhase;
   /** The one pending timer of the current phase, so removing a toast (or its toaster) clears
@@ -206,8 +206,8 @@ const ENTER_DELAY_MS = 10;
 const START_PHASE_CLASS = 'toastStart';
 const END_PHASE_CLASS = 'toastEnd';
 const TOASTER_UPDATE_CLASS = 'toasterUpdating';
-const NO_PADDING: TStyle = { paddingTop: 0, paddingBottom: 0, paddingLeft: 0, paddingRight: 0 };
-const SETTLED_TOAST_STYLE: TStyle = {
+const NO_PADDING: CMPStyle = { paddingTop: 0, paddingBottom: 0, paddingLeft: 0, paddingRight: 0 };
+const SETTLED_TOAST_STYLE: CMPStyle = {
   position: 'relative',
   left: 'auto',
   right: 'auto',
@@ -227,7 +227,7 @@ const APPEAR_START_TRANSFORM: Record<ToastDirection, (w: number, h: number) => s
  * appears, and the toaster padding (animated) that makes room for it. */
 const QUEUE_PUSH: Record<
   ToastDirection,
-  { anchor: TStyle; padding: (w: number, h: number) => TStyle }
+  { anchor: CMPStyle; padding: (w: number, h: number) => CMPStyle }
 > = {
   down: {
     anchor: { top: 0, left: 0, bottom: 'auto', right: 'auto' },
@@ -266,8 +266,8 @@ const resolvePerType = <T>(
   return (value as { [key in ToastType]?: T })[type] ?? fallback;
 };
 
-const getToasterStyle = (config: ToasterSettings): TStyle => {
-  const style: TStyle = { position: 'fixed' };
+const getToasterStyle = (config: ToasterSettings): CMPStyle => {
+  const style: CMPStyle = { position: 'fixed' };
   const { x, y } = config.offset;
 
   if (config.verticalPosition === 'top') style.top = 0;

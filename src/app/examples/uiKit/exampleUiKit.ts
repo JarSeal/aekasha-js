@@ -21,7 +21,7 @@ import {
   toggleDraggableWindow,
   updateDraggableWindowsOfKind,
 } from 'aekasha/ui';
-import type { TCMP, ToastType } from 'aekasha/ui';
+import type { CMPHandle, ToastType } from 'aekasha/ui';
 import './exampleUiKit.scss';
 
 const SCENE_ID = 'exampleUiKit';
@@ -53,7 +53,7 @@ const GROUND_COLORS = [
 // The scene's state, set again on every visit
 const shapeColors = {} as Record<ShapeId, string>;
 const shapeEntityIds = {} as Record<ShapeId, number>;
-const shapeButtons = {} as Record<ShapeId, TCMP>;
+const shapeButtons = {} as Record<ShapeId, CMPHandle>;
 let groundColor = GROUND_COLORS[0].value;
 
 const getShapeName = (shapeId: ShapeId) => SHAPES.find((s) => s.id === shapeId)?.name ?? shapeId;
@@ -250,7 +250,7 @@ const showToast = (message: string, type?: ToastType) =>
 // #endregion ui-kit-toasts
 
 // #region ui-kit-menu (shown in the Hub: hub/pages/examples/ui-kit/)
-let menuButtons: TCMP[] = [];
+let menuButtons: CMPHandle[] = [];
 
 /** The gameplay keys, and the menu's in a context of its own, off until the menu opens */
 const createActions = () => {

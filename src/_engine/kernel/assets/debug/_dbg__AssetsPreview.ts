@@ -1,6 +1,6 @@
 import type * as THREE from 'three/webgpu';
 import { CMP } from '../../../ui/core/CMP';
-import type { TCMP } from '../../../ui/core/CMPTypes';
+import type { CMPHandle } from '../../../ui/core/CMPTypes';
 import { getTextureArrayInfo } from '../TextureArray';
 import { getTextureAtlasInfo, type TextureAtlasInfo } from '../TextureAtlas';
 import { getTextureDepth } from './_dbg__AssetStats';
@@ -94,7 +94,7 @@ const describePreview = (preview: TexturePreview, droppedLevels: number) => {
 export const createTexturePreviewCmp = (
   texture: THREE.Texture,
   windowId: string
-): TCMP | undefined => {
+): CMPHandle | undefined => {
   const atlas = getTextureAtlasInfo(texture);
   const depth = getTextureDepth(texture);
   const isArray = Boolean(getTextureArrayInfo(texture)) || depth > 1;
@@ -186,7 +186,7 @@ export const createTexturePreviewCmp = (
     }
   };
 
-  const cmp: TCMP = CMP({
+  const cmp: CMPHandle = CMP({
     class: [styles.assetsPreview, ...(state.showRects ? [] : [styles.assetsPreviewHideRects])],
     html: `<div>
 <div class="${styles.assetsPreviewToolbar}"><span class="winSmallLabel">Level:</span> ${levelButtons}${rectsToggle}</div>

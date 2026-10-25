@@ -14,7 +14,7 @@
 ## Components
 
 A component (a CMP) is an element made from props, and its handle
-([`TCMP`](api:TCMP)) adds children, updates it and removes it. It's in the page once it's added
+([`CMPHandle`](api:CMPHandle)) adds children, updates it and removes it. It's in the page once it's added
 under a component that is: the app's UI goes under the HUD root, which the engine makes at boot.
 
 ```ts
@@ -327,7 +327,7 @@ container; `vw` and `vh` are the browser window's, as in CSS.
 
 ## Key APIs
 
-- [`CMP`](api:CMP), [`TCMP`](api:TCMP), [`TProps`](api:TProps) and
+- [`CMP`](api:CMP), [`CMPHandle`](api:CMPHandle), [`CMPProps`](api:CMPProps) and
   [`getHUDRootCMP`](api:getHUDRootCMP).
 - [`openDraggableWindow`](api:openDraggableWindow) ([`OpenDraggableWindowProps`](api:OpenDraggableWindowProps)),
   [`closeDraggableWindow`](api:closeDraggableWindow),

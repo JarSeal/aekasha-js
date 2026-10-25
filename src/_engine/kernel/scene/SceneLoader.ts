@@ -16,7 +16,7 @@ import {
   setCurrentScene,
   setLoadingSceneId,
 } from './Scene';
-import type { TCMP } from '../../ui/core/CMPTypes';
+import type { CMPHandle } from '../../ui/core/CMPTypes';
 import { getHUDRootCMP } from '../../ui/core/HUD';
 import {
   addDebugToastWhenReady,
@@ -103,11 +103,11 @@ export type SceneLoader = {
 
   /** Makes the loader's HUD element, once per load: added to the HUD root at the load's start,
    * removed at its end. */
-  loaderContainerFn?: () => TCMP;
+  loaderContainerFn?: () => CMPHandle;
 
   /** The HUD element `loaderContainerFn` made for the running load (set by the load; the last
    * one after it). */
-  loaderContainer?: TCMP;
+  loaderContainer?: CMPHandle;
 
   /** The running load's phase (set by the load): `START` until the previous scene goes, `LOAD`
    * until the next scene is entered, `END` during `loadEndFn`; undefined between loads. */
@@ -220,7 +220,7 @@ type ActiveLoad = {
   sceneData: SceneData;
   nextSceneFn: NonNullable<LoadSceneProps['nextSceneFn']>;
   loader: SceneLoader;
-  loaderContainer: TCMP | null;
+  loaderContainer: CMPHandle | null;
   deletePrevScene: boolean;
 };
 
@@ -323,7 +323,7 @@ const beginLoad = (loadSceneProps: LoadSceneProps): ActiveLoad => {
   setAssetOwnerScene(sceneId);
 
   // Add possible CMP container to HUD
-  let loaderContainer: TCMP | null = null;
+  let loaderContainer: CMPHandle | null = null;
   if (loader.loaderContainerFn) {
     loaderContainer = loader.loaderContainerFn();
     loader.loaderContainer = loaderContainer;

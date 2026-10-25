@@ -1,5 +1,16 @@
 export { CMP, classes } from './core/CMP';
 export type {
+  CMPAnimChain,
+  CMPAnimState,
+  CMPAttr,
+  CMPClassAction,
+  CMPHandle,
+  CMPListener,
+  CMPListenerCache,
+  CMPListenerCreator,
+  CMPProps,
+  CMPSettings,
+  CMPStyle,
   TAnimChain,
   TAnimState,
   TAttr,
@@ -43,7 +54,7 @@ export type {
   SceneTargetResolver,
 } from './overlays/windows/DraggableWindowTypes';
 export { createDropDown } from './forms/DropDown';
-export type { DropDownOption, DropDownProps, TDropDown } from './forms/DropDown';
+export type { DropDown, DropDownOption, DropDownProps, TDropDown } from './forms/DropDown';
 export { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from './core/HUD';
 export {
   addToast,

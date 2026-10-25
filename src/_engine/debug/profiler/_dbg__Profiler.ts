@@ -1,5 +1,5 @@
 import { CMP } from '../../ui/core/CMP';
-import type { TCMP } from '../../ui/core/CMPTypes';
+import type { CMPHandle } from '../../ui/core/CMPTypes';
 import styles from './Profiler.module.scss';
 import { lsGetItem, lsSetItem } from '../../utils/LocalAndSessionStorage';
 import { lwarn } from '../../utils/Logger';
@@ -166,10 +166,10 @@ const getOrderedTabs = () =>
 // WINDOW
 
 /** The window content's root, while the window is open (its content is mounted). */
-let windowRoot: TCMP | null = null;
+let windowRoot: CMPHandle | null = null;
 /** The mounted tab's scroller. */
-let tabContentCMP: TCMP | null = null;
-const menuButtons = new Map<string, TCMP>();
+let tabContentCMP: CMPHandle | null = null;
+const menuButtons = new Map<string, CMPHandle>();
 
 const host = createTabHost({
   getContainer: () => tabContentCMP,

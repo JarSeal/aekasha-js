@@ -12,7 +12,7 @@
  * on-screen row, the viewport stack and the editor's own UI shift with it.
  */
 import { CMP } from '../../ui/core/CMP';
-import type { TCMP } from '../../ui/core/CMPTypes';
+import type { CMPHandle } from '../../ui/core/CMPTypes';
 import type { AnyDebuggerTabDef } from '../DebuggerGUI';
 import { getSvgIcon } from '../../ui/core/icons/SvgIcon';
 import { createTabHost } from '../_dbg__TabHost';
@@ -51,7 +51,7 @@ export type EditorDrawerOpts = {
 };
 
 export type EditorDrawer = {
-  cmp: TCMP;
+  cmp: CMPHandle;
   /** Opens or closes the drawer (no argument toggles it). */
   toggle: (open?: boolean) => void;
   isOpen: () => boolean;
@@ -118,8 +118,8 @@ const createDrawerElements = (
 
 /** Replaces the menu's buttons with one per tab (`menuButtons` by tab id). */
 const buildTabMenu = (
-  menu: TCMP,
-  menuButtons: Map<string, TCMP>,
+  menu: CMPHandle,
+  menuButtons: Map<string, CMPHandle>,
   tabs: AnyDebuggerTabDef[],
   onSelect: (def: AnyDebuggerTabDef) => void
 ) => {
@@ -154,7 +154,7 @@ export const createEditorDrawer = (opts: EditorDrawerOpts): EditorDrawer => {
 
   let isActive = false;
   let tabs: AnyDebuggerTabDef[] = [];
-  const menuButtons = new Map<string, TCMP>();
+  const menuButtons = new Map<string, CMPHandle>();
 
   const { root, titleText, menu, tabsContainer } = createDrawerElements(
     opts,

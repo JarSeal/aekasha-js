@@ -77,18 +77,17 @@ ecsWorld?)`: optional positional parameters, where the coding standard asks for 
   - `AppConfig.draggableWindows` (`kernel/config/Config.ts`, deprecated in engine 5.8.0): the
     windows' content functions are a module map since p617 (`registerDraggableWindow`,
     `registerDraggableWindowKind`), and the key is only read as a fallback (`buildContent`,
-    `ui/overlays/windows/DraggableWindow.ts`). Removed with its `TCMP` and `DraggableWindow` type imports, the last
+    `ui/overlays/windows/DraggableWindow.ts`). Removed with its `CMPHandle` and `DraggableWindow` type imports, the last
     kernel → ui imports of `Config.ts`;
   - `AddToastResponse.timeout` (`ui/overlays/Toaster.ts`, deprecated in engine 5.8.0): the toast's first
     timer, which its later phases replace;
-  - `TSettings.doCheckIsInDom` (`ui/core/CMPTypes.ts`, deprecated in engine 5.8.0): stored, never read;
-  - a candidate, decided here: the UI kit's `T`-prefixed type names, the only ones in the engine
-    (`TCMP` → `Cmp`, `TProps` → `CmpProps`, `TListener`, `TListenerCache`, `TListenerCreator`,
-    `TStyle`, `TAttr`, `TClassAction`, `TAnimChain`, `TAnimState`, `TSettings` in `ui/core/CMPTypes.ts`, and
-    `ui/forms/DropDown.ts`' `TDropDown`), all on `aekasha/ui`, renamed together (the old names
-    deprecated aliases in a minor first, or removed here: the codemod's job). p800 (D12) decides
-    it: p803 adds the new names with the old ones as deprecated aliases, and this major removes
-    the aliases.
+  - `CMPSettings.doCheckIsInDom` (`ui/core/CMPTypes.ts`, deprecated in engine 5.8.0): stored, never read;
+  - the UI kit's `T`-prefixed type names' deprecated aliases (p803 D3, engine 5.12.0), all on
+    `aekasha/ui`: `TCMP` (→ `CMPHandle`), `TProps` (→ `CMPProps`), `TSettings`
+    (→ `CMPSettings`), `TListener`, `TListenerCache`, `TListenerCreator`, `TStyle`, `TAttr`,
+    `TClassAction`, `TAnimChain` and `TAnimState` (each → its `CMP` name) at the end of
+    `ui/core/CMPTypes.ts`, and `TDropDown` (→ `DropDown`) in `ui/forms/DropDown.ts`. Removed
+    here, with their rows in the migration page (a rename, the codemod's job).
 - **From p618 (its D3):**
   - the names on `aekasha/debug` that only the dev files protocol's two sides and the scene runner
     use (deprecated in engine 5.9.0): the dev server's route, header and meta constants

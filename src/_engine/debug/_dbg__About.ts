@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { CMP } from '../ui/core/CMP';
-import type { TCMP } from '../ui/core/CMPTypes';
+import type { CMPHandle } from '../ui/core/CMPTypes';
 import {
   getCurrentEnvironment,
   IS_PROD_TEST_MODE,
@@ -250,7 +250,7 @@ const getSectionsHtml = (sections: InfoSection[]) =>
     )
     .join('');
 
-const createDialogContent = (): TCMP => {
+const createDialogContent = (): CMPHandle => {
   // Read on every open: the renderer, physics state and viewport can change
   const sections = getSections();
   let copiedTimer: ReturnType<typeof setTimeout> | null = null;

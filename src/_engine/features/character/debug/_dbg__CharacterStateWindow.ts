@@ -2,7 +2,7 @@
 // so it isn't split (p618 D8).
 import { addDebugToast } from '../../../debug/DebuggerGUI';
 import { CMP } from '../../../ui/core/CMP';
-import type { TCMP } from '../../../ui/core/CMPTypes';
+import type { CMPHandle } from '../../../ui/core/CMPTypes';
 import { lsGetItem, lsSetItem, lsSubscribe } from '../../../utils/LocalAndSessionStorage';
 import { llog } from '../../../utils/Logger';
 import { getCharacterById } from '../Character';
@@ -1417,7 +1417,7 @@ export const _createCharacterStateWindowContent = (winData?: { [key: string]: un
     unsubscribeSaved: null,
   };
 
-  const rootCmp: TCMP = CMP({
+  const rootCmp: CMPHandle = CMP({
     class: styles.root,
     onRemoveCmp: () => disposeInstance(inst),
   });

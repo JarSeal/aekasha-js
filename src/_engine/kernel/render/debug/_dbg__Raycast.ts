@@ -1,5 +1,5 @@
 import { CMP } from '../../../ui/core/CMP';
-import type { TCMP } from '../../../ui/core/CMPTypes';
+import type { CMPHandle } from '../../../ui/core/CMPTypes';
 import { IS_DEBUG_ENV } from '../../config/Config';
 import {
   createDebuggerTab,
@@ -247,7 +247,7 @@ type StatsValue = { elem: HTMLElement; text: string };
 type StatsWindowRow = { win: IntervalWindowSnapshot; pie: PercentagePie; value: StatsValue };
 /** One counter's cached stats elements */
 type StatsBlock = {
-  list: TCMP;
+  list: CMPHandle;
   getStats: () => Readonly<IntervalCounterSnapshot>;
   isEnabled: () => boolean;
   isActive: boolean | null;
@@ -258,11 +258,12 @@ type StatsBlock = {
 /** The mounted stats blocks (empty while the tab isn't mounted) */
 let statsBlocks: StatsBlock[] = [];
 /** The mounted pending physics queries row (WORKER_THREAD only) */
-let pendingQueriesView: { list: TCMP; isActive: boolean | null; value: StatsValue } | null = null;
+let pendingQueriesView: { list: CMPHandle; isActive: boolean | null; value: StatsValue } | null =
+  null;
 
 const INACTIVE_VALUE = '-';
 
-const addStatsRow = (list: TCMP, label: string, pie?: PercentagePie): StatsValue => {
+const addStatsRow = (list: CMPHandle, label: string, pie?: PercentagePie): StatsValue => {
   const row = list.add({ tag: 'li' });
   const labelCmp = row.add({ tag: 'span', class: 'rayStatLabel', text: label });
   if (pie) labelCmp.add(pie.cmp);
@@ -271,7 +272,7 @@ const addStatsRow = (list: TCMP, label: string, pie?: PercentagePie): StatsValue
 
 /** Builds one counter's stats markup once per mount (static, the value elements are cached). */
 const buildStatsBlock = (
-  root: TCMP,
+  root: CMPHandle,
   title: string,
   getStats: () => Readonly<IntervalCounterSnapshot>,
   isEnabled: () => boolean
@@ -348,7 +349,10 @@ const writeStatsValue = (value: StatsValue, text: string) => {
   value.elem.textContent = text;
 };
 
-const writeListActive = (view: { list: TCMP; isActive: boolean | null }, isActive: boolean) => {
+const writeListActive = (
+  view: { list: CMPHandle; isActive: boolean | null },
+  isActive: boolean
+) => {
   if (isActive === view.isActive) return;
   view.isActive = isActive;
   view.list.updateClass('inactive', isActive ? 'remove' : 'add');

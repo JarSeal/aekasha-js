@@ -383,8 +383,9 @@ Every component, from its first version:
   minors (new components, new tokens) and patches, each merged to `main`.
 - p806 removes Tweakpane, so the tab types' Tweakpane parts break (p618 P7, p622): it ships with
   engine 6.0.0 on the `engine-6` integration branch it shares with p622 (§6).
-- The kit's `T`-prefixed type renames (`TCMP` → `Cmp`, `TProps` → `CmpProps` and the rest, listed
-  in p622) get their new names with deprecated aliases in a p803 minor; p622 removes the aliases.
+- The kit's `T`-prefixed type renames (`TCMP` → `CMPHandle`, `TProps` → `CMPProps` and the rest,
+  `TDropDown` → `DropDown`: p803 D3's table, which replaced this list's `Cmp` / `CmpProps`, and
+  p622) get their new names with deprecated aliases in a p803 minor; p622 removes the aliases.
 - A restyle isn't a break, but it changes how an app's UI looks: each restyle's changelog entry
   says what changed and how to keep the old look (the tokens to set).
 

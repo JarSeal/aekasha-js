@@ -1,7 +1,7 @@
 import { CMP } from './CMP';
-import type { TCMP } from './CMPTypes';
+import type { CMPHandle } from './CMPTypes';
 
-let hudRoot: TCMP | null = null;
+let hudRoot: CMPHandle | null = null;
 /**
  * The page element the full-page boot's HUD root takes the place of, when there's no `#hudRoot`.
  * @internal

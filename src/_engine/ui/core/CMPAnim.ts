@@ -1,11 +1,11 @@
-// A CMP's animation chain (TAnimChain): timers that step through phases of classes and styles,
+// A CMP's animation chain (CMPAnimChain): timers that step through phases of classes and styles,
 // kept in the CMP's `timers`. CMP.ts starts and clears it; it writes the CMP only through the
 // CMP's own methods (updateClass, updateStyle), so it imports no CMP code (only its types).
-import type { TAnimChain, TAnimState, TCMP } from './CMPTypes';
+import type { CMPAnimChain, CMPAnimState, CMPHandle } from './CMPTypes';
 
 type SetTimeout = ReturnType<typeof setTimeout>;
 
-const removeAnim = (cmp: TCMP, animKey: string) => {
+const removeAnim = (cmp: CMPHandle, animKey: string) => {
   const timerData = cmp.timers[animKey];
   if (timerData) {
     clearTimeout(timerData.fn as SetTimeout);
@@ -22,7 +22,7 @@ const removeAnim = (cmp: TCMP, animKey: string) => {
  * Clears every timer of a CMP (its animation chain and its scroll timer): its removal.
  * @internal
  */
-export const removeAnims = (cmp: TCMP) => {
+export const removeAnims = (cmp: CMPHandle) => {
   const timerKeys = Object.keys(cmp.timers);
   for (let i = 0; i < timerKeys.length; i++) {
     removeAnim(cmp, timerKeys[i]);
@@ -33,16 +33,16 @@ export const removeAnims = (cmp: TCMP) => {
  * Starts the chain of a CMP's `anim` prop, if it has one: CMP.ts runs it when the CMP is mounted.
  * @internal
  */
-export const runAnims = (cmp: TCMP) => {
+export const runAnims = (cmp: CMPHandle) => {
   if (cmp.props?.anim) updateCmpAnim(cmp, cmp.props?.anim);
 };
 
 /**
- * Starts a CMP's animation chain (`TCMP.updateAnim`, and the `anim` prop when the CMP is mounted),
+ * Starts a CMP's animation chain (`CMPHandle.updateAnim`, and the `anim` prop when the CMP is mounted),
  * replacing the one it runs: each phase applies its class and style, then waits its duration.
  * @internal
  */
-export const updateCmpAnim = (cmp: TCMP, animChain: TAnimChain[]) => {
+export const updateCmpAnim = (cmp: CMPHandle, animChain: CMPAnimChain[]) => {
   removeAnim(cmp, 'cmpAnim');
 
   if (!animChain?.length) {
@@ -50,7 +50,7 @@ export const updateCmpAnim = (cmp: TCMP, animChain: TAnimChain[]) => {
     return cmp;
   }
 
-  const animState: TAnimState = {
+  const animState: CMPAnimState = {
     setState: (key, value) => (animState.state[key] = value),
     removeState: (key) => delete animState.state[key],
     state: {},

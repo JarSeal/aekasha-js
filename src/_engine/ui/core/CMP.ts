@@ -1,10 +1,18 @@
 import { removeAnims, runAnims, updateCmpAnim } from './CMPAnim';
-import type { TAnimChain, TAttr, TClassAction, TCMP, TProps, TSettings, TStyle } from './CMPTypes';
+import type {
+  CMPAnimChain,
+  CMPAttr,
+  CMPClassAction,
+  CMPHandle,
+  CMPProps,
+  CMPSettings,
+  CMPStyle,
+} from './CMPTypes';
 
 type SetTimeout = ReturnType<typeof setTimeout>;
 
-let rootCMP: TCMP | null = null;
-const cmps: { [key: string]: TCMP } = {};
+let rootCMP: CMPHandle | null = null;
+const cmps: { [key: string]: CMPHandle } = {};
 /** The last generated id's number: a counter, unique for the page's life (an id given in the
  * props that a generated one would take is skipped). */
 let lastGeneratedId = 0;
@@ -19,19 +27,19 @@ const generateCmpId = () => {
 };
 const cmpWrappers: {
   [key: string]: {
-    wrapper: (props?: unknown) => TCMP;
+    wrapper: (props?: unknown) => CMPHandle;
     wrapperProps?: unknown;
   };
 } = {};
-const setWrapper = (id: string, wrapper: (props?: unknown) => TCMP, wrapperProps?: unknown) =>
+const setWrapper = (id: string, wrapper: (props?: unknown) => CMPHandle, wrapperProps?: unknown) =>
   (cmpWrappers[id] = { wrapper: wrapper, wrapperProps });
 const getWrapper = <WrapP = undefined>(id: string) =>
-  cmpWrappers[id] as { wrapper: (props?: WrapP) => TCMP; wrapperProps?: WrapP };
+  cmpWrappers[id] as { wrapper: (props?: WrapP) => CMPHandle; wrapperProps?: WrapP };
 const removeWrapper = (id: string) => {
   if (cmpWrappers[id]) delete cmpWrappers[id];
 };
 
-const globalSettings: TSettings = {
+const globalSettings: CMPSettings = {
   sanitizer: null,
   sanitizeAll: false,
   doCheckIsInDom: false,
@@ -40,7 +48,7 @@ const globalSettings: TSettings = {
 
 /**
  * Makes a UI kit component: its element, built from `props`, and its listeners. It's in the DOM
- * once it's added to a CMP that is (`TCMP.add`, or another CMP's `html`); an app's UI goes under the
+ * once it's added to a CMP that is (`CMPHandle.add`, or another CMP's `html`); an app's UI goes under the
  * HUD root (`getHUDRootCMP`). A taken id throws, and so does a second root (`attach`).
  * @param props what it's made from (none: an empty div)
  * @param wrapper the component function that made it, which `update()` calls again with
@@ -58,10 +66,10 @@ const globalSettings: TSettings = {
  * ```
  */
 export const CMP = (
-  props?: TProps,
-  wrapper?: ((props?: never) => TCMP) | ((props: never) => TCMP),
+  props?: CMPProps,
+  wrapper?: ((props?: never) => CMPHandle) | ((props: never) => CMPHandle),
   wrapperProps?: unknown
-): TCMP => {
+): CMPHandle => {
   if (props?.attach && rootCMP) {
     throw new Error('Root node already created');
   }
@@ -74,7 +82,7 @@ export const CMP = (
   const id = props?.id || generateCmpId();
 
   // Create cmp object
-  const cmp: TCMP = {
+  const cmp: CMPHandle = {
     id,
     children: [],
     props,
@@ -87,14 +95,16 @@ export const CMP = (
     add: (child) => addChildCmp(cmp, child),
     remove: () => removeCmp(cmp),
     removeChildren: () => removeCmpChildren(cmp),
-    update: <WrapP extends TProps>(newProps?: TProps | WrapP, callback?: (cmp: TCMP) => void) =>
-      updateCmp<WrapP>(cmp, newProps, callback),
+    update: <WrapP extends CMPProps>(
+      newProps?: CMPProps | WrapP,
+      callback?: (cmp: CMPHandle) => void
+    ) => updateCmp<WrapP>(cmp, newProps, callback),
     updateClass: (newClass, action) => updateCmpClass(cmp, newClass, action),
     updateAttr: (newAttr) => updateCmpAttr(cmp, newAttr),
     removeAttr: (attrKey) => removeCmpAttr(cmp, attrKey),
-    updateStyle: (newStyle: TStyle) => updateCmpStyle(cmp, newStyle),
+    updateStyle: (newStyle: CMPStyle) => updateCmpStyle(cmp, newStyle),
     updateText: (newText) => updateCmpText(cmp, newText),
-    updateAnim: (animChain: TAnimChain[]) => updateCmpAnim(cmp, animChain),
+    updateAnim: (animChain: CMPAnimChain[]) => updateCmpAnim(cmp, animChain),
     focus: (focusValueToProps) => focusCmp(cmp, focusValueToProps),
     blur: (focusValueToProps) => blurCmp(cmp, focusValueToProps),
     scrollIntoView: (params, timeout) => scrollCmpIntoView(cmp, params, timeout),
@@ -103,7 +113,7 @@ export const CMP = (
   };
 
   // Create possible wrapper
-  if (wrapper) setWrapper(id, wrapper as (props?: unknown) => TCMP, wrapperProps);
+  if (wrapper) setWrapper(id, wrapper as (props?: unknown) => CMPHandle, wrapperProps);
 
   // Create new element
   const elem = createElem(cmp, props);
@@ -146,10 +156,10 @@ export const CMP = (
   // Overwrite toString method
   cmp.toString = () => getTempTemplate(id);
 
-  return cmp as TCMP;
+  return cmp as CMPHandle;
 };
 
-const addChildCmp = (parent: TCMP, child?: TCMP | TProps) => {
+const addChildCmp = (parent: CMPHandle, child?: CMPHandle | CMPProps) => {
   let cmp;
   if (!child) {
     cmp = CMP();
@@ -174,8 +184,8 @@ const addChildCmp = (parent: TCMP, child?: TCMP | TProps) => {
   return cmp;
 };
 
-const addTemplateChildCmp = (cmp: TCMP) => {
-  let focusComponent: TCMP | null = null;
+const addTemplateChildCmp = (cmp: CMPHandle) => {
+  let focusComponent: CMPHandle | null = null;
   const childCmpElems = cmp.elem.querySelectorAll('cmp');
   for (let i = 0; i < childCmpElems.length; i++) {
     const id = childCmpElems[i].getAttribute('id');
@@ -201,11 +211,11 @@ const addTemplateChildCmp = (cmp: TCMP) => {
 };
 
 /** A live CMP by its id (the listeners look their CMP up by it). */
-const getCmpById = (id: string): TCMP | null => cmps[id] || null;
+const getCmpById = (id: string): CMPHandle | null => cmps[id] || null;
 
 const getTempTemplate = (id: string, tag: string = 'cmp') => `<${tag} id="${id}"></${tag}>`;
 
-const createElem = (cmp: TCMP, props?: TProps) => {
+const createElem = (cmp: CMPHandle, props?: CMPProps) => {
   let elem;
 
   // Elem and content
@@ -282,7 +292,7 @@ const PROP_LISTENERS = [
   ['onChange', 'change'],
 ] as const;
 
-const createListeners = (cmp: TCMP, props?: TProps) => {
+const createListeners = (cmp: CMPHandle, props?: CMPProps) => {
   // Remove possiple listeners
   removeListeners(cmp, true);
   const listeners = cmp.listeners;
@@ -325,7 +335,7 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
   return listeners;
 };
 
-const removeListeners = (cmp: TCMP, nullify?: boolean) => {
+const removeListeners = (cmp: CMPHandle, nullify?: boolean) => {
   const listeners = cmp.listeners;
   const keys = Object.keys(listeners);
 
@@ -343,7 +353,7 @@ const removeListeners = (cmp: TCMP, nullify?: boolean) => {
   if (cmp.props?.onClickOutside) removeOutsideClickListener(cmp);
 };
 
-const removeCmp = (cmp: TCMP, doNotRemoveElem?: boolean) => {
+const removeCmp = (cmp: CMPHandle, doNotRemoveElem?: boolean) => {
   const id = cmp.id;
 
   // Remove children CMPs
@@ -381,7 +391,7 @@ const removeCmp = (cmp: TCMP, doNotRemoveElem?: boolean) => {
   return cmp;
 };
 
-const removeCmpChildren = (cmp: TCMP) => {
+const removeCmpChildren = (cmp: CMPHandle) => {
   const children = cmp.children;
   for (let i = 0; i < children.length; i++) {
     children[i].remove();
@@ -389,10 +399,10 @@ const removeCmpChildren = (cmp: TCMP) => {
   return cmp;
 };
 
-const updateCmp = <WrapP extends TProps>(
-  cmp: TCMP,
-  newProps?: TProps | WrapP,
-  callback?: (cmp: TCMP) => void
+const updateCmp = <WrapP extends CMPProps>(
+  cmp: CMPHandle,
+  newProps?: CMPProps | WrapP,
+  callback?: (cmp: CMPHandle) => void
 ) => {
   const wrapper = getWrapper<WrapP>(cmp.id);
   if (wrapper) {
@@ -407,7 +417,7 @@ const updateCmp = <WrapP extends TProps>(
       ...wrapper.wrapperProps,
       ...newProps,
     };
-    setWrapper(cmp.id, wrapper.wrapper as (props?: unknown) => TCMP, wrapperProps);
+    setWrapper(cmp.id, wrapper.wrapper as (props?: unknown) => CMPHandle, wrapperProps);
     cmp.removeChildren();
     delete cmps[cmp.id];
     const newCmp = wrapper.wrapper(wrapperProps);
@@ -456,9 +466,9 @@ const updateCmp = <WrapP extends TProps>(
 };
 
 const updateCmpClass = (
-  cmp: TCMP,
+  cmp: CMPHandle,
   newClass: string | string[],
-  action: TClassAction = 'replace'
+  action: CMPClassAction = 'replace'
 ) => {
   let classes: string[] = [];
   let oldClasses: string[] = [];
@@ -509,7 +519,7 @@ const updateCmpClass = (
   return cmp;
 };
 
-const updateCmpAttr = (cmp: TCMP, newAttr: TAttr) => {
+const updateCmpAttr = (cmp: CMPHandle, newAttr: CMPAttr) => {
   const attrKeys = Object.keys(newAttr);
   // Recorded, so an update() rebuilds the element with them
   const attr = (ownProps(cmp).attr ??= {});
@@ -522,7 +532,7 @@ const updateCmpAttr = (cmp: TCMP, newAttr: TAttr) => {
   return cmp;
 };
 
-const removeCmpAttr = (cmp: TCMP, attrKey: string | string[]) => {
+const removeCmpAttr = (cmp: CMPHandle, attrKey: string | string[]) => {
   let attributeKeys: string | string[] = [];
   const attrProps = cmp.props?.attr;
   if (Array.isArray(attrKey)) {
@@ -549,7 +559,7 @@ const setElemStyle = (elem: HTMLElement, prop: string, value: string | number | 
   elem.style[prop as unknown as number] = value === null ? '' : String(value);
 };
 
-const updateCmpStyle = (cmp: TCMP, newStyle: TStyle) => {
+const updateCmpStyle = (cmp: CMPHandle, newStyle: CMPStyle) => {
   const styleProps = Object.keys(newStyle);
   for (let i = 0; i < styleProps.length; i++) {
     const prop = styleProps[i];
@@ -566,7 +576,7 @@ const updateCmpStyle = (cmp: TCMP, newStyle: TStyle) => {
   return cmp;
 };
 
-const updateCmpText = (cmp: TCMP, newText: string) => {
+const updateCmpText = (cmp: CMPHandle, newText: string) => {
   if (!cmp.props?.text && typeof cmp.props?.text !== 'string') {
     throw new Error(
       'Cannot update text, CMP is not a text CMP. To change this to a text CMP, use the "cmp.update({ text })" function instead.'
@@ -578,7 +588,7 @@ const updateCmpText = (cmp: TCMP, newText: string) => {
   return cmp;
 };
 
-const focusCmp = (cmp: TCMP, focusValueToProps?: boolean) => {
+const focusCmp = (cmp: CMPHandle, focusValueToProps?: boolean) => {
   cmp.elem.focus();
   // The caret at the end, in an input that has a selection (a number, checkbox or range input
   // has none: its setSelectionRange throws)
@@ -592,7 +602,7 @@ const focusCmp = (cmp: TCMP, focusValueToProps?: boolean) => {
   return cmp;
 };
 
-const blurCmp = (cmp: TCMP, focusValueToProps?: boolean) => {
+const blurCmp = (cmp: CMPHandle, focusValueToProps?: boolean) => {
   cmp.elem.blur();
   if (focusValueToProps !== undefined) {
     ownProps(cmp).focus = focusValueToProps;
@@ -601,7 +611,7 @@ const blurCmp = (cmp: TCMP, focusValueToProps?: boolean) => {
 };
 
 const scrollCmpIntoView = (
-  cmp: TCMP,
+  cmp: CMPHandle,
   params?: boolean | ScrollIntoViewOptions,
   timeout?: number
 ) => {
@@ -643,7 +653,7 @@ const onClickOutsideListener: {
   },
 };
 
-const createOutsideClickListener = (cmp: TCMP) => {
+const createOutsideClickListener = (cmp: CMPHandle) => {
   if (!cmp.props?.onClickOutside) {
     removeOutsideClickListener(cmp);
     return;
@@ -657,7 +667,7 @@ const createOutsideClickListener = (cmp: TCMP) => {
   onClickOutsideListener.count += 1;
 };
 
-const removeOutsideClickListener = (cmp: TCMP) => {
+const removeOutsideClickListener = (cmp: CMPHandle) => {
   if (!onClickOutsideListener.fns[cmp.id]) return;
   if (onClickOutsideListener.count === 1) {
     document.removeEventListener('click', onClickOutsideListener.mainFn);
@@ -668,7 +678,7 @@ const removeOutsideClickListener = (cmp: TCMP) => {
 
 /** A copy of the props a CMP is given (`style` and `attr` too), so its in-place writes never reach
  * the caller's objects (eg. a style constant several CMPs share). Made once per create or update. */
-const toOwnProps = <P extends TProps | undefined>(props: P): P =>
+const toOwnProps = <P extends CMPProps | undefined>(props: P): P =>
   (props && {
     ...props,
     ...(props.style ? { style: { ...props.style } } : {}),
@@ -677,9 +687,9 @@ const toOwnProps = <P extends TProps | undefined>(props: P): P =>
 
 /** The CMP's own props (made when it has none), which the update methods write in place: an app
  * HUD that updates a text or a style every frame makes no object for it. */
-const ownProps = (cmp: TCMP): TProps => (cmp.props ??= {});
+const ownProps = (cmp: CMPHandle): CMPProps => (cmp.props ??= {});
 
-const replaceCmpWithAnother = (oldCmp: TCMP, newCmp: TCMP) => {
+const replaceCmpWithAnother = (oldCmp: CMPHandle, newCmp: CMPHandle) => {
   const id = oldCmp.id;
 
   // Props

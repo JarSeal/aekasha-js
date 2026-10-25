@@ -1,6 +1,6 @@
 // The draggable windows' types: the public ones (on `aekasha/ui`) and the internal ones the
 // window modules share (DraggableWindow.ts, its store, geometry and drag modules).
-import type { TCMP } from '../../core/CMPTypes';
+import type { CMPHandle } from '../../core/CMPTypes';
 import type { SvgIconKey } from '../../core/icons/SvgIcon';
 
 /**
@@ -16,7 +16,7 @@ export type DraggableWindowData = { [key: string]: unknown };
 
 /** A window's content: a CMP (kept over closes: detached, not removed, so a reopen shows it
  * again), or a function that builds it from the window's `data` on every mount. */
-export type DraggableWindowContent = TCMP | ((data?: DraggableWindowData) => TCMP);
+export type DraggableWindowContent = CMPHandle | ((data?: DraggableWindowData) => CMPHandle);
 
 /** The units of a window's position and sizes, per axis (default 'px'). */
 export type DraggableWindowUnits = {
@@ -102,9 +102,9 @@ export type DraggableWindow = DraggableWindowConfig & {
   /** Whether the window is on top of its layer (app or debug windows) */
   isActive: boolean;
   /** Only a mounted window has one (not a closed one, or one suspended over a scene change) */
-  windowCMP?: TCMP;
+  windowCMP?: CMPHandle;
   /** The backdrop's CMP, while it's mounted with one */
-  backDropCMP?: TCMP;
+  backDropCMP?: CMPHandle;
   /** The content its last open passed */
   content?: DraggableWindowContent;
   /** The `onClose` its last open passed */
@@ -207,7 +207,7 @@ export type OpenDraggableWindowProps = {
 export type DraggableWindowKindOpts = {
   /** Builds a window's content from its `data`, for the opens without `content` (eg. the restore
    * from LS after a reload) */
-  content?: (data?: DraggableWindowData) => TCMP;
+  content?: (data?: DraggableWindowData) => CMPHandle;
   /** Runs after a window of the kind closes (or is removed), unless the window has its own */
   onClose?: (id: string) => void;
   /** For a window flagged `closeOnSceneChange`: on a scene change the window stays open (rebuilt
@@ -267,11 +267,11 @@ export type DragSession = {
 export type DraggableWindowRuntime = {
   content?: DraggableWindowContent;
   onClose?: () => void;
-  windowCMP?: TCMP;
-  backDropCMP?: TCMP;
-  headerCMP?: TCMP;
-  titleCMP?: TCMP;
-  contentWrapperCMP?: TCMP;
+  windowCMP?: CMPHandle;
+  backDropCMP?: CMPHandle;
+  headerCMP?: CMPHandle;
+  titleCMP?: CMPHandle;
+  contentWrapperCMP?: CMPHandle;
   session: DragSession | null;
   /** The z-index last written, so a restack only writes the windows whose index changed */
   zIndex: number;

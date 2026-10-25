@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { TCMP } from '../../ui/core/CMPTypes';
+import type { CMPHandle } from '../../ui/core/CMPTypes';
 import type { AppData } from './AppData';
 import type { SceneData } from './Scene';
 
@@ -150,7 +150,7 @@ const setScene = (id: string, body?: () => Promise<void> | void, extra?: Partial
   sceneFiles[id] = sceneFnOf(id, body);
 };
 
-const loaderContainer = { remove: vi.fn() } as unknown as TCMP & { remove: typeof vi.fn };
+const loaderContainer = { remove: vi.fn() } as unknown as CMPHandle & { remove: typeof vi.fn };
 
 beforeAll(async () => {
   createRootScene();

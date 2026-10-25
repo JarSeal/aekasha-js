@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented
+Status: in progress | Phases 0-1 implemented
 Category: UI, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
@@ -607,7 +607,7 @@ As built (section 2, 2026-10-25; one-off probes in the scratchpad, not committed
     F6 / Shift+F6 cycle the windows and the debug key moves (D8).
   - Not run: Edge (Chromium) and Windows.
 
-### Phase 1: the move and the names (no behaviour change)
+### Phase 1: the move and the names (no behaviour change) — done
 
 1. Section 1, the move (D2): the folders, `git mv`, the scratchpad import rewrite, the per-folder
    layout rules, the Hub's stand-in paths, every doc path. `yarn test`, `tsc`, `yarn hub:build`
@@ -642,6 +642,21 @@ As built (section 1, 2026-10-25):
   baselines only shift gzip sizes by 1-6 bytes (no raw size or file key changes); no debug code in
   production. Recorded with `--update`. `yarn verify:scenes`: 104 passed against Phase 0's
   baselines.
+
+As built (section 2, 2026-10-25):
+
+- The declarations carry the new names (`core/CMPTypes.ts`, `forms/DropDown.ts`), and the old
+  ones are aliases after them (`export type TCMP = CMPHandle;`, a summary line and
+  `@deprecated Use {@link CMPHandle}. Removed in engine 6.0.0.`), both on `aekasha/ui`.
+- A word-boundary rename over every file under `src/`, `hub/_assets/ts/` and `hub/pages/` that
+  named one (39 files: the engine, the app's two examples, the Hub's component library script and
+  the UI kit guide's `api:` links), then Prettier and ESLint's JSDoc fix (no blank line before
+  `@deprecated`). Only the aliases, the entry and the kit's `CLAUDE.md` name the old ones.
+- p622's UI kit item lists the aliases to remove, p800 D12 points at D3's table, and p355 names
+  `DropDown`. `CHANGELOG.md` and the `_DONE_` plans keep the old names.
+- `tsc` (both), ESLint, `yarn test` and `yarn hub:build` (947 names, 100 % documented, no
+  warning) pass. `verify:baselines`: the 12 new names added to `aekasha/ui`, the bundle baselines
+  unchanged (types only, so `verify:scenes` wasn't run again); recorded with `--update`.
 
 ### Phase 2: the kit without the boot
 

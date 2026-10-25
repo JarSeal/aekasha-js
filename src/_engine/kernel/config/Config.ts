@@ -1,4 +1,4 @@
-import type { TCMP } from '../../ui/core/CMPTypes';
+import type { CMPHandle } from '../../ui/core/CMPTypes';
 import type {
   PhysicsBackgroundBehavior,
   PhysicsEngine,
@@ -276,7 +276,7 @@ export type AppConfig = {
    */
   draggableWindows?: {
     [kind: string]: Partial<DraggableWindow> & {
-      contentFn?: (data?: { [key: string]: unknown }) => TCMP;
+      contentFn?: (data?: { [key: string]: unknown }) => CMPHandle;
     };
   };
 };
