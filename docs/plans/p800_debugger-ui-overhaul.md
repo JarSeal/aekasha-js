@@ -589,6 +589,15 @@ plan as written.
 
 ### p803 — UI kit structure and core components
 
+Written: `p803_ui-kit-structure-and-core.md` (draft, 2026-10-25; its decisions proposed for
+review). What it changes here once confirmed: the type names are `CMPHandle`, `CMPProps`, … (its
+D3, not D12's `Cmp`); modal dialogs keep the window code with a focus trap and `inert` inside the
+HUD root, not `<dialog>.showModal()` (its D7: the top layer and a document-wide `inert` break an
+embed); non-modal overlays go in the top layer (the Popover API); one `aekasha/ui` entry (its
+D12); a new `yarn verify:ui` (its D11); the percentage pie, the debugger list and the tab buttons
+move to p805 with the context menu, which opens p803's menu (its D1). What follows is the sketch
+as written.
+
 - The layout: `ui/core/` (CMP, HUD root, icons), `ui/components/` (§4.2), `ui/overlays/` (windows,
   dialogs, popover, tooltip, toaster, context menu), `ui/forms/` (p804), `ui/data/` (p805),
   `ui/game/` (p808), `ui/styles/`; a move codemod as p608's if the move is large. One coding
