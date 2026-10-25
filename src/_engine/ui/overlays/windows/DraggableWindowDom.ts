@@ -141,7 +141,7 @@ export const syncContentTabStop = ({ contentWrapperCMP }: DraggableWindowRuntime
  */
 export const renderTitle = (titleCMP: CMPHandle, config: DraggableWindowConfig) => {
   titleCMP.updateText(config.title);
-  if (config.icon) titleCMP.elem.insertAdjacentHTML('afterbegin', getSvgIcon(config.icon, 'small'));
+  if (config.icon) titleCMP.elem.insertAdjacentHTML('afterbegin', getSvgIcon(config.icon));
   if (config.title) {
     titleCMP.elem.removeAttribute('aria-hidden');
   } else {

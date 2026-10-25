@@ -2887,7 +2887,8 @@
       "getSvgIcon": "Function",
       "registerBuiltInIcons": "Function",
       "registerIcon": "Function",
-      "SvgIconKey": "TypeAlias"
+      "SvgIconKey": "TypeAlias",
+      "SvgIconSize": "TypeAlias"
     },
     "src/_engine/ui/core/Motion.ts": {
       "getMotionFactor": "Function"
@@ -4122,6 +4123,7 @@
       "PopoverProps",
       "SceneTargetResolver",
       "SvgIconKey",
+      "SvgIconSize",
       "TAnimChain",
       "TAnimState",
       "TAttr",

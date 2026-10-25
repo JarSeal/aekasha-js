@@ -79,7 +79,7 @@ export const _debuggerListCMP = (def: DebuggerListDef): CMPHandle => {
     li.add({
       html: `<button class="listItemWithId"${item.tooltip ? ` title="${esc(item.tooltip)}"` : ''}>
         ${item.subTitle ? `<span class="itemId">${esc(item.subTitle)}</span>` : ''}
-        ${item.icon ? getSvgIcon(item.icon, 'small') : ''}
+        ${item.icon ? getSvgIcon(item.icon, 'sm') : ''}
         ${item.badge ? `<span>${esc(item.badge)}</span>` : ''}
         ${item.description ? `<span>${titleHtml}<span style="opacity:0.7">${esc(item.description)}</span></span>` : titleHtml}
         ${item.suffix ? `<span>${esc(item.suffix)}</span>` : ''}
@@ -99,7 +99,7 @@ export const _debuggerListCMP = (def: DebuggerListDef): CMPHandle => {
       }
       const icon = value ? toggle.icon : toggle.iconOff || toggle.icon;
       group.add({
-        html: `<button class="debuggerListToggle${value ? ' isOn' : ''}" data-toggle="${i}" aria-pressed="${value}" title="${esc(toggle.title)}">${getSvgIcon(icon, 'small')}</button>`,
+        html: `<button class="debuggerListToggle${value ? ' isOn' : ''}" data-toggle="${i}" aria-pressed="${value}" title="${esc(toggle.title)}">${getSvgIcon(icon, 'sm')}</button>`,
         onClick: (_, cmp) => {
           const hadFocus = document.activeElement === cmp.elem;
           toggle.fn(item.itemId, !value);

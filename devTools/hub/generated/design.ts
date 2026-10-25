@@ -123,7 +123,7 @@ const readIcons = (diag: HubDiagnostics): BuiltInIcon[] => {
 };
 
 // The groups: each token's table, by its name (`--aek-` left out)
-const TYPE_PREFIXES = ['font-', 'line-height-', 'numeric-'];
+const TYPE_PREFIXES = ['font-', 'line-height-', 'numeric-', 'icon-size-'];
 /** A delay (`--aek-tooltip-delay`): in the motion section, but not scaled by `--aek-motion` */
 const isDelay = (role: string) => role.endsWith('-delay');
 const isFocusSize = (role: string) => role === 'focus-ring-width' || role === 'focus-ring-offset';
@@ -306,6 +306,7 @@ const renderType = (tokens: DesignTokens | null, md: MarkdownIt, env: HubMarkdow
   );
   const sizes = rootTokens(tokens, (role) => role.startsWith('font-size-'));
   const others = rootTokens(tokens, (role) => /^(font-weight|line-height|numeric)-/.test(role));
+  const iconSizes = rootTokens(tokens, (role) => role.startsWith('icon-size-'));
   const sample = (style: string, text = 'Ækasha 0O 1lI 2468') =>
     `<span class="hubTypeSample" style="${escapeHtml(style)}">${text}</span>`;
   return [
@@ -333,6 +334,21 @@ const renderType = (tokens: DesignTokens | null, md: MarkdownIt, env: HubMarkdow
           px(size),
           px(toBasePx(tokens.compact.get(name))),
           size === null ? '—' : sample(`font-size: ${size}px`, 'The quick brown fox, 1234.5'),
+        ];
+      }),
+    }),
+    heading(md, env, 'Icon sizes'),
+    renderTable({
+      head: ['Token', 'Default', 'Compact', 'Sample'],
+      rows: iconSizes.map((name) => {
+        const size = toBasePx(tokens.root.get(name));
+        return [
+          code(name),
+          px(size),
+          px(toBasePx(tokens.compact.get(name))),
+          size === null
+            ? '—'
+            : `<span class="hubIconSizeSample" style="width: ${size}px; height: ${size}px"></span>`,
         ];
       }),
     }),

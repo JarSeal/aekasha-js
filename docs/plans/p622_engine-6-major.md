@@ -88,6 +88,9 @@ ecsWorld?)`: optional positional parameters, where the coding standard asks for 
     `TClassAction`, `TAnimChain` and `TAnimState` (each → its `CMP` name) at the end of
     `ui/core/CMPTypes.ts`, and `TDropDown` (→ `DropDown`) in `ui/forms/DropDown.ts`. Removed
     here, with their rows in the migration page (a rename, the codemod's job).
+  - `getSvgIcon`'s `size` value `'small'` (p803 D5, deprecated in engine 5.12.0: `'sm'`), and the
+    `uiIcon` / `smallIcon` classes it writes next to `aekIcon` for the debugger's styles (p806's
+    restyle drops them).
 - **From p618 (its D3):**
   - the names on `aekasha/debug` that only the dev files protocol's two sides and the scene runner
     use (deprecated in engine 5.9.0): the dev server's route, header and meta constants

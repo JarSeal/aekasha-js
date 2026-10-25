@@ -111,12 +111,9 @@ $collapseTime: var(--aek-motion-base);
     text-overflow: ellipsis;
   }
 
-  // Until the icons' restyle (p803 Phase 5 section 5: .aekIcon)
-  :where(.aekWindow__title .uiIcon) {
-    display: inline-block;
-    width: 1em;
+  // The title's icon (getSvgIcon: 1em, following the title)
+  :where(.aekWindow__title .aekIcon) {
     margin-right: var(--aek-space-2);
-    vertical-align: -0.125em;
   }
 
   :where(.aekWindow__button) {

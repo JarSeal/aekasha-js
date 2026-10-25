@@ -309,7 +309,7 @@ const playTools = () => {
         ...buttonBaseClasses,
         ...(isProfilerWindowOpen() ? [styles.active, 'onScreenToolActive'] : []),
       ],
-      html: () => `<button>${getSvgIcon('speedometer', 'small')}</button>`,
+      html: () => `<button>${getSvgIcon('speedometer', 'sm')}</button>`,
       attr: { title: 'Profiler (F8, open / close)' },
       onClick: (e) => {
         e.stopPropagation();
@@ -348,7 +348,7 @@ const switchTools = () => {
 
   const useDebugCamBtn = CMP({
     class: useDebugCamBtnClasses,
-    html: () => `<button>${getSvgIcon('aspectRatio', 'small')}</button>`,
+    html: () => `<button>${getSvgIcon('aspectRatio', 'sm')}</button>`,
     attr: { title: 'Toggle between debug camera and app camera' },
     onClick: (e) => {
       e.stopPropagation();
@@ -358,7 +358,7 @@ const switchTools = () => {
 
   // Camera dropdown (the o shortcut)
   const selectCamDropDown = createOnScreenDropDown('CAMERA', {
-    icon: getSvgIcon('camera', 'small'),
+    icon: getSvgIcon('camera', 'sm'),
     title: 'Change camera (O)',
     placeholder: 'No App Camera',
     // The app camera is not the one rendering while the debug camera is active
@@ -377,7 +377,7 @@ const switchTools = () => {
 
   // Scene dropdown (the p shortcut)
   const selectSceneDropDown = createOnScreenDropDown('SCENE', {
-    icon: getSvgIcon('easel', 'small'),
+    icon: getSvgIcon('easel', 'sm'),
     title: 'Change scene (P)',
     placeholder: 'No scene',
     options: getSceneOptions,
@@ -392,7 +392,7 @@ const switchTools = () => {
   }
   const toggleLightHelpersBtn = CMP({
     class: toggleLightHelpersBtnClasses,
-    html: () => `<button>${getSvgIcon('lamp', 'small')}</button>`,
+    html: () => `<button>${getSvgIcon('lamp', 'sm')}</button>`,
     attr: { title: 'Hide / show all light helpers' },
     onClick: (e) => {
       e.stopPropagation();
@@ -408,7 +408,7 @@ const switchTools = () => {
   }
   const toggleCameraHelpersBtn = CMP({
     class: toggleCameraHelpersBtnClasses,
-    html: () => `<button>${getSvgIcon('cameraReels', 'small')}</button>`,
+    html: () => `<button>${getSvgIcon('cameraReels', 'sm')}</button>`,
     attr: { title: 'Hide / show all camera helpers' },
     onClick: (e) => {
       e.stopPropagation();
@@ -429,7 +429,7 @@ const switchTools = () => {
         ? [styles.active, 'onScreenToolActive']
         : []),
     ],
-    html: () => `<button>${getSvgIcon('rocket', 'small')}</button>`,
+    html: () => `<button>${getSvgIcon('rocket', 'sm')}</button>`,
     attr: { title: 'Hide / show all physics wireframes' },
     onClick: (e) => {
       e.stopPropagation();
@@ -476,7 +476,7 @@ const undoRedoTools = () => {
 
   const undoBtn = CMP({
     class: [styles.onScreenTool, 'onScreenTool'],
-    html: () => `<button${!canUndo() ? ' disabled' : ''}>${getSvgIcon('undo', 'small')}</button>`,
+    html: () => `<button${!canUndo() ? ' disabled' : ''}>${getSvgIcon('undo', 'sm')}</button>`,
     attr: { title: 'Undo (Ctrl+Z / ⌘Z)' },
     onClick: (e) => {
       e.stopPropagation();
@@ -487,7 +487,7 @@ const undoRedoTools = () => {
 
   const redoBtn = CMP({
     class: [styles.onScreenTool, 'onScreenTool'],
-    html: () => `<button${!canRedo() ? ' disabled' : ''}>${getSvgIcon('redo', 'small')}</button>`,
+    html: () => `<button${!canRedo() ? ' disabled' : ''}>${getSvgIcon('redo', 'sm')}</button>`,
     attr: { title: 'Redo (Ctrl+Shift+Z / ⇧⌘Z)' },
     onClick: (e) => {
       e.stopPropagation();

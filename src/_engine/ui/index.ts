@@ -136,6 +136,6 @@ export {
   xBoldIcon,
 } from './core/icons/BuiltInIcons';
 export { getSvgIcon, registerBuiltInIcons, registerIcon } from './core/icons/SvgIcon';
-export type { BuiltInIconName, SvgIconKey } from './core/icons/SvgIcon';
+export type { BuiltInIconName, SvgIconKey, SvgIconSize } from './core/icons/SvgIcon';
 export { createTooltip } from './overlays/Tooltip';
 export type { Tooltip, TooltipProps } from './overlays/Tooltip';

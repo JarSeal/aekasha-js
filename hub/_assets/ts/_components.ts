@@ -330,7 +330,7 @@ const createDropDownPanel = () => {
   };
   row('With a value', createDemoDropDown({ title: 'Colour' }));
   row('No value: the placeholder', createDemoDropDown({ placeholder: 'Pick one' }, null));
-  row('With an icon', createDemoDropDown({ icon: getSvgIcon('camera', 'small') }));
+  row('With an icon', createDemoDropDown({ icon: getSvgIcon('camera', 'sm') }));
   row('Opens upward', createDemoDropDown({ placement: 'top' }));
   row('Disabled', createDemoDropDown({ disabled: true }));
   row(
@@ -525,18 +525,26 @@ const ICON_SAMPLES: BuiltInIconName[] = ['gear', 'info', 'warning', 'alert', 'un
 
 /** HTML into the page itself (`<html>` is a kit root): an icon needs no HUD root */
 const initIconsDemo: Demo = (box) => {
-  const sized = addGroup(box, 'In a 1.5rem box the page sizes');
+  const icons = addGroup(box, 'At 1em: they follow their text');
   for (const name of ICON_SAMPLES) {
     const cell = document.createElement('span');
     cell.className = 'hubDemoIcon';
     cell.title = name;
     cell.innerHTML = getSvgIcon(name);
-    sized.append(cell);
+    icons.append(cell);
   }
-  const inText = addGroup(box, 'In a button, sized 1em by the page');
+  const sizes = addGroup(box, 'The sizes: sm, md and lg (--aek-icon-size-*)');
+  for (const size of ['sm', 'md', 'lg'] as const) {
+    const cell = document.createElement('span');
+    cell.className = 'hubDemoIcon';
+    cell.title = size;
+    cell.innerHTML = getSvgIcon('gear', size);
+    sizes.append(cell);
+  }
+  const inText = addGroup(box, 'In a button, 1em with its text');
   const button = addButton(inText, '', () => {});
   button.classList.add('hubDemoIconButton');
-  button.innerHTML = `${getSvgIcon('undo', 'small')}Undo`;
+  button.innerHTML = `${getSvgIcon('undo')}Undo`;
   const missing = addGroup(box, 'Not registered (a warning in the console, once)');
   const cell = document.createElement('span');
   cell.className = 'hubDemoIcon';

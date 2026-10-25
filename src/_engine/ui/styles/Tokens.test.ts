@@ -98,9 +98,11 @@ describe('tokens.css', () => {
     expect(kitRoot.decls.get('font-family')).toBe('var(--aek-font-sans)');
   });
 
-  it('the compact density sets the type and space scales only, all of them', () => {
+  it('the compact density sets the type (its icon sizes too) and space scales only, all of them', () => {
     const scale = (rule: TokenRule) =>
-      [...rule.decls.keys()].filter((name) => /^--aek-(font-size|space)-/.test(name)).sort();
+      [...rule.decls.keys()]
+        .filter((name) => /^--aek-(font-size|icon-size|space)-/.test(name))
+        .sort();
     expect([...compact.decls.keys()].sort()).toEqual(scale(kitRoot));
   });
 });

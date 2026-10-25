@@ -33,7 +33,45 @@
   }
 }
 
-// Unlayered until the icons' restyle (p803 Phase 5: .aekIcon and its size tokens)
+// The icons (getSvgIcon, p803 D5): 1em square, following their text, or a size from the type
+// scale. The SVG keeps its aspect (the built-ins are square).
+@layer aek.base {
+  :where(.aekIcon) {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 1em;
+    vertical-align: -0.125em;
+  }
+
+  :where(.aekIcon[data-size='sm']) {
+    width: var(--aek-icon-size-sm);
+  }
+
+  :where(.aekIcon[data-size='md']) {
+    width: var(--aek-icon-size-md);
+  }
+
+  :where(.aekIcon[data-size='lg']) {
+    width: var(--aek-icon-size-lg);
+  }
+
+  :where(.aekIcon svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  // In the debugger's roots (data-aek-debugger, p803 D7) the icon is the old inline box its own
+  // .uiIcon styles size (an SVG's intrinsic size where they set none) until p806 restyles them
+  :where([data-aek-debugger] .aekIcon, [data-aek-debugger].aekIcon) {
+    display: inline;
+    flex-shrink: 1;
+    width: auto;
+    vertical-align: baseline;
+  }
+}
+
+// The debugger's icon class (getSvgIcon writes it too), unlayered as its styles are: they size
+// .uiIcon themselves until p806 restyles them
 .uiIcon {
   svg {
     display: inline-block;

@@ -297,8 +297,15 @@ element (`--aek-toast-max-width`, …), so a stylesheet can change them too.
 ## Icons
 
 [`registerIcon`](api:registerIcon) names an SVG and [`getSvgIcon`](api:getSvgIcon) returns it as
-HTML, in the text colour. A window's `icon` takes a registered name, a drop-down's `icon` the
-HTML. The kit has about 50 built-in icons (`gearIcon`, `infoIcon`, … on `aekasha/ui`).
+HTML, in the text colour: `1em` square, so it follows the text around it, or at a size from the
+type scale (`'sm'`, `'md'`, `'lg'`: `--aek-icon-size-*`). A window's `icon` takes a registered
+name, a drop-down's `icon` the HTML. The kit has about 50 built-in icons (`gearIcon`, `infoIcon`,
+… on `aekasha/ui`).
+
+```ts
+const save = CMP({ tag: 'button', html: `${getSvgIcon('fileCode')} Save` }); // 1em, with its text
+const badge = CMP({ html: getSvgIcon('shield', 'lg') }); // 20 px at the defaults
+```
 
 ::: note A production build registers no icons
 The engine registers the built-in icons for its debug tools only (debug and prod test mode).

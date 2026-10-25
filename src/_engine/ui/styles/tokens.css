@@ -72,6 +72,10 @@
     --aek-font-weight-medium: 500;
     --aek-font-weight-semibold: 600;
     --aek-font-weight-bold: 700;
+    /* Icon sizes (getSvgIcon's size; without one an icon is 1em: it follows its text) */
+    --aek-icon-size-sm: calc(var(--aek-base) * 12 / 14);
+    --aek-icon-size-md: calc(var(--aek-base) * 16 / 14);
+    --aek-icon-size-lg: calc(var(--aek-base) * 20 / 14);
     --aek-line-height-tight: 1.2;
     --aek-line-height-base: 1.45;
     --aek-line-height-relaxed: 1.65;
@@ -132,7 +136,8 @@
     }
   }
 
-  /* The compact density (the debugger's): the type and space scales only */
+  /* The compact density (the debugger's): the type scale (the icon sizes in it) and the space scale
+     only */
   :where([data-aek-density='compact']) {
     --aek-font-size-xs: calc(var(--aek-base) * 10 / 14);
     --aek-font-size-sm: calc(var(--aek-base) * 11 / 14);
@@ -140,6 +145,9 @@
     --aek-font-size-lg: calc(var(--aek-base) * 13 / 14);
     --aek-font-size-xl: calc(var(--aek-base) * 16 / 14);
     --aek-font-size-2xl: calc(var(--aek-base) * 20 / 14);
+    --aek-icon-size-sm: calc(var(--aek-base) * 11 / 14);
+    --aek-icon-size-md: calc(var(--aek-base) * 13 / 14);
+    --aek-icon-size-lg: calc(var(--aek-base) * 16 / 14);
 
     --aek-space-1: calc(var(--aek-base) * 2 / 14);
     --aek-space-2: calc(var(--aek-base) * 3 / 14);

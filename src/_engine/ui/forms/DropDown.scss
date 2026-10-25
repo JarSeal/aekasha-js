@@ -49,6 +49,11 @@
     width: 1.25em;
   }
 
+  // A getSvgIcon icon: its SVG has the trigger's size, whatever the icon's own
+  :where(.aekDropDownTrigger .aekIcon) {
+    width: auto;
+  }
+
   :where(.aekDropDownTrigger svg path) {
     fill: currentColor;
   }

@@ -26,7 +26,7 @@ export type DropDownProps = {
   onChange: (value: string) => void;
   /** The trigger's text when no option matches the value. */
   placeholder?: string;
-  /** Raw HTML of the trigger's icon (eg. `getSvgIcon('camera', 'small')`). */
+  /** Raw HTML of the trigger's icon (eg. `getSvgIcon('camera')`), 1.25em wide. */
   icon?: string;
   /** The trigger's tooltip and the list's accessible name. */
   title?: string;

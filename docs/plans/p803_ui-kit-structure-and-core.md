@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-5 implemented
 Category: UI, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
@@ -1103,7 +1103,7 @@ As built (section 3, 2026-10-25):
   the embed (the tooltip) and, in the app's build of the profile's scene, `uiKitEmbed.js`
   +1.0 kB and a new `uiKitEmbed.css` (0.3 kB: the tooltip's styles).
 
-### Phase 5: the existing pieces restyled and accessible
+### Phase 5: the existing pieces restyled and accessible — done
 
 One section per piece, each with its demo boxes' screenshots in both themes for review and
 `verify:ui` clean for it:
@@ -1384,6 +1384,54 @@ As built (section 4, 2026-10-25):
 - Docs: the kit's `CLAUDE.md` (the toaster, the closed "Left for p803" item, the embed's check),
   `devTools/verify/CLAUDE.md` (the head check, `expectStyle`, the capture's hidden elements), the
   UI kit guide's toasts, the component library's toaster text.
+
+As built (section 5, 2026-10-25):
+
+- `getSvgIcon(name, size?: SvgIconSize | 'small')` writes `<span class="aekIcon uiIcon">`, with
+  `data-size` for a size and `smallIcon` at `'sm'` (the debugger's classes until p806); `'small'`
+  is `'sm'`, deprecated (its `@param` says so: a union member can't carry `@deprecated`), and
+  p622's UI kit item lists it with the two debugger classes. `SvgIconSize` (`'sm' | 'md' | 'lg'`) is
+  on `aekasha/ui` (a public signature names it). The engine's 14 `'small'` calls and the Hub's are
+  `'sm'` now; the window title's icon has no size (`1em`, following the title).
+- `kit.scss`' `aek.base`: `.aekIcon` is an inline block `1em` wide (the SVG keeps its square
+  aspect), `vertical-align: -0.125em`, and `[data-size]` takes `--aek-icon-size-sm` / `-md` /
+  `-lg` (new in `tokens.css`: 12 / 16 / 20 px, and 11 / 13 / 16 in the compact block: D5 puts them
+  in the type scale's group, so the density re-declares them; `Tokens.test.ts`' density check
+  counts `icon-size` with `font-size` and `space`). The design document's type section has an
+  "Icon sizes" table (`design.ts`: `icon-size-` in `TYPE_PREFIXES`, a square sample per size).
+  The unlayered `.uiIcon svg` rule stays for the debugger.
+- **The debugger keeps its icons** (found by a before / after screenshot of the drawer and the
+  on-screen tools): the drawer's tab buttons never sized their icon (the SVG's own 16 px did), so
+  the kit's `1em` shrank them. Inside `[data-aek-debugger]` (section 2's marker) the base layer
+  gives `.aekIcon` the old inline, auto-width box, after the size rules, and the debugger's own
+  unlayered `.uiIcon` rules win as before: 0 changed pixels after (`.cache/p803/phase5s5/`, local;
+  a scratchpad script).
+- The drop-down's trigger sizes its icon (`.aekDropDownTrigger .aekIcon { width: auto }`, its SVG
+  1.25em); its `icon` prop's example is `getSvgIcon('camera')`.
+- The component library's icons box: icons at `1em`, the three sizes, the "Undo" button with an
+  icon at `1em` (the page no longer sizes `.uiIcon`), and the unregistered name.
+- Tests: `SvgIcon.test.ts` (new, 4: `aekIcon` without a size, `data-size` and `smallIcon`, `'small'`
+  as `'sm'`, `??` with one warning).
+- Docs: `getSvgIcon`'s JSDoc (its parts, its custom properties, an `lg` example), the kit's
+  `CLAUDE.md` (the icons; its "Left for p803" item, the last, gone; the 6.0.0 list), the UI kit
+  guide's icons, the component library's icons text, p622.
+- The section's checks: `yarn test` (168 files, 1385 tests), `tsc` (both), ESLint,
+  `yarn hub:build` (961 names, 100 % documented), `verify:embed` (all seven), `yarn sbp --profile
+  all` (every budget within), `verify:baselines` recorded (`SvgIconSize`; the kit's base CSS
+  +0.1 kB gzip in `index.css`, `banner.css` and `uiKit.css`). `yarn verify:ui` (every piece): every
+  keyboard script passes, no violation; the icons box's two shots differ (its new row), to
+  re-record after review.
+
+The phase's verification (2026-10-25, at its end): `yarn verify:scenes`, 104 passed against
+Phase 0's baselines (none changed: the scene runner's snapshots are the canvas alone, so the
+"baselines change here on purpose" above didn't happen); each section's checks above (`yarn test`,
+`tsc`, ESLint, `yarn hub:build`, `verify:embed`, `yarn sbp --profile all`, `verify:baselines`,
+`yarn verify:ui` with an empty allow list). For Phase 6's size check: `DraggableWindow.ts` is 860
+lines (833 after section 1's split into `DraggableWindowDom.ts` and `DraggableWindowKeys.ts`,
+then section 2's dialog layers; its header says why it's over 800), `Toaster.ts` 705,
+`DropDown.ts` 422; the `uiKit` embed's `uiKitEmbed.js` 16.1 kB of 17 KiB and `uiKitEmbed.css`
+3.2 of 4 KiB; the changelog's restyle note (Phase 9) must name the toaster's class rename, the
+layered styles, the window and dialog z-order and `--aek-z-dialog`'s new value, and Shift+F7.
  `verify:scenes`
   wasn't run: its snapshots are the canvas alone, which no kit style reaches (Phase 0); it runs at
   the phase's end.

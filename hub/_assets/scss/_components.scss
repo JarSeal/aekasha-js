@@ -85,15 +85,17 @@
   }
 }
 
-// The kit sizes no icon (`.uiIcon svg` fills its box's width): its user does, as here
+// An icon demo's cell: an icon is 1em or its size token's (p803 D5), centred in the cell
 .hubDemoIcon {
   display: inline-flex;
-  width: 1.5rem;
+  min-width: 1.5rem;
   justify-content: center;
 }
 
-.hubDemoIconButton .uiIcon {
-  width: 1em;
+.hubDemoIconButton {
+  display: inline-flex;
+  gap: 0.4em;
+  align-items: center;
 }
 
 // A demo window's content: the page's, as an app's content is the app's (the HUD root is outside
