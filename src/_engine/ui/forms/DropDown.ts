@@ -1,5 +1,6 @@
 import type { CMPHandle } from '../core/CMPTypes';
 import { CMP, classes } from '../core/CMP';
+import { pushOverlay, swallowNextKeyUp } from '../overlays/OverlayStack';
 import './DropDown.scss';
 import '../styles/kit.scss';
 
@@ -56,7 +57,7 @@ export type DropDown = {
   cmp: CMPHandle;
   /** Opens the list on the current value and focuses it. */
   open: () => void;
-  /** Closes the list without a change. */
+  /** Closes the list without a change, giving the focus back when it was in the list. */
   close: () => void;
   /** Opens the list, or closes it when it's open. */
   toggle: () => void;
@@ -86,24 +87,16 @@ const NAV_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 const resolve = <T>(value: T | (() => T)) =>
   typeof value === 'function' ? (value as () => T)() : value;
 
-/** Swallows the keyup of the key that closed a list, so a KEY_UP binding of that key (eg. an
- * app's Escape) doesn't fire right after. */
-const swallowNextKeyUp = (key: string) => {
-  const onKeyUp = (e: KeyboardEvent) => {
-    window.removeEventListener('keyup', onKeyUp, true);
-    if (e.key === key) e.stopImmediatePropagation();
-  };
-  window.addEventListener('keyup', onKeyUp, true);
-};
-
 /**
  * Creates a dropdown: a trigger button with an icon, the current option's label and a caret, and
  * an in-page list (not a native select: a native list owns the keyboard while it is open, and
  * Chrome on Windows commits the highlighted option when it is closed with Escape).
  * A click on the trigger toggles the list. In the list, arrow keys, Home and End move, Enter,
  * Space or a click picks, and Escape, Tab or a click outside closes it without a change. The
- * list's keys reach no key binding (their keyups included). The drop-down isn't added anywhere:
- * add its `cmp` where it goes.
+ * list's keys reach no key binding (their keyups included). The open list is on the kit's overlay
+ * stack: in a dialog, one Escape closes the list and the next the dialog. A pick, Escape or Tab
+ * gives the focus back to what had it when the list opened (the trigger, opened by its keys).
+ * The drop-down isn't added anywhere: add its `cmp` where it goes.
  * @example
  * ```ts
  * const quality = createDropDown({
@@ -121,6 +114,8 @@ const swallowNextKeyUp = (key: string) => {
 export const createDropDown = (props: DropDownProps): DropDown => {
   const placement = props.placement || 'bottom';
   let list: CMPHandle | null = null;
+  /** Removes the open list's overlay stack entry */
+  let removeOverlay: ((returnFocus?: boolean) => void) | null = null;
 
   const getOptions = () => resolve(props.options);
   const getValue = () => resolve(props.value ?? null);
@@ -129,6 +124,9 @@ export const createDropDown = (props: DropDownProps): DropDown => {
     class: classes(ROOT_CLASS, `${ROOT_CLASS}_${placement}`, props.className),
     onRemoveCmp: () => {
       list = null;
+      // Removed with its list open (eg. in a closing dialog): the dialog returns the focus
+      removeOverlay?.(false);
+      removeOverlay = null;
     },
   });
 
@@ -163,11 +161,15 @@ export const createDropDown = (props: DropDownProps): DropDown => {
     }
   };
 
-  const close = () => {
+  /** Closes the list; `returnFocus` false when the focus is moving elsewhere (a focusout) */
+  const close = (returnFocus = true) => {
     const openList = list;
     list = null; // first: removing the focused list fires its focusout
     if (!openList) return;
     trigger.updateAttr({ 'aria-expanded': 'false' });
+    // Before the list goes: the focus is still in it
+    removeOverlay?.(returnFocus);
+    removeOverlay = null;
     openList.remove();
     props.onClose?.();
   };
@@ -216,7 +218,7 @@ export const createDropDown = (props: DropDownProps): DropDown => {
           type: 'focusout',
           fn: (e) => {
             const next = (e as FocusEvent).relatedTarget as Node | null;
-            if (!next || !newList.elem.contains(next)) close();
+            if (!next || !newList.elem.contains(next)) close(false);
           },
         },
       ],
@@ -248,6 +250,7 @@ export const createDropDown = (props: DropDownProps): DropDown => {
         swallowNextKeyUp(e.key);
         choose(index);
       } else if (e.key === 'Escape') {
+        // The overlay stack takes Escape first under the HUD root; this is a list outside it
         swallowNextKeyUp(e.key);
         close();
       } else if (e.key === 'Tab') {
@@ -278,6 +281,8 @@ export const createDropDown = (props: DropDownProps): DropDown => {
     list = newList;
     trigger.updateAttr({ 'aria-expanded': 'true' });
     highlight(index);
+    // Before the focus moves in: the entry returns it where it was
+    removeOverlay = pushOverlay({ elem: newList.elem, close: () => close() });
     newList.elem.focus({ preventScroll: true });
     props.onOpen?.();
   };
@@ -286,5 +291,5 @@ export const createDropDown = (props: DropDownProps): DropDown => {
 
   refresh();
 
-  return { cmp: root, open, close, toggle, isOpen: () => Boolean(list), refresh };
+  return { cmp: root, open, close: () => close(), toggle, isOpen: () => Boolean(list), refresh };
 };

@@ -97,6 +97,8 @@ describe('describeStep', () => {
   it('names each kind of step in a line', () => {
     expect(describeStep({ button: 0 })).toBe('button 1');
     expect(describeStep({ press: 'Shift+Tab' })).toBe('press Shift+Tab');
+    expect(describeStep({ focusBox: 'Default' })).toBe('focusBox "Default"');
+    expect(describeStep({ expectFocusBox: 'Default' })).toBe('expectFocusBox "Default"');
     expect(describeStep({ expectAttr: '#t', name: 'aria-expanded', value: null })).toBe(
       'expectAttr #t aria-expanded=absent'
     );

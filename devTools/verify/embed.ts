@@ -23,8 +23,10 @@
  *   toast and the open drop-down list inside the container; the window at its px position from
  *   the container's corner, the dialog centred in it, the backdrop covering it and not the page;
  *   the window's, the toast's and the list's font sizes the same at both roots, their font IBM
- *   Plex Sans (the scene opts in, p801 D8) and its face loaded; with the dialog closed, a drag of the window's title moving it by the pointer's distance, and the window
- *   inside the container after the target shrinks.
+ *   Plex Sans (the scene opts in, p801 D8) and its face loaded; Escape on the host page leaving
+ *   the dialog open and Escape inside it closing it (p803 D7); with the dialog closed, a drag of
+ *   the window's title moving it by the pointer's distance, and the window inside the container
+ *   after the target shrinks.
  *
  * It builds the profiles first (`yarn sbp`'s build, `dist-embed/<id>/`) unless `--no-build`,
  * serves the page and the build from its own static server (a free port on localhost: the page at `/`, the build
@@ -76,6 +78,8 @@ const UI_KIT = {
   // A dialog has no collapse button: its header's one button closes it
   dialogClose: '#uiKitEmbedDialog header button',
   backdrop: '.uiKitEmbedBackdrop',
+  // The host page's own button (embedHost.html), outside the HUD root
+  hostButton: 'body > p > button',
   toast: '#uiKitEmbedToasts .toast',
   list: '.uiKitEmbedList',
   listItem: '.uiKitEmbedList li',
@@ -341,14 +345,22 @@ const checkUiKitAtRoot = async (
       if (!(await loadedPlex()).length) problems.push(`${UI_KIT_FONT_FAMILY} never loaded`);
       expectNoStyleChange(problems, 'while mounted', before, await styles());
 
-      // The dialog closed by its button, so the window is no longer under its backdrop
-      await page.click(UI_KIT.dialogClose);
+      // Escape on the host page is the page's (p803 D7: the overlay stack listens on the HUD
+      // root only), so the closeOnEscape dialog stays open
+      await page.focus(UI_KIT.hostButton);
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(100); // A close would be at once: nothing to poll for
+      if (!(await read()).dialog) problems.push('Escape on the host page closed the dialog');
+
+      // Escape inside the dialog closes it, so the window is no longer under its backdrop
+      await page.focus(UI_KIT.dialogClose);
+      await page.keyboard.press('Escape');
       await waitFor(async () => {
         const closed = await read();
         return !closed.dialog && !closed.backdrop;
       });
       r = await read();
-      if (r.dialog || r.backdrop) problems.push('the dialog’s close button didn’t close it');
+      if (r.dialog || r.backdrop) problems.push('Escape inside the dialog didn’t close it');
 
       // A drag by the title moves the window by the pointer's distance (no jump by the
       // container's offset: Phase 2's fix of a drag's start)

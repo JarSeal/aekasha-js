@@ -15,6 +15,7 @@ import { addBootAfterStartHook } from '../../../kernel/init/BootHooks';
 import styles from './DraggableWindow.module.scss';
 import '../../styles/kit.scss';
 import { getSvgIcon } from '../../core/icons/SvgIcon';
+import { getFirstFocusable } from '../FocusTrap';
 import { addDragHandle, cancelDragSession } from './DraggableWindowDrag';
 import {
   fitWindow,
@@ -440,6 +441,10 @@ const updateMountedWindow = (entry: WindowEntry, prev: DraggableWindowConfig) =>
  * panes and clearing intervals). The config stays. */
 const unmountWindow = (entry: WindowEntry, keepInStack?: boolean) => {
   const { runtime } = entry;
+  // First: the focus is still where it was in the window
+  const onUnmount = runtime.onUnmount;
+  runtime.onUnmount = undefined;
+  onUnmount?.();
   cancelDragSession(entry);
   detachStaticContent(runtime);
   runtime.backDropCMP?.remove();
@@ -451,20 +456,6 @@ const unmountWindow = (entry: WindowEntry, keepInStack?: boolean) => {
   runtime.contentWrapperCMP = undefined;
   runtime.zIndex = -1;
   if (!keepInStack) removeFromStacks(entry.config.id);
-};
-
-const FOCUSABLE_SELECTOR =
-  'button:not([disabled]), a[href], input:not([disabled]):not([type="hidden"]), ' +
-  'select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-/** The first rendered (not hidden, eg. in a collapsed folder) focusable element in `root`. */
-const getFirstFocusable = (root?: Element) => {
-  if (!root) return null;
-  const candidates = root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
-  for (let i = 0; i < candidates.length; i++) {
-    if (candidates[i].getClientRects().length) return candidates[i];
-  }
-  return null;
 };
 
 /** Focuses the window's first focusable content element, else its first header button. */
@@ -542,6 +533,17 @@ export const openDraggableWindow = (props: OpenDraggableWindowProps) => {
   moveToTop(id);
   saveDraggableWindowStatesToLS();
   if (focusFirstElement) focusFirstFocusableElement(entry);
+};
+
+/**
+ * Runs `listener` once when the mounted window's DOM goes (a close, a remove, a remount, a scene
+ * load's teardown), before its elements are removed, so the focus is still in it. One per
+ * window: a second call replaces the first. A no-op when the window isn't mounted.
+ * @internal
+ */
+export const onDraggableWindowUnmount = (id: string, listener: () => void) => {
+  const runtime = getWindows().get(id)?.runtime;
+  if (runtime?.windowCMP) runtime.onUnmount = listener;
 };
 
 /**

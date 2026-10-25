@@ -274,7 +274,11 @@ The folders p800 §5 sketched, with the files they take now:
   - a focus trap (`FocusTrap.ts`: Tab and Shift+Tab wrap inside it), focus to its first focusable
     element or its `initialFocus`, and focus back to the opener on close;
   - `inert` on the HUD root's other children while it's open (never on anything outside the
-    HUD root), restored on close. A second modal makes the first inert too.
+    HUD root), restored on close. A second modal makes the first inert too. **The debugger's
+    roots are spared by an app's modal** (decided 2026-10-25, Phase 4): the drawer, the editor
+    drawer, the on-screen tools and the debug windows carry a marker the stack skips, so a pause
+    menu can still be debugged; a debug modal (the key shortcuts dialog) inerts the rest of the
+    HUD, the app's and the debugger's other roots alike.
 - **z-order** (p801 D2's open item): modal dialogs leave the window stacks and stack from
   `--aek-z-dialog` in open order, above the debug windows. Toasts sit at `--aek-z-toast`. The
   windows' JS bases stay (`Z_INDEX_BASES`), and a test checks they equal the tokens' values.
@@ -879,6 +883,93 @@ only, focus back on the opener, a `closeOnEscape` dialog's Escape only from insi
 and the screenshots of the states that change (a list on the top layer) are re-recorded with
 `--update` after review.
 
+1. Section 1, the overlay stack: `testing/KitDom.ts` (Phase 0's shared linkedom helper with the
+   focus shim; the tests this section touches move onto it), `overlays/OverlayStack.ts` (the
+   entries, Escape on the HUD root's capture phase, the keyup swallow, focus return, `inert` for
+   an entry that asks with the debugger's roots spared, all tested), `overlays/FocusTrap.ts`
+   (the trap and the focusables finder the windows share; the dialog uses the trap from Phase 5).
+   The dialog's Escape moves onto the stack (its window listeners go): every dialog pushes a
+   modal entry, which closes on Escape with `closeOnEscape` and otherwise stops it, and its close
+   returns focus to the opener. **The dialog sets no `inert` until Phase 5 §2** (decided
+   2026-10-25: a dialog's modality arrives in one piece with the trap and the ARIA). The
+   drop-down's list pushes an entry, so one Escape closes only the list (1.2's item 1). The
+   dialog's keyboard scripts follow; the embed's `uiKit` scenario checks Escape on the host page
+   leaves the dialog open and Escape inside closes it.
+2. Section 2, the anchor and the top layer: `overlays/Anchor.ts` (the placement maths as pure
+   functions, the reposition in one rAF on scroll and resize), the Popover API's top layer with
+   the fallback in the HUD root (a dialog's `transform` centring would make a fixed list inside it
+   relative to the dialog, so the fallback moves the list to the HUD root), the drop-down's list
+   on both (no `40vh`, no clipping in a window, the ring on the active option). `verify:ui`'s
+   outline check reads the active option when the focused element has `aria-activedescendant`.
+   The embed's list inside the container; the perf-auditor review of the reposition.
+3. Section 3, the tooltip and the popover: `overlays/Tooltip.ts`, `overlays/Popover.ts`, public
+   on `aekasha/ui`, with their demos, checks and keyboard scripts, the kit's `CLAUDE.md` section on
+   the overlay layer (its `aek:covers`), the embed's tooltip. Then the phase's verification and
+   the changed screenshots re-recorded after review.
+
+As built (section 1, 2026-10-25):
+
+- **linkedom has no capture phase** (found writing the stack's tests): its `dispatchEvent` calls
+  every listener from the target up, capture or not, so a capture listener on the HUD root ran
+  after the target's and its `stopPropagation()` kept nothing from it. `testing/KitDom.ts`'
+  `stubKitDomAsync()` patches linkedom's `EventTarget` (the window's event target is made from it
+  on first use, so the patch comes right after `parseHTML`) with the DOM's order: capture from the
+  window down, the target, bubble up, `once`, `stopImmediatePropagation`. With it Phase 0's focus
+  shim (`activeElement`, blur / focusout / focus / focusin with `relatedTarget`, `[inert]` and
+  unfocusable elements refusing `focus()`), `getClientRects` (one box when connected),
+  `scrollIntoView`, `HTMLElement` / `HTMLInputElement` stubbed, and two helpers: `dispatchKey`
+  (linkedom has no `KeyboardEvent`) and `countListeners` (D11's disposal check). A mutation (the
+  stack's `stopPropagation()` removed) fails two of its tests. `DropDown.test.ts` and
+  `DialogWindow.test.ts` moved onto it; the kit's other tests keep their own stubs until a phase
+  touches them.
+- `overlays/OverlayStack.ts` (`@internal`): `pushOverlay({ elem, close?, returnFocus?, inert?,
+  keep?, isDebug? })` returns the remover (`returnFocus` default true). D7's `modal` is "no
+  `close`": Escape stops at such an entry and does nothing, and `inert` is its own flag, so the
+  dialog can push a modal entry now and ask for `inert` in Phase 5. The keydown listener is on the
+  HUD root (capture), added on the first push with a HUD root; the keyup swallow is
+  `swallowNextKeyUp`, a one-off capture listener on the **window**, not the HUD root: after a
+  close the focus may be back on an opener outside the HUD, where the keyup goes (the drop-down
+  shares it). An entry whose element left the document is dropped when the stack is read. Focus
+  returns only when the focus is in the overlay or on the body, so a focusout close (the user
+  clicked elsewhere) or a close from code while the user works elsewhere doesn't take it back.
+  `inert`: the top inert entry covers the HUD root's children but its own, its `keep` and the
+  entries above it; an app's entry spares `DEBUGGER_ROOT_ATTR` (`data-aek-debugger`, set on the
+  debugger's roots in Phase 5 §2); the app's own `inert` is left alone; recomputed on each push and
+  remove (a child added meanwhile stays live: Phase 5 decides whether that needs an observer).
+- `overlays/FocusTrap.ts` (`@internal`): `trapFocus(elem)` and `getFocusableElements` /
+  `getFirstFocusable`, which the windows' first-focus code now imports (its copy in
+  `DraggableWindow.ts` went: 833 lines with the unmount hook, was 831).
+- The dialog: every `openDialog` pushes an entry (with `close` only for `closeOnEscape`) after the
+  window opens, with the focus before the open as `returnFocus`; the window's `onUnmount` (a new
+  `@internal` `onDraggableWindowUnmount(id, fn)`, run first in `unmountWindow`, while the focus is
+  still in it) removes it, so every close returns the focus. A reopen keeps the first opener. The
+  window listeners are gone. A dialog rebuilt by a `sceneTargetResolver` after a load has no entry
+  (dialogs are `removeOnSceneChange` in practice). The dialog already took the focus on open (the
+  windows' `focusFirstElement`): Phase 3's "focus still on the Hub button" was wrong, the
+  scripts below expect it inside.
+- The drop-down: its list pushes an entry before it takes the focus, so the focus returns to what
+  had it at the open: the trigger when opened by its keys, elsewhere (the canvas) when opened by a
+  click (the trigger's `mousedown` doesn't focus it) or a shortcut. That's D7's rule, and it keeps
+  Space from re-opening a list from a trigger the player never focused. A focusout close passes
+  `false`. Its own Escape stays for a list outside the HUD root (the test's).
+- `verify:ui`: two new steps, `focusBox` and `expectFocusBox` (a demo box's button by its text: the
+  focus outside the HUD, an opener). The dialog's scripts: Escape inside a `closeOnEscape` dialog
+  closes it and the focus is back on its Hub button; Escape on the Hub button leaves it open; a
+  default dialog stops Escape and its OK button's close returns the focus; Escape in the dialog's
+  open list closes the list (focus on the trigger), the next the dialog. The drop-down's two
+  scripts expect the focus back on the trigger. All pass in the four settings. The screenshots of
+  the dialog's "Closes on Escape" and "With a drop-down" states (and its list open) differ by the
+  demo texts this section changed (0.14-0.29 % of the pixels): re-recorded after review.
+- `verify:embed`: the `uiKit` scene's dialog is `closeOnEscape`; Escape on the host page's button
+  leaves it open (a fixed 100 ms wait: nothing to poll for), and Escape on its close button closes
+  it, in place of the button's click. Both host roots pass.
+- The section's checks: `yarn test` (163 files), `tsc` (both), ESLint, `yarn hub:build`,
+  `verify:ui --only dialog,dropDown` (every script; the three screenshots above), `verify:embed`
+  (all seven scenarios). `verify:baselines`: the 12 new `@internal` exports, the dialog and
+  drop-down chunk +0.6 kB gzip in the app (`DropDown.js`) and in the `uiKit` embed
+  (`uiKitEmbed.js`, 11.5 KiB of its 12 KiB budget), and the banner's `banner.css` +56 B, Phase 2
+  §3's `color-scheme` lines, which sat inside the tolerance unrecorded; recorded with `--update`.
+
 ### Phase 5: the existing pieces restyled and accessible
 
 One section per piece, each with its demo boxes' screenshots in both themes for review and
@@ -887,7 +978,9 @@ One section per piece, each with its demo boxes' screenshots in both themes for 
 1. The windows (D5, D8): global classes and parts, the tokens, layered; `role="dialog"`, labels,
    the keyboard move and resize, the cycle keys (F6 / Shift+F6) and the main loop's debug key
    moved off F6, the header's line height and the title's truncation; `DraggableWindowKeys.ts`.
-2. The dialogs (D7): modal ARIA, the trap, `inert`, the z-order from `--aek-z-dialog`, `alert`.
+2. The dialogs (D7): modal ARIA, the trap, `inert` (the stack's, Phase 4: the dialog's entry asks
+   for it, and the debugger's roots get the stack's marker), the z-order from `--aek-z-dialog`,
+   `alert`.
 3. The drop-down (D9): the restyle and the searchable variant; the two debugger stylesheets that
    restyle it checked.
 4. The toaster (D5, D9): `Toaster.scss` and the custom properties, the live regions, pause on hover,

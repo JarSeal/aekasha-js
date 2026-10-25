@@ -1,13 +1,8 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { dispatchKey, stubKitDomAsync } from '../testing/KitDom';
 import { createDropDown } from './DropDown';
 
-beforeAll(async () => {
-  const { parseHTML } = await import('linkedom');
-  const { document, window } = parseHTML('<!doctype html><html><head></head><body></body></html>');
-  Object.assign(window.HTMLElement.prototype, { scrollIntoView: () => {} });
-  vi.stubGlobal('document', document);
-  vi.stubGlobal('window', window);
-});
+beforeAll(() => stubKitDomAsync());
 
 const OPTIONS = [
   { value: 'low', label: 'Low' },
@@ -15,16 +10,8 @@ const OPTIONS = [
   { value: 'high', label: 'High' },
 ];
 
-const key = (elem: Element, type: 'keydown' | 'keyup', name: string) => {
-  const e = Object.assign(new window.Event(type, { bubbles: true, cancelable: true }), {
-    key: name,
-    ctrlKey: false,
-    altKey: false,
-    metaKey: false,
-  });
-  elem.dispatchEvent(e);
-  return e;
-};
+const key = (elem: Element, type: 'keydown' | 'keyup', name: string) =>
+  dispatchKey(elem, type, name);
 
 const create = (onChange = vi.fn()) => {
   let value = 'mid';
@@ -42,6 +29,8 @@ const create = (onChange = vi.fn()) => {
 
 const listOf = (dropDown: ReturnType<typeof createDropDown>) =>
   dropDown.cmp.elem.querySelector('ul')!;
+const triggerOf = (dropDown: ReturnType<typeof createDropDown>) =>
+  dropDown.cmp.elem.querySelector('button')!;
 
 describe('drop-down', () => {
   it("shows the value's label, and opens the list on it", () => {
@@ -83,5 +72,30 @@ describe('drop-down', () => {
     key(listOf(dropDown), 'keydown', 'Escape');
     expect(dropDown.isOpen()).toBe(false);
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('gives the focus back to the trigger it opened from, after a pick or Escape', () => {
+    const { dropDown } = create();
+    const trigger = triggerOf(dropDown);
+    trigger.focus();
+    dropDown.open();
+    expect(document.activeElement).toBe(listOf(dropDown));
+    key(listOf(dropDown), 'keydown', 'Enter');
+    expect(document.activeElement).toBe(trigger);
+    dropDown.open();
+    key(listOf(dropDown), 'keydown', 'Escape');
+    expect(dropDown.isOpen()).toBe(false);
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('leaves the focus where it went when the list loses it', () => {
+    const { dropDown } = create();
+    const elsewhere = document.createElement('button');
+    document.body.appendChild(elsewhere);
+    triggerOf(dropDown).focus();
+    dropDown.open();
+    elsewhere.focus();
+    expect(dropDown.isOpen()).toBe(false);
+    expect(document.activeElement).toBe(elsewhere);
   });
 });

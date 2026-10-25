@@ -136,16 +136,20 @@ openDialog({
 });
 ```
 
-With `closeOnEscape`, Escape closes the top such dialog and nothing else gets that press or its
+A dialog takes the focus when it opens and gives it back when it closes. With `closeOnEscape`,
+Escape pressed inside the HUD closes the top dialog, and nothing else gets that press or its
 release: no key binding or action map sees it. So Escape can open the menu through an action map
-and close it through the dialog. A menu that turns gameplay input off while it's open does it
+and close it through the dialog. Escape goes to the topmost overlay only: a drop-down's list open
+in the dialog closes first. A key pressed outside the HUD (a page that embeds the engine) is the
+page's. A menu that turns gameplay input off while it's open does it
 with [action contexts](hub:features/input#contexts-and-scenes).
 
 ## Drop-downs
 
 [`createDropDown`](api:createDropDown) makes a trigger button and an in-page list (not a native
 `<select>`): arrows, Home and End move, Enter, Space or a click picks, and Escape, Tab or a click
-outside closes it without a change. Its keys reach no key binding. Add its `cmp` where it goes.
+outside closes it without a change. Its keys reach no key binding, and a pick or Escape gives the
+focus back to the trigger when the list was opened from it. Add its `cmp` where it goes.
 The trigger re-reads `value` after a pick; when the value changes elsewhere, call `refresh()`.
 
 ```ts

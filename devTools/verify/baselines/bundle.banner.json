@@ -22,16 +22,16 @@
       "gzip": 1046
     },
     "assets/banner.css": {
-      "bytes": 5915,
-      "gzip": 1599
+      "bytes": 5971,
+      "gzip": 1611
     },
     "assets/banner.embed.js": {
       "bytes": 1041345,
-      "gzip": 292107
+      "gzip": 292104
     },
     "assets/banner.js": {
       "bytes": 483,
-      "gzip": 336
+      "gzip": 337
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
@@ -83,7 +83,7 @@
     },
     "assets/ImportRegistry.js": {
       "bytes": 16551,
-      "gzip": 6658
+      "gzip": 6657
     },
     "assets/KTX2Loader.js": {
       "bytes": 59895,
@@ -111,7 +111,7 @@
     },
     "assets/three.module.js": {
       "bytes": 220,
-      "gzip": 181
+      "gzip": 183
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -119,7 +119,7 @@
     },
     "banner.embed.js": {
       "bytes": 251,
-      "gzip": 211
+      "gzip": 209
     }
   },
   "main": {

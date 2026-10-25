@@ -16,6 +16,15 @@ const POLL_MS = 50;
 
 export const boxSelector = (piece: string) => `[data-hub-demo="${piece}"]`;
 
+/** The demo box's button whose text is `text`, exactly */
+const getBoxButton = (page: Page, piece: string, text: string) => {
+  const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return page
+    .locator(`${boxSelector(piece)} button`)
+    .filter({ hasText: new RegExp(`^\\s*${escaped}\\s*$`) })
+    .first();
+};
+
 /** Takes a step that clicks or presses; false for an `expect*` step, which it leaves */
 const actAsync = async (page: Page, piece: string, step: UiRunStep | UiKeyStep) => {
   if ('button' in step) {
@@ -24,12 +33,9 @@ const actAsync = async (page: Page, piece: string, step: UiRunStep | UiKeyStep) 
       .nth(step.button)
       .click();
   } else if ('click' in step) {
-    const escaped = step.click.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    await page
-      .locator(`${boxSelector(piece)} button`)
-      .filter({ hasText: new RegExp(`^\\s*${escaped}\\s*$`) })
-      .first()
-      .click();
+    await getBoxButton(page, piece, step.click).click();
+  } else if ('focusBox' in step) {
+    await getBoxButton(page, piece, step.focusBox).focus();
   } else if ('clickHud' in step) {
     await page.locator(`#hudRoot ${step.clickHud}`).first().click();
   } else if ('focusHud' in step) {
@@ -46,45 +52,54 @@ export const takeStepsAsync = async (page: Page, piece: string, steps: UiRunStep
 };
 
 /** Whether an `expect*` step holds now, and what the page has */
-const readExpectation = (page: Page, step: UiKeyStep) =>
-  page.evaluate((s) => {
-    const active = document.activeElement;
-    const activeText = !active
-      ? 'nothing'
-      : `${active.tagName.toLowerCase()}${active.id ? `#${active.id}` : ''}${
-          active.classList[0] ? `.${active.classList[0]}` : ''
-        } "${(active.textContent ?? '').trim().slice(0, 30)}"`;
-    if ('expectFocus' in s) {
-      return { ok: !!active?.matches(s.expectFocus), actual: `focus on ${activeText}` };
-    }
-    if ('expectAttr' in s) {
-      const el = document.querySelector(s.expectAttr);
-      const value = el ? el.getAttribute(s.name) : undefined;
-      return {
-        ok: !!el && value === s.value,
-        actual: el ? `${s.name}: ${value === null ? 'absent' : `"${value}"`}` : 'no element',
-      };
-    }
-    if ('expectCount' in s) {
-      const count = document.querySelectorAll(s.expectCount).length;
-      return { ok: count === s.count, actual: `${count} found` };
-    }
-    if ('expectText' in s) {
-      const el = document.querySelector(s.expectText);
-      const text = (el?.textContent ?? '').trim();
-      return { ok: !!el && text === s.text, actual: el ? `"${text}"` : 'no element' };
-    }
-    if ('expectActiveOption' in s) {
-      const id = active?.getAttribute('aria-activedescendant');
-      const option = id ? document.getElementById(id) : null;
-      const text = (option?.textContent ?? '').trim();
-      return {
-        ok: !!option && text === s.expectActiveOption,
-        actual: option ? `"${text}"` : `no active option on ${activeText}`,
-      };
-    }
-    return { ok: false, actual: 'not an expectation' };
-  }, step);
+const readExpectation = (page: Page, piece: string, step: UiKeyStep) =>
+  page.evaluate(
+    ({ s, box }) => {
+      const active = document.activeElement;
+      const activeText = !active
+        ? 'nothing'
+        : `${active.tagName.toLowerCase()}${active.id ? `#${active.id}` : ''}${
+            active.classList[0] ? `.${active.classList[0]}` : ''
+          } "${(active.textContent ?? '').trim().slice(0, 30)}"`;
+      if ('expectFocus' in s) {
+        return { ok: !!active?.matches(s.expectFocus), actual: `focus on ${activeText}` };
+      }
+      if ('expectFocusBox' in s) {
+        const isBoxButton =
+          !!active?.matches(`${box} button`) &&
+          (active.textContent ?? '').trim() === s.expectFocusBox;
+        return { ok: isBoxButton, actual: `focus on ${activeText}` };
+      }
+      if ('expectAttr' in s) {
+        const el = document.querySelector(s.expectAttr);
+        const value = el ? el.getAttribute(s.name) : undefined;
+        return {
+          ok: !!el && value === s.value,
+          actual: el ? `${s.name}: ${value === null ? 'absent' : `"${value}"`}` : 'no element',
+        };
+      }
+      if ('expectCount' in s) {
+        const count = document.querySelectorAll(s.expectCount).length;
+        return { ok: count === s.count, actual: `${count} found` };
+      }
+      if ('expectText' in s) {
+        const el = document.querySelector(s.expectText);
+        const text = (el?.textContent ?? '').trim();
+        return { ok: !!el && text === s.text, actual: el ? `"${text}"` : 'no element' };
+      }
+      if ('expectActiveOption' in s) {
+        const id = active?.getAttribute('aria-activedescendant');
+        const option = id ? document.getElementById(id) : null;
+        const text = (option?.textContent ?? '').trim();
+        return {
+          ok: !!option && text === s.expectActiveOption,
+          actual: option ? `"${text}"` : `no active option on ${activeText}`,
+        };
+      }
+      return { ok: false, actual: 'not an expectation' };
+    },
+    { s: step, box: boxSelector(piece) }
+  );
 
 /** The focused element without an outline, described; null when it has one or it's the body */
 const readMissingOutline = (page: Page) =>
@@ -132,7 +147,7 @@ export const runKeyStepsAsync = async (page: Page, piece: string, steps: UiKeySt
       continue;
     }
     const result = await pollAsync(
-      () => readExpectation(page, step),
+      () => readExpectation(page, piece, step),
       (r) => r.ok,
       EXPECT_TIMEOUT_MS
     );

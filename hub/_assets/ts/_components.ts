@@ -217,7 +217,7 @@ const DIALOG_STATES: DialogState[] = [
   {
     label: 'Closes on Escape',
     props: { closeOnEscape: true },
-    text: 'closeOnEscape: Escape closes it, and nothing else on the page gets that press.',
+    text: 'closeOnEscape: Escape pressed in it closes it, and nothing else on the page gets that press. Escape pressed outside the HUD is the page’s.',
   },
   {
     label: 'Backdrop click closes it',
@@ -227,7 +227,7 @@ const DIALOG_STATES: DialogState[] = [
   {
     label: 'With a drop-down',
     props: { closeOnEscape: true },
-    text: 'A drop-down in a dialog, as the uiKit embed opens it. Open its list and press Escape: one press closes the list and the dialog (for p803).',
+    text: 'A drop-down in a dialog, as the uiKit embed opens it. Open its list and press Escape: the first press closes the list, the next the dialog.',
     hasDropDown: true,
   },
 ];

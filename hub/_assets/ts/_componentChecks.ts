@@ -28,10 +28,16 @@ export type UiKeyStep =
   /** Focuses the first element in the HUD root matching this selector, as a script would (a
    * piece no key reaches yet: F6 does from p803 Phase 5) */
   | { focusHud: string }
+  /** Focuses the demo box's button whose text is this, exactly, without a click (the focus
+   * outside the HUD root: an embed's host page) */
+  | { focusBox: string }
   /** Presses a key or a chord, in Playwright's names (`Tab`, `Shift+Tab`, `ArrowDown`, `Escape`) */
   | { press: string }
   /** The focused element matches this selector (`body`: nothing focused) */
   | { expectFocus: string }
+  /** The focused element is the demo box's button whose text is this, exactly (an overlay's
+   * opener, which its close gives the focus back to) */
+  | { expectFocusBox: string }
   /** The first element matching `expectAttr` has the attribute `name` at `value` (null: absent) */
   | { expectAttr: string; name: string; value: string | null }
   /** This many elements match the selector (0: none, e.g. a closed window) */
@@ -53,6 +59,7 @@ export type UiDemoChecks = { states?: UiCheckState[]; keyboard?: UiKeyScript[] }
 const WINDOW = '#hudRoot #hubDemoWindow';
 const LIST = '#hudRoot .aekDropDownList';
 const TRIGGER = '#hudRoot .aekDropDownTrigger';
+const DIALOG = (index: number) => `#hudRoot #hubDemoDialog${index}`;
 
 export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
   window: {
@@ -83,23 +90,51 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
     ],
     keyboard: [
       {
-        name: 'Escape closes a closeOnEscape dialog',
+        name: 'Escape in a closeOnEscape dialog closes it; the focus goes back to its opener',
         steps: [
           { click: 'Closes on Escape' },
-          { expectCount: '#hudRoot #hubDemoDialog1', count: 1 },
+          { expectFocus: `${DIALOG(1)} *` },
           { press: 'Escape' },
-          { expectCount: '#hudRoot #hubDemoDialog1', count: 0 },
+          { expectCount: DIALOG(1), count: 0 },
+          { expectFocusBox: 'Closes on Escape' },
+        ],
+      },
+      {
+        name: 'Escape outside the HUD leaves a closeOnEscape dialog open',
+        steps: [
+          { click: 'Closes on Escape' },
+          { focusBox: 'Closes on Escape' },
+          { press: 'Escape' },
+          { expectCount: DIALOG(1), count: 1 },
         ],
       },
       {
         name: 'Escape leaves a default dialog open; its button closes it',
         steps: [
           { click: 'Default' },
+          { expectFocus: `${DIALOG(0)} *` },
           { press: 'Escape' },
-          { expectCount: '#hudRoot #hubDemoDialog0', count: 1 },
+          { expectCount: DIALOG(0), count: 1 },
           { focusHud: '#hubDemoDialog0 .hubButton' },
           { press: 'Enter' },
-          { expectCount: '#hudRoot #hubDemoDialog0', count: 0 },
+          { expectCount: DIALOG(0), count: 0 },
+          { expectFocusBox: 'Default' },
+        ],
+      },
+      {
+        name: 'Escape in its open list closes the list, the next one the dialog',
+        steps: [
+          { click: 'With a drop-down' },
+          { focusHud: '#hubDemoDialog3 .aekDropDownTrigger' },
+          { press: 'Enter' },
+          { expectFocus: LIST },
+          { press: 'Escape' },
+          { expectCount: LIST, count: 0 },
+          { expectCount: DIALOG(3), count: 1 },
+          { expectFocus: `${DIALOG(3)} .aekDropDownTrigger` },
+          { press: 'Escape' },
+          { expectCount: DIALOG(3), count: 0 },
+          { expectFocusBox: 'With a drop-down' },
         ],
       },
     ],
@@ -113,7 +148,7 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
     ],
     keyboard: [
       {
-        name: 'Enter opens the list, the arrows, Home and End move, Enter picks',
+        name: 'Enter opens the list, the arrows, Home and End move, Enter picks and returns the focus',
         steps: [
           { click: 'Open the drop-downs' },
           { focusHud: '.aekDropDownTrigger' },
@@ -132,10 +167,11 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { expectCount: LIST, count: 0 },
           { expectAttr: TRIGGER, name: 'aria-expanded', value: 'false' },
           { expectText: `${TRIGGER} .aekDropDownLabel`, text: 'Teal' },
+          { expectFocus: TRIGGER },
         ],
       },
       {
-        name: 'Escape closes the list without a change',
+        name: 'Escape closes the list without a change; the focus goes back to the trigger',
         steps: [
           { click: 'Open the drop-downs' },
           { focusHud: '.aekDropDownTrigger' },
@@ -145,6 +181,7 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { press: 'Escape' },
           { expectCount: LIST, count: 0 },
           { expectText: `${TRIGGER} .aekDropDownLabel`, text: 'Orange' },
+          { expectFocus: TRIGGER },
         ],
       },
     ],

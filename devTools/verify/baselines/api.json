@@ -2904,6 +2904,17 @@
       "DropDownProps": "TypeAlias",
       "TDropDown": "TypeAlias"
     },
+    "src/_engine/ui/overlays/FocusTrap.ts": {
+      "getFirstFocusable": "Function",
+      "getFocusableElements": "Function",
+      "trapFocus": "Function"
+    },
+    "src/_engine/ui/overlays/OverlayStack.ts": {
+      "DEBUGGER_ROOT_ATTR": "Variable",
+      "OverlayProps": "TypeAlias",
+      "pushOverlay": "Function",
+      "swallowNextKeyUp": "Function"
+    },
     "src/_engine/ui/overlays/Toaster.ts": {
       "addToast": "Function",
       "AddToastResponse": "TypeAlias",
@@ -2931,6 +2942,7 @@
       "getDraggableWindowsOfKind": "Function",
       "getKindWindowId": "Function",
       "isDraggableWindowOnTop": "Function",
+      "onDraggableWindowUnmount": "Function",
       "openDraggableWindow": "Function",
       "registerDraggableWindow": "Function",
       "registerDraggableWindowKind": "Function",
@@ -2997,6 +3009,12 @@
       "TokenColor": "TypeAlias",
       "TokenRule": "TypeAlias",
       "TokenSheet": "TypeAlias"
+    },
+    "src/_engine/ui/testing/KitDom.ts": {
+      "countListeners": "Function",
+      "dispatchKey": "Function",
+      "KitKeyInit": "TypeAlias",
+      "stubKitDomAsync": "Function"
     },
     "src/_engine/utils/Assert.ts": {
       "existsOrThrow": "Function",

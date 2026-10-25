@@ -275,6 +275,9 @@ export type DraggableWindowRuntime = {
   session: DragSession | null;
   /** The z-index last written, so a restack only writes the windows whose index changed */
   zIndex: number;
+  /** Runs once when the mounted window's DOM goes, before it's removed (a dialog's overlay
+   * stack entry: `onDraggableWindowUnmount`) */
+  onUnmount?: () => void;
 };
 
 /**

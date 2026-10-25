@@ -97,6 +97,8 @@ export const scene = async () => {
     size: { w: 300, h: 230 },
     minSize: { w: 240, h: 160 },
     backDropClass: BACKDROP_CLASS,
+    // `yarn verify:embed` checks Escape: the host page's leaves it open, its own closes it
+    closeOnEscape: true,
     removeOnSceneChange: true,
   });
   dropDown.open();

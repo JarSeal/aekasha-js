@@ -1,96 +1,122 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { countListeners, dispatchKey, stubKitDomAsync } from '../../testing/KitDom';
+import { createHudRoot, getHUDRootCMP } from '../../core/HUD';
+import { createDropDown } from '../../forms/DropDown';
+import { openDialog } from './DialogWindow';
+import { closeDraggableWindow, getDraggableWindow } from './DraggableWindow';
 
 vi.mock(import('../../../kernel/scene/SceneHooks'), () => ({ addSceneHooks: () => () => {} }));
 vi.mock(import('../../../kernel/init/BootHooks'), () => ({ addBootAfterStartHook: () => true }));
 
-type Modules = {
-  dialogs: typeof import('./DialogWindow');
-  windows: typeof import('./DraggableWindow');
-};
-let m: Modules;
-let win: Window;
-/** linkedom's Event (its window dispatches only its own) */
-let DomEvent: typeof Event;
-/** Every addEventListener call on the window, recorded */
-const addListener = vi.fn<(type: string, fn: unknown, options?: unknown) => void>();
+/** A button on the page outside the HUD root (an embed's host page, a Hub button) */
+let pageButton: HTMLButtonElement;
 
-/** An Escape key event on the window; whether a listener added after the dialogs' got it */
-const escape = (type: 'keydown' | 'keyup', repeat = false) => {
-  const later = vi.fn();
-  win.addEventListener(type, later);
-  win.dispatchEvent(
-    Object.assign(new DomEvent(type, { cancelable: true }), { key: 'Escape', repeat })
+/** Escape at `target`; whether a bubble listener on the window (the input system's) got it */
+const escapeReachesWindow = (target: EventTarget, type: 'keydown' | 'keyup' = 'keydown') => {
+  const binding = vi.fn();
+  window.addEventListener(type, binding);
+  dispatchKey(target, type, 'Escape');
+  window.removeEventListener(type, binding);
+  return binding.mock.calls.length > 0;
+};
+
+const isOpen = (id: string) => Boolean(getDraggableWindow(id)?.isOpen);
+const getElem = (id: string) => getDraggableWindow(id)?.windowCMP?.elem as HTMLElement;
+
+beforeAll(async () => {
+  await stubKitDomAsync(
+    '<!doctype html><html><head></head><body><button id="page">Page</button><div id="hudSlot"></div></body></html>'
   );
-  win.removeEventListener(type, later);
-  return later.mock.calls.length > 0;
-};
+  createHudRoot({ slot: document.getElementById('hudSlot') as HTMLElement });
+  pageButton = document.getElementById('page') as HTMLButtonElement;
+});
 
-const isOpen = (id: string) => Boolean(m.windows.getDraggableWindow(id)?.isOpen);
-
-describe('dialogs: Escape', () => {
-  beforeAll(async () => {
-    const { parseHTML } = await import('linkedom');
-    const { document, window } = parseHTML(
-      '<!doctype html><html><head></head><body><div id="hudSlot"></div></body></html>'
-    );
-    Object.assign(window, { innerWidth: 1280, innerHeight: 720 });
-    Object.assign(window.HTMLElement.prototype, { getClientRects: () => [{}] });
-    vi.stubGlobal('document', document);
-    vi.stubGlobal('window', window);
-    vi.stubGlobal('HTMLInputElement', window.HTMLInputElement);
-    win = window as unknown as Window;
-    DomEvent = window.Event as unknown as typeof Event;
-    // linkedom's window is a proxy (no spyOn): a wrapper that records each call
-    const addEventListener = window.addEventListener.bind(window);
-    Object.assign(window, {
-      addEventListener: (...args: Parameters<typeof addEventListener>) => {
-        addListener(args[0], args[1], args[2]);
-        addEventListener(...args);
-      },
-    });
-    const hud = await import('../../core/HUD');
-    hud.createHudRoot({ slot: document.getElementById('hudSlot') as HTMLElement });
-    m = { dialogs: await import('./DialogWindow'), windows: await import('./DraggableWindow') };
+describe('dialogs: Escape and focus on the overlay stack (p803 D7)', () => {
+  it('adds no key listener before the first dialog, and none on the window (G1)', () => {
+    const hud = getHUDRootCMP().elem;
+    expect(countListeners(hud, 'keydown')).toBe(0);
+    openDialog({ id: 'first', title: 'First', closeOnEscape: true });
+    expect(countListeners(hud, 'keydown')).toBe(1);
+    expect(countListeners(window, 'keydown')).toBe(0);
   });
 
-  it('adds no listener before the first closeOnEscape dialog (G1)', () => {
-    const keyListeners = () =>
-      addListener.mock.calls.filter(([type]) => type === 'keydown' || type === 'keyup');
-    expect(keyListeners()).toEqual([]);
-    m.dialogs.openDialog({ id: 'noEscape', title: 'No Escape' });
-    expect(keyListeners()).toEqual([]);
-    m.dialogs.openDialog({ id: 'first', title: 'First', closeOnEscape: true });
-    expect(keyListeners().map(([type, , capture]) => [type, capture])).toEqual([
-      ['keydown', true],
-      ['keyup', true],
-    ]);
-    m.windows.closeDraggableWindow('noEscape');
-  });
-
-  it('closes the top closeOnEscape dialog, and no later listener gets the press', () => {
-    m.dialogs.openDialog({ id: 'second', title: 'Second', closeOnEscape: true });
-    expect(escape('keydown')).toBe(false);
+  it('takes the focus, and Escape inside it closes it and goes no further', () => {
+    pageButton.focus();
+    openDialog({ id: 'second', title: 'Second', closeOnEscape: true });
+    // Its first focusable element: the header's close button
+    const focused = document.activeElement as HTMLElement;
+    expect(getElem('second').contains(focused)).toBe(true);
+    expect(escapeReachesWindow(focused)).toBe(false);
     expect(isOpen('second')).toBe(false);
     expect(isOpen('first')).toBe(true);
-    // Its keyup is swallowed too (a KEY_UP Escape binding mustn't fire), the next one isn't
-    expect(escape('keyup')).toBe(false);
-    expect(escape('keyup')).toBe(true);
+    // The focus goes back to its opener, and the press's keyup is swallowed there
+    expect(document.activeElement).toBe(pageButton);
+    expect(escapeReachesWindow(pageButton, 'keyup')).toBe(false);
+    expect(escapeReachesWindow(pageButton, 'keyup')).toBe(true);
+  });
+
+  it('leaves Escape pressed outside the HUD root to the page', () => {
+    openDialog({ id: 'other', title: 'Other', closeOnEscape: true });
+    expect(escapeReachesWindow(pageButton)).toBe(true);
+    expect(isOpen('other')).toBe(true);
+    closeDraggableWindow('other');
+  });
+
+  it("stops Escape at a dialog without closeOnEscape, which stays open; its button's close returns the focus", () => {
+    closeDraggableWindow('first');
+    pageButton.focus();
+    openDialog({ id: 'plain', title: 'Plain' });
+    const closeButton = document.activeElement as HTMLElement;
+    expect(escapeReachesWindow(closeButton)).toBe(false);
+    expect(isOpen('plain')).toBe(true);
+    escapeReachesWindow(pageButton, 'keyup');
+    closeButton.click();
+    expect(isOpen('plain')).toBe(false);
+    expect(document.activeElement).toBe(pageButton);
+  });
+
+  it("closes a drop-down's list first, then the dialog (p803 1.2's item 1)", () => {
+    const dropDown = createDropDown({
+      options: [
+        { value: 'a', label: 'A' },
+        { value: 'b', label: 'B' },
+      ],
+      value: 'a',
+      onChange: () => {},
+    });
+    pageButton.focus();
+    openDialog({
+      id: 'withList',
+      title: 'With a list',
+      closeOnEscape: true,
+      content: () => dropDown.cmp,
+    });
+    const trigger = dropDown.cmp.elem.querySelector('button') as HTMLButtonElement;
+    trigger.focus();
+    dropDown.open();
+    const list = dropDown.cmp.elem.querySelector('ul') as HTMLElement;
+    expect(document.activeElement).toBe(list);
+
+    dispatchKey(list, 'keydown', 'Escape');
+    dispatchKey(list, 'keyup', 'Escape');
+    expect(dropDown.isOpen()).toBe(false);
+    expect(isOpen('withList')).toBe(true);
+    expect(document.activeElement).toBe(trigger);
+
+    dispatchKey(trigger, 'keydown', 'Escape');
+    expect(isOpen('withList')).toBe(false);
+    expect(document.activeElement).toBe(pageButton);
   });
 
   it('closes one dialog per press, not one per key repeat', () => {
-    m.dialogs.openDialog({ id: 'other', title: 'Other', closeOnEscape: true });
-    escape('keydown');
-    expect(isOpen('other')).toBe(false);
-    expect(isOpen('first')).toBe(true);
-    escape('keydown', true);
-    expect(isOpen('first')).toBe(true);
-    escape('keyup');
-  });
-
-  it('lets Escape through without a closeOnEscape dialog', () => {
-    m.windows.closeDraggableWindow('first');
-    m.dialogs.openDialog({ id: 'plain', title: 'Plain' });
-    expect(escape('keydown')).toBe(true);
-    expect(isOpen('plain')).toBe(true);
+    openDialog({ id: 'lower', title: 'Lower', closeOnEscape: true });
+    openDialog({ id: 'upper', title: 'Upper', closeOnEscape: true });
+    const focused = document.activeElement as HTMLElement;
+    dispatchKey(focused, 'keydown', 'Escape', { repeat: true });
+    expect(isOpen('upper')).toBe(true);
+    dispatchKey(focused, 'keydown', 'Escape');
+    expect(isOpen('upper')).toBe(false);
+    expect(isOpen('lower')).toBe(true);
+    closeDraggableWindow('lower');
   });
 });
