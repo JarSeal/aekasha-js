@@ -502,8 +502,8 @@ As built (section 3):
   the Hub on every engine save). `devTools/hub/components.test.ts`.
 - "In a build" (`build-text.md`): the SBP report measures the kit as a whole, so the page has one
   section with `{{sbp:…}}` numbers (the app's `_engine/ui` group and budget; the `uiKit`
-  profile's group, its scene chunk with the four pieces and their CSS) and `yarn sbp --profile
-  uiKit --why _engine/ui` for the modules, not a line per piece.
+  profile's group, its scene chunk with the four pieces and their CSS) and
+  `yarn sbp --profile uiKit --why _engine/ui` for the modules, not a line per piece.
 - Each piece's Markdown: what it is, its states, what isn't shown (what needs the boot), and a
   "For p803" note of what the demos showed. Found here, for p803 (Phase 5 adds them to
   `src/_engine/ui/CLAUDE.md`'s "Left for p803"): with a drop-down's list open in a
