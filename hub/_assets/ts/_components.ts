@@ -6,7 +6,9 @@
  * which brings the kit's global styles), as the boot would.
  *
  * The root sits over the viewport, as in an app: each `[data-hub-demo]` box gets buttons that
- * open its piece's states there, and the page's theme and density switches set its attributes.
+ * open its piece's states there, and the page's theme and density switches set its attributes. A
+ * piece drawn in the page (a key hint, an input glyph) draws in a kit root of its own in its box
+ * (`addKitRoot`, as an app's UI outside the HUD), which the switches set too.
  * The buttons and the windows' content are the page's (`.hubButton`, `.hubDemoPanel`), as an
  * app's content is the app's; everything else is the kit's.
  */
@@ -16,6 +18,8 @@ import {
   CMP,
   createDropDown,
   createHudRoot,
+  createInputGlyph,
+  createKbd,
   createPopover,
   createToaster,
   createTooltip,
@@ -35,6 +39,7 @@ import type {
   BuiltInIconName,
   DialogProps,
   DropDownProps,
+  InputGlyphInput,
   OpenDraggableWindowProps,
   CMPHandle,
   Tooltip,
@@ -55,6 +60,8 @@ const TOP_TOASTER_ID = `${ID_PREFIX}TopToaster`;
 
 /** The single windows and dialogs the demos opened, for "Close all" */
 const openedIds = new Set<string>();
+/** The kit roots the static demos draw in, which the page's switches set as they set the HUD root */
+const kitRoots: HTMLElement[] = [];
 
 // --- The page's parts ---
 
@@ -78,6 +85,16 @@ const addButton = (parent: HTMLElement, label: string, onClick: () => void) => {
   button.addEventListener('click', onClick);
   parent.append(button);
   return button;
+};
+
+/** A kit root in a demo box (`aekUi`, as an app's own UI outside the HUD), for a piece drawn in
+ * the page rather than opened over it */
+const addKitRoot = (box: HTMLElement) => {
+  const root = document.createElement('div');
+  root.className = 'aekUi hubDemoKitRoot';
+  box.append(root);
+  kitRoots.push(root);
+  return root;
 };
 
 /** A window's content: paragraphs in the page's padding */
@@ -552,6 +569,72 @@ const initIconsDemo: Demo = (box) => {
   missing.append(cell);
 };
 
+// --- Kbd ---
+
+const KBD_ROWS: { label: string; keys: string[]; platform?: 'mac' | 'other' }[] = [
+  { label: 'Chords', keys: ['Ctrl+S', 'Ctrl+Shift+P', 'Shift+F6', 'Ctrl++'], platform: 'other' },
+  {
+    label: 'macOS: the modifiers as symbols',
+    keys: ['Meta+S', 'Meta+Shift+P', 'Alt+ArrowUp'],
+    platform: 'mac',
+  },
+  { label: 'This platform’s names (no platform prop)', keys: ['Meta+Shift+P', 'Alt+ArrowUp'] },
+  { label: 'Alternatives', keys: ['F7 / Shift+F7', 'ArrowLeft / A'], platform: 'other' },
+];
+
+/** In the page: a key hint draws where its text is */
+const initKbdDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  for (const { label, keys, platform } of KBD_ROWS) {
+    const group = addGroup(root, label);
+    for (const chord of keys) group.append(createKbd({ keys: chord, platform }).cmp.elem);
+  }
+  const inText = addGroup(root, 'In text, following its size');
+  const line = document.createElement('p');
+  line.className = 'hubDemoKbdLine';
+  line.append('Save with ', createKbd({ keys: 'Ctrl+S', platform: 'other' }).cmp.elem, '.');
+  inText.append(line);
+};
+
+// --- Input glyph ---
+
+const GLYPH_ROWS: { label: string; inputs: InputGlyphInput[] }[] = [
+  {
+    label: 'Keys',
+    inputs: ['e', 'Shift', ' ', 'ArrowUp', 'Escape'].map((key) => ({ device: 'KEYBOARD', key })),
+  },
+  {
+    label: 'The mouse',
+    inputs: [
+      { device: 'MOUSE', button: 'LEFT' },
+      { device: 'MOUSE', button: 'RIGHT' },
+      { device: 'MOUSE', button: 'MIDDLE' },
+      { device: 'MOUSE', delta: 'WHEEL' },
+      { device: 'MOUSE', delta: 'MOVE' },
+    ],
+  },
+];
+
+/** In the page: a glyph draws where its text is */
+const initInputGlyphDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  for (const { label, inputs } of GLYPH_ROWS) {
+    const group = addGroup(root, label);
+    for (const input of inputs) group.append(createInputGlyph({ input }).cmp.elem);
+  }
+  const prompt = addGroup(root, 'In a prompt, following its text');
+  const line = document.createElement('p');
+  line.className = 'hubDemoKbdLine';
+  line.append(
+    'Press ',
+    createInputGlyph({ input: { device: 'KEYBOARD', key: 'e' } }).cmp.elem,
+    ' or ',
+    createInputGlyph({ input: { device: 'MOUSE', button: 'LEFT' } }).cmp.elem,
+    ' to open the door.'
+  );
+  prompt.append(line);
+};
+
 const DEMOS: Record<string, Demo> = {
   window: initWindowDemo,
   dialog: initDialogDemo,
@@ -560,11 +643,14 @@ const DEMOS: Record<string, Demo> = {
   popover: initPopoverDemo,
   toaster: initToasterDemo,
   icons: initIconsDemo,
+  kbd: initKbdDemo,
+  inputGlyph: initInputGlyphDemo,
 };
 
 // --- The page ---
 
-/** The page's switches: each radio group sets (or, for '', removes) its attribute on the root */
+/** The page's switches: each radio group sets (or, for '', removes) its attribute on the HUD root
+ * and the demos' kit roots */
 const SETTING_ATTRIBUTES: Record<string, string> = {
   theme: 'data-aek-theme',
   density: 'data-aek-density',
@@ -575,8 +661,10 @@ const initSettings = (root: HTMLElement, hud: HTMLElement) => {
     const input = e.target as HTMLInputElement;
     const attribute = SETTING_ATTRIBUTES[input.name];
     if (!attribute) return;
-    if (input.value) hud.setAttribute(attribute, input.value);
-    else hud.removeAttribute(attribute);
+    for (const elem of [hud, ...kitRoots]) {
+      if (input.value) elem.setAttribute(attribute, input.value);
+      else elem.removeAttribute(attribute);
+    }
   });
 };
 

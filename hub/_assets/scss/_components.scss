@@ -164,3 +164,21 @@
   font-size: 0.8125rem;
   opacity: 0.75;
 }
+
+// A kit root in a demo box (`addKitRoot`): a piece drawn in the page, its theme and density from the
+// page's switches. Its rows are at the kit's text size (not the root itself: --aek-base is computed
+// from the root's own font size, so reading it there would be a cycle)
+.hubDemoKitRoot {
+  display: grid;
+  gap: 1rem;
+
+  .hubComponentDemoGroup {
+    font-size: var(--aek-font-size-md);
+  }
+}
+
+// A line of text with a key hint or a glyph in it
+.hubDemoKbdLine {
+  margin: 0;
+  line-height: var(--aek-line-height-base);
+}

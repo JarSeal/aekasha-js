@@ -1451,6 +1451,93 @@ split button, Link, Kbd, the input glyph, Badge, Tag. Each with its tests, its d
 script, `verify:ui` clean. A module size check after the windows' growth (D8) closes the
 phase.
 
+Each section: the modules in `components/` (`Menu.ts` in `overlays/`, D2) with their stylesheet
+and test on `KitDom`, on `aekasha/ui` with their types, JSDoc with the parts, custom properties,
+keys and an `@example`; the component library's demo box (`<piece>-text.md`, `DEMOS`,
+`COMPONENT_USES`, the checks table); the kit's `CLAUDE.md` and the UI kit guide; then `yarn test`,
+`tsc`, ESLint, `yarn hub:build`, `verify:ui --only <pieces>`, `yarn sbp --profile all` and
+`verify:baselines` (the new names recorded).
+
+1. Section 1, Kbd and the input glyph (first: the button's `kbd` draws with Kbd).
+   `components/KeyNames.ts` (`@internal`, no styles: a key's shown and spoken names, the
+   platform), `components/Kbd.ts`, `components/InputGlyph.ts`.
+2. Section 2, the button: `components/Button.ts`, the five variants (`link` included, D10's Link
+   bullet), the sizes, the icon, the label and tooltip, `kbd`, loading, disabled, the toggle and
+   hold to confirm.
+3. Section 3, the button group (`createButtonGroup`: `role="group"`, joined; `exclusive` a toolbar
+   with roving `tabindex`) and the link (`createLink`).
+4. Section 4, the menu (`overlays/Menu.ts`, the APG menu button) and the split button
+   (`createSplitButton`).
+5. Section 5, the badge and the tag (`createBadge`, `createTag`); then the module size check
+   (D8: `DraggableWindow.ts` at 860 lines) and the phase's verification (`verify:scenes` too).
+
+Defaults chosen at the phase's start (2026-10-25, for review):
+
+- **Static pieces in the page.** Kbd, the glyph, the button, the badge and the tag are demoed in
+  their box, not in a window: in a kit root of the demo's own (`aekUi`, as an app's UI outside
+  the HUD), which the page's theme and density switches set too, so `verify:ui` checks them in
+  the four settings. The menu and the split button open in the box too (their menu is an
+  overlay on the HUD root's stack).
+- **Kbd** (`createKbd({ keys })`): `keys` is `getKeyChordLabel`'s text (`'Ctrl+Shift+P'`, a
+  trailing `+` for the key itself, alternatives joined with `' / '` shown with "or", as the
+  debug shortcuts dialog draws them; p806 moves the dialog onto it). An outer `<kbd class="aekKbd">`
+  holds a `<kbd>` per key with `+` between them on every platform (D10). On macOS (read at
+  create from `navigator.userAgentData` / `navigator.platform`, or the `platform` prop) the
+  modifiers show as ⌃ ⇧ ⌥ ⌘; the arrows are ← ↑ → ↓ everywhere. When what it shows isn't
+  what it says (a symbol, an arrow), the shown keys are `aria-hidden` and a visually hidden copy
+  holds the full names ("Command+Shift+P"): `aria-label` on a `kbd` (a generic role) is
+  prohibited (axe's `aria-prohibited-attr`). Sized in `em` so it follows its text, as an icon.
+- **The input glyph** (`createInputGlyph({ input })`): `input` is an action binding's shape,
+  spelled out in the kit (no kernel import): `{ device: 'KEYBOARD', key }`,
+  `{ device: 'MOUSE', button: 'LEFT' | 'MIDDLE' | 'RIGHT' }` or
+  `{ device: 'MOUSE', delta: 'MOVE' | 'WHEEL' }`, so an app passes a map's binding as it is; p808
+  adds `'GAMEPAD'`. A key is a key cap (a wide one for Space, Shift, Enter, Tab, Backspace), a
+  mouse input an inline SVG of a mouse with the part in the accent (the kit's own markup: a
+  production app may not register the built-in icons). `role="img"` with the spoken name as its
+  `aria-label` ("Left mouse button").
+- **The button's spinner** (section 2) is a CSS mark on the button (`[aria-busy="true"]`), like
+  the window's close cross, so the button needs no Phase 7 module; Phase 7's spinner shares its
+  keyframes. `kbd` sets `aria-keyshortcuts` on the button and its Kbd is `aria-hidden` (the
+  button's name stays its label).
+
+As built (section 1, 2026-10-25):
+
+- `components/KeyNames.ts` (`@internal`): `getKeyPlatform()`, `getKeyName(key, platform)`
+  (`{ shown, spoken }`: the modifiers by platform, the arrows, Esc, Space, Del, PgUp / PgDn; a
+  one-character key upper-cased, an unknown one kept) and `splitKeyChord` (a trailing `+` is the
+  key).
+- `components/Kbd.ts` + `Kbd.scss`: `createKbd({ keys, platform?, class?, attr?, id? })` returns
+  `{ cmp, setKeys }` (redrawn in place). **The hidden copy is there whenever a shown name isn't
+  its word**, so `Ctrl` gets one too ("Control+Shift+P"), not only the macOS symbols. The id is
+  written only when given. The browser's monospace `kbd` font is undone (`font-family: inherit`).
+- `components/InputGlyph.ts` + `InputGlyph.scss`: `createInputGlyph({ input, platform?, class?,
+  attr?, id? })` returns `{ cmp, setInput }`; `InputGlyphInput` on `aekasha/ui`. No wide key caps
+  (D10 doesn't ask; a cap is at least square and grows with its text: Space is wider by itself).
+  The mouse is a 24 × 24 SVG: the body, the buttons' line, the left or right half, the wheel
+  (`MIDDLE`, and `WHEEL` with an up and down chevron), and side chevrons for `MOVE`. The line is
+  broken around the wheel only when the wheel is the part: through it, the line hid the lit wheel,
+  and an outlined wheel on every mouse cut into a lit half (the two halves read alike in the
+  compact density's shot).
+- The component library: a "Kbd" and an "Input glyph" box, drawn in the page in a kit root of their
+  own (`addKitRoot`, `.hubDemoKitRoot`), which the theme and density switches set with the HUD
+  root (the switches' note said "every setting looks the same": stale since Phase 5, rewritten).
+  The rows' size is `--aek-font-size-md` on the groups, not the kit root: `--aek-base` is computed
+  from the root's own font size, so the root reading it would be a cycle. No Hub buttons: the box
+  as shown is the state. Their check scripts have no keys (nothing to press): the macOS hint's
+  symbol, `aria-hidden` and spoken copy, and the glyphs' `role="img"` and names.
+- Tests: `Kbd.test.ts` (8: the chord split, the names by platform, the platform read from
+  `navigator`, the keys and joins, `Ctrl` said in full, the macOS symbols hidden with the words,
+  alternatives and `setKeys`, the id), `InputGlyph.test.ts` (3).
+- Docs: the kit's `CLAUDE.md` (a bullet, the styles' importers, the tests), the UI kit guide (two
+  rows in the pieces table, "Key hints and input glyphs", the key APIs), the component library's
+  two texts and `COMPONENT_USES`.
+- The section's checks: `yarn test` (170 files, 1396 tests), `tsc` (both), ESLint,
+  `yarn hub:build` (968 names, 100 % documented), `yarn sbp --profile all` (every budget within;
+  no profile ships the two yet), `verify:baselines` recorded (the seven `aekasha/ui` names and the
+  five `@internal` key-name exports; every bundle unchanged). `verify:ui --only kbd,inputGlyph`:
+  both scripts pass, no violation; the two boxes' screenshots are new, to record with `--update`
+  after review.
+
 ### Phase 7: core components II — feedback
 
 D10: Spinner, Progress bar, Skeleton, Divider, Empty state, Loading overlay; the debug scene

@@ -2788,6 +2788,24 @@
       "TextureAssetSchema": "Variable"
     },
     "src/_engine/types/three-node-material-helpers.d.ts": {},
+    "src/_engine/ui/components/InputGlyph.ts": {
+      "createInputGlyph": "Function",
+      "InputGlyph": "TypeAlias",
+      "InputGlyphInput": "TypeAlias",
+      "InputGlyphProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/Kbd.ts": {
+      "createKbd": "Function",
+      "Kbd": "TypeAlias",
+      "KbdProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/KeyNames.ts": {
+      "getKeyName": "Function",
+      "getKeyPlatform": "Function",
+      "KeyName": "TypeAlias",
+      "KeyPlatform": "TypeAlias",
+      "splitKeyChord": "Function"
+    },
     "src/_engine/ui/core/CMP.ts": {
       "classes": "Function",
       "CMP": "Function"
@@ -4116,8 +4134,13 @@
       "DropDownOption",
       "DropDownProps",
       "HudRootProps",
+      "InputGlyph",
+      "InputGlyphInput",
+      "InputGlyphProps",
       "KEEP_IN_VIEWS_CLASS",
       "KIT_ROOT_CLASS",
+      "Kbd",
+      "KbdProps",
       "OpenDraggableWindowProps",
       "Popover",
       "PopoverProps",
@@ -4160,6 +4183,8 @@
       "cloudSunIcon",
       "createDropDown",
       "createHudRoot",
+      "createInputGlyph",
+      "createKbd",
       "createPopover",
       "createToaster",
       "createTooltip",

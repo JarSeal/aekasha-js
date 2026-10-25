@@ -65,6 +65,10 @@ export {
   KIT_ROOT_CLASS,
 } from './core/HUD';
 export type { HudRootProps } from './core/HUD';
+export { createInputGlyph } from './components/InputGlyph';
+export type { InputGlyph, InputGlyphInput, InputGlyphProps } from './components/InputGlyph';
+export { createKbd } from './components/Kbd';
+export type { Kbd, KbdProps } from './components/Kbd';
 export { getMotionFactor } from './core/Motion';
 export { createPopover } from './overlays/Popover';
 export type { Popover, PopoverProps } from './overlays/Popover';

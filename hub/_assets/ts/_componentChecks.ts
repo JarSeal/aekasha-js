@@ -74,6 +74,9 @@ const DIALOG = (index: number) => `#hudRoot #hubDemoDialog${index}`;
 const TOOLTIP = '#hudRoot .aekTooltip';
 const POPOVER = '#hudRoot .aekPopover';
 const POPOVER_TRIGGER = '#hubDemoPopoverTrigger';
+/** The first key hint of the Kbd box's macOS row (its second, `KBD_ROWS`) */
+const KBD_MAC = '[data-hub-demo="kbd"] .hubComponentDemoGroup:nth-of-type(2) .aekKbd';
+const GLYPH = '[data-hub-demo="inputGlyph"] .aekInputGlyph';
 
 export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
   window: {
@@ -331,6 +334,34 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { expectCount: POPOVER, count: 0 },
           { expectFocus: `#hudRoot ${POPOVER_TRIGGER}` },
           { expectAttr: `#hudRoot ${POPOVER_TRIGGER}`, name: 'aria-expanded', value: 'false' },
+        ],
+      },
+    ],
+  },
+  kbd: {
+    keyboard: [
+      {
+        name: 'no keys; assistive tech hears a macOS hint’s words, not its symbols',
+        steps: [
+          { expectText: `${KBD_MAC} .aekKbd__key`, text: '⌘' },
+          { expectAttr: `${KBD_MAC} .aekKbd__keys`, name: 'aria-hidden', value: 'true' },
+          { expectText: `${KBD_MAC} .aekVisuallyHidden`, text: 'Command+S' },
+        ],
+      },
+    ],
+  },
+  inputGlyph: {
+    keyboard: [
+      {
+        name: 'no keys; each glyph is an image named by its input',
+        steps: [
+          { expectAttr: GLYPH, name: 'role', value: 'img' },
+          { expectAttr: GLYPH, name: 'aria-label', value: 'E' },
+          {
+            expectAttr: `${GLYPH}[data-device="mouse"]`,
+            name: 'aria-label',
+            value: 'Left mouse button',
+          },
         ],
       },
     ],

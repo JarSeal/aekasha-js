@@ -1,0 +1,37 @@
+// The input glyph's default styles (InputGlyph.ts), on the design tokens and layered (p803 D5): an
+// app's unlayered rule wins, and every selector is in :where(). Its height is
+// --aek-input-glyph-size (default 1.6em, so it follows its text); a key cap is at least as wide.
+@layer aek.components {
+  :where(.aekInputGlyph) {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--aek-input-glyph-size, 1.6em);
+    line-height: 1;
+    vertical-align: middle;
+  }
+
+  :where(.aekInputGlyph[data-device='keyboard']) {
+    min-width: var(--aek-input-glyph-size, 1.6em);
+    padding: 0 0.45em;
+    border: 1px solid var(--aek-border-control);
+    border-bottom-width: 3px;
+    border-radius: var(--aek-radius-md);
+    background-color: var(--aek-surface-raised);
+    color: var(--aek-text);
+    font-size: inherit;
+    font-weight: var(--aek-font-weight-semibold);
+    white-space: nowrap;
+  }
+
+  :where(.aekInputGlyph svg) {
+    display: block;
+    width: auto;
+    height: 100%;
+  }
+
+  :where(.aekInputGlyph__active) {
+    fill: var(--aek-accent);
+  }
+}

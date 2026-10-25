@@ -12,6 +12,8 @@
 | Popover        | [`createPopover`](api:createPopover)                               | Interactive content next to its trigger: filters, a detail    |
 | Toaster, toast | [`createToaster`](api:createToaster), [`addToast`](api:addToast)   | Short messages that come and go                               |
 | Icon           | [`registerIcon`](api:registerIcon), [`getSvgIcon`](api:getSvgIcon) | SVG icons by name, in the text colour                         |
+| Key hint       | [`createKbd`](api:createKbd)                                       | A shortcut's keys, with each platform's names                 |
+| Input glyph    | [`createInputGlyph`](api:createInputGlyph)                         | One key or mouse input in a prompt: "Press E"                 |
 
 ## Components
 
@@ -314,6 +316,27 @@ Register the ones your app shows with `registerIcon` (or all of them with
 shows `??` and logs a warning.
 :::
 
+## Key hints and input glyphs
+
+[`createKbd`](api:createKbd) draws a shortcut's keys, a `<kbd>` each with `+` between them, from
+the text [`getKeyChordLabel`](api:getKeyChordLabel) writes; several chords joined with `' / '`
+are shown with "or". On macOS the modifiers are symbols (⌘ ⇧ ⌥ ⌃), and assistive tech hears the
+words ("Command+Shift+P"). [`createInputGlyph`](api:createInputGlyph) draws one input for a
+prompt: a key cap, or a mouse with the button, the wheel or its movement in the accent. It takes
+an action map binding's shape, so a binding goes in as it is. Both are sized in `em`, so they
+follow their text, and both are display only: binding the key is the app's.
+
+```ts
+const hint = panel.add({ tag: 'p', text: 'Command palette: ' });
+hint.add(createKbd({ keys: getKeyChordLabel({ key: 'p', ctrl: true, shift: true }) }).cmp);
+
+const prompt = panel.add({ tag: 'p', text: 'Press ' });
+const glyph = createInputGlyph({ input: { device: 'KEYBOARD', key: 'e' } });
+prompt.add(glyph.cmp);
+prompt.add({ tag: 'span', text: ' to open the door' });
+glyph.setInput({ device: 'MOUSE', button: 'LEFT' }); // the player rebound it
+```
+
 ## Styling
 
 The kit's components bring their own styles with their modules (a window's, a drop-down's, a
@@ -493,6 +516,8 @@ container; `vw` and `vh` are the browser window's, as in CSS.
 - [`createToaster`](api:createToaster), [`addToast`](api:addToast) and
   [`removeToast`](api:removeToast).
 - [`registerIcon`](api:registerIcon) and [`getSvgIcon`](api:getSvgIcon).
+- [`createKbd`](api:createKbd) ([`Kbd`](api:Kbd)) and [`createInputGlyph`](api:createInputGlyph)
+  ([`InputGlyphInput`](api:InputGlyphInput)).
 - [`aekasha/ui/fonts`](hub:documentation/aekasha/ui/fonts): the kit's fonts, a stylesheet entry.
 
 ## Read more
