@@ -4,6 +4,43 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-25 — p802-hub-project-section
+
+The Hub's Project section (p802 Phases 2-5, of the debugger UI overhaul epic p800; Phase 1, the dev-only pages, merged as `p802-dev-pages`): the pages for working on Ækasha and the app, which only the dev server's Hub shows. How Ækasha and the app are developed, the code blocks reference, Ækasha's design document with its token tables generated from the UI kit, the app's own design document to fill in, and a component library running the UI kit's pieces without the engine.
+
+### Engine 5.11.1 (Golden Hour)
+
+**Changed**
+
+- `Tokens.test.ts`' parser and contrast pairs moved to `src/_engine/ui/styles/TokenSheet.ts` (`@internal`, imports nothing, in no build), so the test and the Hub's design document compute the same ratios. Nothing that ships changed.
+- `src/_engine/ui/CLAUDE.md`: the kit outside the engine (what the Hub stands in for) and what the component library found for p803.
+
+### App 1.15.1 (Preschooler)
+
+**Changed**
+
+- `physicsTest.ts`' `dynamic-box` region note names the code blocks page's new path.
+
+### Project
+
+**Added**
+
+- The Project section's pages (dev only): `project/aekasha/` (Developing Ækasha: the repo's own code conventions, the hooks, ratchets and baselines, and the workflow from a plan to a merge) and `project/app/` (the app's folders, its design and its version), listed by cards on `project/`'s page. They cover the plans, the verify commands and the Hub sections of the CLAUDE.md files, so `hub.config.ts`' `coverageIgnore` is empty.
+- Ækasha's design document (`project/aekasha/design/`): colours, type, spacing, elevation, motion, icons, patterns, accessibility and voice, each rule with an example pair. Its tables are generated from `tokens.css`, `fonts.css` and the built-in icons (`devTools/hub/generated/design.ts`): each colour role in both themes over its surface, every contrast pair `Tokens.test.ts` checks with its ratio and a sample, the type and space scales in both densities, radii, shadows, layers, motion, the focus ring and every built-in icon by name. A token in no table warns at its line in `tokens.css`.
+- The app's design document (`project/app/design/`): the same headings, each a "To decide" note linking Ækasha's section, for a fork to fill in place.
+- The component library (`project/aekasha/components/`): a window, a dialog, a drop-down, toasters and icons running live with every state, theme and density switches (they take effect with p803), each piece's "Used by" list read from `src/` (`devTools/hub/generated/components.ts`), and the kit's size from the SBP report.
+- The Hub's scripts can import the `aekasha*` entries: the aliases, the `__AEK_DEBUG__` (false), `__PROJECT_METADATA__` and Hub-only `__HUB_DEV__` defines, the kit's stylesheets, a relative base for the lazy chunks. Two stand-ins (`hub/_assets/ts/_kit/`) replace the engine's main loop module (it pulled three, the renderer and both workers into the bundle) and its storage (a demo window overwrote the app's saved windows, as the dev Hub shares the app's origin). The component library's chunk is dev only: a public build bundling it is an error. A save to a UI kit file the scripts bundle rebuilds them in dev.
+- `::: do` and `::: dont` callouts, a rule's example pair, side by side from 720 px.
+- In dev, the homepage hero lists the Project section's pages under "Project", the app's design document first.
+- `devTools/hub/design.test.ts`, `components.test.ts` and `scripts.test.ts`.
+
+**Changed**
+
+- The code blocks reference moved from `documentation/code-blocks/` to `project/aekasha/code-blocks/`, so the public Hub no longer has it; the Documentation page says so in dev.
+- `hub/tsconfig.json` checks the engine files the kit reaches, and `eslint.config.js` lints `hub/_assets/ts/` with the layering rules.
+- `hub/CLAUDE.md`, `devTools/hub/CLAUDE.md`, the Hub authoring guide and the root `CLAUDE.md` describe the Project section, the design documents, the component library and the script build.
+- The plans: p802 is `_DONE_`; p800 follows.
+
 ## 2026-10-24 — p801-design-foundation
 
 The design foundation (p801, the debugger UI overhaul epic p800's first child): the design tokens the UI kit, the debugger and the Hub share, with their themes, units that make the kit work in an embed, motion, a focus ring and a contrast rule, and the kit's own fonts. No new component and no restyle of the kit's or the debugger's colours (p803 and p806 do that); the one visible change on purpose is the font.
