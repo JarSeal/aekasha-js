@@ -1538,6 +1538,84 @@ As built (section 1, 2026-10-25):
   both scripts pass, no violation; the two boxes' screenshots are new, to record with `--update`
   after review.
 
+As built (section 2, 2026-10-25):
+
+- `components/Button.ts` + `Button.scss`: `createButton(props)` returns `{ cmp, setLabel,
+  setDisabled, setLoading, isLoading, setPressed, isPressed }`. **`label` is required on every
+  button** (D10 said "required when it shows only an icon"): a button's text is its name, so
+  there's one prop for both, and `iconOnly` (new) shows only the icon, the label then the
+  `aria-label` and, without `tooltip`, the tooltip (which describes nothing: the tooltip's rule).
+  `type` is a prop too (default 'button'). `onClick(e)` gets the click, or for a hold the press
+  that was held.
+- **The size is on the parts** (`--aek-button-font-size`, `--aek-button-height` per size; md 32 px,
+  sm 24, lg 40 at the defaults, never under 24 px): `normalize.scss`' unlayered `button {
+  font-size: 100%; line-height: 1.15 }` beats a layered rule on the button on the full page (the
+  drop-down's finding). The danger variant is the danger colour on a surface with a `danger-soft`
+  hover (there's no `on-danger` token for a filled one); a pressed toggle is `accent-soft` with
+  an accent border; `link` keeps the 24 px target with no padding.
+- **Loading's spinner** is the button's `::after` (the parts at `opacity: 0`, the width kept),
+  turning on `kit.scss`' new `aekSpin` (`calc(800ms * var(--aek-motion, 1))`: a still ring at an
+  app's `--aek-motion: 0`), pulsing on `aekPulse` under `prefers-reduced-motion`; Phase 7's
+  spinner takes the same keyframes.
+- **Hold to confirm:** **a fill across the button** (`.aekButton__hold`, `scaleX` over
+  `--aek-button-hold-time`, linear), not D10's ring: a ring around a wide, short button reads
+  poorly. It starts on a primary `pointerdown` (captured, so a release anywhere ends it), Space or
+  Enter (repeats ignored; their default prevented, so they make no click), stays full after it
+  acts until the release (`data-holding="confirmed"`), and a release, `pointercancel`, a lost
+  capture or a blur before cancels. Every click is ignored, a screen reader's in browse mode too
+  (it sends a click with no press): **open for review** whether that's right; the JSDoc, the
+  guide and the component library say such a user holds Space in focus mode, and that an app
+  offers another way (a dialog). Steps (`steps(4)`) when `getMotionFactor` reads 0 at the press,
+  so an app's `--aek-motion: 0` counts, not only the media query. "Hold to confirm" is a `hidden`
+  span inside the button that `aria-describedby` names (out of the name, read as the
+  description).
+- `kbd`: the hint is a Kbd (`aekButton__kbd`, `aria-hidden`) and the button's
+  `aria-keyshortcuts` comes from `KeyNames.ts`' new `getAriaKeyShortcuts` (ARIA's `Control`,
+  `Meta`, `Alt`, `Space`, `Escape`, `Plus`; alternatives space-separated).
+- **`verify:ui`'s runner** (the button box needed it): a box's states are its `.hubButton`s only
+  (`BOX_BUTTON`: a kit button drawn in the box is its demo; no box changed), the steps
+  `clickInBox` / `focusInBox` (a kit piece in the box) and `keyDown` / `keyUp` (a held key; the
+  outline check after them too), and the settle pauses an infinite animation at its start (the
+  spinner never ends, which failed the settle; paused, its shot is the same on every run).
+- **The Hub's own unlayered `button { color: inherit }` beat the kit** (D5's warning, found by axe:
+  the primary label took `--aek-text` on the accent), and its unlayered `:focus-visible` set
+  `border-radius` on a focused kit piece. Both now skip `#hudRoot *, .hubDemoKitRoot *`
+  (`:not(:where(…))`, so the Hub's own rules keep their specificity), and the kit's layered ring
+  and reset take over there.
+  That changed the HUD's own buttons in the Hub too (checked: with the committed `_base.scss` the
+  window, drop-down and toaster shots match their baselines): the Hub's `font: inherit` had been
+  overriding the kit's layered `line-height` and font on them, so each drop-down trigger is now
+  1 px shorter (the kit's `--aek-line-height-base`) and the window's and toasts' close buttons and
+  a focused element's corners are the kit's. The new shots are the kit's own look.
+- **Found, open for review:** in an app, `page.scss`' `normalize.scss` is unlayered too, so its
+  `button { font-size: 100%; line-height: 1.15 }` beats every layered kit rule on a button: the
+  button works around it (the size on its parts), but the drop-down's trigger takes `1.15` in an
+  app and `--aek-line-height-base` in the Hub. Proposed: normalize in a layer below the kit's
+  (`aek.page`, named first in `tokens.css`' order statement, so either stylesheet may load
+  first), which an app's CSS still beats; then the button's size could go back on the button.
+- The component library: a "Button" box in a kit root (`BUTTON_ID` ids, a `role="status"` line
+  saying what each did): the variants, the sizes, the icons, Save (`kbd`, loads 1.5 s on a click),
+  disabled and loading, two toggles, a hold to confirm. Four keyboard scripts: Enter and Space
+  click and Tab goes on; a toggle's `aria-pressed` by Space and Enter; Save's
+  `aria-keyshortcuts`, busy with the focus kept, then done; a short Enter does nothing on the hold
+  and a held one fills, acts and resets on the release.
+- Tests: `Button.test.ts` (9: the element and its id, the icon's side and icon only with its
+  tooltip and `setLabel`, the tooltip and the shortcut, the ARIA names, click / loading / disabled,
+  the toggle, the hold by pointer, by Space and Enter with repeats and a blur, the removal
+  mid-hold with no timer or listener left).
+- The section's checks: `yarn test` (171 files, 1405 tests), `tsc` (both), ESLint,
+  `yarn hub:build` (971 names, 100 % documented), `yarn sbp --profile all` (every budget within; no
+  profile ships the button yet), `verify:baselines` recorded (the three `aekasha/ui` names and
+  `getAriaKeyShortcuts`; every bundle unchanged). `yarn verify:ui` (every piece): every keyboard
+  script passes, the button's four included, and no violation; to record after review: the
+  button's, Kbd's and the glyph's new shots, the window, drop-down and toaster shots above (the
+  Hub's rules), and the icons box's two (stale since Phase 5 section 5's new row, never
+  re-recorded).
+- Docs: the kit's `CLAUDE.md` (Buttons; the styles' importers and the keyframes; the tests),
+  `devTools/verify/CLAUDE.md` (the box's Hub buttons, the infinite animation, the new steps),
+  `hub/CLAUDE.md` (Hub buttons and kit roots), the UI kit guide (Buttons, the table, the key APIs),
+  the component library's text and `COMPONENT_USES`.
+
 ### Phase 7: core components II — feedback
 
 D10: Spinner, Progress bar, Skeleton, Divider, Empty state, Loading overlay; the debug scene

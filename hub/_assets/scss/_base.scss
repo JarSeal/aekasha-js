@@ -109,14 +109,19 @@ a {
   }
 }
 
+// The kit's pieces in the page (the component library's HUD root and its demos' kit roots, p803):
+// the Hub's unlayered element rules leave them to the kit's layered styles, which they'd beat (a
+// kit button's colour, its corners while focused). In :where(), so the rules keep their specificity
+$kit-pieces: '#hudRoot *, .hubDemoKitRoot *';
+
 // The UI kit's focus ring (p801 D6), unlayered: the Hub's own rules decide where it's inset
-:focus-visible {
+:focus-visible:not(:where(#{$kit-pieces})) {
   outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
   outline-offset: var(--aek-focus-ring-offset);
   border-radius: var(--aek-radius-sm);
 }
 
-button {
+button:not(:where(#{$kit-pieces})) {
   font: inherit;
   color: inherit;
 }

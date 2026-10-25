@@ -39,6 +39,7 @@ export const COMPONENT_USES = [
   { slot: 'generated-components-popover', calls: ['createPopover'] },
   { slot: 'generated-components-toaster', calls: ['createToaster', 'addToast'] },
   { slot: 'generated-components-icons', calls: ['getSvgIcon', 'registerIcon'] },
+  { slot: 'generated-components-button', calls: ['createButton'] },
   { slot: 'generated-components-kbd', calls: ['createKbd'] },
   { slot: 'generated-components-input-glyph', calls: ['createInputGlyph'] },
 ] as const;

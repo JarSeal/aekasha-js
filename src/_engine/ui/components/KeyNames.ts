@@ -83,3 +83,38 @@ export const splitKeyChord = (chord: string): string[] => {
     .map((key) => key.trim())
     .filter(Boolean);
 };
+
+/** `aria-keyshortcuts`' names for the keys whose ARIA name isn't the chord's word */
+const ARIA_NAMES: { [key: string]: string } = {
+  ctrl: 'Control',
+  control: 'Control',
+  cmd: 'Meta',
+  command: 'Meta',
+  meta: 'Meta',
+  option: 'Alt',
+  alt: 'Alt',
+  shift: 'Shift',
+  esc: 'Escape',
+  space: 'Space',
+  del: 'Delete',
+};
+
+/**
+ * Chords as `getKeyChordLabel` writes them (`'Ctrl+S / Meta+S'`), as `aria-keyshortcuts` takes
+ * them (`'Control+S Meta+S'`: ARIA's modifier names, alternatives space-separated).
+ * @internal
+ */
+export const getAriaKeyShortcuts = (keys: string) =>
+  keys
+    .split(' / ')
+    .map((chord) =>
+      splitKeyChord(chord)
+        .map((key) => {
+          if (key === ' ') return 'Space';
+          if (key === '+') return 'Plus';
+          if (key.length === 1) return key.toUpperCase();
+          return ARIA_NAMES[key.toLowerCase()] ?? key;
+        })
+        .join('+')
+    )
+    .join(' ');

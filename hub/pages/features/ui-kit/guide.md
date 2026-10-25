@@ -12,6 +12,7 @@
 | Popover        | [`createPopover`](api:createPopover)                               | Interactive content next to its trigger: filters, a detail    |
 | Toaster, toast | [`createToaster`](api:createToaster), [`addToast`](api:addToast)   | Short messages that come and go                               |
 | Icon           | [`registerIcon`](api:registerIcon), [`getSvgIcon`](api:getSvgIcon) | SVG icons by name, in the text colour                         |
+| Button         | [`createButton`](api:createButton)                                 | An action: a toggle, a loading save, a hold to confirm        |
 | Key hint       | [`createKbd`](api:createKbd)                                       | A shortcut's keys, with each platform's names                 |
 | Input glyph    | [`createInputGlyph`](api:createInputGlyph)                         | One key or mouse input in a prompt: "Press E"                 |
 
@@ -316,6 +317,51 @@ Register the ones your app shows with `registerIcon` (or all of them with
 shows `??` and logs a warning.
 :::
 
+## Buttons
+
+[`createButton`](api:createButton) makes a native `<button>` and returns its handle, whose setters
+write it in place (no rebuild), so a HUD can change it every frame. Its `variant` says what kind of
+action it is: `primary` for a group's one main action, `secondary` (the default), `ghost` for a
+quiet one, `danger` for a destructive one, and `link` for an action that looks like a link (a
+navigation is a real link). `size` is `sm`, `md` or `lg`.
+
+```ts
+const save: Button = createButton({
+  label: 'Save',
+  variant: 'primary',
+  kbd: 'Ctrl+S', // a hint and aria-keyshortcuts; binding the key is yours
+  onClick: () => {
+    save.setLoading(true); // the width kept, a spinner, aria-busy, clicks ignored
+    saveGameAsync().finally(() => save.setLoading(false));
+  },
+});
+toolbarPanel.add(save.cmp);
+
+// An icon button: the label is its accessible name and its tooltip
+toolbarPanel.add(createButton({ label: 'Settings', icon: getSvgIcon('gear'), iconOnly: true }).cmp);
+
+// A toggle (aria-pressed)
+const mute = createButton({ label: 'Mute', pressed: false, onPressedChange: (on) => setMuted(on) });
+
+// A destructive action: it acts only after the pointer, Space or Enter is held for 800 ms
+createButton({
+  label: 'Delete save',
+  variant: 'danger',
+  holdToConfirmMs: 800,
+  onClick: deleteSave,
+});
+```
+
+- A hold to confirm fills across the button while it's held, and an early release cancels. Under
+  reduced motion the fill steps instead of sliding: it's information, so it still shows. It
+  ignores a click without a press, which is how some screen readers activate a button in their
+  browse mode, so give such an action another way too (a confirmation [dialog](#dialogs)).
+- `tooltip` adds a tooltip; an `iconOnly` button gets its label as one.
+- Its parts are `.aekButton__icon`, `.aekButton__label`, `.aekButton__kbd` and `.aekButton__hold`,
+  its variant and size are `data-variant` and `data-size`, and its states are attributes
+  (`disabled`, `aria-pressed`, `aria-busy`, `data-holding`). `--aek-button-radius` and
+  `--aek-button-hold-color` restyle it from any ancestor.
+
 ## Key hints and input glyphs
 
 [`createKbd`](api:createKbd) draws a shortcut's keys, a `<kbd>` each with `+` between them, from
@@ -516,6 +562,7 @@ container; `vw` and `vh` are the browser window's, as in CSS.
 - [`createToaster`](api:createToaster), [`addToast`](api:addToast) and
   [`removeToast`](api:removeToast).
 - [`registerIcon`](api:registerIcon) and [`getSvgIcon`](api:getSvgIcon).
+- [`createButton`](api:createButton) ([`Button`](api:Button), [`ButtonProps`](api:ButtonProps)).
 - [`createKbd`](api:createKbd) ([`Kbd`](api:Kbd)) and [`createInputGlyph`](api:createInputGlyph)
   ([`InputGlyphInput`](api:InputGlyphInput)).
 - [`aekasha/ui/fonts`](hub:documentation/aekasha/ui/fonts): the kit's fonts, a stylesheet entry.

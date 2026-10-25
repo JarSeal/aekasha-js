@@ -70,6 +70,20 @@
   }
 }
 
+// A spinner's turn and, under reduced motion, its slow pulse (p803 D10: the button's loading mark;
+// Phase 7's spinner turns with them too)
+@keyframes aekSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes aekPulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
 // The debugger's icon class (getSvgIcon writes it too), unlayered as its styles are: they size
 // .uiIcon themselves until p806 restyles them
 .uiIcon {

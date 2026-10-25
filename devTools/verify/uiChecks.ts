@@ -96,7 +96,11 @@ export const describeStep = (step: UiRunStep | UiKeyStep) => {
   if ('clickHud' in step) return `clickHud ${step.clickHud}`;
   if ('focusHud' in step) return `focusHud ${step.focusHud}`;
   if ('focusBox' in step) return `focusBox "${step.focusBox}"`;
+  if ('clickInBox' in step) return `clickInBox ${step.clickInBox}`;
+  if ('focusInBox' in step) return `focusInBox ${step.focusInBox}`;
   if ('press' in step) return `press ${step.press}`;
+  if ('keyDown' in step) return `keyDown ${step.keyDown}`;
+  if ('keyUp' in step) return `keyUp ${step.keyUp}`;
   if ('expectFocus' in step) return `expectFocus ${step.expectFocus}`;
   if ('expectFocusBox' in step) return `expectFocusBox "${step.expectFocusBox}"`;
   if ('expectAttr' in step) {

@@ -2788,6 +2788,11 @@
       "TextureAssetSchema": "Variable"
     },
     "src/_engine/types/three-node-material-helpers.d.ts": {},
+    "src/_engine/ui/components/Button.ts": {
+      "Button": "TypeAlias",
+      "ButtonProps": "TypeAlias",
+      "createButton": "Function"
+    },
     "src/_engine/ui/components/InputGlyph.ts": {
       "createInputGlyph": "Function",
       "InputGlyph": "TypeAlias",
@@ -2800,6 +2805,7 @@
       "KbdProps": "TypeAlias"
     },
     "src/_engine/ui/components/KeyNames.ts": {
+      "getAriaKeyShortcuts": "Function",
       "getKeyName": "Function",
       "getKeyPlatform": "Function",
       "KeyName": "TypeAlias",
@@ -4109,6 +4115,8 @@
     "aekasha/ui": [
       "AddToastResponse",
       "BuiltInIconName",
+      "Button",
+      "ButtonProps",
       "CMP",
       "CMPAnimChain",
       "CMPAnimState",
@@ -4181,6 +4189,7 @@
       "classes",
       "closeDraggableWindow",
       "cloudSunIcon",
+      "createButton",
       "createDropDown",
       "createHudRoot",
       "createInputGlyph",

@@ -16,6 +16,7 @@ import {
   addToast,
   closeDraggableWindow,
   CMP,
+  createButton,
   createDropDown,
   createHudRoot,
   createInputGlyph,
@@ -37,6 +38,8 @@ import {
 } from 'aekasha/ui';
 import type {
   BuiltInIconName,
+  Button,
+  ButtonProps,
   DialogProps,
   DropDownProps,
   InputGlyphInput,
@@ -569,6 +572,101 @@ const initIconsDemo: Demo = (box) => {
   missing.append(cell);
 };
 
+// --- Button ---
+
+const BUTTON_ID = (name: string) => `${ID_PREFIX}Button${name}`;
+/** How long the Save button loads after a click */
+const SAVE_LOADING_MS = 1500;
+
+/** In the page: the buttons draw in their rows, and what they do shows in the box's status line */
+const initButtonDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = BUTTON_ID('Status');
+  status.className = 'hubDemoKbdLine';
+  status.setAttribute('role', 'status');
+  const report = (text: string) => (status.textContent = text);
+  const counts = new Map<string, number>();
+  /** A button whose click (a toggle's change aside) is counted in the status line */
+  const make = (name: string, props: ButtonProps) =>
+    createButton({
+      id: BUTTON_ID(name),
+      onClick:
+        props.pressed === undefined
+          ? () => {
+              const n = (counts.get(props.label) ?? 0) + 1;
+              counts.set(props.label, n);
+              report(`${props.label} clicked (${n})`);
+            }
+          : undefined,
+      ...props,
+    });
+  const row = (label: string, ...buttons: Button[]) => {
+    const group = addGroup(root, label);
+    for (const button of buttons) group.append(button.cmp.elem);
+  };
+  const toggled = (label: string) => (pressed: boolean) =>
+    report(`${label}: ${pressed ? 'on' : 'off'}`);
+
+  row(
+    'Variants',
+    make('Primary', { label: 'Primary', variant: 'primary' }),
+    make('Secondary', { label: 'Secondary' }),
+    make('Ghost', { label: 'Ghost', variant: 'ghost' }),
+    make('Danger', { label: 'Danger', variant: 'danger' }),
+    make('Link', { label: 'Link', variant: 'link' })
+  );
+  row(
+    'Sizes: sm, md and lg',
+    make('Small', { label: 'Small', size: 'sm' }),
+    make('Medium', { label: 'Medium' }),
+    make('Large', { label: 'Large', size: 'lg' })
+  );
+  row(
+    'With an icon: at the start, at the end, and only an icon (its label the name and tooltip)',
+    make('Undo', { label: 'Undo', icon: getSvgIcon('undo') }),
+    make('Redo', { label: 'Redo', icon: getSvgIcon('redo'), iconPosition: 'end' }),
+    make('Settings', { label: 'Settings', icon: getSvgIcon('gear'), iconOnly: true })
+  );
+  const save: Button = make('Save', {
+    label: 'Save',
+    variant: 'primary',
+    kbd: 'Ctrl+S',
+    onClick: () => {
+      save.setLoading(true);
+      report('Saving…');
+      setTimeout(() => {
+        save.setLoading(false);
+        report('Saved');
+      }, SAVE_LOADING_MS);
+    },
+  });
+  row('A shortcut’s hint; a click loads for 1.5 s', save);
+  const uploading = make('Uploading', { label: 'Uploading' });
+  uploading.setLoading(true);
+  row('Disabled, and loading', make('Disabled', { label: 'Disabled', disabled: true }), uploading);
+  row(
+    'Toggles (aria-pressed)',
+    make('Mute', { label: 'Mute', pressed: false, onPressedChange: toggled('Mute') }),
+    make('Grid', {
+      label: 'Grid',
+      icon: getSvgIcon('spatialGrid'),
+      pressed: true,
+      onPressedChange: toggled('Grid'),
+    })
+  );
+  row(
+    'Hold to confirm (800 ms)',
+    make('Delete', {
+      label: 'Delete save',
+      variant: 'danger',
+      holdToConfirmMs: 800,
+      onClick: () => report('Deleted (held)'),
+    })
+  );
+  root.append(status);
+};
+
 // --- Kbd ---
 
 const KBD_ROWS: { label: string; keys: string[]; platform?: 'mac' | 'other' }[] = [
@@ -643,6 +741,7 @@ const DEMOS: Record<string, Demo> = {
   popover: initPopoverDemo,
   toaster: initToasterDemo,
   icons: initIconsDemo,
+  button: initButtonDemo,
   kbd: initKbdDemo,
   inputGlyph: initInputGlyphDemo,
 };

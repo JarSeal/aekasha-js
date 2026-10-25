@@ -1,3 +1,5 @@
+export { createButton } from './components/Button';
+export type { Button, ButtonProps } from './components/Button';
 export { CMP, classes } from './core/CMP';
 export type {
   CMPAnimChain,

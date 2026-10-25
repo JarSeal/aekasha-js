@@ -16,11 +16,15 @@ const POLL_MS = 50;
 
 export const boxSelector = (piece: string) => `[data-hub-demo="${piece}"]`;
 
-/** The demo box's button whose text is `text`, exactly */
+/** A box's Hub buttons, which open its states: the page's own (`.hubButton`), not a kit button
+ * drawn in the box as its demo */
+export const BOX_BUTTON = 'button.hubButton';
+
+/** The demo box's Hub button whose text is `text`, exactly */
 const getBoxButton = (page: Page, piece: string, text: string) => {
   const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return page
-    .locator(`${boxSelector(piece)} button`)
+    .locator(`${boxSelector(piece)} ${BOX_BUTTON}`)
     .filter({ hasText: new RegExp(`^\\s*${escaped}\\s*$`) })
     .first();
 };
@@ -29,7 +33,7 @@ const getBoxButton = (page: Page, piece: string, text: string) => {
 const actAsync = async (page: Page, piece: string, step: UiRunStep | UiKeyStep) => {
   if ('button' in step) {
     await page
-      .locator(`${boxSelector(piece)} button`)
+      .locator(`${boxSelector(piece)} ${BOX_BUTTON}`)
       .nth(step.button)
       .click();
   } else if ('click' in step) {
@@ -40,8 +44,22 @@ const actAsync = async (page: Page, piece: string, step: UiRunStep | UiKeyStep) 
     await page.locator(`#hudRoot ${step.clickHud}`).first().click();
   } else if ('focusHud' in step) {
     await page.locator(`#hudRoot ${step.focusHud}`).first().focus();
+  } else if ('clickInBox' in step) {
+    await page
+      .locator(`${boxSelector(piece)} ${step.clickInBox}`)
+      .first()
+      .click();
+  } else if ('focusInBox' in step) {
+    await page
+      .locator(`${boxSelector(piece)} ${step.focusInBox}`)
+      .first()
+      .focus();
   } else if ('press' in step) {
     await page.keyboard.press(step.press);
+  } else if ('keyDown' in step) {
+    await page.keyboard.down(step.keyDown);
+  } else if ('keyUp' in step) {
+    await page.keyboard.up(step.keyUp);
   } else return false;
   return true;
 };
@@ -151,7 +169,7 @@ export const runKeyStepsAsync = async (page: Page, piece: string, steps: UiKeySt
     const step = steps[i];
     const where = `step ${i + 1} (${describeStep(step)})`;
     if (await actAsync(page, piece, step)) {
-      if (!('press' in step)) continue;
+      if (!('press' in step || 'keyDown' in step || 'keyUp' in step)) continue;
       const missing = await pollAsync(
         () => readMissingOutline(page),
         (m) => m === null,

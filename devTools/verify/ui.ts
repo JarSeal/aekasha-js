@@ -34,7 +34,13 @@ import type { Browser, BrowserContext, Page } from 'playwright-core';
 import { UI_DEMO_CHECKS, type UiKeyScript } from '../../hub/_assets/ts/_componentChecks';
 import { launchChromium } from './browser';
 import { startVerifyServerAsync } from './devServer';
-import { boxSelector, captureStateAsync, runKeyStepsAsync, takeStepsAsync } from './uiPage';
+import {
+  BOX_BUTTON,
+  boxSelector,
+  captureStateAsync,
+  runKeyStepsAsync,
+  takeStepsAsync,
+} from './uiPage';
 import { checkSnapshotAsync, startSnapshotRun, UI_LAST_RUN_DIR } from './uiSnapshots';
 import { ROOT } from '../paths';
 import { UI_ALLOWED_VIOLATIONS, UI_AXE_TAGS } from './ui.config';
@@ -97,15 +103,17 @@ const waitForDemosAsync = (page: Page, timeout: number) =>
     { timeout }
   );
 
-/** Each box's key and its buttons' texts, in the page's order */
+/** Each box's key and its Hub buttons' texts, in the page's order */
 const readBoxesAsync = async (page: Page, url: string) => {
   await page.goto(url, { timeout: FIRST_LOAD_TIMEOUT_MS });
   await waitForDemosAsync(page, FIRST_LOAD_TIMEOUT_MS);
-  return page.evaluate(() =>
-    [...document.querySelectorAll<HTMLElement>('[data-hub-demo]')].map((box) => ({
-      piece: box.dataset.hubDemo ?? '',
-      buttons: [...box.querySelectorAll('button')].map((b) => (b.textContent ?? '').trim()),
-    }))
+  return page.evaluate(
+    (selector) =>
+      [...document.querySelectorAll<HTMLElement>('[data-hub-demo]')].map((box) => ({
+        piece: box.dataset.hubDemo ?? '',
+        buttons: [...box.querySelectorAll(selector)].map((b) => (b.textContent ?? '').trim()),
+      })),
+    BOX_BUTTON
   );
 };
 
@@ -124,14 +132,24 @@ const createSettingContextAsync = async (browser: Browser, setting: UiSetting) =
   return context;
 };
 
-/** Waits for no running animation and the HUD root's boxes the same on two polls; false on a timeout */
+/**
+ * Waits for no running animation and the HUD root's boxes the same on two polls; false on a
+ * timeout. An infinite animation (a spinner) never ends: it's paused at its start, which also
+ * makes its shot the same on every run.
+ */
 const settleAsync = async (page: Page) => {
   const end = Date.now() + SETTLE_TIMEOUT_MS;
   let last = '';
   while (Date.now() < end) {
     // No named function in the page: tsx wraps those in a helper the page doesn't have
     const now = await page.evaluate(() => {
-      const running = document.getAnimations().some((a) => a.playState === 'running');
+      const animations = document.getAnimations();
+      for (const a of animations) {
+        if (a.playState !== 'running' || a.effect?.getTiming().iterations !== Infinity) continue;
+        a.pause();
+        a.currentTime = 0;
+      }
+      const running = animations.some((a) => a.playState === 'running');
       const boxes = [...document.querySelectorAll('#hudRoot *')].map((el) => {
         const r = el.getBoundingClientRect();
         return `${r.x},${r.y},${r.width},${r.height}`;

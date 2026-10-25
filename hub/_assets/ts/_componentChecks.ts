@@ -1,7 +1,7 @@
 /**
  * The component library's checks (`yarn verify:ui`, p803 D11), next to its demos
  * (`_components.ts`, whose `DEMOS` keys these are). The runner opens every Hub button of a demo
- * box as a state of its own (on its own page load, in both themes and both densities) and runs
+ * box (`.hubButton`, the page's own: a kit button drawn in the box is the demo) as a state of its own (on its own page load, in both themes and both densities) and runs
  * axe-core over the box and the HUD root; a demo lists here only the states a button alone
  * doesn't open, and its keyboard scripts. Plain data: no page imports it, and it imports nothing.
  *
@@ -11,12 +11,15 @@
  * an outline.
  */
 
-/** A step that opens a state: a button in the demo box by its text, or an element in the HUD root */
+/** A step that opens a state: a Hub button in the demo box by its text, an element in the HUD
+ * root, or a kit element drawn in the box */
 export type UiCheckStep =
-  /** The demo box's button whose text is this, exactly */
+  /** The demo box's Hub button (`.hubButton`) whose text is this, exactly */
   | { click: string }
   /** The first element in the HUD root matching this selector */
-  | { clickHud: string };
+  | { clickHud: string }
+  /** The first element in the demo box matching this selector (a kit button drawn in the page) */
+  | { clickInBox: string };
 
 /**
  * A keyboard script's step. Selectors are the page's (`#hudRoot …` for the kit's). Each `expect*`
@@ -28,11 +31,18 @@ export type UiKeyStep =
   /** Focuses the first element in the HUD root matching this selector, as a script would (a
    * window's part F6 doesn't land on) */
   | { focusHud: string }
-  /** Focuses the demo box's button whose text is this, exactly, without a click (the focus
+  /** Focuses the demo box's Hub button whose text is this, exactly, without a click (the focus
    * outside the HUD root: an embed's host page) */
   | { focusBox: string }
+  /** Focuses the first element in the demo box matching this selector, as a script would (a kit
+   * piece drawn in the page) */
+  | { focusInBox: string }
   /** Presses a key or a chord, in Playwright's names (`Tab`, `Shift+Tab`, `ArrowDown`, `Escape`) */
   | { press: string }
+  /** Holds a key down until a `keyUp` of it (a hold to confirm), in Playwright's names */
+  | { keyDown: string }
+  /** Releases a key a `keyDown` held */
+  | { keyUp: string }
   /** The focused element matches this selector (`body`: nothing focused) */
   | { expectFocus: string }
   /** The focused element is the demo box's button whose text is this, exactly (an overlay's
@@ -77,6 +87,9 @@ const POPOVER_TRIGGER = '#hubDemoPopoverTrigger';
 /** The first key hint of the Kbd box's macOS row (its second, `KBD_ROWS`) */
 const KBD_MAC = '[data-hub-demo="kbd"] .hubComponentDemoGroup:nth-of-type(2) .aekKbd';
 const GLYPH = '[data-hub-demo="inputGlyph"] .aekInputGlyph';
+/** A button of the button box by its name (`_components.ts`' `BUTTON_ID`), and its status line */
+const BUTTON = (name: string) => `#hubDemoButton${name}`;
+const BUTTON_STATUS = BUTTON('Status');
 
 export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
   window: {
@@ -334,6 +347,61 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { expectCount: POPOVER, count: 0 },
           { expectFocus: `#hudRoot ${POPOVER_TRIGGER}` },
           { expectAttr: `#hudRoot ${POPOVER_TRIGGER}`, name: 'aria-expanded', value: 'false' },
+        ],
+      },
+    ],
+  },
+  button: {
+    keyboard: [
+      {
+        name: 'Enter and Space click a button; Tab goes on to the next',
+        steps: [
+          { focusInBox: BUTTON('Secondary') },
+          { press: 'Enter' },
+          { expectText: BUTTON_STATUS, text: 'Secondary clicked (1)' },
+          { press: 'Space' },
+          { expectText: BUTTON_STATUS, text: 'Secondary clicked (2)' },
+          { press: 'Tab' },
+          { expectFocus: BUTTON('Ghost') },
+        ],
+      },
+      {
+        name: 'a toggle: Space and Enter flip aria-pressed',
+        steps: [
+          { focusInBox: BUTTON('Mute') },
+          { expectAttr: BUTTON('Mute'), name: 'aria-pressed', value: 'false' },
+          { press: 'Space' },
+          { expectAttr: BUTTON('Mute'), name: 'aria-pressed', value: 'true' },
+          { expectText: BUTTON_STATUS, text: 'Mute: on' },
+          { press: 'Enter' },
+          { expectAttr: BUTTON('Mute'), name: 'aria-pressed', value: 'false' },
+        ],
+      },
+      {
+        name: 'a click loads: busy, with the focus kept, then done',
+        steps: [
+          { focusInBox: BUTTON('Save') },
+          { expectAttr: BUTTON('Save'), name: 'aria-keyshortcuts', value: 'Control+S' },
+          { press: 'Enter' },
+          { expectAttr: BUTTON('Save'), name: 'aria-busy', value: 'true' },
+          { expectText: BUTTON_STATUS, text: 'Saving…' },
+          { expectFocus: BUTTON('Save') },
+          { expectAttr: BUTTON('Save'), name: 'aria-busy', value: null },
+          { expectText: BUTTON_STATUS, text: 'Saved' },
+        ],
+      },
+      {
+        name: 'hold to confirm: a short Enter does nothing, a held one acts',
+        steps: [
+          { focusInBox: BUTTON('Delete') },
+          { press: 'Enter' },
+          { expectAttr: BUTTON('Delete'), name: 'data-holding', value: null },
+          { keyDown: 'Enter' },
+          { expectAttr: BUTTON('Delete'), name: 'data-holding', value: 'filling' },
+          { expectAttr: BUTTON('Delete'), name: 'data-holding', value: 'confirmed' },
+          { expectText: BUTTON_STATUS, text: 'Deleted (held)' },
+          { keyUp: 'Enter' },
+          { expectAttr: BUTTON('Delete'), name: 'data-holding', value: null },
         ],
       },
     ],
