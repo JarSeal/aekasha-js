@@ -32,7 +32,7 @@ const createResult = (html: string, fields: Partial<HubBuildResult> = {}): HubBu
   files: [PAGE_FILE, OUTSIDE_FILE],
   dirs: [],
   pages: [{ path: 'examples/', outPath: 'examples/index.html', html, isErrorPage: false }],
-  assets: { styles: null, styleSources: [], scripts: null, isClean: true },
+  assets: { styles: null, styleSources: [], scripts: null, scriptSources: [], isClean: true },
   search: null,
   api: null,
   isApiStale: false,
@@ -248,7 +248,13 @@ describe('createHubDevRunner', () => {
     const styles = (hash: string) => ({ outPath: '_assets/hub.css', content: '', hash });
     const withTokens = (hash: string): Partial<HubBuildResult> => ({
       files: [PAGE_FILE, ENGINE_TOKENS],
-      assets: { styles: styles(hash), styleSources: [ENGINE_TOKENS], scripts: null, isClean: true },
+      assets: {
+        styles: styles(hash),
+        styleSources: [ENGINE_TOKENS],
+        scripts: null,
+        scriptSources: [],
+        isClean: true,
+      },
     });
     const runner = createHubDevRunner(deps);
     const first = runner.getBuildAsync();
@@ -301,10 +307,22 @@ describe('diffBuilds', () => {
   it('sends `css` for a new stylesheet and `all` for a static asset', () => {
     const styles = (hash: string) => ({ outPath: '_assets/hub.css', content: '', hash });
     const prev = createResult('', {
-      assets: { styles: styles('a'), styleSources: [], scripts: null, isClean: true },
+      assets: {
+        styles: styles('a'),
+        styleSources: [],
+        scripts: null,
+        scriptSources: [],
+        isClean: true,
+      },
     });
     const next = createResult('', {
-      assets: { styles: styles('b'), styleSources: [], scripts: null, isClean: true },
+      assets: {
+        styles: styles('b'),
+        styleSources: [],
+        scripts: null,
+        scriptSources: [],
+        isClean: true,
+      },
     });
     expect(diffBuilds(prev, next, new Set())).toEqual([{ kind: 'css', version: 'b' }]);
     const icon = path.join(HUB_DIR, '_assets', 'icons', 'search.svg');

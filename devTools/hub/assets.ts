@@ -3,15 +3,20 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as sass from 'sass';
 import { build as viteBuild, type Rollup } from 'vite';
+import { getViteAliases } from '../aliases';
+import type { ProjectMetadata } from '../projectMetadata';
 import type { HubDiagnostics } from './diagnostics';
 import { hashContent } from './hash';
+import { hubKitKernelPlugin } from './kitKernel';
 import {
+  HUB_COMPONENTS_FILE,
   HUB_DEV_CLIENT_FILE,
   HUB_DIR,
   HUB_SCSS_ENTRY,
   HUB_STATIC_ASSET_DIRS,
   HUB_TS_DIR,
   isHubStaticAssetFile,
+  ROOT,
 } from './paths';
 import type { HubBuildMode } from './types';
 
@@ -141,25 +146,60 @@ type RollupErrorLike = Error & { loc?: { file?: string; line?: number }; id?: st
 export const HUB_DEV_CLIENT_OUT_PATH = `${ASSETS_URL_DIR}hub-dev.js`;
 
 /**
+ * The modules only a `dev` build may bundle: the dev client, and the component library
+ * (`_components.ts`, p802 D9), which `hub.ts` imports behind `__HUB_DEV__`. A `public` build with
+ * one of them is an error (`buildScripts`).
+ */
+const DEV_ONLY_SCRIPT_MODULES = [HUB_DEV_CLIENT_FILE, HUB_COMPONENTS_FILE];
+
+/** The scripts, and the files outside `hub/` they were built from */
+export type HubBuiltScripts = {
+  files: HubAssetFile[];
+  /**
+   * Each bundled module's file outside `hub/` (the UI kit's, p802 Phase 4): the dev plugin
+   * watches them, which `hub/`'s own watch doesn't see
+   */
+  sources: string[];
+};
+
+/** A bundled module's id as a file: without a query, null for a virtual module */
+const toModuleFile = (id: string) => (id.startsWith('\0') ? null : id.replace(/\?.*$/, ''));
+
+/**
  * Bundles the TS entries (and the dev client in `dev`) with Vite's `build()`, unwritten; null with
- * an error when it fails
+ * an error when it fails. The entries can import the `aekasha*` entries (the component library's
+ * `aekasha/ui`): the aliases, the engine's `define`s (`__AEK_DEBUG__` false, as in a production
+ * build), the kit's scss modules through Vite's CSS handling (a chunk's CSS next to it), and the
+ * kit's kernel import resolved to the Hub's stand-in (`kitKernel.ts`). `__HUB_DEV__` is the Hub's
+ * own: true in `dev`, so a `public` build drops what it guards.
  */
 export const buildScripts = async (
   mode: HubBuildMode,
-  diag: HubDiagnostics
-): Promise<HubAssetFile[] | null> => {
+  diag: HubDiagnostics,
+  meta: ProjectMetadata
+): Promise<HubBuiltScripts | null> => {
   const input = Object.fromEntries(
     listScriptEntries().map((file) => [path.basename(file, '.ts'), file])
   );
   if (mode === 'dev') input[path.basename(HUB_DEV_CLIENT_OUT_PATH, '.js')] = HUB_DEV_CLIENT_FILE;
-  if (!Object.keys(input).length) return [];
+  if (!Object.keys(input).length) return { files: [], sources: [] };
   try {
     const result = await viteBuild({
       configFile: false,
       root: HUB_DIR,
+      // Relative: a lazy chunk's CSS is loaded from `import.meta.url`, so the Hub works at any
+      // path (the default `/` would load `/_assets/…` from the domain root)
+      base: './',
       mode: 'production',
       logLevel: 'warn',
       publicDir: false,
+      resolve: { alias: getViteAliases(ROOT) },
+      define: {
+        __AEK_DEBUG__: 'false',
+        __PROJECT_METADATA__: JSON.stringify(meta),
+        __HUB_DEV__: JSON.stringify(mode === 'dev'),
+      },
+      plugins: [hubKitKernelPlugin()],
       build: {
         write: false,
         minify: mode === 'public',
@@ -174,17 +214,33 @@ export const buildScripts = async (
             format: 'es',
             entryFileNames: '[name].js',
             chunkFileNames: 'chunks/[name]-[hash].js',
+            assetFileNames: 'chunks/[name]-[hash][extname]',
           },
         },
       },
     });
     const outputs = (Array.isArray(result) ? result : [result]) as Rollup.RollupOutput[];
-    return outputs
-      .flatMap(({ output }) => output)
-      .map((item) => {
+    const items = outputs.flatMap(({ output }) => output);
+    const moduleFiles = new Set(
+      items.flatMap((item) => (item.type === 'chunk' ? item.moduleIds : [])).map(toModuleFile)
+    );
+    if (mode === 'public') {
+      const devOnly = DEV_ONLY_SCRIPT_MODULES.filter((file) => moduleFiles.has(file));
+      for (const file of devOnly) {
+        diag.error(file, undefined, 'A dev-only script module is in the public build');
+      }
+      if (devOnly.length) return null;
+    }
+    return {
+      files: items.map((item) => {
         const content = item.type === 'chunk' ? item.code : Buffer.from(item.source);
         return { outPath: ASSETS_URL_DIR + item.fileName, content, hash: hashContent(content) };
-      });
+      }),
+      sources: [...moduleFiles].filter(
+        (file): file is string =>
+          !!file && path.isAbsolute(file) && !file.startsWith(HUB_DIR + path.sep)
+      ),
+    };
   } catch (err) {
     const { loc, id, message } = err as RollupErrorLike;
     diag.error(loc?.file ?? id ?? HUB_TS_DIR, loc?.line, message);

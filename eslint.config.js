@@ -14,7 +14,14 @@ const compat = new FlatCompat();
 const ROOT = import.meta.dirname;
 // The `aekasha/toolkit/<category>` entries' folders
 const TOOLKIT_CATEGORIES = ['ecs', 'geometry', 'materials'];
-const ENGINE_CONSUMERS = ['src/toolkit/**', 'src/app/**', 'src/generated/**', 'src/*.ts'];
+// The Hub's browser TS too: its component library imports `aekasha/ui` (p802 D9)
+const ENGINE_CONSUMERS = [
+  'src/toolkit/**',
+  'src/app/**',
+  'src/generated/**',
+  'src/*.ts',
+  'hub/_assets/ts/**',
+];
 const LAYER_ZONES = [
   {
     target: 'src/_engine/**',
@@ -216,7 +223,7 @@ export default [
 
   // The layering (see LAYER_ZONES)
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.ts', 'hub/_assets/ts/**/*.ts'],
     plugins: { import: importPlugin },
     settings: { 'import/resolver': { node: { extensions: ['.ts', '.js', '.json'] } } },
     rules: {

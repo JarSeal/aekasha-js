@@ -393,6 +393,59 @@ D9: the script build's aliases and CSS, `components.ts`, the page with the exist
 `yarn hub:build` in `public` checks that the page and its script are absent from `dist-hub/`
 (a test on the output list: no file under `project/` and no `components.js`).
 
+Checked against the branch after Phase 3 (2026-10-25), with a probe build of D9's setup:
+
+- §4's risk holds, and is worse than the plan expected: `DraggableWindow.ts` imports `addResizer`
+  from `kernel/loop/MainLoop.ts`, which imports three, the renderer and, through them, both
+  workers. With Vite's default IIFE workers the build fails; with ES workers it writes a 103 kB
+  entry (`three.core.js` in it) and about 4.7 MB of workers, Rapier, Draco and Basis next to it
+  (Vite bundles a worker when it transforms the file, before tree-shaking). `SceneHooks.ts`,
+  `BootHooks.ts` and `Config.ts` are harmless.
+- The windows, dialogs and toasts mount under the HUD root, which only the boot makes
+  (`createHudContainer`, `@internal`, not on `aekasha/ui`): `getHUDRootCMP()` throws without it,
+  and a page has one root (a second `attach` throws). "A demo per component in its own box"
+  can't be built with the public API.
+- Both themes and both densities look the same on the kit today: its colours are still
+  `variables.scss`', its sizes `--aek-rem` (p803 / p806 map them).
+- Every `hub/_assets/ts/*.ts` not starting with `_` is built in both modes, so `components.ts`
+  would be in `dist-hub/`.
+
+Decided at the review (all as recommended): a Hub-side stand-in for `MainLoop.ts`, no engine
+change (p803 still cuts the import); one HUD root over the viewport as in an app, each section's
+box opening its piece's states, the drop-down shown in a window; the theme and density switches
+kept, saying they take effect with p803. Sections: 1. the script build, 2. the HUD root and the
+page skeleton, 3. the pieces (with the hero link and `project/aekasha/`' card).
+
+As built (section 1):
+
+- `buildScripts` (`assets.ts`) takes the project metadata and builds with the `aekasha*` aliases,
+  the defines `__AEK_DEBUG__` (`false`), `__PROJECT_METADATA__` and the Hub's own `__HUB_DEV__`
+  (`hub/_assets/ts/hub-env.d.ts`), `base: './'` (a lazy chunk's CSS loads from
+  `import.meta.url`; the default `/` would load it from the domain root) and each asset in
+  `chunks/` next to its chunk. The kit's `.module.scss` needed nothing more.
+- The component library is `hub/_assets/ts/_components.ts` (`HUB_COMPONENTS_FILE`), not
+  `components.ts`: `hub.ts` imports it behind `__HUB_DEV__` on a page with
+  `[data-hub-components]`, so `public` drops the import and emits no chunk. A `public` build
+  bundling it or the dev client is an error (`DEV_ONLY_SCRIPT_MODULES`). The public `hub.js`
+  changed only in Vite's preload helper (it now resolves against `import.meta.url`; no public
+  chunk has a dependency); the chunks are byte for byte as before.
+- `devTools/hub/kitKernel.ts`: `hubKitKernelPlugin` resolves an import of a
+  `HUB_KIT_KERNEL_STAND_INS` module (`MainLoop.ts` only) to `hub/_assets/ts/_kitKernel.ts`, whose
+  `addResizer` runs on the browser window's `resize`. A new kernel name in the kit fails the
+  build (a missing export). The dev chunk: 53 kB unminified and 8 kB of CSS, no three, no worker.
+- `HubBuiltScripts.sources` / `HubBuildAssets.scriptSources`: the bundled files outside `hub/`
+  (the kit's), in the build's `files`, so the dev plugin watches them and a save rebuilds the
+  scripts (`devRunner.ts`' `reuseAssets` counts them with the style sources).
+- `hub/tsconfig.json`: `tsc` doesn't see the stand-in, so `tsc -p hub` checks the engine files the
+  kit reaches: it includes the engine's global declarations and `vite-env.d.ts`, keeps the root's
+  `typeRoots` (three's addons' types), and `hub-env.d.ts` declares V8's
+  `Error.stackTraceLimit` (a debug module's; the Hub's check stays without node's globals).
+- `eslint.config.js`: `hub/_assets/ts/**` is an engine consumer (no `_engine/` path) and gets the
+  layering rules.
+- `devTools/hub/scripts.test.ts`: each stand-in is a `UI_KERNEL_HOOKS` module and exports every
+  name the kit imports from it; a `public` build has no component chunk and no kit source; a
+  `dev` one has the chunk and its CSS, no other asset, and no three or kernel loop source.
+
 ### Phase 5: `CLAUDE.md`, the authoring doc, the root `CLAUDE.md`
 
 The root `CLAUDE.md`'s Ækasha Hub section: the Project section and the dev-only pages in one

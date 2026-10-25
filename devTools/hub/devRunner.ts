@@ -276,14 +276,17 @@ export const createHubDevRunner = (deps: HubDevRunnerDeps): HubDevRunner => {
 
   /** A run after the first build; `extracted`: it renders an API rebuild's model */
   const runAsync = async ({ files, extracted }: HubDevWork) => {
-    const styleSources = new Set(lastBuild?.assets.styleSources);
+    const assetSources = new Set([
+      ...(lastBuild?.assets.styleSources ?? []),
+      ...(lastBuild?.assets.scriptSources ?? []),
+    ]);
     const reuseAssets =
       !!lastBuild &&
       ![...files].some(
         (file) =>
           file.startsWith(HUB_ASSETS_DIR + path.sep) ||
           isStaticAsset(file) ||
-          styleSources.has(file)
+          assetSources.has(file)
       );
     const result = await deps.buildAsync({ last: lastBuild, reuseAssets });
     const prev = lastBuild;
