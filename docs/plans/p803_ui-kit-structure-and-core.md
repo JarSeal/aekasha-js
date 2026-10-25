@@ -1318,6 +1318,72 @@ As built (section 3, 2026-10-25):
   window,dialog,dropDown`: every keyboard script passes and no violation (the allow list holds the
   toaster's `button-name` alone); the drop-down's and the dialog's drop-down screenshots differ
   (the restyle, the panel's new row) and the searchable state is new, to re-record after review.
+
+As built (section 4, 2026-10-25):
+
+- **Nothing in the page's head** (D5): `Toaster.scss` (on the tokens, layered) has the styles, a
+  toaster's size settings are custom properties on its element (`--aek-toast-min-width`,
+  `-max-width`, `-min-height`, `-max-height`; the `ToasterSettings` keys unchanged), a toast's
+  animation time is `--aek-toast-time` on it (the JS still times the phases), the toaster at
+  `--aek-z-toast`. `verify:embed`'s `uiKit` scenario counts the host head's `<style>` elements
+  before and after the mount.
+- **The classes are aek-prefixed** (decided in this section: D5's global prefixed classes; a host
+  page's own `.toast` matched the old ones in an embed): `aekToaster`, `aekToast` with `__icon`,
+  `__content`, `__title`, `__message`, `__close`, `data-type`, and the phase as `data-phase`
+  (`entering` / `appearing` / `showing` / `removing`, in place of `toastStart` / `toastEnd`), the
+  toaster's padding transition on `data-updating`. The changelog's restyle note names the rename.
+  `DebugToaster.scss` (the debug toaster's icon colours by the old classes) is deleted: the kit
+  colours each kind now. `MaterialEditor.module.scss`' toaster rule takes `.aekToaster`.
+- **`success`** joins `ToastType` (D9 names it; 3.2 s like info). Each kind has a status colour
+  (a 3 px stripe, `--aek-toast-status`: `info`, `success`, `warning`, `danger`) and an icon:
+  `settings.icons`' HTML (the debug toaster's), else a glyph drawn in CSS in a `-soft` circle
+  (`data-glyph`: i, a check mark, !, a multiplication sign), so an app needn't register the
+  built-in icons. The glyphs are CSS escapes in the output (`sass:string`'s `unquote`): a
+  non-ASCII character would make Sass write `@charset`.
+- Assistive tech (D9): two visually hidden live regions per toaster (`role="status"` polite for
+  info, success and warning; `role="alert"` assertive for an alert) read a toast's title and
+  message once, the region emptied and filled 50 ms later so a repeated text is read again; the
+  toaster isn't live itself. `aekVisuallyHidden` is new in `kit.scss` (`aek.utilities`), for
+  Phase 6's link too. `verify:ui`'s capture leaves visually hidden elements out of the union (the
+  regions' 1 px boxes made every state's shot the whole viewport).
+- The close button: `aria-label="Close"` (closes the `button-name` entry), a 24 px target,
+  `type="button"`; the default cross is CSS like the window's. With the focus in a toast it has an
+  overlay stack entry (pushed on `focusin`, its `returnFocus` the `relatedTarget`), so Escape
+  closes it and the focus goes back; `removeToast` with the focus inside returns it too.
+- The pauses: the showing time counts down only while the toast isn't hovered, doesn't hold the
+  focus and the page isn't hidden (one `visibilitychange` listener on the document, added with the
+  first toaster and removed with the last); the time left is kept across a pause.
+- The long toast (1.2's item 5): a flex row (icon, text, close), the text `align-self: stretch`
+  with its own scroll inside `--aek-toast-max-height`, a tab stop when it overflows (measured
+  at the add: `scrollable-region-focusable` fired on the long message).
+- Reduced motion (D9, p800 D7): with a factor of 0 the toast doesn't slide or push the queue; it's
+  settled at once and fades in place in the setting's time, unscaled (opacity isn't motion).
+  `animationTime` in the response is that fade then.
+- Found: a `down` or `right` toaster's new toast slid in at the start and then settled at the far
+  end (it was appended); it's prepended now. The old code's `prepend` was on the toast's content,
+  which put a down toaster's text before its icon.
+- `UI_ALLOWED_VIOLATIONS` is empty (Done when: `verify:ui` passes with no allowed violations).
+- The component library: a "Success" toast; the long message closable and its text on the
+  scroll; three keyboard scripts (the close button's label and Enter; Escape in a toast with the
+  focus back on its Hub button; the polite region's text after "With a title").
+- Tests: `Toaster.test.ts` on `KitDom` (7: the phases, the early removal and the toaster's
+  removal with no head `<style>` and no listener left, the live regions, the glyph and the close
+  label and an omitted icon, the three pauses with the time left, Escape with the focus back).
+- Size: the toaster's CSS left its JS string: `uiKitEmbed.css` 2.6 → 3.2 kB gzip and
+  `uiKitEmbed.js` 15.9 → 16.1 kB in the embed (`DropDown.css` +0.6, `DropDown.js` +0.2 in the
+  app), over their budgets: 4 KiB and 17 KiB now (`sbp.config.ts`, Phase 7 resets them).
+- Checked by eye: the debug toaster in the app (F1's toast) on a light system follows it (D6: the
+  debug toaster isn't forced dark), its own icons in the kind's colour (`.cache/p803/phase5s4/`).
+- The section's checks, in the foreground this time (the Stop hook's tests and the background
+  `verify:embed` collided twice): `yarn test` (1381 tests), `tsc` (both), ESLint,
+  `yarn hub:build`, `verify:embed` (all seven), `yarn sbp --profile all` (every budget within after
+  the raise), `verify:baselines` recorded. `yarn verify:ui` (every piece): every keyboard script
+  passes, no violation, an empty allow list; the toaster's screenshots differ (the restyle), and
+  the tooltip's and the popover's by 0.16-0.36 % (they open in windows: section 2's corners and
+  handles, not re-recorded then), to re-record after review.
+- Docs: the kit's `CLAUDE.md` (the toaster, the closed "Left for p803" item, the embed's check),
+  `devTools/verify/CLAUDE.md` (the head check, `expectStyle`, the capture's hidden elements), the
+  UI kit guide's toasts, the component library's toaster text.
  `verify:scenes`
   wasn't run: its snapshots are the canvas alone, which no kit style reaches (Phase 0); it runs at
   the phase's end.

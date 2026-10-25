@@ -13,7 +13,6 @@ import { getSvgIcon } from '../ui/core/icons/SvgIcon';
 import { persistDebuggerTabStateValue } from './_dbg__DebuggerPaneBuilder';
 import { createTabHost } from './_dbg__TabHost';
 import { doesSceneExist, getCurrentSceneId, registerOnAllSceneExits } from '../kernel/scene/Scene';
-import './DebugToaster.scss';
 // The kit's fonts (p801 D8): the full page has them already (InitEngine), a debug embed gets them here
 import '../ui/fonts/fonts.css';
 

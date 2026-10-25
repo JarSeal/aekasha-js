@@ -18,10 +18,7 @@ export const UI_AXE_TAGS = [
 /** A violation allowed on a piece (a `DEMOS` key): an axe rule id, and the phase that fixes it */
 export type UiAllowedViolation = { rule: string; piece: string; until: string };
 
-export const UI_ALLOWED_VIOLATIONS: UiAllowedViolation[] = [
-  // The toast's close button is an icon with no label
-  { rule: 'button-name', piece: 'toaster', until: 'p803 Phase 5 section 4' },
-];
+export const UI_ALLOWED_VIOLATIONS: UiAllowedViolation[] = [];
 
 /**
  * How far a state's screenshot may differ from its baseline: the kit's pixels are the same run to

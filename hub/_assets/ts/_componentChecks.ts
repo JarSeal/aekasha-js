@@ -63,6 +63,7 @@ const WINDOW = '#hudRoot #hubDemoWindow';
 const WINDOW_HEADER = `${WINDOW} .aekWindow__header`;
 const KIND_WINDOW = (n: number) => `#hudRoot #hubDemoKind_${n}`;
 const BEHIND_DIALOG = '#hudRoot #hubDemoBehindDialog';
+const TOAST = '#hudRoot .aekToast';
 const LIST = '#hudRoot .aekDropDownList';
 const TRIGGER = '#hudRoot .aekDropDownTrigger';
 /** The searchable drop-down's trigger: the panel's sixth row (`createDropDownPanel`) */
@@ -340,10 +341,31 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
         name: 'a closable toast’s button closes it',
         steps: [
           { click: 'Until closed' },
-          { expectCount: '#hudRoot .toast', count: 1 },
-          { focusHud: '.toast .toastCloseBtn' },
+          { expectCount: TOAST, count: 1 },
+          { expectAttr: `${TOAST} .aekToast__close`, name: 'aria-label', value: 'Close' },
+          { focusHud: '.aekToast .aekToast__close' },
           { press: 'Enter' },
-          { expectCount: '#hudRoot .toast', count: 0 },
+          { expectCount: TOAST, count: 0 },
+        ],
+      },
+      {
+        name: 'Escape in a toast closes it; the focus goes back to its Hub button',
+        steps: [
+          { click: 'Until closed' },
+          { focusHud: '.aekToast .aekToast__close' },
+          { press: 'Escape' },
+          { expectCount: TOAST, count: 0 },
+          { expectFocusBox: 'Until closed' },
+        ],
+      },
+      {
+        name: 'a toast is read once through the toaster’s polite live region',
+        steps: [
+          { click: 'With a title' },
+          {
+            expectText: '#hudRoot #hubDemoToaster [role="status"]',
+            text: 'Saved. The scene was written to disk.',
+          },
         ],
       },
     ],

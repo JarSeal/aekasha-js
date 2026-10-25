@@ -471,6 +471,7 @@ const initPopoverDemo: Demo = (box) => {
 
 const TOASTS: { label: string; toast: Parameters<typeof addToast>[0] }[] = [
   { label: 'Info', toast: { message: 'Just so you know.' } },
+  { label: 'Success', toast: { type: 'success', message: 'Done.' } },
   { label: 'Warning', toast: { type: 'warning', message: 'Careful now.' } },
   { label: 'Alert', toast: { type: 'alert', message: 'That didn’t work. Alerts stay closable.' } },
   { label: 'With a title', toast: { title: 'Saved', message: 'The scene was written to disk.' } },
@@ -487,7 +488,8 @@ const TOASTS: { label: string; toast: Parameters<typeof addToast>[0] }[] = [
     toast: {
       type: 'warning',
       message:
-        'A long message wraps inside the toast’s width (200 px by default) and runs past its maximum height, 100 px: write a toast as one short sentence.',
+        'A long message wraps inside the toast’s width (200 px by default) and scrolls inside its maximum height, 100 px, its close button in a column of its own: write a toast as one short sentence.',
+      isClosable: true,
     },
   },
 ];

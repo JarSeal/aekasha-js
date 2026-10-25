@@ -82,7 +82,7 @@ const UI_KIT = {
   backdrop: '.uiKitEmbedBackdrop',
   // The host page's own button (embedHost.html), outside the HUD root
   hostButton: 'body > p > button',
-  toast: '#uiKitEmbedToasts .toast',
+  toast: '#uiKitEmbedToasts .aekToast',
   list: '.uiKitEmbedList',
   tooltip: '.uiKitEmbedTooltip',
   listItem: '.uiKitEmbedList li',
@@ -290,6 +290,10 @@ const checkUiKitAtRoot = async (
     `the UI kit, INLINE, ${label}`,
     async ({ problems, styles }) => {
       const before = await styles();
+      // The `<style>` elements in the host's head before the mount: the kit writes none (p803 D5:
+      // the toaster's settings are custom properties on its element, its styles a stylesheet)
+      const headStyles = () => page.evaluate(() => document.head.querySelectorAll('style').length);
+      const headStylesBefore = await headStyles();
       const mounted = await page.evaluate(() => window.__embedTest.mount({ target: '#inline' }));
       if (mounted.isFallback) problems.push('mounted as the fallback');
       // Every piece open, and the toast done sliding in (its box the same on two polls)
@@ -308,6 +312,10 @@ const checkUiKitAtRoot = async (
         return;
       }
       for (const name of UI_KIT_INSIDE) pushIf(problems, checkInside(name, r[name], container));
+      const headStylesAfter = await headStyles();
+      if (headStylesAfter !== headStylesBefore) {
+        problems.push(`the host's head has ${headStylesAfter - headStylesBefore} more <style>`);
+      }
       pushIf(
         problems,
         checkPosition('window', r.window, {

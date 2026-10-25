@@ -287,6 +287,13 @@ The first toaster made is the default one for a toast without a `toasterId`; in 
 the engine's, so name yours on each toast (or make it the default with `setAsDefaultToaster`).
 [`removeToaster`](api:removeToaster) takes it away with its toasts.
 
+A toast's `type` (`info`, `success`, `warning`, `alert`) gives it its status colour and icon, and
+a screen reader reads its title and message once (an alert at once, the others when it's idle).
+Its showing time pauses while the player hovers it or its close button holds the focus, and while
+the page is hidden; Escape with the focus in it closes it. Under reduced motion toasts fade in
+place instead of sliding. A toaster's sizes are its settings, written as custom properties on its
+element (`--aek-toast-max-width`, …), so a stylesheet can change them too.
+
 ## Icons
 
 [`registerIcon`](api:registerIcon) names an SVG and [`getSvgIcon`](api:getSvgIcon) returns it as

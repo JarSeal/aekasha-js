@@ -210,11 +210,12 @@ const captureBoxAsync = async (page: Page, piece: string) => {
  * A state's screenshot: the HUD root's overlays alone (the page around them hidden, so a Hub text
  * change doesn't change it), clipped to their boxes' union in the viewport (a backdrop's is the
  * viewport), or the demo box, pinned, when nothing is open in the HUD root (the icons, a closed
- * state)
+ * state). A visually hidden element (a toaster's live regions, 1 px) isn't something open.
  */
 export const captureStateAsync = async (page: Page, piece: string) => {
   const clip = await page.evaluate(() => {
     const rects = [...document.querySelectorAll('#hudRoot *')]
+      .filter((el) => !el.closest('.aekVisuallyHidden'))
       .map((el) => el.getBoundingClientRect())
       .filter((r) => r.width > 0 && r.height > 0);
     if (!rects.length) return null;
