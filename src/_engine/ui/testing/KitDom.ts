@@ -147,6 +147,10 @@ const shimFocus = (document: Document, window: Window & typeof globalThis) => {
     getClientRects(this: HTMLElement) {
       return this.isConnected ? [{ width: 1, height: 1 }] : [];
     },
+    // A box at the origin (linkedom has none): the anchor's maths are tested on their own
+    getBoundingClientRect() {
+      return { left: 0, top: 0, right: 0, bottom: 0, x: 0, y: 0, width: 0, height: 0 };
+    },
     scrollIntoView() {},
   });
 };
@@ -220,7 +224,10 @@ export const dispatchKey = (
  * @internal
  */
 export const countListeners = (target: EventTarget, type?: string) => {
-  const byType = listeners.get(target);
+  // linkedom's window is a proxy: its listeners are on the document's parent, its event target
+  const resolved =
+    target === (window as unknown) ? (document as unknown as KitTarget)._getParent?.() : target;
+  const byType = resolved && listeners.get(resolved);
   if (!byType) return 0;
   if (type) return byType.get(type)?.length ?? 0;
   let count = 0;

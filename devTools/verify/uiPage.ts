@@ -101,11 +101,17 @@ const readExpectation = (page: Page, piece: string, step: UiKeyStep) =>
     { s: step, box: boxSelector(piece) }
   );
 
-/** The focused element without an outline, described; null when it has one or it's the body */
+/**
+ * The focused element without an outline, described; null when it has one or it's the body. A
+ * focused element with `aria-activedescendant` (a drop-down's list) shows the ring on that option
+ * instead (p803 D7), so the option is the one read.
+ */
 const readMissingOutline = (page: Page) =>
   page.evaluate(() => {
-    const el = document.activeElement;
-    if (!el || el === document.body) return null;
+    const focused = document.activeElement;
+    if (!focused || focused === document.body) return null;
+    const activeId = focused.getAttribute('aria-activedescendant');
+    const el = (activeId && document.getElementById(activeId)) || focused;
     const style = getComputedStyle(el);
     if (style.outlineStyle !== 'none' && style.outlineWidth !== '0px') return null;
     return `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${

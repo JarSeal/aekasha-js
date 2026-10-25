@@ -1,6 +1,7 @@
 import type { CMPHandle } from '../core/CMPTypes';
 import { CMP, classes } from '../core/CMP';
 import { pushOverlay, swallowNextKeyUp } from '../overlays/OverlayStack';
+import { showAnchored } from '../overlays/Anchor';
 import './DropDown.scss';
 import '../styles/kit.scss';
 
@@ -29,7 +30,8 @@ export type DropDownProps = {
   icon?: string;
   /** The trigger's tooltip and the list's accessible name. */
   title?: string;
-  /** Which side of the trigger the list opens on. Default 'bottom'. */
+  /** Which side of the trigger the list opens on, when it fits there (else the other). Default
+   * 'bottom'. */
   placement?: 'top' | 'bottom';
   /** Disables the trigger (default false). */
   disabled?: boolean;
@@ -81,6 +83,7 @@ const CARET_CLASS = 'aekDropDownCaret';
 const LIST_CLASS = 'aekDropDownList';
 const ITEM_CLASS = 'aekDropDownItem';
 const HIGHLIGHTED_CLASS = 'isHighlighted';
+const ACTIVE_ATTR = 'data-active';
 const CURRENT_CLASS = 'isCurrent';
 const NAV_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 
@@ -90,7 +93,9 @@ const resolve = <T>(value: T | (() => T)) =>
 /**
  * Creates a dropdown: a trigger button with an icon, the current option's label and a caret, and
  * an in-page list (not a native select: a native list owns the keyboard while it is open, and
- * Chrome on Windows commits the highlighted option when it is closed with Escape).
+ * Chrome on Windows commits the highlighted option when it is closed with Escape). The list opens
+ * in the browser's top layer, so no window clips it, on the `placement` side when it fits there
+ * (else the other), inside the HUD's bounds and as tall as the space left.
  * A click on the trigger toggles the list. In the list, arrow keys, Home and End move, Enter,
  * Space or a click picks, and Escape, Tab or a click outside closes it without a change. The
  * list's keys reach no key binding (their keyups included). The open list is on the kit's overlay
@@ -116,6 +121,8 @@ export const createDropDown = (props: DropDownProps): DropDown => {
   let list: CMPHandle | null = null;
   /** Removes the open list's overlay stack entry */
   let removeOverlay: ((returnFocus?: boolean) => void) | null = null;
+  /** Stops the open list's anchoring (`showAnchored`) */
+  let hideAnchored: (() => void) | null = null;
 
   const getOptions = () => resolve(props.options);
   const getValue = () => resolve(props.value ?? null);
@@ -127,6 +134,8 @@ export const createDropDown = (props: DropDownProps): DropDown => {
       // Removed with its list open (eg. in a closing dialog): the dialog returns the focus
       removeOverlay?.(false);
       removeOverlay = null;
+      hideAnchored?.();
+      hideAnchored = null;
     },
   });
 
@@ -170,6 +179,8 @@ export const createDropDown = (props: DropDownProps): DropDown => {
     // Before the list goes: the focus is still in it
     removeOverlay?.(returnFocus);
     removeOverlay = null;
+    hideAnchored?.();
+    hideAnchored = null;
     openList.remove();
     props.onClose?.();
   };
@@ -229,6 +240,8 @@ export const createDropDown = (props: DropDownProps): DropDown => {
       const items = newList.elem.children;
       for (let i = 0; i < items.length; i++) {
         items[i].classList.toggle(HIGHLIGHTED_CLASS, i === index);
+        // The ring's: the list keeps the focus for aria-activedescendant (p803 D7)
+        items[i].toggleAttribute(ACTIVE_ATTR, i === index);
       }
       items[index]?.scrollIntoView({ block: 'nearest' });
       newList.updateAttr({ 'aria-activedescendant': `${newList.id}-${index}` });
@@ -280,6 +293,13 @@ export const createDropDown = (props: DropDownProps): DropDown => {
     root.add(newList);
     list = newList;
     trigger.updateAttr({ 'aria-expanded': 'true' });
+    // Shown before the highlight scrolls to it: a closed popover has no box
+    hideAnchored = showAnchored({
+      elem: newList.elem,
+      anchor: trigger.elem,
+      side: placement,
+      matchAnchorWidth: true,
+    });
     highlight(index);
     // Before the focus moves in: the entry returns it where it was
     removeOverlay = pushOverlay({ elem: newList.elem, close: () => close() });

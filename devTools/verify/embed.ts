@@ -23,7 +23,8 @@
  *   toast and the open drop-down list inside the container; the window at its px position from
  *   the container's corner, the dialog centred in it, the backdrop covering it and not the page;
  *   the window's, the toast's and the list's font sizes the same at both roots, their font IBM
- *   Plex Sans (the scene opts in, p801 D8) and its face loaded; Escape on the host page leaving
+ *   Plex Sans (the scene opts in, p801 D8) and its face loaded; the list's last option shown
+ *   where the list overflows the dialog (the top layer); Escape on the host page leaving
  *   the dialog open and Escape inside it closing it (p803 D7); with the dialog closed, a drag of
  *   the window's title moving it by the pointer's distance, and the window inside the container
  *   after the target shrinks.
@@ -321,6 +322,16 @@ const checkUiKitAtRoot = async (
           })
         );
       }
+      // The list overflows the dialog (in the top layer, p803 D7): its last option isn't clipped
+      const isLastOptionShown = await page.evaluate((selector) => {
+        const items = document.querySelectorAll(selector);
+        const last = items[items.length - 1];
+        if (!last) return false;
+        const box = last.getBoundingClientRect();
+        return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2) === last;
+      }, UI_KIT.listItem);
+      if (!isLastOptionShown)
+        problems.push('the list’s last option is hidden (clipped or covered)');
       // The container's box, not the page's
       pushIf(problems, checkPosition('backdrop', r.backdrop, container));
       pushIf(problems, checkBox('backdrop', r.backdrop, container));

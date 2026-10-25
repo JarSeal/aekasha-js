@@ -118,8 +118,9 @@ const profiles: SbpProfile[] = [
         'assets/uiKit.embed.js': 296 * KIB,
         'assets/uiKit.css': 3 * KIB,
         // The scene's chunk: the kit's window, dialog, drop-down and toaster (10.2 KiB of it) and
-        // their styles, loaded with the scene
-        'assets/uiKitEmbed.js': 12 * KIB,
+        // their styles, loaded with the scene. 13: p803 Phase 4 added the overlay stack, the focus
+        // trap and the anchor (12.2 KiB); p803 Phase 7 resets it from `suggestBudget`
+        'assets/uiKitEmbed.js': 13 * KIB,
         'assets/uiKitEmbed.css': 3 * KIB,
       },
       groups: {

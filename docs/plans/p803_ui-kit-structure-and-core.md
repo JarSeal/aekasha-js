@@ -970,6 +970,70 @@ As built (section 1, 2026-10-25):
   (`uiKitEmbed.js`, 11.5 KiB of its 12 KiB budget), and the banner's `banner.css` +56 B, Phase 2
   §3's `color-scheme` lines, which sat inside the tolerance unrecorded; recorded with `--update`.
 
+As built (section 2, 2026-10-25):
+
+- `overlays/Anchor.ts` (`@internal`): `computeAnchorPlacement` (pure, viewport px: the preferred
+  side, flipped when the element doesn't fit and the other side has more room, else kept with
+  the space it has; `start` / `center` / `end` along the side, shifted inside the bounds with
+  `gap` from their edges, a too wide one fitted to them; the space left as `maxHeight` /
+  `maxWidth`, never negative; all four sides, for the tooltip) and `showAnchored({ elem, anchor,
+  side?, align?, gap? = 4, matchAnchorWidth? })` (`hasTopLayer()` feature-detects
+  `showPopover`). The top layer path sets `popover="manual"` and keeps the element's DOM place;
+  the fallback moves it to the HUD root at `--aek-z-tooltip` with its old place's
+  `data-aek-theme` / `data-aek-density` (a dialog's centring `transform` would make a fixed element
+  inside it relative to the dialog), and subtracts the bounds' corner. Both write
+  `position: fixed`, `left` / `top`, the max size, `min-width` (`matchAnchorWidth`) and
+  `data-side`. The reposition is one rAF on a capture `scroll` on the document, the window's
+  `resize` and `onBoundsResize`; the remover stops them and calls `hidePopover()` (a no-op on a
+  hidden popover, so no `:popover-open` check, which throws in linkedom).
+- **The perf-auditor review** (D11): no layout thrashing (every read before every write), the
+  teardown right. Applied: the overlay's own scroll (a long list) doesn't reposition it, and
+  `place()` writes nothing when the ten numbers it read (the anchor's box, the bounds', the
+  overlay's size) are those of the last call. Documented, not changed: the measured width is the
+  rendered one under the last max width, so after the space grows a centre or end alignment uses
+  the old width once (measuring the natural width would take a write before the reads). Skipped:
+  the few objects per reposition (event-driven, only while an overlay is open), the forced layout
+  once per open, the doubled window `resize` without a bounds element (the rAF coalesces it).
+- The drop-down: the list is shown with `showAnchored` (side `placement`, `matchAnchorWidth`)
+  before the highlight scrolls to it (a closed popover has no box), stopped before it's removed
+  and in the root's `onRemoveCmp`. `DropDown.scss`: the list's `absolute`, `40vh`, `min-width:
+  100%` and the two side rules went; `inset: auto`, `margin: 0`, `border: 0`, `width:
+  max-content` undo the browser's popover styles. **Its width now follows the trigger** (the
+  anchor), not the drop-down's root, which a flex column stretched to the panel's width (the
+  component library's window): a list as wide as its trigger, or wider for its options. The
+  font size is inherited as before in the top layer (its DOM place); the fallback takes the HUD
+  root's until Phase 5 puts both on the type tokens (a size token now would shrink the list and
+  not the trigger in the compact density). The highlighted option gets `data-active`, and
+  `.aekDropDownList:focus-visible` moves the ring onto it (inset, since the list's overflow clips
+  around the options).
+- `verify:ui`'s outline check reads the option `aria-activedescendant` names when the focused
+  element has one; the drop-down's and the dialog's scripts pass with it, so the ring shows on
+  the option after every key.
+- `verify:embed`: the `uiKit` scene's dialog is 180 px tall (was 230, "tall enough for the open
+  list"), so the list overflows it, and the scenario checks the list's last option is the topmost
+  element at its centre (`elementFromPoint`) besides the list inside the container. Both host
+  roots pass.
+- `KitDom.ts`: `countListeners(window, …)` read 0 always (linkedom's `window` is a proxy whose
+  listeners are on the document's parent target): it resolves the window now, so section 1's
+  "none on the window" assertions check something. A `getBoundingClientRect` shim (a box at the
+  origin): linkedom has none, and `showAnchored` runs on the fallback path in the kit's tests.
+  `Anchor.test.ts`: the maths (fits, flips both ways, keeps a side with less room opposite,
+  shifts at both edges, a too wide one, centred in an embed's container box, left and right, no
+  negative size), the fallback path (moved, theme and density, z, fixed, `data-side`), the top
+  layer path (stubbed `showPopover` / `hidePopover`: kept in place, `popover="manual"`), and no
+  listener left after the remover.
+- The section's checks: `yarn test` (1347 tests), `tsc` (both), ESLint, `yarn hub:build`,
+  `yarn verify:ui` (every piece: all eight keyboard scripts pass; only the screenshots below
+  differ, no axe violation outside the allow list), `verify:embed` (seven scenarios).
+  `verify:baselines`: the anchor's nine `@internal` exports, `DropDown.js` (the app's chunk with the
+  windows, dialogs and drop-down) and the `uiKit` embed's `uiKitEmbed.js` +1.0 kB gzip each,
+  recorded. `yarn sbp`: `uiKitEmbed.js` at 12.5 kB went over its 12 KiB budget, so it's 13 KiB
+  now (`sbp.config.ts`, the comment naming this phase; Phase 7 resets it from `suggestBudget`);
+  every budget within after.
+- The screenshots that differ, to re-record after review (`--update`): the dialog's "Closes on
+  Escape" and "With a drop-down" (section 1's demo texts), its list open (also the list's width),
+  and the drop-down's "a list open" (2.3 %: the list as wide as its trigger, not the panel).
+
 ### Phase 5: the existing pieces restyled and accessible
 
 One section per piece, each with its demo boxes' screenshots in both themes for review and

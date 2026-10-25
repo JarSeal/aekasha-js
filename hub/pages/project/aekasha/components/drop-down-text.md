@@ -13,7 +13,6 @@ and the next the dialog.
   re-reads `value` after `onChange` returns, so a pick shows at once; each pick here also adds a
   toast.
 
-::: note For p803
-The list's height is at most `40vh` (the browser window's, also in an embed), and a window clips a
-list that overflows it.
-:::
+The list opens in the browser's top layer, so the window doesn't clip it: on its side when it fits
+there (else the other), inside the HUD's bounds, and as tall as the space left. It's at least as wide as its trigger. With the keyboard, the ring is on the highlighted option, not the
+list.

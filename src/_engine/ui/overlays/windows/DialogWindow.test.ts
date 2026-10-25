@@ -94,7 +94,9 @@ describe('dialogs: Escape and focus on the overlay stack (p803 D7)', () => {
     const trigger = dropDown.cmp.elem.querySelector('button') as HTMLButtonElement;
     trigger.focus();
     dropDown.open();
-    const list = dropDown.cmp.elem.querySelector('ul') as HTMLElement;
+    // In the HUD root: linkedom has no Popover API, so the list takes the fallback path
+    const list = document.querySelector('.aekDropDownList') as HTMLElement;
+    expect(list.parentElement).toBe(getHUDRootCMP().elem);
     expect(document.activeElement).toBe(list);
 
     dispatchKey(list, 'keydown', 'Escape');

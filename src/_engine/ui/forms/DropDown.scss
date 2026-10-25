@@ -3,8 +3,6 @@
 // overrides it, whatever the stylesheet order.
 @use '../styles/variables.scss';
 
-$listGap: calc(0.4 * var(--aek-rem));
-
 // The font size is set here, not on the trigger: normalize.scss's `button { font-size: 100% }`
 // beats a :where() rule, and 100% inherits this one (the list inherits it too)
 :where(.aekDropDown) {
@@ -72,14 +70,20 @@ $listGap: calc(0.4 * var(--aek-rem));
   border-bottom: calc(0.5 * var(--aek-rem)) solid currentColor;
 }
 
+// Placed by Anchor.ts' showAnchored (fixed, its left / top, max size and min width inline), in
+// the top layer as a manual popover: `inset`, `margin`, `border` and the size undo the browser's
+// popover styles. The top layer keeps its place in the DOM, so it inherits the root's font size;
+// the fallback (no Popover API) moves it to the HUD root, whose size it takes until p803 Phase 5
+// puts both on the type tokens.
 :where(.aekDropDownList) {
-  position: absolute;
-  left: 0;
-  z-index: 1;
-  min-width: 100%;
-  max-height: 40vh;
+  inset: auto;
+  box-sizing: border-box;
+  width: max-content;
+  height: auto;
+  overflow-x: hidden;
   overflow-y: auto;
   margin: 0;
+  border: 0;
   padding: calc(0.4 * var(--aek-rem));
   list-style: none;
   background-color: variables.$debugGuiBackgroundLighter2;
@@ -92,12 +96,15 @@ $listGap: calc(0.4 * var(--aek-rem));
   scrollbar-width: thin;
 }
 
-:where(.aekDropDown_bottom .aekDropDownList) {
-  top: calc(100% + $listGap);
+// The list holds the focus (aria-activedescendant), so its active option shows the ring in its
+// place (p803 D7): inset, since the list's overflow clips around the options
+:where(.aekDropDownList:focus-visible) {
+  outline: none;
 }
 
-:where(.aekDropDown_top .aekDropDownList) {
-  bottom: calc(100% + $listGap);
+:where(.aekDropDownList:focus-visible .aekDropDownItem[data-active]) {
+  outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
+  outline-offset: calc(-1 * var(--aek-focus-ring-width));
 }
 
 :where(.aekDropDownItem) {

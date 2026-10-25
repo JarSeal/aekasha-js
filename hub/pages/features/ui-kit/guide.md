@@ -149,7 +149,9 @@ with [action contexts](hub:features/input#contexts-and-scenes).
 [`createDropDown`](api:createDropDown) makes a trigger button and an in-page list (not a native
 `<select>`): arrows, Home and End move, Enter, Space or a click picks, and Escape, Tab or a click
 outside closes it without a change. Its keys reach no key binding, and a pick or Escape gives the
-focus back to the trigger when the list was opened from it. Add its `cmp` where it goes.
+focus back to the trigger when the list was opened from it. The list opens over everything (the
+browser's top layer), so a window doesn't clip it: on `placement`'s side when it fits there, else
+the other, and inside the page or the embed's container. Add its `cmp` where it goes.
 The trigger re-reads `value` after a pick; when the value changes elsewhere, call `refresh()`.
 
 ```ts

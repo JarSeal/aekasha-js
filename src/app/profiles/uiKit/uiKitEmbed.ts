@@ -93,8 +93,9 @@ export const scene = async () => {
       panel.add(dropDown.cmp);
       return panel;
     },
-    // Tall enough for the open list: a window clips what overflows it
-    size: { w: 300, h: 230 },
+    // Shorter than the open list reaches: the list is in the top layer, which no window clips
+    // (p803 D7), and `yarn verify:embed` checks its last option shows
+    size: { w: 300, h: 180 },
     minSize: { w: 240, h: 160 },
     backDropClass: BACKDROP_CLASS,
     // `yarn verify:embed` checks Escape: the host page's leaves it open, its own closes it
