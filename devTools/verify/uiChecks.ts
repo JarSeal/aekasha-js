@@ -1,0 +1,111 @@
+/**
+ * `yarn verify:ui`'s pure parts (`ui.ts` is the CLI): its arguments, the states a demo box runs,
+ * the settings each runs in, and the violations' grouping and allow list. Tested in Node
+ * (`uiChecks.test.ts`).
+ */
+import type { UiCheckStep, UiDemoChecks } from '../../hub/_assets/ts/_componentChecks';
+import type { UiAllowedViolation } from './ui.config';
+
+export const UI_USAGE = 'yarn verify:ui [--url <hub url>] [--only <piece>[,<piece>…]] [--headed]';
+
+export type UiArgs = { url: string; only: string[]; headed: boolean };
+
+/** @throws on an unknown argument or one without its value */
+export const parseUiArgs = (argv: string[]): UiArgs => {
+  const args: UiArgs = { url: '', only: [], headed: false };
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    const value = argv[i + 1];
+    if (arg === '--url' && value) {
+      args.url = value.endsWith('/') ? value : `${value}/`;
+      i++;
+    } else if (arg === '--only' && value) {
+      args.only = value.split(',').filter(Boolean);
+      i++;
+    } else if (arg === '--headed') args.headed = true;
+    else throw new Error(`Unknown argument: ${arg} (usage: ${UI_USAGE})`);
+  }
+  return args;
+};
+
+/** The page the run opens, from the Hub's root URL (dev-only until p803 Phase 8 makes it public) */
+export const UI_PAGE_PATH = 'project/aekasha/components/';
+
+/** A theme and a density each state runs in (p803 D11: both themes, both densities) */
+export type UiSetting = { theme: 'dark' | 'light'; density: '' | 'compact' };
+
+export const UI_SETTINGS: UiSetting[] = [
+  { theme: 'dark', density: '' },
+  { theme: 'light', density: '' },
+  { theme: 'dark', density: 'compact' },
+  { theme: 'light', density: 'compact' },
+];
+
+export const formatSetting = (s: UiSetting) => (s.density ? `${s.theme} ${s.density}` : s.theme);
+
+/** A step the runner takes: the table's, or the box's button at this index */
+export type UiRunStep = UiCheckStep | { button: number };
+
+/** A state a demo box runs: its name (unique in the box) and the steps that open it */
+export type UiState = { name: string; steps: UiRunStep[] };
+
+/** The box as the page shows it, before any step */
+export const BOX_STATE_NAME = 'the box';
+
+/**
+ * A box's states: the box itself, a state per button (named by its text, a repeated text
+ * numbered: `Info`, `Info 2`), then the checks table's
+ * @throws when a table state's name is taken
+ */
+export const getDemoStates = (buttonTexts: string[], checks: UiDemoChecks | undefined) => {
+  const states: UiState[] = [{ name: BOX_STATE_NAME, steps: [] }];
+  const seen = new Map<string, number>();
+  buttonTexts.forEach((text, button) => {
+    const n = (seen.get(text) ?? 0) + 1;
+    seen.set(text, n);
+    states.push({ name: n > 1 ? `${text} ${n}` : text, steps: [{ button }] });
+  });
+  for (const state of checks?.states ?? []) {
+    if (states.some((s) => s.name === state.name)) {
+      throw new Error(`Two states named "${state.name}"`);
+    }
+    states.push(state);
+  }
+  return states;
+};
+
+/** An axe-core violation as the page returns it: the rule and the nodes' selectors */
+export type UiViolation = { rule: string; impact: string; help: string; targets: string[] };
+
+/** A rule's violations in one state, over the settings it was found in */
+export type UiStateViolation = UiViolation & { settings: string[] };
+
+/** Merges a state's violations from each setting by rule: the settings and targets joined */
+export const groupViolations = (bySetting: { setting: string; violations: UiViolation[] }[]) => {
+  const byRule = new Map<string, UiStateViolation>();
+  for (const { setting, violations } of bySetting) {
+    for (const v of violations) {
+      const found = byRule.get(v.rule);
+      if (!found) {
+        byRule.set(v.rule, { ...v, targets: [...v.targets], settings: [setting] });
+        continue;
+      }
+      if (!found.settings.includes(setting)) found.settings.push(setting);
+      for (const target of v.targets) {
+        if (!found.targets.includes(target)) found.targets.push(target);
+      }
+    }
+  }
+  return [...byRule.values()];
+};
+
+/** The allowance that covers a rule on a piece, if any */
+export const findAllowance = (list: UiAllowedViolation[], rule: string, piece: string) =>
+  list.find((a) => a.rule === rule && a.piece === piece);
+
+/** The allowances for the pieces run that matched nothing: fixed, so they can go */
+export const findStaleAllowances = (
+  list: UiAllowedViolation[],
+  piecesRun: string[],
+  found: Set<string>
+) => list.filter((a) => piecesRun.includes(a.piece) && !found.has(`${a.rule}@${a.piece}`));

@@ -751,6 +751,50 @@ screenshots, the progress log. The existing pieces' violations are recorded here
 Phases 4-6 empty (the command takes a `--allow <rule@piece>` list while that list isn't empty,
 and the plan records each entry).
 
+1. Section 1, the command and axe: `devTools/verify/ui.ts` (its own dev server, the scene
+   runner's moved into a shared module, or `--url`; `--only`, `--headed`; the progress log), the
+   demos' check table next to `_components.ts` (every Hub button in a box is a state, plus the
+   states that need steps: a drop-down's list open), axe-core over each state in both themes and
+   both densities, and the allowed violations, recorded here.
+2. Section 2, the keyboard scripts: the step format, a script per piece, the outline check.
+3. Section 3, the screenshots and the docs: the local baselines in `.cache/verify/ui/`,
+   `--update`, the diff images; `devTools/verify/CLAUDE.md`, the root `CLAUDE.md`'s command,
+   `hub/CLAUDE.md` (a demo's checks), the readme's commands table.
+
+As built (section 1, 2026-10-25):
+
+- `axe-core` 4.14.0 (2026-10-05, MPL-2.0), an exact dev dependency like `playwright-core`.
+- The scene runner's own dev server moved into `devTools/verify/devServer.ts`
+  (`startVerifyServerAsync`: it throws where it exited, and each runner exits 2 on it), which
+  `scenes.ts` and the new command share (port 8092 or the next free, `node_modules/.vite-verify`).
+- `yarn verify:ui [--url <hub url>] [--only <piece>[,…]] [--headed]` (`devTools/verify/ui.ts`, the
+  CLI; `uiChecks.ts`, its pure parts, tested in `uiChecks.test.ts`; `ui.config.ts`, the axe tags
+  and the allow list). Without `--url` it starts its own dev server and opens the dev Hub's
+  `project/aekasha/components/` (Phase 8 moves it to the public page and `hubPreview`'s server).
+- A box's states: the box as shown, each of its Hub buttons (a repeated text numbered: the
+  toaster's two "Info"), and the check table's (`hub/_assets/ts/_componentChecks.ts`, plain data
+  next to the demos, keyed like `DEMOS`: the dialog's and the drop-downs' lists open). Each state
+  runs on its own page load in each setting, a browser context per setting (the Hub's saved theme,
+  the emulated colour scheme, the page's theme and density radios), four at a time. It waits for
+  no running animation and the HUD root's boxes still on two polls, then runs axe over the box and
+  `#hudRoot` with WCAG 2.2 A / AA and `best-practice`. A console or page error fails the state.
+- **The allow list is a committed list, not a `--allow` flag** (`UI_ALLOWED_VIOLATIONS`: rule,
+  piece, the phase that removes it), so `yarn verify:ui` alone is each phase's check. An entry for
+  a piece that ran and matched nothing is printed as one to remove.
+- The first run: 30 states × 4 settings in about 50 s, 17 states failing on three rules, every
+  one in all four settings. Allowed until Phase 5:
+  - `landmark-no-duplicate-banner` on `window`, `dialog` and `dropDown` (its drop-downs open in a
+    window): the window's `<header>` is a second banner landmark. A `role="dialog"` (D8) doesn't
+    scope a `<header>` (only sectioning content and the article, complementary, main, navigation
+    and region roles do), so section 1 changes the element or its role;
+  - `scrollable-region-focusable` on `window` (collapsed, and long content): the scrolling content
+    wrapper takes no focus (section 1);
+  - `button-name` on `toaster` (alert, until closed): the close button is an icon with no label
+    (section 4).
+- axe finds no fault in what's missing: the windows and dialogs have no `role`, so no rule asks
+  for their name, modal state or focus. Those are the keyboard scripts' (section 2) and D8's.
+  No colour contrast violation either, in either theme.
+
 ### Phase 4: the overlay layer
 
 D7: `OverlayStack.ts`, `FocusTrap.ts`, `Anchor.ts`, the top layer with its fallback; the dialog's

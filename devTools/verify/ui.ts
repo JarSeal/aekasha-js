@@ -1,0 +1,335 @@
+/**
+ * The UI check (`yarn verify:ui`, p803 D11): opens the Hub's component library page in Chromium
+ * and runs axe-core over each demo box's states, in both themes and both densities, failing on a
+ * violation `ui.config.ts` doesn't allow:
+ *
+ *   yarn verify:ui [--url <hub url>] [--only <piece>[,<piece>…]] [--headed]
+ *
+ * - The states of a box (`uiChecks.ts`' `getDemoStates`): the box as the page shows it, each of
+ *   its Hub buttons, and the states the checks table (`hub/_assets/ts/_componentChecks.ts`, next
+ *   to the demos) opens with more steps. Each runs on its own page load per setting (four at a
+ *   time, a browser context per setting), so no state leaks into the next.
+ * - A setting is the Hub's theme (its toggle's saved value, and the colour scheme emulated) and
+ *   the page's own theme and density switches, which set the HUD root's attributes.
+ * - After the steps, it waits for the page to settle (no animation running, the HUD root's boxes
+ *   the same on two polls), then runs axe-core (`UI_AXE_TAGS`) over the box and the HUD root,
+ *   where the demos' overlays open. A console or page error fails the state too.
+ * - `--only` runs the named pieces (the boxes' `data-hub-demo` keys). An allowance for a piece
+ *   that ran and matched nothing is listed at the end: it can go.
+ *
+ * It starts its own dev server (`devServer.ts`, the scene runner's) and opens the dev Hub's page,
+ * which is dev-only until p803 Phase 8, unless `--url` names a Hub's root (a running dev server's
+ * `http://localhost:8080/hub/`). Every line also goes to `.cache/verify/progress.log`. Exits 1 on
+ * a failed state, 2 on an error.
+ */
+import fs from 'fs';
+import path from 'path';
+import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+import type { Browser, BrowserContext, Page } from 'playwright-core';
+import { UI_DEMO_CHECKS } from '../../hub/_assets/ts/_componentChecks';
+import { launchChromium } from './browser';
+import { startVerifyServerAsync } from './devServer';
+import { UI_ALLOWED_VIOLATIONS, UI_AXE_TAGS } from './ui.config';
+import {
+  findAllowance,
+  findStaleAllowances,
+  formatSetting,
+  getDemoStates,
+  groupViolations,
+  parseUiArgs,
+  UI_PAGE_PATH,
+  UI_SETTINGS,
+  type UiArgs,
+  type UiSetting,
+  type UiState,
+  type UiViolation,
+} from './uiChecks';
+import { out, PROGRESS_LOG_WATCH } from '../progressLog';
+
+const color = (code: string) => (process.env.NO_COLOR ? '' : `\x1b[${code}m`);
+const RED = color('31');
+const GREEN = color('32');
+const YELLOW = color('33');
+const DIM = color('2');
+const RESET = color('0');
+
+const VIEWPORT = { width: 1440, height: 900 };
+/** The first load waits for the dev Hub's lazy first build */
+const FIRST_LOAD_TIMEOUT_MS = 120_000;
+const LOAD_TIMEOUT_MS = 30_000;
+/** How long a state may take to settle before it's checked as it is (with a note) */
+const SETTLE_TIMEOUT_MS = 5_000;
+const SETTLE_POLL_MS = 100;
+/** The Hub's theme toggle's saved value (`hub.ts`), read before the first paint */
+const HUB_THEME_KEY = 'aekHubTheme';
+/** The targets printed per violation; the rest counted */
+const MAX_TARGETS = 3;
+
+/** Prints the message and exits 2 */
+function fail(msg: string): never {
+  out(`${RED}${msg}${RESET}`, true);
+  process.exit(2);
+}
+
+/** axe-core's browser build, read on the first use */
+let axeSource = '';
+const getAxeSource = () =>
+  (axeSource ||= fs.readFileSync(
+    createRequire(import.meta.url).resolve('axe-core/axe.min.js'),
+    'utf8'
+  ));
+
+const boxSelector = (piece: string) => `[data-hub-demo="${piece}"]`;
+
+/** The page's demos mounted: the HUD root made and the boxes filled */
+const waitForDemosAsync = (page: Page, timeout: number) =>
+  page.waitForFunction(
+    () => !!document.querySelector('#hudRoot') && !!document.querySelector('[data-hub-demo] *'),
+    null,
+    { timeout }
+  );
+
+/** Each box's key and its buttons' texts, in the page's order */
+const readBoxesAsync = async (page: Page, url: string) => {
+  await page.goto(url, { timeout: FIRST_LOAD_TIMEOUT_MS });
+  await waitForDemosAsync(page, FIRST_LOAD_TIMEOUT_MS);
+  return page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>('[data-hub-demo]')].map((box) => ({
+      piece: box.dataset.hubDemo ?? '',
+      buttons: [...box.querySelectorAll('button')].map((b) => (b.textContent ?? '').trim()),
+    }))
+  );
+};
+
+const createSettingContextAsync = async (browser: Browser, setting: UiSetting) => {
+  const context = await browser.newContext({ viewport: VIEWPORT, colorScheme: setting.theme });
+  await context.addInitScript(
+    ({ key, theme }) => {
+      try {
+        localStorage.setItem(key, theme);
+      } catch {
+        // The page then follows the emulated colour scheme
+      }
+    },
+    { key: HUB_THEME_KEY, theme: setting.theme }
+  );
+  return context;
+};
+
+/** Waits for no running animation and the HUD root's boxes the same on two polls; false on a timeout */
+const settleAsync = async (page: Page) => {
+  const end = Date.now() + SETTLE_TIMEOUT_MS;
+  let last = '';
+  while (Date.now() < end) {
+    // No named function in the page: tsx wraps those in a helper the page doesn't have
+    const now = await page.evaluate(() => {
+      const running = document.getAnimations().some((a) => a.playState === 'running');
+      const boxes = [...document.querySelectorAll('#hudRoot *')].map((el) => {
+        const r = el.getBoundingClientRect();
+        return `${r.x},${r.y},${r.width},${r.height}`;
+      });
+      return running ? null : boxes.join(';');
+    });
+    if (now !== null && now === last) return true;
+    last = now ?? '';
+    await page.waitForTimeout(SETTLE_POLL_MS);
+  }
+  return false;
+};
+
+const takeStepAsync = async (page: Page, piece: string, step: UiState['steps'][number]) => {
+  if ('button' in step) {
+    await page
+      .locator(`${boxSelector(piece)} button`)
+      .nth(step.button)
+      .click();
+  } else if ('click' in step) {
+    const escaped = step.click.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    await page
+      .locator(`${boxSelector(piece)} button`)
+      .filter({ hasText: new RegExp(`^\\s*${escaped}\\s*$`) })
+      .first()
+      .click();
+  } else {
+    await page.locator(`#hudRoot ${step.clickHud}`).first().click();
+  }
+};
+
+type SettingRun = { setting: string; violations: UiViolation[]; problems: string[] };
+
+/** One state in one setting, on its own page load */
+const runStateAsync = async (
+  context: BrowserContext,
+  url: string,
+  piece: string,
+  state: UiState,
+  setting: UiSetting
+): Promise<SettingRun> => {
+  const label = formatSetting(setting);
+  const problems: string[] = [];
+  const page = await context.newPage();
+  page.setDefaultTimeout(LOAD_TIMEOUT_MS);
+  page.on('console', (msg) => msg.type() === 'error' && problems.push(`console: ${msg.text()}`));
+  page.on('pageerror', (err) => problems.push(`page error: ${err.message}`));
+  let violations: UiViolation[] = [];
+  try {
+    await page.goto(url);
+    await waitForDemosAsync(page, LOAD_TIMEOUT_MS);
+    await page.check(`input[name="theme"][value="${setting.theme}"]`);
+    await page.check(`input[name="density"][value="${setting.density}"]`);
+    for (const step of state.steps) await takeStepAsync(page, piece, step);
+    if (!(await settleAsync(page))) problems.push(`not settled after ${SETTLE_TIMEOUT_MS} ms`);
+    await page.addScriptTag({ content: getAxeSource() });
+    violations = await page.evaluate(
+      async ({ box, tags }) => {
+        const result = await window.axe.run(
+          { include: [[box], ['#hudRoot']] },
+          { runOnly: { type: 'tag', values: tags }, resultTypes: ['violations'] }
+        );
+        return result.violations.map((v) => ({
+          rule: v.id,
+          impact: v.impact ?? '',
+          help: v.help,
+          targets: v.nodes.map((n) => n.target.map(String).join(' ')),
+        }));
+      },
+      { box: boxSelector(piece), tags: [...UI_AXE_TAGS] }
+    );
+  } catch (err) {
+    problems.push(`stopped: ${(err as Error).message.split('\n')[0]}`);
+  } finally {
+    await page.close();
+  }
+  return { setting: label, violations, problems };
+};
+
+/** Runs a piece's states and prints them; the rule@piece keys found, and how many states failed */
+const checkPieceAsync = async (
+  contexts: BrowserContext[],
+  url: string,
+  piece: string,
+  states: UiState[]
+) => {
+  out(`\n${piece} ${DIM}(${states.length} states × ${UI_SETTINGS.length} settings)${RESET}`);
+  const found = new Set<string>();
+  let failed = 0;
+  for (const state of states) {
+    const runs = await Promise.all(
+      UI_SETTINGS.map((setting, i) => runStateAsync(contexts[i], url, piece, state, setting))
+    );
+    const lines: string[] = [];
+    let isFailed = false;
+    for (const run of runs) {
+      for (const problem of run.problems) {
+        isFailed = true;
+        lines.push(`${RED}${run.setting}: ${problem}${RESET}`);
+      }
+    }
+    for (const v of groupViolations(runs)) {
+      found.add(`${v.rule}@${piece}`);
+      const allowance = findAllowance(UI_ALLOWED_VIOLATIONS, v.rule, piece);
+      if (!allowance) isFailed = true;
+      const where =
+        v.settings.length === UI_SETTINGS.length ? 'all settings' : v.settings.join(', ');
+      const head = `${v.rule} (${v.impact}, ${where}): ${v.help}`;
+      lines.push(
+        allowance
+          ? `${DIM}${head} (allowed until ${allowance.until})${RESET}`
+          : `${RED}${head}${RESET}`
+      );
+      for (const target of v.targets.slice(0, MAX_TARGETS)) lines.push(`  ${DIM}${target}${RESET}`);
+      if (v.targets.length > MAX_TARGETS) {
+        lines.push(`  ${DIM}… ${v.targets.length - MAX_TARGETS} more${RESET}`);
+      }
+    }
+    if (isFailed) failed++;
+    out(`  ${isFailed ? `${RED}✗` : `${GREEN}✓`} ${state.name}${RESET}`);
+    for (const line of lines) out(`      ${line}`);
+  }
+  return { found, failed };
+};
+
+const runAsync = async (args: UiArgs, browser: Browser, url: string) => {
+  const discovery = await browser.newPage({ viewport: VIEWPORT });
+  const boxes = await readBoxesAsync(discovery, url).finally(() => discovery.close());
+  const pieces = boxes.map((b) => b.piece);
+  for (const key of Object.keys(UI_DEMO_CHECKS)) {
+    if (!pieces.includes(key)) fail(`_componentChecks.ts names ${key}, which no demo box is`);
+  }
+  for (const key of args.only) {
+    if (!pieces.includes(key)) fail(`No demo box ${key} (the pieces: ${pieces.join(', ')})`);
+  }
+  const selected = boxes.filter((b) => !args.only.length || args.only.includes(b.piece));
+  const contexts = await Promise.all(
+    UI_SETTINGS.map((setting) => createSettingContextAsync(browser, setting))
+  );
+  const found = new Set<string>();
+  let failed = 0;
+  for (const { piece, buttons } of selected) {
+    const states = getDemoStates(buttons, UI_DEMO_CHECKS[piece]);
+    const result = await checkPieceAsync(contexts, url, piece, states);
+    for (const key of result.found) found.add(key);
+    failed += result.failed;
+  }
+  const stale = findStaleAllowances(
+    UI_ALLOWED_VIOLATIONS,
+    selected.map((b) => b.piece),
+    found
+  );
+  for (const a of stale) {
+    out(
+      `${YELLOW}Allowed but not found: ${a.rule}@${a.piece} (until ${a.until}): remove it${RESET}`
+    );
+  }
+  return failed;
+};
+
+const main = async () => {
+  let args: UiArgs;
+  try {
+    args = parseUiArgs(process.argv.slice(2));
+  } catch (err) {
+    return fail((err as Error).message);
+  }
+  out(`UI check${args.only.length ? `: ${args.only.join(', ')}` : ''}`);
+  out(`${DIM}Watch it: ${PROGRESS_LOG_WATCH}${RESET}`);
+  const started = Date.now();
+  const own = args.url
+    ? null
+    : await startVerifyServerAsync().catch((err: Error) => fail(err.message));
+  const hubUrl = args.url || `${own!.url}/hub/`;
+  const url = `${hubUrl}${UI_PAGE_PATH}`;
+  out(`${DIM}${url}, Chromium, ${VIEWPORT.width} × ${VIEWPORT.height}${RESET}`);
+  const browser = await launchChromium({ useWebGL: false, headed: args.headed });
+  const close = async () => {
+    await browser.close().catch(() => undefined);
+    await own?.server.close();
+  };
+  process.once('SIGINT', () => {
+    void close().then(() => process.exit(130));
+  });
+  let failed: number;
+  try {
+    failed = await runAsync(args, browser, url);
+  } finally {
+    await close();
+  }
+  const took = `${((Date.now() - started) / 1000).toFixed(1)} s`;
+  if (failed) {
+    out(`\n${RED}${failed} state(s) failed${RESET} in ${took}`);
+    process.exit(1);
+  }
+  out(`\n${GREEN}All UI checks passed${RESET} in ${took}`);
+};
+
+declare global {
+  interface Window {
+    /** axe-core, injected by the run */
+    axe: typeof import('axe-core');
+  }
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((err: Error) => fail(`The UI check stopped: ${err.message}`));
+}
