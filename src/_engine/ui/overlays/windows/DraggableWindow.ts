@@ -9,7 +9,7 @@ import { CMP } from '../../core/CMP';
 import { lerror } from '../../../utils/Logger';
 import { getConfig, IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../../../kernel/config/Config';
 import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../core/HUD';
-import { addResizer } from '../../../kernel/loop/MainLoop';
+import { onBoundsResize } from '../../core/Window';
 import { addSceneHooks } from '../../../kernel/scene/SceneHooks';
 import { addBootAfterStartHook } from '../../../kernel/init/BootHooks';
 import styles from './DraggableWindow.module.scss';
@@ -248,11 +248,11 @@ const onViewportResized = () => {
   if (isChanged) saveDraggableWindowStatesToLS();
 };
 
-/** Registered at the first mount and kept: a no-op while no window is open. */
+/** Added at the first mount and kept: a no-op while no window is open. */
 const ensureViewportResizer = () => {
   if (isViewportResizerAdded) return;
   isViewportResizerAdded = true;
-  addResizer('draggableWindows', () => {
+  onBoundsResize(() => {
     if (viewportResizeTimer) clearTimeout(viewportResizeTimer);
     viewportResizeTimer = setTimeout(onViewportResized, RESIZE_DEBOUNCE_MS);
   });

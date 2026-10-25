@@ -202,7 +202,7 @@ export const mountAekasha = async (opts: MountAekashaOptions): Promise<AekashaMo
   }
 
   // The seams (p611 Phase 3), before the boot reads them. The container bounds the HUD too: the
-  // windows measure it, and its ResizeObserver runs their resizer (the main loop's resizers)
+  // windows measure it and follow its size (the kit's own ResizeObserver, onBoundsResize)
   setCanvasSizeSource(createElementSizeSource(container));
   setWindowBoundsElement(container);
   setInputScope(opts.input ?? 'NONE');

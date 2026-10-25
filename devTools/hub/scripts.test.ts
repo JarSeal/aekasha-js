@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { getProjectMetadata } from '../projectMetadata';
 import { buildScripts, type HubBuiltScripts } from './assets';
 import { HubDiagnostics } from './diagnostics';
+import { UI_KERNEL_HOOKS } from '../layout/layout';
 import { HUB_KIT_STAND_INS } from './kitStandIns';
 import { HUB_COMPONENTS_FILE, ROOT } from './paths';
 
@@ -56,6 +57,14 @@ describe('the script build', () => {
     expect(sources).toContain('src/_engine/ui/overlays/windows/DraggableWindow.ts');
     expect(sources.filter((file) => file.startsWith('node_modules/three/'))).toEqual([]);
     expect(dev.sources).not.toContain(HUB_COMPONENTS_FILE); // in hub/: watched already
+  });
+
+  it("reaches no kernel module but the kit's hooks (p803 D4: no main loop, no stand-in for it)", () => {
+    const kernel = dev.sources
+      .map(fromRoot)
+      .filter((file) => file.startsWith('src/_engine/kernel/'));
+    expect(kernel.filter((file) => !UI_KERNEL_HOOKS.has(file))).toEqual([]);
+    expect(kernel).not.toContain('src/_engine/kernel/loop/MainLoop.ts');
   });
 
   it('uses each stand-in in place of its module', () => {

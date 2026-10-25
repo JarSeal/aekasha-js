@@ -367,8 +367,8 @@ const checkUiKitAtRoot = async (
         problems.push('no window title to drag');
       }
 
-      // The windows clamp on the container's resize (the main loop's resizers, from its
-      // ResizeObserver), and the toast follows the container's right edge
+      // The windows clamp on the container's resize (the kit's ResizeObserver on its bounds,
+      // onBoundsResize), and the toast follows the container's right edge
       await page.evaluate(
         (size) => window.__embedTest.resizeTarget('#inline', size.width, size.height),
         { width: `${UI_KIT_SHRUNK.width}px`, height: `${UI_KIT_SHRUNK.height}px` }

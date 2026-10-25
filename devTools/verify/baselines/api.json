@@ -2894,6 +2894,7 @@
     },
     "src/_engine/ui/core/Window.ts": {
       "getWindowSize": "Function",
+      "onBoundsResize": "Function",
       "setWindowBoundsElement": "Function"
     },
     "src/_engine/ui/forms/DropDown.ts": {

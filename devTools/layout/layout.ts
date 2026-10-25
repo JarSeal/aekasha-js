@@ -72,11 +72,11 @@ export type LayoutCheck = {
 };
 
 /** Which file of a layer the UI kit may import from the kernel (p617 D7): the env flags, and the
- * registries through which the windows follow a resize, a scene load and the boot while the
- * kernel names no window (p613 D5) */
+ * registries through which the windows follow a scene load and the boot while the kernel names no
+ * window (p613 D5). They import nothing heavy, so the kit runs without the engine (p803 D4: the
+ * windows follow a resize through `ui/core/Window.ts`' `onBoundsResize`, not the main loop) */
 export const UI_KERNEL_HOOKS = new Set([
   'src/_engine/kernel/config/Config.ts',
-  'src/_engine/kernel/loop/MainLoop.ts',
   'src/_engine/kernel/scene/SceneHooks.ts',
   'src/_engine/kernel/init/BootHooks.ts',
 ]);

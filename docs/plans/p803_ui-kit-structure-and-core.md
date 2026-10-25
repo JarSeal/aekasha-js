@@ -694,6 +694,25 @@ As built (section 1, 2026-10-25):
   imports are gone. Its intro and icons text, the UI kit guide (a "Without the engine" section,
   `KIT_ROOT_CLASS`, `getMotionFactor`, the controls' reset) and both `CLAUDE.md` files follow.
 
+As built (section 2, 2026-10-25):
+
+- `core/Window.ts`' `onBoundsResize(listener)` (`@internal`) keeps a set of listeners. The first
+  one attaches the source and the last one's remover stops it. With a bounds element the source
+  is a `ResizeObserver` (its first call follows `observe()`, which the windows' debounced clamp
+  doesn't mind), and without one it's the window's `resize`. `setWindowBoundsElement` moves an
+  attached source to the new bounds, so a window opened before a mount, or open across an
+  unmount, follows the right box. `Window.test.ts` (new) covers both sources, the move and the
+  detach, with stubs (linkedom has no `ResizeObserver`).
+- `DraggableWindow.ts` calls it in place of `addResizer`, still once and kept, so the windows
+  import no kernel module but `Config.ts`, `SceneHooks.ts` and `BootHooks.ts`.
+  `UI_KERNEL_HOOKS` drops `MainLoop.ts`. `Camera.ts` and the canvas keep the main loop's
+  resizers.
+- The Hub: `hub/_assets/ts/_kit/MainLoop.ts` is deleted and `HUB_KIT_STAND_INS` holds only the
+  storage. `scripts.test.ts` gets a test: the dev chunk's kernel modules are all in
+  `UI_KERNEL_HOOKS`, and none is `MainLoop.ts`.
+- The comments (`Mount.ts`, `embed.ts`' shrink check) and docs (the kit's and the Hub
+  generator's `CLAUDE.md`, the component library's intro) follow.
+
 ### Phase 3: `yarn verify:ui`
 
 D11's command over the component library page as it is (still dev-only until Phase 8: it runs
