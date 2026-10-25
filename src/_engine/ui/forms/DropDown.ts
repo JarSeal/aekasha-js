@@ -1,6 +1,7 @@
 import type { CMPHandle } from '../core/CMPTypes';
 import { CMP, classes } from '../core/CMP';
 import './DropDown.scss';
+import '../styles/kit.scss';
 
 /** One of a drop-down's options. */
 export type DropDownOption = {

@@ -207,12 +207,32 @@ as usual: the drop-down's default styles have zero specificity, so any class ove
 In debug mode, the editor views (the material editor) hide the HUD root's children, except one
 with [`KEEP_IN_VIEWS_CLASS`](api:KEEP_IN_VIEWS_CLASS).
 
+### Without the engine
+
+The kit works on a page that doesn't run the engine: a menu shown before the engine starts, or a
+page of your site. Make the HUD root there yourself with [`createHudRoot`](api:createHudRoot),
+once per page (the engine's boot makes it in an app, and a second one throws). Each kit module
+brings the kit's global styles, so there's no stylesheet to import. Register the icons the pieces
+show (the windows' buttons, the toasts' kinds): [`registerBuiltInIcons`](api:registerBuiltInIcons)
+registers every built-in, as the boot does in debug mode.
+
+```ts
+import { addToast, createHudRoot, createToaster, registerBuiltInIcons } from 'aekasha/ui';
+
+registerBuiltInIcons();
+const hud = createHudRoot({ slot: document.querySelector<HTMLElement>('#menuHud') ?? undefined });
+hud.add(createToaster({ id: 'menuToasts' }));
+addToast({ message: 'Settings saved' });
+```
+
 ### The kit root and its tokens
 
 The design tokens are CSS custom properties (`--aek-*`) on a kit root, an element with the class
-`aekUi`. The HUD root is one, so everything under it can read them. For UI of your own outside
-the HUD (a title screen in the page's own markup), put the class on its container. The tokens are
-never on `:root`, so an engine embedded in a page leaves the page's own styles alone.
+`aekUi` ([`KIT_ROOT_CLASS`](api:KIT_ROOT_CLASS)). The HUD root is one, so everything under it can
+read them. For UI of your own outside the HUD (a title screen in the page's own markup), put the
+class on its container. The tokens are never on `:root`, so an engine embedded in a page leaves
+the page's own styles alone. Under a kit root the text takes the theme's colour, and buttons and
+fields take the kit's font and colour instead of the browser's defaults.
 
 ```ts
 const scorePanel = getHUDRootCMP().add({ class: 'scorePanel' });
@@ -311,7 +331,9 @@ import 'aekasha/ui/fonts';
 - **Reduced motion:** the kit's transitions and the toaster's animations take their durations from
   the motion tokens, which are 0 when the player's system asks for reduced motion. Set
   `--aek-motion: 0` on the kit root to turn them off from a setting of your own. Your own
-  transitions follow too when they use the tokens.
+  transitions follow too when they use the tokens; for an animation timed in code, multiply its
+  durations by [`getMotionFactor`](api:getMotionFactor). A component's `anim` phases don't scale
+  on their own, since an animation can carry meaning: scale the ones that shouldn't play.
 - **Focus:** keyboard focus under a kit root shows a ring in the accent colour (`:focus-visible`,
   so a click shows none). Don't remove `outline` in your styles; change the ring with its tokens.
 - **Cascade layers:** the tokens are in the layer `aek.tokens` and the focus ring in `aek.base`, so
@@ -327,8 +349,9 @@ container; `vw` and `vh` are the browser window's, as in CSS.
 
 ## Key APIs
 
-- [`CMP`](api:CMP), [`CMPHandle`](api:CMPHandle), [`CMPProps`](api:CMPProps) and
-  [`getHUDRootCMP`](api:getHUDRootCMP).
+- [`CMP`](api:CMP), [`CMPHandle`](api:CMPHandle), [`CMPProps`](api:CMPProps),
+  [`getHUDRootCMP`](api:getHUDRootCMP), [`createHudRoot`](api:createHudRoot) and
+  [`hasHudRoot`](api:hasHudRoot).
 - [`openDraggableWindow`](api:openDraggableWindow) ([`OpenDraggableWindowProps`](api:OpenDraggableWindowProps)),
   [`closeDraggableWindow`](api:closeDraggableWindow),
   [`toggleDraggableWindow`](api:toggleDraggableWindow),

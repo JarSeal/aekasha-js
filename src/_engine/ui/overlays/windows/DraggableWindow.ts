@@ -13,6 +13,7 @@ import { addResizer } from '../../../kernel/loop/MainLoop';
 import { addSceneHooks } from '../../../kernel/scene/SceneHooks';
 import { addBootAfterStartHook } from '../../../kernel/init/BootHooks';
 import styles from './DraggableWindow.module.scss';
+import '../../styles/kit.scss';
 import { getSvgIcon } from '../../core/icons/SvgIcon';
 import { addDragHandle, cancelDragSession } from './DraggableWindowDrag';
 import {

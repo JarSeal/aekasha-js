@@ -2822,11 +2822,14 @@
       "TStyle": "TypeAlias"
     },
     "src/_engine/ui/core/HUD.ts": {
-      "createHudContainer": "Function",
+      "createHudRoot": "Function",
       "getHUDRootCMP": "Function",
       "GUI_CONTAINER_ID": "Variable",
+      "hasHudRoot": "Function",
       "HUD_ROOT_ID": "Variable",
-      "KEEP_IN_VIEWS_CLASS": "Variable"
+      "HudRootProps": "TypeAlias",
+      "KEEP_IN_VIEWS_CLASS": "Variable",
+      "KIT_ROOT_CLASS": "Variable"
     },
     "src/_engine/ui/core/icons/BuiltInIcons.ts": {
       "aekashaIcon": "Variable",
@@ -4047,7 +4050,9 @@
       "DropDown",
       "DropDownOption",
       "DropDownProps",
+      "HudRootProps",
       "KEEP_IN_VIEWS_CLASS",
+      "KIT_ROOT_CLASS",
       "OpenDraggableWindowProps",
       "SceneTargetResolver",
       "SvgIconKey",
@@ -4083,6 +4088,7 @@
       "closeDraggableWindow",
       "cloudSunIcon",
       "createDropDown",
+      "createHudRoot",
       "createToaster",
       "databaseXIcon",
       "easelIcon",
@@ -4098,8 +4104,10 @@
       "getDraggableWindowsOfKind",
       "getHUDRootCMP",
       "getKindWindowId",
+      "getMotionFactor",
       "getSvgIcon",
       "gpuCardIcon",
+      "hasHudRoot",
       "hasToaster",
       "heartArrowIcon",
       "infinityIcon",

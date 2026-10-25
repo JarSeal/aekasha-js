@@ -51,7 +51,7 @@ import {
   registerDraggableWindow,
   registerDraggableWindowKind,
 } from './DraggableWindow';
-import { createHudContainer } from '../../core/HUD';
+import { createHudRoot } from '../../core/HUD';
 
 describe('draggable windows: the scene and boot hooks (p613 D5)', () => {
   it('adds them on the first use, once, never at module load', () => {
@@ -86,7 +86,7 @@ const stubDom = async () => {
 describe('draggable windows: open, reopen, kinds, scene changes, LS', () => {
   beforeAll(async () => {
     const document = await stubDom();
-    createHudContainer(document.getElementById('hudSlot') as HTMLElement);
+    createHudRoot({ slot: document.getElementById('hudSlot') as HTMLElement });
   });
 
   it('opens a window with its props, and mounts it in the HUD', () => {
@@ -194,7 +194,7 @@ describe('draggable windows: open, reopen, kinds, scene changes, LS', () => {
     const hud = await import('../../core/HUD');
     const cmp = await import('../../core/CMP');
     const windows = await import('./DraggableWindow');
-    hud.createHudContainer(document.getElementById('hudSlot') as HTMLElement);
+    hud.createHudRoot({ slot: document.getElementById('hudSlot') as HTMLElement });
     windows.registerDraggableWindow('savedWin', { content: () => cmp.CMP({ text: 'restored' }) });
     expect(windows.getDraggableWindow('savedWin')).toMatchObject({ isOpen: true, title: 'Saved' });
     expect(windows.getDraggableWindow('savedWin')?.windowCMP).toBeUndefined();

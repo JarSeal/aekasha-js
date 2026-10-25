@@ -1,0 +1,28 @@
+// The UI kit's global styles (p803 D4): the design tokens with the focus ring, the controls'
+// reset and the icons. The HUD root's module and every kit module with styles import it, so a page
+// that uses the kit gets it without the boot, and Vite emits it once. Nothing on html, body or other
+// elements a host page owns: everything is under a kit root (.aekUi).
+@use './tokens';
+
+// p803 D5: the kit root's text colour, so a control's `inherit` never gives the host page's. Set on
+// each forced theme too: a computed colour inherits as it is, so a forced subtree would keep its
+// ancestor's. Controls take the kit's font and colour, not the browser's defaults.
+@layer aek.base {
+  :where(.aekUi, .aekUi [data-aek-theme]) {
+    color: var(--aek-text);
+  }
+
+  :where(.aekUi) :where(button, input, select, textarea) {
+    font: inherit;
+    color: inherit;
+  }
+}
+
+// Unlayered until the icons' restyle (p803 Phase 5: .aekIcon and its size tokens)
+.uiIcon {
+  svg {
+    display: inline-block;
+    width: 100%;
+    height: auto;
+  }
+}

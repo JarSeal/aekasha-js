@@ -1,6 +1,7 @@
 import type { CMPHandle, CMPStyle } from '../core/CMPTypes';
 import { CMP } from '../core/CMP';
 import { getMotionFactor } from '../core/Motion';
+import '../styles/kit.scss';
 
 /**
  * A toast's kind: the settings that can differ per kind (showing time, closable, icon) are keyed by

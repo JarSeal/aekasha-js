@@ -49,7 +49,7 @@ describe('dialogs: Escape', () => {
       },
     });
     const hud = await import('../../core/HUD');
-    hud.createHudContainer(document.getElementById('hudSlot') as HTMLElement);
+    hud.createHudRoot({ slot: document.getElementById('hudSlot') as HTMLElement });
     m = { dialogs: await import('./DialogWindow'), windows: await import('./DraggableWindow') };
   });
 

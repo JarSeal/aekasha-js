@@ -2,8 +2,8 @@
  * The component library (p802 D9, the dev page `project/aekasha/components/`): a chunk `hub.ts`
  * imports on a page with `[data-hub-components]`, only in the dev Hub. It uses `aekasha/ui`
  * without the engine: the Hub's script build resolves the kit's main loop and storage to its own
- * stand-ins (`_kit/`, `devTools/hub/kitStandIns.ts`), and this makes what the boot would: the HUD
- * root and the kit's global styles.
+ * stand-ins (`_kit/`, `devTools/hub/kitStandIns.ts`), and this makes the HUD root (`createHudRoot`,
+ * which brings the kit's global styles), as the boot would.
  *
  * The root sits over the viewport, as in an app: each `[data-hub-demo]` box gets buttons that
  * open its piece's states there, and the page's theme and density switches set its attributes.
@@ -15,6 +15,7 @@ import {
   closeDraggableWindow,
   CMP,
   createDropDown,
+  createHudRoot,
   createToaster,
   fitAllDraggableWindowsToScreen,
   getDraggableWindowsOfKind,
@@ -34,11 +35,6 @@ import type {
   OpenDraggableWindowProps,
   CMPHandle,
 } from 'aekasha/ui';
-// eslint-disable-next-line import/no-restricted-paths -- the kit has no public way to make its root without the boot: p803 adds one (p800 D1), and this import goes
-import { createHudContainer } from '../../../src/_engine/ui/core/HUD';
-// The kit's global styles (`.uiIcon`), which the boot loads in every build
-// eslint-disable-next-line import/no-restricted-paths -- the kit's entry doesn't bring its global styles: p803 makes it (p800 D1), and this import goes
-import '../../../src/_engine/ui/styles/index.scss';
 
 /** A demo: fills its box (`data-hub-demo="<key>"`) with the controls that open its states */
 type Demo = (box: HTMLElement) => void;
@@ -435,8 +431,7 @@ export const initComponents = (root: HTMLElement) => {
   // The root takes the place of its slot (as of the page's `#hudRoot` in an app)
   const slot = document.createElement('div');
   document.body.append(slot);
-  createHudContainer(slot);
-  initSettings(root, getHUDRootCMP().elem);
+  initSettings(root, createHudRoot({ slot }).elem);
   for (const box of root.querySelectorAll<HTMLElement>('[data-hub-demo]')) {
     DEMOS[box.dataset.hubDemo ?? '']?.(box);
   }

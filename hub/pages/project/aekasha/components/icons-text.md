@@ -11,6 +11,5 @@ warning. Every built-in is listed in the [design document](hub:project/aekasha/d
 ::: note For p803
 The kit sizes no icon: `.uiIcon`'s SVG fills its box's width, so each user sizes `.uiIcon` itself
 (the window's header, the debugger, the on-screen tools), and `'small'` only adds the class
-`smallIcon`, which only the on-screen tools style. The kit's global styles (`.uiIcon`) come with
-the boot (`styles/index.scss`), not with `aekasha/ui`: this page imports them by path.
+`smallIcon`, which only the on-screen tools style.
 :::

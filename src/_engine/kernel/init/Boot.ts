@@ -12,7 +12,7 @@ import {
 } from '../config/Config';
 import { createAssetsDebugGUI, initAssets } from '../assets/AssetsAPI';
 import { setAppData } from '../scene/AppData';
-import { createHudContainer, getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../ui/core/HUD';
+import { createHudRoot, getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../ui/core/HUD';
 import {
   registerDefaultDebugKeyBindings,
   registerDefaultProdTestKeyBindings,
@@ -20,8 +20,8 @@ import {
 import { addWindowListeners, initMainLoop, registerMainLoopDebugGUI } from '../loop/MainLoop';
 import { createRootScene, getRootScene, registerScenesFromGeneratedData } from '../scene/Scene';
 import { isCurrentlyLoading } from '../scene/SceneLoader';
-// The components' styles only: the page's (page.scss) are InitEngine's, which a mounted engine
-// (mountAekasha) doesn't import (p611 D6)
+// The editor views' HUD rule (the kit's own styles come with HUD.ts, p803 D4): the page's
+// (page.scss) are InitEngine's, which a mounted engine (mountAekasha) doesn't import (p611 D6)
 import '../../ui/styles/index.scss';
 import { llog, lwarn } from '../../utils/Logger';
 import { createRendererDebugGUI } from '../render/Renderer';
@@ -136,8 +136,8 @@ export const bootEngineAsync = async ({ config, data, features, start, hudSlot }
   // Init ECS
   const ecsWorld = initECSWorld();
 
-  // HUD container
-  createHudContainer(hudSlot);
+  // The HUD root
+  createHudRoot({ slot: hudSlot });
 
   // Resolve the assets config (the assets worker is only started by its first request)
   initAssets();

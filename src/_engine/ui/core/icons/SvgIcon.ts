@@ -1,5 +1,6 @@
 import { lwarn } from '../../../utils/Logger';
 import * as builtIn from './BuiltInIcons';
+import '../../styles/kit.scss';
 
 /**
  * The icon registry (p607 D12): `getSvgIcon` renders only a registered icon, so a build holds the

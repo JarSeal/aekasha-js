@@ -1,20 +1,12 @@
-// The UI kit's global styles, in every build: the design tokens (on the kit root, `.aekUi`, with the
-// focus ring), the editor views' HUD rule and the icons. Nothing on html, body or other elements a
-// host page owns: those are page.scss's, which only the full-page boot loads (p611 D6). Nothing of
-// the debug tools either: each debug module loads its own (p617 S1).
-@use './tokens';
+// The boot's global styles, in every build: the editor views' HUD rule. The kit's own (the tokens,
+// the controls' reset, the icons) are kit.scss, which the HUD root's module imports (p803 D4), so
+// the page holds one copy. Nothing on html, body or other elements a host page owns: those are
+// page.scss's, which only the full-page boot loads (p611 D6). Nothing of the debug tools either:
+// each debug module loads its own (p617 S1).
 
 // Editor views (kernel/render/Views.ts) hide the suspended scene's HUD: the debug drawer, the switch
 // tools, draggable windows, the scene loader and any app HUD. display: none keeps them mounted, so
 // the Runtime view shows them as they were. KEEP_IN_VIEWS_CLASS (ui/core/HUD.ts) opts an element out.
 body.aekEditorView #hudRoot > :not(.aekKeepInViews) {
   display: none;
-}
-
-.uiIcon {
-  svg {
-    display: inline-block;
-    width: 100%;
-    height: auto;
-  }
 }

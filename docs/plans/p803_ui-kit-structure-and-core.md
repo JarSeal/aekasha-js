@@ -668,6 +668,32 @@ debugger's roots. The Hub's `MainLoop.ts` stand-in and the two deep imports go, 
 Verify: `verify:embed`'s shrink check (the windows' clamp on the new resize source) and the
 component library page by eye.
 
+1. Section 1, the kit root and its styles: `createHudRoot`, `hasHudRoot`, `KIT_ROOT_CLASS`,
+   `kit.scss` imported by the kit, `getMotionFactor` public, the component library's two deep
+   imports gone.
+2. Section 2, the resize source: `onBoundsResize`, `MainLoop.ts` out of `UI_KERNEL_HOOKS`, the
+   Hub's `MainLoop.ts` stand-in gone, `scripts.test.ts`' kernel check, `verify:embed`.
+3. Section 3, the themes: `color-scheme` in the theme blocks, D6's forced dark theme on the
+   debugger's roots, the component library page by eye in both themes.
+
+As built (section 1, 2026-10-25):
+
+- `core/HUD.ts`: `createHudRoot(props?: HudRootProps)` (`{ slot? }`) returns the root's handle;
+  a second call throws its own message naming the boot before CMP's "Root node already created".
+  `hasHudRoot()`, `KIT_ROOT_CLASS` (the root's class is built from it), all on `aekasha/ui` with
+  `HudRootProps`. `HUD.test.ts` (new): the root in its slot, a kit root, the second call.
+- `styles/kit.scss`: `tokens.css` (`@use`d), D5's `aek.base` rules and `.uiIcon` (unlayered until
+  Phase 5's `.aekIcon`). The kit root's `color: var(--aek-text)` is on
+  `:where(.aekUi, .aekUi [data-aek-theme])`: a computed colour inherits as it is, so a forced
+  theme under the root sets its own. `HUD.ts`, `DraggableWindow.ts`, `Toaster.ts`, `DropDown.ts`
+  and `SvgIcon.ts` import it; `DialogWindow.ts` gets it through `DraggableWindow.ts`.
+  `index.scss` keeps only the editor views' rule (no `@use` of `kit.scss`: that would be a second
+  copy next to the module's).
+- `getMotionFactor` on `aekasha/ui`, its JSDoc with D4's note on `anim` and an `@example`.
+- The component library calls `createHudRoot` from `aekasha/ui`; both `eslint-disable`d deep
+  imports are gone. Its intro and icons text, the UI kit guide (a "Without the engine" section,
+  `KIT_ROOT_CLASS`, `getMotionFactor`, the controls' reset) and both `CLAUDE.md` files follow.
+
 ### Phase 3: `yarn verify:ui`
 
 D11's command over the component library page as it is (still dev-only until Phase 8: it runs

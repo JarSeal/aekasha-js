@@ -55,7 +55,15 @@ export type {
 } from './overlays/windows/DraggableWindowTypes';
 export { createDropDown } from './forms/DropDown';
 export type { DropDown, DropDownOption, DropDownProps, TDropDown } from './forms/DropDown';
-export { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from './core/HUD';
+export {
+  createHudRoot,
+  getHUDRootCMP,
+  hasHudRoot,
+  KEEP_IN_VIEWS_CLASS,
+  KIT_ROOT_CLASS,
+} from './core/HUD';
+export type { HudRootProps } from './core/HUD';
+export { getMotionFactor } from './core/Motion';
 export {
   addToast,
   createToaster,
