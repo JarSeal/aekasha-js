@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-5 implemented
+Status: implemented (Phases 1-6)
 Category: Documentation, Hub, Tooling
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p809_project-roadmaps-and-docs-split.md
@@ -177,6 +177,10 @@ Documentation page's intro says the syntax reference is in the repo's dev Hub, a
   that merge, Phase 3 after p801 merged.
 - Versions: none (the Hub and `devTools/` are repo tooling): a Project entry in `CHANGELOG.md`
   per PR. Phase 4's change to the Hub's script build is tooling too.
+- As built (Phase 6): `yarn checkVersions --against main` counts every file under `src/_engine/`
+  and `src/app/`, with no exemption for one that ships in nothing, so the second PR has patch
+  bumps: engine (and project) 5.11.1 for `TokenSheet.ts`, `Tokens.test.ts` and
+  `src/_engine/ui/CLAUDE.md`, app 1.15.1 for `physicsTest.ts`' region note.
 
 ---
 
@@ -561,10 +565,14 @@ As built:
 - Checked: `yarn test`, and `yarn hub:build --no-api --no-embed` (61 pages, no coverage or link
   warnings, no `project/` in the output).
 
-### Phase 6: done
+### Phase 6: the versions, the changelog, the plan done — done
 
 The changelog entry, `yarn checkVersions --against main`, mark the plan done; p800 §5's p802
 entry points here. Time for the PR: `p802-hub-project-section` → `main`.
+
+As built: the versions as D10's As built says; the `CHANGELOG.md` entry `2026-10-25 —
+p802-hub-project-section` (Engine, App, Project); the file renamed to `_DONE_`, with p800's
+`Blocks:` line and §5 entry and p801's `Blocked by` following.
 
 ---
 
