@@ -1929,6 +1929,51 @@ As built (section 2, 2026-10-25):
   rules, the icons box's two from Phase 5); the three new boxes' shots (and "Load the content")
   are new. To record with `--update` after review.
 
+As built (section 3, 2026-10-25):
+
+- `components/LoadingOverlay.ts` + `LoadingOverlay.scss`: `createLoadingOverlay({ text, progress?,
+  cover?, fadeInMs?, fadeOutMs?, class?, attr?, id? })` returns `{ cmp, showAsync, hideAsync,
+  isShown, setText, setProgress }`, as the defaults say. **`fadeInMs` / `fadeOutMs` and `isShown`
+  are new.** It starts hidden (`data-state="hidden"`: `visibility: hidden`); `showAsync` /
+  `hideAsync` go through `showing` / `hiding` to `shown` / `hidden`, with the inline
+  `transitionDuration` at the time times `getMotionFactor`, **reading the computed opacity first**
+  (a scene loader adds its container and calls `loadStartFn` in the same frame: without a style
+  read the opacity would start at 1, which the old debug loader got round with a `setTimeout(0)`).
+  One timer; a later call or `cmp.remove()` resolves the cut promise `false`, a 0 ms fade resolves
+  at once. Hidden or hiding, it lets the pointer through. The progress bar's label is the text,
+  hidden (the visible text is the status); the spinner or the bar sits above the text, the bar
+  `align-self: stretch` in a column of `--aek-space-7` × 10 at most. In a parent it's at
+  `--aek-loading-overlay-z`, default 1.
+- **`--aek-z-loading: 1000`** in `tokens.css` (the layers' comment says where it sits), in the
+  design document's Layers table by itself (`design.ts` reads every `z-` token) and in the UI kit
+  guide's token table. It adds 22 bytes to the entry stylesheets (`index.css`, `banner.css`,
+  `uiKit.css`: recorded); every JS file's bytes are unchanged.
+- **The debug scene loader** (`_dbg__DebuggerSceneLoader.ts`) is the overlay with a spinner and
+  "Loading the scene" (the old one had no text), a new overlay per load, its handle in the
+  `createDebuggerSceneLoader` closure; `DebuggerSceneLoader.module.scss` (the old spinner, the
+  debugger's grey) is gone. It now follows the system's theme (`--aek-bg`). Checked live on a dev
+  server with the Debug tools' start scene saved in `AEK_debugTools` (`exampleQuickStart`, both
+  schemes): fixed over the page at z 1000, under the debugger's on-screen tools and stats panels as
+  the old one was, removed after the load, no page error.
+- The component library: a "Loading overlay" box: an overlay over a panel (`cover: 'parent'`,
+  shown at once, its spinner), "Show the progress" (a bar at 60 %), "Hide it", and "Over the
+  HUD's bounds" (a bar at 35 % over the viewport; the demo's own click listener hides and removes
+  it). Scripts: the status, the decorative spinner, the bar swapped in, the hide; the bounds'
+  overlay fixed and shown, gone after a click.
+- Tests: `LoadingOverlay.test.ts` (4). **Found by the test**: with `progress` given, the bar went
+  above a text not yet in the content; the text is appended first now, and the spinner or bar
+  inserted before it.
+- Docs: the kit's `CLAUDE.md` (Loading overlays, the dialogs' z note, the importers, the tests),
+  the UI kit guide ("Loading overlays" with the `createSceneLoader` wiring and
+  `getLoaderStatusUpdater`, the table, the token row, the key APIs), the scenes guide's loader
+  paragraph (a link to it), the component library's text and `COMPONENT_USES`.
+- The section's checks: `yarn test` (183 files, 1453 tests; `buildGuard.test.ts` failed in the
+  Stop hook's run beside the background `hub:build` again and passes alone), `tsc` (both),
+  ESLint, `yarn hub:build` (1014 names, 100 % documented), `yarn sbp --profile all` (every budget
+  within), `verify:baselines` recorded (the three `aekasha/ui` names, the 22 bytes).
+  `verify:ui --only loadingOverlay`: four states and two scripts pass, no violation; the shots are
+  new, to record with `--update` after review.
+
 ### Phase 8: the Hub, the example, `CLAUDE.md`, readme
 
 D13: the UI kit section and its child pages, the styling guide, the public component library page

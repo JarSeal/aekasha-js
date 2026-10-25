@@ -50,6 +50,7 @@ export const COMPONENT_USES = [
   { slot: 'generated-components-skeleton', calls: ['createSkeleton'] },
   { slot: 'generated-components-divider', calls: ['createDivider'] },
   { slot: 'generated-components-empty-state', calls: ['createEmptyState'] },
+  { slot: 'generated-components-loading-overlay', calls: ['createLoadingOverlay'] },
   { slot: 'generated-components-kbd', calls: ['createKbd'] },
   { slot: 'generated-components-input-glyph', calls: ['createInputGlyph'] },
 ] as const;

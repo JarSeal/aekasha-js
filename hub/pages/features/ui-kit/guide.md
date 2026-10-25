@@ -1,30 +1,31 @@
 ## The pieces
 
-| Piece          | Made with                                                          | For                                                            |
-| -------------- | ------------------------------------------------------------------ | -------------------------------------------------------------- |
-| Component      | [`CMP`](api:CMP)                                                   | Any element: a panel, a button, a readout                      |
-| HUD root       | [`getHUDRootCMP`](api:getHUDRootCMP)                               | Where the app's UI goes, over the canvas                       |
-| Window         | [`openDraggableWindow`](api:openDraggableWindow)                   | A panel the player moves, resizes, collapses and closes        |
-| Window kind    | [`registerDraggableWindowKind`](api:registerDraggableWindowKind)   | One window per thing (an entity, an item), each with its data  |
-| Dialog         | [`openDialog`](api:openDialog)                                     | A modal window over a backdrop: a pause menu, a confirmation   |
-| Drop-down      | [`createDropDown`](api:createDropDown)                             | A choice from a list, with the keyboard                        |
-| Tooltip        | [`createTooltip`](api:createTooltip)                               | A short text describing a control, on hover or focus           |
-| Popover        | [`createPopover`](api:createPopover)                               | Interactive content next to its trigger: filters, a detail     |
-| Toaster, toast | [`createToaster`](api:createToaster), [`addToast`](api:addToast)   | Short messages that come and go                                |
-| Icon           | [`registerIcon`](api:registerIcon), [`getSvgIcon`](api:getSvgIcon) | SVG icons by name, in the text colour                          |
-| Button         | [`createButton`](api:createButton)                                 | An action: a toggle, a loading save, a hold to confirm         |
-| Button group   | [`createButtonGroup`](api:createButtonGroup)                       | Buttons joined; a toolbar of toggles with one pressed          |
-| Link           | [`createLink`](api:createLink)                                     | A navigation: in text, to another site, or as a button         |
-| Menu           | [`createMenu`](api:createMenu)                                     | A button's list of actions, on / off items and choices         |
-| Split button   | [`createSplitButton`](api:createSplitButton)                       | An action, with its variants in a menu                         |
-| Badge, tag     | [`createBadge`](api:createBadge), [`createTag`](api:createTag)     | A count or a status word; a kind, a filter chip, a picked item |
-| Spinner        | [`createSpinner`](api:createSpinner)                               | A wait of unknown length, in text or alone                     |
-| Progress bar   | [`createProgressBar`](api:createProgressBar)                       | How far a task is, or that it's going on; a segmented gauge    |
-| Skeleton       | [`createSkeleton`](api:createSkeleton)                             | A placeholder shaped like content that's still loading         |
-| Divider        | [`createDivider`](api:createDivider)                               | A line between two groups, across a column or down a row       |
-| Empty state    | [`createEmptyState`](api:createEmptyState)                         | What an empty list or search shows, and what to do             |
-| Key hint       | [`createKbd`](api:createKbd)                                       | A shortcut's keys, with each platform's names                  |
-| Input glyph    | [`createInputGlyph`](api:createInputGlyph)                         | One key or mouse input in a prompt: "Press E"                  |
+| Piece           | Made with                                                          | For                                                            |
+| --------------- | ------------------------------------------------------------------ | -------------------------------------------------------------- |
+| Component       | [`CMP`](api:CMP)                                                   | Any element: a panel, a button, a readout                      |
+| HUD root        | [`getHUDRootCMP`](api:getHUDRootCMP)                               | Where the app's UI goes, over the canvas                       |
+| Window          | [`openDraggableWindow`](api:openDraggableWindow)                   | A panel the player moves, resizes, collapses and closes        |
+| Window kind     | [`registerDraggableWindowKind`](api:registerDraggableWindowKind)   | One window per thing (an entity, an item), each with its data  |
+| Dialog          | [`openDialog`](api:openDialog)                                     | A modal window over a backdrop: a pause menu, a confirmation   |
+| Drop-down       | [`createDropDown`](api:createDropDown)                             | A choice from a list, with the keyboard                        |
+| Tooltip         | [`createTooltip`](api:createTooltip)                               | A short text describing a control, on hover or focus           |
+| Popover         | [`createPopover`](api:createPopover)                               | Interactive content next to its trigger: filters, a detail     |
+| Toaster, toast  | [`createToaster`](api:createToaster), [`addToast`](api:addToast)   | Short messages that come and go                                |
+| Icon            | [`registerIcon`](api:registerIcon), [`getSvgIcon`](api:getSvgIcon) | SVG icons by name, in the text colour                          |
+| Button          | [`createButton`](api:createButton)                                 | An action: a toggle, a loading save, a hold to confirm         |
+| Button group    | [`createButtonGroup`](api:createButtonGroup)                       | Buttons joined; a toolbar of toggles with one pressed          |
+| Link            | [`createLink`](api:createLink)                                     | A navigation: in text, to another site, or as a button         |
+| Menu            | [`createMenu`](api:createMenu)                                     | A button's list of actions, on / off items and choices         |
+| Split button    | [`createSplitButton`](api:createSplitButton)                       | An action, with its variants in a menu                         |
+| Badge, tag      | [`createBadge`](api:createBadge), [`createTag`](api:createTag)     | A count or a status word; a kind, a filter chip, a picked item |
+| Spinner         | [`createSpinner`](api:createSpinner)                               | A wait of unknown length, in text or alone                     |
+| Progress bar    | [`createProgressBar`](api:createProgressBar)                       | How far a task is, or that it's going on; a segmented gauge    |
+| Skeleton        | [`createSkeleton`](api:createSkeleton)                             | A placeholder shaped like content that's still loading         |
+| Divider         | [`createDivider`](api:createDivider)                               | A line between two groups, across a column or down a row       |
+| Empty state     | [`createEmptyState`](api:createEmptyState)                         | What an empty list or search shows, and what to do             |
+| Loading overlay | [`createLoadingOverlay`](api:createLoadingOverlay)                 | A scene loader's screen, or a panel's while it loads           |
+| Key hint        | [`createKbd`](api:createKbd)                                       | A shortcut's keys, with each platform's names                  |
+| Input glyph     | [`createInputGlyph`](api:createInputGlyph)                         | One key or mouse input in a prompt: "Press E"                  |
 
 ## Components
 
@@ -529,6 +530,40 @@ if (!rows.length) {
 pauseMenu.add(createDivider().cmp); // before Quit
 ```
 
+## Loading overlays
+
+[`createLoadingOverlay`](api:createLoadingOverlay) covers the HUD's bounds (a scene load; a
+mounted engine's container in an embed) or, with `cover: 'parent'`, a positioned panel of yours,
+while something loads: a spinner, or a progress bar when you give it `progress`, and a text that
+assistive tech reads as a status. Add its `cmp` where it goes; it's hidden until
+`showAsync()`. `showAsync()` and `hideAsync()` fade it (instantly under reduced motion) and
+resolve `true` once done, or `false` when a later call or its removal cut them short, so they
+plug into a scene loader as they are. It blocks the pointer while shown, above the app's windows
+and below its dialogs (`--aek-z-loading`).
+
+```ts
+import { createSceneLoader, getLoaderStatusUpdater } from 'aekasha';
+import { createLoadingOverlay, type LoadingOverlay } from 'aekasha/ui';
+
+let overlay: LoadingOverlay | null = null;
+await createSceneLoader({
+  id: 'main',
+  // A new overlay per load: the load removes its container at its end
+  loaderContainerFn: () => {
+    overlay = createLoadingOverlay({ text: 'Loading the level', progress: 0 });
+    return overlay.cmp;
+  },
+  loadStartFn: () => overlay?.showAsync() ?? Promise.resolve(true),
+  loadEndFn: () => overlay?.hideAsync() ?? Promise.resolve(true),
+  updateLoaderStatusFn: (_loader, params) => overlay?.setProgress(Number(params?.percent ?? 0)),
+});
+
+// In a scene file, as its assets come in:
+getLoaderStatusUpdater()({ percent: 40 });
+```
+
+The debug scene loader (the Debug tools' start scene) is the same overlay with a spinner.
+
 ## Key hints and input glyphs
 
 [`createKbd`](api:createKbd) draws a shortcut's keys, a `<kbd>` each with `+` between them, from
@@ -627,7 +662,7 @@ const scorePanel = getHUDRootCMP().add({ class: 'scorePanel' });
 | Shadows | `--aek-shadow-sm`, `--aek-shadow-lg`                                                                                                                                                                                                                                                                                                                                                     |
 | Motion  | `--aek-motion-fast`, `-base`, `-slow` (120, 200, 320 ms); `--aek-ease-standard`, `--aek-ease-emphasized`                                                                                                                                                                                                                                                                                 |
 | Focus   | `--aek-focus-ring-width`, `-offset`, `-color`                                                                                                                                                                                                                                                                                                                                            |
-| Layers  | `--aek-z-window`, `-dialog`, `-debug-window`, `-debug-dialog`, `-toast`, `-tooltip` (z-index values: 100, 5000, 20000, 30000, 31000, 32000)                                                                                                                                                                                                                                              |
+| Layers  | `--aek-z-window`, `-loading`, `-dialog`, `-debug-window`, `-debug-dialog`, `-toast`, `-tooltip` (z-index values: 100, 1000, 5000, 20000, 30000, 31000, 32000)                                                                                                                                                                                                                            |
 
 The sizes are at the defaults: a 16 px browser font size and a UI scale of 1 (see below). In both
 themes the text, the accent and the status colours have a contrast of at least 4.5:1 on every
@@ -738,6 +773,8 @@ container; `vw` and `vh` are the browser window's, as in CSS.
   ([`ProgressBar`](api:ProgressBar)).
 - [`createSkeleton`](api:createSkeleton), [`createDivider`](api:createDivider) and
   [`createEmptyState`](api:createEmptyState) ([`EmptyState`](api:EmptyState)).
+- [`createLoadingOverlay`](api:createLoadingOverlay) ([`LoadingOverlay`](api:LoadingOverlay)), with
+  [`createSceneLoader`](api:createSceneLoader).
 - [`createKbd`](api:createKbd) ([`Kbd`](api:Kbd)) and [`createInputGlyph`](api:createInputGlyph)
   ([`InputGlyphInput`](api:InputGlyphInput)).
 - [`aekasha/ui/fonts`](hub:documentation/aekasha/ui/fonts): the kit's fonts, a stylesheet entry.

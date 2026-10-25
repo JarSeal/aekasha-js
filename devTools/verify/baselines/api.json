@@ -2838,6 +2838,11 @@
       "Link": "TypeAlias",
       "LinkProps": "TypeAlias"
     },
+    "src/_engine/ui/components/LoadingOverlay.ts": {
+      "createLoadingOverlay": "Function",
+      "LoadingOverlay": "TypeAlias",
+      "LoadingOverlayProps": "TypeAlias"
+    },
     "src/_engine/ui/components/ProgressBar.ts": {
       "createProgressBar": "Function",
       "ProgressBar": "TypeAlias",
@@ -4222,6 +4227,8 @@
       "KbdProps",
       "Link",
       "LinkProps",
+      "LoadingOverlay",
+      "LoadingOverlayProps",
       "Menu",
       "MenuActionItem",
       "MenuCheckboxItem",
@@ -4290,6 +4297,7 @@
       "createInputGlyph",
       "createKbd",
       "createLink",
+      "createLoadingOverlay",
       "createMenu",
       "createPopover",
       "createProgressBar",

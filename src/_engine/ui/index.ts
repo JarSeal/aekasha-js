@@ -81,6 +81,8 @@ export { createKbd } from './components/Kbd';
 export type { Kbd, KbdProps } from './components/Kbd';
 export { createLink } from './components/Link';
 export type { Link, LinkProps } from './components/Link';
+export { createLoadingOverlay } from './components/LoadingOverlay';
+export type { LoadingOverlay, LoadingOverlayProps } from './components/LoadingOverlay';
 export { createMenu } from './overlays/Menu';
 export type {
   Menu,

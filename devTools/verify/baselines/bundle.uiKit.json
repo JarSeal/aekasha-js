@@ -51,7 +51,7 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7543,
-      "gzip": 3074
+      "gzip": 3075
     },
     "assets/GeometryTransfer.js": {
       "bytes": 4297,
@@ -59,11 +59,11 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 45868,
-      "gzip": 13861
+      "gzip": 13862
     },
     "assets/HDRLoader.js": {
       "bytes": 3405,
-      "gzip": 1631
+      "gzip": 1632
     },
     "assets/ibm-plex-mono-latin-400-italic.woff2": {
       "bytes": 16448,
@@ -91,11 +91,11 @@
     },
     "assets/ImportRegistry.js": {
       "bytes": 16534,
-      "gzip": 6651
+      "gzip": 6653
     },
     "assets/KTX2Loader.js": {
       "bytes": 59895,
-      "gzip": 24363
+      "gzip": 24364
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2168,
@@ -119,19 +119,19 @@
     },
     "assets/three.module.js": {
       "bytes": 219,
-      "gzip": 181
+      "gzip": 182
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
       "gzip": 179
     },
     "assets/uiKit.css": {
-      "bytes": 7067,
-      "gzip": 1915
+      "bytes": 7089,
+      "gzip": 1924
     },
     "assets/uiKit.embed.js": {
       "bytes": 1038854,
-      "gzip": 291080
+      "gzip": 291079
     },
     "assets/uiKitEmbed.css": {
       "bytes": 17762,
@@ -139,11 +139,11 @@
     },
     "assets/uiKitEmbed.js": {
       "bytes": 45184,
-      "gzip": 16449
+      "gzip": 16450
     },
     "uiKit.embed.js": {
       "bytes": 249,
-      "gzip": 210
+      "gzip": 211
     }
   },
   "main": {

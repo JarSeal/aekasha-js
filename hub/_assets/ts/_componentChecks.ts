@@ -111,6 +111,8 @@ const PROGRESS_TRACK = (name: string) => `${PROGRESS(name)} .aekProgress__track`
 const SKELETON_CARD = '#hubDemoSkeletonCard';
 const DIVIDER_BOX = '[data-hub-demo="divider"]';
 const EMPTY_SAVES = '#hubDemoEmptySaves';
+const OVERLAY_PANEL = '#hubDemoOverlayPanel .aekLoadingOverlay';
+const OVERLAY_BOUNDS = '#hudRoot #hubDemoOverlayBounds';
 
 export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
   window: {
@@ -695,6 +697,41 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { focusInBox: `${EMPTY_SAVES} .aekEmptyState__action` },
           { press: 'Enter' },
           { expectText: '#hubDemoEmptyStatus', text: 'New game started' },
+        ],
+      },
+    ],
+  },
+  loadingOverlay: {
+    keyboard: [
+      {
+        name: 'no keys; its text is a status, its spinner hidden, a bar swapped in and a hide',
+        steps: [
+          { expectAttr: OVERLAY_PANEL, name: 'data-state', value: 'shown' },
+          {
+            expectAttr: `${OVERLAY_PANEL} .aekLoadingOverlay__text`,
+            name: 'role',
+            value: 'status',
+          },
+          { expectAttr: `${OVERLAY_PANEL} .aekSpinner`, name: 'aria-hidden', value: 'true' },
+          { click: 'Show the progress' },
+          { expectCount: `${OVERLAY_PANEL} .aekSpinner`, count: 0 },
+          {
+            expectAttr: `${OVERLAY_PANEL} [role="progressbar"]`,
+            name: 'aria-valuenow',
+            value: '60',
+          },
+          { click: 'Hide it' },
+          { expectAttr: OVERLAY_PANEL, name: 'data-state', value: 'hidden' },
+        ],
+      },
+      {
+        name: 'over the HUD’s bounds: shown above the page, gone after the demo’s click',
+        steps: [
+          { click: 'Over the HUD’s bounds' },
+          { expectAttr: OVERLAY_BOUNDS, name: 'data-state', value: 'shown' },
+          { expectStyle: OVERLAY_BOUNDS, name: 'position', value: 'fixed' },
+          { clickHud: '#hubDemoOverlayBounds' },
+          { expectCount: OVERLAY_BOUNDS, count: 0 },
         ],
       },
     ],

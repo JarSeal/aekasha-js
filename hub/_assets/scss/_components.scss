@@ -221,3 +221,16 @@
   align-items: stretch;
   gap: 0.25rem;
 }
+
+// The panel a loading overlay covers (`cover: 'parent'`): positioned, with a size of its own
+.hubDemoOverlayPanel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: min(100%, 24rem);
+  min-height: 9rem;
+  padding: 1rem;
+  border: 1px solid var(--aek-border);
+  border-radius: var(--aek-radius-md);
+  overflow: hidden;
+}

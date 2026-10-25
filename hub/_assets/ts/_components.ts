@@ -26,6 +26,7 @@ import {
   createInputGlyph,
   createKbd,
   createLink,
+  createLoadingOverlay,
   createMenu,
   createPopover,
   createProgressBar,
@@ -1101,6 +1102,45 @@ const initEmptyStateDemo: Demo = (box) => {
   root.append(status);
 };
 
+// --- Loading overlay ---
+
+const OVERLAY_ID = (name: string) => `${ID_PREFIX}Overlay${name}`;
+
+/** In the page: one over a panel of the box, shown at once (its Hub buttons swap in a bar or hide
+ * it); another over the HUD's bounds, as a scene loader's, which a click on it closes (the demo's
+ * own listener: the overlay itself takes no input) */
+const initLoadingOverlayDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const panel = document.createElement('div');
+  panel.id = OVERLAY_ID('Panel');
+  panel.className = 'hubDemoOverlayPanel';
+  const line = document.createElement('p');
+  line.className = 'hubDemoLine';
+  line.textContent = 'Leaderboard: Ada 1:42.3, Grace 1:44.0, Alan 1:45.9';
+  panel.append(line);
+  const overlay = createLoadingOverlay({ text: 'Loading the scores', cover: 'parent' });
+  panel.append(overlay.cmp.elem);
+  void overlay.showAsync();
+  const inPanel = addGroup(root, 'Over a panel (cover: parent): a spinner, or a progress bar');
+  inPanel.append(panel);
+  addButton(inPanel, 'Show the progress', () => overlay.setProgress(60));
+  addButton(inPanel, 'Hide it', () => void overlay.hideAsync());
+
+  const bounds = addGroup(root, 'Over the HUD’s bounds, as a scene loader’s (a click closes it)');
+  addButton(bounds, 'Over the HUD’s bounds', () => {
+    const loader = createLoadingOverlay({
+      id: OVERLAY_ID('Bounds'),
+      text: 'Loading the level',
+      progress: 35,
+    });
+    getHUDRootCMP().add(loader.cmp);
+    loader.cmp.elem.addEventListener('click', () =>
+      loader.hideAsync().then((isHidden) => isHidden && loader.cmp.remove())
+    );
+    void loader.showAsync();
+  });
+};
+
 // --- Kbd ---
 
 const KBD_ROWS: { label: string; keys: string[]; platform?: 'mac' | 'other' }[] = [
@@ -1186,6 +1226,7 @@ const DEMOS: Record<string, Demo> = {
   skeleton: initSkeletonDemo,
   divider: initDividerDemo,
   emptyState: initEmptyStateDemo,
+  loadingOverlay: initLoadingOverlayDemo,
   kbd: initKbdDemo,
   inputGlyph: initInputGlyphDemo,
 };
