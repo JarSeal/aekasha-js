@@ -42,6 +42,13 @@ in `examples/ecs/`, where its page shows them, though another scene uses them to
   folder. `banner` is the floor (one code-made scene, no feature), and `uiKit` is the UI kit in an
   embed.
 
+## The app's design
+
+The [app's design document](hub:project/app/design) says how its UI looks, moves and talks to its
+players. In the template it's empty: each section says what to decide and starts from
+[Ækasha's design document](hub:project/aekasha/design), since the app's HUD is built from the
+UI kit and its tokens.
+
 ## The app's version
 
 `app_metadata.version` covers `src/app/` and the app-level files in `src/`. It's bumped once per

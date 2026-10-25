@@ -39,10 +39,11 @@ const QUICK_LINKS = [
 ] as const;
 
 /**
- * The hero's Project links (dev pages), in p802 D6's order: the app's design document goes first
- * (with its page), the component library after Ækasha's design document
+ * The hero's Project links (dev pages), in p802 D6's order: the app's design document first, then
+ * Ækasha's after the app's page (Phase 4 adds the component library after it)
  */
 const PROJECT_LINKS = [
+  { href: 'hub:project/app/design', label: 'The app’s design' },
   { href: 'hub:project/app', label: 'The app' },
   { href: 'hub:project/aekasha/design', label: 'Ækasha’s design' },
   { href: 'hub:project/aekasha', label: 'Developing Ækasha' },

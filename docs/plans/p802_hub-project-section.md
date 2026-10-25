@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-3 implemented
 Category: Documentation, Hub, Tooling
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p809_project-roadmaps-and-docs-split.md
@@ -314,10 +314,78 @@ As built (section 3):
 - Test: `devPages.test.ts` (the slot is empty with no links in `public`, and every link is a
   dev-only one to `project/` in `dev`). `hub/CLAUDE.md`'s homepage line names the slot.
 
-### Phase 3: the design document (after p801)
+### Phase 3: the design document (after p801) — done
 
 D8: `generated/design.ts`, the contrast module shared with p801's test, the prose, the app's
 template (p801 Phase 4 removed `font-study/`: the design document's fonts come from p801 D8).
+
+Checked against `main` after p801 (2026-10-25): p801's test is `Tokens.test.ts`; D1's "a
+generated section's page can't be dev" holds only for the pages a section adds (`pages.ts`), so a
+hand-written dev page's slots can be generated; a devTools import of an engine module must be on
+`devTools/engineImports.test.ts`' list (p619 D8); `BuiltInIcons.ts`' `?raw` imports don't load in
+Node, so the icons are read from its export lines. Sections: 1. the shared module, 2. the
+generated tables, 3. the prose, 4. the app's template.
+
+As built (section 1):
+
+- `src/_engine/ui/styles/TokenSheet.ts` (`@internal`, imports nothing, ships in nothing): the
+  parser, `findTokenRules` (the kit root, dark, the two light copies, compact), `parseTokenColor`,
+  `getContrastRatio`, the pair lists (`CONTRAST_SURFACES`, `_TEXTS`, `_CONTROLS`, `_SOFTS`,
+  `_UNCHECKED`, `_CHECKED`) and `listContrastPairs` (every pair with its ratio and minimum: 51 per
+  theme). In the engine, not `devTools/`: the rule belongs with `tokens.css`, as `StableStringify`
+  or `LodSimplify` do. `Tokens.test.ts` imports it. `api.json` and `docs.json` record its 15
+  exports (no engine version: nothing that ships changed).
+
+As built (section 2):
+
+- `devTools/hub/generated/design.ts` (`createDesignSection`, after the API's in `build.ts`) fills
+  seven slots of the hand-written dev page `project/aekasha/design/`: `generated-design-colours`
+  (each role's swatch and value in both themes, over its theme's `surface` so a tint shows as
+  used, and its contrast rule; a contrast table per theme, an "Aa" sample per pair in its real
+  colours; the accent and tint pairs), `-type` (families with `fonts.css`' opt-in, sizes in both
+  densities with samples, weights, line heights, figures), `-space` (the units, `--aek-rem` marked
+  internal; the space scale in both densities), `-elevation` (radii, shadows on each theme's `bg`,
+  layers), `-motion` (durations and easings, a dot that moves on hover or focus with the token
+  itself), `-focus` (the ring's tokens, drawn in each theme) and `-icons` (every built-in by its
+  name, its SVG inlined with `icons.ts`' now exported `toInlineSvg`, and its file).
+- Its colours are literal values from the parse, not `var()`s, so a sample shows its theme on
+  either page theme; the focus samples are the exception (live tokens under `data-aek-theme`).
+- A kit root token in no table (`findUnshownTokens`) warns at its line in `tokens.css`; an
+  unreadable `tokens.css` is an error and the slots say so. Watched: `tokens.css`, `fonts.css`,
+  `BuiltInIcons.ts`, the SVGs and their folder.
+- `hub/_assets/scss/_design.scss`. Long values wrap in their cell and the minimum ratio sits
+  under the role's name, so the tables fit the content column at 1400 px; on a phone they scroll
+  inside their frame (no page overflow).
+- `devTools/hub/design.test.ts`: no diagnostics, every token shown, each theme's colour values,
+  every pair's ratio, every icon, the headings in the TOC, an unshown token found.
+
+As built (section 3):
+
+- The prose in the page's Markdown slots (`<topic>-text.md`, so a slot's id never takes its
+  heading's): D6, D7 and D8 of p800 in reader form; type, spacing, elevation and icons from p801
+  and `src/_engine/ui/CLAUDE.md`. The voice (nothing in the repo specified one), the patterns'
+  details (focus on the safe action, checks on commit, a spinner after a delay, undo over a
+  confirmation where the debugger has undo) and the space steps' uses are this phase's proposals,
+  flagged at its review (no changes asked).
+- Two callout kinds for the pairs, `::: do` and `::: dont` (`markdown.ts`' `CALLOUT_TITLES`;
+  the title says which, the border repeats it). A "do" followed by a "don't" sits beside it from
+  720 px (`_prose.scss`, CSS only: the asides are siblings). `hub/CLAUDE.md` and
+  `hub-authoring.md` list the kinds.
+- `project/aekasha/`' conventions slot has "The UI's design", linking the page; the hero has
+  "Ækasha's design" after "The app" (the full title wrapped in the side column).
+
+As built (section 4):
+
+- `project/app/design/` is the app's design document itself, not a copy: in the template each
+  section holds a `::: note To decide` and a link to the same section of Ækasha's, and a fork
+  replaces the notes with its decisions in place. Its intro says to start from Ækasha's tokens
+  (set them on the kit root, an app's own tokens under a prefix of its own). The app page's
+  conventions slot has "The app's design", and the hero's first link is "The app's design".
+- The hero's links now: The app's design, The app, Ækasha's design, Developing Ækasha, Plan
+  workflow, Code blocks. **Phase 4 adds the component library after Ækasha's design.**
+- For Phase 5: `devTools/hub/CLAUDE.md`'s generated sections (the design section, its warning,
+  the `TokenSheet.ts` import), `hub/CLAUDE.md`'s pages (the two design documents) and the root
+  `CLAUDE.md` line; the callout kinds are already listed.
 
 ### Phase 4: the component library (dev)
 
