@@ -98,4 +98,54 @@ describe('drop-down', () => {
     expect(dropDown.isOpen()).toBe(false);
     expect(document.activeElement).toBe(elsewhere);
   });
+
+  it('searchable: the field filters the options, marks the matches and picks with Enter', () => {
+    const onChange = vi.fn();
+    const dropDown = createDropDown({
+      options: OPTIONS,
+      value: 'mid',
+      onChange,
+      searchable: true,
+      searchPlaceholder: 'Filter',
+    });
+    document.body.appendChild(dropDown.cmp.elem);
+    const trigger = triggerOf(dropDown);
+    trigger.focus();
+    dropDown.open();
+    const field = dropDown.cmp.elem.querySelector('input')!;
+    expect(document.activeElement).toBe(field);
+    expect(field.getAttribute('role')).toBe('combobox');
+    expect(field.getAttribute('aria-label')).toBe('Filter');
+    expect(field.getAttribute('aria-controls')).toBe(listOf(dropDown).id);
+    expect(field.getAttribute('aria-activedescendant')).toBe(`${listOf(dropDown).id}-1`);
+
+    const type = (text: string) => {
+      field.value = text;
+      field.dispatchEvent(new window.Event('input'));
+    };
+    type('i');
+    const items = () => [...listOf(dropDown).querySelectorAll('li')];
+    expect(items().map((item) => item.textContent)).toEqual(['Medium', 'High']);
+    expect(items()[0].querySelector('mark')?.textContent).toBe('i');
+    // The first match is highlighted; Home and Space are the field's (the caret, a typed space)
+    expect(field.getAttribute('aria-activedescendant')).toBe(`${listOf(dropDown).id}-1`);
+    expect(key(field, 'keydown', 'Home').defaultPrevented).toBe(false);
+    expect(key(field, 'keydown', ' ').defaultPrevented).toBe(false);
+    key(field, 'keydown', 'ArrowDown');
+    expect(field.getAttribute('aria-activedescendant')).toBe(`${listOf(dropDown).id}-2`);
+
+    type('zz');
+    expect(items()).toHaveLength(0);
+    expect(dropDown.cmp.elem.querySelector('.aekDropDownEmpty')?.textContent).toBe('No matches');
+    expect(field.hasAttribute('aria-activedescendant')).toBe(false);
+    key(field, 'keydown', 'Enter');
+    expect(onChange).not.toHaveBeenCalled();
+    expect(dropDown.isOpen()).toBe(true);
+
+    type('HIG');
+    key(field, 'keydown', 'Enter');
+    expect(onChange).toHaveBeenCalledWith('high');
+    expect(dropDown.isOpen()).toBe(false);
+    expect(document.activeElement).toBe(trigger);
+  });
 });

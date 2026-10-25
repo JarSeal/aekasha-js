@@ -19,10 +19,6 @@ export const UI_AXE_TAGS = [
 export type UiAllowedViolation = { rule: string; piece: string; until: string };
 
 export const UI_ALLOWED_VIOLATIONS: UiAllowedViolation[] = [
-  // The drop-down keeps its old dark greys inside a window that follows the light theme now: its
-  // labels, and its open list over the panel's text
-  { rule: 'color-contrast', piece: 'dialog', until: 'p803 Phase 5 section 3' },
-  { rule: 'color-contrast', piece: 'dropDown', until: 'p803 Phase 5 section 3' },
   // The toast's close button is an icon with no label
   { rule: 'button-name', piece: 'toaster', until: 'p803 Phase 5 section 4' },
 ];

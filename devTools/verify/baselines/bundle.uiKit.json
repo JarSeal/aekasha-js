@@ -51,7 +51,7 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7543,
-      "gzip": 3075
+      "gzip": 3074
     },
     "assets/GeometryTransfer.js": {
       "bytes": 4297,
@@ -59,11 +59,11 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 45868,
-      "gzip": 13863
+      "gzip": 13861
     },
     "assets/HDRLoader.js": {
       "bytes": 3405,
-      "gzip": 1633
+      "gzip": 1631
     },
     "assets/ibm-plex-mono-latin-400-italic.woff2": {
       "bytes": 16448,
@@ -131,15 +131,15 @@
     },
     "assets/uiKit.embed.js": {
       "bytes": 1038854,
-      "gzip": 291099
+      "gzip": 291100
     },
     "assets/uiKitEmbed.css": {
-      "bytes": 12546,
-      "gzip": 2599
+      "bytes": 13844,
+      "gzip": 2663
     },
     "assets/uiKitEmbed.js": {
-      "bytes": 43478,
-      "gzip": 15699
+      "bytes": 44940,
+      "gzip": 16231
     },
     "uiKit.embed.js": {
       "bytes": 249,

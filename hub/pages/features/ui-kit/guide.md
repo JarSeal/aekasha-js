@@ -216,6 +216,20 @@ const quality = createDropDown({
 settingsPanel.add(quality.cmp);
 ```
 
+For a long list, `searchable: true` puts a filter field over it. Typing filters the options by
+their labels and marks the match, the arrows move through what's left, and Enter picks:
+
+```ts
+const level = createDropDown({
+  options: levels.map((l) => ({ value: l.id, label: l.name })),
+  value: () => currentLevelId,
+  onChange: (id) => loadLevel(id),
+  title: 'Level',
+  searchable: true,
+  searchPlaceholder: 'Find a level',
+});
+```
+
 ## Tooltips and popovers
 
 A [tooltip](api:createTooltip) is a short text that describes a control. It shows after
@@ -363,7 +377,7 @@ const scorePanel = getHUDRootCMP().add({ class: 'scorePanel' });
 | Shadows | `--aek-shadow-sm`, `--aek-shadow-lg`                                                                                                                                                                                                                                                                                                                                                     |
 | Motion  | `--aek-motion-fast`, `-base`, `-slow` (120, 200, 320 ms); `--aek-ease-standard`, `--aek-ease-emphasized`                                                                                                                                                                                                                                                                                 |
 | Focus   | `--aek-focus-ring-width`, `-offset`, `-color`                                                                                                                                                                                                                                                                                                                                            |
-| Layers  | `--aek-z-window`, `-dialog`, `-debug-window`, `-debug-dialog`, `-toast`, `-tooltip` (z-index values: 100, 5000, 20000, 30000, 31000, 32000)                                                                                                                                                                                                                                                                     |
+| Layers  | `--aek-z-window`, `-dialog`, `-debug-window`, `-debug-dialog`, `-toast`, `-tooltip` (z-index values: 100, 5000, 20000, 30000, 31000, 32000)                                                                                                                                                                                                                                              |
 
 The sizes are at the defaults: a 16 px browser font size and a UI scale of 1 (see below). In both
 themes the text, the accent and the status colours have a contrast of at least 4.5:1 on every
@@ -384,10 +398,10 @@ settingsPanel.updateAttr({ 'data-aek-theme': 'dark' }); // One panel in it
 subtree (12 px text and tighter spacing at the defaults), for dense panels.
 
 ::: note The kit's own colours come later
-The windows and dialogs, the tooltips and the popovers follow the themes and densities. The
-drop-downs and the toasts keep their own colours for now: a later version moves them onto the
-tokens. The UI scale, the font size, the fonts, reduced motion and the focus ring below apply to
-the whole kit already.
+The windows and dialogs, the drop-downs, the tooltips and the popovers follow the themes and
+densities. The toasts keep their own colours for now: a later version moves them onto the tokens.
+The UI scale, the font size, the fonts, reduced motion and the focus ring below apply to the
+whole kit already.
 :::
 
 ### UI scale and font size

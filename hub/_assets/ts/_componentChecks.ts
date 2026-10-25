@@ -65,6 +65,10 @@ const KIND_WINDOW = (n: number) => `#hudRoot #hubDemoKind_${n}`;
 const BEHIND_DIALOG = '#hudRoot #hubDemoBehindDialog';
 const LIST = '#hudRoot .aekDropDownList';
 const TRIGGER = '#hudRoot .aekDropDownTrigger';
+/** The searchable drop-down's trigger: the panel's sixth row (`createDropDownPanel`) */
+const SEARCHABLE_TRIGGER = '.hubDemoDropDowns > .aekDropDown:nth-of-type(6) .aekDropDownTrigger';
+const SEARCH = '#hudRoot .aekDropDownSearch';
+const SEARCH_LIST = '#hudRoot .aekDropDownPopup .aekDropDownList';
 const DIALOG = (index: number) => `#hudRoot #hubDemoDialog${index}`;
 const TOOLTIP = '#hudRoot .aekTooltip';
 const POPOVER = '#hudRoot .aekPopover';
@@ -216,6 +220,10 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
         name: 'a list open',
         steps: [{ click: 'Open the drop-downs' }, { clickHud: '.aekDropDownTrigger' }],
       },
+      {
+        name: 'the searchable list open',
+        steps: [{ click: 'Open the drop-downs' }, { clickHud: SEARCHABLE_TRIGGER }],
+      },
     ],
     keyboard: [
       {
@@ -253,6 +261,30 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { expectCount: LIST, count: 0 },
           { expectText: `${TRIGGER} .aekDropDownLabel`, text: 'Orange' },
           { expectFocus: TRIGGER },
+        ],
+      },
+      {
+        name: 'searchable: typing filters the list, the arrows move through the matches, Enter picks',
+        steps: [
+          { click: 'Open the drop-downs' },
+          { focusHud: SEARCHABLE_TRIGGER },
+          { press: 'Enter' },
+          { expectFocus: `${SEARCH}[role="combobox"]` },
+          { expectActiveOption: 'Orange' },
+          { press: 'o' },
+          { expectCount: `${SEARCH_LIST} [role="option"]`, count: 3 },
+          { expectText: `${SEARCH_LIST} [role="option"] .aekDropDownMatch`, text: 'O' },
+          { press: 'ArrowDown' },
+          { expectActiveOption: 'Gold' },
+          { press: 'l' },
+          { expectCount: `${SEARCH_LIST} [role="option"]`, count: 2 },
+          { expectActiveOption: 'Gold' },
+          { press: 'ArrowDown' },
+          { expectActiveOption: 'Violet' },
+          { press: 'Enter' },
+          { expectCount: SEARCH, count: 0 },
+          { expectText: `#hudRoot ${SEARCHABLE_TRIGGER} .aekDropDownLabel`, text: 'Violet' },
+          { expectFocus: `#hudRoot ${SEARCHABLE_TRIGGER}` },
         ],
       },
     ],

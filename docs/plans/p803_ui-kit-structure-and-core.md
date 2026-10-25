@@ -1268,6 +1268,56 @@ As built (section 2, 2026-10-25):
   screenshots that differ (the corners' `radius-lg` and the handles' `border` on every window and
   dialog state, the dialog box's two new buttons; the two new states have none yet) to re-record
   after review.
+
+As built (section 3, 2026-10-25):
+
+- `DropDown.scss` on the tokens in `@layer aek.components` (p801's rows): the trigger a control
+  (`surface`, a 1 px `border-control`, `radius-md`, `surface-hover` on hover, `text-disabled`
+  and `border` disabled, the caret `text-muted`), the list `surface-raised` with a 1 px
+  `border-strong` and `shadow-sm`, the highlighted option `surface-hover`, the current option's dot
+  the `accent`, the sizes from the type and space scales, no `--aek-rem` or `variables.scss`. The
+  list sets its own `--aek-font-size-sm`, so the fallback in the HUD root looks the same (Phase 4
+  §2's open item). **A 24 px floor** on the trigger, the filter field and the options (WCAG
+  2.5.8): axe's `target-size` fired on the field in the compact density (21 px); an option is a
+  flex box centring one label span (a flex box would drop the spaces around a match).
+- **`searchable: true`** and `searchPlaceholder` (default 'Search'): the open popup
+  (`.aekDropDownPopup`, the anchored element, with `listClass`) holds the filter field
+  (`.aekDropDownSearch`, `role="combobox"`, `aria-controls` the list, which now writes its id,
+  `aria-autocomplete="list"`, `aria-expanded`, named by the placeholder), the list and a
+  `role="status"` `.aekDropDownEmpty` ('No matches', hidden while empty). The field keeps the focus
+  and the `aria-activedescendant` (the ring on the active option follows it:
+  `.aekDropDownSearch:focus-visible + .aekDropDownList`); typing filters by label, case ignored,
+  marks the first match (`<mark class="aekDropDownMatch">`, built from text nodes: labels are app
+  data) and highlights the first match; the arrows move, Enter picks (nothing with no match), Home,
+  End and Space are the field's, Escape and Tab as before. A press on the popup's own padding keeps
+  the focus in the field. The popup's keydown, keyup and focusout listeners moved from the list's
+  CMP listeners (capture) to plain ones on the popup (the list itself without `searchable`), and
+  a typed letter's keyup is stopped with the arrows'. No typeahead: D9's "its typeahead stays as
+  today" found none to keep.
+- The debugger: only `OnScreenTools.module.scss` still restyles the drop-down (its trigger, by
+  `triggerClass`; `MaterialEditor.module.scss` no longer does, 1.1 is stale there). Its unlayered
+  class wins over the kit's layer, so the on-screen triggers look as before; their list takes the
+  tokens' dark theme (the tools force it). Checked by eye in the debug env, a light and a dark
+  system (`.cache/p803/phase5s3/`, local; a scratchpad script).
+- `UI_ALLOWED_VIOLATIONS` lost section 1's two `color-contrast` entries.
+- The component library: a "Searchable: type to filter" row (the panel's window 600 px tall), a
+  state with its list open, and a keyboard script: Enter opens it with the focus on the field
+  (`role="combobox"`), the active option Orange; `o` leaves three options with the match marked,
+  ArrowDown to Gold, `l` leaves two with Gold highlighted, ArrowDown to Violet, Enter picks it
+  and the focus is back on the trigger.
+- Tests: `DropDown.test.ts` (+1: the field's ARIA, the filter, the mark, Home and Space left to
+  the field, 'No matches' and Enter doing nothing, a pick by Enter and the focus back).
+- Docs: `createDropDown`'s JSDoc (the searchable keys, its parts, its ARIA), the kit's
+  `CLAUDE.md`, the UI kit guide (a searchable example, the colours note), the component library's
+  drop-down text.
+- The section's checks: `yarn test` (1377 tests; `buildGuard.test.ts` failed again in the Stop
+  hook's run beside the background `verify:embed`, and passes alone), `tsc` (both), ESLint,
+  `yarn hub:build`, `verify:embed` (all seven), `yarn sbp --profile all` (every budget within:
+  the embed's `uiKitEmbed.js` 15.9 kB of its 16 KiB), `verify:baselines` recorded (`DropDown.js`
+  and `uiKitEmbed.js` +0.5 kB gzip each: the searchable variant). `verify:ui --only
+  window,dialog,dropDown`: every keyboard script passes and no violation (the allow list holds the
+  toaster's `button-name` alone); the drop-down's and the dialog's drop-down screenshots differ
+  (the restyle, the panel's new row) and the searchable state is new, to re-record after review.
  `verify:scenes`
   wasn't run: its snapshots are the canvas alone, which no kit style reaches (Phase 0); it runs at
   the phase's end.

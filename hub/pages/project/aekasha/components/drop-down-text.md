@@ -9,10 +9,14 @@ its keys). The open list is on the kit's overlay stack, so in a dialog one Escap
 and the next the dialog.
 
 - **States** (in one window): a value, no value (the placeholder), an icon, opening upward,
-  disabled, and a value changed elsewhere, which the trigger shows after `refresh()`. The trigger
+  disabled, searchable (a filter field over the list: typing filters it by label and marks the
+  match, the arrows move through what's left, Enter picks, and Home, End and Space are the
+  field's), and a value changed elsewhere, which the trigger shows after `refresh()`. The trigger
   re-reads `value` after `onChange` returns, so a pick shows at once; each pick here also adds a
   toast.
 
 The list opens in the browser's top layer, so the window doesn't clip it: on its side when it fits
-there (else the other), inside the HUD's bounds, and as tall as the space left. It's at least as wide as its trigger. With the keyboard, the ring is on the highlighted option, not the
-list.
+there (else the other), inside the HUD's bounds, and as tall as the space left. It's at least as
+wide as its trigger. With the keyboard, the ring is on the highlighted option (the list, or the
+filter field, keeps the focus for `aria-activedescendant`). The trigger, the field and each option
+are at least 24 px tall in both densities (WCAG 2.5.8).

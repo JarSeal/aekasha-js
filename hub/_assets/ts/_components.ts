@@ -333,6 +333,10 @@ const createDropDownPanel = () => {
   row('With an icon', createDemoDropDown({ icon: getSvgIcon('camera', 'small') }));
   row('Opens upward', createDemoDropDown({ placement: 'top' }));
   row('Disabled', createDemoDropDown({ disabled: true }));
+  row(
+    'Searchable: type to filter',
+    createDemoDropDown({ searchable: true, searchPlaceholder: 'Filter colours' })
+  );
   // A value changed elsewhere: the trigger shows it after `refresh()`
   let index = 0;
   const changed = createDropDown({
@@ -356,7 +360,7 @@ const initDropDownDemo: Demo = (box) => {
     openDraggableWindow({
       id,
       title: 'Drop-downs',
-      size: { w: 300, h: 520 },
+      size: { w: 300, h: 600 },
       removeOnClose: true,
       content: createDropDownPanel,
     });

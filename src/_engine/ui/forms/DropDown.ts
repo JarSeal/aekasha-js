@@ -35,6 +35,12 @@ export type DropDownProps = {
   placement?: 'top' | 'bottom';
   /** Disables the trigger (default false). */
   disabled?: boolean;
+  /** A filter field over the list (p803 D9, the APG combobox with a list): typing filters the
+   * options by their labels and marks the matching text, the arrows move through what's left, and
+   * Enter picks. Default false. */
+  searchable?: boolean;
+  /** The filter field's placeholder and accessible name, with `searchable` (default 'Search'). */
+  searchPlaceholder?: string;
   /** Extra classes (a class name, or several) for the root. The default styles (DropDown.scss)
    * have zero specificity (`:where()`), so any class overrides them; the elements also carry the
    * global `aekDropDown*` classes. */
@@ -43,7 +49,7 @@ export type DropDownProps = {
   triggerClass?: string | string[];
   /** Extra classes for the trigger's label */
   labelClass?: string | string[];
-  /** Extra classes for the list */
+  /** Extra classes for the list (with `searchable`, for its popup: the field and the list) */
   listClass?: string | string[];
   /** Extra classes for each option */
   itemClass?: string | string[];
@@ -81,6 +87,10 @@ const TRIGGER_CLASS = 'aekDropDownTrigger';
 const LABEL_CLASS = 'aekDropDownLabel';
 const CARET_CLASS = 'aekDropDownCaret';
 const LIST_CLASS = 'aekDropDownList';
+const POPUP_CLASS = 'aekDropDownPopup';
+const SEARCH_CLASS = 'aekDropDownSearch';
+const EMPTY_CLASS = 'aekDropDownEmpty';
+const MATCH_CLASS = 'aekDropDownMatch';
 const ITEM_CLASS = 'aekDropDownItem';
 const HIGHLIGHTED_CLASS = 'isHighlighted';
 const ACTIVE_ATTR = 'data-active';
@@ -89,6 +99,33 @@ const NAV_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 
 const resolve = <T>(value: T | (() => T)) =>
   typeof value === 'function' ? (value as () => T)() : value;
+
+/** The options whose labels contain the query (case ignored), as indices into `options` */
+const filterOptions = (options: DropDownOption[], query: string) => {
+  const needle = query.trim().toLowerCase();
+  const indices: number[] = [];
+  for (let i = 0; i < options.length; i++) {
+    if (!needle || options[i].label.toLowerCase().includes(needle)) indices.push(i);
+  }
+  return indices;
+};
+
+/** Writes a label into an option as text in one span (the option is a flex box, which would
+ * drop the spaces around a match), the query's first match in a `<mark>` */
+const writeLabel = (item: HTMLElement, label: string, query: string) => {
+  const span = document.createElement('span');
+  const needle = query.trim().toLowerCase();
+  const at = needle ? label.toLowerCase().indexOf(needle) : -1;
+  if (at === -1) {
+    span.textContent = label;
+  } else {
+    const mark = document.createElement('mark');
+    mark.className = MATCH_CLASS;
+    mark.textContent = label.slice(at, at + needle.length);
+    span.append(label.slice(0, at), mark, label.slice(at + needle.length));
+  }
+  item.replaceChildren(span);
+};
 
 /**
  * Creates a dropdown: a trigger button with an icon, the current option's label and a caret, and
@@ -101,6 +138,17 @@ const resolve = <T>(value: T | (() => T)) =>
  * list's keys reach no key binding (their keyups included). The open list is on the kit's overlay
  * stack: in a dialog, one Escape closes the list and the next the dialog. A pick, Escape or Tab
  * gives the focus back to what had it when the list opened (the trigger, opened by its keys).
+ * With `searchable`, a filter field over the list takes the focus (`role="combobox"`): typing
+ * filters the options by label and marks the match, the arrows move through what's left, Enter
+ * picks, and Home, End and Space are the field's.
+ * - Parts: `.aekDropDown` (`_top` / `_bottom`), its `.aekDropDownTrigger` with
+ *   `.aekDropDownLabel` and `.aekDropDownCaret`; open, `.aekDropDownList` of `.aekDropDownItem`s
+ *   (`isHighlighted`, `isCurrent`, `[data-active]`), or with `searchable` the `.aekDropDownPopup`
+ *   with `.aekDropDownSearch`, the list and `.aekDropDownEmpty`; a match is `.aekDropDownMatch`.
+ * - ARIA: the trigger `aria-haspopup="listbox"` and `aria-expanded`; the list a `listbox` named by
+ *   `title`, its options' `aria-selected` the current one; the focus holder's
+ *   `aria-activedescendant` the highlighted option.
+ *
  * The drop-down isn't added anywhere: add its `cmp` where it goes.
  * @example
  * ```ts
@@ -190,66 +238,119 @@ export const createDropDown = (props: DropDownProps): DropDown => {
     const options = getOptions();
     if (!options.length) return;
     const currentValue = getValue();
+    /** The options shown, as indices into `options` (all of them until a filter) */
+    let shown = options.map((_, i) => i);
+    /** The highlighted option's place in `shown` */
     let index = Math.max(
       0,
       options.findIndex((option) => option.value === currentValue)
     );
+    let query = '';
 
     const newList: CMPHandle = CMP({
       tag: 'ul',
-      class: classes(LIST_CLASS, props.listClass),
+      // Its id is the filter field's aria-controls
+      idAttr: true,
+      class: classes(LIST_CLASS, props.searchable ? null : props.listClass),
       attr: {
         role: 'listbox',
-        tabindex: '-1',
+        ...(props.searchable ? {} : { tabindex: '-1' }),
         ...(props.title ? { 'aria-label': props.title } : {}),
       },
       onClick: (e) => {
         e.stopPropagation();
         const item = (e.target as HTMLElement).closest('li');
-        if (item) choose(Number(item.dataset.index));
+        if (item) choose(shown.indexOf(Number(item.dataset.index)));
       },
       listeners: [
-        // Keeps the focus in the list on a click, so the click lands before any focusout
+        // Keeps the focus where it is on a click, so the click lands before any focusout
         { type: 'mousedown', fn: (e) => e.preventDefault() },
-        { type: 'keydown', fn: (e) => onKeyDown(e as KeyboardEvent) },
-        {
-          type: 'keyup',
-          fn: (e) => {
-            if (NAV_KEYS.has((e as KeyboardEvent).key)) e.stopPropagation();
-          },
-        },
         {
           type: 'mousemove',
           fn: (e) => {
             const item = (e.target as HTMLElement).closest('li');
-            if (item && Number(item.dataset.index) !== index) highlight(Number(item.dataset.index));
-          },
-        },
-        {
-          type: 'focusout',
-          fn: (e) => {
-            const next = (e as FocusEvent).relatedTarget as Node | null;
-            if (!next || !newList.elem.contains(next)) close(false);
+            const at = item ? shown.indexOf(Number(item.dataset.index)) : -1;
+            if (at !== -1 && at !== index) highlight(at);
           },
         },
       ],
     });
 
+    // With `searchable` the field holds the focus (a combobox over the list), else the list does
+    const search: CMPHandle | null = props.searchable
+      ? CMP({
+          tag: 'input',
+          class: SEARCH_CLASS,
+          attr: {
+            type: 'text',
+            role: 'combobox',
+            'aria-expanded': 'true',
+            'aria-controls': newList.id,
+            'aria-autocomplete': 'list',
+            'aria-label': props.searchPlaceholder || 'Search',
+            placeholder: props.searchPlaceholder || 'Search',
+            autocomplete: 'off',
+            spellcheck: 'false',
+          },
+          listeners: [{ type: 'input', fn: (e) => filter((e.target as HTMLInputElement).value) }],
+        })
+      : null;
+    const empty: CMPHandle | null = search
+      ? CMP({ class: EMPTY_CLASS, text: '', attr: { role: 'status' } })
+      : null;
+    const popup: CMPHandle = search
+      ? CMP({ class: classes(POPUP_CLASS, props.listClass) })
+      : newList;
+    const focusHolder = search ?? newList;
+
     const highlight = (newIndex: number) => {
-      index = Math.min(options.length - 1, Math.max(0, newIndex));
+      index = Math.min(shown.length - 1, Math.max(0, newIndex));
       const items = newList.elem.children;
       for (let i = 0; i < items.length; i++) {
         items[i].classList.toggle(HIGHLIGHTED_CLASS, i === index);
-        // The ring's: the list keeps the focus for aria-activedescendant (p803 D7)
+        // The ring's: the focus holder keeps the focus for aria-activedescendant (p803 D7)
         items[i].toggleAttribute(ACTIVE_ATTR, i === index);
       }
+      if (!shown.length) {
+        focusHolder.removeAttr('aria-activedescendant');
+        return;
+      }
       items[index]?.scrollIntoView({ block: 'nearest' });
-      newList.updateAttr({ 'aria-activedescendant': `${newList.id}-${index}` });
+      focusHolder.updateAttr({ 'aria-activedescendant': `${newList.id}-${shown[index]}` });
+    };
+
+    /** Builds the shown options, the query's matches marked */
+    const renderItems = () => {
+      newList.removeChildren();
+      for (let i = 0; i < shown.length; i++) {
+        const option = options[shown[i]];
+        const isCurrent = option.value === currentValue;
+        const item = newList.add({
+          tag: 'li',
+          class: classes(ITEM_CLASS, isCurrent ? CURRENT_CLASS : null, props.itemClass),
+          attr: {
+            id: `${newList.id}-${shown[i]}`,
+            role: 'option',
+            'aria-selected': String(isCurrent),
+            'data-index': String(shown[i]),
+          },
+        });
+        writeLabel(item.elem, option.label, query);
+      }
+      empty?.updateText(shown.length ? '' : 'No matches');
+    };
+
+    const filter = (text: string) => {
+      query = text;
+      shown = filterOptions(options, query);
+      renderItems();
+      highlight(0);
     };
 
     const choose = (chosenIndex: number) => {
+      if (chosenIndex < 0 || chosenIndex >= shown.length) return;
       close();
-      props.onChange(options[chosenIndex].value);
+      props.onChange(options[shown[chosenIndex]].value);
       refresh();
     };
 
@@ -257,9 +358,10 @@ export const createDropDown = (props: DropDownProps): DropDown => {
       if (e.ctrlKey || e.altKey || e.metaKey) return;
       if (e.key === 'ArrowDown') highlight(index + 1);
       else if (e.key === 'ArrowUp') highlight(index - 1);
-      else if (e.key === 'Home') highlight(0);
-      else if (e.key === 'End') highlight(options.length - 1);
-      else if (e.key === 'Enter' || e.key === ' ') {
+      // In the filter field Home and End move its caret, and Space types
+      else if (e.key === 'Home' && !search) highlight(0);
+      else if (e.key === 'End' && !search) highlight(shown.length - 1);
+      else if (e.key === 'Enter' || (e.key === ' ' && !search)) {
         swallowNextKeyUp(e.key);
         choose(index);
       } else if (e.key === 'Escape') {
@@ -269,41 +371,46 @@ export const createDropDown = (props: DropDownProps): DropDown => {
       } else if (e.key === 'Tab') {
         close();
         return;
-      } else return; // Other keys go on (eg. a shortcut that toggles this list)
+      } else return; // Other keys go on (eg. a shortcut that toggles this list, a typed letter)
       // The list's keys reach no key binding
       e.preventDefault();
       e.stopPropagation();
     };
 
-    for (let i = 0; i < options.length; i++) {
-      const isCurrent = options[i].value === currentValue;
-      newList.add({
-        tag: 'li',
-        text: options[i].label,
-        class: classes(ITEM_CLASS, isCurrent ? CURRENT_CLASS : null, props.itemClass),
-        attr: {
-          id: `${newList.id}-${i}`,
-          role: 'option',
-          'aria-selected': String(isCurrent),
-          'data-index': String(i),
-        },
+    popup.elem.addEventListener('keydown', onKeyDown);
+    popup.elem.addEventListener('keyup', (e) => {
+      // A typed letter's too: a key binding mustn't see the second half of a press it never saw
+      if (NAV_KEYS.has(e.key) || (search && e.target === search.elem)) e.stopPropagation();
+    });
+    popup.elem.addEventListener('focusout', (e) => {
+      const next = e.relatedTarget as Node | null;
+      if (!next || !popup.elem.contains(next)) close(false);
+    });
+    if (search && empty) {
+      // A press on the popup's own padding or message keeps the focus in the field
+      popup.elem.addEventListener('mousedown', (e) => {
+        if (e.target !== search.elem) e.preventDefault();
       });
+      popup.add(search);
+      popup.add(newList);
+      popup.add(empty);
     }
 
-    root.add(newList);
-    list = newList;
+    renderItems();
+    root.add(popup);
+    list = popup;
     trigger.updateAttr({ 'aria-expanded': 'true' });
     // Shown before the highlight scrolls to it: a closed popover has no box
     hideAnchored = showAnchored({
-      elem: newList.elem,
+      elem: popup.elem,
       anchor: trigger.elem,
       side: placement,
       matchAnchorWidth: true,
     });
     highlight(index);
     // Before the focus moves in: the entry returns it where it was
-    removeOverlay = pushOverlay({ elem: newList.elem, close: () => close() });
-    newList.elem.focus({ preventScroll: true });
+    removeOverlay = pushOverlay({ elem: popup.elem, close: () => close() });
+    focusHolder.elem.focus({ preventScroll: true });
     props.onOpen?.();
   };
 
