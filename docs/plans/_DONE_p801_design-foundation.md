@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-6 implemented
+Status: implemented (Phases 0-7)
 Category: UI, Refactoring
 Epic: p800_debugger-ui-overhaul.md
 Blocked by: p802_hub-project-section.md (only its Phase 1, the dev-only pages, merged on its own, for Phase 0's font specimen page: D11)
@@ -852,10 +852,18 @@ fixed here):
 - Verified: `yarn hub:build` (92 pages, the API 100 % documented, no warning; the new links
   resolve), lint and Prettier on the changed files.
 
-### Phase 7: versions and done
+### Phase 7: versions and done — done
 
 D12; `yarn checkVersions --against main`; mark the plan done; p800 §5's p801 entry points here.
 Time for the PR: `p801-design-foundation` → `main` (p800 §6).
+
+As built (2026-10-25): engine and project 5.10.2 → 5.11.0, app 1.14.0 → 1.15.0, toolkit unchanged
+(D12); the changelog's `p801-design-foundation` entry has D12's restyle note (the full page's and
+the debugger's text Lucida → IBM Plex Sans, the debugger's mono → IBM Plex Mono, an embed's kit
+from the host's font to the system UI stack, the Hub Inter → Plex and its code → Plex Mono), with
+the old stacks to set on `.aekUi` to keep the old look. `yarn checkVersions --against main`
+passes. The plan is `_DONE_`; p800's Blocks line and §5 entry and p802's header follow (p802's
+`Blocked by` pointed only here, so it went to Related).
 
 ---
 
