@@ -94,6 +94,13 @@ const BUTTON_STATUS = BUTTON('Status');
 const GROUP_BUTTON = (label: string) => `#hubDemoGroupButton${label}`;
 const GROUP_STATUS = '#hubDemoGroupStatus';
 const LINK = (name: string) => `#hubDemoLink${name}`;
+/** The menu box's File button, its split button's parts, the open menu and its focused item */
+const MENU_FILE = '#hubDemoMenuFile';
+const SPLIT_ACTION = '#hubDemoMenuSplit > .aekButton:first-child';
+const SPLIT_MENU_BUTTON = '#hubDemoMenuSplit > [aria-haspopup="menu"]';
+const MENU = '#hudRoot .aekMenu';
+const MENU_FOCUSED = `${MENU} .aekMenu__item:focus .aekMenu__label`;
+const MENU_STATUS = '#hubDemoMenuStatus';
 
 export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
   window: {
@@ -475,6 +482,79 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { expectAttr: LINK('Manual'), name: 'target', value: '_blank' },
           { expectAttr: LINK('Manual'), name: 'rel', value: 'noopener noreferrer' },
           { expectText: `${LINK('Manual')} .aekVisuallyHidden`, text: '(opens in a new tab)' },
+        ],
+      },
+    ],
+  },
+  menu: {
+    states: [
+      { name: 'the menu open', steps: [{ clickInBox: MENU_FILE }] },
+      { name: 'the split button’s menu open', steps: [{ clickInBox: SPLIT_MENU_BUTTON }] },
+    ],
+    keyboard: [
+      {
+        name: 'Enter opens the menu on its first item, the arrows move, Enter picks; the focus back',
+        steps: [
+          { focusInBox: MENU_FILE },
+          { expectAttr: MENU_FILE, name: 'aria-haspopup', value: 'menu' },
+          { press: 'Enter' },
+          { expectAttr: MENU_FILE, name: 'aria-expanded', value: 'true' },
+          { expectText: MENU_FOCUSED, text: 'New' },
+          { press: 'ArrowDown' },
+          { expectText: MENU_FOCUSED, text: 'Open…' },
+          { press: 'End' },
+          { expectText: MENU_FOCUSED, text: 'Revert' },
+          { press: 'ArrowDown' },
+          { expectText: MENU_FOCUSED, text: 'New' },
+          { press: 'Enter' },
+          { expectCount: MENU, count: 0 },
+          { expectText: MENU_STATUS, text: 'File: New' },
+          { expectFocus: MENU_FILE },
+          { expectAttr: MENU_FILE, name: 'aria-expanded', value: 'false' },
+        ],
+      },
+      {
+        name: 'ArrowUp opens it on its last item; a letter goes to its item; Space flips and stays; Escape closes',
+        steps: [
+          { focusInBox: MENU_FILE },
+          { press: 'ArrowUp' },
+          { expectText: MENU_FOCUSED, text: 'Revert' },
+          { press: 'Enter' },
+          { expectCount: MENU, count: 1 },
+          { press: 'a' },
+          { expectText: MENU_FOCUSED, text: 'Autosave' },
+          { press: 'Space' },
+          { expectAttr: `${MENU} [role="menuitemcheckbox"]`, name: 'aria-checked', value: 'true' },
+          { expectText: MENU_STATUS, text: 'Autosave: on' },
+          { expectCount: MENU, count: 1 },
+          { press: 'ArrowDown' },
+          { press: 'ArrowDown' },
+          { press: 'Space' },
+          {
+            expectAttr: `${MENU} [role="menuitemradio"]:nth-child(2)`,
+            name: 'aria-checked',
+            value: 'true',
+          },
+          { expectText: MENU_STATUS, text: 'Sort by: date' },
+          { press: 'Escape' },
+          { expectCount: MENU, count: 0 },
+          { expectFocus: MENU_FILE },
+        ],
+      },
+      {
+        name: 'a split button: the action, then Tab to its menu button, whose arrows open the menu',
+        steps: [
+          { focusInBox: SPLIT_ACTION },
+          { press: 'Enter' },
+          { expectText: MENU_STATUS, text: 'Saved' },
+          { press: 'Tab' },
+          { expectFocus: SPLIT_MENU_BUTTON },
+          { expectAttr: SPLIT_MENU_BUTTON, name: 'aria-label', value: 'More options' },
+          { press: 'ArrowDown' },
+          { expectText: MENU_FOCUSED, text: 'Save as…' },
+          { press: 'Tab' },
+          { expectCount: MENU, count: 0 },
+          { expectFocus: SPLIT_MENU_BUTTON },
         ],
       },
     ],

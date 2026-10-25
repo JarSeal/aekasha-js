@@ -15,6 +15,8 @@
 | Button         | [`createButton`](api:createButton)                                 | An action: a toggle, a loading save, a hold to confirm        |
 | Button group   | [`createButtonGroup`](api:createButtonGroup)                       | Buttons joined; a toolbar of toggles with one pressed         |
 | Link           | [`createLink`](api:createLink)                                     | A navigation: in text, to another site, or as a button        |
+| Menu           | [`createMenu`](api:createMenu)                                     | A button's list of actions, on / off items and choices        |
+| Split button   | [`createSplitButton`](api:createSplitButton)                       | An action, with its variants in a menu                        |
 | Key hint       | [`createKbd`](api:createKbd)                                       | A shortcut's keys, with each platform's names                 |
 | Input glyph    | [`createInputGlyph`](api:createInputGlyph)                         | One key or mouse input in a prompt: "Press E"                 |
 
@@ -381,6 +383,50 @@ const viewMode = createButtonGroup({
 toolbarPanel.add(viewMode.cmp);
 ```
 
+### Menus and split buttons
+
+[`createMenu`](api:createMenu) gives a button a menu: actions, on / off items, one-of choices,
+named groups and separators. It works from the keyboard as menus do everywhere: Enter, Space or
+ArrowDown opens it, the arrows move, a typed letter jumps, Enter picks, Escape closes, and the
+focus goes back to the button. Pass the items as a function to read your state on every open.
+
+```ts
+const view = createButton({ label: 'View' });
+toolbarPanel.add(view.cmp);
+createMenu({
+  anchor: view.cmp.elem,
+  items: () => [
+    { label: 'Reset camera', kbd: 'Home', onSelect: () => resetCamera() },
+    {
+      type: 'checkbox',
+      label: 'Grid',
+      checked: settings.grid,
+      onCheckedChange: (on) => (settings.grid = on),
+    },
+    {
+      type: 'radio',
+      label: 'Shading',
+      value: settings.shading,
+      options: [
+        { value: 'lit', label: 'Lit' },
+        { value: 'wire', label: 'Wireframe' },
+      ],
+      onValueChange: (value) => (settings.shading = value),
+    },
+  ],
+});
+
+// An action and its variants
+const save = createSplitButton({
+  label: 'Save',
+  onClick: () => saveGame(),
+  items: [{ label: 'Save as…', onSelect: () => openSaveAsDialog() }],
+});
+```
+
+An action's `onSelect` runs after the menu closed, so a dialog it opens gives the focus back to
+the menu's button when it closes.
+
 ## Links
 
 [`createLink`](api:createLink) is an `<a>`. A link to another site opens in a new tab with the
@@ -596,7 +642,9 @@ container; `vw` and `vh` are the browser window's, as in CSS.
   [`removeToast`](api:removeToast).
 - [`registerIcon`](api:registerIcon) and [`getSvgIcon`](api:getSvgIcon).
 - [`createButton`](api:createButton) ([`Button`](api:Button), [`ButtonProps`](api:ButtonProps)),
-  [`createButtonGroup`](api:createButtonGroup) and [`createLink`](api:createLink).
+  [`createButtonGroup`](api:createButtonGroup), [`createSplitButton`](api:createSplitButton) and
+  [`createLink`](api:createLink).
+- [`createMenu`](api:createMenu) ([`MenuItem`](api:MenuItem)).
 - [`createKbd`](api:createKbd) ([`Kbd`](api:Kbd)) and [`createInputGlyph`](api:createInputGlyph)
   ([`InputGlyphInput`](api:InputGlyphInput)).
 - [`aekasha/ui/fonts`](hub:documentation/aekasha/ui/fonts): the kit's fonts, a stylesheet entry.

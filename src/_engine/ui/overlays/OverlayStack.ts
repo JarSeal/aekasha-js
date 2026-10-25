@@ -1,5 +1,5 @@
-// The overlay stack (p803 D7): every open drop-down list and dialog is an entry (the tooltip,
-// the popover and the menu join them as p803 adds them). Escape pressed inside the HUD root goes
+// The overlay stack (p803 D7): every open dialog, drop-down list, tooltip, popover, menu and
+// focused toast is an entry. Escape pressed inside the HUD root goes
 // to the top entry alone, a closed entry returns the focus, and an entry that asks makes the rest
 // of the HUD inert.
 import { getHUDRootCMP, hasHudRoot } from '../core/HUD';

@@ -42,6 +42,7 @@ export const COMPONENT_USES = [
   { slot: 'generated-components-button', calls: ['createButton'] },
   { slot: 'generated-components-button-group', calls: ['createButtonGroup'] },
   { slot: 'generated-components-link', calls: ['createLink'] },
+  { slot: 'generated-components-menu', calls: ['createMenu', 'createSplitButton'] },
   { slot: 'generated-components-kbd', calls: ['createKbd'] },
   { slot: 'generated-components-input-glyph', calls: ['createInputGlyph'] },
 ] as const;

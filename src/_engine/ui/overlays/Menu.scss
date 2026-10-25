@@ -1,0 +1,129 @@
+// The menu's default styles (Menu.ts), on the design tokens and layered (p803 D5): an app's
+// unlayered rule wins, and every selector is in :where(). Placed by Anchor.ts' showAnchored (fixed,
+// its left / top inline, the space left in --aek-anchor-max-width / -height); `inset`, `margin`,
+// `border` and `padding` undo the browser's popover styles. The colours are the popover's: a
+// `surface-raised` panel, the focused item `surface-hover`, the check marks in the accent.
+@layer aek.components {
+  :where(.aekMenu) {
+    inset: auto;
+    box-sizing: border-box;
+    width: max-content;
+    min-width: calc(var(--aek-space-7) * 5);
+    max-width: var(--aek-anchor-max-width, 100%);
+    height: auto;
+    max-height: var(--aek-anchor-max-height, 100%);
+    margin: 0;
+    padding: var(--aek-space-1);
+    overflow: auto;
+    border: 1px solid var(--aek-border-strong);
+    border-radius: var(--aek-radius-md);
+    background-color: var(--aek-surface-raised);
+    box-shadow: var(--aek-shadow-lg);
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-md);
+    line-height: var(--aek-line-height-base);
+  }
+
+  :where(.aekMenu__item) {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: var(--aek-space-3);
+    // WCAG 2.5.8's target size, in every density
+    min-height: 24px;
+    padding: var(--aek-space-1) var(--aek-space-3);
+    border-radius: var(--aek-radius-sm);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  // The focused item (by the keys or the pointer); the ring inside it (the menu's overflow clips
+  // an outside one)
+  :where(.aekMenu__item:focus) {
+    background-color: var(--aek-surface-hover);
+  }
+
+  :where(.aekMenu__item:focus-visible) {
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
+  }
+
+  :where(.aekMenu__item[aria-disabled='true']) {
+    color: var(--aek-text-disabled);
+    cursor: default;
+  }
+
+  :where(.aekMenu__label) {
+    flex: 1;
+  }
+
+  // In a menu with check marks or icons, an item with neither keeps their column empty, so every
+  // label starts in one line
+  :where(.aekMenu[data-has-leading] .aekMenu__item:not([data-leading])) {
+    padding-inline-start: calc(var(--aek-space-3) * 2 + 1em);
+  }
+
+  :where(.aekMenu__icon) {
+    display: inline-flex;
+  }
+
+  :where(.aekMenu__icon svg) {
+    display: block;
+    width: 1em;
+    height: auto;
+  }
+
+  :where(.aekMenu__kbd) {
+    margin-inline-start: var(--aek-space-5);
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-sm);
+  }
+
+  // The check mark's box, kept on every checkable item so their labels line up
+  :where(.aekMenu__check) {
+    position: relative;
+    flex-shrink: 0;
+    width: 1em;
+    height: 1em;
+  }
+
+  :where(.aekMenu__item[role='menuitemcheckbox'][aria-checked='true'] .aekMenu__check)::before {
+    position: absolute;
+    top: 0.1em;
+    left: 0.32em;
+    box-sizing: border-box;
+    width: 0.36em;
+    height: 0.65em;
+    border: solid var(--aek-accent);
+    border-width: 0 0.14em 0.14em 0;
+    content: '';
+    transform: rotate(45deg);
+  }
+
+  :where(.aekMenu__item[role='menuitemradio'][aria-checked='true'] .aekMenu__check)::before {
+    position: absolute;
+    inset: 0;
+    width: 0.45em;
+    height: 0.45em;
+    margin: auto;
+    border-radius: 50%;
+    background-color: var(--aek-accent);
+    content: '';
+  }
+
+  // A group's name, from its data-label (its aria-label says it to assistive tech)
+  :where(.aekMenu__group)::before {
+    display: block;
+    padding: var(--aek-space-2) var(--aek-space-3) var(--aek-space-1);
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-sm);
+    font-weight: var(--aek-font-weight-semibold);
+    content: attr(data-label);
+  }
+
+  :where(.aekMenu__separator) {
+    height: 1px;
+    margin: var(--aek-space-1) 0;
+    background-color: var(--aek-border);
+  }
+}

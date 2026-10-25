@@ -1659,6 +1659,56 @@ As built (section 3, 2026-10-25):
   `verify:ui --only kbd,inputGlyph,button,buttonGroup,link`: every keyboard script passes, no
   violation; the five boxes' shots are new, to record with `--update` after review.
 
+As built (section 4, 2026-10-25):
+
+- `overlays/Menu.ts` + `Menu.scss`: `createMenu({ anchor, items, label?, side?, align?, onOpen?,
+  onClose?, class?, attr?, id? })` returns `{ cmp, open(focus?), close, toggle, isOpen }`, shown
+  like the popover (the HUD root, `showAnchored` with `matchAnchorWidth`, a stack entry returning
+  the focus to the trigger, an outside press, a focusout). **The item types are a union**
+  (`MenuItem`: an action, `type: 'checkbox'`, `type: 'radio'` a whole one-of group with its
+  `options` and `onValueChange`, `type: 'group'`, `type: 'separator'`), each type on
+  `aekasha/ui`. `items` may be a getter read on every open: the menu keeps no state between
+  opens, so a checked state or a value is the app's.
+- The keys follow the APG menu button, with three choices made here: **Space flips an on / off item
+  or a choice and keeps the menu open** (Enter picks and closes; the APG editor menubar's split),
+  **Tab closes it with the focus back on the trigger** (as the drop-down; Tab from a top-layer menu
+  in the HUD root would go on from the HUD, not from the trigger), and **a disabled item is
+  focusable** (`aria-disabled`, the APG's advice). The items take the real focus (`tabindex="-1"`);
+  hovering one focuses it. Typeahead: letters within 500 ms make one search; one letter, or one
+  typed again, cycles from the next item.
+- **A pick that closes closes first, then runs** its `onSelect` (or `onCheckedChange` /
+  `onValueChange` on Enter), so a dialog it opens takes the focus from the trigger and gives it
+  back there.
+- **A group's visible name is a `::before` from `data-label`**, its `aria-label` the name for
+  assistive tech: a heading element inside `role="menu"` would be a child that isn't an item.
+  The check marks are CSS shapes (no glyph, no icon to register).
+- `components/SplitButton.ts`: `createSplitButton({ label, onClick, items, menuLabel?, variant?,
+  size?, icon?, kbd?, disabled?, class?, attr?, id? })` returns `{ cmp, button, menuButton, menu }`.
+  Its own group element (`aekButtonGroup aekSplitButton`), not `createButtonGroup`, so its
+  `onRemoveCmp` disposes of the menu; the menu button is icon-only with the kit's caret SVG,
+  named "More options" by default, and its menu aligned to its end.
+- The component library: a "Menu and split button" box (a File menu button: three actions with
+  shortcuts and an icon, Autosave, Sort by, a disabled Revert; a split Save with two variants and
+  a disabled one; a status line), two states (each menu open) and three scripts (Enter, the
+  arrows, End wrapping and Enter picking with the focus back; ArrowUp to the last, a disabled
+  item's Enter, typeahead, Space on the checkbox and the radio staying open, Escape; the split
+  button's action, Tab, ArrowDown into its menu, Tab out).
+- Tests: `Menu.test.ts` (12), `SplitButton.test.ts` (2).
+- Docs: the kit's `CLAUDE.md` (Menus in the overlay layer, Split buttons, the importers, the
+  tests; the stack's header), the UI kit guide ("Menus and split buttons", the table, the key APIs),
+  the component library's text and `COMPONENT_USES`.
+- Found in the shots: the labels didn't line up where a menu mixes items with and without a check
+  mark or an icon, so an item with either gets `data-leading`, the menu `data-has-leading`, and the
+  others keep the column empty (a start padding of the mark's `1em` and the gap); and the split
+  button's two halves had no line between them on the primary look (one colour, one border
+  colour): the menu button's start border is its text colour at 40 % (`color-mix`).
+- The section's checks: `yarn test` (175 files, 1430 tests; `buildGuard.test.ts` failed in the Stop
+  hook's run beside the background `hub:build` again and passes alone), `tsc` (both), ESLint,
+  `yarn hub:build` (989 names, 100 % documented), `yarn sbp --profile all` (every budget within),
+  `verify:baselines` recorded (the twelve `aekasha/ui` names; every bundle unchanged).
+  `verify:ui --only menu,button,buttonGroup` (and `menu,buttonGroup` after the two fixes): every
+  keyboard script passes, no violation; the menu's three shots are new, to record after review.
+
 ### Phase 7: core components II — feedback
 
 D10: Spinner, Progress bar, Skeleton, Divider, Empty state, Loading overlay; the debug scene

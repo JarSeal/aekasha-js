@@ -75,9 +75,22 @@ export { createKbd } from './components/Kbd';
 export type { Kbd, KbdProps } from './components/Kbd';
 export { createLink } from './components/Link';
 export type { Link, LinkProps } from './components/Link';
+export { createMenu } from './overlays/Menu';
+export type {
+  Menu,
+  MenuActionItem,
+  MenuCheckboxItem,
+  MenuGroup,
+  MenuItem,
+  MenuProps,
+  MenuRadioGroup,
+  MenuSeparator,
+} from './overlays/Menu';
 export { getMotionFactor } from './core/Motion';
 export { createPopover } from './overlays/Popover';
 export type { Popover, PopoverProps } from './overlays/Popover';
+export { createSplitButton } from './components/SplitButton';
+export type { SplitButton, SplitButtonProps } from './components/SplitButton';
 export {
   addToast,
   createToaster,

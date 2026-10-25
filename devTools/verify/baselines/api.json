@@ -2822,6 +2822,11 @@
       "Link": "TypeAlias",
       "LinkProps": "TypeAlias"
     },
+    "src/_engine/ui/components/SplitButton.ts": {
+      "createSplitButton": "Function",
+      "SplitButton": "TypeAlias",
+      "SplitButtonProps": "TypeAlias"
+    },
     "src/_engine/ui/core/CMP.ts": {
       "classes": "Function",
       "CMP": "Function"
@@ -2954,6 +2959,17 @@
       "getFirstFocusable": "Function",
       "getFocusableElements": "Function",
       "trapFocus": "Function"
+    },
+    "src/_engine/ui/overlays/Menu.ts": {
+      "createMenu": "Function",
+      "Menu": "TypeAlias",
+      "MenuActionItem": "TypeAlias",
+      "MenuCheckboxItem": "TypeAlias",
+      "MenuGroup": "TypeAlias",
+      "MenuItem": "TypeAlias",
+      "MenuProps": "TypeAlias",
+      "MenuRadioGroup": "TypeAlias",
+      "MenuSeparator": "TypeAlias"
     },
     "src/_engine/ui/overlays/OverlayStack.ts": {
       "DEBUGGER_ROOT_ATTR": "Variable",
@@ -4163,10 +4179,20 @@
       "KbdProps",
       "Link",
       "LinkProps",
+      "Menu",
+      "MenuActionItem",
+      "MenuCheckboxItem",
+      "MenuGroup",
+      "MenuItem",
+      "MenuProps",
+      "MenuRadioGroup",
+      "MenuSeparator",
       "OpenDraggableWindowProps",
       "Popover",
       "PopoverProps",
       "SceneTargetResolver",
+      "SplitButton",
+      "SplitButtonProps",
       "SvgIconKey",
       "SvgIconSize",
       "TAnimChain",
@@ -4210,7 +4236,9 @@
       "createInputGlyph",
       "createKbd",
       "createLink",
+      "createMenu",
       "createPopover",
+      "createSplitButton",
       "createToaster",
       "createTooltip",
       "databaseXIcon",

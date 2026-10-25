@@ -245,4 +245,9 @@
     border-end-start-radius: 0;
     border-end-end-radius: 0;
   }
+
+  // A split button's menu button: a line between the two, also where both are one colour (primary)
+  :where(.aekSplitButton > .aekButton + .aekButton:not(:disabled)) {
+    border-inline-start-color: color-mix(in srgb, currentColor 40%, transparent);
+  }
 }

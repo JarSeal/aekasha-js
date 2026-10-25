@@ -23,7 +23,9 @@ import {
   createInputGlyph,
   createKbd,
   createLink,
+  createMenu,
   createPopover,
+  createSplitButton,
   createToaster,
   createTooltip,
   fitAllDraggableWindowsToScreen,
@@ -726,6 +728,82 @@ const initButtonGroupDemo: Demo = (box) => {
   root.append(status);
 };
 
+// --- Menu ---
+
+const MENU_ID = (name: string) => `${ID_PREFIX}Menu${name}`;
+
+/** In the page: a menu button and a split button; what their items do in the status line */
+const initMenuDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = MENU_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const report = (text: string) => () => (status.textContent = text);
+  // The app's state the menu reads on every open (its items are a getter)
+  let isAutosaveOn = false;
+  let sortBy = 'name';
+
+  const file = createButton({ id: MENU_ID('File'), label: 'File' });
+  createMenu({
+    anchor: file.cmp.elem,
+    items: () => [
+      { label: 'New', kbd: 'Ctrl+N', onSelect: report('File: New') },
+      { label: 'Open…', kbd: 'Ctrl+O', onSelect: report('File: Open…') },
+      {
+        label: 'Save',
+        icon: getSvgIcon('fileCode'),
+        kbd: 'Ctrl+S',
+        onSelect: report('File: Save'),
+      },
+      { type: 'separator' },
+      {
+        type: 'checkbox',
+        label: 'Autosave',
+        checked: isAutosaveOn,
+        onCheckedChange: (on) => {
+          isAutosaveOn = on;
+          status.textContent = `Autosave: ${on ? 'on' : 'off'}`;
+        },
+      },
+      {
+        type: 'radio',
+        label: 'Sort by',
+        value: sortBy,
+        options: [
+          { value: 'name', label: 'Name' },
+          { value: 'date', label: 'Date' },
+        ],
+        onValueChange: (value) => {
+          sortBy = value;
+          status.textContent = `Sort by: ${value}`;
+        },
+      },
+      { type: 'separator' },
+      { label: 'Revert', disabled: true },
+    ],
+  });
+  addGroup(
+    root,
+    'A menu button: actions, an on / off item, a one-of choice, a disabled item'
+  ).append(file.cmp.elem);
+
+  const split = createSplitButton({
+    id: MENU_ID('Split'),
+    label: 'Save',
+    variant: 'primary',
+    onClick: report('Saved'),
+    items: [
+      { label: 'Save as…', onSelect: report('Save as…') },
+      { label: 'Save a copy', onSelect: report('Save a copy') },
+      { type: 'separator' },
+      { label: 'Export…', disabled: true },
+    ],
+  });
+  addGroup(root, 'A split button: the action, and its variants in a menu').append(split.cmp.elem);
+  root.append(status);
+};
+
 // --- Link ---
 
 const LINK_ID = (name: string) => `${ID_PREFIX}Link${name}`;
@@ -857,6 +935,7 @@ const DEMOS: Record<string, Demo> = {
   button: initButtonDemo,
   buttonGroup: initButtonGroupDemo,
   link: initLinkDemo,
+  menu: initMenuDemo,
   kbd: initKbdDemo,
   inputGlyph: initInputGlyphDemo,
 };
