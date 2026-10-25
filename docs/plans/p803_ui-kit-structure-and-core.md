@@ -500,6 +500,22 @@ review.
      debug screenshots and the drawer by eye.
 3. The answers go into D7, D8 and D11 here (As built) before Phase 1.
 
+As built (section 1, 2026-10-25, at `69086431`: `main` with this plan, macOS, Chromium on WebGPU):
+
+- `yarn sbp --profile all`: every budget within. The app's first download 381.5 KiB gzip; its
+  `_engine/ui` group 4.0 KiB initial (budget 5 KiB, 3 modules) and 10.4 KiB lazy (11 modules);
+  the example's `exampleUiKit.js` 2.1 KiB and `exampleUiKit.css` 0.5 KiB. The `uiKit` profile's
+  first download 285.8 KiB; its `_engine/ui` group 4.1 KiB initial (budget 6 KiB, 4 modules) and
+  10.2 KiB lazy; the scene chunk `uiKitEmbed.js` 10.9 KiB (budget 12 KiB) and `uiKitEmbed.css`
+  2.3 KiB (budget 3 KiB).
+- `yarn verify:embed`: the banner's three scenarios and the `uiKit` profile's four pass.
+- `yarn verify:scenes --update`: 104 runs recorded (26 scenes, 4 configurations), no failure, in
+  `.cache/verify/scenes/webgpu/`.
+- The component library's "before": 44 screenshots in `.cache/p803/before/` (local, gitignored),
+  per theme the whole page and each demo button's state on its own page load (1440 × 900, the
+  Hub's theme and the HUD root's `data-aek-theme` both set). A one-off script in the scratchpad,
+  not committed.
+
 ### Phase 1: the move and the names (no behaviour change)
 
 1. Section 1, the move (D2): the folders, `git mv`, the scratchpad import rewrite, the per-folder
