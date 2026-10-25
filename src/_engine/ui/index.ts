@@ -64,6 +64,8 @@ export {
 } from './core/HUD';
 export type { HudRootProps } from './core/HUD';
 export { getMotionFactor } from './core/Motion';
+export { createPopover } from './overlays/Popover';
+export type { Popover, PopoverProps } from './overlays/Popover';
 export {
   addToast,
   createToaster,
@@ -133,3 +135,5 @@ export {
 } from './core/icons/BuiltInIcons';
 export { getSvgIcon, registerBuiltInIcons, registerIcon } from './core/icons/SvgIcon';
 export type { BuiltInIconName, SvgIconKey } from './core/icons/SvgIcon';
+export { createTooltip } from './overlays/Tooltip';
+export type { Tooltip, TooltipProps } from './overlays/Tooltip';

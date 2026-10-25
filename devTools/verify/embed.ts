@@ -20,9 +20,9 @@
  *   button pauses and resumes it, without an error.
  * - The uiKit profile only (p801 D9), `INLINE` in the 640 × 360 target on a host with a 16 px
  *   root and again with `html { font-size: 62.5% }`: the window, the dialog, its backdrop, the
- *   toast and the open drop-down list inside the container; the window at its px position from
+ *   toast, the open drop-down list and the window's tooltip (p803 D11) inside the container; the window at its px position from
  *   the container's corner, the dialog centred in it, the backdrop covering it and not the page;
- *   the window's, the toast's and the list's font sizes the same at both roots, their font IBM
+ *   the window's, the toast's, the list's and the tooltip's font sizes the same at both roots, their font IBM
  *   Plex Sans (the scene opts in, p801 D8) and its face loaded; the list's last option shown
  *   where the list overflows the dialog (the top layer); Escape on the host page leaving
  *   the dialog open and Escape inside it closing it (p803 D7); with the dialog closed, a drag of
@@ -83,17 +83,18 @@ const UI_KIT = {
   hostButton: 'body > p > button',
   toast: '#uiKitEmbedToasts .toast',
   list: '.uiKitEmbedList',
+  tooltip: '.uiKitEmbedTooltip',
   listItem: '.uiKitEmbedList li',
 } as const;
 /** The elements that must stay inside the container */
-const UI_KIT_INSIDE = ['window', 'dialog', 'backdrop', 'toast', 'list'] as const;
+const UI_KIT_INSIDE = ['window', 'dialog', 'backdrop', 'toast', 'list', 'tooltip'] as const;
 /** The elements whose font size must not follow the host's root */
-const UI_KIT_FONTS = ['window', 'toast', 'listItem'] as const;
+const UI_KIT_FONTS = ['window', 'toast', 'listItem', 'tooltip'] as const;
 /** The kit's font, which the profile's scene opts into (`aekasha/ui/fonts`, p801 D8) */
 const UI_KIT_FONT_FAMILY = 'IBM Plex Sans';
 /** The window's px position in the scene, from the container's top left corner */
 const UI_KIT_WINDOW_AT = { x: 16, y: 16 };
-/** The drag, which keeps the 220 × 150 window inside the 640 × 360 container */
+/** The drag, which keeps the 220 × 170 window inside the 640 × 360 container */
 const UI_KIT_DRAG = { x: 120, y: 60 };
 /** The shrunk target, which the dragged window no longer fits at its place */
 const UI_KIT_SHRUNK = { width: 320, height: 200 };

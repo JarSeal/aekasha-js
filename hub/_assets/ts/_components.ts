@@ -16,7 +16,9 @@ import {
   CMP,
   createDropDown,
   createHudRoot,
+  createPopover,
   createToaster,
+  createTooltip,
   fitAllDraggableWindowsToScreen,
   getDraggableWindowsOfKind,
   getHUDRootCMP,
@@ -34,6 +36,8 @@ import type {
   DropDownProps,
   OpenDraggableWindowProps,
   CMPHandle,
+  Tooltip,
+  TooltipProps,
 } from 'aekasha/ui';
 
 /** A demo: fills its box (`data-hub-demo="<key>"`) with the controls that open its states */
@@ -320,6 +324,106 @@ const initDropDownDemo: Demo = (box) => {
   });
 };
 
+// --- Tooltip ---
+
+const TOOLTIPS_WINDOW_ID = `${ID_PREFIX}Tooltips`;
+const TOOLTIP_ANCHORS: { label: string; side: NonNullable<TooltipProps['side']>; text: string }[] =
+  [
+    { label: 'Top', side: 'top', text: 'Above' },
+    { label: 'Left', side: 'left', text: 'Left' },
+    { label: 'Right', side: 'right', text: 'Right' },
+    { label: 'Bottom', side: 'bottom', text: 'Below' },
+    {
+      label: 'Long text',
+      side: 'bottom',
+      text: 'A long tooltip wraps at about 32 characters a line and stays inside the HUD’s bounds: keep it to a sentence.',
+    },
+  ];
+/** The open window's tooltips, by their anchor's label */
+const tooltips = new Map<string, Tooltip>();
+
+/** A window of buttons, each with a tooltip; `shown` are shown at once (no hover) */
+const openTooltips = (shown: string[] = []) => {
+  openedIds.add(TOOLTIPS_WINDOW_ID);
+  openDraggableWindow({
+    id: TOOLTIPS_WINDOW_ID,
+    title: 'Tooltips',
+    size: { w: 420, h: 300 },
+    removeOnClose: true,
+    content: () => {
+      const panel = CMP({
+        class: 'hubDemoPanel hubDemoTooltips',
+        // Each tooltip goes with its anchor
+        onRemoveCmp: () => {
+          for (const tooltip of tooltips.values()) tooltip.cmp.remove();
+          tooltips.clear();
+        },
+      });
+      panel.add({ tag: 'p', text: 'Hover a button, or Tab to it. Escape hides the tooltip.' });
+      // A compass: each side's tooltip has room there
+      const compass = panel.add({ class: 'hubDemoTooltipCompass' });
+      for (const { label, side, text } of TOOLTIP_ANCHORS) {
+        const button = addPanelButton(compass, label, () => {});
+        button.elem.dataset.area = label.toLowerCase().replace(/\s+/g, '');
+        tooltips.set(label, createTooltip({ anchor: button.elem, text, side }));
+      }
+      return panel;
+    },
+  });
+  for (const label of shown) tooltips.get(label)?.show();
+};
+
+const initTooltipDemo: Demo = (box) => {
+  const states = addGroup(box, 'States');
+  addButton(states, 'Open the tooltips', () => openTooltips());
+  addButton(states, 'Shown on every side', () => openTooltips(['Top', 'Right', 'Bottom', 'Left']));
+  addButton(states, 'A long text', () => openTooltips(['Long text']));
+};
+
+// --- Popover ---
+
+const POPOVER_WINDOW_ID = `${ID_PREFIX}Popovers`;
+const POPOVER_TRIGGER_ID = `${ID_PREFIX}PopoverTrigger`;
+
+const initPopoverDemo: Demo = (box) => {
+  const states = addGroup(box, 'States');
+  addButton(states, 'Open the popover window', () => {
+    openedIds.add(POPOVER_WINDOW_ID);
+    openDraggableWindow({
+      id: POPOVER_WINDOW_ID,
+      title: 'Popover',
+      size: { w: 340, h: 300 },
+      removeOnClose: true,
+      content: () => {
+        let removePopover = () => {};
+        const panel = CMP({
+          class: 'hubDemoPanel',
+          onRemoveCmp: () => removePopover(),
+        });
+        panel.add({
+          tag: 'p',
+          text: 'Its trigger opens and closes it. The focus moves in; Escape, a press outside or Tab past its end closes it.',
+        });
+        const trigger = addPanelButton(panel, 'Filters', () => {});
+        trigger.elem.id = POPOVER_TRIGGER_ID;
+        const popover = createPopover({
+          anchor: trigger.elem,
+          label: 'Filters',
+          content: () => {
+            const content = createPanel('Interactive content: buttons, fields, links.');
+            content.updateClass('hubDemoPopover', 'add');
+            addPanelButton(content, 'Apply', () => popover.close());
+            addPanelButton(content, 'Reset', () => {});
+            return content;
+          },
+        });
+        removePopover = () => popover.cmp.remove();
+        return panel;
+      },
+    });
+  });
+};
+
 // --- Toaster ---
 
 const TOASTS: { label: string; toast: Parameters<typeof addToast>[0] }[] = [
@@ -399,6 +503,8 @@ const DEMOS: Record<string, Demo> = {
   window: initWindowDemo,
   dialog: initDialogDemo,
   dropDown: initDropDownDemo,
+  tooltip: initTooltipDemo,
+  popover: initPopoverDemo,
   toaster: initToasterDemo,
   icons: initIconsDemo,
 };

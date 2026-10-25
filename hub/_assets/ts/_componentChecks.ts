@@ -60,6 +60,9 @@ const WINDOW = '#hudRoot #hubDemoWindow';
 const LIST = '#hudRoot .aekDropDownList';
 const TRIGGER = '#hudRoot .aekDropDownTrigger';
 const DIALOG = (index: number) => `#hudRoot #hubDemoDialog${index}`;
+const TOOLTIP = '#hudRoot .aekTooltip';
+const POPOVER = '#hudRoot .aekPopover';
+const POPOVER_TRIGGER = '#hubDemoPopoverTrigger';
 
 export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
   window: {
@@ -182,6 +185,51 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { expectCount: LIST, count: 0 },
           { expectText: `${TRIGGER} .aekDropDownLabel`, text: 'Orange' },
           { expectFocus: TRIGGER },
+        ],
+      },
+    ],
+  },
+  tooltip: {
+    keyboard: [
+      {
+        name: 'Tab shows the focused button’s tooltip at once; Escape hides it, not the window',
+        steps: [
+          { click: 'Open the tooltips' },
+          { focusHud: '#hubDemoTooltips .hubButton' },
+          { press: 'Tab' },
+          { expectCount: TOOLTIP, count: 1 },
+          { expectText: TOOLTIP, text: 'Left' },
+          { press: 'Escape' },
+          { expectCount: TOOLTIP, count: 0 },
+          { expectCount: '#hudRoot #hubDemoTooltips', count: 1 },
+          { press: 'Tab' },
+          { expectText: TOOLTIP, text: 'Right' },
+        ],
+      },
+    ],
+  },
+  popover: {
+    states: [
+      {
+        name: 'open',
+        steps: [{ click: 'Open the popover window' }, { clickHud: POPOVER_TRIGGER }],
+      },
+    ],
+    keyboard: [
+      {
+        name: 'Enter opens it with the focus in; Escape closes it, the focus back on the trigger',
+        steps: [
+          { click: 'Open the popover window' },
+          { focusHud: POPOVER_TRIGGER },
+          { press: 'Enter' },
+          { expectAttr: `#hudRoot ${POPOVER_TRIGGER}`, name: 'aria-expanded', value: 'true' },
+          { expectFocus: `${POPOVER} .hubButton` },
+          { press: 'Tab' },
+          { expectText: `${POPOVER} .hubButton:focus`, text: 'Reset' },
+          { press: 'Escape' },
+          { expectCount: POPOVER, count: 0 },
+          { expectFocus: `#hudRoot ${POPOVER_TRIGGER}` },
+          { expectAttr: `#hudRoot ${POPOVER_TRIGGER}`, name: 'aria-expanded', value: 'false' },
         ],
       },
     ],

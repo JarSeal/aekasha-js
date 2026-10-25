@@ -147,7 +147,15 @@ export type ShowAnchoredProps = {
   gap?: number;
   /** At least as wide as the anchor along a top or bottom side (a drop-down's list) */
   matchAnchorWidth?: boolean;
+  /** Runs when the anchor leaves the document while the overlay shows (checked once a frame):
+   * the overlay closes (a window's close button removed under its tooltip) */
+  onAnchorRemoved?: () => void;
 };
+
+/** The space left at the side it took, which the overlay's stylesheet reads for its max size
+ * (`max-height: var(--aek-anchor-max-height)`), capping it further where it wants */
+const MAX_WIDTH_PROP = '--aek-anchor-max-width';
+const MAX_HEIGHT_PROP = '--aek-anchor-max-height';
 
 /** The attribute `showAnchored` writes the side it took to, for an arrow or a caret */
 const SIDE_ATTR = 'data-side';
@@ -160,11 +168,15 @@ const SIDE_ATTR = 'data-side';
 export const hasTopLayer = () =>
   typeof HTMLElement === 'function' && typeof HTMLElement.prototype.showPopover === 'function';
 
-/** The fallback's overlay leaves its subtree for the HUD root: it takes the nearest theme and
- * density with it */
-const copyInheritedAttr = (elem: HTMLElement, anchor: HTMLElement, name: string) => {
-  const value = anchor.closest(`[${name}]`)?.getAttribute(name);
-  if (value) elem.setAttribute(name, value);
+/** The anchor's forced theme and density, which an overlay outside the element carrying them
+ * takes along (the fallback's, moved to the HUD root; one made in the HUD root: a tooltip) */
+const INHERITED_ATTRS = ['data-aek-theme', 'data-aek-density'];
+
+const copyInheritedAttrs = (elem: HTMLElement, anchor: HTMLElement) => {
+  for (const name of INHERITED_ATTRS) {
+    const source = anchor.closest(`[${name}]`);
+    if (source && !source.contains(elem)) elem.setAttribute(name, source.getAttribute(name) ?? '');
+  }
 };
 
 /**
@@ -174,8 +186,10 @@ const copyInheritedAttr = (elem: HTMLElement, anchor: HTMLElement, name: string)
  * nothing: the overlay stack does) neither a window's `overflow` nor an embed's container clips
  * it, and its position is the viewport's. Without the Popover API it moves to the HUD root at
  * `--aek-z-tooltip` (a dialog's centring transform would make a fixed element inside it relative
- * to the dialog), with the theme and density of its old place, and its position is the HUD's
- * bounds'. Either way it gets `position: fixed`, its place and max size as inline styles, and
+ * to the dialog), and its position is the HUD's bounds'. An overlay outside its anchor's forced
+ * `data-aek-theme` / `data-aek-density` (the fallback's, or one made in the HUD root) gets them.
+ * Either way it gets `position: fixed` and its place as inline styles, the space left as
+ * `--aek-anchor-max-width` / `--aek-anchor-max-height` (its stylesheet's max size reads them) and
  * `data-side` (the side it took).
  * @internal
  * @returns what stops the tracking and takes it out of the top layer; removing the element is the
@@ -188,17 +202,17 @@ export const showAnchored = ({
   align = 'start',
   gap = 4,
   matchAnchorWidth,
+  onAnchorRemoved,
 }: ShowAnchoredProps) => {
   const isTopLayer = hasTopLayer();
   if (isTopLayer) {
     elem.setAttribute('popover', 'manual');
     elem.showPopover();
   } else if (hasHudRoot()) {
-    copyInheritedAttr(elem, anchor, 'data-aek-theme');
-    copyInheritedAttr(elem, anchor, 'data-aek-density');
     elem.style.zIndex = 'var(--aek-z-tooltip)';
     getHUDRootCMP().elem.appendChild(elem);
   }
+  copyInheritedAttrs(elem, anchor);
   elem.style.position = 'fixed';
 
   /** What the last `place()` read (the anchor's box, the bounds', the overlay's size): it writes
@@ -245,8 +259,9 @@ export const showAnchored = ({
     const style = elem.style;
     style.left = `${placement.x - offsetX}px`;
     style.top = `${placement.y - offsetY}px`;
-    style.maxWidth = `${placement.maxWidth}px`;
-    style.maxHeight = `${placement.maxHeight}px`;
+    // Custom properties, not max-width / max-height: the overlay's stylesheet caps them further
+    style.setProperty(MAX_WIDTH_PROP, `${placement.maxWidth}px`);
+    style.setProperty(MAX_HEIGHT_PROP, `${placement.maxHeight}px`);
     if (matchAnchorWidth) style.minWidth = `${Math.min(anchorRect.width, placement.maxWidth)}px`;
     if (elem.getAttribute(SIDE_ATTR) !== placement.side)
       elem.setAttribute(SIDE_ATTR, placement.side);
@@ -270,7 +285,18 @@ export const showAnchored = ({
   window.addEventListener('resize', schedule);
   const removeBoundsListener = onBoundsResize(schedule);
 
+  // One property read a frame while the overlay shows, and only when the caller asks
+  let watchFrame = 0;
+  const watchAnchor = () => {
+    watchFrame = 0;
+    if (anchor.isConnected) watchFrame = requestAnimationFrame(watchAnchor);
+    else onAnchorRemoved?.();
+  };
+  if (onAnchorRemoved) watchFrame = requestAnimationFrame(watchAnchor);
+
   return () => {
+    if (watchFrame) cancelAnimationFrame(watchFrame);
+    watchFrame = 0;
     document.removeEventListener('scroll', onScroll, { capture: true });
     window.removeEventListener('resize', schedule);
     removeBoundsListener();

@@ -2926,6 +2926,11 @@
       "pushOverlay": "Function",
       "swallowNextKeyUp": "Function"
     },
+    "src/_engine/ui/overlays/Popover.ts": {
+      "createPopover": "Function",
+      "Popover": "TypeAlias",
+      "PopoverProps": "TypeAlias"
+    },
     "src/_engine/ui/overlays/Toaster.ts": {
       "addToast": "Function",
       "AddToastResponse": "TypeAlias",
@@ -2939,6 +2944,11 @@
       "ToasterSettings": "TypeAlias",
       "ToastProps": "TypeAlias",
       "ToastType": "TypeAlias"
+    },
+    "src/_engine/ui/overlays/Tooltip.ts": {
+      "createTooltip": "Function",
+      "Tooltip": "TypeAlias",
+      "TooltipProps": "TypeAlias"
     },
     "src/_engine/ui/overlays/windows/DialogWindow.ts": {
       "DialogProps": "TypeAlias",
@@ -4084,6 +4094,8 @@
       "KEEP_IN_VIEWS_CLASS",
       "KIT_ROOT_CLASS",
       "OpenDraggableWindowProps",
+      "Popover",
+      "PopoverProps",
       "SceneTargetResolver",
       "SvgIconKey",
       "TAnimChain",
@@ -4103,6 +4115,8 @@
       "ToastType",
       "ToasterProps",
       "ToasterSettings",
+      "Tooltip",
+      "TooltipProps",
       "addToast",
       "aekashaIcon",
       "alertIcon",
@@ -4119,7 +4133,9 @@
       "cloudSunIcon",
       "createDropDown",
       "createHudRoot",
+      "createPopover",
       "createToaster",
+      "createTooltip",
       "databaseXIcon",
       "easelIcon",
       "ecsIcon",

@@ -4,11 +4,13 @@ import {
   CMP,
   createDropDown,
   createToaster,
+  createTooltip,
   getHUDRootCMP,
   openDialog,
   openDraggableWindow,
   removeToaster,
 } from 'aekasha/ui';
+import type { Tooltip } from 'aekasha/ui';
 // The kit's fonts (p801 D8), with the kit in this scene's lazy chunk: `yarn verify:embed` checks
 // the window's and the toast's font is IBM Plex Sans
 import 'aekasha/ui/fonts';
@@ -21,6 +23,7 @@ const DIALOG_ID = 'uiKitEmbedDialog';
 const TOASTER_ID = 'uiKitEmbedToasts';
 const BACKDROP_CLASS = 'uiKitEmbedBackdrop';
 const LIST_CLASS = 'uiKitEmbedList';
+const TOOLTIP_CLASS = 'uiKitEmbedTooltip';
 
 const SHADES = [
   { value: 'dawn', label: 'Dawn' },
@@ -38,7 +41,8 @@ const PANEL_STYLE = {
 
 /**
  * The uiKit embed's scene (p801 D9): a box made in code, and one of each of the UI kit's pieces
- * open over it: a window, a toast, and a dialog with its drop-down's list open. Mounted into a
+ * open over it: a window with a tooltip shown, a toast, and a dialog with its drop-down's list
+ * open. Mounted into a
  * page it doesn't own (`uiKit.embed.ts`), they size from the browser's font size, not the host's
  * root, and stay inside the mount's container; `yarn verify:embed` checks both.
  */
@@ -49,16 +53,30 @@ export const scene = async () => {
     rotation: { x: 0.5, y: 0.7, z: 0 },
   });
 
-  // A window at a px position: from the container's top left corner in an embed
+  // A window at a px position: from the container's top left corner in an embed, with a button
+  // whose tooltip shows (before the dialog opens, which stays above it on the overlay stack)
+  const hint: { tooltip: Tooltip | null } = { tooltip: null };
   openDraggableWindow({
     id: WINDOW_ID,
     title: 'Window',
-    content: () =>
-      CMP({ style: PANEL_STYLE, text: 'Drag me by the header: I stay inside the container.' }),
+    content: () => {
+      const panel = CMP({ style: PANEL_STYLE, onRemoveCmp: () => hint.tooltip?.cmp.remove() });
+      panel.add({ text: 'Drag me by the header: I stay inside the container.' });
+      const button = panel.add({ tag: 'button', text: 'Hint', attr: { type: 'button' } });
+      hint.tooltip = createTooltip({
+        anchor: button.elem,
+        text: 'A tooltip',
+        class: TOOLTIP_CLASS,
+      });
+      return panel;
+    },
     position: { x: 16, y: 16 },
-    size: { w: 220, h: 140 },
+    size: { w: 220, h: 170 },
+    // The focus would show the tooltip, and the dialog's taking it (a blur) hide it again
+    focusFirstElement: false,
     closeOnSceneChange: true,
   });
+  hint.tooltip?.show();
 
   getHUDRootCMP().add(
     createToaster({

@@ -182,6 +182,11 @@ export const stubKitDomAsync = async (
   vi.stubGlobal('window', window);
   vi.stubGlobal('HTMLElement', window.HTMLElement);
   vi.stubGlobal('HTMLInputElement', window.HTMLInputElement);
+  // A frame is a 16 ms timer, so a test's fake timers run it (`vi.advanceTimersByTime`)
+  vi.stubGlobal('requestAnimationFrame', (fn: FrameRequestCallback) =>
+    setTimeout(() => fn(Date.now()), 16)
+  );
+  vi.stubGlobal('cancelAnimationFrame', (id: number) => clearTimeout(id));
   return { document, window };
 };
 

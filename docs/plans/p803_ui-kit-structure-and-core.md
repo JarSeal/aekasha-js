@@ -1034,6 +1034,75 @@ As built (section 2, 2026-10-25):
   Escape" and "With a drop-down" (section 1's demo texts), its list open (also the list's width),
   and the drop-down's "a list open" (2.3 %: the list as wide as its trigger, not the panel).
 
+As built (section 3, 2026-10-25):
+
+- `overlays/Tooltip.ts` + `Tooltip.scss`, `overlays/Popover.ts` + `Popover.scss`, on
+  `aekasha/ui` with their types (`Tooltip`, `TooltipProps`, `Popover`, `PopoverProps`); D2's
+  style: `createX(props)` returning `{ cmp, … }`, `class` / `attr` / `id` props, `cmp.remove()`
+  disposing of the listeners on the anchor, the timers, the stack entry and the anchor's ARIA. Each
+  is a persistent CMP whose element is in the HUD root only while it shows (never inside the
+  anchor: a tooltip's text would join the anchor's accessible name), so nothing lingers when the
+  anchor goes. Their side props spell the union out (no internal type in a public signature).
+- The tooltip: shown after `--aek-tooltip-delay` (new token, 500 ms, read on the anchor with
+  `getComputedStyle`) of hover and at once on a `:focus-visible` focus (a click's focus shows
+  none); hidden on blur, `pointerdown` on the anchor (the window close button's case: the press
+  removes the anchor under it), Escape (the stack's, `returnFocus: null`; the anchor's own
+  listener outside the HUD root), the pointer leaving with a 100 ms grace to reach the tooltip
+  (hoverable, WCAG 1.4.13), and the anchor leaving the document. `aria-describedby` is set at
+  create (added to the anchor's ids), while the element exists only when shown: the description is
+  there when a focus shows it, as Radix does it.
+- The popover: the trigger's `click` toggles (Enter / Space on a button), `aria-haspopup="dialog"`,
+  `aria-expanded`, `aria-controls`; `role="dialog"` (non-modal), `tabindex="-1"`, `aria-label`
+  from `label`; the focus moves to its first focusable element (else itself); Escape returns it to
+  the trigger (`returnFocus: anchor`, so also on Safari, where a click doesn't focus a button);
+  a capture `pointerdown` on the document while open, outside it and its trigger, or a focusout
+  leaving both, closes it without taking the focus back. `content` is a CMP added once or a
+  function built per open (removed on close).
+- `showAnchored` grew two things both use: an overlay outside the element carrying its anchor's
+  forced `data-aek-theme` / `data-aek-density` takes them (the fallback's, and now one made in the
+  HUD root), and `onAnchorRemoved` (an rAF check of `anchor.isConnected` while it shows: one
+  property read a frame). It writes the max size as `--aek-anchor-max-width` / `-height`, not
+  `max-width` / `max-height`, so a stylesheet caps it further (the tooltip at 32ch); the drop-down
+  list's stylesheet reads them.
+- The new stylesheets are on the tokens and in `@layer aek.components` with `:where()` (D5), the
+  first kit styles there. `--aek-tooltip-delay` is a delay, not motion (reduced motion keeps it):
+  `tokens.css` after the easings, and the design document's motion section has a "Delays" table
+  (`design.ts`' `isDelay`).
+- `KitDom.ts`: `requestAnimationFrame` / `cancelAnimationFrame` as 16 ms timers (fake timers run
+  them). Tests: `Tooltip.test.ts` (6: the ARIA and its removal, the delay, the hoverable leave, a
+  leave before the delay, focus / blur / press / Escape, the anchor removed, no timer or listener
+  left, `setText`), `Popover.test.ts` (5: the trigger's ARIA, open with the focus in and the
+  content built, the trigger's click closing it, Escape with the focus back, an outside press
+  and a focus leaving, the disposal, a CMP content kept).
+- The component library: a tooltip demo (a window of buttons laid out as a compass, so each side's
+  tooltip has room, and a long text; states: the window, the four sides shown at once with
+  `show()`, the long text) and a popover demo (a window with a "Filters" trigger; the checks'
+  state opens it). Keyboard scripts: Tab shows the focused button's tooltip, Escape hides it and not
+  the window, Tab shows the next; Enter opens the popover with the focus in, Tab moves inside,
+  Escape closes it with the focus back on the trigger and `aria-expanded` false. Their texts,
+  `COMPONENT_USES` and the page's tags. `UI_ALLOWED_VIOLATIONS` gets the windows'
+  `landmark-no-duplicate-banner` on `tooltip` and `popover` too (their demos open in windows),
+  until Phase 5 §1.
+- The `uiKit` embed: its window (170 px tall, `focusFirstElement: false`: the focus would show the
+  tooltip and the dialog's taking it hide it) has a "Hint" button whose tooltip shows before the
+  dialog opens (so the dialog stays above it on the stack, and the scenario's Escape closes the
+  dialog). The scenario checks the tooltip inside the container, its font size the same at both
+  roots and its font IBM Plex Sans. `uiKitEmbed.js` budget 14 KiB (13.0 KiB now).
+- Docs: the kit's `CLAUDE.md` has a `## The overlay layer` section (the stack, the trap and the
+  anchor moved there from the UI kit section, the tooltip, the popover, their styles), which the
+  UI kit feature page's `aek:covers` names; the UI kit guide a "Tooltips and popovers" section, the
+  two in its pieces table and key APIs; the root `CLAUDE.md`'s map line and `overlays/` line.
+  The readme waits for Phase 8 (D13).
+- An `@example` naming `toolbar` failed the example check: it's a DOM global (`window.toolbar`,
+  a `BarProp`), so the free name resolved to it; renamed `toolbarPanel` (the guide too).
+- The phase's verification: `yarn test` (1358 tests), `tsc` (both), ESLint, `yarn hub:build` (no
+  warning), `yarn verify:scenes` (104 passed against Phase 0's baselines), `verify:embed` (seven
+  scenarios), `yarn sbp --profile all` (every budget within), `yarn verify:ui` (every keyboard
+  script; the four reviewed screenshots differ, the tooltip's and the popover's are new), and
+  `verify:baselines` recorded: the six new `aekasha/ui` names, `uiKitEmbed.js` +0.8 kB gzip in
+  the embed (the tooltip) and, in the app's build of the profile's scene, `uiKitEmbed.js`
+  +1.0 kB and a new `uiKitEmbed.css` (0.3 kB: the tooltip's styles).
+
 ### Phase 5: the existing pieces restyled and accessible
 
 One section per piece, each with its demo boxes' screenshots in both themes for review and

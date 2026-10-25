@@ -124,12 +124,14 @@ const readIcons = (diag: HubDiagnostics): BuiltInIcon[] => {
 
 // The groups: each token's table, by its name (`--aek-` left out)
 const TYPE_PREFIXES = ['font-', 'line-height-', 'numeric-'];
+/** A delay (`--aek-tooltip-delay`): in the motion section, but not scaled by `--aek-motion` */
+const isDelay = (role: string) => role.endsWith('-delay');
 const isFocusSize = (role: string) => role === 'focus-ring-width' || role === 'focus-ring-offset';
 const ROOT_GROUPS: [string, (role: string) => boolean][] = [
   ['type', (role) => TYPE_PREFIXES.some((prefix) => role.startsWith(prefix))],
   ['space', (role) => role.startsWith('space-') || role === 'base' || role === 'rem'],
   ['elevation', (role) => role.startsWith('radius-') || role.startsWith('z-')],
-  ['motion', (role) => role.startsWith('motion-') || role.startsWith('ease-')],
+  ['motion', (role) => role.startsWith('motion-') || role.startsWith('ease-') || isDelay(role)],
   ['focus', isFocusSize],
 ];
 
@@ -428,6 +430,7 @@ const renderMotion = (tokens: DesignTokens | null, md: MarkdownIt, env: HubMarkd
   if (!tokens) return UNREAD;
   const durations = rootTokens(tokens, (role) => role.startsWith('motion-'));
   const easings = rootTokens(tokens, (role) => role.startsWith('ease-'));
+  const delays = rootTokens(tokens, isDelay);
   // Hover or focus the row to play it: the token's own duration, so reduced motion stops it too
   const demo = (style: string) =>
     `<span class="hubMotionDemo" style="${escapeHtml(style)}" tabindex="0" role="img" aria-label="A dot that moves on hover or focus"><span></span></span>`;
@@ -452,6 +455,13 @@ const renderMotion = (tokens: DesignTokens | null, md: MarkdownIt, env: HubMarkd
         code(tokens.root.get(name) ?? ''),
         demo(`--hub-motion-duration: var(--aek-motion-slow); --hub-motion-ease: var(${name})`),
       ]),
+    }),
+    heading(md, env, 'Delays'),
+    '<p>Waits before a piece shows, not motion: reduced motion keeps them.</p>\n',
+    renderTable({
+      className: 'hubMotionTable',
+      head: ['Token', 'Value'],
+      rows: delays.map((name) => [code(name), code(tokens.root.get(name) ?? '')]),
     }),
   ].join('');
 };

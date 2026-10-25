@@ -20,10 +20,12 @@ export type UiAllowedViolation = { rule: string; piece: string; until: string };
 
 export const UI_ALLOWED_VIOLATIONS: UiAllowedViolation[] = [
   // The window's `<header>` is a banner landmark (the page has its own): every piece that opens
-  // a window (the drop-downs open in one)
+  // a window (the drop-downs, the tooltips and the popover open in one)
   { rule: 'landmark-no-duplicate-banner', piece: 'window', until: 'p803 Phase 5 section 1' },
   { rule: 'landmark-no-duplicate-banner', piece: 'dialog', until: 'p803 Phase 5 section 1' },
   { rule: 'landmark-no-duplicate-banner', piece: 'dropDown', until: 'p803 Phase 5 section 1' },
+  { rule: 'landmark-no-duplicate-banner', piece: 'tooltip', until: 'p803 Phase 5 section 1' },
+  { rule: 'landmark-no-duplicate-banner', piece: 'popover', until: 'p803 Phase 5 section 1' },
   // A window's scrolling content (collapsed, or longer than the window) can't take focus
   { rule: 'scrollable-region-focusable', piece: 'window', until: 'p803 Phase 5 section 1' },
   // The toast's close button is an icon with no label

@@ -8,6 +8,8 @@
 | Window kind    | [`registerDraggableWindowKind`](api:registerDraggableWindowKind)   | One window per thing (an entity, an item), each with its data |
 | Dialog         | [`openDialog`](api:openDialog)                                     | A modal window over a backdrop: a pause menu, a confirmation  |
 | Drop-down      | [`createDropDown`](api:createDropDown)                             | A choice from a list, with the keyboard                       |
+| Tooltip        | [`createTooltip`](api:createTooltip)                               | A short text describing a control, on hover or focus          |
+| Popover        | [`createPopover`](api:createPopover)                               | Interactive content next to its trigger: filters, a detail    |
 | Toaster, toast | [`createToaster`](api:createToaster), [`addToast`](api:addToast)   | Short messages that come and go                               |
 | Icon           | [`registerIcon`](api:registerIcon), [`getSvgIcon`](api:getSvgIcon) | SVG icons by name, in the text colour                         |
 
@@ -166,6 +168,37 @@ const quality = createDropDown({
 });
 settingsPanel.add(quality.cmp);
 ```
+
+## Tooltips and popovers
+
+A [tooltip](api:createTooltip) is a short text that describes a control. It shows after
+`--aek-tooltip-delay` (500 ms) of hover and at once when the control gets the focus from the
+keyboard, and it hides when the pointer leaves (it can move onto the tooltip), on blur, on a press
+and on Escape. It's never interactive. Its anchor's `aria-describedby` names it, so a screen reader
+reads it as the control's description.
+
+```ts
+const save = toolbarPanel.add({ tag: 'button', text: 'Save' });
+const saveTip = createTooltip({ anchor: save.elem, text: 'Saves the scene (Ctrl+S)' });
+// When the button goes: its listeners and ARIA go with the tooltip
+saveTip.cmp.remove();
+```
+
+A [popover](api:createPopover) holds interactive content next to its trigger, which opens and
+closes it. The focus moves in when it opens. Escape closes it and gives the focus back to the
+trigger, and a press outside it, or the focus leaving it, closes it. `content` can be a function,
+built again on every open.
+
+```ts
+const filters = toolbarPanel.add({ tag: 'button', text: 'Filters' });
+createPopover({ anchor: filters.elem, label: 'Filters', content: () => createFiltersPanel() });
+```
+
+Both open over everything (the browser's top layer, or the HUD root's top where that's missing),
+on their `side` when they fit there, else the opposite one, and inside the page or an embed's
+container. Escape goes to the topmost overlay only: a tooltip, a popover, a drop-down's list or a
+dialog, in the order they opened, and only when it's pressed inside the HUD. Neither is added
+anywhere: dispose of one with `cmp.remove()` when its anchor goes.
 
 ## Toasts
 
@@ -366,6 +399,8 @@ container; `vw` and `vh` are the browser window's, as in CSS.
   [`registerDraggableWindowKind`](api:registerDraggableWindowKind) and
   [`getKindWindowId`](api:getKindWindowId).
 - [`openDialog`](api:openDialog) and [`createDropDown`](api:createDropDown).
+- [`createTooltip`](api:createTooltip) ([`Tooltip`](api:Tooltip)) and
+  [`createPopover`](api:createPopover) ([`Popover`](api:Popover)).
 - [`createToaster`](api:createToaster), [`addToast`](api:addToast) and
   [`removeToast`](api:removeToast).
 - [`registerIcon`](api:registerIcon) and [`getSvgIcon`](api:getSvgIcon).

@@ -128,6 +128,36 @@
   }
 }
 
+.hubDemoTooltipCompass {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-areas:
+    '. top .'
+    'left . right'
+    '. bottom .'
+    'longtext longtext longtext';
+  gap: 0.5rem;
+  place-items: center;
+  padding: 1.5rem 0 0;
+
+  @each $area in top, left, right, bottom, longtext {
+    > [data-area='#{$area}'] {
+      grid-area: $area;
+      // A panel button sits at its row's start (.hubDemoPanel)
+      justify-self: center;
+    }
+  }
+
+  // Room for the bottom button's tooltip
+  > [data-area='longtext'] {
+    margin-top: 1.75rem;
+  }
+}
+
+.hubDemoPopover {
+  padding: 0;
+}
+
 .hubDemoDropDowns > p {
   margin-top: 0.25rem;
   font-size: 0.8125rem;

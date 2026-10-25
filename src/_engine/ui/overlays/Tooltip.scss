@@ -1,0 +1,24 @@
+// The tooltip's default styles (Tooltip.ts), on the design tokens and layered (p803 D5): an app's
+// unlayered rule wins, and every selector is in :where(). Placed by Anchor.ts' showAnchored (fixed,
+// its left / top inline, the space left in --aek-anchor-max-width); `inset`, `margin`, `border` and `overflow` undo the
+// browser's popover styles.
+@layer aek.components {
+  :where(.aekTooltip) {
+    inset: auto;
+    box-sizing: border-box;
+    width: max-content;
+    max-width: min(32ch, var(--aek-anchor-max-width, 100%));
+    height: auto;
+    margin: 0;
+    padding: var(--aek-space-1) var(--aek-space-2);
+    overflow: hidden;
+    border: 1px solid var(--aek-border-strong);
+    border-radius: var(--aek-radius-sm);
+    background-color: var(--aek-surface-raised);
+    box-shadow: var(--aek-shadow-sm);
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-sm);
+    line-height: var(--aek-line-height-base);
+    overflow-wrap: break-word;
+  }
+}
