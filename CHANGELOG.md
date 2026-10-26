@@ -4,6 +4,85 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-10-26 — p803-ui-kit-structure-and-core
+
+The UI kit's structure and core components (p803, the debugger UI overhaul epic p800's third child). The kit gets its folders, coding style and names, works without the boot, and its windows, dialogs, drop-down, toasts and icons are restyled onto p801's tokens and made accessible. It also gets an overlay layer (Escape, focus return, anchored positioning) and fifteen new components, with a `yarn verify:ui` checking them in a browser. The Hub gets a UI kit section with live demos and a public component library. The debugger keeps its own look except where it uses the kit's pieces; its restyle is p806's.
+
+### Engine 5.12.0 (Golden Hour)
+
+**Added**
+
+- Components on `aekasha/ui`, each a `create…(props)` returning a handle with its `cmp`, disposed by `cmp.remove()`, on the tokens, with its ARIA, keyboard map and an `@example`:
+  - actions: `createButton` (the variants `primary`, `secondary`, `ghost`, `danger` and `link`, three sizes, an icon or icon only, a tooltip, a key hint with `aria-keyshortcuts`, loading, a toggle, hold to confirm), `createButtonGroup` (a joined group, or with `exclusive` a toolbar with roving focus that always keeps one pressed), `createSplitButton`, `createLink` (internal or external, or drawn as a button);
+  - overlays: `createTooltip` (after `--aek-tooltip-delay` on hover, at once on keyboard focus, hoverable, Escape), `createPopover` (non-modal, the focus in and back), `createMenu` (the APG menu button: actions, checkboxes, a radio group, groups and separators, typeahead);
+  - feedback: `createSpinner`, `createProgressBar` (determinate, indeterminate or segmented), `createSkeleton`, `createDivider`, `createEmptyState`, `createLoadingOverlay` (over the HUD's bounds or a parent, a spinner or a progress bar, `showAsync` / `hideAsync` usable as a scene loader's `loadStartFn` / `loadEndFn` as they are);
+  - labels: `createKbd` (a key chord, with the macOS symbols and the full names for assistive tech), `createInputGlyph` (a key or a mouse input, from an action binding's shape), `createBadge`, `createTag` (selectable or removable).
+- The overlay layer: Escape goes to the innermost open overlay only, and only from inside the HUD root (a dialog's open drop-down list closes first). A closed overlay returns the focus to where it was, and a modal dialog makes the rest of the HUD `inert`, but not the debugger. Tooltips, popovers, menus and the drop-down's list are on the browser's top layer (the Popover API), anchored to their trigger, flipping and shifting to stay in the HUD's bounds, so a window no longer clips them. Without the Popover API they fall back to the HUD root.
+- `createHudRoot({ slot? })`, `hasHudRoot()` and `KIT_ROOT_CLASS`: a page uses every piece without `InitEngine` or `mountAekasha`. The kit's stylesheet comes with its modules, and the kit imports no main loop module.
+- The windows: `role="dialog"` named by the title (or the new `ariaLabel`), the collapse button a disclosure, labelled close and collapse buttons with tooltips, the title cut with an ellipsis and its tooltip only then. The header moves the window with the arrow keys and resizes it with Alt+arrows (Shift for larger steps), and Enter collapses it. **F6 / Shift+F6 cycle the focus through the open windows** (`setWindowCycleKeys` with `WindowCycleKeys` rebinds or turns them off).
+- `openDialog`: `role="dialog"` with `aria-modal`, or `alertdialog` with the new `alert`; a focus trap; the new `initialFocus` (a selector); the focus back on the opener at the close.
+- `createDropDown`'s `searchable` and `searchPlaceholder`: a filter field (`role="combobox"`) over the list, the matches marked, "No matches" said.
+- The toaster: a `success` toast type, an icon per type drawn in CSS (no built-in icons needed), live regions that read each toast once (`role="status"`, `alert` for an alert), the time paused while a toast is hovered or focused or the page is hidden, Escape closing a focused toast, a long toast scrolling inside its maximum height.
+- `getSvgIcon`'s sizes `'sm' | 'md' | 'lg'` (`SvgIconSize`) from the new `--aek-icon-size-*` tokens (12 / 16 / 20 px, smaller in the compact density); without a size an icon is `1em` and follows its text.
+- Tokens: `--aek-icon-size-sm / -md / -lg`, `--aek-tooltip-delay` (500 ms; reduced motion keeps it), `--aek-z-loading` (1000) and `--aek-z-debug-dialog` (30000); `color-scheme` in each theme, so native scrollbars and inputs follow it. Each component documents its own custom properties (`--aek-window-header-height`, `--aek-button-radius`, `--aek-progress-color`, …), which an app sets on any ancestor.
+- `getMotionFactor()` is public.
+- The new type names (below) and the components' props and handle types.
+
+**Changed**
+
+- **Restyle:** the kit's windows, dialogs, drop-downs, toasts and icons take the tokens' colours, spacing, type and radii in both themes and densities: a light system now gets light windows and toasts, and the old greys are gone. To keep a dark look on an app's windows, force `data-aek-theme="dark"` on the HUD root (`getHUDRootCMP().updateAttr({ 'data-aek-theme': 'dark' })`); the old greys aren't tokens, so there's no exact restore.
+- **The kit's styles are layered** (`@layer aek.components` with `:where()`): any rule of an app's beats them, and an app's broad unlayered rules (`button { … }`, `a { color }`, `hr`, `p` margins) now win inside the HUD too. Scope such rules to the app's own UI, or put them in a layer after `@layer aek, app;`. The Hub's styling page shows both.
+- **The debug key toggling the main loop is Shift+F7** (was F6, now the window cycle key), in the debug env and prodTest; F7 alone still pauses the app loop.
+- **A modal dialog stacks at `--aek-z-dialog` 5000** (was 30000: above the app's windows and the loading overlay, below the debugger, whose debug dialogs use `--aek-z-debug-dialog`), so the debugger stays usable over an app's pause menu.
+- **The toaster's classes are `aek`-prefixed**: `aekToaster`, `aekToast` with `__icon`, `__content`, `__title`, `__message` and `__close`, the type as `data-type` and the phase as `data-phase` (were `toaster`, `toast`, `toastTitle`, `toastMessage`, `toastCloseBtn`, `toastStart` / `toastEnd`, …, which a host page's own `.toast` matched in an embed). The toaster writes no `<style>` into the page's head any more; its size settings are custom properties on its element (`--aek-toast-max-width`, …), the `ToasterSettings` keys unchanged.
+- The windows' styles are global classes (`aekWindow`, `aekWindow__header`, …) with the states as attributes (`data-state="collapsed"`, `data-resizable`), in place of a CSS module.
+- A drop-down's list is as wide as its trigger (or its options), not as the drop-down's root, and is no longer capped at `40vh`; the focus ring is on the highlighted option. The trigger, the filter field and the options are at least 24 px tall.
+- The kit's folders: `core/`, `components/`, `overlays/` (with `windows/`), `forms/`, `styles/` (a layout rule each); every deep path changed, the entry didn't.
+- The control reset: a button, input, select or textarea under a kit root inherits its font and colour, and the kit root sets `color: var(--aek-text)`, so in an embed the buttons' font and the toast's text no longer come from the host page.
+- The debug scene loader is the loading overlay ("Loading the scene", the system's theme).
+- The debugger's roots force the dark theme (the drawer, the editor drawer, the on-screen tools, the debug windows and the profiler) and carry `data-aek-debugger`. Until p806 a debug window's frame is the kit's navy around the debugger's grey panels; the debug toaster follows the system's theme.
+
+**Deprecated** (removed in engine 6.0.0, p622)
+
+- The `T`-prefixed type names on `aekasha/ui`: `TCMP` (use `CMPHandle`), `TProps` (`CMPProps`), `TSettings` (`CMPSettings`), `TListener`, `TListenerCache`, `TListenerCreator`, `TStyle`, `TAttr`, `TClassAction`, `TAnimChain`, `TAnimState` (each its `CMP…` name) and `TDropDown` (`DropDown`).
+- `getSvgIcon`'s size `'small'` (use `'sm'`), and the `uiIcon` / `smallIcon` classes it writes for the debugger next to `aekIcon`.
+
+**Fixed**
+
+- One Escape in a `closeOnEscape` dialog with its drop-down open closed both; now it closes the list.
+- In an embed, a `closeOnEscape` dialog closed on an Escape anywhere on the host page.
+- A window clipped a drop-down's list that overflowed it.
+- The window header clipped its title's descenders.
+- A long toast ran past its maximum height under its close button.
+- A `down` or `right` toaster's new toast slid in at the start and then jumped to the far end.
+
+### App 1.16.0 (Preschooler)
+
+**Changed**
+
+- The `uiKit` example rebuilt on the components: the panel's buttons with tooltips and key hints, a split button "Turn all" whose menu turns one shape or resets the colours, a segmented progress bar of each shape window's turns, and the pause menu's kit buttons with "Reload the scene".
+- The app's scene loader (`src/index.ts`) is the kit's loading overlay, a progress bar when the scene reports its count, with 500 ms fades as before. It adds about 1.3 kB gzip to the first download.
+- The `uiKit` embed's scene: its window has a kit button with a tooltip and an "Open the dialog" button; the dialog no longer opens at load, so an embed doesn't take the reader's focus as it mounts.
+- The engine's new type names in the examples.
+
+### Project
+
+**Added**
+
+- `yarn verify:ui [--url <hub url>] [--no-build] [--only <piece>[,…]] [--update] [--headed]`: builds the public Hub into `.cache/verify/ui/hub/` and opens its component library page in Chromium. Each demo's states run in both themes and both densities through axe-core (WCAG 2.2 A / AA and best practice; the committed allow list is empty), with keyboard scripts (`hub/_assets/ts/_componentChecks.ts`: the keys, the focus, the ARIA, a visible focus ring after every key) and local screenshots. `axe-core` 4.14.0 is a dev dependency.
+- The Hub's UI kit section: the overview (`features/ui-kit/`, with the HUD root and what a HUD costs in a build), Core components, Windows and overlays (with the overlay stack's rules), Styling the UI kit (the tokens, the components' custom properties, the parts, why an app's CSS wins, and a worked "make it look like your game" example), and the public component library (`features/ui-kit/library/`: every piece live with its states, the theme and density switches). Each component section has its live demo and a reference table (props, parts, states, custom properties, keys, assistive tech). `::: embed uiKit` shows the embed on the overview.
+- `::: demo <key>` (`devTools/hub/demo.ts`): a component library box on any Hub page; an unknown key fails the build.
+- `devTools/hub/previewServer.ts` (`yarn hub:preview`'s request handler, which `verify:ui` serves its build with) and `devTools/verify/devServer.ts` (the scene runner's dev server).
+- The design document: icon sizes, a Delays table and the new layers.
+
+**Changed**
+
+- `sbp.config.ts`: the app's `_engine/ui` budget 5 → 7 KiB (the scene loader), the `uiKit` profile's scene chunk 12 → 19 KiB and its CSS 3 → 6 KiB (from `suggestBudget`).
+- The component library's chunk is in both Hub builds (was dev only). The dev page keeps the boxes with their internal notes and links each piece's public text, and the Hub's `MainLoop.ts` stand-in is gone.
+- The Hub's unlayered `button`, `a`, focus and prose rules skip the kit's pieces, so a demo looks as it does in an app.
+- `src/_engine/ui/CLAUDE.md` (the layout, the overlay layer, a new "Writing a component"), the root `CLAUDE.md`, `hub/CLAUDE.md`, `devTools/hub/`, `devTools/verify/` and `devTools/sbp/CLAUDE.md`, the coding standards (a UI kit component follows the kit's style), the Hub authoring guide and the readme.
+- The plans: p803 is `_DONE_`; p800 and p622 follow.
+
 ## 2026-10-25 — p802-hub-project-section
 
 The Hub's Project section (p802 Phases 2-5, of the debugger UI overhaul epic p800; Phase 1, the dev-only pages, merged as `p802-dev-pages`): the pages for working on Ækasha and the app, which only the dev server's Hub shows. How Ækasha and the app are developed, the code blocks reference, Ækasha's design document with its token tables generated from the UI kit, the app's own design document to fill in, and a component library running the UI kit's pieces without the engine.

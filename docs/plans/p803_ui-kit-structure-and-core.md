@@ -2315,6 +2315,29 @@ D14; the changelog entry with the restyle note; `yarn checkVersions --against ma
 done; p800's §5 p803 entry points here and its Blocks line follows; p622's UI kit item names the
 aliases to remove. Time for the PR: `p803-ui-kit-structure-and-core` → `main` (p800 §6).
 
+1. Section 1, the versions and the changelog: engine and project 5.12.0, app 1.16.0, toolkit
+   unchanged (D14); the `CHANGELOG.md` entry with the restyle note and Phase 8's lines;
+   `yarn checkVersions --against main`.
+2. Section 2, the plan done: the status line, `git mv` to `_DONE_`, the references (p800's Blocks
+   line and §5 entry, p622, `_DONE_p801`'s mention, the stale "until p803" lines in the
+   `CLAUDE.md` files and `docs/issues/ui-kit-in-an-embed.md`), a home for the open review items, the
+   Done when list checked; then the final checks and the PR.
+
+As built (section 1, 2026-10-26):
+
+- `package.json`: `version` and `engine_metadata.version` 5.12.0, `app_metadata.version` 1.16.0,
+  the toolkit 2.2.1 (no file under `src/toolkit/` changed); no codename changes (minors).
+- `CHANGELOG.md`'s `2026-10-26 — p803-ui-kit-structure-and-core` entry: Engine (Added: the
+  components by group, the overlay layer, the kit without the boot, the windows', dialogs',
+  drop-down's, toaster's and icons' new behaviour, the tokens; Changed: D14's restyle note with the
+  forced dark theme, the layers' warning, Shift+F7, the dialogs' z 5000, the toaster's class rename
+  and its head `<style>` gone, the window classes, the drop-down list's width, the folders, the
+  control reset, the debug scene loader, the debugger's forced dark roots; Deprecated: D3's
+  aliases and `'small'`; Fixed: 1.2's items 1, 4, 5 and 6 and the toaster's slide), App (Phase 8's
+  example, the scene loader and the embed's scene) and Project (`verify:ui`, the Hub's UI kit
+  section and library, `::: demo`, the budgets, the docs).
+- `yarn checkVersions --against main` passes.
+
 ---
 
 ## 4. Risks
