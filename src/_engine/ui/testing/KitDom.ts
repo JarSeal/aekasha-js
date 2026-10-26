@@ -168,7 +168,9 @@ const pointerCaptures = new Map<number, Element>();
  * (`selectionStart`, `selectionEnd`, `setSelectionRange`, `select()`; a new value puts the caret
  * at its end), a checkbox's `checked` kept apart from `defaultChecked` (the attribute is the default,
  * the property the state), its `indeterminate`, and its `click()` (not disabled) flipping it, a
- * cancelled click putting it back, then `input` and `change`; and pointer capture
+ * cancelled click putting it back, then `input` and `change`; a radio's `checked` unchecking its
+ * group (the same name in the same tree) and its `click()` checking it, with `input` and `change`
+ * only when it wasn't checked; and pointer capture
  * (`setPointerCapture`, `releasePointerCapture`,
  * `hasPointerCapture`; `lostpointercapture` on a release, `dispatchPointer` routes a captured
  * pointer's events and releases it on `pointerup` / `pointercancel`).
@@ -250,6 +252,18 @@ const shimFormControls = (window: Window & typeof globalThis) => {
   });
 };
 
+/** The radios of `radio`'s group: the same name in the same tree (detached ones too) */
+const getRadioGroup = (radio: HTMLInputElement) => {
+  const name = radio.getAttribute('name');
+  if (!name) return [radio];
+  let root: Node = radio;
+  while (root.parentNode) root = root.parentNode;
+  const radios = [
+    ...(root as ParentNode).querySelectorAll<HTMLInputElement>('input[type="radio"]'),
+  ];
+  return radios.filter((other) => other.getAttribute('name') === name);
+};
+
 const shimCheckboxes = (window: Window & typeof globalThis) => {
   const checkedStates = new WeakMap<HTMLInputElement, boolean>();
   const indeterminates = new WeakMap<HTMLInputElement, boolean>();
@@ -262,6 +276,10 @@ const shimCheckboxes = (window: Window & typeof globalThis) => {
         return checkedStates.get(this) ?? this.hasAttribute('checked');
       },
       set(this: HTMLInputElement, on: unknown) {
+        // A radio checked unchecks the rest of its group
+        if (on && this.getAttribute('type') === 'radio') {
+          for (const other of getRadioGroup(this)) checkedStates.set(other, false);
+        }
         checkedStates.set(this, Boolean(on));
       },
     },
@@ -286,7 +304,12 @@ const shimCheckboxes = (window: Window & typeof globalThis) => {
   });
   Object.assign(proto, {
     click(this: HTMLInputElement) {
-      if (this.getAttribute('type') !== 'checkbox') {
+      const type = this.getAttribute('type');
+      if (type === 'radio') {
+        clickRadio(this);
+        return;
+      }
+      if (type !== 'checkbox') {
         elementClick.call(this);
         return;
       }
@@ -306,6 +329,23 @@ const shimCheckboxes = (window: Window & typeof globalThis) => {
       this.dispatchEvent(new window.Event('change', { bubbles: true }));
     },
   });
+
+  /** A radio's click: checked (its group's others unchecked), the cancelable click, then `input`
+   * and `change` only when it wasn't checked before */
+  const clickRadio = (radio: HTMLInputElement) => {
+    if (radio.hasAttribute('disabled')) return;
+    const wasChecked = getRadioGroup(radio).find((other) => other.checked) ?? null;
+    radio.checked = true;
+    const click = new window.Event('click', { bubbles: true, cancelable: true });
+    if (!radio.dispatchEvent(click)) {
+      radio.checked = false;
+      if (wasChecked) wasChecked.checked = true;
+      return;
+    }
+    if (wasChecked === radio) return;
+    radio.dispatchEvent(new window.Event('input', { bubbles: true }));
+    radio.dispatchEvent(new window.Event('change', { bubbles: true }));
+  };
 };
 
 const fireLostCapture = (elem: Element, pointerId: number) => {

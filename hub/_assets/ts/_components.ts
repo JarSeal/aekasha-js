@@ -36,7 +36,9 @@ import {
   createNumberField,
   createPopover,
   createProgressBar,
+  createRadioGroup,
   createRangeSlider,
+  createSegmentedControl,
   createSkeleton,
   createSlider,
   createSpinner,
@@ -66,7 +68,9 @@ import type {
   DropDownProps,
   InputGlyphInput,
   NumberFieldProps,
+  RadioGroupProps,
   RangeSliderProps,
+  SegmentedControlProps,
   SliderProps,
   TextFieldProps,
   OpenDraggableWindowProps,
@@ -717,6 +721,94 @@ const initRangeSliderDemo: Demo = (box) => {
   row(
     'Disabled',
     make('Depth', 'depth', { min: 0, max: 10, step: 1, unit: 'm', disabled: true }).cmp.elem
+  );
+  root.append(status);
+};
+
+// --- Radio group and segmented control ---
+
+const RADIO_ID = (name: string) => `${ID_PREFIX}Radio${name}`;
+
+/** In the page: radio groups (a column with a hint, a row with a disabled option), segmented
+ * controls (text filling the width, icons alone) and disabled ones, bound to one object; each pick
+ * in the box's status line */
+const initRadioGroupDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = RADIO_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const settings = {
+    difficulty: 'normal',
+    shadows: 'low',
+    camera: 'orbit',
+    simulation: 'play',
+    quality: 'high',
+  };
+  type Key = keyof typeof settings;
+  const report = (label: string) => (value: string) => {
+    status.textContent = `${label}: ${value}`;
+  };
+  const options = (...labels: string[]) =>
+    labels.map((label) => ({ value: label.toLowerCase(), label }));
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields', 'hubDemoChoices');
+    group.append(...elems);
+  };
+  const radios = (label: string, key: Key, props: Partial<RadioGroupProps<string>> = {}) =>
+    createRadioGroup({
+      id: RADIO_ID(label),
+      label,
+      target: settings,
+      key,
+      options: options('Easy', 'Normal', 'Hard'),
+      onChange: report(label),
+      ...props,
+    } as RadioGroupProps<string>).cmp.elem;
+  const segments = (label: string, key: Key, props: Partial<SegmentedControlProps<string>>) =>
+    createSegmentedControl({
+      id: RADIO_ID(label),
+      label,
+      target: settings,
+      key,
+      options: [],
+      onChange: report(label),
+      ...props,
+    } as SegmentedControlProps<string>).cmp.elem;
+
+  row(
+    'A radio group: a column, with a hint',
+    radios('Difficulty', 'difficulty', { hint: 'Changes how hard the enemies hit' })
+  );
+  row(
+    'A row; one option disabled',
+    radios('Shadows', 'shadows', {
+      orientation: 'horizontal',
+      options: [
+        ...options('Off', 'Low', 'High'),
+        { value: 'ultra', label: 'Ultra', disabled: true },
+      ],
+    })
+  );
+  row(
+    'A segmented control: text, filling the width',
+    segments('Camera', 'camera', { options: options('Orbit', 'Follow', 'Free'), fill: true })
+  );
+  row(
+    'Icons alone: their names in tooltips',
+    segments('Simulation', 'simulation', {
+      options: [
+        { value: 'play', label: 'Play', icon: getSvgIcon('playFill'), iconOnly: true },
+        { value: 'pause', label: 'Pause', icon: getSvgIcon('pause'), iconOnly: true },
+        { value: 'stop', label: 'Stop', icon: getSvgIcon('stop'), iconOnly: true },
+      ],
+    })
+  );
+  row(
+    'Disabled',
+    radios('Mode', 'difficulty', { disabled: true, orientation: 'horizontal' }),
+    segments('Quality', 'quality', { options: options('Low', 'High'), disabled: true })
   );
   root.append(status);
 };
@@ -1734,6 +1826,7 @@ const DEMOS: Record<string, Demo> = {
   numberFieldStress: initNumberFieldStressDemo,
   slider: initSliderDemo,
   rangeSlider: initRangeSliderDemo,
+  radioGroup: initRadioGroupDemo,
   textField: initTextFieldDemo,
   checkbox: initCheckboxDemo,
   tooltip: initTooltipDemo,

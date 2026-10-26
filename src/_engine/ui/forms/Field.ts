@@ -121,6 +121,8 @@ export type FieldSpec<T> = {
   labelFor?: HTMLElement;
   /** A group of parts (a vector's axes): the label is a `<span>` naming the control */
   isGroup?: boolean;
+  /** The group's role (default `group`; a radio group's `radiogroup`) */
+  groupRole?: string;
   /** The focusable part isn't labelable (a `role="slider"` thumb): the label is a `<span>` it's
    * `aria-labelledby`, and a click on it focuses the part */
   isLabelledBy?: boolean;
@@ -218,7 +220,7 @@ export const createField = <T>(props: FieldProps<T>, spec: FieldSpec<T>): FieldS
     if (!isDisabled) labelFor.focus();
   };
   if (spec.isGroup) {
-    spec.control.setAttribute('role', 'group');
+    spec.control.setAttribute('role', spec.groupRole ?? 'group');
     spec.control.setAttribute('aria-labelledby', labelId);
   } else {
     labelFor.id = controlId;
@@ -305,6 +307,9 @@ export const createField = <T>(props: FieldProps<T>, spec: FieldSpec<T>): FieldS
     if (on === isDisabled) return;
     isDisabled = on;
     setAttrIf(root, 'data-disabled', on);
+    // A group too: its label's text is then an inactive control's (WCAG 1.4.3's exception, which
+    // axe reads from the controls a text names with aria-labelledby)
+    if (spec.isGroup) setAttrIf(spec.control, 'aria-disabled', on, 'true');
     spec.applyDisabled(on);
     resetButton.setDisabled(on);
   };

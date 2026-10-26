@@ -1093,6 +1093,36 @@ D7's slider, range slider, radio group, segmented control and select.
      `aria-invalid` (default `labelFor`): the range's two spin buttons, or its three stops, where
      only the first was before.
 3. Section 3, the radio group and the segmented control.
+   - **Done 2026-10-26.** `RadioGroup.test.ts` (13); the `radioGroup` box on both library pages
+     (both pieces, as the checkbox box shows the switch: a column with a hint, a row with a
+     disabled option, a segmented control filling its width, one of icons alone, a disabled one of
+     each), two keyboard scripts, `COMPONENT_USES`; on `aekasha/ui`: `createRadioGroup`,
+     `createSegmentedControl`, `RadioGroup`, `RadioGroupProps`, `RadioOption`, `RadioValue`,
+     `SegmentedControl`, `SegmentedControlProps`, `SegmentOption`.
+   - **One module** (`forms/RadioGroup.ts`, as D2): both are `createChoiceField`, native radios
+     sharing a name of their own (`aekRadio<n>`), their `value` the option's index (a value is a
+     string, number or boolean, compared with `===`). An option is `{ value, label, disabled? }`
+     (the kit's `label`; section 4's select maps Tweakpane's `text` to it), a segment's with `icon`
+     and `iconOnly` (its label visually hidden and a tooltip).
+   - **No `<fieldset>`** (D7 had one standalone): every field is the shell, so the group is a
+     `role="radiogroup"` the label's `<span>` names (`FieldSpec.groupRole`), standalone or in a
+     grid; a fieldset is D9's `createFieldset` for a form's section.
+   - **The keys are the browser's** (D7): one tab stop at the checked radio, the arrows pick and
+     wrap, skipping a disabled one, Space picks. linkedom moves no focus between radios, so only
+     `verify:ui`'s scripts check them (they passed first time). KitDom's radio shim: `checked`
+     unchecks the group (the same name in the same tree, detached too) and `click()` fires `input`
+     and `change` only when it wasn't checked.
+   - **The message describes the group**, which an error marks (a radio takes no
+     `aria-invalid`), and the handle's `focus` goes where Tab would (the checked radio, else the
+     first enabled one).
+   - **A disabled group is `aria-disabled` itself, now in the shell** for any `isGroup` field (the
+     range slider set it on its own in section 2): `verify:ui` failed the disabled groups' label
+     contrast the same way.
+   - **The segment's radio lies over it**, transparent (`appearance: none`), so the kit's focus
+     ring on the radio is the segment's ring and a click anywhere picks it; the picked segment is
+     `:has(:checked)` in the accent (`--aek-segmented-selected-bg` / `-color`).
+   - The `@example` check found `toolbar` in the segmented control's example resolving to
+     `window.toolbar`: examples name a `settingsPanel`.
 4. Section 4, the select field on the drop-down (Tweakpane's two `options` forms).
 
 ### Phase 4: containers and the declarative grid

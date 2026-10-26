@@ -122,6 +122,11 @@ const SLIDER_STATUS = '#hubDemoSliderStatus';
  * `range`: the span), and the box's status line */
 const RANGE = (name: string, part: 'min' | 'max' | 'range') => `#hubDemoRange${name}-${part}`;
 const RANGE_STATUS = '#hubDemoRangeStatus';
+/** A radio of the radio group box by its group's name (`_components.ts`' `RADIO_ID`) and place,
+ * the same checked, and the box's status line */
+const RADIO = (name: string, index: number) => `#hubDemoRadio${name}-${index}`;
+const RADIO_CHECKED = (name: string, index: number) => `${RADIO(name, index)}:checked`;
+const RADIO_STATUS = '#hubDemoRadioStatus';
 /** A text field's input by its label (`_components.ts`' `TEXT_ID`), and the box's lines */
 const TEXT = (name: string) => `#hubDemoText${name}`;
 const TEXT_STATUS = '#hubDemoTextStatus';
@@ -523,6 +528,46 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { expectAttr: RANGE('Altitude', 'max'), name: 'aria-valuemin', value: '6000' },
           { press: 'Shift+ArrowUp' },
           { expectAttr: RANGE('Altitude', 'max'), name: 'aria-valuenow', value: '7000' },
+        ],
+      },
+    ],
+  },
+  radioGroup: {
+    keyboard: [
+      {
+        name: 'a radio group is one tab stop: the arrows pick (wrapping), skipping a disabled one',
+        steps: [
+          { focusInBox: RADIO('Difficulty', 1) },
+          { press: 'ArrowDown' },
+          { expectFocus: RADIO('Difficulty', 2) },
+          { expectCount: RADIO_CHECKED('Difficulty', 2), count: 1 },
+          { expectText: RADIO_STATUS, text: 'Difficulty: hard' },
+          { press: 'ArrowDown' },
+          { expectFocus: RADIO('Difficulty', 0) },
+          { expectText: RADIO_STATUS, text: 'Difficulty: easy' },
+          // Out of the group to the next one's checked radio
+          { press: 'Tab' },
+          { expectFocus: RADIO('Shadows', 1) },
+          { press: 'ArrowRight' },
+          { expectFocus: RADIO('Shadows', 2) },
+          { press: 'ArrowRight' },
+          { expectFocus: RADIO('Shadows', 0) },
+          { expectText: RADIO_STATUS, text: 'Shadows: off' },
+        ],
+      },
+      {
+        name: 'a segmented control is the same: one tab stop, the arrows pick',
+        steps: [
+          { focusInBox: RADIO('Camera', 0) },
+          { press: 'ArrowRight' },
+          { expectFocus: RADIO('Camera', 1) },
+          { expectCount: RADIO_CHECKED('Camera', 1), count: 1 },
+          { expectText: RADIO_STATUS, text: 'Camera: follow' },
+          { press: 'Tab' },
+          { expectFocus: RADIO('Simulation', 0) },
+          { press: 'ArrowLeft' },
+          { expectFocus: RADIO('Simulation', 2) },
+          { expectText: RADIO_STATUS, text: 'Simulation: stop' },
         ],
       },
     ],

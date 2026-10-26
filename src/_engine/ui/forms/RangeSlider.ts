@@ -241,10 +241,6 @@ export const createRangeSlider = (props: RangeSliderProps): RangeSlider => {
     flashElem: span,
     draw,
     applyDisabled: (on) => {
-      // The group too: its label's text is then an inactive control's (WCAG 1.4.3's exception,
-      // which axe reads from the controls a text names)
-      if (on) control.setAttribute('aria-disabled', 'true');
-      else control.removeAttribute('aria-disabled');
       if (spins) {
         spins.low.applyDisabled(on);
         spins.high.applyDisabled(on);

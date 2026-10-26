@@ -82,6 +82,16 @@ export type { Slider, SliderProps } from './forms/Slider';
 export { createRangeSlider } from './forms/RangeSlider';
 export type { RangeSlider, RangeSliderProps, RangeValue } from './forms/RangeSlider';
 export type { SliderTick } from './forms/SliderTrack';
+export { createRadioGroup, createSegmentedControl } from './forms/RadioGroup';
+export type {
+  RadioGroup,
+  RadioGroupProps,
+  RadioOption,
+  RadioValue,
+  SegmentedControl,
+  SegmentedControlProps,
+  SegmentOption,
+} from './forms/RadioGroup';
 export type { DropDown, DropDownOption, DropDownProps, TDropDown } from './forms/DropDown';
 export {
   createHudRoot,

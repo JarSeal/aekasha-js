@@ -209,6 +209,17 @@
   width: min(100%, 22rem);
 }
 
+// A row of radios or segments takes its content's width, up to the box's
+.hubComponentDemoGroup.hubDemoChoices > .aekField {
+  width: auto;
+  max-width: 100%;
+}
+
+// The segmented control filling its width needs one to fill
+.hubComponentDemoGroup.hubDemoChoices > .aekField:has(.aekSegmented[data-fill]) {
+  width: min(100%, 20rem);
+}
+
 // A range slider with a spin button at each end takes more
 .hubComponentDemoGroup.hubDemoSliders > .aekField.hubDemoRangeInputs {
   width: min(100%, 30rem);
