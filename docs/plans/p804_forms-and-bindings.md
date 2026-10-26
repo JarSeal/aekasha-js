@@ -837,6 +837,55 @@ API is tried before the rest depend on it.
    `prev`), `BindingScheduler.ts` (refresh, the tick, visibility, intervals, the flash),
    `ValueExpression.ts`, `ValueText.ts` (precision, `format`, tabular figures); their tests. No UI
    yet; `createBindingScheduler` on `aekasha/ui`.
+   - **Done 2026-10-26.** 47 tests in the four `*.test.ts` files; the kit's `CLAUDE.md` has a
+     bullet for the core (D15's `## Forms and bindings` section, with its `aek:covers`, stays
+     Phase 7's).
+   - **`Binding.ts`** (`@internal` but its two public types): `createBinding({ ...source, kind,
+     onChange })` returns `{ peek, getValue, sync, step, commit, change, setValue, isInGesture }`.
+     A `BindingValueKind` (`{ equals, copy(from, into?) }`) compares and copies the value:
+     `getPrimitiveValueKind()` (`===`, NaN equal to itself, so a bound NaN isn't a change on every
+     read) or `createObjectValueKind(keys)` (key by key, a copy a plain object; a read fills the
+     kept copy in place, no allocation; a `THREE.Euler`'s accessors work as fields). D3's order:
+     `step` writes with `last: false` (an equal value opens the gesture and writes nothing, as
+     Tweakpane's `forceEmit: false`), `commit` fires `last: true` with the gesture's first `prev`
+     even when nothing moved since (Tweakpane's release), `change` is one write with `last: true`
+     (and inside a gesture, its last step and commit), `setValue` is `source: 'api'` and reads the
+     bound value first (`silent` writes without an event). An equal value is no write for
+     `change` and `setValue`. The handler gets copies (it may keep them), after the value is
+     written and kept, so a `refresh()` from inside it reads no change (§4's `refreshPane`).
+   - **Not in D3:** `{ get, set }` with an object value calls `set` with a copy of its own (D3's
+     in-place rule is `{ target, key }`'s); `{ value }` holds a plain copy (a `THREE.Vector3`
+     given as `value` reads back as `{ x, y, z }`). `BindingSource` and `BindingChange` go on
+     `aekasha/ui` with the number field (section 2), the first public signature naming them.
+   - **`BindingScheduler.ts`:** the handle is D4's `{ refresh, setVisible, dispose }`; a field
+     joins through `addScheduledBinding(scheduler, { read(fromRefresh), readState?, isShown,
+     interval? })` (`@internal`, returns the remover; the internals are in a `WeakMap`, off the
+     public handle). `refresh()` calls every entry's `readState` (the `hidden` / `disabled`
+     functions, hidden or not), reads the shown ones with `fromRefresh: true` (live ones too: a
+     monitor ignores the flag) and marks the others stale; `revealScheduledBindings(scheduler)`
+     reads the stale entries that show now, once, without a flash (a folder calls it on open,
+     Phase 4; a field on `setHidden(false)`, section 2). The tick reads a hidden live entry on the
+     first frame it shows, whatever its interval. The page's `visibilitychange` is listened to
+     only while a live entry exists. `isShown` is the field's (section 2 decides how it sees a
+     collapsed folder; a `closest('[hidden]')` per tick read is the candidate the perf-auditor
+     looks at in section 4).
+   - **The flash** is `createFlash(elem)` in `BindingScheduler.ts`: `data-flash` for 200 ms
+     (`--aek-motion-base` unscaled, so reduced motion's static tint lasts as long), a second flash
+     restarting it; the stylesheet's rule and the tabular figures land with `Field.scss` in
+     section 2 (no UI here).
+   - **`ValueText.ts`** (all `@internal` but `NumberRules`, which the number field's props
+     extend): the shown decimals are Tweakpane's count (`toFixed(10)` without trailing zeros, so
+     `Math.PI / 8` shows 10, as there), `precision` over `step`'s, else the value's own and at
+     least 2 (Tweakpane's `getSuitableDecimalDigits`); `constrainNumber` snaps to the grid from
+     `min` (else 0), wraps or clamps, then rounds. **The rounding takes `max`'s decimals too**
+     (D6 said step's and min's): a clamp to `max: 1.05` on a `0.1` grid would round past it
+     otherwise. Without a `step` it rounds to `precision`, else the value's own decimals (at most
+     10). A `step` of 0 or less is none. Halves round away from zero.
+   - **`ValueExpression.ts`:** as D6, plus `π`, exponents (`2e-3`) and a unary `+`; `**` binds
+     tighter than a unary sign and from the right (`-2 ** 2` is -4, `2 ** -1` 0.5); no implicit
+     product (`2pi` is an error); units are postfix factors after a number or a `)`, matched
+     case-insensitively on the field's own keys (`toString` isn't one); 256 characters and 32
+     levels of nesting at most; a non-finite result (`1 / 0`) is an error.
 2. Section 2, `Field.ts` (the shell: label, reset button, message line, `hidden` / `disabled`,
    ids) and the number field (spinbutton, D6's keys, scrub, expressions, copy and paste).
 3. Section 3, the text field (text, multiline, search), the checkbox and the switch.

@@ -2982,6 +2982,39 @@
       "onBoundsResize": "Function",
       "setWindowBoundsElement": "Function"
     },
+    "src/_engine/ui/forms/binding/Binding.ts": {
+      "Binding": "TypeAlias",
+      "BindingChange": "TypeAlias",
+      "BindingSource": "TypeAlias",
+      "BindingValueKind": "TypeAlias",
+      "createBinding": "Function",
+      "createObjectValueKind": "Function",
+      "getPrimitiveValueKind": "Function"
+    },
+    "src/_engine/ui/forms/binding/BindingScheduler.ts": {
+      "addScheduledBinding": "Function",
+      "BindingScheduler": "TypeAlias",
+      "BindingSchedulerProps": "TypeAlias",
+      "createBindingScheduler": "Function",
+      "createFlash": "Function",
+      "revealScheduledBindings": "Function",
+      "ScheduledBinding": "TypeAlias"
+    },
+    "src/_engine/ui/forms/binding/ValueExpression.ts": {
+      "evaluateValueExpression": "Function",
+      "ValueExpressionResult": "TypeAlias"
+    },
+    "src/_engine/ui/forms/binding/ValueText.ts": {
+      "constrainNumber": "Function",
+      "formatNumber": "Function",
+      "getDecimalDigits": "Function",
+      "getShownDecimals": "Function",
+      "getSpokenValueText": "Function",
+      "getValueText": "Function",
+      "NumberRules": "TypeAlias",
+      "roundToDecimals": "Function",
+      "ValueTextOptions": "TypeAlias"
+    },
     "src/_engine/ui/forms/DropDown.ts": {
       "createDropDown": "Function",
       "DropDown": "TypeAlias",
@@ -4188,6 +4221,8 @@
       "Badge",
       "BadgeProps",
       "BadgeTone",
+      "BindingScheduler",
+      "BindingSchedulerProps",
       "BuiltInIconName",
       "Button",
       "ButtonGroup",
@@ -4292,6 +4327,7 @@
       "closeDraggableWindow",
       "cloudSunIcon",
       "createBadge",
+      "createBindingScheduler",
       "createButton",
       "createButtonGroup",
       "createDivider",

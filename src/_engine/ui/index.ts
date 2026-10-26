@@ -65,6 +65,8 @@ export { setWindowCycleKeys } from './overlays/windows/DraggableWindowKeys';
 export type { WindowCycleKeys } from './overlays/windows/DraggableWindowKeys';
 export { createEmptyState } from './components/EmptyState';
 export type { EmptyState, EmptyStateProps } from './components/EmptyState';
+export { createBindingScheduler } from './forms/binding/BindingScheduler';
+export type { BindingScheduler, BindingSchedulerProps } from './forms/binding/BindingScheduler';
 export { createDropDown } from './forms/DropDown';
 export type { DropDown, DropDownOption, DropDownProps, TDropDown } from './forms/DropDown';
 export {
