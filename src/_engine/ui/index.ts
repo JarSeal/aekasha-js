@@ -78,6 +78,8 @@ export type {
   FieldProps,
   FormChild,
 } from './forms/Field';
+export { createForm } from './forms/Form';
+export type { Form, FormProps } from './forms/Form';
 export { createFieldset } from './forms/Fieldset';
 export type { Fieldset, FieldsetProps } from './forms/Fieldset';
 export { createFolder } from './forms/Folder';

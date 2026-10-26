@@ -30,6 +30,7 @@ import {
   createEmptyState,
   createFieldset,
   createFolder,
+  createForm,
   createHudRoot,
   createInputGlyph,
   createKbd,
@@ -1710,6 +1711,103 @@ const initPropertyGridParityDemo: Demo = (box) => {
   root.append(status);
 };
 
+// --- Form ---
+
+const FORM_ID = (name: string) => `${ID_PREFIX}Form${name}`;
+
+/** In the page: a new player's form in two fieldsets (a required name with a length check, a
+ * required region, an age of 13 or more, the rules to accept), its submit a promise (the button
+ * loading for a moment); Hub buttons submit it empty (the summary and the errors) and fill it in */
+const initFormDemo: Demo = (box) => {
+  const controls = addGroup(box, 'States');
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = FORM_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const player = { name: '', region: '', age: 30, rules: false };
+  const regions = [
+    { text: 'Europe', value: 'eu' },
+    { text: 'Americas', value: 'am' },
+    { text: 'Asia', value: 'as' },
+  ];
+  const form = createForm({
+    id: FORM_ID('Form'),
+    submitLabel: 'Create',
+    resetLabel: 'Start again',
+    onSubmit: () => {
+      status.textContent = 'Creating…';
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          const region = regions.find((option) => option.value === player.region)?.text;
+          status.textContent = `Created ${player.name} (${region}, ${player.age})`;
+          resolve();
+        }, 400);
+      });
+    },
+    onReset: () => {
+      status.textContent = 'Reset: every field at its default';
+    },
+    children: [
+      createFieldset({
+        legend: 'Player',
+        children: [
+          createTextField({
+            id: FORM_ID('Name'),
+            label: 'Name',
+            target: player,
+            key: 'name',
+            required: 'Enter a name',
+            validate: (name) =>
+              name.trim().length < 3 ? 'Name must be 3 characters or more' : null,
+          }),
+          createSelectField({
+            id: FORM_ID('Region'),
+            label: 'Region',
+            target: player,
+            key: 'region',
+            options: regions,
+            placeholder: 'Choose a region',
+            required: 'Choose a region',
+          }),
+          createNumberField({
+            id: FORM_ID('Age'),
+            label: 'Age',
+            target: player,
+            key: 'age',
+            min: 0,
+            max: 120,
+            step: 1,
+            hint: 'Players are 13 or older',
+            validate: (age) => (age < 13 ? 'Age must be 13 or more' : null),
+          }),
+        ],
+      }),
+      createFieldset({
+        legend: 'Rules',
+        children: [
+          createCheckbox({
+            id: FORM_ID('Rules'),
+            label: 'I accept the rules',
+            target: player,
+            key: 'rules',
+            required: 'Accept the rules to go on',
+          }),
+        ],
+      }),
+    ],
+  });
+  const group = addGroup(root, 'A new player; Create checks it');
+  group.classList.add('hubDemoFields', 'hubDemoForms');
+  group.append(form.cmp.elem);
+  root.append(status);
+  addButton(controls, 'Submit it empty', () => form.submit());
+  addButton(controls, 'Fill it in', () => {
+    Object.assign(player, { name: 'Ada', region: 'eu', age: 36, rules: true });
+    form.refresh();
+  });
+};
+
 // --- Tooltip ---
 
 const TOOLTIPS_WINDOW_ID = `${ID_PREFIX}Tooltips`;
@@ -2538,6 +2636,7 @@ const DEMOS: Record<string, Demo> = {
   fieldset: initFieldsetDemo,
   propertyGrid: initPropertyGridDemo,
   propertyGridParity: initPropertyGridParityDemo,
+  form: initFormDemo,
   tooltip: initTooltipDemo,
   popover: initPopoverDemo,
   toaster: initToasterDemo,

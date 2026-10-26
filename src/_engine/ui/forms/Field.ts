@@ -72,6 +72,14 @@ export type FieldOptions<T> = {
   /** Hides the field: a value, or a function re-read on every refresh (default false). A hidden
    * field isn't read; it's read once when it shows. */
   hidden?: FieldDyn<boolean>;
+  /** Required in the form it's in (`createForm`): an empty value (`''` or spaces, `false`, `null`,
+   * `undefined`, `NaN`) is its error on a submit, "{label} is required" or this text. Marked after
+   * the label (`*`, hidden from screen readers), with `required` or `aria-required` on the control
+   * where its role takes one (default false). */
+  required?: boolean | string;
+  /** Checks the value in the form it's in (`createForm`), after `required`: the error to show, or
+   * null. Run on a submit, and on a blur from the first submit on. */
+  validate?(value: T): string | null;
   /** Shows the value as text, not a control (Tweakpane's `readonly`, default false): a monitor
    * (`createMonitor`) in the field's own text (a number's format and unit, an option's label),
    * read on the tick every `interval` ms (default 200). The field's edit props do nothing then. */
@@ -231,7 +239,60 @@ export const setSchedulerAdopter = (
 export const adoptFormScheduler = (root: Element, scheduler: BindingScheduler) => {
   schedulerAdopters.get(root)?.(scheduler);
   for (const elem of root.querySelectorAll('.aekField, .aekFolder')) {
+    // A property grid added (to a form) keeps its own: its `refresh()` reads its fields
+    const grid = elem.closest('.aekPropertyGrid');
+    if (grid && root.contains(grid)) continue;
     schedulerAdopters.get(elem)?.(scheduler);
+  }
+};
+
+/**
+ * What a form (`createForm`) reads of a field in it: its handle, its checks and its error.
+ * @internal
+ */
+export type FormFieldEntry = {
+  field: Field<unknown>;
+  label: string;
+  required: boolean | string | undefined;
+  validate: ((value: unknown) => string | null) | undefined;
+  /** Shows the form's error (a check's), under the field's own and the app's `setError`, or
+   * clears it */
+  setFormError: (text: string | null) => void;
+  /** The error shown now: the field's own, the app's or the form's */
+  getError: () => string | null;
+  isDisabled: () => boolean;
+  /** The id of the part a summary link names: the focusable part's, or the group's */
+  targetId: string;
+};
+
+/** Each edit field's element (a monitor has none) and what a form reads of it */
+const formFields = new WeakMap<Element, FormFieldEntry>();
+
+/**
+ * The field at `elem` as a form reads it, or undefined (not a field, a monitor).
+ * @internal
+ */
+export const getFormField = (elem: Element) => formFields.get(elem);
+
+/** A folder's element and its open, which a form's summary link calls */
+const formRevealers = new WeakMap<Element, () => void>();
+
+/**
+ * Says how the container at `elem` shows what it holds (a shut folder opens), for a form's summary
+ * link to a field in it.
+ * @internal
+ */
+export const setFormRevealer = (elem: Element, reveal: () => void) => {
+  formRevealers.set(elem, reveal);
+};
+
+/**
+ * Opens every container around `elem` that hides it (a shut folder), outermost last.
+ * @internal
+ */
+export const revealFormChild = (elem: Element) => {
+  for (let parent = elem.parentElement; parent; parent = parent.parentElement) {
+    formRevealers.get(parent)?.();
   }
 };
 
@@ -250,6 +311,9 @@ export const readFieldsetDisabled = (root: Element) => {
 
 const RESET_ICON =
   '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5a4.5 4.5 0 1 0 1.3-3.7"/><path d="M3.5 2.5v3h3"/></svg>';
+
+/** The roles that take `aria-required` (ARIA 1.2), of the parts a field's message describes */
+const REQUIRED_ROLES = new Set(['radiogroup', 'combobox', 'listbox', 'spinbutton', 'textbox']);
 
 const resolveDyn = <T>(value: FieldDyn<T> | undefined, fallback: T) =>
   value === undefined ? fallback : typeof value === 'function' ? (value as () => T)() : value;
@@ -278,6 +342,8 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
   let isOwnDisabled = false;
   let appError: string | null = null;
   let ownError: string | null = null;
+  /** A form's check's (`createForm`) */
+  let formError: string | null = null;
   let removeEntry: (() => void) | null = null;
 
   const cmp = CMP({
@@ -288,6 +354,7 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
       removeEntry = null;
       fieldsetReads.delete(root);
       schedulerAdopters.delete(root);
+      formFields.delete(root);
       flash.dispose();
       labelTooltip.cmp.remove();
       labelElem.removeEventListener('click', onLabelClick);
@@ -311,6 +378,15 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
   labelElem.id = labelId;
   labelElem.textContent = props.label;
   head.elem.append(labelElem);
+  const isRequired = Boolean(props.required) && !spec.isMonitor;
+  if (isRequired) {
+    // Said by the control's `required` / `aria-required`, where its role takes one
+    const mark = document.createElement('span');
+    mark.className = 'aekField__required';
+    mark.setAttribute('aria-hidden', 'true');
+    mark.textContent = '*';
+    labelElem.append(mark);
+  }
   // A `<label for>` focuses its control on a click; a span naming a part does it here
   const onLabelClick = () => {
     if (!isDisabled) labelFor.focus();
@@ -320,6 +396,8 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
   if (spec.isGroup) {
     spec.control.setAttribute('role', spec.groupRole ?? 'group');
     spec.control.setAttribute('aria-labelledby', labelId);
+    // What a form's summary link names
+    if (!spec.control.id) spec.control.id = controlId;
   } else if (!spec.isTextOnly) {
     labelFor.id = controlId;
     if (spec.isLabelledBy) {
@@ -369,8 +447,19 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
 
   const flash = createFlash(spec.flashElem ?? spec.control);
 
+  if (isRequired) {
+    for (const part of messageFor) {
+      if (part.tagName === 'INPUT' || part.tagName === 'TEXTAREA') {
+        part.setAttribute('required', '');
+      } else if (REQUIRED_ROLES.has(part.getAttribute('role') ?? '')) {
+        part.setAttribute('aria-required', 'true');
+      }
+    }
+  }
+
+  const getError = () => ownError ?? appError ?? formError;
   const drawMessage = () => {
-    const error = ownError ?? appError;
+    const error = getError();
     const text = error ?? props.hint ?? '';
     message.textContent = text;
     setAttrIf(message, 'hidden', !text);
@@ -471,6 +560,22 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
   };
 
   fieldsetReads.set(root, () => applyDisabled(isOwnDisabled));
+  if (!spec.isMonitor) {
+    formFields.set(root, {
+      field: field as Field<unknown>,
+      label: props.label,
+      required: props.required,
+      validate: props.validate as FormFieldEntry['validate'],
+      setFormError: (text) => {
+        if (text === formError) return;
+        formError = text;
+        drawMessage();
+      },
+      getError,
+      isDisabled: () => isDisabled,
+      targetId: (spec.isGroup ? spec.control : labelFor).id,
+    });
+  }
   readState();
   drawMessage();
   draw();

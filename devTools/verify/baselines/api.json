@@ -3044,7 +3044,11 @@
       "FieldShell": "TypeAlias",
       "FieldSpec": "TypeAlias",
       "FormChild": "TypeAlias",
+      "FormFieldEntry": "TypeAlias",
+      "getFormField": "Function",
       "readFieldsetDisabled": "Function",
+      "revealFormChild": "Function",
+      "setFormRevealer": "Function",
       "setSchedulerAdopter": "Function"
     },
     "src/_engine/ui/forms/Fieldset.ts": {
@@ -3056,6 +3060,11 @@
       "createFolder": "Function",
       "Folder": "TypeAlias",
       "FolderProps": "TypeAlias"
+    },
+    "src/_engine/ui/forms/Form.ts": {
+      "createForm": "Function",
+      "Form": "TypeAlias",
+      "FormProps": "TypeAlias"
     },
     "src/_engine/ui/forms/Monitor.ts": {
       "buildMonitor": "Function",
@@ -4399,7 +4408,9 @@
       "FieldsetProps",
       "Folder",
       "FolderProps",
+      "Form",
       "FormChild",
+      "FormProps",
       "HudRootProps",
       "InputGlyph",
       "InputGlyphInput",
@@ -4519,6 +4530,7 @@
       "createEmptyState",
       "createFieldset",
       "createFolder",
+      "createForm",
       "createHudRoot",
       "createInputGlyph",
       "createKbd",

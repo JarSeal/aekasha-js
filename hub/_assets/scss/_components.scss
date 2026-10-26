@@ -236,6 +236,11 @@
   width: min(100%, 26rem);
 }
 
+// A form takes a dialog's width
+.hubComponentDemoGroup.hubDemoForms > .aekForm {
+  width: min(100%, 24rem);
+}
+
 // The parity box's custom item: a row of kit buttons (the day-night speed buttons)
 .hubDemoParityCustom {
   display: flex;

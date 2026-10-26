@@ -9,7 +9,13 @@ import {
   revealScheduledBindings,
   type BindingScheduler,
 } from './binding/BindingScheduler';
-import { addFormChildren, setSchedulerAdopter, type FieldDyn, type FormChild } from './Field';
+import {
+  addFormChildren,
+  setFormRevealer,
+  setSchedulerAdopter,
+  type FieldDyn,
+  type FormChild,
+} from './Field';
 import './Folder.scss';
 import '../styles/kit.scss';
 
@@ -211,6 +217,8 @@ export const createFolder = (props: FolderProps): Folder => {
 
   const onClick = () => applyExpanded(!isOpen);
   toggleButton.addEventListener('click', onClick);
+  // A form's summary link to a field in it opens it
+  setFormRevealer(root, () => applyExpanded(true));
 
   toggleButton.setAttribute('aria-expanded', String(isOpen));
   drawSettled();

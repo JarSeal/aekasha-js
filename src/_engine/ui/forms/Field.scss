@@ -40,8 +40,18 @@
     white-space: nowrap;
   }
 
+  // A required field's mark (`required`), its text said by the control's `required`
+  :where(.aekField__required) {
+    margin-inline-start: 0.25em;
+    color: var(--aek-danger);
+  }
+
   :where(.aekField[data-disabled] .aekField__label) {
     color: var(--aek-text-disabled);
+  }
+
+  :where(.aekField[data-disabled] .aekField__required) {
+    color: inherit;
   }
 
   // Small and quiet, at the 24 px target size (WCAG 2.5.8) in every density

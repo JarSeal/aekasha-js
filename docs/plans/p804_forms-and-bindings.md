@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-4 implemented
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
@@ -1161,9 +1161,17 @@ D7's slider, range slider, radio group, segmented control and select.
      unit tests look in the HUD root, the box's scripts in the box (a window's drop-down is under
      `#hudRoot` either way).
 
-### Phase 4: containers and the declarative grid
+### Phase 4: containers and the declarative grid — done
 
 D9 and D10, and D7's monitor.
+
+- **Verified 2026-10-26** (after section 5): `yarn test` (203 files, 1690 tests), ESLint, `tsc` and
+  `tsc -p hub`, `yarn hub:build`, `yarn verify:ui` (every box and script, 188 s; no new shot
+  unrecorded), `yarn verify:embed` (both profiles), `yarn sbp --profile all` (every budget within;
+  still no field in an app or embed build: the app's `_engine/ui` 5.4 kB initial as Phase 0's,
+  20.5 kB lazy (19.8), the `uiKit` profile's 4.3 kB, `uiKitEmbed.js` 17.5 kB), `yarn verify:scenes`
+  (104 passed), `yarn verify:baselines` (unchanged after section 5's `--update`; docs 100 %, no
+  debug code).
 
 1. Section 1, the monitor (text, multiline, intervals on the tick) and `readonly: true` on every
    field so far.
@@ -1319,6 +1327,44 @@ D9 and D10, and D7's monitor.
      **`custom`** gets the row's CMP. Their `hidden` / `disabled` functions and the custom
      refresh join the grid's scheduler, and leave it with their row (a shared one keeps nothing).
 5. Section 5, the form (validation, the error summary, submit and reset).
+   - **Done 2026-10-26.** `Form.test.ts` (13); the `form` box on both library pages (a new player's
+     form in two fieldsets: a required name with a length check, a required region, an age of 13
+     or more, the rules to accept; its submit a 400 ms promise; "Submit it empty" and "Fill it in"
+     states), four keyboard scripts, `COMPONENT_USES`; on `aekasha/ui`: `createForm`, `Form`,
+     `FormProps`.
+   - **`required` and `validate` are field props** (`FieldOptions`; D9 said "per field"), so a
+     grid item takes them too. The shell only stores them and marks `required` (an `aria-hidden`
+     `*` in the label; `required` on an `<input>` / `<textarea>` part, `aria-required` where the
+     part's role takes it: a radio group's, not a select's trigger button, which has the mark
+     alone). The checks are `Form.ts`', reading each field through a `FormFieldEntry` the shell
+     registers by element (`getFormField`, `@internal`), so a field outside a form carries no
+     validation code. `required` is `true` ("{label} is required") or the error's text; empty is
+     `''` or spaces, `false`, `null`, `undefined`, `NaN`.
+   - **A third error slot:** the form's errors go to the field's form error, under its own (a
+     typed expression's) and the app's `setError`. A field showing any of the three is invalid,
+     so an expression that doesn't parse blocks a submit, and an app's server answer
+     (`setError`, then `validate()`) shows in the summary.
+   - **The summary** (GOV.UK): first in the form, `role="group"` named by its title ('There is a
+     problem', `summaryTitle`), `tabindex="-1"`, a link per error whose text is the error and
+     whose `href` is the control's id (a group's control now gets the control id when it has
+     none). A link's click is prevented (no hash in an app's URL), opens the shut folders around
+     the field (`setFormRevealer` / `revealFormChild`, `@internal`: the folder registers its open),
+     focuses it and scrolls it into view. A shut folder's field is checked; a hidden or disabled
+     one isn't (as the browser skips a disabled control).
+   - **The blur check** (from the first submit or `validate()`, until a reset): a bubble
+     `focusout` on the form, after the field's own `blur` wrote its typed text, unless the focus
+     stayed in the field. It updates the field's link or removes it (hiding the summary with the
+     last), but never adds one: the summary is the last submit's. Not on each change (a checkbox
+     ticked keeps its error until the focus leaves), as D9 has it.
+   - **Not in D9:** `submitLabel` / `resetLabel` make the buttons (a primary `type="submit"`, a
+     `type="reset"`; the app may add its own); an `onSubmit` promise makes the form busy
+     (`aria-busy`, the submit button loading, a submit meanwhile ignored: p355's save); the body is
+     a `fieldset` with `role="none"`, so `disabled` / `setDisabled` disables every field and button
+     as the fieldset does; the form owns a scheduler (D4) or shares one, and **a property grid added
+     to a form keeps its own** (`adoptFormScheduler` skips what a grid at or under the added root
+     holds), so `grid.refresh()` still reads its fields.
+   - **Not done:** a form-level error (a failed save not tied to a field): a toast, or a field's
+     `setError` and `validate()`, until p355 or p808 needs one.
 
 ### Phase 5: value editors I
 

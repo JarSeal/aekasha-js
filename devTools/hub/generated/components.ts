@@ -49,6 +49,7 @@ export const COMPONENT_USES = [
   { slot: 'generated-components-folder', calls: ['createFolder'] },
   { slot: 'generated-components-fieldset', calls: ['createFieldset'] },
   { slot: 'generated-components-property-grid', calls: ['createPropertyGrid'] },
+  { slot: 'generated-components-form', calls: ['createForm'] },
   { slot: 'generated-components-tooltip', calls: ['createTooltip'] },
   { slot: 'generated-components-popover', calls: ['createPopover'] },
   { slot: 'generated-components-toaster', calls: ['createToaster', 'addToast'] },

@@ -152,6 +152,10 @@ const FOLDER_STATUS = '#hubDemoFolderStatus';
 const FIELDSET = (name: string) => `#hubDemoFieldset${name}`;
 /** A property grid demo's element by its name (`GRID_ID`) */
 const GRID = (name: string) => `#hubDemoGrid${name}`;
+/** A form demo's element by its name (`FORM_ID`): a field's control, the status line */
+const FORM = (name: string) => `#hubDemoForm${name}`;
+const FORM_SUMMARY = `${FORM('Form')} .aekForm__summary`;
+const FORM_LINKS = `${FORM_SUMMARY} .aekForm__summaryLink`;
 /** A monitor by its name (`MONITOR_ID`): the line's element, or the multiline text area */
 const MONITOR = (name: string) => `#hubDemoMonitor${name}`;
 const BADGE_INBOX = '#hubDemoBadgeInbox';
@@ -838,6 +842,64 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { focusInBox: GRID('Outside') },
           { press: 'Shift+Tab' },
           { expectFocus: GRID('Separator') },
+        ],
+      },
+    ],
+  },
+  form: {
+    keyboard: [
+      {
+        name: 'Enter in a field submits: the summary takes the focus, and its link the field’s',
+        steps: [
+          { focusInBox: FORM('Name') },
+          { press: 'Enter' },
+          { expectFocus: FORM_SUMMARY },
+          { expectCount: FORM_LINKS, count: 3 },
+          { expectText: `${FORM_SUMMARY} li:first-child`, text: 'Enter a name' },
+          { press: 'Tab' },
+          { expectFocus: `${FORM_SUMMARY} li:first-child a` },
+          { press: 'Enter' },
+          { expectFocus: FORM('Name') },
+        ],
+      },
+      {
+        name: 'after a submit, a fixed field’s error and link go when the focus leaves it',
+        steps: [
+          { focusInBox: FORM('Name') },
+          { press: 'Enter' },
+          { focusInBox: FORM('Name') },
+          { press: 'a' },
+          { press: 'd' },
+          { press: 'a' },
+          { press: 'Tab' },
+          { expectFocus: FORM('Region') },
+          {
+            expectAttr: `.aekField:has(> .aekField__control ${FORM('Name')})`,
+            name: 'data-invalid',
+            value: null,
+          },
+          { expectCount: FORM_LINKS, count: 2 },
+        ],
+      },
+      {
+        name: 'the reset button puts the defaults back and the summary away',
+        steps: [
+          { focusInBox: FORM('Name') },
+          { press: 'Enter' },
+          { focusInBox: `${FORM('Form')} button[type="reset"]` },
+          { press: 'Enter' },
+          { expectAttr: FORM_SUMMARY, name: 'hidden', value: '' },
+          { expectText: FORM('Status'), text: 'Reset: every field at its default' },
+        ],
+      },
+      {
+        name: 'filled in, Enter submits: the status says so after the submit’s promise',
+        steps: [
+          { click: 'Fill it in' },
+          { focusInBox: FORM('Name') },
+          { press: 'Enter' },
+          { expectText: FORM('Status'), text: 'Created Ada (Europe, 36)' },
+          { expectAttr: FORM_SUMMARY, name: 'hidden', value: '' },
         ],
       },
     ],
