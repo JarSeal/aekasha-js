@@ -93,6 +93,14 @@ export type {
   SegmentOption,
 } from './forms/RadioGroup';
 export type { DropDown, DropDownOption, DropDownProps, TDropDown } from './forms/DropDown';
+export { createSelectField } from './forms/SelectField';
+export type {
+  SelectField,
+  SelectFieldProps,
+  SelectOption,
+  SelectOptions,
+  SelectValue,
+} from './forms/SelectField';
 export {
   createHudRoot,
   getHUDRootCMP,

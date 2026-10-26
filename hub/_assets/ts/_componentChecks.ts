@@ -127,6 +127,15 @@ const RANGE_STATUS = '#hubDemoRangeStatus';
 const RADIO = (name: string, index: number) => `#hubDemoRadio${name}-${index}`;
 const RADIO_CHECKED = (name: string, index: number) => `${RADIO(name, index)}:checked`;
 const RADIO_STATUS = '#hubDemoRadioStatus';
+/** A select field's trigger by its name (`_components.ts`' `SELECT_ID`), its shown value, and the
+ * box's status line */
+const SELECT = (name: string) => `#hubDemoSelect${name}`;
+const SELECT_VALUE = (name: string) => `${SELECT(name)} .aekDropDownLabel`;
+const SELECT_STATUS = '#hubDemoSelectStatus';
+/** The select box's open list and filter: in the field (the Popover API's top layer leaves it in
+ * its place), not in the HUD root as a window's drop-down is */
+const SELECT_LIST = '[data-hub-demo="selectField"] .aekDropDownList';
+const SELECT_SEARCH = '[data-hub-demo="selectField"] .aekDropDownSearch';
 /** A text field's input by its label (`_components.ts`' `TEXT_ID`), and the box's lines */
 const TEXT = (name: string) => `#hubDemoText${name}`;
 const TEXT_STATUS = '#hubDemoTextStatus';
@@ -568,6 +577,53 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { press: 'ArrowLeft' },
           { expectFocus: RADIO('Simulation', 2) },
           { expectText: RADIO_STATUS, text: 'Simulation: stop' },
+        ],
+      },
+    ],
+  },
+  selectField: {
+    keyboard: [
+      {
+        name: 'Enter opens the list on the value; the arrows and Enter pick, the focus comes back',
+        steps: [
+          { focusInBox: SELECT('ShadowMap') },
+          { press: 'Enter' },
+          { expectCount: SELECT_LIST, count: 1 },
+          { expectActiveOption: '1024' },
+          { press: 'ArrowDown' },
+          { expectActiveOption: '2048' },
+          { press: 'Enter' },
+          { expectCount: SELECT_LIST, count: 0 },
+          { expectText: SELECT_STATUS, text: 'Shadow map: 2048' },
+          { expectText: SELECT_VALUE('ShadowMap'), text: '2048' },
+          { expectFocus: SELECT('ShadowMap') },
+        ],
+      },
+      {
+        name: 'Escape closes the list without a change',
+        steps: [
+          { focusInBox: SELECT('ToneMapping') },
+          { press: 'Space' },
+          { expectCount: SELECT_LIST, count: 1 },
+          { press: 'ArrowUp' },
+          { press: 'Escape' },
+          { expectCount: SELECT_LIST, count: 0 },
+          { expectText: SELECT_VALUE('ToneMapping'), text: 'ACES Filmic' },
+          { expectFocus: SELECT('ToneMapping') },
+        ],
+      },
+      {
+        name: 'searchable: typing filters the list, Enter picks the match',
+        steps: [
+          { focusInBox: SELECT('Spawn') },
+          { press: 'Enter' },
+          { expectFocus: SELECT_SEARCH },
+          { press: 'r' },
+          { press: 'i' },
+          { expectActiveOption: 'Ridge' },
+          { press: 'Enter' },
+          { expectText: SELECT_STATUS, text: 'Spawn point: ridge' },
+          { expectFocus: SELECT('Spawn') },
         ],
       },
     ],

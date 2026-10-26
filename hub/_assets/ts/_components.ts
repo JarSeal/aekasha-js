@@ -39,6 +39,7 @@ import {
   createRadioGroup,
   createRangeSlider,
   createSegmentedControl,
+  createSelectField,
   createSkeleton,
   createSlider,
   createSpinner,
@@ -71,6 +72,7 @@ import type {
   RadioGroupProps,
   RangeSliderProps,
   SegmentedControlProps,
+  SelectValue,
   SliderProps,
   TextFieldProps,
   OpenDraggableWindowProps,
@@ -809,6 +811,115 @@ const initRadioGroupDemo: Demo = (box) => {
     'Disabled',
     radios('Mode', 'difficulty', { disabled: true, orientation: 'horizontal' }),
     segments('Quality', 'quality', { options: options('Low', 'High'), disabled: true })
+  );
+  root.append(status);
+};
+
+// --- Select field ---
+
+const SELECT_ID = (name: string) => `${ID_PREFIX}Select${name}`;
+const SPAWN_POINTS = ['Harbour', 'Lighthouse', 'Mill', 'Quarry', 'Ridge', 'Square', 'Tower'];
+
+/** In the page: select fields in Tweakpane's two option forms, a searchable one over a getter's
+ * list that a kit button grows, the placeholder, an error and disabled, bound to one object; each
+ * pick in the box's status line */
+const initSelectFieldDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = SELECT_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const settings = {
+    shadowMap: 1024,
+    toneMapping: 'aces',
+    spawn: 'mill',
+    material: 'missing',
+    preset: 'medium',
+  };
+  const report = (label: string) => (value: SelectValue) => {
+    status.textContent = `${label}: ${value}`;
+  };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+  const spawnPoints = [...SPAWN_POINTS];
+
+  row(
+    'Tweakpane’s object form: number values',
+    createSelectField({
+      id: SELECT_ID('ShadowMap'),
+      label: 'Shadow map',
+      target: settings,
+      key: 'shadowMap',
+      options: { '512': 512, '1024': 1024, '2048': 2048, '4096': 4096 },
+      onChange: report('Shadow map'),
+    }).cmp.elem
+  );
+  row(
+    'The array form, with a hint',
+    createSelectField({
+      id: SELECT_ID('ToneMapping'),
+      label: 'Tone mapping',
+      target: settings,
+      key: 'toneMapping',
+      options: [
+        { text: 'None', value: 'none' },
+        { text: 'Linear', value: 'linear' },
+        { text: 'ACES Filmic', value: 'aces' },
+        { text: 'AgX', value: 'agx' },
+      ],
+      hint: 'How the HDR image is mapped to the screen',
+      onChange: report('Tone mapping'),
+    }).cmp.elem
+  );
+  const spawn = createSelectField({
+    id: SELECT_ID('Spawn'),
+    label: 'Spawn point',
+    target: settings,
+    key: 'spawn',
+    options: () => spawnPoints.map((name) => ({ text: name, value: name.toLowerCase() })),
+    searchable: true,
+    searchPlaceholder: 'Filter places',
+    onChange: report('Spawn point'),
+  });
+  const add = createButton({
+    id: SELECT_ID('Add'),
+    label: 'Add a place, then refresh()',
+    onClick: () => {
+      spawnPoints.push(`Camp ${spawnPoints.length - SPAWN_POINTS.length + 1}`);
+      spawn.refresh();
+    },
+  });
+  row('Searchable, its options a getter’s', spawn.cmp.elem, add.cmp.elem);
+  row(
+    'A value no option has: the placeholder',
+    createSelectField({
+      label: 'Material',
+      target: settings,
+      key: 'material',
+      options: { Metal: 'metal', Wood: 'wood' },
+      placeholder: 'Pick a material',
+      onChange: report('Material'),
+    }).cmp.elem
+  );
+  const invalid = createSelectField({
+    label: 'Preset',
+    target: settings,
+    key: 'preset',
+    options: { Low: 'low', Medium: 'medium', High: 'high' },
+  });
+  invalid.setError('Not supported on this device');
+  row(
+    'An error, and disabled',
+    invalid.cmp.elem,
+    createSelectField({
+      label: 'Locked',
+      value: 'medium',
+      options: { Low: 'low', Medium: 'medium' },
+      disabled: true,
+    }).cmp.elem
   );
   root.append(status);
 };
@@ -1827,6 +1938,7 @@ const DEMOS: Record<string, Demo> = {
   slider: initSliderDemo,
   rangeSlider: initRangeSliderDemo,
   radioGroup: initRadioGroupDemo,
+  selectField: initSelectFieldDemo,
   textField: initTextFieldDemo,
   checkbox: initCheckboxDemo,
   tooltip: initTooltipDemo,

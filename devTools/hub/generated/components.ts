@@ -35,6 +35,7 @@ export const COMPONENT_USES = [
   },
   { slot: 'generated-components-dialog', calls: ['openDialog'] },
   { slot: 'generated-components-drop-down', calls: ['createDropDown'] },
+  { slot: 'generated-components-select-field', calls: ['createSelectField'] },
   { slot: 'generated-components-number-field', calls: ['createNumberField'] },
   { slot: 'generated-components-slider', calls: ['createSlider'] },
   { slot: 'generated-components-range-slider', calls: ['createRangeSlider'] },

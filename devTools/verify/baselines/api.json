@@ -3074,6 +3074,14 @@
       "RangeSliderProps": "TypeAlias",
       "RangeValue": "TypeAlias"
     },
+    "src/_engine/ui/forms/SelectField.ts": {
+      "createSelectField": "Function",
+      "SelectField": "TypeAlias",
+      "SelectFieldProps": "TypeAlias",
+      "SelectOption": "TypeAlias",
+      "SelectOptions": "TypeAlias",
+      "SelectValue": "TypeAlias"
+    },
     "src/_engine/ui/forms/Slider.ts": {
       "createSlider": "Function",
       "Slider": "TypeAlias",
@@ -4379,6 +4387,11 @@
       "SegmentOption",
       "SegmentedControl",
       "SegmentedControlProps",
+      "SelectField",
+      "SelectFieldProps",
+      "SelectOption",
+      "SelectOptions",
+      "SelectValue",
       "Skeleton",
       "SkeletonProps",
       "Slider",
@@ -4450,6 +4463,7 @@
       "createRadioGroup",
       "createRangeSlider",
       "createSegmentedControl",
+      "createSelectField",
       "createSkeleton",
       "createSlider",
       "createSpinner",

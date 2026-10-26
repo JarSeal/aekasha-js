@@ -1,0 +1,28 @@
+// The select field's own styles (SelectField.ts), on the design tokens and layered (p803 D5): the
+// drop-down fills the field's control row (its look is DropDown.scss'), and a change from outside
+// flashes its trigger as a typed field's box flashes (Field.scss).
+@layer aek.components {
+  :where(.aekField[data-kind='select'] .aekDropDown) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  :where(.aekField[data-kind='select'] .aekDropDownTrigger) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  :where(.aekField[data-kind='select'] .aekDropDownTrigger[data-flash]) {
+    background-color: var(--aek-field-flash-color, var(--aek-accent-soft));
+    transition-duration: 0s;
+  }
+
+  // The placeholder isn't a value
+  :where(.aekField[data-kind='select'] .aekDropDownTrigger[data-placeholder]) {
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekField[data-invalid] .aekDropDownTrigger) {
+    border-color: var(--aek-danger);
+  }
+}

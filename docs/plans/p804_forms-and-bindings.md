@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
@@ -1004,9 +1004,20 @@ API is tried before the rest depend on it.
      event, per user input, not per frame. **`document.visibilityState`** read per frame:
      negligible.
 
-### Phase 3: choices and ranges
+### Phase 3: choices and ranges — done
 
 D7's slider, range slider, radio group, segmented control and select.
+
+- **Verified 2026-10-26** (after section 4): `yarn test` (197 files, 1630 tests), ESLint, `tsc` and
+  `tsc -p hub`, `yarn verify:ui` (every box and script, 157 s), `yarn verify:embed` (both
+  profiles), `yarn sbp --profile all` (every budget within; no field in an app or embed build yet,
+  the `_engine/ui` groups as Phase 0's), `yarn verify:scenes` (104 passed), `yarn verify:baselines
+  --update` (the new names; docs 100 %, no debug code).
+- **New internal modules** (not in D2's table): `NumberSteps.ts`, `NumberInput.ts` (the spin button
+  any number part writes through a `NumberTarget`), `SliderTrack.ts`; the shell's `FieldSpec` grew
+  `isLabelledBy`, `messageFor`, `groupRole` and `onRefresh`, and a disabled group is
+  `aria-disabled` itself. Phase 4's monitor, grid and declarative items build on these; Phase 5's
+  vector, rotation and quaternion axes are `NumberInput`s on an object binding's keys.
 
 1. Section 1, the slider (the pointer-only track, `showInput: false`, ticks, the bubble).
    - **Done 2026-10-26.** `Slider.test.ts` (20); the `slider` box on both library pages (a
@@ -1124,6 +1135,30 @@ D7's slider, range slider, radio group, segmented control and select.
    - The `@example` check found `toolbar` in the segmented control's example resolving to
      `window.toolbar`: examples name a `settingsPanel`.
 4. Section 4, the select field on the drop-down (Tweakpane's two `options` forms).
+   - **Done 2026-10-26.** `SelectField.test.ts` (8); the `selectField` box on both library pages
+     (the object form with number values, the array form with a hint, a searchable list from a
+     getter that a kit button grows, the placeholder, an error, disabled), three keyboard scripts,
+     `COMPONENT_USES`; on `aekasha/ui`: `createSelectField`, `SelectField`, `SelectFieldProps`,
+     `SelectOption`, `SelectOptions`, `SelectValue`.
+   - **`createDropDown` unchanged** (D7): the options go to it by index, so a value may be a
+     number or a boolean (`SelectValue` is the radio's), and its `value` getter finds the bound
+     value's index. `options` takes Tweakpane's `[{ text, value }]` and `{ [text]: value }` and the
+     kit's `{ label, value }` (as the radio's, so a radio and a select take the same list), or a
+     getter of any of them, read again on each open and refresh.
+   - **`FieldSpec.onRefresh`** (the shell, not in D5): a getter's list can change while the value
+     doesn't, which a refresh never drew; it runs with the `hidden` / `disabled` functions on every
+     refresh.
+   - **The trigger's name** is the label and the value it shows (`aria-labelledby`: "Shadow map,
+     1024"), the shell's `isLabelledBy` (a click on the label focuses it); the drop-down's `title`
+     is the label, for the open list's name, and the trigger's `title` attribute is removed (no
+     native tooltip). While no option has the value it's `data-placeholder`, its text muted (not
+     in D7: the placeholder read as a picked value in the first shots).
+   - **The drop-down's root isn't in the field's CMP tree** (the shell appends the control's
+     element), so the field's `onRemove` removes it, which closes an open list.
+   - **Where an open list is:** with the Popover API it stays in the drop-down's DOM, in the field
+     (the browser's top layer); without it (linkedom) `showAnchored` moves it to the HUD root. The
+     unit tests look in the HUD root, the box's scripts in the box (a window's drop-down is under
+     `#hudRoot` either way).
 
 ### Phase 4: containers and the declarative grid
 

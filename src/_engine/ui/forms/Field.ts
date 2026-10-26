@@ -135,6 +135,8 @@ export type FieldSpec<T> = {
   draw: (value: T) => void;
   /** Sets the control's own disabled state */
   applyDisabled: (disabled: boolean) => void;
+  /** Runs on every refresh, the value changed or not (a getter's options read again) */
+  onRefresh?: () => void;
   /** Never flashes (a monitor) */
   isMonitor?: boolean;
   /** Runs when the field is removed: the control's own listeners, timers, overlay entries */
@@ -325,6 +327,7 @@ export const createField = <T>(props: FieldProps<T>, spec: FieldSpec<T>): FieldS
   const readState = () => {
     applyHidden(resolveDyn(hiddenProp, false));
     applyDisabled(resolveDyn(disabledProp, false));
+    spec.onRefresh?.();
   };
 
   const read = (fromRefresh: boolean) => {
