@@ -36,6 +36,8 @@ export const COMPONENT_USES = [
   { slot: 'generated-components-dialog', calls: ['openDialog'] },
   { slot: 'generated-components-drop-down', calls: ['createDropDown'] },
   { slot: 'generated-components-number-field', calls: ['createNumberField'] },
+  { slot: 'generated-components-text-field', calls: ['createTextField'] },
+  { slot: 'generated-components-checkbox', calls: ['createCheckbox', 'createSwitch'] },
   { slot: 'generated-components-tooltip', calls: ['createTooltip'] },
   { slot: 'generated-components-popover', calls: ['createPopover'] },
   { slot: 'generated-components-toaster', calls: ['createToaster', 'addToast'] },

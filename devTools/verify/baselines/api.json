@@ -3015,6 +3015,14 @@
       "roundToDecimals": "Function",
       "ValueTextOptions": "TypeAlias"
     },
+    "src/_engine/ui/forms/Checkbox.ts": {
+      "Checkbox": "TypeAlias",
+      "CheckboxProps": "TypeAlias",
+      "createCheckbox": "Function",
+      "createSwitch": "Function",
+      "Switch": "TypeAlias",
+      "SwitchProps": "TypeAlias"
+    },
     "src/_engine/ui/forms/DropDown.ts": {
       "createDropDown": "Function",
       "DropDown": "TypeAlias",
@@ -3035,6 +3043,15 @@
       "createNumberField": "Function",
       "NumberField": "TypeAlias",
       "NumberFieldProps": "TypeAlias"
+    },
+    "src/_engine/ui/forms/TextField.ts": {
+      "createTextField": "Function",
+      "TextField": "TypeAlias",
+      "TextFieldProps": "TypeAlias"
+    },
+    "src/_engine/ui/forms/TypedText.ts": {
+      "createTypedText": "Function",
+      "TypedTextProps": "TypeAlias"
     },
     "src/_engine/ui/overlays/Anchor.ts": {
       "AnchorAlign": "TypeAlias",
@@ -4258,6 +4275,8 @@
       "CMPProps",
       "CMPSettings",
       "CMPStyle",
+      "Checkbox",
+      "CheckboxProps",
       "DEFAULT_TOASTER_SETTINGS",
       "DialogProps",
       "Divider",
@@ -4315,6 +4334,8 @@
       "SplitButtonProps",
       "SvgIconKey",
       "SvgIconSize",
+      "Switch",
+      "SwitchProps",
       "TAnimChain",
       "TAnimState",
       "TAttr",
@@ -4329,6 +4350,8 @@
       "TStyle",
       "Tag",
       "TagProps",
+      "TextField",
+      "TextFieldProps",
       "ToastDirection",
       "ToastProps",
       "ToastType",
@@ -4355,6 +4378,7 @@
       "createBindingScheduler",
       "createButton",
       "createButtonGroup",
+      "createCheckbox",
       "createDivider",
       "createDropDown",
       "createEmptyState",
@@ -4370,7 +4394,9 @@
       "createSkeleton",
       "createSpinner",
       "createSplitButton",
+      "createSwitch",
       "createTag",
+      "createTextField",
       "createToaster",
       "createTooltip",
       "databaseXIcon",

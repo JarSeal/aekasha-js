@@ -166,7 +166,10 @@ const pointerCaptures = new Map<number, Element>();
  * grown as the fields need them: an input's or a textarea's `value` kept apart from its
  * `defaultValue` (linkedom writes the attribute on every set), the selection API
  * (`selectionStart`, `selectionEnd`, `setSelectionRange`, `select()`; a new value puts the caret
- * at its end) and pointer capture (`setPointerCapture`, `releasePointerCapture`,
+ * at its end), a checkbox's `checked` kept apart from `defaultChecked` (the attribute is the default,
+ * the property the state), its `indeterminate`, and its `click()` (not disabled) flipping it, a
+ * cancelled click putting it back, then `input` and `change`; and pointer capture
+ * (`setPointerCapture`, `releasePointerCapture`,
  * `hasPointerCapture`; `lostpointercapture` on a release, `dispatchPointer` routes a captured
  * pointer's events and releases it on `pointerup` / `pointercancel`).
  */
@@ -228,6 +231,7 @@ const shimFormControls = (window: Window & typeof globalThis) => {
       },
     });
   }
+  shimCheckboxes(window);
   Object.assign(window.HTMLElement.prototype, {
     setPointerCapture(this: Element, pointerId: number) {
       const previous = pointerCaptures.get(pointerId);
@@ -242,6 +246,64 @@ const shimFormControls = (window: Window & typeof globalThis) => {
     },
     hasPointerCapture(this: Element, pointerId: number) {
       return pointerCaptures.get(pointerId) === this;
+    },
+  });
+};
+
+const shimCheckboxes = (window: Window & typeof globalThis) => {
+  const checkedStates = new WeakMap<HTMLInputElement, boolean>();
+  const indeterminates = new WeakMap<HTMLInputElement, boolean>();
+  const proto = window.HTMLInputElement.prototype;
+  const elementClick = window.HTMLElement.prototype.click;
+  Object.defineProperties(proto, {
+    checked: {
+      configurable: true,
+      get(this: HTMLInputElement) {
+        return checkedStates.get(this) ?? this.hasAttribute('checked');
+      },
+      set(this: HTMLInputElement, on: unknown) {
+        checkedStates.set(this, Boolean(on));
+      },
+    },
+    defaultChecked: {
+      configurable: true,
+      get(this: HTMLInputElement) {
+        return this.hasAttribute('checked');
+      },
+      set(this: HTMLInputElement, on: unknown) {
+        this.toggleAttribute('checked', Boolean(on));
+      },
+    },
+    indeterminate: {
+      configurable: true,
+      get(this: HTMLInputElement) {
+        return indeterminates.get(this) ?? false;
+      },
+      set(this: HTMLInputElement, on: unknown) {
+        indeterminates.set(this, Boolean(on));
+      },
+    },
+  });
+  Object.assign(proto, {
+    click(this: HTMLInputElement) {
+      if (this.getAttribute('type') !== 'checkbox') {
+        elementClick.call(this);
+        return;
+      }
+      if (this.hasAttribute('disabled')) return;
+      const wasChecked = this.checked;
+      const wasIndeterminate = this.indeterminate;
+      // The browser's order: flipped, the click (cancelable), then input and change
+      this.checked = !wasChecked;
+      this.indeterminate = false;
+      const click = new window.Event('click', { bubbles: true, cancelable: true });
+      if (!this.dispatchEvent(click)) {
+        this.checked = wasChecked;
+        this.indeterminate = wasIndeterminate;
+        return;
+      }
+      this.dispatchEvent(new window.Event('input', { bubbles: true }));
+      this.dispatchEvent(new window.Event('change', { bubbles: true }));
     },
   });
 };

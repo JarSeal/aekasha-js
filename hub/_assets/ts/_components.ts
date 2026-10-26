@@ -23,6 +23,7 @@ import {
   createBindingScheduler,
   createButton,
   createButtonGroup,
+  createCheckbox,
   createDivider,
   createDropDown,
   createEmptyState,
@@ -38,7 +39,9 @@ import {
   createSkeleton,
   createSpinner,
   createSplitButton,
+  createSwitch,
   createTag,
+  createTextField,
   createToaster,
   createTooltip,
   fitAllDraggableWindowsToScreen,
@@ -61,6 +64,7 @@ import type {
   DropDownProps,
   InputGlyphInput,
   NumberFieldProps,
+  TextFieldProps,
   OpenDraggableWindowProps,
   ProgressBarProps,
   CMPHandle,
@@ -481,6 +485,201 @@ const initNumberFieldDemo: Demo = (box) => {
     },
   });
   row('A change from outside, then the scheduler’s refresh()', outside.cmp.elem);
+  root.append(status);
+};
+
+// --- Text field ---
+
+const TEXT_ID = (name: string) => `${ID_PREFIX}Text${name}`;
+const SEARCH_WORDS = ['Asteroid', 'Comet', 'Galaxy', 'Meteor', 'Moon', 'Nebula', 'Planet', 'Star'];
+
+/** In the page: the fields bound to one object, each write in the box's status line; the search
+ * field filters a list of words as you type */
+const initTextFieldDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = TEXT_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const profile = {
+    name: 'Ada',
+    title: 'Pilot',
+    notes: 'Line one\nLine two',
+    query: '',
+    code: 'x',
+  };
+  const report = (label: string) => (value: string, change: { last: boolean }) => {
+    status.textContent = `${label}: "${value.replace(/\n/g, ' / ')}" (${change.last ? 'last' : 'step'})`;
+  };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+    return group;
+  };
+  const make = (name: string, key: keyof typeof profile, props: Partial<TextFieldProps> = {}) =>
+    createTextField({
+      id: TEXT_ID(name),
+      label: name,
+      target: profile,
+      key,
+      onChange: report(name),
+      ...props,
+    } as TextFieldProps).cmp.elem;
+
+  row(
+    'Written on Enter or a blur; a hint and a maximum length',
+    make('Name', 'name', {
+      hint: 'Up to 24 characters',
+      maxLength: 24,
+    })
+  );
+  row('Live: each keystroke writes', make('Title', 'title', { live: true }));
+  row(
+    'Multiline (4 rows): Ctrl/⌘+Enter or a blur writes',
+    make('Notes', 'notes', {
+      multiline: true,
+      rows: 4,
+    })
+  );
+  const results = document.createElement('p');
+  results.id = TEXT_ID('Results');
+  // Under the field, across the row
+  results.className = 'hubDemoLine hubDemoFieldNote';
+  const showResults = (query: string) => {
+    const matches = SEARCH_WORDS.filter((word) => word.toLowerCase().includes(query.toLowerCase()));
+    results.textContent = `${matches.length} of ${SEARCH_WORDS.length}: ${matches.join(', ') || 'none'}`;
+  };
+  showResults('');
+  row(
+    'Search: the list filters 250 ms after typing, at once on Enter or a clear',
+    make('Search', 'query', {
+      type: 'search',
+      labelHidden: true,
+      placeholder: 'Filter the words',
+      onSearch: showResults,
+    }),
+    results
+  );
+  const code = createTextField({
+    id: TEXT_ID('Code'),
+    label: 'Code',
+    target: profile,
+    key: 'code',
+    onChange: report('Code'),
+  });
+  code.setError('Codes are 6 characters');
+  const disabled = createTextField({
+    id: TEXT_ID('Disabled'),
+    label: 'Disabled',
+    value: 'Read me',
+    disabled: true,
+  });
+  row('An error, and disabled', code.cmp.elem, disabled.cmp.elem);
+  root.append(status);
+};
+
+// --- Checkbox and switch ---
+
+const TOGGLE_ID = (name: string) => `${ID_PREFIX}Toggle${name}`;
+
+/** In the page: checkboxes (a mixed one over three), switches and disabled ones, each write in
+ * the box's status line */
+const initCheckboxDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = TOGGLE_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const report = (label: string) => (on: boolean) => {
+    status.textContent = `${label}: ${on ? 'on' : 'off'}`;
+  };
+  const settings = { shadows: true, fog: false, vsync: true, music: false };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+
+  row(
+    'Checkboxes',
+    createCheckbox({
+      id: TOGGLE_ID('Shadows'),
+      label: 'Shadows',
+      target: settings,
+      key: 'shadows',
+      onChange: report('Shadows'),
+    }).cmp.elem,
+    createCheckbox({
+      id: TOGGLE_ID('Fog'),
+      label: 'Fog',
+      target: settings,
+      key: 'fog',
+      onChange: report('Fog'),
+    }).cmp.elem
+  );
+
+  // A mixed checkbox over three: it shows mixed while some are on, and sets them all
+  const layers = { terrain: true, water: false, clouds: true };
+  const names = Object.keys(layers) as (keyof typeof layers)[];
+  const count = () => names.filter((name) => layers[name]).length;
+  const children = names.map((name) =>
+    createCheckbox({
+      id: TOGGLE_ID(name),
+      label: name[0].toUpperCase() + name.slice(1),
+      target: layers,
+      key: name,
+      onChange: (on) => {
+        report(name)(on);
+        syncAll();
+      },
+    })
+  );
+  const all = createCheckbox({
+    id: TOGGLE_ID('All'),
+    label: 'All layers',
+    get: () => count() === names.length,
+    set: (on) => {
+      for (const name of names) layers[name] = on;
+      for (const child of children) child.refresh();
+    },
+    onChange: report('All layers'),
+  });
+  const syncAll = () => {
+    all.refresh();
+    all.setIndeterminate(count() > 0 && count() < names.length);
+  };
+  syncAll();
+  const nested = document.createElement('div');
+  nested.className = 'hubDemoNestedToggles';
+  nested.append(...children.map((child) => child.cmp.elem));
+  row('Mixed: “All layers” over three', all.cmp.elem, nested);
+
+  row(
+    'Switches: one with its state as text',
+    createSwitch({
+      id: TOGGLE_ID('Vsync'),
+      label: 'V-sync',
+      target: settings,
+      key: 'vsync',
+      onText: 'On',
+      offText: 'Off',
+      onChange: report('V-sync'),
+    }).cmp.elem,
+    createSwitch({
+      id: TOGGLE_ID('Music'),
+      label: 'Music',
+      target: settings,
+      key: 'music',
+      onChange: report('Music'),
+    }).cmp.elem
+  );
+  row(
+    'Disabled',
+    createCheckbox({ label: 'Checked, disabled', value: true, disabled: true }).cmp.elem,
+    createCheckbox({ label: 'Off, disabled', value: false, disabled: true }).cmp.elem,
+    createSwitch({ label: 'Switch, disabled', value: true, disabled: true }).cmp.elem
+  );
   root.append(status);
 };
 
@@ -1299,6 +1498,8 @@ const DEMOS: Record<string, Demo> = {
   dialog: initDialogDemo,
   dropDown: initDropDownDemo,
   numberField: initNumberFieldDemo,
+  textField: initTextFieldDemo,
+  checkbox: initCheckboxDemo,
   tooltip: initTooltipDemo,
   popover: initPopoverDemo,
   toaster: initToasterDemo,

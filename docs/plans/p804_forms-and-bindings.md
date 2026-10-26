@@ -925,6 +925,39 @@ API is tried before the rest depend on it.
    - Not in a keyboard script (no step drives them): the scrub, the clipboard, `live`; the unit
      tests check them.
 3. Section 3, the text field (text, multiline, search), the checkbox and the switch.
+   - **Done 2026-10-26.** `TextField.test.ts` and `Checkbox.test.ts`; the `textField` and
+     `checkbox` boxes on both library pages (the checkbox box shows the switch too, as one module
+     makes both), three keyboard scripts each, `COMPONENT_USES`; on `aekasha/ui`:
+     `createTextField`, `createCheckbox`, `createSwitch` and their props and handle types.
+   - **`forms/TypedText.ts`** (`@internal`, not in D2's table): the typed text the number field
+     and the text field share (dirty text, the overlay stack entry for Escape, the commit, the
+     revert with `live`'s undo, the blur's settle). The number field moved onto it unchanged (its
+     26 tests as they were).
+   - **The box styles moved to `Field.scss`** (`.aekField__box`, `.aekField__input`), which both
+     typed fields carry next to their own class; `NumberField.scss` keeps the tabular figures,
+     the unit and the scrub cursor.
+   - **The search field is `type="text"` with `role="searchbox"`**, not `type="search"`:
+     browsers draw their own clear button and clear on Escape differently, and the kit has both.
+     Its clear button writes `''` and calls `onSearch` at once, and moves the focus to the input
+     when it had it (it hides with the text). `onSearch` is debounced `searchDelayMs` (250 ms,
+     not in D7), at once on Enter.
+   - **Multiline:** Enter is a new line; Ctrl/⌘+Enter (prevented) or a blur writes (D7 named
+     only Enter and the blur).
+   - **The checkbox** sits before its label and **the switch** after it, both on the shell's
+     grid areas (`Checkbox.scss`); a 24 px target with the box or track drawn in its `::before`
+     and the mark or thumb in its `::after`. `setIndeterminate` / `isIndeterminate` extend the
+     shell's handle object, so `onChange`'s `field` is the checkbox's own handle.
+   - **KitDom:** `checked` apart from `defaultChecked`, `indeterminate`, and a checkbox's
+     `click()` (flipped, the cancelable click, then `input` and `change`). The radio group's
+     unchecking comes with Phase 3. **`verify:ui` got an `expectValue` step** (an input's
+     `value`: typed text), for the text field's scripts.
+   - **Found by the screenshots, not the checks:** the first `Checkbox.scss` put its
+     pseudo-elements inside `:where()` (`:where(.aekCheckbox::before)`), which makes the whole
+     rule invalid: the checkboxes and switches drew nothing, yet axe and every keyboard script
+     passed (the inputs were there, focusable, with their outline). Fixed
+     (`:where(.aekCheckbox)::before`), as was `Field.scss`' placeholder rule; the kit's
+     `CLAUDE.md` (Writing a component, Styles) names the trap. A new box's first shots are
+     looked at before `--update` records them.
 4. Section 4, the perf-auditor's first pass over the scheduler and the scrub with a 200-number
    demo; its findings fixed or written here.
 

@@ -71,7 +71,11 @@ export type { BindingChange, BindingSource } from './forms/binding/Binding';
 export type { NumberRules } from './forms/binding/ValueText';
 export { createDropDown } from './forms/DropDown';
 export type { Field, FieldChange, FieldDyn, FieldProps } from './forms/Field';
+export { createCheckbox, createSwitch } from './forms/Checkbox';
+export type { Checkbox, CheckboxProps, Switch, SwitchProps } from './forms/Checkbox';
 export { createNumberField } from './forms/NumberField';
+export { createTextField } from './forms/TextField';
+export type { TextField, TextFieldProps } from './forms/TextField';
 export type { NumberField, NumberFieldProps } from './forms/NumberField';
 export type { DropDown, DropDownOption, DropDownProps, TDropDown } from './forms/DropDown';
 export {

@@ -1,0 +1,206 @@
+// The checkbox's and the switch's styles (Checkbox.ts), on the design tokens and layered (p803
+// D5). Each is a native checkbox with `appearance: none`, a 24 px target (WCAG 2.5.8) in both
+// densities, its look drawn inside it: the checkbox's box is its ::before and its mark the
+// ::after, the switch's track its ::before and its thumb the ::after. Off, a control (`surface`,
+// `border-control`); on, the `accent` with `on-accent` marks. The kit's focus ring is on the input.
+// A checkbox sits before its label, a switch after it.
+@layer aek.components {
+  :where(.aekField[data-kind='checkbox']) {
+    display: grid;
+    grid-template-areas:
+      'control head'
+      '. message';
+    grid-template-columns: auto 1fr;
+    column-gap: var(--aek-space-2);
+    align-items: center;
+  }
+
+  :where(.aekField[data-kind='switch']) {
+    display: grid;
+    grid-template-areas:
+      'head control'
+      'message message';
+    grid-template-columns: 1fr auto;
+    column-gap: var(--aek-space-3);
+    align-items: center;
+  }
+
+  :where(.aekField[data-kind='checkbox'], .aekField[data-kind='switch']) > :where(.aekField__head) {
+    grid-area: head;
+  }
+
+  :where(.aekField[data-kind='checkbox'], .aekField[data-kind='switch'])
+    > :where(.aekField__control) {
+    grid-area: control;
+  }
+
+  :where(.aekField[data-kind='checkbox'], .aekField[data-kind='switch'])
+    > :where(.aekField__message) {
+    grid-area: message;
+  }
+
+  // A toggle's label is its text, not a column's muted name
+  :where(.aekField[data-kind='checkbox'], .aekField[data-kind='switch']) :where(.aekField__label) {
+    color: var(--aek-text);
+    cursor: pointer;
+  }
+
+  :where(.aekField[data-kind='checkbox'][data-disabled], .aekField[data-kind='switch'][data-disabled])
+    :where(.aekField__label) {
+    color: var(--aek-text-disabled);
+    cursor: default;
+  }
+
+  :where(.aekCheckbox, .aekSwitch) {
+    position: relative;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--aek-radius-sm);
+    background: transparent;
+    cursor: pointer;
+    appearance: none;
+  }
+
+  :where(.aekCheckbox:disabled, .aekSwitch:disabled) {
+    cursor: default;
+  }
+
+  // A pseudo-element can't be inside :where(): it goes after it
+  :where(.aekCheckbox, .aekSwitch)::before,
+  :where(.aekCheckbox, .aekSwitch)::after {
+    content: '';
+    position: absolute;
+    box-sizing: border-box;
+  }
+
+  // --- The checkbox ---
+
+  :where(.aekCheckbox) {
+    width: 24px;
+    height: 24px;
+  }
+
+  :where(.aekCheckbox)::before {
+    inset: calc((24px - var(--aek-checkbox-size, 16px)) / 2);
+    border: 1px solid var(--aek-field-control-border-color, var(--aek-border-control));
+    border-radius: var(--aek-radius-sm);
+    background-color: var(--aek-field-control-bg, var(--aek-surface));
+    transition:
+      background-color var(--aek-motion-fast) var(--aek-ease-standard),
+      border-color var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekCheckbox:checked, .aekCheckbox:indeterminate)::before {
+    border-color: var(--aek-accent);
+    background-color: var(--aek-accent);
+  }
+
+  :where(.aekCheckbox[data-flash])::before {
+    box-shadow: 0 0 0 3px var(--aek-field-flash-color, var(--aek-accent-soft));
+  }
+
+  // The check mark: the bottom and right borders of a turned box
+  :where(.aekCheckbox:checked:not(:indeterminate))::after {
+    top: 6px;
+    left: 9.5px;
+    width: 5px;
+    height: 9px;
+    border: solid var(--aek-on-accent);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  // Mixed: a bar
+  :where(.aekCheckbox:indeterminate)::after {
+    top: 11px;
+    left: 7px;
+    width: 10px;
+    height: 2px;
+    background-color: var(--aek-on-accent);
+  }
+
+  :where(.aekCheckbox:disabled)::before {
+    border-color: var(--aek-border);
+    background-color: var(--aek-surface-hover);
+  }
+
+  :where(.aekCheckbox:disabled:checked, .aekCheckbox:disabled:indeterminate)::before {
+    border-color: var(--aek-text-disabled);
+    background-color: var(--aek-text-disabled);
+  }
+
+  // --- The switch ---
+
+  :where(.aekSwitch) {
+    width: var(--aek-switch-width, 36px);
+    height: 24px;
+    border-radius: var(--aek-radius-full);
+  }
+
+  :where(.aekSwitch)::before {
+    inset: calc((24px - var(--aek-switch-height, 20px)) / 2) 0;
+    border: 1px solid var(--aek-field-control-border-color, var(--aek-border-control));
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-field-control-bg, var(--aek-surface));
+    transition:
+      background-color var(--aek-motion-fast) var(--aek-ease-standard),
+      border-color var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekSwitch)::after {
+    top: calc((24px - var(--aek-switch-height, 20px)) / 2 + 3px);
+    left: 3px;
+    width: calc(var(--aek-switch-height, 20px) - 6px);
+    height: calc(var(--aek-switch-height, 20px) - 6px);
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-text-muted);
+    transition:
+      transform var(--aek-motion-fast) var(--aek-ease-standard),
+      background-color var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekSwitch:checked)::before {
+    border-color: var(--aek-accent);
+    background-color: var(--aek-accent);
+  }
+
+  :where(.aekSwitch:checked)::after {
+    background-color: var(--aek-on-accent);
+    transform: translateX(calc(var(--aek-switch-width, 36px) - var(--aek-switch-height, 20px)));
+  }
+
+  :where(.aekSwitch[data-flash])::before {
+    box-shadow: 0 0 0 3px var(--aek-field-flash-color, var(--aek-accent-soft));
+  }
+
+  :where(.aekSwitch:disabled)::before {
+    border-color: var(--aek-border);
+    background-color: var(--aek-surface-hover);
+  }
+
+  :where(.aekSwitch:disabled)::after {
+    background-color: var(--aek-text-disabled);
+  }
+
+  :where(.aekSwitch:disabled:checked)::before {
+    border-color: var(--aek-text-disabled);
+    background-color: var(--aek-text-disabled);
+  }
+
+  :where(.aekSwitch:disabled:checked)::after {
+    background-color: var(--aek-surface);
+  }
+
+  :where(.aekSwitch__row) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--aek-space-2);
+  }
+
+  :where(.aekSwitch__text) {
+    min-width: 3ch;
+    color: var(--aek-text-muted);
+  }
+}

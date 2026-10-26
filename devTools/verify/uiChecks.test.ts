@@ -112,6 +112,7 @@ describe('describeStep', () => {
       'expectAttr #t aria-expanded=absent'
     );
     expect(describeStep({ expectCount: '.toast', count: 0 })).toBe('expectCount .toast = 0');
+    expect(describeStep({ expectValue: '#t', value: 'ab' })).toBe('expectValue #t "ab"');
     expect(describeStep({ expectActiveOption: 'Teal' })).toBe('expectActiveOption "Teal"');
   });
 });

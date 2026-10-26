@@ -204,6 +204,19 @@
   }
 }
 
+// A line under a row's fields (a search's results)
+.hubComponentDemoGroup > .hubDemoFieldNote {
+  width: 100%;
+}
+
+// The checkboxes a mixed one stands for, indented under it
+.hubDemoNestedToggles {
+  display: grid;
+  gap: 0.25rem;
+  width: 100%;
+  padding-inline-start: 1.5rem;
+}
+
 // A skeleton's text lines in a row take a width of their own (empty, they'd shrink to nothing)
 .hubDemoSkeleton {
   width: min(100%, 16rem);

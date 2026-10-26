@@ -1,55 +1,9 @@
-// The number field's default styles (NumberField.ts), on the design tokens and layered (p803 D5):
-// its box is a control (`surface`, `border-control`, as the drop-down's trigger), its text in
-// tabular figures (p800 D5), an error's border the danger colour, and a change from outside a
-// flash of `accent-soft` that fades out over `--aek-motion-base` (with `--aek-motion: 0`, a tint
-// that stays as long as `data-flash`, then goes).
+// The number field's own styles (NumberField.ts), on the design tokens and layered (p803 D5): its
+// text in tabular figures (p800 D5), its unit, and the label's scrub cursor. The box, the input,
+// the error and the flash are the fields' (`.aekField__box`, Field.scss).
 @layer aek.components {
-  :where(.aekNumberField) {
-    box-sizing: border-box;
-    display: flex;
-    flex: 1;
-    align-items: center;
-    gap: var(--aek-space-2);
-    min-width: calc(var(--aek-space-7) * 2);
-    // WCAG 2.5.8's target size, in every density
-    min-height: 24px;
-    padding: 0 var(--aek-space-3) 0 0;
-    border: 1px solid var(--aek-field-control-border-color, var(--aek-border-control));
-    border-radius: var(--aek-field-radius, var(--aek-radius-md));
-    background-color: var(--aek-field-control-bg, var(--aek-surface));
-    transition: background-color var(--aek-motion-base) var(--aek-ease-standard);
-  }
-
-  :where(.aekNumberField[data-flash]) {
-    background-color: var(--aek-field-flash-color, var(--aek-accent-soft));
-    transition-duration: 0s;
-  }
-
-  :where(.aekField[data-invalid] .aekNumberField) {
-    border-color: var(--aek-danger);
-  }
-
-  :where(.aekField[data-disabled] .aekNumberField) {
-    border-color: var(--aek-border);
-  }
-
   :where(.aekNumberField__input) {
-    flex: 1;
-    width: 100%;
-    min-width: 0;
-    margin: 0;
-    // The input fills the box (the kit's ring is on it), the padding inside it
-    padding: var(--aek-space-2) 0 var(--aek-space-2) var(--aek-space-3);
-    border: 0;
-    border-radius: inherit;
-    background: transparent;
-    color: var(--aek-text);
     font-variant-numeric: tabular-nums;
-    line-height: var(--aek-line-height-tight);
-  }
-
-  :where(.aekNumberField__input:disabled) {
-    color: var(--aek-text-disabled);
   }
 
   :where(.aekNumberField__unit) {

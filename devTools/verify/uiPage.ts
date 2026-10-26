@@ -105,6 +105,14 @@ const readExpectation = (page: Page, piece: string, step: UiKeyStep) =>
         const text = (el?.textContent ?? '').trim();
         return { ok: !!el && text === s.text, actual: el ? `"${text}"` : 'no element' };
       }
+      if ('expectValue' in s) {
+        const el = document.querySelector<HTMLInputElement>(s.expectValue);
+        const value = el?.value;
+        return {
+          ok: typeof value === 'string' && value === s.value,
+          actual: el ? `value "${value}"` : 'no element',
+        };
+      }
       if ('expectStyle' in s) {
         const el = document.querySelector(s.expectStyle);
         const value = el ? getComputedStyle(el).getPropertyValue(s.name).trim() : undefined;

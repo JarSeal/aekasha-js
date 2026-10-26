@@ -54,6 +54,8 @@ export type UiKeyStep =
   | { expectCount: string; count: number }
   /** The first element matching `expectText` has this text, trimmed */
   | { expectText: string; text: string }
+  /** The first element matching `expectValue` (an input, a textarea) has this `value`, as is */
+  | { expectValue: string; value: string }
   /** The first element matching `expectStyle` has the computed style property `name` (CSS's name:
    * `left`, `border-top-width`) at `value` (a used length in px: `576px`) */
   | { expectStyle: string; name: string; value: string }
@@ -112,6 +114,15 @@ const MENU_STATUS = '#hubDemoMenuStatus';
 const NUMBER = (name: string) => `#hubDemoNumber${name}`;
 const NUMBER_RESET = (name: string) => `.aekField:has(${NUMBER(name)}) .aekField__reset`;
 const NUMBER_STATUS = '#hubDemoNumberStatus';
+/** A text field's input by its label (`_components.ts`' `TEXT_ID`), and the box's lines */
+const TEXT = (name: string) => `#hubDemoText${name}`;
+const TEXT_STATUS = '#hubDemoTextStatus';
+const TEXT_RESULTS = '#hubDemoTextResults';
+const SEARCH_CLEAR = `.aekField:has(${TEXT('Search')}) .aekTextField__clear`;
+/** A checkbox's or a switch's input by its name (`TOGGLE_ID`), and the box's status line */
+const TOGGLE = (name: string) => `#hubDemoToggle${name}`;
+const TOGGLE_STATUS = '#hubDemoToggleStatus';
+const LAYERS_ON = '[data-hub-demo="checkbox"] .hubDemoNestedToggles input:checked';
 const BADGE_INBOX = '#hubDemoBadgeInbox';
 const TAG = (name: string) => `#hubDemoTag${name}`;
 const TAG_STATUS = '#hubDemoTagStatus';
@@ -400,6 +411,100 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { expectAttr: NUMBER('Heading'), name: 'aria-valuenow', value: '90' },
           { expectAttr: NUMBER_RESET('Heading'), name: 'hidden', value: '' },
           { expectFocus: NUMBER('Heading') },
+        ],
+      },
+    ],
+  },
+  textField: {
+    keyboard: [
+      {
+        name: 'typed text is written on Enter; Escape puts the text back',
+        steps: [
+          { focusInBox: TEXT('Name') },
+          { press: 'ControlOrMeta+A' },
+          { press: 'b' },
+          { press: 'o' },
+          { press: 'b' },
+          { press: 'Enter' },
+          { expectText: TEXT_STATUS, text: 'Name: "bob" (last)' },
+          { press: 'ControlOrMeta+A' },
+          { press: 'x' },
+          { expectValue: TEXT('Name'), value: 'x' },
+          { press: 'Escape' },
+          { expectValue: TEXT('Name'), value: 'bob' },
+          { expectFocus: TEXT('Name') },
+        ],
+      },
+      {
+        name: 'multiline: Enter is a new line, Ctrl/⌘+Enter writes',
+        steps: [
+          { focusInBox: TEXT('Notes') },
+          { press: 'ControlOrMeta+A' },
+          { press: 'a' },
+          { press: 'Enter' },
+          { press: 'b' },
+          { expectValue: TEXT('Notes'), value: 'a\nb' },
+          { expectText: TEXT_STATUS, text: '' },
+          { press: 'ControlOrMeta+Enter' },
+          { expectText: TEXT_STATUS, text: 'Notes: "a / b" (last)' },
+        ],
+      },
+      {
+        name: 'search: typing filters the list; the clear button empties it and returns the focus',
+        steps: [
+          { focusInBox: TEXT('Search') },
+          { press: 'm' },
+          { press: 'e' },
+          { expectText: TEXT_RESULTS, text: '2 of 8: Comet, Meteor' },
+          { press: 'Tab' },
+          { expectFocus: SEARCH_CLEAR },
+          { press: 'Enter' },
+          { expectValue: TEXT('Search'), value: '' },
+          { expectFocus: TEXT('Search') },
+          {
+            expectText: TEXT_RESULTS,
+            text: '8 of 8: Asteroid, Comet, Galaxy, Meteor, Moon, Nebula, Planet, Star',
+          },
+        ],
+      },
+    ],
+  },
+  checkbox: {
+    keyboard: [
+      {
+        name: 'Space flips a checkbox; Tab goes on to the next',
+        steps: [
+          { focusInBox: TOGGLE('Shadows') },
+          { press: 'Space' },
+          { expectText: TOGGLE_STATUS, text: 'Shadows: off' },
+          { press: 'Tab' },
+          { expectFocus: TOGGLE('Fog') },
+          { press: 'Space' },
+          { expectText: TOGGLE_STATUS, text: 'Fog: on' },
+        ],
+      },
+      {
+        name: 'a mixed checkbox: Space sets all three, and again clears them',
+        steps: [
+          { focusInBox: TOGGLE('All') },
+          { expectCount: `${TOGGLE('All')}:indeterminate`, count: 1 },
+          { expectCount: LAYERS_ON, count: 2 },
+          { press: 'Space' },
+          { expectCount: `${TOGGLE('All')}:indeterminate`, count: 0 },
+          { expectCount: LAYERS_ON, count: 3 },
+          { press: 'Space' },
+          { expectCount: LAYERS_ON, count: 0 },
+          { expectText: TOGGLE_STATUS, text: 'All layers: off' },
+        ],
+      },
+      {
+        name: 'a switch: Space flips it and its text',
+        steps: [
+          { focusInBox: TOGGLE('Vsync') },
+          { expectText: `.aekField:has(${TOGGLE('Vsync')}) .aekSwitch__text`, text: 'On' },
+          { press: 'Space' },
+          { expectText: `.aekField:has(${TOGGLE('Vsync')}) .aekSwitch__text`, text: 'Off' },
+          { expectText: TOGGLE_STATUS, text: 'V-sync: off' },
         ],
       },
     ],

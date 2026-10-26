@@ -1,4 +1,3 @@
-import { pushOverlay, swallowNextKeyUp } from '../overlays/OverlayStack';
 import { getPrimitiveValueKind } from './binding/Binding';
 import { evaluateValueExpression } from './binding/ValueExpression';
 import {
@@ -9,6 +8,7 @@ import {
   type ValueTextOptions,
 } from './binding/ValueText';
 import { createField, type Field, type FieldProps } from './Field';
+import { createTypedText } from './TypedText';
 import './NumberField.scss';
 import '../styles/kit.scss';
 
@@ -67,8 +67,8 @@ const getPointerScale = (step: number | undefined, value: number) => {
  *   focuses the input; Shift ×10, Alt ×0.1), `last: true` on the release.
  * - Parts: `.aekField` (`data-kind="number"`, `data-disabled`, `data-invalid`, `data-scrubbing`)
  *   with `.aekField__head` (`.aekField__label`, `.aekField__reset`), `.aekField__control` holding
- *   `.aekNumberField` (`data-flash` while a change from outside shows) with
- *   `.aekNumberField__input` and `.aekNumberField__unit`, and `.aekField__message`
+ *   `.aekField__box.aekNumberField` (`data-flash` while a change from outside shows)
+ *   with `.aekField__input.aekNumberField__input` and `.aekNumberField__unit`, and `.aekField__message`
  *   (`data-type="hint" | "error"`).
  * - Custom properties: `--aek-field-control-bg`, `--aek-field-control-border-color`,
  *   `--aek-field-radius`, `--aek-field-flash-color`.
@@ -99,11 +99,6 @@ const getPointerScale = (step: number | undefined, value: number) => {
 export const createNumberField = (props: NumberFieldProps): NumberField => {
   const { onInput, expressionUnits } = props;
   const textOptions: ValueTextOptions = props;
-  let isDirty = false;
-  /** The value when the typing started: what Escape puts back after live writes */
-  let textStartValue = 0;
-  /** The overlay stack entry while there's typed text, so Escape reverts it first */
-  let removeTypingEntry: ((returnFocus?: boolean) => void) | null = null;
   /** The key whose keyup ends the key gesture */
   let stepKey: string | null = null;
   let scrub: {
@@ -115,13 +110,15 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
     isMoving: boolean;
   } | null = null;
   let isClickAfterScrub = false;
+  /** Whether there's typed text (set below: the shell draws while it's made) */
+  let isTyping = () => false;
   /** Ends what's in progress (set below: disabling can run while the shell is made) */
   let endInteractions = () => {};
 
   const box = document.createElement('span');
-  box.className = 'aekNumberField';
+  box.className = 'aekField__box aekNumberField';
   const input = document.createElement('input');
-  input.className = 'aekNumberField__input';
+  input.className = 'aekField__input aekNumberField__input';
   for (const [name, value] of [
     ['type', 'text'],
     ['inputmode', 'decimal'],
@@ -157,7 +154,7 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
       input.setAttribute('aria-valuenow', String(value));
       input.setAttribute('aria-valuetext', getSpokenValueText(value, textOptions));
       // Typed text stays until it's written or put back
-      if (!isDirty) drawText(value);
+      if (!isTyping()) drawText(value);
     },
     applyDisabled: (on) => {
       if (on) input.setAttribute('disabled', '');
@@ -165,8 +162,7 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
       if (on) endInteractions();
     },
     onRemove: () => {
-      removeTypingEntry?.(false);
-      removeTypingEntry = null;
+      typed.dispose();
       for (const [elem, type, fn] of listeners) elem.removeEventListener(type, fn as EventListener);
     },
   });
@@ -179,35 +175,19 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
       modifier < 1 && props.step !== undefined ? { ...props, step: props.step * modifier } : props
     );
 
-  const endTyping = () => {
-    isDirty = false;
-    shell.setOwnError(null);
-    removeTypingEntry?.(false);
-    removeTypingEntry = null;
-  };
-
-  /** Puts the value's text back (Escape, an invalid text's blur); live writes are undone */
-  const revertText = () => {
-    if (!isDirty) return;
-    const isLive = Boolean(props.live) && binding.isInGesture();
-    endTyping();
-    if (isLive) binding.change(textStartValue);
-    drawText(binding.peek());
-  };
-
-  /** Writes the typed text; false (the error shown, the text kept) when it isn't a number */
-  const commitText = () => {
-    if (!isDirty) return true;
-    const result = evaluateValueExpression(input.value, expressionUnits);
-    if (result.value === undefined) {
-      shell.setOwnError(result.error);
-      return false;
-    }
-    endTyping();
-    binding.change(constrain(result.value));
-    drawText(binding.peek());
-    return true;
-  };
+  const typed = createTypedText<number>({
+    input,
+    binding,
+    parse: (text) => {
+      const result = evaluateValueExpression(text, expressionUnits);
+      return result.value === undefined ? result : { value: constrain(result.value) };
+    },
+    drawText,
+    setError: shell.setOwnError,
+    live: props.live,
+    onInput,
+  });
+  isTyping = typed.isDirty;
 
   /** Ends a key's or a scrub's gesture, with its `last: true` */
   const endGesture = () => {
@@ -220,7 +200,7 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
   // Everything in progress ends: a blur, disabling
   endInteractions = () => {
     if (stepKey !== null || scrub !== null) endGesture();
-    if (isDirty && !commitText()) revertText();
+    typed.settle();
   };
 
   const onKeyDown = (e: KeyboardEvent) => {
@@ -230,10 +210,10 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
     if (steps !== undefined) {
       const modifier = getModifier(e);
       // From the typed text when it's a number, else from the value
-      const typed = isDirty
+      const typedValue = typed.isDirty()
         ? evaluateValueExpression(input.value, expressionUnits).value
         : undefined;
-      const from = typed ?? binding.peek();
+      const from = typedValue ?? binding.peek();
       target = constrain(from + steps * (props.step ?? 1) * modifier, modifier);
     } else if (e.key === 'Home' && props.min !== undefined) {
       target = props.min;
@@ -241,22 +221,18 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
       target = props.max;
     } else if (e.key === 'Enter') {
       // Not stopped: in a form, Enter submits after the value is written
-      commitText();
+      typed.commit();
       return;
     } else if (e.key === 'Escape') {
       // Outside a HUD root (the overlay stack takes it first under one)
-      if (!isDirty) return;
-      e.preventDefault();
-      e.stopPropagation();
-      swallowNextKeyUp('Escape');
-      revertText();
+      typed.onEscape(e);
       return;
     } else {
       return;
     }
     e.preventDefault();
     e.stopPropagation();
-    if (isDirty) endTyping();
+    typed.end();
     if (stepKey !== null && stepKey !== e.key) endGesture();
     stepKey = e.key;
     binding.step(target);
@@ -268,18 +244,6 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
     // The keydown was used: so is its keyup
     e.stopPropagation();
     endGesture();
-  };
-
-  const onInputEvent = () => {
-    if (!isDirty) {
-      isDirty = true;
-      textStartValue = binding.peek();
-      removeTypingEntry = pushOverlay({ elem: input, close: revertText });
-    }
-    onInput?.(input.value);
-    if (!props.live) return;
-    const result = evaluateValueExpression(input.value, expressionUnits);
-    if (result.value !== undefined) binding.step(constrain(result.value));
   };
 
   /** Copies the value when no text is selected (D6); otherwise the input copies its selection */
@@ -294,7 +258,7 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
     const text = e.clipboardData?.getData('text/plain').trim() ?? '';
     if (!NUMBER_TEXT_REGEX.test(text)) return;
     e.preventDefault();
-    if (isDirty) endTyping();
+    typed.end();
     binding.change(constrain(Number(text)));
     drawText(binding.peek());
   };
@@ -316,7 +280,7 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
       scrub.isMoving = true;
       scrub.lastX = scrub.startX;
       shell.cmp.elem.setAttribute('data-scrubbing', '');
-      revertText();
+      typed.revert();
     }
     const modifier = getModifier(e);
     scrub.raw += (e.clientX - scrub.lastX) * scrub.scale * modifier;
@@ -342,7 +306,7 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
   const listeners: [HTMLElement, string, (e: never) => void][] = [
     [input, 'keydown', onKeyDown],
     [input, 'keyup', onKeyUp],
-    [input, 'input', onInputEvent],
+    [input, 'input', typed.onInput],
     [input, 'blur', () => endInteractions()],
     [input, 'copy', onCopy],
     [input, 'paste', onPaste],
