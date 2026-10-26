@@ -73,4 +73,6 @@ host's root, the backdrop at `100vw` × `100vh`, no bounds element). Chromium on
 Left for p803 (the kit's restyle), seen in the same embed: a drop-down list's `max-height: 40vh`
 is the browser window's; a `closeOnEscape` dialog takes Escape from the whole host page while
 it's open; the toast's text colour, the kit's font and the buttons' font come from the host page
-(no normalize in an embed); a window clips a drop-down list that overflows it.
+(no normalize in an embed); a window clips a drop-down list that overflows it. All fixed in p803
+(engine 5.12.0): the list on the top layer, anchored to its trigger; Escape only from inside the
+HUD root; the controls' reset and the kit root's own colour.

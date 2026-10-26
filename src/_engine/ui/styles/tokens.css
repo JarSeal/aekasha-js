@@ -48,8 +48,8 @@
     font-family: var(--aek-font-sans);
 
     /*
-     * The UI's font size, and the old 62.5 % root's rem (@internal: the existing styles' unit
-     * until p803 / p806 restyle them). Fixed here for a browser without @property, where an
+     * The UI's font size, and the old 62.5 % root's rem (@internal: the debugger's styles' unit
+     * until p806 restyles them; p803 took it out of the kit). Fixed here for a browser without @property, where an
      * unregistered em would resolve again in every descendant and compound; computed below.
      */
     --aek-base: calc(14px * var(--aek-ui-scale, 1));

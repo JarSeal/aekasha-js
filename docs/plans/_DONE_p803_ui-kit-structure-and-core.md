@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-8 implemented
+Status: implemented (Phases 0-9)
 Category: UI, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
@@ -2309,7 +2309,7 @@ For Phase 9:
   with no press, `normalize.scss` in a layer below the kit's, and a long custom property name
   breaking mid-word in a Hub table cell.
 
-### Phase 9: versions and done
+### Phase 9: versions and done — done
 
 D14; the changelog entry with the restyle note; `yarn checkVersions --against main`; mark the plan
 done; p800's §5 p803 entry points here and its Blocks line follows; p622's UI kit item names the
@@ -2337,6 +2337,32 @@ As built (section 1, 2026-10-26):
   example, the scene loader and the embed's scene) and Project (`verify:ui`, the Hub's UI kit
   section and library, `::: demo`, the budgets, the docs).
 - `yarn checkVersions --against main` passes.
+
+As built (section 2, 2026-10-26):
+
+- The plan is `_DONE_p803_ui-kit-structure-and-core.md` (`git mv`). References: p800's Blocks line
+  (and its "p801, p802 and p803 done"), its §5 p803 entry ("Done:", what the later plans build on,
+  as p801's and p802's), `_DONE_p801`'s Blocks line, p622's Related line (its UI kit item already
+  named D3's aliases and `'small'`, Phase 1 and Phase 5 §5).
+- Stale lines: `devTools/sbp/CLAUDE.md`'s embed limits (the toast's colour "until p803" → an app's
+  unlayered CSS beating the kit), `docs/issues/ui-kit-in-an-embed.md`'s "Left for p803" (fixed
+  here), `tokens.css`' `--aek-rem` comment (the debugger's until p806), the dev library's button
+  text (the Kbd item's new home).
+- **The open review items' homes** (none blocks an app): the button bringing Kbd in p804's sketch
+  (p800 §5); normalize's layer, the hold to confirm's click, the indeterminate bar's shot and the
+  Hub's mid-word break in a new `docs/issues/ui-kit-review-items.md` (`open | for the UI kit's
+  next plan (p804)`).
+- **Done when, checked**: the folders and their rules; no old type name outside the aliases and
+  the entry; no `MainLoop` import in the kit, the Hub's only stand-in the storage and no deep
+  import in its scripts; no `--aek-rem` in a kit file (`variables.scss` is the debugger's, p806's);
+  1.2's items 1-11 each closed (1 Phase 4 §1; 2 Phase 5 §5; 3 Phase 2 §1; 4 Phase 5 §1; 5 Phase 5
+  §4; 6 Phases 4-5; 7 Phase 5; 8 Phase 4 §2; 9 D4, `getMotionFactor`; 10 Phase 5 §2 and Phase 2
+  §3; 11 Phase 8 §4). **One part is the user's**: `yarn verify:ui` passes its axe and keyboard
+  checks with an empty allow list, and its screenshots wait for `--update` after review (Phase 8's
+  11 states and Phases 6-7's new boxes; local baselines in `.cache/verify/ui/`, not committed).
+- The section's checks: `yarn test` (184 files, 1455 tests), `yarn hub:build` (97 pages: the new
+  issue file's; no dead link, 1014 names, 100 % documented, search 323 KiB gzip),
+  `yarn verify:baselines` (every baseline unchanged), `yarn checkVersions --against main`.
 
 ---
 
