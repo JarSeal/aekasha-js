@@ -155,10 +155,107 @@ const shimFocus = (document: Document, window: Window & typeof globalThis) => {
   });
 };
 
+type TextControl = HTMLInputElement | HTMLTextAreaElement;
+type Selection = { start: number; end: number };
+
+/** The elements holding a pointer's capture, by pointer id */
+const pointerCaptures = new Map<number, Element>();
+
+/**
+ * The form controls as the fields use them (p804 D14; linkedom 0.18.13's gaps, Phase 0 step 5),
+ * grown as the fields need them: an input's or a textarea's `value` kept apart from its
+ * `defaultValue` (linkedom writes the attribute on every set), the selection API
+ * (`selectionStart`, `selectionEnd`, `setSelectionRange`, `select()`; a new value puts the caret
+ * at its end) and pointer capture (`setPointerCapture`, `releasePointerCapture`,
+ * `hasPointerCapture`; `lostpointercapture` on a release, `dispatchPointer` routes a captured
+ * pointer's events and releases it on `pointerup` / `pointercancel`).
+ */
+const shimFormControls = (window: Window & typeof globalThis) => {
+  const values = new WeakMap<TextControl, string>();
+  const selections = new WeakMap<TextControl, Selection>();
+  const textControls = [window.HTMLInputElement, window.HTMLTextAreaElement];
+  for (const Control of textControls) {
+    const isTextarea = Control === window.HTMLTextAreaElement;
+    const getDefault = (elem: TextControl) =>
+      isTextarea ? elem.textContent ?? '' : elem.getAttribute('value') ?? '';
+    const getValue = (elem: TextControl) => values.get(elem) ?? getDefault(elem);
+    const getSelection = (elem: TextControl) => {
+      const length = getValue(elem).length;
+      const selection = selections.get(elem) ?? { start: length, end: length };
+      return { start: Math.min(selection.start, length), end: Math.min(selection.end, length) };
+    };
+    Object.defineProperties(Control.prototype, {
+      value: {
+        configurable: true,
+        get(this: TextControl) {
+          return getValue(this);
+        },
+        set(this: TextControl, value: unknown) {
+          const text = String(value ?? '');
+          values.set(this, text);
+          selections.set(this, { start: text.length, end: text.length });
+        },
+      },
+      defaultValue: {
+        configurable: true,
+        get(this: TextControl) {
+          return getDefault(this);
+        },
+        set(this: TextControl, value: unknown) {
+          if (isTextarea) this.textContent = String(value ?? '');
+          else this.setAttribute('value', String(value ?? ''));
+        },
+      },
+      selectionStart: {
+        configurable: true,
+        get(this: TextControl) {
+          return getSelection(this).start;
+        },
+      },
+      selectionEnd: {
+        configurable: true,
+        get(this: TextControl) {
+          return getSelection(this).end;
+        },
+      },
+    });
+    Object.assign(Control.prototype, {
+      setSelectionRange(this: TextControl, start: number, end: number) {
+        selections.set(this, { start: Math.min(start, end), end: Math.max(start, end) });
+      },
+      select(this: TextControl) {
+        selections.set(this, { start: 0, end: getValue(this).length });
+      },
+    });
+  }
+  Object.assign(window.HTMLElement.prototype, {
+    setPointerCapture(this: Element, pointerId: number) {
+      const previous = pointerCaptures.get(pointerId);
+      if (previous === this) return;
+      pointerCaptures.set(pointerId, this);
+      if (previous) fireLostCapture(previous, pointerId);
+    },
+    releasePointerCapture(this: Element, pointerId: number) {
+      if (pointerCaptures.get(pointerId) !== this) return;
+      pointerCaptures.delete(pointerId);
+      fireLostCapture(this, pointerId);
+    },
+    hasPointerCapture(this: Element, pointerId: number) {
+      return pointerCaptures.get(pointerId) === this;
+    },
+  });
+};
+
+const fireLostCapture = (elem: Element, pointerId: number) => {
+  elem.dispatchEvent(
+    Object.assign(new window.Event('lostpointercapture', { bubbles: true }), { pointerId })
+  );
+};
+
 /**
  * Stubs `document`, `window` and the element classes the kit uses with a linkedom page that has
- * the browser's event order (capture, target, bubble) and focus (see `shimFocus`), for the kit's
- * tests. Call it in `beforeAll` (an import isn't there yet in `vi.hoisted`), before the module
+ * the browser's event order (capture, target, bubble), focus (see `shimFocus`) and the form
+ * controls the fields use (see `shimFormControls`), for the kit's tests. Call it in `beforeAll` (an import isn't there yet in `vi.hoisted`), before the module
  * under test adds a listener.
  * @internal
  * @param html the page (default: an empty body with a `#hudSlot` for `createHudRoot`)
@@ -177,6 +274,8 @@ export const stubKitDomAsync = async (
   if (!proto) throw new Error('stubKitDomAsync: no EventTarget in linkedom’s document');
   patchEventTarget(proto as EventTarget);
   shimFocus(document as unknown as Document, window as unknown as Window & typeof globalThis);
+  shimFormControls(window as unknown as Window & typeof globalThis);
+  pointerCaptures.clear();
   Object.assign(window, { innerWidth: 1280, innerHeight: 720 });
   vi.stubGlobal('document', document);
   vi.stubGlobal('window', window);
@@ -221,6 +320,61 @@ export const dispatchKey = (
   });
   target.dispatchEvent(event);
   return event as unknown as KeyboardEvent;
+};
+
+/** What a pointer event carries (linkedom has no `PointerEvent` or `MouseEvent`) */
+export type KitPointerInit = KitKeyInit & {
+  pointerId?: number;
+  /** The button pressed (0 primary) */
+  button?: number;
+  clientX?: number;
+  clientY?: number;
+};
+
+/**
+ * Dispatches a pointer event at `target`, bubbling and cancelable like a browser's. A pointer an
+ * element captured goes to that element (`setPointerCapture`), and `pointerup` / `pointercancel`
+ * release its capture after the event (`lostpointercapture`), as a browser does.
+ * @internal
+ * @returns the event, to read `defaultPrevented`
+ */
+export const dispatchPointer = (
+  target: EventTarget,
+  type:
+    | 'pointerdown'
+    | 'pointermove'
+    | 'pointerup'
+    | 'pointercancel'
+    | 'pointerenter'
+    | 'pointerleave'
+    | 'click',
+  init: KitPointerInit = {}
+) => {
+  const pointerId = init.pointerId ?? 1;
+  const event = Object.assign(new window.Event(type, { bubbles: true, cancelable: true }), {
+    pointerId,
+    pointerType: 'mouse',
+    isPrimary: true,
+    button: 0,
+    buttons: type === 'pointerup' || type === 'click' ? 0 : 1,
+    clientX: 0,
+    clientY: 0,
+    shiftKey: false,
+    ctrlKey: false,
+    altKey: false,
+    metaKey: false,
+    ...init,
+  });
+  const captured = type === 'click' ? undefined : pointerCaptures.get(pointerId);
+  (captured ?? target).dispatchEvent(event);
+  if (type === 'pointerup' || type === 'pointercancel') {
+    const holder = pointerCaptures.get(pointerId);
+    if (holder) {
+      pointerCaptures.delete(pointerId);
+      fireLostCapture(holder, pointerId);
+    }
+  }
+  return event as unknown as PointerEvent;
 };
 
 /**

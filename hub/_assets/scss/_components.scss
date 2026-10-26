@@ -194,6 +194,16 @@
   width: min(100%, 20rem);
 }
 
+// A row of fields: each a width of its own (the row is a wrapping flex box) and aligned at the top,
+// so a field with a message line doesn't push its neighbour down
+.hubComponentDemoGroup.hubDemoFields {
+  align-items: start;
+
+  > .aekField {
+    width: min(100%, 16rem);
+  }
+}
+
 // A skeleton's text lines in a row take a width of their own (empty, they'd shrink to nothing)
 .hubDemoSkeleton {
   width: min(100%, 16rem);

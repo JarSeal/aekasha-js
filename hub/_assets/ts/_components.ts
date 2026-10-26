@@ -20,6 +20,7 @@ import {
   closeDraggableWindow,
   CMP,
   createBadge,
+  createBindingScheduler,
   createButton,
   createButtonGroup,
   createDivider,
@@ -31,6 +32,7 @@ import {
   createLink,
   createLoadingOverlay,
   createMenu,
+  createNumberField,
   createPopover,
   createProgressBar,
   createSkeleton,
@@ -58,6 +60,7 @@ import type {
   DialogProps,
   DropDownProps,
   InputGlyphInput,
+  NumberFieldProps,
   OpenDraggableWindowProps,
   ProgressBarProps,
   CMPHandle,
@@ -401,6 +404,84 @@ const initDropDownDemo: Demo = (box) => {
       content: createDropDownPanel,
     });
   });
+};
+
+// --- Number field ---
+
+const NUMBER_ID = (name: string) => `${ID_PREFIX}Number${name}`;
+
+/** In the page: the fields draw in their rows, bound to one object, and each write shows in the
+ * box's status line; a kit button changes the speed from outside, which the next refresh flashes */
+const initNumberFieldDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = NUMBER_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const settings = { speed: 1.5, heading: 90, volume: 0.8, size: 4, limit: 12 };
+  const scheduler = createBindingScheduler();
+  const make = (name: string, props: Partial<NumberFieldProps>) => {
+    const field = createNumberField({
+      id: NUMBER_ID(name),
+      label: name,
+      target: settings,
+      key: name.toLowerCase(),
+      scheduler,
+      onChange: (value, { last, source }) => {
+        status.textContent = `${name}: ${value} (${last ? 'last' : 'step'}, ${source})`;
+      },
+      ...props,
+    } as NumberFieldProps);
+    return field;
+  };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+
+  row(
+    'A step, a minimum and a unit; a hint',
+    make('Speed', { min: 0, step: 0.1, unit: 'm/s', hint: 'Drag the label, or type 3 * 0.5' }).cmp
+      .elem
+  );
+  row(
+    'An angle that wraps at ±180, typed in deg or rad',
+    make('Heading', {
+      min: -180,
+      max: 180,
+      step: 15,
+      wrap: true,
+      unit: '°',
+      expressionUnits: { deg: 1, rad: 180 / Math.PI },
+    }).cmp.elem
+  );
+  row(
+    'Formatted as a percent, typed with %',
+    make('Volume', {
+      min: 0,
+      max: 1,
+      step: 0.01,
+      format: (value) => `${Math.round(value * 100)} %`,
+      expressionUnits: { '%': 0.01 },
+    }).cmp.elem
+  );
+  row('Live: each valid keystroke writes', make('Size', { step: 1, live: true }).cmp.elem);
+  const limit = make('Limit', { step: 1, max: 20 });
+  limit.setError('Must be below 10');
+  const disabled = make('Disabled', { target: settings, key: 'speed', disabled: true });
+  row('An error, and disabled', limit.cmp.elem, disabled.cmp.elem);
+  const outside = createButton({
+    id: NUMBER_ID('Outside'),
+    label: 'Change the speed from outside',
+    onClick: () => {
+      settings.speed = Math.round((settings.speed + 1) * 10) / 10;
+      // What a host's refresh does: the field flashes the value it didn't write
+      scheduler.refresh();
+    },
+  });
+  row('A change from outside, then the scheduler’s refresh()', outside.cmp.elem);
+  root.append(status);
 };
 
 // --- Tooltip ---
@@ -1217,6 +1298,7 @@ const DEMOS: Record<string, Demo> = {
   window: initWindowDemo,
   dialog: initDialogDemo,
   dropDown: initDropDownDemo,
+  numberField: initNumberFieldDemo,
   tooltip: initTooltipDemo,
   popover: initPopoverDemo,
   toaster: initToasterDemo,

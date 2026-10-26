@@ -3022,6 +3022,20 @@
       "DropDownProps": "TypeAlias",
       "TDropDown": "TypeAlias"
     },
+    "src/_engine/ui/forms/Field.ts": {
+      "createField": "Function",
+      "Field": "TypeAlias",
+      "FieldChange": "TypeAlias",
+      "FieldDyn": "TypeAlias",
+      "FieldProps": "TypeAlias",
+      "FieldShell": "TypeAlias",
+      "FieldSpec": "TypeAlias"
+    },
+    "src/_engine/ui/forms/NumberField.ts": {
+      "createNumberField": "Function",
+      "NumberField": "TypeAlias",
+      "NumberFieldProps": "TypeAlias"
+    },
     "src/_engine/ui/overlays/Anchor.ts": {
       "AnchorAlign": "TypeAlias",
       "AnchorBox": "TypeAlias",
@@ -3187,7 +3201,9 @@
     "src/_engine/ui/testing/KitDom.ts": {
       "countListeners": "Function",
       "dispatchKey": "Function",
+      "dispatchPointer": "Function",
       "KitKeyInit": "TypeAlias",
+      "KitPointerInit": "TypeAlias",
       "stubKitDomAsync": "Function"
     },
     "src/_engine/utils/Assert.ts": {
@@ -4221,8 +4237,10 @@
       "Badge",
       "BadgeProps",
       "BadgeTone",
+      "BindingChange",
       "BindingScheduler",
       "BindingSchedulerProps",
+      "BindingSource",
       "BuiltInIconName",
       "Button",
       "ButtonGroup",
@@ -4256,6 +4274,10 @@
       "DropDownProps",
       "EmptyState",
       "EmptyStateProps",
+      "Field",
+      "FieldChange",
+      "FieldDyn",
+      "FieldProps",
       "HudRootProps",
       "InputGlyph",
       "InputGlyphInput",
@@ -4276,6 +4298,9 @@
       "MenuProps",
       "MenuRadioGroup",
       "MenuSeparator",
+      "NumberField",
+      "NumberFieldProps",
+      "NumberRules",
       "OpenDraggableWindowProps",
       "Popover",
       "PopoverProps",
@@ -4339,6 +4364,7 @@
       "createLink",
       "createLoadingOverlay",
       "createMenu",
+      "createNumberField",
       "createPopover",
       "createProgressBar",
       "createSkeleton",

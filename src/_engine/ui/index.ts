@@ -67,7 +67,12 @@ export { createEmptyState } from './components/EmptyState';
 export type { EmptyState, EmptyStateProps } from './components/EmptyState';
 export { createBindingScheduler } from './forms/binding/BindingScheduler';
 export type { BindingScheduler, BindingSchedulerProps } from './forms/binding/BindingScheduler';
+export type { BindingChange, BindingSource } from './forms/binding/Binding';
+export type { NumberRules } from './forms/binding/ValueText';
 export { createDropDown } from './forms/DropDown';
+export type { Field, FieldChange, FieldDyn, FieldProps } from './forms/Field';
+export { createNumberField } from './forms/NumberField';
+export type { NumberField, NumberFieldProps } from './forms/NumberField';
 export type { DropDown, DropDownOption, DropDownProps, TDropDown } from './forms/DropDown';
 export {
   createHudRoot,

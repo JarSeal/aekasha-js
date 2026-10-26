@@ -1,0 +1,87 @@
+// The field shell's default styles (Field.ts), on the design tokens and layered (p803 D5): an
+// app's unlayered rule wins, and every selector is in :where(). A field stands alone as a label
+// row over its control and its message line; the property grid (p804 D9) lays its fields out in
+// a label column. The control parts are each field's own (NumberField.scss, …), which read the
+// shared custom properties here: `--aek-field-control-bg`, `--aek-field-control-border-color`,
+// `--aek-field-radius` and `--aek-field-flash-color`.
+@layer aek.components {
+  :where(.aekField) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-1);
+    min-width: 0;
+    font-size: var(--aek-font-size-sm);
+  }
+
+  // `hidden` is the browser's display: none, which any author rule would beat
+  :where(.aekField[hidden], .aekField__reset[hidden], .aekField__message[hidden]) {
+    display: none;
+  }
+
+  :where(.aekField__head) {
+    display: flex;
+    align-items: center;
+    gap: var(--aek-space-2);
+    min-width: 0;
+    // The reset button's row keeps its height whether it shows or not
+    min-height: 24px;
+  }
+
+  :where(.aekField__label) {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--aek-text-muted);
+    line-height: var(--aek-line-height-tight);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :where(.aekField[data-disabled] .aekField__label) {
+    color: var(--aek-text-disabled);
+  }
+
+  // Small and quiet, at the 24 px target size (WCAG 2.5.8) in every density
+  :where(.aekField__reset) {
+    flex-shrink: 0;
+    min-width: 24px;
+    min-height: 24px;
+  }
+
+  :where(.aekField__control) {
+    display: flex;
+    align-items: center;
+    gap: var(--aek-space-2);
+    min-width: 0;
+  }
+
+  :where(.aekField__message) {
+    display: flex;
+    align-items: baseline;
+    gap: var(--aek-space-2);
+    margin: 0;
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-xs);
+    line-height: var(--aek-line-height-base);
+  }
+
+  :where(.aekField__message[data-type='error']) {
+    color: var(--aek-danger);
+  }
+
+  // The error's mark: never the colour alone (p800 D6)
+  :where(.aekField__message[data-type='error'])::before {
+    content: '!';
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1.25em;
+    height: 1.25em;
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-danger);
+    color: var(--aek-surface);
+    font-weight: var(--aek-font-weight-bold);
+    line-height: 1;
+  }
+}

@@ -107,6 +107,11 @@ const SPLIT_MENU_BUTTON = '#hubDemoMenuSplit > [aria-haspopup="menu"]';
 const MENU = '#hudRoot .aekMenu';
 const MENU_FOCUSED = `${MENU} .aekMenu__item:focus .aekMenu__label`;
 const MENU_STATUS = '#hubDemoMenuStatus';
+/** A number field's input by its label (`_components.ts`' `NUMBER_ID`), its reset button, and
+ * the box's status line */
+const NUMBER = (name: string) => `#hubDemoNumber${name}`;
+const NUMBER_RESET = (name: string) => `.aekField:has(${NUMBER(name)}) .aekField__reset`;
+const NUMBER_STATUS = '#hubDemoNumberStatus';
 const BADGE_INBOX = '#hubDemoBadgeInbox';
 const TAG = (name: string) => `#hubDemoTag${name}`;
 const TAG_STATUS = '#hubDemoTagStatus';
@@ -331,6 +336,70 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { expectCount: SEARCH, count: 0 },
           { expectText: `#hudRoot ${SEARCHABLE_TRIGGER} .aekDropDownLabel`, text: 'Violet' },
           { expectFocus: `#hudRoot ${SEARCHABLE_TRIGGER}` },
+        ],
+      },
+    ],
+  },
+  numberField: {
+    keyboard: [
+      {
+        name: 'the arrows step (Shift ×10), each keyup writing last: true; the reset button shows',
+        steps: [
+          { focusInBox: NUMBER('Speed') },
+          { expectAttr: NUMBER('Speed'), name: 'aria-valuenow', value: '1.5' },
+          { expectAttr: NUMBER_RESET('Speed'), name: 'hidden', value: '' },
+          { press: 'ArrowUp' },
+          { expectAttr: NUMBER('Speed'), name: 'aria-valuenow', value: '1.6' },
+          { expectText: NUMBER_STATUS, text: 'Speed: 1.6 (last, user)' },
+          { press: 'Shift+ArrowUp' },
+          { expectAttr: NUMBER('Speed'), name: 'aria-valuenow', value: '2.6' },
+          { expectAttr: NUMBER('Speed'), name: 'aria-valuetext', value: '2.6 m/s' },
+          { expectAttr: NUMBER_RESET('Speed'), name: 'hidden', value: null },
+        ],
+      },
+      {
+        name: 'a typed expression is written on Enter, rounded; Escape puts the text back',
+        steps: [
+          { focusInBox: NUMBER('Speed') },
+          { press: 'ControlOrMeta+A' },
+          { press: '3' },
+          { press: '*' },
+          { press: '0' },
+          { press: '.' },
+          { press: '7' },
+          { press: 'Enter' },
+          { expectAttr: NUMBER('Speed'), name: 'aria-valuenow', value: '2.1' },
+          { expectText: NUMBER_STATUS, text: 'Speed: 2.1 (last, user)' },
+          { press: 'ControlOrMeta+A' },
+          { press: '9' },
+          { press: 'Escape' },
+          { expectAttr: NUMBER('Speed'), name: 'aria-valuenow', value: '2.1' },
+          { expectFocus: NUMBER('Speed') },
+        ],
+      },
+      {
+        name: 'Home and End go to the minimum and the maximum',
+        steps: [
+          { focusInBox: NUMBER('Volume') },
+          { expectAttr: NUMBER('Volume'), name: 'aria-valuetext', value: '80 %' },
+          { press: 'End' },
+          { expectAttr: NUMBER('Volume'), name: 'aria-valuetext', value: '100 %' },
+          { press: 'Home' },
+          { expectAttr: NUMBER('Volume'), name: 'aria-valuetext', value: '0 %' },
+        ],
+      },
+      {
+        name: 'the reset button writes the default and gives the focus back to the input',
+        steps: [
+          { focusInBox: NUMBER('Heading') },
+          { press: 'ArrowUp' },
+          { expectAttr: NUMBER('Heading'), name: 'aria-valuenow', value: '105' },
+          { press: 'Shift+Tab' },
+          { expectFocus: NUMBER_RESET('Heading') },
+          { press: 'Enter' },
+          { expectAttr: NUMBER('Heading'), name: 'aria-valuenow', value: '90' },
+          { expectAttr: NUMBER_RESET('Heading'), name: 'hidden', value: '' },
+          { expectFocus: NUMBER('Heading') },
         ],
       },
     ],

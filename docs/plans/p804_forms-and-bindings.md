@@ -888,6 +888,42 @@ API is tried before the rest depend on it.
      levels of nesting at most; a non-finite result (`1 / 0`) is an error.
 2. Section 2, `Field.ts` (the shell: label, reset button, message line, `hidden` / `disabled`,
    ids) and the number field (spinbutton, D6's keys, scrub, expressions, copy and paste).
+   - **Done 2026-10-26.** `Field.test.ts` (11) and `NumberField.test.ts` (26); the number box on
+     both library pages (`numberField`: six fields bound to one object, a status line, a kit
+     button that changes the speed and calls the scheduler's `refresh()`), four keyboard scripts,
+     `COMPONENT_USES`; the kit's `CLAUDE.md` bullets. On `aekasha/ui`: `createNumberField`,
+     `NumberField`, `NumberFieldProps`, `Field`, `FieldChange`, `FieldDyn`, `FieldProps`,
+     `BindingChange`, `BindingSource`, `NumberRules`.
+   - **KitDom's `shimFormControls`** (D14) has what this section needed: `value` apart from
+     `defaultValue` (inputs and textareas), the selection API, pointer capture and
+     `dispatchPointer`. `checked` and the checkbox's and radio's `click()` come with section 3.
+   - **`interval`, not `live`, puts an edit field on the tick** (D4 said "a field with
+     `live: true`"): D3 and D7 already use `live` for writing each keystroke, so a field prop
+     can't mean both. `interval` is Tweakpane's monitor name, so a monitor and an edit field
+     that follows a changing value say it the same way.
+   - **The number field's own props:** `expressionUnits` (D6's "units the field declares", named
+     apart from `unit`, the shown one), `live`, `onInput`, `format`, `unit` and `NumberRules`
+     (`min`, `max`, `step`, `precision`, `wrap`). `readonly` waits for Phase 4's monitor.
+   - **Escape on typed text** goes through the overlay stack: the field pushes an entry at the
+     first keystroke, so in a dialog the first Escape reverts the text and the next one closes
+     the dialog. Outside a HUD root the input's own keydown does it. With `live`, Escape also
+     writes back the value from before the typing (`last: true`).
+   - **Enter isn't stopped**, so in a form (Phase 4) Enter writes the value and then submits.
+     Home and End are left to the caret when `min` / `max` aren't set.
+   - **Alt's ×0.1** steps on a tenth of the step's grid: on the grid itself, a 0.1 step × 0.1
+     would snap back to where it was.
+   - **The reset button**, activated with the keyboard, hides itself (the value is the default
+     again), so it moves the focus to the control first; the keyboard script checks it.
+   - **The ring is on the input**, not the box: the kit never removes `outline`, and
+     `verify:ui`'s keyboard scripts read it on the focused element. The input fills the box (the
+     padding is inside it).
+   - **Layout:** a field stands alone as its label row over the control and the message line;
+     Phase 4's property grid lays fields out in its label column.
+   - **Copy and paste** use the `copy` / `paste` events (no clipboard permission): copy with a
+     collapsed selection writes `String(value)`, and a plain number pasted (`1.5`, `-2e3`) is the
+     value. An expression pasted pastes as text.
+   - Not in a keyboard script (no step drives them): the scrub, the clipboard, `live`; the unit
+     tests check them.
 3. Section 3, the text field (text, multiline, search), the checkbox and the switch.
 4. Section 4, the perf-auditor's first pass over the scheduler and the scrub with a 200-number
    demo; its findings fixed or written here.
