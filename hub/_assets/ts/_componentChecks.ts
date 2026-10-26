@@ -145,6 +145,14 @@ const SEARCH_CLEAR = `.aekField:has(${TEXT('Search')}) .aekTextField__clear`;
 const TOGGLE = (name: string) => `#hubDemoToggle${name}`;
 const TOGGLE_STATUS = '#hubDemoToggleStatus';
 const LAYERS_ON = '[data-hub-demo="checkbox"] .hubDemoNestedToggles input:checked';
+/** A colour field's text input by its name (`_components.ts`' `COLOR_ID`), its swatch and its
+ * alpha's spin button, the open panel's swatches, and the box's status line */
+const COLOR = (name: string) => `#hubDemoColor${name}`;
+const COLOR_SWATCH = (name: string) => `.aekField:has(${COLOR(name)}) .aekColorField__swatch`;
+const COLOR_ALPHA = (name: string) => `.aekField:has(${COLOR(name)}) .aekColorField__part input`;
+const COLOR_PANEL_SWATCH = (n: number) =>
+  `#hudRoot .aekColorPopover .aekColorPanel__group:first-child .aekColorPanel__swatch:nth-child(${n})`;
+const COLOR_STATUS = '#hubDemoColorStatus';
 /** A folder demo's element by its name (`FOLDER_ID`): a folder's button, a field's control */
 const FOLDER = (name: string) => `#hubDemoFolder${name}`;
 const FOLDER_STATUS = '#hubDemoFolderStatus';
@@ -731,6 +739,64 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { press: 'Space' },
           { expectText: `.aekField:has(${TOGGLE('Vsync')}) .aekSwitch__text`, text: 'Off' },
           { expectText: TOGGLE_STATUS, text: 'V-sync: off' },
+        ],
+      },
+    ],
+  },
+  colorField: {
+    keyboard: [
+      {
+        name: 'typed text is written on Enter; Escape puts the text back',
+        steps: [
+          { focusInBox: COLOR('Fog') },
+          { press: 'ControlOrMeta+A' },
+          { press: '#' },
+          { press: 'f' },
+          { press: '0' },
+          { press: '0' },
+          { press: 'Enter' },
+          { expectValue: COLOR('Fog'), value: '#ff0000' },
+          { expectText: COLOR_STATUS, text: 'Fog: 0xff0000 (last)' },
+          { press: 'ControlOrMeta+A' },
+          { press: 'x' },
+          { press: 'Escape' },
+          { expectValue: COLOR('Fog'), value: '#ff0000' },
+          { expectFocus: COLOR('Fog') },
+        ],
+      },
+      {
+        name: 'the swatch opens the panel; a palette swatch sets the colour; Escape returns',
+        steps: [
+          { focusInBox: COLOR_SWATCH('Fog') },
+          { press: 'Enter' },
+          { expectAttr: COLOR_SWATCH('Fog'), name: 'aria-expanded', value: 'true' },
+          { expectFocus: COLOR_PANEL_SWATCH(1) },
+          { expectAttr: COLOR_PANEL_SWATCH(1), name: 'aria-current', value: 'true' },
+          { press: 'Tab' },
+          { expectFocus: COLOR_PANEL_SWATCH(2) },
+          { press: 'Enter' },
+          { expectText: COLOR_STATUS, text: 'Fog: 0xd7c4a3 (last)' },
+          { expectAttr: COLOR_PANEL_SWATCH(2), name: 'aria-current', value: 'true' },
+          { expectAttr: COLOR_PANEL_SWATCH(1), name: 'aria-current', value: null },
+          // The focused swatch's tooltip is the top overlay: the first Escape closes it
+          { press: 'Escape' },
+          { expectCount: '#hudRoot .aekTooltip', count: 0 },
+          { expectFocus: COLOR_PANEL_SWATCH(2) },
+          { press: 'Escape' },
+          { expectFocus: COLOR_SWATCH('Fog') },
+          { expectCount: '#hudRoot .aekColorPopover', count: 0 },
+          { expectValue: COLOR('Fog'), value: '#d7c4a3' },
+        ],
+      },
+      {
+        name: 'the alpha’s spin button steps it, the text following',
+        steps: [
+          { focusInBox: COLOR_ALPHA('Tint') },
+          { press: 'ArrowUp' },
+          { expectText: COLOR_STATUS, text: 'Tint: #3fd8f282 (last)' },
+          { expectValue: COLOR('Tint'), value: '#3fd8f282' },
+          { press: 'Shift+ArrowDown' },
+          { expectValue: COLOR('Tint'), value: '#3fd8f269' },
         ],
       },
     ],

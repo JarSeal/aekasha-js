@@ -129,6 +129,10 @@ export type {
   SelectOptions,
   SelectValue,
 } from './forms/SelectField';
+export { createColorField } from './forms/color/ColorField';
+export type { ColorField, ColorFieldProps, ColorIntensityProps } from './forms/color/ColorField';
+export type { ColorFieldValue } from './forms/color/ColorValue';
+export { getRecentColors, onRecentColorsChange, setRecentColors } from './forms/color/RecentColors';
 export {
   createHudRoot,
   getHUDRootCMP,

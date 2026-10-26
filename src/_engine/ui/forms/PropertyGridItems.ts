@@ -9,6 +9,8 @@ import { lwarn } from '../../utils/Logger';
 import type { BindingSource, ReadonlyBindingSource } from './binding/Binding';
 import { addScheduledBinding, type BindingScheduler } from './binding/BindingScheduler';
 import { createCheckbox, createSwitch } from './Checkbox';
+import { createColorField, type ColorIntensityProps } from './color/ColorField';
+import { isColorObject, isColorString } from './color/ColorValue';
 import type { Field, FieldChange, FieldDyn, FieldOptions, FormChild } from './Field';
 import { createFolder } from './Folder';
 import { createMonitor } from './Monitor';
@@ -40,14 +42,17 @@ export type PropertyGridFieldKind =
   | 'select'
   | 'text'
   | 'search'
+  | 'color'
   | 'monitor';
 
 /**
  * A field item (p804 D10): a binding (`{ target, key }`, `{ get, set }`, `{ get }` alone for a
  * read-only one, or `{ value }`) with the field's props, in Tweakpane's names where it has them.
  * Without `kind` the field is inferred from the value at creation: `options` make a select, a
- * number a number field (a slider with both `min` and `max`), a boolean a checkbox, a string a
- * text field. `readonly: true` makes it a monitor in that field's text.
+ * number a number field (a slider with both `min` and `max`), a boolean a checkbox, a hex colour
+ * string (`'#rgb'` to `'#rrggbbaa'`) or an `{ r, g, b, a? }` object a colour field, another
+ * string a text field (a 24-bit colour number says `kind: 'color'`, Tweakpane's `view: 'color'`).
+ * `readonly: true` makes it a monitor in that field's text.
  */
 export type PropertyGridFieldItem = (BindingSource<unknown> | ReadonlyBindingSource<unknown>) &
   Omit<FieldOptions<unknown>, 'onChange' | 'scheduler'> & {
@@ -105,6 +110,18 @@ export type PropertyGridFieldItem = (BindingSource<unknown> | ReadonlyBindingSou
     maxLength?: number;
     /** A search field's debounced text. */
     onSearch?(text: string): void;
+    /** A colour field edits the alpha too. */
+    alpha?: boolean;
+    /** A colour object's space: `'srgb'` (default) or `'linear'` (a `THREE.Color`'s). */
+    colorSpace?: 'srgb' | 'linear';
+    /** A colour field's intensity, bound on its own (a light's). */
+    intensity?: ColorIntensityProps;
+    /** A colour field's swatches. */
+    palette?: readonly string[];
+    /** A colour field's recent colours (default true). */
+    recent?: boolean;
+    /** A colour field's eyedropper, where the browser has one (default true). */
+    eyeDropper?: boolean;
     /** A checkbox shows as mixed. */
     indeterminate?: boolean;
     /** A switch's or a boolean monitor's text while on. */
@@ -208,8 +225,9 @@ const readItemValue = (item: PropertyGridFieldItem): unknown => {
 
 /**
  * The field an item makes (D10's inference): its `kind`, else `options` a select, a number a
- * number field or (with `min` and `max`) a slider, a boolean a checkbox, a string a text field.
- * Any other value has no field yet (a vector's, a colour's, a rotation's: p804 Phase 5): `null`.
+ * number field or (with `min` and `max`) a slider, a boolean a checkbox, a hex colour string or a
+ * colour object a colour field, another string a text field. Any other value has no field yet (a
+ * vector's, a rotation's: p804 Phase 5): `null`.
  * @internal
  */
 export const inferFieldKind = (
@@ -222,6 +240,8 @@ export const inferFieldKind = (
     return item.min !== undefined && item.max !== undefined ? 'slider' : 'number';
   }
   if (typeof value === 'boolean') return 'checkbox';
+  // Tweakpane's: a hex string and an { r, g, b } object are colours (their channels 0-1, D8)
+  if (isColorString(value) || isColorObject(value)) return 'color';
   if (typeof value === 'string') return 'text';
   return null;
 };
@@ -247,7 +267,7 @@ const createItemField = (
     (create as (p: object) => unknown)({ ...props, ...extra }) as Field<unknown>;
   let kind = inferFieldKind(item, readItemValue(item));
   if (kind === null) {
-    // A vector, a colour, a rotation: shown as a monitor until their fields exist
+    // A vector, a rotation: shown as a monitor until their fields exist
     if (!item.readonly) {
       lwarn(`Property grid item "${item.label}": no field edits this value yet; it's read-only.`);
     }
@@ -284,6 +304,9 @@ const createItemField = (
       break;
     case 'search':
       field = make(createTextField, { type: 'search' });
+      break;
+    case 'color':
+      field = make(createColorField);
       break;
     case 'monitor':
       field = make(createMonitor);
@@ -414,9 +437,11 @@ const buildItems = (
  * `interval`, `multiline`, `rows`, `hidden`, `disabled`, `expanded`), so a ported pane is a rename.
  * - A field item binds `{ target, key }`, `{ get, set }` or `{ value }`; without `kind` its field
  *   is inferred from the value at creation: `options` make a select, a number a number field (a
- *   slider with both `min` and `max`), a boolean a checkbox, a string a text field; `readonly:
- *   true` makes it a monitor in that field's text. A value no field edits yet (a vector's, a
- *   colour's, a rotation's) is shown as a monitor, with a warning unless it's `readonly`.
+ *   slider with both `min` and `max`), a boolean a checkbox, a hex colour string or an
+ *   `{ r, g, b, a? }` object a colour field (a 24-bit number says `kind: 'color'`), another
+ *   string a text field; `readonly: true` makes it a monitor in that field's text. A value no
+ *   field edits yet (a vector's, a rotation's) is shown as a monitor, with a warning unless it's
+ *   `readonly`.
  *   `onChange` is the field's (D3: every write, `last` on the gesture's end, never a refresh's),
  *   `onCreate` gets the field's handle.
  * - A folder item's id is its title path (`'Parent/Child'`, after `path`) or its `id`; its open

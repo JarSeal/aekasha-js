@@ -25,6 +25,7 @@ import {
   createButton,
   createButtonGroup,
   createCheckbox,
+  createColorField,
   createDivider,
   createDropDown,
   createEmptyState,
@@ -65,6 +66,7 @@ import {
   registerBuiltInIcons,
   registerDraggableWindowKind,
   removeDraggableWindow,
+  setRecentColors,
   toggleDraggableWindow,
 } from 'aekasha/ui';
 import type {
@@ -1141,6 +1143,107 @@ const initCheckboxDemo: Demo = (box) => {
   root.append(status);
 };
 
+// --- Colour field ---
+
+const COLOR_ID = (name: string) => `${ID_PREFIX}Color${name}`;
+const COLOR_PALETTE = ['#9fb4c7', '#d7c4a3', '#3a4a5c', '#e07a5f', '#81b29a', '#f2cc8f'];
+
+/** In the page: colour fields in each of the three forms, each write in the box's status line; a
+ * kit button changes the sun from outside and refreshes (the flash); the recent colours seeded as
+ * an owner would restore them */
+const initColorFieldDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const scheduler = createBindingScheduler();
+  const status = document.createElement('p');
+  status.id = COLOR_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  /** A value as the status line says it: a number in hex, an object's floats to 3 decimals */
+  const sayColor = (value: unknown) => {
+    if (typeof value === 'number') return `0x${value.toString(16).padStart(6, '0')}`;
+    if (typeof value === 'object' && value) {
+      return Object.values(value as Record<string, number>)
+        .map((channel) => channel.toFixed(3))
+        .join(', ');
+    }
+    return String(value);
+  };
+  const report = (label: string) => (value: unknown, change: { last: boolean }) => {
+    status.textContent = `${label}: ${sayColor(value)} (${change.last ? 'last' : 'step'})`;
+  };
+  setRecentColors(['#ffd166', '#06d6a0', '#118ab2']);
+  // A THREE.Color's shape: linear floats, written in place
+  const scene = { fog: 0x9fb4c7, tint: '#3fd8f280', sun: { r: 1, g: 0.6, b: 0.3 }, intensity: 3 };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+    return group;
+  };
+  const fog = createColorField({
+    id: COLOR_ID('Fog'),
+    label: 'Fog',
+    target: scene,
+    key: 'fog',
+    palette: COLOR_PALETTE,
+    hint: 'A 24-bit number, as getHex() gives',
+    scheduler,
+    onChange: report('Fog'),
+  });
+  const fogRow = row('A number, with a palette and the recent colours', fog.cmp.elem);
+  addButton(fogRow, 'The fog’s panel open', () =>
+    fog.cmp.elem.querySelector<HTMLElement>('.aekColorField__swatch')?.click()
+  );
+  row(
+    'A hex string with alpha',
+    createColorField({
+      id: COLOR_ID('Tint'),
+      label: 'Tint',
+      target: scene,
+      key: 'tint',
+      scheduler,
+      onChange: report('Tint'),
+    }).cmp.elem
+  );
+  const sun = createColorField({
+    id: COLOR_ID('Sun'),
+    label: 'Sun',
+    target: scene,
+    key: 'sun',
+    colorSpace: 'linear',
+    intensity: {
+      target: scene,
+      key: 'intensity',
+      min: 0,
+      step: 0.1,
+      onChange: (value, { last }) => {
+        status.textContent = `Intensity: ${value} (${last ? 'last' : 'step'})`;
+      },
+    },
+    scheduler,
+    onChange: report('Sun'),
+  });
+  const change = createButton({
+    id: COLOR_ID('Change'),
+    label: 'Change the sun from outside',
+    size: 'sm',
+    onClick: () => {
+      scene.sun = { r: 0.2, g: 0.4, b: 1 };
+      scene.intensity = 1.5;
+      scheduler.refresh();
+    },
+  });
+  row('Linear floats (a THREE.Color) with an intensity', sun.cmp.elem, change.cmp.elem);
+  const invalid = createColorField({ id: COLOR_ID('Invalid'), label: 'Accent', value: '#e07a5f' });
+  invalid.setError('Too close to the background');
+  row(
+    'An error, and disabled',
+    invalid.cmp.elem,
+    createColorField({ label: 'Locked', value: 0x3a4a5c, disabled: true }).cmp.elem
+  );
+  root.append(status);
+};
+
 // --- Monitor ---
 
 const MONITOR_ID = (name: string) => `${ID_PREFIX}Monitor${name}`;
@@ -1519,6 +1622,10 @@ const initPropertyGridParityDemo: Demo = (box) => {
     labelText: 'Ray 1',
     castShadow: true,
     shadowMapSize: 1024,
+    cellsColor: 0x44aaff,
+    skyColor: '#87ceeb',
+    helperColor: '#ff00ff',
+    gridCenterColor: { r: 0.27, g: 0.27, b: 0.27 },
   };
   const note = {
     text: 'The env bake already lights PBR materials, and this adds to it. For Lambert/Phong materials (no environment) and stylized looks.',
@@ -1588,6 +1695,24 @@ const initPropertyGridParityDemo: Demo = (box) => {
           min: 0,
         }),
         field('_dbg__RayTester.ts:557', { target: state, key: 'labelText', label: 'Label' }),
+        field('_dbg__SpatialGrid.ts:586', {
+          target: state,
+          key: 'cellsColor',
+          label: 'Wireframe color',
+          kind: 'color',
+        }),
+        field('_dbg__BaseFolder.ts:26', { target: state, key: 'skyColor', label: 'Color' }),
+        field('_dbg__RayTester.ts:492', {
+          target: state,
+          key: 'helperColor',
+          label: 'Helper color',
+          kind: 'color',
+        }),
+        field('_dbg__DebugTools.ts:682', {
+          target: state,
+          key: 'gridCenterColor',
+          label: "Grid's center line color",
+        }),
         field('the view: list blade (_dbg__LightGUI.ts)', {
           kind: 'select',
           label: 'Shadow map width',
@@ -2630,6 +2755,7 @@ const DEMOS: Record<string, Demo> = {
   selectField: initSelectFieldDemo,
   textField: initTextFieldDemo,
   checkbox: initCheckboxDemo,
+  colorField: initColorFieldDemo,
   monitor: initMonitorDemo,
   monitorStress: initMonitorStressDemo,
   folder: initFolderDemo,

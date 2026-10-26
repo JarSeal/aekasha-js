@@ -166,6 +166,9 @@ export type FieldSpec<T> = {
   applyDisabled: (disabled: boolean) => void;
   /** Runs on every refresh, the value changed or not (a getter's options read again) */
   onRefresh?: () => void;
+  /** Runs on every read of the bound value (a refresh's, the tick's, a show's), before it: a part
+   * with a binding of its own reads it too (a colour's intensity) */
+  onRead?: (fromRefresh: boolean) => void;
   /** A monitor: never flashes, and has no reset button (nothing the user writes) */
   isMonitor?: boolean;
   /** The control is text with no part to label (a monitor's single line): the label is a
@@ -526,6 +529,7 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
   };
 
   const read = (fromRefresh: boolean) => {
+    spec.onRead?.(fromRefresh);
     if (!binding.sync()) return;
     draw();
     if (fromRefresh && !spec.isMonitor) flash.flash();

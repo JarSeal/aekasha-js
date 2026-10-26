@@ -45,6 +45,10 @@ export const COMPONENT_USES = [
   },
   { slot: 'generated-components-text-field', calls: ['createTextField'] },
   { slot: 'generated-components-checkbox', calls: ['createCheckbox', 'createSwitch'] },
+  {
+    slot: 'generated-components-color-field',
+    calls: ['createColorField', 'setRecentColors', 'getRecentColors', 'onRecentColorsChange'],
+  },
   { slot: 'generated-components-monitor', calls: ['createMonitor'] },
   { slot: 'generated-components-folder', calls: ['createFolder'] },
   { slot: 'generated-components-fieldset', calls: ['createFieldset'] },

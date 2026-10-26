@@ -55,6 +55,43 @@ describe('the property grid’s items (p804 D10)', () => {
     ]);
   });
 
+  it('infers colours as Tweakpane does: a hex string, an { r, g, b } object; a number says so', () => {
+    const state = {
+      sky: '#87ceeb',
+      fog: '#9fb4c780',
+      grid: { r: 0.2, g: 0.4, b: 0.6 },
+      collider: 0x00ff00,
+      tag: '#tag',
+      code: '#abc',
+    };
+    const { rows } = makeGrid([
+      { target: state, key: 'sky', label: 'Sky' },
+      { target: state, key: 'fog', label: 'Fog' },
+      { target: state, key: 'grid', label: 'Grid' },
+      { target: state, key: 'collider', label: 'Collider', kind: 'color' },
+      { target: state, key: 'collider', label: 'Collider id' },
+      { target: state, key: 'tag', label: 'Tag' },
+      { target: state, key: 'code', label: 'Code', kind: 'text' },
+      { target: state, key: 'sky', label: 'Sky', readonly: true },
+    ]);
+    expect(rows.map(kindOf)).toEqual([
+      'color',
+      'color',
+      'color',
+      'color',
+      'number',
+      'text',
+      'text',
+      'monitor',
+    ]);
+    const text = (row: HTMLElement) => row.querySelector<HTMLInputElement>('input')!.value;
+    expect(text(rows[2])).toBe('#336699');
+    expect(text(rows[3])).toBe('#00ff00');
+    // A string with alpha digits has the alpha part
+    expect(rows[1].querySelectorAll('.aekColorField__part')).toHaveLength(1);
+    expect(rows[7].textContent).toContain('#87ceeb');
+  });
+
   it('takes a kind over the inferred one, and Tweakpane’s options forms for radios', () => {
     const state = { on: false, mode: 'b', price: { min: 1, max: 5 }, query: '' };
     const { rows } = makeGrid([
@@ -82,7 +119,7 @@ describe('the property grid’s items (p804 D10)', () => {
     expect(rows[5].textContent).toContain('Off');
   });
 
-  it('shows a value no field edits yet as a monitor, warning unless it’s read-only', () => {
+  it('shows a value no field edits yet (a vector) as a monitor, warning unless it’s read-only', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const state = { position: { x: 1, y: 2, z: 3 } };
     const { rows } = makeGrid([

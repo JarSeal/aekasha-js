@@ -1372,6 +1372,43 @@ D8's colour, vector, rotation and quaternion.
 
 1. Section 1, `ColorValue.ts` (the forms, the spaces, parse and format) and the colour field
    without the picker (swatch, text, alpha, intensity, recent, palette, the EyeDropper).
+   - **Done 2026-10-26.** `ColorValue.test.ts` (10) and `ColorField.test.ts` (18), and a colour
+     inference test in `PropertyGridItems.test.ts`; the `colorField` box on both library pages (a
+     number with a palette and "The fog’s panel open" state, a hex string with alpha, a linear
+     object with an intensity and a kit button changing both from outside, an error, disabled),
+     three keyboard scripts, `COMPONENT_USES`; the parity box's four colour rows; on
+     `aekasha/ui`: `createColorField`, `ColorField`, `ColorFieldProps`, `ColorIntensityProps`,
+     `ColorFieldValue`, `getRecentColors`, `setRecentColors`, `onRecentColorsChange`.
+   - **`forms/color/RecentColors.ts`** (not in D2's table): the page's list (newest first, at most
+     8, hex), in memory; `setRecentColors` (an owner's restore, calling no listener) and
+     `onRecentColorsChange` (the owner's save) are D8's "an owner may persist them".
+   - **No `format: 'float'`** (D8, D10's table): the value's form is its type (a number, a string,
+     an object, read at creation), and an object is always 0-1 floats (no census row has 0-255
+     objects), so Tweakpane's `color: { type: 'float' }` is dropped in the port, not renamed; an
+     item's `format` stays the text function it is for every other field.
+   - **`intensity` is one prop** (D8 had `intensity: true` with `intensityBind`):
+     `ColorIntensityProps`, a `BindingSource<number>` with `NumberRules`, `label` (default
+     'Intensity'), `unit` and its own `onChange`. Its binding is read with the field's through
+     the shell's new `FieldSpec.onRead(fromRefresh)` (every read: a refresh's, the tick's, a
+     show's), flashing its own box on a refresh. The reset button resets the colour only.
+   - **Not a group:** the `<label for>` names the text input; the swatch is "Pick {label}", the
+     alpha "{label} alpha", the intensity "{label} {its label}", each part's name shown before
+     its box (`aria-hidden`, held in the input's name: WCAG 2.5.3). An error marks every input.
+   - **Alpha:** a spin button 0-1 on a `NumberTarget` over the colour's binding (`withAlpha`
+     leaves the colour channels as they are: a linear value's round trip through sRGB isn't
+     exact, and an HDR channel over 1 stays). Shown for a string or an object with `alpha: true`,
+     and for a string bound with alpha digits; never for a number (a warning with `alpha`). A
+     typed 6-digit hex in an alpha field writes it opaque (the text shows the alpha digits).
+   - **The panel** (the popover the swatch opens, built on each open; the picker's place in
+     section 2): 'Palette' and 'Recent' groups of swatch buttons named by their hex (a tooltip
+     each, `aria-current` on the value's), the eyedropper button where `EyeDropper` exists (it
+     keeps the alpha, and re-checks the field after its `await`), else a line saying what to
+     type. A swatch writes once and the panel stays open (the picker beside it in section 2).
+     Each swatch is a tab stop (no roving focus: at most 8 recent and the app's palette).
+   - **Recent colours** are added on a user's `last: true` change (a reset too), not a step.
+   - **The text** accepts no colour names (a 1.3 KiB table), and 3-digit hex only with `#` or
+     `0x` (`100` reads as numbers, an error, not `#110000`); `live` isn't offered (`#3fd` is a
+     whole colour, so each keystroke would write a different one).
 2. Section 2, the picker: Phase 0's library in `ColorPicker.ts`, loaded on the first open in the
    popover; its budget line measured and set.
 3. Section 3, the vector field (axes, the link lock, per-axis props).
