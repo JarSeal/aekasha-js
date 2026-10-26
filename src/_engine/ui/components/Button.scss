@@ -3,9 +3,9 @@
 // control (`surface`, `border-control`), primary the accent, danger the danger colour on a surface,
 // ghost and link without a box; pressed the `accent-soft`.
 
-// The size is on the parts, not the button: normalize.scss's `button { font-size: 100%;
-// line-height: 1.15 }` (unlayered, on the full page) beats a layered rule on the button itself. Each
-// size sets --aek-button-font-size, which the parts and the spinner read.
+// Each size sets --aek-button-font-size (the button's font size, which the spinner reads too) and
+// --aek-button-height. On the button itself: the full page's normalize is in @layer aek.page, below
+// this one (p804 D13).
 @layer aek.components {
   :where(.aekButton) {
     --aek-button-font-size: var(--aek-font-size-md);
@@ -27,7 +27,9 @@
     background-color: transparent;
     color: var(--aek-text);
     font-family: inherit;
+    font-size: var(--aek-button-font-size);
     font-weight: var(--aek-font-weight-medium);
+    line-height: var(--aek-line-height-tight);
     text-align: center;
     text-decoration: none;
     white-space: nowrap;
@@ -41,8 +43,6 @@
   }
 
   :where(.aekButton > *) {
-    font-size: var(--aek-button-font-size);
-    line-height: var(--aek-line-height-tight);
     transition: opacity var(--aek-motion-fast) var(--aek-ease-standard);
   }
 

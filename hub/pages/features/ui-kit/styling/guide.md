@@ -108,8 +108,10 @@ names: a version that changes one says so in its changelog.
 
 ## Why your CSS wins
 
-Every kit style is in a CSS cascade layer (`@layer aek.tokens, aek.base, aek.components,
-aek.utilities`), and its selectors are wrapped in `:where()`, which has no specificity. So:
+Every kit style is in a CSS cascade layer (`@layer aek.page, aek.tokens, aek.base,
+aek.components, aek.utilities`), and its selectors are wrapped in `:where()`, which has no
+specificity. `aek.page` is the full-page boot's normalize (`InitEngine`; an embed doesn't load it),
+below every other kit layer, so the kit's own rules beat it on buttons and form controls. So:
 
 - **A rule of yours that isn't in a layer beats every kit style**, whatever its specificity: a
   plain `.aekWindow__title` beats the kit's.

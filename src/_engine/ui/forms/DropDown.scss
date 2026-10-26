@@ -4,8 +4,7 @@
 // roles: the trigger a control on `surface` with `border-control`, the list `surface-raised` with
 // `shadow-sm`, the highlighted option `surface-hover`, the current one's dot the `accent`.
 
-// The font size is set here, not on the trigger: normalize.scss's `button { font-size: 100% }`
-// (unlayered, on the full page) beats a layered rule, and 100% inherits this one
+// The font size is the drop-down's, which the trigger inherits (the kit's controls' reset, kit.scss)
 @layer aek.components {
   :where(.aekDropDown) {
     position: relative;

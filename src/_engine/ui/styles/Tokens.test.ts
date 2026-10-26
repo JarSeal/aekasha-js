@@ -33,7 +33,9 @@ const findContrastFailures = (decls: Map<string, string>) =>
 
 describe('tokens.css', () => {
   it('declares the layer order first', () => {
-    expect(sheet.statements[0]).toBe('@layer aek.tokens, aek.base, aek.components, aek.utilities');
+    expect(sheet.statements[0]).toBe(
+      '@layer aek.page, aek.tokens, aek.base, aek.components, aek.utilities'
+    );
   });
 
   it('registers each @property once, with a fixed fallback on the kit root', () => {

@@ -543,8 +543,11 @@ string form deprecated the same way).
 - **Engine minor** (5.13.0, or the next minor when p805 merges first): the new components and
   public functions, the button's `kbd` handle with the string form deprecated, normalize's layer.
   The changelog's restyle note (p800 D12): normalize's layer makes the kit's rules beat it on
-  buttons and form controls in the full page (the drop-down's trigger takes the kit's line height);
-  to keep a normalize rule, an app puts it in its own unlayered CSS.
+  buttons and form controls in the full page (the drop-down's trigger takes the kit's line height,
+  the key hints `Kbd.scss`' font and size); to keep a normalize rule, an app puts it in its own
+  unlayered CSS. The button's font size is on the button again, so an `em` in an app's rule on a
+  kit button (a `::before` swatch) is its text size, 14 px at the defaults, not the inherited
+  16 px.
 - **App minor** (the example's panel and form, the `uiKit` profile's form). **Toolkit:** none.
   **Project:** `verify:ui`'s settle fraction, the Hub's `<wbr>`, the forms page and boxes.
 - p800 §6: branch `p804-forms-and-bindings` from `main`, one PR into `main`. It can run beside
@@ -745,6 +748,23 @@ D13. Small, and first: normalize's layer is under every field.
    hidden (`?isDebug=true&startScene=…` with the drawer's tab seeded in `AEK_debugDrawerState`,
    and `?isProdTest=true&startScene=exampleUiKit` for the kit's HUD without the debugger), the
    expected changes being the kit buttons' height and the key hints, and none in a drawer tab.
+   - **Done 2026-10-26.** `tokens.css`' order is `@layer aek.page, aek.tokens, aek.base,
+     aek.components, aek.utilities` (its header says why it's named there; `Tokens.test.ts`
+     follows); `page.scss` loads normalize with `meta.load-css` inside `@layer aek.page`, its `*`,
+     `body`, `#mainCanvas` and `#guiContainer` rules left unlayered (Phase 0 checked normalize
+     alone, and nothing of the kit fights them). The button's `font-size` and `line-height` are on
+     `.aekButton` again (`--aek-button-font-size` still set per size, which the spinner reads); the
+     drop-down's trigger needed no change (its own `line-height` now wins), only its comment, as
+     `Kbd.scss`' and `Divider.scss`'. The Hub's Styling guide names `aek.page`.
+   - **The shots** (Phase 0's 15 states, the script reused; two "before" sets 0 px apart but the
+     profiler's live figures): **no drawer tab changed.** Changed: the About dialog's "Copy info" and
+     "Close" (taller: the kit's line height), the key shortcuts dialog and the profiler (their kit
+     buttons and key hints), and the UI kit example's key hints (`Kbd.scss`' size and font, no
+     longer normalize's `kbd { font-family: monospace, monospace; font-size: 1em }`): Phase 0's
+     list. One more, from the button's size moving back: **an `em` on the button itself now means
+     its text size.** The example's shape swatches (`.exampleUiKitShapeButton::before`, `0.75em`)
+     went from 12 px to 10.5 px, since the button was 16 px (inherited) with only its parts at
+     14 px. That's the point of the move, and goes in D16's changelog note with normalize's.
 2. Section 2, the button: `kbd` as a `Kbd` handle, the string form deprecated and loaded on first
    use, `onUnheldClick`; the menu's `kbd` if Phase 0 says so; JSDoc, the Hub's core page, the
    library's button text.
