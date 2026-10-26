@@ -211,6 +211,23 @@ ${box} {
   z-index: 2147483647 !important;
 }`;
 
+/**
+ * Offsets the box by the fraction of a pixel its place on the page has (`position: relative`,
+ * which, unlike a transform, leaves its fixed children alone), before a state's steps: an overlay
+ * they open anchored to it then lands on whole pixels too. Where the page lays the box out (a text
+ * above it grown by a line) moves an open overlay by whole pixels only, which its clipped shot
+ * doesn't see; a fraction would antialias its text differently.
+ */
+export const alignBoxAsync = (page: Page, piece: string) =>
+  page.evaluate((box) => {
+    const el = document.querySelector<HTMLElement>(box);
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+    el.style.left = `${Math.round(rect.left) - rect.left}px`;
+    el.style.top = `${Math.round(rect.top) - rect.top}px`;
+  }, boxSelector(piece));
+
 /** The box's screenshot, pinned (`getPinBoxCss`) */
 const captureBoxAsync = async (page: Page, piece: string) => {
   const box = page.locator(boxSelector(piece));

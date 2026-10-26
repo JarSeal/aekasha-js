@@ -67,7 +67,13 @@ export type UiCheckState = { name: string; steps: UiCheckStep[] };
 export type UiKeyScript = { name: string; steps: UiKeyStep[] };
 
 /** A demo's checks beyond its buttons */
-export type UiDemoChecks = { states?: UiCheckState[]; keyboard?: UiKeyScript[] };
+export type UiDemoChecks = {
+  states?: UiCheckState[];
+  keyboard?: UiKeyScript[];
+  /** Where in its duration (0-1) the settle pauses an infinite animation for the shot (a spinner,
+   * the indeterminate bar's slide): default 0.4 (`ui.ts`' `DEFAULT_PAUSE_AT`), where both show */
+  pauseAt?: number;
+};
 
 const WINDOW = '#hudRoot #hubDemoWindow';
 const WINDOW_HEADER = `${WINDOW} .aekWindow__header`;
@@ -636,6 +642,9 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
     ],
   },
   progressBar: {
+    // The indeterminate slide eases out fast (`--aek-ease-standard`): at a fifth of its time the
+    // bar is mid-track (30-70 %), at the default 0.4 it's already past the right edge
+    pauseAt: 0.2,
     keyboard: [
       {
         name: 'no keys; the track is a progressbar with its value, none while indeterminate',

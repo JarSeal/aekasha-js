@@ -109,7 +109,7 @@ const parseFenceMeta = (meta: string, warn: (message: string) => void): HubFence
 /** A fence inside `::: code-group`: its tab panel's ids, set by the directive */
 type GroupPanel = { panelId: string; tabId: string; isActive: boolean };
 
-type HubCodeOptions = { highlighter: Highlighter; icons: HubIcons };
+export type HubCodeOptions = { highlighter: Highlighter; icons: HubIcons };
 
 const lineOf = (token: Token) => (token.map?.[0] ?? 0) + 1;
 
@@ -300,6 +300,31 @@ const inlineLanguageRule = (state: StateCore) => {
   }
 };
 
+/**
+ * Marks the inline code in a table cell (`meta.isInTableCell`), which renders with a `<wbr>` after
+ * its hyphens (p804 D13: a long custom property name in a narrow reference table's cell)
+ */
+const tableCellCodeRule = (state: StateCore) => {
+  let cellDepth = 0;
+  for (const block of state.tokens) {
+    if (block.type === 'td_open' || block.type === 'th_open') cellDepth++;
+    else if (block.type === 'td_close' || block.type === 'th_close') cellDepth--;
+    else if (cellDepth > 0 && block.type === 'inline' && block.children) {
+      for (const child of block.children) {
+        if (child.type === 'code_inline') child.meta = { ...child.meta, isInTableCell: true };
+      }
+    }
+  }
+};
+
+/**
+ * Escaped code text with a `<wbr>` after each hyphen between two letters or digits, where a line
+ * may break (`--aek-window-<wbr>header-<wbr>height`): never after a leading `--`, which would end
+ * a line alone
+ */
+export const breakAtHyphens = (escaped: string) =>
+  escaped.replace(/(?<=[\p{L}\p{N}])-(?=[\p{L}\p{N}])/gu, '-<wbr>');
+
 // --- Snippet includes ---
 
 /**
@@ -346,6 +371,7 @@ export const hubCodePlugin = (md: MarkdownIt, options: HubCodeOptions) => {
     alt: ['paragraph', 'reference', 'blockquote', 'list'],
   });
   md.core.ruler.after('inline', 'hub_inline_code_lang', inlineLanguageRule);
+  md.core.ruler.after('hub_inline_code_lang', 'hub_table_cell_code', tableCellCodeRule);
 
   md.renderer.rules['fence'] = (tokens, idx, _opts, env: HubMarkdownEnv) =>
     renderFence(options, tokens[idx], env);
@@ -354,6 +380,10 @@ export const hubCodePlugin = (md: MarkdownIt, options: HubCodeOptions) => {
   md.renderer.rules['code_inline'] = (tokens, idx, opts, env: HubMarkdownEnv, self) => {
     const token = tokens[idx];
     const lang = token.meta?.lang as string | undefined;
+    if (!lang && token.meta?.isInTableCell) {
+      const code = breakAtHyphens(md.utils.escapeHtml(token.content));
+      return `<code${self.renderAttrs(token)}>${code}</code>`;
+    }
     if (!lang) return defaultCodeInline(tokens, idx, opts, env, self);
     const resolved = resolveLanguage(options.highlighter, lang, env, token.meta.line);
     if (resolved === 'text') return defaultCodeInline(tokens, idx, opts, env, self);

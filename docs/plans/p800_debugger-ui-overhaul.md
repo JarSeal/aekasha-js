@@ -608,9 +608,8 @@ API, anchored) with the tooltip, popover and menu on it; §4.2's components; `ya
 (axe-core, keyboard scripts, screenshots of the public component library page, `hub/CLAUDE.md`
 says how a new piece joins it); the Hub's UI kit section, where a new component gets its section
 and `::: demo`. The percentage pie, the debugger list and the tab buttons moved to p805 with the
-context menu, which opens p803's menu (its D1). Its open review items are
-`docs/issues/ui-kit-review-items.md` and, for p804, the button's key hint below. What follows is
-the sketch as written.
+context menu, which opens p803's menu (its D1). Its open review items and the button's key hint
+below went to p804 (its D13), whose Phase 1 settled them. What follows is the sketch as written.
 
 - The layout: `ui/core/` (CMP, HUD root, icons), `ui/components/` (§4.2), `ui/overlays/` (windows,
   dialogs, popover, tooltip, toaster, context menu), `ui/forms/` (p804), `ui/data/` (p805),
@@ -627,8 +626,8 @@ the sketch as written.
 
 Written: `p804_forms-and-bindings.md` (2026-10-26, draft). It changes D9's events (its D3), moves
 the label's context menu and the monitor's graph view to p805, keeps the gradient and curve
-editors with a fallback home (its D1), and takes `docs/issues/ui-kit-review-items.md` (its D13).
-What follows is the sketch as written.
+editors with a fallback home (its D1), and took p803's four open review items, closing their issue
+file in its Phase 1 (its D13). What follows is the sketch as written.
 
 - Phase 0: the colour picker study (D13); the binding scheduler's design checked against today's
   builder (`_dbg__DebuggerPaneBuilder.ts`) and undo (`UndoRedo.ts`).

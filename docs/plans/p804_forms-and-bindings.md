@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented
+Status: in progress | Phases 0-1 implemented
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
@@ -547,7 +547,8 @@ string form deprecated the same way).
   the key hints `Kbd.scss`' font and size); to keep a normalize rule, an app puts it in its own
   unlayered CSS. The button's font size is on the button again, so an `em` in an app's rule on a
   kit button (a `::before` swatch) is its text size, 14 px at the defaults, not the inherited
-  16 px.
+  16 px, and a kit piece put straight in a button (a badge, a key hint) has its own size, no
+  longer the button's.
 - **App minor** (the example's panel and form, the `uiKit` profile's form). **Toolkit:** none.
   **Project:** `verify:ui`'s settle fraction, the Hub's `<wbr>`, the forms page and boxes.
 - p800 §6: branch `p804-forms-and-bindings` from `main`, one PR into `main`. It can run beside
@@ -737,7 +738,7 @@ each section for review.
      snapshots read the canvas, so they can't show it; Phase 1 section 1 compares these shots
      instead.
 
-### Phase 1: p803's open items and the button's `kbd`
+### Phase 1: p803's open items and the button's `kbd` — done
 
 D13. Small, and first: normalize's layer is under every field.
 
@@ -765,6 +766,9 @@ D13. Small, and first: normalize's layer is under every field.
      its text size.** The example's shape swatches (`.exampleUiKitShapeButton::before`, `0.75em`)
      went from 12 px to 10.5 px, since the button was 16 px (inherited) with only its parts at
      14 px. That's the point of the move, and goes in D16's changelog note with normalize's.
+     Section 3's full `verify:ui` found one more of the same kind: a badge put straight in a
+     button (the badge box's "Messages") had the button's size from the old `.aekButton > *` rule,
+     and now has its own `0.8em` of it.
 2. Section 2, the button: `kbd` as a `Kbd` handle, the string form deprecated and loaded on first
    use, `onUnheldClick`; the menu's `kbd` if Phase 0 says so; JSDoc, the Hub's core page, the
    library's button text.
@@ -802,6 +806,27 @@ D13. Small, and first: normalize's layer is under every field.
      pixel before the shot), so a Hub text change no longer moves them.
 3. Section 3, `verify:ui`'s settle fraction and the Hub's `<wbr>`; the issue file closed
    (`git rm`, its mentions in `src/_engine/ui/CLAUDE.md` and p800 updated).
+   - **Done 2026-10-26**, with the overlays' pinning added (the user's call after section 2).
+   - **The settle point:** an infinite animation pauses at `pauseAt` of its duration after its
+     delay, 0.4 by default (`ui.ts`' `DEFAULT_PAUSE_AT`), or the box's own (`UiDemoChecks.pauseAt`
+     in `_componentChecks.ts`). The progress bar's box says 0.2: its slide eases out fast
+     (`--aek-ease-standard`), so at 0.4 the bar is already past the right edge; at 0.2 it spans
+     30-70 % of the track. The spinner's, the skeleton's and the loading overlay's shots were
+     recorded again at 0.4.
+   - **The overlays pinned:** before a state's steps, `uiPage.ts`' `alignBoxAsync` offsets the
+     box by its place's fraction of a pixel (`position: relative` with `left` / `top`; a
+     transform would make the box the containing block of its fixed children), so what opens
+     anchored to it lands on whole pixels. The two menu shots were recorded again; checked by a
+     temporary wrapped line at the top of the library page, with the drop-down, tooltip, popover
+     and menu boxes passing unchanged under it.
+   - **The `<wbr>`:** `code.ts`' `tableCellCodeRule` marks plain inline code in a table cell, and
+     its renderer puts a `<wbr>` after each hyphen between two letters or digits
+     (`breakAtHyphens`), not after each `-` as D13 had it: a break after a name's leading `--`
+     would leave it alone at a line's end. Highlighted inline code (`` `x`{ts} ``) is left as it
+     is. `devTools/hub/code.test.ts` is new (and `HubCodeOptions` exported for it).
+   - The issue file is removed; p800's two mentions now say p804 took and settled its items (the
+     kit's `CLAUDE.md` had none). The dev library pages' spinner, skeleton and progress bar texts
+     say where their shots pause.
 
 ### Phase 2: the binding core and the first fields
 
