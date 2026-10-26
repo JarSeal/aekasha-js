@@ -358,7 +358,15 @@ t)` on `aekasha/ui` for the sky colours and ramps.
   **Without `kind` it's inferred from the bound value at creation, as Tweakpane does:** a number
   is a number field, or a slider when both `min` and `max` are set; a boolean a checkbox; a string
   a text field; any value with `options` a select; `{ x, y }`-like objects and 2-4 number arrays a
-  vector. A colour has no shape to infer from: `kind: 'color'`.
+  vector. **Colours are inferred as Tweakpane infers them** (Phase 0's census: the sky box's 8
+  colour rows are `'#rrggbb'` strings with no `view`, the Debug tools tab's 2 grid colours
+  `{ r, g, b }` objects with only `color: { type: 'float' }`): a `'#rgb'`, `'#rrggbb'` or
+  `'#rrggbbaa'` string and an `{ r, g, b, a? }` object are a colour field (the object's channels
+  0-1, D8's float form; no census row has 0-255 objects); a 24-bit number has no shape to infer
+  from (`kind: 'color'`, Tweakpane's `view: 'color'`); a text field that holds such a string says
+  `kind: 'text'`. An object with a string `order` (a `THREE.Euler`'s shape) is a rotation field
+  (D8: degrees), not a vector (Tweakpane shows its radians as a point; the census's 2 Euler rows
+  are imperative, rewritten in p806 anyway).
 - **Tweakpane's names map one to one** (p800 D9), so p806's port is a rename where it isn't the
   same name:
 
@@ -372,13 +380,15 @@ t)` on `aekasha/ui` for the sky colours and ramps.
   | `expanded` (a folder, a titled section)      | the same                                         |
   | `view: 'color'`, `color: { type: 'float' }`  | `kind: 'color'`, `format: 'float'`               |
   | an `{ x, y, z }` value (a point)             | inferred `vector`                                |
+  | a `'#rrggbb'` string, an `{ r, g, b }` value | inferred `color`                                 |
+  | a `THREE.Euler` value (a point in radians)   | inferred `rotation` (shown in degrees)           |
   | `onChange(value, { prev, last, api })`       | `onChange(value, { prev, last, source, field })` |
   | `onCreate(api)`                              | `onCreate(field)` (the field's handle)           |
   | `addBlade({ view: 'separator' })`            | `{ type: 'separator' }`                          |
   | `addBlade({ view: 'list', options, value })` | an unbound select (`kind: 'select'`, `value`)    |
 
-  Phase 0's census confirms every param in use is in the table; one that isn't is added here (or
-  to p806's list of rewrites) before Phase 4.
+  Phase 0's census confirms every param in use is in the table (the two inferred rows above were
+  added from it); what isn't a rename is §4's list for p806.
 
 - **Folder ids** are the title path (`'Parent/Child'`) or `id`, as today, and the grid reports
   `onFolderExpandedChange(id, expanded)` and takes `folderExpanded: Record<string, boolean>`: the
@@ -515,6 +525,45 @@ each section for review.
    blade and imperative call in the engine and the app, with its params, the type of its bound
    value, whether its `onChange` has a live side effect, and its file. The result goes into D10's
    table (every param mapped) and a list p806 starts from (§4 of this plan, "For p806").
+   - **Run on 2026-10-26** (the TypeScript checker over `src/`: a declarative item found by its
+     `DebuggerPane*` contextual type, or by its keys where a helper builds it untyped; an
+     imperative call by its Tweakpane receiver; the bound value's type from the checker, the sky
+     box's runtime proxy (`Record<string, unknown>`) typed by hand from `_dbg__SkyBoxShared.ts`'
+     key tables). §1.1's counts were greps; these are exact.
+   - **340 bindings** in 40 files (280 declarative, 53 imperative `addBinding`, 7 untyped helper
+     items), plus 26 declarative sections, 66 folders, 77 buttons, 20 separators and 1 `custom`;
+     imperative: 7 `new Pane` in 6 files, 5 `addFolder`, 19 `addButton`, 7 `addBlade` (5
+     separators, 2 `view: 'list'`).
+   - **Params:** `label` 330, `readonly` 85, `step` 84, `min` 75, `disabled` 47, `max` 40,
+     `options` 36 (3 in the object form), `interval` 35 (`0` ×14, `250` ×4, `500` ×11, 6 through a
+     spread), `hidden` 23, `format` 22, `view` 14 (all `'color'`), `multiline` 11, `rows` 11,
+     `color: { type: 'float' }` 2. Every one is in D10's table. `hidden` and `disabled` are always
+     functions; `format` and `interval` appear only on monitors; `multiline` only on monitors (no
+     editable multiline text); `onCreate` has no user.
+   - **The fields they become:** checkbox 92, monitor 88 (12 multiline; their values strings 57,
+     numbers 28, booleans 3: no vector or colour monitor), number 43 (34 with `min` and `step`, no
+     `max`), slider 40, select 38, colour 22 (9 hex numbers with `view: 'color'`, 8 `'#rrggbb'`
+     strings inferred, 3 strings with `view: 'color'`, 2 `{ r, g, b }` floats), vector 11 (all
+     3D: `THREE.Vector3`, `Vec3`, `PhysVector`, plain `{ x, y, z }`), text 3, rotation 2 (Euler,
+     `step: Math.PI / 8`, both imperative), and the material editor's TSL input (number, checkbox or
+     colour by the input's kind).
+   - **`onChange`:** 194 act on every tick (a live side effect: a light, a uniform, an override
+     with its coalesced undo, a rebuild); 16 act on every tick and read `last` for the commit work
+     (persist, undo); 4 act on `last` only (the light's position and target and the camera's
+     position, imperative points, and `_dbg__SpatialGrid.ts`' cell size); 126 have none (monitors,
+     and state keys the builder persists). D3's every-write `onChange` is what they need.
+   - **Parity box rows** (Phase 4; one per distinct shape, with an example): checkbox
+     (`_dbg__SpatialGrid.ts:568`); slider `min`/`max`/`step` (`_dbg__LightGUI.ts:838`); select,
+     array `options` (`_dbg__SpatialGrid.ts:508`) and object `options` (`_dbg__ECS.ts:120`);
+     number `min`/`step` (`_dbg__SpatialGrid.ts:522`), `step` alone (`_dbg__LightGUI.ts:816`),
+     `min` alone (`_dbg__LightGUI.ts:865`); monitor plain (`_dbg__SpatialGrid.ts:521`), `interval`
+     (`_dbg__LightGUI.ts:506`), `format` (`_dbg__SpatialGrid.ts:560`), multiline `rows` with and
+     without `interval` (`_dbg__SpatialGrid.ts:674`, `_dbg__AmbientLightFolder.ts:21`); vector
+     (`_dbg__DebugTools.ts:549`); colour hex number (`_dbg__SpatialGrid.ts:586`), inferred
+     `'#rrggbb'` (`_dbg__BaseFolder.ts:26`), string with `view` (`_dbg__RayTester.ts:492`), float
+     object (`_dbg__DebugTools.ts:682`); text (`_dbg__RayTester.ts:557`); rotation, Euler
+     (`_dbg__Character.ts:213`); a `hidden` and a `disabled` function; a folder, a nested folder, a
+     button, a separator, a `custom` item; an unbound select (the `view: 'list'` blade).
 3. **The event order today:** a Playwright probe on the `debugTab` example (`?isDebug=true`): drag
    a slider, step it with the keys, type into a number, toggle a checkbox, pick a list option, and
    log each `onChange` with `last` and `prev`. Written here; `Binding.test.ts` pins D3's order, and
@@ -623,9 +672,42 @@ p426); time for the PR: `p804-forms-and-bindings` → `main` (p800 §6).
 
 ## 4. For p806
 
-Filled by Phase 0's census and the later phases: what the port needs that isn't a rename (the
-imperative panes' `addBinding` calls with live side effects, the two `view: 'list'` blades, the
-`custom` sections, anything the census finds outside D10's table).
+Filled by Phase 0's census and the later phases: what the port needs that isn't a rename. The
+declarative sections (26, with their 280 bindings and the helper-built items) port by D10's
+table; these don't:
+
+- **The imperative panes** (7 `new Pane` in 6 files; 53 bindings, 40 with a `.on('change')`
+  handler: 37 live, 3 acting on `last` only): `_dbg__LightGUI.ts` (two panes: a light's readout and its editor; 32
+  bindings, 2 folders, 3 buttons), `_dbg__CameraGUI.ts` (8 bindings, a folder, 2 buttons),
+  `_dbg__Character.ts`' window (position and rotation, 5 buttons, a separator),
+  `_dbg__PhysicsAPI.ts` (the entity window's position and rotation, 5 buttons, 2 separators; the
+  wireframe folder's visibility, note and per-state colours with their reset buttons),
+  `_dbg__PostFX.ts` (the enabled toggle and one binding per pass param, its params built by
+  `getParamBindingParams`) and `_dbg__ECS.ts` (3 bindings, the storage folder, 2 buttons). Each
+  becomes a property grid of D10's items, `.on('change')` an `onChange`.
+- **Their folders' open states** are module-owned (`.on('fold')` writing `_lensSettingsOpen`,
+  `_shadowFolderOpen`, `_shadowCameraFolderOpen`, `entityWireframeFolderExpanded`): a folder
+  item's `onExpandedChange`, or ids under the grid's `folderExpanded`.
+- **The two `view: 'list'` blades** (`_dbg__LightGUI.ts`' shadow map width and height, `value`
+  and `.on('change')`): unbound selects (`kind: 'select'`, `value`).
+- **The `custom` item** (`_dbg__DayNightFolder.ts`' `buildSpeedButtons`): raw `<button>`s with
+  Tweakpane's own class `tp-btnv_b` in a separator blade's element, styled by
+  `DebuggerGUI.module.scss`' `.debuggerSkyTransportRow` (the one Tweakpane class outside
+  Tweakpane): a row of kit buttons in `custom`'s CMP container, and the rule goes.
+- **The Euler bindings** (the character's and the physics entity's rotation, imperative,
+  `step: Math.PI / 8`): rotation fields, shown in degrees where Tweakpane showed radians (a
+  visible change, D10's inference).
+- **One-level state paths** (46 rows: `_dbg__DebugTools.ts`' `'helpers.showGrid'` and the like,
+  `_dbg__RayTester.ts`' `'aim.dir'`): p806's mapping of a tab's `state` key to `{ target, key }`
+  (D3) resolves the path to its parent object, as the builder does today, and persists the
+  top-level key.
+- **Wrappers that rewrite items** (`_dbg__RayTester.ts`' `persistOnCommit`, spreading each item
+  with a wrapped `onChange`; the material editor's definition tables, `SettingDef` and
+  `MaterialParamDef` with `kind: 'COLOR' | 'NUMBER' | 'BOOLEAN' | 'OPTIONS' | 'SIDE'`, spread into
+  items): they keep working on plain data; their `view: 'color'` spreads become `kind: 'color'`.
+- **A handler that refreshes its own pane** (`_dbg__RayTester.ts`' `refreshPane`, the builder's
+  `refresh()` from inside an `onChange`): the grid's `refresh()`, which never fires `onChange`
+  (D3), so it can't loop.
 
 ---
 
