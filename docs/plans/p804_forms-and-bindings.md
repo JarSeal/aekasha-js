@@ -151,7 +151,20 @@ Each public module is on `aekasha/ui` by name (p803 D12: one entry). The coding 
     pointerdown → (each step: write, `onChange` `last: false`) → pointerup: `onChange` `last: true`
     (with the same value as the last step when it didn't move again). A key step: write,
     `onChange` `last: false`; its keyup: `onChange` `last: true`. A click (checkbox, select,
-    segment): write, one `onChange` `last: true`.
+    segment): write, one `onChange` `last: true`. A click on a slider's track is a drag without a
+    move (the press's write with `last: false`, then `last: true`).
+  - **Phase 0 found today's order the same** (§3, Phase 0 step 3), with these differences, each
+    kept on purpose:
+    - `prev` on the `last: true` call: today the last step's value (so it equals `value`); here
+      the value before the gesture. No handler reads it there (undo coalescing keeps the first
+      tick's `prev`; the one `prev` comparison, the sky box's auto colour, is on a select, which
+      writes once), and a handler that records on `last` only gets the whole change in one call.
+    - Monitors: Tweakpane's poll emits `change` unsuppressed, so today the builder calls a
+      monitor's `onChange` on every read (no monitor has one). Here a monitor's read is a refresh
+      (D4): it never fires `onChange`.
+    - Escape on typed text reverts it (D6); today the next blur commits it.
+    - A typed or stepped number is rounded to the step's decimals before it's written (D6); today
+      `1.0999999999999999` and `2.5000000000000004` reach the target, LS and undo.
 - p800 D9's events bullet is updated to this.
 
 ### D4. The scheduler
@@ -212,9 +225,17 @@ setHidden(on), setError(text | null), focus() }`, plus each field's own.
 ew-resize`). No pointer lock (it prompts in some browsers and loses the cursor in an embed).
   The keyboard path is the keys above.
 - **Expressions** (p800 D9: "where p804 decides it's safe"): `ValueExpression.ts`, our own parser
-  (about 1 KiB): numbers, `+ - * / ( )`, unary minus, `pi`, and the units the field declares
+  (about 1 KiB): numbers, `+ - * / ** ( )`, unary minus, `pi`, and the units the field declares
   (`deg` / `rad` on an angle, `%` on a 0-1 field). No `eval` or `Function` (CSP-safe, nothing
   runs). An invalid expression shows the error and keeps the value. Typed into any number part.
+  Phase 0 found Tweakpane evaluates typed expressions already (ECMAScript's number expressions),
+  so this is parity, not new: its `**` is kept, its `%` (modulo) is the unit here, and its bit
+  operators and `~` go (nothing types a value with them).
+- **Rounding:** a stepped, dragged or typed value is rounded to the shown decimals (`step`'s, or
+  `precision`) before it's written, so `1 + 0.1` writes `1.1` (Phase 0: Tweakpane writes
+  `1.0999999999999999`, and snaps a typed `2.5` to `2.5000000000000004` on a grid from `min`).
+  The step grid stays Tweakpane's (from `min` when it's set, else 0); the rounding takes the
+  larger of `step`'s and `min`'s decimals. A `format` changes only what's shown.
 - **Precision:** the shown decimals follow `step` (as Tweakpane: `step: 0.01` → 2), or
   `precision`, or `format(v) => string` (Tweakpane's `format`, which then also sets the
   spinbutton's `aria-valuetext`). Numbers use tabular figures (p800 D5).
@@ -568,6 +589,45 @@ each section for review.
    a slider, step it with the keys, type into a number, toggle a checkbox, pick a list option, and
    log each `onChange` with `last` and `prev`. Written here; `Binding.test.ts` pins D3's order, and
    any difference from today's is a decision in D3 before Phase 2.
+   - **Run on 2026-10-26** (Chrome on WebGPU, a dev server of its own, a fresh context per tab;
+     Playwright's route served `_dbg__DebuggerPaneBuilder.ts` with a log call before its
+     `isSuppressed` check and one next to its `onChange` call, so the repo wasn't touched; the
+     `debugTab` example has only a slider and a colour, so the Debug tools tab's checkbox and
+     number and the Renderer tab's list were driven too). Each line: what the builder's
+     `onChange` got.
+   - **Slider drag** (the track, a pause before the release): the press writes at once
+     (`last: false`, `prev` the old value), each move writes (`last: false`, `prev` the step
+     before), the release repeats the last value with `last: true` and `prev` equal to it.
+     Released while moving: the same, the `last: true` call 8 ms after the last step. **A click on
+     the track** is the same gesture: one `last: false` write, then `last: true` with the same
+     value.
+   - **Keys** (the slider's focused track with ArrowRight, its text with ArrowUp, the number's
+     text with ArrowUp): each keydown writes with `last: false`, its keyup repeats it with
+     `last: true`. Shift+ArrowUp steps ×10. A held key's repeats each write `last: false`; one
+     `last: true` on the keyup.
+   - **Typed text:** Enter or a blur (Tab) writes once with `last: true`, `prev` the old value.
+     Escape doesn't revert: the next blur commits the typed text. `1/2` is evaluated (0.5:
+     Tweakpane's own parser, ECMAScript's number expressions: `**`, `*`, `/`, `%` as modulo, `+`,
+     `-`, the bit operators, unary `+ - ~`, parentheses); `abc` writes nothing.
+   - **The number text's drag knob** (Tweakpane's scrub, on the value's left edge): as the slider
+     drag, `last: false` per step and `last: true` on the release.
+   - **Colour:** a typed `#ff0000` and Enter writes once (`last: true`); a drag in the picker's
+     plane writes per move (`last: false`) and once with `last: true` on the release. The bound
+     string is written as `'#rrggbb'`.
+   - **Checkbox** (a click, Space) and **list** (a pick): one write, `last: true`.
+   - **Float noise:** ArrowUp from 1 by `step: 0.1` writes `1.0999999999999999`; a typed `2.5`
+     on `min: 0.1, step: 0.1` writes `2.5000000000000004` (Tweakpane snaps to the step grid from
+     `min` and doesn't round).
+   - **Refresh:** the tab's `refreshIntervalMs` refresh makes Tweakpane emit `change` for the
+     bound values that changed (and every monitor), which the builder suppresses: no `onChange`.
+     **But a monitor's own `interval` read emits `change` unsuppressed**, every 200 ms (Tweakpane's
+     default) with `last: true`, so the builder would call a monitor's `onChange` on every read;
+     no monitor in the census has one.
+   - Not found: ArrowDown on a focused `<select>` in Chrome on macOS opens its popup, so no key
+     write was logged for the list.
+   - Aside: the Renderer tab's "Custom" tone mapping (`THREE.CustomToneMapping`) logs
+     `THREE.ToneMappingNode: Unsupported Tone Mapping configuration. 5` on WebGPU: the tab offers
+     an option three's node renderer doesn't take (outside this plan).
 4. **The colour picker study** (p800 D13): `vanilla-colorful`, Coloris, `iro.js`, and any newer
    candidate found then, on p800 D13's criteria, each in a probe page (scratchpad) in both themes:
    gzip size, keyboard and screen reader use (axe-core and by hand with VoiceOver), alpha, the
