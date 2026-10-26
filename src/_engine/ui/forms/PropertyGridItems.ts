@@ -8,6 +8,7 @@ import { createDivider } from '../components/Divider';
 import { lwarn } from '../../utils/Logger';
 import type { BindingSource, ReadonlyBindingSource } from './binding/Binding';
 import { addScheduledBinding, type BindingScheduler } from './binding/BindingScheduler';
+import { createAngleDial } from './AngleDial';
 import { createCheckbox, createSwitch } from './Checkbox';
 import { createColorField, type ColorIntensityProps } from './color/ColorField';
 import { isColorObject, isColorString } from './color/ColorValue';
@@ -15,6 +16,7 @@ import type { Field, FieldChange, FieldDyn, FieldOptions, FormChild } from './Fi
 import { createFolder } from './Folder';
 import { createMonitor, getVectorKeys } from './Monitor';
 import { createNumberField } from './NumberField';
+import { createPad2D } from './Pad2D';
 import type { PropertyGrid } from './PropertyGrid';
 import { createRadioGroup, createSegmentedControl, type SegmentOption } from './RadioGroup';
 import { createRangeSlider } from './RangeSlider';
@@ -50,6 +52,8 @@ export type PropertyGridFieldKind =
   | 'vector'
   | 'rotation'
   | 'quaternion'
+  | 'angle'
+  | 'pad2d'
   | 'monitor';
 
 /**
@@ -60,7 +64,8 @@ export type PropertyGridFieldKind =
  * string (`'#rgb'` to `'#rrggbbaa'`) or an `{ r, g, b, a? }` object a colour field, an
  * `{ x, y, z?, w? }` object or an array of 2 to 4 numbers a vector field, an Euler's shape (with a
  * string `order`) a rotation field in degrees, another string a text field (a 24-bit colour
- * number says `kind: 'color'`, Tweakpane's `view: 'color'`; a quaternion `kind: 'quaternion'`).
+ * number says `kind: 'color'`, Tweakpane's `view: 'color'`; a quaternion `kind: 'quaternion'`; an
+ * angle dial and a 2D pad `'angle'` and `'pad2d'`).
  * `readonly: true` makes it a monitor in that field's text.
  */
 export type PropertyGridFieldItem = (BindingSource<unknown> | ReadonlyBindingSource<unknown>) &
@@ -87,7 +92,7 @@ export type PropertyGridFieldItem = (BindingSource<unknown> | ReadonlyBindingSou
     live?: boolean;
     /** A slider's or a range's marks. */
     ticks?: number | readonly SliderTick[];
-    /** A slider's spin button (default true). */
+    /** A slider's or an angle dial's spin button (default true). */
     showInput?: boolean;
     /** A range's spin buttons at each end. */
     showInputs?: boolean;
@@ -135,6 +140,13 @@ export type PropertyGridFieldItem = (BindingSource<unknown> | ReadonlyBindingSou
     order?: EulerOrder;
     /** A quaternion's raw components as text. */
     showRaw?: boolean;
+    /** An angle dial's value unit: `'radians'` (default) or `'degrees'`. */
+    angleUnit?: 'radians' | 'degrees';
+    /** An angle dial's 0 and turn: `'math'` (default, from the right, anticlockwise) or
+     * `'compass'` (from the top, clockwise). */
+    convention?: 'math' | 'compass';
+    /** A 2D pad's y grows downwards. */
+    invertY?: boolean;
     /** A colour field edits the alpha too. */
     alpha?: boolean;
     /** A colour object's space: `'srgb'` (default) or `'linear'` (a `THREE.Color`'s). */
@@ -357,6 +369,12 @@ const createItemField = (
     case 'quaternion':
       field = make(createQuaternionField);
       break;
+    case 'angle':
+      field = make(createAngleDial);
+      break;
+    case 'pad2d':
+      field = make(createPad2D);
+      break;
     case 'monitor':
       field = make(createMonitor);
       break;
@@ -490,7 +508,7 @@ const buildItems = (
  *   `{ r, g, b, a? }` object a colour field (a 24-bit number says `kind: 'color'`), an
  *   `{ x, y, z?, w? }` object or 2 to 4 numbers a vector field, an Euler (a string `order`) a
  *   rotation field in degrees, another string a text field (a quaternion says
- *   `kind: 'quaternion'`); `readonly: true` makes it a monitor in that field's text. A value no
+ *   `kind: 'quaternion'`, an angle dial `'angle'`, a 2D pad `'pad2d'`); `readonly: true` makes it a monitor in that field's text. A value no
  *   field edits is shown as a monitor, with a warning unless it's `readonly`.
  *   `onChange` is the field's (D3: every write, `last` on the gesture's end, never a refresh's),
  *   `onCreate` gets the field's handle.

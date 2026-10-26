@@ -1,6 +1,6 @@
 // A slider's track (p804 D7), which the slider and the range slider share: the rail with its fill,
 // the ticks, the histogram, the thumbs with their bubbles, where a value sits on the rail and which
-// value is under the pointer, and the drag (the pointer's capture and its end).
+// value is under the pointer. Its drag is PointerDrag.ts'.
 import './Slider.scss';
 import '../styles/kit.scss';
 
@@ -176,73 +176,6 @@ export const createSliderTrack = (props: SliderTrackProps) => {
           bubble.textContent = props.unit ? `${text} ${props.unit}` : text;
         },
       };
-    },
-  };
-};
-
-/**
- * What a track's drag calls.
- * @internal
- */
-export type TrackDragHandlers = {
-  /** Whether a primary press may start a drag (not while disabled) */
-  canPress: () => boolean;
-  /** The press: the pointer is captured and `data-dragging` set */
-  onPress: (e: PointerEvent) => void;
-  /** Each move of the pressed pointer */
-  onMove: (e: PointerEvent) => void;
-  /** The drag's end: the release, a `pointercancel`, a lost capture or `end()` */
-  onEnd: () => void;
-};
-
-/**
- * A drag on a track: a primary press (`preventDefault`: no text selection, and the focus stays
- * unless the handler moves it) captures the pointer and sets `data-dragging` until the release, a
- * `pointercancel` or a lost capture. `dispose()` releases the capture without `onEnd`.
- * @internal
- */
-export const createTrackDrag = (track: HTMLElement, handlers: TrackDragHandlers) => {
-  let pointerId: number | null = null;
-
-  const end = () => {
-    if (pointerId === null) return;
-    pointerId = null;
-    track.removeAttribute('data-dragging');
-    handlers.onEnd();
-  };
-
-  const onPointerDown = (e: PointerEvent) => {
-    if (e.button !== 0 || pointerId !== null || !handlers.canPress()) return;
-    e.preventDefault();
-    pointerId = e.pointerId;
-    track.setPointerCapture?.(e.pointerId);
-    track.setAttribute('data-dragging', '');
-    handlers.onPress(e);
-  };
-
-  const onPointerMove = (e: PointerEvent) => {
-    if (pointerId === null || e.pointerId !== pointerId) return;
-    handlers.onMove(e);
-  };
-
-  const listeners: [string, (e: never) => void][] = [
-    ['pointerdown', onPointerDown],
-    ['pointermove', onPointerMove],
-    ['pointerup', end],
-    ['pointercancel', end],
-    ['lostpointercapture', end],
-  ];
-  for (const [type, fn] of listeners) track.addEventListener(type, fn as EventListener);
-
-  return {
-    end,
-    isDragging: () => pointerId !== null,
-    dispose: () => {
-      // Cleared first: the release's lostpointercapture would end the drag
-      const held = pointerId;
-      pointerId = null;
-      if (held !== null && track.hasPointerCapture?.(held)) track.releasePointerCapture(held);
-      for (const [type, fn] of listeners) track.removeEventListener(type, fn as EventListener);
     },
   };
 };

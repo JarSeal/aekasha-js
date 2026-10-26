@@ -8,12 +8,8 @@ import { createField, type Field, type FieldProps } from './Field';
 import { buildMonitor } from './Monitor';
 import { createNumberInput, type NumberInput, type NumberTarget } from './NumberInput';
 import { createNumberSteps, getStepModifier } from './NumberSteps';
-import {
-  createSliderTrack,
-  createTrackDrag,
-  type SliderThumb,
-  type SliderTick,
-} from './SliderTrack';
+import { createPointerDrag, type PointerDrag } from './PointerDrag';
+import { createSliderTrack, type SliderThumb, type SliderTick } from './SliderTrack';
 import './RangeSlider.scss';
 import '../styles/kit.scss';
 
@@ -191,7 +187,7 @@ export const createRangeSlider = (props: RangeSliderProps): RangeSlider => {
   let spanRight = -1;
   /** The key whose keyup ends the key's gesture */
   let stepKey: string | null = null;
-  let drag: ReturnType<typeof createTrackDrag> | null = null;
+  let drag: PointerDrag | null = null;
 
   /** A thumb at its value with its bubble; its ARIA when it's the control */
   const drawThumb = (thumb: SliderThumb, value: number) => {
@@ -405,7 +401,7 @@ export const createRangeSlider = (props: RangeSliderProps): RangeSlider => {
     return value - from.min < from.max - value ? 'low' : 'high';
   };
 
-  drag = createTrackDrag(parts.track, {
+  drag = createPointerDrag(parts.track, {
     canPress: () => !shell.isDisabled(),
     onPress: (e) => {
       endKeyGesture();

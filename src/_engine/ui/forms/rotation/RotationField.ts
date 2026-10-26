@@ -6,7 +6,8 @@ import { createValueFormatter } from '../binding/ValueText';
 import { createDropDown } from '../DropDown';
 import type { Field, FieldProps } from '../Field';
 import { buildMonitor, readFirstValue } from '../Monitor';
-import { buildPartsField, type NumberPart } from '../VectorField';
+import { buildPartsField } from '../VectorField';
+import { getAnglePart } from './AnglePart';
 import { DEG_TO_RAD, EULER_ORDERS, RAD_TO_DEG } from './RotationMath';
 import '../VectorField.scss';
 import '../../styles/kit.scss';
@@ -44,40 +45,7 @@ export type RotationFieldProps<T extends EulerValue = EulerValue> = FieldProps<T
  */
 export type RotationField<T extends EulerValue = EulerValue> = Field<T>;
 
-/**
- * The units a typed angle may use: degrees as they are, radians and turns converted.
- * @internal
- */
-export const ANGLE_UNITS: Readonly<Record<string, number>> = {
-  deg: 1,
-  '°': 1,
-  rad: RAD_TO_DEG,
-  turn: 360,
-};
-
 const KEYS = ['x', 'y', 'z'] as const;
-
-/**
- * An angle part's rules (p804 D8): degrees, wrapping at ±180°, the step given in radians.
- * @internal
- */
-export const getAnglePart = (
-  axis: string,
-  label: string,
-  props: { step?: number; precision?: number; format?: (degrees: number) => string }
-): NumberPart => ({
-  axis,
-  label,
-  min: -180,
-  max: 180,
-  wrap: true,
-  // `Math.PI / 8` in degrees is 22.499999999999996: rounded, so its decimals are 22.5's
-  step: props.step === undefined ? 1 : Number((props.step * RAD_TO_DEG).toFixed(10)),
-  precision: props.precision,
-  format: props.format,
-  unit: '°',
-  expressionUnits: ANGLE_UNITS,
-});
 
 /**
  * Creates a rotation field (p804 D8): an Euler's angles (radians, a `THREE.Euler` written in

@@ -6,8 +6,9 @@ import { getPrimitiveValueKind, type Binding } from './binding/Binding';
 import { createValueFormatter } from './binding/ValueText';
 import { createField, type Field } from './Field';
 import { buildNumberField, buildNumberMonitor, type NumberFieldProps } from './NumberField';
-import { createNumberSteps, type NumberSteps } from './NumberSteps';
-import { createSliderTrack, createTrackDrag, type SliderTick } from './SliderTrack';
+import { createNumberSteps, listenStepKeys, type NumberSteps } from './NumberSteps';
+import { createPointerDrag, type PointerDrag } from './PointerDrag';
+import { createSliderTrack, type SliderTick } from './SliderTrack';
 import '../styles/kit.scss';
 
 /** What {@link createSlider} makes a slider from. */
@@ -64,7 +65,7 @@ const createSingleTrack = (props: SliderProps) => {
       // Alt: a tenth of the step's grid, as the keys
       const getValue = (e: PointerEvent) =>
         steps.constrain(parts.getValueAt(e.clientX, offset), e.altKey ? 0.1 : 1);
-      return createTrackDrag(parts.track, {
+      return createPointerDrag(parts.track, {
         canPress: () => !drag.isDisabled(),
         onPress: (e) => {
           drag.onPress();
@@ -85,13 +86,12 @@ const createSingleTrack = (props: SliderProps) => {
 };
 
 type SingleTrack = ReturnType<typeof createSingleTrack>;
-type TrackDrag = ReturnType<typeof createTrackDrag>;
 
 /** The slider with the spin button: the number field with the track before its box */
 const createInputSlider = (props: SliderProps, track: SingleTrack): Slider => {
   // The spin button is the control: the track is for the pointer only
   track.track.setAttribute('aria-hidden', 'true');
-  let drag: TrackDrag | null = null;
+  let drag: PointerDrag | null = null;
   const build = buildNumberField(props, {
     kind: 'slider',
     wrapBox: (box) => {
@@ -123,20 +123,14 @@ const createThumbSlider = (props: SliderProps, track: SingleTrack): Slider => {
   const steps = createNumberSteps(props, { horizontal: true });
   /** The text last drawn (its aria-valuetext written) */
   let shownText: string | null = null;
-  /** The key whose keyup ends the key's gesture */
-  let stepKey: string | null = null;
-  let drag: TrackDrag | null = null;
+  let drag: PointerDrag | null = null;
+  /** The thumb's keys (set below: disabling can run while the shell is made) */
+  let keys: ReturnType<typeof listenStepKeys> | null = null;
 
   thumb.setAttribute('role', 'slider');
   thumb.setAttribute('tabindex', '0');
   thumb.setAttribute('aria-valuemin', String(props.min));
   thumb.setAttribute('aria-valuemax', String(props.max));
-
-  const endKeyGesture = () => {
-    if (stepKey === null) return;
-    stepKey = null;
-    shell.binding.commit();
-  };
 
   const shell = createField<number>(props, {
     kind: 'slider',
@@ -159,7 +153,7 @@ const createThumbSlider = (props: SliderProps, track: SingleTrack): Slider => {
       if (on) {
         thumb.setAttribute('aria-disabled', 'true');
         thumb.removeAttribute('tabindex');
-        endKeyGesture();
+        keys?.end();
         drag?.end();
       } else {
         thumb.removeAttribute('aria-disabled');
@@ -168,35 +162,19 @@ const createThumbSlider = (props: SliderProps, track: SingleTrack): Slider => {
     },
     onRemove: () => {
       drag?.dispose();
-      for (const [type, fn] of listeners) thumb.removeEventListener(type, fn as EventListener);
+      keys?.dispose();
     },
   });
   const { binding } = shell;
 
-  const onKeyDown = (e: KeyboardEvent) => {
-    if (e.ctrlKey || e.metaKey || shell.isDisabled()) return;
-    const target = steps.getKeyTarget(e, binding.peek);
-    if (target === null) return;
-    e.preventDefault();
-    e.stopPropagation();
-    if (stepKey !== null && stepKey !== e.key) endKeyGesture();
-    stepKey = e.key;
-    binding.step(target);
-  };
-
-  const onKeyUp = (e: KeyboardEvent) => {
-    if (e.key !== stepKey) return;
-    // The keydown was used: so is its keyup
-    e.stopPropagation();
-    endKeyGesture();
-  };
-
-  const listeners: [string, (e: never) => void][] = [
-    ['keydown', onKeyDown],
-    ['keyup', onKeyUp],
-    ['blur', endKeyGesture],
-  ];
-  for (const [type, fn] of listeners) thumb.addEventListener(type, fn as EventListener);
+  keys = listenStepKeys(thumb, {
+    getStep: (e) => {
+      const target = steps.getKeyTarget(e, binding.peek);
+      return target === null ? null : () => binding.step(target);
+    },
+    commit: () => binding.commit(),
+    isDisabled: shell.isDisabled,
+  });
 
   drag = track.listen({
     binding,
@@ -204,7 +182,7 @@ const createThumbSlider = (props: SliderProps, track: SingleTrack): Slider => {
     isDisabled: shell.isDisabled,
     // The press focuses the slider, as a click on a native one does
     onPress: () => {
-      endKeyGesture();
+      keys?.end();
       thumb.focus({ preventScroll: true });
     },
   });

@@ -168,6 +168,15 @@ const ROTATION_PART = (name: string, axis: string) =>
   `#hubDemoRotation${name} .aekVectorField__axis[data-axis="${axis}"] input`;
 const ROTATION_ORDER = '#hubDemoRotationRotation .aekDropDownTrigger';
 const ROTATION_STATUS = '#hubDemoRotationStatus';
+/** An angle dial's control by its name (`_components.ts`' `ANGLE_ID`: the spin button's id, or
+ * the dial's without one), and the box's status line */
+const ANGLE = (name: string) => `#hubDemoAngle${name}`;
+const ANGLE_STATUS = '#hubDemoAngleStatus';
+/** A 2D pad's pad and axis by the field's name (`PAD_ID`, the row's id), and the status line */
+const PAD = (name: string) => `#hubDemoPad${name} .aekPad2D__pad`;
+const PAD_AXIS = (name: string, axis: string) =>
+  `#hubDemoPad${name} .aekVectorField__axis[data-axis="${axis}"] input`;
+const PAD_STATUS = '#hubDemoPadStatus';
 /** A folder demo's element by its name (`FOLDER_ID`): a folder's button, a field's control */
 const FOLDER = (name: string) => `#hubDemoFolder${name}`;
 const FOLDER_STATUS = '#hubDemoFolderStatus';
@@ -916,6 +925,75 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { press: '0' },
           { press: 'Enter' },
           { expectText: ROTATION_STATUS, text: 'Spin: 0.707, 0.000, 0.000, 0.707 (last)' },
+        ],
+      },
+    ],
+  },
+  angleDial: {
+    keyboard: [
+      {
+        name: 'the spin button steps by π / 8, shown as 22.5°',
+        steps: [
+          { focusInBox: ANGLE('Heading') },
+          { press: 'ArrowUp' },
+          { expectValue: ANGLE('Heading'), value: '67.5' },
+          { expectText: ANGLE_STATUS, text: 'Heading: 1.178 (last)' },
+        ],
+      },
+      {
+        name: 'a compass in degrees: a typed -90 wraps to 270',
+        steps: [
+          { focusInBox: ANGLE('Azimuth') },
+          { press: 'ControlOrMeta+A' },
+          { press: '-' },
+          { press: '9' },
+          { press: '0' },
+          { press: 'Enter' },
+          { expectValue: ANGLE('Azimuth'), value: '270' },
+          { expectText: ANGLE_STATUS, text: 'Sun azimuth: 270 (last)' },
+        ],
+      },
+      {
+        name: 'without the spin button the dial is the slider: the arrows, Shift ×10, End',
+        steps: [
+          { focusInBox: ANGLE('Spin') },
+          { press: 'ArrowRight' },
+          { expectAttr: ANGLE('Spin'), name: 'aria-valuenow', value: '1' },
+          { press: 'Shift+ArrowRight' },
+          { expectAttr: ANGLE('Spin'), name: 'aria-valuenow', value: '11' },
+          { press: 'End' },
+          { expectAttr: ANGLE('Spin'), name: 'aria-valuenow', value: '180' },
+          { expectText: ANGLE_STATUS, text: 'Spin: 3.142 (last)' },
+        ],
+      },
+    ],
+  },
+  pad2d: {
+    keyboard: [
+      {
+        name: 'the pad’s arrows move the point, Shift ×10; its axes follow',
+        steps: [
+          { focusInBox: PAD('Offset') },
+          { press: 'ArrowRight' },
+          { expectText: PAD_STATUS, text: 'Offset: 0.26, -0.5 (last)' },
+          { press: 'Shift+ArrowUp' },
+          { expectText: PAD_STATUS, text: 'Offset: 0.26, -0.4 (last)' },
+          { expectValue: PAD_AXIS('Offset', 'y'), value: '-0.40' },
+        ],
+      },
+      {
+        name: 'Tab goes from the pad to its axes; y down: ArrowUp lowers y',
+        steps: [
+          { focusInBox: PAD('Anchor') },
+          { press: 'ArrowUp' },
+          { expectText: PAD_STATUS, text: 'Anchor: 50, 24 (last)' },
+          { press: 'Tab' },
+          { expectFocus: PAD_AXIS('Anchor', 'x') },
+          { press: 'ControlOrMeta+A' },
+          { press: '7' },
+          { press: '5' },
+          { press: 'Enter' },
+          { expectText: PAD_STATUS, text: 'Anchor: 75, 24 (last)' },
         ],
       },
     ],

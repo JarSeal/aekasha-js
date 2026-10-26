@@ -1,6 +1,7 @@
 // A number part's steps (p804 D6): the keys that move it, Shift's and Alt's modifiers and the
-// constraint a stepped value goes through. The number field's spin button, the slider's thumb and
-// (later) the range slider's thumbs share them.
+// constraint a stepped value goes through, and the key gesture of a stop that isn't a text input.
+// The number field's spin button, the slider's and the range slider's thumbs, the angle dial and
+// the 2D pad share them.
 import { constrainNumber, type NumberRules } from './binding/ValueText';
 
 /** A key's step, as a count of `step`s */
@@ -36,6 +37,64 @@ export type NumberSteps = {
    * arrows, PageUp / PageDown ×10, Home / End to `min` / `max` when they're set; null for any
    * other key */
   getKeyTarget: (e: KeyboardEvent, from: () => number) => number | null;
+};
+
+/**
+ * The key gesture on a stop that isn't a text input (a slider's thumb, the angle dial, the 2D pad):
+ * a step key's keydown writes (`getStep` gives the write; each repeat writes again, `last: false`),
+ * and its keyup, another step key, a blur or `end()` calls `commit` (`last: true`). A used key is
+ * stopped, its keyup too; nothing with Ctrl / ⌘ or while `isDisabled`.
+ * @internal
+ */
+export const listenStepKeys = (
+  elem: HTMLElement,
+  handlers: {
+    /** The write a keydown makes, or null for a key that isn't a step */
+    getStep: (e: KeyboardEvent) => (() => void) | null;
+    commit: () => void;
+    isDisabled: () => boolean;
+  }
+) => {
+  /** The key whose keyup ends the key's gesture */
+  let stepKey: string | null = null;
+
+  const end = () => {
+    if (stepKey === null) return;
+    stepKey = null;
+    handlers.commit();
+  };
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.ctrlKey || e.metaKey || handlers.isDisabled()) return;
+    const write = handlers.getStep(e);
+    if (!write) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (stepKey !== null && stepKey !== e.key) end();
+    stepKey = e.key;
+    write();
+  };
+
+  const onKeyUp = (e: KeyboardEvent) => {
+    if (e.key !== stepKey) return;
+    // The keydown was used: so is its keyup
+    e.stopPropagation();
+    end();
+  };
+
+  const listeners: [string, (e: never) => void][] = [
+    ['keydown', onKeyDown],
+    ['keyup', onKeyUp],
+    ['blur', end],
+  ];
+  for (const [type, fn] of listeners) elem.addEventListener(type, fn as EventListener);
+
+  return {
+    end,
+    dispose: () => {
+      for (const [type, fn] of listeners) elem.removeEventListener(type, fn as EventListener);
+    },
+  };
 };
 
 /**

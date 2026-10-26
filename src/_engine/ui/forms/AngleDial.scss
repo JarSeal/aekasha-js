@@ -1,0 +1,124 @@
+// The angle dial's styles (AngleDial.ts), on the design tokens and layered (p803 D5): a round face
+// (`--aek-angle-dial-size`, a control's background and border) with a mark at 0 and the hand from
+// its centre to the knob at the rim, turned by the field (an inline `transform`). The spin
+// button's box after it is the number field's (Field.scss), `--aek-angle-dial-input-width` wide.
+// The kit's ring is on the dial when it's the slider.
+@layer aek.components {
+  :where(.aekAngleDial__row) {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--aek-space-3);
+    min-width: 0;
+  }
+
+  :where(.aekAngleDial__row) > :where(.aekField__box) {
+    flex: 0 1 var(--aek-angle-dial-input-width, 5em);
+    min-width: 0;
+  }
+
+  :where(.aekAngleDial) {
+    position: relative;
+    display: block;
+    flex: none;
+    box-sizing: border-box;
+    // WCAG 2.5.8's target size at the least, in every density
+    width: max(24px, var(--aek-angle-dial-size, calc(var(--aek-space-7) * 2)));
+    height: max(24px, var(--aek-angle-dial-size, calc(var(--aek-space-7) * 2)));
+    border: 1px solid var(--aek-field-control-border-color, var(--aek-border-control));
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-angle-dial-face-color, var(--aek-field-control-bg, var(--aek-surface)));
+    cursor: grab;
+    // The drag is the dial's, not the page's scroll or a text selection
+    touch-action: none;
+    user-select: none;
+    transition: background-color var(--aek-motion-base) var(--aek-ease-standard);
+  }
+
+  :where(.aekAngleDial[data-dragging]) {
+    cursor: grabbing;
+  }
+
+  :where(.aekAngleDial[data-flash]) {
+    background-color: var(--aek-field-flash-color, var(--aek-accent-soft));
+    transition-duration: 0s;
+  }
+
+  :where(.aekField[data-invalid] .aekAngleDial) {
+    border-color: var(--aek-danger);
+  }
+
+  :where(.aekField[data-disabled] .aekAngleDial) {
+    border-color: var(--aek-border);
+    cursor: default;
+  }
+
+  // The mark at 0: inside the rim, on the right (math) or at the top (compass)
+  :where(.aekAngleDial__zero) {
+    position: absolute;
+    top: 50%;
+    right: 3px;
+    width: 6px;
+    height: 2px;
+    margin-top: -1px;
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-border-strong);
+  }
+
+  :where(.aekAngleDial[data-convention='compass'] .aekAngleDial__zero) {
+    top: 3px;
+    right: auto;
+    left: 50%;
+    width: 2px;
+    height: 6px;
+    margin: 0 0 0 -1px;
+  }
+
+  // The hand: from the centre to the knob's centre, 7 px inside the rim, pointing right before its
+  // turn
+  :where(.aekAngleDial__hand) {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: calc(50% - 7px);
+    height: 2px;
+    margin-top: -1px;
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-angle-dial-hand-color, var(--aek-accent));
+    transform-origin: 0 50%;
+  }
+
+  // The knob at its end, and the centre's dot
+  :where(.aekAngleDial__hand)::after,
+  :where(.aekAngleDial__hand)::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    box-sizing: border-box;
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-angle-dial-hand-color, var(--aek-accent));
+  }
+
+  :where(.aekAngleDial__hand)::after {
+    right: -5px;
+    width: 10px;
+    height: 10px;
+    margin-top: -5px;
+    border: 2px solid var(--aek-surface);
+    box-shadow: var(--aek-shadow-sm);
+  }
+
+  :where(.aekAngleDial__hand)::before {
+    left: -3px;
+    width: 6px;
+    height: 6px;
+    margin-top: -3px;
+  }
+
+  :where(.aekField[data-disabled] .aekAngleDial__hand),
+  :where(.aekField[data-disabled] .aekAngleDial__hand)::after,
+  :where(.aekField[data-disabled] .aekAngleDial__hand)::before {
+    background-color: var(--aek-text-disabled);
+    box-shadow: none;
+  }
+}

@@ -7,7 +7,7 @@ import { createValueFormatter } from '../binding/ValueText';
 import type { Field, FieldProps } from '../Field';
 import { buildMonitor } from '../Monitor';
 import { buildPartsField, type NumberPart } from '../VectorField';
-import { getAnglePart } from './RotationField';
+import { getAnglePart } from './AnglePart';
 import {
   axisAngleToQuaternion,
   DEG_TO_RAD,

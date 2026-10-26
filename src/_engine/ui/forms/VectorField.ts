@@ -282,6 +282,8 @@ export type PartsFieldSpec<T> = {
   ) => T;
   /** `from` with every part set (a pasted list, each kept to its rules) */
   writeAll: (from: T, values: readonly number[]) => T;
+  /** Elements before the parts in the row (the 2D pad) */
+  leading?: readonly HTMLElement[];
   /** Elements after the parts in the row (a link toggle, an order select, a raw line) */
   extras?: readonly HTMLElement[];
   /** Draws the extras */
@@ -295,7 +297,7 @@ export type PartsFieldSpec<T> = {
  * label): a spin button per part with its name before it, each writing the whole value through
  * the field's binding (`writePart`), the clipboard the whole value (`1, 2.5, -3`; a pasted list
  * of as many numbers sets every part), an outside change flashing every box. The vector field,
- * and the rotation and quaternion fields with their degrees.
+ * the rotation and quaternion fields with their degrees, and the 2D pad (its pad `leading`).
  * @internal
  */
 export const buildPartsField = <T>(
@@ -312,6 +314,7 @@ export const buildPartsField = <T>(
 
   const row = document.createElement('span');
   row.className = spec.className ? `aekVectorField ${spec.className}` : 'aekVectorField';
+  row.append(...(spec.leading ?? []));
   const spins: NumberInput[] = parts.map((part) => {
     const { axis: name, label, ...rules } = part;
     const spin = createNumberInput({

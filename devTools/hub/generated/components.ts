@@ -50,6 +50,8 @@ export const COMPONENT_USES = [
     slot: 'generated-components-rotation-field',
     calls: ['createRotationField', 'createQuaternionField'],
   },
+  { slot: 'generated-components-angle-dial', calls: ['createAngleDial'] },
+  { slot: 'generated-components-pad2d', calls: ['createPad2D'] },
   {
     slot: 'generated-components-color-field',
     calls: ['createColorField', 'setRecentColors', 'getRecentColors', 'onRecentColorsChange'],

@@ -27,6 +27,7 @@ import {
   createCheckbox,
   createColorField,
   createDivider,
+  createAngleDial,
   createDropDown,
   createEmptyState,
   createFieldset,
@@ -40,6 +41,7 @@ import {
   createMenu,
   createMonitor,
   createNumberField,
+  createPad2D,
   createPopover,
   createProgressBar,
   createQuaternionField,
@@ -1434,6 +1436,170 @@ const initRotationFieldDemo: Demo = (box) => {
       value: { x: 0, y: Math.PI / 2, z: 0 },
       disabled: true,
     }).cmp.elem
+  );
+  root.append(status);
+};
+
+// --- Angle dial ---
+
+const ANGLE_ID = (name: string) => `${ID_PREFIX}Angle${name}`;
+
+/** In the page: dials in radians and in degrees, each write in the box's status line (to 3
+ * decimals); a kit button turns the heading from outside (the flash) */
+const initAngleDialDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const scheduler = createBindingScheduler();
+  const status = document.createElement('p');
+  status.id = ANGLE_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const report = (label: string) => (value: number, change: { last: boolean }) => {
+    status.textContent = `${label}: ${Number(value.toFixed(3))} (${change.last ? 'last' : 'step'})`;
+  };
+  // A body's yaw in radians, a sun's azimuth in degrees
+  const scene = { heading: Math.PI / 4, azimuth: 160, spin: 0, hatch: Math.PI / 6 };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+  const turn = createButton({
+    id: ANGLE_ID('Turn'),
+    label: 'Turn it from outside',
+    size: 'sm',
+    onClick: () => {
+      scene.heading = -Math.PI / 2;
+      scheduler.refresh();
+    },
+  });
+  row(
+    'Radians, its step π / 8 (Tweakpane’s): 0 at the right, anticlockwise',
+    createAngleDial({
+      id: ANGLE_ID('Heading'),
+      label: 'Heading',
+      target: scene,
+      key: 'heading',
+      step: Math.PI / 8,
+      scheduler,
+      onChange: report('Heading'),
+    }).cmp.elem,
+    turn.cmp.elem
+  );
+  row(
+    'A compass in degrees, 0 to 360: 0 at the top, clockwise',
+    createAngleDial({
+      id: ANGLE_ID('Azimuth'),
+      label: 'Sun azimuth',
+      target: scene,
+      key: 'azimuth',
+      angleUnit: 'degrees',
+      min: 0,
+      max: 360,
+      convention: 'compass',
+      hint: 'Shift snaps a drag to 15°',
+      onChange: report('Sun azimuth'),
+    }).cmp.elem
+  );
+  row(
+    'Without the spin button: the dial is the slider',
+    createAngleDial({
+      id: ANGLE_ID('Spin'),
+      label: 'Spin',
+      target: scene,
+      key: 'spin',
+      showInput: false,
+      onChange: report('Spin'),
+    }).cmp.elem
+  );
+  row(
+    'Clamped to a quarter turn (no wrap)',
+    createAngleDial({
+      id: ANGLE_ID('Hatch'),
+      label: 'Hatch angle',
+      target: scene,
+      key: 'hatch',
+      min: 0,
+      max: Math.PI / 2,
+      wrap: false,
+      onChange: report('Hatch angle'),
+    }).cmp.elem
+  );
+  const invalid = createAngleDial({ label: 'Tilt', value: Math.PI / 3 });
+  invalid.setError('Steeper than the slope allows');
+  row(
+    'An error, and disabled',
+    invalid.cmp.elem,
+    createAngleDial({ label: 'Locked', value: -Math.PI / 4, disabled: true }).cmp.elem
+  );
+  root.append(status);
+};
+
+// --- 2D pad ---
+
+const PAD_ID = (name: string) => `${ID_PREFIX}Pad${name}`;
+
+/** In the page: an offset with y up and a screen anchor with y down, each write in the box's
+ * status line; a kit button moves the offset from outside (the flash) */
+const initPad2DDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const scheduler = createBindingScheduler();
+  const status = document.createElement('p');
+  status.id = PAD_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const report =
+    (label: string) => (value: { x: number; y: number }, change: { last: boolean }) => {
+      const axes = [value.x, value.y].map((axis) => Number(axis.toFixed(3)));
+      status.textContent = `${label}: ${axes.join(', ')} (${change.last ? 'last' : 'step'})`;
+    };
+  // A THREE.Vector2's shape, written in place
+  const layout = { offset: { x: 0.25, y: -0.5 }, anchor: { x: 50, y: 25 } };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+  const move = createButton({
+    id: PAD_ID('Move'),
+    label: 'Move it from outside',
+    size: 'sm',
+    onClick: () => {
+      layout.offset.x = -0.75;
+      layout.offset.y = 0.75;
+      scheduler.refresh();
+    },
+  });
+  row(
+    'An offset, -1 to 1 by 0.01, y up (the defaults)',
+    createPad2D({
+      id: PAD_ID('Offset'),
+      label: 'Offset',
+      target: layout,
+      key: 'offset',
+      scheduler,
+      onChange: report('Offset'),
+    }).cmp.elem,
+    move.cmp.elem
+  );
+  row(
+    'Screen coordinates: 0 to 100 px, y down',
+    createPad2D({
+      id: PAD_ID('Anchor'),
+      label: 'Anchor',
+      target: layout,
+      key: 'anchor',
+      min: 0,
+      max: 100,
+      step: 1,
+      unit: 'px',
+      invertY: true,
+      hint: 'The arrows move the point; the axes type it',
+      onChange: report('Anchor'),
+    }).cmp.elem
+  );
+  row(
+    'Disabled',
+    createPad2D({ label: 'Locked', value: { x: -0.5, y: 0.5 }, disabled: true }).cmp.elem
   );
   root.append(status);
 };
@@ -2965,6 +3131,8 @@ const DEMOS: Record<string, Demo> = {
   colorField: initColorFieldDemo,
   vectorField: initVectorFieldDemo,
   rotationField: initRotationFieldDemo,
+  angleDial: initAngleDialDemo,
+  pad2d: initPad2DDemo,
   monitor: initMonitorDemo,
   monitorStress: initMonitorStressDemo,
   folder: initFolderDemo,

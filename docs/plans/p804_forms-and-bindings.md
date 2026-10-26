@@ -1529,6 +1529,44 @@ D8's angle dial, 2D pad, gradient editor and curve editor (D1: if the plan runs 
 two leave it here).
 
 1. Section 1, the angle dial and the 2D pad.
+   - **Done 2026-10-26.** `AngleDial.test.ts` (12) and `Pad2D.test.ts` (10), and the kinds in
+     `PropertyGridItems.test.ts`; the `angleDial` box on both library pages (a heading in radians
+     with `step: Math.PI / 8` and a button turning it from outside, a compass in degrees from 0 to
+     360, the dial alone as the slider, a quarter turn without wrapping, an error, disabled) and
+     the `pad2d` box (an offset on the defaults with a button moving it, a screen anchor 0-100 px
+     with y down, disabled), five keyboard scripts, `COMPONENT_USES`; on `aekasha/ui`:
+     `createAngleDial`, `AngleDial`, `AngleDialProps`, `createPad2D`, `Pad2D`, `Pad2DProps`,
+     `Pad2DValue`.
+   - **The dial is the slider's model** (D8 had it `role="slider"` beside a number part): with
+     the spin button (default) the dial is `aria-hidden` and the spin button the one control, as
+     the slider's track (D7: one stop is enough when both take the same keys); `showInput: false`
+     makes the dial the APG slider. Its spoken unit is the spin button's "45 °" (read "degrees"),
+     not D8's "45 degrees".
+   - **The dial's value and range:** radians by default (three's; `step: Math.PI / 8` shows
+     22.5°), or `angleUnit: 'degrees'` (the sky's azimuth and elevation are degrees, p806's first
+     user); `min` / `max` in the value's unit (default -180° to 180°), `wrap` default true.
+     `convention: 'math'` (default: 0 at the right, anticlockwise, three's rotation seen from the
+     axis' positive end) or `'compass'` (0 at the top, clockwise). Named `convention`, not
+     `orientation`: the grid item's `orientation` is the radio group's.
+   - **The dial's drag** follows the pointer's turn since the last move (unwrapped): a press turns
+     the shortest way from the value to the pointer, the constraint wraps across ±180° or, without
+     `wrap`, clamps (the hand held at the end until the pointer comes back round). Shift snaps to
+     15°, Alt a tenth of the step.
+   - **`getAnglePart` and `ANGLE_UNITS` moved to `rotation/AnglePart.ts`** (the dial importing
+     `RotationField.ts` would bring its drop-down and styles), and take `min`, `max`, `wrap` and
+     `toDegrees` (the value's unit) besides the step.
+   - **The pad** is `buildPartsField` (a new `leading` slot before the parts) with the pad, its
+     value text (`aria-describedby`) and a line break, the parts on their own line under it. Its
+     range: each axis' `min` / `max` (`axes` over the shared rules over -1 to 1 by 0.01); y up
+     unless `invertY` (Tweakpane's `y: { inverted }`). Lines through 0 and a line from 0 to the
+     point, shown only when 0 is strictly inside the range (the anchor's 0-100 drew a line from the
+     corner). `{ x, y }` objects only (no arrays). The pad's arrows
+     and a press focus it (it's a tab stop, D8); no Home / End or PageUp / PageDown on the pad.
+   - **Shared pieces:** `createTrackDrag` moved to `PointerDrag.ts` as `createPointerDrag` (the
+     dial and the pad bring none of `Slider.scss`), and `NumberSteps.ts`' `listenStepKeys` is the
+     key gesture of a stop that isn't a text input (the slider's thumb now, the dial, the pad).
+   - **The grid:** `kind: 'angle'` and `kind: 'pad2d'` (never inferred: a number is a number field,
+     an `{ x, y }` a vector), with `angleUnit`, `convention` and `invertY` passed through.
 2. Section 2, the gradient editor and `evaluate`.
 3. Section 3, the curve editor, `evaluateCurve` and its presets; the perf-auditor's second pass
    (the slider's drag, the pad, the editors' drags).

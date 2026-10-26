@@ -146,6 +146,10 @@ export type {
   QuaternionValue,
 } from './forms/rotation/QuaternionField';
 export type { EulerOrder } from './forms/rotation/RotationMath';
+export { createAngleDial } from './forms/AngleDial';
+export type { AngleDial, AngleDialProps } from './forms/AngleDial';
+export { createPad2D } from './forms/Pad2D';
+export type { Pad2D, Pad2DProps, Pad2DValue } from './forms/Pad2D';
 export { createColorField } from './forms/color/ColorField';
 export type { ColorField, ColorFieldProps, ColorIntensityProps } from './forms/color/ColorField';
 export type { ColorFieldValue } from './forms/color/ColorValue';

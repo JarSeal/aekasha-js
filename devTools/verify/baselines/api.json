@@ -2982,6 +2982,11 @@
       "onBoundsResize": "Function",
       "setWindowBoundsElement": "Function"
     },
+    "src/_engine/ui/forms/AngleDial.ts": {
+      "AngleDial": "TypeAlias",
+      "AngleDialProps": "TypeAlias",
+      "createAngleDial": "Function"
+    },
     "src/_engine/ui/forms/binding/Binding.ts": {
       "Binding": "TypeAlias",
       "BindingChange": "TypeAlias",
@@ -3131,7 +3136,19 @@
     "src/_engine/ui/forms/NumberSteps.ts": {
       "createNumberSteps": "Function",
       "getStepModifier": "Function",
+      "listenStepKeys": "Function",
       "NumberSteps": "TypeAlias"
+    },
+    "src/_engine/ui/forms/Pad2D.ts": {
+      "createPad2D": "Function",
+      "Pad2D": "TypeAlias",
+      "Pad2DProps": "TypeAlias",
+      "Pad2DValue": "TypeAlias"
+    },
+    "src/_engine/ui/forms/PointerDrag.ts": {
+      "createPointerDrag": "Function",
+      "PointerDrag": "TypeAlias",
+      "PointerDragHandlers": "TypeAlias"
     },
     "src/_engine/ui/forms/PropertyGrid.ts": {
       "createPropertyGrid": "Function",
@@ -3167,6 +3184,11 @@
       "RangeSliderProps": "TypeAlias",
       "RangeValue": "TypeAlias"
     },
+    "src/_engine/ui/forms/rotation/AnglePart.ts": {
+      "ANGLE_UNITS": "Variable",
+      "AnglePartProps": "TypeAlias",
+      "getAnglePart": "Function"
+    },
     "src/_engine/ui/forms/rotation/QuaternionField.ts": {
       "createQuaternionField": "Function",
       "QuaternionField": "TypeAlias",
@@ -3174,10 +3196,8 @@
       "QuaternionValue": "TypeAlias"
     },
     "src/_engine/ui/forms/rotation/RotationField.ts": {
-      "ANGLE_UNITS": "Variable",
       "createRotationField": "Function",
       "EulerValue": "TypeAlias",
-      "getAnglePart": "Function",
       "RotationField": "TypeAlias",
       "RotationFieldProps": "TypeAlias"
     },
@@ -3209,11 +3229,9 @@
     },
     "src/_engine/ui/forms/SliderTrack.ts": {
       "createSliderTrack": "Function",
-      "createTrackDrag": "Function",
       "SliderThumb": "TypeAlias",
       "SliderTick": "TypeAlias",
-      "SliderTrackProps": "TypeAlias",
-      "TrackDragHandlers": "TypeAlias"
+      "SliderTrackProps": "TypeAlias"
     },
     "src/_engine/ui/forms/TextField.ts": {
       "createTextField": "Function",
@@ -4433,6 +4451,8 @@
     ],
     "aekasha/ui": [
       "AddToastResponse",
+      "AngleDial",
+      "AngleDialProps",
       "Badge",
       "BadgeProps",
       "BadgeTone",
@@ -4519,6 +4539,9 @@
       "NumberFieldProps",
       "NumberRules",
       "OpenDraggableWindowProps",
+      "Pad2D",
+      "Pad2DProps",
+      "Pad2DValue",
       "Popover",
       "PopoverProps",
       "ProgressBar",
@@ -4612,6 +4635,7 @@
       "classes",
       "closeDraggableWindow",
       "cloudSunIcon",
+      "createAngleDial",
       "createBadge",
       "createBindingScheduler",
       "createButton",
@@ -4632,6 +4656,7 @@
       "createMenu",
       "createMonitor",
       "createNumberField",
+      "createPad2D",
       "createPopover",
       "createProgressBar",
       "createPropertyGrid",

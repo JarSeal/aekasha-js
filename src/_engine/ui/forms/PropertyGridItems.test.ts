@@ -142,6 +142,27 @@ describe('the property grid’s items (p804 D10)', () => {
     );
   });
 
+  it('an angle dial and a 2D pad say their kinds, their props passed through', () => {
+    const state = { azimuth: 90, wind: { x: 0.5, y: -0.5 } };
+    const { rows } = makeGrid([
+      {
+        target: state,
+        key: 'azimuth',
+        label: 'Azimuth',
+        kind: 'angle',
+        angleUnit: 'degrees',
+        min: 0,
+        max: 360,
+        convention: 'compass',
+      },
+      { target: state, key: 'wind', label: 'Wind', kind: 'pad2d', invertY: true },
+    ]);
+    expect(rows.map(kindOf)).toEqual(['angle', 'pad2d']);
+    expect(rows[0].querySelector('.aekAngleDial')!.getAttribute('data-convention')).toBe('compass');
+    expect(rows[0].querySelector('input')!.value).toBe('90');
+    expect(rows[1].querySelector<HTMLElement>('.aekPad2D__point')!.style.top).toBe('25%');
+  });
+
   it('infers a rotation from an Euler’s shape; a quaternion says its kind', () => {
     const state = {
       rotation: { x: 0, y: Math.PI / 4, z: 0, order: 'XYZ' },
