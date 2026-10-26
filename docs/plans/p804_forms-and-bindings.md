@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 started
+Status: in progress | Phase 0 implemented
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
@@ -485,6 +485,9 @@ imports `Kbd.ts`; `aria-keyshortcuts` comes from the handle (`getAriaKeyShortcut
 The string form keeps working, deprecated until 6.0.0 (p622), drawn after an `import('./Kbd')` on
 first use (the hint appears a frame later; a build gets a small chunk). Phase 0 measures
 `KeyNames.ts`' share; if it's most of the 0.7 kB, the menu's `kbd` gets the same treatment.
+**Phase 0 measured it:** the two add about 860 B of JS gzip (and 348 B of CSS), `KeyNames.ts`
+about 600 B of it, the same in the menu, so **the menu's `kbd` takes a `Kbd` handle too** (its
+string form deprecated the same way).
 
 ### D14. Tests and checks
 
@@ -495,6 +498,20 @@ first use (the hint appears a frame later; a build gets a small chunk). Phase 0 
   `ValueExpression.test.ts` the grammar and the refusals; `ColorValue.test.ts` the forms and the
   sRGB curve against three's (three is a dependency, the test may import it);
   `RotationMath.test.ts` Euler / quaternion / axis-angle round trips against three's.
+- **KitDom's form controls** (Phase 0 step 5 found linkedom's gaps): `stubKitDomAsync` gets
+  `shimFormControls` in Phase 2 section 2, grown as the fields need it: `checked` and
+  `defaultChecked` (the attribute is the default, the property the state), `click()` on a
+  checkbox or radio toggling it with `input` and `change` and a radio unchecking its group,
+  `value` kept apart from `defaultValue` (linkedom writes the attribute on every set), the
+  selection API (`selectionStart`, `selectionEnd`, `setSelectionRange`, `select()`), pointer
+  capture (`setPointerCapture`, `releasePointerCapture`, `hasPointerCapture`, a
+  `lostpointercapture` on release) and a `dispatchPointer` beside `dispatchKey` (an `Event` with
+  the pointer fields: linkedom has no `PointerEvent`). No shim for what the kit doesn't use: the
+  select field is the drop-down (no native `<select>`), and the form validates itself
+  (`novalidate`, D9) and resets its fields through their handles, so no validity API or
+  `form.reset()`. **What stays a browser check** (`verify:ui`): the browser's own text editing
+  (typing, the caret, IME, the clipboard), a form's implicit submission (Enter in a field), a
+  disabled fieldset's controls, anything read from `getComputedStyle`, and the drags' geometry.
 - **`yarn verify:ui`:** each field's box with its states (default, focused, disabled, error,
   read-only) and its keyboard script; the folder, grid and form boxes; **a "Tweakpane parity" box**
   (dev page only) with one row per row of Phase 0's census, so p806 starts from a page that shows
@@ -546,7 +563,7 @@ scripts, the kit's `CLAUDE.md`; then `yarn test`, `tsc`, ESLint, `yarn hub:build
 `verify:ui --only <pieces>`, `verify:baselines` (the new names recorded). Each phase stops after
 each section for review.
 
-### Phase 0: baselines and checks
+### Phase 0: baselines and checks — done
 
 1. On `main`: `yarn verify:scenes --update`, `yarn verify:embed`, `yarn verify:ui`,
    `yarn sbp --profile all` (the app's and the `uiKit` profile's `_engine/ui` group, the
@@ -682,14 +699,52 @@ each section for review.
    and `input` events, `setPointerCapture`; a gap becomes a `KitDom` shim or a check moved to
    `verify:ui`); `KeyNames.ts`' share of the button's `kbd` cost (D13); whether `@layer aek.page`
    changes any scene runner screenshot or the debugger by eye (D13 item 1).
+   - **Run on 2026-10-26.**
+   - **linkedom 0.18.13's form controls** (a script over its `parseHTML`, without KitDom): an
+     input's `value` works (writing it rewrites the `value` attribute, so `defaultValue`, which
+     is `undefined`, can't be told apart), a textarea's too, and an `input` event dispatched
+     reaches its listener. Missing or wrong: `checked` doesn't read its attribute and setting it
+     leaves the attribute; `click()` doesn't toggle a checkbox; a radio doesn't uncheck its group;
+     no `selectionStart`, `setSelectionRange` or `select()`; `select.value` can't be set and has
+     no `selectedIndex`; no `labels`, `htmlFor` or `control`; `readOnly`, `required` and
+     `inputMode` don't reflect; a disabled fieldset disables nothing (`:disabled`); no
+     `form.reset()`, `elements`, `noValidate`, `checkValidity`, `validity`,
+     `setCustomValidity` or `requestSubmit`, and a submit button's click submits nothing; no
+     `setPointerCapture` / `hasPointerCapture`; no `KeyboardEvent`, `PointerEvent`,
+     `MouseEvent`, `FocusEvent` or `ClipboardEvent` (`Event`, `CustomEvent`, `InputEvent` are
+     there); no `getComputedStyle` or `ResizeObserver`. `customElements` exists; SVG elements
+     build and serialise. What follows is in D14.
+   - **The button's `kbd` cost** (esbuild, minified, gzip; the stylesheets stubbed; each module
+     replaced by a stub in turn): `Kbd.ts` and `KeyNames.ts` add **about 860 B** of JS to a button
+     (8293 B → 7431 B), of which **`KeyNames.ts` is about 600 B (70 %)** and `Kbd.ts` about 260 B,
+     plus `Kbd.scss`' 348 B of CSS. The menu is the same (about 845 B, KeyNames 586 B). So the
+     menu's `kbd` gets D13's treatment too.
+   - **`@layer aek.page`** (the change made for the check and reverted: `aek.page` first in
+     `tokens.css`' order, `page.scss` loading normalize with `meta.load-css` inside the layer; the
+     full page's DOM, shot with the canvas hidden in 15 states, before (twice: 0 px apart, the
+     profiler's live figures aside) and after, compared in pixels): **no drawer tab changed**
+     (the debug tools, renderer, lights, cameras, sky box, physics, stats, loop, ECS and assets
+     tabs, the Boxes tab: Tweakpane and the debugger's own styles are unlayered and beat it
+     either way). What changed is the kit where normalize had won: **the kit's buttons in the
+     debugger's dialogs** (the About dialog's "Copy info" and "Close", the key shortcuts dialog's
+     and the profiler's tab buttons) are a few px taller, normalize's `line-height: 1.15` giving
+     way to the kit's; and **the key hints** (`Kbd`) in the UI kit example's buttons are the
+     kit's size, normalize's `kbd { font-family: monospace, monospace; font-size: 1em }` giving
+     way to `Kbd.scss` (the look the Hub shows, which has no normalize). The scene runner's
+     snapshots read the canvas, so they can't show it; Phase 1 section 1 compares these shots
+     instead.
 
 ### Phase 1: p803's open items and the button's `kbd`
 
 D13. Small, and first: normalize's layer is under every field.
 
 1. Section 1, normalize's layer: `@layer aek.page` in `tokens.css`' order, `page.scss`, the
-   button's size back on the button, the drop-down trigger's line height; the scene runner's
-   screenshots compared (debug on and off).
+   button's size back on the button, the drop-down trigger's line height, `Kbd.scss` as the key
+   hint's whole look; the full page's DOM compared before and after (the scene runner's
+   snapshots read the canvas and can't show it): Phase 0 step 5's states, shot with the canvas
+   hidden (`?isDebug=true&startScene=…` with the drawer's tab seeded in `AEK_debugDrawerState`,
+   and `?isProdTest=true&startScene=exampleUiKit` for the kit's HUD without the debugger), the
+   expected changes being the kit buttons' height and the key hints, and none in a drawer tab.
 2. Section 2, the button: `kbd` as a `Kbd` handle, the string form deprecated and loaded on first
    use, `onUnheldClick`; the menu's `kbd` if Phase 0 says so; JSDoc, the Hub's core page, the
    library's button text.
