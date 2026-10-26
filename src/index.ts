@@ -55,7 +55,13 @@ InitEngine({
       id: 'main-scene-loader',
       // A new overlay per load: the load removes its container at its end
       loaderContainerFn: () => {
-        loaderOverlay = createLoadingOverlay({ text: 'Loading the scene' });
+        // 500 ms fades, as the app's loader had: the frames a load renders while it fades are
+        // the sky's clock (the scene runner's sky snapshots), so its pacing stays the same
+        loaderOverlay = createLoadingOverlay({
+          text: 'Loading the scene',
+          fadeInMs: 500,
+          fadeOutMs: 500,
+        });
         return loaderOverlay.cmp;
       },
       loadStartFn: () => loaderOverlay?.showAsync() ?? Promise.resolve(true),

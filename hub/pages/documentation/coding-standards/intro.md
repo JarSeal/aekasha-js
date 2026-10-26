@@ -51,6 +51,11 @@ The layers and the boot they come together in are on [Architecture](hub:document
   leaking into a parameter or a result is an internal that can't change anymore. `yarn hub:build`
   warns about each one at the reference that names it, with the types it names in turn: export the
   type from the entry with a summary, mark the member `@internal`, or change the signature.
+- **A UI kit component follows the kit's own style:** `createX(props)` returning a handle whose
+  setters write in place, `cmp.remove()` disposing of everything it added, the props every
+  component takes (`class`, `attr`, `id`), its styles layered on the design tokens, and its
+  parts, custom properties and keys in its JSDoc
+  ([Writing a component](repo:src/_engine/ui/CLAUDE.md#writing-a-component)).
 
 ## Naming
 

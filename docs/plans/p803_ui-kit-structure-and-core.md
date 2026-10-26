@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-7 implemented
+Status: in progress | Phases 0-8 implemented
 Category: UI, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
@@ -2027,7 +2027,7 @@ For Phase 8:
 - Still open from Phase 6: the hold to confirm ignoring a click with no press, and `normalize.scss`
   in a layer below the kit's.
 
-### Phase 8: the Hub, the example, `CLAUDE.md`, readme
+### Phase 8: the Hub, the example, `CLAUDE.md`, readme — done
 
 D13: the UI kit section and its child pages, the styling guide, the public component library page
 (and its script in `public`), the dev page on the same demos, the `uiKit` example rebuilt and its
@@ -2248,10 +2248,66 @@ As built (section 4, 2026-10-26):
   KiB gzip), `yarn verify:scenes --only exampleUiKit,uiKitEmbed,scene01 --config quick` (3 passed
   against Phase 0's baselines; `scene01` reports its progress through the new loader). The
   example driven in Chromium on the dev server (debug and prod test): the windows, the split
-  button's menu, the turn bars, the pause menu and the reload's overlay, no console or page error. **To record in section 5's `verify:baselines`**: the app bundle's growth (the main
-  chunk's `_engine/ui`, `index.css`, and the lazy `DropDown.js` +1.8 kB and `.css` +1.0 kB, the
-  shared chunk the example's kit buttons now go into, `exampleUiKit.js` +2.4 kB, `.css` +0.6 kB)
-  and the `uiKit` embed's.
+  button's menu, the turn bars, the pause menu and the reload's overlay, no console or page error.
+  **To record in section 5's `verify:baselines`**: the app bundle's growth (the main chunk's
+  `_engine/ui`, `index.css`, and the lazy `DropDown.js` +1.8 kB and `.css` +1.0 kB, the shared
+  chunk the example's kit buttons now go into, `exampleUiKit.js` +2.4 kB, `.css` +0.6 kB) and the
+  `uiKit` embed's.
+
+As built (section 5, 2026-10-26):
+
+- **The kit's `CLAUDE.md`**: the intro says p803 restyled the kit (no more "until then a change
+  keeps its look"), and the stale lines went: `.uiIcon` the debugger's until p806, the toaster's
+  injected CSS, "the toaster follows in section 4", `--aek-rem` (none left in a kit file: the
+  debugger's `variables.scss` and debug modules are its last users, p806's), the kit's colours on
+  the roles, every kit stylesheet layered. **A new `## Writing a component`** (D2's coding style
+  made concrete: the shape and disposal, ARIA and keys, styles, JSDoc, tests, and what goes with a
+  new piece in the same branch), which the core components page covers (`aek:covers`).
+- **The coding standards page** (Public API): one bullet, a UI kit component follows the kit's
+  style, linking `repo:src/_engine/ui/CLAUDE.md#writing-a-component`; the root `CLAUDE.md`'s
+  Public API line says the same.
+- **The root `CLAUDE.md`**: the `ui/` folder line lists `components/`' pieces and the menu in
+  `overlays/`; the map line names Writing a component (no more "what's left for p803"). The
+  `verify:ui` command line was section 1's. `UI_KERNEL_HOOKS` (`devTools/layout/layout.ts`)
+  already had no main loop (Phase 2).
+- **`readme.md`**: the UI kit bullet (the components, the overlay stack, accessibility checked with
+  axe-core, without the engine, layered styles, the Hub's section and library), the tree's `ui/`
+  lines, and `verify:ui`'s row (it builds the public Hub).
+- `devTools/verify/CLAUDE.md`, `devTools/hub/CLAUDE.md` and `hub/CLAUDE.md` were sections 1-4's.
+- **Found by the full `verify:scenes`: the loader's fades are the sky's clock.** With the overlay's
+  default fades (150 / 250 ms) the four sky-box scenes' snapshots (`exampleHubHero`,
+  `exampleSkyBox`, `skyShowcase`, `space`, in every configuration) moved a little over the whole
+  frame (mean 0.6-1.4): the sky advances in the frames a load renders while its overlay fades,
+  and the old cover faded 500 ms each way. Checked by putting Phase 7's `src/index.ts` back (both
+  pass) and then mine (both fail). The app's loader now passes `fadeInMs: 500, fadeOutMs: 500`
+  (the comment says why), so a load's pacing is as it was; the five scenes then pass (20 runs).
+  `testDebugScene`'s `mainThread` run ("the test bridge never installed") failed once and passed
+  on its own both times after: a flake.
+
+The phase's verification (2026-10-26, at its end): `yarn lint`, `yarn test` (184 files, 1455
+tests), `tsc` (both), `yarn hub:build` (96 pages, no dead link, 1014 names, 100 % documented) and a
+dev build (103 pages, no error or warning), `yarn sbp --profile all` (within every budget, after
+section 4's raise), `yarn verify:embed` (every scenario), `verify:baselines` recorded (the app
+bundle's 5 changes of section 4: `index.css` +1.0 kB, the shared `DropDown.js` +1.8 kB and `.css`
++1.0 kB, `exampleUiKit.js` +2.4 kB and `.css` +0.6 kB; `bundle.uiKit.json` within the tolerance; no
+debug code in any build; the API and the docs unchanged), `yarn verify:ui` against the public build
+(every keyboard script passes, no violation; the same 11 states fail on screenshots only),
+`yarn verify:scenes` (104 passed against Phase 0's baselines, with the loader's 500 ms fades
+above; 91 with the overlay's default fades).
+
+For Phase 9:
+
+- The changelog's restyle note (D14) and these Phase 8 lines: the Hub's UI kit section (the
+  overview, core components, windows and overlays, styling, the public component library),
+  `::: demo`, `verify:ui` on the public build (`--no-build`), the app's scene loader on the
+  loading overlay (the app's `_engine/ui` budget 5 → 7 KiB: an app minor's line), the `uiKit`
+  example rebuilt and the embed's dialog from a button.
+- Still to record with `yarn verify:ui --update` after review: the 11 states' shots and every new
+  box's of Phases 6 and 7.
+- Open for review (not Phase 9's): the button bringing Kbd (on the dev library page's button
+  text), the indeterminate progress bar's empty-track shot, the hold to confirm ignoring a click
+  with no press, `normalize.scss` in a layer below the kit's, and a long custom property name
+  breaking mid-word in a Hub table cell.
 
 ### Phase 9: versions and done
 

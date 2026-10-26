@@ -59,7 +59,7 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 45868,
-      "gzip": 13863
+      "gzip": 13862
     },
     "assets/HDRLoader.js": {
       "bytes": 3405,
@@ -131,15 +131,15 @@
     },
     "assets/uiKit.embed.js": {
       "bytes": 1038854,
-      "gzip": 291084
+      "gzip": 291081
     },
     "assets/uiKitEmbed.css": {
       "bytes": 23818,
       "gzip": 4253
     },
     "assets/uiKitEmbed.js": {
-      "bytes": 50652,
-      "gzip": 18312
+      "bytes": 50786,
+      "gzip": 18357
     },
     "uiKit.embed.js": {
       "bytes": 249,
