@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2741,
-      "total": 2741
+      "documented": 2755,
+      "total": 2755
     },
     "members": {
       "documented": 1043,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2661,
-        "total": 2661
+        "documented": 2675,
+        "total": 2675
       },
       "members": {
         "documented": 890,
@@ -665,8 +665,22 @@
     },
     "engine/ui/forms/color": {
       "exports": {
-        "documented": 29,
-        "total": 29
+        "documented": 34,
+        "total": 34
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/ui/forms/gradient": {
+      "exports": {
+        "documented": 9,
+        "total": 9
       },
       "members": {
         "documented": 0,

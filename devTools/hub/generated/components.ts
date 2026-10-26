@@ -53,6 +53,10 @@ export const COMPONENT_USES = [
   { slot: 'generated-components-angle-dial', calls: ['createAngleDial'] },
   { slot: 'generated-components-pad2d', calls: ['createPad2D'] },
   {
+    slot: 'generated-components-gradient-editor',
+    calls: ['createGradientEditor', 'evaluateGradient'],
+  },
+  {
     slot: 'generated-components-color-field',
     calls: ['createColorField', 'setRecentColors', 'getRecentColors', 'onRecentColorsChange'],
   },

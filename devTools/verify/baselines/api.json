@@ -3035,6 +3035,13 @@
       "ColorIntensityProps": "TypeAlias",
       "createColorField": "Function"
     },
+    "src/_engine/ui/forms/color/ColorParts.ts": {
+      "ColorParts": "TypeAlias",
+      "ColorPartsHost": "TypeAlias",
+      "ColorPartsProps": "TypeAlias",
+      "ColorTarget": "TypeAlias",
+      "createColorParts": "Function"
+    },
     "src/_engine/ui/forms/color/ColorPicker.ts": {
       "ColorPicker": "TypeAlias",
       "ColorPickerProps": "TypeAlias",
@@ -3107,6 +3114,19 @@
       "createForm": "Function",
       "Form": "TypeAlias",
       "FormProps": "TypeAlias"
+    },
+    "src/_engine/ui/forms/gradient/Gradient.ts": {
+      "evaluateGradient": "Function",
+      "getGradientCss": "Function",
+      "GradientColor": "TypeAlias",
+      "GradientStop": "TypeAlias",
+      "GradientValue": "TypeAlias",
+      "readHexColor": "Function"
+    },
+    "src/_engine/ui/forms/gradient/GradientEditor.ts": {
+      "createGradientEditor": "Function",
+      "GradientEditor": "TypeAlias",
+      "GradientEditorProps": "TypeAlias"
     },
     "src/_engine/ui/forms/Monitor.ts": {
       "buildMonitor": "Function",
@@ -4513,6 +4533,11 @@
       "Form",
       "FormChild",
       "FormProps",
+      "GradientColor",
+      "GradientEditor",
+      "GradientEditorProps",
+      "GradientStop",
+      "GradientValue",
       "HudRootProps",
       "InputGlyph",
       "InputGlyphInput",
@@ -4648,6 +4673,7 @@
       "createFieldset",
       "createFolder",
       "createForm",
+      "createGradientEditor",
       "createHudRoot",
       "createInputGlyph",
       "createKbd",
@@ -4680,6 +4706,7 @@
       "easelIcon",
       "ecsIcon",
       "eraserIcon",
+      "evaluateGradient",
       "fileAsterixIcon",
       "fileCodeIcon",
       "fitAllDraggableWindowsToScreen",

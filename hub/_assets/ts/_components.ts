@@ -33,6 +33,7 @@ import {
   createFieldset,
   createFolder,
   createForm,
+  createGradientEditor,
   createHudRoot,
   createInputGlyph,
   createKbd,
@@ -73,6 +74,7 @@ import {
   removeDraggableWindow,
   setRecentColors,
   toggleDraggableWindow,
+  evaluateGradient,
 } from 'aekasha/ui';
 import type {
   BindingScheduler,
@@ -1604,6 +1606,111 @@ const initPad2DDemo: Demo = (box) => {
   root.append(status);
 };
 
+// --- Gradient editor ---
+
+const GRADIENT_ID = (name: string) => `${ID_PREFIX}Gradient${name}`;
+
+/** In the page: a sky ramp and a fade, each write in the box's status line (the stops), and the
+ * ramp's colour at a quarter through `evaluateGradient`; a kit button shifts it from outside */
+const initGradientEditorDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const scheduler = createBindingScheduler();
+  const status = document.createElement('p');
+  status.id = GRADIENT_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const sample = document.createElement('p');
+  sample.id = GRADIENT_ID('Sample');
+  sample.className = 'hubDemoLine';
+  const sampled = { r: 0, g: 0, b: 0, a: 1 };
+  const byte = (channel: number) =>
+    Math.round(channel * 255)
+      .toString(16)
+      .padStart(2, '0');
+  const showSample = () => {
+    evaluateGradient(sky.ramp, 0.25, sampled);
+    sample.textContent = `evaluateGradient(ramp, 0.25): #${byte(sampled.r)}${byte(sampled.g)}${byte(sampled.b)}`;
+  };
+  const report =
+    (label: string) =>
+    (value: { stops: { t: number; color: string }[] }, change: { last: boolean }) => {
+      const stops = value.stops.map((stop) => `${stop.color} ${Number(stop.t.toFixed(3))}`);
+      status.textContent = `${label}: ${stops.join(', ')} (${change.last ? 'last' : 'step'})`;
+      showSample();
+    };
+  // A sky's colours through the day, and a fade's alpha
+  const sky = {
+    ramp: {
+      stops: [
+        { t: 0, color: '#0b1d3a' },
+        { t: 0.5, color: '#f2a65a' },
+        { t: 1, color: '#9fd3ff' },
+      ],
+    },
+    fade: {
+      stops: [
+        { t: 0, color: '#3fd8f200' },
+        { t: 1, color: '#3fd8f2ff' },
+      ],
+    },
+  };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+  const shift = createButton({
+    id: GRADIENT_ID('Shift'),
+    label: 'Shift it from outside',
+    size: 'sm',
+    onClick: () => {
+      sky.ramp.stops[1].t = 0.3;
+      scheduler.refresh();
+      showSample();
+    },
+  });
+  row(
+    'A sky ramp, three stops, with a palette',
+    createGradientEditor({
+      id: GRADIENT_ID('Sky'),
+      label: 'Sky ramp',
+      target: sky,
+      key: 'ramp',
+      palette: ['#0b1d3a', '#f2a65a', '#9fd3ff', '#ffffff'],
+      scheduler,
+      onChange: report('Sky ramp'),
+    }).cmp.elem,
+    shift.cmp.elem
+  );
+  row(
+    'With alpha: a fade',
+    createGradientEditor({
+      id: GRADIENT_ID('Fade'),
+      label: 'Fade',
+      target: sky,
+      key: 'fade',
+      alpha: true,
+      hint: 'A press on the bar adds a stop; Delete removes the focused one',
+      onChange: report('Fade'),
+    }).cmp.elem
+  );
+  row(
+    'Disabled',
+    createGradientEditor({
+      label: 'Locked',
+      value: {
+        stops: [
+          { t: 0, color: '#000000' },
+          { t: 1, color: '#ffffff' },
+        ],
+      },
+      disabled: true,
+    }).cmp.elem
+  );
+  showSample();
+  root.append(status, sample);
+};
+
 // --- Monitor ---
 
 const MONITOR_ID = (name: string) => `${ID_PREFIX}Monitor${name}`;
@@ -3133,6 +3240,7 @@ const DEMOS: Record<string, Demo> = {
   rotationField: initRotationFieldDemo,
   angleDial: initAngleDialDemo,
   pad2d: initPad2DDemo,
+  gradientEditor: initGradientEditorDemo,
   monitor: initMonitorDemo,
   monitorStress: initMonitorStressDemo,
   folder: initFolderDemo,

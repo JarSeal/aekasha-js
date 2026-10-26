@@ -14,6 +14,7 @@ import { createColorField, type ColorIntensityProps } from './color/ColorField';
 import { isColorObject, isColorString } from './color/ColorValue';
 import type { Field, FieldChange, FieldDyn, FieldOptions, FormChild } from './Field';
 import { createFolder } from './Folder';
+import { createGradientEditor } from './gradient/GradientEditor';
 import { createMonitor, getVectorKeys } from './Monitor';
 import { createNumberField } from './NumberField';
 import { createPad2D } from './Pad2D';
@@ -54,6 +55,7 @@ export type PropertyGridFieldKind =
   | 'quaternion'
   | 'angle'
   | 'pad2d'
+  | 'gradient'
   | 'monitor';
 
 /**
@@ -65,7 +67,7 @@ export type PropertyGridFieldKind =
  * `{ x, y, z?, w? }` object or an array of 2 to 4 numbers a vector field, an Euler's shape (with a
  * string `order`) a rotation field in degrees, another string a text field (a 24-bit colour
  * number says `kind: 'color'`, Tweakpane's `view: 'color'`; a quaternion `kind: 'quaternion'`; an
- * angle dial and a 2D pad `'angle'` and `'pad2d'`).
+ * angle dial, a 2D pad and a gradient `'angle'`, `'pad2d'` and `'gradient'`).
  * `readonly: true` makes it a monitor in that field's text.
  */
 export type PropertyGridFieldItem = (BindingSource<unknown> | ReadonlyBindingSource<unknown>) &
@@ -147,6 +149,10 @@ export type PropertyGridFieldItem = (BindingSource<unknown> | ReadonlyBindingSou
     convention?: 'math' | 'compass';
     /** A 2D pad's y grows downwards. */
     invertY?: boolean;
+    /** A gradient's fewest stops. */
+    minStops?: number;
+    /** A gradient's most stops. */
+    maxStops?: number;
     /** A colour field edits the alpha too. */
     alpha?: boolean;
     /** A colour object's space: `'srgb'` (default) or `'linear'` (a `THREE.Color`'s). */
@@ -375,6 +381,9 @@ const createItemField = (
     case 'pad2d':
       field = make(createPad2D);
       break;
+    case 'gradient':
+      field = make(createGradientEditor);
+      break;
     case 'monitor':
       field = make(createMonitor);
       break;
@@ -508,7 +517,7 @@ const buildItems = (
  *   `{ r, g, b, a? }` object a colour field (a 24-bit number says `kind: 'color'`), an
  *   `{ x, y, z?, w? }` object or 2 to 4 numbers a vector field, an Euler (a string `order`) a
  *   rotation field in degrees, another string a text field (a quaternion says
- *   `kind: 'quaternion'`, an angle dial `'angle'`, a 2D pad `'pad2d'`); `readonly: true` makes it a monitor in that field's text. A value no
+ *   `kind: 'quaternion'`, an angle dial `'angle'`, a 2D pad `'pad2d'`, a gradient `'gradient'`); `readonly: true` makes it a monitor in that field's text. A value no
  *   field edits is shown as a monitor, with a warning unless it's `readonly`.
  *   `onChange` is the field's (D3: every write, `last` on the gesture's end, never a refresh's),
  *   `onCreate` gets the field's handle.

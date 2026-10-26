@@ -142,8 +142,17 @@ describe('the property grid’s items (p804 D10)', () => {
     );
   });
 
-  it('an angle dial and a 2D pad say their kinds, their props passed through', () => {
-    const state = { azimuth: 90, wind: { x: 0.5, y: -0.5 } };
+  it('an angle dial, a 2D pad and a gradient say their kinds, their props passed through', () => {
+    const state = {
+      azimuth: 90,
+      wind: { x: 0.5, y: -0.5 },
+      ramp: {
+        stops: [
+          { t: 0, color: '#000000' },
+          { t: 1, color: '#ffffff' },
+        ],
+      },
+    };
     const { rows } = makeGrid([
       {
         target: state,
@@ -156,8 +165,10 @@ describe('the property grid’s items (p804 D10)', () => {
         convention: 'compass',
       },
       { target: state, key: 'wind', label: 'Wind', kind: 'pad2d', invertY: true },
+      { target: state, key: 'ramp', label: 'Ramp', kind: 'gradient', maxStops: 2 },
     ]);
-    expect(rows.map(kindOf)).toEqual(['angle', 'pad2d']);
+    expect(rows.map(kindOf)).toEqual(['angle', 'pad2d', 'gradient']);
+    expect(rows[2].querySelector('.aekGradientEditor__add')!.hasAttribute('disabled')).toBe(true);
     expect(rows[0].querySelector('.aekAngleDial')!.getAttribute('data-convention')).toBe('compass');
     expect(rows[0].querySelector('input')!.value).toBe('90');
     expect(rows[1].querySelector<HTMLElement>('.aekPad2D__point')!.style.top).toBe('25%');

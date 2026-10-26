@@ -177,6 +177,15 @@ const PAD = (name: string) => `#hubDemoPad${name} .aekPad2D__pad`;
 const PAD_AXIS = (name: string, axis: string) =>
   `#hubDemoPad${name} .aekVectorField__axis[data-axis="${axis}"] input`;
 const PAD_STATUS = '#hubDemoPadStatus';
+/** A gradient editor's stop handle by the editor's name (`GRADIENT_ID`, the group's id) and its
+ * place in the array (1-based), its row's parts, and the box's status line */
+const GRADIENT_STOP = (name: string, n: number) =>
+  `#hubDemoGradient${name} .aekGradientEditor__stop:nth-child(${n})`;
+const GRADIENT_STOPS = (name: string) => `#hubDemoGradient${name} .aekGradientEditor__stop`;
+const GRADIENT_POSITION = (name: string) =>
+  `#hubDemoGradient${name} input[aria-label="Stop position"]`;
+const GRADIENT_SWATCH = (name: string) => `#hubDemoGradient${name} .aekColorField__swatch`;
+const GRADIENT_STATUS = '#hubDemoGradientStatus';
 /** A folder demo's element by its name (`FOLDER_ID`): a folder's button, a field's control */
 const FOLDER = (name: string) => `#hubDemoFolder${name}`;
 const FOLDER_STATUS = '#hubDemoFolderStatus';
@@ -994,6 +1003,57 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { press: '5' },
           { press: 'Enter' },
           { expectText: PAD_STATUS, text: 'Anchor: 75, 24 (last)' },
+        ],
+      },
+    ],
+  },
+  gradientEditor: {
+    keyboard: [
+      {
+        name: 'a stop’s arrows move it; Insert adds one after it, focused; Delete removes it',
+        steps: [
+          { focusInBox: GRADIENT_STOP('Sky', 2) },
+          { press: 'ArrowRight' },
+          { expectAttr: GRADIENT_STOP('Sky', 2), name: 'aria-valuenow', value: '51' },
+          {
+            expectText: GRADIENT_STATUS,
+            text: 'Sky ramp: #0b1d3a 0, #f2a65a 0.51, #9fd3ff 1 (last)',
+          },
+          { press: 'Insert' },
+          { expectCount: GRADIENT_STOPS('Sky'), count: 4 },
+          { expectFocus: GRADIENT_STOP('Sky', 3) },
+          { press: 'Delete' },
+          { expectCount: GRADIENT_STOPS('Sky'), count: 3 },
+          { expectFocus: GRADIENT_STOP('Sky', 3) },
+        ],
+      },
+      {
+        name: 'Tab goes from the stops to the selected one’s position: a typed place',
+        steps: [
+          { focusInBox: GRADIENT_STOP('Sky', 3) },
+          { press: 'Tab' },
+          { expectFocus: GRADIENT_POSITION('Sky') },
+          { press: 'ControlOrMeta+A' },
+          { press: '9' },
+          { press: '0' },
+          { press: 'Enter' },
+          { expectAttr: GRADIENT_STOP('Sky', 3), name: 'aria-valuenow', value: '90' },
+          {
+            expectText: GRADIENT_STATUS,
+            text: 'Sky ramp: #0b1d3a 0, #f2a65a 0.5, #9fd3ff 0.9 (last)',
+          },
+        ],
+      },
+      {
+        name: 'Enter on a stop opens its colour panel on the picker; Escape returns to the swatch',
+        steps: [
+          { focusInBox: GRADIENT_STOP('Fade', 2) },
+          { press: 'Enter' },
+          { expectAttr: GRADIENT_SWATCH('Fade'), name: 'aria-expanded', value: 'true' },
+          { expectFocus: '[part="saturation"]' },
+          { press: 'Escape' },
+          { expectAttr: GRADIENT_SWATCH('Fade'), name: 'aria-expanded', value: 'false' },
+          { expectFocus: GRADIENT_SWATCH('Fade') },
         ],
       },
     ],

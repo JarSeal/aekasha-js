@@ -1568,6 +1568,33 @@ two leave it here).
    - **The grid:** `kind: 'angle'` and `kind: 'pad2d'` (never inferred: a number is a number field,
      an `{ x, y }` a vector), with `angleUnit`, `convention` and `invertY` passed through.
 2. Section 2, the gradient editor and `evaluate`.
+   - **Done 2026-10-26.** `Gradient.test.ts` (7) and `GradientEditor.test.ts` (12), and the kind in
+     `PropertyGridItems.test.ts`; the `gradientEditor` box on both library pages (a sky ramp with
+     a palette and a button shifting a stop from outside, a fade with alpha, disabled, and a line
+     of `evaluateGradient` at a quarter), three keyboard scripts, `COMPONENT_USES`; on
+     `aekasha/ui`: `createGradientEditor`, `GradientEditor`, `GradientEditorProps`,
+     `evaluateGradient`, `GradientStop`, `GradientValue`, `GradientColor`.
+   - **`evaluate` is `evaluateGradient(gradient, t, out?)`** (a name of its own beside p804's
+     `evaluateCurve`): CSS's `linear-gradient` (sRGB, premultiplied alpha; a tie a hard edge with
+     the later stop's colour at it), so the preview and a ramp agree; no allocation with `out`
+     (hex read by char codes), the stops in any order. The sky box has no gradient yet (its
+     nebula's 2-3 colours are evenly spaced): p806 decides where the editor goes.
+   - **The value:** `{ stops: { t, color }[] }`, the colour a hex string only (`'#rrggbb'`,
+     `'#rrggbbaa'` with `alpha` or when a stop has alpha digits), written in place (the object,
+     its array and its stop objects). **Stops keep their array order**: a stop dragged past
+     another keeps its index, handle and focus (so the tab order is the array's, not the bar's).
+   - **The selected stop's row** (D8 had Enter open "its colour field's picker"): its position (a
+     spin button in %), its colour and "Add stop" / "Remove stop" buttons. The buttons are the
+     pointer's way to remove a stop and every keyboard's to add one (Insert is missing on Mac
+     keyboards; `+` also adds). Focusing or pressing a handle selects it. A press on the bar adds
+     a stop and drags it (not a click's one write: the add is the press's step).
+   - **`color/ColorParts.ts`:** the colour field's swatch, text, alpha, intensity and panel moved
+     out of `ColorField.ts` into `createColorParts(…)`, attached to a `ColorTarget` (the field's
+     binding, or the gradient's selected stop), as `createNumberInput` is; a nested colour field
+     would have brought its own label, reset button and form entry. The colour field's tests
+     passed unchanged. A stop's colour isn't added to the recent colours (the field adds on its
+     `last: true`; the editor's change isn't one colour).
+   - **The grid:** `kind: 'gradient'` (not inferred), `minStops` / `maxStops` passed through.
 3. Section 3, the curve editor, `evaluateCurve` and its presets; the perf-auditor's second pass
    (the slider's drag, the pad, the editors' drags).
 
