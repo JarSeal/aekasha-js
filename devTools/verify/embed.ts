@@ -19,8 +19,9 @@
  *   `hub/pages/examples/embed/`) mounts into its hero at the target's size, turns, and its pause
  *   button pauses and resumes it, without an error.
  * - The uiKit profile only (p801 D9), `INLINE` in the 640 × 360 target on a host with a 16 px
- *   root and again with `html { font-size: 62.5% }`: the window, the dialog, its backdrop, the
- *   toast, the open drop-down list and the window's tooltip (p803 D11) inside the container; the window at its px position from
+ *   root and again with `html { font-size: 62.5% }`: the window, the dialog (opened from the
+ *   window's button) with its backdrop, the toast, the drop-down list (opened from its trigger)
+ *   and the window's tooltip (p803 D11) inside the container; the window at its px position from
  *   the container's corner, the dialog centred in it, the backdrop covering it and not the page;
  *   the window's, the toast's, the list's and the tooltip's font sizes the same at both roots, their font IBM
  *   Plex Sans (the scene opts in, p801 D8) and its face loaded; the list's last option shown
@@ -87,6 +88,10 @@ const UI_KIT = {
   tooltip: '.uiKitEmbedTooltip',
   listItem: '.uiKitEmbedList li',
 } as const;
+/** The window's button that opens the dialog, and the dialog's drop-down trigger the list opens
+ * from: the scene opens neither at load (p803 Phase 8: a page's focus would jump into the embed) */
+const UI_KIT_OPEN_DIALOG = '#uiKitEmbedWindow .uiKitEmbedOpenDialog';
+const UI_KIT_LIST_TRIGGER = '#uiKitEmbedDialog .aekDropDownTrigger';
 /** The elements that must stay inside the container */
 const UI_KIT_INSIDE = ['window', 'dialog', 'backdrop', 'toast', 'list', 'tooltip'] as const;
 /** The elements whose font size must not follow the host's root */
@@ -95,7 +100,7 @@ const UI_KIT_FONTS = ['window', 'toast', 'listItem', 'tooltip'] as const;
 const UI_KIT_FONT_FAMILY = 'IBM Plex Sans';
 /** The window's px position in the scene, from the container's top left corner */
 const UI_KIT_WINDOW_AT = { x: 16, y: 16 };
-/** The drag, which keeps the 220 × 170 window inside the 640 × 360 container */
+/** The drag, which keeps the 220 × 190 window inside the 640 × 360 container */
 const UI_KIT_DRAG = { x: 120, y: 60 };
 /** The shrunk target, which the dragged window no longer fits at its place */
 const UI_KIT_SHRUNK = { width: 320, height: 200 };
@@ -296,6 +301,9 @@ const checkUiKitAtRoot = async (
       const headStylesBefore = await headStyles();
       const mounted = await page.evaluate(() => window.__embedTest.mount({ target: '#inline' }));
       if (mounted.isFallback) problems.push('mounted as the fallback');
+      // The dialog from the window's button, and its drop-down's list from its trigger
+      await page.click(UI_KIT_OPEN_DIALOG, { timeout: 10_000 });
+      await page.click(UI_KIT_LIST_TRIGGER, { timeout: 10_000 });
       // Every piece open, and the toast done sliding in (its box the same on two polls)
       let lastToast = '';
       await waitFor(async () => {

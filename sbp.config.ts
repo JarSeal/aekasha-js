@@ -55,8 +55,11 @@ const profiles: SbpProfile[] = [
         '_engine/kernel/ecs': 9 * KIB,
         '_engine/kernel/input': 9 * KIB,
         '_engine/kernel/scene': 6 * KIB,
-        // p613 D5: the draggable windows load only where they're used
-        '_engine/ui': 5 * KIB,
+        // p613 D5: the draggable windows load only where they're used. p803 Phase 8: 5 → 7 KiB
+        // (`suggestBudget` of 5.4 kB): the app's scene loader is the kit's loading overlay
+        // (`src/index.ts`), with its spinner, its progress bar and their styles; every scene's
+        // first load shows it, so it can't load later
+        '_engine/ui': 7 * KIB,
         app: 14 * KIB,
         toolkit: 7 * KIB,
       },

@@ -4,9 +4,10 @@ that remember their layout, modal dialogs, menus, tooltips, drop-downs and toast
 with no framework, every piece works with the keyboard and assistive tech, and a build carries
 only the parts the app imports. Everything is on `aekasha/ui`.
 
-::: scene exampleUiKit
-A HUD panel with a window per shape, a settings window, toasts, and a pause menu on Escape. The
-[UI kit example](hub:examples/ui-kit) walks through it.
+::: embed uiKit
+The UI kit live, mounted into this page: a window with a button and its tooltip, a toast, and a
+dialog with a drop-down from the window's "Open the dialog". Drag the window, press Escape in the
+dialog, or Tab through it. The [UI kit example](hub:examples/ui-kit) builds a whole HUD.
 :::
 
 This page is the kit's base: [components](#components), [the HUD root](#the-hud-root), the

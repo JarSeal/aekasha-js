@@ -25,6 +25,7 @@ const TOASTER_ID = 'uiKitEmbedToasts';
 const BACKDROP_CLASS = 'uiKitEmbedBackdrop';
 const LIST_CLASS = 'uiKitEmbedList';
 const TOOLTIP_CLASS = 'uiKitEmbedTooltip';
+const OPEN_DIALOG_CLASS = 'uiKitEmbedOpenDialog';
 
 const SHADES = [
   { value: 'dawn', label: 'Dawn' },
@@ -41,11 +42,13 @@ const PANEL_STYLE = {
 };
 
 /**
- * The uiKit embed's scene (p801 D9): a box made in code, and one of each of the UI kit's pieces
- * open over it: a window with a button and its tooltip shown, a toast, and a dialog with its
- * drop-down's list open. Mounted into a
- * page it doesn't own (`uiKit.embed.ts`), they size from the browser's font size, not the host's
- * root, and stay inside the mount's container; `yarn verify:embed` checks both.
+ * The uiKit embed's scene (p801 D9): a box made in code, and the UI kit's pieces over it: a
+ * window with a button and its tooltip shown, a toast, and a dialog with a drop-down, which the
+ * window's second button opens (p803 Phase 8: opened at load, the dialog took the focus of a
+ * page the embed mounts into as it scrolled in, the Hub's UI kit page). Mounted into a page it
+ * doesn't own (`uiKit.embed.ts`), they size from the browser's font size, not the host's root,
+ * and stay inside the mount's container; `yarn verify:embed` checks both, after clicking the
+ * button and the drop-down's trigger.
  */
 export const scene = async () => {
   createMeshEntity({
@@ -70,12 +73,23 @@ export const scene = async () => {
       hint.tooltip = createTooltip({
         anchor: button.cmp.elem,
         text: 'A tooltip',
+        // Beside the button: above it, it would cover the window's text
+        side: 'right',
         class: TOOLTIP_CLASS,
       });
+      panel.add(
+        createButton({
+          label: 'Open the dialog',
+          size: 'sm',
+          variant: 'primary',
+          class: OPEN_DIALOG_CLASS,
+          onClick: () => openShadeDialog(),
+        }).cmp
+      );
       return panel;
     },
     position: { x: 16, y: 16 },
-    size: { w: 220, h: 170 },
+    size: { w: 220, h: 190 },
     // The focus would show the tooltip, and the dialog's taking it (a blur) hide it again
     focusFirstElement: false,
     closeOnSceneChange: true,
@@ -97,8 +111,12 @@ export const scene = async () => {
   // Until it's closed: the check measures it
   addToast({ message: 'A toast', toasterId: TOASTER_ID, showingTime: 0 });
 
-  // The drop-down is in the dialog: opening a window focuses its first element, which would
-  // close a list open elsewhere (its focusout)
+  registerOnSceneExit(SCENE_ID, () => removeToaster(TOASTER_ID));
+};
+
+/** The dialog with its drop-down, from the window's button: it takes the focus as it opens */
+const openShadeDialog = () => {
+  // Its list opens from the trigger (`yarn verify:embed` clicks it), in the top layer
   const dropDown = createDropDown({
     options: SHADES,
     value: () => SHADES[0].value,
@@ -124,7 +142,4 @@ export const scene = async () => {
     closeOnEscape: true,
     removeOnSceneChange: true,
   });
-  dropDown.open();
-
-  registerOnSceneExit(SCENE_ID, () => removeToaster(TOASTER_ID));
 };

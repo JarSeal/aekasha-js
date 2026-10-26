@@ -2161,6 +2161,98 @@ As built (section 2, 2026-10-26):
   `yarn hub:build` (95 pages, no dead link, 100 % documented, search 314 KiB gzip) and a dev build
   (102 pages, no error or warning: the dev page's links to the public texts).
 
+As built (section 3, 2026-10-26):
+
+- **`features/ui-kit/styling/`** ("Styling the UI kit", menu "Styling", order 30, `aek:icon`
+  feather, `aek:covers` "Tokens and units", which the overview no longer names). Its intro lists
+  the three ways in order; its sections: **The tokens: the whole look** (set on the kit root;
+  derived tokens resolve where they're declared; a forced theme declares its colours again, so a
+  palette's rule names it; keep the contrast; an app's own UI reads them; the token table, now
+  with the icon sizes, `--aek-motion` and `--aek-tooltip-delay`), **A component's custom
+  properties** (pointing at the reference tables), **Rules on its parts** (the global classes,
+  states as attributes, public names), **Why your CSS wins** (the layers and `:where()`; an
+  unlayered rule always wins, a layer of the app's after `@layer aek, app;`, scoping a broad
+  `button { … }`), **Make it look like your game** (a sci-fi HUD's `hud.css`: a self-hosted
+  `@font-face`, the palette and corners, three component properties, two part rules, and the HUD
+  root forced dark), then themes and density, UI scale and font size, fonts, motion and focus,
+  and the embed tip.
+- **The worked example is checked**: its contrast computed (the accent at least 8.4:1 on the four
+  surfaces, the muted text 6.5:1, the text on the accent 10.1:1, `--aek-border-control` 3.7:1),
+  and its CSS applied to the library page in Chromium (uppercase titles, square corners, the
+  amber accent, no page error). **The debug tools aren't kit roots**: they keep the kit's dark
+  colours (their forced theme declares them again) but inherit the font, the corners and the UI's
+  text size from the HUD root, which the example says (a first draft said they'd be untouched).
+- **The overview's Styling** is a paragraph linking the page; the editor views'
+  `KEEP_IN_VIEWS_CLASS` note moved into The HUD root. **"In a build"** (new, p800 D10's "what does
+  a HUD cost"): `{{sbp:uiKit.group:_engine/ui}}` in the first download (4.3 KiB), and the
+  `uiKit` scene's `{{sbp:uiKit.chunk:assets/uiKitEmbed.js}}` (17.9 KiB) and `.css` (4.2 KiB).
+- The stale lines the old Styling had (the toasts' own colours "for now", the components "not in a
+  layer yet") are gone with it.
+- Links moved to the page: the design documents' (Ækasha's and the app's), the core page's intro,
+  the overlays page's layers line, the overview's kit root mention.
+- Docs: the kit's `CLAUDE.md` (Tokens and units' guide is the styling page; the section's pages),
+  `hub/CLAUDE.md` (`styling/` in the section).
+- The section's checks: `yarn hub:build` (96 pages, no dead link, 100 % documented, search 319 KiB
+  gzip) and a dev build (103 pages, no error or warning).
+
+As built (section 4, 2026-10-26):
+
+- **The example** (`src/app/examples/uiKit/exampleUiKit.ts`, same four regions): the HUD panel's
+  buttons are `createButton`s (a shape's has a `tooltip` and its `--swatch` written on
+  `button.cmp`), **a split button** "Turn all" (`kbd: 'Space'`) whose menu turns one shape or
+  resets the colours, Settings, and Menu (`kbd: 'Escape'`: the hints replace the old hint text;
+  the keys stay the action map's). A shape window holds its colour drop-down, **a segmented
+  progress bar** of its turns (eight segments a full turn, a turn now an eighth: 45°, as before)
+  written in place by `turnShape` through a map of the open windows' bars (a content's
+  `onRemoveCmp` deletes its own bar only, so a rebuild's new one stays) and a Turn button. The
+  pause menu's buttons are kit buttons (Resume primary) with **"Reload the scene"**
+  (`loadScene`, not awaited). `exampleUiKit.scss` is on the tokens and lays the kit's buttons out
+  with rules on their classes (full width, left-aligned, the key hint at the far end). The panel
+  is 14em wide (11em cut the buttons with key hints), the shape windows open at x 260.
+- **The app's scene loader** (`src/index.ts`, region `app-scene-loader`): `createLoadingOverlay`
+  (`'Loading the scene'`) per load, `showAsync` / `hideAsync` as `loadStartFn` / `loadEndFn`, and a
+  scene's `{ loadedCount, totalCount }` (`physicsTiers`, `scene01`, `topDownTestScene`) turning
+  it into a bar with the count in its text. `src/index.ts` no longer imports `CMP`. **It adds
+  1.3 kB gzip to the app's first download** (`_engine/ui` 4.1 → 5.4 kB, 3 → 7 modules: the
+  overlay, the spinner, the progress bar and their styles; `index.css` +1.0 kB): every first load
+  shows it, so it can't be lazy. **The app's `_engine/ui` budget 5 → 7 KiB** (`suggestBudget`),
+  with the reason in `sbp.config.ts`; open for review.
+- **The embed's scene** (`uiKitEmbed.ts`): the window (220 × 190) has its Hint button with the
+  tooltip shown, now `side: 'right'` (above, it covered the window's text), and **"Open the
+  dialog"** (`uiKitEmbedOpenDialog`), which opens the dialog with its drop-down
+  (`openShadeDialog`); neither the dialog nor the list opens at load. `yarn verify:embed` clicks the
+  button and the trigger after the mount (`UI_KIT_OPEN_DIALOG`, `UI_KIT_LIST_TRIGGER`) and
+  checks the rest as before. The scene JSON's description says so.
+- **`::: embed uiKit`** on the UI kit overview's intro, in place of the `::: scene exampleUiKit`
+  panel (the example's own page keeps its panel; the caption links it). Checked on the dev Hub in
+  Chromium: the page's focus stays on the body as the embed mounts, the dialog and its list open
+  from their buttons, two Escapes close the list and then the dialog, no error.
+- **The poster** (`src/app/profiles/uiKit/uiKitEmbed.hub.png`, 1600 × 1000): the Hub tab saves
+  the canvas alone (a box on its background), so the poster is a screenshot of the embed mounted
+  on the dev Hub's UI kit page (its `[data-hub-embed-target]` at 1600 px wide, the pause button
+  hidden), resized by a pixel to 1600 × 1000. `uiKitEmbed` is in `OTHER_HUB_SCENES` too (D13's
+  step; its tab saves a canvas-only image). `hub/CLAUDE.md` says how the poster is made.
+- **The example page**: its intro and walkthrough rewritten for the components (the panel's
+  buttons, key hints and split button, the windows' turn bars, the pause menu's reload) with a
+  new **The scene loader** section including `src/index.ts#app-scene-loader`; `ui-kit-hud.png`
+  taken again in prod test mode (the debugger's roots hidden, 1600 × 1000, the same state as the
+  old one: the Box window on Violet, the settings window, two toasts). `exampleUiKit.hub.png`
+  stays: the tab's snapshot has no HUD, and the scene's 3D is unchanged.
+- Docs: `hub/CLAUDE.md` (the embeds' pages, `OTHER_HUB_SCENES`, the poster), the kit's
+  `CLAUDE.md` (Bounds in an embed: the dialog from a button), `devTools/verify/CLAUDE.md` (the
+  embed check's clicks).
+- The section's checks: `yarn test` (184 files, 1455 tests), `tsc` (both), ESLint on the changed
+  files, `yarn sbp --profile all` (within every budget after the raise; the app's `app` group
+  12.0 kB is well under its 14: left), `yarn verify:embed` (every scenario, both profiles, both host
+  roots), `yarn hub:build` with the live embeds (96 pages, the API 100 % documented, search 320
+  KiB gzip), `yarn verify:scenes --only exampleUiKit,uiKitEmbed,scene01 --config quick` (3 passed
+  against Phase 0's baselines; `scene01` reports its progress through the new loader). The
+  example driven in Chromium on the dev server (debug and prod test): the windows, the split
+  button's menu, the turn bars, the pause menu and the reload's overlay, no console or page error. **To record in section 5's `verify:baselines`**: the app bundle's growth (the main
+  chunk's `_engine/ui`, `index.css`, and the lazy `DropDown.js` +1.8 kB and `.css` +1.0 kB, the
+  shared chunk the example's kit buttons now go into, `exampleUiKit.js` +2.4 kB, `.css` +0.6 kB)
+  and the `uiKit` embed's.
+
 ### Phase 9: versions and done
 
 D14; the changelog entry with the restyle note; `yarn checkVersions --against main`; mark the plan

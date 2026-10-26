@@ -9,7 +9,7 @@ import { postFx } from 'aekasha/postfx';
 import { skyBox } from 'aekasha/skybox';
 import { spatial } from 'aekasha/spatial';
 import { viewports } from 'aekasha/viewports';
-import { CMP } from 'aekasha/ui';
+import { createLoadingOverlay, type LoadingOverlay } from 'aekasha/ui';
 import config from './CONFIG';
 import { appData } from './generated';
 import { appECSPlugins } from './AppECSPlugins';
@@ -47,54 +47,29 @@ InitEngine({
     });
     // #endregion create-renderer
 
-    // The scene loader: a full-screen cover that fades in before a scene loads, shows its
-    // progress, and fades out once the next scene is in
+    // #region app-scene-loader (shown in the Hub: hub/pages/examples/ui-kit/)
+    // The scene loader: the UI kit's loading overlay over the HUD, faded in before a scene loads
+    // and out once the next scene is in, with the progress scene code reports
+    let loaderOverlay: LoadingOverlay | null = null;
     createSceneLoader({
       id: 'main-scene-loader',
-      loaderContainerFn: () =>
-        CMP({
-          id: 'main-scene-loader-cmp',
-          text: 'Loading…',
-          style: {
-            width: '100vw',
-            height: '100vh',
-            background: '#101218',
-            color: '#e6e8ee',
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            zIndex: 1000,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            transition: 'opacity 0.5s ease-in',
-            opacity: 0,
-          },
-        }),
-      // Each fade starts a task later, so the transition runs from the opacity the cover has
-      loadStartFn: (loader) =>
-        new Promise((resolve) => {
-          setTimeout(() => {
-            loader.loaderContainer?.updateStyle({ opacity: 1 });
-            setTimeout(() => resolve(true), 500);
-          }, 0);
-        }),
-      loadEndFn: (loader) =>
-        new Promise((resolve) => {
-          setTimeout(() => {
-            loader.loaderContainer?.updateStyle({ opacity: 0 });
-            setTimeout(() => resolve(true), 500);
-          }, 0);
-        }),
-      // Scene code reports its progress through getLoaderStatusUpdater()
-      updateLoaderStatusFn: (loader, params) => {
-        if (params && 'loadedCount' in params && 'totalCount' in params) {
-          loader.loaderContainer?.update({
-            text: `Loading, ${params.loadedCount} / ${params.totalCount}`,
-          });
-        }
+      // A new overlay per load: the load removes its container at its end
+      loaderContainerFn: () => {
+        loaderOverlay = createLoadingOverlay({ text: 'Loading the scene' });
+        return loaderOverlay.cmp;
+      },
+      loadStartFn: () => loaderOverlay?.showAsync() ?? Promise.resolve(true),
+      loadEndFn: () => loaderOverlay?.hideAsync() ?? Promise.resolve(true),
+      // Scene code reports its progress through getLoaderStatusUpdater(): the spinner becomes a bar
+      updateLoaderStatusFn: (_loader, params) => {
+        const loaded = Number(params?.loadedCount);
+        const total = Number(params?.totalCount);
+        if (!loaderOverlay || !(total > 0)) return;
+        loaderOverlay.setProgress((loaded / total) * 100);
+        loaderOverlay.setText(`Loading the scene, ${loaded} / ${total}`);
       },
     });
+    // #endregion app-scene-loader
 
     // The example scenes' Hub tab (debug env)
     if (IS_DEBUG_ENV) {

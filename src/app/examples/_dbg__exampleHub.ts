@@ -157,7 +157,7 @@ const SCENE_IMAGE_SIZES: Record<string, HubImageSize> = { exampleHubHero: 'HERO'
 
 /** Scenes outside `src/app/examples/` that a Hub page shows (`::: scene`, `::: embed`'s poster),
  * so they get the tab too */
-const OTHER_HUB_SCENES = new Set(['lodShowcase', 'banner']);
+const OTHER_HUB_SCENES = new Set(['lodShowcase', 'banner', 'uiKitEmbed']);
 
 /** Scenes whose Hub image has no background: an embed's poster, in place of the live embed that
  * the page shows through (p611 D9) */

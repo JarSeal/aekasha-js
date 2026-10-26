@@ -319,7 +319,7 @@ the focus) is on one stack, and the kit keeps the same rules for all of them:
   or an embed's container. Where the browser has no top layer they open at the HUD root's top.
 - **The layers:** the app's windows, then a loading overlay over the HUD, then the app's dialogs,
   the debug tools' windows and dialogs, the toasts and the tooltips (`--aek-z-*`, in the
-  [styling tokens](hub:features/ui-kit#the-kit-root-and-its-tokens)). An app's modal dialog leaves
+  [styling tokens](hub:features/ui-kit/styling#the-tokens-the-whole-look)). An app's modal dialog leaves
   the debug tools usable, so a pause menu can still be debugged.
 
 ## Key APIs

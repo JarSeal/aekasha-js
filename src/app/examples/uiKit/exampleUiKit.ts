@@ -4,6 +4,7 @@ import {
   createMeshEntity,
   getECSWorld,
   getMaterial,
+  loadScene,
   registerOnSceneExit,
   setActionContextEnabled,
 } from 'aekasha';
@@ -11,7 +12,10 @@ import {
   addToast,
   closeDraggableWindow,
   CMP,
+  createButton,
   createDropDown,
+  createProgressBar,
+  createSplitButton,
   createToaster,
   getHUDRootCMP,
   getKindWindowId,
@@ -21,7 +25,7 @@ import {
   toggleDraggableWindow,
   updateDraggableWindowsOfKind,
 } from 'aekasha/ui';
-import type { CMPHandle, ToastType } from 'aekasha/ui';
+import type { Button, ProgressBar, ToastType } from 'aekasha/ui';
 import './exampleUiKit.scss';
 
 const SCENE_ID = 'exampleUiKit';
@@ -30,6 +34,8 @@ const SHAPE_WINDOW_KIND = 'exampleUiKitShape';
 const SETTINGS_WINDOW_ID = 'exampleUiKitSettings';
 const MENU_DIALOG_ID = 'exampleUiKitMenu';
 const MENU_CONTEXT = 'MENU';
+/** A turn is an eighth of a full one: a shape's window shows them as eight segments */
+const TURNS_PER_REVOLUTION = 8;
 
 type ShapeId = 'box' | 'pyramid' | 'prism';
 
@@ -52,8 +58,11 @@ const GROUND_COLORS = [
 
 // The scene's state, set again on every visit
 const shapeColors = {} as Record<ShapeId, string>;
+const shapeTurns = {} as Record<ShapeId, number>;
 const shapeEntityIds = {} as Record<ShapeId, number>;
-const shapeButtons = {} as Record<ShapeId, CMPHandle>;
+const shapeButtons = {} as Record<ShapeId, Button>;
+/** The open shape windows' turn bars, set by their content and taken off when it goes */
+const turnBars = new Map<ShapeId, ProgressBar>();
 let groundColor = GROUND_COLORS[0].value;
 
 const getShapeName = (shapeId: ShapeId) => SHAPES.find((s) => s.id === shapeId)?.name ?? shapeId;
@@ -101,6 +110,7 @@ export const scene = async () => {
   // A material outlives a visit: start each one from the defaults
   for (const shape of SHAPES) {
     shapeColors[shape.id] = shape.color;
+    shapeTurns[shape.id] = 0;
     setMaterialColor(`uiKit${shape.name}`, shape.color);
   }
   groundColor = GROUND_COLORS[0].value;
@@ -114,8 +124,9 @@ export const scene = async () => {
   registerShapeWindows();
   createActions();
 
-  // What the scene added outside the ECS goes with it (one exit function per scene). Its windows
-  // close or are removed by their own flags.
+  // What the scene added outside the ECS goes with it (one exit function per scene): removing
+  // the panel removes the kit components in it, their tooltips and the split button's menu. Its
+  // windows close or are removed by their own flags.
   registerOnSceneExit(SCENE_ID, () => {
     panel.remove();
     removeToaster(TOASTER_ID);
@@ -123,24 +134,41 @@ export const scene = async () => {
 };
 
 // #region ui-kit-hud (shown in the Hub: hub/pages/examples/ui-kit/)
-/** The HUD panel: a button per shape (its window), the settings and the menu */
+/** The HUD panel: a button per shape (its window), the turns, the settings and the menu */
 const createHudPanel = () => {
   const panel = getHUDRootCMP().add({ class: 'exampleUiKitHud' });
   panel.add({ tag: 'h2', text: 'Shapes' });
   for (const shape of SHAPES) {
-    shapeButtons[shape.id] = panel.add({
-      tag: 'button',
+    const button = createButton({
+      label: shape.name,
       class: 'exampleUiKitShapeButton',
-      text: shape.name,
-      // A custom property, which the button's swatch (its ::before) reads
-      style: { '--swatch': shapeColors[shape.id] },
+      tooltip: `The ${shape.name.toLowerCase()}'s window: its colour and its turns`,
       onClick: () => toggleShapeWindow(shape.id),
     });
+    // A custom property, which the button's swatch (its ::before) reads
+    button.cmp.updateStyle({ '--swatch': shapeColors[shape.id] });
+    shapeButtons[shape.id] = button;
+    panel.add(button.cmp);
   }
-  const row = panel.add({ class: 'exampleUiKitRow' });
-  row.add({ tag: 'button', text: 'Settings', onClick: () => toggleSettingsWindow() });
-  row.add({ tag: 'button', text: 'Menu', onClick: () => openMenu() });
-  panel.add({ class: 'exampleUiKitHint', text: 'Space: turn the shapes\nEsc: menu' });
+  // An action and its variants: turn them all, or one, from the menu button next to it
+  const turn = createSplitButton({
+    label: 'Turn all',
+    kbd: 'Space',
+    menuLabel: 'Turn one',
+    onClick: () => turnAllShapes(),
+    items: [
+      ...SHAPES.map((shape) => ({
+        label: `Turn the ${shape.name.toLowerCase()}`,
+        onSelect: () => turnShape(shape.id),
+      })),
+      { type: 'separator' as const },
+      { label: 'Reset the colours', onSelect: () => resetColors() },
+    ],
+  });
+  panel.add(turn.cmp);
+  panel.add(createButton({ label: 'Settings', onClick: () => toggleSettingsWindow() }).cmp);
+  // `kbd` is a hint (and `aria-keyshortcuts`): the key is the scene's action map's
+  panel.add(createButton({ label: 'Menu', kbd: 'Escape', onClick: () => openMenu() }).cmp);
   return panel;
 };
 
@@ -148,7 +176,7 @@ const applyShapeColor = (shapeId: ShapeId, color: string) => {
   shapeColors[shapeId] = color;
   setMaterialColor(`uiKit${getShapeName(shapeId)}`, color);
   // Written in place: no new props object per update
-  shapeButtons[shapeId].updateStyle({ '--swatch': color });
+  shapeButtons[shapeId].cmp.updateStyle({ '--swatch': color });
 };
 
 const setShapeColor = (shapeId: ShapeId, color: string) => {
@@ -165,7 +193,21 @@ const registerShapeWindows = () =>
   });
 
 const createShapePanel = (shapeId: ShapeId) => {
-  const panel = CMP({ class: 'exampleUiKitPanel' });
+  // A full turn in eighths: one segment fills per turn
+  const turns = createProgressBar({
+    label: 'Turned',
+    max: TURNS_PER_REVOLUTION,
+    segments: TURNS_PER_REVOLUTION,
+    value: shapeTurns[shapeId] % TURNS_PER_REVOLUTION,
+  });
+  turnBars.set(shapeId, turns);
+  const panel = CMP({
+    class: 'exampleUiKitPanel',
+    // The content goes on a close or a rebuild: its bar with it, unless a rebuild's is in already
+    onRemoveCmp: () => {
+      if (turnBars.get(shapeId) === turns) turnBars.delete(shapeId);
+    },
+  });
   panel.add({ tag: 'label', text: 'Colour' });
   const colorDropDown = createDropDown({
     options: COLORS,
@@ -177,7 +219,8 @@ const createShapePanel = (shapeId: ShapeId) => {
     title: 'Colour',
   });
   panel.add(colorDropDown.cmp);
-  panel.add({ tag: 'button', text: 'Turn', onClick: () => turnShape(shapeId) });
+  panel.add(turns.cmp);
+  panel.add(createButton({ label: 'Turn', size: 'sm', onClick: () => turnShape(shapeId) }).cmp);
   return panel;
 };
 
@@ -189,8 +232,8 @@ const toggleShapeWindow = (shapeId: ShapeId) =>
     data: { shapeId },
     title: getShapeName(shapeId),
     // Right of the HUD panel (px: its top left corner); a kind's next window cascades from it
-    position: { x: 200, y: 72 },
-    size: { w: 240, h: 170 },
+    position: { x: 260, y: 72 },
+    size: { w: 260, h: 200 },
     closeOnSceneChange: true,
   });
 
@@ -203,7 +246,7 @@ const toggleSettingsWindow = () =>
     // A % position is the window's centre: near the right edge, below the toasts
     position: { x: 86, y: 58 },
     units: { position: { x: '%', y: '%' } },
-    size: { w: 260, h: 240 },
+    size: { w: 260, h: 190 },
     closeOnSceneChange: true,
   });
 
@@ -222,8 +265,16 @@ const createSettingsPanel = () => {
   panel.add(groundDropDown.cmp);
   panel.add({ tag: 'label', text: 'Toasts' });
   const row = panel.add({ class: 'exampleUiKitRow' });
-  row.add({ tag: 'button', text: 'Info', onClick: () => showToast('Just so you know') });
-  row.add({ tag: 'button', text: 'Warning', onClick: () => showToast('Careful now', 'warning') });
+  row.add(
+    createButton({ label: 'Info', size: 'sm', onClick: () => showToast('Just so you know') }).cmp
+  );
+  row.add(
+    createButton({
+      label: 'Warning',
+      size: 'sm',
+      onClick: () => showToast('Careful now', 'warning'),
+    }).cmp
+  );
   return panel;
 };
 // #endregion ui-kit-windows
@@ -250,7 +301,7 @@ const showToast = (message: string, type?: ToastType) =>
 // #endregion ui-kit-toasts
 
 // #region ui-kit-menu (shown in the Hub: hub/pages/examples/ui-kit/)
-let menuButtons: CMPHandle[] = [];
+let menuButtons: Button[] = [];
 
 /** The gameplay keys, and the menu's in a context of its own, off until the menu opens */
 const createActions = () => {
@@ -267,7 +318,7 @@ const createActions = () => {
     },
   });
   gameplay.onPressed('menu', () => openMenu());
-  gameplay.onPressed('turn', () => SHAPES.forEach((shape) => turnShape(shape.id)));
+  gameplay.onPressed('turn', () => turnAllShapes());
 
   const menu = createActionMap({
     id: `${SCENE_ID}:menu`,
@@ -296,8 +347,8 @@ const openMenu = () => {
     id: MENU_DIALOG_ID,
     title: 'Paused',
     content: () => createMenuPanel(),
-    size: { w: 320, h: 220 },
-    minSize: { w: 280, h: 180 },
+    size: { w: 320, h: 210 },
+    minSize: { w: 280, h: 190 },
     closeOnEscape: true,
     removeOnSceneChange: true,
     onClose: () => {
@@ -310,21 +361,26 @@ const openMenu = () => {
 const createMenuPanel = () => {
   const panel = CMP({ class: 'exampleUiKitMenu' });
   menuButtons = [
-    panel.add({
-      tag: 'button',
-      text: 'Resume',
+    createButton({
+      label: 'Resume',
+      variant: 'primary',
       onClick: () => closeDraggableWindow(MENU_DIALOG_ID),
     }),
-    panel.add({ tag: 'button', text: 'Reset the colours', onClick: () => resetColors() }),
+    createButton({ label: 'Reset the colours', onClick: () => resetColors() }),
+    // The app's scene loader (src/index.ts) covers the reload: its loading overlay
+    createButton({
+      label: 'Reload the scene',
+      onClick: () => void loadScene({ sceneId: SCENE_ID }),
+    }),
   ];
-  panel.add({ class: 'exampleUiKitHint', text: '↑ ↓: choose · Enter: press · Esc: resume' });
+  for (const button of menuButtons) panel.add(button.cmp);
   return panel;
 };
 
 const moveMenuFocus = (step: number) => {
-  const current = menuButtons.findIndex((button) => button.elem === document.activeElement);
+  const current = menuButtons.findIndex((button) => button.cmp.elem === document.activeElement);
   const next = (current + step + menuButtons.length) % menuButtons.length;
-  menuButtons[next]?.focus();
+  menuButtons[next]?.cmp.focus();
 };
 // #endregion ui-kit-menu
 
@@ -336,7 +392,10 @@ const resetColors = () => {
 };
 
 // An eighth of a turn around y
-const turnStep = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 4);
+const turnStep = new THREE.Quaternion().setFromAxisAngle(
+  new THREE.Vector3(0, 1, 0),
+  (Math.PI * 2) / TURNS_PER_REVOLUTION
+);
 const nextRotation = new THREE.Quaternion();
 
 const turnShape = (shapeId: ShapeId) => {
@@ -347,4 +406,9 @@ const turnShape = (shapeId: ShapeId) => {
   world.setTransform(shapeEntityIds[shapeId], {
     rot: nextRotation.copy(rotation).multiply(turnStep),
   });
+  shapeTurns[shapeId]++;
+  // Written in place in the open window, if there is one
+  turnBars.get(shapeId)?.setValue(shapeTurns[shapeId] % TURNS_PER_REVOLUTION);
 };
+
+const turnAllShapes = () => SHAPES.forEach((shape) => turnShape(shape.id));
