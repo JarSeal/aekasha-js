@@ -2,8 +2,8 @@ import type { CMPAttr, CMPHandle } from '../core/CMPTypes';
 import { CMP, classes } from '../core/CMP';
 import { getMotionFactor } from '../core/Motion';
 import { createTooltip, type Tooltip } from '../overlays/Tooltip';
-import { createKbd } from './Kbd';
-import { getAriaKeyShortcuts } from './KeyNames';
+import type { Kbd } from './Kbd';
+import { addShortcutHint } from './ShortcutHint';
 import './Button.scss';
 import '../styles/kit.scss';
 
@@ -26,9 +26,11 @@ export type ButtonProps = {
   iconOnly?: boolean;
   /** Its tooltip's text (default: none, or `label` with `iconOnly`). */
   tooltip?: string;
-  /** A shortcut's hint drawn after the label with `createKbd` (`'Ctrl+S'`), and the button's
-   * `aria-keyshortcuts`. Display only: binding the key is the app's. */
-  kbd?: string;
+  /** A shortcut's hint drawn after the label (`createKbd({ keys: 'Ctrl+S' })`), whose keys are the
+   * button's `aria-keyshortcuts`, also after its `setKeys`. The button removes it with itself.
+   * Display only: binding the key is the app's. A string (`'Ctrl+S'`) is deprecated (removed in
+   * engine 6.0.0): the button loads Kbd's code for it, so its hint appears a frame later. */
+  kbd?: Kbd | string;
   /** Makes it a toggle button with this state (`aria-pressed`): a click flips it. */
   pressed?: boolean;
   /** A toggle's new state, after a click flipped it. */
@@ -36,6 +38,11 @@ export type ButtonProps = {
   /** Makes it a hold to confirm button (a destructive action): it acts after the pointer, Space
    * or Enter is held this long (eg. 800), and releasing earlier cancels. */
   holdToConfirmMs?: number;
+  /** With `holdToConfirmMs`: a click that no press on the button started (a screen reader's
+   * browse mode clicks without one, so its user can't hold). The app confirms another way here
+   * (opens its confirmation dialog); without it such a click does nothing. Not called while it's
+   * loading. */
+  onUnheldClick?: (e: Event) => void;
   /** Disables it (default false). */
   disabled?: boolean;
   /** Its `type` in a form (default 'button'). */
@@ -94,6 +101,9 @@ const createHoldToConfirm = (
 ) => {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let isHolding = false;
+  // A pointer press or a held key started what follows: the click after a pointer's release is
+  // its, not one without a press
+  let hasPress = false;
 
   const clear = () => {
     if (timer) clearTimeout(timer);
@@ -125,13 +135,21 @@ const createHoldToConfirm = (
       fn: (e: Event) => {
         const pointer = e as PointerEvent;
         if (pointer.button !== 0) return;
+        hasPress = true;
         const elem = getElem();
         if (typeof elem.setPointerCapture === 'function') elem.setPointerCapture(pointer.pointerId);
         start(e);
       },
     },
     { type: 'pointerup', fn: clear },
-    { type: 'pointercancel', fn: clear },
+    {
+      type: 'pointercancel',
+      fn: () => {
+        // No click follows
+        hasPress = false;
+        clear();
+      },
+    },
     { type: 'lostpointercapture', fn: clear },
     {
       type: 'keydown',
@@ -140,6 +158,7 @@ const createHoldToConfirm = (
         if (!HOLD_KEYS.has(key.key)) return;
         // No click from the key: the timer acts
         e.preventDefault();
+        hasPress = true;
         if (!key.repeat) start(e);
       },
     },
@@ -148,16 +167,29 @@ const createHoldToConfirm = (
       fn: (e: Event) => {
         if (!HOLD_KEYS.has((e as KeyboardEvent).key)) return;
         e.preventDefault();
+        hasPress = false;
         clear();
       },
     },
-    { type: 'blur', fn: clear },
+    {
+      type: 'blur',
+      fn: () => {
+        hasPress = false;
+        clear();
+      },
+    },
   ];
-  return { listeners, clear };
+  /** Whether a press started this click, which it ends */
+  const takePress = () => {
+    const had = hasPress;
+    hasPress = false;
+    return had;
+  };
+  return { listeners, clear, takePress };
 };
 
-/** Appends the button's parts, in order: the icon, the label (not with `iconOnly`), the
- * shortcut's hint, and a hold to confirm's fill and description */
+/** Appends the button's parts, in order: the icon, the label (not with `iconOnly`), and a hold to
+ * confirm's fill and description; returns the fill, which the shortcut's hint goes before */
 const appendParts = (elem: HTMLElement, props: ButtonProps, labelElem: HTMLElement, id: string) => {
   const parts: HTMLElement[] = [];
   if (props.icon) {
@@ -170,13 +202,9 @@ const appendParts = (elem: HTMLElement, props: ButtonProps, labelElem: HTMLEleme
     if (props.iconPosition === 'end') parts.unshift(labelElem);
     else parts.push(labelElem);
   }
-  if (props.kbd) {
-    const kbd = createKbd({ keys: props.kbd, class: 'aekButton__kbd' }).cmp.elem;
-    kbd.setAttribute('aria-hidden', 'true');
-    parts.push(kbd);
-  }
+  let fill: HTMLElement | null = null;
   if (props.holdToConfirmMs) {
-    const fill = createPart('aekButton__hold');
+    fill = createPart('aekButton__hold');
     fill.setAttribute('aria-hidden', 'true');
     // Hidden, so it isn't part of the name; aria-describedby reads it all the same
     const description = createPart('aekButton__holdText');
@@ -188,6 +216,7 @@ const appendParts = (elem: HTMLElement, props: ButtonProps, labelElem: HTMLEleme
     elem.style.setProperty('--aek-button-hold-time', `${props.holdToConfirmMs}ms`);
   }
   elem.append(...parts);
+  return fill;
 };
 
 /**
@@ -202,16 +231,21 @@ const appendParts = (elem: HTMLElement, props: ButtonProps, labelElem: HTMLEleme
  * - Keys: Enter and Space click it (the browser's). A hold to confirm acts after Space or Enter is
  *   held for `holdToConfirmMs` (the fill steps instead of sliding under reduced motion: it's
  *   information); releasing earlier cancels. A click without a press (assistive tech's) doesn't
- *   act on it.
+ *   act on it: it calls `onUnheldClick`, where the app confirms another way.
  * - ARIA: a toggle has `aria-pressed`; `iconOnly` names it by `aria-label`; `kbd` sets
- *   `aria-keyshortcuts` (its hint is hidden from assistive tech); loading sets `aria-busy`; a hold
- *   to confirm is described "Hold to confirm".
+ *   `aria-keyshortcuts` from the hint's keys (the hint is hidden from assistive tech); loading
+ *   sets `aria-busy`; a hold to confirm is described "Hold to confirm".
  * @example
  * ```ts
- * const save = createButton({ label: 'Save', variant: 'primary', kbd: 'Ctrl+S', onClick: () => {
- *   save.setLoading(true);
- *   saveSceneAsync().finally(() => save.setLoading(false));
- * } });
+ * const save = createButton({
+ *   label: 'Save',
+ *   variant: 'primary',
+ *   kbd: createKbd({ keys: 'Ctrl+S' }),
+ *   onClick: () => {
+ *     save.setLoading(true);
+ *     saveSceneAsync().finally(() => save.setLoading(false));
+ *   },
+ * });
  * toolbarPanel.add(save.cmp);
  * toolbarPanel.add(createButton({ label: 'Settings', icon: getSvgIcon('gear'), iconOnly: true }).cmp);
  * ```
@@ -244,10 +278,15 @@ export const createButton = (props: ButtonProps): Button => {
   const clearHold = () => hold?.clear();
 
   const onClick = (e: Event) => {
-    // A hold acts from its timer; the click after the release (or assistive tech's) does nothing
-    if (isLoading || hold) return;
-    act(e);
+    // A hold acts from its timer: the click after the release does nothing, and one with no press
+    // (assistive tech's) is the app's to confirm
+    if (hold) {
+      if (!hold.takePress() && !isLoading) props.onUnheldClick?.(e);
+      return;
+    }
+    if (!isLoading) act(e);
   };
+  let stopHint: ((removeHint: boolean) => void) | null = null;
 
   const cmp = CMP({
     id: props.id,
@@ -261,12 +300,13 @@ export const createButton = (props: ButtonProps): Button => {
       'data-size': props.size ?? 'md',
       ...(iconOnly ? { 'data-icon-only': '', 'aria-label': label } : {}),
       ...(isToggle ? { 'aria-pressed': String(pressed) } : {}),
-      ...(props.kbd ? { 'aria-keyshortcuts': getAriaKeyShortcuts(props.kbd) } : {}),
       ...(props.disabled ? { disabled: '' } : {}),
     },
     listeners: [{ type: 'click', fn: onClick }, ...(hold?.listeners ?? [])],
     onRemoveCmp: () => {
       clearHold();
+      stopHint?.(true);
+      stopHint = null;
       tooltip?.cmp.remove();
       tooltip = null;
     },
@@ -275,7 +315,15 @@ export const createButton = (props: ButtonProps): Button => {
 
   const labelElem = createPart('aekButton__label');
   labelElem.textContent = label;
-  appendParts(elem, props, labelElem, cmp.id);
+  const fill = appendParts(elem, props, labelElem, cmp.id);
+  if (props.kbd) {
+    stopHint = addShortcutHint({
+      owner: elem,
+      kbd: props.kbd,
+      className: 'aekButton__kbd',
+      before: fill,
+    });
+  }
 
   const tooltipText = props.tooltip ?? (iconOnly ? label : undefined);
   if (tooltipText !== undefined) tooltip = createTooltip({ anchor: elem, text: tooltipText });

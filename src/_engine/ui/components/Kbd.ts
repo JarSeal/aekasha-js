@@ -1,6 +1,12 @@
 import type { CMPAttr, CMPHandle } from '../core/CMPTypes';
 import { CMP, classes } from '../core/CMP';
-import { getKeyName, getKeyPlatform, splitKeyChord, type KeyPlatform } from './KeyNames';
+import {
+  getAriaKeyShortcuts,
+  getKeyName,
+  getKeyPlatform,
+  splitKeyChord,
+  type KeyPlatform,
+} from './KeyNames';
 import './Kbd.scss';
 import '../styles/kit.scss';
 
@@ -20,12 +26,19 @@ export type KbdProps = {
   id?: string;
 };
 
-/** A key hint {@link createKbd} made: its CMP and its setter. */
+/** A key hint {@link createKbd} made: its CMP, its setter, and what a button or menu item that
+ * shows it reads. */
 export type Kbd = {
-  /** Its element (`<kbd class="aekKbd">`): add it where it goes. */
+  /** Its element (`<kbd class="aekKbd">`): add it where it goes, or give the handle to a button's
+   * or a menu item's `kbd`, which draws it and removes it with itself. */
   cmp: CMPHandle;
   /** Draws other keys in place. */
   setKeys: (keys: string) => void;
+  /** Its keys as `aria-keyshortcuts` takes them (`'Ctrl+S / Meta+S'` → `'Control+S Meta+S'`):
+   * what the element whose shortcut it shows sets. */
+  getAriaKeyShortcuts: () => string;
+  /** Calls `fn` with the keys after each `setKeys`; returns its remover. */
+  onKeysChange: (fn: (keys: string) => void) => () => void;
 };
 
 const createPart = (className: string, text: string) => {
@@ -71,11 +84,14 @@ const writeKeys = (elem: HTMLElement, keys: string, platform: KeyPlatform) => {
  * - Parts: `.aekKbd` (the outer `<kbd>`), `.aekKbd__key` (each key), `.aekKbd__join` (the `+`),
  *   `.aekKbd__or` (between alternatives). Sized in `em`, so it follows its text.
  * - Assistive tech: where a shown name isn't the key's word (a symbol, an arrow), the shown keys
- *   are hidden from it and a visually hidden copy says the full names ("Command+Shift+P").
+ *   are hidden from it and a visually hidden copy says the full names ("Command+Shift+P"). On a
+ *   button or a menu item (their `kbd`) the hint is hidden and the item's `aria-keyshortcuts`
+ *   names the keys (`getAriaKeyShortcuts`, kept after `setKeys`).
  * @example
  * ```ts
  * const hint = panel.add({ tag: 'p', text: 'Open the palette with ' });
  * hint.add(createKbd({ keys: 'Ctrl+Shift+P' }).cmp);
+ * panel.add(createButton({ label: 'Save', kbd: createKbd({ keys: 'Ctrl+S' }) }).cmp);
  * ```
  */
 export const createKbd = (props: KbdProps): Kbd => {
@@ -87,6 +103,22 @@ export const createKbd = (props: KbdProps): Kbd => {
     class: classes('aekKbd', props.class),
     attr: props.attr,
   });
-  writeKeys(cmp.elem, props.keys, platform);
-  return { cmp, setKeys: (keys) => writeKeys(cmp.elem, keys, platform) };
+  let keys = props.keys;
+  const listeners = new Set<(keys: string) => void>();
+  writeKeys(cmp.elem, keys, platform);
+  return {
+    cmp,
+    setKeys: (next) => {
+      keys = next;
+      writeKeys(cmp.elem, keys, platform);
+      for (const fn of listeners) fn(keys);
+    },
+    getAriaKeyShortcuts: () => getAriaKeyShortcuts(keys),
+    onKeysChange: (fn) => {
+      listeners.add(fn);
+      return () => {
+        listeners.delete(fn);
+      };
+    },
+  };
 };

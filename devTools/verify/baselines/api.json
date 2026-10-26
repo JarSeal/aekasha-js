@@ -2848,6 +2848,10 @@
       "ProgressBar": "TypeAlias",
       "ProgressBarProps": "TypeAlias"
     },
+    "src/_engine/ui/components/ShortcutHint.ts": {
+      "addShortcutHint": "Function",
+      "ShortcutHintProps": "TypeAlias"
+    },
     "src/_engine/ui/components/Skeleton.ts": {
       "createSkeleton": "Function",
       "Skeleton": "TypeAlias",

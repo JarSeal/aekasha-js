@@ -748,14 +748,14 @@ D13. Small, and first: normalize's layer is under every field.
    hidden (`?isDebug=true&startScene=…` with the drawer's tab seeded in `AEK_debugDrawerState`,
    and `?isProdTest=true&startScene=exampleUiKit` for the kit's HUD without the debugger), the
    expected changes being the kit buttons' height and the key hints, and none in a drawer tab.
-   - **Done 2026-10-26.** `tokens.css`' order is `@layer aek.page, aek.tokens, aek.base,
-     aek.components, aek.utilities` (its header says why it's named there; `Tokens.test.ts`
-     follows); `page.scss` loads normalize with `meta.load-css` inside `@layer aek.page`, its `*`,
-     `body`, `#mainCanvas` and `#guiContainer` rules left unlayered (Phase 0 checked normalize
-     alone, and nothing of the kit fights them). The button's `font-size` and `line-height` are on
-     `.aekButton` again (`--aek-button-font-size` still set per size, which the spinner reads); the
-     drop-down's trigger needed no change (its own `line-height` now wins), only its comment, as
-     `Kbd.scss`' and `Divider.scss`'. The Hub's Styling guide names `aek.page`.
+   - **Done 2026-10-26.** `tokens.css`' order puts `aek.page` first (its header says why it's
+     named there; `Tokens.test.ts` follows); `page.scss` loads normalize with `meta.load-css`
+     inside `@layer aek.page`, its `*`, `body`, `#mainCanvas` and `#guiContainer` rules left
+     unlayered (Phase 0 checked normalize alone, and nothing of the kit fights them). The button's
+     `font-size` and `line-height` are on `.aekButton` again (`--aek-button-font-size` still set
+     per size, which the spinner reads); the drop-down's trigger needed no change (its own
+     `line-height` now wins), only its comment, as `Kbd.scss`' and `Divider.scss`'. The Hub's
+     Styling guide names `aek.page`.
    - **The shots** (Phase 0's 15 states, the script reused; two "before" sets 0 px apart but the
      profiler's live figures): **no drawer tab changed.** Changed: the About dialog's "Copy info" and
      "Close" (taller: the kit's line height), the key shortcuts dialog and the profiler (their kit
@@ -768,6 +768,38 @@ D13. Small, and first: normalize's layer is under every field.
 2. Section 2, the button: `kbd` as a `Kbd` handle, the string form deprecated and loaded on first
    use, `onUnheldClick`; the menu's `kbd` if Phase 0 says so; JSDoc, the Hub's core page, the
    library's button text.
+   - **Done 2026-10-26.** The `Kbd` handle gets `getAriaKeyShortcuts()` (D13) and
+     `onKeysChange(fn)`, which returns its remover (not in D13): a button's or item's
+     `aria-keyshortcuts` follows a later `setKeys`, which reading it once at the create would
+     leave stale.
+   - **`components/ShortcutHint.ts`** (`@internal`): `addShortcutHint(props)` draws a hint (the
+     part's class, `aria-hidden`, before `before`), writes the owner's `aria-keyshortcuts` and
+     keeps it, and returns a stop (`removeHint`). It imports Kbd's type only; the deprecated
+     string makes the hint after `import('./Kbd')` (not after a stop that came first). The button,
+     the split button (through the button) and the menu use it, so none of them imports `Kbd.ts`
+     or `KeyNames.ts`.
+   - **Who removes a hint** (every CMP stays in CMP's registry until removed, and the old code
+     never removed the hint it made): the button, with itself; the menu, a getter's hints at each
+     close (a getter makes new ones per open) and an array's with the menu (they're re-added on
+     each open). A string's hint is always the owner's.
+   - **`onUnheldClick`**: a press is a primary `pointerdown` or a hold key's keydown; the click
+     after a pointer's release takes it, and a `pointercancel`, the key's keyup or a blur ends it
+     (no click follows those). A click with none calls `onUnheldClick` (not while loading), and
+     is ignored without it. The Hub's hold demo reports one; `yarn verify:ui` has no step that
+     clicks without a press, so `Button.test.ts` alone checks it (the dev library page says so).
+   - The string form's removal is in p622's list (`ButtonProps`, `SplitButtonProps`,
+     `MenuActionItem`, `MenuCheckboxItem`, and the string path of `ShortcutHint.ts`). The UI kit
+     example and the Hub's demos pass handles.
+   - **Sizes** (`yarn verify:baselines`): the `uiKit` profile's `uiKitEmbed.js` 17.9 → 17.5 kB
+     gzip and its `.css` 4.2 → 4.0 kB (its buttons show no hint), the app's `DropDown.js` chunk
+     −0.5 kB; Kbd is a chunk of its own (`Kbd.js` 1.2 kB, `Kbd.css` 0.3 kB), lazy in the `uiKit`
+     profile (only the string path loads it), in the app with the example that imports it.
+   - **`verify:ui`'s menu shots moved** ("the menu open", "the split button's menu open"): not
+     the menu. The library page's button text grew by a line, which moved the menu box 26 px
+     down and the open menu from y .578 to .969 of a pixel, which antialiases its text
+     differently. A box's shot is pinned to whole pixels (`getPinBoxCss`), an open overlay's
+     isn't. Recorded again; section 3 could pin the overlays too (the anchor scrolled to a whole
+     pixel before the shot), so a Hub text change no longer moves them.
 3. Section 3, `verify:ui`'s settle fraction and the Hub's `<wbr>`; the issue file closed
    (`git rm`, its mentions in `src/_engine/ui/CLAUDE.md` and p800 updated).
 

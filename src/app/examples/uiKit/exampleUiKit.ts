@@ -14,6 +14,7 @@ import {
   CMP,
   createButton,
   createDropDown,
+  createKbd,
   createProgressBar,
   createSplitButton,
   createToaster,
@@ -153,7 +154,7 @@ const createHudPanel = () => {
   // An action and its variants: turn them all, or one, from the menu button next to it
   const turn = createSplitButton({
     label: 'Turn all',
-    kbd: 'Space',
+    kbd: createKbd({ keys: 'Space' }),
     menuLabel: 'Turn one',
     onClick: () => turnAllShapes(),
     items: [
@@ -168,7 +169,10 @@ const createHudPanel = () => {
   panel.add(turn.cmp);
   panel.add(createButton({ label: 'Settings', onClick: () => toggleSettingsWindow() }).cmp);
   // `kbd` is a hint (and `aria-keyshortcuts`): the key is the scene's action map's
-  panel.add(createButton({ label: 'Menu', kbd: 'Escape', onClick: () => openMenu() }).cmp);
+  panel.add(
+    createButton({ label: 'Menu', kbd: createKbd({ keys: 'Escape' }), onClick: () => openMenu() })
+      .cmp
+  );
   return panel;
 };
 

@@ -91,6 +91,10 @@ ecsWorld?)`: optional positional parameters, where the coding standard asks for 
   - `getSvgIcon`'s `size` value `'small'` (p803 D5, deprecated in engine 5.12.0: `'sm'`), and the
     `uiIcon` / `smallIcon` classes it writes next to `aekIcon` for the debugger's styles (p806's
     restyle drops them).
+  - the string form of `kbd` (p804 D13, deprecated in engine 5.13.0 or the minor p804 takes: a
+    `Kbd` handle from `createKbd`) on `ButtonProps`, `SplitButtonProps`, `MenuActionItem` and
+    `MenuCheckboxItem`: `ui/components/ShortcutHint.ts`' string path (its `import('./Kbd')`) goes
+    with it, and the props' type is `Kbd` alone.
 - **From p618 (its D3):**
   - the names on `aekasha/debug` that only the dev files protocol's two sides and the scene runner
     use (deprecated in engine 5.9.0): the dev server's route, header and meta constants

@@ -1,8 +1,8 @@
 import type { CMPAttr, CMPHandle } from '../core/CMPTypes';
 import { CMP, classes } from '../core/CMP';
 import { getHUDRootCMP, hasHudRoot, KIT_ROOT_CLASS } from '../core/HUD';
-import { createKbd } from '../components/Kbd';
-import { getAriaKeyShortcuts } from '../components/KeyNames';
+import type { Kbd } from '../components/Kbd';
+import { addShortcutHint } from '../components/ShortcutHint';
 import { showAnchored } from './Anchor';
 import { pushOverlay, swallowNextKeyUp } from './OverlayStack';
 import './Menu.scss';
@@ -19,8 +19,11 @@ export type MenuActionItem = {
   onSelect?: () => void;
   /** Raw HTML of its icon (`getSvgIcon('gear')`), at `1em`. */
   icon?: string;
-  /** A shortcut's hint (`'Ctrl+S'`), drawn with `createKbd`, and its `aria-keyshortcuts`. */
-  kbd?: string;
+  /** A shortcut's hint (`createKbd({ keys: 'Ctrl+S' })`), whose keys are its
+   * `aria-keyshortcuts`. The menu removes it (see {@link MenuProps}' `items`). A string is
+   * deprecated (removed in engine 6.0.0): the menu loads Kbd's code for it, so its hint appears a
+   * frame later the first time. */
+  kbd?: Kbd | string;
   /** Shown and focusable, but not picked (default false). */
   disabled?: boolean;
 };
@@ -35,8 +38,8 @@ export type MenuCheckboxItem = {
   checked: boolean;
   /** Its new state, after a pick flipped it. */
   onCheckedChange?: (checked: boolean) => void;
-  /** A shortcut's hint (`'Ctrl+G'`), and its `aria-keyshortcuts`. */
-  kbd?: string;
+  /** A shortcut's hint (`createKbd({ keys: 'Ctrl+G' })`), as an action's `kbd`. */
+  kbd?: Kbd | string;
   /** Shown and focusable, but not picked (default false). */
   disabled?: boolean;
 };
@@ -84,7 +87,9 @@ export type MenuProps = {
   /** Its trigger (a button): a click, Enter, Space or ArrowDown opens it on its first item,
    * ArrowUp on its last. */
   anchor: HTMLElement;
-  /** Its items, or a getter re-read on every open (so a checked state or a value is the app's). */
+  /** Its items, or a getter re-read on every open (so a checked state or a value is the app's).
+   * The menu removes their `kbd` hints: a getter's at each close (it makes new ones), an array's
+   * with the menu. */
   items: MenuItem[] | (() => MenuItem[]);
   /** The menu's accessible name (default: the trigger's `aria-label`, else its text). */
   label?: string;
@@ -143,10 +148,11 @@ const createPart = (className: string, text = '') => {
   return span;
 };
 
-/** An item's element: its check mark (on / off and choices), icon, label and shortcut's hint */
+/** An item's element: its check mark (on / off and choices), icon and label (the shortcut's hint
+ * is `buildItems`') */
 const createItemElem = (
   kind: keyof typeof ROLE_OF,
-  props: { label: string; icon?: string; kbd?: string; disabled?: boolean; checked?: boolean }
+  props: { label: string; icon?: string; disabled?: boolean; checked?: boolean }
 ) => {
   const elem = document.createElement('div');
   elem.className = 'aekMenu__item';
@@ -168,12 +174,6 @@ const createItemElem = (
     elem.append(icon);
   }
   elem.append(createPart('aekMenu__label', props.label));
-  if (props.kbd) {
-    elem.setAttribute('aria-keyshortcuts', getAriaKeyShortcuts(props.kbd));
-    const kbd = createKbd({ keys: props.kbd, class: 'aekMenu__kbd' }).cmp.elem;
-    kbd.setAttribute('aria-hidden', 'true');
-    elem.append(kbd);
-  }
   return elem;
 };
 
@@ -187,14 +187,21 @@ const createGroupElem = (label: string) => {
   return elem;
 };
 
-/** Builds the items into `parent`, and returns its focusable entries in order */
-const buildItems = (parent: HTMLElement, items: MenuItem[]) => {
+/** A shortcut's hint's remover (`addShortcutHint`'s) */
+type StopHint = (removeHint: boolean) => void;
+
+/** Builds the items into `parent`, and returns its focusable entries in order; each hint's remover
+ * goes into `hints` */
+const buildItems = (parent: HTMLElement, items: MenuItem[], hints: StopHint[]) => {
   const entries: Entry[] = [];
   const addEntry = (to: HTMLElement, item: MenuActionItem | MenuCheckboxItem) => {
     const isCheckbox = item.type === 'checkbox';
     let checked = isCheckbox && item.checked;
     const elem = createItemElem(isCheckbox ? 'checkbox' : 'item', { ...item, checked });
     to.append(elem);
+    if (item.kbd) {
+      hints.push(addShortcutHint({ owner: elem, kbd: item.kbd, className: 'aekMenu__kbd' }));
+    }
     entries.push({
       elem,
       text: item.label.toLowerCase(),
@@ -269,6 +276,20 @@ const findTypedEntry = (entries: Entry[], typed: string, from: number) => {
   return -1;
 };
 
+/** The `Kbd` handles an item array holds (not the strings: their hints are the menu's own) */
+const findHintHandles = (items: MenuItem[]) => {
+  const handles: Kbd[] = [];
+  for (const item of items) {
+    const inner = item.type === 'group' ? item.items : [item];
+    for (const one of inner) {
+      if ((!one.type || one.type === 'item' || one.type === 'checkbox') && one.kbd) {
+        if (typeof one.kbd !== 'string') handles.push(one.kbd);
+      }
+    }
+  }
+  return handles;
+};
+
 /** Where the arrows, Home and End move the focus from `index`, wrapping (null: another key) */
 const getMoveTarget = (key: string, index: number, count: number) => {
   if (key === 'ArrowDown') return (index + 1) % count;
@@ -323,8 +344,8 @@ const createTypeahead = () => {
  * choices, groups and separators, opened by its trigger and anchored to it.
  * - Parts: `.aekMenu` (`role="menu"`), in the HUD root while it's open, in the browser's top layer
  *   (else at `--aek-z-tooltip`); `.aekMenu__item` (`menuitem`, `menuitemcheckbox`,
- *   `menuitemradio`; `aria-disabled`, `aria-checked`) with `__check`, `__icon`, `__label` and
- *   `__kbd`; `.aekMenu__group` (`role="group"`, its label from `data-label`);
+ *   `menuitemradio`; `aria-disabled`, `aria-checked`; `aria-keyshortcuts` from its `kbd`) with
+ *   `__check`, `__icon`, `__label` and `__kbd`; `.aekMenu__group` (`role="group"`, its label from `data-label`);
  *   `.aekMenu__separator`.
  * - ARIA: the trigger gets `aria-haspopup="menu"`, `aria-expanded` and `aria-controls`.
  * - Keys, on the trigger: Enter, Space and ArrowDown open it on the first item, ArrowUp on the last.
@@ -343,7 +364,7 @@ const createTypeahead = () => {
  * createMenu({
  *   anchor: fileButton.cmp.elem,
  *   items: () => [
- *     { label: 'Save', kbd: 'Ctrl+S', onSelect: () => saveScene() },
+ *     { label: 'Save', kbd: createKbd({ keys: 'Ctrl+S' }), onSelect: () => saveScene() },
  *     { type: 'checkbox', label: 'Autosave', checked: settings.autosave,
  *       onCheckedChange: (on) => (settings.autosave = on) },
  *     { type: 'separator' },
@@ -359,6 +380,8 @@ export const createMenu = (props: MenuProps): Menu => {
   let hideAnchored: (() => void) | null = null;
   let removeOverlay: ((returnFocus?: boolean) => void) | null = null;
   const typeahead = createTypeahead();
+  const hints: StopHint[] = [];
+  const isItemsGetter = typeof props.items === 'function';
 
   /** Closes it; `returnFocus` false when the focus went elsewhere (an outside press) */
   const close = (returnFocus = true) => {
@@ -371,6 +394,9 @@ export const createMenu = (props: MenuProps): Menu => {
     hideAnchored?.();
     hideAnchored = null;
     anchor.setAttribute('aria-expanded', 'false');
+    // A getter makes new hints on each open, an array's are kept for the next
+    for (const stopHint of hints) stopHint(isItemsGetter);
+    hints.length = 0;
     cmp.elem.replaceChildren();
     entries = [];
     cmp.elem.remove();
@@ -393,7 +419,7 @@ export const createMenu = (props: MenuProps): Menu => {
     if (isOpen || !anchor.isConnected) return;
     isOpen = true;
     const items = typeof props.items === 'function' ? props.items() : props.items;
-    entries = buildItems(cmp.elem, items);
+    entries = buildItems(cmp.elem, items, hints);
     cmp.elem.setAttribute(
       'aria-label',
       props.label ?? anchor.getAttribute('aria-label') ?? (anchor.textContent ?? '').trim()
@@ -490,6 +516,9 @@ export const createMenu = (props: MenuProps): Menu => {
     onRemoveCmp: () => {
       close(false);
       unwireTrigger();
+      if (!isItemsGetter) {
+        for (const handle of findHintHandles(props.items as MenuItem[])) handle.cmp.remove();
+      }
     },
   });
   const unwireTrigger = wireTrigger(anchor, cmp.id, toggle, onAnchorKeyDown);

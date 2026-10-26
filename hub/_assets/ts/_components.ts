@@ -647,7 +647,7 @@ const initButtonDemo: Demo = (box) => {
   const save: Button = make('Save', {
     label: 'Save',
     variant: 'primary',
-    kbd: 'Ctrl+S',
+    kbd: createKbd({ keys: 'Ctrl+S' }),
     onClick: () => {
       save.setLoading(true);
       report('Saving…');
@@ -678,6 +678,8 @@ const initButtonDemo: Demo = (box) => {
       variant: 'danger',
       holdToConfirmMs: 800,
       onClick: () => report('Deleted (held)'),
+      // A screen reader's browse mode clicks with no press: the app confirms another way
+      onUnheldClick: () => report('A click with no hold: the app asks to confirm'),
     })
   );
   root.append(status);
@@ -760,12 +762,12 @@ const initMenuDemo: Demo = (box) => {
   createMenu({
     anchor: file.cmp.elem,
     items: () => [
-      { label: 'New', kbd: 'Ctrl+N', onSelect: report('File: New') },
-      { label: 'Open…', kbd: 'Ctrl+O', onSelect: report('File: Open…') },
+      { label: 'New', kbd: createKbd({ keys: 'Ctrl+N' }), onSelect: report('File: New') },
+      { label: 'Open…', kbd: createKbd({ keys: 'Ctrl+O' }), onSelect: report('File: Open…') },
       {
         label: 'Save',
         icon: getSvgIcon('fileCode'),
-        kbd: 'Ctrl+S',
+        kbd: createKbd({ keys: 'Ctrl+S' }),
         onSelect: report('File: Save'),
       },
       { type: 'separator' },

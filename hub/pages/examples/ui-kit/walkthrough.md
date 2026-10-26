@@ -8,8 +8,9 @@ its exit function, with the toaster, and the kit components in it go with it.
 
 - `createButton` returns a handle; its `cmp` goes where the button goes. A `tooltip` describes the
   button on hover and keyboard focus.
-- `kbd` draws a key hint and sets `aria-keyshortcuts`. It doesn't bind the key: Space and Escape
-  are the scene's action map's (below).
+- `kbd` takes a key hint made with `createKbd`: the button draws it after its label and sets
+  `aria-keyshortcuts` from its keys. It doesn't bind the key: Space and Escape are the scene's
+  action map's (below).
 - The split button is an action ("Turn all") and a menu button next to it, whose menu holds the
   action's variants. A menu item's `onSelect` runs after the menu closed.
 - Each shape button's colour swatch is a CSS `::before` that reads the custom property `--swatch`.

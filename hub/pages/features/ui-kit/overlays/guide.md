@@ -260,7 +260,7 @@ toolbarPanel.add(view.cmp);
 createMenu({
   anchor: view.cmp.elem,
   items: () => [
-    { label: 'Reset camera', kbd: 'Home', onSelect: () => resetCamera() },
+    { label: 'Reset camera', kbd: createKbd({ keys: 'Home' }), onSelect: () => resetCamera() },
     {
       type: 'checkbox',
       label: 'Grid',
@@ -292,7 +292,9 @@ const save = createSplitButton({
 :::
 
 An action's `onSelect` runs after the menu closed, so a dialog it opens gives the focus back to
-the menu's button when it closes.
+the menu's button when it closes. An item's `kbd` is a key hint you make with `createKbd`, which
+the menu removes: a getter's at each close (the getter makes new ones on the next open), an
+array's with the menu.
 
 | Menu           |                                                                                                                                                                                                              |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
