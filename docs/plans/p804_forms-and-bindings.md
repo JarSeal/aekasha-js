@@ -1,0 +1,657 @@
+Status: draft | not-implemented
+Category: UI, Accessibility, Debug
+Epic: p800_debugger-ui-overhaul.md
+Blocks: p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
+Related: \_DONE_p803_ui-kit-structure-and-core.md (the folders, coding style, overlay layer, popover and drop-down this builds on; its open items: D13), \_DONE_p801_design-foundation.md (the tokens, densities and motion), \_DONE_p618_review-debug-public-api.md (the pane types' Tweakpane fields, P7), p805_data-display.md (the label's context menu and the monitor's graph view: D1), p355_save-menu-and-file-server-settings.md (its settings on this plan's form), p426_sequencer-splines-and-cutscenes.md (the curve editor), p622_engine-6-major.md (the button's string `kbd`, deprecated here: D13), `docs/issues/ui-kit-review-items.md` (D13)
+
+# Forms and Bindings
+
+p800's fourth child: Tweakpane's replacement, as public `aekasha/ui` components. Every field the
+debugger's panes use today (numbers, sliders, checkboxes, lists, text, colours, points, monitors,
+folders) and the ones a game's settings menu or an editor needs (switches, radio groups, segmented
+controls, ranges, vectors, rotations, quaternions, the angle dial, the 2D pad, the gradient and
+curve editors) are built on one binding model and one refresh scheduler. A declarative description
+(the debugger's pane sections' shape, without Tweakpane) lets an app and p806 describe a panel as
+data, with Tweakpane's names, so p806 ports the debugger mechanically.
+
+The debugger doesn't move here: its panes stay on Tweakpane until p806. Nothing breaks.
+
+---
+
+## 1. As found (2026-10-26, `main` at `a49bb748`, Engine 5.12.0)
+
+### 1.1 p800's p804 sketch, checked
+
+p800 §2.1, §3 D9 / D13 and §4.3 hold, with these differences and additions:
+
+- **Tweakpane today** (non-test files naming `tweakpane`, a tab or a pane section: 33; p800 counted
+  43 that build Tweakpane UI, helpers included; Phase 0's census is the exact list): `addBinding`
+  59, `new Pane` 8, `addBlade` 8 (6 separators, 2 `view: 'list'` in `_dbg__LightGUI.ts`' shadow map
+  size), declarative folders 44, buttons 60, separators 19, `custom` 2. Binding params: `min` 70,
+  `max` 36, `step` 72, `options` 28, `format` 25, `readonly: true` 64, `interval` 15, `multiline`
+  10, `rows` 18, `expanded` 24, `view: 'color'` 12, `color: { type: 'float' }` 2. No per-axis
+  point params (`x: { … }`), `keyScale`, `pointerScale`, `inverted`, `bufferSize`, `picker`,
+  graph, slider or text blades. `onCreate` has no user outside the builder.
+- **The builder** (`debug/_dbg__DebuggerPaneBuilder.ts`, 217 lines): a binding's `onChange` fires
+  for user input only, suppressed while `refresh()` pushes values in (Tweakpane's `refresh()`
+  emits `change`). It gets `{ prev, last, api }`: `prev` is a `structuredClone` snapshot taken at
+  the last change or refresh, `last` Tweakpane's. A persisted state key is written to LS on
+  `last` before `onChange` runs. `hidden` / `disabled` are `DebuggerDyn` (a value or a function
+  re-read on refresh). Folder ids are the title path (`'Parent/Child'`) or an `id`; their open
+  states go to the tab's UI key. A titled pane section is itself a foldable root.
+- **The values bound:** numbers, booleans, strings, `{ x, y, z }` objects (positions, targets,
+  origins), Euler rotations with `step: Math.PI / 8`, and colours as 24-bit hex **numbers**
+  (`getHex()` / `setHex()`, sRGB: `Config.ts`' collider colours say so) or `{ r, g, b }` floats
+  (`color: { type: 'float' }`, the Debug tools tab's grid colours). No binding targets a
+  `THREE.Color` directly; quaternions are converted by hand.
+- **Refresh:** the tab host (`_dbg__TabHost.ts`) runs a tab's `refreshIntervalMs` with a
+  `setInterval` while the host is visible; each monitor with an `interval` has Tweakpane's own
+  timer on top. No shared tick.
+- **Undo** (`debug/UndoRedo.ts`): `recordOrCoalesceUndoRedoAction` merges the ticks with the same
+  type and key within 800 ms into one entry (the first tick's `prev`, the last's `next`). The
+  bindings' `onChange` handlers call it on every tick, `last` or not, and apply live side effects
+  (a light's colour, a grid rebuild) on every tick too: an `onChange` fired only on commit would
+  freeze the scene during a drag.
+- **The kit** (`src/_engine/ui/`, p803): `forms/` holds only the drop-down (`DropDown.ts` 422
+  lines, `createDropDown`, searchable, on the overlay layer). The pieces this plan builds on: the
+  overlay stack, `showAnchored`, the popover, the menu, the tooltip (`onlyWhenTruncated`), the
+  button, the button group, the divider, `getMotionFactor`, `KitDom`. The layout rule per kit
+  folder (`UI_KIT_FOLDERS`, `layoutRules.ts`) is a path prefix, so a subfolder of `forms/` needs
+  no rule.
+- **The button's `kbd`** (p803's open item, p800 §5): `Button.ts` imports `createKbd` and
+  `getAriaKeyShortcuts` statically, about 0.7 kB gzip of the button's 1.8 kB, which a button
+  without a hint carries too.
+- **`docs/issues/ui-kit-review-items.md`** (`open | for the UI kit's next plan (p804)`): four
+  items: `normalize.scss` unlayered beats the kit on `button` (and on `input`, `select`,
+  `textarea`, which this plan's fields are), hold to confirm ignoring a click with no press,
+  `verify:ui`'s shot of the indeterminate progress bar, a long custom property name breaking
+  mid-word in a Hub table cell.
+- **SBP** (`sbp.config.ts`): the app's `_engine/ui` group budget 7 KiB initial, the `uiKit`
+  profile's 6 KiB, its scene chunk `uiKitEmbed.js` 19 KiB and `.css` 6 KiB.
+- `tweakpane` 4.0.5 and `@tweakpane/core` 2.0.5 stay in `package.json` until p806.
+
+---
+
+## 2. Decisions (proposed 2026-10-26, for review)
+
+### D1. Scope
+
+- **In:** the binding (D3) and its scheduler (D4), the field shell and value editing (D5, D6),
+  p800 §4.3's fields (D7), value editors (D8) and containers (D9), the declarative description with
+  Tweakpane's names (D10), the forms' accessibility (D11) and size (D12), p803's open items and
+  the button's `kbd` (D13), tests (D14), the Hub (D15).
+- **Moved to p805:** the label's context menu (Reset, Copy, Paste; p805 builds the context menu on
+  p803's menu, and adds these items to a field's label then; until then D6's keyboard and button
+  paths do it) and the monitor's graph view (p805's sparkline; p804's monitor shows text).
+- **The gradient and curve editors are in** (Phase 6, the last component phase). If the plan runs
+  long, they leave it as a pair: the curve editor to p426 (its first user), the gradient editor to
+  p806 (the sky colours), and p800 §4.3 says so.
+- **Out:** the debugger's panes (p806), Tweakpane's removal (p806), a storage layer: a field or a
+  folder never writes LS, it reports (`onChange`, `onExpandedChange`) and its owner persists (the
+  debugger, p806; an app's settings, p808).
+
+### D2. Layout
+
+`ui/forms/`, as p803 D2 set it (a module, its stylesheet and its test flat; a piece with more
+than one module gets a folder):
+
+| Path                    | What                                                                                          |
+| ----------------------- | --------------------------------------------------------------------------------------------- |
+| `forms/binding/`        | `Binding.ts` (D3), `BindingScheduler.ts` (D4), `ValueExpression.ts` (D6), `ValueText.ts` (D6) |
+| `forms/Field.ts`        | the field shell (D5), `@internal`                                                             |
+| `forms/NumberField.ts`  | number (D7)                                                                                   |
+| `forms/Slider.ts`       | slider, and the range slider's two thumbs (D7)                                                |
+| `forms/Checkbox.ts`     | checkbox and switch (D7)                                                                      |
+| `forms/RadioGroup.ts`   | radio group and segmented control (D7)                                                        |
+| `forms/SelectField.ts`  | the drop-down on the binding (D7)                                                             |
+| `forms/TextField.ts`    | text, textarea, search (D7)                                                                   |
+| `forms/Monitor.ts`      | read-only values (D7)                                                                         |
+| `forms/color/`          | `ColorField.ts`, `ColorValue.ts` (parse, format, spaces), `ColorPicker.ts` (lazy, D8)         |
+| `forms/VectorField.ts`  | vector 2 / 3 / 4 (D8)                                                                         |
+| `forms/rotation/`       | `RotationField.ts`, `QuaternionField.ts`, `RotationMath.ts` (D8)                              |
+| `forms/AngleDial.ts`    | (D8)                                                                                          |
+| `forms/Pad2D.ts`        | (D8)                                                                                          |
+| `forms/gradient/`       | `GradientEditor.ts`, `Gradient.ts` (evaluate) (D8)                                            |
+| `forms/curve/`          | `CurveEditor.ts`, `Curve.ts` (evaluate, presets) (D8)                                         |
+| `forms/Folder.ts`       | (D9)                                                                                          |
+| `forms/Fieldset.ts`     | (D9)                                                                                          |
+| `forms/PropertyGrid.ts` | the label column layout and the declarative items (D9, D10); `PropertyGridItems.ts` if large  |
+| `forms/Form.ts`         | validation, submit, reset (D9)                                                                |
+| `forms/DropDown.ts`     | as it is (the select field wraps it)                                                          |
+
+Each public module is on `aekasha/ui` by name (p803 D12: one entry). The coding style is
+`src/_engine/ui/CLAUDE.md`'s "Writing a component".
+
+### D3. The binding (changes p800 D9's events)
+
+- A field binds in one of three ways (p800 D9; the third is this plan's):
+  - `{ target, key }`: reads `target[key]`, writes it in place (Tweakpane's model);
+  - `{ get, set }`: any source (an ECS component, a setter with side effects, a store);
+  - `value`: unbound, the field holds it (a form's fields, an app's dialog), read with
+    `getValue()`.
+  - p806 maps a debugger tab's `state` key to the first (p800 D9).
+- **A vector, colour or rotation target is written in place** (`target[key].x = …`), never
+  replaced, when the bound value is an object: a `THREE.Vector3` stays the same instance. A bound
+  primitive is written with `target[key] = v` or `set(v)`.
+- **Events** (changes p800 D9, which had `onInput` on every live change and `onChange` on commit):
+  - `onChange(value, { prev, last, source })` fires on **every write** of the bound value: each
+    drag step and each key step with `last: false`, then once with `last: true` on release, Enter,
+    blur or the key's keyup. `prev` is the value before the gesture's first write for the `last`
+    call and before this step otherwise. `source` is `'user'` or `'api'` (`setValue`). This is
+    Tweakpane's model, which today's handlers rely on: they apply live side effects on every tick
+    and record undo on every tick (coalesced), so p806's port stays mechanical (1.1, Undo).
+  - `onInput(text)` fires only in a text-like part (a text field, a number or colour field's
+    typed text) on each keystroke, before a commit: what a search-as-you-type or a live preview
+    uses. A typed value is written on Enter or blur (one `onChange`, `last: true`), or on each
+    valid keystroke with `live: true`.
+  - **A refresh from the bound value never fires either.** `setValue(v)` writes and fires
+    `onChange` with `source: 'api'`; `setValue(v, { silent: true })` writes without it (what an
+    undo handler uses).
+  - The order, pinned by `Binding.test.ts` and checked in Phase 0 against today's builder:
+    pointerdown → (each step: write, `onChange` `last: false`) → pointerup: `onChange` `last: true`
+    (with the same value as the last step when it didn't move again). A key step: write,
+    `onChange` `last: false`; its keyup: `onChange` `last: true`. A click (checkbox, select,
+    segment): write, one `onChange` `last: true`.
+- p800 D9's events bullet is updated to this.
+
+### D4. The scheduler
+
+- `createBindingScheduler(props?)` (public, on `aekasha/ui`), one per host (a debugger tab, a
+  window, an app panel): `{ refresh(), setVisible(on), dispose() }`. A field takes `scheduler`;
+  without one it gets the scheduler of the property grid or form it's in, or none (refreshed only
+  by `refresh()` on its handle).
+- **Two kinds of read:** `refresh()` reads every edit field of the host (what a tab's `onRefresh`
+  and `updateDebuggerTab` do today; p806 maps `refreshIntervalMs` onto it). Monitors (and a field
+  with `live: true`) are read by the tick.
+- **The tick:** one `requestAnimationFrame` loop per scheduler, running only while the host is
+  visible, the document isn't hidden and it has at least one live field (none: no loop). Each
+  live field has its `interval` (ms; `0` every tick, p800 D9) and its last read time, compared
+  with the frame's timestamp: no timer per field. Not the main loop: the kit doesn't import it
+  (p803 D4), and the debugger's monitors keep running while the loop is paused, as today.
+- **Visible fields only:** a field inside a collapsed folder or a hidden item isn't read, and is
+  read once when shown.
+- **No allocation per tick** (p800 D9): a number compared as a number, a string by `===`, a
+  vector or colour component by component into the field's kept scratch, the formatted text made
+  only on a change, the DOM written only on a change. The perf-auditor agent reviews it with 200
+  monitors in one host (D14).
+- **The flash** (p800 D7): an edit field whose value changed from outside (a `refresh()` read
+  that differs, not the user's own write) flashes once (`data-flash`, the accent's soft
+  background, `--aek-motion-base`). Monitors never flash (D7's per-frame rule); under reduced
+  motion the flash is a static tint for the same time.
+
+### D5. The field shell
+
+Every field is the same shell (`Field.ts`, `@internal`): a label, the control, a reset button, a
+message line.
+
+- **Common props:** the binding (D3), `label` (required: visible, or `labelHidden: true` keeps it
+  as the accessible name only), `hint` (the message line's text), `default` (the reset value;
+  default: the value at creation), `disabled`, `hidden` (each a value or a function re-read on
+  `refresh()`, as `DebuggerDyn`), `readonly`, `onChange`, `onInput`, `scheduler`, `class`, `attr`,
+  `id`.
+- **The handle:** `{ cmp, getValue(), setValue(v, opts?), refresh(), reset(), setDisabled(on),
+setHidden(on), setError(text | null), focus() }`, plus each field's own.
+- **The label:** a `<label for>` for a one-input field; for a group (vector, radio group,
+  rotation) the label's id names a `role="group"` (`aria-labelledby`), and each part has its own
+  `aria-label` (`X`, `Y`, …). Long labels truncate with `createTooltip({ onlyWhenTruncated })`.
+- **The reset button:** a small ghost button after the label, shown only while the value differs
+  from its default (so it's a Tab stop only then), labelled "Reset {label}"; `reset()` writes
+  the default with `source: 'user'` (it's the user's action, so undo records it).
+- **The message line:** a hint, or an error (`setError`, or D9's validation) with the danger role
+  and its icon (p800 D6: never colour alone), linked by `aria-describedby`; an error sets
+  `aria-invalid` on the control.
+
+### D6. Value editing (p800 D9's last bullet, made concrete)
+
+- **Keys on a number** (and each axis of a vector, rotation, quaternion): ArrowUp / ArrowDown step
+  (`step`), Shift ×10, Alt ×0.1; PageUp / PageDown ×10; Home / End to `min` / `max` when set.
+  Enter commits typed text, Escape reverts it (and goes no further: p803's "a key the piece uses
+  goes no further").
+- **Scrub on the label:** a horizontal drag on a number's label changes the value (pointer
+  capture, a 3 px threshold so a click still focuses, Shift / Alt as the keys, `cursor:
+ew-resize`). No pointer lock (it prompts in some browsers and loses the cursor in an embed).
+  The keyboard path is the keys above.
+- **Expressions** (p800 D9: "where p804 decides it's safe"): `ValueExpression.ts`, our own parser
+  (about 1 KiB): numbers, `+ - * / ( )`, unary minus, `pi`, and the units the field declares
+  (`deg` / `rad` on an angle, `%` on a 0-1 field). No `eval` or `Function` (CSP-safe, nothing
+  runs). An invalid expression shows the error and keeps the value. Typed into any number part.
+- **Precision:** the shown decimals follow `step` (as Tweakpane: `step: 0.01` → 2), or
+  `precision`, or `format(v) => string` (Tweakpane's `format`, which then also sets the
+  spinbutton's `aria-valuetext`). Numbers use tabular figures (p800 D5).
+- **Copy and paste:** Ctrl/⌘+C in a field part with no text selected copies the field's whole
+  value as text (`1.5`, `0, 1.2, -3`, `#3fd8f2`, a rotation in degrees); Ctrl/⌘+V of a text that
+  parses as the whole value sets it (one `onChange`, `last: true`), otherwise the input pastes as
+  usual. (Ctrl+Shift+C was the other candidate: Chrome takes it for the element picker.)
+- **Reset:** D5's button and `reset()`; p805's context menu adds it to the label (D1).
+
+### D7. The fields
+
+Native elements first (p800 D8), the APG pattern where none fits:
+
+- **Number** (`createNumberField`): `<input type="text" inputmode="decimal" role="spinbutton">`
+  with `aria-valuenow`, `-min`, `-max` and `-valuetext` (the formatted value and `unit`). Not
+  `type="number"`: it rejects expressions, formats by locale, and changes on the wheel. Props:
+  `min`, `max`, `step`, `precision`, `format`, `unit` (shown after the value), `wrap` (an angle
+  wraps at its range instead of clamping).
+- **Slider** (`createSlider`): a number field with a track. **The track is pointer-only and
+  `aria-hidden`; the spinbutton is the one keyboard and screen reader control** (Tweakpane has
+  two tab stops per slider; one is enough when both take the same keys). `showInput: false` makes
+  the thumb itself the APG slider (`role="slider"`, focusable) for a compact control. Ticks
+  (`ticks: n` or values, with labels) and a value bubble while dragging.
+- **Range slider** (`createRangeSlider`, `{ min, max }` value): the APG multi-thumb slider, each
+  thumb `role="slider"` labelled "Minimum {label}" / "Maximum {label}", each one's
+  `aria-valuemin` / `-max` the other's value ± `minGap`. Steps and ticks as the slider; an
+  optional `histogram: number[]` drawn behind the track (inline SVG bars, `aria-hidden`); the span
+  between the thumbs drags both (pointer), and its keyboard path is a third stop on the span
+  (`tabindex="0"`, `aria-roledescription="range"`, the arrows move both).
+- **Checkbox** (`createCheckbox`): a native `<input type="checkbox">`, styled with
+  `appearance: none`; `indeterminate` supported. **Switch** (`createSwitch`): the same input with
+  `role="switch"` (the APG switch on a checkbox), on / off text optional.
+- **Radio group** (`createRadioGroup`): native radios in a `role="radiogroup"` (a `<fieldset>`
+  standalone, a labelled group in a grid row); the arrows are the browser's. **Segmented control**
+  (`createSegmentedControl`): the same native radios, visually hidden behind segment labels (text
+  or icon with a label). A value, not actions: a set of tool buttons is p803's exclusive button
+  group.
+- **Select** (`createSelectField`): `createDropDown` on the binding. `options` take Tweakpane's two
+  forms, `[{ text, value }]` and `{ [text]: value }`, so the port is mechanical; `searchable`
+  passes through. The drop-down's own API doesn't change.
+- **Text** (`createTextField`): `<input type="text">`; `multiline: true` (with `rows`, Tweakpane's
+  names) a `<textarea>`; `type: 'search'` a search input with a clear button and `onSearch`
+  (debounced `onInput`). Written on Enter / blur, or each keystroke with `live: true` (D3).
+- **Monitor** (`createMonitor`, and `readonly: true` on any field): the value as text in a
+  `<span>` (tabular figures, `aria-labelledby` its label), `multiline` / `rows` as a `<pre>`-like
+  block, a boolean as "On" / "Off" text, a vector as its axes. **Not a live region** (a value that
+  changes 60 times a second would drown a screen reader; p800 D8's deviation, written in its
+  JSDoc). `interval` as D4.
+
+### D8. Value editors
+
+- **Colour** (`createColorField`, p800 D13): a swatch button that opens the picker in a p803
+  popover, a text input (hex, `rgb()`, `hsl()`, a float triple) and, with `alpha: true`, an alpha
+  field.
+  - **The value's forms**, read from the bound value and kept on write: a 24-bit number
+    (`0xrrggbb`, what `getHex()` gives: today's form), a string (`'#rrggbb'`, `'#rrggbbaa'`), or
+    `{ r, g, b, a? }` floats (Tweakpane's `color: { type: 'float' }` maps to `format: 'float'`).
+  - **Colour spaces:** `colorSpace: 'srgb'` (default: what the hex forms are) or `'linear'` (a
+    `THREE.Color`'s `r`, `g`, `b` in three's linear working space): the picker and text always
+    show sRGB, the binding writes what the target holds. The transfer function is the kit's own
+    (no three import; three's `ColorManagement` uses the same sRGB curve).
+  - **HDR:** `intensity: true` adds a number field after the swatch (a light's intensity or an
+    emissive strength), bound with its own `intensityBind` (D3's forms).
+  - Recent colours (in memory for the page, shared by the fields; an owner may persist them),
+    `palette: string[]` swatches, the EyeDropper API where the browser has it (a button, hidden
+    elsewhere), D6's copy and paste.
+  - **The picker** is Phase 0's pick (p800 D13's criteria: gzip size, keyboard and screen reader
+    use, alpha, HSV / HSL / RGB / hex, how far its look follows our tokens through a shadow root,
+    maintenance, licence), wrapped in `ColorPicker.ts` so a swap touches one module, and loaded
+    with `import()` on the first open (D12).
+- **Vector** (`createVectorField`): `{ x, y }`, `{ x, y, z }`, `{ x, y, z, w }` or a number
+  array (2-4), axes in a row, each a number part (D6) with its axis letter visible (colour on the
+  letter is a hint, never alone). `min` / `max` / `step` shared, or per axis
+  (`axes: { x: { … } }`). A link lock (a toggle button, `aria-pressed`) scales the axes together:
+  proportionally, or by the same delta when an axis is 0.
+- **Rotation** (`createRotationField`): an Euler `{ x, y, z, order? }` in radians (a
+  `THREE.Euler`'s shape), shown and typed in degrees; `step` in radians (Tweakpane's
+  `Math.PI / 8` keeps working) shown as degrees; each axis wraps at ±180°; `showOrder: true`
+  adds a select for the order.
+- **Quaternion** (`createQuaternionField`): a `{ x, y, z, w }` target edited as Euler degrees
+  (default) or axis-angle (`edit: 'axisAngle'`), the raw `xyzw` only with `showRaw: true` (a
+  monitor). Normalised on write. While a part has focus, the shown Euler is the user's own, not
+  re-derived from the quaternion on each refresh (no jumps between equivalent angles).
+  `RotationMath.ts` is the kit's own (no three import, about 1 KiB).
+- **Angle dial** (`createAngleDial`): a circle with a handle, `role="slider"` in degrees
+  (`aria-valuetext` "45 degrees"), D6's keys, Shift-drag snaps to 15°, `wrap`; next to a number
+  part by default.
+- **2D pad** (`createPad2D`, `{ x, y }`): a box with a point for offsets and directions. The pad is
+  a pointer convenience, focusable with the arrows moving the point (D6's modifiers); **the vector
+  field shown next to it is the accessible editor** (the APG has no 2D pattern). The pad has
+  `role="group"` and `aria-roledescription="2D pad"`, its value in `aria-describedby` text
+  (updated on change, not live).
+- **Gradient editor** (`createGradientEditor`, `{ stops: { t, color }[] }`): a preview bar, stops
+  on it (each a `role="slider"` for its position: arrows move it, Delete removes it, Enter opens
+  its colour field's picker, Insert adds a stop after it), add on a bar click; `evaluate(gradient,
+t)` on `aekasha/ui` for the sky colours and ramps.
+- **Curve editor** (`createCurveEditor`): `mode: 'bezier'` (a CSS-like `[x1, y1, x2, y2]` easing,
+  two handles) or `'keys'` (`{ x, y, inTangent?, outTangent? }[]`, the falloff and animation
+  curves p426 needs), with presets (linear, ease in / out / in-out, smoothstep). SVG (a few points,
+  crisp at any scale, styled by the tokens). Keyboard: each point is a stop (Tab between them),
+  arrows move it (D6's modifiers), Delete removes, Insert adds; the points' values are listed in
+  a visually hidden table. `evaluateCurve(curve, x)` on `aekasha/ui`.
+
+### D9. Containers
+
+- **Folder** (`createFolder`): the APG disclosure, a `<button aria-expanded aria-controls>` row
+  over a region, not `<details>`: the height animates under D7 in every browser (`::details-content`
+  isn't everywhere), and the open state is set before the first paint. The chevron turns as it
+  opens. `expanded`, `onExpandedChange` (the owner persists, D1), nesting with an indent per level,
+  `hidden`.
+- **Fieldset** (`createFieldset`): a native `<fieldset>` and `<legend>`, for a group outside the
+  grid (a form's section).
+- **Property grid** (`createPropertyGrid`): the label column layout the debugger uses. A CSS grid
+  with `--aek-property-grid-label-width` (default 40 %, Tweakpane's look), labels aligned and
+  truncated with a tooltip, every row in the density's height.
+  - **The label column is resizable:** a `role="separator"` on the column edge, focusable,
+    `aria-valuenow` the percentage, dragged or moved with the arrows; `labelWidth` and
+    `onLabelWidthChange` (the owner persists).
+  - It owns a scheduler (D4), or takes one (`scheduler`, a tab host sharing one over its
+    sections), and `refresh()` reads every field in it and re-reads each `hidden` / `disabled`
+    function (today's `refresh()`).
+  - Its content: field handles and D10's items (`items`), added with `add(...)` after creation too.
+- **Form** (`createForm`): a `<form novalidate>` around a grid or fieldsets, with `onSubmit`
+  (Enter in a field submits, as natively) and `onReset` (every field to its default). Per field
+  `required` and `validate(value) => string | null`, checked on blur after the first submit and on
+  submit: the errors under their fields (D5) and an error summary at the top that takes the focus
+  and links each field (the GOV.UK pattern). What p355's save menu and p808's settings menu build
+  on.
+
+### D10. The declarative description
+
+- `PropertyGridItem`: a field item, `{ type: 'folder', title, id?, expanded?, hidden?, items }`,
+  `{ type: 'button', title, label?, variant?, hidden?, disabled?, onClick }` (p803's button),
+  `{ type: 'separator', hidden? }` (p803's divider) and
+  `{ type: 'custom', build(container: CMPHandle) => void | (() => void) }` (the function it
+  returns runs on every refresh). The shape of today's `DebuggerPaneItem`, with a CMP container in
+  `custom` instead of Tweakpane's `Pane | FolderApi` (p800 §5's p806 sketch).
+- **A field item** is `{ target, key }` or `{ get, set }` or `{ value }` (D3) with the field's
+  props, and `kind` (`'number' | 'slider' | 'checkbox' | 'switch' | 'radio' | 'segmented' |
+'select' | 'text' | 'color' | 'vector' | 'rotation' | 'quaternion' | 'angle' | 'pad2d' | …`).
+  **Without `kind` it's inferred from the bound value at creation, as Tweakpane does:** a number
+  is a number field, or a slider when both `min` and `max` are set; a boolean a checkbox; a string
+  a text field; any value with `options` a select; `{ x, y }`-like objects and 2-4 number arrays a
+  vector. A colour has no shape to infer from: `kind: 'color'`.
+- **Tweakpane's names map one to one** (p800 D9), so p806's port is a rename where it isn't the
+  same name:
+
+  | Tweakpane                                    | Here                                             |
+  | -------------------------------------------- | ------------------------------------------------ |
+  | `label`, `min`, `max`, `step`, `format`      | the same                                         |
+  | `options` (array or object)                  | the same (D7's select)                           |
+  | `readonly: true`, `interval`                 | the same (D7's monitor, D4)                      |
+  | `multiline`, `rows`                          | the same (D7's text and monitor)                 |
+  | `hidden`, `disabled` (values or functions)   | the same                                         |
+  | `expanded` (a folder, a titled section)      | the same                                         |
+  | `view: 'color'`, `color: { type: 'float' }`  | `kind: 'color'`, `format: 'float'`               |
+  | an `{ x, y, z }` value (a point)             | inferred `vector`                                |
+  | `onChange(value, { prev, last, api })`       | `onChange(value, { prev, last, source, field })` |
+  | `onCreate(api)`                              | `onCreate(field)` (the field's handle)           |
+  | `addBlade({ view: 'separator' })`            | `{ type: 'separator' }`                          |
+  | `addBlade({ view: 'list', options, value })` | an unbound select (`kind: 'select'`, `value`)    |
+
+  Phase 0's census confirms every param in use is in the table; one that isn't is added here (or
+  to p806's list of rewrites) before Phase 4.
+
+- **Folder ids** are the title path (`'Parent/Child'`) or `id`, as today, and the grid reports
+  `onFolderExpandedChange(id, expanded)` and takes `folderExpanded: Record<string, boolean>`: the
+  owner's persistence (D1) keeps today's key format.
+
+### D11. Accessibility (p800 D8, for forms)
+
+- Every field has a visible label, or `labelHidden` with the name still given; a group is a
+  `role="group"` (or a fieldset) with its label.
+- Target size at least 24 × 24 px in the compact density at UI scale 1, the slider's thumb and the
+  reset button included.
+- Errors: text, the danger role and its icon, `aria-invalid`, `aria-describedby`; the form's
+  summary takes focus on a failed submit.
+- Monitors aren't live regions (D7); a running value an app wants announced is the app's
+  `aria-live` text.
+- Every pointer action has a keyboard path: scrub (keys), the slider track (the spinbutton), the
+  range span (its stop), the pad (arrows and the vector field), the gradient's and curve's points
+  (their stops), the label column (its separator), the picker (its inputs).
+- Reduced motion: the folder opens without the height animation, the flash is a static tint
+  (D4), the value bubble doesn't slide.
+
+### D12. Size
+
+- Each field is its own module; a form with a number, a slider, a checkbox and a select brings no
+  colour, rotation or editor code (`sideEffects`, p803 D12).
+- **Lazy:** the colour picker library on the first open (`import()` in `ColorPicker.ts`; the
+  swatch and text input work without it). The gradient and curve editors are their own modules,
+  imported only by an app that uses them, so they need no `import()` of their own.
+- **Budgets** (p800 D10: "later a form"): the `uiKit` profile's scene gets a small form (a number,
+  a slider, a checkbox, a select and a colour field), and `sbp.config.ts` gets a line for the
+  forms group and one for the picker's chunk, set from Phase 0's probe and Phase 5's measure.
+- The debugger's use costs production nothing (p806; p607 D7).
+
+### D13. p803's open items and the button's `kbd`
+
+From `docs/issues/ui-kit-review-items.md` (proposed answers; the issue is closed by Phase 1):
+
+1. **`normalize.scss` in a layer:** `@layer aek.page` named first in `tokens.css`' layer order
+   statement, `page.scss` forwarding normalize into it. An app's CSS still beats it, and every
+   kit rule does too: the button's size goes back on the button, and the fields' inputs need no
+   workaround. First in the plan, since every field is an `input`.
+2. **Hold to confirm and a click with no press:** a click that no pointer or key press on the
+   button started (a screen reader's browse mode) calls a new `onUnheldClick` when given (an app
+   opens its confirmation dialog), and is ignored otherwise, as now. The kit can't open a dialog
+   from the button without importing the dialog code into every button.
+3. **The indeterminate bar's shot:** `verify:ui`'s settle loop pauses an infinite animation at
+   40 % of its duration instead of 0, and a box's checks may name its own fraction.
+4. **A long custom property name in a Hub table:** the Hub's Markdown renderer puts a `<wbr>`
+   after each `-` of inline code inside a table cell.
+
+**The button's `kbd`** (p800 §5): `kbd` takes a `Kbd` handle the app makes
+(`createButton({ label: 'Save', kbd: createKbd({ keys: 'Ctrl+S' }) })`), so `Button.ts` no longer
+imports `Kbd.ts`; `aria-keyshortcuts` comes from the handle (`getAriaKeyShortcuts` moves onto it).
+The string form keeps working, deprecated until 6.0.0 (p622), drawn after an `import('./Kbd')` on
+first use (the hint appears a frame later; a build gets a small chunk). Phase 0 measures
+`KeyNames.ts`' share; if it's most of the 0.7 kB, the menu's `kbd` gets the same treatment.
+
+### D14. Tests and checks
+
+- **Unit tests** (Node, `KitDom`, next to each module): each field's keys (D6) and ARIA after each
+  action, its disposal (`countListeners`), and nothing at load. `Binding.test.ts` pins D3's event
+  order for each gesture; `BindingScheduler.test.ts` the visibility rules, the intervals (a fake
+  `requestAnimationFrame` clock), no write on an unchanged value, no flash on a monitor;
+  `ValueExpression.test.ts` the grammar and the refusals; `ColorValue.test.ts` the forms and the
+  sRGB curve against three's (three is a dependency, the test may import it);
+  `RotationMath.test.ts` Euler / quaternion / axis-angle round trips against three's.
+- **`yarn verify:ui`:** each field's box with its states (default, focused, disabled, error,
+  read-only) and its keyboard script; the folder, grid and form boxes; **a "Tweakpane parity" box**
+  (dev page only) with one row per row of Phase 0's census, so p806 starts from a page that shows
+  every feature it ports.
+- **The perf-auditor agent** reviews the scheduler's tick, the scrub and the slider's drag, with
+  a 200-monitor demo (dev page) measured in the profiler's frame probe.
+
+### D15. Documentation and the example
+
+- **The Hub's UI kit section** (p803 D13) gets `features/ui-kit/forms/`: the fields, the value
+  editors and the containers, each with `::: demo`, its parts, custom properties and keyboard map;
+  **the binding guide** (the three bindings, the events and their order, the scheduler, monitors,
+  the declarative grid and its inference) with "Coming from Tweakpane" (D10's table). The
+  drop-down's section moves there from the overview.
+- **The component library pages** (public and dev) get every box (D14), `DEMOS`,
+  `COMPONENT_USES` and the checks.
+- **The example** (proposed, the user's call per `docs/plans/CLAUDE.md`): `examples/uiKit/` gets
+  a "Scene settings" panel, a property grid in a kit window bound to the scene's objects (a
+  spinning mesh's speed on a slider, its colour, its position as a vector, its rotation, a
+  checkbox for the wireframe, a monitor of the frame time) and a small form (a validated name, a
+  select, submit and reset). No new example scene: p808's `gameHud` builds the settings menu.
+- `src/_engine/ui/CLAUDE.md` gets a `## Forms and bindings` section (an `aek:covers` on the forms
+  page); the root `CLAUDE.md`'s Three-folder split line for `ui/` names the fields; `readme.md`'s
+  UI kit bullet; `layoutRules.ts`' note on `forms/`.
+- `debug/CLAUDE.md` and the debug suite's page don't change (p806).
+
+### D16. Versions
+
+- **Engine minor** (5.13.0, or the next minor when p805 merges first): the new components and
+  public functions, the button's `kbd` handle with the string form deprecated, normalize's layer.
+  The changelog's restyle note (p800 D12): normalize's layer makes the kit's rules beat it on
+  buttons and form controls in the full page (the drop-down's trigger takes the kit's line height);
+  to keep a normalize rule, an app puts it in its own unlayered CSS.
+- **App minor** (the example's panel and form, the `uiKit` profile's form). **Toolkit:** none.
+  **Project:** `verify:ui`'s settle fraction, the Hub's `<wbr>`, the forms page and boxes.
+- p800 §6: branch `p804-forms-and-bindings` from `main`, one PR into `main`. It can run beside
+  p805's branch; whichever merges second rebases and takes the next minor.
+
+---
+
+## 3. Phases
+
+Branch `p804-forms-and-bindings` from `main`. Verification of each phase: `yarn test`,
+`yarn verify:scenes` (baselines recorded on `main` before the first run), `yarn verify:baselines`,
+`yarn verify:embed`, `yarn verify:ui`, `yarn sbp --profile all`, plus the phase's own checks. Each
+section of a component phase: the modules with their stylesheet and test, their names on
+`aekasha/ui` with JSDoc and an `@example`, their boxes on both library pages with the keyboard
+scripts, the kit's `CLAUDE.md`; then `yarn test`, `tsc`, ESLint, `yarn hub:build`,
+`verify:ui --only <pieces>`, `verify:baselines` (the new names recorded). Each phase stops after
+each section for review.
+
+### Phase 0: baselines and checks
+
+1. On `main`: `yarn verify:scenes --update`, `yarn verify:embed`, `yarn verify:ui`,
+   `yarn sbp --profile all` (the app's and the `uiKit` profile's `_engine/ui` group, the
+   `uiKitEmbed` chunk: noted here).
+2. **The Tweakpane census** (a one-off script in the scratchpad, not committed): every binding,
+   blade and imperative call in the engine and the app, with its params, the type of its bound
+   value, whether its `onChange` has a live side effect, and its file. The result goes into D10's
+   table (every param mapped) and a list p806 starts from (§4 of this plan, "For p806").
+3. **The event order today:** a Playwright probe on the `debugTab` example (`?isDebug=true`): drag
+   a slider, step it with the keys, type into a number, toggle a checkbox, pick a list option, and
+   log each `onChange` with `last` and `prev`. Written here; `Binding.test.ts` pins D3's order, and
+   any difference from today's is a decision in D3 before Phase 2.
+4. **The colour picker study** (p800 D13): `vanilla-colorful`, Coloris, `iro.js`, and any newer
+   candidate found then, on p800 D13's criteria, each in a probe page (scratchpad) in both themes:
+   gzip size, keyboard and screen reader use (axe-core and by hand with VoiceOver), alpha, the
+   models, how far tokens restyle it, last release and open issues, licence. The pick and why go
+   into D8.
+5. Checks that decide details: linkedom 0.18.13's `<input>` (`value`, `selectionStart`, `select`
+   and `input` events, `setPointerCapture`; a gap becomes a `KitDom` shim or a check moved to
+   `verify:ui`); `KeyNames.ts`' share of the button's `kbd` cost (D13); whether `@layer aek.page`
+   changes any scene runner screenshot or the debugger by eye (D13 item 1).
+
+### Phase 1: p803's open items and the button's `kbd`
+
+D13. Small, and first: normalize's layer is under every field.
+
+1. Section 1, normalize's layer: `@layer aek.page` in `tokens.css`' order, `page.scss`, the
+   button's size back on the button, the drop-down trigger's line height; the scene runner's
+   screenshots compared (debug on and off).
+2. Section 2, the button: `kbd` as a `Kbd` handle, the string form deprecated and loaded on first
+   use, `onUnheldClick`; the menu's `kbd` if Phase 0 says so; JSDoc, the Hub's core page, the
+   library's button text.
+3. Section 3, `verify:ui`'s settle fraction and the Hub's `<wbr>`; the issue file closed
+   (`git rm`, its mentions in `src/_engine/ui/CLAUDE.md` and p800 updated).
+
+### Phase 2: the binding core and the first fields
+
+D3-D6 and D7's number, text, checkbox and switch: the core is built against real fields, so its
+API is tried before the rest depend on it.
+
+1. Section 1, `forms/binding/`: `Binding.ts` (the three forms, in-place writes, the events and
+   `prev`), `BindingScheduler.ts` (refresh, the tick, visibility, intervals, the flash),
+   `ValueExpression.ts`, `ValueText.ts` (precision, `format`, tabular figures); their tests. No UI
+   yet; `createBindingScheduler` on `aekasha/ui`.
+2. Section 2, `Field.ts` (the shell: label, reset button, message line, `hidden` / `disabled`,
+   ids) and the number field (spinbutton, D6's keys, scrub, expressions, copy and paste).
+3. Section 3, the text field (text, multiline, search), the checkbox and the switch.
+4. Section 4, the perf-auditor's first pass over the scheduler and the scrub with a 200-number
+   demo; its findings fixed or written here.
+
+### Phase 3: choices and ranges
+
+D7's slider, range slider, radio group, segmented control and select.
+
+1. Section 1, the slider (the pointer-only track, `showInput: false`, ticks, the bubble).
+2. Section 2, the range slider (two thumbs, `minGap`, the span's stop, the histogram).
+3. Section 3, the radio group and the segmented control.
+4. Section 4, the select field on the drop-down (Tweakpane's two `options` forms).
+
+### Phase 4: containers and the declarative grid
+
+D9 and D10, and D7's monitor.
+
+1. Section 1, the monitor (text, multiline, intervals on the tick) and `readonly: true` on every
+   field so far.
+2. Section 2, the folder and the fieldset.
+3. Section 3, the property grid: the label column and its separator, the scheduler it owns or
+   shares, `refresh()`, `add()`.
+4. Section 4, the declarative items (`items`, kind inference, D10's names, folder ids and
+   `onFolderExpandedChange`, `custom`, buttons and separators) and the "Tweakpane parity" box (dev
+   page) from Phase 0's census, so far as the fields exist.
+5. Section 5, the form (validation, the error summary, submit and reset).
+
+### Phase 5: value editors I
+
+D8's colour, vector, rotation and quaternion.
+
+1. Section 1, `ColorValue.ts` (the forms, the spaces, parse and format) and the colour field
+   without the picker (swatch, text, alpha, intensity, recent, palette, the EyeDropper).
+2. Section 2, the picker: Phase 0's library in `ColorPicker.ts`, loaded on the first open in the
+   popover; its budget line measured and set.
+3. Section 3, the vector field (axes, the link lock, per-axis props).
+4. Section 4, `RotationMath.ts`, the rotation and quaternion fields; the parity box completed.
+
+### Phase 6: value editors II
+
+D8's angle dial, 2D pad, gradient editor and curve editor (D1: if the plan runs long, the last
+two leave it here).
+
+1. Section 1, the angle dial and the 2D pad.
+2. Section 2, the gradient editor and `evaluate`.
+3. Section 3, the curve editor, `evaluateCurve` and its presets; the perf-auditor's second pass
+   (the slider's drag, the pad, the editors' drags).
+
+### Phase 7: the Hub, the example, `CLAUDE.md`, readme
+
+D15 and D12's budgets.
+
+1. Section 1, `features/ui-kit/forms/`: every piece's section with `::: demo`, the drop-down moved
+   there, the `aek:covers`.
+2. Section 2, the binding guide and "Coming from Tweakpane".
+3. Section 3, the example's panel and form (as the user decided), its walkthrough; the `uiKit`
+   profile's form and the budgets in `sbp.config.ts`.
+4. Section 4, the `CLAUDE.md` files, `readme.md`, `layoutRules.ts`' note; `yarn hub:build` in both
+   modes, `verify:ui` against the public build.
+
+### Phase 8: versions and done
+
+D16; the changelog entry with the restyle note; `yarn checkVersions --against main`; mark the plan
+done (the references: p800's Blocks line and §5 entry, p806's and p808's when written, p355,
+p426); time for the PR: `p804-forms-and-bindings` → `main` (p800 §6).
+
+---
+
+## 4. For p806
+
+Filled by Phase 0's census and the later phases: what the port needs that isn't a rename (the
+imperative panes' `addBinding` calls with live side effects, the two `view: 'list'` blades, the
+`custom` sections, anything the census finds outside D10's table).
+
+---
+
+## 5. Risks
+
+- **The event model is what p806's port and undo stand on.** D3 keeps Tweakpane's (every write
+  with `last`), Phase 0 records today's order in the browser, and `Binding.test.ts` pins it before
+  any other field is built.
+- **Monitor cost** (p800 §8): one rAF per visible host, no allocation, DOM writes on change only,
+  and the perf-auditor's two passes with 200 monitors.
+- **The colour picker library:** its shadow root may resist the tokens, and its maintenance may
+  lapse. Phase 0's study, the wrapper (one module to swap), and the field working without it
+  (text input, swatches) if a pick fails late.
+- **Scope:** the plan holds 20-odd components. The phases are ordered so the debugger's needs
+  (Phases 2-5) come before the editors no Tweakpane panel has (Phase 6), and D1 says what leaves
+  if it runs long.
+- **normalize's layer** changes how the full page's buttons and controls look where an app relied
+  on normalize beating the kit: D16's changelog note, and the scene runner's screenshots in
+  Phase 1.
+- **Two ways to draw a hint on a button** until 6.0.0 (the handle and the deprecated string):
+  the string's lazy path is tested, and p622 removes it.
+
+---
+
+## Done when
+
+- `ui/forms/` holds the binding, the scheduler and every field, value editor and container of
+  D7-D9 (or D1's moves are written in p800), each with tests, demos, keyboard scripts and its Hub
+  section, and `yarn verify:ui` passes with no allowed violations.
+- D3's event order is pinned by tests and matches today's builder where p806 relies on it;
+  the scheduler passed the perf-auditor's review with 200 monitors.
+- A property grid built from D10's items renders every row of Phase 0's census (the parity box),
+  and §4 lists what p806 rewrites by hand.
+- The colour picker is picked and wrapped, loaded on first open, with its budget line.
+- `docs/issues/ui-kit-review-items.md` is closed, and the button carries no Kbd code unless it
+  shows a hint.
+- The Hub's forms page, binding guide and library boxes are live, the example's panel and form
+  work, and `yarn hub:build` passes in both modes.
+- Engine minor and app minor, the changelog's restyle note, `yarn checkVersions --against main`.

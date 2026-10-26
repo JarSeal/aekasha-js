@@ -1,6 +1,6 @@
 **Title:** Four small UI kit questions p803 left open: normalize's layer, hold to confirm, two Hub shots
 
-Status: open | for the UI kit's next plan (p804)
+Status: open | taken by p804 (`docs/plans/p804_forms-and-bindings.md` D13, closed by its Phase 1)
 Category: UI, Accessibility, Hub
 Found: 2026-10-25 and 2026-10-26, p803 Phases 6-8 (`_DONE_p803_ui-kit-structure-and-core.md`)
 

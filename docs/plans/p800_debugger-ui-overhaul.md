@@ -325,11 +325,13 @@ Every component, from its first version:
 
 - A field binds in one of three ways: `{ target, key }` (an object and a key, Tweakpane's model),
   `{ get, set }` (any source), or a debugger tab's `state` key (p806 maps it to the first).
-- Events: `onInput(value)` on every live change (each drag step, each key),
-  `onChange(value, { prev, last, source })` on commit, `last` true on release or Enter (what undo coalescing and
-  LS persistence key on today, `debug/CLAUDE.md`'s undo section), `source` `'user' | 'api'`.
-  A refresh from the bound value never fires `onChange` (today's builder suppresses it the same
-  way).
+- Events (p804 D3 changed this from `onInput` on every live change and `onChange` on commit):
+  `onChange(value, { prev, last, source })` on every write of the bound value (each drag step and
+  key step with `last: false`, then `last: true` on release, Enter, blur or keyup: Tweakpane's
+  model, which today's handlers' live side effects, undo coalescing and LS persistence key on,
+  `debug/CLAUDE.md`'s undo section), `source` `'user' | 'api'`; `onInput(text)` only for typed
+  text before its commit. A refresh from the bound value never fires `onChange` (today's builder
+  suppresses it the same way).
 - Monitors: `readonly` fields with `interval` (ms; `0` reads every scheduler tick).
 - The scheduler: one per host (a tab, a window, an app panel), driven by the host's visibility
   (paused while hidden, as the tab host's `refreshIntervalMs` is today). A tick reads each visible
@@ -620,6 +622,11 @@ the sketch as written.
   (decided here) with an accessibility checker (eg. axe-core, dev dependency).
 
 ### p804 — Forms and bindings
+
+Written: `p804_forms-and-bindings.md` (2026-10-26, draft). It changes D9's events (its D3), moves
+the label's context menu and the monitor's graph view to p805, keeps the gradient and curve
+editors with a fallback home (its D1), and takes `docs/issues/ui-kit-review-items.md` (its D13).
+What follows is the sketch as written.
 
 - Phase 0: the colour picker study (D13); the binding scheduler's design checked against today's
   builder (`_dbg__DebuggerPaneBuilder.ts`) and undo (`UndoRedo.ts`).
