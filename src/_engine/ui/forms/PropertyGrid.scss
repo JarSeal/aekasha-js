@@ -34,7 +34,8 @@
       .aekFolder__clip,
       .aekFolder__content,
       .aekFieldset,
-      .aekFieldset__content
+      .aekFieldset__content,
+      .aekPropertyGrid__buttonRow
     )
     > :where(*) {
     grid-column: 1 / -1;
@@ -50,7 +51,8 @@
       .aekFolder__content,
       .aekFieldset,
       .aekFieldset__content,
-      .aekField
+      .aekField,
+      .aekPropertyGrid__buttonRow
     ) {
     display: grid;
     grid-template-columns: subgrid;
@@ -94,6 +96,24 @@
     :where(.aekField[data-kind='checkbox'][data-disabled], .aekField[data-kind='switch'][data-disabled])
     :where(.aekField__label) {
     color: var(--aek-text-disabled);
+  }
+
+  // A button item: across both columns, or with its label in the first and itself in the second
+  .aekPropertyGrid :where(.aekPropertyGrid__buttonRow) {
+    align-items: center;
+  }
+
+  .aekPropertyGrid :where(.aekPropertyGrid__buttonRow[data-labelled]) > :where(.aekButton) {
+    grid-column: 2;
+  }
+
+  .aekPropertyGrid :where(.aekPropertyGrid__buttonLabel) {
+    grid-column: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--aek-text-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   // The column's edge, over the gap: a line under the pointer, while dragged and with the focus

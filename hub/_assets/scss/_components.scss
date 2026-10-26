@@ -236,6 +236,12 @@
   width: min(100%, 26rem);
 }
 
+// The parity box's custom item: a row of kit buttons (the day-night speed buttons)
+.hubDemoParityCustom {
+  display: flex;
+  gap: 0.25rem;
+}
+
 // The fieldsets one under another, a form's sections apart, with "Done" under them
 .hubComponentDemoGroup.hubDemoFieldsets {
   flex-direction: column;

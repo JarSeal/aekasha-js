@@ -61,8 +61,12 @@ export type SelectFieldProps<T extends SelectValue> = FieldProps<T> & {
  */
 export type SelectField<T extends SelectValue> = Field<T>;
 
-/** The options as `{ label, value }`, either form */
-const normalizeOptions = <T extends SelectValue>(options: SelectOptions<T>) => {
+/**
+ * A select's options as `{ label, value }`, from either of Tweakpane's forms (or the kit's): what a
+ * property grid item's radio group takes too.
+ * @internal
+ */
+export const normalizeOptions = <T extends SelectValue>(options: SelectOptions<T>) => {
   if (Array.isArray(options)) {
     return (options as readonly SelectOption<T>[]).map((option) => ({
       label: option.text ?? option.label ?? '',

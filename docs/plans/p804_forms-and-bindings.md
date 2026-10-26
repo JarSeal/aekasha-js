@@ -1289,6 +1289,35 @@ D9 and D10, and D7's monitor.
 4. Section 4, the declarative items (`items`, kind inference, D10's names, folder ids and
    `onFolderExpandedChange`, `custom`, buttons and separators) and the "Tweakpane parity" box (dev
    page) from Phase 0's census, so far as the fields exist.
+   - **Done 2026-10-26.** `PropertyGridItems.test.ts` (9); the "Tweakpane parity" box
+     (`propertyGridParity`, dev page only, so not in `verify:ui`: checked by a screenshot from the
+     dev server, no warning in its console) with a row per census row whose field exists, each
+     hinted with its source line, and its text listing Phase 5's rows (the vector, the four
+     colours, the rotation); on `aekasha/ui`: `addPropertyGridItems` and the item types
+     (`PropertyGridItem`, `PropertyGridFieldItem`, `PropertyGridFolderItem`,
+     `PropertyGridButtonItem`, `PropertyGridSeparatorItem`, `PropertyGridCustomItem`,
+     `PropertyGridFieldKind`, `PropertyGridItemsOptions`).
+   - **`addPropertyGridItems(grid, items, options)`, not a grid prop** (D9 and D10 had `items` on
+     `createPropertyGrid`): inference may make any field, so the items' module imports every field
+     creator; on the grid, every grid (an app's settings menu of handles) would carry them all
+     (Smallest Build Possible). Its own module, `PropertyGridItems.ts` (D2's "if large"). The
+     folders' open states are its options: `folderExpanded` (by id, over an item's `expanded`),
+     `onFolderExpandedChange(id, expanded)` and `path` (a titled section's title, the ids' start).
+   - **The field item:** `type?: 'field'` (the debugger's `'binding'`), the binding (`{ get }`
+     alone too), the fields' props in Tweakpane's names, `kind` (D10's list as far as the fields
+     exist, plus `range` and `search`, which `type` couldn't name). `format`, `onChange`,
+     `onCreate`, `onInput` and `onSearch` are method signatures, so a handler typed with its value
+     (`(value: number) => …`) type-checks against `unknown`. Inference as D10; a value no field
+     edits yet (a vector, a colour, a rotation) is a monitor with a warning unless `readonly`,
+     until Phase 5 (D10's colour-string inference waits for the colour field: a `'#rrggbb'`
+     string is a text field until then).
+   - **The folder item's children are `items`** (D10; the debugger's `content`); its id is `id`,
+     else the title path, the children's path the title path (the builder's rule).
+   - **The button item** is the kit's button, `variant` default `secondary`; with `label` a row
+     whose label sits in the label column and the button in the control column, named by both
+     (`aria-labelledby`); without, it spans both. **The separator** is the kit's divider in a row;
+     **`custom`** gets the row's CMP. Their `hidden` / `disabled` functions and the custom
+     refresh join the grid's scheduler, and leave it with their row (a shared one keeps nothing).
 5. Section 5, the form (validation, the error summary, submit and reset).
 
 ### Phase 5: value editors I
@@ -1367,6 +1396,14 @@ table; these don't:
   with a wrapped `onChange`; the material editor's definition tables, `SettingDef` and
   `MaterialParamDef` with `kind: 'COLOR' | 'NUMBER' | 'BOOLEAN' | 'OPTIONS' | 'SIDE'`, spread into
   items): they keep working on plain data; their `view: 'color'` spreads become `kind: 'color'`.
+- **A pane section is a property grid with its items** (Phase 4 section 4):
+  `createPropertyGrid({ scheduler: the tab's, labelWidth, onLabelWidthChange })` and
+  `addPropertyGridItems(grid, section.content, { folderExpanded, onFolderExpandedChange, path })`
+  (the titled section's title as `path`, or the section a folder item of its own). The renames: a
+  binding's `type: 'binding'` → `'field'` (or none), a folder's `content` → `items`, its
+  `persistExpanded` → the owner's `onFolderExpandedChange` (it saves the ids it persists),
+  `view: 'list'` blades → `{ kind: 'select', value, options }`. A field item's `onChange` gets
+  `{ prev, last, source, field }` in place of `{ prev, last, api }`.
 - **A handler that refreshes its own pane** (`_dbg__RayTester.ts`' `refreshPane`, the builder's
   `refresh()` from inside an `onChange`): the grid's `refresh()`, which never fires `onChange`
   (D3), so it can't loop.
