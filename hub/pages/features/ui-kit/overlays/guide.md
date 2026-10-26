@@ -344,6 +344,7 @@ the focus) is on one stack, and the kit keeps the same rules for all of them:
 
 - [The UI kit](hub:features/ui-kit): components, the HUD root, styling.
 - [Core components](hub:features/ui-kit/core): the buttons and the pieces in your panels.
+- [Forms and fields](hub:features/ui-kit/forms): the fields a window or a dialog holds.
 - [The component library](hub:features/ui-kit/library): every piece in every state.
 - [Input](hub:features/input#contexts-and-scenes): the action contexts a menu switches.
 

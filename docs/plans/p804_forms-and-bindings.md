@@ -1715,6 +1715,36 @@ D15 and D12's budgets.
 
 1. Section 1, `features/ui-kit/forms/`: every piece's section with `::: demo`, the drop-down moved
    there, the `aek:covers`.
+   - **Done 2026-10-27.** The page "Forms and fields" (`aek:order` 15, between the core components
+     and the overlays; Lucide's `sliders-horizontal` added to `hub/_assets/icons/` for its card),
+     in five slots: `intro` (the pieces and a first property grid), `fields-guide` (How a field
+     works: the three bindings, `onChange`'s order, the scheduler and the shell; then number
+     fields, sliders with range sliders, radio groups and segmented controls, selects with the
+     drop-down as an h3, text fields, checkboxes and switches, monitors), `editors-guide` (colour
+     fields; vectors, rotations and quaternions; angle dials and 2D pads; gradient and curve
+     editors), `containers-guide` (folders and fieldsets, property grids with "Panels as data",
+     forms) and `guide` (a build, the key APIs, read more). Each section: what it is, a code
+     example, its `::: demo` (all 20 form boxes) and the core page's table (props, parts,
+     states, custom properties, keys, assistive tech) from the components' JSDoc.
+   - **The drop-down moved:** the overview lost its `## Drop-downs` section and its key API line;
+     its pieces table lists every form piece (on the forms page's anchors), its intro, `aek:tags`
+     and description name the form fields, and "three pages" became four. The core and overlays
+     pages' "Read more" link the forms page.
+   - **The `aek:covers` needed the section now** (D15 had it in section 4): `src/_engine/ui/CLAUDE.md`
+     has `## Forms and bindings`, after the overlay layer, holding the forms bullets moved out of
+     `## UI kit` unchanged under a one-paragraph intro; the root `CLAUDE.md`'s map line and
+     `hub/CLAUDE.md`'s feature page list name it and `forms/`. Section 4 still owns the rest of
+     D15's `CLAUDE.md` work (the Three-folder split's `ui/` line, `layoutRules.ts`' note,
+     `readme.md`).
+   - **Left for section 2:** the binding guide. "How a field works" and "Panels as data" give the
+     short form (the three bindings, `onChange`'s `last`, the scheduler; the inferred kinds and
+     the ones `kind` says) and section 2 links its detail from them. No `{{sbp:…}}` numbers in
+     "In a build" yet: the `uiKit` profile has no form until section 3.
+   - Checked: `yarn hub:build` (98 pages, every `api:` / `hub:` link and demo key; the search
+     payload 363 KiB gzipped, under the 450 KiB warning), the page's 16 same-page anchors against
+     the build, and the built page in Chromium (every box filled, no console error, no
+     horizontal scroll at 1400 or 390 px wide). Long trailing comments in the examples moved onto
+     their own lines (the code column shows about 76 characters before it scrolls).
 2. Section 2, the binding guide and "Coming from Tweakpane".
 3. Section 3, the example's panel and form (as the user decided), its walkthrough; the `uiKit`
    profile's form and the budgets in `sbp.config.ts`.

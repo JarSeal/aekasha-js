@@ -359,5 +359,7 @@ The debug scene loader (the Debug tools' start scene) is the same overlay with a
 ## Read more
 
 - [The UI kit](hub:features/ui-kit): components, the HUD root, styling.
+- [Forms and fields](hub:features/ui-kit/forms): the fields a settings menu or a panel is built
+  from.
 - [Windows and overlays](hub:features/ui-kit/overlays): what opens over the HUD.
 - [The component library](hub:features/ui-kit/library): every piece in every state.
