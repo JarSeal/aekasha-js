@@ -45,7 +45,8 @@ field made with it as its `scheduler` is read by one `refresh()`, and a
 theirs to every field added without one. A refresh never calls `onChange`, so a handler that
 refreshes can't loop, and a value changed from outside flashes its field once. A field that
 follows a value changing on its own takes an `interval` (in ms, 0 every frame), read on the
-scheduler's tick while its host shows.
+scheduler's tick while its host shows. [Binding values](hub:features/ui-kit/forms/binding) has the
+whole order of the writes, the scheduler and its tick.
 
 Around every control is the same shell:
 

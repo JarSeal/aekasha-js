@@ -1746,6 +1746,31 @@ D15 and D12's budgets.
      horizontal scroll at 1400 or 390 px wide). Long trailing comments in the examples moved onto
      their own lines (the code column shows about 76 characters before it scrolls).
 2. Section 2, the binding guide and "Coming from Tweakpane".
+   - **Done 2026-10-27.** A child page of the forms page, "Binding values"
+     (`features/ui-kit/forms/binding/`, `intro` and `guide` slots; the forms page stays a
+     catalogue of pieces): the three bindings (a table, in-place writes, `key` one property,
+     `{ get }` alone, no allocation per read); the writes and their order (a table of gestures to
+     `onChange` calls from `Binding.ts`' `step` / `commit` / `change` / `setValue`, `prev`'s two
+     meanings, a `last: true` with no change, copies, `source`, `onInput`, and the live-apply /
+     save-on-`last` / silent-undo pattern); refresh and the scheduler (the flash, `setVisible`,
+     the tick, unshown fields, a container's adopted scheduler and who disposes it); monitors;
+     panels as data (each item's shape, the inference table, `kind`, folder ids and
+     `onFolderExpandedChange`, an unbound select and a custom item's refresh); and coming from
+     Tweakpane (its calls, its params, and D3's kept differences: `prev` on `last`, monitors and
+     refreshes firing nothing, Escape, the rounding, the expression parser, Euler and `{ x, y }`).
+     The forms page's intro, "How a field works", "Panels as data" and "Read more" link it.
+   - **D10's table, as built:** `color: { type: 'float' }` maps to nothing (an `{ r, g, b }`
+     object is always floats: Phase 5 dropped `format: 'float'`), `color: { alpha: true }` to
+     `alpha: true`, a point's `x: { … }` to `axes`, `y: { inverted }` to the pad's `invertY`;
+     `keyScale`, `pointerScale` and the colour's `picker` / `expanded` have none. Found while
+     writing: `label` is required on every field and item, where Tweakpane shows the key without
+     one; a Tweakpane `{ x, y }` has a pad, here it's a vector unless `kind: 'pad2d'`. The guide's
+     table says each.
+   - The debug suite page's Tweakpane note is unchanged (D15: p806); the guide's last paragraph
+     says the debug tabs still use Tweakpane and move onto the fields in a later major.
+   - Checked: `yarn hub:build` (99 pages; the search payload 370 KiB gzipped), the guide's six
+     same-page anchors against the build, the page in Chromium (the gesture and Tweakpane tables
+     at 1400 and 390 px wide, no horizontal scroll, no page error).
 3. Section 3, the example's panel and form (as the user decided), its walkthrough; the `uiKit`
    profile's form and the budgets in `sbp.config.ts`.
 4. Section 4, the `CLAUDE.md` files, `readme.md`, `layoutRules.ts`' note; `yarn hub:build` in both

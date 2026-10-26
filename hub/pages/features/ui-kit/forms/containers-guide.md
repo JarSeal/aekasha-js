@@ -140,7 +140,10 @@ addPropertyGridItems(
   refresh, runs on the grid's `refresh()`.
 
 It's its own module, since inference may make any field: a grid built from handles, as above,
-carries only the fields it makes.
+carries only the fields it makes. [Binding values](hub:features/ui-kit/forms/binding#panels-as-data)
+has every item's shape and the whole inference, and
+[coming from Tweakpane](hub:features/ui-kit/forms/binding#coming-from-tweakpane) maps a pane's
+calls and params onto them.
 
 | Property grid     |                                                                                                                                                                |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |

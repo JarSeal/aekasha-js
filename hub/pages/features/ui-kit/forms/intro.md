@@ -24,7 +24,8 @@ grid.refresh();
 ```
 
 Every field is bound the same way, writes the same events and has the same handle, so once you
-know one you know them all ([how a field works](#how-a-field-works)). They're plain DOM, work with
+know one you know them all ([how a field works](#how-a-field-works), and in full,
+[binding values](hub:features/ui-kit/forms/binding)). They're plain DOM, work with
 the keyboard and assistive tech, and each is its own module: a build carries only the fields the
 app makes. Each section has a live demo, and the [component library](hub:features/ui-kit/library)
 shows every field in every state.

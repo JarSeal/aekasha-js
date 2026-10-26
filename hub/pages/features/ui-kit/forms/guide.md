@@ -34,6 +34,8 @@ no colour, rotation or editor code. Three pieces load or carry more:
 
 ## Read more
 
+- [Binding values](hub:features/ui-kit/forms/binding): the bindings, the writes' order, the
+  scheduler, panels as data and coming from Tweakpane.
 - [The UI kit](hub:features/ui-kit): components, the HUD root, styling.
 - [Windows and overlays](hub:features/ui-kit/overlays): the windows and dialogs a panel or a form
   goes in, and the popover the colour panel is.
