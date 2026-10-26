@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 0 started
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
@@ -501,6 +501,16 @@ each section for review.
 1. On `main`: `yarn verify:scenes --update`, `yarn verify:embed`, `yarn verify:ui`,
    `yarn sbp --profile all` (the app's and the `uiKit` profile's `_engine/ui` group, the
    `uiKitEmbed` chunk: noted here).
+   - **Run on 2026-10-26** (branch `p804-forms-and-bindings` at `567cecf3`, `main`'s commit; macOS,
+     Chromium on WebGPU): all four passed. `verify:scenes --update`: 104 runs recorded, 0 failed.
+     `verify:ui`: every box and script passed against p803's local shots (117.6 s). `verify:embed`:
+     both profiles, all checks. `sbp --profile all`: every budget within (the app's `app` group
+     well under: 12.0 kB of 14 KiB, left as it is).
+   - **The sizes** (gzip): the app's `_engine/ui` group 5.4 kB initial (budget 7 KiB), 19.8 kB
+     lazy; the `uiKit` profile's `_engine/ui` 4.3 kB initial (budget 6 KiB), 17.2 kB lazy; its
+     `assets/uiKitEmbed.js` 17.9 kB (budget 19 KiB) and `assets/uiKitEmbed.css` 4.3 kB (Vite's
+     figure; budget 6 KiB); `assets/uiKit.css` 1.9 kB (budget 3 KiB). The banner's `_engine/ui`
+     4.0 kB.
 2. **The Tweakpane census** (a one-off script in the scratchpad, not committed): every binding,
    blade and imperative call in the engine and the app, with its params, the type of its bound
    value, whether its `onChange` has a live side effect, and its file. The result goes into D10's
