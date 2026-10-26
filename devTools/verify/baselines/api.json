@@ -3030,6 +3030,13 @@
       "ColorIntensityProps": "TypeAlias",
       "createColorField": "Function"
     },
+    "src/_engine/ui/forms/color/ColorPicker.ts": {
+      "ColorPicker": "TypeAlias",
+      "ColorPickerProps": "TypeAlias",
+      "createColorPicker": "Function",
+      "isColorPickerLoaded": "Function",
+      "loadColorPickerAsync": "Function"
+    },
     "src/_engine/ui/forms/color/ColorValue.ts": {
       "COLOR_TEXT_ERROR": "Variable",
       "ColorCodec": "TypeAlias",
@@ -3038,11 +3045,14 @@
       "createColorCodec": "Function",
       "formatColorHex": "Function",
       "getColorForm": "Function",
+      "Hsva": "TypeAlias",
+      "hsvaToRgba": "Function",
       "isColorObject": "Function",
       "isColorString": "Function",
       "linearToSrgb": "Function",
       "parseColorText": "Function",
       "Rgba": "TypeAlias",
+      "rgbaToHsva": "Function",
       "srgbToLinear": "Function"
     },
     "src/_engine/ui/forms/color/RecentColors.ts": {

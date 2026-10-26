@@ -43,7 +43,8 @@ export type UiKeyStep =
   | { keyDown: string }
   /** Releases a key a `keyDown` held */
   | { keyUp: string }
-  /** The focused element matches this selector (`body`: nothing focused) */
+  /** The focused element matches this selector (`body`: nothing focused); in an open shadow root,
+   * the element focused there (a colour picker's `[part="saturation"]`) */
   | { expectFocus: string }
   /** The focused element is the demo box's button whose text is this, exactly (an overlay's
    * opener, which its close gives the focus back to) */
@@ -151,7 +152,9 @@ const COLOR = (name: string) => `#hubDemoColor${name}`;
 const COLOR_SWATCH = (name: string) => `.aekField:has(${COLOR(name)}) .aekColorField__swatch`;
 const COLOR_ALPHA = (name: string) => `.aekField:has(${COLOR(name)}) .aekColorField__part input`;
 const COLOR_PANEL_SWATCH = (n: number) =>
-  `#hudRoot .aekColorPopover .aekColorPanel__group:first-child .aekColorPanel__swatch:nth-child(${n})`;
+  `#hudRoot .aekColorPopover .aekColorPanel__picker + .aekColorPanel__group .aekColorPanel__swatch:nth-child(${n})`;
+/** The picker's parts, focused in its shadow root (`expectFocus` reads the element focused there) */
+const PICKER_PART = (part: string) => `[part="${part}"]`;
 const COLOR_STATUS = '#hubDemoColorStatus';
 /** A folder demo's element by its name (`FOLDER_ID`): a folder's button, a field's control */
 const FOLDER = (name: string) => `#hubDemoFolder${name}`;
@@ -765,19 +768,27 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
         ],
       },
       {
-        name: 'the swatch opens the panel; a palette swatch sets the colour; Escape returns',
+        name: 'the swatch opens the panel on the picker’s plane; the arrows step it; a palette swatch sets the colour; Escape returns',
         steps: [
           { focusInBox: COLOR_SWATCH('Fog') },
           { press: 'Enter' },
           { expectAttr: COLOR_SWATCH('Fog'), name: 'aria-expanded', value: 'true' },
+          // Loaded on this first open, then focused
+          { expectFocus: PICKER_PART('saturation') },
+          // Saturation +1 %: h 208.5, s 20.1, v 78.0 rounded by the picker to 209, 21, 78
+          { press: 'ArrowRight' },
+          { expectText: COLOR_STATUS, text: 'Fog: 0x9db3c7 (last)' },
+          { expectValue: COLOR('Fog'), value: '#9db3c7' },
+          { press: 'Tab' },
+          { expectFocus: PICKER_PART('hue') },
+          // No alpha slider: the fog is a 24-bit number
+          { press: 'Tab' },
           { expectFocus: COLOR_PANEL_SWATCH(1) },
-          { expectAttr: COLOR_PANEL_SWATCH(1), name: 'aria-current', value: 'true' },
           { press: 'Tab' },
           { expectFocus: COLOR_PANEL_SWATCH(2) },
           { press: 'Enter' },
           { expectText: COLOR_STATUS, text: 'Fog: 0xd7c4a3 (last)' },
           { expectAttr: COLOR_PANEL_SWATCH(2), name: 'aria-current', value: 'true' },
-          { expectAttr: COLOR_PANEL_SWATCH(1), name: 'aria-current', value: null },
           // The focused swatch's tooltip is the top overlay: the first Escape closes it
           { press: 'Escape' },
           { expectCount: '#hudRoot .aekTooltip', count: 0 },

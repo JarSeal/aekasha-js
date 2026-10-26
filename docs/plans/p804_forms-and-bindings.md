@@ -1411,6 +1411,43 @@ D8's colour, vector, rotation and quaternion.
      whole colour, so each keystroke would write a different one).
 2. Section 2, the picker: Phase 0's library in `ColorPicker.ts`, loaded on the first open in the
    popover; its budget line measured and set.
+   - **Done 2026-10-26.** `vanilla-colorful` 0.7.2 in `package.json` (pinned; the readme's
+     credits); `ColorPicker.test.ts` (3, its own file so the picker isn't loaded at its start) and
+     7 picker tests in `ColorField.test.ts`; the `colorField` box's keyboard script goes into the
+     picker (its plane takes the focus at the open, ArrowRight steps it) and a "The tint’s panel
+     open" state shows the alpha slider. Nothing new on `aekasha/ui`.
+   - **The picker is the panel's top** (`.aekColorPanel__picker`), the panel a fixed width of
+     eight swatches. On the first open its place is kept (`data-loading`, its height) while the
+     library loads; then it's attached and **its plane takes the focus**, unless the user moved
+     the focus meanwhile. Later opens show it at once with the focus on the plane. A failed load
+     warns, removes the place and is tried again on the next open; the text and the swatches work
+     without it (D8's fallback).
+   - **The gesture's end is the wrapper's:** the library fires only `color-changed`, so a primary
+     press on it listens for the release on the document (anywhere, as the library's own drag),
+     and a key it used (it prevents it) is stopped at the host and its keyup commits. D3's order
+     holds: each move `last: false`, the release or keyup `last: true`. Escape mid-drag closes the
+     panel and commits the value reached; a removed field commits nothing.
+   - **Its own writes aren't drawn back** (`isPickerWriting`): it rounds to whole units, and a grey
+     or black has no hue, so drawing the written value back would move the pointer and send the
+     hue slider to red at the plane's edge. A value from outside is drawn with the picker's hue and
+     saturation kept where the colour has none (`rgbaToHsva(color, previous)`).
+   - **Styles:** `ColorField.scss`' `::part` rules (a rule outside a shadow root beats the root's
+     own, whatever the layer or specificity, as D8 found): the kit's radii, 24 px sliders, the
+     kit's ring on each part's `:focus-visible`, 20 px pointers. The pointers keep the library's
+     white ring and shadow: they sit on the colours, and a surface-coloured ring (tried first) was
+     lost on the plane's dark half in the dark theme.
+   - **The size:** the library is a chunk of its own in the Hub's build, **2.7 kB gzip** (6.3 kB
+     raw, `hsva-*.js`), D8's "about 3 KiB". **The budget line waits for Phase 7 section 3:** no app
+     or embed build has a colour field yet, so `yarn sbp` has no chunk to budget; the `uiKit`
+     profile's form brings one, and its line (3 KiB, `assets/hsva.js` or the key that build
+     gives it) is set from that report.
+   - **Two tools learned shadow roots:** `verify:ui`'s focus reads (`expectFocus`, the outline
+     check) follow an open shadow root's `activeElement`, so a script names a part
+     (`[part="saturation"]`); KitDom's events cross an open shadow root to its host (composed
+     ones, retargeted), `document.activeElement` is the host and the root's own the element, and
+     the global `CustomEvent` is linkedom's (the library's events).
+   - **Not done:** VoiceOver by hand (Phase 0 step 4 left it for this section; it needs a person
+     at the Mac); axe passes on both panel states in all four settings.
 3. Section 3, the vector field (axes, the link lock, per-axis props).
 4. Section 4, `RotationMath.ts`, the rotation and quaternion fields; the parity box completed.
 

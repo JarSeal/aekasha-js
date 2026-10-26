@@ -17,12 +17,51 @@ const listeners = new WeakMap<object, Map<string, ListenerEntry[]>>();
 const isCaptureOption = (options?: boolean | AddEventListenerOptions | EventListenerOptions) =>
   typeof options === 'boolean' ? options : Boolean(options?.capture);
 
+/** A node's shadow root, when it's one (linkedom's: a fragment with a `host`) */
+const asShadowRoot = (node: unknown) => {
+  const root = node as { nodeType?: number; host?: KitTarget } | null;
+  return root?.nodeType === 11 && root.host ? (root as ShadowRoot) : null;
+};
+
+/** The top of a node's tree: the document, a shadow root, or a detached node */
+const getRoot = (node: Node) => {
+  let top = node;
+  while (top.parentNode) top = top.parentNode;
+  return top;
+};
+
+/** Whether `ancestor` is `node` or holds it, across shadow roots to their hosts */
+const isShadowIncludingAncestor = (ancestor: unknown, node: unknown) => {
+  for (let n = node as Node | null; n; n = n.parentNode ?? asShadowRoot(n)?.host ?? null) {
+    if (n === ancestor) return true;
+  }
+  return false;
+};
+
+/**
+ * The DOM's retargeting: `target` as a listener on `node` sees it, the host of each shadow root
+ * `node` isn't in (a press in a colour picker's plane is a press on the picker for the page).
+ */
+const retarget = (target: unknown, node: unknown) => {
+  if (typeof (target as Node | null)?.parentNode === 'undefined') return target;
+  let seen = target as Node;
+  for (;;) {
+    const root = asShadowRoot(getRoot(seen));
+    if (!root || isShadowIncludingAncestor(root, node)) return seen;
+    seen = root.host;
+  }
+};
+
 /** The target and its ancestors: an element's parent is its parentNode, the document's the
- * window's event target */
-const getEventPath = (target: KitTarget) => {
+ * window's event target, and a shadow root's its host for a composed event (a key, a pointer, a
+ * focus change: `dispatchKey` and `dispatchPointer` make them composed, as a browser's are; a
+ * library's own events, a colour picker's `move`, stay in its root) */
+const getEventPath = (target: KitTarget, composed: boolean) => {
   const path: KitTarget[] = [];
-  for (let node: KitTarget | null = target; node; node = node._getParent?.() ?? null) {
+  for (let node: KitTarget | null = target; node; ) {
     path.push(node);
+    const host: KitTarget | null = composed ? asShadowRoot(node)?.host ?? null : null;
+    node = node._getParent?.() ?? host;
   }
   return path;
 };
@@ -62,12 +101,17 @@ const patchEventTarget = (proto: EventTarget) => {
       if (index !== -1) list!.splice(index, 1);
     },
     dispatchEvent(this: KitTarget, event: KitEvent) {
-      const path = getEventPath(this);
+      const path = getEventPath(this, Boolean(event.composed));
       const e = event as unknown as Record<string, unknown>;
-      e.target = path[0];
+      const target = path[0];
+      const relatedTarget = e.relatedTarget;
+      e.target = target;
       const invoke = (node: KitTarget, phase: number, capture: boolean | null) => {
         const list = listeners.get(node)?.get(event.type);
         if (!list) return;
+        // Retargeted for a listener outside a shadow root the event came from
+        e.target = retarget(target, node);
+        if (relatedTarget) e.relatedTarget = retarget(relatedTarget, node);
         e.currentTarget = node;
         e.eventPhase = phase;
         for (const l of [...list]) {
@@ -88,6 +132,7 @@ const patchEventTarget = (proto: EventTarget) => {
       }
       e.currentTarget = null;
       e.eventPhase = 0;
+      e.target = target;
       return !event.defaultPrevented;
     },
   });
@@ -111,11 +156,26 @@ const shimFocus = (document: Document, window: Window & typeof globalThis) => {
   let active: HTMLElement | null = null;
   Object.defineProperty(document, 'activeElement', {
     configurable: true,
-    get: () => (active?.isConnected ? active : document.body),
+    // In a shadow root, its host (the browser's retargeting); the root's own `activeElement` is
+    // the element
+    get: () => (active?.isConnected ? retarget(active, document) : document.body),
+  });
+  const shadowProto = Object.getPrototypeOf(
+    document.createElement('div').attachShadow({ mode: 'open' })
+  ) as object;
+  Object.defineProperty(shadowProto, 'activeElement', {
+    configurable: true,
+    get(this: ShadowRoot) {
+      return active?.isConnected && isShadowIncludingAncestor(this, active)
+        ? retarget(active, this)
+        : null;
+    },
   });
   const fire = (target: Element, type: string, relatedTarget: Element | null) => {
     const bubbles = type === 'focusin' || type === 'focusout';
-    target.dispatchEvent(Object.assign(new window.Event(type, { bubbles }), { relatedTarget }));
+    target.dispatchEvent(
+      Object.assign(new window.Event(type, { bubbles }), { relatedTarget, composed: true })
+    );
   };
   const focus = (elem: HTMLElement) => {
     if (active === elem || !elem.isConnected || !isFocusable(elem)) return;
@@ -356,8 +416,12 @@ const fireLostCapture = (elem: Element, pointerId: number) => {
 
 /**
  * Stubs `document`, `window` and the element classes the kit uses with a linkedom page that has
- * the browser's event order (capture, target, bubble), focus (see `shimFocus`) and the form
- * controls the fields use (see `shimFormControls`), for the kit's tests. Call it in `beforeAll` (an import isn't there yet in `vi.hoisted`), before the module
+ * the browser's event order (capture, target, bubble), focus (see `shimFocus`), the form
+ * controls the fields use (see `shimFormControls`) and open shadow roots (a composed event's path
+ * goes from the root to its host, its `target` and `relatedTarget` retargeted to the host for a
+ * listener outside; `document.activeElement` is the host of a focused element in one, the root's
+ * `activeElement` the element; the global `CustomEvent` is linkedom's, for a library's events),
+ * for the kit's tests. Call it in `beforeAll` (an import isn't there yet in `vi.hoisted`), before the module
  * under test adds a listener.
  * @internal
  * @param html the page (default: an empty body with a `#hudSlot` for `createHudRoot`)
@@ -383,6 +447,8 @@ export const stubKitDomAsync = async (
   vi.stubGlobal('window', window);
   vi.stubGlobal('HTMLElement', window.HTMLElement);
   vi.stubGlobal('HTMLInputElement', window.HTMLInputElement);
+  // Node's own has a read-only `target`, which the dispatch above sets (a library's events)
+  vi.stubGlobal('CustomEvent', window.CustomEvent);
   // A frame is a 16 ms timer, so a test's fake timers run it (`vi.advanceTimersByTime`)
   vi.stubGlobal('requestAnimationFrame', (fn: FrameRequestCallback) =>
     setTimeout(() => fn(Date.now()), 16)
@@ -412,6 +478,8 @@ export const dispatchKey = (
   init: KitKeyInit = {}
 ) => {
   const event = Object.assign(new window.Event(type, { bubbles: true, cancelable: true }), {
+    // A browser's key and pointer events cross a shadow root to its host
+    composed: true,
     key,
     shiftKey: false,
     ctrlKey: false,
@@ -454,6 +522,8 @@ export const dispatchPointer = (
 ) => {
   const pointerId = init.pointerId ?? 1;
   const event = Object.assign(new window.Event(type, { bubbles: true, cancelable: true }), {
+    // A browser's key and pointer events cross a shadow root to its host
+    composed: true,
     pointerId,
     pointerType: 'mouse',
     isPrimary: true,

@@ -23,11 +23,20 @@ import { buildMonitor } from '../Monitor';
 import { createNumberInput, type NumberInput, type NumberTarget } from '../NumberInput';
 import { createTypedText } from '../TypedText';
 import {
+  createColorPicker,
+  isColorPickerLoaded,
+  loadColorPickerAsync,
+  type ColorPicker,
+} from './ColorPicker';
+import {
   createColorCodec,
   formatColorHex,
   getColorForm,
+  hsvaToRgba,
   parseColorText,
+  rgbaToHsva,
   type ColorFieldValue,
+  type Hsva,
   type Rgba,
 } from './ColorValue';
 import { addRecentColor, getRecentColors } from './RecentColors';
@@ -213,6 +222,14 @@ export const createColorField = <T extends ColorFieldValue>(
   let settle = () => {};
   /** Closes the panel (set below, as `settle`) */
   let closePanel = () => {};
+  /** The open panel's picker, once it's loaded */
+  let picker: ColorPicker | null = null;
+  /** While the picker writes: its own value isn't drawn back into it (it rounds to whole units,
+   * and a colour at black or grey has no hue to give it back) */
+  let isPickerWriting = false;
+  /** What had the focus right after the panel opened: the picker takes it once it's loaded, unless
+   * the user moved it meanwhile */
+  let focusAtOpen: Element | null = null;
 
   const row = document.createElement('span');
   row.className = 'aekColorField';
@@ -303,6 +320,7 @@ export const createColorField = <T extends ColorFieldValue>(
         // Typed text stays until it's written or put back
         if (!isTyping() && input.value !== text) input.value = text;
         markCurrent?.(text);
+        if (picker && !isPickerWriting) picker.setColor(rgbaToHsva(shown, picker.getColor()));
       },
       applyDisabled: (on) => {
         if (on) {
@@ -393,7 +411,33 @@ export const createColorField = <T extends ColorFieldValue>(
     }
   };
 
-  /** The popover's content, built on every open: the swatches as they are now */
+  /** A move of the picker: a step of its gesture (D3), the alpha the value's where it has none */
+  const onPickerStep = (hsva: Hsva) => {
+    if (shell.isDisabled()) return;
+    const color = hsvaToRgba(hsva);
+    if (!codec.hasAlpha) color.a = codec.read(binding.peek(), scratch).a;
+    typed.end();
+    isPickerWriting = true;
+    try {
+      binding.step(codec.write(color) as T);
+    } finally {
+      isPickerWriting = false;
+    }
+  };
+
+  /** Puts the picker in its slot at the panel's top, showing the value */
+  const attachPicker = (slot: HTMLElement) => {
+    picker = createColorPicker({
+      alpha: codec.hasAlpha,
+      onStep: onPickerStep,
+      onEnd: () => binding.commit(),
+    });
+    picker.setColor(rgbaToHsva(codec.read(binding.peek(), scratch)));
+    slot.removeAttribute('data-loading');
+    slot.append(picker.elem);
+  };
+
+  /** The popover's content, built on every open: the picker and the swatches as they are now */
   const buildPanel = (): CMPHandle => {
     const tooltips: Tooltip[] = [];
     const swatches: HTMLElement[] = [];
@@ -402,8 +446,34 @@ export const createColorField = <T extends ColorFieldValue>(
       onRemoveCmp: () => {
         for (const tooltip of tooltips) tooltip.cmp.remove();
         markCurrent = null;
+        if (!picker) return;
+        picker.dispose();
+        picker = null;
+        // A drag the close cut short (Escape) ends with the value it reached; a removed field
+        // writes nothing more
+        if (!isRemoved) binding.commit();
       },
     });
+    const slot = panel.add({ class: 'aekColorPanel__picker' }).elem;
+    if (isColorPickerLoaded()) {
+      attachPicker(slot);
+    } else {
+      // Its size kept, so the panel doesn't jump when it comes
+      slot.setAttribute('data-loading', '');
+      void loadColorPickerAsync().then((isLoaded) => {
+        // The panel may have closed (and opened again), or the field gone, meanwhile
+        if (isRemoved || !slot.isConnected) return;
+        if (!isLoaded) {
+          slot.remove();
+          if (swatches.length === 0 && !hasEyeDropper) {
+            panel.add({ tag: 'p', class: 'aekColorPanel__empty', text: NO_SWATCHES_TEXT });
+          }
+          return;
+        }
+        attachPicker(slot);
+        if (document.activeElement === focusAtOpen) picker?.focus();
+      });
+    }
     const addGroup = (title: string, colors: readonly string[]) => {
       const parsed = colors
         .map((text) => parseColorText(text).value)
@@ -436,7 +506,8 @@ export const createColorField = <T extends ColorFieldValue>(
     };
     addGroup('Palette', props.palette ?? []);
     if (showsRecent) addGroup('Recent', getRecentColors());
-    if (props.eyeDropper !== false && getEyeDropper()) {
+    const hasEyeDropper = props.eyeDropper !== false && Boolean(getEyeDropper());
+    if (hasEyeDropper) {
       panel.add(
         createButton({
           label: 'Pick from the screen',
@@ -446,9 +517,6 @@ export const createColorField = <T extends ColorFieldValue>(
           onClick: () => void pickFromScreenAsync(),
         }).cmp
       );
-    }
-    if (panel.elem.childElementCount === 0) {
-      panel.add({ tag: 'p', class: 'aekColorPanel__empty', text: NO_SWATCHES_TEXT });
     }
     markCurrent = (text) => {
       for (const elem of swatches) {
@@ -465,6 +533,10 @@ export const createColorField = <T extends ColorFieldValue>(
     label: props.label,
     class: 'aekColorPopover',
     content: buildPanel,
+    onOpen: () => {
+      focusAtOpen = document.activeElement;
+      picker?.focus();
+    },
   });
   closePanel = popover.close;
 

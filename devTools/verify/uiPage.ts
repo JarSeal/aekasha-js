@@ -73,7 +73,9 @@ export const takeStepsAsync = async (page: Page, piece: string, steps: UiRunStep
 const readExpectation = (page: Page, piece: string, step: UiKeyStep) =>
   page.evaluate(
     ({ s, box }) => {
-      const active = document.activeElement;
+      // The focused element in an open shadow root (the colour picker's slider), not its host
+      let active = document.activeElement;
+      while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
       const activeText = !active
         ? 'nothing'
         : `${active.tagName.toLowerCase()}${active.id ? `#${active.id}` : ''}${
@@ -138,11 +140,14 @@ const readExpectation = (page: Page, piece: string, step: UiKeyStep) =>
 /**
  * The focused element without an outline, described; null when it has one or it's the body. A
  * focused element with `aria-activedescendant` (a drop-down's list) shows the ring on that option
- * instead (p803 D7), so the option is the one read.
+ * instead (p803 D7), so the option is the one read; in an open shadow root, the element focused
+ * there (p804 Phase 5: the colour picker's sliders).
  */
 const readMissingOutline = (page: Page) =>
   page.evaluate(() => {
-    const focused = document.activeElement;
+    // In an open shadow root, the element focused there: its ring is on it, not on the host
+    let focused = document.activeElement;
+    while (focused?.shadowRoot?.activeElement) focused = focused.shadowRoot.activeElement;
     if (!focused || focused === document.body) return null;
     const activeId = focused.getAttribute('aria-activedescendant');
     const el = (activeId && document.getElementById(activeId)) || focused;

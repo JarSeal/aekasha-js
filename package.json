@@ -84,7 +84,8 @@
     "meshoptimizer": "1.1.1",
     "stats-gl": "4.2.3",
     "three": "0.186.1",
-    "tweakpane": "4.0.5"
+    "tweakpane": "4.0.5",
+    "vanilla-colorful": "0.7.2"
   },
   "devDependencies": {
     "@gltf-transform/cli": "4.5.1",

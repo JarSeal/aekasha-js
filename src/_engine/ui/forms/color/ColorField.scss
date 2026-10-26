@@ -3,6 +3,10 @@
 // text in the mono font, the alpha's and the intensity's parts, and the panel's groups. The text's
 // box, the error and the flash are the fields' (`.aekField__box`, Field.scss). The colour is the
 // inline `--aek-color-field-value`; `--aek-color-field-checker` is the checkerboard's dark squares.
+// The picker (ColorPicker.ts, vanilla-colorful's) is styled through its `::part`s: a rule from
+// outside its shadow root beats the root's own whatever its specificity or layer (the cascade's
+// context comes first), so its radii, pointers and the kit's ring (its root sets `outline: 0`)
+// are ours. `--aek-color-picker-height` is the plane's height.
 @layer aek.components {
   :where(.aekColorField) {
     display: flex;
@@ -90,8 +94,8 @@
     display: flex;
     flex-direction: column;
     gap: var(--aek-space-3);
-    // Eight swatches a row
-    max-width: calc(24px * 8 + var(--aek-space-2) * 7);
+    // Eight swatches a row, the picker as wide
+    width: calc(24px * 8 + var(--aek-space-2) * 7);
     font-size: var(--aek-font-size-sm);
   }
 
@@ -117,6 +121,52 @@
   :where(.aekColorPanel__swatch[aria-current='true']) {
     border-color: var(--aek-accent);
     box-shadow: inset 0 0 0 1px var(--aek-accent);
+  }
+
+  // The picker's place: its size kept while it loads, so the panel doesn't jump
+  :where(.aekColorPanel__picker) {
+    display: flex;
+    min-height: calc(var(--aek-color-picker-height, calc(var(--aek-space-7) * 5)) + 24px * 2);
+  }
+
+  :where(.aekColorPicker) {
+    flex: 1;
+    gap: var(--aek-space-3);
+    width: auto;
+    height: auto;
+  }
+
+  :where(.aekColorPicker)::part(saturation) {
+    flex: 0 0 var(--aek-color-picker-height, calc(var(--aek-space-7) * 5));
+    border-bottom-width: 0;
+    border-radius: var(--aek-radius-md);
+  }
+
+  // The sliders 24 px tall (WCAG 2.5.8), rounded at both ends
+  :where(.aekColorPicker)::part(hue),
+  :where(.aekColorPicker)::part(alpha) {
+    flex: 0 0 24px;
+    border-radius: var(--aek-radius-full);
+  }
+
+  :where(.aekColorPicker[data-alpha='off'])::part(alpha) {
+    display: none;
+  }
+
+  // Its white ring and shadow kept: a pointer sits on the colours, light or dark in either theme
+  :where(.aekColorPicker)::part(saturation-pointer),
+  :where(.aekColorPicker)::part(hue-pointer),
+  :where(.aekColorPicker)::part(alpha-pointer) {
+    width: 20px;
+    height: 20px;
+  }
+
+  // The kit's ring (its root's `outline: 0` would leave a scaled pointer as the only mark)
+  :where(.aekColorPicker)::part(saturation):focus-visible,
+  :where(.aekColorPicker)::part(hue):focus-visible,
+  :where(.aekColorPicker)::part(alpha):focus-visible {
+    outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
+    outline-offset: var(--aek-focus-ring-offset);
   }
 
   :where(.aekColorPanel__eyeDropper) {

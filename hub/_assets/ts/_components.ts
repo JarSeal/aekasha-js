@@ -1194,16 +1194,17 @@ const initColorFieldDemo: Demo = (box) => {
   addButton(fogRow, 'The fog’s panel open', () =>
     fog.cmp.elem.querySelector<HTMLElement>('.aekColorField__swatch')?.click()
   );
-  row(
-    'A hex string with alpha',
-    createColorField({
-      id: COLOR_ID('Tint'),
-      label: 'Tint',
-      target: scene,
-      key: 'tint',
-      scheduler,
-      onChange: report('Tint'),
-    }).cmp.elem
+  const tint = createColorField({
+    id: COLOR_ID('Tint'),
+    label: 'Tint',
+    target: scene,
+    key: 'tint',
+    scheduler,
+    onChange: report('Tint'),
+  });
+  const tintRow = row('A hex string with alpha', tint.cmp.elem);
+  addButton(tintRow, 'The tint’s panel open', () =>
+    tint.cmp.elem.querySelector<HTMLElement>('.aekColorField__swatch')?.click()
   );
   const sun = createColorField({
     id: COLOR_ID('Sun'),

@@ -1,16 +1,25 @@
 import { Color } from 'three';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createHudRoot, getHUDRootCMP } from '../../core/HUD';
-import { countListeners, dispatchKey, stubKitDomAsync } from '../../testing/KitDom';
+import {
+  countListeners,
+  dispatchKey,
+  dispatchPointer,
+  stubKitDomAsync,
+  type KitKeyInit,
+} from '../../testing/KitDom';
 import { createBindingScheduler } from '../binding/BindingScheduler';
 import type { FieldChange } from '../Field';
 import { createColorField, type ColorFieldProps } from './ColorField';
-import type { ColorFieldValue } from './ColorValue';
+import { loadColorPickerAsync } from './ColorPicker';
+import type { ColorFieldValue, Hsva } from './ColorValue';
 import { getRecentColors, onRecentColorsChange, setRecentColors } from './RecentColors';
 
 beforeAll(async () => {
   await stubKitDomAsync();
   createHudRoot({ slot: document.getElementById('hudSlot')! });
+  // Loaded, so every open shows it at once (its first open's lazy load: ColorPicker.test.ts)
+  await loadColorPickerAsync();
 });
 
 type Change = { value: unknown; prev: unknown; last: boolean; source: string };
@@ -278,8 +287,11 @@ describe('the colour panel (p804 D8)', () => {
     expect(swatches.map((elem) => elem.getAttribute('aria-label'))).toEqual(['#3fd8f2', '#ff0000']);
     expect(swatches[0].getAttribute('aria-current')).toBe('true');
     expect(swatches[1].hasAttribute('aria-current')).toBe(false);
-    // The focus went in
-    expect(document.activeElement).toBe(swatches[0]);
+    // The focus went to the picker's plane, at the panel's top
+    const picker = popover.querySelector<HTMLElement>('.aekColorPanel__picker aek-color-picker')!;
+    expect(popover.firstElementChild!.firstElementChild!.className).toBe('aekColorPanel__picker');
+    expect(document.activeElement).toBe(picker);
+    expect(picker.shadowRoot!.activeElement!.getAttribute('part')).toBe('saturation');
   });
 
   it('a swatch sets its colour once, stays open and moves the mark; it’s a recent colour', () => {
@@ -298,11 +310,7 @@ describe('the colour panel (p804 D8)', () => {
     expect(getRecentColors()).toEqual(['#ff0000']);
   });
 
-  it('shows the page’s recent colours, and says what to type when it has nothing', () => {
-    const empty = makeColor(0xffffff);
-    empty.swatch.click();
-    expect(empty.panel()!.querySelector('.aekColorPanel__empty')!.textContent).toMatch(/#rrggbb/);
-    empty.swatch.click();
+  it('shows the page’s recent colours', () => {
     setRecentColors(['#102030', '#405060']);
     const { swatch, panel } = makeColor(0xffffff);
     swatch.click();
@@ -379,5 +387,120 @@ describe('the recent colours (p804 D8)', () => {
     expect(getRecentColors()).toHaveLength(8);
     getRecentColors().push('#123456');
     expect(getRecentColors()).toHaveLength(8);
+  });
+});
+
+describe('the picker in the panel (p804 D8)', () => {
+  /** The open panel's picker and its three parts */
+  const openPicker = (swatch: HTMLElement, panel: () => HTMLElement | null) => {
+    swatch.click();
+    const picker = panel()!.querySelector<HTMLElement & { color: Hsva }>('aek-color-picker')!;
+    const part = (name: string) =>
+      picker.shadowRoot!.querySelector<HTMLElement>(`[part="${name}"]`)!;
+    /** The library's own event from a part: its move, merged into the colour it holds */
+    const move = (name: string, detail: Partial<Hsva>) =>
+      part(name).dispatchEvent(new window.CustomEvent('move', { bubbles: true, detail }));
+    return { picker, part, move };
+  };
+
+  it('shows the value; the alpha slider only for a value with alpha', () => {
+    const number = makeColor(0x0000ff);
+    const { picker } = openPicker(number.swatch, number.panel);
+    expect(picker.className).toBe('aekColorPicker');
+    expect(picker.color).toMatchObject({ h: 240, s: 100, v: 100 });
+    expect(picker.getAttribute('data-alpha')).toBe('off');
+    number.swatch.click();
+    const tint = makeColor('#ff000080');
+    const withAlpha = openPicker(tint.swatch, tint.panel);
+    expect(withAlpha.picker.hasAttribute('data-alpha')).toBe(false);
+    expect(withAlpha.picker.color.a).toBeCloseTo(128 / 255);
+    expect(withAlpha.part('alpha').getAttribute('role')).toBe('slider');
+  });
+
+  it('a drag: each move a step, the release anywhere the last: true', () => {
+    const { swatch, panel, target, calls, input } = makeColor(0xff0000);
+    const { part, move } = openPicker(swatch, panel);
+    dispatchPointer(part('saturation'), 'pointerdown');
+    // A press in its shadow root is a press in the panel: it stays open
+    expect(panel()).not.toBe(null);
+    move('hue', { h: 120 });
+    expect(target.color).toBe(0x00ff00);
+    expect(input.value).toBe('#00ff00');
+    move('hue', { h: 240 });
+    expect(target.color).toBe(0x0000ff);
+    dispatchPointer(document.body, 'pointerup');
+    expect(calls).toEqual([
+      user(0x00ff00, 0xff0000, false),
+      user(0x0000ff, 0x00ff00, false),
+      user(0x0000ff, 0xff0000, true),
+    ]);
+    // A step isn't a recent colour; the gesture's end is
+    expect(getRecentColors()).toEqual(['#0000ff']);
+  });
+
+  it('a key step writes last: false, its keyup last: true; the key goes no further', () => {
+    const { swatch, panel, target, calls } = makeColor(0xff0000);
+    const { part } = openPicker(swatch, panel);
+    const outside: string[] = [];
+    const onKey = (e: Event) => outside.push((e as KeyboardEvent).key);
+    document.addEventListener('keydown', onKey);
+    const hue = part('hue');
+    // The library reads `keyCode`
+    const down = dispatchKey(hue, 'keydown', 'ArrowRight', { keyCode: 39 } as KitKeyInit);
+    expect(down.defaultPrevented).toBe(true);
+    expect(target.color).not.toBe(0xff0000);
+    dispatchKey(hue, 'keyup', 'ArrowRight', { keyCode: 39 } as KitKeyInit);
+    document.removeEventListener('keydown', onKey);
+    expect(outside).toEqual([]);
+    expect(calls.map(({ last }) => last)).toEqual([false, true]);
+  });
+
+  it('its own writes don’t come back; a value from outside does, its hue kept at grey', () => {
+    const { swatch, panel, field } = makeColor<number>(0x0000ff);
+    const { picker, move } = openPicker(swatch, panel);
+    // Black has no hue to give back: the picker keeps its own
+    move('saturation', { v: 0 });
+    expect(field.getValue()).toBe(0x000000);
+    expect(picker.color).toMatchObject({ h: 240, v: 0 });
+    field.setValue(0x808080);
+    expect(picker.color).toMatchObject({ h: 240, s: 0 });
+    field.setValue(0x00ff00);
+    expect(picker.color).toMatchObject({ h: 120, s: 100, v: 100 });
+  });
+
+  it('a value without alpha keeps its own: a linear object’s floats from the picker', () => {
+    const color = new Color(1, 0, 0);
+    const { swatch, panel, target } = makeColor(color, { colorSpace: 'linear' });
+    const { move } = openPicker(swatch, panel);
+    move('hue', { h: 120 });
+    expect(target.color).toBe(color);
+    expect(color.getHex()).toBe(0x00ff00);
+  });
+
+  it('Escape mid-drag closes the panel with the value reached, last: true', () => {
+    const { swatch, panel, calls } = makeColor(0xff0000);
+    const { part, move } = openPicker(swatch, panel);
+    dispatchPointer(part('saturation'), 'pointerdown');
+    move('hue', { h: 120 });
+    dispatchKey(part('saturation'), 'keydown', 'Escape', { keyCode: 27 } as KitKeyInit);
+    expect(panel()).toBe(null);
+    expect(document.activeElement).toBe(swatch);
+    expect(calls).toEqual([user(0x00ff00, 0xff0000, false), user(0x00ff00, 0xff0000, true)]);
+    // Its release, later, is no one's
+    dispatchPointer(document.body, 'pointerup');
+    expect(calls).toHaveLength(2);
+  });
+
+  it('a field removed mid-drag writes nothing more and leaves no listener on the page', () => {
+    const before = countListeners(document, 'pointerup');
+    const { field, swatch, panel, calls } = makeColor(0xff0000);
+    const { part, move } = openPicker(swatch, panel);
+    dispatchPointer(part('saturation'), 'pointerdown');
+    expect(countListeners(document, 'pointerup')).toBe(before + 1);
+    move('hue', { h: 120 });
+    field.cmp.remove();
+    expect(countListeners(document, 'pointerup')).toBe(before);
+    dispatchPointer(document.body, 'pointerup');
+    expect(calls.map(({ last }) => last)).toEqual([false]);
   });
 });

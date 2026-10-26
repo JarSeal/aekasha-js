@@ -238,6 +238,49 @@ export const parseColorText = (text: string): ParseResult => {
 };
 
 /**
+ * A colour as the picker holds it (vanilla-colorful's HSVA): hue 0-360, saturation and value
+ * 0-100, alpha 0-1.
+ * @internal
+ */
+export type Hsva = { h: number; s: number; v: number; a: number };
+
+/**
+ * An sRGB colour in HSVA, its channels clamped to 0-1. A grey has no hue and black no saturation
+ * either: `previous`'s are kept then (the picker's), so its hue slider doesn't jump to red when
+ * the plane reaches its edge.
+ * @internal
+ */
+export const rgbaToHsva = (color: Rgba, previous?: Hsva): Hsva => {
+  const r = clamp01(color.r);
+  const g = clamp01(color.g);
+  const b = clamp01(color.b);
+  const max = Math.max(r, g, b);
+  const delta = max - Math.min(r, g, b);
+  let h = previous?.h ?? 0;
+  if (delta > 0) {
+    const sector =
+      max === r ? (g - b) / delta : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4;
+    h = (sector * 60 + 360) % 360;
+  }
+  const s = max > 0 ? (delta / max) * 100 : previous?.s ?? 0;
+  return { h, s, v: max * 100, a: clamp01(color.a) };
+};
+
+/**
+ * An HSVA colour in sRGB.
+ * @internal
+ */
+export const hsvaToRgba = (color: Hsva): Rgba => {
+  const saturation = color.s / 100;
+  const value = color.v / 100;
+  const channel = (n: number) => {
+    const k = (n + color.h / 60) % 6;
+    return value - value * saturation * Math.max(0, Math.min(k, 4 - k, 1));
+  };
+  return { r: channel(5), g: channel(3), b: channel(1), a: color.a };
+};
+
+/**
  * Reads and writes a field's bound colour in its own form.
  * @internal
  */
